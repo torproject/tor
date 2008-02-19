@@ -1126,13 +1126,15 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->cache_info.signed_descriptor_len = end-s;
   if (cache_copy) {
     size_t len = router->cache_info.signed_descriptor_len +
-                router->cache_info.annotations_len;
+                 router->cache_info.annotations_len;
     char *cp =
       router->cache_info.signed_descriptor_body = tor_malloc(len+1);
     if (prepend_annotations) {
       memcpy(cp, prepend_annotations, prepend_len);
       cp += prepend_len;
     }
+    tor_assert(cp+(end-start_of_annotations) ==
+               router->cache_info.signed_descriptor_body+len);
     memcpy(cp, start_of_annotations, end-start_of_annotations);
     router->cache_info.signed_descriptor_body[len] = '\0';
     tor_assert(strlen(router->cache_info.signed_descriptor_body) == len);

@@ -90,6 +90,7 @@ void
 smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
 {
   smartlist_ensure_capacity(s1, s1->num_used + s2->num_used);
+  tor_assert(s1->capacity >= s1->num_used+s2->num_used);
   memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
   s1->num_used += s2->num_used;
 }

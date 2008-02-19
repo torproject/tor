@@ -4753,7 +4753,10 @@ or_state_load(void)
       log_warn(LD_BUG, "Unable to parse state in \"%s\". Moving it aside "
                "to \"%s\".  This could be a bug in Tor; please tell "
                "the developers.", fname, fname2);
-      (int)rename(fname, fname2);
+      if (rename(fname, fname2) < 0) {
+        log_warn(LD_BUG, "Weirdly, I couldn't even mode the state aside. The "
+                 "OS gave an error of %s", strerror(errno));
+      }
     }
     tor_free(fname2);
     tor_free(contents);
