@@ -850,8 +850,14 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   else
     intro_key = circuit->intro_key;
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
-  len = crypto_pk_asn1_encode(intro_key, buf+2,
-                              RELAY_PAYLOAD_SIZE-2);
+  r = crypto_pk_asn1_encode(intro_key, buf+2,
+                            RELAY_PAYLOAD_SIZE-2);
+  if (r < 0) {
+    log_warn(LD_BUG, "Internal error; failed to establish intro point.");
+    reason = END_CIRC_REASON_INTERNAL;
+    goto err;
+  }
+  len = r;
   set_uint16(buf, htons((uint16_t)len));
   len += 2;
   memcpy(auth, circuit->cpath->prev->handshake_digest, DIGEST_LEN);
