@@ -492,10 +492,12 @@ touch_file(const char *fname)
 static int n_sockets_open = 0;
 
 /** As close(), but guaranteed to work for sockets across platforms (including
- * Windows, where close()ing a socket doesn't work. */
-void
+ * Windows, where close()ing a socket doesn't work.  Returns 0 on success, -1
+ * on failure. */
+int
 tor_close_socket(int s)
 {
+  int r = 0;
   /* On Windows, you have to call close() on fds returned by open(),
    * and closesocket() on fds returned by socket().  On Unix, everything
    * gets close()'d.  We abstract this difference by always using
@@ -503,14 +505,28 @@ tor_close_socket(int s)
    * files.
    */
 #ifdef USE_BSOCKETS
-  bclose(s);
+  r = bclose(s);
 #elif defined(MS_WINDOWS)
-  closesocket(s);
+  r = closesocket(s);
 #else
-  close(s);
+  r = close(s);
 #endif
+  if (r == 0) {
+    --n_sockets_open;
+  } else {
+    int err = tor_socket_errno(-1);
+    log_info(LD_NET, "Close returned an error: %s", tor_socket_strerror(err));
+#ifdef WIN32
+    if (err != WSAENOTSOCK)
+      --n_sockets_open;
+#else
+    if (err != EBADF)
+      --n_sockets_open;
+#endif
+    r = -1;
+  }
   tor_assert(n_sockets_open > 0);
-  --n_sockets_open;
+  return r;
 }
 
 /** As socket(), but counts the number of open sockets. */

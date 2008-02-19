@@ -255,7 +255,7 @@ int touch_file(const char *fname);
 
 /* ===== Net compatibility */
 
-void tor_close_socket(int s);
+int tor_close_socket(int s);
 int tor_open_socket(int domain, int type, int protocol);
 int get_n_open_sockets(void);
 
