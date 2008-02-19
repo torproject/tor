@@ -90,7 +90,7 @@ typedef struct cached_resolve_t {
 } cached_resolve_t;
 
 static void purge_expired_resolves(time_t now);
-static void dns_found_answer(const char *address, int is_reverse,
+static void dns_found_answer(const char *address, uint8_t is_reverse,
                              uint32_t addr, const char *hostname, char outcome,
                              uint32_t ttl);
 static void send_resolved_cell(edge_connection_t *conn, uint8_t answer_type);
@@ -620,7 +620,8 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   pending_connection_t *pending_connection;
   struct in_addr in;
   time_t now = time(NULL);
-  int is_reverse = 0, r;
+  uint8_t is_reverse = 0;
+  int r;
   assert_connection_ok(TO_CONN(exitconn), 0);
   tor_assert(exitconn->_base.s == -1);
   assert_cache_ok();
@@ -900,7 +901,7 @@ dns_cancel_pending_resolve(const char *address)
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  **/
 static void
-add_answer_to_cache(const char *address, int is_reverse, uint32_t addr,
+add_answer_to_cache(const char *address, uint8_t is_reverse, uint32_t addr,
                     const char *hostname, char outcome, uint32_t ttl)
 {
   cached_resolve_t *resolve;
@@ -953,7 +954,7 @@ is_test_address(const char *address)
  * DNS_RESOLVE_{FAILED_TRANSIENT|FAILED_PERMANENT|SUCCEEDED}.
  */
 static void
-dns_found_answer(const char *address, int is_reverse, uint32_t addr,
+dns_found_answer(const char *address, uint8_t is_reverse, uint32_t addr,
                  const char *hostname, char outcome, uint32_t ttl)
 {
   pending_connection_t *pend;
@@ -1178,7 +1179,7 @@ evdns_callback(int result, char type, int count, int ttl, void *addresses,
                void *arg)
 {
   char *string_address = arg;
-  int is_reverse = 0;
+  uint8_t is_reverse = 0;
   int status = DNS_RESOLVE_FAILED_PERMANENT;
   uint32_t addr = 0;
   const char *hostname = NULL;
