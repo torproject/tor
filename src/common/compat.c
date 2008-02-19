@@ -525,7 +525,9 @@ tor_close_socket(int s)
 #endif
     r = -1;
   }
-  tor_assert(n_sockets_open > 0);
+  if (n_sockets_open < 0)
+    log_warn(LD_BUG, "Our socket count is below zero: %d. Please submit a "
+             "bug report.", n_sockets_open);
   return r;
 }
 
