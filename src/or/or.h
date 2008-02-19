@@ -648,6 +648,8 @@ typedef enum {
 #define CELL_DIRECTION_OUT 2
 
 #ifdef TOR_PERF
+/* These options are here for internal testing on a separate network. If
+ * you enable them, you won't be compatible with the main Tor network. */
 #define CIRCWINDOW_START 10000
 #define CIRCWINDOW_INCREMENT 1000
 #define STREAMWINDOW_START 5000
