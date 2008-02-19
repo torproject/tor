@@ -509,6 +509,7 @@ tor_close_socket(int s)
 #else
   close(s);
 #endif
+  tor_assert(n_sockets_open > 0);
   --n_sockets_open;
 }
 
