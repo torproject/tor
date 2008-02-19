@@ -12,6 +12,11 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       would stop building circuits and start refusing connections after
       24 hours, since we falsely believed that Tor was dormant. Reported
       by nwf; bugfix on 0.1.2.x.
+    - When counting the number of open sockets, count not only the number
+      of sockets we have received from the socket() call, but also the
+      number we've gotten from accept().  This bug made us fail to count
+      all sockets that we were using for incoming connections.  Bugfix on
+      0.2.0.x
 
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of

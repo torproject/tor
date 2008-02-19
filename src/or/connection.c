@@ -929,7 +929,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
 
-  news = accept(conn->s,(struct sockaddr *)&addrbuf,&remotelen);
+  news = tor_accept_socket(conn->s,(struct sockaddr *)&addrbuf,&remotelen);
   if (news < 0) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {

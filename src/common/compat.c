@@ -546,6 +546,29 @@ tor_close_socket(int s)
   return r;
 }
 
+#ifdef DEBUG_SOCKET_COUNTING
+static INLINE void
+mark_socket_open(int s)
+{
+  if (s > max_socket) {
+    if (max_socket == -1) {
+      open_sockets = bitarray_init_zero(s+128);
+      max_socket = s+128;
+    } else {
+      open_sockets = bitarray_expand(open_sockets, max_socket, s+128);
+      max_socket = s+128;
+    }
+  }
+  if (bitarray_is_set(open_sockets, s)) {
+    log_warn(LD_BUG, "I thought that %d was already open, but socket() just "
+             "gave it to me!", s);
+  }
+  bitarray_set(open_sockets, s);
+}
+#else
+#define mark_socket_open(s) STMT_NIL
+#endif
+
 /** As socket(), but counts the number of open sockets. */
 int
 tor_open_socket(int domain, int type, int protocol)
@@ -553,22 +576,19 @@ tor_open_socket(int domain, int type, int protocol)
   int s = socket(domain, type, protocol);
   if (s >= 0) {
     ++n_sockets_open;
-#ifdef DEBUG_SOCKET_COUNTING
-    if (s > max_socket) {
-      if (max_socket == -1) {
-        open_sockets = bitarray_init_zero(s+128);
-        max_socket = s+128;
-      } else {
-        open_sockets = bitarray_expand(open_sockets, max_socket, s+128);
-        max_socket = s+128;
-      }
-    }
-    if (bitarray_is_set(open_sockets, s)) {
-      log_warn(LD_BUG, "I thought that %d was already open, but socket() just "
-               "gave it to me!", s);
-    }
-    bitarray_set(open_sockets, s);
-#endif
+    mark_socket_open(s);
+  }
+  return s;
+}
+
+/** As socket(), but counts the number of open sockets. */
+int
+tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len)
+{
+  int s = accept(sockfd, addr, len);
+  if (s >= 0) {
+    ++n_sockets_open;
+    mark_socket_open(s);
   }
   return s;
 }
@@ -676,7 +696,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
       goto tidy_up_and_fail;
 
     size = sizeof(listen_addr);
-    acceptor = accept(listener, (struct sockaddr *) &listen_addr, &size);
+    acceptor = tor_accept_socket(listener,
+                                 (struct sockaddr *) &listen_addr, &size);
     if (acceptor < 0)
       goto tidy_up_and_fail;
     if (size != sizeof(listen_addr))

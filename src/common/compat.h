@@ -257,6 +257,7 @@ int touch_file(const char *fname);
 
 int tor_close_socket(int s);
 int tor_open_socket(int domain, int type, int protocol);
+int tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len);
 int get_n_open_sockets(void);
 
 #ifdef USE_BSOCKETS
