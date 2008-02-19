@@ -485,13 +485,18 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
 {
   char *cp;
   char *end;
-  int i;
+  int i, r;
   size_t asn1len;
   size_t buflen =
          PK_BYTES*2*(smartlist_len(desc->intro_nodes)+2);/*Too long, but ok*/
   cp = *str_out = tor_malloc(buflen);
   end = cp + PK_BYTES*2*(smartlist_len(desc->intro_nodes)+1);
-  asn1len = crypto_pk_asn1_encode(desc->pk, cp+2, end-(cp+2));
+  r = crypto_pk_asn1_encode(desc->pk, cp+2, end-(cp+2));
+  if (r < 0) {
+    tor_free(*str_out);
+    return -1;
+  }
+  asn1len = r;
   set_uint16(cp, htons((uint16_t)asn1len));
   cp += 2+asn1len;
   set_uint32(cp, htonl((uint32_t)desc->timestamp));
@@ -509,12 +514,12 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     cp += strlen(ipoint)+1;
   }
   note_crypto_pk_op(REND_SERVER);
-  i = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
-  if (i<0) {
+  r = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
+  if (r<0) {
     tor_free(*str_out);
     return -1;
   }
-  cp += i;
+  cp += r;
   *len_out = (size_t)(cp-*str_out);
   return 0;
 }
