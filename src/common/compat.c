@@ -637,6 +637,16 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #if defined(HAVE_SOCKETPAIR) && !defined(MS_WINDOWS)
   int r;
   r = socketpair(family, type, protocol, fd);
+  if (r == 0) {
+    if (fd[0] >= 0) {
+      ++n_sockets_open;
+      mark_socket_open(fd[0]);
+    }
+    if (fd[1] >= 0) {
+      ++n_sockets_open;
+      mark_socket_open(fd[1]);
+    }
+  }
   return r < 0 ? -errno : r;
 #elif defined(USE_BSOCKETS)
   return bsocketpair(family, type, protocol, fd);

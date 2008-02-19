@@ -366,6 +366,7 @@ _connection_free(connection_t *conn)
   if (conn->s >= 0) {
     log_debug(LD_NET,"closing fd %d.",conn->s);
     tor_close_socket(conn->s);
+    conn->s = -1;
   }
 
   if (conn->type == CONN_TYPE_OR &&
