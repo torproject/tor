@@ -688,6 +688,14 @@ directory_initiate_command(const char *address, uint32_t addr,
     }
   } else { /* we want to connect via a tor connection */
     edge_connection_t *linked_conn;
+
+    /* If it's an anonymized connection, remember the fact that we
+     * wanted it for later: maybe we'll want it again soon. */
+    if (anonymized_connection && use_begindir)
+      rep_hist_note_used_internal(now, 0, 1);
+    else if (anonymized_connection && !use_begindir)
+      rep_hist_note_used_port(time(NULL), conn->_base.port);
+
     /* make an AP connection
      * populate it and add it at the right state
      * hook up both sides

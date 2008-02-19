@@ -1546,6 +1546,7 @@ rep_hist_circbuilding_dormant(time_t now)
     return 0;
 
   /* see if we'll still need to build testing circuits */
+//XXX020 actually, is it orport_reachable or still-doing-bandwidth-tests?
   if (server_mode(get_options()) && !check_whether_orport_reachable())
     return 0;
   if (!check_whether_dirport_reachable())

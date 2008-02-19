@@ -1244,6 +1244,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   int automap = 0;
   char orig_address[MAX_SOCKS_ADDR_LEN];
   time_t map_expires = TIME_MAX;
+  time_t now = time(NULL);
 
   tor_strlower(socks->address); /* normalize it */
   strlcpy(orig_address, socks->address, sizeof(orig_address));
@@ -1406,7 +1407,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return 0;
       }
       tor_assert(!automap);
-      rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
+      rep_hist_note_used_resolve(now); /* help predict this next time */
     } else if (socks->command == SOCKS_COMMAND_CONNECT) {
       tor_assert(!automap);
       if (socks->port == 0) {
@@ -1438,10 +1439,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
       if (!conn->use_begindir) {
         /* help predict this next time */
-        rep_hist_note_used_port(socks->port, time(NULL));
+        rep_hist_note_used_port(socks->port, now);
       }
     } else if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
-      rep_hist_note_used_resolve(time(NULL)); /* help predict this next time */
+      rep_hist_note_used_resolve(now); /* help predict this next time */
       /* no extra processing needed */
     } else {
       tor_fragile_assert();
@@ -1491,6 +1492,11 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
+
+    /* Help predict this next time. We're not sure if it will need
+     * a stable circuit yet, but we know we'll need *something*. */
+    rep_hist_note_used_internal(now, 0, 1);
+
     if (r==0) {
       conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
@@ -1503,7 +1509,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 /** How long after we receive a hidden service descriptor do we consider
  * it valid? */
 #define NUM_SECONDS_BEFORE_HS_REFETCH (60*15)
-      if (time(NULL) - entry->received < NUM_SECONDS_BEFORE_HS_REFETCH) {
+      if (now - entry->received < NUM_SECONDS_BEFORE_HS_REFETCH) {
         conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
         log_info(LD_REND, "Descriptor is here and fresh enough. Great.");
         if (connection_ap_handshake_attach_circuit(conn) < 0) {

@@ -8,6 +8,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - Resolved problems with (re-)fetching hidden service descriptors.
       Patch from Karsten Loesing; fixes problems with 0.2.0.18-alpha
       and 0.2.0.19-alpha.
+    - If we only ever used Tor for hidden service lookups or posts, we
+      would stop building circuits and start refusing connections after
+      24 hours, since we false believed that Tor was dormant. Reported
+      by nwf; bugfix on 0.1.2.x.
 
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of
@@ -32,7 +36,7 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       network; it was producing too many wrong guesses.
     - We were leaking a file descriptor if Tor started with a zero-length
       cached-descriptors file. Patch by freddy77; bugfix on 0.1.2.
-    - Have the new hidden service code respect the SafeLogging setting.
+    - Make the new hidden service code respect the SafeLogging setting.
       Bugfix on 0.2.0.x.  Patch from Karsten.
 
   o Code simplifications and refactoring:
