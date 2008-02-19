@@ -1133,6 +1133,12 @@ router_parse_entry_from_string(const char *s, const char *end,
       memcpy(cp, prepend_annotations, prepend_len);
       cp += prepend_len;
     }
+    /* This assertion will always succeed.
+     * len == signed_desc_len + annotations_len
+     *     == end-s + s-start_of_annotations + prepend_len
+     *     == end-start_of_annotations + prepend_len
+     * We already wrote prepend_len bytes into the buffer; now we're
+     * writing end-start_of_annotations -NM. */
     tor_assert(cp+(end-start_of_annotations) ==
                router->cache_info.signed_descriptor_body+len);
     memcpy(cp, start_of_annotations, end-start_of_annotations);
