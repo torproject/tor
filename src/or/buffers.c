@@ -1056,7 +1056,7 @@ buf_pos_inc(buf_pos_t *pos)
 /** Return true iff the <b>n</b>-character string in <b>s</b> appears
  * (verbatim) at <b>pos</b>. */
 static int
-buf_matches_at_pos(const buf_pos_t *pos, const char *s, int n)
+buf_matches_at_pos(const buf_pos_t *pos, const char *s, size_t n)
 {
   buf_pos_t p;
   memcpy(&p, pos, sizeof(p));
@@ -1076,7 +1076,7 @@ buf_matches_at_pos(const buf_pos_t *pos, const char *s, int n)
 /** Return the first position in <b>buf</b> at which the <b>n</b>-character
  * string <b>s</b> occurs, or -1 if it does not occur. */
 static int
-buf_find_string_offset(const buf_t *buf, const char *s, int n)
+buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
 {
   buf_pos_t pos;
   buf_pos_init(buf, &pos);
