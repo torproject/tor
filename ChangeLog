@@ -7,6 +7,10 @@ Changes in versino 0.1.2.20 - 2008-??-??
       blocked_on_or_conn field set.  This prevents a rare assertion error
       that could occur when an OR connection carrying tunneled directory
       requests closed before the requests were complete.  Fixes bug 406.
+    - If we only ever used Tor for hidden service lookups or posts, we
+      would stop building circuits and start refusing connections after
+      24 hours, since we falsely believed that Tor was dormant. Reported
+      by nwf.
 
   o Minor bugfixes:
     - Stop recommending that every server operator send mail to tor-ops.

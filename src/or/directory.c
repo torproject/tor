@@ -455,6 +455,10 @@ directory_initiate_command(const char *address, uint32_t addr,
      * populate it and add it at the right state
      * socketpair and hook up both sides
      */
+
+    if (private_connection)
+      rep_hist_note_used_port(time(NULL), conn->_base.port);
+
     conn->dirconn_direct = 0;
     conn->_base.s =
       connection_ap_make_bridge(conn->_base.address, conn->_base.port,

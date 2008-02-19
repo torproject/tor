@@ -1390,6 +1390,11 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
+
+    /* Help predict this next time. We're not sure if it will need
+     * a stable circuit yet, but we know we'll need *something*. */
+    rep_hist_note_used_internal(now, 0, 1);
+
     if (r==0) {
       conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
