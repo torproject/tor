@@ -157,6 +157,7 @@ evdns_log_cb(int warn, const char *msg)
   if (!strcmpstart(msg, "Nameserver ") && (cp=strstr(msg, " has failed: "))) {
     char *ns = tor_strndup(msg+11, cp-(msg+11));
     const char *err = strchr(cp, ':'+2);
+    tor_assert(err);
     /* Don't warn about a single failed nameserver; we'll warn with 'all
      * nameservers have failed' if we're completely out of nameservers;
      * otherwise, the situation is tolerable. */
