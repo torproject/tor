@@ -52,6 +52,8 @@ const char tortls_c_id[] =
 /** How long do identity certificates live? (sec) */
 #define IDENTITY_CERT_LIFETIME  (365*24*60*60)
 
+#define ADDR(tls) (((tls) && (tls)->address) ? tls->address : "peer")
+
 /** Structure holding the TLS state for a single connection. */
 typedef struct tor_tls_context_t {
   int refcnt;
@@ -69,6 +71,7 @@ struct tor_tls_t {
   tor_tls_context_t *context; /** A link to the context object for this tls */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
+  char *address; /**< An address to log when describing this connectinon. */
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
@@ -157,20 +160,24 @@ static int tls_library_is_initialized = 0;
  * <b>doing</b> to describe our current activities.
  */
 static void
-tls_log_errors(int severity, const char *doing)
+tls_log_errors(tor_tls_t *tls, int severity, const char *doing)
 {
   int err;
-  const char *msg, *lib, *func;
+  const char *msg, *lib, *func, *addr;
+  addr = tls ? tls->address : NULL;
   while ((err = ERR_get_error()) != 0) {
     msg = (const char*)ERR_reason_error_string(err);
     lib = (const char*)ERR_lib_error_string(err);
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
     if (doing) {
-      log(severity, LD_NET, "TLS error while %s: %s (in %s:%s)",
-          doing, msg, lib,func);
+      log(severity, LD_NET, "TLS error while %s%s%s: %s (in %s:%s)",
+          doing, addr?" with ":"", addr?addr:"",
+          msg, lib, func);
     } else {
-      log(severity, LD_NET, "TLS error: %s (in %s:%s)", msg, lib, func);
+      log(severity, LD_NET, "TLS error%s%s: %s (in %s:%s)",
+          addr?" with ":"", addr?addr:"",
+          msg, lib, func);
     }
   }
 }
@@ -270,18 +277,18 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
             doing, e, tor_socket_strerror(e));
         tor_error = tor_errno_to_tls_error(e);
       }
-      tls_log_errors(severity, doing);
+      tls_log_errors(tls, severity, doing);
       return tor_error;
     case SSL_ERROR_ZERO_RETURN:
       if (extra&CATCH_ZERO)
         return _TOR_TLS_ZERORETURN;
       log(severity, LD_NET, "TLS error: Zero return");
-      tls_log_errors(severity, doing);
+      tls_log_errors(tls, severity, doing);
       /* XXXX020 Actually, a 'zero return' error has a pretty specific meaning:
        * the connection has been closed cleanly.  */
       return TOR_TLS_ERROR_MISC;
     default:
-      tls_log_errors(severity, doing);
+      tls_log_errors(tls, severity, doing);
       return TOR_TLS_ERROR_MISC;
   }
 }
@@ -404,7 +411,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
     x509 = NULL;
   }
  done:
-  tls_log_errors(LOG_WARN, "generating certificate");
+  tls_log_errors(NULL, LOG_WARN, "generating certificate");
   if (sign_pkey)
     EVP_PKEY_free(sign_pkey);
   if (pkey)
@@ -595,7 +602,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   return 0;
 
  error:
-  tls_log_errors(LOG_WARN, "creating TLS context");
+  tls_log_errors(NULL, LOG_WARN, "creating TLS context");
   tor_free(nickname);
   tor_free(nn2);
   if (pkey)
@@ -618,7 +625,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
  * a list that indicates that the client know how to do the v2 TLS connection
  * handshake. */
 static int
-tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
+tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
 {
   int i;
   SSL_SESSION *session;
@@ -642,7 +649,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
         strcmp(ciphername, SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA) &&
         strcmp(ciphername, "(NONE)")) {
       /* XXXX should be ld_debug */
-      log_info(LD_NET, "Got a non-version-1 cipher called '%s'",ciphername);
+      log_info(LD_NET, "Got a non-version-1 cipher called '%s'", ciphername);
       // return 1;
       goto dump_list;
     }
@@ -658,7 +665,8 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl)
       smartlist_add(elts, (char*)ciphername);
     }
     s = smartlist_join_strings(elts, ":", 0, NULL);
-    log_info(LD_NET, "Got a non-version-1 cipher list.  It is: '%s'", s);
+    log_info(LD_NET, "Got a non-version-1 cipher list from %s.  It is: '%s'",
+             s, address);
     tor_free(s);
     smartlist_free(elts);
   }
@@ -691,7 +699,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
   }
 
   /* Now check the cipher list. */
-  if (tor_tls_client_is_using_v2_ciphers(ssl)) {
+  if (tor_tls_client_is_using_v2_ciphers(ssl, ADDR(tls))) {
     /*XXXX_TLS keep this from happening more than once! */
 
     /* Yes, we're casting away the const from ssl.  This is very naughty of us.
@@ -722,7 +730,7 @@ tor_tls_new(int sock, int isServer)
 
   tor_assert(global_tls_context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
-    tls_log_errors(LOG_WARN, "generating TLS context");
+    tls_log_errors(NULL, LOG_WARN, "generating TLS context");
     tor_free(result);
     return NULL;
   }
@@ -739,7 +747,7 @@ tor_tls_new(int sock, int isServer)
   bio = BIO_new_socket(sock, BIO_NOCLOSE);
 #endif
   if (! bio) {
-    tls_log_errors(LOG_WARN, "opening BIO");
+    tls_log_errors(NULL, LOG_WARN, "opening BIO");
     SSL_free(result->ssl);
     tor_free(result);
     return NULL;
@@ -757,8 +765,19 @@ tor_tls_new(int sock, int isServer)
   }
 #endif
   /* Not expected to get called. */
-  tls_log_errors(LOG_WARN, "generating TLS context");
+  tls_log_errors(NULL, LOG_WARN, "generating TLS context");
   return result;
+}
+
+/** Make future log messages about <b>tls</b> display the address
+ * <b>address</b>.
+ */
+void
+tor_tls_set_logged_address(tor_tls_t *tls, const char *address)
+{
+  tor_assert(tls);
+  tor_free(tls->address);
+  tls->address = tor_strdup(address);
 }
 
 /** Set <b>cb</b> to be called with argument <b>arg</b> whenever <b>tls</b>
@@ -808,6 +827,7 @@ tor_tls_free(tor_tls_t *tls)
   tls->negotiated_callback = NULL;
   if (tls->context)
     tor_tls_context_decref(tls->context);
+  tor_free(tls->address);
   tor_free(tls);
 }
 
@@ -828,7 +848,7 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
 #ifdef V2_HANDSHAKE_SERVER
     if (tls->got_renegotiate) {
       /* Renegotiation happened! */
-      log_info(LD_NET, "Got a TLS renegotiation from %p", tls);
+      log_info(LD_NET, "Got a TLS renegotiation from %s", ADDR(tls));
       if (tls->negotiated_callback)
         tls->negotiated_callback(tls, tls->callback_arg);
       tls->got_renegotiate = 0;
@@ -900,7 +920,7 @@ tor_tls_handshake(tor_tls_t *tls)
   }
   r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
   if (ERR_peek_error() != 0) {
-    tls_log_errors(tls->isServer ? LOG_INFO : LOG_WARN,
+    tls_log_errors(tls, tls->isServer ? LOG_INFO : LOG_WARN,
                    "handshaking");
     return TOR_TLS_ERROR_MISC;
   }
@@ -912,7 +932,7 @@ tor_tls_handshake(tor_tls_t *tls)
       /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
       tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
 #ifdef V2_HANDSHAKE_SERVER
-      if (tor_tls_client_is_using_v2_ciphers(tls->ssl)) {
+      if (tor_tls_client_is_using_v2_ciphers(tls->ssl, ADDR(tls))) {
         /* This check is redundant, but back when we did it in the callback,
          * we might have not been able to look up the tor_tls_t if the code
          * was buggy.  Fixing that. */
@@ -1047,7 +1067,7 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
 {
   X509 *cert;
   cert = SSL_get_peer_certificate(tls->ssl);
-  tls_log_errors(LOG_WARN, "getting peer certificate");
+  tls_log_errors(tls, LOG_WARN, "getting peer certificate");
   if (!cert)
     return 0;
   X509_free(cert);
@@ -1074,7 +1094,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
     log_warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
   }
   if (!(ASN1_TIME_print(bio, X509_get_notBefore(cert)))) {
-    tls_log_errors(LOG_WARN, "printing certificate lifetime");
+    tls_log_errors(NULL, LOG_WARN, "printing certificate lifetime");
     goto end;
   }
   BIO_get_mem_ptr(bio, &buf);
@@ -1082,7 +1102,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
 
   (void)BIO_reset(bio);
   if (!(ASN1_TIME_print(bio, X509_get_notAfter(cert)))) {
-    tls_log_errors(LOG_WARN, "printing certificate lifetime");
+    tls_log_errors(NULL, LOG_WARN, "printing certificate lifetime");
     goto end;
   }
   BIO_get_mem_ptr(bio, &buf);
@@ -1096,7 +1116,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
 
  end:
   /* Not expected to get invoked */
-  tls_log_errors(LOG_WARN, "getting certificate lifetime");
+  tls_log_errors(NULL, LOG_WARN, "getting certificate lifetime");
   if (bio)
     BIO_free(bio);
   if (s1)
@@ -1170,7 +1190,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
   if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
     log_fn(severity,LD_PROTOCOL,"X509_verify on cert and pkey returned <= 0");
-    tls_log_errors(severity,"verifying certificate");
+    tls_log_errors(tls, severity,"verifying certificate");
     goto done;
   }
 
@@ -1189,7 +1209,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
 
   /* This should never get invoked, but let's make sure in case OpenSSL
    * acts unexpectedly. */
-  tls_log_errors(LOG_WARN, "finishing tor_tls_verify");
+  tls_log_errors(tls, LOG_WARN, "finishing tor_tls_verify");
 
   return r;
 }
@@ -1228,7 +1248,7 @@ tor_tls_check_lifetime(tor_tls_t *tls, int tolerance)
   if (cert)
     X509_free(cert);
   /* Not expected to get invoked */
-  tls_log_errors(LOG_WARN, "checking certificate lifetime");
+  tls_log_errors(tls, LOG_WARN, "checking certificate lifetime");
 
   return r;
 }
@@ -1281,7 +1301,7 @@ _check_no_tls_errors(const char *fname, int line)
     return;
   log(LOG_WARN, LD_CRYPTO, "Unhandled OpenSSL errors found at %s:%d: ",
       tor_fix_source_file(fname), line);
-  tls_log_errors(LOG_WARN, NULL);
+  tls_log_errors(NULL, LOG_WARN, NULL);
 }
 
 /** Return true iff the initial TLS connection at <b>tls</b> did not use a v2

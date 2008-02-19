@@ -29,6 +29,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       to use for one-off session password hashes that shouldn't get
       saved to disk by SAVECONF.  Partial fix for bug 586.
 
+  o Minor features (logging):
+    - When SafeLogging is disabled, log addresses along with all TLS
+      errors.
+
   o Minor bugfixes:
     - Log the correct memory chunk sizes for empty RAM chunks in mempool.c.
     - Directory mirrors no longer include a guess at the client's IP

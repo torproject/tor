@@ -573,6 +573,7 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
 {
   conn->_base.state = OR_CONN_STATE_TLS_HANDSHAKING;
   conn->tls = tor_tls_new(conn->_base.s, receiving);
+  tor_tls_set_logged_address(conn->tls, escaped_safe_str(conn->_base.address));
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
