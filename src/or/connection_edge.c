@@ -1393,7 +1393,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
     /* Help predict this next time. We're not sure if it will need
      * a stable circuit yet, but we know we'll need *something*. */
-    rep_hist_note_used_internal(now, 0, 1);
+    rep_hist_note_used_internal(time(NULL), 0, 1);
 
     if (r==0) {
       conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
