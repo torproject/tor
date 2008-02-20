@@ -2554,7 +2554,7 @@ void circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
                                  or_connection_t *conn);
 void circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
                                  or_connection_t *conn);
-void circuit_set_state(circuit_t *circ, int state);
+void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
 origin_circuit_t *origin_circuit_new(void);
 or_circuit_t *or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn);

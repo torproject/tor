@@ -185,7 +185,7 @@ circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
 /** Change the state of <b>circ</b> to <b>state</b>, adding it to or removing
  * it from lists as appropriate. */
 void
-circuit_set_state(circuit_t *circ, int state)
+circuit_set_state(circuit_t *circ, uint8_t state)
 {
   tor_assert(circ);
   if (state == circ->state)
