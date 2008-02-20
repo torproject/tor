@@ -330,24 +330,25 @@ void* strmap_remove_lc(strmap_t *map, const char *key);
 typedef unsigned int bitarray_t;
 /** Create a new bit array that can hold <b>n_bits</b> bits. */
 static INLINE bitarray_t *
-bitarray_init_zero(int n_bits)
+bitarray_init_zero(unsigned int n_bits)
 {
-  size_t sz = (n_bits+BITARRAY_MASK) / (1u << BITARRAY_SHIFT);
+  /* round up to the next int. */
+  size_t sz = (n_bits+BITARRAY_MASK) >> BITARRAY_SHIFT;
   return tor_malloc_zero(sz*sizeof(unsigned int));
 }
 static INLINE bitarray_t *
-bitarray_expand(bitarray_t *ba, int n_bits_old, int n_bits_new)
+bitarray_expand(bitarray_t *ba,
+                unsigned int n_bits_old, unsigned int n_bits_new)
 {
-  size_t sz_old = (n_bits_old+BITARRAY_MASK) / (1u << BITARRAY_SHIFT);
-  size_t sz_new = (n_bits_new+BITARRAY_MASK) / (1u << BITARRAY_SHIFT);
+  size_t sz_old = (n_bits_old+BITARRAY_MASK) >> BITARRAY_SHIFT;
+  size_t sz_new = (n_bits_new+BITARRAY_MASK) >> BITARRAY_SHIFT;
   char *ptr;
   if (sz_new <= sz_old)
     return ba;
-  ptr = tor_realloc(ba, sz_new);
-  memset(ptr+sz_old, 0, sz_new-sz_old); /* This does nothing to the older
-                                         * excess bytes.  But they were
-                                         * already set to 0 by
-                                         * bitarry_init_zero. */
+  ptr = tor_realloc(ba, sz_new*sizeof(unsigned int));
+  /* This memset does nothing to the older excess bytes.  But they were
+   * already set to 0 by bitarry_init_zero. */
+  memset(ptr+sz_old, 0, (sz_new-sz_old)*sizeof(unsigned int));
   return (bitarray_t*) ptr;
 }
 /** Free the bit array <b>ba</b>. */
