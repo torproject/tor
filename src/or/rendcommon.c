@@ -510,7 +510,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     base16_encode(ipoint+1, HEX_DIGEST_LEN+1,
                   intro->extend_info->identity_digest,
                   DIGEST_LEN);
-    tor_assert(buflen >= cp-*str_out); /* XXX021 This assert is a kludge. */
+    tor_assert(buflen + *str_out >= cp); /* XXX021 This assert is a kludge. */
     strlcpy(cp, ipoint, buflen-(cp-*str_out));
     cp += strlen(ipoint)+1;
   }
