@@ -2186,7 +2186,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 		if ((cp-ip_as_string) >= (int)sizeof(buf)) {
 			return 4;
 		}
-		tor_assert(cp >= ip_as_string);
+		assert(cp >= ip_as_string);
 		memcpy(buf, ip_as_string, cp-ip_as_string);
 		buf[cp-ip_as_string] = '\0';
 		cp = buf;
