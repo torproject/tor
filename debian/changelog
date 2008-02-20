@@ -3,7 +3,7 @@ tor (0.2.0.19-alpha+svn-1) unreleased; urgency=low
   * Change the default for MAX_FILEDESCRIPTORS in our init script to depend
     on the number of system-wide available file descriptors:
     /proc/sys/fs/file-max is bigger than 80k, set ulimit -n to 32k, if it's
-    greater than 40k set the limit to 16k, and when greater than 20k our limit
+    greater than 40k set the limit to 16k, and when greater than 10k our limit
     shall be 8k descriptors.  If there are less than 20k FDs in the entire
     system default to a limit of only 1024.
 
@@ -11,7 +11,7 @@ tor (0.2.0.19-alpha+svn-1) unreleased; urgency=low
     default of 8k no longer is sufficient.  On the other hand we don't want
     lower end systems to run out of FDs on Tor's account.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 20 Feb 2008 23:33:00 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed, 20 Feb 2008 23:38:45 +0100
 
 tor (0.2.0.19-alpha-1) experimental; urgency=low
 

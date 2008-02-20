@@ -32,7 +32,7 @@ if [ -r /proc/sys/fs/file-max ]; then
 		MAX_FILEDESCRIPTORS=32768
 	elif [ "$system_max" -gt "40000" ] ; then
 		MAX_FILEDESCRIPTORS=16384
-	elif [ "$system_max" -gt "20000" ] ; then
+	elif [ "$system_max" -gt "10000" ] ; then
 		MAX_FILEDESCRIPTORS=8192
 	else
 		MAX_FILEDESCRIPTORS=1024
