@@ -25,7 +25,20 @@ TORPID=$TORPIDDIR/tor.pid
 DEFAULTSFILE=/etc/default/$NAME
 WAITFORDAEMON=60
 ARGS=""
-MAX_FILEDESCRIPTORS=8192
+# Let's try to figure our some sane defaults:
+if [ -r /proc/sys/fs/file-max ]; then
+	system_max=`cat /proc/sys/fs/file-max`
+	if [ "$system_max" -gt "100000" ] ; then
+		MAX_FILEDESCRIPTORS=32768
+	elif [ "$system_max" -gt "20000" ] ; then
+		MAX_FILEDESCRIPTORS=8192
+	else
+		MAX_FILEDESCRIPTORS=1024
+	fi
+else
+	MAX_FILEDESCRIPTORS=8192
+fi
+
 NICE=""
 
 test -x $DAEMON || exit 0

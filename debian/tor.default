@@ -9,10 +9,15 @@ RUN_DAEMON="yes"
 
 #
 # Servers sometimes may need more than the default 1024 file descriptors
-# if they are very busy and have many clients connected to them.
+# if they are very busy and have many clients connected to them.  The top
+# servers as of early 2008 regularly have more than 10000 connected
+# clients.
 #  (ulimit -n)
 #
-MAX_FILEDESCRIPTORS=8192
+# (the default varies as it depends on the number of available system-wide file
+#  descriptors.  See the init script in /etc/init.d/tor for details.)
+#
+# MAX_FILEDESCRIPTORS=
 
 #
 # If tor is seriously hogging your CPU, taking away too much cycles from
