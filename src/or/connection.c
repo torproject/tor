@@ -600,6 +600,7 @@ _connection_mark_for_close(connection_t *conn, int line, const char *file)
 {
   assert_connection_ok(conn,0);
   tor_assert(line);
+  tor_assert(line < 1<<16); /* marked_for_close can only fit a uint16_t. */
   tor_assert(file);
 
   if (conn->marked_for_close) {
