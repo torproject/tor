@@ -348,7 +348,8 @@ bitarray_expand(bitarray_t *ba,
   ptr = tor_realloc(ba, sz_new*sizeof(unsigned int));
   /* This memset does nothing to the older excess bytes.  But they were
    * already set to 0 by bitarry_init_zero. */
-  memset(ptr+sz_old, 0, (sz_new-sz_old)*sizeof(unsigned int));
+  memset(ptr+sz_old*sizeof(unsigned int), 0,
+         (sz_new-sz_old)*sizeof(unsigned int));
   return (bitarray_t*) ptr;
 }
 /** Free the bit array <b>ba</b>. */
