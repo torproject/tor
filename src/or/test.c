@@ -28,6 +28,7 @@ const char tor_svn_revision[] = "";
 
 /* These macros pull in declarations for some functions and structures that
  * are typically file-private. */
+#define BUFFERS_PRIVATE
 #define CONFIG_PRIVATE
 #define CONTROL_PRIVATE
 #define CRYPTO_PRIVATE
@@ -117,6 +118,7 @@ test_buffers(void)
   char str2[256];
 
   buf_t *buf, *buf2;
+  const char *cp;
 
   int j;
   size_t r;
@@ -255,7 +257,20 @@ test_buffers(void)
   buf_free(buf);
   buf_free(buf2);
 
-  /*XXXX020 Test code to find chars and strings on buffers. */
+  buf = buf_new_with_capacity(5);
+  cp = "Testing. This is a moderately long Testing string.";
+  for (j = 0; cp[j]; j++)
+    write_to_buf(cp+j, 1, buf);
+  test_eq(0, buf_find_string_offset(buf, "Testing", 7));
+  test_eq(1, buf_find_string_offset(buf, "esting", 6));
+  test_eq(1, buf_find_string_offset(buf, "est", 3));
+  test_eq(39, buf_find_string_offset(buf, "ing str", 7));
+  test_eq(35, buf_find_string_offset(buf, "Testing str", 11));
+  test_eq(32, buf_find_string_offset(buf, "ng ", 3));
+  test_eq(-1, buf_find_string_offset(buf, "shrdlu", 6));
+  test_eq(-1, buf_find_string_offset(buf, "Testing thing", 13));
+  test_eq(-1, buf_find_string_offset(buf, "ngx", 3));
+  buf_free(buf);
 
 #if 0
   {
