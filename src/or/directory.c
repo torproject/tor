@@ -2639,27 +2639,19 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       connection_dir_is_encrypted(conn) &&
       !strcmp(url,"/tor/networkstatus-bridges")) {
     char *status;
-    char decoded[64];
-    char *secret;
-    int r;
+    char *secret = alloc_http_authenticator(options->BridgePassword);
 
     header = http_get_header(headers, "Authorization: Basic ");
 
-    if (!header) {
+    /* now make sure the password is there and right */
+    if (!header || strcmp(header, secret)) {
       write_http_status_line(conn, 404, "Not found");
-      goto done;
-    }
-
-    /* now make sure the password is right */
-    r = base64_decode(decoded, sizeof(decoded), header, strlen(header));
-    secret = alloc_http_authenticator(options->BridgePassword);
-    if (r < 0 || (unsigned)r != strlen(secret) || memcmp(decoded, secret, r)) {
-      /* failed to decode, or didn't match. Refuse. */
-      write_http_status_line(conn, 404, "Not found");
+      tor_free(secret);
       tor_free(header);
       goto done;
     }
     tor_free(secret);
+    tor_free(header);
 
     /* all happy now. send an answer. */
     status = networkstatus_getinfo_by_purpose("bridge", time(NULL));
