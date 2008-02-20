@@ -756,46 +756,76 @@ typedef unsigned long rlim_t;
 /** Learn the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.
  *
- * We compute this by finding the largest number between <b>limit</b>
- * and <b>cap</b> that we can use. If we can't find a number greater
- * than or equal to <b>limit</b>, then we fail: return -1.
+ * We compute this by finding the largest number that we can use.
+ * If we can't find a number greater than or equal to <b>limit</b>,
+ * then we fail: return -1.
  *
- * Otherwise, return the number minus some buffer to allow for other
- * file descriptors we'll want available for ordinary use. */
+ * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>.*/
 int
-set_max_file_descriptors(unsigned long limit, unsigned long cap)
+set_max_file_descriptors(unsigned long limit, int *max_out)
 {
+#define DEFAULT_MAX_CONNECTIONS 15000
+#define CYGWIN_MAX_CONNECTIONS 3200
+#define IPHONE_MAX_CONNECTIONS 9999
+  /* Define some maximum connections values for systems where we cannot
+   * automatically determine a limit. Re Cygwin, see
+   * http://archives.seul.org/or/talk/Aug-2006/msg00210.html
+   * For an iPhone, 9999 should work. For Windows and all other unknown
+   * systems we use 15000 as the default. */
 #ifndef HAVE_GETRLIMIT
   log_fn(LOG_INFO, LD_NET,
          "This platform is missing getrlimit(). Proceeding.");
-  if (limit < cap) {
-    log_info(LD_CONFIG, "ConnLimit must be at most %d. Using that.", (int)cap);
-    limit = cap;
+#ifdef MS_WINDOWS
+  if (limit > DEFAULT_MAX_CONNECTIONS) {
+    log_warn(LD_CONFIG,
+             "We do not support more than %lu file descriptors",
+             "on Windows. Tried to raise to %lu.",
+             DEFAULT_MAX_CONNECTIONS, limit);
+    return -1;
   }
+  limit = DEFAULT_MAX_CONNECTIONS;
+#elif defined(CYGWIN) || defined(__CYGWIN__)
+  if (limit > CYGWIN_MAX_CONNECTIONS) {
+    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors",
+             "when using Cygwin. Tried to raise to %lu.",
+             CYGWIN_MAX_CONNECTIONS, limit);
+    return -1;
+  }
+  limit = CYGWIN_MAX_CONNECTIONS;
+#elif defined(IPHONE)
+  if (limit > IPHONE_MAX_CONNECTIONS) {
+    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors",
+             "on iPhone. Tried to raise to %lu.",
+             IPHONE_MAX_CONNECTIONS, limit);
+    return -1;
+  }
+  limit = IPHONE_MAX_CONNECTIONS;
+#else
+  /* Unknown system without getrlimit support. Use the default value.*/
+  limit = DEFAULT_MAX_CONNECTIONS;
+#endif
 #else
   struct rlimit rlim;
-  rlim_t most;
   tor_assert(limit > 0);
-  tor_assert(cap > 0);
 
   if (getrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     log_warn(LD_NET, "Could not get maximum number of file descriptors: %s",
              strerror(errno));
     return -1;
   }
-  //log_notice(LD_CONFIG, "%llu %llu", rlim.rlim_cur, rlim.rlim_max);
+
   if ((unsigned long)rlim.rlim_max < limit) {
     log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
              "limited to %lu. Please change your ulimit -n.",
              limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
-  most = rlim.rlim_max > (rlim_t)cap ? (rlim_t)cap : rlim.rlim_max;
-  if ((rlim_t)most > rlim.rlim_cur) {
+
+  if (rlim.rlim_max > rlim.rlim_cur) {
     log_info(LD_NET,"Raising max file descriptors from %lu to %lu.",
-             (unsigned long)rlim.rlim_cur, (unsigned long)most);
+             (unsigned long)rlim.rlim_cur, (unsigned long)rlim.rlim_max);
   }
-  rlim.rlim_cur = most;
+  rlim.rlim_cur = rlim.rlim_max;
 
   if (setrlimit(RLIMIT_NOFILE, &rlim) != 0) {
     int bad = 1;
@@ -812,9 +842,8 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
         } else {
           log_info(LD_CONFIG, "Dropped connection limit to OPEN_MAX (%lu); "
                    "Apparently, %lu was too high and rlimit lied to us.",
-                   (unsigned long)OPEN_MAX, (unsigned long)most);
+                   (unsigned long)OPEN_MAX, (unsigned long)rlim.rlim_max);
         }
-        most = rlim.rlim_cur;
         bad = 0;
       }
     }
@@ -826,7 +855,7 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
     }
   }
   /* leave some overhead for logs, etc, */
-  limit = most;
+  limit = rlim.rlim_cur;
 #endif
 
   if (limit < ULIMIT_BUFFER) {
@@ -834,7 +863,11 @@ set_max_file_descriptors(unsigned long limit, unsigned long cap)
              "ConnLimit must be at least %d. Failing.", ULIMIT_BUFFER);
     return -1;
   }
-  return limit - ULIMIT_BUFFER;
+  if (limit > INT_MAX)
+          limit = INT_MAX;
+  tor_assert(max_out);
+  *max_out = (int)limit - ULIMIT_BUFFER;
+  return 0;
 }
 
 /** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on

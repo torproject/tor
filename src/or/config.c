@@ -990,9 +990,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
 
   if (running_tor) {
     /* We need to set the connection limit before we can open the listeners. */
-    options->_ConnLimit =
-      set_max_file_descriptors((unsigned)options->ConnLimit, MAXCONNECTIONS);
-    if (options->_ConnLimit < 0) {
+    if (set_max_file_descriptors((unsigned)options->ConnLimit,
+                                 &options->_ConnLimit) < 0) {
       *msg = tor_strdup("Problem with ConnLimit value. See logs for details.");
       goto rollback;
     }
@@ -1075,7 +1074,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
   }
 
   if (set_conn_limit && old_options)
-    set_max_file_descriptors((unsigned)old_options->ConnLimit,MAXCONNECTIONS);
+    set_max_file_descriptors((unsigned)old_options->ConnLimit,
+                             &options->_ConnLimit);
 
   SMARTLIST_FOREACH(new_listeners, connection_t *, conn,
   {

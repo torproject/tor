@@ -30,6 +30,9 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - Add a --with-tcmalloc option to the configure script to link
       against tcmalloc (if present).  Does not yet search for
       non-system include paths.
+    - Stop imposing an arbitrary maximum on the number of file descriptors
+      used for busy servers.  Bug reported by Olaf Selke; patch from
+      Sebastian Hahn.
 
   o Minor features (controller):
     - Add a new __HashedControlSessionPassword option for controllers
