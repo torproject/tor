@@ -255,6 +255,8 @@ test_buffers(void)
   buf_free(buf);
   buf_free(buf2);
 
+  /*XXXX020 Test code to find chars and strings on buffers. */
+
 #if 0
   {
   int s;

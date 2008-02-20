@@ -17,6 +17,8 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       number we've gotten from accept().  This bug made us fail to count
       all sockets that we were using for incoming connections.  Bugfix on
       0.2.0.x
+    - Fix code used to find strings within buffers, when those strings
+      are not in the first chunk of the buffer.
 
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of

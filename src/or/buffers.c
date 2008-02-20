@@ -998,9 +998,8 @@ move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
 /** Internal structure: represents a position in a buffer. */
 typedef struct buf_pos_t {
   const chunk_t *chunk; /**< Which chunk are we pointing to? */
-  int pos; /**< Which character inside the chunk's data are we pointing to? */
-  int pos_absolute; /**< Which character inside the buffer are we pointing to?
-                     */
+  off_t pos;/**< Which character inside the chunk's data are we pointing to? */
+  size_t chunk_pos; /**< Total length of all previous chunks. */
 } buf_pos_t;
 
 /** Initialize <b>out</b> to point to the first character of <b>buf</b>.*/
@@ -1009,7 +1008,7 @@ buf_pos_init(const buf_t *buf, buf_pos_t *out)
 {
   out->chunk = buf->head;
   out->pos = 0;
-  out->pos_absolute = 0;
+  out->chunk_pos = 0;
 }
 
 /** Advance <b>out</b> to the first appearance of <b>ch</b> at the current
@@ -1019,19 +1018,19 @@ static int
 buf_find_pos_of_char(char ch, buf_pos_t *out)
 {
   const chunk_t *chunk;
-  int offset = 0; /*XXXX020 should this be pos_absolute? Otherwise, bug. */
   int pos;
-  tor_assert(out && out->chunk && out->pos < (int)out->chunk->datalen);
+  tor_assert(out);
+  if (out->chunk)
+    tor_assert(out->pos < out->chunk->datalen);
   pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data+pos, ch, chunk->datalen-pos);
     if (cp) {
       out->chunk = chunk;
       out->pos = cp - chunk->data;
-      out->pos_absolute = offset + (cp - chunk->data);
-      return out->pos_absolute;
+      return out->chunk_pos + out->pos;
     } else {
-      offset += chunk->datalen;
+      out->chunk_pos += chunk->datalen;
       pos = 0;
     }
   }
@@ -1043,15 +1042,14 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
 static INLINE int
 buf_pos_inc(buf_pos_t *pos)
 {
-  if ((size_t)pos->pos == pos->chunk->datalen) {
+  ++pos->pos;
+  if (pos->pos == pos->chunk->datalen) {
     if (!pos->chunk->next)
       return -1;
+    pos->chunk_pos += pos->chunk->datalen;
     pos->chunk = pos->chunk->next;
     pos->pos = 0;
-  } else {
-    ++pos->pos;
   }
-  ++pos->pos_absolute;
   return 0;
 }
 
@@ -1084,7 +1082,7 @@ buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
   buf_pos_init(buf, &pos);
   while (buf_find_pos_of_char(*s, &pos) >= 0) {
     if (buf_matches_at_pos(&pos, s, n)) {
-      return pos.pos_absolute;
+      return pos.chunk_pos + pos.pos;
     } else {
       if (buf_pos_inc(&pos)<0)
         return -1;
