@@ -57,7 +57,7 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       version of it, when handling a "/tor/networkstatus-bridges"
       directory request. Now compare correctly. Noticed by Veracode.
     - When starting as an authority, do not overwrite all certificates
-      cached from author authorities.  Bugfix on 0.2.0.x.  Fixes bug 606.
+      cached from other authorities.  Bugfix on 0.2.0.x.  Fixes bug 606.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,
