@@ -3556,8 +3556,8 @@ void rep_hist_note_extend_succeeded(const char *from_name,
                                     const char *to_name);
 void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
-void rep_hist_note_bytes_read(int num_bytes, time_t when);
-void rep_hist_note_bytes_written(int num_bytes, time_t when);
+void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
+void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);

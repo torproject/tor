@@ -1056,7 +1056,8 @@ advance_obs(bw_array_t *b)
     commit_max(b);
 }
 
-/** Add 'n' bytes to the number of bytes in b for second 'when'. */
+/** Add <b>n</b> bytes to the number of bytes in <b>b</b> for second
+ * <b>when</b>. */
 static INLINE void
 add_obs(bw_array_t *b, time_t when, uint64_t n)
 {
@@ -1106,7 +1107,7 @@ bw_arrays_init(void)
  * earlier than the latest <b>when</b> you've heard of.
  */
 void
-rep_hist_note_bytes_written(int num_bytes, time_t when)
+rep_hist_note_bytes_written(size_t num_bytes, time_t when)
 {
 /* Maybe a circular array for recent seconds, and step to a new point
  * every time a new second shows up. Or simpler is to just to have
@@ -1123,7 +1124,7 @@ rep_hist_note_bytes_written(int num_bytes, time_t when)
  * (like rep_hist_note_bytes_written() above)
  */
 void
-rep_hist_note_bytes_read(int num_bytes, time_t when)
+rep_hist_note_bytes_read(size_t num_bytes, time_t when)
 {
 /* if we're smart, we can make this func and the one above share code */
   add_obs(read_array, when, num_bytes);
@@ -1148,7 +1149,7 @@ find_largest_max(bw_array_t *b)
 
 /** Find the largest sums in the past NUM_SECS_BW_SUM_IS_VALID (roughly)
  * seconds. Find one sum for reading and one for writing. They don't have
- * to be at the same time).
+ * to be at the same time.
  *
  * Return the smaller of these sums, divided by NUM_SECS_ROLLING_MEASURE.
  */

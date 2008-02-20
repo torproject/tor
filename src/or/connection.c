@@ -1571,7 +1571,7 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
  * Decrement buckets appropriately. */
 static void
 connection_buckets_decrement(connection_t *conn, time_t now,
-                             int num_read, int num_written)
+                             size_t num_read, size_t num_written)
 {
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
