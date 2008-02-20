@@ -1372,7 +1372,7 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 			if (table) dnslabel_table_add(table, start, j);
 			buf[j++] = label_len;
 
-			memcpy(buf + j, start, end - start);
+			memcpy(buf + j, start, label_len);
 			j += end - start;
 			break;
 		} else {
@@ -2186,6 +2186,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 		if ((cp-ip_as_string) >= (int)sizeof(buf)) {
 			return 4;
 		}
+		tor_assert(cp >= ip_as_string);
 		memcpy(buf, ip_as_string, cp-ip_as_string);
 		buf[cp-ip_as_string] = '\0';
 		cp = buf;
