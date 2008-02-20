@@ -1020,8 +1020,17 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
   const chunk_t *chunk;
   int pos;
   tor_assert(out);
-  if (out->chunk)
+  if (out->chunk) {
+    if (!(out->pos < (off_t)out->chunk->datalen)) {
+      log_warn(LD_BUG, "About to assert. %p, %d, %d, %p, %d.",
+               out, (int)out->pos,
+               (int)out->chunk_pos, out->chunk,
+               out->chunk?(int)out->chunk->datalen : (int)-1
+               );
+      /*XXXX020 remove this once the bug it detects is fixed. */
+    }
     tor_assert(out->pos < (off_t)out->chunk->datalen);
+  }
   pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data+pos, ch, chunk->datalen-pos);
