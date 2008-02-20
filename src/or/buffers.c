@@ -1019,8 +1019,10 @@ static int
 buf_find_pos_of_char(char ch, buf_pos_t *out)
 {
   const chunk_t *chunk;
-  int offset = 0;
-  int pos = out->pos;
+  int offset = 0; /*XXXX020 should this be pos_absolute? Otherwise, bug. */
+  int pos;
+  tor_assert(out && out->chunk && out->pos < (int)out->chunk->datalen);
+  pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data+pos, ch, chunk->datalen-pos);
     if (cp) {

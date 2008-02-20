@@ -1787,16 +1787,17 @@ dirvote_add_signatures_to_pending_consensus(
     char *new_detached =
       networkstatus_get_detached_signatures(pending_consensus);
     const char *src;
-    char *dst;
+    char *dst, *dst_end;
     size_t new_consensus_len =
       strlen(pending_consensus_body) + strlen(new_detached) + 1;
     pending_consensus_body = tor_realloc(pending_consensus_body,
                                          new_consensus_len);
+    dst_end = pending_consensus_body + new_consensus_len;
     dst = strstr(pending_consensus_body, "directory-signature ");
     tor_assert(dst);
     src = strstr(new_detached, "directory-signature ");
     tor_assert(src);
-    strlcpy(dst, src, new_consensus_len - (dst-pending_consensus_body));
+    strlcpy(dst, src, dst_end-dst);
 
     /* We remove this block once it has failed to crash for a while.  But
      * unless it shows up in profiles, we're probably better leaving it in,

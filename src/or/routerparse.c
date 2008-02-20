@@ -2704,6 +2704,7 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
 
   /* Set *s to first token, eol to end-of-line, next to after first token */
   *s = eat_whitespace_eos(*s, eos); /* eat multi-line whitespace */
+  tor_assert(eos >= *s);
   eol = memchr(*s, '\n', eos-*s);
   if (!eol)
     eol = eos;
@@ -2775,11 +2776,13 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
 
   /* Check whether there's an object present */
   *s = eat_whitespace_eos(eol, eos);  /* Scan from end of first line */
+  tor_assert(eos >= *s);
   eol = memchr(*s, '\n', eos-*s);
   if (!eol || eol-*s<11 || strcmpstart(*s, "-----BEGIN ")) /* No object. */
     goto check_object;
 
   obstart = *s; /* Set obstart to start of object spec */
+  tor_assert(eol >= (*s+16));
   if (*s+11 >= eol-5 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
       strcmp_len(eol-5, "-----", 5)) {          /* nuls or invalid endings */
     RET_ERR("Malformed object: bad begin line");
@@ -2793,6 +2796,7 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
   if (!next) {
     RET_ERR("Malformed object: missing object end line");
   }
+  tor_assert(eos >= next);
   eol = memchr(next, '\n', eos-next);
   if (!eol)  /* end-of-line marker, or eos if there's no '\n' */
     eol = eos;
