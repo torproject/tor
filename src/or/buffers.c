@@ -13,7 +13,7 @@ const char buffers_c_id[] =
  * fairly opaque string holders that can read to or flush from:
  * memory, file descriptors, or TLS connections.
  **/
-
+#define BUFFERS_PRIVATE
 #include "or.h"
 
 //#define PARANOIA
@@ -1075,7 +1075,7 @@ buf_matches_at_pos(const buf_pos_t *pos, const char *s, size_t n)
 
 /** Return the first position in <b>buf</b> at which the <b>n</b>-character
  * string <b>s</b> occurs, or -1 if it does not occur. */
-static int
+/*private*/ int
 buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
 {
   buf_pos_t pos;

@@ -127,7 +127,7 @@ trusted_dirs_reload_certs(void)
   tor_free(filename);
   if (!contents)
     return 0;
-  r = trusted_dirs_load_certs_from_string(contents, 1);
+  r = trusted_dirs_load_certs_from_string(contents, 1, 1);
   tor_free(contents);
   return r;
 }
@@ -155,7 +155,8 @@ already_have_cert(authority_cert_t *cert)
  * to flush any changed certificates to disk.  Return 0 on success, -1 on
  * failure. */
 int
-trusted_dirs_load_certs_from_string(const char *contents, int from_store)
+trusted_dirs_load_certs_from_string(const char *contents, int from_store,
+                                    int flush)
 {
   trusted_dir_server_t *ds;
   const char *s, *eos;
@@ -215,7 +216,8 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store)
       trusted_dir_servers_certs_changed = 1;
   }
 
-  trusted_dirs_flush_certs_to_disk();
+  if (flush)
+    trusted_dirs_flush_certs_to_disk();
 
   networkstatus_note_certs_arrived();
   return 0;

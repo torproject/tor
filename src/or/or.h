@@ -2471,6 +2471,10 @@ int peek_buf_has_control0_command(buf_t *buf);
 
 void assert_buf_ok(buf_t *buf);
 
+#ifdef BUFFERS_PRIVATE
+int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
+#endif
+
 /********************************* circuitbuild.c **********************/
 
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
@@ -3846,7 +3850,8 @@ typedef struct trusted_dir_server_t {
 
 int get_n_authorities(authority_type_t type);
 int trusted_dirs_reload_certs(void);
-int trusted_dirs_load_certs_from_string(const char *contents, int from_store);
+int trusted_dirs_load_certs_from_string(const char *contents, int from_store,
+                                        int flush);
 void trusted_dirs_flush_certs_to_disk(void);
 authority_cert_t *authority_cert_get_newest_by_id(const char *id_digest);
 authority_cert_t *authority_cert_get_by_sk_digest(const char *sk_digest);
