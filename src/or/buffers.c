@@ -1021,15 +1021,19 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
   int pos;
   tor_assert(out);
   if (out->chunk) {
-    if (!(out->pos < (off_t)out->chunk->datalen)) {
-      log_warn(LD_BUG, "About to assert. %p, %d, %d, %p, %d.",
-               out, (int)out->pos,
-               (int)out->chunk_pos, out->chunk,
-               out->chunk?(int)out->chunk->datalen : (int)-1
-               );
+    if (out->chunk->datalen) {
       /*XXXX020 remove this once the bug it detects is fixed. */
+      if (!(out->pos < (off_t)out->chunk->datalen)) {
+        log_warn(LD_BUG, "About to assert. %p, %d, %d, %p, %d.",
+                 out, (int)out->pos,
+                 (int)out->chunk_pos, out->chunk,
+                 out->chunk?(int)out->chunk->datalen : (int)-1
+                 );
+      }
+      tor_assert(out->pos < (off_t)out->chunk->datalen);
+    } else {
+      tor_assert(out->pos == 0);
     }
-    tor_assert(out->pos < (off_t)out->chunk->datalen);
   }
   pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
