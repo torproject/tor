@@ -466,7 +466,7 @@ relay_header_unpack(relay_header_t *dest, const char *src)
  */
 int
 relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
-                             int relay_command, const char *payload,
+                             uint8_t relay_command, const char *payload,
                              size_t payload_len, crypt_path_t *cpath_layer)
 {
   cell_t cell;
@@ -526,7 +526,7 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
  */
 int
 connection_edge_send_command(edge_connection_t *fromconn,
-                             int relay_command, const char *payload,
+                             uint8_t relay_command, const char *payload,
                              size_t payload_len)
 {
   /* XXXX NM Split this function into a separate versions per circuit type? */
@@ -1486,7 +1486,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
     if (relay_send_command_from_edge(0, circ, RELAY_COMMAND_SENDME,
                                      NULL, 0, layer_hint) < 0) {
       log_warn(LD_CIRC,
-               "connection_edge_send_command failed. Circuit's closed.");
+               "relay_send_command_from_edge failed. Circuit's closed.");
       return; /* the circuit's closed, don't continue */
     }
   }

@@ -3511,10 +3511,10 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
 int relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
-                               int relay_command, const char *payload,
+                               uint8_t relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer);
 int connection_edge_send_command(edge_connection_t *fromconn,
-                                 int relay_command, const char *payload,
+                                 uint8_t relay_command, const char *payload,
                                  size_t payload_len);
 int connection_edge_package_raw_inbuf(edge_connection_t *conn,
                                       int package_partial);
