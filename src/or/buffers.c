@@ -1021,7 +1021,7 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
   int pos;
   tor_assert(out);
   if (out->chunk)
-    tor_assert(out->pos < out->chunk->datalen);
+    tor_assert(out->pos < (off_t)out->chunk->datalen);
   pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data+pos, ch, chunk->datalen-pos);
@@ -1043,7 +1043,7 @@ static INLINE int
 buf_pos_inc(buf_pos_t *pos)
 {
   ++pos->pos;
-  if (pos->pos == pos->chunk->datalen) {
+  if (pos->pos == (off_t)pos->chunk->datalen) {
     if (!pos->chunk->next)
       return -1;
     pos->chunk_pos += pos->chunk->datalen;
