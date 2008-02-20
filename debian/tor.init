@@ -28,8 +28,10 @@ ARGS=""
 # Let's try to figure our some sane defaults:
 if [ -r /proc/sys/fs/file-max ]; then
 	system_max=`cat /proc/sys/fs/file-max`
-	if [ "$system_max" -gt "100000" ] ; then
+	if [ "$system_max" -gt "80000" ] ; then
 		MAX_FILEDESCRIPTORS=32768
+	elif [ "$system_max" -gt "40000" ] ; then
+		MAX_FILEDESCRIPTORS=16384
 	elif [ "$system_max" -gt "20000" ] ; then
 		MAX_FILEDESCRIPTORS=8192
 	else
