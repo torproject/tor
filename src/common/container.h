@@ -207,45 +207,83 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 
 #undef DECLARE_MAP_FNS
 
+/** Used to iterate over the key-value pairs in a map <b>map</b> in order.
+ * <b>prefix</b> is as for DECLARE_MAP_FNS (i.e., strmap_ or digestmap_).
+ * The map's keys and values are of type keytype and valtype respectively;
+ * each iteration assigns them to keyvar and valvar.
+ *
+ * Example use:
+ *   MAP_FOREACH(digestmap_, m, const char *, k, routerinfo_t *, r) {
+ *     // use k and r
+ *   } MAP_FOREACH_END.
+ */
 #define MAP_FOREACH(prefix, map, keytype, keyvar, valtype, valvar)      \
   STMT_BEGIN                                                            \
-    prefix##iter_t *key##_iter;                                         \
-    for (key##_iter = prefix##iter_init(map);                           \
-         !prefix##iter_done(key##_iter);                                \
-         key##_iter = prefix##iter_next(map, key##_iter)) {             \
+    prefix##iter_t *keyvar##_iter;                                      \
+    for (keyvar##_iter = prefix##iter_init(map);                        \
+         !prefix##iter_done(keyvar##_iter);                             \
+         keyvar##_iter = prefix##iter_next(map, keyvar##_iter)) {       \
       keytype keyvar;                                                   \
       void *valvar##_voidp;                                             \
       valtype valvar;                                                   \
-      prefix##iter_get(key##_iter, &keyvar, &valvar##_voidp);           \
+      prefix##iter_get(keyvar##_iter, &keyvar, &valvar##_voidp);        \
       valvar = valvar##_voidp;
 
+/** As MAP_FOREACH, except allows members to be removed from the map
+ * during the iteration via MAP_DEL_CURRENT.  Example use:
+ *
+ * Example use:
+ *   MAP_FOREACH(digestmap_, m, const char *, k, routerinfo_t *, r) {
+ *      if (is_very_old(r))
+ *       MAP_DEL_CURRENT(k);
+ *   } MAP_FOREACH_END.
+ **/
 #define MAP_FOREACH_MODIFY(prefix, map, keytype, keyvar, valtype, valvar) \
   STMT_BEGIN                                                            \
-    prefix##iter_t *key##_iter;                                         \
+    prefix##iter_t *keyvar##_iter;                                      \
     int keyvar##_del=0;                                                 \
-    for (key##_iter = prefix##iter_init(map);                           \
-         !prefix##iter_done(key##_iter);                                \
-         key##_iter = keyvar##_del ?                                    \
-           prefix##iter_next_rmv(map, key##_iter) :                     \
-           prefix##iter_next(map, key##_iter)) {                        \
+    for (keyvar##_iter = prefix##iter_init(map);                        \
+         !prefix##iter_done(keyvar##_iter);                             \
+         keyvar##_iter = keyvar##_del ?                                 \
+           prefix##iter_next_rmv(map, keyvar##_iter) :                  \
+           prefix##iter_next(map, keyvar##_iter)) {                     \
       keytype keyvar;                                                   \
       void *valvar##_voidp;                                             \
       valtype valvar;                                                   \
       keyvar##_del=0;                                                   \
-      prefix##iter_get(key##_iter, &keyvar, &valvar##_voidp);           \
+      prefix##iter_get(keyvar##_iter, &keyvar, &valvar##_voidp);        \
       valvar = valvar##_voidp;
 
+/** Used with MAP_FOREACH_MODIFY to remove the currently-iterated-upon
+ * member of the map.  */
 #define MAP_DEL_CURRENT(keyvar)                   \
   STMT_BEGIN                                      \
     keyvar##_del = 1;                             \
   STMT_END
 
+/** Used to end a MAP_FOREACH() block. */
 #define MAP_FOREACH_END } STMT_END ;
 
+/** As MAP_FOREACH, but does not require declaration of prefix or keytype.
+ * Example use:
+ *   DIGESTMAP_FOREACH(m, k, routerinfo_t *, r) {
+ *     // use k and r
+ *   } DIGESTMAP_FOREACH_END.
+ */
 #define DIGESTMAP_FOREACH(map, keyvar, valtype, valvar)                 \
   MAP_FOREACH(digestmap_, map, const char *, keyvar, valtype, valvar)
+
+/** As MAP_FOREACH_MODIFY, but does not require declaration of prefix or
+ * keytype.
+ * Example use:
+ *   DIGESTMAP_FOREACH_MODIFY(m, k, routerinfo_t *, r) {
+ *      if (is_very_old(r))
+ *       MAP_DEL_CURRENT(k);
+ *   } DIGESTMAP_FOREACH_END.
+ */
 #define DIGESTMAP_FOREACH_MODIFY(map, keyvar, valtype, valvar)          \
   MAP_FOREACH_MODIFY(digestmap_, map, const char *, keyvar, valtype, valvar)
+/** Used to end a DIGESTMAP_FOREACH() block. */
 #define DIGESTMAP_FOREACH_END MAP_FOREACH_END
 
 void* strmap_set_lc(strmap_t *map, const char *key, void *val);
@@ -336,6 +374,9 @@ bitarray_init_zero(unsigned int n_bits)
   size_t sz = (n_bits+BITARRAY_MASK) >> BITARRAY_SHIFT;
   return tor_malloc_zero(sz*sizeof(unsigned int));
 }
+/** Expand <b>ba</b> from holding <b>n_bits_old</b> to <b>n_bits_new</b>,
+ * clearing all new bits.  Returns a possibly changed pointer to the
+ * bitarray. */
 static INLINE bitarray_t *
 bitarray_expand(bitarray_t *ba,
                 unsigned int n_bits_old, unsigned int n_bits_new)
