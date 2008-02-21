@@ -592,6 +592,8 @@ dns_resolve(edge_connection_t *exitconn)
         // main.c. -NM
         // "<armadev> If that's true, there are other bugs around, where we
         //  don't check if it's marked, and will end up double-freeing."
+        // On the other hand, I don't know of any actual bugs here, so this
+        // shouldn't be holding up the rc. -RD
       }
       break;
     default:

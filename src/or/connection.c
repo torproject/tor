@@ -1861,7 +1861,8 @@ loop_again:
      * we need to invoke the appropriate callbacks ourself. */
     connection_t *linked = conn->linked_conn;
     /* XXXX020rc Do we need to ensure that this stuff is called even if
-     * conn dies in a way that causes us to return -1 earlier? */
+     * conn dies in a way that causes us to return -1 earlier? -NM
+     * No idea. -RD */
 
     if (n_read) {
       /* Probably a no-op, but hey. */
