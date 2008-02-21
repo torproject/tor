@@ -13,9 +13,11 @@ Backport items for 0.1.2:
   o r12341: Work if the real open-file limit is OPEN_FILES.
   o r12459: Exit policies reject public IP address too
   - r13406: fix bandwidth bucket calculations
-  - r13372: Don't use ourselves as intro point, rend point, or final hop 
-    for internal circuits. 
+  - r13372: Don't use ourselves as intro point, rend point, or final hop
+    for internal circuits.
   - r13532: Drop tor_strpartition().
+  - r13643: reset timeout when flushing final bytes from a connection.
+  - r13655: avoid flush on connection closed because of bug.
 
 Backport for 0.1.2.x once better tested:
   D r11287: Reject address mappings to internal addresses. (??)
@@ -29,3 +31,4 @@ Backport for 0.1.2.x once better tested:
             store that we just wrote.
   - r12945: better cross-compilation support in configure.in
   - r12946: iPhone support; requires r12945.
+  - r13647: Make "trackhostexits ." work
