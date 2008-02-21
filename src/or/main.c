@@ -1473,11 +1473,6 @@ do_main_loop(void)
         continue;
       }
     }
-
-    /* refilling buckets and sending cells happens at the beginning of the
-     * next iteration of the loop, inside prepare_for_poll()
-     * DOCDOC No longer so; fix comment.
-     */
   }
 }
 

@@ -2593,7 +2593,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
  * conn, and join them together.  Return 0 on success (or if there was an
  * error we could send back an end cell for).  Return -(some circuit end
  * reason) if the circuit needs to be torn down.  Either connects
- * <b>exitconn<b/>, frees it, or marks it, as appropriate.
+ * <b>exitconn</b>, frees it, or marks it, as appropriate.
  */
 static int
 connection_exit_connect_dir(edge_connection_t *exitconn)

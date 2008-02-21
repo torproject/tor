@@ -14,9 +14,9 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       by nwf; bugfix on 0.1.2.x.
     - When counting the number of open sockets, count not only the number
       of sockets we have received from the socket() call, but also the
-      number we've gotten from accept().  This bug made us fail to count
-      all sockets that we were using for incoming connections.  Bugfix on
-      0.2.0.x
+      number we've gotten from accept() and socketpair().  This bug made us
+      fail to count all sockets that we were using for incoming
+      connections.  Bugfix on 0.2.0.x.
     - Fix code used to find strings within buffers, when those strings
       are not in the first chunk of the buffer.
     - Fix potential segfault when parsing HTTP headers. Bugfix on 0.2.0.x.

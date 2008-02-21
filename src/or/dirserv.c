@@ -1614,6 +1614,7 @@ should_generate_v2_networkstatus(void)
 /* Thresholds for server performance: set by
  * dirserv_compute_performance_thresholds, and used by
  * generate_v2_networkstatus */
+/* XXXX stick these all in a struct. */
 static uint32_t stable_uptime = 0; /* start at a safe value */
 static double stable_mtbf = 0.0;
 static int enough_mtbf_info = 0;
@@ -1687,12 +1688,14 @@ dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
           router->is_running);
 }
 
-/** Look through the routerlist, and assign the median uptime of running valid
- * servers to stable_uptime, and the relative bandwidth capacities to
- * fast_bandwidth and guard_bandwidth.  Set total_bandwidth to the total
- * capacity of all running valid servers and total_exit_bandwidth to the
- * capacity of all running valid exits.  Set the is_exit flag of each router
- * appropriately. */
+/** Look through the routerlist, the Mean Time Between Failure history, and
+ * the Weighted Fractional Uptime history, and use them to set thresholds for
+ * the Stable, Fast, and Guard flags.  Update the fields stable_uptime,
+ * stable_mtbf, enough_mtbf_info, guard_wfu, guard_tk, fast_bandwidth,
+ * guard_bandwidh_including_exits, guard_bandwidth_excluding_exits,
+ * total_bandwidth, and total_exit_bandwidth.
+ *
+ * Also, set the is_exit flag of each router appropriately. */
 static void
 dirserv_compute_performance_thresholds(routerlist_t *rl)
 {
@@ -1702,8 +1705,6 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   double *mtbfs, *wfus;
   time_t now = time(NULL);
 
-  /* DOCDOC this is a litle tricky; comment this function better. */
-
   /* initialize these all here, in case there are no routers */
   stable_uptime = 0;
   stable_mtbf = 0;
@@ -1712,19 +1713,27 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   guard_bandwidth_excluding_exits = 0;
   guard_tk = 0;
   guard_wfu = 0;
-
   total_bandwidth = 0;
   total_exit_bandwidth = 0;
 
+  /* Initialize arrays that will hold values for each router.  We'll
+   * sort them and use that to compute thresholds. */
   n_active = n_active_nonexit = 0;
+  /* Uptime for every active router. */
   uptimes = tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
+  /* Bandwidth for every active router. */
   bandwidths = tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
+  /* Bandwidth for every active non-exit router. */
   bandwidths_excluding_exits =
     tor_malloc(sizeof(uint32_t)*smartlist_len(rl->routers));
+  /* Weighted mean time between failure for each active router. */
   mtbfs = tor_malloc(sizeof(double)*smartlist_len(rl->routers));
+  /* Time-known for each active router. */
   tks = tor_malloc(sizeof(long)*smartlist_len(rl->routers));
+  /* Weighted fractional uptime for each active router. */
   wfus = tor_malloc(sizeof(double)*smartlist_len(rl->routers));
 
+  /* Now, fill in the arrays. */
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
     if (router_is_active(ri, now)) {
       const char *id = ri->cache_info.identity_digest;
@@ -1745,11 +1754,15 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     }
   });
 
+  /* Now, compute thresholds. */
   if (n_active) {
+    /* The median uptime is stable. */
     stable_uptime = median_uint32(uptimes, n_active);
+    /* The median mtbf is stable, if we have enough mtbf info */
     stable_mtbf = median_double(mtbfs, n_active);
+    /* The 12.5th percentile bandwidth is fast. */
     fast_bandwidth = find_nth_uint32(bandwidths, n_active, n_active/8);
-    /* Now bandwidths is sorted. */
+    /* (Now bandwidths is sorted.) */
     if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH)
       fast_bandwidth = bandwidths[n_active/4];
     guard_bandwidth_including_exits = bandwidths[(n_active-1)/2];
@@ -1762,6 +1775,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   if (fast_bandwidth > BANDWIDTH_TO_GUARANTEE_FAST)
     fast_bandwidth = BANDWIDTH_TO_GUARANTEE_FAST;
 
+  /* Now that we have a time-known that 7/8 routers are known longer than,
+   * fill wfus with the wfu of every such "familiar" router. */
   n_familiar = 0;
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
       if (router_is_active(ri, now)) {

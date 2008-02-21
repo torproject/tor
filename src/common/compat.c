@@ -489,7 +489,10 @@ touch_file(const char *fname)
 
 #undef DEBUG_SOCKET_COUNTING
 #ifdef DEBUG_SOCKET_COUNTING
+/** A bitarray of all fds that should be passed to tor_socket_close(). Only
+ * used if DEBUG_SOCKET_COUNTING is defined. */
 static bitarray_t *open_sockets = NULL;
+/** The size of <b>open_sockets</b>, in bits. */
 static int max_socket = -1;
 #endif
 
@@ -547,6 +550,8 @@ tor_close_socket(int s)
 }
 
 #ifdef DEBUG_SOCKET_COUNTING
+/** Helper: if DEBUG_SOCKET_COUNTING is enabled, remember that <b>s</b> is
+ * now an open socket. */
 static INLINE void
 mark_socket_open(int s)
 {
