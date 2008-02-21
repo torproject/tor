@@ -67,6 +67,8 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       on the socket. Bugfix on 0.1.2.x.
     - Change the behavior of "getinfo status/good-server-descriptor"
       so it doesn't return failure when any authority disappears.
+    - Even though the man page said that "TrackHostExits ." should
+      work, nobody had ever implemented it. Bugfix on 0.1.0.x.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,

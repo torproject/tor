@@ -1185,7 +1185,8 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 
   SMARTLIST_FOREACH(options->TrackHostExits, const char *, cp, {
     if (cp[0] == '.') { /* match end */
-      if (!strcasecmpend(conn->socks_request->address, cp) ||
+      if (cp[1] == '\0' ||
+          !strcasecmpend(conn->socks_request->address, cp) ||
           !strcasecmp(conn->socks_request->address, &cp[1]))
           found_needle = 1;
     } else if (strcasecmp(cp, conn->socks_request->address) == 0) {
