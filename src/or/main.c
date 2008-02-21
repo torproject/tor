@@ -573,11 +573,12 @@ conn_close_if_marked(int i)
     if (retval >= 0 && /* Technically, we could survive things like
                           TLS_WANT_WRITE here. But don't bother for now. */
         conn->hold_open_until_flushed && connection_wants_to_flush(conn)) {
-      if (retval > 0)
+      if (retval > 0) {
         LOG_FN_CONN(conn, (LOG_INFO,LD_NET,
                            "Holding conn (fd %d) open for more flushing.",
                            conn->s));
-      /* XXX020rc should we reset timestamp_lastwritten here? */
+        conn->timestamp_lastwritten = now; /* reset so we can flush more */
+      }
       return 0;
     }
     if (connection_wants_to_flush(conn)) {

@@ -61,6 +61,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       cached from other authorities.  Bugfix on 0.2.0.x.  Fixes bug 606.
     - Recover from bad tracked-since value in MTBF-history file.
       Should fix bug 537.
+    - If we're trying to flush the last bytes on a connection (for
+      example, when answering a directory request), reset the
+      time-to-give-up timeout every time we manage to write something
+      on the socket. Bugfix on 0.1.2.x.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,
