@@ -842,8 +842,8 @@ client_dns_incr_failures(const char *address)
     ent->expires = time(NULL) + MAX_DNS_ENTRY_AGE;
     strmap_set(addressmap,address,ent);
   }
-  if (++ent->num_resolve_failures < 0) /* overflow. */
-    ent->num_resolve_failures = SHORT_MAX;
+  if (ent->num_resolve_failures < SHORT_MAX)
+    ++ent->num_resolve_failures; /* don't overflow */
   log_info(LD_APP, "Address %s now has %d resolve failures.",
            safe_str(address), ent->num_resolve_failures);
   return ent->num_resolve_failures;

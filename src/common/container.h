@@ -292,7 +292,6 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
   MAP_FOREACH_MODIFY(strmap_, map, const char *, keyvar, valtype, valvar)
 #define STRMAP_FOREACH_END MAP_FOREACH_END
 
-
 void* strmap_set_lc(strmap_t *map, const char *key, void *val);
 void* strmap_get_lc(const strmap_t *map, const char *key);
 void* strmap_remove_lc(strmap_t *map, const char *key);
