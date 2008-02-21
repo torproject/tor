@@ -954,7 +954,7 @@ rep_hist_load_mtbf_data(time_t now)
   if (strcmp(line, "."))
     log_warn(LD_GENERAL, "Truncated MTBF file.");
 
-  if (!tracked_since)
+  if (tracked_since < 86400*365) /* Recover from insanely early value. */
     tracked_since = latest_possible_start;
 
   stability_last_downrated = last_downrated;
