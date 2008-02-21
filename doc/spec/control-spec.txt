@@ -551,7 +551,7 @@ $Id$
       These provide the current internal Tor values for various Tor
       states. See Section 4.1.10 for explanations. (Only a few of the
       status events are available as getinfo's currently. Let us know if
-      you want more exposed.)<
+      you want more exposed.)
     "status/reachability/or"
       0 or 1, depending on whether we've found our ORPort reachable.
     "status/reachability/dir"
@@ -1371,7 +1371,7 @@ $Id$
        We're going to start testing the reachability of our external OR port
        or directory port.
 
-       {This event could effect the controller's idea of server status, but
+       {This event could affect the controller's idea of server status, but
        the controller should not interrupt the user to tell them so.}
 
      REACHABILITY_SUCCEEDED
@@ -1381,14 +1381,14 @@ $Id$
        directory port (depending on which of ORADDRESS or DIRADDRESS is
        given.)
 
-       {This event could effect the controller's idea of server status, but
+       {This event could affect the controller's idea of server status, but
        the controller should not interrupt the user to tell them so.}
 
      GOOD_SERVER_DESCRIPTOR
-       We successfully uploaded our server descriptor to each of the
-       directory authorities, with no complaints.
+       We successfully uploaded our server descriptor to at least one
+       of the directory authorities, with no complaints.
 
-       {This event could effect the controller's idea of server status, but
+       {This event could affect the controller's idea of server status, but
        the controller should not interrupt the user to tell them so.}
 
      NAMESERVER_STATUS
@@ -1398,7 +1398,7 @@ $Id$
         One of our nameservers has changed status.
         // actually notice
 
-       {This event could effect the controller's idea of server status, but
+       {This event could affect the controller's idea of server status, but
        the controller should not interrupt the user to tell them so.}
 
      NAMESERVER_ALL_DOWN
@@ -1438,7 +1438,7 @@ $Id$
         A single directory authority accepted our descriptor.
         // actually notice
 
-       {This event could effect the controller's idea of server status, but
+       {This event could affect the controller's idea of server status, but
        the controller should not interrupt the user to tell them so.}
 
      REACHABILITY_FAILED
@@ -1447,7 +1447,7 @@ $Id$
        We failed to connect to our external OR port or directory port
        successfully.
 
-       {This event could effect the controller's idea of server status.  The
+       {This event could affect the controller's idea of server status.  The
        controller should warn the admin and suggest reasonable steps to take.}
 
 4.1.11. Our set of guard nodes has changed

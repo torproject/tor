@@ -65,6 +65,8 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       example, when answering a directory request), reset the
       time-to-give-up timeout every time we manage to write something
       on the socket. Bugfix on 0.1.2.x.
+    - Change the behavior of "getinfo status/good-server-descriptor"
+      so it doesn't return failure when any authority disappears.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,

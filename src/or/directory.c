@@ -192,24 +192,26 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
   return 0;
 }
 
-/** Return true iff all trusted directory servers have accepted our
- * server descriptor. */
+/** Return true iff any trusted directory authority has accepted our
+ * server descriptor.
+ *
+ * We consider any authority sufficient because waiting for all of
+ * them means it never happens while any authority is down; we don't
+ * go for something more complex in the middle (like \>1/3 or \>1/2 or
+ * \>=1/2) because that doesn't seem necessary yet.
+ */
 int
 directories_have_accepted_server_descriptor(void)
 {
   smartlist_t *servers = router_get_trusted_dir_servers();
   or_options_t *options = get_options();
-  /* XXX020rc If any authority of the needed type is down, this
-   * function will never return true. Perhaps we need to be
-   * tolerant of down servers? Or even better, should we change
-   * this so one successful upload is enough? -RD */
   SMARTLIST_FOREACH(servers, trusted_dir_server_t *, d, {
     if ((d->type & options->_PublishServerDescriptor) &&
-        !d->has_accepted_serverdesc) {
-      return 0;
+        d->has_accepted_serverdesc) {
+      return 1;
     }
   });
-  return 1;
+  return 0;
 }
 
 /** Start a connection to every suitable directory authority, using
