@@ -472,13 +472,16 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT ||
-        !conn->chosen_exit_optional)
+        (!conn->chosen_exit_optional &&
+         !conn->chosen_exit_retries))
       continue;
     edge_conn = TO_EDGE_CONN(conn);
     r1 = router_get_by_nickname(edge_conn->chosen_exit_name, 0);
     r2 = router_get_by_nickname(info->nickname, 0);
-    if (r1 && r2 && r1==r2) {
-      tor_assert(edge_conn->socks_request);
+    if (!r1 || !r2 || r1 != r2)
+      continue;
+    tor_assert(edge_conn->socks_request);
+    if (conn->chosen_exit_optional) {
       log_info(LD_APP, "Giving up on enclave exit '%s' for destination %s.",
                safe_str(edge_conn->chosen_exit_name),
                escaped_safe_str(edge_conn->socks_request->address));
@@ -487,6 +490,16 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
       /* if this port is dangerous, warn or reject it now that we don't
        * think it'll be using an enclave. */
       consider_plaintext_ports(edge_conn, edge_conn->socks_request->port);
+    }
+    if (conn->chosen_exit_retries) {
+      if (--conn->chosen_exit_retries == 0) { /* give up! */
+        /* XXX020rc unregister maps from foo to
+         * foo.chosen_exit_name.exit \forall foo. -RD */
+        tor_free(edge_conn->chosen_exit_name); /* clears it */
+        /* if this port is dangerous, warn or reject it now that we don't
+         * think it'll be using an enclave. */
+        consider_plaintext_ports(edge_conn, edge_conn->socks_request->port);
+      }
     }
   });
 }
@@ -1244,6 +1257,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   int automap = 0;
   char orig_address[MAX_SOCKS_ADDR_LEN];
   time_t map_expires = TIME_MAX;
+  int remapped_to_exit = 0;
   time_t now = time(NULL);
 
   tor_strlower(socks->address); /* normalize it */
@@ -1299,11 +1313,16 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       }
     }
   } else if (!automap) {
+    int started_without_chosen_exit = strcasecmpend(socks->address, ".exit");
     /* For address map controls, remap the address. */
     if (addressmap_rewrite(socks->address, sizeof(socks->address),
                            &map_expires)) {
       control_event_stream_status(conn, STREAM_EVENT_REMAP,
                                   REMAP_STREAM_SOURCE_CACHE);
+      if (started_without_chosen_exit &&
+          !strcasecmpend(socks->address, ".exit") &&
+          map_expires < TIME_MAX)
+        remapped_to_exit = 1;
     }
   }
 
@@ -1340,6 +1359,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     if (s) {
       if (s[1] != '\0') {
         conn->chosen_exit_name = tor_strdup(s+1);
+/* DOCDOC */
+#define TRACKHOSTEXITS_RETRIES 5
+        if (remapped_to_exit) /* 5 tries before it expires the addressmap */
+          TO_CONN(conn)->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
         *s = 0;
       } else {
         log_warn(LD_APP,"Malformed exit address '%s.exit'. Refusing.",

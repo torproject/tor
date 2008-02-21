@@ -771,9 +771,18 @@ connection_edge_process_end_not_open(
                                NULL)) {
           control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
         }
-        if (conn->_base.chosen_exit_optional) {
+        if (conn->_base.chosen_exit_optional ||
+            conn->_base.chosen_exit_retries) {
           /* stop wanting a specific exit */
           conn->_base.chosen_exit_optional = 0;
+          /* A non-zero chosen_exit_retries can happen if we set a
+           * TrackHostExits for this address under a port that the exit
+           * relay allows, but then try the same address with a different
+           * port that it doesn't allow to exit. We shouldn't unregister
+           * the mapping, since it is probably still wanted on the
+           * original port. But now we give away to the exit relay that
+           * we probably have a TrackHostExits on it. So be it. */
+          conn->_base.chosen_exit_retries = 0;
           tor_free(conn->chosen_exit_name); /* clears it */
         }
         if (connection_ap_detach_retriable(conn, circ, control_reason) >= 0)

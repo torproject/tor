@@ -811,6 +811,11 @@ typedef struct connection_t {
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
   unsigned int chosen_exit_optional:1;
+  /** For AP connections only. If non-zero, this exit node was picked as
+   * a result of the TrackHostExit, and the value decrements every time
+   * we fail to complete a circuit to our chosen exit -- if it reaches
+   * zero, abandon the associated mapaddress. */
+  unsigned int chosen_exit_retries:3;
   /** Set to 1 when we're inside connection_flushed_some to keep us from
    * calling connection_handle_write() recursively. */
   unsigned int in_flushed_some:1;
@@ -861,7 +866,7 @@ typedef struct connection_t {
                                       * we marked for close? */
   char *address; /**< FQDN (or IP) of the guy on the other end.
                   * strdup into this, because free_connection frees it. */
-  /** Annother connection that's connected to this one in lieu of a socket. */
+  /** Another connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
 
   /* XXXX021 move this into a subtype. */

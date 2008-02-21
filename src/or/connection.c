@@ -2876,7 +2876,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     assert_buf_ok(conn->outbuf);
   }
 
-  if (conn->chosen_exit_optional) {
+  if (conn->chosen_exit_optional || conn->chosen_exit_retries) {
     tor_assert(conn->type == CONN_TYPE_AP);
     tor_assert((TO_EDGE_CONN(conn))->chosen_exit_name);
   }
