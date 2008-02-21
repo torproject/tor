@@ -2058,8 +2058,10 @@ connection_dirserv_unlink_from_bridge(dir_connection_t *dir_conn)
   dir_conn->bridge_conn = NULL;
   if (edge_conn) {
     edge_conn->bridge_for_conn = NULL;
-    if (!edge_conn->_base.marked_for_close)
+    if (!edge_conn->_base.marked_for_close) {
+      TO_CONN(edge_conn)->edge_has_sent_end = 1;
       connection_mark_for_close(TO_CONN(edge_conn));
+    }
   }
   if (!dir_conn->_base.marked_for_close)
     connection_mark_for_close(TO_CONN(dir_conn));
