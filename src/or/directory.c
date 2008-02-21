@@ -1679,7 +1679,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           if (rejected_hdr) {
             if (!strcmp(rejected_hdr, "Yes")) {
               /* XXXX020rc use this information; be sure to upload next one
-               * sooner. */
+               * sooner. -NM Given that we don't know of any bugs here, and
+               * it's more insuring against the future, could this wait
+               * until 0.2.1? -RD */
               rejected = 1;
             }
             tor_free(rejected_hdr);
