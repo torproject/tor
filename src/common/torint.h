@@ -267,6 +267,16 @@ typedef uint32_t uintptr_t;
 #endif
 #endif
 
+#ifndef SHORT_MAX
+#if (SIZEOF_SHORT == 2)
+#define SHORT_MAX 0x7fff
+#elif (SIZEOF_SHORT == 4)
+#define SHORT_MAX 0x7fffffff
+#else
+#error "Can't define SHORT_MAX"
+#endif
+#endif
+
 #ifndef TIME_MAX
 
 #ifdef TIME_T_IS_SIGNED

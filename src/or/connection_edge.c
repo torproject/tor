@@ -33,6 +33,7 @@ static int connection_ap_process_natd(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
 static int address_is_in_virtual_range(const char *addr);
 static int consider_plaintext_ports(edge_connection_t *conn, uint16_t port);
+static void clear_trackexithost_mappings(const char *exitname);
 
 /** An AP stream has failed/finished. If it hasn't already sent back
  * a socks reply, send one now (based on endreason). Also set
@@ -493,8 +494,7 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
     }
     if (conn->chosen_exit_retries) {
       if (--conn->chosen_exit_retries == 0) { /* give up! */
-        /* XXX020rc unregister maps from foo to
-         * foo.chosen_exit_name.exit \forall foo. -RD */
+        clear_trackexithost_mappings(edge_conn->chosen_exit_name);
         tor_free(edge_conn->chosen_exit_name); /* clears it */
         /* if this port is dangerous, warn or reject it now that we don't
          * think it'll be using an enclave. */
@@ -551,7 +551,8 @@ connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ,
 typedef struct {
   char *new_address;
   time_t expires;
-  int num_resolve_failures;
+  addressmap_entry_source_t source:3;
+  short num_resolve_failures;
 } addressmap_entry_t;
 
 /** Entry for mapping addresses to which virtual address we mapped them to. */
@@ -630,6 +631,28 @@ addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 {
   addressmap_virtaddress_remove(address, ent);
   addressmap_ent_free(ent);
+}
+
+/** Unregister all TrackHostExits mappings from any address to
+ * *.exitname.exit. */
+static void
+clear_trackexithost_mappings(const char *exitname)
+{
+  char *suffix;
+  size_t suffix_len;
+  if (!addressmap || !exitname)
+    return;
+  suffix_len = strlen(exitname) + 16;
+  suffix = tor_malloc(suffix_len);
+  tor_snprintf(suffix, suffix_len, ".%s.exit", exitname);
+  tor_strlower(suffix);
+
+  STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
+    if (ent->source == ADDRMAPSRC_TRACKEXIT && !strcmpend(address, suffix)) {
+      addressmap_ent_remove(address, ent);
+      MAP_DEL_CURRENT(address);
+    }
+  } STRMAP_FOREACH_END;
 }
 
 /** Remove all entries from the addressmap that were set via the
@@ -761,7 +784,8 @@ addressmap_have_mapping(const char *address)
  * any mappings that exist from <b>address</b>.
  */
 void
-addressmap_register(const char *address, char *new_address, time_t expires)
+addressmap_register(const char *address, char *new_address, time_t expires,
+                    addressmap_entry_source_t source)
 {
   addressmap_entry_t *ent;
 
@@ -798,6 +822,7 @@ addressmap_register(const char *address, char *new_address, time_t expires)
   ent->new_address = new_address;
   ent->expires = expires==2 ? 1 : expires;
   ent->num_resolve_failures = 0;
+  ent->source = source;
 
   log_info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
            safe_str(address), safe_str(ent->new_address));
@@ -817,7 +842,8 @@ client_dns_incr_failures(const char *address)
     ent->expires = time(NULL) + MAX_DNS_ENTRY_AGE;
     strmap_set(addressmap,address,ent);
   }
-  ++ent->num_resolve_failures;
+  if (++ent->num_resolve_failures < 0) /* overflow. */
+    ent->num_resolve_failures = SHORT_MAX;
   log_info(LD_APP, "Address %s now has %d resolve failures.",
            safe_str(address), ent->num_resolve_failures);
   return ent->num_resolve_failures;
@@ -879,7 +905,7 @@ client_dns_set_addressmap_impl(const char *address, const char *name,
                  "%s", name);
   }
   addressmap_register(extendedaddress, tor_strdup(extendedval),
-                      time(NULL) + ttl);
+                      time(NULL) + ttl, ADDRMAPSRC_DNS);
 }
 
 /** Record the fact that <b>address</b> resolved to <b>val</b>.
@@ -1105,7 +1131,7 @@ addressmap_register_virtual_address(int type, char *new_address)
   tor_free(*addrp);
   *addrp = addressmap_get_virtual_address(type);
   log_info(LD_APP, "Registering map from %s to %s", *addrp, new_address);
-  addressmap_register(*addrp, new_address, 2);
+  addressmap_register(*addrp, new_address, 2, ADDRMAPSRC_CONTROLLER);
 
 #if 0
   {

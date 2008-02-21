@@ -3706,7 +3706,7 @@ config_register_addressmaps(or_options_t *options)
         log_warn(LD_CONFIG,
                  "Skipping invalid argument '%s' to MapAddress", to);
       } else {
-        addressmap_register(from, tor_strdup(to), 0);
+        addressmap_register(from, tor_strdup(to), 0, ADDRMAPSRC_TORRC);
         if (smartlist_len(elts)>2) {
           log_warn(LD_CONFIG,"Ignoring extra arguments to MapAddress.");
         }

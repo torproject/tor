@@ -1212,7 +1212,8 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
                conn->socks_request->address, fp);
 
   addressmap_register(conn->socks_request->address, new_address,
-                      time(NULL) + options->TrackHostExitsExpire);
+                      time(NULL) + options->TrackHostExitsExpire,
+                      ADDRMAPSRC_TRACKEXIT);
 }
 
 /** Attempt to attach the connection <b>conn</b> to <b>circ</b>, and send a

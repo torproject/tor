@@ -2816,8 +2816,12 @@ void addressmap_clear_transient(void);
 void addressmap_free_all(void);
 int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out);
 int addressmap_have_mapping(const char *address);
+typedef enum {
+  ADDRMAPSRC_CONTROLLER, ADDRMAPSRC_TORRC, ADDRMAPSRC_TRACKEXIT,
+  ADDRMAPSRC_DNS,
+} addressmap_entry_source_t;
 void addressmap_register(const char *address, char *new_address,
-                         time_t expires);
+                         time_t expires, addressmap_entry_source_t source);
 int parse_virtual_addr_network(const char *val, int validate_only,
                                char **msg);
 int client_dns_incr_failures(const char *address);

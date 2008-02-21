@@ -114,7 +114,7 @@ R   . FAQ entry which is wrong
       non-encrypted request
   o write a tor-gencert man page
 
-  . geoip caching and publishing for bridges
+N . geoip caching and publishing for bridges
     d Track consecutive time up, not time since last-forgotten IP.
     - Mention in dir-spec.txt
     - Mention in control-spec.txt

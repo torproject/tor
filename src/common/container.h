@@ -286,6 +286,13 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 /** Used to end a DIGESTMAP_FOREACH() block. */
 #define DIGESTMAP_FOREACH_END MAP_FOREACH_END
 
+#define STRMAP_FOREACH(map, keyvar, valtype, valvar)                 \
+  MAP_FOREACH(strmap_, map, const char *, keyvar, valtype, valvar)
+#define STRMAP_FOREACH_MODIFY(map, keyvar, valtype, valvar)          \
+  MAP_FOREACH_MODIFY(strmap_, map, const char *, keyvar, valtype, valvar)
+#define STRMAP_FOREACH_END MAP_FOREACH_END
+
+
 void* strmap_set_lc(strmap_t *map, const char *key, void *val);
 void* strmap_get_lc(const strmap_t *map, const char *key);
 void* strmap_remove_lc(strmap_t *map, const char *key);
