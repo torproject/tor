@@ -82,11 +82,12 @@ R     - Get closer to downloading far fewer descriptors
         - Write a proposal for how to fetch far fewer descriptors; assess
           anonymity attacks, like from looking at the size of the
           descriptor you fetch.
-?     - Translation portal
+J     - Translation portal
         - Vidalia translations
-        - Vidalia installer
-        - Torbutton plus its docs
-        - Torbrowser docs
+        - Vidalia installer translations
+        - Torbutton translations
+        - Torbutton webpage
+        - Torbrowser webpage
         - Tor website
         - check.torproject.org
 
