@@ -37,8 +37,14 @@
 #include <ctype.h>
 #endif
 #include <stdarg.h>
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
@@ -443,7 +449,10 @@ uint32_t get_uint32(const char *cp) ATTR_PURE ATTR_NONNULL((1));
 void set_uint16(char *cp, uint16_t v) ATTR_NONNULL((1));
 void set_uint32(char *cp, uint32_t v) ATTR_NONNULL((1));
 
-int set_max_file_descriptors(unsigned long limit, int *max);
+#if !defined(HAVE_RLIM_T)
+typedef unsigned long rlim_t;
+#endif
+int set_max_file_descriptors(rlim_t limit, int *max);
 int switch_id(const char *user, const char *group);
 #ifdef HAVE_PWD_H
 char *get_user_homedir(const char *username);

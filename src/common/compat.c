@@ -754,10 +754,6 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 
 #define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
 
-#if defined(HAVE_GETRLIMIT) && !defined(HAVE_RLIM_T)
-typedef unsigned long rlim_t;
-#endif
-
 /** Learn the maximum allowed number of file descriptors. (Some systems
  * have a low soft limit.
  *
@@ -767,7 +763,7 @@ typedef unsigned long rlim_t;
  *
  * Otherwise, return 0 and store the maximum we found inside <b>max_out</b>.*/
 int
-set_max_file_descriptors(unsigned long limit, int *max_out)
+set_max_file_descriptors(rlim_t limit, int *max_out)
 {
 #define DEFAULT_MAX_CONNECTIONS 15000
 #define CYGWIN_MAX_CONNECTIONS 3200
@@ -819,10 +815,10 @@ set_max_file_descriptors(unsigned long limit, int *max_out)
     return -1;
   }
 
-  if ((unsigned long)rlim.rlim_max < limit) {
+  if (rlim.rlim_max < limit) {
     log_warn(LD_CONFIG,"We need %lu file descriptors available, and we're "
              "limited to %lu. Please change your ulimit -n.",
-             limit, (unsigned long)rlim.rlim_max);
+             (unsigned long)limit, (unsigned long)rlim.rlim_max);
     return -1;
   }
 
@@ -843,7 +839,7 @@ set_max_file_descriptors(unsigned long limit, int *max_out)
         if (rlim.rlim_cur < (rlim_t)limit) {
           log_warn(LD_CONFIG, "We are limited to %lu file descriptors by "
                  "OPEN_MAX, and ConnLimit is %lu.  Changing ConnLimit; sorry.",
-                   (unsigned long)OPEN_MAX, limit);
+                   (unsigned long)OPEN_MAX, (unsigned long)limit);
         } else {
           log_info(LD_CONFIG, "Dropped connection limit to OPEN_MAX (%lu); "
                    "Apparently, %lu was too high and rlimit lied to us.",
@@ -869,7 +865,7 @@ set_max_file_descriptors(unsigned long limit, int *max_out)
     return -1;
   }
   if (limit > INT_MAX)
-          limit = INT_MAX;
+    limit = INT_MAX;
   tor_assert(max_out);
   *max_out = (int)limit - ULIMIT_BUFFER;
   return 0;

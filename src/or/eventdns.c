@@ -1298,8 +1298,12 @@ dnslabel_table_get_pos(const struct dnslabel_table *table, const char *label)
 {
 	int i;
 	for (i = 0; i < table->n_labels; ++i) {
-		if (!strcmp(label, table->labels[i].v))
-			return table->labels[i].pos;
+		if (!strcmp(label, table->labels[i].v)) {
+			off_t pos = table->labels[i].pos;
+            if (pos > 65535)
+                return -1;
+            return (int)pos;
+        }
 	}
 	return -1;
 }
@@ -1682,7 +1686,7 @@ overflow:
 		buf[3] |= 0x02; /* set the truncated bit. */
 	}
 
-	req->response_len = j;
+	req->response_len = (size_t)j;
 
 	if (!(req->response = malloc(req->response_len))) {
 		server_request_free_answers(req);

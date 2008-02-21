@@ -998,7 +998,7 @@ move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
 /** Internal structure: represents a position in a buffer. */
 typedef struct buf_pos_t {
   const chunk_t *chunk; /**< Which chunk are we pointing to? */
-  off_t pos;/**< Which character inside the chunk's data are we pointing to? */
+  int pos;/**< Which character inside the chunk's data are we pointing to? */
   size_t chunk_pos; /**< Total length of all previous chunks. */
 } buf_pos_t;
 
@@ -1037,7 +1037,7 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
   }
   pos = out->pos;
   for (chunk = out->chunk; chunk; chunk = chunk->next) {
-    char *cp = memchr(chunk->data+pos, ch, chunk->datalen-pos);
+    char *cp = memchr(chunk->data+pos, ch, chunk->datalen - pos);
     if (cp) {
       out->chunk = chunk;
       out->pos = cp - chunk->data;

@@ -361,8 +361,9 @@ rep_hist_downrate_old_runs(time_t now)
       (unsigned long)(hist->weighted_run_length * alpha);
     hist->total_run_weights *= alpha;
 
-    hist->weighted_uptime *= alpha;
-    hist->total_weighted_time *= alpha;
+    hist->weighted_uptime = (unsigned long)(hist->weighted_uptime * alpha);
+    hist->total_weighted_time = (unsigned long)
+      (hist->total_weighted_time * alpha);
   }
 
   return stability_last_downrated + STABILITY_INTERVAL;
