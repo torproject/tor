@@ -723,10 +723,6 @@ test_util(void)
 
   end.tv_usec = 7000;
 
-  test_assert(tv_cmp(&start, &end)<0);
-  test_assert(tv_cmp(&end, &start)>0);
-  test_assert(tv_cmp(&end, &end)==0);
-
   test_eq(2000L, tv_udiff(&start, &end));
 
   end.tv_sec = 6;
@@ -741,16 +737,9 @@ test_util(void)
 
   test_eq(-1005000L, tv_udiff(&start, &end));
 
-  tv_addms(&end, 5090);
-  test_eq(end.tv_sec, 9);
-  test_eq(end.tv_usec, 90000);
-
   end.tv_usec = 999990;
   start.tv_sec = 1;
   start.tv_usec = 500;
-  tv_add(&start, &end);
-  test_eq(start.tv_sec, 11);
-  test_eq(start.tv_usec, 490);
 
   /* The test values here are confirmed to be correct on a platform
    * with a working timegm. */

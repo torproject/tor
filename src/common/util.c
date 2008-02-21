@@ -969,43 +969,6 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
   return udiff;
 }
 
-/** Return -1 if *a \< *b, 0 if *a==*b, and 1 if *a \> *b.
- */
-int
-tv_cmp(const struct timeval *a, const struct timeval *b)
-{
-  if (a->tv_sec > b->tv_sec)
-    return 1;
-  if (a->tv_sec < b->tv_sec)
-    return -1;
-  if (a->tv_usec > b->tv_usec)
-    return 1;
-  if (a->tv_usec < b->tv_usec)
-    return -1;
-  return 0;
-}
-
-/** Increment *a by the number of seconds and microseconds in *b.
- */
-void
-tv_add(struct timeval *a, const struct timeval *b)
-{
-  a->tv_usec += b->tv_usec;
-  a->tv_sec += b->tv_sec + (a->tv_usec / 1000000);
-  a->tv_usec %= 1000000;
-}
-
-/** Increment *a by <b>ms</b> milliseconds.
- */
-void
-tv_addms(struct timeval *a, long ms)
-{
-  uint64_t us = ms * 1000;
-  a->tv_usec += us % 1000000;
-  a->tv_sec += (us / 1000000) + (a->tv_usec / 1000000);
-  a->tv_usec %= 1000000;
-}
-
 /** Yield true iff <b>y</b> is a leap-year. */
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
 /** Helper: Return the number of leap-days between Jan 1, y1 and Jan 1, y2. */
