@@ -500,7 +500,7 @@ conn_write_callback(int fd, short events, void *_conn)
           edge_conn->end_reason = END_STREAM_REASON_INTERNAL;
         conn->edge_has_sent_end = 1;
       }
-      /* XXX020 do we need a close-immediate here, so we don't try to flush? */
+      /* XXX020rc do we need a close-immediate here, so we don't try to flush? */
       connection_mark_for_close(conn);
     }
   }
@@ -574,7 +574,7 @@ conn_close_if_marked(int i)
         LOG_FN_CONN(conn, (LOG_INFO,LD_NET,
                            "Holding conn (fd %d) open for more flushing.",
                            conn->s));
-      /* XXX020 should we reset timestamp_lastwritten here? */
+      /* XXX020rc should we reset timestamp_lastwritten here? */
       return 0;
     }
     if (connection_wants_to_flush(conn)) {

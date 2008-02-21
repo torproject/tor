@@ -199,7 +199,7 @@ directories_have_accepted_server_descriptor(void)
 {
   smartlist_t *servers = router_get_trusted_dir_servers();
   or_options_t *options = get_options();
-  /* XXX020 If any authority of the needed type is down, this
+  /* XXX020rc If any authority of the needed type is down, this
    * function will never return true. Perhaps we need to be
    * tolerant of down servers? Or even better, should we change
    * this so one successful upload is enough? -RD */
@@ -1678,7 +1678,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           int rejected = 0;
           if (rejected_hdr) {
             if (!strcmp(rejected_hdr, "Yes")) {
-              /* XXXX020 use this information; be sure to upload next one
+              /* XXXX020rc use this information; be sure to upload next one
                * sooner. */
               rejected = 1;
             }

@@ -284,8 +284,8 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
         return _TOR_TLS_ZERORETURN;
       log(severity, LD_NET, "TLS error: Zero return");
       tls_log_errors(tls, severity, doing);
-      /* XXXX020 Actually, a 'zero return' error has a pretty specific meaning:
-       * the connection has been closed cleanly.  */
+      /* XXXX020rc Actually, a 'zero return' error has a pretty specific
+       * meaning: the connection has been closed cleanly.  */
       return TOR_TLS_ERROR_MISC;
     default:
       tls_log_errors(tls, severity, doing);

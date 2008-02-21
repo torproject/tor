@@ -478,7 +478,8 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
     connection_mark_for_close(TO_CONN(conn));
     return;
   } else if (highest_supported_version == 1) {
-    /*XXXXX020 consider this carefully. */
+    /* Negotiating version 1 makes no sense, since version 1 has no VERSIONS
+     * cells. */
     log_fn(LOG_PROTOCOL_WARN, LD_OR,
            "Used version negotiation protocol to negotiate a v1 connection. "
            "That's crazily non-compliant. Closing connection.");
