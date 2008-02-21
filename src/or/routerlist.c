@@ -3939,7 +3939,7 @@ update_consensus_router_descriptor_downloads(time_t now)
   log_info(LD_DIR,
            "%d router descriptors downloadable. %d delayed; %d present "
            "(%d of those were in old_routers); %d would_reject; "
-           "%d wouldnt_use, %d in progress.",
+           "%d wouldnt_use; %d in progress.",
            smartlist_len(downloadable), n_delayed, n_have, n_in_oldrouters,
            n_would_reject, n_wouldnt_use, n_inprogress);
 

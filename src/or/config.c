@@ -2446,7 +2446,7 @@ options_init(or_options_t *options)
   config_init(&options_format, options);
 }
 
-/** Set all vars in the configuration object 'options' to their default
+/** Set all vars in the configuration object <b>options</b> to their default
  * values. */
 static void
 config_init(config_format_t *fmt, void *options)

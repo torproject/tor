@@ -1306,7 +1306,7 @@ _check_no_tls_errors(const char *fname, int line)
 }
 
 /** Return true iff the initial TLS connection at <b>tls</b> did not use a v2
- * TLS handshake. Output undefined if the handshake isn't finished. */
+ * TLS handshake. Output is undefined if the handshake isn't finished. */
 int
 tor_tls_used_v1_handshake(tor_tls_t *tls)
 {

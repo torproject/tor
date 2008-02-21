@@ -207,7 +207,7 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
 
 #undef DECLARE_MAP_FNS
 
-/** Used to iterate over the key-value pairs in a map <b>map</b> in order.
+/** Iterates over the key-value pairs in a map <b>map</b> in order.
  * <b>prefix</b> is as for DECLARE_MAP_FNS (i.e., strmap_ or digestmap_).
  * The map's keys and values are of type keytype and valtype respectively;
  * each iteration assigns them to keyvar and valvar.

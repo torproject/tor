@@ -52,7 +52,7 @@ into Vidalia.
 
 We should add a new option ``auto'' that cycles through a set of preferred
 ports, testing bindability and reachability for each of them, and only
-complains to the user once it's given up on the common options.
+complains to the user once it's given up on the common choices.
 
 \subsection{Incentives design}
 
@@ -112,8 +112,9 @@ routers can't handle this many connections in their routing table.
 
 One approach is a restricted-route topology~\cite{danezis:pet2003}:
 predefine which relays can reach which other relays, and communicate
-these restrictions to the clients. We would need to compute which links
-are acceptable in a way that's decentralized yet scalable, and we would
+these restrictions to the relays and the clients. We need to compute
+which links are acceptable in a way that's decentralized yet scalable,
+and in a way that achieves a small-worlds property; and we
 need an efficient (compact) way to characterize the topology information
 so all the users could keep up to date.
 
@@ -162,6 +163,7 @@ Metrics for deciding when you're fast enough and stable enough
 \subsection{Continue Torbutton improvements}
       especially better docs
 \subsection{Vidalia and stability (especially wrt ongoing Windows problems)}
+      learn how to get useful crash reports (tracebacks) from Windows users
 \subsection{Polipo support on Windows}
 \subsection{Auto update for Tor, Vidalia, others}
 \subsection{Tor browser bundle for USB and standalone use}

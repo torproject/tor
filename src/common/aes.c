@@ -135,9 +135,9 @@ static void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr,
 /*======================================================================*/
 /* Interface to AES code, and counter implementation */
 
-/** Implements an aes counter-mode cipher. */
+/** Implements an AES counter-mode cipher. */
 struct aes_cnt_cipher {
-  /** This next element (howevever it's defined) is the AES key. */
+/** This next element (however it's defined) is the AES key. */
 #if defined(USE_OPENSSL_EVP)
   EVP_CIPHER_CTX key;
 #elif defined(USE_OPENSSL_AES)

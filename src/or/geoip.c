@@ -296,8 +296,8 @@ geoip_get_history_start(void)
 
 /** Helper type: used to sort per-country totals by value. */
 typedef struct c_hist_t {
-  char country[3]; /**< two-leter country code. */
-  unsigned total; /**< total ips seen in this country. */
+  char country[3]; /**< Two-letter country code. */
+  unsigned total; /**< Total IP addresses seen in this country. */
 } c_hist_t;
 
 /** Sorting helper: return -1, 1, or 0 based on comparison of two

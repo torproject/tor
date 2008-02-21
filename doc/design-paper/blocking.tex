@@ -25,7 +25,7 @@
 %\newcommand{\workingnote}[1]{(**#1)}   % makes the note visible.
 
 \date{}
-\title{Design of a blocking-resistant anonymity system}
+\title{Design of a blocking-resistant anonymity system\\DRAFT}
 
 %\author{Roger Dingledine\inst{1} \and Nick Mathewson\inst{1}}
 \author{Roger Dingledine \\ The Tor Project \\ arma@torproject.org \and
@@ -46,7 +46,8 @@ itself, blocked users can no longer benefit from the security Tor offers.
 
 Here we describe a design that builds upon the current Tor network
 to provide an anonymizing network that resists blocking
-by government-level attackers.
+by government-level attackers. We have implemented and deployed this
+design, and talk briefly about early use.
 
 \end{abstract}
 
@@ -194,7 +195,7 @@ currently~\cite{clayton:pet2006}:
   certain strings or patterns in TCP packets.  Offending packets can be
   dropped, or can trigger a response like closing the
   connection.
-\item Block a destination by listing its IP address at a
+\item Block certain IP addresses or destination ports at a
   firewall or other routing control point.
 \item Intercept DNS requests and give bogus responses for certain
   destination hostnames.

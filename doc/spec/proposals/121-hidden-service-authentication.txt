@@ -42,8 +42,8 @@ Motivation:
 
   The major part of hidden services does not require client authorization
   now and won't do so in the future. To the contrary, many clients would
-  not want to be (pseudonymously) identifiable by the service (which
-  is unavoidable to some extend), but rather use the service
+  not want to be (pseudonymously) identifiable by the service (though this
+  is unavoidable to some extent), but rather use the service
   anonymously. These services are not addressed by this proposal.
 
   However, there may be certain services which are intended to be accessed
@@ -93,8 +93,8 @@ Motivation:
   previously guaranteed QoS level, thus providing better latency or
   bandwidth for selected clients.
 
-  As a disadvantage of performing authorization within the Tor network can
-  be seen that a hidden service cannot make use of authorization data in
+  A disadvantage of performing authorization within the Tor network is
+  that a hidden service cannot make use of authorization data in
   the transported protocol. Tor hidden services were designed to be
   independent of the transported protocol. Therefore it's only possible to
   either grant or deny access to the whole service, but not to specific
@@ -120,7 +120,7 @@ Motivation:
 
 Details:
 
-  1  General infrastructure for authorization to hidden services 
+  1. General infrastructure for authorization to hidden services 
 
   We spotted three possible authorization points in the hidden service
   protocol:
@@ -133,7 +133,7 @@ Details:
   The general idea of this proposal is to allow service providers to
   restrict access to all of these points to authorized clients only.
 
-  1.1  Client authorization at directory
+  1.1. Client authorization at directory
 
   Since the implementation of proposal 114 it is possible to combine a
   hidden service descriptor with a so-called descriptor cookie. If done so,
@@ -183,7 +183,7 @@ Details:
   (clients and servers would have to be upgraded anyway for using the new
   features).
 
-  1.2  Client authorization at introduction point
+  1.2. Client authorization at introduction point
 
   The next possible authorization point after downloading and decrypting
   a hidden service descriptor is the introduction point. It is important
@@ -288,7 +288,7 @@ Details:
   depending on the version of the contained INTRODUCE2 cell; however, this
   approach does not appear very clean.)
 
-  1.3  Client authorization at hidden service
+  1.3. Client authorization at hidden service
 
   The time when a hidden service receives an INTRODUCE2 cell constitutes
   the last possible authorization point during the hidden service
@@ -363,7 +363,7 @@ Details:
   rendezvous point for 3 times and a total number of 10 connection
   establishments (not requests in the transported protocol) per hour.
 
-  1.4  Summary of authorization data fields
+  1.4. Summary of authorization data fields
 
   In summary, the proposed descriptor format and cell formats provide the
   following fields for carrying authorization data:
@@ -393,7 +393,7 @@ Details:
   cannot be performed without using an encryption schema for introduction
   information.
 
-  1.5  Managing authorization data at servers and clients
+  1.5. Managing authorization data at servers and clients
 
   In order to provide authorization data at the hidden server and the
   authenticated clients, we propose to use files---either the tor
@@ -407,7 +407,7 @@ Details:
   and is also a bad idea, because in case of HTTP the requested URL may be
   contained in the Host and Referer fields.
 
-  2  An authorization protocol based on group and user passwords
+  2. An authorization protocol based on group and user passwords
 
   In the following we discuss an authorization protocol for the proposed
   authorization architecture that performs authorization at all three
@@ -419,7 +419,7 @@ Details:
   derived from the user key will be used for performing authorization at
   the introduction and the hidden service.
 
-  2.1  Client authorization at directory
+  2.1. Client authorization at directory
 
   The server creates groups of users that shall be able to access his
   service. He provides all users of a certain group with the same group key
@@ -437,7 +437,7 @@ Details:
   server decides to remove authorization for a group, he can simply stop
   publishing hidden service descriptors using the descriptor cookie.
 
-  2.2  Client authorization at introduction point
+  2.2. Client authorization at introduction point
 
   The idea for authenticating at the introduction point is borrowed from
   authorization at the rendezvous point using a rendezvous cookie. A
@@ -496,7 +496,7 @@ Details:
   number for the encrypted introduction cookies as well as for
   ESTABLISH_INTRO and INTRODUCE1 cells is "1".
 
-  2.3  Client authorization at hidden service
+  2.3. Client authorization at hidden service
 
   Authorization at the hidden service also makes use of the user key,
   because whoever is authorized to pass the introduction point shall be
@@ -526,7 +526,7 @@ Details:
   connection limit of 10 requests per hour and user that helps prevent some
   threats.
 
-  2.4  Providing authorization data
+  2.4. Providing authorization data
 
   The authorization data that needs to be provided by servers consists of
   a number of group keys, each having a number of user keys assigned. These
@@ -647,3 +647,4 @@ Compatibility:
   changed, so that they understand the new cell versions and perform
   authorization. But again, the new introduction points would remain
   compatible to the existing hidden service protocol.
+
