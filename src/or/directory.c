@@ -1680,10 +1680,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           int rejected = 0;
           if (rejected_hdr) {
             if (!strcmp(rejected_hdr, "Yes")) {
-              /* XXXX020rc use this information; be sure to upload next one
-               * sooner. -NM Given that we don't know of any bugs here, and
-               * it's more insuring against the future, could this wait
-               * until 0.2.1? -RD */
+              /* XXXX021 use this information; be sure to upload next one
+               * sooner. -NM */
               rejected = 1;
             }
             tor_free(rejected_hdr);
