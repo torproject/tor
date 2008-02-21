@@ -267,6 +267,7 @@ test_buffers(void)
   test_eq(39, buf_find_string_offset(buf, "ing str", 7));
   test_eq(35, buf_find_string_offset(buf, "Testing str", 11));
   test_eq(32, buf_find_string_offset(buf, "ng ", 3));
+  test_eq(43, buf_find_string_offset(buf, "string.", 7));
   test_eq(-1, buf_find_string_offset(buf, "shrdlu", 6));
   test_eq(-1, buf_find_string_offset(buf, "Testing thing", 13));
   test_eq(-1, buf_find_string_offset(buf, "ngx", 3));

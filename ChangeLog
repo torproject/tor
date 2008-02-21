@@ -19,6 +19,7 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       0.2.0.x
     - Fix code used to find strings within buffers, when those strings
       are not in the first chunk of the buffer.
+    - Fix potential segfault when parsing HTTP headers. Bugfix on 0.2.0.x.
 
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of

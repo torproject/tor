@@ -1072,18 +1072,24 @@ static int
 buf_matches_at_pos(const buf_pos_t *pos, const char *s, size_t n)
 {
   buf_pos_t p;
+  if (!n)
+    return 1;
+
   memcpy(&p, pos, sizeof(p));
 
-  while (n) {
+  while (1) {
     char ch = p.chunk->data[p.pos];
     if (ch != *s)
       return 0;
     ++s;
-    --n;
+    /* If we're out of characters that don't match, we match.  Check this
+     * _before_ we test incrementing pos, in case we're at the end of the
+     * string. */
+    if (--n == 0)
+      return 1;
     if (buf_pos_inc(&p)<0)
       return 0;
   }
-  return 1;
 }
 
 /** Return the first position in <b>buf</b> at which the <b>n</b>-character
@@ -1137,7 +1143,6 @@ fetch_from_buf_http(buf_t *buf,
   if (!buf->head)
     return 0;
 
-  headers = buf->head->data;
   crlf_offset = buf_find_string_offset(buf, "\r\n\r\n", 4);
   if (crlf_offset > (int)max_headerlen ||
       (crlf_offset < 0 && buf->datalen > max_headerlen)) {
@@ -1153,6 +1158,7 @@ fetch_from_buf_http(buf_t *buf,
     buf_pullup(buf, crlf_offset+4, 0);
   headerlen = crlf_offset + 4;
 
+  headers = buf->head->data;
   bodylen = buf->datalen - headerlen;
   log_debug(LD_HTTP,"headerlen %d, bodylen %d.", (int)headerlen, (int)bodylen);
 
