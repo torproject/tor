@@ -1945,12 +1945,14 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
 
     switch (result) {
       case TOR_TLS_CLOSE:
-        log_info(LD_NET,"TLS connection closed on read. Closing. "
+      case TOR_TLS_ERROR_IO:
+        log_info(LD_NET,"TLS connection closed %son read. Closing. "
                  "(Nickname %s, address %s",
+                 result == TOR_TLS_CLOSE ? "cleanly " : "",
                  or_conn->nickname ? or_conn->nickname : "not set",
                  conn->address);
         return result;
-      CASE_TOR_TLS_ERROR_ANY:
+      CASE_TOR_TLS_ERROR_ANY_NONIO:
         log_info(LD_NET,"tls error [%s]. breaking (nickname %s, address %s).",
                  tor_tls_err_to_string(result),
                  or_conn->nickname ? or_conn->nickname : "not set",

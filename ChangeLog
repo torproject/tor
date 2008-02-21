@@ -72,6 +72,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - Alter the code that tries to recover from unhandled write
       errors, to not try to flush onto a socket that's given us
       unhandled errors.  Bugfix on 0.1.2.x.
+    - Report TLS "zero return" case as a "clean close" and "IO error"
+      as a "close".  Stop calling closes "unexpected closes": existing
+      Tors don't use SSL_close(), so having a connection close without
+      the TLS shutdown handshake is hardly unexpected.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,

@@ -22,7 +22,7 @@ typedef struct tor_tls_t tor_tls_t;
 /* Possible return values for most tor_tls_* functions. */
 #define _MIN_TOR_TLS_ERROR_VAL     -9
 #define TOR_TLS_ERROR_MISC         -9
-/* Rename to unexpected close or something. XXXX */
+/* Rename to unexpected close or something. XXXX021 */
 #define TOR_TLS_ERROR_IO           -8
 #define TOR_TLS_ERROR_CONNREFUSED  -7
 #define TOR_TLS_ERROR_CONNRESET    -6
@@ -33,15 +33,19 @@ typedef struct tor_tls_t tor_tls_t;
 #define TOR_TLS_WANTWRITE          -1
 #define TOR_TLS_DONE                0
 
-/** Use this macro in a switch statement to catch _any_ TLS error.  That way,
- * if more errors are added, your switches will still work. */
-#define CASE_TOR_TLS_ERROR_ANY                  \
+/** DOCDOC XXXX021 also rename me. */
+#define CASE_TOR_TLS_ERROR_ANY_NONIO            \
   case TOR_TLS_ERROR_MISC:                      \
-  case TOR_TLS_ERROR_IO:                        \
   case TOR_TLS_ERROR_CONNREFUSED:               \
   case TOR_TLS_ERROR_CONNRESET:                 \
   case TOR_TLS_ERROR_NO_ROUTE:                  \
   case TOR_TLS_ERROR_TIMEOUT
+
+/** Use this macro in a switch statement to catch _any_ TLS error.  That way,
+ * if more errors are added, your switches will still work. */
+#define CASE_TOR_TLS_ERROR_ANY                  \
+  CASE_TOR_TLS_ERROR_ANY_NONIO:                 \
+  case TOR_TLS_ERROR_IO
 
 #define TOR_TLS_IS_ERROR(rv) ((rv) < TOR_TLS_CLOSE)
 const char *tor_tls_err_to_string(int err);

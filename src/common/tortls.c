@@ -282,12 +282,9 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
     case SSL_ERROR_ZERO_RETURN:
       if (extra&CATCH_ZERO)
         return _TOR_TLS_ZERORETURN;
-      log(severity, LD_NET, "TLS error: Zero return");
+      log(severity, LD_NET, "TLS connection closed while %s", doing);
       tls_log_errors(tls, severity, doing);
-      /* XXXX020rc Actually, a 'zero return' error has a pretty specific
-       * meaning: the connection has been closed cleanly. -NM
-       * Great. Do something smart here then. :) -RD */
-      return TOR_TLS_ERROR_MISC;
+      return TOR_TLS_CLOSE;
     default:
       tls_log_errors(tls, severity, doing);
       return TOR_TLS_ERROR_MISC;
@@ -858,7 +855,7 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
     return r;
   }
   err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG);
-  if (err == _TOR_TLS_ZERORETURN) {
+  if (err == _TOR_TLS_ZERORETURN || err == TOR_TLS_CLOSE) {
     log_debug(LD_NET,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
     return TOR_TLS_CLOSE;
