@@ -89,10 +89,12 @@ smartlist_add(smartlist_t *sl, void *element)
 void
 smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
 {
-  smartlist_ensure_capacity(s1, s1->num_used + s2->num_used);
-  tor_assert(s1->capacity >= s1->num_used+s2->num_used);
+  int new_size = s1->num_used + s2->num_used;
+  tor_assert(new_size >= s1->num_used); /* check for overflow. */
+  smartlist_ensure_capacity(s1, new_size);
+  tor_assert(s1->capacity >= new_size);
   memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
-  s1->num_used += s2->num_used;
+  s1->num_used = new_size;
 }
 
 /** Remove all elements E from sl such that E==element.  Preserve

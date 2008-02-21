@@ -4754,7 +4754,7 @@ or_state_load(void)
                "to \"%s\".  This could be a bug in Tor; please tell "
                "the developers.", fname, fname2);
       if (rename(fname, fname2) < 0) {
-        log_warn(LD_BUG, "Weirdly, I couldn't even mode the state aside. The "
+        log_warn(LD_BUG, "Weirdly, I couldn't even move the state aside. The "
                  "OS gave an error of %s", strerror(errno));
       }
     }
