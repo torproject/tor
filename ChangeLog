@@ -5,6 +5,14 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       for bridge users. Also do this for people who set StrictEntryNodes.
     - When a TrackHostExits-chosen exit fails too many times in a row,
       stop using it.  Bugfix on 0.1.2.x.  Fixes bug 437.
+    - Enable the revised TLS handshake based on the one designed by
+      Steven Murdoch in proposal 124, as revised in proposal 130.  It
+      includes version negotiation for OR connections as described in
+      proposal 105.  The new handshake is meant to be harder for
+      censors to fingerprint, and it adds the ability to detect
+      certain kinds of man-in-the-middle traffic analysis attacks.
+      The version negotiation feature will allow us to improve Tor's
+      link protocol more safely in the future.
 
   o Major bugfixes:
     - Resolved problems with (re-)fetching hidden service descriptors.

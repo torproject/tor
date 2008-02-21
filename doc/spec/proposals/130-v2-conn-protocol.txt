@@ -17,7 +17,6 @@ Overview:
        Proposal 124: Blocking resistant TLS certificate usage
     It refers to aspects of:
        Proposal 105: Version negotiation for the Tor protocol
-       Proposal 110: Avoid infinite length circuits
 
 
   In summary, The Tor connection protocol has been in need of a redesign
@@ -183,8 +182,4 @@ Proposal:
    as in proposal 105, and communications begin as per tor-spec.txt.
    Until NETINFO cells have been exchanged, the connection is not open.
 
-   RELAY_EARLY cells are accepted as in proposal 110, and treated as
-   RELAY cells except that they are relayed as RELAY_EARLY if the next
-   host in the circuit has negotiated v2 or later; otherwise, not.
-   Command value 9 is used for RELAY_EARLY.
 

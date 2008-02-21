@@ -42,8 +42,10 @@ const char tortls_c_id[] =
 #include "ht.h"
 #include <string.h>
 
-// #define V2_HANDSHAKE_SERVER
-// #define V2_HANDSHAKE_CLIENT
+/* Enable the "v2" TLS handshake.
+ */
+#define V2_HANDSHAKE_SERVER
+#define V2_HANDSHAKE_CLIENT
 
 /* Copied from or.h */
 #define LEGAL_NICKNAME_CHARACTERS \
