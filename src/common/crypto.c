@@ -133,7 +133,7 @@ static int _crypto_global_initialized = 0;
 static void
 crypto_log_errors(int severity, const char *doing)
 {
-  unsigned int err;
+  unsigned long err;
   const char *msg, *lib, *func;
   while ((err = ERR_get_error()) != 0) {
     msg = (const char*)ERR_reason_error_string(err);
@@ -518,10 +518,11 @@ crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src,
 
   tor_assert(env);
   tor_assert(src);
+  tor_assert(len<INT_MAX);
 
   b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
 
-  BIO_write(b, src, len);
+  BIO_write(b, src, (int)len);
 
   if (env->key)
     RSA_free(env->key);
@@ -640,8 +641,9 @@ crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
   tor_assert(env);
   tor_assert(from);
   tor_assert(to);
+  tor_assert(fromlen<INT_MAX);
 
-  r = RSA_public_encrypt(fromlen, (unsigned char*)from, (unsigned char*)to,
+  r = RSA_public_encrypt((int)fromlen, (unsigned char*)from, (unsigned char*)to,
                          env->key, crypto_get_rsa_padding(padding));
   if (r<0) {
     crypto_log_errors(LOG_WARN, "performing RSA encryption");
@@ -665,11 +667,13 @@ crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
   tor_assert(from);
   tor_assert(to);
   tor_assert(env->key);
+  tor_assert(fromlen<INT_MAX);
   if (!env->key->p)
     /* Not a private key */
     return -1;
 
-  r = RSA_private_decrypt(fromlen, (unsigned char*)from, (unsigned char*)to,
+  r = RSA_private_decrypt((int)fromlen,
+                          (unsigned char*)from, (unsigned char*)to,
                           env->key, crypto_get_rsa_padding(padding));
 
   if (r<0) {
@@ -693,7 +697,8 @@ crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
   tor_assert(env);
   tor_assert(from);
   tor_assert(to);
-  r = RSA_public_decrypt(fromlen, (unsigned char*)from, (unsigned char*)to,
+  tor_assert(fromlen < INT_MAX);
+  r = RSA_public_decrypt((int)fromlen, (unsigned char*)from, (unsigned char*)to,
                          env->key, RSA_PKCS1_PADDING);
 
   if (r<0) {
@@ -754,11 +759,13 @@ crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
   tor_assert(env);
   tor_assert(from);
   tor_assert(to);
+  tor_assert(fromlen < INT_MAX);
   if (!env->key->p)
     /* Not a private key */
     return -1;
 
-  r = RSA_private_encrypt(fromlen, (unsigned char*)from, (unsigned char*)to,
+  r = RSA_private_encrypt((int)fromlen,
+                          (unsigned char*)from, (unsigned char*)to,
                           env->key, RSA_PKCS1_PADDING);
   if (r<0) {
     crypto_log_errors(LOG_WARN, "generating RSA signature");
@@ -1672,8 +1679,8 @@ crypto_seed_rng(void)
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
-  int fd;
-  int i, n;
+  int fd, i;
+  size_t n;
 #endif
 
 #if USE_RAND_POLL

@@ -331,8 +331,8 @@ round_to_power_of_2(uint64_t u64)
  * ===== */
 
 /** Remove from the string <b>s</b> every character which appears in
- * <b>strip</b>.  Return the number of characters removed. */
-int
+ * <b>strip</b>. */
+void
 tor_strstrip(char *s, const char *strip)
 {
   char *read = s;
@@ -344,7 +344,6 @@ tor_strstrip(char *s, const char *strip)
     }
   }
   *s = '\0';
-  return read-s;
 }
 
 /** Return a pointer to a NUL-terminated hexadecimal string encoding
@@ -1000,7 +999,8 @@ tor_timegm(struct tm *tm)
     log_warn(LD_BUG, "Out-of-range argument to tor_timegm");
     return -1;
   }
-  days = 365 * (year-1970) + n_leapdays(1970,year);
+  tor_assert(year < INT_MAX);
+  days = 365 * (year-1970) + n_leapdays(1970,(int)year);
   for (i = 0; i < tm->tm_mon; ++i)
     days += days_per_month[i];
   if (tm->tm_mon > 1 && IS_LEAPYEAR(year))
@@ -1328,6 +1328,7 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
 {
   size_t written = 0;
   int result;
+  tor_assert(count < INT_MAX); /*XXXX021 make returnval an ssize_t */
 
   while (written != count) {
     if (isSocket)
@@ -1338,7 +1339,7 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
       return -1;
     written += result;
   }
-  return count;
+  return (int)count;
 }
 
 /** Read from <b>fd</b> to <b>buf</b>, until we get <b>count</b> bytes

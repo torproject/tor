@@ -225,7 +225,7 @@ format_msg(char *buf, size_t buf_len,
     /* The message was too long; overwrite the end of the buffer with
      * "[...truncated]" */
     if (buf_len >= TRUNCATED_STR_LEN) {
-      int offset = buf_len-TRUNCATED_STR_LEN;
+      size_t offset = buf_len-TRUNCATED_STR_LEN;
       /* We have an extra 2 characters after buf_len to hold the \n\0,
        * so it's safe to add 1 to the size here. */
       strlcpy(buf+offset, TRUNCATED_STR, buf_len-offset+1);
