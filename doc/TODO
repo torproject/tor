@@ -202,6 +202,18 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 =======================================================================
 
 Planned for 0.2.1.x:
+  - Things that have been bugging Nick
+    - Make better use of multi-core machines: Do AES crypto and
+      compression in worker threads
+    - Maybe use jemalloc from freebsd via firefox 3, once its windows
+      and osx ports are more mature.
+    - MMap the cached-descriptors.new file as well as the regular ones
+    - Actually use SSL_shutdown to close our TLS connections.
+    - Refactor the HTTP logic so the functions aren't so large.
+    - Get a "use less buffer ram" patch into openssl.
+    - Get IOCP patch into libevent
+    - Use libevent's evdns code where applicable.
+
   - bridge communities with local bridge authorities:
     - clients who have a password configured decide to ask their bridge
       authority for a networkstatus
