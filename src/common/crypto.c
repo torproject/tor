@@ -816,8 +816,8 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
                                 size_t fromlen,
                                 int padding, int force)
 {
-  int overhead, outlen, r, symlen;
-  size_t pkeylen;
+  int overhead, outlen, r;
+  size_t pkeylen, symlen;
   crypto_cipher_env_t *cipher = NULL;
   char *buf = NULL;
 
@@ -867,7 +867,8 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   memset(buf, 0, pkeylen);
   tor_free(buf);
   crypto_free_cipher_env(cipher);
-  return outlen + symlen;
+  tor_assert(outlen+symlen < INT_MAX);
+  return (int)(outlen + symlen);
  err:
   if (buf) {
     memset(buf, 0, pkeylen);
@@ -921,7 +922,8 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   memset(buf,0,pkeylen);
   tor_free(buf);
   crypto_free_cipher_env(cipher);
-  return outlen + (fromlen-pkeylen);
+  tor_assert(outlen + fromlen < INT_MAX);
+  return (int)(outlen + (fromlen-pkeylen));
  err:
   memset(buf,0,pkeylen);
   tor_free(buf);
@@ -1211,6 +1213,7 @@ crypto_cipher_encrypt_with_iv(crypto_cipher_env_t *cipher,
   tor_assert(cipher);
   tor_assert(from);
   tor_assert(to);
+  tor_assert(fromlen < INT_MAX);
 
   if (fromlen < 1)
     return -1;
@@ -1221,7 +1224,7 @@ crypto_cipher_encrypt_with_iv(crypto_cipher_env_t *cipher,
   if (crypto_cipher_set_iv(cipher, to)<0)
     return -1;
   crypto_cipher_encrypt(cipher, to+CIPHER_IV_LEN, from, fromlen);
-  return fromlen + CIPHER_IV_LEN;
+  return (int)(fromlen + CIPHER_IV_LEN);
 }
 
 /** Decrypt <b>fromlen</b> bytes (at least 1+CIPHER_IV_LEN) from <b>from</b>
@@ -1241,6 +1244,7 @@ crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *cipher,
   tor_assert(cipher);
   tor_assert(from);
   tor_assert(to);
+  tor_assert(fromlen < INT_MAX);
 
   if (fromlen <= CIPHER_IV_LEN)
     return -1;
@@ -1250,7 +1254,7 @@ crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *cipher,
   if (crypto_cipher_set_iv(cipher, from)<0)
     return -1;
   crypto_cipher_encrypt(cipher, to, from+CIPHER_IV_LEN, fromlen-CIPHER_IV_LEN);
-  return fromlen - CIPHER_IV_LEN;
+  return (int)(fromlen - CIPHER_IV_LEN);
 }
 
 /* SHA-1 */
@@ -1362,7 +1366,9 @@ crypto_hmac_sha1(char *hmac_out,
                  const char *key, size_t key_len,
                  const char *msg, size_t msg_len)
 {
-  HMAC(EVP_sha1(), key, key_len, (unsigned char*)msg, msg_len,
+  tor_assert(key_len < INT_MAX);
+  tor_assert(msg_len < INT_MAX);
+  HMAC(EVP_sha1(), key, (int)key_len, (unsigned char*)msg, (int)msg_len,
        (unsigned char*)hmac_out, NULL);
 }
 
@@ -1548,7 +1554,7 @@ tor_check_dh_key(BIGNUM *bn)
  *         SHA1( g^xy || "\x00" ) || SHA1( g^xy || "\x01" ) || ...
  * where || is concatenation.)
  */
-int
+ssize_t
 crypto_dh_compute_secret(crypto_dh_env_t *dh,
                          const char *pubkey, size_t pubkey_len,
                          char *secret_out, size_t secret_bytes_out)
@@ -1559,8 +1565,10 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
   int result=0;
   tor_assert(dh);
   tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
+  tor_assert(pubkey_len < INT_MAX);
 
-  if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey, pubkey_len, NULL)))
+  if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey,
+                              (int)pubkey_len, NULL)))
     goto error;
   if (tor_check_dh_key(pubkey_bn)<0) {
     /* Check for invalid public keys. */
@@ -1721,10 +1729,11 @@ crypto_seed_rng(void)
     close(fd);
     if (n != sizeof(buf)) {
       log_warn(LD_CRYPTO,
-               "Error reading from entropy source (read only %d bytes).", n);
+               "Error reading from entropy source (read only %lu bytes).",
+               (unsigned long)n);
       return -1;
     }
-    RAND_seed(buf, sizeof(buf));
+    RAND_seed(buf, (int)sizeof(buf));
     memset(buf, 0, sizeof(buf));
     return 0;
   }
@@ -1741,8 +1750,9 @@ int
 crypto_rand(char *to, size_t n)
 {
   int r;
+  tor_assert(n < INT_MAX);
   tor_assert(to);
-  r = RAND_bytes((unsigned char*)to, n);
+  r = RAND_bytes((unsigned char*)to, (int)n);
   if (r == 0)
     crypto_log_errors(LOG_WARN, "generating random data");
   return (r == 1) ? 0 : -1;
@@ -1801,7 +1811,8 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
                        const char *suffix)
 {
   char *result, *rand_bytes;
-  int randlen, resultlen, rand_bytes_len, prefixlen;
+  int randlen, rand_bytes_len;
+  size_t resultlen, prefixlen;
 
   tor_assert(max_rand_len >= min_rand_len);
   randlen = min_rand_len + crypto_rand_int(max_rand_len - min_rand_len + 1);
@@ -1829,8 +1840,7 @@ crypto_random_hostname(int min_rand_len, int max_rand_len, const char *prefix,
 void *
 smartlist_choose(const smartlist_t *sl)
 {
-  size_t len;
-  len = smartlist_len(sl);
+  int len = smartlist_len(sl);
   if (len)
     return smartlist_get(sl,crypto_rand_int(len));
   return NULL; /* no elements to choose from */
@@ -1863,6 +1873,7 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
    * it ever shows up in the profile. */
   EVP_ENCODE_CTX ctx;
   int len, ret;
+  tor_assert(srclen < INT_MAX);
 
   /* 48 bytes of input -> 64 bytes of output plus newline.
      Plus one more byte, in case I'm wrong.
@@ -1874,7 +1885,7 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 
   EVP_EncodeInit(&ctx);
   EVP_EncodeUpdate(&ctx, (unsigned char*)dest, &len,
-                   (unsigned char*)src, srclen);
+                   (unsigned char*)src, (int)srclen);
   EVP_EncodeFinal(&ctx, (unsigned char*)(dest+len), &ret);
   ret += len;
   return ret;
@@ -2004,8 +2015,9 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
   }
 
   tor_assert((dest-dest_orig) <= (ssize_t)destlen);
+  tor_assert((dest-dest_orig) <= INT_MAX);
 
-  return dest-dest_orig;
+  return (int)(dest-dest_orig);
 #endif
 }
 #undef X
@@ -2056,8 +2068,8 @@ digest_from_base64(char *digest, const char *d64)
 void
 base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
-  unsigned int nbits, i, bit, v, u;
-  nbits = srclen * 8;
+  unsigned int i, bit, v, u;
+  size_t nbits = srclen * 8;
 
   tor_assert((nbits%5) == 0); /* We need an even multiple of 5 bits. */
   tor_assert((nbits/5)+1 <= destlen); /* We need enough space. */
@@ -2082,7 +2094,8 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   /* XXXX we might want to rewrite this along the lines of base64_decode, if
    * it ever shows up in the profile. */
-  unsigned int nbits, i, j, bit;
+  unsigned int i, j, bit;
+  size_t nbits;
   char *tmp;
   nbits = srclen * 5;
 

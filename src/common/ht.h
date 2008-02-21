@@ -90,7 +90,8 @@ ht_string_hash(const char *s)
   while (*cp) {
     h = (1000003*h) ^ *cp++;
   }
-  h ^= (cp-(const unsigned char*)s);
+  /* This conversion truncates the length of the string, but that's ok. */
+  h ^= (unsigned)(cp-(const unsigned char*)s);
   return h;
 }
 
@@ -287,7 +288,7 @@ ht_string_hash(const char *s)
     805306457, 1610612741                                               \
   };                                                                    \
   static unsigned name##_N_PRIMES =                                     \
-    sizeof(name##_PRIMES)/sizeof(name##_PRIMES[0]);                     \
+    (unsigned)(sizeof(name##_PRIMES)/sizeof(name##_PRIMES[0]));         \
   /* Expand the internal table of 'head' until it is large enough to    \
    * hold 'size' elements.  Return 0 on success, -1 on allocation       \
    * failure. */                                                        \

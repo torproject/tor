@@ -77,6 +77,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   tor_assert(out);
   tor_assert(out_len);
   tor_assert(in);
+  tor_assert(in_len < UINT_MAX);
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in deflateInit2 */
@@ -91,7 +92,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   stream->zfree = Z_NULL;
   stream->opaque = NULL;
   stream->next_in = (unsigned char*) in;
-  stream->avail_in = in_len;
+  stream->avail_in = (unsigned int)in_len;
 
   if (deflateInit2(stream, Z_BEST_COMPRESSION, Z_DEFLATED,
                    method_bits(method),
@@ -106,7 +107,7 @@ tor_gzip_compress(char **out, size_t *out_len,
   if (out_size < 1024) out_size = 1024;
   *out = tor_malloc(out_size);
   stream->next_out = (unsigned char*)*out;
-  stream->avail_out = out_size;
+  stream->avail_out = (unsigned int)out_size;
 
   while (1) {
     switch (deflate(stream, Z_FINISH))
@@ -190,6 +191,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   tor_assert(out);
   tor_assert(out_len);
   tor_assert(in);
+  tor_assert(in_len < UINT_MAX);
 
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in inflateInit2 */
@@ -204,7 +206,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
   stream->zfree = Z_NULL;
   stream->opaque = NULL;
   stream->next_in = (unsigned char*) in;
-  stream->avail_in = in_len;
+  stream->avail_in = (unsigned int)in_len;
 
   if (inflateInit2(stream,
                    method_bits(method)) != Z_OK) {
@@ -215,10 +217,12 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
   out_size = in_len * 2;  /* guess 50% compression. */
   if (out_size < 1024) out_size = 1024;
+  if (out_size > UINT_MAX)
+    goto err;
 
   *out = tor_malloc(out_size);
   stream->next_out = (unsigned char*)*out;
-  stream->avail_out = out_size;
+  stream->avail_out = (unsigned int)out_size;
 
   while (1) {
     switch (inflate(stream, complete_only ? Z_FINISH : Z_SYNC_FLUSH))
@@ -372,10 +376,12 @@ tor_zlib_process(tor_zlib_state_t *state,
                  int finish)
 {
   int err;
+  tor_assert(*in_len <= UINT_MAX);
+  tor_assert(*out_len <= UINT_MAX);
   state->stream.next_in = (unsigned char*) *in;
-  state->stream.avail_in = *in_len;
+  state->stream.avail_in = (unsigned int)*in_len;
   state->stream.next_out = (unsigned char*) *out;
-  state->stream.avail_out = *out_len;
+  state->stream.avail_out = (unsigned int)*out_len;
 
   if (state->compress) {
     err = deflate(&state->stream, finish ? Z_FINISH : Z_SYNC_FLUSH);

@@ -111,7 +111,7 @@ static INLINE unsigned int
 tor_tls_entry_hash(const tor_tls_t *a)
 {
 #if SIZEOF_INT == SIZEOF_VOID_P
-  return ((unsigned int)a->ssl);
+  return ((unsigned int)(uintptr_t)a->ssl);
 #else
   return (unsigned int) ((((uint64_t)a->ssl)>>2) & UINT_MAX);
 #endif
@@ -162,7 +162,7 @@ static int tls_library_is_initialized = 0;
 static void
 tls_log_errors(tor_tls_t *tls, int severity, const char *doing)
 {
-  int err;
+  unsigned long err;
   const char *msg, *lib, *func, *addr;
   addr = tls ? tls->address : NULL;
   while ((err = ERR_get_error()) != 0) {
@@ -841,7 +841,8 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
   tor_assert(tls);
   tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
-  r = SSL_read(tls->ssl, cp, len);
+  tor_assert(len<INT_MAX);
+  r = SSL_read(tls->ssl, cp, (int)len);
   if (r > 0) {
 #ifdef V2_HANDSHAKE_SERVER
     if (tls->got_renegotiate) {
@@ -878,6 +879,7 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
   tor_assert(tls);
   tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_OPEN);
+  tor_assert(n < INT_MAX);
   if (n == 0)
     return 0;
   if (tls->wantwrite_n) {
@@ -888,7 +890,7 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
     n = tls->wantwrite_n;
     tls->wantwrite_n = 0;
   }
-  r = SSL_write(tls->ssl, cp, n);
+  r = SSL_write(tls->ssl, cp, (int)n);
   err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO);
   if (err == TOR_TLS_DONE) {
     return r;

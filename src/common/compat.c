@@ -1112,7 +1112,7 @@ tor_inet_pton(int af, const char *src, void *dst)
         return 0;
       if (TOR_ISXDIGIT(*src)) {
         char *next;
-        int r = strtol(src, &next, 16);
+        long r = strtol(src, &next, 16);
         if (next > 4+src)
           return 0;
         if (next == src)

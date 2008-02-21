@@ -358,7 +358,7 @@ mp_pool_t *
 mp_pool_new(size_t item_size, size_t chunk_capacity)
 {
   mp_pool_t *pool;
-  size_t alloc_size;
+  size_t alloc_size, new_chunk_cap;
 
   pool = ALLOC(sizeof(mp_pool_t));
   CHECK_ALLOC(pool);
@@ -393,7 +393,10 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
   if (chunk_capacity < MIN_CHUNK)
     chunk_capacity = MIN_CHUNK;
 
-  pool->new_chunk_capacity = (chunk_capacity-CHUNK_OVERHEAD) / alloc_size;
+  new_chunk_cap = (chunk_capacity-CHUNK_OVERHEAD) / alloc_size;
+  tor_assert(new_chunk_cap < INT_MAX);
+  pool->new_chunk_capacity = (int)new_chunk_cap;
+
   pool->item_alloc_size = alloc_size;
 
   log_debug(LD_MM, "Capacity is %lu, item size is %lu, alloc size is %lu",

@@ -770,10 +770,10 @@ test_util(void)
 
   /* Test tor_strstrip() */
   strlcpy(buf, "Testing 1 2 3", sizeof(buf));
-  test_eq(0, tor_strstrip(buf, ",!"));
+  tor_strstrip(buf, ",!");
   test_streq(buf, "Testing 1 2 3");
   strlcpy(buf, "!Testing 1 2 3?", sizeof(buf));
-  test_eq(5, tor_strstrip(buf, "!? "));
+  tor_strstrip(buf, "!? ");
   test_streq(buf, "Testing123");
 
   /* Test parse_addr_port */

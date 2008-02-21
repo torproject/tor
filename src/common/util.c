@@ -1327,7 +1327,7 @@ int
 write_all(int fd, const char *buf, size_t count, int isSocket)
 {
   size_t written = 0;
-  int result;
+  ssize_t result;
   tor_assert(count < INT_MAX); /*XXXX021 make returnval an ssize_t */
 
   while (written != count) {
@@ -1350,10 +1350,11 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
 int
 read_all(int fd, char *buf, size_t count, int isSocket)
 {
+  /*XXXX021 return ssize_t. */
   size_t numread = 0;
-  int result;
+  ssize_t result;
 
-  if (count > SIZE_T_CEILING)
+  if (count > SIZE_T_CEILING || count > INT_MAX)
     return -1;
 
   while (numread != count) {
@@ -1367,7 +1368,7 @@ read_all(int fd, char *buf, size_t count, int isSocket)
       break;
     numread += result;
   }
-  return numread;
+  return (int)numread;
 }
 
 /*
@@ -2373,7 +2374,7 @@ parse_port_range(const char *port, uint16_t *port_min_out,
     port_max = 65535;
   } else {
     char *endptr = NULL;
-    port_min = tor_parse_long(port, 10, 0, 65535, &ok, &endptr);
+    port_min = (int)tor_parse_long(port, 10, 0, 65535, &ok, &endptr);
     if (!ok) {
       log_warn(LD_GENERAL,
                "Malformed port %s on address range; rejecting.",
@@ -2382,7 +2383,7 @@ parse_port_range(const char *port, uint16_t *port_min_out,
     } else if (endptr && *endptr == '-') {
       port = endptr+1;
       endptr = NULL;
-      port_max = tor_parse_long(port, 10, 1, 65536, &ok, &endptr);
+      port_max = (int)tor_parse_long(port, 10, 1, 65536, &ok, &endptr);
       if (!ok) {
         log_warn(LD_GENERAL,
                  "Malformed port %s on address range; rejecting.",
@@ -2933,20 +2934,20 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
 
   memset(addr, 0, sizeof(tor_addr_t));
   memset(&target_addr, 0, sizeof(target_addr));
-  my_addr_len = sizeof(my_addr);
+  my_addr_len = (socklen_t)sizeof(my_addr);
   ((struct sockaddr_in*)&target_addr)->sin_port = 9;  /* DISGARD port */
   /* Don't worry: no packets are sent. We just need to use a real address
    * on the actual internet. */
   if (family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)&target_addr;
     sock = tor_open_socket(PF_INET6,SOCK_DGRAM,IPPROTO_UDP);
-    my_addr_len = sizeof(struct sockaddr_in6);
+    my_addr_len = (socklen_t)sizeof(struct sockaddr_in6);
     sin6->sin6_family = AF_INET6;
     S6_ADDR16(sin6->sin6_addr)[0] = htons(0x2002); /* 2002:: */
   } else if (family == AF_INET) {
     struct sockaddr_in *sin = (struct sockaddr_in*)&target_addr;
     sock = tor_open_socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
-    my_addr_len = sizeof(struct sockaddr_in);
+    my_addr_len = (socklen_t)sizeof(struct sockaddr_in);
     sin->sin_family = AF_INET;
     sin->sin_addr.s_addr = htonl(0x12000001); /* 18.0.0.1 */
   } else {
@@ -2959,7 +2960,8 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
     goto err;
   }
 
-  if (connect(sock,(struct sockaddr *)&target_addr,sizeof(target_addr))<0) {
+  if (connect(sock,(struct sockaddr *)&target_addr,
+              (socklen_t)sizeof(target_addr))<0) {
     int e = tor_socket_errno(sock);
     log_fn(severity, LD_NET, "connect() failed: %s", tor_socket_strerror(e));
     goto err;
