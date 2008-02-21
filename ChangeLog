@@ -69,6 +69,9 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       so it doesn't return failure when any authority disappears.
     - Even though the man page said that "TrackHostExits ." should
       work, nobody had ever implemented it. Bugfix on 0.1.0.x.
+    - Alter the code that tries to recover from unhandled write
+      errors, to not try to flush onto a socket that's given us
+      unhandled errors.  Bugfix on 0.1.2.x.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,

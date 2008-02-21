@@ -500,10 +500,7 @@ conn_write_callback(int fd, short events, void *_conn)
           edge_conn->end_reason = END_STREAM_REASON_INTERNAL;
         conn->edge_has_sent_end = 1;
       }
-      /* XXX020rc do we need a close-immediate here, so we don't try to
-       * flush? -NM
-       * Yes, we do, since it broke in an unexpected way. This should be
-       * safe to do since I don't think this codepath ever gets called. -RD */
+      connection_close_immediate(conn); /* So we don't try to flush. */
       connection_mark_for_close(conn);
     }
   }
