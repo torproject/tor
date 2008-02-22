@@ -398,7 +398,7 @@ get_escaped_string_length(const char *start, size_t in_len_max,
   }
   if (chars_out)
     *chars_out = chars;
-  return cp - start+1;
+  return (int)(cp - start+1);
 }
 
 /** As decode_escaped_string, but does not decode the string: copies the
@@ -631,9 +631,9 @@ send_control_event_extended(uint16_t event, event_format_t which,
 static origin_circuit_t *
 get_circ(const char *id)
 {
-  unsigned long n_id;
+  uint32_t n_id;
   int ok;
-  n_id = tor_parse_ulong(id, 10, 0, ULONG_MAX, &ok, NULL);
+  n_id = (uint32_t) tor_parse_ulong(id, 10, 0, UINT32_MAX, &ok, NULL);
   if (!ok)
     return NULL;
   return circuit_get_by_global_id(n_id);
@@ -643,10 +643,10 @@ get_circ(const char *id)
 static edge_connection_t *
 get_stream(const char *id)
 {
-  unsigned long n_id;
+  uint32_t n_id;
   int ok;
   edge_connection_t *conn;
-  n_id = tor_parse_ulong(id, 10, 0, ULONG_MAX, &ok, NULL);
+  n_id = (uint32_t) tor_parse_ulong(id, 10, 0, UINT32_MAX, &ok, NULL);
   if (!ok)
     return NULL;
   conn = connection_get_by_global_id(n_id);
@@ -1008,7 +1008,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
     cp = body;
     while (TOR_ISXDIGIT(*cp))
       ++cp;
-    i = cp - body;
+    i = (int)(cp - body);
     tor_assert(i>0);
     password_len = i/2;
     password = tor_malloc(password_len + 1);
@@ -2197,8 +2197,8 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     char *hopstring = smartlist_get(args, 2);
     if (!strcasecmpstart(hopstring, "HOP=")) {
       hopstring += strlen("HOP=");
-      hop = tor_parse_ulong(hopstring, 10, 0, ULONG_MAX,
-                            &hop_line_ok, NULL);
+      hop = (int) tor_parse_ulong(hopstring, 10, 0, INT_MAX,
+                                  &hop_line_ok, NULL);
       if (!hop_line_ok) { /* broken hop line */
         connection_printf_to_buf(conn, "552 Bad value hop=%s\r\n", hopstring);
       }
@@ -2660,6 +2660,7 @@ int
 connection_control_process_inbuf(control_connection_t *conn)
 {
   size_t data_len;
+  uint32_t cmd_data_len;
   int cmd_len;
   char *args;
 
@@ -2721,7 +2722,7 @@ connection_control_process_inbuf(control_connection_t *conn)
     tor_assert(data_len);
 
     last_idx = conn->incoming_cmd_cur_len;
-    conn->incoming_cmd_cur_len += data_len;
+    conn->incoming_cmd_cur_len += (int)data_len;
 
     /* We have appended a line to incoming_cmd.  Is the command done? */
     if (last_idx == 0 && *conn->incoming_cmd != '+')
@@ -2772,64 +2773,71 @@ connection_control_process_inbuf(control_connection_t *conn)
     return 0;
   }
 
+  if (data_len >= UINT32_MAX) {
+    connection_write_str_to_buf("500 A 4GB command? Nice try.\r\n", conn);
+    connection_mark_for_close(TO_CONN(conn));
+    return 0;
+  }
+
+  cmd_data_len = (uint32_t)data_len;
   if (!strcasecmp(conn->incoming_cmd, "SETCONF")) {
-    if (handle_control_setconf(conn, data_len, args))
+    if (handle_control_setconf(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "RESETCONF")) {
-    if (handle_control_resetconf(conn, data_len, args))
+    if (handle_control_resetconf(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "GETCONF")) {
-    if (handle_control_getconf(conn, data_len, args))
+    if (handle_control_getconf(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SETEVENTS")) {
-    if (handle_control_setevents(conn, data_len, args))
+    if (handle_control_setevents(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
-    if (handle_control_authenticate(conn, data_len, args))
+    if (handle_control_authenticate(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SAVECONF")) {
-    if (handle_control_saveconf(conn, data_len, args))
+    if (handle_control_saveconf(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SIGNAL")) {
-    if (handle_control_signal(conn, data_len, args))
+    if (handle_control_signal(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "MAPADDRESS")) {
-    if (handle_control_mapaddress(conn, data_len, args))
+    if (handle_control_mapaddress(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "GETINFO")) {
-    if (handle_control_getinfo(conn, data_len, args))
+    if (handle_control_getinfo(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "EXTENDCIRCUIT")) {
-    if (handle_control_extendcircuit(conn, data_len, args))
+    if (handle_control_extendcircuit(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SETCIRCUITPURPOSE")) {
-    if (handle_control_setcircuitpurpose(conn, data_len, args))
+    if (handle_control_setcircuitpurpose(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SETROUTERPURPOSE")) {
     connection_write_str_to_buf("511 SETROUTERPURPOSE is obsolete.\r\n", conn);
   } else if (!strcasecmp(conn->incoming_cmd, "ATTACHSTREAM")) {
-    if (handle_control_attachstream(conn, data_len, args))
+    if (handle_control_attachstream(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "+POSTDESCRIPTOR")) {
-    if (handle_control_postdescriptor(conn, data_len, args))
+    if (handle_control_postdescriptor(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "REDIRECTSTREAM")) {
-    if (handle_control_redirectstream(conn, data_len, args))
+    if (handle_control_redirectstream(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "CLOSESTREAM")) {
-    if (handle_control_closestream(conn, data_len, args))
+    if (handle_control_closestream(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "CLOSECIRCUIT")) {
-    if (handle_control_closecircuit(conn, data_len, args))
+    if (handle_control_closecircuit(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "USEFEATURE")) {
-    if (handle_control_usefeature(conn, data_len, args))
+    if (handle_control_usefeature(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "RESOLVE")) {
-    if (handle_control_resolve(conn, data_len, args))
+    if (handle_control_resolve(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "PROTOCOLINFO")) {
-    if (handle_control_protocolinfo(conn, data_len, args))
+    if (handle_control_protocolinfo(conn, cmd_data_len, args))
       return -1;
   } else {
     connection_printf_to_buf(conn, "510 Unrecognized command \"%s\"\r\n",
@@ -3457,7 +3465,7 @@ control_event_or_authdir_new_descriptor(const char *action,
 {
   char firstline[1024];
   char *buf;
-  int totallen;
+  size_t totallen;
   char *esc = NULL;
   size_t esclen;
 

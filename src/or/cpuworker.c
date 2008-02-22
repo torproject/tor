@@ -250,7 +250,7 @@ cpuworker_main(void *data)
   dup_onion_keys(&onion_key, &last_onion_key);
 
   for (;;) {
-    int r;
+    ssize_t r;
 
     if ((r = recv(fd, &question_type, 1, 0)) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");

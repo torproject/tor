@@ -20,7 +20,7 @@ static void clear_geoip_db(void);
 typedef struct geoip_entry_t {
   uint32_t ip_low; /**< The lowest IP in the range, in host order */
   uint32_t ip_high; /**< The highest IP in the range, in host order */
-  int country; /**< An index into geoip_countries */
+  intptr_t country; /**< An index into geoip_countries */
 } geoip_entry_t;
 
 /** A list of lowercased two-letter country codes. */
@@ -38,7 +38,7 @@ static smartlist_t *geoip_entries = NULL;
 static void
 geoip_add_entry(uint32_t low, uint32_t high, const char *country)
 {
-  uintptr_t idx;
+  intptr_t idx;
   geoip_entry_t *ent;
   void *_idxplus1;
 
@@ -143,7 +143,7 @@ geoip_load_file(const char *filename)
   log_info(LD_GENERAL, "Parsing GEOIP file.");
   while (!feof(f)) {
     char buf[512];
-    if (fgets(buf, sizeof(buf), f) == NULL)
+    if (fgets(buf, (int)sizeof(buf), f) == NULL)
       break;
     /* FFFF track full country name. */
     geoip_parse_entry(buf);
@@ -167,14 +167,14 @@ geoip_get_country_by_ip(uint32_t ipaddr)
   if (!geoip_entries)
     return -1;
   ent = smartlist_bsearch(geoip_entries, &ipaddr, _geoip_compare_key_to_entry);
-  return ent ? ent->country : -1;
+  return ent ? (int)ent->country : -1;
 }
 
 /** Return the number of countries recognized by the GeoIP database. */
 int
 geoip_get_n_countries(void)
 {
-  return smartlist_len(geoip_countries);
+  return (int) smartlist_len(geoip_countries);
 }
 
 /** Return the two-letter country code associated with the number <b>num</b>,

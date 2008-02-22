@@ -364,7 +364,7 @@ connection_ap_expire_beginning(void)
     /* if it's an internal linked connection, don't yell its status. */
     severity = (!conn->_base.addr && !conn->_base.port)
       ? LOG_INFO : LOG_NOTICE;
-    seconds_idle = now - conn->_base.timestamp_lastread;
+    seconds_idle = (int)( now - conn->_base.timestamp_lastread );
 
     if (AP_CONN_STATE_IS_UNATTACHED(conn->_base.state)) {
       if (seconds_idle >= options->SocksTimeout) {
@@ -1004,7 +1004,7 @@ parse_virtual_addr_network(const char *val, int validate_only,
   if (validate_only)
     return 0;
 
-  virtual_addr_network = addr & (0xfffffffful << (32-bits));
+  virtual_addr_network = (uint32_t)( addr & (0xfffffffful << (32-bits)) );
   virtual_addr_netmask_bits = bits;
 
   if (addr_mask_cmp_bits(next_virtual_addr, addr, bits))
@@ -1938,7 +1938,7 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
                (circ->_base.purpose == CIRCUIT_PURPOSE_C_GENERAL) ?
                  ap_conn->socks_request->address : "",
                ap_conn->socks_request->port);
-  payload_len = strlen(payload)+1;
+  payload_len = (int)strlen(payload)+1;
 
   log_debug(LD_APP,
             "Sending relay cell to begin stream %d.", ap_conn->stream_id);
@@ -1995,7 +1995,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 
   if (command == SOCKS_COMMAND_RESOLVE) {
     string_addr = ap_conn->socks_request->address;
-    payload_len = strlen(string_addr)+1;
+    payload_len = (int)strlen(string_addr)+1;
     tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
   } else {
     struct in_addr in;
@@ -2029,7 +2029,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
                    (int)(uint8_t)((a>>24)&0xff));
     }
     string_addr = inaddr_buf;
-    payload_len = strlen(inaddr_buf)+1;
+    payload_len = (int)strlen(inaddr_buf)+1;
     tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
   }
 

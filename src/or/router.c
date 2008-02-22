@@ -333,7 +333,7 @@ v3_authority_check_key_expiry(void)
 
   now = time(NULL);
   expires = authority_key_certificate->expires;
-  time_left = expires - now;
+  time_left = (int)( expires - now );
   if (time_left <= 0) {
     badness = LOG_ERR;
     warn_interval = 60*60;
@@ -1742,7 +1742,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 #endif
 
-  return written+1;
+  return (int)written+1;
 }
 
 /** Write the contents of <b>extrainfo</b> to the <b>maxlen</b>-byte string
@@ -1814,7 +1814,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   }
 #endif
 
-  return strlen(s)+1;
+  return (int)strlen(s)+1;
 }
 
 /** Return true iff <b>s</b> is a legally valid server nickname. */

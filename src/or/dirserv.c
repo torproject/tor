@@ -31,9 +31,9 @@ const char dirserv_c_id[] =
 extern time_t time_of_process_start; /* from main.c */
 
 /** Do we need to regenerate the directory when someone asks for it? */
-static int the_directory_is_dirty = 1;
-static int runningrouters_is_dirty = 1;
-static int the_v2_networkstatus_is_dirty = 1;
+static time_t the_directory_is_dirty = 1;
+static time_t runningrouters_is_dirty = 1;
+static time_t the_v2_networkstatus_is_dirty = 1;
 
 /** Most recently generated encoded signed v1 directory. (v1 auth dirservers
  * only.) */
@@ -1628,7 +1628,7 @@ static uint64_t total_exit_bandwidth = 0;
 
 /** Helper: estimate the uptime of a router given its stated uptime and the
  * amount of time since it last stated its stated uptime. */
-static INLINE int
+static INLINE long
 real_uptime(routerinfo_t *router, time_t now)
 {
   if (now < router->cache_info.published_on)
@@ -1652,7 +1652,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
       /* XXXX Once most authorities are on v3, we should change the rule from
        * "use uptime if we don't have mtbf data" to "don't advertise Stable on
        * v3 if we don't have enough mtbf data." */
-      int uptime = real_uptime(router, now);
+      long uptime = real_uptime(router, now);
       if ((unsigned)uptime < stable_uptime &&
           (unsigned)uptime < UPTIME_TO_GUARANTEE_STABLE)
         return 1;
@@ -1681,7 +1681,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
 static int
 dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
 {
-  int uptime = real_uptime(router, now);
+  long uptime = real_uptime(router, now);
 
   return (router->wants_to_be_hs_dir &&
           uptime > get_options()->MinUptimeHidServDirectoryV2 &&
@@ -1739,7 +1739,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       const char *id = ri->cache_info.identity_digest;
       uint32_t bw;
       ri->is_exit = exit_policy_is_general_exit(ri->exit_policy);
-      uptimes[n_active] = real_uptime(ri, now);
+      uptimes[n_active] = (uint32_t)real_uptime(ri, now);
       mtbfs[n_active] = rep_hist_get_stability(id, now);
       tks  [n_active] = rep_hist_get_weighted_time_known(id, now);
       bandwidths[n_active] = bw = router_get_advertised_bandwidth(ri);
@@ -2233,14 +2233,14 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     char tbuf[ISO_TIME_LEN+1];
     networkstatus_t *current_consensus =
       networkstatus_get_live_consensus(now);
-    time_t last_consensus_interval; /* only used to pick a valid_after */
+    long last_consensus_interval; /* only used to pick a valid_after */
     if (current_consensus)
       last_consensus_interval = current_consensus->fresh_until -
         current_consensus->valid_after;
     else
       last_consensus_interval = DEFAULT_VOTING_INTERVAL_WHEN_NO_CONSENSUS;
     v3_out->valid_after =
-      dirvote_get_start_of_next_interval(now, last_consensus_interval);
+      dirvote_get_start_of_next_interval(now, (int)last_consensus_interval);
     format_iso_time(tbuf, v3_out->valid_after);
     log_notice(LD_DIR,"Choosing valid-after time in vote as %s: "
                "consensus_set=%d, last_interval=%d",

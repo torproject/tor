@@ -1190,7 +1190,7 @@ second_elapsed_callback(int fd, short event, void *args)
   /* the second has rolled over. check more stuff. */
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
   bytes_read = stats_prev_global_read_bucket - global_read_bucket;
-  seconds_elapsed = current_second ? (now.tv_sec - current_second) : 0;
+  seconds_elapsed = current_second ? (int)(now.tv_sec - current_second) : 0;
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
   if (accounting_is_enabled(options) && seconds_elapsed >= 0)

@@ -288,7 +288,7 @@ connection_or_flushed_some(or_connection_t *conn)
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   if (datalen < OR_CONN_LOWWATER) {
-    int n = (OR_CONN_HIGHWATER - datalen + CELL_NETWORK_SIZE-1)
+    ssize_t n = (OR_CONN_HIGHWATER - datalen + CELL_NETWORK_SIZE-1)
       / CELL_NETWORK_SIZE;
     while (conn->active_circuits && n > 0) {
       int flushed = connection_or_flush_from_first_active_circuit(conn, 1);
@@ -1023,7 +1023,7 @@ connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn, int reason)
 static const uint16_t or_protocol_versions[] = { 1, 2 };
 /** Number of versions in <b>or_protocol_versions</b>. */
 static const int n_or_protocol_versions =
-  sizeof(or_protocol_versions)/sizeof(uint16_t);
+  (int)( sizeof(or_protocol_versions)/sizeof(uint16_t) );
 
 /** Return true iff <b>v</b> is a link protocol version that this Tor
  * implementation believes it can support. */
@@ -1074,7 +1074,7 @@ connection_or_send_netinfo(or_connection_t *conn)
   cell.command = CELL_NETINFO;
 
   /* Their address. */
-  set_uint32(cell.payload, htonl(now));
+  set_uint32(cell.payload, htonl((uint32_t)now));
   cell.payload[4] = RESOLVED_TYPE_IPV4;
   cell.payload[5] = 4;
   set_uint32(cell.payload+6, htonl(conn->_base.addr));

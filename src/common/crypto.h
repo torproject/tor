@@ -97,7 +97,7 @@ int crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
 int crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
                               const char *from, size_t fromlen);
 int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
-                                     int datalen, const char *sig, int siglen);
+                               size_t datalen, const char *sig, size_t siglen);
 int crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
                            const char *from, size_t fromlen);
 int crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
@@ -109,7 +109,7 @@ int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, char *to,
                                      const char *from, size_t fromlen,
                                      int padding, int warnOnFailure);
 
-int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len);
+int crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, size_t dest_len);
 crypto_pk_env_t *crypto_pk_asn1_decode(const char *str, size_t len);
 int crypto_pk_get_digest(crypto_pk_env_t *pk, char *digest_out);
 int crypto_pk_get_fingerprint(crypto_pk_env_t *pk, char *fp_out,int add_space);

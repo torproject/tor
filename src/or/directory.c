@@ -1225,7 +1225,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   size_t body_len=0, orig_len=0;
   int status_code;
   time_t date_header=0;
-  int delta;
+  long delta;
   compress_method_t compression;
   int plausible;
   int skewed=0;
@@ -1281,7 +1281,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
      * inaccurate if we spend a lot of time downloading.)
      */
     delta = conn->_base.timestamp_lastwritten - date_header;
-    if (abs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
+    if (labs(delta)>ALLOW_DIRECTORY_TIME_SKEW) {
       char dbuf[64];
       int trusted = router_digest_is_trusted_dir(conn->identity_digest);
       format_time_interval(dbuf, sizeof(dbuf), delta);
@@ -1296,11 +1296,11 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
       control_event_general_status(trusted ? LOG_WARN : LOG_NOTICE,
-                               "CLOCK_SKEW SKEW=%d SOURCE=DIRSERV:%s:%d",
+                               "CLOCK_SKEW SKEW=%ld SOURCE=DIRSERV:%s:%d",
                                delta, conn->_base.address, conn->_base.port);
     } else {
       log_debug(LD_HTTP, "Time on received directory is within tolerance; "
-                "we are %d seconds skewed.  (That's okay.)", delta);
+                "we are %ld seconds skewed.  (That's okay.)", delta);
     }
   }
   (void) skewed; /* skewed isn't used yet. */
@@ -1977,7 +1977,7 @@ static void
 write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
                            const char *type, const char *encoding,
                            const char *extra_headers,
-                           int cache_lifetime)
+                           long cache_lifetime)
 {
   char date[RFC1123_TIME_LEN+1];
   char tmp[1024];
@@ -2041,7 +2041,7 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
  * based on whether the response will be <b>compressed</b> or not. */
 static void
 write_http_response_header(dir_connection_t *conn, ssize_t length,
-                           int compressed, int cache_lifetime)
+                           int compressed, long cache_lifetime)
 {
   write_http_response_header_impl(conn, length,
                           compressed?"application/octet-stream":"text/plain",
@@ -2273,7 +2273,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     int is_v3 = !strcmpstart(url, "/tor/status-vote");
     const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
-    int lifetime = NETWORKSTATUS_CACHE_LIFETIME;
+    long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
     if (!is_v3) {
       dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
       if (!strcmpstart(key, "fp/"))
@@ -3004,7 +3004,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
 {
   const int *schedule;
-  int schedule_len;
+  size_t schedule_len;
   int increment;
   tor_assert(dls);
   if (status_code != 503 || server)

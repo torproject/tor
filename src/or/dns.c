@@ -268,7 +268,12 @@ static int
 _compare_cached_resolves_by_expiry(const void *_a, const void *_b)
 {
   const cached_resolve_t *a = _a, *b = _b;
-  return a->expire - b->expire;
+  if (a->expire < b->expire)
+    return -1;
+  else if (a->expire == b->expire)
+    return 0;
+  else
+    return 1;
 }
 
 /** Priority queue of cached_resolve_t objects to let us know when they
@@ -423,7 +428,7 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
     case RESOLVED_TYPE_ERROR:
       {
         const char *errmsg = "Error resolving hostname";
-        int msglen = strlen(errmsg);
+        size_t msglen = strlen(errmsg);
 
         buf[1] = msglen;
         strlcpy(buf+2, errmsg, sizeof(buf)-2);
@@ -501,10 +506,10 @@ parse_inaddr_arpa_address(const char *address, struct in_addr *in)
   if (in) {
     uint32_t a;
     /* reverse the bytes */
-    a = (  ((inaddr.s_addr & 0x000000fful) << 24)
-          |((inaddr.s_addr & 0x0000ff00ul) << 8)
-          |((inaddr.s_addr & 0x00ff0000ul) >> 8)
-          |((inaddr.s_addr & 0xff000000ul) >> 24));
+    a = (uint32_t) (  ((inaddr.s_addr & 0x000000fful) << 24)
+                     |((inaddr.s_addr & 0x0000ff00ul) << 8)
+                     |((inaddr.s_addr & 0x00ff0000ul) >> 8)
+                     |((inaddr.s_addr & 0xff000000ul) >> 24));
     inaddr.s_addr = a;
 
     memcpy(in, &inaddr, sizeof(inaddr));

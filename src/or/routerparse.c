@@ -507,7 +507,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
                                crypto_pk_env_t *private_key)
 {
   char *signature;
-  int i;
+  size_t i;
 
   signature = tor_malloc(crypto_pk_keysize(private_key));
   if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
@@ -1174,7 +1174,7 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   tok = find_first_by_keyword(tokens, K_BANDWIDTH);
   tor_assert(tok && tok->n_args >= 3);
-  router->bandwidthrate =
+  router->bandwidthrate = (int)
     tor_parse_long(tok->args[0],10,1,INT_MAX,&ok,NULL);
 
   if (!ok) {
@@ -1182,12 +1182,13 @@ router_parse_entry_from_string(const char *s, const char *end,
              escaped(tok->args[0]));
     goto err;
   }
-  router->bandwidthburst = tor_parse_long(tok->args[1],10,0,INT_MAX,&ok,NULL);
+  router->bandwidthburst =
+    (int) tor_parse_long(tok->args[1],10,0,INT_MAX,&ok,NULL);
   if (!ok) {
     log_warn(LD_DIR, "Invalid bandwidthburst %s", escaped(tok->args[1]));
     goto err;
   }
-  router->bandwidthcapacity =
+  router->bandwidthcapacity = (int)
     tor_parse_long(tok->args[2],10,0,INT_MAX,&ok,NULL);
   if (!ok) {
     log_warn(LD_DIR, "Invalid bandwidthcapacity %s", escaped(tok->args[1]));
@@ -2309,8 +2310,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         goto err;
       v->good_signature = 1;
     } else {
+      if (tok->object_size >= INT_MAX)
+        goto err;
       v->signature = tor_memdup(tok->object_body, tok->object_size);
-      v->signature_len = tok->object_size;
+      v->signature_len = (int) tok->object_size;
     }
     ++n_signatures;
   });
@@ -2441,8 +2444,10 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
       voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
       memcpy(voter->identity_digest, id_digest, DIGEST_LEN);
       memcpy(voter->signing_key_digest, sk_digest, DIGEST_LEN);
+      if (tok->object_size >= INT_MAX)
+        goto err;
       voter->signature = tor_memdup(tok->object_body, tok->object_size);
-      voter->signature_len = tok->object_size;
+      voter->signature_len = (int) tok->object_size;
 
       smartlist_add(sigs->signatures, voter);
     });
@@ -2684,7 +2689,8 @@ static directory_token_t *
 get_next_token(const char **s, const char *eos, token_rule_t *table)
 {
   const char *next, *eol, *obstart;
-  int i, j, allocated, obname_len;
+  int i, j, allocated;
+  size_t obname_len;
   directory_token_t *tok;
   obj_syntax o_syn = NO_OBJ;
   char ebuf[128];
@@ -2801,7 +2807,7 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
   if (!eol)  /* end-of-line marker, or eos if there's no '\n' */
     eol = eos;
   /* Validate the ending tag, which should be 9 + NAME + 5 + eol */
-  if (eol-next != 9+obname_len+5 ||
+  if ((size_t)(eol-next) != 9+obname_len+5 ||
       strcmp_len(next+9, tok->object_type, obname_len) ||
       strcmp_len(eol-5, "-----", 5)) {
     snprintf(ebuf, sizeof(ebuf), "Malformed object: mismatched end tag %s",
@@ -3065,17 +3071,17 @@ tor_version_parse(const char *s, tor_version_t *out)
     s += 4;
 
   /* Get major. */
-  out->major = strtol(s,&eos,10);
+  out->major = (int)strtol(s,&eos,10);
   if (!eos || eos==s || *eos != '.') return -1;
   cp = eos+1;
 
   /* Get minor */
-  out->minor = strtol(cp,&eos,10);
+  out->minor = (int) strtol(cp,&eos,10);
   if (!eos || eos==cp || *eos != '.') return -1;
   cp = eos+1;
 
   /* Get micro */
-  out->micro = strtol(cp,&eos,10);
+  out->micro = (int) strtol(cp,&eos,10);
   if (!eos || eos==cp) return -1;
   if (!*eos) {
     out->status = VER_RELEASE;
@@ -3099,7 +3105,7 @@ tor_version_parse(const char *s, tor_version_t *out)
   }
 
   /* Get patchlevel */
-  out->patchlevel = strtol(cp,&eos,10);
+  out->patchlevel = (int) strtol(cp,&eos,10);
   if (!eos || eos==cp) return -1;
   cp = eos;
 
@@ -3117,7 +3123,7 @@ tor_version_parse(const char *s, tor_version_t *out)
 
   if (!strcmpstart(cp, "(r")) {
     cp += 2;
-    out->svn_revision = strtol(cp,&eos,10);
+    out->svn_revision = (int) strtol(cp,&eos,10);
   }
 
   return 0;

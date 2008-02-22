@@ -283,7 +283,7 @@ compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
   if ((r = memcmp(a->status.descriptor_digest, b->status.descriptor_digest,
                   DIGEST_LEN)))
     return r;
-  if ((r = (b->status.published_on - a->status.published_on)))
+  if ((r = (int)(b->status.published_on - a->status.published_on)))
     return r;
   if ((r = strcmp(b->status.nickname, a->status.nickname)))
     return r;
@@ -1220,7 +1220,7 @@ dirvote_recalculate_timing(or_options_t *options, time_t now)
   memset(&voting_schedule, 0, sizeof(voting_schedule));
 
   if (consensus) {
-    interval = consensus->fresh_until - consensus->valid_after;
+    interval = (int)( consensus->fresh_until - consensus->valid_after );
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
   } else {

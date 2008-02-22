@@ -2561,10 +2561,10 @@ alloc_http_authenticator(const char *authenticator)
 {
   /* an authenticator in Basic authentication
    * is just the string "username:password" */
-  const int authenticator_length = strlen(authenticator);
+  const size_t authenticator_length = strlen(authenticator);
   /* The base64_encode function needs a minimum buffer length
    * of 66 bytes. */
-  const int base64_authenticator_length = (authenticator_length/48+1)*66;
+  const size_t base64_authenticator_length = (authenticator_length/48+1)*66;
   char *base64_authenticator = tor_malloc(base64_authenticator_length);
   if (base64_encode(base64_authenticator, base64_authenticator_length,
                     authenticator, authenticator_length) < 0) {

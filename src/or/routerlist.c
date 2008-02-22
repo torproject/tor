@@ -547,7 +547,7 @@ static int
 _compare_signed_descriptors_by_age(const void **_a, const void **_b)
 {
   const signed_descriptor_t *r1 = *_a, *r2 = *_b;
-  return r1->published_on - r2->published_on;
+  return (int)(r1->published_on - r2->published_on);
 }
 
 /** If the journal is too long, or if <b>force</b> is true, then atomically
@@ -2875,7 +2875,7 @@ _compare_old_routers_by_identity(const void **_a, const void **_b)
   const signed_descriptor_t *r1 = *_a, *r2 = *_b;
   if ((i = memcmp(r1->identity_digest, r2->identity_digest, DIGEST_LEN)))
     return i;
-  return r1->published_on - r2->published_on;
+  return (int)(r1->published_on - r2->published_on);
 }
 
 /** Internal type used to represent how long an old descriptor was valid,
@@ -2949,7 +2949,7 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
     if (i < hi) {
       r_next = smartlist_get(lst, i+1);
       tor_assert(r->published_on <= r_next->published_on);
-      lifespans[i-lo].duration = (r_next->published_on - r->published_on);
+      lifespans[i-lo].duration = (int)(r_next->published_on - r->published_on);
     } else {
       r_next = NULL;
       lifespans[i-lo].duration = INT_MAX;
@@ -4185,7 +4185,7 @@ int
 router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
 {
   time_t r1pub, r2pub;
-  int time_difference;
+  long time_difference;
   tor_assert(r1 && r2);
 
   /* r1 should be the one that was published first. */
@@ -4240,7 +4240,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
    * give or take some slop? */
   r1pub = r1->cache_info.published_on;
   r2pub = r2->cache_info.published_on;
-  time_difference = abs(r2->uptime - (r1->uptime + (r2pub - r1pub)));
+  time_difference = labs(r2->uptime - (r1->uptime + (r2pub - r1pub)));
   if (time_difference > ROUTER_ALLOW_UPTIME_DRIFT &&
       time_difference > r1->uptime * .05 &&
       time_difference > r2->uptime * .05)

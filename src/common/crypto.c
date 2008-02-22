@@ -715,7 +715,7 @@ crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
  */
 int
 crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
-                                 int datalen, const char *sig, int siglen)
+                                 size_t datalen, const char *sig, size_t siglen)
 {
   char digest[DIGEST_LEN];
   char *buf;
@@ -935,12 +935,12 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
  * Return -1 on error, or the number of characters used on success.
  */
 int
-crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, int dest_len)
+crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, size_t dest_len)
 {
   int len;
   unsigned char *buf, *cp;
   len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0 || len > dest_len)
+  if (len < 0 || (size_t)len > dest_len)
     return -1;
   cp = buf = tor_malloc(len+1);
   len = i2d_RSAPublicKey(pk->key, &cp);

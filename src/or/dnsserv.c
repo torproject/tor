@@ -39,7 +39,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
   /* First, check whether the requesting address matches our SOCKSPolicy. */
   if ((addrlen = evdns_server_request_get_requesting_addr(req,
-                                (struct sockaddr*)&addr, sizeof(addr))) < 0) {
+                      (struct sockaddr*)&addr, (socklen_t)sizeof(addr))) < 0) {
     log_warn(LD_APP, "Couldn't get requesting address.");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;

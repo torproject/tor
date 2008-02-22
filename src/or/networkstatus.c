@@ -1130,7 +1130,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
     tor_assert(c->fresh_until < start);
     /* We must download the next one before c is invalid: */
     tor_assert(start+dl_interval < c->valid_until);
-    time_to_download_next_consensus = start + crypto_rand_int(dl_interval);
+    time_to_download_next_consensus = start + crypto_rand_int((int)dl_interval);
     {
       char tbuf1[ISO_TIME_LEN+1];
       char tbuf2[ISO_TIME_LEN+1];

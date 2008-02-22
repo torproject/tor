@@ -180,7 +180,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
     goto err;
 
   dhbytes = crypto_dh_get_bytes(dh);
-  pkbytes = crypto_pk_keysize(dest_router_key);
+  pkbytes = (int) crypto_pk_keysize(dest_router_key);
   tor_assert(dhbytes == 128);
   tor_assert(pkbytes == 128);
 
@@ -235,7 +235,7 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
 {
   char challenge[ONIONSKIN_CHALLENGE_LEN];
   crypto_dh_env_t *dh = NULL;
-  int len;
+  ssize_t len;
   char *key_material=NULL;
   size_t key_material_len=0;
   int i;
@@ -258,8 +258,8 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
              "Couldn't decrypt onionskin: client may be using old onion key");
     goto err;
   } else if (len != DH_KEY_LEN) {
-    log_warn(LD_PROTOCOL, "Unexpected onionskin length after decryption: %d",
-             len);
+    log_warn(LD_PROTOCOL, "Unexpected onionskin length after decryption: %ld",
+             (long)len);
     goto err;
   }
 
@@ -332,7 +332,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
             char *key_out,
             size_t key_out_len)
 {
-  int len;
+  ssize_t len;
   char *key_material=NULL;
   size_t key_material_len;
   tor_assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);

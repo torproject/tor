@@ -490,7 +490,7 @@ accounting_set_wakeup_time(void)
     return;
   }
 
-  time_in_interval = interval_end_time - interval_start_time;
+  time_in_interval = (int)(interval_end_time - interval_start_time);
 
   time_to_exhaust_bw =
     (get_options()->AccountingMax/expected_bandwidth_usage)*60;
