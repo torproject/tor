@@ -94,6 +94,8 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       as a "close".  Stop calling closes "unexpected closes": existing
       Tors don't use SSL_close(), so having a connection close without
       the TLS shutdown handshake is hardly unexpected.
+    - Send NAMESERVER_STATUS messages for a single failed nameserver
+      correctly.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,
