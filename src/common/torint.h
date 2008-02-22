@@ -42,11 +42,6 @@
 #include <inttypes.h>
 #endif
 
-#ifdef MS_WINDOWS
-/* Windows likes to capitalize ssize_t.  Charming. */
-#define ssize_t SSIZE_T
-#endif
-
 #if (SIZEOF_INT8_T != 0)
 #define HAVE_INT8_T
 #endif
@@ -183,6 +178,16 @@ typedef unsigned __int64 uint64_t;
 #endif
 #ifndef INT64_MAX
 #define INT64_MAX 0x7fffffffffffffffi64
+#endif
+#endif
+
+#ifndef HAVE_SSIZE_T
+#if SIZEOF_SIZE_T == 8
+typedef int64_t ssize_t;
+#elif SIZEOF_SIZE_T == 4
+typedef int32_t ssize_t;
+#else
+#error "Can't define ssize_t."
 #endif
 #endif
 

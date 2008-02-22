@@ -779,7 +779,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
 #ifdef MS_WINDOWS
   if (limit > DEFAULT_MAX_CONNECTIONS) {
     log_warn(LD_CONFIG,
-             "We do not support more than %lu file descriptors"
+             "We do not support more than %lu file descriptors "
              "on Windows. Tried to raise to %lu.",
              DEFAULT_MAX_CONNECTIONS, limit);
     return -1;
@@ -787,7 +787,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   limit = DEFAULT_MAX_CONNECTIONS;
 #elif defined(CYGWIN) || defined(__CYGWIN__)
   if (limit > CYGWIN_MAX_CONNECTIONS) {
-    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors"
+    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors "
              "when using Cygwin. Tried to raise to %lu.",
              CYGWIN_MAX_CONNECTIONS, limit);
     return -1;
@@ -795,7 +795,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   limit = CYGWIN_MAX_CONNECTIONS;
 #elif defined(IPHONE)
   if (limit > IPHONE_MAX_CONNECTIONS) {
-    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors"
+    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors "
              "on iPhone. Tried to raise to %lu.",
              IPHONE_MAX_CONNECTIONS, limit);
     return -1;
