@@ -1514,7 +1514,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   switch (var->type) {
 
   case CONFIG_TYPE_UINT:
-    i = tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
+    i = (int)tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
     if (!ok) {
       r = tor_snprintf(buf, sizeof(buf),
           "Int keyword '%s %s' is malformed or out of bounds.",
@@ -1552,7 +1552,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   }
 
   case CONFIG_TYPE_BOOL:
-    i = tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
+    i = (int)tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
       r = tor_snprintf(buf, sizeof(buf),
           "Boolean '%s %s' expects 0 or 1.",

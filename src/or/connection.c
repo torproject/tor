@@ -789,10 +789,11 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
      * right after somebody else has let it go. But REUSEADDR on win32
      * means you can bind to the port _even when somebody else
      * already has it bound_. So, don't do that on Win32. */
-    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one, sizeof(one));
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one,
+               (socklen_t)sizeof(one));
 #endif
 
-    if (bind(s,listensockaddr,sizeof(struct sockaddr_in)) < 0) {
+    if (bind(s,listensockaddr,(socklen_t)sizeof(struct sockaddr_in)) < 0) {
       const char *helpfulhint = "";
       int e = tor_socket_errno(s);
       if (ERRNO_IS_EADDRINUSE(e))
@@ -2585,7 +2586,7 @@ client_check_address_changed(int sock)
 {
   uint32_t iface_ip, ip_out;
   struct sockaddr_in out_addr;
-  socklen_t out_addr_len = sizeof(out_addr);
+  socklen_t out_addr_len = (socklen_t) sizeof(out_addr);
   uint32_t *ip;
 
   if (!last_interface_ip)
@@ -2640,12 +2641,12 @@ static void
 set_constrained_socket_buffers(int sock, int size)
 {
   void *sz = (void*)&size;
-  if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, sz, sizeof(size)) < 0) {
+  if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, sz,(socklen_t)sizeof(size)) < 0) {
     int e = tor_socket_errno(sock);
     log_warn(LD_NET, "setsockopt() to constrain send "
              "buffer to %d bytes failed: %s", size, tor_socket_strerror(e));
   }
-  if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, sz, sizeof(size)) < 0) {
+  if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, sz,(socklen_t)sizeof(size)) < 0) {
     int e = tor_socket_errno(sock);
     log_warn(LD_NET, "setsockopt() to constrain recv "
              "buffer to %d bytes failed: %s", size, tor_socket_strerror(e));

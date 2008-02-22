@@ -553,7 +553,7 @@ static INLINE int
 read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
               int *reached_eof)
 {
-  int read_result;
+  ssize_t read_result;
 
   tor_assert(CHUNK_REMAINING_CAPACITY(chunk) >= at_most);
   read_result = tor_socket_recv(fd, CHUNK_WRITE_PTR(chunk), at_most, 0);
@@ -574,9 +574,10 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
   } else { /* actually got bytes. */
     buf->datalen += read_result;
     chunk->datalen += read_result;
-    log_debug(LD_NET,"Read %d bytes. %d on inbuf.", read_result,
+    log_debug(LD_NET,"Read %ld bytes. %d on inbuf.", (long)read_result,
               (int)buf->datalen);
-    return read_result;
+    tor_assert(read_result < INT_MAX);
+    return (int)read_result;
   }
 }
 
@@ -634,8 +635,10 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
     check();
     if (r < 0)
       return r; /* Error */
-    else if ((size_t)r < readlen) /* eof, block, or no more to read. */
-      return r + total_read;
+    else if ((size_t)r < readlen) { /* eof, block, or no more to read. */
+      tor_assert(r+total_read < INT_MAX);
+      return (int)(r + total_read);
+    }
     total_read += r;
   }
   return r;
@@ -702,7 +705,7 @@ static INLINE int
 flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
             size_t *buf_flushlen)
 {
-  int write_result;
+  ssize_t write_result;
 
   tor_assert(sz <= chunk->datalen);
   write_result = tor_socket_send(s, chunk->data, sz, 0);
@@ -720,7 +723,8 @@ flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
   } else {
     *buf_flushlen -= write_result;
     buf_remove_from_front(buf, write_result);
-    return write_result;
+    tor_assert(write_result < INT_MAX);
+    return (int)write_result;
   }
 }
 
@@ -798,7 +802,8 @@ flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
     if (r == 0 || (size_t)r < flushlen0) /* can't flush any more now. */
       break;
   }
-  return flushed;
+  tor_assert(flushed < INT_MAX);
+  return (int)flushed;
 }
 
 /** As flush_buf(), but writes data to a TLS connection.  Can write more than
@@ -841,7 +846,8 @@ flush_buf_tls(tor_tls_t *tls, buf_t *buf, size_t flushlen,
     if (r == 0) /* Can't flush any more now. */
       break;
   } while (sz > 0);
-  return flushed;
+  tor_assert(flushed < INT_MAX);
+  return (int)flushed;
 }
 
 /** Append <b>string_len</b> bytes from <b>string</b> to the end of
@@ -853,7 +859,7 @@ int
 write_to_buf(const char *string, size_t string_len, buf_t *buf)
 {
   if (!string_len)
-    return buf->datalen;
+    return (int)buf->datalen;
   check();
 
   while (string_len) {
@@ -872,7 +878,8 @@ write_to_buf(const char *string, size_t string_len, buf_t *buf)
   }
 
   check();
-  return buf->datalen;
+  tor_assert(buf->datalen < INT_MAX);
+  return (int)buf->datalen;
 }
 
 /** Helper: copy the first <b>string_len</b> bytes from <b>buf</b>
@@ -917,7 +924,8 @@ fetch_from_buf(char *string, size_t string_len, buf_t *buf)
   peek_from_buf(string, string_len, buf);
   buf_remove_from_front(buf, string_len);
   check();
-  return buf->datalen;
+  tor_assert(buf->datalen < INT_MAX);
+  return (int)buf->datalen;
 }
 
 /** Check <b>buf</b> for a variable-length cell according to the rules of link
@@ -982,6 +990,7 @@ move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
     len = buf_in->datalen;
 
   cp = len; /* Remember the number of bytes we intend to copy. */
+  tor_assert(cp < INT_MAX);
   while (len) {
     /* This isn't the most efficient implementation one could imagine, since
      * it does two copies instead of 1, but I kinda doubt that this will be
@@ -992,7 +1001,7 @@ move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen)
     len -= n;
   }
   *buf_flushlen -= cp;
-  return cp;
+  return (int)cp;
 }
 
 /** Internal structure: represents a position in a buffer. */
@@ -1014,7 +1023,7 @@ buf_pos_init(const buf_t *buf, buf_pos_t *out)
 /** Advance <b>out</b> to the first appearance of <b>ch</b> at the current
  * position of <b>out</b>, or later.  Return -1 if no instances are found;
  * otherwise returns the absolute position of the character. */
-static int
+static off_t
 buf_find_pos_of_char(char ch, buf_pos_t *out)
 {
   const chunk_t *chunk;
@@ -1040,7 +1049,8 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
     char *cp = memchr(chunk->data+pos, ch, chunk->datalen - pos);
     if (cp) {
       out->chunk = chunk;
-      out->pos = cp - chunk->data;
+      tor_assert(cp - chunk->data < INT_MAX);
+      out->pos = (int)(cp - chunk->data);
       return out->chunk_pos + out->pos;
     } else {
       out->chunk_pos += chunk->datalen;
@@ -1101,7 +1111,8 @@ buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
   buf_pos_init(buf, &pos);
   while (buf_find_pos_of_char(*s, &pos) >= 0) {
     if (buf_matches_at_pos(&pos, s, n)) {
-      return pos.chunk_pos + pos.pos;
+      tor_assert(pos.chunk_pos + pos.pos < INT_MAX);
+      return (int)(pos.chunk_pos + pos.pos);
     } else {
       if (buf_pos_inc(&pos)<0)
         return -1;
@@ -1561,11 +1572,11 @@ peek_buf_has_control0_command(buf_t *buf)
 
 /** Return the index within <b>buf</b> at which <b>ch</b> first appears,
  * or -1 if <b>ch</b> does not appear on buf. */
-static int
+static off_t
 buf_find_offset_of_char(buf_t *buf, char ch)
 {
   chunk_t *chunk;
-  int offset = 0;
+  off_t offset = 0;
   for (chunk = buf->head; chunk; chunk = chunk->next) {
     char *cp = memchr(chunk->data, ch, chunk->datalen);
     if (cp)
@@ -1587,7 +1598,7 @@ int
 fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)
 {
   size_t sz;
-  int offset;
+  off_t offset;
 
   if (!buf->head)
     return 0;

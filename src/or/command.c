@@ -530,7 +530,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
              conn->handshake_state->received_versions);
   /* Decode the cell. */
   timestamp = ntohl(get_uint32(cell->payload));
-  if (abs(now - conn->handshake_state->sent_versions_at) < 180) {
+  if (labs(now - conn->handshake_state->sent_versions_at) < 180) {
     apparent_skew = now - timestamp;
   }
 
@@ -574,7 +574,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   /* Act on apparent skew. */
   /** Warn when we get a netinfo skew with at least this value. */
 #define NETINFO_NOTICE_SKEW 3600
-  if (abs(apparent_skew) > NETINFO_NOTICE_SKEW &&
+  if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
       router_get_by_digest(conn->identity_digest)) {
     char dbuf[64];
     /*XXXX This should check the trustedness of the other side. */

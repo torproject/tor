@@ -1272,7 +1272,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
   tor_assert(conn->socks_request);
   want_onehop = conn->want_onehop;
 
-  conn_age = time(NULL) - conn->_base.timestamp_created;
+  conn_age = (int)(time(NULL) - conn->_base.timestamp_created);
 
   if (conn_age >= get_options()->SocksTimeout) {
     int severity = (!conn->_base.addr && !conn->_base.port) ?
