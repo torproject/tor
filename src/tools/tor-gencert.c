@@ -44,7 +44,11 @@ int reuse_signing_key = 0;
 int verbose = 0;
 int make_new_id = 0;
 int months_lifetime = DEFAULT_LIFETIME;
+int passphrase_fd = -1;
 char *address = NULL;
+
+char *passphrase = NULL;
+size_t passphrase_len = 0;
 
 EVP_PKEY *identity_key = NULL;
 EVP_PKEY *signing_key = NULL;
@@ -57,7 +61,8 @@ show_help(void)
           "tor-gencert [-h|--help] [-v] [-r|--reuse] [--create-identity-key]\n"
           "        [-i identity_key_file] [-s signing_key_file] "
           "[-c certificate_file]\n"
-          "        [-m lifetime_in_months] [-a address:port]\n");
+          "        [-m lifetime_in_months] [-a address:port] "
+          "[--passphrase-fd <fd>]\n");
 
 }
 
@@ -80,6 +85,34 @@ crypto_log_errors(int severity, const char *doing)
     } else {
       log(severity, LD_CRYPTO, "crypto error: %s (in %s:%s)", msg, lib, func);
     }
+  }
+}
+
+/** Read the passphrase from the passphrase fd. */
+static int
+load_passphrase(void)
+{
+  char *cp;
+  char buf[1024]; /* "Ought to be enough for anybody." */
+  int n = read_all(passphrase_fd, buf, sizeof(buf), 0);
+  if (n < 0) {
+    log_err(LD_GENERAL, "Couldn't read from passphrase fd: %s",
+            strerror(errno));
+    return -1;
+  }
+  cp = memchr(buf, '\n', n);
+  passphrase_len = cp-buf;
+  passphrase = tor_strndup(buf, passphrase_len);
+  memset(buf, 0, sizeof(buf));
+  return 0;
+}
+
+static void
+clear_passphrase(void)
+{
+  if (passphrase) {
+    memset(passphrase, 0, passphrase_len);
+    tor_free(passphrase);
   }
 }
 
@@ -143,6 +176,12 @@ parse_commandline(int argc, char **argv)
       tor_snprintf(address, INET_NTOA_BUF_LEN+32, "%s:%d", b, (int)port);
     } else if (!strcmp(argv[i], "--create-identity-key")) {
       make_new_id = 1;
+    } else if (!strcmp(argv[i], "--passphrase-fd")) {
+      if (i+1>=argc) {
+        fprintf(stderr, "No argument to -m\n");
+        return 1;
+      }
+      passphrase_fd = atoi(argv[++i]);
     } else {
       fprintf(stderr, "Unrecognized option %s\n", argv[i]);
       return 1;
@@ -169,6 +208,10 @@ parse_commandline(int argc, char **argv)
     certificate_file = tor_strdup("./authority_certificate");
     log_info(LD_GENERAL, "No signing key file given; defaulting to %s",
              certificate_file);
+  }
+  if (passphrase_fd >= 0) {
+    if (load_passphrase()<0)
+      return 1;
   }
   return 0;
 }
@@ -209,9 +252,11 @@ load_identity_key(void)
                                           &open_file)))
       return 1;
 
+    /* Write the key to the file.  If passphrase is not set, takes it from
+     * the terminal. */
     if (!PEM_write_PKCS8PrivateKey_nid(f, identity_key,
                                        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
-                                       NULL, 0, /* no password here. */
+                                       passphrase, (int)passphrase_len,
                                        NULL, NULL)) {
       log_err(LD_GENERAL, "Couldn't write identity key to %s",
               identity_key_file);
@@ -235,7 +280,8 @@ load_identity_key(void)
       return 1;
     }
 
-    identity_key = PEM_read_PrivateKey(f, NULL, NULL, NULL);
+    /* Read the key.  If passphrase is not set, takes it from the terminal. */
+    identity_key = PEM_read_PrivateKey(f, NULL, NULL, passphrase);
     if (!identity_key) {
       log_err(LD_GENERAL, "Couldn't read identity key from %s",
               identity_key_file);
@@ -444,6 +490,7 @@ main(int argc, char **argv)
 
   r = 0;
  done:
+  clear_passphrase();
   if (identity_key)
     EVP_PKEY_free(identity_key);
   if (signing_key)

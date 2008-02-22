@@ -63,6 +63,11 @@ Default: "./authority_certificate"
 Number of months that the certificate should be valid.  Default: 12.
 .LP
 .TP
+\fB--passphrase-fd \fR\fIFILEDES\fP
+Filedescriptor to read the file descriptor from.  Ends at the first
+NUL or newline.  Default: read from the terminal.
+.LP
+.TP
 \fB-a \fR\fIaddress\fR:\fIport\fP
 If provided, advertise the address:port combination as this authority's
 preferred directory port in its certificate.  If the address is a hostname,

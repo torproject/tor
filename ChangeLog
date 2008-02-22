@@ -58,6 +58,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - When built with --enable-gcc-warnings, check for whether Apple's
       warning "-Wshorten-64-to-32" is enabled.
 
+  o Minor features (misc):
+    - Add a --passphrase-fd argument to tor-gencert command for
+      scriptability.
+
   o Minor bugfixes:
     - Log the correct memory chunk sizes for empty RAM chunks in mempool.c.
     - Directory mirrors no longer include a guess at the client's IP
