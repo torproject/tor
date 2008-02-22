@@ -759,7 +759,7 @@ connection_edge_process_end_not_open(
             (rh->length < 5 ||
              (tor_inet_aton(conn->socks_request->address, &in) &&
               !conn->chosen_exit_name))) {
-          log_notice(LD_APP,
+          log_info(LD_APP,
                  "Exitrouter '%s' seems to be more restrictive than its exit "
                  "policy. Not using this router as exit for now.",
                  exitrouter->nickname);
