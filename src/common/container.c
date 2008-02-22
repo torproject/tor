@@ -92,7 +92,6 @@ smartlist_add_all(smartlist_t *s1, const smartlist_t *s2)
   int new_size = s1->num_used + s2->num_used;
   tor_assert(new_size >= s1->num_used); /* check for overflow. */
   smartlist_ensure_capacity(s1, new_size);
-  tor_assert(s1->capacity >= new_size);
   memcpy(s1->list + s1->num_used, s2->list, s2->num_used*sizeof(void*));
   s1->num_used = new_size;
 }
