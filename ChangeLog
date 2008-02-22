@@ -47,8 +47,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
 
   o Minor features (controller):
     - Add a new __HashedControlSessionPassword option for controllers
-      to use for one-off session password hashes that shouldn't get
-      saved to disk by SAVECONF.  Partial fix for bug 586.
+      to use for one-off session password hashes that shouldn't
+      get saved to disk by SAVECONF. Make Tor automatically convert
+      "HashedControlPassword" to this new option but only when it's
+      given on the command line. Partial fix for bug 586.
 
   o Minor features (logging):
     - When SafeLogging is disabled, log addresses along with all TLS

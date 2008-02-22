@@ -84,6 +84,7 @@ static config_abbrev_t _option_abbrevs[] = {
   { "SearchDomains", "ServerDNSSearchDomains", 0, 1},
   { "PreferTunnelledDirConns", "PreferTunneledDirConns", 0, 0},
   { "BridgeAuthoritativeDirectory", "BridgeAuthoritativeDir", 0, 0},
+  { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { NULL, NULL, 0, 0},
 };
 /* A list of state-file abbreviations, for compatibility. */
