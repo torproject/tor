@@ -116,7 +116,6 @@ case "$1" in
 	fi
 
 	start-stop-daemon --start --quiet --oknodo \
-		--chuid debian-tor:debian-tor \
 		--pidfile $TORPID \
 		$NICE \
 		--exec $DAEMON -- $ARGS

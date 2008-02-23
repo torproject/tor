@@ -13,8 +13,10 @@ tor (0.2.0.19-alpha+svn-1) unreleased; urgency=low
   * If we run as root also apply debian defaults.
   * Add User=debian-tor and Group=debian-tor to debian defaults.  That allows
     us to start Tor as root and have it setuid/setgid to the target user.
+  * Change the init script to start Tor as root.  Now we should be able to
+    bind to low port.
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 23 Feb 2008 13:44:56 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sat, 23 Feb 2008 13:50:14 +0100
 
 tor (0.2.0.19-alpha-1) experimental; urgency=low
 
