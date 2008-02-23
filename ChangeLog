@@ -30,6 +30,10 @@ Changes in version 0.2.0.20-?? - 2008-02-??
     - Fix code used to find strings within buffers, when those strings
       are not in the first chunk of the buffer.
     - Fix potential segfault when parsing HTTP headers. Bugfix on 0.2.0.x.
+    - Servers that don't know their own IP address should go to the
+      authorities for their first directory fetch, even if their DirPort
+      is off or if they don't know they're reachable yet. This will help
+      them bootstrap better. Bugfix on 0.2.0.18-alpha; fixes bug 609.
 
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of

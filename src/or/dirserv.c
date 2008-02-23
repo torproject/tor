@@ -1118,11 +1118,14 @@ int
 directory_fetches_from_authorities(or_options_t *options)
 {
   routerinfo_t *me;
+  uint32_t addr;
   if (options->FetchDirInfoEarly)
     return 1;
-  if (options->DirPort == 0)
-    return 0;
   if (options->BridgeRelay == 1)
+    return 0;
+  if (server_mode(options) && router_pick_published_address(options, &addr)<0)
+    return 1; /* we don't know our IP address; ask an authority. */
+  if (options->DirPort == 0)
     return 0;
   if (!server_mode(options) || !advertised_server_mode())
     return 0;

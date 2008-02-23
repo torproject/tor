@@ -1160,9 +1160,10 @@ static smartlist_t *warned_nonexistent_family = NULL;
 
 static int router_guess_address_from_dir_headers(uint32_t *guess);
 
-/** Return our current best guess at our address, either because
+/** Make a current best guess at our address, either because
  * it's configured in torrc, or because we've learned it from
- * dirserver headers. */
+ * dirserver headers. Place the answer in *<b>addr</b> and return
+ * 0 on success, else return -1 if we have no guess. */
 int
 router_pick_published_address(or_options_t *options, uint32_t *addr)
 {
