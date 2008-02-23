@@ -10,8 +10,11 @@ tor (0.2.0.19-alpha+svn-1) unreleased; urgency=low
     Big servers at the moment regularly use more than 10k FDs, so our old
     default of 8k no longer is sufficient.  On the other hand we don't want
     lower end systems to run out of FDs on Tor's account.
+  * If we run as root also apply debian defaults.
+  * Add User=debian-tor and Group=debian-tor to debian defaults.  That allows
+    us to start Tor as root and have it setuid/setgid to the target user.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 20 Feb 2008 23:38:45 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sat, 23 Feb 2008 13:44:56 +0100
 
 tor (0.2.0.19-alpha-1) experimental; urgency=low
 
