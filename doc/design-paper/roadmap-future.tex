@@ -17,6 +17,7 @@
 
 \title{Tor Development Roadmap: Wishlist for 2008 and beyond}
 \author{Roger Dingledine \and Nick Mathewson}
+\date{}
 
 \maketitle
 \pagestyle{plain}
@@ -138,11 +139,58 @@ bytes.  But a) we could use some more intelligent heuristics, and b)
 this leaks information to an active attacker about when local traffic
 was sent/received.
 
-\subsection{Tolerate absurdly wrong clocks, even for servers}
-\subsection{First a bridge, then a public relay?}
-Metrics for deciding when you're fast enough and stable enough
-      to opt to switch from being a bridge relay to a public relay.
+\subsection{Tolerate absurdly wrong clocks, even for relays}
+
+Many of our users are on Windows, running with a clock several days or
+even several years off from reality. Some of them are even intentionally
+in this state so they can run software that will only run in the past.
+
+Before Tor 0.1.1.x, Tor clients would still function if their clock was
+wildly off --- they simply got a copy of the directory and believed it.
+Starting in Tor 0.1.2.x, the clients only believed networkstatus documents
+that they believed to be recent, so clients with extremely wrong clocks
+stopped working. (This bug has been an unending source of vague and
+confusing bug reports.)
+
+Step one is for clients to recognize when all the directory material
+they're fetching has roughly the same offset from their current time,
+and then automatically correct for it.
+
+Once that's working well, clients who opt to become bridge relays should
+be able to use the same approach to serve accurate directory information
+to their bridge users.
+
 \subsection{Risks from being a relay}
+
+Three different research
+papers~\cite{back01,clog-the-queue,attack-tor-oak05} describe ways to
+identify the nodes in a circuit by running traffic through candidate nodes
+and looking for dips in the traffic while the circuit is active. These
+clogging attacks are not that scary in the Tor context so long as relays
+are never clients too. But if we're trying to encourage more clients to
+turn on relay functionality too (whether as bridge relays or as normal
+relays), then we need to understand this threat better and learn how to
+mitigate it.
+
+One promising research direction is to investigate the RelayBandwidthRate
+feature that lets Tor rate limit relayed traffic differently from local
+traffic. Since the attacker's ``clogging'' traffic is not in the same
+bandwidth class as the traffic initiated by the user, it may be harder
+to detect interference. Or it may not be.
+
+\subsection{First a bridge, then a public relay?}
+
+Once enough of the items in this section are done, I want all clients
+to start out automatically detecting their reachability and opting
+to be bridge relays.
+
+Then if they realize they have enough consistency and bandwidth, they
+should automatically upgrade to being non-exit relays.
+
+What metrics should we use for deciding when we're fast enough
+and stable enough to switch? Given that the list of bridge relays needs
+to be kept secret, it doesn't make much sense to switch back.
+
 \section{Tor on low resources / slow links}
 \subsection{Reducing directory fetches further}
 \label{subsec:fewer-descriptor-fetches}
