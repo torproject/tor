@@ -226,6 +226,10 @@ Planned for 0.2.1.x:
     - Get a "use less buffer ram" patch into openssl.
     - Get IOCP patch into libevent
     - Use libevent's evdns code where applicable.
+    - Refactor buf_read and buf_write to have sensible ways to return
+      error codes after partial writes
+    - Improve unit test coverage
+    - Logging domains.
 
   - bridge communities with local bridge authorities:
     - clients who have a password configured decide to ask their bridge
