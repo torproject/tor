@@ -995,14 +995,14 @@ typedef struct edge_connection_t {
   uint8_t num_socks_retries;
 
   /** True iff this connection is for a dns request only. */
-  unsigned int is_dns_request : 1;
+  unsigned int is_dns_request:1;
 
   /** True iff this stream must attach to a one-hop circuit (e.g. for
    * begin_dir). */
-  int want_onehop:1;
+  unsigned int want_onehop:1;
   /** True iff this stream should use a BEGIN_DIR relay command to establish
    * itself rather than BEGIN (either via onehop or via a whole circuit). */
-  int use_begindir:1;
+  unsigned int use_begindir:1;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */

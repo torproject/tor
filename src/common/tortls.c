@@ -85,8 +85,8 @@ struct tor_tls_t {
                                   * of the connection protocol (client sends
                                   * different cipher list, server sends only
                                   * one certificate). */
-  int got_renegotiate:1; /**< True iff we should call negotiated_callback
-                          * when we're done reading. */
+ /** True iff we should call negotiated_callback when we're done reading. */
+  unsigned int got_renegotiate:1;
   size_t wantwrite_n; /**< 0 normally, >0 if we returned wantwrite last
                        * time. */
   /** Last values retrieved from BIO_number_read()/write(); see
