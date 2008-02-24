@@ -2673,8 +2673,10 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          if (router_digest_is_me(d)) {
-           if (router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
-             smartlist_add(descs_out, &(router_get_my_routerinfo()->cache_info));
+           /* make sure desc_routerinfo exists */
+           routerinfo_t *ri = router_get_my_routerinfo();
+           if (ri)
+             smartlist_add(descs_out, &(ri->cache_info));
          } else {
            routerinfo_t *ri = router_get_by_digest(d);
            /* Don't actually serve a descriptor that everyone will think is

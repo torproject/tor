@@ -643,7 +643,8 @@ crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
   tor_assert(to);
   tor_assert(fromlen<INT_MAX);
 
-  r = RSA_public_encrypt((int)fromlen, (unsigned char*)from, (unsigned char*)to,
+  r = RSA_public_encrypt((int)fromlen,
+                         (unsigned char*)from, (unsigned char*)to,
                          env->key, crypto_get_rsa_padding(padding));
   if (r<0) {
     crypto_log_errors(LOG_WARN, "performing RSA encryption");
@@ -698,7 +699,8 @@ crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
   tor_assert(from);
   tor_assert(to);
   tor_assert(fromlen < INT_MAX);
-  r = RSA_public_decrypt((int)fromlen, (unsigned char*)from, (unsigned char*)to,
+  r = RSA_public_decrypt((int)fromlen,
+                         (unsigned char*)from, (unsigned char*)to,
                          env->key, RSA_PKCS1_PADDING);
 
   if (r<0) {
@@ -715,7 +717,7 @@ crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
  */
 int
 crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
-                                 size_t datalen, const char *sig, size_t siglen)
+                               size_t datalen, const char *sig, size_t siglen)
 {
   char digest[DIGEST_LEN];
   char *buf;

@@ -2647,12 +2647,13 @@ static void
 set_constrained_socket_buffers(int sock, int size)
 {
   void *sz = (void*)&size;
-  if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, sz,(socklen_t)sizeof(size)) < 0) {
+  socklen_t sz_sz = (socklen_t) sizeof(size);
+  if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF, sz, sz_sz) < 0) {
     int e = tor_socket_errno(sock);
     log_warn(LD_NET, "setsockopt() to constrain send "
              "buffer to %d bytes failed: %s", size, tor_socket_strerror(e));
   }
-  if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, sz,(socklen_t)sizeof(size)) < 0) {
+  if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF, sz, sz_sz) < 0) {
     int e = tor_socket_errno(sock);
     log_warn(LD_NET, "setsockopt() to constrain recv "
              "buffer to %d bytes failed: %s", size, tor_socket_strerror(e));

@@ -1099,11 +1099,12 @@ router_digest_is_me(const char *digest)
 int
 router_extrainfo_digest_is_me(const char *digest)
 {
-  if (!router_get_my_extrainfo())
+  extrainfo_t *ei = router_get_my_extrainfo();
+  if (!ei)
     return 0;
 
   return !memcmp(digest,
-                 &(router_get_my_extrainfo()->cache_info).signed_descriptor_digest,
+                 ei->cache_info.signed_descriptor_digest,
                  DIGEST_LEN);
 }
 
