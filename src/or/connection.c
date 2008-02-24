@@ -746,8 +746,9 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address)
  */
 static connection_t *
 connection_create_listener(struct sockaddr *listensockaddr, int type,
-  char* address)
+                           char* address)
 {
+  /*XXXX021 this function should take a socklen too. */
   connection_t *conn;
   int s; /* the socket we're going to make */
   uint16_t usePort = 0;
@@ -814,7 +815,6 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
     }
 #ifdef HAVE_SYS_UN_H
   } else if (listensockaddr->sa_family == AF_UNIX) {
-    size_t len;
     start_reading = 1;
 
     /* For now only control ports can be unix domain sockets
@@ -835,9 +835,7 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
       goto err;
     }
 
-    len = strlen(((struct sockaddr_un *)listensockaddr)->sun_path) +
-          sizeof(((struct sockaddr_un *)listensockaddr)->sun_family);
-    if (bind(s, listensockaddr, (socklen_t)len) == -1) {
+    if (bind(s, listensockaddr, (socklen_t)sizeof(struct sockaddr_un)) == -1) {
       log_warn(LD_NET,"Bind to %s failed: %s.", address,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;

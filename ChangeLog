@@ -102,6 +102,8 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       the TLS shutdown handshake is hardly unexpected.
     - Send NAMESERVER_STATUS messages for a single failed nameserver
       correctly.
+    - Make Unix controlsockets work correctly on OpenBSD.  Patch from
+      tup. Bugfix on 0.2.0.3-alpha.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,
