@@ -42,11 +42,27 @@ S   - Zip-splitting:
       - If it's faster to research a self-extracting splitter
         and use it, with simpler documentation, that's obviously fine.
 S   - Finish first cut at integrating upnp lib into Vidalia
+R   - get the geoip files onto some bridge relays, and gather stats
+J   - Translation portal
+      - Vidalia translations
+      - Vidalia installer translations
+      - Torbutton translations
+      - Centralized instructions for how to help translate
+      - Continue managing the tor-translations team to keep the Tor
+        website translated
 
-  - End of June
+  - Mid May
 S   - More TorBrowser work
       - Integrate pidgin and OTR
       - move portablefirefox nsi goo into vidalia as appropriate
+      - Figure out (or give up on) how to run Tor Browser and ordinary
+        Firefox side-by-side.
+
+  - mid June
+R   - SRI stuff
+
+  - End of June
+S   - More TorBrowser work
       - Firefox extension framework for Torbrowser build-time
       - Progress bar during startup, including some "timeout" events to
         indicate when Tor's unlikely to succeed at startup.
@@ -64,7 +80,11 @@ NR    - Include "stable" bridge and "port 443" bridge and "adequately
 N     - Detect proxies and treat them as the same address
     - More back-end work:
 N     - Investigate and start resolving (or declare unresolvable) the ram
-        issue for relays
+        issue for relays. Investigate and document all of, and do at
+        least one of:
+        - better buffer approaches in Tor
+        - better buffer approaches in openssl
+        - shipping Tor with its own integrated allocator.
 N     - Write a research proposal for how to safely collect and aggregate
         some GeoIP data from non-bridge entry nodes. Deploy that if we
         think it's safe enough, or produce a clear roadmap to getting it
@@ -83,18 +103,10 @@ R     - Get closer to downloading far fewer descriptors
           anonymity attacks, like from looking at the size of the
           descriptor you fetch.
 J     - Translation portal
-        - Vidalia translations
-        - Vidalia installer translations
-        - Torbutton translations
         - Torbutton webpage
         - Torbrowser webpage
         - Tor website
         - check.torproject.org
-
-  - mid June
-R   - SRI stuff
-
-
 
 =======================================================================
 
