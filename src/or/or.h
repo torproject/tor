@@ -3794,6 +3794,7 @@ routerinfo_t *router_get_my_routerinfo(void);
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 int router_digest_is_me(const char *digest);
+int router_extrainfo_digest_is_me(const char *digest);
 int router_is_me(routerinfo_t *router);
 int router_fingerprint_is_me(const char *fp);
 int router_pick_published_address(or_options_t *options, uint32_t *addr);

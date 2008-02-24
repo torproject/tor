@@ -1094,6 +1094,19 @@ router_digest_is_me(const char *digest)
   return identitykey && !memcmp(identitykey_digest, digest, DIGEST_LEN);
 }
 
+/** Return true iff I'm a server and <b>digest</b> is equal to
+ * my identity digest. */
+int
+router_extrainfo_digest_is_me(const char *digest)
+{
+  if (!router_get_my_extrainfo())
+    return 0;
+
+  return !memcmp(digest,
+                 &(router_get_my_extrainfo()->cache_info).signed_descriptor_digest,
+                 DIGEST_LEN);
+}
+
 /** A wrapper around router_digest_is_me(). */
 int
 router_is_me(routerinfo_t *router)

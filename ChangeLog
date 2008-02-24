@@ -55,6 +55,9 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       get saved to disk by SAVECONF. Make Tor automatically convert
       "HashedControlPassword" to this new option but only when it's
       given on the command line. Partial fix for bug 586.
+    - If we have an extra-info document for our server, always make
+      it available on the control port, even if we haven't gotten
+      a copy of it from an authority yet.  Patch from mwenge.
 
   o Minor features (logging):
     - When SafeLogging is disabled, log addresses along with all TLS
