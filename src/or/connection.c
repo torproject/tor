@@ -814,7 +814,7 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
     }
 #ifdef HAVE_SYS_UN_H
   } else if (listensockaddr->sa_family == AF_UNIX) {
-    int len;
+    size_t len;
     start_reading = 1;
 
     /* For now only control ports can be unix domain sockets
@@ -837,7 +837,7 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
 
     len = strlen(((struct sockaddr_un *)listensockaddr)->sun_path) +
           sizeof(((struct sockaddr_un *)listensockaddr)->sun_family);
-    if (bind(s, listensockaddr, len) == -1) {
+    if (bind(s, listensockaddr, (socklen_t)len) == -1) {
       log_warn(LD_NET,"Bind to %s failed: %s.", address,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
@@ -925,7 +925,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   struct sockaddr_in remote;
   char addrbuf[256];
   /* length of the remote address. Must be whatever accept() needs. */
-  socklen_t remotelen = sizeof(addrbuf);
+  socklen_t remotelen = (socklen_t)sizeof(addrbuf);
   char tmpbuf[INET_NTOA_BUF_LEN];
   or_options_t *options = get_options();
 
@@ -1129,7 +1129,8 @@ connection_connect(connection_t *conn, const char *address,
       log_warn(LD_CONFIG,"Outbound bind address '%s' didn't parse. Ignoring.",
                options->OutboundBindAddress);
     } else {
-      if (bind(s, (struct sockaddr*)&ext_addr, sizeof(ext_addr)) < 0) {
+      if (bind(s, (struct sockaddr*)&ext_addr,
+               (socklen_t)sizeof(ext_addr)) < 0) {
         log_warn(LD_NET,"Error binding network socket: %s",
                  tor_socket_strerror(tor_socket_errno(s)));
         tor_close_socket(s);
@@ -1150,7 +1151,8 @@ connection_connect(connection_t *conn, const char *address,
 
   log_debug(LD_NET,"Connecting to %s:%u.",escaped_safe_str(address),port);
 
-  if (connect(s,(struct sockaddr *)&dest_addr,sizeof(dest_addr)) < 0) {
+  if (connect(s,(struct sockaddr *)&dest_addr,
+              (socklen_t)sizeof(dest_addr)) < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
@@ -1437,13 +1439,13 @@ connection_counts_as_relayed_traffic(connection_t *conn, time_t now)
  * of a cell on the network; <b>priority</b> says whether we should
  * write many of them or just a few; and <b>conn_bucket</b> (if
  * non-negative) provides an upper limit for our answer. */
-static int
+static ssize_t
 connection_bucket_round_robin(int base, int priority,
-                              int global_bucket, int conn_bucket)
+                              ssize_t global_bucket, ssize_t conn_bucket)
 {
-  int at_most;
-  int num_bytes_high = (priority ? 32 : 16) * base;
-  int num_bytes_low = (priority ? 4 : 2) * base;
+  ssize_t at_most;
+  ssize_t num_bytes_high = (priority ? 32 : 16) * base;
+  ssize_t num_bytes_low = (priority ? 4 : 2) * base;
 
   /* Do a rudimentary round-robin so one circuit can't hog a connection.
    * Pick at most 32 cells, at least 4 cells if possible, and if we're in
@@ -1467,7 +1469,7 @@ connection_bucket_round_robin(int base, int priority,
 }
 
 /** How many bytes at most can we read onto this connection? */
-static int
+static ssize_t
 connection_bucket_read_limit(connection_t *conn, time_t now)
 {
   int base = connection_speaks_cells(conn) ?
@@ -1496,7 +1498,7 @@ connection_bucket_read_limit(connection_t *conn, time_t now)
 }
 
 /** How many bytes at most can we write onto this connection? */
-int
+ssize_t
 connection_bucket_write_limit(connection_t *conn, time_t now)
 {
   int base = connection_speaks_cells(conn) ?
@@ -1576,6 +1578,8 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 {
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
+  tor_assert(num_read < INT_MAX);
+  tor_assert(num_written < INT_MAX);
 
   if (num_read > 0)
     rep_hist_note_bytes_read(num_read, now);
@@ -1583,13 +1587,13 @@ connection_buckets_decrement(connection_t *conn, time_t now,
     rep_hist_note_bytes_written(num_written, now);
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
-    global_relayed_read_bucket -= num_read;
-    global_relayed_write_bucket -= num_written;
+    global_relayed_read_bucket -= (int)num_read;
+    global_relayed_write_bucket -= (int)num_written;
   }
-  global_read_bucket -= num_read;
-  global_write_bucket -= num_written;
+  global_read_bucket -= (int)num_read;
+  global_write_bucket -= (int)num_written;
   if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN)
-    TO_OR_CONN(conn)->read_bucket -= num_read;
+    TO_OR_CONN(conn)->read_bucket -= (int)num_read;
 }
 
 /** If we have exhausted our global buckets, or the buckets for conn,
@@ -1907,7 +1911,8 @@ loop_again:
 static int
 connection_read_to_buf(connection_t *conn, int *max_to_read)
 {
-  int result, at_most = *max_to_read;
+  int result;
+  ssize_t at_most = *max_to_read;
   size_t slack_in_buf, more_to_read;
   size_t n_read = 0, n_written = 0;
 
@@ -1938,10 +1943,10 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     }
 
     log_debug(LD_NET,
-              "%d: starting, inbuf_datalen %d (%d pending in tls object)."
-              " at_most %d.",
-              conn->s,(int)buf_datalen(conn->inbuf),
-              tor_tls_get_pending_bytes(or_conn->tls), at_most);
+              "%d: starting, inbuf_datalen %ld (%d pending in tls object)."
+              " at_most %ld.",
+              conn->s,(long)buf_datalen(conn->inbuf),
+              tor_tls_get_pending_bytes(or_conn->tls), (long)at_most);
 
     initial_size = buf_datalen(conn->inbuf);
     /* else open, or closing */
@@ -2023,12 +2028,14 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
   }
 
   if (n_read > 0) { /* change *max_to_read */
-    *max_to_read = at_most - n_read;
+    /*XXXX021 check for overflow*/
+    *max_to_read = (int)(at_most - n_read);
   }
 
   if (conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    edge_conn->n_read += n_read;
+    /*XXXX021 check for overflow*/
+    edge_conn->n_read += (int)n_read;
   }
 
   connection_buckets_decrement(conn, time(NULL), n_read, n_written);
@@ -2096,9 +2103,9 @@ int
 connection_handle_write(connection_t *conn, int force)
 {
   int e;
-  socklen_t len=sizeof(e);
+  socklen_t len=(socklen_t)sizeof(e);
   int result;
-  int max_to_write;
+  ssize_t max_to_write;
   time_t now = time(NULL);
   size_t n_read = 0, n_written = 0;
 
@@ -2148,7 +2155,7 @@ connection_handle_write(connection_t *conn, int force)
       return -1;
   }
 
-  max_to_write = force ? (int)conn->outbuf_flushlen
+  max_to_write = force ? (ssize_t)conn->outbuf_flushlen
     : connection_bucket_write_limit(conn, now);
 
   if (connection_speaks_cells(conn) &&
@@ -2222,7 +2229,8 @@ connection_handle_write(connection_t *conn, int force)
 
   if (conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    edge_conn->n_written += n_written;
+    /*XXXX021 check for overflow.*/
+    edge_conn->n_written += (int)n_written;
   }
 
   connection_buckets_decrement(conn, time(NULL), n_read, n_written);
@@ -2315,7 +2323,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   if (zlib) {
     conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
   } else {
-    int extra = 0;
+    ssize_t extra = 0;
     conn->outbuf_flushlen += len;
 
     /* Should we try flushing the outbuf now? */

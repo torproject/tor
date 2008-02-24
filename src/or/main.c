@@ -536,7 +536,7 @@ conn_close_if_marked(int i)
   if ((conn->s >= 0 || conn->linked_conn) && connection_wants_to_flush(conn)) {
     /* s == -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
-    int sz = connection_bucket_write_limit(conn, now);
+    ssize_t sz = connection_bucket_write_limit(conn, now);
     if (!conn->hold_open_until_flushed)
       log_info(LD_NET,
                "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "

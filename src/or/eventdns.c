@@ -310,7 +310,7 @@ static int global_max_nameserver_timeout = 3;
 /* These are the timeout values for nameservers. If we find a nameserver is down */
 /* we try to probe it at intervals as given below. Values are in seconds. */
 static const struct timeval global_nameserver_timeouts[] = {{10, 0}, {60, 0}, {300, 0}, {900, 0}, {3600, 0}};
-static const int global_nameserver_timeouts_length = sizeof(global_nameserver_timeouts)/sizeof(struct timeval);
+static const int global_nameserver_timeouts_length = (int)(sizeof(global_nameserver_timeouts)/sizeof(struct timeval));
 
 static struct nameserver *nameserver_pick(void);
 static void evdns_request_insert(struct request *req, struct request **head);
@@ -754,7 +754,7 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 }
 
 static INLINE int
-name_parse(u8 *packet, int length, int *idx, char *name_out, int name_out_len) {
+name_parse(u8 *packet, int length, int *idx, char *name_out, size_t name_out_len) {
 	int name_end = -1;
 	int j = *idx;
 	int ptr_count = 0;
@@ -947,7 +947,7 @@ reply_parse(u8 *packet, int length) {
 /* a DNS client (addr,addrlen), and if it's well-formed, call the corresponding */
 /* callback. */
 static int
-request_parse(u8 *packet, int length, struct evdns_server_port *port, struct sockaddr *addr, socklen_t addrlen)
+request_parse(u8 *packet, ssize_t length, struct evdns_server_port *port, struct sockaddr *addr, socklen_t addrlen)
 {
 	int j = 0;	/* index into packet */
 	u16 _t;	 /* used by the macros */
@@ -968,6 +968,9 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 	if (flags & 0x8000) return -1; /* Must not be an answer. */
 	flags &= 0x0110; /* Only RD and CD get preserved. */
 
+    if (length > INT_MAX)
+        return -1;
+
 	server_req = malloc(sizeof(struct server_request));
 	if (server_req == NULL) return -1;
 	memset(server_req, 0, sizeof(struct server_request));
@@ -985,8 +988,8 @@ request_parse(u8 *packet, int length, struct evdns_server_port *port, struct soc
 	for (i = 0; i < questions; ++i) {
 		u16 type, class;
 		struct evdns_server_question *q;
-		int namelen;
-		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0)
+		size_t namelen;
+		if (name_parse(packet, (int)length, &j, tmp_name, sizeof(tmp_name))<0)
 			goto err;
 		GET16(type);
 		GET16(class);
@@ -1143,7 +1146,8 @@ nameserver_read(struct nameserver *ns) {
 	u8 packet[1500];
 
 	for (;;) {
-		const int r = recv(ns->socket, packet, sizeof(packet), 0);
+		const int r =
+            (int)recv(ns->socket, packet,(socklen_t)sizeof(packet), 0);
 		if (r < 0) {
 			int err = last_error(ns->socket);
 			if (error_is_eagain(err)) return;
@@ -1162,10 +1166,10 @@ server_port_read(struct evdns_server_port *s) {
 	u8 packet[1500];
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
-	int r;
+	ssize_t r;
 
 	for (;;) {
-		addrlen = sizeof(struct sockaddr_storage);
+		addrlen = (socklen_t)sizeof(struct sockaddr_storage);
 		r = recvfrom(s->socket, packet, sizeof(packet), 0,
 					 (struct sockaddr*) &addr, &addrlen);
 		if (r < 0) {
@@ -1185,8 +1189,8 @@ server_port_flush(struct evdns_server_port *port)
 {
 	while (port->pending_replies) {
 		struct server_request *req = port->pending_replies;
-		int r = sendto(port->socket, req->response, req->response_len, 0,
-			   (struct sockaddr*) &req->addr, req->addrlen);
+		ssize_t r = sendto(port->socket, req->response, req->response_len, 0,
+                       (struct sockaddr*) &req->addr, (socklen_t)req->addrlen);
 		if (r < 0) {
 			int err = last_error(port->socket);
 			if (error_is_eagain(err))
@@ -1339,7 +1343,7 @@ dnslabel_table_add(struct dnslabel_table *table, const char *label, off_t pos)
 /* */
 static off_t
 dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
-				  const char *name, const int name_len,
+				  const char *name, const size_t name_len,
 				  struct dnslabel_table *table) {
 	const char *end = name + name_len;
 	int ref = 0;
@@ -1370,22 +1374,22 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 		}
 		name = strchr(name, '.');
 		if (!name) {
-			const unsigned int label_len = end - start;
+			const size_t label_len = end - start;
 			if (label_len > 63) return -1;
 			if ((size_t)(j+label_len+1) > buf_len) return -2;
 			if (table) dnslabel_table_add(table, start, j);
-			buf[j++] = label_len;
+			buf[j++] = (uint8_t)label_len;
 
 			memcpy(buf + j, start, label_len);
 			j += end - start;
 			break;
 		} else {
 			/* append length of the label. */
-			const unsigned int label_len = name - start;
+			const size_t label_len = name - start;
 			if (label_len > 63) return -1;
 			if ((size_t)(j+label_len+1) > buf_len) return -2;
 			if (table) dnslabel_table_add(table, start, j);
-			buf[j++] = label_len;
+			buf[j++] = (uint8_t)label_len;
 
 			memcpy(buf + j, start, name - start);
 			j += name - start;
@@ -1406,8 +1410,8 @@ dnsname_to_labels(u8 *const buf, size_t buf_len, off_t j,
 /* Finds the length of a dns request for a DNS name of the given */
 /* length. The actual request may be smaller than the value returned */
 /* here */
-static int
-evdns_request_len(const int name_len) {
+static size_t
+evdns_request_len(const size_t name_len) {
 	return 96 + /* length of the DNS standard header */
 		name_len + 2 +
 		4;	/* space for the resource type */
@@ -1418,7 +1422,7 @@ evdns_request_len(const int name_len) {
 /* */
 /* Returns the amount of space used. Negative on error. */
 static int
-evdns_request_data_build(const char *const name, const int name_len,
+evdns_request_data_build(const char *const name, const size_t name_len,
 						 const u16 trans_id, const u16 type, const u16 class,
 						 u8 *const buf, size_t buf_len) {
 	off_t j = 0;	/* current offset into buf */
@@ -1705,10 +1709,10 @@ evdns_server_request_respond(struct evdns_server_request *_req, int err)
 {
 	struct server_request *req = TO_SERVER_REQUEST(_req);
 	struct evdns_server_port *port = req->port;
-	int r;
+	ssize_t r;
 	if (!req->response) {
 		if ((r = evdns_server_request_format_response(req, err))<0)
-			return r;
+			return (int)r;
 	}
 
 	r = sendto(port->socket, req->response, req->response_len, 0,
@@ -1896,13 +1900,13 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 /* 2 other failure */
 static int
 evdns_request_transmit_to(struct request *req, struct nameserver *server) {
-	const int r = send(server->socket, req->request, req->request_len, 0);
+	const ssize_t r = send(server->socket, req->request, req->request_len, 0);
 	if (r < 0) {
 		int err = last_error(server->socket);
 		if (error_is_eagain(err)) return 1;
 		nameserver_failed(req->ns, strerror(err));
 		return 2;
-	} else if (r != (int)req->request_len) {
+	} else if (r != (ssize_t)req->request_len) {
 		return 1;  /* short write */
 	} else {
 		return 0;
@@ -2091,7 +2095,7 @@ evdns_resume(void)
 }
 
 static int
-_evdns_nameserver_add_impl(unsigned long int address, int port) {
+_evdns_nameserver_add_impl(u32 address, int port) {
 	/* first check to see if we already have this nameserver */
 
 	const struct nameserver *server = server_head, *const started_at = server_head;
@@ -2124,7 +2128,8 @@ _evdns_nameserver_add_impl(unsigned long int address, int port) {
 	sin.sin_addr.s_addr = address;
 	sin.sin_port = htons(port);
 	sin.sin_family = AF_INET;
-	if (connect(ns->socket, (struct sockaddr *) &sin, sizeof(sin)) != 0) {
+	if (connect(ns->socket, (struct sockaddr *) &sin,
+                (socklen_t)sizeof(sin)) != 0) {
 		err = 2;
 		goto out2;
 	}
@@ -2168,7 +2173,7 @@ out1:
 /* exported function */
 int
 evdns_nameserver_add(unsigned long int address) {
-	return _evdns_nameserver_add_impl(address, 53);
+	return _evdns_nameserver_add_impl((u32)address, 53);
 }
 
 /* exported function */
@@ -2232,8 +2237,8 @@ request_new(int type, const char *name, int flags,
 	const char issuing_now =
 		(global_requests_inflight < global_max_requests_inflight) ? 1 : 0;
 
-	const int name_len = strlen(name);
-	const int request_max_len = evdns_request_len(name_len);
+	const size_t name_len = strlen(name);
+	const size_t request_max_len = evdns_request_len(name_len);
 	const u16 trans_id = issuing_now ? transaction_id_pick() : 0xffff;
 	/* the request data is alloced in a single block with the header */
 	struct request *const req =
@@ -2370,7 +2375,7 @@ int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_ty
 /* to decide that a name is non-local and so try a raw lookup first. */
 
 struct search_domain {
-	int len;
+	size_t len;
 	struct search_domain *next;
 	/* the text string is appended to this structure */
 };
@@ -2426,7 +2431,7 @@ evdns_search_clear(void) {
 
 static void
 search_postfix_add(const char *domain) {
-	int domain_len;
+	size_t domain_len;
 	struct search_domain *sdomain;
 	while (domain[0] == '.') domain++;
 	domain_len = strlen(domain);
@@ -2488,7 +2493,7 @@ search_set_from_hostname(void) {
 /* warning: returns malloced string */
 static char *
 search_make_new(const struct search_state *const state, int n, const char *const base_name) {
-	const int base_len = strlen(base_name);
+	const size_t base_len = strlen(base_name);
 	const char need_to_append_dot = base_name[base_len - 1] == '.' ? 0 : 1;
 	struct search_domain *dom;
 
@@ -2497,7 +2502,7 @@ search_make_new(const struct search_state *const state, int n, const char *const
 			/* this is the postfix we want */
 			/* the actual postfix string is kept at the end of the structure */
 			const u8 *const postfix = ((u8 *) dom) + sizeof(struct search_domain);
-			const int postfix_len = dom->len;
+			const size_t postfix_len = dom->len;
 			char *const newname = (char *) malloc(base_len + need_to_append_dot + postfix_len + 1);
 			if (!newname) return NULL;
 			memcpy(newname, base_name, base_len);
@@ -2626,9 +2631,9 @@ strtok_r(char *s, const char *delim, char **state) {
 static int
 strtoint(const char *const str) {
 	char *endptr;
-	const int r = strtol(str, &endptr, 10);
-	if (*endptr) return -1;
-	return r;
+	const long r = strtol(str, &endptr, 10);
+	if (*endptr || r > INT_MAX) return -1;
+	return (int)r;
 }
 
 /* helper version of atoi that returns -1 on error and clips to bounds. */
@@ -2766,7 +2771,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 	if (!resolv) { err = 4; goto out1; }
 
     n = 0;
-	while ((r = read(fd, resolv+n, (size_t)st.st_size-n)) > 0) {
+	while ((r = (int)read(fd, resolv+n, (size_t)st.st_size-n)) > 0) {
 		n += r;
 		if (n == st.st_size)
 			break;
