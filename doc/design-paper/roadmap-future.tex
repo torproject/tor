@@ -147,12 +147,12 @@ in this state so they can run software that will only run in the past.
 
 Before Tor 0.1.1.x, Tor clients would still function if their clock was
 wildly off --- they simply got a copy of the directory and believed it.
-Starting in Tor 0.1.2.x, the clients only believed networkstatus documents
-that they believed to be recent, so clients with extremely wrong clocks
-stopped working. (This bug has been an unending source of vague and
-confusing bug reports.)
+Starting in Tor 0.1.1.x (and even moreso in Tor 0.2.0.x), the clients
+only use networkstatus documents that they believe to be recent, so
+clients with extremely wrong clocks no longer work. (This bug has been
+an unending source of vague and confusing bug reports.)
 
-Step one is for clients to recognize when all the directory material
+The first step is for clients to recognize when all the directory material
 they're fetching has roughly the same offset from their current time,
 and then automatically correct for it.
 
