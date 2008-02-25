@@ -1,5 +1,6 @@
-tor (0.2.0.19-alpha+svn-1) unreleased; urgency=low
+tor (0.2.0.20-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Change the default for MAX_FILEDESCRIPTORS in our init script to depend
     on the number of system-wide available file descriptors:
     /proc/sys/fs/file-max is bigger than 80k, set ulimit -n to 32k, if it's
@@ -16,7 +17,7 @@ tor (0.2.0.19-alpha+svn-1) unreleased; urgency=low
   * Change the init script to start Tor as root.  Now we should be able to
     bind to low port.
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 23 Feb 2008 13:50:14 +0100
+ -- Peter Palfrader <weasel@debian.org>  Mon, 25 Feb 2008 13:54:58 +0100
 
 tor (0.2.0.19-alpha-1) experimental; urgency=low
 
