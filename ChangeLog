@@ -1,18 +1,18 @@
-Changes in version 0.2.0.20-?? - 2008-02-??
+Changes in version 0.2.0.20-rc - 2008-02-24
   o Major features:
-    - Start choosing which bridge to use proportional to its advertised
-      bandwidth, rather than uniformly at random. This should speed up Tor
-      for bridge users. Also do this for people who set StrictEntryNodes.
-    - When a TrackHostExits-chosen exit fails too many times in a row,
-      stop using it.  Bugfix on 0.1.2.x.  Fixes bug 437.
     - Enable the revised TLS handshake based on the one designed by
-      Steven Murdoch in proposal 124, as revised in proposal 130.  It
+      Steven Murdoch in proposal 124, as revised in proposal 130. It
       includes version negotiation for OR connections as described in
-      proposal 105.  The new handshake is meant to be harder for
-      censors to fingerprint, and it adds the ability to detect
-      certain kinds of man-in-the-middle traffic analysis attacks.
-      The version negotiation feature will allow us to improve Tor's
-      link protocol more safely in the future.
+      proposal 105. The new handshake is meant to be harder for censors
+      to fingerprint, and it adds the ability to detect certain kinds of
+      man-in-the-middle traffic analysis attacks. The version negotiation
+      feature will allow us to improve Tor's link protocol more safely
+      in the future.
+    - Choose which bridge to use proportional to its advertised bandwidth,
+      rather than uniformly at random. This should speed up Tor for
+      bridge users. Also do this for people who set StrictEntryNodes.
+    - When a TrackHostExits-chosen exit fails too many times in a row,
+      stop using it. Bugfix on 0.1.2.x; fixes bug 437.
 
   o Major bugfixes:
     - Resolved problems with (re-)fetching hidden service descriptors.
@@ -22,72 +22,75 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       would stop building circuits and start refusing connections after
       24 hours, since we falsely believed that Tor was dormant. Reported
       by nwf; bugfix on 0.1.2.x.
-    - When counting the number of open sockets, count not only the number
-      of sockets we have received from the socket() call, but also the
-      number we've gotten from accept() and socketpair().  This bug made us
-      fail to count all sockets that we were using for incoming
-      connections.  Bugfix on 0.2.0.x.
-    - Fix code used to find strings within buffers, when those strings
-      are not in the first chunk of the buffer.
-    - Fix potential segfault when parsing HTTP headers. Bugfix on 0.2.0.x.
     - Servers that don't know their own IP address should go to the
       authorities for their first directory fetch, even if their DirPort
       is off or if they don't know they're reachable yet. This will help
       them bootstrap better. Bugfix on 0.2.0.18-alpha; fixes bug 609.
+    - When counting the number of open sockets, count not only the number
+      of sockets we have received from the socket() call, but also
+      the number we've gotten from accept() and socketpair(). This bug
+      made us fail to count all sockets that we were using for incoming
+      connections. Bugfix on 0.2.0.x.
+    - Fix code used to find strings within buffers, when those strings
+      are not in the first chunk of the buffer. Bugfix on 0.2.0.x.
+    - Fix potential segfault when parsing HTTP headers. Bugfix on 0.2.0.x.
+    - Add a new __HashedControlSessionPassword option for controllers
+      to use for one-off session password hashes that shouldn't get
+      saved to disk by SAVECONF --- Vidalia users were accumulating a
+      pile of HashedControlPassword lines in their torrc files, one for
+      each time they had restarted Tor and then clicked Save. Make Tor
+      automatically convert "HashedControlPassword" to this new option but
+      only when it's given on the command line. Partial fix for bug 586.
 
   o Minor features (performance):
     - Tune parameters for cell pool allocation to minimize amount of
       RAM overhead used.
     - Add OpenBSD malloc code from phk as an optional malloc
       replacement on Linux: some glibc libraries do very poorly
-      with Tor's memory allocation patterns.  Pass
+      with Tor's memory allocation patterns. Pass
       --enable-openbsd-malloc to get the replacement malloc code.
     - Add a --with-tcmalloc option to the configure script to link
       against tcmalloc (if present).  Does not yet search for
       non-system include paths.
     - Stop imposing an arbitrary maximum on the number of file descriptors
-      used for busy servers.  Bug reported by Olaf Selke; patch from
+      used for busy servers. Bug reported by Olaf Selke; patch from
       Sebastian Hahn.
 
-  o Minor features (controller):
-    - Add a new __HashedControlSessionPassword option for controllers
-      to use for one-off session password hashes that shouldn't
-      get saved to disk by SAVECONF. Make Tor automatically convert
-      "HashedControlPassword" to this new option but only when it's
-      given on the command line. Partial fix for bug 586.
-    - If we have an extra-info document for our server, always make
-      it available on the control port, even if we haven't gotten
-      a copy of it from an authority yet.  Patch from mwenge.
-
-  o Minor features (logging):
+  o Minor features (other):
     - When SafeLogging is disabled, log addresses along with all TLS
       errors.
-
-  o Minor features (build):
-    - When built with --enable-gcc-warnings, check for whether Apple's
-      warning "-Wshorten-64-to-32" is enabled.
-
-  o Minor features (misc):
-    - Add a --passphrase-fd argument to tor-gencert command for
+    - When building with --enable-gcc-warnings, check for whether Apple's
+      warning "-Wshorten-64-to-32" is available.
+    - Add a --passphrase-fd argument to the tor-gencert command for
       scriptability.
 
-  o Minor bugfixes:
-    - Log the correct memory chunk sizes for empty RAM chunks in mempool.c.
-    - Directory mirrors no longer include a guess at the client's IP
-      address if the connection appears to be coming from the same /24
-      network; it was producing too many wrong guesses.
+  o Minor bugfixes (memory leaks and code problems):
     - We were leaking a file descriptor if Tor started with a zero-length
       cached-descriptors file. Patch by freddy77; bugfix on 0.1.2.
-    - Make the new hidden service code respect the SafeLogging setting.
-      Bugfix on 0.2.0.x.  Patch from Karsten.
     - Detect size overflow in zlib code.
     - We were comparing the raw BridgePassword entry with a base64'ed
       version of it, when handling a "/tor/networkstatus-bridges"
       directory request. Now compare correctly. Noticed by Veracode.
-    - When starting as an authority, do not overwrite all certificates
-      cached from other authorities.  Bugfix on 0.2.0.x.  Fixes bug 606.
     - Recover from bad tracked-since value in MTBF-history file.
       Should fix bug 537.
+    - Alter the code that tries to recover from unhandled write
+      errors, to not try to flush onto a socket that's given us
+      unhandled errors.  Bugfix on 0.1.2.x.
+    - Make Unix controlsockets work correctly on OpenBSD. Patch from
+      tup. Bugfix on 0.2.0.3-alpha.
+
+  o Minor bugfixes (other):
+    - If we have an extra-info document for our server, always make
+      it available on the control port, even if we haven't gotten
+      a copy of it from an authority yet. Patch from mwenge.
+    - Log the correct memory chunk sizes for empty RAM chunks in mempool.c.
+    - Directory mirrors no longer include a guess at the client's IP
+      address if the connection appears to be coming from the same /24
+      network; it was producing too many wrong guesses.
+    - Make the new hidden service code respect the SafeLogging setting.
+      Bugfix on 0.2.0.x.  Patch from Karsten.
+    - When starting as an authority, do not overwrite all certificates
+      cached from other authorities. Bugfix on 0.2.0.x. Fixes bug 606.
     - If we're trying to flush the last bytes on a connection (for
       example, when answering a directory request), reset the
       time-to-give-up timeout every time we manage to write something
@@ -96,17 +99,12 @@ Changes in version 0.2.0.20-?? - 2008-02-??
       so it doesn't return failure when any authority disappears.
     - Even though the man page said that "TrackHostExits ." should
       work, nobody had ever implemented it. Bugfix on 0.1.0.x.
-    - Alter the code that tries to recover from unhandled write
-      errors, to not try to flush onto a socket that's given us
-      unhandled errors.  Bugfix on 0.1.2.x.
     - Report TLS "zero return" case as a "clean close" and "IO error"
-      as a "close".  Stop calling closes "unexpected closes": existing
+      as a "close". Stop calling closes "unexpected closes": existing
       Tors don't use SSL_close(), so having a connection close without
       the TLS shutdown handshake is hardly unexpected.
     - Send NAMESERVER_STATUS messages for a single failed nameserver
       correctly.
-    - Make Unix controlsockets work correctly on OpenBSD.  Patch from
-      tup. Bugfix on 0.2.0.3-alpha.
 
   o Code simplifications and refactoring:
     - Remove the tor_strpartition function: its logic was confused,
