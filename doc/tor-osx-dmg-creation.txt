@@ -69,7 +69,7 @@ Extract the tarball.
 
 11) Update three variables in contrib/osx/package.sh:
 PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
-TORBUTTON_PATH=~/tmp/torbutton-1.1.9.1-alpha.xpi
+TORBUTTON_PATH=~/tmp/torbutton-1.1.14-alpha.xpi
 TORBUTTON_LIC_PATH=~/tmp/LICENSE
 
 Make sure the paths are correct.  The build will fail if they are not.
@@ -137,7 +137,7 @@ tarball.
 
 4) Update three variables in contrib/osx/package.sh:
 PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
-TORBUTTON_PATH=~/tmp/torbutton-1.1.9.1-alpha.xpi
+TORBUTTON_PATH=~/tmp/torbutton-1.1.14-alpha.xpi
 TORBUTTON_LIC_PATH=~/tmp/LICENSE
 
 Make sure the paths are correct.  The build will fail if they are not.
