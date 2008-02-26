@@ -21,6 +21,7 @@ for my $f (@files) {
     my $num = substr($f, 0, 3);
     my $status = undef;
     my $title = undef;
+    if ($f !~ /\.txt/) { print "$f doesn't end with .txt\n"; }
     open(F, "$f");
     while (<F>) {
 	last if (/^\s*$/);
