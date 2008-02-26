@@ -45,7 +45,7 @@ Proposals by number:
 120  Suicide descriptors when Tor servers stop [OPEN]
 121  Hidden Service Authentication [OPEN]
 122  Network status entries need a new Unnamed flag [CLOSED]
-123  Naming authorities automatically create bindings [OPEN]
+123  Naming authorities automatically create bindings [FINISHED]
 124  Blocking resistant TLS certificate usage [SUPERSEDED]
 125  Behavior for bridge users, bridge relays, and bridge authorities [FINISHED]
 126  Getting GeoIP data and publishing usage summaries [FINISHED]
@@ -65,7 +65,6 @@ Proposals by status:
    117  IPv6 exits
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
-   123  Naming authorities automatically create bindings
  ACCEPTED:
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
@@ -77,6 +76,7 @@ Proposals by status:
  FINISHED:
    105  Version negotiation for the Tor protocol
    111  Prioritizing local traffic over relayed traffic
+   123  Naming authorities automatically create bindings
    125  Behavior for bridge users, bridge relays, and bridge authorities
    126  Getting GeoIP data and publishing usage summaries
    129  Block Insecure Protocols by Default
