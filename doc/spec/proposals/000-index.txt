@@ -27,7 +27,7 @@ Proposals by number:
 102  Dropping "opt" from the directory format [CLOSED]
 103  Splitting identity key from regularly used signing key [CLOSED]
 104  Long and Short Router Descriptors [CLOSED]
-105  Version negotiation for the Tor protocol [ACCEPTED]
+105  Version negotiation for the Tor protocol [FINISHED]
 106  Checking fewer things during TLS handshakes [CLOSED]
 107  Uptime Sanity Checking [CLOSED]
 108  Base "Stable" Flag on Mean Time Between Failures [CLOSED]
@@ -47,12 +47,12 @@ Proposals by number:
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [OPEN]
 124  Blocking resistant TLS certificate usage [SUPERSEDED]
-125  Behavior for bridge users, bridge relays, and bridge authorities [OPEN]
-126  Getting GeoIP data and publishing usage summaries [OPEN]
+125  Behavior for bridge users, bridge relays, and bridge authorities [FINISHED]
+126  Getting GeoIP data and publishing usage summaries [FINISHED]
 127  Relaying dirport requests to Tor download site / website [DRAFT]
 128  Families of private bridges [DRAFT]
-129  Block Insecure Protocols by Default [OPEN]
-130  Version 2 Tor connection protocol [OPEN]
+129  Block Insecure Protocols by Default [FINISHED]
+130  Version 2 Tor connection protocol [FINISHED]
 
 
 Proposals by status:
@@ -66,12 +66,7 @@ Proposals by status:
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
    123  Naming authorities automatically create bindings
-   125  Behavior for bridge users, bridge relays, and bridge authorities
-   126  Getting GeoIP data and publishing usage summaries
-   129  Block Insecure Protocols by Default
-   130  Version 2 Tor connection protocol
  ACCEPTED:
-   105  Version negotiation for the Tor protocol
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
  META:
@@ -80,7 +75,12 @@ Proposals by status:
    098  Proposals that should be written
    099  Miscellaneous proposals
  FINISHED:
+   105  Version negotiation for the Tor protocol
    111  Prioritizing local traffic over relayed traffic
+   125  Behavior for bridge users, bridge relays, and bridge authorities
+   126  Getting GeoIP data and publishing usage summaries
+   129  Block Insecure Protocols by Default
+   130  Version 2 Tor connection protocol
  CLOSED:
    101  Voting on the Tor Directory System
    102  Dropping "opt" from the directory format

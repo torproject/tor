@@ -17,7 +17,7 @@ Overview:
    seems irrelevant.
 
 
-For protocol version 2:
+For some later protool version.
 
   - Fix onionskin handshake scheme to be more mainstream, less nutty.
     Can we just do

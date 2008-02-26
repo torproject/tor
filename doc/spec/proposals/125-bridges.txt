@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 11-Nov-2007
-Status: Open
+Status: Finished
 
 0. Preface
 

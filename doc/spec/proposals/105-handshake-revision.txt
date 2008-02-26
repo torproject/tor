@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson, Roger Dingledine
 Created:
-Status: Accepted
+Status: Finished
 
 Overview:
 
@@ -13,7 +13,8 @@ Overview:
   cells types to the Tor link connection setup handshake: one used for
   version negotiation, and another to prevent MITM attacks.
 
-  This is an open proposal.
+  This proposal is partially implemented, and partially proceded by
+  proposal 130.
 
 Motivation: Tor versions
 
