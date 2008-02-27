@@ -144,3 +144,58 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
   6. See the Doxygen manual for more information; this summary just
      scratches the surface.
 
+2. Code notes
+
+2.1. Dataflows
+
+2.1.1. How Incoming data is handled
+
+There are two paths for data arriving at Tor over the network: regular
+TCP data, and DNS.
+
+2.1.1.1. TCP.
+
+When Tor takes information over the network, it uses the functions
+read_to_buf() and read_to_buf_tls() in buffers.c.  These read from a
+socket or an SSL* into a buffer_t, which is an mbuf-style linkedlist
+of memory chunks.
+
+read_to_buf() and read_to_buf_tls() are called only from
+connection_read_to_buf() in connection.c.  It takes a connection_t
+pointer, and reads data into it over the network, up to the
+connection's current bandwidth limits.  It places that data into the
+"inbuf" field of the connection, and then:
+  - Adjusts the connection's want-to-read/want-to-write status as
+    appropriate.
+  - Increments the read and written counts for the connection as
+    appropriate.
+  - Adjusts bandwidth buckets as appropriate.
+
+connection_read_to_buf() is called only from connection_handle_read().
+The connection_handle_read() function is called whenever libevent
+decides (based on select, poll, epoll, kqueue, etc) that there is data
+to read from a connection.  If any data is read,
+connection_handle_read() calls connection_process_inbuf() to see if
+any of the data can be processed.  If the connection was closed,
+connection_handle_read() calls connection_reached_eof().
+
+Connection_process_inbuf() and connection_reached_eof() both dispatch
+based on the connection type to determine what to do with the data
+that's just arrived on the connection's inbuf field.  Each type of
+connection has its own version of these functions.  For example,
+directory connections process incoming data in
+connection_dir_process_inbuf(), while OR connections process incoming
+data in connection_or_process_inbuf().  These
+connection_*_process_inbuf() functions extract data from the
+connection's inbuf field (a buffer_t), using functions from buffers.c.
+Some of these accessor functions are straightforward data extractors
+(like fetch_from_buf()); others do protocol-specific parsing.
+
+
+2.1.1.2. DNS
+
+Tor launches (and optionally accepts) DNS requests using the code in
+eventdns.c, which is a copy of libevent's evdns.c.  (We don't use
+libevent's version because it is not yet in the versions of libevent
+all our users have.)  DNS replies are read in nameserver_read();
+DNS queries are read in server_port_read().
