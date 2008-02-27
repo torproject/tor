@@ -1381,6 +1381,7 @@ test_util_smartlist(void)
 {
   smartlist_t *sl;
   char *cp;
+  size_t sz;
 
   /* XXXX test sort_digests, uniq_strings, uniq_digests */
 
@@ -1569,6 +1570,8 @@ test_util_smartlist(void)
   test_eq(smartlist_len(sl), 6);
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
+  cp = smartlist_pop_last(sl);
+  test_eq(cp, NULL);
 
   /* Test uniq() */
   smartlist_split_string(sl,
@@ -1603,8 +1606,9 @@ test_util_smartlist(void)
   test_streq(cp, "Some,say,the,Earth,fire,end,in,ice,and,some,in");
   tor_free(cp);
   smartlist_string_remove(sl, "in");
-  cp = smartlist_join_strings2(sl, "+XX", 1, 0, NULL);
+  cp = smartlist_join_strings2(sl, "+XX", 1, 0, &sz);
   test_streq(cp, "Some+say+the+Earth+fire+end+some+ice+and");
+  test_eq((int)sz, 40);
   tor_free(cp);
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
@@ -1655,6 +1659,33 @@ test_util_smartlist(void)
     smartlist_free(evens);
     smartlist_free(ints);
     smartlist_free(primes);
+    smartlist_clear(sl);
+  }
+
+  {
+    /* digest_isin. */
+    smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
+    smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
+    smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
+    test_eq(0, smartlist_digest_isin(NULL, "AAAAAAAAAAAAAAAAAAAA"));
+    test_assert(smartlist_digest_isin(sl, "AAAAAAAAAAAAAAAAAAAA"));
+    test_assert(smartlist_digest_isin(sl, "\00090AAB2AAAAaasdAAAAA"));
+    test_eq(0, smartlist_digest_isin(sl, "\00090AAB2AAABaasdAAAAA"));
+
+    /* sort digests */
+    smartlist_sort_digests(sl);
+    test_memeq(smartlist_get(sl, 0), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+    test_memeq(smartlist_get(sl, 1), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+    test_memeq(smartlist_get(sl, 2), "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
+    test_eq(3, smartlist_len(sl));
+
+    /* uniq_digests */
+    smartlist_uniq_digests(sl);
+    test_eq(2, smartlist_len(sl));
+    test_memeq(smartlist_get(sl, 0), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+    test_memeq(smartlist_get(sl, 1), "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
+
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_clear(sl);
   }
 
@@ -2078,6 +2109,13 @@ test_util_mmap(void)
   test_streq(mapping->data, "Short file.");
   tor_munmap_file(mapping);
 #endif
+
+  /* Now a zero-length file. */
+  write_str_to_file(fname1, "", 1);
+  mapping = tor_mmap_file(fname1);
+  test_eq(mapping, NULL);
+  test_eq(ERANGE, errno);
+  unlink(fname1);
 
   /* Make sure that we fail to map a no-longer-existent file. */
   mapping = tor_mmap_file(fname1);

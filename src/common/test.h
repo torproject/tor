@@ -125,14 +125,20 @@ extern int have_failed;
 #define test_memeq(expr1, expr2, len)                           \
   STMT_BEGIN                                                    \
     const void *_test_v1=(expr1), *_test_v2=(expr2);            \
+    char *mem1, *mem2;                                          \
     if (!memcmp(_test_v1,_test_v2,(len))) {                     \
       printf("."); fflush(stdout); } else {                     \
     have_failed = 1;                                            \
-    printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n", \
+    mem1 = tor_malloc(len*2+1);                                    \
+    mem2 = tor_malloc(len*2+1);                                    \
+    base16_encode(mem1, len*2+1, _test_v1, len);                   \
+    base16_encode(mem2, len*2+1, _test_v2, len);                   \
+    printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n" \
+           "      %s != %s\n",                                     \
       _SHORT_FILE_,                                             \
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
-      #expr1, #expr2);                                          \
+      #expr1, #expr2, mem1, mem2);                              \
     return;                                                     \
   } STMT_END
 
