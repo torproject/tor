@@ -1,5 +1,8 @@
 Changes in version 0.2.0.21-rc - 2008-0?-??
-
+  o Minor bugfixes:
+    - Downgrade assert in connection_buckets_decrement() to a log message.
+      This may help us solve bug 614, and in any case will make its symptoms
+      less severe.  Bugfix on 0.2.0.20-rc.
 
 Changes in version 0.2.0.20-rc - 2008-02-24
   Tor 0.2.0.20-rc is the first release candidate for the 0.2.0 series. It
