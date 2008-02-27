@@ -1576,8 +1576,16 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 {
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
-  tor_assert(num_read < INT_MAX);
-  tor_assert(num_written < INT_MAX);
+  if (num_written >= INT_MAX || num_read >= INT_MAX) {
+    log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
+             "connection type=%s, state=%s",
+             (unsigned long)num_read, (unsigned long)num_written,
+             conn_type_to_string(conn->type),
+             conn_state_to_string(conn->type, conn->state));
+    if (num_written >= INT_MAX) num_written = 1;
+    if (num_read >= INT_MAX) num_read = 1;
+    tor_fragile_assert();
+  }
 
   if (num_read > 0)
     rep_hist_note_bytes_read(num_read, now);
