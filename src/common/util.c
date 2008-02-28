@@ -2108,7 +2108,8 @@ tor_listdir(const char *dirname)
     }
     if (!FindNextFile(handle, &findData)) {
       if (GetLastError() != ERROR_NO_MORE_FILES) {
-        log_warn(LD_FS, "Error reading directory.");
+        /* XXX021 can we say what the error is? */
+        log_warn(LD_FS, "Error reading directory '%s'.", dirname);
       }
       break;
     }
