@@ -2541,7 +2541,8 @@ handle_control_protocolinfo(control_connection_t *conn, uint32_t len,
     char *esc_cfile = esc_for_log(cfile);
     char *methods;
     {
-      int passwd = (options->HashedControlPassword != NULL);
+      int passwd = (options->HashedControlPassword != NULL ||
+                    options->HashedControlSessionPassword != NULL);
       smartlist_t *mlist = smartlist_create();
       if (cookies)
         smartlist_add(mlist, (char*)"COOKIE");

@@ -81,7 +81,8 @@ Changes in version 0.2.0.20-rc - 2008-02-24
   o Minor bugfixes (memory leaks and code problems):
     - We were leaking a file descriptor if Tor started with a zero-length
       cached-descriptors file. Patch by freddy77; bugfix on 0.1.2.
-    - Detect size overflow in zlib code. Reported by Dan Kaminsky.
+    - Detect size overflow in zlib code. Reported by Justin Ferguson and
+      Dan Kaminsky.
     - We were comparing the raw BridgePassword entry with a base64'ed
       version of it, when handling a "/tor/networkstatus-bridges"
       directory request. Now compare correctly. Noticed by Veracode.
