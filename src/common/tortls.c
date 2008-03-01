@@ -432,7 +432,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
  * SSL3_TXT_RSA_NULL_SHA.  If you do this, you won't be able to communicate
  * with any of the "real" Tors, though. */
 
-#if OPENSSL_VERSION_NUMBER >= 0x00908000l
+#if OPENSSL_VERSION_NUMBER >= 0x00908020l
 #define CLIENT_CIPHER_LIST                         \
   (TLS1_TXT_ECDHE_ECDSA_WITH_AES_256_CBC_SHA ":"   \
    TLS1_TXT_ECDHE_RSA_WITH_AES_256_CBC_SHA ":"     \

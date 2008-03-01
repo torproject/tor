@@ -3,6 +3,10 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Downgrade assert in connection_buckets_decrement() to a log message.
       This may help us solve bug 614, and in any case will make its symptoms
       less severe.  Bugfix on 0.2.0.20-rc.
+    - Fix compilation with OpenSSL 0.9.8 and 0.9.8a.  All other supported
+      OpenSSL versions should have been working fine.  Diagnosis and patch
+      from lodger, Karsten Loesing and Sebastian Hahn.  Fixes bug 616.
+      Bugfix on 0.2.0.20-rc.
 
 
 Changes in version 0.2.0.20-rc - 2008-02-24
