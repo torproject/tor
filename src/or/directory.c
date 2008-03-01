@@ -2191,8 +2191,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     cached_dir_t *d = dirserv_get_directory();
 
     if (!d) {
-      log_notice(LD_DIRSERV,"Client asked for the mirrored directory, but we "
-                 "don't have a good one yet. Sending 503 Dir not available.");
+      log_info(LD_DIRSERV,"Client asked for the mirrored directory, but we "
+               "don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
       /* try to get a new one now */
       if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR) &&
