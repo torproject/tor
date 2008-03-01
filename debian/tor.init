@@ -90,9 +90,9 @@ check_torpiddir () {
 }
 
 check_config () {
-	if ! su -s /bin/sh -c "$DAEMON --verify-config" debian-tor > /dev/null; then
+	if ! "$DAEMON --verify-config" > /dev/null; then
 		echo "ABORTED: Tor configuration invalid:" >&2
-		su -s /bin/sh -c "$DAEMON --verify-config" debian-tor >&2
+		$DAEMON --verify-config >&2
 		exit 1
 	fi
 }
