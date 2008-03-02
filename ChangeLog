@@ -9,6 +9,25 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       Bugfix on 0.2.0.20-rc.
 
 
+Changes in version 0.2.0.21-rc - 2008-03-02
+  o Major bugfixes:
+    - The control port should declare that it requires password auth
+      when HashedControlSessionPassword is set too. Patch from Matt Edman;
+      bugfix on 0.2.0.20-rc. Fixes bug 615.
+    - Downgrade assert in connection_buckets_decrement() to a log message.
+      This may help us solve bug 614, and in any case will make its
+      symptoms less severe. Bugfix on 0.2.0.20-rc. Reported by fredzupy.
+    - We were sometimes miscounting the number of bytes read from the
+      network, causing our rate limiting to not be followed exactly.
+      Bugfix on 0.2.0.16-alpha. Reported by lodger.
+
+  o Minor bugfixes:
+    - Fix compilation with OpenSSL 0.9.8 and 0.9.8a.  All other supported
+      OpenSSL versions should have been working fine.  Diagnosis and patch
+      from lodger, Karsten Loesing and Sebastian Hahn.  Fixes bug 616.
+      Bugfix on 0.2.0.20-rc.
+
+
 Changes in version 0.2.0.20-rc - 2008-02-24
   Tor 0.2.0.20-rc is the first release candidate for the 0.2.0 series. It
   makes more progress towards normalizing Tor's TLS handshake, makes

@@ -234,6 +234,7 @@ Planned for 0.2.1.x:
 
   - get rid of the v1 directory stuff (making, serving, and caching).
     - perhaps replace it with a "this is a tor server" stock webpage.
+  - even clients run rep_hist_load_mtbf_data(). this wastes memory.
 
   - bridge communities with local bridge authorities:
     - clients who have a password configured decide to ask their bridge
