@@ -635,13 +635,13 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
     check();
     if (r < 0)
       return r; /* Error */
-    else if ((size_t)r < readlen) { /* eof, block, or no more to read. */
-      tor_assert(r+total_read < INT_MAX);
-      return (int)(r + total_read);
-    }
+    tor_assert(total_read+r < INT_MAX);
     total_read += r;
+    if ((size_t)r < readlen) { /* eof, block, or no more to read. */
+      break;
+    }
   }
-  return r;
+  return (int)total_read;
 }
 
 /** As read_to_buf, but reads from a TLS connection, and returns a TLS
@@ -689,11 +689,12 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
     check();
     if (r < 0)
       return r; /* Error */
-    else if ((size_t)r < readlen) /* eof, block, or no more to read. */
-      return r;
+    tor_assert(total_read+r < INT_MAX);
     total_read += r;
+    if ((size_t)r < readlen) /* eof, block, or no more to read. */
+      break;
   }
-  return r;
+  return (int)total_read;
 }
 
 /** Helper for flush_buf(): try to write <b>sz</b> bytes from chunk
