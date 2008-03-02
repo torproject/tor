@@ -1,11 +1,11 @@
-Changes in version 0.2.0.21-rc - 2008-0?-??
+Changes in version 0.2.0.21-rc - 2008-03-02
   o Major bugfixes:
     - The control port should declare that it requires password auth
       when HashedControlSessionPassword is set too. Patch from Matt Edman;
       bugfix on 0.2.0.20-rc. Fixes bug 615.
     - Downgrade assert in connection_buckets_decrement() to a log message.
       This may help us solve bug 614, and in any case will make its
-      symptoms less severe. Bugfix on 0.2.0.20-rc.
+      symptoms less severe. Bugfix on 0.2.0.20-rc. Reported by fredzupy.
     - We were sometimes miscounting the number of bytes read from the
       network, causing our rate limiting to not be followed exactly.
       Bugfix on 0.2.0.16-alpha. Reported by lodger.
