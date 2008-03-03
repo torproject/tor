@@ -1,10 +1,11 @@
-tor (0.2.0.20-rc-1+XX) XXperimental; urgency=low
+tor (0.2.0.21-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Run --verify-config before start/reload/restart as root.  No longer
     su - to debian-tor tor run it.  Given that we now even start Tor as
     root (it setuids later on) this should be fine (closes: #468566).
 
- -- Peter Palfrader <weasel@debian.org>  Sat,  1 Mar 2008 01:49:58 +0100
+ -- Peter Palfrader <weasel@debian.org>  Mon,  3 Mar 2008 13:36:59 +0100
 
 tor (0.2.0.20-rc-1) experimental; urgency=low
 
