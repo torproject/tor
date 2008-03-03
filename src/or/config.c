@@ -1146,7 +1146,7 @@ options_act(or_options_t *old_options)
   }
 
   /* Load state */
-  if (! global_state && options->command == CMD_RUN_TOR) {
+  if (! global_state && running_tor) {
     if (or_state_load())
       return -1;
     rep_hist_load_mtbf_data(time(NULL));
