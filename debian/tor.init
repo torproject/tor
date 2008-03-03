@@ -89,6 +89,14 @@ check_torpiddir () {
 	fi
 }
 
+check_config () {
+	if ! "$DAEMON --verify-config" > /dev/null; then
+		echo "ABORTED: Tor configuration invalid:" >&2
+		$DAEMON --verify-config >&2
+		exit 1
+	fi
+}
+
 
 case "$1" in
   start)
@@ -109,11 +117,7 @@ case "$1" in
 	check_torpiddir
 
 	echo "Starting $DESC: $NAME..."
-	if ! su -s /bin/sh -c "$DAEMON --verify-config" debian-tor > /dev/null; then
-		echo "ABORTED: Tor configuration invalid:" >&2
-		su -s /bin/sh -c "$DAEMON --verify-config" debian-tor >&2
-		exit 1
-	fi
+	check_config
 
 	start-stop-daemon --start --quiet --oknodo \
 		--pidfile $TORPID \
@@ -149,11 +153,7 @@ case "$1" in
 		exit 0
 	fi
 
-	if ! su -s /bin/sh -c "$DAEMON --verify-config" debian-tor > /dev/null; then
-		echo "ABORTED: Tor configuration invalid:" >&2
-		su -s /bin/sh -c "$DAEMON --verify-config" debian-tor >&2
-		exit 1
-	fi
+	check_config
 
 	if start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
 	then
@@ -166,11 +166,7 @@ case "$1" in
 	fi
 	;;
   restart)
-	if ! su -s /bin/sh -c "$DAEMON --verify-config" debian-tor > /dev/null; then
-		echo "Restarting Tor ABORTED: Tor configuration invalid:" >&2
-		su -s /bin/sh -c "$DAEMON --verify-config" debian-tor >&2
-		exit 1
-	fi
+	check_config
 
 	$0 stop
 	sleep 1
