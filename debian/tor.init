@@ -90,7 +90,7 @@ check_torpiddir () {
 }
 
 check_config () {
-	if ! "$DAEMON --verify-config" > /dev/null; then
+	if ! $DAEMON --verify-config > /dev/null; then
 		echo "ABORTED: Tor configuration invalid:" >&2
 		$DAEMON --verify-config >&2
 		exit 1
