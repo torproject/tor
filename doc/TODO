@@ -52,6 +52,14 @@ J   - Translation portal
       - Continue managing the tor-translations team to keep the Tor
         website translated
 
+  - End of April
+N   - Investigate and start resolving (or declare unresolvable) the ram
+      issue for relays. Investigate and document all of, and do at
+      least two of:
+      o better buffer approaches in Tor
+      - better buffer approaches in openssl
+      - shipping Tor with its own integrated allocator.
+
   - Mid May
 S   - More TorBrowser work
       - Integrate pidgin and OTR
@@ -80,12 +88,6 @@ NR    - Include "stable" bridge and "port 443" bridge and "adequately
         box!^W^W^Woutput batch.
 N     - Detect proxies and treat them as the same address
     - More back-end work:
-N     - Investigate and start resolving (or declare unresolvable) the ram
-        issue for relays. Investigate and document all of, and do at
-        least one of:
-        - better buffer approaches in Tor
-        - better buffer approaches in openssl
-        - shipping Tor with its own integrated allocator.
 N     - Write a research proposal for how to safely collect and aggregate
         some GeoIP data from non-bridge entry nodes. Deploy that if we
         think it's safe enough, or produce a clear roadmap to getting it
@@ -235,6 +237,10 @@ Planned for 0.2.1.x:
   - get rid of the v1 directory stuff (making, serving, and caching).
     - perhaps replace it with a "this is a tor server" stock webpage.
   - even clients run rep_hist_load_mtbf_data(). this wastes memory.
+  - steven's plan for replacing check.torproject.org with a built-in
+    answer by tor itself.
+  - a status event for when tor decides to stop fetching directory info
+    if the client hasn't clicked recently: then make the onion change too.
 
   - bridge communities with local bridge authorities:
     - clients who have a password configured decide to ask their bridge
