@@ -59,6 +59,10 @@ N   - Investigate and start resolving (or declare unresolvable) the ram
       o better buffer approaches in Tor
       - better buffer approaches in openssl
       - shipping Tor with its own integrated allocator.
+N   - Write a draft research proposal for how to safely collect and
+      aggregate some GeoIP data from non-bridge entry nodes, or conclude
+      that we don't know how to do it safely while still being useful
+      and explain why.
 
   - Mid May
 S   - More TorBrowser work
@@ -88,10 +92,8 @@ NR    - Include "stable" bridge and "port 443" bridge and "adequately
         box!^W^W^Woutput batch.
 N     - Detect proxies and treat them as the same address
     - More back-end work:
-N     - Write a research proposal for how to safely collect and aggregate
-        some GeoIP data from non-bridge entry nodes. Deploy that if we
-        think it's safe enough, or produce a clear roadmap to getting it
-        safe if we don't think it's ready yet.
+N     - If we decided above that we know how to collect geoip data for
+        non bridge relays, deploy that plan.
 N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
         - spoof the cipher suites
         - spoof the extensions list
