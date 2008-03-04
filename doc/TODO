@@ -8,7 +8,7 @@ P       - phobos claims
 S       - Steven claims
 M       - Matt/Mike claims
 J       - Jeff claims
-I	- ioerror claims
+I       - ioerror claims
         - Not done
         * Top priority
         . Partially done
@@ -37,22 +37,15 @@ S   - Pick a suitable-looking upnp library and begin integrating it
 ?     - Resolve branding issue
       o Make Torbrowser website
 R     - Get it integrated into the Tor download pages
+S   - Finish first cut at integrating upnp lib into Vidalia
+R   - get the geoip files onto some bridge relays, and gather stats
+
+  - End of April
 S   - Zip-splitting:
       - Document the use of 7-zip to combine fractional files and
         reconstruct them after download.  Host such files.
       - If it's faster to research a self-extracting splitter
         and use it, with simpler documentation, that's obviously fine.
-S   - Finish first cut at integrating upnp lib into Vidalia
-R   - get the geoip files onto some bridge relays, and gather stats
-J   - Translation portal
-      - Vidalia translations
-      - Vidalia installer translations
-      - Torbutton translations
-      - Centralized instructions for how to help translate
-      - Continue managing the tor-translations team to keep the Tor
-        website translated
-
-  - End of April
 N   - Investigate and start resolving (or declare unresolvable) the ram
       issue for relays. Investigate and document all of, and do at
       least two of:
@@ -63,8 +56,15 @@ N   - Write a draft research proposal for how to safely collect and
       aggregate some GeoIP data from non-bridge entry nodes, or conclude
       that we don't know how to do it safely while still being useful
       and explain why.
+I   - Translation portal
+      - Vidalia translations (via launchpad?)
+      - Vidalia installer translations
+      - Torbutton translations (via babelzilla?)
+      - Centralized instructions for how to help translate
+      - Continue managing the tor-translations team to keep the Tor
+        website translated
 
-  - Mid May
+  - End of May
 S   - More TorBrowser work
       - Integrate pidgin and OTR
       - move portablefirefox nsi goo into vidalia as appropriate
@@ -75,13 +75,13 @@ S   - More TorBrowser work
 R   - SRI stuff
 
   - End of June
-S   - More TorBrowser work
-      - Firefox extension framework for Torbrowser build-time
-      - Progress bar during startup, including some "timeout" events to
+    - More TorBrowser work
+S     - Firefox extension framework for Torbrowser build-time
+S     - Progress bar during startup, including some "timeout" events to
         indicate when Tor's unlikely to succeed at startup.
 R       - Make Tor put out appropriate events
         - Let Vidalia notice them and change its appearance
-      - Enumerate and analyze traces left when running from USB
+S     - Enumerate and analyze traces left when running from USB
 R   - Finish tor-doc-bridge.wml
     - More bridgedb work:
 R     - Get the dkimproxy patch in
@@ -107,9 +107,9 @@ R     - Get closer to downloading far fewer descriptors
         - Write a proposal for how to fetch far fewer descriptors; assess
           anonymity attacks, like from looking at the size of the
           descriptor you fetch.
-J     - Translation portal
+I     - Translation portal
         - Torbutton webpage
-        - Torbrowser webpage
+        o Torbrowser webpage
         - Tor website
         - check.torproject.org
 
