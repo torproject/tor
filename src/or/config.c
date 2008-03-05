@@ -630,8 +630,6 @@ static int parse_dir_server_line(const char *line,
                                  int validate_only);
 static int parse_redirect_line(smartlist_t *result,
                                config_line_t *line, char **msg);
-static int parse_log_severity_range(const char *range, int *min_out,
-                                    int *max_out);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
@@ -1052,8 +1050,10 @@ options_act_reversible(or_options_t *old_options, char **msg)
  commit:
   r = 0;
   if (logs_marked) {
+    log_severity_list_t *severity =
+      tor_malloc_zero(sizeof(log_severity_list_t));
     close_temp_logs();
-    add_callback_log(LOG_ERR, LOG_ERR, control_event_logmsg);
+    add_callback_log(severity, control_event_logmsg);
     control_adjust_event_log_severity();
   }
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
@@ -3722,58 +3722,6 @@ config_register_addressmaps(or_options_t *options)
   smartlist_free(elts);
 }
 
-/** If <b>range</b> is of the form MIN-MAX, for MIN and MAX both
- * recognized log severity levels, set *<b>min_out</b> to MIN and
- * *<b>max_out</b> to MAX and return 0.  Else, if <b>range</b> is of
- * the form MIN, act as if MIN-err had been specified.  Else, warn and
- * return -1.
- */
-static int
-parse_log_severity_range(const char *range, int *min_out, int *max_out)
-{
-  int levelMin, levelMax;
-  const char *cp;
-  cp = strchr(range, '-');
-  if (cp) {
-    if (cp == range) {
-      levelMin = LOG_DEBUG;
-    } else {
-      char *tmp_sev = tor_strndup(range, cp - range);
-      levelMin = parse_log_level(tmp_sev);
-      if (levelMin < 0) {
-        log_warn(LD_CONFIG, "Unrecognized minimum log severity '%s': must be "
-                 "one of err|warn|notice|info|debug", tmp_sev);
-        tor_free(tmp_sev);
-        return -1;
-      }
-      tor_free(tmp_sev);
-    }
-    if (!*(cp+1)) {
-      levelMax = LOG_ERR;
-    } else {
-      levelMax = parse_log_level(cp+1);
-      if (levelMax < 0) {
-        log_warn(LD_CONFIG, "Unrecognized maximum log severity '%s': must be "
-                 "one of err|warn|notice|info|debug", cp+1);
-        return -1;
-      }
-    }
-  } else {
-    levelMin = parse_log_level(range);
-    if (levelMin < 0) {
-      log_warn(LD_CONFIG, "Unrecognized log severity '%s': must be one of "
-               "err|warn|notice|info|debug", range);
-      return -1;
-    }
-    levelMax = LOG_ERR;
-  }
-
-  *min_out = levelMin;
-  *max_out = levelMax;
-
-  return 0;
-}
-
 /**
  * Initialize the logs based on the configuration file.
  */
@@ -3794,84 +3742,73 @@ options_init_logs(or_options_t *options, int validate_only)
   elts = smartlist_create();
 
   for (opt = options->Logs; opt; opt = opt->next) {
-    int levelMin=LOG_DEBUG, levelMax=LOG_ERR;
-    smartlist_split_string(elts, opt->value, NULL,
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
-    if (smartlist_len(elts) == 0) {
-      log_warn(LD_CONFIG, "No arguments to Log option 'Log %s'", opt->value);
-      ok = 0; goto cleanup;
-    }
-    if (parse_log_severity_range(smartlist_get(elts,0), &levelMin,
-                                 &levelMax)) {
-      ok = 0; goto cleanup;
-    }
-    if (smartlist_len(elts) < 2) { /* only loglevels were provided */
-      if (!validate_only) {
-        if (daemon) {
-          log_warn(LD_CONFIG,
-              "Can't log to stdout with RunAsDaemon set; skipping stdout");
-        } else {
-          add_stream_log(levelMin, levelMax, "<stdout>", stdout);
-        }
-      }
-      goto cleanup;
-    }
-    if (!strcasecmp(smartlist_get(elts,1), "file")) {
-      if (smartlist_len(elts) != 3) {
-        log_warn(LD_CONFIG, "Bad syntax on file Log option 'Log %s'",
-                 opt->value);
-        ok = 0; goto cleanup;
-      }
-      if (!validate_only) {
-        if (add_file_log(levelMin, levelMax, smartlist_get(elts, 2)) < 0) {
-          log_warn(LD_CONFIG, "Couldn't open file for 'Log %s'", opt->value);
-          ok = 0;
-        }
-      }
-      goto cleanup;
-    }
-    if (smartlist_len(elts) != 2) {
-      log_warn(LD_CONFIG, "Wrong number of arguments on Log option 'Log %s'",
+    log_severity_list_t *severity;
+    const char *cfg = opt->value;
+    severity = tor_malloc_zero(sizeof(log_severity_list_t));
+    if (parse_log_severity_config(&cfg, severity) < 0) {
+      log_warn(LD_CONFIG, "Couldn't parse log levels in Log option 'Log %s'",
                opt->value);
       ok = 0; goto cleanup;
     }
-    if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
-      if (daemon) {
-        log_warn(LD_CONFIG, "Can't log to stdout with RunAsDaemon set.");
-        ok = 0; goto cleanup;
-      }
+
+    smartlist_split_string(elts, cfg, NULL,
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
+
+    if (smartlist_len(elts) == 0)
+      smartlist_add(elts, tor_strdup("stdout"));
+
+    if (smartlist_len(elts) == 1 &&
+        (!strcasecmp(smartlist_get(elts,0), "stdout") ||
+         !strcasecmp(smartlist_get(elts,0), "stderr"))) {
+      int err = smartlist_len(elts) &&
+        !strcasecmp(smartlist_get(elts,0), "stderr");
       if (!validate_only) {
-        add_stream_log(levelMin, levelMax, "<stdout>", stdout);
+        if (daemon) {
+          log_warn(LD_CONFIG,
+                   "Can't log to %s with RunAsDaemon set; skipping stdout",
+                   err?"stderr":"stdout");
+        } else {
+          add_stream_log(severity, err?"<stderr>":"<stdout>",
+                         err?stderr:stdout);
+          severity=NULL;
+        }
       }
-    } else if (!strcasecmp(smartlist_get(elts,1), "stderr")) {
-      if (daemon) {
-        log_warn(LD_CONFIG, "Can't log to stderr with RunAsDaemon set.");
-        ok = 0; goto cleanup;
-      }
-      if (!validate_only) {
-        add_stream_log(levelMin, levelMax, "<stderr>", stderr);
-      }
-    } else if (!strcasecmp(smartlist_get(elts,1), "syslog")) {
+      goto cleanup;
+    }
+    if (smartlist_len(elts) == 1 &&
+        !strcasecmp(smartlist_get(elts,0), "syslog")) {
 #ifdef HAVE_SYSLOG_H
-      if (!validate_only)
-        add_syslog_log(levelMin, levelMax);
+      if (!validate_only) {
+        add_syslog_log(severity);
+        severity=NULL;
+      }
 #else
       log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
 #endif
-    } else {
-      log_warn(LD_CONFIG, "Unrecognized log type %s",
-               (const char*)smartlist_get(elts,1));
-      if (strchr(smartlist_get(elts,1), '/') ||
-          strchr(smartlist_get(elts,1), '\\')) {
-        log_warn(LD_CONFIG, "Did you mean to say 'Log %s file %s' ?",
-                 (const char *)smartlist_get(elts,0),
-                 (const char *)smartlist_get(elts,1));
-      }
-      ok = 0; goto cleanup;
+      goto cleanup;
     }
+
+    if (smartlist_len(elts) == 2 &&
+        !strcasecmp(smartlist_get(elts,0), "file")) {
+      if (!validate_only) {
+        if (add_file_log(severity, smartlist_get(elts, 1)) < 0) {
+          log_warn(LD_CONFIG, "Couldn't open file for 'Log %s'", opt->value);
+          ok = 0;
+        } else {
+          tor_free(severity);
+        }
+      }
+      goto cleanup;
+    }
+
+    log_warn(LD_CONFIG, "Bad syntax on file Log option 'Log %s'",
+             opt->value);
+    ok = 0; goto cleanup;
+
   cleanup:
     SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
     smartlist_clear(elts);
+    tor_free(severity);
   }
   smartlist_free(elts);
 

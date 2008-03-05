@@ -3634,7 +3634,12 @@ main(int c, char**v)
     }
   }
 
-  add_stream_log(loglevel, LOG_ERR, "", stdout);
+  {
+    log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
+    for (i = loglevel; i >= LOG_ERR; --i)
+      s->masks[SEVERITY_MASK_IDX(i)] = ~0u;
+    add_stream_log(s, "", stdout);
+  }
 
   options->command = CMD_RUN_UNITTESTS;
   rep_hist_init();

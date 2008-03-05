@@ -123,6 +123,7 @@ static int
 parse_commandline(int argc, char **argv)
 {
   int i;
+  log_severity_list_t *s;
   for (i = 1; i < argc; ++i) {
     if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h")) {
       show_help();
@@ -188,11 +189,15 @@ parse_commandline(int argc, char **argv)
     }
   }
 
+  s = tor_malloc_zero(sizeof(log_severity_list_t));
+  s->masks[SEVERITY_MASK_IDX(LOG_ERR)] = ~0u;
+  s->masks[SEVERITY_MASK_IDX(LOG_WARN)] = ~0u;
   if (verbose) {
-    add_stream_log(LOG_INFO, LOG_ERR, "<stderr>", stderr);
-  } else {
-    add_stream_log(LOG_NOTICE, LOG_ERR, "<stderr>", stderr);
+    s->masks[SEVERITY_MASK_IDX(LOG_NOTICE)] = ~0u;
+    s->masks[SEVERITY_MASK_IDX(LOG_INFO)] = ~0u;
+    s->masks[SEVERITY_MASK_IDX(LOG_DEBUG)] = ~0u;
   }
+  add_stream_log(s, "<stderr>", stderr);
 
   if (!identity_key_file) {
     identity_key_file = tor_strdup("./authority_identity_key");

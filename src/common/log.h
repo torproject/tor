@@ -91,19 +91,38 @@
 /** Bandwidth accounting. */
 #define LD_ACCT     (1u<<17)
 
+/** Number of logging domains in the code. */
+#define N_LOGGING_DOMAINS 18
+
+typedef uint32_t log_domain_mask_t;
+
+/** Configures which severities are logged for each logging domain for a given
+ * log target. */
+typedef struct log_severity_list_t {
+  /** For each log severity, a bitmask of which domains a given logger is
+   * logging. */
+  log_domain_mask_t masks[LOG_DEBUG-LOG_ERR+1];
+} log_severity_list_t;
+
+/** Given a severity, yields an index into log_severity_list_t.masks to use
+ * for that severity. */
+#define SEVERITY_MASK_IDX(sev) ((sev) - LOG_ERR)
+
 /** Callback type used for add_callback_log. */
 typedef void (*log_callback)(int severity, uint32_t domain, const char *msg);
 
 void init_logging(void);
 int parse_log_level(const char *level);
 const char *log_level_to_string(int level);
-void add_stream_log(int severityMin, int severityMax, const char *name,
+int parse_log_severity_config(const char **cfg,
+                              log_severity_list_t *severity_out);
+void add_stream_log(log_severity_list_t *severity, const char *name,
                     FILE *stream);
-int add_file_log(int severityMin, int severityMax, const char *filename);
+int add_file_log(log_severity_list_t *severity, const char *filename);
 #ifdef HAVE_SYSLOG_H
-int add_syslog_log(int loglevelMin, int loglevelMax);
+int add_syslog_log(log_severity_list_t *severity);
 #endif
-int add_callback_log(int loglevelMin, int loglevelMax, log_callback cb);
+int add_callback_log(log_severity_list_t *severity, log_callback cb);
 int get_min_log_level(void);
 void switch_logs_debug(void);
 void logs_free_all(void);
@@ -118,14 +137,14 @@ void change_callback_log_severity(int loglevelMin, int loglevelMax,
 void log_set_application_name(const char *name);
 
 /* Outputs a message to stdout */
-void _log(int severity, uint32_t domain, const char *format, ...)
+void _log(int severity, log_domain_mask_t domain, const char *format, ...)
   CHECK_PRINTF(3,4);
 #define log _log /* hack it so we don't conflict with log() as much */
 
 #ifdef __GNUC__
 extern int _log_global_min_severity;
 
-void _log_fn(int severity, uint32_t domain,
+void _log_fn(int severity, log_domain_mask_t domain,
              const char *funcname, const char *format, ...)
   CHECK_PRINTF(4,5);
 /** Log a message at level <b>severity</b>, using a pretty-printed version
@@ -148,12 +167,12 @@ void _log_fn(int severity, uint32_t domain,
 
 #else /* ! defined(__GNUC__) */
 
-void _log_fn(int severity, uint32_t domain, const char *format, ...);
-void _log_debug(uint32_t domain, const char *format, ...);
-void _log_info(uint32_t domain, const char *format, ...);
-void _log_notice(uint32_t domain, const char *format, ...);
-void _log_warn(uint32_t domain, const char *format, ...);
-void _log_err(uint32_t domain, const char *format, ...);
+void _log_fn(int severity, log_domain_mask_t domain, const char *format, ...);
+void _log_debug(log_domain_mask_t domain, const char *format, ...);
+void _log_info(log_domain_mask_t domain, const char *format, ...);
+void _log_notice(log_domain_mask_t domain, const char *format, ...);
+void _log_warn(log_domain_mask_t domain, const char *format, ...);
+void _log_err(log_domain_mask_t domain, const char *format, ...);
 
 #if defined(_MSC_VER) && _MSC_VER < 1300
 /* MSVC 6 and earlier don't have __func__, or even __LINE__. */

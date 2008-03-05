@@ -8,6 +8,12 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       from lodger, Karsten Loesing and Sebastian Hahn.  Fixes bug 616.
       Bugfix on 0.2.0.20-rc.
 
+  o Minor features:
+    - Allow separate log levels to be configured for different logging
+      domains.  For example, this allows one to log all notices, warnings, or
+      errors, plus all memory management messages of level debug or higher,
+      with: Log [MM] debug-err [*] notice-err file /var/log/tor.
+
 
 Changes in version 0.2.0.21-rc - 2008-03-02
   o Major bugfixes:

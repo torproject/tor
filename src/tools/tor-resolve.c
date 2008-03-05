@@ -280,6 +280,7 @@ main(int argc, char **argv)
   uint32_t result = 0;
   char *result_hostname = NULL;
   char buf[INET_NTOA_BUF_LEN];
+  log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
 
   init_logging();
 
@@ -317,11 +318,15 @@ main(int argc, char **argv)
     usage();
   }
 
+  s->masks[SEVERITY_MASK_IDX(LOG_ERR)] = ~0u;
+  s->masks[SEVERITY_MASK_IDX(LOG_WARN)] = ~0u;
   if (isVerbose) {
-    add_stream_log(LOG_DEBUG, LOG_ERR, "<stderr>", stderr);
-  } else {
-    add_stream_log(LOG_WARN, LOG_ERR, "<stderr>", stderr);
+    s->masks[SEVERITY_MASK_IDX(LOG_NOTICE)] = ~0u;
+    s->masks[SEVERITY_MASK_IDX(LOG_INFO)] = ~0u;
+    s->masks[SEVERITY_MASK_IDX(LOG_DEBUG)] = ~0u;
   }
+  add_stream_log(s, "<stderr>", stderr);
+
   if (n_args == 1) {
     log_debug(LD_CONFIG, "defaulting to localhost:9050");
     sockshost = 0x7f000001u; /* localhost */
