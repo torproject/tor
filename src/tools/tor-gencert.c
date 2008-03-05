@@ -178,7 +178,7 @@ parse_commandline(int argc, char **argv)
       make_new_id = 1;
     } else if (!strcmp(argv[i], "--passphrase-fd")) {
       if (i+1>=argc) {
-        fprintf(stderr, "No argument to -m\n");
+        fprintf(stderr, "No argument to --passphrase-fd\n");
         return 1;
       }
       passphrase_fd = atoi(argv[++i]);
