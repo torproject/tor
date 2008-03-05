@@ -8,7 +8,7 @@ P       - phobos claims
 S       - Steven claims
 M       - Matt/Mike claims
 J       - Jeff claims
-I	- ioerror claims
+I       - ioerror claims
         - Not done
         * Top priority
         . Partially done
@@ -16,98 +16,6 @@ I	- ioerror claims
         d Deferrable
         D Deferred
         X Abandoned
-
-=======================================================================
-
-External constraints:
-  - Mid Feb, blocking-resistance roll-out
-M   - Adequately stable Vidalia snapshot, or 0.1.0 release
-R   - Write some text for it
-S   - New Tor Browser Bundle with above Vidalia
-
-  - Late Feb, NGO in a box
-    - Have 0.2.0 beta or rc out
-
-  - Mid Mar, upnp
-S   - Pick a suitable-looking upnp library and begin integrating it
-
-  - Mid Apr
-    - More Torbrowser work:
-      o Get polipo into it
-?     - Resolve branding issue
-      o Make Torbrowser website
-R     - Get it integrated into the Tor download pages
-S   - Zip-splitting:
-      - Document the use of 7-zip to combine fractional files and
-        reconstruct them after download.  Host such files.
-      - If it's faster to research a self-extracting splitter
-        and use it, with simpler documentation, that's obviously fine.
-S   - Finish first cut at integrating upnp lib into Vidalia
-R   - get the geoip files onto some bridge relays, and gather stats
-J   - Translation portal
-      - Vidalia translations
-      - Vidalia installer translations
-      - Torbutton translations
-      - Centralized instructions for how to help translate
-      - Continue managing the tor-translations team to keep the Tor
-        website translated
-
-  - Mid May
-S   - More TorBrowser work
-      - Integrate pidgin and OTR
-      - move portablefirefox nsi goo into vidalia as appropriate
-      - Figure out (or give up on) how to run Tor Browser and ordinary
-        Firefox side-by-side.
-
-  - mid June
-R   - SRI stuff
-
-  - End of June
-S   - More TorBrowser work
-      - Firefox extension framework for Torbrowser build-time
-      - Progress bar during startup, including some "timeout" events to
-        indicate when Tor's unlikely to succeed at startup.
-R       - Make Tor put out appropriate events
-        - Let Vidalia notice them and change its appearance
-      - Enumerate and analyze traces left when running from USB
-R   - Finish tor-doc-bridge.wml
-    - More bridgedb work:
-R     - Get the dkimproxy patch in
-?     - Brainstorm about safe but effective ways for vidalia to
-        auto-update its user's bridges via Tor in the background.
-NR    - Include "stable" bridge and "port 443" bridge and "adequately
-        new version" bridge free in every specially marked
-        box!^W^W^Woutput batch.
-N     - Detect proxies and treat them as the same address
-    - More back-end work:
-N     - Investigate and start resolving (or declare unresolvable) the ram
-        issue for relays. Investigate and document all of, and do at
-        least one of:
-        - better buffer approaches in Tor
-        - better buffer approaches in openssl
-        - shipping Tor with its own integrated allocator.
-N     - Write a research proposal for how to safely collect and aggregate
-        some GeoIP data from non-bridge entry nodes. Deploy that if we
-        think it's safe enough, or produce a clear roadmap to getting it
-        safe if we don't think it's ready yet.
-N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
-        - spoof the cipher suites
-        - spoof the extensions list
-        - red-team testing (a.k.a, look at a packet dump and compare),
-        - investigate the feasibility of handing connections off to a
-          local apache if they don't look like Tor or if they don't
-          portknock or whatever.
-R     - Get closer to downloading far fewer descriptors
-        - Instrument the code to track how many descriptors we download vs how
-          many times we extend a circuit.
-        - Write a proposal for how to fetch far fewer descriptors; assess
-          anonymity attacks, like from looking at the size of the
-          descriptor you fetch.
-J     - Translation portal
-        - Torbutton webpage
-        - Torbrowser webpage
-        - Tor website
-        - check.torproject.org
 
 =======================================================================
 
