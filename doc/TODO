@@ -113,6 +113,19 @@ I     - Translation portal
         - Tor website
         - check.torproject.org
 
+  - August
+I   - Auto update
+      o Vidalia learns when Tor thinks it should be updated
+R     - Tor status events should suggest a new version to switch to
+I     - Figure out a good PKI, document the design, assess security issues:
+        "write a proposal"
+      - Vidalia fetches the new one via Tor when possible, but fetches
+        it without Tor "when necessary", whatever that means.
+        - Give an interface for notifying the user, and letting her
+          decide to fetch and decide to swap out the old Tor for the new.
+      - Do the same for Polipo
+      - and for Vidalia itself
+
 =======================================================================
 
 For Tor 0.2.0.x-rc:
