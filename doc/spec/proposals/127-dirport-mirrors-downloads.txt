@@ -135,3 +135,23 @@ Status: Draft
       answers to popular requests, so we don't have to keep getting
       them again.)
 
+6. Outstanding problems
+
+  1) HTTP proxies already exist.  Why waste our time cloning one
+  badly? When we clone existing stuff, we usually regret it.
+
+  2) It's overbroad.  We only seem to need a secure get-a-tor feature,
+  and instead we're contemplating building a locked-down HTTP proxy.
+
+  3) It's going to add a fair bit of complexity to our code.  We do
+  not currently implement HTTPS.  We'd need to refactor lots of the
+  low-level connection stuff so that "SSL" and "Cell-based" were no
+  longer synonymous.
+
+  4) It's still unclear how effective this proposal would be in
+  practice. You need to know that this feature exists, which means
+  somebody needs to tell you about a bridge (mirror) address and tell
+  you how to use it. And if they're doing that, they could (e.g.) tell
+  you about a gmail autoresponder address just as easily, and then you'd
+  get better authentication of the Tor program to boot.
+
