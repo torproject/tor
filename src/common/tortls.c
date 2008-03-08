@@ -1273,7 +1273,7 @@ tor_tls_get_forced_write_size(tor_tls_t *tls)
 }
 
 /** Sets n_read and n_written to the number of bytes read and written,
- * respectivey, on the raw socket used by <b>tls</b> since the last time this
+ * respectively, on the raw socket used by <b>tls</b> since the last time this
  * function was called on <b>tls</b>. */
 void
 tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
