@@ -1055,6 +1055,7 @@ options_act_reversible(or_options_t *old_options, char **msg)
     close_temp_logs();
     add_callback_log(severity, control_event_logmsg);
     control_adjust_event_log_severity();
+    tor_free(severity);
   }
   SMARTLIST_FOREACH(replaced_listeners, connection_t *, conn,
   {
@@ -3770,7 +3771,6 @@ options_init_logs(or_options_t *options, int validate_only)
         } else {
           add_stream_log(severity, err?"<stderr>":"<stdout>",
                          err?stderr:stdout);
-          severity=NULL;
         }
       }
       goto cleanup;
@@ -3780,7 +3780,6 @@ options_init_logs(or_options_t *options, int validate_only)
 #ifdef HAVE_SYSLOG_H
       if (!validate_only) {
         add_syslog_log(severity);
-        severity=NULL;
       }
 #else
       log_warn(LD_CONFIG, "Syslog is not supported on this system. Sorry.");
@@ -3794,8 +3793,6 @@ options_init_logs(or_options_t *options, int validate_only)
         if (add_file_log(severity, smartlist_get(elts, 1)) < 0) {
           log_warn(LD_CONFIG, "Couldn't open file for 'Log %s'", opt->value);
           ok = 0;
-        } else {
-          tor_free(severity);
         }
       }
       goto cleanup;

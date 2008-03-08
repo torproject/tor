@@ -480,8 +480,7 @@ new_severity_list(int loglevelMin, int loglevelMax)
 }
 
 /** Add a log handler named <b>name</b> to send all messages in <b>severity</b>
- * to <b>stream</b>. Steals a reference to <b>severity</b>; the caller must
- * not use it after calling this function. Helper: does no locking. */
+ * to <b>stream</b>. Copies <b>severity</b>. Helper: does no locking. */
 static void
 add_stream_log_impl(log_severity_list_t *severity,
                     const char *name, FILE *stream)
@@ -489,7 +488,7 @@ add_stream_log_impl(log_severity_list_t *severity,
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
   lf->filename = tor_strdup(name);
-  lf->severities = severity;
+  lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
   lf->file = stream;
   lf->next = logfiles;
 
@@ -539,7 +538,7 @@ add_callback_log(log_severity_list_t *severity, log_callback cb)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
-  lf->severities = severity;
+  lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
   lf->filename = tor_strdup("<callback>");
   lf->callback = cb;
   lf->next = logfiles;
@@ -657,7 +656,7 @@ add_syslog_log(log_severity_list_t *severity)
     openlog("Tor", LOG_PID | LOG_NDELAY, LOGFACILITY);
 
   lf = tor_malloc_zero(sizeof(logfile_t));
-  lf->severities = severity;
+  lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
   lf->filename = tor_strdup("<syslog>");
 
   lf->is_syslog = 1;
