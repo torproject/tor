@@ -1,3 +1,11 @@
+Changes in version 0.2.0.22-rc - 2008-03-??
+  o Minor bugfixes:
+    - If we set RelayBandwidthRate and RelayBandwidthBurst very high but
+      left BandwidthRate and BandwidthBurst at the default, we would be
+      silently limited by those defaults. Now raise them to match the
+      RelayBandwidth* values.
+
+
 Changes in version 0.2.0.21-rc - 2008-03-02
   o Major bugfixes:
     - The control port should declare that it requires password auth

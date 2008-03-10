@@ -3117,6 +3117,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->BandwidthRate > options->BandwidthBurst)
     REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
 
+  /* if they set relaybandwidth* really high but left bandwidth*
+   * at the default, raise the defaults. */
+  if (options->RelayBandwidthRate > options->BandwidthRate)
+    options->BandwidthRate = options->RelayBandwidthRate;
+  if (options->RelayBandwidthBurst > options->BandwidthBurst)
+    options->BandwidthBurst = options->RelayBandwidthBurst;
+
   if (accounting_parse_options(options, 1)<0)
     REJECT("Failed to parse accounting options. See logs for details.");
 

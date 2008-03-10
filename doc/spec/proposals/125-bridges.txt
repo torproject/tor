@@ -42,7 +42,7 @@ Status: Finished
   can supply their bridge users with cached copies of all the various
   Tor network information.
 
-  As for Tor 0.2.0.13-alpha, bridges will answer begin_dir questions
+  As of Tor 0.2.0.13-alpha, bridges will answer begin_dir questions
   (and cache dir info they see so the answers will be more useful)
   whether their DirPort is enabled or not. (After all, we don't care if
   they have an open or reachable DirPort to answer begin_dir questions.)
