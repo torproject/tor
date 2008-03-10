@@ -3574,6 +3574,46 @@ find_torrc_filename(int argc, char **argv,
   return fname;
 }
 
+/** Load torrc from disk, setting torrc_fname if successful */
+char *
+load_torrc_from_disk(int argc, char **argv)
+{
+  char *fname=NULL;
+  char *cf = NULL;
+  int using_default_torrc = 1;
+  int ignore_missing_torrc = 0;
+
+  fname = find_torrc_filename(argc, argv,
+                              &using_default_torrc, &ignore_missing_torrc);
+  tor_assert(fname);
+  log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
+
+  tor_free(torrc_fname);
+  torrc_fname = fname;
+
+  /* Open config file */
+  if (file_status(fname) != FN_FILE ||
+      !(cf = read_file_to_str(fname,0,NULL))) {
+    if (using_default_torrc == 1 || ignore_missing_torrc ) {
+      log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
+          "using reasonable defaults.", fname);
+      tor_free(fname); /* sets fname to NULL */
+      torrc_fname = NULL;
+      cf = tor_strdup("");
+    } else {
+      log(LOG_WARN, LD_CONFIG,
+          "Unable to open configuration file \"%s\".", fname);
+      goto err;
+    }
+  }
+
+  return cf;
+ err:
+  tor_free(fname);
+  torrc_fname = NULL;
+  return NULL;
+}
+
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency, then take actions based on them.
@@ -3583,10 +3623,8 @@ options_init_from_torrc(int argc, char **argv)
 {
   or_options_t *oldoptions, *newoptions;
   config_line_t *cl;
-  char *cf=NULL, *fname=NULL, *errmsg=NULL;
+  char *cf=NULL, *errmsg=NULL;
   int i, retval;
-  int using_default_torrc = 1;
-  int ignore_missing_torrc = 0;
   static char **backup_argv;
   static int backup_argc;
 
@@ -3634,29 +3672,9 @@ options_init_from_torrc(int argc, char **argv)
     }
   }
 
-  fname = find_torrc_filename(argc, argv,
-                              &using_default_torrc, &ignore_missing_torrc);
-  tor_assert(fname);
-  log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
-
-  tor_free(torrc_fname);
-  torrc_fname = fname;
-
-  /* Open config file */
-  if (file_status(fname) != FN_FILE ||
-      !(cf = read_file_to_str(fname,0,NULL))) {
-    if (using_default_torrc == 1 || ignore_missing_torrc ) {
-      log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
-          "using reasonable defaults.", fname);
-      tor_free(fname); /* sets fname to NULL */
-      torrc_fname = NULL;
-      cf = tor_strdup("");
-    } else {
-      log(LOG_WARN, LD_CONFIG,
-          "Unable to open configuration file \"%s\".", fname);
-      goto err;
-    }
-  }
+  cf = load_torrc_from_disk(argc, argv);
+  if (!cf)
+    goto err;
 
   /* get config lines, assign them */
   retval = config_get_lines(cf, &cl);
@@ -3688,8 +3706,6 @@ options_init_from_torrc(int argc, char **argv)
 
   return 0;
  err:
-  tor_free(fname);
-  torrc_fname = NULL;
   config_free(&options_format, newoptions);
   if (errmsg) {
     log(LOG_WARN,LD_CONFIG,"Failed to parse/validate config: %s", errmsg);
