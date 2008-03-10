@@ -100,6 +100,8 @@ static int handle_control_resetconf(control_connection_t *conn, uint32_t len,
                                     char *body);
 static int handle_control_getconf(control_connection_t *conn, uint32_t len,
                                   const char *body);
+static int handle_control_loadconf(control_connection_t *conn, uint32_t len,
+                                  const char *body);
 static int handle_control_setevents(control_connection_t *conn, uint32_t len,
                                     const char *body);
 static int handle_control_authenticate(control_connection_t *conn,
@@ -861,6 +863,49 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
 
   return 0;
 }
+
+
+/** Called when we get a +LOADCONF message. */
+static int
+handle_control_loadconf(control_connection_t *conn, uint32_t len,
+                         const char *body)
+{
+  int retval;
+  char *errstring = NULL;
+  char *msg = NULL;
+
+  retval = options_init_from_string(body, CMD_RUN_TOR, NULL, &errstring);
+
+  if (retval < 0) {
+    log_warn(LD_CONTROL,
+             "Controller gave us config file that didn't validate: %s",
+             errstring);
+    switch (retval) {
+      case -2:
+        msg = "552 Invalid config file";
+        break;
+      case -3:
+        msg = "553 Transition not allowed";
+        break;
+      case -4:
+        msg = "553 Unable to set option";
+        break;
+      case -1:
+      default:
+        msg = "550 Unable to load config";
+        break;
+    }
+    if (*errstring)
+      connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
+    else
+      connection_printf_to_buf(conn, "%s\r\n", msg);
+    tor_free(errstring);
+    return 0;
+  }
+  send_control_done(conn);
+  return 0;
+}
+
 
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
@@ -2800,6 +2845,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "GETCONF")) {
     if (handle_control_getconf(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "+LOADCONF")) {
+    if (handle_control_loadconf(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SETEVENTS")) {
     if (handle_control_setevents(conn, cmd_data_len, args))
