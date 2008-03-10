@@ -2742,11 +2742,13 @@ connection_control_process_inbuf(control_connection_t *conn)
     if (last_idx+3 == conn->incoming_cmd_cur_len &&
         !memcmp(conn->incoming_cmd + last_idx, ".\r\n", 3)) {
       /* Just appended ".\r\n"; we're done. Remove it. */
+      conn->incoming_cmd[last_idx] = '\0';
       conn->incoming_cmd_cur_len -= 3;
       break;
     } else if (last_idx+2 == conn->incoming_cmd_cur_len &&
                !memcmp(conn->incoming_cmd + last_idx, ".\n", 2)) {
       /* Just appended ".\n"; we're done. Remove it. */
+      conn->incoming_cmd[last_idx] = '\0';
       conn->incoming_cmd_cur_len -= 2;
       break;
     }
