@@ -3642,7 +3642,7 @@ options_init_from_torrc(int argc, char **argv)
   tor_free(torrc_fname);
   torrc_fname = fname;
 
-  /* get config lines, assign them */
+  /* Open config file */
   if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0,NULL))) {
     if (using_default_torrc == 1 || ignore_missing_torrc ) {
@@ -3650,21 +3650,23 @@ options_init_from_torrc(int argc, char **argv)
           "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */
       torrc_fname = NULL;
+      cf = tor_strdup("");
     } else {
       log(LOG_WARN, LD_CONFIG,
           "Unable to open configuration file \"%s\".", fname);
       goto err;
     }
-  } else { /* it opened successfully. use it. */
-    retval = config_get_lines(cf, &cl);
-    tor_free(cf);
-    if (retval < 0)
-      goto err;
-    retval = config_assign(&options_format, newoptions, cl, 0, 0, &errmsg);
-    config_free_lines(cl);
-    if (retval < 0)
-      goto err;
   }
+
+  /* get config lines, assign them */
+  retval = config_get_lines(cf, &cl);
+  tor_free(cf);
+  if (retval < 0)
+    goto err;
+  retval = config_assign(&options_format, newoptions, cl, 0, 0, &errmsg);
+  config_free_lines(cl);
+  if (retval < 0)
+    goto err;
 
   /* Go through command-line variables too */
   if (config_get_commandlines(argc, argv, &cl) < 0)
