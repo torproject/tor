@@ -287,10 +287,10 @@ Planned for 0.2.1.x:
     - Base relative control socket paths on datadir.
     - Make TrackHostExits expire TrackHostExitsExpire seconds after their
        *last* use, not their *first* use.
-P - Plan a switch to polipo.  Perhaps we'll offer two http proxies in
+  - Plan a switch to polipo.  Perhaps we'll offer two http proxies in
     the future.
-P - Consider creating special Tor-Polipo-Vidalia test packages,
-    requested by Dmitri Vitalev
+  - Consider creating special Tor-Polipo-Vidalia test packages,
+    requested by Dmitri Vitalev (does torbrowser meet this need?)
   - Create packages for Nokia 800, requested by Chris Soghoian
   - mirror tor downloads on (via) tor dir caches
     . spec
@@ -634,7 +634,7 @@ NR  - write a spec appendix for 'being nice with tor'
   - Remove need for HACKING file.
   - document http://wiki.noreply.org/noreply/TheOnionRouter/TransparentProxy on freebsd and osx
 P - figure out why x86_64 won't build rpms from tor.spec
-P - figure out spec files for bundles of vidalia-tor-polipo
+P - figure out rpm spec files for bundles of vidalia-tor-polipo
 P - figure out polipo install scripts for bundles of vidalia-tor-polipo on osx, win32
   - figure out selinux policy for tor
 P - change packaging system to more automated and specific for each
