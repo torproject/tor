@@ -3569,12 +3569,24 @@ options_init_from_torrc(int argc, char **argv)
   newoptions = tor_malloc_zero(sizeof(or_options_t));
   newoptions->_magic = OR_OPTIONS_MAGIC;
   options_init(newoptions);
+  newoptions->command = CMD_RUN_TOR;
+
+  for (i = 1; i < argc; ++i) {
+    if (!strcmp(argv[i],"--list-fingerprint")) {
+      newoptions->command = CMD_LIST_FINGERPRINT;
+    } else if (!strcmp(argv[i],"--hash-password")) {
+      newoptions->command = CMD_HASH_PASSWORD;
+      newoptions->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
+      ++i;
+    } else if (!strcmp(argv[i],"--verify-config")) {
+      newoptions->command = CMD_VERIFY_CONFIG;
+    }
+  }
 
   /* learn config file name */
   fname = NULL;
   using_default_torrc = 1;
   ignore_missing_torrc = 0;
-  newoptions->command = CMD_RUN_TOR;
   for (i = 1; i < argc; ++i) {
     if (i < argc-1 && !strcmp(argv[i],"-f")) {
       if (fname) {
@@ -3592,14 +3604,6 @@ options_init_from_torrc(int argc, char **argv)
       ++i;
     } else if (!strcmp(argv[i],"--ignore-missing-torrc")) {
       ignore_missing_torrc = 1;
-    } else if (!strcmp(argv[i],"--list-fingerprint")) {
-      newoptions->command = CMD_LIST_FINGERPRINT;
-    } else if (!strcmp(argv[i],"--hash-password")) {
-      newoptions->command = CMD_HASH_PASSWORD;
-      newoptions->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
-      ++i;
-    } else if (!strcmp(argv[i],"--verify-config")) {
-      newoptions->command = CMD_VERIFY_CONFIG;
     }
   }
   if (using_default_torrc) {
