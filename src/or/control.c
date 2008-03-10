@@ -864,7 +864,6 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   return 0;
 }
 
-
 /** Called when we get a +LOADCONF message. */
 static int
 handle_control_loadconf(control_connection_t *conn, uint32_t len,
@@ -905,7 +904,6 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
   send_control_done(conn);
   return 0;
 }
-
 
 /** Called when we get a SETEVENTS message: update conn->event_mask,
  * and reply with DONE or ERROR. */
