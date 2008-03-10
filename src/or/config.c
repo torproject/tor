@@ -3523,6 +3523,57 @@ check_nickname_list(const char *lst, const char *name, char **msg)
   return r;
 }
 
+/** Learn config file name from command line arguments, or use the default */
+char *
+find_torrc_filename(int argc, char **argv,
+                    int *using_default_torrc, int *ignore_missing_torrc)
+{
+  char *fname=NULL;
+  int i;
+
+  for (i = 1; i < argc; ++i) {
+    if (i < argc-1 && !strcmp(argv[i],"-f")) {
+      if (fname) {
+        log(LOG_WARN, LD_CONFIG, "Duplicate -f options on command line.");
+        tor_free(fname);
+      }
+#ifdef MS_WINDOWS
+      /* XXX one day we might want to extend expand_filename to work
+       * under Windows as well. */
+      fname = tor_strdup(argv[i+1]);
+#else
+      fname = expand_filename(argv[i+1]);
+#endif
+      *using_default_torrc = 0;
+      ++i;
+    } else if (!strcmp(argv[i],"--ignore-missing-torrc")) {
+      *ignore_missing_torrc = 1;
+    }
+  }
+
+  if (*using_default_torrc) {
+    /* didn't find one, try CONFDIR */
+    const char *dflt = get_default_conf_file();
+    if (dflt && file_status(dflt) == FN_FILE) {
+      fname = tor_strdup(dflt);
+    } else {
+#ifndef MS_WINDOWS
+      char *fn;
+      fn = expand_filename("~/.torrc");
+      if (fn && file_status(fn) == FN_FILE) {
+        fname = fn;
+      } else {
+        tor_free(fn);
+        fname = tor_strdup(dflt);
+      }
+#else
+      fname = tor_strdup(dflt);
+#endif
+    }
+  }
+  return fname;
+}
+
 /** Read a configuration file into <b>options</b>, finding the configuration
  * file location based on the command line.  After loading the options,
  * validate them for consistency, then take actions based on them.
@@ -3534,8 +3585,8 @@ options_init_from_torrc(int argc, char **argv)
   config_line_t *cl;
   char *cf=NULL, *fname=NULL, *errmsg=NULL;
   int i, retval;
-  int using_default_torrc;
-  int ignore_missing_torrc;
+  int using_default_torrc = 1;
+  int ignore_missing_torrc = 0;
   static char **backup_argv;
   static int backup_argc;
 
@@ -3583,49 +3634,8 @@ options_init_from_torrc(int argc, char **argv)
     }
   }
 
-  /* learn config file name */
-  fname = NULL;
-  using_default_torrc = 1;
-  ignore_missing_torrc = 0;
-  for (i = 1; i < argc; ++i) {
-    if (i < argc-1 && !strcmp(argv[i],"-f")) {
-      if (fname) {
-        log(LOG_WARN, LD_CONFIG, "Duplicate -f options on command line.");
-        tor_free(fname);
-      }
-#ifdef MS_WINDOWS
-      /* XXX one day we might want to extend expand_filename to work
-       * under Windows as well. */
-      fname = tor_strdup(argv[i+1]);
-#else
-      fname = expand_filename(argv[i+1]);
-#endif
-      using_default_torrc = 0;
-      ++i;
-    } else if (!strcmp(argv[i],"--ignore-missing-torrc")) {
-      ignore_missing_torrc = 1;
-    }
-  }
-  if (using_default_torrc) {
-    /* didn't find one, try CONFDIR */
-    const char *dflt = get_default_conf_file();
-    if (dflt && file_status(dflt) == FN_FILE) {
-      fname = tor_strdup(dflt);
-    } else {
-#ifndef MS_WINDOWS
-      char *fn;
-      fn = expand_filename("~/.torrc");
-      if (fn && file_status(fn) == FN_FILE) {
-        fname = fn;
-      } else {
-        tor_free(fn);
-        fname = tor_strdup(dflt);
-      }
-#else
-      fname = tor_strdup(dflt);
-#endif
-    }
-  }
+  fname = find_torrc_filename(argc, argv,
+                              &using_default_torrc, &ignore_missing_torrc);
   tor_assert(fname);
   log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
 
