@@ -352,6 +352,12 @@ Planned for 0.2.1.x:
   - Investigate RAM use in Tor servers.
   - Start on the WSAENOBUFS solution.
   - Start on Windows auto-update for Tor
+  - Stuff that weasel wants:
+    - Make Tor able to chroot itself
+      - allow it to load an entire config file from control interface
+      - log rotation (and FD passing) via control interface
+      - chroot yourself, including inhibit trying to read config file
+        and reopen logs, unless they are under datadir.
 
 Deferred from 0.2.0.x:
   - Proposals
