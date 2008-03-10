@@ -243,7 +243,7 @@ static config_var_t _option_vars[] = {
   V(OutboundBindAddress,         STRING,   NULL),
   OBSOLETE("PathlenCoinWeight"),
   V(PidFile,                     STRING,   NULL),
-  V(PreferTunneledDirConns,      BOOL,     "0"),
+  V(PreferTunneledDirConns,      BOOL,     "1"),
   V(ProtocolWarnings,            BOOL,     "0"),
   V(PublishServerDescriptor,     CSV,      "1"),
   V(PublishHidServDescriptors,   BOOL,     "1"),
@@ -289,7 +289,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("TrafficShaping"),
   V(TransListenAddress,          LINELIST, NULL),
   V(TransPort,                   UINT,     "0"),
-  V(TunnelDirConns,              BOOL,     "0"),
+  V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
   V(UseEntryGuards,              BOOL,     "1"),
@@ -3117,6 +3117,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->BandwidthRate > options->BandwidthBurst)
     REJECT("BandwidthBurst must be at least equal to BandwidthRate.");
+
+  /* if they set relaybandwidth* really high but left bandwidth*
+   * at the default, raise the defaults. */
+  if (options->RelayBandwidthRate > options->BandwidthRate)
+    options->BandwidthRate = options->RelayBandwidthRate;
+  if (options->RelayBandwidthBurst > options->BandwidthBurst)
+    options->BandwidthBurst = options->RelayBandwidthBurst;
 
   if (accounting_parse_options(options, 1)<0)
     REJECT("Failed to parse accounting options. See logs for details.");
