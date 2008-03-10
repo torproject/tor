@@ -1,4 +1,10 @@
 Changes in version 0.2.0.22-rc - 2008-03-??
+  o Major features:
+    - Enable encrypted directory connections by default, so censor
+      tools that block Tor directory connections based on their plaintext
+      patterns will no longer work. This means Tor works in certain
+      censored countries by default again.
+
   o Minor bugfixes:
     - If we set RelayBandwidthRate and RelayBandwidthBurst very high but
       left BandwidthRate and BandwidthBurst at the default, we would be
