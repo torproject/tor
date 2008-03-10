@@ -705,6 +705,8 @@ static or_options_t *global_options = NULL;
 static char *torrc_fname = NULL;
 /** Persistent serialized state. */
 static or_state_t *global_state = NULL;
+/** Configuration Options set by command line. */
+static config_line_t *global_cmdline_options = NULL;
 
 /** Allocate an empty configuration object of a given format type. */
 static void *
@@ -783,6 +785,10 @@ config_free_all(void)
   if (global_state) {
     config_free(&state_format, global_state);
     global_state = NULL;
+  }
+  if (global_cmdline_options) {
+    config_free_lines(global_cmdline_options);
+    global_cmdline_options = NULL;
   }
   tor_free(torrc_fname);
   tor_free(_version);
@@ -3621,7 +3627,7 @@ load_torrc_from_disk(int argc, char **argv)
 int
 options_init_from_torrc(int argc, char **argv)
 {
-  or_options_t *oldoptions, *newoptions;
+  or_options_t *oldoptions, *newoptions = NULL;
   config_line_t *cl;
   char *cf=NULL, *errmsg=NULL;
   int i, retval;
@@ -3653,6 +3659,15 @@ options_init_from_torrc(int argc, char **argv)
       print_svn_version();
     }
     exit(0);
+  }
+
+  /* Go through command-line variables */
+  if (!global_cmdline_options) {
+    /* Or we could redo the list every time we pass this place.
+     * It does not really matter */
+    if (config_get_commandlines(argc, argv, &global_cmdline_options) < 0) {
+      goto err;
+    }
   }
 
   newoptions = tor_malloc_zero(sizeof(or_options_t));
@@ -3687,10 +3702,8 @@ options_init_from_torrc(int argc, char **argv)
     goto err;
 
   /* Go through command-line variables too */
-  if (config_get_commandlines(argc, argv, &cl) < 0)
-    goto err;
-  retval = config_assign(&options_format, newoptions, cl, 0, 0, &errmsg);
-  config_free_lines(cl);
+  retval = config_assign(&options_format, newoptions,
+                         global_cmdline_options, 0, 0, &errmsg);
   if (retval < 0)
     goto err;
 
