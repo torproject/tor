@@ -3621,8 +3621,8 @@ load_torrc_from_disk(int argc, char **argv)
 }
 
 /** Read a configuration file into <b>options</b>, finding the configuration
- * file location based on the command line.  After loading the options,
- * validate them for consistency, then take actions based on them.
+ * file location based on the command line.  After loading the file
+ * call options_init_from_string() to load the config.
  * Return 0 if success, -1 if failure. */
 int
 options_init_from_torrc(int argc, char **argv)
@@ -3632,6 +3632,7 @@ options_init_from_torrc(int argc, char **argv)
   static char **backup_argv;
   static int backup_argc;
   char *command_arg = NULL;
+  char *errmsg=NULL;
 
   if (argv) { /* first time we're called. save commandline args */
     backup_argv = argv;
@@ -3684,7 +3685,7 @@ options_init_from_torrc(int argc, char **argv)
   if (!cf)
     goto err;
 
-  retval = options_init_from_string(cf, command, command_arg);
+  retval = options_init_from_string(cf, command, command_arg, &errmsg);
   tor_free(cf);
   if (retval < 0)
     goto err;
@@ -3692,16 +3693,32 @@ options_init_from_torrc(int argc, char **argv)
   return 0;
 
  err:
+  if (errmsg) {
+    log(LOG_WARN,LD_CONFIG,"%s", errmsg);
+    tor_free(errmsg);
+  }
   return -1;
 }
 
+/** Load the options from the configuration in <b>cf</b>, validate
+ * them for consistency and take actions based on them.
+ *
+ * Return 0 if success, negative on error:
+ *  * -1 for general errors.
+ *  * -2 for failure to parse/validate,
+ *  * -3 for transition not allowed
+ *  * -4 for error while setting the new options
+ */
 int
-options_init_from_string(const char *cf, int command, const char *command_arg)
+options_init_from_string(const char *cf,
+                         int command, const char *command_arg,
+                         char **msg)
 {
   or_options_t *oldoptions, *newoptions;
   config_line_t *cl;
-  int  retval;
-  char *errmsg=NULL;
+  int retval;
+  int err = -1;
+  assert(msg);
 
   oldoptions = global_options; /* get_options unfortunately asserts if
                                   this is the first time we run*/
@@ -3714,38 +3731,54 @@ options_init_from_string(const char *cf, int command, const char *command_arg)
 
   /* get config lines, assign them */
   retval = config_get_lines(cf, &cl);
-  if (retval < 0)
+  if (retval < 0) {
+    err = -2;
     goto err;
-  retval = config_assign(&options_format, newoptions, cl, 0, 0, &errmsg);
+  }
+  retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
   config_free_lines(cl);
-  if (retval < 0)
+  if (retval < 0) {
+    err = -2;
     goto err;
+  }
 
   /* Go through command-line variables too */
   retval = config_assign(&options_format, newoptions,
-                         global_cmdline_options, 0, 0, &errmsg);
-  if (retval < 0)
+                         global_cmdline_options, 0, 0, msg);
+  if (retval < 0) {
+    err = -2;
     goto err;
+  }
 
   /* Validate newoptions */
-  if (options_validate(oldoptions, newoptions, 0, &errmsg) < 0)
+  if (options_validate(oldoptions, newoptions, 0, msg) < 0) {
+    err = -2;
     goto err;
+  }
 
-  if (options_transition_allowed(oldoptions, newoptions, &errmsg) < 0)
+  if (options_transition_allowed(oldoptions, newoptions, msg) < 0) {
+    err = -3;
     goto err;
+  }
 
-  if (set_options(newoptions, &errmsg))
+  if (set_options(newoptions, msg)) {
+    err = -4;
     goto err; /* frees and replaces old options */
+  }
 
   return 0;
 
  err:
   config_free(&options_format, newoptions);
-  if (errmsg) {
-    log(LOG_WARN,LD_CONFIG,"Failed to parse/validate config: %s", errmsg);
-    tor_free(errmsg);
+  if (*msg) {
+    int len = strlen(*msg)+256;
+    char *newmsg = tor_malloc(len);
+
+    tor_snprintf(newmsg, len, "Failed to parse/validate config: %s", *msg);
+    tor_free(*msg);
+    *msg = newmsg;
   }
-  return -1;
+  return err;
 }
 
 /** Return the location for our configuration file.
