@@ -3627,21 +3627,18 @@ load_torrc_from_disk(int argc, char **argv)
 int
 options_init_from_torrc(int argc, char **argv)
 {
-  or_options_t *oldoptions, *newoptions = NULL;
-  config_line_t *cl;
-  char *cf=NULL, *errmsg=NULL;
-  int i, retval;
+  char *cf=NULL;
+  int i, retval, command;
   static char **backup_argv;
   static int backup_argc;
+  char *command_arg = NULL;
 
   if (argv) { /* first time we're called. save commandline args */
     backup_argv = argv;
     backup_argc = argc;
-    oldoptions = NULL;
   } else { /* we're reloading. need to clean up old options first. */
     argv = backup_argv;
     argc = backup_argc;
-    oldoptions = get_options();
   }
   if (argc > 1 && (!strcmp(argv[1], "-h") || !strcmp(argv[1],"--help"))) {
     print_usage();
@@ -3670,20 +3667,16 @@ options_init_from_torrc(int argc, char **argv)
     }
   }
 
-  newoptions = tor_malloc_zero(sizeof(or_options_t));
-  newoptions->_magic = OR_OPTIONS_MAGIC;
-  options_init(newoptions);
-  newoptions->command = CMD_RUN_TOR;
-
+  command = CMD_RUN_TOR;
   for (i = 1; i < argc; ++i) {
     if (!strcmp(argv[i],"--list-fingerprint")) {
-      newoptions->command = CMD_LIST_FINGERPRINT;
+      command = CMD_LIST_FINGERPRINT;
     } else if (!strcmp(argv[i],"--hash-password")) {
-      newoptions->command = CMD_HASH_PASSWORD;
-      newoptions->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
+      command = CMD_HASH_PASSWORD;
+      command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
       ++i;
     } else if (!strcmp(argv[i],"--verify-config")) {
-      newoptions->command = CMD_VERIFY_CONFIG;
+      command = CMD_VERIFY_CONFIG;
     }
   }
 
@@ -3691,9 +3684,36 @@ options_init_from_torrc(int argc, char **argv)
   if (!cf)
     goto err;
 
+  retval = options_init_from_string(cf, command, command_arg);
+  tor_free(cf);
+  if (retval < 0)
+    goto err;
+
+  return 0;
+
+ err:
+  return -1;
+}
+
+int
+options_init_from_string(const char *cf, int command, const char *command_arg)
+{
+  or_options_t *oldoptions, *newoptions;
+  config_line_t *cl;
+  int  retval;
+  char *errmsg=NULL;
+
+  oldoptions = global_options; /* get_options unfortunately asserts if
+                                  this is the first time we run*/
+
+  newoptions = tor_malloc_zero(sizeof(or_options_t));
+  newoptions->_magic = OR_OPTIONS_MAGIC;
+  options_init(newoptions);
+  newoptions->command = command;
+  newoptions->command_arg = command_arg;
+
   /* get config lines, assign them */
   retval = config_get_lines(cf, &cl);
-  tor_free(cf);
   if (retval < 0)
     goto err;
   retval = config_assign(&options_format, newoptions, cl, 0, 0, &errmsg);
@@ -3718,6 +3738,7 @@ options_init_from_torrc(int argc, char **argv)
     goto err; /* frees and replaces old options */
 
   return 0;
+
  err:
   config_free(&options_format, newoptions);
   if (errmsg) {

@@ -2652,6 +2652,8 @@ int resolve_my_address(int warn_severity, or_options_t *options,
 int is_local_IP(uint32_t ip) ATTR_PURE;
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
+int options_init_from_string(const char *cf,
+                             int command, const char *command_arg);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
 config_line_t *option_get_assignment(or_options_t *options,
