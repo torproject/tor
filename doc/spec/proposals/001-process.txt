@@ -153,6 +153,10 @@ Proposal status:
       for details.  The proposal should not be changed after this point;
       to bring up some other version of the idea, write a new proposal.
 
+   Draft: This isn't a complete proposal yet; there are definite missing
+      pieces.  Please don't add any new proposals with this status; put them
+      in the "ideas" sub-directory instead.
+
    Needs-Revision: The idea for the proposal is a good one, but the proposal
       as it stands has serious problems that keep it from being accepted.
       See comments in the document for details.

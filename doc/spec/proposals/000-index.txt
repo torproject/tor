@@ -53,7 +53,7 @@ Proposals by number:
 128  Families of private bridges [DRAFT]
 129  Block Insecure Protocols by Default [FINISHED]
 130  Version 2 Tor connection protocol [FINISHED]
-131  Help users to verify they are using Tor [DRAFT]
+131  Help users to verify they are using Tor [NEEDS-REVISION]
 
 
 Proposals by status:
@@ -67,6 +67,8 @@ Proposals by status:
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
  ACCEPTED:
+ NEEDS-REVISION:
+   131  Help users to verify they are using Tor
  NEEDS-RESEARCH:
    118  Advertising multiple ORPorts at once
  META:
@@ -102,4 +104,3 @@ Proposals by status:
  DRAFT:
    127  Relaying dirport requests to Tor download site / website
    128  Families of private bridges
-   131  Help users to verify they are using Tor
