@@ -3718,7 +3718,7 @@ options_init_from_string(const char *cf,
   config_line_t *cl;
   int retval;
   int err = -1;
-  assert(msg);
+  tor_assert(msg);
 
   oldoptions = global_options; /* get_options unfortunately asserts if
                                   this is the first time we run*/

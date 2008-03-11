@@ -57,7 +57,9 @@ sev_to_string(int severity)
     case LOG_NOTICE:  return "notice";
     case LOG_WARN:    return "warn";
     case LOG_ERR:     return "err";
-    default:          assert(0); return "UNKNOWN";
+    default:          /* Call assert, not tor_assert, since tor_assert
+                       * calls log on failure. */
+                      assert(0); return "UNKNOWN";
   }
 }
 
@@ -76,6 +78,7 @@ should_log_function_name(log_domain_mask_t domain, int severity)
       /* We care about places where bugs occur. */
       return (domain == LD_BUG);
     default:
+      /* Call assert, not tor_assert, since tor_assert calls log on failure. */
       assert(0); return 0;
   }
 }
@@ -203,7 +206,7 @@ format_msg(char *buf, size_t buf_len,
   int r;
   char *end_of_prefix;
 
-  tor_assert(buf_len >= 2); /* prevent integer underflow */
+  assert(buf_len >= 2); /* prevent integer underflow */
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
 
   n = _log_prefix(buf, buf_len, severity);
@@ -256,6 +259,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
   logfile_t *lf;
   char *end_of_prefix=NULL;
 
+  /* Call assert, not tor_assert, since tor_assert calls log on failure. */
   assert(format);
   LOCK_LOGS();
   lf = logfiles;
