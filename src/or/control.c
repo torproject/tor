@@ -871,7 +871,8 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
 {
   int retval;
   char *errstring = NULL;
-  char *msg = NULL;
+  const char *msg = NULL;
+  (void) len;
 
   retval = options_init_from_string(body, CMD_RUN_TOR, NULL, &errstring);
 
@@ -3629,7 +3630,7 @@ control_event_status(int type, int severity, const char *format, va_list args)
       status = "STATUS_CLIENT";
       break;
     case EVENT_STATUS_SERVER:
-      status = "STATUS_SEVER";
+      status = "STATUS_SERVER";
       break;
     default:
       log_warn(LD_BUG, "Unrecognized status type %d", type);

@@ -7,6 +7,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       OpenSSL versions should have been working fine.  Diagnosis and patch
       from lodger, Karsten Loesing and Sebastian Hahn.  Fixes bug 616.
       Bugfix on 0.2.0.20-rc.
+    - Generate "STATUS_SERVER" events rather than misspelled "STATUS_SEVER"
+      events.  Caught by mwenge; bugfix on 0.1.2.x.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging

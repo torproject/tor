@@ -3530,7 +3530,7 @@ check_nickname_list(const char *lst, const char *name, char **msg)
 }
 
 /** Learn config file name from command line arguments, or use the default */
-char *
+static char *
 find_torrc_filename(int argc, char **argv,
                     int *using_default_torrc, int *ignore_missing_torrc)
 {
@@ -3581,7 +3581,7 @@ find_torrc_filename(int argc, char **argv,
 }
 
 /** Load torrc from disk, setting torrc_fname if successful */
-char *
+static char *
 load_torrc_from_disk(int argc, char **argv)
 {
   char *fname=NULL;

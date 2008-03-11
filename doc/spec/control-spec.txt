@@ -1160,6 +1160,10 @@ $Id$
      controllers.  These recommendations are suggestions only; no controller
      is required to implement them.
 
+  Compatibility node: versions of Tor before 0.2.0.22-rc incorrectly
+  generated "STATUS_SERVER" as "STATUS_SEVER".  To be compatible with those
+  versions, tools should accept both.
+
   Actions for STATUS_GENERAL events can be as follows:
 
      CLOCK_JUMPED
