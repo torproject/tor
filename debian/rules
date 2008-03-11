@@ -53,6 +53,10 @@ CONF_OPTIONS =
 ifneq (,$(findstring with-dmalloc,$(DEB_BUILD_OPTIONS)))
 	CONF_OPTIONS += --with-dmalloc
 endif
+# inhibit building with --enable-openbsd-malloc
+ifeq (,$(findstring no-enable-openbsd-malloc,$(DEB_BUILD_OPTIONS)))
+	CONF_OPTIONS += --enable-openbsd-malloc
+endif
 
 configure: patch-stamp
 config.status: configure
