@@ -11,6 +11,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       events.  Caught by mwenge; bugfix on 0.1.2.x.
     - Fix the SVK version detection logic to work correctly on a branch.
       Bugfix on 0.2.0.x.
+    - Make sure servers always request certificates from clients during
+      TLS renegotiation. Bugfix on 0.2.0.x.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging

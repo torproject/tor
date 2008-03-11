@@ -930,7 +930,7 @@ tor_tls_handshake(tor_tls_t *tls)
     tls->state = TOR_TLS_ST_OPEN;
     if (tls->isServer) {
       SSL_set_info_callback(tls->ssl, NULL);
-      SSL_set_verify(tls->ssl, SSL_VERIFY_NONE, always_accept_verify_cb);
+      SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
       /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
       tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
 #ifdef V2_HANDSHAKE_SERVER
