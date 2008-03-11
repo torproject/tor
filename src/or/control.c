@@ -3581,7 +3581,7 @@ control_event_status(int type, int severity, const char *format, va_list args)
       status = "STATUS_CLIENT";
       break;
     case EVENT_STATUS_SERVER:
-      status = "STATUS_SEVER";
+      status = "STATUS_SERVER";
       break;
     default:
       log_warn(LD_BUG, "Unrecognized status type %d", type);

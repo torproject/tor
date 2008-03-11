@@ -23,6 +23,8 @@ Changes in version 0.2.0.21-rc - 2008-03-02
     - We were sometimes miscounting the number of bytes read from the
       network, causing our rate limiting to not be followed exactly.
       Bugfix on 0.2.0.16-alpha. Reported by lodger.
+    - Generate "STATUS_SERVER" events rather than misspelled "STATUS_SEVER"
+      events.  Caught by mwenge; bugfix on 0.1.2.x.
 
   o Minor bugfixes:
     - Fix compilation with OpenSSL 0.9.8 and 0.9.8a.  All other supported
