@@ -16,6 +16,11 @@ Changes in version 0.2.0.22-rc - 2008-03-??
       Bugfix on 0.2.0.x.
     - Make sure servers always request certificates from clients during
       TLS renegotiation. Bugfix on 0.2.0.x.
+    - When counting the number of bytes written on a TLS connection, look at
+      the BIO actually used for writing to the network, not at the BIO used
+      (sometimes) to buffer data for the network.  Looking at different BIOs
+      could result in write counts on the order of ULONG_MAX.  Fix for bug
+      614.  Bugfix on 0.1.2.x.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02

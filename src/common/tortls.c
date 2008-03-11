@@ -759,6 +759,12 @@ tor_tls_new(int sock, int isServer)
   result->state = TOR_TLS_ST_HANDSHAKE;
   result->isServer = isServer;
   result->wantwrite_n = 0;
+  result->last_write_count = BIO_number_written(bio);
+  result->last_read_count = BIO_number_read(bio);
+  if (result->last_write_count || result->last_read_count) {
+    log_warn(LD_NET, "Newly created BIO has read count %lu, write count %lu",
+             result->last_read_count, result->last_write_count);
+  }
 #ifdef V2_HANDSHAKE_SERVER
   if (isServer) {
     SSL_set_info_callback(result->ssl, tor_tls_server_info_callback);
@@ -1278,18 +1284,33 @@ tor_tls_get_forced_write_size(tor_tls_t *tls)
 void
 tor_tls_get_n_raw_bytes(tor_tls_t *tls, size_t *n_read, size_t *n_written)
 {
+  BIO *wbio, *tmpbio;
   unsigned long r, w;
   r = BIO_number_read(SSL_get_rbio(tls->ssl));
-  w = BIO_number_written(SSL_get_wbio(tls->ssl));
+  /* We want the number of bytes actually for real written.  Unfortunately,
+   * sometimes OpenSSL replaces the wbio on tls->ssl with a buffering bio,
+   * which makes the answer turn out wrong.  Let's cope with that.  Note
+   * that this approach will fail if we ever replace tls->ssl's BIOs with
+   * buffering bios for reasons of our own.  As an alternative, we could
+   * save the original BIO for  tls->ssl in the tor_tls_t structure, but
+   * that would be tempting fate. */
+  wbio = SSL_get_wbio(tls->ssl);
+  if (wbio->method == BIO_f_buffer() && (tmpbio = BIO_next(wbio)) != NULL)
+    wbio = tmpbio;
+  w = BIO_number_written(wbio);
 
   /* We are ok with letting these unsigned ints go "negative" here:
    * If we wrapped around, this should still give us the right answer, unless
    * we wrapped around by more than ULONG_MAX since the last time we called
    * this function.
    */
-
   *n_read = (size_t)(r - tls->last_read_count);
   *n_written = (size_t)(w - tls->last_write_count);
+  if (*n_read > INT_MAX || *n_written > INT_MAX) {
+    log_warn(LD_BUG, "Preposterously large value in tor_tls_get_n_raw_bytes. "
+             "r=%lu, last_read=%lu, w=%lu, last_written=%lu",
+             r, tls->last_read_count, w, tls->last_write_count);
+  }
   tls->last_read_count = r;
   tls->last_write_count = w;
 }
