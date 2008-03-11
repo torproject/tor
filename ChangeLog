@@ -14,6 +14,8 @@ Changes in version 0.2.0.22-rc - 2008-03-??
       events.  Caught by mwenge; bugfix on 0.1.2.x.
     - Fix the SVK version detection logic to work correctly on a branch.
       Bugfix on 0.2.0.x.
+    - Make sure servers always request certificates from clients during
+      TLS renegotiation. Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
