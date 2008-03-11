@@ -23,9 +23,9 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad trunk~/src/or/config.c trunk/src/or/config.c
---- trunk~/src/or/config.c	2008-02-23 11:08:40.000000000 +0100
-+++ trunk/src/or/config.c	2008-02-23 13:43:05.000000000 +0100
+diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
+--- git-trunk-conf~/src/or/config.c	2008-03-11 15:23:01.000000000 +0100
++++ git-trunk-conf/src/or/config.c	2008-03-11 15:30:34.139280421 +0100
 @@ -15,6 +15,7 @@
  #define CONFIG_PRIVATE
  
@@ -34,7 +34,7 @@ diff -urNad trunk~/src/or/config.c trunk/src/or/config.c
  #ifdef MS_WINDOWS
  #include <shlobj.h>
  #endif
-@@ -660,6 +661,8 @@
+@@ -658,6 +659,8 @@
  #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
  static void check_libevent_version(const char *m, int server);
  #endif
@@ -43,18 +43,9 @@ diff -urNad trunk~/src/or/config.c trunk/src/or/config.c
  
  /** Magic value for or_options_t. */
  #define OR_OPTIONS_MAGIC 9090909
-@@ -3522,7 +3525,7 @@
- int
- options_init_from_torrc(int argc, char **argv)
- {
--  or_options_t *oldoptions, *newoptions;
-+  or_options_t *oldoptions, *newoptions = NULL;
-   config_line_t *cl;
-   char *cf=NULL, *fname=NULL, *errmsg=NULL;
-   int i, retval;
-@@ -3531,6 +3534,9 @@
-   static char **backup_argv;
-   static int backup_argc;
+@@ -3634,6 +3637,9 @@
+   char *command_arg = NULL;
+   char *errmsg=NULL;
  
 +  if (debian_config_fix_defaults() < 0)
 +    goto err;
@@ -62,17 +53,7 @@ diff -urNad trunk~/src/or/config.c trunk/src/or/config.c
    if (argv) { /* first time we're called. save commandline args */
      backup_argv = argv;
      backup_argc = argc;
-@@ -3666,7 +3672,8 @@
-  err:
-   tor_free(fname);
-   torrc_fname = NULL;
--  config_free(&options_format, newoptions);
-+  if (newoptions)
-+    config_free(&options_format, newoptions);
-   if (errmsg) {
-     log(LOG_WARN,LD_CONFIG,"Failed to parse/validate config: %s", errmsg);
-     tor_free(errmsg);
-@@ -5011,3 +5018,64 @@
+@@ -5051,3 +5057,64 @@
    puts(routerparse_c_id);
  }
  
