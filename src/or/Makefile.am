@@ -74,7 +74,8 @@ micro-revision.i: FORCE
 	      break;						\
 	    else						\
 	      loc=`svk info $$location |			\
-		sed -n 's/^Copied From: \(.*\), Rev\. [0-9][0-9]*/\1/p'`; \
+		sed -n 's/^Copied From: \(.*\), Rev\. [0-9][0-9]*/\1/p' | \
+	        head -1`;					\
 	      if test x$$loc = x; then				\
 		break;						\
 	      else						\
