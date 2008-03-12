@@ -6,8 +6,9 @@ tor (0.2.0.21-rc-+svn) XXperimental; urgency=low
     found in DEB_BUILD_OPTIONS.  Hopefully this deals with some of the
     horrible memory fragmentation that glibc's malloc causes.
   * Forward port patch 06_add_compile_time_defaults.
+  * Mention OpenBSD_malloc_Linux.c in debian/copyright.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 11 Mar 2008 15:33:07 +0100
+ -- Peter Palfrader <weasel@debian.org>  Thu, 13 Mar 2008 00:18:19 +0100
 
 tor (0.2.0.21-rc-1) experimental; urgency=low
 
