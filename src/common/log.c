@@ -261,6 +261,9 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
 
   /* Call assert, not tor_assert, since tor_assert calls log on failure. */
   assert(format);
+  /* check that severity is sane.  Overrunning the masks array leads to
+   * interesting and hard to diagnose effects */
+  assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
   LOCK_LOGS();
   lf = logfiles;
   while (lf) {
