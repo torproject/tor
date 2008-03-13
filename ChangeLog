@@ -19,7 +19,7 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       could result in write counts on the order of ULONG_MAX.  Fix for bug
       614.  Bugfix on 0.1.2.x.
     - Make --enable-openbsd-malloc work correctly on Linux with alpha CPUs.
-      Bugfix on 0.2.0.x.
+      Fixes bug 625.  Bugfix on 0.2.0.x.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
