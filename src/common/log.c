@@ -255,6 +255,9 @@ logv(int severity, uint32_t domain, const char *funcname, const char *format,
   char *end_of_prefix=NULL;
 
   assert(format);
+  /* check that severity is sane.  Overrunning the masks array leads to
+   * interesting and hard to diagnose effects */
+  assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
   LOCK_LOGS();
   lf = logfiles;
   while (lf) {

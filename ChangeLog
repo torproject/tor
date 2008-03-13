@@ -23,6 +23,7 @@ Changes in version 0.2.0.22-rc - 2008-03-??
       614.  Bugfix on 0.1.2.x.
     - Make --enable-openbsd-malloc work correctly on Linux with alpha CPUs.
       Fixes bug 625.  Bugfix on 0.2.0.x.
+    - Logging functions now check that the passed severity is sane.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
