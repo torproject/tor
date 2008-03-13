@@ -2936,7 +2936,7 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
   memset(addr, 0, sizeof(tor_addr_t));
   memset(&target_addr, 0, sizeof(target_addr));
   my_addr_len = (socklen_t)sizeof(my_addr);
-  ((struct sockaddr_in*)&target_addr)->sin_port = 9;  /* DISGARD port */
+  ((struct sockaddr_in*)&target_addr)->sin_port = 9;  /* the "discard" service port */
   /* Don't worry: no packets are sent. We just need to use a real address
    * on the actual internet. */
   if (family == AF_INET6) {
