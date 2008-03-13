@@ -54,6 +54,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <err.h>
+#include "torint.h"
 
 //#include "thread_private.h"
 
@@ -1926,11 +1927,14 @@ realloc(void *ptr, size_t size)
 	return (r);
 }
 
-#if defined(__i386__)||defined(__arm__)||defined(__powerpc__)
-#define SIZE_MAX 0xffffffff
-#endif
-#if defined(__x86_64__)
-#define SIZE_MAX 0xffffffffffffffff
+#ifndef SIZE_MAX
+//#if defined(__i386__)||defined(__arm__)||defined(__powerpc__)
+//#define SIZE_MAX 0xffffffff
+//#endif
+//#if defined(__x86_64__)
+//#define SIZE_MAX 0xffffffffffffffff
+//#endif
+#define SIZE_MAX SIZE_T_MAX
 #endif
 
 void *

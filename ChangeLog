@@ -21,6 +21,8 @@ Changes in version 0.2.0.22-rc - 2008-03-??
       (sometimes) to buffer data for the network.  Looking at different BIOs
       could result in write counts on the order of ULONG_MAX.  Fix for bug
       614.  Bugfix on 0.1.2.x.
+    - Make --enable-openbsd-malloc work correctly on Linux with alpha CPUs.
+      Fixes bug 625.  Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
