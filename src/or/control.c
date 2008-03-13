@@ -665,7 +665,7 @@ static int
 control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
                        int use_defaults)
 {
-  int r;
+  setopt_err_t opt_err;
   config_line_t *lines=NULL;
   char *start = body;
   char *errstring = NULL;
@@ -732,25 +732,29 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   }
   tor_free(config);
 
-  if ((r=options_trial_assign(lines, use_defaults,
-                              clear_first, &errstring)) < 0) {
+  if ((opt_err=options_trial_assign(lines, use_defaults,
+                              clear_first, &errstring)) != SETOPT_OK) {
     const char *msg;
     log_warn(LD_CONTROL,
              "Controller gave us config lines that didn't validate: %s",
              errstring);
-    switch (r) {
-      case -1:
+    switch (opt_err) {
+      case SETOPT_ERR_MISC:
         msg = "552 Unrecognized option";
         break;
-      case -2:
+      case SETOPT_ERR_PARSE:
         msg = "513 Unacceptable option value";
         break;
-      case -3:
+      case SETOPT_ERR_TRANSITION:
         msg = "553 Transition not allowed";
         break;
-      case -4:
+      case SETOPT_ERR_SETTING:
       default:
         msg = "553 Unable to set option";
+        break;
+      case SETOPT_OK:
+        msg = "551 Internal error";
+        tor_fragile_assert();
         break;
     }
     connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
@@ -869,30 +873,33 @@ static int
 handle_control_loadconf(control_connection_t *conn, uint32_t len,
                          const char *body)
 {
-  int retval;
+  setopt_err_t retval;
   char *errstring = NULL;
   const char *msg = NULL;
   (void) len;
 
   retval = options_init_from_string(body, CMD_RUN_TOR, NULL, &errstring);
 
-  if (retval < 0) {
+  if (retval != SETOPT_OK) {
     log_warn(LD_CONTROL,
              "Controller gave us config file that didn't validate: %s",
              errstring);
     switch (retval) {
-      case -2:
+      case SETOPT_ERR_PARSE:
         msg = "552 Invalid config file";
         break;
-      case -3:
+      case SETOPT_ERR_TRANSITION:
         msg = "553 Transition not allowed";
         break;
-      case -4:
+      case SETOPT_ERR_SETTING:
         msg = "553 Unable to set option";
         break;
-      case -1:
+      case SETOPT_ERR_MISC:
       default:
         msg = "550 Unable to load config";
+        break;
+      case SETOPT_OK:
+        tor_fragile_assert();
         break;
     }
     if (*errstring)

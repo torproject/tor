@@ -728,7 +728,7 @@ get_options(void)
 
 /** Change the current global options to contain <b>new_val</b> instead of
  * their current value; take action based on the new value; free the old value
- * as necessary.
+ * as necessary.  Returns 0 on success, -1 on failure.
  */
 int
 set_options(or_options_t *new_val, char **msg)
@@ -1979,13 +1979,13 @@ config_assign(config_format_t *fmt, void *options, config_line_t *list,
 /** Try assigning <b>list</b> to the global options. You do this by duping
  * options, assigning list to the new one, then validating it. If it's
  * ok, then throw out the old one and stick with the new one. Else,
- * revert to old and return failure.  Return 0 on success, -1 on bad
- * keys, -2 on bad values, -3 on bad transition, and -4 on failed-to-set.
+ * revert to old and return failure.  Return SETOPT_OK on success, or
+ * a setopt_err_t on failure.
  *
  * If not success, point *<b>msg</b> to a newly allocated string describing
  * what went wrong.
  */
-int
+setopt_err_t
 options_trial_assign(config_line_t *list, int use_defaults,
                      int clear_first, char **msg)
 {
@@ -2000,21 +2000,21 @@ options_trial_assign(config_line_t *list, int use_defaults,
 
   if (options_validate(get_options(), trial_options, 1, msg) < 0) {
     config_free(&options_format, trial_options);
-    return -2;
+    return SETOPT_ERR_PARSE; /*XXX021 make this separate. */
   }
 
   if (options_transition_allowed(get_options(), trial_options, msg) < 0) {
     config_free(&options_format, trial_options);
-    return -3;
+    return SETOPT_ERR_TRANSITION;
   }
 
   if (set_options(trial_options, msg)<0) {
     config_free(&options_format, trial_options);
-    return -4;
+    return SETOPT_ERR_SETTING;
   }
 
   /* we liked it. put it in place. */
-  return 0;
+  return SETOPT_OK;
 }
 
 /** Reset config option <b>var</b> to 0, 0.0, NULL, or the equivalent.
@@ -3709,7 +3709,7 @@ options_init_from_torrc(int argc, char **argv)
  *  * -3 for transition not allowed
  *  * -4 for error while setting the new options
  */
-int
+setopt_err_t
 options_init_from_string(const char *cf,
                          int command, const char *command_arg,
                          char **msg)
@@ -3717,7 +3717,7 @@ options_init_from_string(const char *cf,
   or_options_t *oldoptions, *newoptions;
   config_line_t *cl;
   int retval;
-  int err = -1;
+  setopt_err_t err = SETOPT_ERR_MISC;
   tor_assert(msg);
 
   oldoptions = global_options; /* get_options unfortunately asserts if
@@ -3732,13 +3732,13 @@ options_init_from_string(const char *cf,
   /* get config lines, assign them */
   retval = config_get_lines(cf, &cl);
   if (retval < 0) {
-    err = -2;
+    err = SETOPT_ERR_PARSE;
     goto err;
   }
   retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
   config_free_lines(cl);
   if (retval < 0) {
-    err = -2;
+    err = SETOPT_ERR_PARSE;
     goto err;
   }
 
@@ -3746,27 +3746,27 @@ options_init_from_string(const char *cf,
   retval = config_assign(&options_format, newoptions,
                          global_cmdline_options, 0, 0, msg);
   if (retval < 0) {
-    err = -2;
+    err = SETOPT_ERR_PARSE;
     goto err;
   }
 
   /* Validate newoptions */
   if (options_validate(oldoptions, newoptions, 0, msg) < 0) {
-    err = -2;
+    err = SETOPT_ERR_PARSE; /*XXX021 make this separate.*/
     goto err;
   }
 
   if (options_transition_allowed(oldoptions, newoptions, msg) < 0) {
-    err = -3;
+    err = SETOPT_ERR_TRANSITION;
     goto err;
   }
 
   if (set_options(newoptions, msg)) {
-    err = -4;
+    err = SETOPT_ERR_SETTING;
     goto err; /* frees and replaces old options */
   }
 
-  return 0;
+  return SETOPT_OK;
 
  err:
   config_free(&options_format, newoptions);

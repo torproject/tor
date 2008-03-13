@@ -2636,6 +2636,15 @@ extern uint64_t stats_n_destroy_cells_processed;
 
 /********************************* config.c ***************************/
 
+/** An error from options_trial_assign or options_init_from_string. */
+typedef enum setopt_err_t {
+  SETOPT_OK = 0,
+  SETOPT_ERR_MISC = -1,
+  SETOPT_ERR_PARSE = -2,
+  SETOPT_ERR_TRANSITION = -3,
+  SETOPT_ERR_SETTING = -4,
+} setopt_err_t;
+
 or_options_t *get_options(void);
 int set_options(or_options_t *new_val, char **msg);
 void config_free_all(void);
@@ -2652,8 +2661,8 @@ int resolve_my_address(int warn_severity, or_options_t *options,
 int is_local_IP(uint32_t ip) ATTR_PURE;
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
-int options_init_from_string(const char *cf,
-                             int command, const char *command_arg, char **msg);
+setopt_err_t options_init_from_string(const char *cf,
+                            int command, const char *command_arg, char **msg);
 int option_is_recognized(const char *key);
 const char *option_get_canonical_name(const char *key);
 config_line_t *option_get_assignment(or_options_t *options,
