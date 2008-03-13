@@ -21,6 +21,7 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Make --enable-openbsd-malloc work correctly on Linux with alpha CPUs.
       Fixes bug 625.  Bugfix on 0.2.0.x.
     - Logging functions now check that the passed severity is sane.
+    - Use proper log levels in the testsuite call of get_interface_address6().
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
