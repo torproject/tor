@@ -1998,3 +1998,21 @@ void *valloc(size_t size)
 	posix_memalign(&r, malloc_pagesize, size);
 	return r;
 }
+
+size_t malloc_good_size(size_t size)
+{
+	if (size == 0) {
+		return 1;
+	} else if (size <= malloc_maxsize) {
+		int i, j;
+		/* round up to the nearest power of 2, with same approach
+		 * as malloc_bytes() uses. */
+		j = 1;
+		i = size - 1;
+		while (i >>= 1)
+			j++;
+		return ((size_t)1) << j;
+	} else {
+		return pageround(size);
+	}
+}

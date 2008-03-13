@@ -22,12 +22,16 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       Fixes bug 625.  Bugfix on 0.2.0.x.
     - Logging functions now check that the passed severity is sane.
     - Use proper log levels in the testsuite call of get_interface_address6().
+    - When using a nonstandard malloc, do not use the platform values for
+      HAVE_MALLOC_GOOD_SIZE or HAVE_MALLOC_USABLE_SIZE.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
       domains.  For example, this allows one to log all notices, warnings, or
       errors, plus all memory management messages of level debug or higher,
       with: Log [MM] debug-err [*] notice-err file /var/log/tor.
+    - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
+      to avoid unused RAM in buffer chunks and memory pools.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
