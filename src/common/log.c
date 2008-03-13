@@ -872,7 +872,7 @@ switch_logs_debug(void)
   LOCK_LOGS();
   for (lf = logfiles; lf; lf=lf->next) {
     for (i = LOG_DEBUG; i >= LOG_ERR; --i)
-      lf->severities->masks[i] = ~0u;
+      lf->severities->masks[SEVERITY_MASK_IDX(i)] = ~0u;
   }
   UNLOCK_LOGS();
 }
