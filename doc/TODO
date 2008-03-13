@@ -650,7 +650,14 @@ P - Setup repos for redhat and suse rpms & start signing the rpms the
     way package management apps prefer
 
 Website:
-J  - tor-in-the-media page
+J . tor-in-the-media page
+  - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
+    so they admit that Torbutton is in them too. Change the download
+    page too.
+  - The OS X bundle screenshots are from forever ago -- they don't
+    include Torbutton, they still say it's tor.eff.org, etc.
+  - Should we still be telling you how to use Safari on OS X for Tor,
+    given all the holes that Torbutton-dev solves on Firefox?
 P  - Figure out licenses for website material.
     (Phobos reccomends the Open Publication License with Option A at
     http://opencontent.org/openpub/)
@@ -664,7 +671,7 @@ figures into this)
     http://opencontent.org/openpub/)
 R - make a page with the hidden service diagrams.
 P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
-  - add a page for localizing all tor's components.
+I - add a page for localizing all tor's components.
   - It would be neat if we had a single place that described _all_ the
     tor-related tools you can use, and what they give you, and how well they
     work.  Right now, we don't give a lot of guidance wrt
@@ -685,7 +692,4 @@ P - create a 'blog badge' for tor fans to link to and feature on their
     - ponder how to get users to learn that they should google for
       "tor mirrors" if the main site is blocked.
     - find a mirror volunteer to coordinate all of this
-
-Blog todo:
-  - Link to the blog from the main Tor website
 
