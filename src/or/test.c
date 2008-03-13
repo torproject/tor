@@ -1366,8 +1366,8 @@ test_util_ip6_helpers(void)
   test_assert(sizeof(tor_addr_t) >= sizeof(struct in6_addr));
 
   /* get interface addresses */
-  r = get_interface_address6(0, AF_INET, &t1);
-  i = get_interface_address6(0, AF_INET6, &t2);
+  r = get_interface_address6(LOG_ERR, AF_INET, &t1);
+  i = get_interface_address6(LOG_ERR, AF_INET6, &t2);
 #if 0
   tor_inet_ntop(AF_INET, &t1.sa.sin_addr, buf, sizeof(buf));
   printf("\nv4 address: %s  (family=%i)", buf, IN_FAMILY(&t1));
