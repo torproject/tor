@@ -3636,8 +3636,7 @@ main(int c, char**v)
 
   {
     log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
-    for (i = loglevel; i >= LOG_ERR; --i)
-      s->masks[SEVERITY_MASK_IDX(i)] = ~0u;
+    set_log_severity_config(loglevel, LOG_ERR, s);
     add_stream_log(s, "", stdout);
   }
 

@@ -318,13 +318,10 @@ main(int argc, char **argv)
     usage();
   }
 
-  s->masks[SEVERITY_MASK_IDX(LOG_ERR)] = ~0u;
-  s->masks[SEVERITY_MASK_IDX(LOG_WARN)] = ~0u;
-  if (isVerbose) {
-    s->masks[SEVERITY_MASK_IDX(LOG_NOTICE)] = ~0u;
-    s->masks[SEVERITY_MASK_IDX(LOG_INFO)] = ~0u;
-    s->masks[SEVERITY_MASK_IDX(LOG_DEBUG)] = ~0u;
-  }
+  if (isVerbose)
+    set_log_severity_config(LOG_DEBUG, LOG_ERR, s);
+  else
+    set_log_severity_config(LOG_WARN, LOG_ERR, s);
   add_stream_log(s, "<stderr>", stderr);
 
   if (n_args == 1) {

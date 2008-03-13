@@ -24,6 +24,7 @@ const char log_c_id[] = "$Id$";
 #include <time.h>
 #endif
 #include "util.h"
+#define LOG_PRIVATE
 #include "log.h"
 #include "container.h"
 
@@ -474,16 +475,21 @@ close_log(logfile_t *victim)
   }
 }
 
-/** DOCDOC XXXX021 remove me. */
-static log_severity_list_t *
-new_severity_list(int loglevelMin, int loglevelMax)
+/** Adjust a log severity configuration in <b>severity_out</b> to contain
+ * every domain between <b>loglevelMin</b> and <b>loglevelMax</b>, inclusive.
+ */
+void
+set_log_severity_config(int loglevelMin, int loglevelMax,
+                        log_severity_list_t *severity_out)
 {
-  log_severity_list_t *out = tor_malloc_zero(sizeof(log_severity_list_t));
   int i;
+  tor_assert(loglevelMin >= loglevelMax);
+  tor_assert(loglevelMin >= LOG_ERR && loglevelMin <= LOG_DEBUG);
+  tor_assert(loglevelMax >= LOG_ERR && loglevelMax <= LOG_DEBUG);
+  memset(severity_out, 0, sizeof(log_severity_list_t));
   for (i = loglevelMin; i >= loglevelMax; --i) {
-    out->masks[SEVERITY_MASK_IDX(i)] = ~0u;
+    severity_out->masks[SEVERITY_MASK_IDX(i)] = ~0u;
   }
-  return out;
 }
 
 /** Add a log handler named <b>name</b> to send all messages in <b>severity</b>
@@ -529,9 +535,10 @@ init_logging(void)
 void
 add_temp_log(void)
 {
+  log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
+  set_log_severity_config(LOG_NOTICE, LOG_ERR, s);
   LOCK_LOGS();
-  add_stream_log_impl(new_severity_list(LOG_NOTICE, LOG_ERR),
-                      "<temp>", stdout);
+  add_stream_log_impl(s, "<temp>", stdout);
   logfiles->is_temporary = 1;
   UNLOCK_LOGS();
 }
@@ -567,8 +574,7 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
   LOCK_LOGS();
   for (lf = logfiles; lf; lf = lf->next) {
     if (lf->callback == cb) {
-      tor_free(lf->severities);
-      lf->severities = new_severity_list(loglevelMin, loglevelMax);
+      set_log_severity_config(loglevelMin, loglevelMax, lf->severities);
     }
   }
   _log_global_min_severity = get_min_log_level();
