@@ -33,7 +33,7 @@ set -e;
 
 # Feel free to set any authority you desire, we're using weasel's by default
 # You could also try the v3 directory infomation in weasel's dir authority:
-# http://tor.noreply.org:80/tor/status/authority
+# http://tor.noreply.org/tor/status-vote/current/consensus
 #
 authority="http://tor.noreply.org:80/tor/status/authority";
 
