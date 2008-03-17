@@ -643,7 +643,7 @@ router_rebuild_store(int force, desc_store_t *store)
   }
 
   if (replace_file(fname_tmp, fname)<0) {
-    log_warn(LD_FS, "Error replacing old router store.");
+    log_warn(LD_FS, "Error replacing old router store: %s", strerror(errno));
     goto done;
   }
 
