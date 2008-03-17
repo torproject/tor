@@ -27,6 +27,10 @@ Changes in version 0.2.0.22-rc - 2008-03-??
     - Use proper log levels in the testsuite call of get_interface_address6().
     - When using a nonstandard malloc, do not use the platform values for
       HAVE_MALLOC_GOOD_SIZE or HAVE_MALLOC_USABLE_SIZE.
+    - Make the openbsd malloc code use 8k pages on alpha CPUs.  Bugfix on
+      0.2.0.x.
+    - Detect mismatched page sizes when using --enable-openbsd-malloc.
+      Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02

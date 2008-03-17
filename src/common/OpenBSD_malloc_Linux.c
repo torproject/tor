@@ -95,7 +95,7 @@ static pthread_mutex_t gen_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define _MALLOC_LOCK() {pthread_mutex_lock(&gen_mutex);}
 #define _MALLOC_UNLOCK() {pthread_mutex_unlock(&gen_mutex);}
 
-#if defined(__sparc__)
+#if defined(__sparc__) || defined(__alpha__)
 #define	malloc_pageshift	13U
 #endif /* __sparc__ */
 
@@ -785,6 +785,13 @@ malloc_init(void)
 		wrtwarning("atexit(2) failed."
 		    "  Will not be able to dump malloc stats on exit");
 #endif /* MALLOC_STATS */
+
+	if (malloc_pagesize != getpagesize()) {
+		wrterror("malloc() replacement compiled with a different "
+			 "page size from what we're running with.  Failing.");
+		errno = ENOMEM;
+		return;
+	}
 
 	/* Allocate one page for the page directory. */
 	page_dir = (struct pginfo **)MMAP(malloc_pagesize);
