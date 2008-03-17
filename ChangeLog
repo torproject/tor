@@ -36,6 +36,7 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       with: Log [MM] debug-err [*] notice-err file /var/log/tor.
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
       to avoid unused RAM in buffer chunks and memory pools.
+    - Downgrade "sslv3 alert handshake failure" message to INFO.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
