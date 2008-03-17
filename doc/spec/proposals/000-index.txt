@@ -54,6 +54,7 @@ Proposals by number:
 129  Block Insecure Protocols by Default [FINISHED]
 130  Version 2 Tor connection protocol [FINISHED]
 131  Help users to verify they are using Tor [NEEDS-REVISION]
+132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 
 
 Proposals by status:
@@ -104,3 +105,4 @@ Proposals by status:
  DRAFT:
    127  Relaying dirport requests to Tor download site / website
    128  Families of private bridges
+   132  A Tor Web Service For Verifying Correct Browser Configuration
