@@ -1003,7 +1003,7 @@ tor_tls_renegotiate(tor_tls_t *tls)
     return TOR_TLS_DONE;
   } else
     return tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO,
-                             "renegotiating handshake", LOG_WARN);
+                             "renegotiating handshake", LOG_INFO);
 }
 
 /** Shut down an open tls connection <b>tls</b>.  When finished, returns

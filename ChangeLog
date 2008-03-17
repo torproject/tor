@@ -5,6 +5,9 @@ Changes in version 0.2.0.22-rc - 2008-03-??
       patterns will no longer work. This means Tor works in certain
       censored countries by default again.
 
+  o Minor features:
+    - Downgrade "sslv3 alert handshake failure" message to INFO.
+
   o Minor bugfixes:
     - If we set RelayBandwidthRate and RelayBandwidthBurst very high but
       left BandwidthRate and BandwidthBurst at the default, we would be
