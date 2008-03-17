@@ -650,7 +650,8 @@ rend_client_desc_here(const char *query)
       if (connection_ap_handshake_attach_circuit(conn) < 0) {
         /* it will never work */
         log_warn(LD_REND,"Rendezvous attempt failed. Closing.");
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+        if (!conn->_base.marked_for_close)
+          connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
     } else { /* 404, or fetch didn't get that far */
       log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "

@@ -431,7 +431,8 @@ connection_ap_expire_beginning(void)
     /* move it back into 'pending' state, and try to attach. */
     if (connection_ap_detach_retriable(conn, TO_ORIGIN_CIRCUIT(circ),
                                        END_STREAM_REASON_TIMEOUT)<0) {
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+      if (!conn->_base.marked_for_close)
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     }
   }); /* end foreach */
 }
@@ -452,7 +453,9 @@ connection_ap_attach_pending(void)
       continue;
     edge_conn = TO_EDGE_CONN(conn);
     if (connection_ap_handshake_attach_circuit(edge_conn) < 0) {
-      connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_CANT_ATTACH);
+      if (!edge_conn->_base.marked_for_close)
+        connection_mark_unattached_ap(edge_conn,
+                                      END_STREAM_REASON_CANT_ATTACH);
     }
   });
 }
@@ -1501,7 +1504,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                    conn, circ, cpath) < 0) ||
         (!circ &&
          connection_ap_handshake_attach_circuit(conn) < 0)) {
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+      if (!conn->_base.marked_for_close)
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       return -1;
     }
     return 0;
@@ -1562,7 +1566,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
         log_info(LD_REND, "Descriptor is here and fresh enough. Great.");
         if (connection_ap_handshake_attach_circuit(conn) < 0) {
-          connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+          if (!conn->_base.marked_for_close)
+            connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
           return -1;
         }
       } else {
@@ -2100,7 +2105,8 @@ connection_ap_make_link(char *address, uint16_t port,
 
   /* attaching to a dirty circuit is fine */
   if (connection_ap_handshake_attach_circuit(conn) < 0) {
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
+    if (!conn->_base.marked_for_close)
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     return NULL;
   }
 

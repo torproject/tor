@@ -845,7 +845,9 @@ connection_edge_process_end_not_open(
        connection_edge_end_reason_str(rh->length > 0 ? reason : -1));
   if (conn->_base.type == CONN_TYPE_AP) {
     circuit_log_path(LOG_INFO,LD_APP,circ);
-    connection_mark_unattached_ap(conn, control_reason);
+    /* need to test because of detach_retriable*/
+    if (!conn->_base.marked_for_close)
+      connection_mark_unattached_ap(conn, control_reason);
   } else {
     /* we just got an 'end', don't need to send one */
     conn->_base.edge_has_sent_end = 1;

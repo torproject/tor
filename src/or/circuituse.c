@@ -1255,11 +1255,13 @@ connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
 
 /** Try to find a safe live circuit for CONN_TYPE_AP connection conn. If
  * we don't find one: if conn cannot be handled by any known nodes,
- * warn and return -1 (conn needs to die);
+ * warn and return -1 (conn needs to die, and is maybe already marked);
  * else launch new circuit (if necessary) and return 0.
  * Otherwise, associate conn with a safe live circuit, do the
  * right next step, and return 1.
  */
+/* XXXX021 this function should mark for close whenever it returns -1;
+ * its callers shouldn't have to worry about that. */
 int
 connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 {

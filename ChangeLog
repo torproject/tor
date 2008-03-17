@@ -28,6 +28,7 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       0.2.0.x.
     - Detect mismatched page sizes when using --enable-openbsd-malloc.
       Bugfix on 0.2.0.x.
+    - Stop giving double-close warn when we reject an address for client DNS.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
@@ -37,6 +38,11 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
       to avoid unused RAM in buffer chunks and memory pools.
     - Downgrade "sslv3 alert handshake failure" message to INFO.
+
+  o Code simplifications and refactoring:
+    - Refactor code using connection_ap_handshake_attach_circuit() to
+      allow that function to mark connections for close.  Part of a fix for
+      bug 617.  Bugfix on 0.2.0.1-alpha.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
