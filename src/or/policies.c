@@ -530,10 +530,7 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
   int match = 0;
   int maybe = 0;
   int i, len;
-  if (!policy)
-    return ADDR_POLICY_REJECTED;
-
-  len = smartlist_len(policy);
+  len = policy ? smartlist_len(policy) : 0;
 
   for (i = 0; i < len; ++i) {
     addr_policy_t *tmpe = smartlist_get(policy, i);
