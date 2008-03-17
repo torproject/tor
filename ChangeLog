@@ -32,7 +32,8 @@ Changes in version 0.2.0.22-rc - 2008-03-17
       get_interface_address6().
     - When using a nonstandard malloc, do not use the platform values for
       HAVE_MALLOC_GOOD_SIZE or HAVE_MALLOC_USABLE_SIZE.
-    - Make the openbsd malloc code use 8k pages on alpha CPUs.
+    - Make the openbsd malloc code use 8k pages on alpha CPUs and 16k pages
+      on ia64.
     - Detect mismatched page sizes when using --enable-openbsd-malloc.
     - Avoid double-marked-for-close warning when certain kinds of invalid
       .in-addr.arpa addresses are passed to the DNSPort.  Part of a fix
