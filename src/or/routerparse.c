@@ -1272,6 +1272,10 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   exit_policy_tokens = find_all_exitpolicy(tokens);
+  if (!smartlist_len(exit_policy_tokens)) {
+    log_warn(LD_DIR, "No exit policy tokens in descriptor.");
+    goto err;
+  }
   SMARTLIST_FOREACH(exit_policy_tokens, directory_token_t *, t,
                     if (router_add_exit_policy(router,t)<0) {
                       log_warn(LD_DIR,"Error in exit policy");

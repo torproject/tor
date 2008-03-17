@@ -51,7 +51,7 @@ policy_expand_private(smartlist_t **policy)
   int i;
   smartlist_t *tmp;
 
-  if (!*policy)
+  if (!*policy) /*XXXX021 disallow NULL policies */
     return;
 
   tmp = smartlist_create();
@@ -530,10 +530,8 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
   int match = 0;
   int maybe = 0;
   int i, len;
-  if (!policy)
-    return ADDR_POLICY_REJECTED;
 
-  len = smartlist_len(policy);
+  len = policy ? smartlist_len(policy) : 0;
 
   for (i = 0; i < len; ++i) {
     addr_policy_t *tmpe = smartlist_get(policy, i);
@@ -767,7 +765,7 @@ exit_policy_is_general_exit(smartlist_t *policy)
   static const int ports[] = { 80, 443, 6667 };
   int n_allowed = 0;
   int i;
-  if (!policy)
+  if (!policy) /*XXXX021 disallow NULL policies */
     return 0;
 
   for (i = 0; i < 3; ++i) {
@@ -793,7 +791,7 @@ exit_policy_is_general_exit(smartlist_t *policy)
 int
 policy_is_reject_star(smartlist_t *policy)
 {
-  if (!policy)
+  if (!policy) /*XXXX021 disallow NULL policies */
     return 1;
   SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
     if (p->policy_type == ADDR_POLICY_ACCEPT)
