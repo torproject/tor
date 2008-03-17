@@ -248,9 +248,13 @@ control_adjust_event_log_severity(void)
     if (max_log_event < EVENT_ERR_MSG)
       max_log_event = EVENT_ERR_MSG;
   }
-  change_callback_log_severity(event_to_log_severity(min_log_event),
-                               event_to_log_severity(max_log_event),
-                               control_event_logmsg);
+  if (min_log_event <= max_log_event)
+    change_callback_log_severity(event_to_log_severity(min_log_event),
+                                 event_to_log_severity(max_log_event),
+                                 control_event_logmsg);
+  else
+    change_callback_log_severity(LOG_ERR, LOG_ERR,
+                                 control_event_logmsg);
 }
 
 /** Return true iff the event with code <b>c</b> is being sent to any current
