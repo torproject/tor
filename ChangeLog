@@ -38,6 +38,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
       to avoid unused RAM in buffer chunks and memory pools.
     - Downgrade "sslv3 alert handshake failure" message to INFO.
+    - Only log guard node status when guard node status has changed.
+    - Downgrade the 3 most common "INFO" messages to "DEBUG".  This will make
+      "INFO" 75% less verbose.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to
