@@ -530,7 +530,10 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
   int match = 0;
   int maybe = 0;
   int i, len;
-  len = policy ? smartlist_len(policy) : 0;
+  if (!policy)
+    return ADDR_POLICY_REJECTED;
+
+  len = smartlist_len(policy);
 
   for (i = 0; i < len; ++i) {
     addr_policy_t *tmpe = smartlist_get(policy, i);
@@ -764,6 +767,9 @@ exit_policy_is_general_exit(smartlist_t *policy)
   static const int ports[] = { 80, 443, 6667 };
   int n_allowed = 0;
   int i;
+  if (!policy)
+    return 0;
+
   for (i = 0; i < 3; ++i) {
     SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
       if (p->prt_min > ports[i] || p->prt_max < ports[i])
@@ -787,6 +793,8 @@ exit_policy_is_general_exit(smartlist_t *policy)
 int
 policy_is_reject_star(smartlist_t *policy)
 {
+  if (!policy)
+    return 1;
   SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
     if (p->policy_type == ADDR_POLICY_ACCEPT)
       return 0;

@@ -1118,7 +1118,7 @@ typedef enum {
   ADDR_POLICY_REJECT=2,
 } addr_policy_action_t;
 
-/** A linked list of policy rules */
+/** A reference-counted address policy rule. */
 typedef struct addr_policy_t {
   int refcnt; /**< Reference count */
   addr_policy_action_t policy_type:2;/**< What to do when the policy matches.*/

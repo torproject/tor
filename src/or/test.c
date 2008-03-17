@@ -2996,6 +2996,8 @@ test_policies(void)
           compare_addr_to_addr_policy(0, 2, policy));
   test_assert(ADDR_POLICY_REJECTED ==
           compare_addr_to_addr_policy(0xc0a80102, 2, policy));
+  test_assert(ADDR_POLICY_REJECTED ==
+          compare_addr_to_addr_policy(0x01020304u, 2, NULL));
 
   policy2 = NULL;
   test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, NULL));
@@ -3003,12 +3005,16 @@ test_policies(void)
 
   test_assert(!exit_policy_is_general_exit(policy));
   test_assert(exit_policy_is_general_exit(policy2));
+  test_assert(!exit_policy_is_general_exit(NULL));
 
   test_assert(cmp_addr_policies(policy, policy2));
+  test_assert(cmp_addr_policies(policy, NULL));
   test_assert(!cmp_addr_policies(policy2, policy2));
+  test_assert(!cmp_addr_policies(NULL, NULL));
 
   test_assert(!policy_is_reject_star(policy2));
   test_assert(policy_is_reject_star(policy));
+  test_assert(policy_is_reject_star(NULL));
 
   addr_policy_list_free(policy);
   addr_policy_list_free(policy2);
