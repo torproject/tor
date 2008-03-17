@@ -2012,7 +2012,10 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
       ap_conn->socks_request->address[len-13] = '\0';
     }
     if (tor_inet_aton(ap_conn->socks_request->address, &in) == 0) {
-      connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
+      /* Do not mark here; every caller of
+       * connection_ap_attach_{chosen_}circuit() [which calls this function
+       * will also mark on a -1 return value. */
+      // connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
       return -1;
     }
     if (c) {

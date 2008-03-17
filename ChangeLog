@@ -34,6 +34,9 @@ Changes in version 0.2.0.22-rc - 2008-03-??
       0.2.0.x.
     - Detect mismatched page sizes when using --enable-openbsd-malloc.
       Bugfix on 0.2.0.x.
+    - Avoid double-marked-for-close warning when certain kinds of invalid
+      .in-addr.arpa addresses are passed to the DNSPort.  Part of a fix
+      for bug 617.  Bugfix on 0.2.0.1-alpha.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
