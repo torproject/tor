@@ -2171,7 +2171,6 @@ entry_guards_compute_status(void)
   int changed = 0;
   int severity = LOG_DEBUG;
   or_options_t *options;
-  const char **reasons;
   if (! entry_guards)
     return;
 
@@ -2179,17 +2178,16 @@ entry_guards_compute_status(void)
 
   now = time(NULL);
 
-  reasons = tor_malloc_zero(smartlist_len(entry_guards) * sizeof(char*));
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
       const char *reason = NULL;
+      /*XXX021 log reason again. */
       if (entry_guard_set_status(entry, r, now, options, &reason))
         changed = 1;
 
       if (entry->bad_since)
         tor_assert(reason);
-      reasons[entry_sl_idx] = reason;
     });
 
   if (remove_dead_entry_guards())
@@ -2199,18 +2197,16 @@ entry_guards_compute_status(void)
 
   if (changed) {
     SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
-        log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s%s, and %s.",
+        log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s, and %s.",
                entry->nickname,
                entry->unreachable_since ? "unreachable" : "reachable",
                entry->bad_since ? "unusable: " : "usable",
-               reasons[entry_sl_idx] ? reasons[entry_sl_idx] : "",
                entry_is_live(entry, 0, 1, 0) ? "live" : "not live"));
     log_info(LD_CIRC, "    (%d/%d entry guards are usable/new)",
              num_live_entry_guards(), smartlist_len(entry_guards));
     log_entry_guards(LOG_INFO);
     entry_guards_changed();
   }
-  tor_free(reasons);
 }
 
 /** Called when a connection to an OR with the identity digest <b>digest</b>
