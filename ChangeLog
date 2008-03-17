@@ -29,6 +29,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Detect mismatched page sizes when using --enable-openbsd-malloc.
       Bugfix on 0.2.0.x.
     - Stop giving double-close warn when we reject an address for client DNS.
+    - Make sure that the "NULL-means-reject *:*" convention is followed by
+      all the policy manipulation functions, avoiding some possible crash
+      bugs. Bug found by lodger. Bugfix on 0.2.0.16-alpha.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
