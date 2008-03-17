@@ -24,8 +24,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Use proper log levels in the testsuite call of get_interface_address6().
     - When using a nonstandard malloc, do not use the platform values for
       HAVE_MALLOC_GOOD_SIZE or HAVE_MALLOC_USABLE_SIZE.
-    - Make the openbsd malloc code use 8k pages on alpha CPUs.  Bugfix on
-      0.2.0.x.
+    - Make the openbsd malloc code use 8k pages on alpha CPUs and 16k pages
+      on ia64.  Bugfix on 0.2.0.x.
     - Detect mismatched page sizes when using --enable-openbsd-malloc.
       Bugfix on 0.2.0.x.
     - Stop giving double-close warn when we reject an address for client DNS.

@@ -98,7 +98,10 @@ static pthread_mutex_t gen_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #if defined(__sparc__) || defined(__alpha__)
 #define	malloc_pageshift	13U
-#endif /* __sparc__ */
+#endif
+#if defined(__ia64__)
+#define	malloc_pageshift	14U
+#endif
 
 #ifndef malloc_pageshift
 #define malloc_pageshift	(PGSHIFT)
