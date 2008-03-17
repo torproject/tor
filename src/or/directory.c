@@ -2209,7 +2209,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     dlen = compressed ? d->dir_z_len : d->dir_len;
 
     if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
-      log_info(LD_DIRSERV,
+      log_debug(LD_DIRSERV,
                "Client asked for the mirrored directory, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");
@@ -2314,7 +2314,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     dlen = dirserv_estimate_data_size(dir_fps, 0, compressed);
     if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
-      log_info(LD_DIRSERV,
+      log_debug(LD_DIRSERV,
                "Client asked for network status lists, but we've been "
                "writing too many bytes lately. Sending 503 Dir busy.");
       write_http_status_line(conn, 503, "Directory busy, try again later");

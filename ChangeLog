@@ -38,6 +38,11 @@ Changes in version 0.2.0.22-rc - 2008-03-17
       .in-addr.arpa addresses are passed to the DNSPort.  Part of a fix
       for bug 617. Bugfix on 0.2.0.1-alpha.
 
+  o Minor features:
+    - Only log guard node status when guard node status has changed.
+    - Downgrade the 3 most common "INFO" messages to "DEBUG".  This will make
+      "INFO" 75% less verbose.
+
 
 Changes in version 0.2.0.21-rc - 2008-03-02
   o Major bugfixes:

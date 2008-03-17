@@ -755,8 +755,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     char tmpbuf[INET_NTOA_BUF_LEN];
     in.s_addr = htonl(circ->n_addr);
     tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-    log_info(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
-             tmpbuf, circ->n_port);
+    log_debug(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
+              tmpbuf, circ->n_port);
 
     circ->n_conn_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->n_conn_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
@@ -2169,7 +2169,7 @@ entry_guards_compute_status(void)
 {
   time_t now;
   int changed = 0;
-  int severity = LOG_INFO;
+  int severity = LOG_DEBUG;
   or_options_t *options;
   if (! entry_guards)
     return;
@@ -2182,26 +2182,28 @@ entry_guards_compute_status(void)
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
       const char *reason = NULL;
+      /*XXX021 log reason again. */
       if (entry_guard_set_status(entry, r, now, options, &reason))
         changed = 1;
 
       if (entry->bad_since)
         tor_assert(reason);
-
-      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s%s, and %s.",
-               entry->nickname,
-               entry->unreachable_since ? "unreachable" : "reachable",
-               entry->bad_since ? "unusable: " : "usable",
-               entry->bad_since ? reason : "",
-               entry_is_live(entry, 0, 1, 0) ? "live" : "not live");
     });
 
   if (remove_dead_entry_guards())
     changed = 1;
 
+  severity = changed ? LOG_DEBUG : LOG_INFO;
+
   if (changed) {
-    log_fn(severity, LD_CIRC, "    (%d/%d entry guards are usable/new)",
-           num_live_entry_guards(), smartlist_len(entry_guards));
+    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+        log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s, and %s.",
+               entry->nickname,
+               entry->unreachable_since ? "unreachable" : "reachable",
+               entry->bad_since ? "unusable: " : "usable",
+               entry_is_live(entry, 0, 1, 0) ? "live" : "not live"));
+    log_info(LD_CIRC, "    (%d/%d entry guards are usable/new)",
+             num_live_entry_guards(), smartlist_len(entry_guards));
     log_entry_guards(LOG_INFO);
     entry_guards_changed();
   }
