@@ -1397,7 +1397,7 @@ clean_name_for_stat(char *name)
 
 /** Return FN_ERROR if filename can't be read, FN_NOENT if it doesn't
  * exist, FN_FILE if it is a regular file, or FN_DIR if it's a
- * directory. */
+ * directory.  On FN_ERROR, sets errno. */
 file_status_t
 file_status(const char *fname)
 {
