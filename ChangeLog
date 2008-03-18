@@ -46,6 +46,9 @@ Changes in version 0.2.0.22-rc - 2008-03-17
     - Make sure that the "NULL-means-reject *:*" convention is followed by
       all the policy manipulation functions, avoiding some possible crash
       bugs. Bug found by lodger. Bugfix on 0.2.0.16-alpha.
+    - Fix the implementation of ClientDNSRejectInternalAddresses so that it
+      actually works, and doesn't warn about every single reverse lookup.
+      Fixes the other part of bug 617.  Bugfix on 0.2.0.1-alpha.
 
   o Minor features:
     - Only log guard node status when guard node status has changed.
