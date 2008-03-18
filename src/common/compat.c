@@ -765,47 +765,36 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 int
 set_max_file_descriptors(rlim_t limit, int *max_out)
 {
-#define DEFAULT_MAX_CONNECTIONS 15000
-#define CYGWIN_MAX_CONNECTIONS 3200
-#define IPHONE_MAX_CONNECTIONS 9999
   /* Define some maximum connections values for systems where we cannot
    * automatically determine a limit. Re Cygwin, see
    * http://archives.seul.org/or/talk/Aug-2006/msg00210.html
    * For an iPhone, 9999 should work. For Windows and all other unknown
    * systems we use 15000 as the default. */
 #ifndef HAVE_GETRLIMIT
+#if defined(CYGWIN) || defined(__CYGWIN__)
+  const char *platform = "Cygwin";
+  const unsigned long MAX_CONNECTIONS = 3200;
+#elif defined(IPHONE)
+  const char *platform = "iPhone";
+  const unsigned long MAX_CONNECTIONS = 9999;
+#elif defined(MS_WINDOWS)
+  const char *platform = "Windows";
+  const unsigned long MAX_CONNECTIONS = 15000;
+#else
+  const char *platform = "unknown platforms with no getrlimit()";
+  const unsigned long MAX_CONNECTIONS = 15000;
+#endif
   log_fn(LOG_INFO, LD_NET,
          "This platform is missing getrlimit(). Proceeding.");
-#ifdef MS_WINDOWS
-  if (limit > DEFAULT_MAX_CONNECTIONS) {
+  if (limit > MAX_CONNECTIONS) {
     log_warn(LD_CONFIG,
              "We do not support more than %lu file descriptors "
-             "on Windows. Tried to raise to %lu.",
-             (unsigned long)DEFAULT_MAX_CONNECTIONS, (unsigned long)limit);
+             "on %s. Tried to raise to %lu.",
+             (unsigned long)MAX_CONNECTIONS, platform, (unsigned long)limit);
     return -1;
   }
-  limit = DEFAULT_MAX_CONNECTIONS;
-#elif defined(CYGWIN) || defined(__CYGWIN__)
-  if (limit > CYGWIN_MAX_CONNECTIONS) {
-    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors "
-             "when using Cygwin. Tried to raise to %lu.",
-             (unsigned long)CYGWIN_MAX_CONNECTIONS, (unsigned long)limit);
-    return -1;
-  }
-  limit = CYGWIN_MAX_CONNECTIONS;
-#elif defined(IPHONE)
-  if (limit > IPHONE_MAX_CONNECTIONS) {
-    log_warn(LD_CONFIG, "We do not support more than %lu file descriptors "
-             "on iPhone. Tried to raise to %lu.",
-             (unsigned long)IPHONE_MAX_CONNECTIONS, (unsigned long)limit);
-    return -1;
-  }
-  limit = IPHONE_MAX_CONNECTIONS;
-#else
-  /* Unknown system without getrlimit support. Use the default value.*/
-  limit = DEFAULT_MAX_CONNECTIONS;
-#endif
-#else
+  limit = MAX_CONNECTIONS;
+#else /* HAVE_GETRLIMIT */
   struct rlimit rlim;
   tor_assert(limit > 0);
 
@@ -848,7 +837,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
         bad = 0;
       }
     }
-#endif
+#endif /* OPEN_MAX */
     if (bad) {
       log_warn(LD_CONFIG,"Couldn't set maximum number of file descriptors: %s",
                strerror(errno));
@@ -857,7 +846,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   }
   /* leave some overhead for logs, etc, */
   limit = rlim.rlim_cur;
-#endif
+#endif /* HAVE_GETRLIMIT */
 
   if (limit < ULIMIT_BUFFER) {
     log_warn(LD_CONFIG,
