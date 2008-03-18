@@ -32,11 +32,11 @@ Changes in version 0.2.0.22-rc - 2008-03-17
       get_interface_address6().
     - When using a nonstandard malloc, do not use the platform values for
       HAVE_MALLOC_GOOD_SIZE or HAVE_MALLOC_USABLE_SIZE.
-    - Make the openbsd malloc code use 8k pages on alpha CPUs and 16k pages
-      on ia64.
+    - Make the openbsd malloc code use 8k pages on alpha CPUs and
+      16k pages on ia64.
     - Detect mismatched page sizes when using --enable-openbsd-malloc.
     - Avoid double-marked-for-close warning when certain kinds of invalid
-      .in-addr.arpa addresses are passed to the DNSPort.  Part of a fix
+      .in-addr.arpa addresses are passed to the DNSPort. Part of a fix
       for bug 617. Bugfix on 0.2.0.1-alpha.
     - Make sure that the "NULL-means-reject *:*" convention is followed by
       all the policy manipulation functions, avoiding some possible crash
@@ -44,8 +44,8 @@ Changes in version 0.2.0.22-rc - 2008-03-17
 
   o Minor features:
     - Only log guard node status when guard node status has changed.
-    - Downgrade the 3 most common "INFO" messages to "DEBUG".  This will make
-      "INFO" 75% less verbose.
+    - Downgrade the 3 most common "INFO" messages to "DEBUG". This will
+      make "INFO" 75% less verbose.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
