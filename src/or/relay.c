@@ -1813,6 +1813,12 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
     connection_t *conn = TO_CONN(edge);
     conn->edge_blocked_on_circ = block;
 
+    if (!conn->read_event) {
+      /* This connection is a placeholder for something; probably a DNS
+       * request.  It can't actually stop or start reading.*/
+      continue;
+    }
+
     if (block) {
       if (connection_is_reading(conn))
         connection_stop_reading(conn);
