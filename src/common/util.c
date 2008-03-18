@@ -2096,7 +2096,7 @@ tor_listdir(const char *dirname)
   size_t pattern_len = strlen(dirname)+16;
   pattern = tor_malloc(pattern_len);
   tor_snprintf(pattern, pattern_len, "%s\\*", dirname);
-  if (!(handle = FindFirstFile(pattern, &findData))) {
+  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(pattern, &findData))) {
     tor_free(pattern);
     return NULL;
   }

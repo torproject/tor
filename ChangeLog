@@ -1,6 +1,8 @@
 Changes in version 0.2.1.1-alpha - 2008-??-??
   o Minor bugfixes:
     - Stop giving double-close warn when we reject an address for client DNS.
+    - On Windows, correctly detect errors when listing the contents of a
+      directory.  Fix from lodger.  (Bugfix on 0.1.2.x.)
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
