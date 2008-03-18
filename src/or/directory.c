@@ -613,7 +613,8 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
 
 /** Evaluate the situation and decide if we should use an encrypted
  * "begindir-style" connection for this directory request.
- * 1) If or_port is 0, or it's a direct conn and or_port is firewalled, no.
+ * 1) If or_port is 0, or it's a direct conn and or_port is firewalled
+ *    or we're a dir mirror, no.
  * 2) If we prefer to avoid begindir conns, and we're not fetching or
  * publishing a bridge relay descriptor, no.
  * 3) Else yes.
