@@ -8,7 +8,7 @@ Changes in version 0.2.0.22-rc - 2008-03-17
   o Major bugfixes:
     - Make sure servers always request certificates from clients during
       TLS renegotiation. Reported by lodger; bugfix on 0.2.0.20-rc.
-    - Do not enter an infinite loop when a connection is closed in the middle
+    - Do not enter a CPU-eating loop when a connection is closed in the middle
       of client-side TLS renegotiation.  Fixes bug 622.  Bug diagnosed by
       lodger.
 
