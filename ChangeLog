@@ -1,37 +1,6 @@
 Changes in version 0.2.1.1-alpha - 2008-??-??
   o Minor bugfixes:
-    - Downgrade assert in connection_buckets_decrement() to a log message.
-      This may help us solve bug 614, and in any case will make its symptoms
-      less severe.  Bugfix on 0.2.0.20-rc.
-    - Fix compilation with OpenSSL 0.9.8 and 0.9.8a.  All other supported
-      OpenSSL versions should have been working fine.  Diagnosis and patch
-      from lodger, Karsten Loesing and Sebastian Hahn.  Fixes bug 616.
-      Bugfix on 0.2.0.20-rc.
-    - Generate "STATUS_SERVER" events rather than misspelled "STATUS_SEVER"
-      events.  Caught by mwenge; bugfix on 0.1.2.x.
-    - Fix the SVK version detection logic to work correctly on a branch.
-      Bugfix on 0.2.0.x.
-    - Make sure servers always request certificates from clients during
-      TLS renegotiation. Bugfix on 0.2.0.x.
-    - When counting the number of bytes written on a TLS connection, look at
-      the BIO actually used for writing to the network, not at the BIO used
-      (sometimes) to buffer data for the network.  Looking at different BIOs
-      could result in write counts on the order of ULONG_MAX.  Fix for bug
-      614.  Bugfix on 0.1.2.x.
-    - Make --enable-openbsd-malloc work correctly on Linux with alpha CPUs.
-      Fixes bug 625.  Bugfix on 0.2.0.x.
-    - Logging functions now check that the passed severity is sane.
-    - Use proper log levels in the testsuite call of get_interface_address6().
-    - When using a nonstandard malloc, do not use the platform values for
-      HAVE_MALLOC_GOOD_SIZE or HAVE_MALLOC_USABLE_SIZE.
-    - Make the openbsd malloc code use 8k pages on alpha CPUs and 16k pages
-      on ia64.  Bugfix on 0.2.0.x.
-    - Detect mismatched page sizes when using --enable-openbsd-malloc.
-      Bugfix on 0.2.0.x.
     - Stop giving double-close warn when we reject an address for client DNS.
-    - Make sure that the "NULL-means-reject *:*" convention is followed by
-      all the policy manipulation functions, avoiding some possible crash
-      bugs. Bug found by lodger. Bugfix on 0.2.0.16-alpha.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
@@ -42,13 +11,61 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       to avoid unused RAM in buffer chunks and memory pools.
     - Downgrade "sslv3 alert handshake failure" message to INFO.
     - Only log guard node status when guard node status has changed.
-    - Downgrade the 3 most common "INFO" messages to "DEBUG".  This will make
-      "INFO" 75% less verbose.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to
       allow that function to mark connections for close.  Part of a fix for
       bug 617.  Bugfix on 0.2.0.1-alpha.
+
+
+Changes in version 0.2.0.22-rc - 2008-03-17
+  o Major features:
+    - Enable encrypted directory connections by default, so censor
+      tools that block Tor directory connections based on their plaintext
+      patterns will no longer work. This means Tor works in certain
+      censored countries by default again.
+
+  o Major bugfixes:
+    - Make sure servers always request certificates from clients during
+      TLS renegotiation. Reported by lodger; bugfix on 0.2.0.20-rc.
+
+  o Minor bugfixes (on 0.1.2.x):
+    - Generate "STATUS_SERVER" events rather than misspelled
+      "STATUS_SEVER" events. Caught by mwenge.
+    - When counting the number of bytes written on a TLS connection,
+      look at the BIO actually used for writing to the network, not
+      at the BIO used (sometimes) to buffer data for the network.
+      Looking at different BIOs could result in write counts on the
+      order of ULONG_MAX. Fixes bug 614.
+
+  o Minor bugfixes (on 0.2.0.x):
+    - Downgrade "sslv3 alert handshake failure" message to INFO.
+    - If we set RelayBandwidthRate and RelayBandwidthBurst very high but
+      left BandwidthRate and BandwidthBurst at the default, we would be
+      silently limited by those defaults. Now raise them to match the
+      RelayBandwidth* values.
+    - Fix the SVK version detection logic to work correctly on a branch.
+    - Make --enable-openbsd-malloc work correctly on Linux with alpha
+      CPUs. Fixes bug 625.
+    - Logging functions now check that the passed severity is sane.
+    - Use proper log levels in the testsuite call of
+      get_interface_address6().
+    - When using a nonstandard malloc, do not use the platform values for
+      HAVE_MALLOC_GOOD_SIZE or HAVE_MALLOC_USABLE_SIZE.
+    - Make the openbsd malloc code use 8k pages on alpha CPUs and
+      16k pages on ia64.
+    - Detect mismatched page sizes when using --enable-openbsd-malloc.
+    - Avoid double-marked-for-close warning when certain kinds of invalid
+      .in-addr.arpa addresses are passed to the DNSPort. Part of a fix
+      for bug 617. Bugfix on 0.2.0.1-alpha.
+    - Make sure that the "NULL-means-reject *:*" convention is followed by
+      all the policy manipulation functions, avoiding some possible crash
+      bugs. Bug found by lodger. Bugfix on 0.2.0.16-alpha.
+
+  o Minor features:
+    - Only log guard node status when guard node status has changed.
+    - Downgrade the 3 most common "INFO" messages to "DEBUG". This will
+      make "INFO" 75% less verbose.
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02

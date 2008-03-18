@@ -2636,7 +2636,7 @@ extern uint64_t stats_n_destroy_cells_processed;
 
 /********************************* config.c ***************************/
 
-/** An error from options_trial_assign or options_init_from_string. */
+/** An error from options_trial_assign() or options_init_from_string(). */
 typedef enum setopt_err_t {
   SETOPT_OK = 0,
   SETOPT_ERR_MISC = -1,
