@@ -781,7 +781,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
     log_warn(LD_CONFIG,
              "We do not support more than %lu file descriptors "
              "on Windows. Tried to raise to %lu.",
-             DEFAULT_MAX_CONNECTIONS, limit);
+             (unsigned long)DEFAULT_MAX_CONNECTIONS, (unsigned long)limit);
     return -1;
   }
   limit = DEFAULT_MAX_CONNECTIONS;
@@ -789,7 +789,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   if (limit > CYGWIN_MAX_CONNECTIONS) {
     log_warn(LD_CONFIG, "We do not support more than %lu file descriptors "
              "when using Cygwin. Tried to raise to %lu.",
-             CYGWIN_MAX_CONNECTIONS, limit);
+             (unsigned long)CYGWIN_MAX_CONNECTIONS, (unsigned long)limit);
     return -1;
   }
   limit = CYGWIN_MAX_CONNECTIONS;
@@ -797,7 +797,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   if (limit > IPHONE_MAX_CONNECTIONS) {
     log_warn(LD_CONFIG, "We do not support more than %lu file descriptors "
              "on iPhone. Tried to raise to %lu.",
-             IPHONE_MAX_CONNECTIONS, limit);
+             (unsigned long)IPHONE_MAX_CONNECTIONS, (unsigned long)limit);
     return -1;
   }
   limit = IPHONE_MAX_CONNECTIONS;
