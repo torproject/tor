@@ -1,9 +1,9 @@
 Changes in version 0.2.0.22-rc - 2008-03-18
   o Major features:
-    - Enable encrypted directory connections by default, so censor
-      tools that block Tor directory connections based on their plaintext
-      patterns will no longer work. This means Tor works in certain
-      censored countries by default again.
+    - Enable encrypted directory connections by default for non-relays,
+      so censor tools that block Tor directory connections based on their
+      plaintext patterns will no longer work. This means Tor works in
+      certain censored countries by default again.
 
   o Major bugfixes:
     - Make sure servers always request certificates from clients during

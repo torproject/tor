@@ -625,9 +625,10 @@ directory_command_should_use_begindir(or_options_t *options, uint32_t addr,
 {
   if (!or_port)
     return 0; /* We don't know an ORPort -- no chance. */
-  if (!anonymized_connection &&
-      !fascist_firewall_allows_address_or(addr, or_port))
-    return 0; /* We're firewalled -- also no chance. */
+  if (!anonymized_connection)
+    if (!fascist_firewall_allows_address_or(addr, or_port) ||
+        directory_fetches_from_authorities(options))
+      return 0; /* We're firewalled or are acting like a relay -- also no. */
   if (!options->TunnelDirConns &&
       router_purpose != ROUTER_PURPOSE_BRIDGE)
     return 0; /* We prefer to avoid using begindir conns. Fine. */
