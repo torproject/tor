@@ -611,6 +611,31 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
   update_certificate_downloads(time(NULL));
 }
 
+/** Evaluate the situation and decide if we should use an encrypted
+ * "begindir-style" connection for this directory request.
+ * 1) If or_port is 0, or it's a direct conn and or_port is firewalled
+ *    or we're a dir mirror, no.
+ * 2) If we prefer to avoid begindir conns, and we're not fetching or
+ * publishing a bridge relay descriptor, no.
+ * 3) Else yes.
+ */
+static int
+directory_command_should_use_begindir(or_options_t *options, uint32_t addr,
+                                      int or_port, uint8_t router_purpose,
+                                      int anonymized_connection)
+{
+  if (!or_port)
+    return 0; /* We don't know an ORPort -- no chance. */
+  if (!anonymized_connection)
+    if (!fascist_firewall_allows_address_or(addr, or_port) ||
+        directory_fetches_from_authorities(options))
+      return 0; /* We're firewalled or are acting like a relay -- also no. */
+  if (!options->TunnelDirConns &&
+      router_purpose != ROUTER_PURPOSE_BRIDGE)
+    return 0; /* We prefer to avoid using begindir conns. Fine. */
+  return 1;
+}
+
 /** Helper for directory_initiate_command_routerstatus: send the
  * command to a server whose address is <b>address</b>, whose IP is
  * <b>addr</b>, whose directory port is <b>dir_port</b>, whose tor version
@@ -627,11 +652,9 @@ directory_initiate_command(const char *address, uint32_t addr,
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
-  int use_begindir = supports_begindir && or_port &&
-                     (options->TunnelDirConns ||
-                      router_purpose == ROUTER_PURPOSE_BRIDGE) &&
-                     (anonymized_connection ||
-                      fascist_firewall_allows_address_or(addr, or_port));
+  int use_begindir = supports_begindir &&
+                     directory_command_should_use_begindir(options, addr,
+                       or_port, router_purpose, anonymized_connection);
 
   tor_assert(address);
   tor_assert(addr);
