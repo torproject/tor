@@ -1686,7 +1686,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   /* Write the exit policy to the end of 's'. */
-  if (dns_seems_to_be_broken()) {
+  if (dns_seems_to_be_broken() ||
+      !router->exit_policy || !smartlist_len(router->exit_policy)) {
     /* DNS is screwed up; don't claim to be an exit. */
     strlcat(s+written, "reject *:*\n", maxlen-written);
     written += strlen("reject *:*\n");

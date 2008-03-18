@@ -2298,7 +2298,7 @@ test_dir_format(void)
   strlcat(buf2, pk1_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
-  strlcat(buf2, "router-signature\n", sizeof(buf2));
+  strlcat(buf2, "reject *:*\nrouter-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
 
@@ -2316,7 +2316,7 @@ test_dir_format(void)
   test_eq(rp1->bandwidthcapacity, r1->bandwidthcapacity);
   test_assert(crypto_pk_cmp_keys(rp1->onion_pkey, pk1) == 0);
   test_assert(crypto_pk_cmp_keys(rp1->identity_pkey, pk2) == 0);
-  test_assert(rp1->exit_policy == NULL);
+  test_assert(smartlist_len(rp1->exit_policy) == 1);
 
 #if 0
   /* XXX Once we have exit policies, test this again. XXX */
@@ -2996,7 +2996,7 @@ test_policies(void)
           compare_addr_to_addr_policy(0, 2, policy));
   test_assert(ADDR_POLICY_REJECTED ==
           compare_addr_to_addr_policy(0xc0a80102, 2, policy));
-  test_assert(ADDR_POLICY_REJECTED ==
+  test_assert(ADDR_POLICY_ACCEPTED ==
           compare_addr_to_addr_policy(0x01020304u, 2, NULL));
 
   policy2 = NULL;
