@@ -992,8 +992,7 @@ tor_tls_renegotiate(tor_tls_t *tls)
   if (tls->state != TOR_TLS_ST_RENEGOTIATE) {
     int r = SSL_renegotiate(tls->ssl);
     if (r <= 0) {
-      return tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO,
-                               "renegotiating", LOG_WARN);
+      return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN);
     }
     tls->state = TOR_TLS_ST_RENEGOTIATE;
   }
@@ -1002,8 +1001,7 @@ tor_tls_renegotiate(tor_tls_t *tls)
     tls->state = TOR_TLS_ST_OPEN;
     return TOR_TLS_DONE;
   } else
-    return tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO,
-                             "renegotiating handshake", LOG_INFO);
+    return tor_tls_get_error(tls, r, 0, "renegotiating handshake", LOG_INFO);
 }
 
 /** Shut down an open tls connection <b>tls</b>.  When finished, returns
