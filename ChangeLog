@@ -1,4 +1,4 @@
-Changes in versino 0.1.2.20 - 2008-??-??
+Changes in version 0.1.2.20 - 2008-??-??
   o Major bugfixes:
     - Patch from "Andrew S. Lists" to catch when we contact a directory
       mirror at IP address X and he says we look like we're coming from
@@ -21,7 +21,8 @@ Changes in versino 0.1.2.20 - 2008-??-??
       cached-descriptors file. Patch by freddy77.
     - Detect size overflow in zlib code.
     - Fix a pointer error that kept us from reporting nameserver errors.
-
+    - On Windows, correctly detect errors when listing the contents of a
+      directory.  Fix from lodger.
 
 Changes in version 0.1.2.19 - 2008-01-17
   Tor 0.1.2.19 fixes a huge memory leak on exit relays, makes the default
