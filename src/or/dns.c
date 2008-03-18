@@ -481,7 +481,8 @@ send_resolved_hostname_cell(edge_connection_t *conn, const char *hostname)
  * parse it and place the address in <b>in</b> if present. Return 1 on success;
  * 0 if the address is not in in-addr.arpa format, and -1 if the address is
  * malformed. */
-static int
+/* XXXX021 move this to util.c. */
+int
 parse_inaddr_arpa_address(const char *address, struct in_addr *in)
 {
   char buf[INET_NTOA_BUF_LEN];

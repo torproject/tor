@@ -1331,8 +1331,17 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     if (options->ClientDNSRejectInternalAddresses) {
       /* Don't let people try to do a reverse lookup on 10.0.0.1. */
       tor_addr_t addr;
-      if (tor_addr_from_str(&addr, socks->address) >= 0 &&
-          tor_addr_is_internal(&addr, 0)) {
+      struct in_addr in;
+      int ok;
+      if (!strcasecmpend(socks->address, ".in-addr.arpa"))
+        ok = !parse_inaddr_arpa_address(socks->address, &in);
+      else
+        ok = tor_inet_aton(socks->address, &in);
+      /*XXXX021 make this a function. */
+      addr.family = AF_INET;
+      memcpy(&addr.addr.in_addr, &in, sizeof(struct in_addr));
+
+      if (ok && tor_addr_is_internal(&addr, 0)) {
         connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
                                                0, NULL, -1, TIME_MAX);
         connection_mark_unattached_ap(conn,

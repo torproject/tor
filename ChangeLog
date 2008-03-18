@@ -3,6 +3,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Stop giving double-close warn when we reject an address for client DNS.
     - On Windows, correctly detect errors when listing the contents of a
       directory.  Fix from lodger.  (Bugfix on 0.1.2.x.)
+    - Fix the implementation of ClientDNSRejectInternalAddresses so that it
+      actually works, and doesn't warn about every single reverse lookup.
+      Fixes the other part of bug 617.  Bugfix on 0.2.0.1-alpha.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging

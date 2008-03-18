@@ -3246,6 +3246,7 @@ int dns_resolve(edge_connection_t *exitconn);
 void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
 void dns_reset_correctness_checks(void);
+int parse_inaddr_arpa_address(const char *address, struct in_addr *in);
 
 /********************************* dnsserv.c ************************/
 
