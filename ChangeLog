@@ -1,4 +1,4 @@
-Changes in version 0.2.0.22-rc - 2008-03-17
+Changes in version 0.2.0.22-rc - 2008-03-18
   o Major features:
     - Enable encrypted directory connections by default, so censor
       tools that block Tor directory connections based on their plaintext
@@ -8,12 +8,12 @@ Changes in version 0.2.0.22-rc - 2008-03-17
   o Major bugfixes:
     - Make sure servers always request certificates from clients during
       TLS renegotiation. Reported by lodger; bugfix on 0.2.0.20-rc.
-    - Do not enter a CPU-eating loop when a connection is closed in the middle
-      of client-side TLS renegotiation.  Fixes bug 622.  Bug diagnosed by
-      lodger.
-    - Fix assertion failure that could occur when a blocked circuit became
-      unblocked, and it had pending client DNS requests.  Bugfix on
-      0.2.0.1-alpha.  Fixes bug 632.
+    - Do not enter a CPU-eating loop when a connection is closed in
+      the middle of client-side TLS renegotiation. Fixes bug 622. Bug
+      diagnosed by lodger; bugfix on 0.2.0.20-rc.
+    - Fix assertion failure that could occur when a blocked circuit
+      became unblocked, and it had pending client DNS requests. Bugfix
+      on 0.2.0.1-alpha. Fixes bug 632.
 
   o Minor bugfixes (on 0.1.2.x):
     - Generate "STATUS_SERVER" events rather than misspelled
@@ -23,8 +23,8 @@ Changes in version 0.2.0.22-rc - 2008-03-17
       at the BIO used (sometimes) to buffer data for the network.
       Looking at different BIOs could result in write counts on the
       order of ULONG_MAX. Fixes bug 614.
-    - On Windows, correctly detect errors when listing the contents of a
-      directory.  Fix from lodger.
+    - On Windows, correctly detect errors when listing the contents of
+      a directory. Fix from lodger.
 
   o Minor bugfixes (on 0.2.0.x):
     - Downgrade "sslv3 alert handshake failure" message to INFO.
