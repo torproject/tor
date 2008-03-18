@@ -2171,6 +2171,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         goto err;
       }
       voter->addr = ntohl(in.s_addr);
+      /* XXX021 long to int to uint64 to uint16? what the hell? -rd */
       voter->dir_port = (uint64_t)
         (int) tor_parse_long(tok->args[4], 10, 0, 65535, &ok, NULL);
       if (!ok)
