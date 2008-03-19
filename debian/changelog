@@ -1,14 +1,25 @@
-tor (0.2.0.21-rc-+svn) XXperimental; urgency=low
+tor (0.2.1.0-unreleased-1) XXperimental; urgency=low
 
+  * trunk
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 19 Mar 2008 08:51:35 +0100
+
+tor (0.2.0.22-rc-2) XXperimental; urgency=low
+
+  * Mention OpenBSD_malloc_Linux.c in debian/copyright.
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 19 Mar 2008 08:50:18 +0100
+
+tor (0.2.0.22-rc-1) experimental; urgency=low
+
+  * New upstream version.
   * Work around fig2dev failing to build the images on all archs
     (re #457568).
   * Build with --enable-openbsd-malloc, unless no-enable-openbsd-malloc is
     found in DEB_BUILD_OPTIONS.  Hopefully this deals with some of the
     horrible memory fragmentation that glibc's malloc causes.
-  * Forward port patch 06_add_compile_time_defaults.
-  * Mention OpenBSD_malloc_Linux.c in debian/copyright.
 
- -- Peter Palfrader <weasel@debian.org>  Thu, 13 Mar 2008 00:18:19 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed, 19 Mar 2008 08:03:47 +0100
 
 tor (0.2.0.21-rc-1) experimental; urgency=low
 
