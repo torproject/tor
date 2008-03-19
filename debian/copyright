@@ -12,6 +12,7 @@ Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 Copyright (c) 2007-2008, The Tor Project, Inc.
 strlcat, strlcpy: Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
 ht.h: Copyright (c) 2002, Christopher Clark, 2006 Nick Mathewson
+OpenBSD_malloc_Linux.c: phk@FreeBSD.ORG
 Modifications for Debian: Copyright (c) 2004, 2005, 2006, 2007, 2008 Peter Palfrader
 
 Tor is distributed under this license:
@@ -115,4 +116,9 @@ ht.h by Nick Mathewson is licensed as follows:
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
+===============================================================================
+OpenBSD_malloc_Linux.c:
+ * "THE BEER-WARE LICENSE" (Revision 42):
+ * <phk@FreeBSD.ORG> wrote this file.  As long as you retain this notice you
+ * can do whatever you want with this stuff. If we meet some day, and you think
+ * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
