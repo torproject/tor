@@ -68,7 +68,7 @@ Extensions:
   configuration could include the following HTML:
    <h2>Connection chain</h2>
    <ul>
-   <li>Tor 0.1.2.14-alpha
+   <li>Tor 0.1.2.14-alpha</li>
    <!-- Tor Connectivity Check: success -->
    </ul>
 
@@ -78,8 +78,8 @@ Extensions:
   browser:
    <h2>Connection chain
    <ul>
-   <li>Tor 0.1.2.14-alpha
-   <li>Polipo version 1.0.4
+   <li>Tor 0.1.2.14-alpha</li>
+   <li>Polipo version 1.0.4</li>
    <!-- Tor Connectivity Check: success -->
    </ul>
 
@@ -91,6 +91,35 @@ Extensions:
   page which is loaded from a different domain. If this is able to be
   loaded then the user will know that external connectivity through
   Tor works.
+
+  Automatic Firefox Notification:
+
+  All forms of the website should return valid XHTML and have a
+  hidden link with an id attribute "TorCheckResult" and a target
+  property that can be queried to determine the result. For example,   
+  a hidden link would convey success like this: 
+
+  <a id="TorCheckResult" target="success" href="/"></a>
+
+  failure like this:
+
+  <a id="TorCheckResult" target="failure" href="/"></a>
+
+  and DNS leaks like this:
+
+  <a id="TorCheckResult" target="dnsleak" href="/"></a>
+
+  Firefox extensions such as Torbutton would then be able to 
+  issue an XMLHttpRequest for the page and query the result
+  with resultXML.getElementById("TorCheckResult").target
+  to automatically report the Tor status to the user when
+  they first attempt to enable Tor activity, or whenever
+  they request a check from the extension preferences window.
+
+  If the check website is to be themed with heavy graphics and/or
+  extensive documentation, the check result itself should be
+  contained in a seperate lightweight iframe that extensions can
+  request via an alternate url.
 
 Security and resiliency implications:
 
