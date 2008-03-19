@@ -28,19 +28,22 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       bug 617.  Bugfix on 0.2.0.1-alpha.
 
 
-Changes in version 0.2.0.22-rc - 2008-03-17
+Changes in version 0.2.0.22-rc - 2008-03-18
   o Major features:
-    - Enable encrypted directory connections by default, so censor
-      tools that block Tor directory connections based on their plaintext
-      patterns will no longer work. This means Tor works in certain
-      censored countries by default again.
+    - Enable encrypted directory connections by default for non-relays,
+      so censor tools that block Tor directory connections based on their
+      plaintext patterns will no longer work. This means Tor works in
+      certain censored countries by default again.
 
   o Major bugfixes:
     - Make sure servers always request certificates from clients during
       TLS renegotiation. Reported by lodger; bugfix on 0.2.0.20-rc.
-    - Do not enter a CPU-eating loop when a connection is closed in the middle
-      of client-side TLS renegotiation.  Fixes bug 622.  Bug diagnosed by
-      lodger.
+    - Do not enter a CPU-eating loop when a connection is closed in
+      the middle of client-side TLS renegotiation. Fixes bug 622. Bug
+      diagnosed by lodger; bugfix on 0.2.0.20-rc.
+    - Fix assertion failure that could occur when a blocked circuit
+      became unblocked, and it had pending client DNS requests. Bugfix
+      on 0.2.0.1-alpha. Fixes bug 632.
 
   o Minor bugfixes (on 0.1.2.x):
     - Generate "STATUS_SERVER" events rather than misspelled
@@ -50,6 +53,8 @@ Changes in version 0.2.0.22-rc - 2008-03-17
       at the BIO used (sometimes) to buffer data for the network.
       Looking at different BIOs could result in write counts on the
       order of ULONG_MAX. Fixes bug 614.
+    - On Windows, correctly detect errors when listing the contents of
+      a directory. Fix from lodger.
 
   o Minor bugfixes (on 0.2.0.x):
     - Downgrade "sslv3 alert handshake failure" message to INFO.
@@ -74,6 +79,9 @@ Changes in version 0.2.0.22-rc - 2008-03-17
     - Make sure that the "NULL-means-reject *:*" convention is followed by
       all the policy manipulation functions, avoiding some possible crash
       bugs. Bug found by lodger. Bugfix on 0.2.0.16-alpha.
+    - Fix the implementation of ClientDNSRejectInternalAddresses so that it
+      actually works, and doesn't warn about every single reverse lookup.
+      Fixes the other part of bug 617.  Bugfix on 0.2.0.1-alpha.
 
   o Minor features:
     - Only log guard node status when guard node status has changed.
