@@ -1,12 +1,13 @@
-tor (0.2.0.21-rc-+svn) XXperimental; urgency=low
+tor (0.2.0.22-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Work around fig2dev failing to build the images on all archs
     (re #457568).
   * Build with --enable-openbsd-malloc, unless no-enable-openbsd-malloc is
     found in DEB_BUILD_OPTIONS.  Hopefully this deals with some of the
     horrible memory fragmentation that glibc's malloc causes.
 
- -- Peter Palfrader <weasel@debian.org>  Tue, 11 Mar 2008 14:51:47 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed, 19 Mar 2008 08:03:47 +0100
 
 tor (0.2.0.21-rc-1) experimental; urgency=low
 
