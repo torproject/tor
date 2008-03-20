@@ -112,6 +112,7 @@ I     - Translation portal
         o Torbrowser webpage
         - Tor website
         - check.torproject.org
+        - should we i18nize polipo's error messages too?
 
   - August
 I   - Auto update
