@@ -251,6 +251,7 @@ Planned for 0.2.1.x:
 
   - get rid of the v1 directory stuff (making, serving, and caching).
     - perhaps replace it with a "this is a tor server" stock webpage.
+  - the v2dir flag isn't used for anything anymore. right?
   - even clients run rep_hist_load_mtbf_data(). this wastes memory.
   - steven's plan for replacing check.torproject.org with a built-in
     answer by tor itself.
