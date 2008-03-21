@@ -166,7 +166,7 @@ int crypto_expand_key_material(const char *key_in, size_t in_len,
                                char *key_out, size_t key_out_len);
 
 /* random numbers */
-int crypto_seed_rng(void);
+int crypto_seed_rng(int startup);
 int crypto_rand(char *to, size_t n);
 int crypto_rand_int(unsigned int max);
 uint64_t crypto_rand_uint64(uint64_t max);

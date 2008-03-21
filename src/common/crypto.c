@@ -1667,19 +1667,29 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* Use RAND_poll if openssl is 0.9.6 release or later.  (The "f" means
    "release".)  */
-//#define USE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
-#define USE_RAND_POLL 0
-/* XXX Somehow setting USE_RAND_POLL on causes stack smashes. We're
- * not sure where. This was the big bug with Tor 0.1.1.9-alpha. */
+#define HAVE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
 
-/** Seed OpenSSL's random number generator with bytes from the
- * operating system.  Return 0 on success, -1 on failure.
+/* Versions of openssl prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
+ * would allocate an fd_set on the stack, open a new file, and try to FD_SET
+ * that fd without checking whether it fit in the fd_set.  Thus, if the
+ * system has not just been started up, it is unsafe to call */
+#define RAND_POLL_IS_SAFE                       \
+  ((OPENSSL_VERSION_NUMBER >= 0x009070afl &&    \
+    OPENSSL_VERSION_NUMBER <= 0x00907fffl) ||   \
+   (OPENSSL_VERSION_NUMBER >= 0x0090803fl))
+
+/* We could actually get away with calling RAND_poll */
+#define USE_RAND_POLL (HAVE_RAND_POLL && RAND_POLL_IS_SAFE)
+
+/** Seed OpenSSL's random number generator with bytes from the operating
+ * system.  <b>startup</b> should be true iff we have just started Tor and
+ * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
  */
 int
-crypto_seed_rng(void)
+crypto_seed_rng(int startup)
 {
   char buf[ADD_ENTROPY];
-  int rand_poll_status;
+  int rand_poll_status = 0;
 
   /* local variables */
 #ifdef MS_WINDOWS
@@ -1693,15 +1703,15 @@ crypto_seed_rng(void)
   size_t n;
 #endif
 
-#if USE_RAND_POLL
+#if HAVE_RAND_POLL
   /* OpenSSL 0.9.6 adds a RAND_poll function that knows about more kinds of
    * entropy than we do.  We'll try calling that, *and* calling our own entropy
    * functions.  If one succeeds, we'll accept the RNG as seeded. */
-  rand_poll_status = RAND_poll();
-  if (rand_poll_status == 0)
-    log_warn(LD_CRYPTO, "RAND_poll() failed.");
-#else
-  rand_poll_status = 0;
+  if (startup || RAND_POLL_IS_SAFE) {
+    rand_poll_status = RAND_poll();
+    if (rand_poll_status == 0)
+      log_warn(LD_CRYPTO, "RAND_poll() failed.");
+  }
 #endif
 
 #ifdef MS_WINDOWS

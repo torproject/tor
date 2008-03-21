@@ -24,6 +24,13 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Add a couple of extra warnings to --enable-gcc-warnings for GCC 4.3,
       and stop using a warning that had become unfixably verbose under GCC
       4.3.
+    - Start using OpenSSL's RAND_poll() for better (and more portable)
+      cross-platform entropy collection again.  We used to use it, then
+      stopped using it because of a bug that could crash systems that called
+      RAND_poll when they had a lot of fds open.  It looks like the bug got
+      fixed in late 2006.  Our new behavior is to call RAND_poll() at
+      startup, and to call RAND_poll() when we reseed later only if we
+      have a non-buggy OpenSSL version.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to

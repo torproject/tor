@@ -900,7 +900,7 @@ run_scheduled_events(time_t now)
   if (time_to_add_entropy < now) {
     if (time_to_add_entropy) {
       /* We already seeded once, so don't die on failure. */
-      crypto_seed_rng();
+      crypto_seed_rng(0);
     }
 /** How often do we add more entropy to OpenSSL's RNG pool? */
 #define ENTROPY_INTERVAL (60*60)
@@ -1810,7 +1810,7 @@ tor_init(int argc, char *argv[])
 #endif
 
   crypto_global_init(get_options()->HardwareAccel);
-  if (crypto_seed_rng()) {
+  if (crypto_seed_rng(1)) {
     log_err(LD_BUG, "Unable to seed random number generator. Exiting.");
     return -1;
   }
