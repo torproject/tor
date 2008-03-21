@@ -392,7 +392,7 @@ test_crypto(void)
   test_assert(data1 && data2 && data3);
 
   /* Try out RNG. */
-  test_assert(! crypto_seed_rng());
+  test_assert(! crypto_seed_rng(0));
   crypto_rand(data1, 100);
   crypto_rand(data2, 100);
   test_memneq(data1,data2,100);
@@ -3656,7 +3656,7 @@ main(int c, char**v)
     return 1;
   }
 
-  crypto_seed_rng();
+  crypto_seed_rng(1);
 
   if (0) {
     bench_aes();
