@@ -723,6 +723,11 @@ if test x$enable_gcc_warnings = xyes; then
 #error
 #endif]), have_gcc42=yes, have_gcc42=no)
 
+  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+#if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
+#error
+#endif]), have_gcc43=yes, have_gcc43=no)
+
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
   AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], []), have_shorten64_flag=yes,
@@ -730,6 +735,7 @@ if test x$enable_gcc_warnings = xyes; then
   CFLAGS="$save_CFLAGS"
 
   CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Wwrite-strings -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wbad-function-cast -Wswitch-enum -Werror"
+
   # Disabled, so we can use mallinfo(): -Waggregate-return
 
   if test x$have_gcc4 = xyes ; then 
@@ -741,7 +747,14 @@ if test x$enable_gcc_warnings = xyes; then
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 Use -fstack-protector.
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=5"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1"
+    # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
+  fi
+
+  if test x$have_gcc43 = xyes ; then 
+    # These warnings break gcc 4.2 and work on gcc 4.3
+    # XXXX020 See if any of these work with earlier versions.
+    CFLAGS="$CFLAGS -Wextra -Warray-bounds"
   fi
 
   if test x$have_shorten64_flag = xyes ; then
