@@ -1,0 +1,26 @@
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\"
+        \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
+<dict>
+        <key>Label</key>
+        <string>org.torproject.tor</string>
+        <key>ProgramArguments</key>
+        <array>
+                <string>/usr/bin/tor</string>
+                <string>-f</string>
+                <string>/Library/Tor/torrc</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+    <key>OnDemand</key>
+    <false/>
+
+    <key>UserName</key>
+    <string>_tor</string>
+    <key>GroupName</key>
+    <string>daemon</string>
+
+</dict>
+
+</plist>
