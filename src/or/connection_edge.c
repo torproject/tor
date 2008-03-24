@@ -457,6 +457,32 @@ connection_ap_attach_pending(void)
   });
 }
 
+/** Tell any AP streams that are waiting for a onehop tunnel to
+ * <b>failed_digest</b> that they are going to fail. */
+void
+connection_ap_fail_onehop(const char *failed_digest)
+{
+  edge_connection_t *edge_conn;
+  char digest[DIGEST_LEN];
+  smartlist_t *conns = get_connection_array();
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
+    if (conn->marked_for_close ||
+        conn->type != CONN_TYPE_AP ||
+        conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
+      continue;
+    edge_conn = TO_EDGE_CONN(conn);
+    if (!edge_conn->want_onehop)
+      continue;
+    if (!hexdigest_to_digest(edge_conn->chosen_exit_name, digest) &&
+        !memcmp(digest, failed_digest, DIGEST_LEN)) {
+      log_info(LD_APP, "Closing onehop stream to '%s' because the OR conn "
+                       "just failed.", edge_conn->chosen_exit_name);
+      connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_TIMEOUT);
+    }
+  });
+}
+
 /** A circuit failed to finish on its last hop <b>info</b>. If there
  * are any streams waiting with this exit node in mind, but they
  * don't absolutely require it, make them give up on it.
