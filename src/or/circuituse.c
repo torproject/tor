@@ -210,14 +210,20 @@ circuit_expire_building(time_t now)
 {
   circuit_t *victim, *circ = global_circuitlist;
   time_t cutoff = now - get_options()->CircuitBuildTimeout;
+  time_t begindir_cutoff = now - get_options()->CircuitBuildTimeout/2;
+  cpath_build_state_t *build_state;
 
   while (circ) {
     victim = circ;
     circ = circ->next;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
-        victim->timestamp_created > cutoff || /* Not old enough to expire */
         victim->marked_for_close) /* don't mess with marked circs */
       continue;
+
+    build_state = TO_ORIGIN_CIRCUIT(victim)->build_state;
+    if (victim->timestamp_created >
+        (build_state && build_state->onehop_tunnel) ? begindir_cutoff : cutoff)
+      continue; /* it's still young, leave it alone */
 
 #if 0
     /* some debug logs, to help track bugs */
