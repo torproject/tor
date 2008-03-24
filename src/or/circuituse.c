@@ -222,7 +222,8 @@ circuit_expire_building(time_t now)
 
     build_state = TO_ORIGIN_CIRCUIT(victim)->build_state;
     if (victim->timestamp_created >
-        (build_state && build_state->onehop_tunnel) ? begindir_cutoff : cutoff)
+        ((build_state && build_state->onehop_tunnel) ?
+         begindir_cutoff : cutoff))
       continue; /* it's still young, leave it alone */
 
 #if 0
