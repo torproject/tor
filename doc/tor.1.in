@@ -87,8 +87,8 @@ server without impacting network performance.
 If defined, a separate token bucket limits the average incoming bandwidth
 usage for _relayed traffic_ on this node to the specified number of
 bytes per second, and the average outgoing bandwidth usage to that same
-value. Relayed traffic is currently defined as answers to directory
-requests, but that may change. (Default: 0)
+value. Relayed traffic currently is calculated to include answers to directory
+requests, but that may change in future versions. (Default: 0)
 .LP
 .TP
 \fBRelayBandwidthBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
