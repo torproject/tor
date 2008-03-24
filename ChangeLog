@@ -1,4 +1,4 @@
-Changes in version 0.2.0.23-rc - 2008-03-2?
+Changes in version 0.2.0.23-rc - 2008-03-24
   o Major bugfixes:
     - When a tunneled directory request is made to a directory server
       that's down, notice after 30 seconds rather than 120 seconds. Also,
