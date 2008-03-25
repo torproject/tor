@@ -4,12 +4,13 @@ tor (0.2.1.0-unreleased-1) XXperimental; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 19 Mar 2008 20:09:25 +0100
 
-tor (0.2.0.22-rc-2) XXperimental; urgency=low
+tor (0.2.0.23-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Mention OpenBSD_malloc_Linux.c in debian/copyright.
   * Add a recommends on logrotate.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 19 Mar 2008 20:08:55 +0100
+ -- Peter Palfrader <weasel@debian.org>  Tue, 25 Mar 2008 09:34:37 +0100
 
 tor (0.2.0.22-rc-1) experimental; urgency=low
 
