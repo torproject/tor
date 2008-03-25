@@ -373,6 +373,12 @@ test_crypto_dh(void)
   test_eq(s1len, s2len);
   test_memeq(s1, s2, s1len);
 
+  {
+    /* XXXX Now fabricate some bad values and make sure they get caught,
+     * Check 0, 1, N-1, >= N, etc.
+     */
+  }
+
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
 }
@@ -383,7 +389,7 @@ test_crypto(void)
   crypto_cipher_env_t *env1, *env2;
   crypto_pk_env_t *pk1, *pk2;
   char *data1, *data2, *data3, *cp;
-  int i, j, p, len, idx;
+  int i, j, p, len, idx, allok;
   size_t size;
 
   data1 = tor_malloc(1024);
@@ -396,6 +402,28 @@ test_crypto(void)
   crypto_rand(data1, 100);
   crypto_rand(data2, 100);
   test_memneq(data1,data2,100);
+  allok = 1;
+  for (i = 0; i < 100; ++i) {
+    uint64_t big;
+    char *host;
+    j = crypto_rand_int(100);
+    if (i < 0 || i >= 100)
+      allok = 0;
+    big = crypto_rand_uint64(U64_LITERAL(1)<<40);
+    if (big >= (U64_LITERAL(1)<<40))
+      allok = 0;
+    big = crypto_rand_uint64(U64_LITERAL(5));
+    if (big >= 5)
+      allok = 0;
+    host = crypto_random_hostname(3,8,"www.",".onion");
+    if (strcmpstart(host,"www.") ||
+        strcmpend(host,".onion") ||
+        strlen(host) < 13 ||
+        strlen(host) > 18)
+      allok = 0;
+    tor_free(host);
+  }
+  test_assert(allok);
 
   /* Now, test encryption and decryption with stream cipher. */
   data1[0]='\0';
@@ -578,11 +606,18 @@ test_crypto(void)
   /* File operations: save and load private key */
   test_assert(! crypto_pk_write_private_key_to_filename(pk1,
                                                         get_fname("pkey1")));
-
+  /* failing case for read: can't read. */
+  test_assert(crypto_pk_read_private_key_from_filename(pk2,
+                                                   get_fname("xyzzy")) < 0);
+  write_str_to_file(get_fname("xyzzy"), "foobar", 6);
+  /* Failing case for read: no key. */
+  test_assert(crypto_pk_read_private_key_from_filename(pk2,
+                                                   get_fname("xyzzy")) < 0);
   test_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                          get_fname("pkey1")));
   test_eq(15, crypto_pk_private_decrypt(pk2, data3, data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
+
 
   /* Now try signing. */
   strlcpy(data1, "Ossifrage", 1024);
@@ -652,6 +687,8 @@ test_crypto(void)
   test_memeq(data1, data3, DIGEST_LEN);
   test_eq(99, data3[DIGEST_LEN+1]);
 
+  test_assert(digest_from_base64(data3, "###") < 0);
+
   /* Base32 tests */
   strlcpy(data1, "5chrs", 1024);
   /* bit pattern is:  [35 63 68 72 73] ->
@@ -694,6 +731,45 @@ test_crypto(void)
     test_streq(data2, "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000");
     tor_free(data1);
     tor_free(data2);
+  }
+
+  /* Check fingerprint */
+  {
+    test_assert(crypto_pk_check_fingerprint_syntax(
+                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 0000"));
+    test_assert(!crypto_pk_check_fingerprint_syntax(
+                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 000"));
+    test_assert(!crypto_pk_check_fingerprint_syntax(
+                "ABCD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 00000"));
+    test_assert(!crypto_pk_check_fingerprint_syntax(
+                "ABCD 1234 ABCD 5678 0000 ABCD1234 ABCD 5678 0000"));
+    test_assert(!crypto_pk_check_fingerprint_syntax(
+                "ABCD 1234 ABCD 5678 0000 ABCD1234 ABCD 5678 00000"));
+    test_assert(!crypto_pk_check_fingerprint_syntax(
+                "ACD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 00000"));
+  }
+
+  /* Incremental digest code. */
+  {
+    crypto_digest_env_t *d1, *d2;
+    char d_out1[DIGEST_LEN], d_out2[DIGEST_LEN];
+    d1 = crypto_new_digest_env();
+    test_assert(d1);
+    crypto_digest_add_bytes(d1, "abcdef", 6);
+    d2 = crypto_digest_dup(d1);
+    test_assert(d2);
+    crypto_digest_add_bytes(d2, "ghijkl", 6);
+    crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+    crypto_digest(d_out2, "abcdefghijkl", 12);
+    test_memeq(d_out1, d_out2, DIGEST_LEN);
+    crypto_digest_assign(d2, d1);
+    crypto_digest_add_bytes(d2, "mno", 3);
+    crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+    crypto_digest(d_out2, "abcdefmno", 9);
+    test_memeq(d_out1, d_out2, DIGEST_LEN);
+    crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
+    crypto_digest(d_out2, "abcdef", 6);
+    test_memeq(d_out1, d_out2, DIGEST_LEN);
   }
 }
 
@@ -877,6 +953,10 @@ test_util(void)
   test_assert(U64_LITERAL(0) ==
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
   test_assert(i == 0);
+
+  /* Test failing snprintf cases */
+  test_eq(-1, tor_snprintf(buf, 0, "Foo"));
+  test_eq(-1, tor_snprintf(buf, 2, "Foo"));
 
   /* Test printf with uint64 */
   tor_snprintf(buf, sizeof(buf), "x!"U64_FORMAT"!x",
@@ -1640,6 +1720,24 @@ test_util_smartlist(void)
   test_assert(!smartlist_string_isin_case(sl, "nooNooN"));
   test_assert(smartlist_string_num_isin(sl, 50));
   test_assert(!smartlist_string_num_isin(sl, 60));
+
+  /* Test smartlist_choose */
+  {
+    int i;
+    int allsame = 1;
+    int allin = 1;
+    void *first = smartlist_choose(sl);
+    test_assert(smartlist_isin(sl, first));
+    for (i = 0; i < 100; ++i) {
+      void *second = smartlist_choose(sl);
+      if (second != first)
+        allsame = 0;
+      if (!smartlist_isin(sl, second))
+        allin = 0;
+    }
+    test_assert(!allsame);
+    test_assert(allin);
+  }
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
@@ -2062,8 +2160,11 @@ test_util_strmap(void)
   smartlist_t *found_keys;
 
   map = strmap_new();
+  test_eq(strmap_size(map), 0);
+  test_assert(strmap_isempty(map));
   v = strmap_set(map, "K1", (void*)99);
   test_eq(v, NULL);
+  test_assert(!strmap_isempty(map));
   v = strmap_set(map, "K2", (void*)101);
   test_eq(v, NULL);
   v = strmap_set(map, "K1", (void*)100);
@@ -2082,6 +2183,7 @@ test_util_strmap(void)
   strmap_set(map, "K2", (void*)101);
   strmap_set(map, "K3", (void*)102);
   strmap_set(map, "K4", (void*)103);
+  test_eq(strmap_size(map), 4);
   strmap_assert_ok(map);
   strmap_set(map, "K5", (void*)104);
   strmap_set(map, "K6", (void*)105);
@@ -2141,6 +2243,9 @@ test_util_mmap(void)
   tor_mmap_t *mapping;
 
   crypto_rand(buf, buflen);
+
+  mapping = tor_mmap_file(fname1);
+  test_assert(! mapping);
 
   write_str_to_file(fname1, "Short file.", 1);
   write_bytes_to_file(fname2, buf, buflen, 1);
@@ -3431,6 +3536,10 @@ test_crypto_base32_decode(void)
   res = base32_decode(decoded, 60, encoded, 96);
   test_eq(res, 0);
   test_memneq(plain, decoded, 60);
+  /* Bad encodings. */
+  encoded[0] = '!';
+  res = base32_decode(decoded, 60, encoded, 96);
+  test_assert(res < 0);
 }
 
 /* Test encoding and parsing of v2 rendezvous service descriptors. */
@@ -3695,6 +3804,7 @@ main(int c, char**v)
   }
 
   options->command = CMD_RUN_UNITTESTS;
+  crypto_global_init(0);
   rep_hist_init();
   network_init();
   setup_directory();
@@ -3728,6 +3838,8 @@ main(int c, char**v)
     test_array[i].test_fn();
   }
   puts("");
+
+  crypto_global_cleanup();
 
   if (have_failed)
     return 1;
