@@ -39,6 +39,14 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       bug 617.  Bugfix on 0.2.0.1-alpha.
 
 
+Changes in version 0.2.0.23-rc - 2008-03-24
+  o Major bugfixes:
+    - When a tunneled directory request is made to a directory server
+      that's down, notice after 30 seconds rather than 120 seconds. Also,
+      fail any begindir streams that are pending on it, so they can
+      retry elsewhere. This was causing multi-minute delays on bootstrap.
+
+
 Changes in version 0.2.0.22-rc - 2008-03-18
   o Major features:
     - Enable encrypted directory connections by default for non-relays,
