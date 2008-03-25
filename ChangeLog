@@ -31,6 +31,7 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       fixed in late 2006.  Our new behavior is to call RAND_poll() at
       startup, and to call RAND_poll() when we reseed later only if we
       have a non-buggy OpenSSL version.
+    - Lots of new unit tests.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to

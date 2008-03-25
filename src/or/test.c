@@ -456,14 +456,56 @@ test_crypto(void)
   crypto_free_cipher_env(env1);
   crypto_free_cipher_env(env2);
 
-  /* Test vectors for stream ciphers. */
-  /* XXXX Look up some test vectors for the ciphers and make sure we match. */
+  /* NIST test vector for aes. */
+  env1 = crypto_new_cipher_env(); /* IV starts at 0 */
+  crypto_cipher_set_key(env1, "\x80\x00\x00\x00\x00\x00\x00\x00"
+                              "\x00\x00\x00\x00\x00\x00\x00\x00");
+  crypto_cipher_encrypt_init_cipher(env1);
+  crypto_cipher_encrypt(env1, data1,
+                        "\x00\x00\x00\x00\x00\x00\x00\x00"
+                        "\x00\x00\x00\x00\x00\x00\x00\x00", 16);
+  test_memeq_hex(data1, "0EDD33D3C621E546455BD8BA1418BEC8");
+
+  /* Now test rollover.  All these values are originally from a python
+   * script. */
+  crypto_cipher_set_iv(env1, "\x00\x00\x00\x00\x00\x00\x00\x00"
+                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  memset(data2, 0,  1024);
+  crypto_cipher_encrypt(env1, data1, data2, 32);
+  test_memeq_hex(data1, "335fe6da56f843199066c14a00a40231"
+                        "cdd0b917dbc7186908a6bfb5ffd574d3");
+
+  crypto_cipher_set_iv(env1, "\x00\x00\x00\x00\xff\xff\xff\xff"
+                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  memset(data2, 0,  1024);
+  crypto_cipher_encrypt(env1, data1, data2, 32);
+  test_memeq_hex(data1, "e627c6423fa2d77832a02b2794094b73"
+                        "3e63c721df790d2c6469cc1953a3ffac");
+
+  crypto_cipher_set_iv(env1, "\xff\xff\xff\xff\xff\xff\xff\xff"
+                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  memset(data2, 0,  1024);
+  crypto_cipher_encrypt(env1, data1, data2, 32);
+  test_memeq_hex(data1, "2aed2bff0de54f9328efd070bf48f70a"
+                        "0EDD33D3C621E546455BD8BA1418BEC8");
+
+  /* Now check rollover on inplace cipher. */
+  crypto_cipher_set_iv(env1, "\xff\xff\xff\xff\xff\xff\xff\xff"
+                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  crypto_cipher_crypt_inplace(env1, data2, 64);
+  test_memeq_hex(data2, "2aed2bff0de54f9328efd070bf48f70a"
+                        "0EDD33D3C621E546455BD8BA1418BEC8"
+                        "93e2c5243d6839eac58503919192f7ae"
+                        "1908e67cafa08d508816659c2e693191");
+  crypto_cipher_set_iv(env1, "\xff\xff\xff\xff\xff\xff\xff\xff"
+                             "\xff\xff\xff\xff\xff\xff\xff\xff");
+  crypto_cipher_crypt_inplace(env1, data2, 64);
+  test_assert(tor_mem_is_zero(data2, 64));
+  crypto_free_cipher_env(env1);
 
   /* Test SHA-1 with a test vector from the specification. */
   i = crypto_digest(data1, "abc", 3);
-  test_memeq(data1,
-             "\xA9\x99\x3E\x36\x47\x06\x81\x6A\xBA\x3E\x25\x71\x78"
-             "\x50\xC2\x6C\x9C\xD0\xD8\x9D", 20);
+  test_memeq_hex(data1, "A9993E364706816ABA3E25717850C26C9CD0D89D");
 
   /* Test HMAC-SHA-1 with test cases from RFC2202. */
   {
@@ -768,6 +810,11 @@ test_util(void)
   test_eq(-1, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
   tor_gettimeofday(&start);
 
+  /* Tests for corner cases of strl operations */
+  test_eq(5, strlcpy(buf, "Hello", 0));
+  strlcpy(buf, "Hello", sizeof(buf));
+  test_eq(10, strlcat(buf, "Hello", 5));
+
   /* Test tor_strstrip() */
   strlcpy(buf, "Testing 1 2 3", sizeof(buf));
   tor_strstrip(buf, ",!");
@@ -996,7 +1043,7 @@ test_util(void)
     test_eq_ptr(eat_whitespace(s), s+5);
   }
 
-  /* Test memmem */
+  /* Test memmem and memstr */
   {
     const char *haystack = "abcde";
     tor_assert(!tor_memmem(haystack, 5, "ef", 2));
@@ -1004,6 +1051,9 @@ test_util(void)
     test_eq_ptr(tor_memmem(haystack, 5, "cde", 3), haystack + 2);
     haystack = "ababcad";
     test_eq_ptr(tor_memmem(haystack, 7, "abc", 3), haystack + 2);
+    test_eq_ptr(tor_memstr(haystack, 7, "abc"), haystack + 2);
+    test_assert(!tor_memstr(haystack, 7, "fe"));
+    test_assert(!tor_memstr(haystack, 7, "longerthantheoriginal"));
   }
 
   /* Test wrap_string */

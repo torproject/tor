@@ -142,6 +142,29 @@ extern int have_failed;
     return;                                                     \
   } STMT_END
 
+#define test_memeq_hex(expr1, hex)                                      \
+  STMT_BEGIN                                                            \
+    const void *_test_v1 = (expr1);                                     \
+    const char *_test_v2 = (hex);                                       \
+    size_t _len_v2 = strlen(_test_v2);                                  \
+    char *mem2 = tor_malloc(_len_v2/2);                                 \
+    tor_assert((_len_v2 & 1) == 0);                                     \
+    base16_decode(mem2, _len_v2/2, _test_v2, _len_v2);                  \
+    if (!memcmp(mem2, _test_v1, _len_v2/2)) {                           \
+      printf("."); fflush(stdout); } else {                             \
+      char *mem1 = tor_malloc(_len_v2)+1;                               \
+      base16_encode(mem1, _len_v2+1, _test_v1, _len_v2/2);              \
+      printf("\nFile %s: line %d (%s): Assertion failed: (%s==%s)\n"    \
+             "      %s != %s\n",                                        \
+             _SHORT_FILE_,                                              \
+             __LINE__,                                                  \
+             PRETTY_FUNCTION,                                           \
+             #expr1, _test_v2, mem1, _test_v2);                         \
+      return;                                                           \
+    }                                                                   \
+    tor_free(mem2);                                                     \
+  STMT_END
+
 #define test_memneq(expr1, expr2, len)                          \
   STMT_BEGIN                                                    \
    void *_test_v1=(expr1), *_test_v2=(expr2);                   \
