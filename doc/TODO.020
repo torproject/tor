@@ -1,0 +1,12 @@
+
+(Remember to include both the revision number _AND_ an abbreviated
+description of the patch.)
+
+Backport items for 0.2.0:
+  - r14204: start policy refcounts at 1, not 2.
+  - r14205: free authority certs on exit.
+
+Backport for 0.2.0 once better tested:
+
+
+
