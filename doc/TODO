@@ -21,22 +21,14 @@ I       - ioerror claims
 
 External constraints:
   - Mid Feb, blocking-resistance roll-out
-M   - Adequately stable Vidalia snapshot, or 0.1.0 release
 R   - Write some text for it
-S   - New Tor Browser Bundle with above Vidalia
-
-  - Late Feb, NGO in a box
-    - Have 0.2.0 beta or rc out
-
-  - Mid Mar, upnp
-S   - Pick a suitable-looking upnp library and begin integrating it
 
   - Mid Apr
     - More Torbrowser work:
       o Get polipo into it
 ?     - Resolve branding issue
       o Make Torbrowser website
-R     - Get it integrated into the Tor download pages
+      o Get it integrated into the Tor download pages
 S   - Finish first cut at integrating upnp lib into Vidalia
 R   - get the geoip files onto some bridge relays, and gather stats
 
