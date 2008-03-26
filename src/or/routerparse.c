@@ -113,16 +113,21 @@ typedef enum {
  * of a keyword, a line full of arguments, and a binary object.  The
  * arguments and object are both optional, depending on the keyword
  * type.
+ *
+ * This structure is only allocated in memareas; do not allocate it on
+ * the heap, or token_free() won't work.
  */
 typedef struct directory_token_t {
   directory_keyword tp;        /**< Type of the token. */
-  unsigned int in_area:1;/**<XXXX021 remove need for this. */
-  int n_args : 31;             /**< Number of elements in args */
+  int n_args:30;               /**< Number of elements in args */
   char **args;                 /**< Array of arguments from keyword line. */
+  
   char *object_type;           /**< -----BEGIN [object_type]-----*/
   size_t object_size;          /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
-  crypto_pk_env_t *key;        /**< For public keys only. */
+
+  crypto_pk_env_t *key;        /**< For public keys only.  Heap-allocated. */
+
   char *error;                 /**< For _ERR tokens only. */
 } directory_token_t;
 
@@ -1870,7 +1875,7 @@ networkstatus_v2_parse_from_string(const char *s)
 
   area = memarea_new(8192);
   eos = find_start_of_next_routerstatus(s);
-  if (tokenize_string(area,s, eos, tokens, netstatus_token_table,0)) {
+  if (tokenize_string(area, s, eos, tokens, netstatus_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing network-status header.");
     goto err;
   }
@@ -1974,7 +1979,7 @@ networkstatus_v2_parse_from_string(const char *s)
   memarea_clear(area);
   while (!strcmpstart(s, "r ")) {
     routerstatus_t *rs;
-    if ((rs = routerstatus_parse_entry_from_string(NULL, &s, tokens, NULL, NULL, 0)))
+    if ((rs = routerstatus_parse_entry_from_string(area, &s, tokens, NULL, NULL, 0)))
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);
@@ -2661,35 +2666,20 @@ assert_addr_policy_ok(smartlist_t *lst)
 static void
 token_free(directory_token_t *tok)
 {
-  int i;
   tor_assert(tok);
   if (tok->key)
     crypto_free_pk_env(tok->key);
-
-  if (! tok->in_area) {
-    if (tok->args) {
-      for (i = 0; i < tok->n_args; ++i) {
-        tor_free(tok->args[i]);
-      }
-      tor_free(tok->args);
-    }
-    tor_free(tok->object_type);
-    tor_free(tok->object_body);
-    tor_free(tok->error);
-    tor_free(tok);
-  }
 }
 
-#define ALLOC_ZERO(sz) (area?memarea_alloc_zero(area,sz):tor_malloc_zero(sz))
-#define ALLOC(sz) (area?memarea_alloc(area,sz):tor_malloc(sz))
-#define STRDUP(str) (area?memarea_strdup(area,str):tor_strdup(str))
-#define STRNDUP(str,n) (area?memarea_strndup(area,(str),(n)):tor_strndup((str),(n)))
+#define ALLOC_ZERO(sz) memarea_alloc_zero(area,sz)
+#define ALLOC(sz) memarea_alloc(area,sz)
+#define STRDUP(str) memarea_strdup(area,str)
+#define STRNDUP(str,n) memarea_strndup(area,(str),(n))
 
 #define RET_ERR(msg)                                               \
   STMT_BEGIN                                                       \
     if (tok) token_free(tok);                                      \
     tok = ALLOC_ZERO(sizeof(directory_token_t));                   \
-    tok->in_area = area?1:0;                                       \
     tok->tp = _ERR;                                                \
     tok->error = STRDUP(msg);                                      \
     goto done_tokenizing;                                          \
@@ -2746,15 +2736,15 @@ get_next_token(memarea_t *area,
                const char **s, const char *eos, token_rule_t *table)
 {
   const char *next, *eol, *obstart;
-  int i, j, allocated;
   size_t obname_len;
+  int i;
   directory_token_t *tok;
   obj_syntax o_syn = NO_OBJ;
   char ebuf[128];
   const char *kwd = "";
 
+  tor_assert(area);
   tok = ALLOC_ZERO(sizeof(directory_token_t));
-  tok->in_area = area?1:0;
   tok->tp = _ERR;
 
   /* Set *s to first token, eol to end-of-line, next to after first token */
@@ -2792,48 +2782,32 @@ get_next_token(memarea_t *area,
         tok->n_args = 1;
       } else {
         /* This keyword takes multiple arguments. */
-        if (area) {
-          char *mem = memarea_strndup(area, *s, eol-*s);
-          char *cp = mem;
+        /* XXXX021 this code is still too complicated. */
+        char *mem = memarea_strndup(area, *s, eol-*s);
+        char *cp = mem;
+        int j = 0;
+        while (*cp) {
+          j++;
+          cp = (char*)find_whitespace(cp);
+          if (!cp || !*cp)
+            break;
+          cp = (char*)eat_whitespace(cp);
+        }
+        tok->n_args = j;
+        if (tok->n_args) {
+          tok->args = memarea_alloc(area, sizeof(char*)*tok->n_args);
+          cp = mem;
           j = 0;
           while (*cp) {
-            j++;
+            tok->args[j++] = cp;
             cp = (char*)find_whitespace(cp);
-            if (!cp || !*cp)
-              break;
-            cp = (char*)eat_whitespace(cp);
-          }
-          tok->n_args = j;
-          if (tok->n_args) {
-            tok->args = memarea_alloc(area, sizeof(char*)*tok->n_args);
-            cp = mem;
-            j = 0;
-            while (*cp) {
-              tok->args[j++] = cp;
-              cp = (char*)find_whitespace(cp);
               if (!cp || !*cp)
                 break;
               *cp++ = '\0';
               cp = (char*)eat_whitespace(cp);
-            }
           }
-          *s = eol;
-        } else {
-          /*XXXX021 make this needless. */
-          j = 0;
-          allocated = 16;
-          tok->args = tor_malloc(sizeof(char*)*allocated);
-          while (*s < eol) { /* While not at eol, store the next token */
-            if (j == allocated) {
-              allocated *= 2;
-              tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
-            }
-            tok->args[j++] = tor_strndup(*s, next-*s);
-            *s = eat_whitespace_eos_no_nl(next, eol); /* eat intra-line ws */
-            next = find_whitespace_eos(*s, eol); /* find end of token at *s */
-          }
-          tok->n_args = j;
         }
+        *s = eol;
       }
       if (tok->n_args < table[i].min_args) {
         tor_snprintf(ebuf, sizeof(ebuf), "Too few arguments to %s", kwd);
@@ -2936,6 +2910,7 @@ tokenize_string(memarea_t *area,
   int i;
   int first_nonannotation;
   int prev_len = smartlist_len(out);
+  tor_assert(area);
 
   s = &start;
   if (!end)
