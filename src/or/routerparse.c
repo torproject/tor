@@ -1652,18 +1652,20 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     *end_of_string = eat_whitespace(eos);
   }
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
-  if (area)
-    memarea_drop_all(area);
   smartlist_free(tokens);
-  return cert;
- err:
-  authority_cert_free(cert);
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   if (area) {
     DUMP_AREA(area, "authority cert");
     memarea_drop_all(area);
   }
+  return cert;
+ err:
+  authority_cert_free(cert);
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
+  if (area) {
+    DUMP_AREA(area, "authority cert");
+    memarea_drop_all(area);
+  }
   return NULL;
 }
 
