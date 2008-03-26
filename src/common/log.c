@@ -539,6 +539,7 @@ add_temp_log(void)
   set_log_severity_config(LOG_NOTICE, LOG_ERR, s);
   LOCK_LOGS();
   add_stream_log_impl(s, "<temp>", stdout);
+  tor_free(s);
   logfiles->is_temporary = 1;
   UNLOCK_LOGS();
 }
@@ -583,7 +584,8 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
   UNLOCK_LOGS();
 }
 
-/** Close any log handlers added by add_temp_log or marked by mark_logs_temp */
+/** Close any log handlers added by add_temp_log() or marked by
+ * mark_logs_temp(). */
 void
 close_temp_logs(void)
 {
@@ -619,7 +621,7 @@ rollback_log_changes(void)
   close_temp_logs();
 }
 
-/** Configure all log handles to be closed by close_temp_logs */
+/** Configure all log handles to be closed by close_temp_logs(). */
 void
 mark_logs_temp(void)
 {
