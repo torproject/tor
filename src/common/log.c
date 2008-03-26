@@ -839,9 +839,13 @@ parse_log_severity_config(const char **cfg_ptr,
       sev_lo = tor_strndup(cfg, space-cfg);
       sev_hi = tor_strdup("ERR");
     }
-    if ((low = parse_log_level(sev_lo)) == -1)
+    low = parse_log_level(sev_lo);
+    high = parse_log_level(sev_hi);
+    tor_free(sev_lo);
+    tor_free(sev_hi);
+    if (low == -1)
       return -1;
-    if ((high = parse_log_level(sev_hi)) == -1)
+    if (high == -1)
       return -1;
 
     got_anything = 1;
