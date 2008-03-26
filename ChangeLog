@@ -1,3 +1,9 @@
+Changes in version 0.2.0.24-?? - 2008-??-??
+  o Minor bugfixes:
+    - Initialize log mutex before initializing dmalloc.  Otherwise,
+      running with dmalloc would crash. Bugfix on 0.2.0.x-alpha.
+
+
 Changes in version 0.2.0.23-rc - 2008-03-24
   o Major bugfixes:
     - When a tunneled directory request is made to a directory server
