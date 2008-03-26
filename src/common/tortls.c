@@ -622,7 +622,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 
 #ifdef V2_HANDSHAKE_SERVER
 /** Return true iff the cipher list suggested by the client for <b>ssl</b> is
- * a list that indicates that the client know how to do the v2 TLS connection
+ * a list that indicates that the client knows how to do the v2 TLS connection
  * handshake. */
 static int
 tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
@@ -666,7 +666,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
     }
     s = smartlist_join_strings(elts, ":", 0, NULL);
     log_info(LD_NET, "Got a non-version-1 cipher list from %s.  It is: '%s'",
-             s, address);
+             address, s);
     tor_free(s);
     smartlist_free(elts);
   }
