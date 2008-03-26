@@ -11,6 +11,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Fix the implementation of ClientDNSRejectInternalAddresses so that it
       actually works, and doesn't warn about every single reverse lookup.
       Fixes the other part of bug 617.  Bugfix on 0.2.0.1-alpha.
+    - Initialize log mutex before initializing dmalloc.  Otherwise,
+      running with dmalloc would crash. Bugfix on 0.2.0.x-alpha.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
