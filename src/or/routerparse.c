@@ -3311,6 +3311,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   smartlist_t *versions;
   char public_key_hash[DIGEST_LEN];
   char test_desc_id[DIGEST_LEN];
+  memarea_t *area = NULL;
   tor_assert(desc);
   /* Check if desc starts correctly. */
   if (strncmp(desc, "rendezvous-service-descriptor ",
@@ -3332,7 +3333,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   else
     eos = eos + 1;
   /* Tokenize descriptor. */
-  if (tokenize_string(NULL, desc, eos, tokens, desc_token_table, 0)) {
+  area = memarea_new(4096);
+  if (tokenize_string(area, desc, eos, tokens, desc_token_table, 0)) {
     log_warn(LD_REND, "Error tokenizing descriptor.");
     goto err;
   }
@@ -3428,9 +3430,9 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                "type MESSAGE");
       goto err;
     }
-    *intro_points_encrypted_out = tok->object_body;
+    *intro_points_encrypted_out = tor_memdup(tok->object_body,
+                                             tok->object_size);
     *intro_points_encrypted_size_out = tok->object_size;
-    tok->object_body = NULL; /* Prevent free. */
   } else {
     *intro_points_encrypted_out = NULL;
     *intro_points_encrypted_size_out = 0;
@@ -3461,6 +3463,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
+  if (area)
+    memarea_drop_all(area);
   *parsed_out = result;
   if (result)
     return 0;
@@ -3489,6 +3493,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   extend_info_t *info;
   struct in_addr ip;
   int result, num_ok=1;
+  memarea_t *area = NULL;
   tor_assert(parsed);
   /** Function may only be invoked once. */
   tor_assert(!parsed->intro_nodes);
@@ -3516,6 +3521,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   current_ipo = &intro_points_encrypted;
   tokens = smartlist_create();
   parsed->intro_nodes = smartlist_create();
+  area = memarea_new(4096);
   while (!strcmpstart(*current_ipo, "introduction-point ")) {
     /* Determine end of string. */
     const char *eos = strstr(*current_ipo, "\nintroduction-point ");
@@ -3526,8 +3532,9 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     /* Free tokens and clear token list. */
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_clear(tokens);
+    memarea_clear(area);
     /* Tokenize string. */
-    if (tokenize_string(NULL, *current_ipo, eos, tokens, ipo_token_table, 0)) {
+    if (tokenize_string(area, *current_ipo, eos, tokens, ipo_token_table, 0)) {
       log_warn(LD_REND, "Error tokenizing introduction point.");
       goto err;
     }
@@ -3594,6 +3601,8 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   /* Free tokens and clear token list. */
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
+  if (area)
+    memarea_drop_all(area);
 
   return result;
 }
