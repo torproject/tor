@@ -619,7 +619,6 @@ test_crypto(void)
   test_eq(15, crypto_pk_private_decrypt(pk2, data3, data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
 
-
   /* Now try signing. */
   strlcpy(data1, "Ossifrage", 1024);
   test_eq(128, crypto_pk_private_sign(pk1, data2, data1, 10));

@@ -121,7 +121,7 @@ typedef struct directory_token_t {
   directory_keyword tp;        /**< Type of the token. */
   int n_args:30;               /**< Number of elements in args */
   char **args;                 /**< Array of arguments from keyword line. */
-  
+
   char *object_type;           /**< -----BEGIN [object_type]-----*/
   size_t object_size;          /**< Bytes in object_body */
   char *object_body;           /**< Contents of object, base64-decoded. */
@@ -1979,7 +1979,8 @@ networkstatus_v2_parse_from_string(const char *s)
   memarea_clear(area);
   while (!strcmpstart(s, "r ")) {
     routerstatus_t *rs;
-    if ((rs = routerstatus_parse_entry_from_string(area, &s, tokens, NULL, NULL, 0)))
+    if ((rs = routerstatus_parse_entry_from_string(area, &s, tokens,
+                                                   NULL, NULL, 0)))
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);

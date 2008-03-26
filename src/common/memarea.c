@@ -209,3 +209,4 @@ memarea_assert_ok(memarea_t *area)
     tor_assert(chunk->next_mem <= chunk->u.mem+chunk->mem_size+MEMAREA_ALIGN);
   }
 }
+

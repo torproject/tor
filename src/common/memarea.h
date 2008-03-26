@@ -20,3 +20,4 @@ char *memarea_strndup(memarea_t *area, const char *s, size_t n);
 void memarea_assert_ok(memarea_t *area);
 
 #endif
+
