@@ -197,6 +197,22 @@ memarea_strndup(memarea_t *area, const char *s, size_t n)
   return result;
 }
 
+/** Set <b>allocated_out</b> to the number of bytes allocated in <b>area</b>,
+ * and <b>used_out</b> to the number of bytes currently used. */
+void
+memarea_get_stats(memarea_t *area, size_t *allocated_out, size_t *used_out)
+{
+  size_t a = 0, u = 0;
+  memarea_chunk_t *chunk;
+  for (chunk = area->first; chunk; chunk = chunk->next_chunk) {
+    a += CHUNK_HEADER_SIZE + chunk->mem_size;
+    tor_assert(chunk->next_mem >= chunk->u.mem);
+    u += CHUNK_HEADER_SIZE + (chunk->next_mem - chunk->u.mem);
+  }
+  *allocated_out = a;
+  *used_out = u;
+}
+
 /** Assert that <b>area</b> is okay. */
 void
 memarea_assert_ok(memarea_t *area)

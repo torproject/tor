@@ -17,6 +17,8 @@ void *memarea_alloc_zero(memarea_t *area, size_t sz);
 void *memarea_memdup(memarea_t *area, const void *s, size_t n);
 char *memarea_strdup(memarea_t *area, const char *s);
 char *memarea_strndup(memarea_t *area, const char *s, size_t n);
+void memarea_get_stats(memarea_t *area,
+                       size_t *allocated_out, size_t *used_out);
 void memarea_assert_ok(memarea_t *area);
 
 #endif

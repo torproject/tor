@@ -446,6 +446,19 @@ static int check_signature_token(const char *digest,
 static crypto_pk_env_t *find_dir_signing_key(const char *str, const char *eos);
 static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 
+#undef DEBUG_AREA_ALLOC
+
+#ifdef DEBUG_AREA_ALLOC
+#define DUMP_AREA(a,name) STMT_BEGIN                              \
+  size_t alloc=0, used=0;                                         \
+  memarea_get_stats((a),&alloc,&used);                            \
+  log_debug(LD_MM, "Area for %s has %lu allocated; using %lu.",   \
+            name, (unsigned long)alloc, (unsigned long)used);     \
+  STMT_END
+#else
+#define DUMP_AREA(a,name) STMT_NIL
+#endif
+
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, -1 on failure.
  */
@@ -715,8 +728,10 @@ router_parse_directory(const char *str)
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "v1 directory");
     memarea_drop_all(area);
+  }
   return r;
 }
 
@@ -778,8 +793,10 @@ router_parse_runningrouters(const char *str)
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "v1 running-routers");
     memarea_drop_all(area);
+  }
   return r;
 }
 
@@ -824,7 +841,10 @@ find_dir_signing_key(const char *str, const char *eos)
 
  done:
   if (tok) token_free(tok);
-  if (area) memarea_drop_all(area);
+  if (area) {
+    DUMP_AREA(area, "dir-signing-key token");
+    memarea_drop_all(area);
+  }
   return key;
 }
 
@@ -1086,7 +1106,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
     --end;
 
-  area = memarea_new(8192);
+  area = memarea_new(4096);
   tokens = smartlist_create();
   if (prepend_annotations) {
     if (tokenize_string(area,prepend_annotations,NULL,tokens,
@@ -1367,8 +1387,10 @@ router_parse_entry_from_string(const char *s, const char *end,
   if (exit_policy_tokens) {
     smartlist_free(exit_policy_tokens);
   }
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "routerinfo");
     memarea_drop_all(area);
+  }
   return router;
 }
 
@@ -1487,8 +1509,10 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "extrainfo");
     memarea_drop_all(area);
+  }
   return extrainfo;
 }
 
@@ -1635,8 +1659,10 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
  err:
   authority_cert_free(cert);
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "authority cert");
     memarea_drop_all(area);
+  }
   smartlist_free(tokens);
   return NULL;
 }
@@ -1824,8 +1850,10 @@ routerstatus_parse_entry_from_string(memarea_t *area,
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_clear(tokens);
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "routerstatus entry");
     memarea_clear(area);
+  }
   *s = eos;
 
   return rs;
@@ -2017,8 +2045,10 @@ networkstatus_v2_parse_from_string(const char *s)
   smartlist_free(tokens);
   SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
   smartlist_free(footer_tokens);
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "v2 networkstatus");
     memarea_drop_all(area);
+  }
   return ns;
 }
 
@@ -2392,8 +2422,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
     smartlist_free(footer_tokens);
   }
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "v3 networkstatus");
     memarea_drop_all(area);
+  }
   if (rs_area)
     memarea_drop_all(rs_area);
 
@@ -2506,8 +2538,10 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "detached signatures");
     memarea_drop_all(area);
+  }
   return sigs;
 }
 
@@ -2541,7 +2575,7 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
   }
 
   eos = cp + strlen(cp);
-  area = memarea_new(512);
+  area = memarea_new(128);
   tok = get_next_token(area, &cp, eos, routerdesc_token_table);
   if (tok->tp == _ERR) {
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
@@ -2559,8 +2593,10 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
   r = NULL;
  done:
   token_free(tok);
-  if (area)
+  if (area) {
+    DUMP_AREA(area, "policy item");
     memarea_drop_all(area);
+  }
   return r;
 }
 
