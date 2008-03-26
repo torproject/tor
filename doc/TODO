@@ -131,12 +131,6 @@ R - bug: if we launch using bridges, and then stop using bridges, we
   . make it easier to set up a private tor network on your own computer
     is very hard.
 R   . FAQ entry which is wrong
-  o Make BEGIN_DIR mandatory for asking questions of bridge authorities?
-    (but only for bridge descriptors. not for ordinary cache stuff.)
-    o Implement connection_dir_is_encrypted().
-    o set up a filter to not answer any bridge descriptors on a
-      non-encrypted request
-  o write a tor-gencert man page
 
 N . geoip caching and publishing for bridges
     d Track consecutive time up, not time since last-forgotten IP.
@@ -151,9 +145,6 @@ R - bridge communities
       - man page entries for Alternate*Authority config options
 
 Things we'd like to do in 0.2.0.x:
-  o if we notice a cached-status directory and we're not serving v2 dir
-    info and it's old enough, delete it.
-     o same with cached-routers*.
 N - document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline.
 R   - then document the bridge user download timeline.
@@ -196,6 +187,9 @@ N       - Event when new consensus arrives
     . 111: Prioritize local traffic over relayed.
 R     - Merge into tor-spec.txt.
 
+=======================================================================
+
+Planned for 0.2.1.x:
   - Refactoring:
     . Make cells get buffered on circuit, not on the or_conn.
       . Switch to pool-allocation for cells?
@@ -216,16 +210,11 @@ N       - Find more ways to test this.
     . Document transport and natdport in a good HOWTO.
 N   - Quietly document NT Service options: revise (or create) FAQ entry
 
-R - make sure you solved bug 556
-
 P - Make documentation realize that location of system configuration file
     will depend on location of system defaults, and isn't always /etc/torrc.
 P - Figure out why dll's compiled in mingw don't work right in WinXP.
 P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 
-=======================================================================
-
-Planned for 0.2.1.x:
   - Things that have been bugging Nick
     - Make better use of multi-core machines: Do AES crypto and
       compression in worker threads
