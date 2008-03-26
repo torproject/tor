@@ -42,6 +42,7 @@ const char tor_svn_revision[] = "";
 #include "test.h"
 #include "torgzip.h"
 #include "mempool.h"
+#include "memarea.h"
 
 int have_failed = 0;
 
@@ -3365,6 +3366,97 @@ test_util_mempool(void)
 }
 
 static void
+test_util_memarea(void)
+{
+  memarea_t *area = memarea_new(1024);
+  char *p1, *p2, *p3, *p1_orig;
+  int i;
+  test_assert(area);
+
+  p1_orig = p1 = memarea_alloc(area,64);
+  p2 = memarea_alloc_zero(area,52);
+  p3 = memarea_alloc(area,11);
+
+  test_assert(memarea_owns_ptr(area, p1));
+  test_assert(memarea_owns_ptr(area, p2));
+  test_assert(memarea_owns_ptr(area, p3));
+  /* Make sure we left enough space. */
+  test_assert(p1+64 <= p2);
+  test_assert(p2+52 <= p3);
+  /* Make sure we aligned. */
+  test_eq(((uintptr_t)p1) % sizeof(void*), 0);
+  test_eq(((uintptr_t)p2) % sizeof(void*), 0);
+  test_eq(((uintptr_t)p3) % sizeof(void*), 0);
+  test_assert(!memarea_owns_ptr(area, p3+8192));
+  test_assert(!memarea_owns_ptr(area, p3+30));
+  test_assert(tor_mem_is_zero(p2, 52));
+  /* Make sure we don't overalign. */
+  p1 = memarea_alloc(area, 1);
+  p2 = memarea_alloc(area, 1);
+  test_eq(p1+sizeof(void*), p2);
+  {
+    void *ptr = tor_malloc(64);
+    test_assert(!memarea_owns_ptr(area, ptr));
+    tor_free(ptr);
+  }
+
+  /* memarea_memdup */
+  {
+    char *ptr = tor_malloc(64);
+    crypto_rand(ptr, 64);
+    p1 = memarea_memdup(area, ptr, 64);
+    test_assert(p1 != ptr);
+    test_memeq(p1, ptr, 64);
+    tor_free(ptr);
+  }
+
+  /* memarea_strdup. */
+  p1 = memarea_strdup(area,"");
+  p2 = memarea_strdup(area, "abcd");
+  test_assert(p1);
+  test_assert(p2);
+  test_streq(p1, "");
+  test_streq(p2, "abcd");
+
+  /* memarea_strndup. */
+  {
+    const char *s = "Ad ogni porta batte la morte e grida: il nome!";
+    /* (From Turandot, act 3.) */
+    size_t len = strlen(s);
+    p1 = memarea_strndup(area, s, 1000);
+    p2 = memarea_strndup(area, s, 10);
+    test_streq(p1, s);
+    test_assert(p2 >= p1 + len + 1);
+    test_memeq(s, p2, 10);
+    test_eq(p2[10], '\0');
+    p3 = memarea_strndup(area, s, len);
+    test_streq(p3, s);
+    p3 = memarea_strndup(area, s, len-1);
+    test_memeq(s, p3, len-1);
+    test_eq(p3[len-1], '\0');
+  }
+
+  memarea_clear(area);
+  p1 = memarea_alloc(area, 1);
+  test_eq(p1, p1_orig);
+  memarea_clear(area);
+
+  /* Check for running over an area's size. */
+  for (i = 0; i < 512; ++i) {
+    p1 = memarea_alloc(area, crypto_rand_int(5)+1);
+    test_assert(memarea_owns_ptr(area, p1));
+  }
+  memarea_assert_ok(area);
+  /* Make sure we can allocate a too-big object. */
+  p1 = memarea_alloc_zero(area, 9000);
+  p2 = memarea_alloc_zero(area, 16);
+  test_assert(memarea_owns_ptr(area, p1));
+  test_assert(memarea_owns_ptr(area, p2));
+
+  memarea_drop_all(area);
+}
+
+static void
 test_util_datadir(void)
 {
   char buf[1024];
@@ -3715,6 +3807,7 @@ static struct {
   SUBENT(util, smartlist),
   SUBENT(util, bitarray),
   SUBENT(util, mempool),
+  SUBENT(util, memarea),
   SUBENT(util, strmap),
   SUBENT(util, control_formats),
   SUBENT(util, pqueue),

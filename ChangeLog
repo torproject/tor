@@ -31,6 +31,10 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       fixed in late 2006.  Our new behavior is to call RAND_poll() at
       startup, and to call RAND_poll() when we reseed later only if we
       have a non-buggy OpenSSL version.
+    - Speed up parsing and cut down on memory fragmentation by using
+      stack-style allocations for parsing directory objects.  Previously,
+      this accounted for over 40% of allocations from within Tor's code
+      on a typical directory cache.
     - Lots of new unit tests.
 
   o Code simplifications and refactoring:

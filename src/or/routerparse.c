@@ -13,6 +13,7 @@ const char routerparse_c_id[] =
  **/
 
 #include "or.h"
+#include "memarea.h"
 
 /****************************************************************************/
 
@@ -115,7 +116,8 @@ typedef enum {
  */
 typedef struct directory_token_t {
   directory_keyword tp;        /**< Type of the token. */
-  int n_args;                  /**< Number of elements in args */
+  unsigned int in_area:1;/**<XXXX021 remove need for this. */
+  int n_args : 31;             /**< Number of elements in args */
   char **args;                 /**< Array of arguments from keyword line. */
   char *object_type;           /**< -----BEGIN [object_type]-----*/
   size_t object_size;          /**< Bytes in object_body */
@@ -422,11 +424,13 @@ static directory_token_t *find_first_by_keyword(smartlist_t *s,
 #define TS_ANNOTATIONS_OK 1
 #define TS_NOCHECK 2
 #define TS_NO_NEW_ANNOTATIONS 4
-static int tokenize_string(const char *start, const char *end,
+static int tokenize_string(memarea_t *area,
+                           const char *start, const char *end,
                            smartlist_t *out,
                            token_rule_t *table,
                            int flags);
-static directory_token_t *get_next_token(const char **s,
+static directory_token_t *get_next_token(memarea_t *area,
+                                         const char **s,
                                          const char *eos,
                                          token_rule_t *table);
 static int check_signature_token(const char *digest,
@@ -629,6 +633,7 @@ router_parse_directory(const char *str)
   const char *end, *cp;
   smartlist_t *tokens = NULL;
   crypto_pk_env_t *declared_key = NULL;
+  memarea_t *area = memarea_new(8192);
 
   /* XXXX This could be simplified a lot, but it will all go away
    * once pre-0.1.1.8 is obsolete, and for now it's better not to
@@ -649,7 +654,7 @@ router_parse_directory(const char *str)
   }
   ++cp;
   tokens = smartlist_create();
-  if (tokenize_string(cp,strchr(cp,'\0'),tokens,dir_token_table,0)) {
+  if (tokenize_string(area,cp,strchr(cp,'\0'),tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing directory signature"); goto err;
   }
   if (smartlist_len(tokens) != 1) {
@@ -665,8 +670,8 @@ router_parse_directory(const char *str)
     goto err;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
-  smartlist_free(tokens);
-  tokens = NULL;
+  smartlist_clear(tokens);
+  memarea_clear(area);
 
   /* Now try to parse the first part of the directory. */
   if ((end = strstr(str,"\nrouter "))) {
@@ -677,8 +682,7 @@ router_parse_directory(const char *str)
     end = str + strlen(str);
   }
 
-  tokens = smartlist_create();
-  if (tokenize_string(str,end,tokens,dir_token_table,0)) {
+  if (tokenize_string(area,str,end,tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
 
@@ -706,6 +710,8 @@ router_parse_directory(const char *str)
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
+  if (area)
+    memarea_drop_all(area);
   return r;
 }
 
@@ -722,13 +728,15 @@ router_parse_runningrouters(const char *str)
   crypto_pk_env_t *declared_key = NULL;
   smartlist_t *tokens = NULL;
   const char *eos = str + strlen(str);
+  memarea_t *area = NULL;
 
   if (router_get_runningrouters_hash(str, digest)) {
     log_warn(LD_DIR, "Unable to compute digest of running-routers");
     goto err;
   }
+  area = memarea_new(8192);
   tokens = smartlist_create();
-  if (tokenize_string(str,eos,tokens,dir_token_table,0)) {
+  if (tokenize_string(area,str,eos,tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
   }
   tok = smartlist_get(tokens,0);
@@ -765,6 +773,8 @@ router_parse_runningrouters(const char *str)
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
+  if (area)
+    memarea_drop_all(area);
   return r;
 }
 
@@ -777,6 +787,7 @@ find_dir_signing_key(const char *str, const char *eos)
   const char *cp;
   directory_token_t *tok;
   crypto_pk_env_t *key = NULL;
+  memarea_t *area = NULL;
   tor_assert(str);
   tor_assert(eos);
 
@@ -788,10 +799,11 @@ find_dir_signing_key(const char *str, const char *eos)
     return NULL;
   ++cp; /* Now cp points to the start of the token. */
 
-  tok = get_next_token(&cp, eos, dir_token_table);
+  area = memarea_new(1024);
+  tok = get_next_token(area, &cp, eos, dir_token_table);
   if (!tok) {
     log_warn(LD_DIR, "Unparseable dir-signing-key token");
-    return NULL;
+    goto done;
   }
   if (tok->tp != K_DIR_SIGNING_KEY) {
     log_warn(LD_DIR, "Dir-signing-key token did not parse as expected");
@@ -807,6 +819,7 @@ find_dir_signing_key(const char *str, const char *eos)
 
  done:
   if (tok) token_free(tok);
+  if (area) memarea_drop_all(area);
   return key;
 }
 
@@ -1056,6 +1069,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   const char *start_of_annotations, *cp;
   size_t prepend_len = prepend_annotations ? strlen(prepend_annotations) : 0;
   int ok = 1;
+  memarea_t *area = NULL;
 
   tor_assert(!allow_annotations || !prepend_annotations);
 
@@ -1067,9 +1081,10 @@ router_parse_entry_from_string(const char *s, const char *end,
   while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
     --end;
 
+  area = memarea_new(8192);
   tokens = smartlist_create();
   if (prepend_annotations) {
-    if (tokenize_string(prepend_annotations,NULL,tokens,
+    if (tokenize_string(area,prepend_annotations,NULL,tokens,
                         routerdesc_token_table,TS_NOCHECK)) {
       log_warn(LD_DIR, "Error tokenizing router descriptor (annotations).");
       goto err;
@@ -1088,7 +1103,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   if (allow_annotations && start_of_annotations != s) {
-    if (tokenize_string(start_of_annotations,s,tokens,
+    if (tokenize_string(area,start_of_annotations,s,tokens,
                         routerdesc_token_table,TS_NOCHECK)) {
       log_warn(LD_DIR, "Error tokenizing router descriptor (annotations).");
       goto err;
@@ -1106,7 +1121,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     if (prepend_annotations)
       flags |= TS_ANNOTATIONS_OK|TS_NO_NEW_ANNOTATIONS;
 
-    if (tokenize_string(s,end,tokens,routerdesc_token_table, flags)) {
+    if (tokenize_string(area,s,end,tokens,routerdesc_token_table, flags)) {
       log_warn(LD_DIR, "Error tokenizing router descriptor.");
       goto err;
     }
@@ -1196,7 +1211,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   if ((tok = find_first_by_keyword(tokens, A_PURPOSE))) {
-    tor_assert(tok->n_args);
+    tor_assert(tok->n_args != 0);
     router->purpose = router_purpose_from_string(tok->args[0]);
   } else {
     router->purpose = ROUTER_PURPOSE_GENERAL;
@@ -1347,6 +1362,8 @@ router_parse_entry_from_string(const char *s, const char *end,
   if (exit_policy_tokens) {
     smartlist_free(exit_policy_tokens);
   }
+  if (area)
+    memarea_drop_all(area);
   return router;
 }
 
@@ -1366,6 +1383,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   directory_token_t *tok;
   crypto_pk_env_t *key = NULL;
   routerinfo_t *router = NULL;
+  memarea_t *area = NULL;
 
   if (!end) {
     end = s + strlen(s);
@@ -1380,7 +1398,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     return NULL;
   }
   tokens = smartlist_create();
-  if (tokenize_string(s,end,tokens,extrainfo_token_table,0)) {
+  area = memarea_new(8192);
+  if (tokenize_string(area,s,end,tokens,extrainfo_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing extra-info document.");
     goto err;
   }
@@ -1463,6 +1482,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_free(tokens);
   }
+  if (area)
+    memarea_drop_all(area);
   return extrainfo;
 }
 
@@ -1479,6 +1500,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   char *eos;
   size_t len;
   int found;
+  memarea_t *area = NULL;
 
   s = eat_whitespace(s);
   eos = strstr(s, "\n-----END SIGNATURE-----\n");
@@ -1492,7 +1514,8 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   len = eos - s;
 
   tokens = smartlist_create();
-  if (tokenize_string(s, eos, tokens, dir_key_certificate_table, 0) < 0) {
+  area = memarea_new(8192);
+  if (tokenize_string(area,s, eos, tokens, dir_key_certificate_table, 0) < 0) {
     log_warn(LD_DIR, "Error tokenizing key certificate");
     goto err;
   }
@@ -1542,7 +1565,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
 
   tok = find_first_by_keyword(tokens, K_DIR_ADDRESS);
   if (tok) {
-    tor_assert(tok->n_args);
+    tor_assert(tok->n_args != 0);
     if (parse_addr_port(LOG_WARN, tok->args[0], NULL, &cert->addr,
                         &cert->dir_port)<0) {
       log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
@@ -1600,11 +1623,15 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     *end_of_string = eat_whitespace(eos);
   }
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  if (area)
+    memarea_drop_all(area);
   smartlist_free(tokens);
   return cert;
  err:
   authority_cert_free(cert);
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  if (area)
+    memarea_drop_all(area);
   smartlist_free(tokens);
   return NULL;
 }
@@ -1643,7 +1670,8 @@ find_start_of_next_routerstatus(const char *s)
  * make that consensus.
  **/
 static routerstatus_t *
-routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
+routerstatus_parse_entry_from_string(memarea_t *area,
+                                     const char **s, smartlist_t *tokens,
                                      networkstatus_t *vote,
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method)
@@ -1658,7 +1686,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
 
   eos = find_start_of_next_routerstatus(*s);
 
-  if (tokenize_string(*s, eos, tokens, rtrstatus_token_table,0)) {
+  if (tokenize_string(area,*s, eos, tokens, rtrstatus_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing router status");
     goto err;
   }
@@ -1776,8 +1804,7 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
         tor_version_as_new_as(tok->args[0], "0.2.0.8-alpha");
     }
     if (vote_rs) {
-      vote_rs->version = tok->args[0];
-      tok->args[0] = NULL; /* suppress free() */
+      vote_rs->version = tor_strdup(tok->args[0]);
     }
   }
 
@@ -1792,6 +1819,8 @@ routerstatus_parse_entry_from_string(const char **s, smartlist_t *tokens,
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_clear(tokens);
+  if (area)
+    memarea_clear(area);
   *s = eos;
 
   return rs;
@@ -1832,14 +1861,16 @@ networkstatus_v2_parse_from_string(const char *s)
   struct in_addr in;
   directory_token_t *tok;
   int i;
+  memarea_t *area = NULL;
 
   if (router_get_networkstatus_v2_hash(s, ns_digest)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
   }
 
+  area = memarea_new(8192);
   eos = find_start_of_next_routerstatus(s);
-  if (tokenize_string(s, eos, tokens, netstatus_token_table,0)) {
+  if (tokenize_string(area,s, eos, tokens, netstatus_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing network-status header.");
     goto err;
   }
@@ -1857,7 +1888,7 @@ networkstatus_v2_parse_from_string(const char *s)
   tok = find_first_by_keyword(tokens, K_DIR_SOURCE);
   tor_assert(tok);
   tor_assert(tok->n_args >= 3);
-  ns->source_address = tok->args[0]; tok->args[0] = NULL;
+  ns->source_address = tor_strdup(tok->args[0]);
   if (tor_inet_aton(tok->args[1], &in) == 0) {
     log_warn(LD_DIR, "Error parsing network-status source address %s",
              escaped(tok->args[1]));
@@ -1873,7 +1904,7 @@ networkstatus_v2_parse_from_string(const char *s)
 
   tok = find_first_by_keyword(tokens, K_FINGERPRINT);
   tor_assert(tok);
-  tor_assert(tok->n_args);
+  tor_assert(tok->n_args != 0);
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
     log_warn(LD_DIR, "Couldn't decode networkstatus fingerprint %s",
@@ -1882,9 +1913,8 @@ networkstatus_v2_parse_from_string(const char *s)
   }
 
   if ((tok = find_first_by_keyword(tokens, K_CONTACT))) {
-    tor_assert(tok->n_args);
-    ns->contact = tok->args[0];
-    tok->args[0] = NULL;
+    tor_assert(tok->n_args != 0);
+    ns->contact = tor_strdup(tok->args[0]);
   }
 
   tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY);
@@ -1920,16 +1950,14 @@ networkstatus_v2_parse_from_string(const char *s)
       log_warn(LD_DIR, "Missing client-versions on versioning directory");
       goto err;
     }
-    ns->client_versions = tok->args[0];
-    tok->args[0] = NULL;
+    ns->client_versions = tor_strdup(tok->args[0]);
 
     if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) ||
         tok->n_args<1) {
       log_warn(LD_DIR, "Missing server-versions on versioning directory");
       goto err;
     }
-    ns->server_versions = tok->args[0];
-    tok->args[0] = NULL;
+    ns->server_versions = tor_strdup(tok->args[0]);
   }
 
   tok = find_first_by_keyword(tokens, K_PUBLISHED);
@@ -1943,16 +1971,17 @@ networkstatus_v2_parse_from_string(const char *s)
   s = eos;
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_clear(tokens);
+  memarea_clear(area);
   while (!strcmpstart(s, "r ")) {
     routerstatus_t *rs;
-    if ((rs = routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL, 0)))
+    if ((rs = routerstatus_parse_entry_from_string(NULL, &s, tokens, NULL, NULL, 0)))
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, _compare_routerstatus_entries);
   smartlist_uniq(ns->entries, _compare_routerstatus_entries,
                  _free_duplicate_routerstatus_entry);
 
-  if (tokenize_string(s, NULL, footer_tokens, dir_footer_token_table,0)) {
+  if (tokenize_string(area,s, NULL, footer_tokens, dir_footer_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing network-status footer.");
     goto err;
   }
@@ -1982,7 +2011,8 @@ networkstatus_v2_parse_from_string(const char *s)
   smartlist_free(tokens);
   SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
   smartlist_free(footer_tokens);
-
+  if (area)
+    memarea_drop_all(area);
   return ns;
 }
 
@@ -2003,14 +2033,16 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   int ok;
   struct in_addr in;
   int i, inorder, n_signatures = 0;
+  memarea_t *area = NULL, *rs_area = NULL;
 
   if (router_get_networkstatus_v3_hash(s, ns_digest)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
   }
 
+  area = memarea_new(8192);
   end_of_header = find_start_of_next_routerstatus(s);
-  if (tokenize_string(s, end_of_header, tokens,
+  if (tokenize_string(area, s, end_of_header, tokens,
                       is_vote ? networkstatus_token_table :
                                 networkstatus_consensus_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote header.");
@@ -2032,7 +2064,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   tok = find_first_by_keyword(tokens, K_VOTE_STATUS);
   tor_assert(tok);
-  tor_assert(tok->n_args);
+  tor_assert(tok->n_args != 0);
   if (!strcmp(tok->args[0], "vote")) {
     ns->is_vote = 1;
   } else if (!strcmp(tok->args[0], "consensus")) {
@@ -2056,8 +2088,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     tok = find_first_by_keyword(tokens, K_CONSENSUS_METHODS);
     if (tok) {
       for (i=0; i < tok->n_args; ++i)
-        smartlist_add(ns->supported_methods, tok->args[i]);
-      tok->n_args = 0; /* Prevent double free. */
+        smartlist_add(ns->supported_methods, tor_strdup(tok->args[i]));
     } else {
       smartlist_add(ns->supported_methods, tor_strdup("1"));
     }
@@ -2113,25 +2144,22 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   if ((tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS))) {
-    ns->client_versions = tok->args[0];
-    tok->args[0] = NULL;
+    ns->client_versions = tor_strdup(tok->args[0]);
   }
   if ((tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS))) {
-    ns->server_versions = tok->args[0];
-    tok->args[0] = NULL;
+    ns->server_versions = tor_strdup(tok->args[0]);
   }
 
   tok = find_first_by_keyword(tokens, K_KNOWN_FLAGS);
   ns->known_flags = smartlist_create();
   inorder = 1;
   for (i = 0; i < tok->n_args; ++i) {
-    smartlist_add(ns->known_flags, tok->args[i]);
+    smartlist_add(ns->known_flags, tor_strdup(tok->args[i]));
     if (i>0 && strcmp(tok->args[i-1], tok->args[i])>= 0) {
       log_warn(LD_DIR, "%s >= %s", tok->args[i-1], tok->args[i]);
       inorder = 0;
     }
   }
-  tok->n_args = 0; /* suppress free of args members, but not of args itself. */
   if (!inorder) {
     log_warn(LD_DIR, "known-flags not in order");
     goto err;
@@ -2215,13 +2243,15 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   /* Parse routerstatus lines. */
   rs_tokens = smartlist_create();
+  rs_area = memarea_new(512);
   s = end_of_header;
   ns->routerstatus_list = smartlist_create();
 
   while (!strcmpstart(s, "r ")) {
     if (is_vote) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-      if (routerstatus_parse_entry_from_string(&s, tokens, ns, rs, 0))
+      if (routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens, ns,
+                                               rs, 0))
         smartlist_add(ns->routerstatus_list, rs);
       else {
         tor_free(rs->version);
@@ -2229,7 +2259,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     } else {
       routerstatus_t *rs;
-      if ((rs = routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL,
+      if ((rs = routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens,
+                                                     NULL, NULL,
                                                      ns->consensus_method)))
         smartlist_add(ns->routerstatus_list, rs);
     }
@@ -2257,7 +2288,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     ++end_of_footer;
   else
     end_of_footer = s + strlen(s);
-  if (tokenize_string(s, end_of_footer, footer_tokens,
+  if (tokenize_string(area,s, end_of_footer, footer_tokens,
                       networkstatus_vote_footer_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing network-status vote footer.");
     goto err;
@@ -2355,6 +2386,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
     smartlist_free(footer_tokens);
   }
+  if (area)
+    memarea_drop_all(area);
+  if (rs_area)
+    memarea_drop_all(rs_area);
 
   return ns;
 }
@@ -2364,8 +2399,9 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 ns_detached_signatures_t *
 networkstatus_parse_detached_signatures(const char *s, const char *eos)
 {
-  /* XXXX there is too much duplicate code here. */
+  /* XXXX021 there is too much duplicate code here. */
   directory_token_t *tok;
+  memarea_t *area = NULL;
 
   smartlist_t *tokens = smartlist_create();
   ns_detached_signatures_t *sigs =
@@ -2374,7 +2410,8 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   if (!eos)
     eos = s + strlen(s);
 
-  if (tokenize_string(s, eos, tokens,
+  area = memarea_new(8192);
+  if (tokenize_string(area,s, eos, tokens,
                       networkstatus_detached_signature_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing detached networkstatus signatures");
     goto err;
@@ -2463,6 +2500,8 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
+  if (area)
+    memarea_drop_all(area);
   return sigs;
 }
 
@@ -2480,6 +2519,7 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
    * accept and the address:mask/port element. */
   char line[TOR_ADDR_BUF_LEN*2 + 32];
   addr_policy_t *r;
+  memarea_t *area = NULL;
 
   s = eat_whitespace(s);
   if ((*s == '*' || TOR_ISDIGIT(*s)) && assume_action >= 0) {
@@ -2495,7 +2535,8 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
   }
 
   eos = cp + strlen(cp);
-  tok = get_next_token(&cp, eos, routerdesc_token_table);
+  area = memarea_new(512);
+  tok = get_next_token(area, &cp, eos, routerdesc_token_table);
   if (tok->tp == _ERR) {
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
     goto err;
@@ -2512,6 +2553,8 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
   r = NULL;
  done:
   token_free(tok);
+  if (area)
+    memarea_drop_all(area);
   return r;
 }
 
@@ -2620,31 +2663,40 @@ token_free(directory_token_t *tok)
 {
   int i;
   tor_assert(tok);
-  if (tok->args) {
-    for (i = 0; i < tok->n_args; ++i) {
-      tor_free(tok->args[i]);
-    }
-    tor_free(tok->args);
-  }
-  tor_free(tok->object_type);
-  tor_free(tok->object_body);
-  tor_free(tok->error);
   if (tok->key)
     crypto_free_pk_env(tok->key);
-  tor_free(tok);
+
+  if (! tok->in_area) {
+    if (tok->args) {
+      for (i = 0; i < tok->n_args; ++i) {
+        tor_free(tok->args[i]);
+      }
+      tor_free(tok->args);
+    }
+    tor_free(tok->object_type);
+    tor_free(tok->object_body);
+    tor_free(tok->error);
+    tor_free(tok);
+  }
 }
+
+#define ALLOC_ZERO(sz) (area?memarea_alloc_zero(area,sz):tor_malloc_zero(sz))
+#define ALLOC(sz) (area?memarea_alloc(area,sz):tor_malloc(sz))
+#define STRDUP(str) (area?memarea_strdup(area,str):tor_strdup(str))
+#define STRNDUP(str,n) (area?memarea_strndup(area,(str),(n)):tor_strndup((str),(n)))
 
 #define RET_ERR(msg)                                               \
   STMT_BEGIN                                                       \
     if (tok) token_free(tok);                                      \
-    tok = tor_malloc_zero(sizeof(directory_token_t));              \
+    tok = ALLOC_ZERO(sizeof(directory_token_t));                   \
+    tok->in_area = area?1:0;                                       \
     tok->tp = _ERR;                                                \
-    tok->error = tor_strdup(msg);                                  \
+    tok->error = STRDUP(msg);                                      \
     goto done_tokenizing;                                          \
   STMT_END
 
 static INLINE directory_token_t *
-token_check_object(const char *kwd,
+token_check_object(memarea_t *area, const char *kwd,
                    directory_token_t *tok, obj_syntax o_syn)
 {
   char ebuf[128];
@@ -2690,7 +2742,8 @@ token_check_object(const char *kwd,
  * of tokens in <b>table</b>.
  */
 static directory_token_t *
-get_next_token(const char **s, const char *eos, token_rule_t *table)
+get_next_token(memarea_t *area,
+               const char **s, const char *eos, token_rule_t *table)
 {
   const char *next, *eol, *obstart;
   int i, j, allocated;
@@ -2700,16 +2753,8 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
   char ebuf[128];
   const char *kwd = "";
 
-#define RET_ERR(msg)                                               \
-  STMT_BEGIN                                                       \
-    if (tok) token_free(tok);                                      \
-    tok = tor_malloc_zero(sizeof(directory_token_t));              \
-    tok->tp = _ERR;                                                \
-    tok->error = tor_strdup(msg);                                  \
-    goto done_tokenizing;                                          \
-  STMT_END
-
-  tok = tor_malloc_zero(sizeof(directory_token_t));
+  tok = ALLOC_ZERO(sizeof(directory_token_t));
+  tok->in_area = area?1:0;
   tok->tp = _ERR;
 
   /* Set *s to first token, eol to end-of-line, next to after first token */
@@ -2737,29 +2782,58 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
       tok->tp = table[i].v;
       o_syn = table[i].os;
       *s = eat_whitespace_eos_no_nl(next, eol);
-      next = find_whitespace_eos(*s, eol);
+      next = find_whitespace_eos(*s, eol); /* XXXX021 lower this. */
       /* We go ahead whether there are arguments or not, so that tok->args is
        * always set if we want arguments. */
       if (table[i].concat_args) {
         /* The keyword takes the line as a single argument */
-        tok->args = tor_malloc(sizeof(char*));
-        tok->args[0] = tor_strndup(*s,eol-*s); /* Grab everything on line */
+        tok->args = ALLOC(sizeof(char*));
+        tok->args[0] = STRNDUP(*s,eol-*s); /* Grab everything on line */
         tok->n_args = 1;
       } else {
         /* This keyword takes multiple arguments. */
-        j = 0;
-        allocated = 16;
-        tok->args = tor_malloc(sizeof(char*)*allocated);
-        while (*s < eol) { /* While not at eol, store the next token */
-          if (j == allocated) {
-            allocated *= 2;
-            tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
+        if (area) {
+          char *mem = memarea_strndup(area, *s, eol-*s);
+          char *cp = mem;
+          j = 0;
+          while (*cp) {
+            j++;
+            cp = (char*)find_whitespace(cp);
+            if (!cp || !*cp)
+              break;
+            cp = (char*)eat_whitespace(cp);
           }
-          tok->args[j++] = tor_strndup(*s, next-*s);
-          *s = eat_whitespace_eos_no_nl(next, eol); /* eat intra-line ws */
-          next = find_whitespace_eos(*s, eol); /* find end of token at *s */
+          tok->n_args = j;
+          if (tok->n_args) {
+            tok->args = memarea_alloc(area, sizeof(char*)*tok->n_args);
+            cp = mem;
+            j = 0;
+            while (*cp) {
+              tok->args[j++] = cp;
+              cp = (char*)find_whitespace(cp);
+              if (!cp || !*cp)
+                break;
+              *cp++ = '\0';
+              cp = (char*)eat_whitespace(cp);
+            }
+          }
+          *s = eol;
+        } else {
+          /*XXXX021 make this needless. */
+          j = 0;
+          allocated = 16;
+          tok->args = tor_malloc(sizeof(char*)*allocated);
+          while (*s < eol) { /* While not at eol, store the next token */
+            if (j == allocated) {
+              allocated *= 2;
+              tok->args = tor_realloc(tok->args,sizeof(char*)*allocated);
+            }
+            tok->args[j++] = tor_strndup(*s, next-*s);
+            *s = eat_whitespace_eos_no_nl(next, eol); /* eat intra-line ws */
+            next = find_whitespace_eos(*s, eol); /* find end of token at *s */
+          }
+          tok->n_args = j;
         }
-        tok->n_args = j;
       }
       if (tok->n_args < table[i].min_args) {
         tor_snprintf(ebuf, sizeof(ebuf), "Too few arguments to %s", kwd);
@@ -2778,8 +2852,8 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
       tok->tp = _A_UNKNOWN;
     else
       tok->tp = K_OPT;
-    tok->args = tor_malloc(sizeof(char*));
-    tok->args[0] = tor_strndup(*s, eol-*s);
+    tok->args = ALLOC(sizeof(char*));
+    tok->args[0] = STRNDUP(*s, eol-*s);
     tok->n_args = 1;
     o_syn = OBJ_OK;
   }
@@ -2797,7 +2871,7 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
       strcmp_len(eol-5, "-----", 5)) {          /* nuls or invalid endings */
     RET_ERR("Malformed object: bad begin line");
   }
-  tok->object_type = tor_strndup(*s+11, eol-*s-16);
+  tok->object_type = STRNDUP(*s+11, eol-*s-16);
   obname_len = eol-*s-16; /* store objname length here to avoid a strlen() */
   *s = eol+1;    /* Set *s to possible start of object data (could be eos) */
 
@@ -2825,7 +2899,7 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
       RET_ERR("Couldn't parse public key.");
   } else { /* If it's something else, try to base64-decode it */
     int r;
-    tok->object_body = tor_malloc(next-*s); /* really, this is too much RAM. */
+    tok->object_body = ALLOC(next-*s); /* really, this is too much RAM. */
     r = base64_decode(tok->object_body, next-*s, *s, next-*s);
     if (r<0)
       RET_ERR("Malformed object: bad base64-encoded data");
@@ -2834,12 +2908,16 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
   *s = eol;
 
  check_object:
-  tok = token_check_object(kwd, tok, o_syn);
+  tok = token_check_object(area, kwd, tok, o_syn);
 
  done_tokenizing:
   return tok;
 
 #undef RET_ERR
+#undef ALLOC
+#undef ALLOC_ZERO
+#undef STRDUP
+#undef STRNDUP
 }
 
 /** Read all tokens from a string between <b>start</b> and <b>end</b>, and add
@@ -2848,7 +2926,8 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
  * entire string.
  */
 static int
-tokenize_string(const char *start, const char *end, smartlist_t *out,
+tokenize_string(memarea_t *area,
+                const char *start, const char *end, smartlist_t *out,
                 token_rule_t *table, int flags)
 {
   const char **s;
@@ -2864,7 +2943,7 @@ tokenize_string(const char *start, const char *end, smartlist_t *out,
   for (i = 0; i < _NIL; ++i)
     counts[i] = 0;
   while (*s < end && (!tok || tok->tp != _EOF)) {
-    tok = get_next_token(s, end, table);
+    tok = get_next_token(area, s, end, table);
     if (tok->tp == _ERR) {
       log_warn(LD_DIR, "parse error: %s", tok->error);
       token_free(tok);
@@ -3253,7 +3332,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   else
     eos = eos + 1;
   /* Tokenize descriptor. */
-  if (tokenize_string(desc, eos, tokens, desc_token_table, 0)) {
+  if (tokenize_string(NULL, desc, eos, tokens, desc_token_table, 0)) {
     log_warn(LD_REND, "Error tokenizing descriptor.");
     goto err;
   }
@@ -3448,7 +3527,7 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_clear(tokens);
     /* Tokenize string. */
-    if (tokenize_string(*current_ipo, eos, tokens, ipo_token_table, 0)) {
+    if (tokenize_string(NULL, *current_ipo, eos, tokens, ipo_token_table, 0)) {
       log_warn(LD_REND, "Error tokenizing introduction point.");
       goto err;
     }
