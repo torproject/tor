@@ -431,6 +431,8 @@ logs_free_all(void)
     log_free(victim);
   }
   tor_free(appname);
+  tor_mutex_free(log_mutex);
+  log_mutex = NULL;
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list

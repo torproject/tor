@@ -1849,13 +1849,15 @@ tor_free_all(int postfork)
   entry_guards_free_all();
   connection_free_all();
   buf_shrink_freelists(1);
-  policies_free_all();
   if (!postfork) {
     config_free_all();
     router_free_all();
+    policies_free_all();
   }
   free_cell_pool();
-  tor_tls_free_all();
+  if (!postfork) {
+    tor_tls_free_all();
+  }
   /* stuff in main.c */
   smartlist_free(connection_array);
   smartlist_free(closeable_connection_lst);

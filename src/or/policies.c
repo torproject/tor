@@ -446,7 +446,7 @@ typedef struct policy_map_ent_t {
   addr_policy_t *policy;
 } policy_map_ent_t;
 
-static HT_HEAD(policy_map, policy_map_ent_t) policy_root;
+static HT_HEAD(policy_map, policy_map_ent_t) policy_root = HT_INITIALIZER();
 
 /** Return true iff a and b are equal. */
 static INLINE int
@@ -923,5 +923,9 @@ policies_free_all(void)
   authdir_reject_policy = NULL;
   addr_policy_list_free(authdir_invalid_policy);
   authdir_invalid_policy = NULL;
+
+  if (!HT_EMPTY(&policy_root))
+    log_warn(LD_MM, "Still had some address policies cached at shutdown.");
+  HT_CLEAR(policy_map, &policy_root);
 }
 

@@ -314,6 +314,10 @@ tor_tls_free_all(void)
     tor_tls_context_decref(global_tls_context);
     global_tls_context = NULL;
   }
+  if (!HT_EMPTY(&tlsmap_root)) {
+    log_warn(LD_MM, "Still have entries in the tlsmap at shutdown.");
+  }
+  HT_CLEAR(tlsmap, &tlsmap_root);
 }
 
 /** We need to give OpenSSL a callback to verify certificates. This is

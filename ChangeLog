@@ -17,6 +17,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       2. Bugfix on 0.2.0.16-alpha.
     - Free authority certificates on exit, so they don't look like memory
       leaks.  Bugfix on 0.2.0.19-alpha.
+    - Free static hashtables for policy maps and for TLS connections on
+      shutdown, so they don't look like memory leaks.  Bugfix on 0.2.0.x.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
