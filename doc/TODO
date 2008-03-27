@@ -125,7 +125,7 @@ Things Roger would be excited to see:
 
 Nick
   - Finish buffer stuff in libevent; start using it in Tor.
-  - Tors start believing the contents of NETINFO docs.
+  - Tors start believing the contents of NETINFO cells.
   - Get a "use less buffer ram" patch into openssl.
 
 Matt
@@ -163,6 +163,10 @@ Karsten
   - Make a hidden services explanation page with the hidden service
     diagrams. See img/THS-[1-6].png. These need some text to go along
     with them though, so people can follow what's going on.
+  - We should consider a single config option TorPrivateNetwork that
+    turns on all the config options for running a private test tor
+    network. having to keep updating all the tools, and the docs,
+    just isn't working.
 
 =======================================================================
 
@@ -354,16 +358,12 @@ N - router_choose_random_node() has a big pile of args. make it "flags".
   - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
   - configurable timestamp granularity. defaults to 'seconds'.
   - consider making 'safelogging' extend to info-level logs too.
-  - we should consider a single config option TorPrivateNetwork that
-    turns on all the config options for running a private test tor
-    network. having to keep updating all the tools, and the docs,
-    just isn't working.
   - consider whether a single Guard flag lets us distinguish between
     "was good enough to be a guard when we picked it" and "is still
     adequate to be used as a guard even after we've picked it". We should
     write a real proposal for this.
   - make the new tls handshake blocking-resistant.
-  - figure out some way to collect feedback about what countries are using
+  o figure out some way to collect feedback about what countries are using
     bridges, in a way that doesn't screw anonymity too much.
   - let tor dir mirrors proxy connections to the tor download site, so
     if you know a bridge you can fetch the tor software.
