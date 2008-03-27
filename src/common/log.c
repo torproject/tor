@@ -535,10 +535,10 @@ init_logging(void)
  * logs are initialized).
  */
 void
-add_temp_log(void)
+add_temp_log(int min_severity)
 {
   log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
-  set_log_severity_config(LOG_NOTICE, LOG_ERR, s);
+  set_log_severity_config(min_severity, LOG_ERR, s);
   LOCK_LOGS();
   add_stream_log_impl(s, "<temp>", stdout);
   tor_free(s);

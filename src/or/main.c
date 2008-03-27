@@ -1780,12 +1780,21 @@ tor_init(int argc, char *argv[])
   /* We search for the "quiet" option first, since it decides whether we
    * will log anything at all to the command line. */
   for (i=1;i<argc;++i) {
-    if (!strcmp(argv[i], "--quiet"))
+    if (!strcmp(argv[i], "--hush"))
       quiet = 1;
+    if (!strcmp(argv[i], "--quiet"))
+      quiet = 2;
   }
-  if (!quiet) {
-    /* give it somewhere to log to initially */
-    add_temp_log();
+ /* give it somewhere to log to initially */
+  switch (quiet) {
+    case 2:
+      /* no initial logging */
+      break;
+    case 1:
+      add_temp_log(LOG_WARN);
+      break;
+    default:
+      add_temp_log(LOG_NOTICE);
   }
 
   log(LOG_NOTICE, LD_GENERAL, "Tor v%s. This is experimental software. "

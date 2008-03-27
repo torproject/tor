@@ -1343,7 +1343,8 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     } else if (!strcmp(argv[i],"--list-fingerprint") ||
                !strcmp(argv[i],"--verify-config") ||
                !strcmp(argv[i],"--ignore-missing-torrc") ||
-               !strcmp(argv[i],"--quiet")) {
+               !strcmp(argv[i],"--quiet") ||
+               !strcmp(argv[i],"--hush")) {
       i += 1; /* command-line option. ignore it. */
       continue;
     } else if (!strcmp(argv[i],"--nt-service") ||

@@ -130,7 +130,7 @@ int add_callback_log(log_severity_list_t *severity, log_callback cb);
 int get_min_log_level(void);
 void switch_logs_debug(void);
 void logs_free_all(void);
-void add_temp_log(void);
+void add_temp_log(int min_severity);
 void close_temp_logs(void);
 void rollback_log_changes(void);
 void mark_logs_temp(void);

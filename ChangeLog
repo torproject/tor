@@ -47,6 +47,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       this accounted for over 40% of allocations from within Tor's code
       on a typical directory cache.
     - Lots of new unit tests.
+    - New --hush command-line option similar to --quiet.  While --quiet
+      disables all logging to the console on startup, --hush limits the
+      output to messages of warning and error severity.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to
