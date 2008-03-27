@@ -301,13 +301,10 @@ nt_service_main(void)
         do_main_loop();
         break;
       case CMD_LIST_FINGERPRINT:
-        do_list_fingerprint();
-        break;
       case CMD_HASH_PASSWORD:
-        do_hash_password();
-        break;
       case CMD_VERIFY_CONFIG:
-        printf("Configuration was valid\n");
+        log_err(LD_CONFIG, "Unsupported command (--list-fingerint, "
+                "--hash-password, or --verify-config) in NT service.");
         break;
       case CMD_RUN_UNITTESTS:
       default:
