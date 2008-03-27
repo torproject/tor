@@ -55,6 +55,7 @@ Proposals by number:
 130  Version 2 Tor connection protocol [FINISHED]
 131  Help users to verify they are using Tor [NEEDS-REVISION]
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
+133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
 
 
 Proposals by status:
@@ -106,3 +107,4 @@ Proposals by status:
    127  Relaying dirport requests to Tor download site / website
    128  Families of private bridges
    132  A Tor Web Service For Verifying Correct Browser Configuration
+   133  Incorporate Unreachable ORs into the Tor Network
