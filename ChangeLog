@@ -20,8 +20,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Free static hashtables for policy maps and for TLS connections on
       shutdown, so they don't look like memory leaks.  Bugfix on 0.2.0.x.
     - Do not read the configuration file when we've only been told to
-      generate a password hash.  Bugfix on 0.0.9pre5.  Fix based on patch
-      from Sebastian Hahn.
+      generate a password hash.  Fixes bug 643. Bugfix on 0.0.9pre5.  Fix
+      based on patch from Sebastian Hahn.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
