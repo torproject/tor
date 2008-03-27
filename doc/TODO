@@ -9,6 +9,7 @@ S       - Steven claims
 M       - Matt/Mike claims
 J       - Jeff claims
 I       - ioerror claims
+W       - weasel claims
         - Not done
         * Top priority
         . Partially done
@@ -20,13 +21,12 @@ I       - ioerror claims
 =======================================================================
 
 External constraints:
-  - Mid Feb, blocking-resistance roll-out
-R   - Write some text for it
 
   - Mid Apr
     - More Torbrowser work:
       o Get polipo into it
-?     - Resolve branding issue
+I     - Figure out who at Mozilla can give us permission to keep the
+        name Firefox on our Tor Browser Bundle. Get said permission.
       o Make Torbrowser website
       o Get it integrated into the Tor download pages
 S   - Finish first cut at integrating upnp lib into Vidalia
@@ -93,7 +93,7 @@ N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
         - investigate the feasibility of handing connections off to a
           local apache if they don't look like Tor or if they don't
           portknock or whatever.
-R     - Get closer to downloading far fewer descriptors
+W     - Get closer to downloading far fewer descriptors
         - Instrument the code to track how many descriptors we download vs how
           many times we extend a circuit.
         - Write a proposal for how to fetch far fewer descriptors; assess
@@ -118,6 +118,51 @@ I     - Figure out a good PKI, document the design, assess security issues:
           decide to fetch and decide to swap out the old Tor for the new.
       - Do the same for Polipo
       - and for Vidalia itself
+
+=======================================================================
+
+Things Roger would be excited to see:
+
+Nick
+  - Finish buffer stuff in libevent; start using it in Tor.
+  - Tors start believing the contents of NETINFO docs.
+  - Get a "use less buffer ram" patch into openssl.
+
+Matt
+  - Fit Vidalia in 640x480 again.
+  - When user changes the language in Vidalia, have it change right then.
+  - Vidalia should display/edit PlaintextPorts events/config.
+
+Jake
+  - gmail auto responder so you send us an email and we send you a Tor
+    binary. Probably needs a proposal first.
+  - weather.torproject.org should go live.
+  - Learn from Steven how to build/maintain the Tor Browser Bundle.
+  - Learn from Mike how to run SoaT, and try to make that an automated
+    service somewhere.
+  - Keep advocating new Tor servers and working with orgs like Mozilla
+    to let them like Tor.
+  - Start converting critical wiki pages into real Tor wml pages. E.g.,
+    https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
+
+Steven
+  - Write a list of research items Tor would like to see done, for the
+    volunteer page. Pick a few you'd like to work on yourself.
+  - Move proposal 131 or equivalent forward.
+
+Andrew
+  - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
+    so they admit that Torbutton is in them too. Change the download
+    page too.
+  - The OS X bundle screenshots are from forever ago -- they don't
+    include Torbutton, they still say it's tor.eff.org, etc.
+  - Should we still be telling you how to use Safari on OS X for Tor,
+    given all the holes that Torbutton-dev solves on Firefox?
+
+Karsten
+  - Make a hidden services explanation page with the hidden service
+    diagrams. See img/THS-[1-6].png. These need some text to go along
+    with them though, so people can follow what's going on.
 
 =======================================================================
 
@@ -245,7 +290,7 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
       authority for a networkstatus
     - be able to have bridges that aren't in your torrc. save them in
       state file, etc.
-  - router_choose_random_node() has a big pile of args. make it "flags".
+N - router_choose_random_node() has a big pile of args. make it "flags".
   - Consider if we can solve: the Tor client doesn't know what flags
     its bridge has (since it only gets the descriptor), so it can't
     make decisions based on Fast or Stable.
@@ -270,8 +315,7 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Base relative control socket paths on datadir.
     - Make TrackHostExits expire TrackHostExitsExpire seconds after their
        *last* use, not their *first* use.
-  - Plan a switch to polipo.  Perhaps we'll offer two http proxies in
-    the future.
+  - switch out privoxy in the bundles and replace it with polipo.
   - Consider creating special Tor-Polipo-Vidalia test packages,
     requested by Dmitri Vitalev (does torbrowser meet this need?)
   - Create packages for Nokia 800, requested by Chris Soghoian
@@ -318,7 +362,6 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     "was good enough to be a guard when we picked it" and "is still
     adequate to be used as a guard even after we've picked it". We should
     write a real proposal for this.
-  - switch out privoxy in the bundles and replace it with polipo.
   - make the new tls handshake blocking-resistant.
   - figure out some way to collect feedback about what countries are using
     bridges, in a way that doesn't screw anonymity too much.
@@ -332,9 +375,7 @@ P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     purpose==bridge descriptors they have.
   - Clients should estimate their skew as median of skew from servers
     over last N seconds.
-  - Investigate RAM use in Tor servers.
   - Start on the WSAENOBUFS solution.
-  - Start on Windows auto-update for Tor
   - Stuff that weasel wants:
     - Make Tor able to chroot itself
       o allow it to load an entire config file from control interface
@@ -611,7 +652,7 @@ Future versions:
       http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#PrivoxyWeirdSSLPort
 
   - Related tools
-    - Patch privoxy and socks protocol to pass strings to the browser.
+    X Patch privoxy and socks protocol to pass strings to the browser.
 
 =======================================================================
 
@@ -634,13 +675,6 @@ P - Setup repos for redhat and suse rpms & start signing the rpms the
 
 Website:
 J . tor-in-the-media page
-  - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
-    so they admit that Torbutton is in them too. Change the download
-    page too.
-  - The OS X bundle screenshots are from forever ago -- they don't
-    include Torbutton, they still say it's tor.eff.org, etc.
-  - Should we still be telling you how to use Safari on OS X for Tor,
-    given all the holes that Torbutton-dev solves on Firefox?
 P  - Figure out licenses for website material.
     (Phobos reccomends the Open Publication License with Option A at
     http://opencontent.org/openpub/)
@@ -652,7 +686,6 @@ P - figure out a license for the logos and docs we publish (trademark
 figures into this)
     (Phobos reccomends the Open Publication License with Option A at
     http://opencontent.org/openpub/)
-R - make a page with the hidden service diagrams.
 P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
 I - add a page for localizing all tor's components.
   - It would be neat if we had a single place that described _all_ the
