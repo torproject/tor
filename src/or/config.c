@@ -3681,9 +3681,13 @@ options_init_from_torrc(int argc, char **argv)
     }
   }
 
-  cf = load_torrc_from_disk(argc, argv);
-  if (!cf)
-    goto err;
+  if (command == CMD_HASH_PASSWORD) {
+    cf = tor_strdup("");
+  } else {
+    cf = load_torrc_from_disk(argc, argv);
+    if (!cf)
+      goto err;
+  }
 
   retval = options_init_from_string(cf, command, command_arg, &errmsg);
   tor_free(cf);
