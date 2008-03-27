@@ -3535,6 +3535,7 @@ options_init_from_torrc(int argc, char **argv)
   int i, retval;
   int using_default_torrc;
   int ignore_missing_torrc;
+  int ignore_torrc = 0;
   static char **backup_argv;
   static int backup_argc;
 
@@ -3597,11 +3598,12 @@ options_init_from_torrc(int argc, char **argv)
       newoptions->command = CMD_HASH_PASSWORD;
       newoptions->command_arg = tor_strdup( (i < argc-1) ? argv[i+1] : "");
       ++i;
+      ignore_torrc = 1;
     } else if (!strcmp(argv[i],"--verify-config")) {
       newoptions->command = CMD_VERIFY_CONFIG;
     }
   }
-  if (using_default_torrc) {
+  if (using_default_torrc && !ignore_torrc) {
     /* didn't find one, try CONFDIR */
     const char *dflt = get_default_conf_file();
     if (dflt && file_status(dflt) == FN_FILE) {
@@ -3621,16 +3623,20 @@ options_init_from_torrc(int argc, char **argv)
 #endif
     }
   }
-  tor_assert(fname);
-  log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
+  if (!ignore_torrc) {
+    tor_assert(fname);
+    log(LOG_DEBUG, LD_CONFIG, "Opening config file \"%s\"", fname);
 
-  tor_free(torrc_fname);
-  torrc_fname = fname;
+    tor_free(torrc_fname);
+    torrc_fname = fname;
+  }
 
   /* get config lines, assign them */
-  if (file_status(fname) != FN_FILE ||
+  if (ignore_torrc) {
+    cf = tor_strdup("");
+  } else if (file_status(fname) != FN_FILE ||
       !(cf = read_file_to_str(fname,0,NULL))) {
-    if (using_default_torrc == 1 || ignore_missing_torrc ) {
+    if (using_default_torrc == 1 || ignore_missing_torrc) {
       log(LOG_NOTICE, LD_CONFIG, "Configuration file \"%s\" not present, "
           "using reasonable defaults.", fname);
       tor_free(fname); /* sets fname to NULL */
@@ -3640,7 +3646,8 @@ options_init_from_torrc(int argc, char **argv)
           "Unable to open configuration file \"%s\".", fname);
       goto err;
     }
-  } else { /* it opened successfully. use it. */
+  }
+  if (cf) { /* It opened successfully. use it. */
     retval = config_get_lines(cf, &cl);
     tor_free(cf);
     if (retval < 0)
