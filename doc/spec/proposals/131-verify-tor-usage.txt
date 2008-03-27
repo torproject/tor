@@ -125,14 +125,14 @@ Security and resiliency implications:
 
   What attacks are possible?
 
-  If the IP addressed used for this feature moves there will be two
+  If the IP address used for this feature moves there will be two
   consequences:
    - A new website at this IP address will remain inaccessible over
      Tor
    - Tor users who are leaking DNS will be informed that Tor is not
      working, rather than that it is active but leaking DNS
   We should thus attempt to find an IP address which we reasonably
-  belive can remain static.
+  believe can remain static.
 
 Open issues:
 
