@@ -1221,6 +1221,8 @@ typedef struct signed_descriptor_t {
   /** The valid-until time of the most recent consensus that listed this
    * descriptor.  0 for "never listed in a consensus, so far as we know." */
   time_t last_listed_as_valid_until;
+  /** DOCDOC */
+  time_t last_served_at; /*XXXX021 remove if not useful. */
   /* If true, we do not ever try to save this object in the cache. */
   unsigned int do_not_cache : 1;
   /* If true, this item is meant to represent an extrainfo. */
