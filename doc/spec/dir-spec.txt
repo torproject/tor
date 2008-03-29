@@ -987,6 +987,19 @@ $Id$
    binds X to some other Y'.)  A router is called 'Named' if the router
    believes the given name should be bound to the given key.
 
+        Two strategies exist on the current network for deciding on
+        values for the Named flag.  In the original version, server
+        operators were asked to send nickname-identity pairs to a
+        mailing list of Naming directory authorities operators.  The
+        operators were then supposed to add the pairs to their
+        mapping files; in practice, they didn't get to this often.
+
+        Newer Naming authorities run a script that registers routers
+        in their mapping files once the routers have been online at
+        least two weeks, no other router has that nickname, and no
+        other router has wanted the nickname for a month.  If a router
+        has not been online for six months, the router is removed.
+
    "Unnamed" -- Directory authorities that support naming should vote for a
    router to be 'Unnamed' if its given nickname is mapped to a different
    identity.

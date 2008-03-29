@@ -45,7 +45,7 @@ Proposals by number:
 120  Suicide descriptors when Tor servers stop [OPEN]
 121  Hidden Service Authentication [OPEN]
 122  Network status entries need a new Unnamed flag [CLOSED]
-123  Naming authorities automatically create bindings [FINISHED]
+123  Naming authorities automatically create bindings [CLOSED]
 124  Blocking resistant TLS certificate usage [SUPERSEDED]
 125  Behavior for bridge users, bridge relays, and bridge authorities [FINISHED]
 126  Getting GeoIP data and publishing usage summaries [FINISHED]
@@ -81,7 +81,6 @@ Proposals by status:
  FINISHED:
    105  Version negotiation for the Tor protocol
    111  Prioritizing local traffic over relayed traffic
-   123  Naming authorities automatically create bindings
    125  Behavior for bridge users, bridge relays, and bridge authorities
    126  Getting GeoIP data and publishing usage summaries
    129  Block Insecure Protocols by Default
@@ -98,6 +97,7 @@ Proposals by status:
    114  Distributed Storage for Tor Hidden Service Descriptors
    119  New PROTOCOLINFO command for controllers
    122  Network status entries need a new Unnamed flag
+   123  Naming authorities automatically create bindings
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
    124  Blocking resistant TLS certificate usage
