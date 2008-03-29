@@ -524,6 +524,10 @@ $Id$
       A space-separated list of all the events supported by this version of
       Tor's USEFEATURE.
 
+    "ip-to-country/*"
+      Maps IP addresses to 2-letter country codes.  For example,
+      "GETINFO ip-to-country/18.0.0.1" should give "US".
+
     "next-circuit/IP:port"
       XXX todo.
 

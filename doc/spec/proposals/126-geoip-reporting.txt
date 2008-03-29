@@ -4,7 +4,13 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2007-11-24
-Status: Finished
+Status: Closed
+
+0. Status
+
+  In 0.2.0.x, this proposal is implemented to the extent needed to
+  address its motivations.  See notes below with the test "RESOLUTION"
+  for details.
 
 1. Background and motivation
 
@@ -114,6 +120,9 @@ Status: Finished
   The IP-to-country details are described further in Sections 5 and
   6 below.
 
+  [RESOLUTION: The geoip file in 0.2.0.x is not distributed through
+  Tor.  Instead, it is shipped with the bundle.]
+
 4.2. The IP-to-city db
 
   In an ideal world, the IP-to-city db would be small enough that we
@@ -139,6 +148,8 @@ Status: Finished
   the GeoIP information won't change from one consensus to the next. Is
   there another reasonable location for it that can provide similar
   consensus security properties?
+
+  [RESOLUTION: IP-to-city is not supported.]
 
 4.2.1. Controllers can query for router annotations
 
@@ -202,6 +213,8 @@ Status: Finished
   [XXX Should consider forward/backward compatibility, e.g. if we want
   to move to a new geoip file format. -RD]
 
+  [RESOLUTION: Not done over Tor.]
+
 6. Controllers use the IP-to-country db for mapping and for path building
 
   Down the road, Vidalia could use the IP-to-country mappings for placing
@@ -221,6 +234,8 @@ Status: Finished
     GETINFO ip-to-country/128.31.0.34
     250+ip-to-country/128.31.0.34="US","USA","UNITED STATES"
 
+  [RESOLUTION: Not done now, except for the getinfo command.]
+
 6.1. Other interfaces
 
   Robert Hogan has also suggested a
@@ -229,6 +244,8 @@ Status: Finished
 
   as well as torrc options for ExitCountryCodes, EntryCountryCodes,
   ExcludeCountryCodes, etc.
+
+  [RESOLUTION: Not implemented in 0.2.0.x.  Fodder for a future proposal.]
 
 7. Relays and bridges use the IP-to-country db for usage summaries
 

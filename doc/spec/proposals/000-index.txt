@@ -48,7 +48,7 @@ Proposals by number:
 123  Naming authorities automatically create bindings [CLOSED]
 124  Blocking resistant TLS certificate usage [SUPERSEDED]
 125  Behavior for bridge users, bridge relays, and bridge authorities [FINISHED]
-126  Getting GeoIP data and publishing usage summaries [FINISHED]
+126  Getting GeoIP data and publishing usage summaries [CLOSED]
 127  Relaying dirport requests to Tor download site / website [DRAFT]
 128  Families of private bridges [DRAFT]
 129  Block Insecure Protocols by Default [FINISHED]
@@ -82,7 +82,6 @@ Proposals by status:
    105  Version negotiation for the Tor protocol
    111  Prioritizing local traffic over relayed traffic
    125  Behavior for bridge users, bridge relays, and bridge authorities
-   126  Getting GeoIP data and publishing usage summaries
    129  Block Insecure Protocols by Default
    130  Version 2 Tor connection protocol
  CLOSED:
@@ -98,6 +97,7 @@ Proposals by status:
    119  New PROTOCOLINFO command for controllers
    122  Network status entries need a new Unnamed flag
    123  Naming authorities automatically create bindings
+   126  Getting GeoIP data and publishing usage summaries
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
    124  Blocking resistant TLS certificate usage
