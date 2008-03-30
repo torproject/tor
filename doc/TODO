@@ -132,6 +132,9 @@ Matt
   - Fit Vidalia in 640x480 again.
   - When user changes the language in Vidalia, have it change right then.
   - Vidalia should display/edit PlaintextPorts events/config.
+  - Vidalia's GUI should let you specify an http proxy that it launches
+    for you. Maybe in the general config window next to which Tor it
+    launches for you.
 
 Jake
   - gmail auto responder so you send us an email and we send you a Tor
@@ -167,6 +170,13 @@ Karsten
     turns on all the config options for running a private test tor
     network. having to keep updating all the tools, and the docs,
     just isn't working.
+
+Weasel
+  - Figure out how to make Vidalia and Tor play nicely on Debian, make
+    the necessary modifications, and make some Vidalia debs that pass
+    muster.
+  - Tell us whether bug 537 can be closed.
+  - Fix bug 393.
 
 =======================================================================
 
