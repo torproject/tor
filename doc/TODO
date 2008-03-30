@@ -177,6 +177,8 @@ Weasel
     muster.
   - Tell us whether bug 537 can be closed.
   - Fix bug 393.
+  - Get oftc to switch to the Tor dns exitlist. Or tell us why it's
+    not suitable yet.
 
 =======================================================================
 
