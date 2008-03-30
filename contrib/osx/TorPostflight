@@ -123,16 +123,7 @@ fi
 
 if [ -f /Applications/Firefox.app/Contents/MacOS/firefox ]; then
   if [ -f $TARGET/torbutton-$TORBUTTON_VERSION.xpi ]; then
-      /Applications/Firefox.app/Contents/MacOS/firefox -install-global-extension $TARGET/torbutton-$TORBUTTON_VERSION.xpi
-# The following is a kludge to get around the fact that the installer
-# runs as root.  This means the Torbutton extension will install with
-# root permissions; thereby making uninstalling Torbutton from inside
-# Firefox impossible.  The user will be caught in an endless loop of
-# uninstall -> automatic re-installation of Torbutton.  The OSX
-# installer doesn't tell you the owner of Firefox, therefore we have to
-# parse it.
-      USR=`ls -alrt /Applications/Firefox.app/Contents/MacOS/extensions/ | tail -1 | awk '{print $3}'`
-      GRP=`ls -alrt /Applications/Firefox.app/Contents/MacOS/extensions/ | tail -1 | awk '{print $4}'`
-      chown -R $USR:$GRP /Applications/Firefox.app/Contents/MacOS/extensions/
+# Open firefox with a prompt to install the torbutton xpi
+      /Applications/Firefox.app/Contents/MacOS/firefox $TARGET/torbutton-$TORBUTTON_VERSION.xpi
   fi
 fi
