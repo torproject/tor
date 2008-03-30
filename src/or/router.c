@@ -1635,7 +1635,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   result = tor_snprintf(s, maxlen,
                     "router %s %s %d 0 %d\n"
                     "platform %s\n"
-                    "opt protocols Link 1 Circuit 1\n"
+                    "opt protocols Link 1 2 Circuit 1\n"
                     "published %s\n"
                     "opt fingerprint %s\n"
                     "uptime %ld\n"
