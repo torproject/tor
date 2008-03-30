@@ -143,14 +143,70 @@ see tor-design.pdf.
 
 2. Connections
 
-   Tor uses TLS/SSLv3 for link authentication and encryption.  All
+   Connections between two Tor servers, or between a client and a server,
+   use TLS/SSLv3 for link authentication and encryption.  All
    implementations MUST support the SSLv3 ciphersuite
    "SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA", and SHOULD support the TLS
    ciphersuite "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" if it is available.
-   Implementations MAY support other TLS ciphersuites, but MUST NOT
-   support any suite that lacks ephemeral keys, or whose symmetric keys are
-   less then KEY_LEN bits, or whose digests are less than HASH_LEN bits.
-   Implementations SHOULD NOT allow other SSLv3 ciphersuites.
+
+   There are three acceptable ways to perform a TLS handshake when
+   connecting to a Tor server: "certificates up-front", "renegotiation", and
+   "backwards-compatible renegotiation".  ("Backwards-compatible
+   renegotiation" is, as the name implies, compatible with both other
+   handshake types.)
+
+   Before Tor 0.2.0.21, only "certificates up-front" was supported.  In Tor
+   0.2.0.21 or later, "backwards-compatible renegotiation" is used.
+
+   In "certificates up-front", the connection initiator always sends a
+   two-certificate chain, consisting of an X.509 certificate using a
+   short-term connection public key and a second, self- signed X.509
+   certificate containing its identity key.  The other party sends a similar
+   certificate chain.  The initiator's ClientHello MUST NOT include any
+   ciphersuites other than:
+     TLS_DHE_RSA_WITH_AES_256_CBC_SHA
+     TLS_DHE_RSA_WITH_AES_128_CBC_SHA
+     SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA
+     SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA
+
+   In "renegotiation", the connection initiator sends no certificates, and
+   the responder sends a single connection certificate.  Once the TLS
+   handshake is complete, the initiator renegotiates the handshake, with each
+   parties sending a two-certificate chain as in "certificates up-front".
+   The initiator's ClientHello MUST include at least once ciphersuite not in
+   the list above.
+
+   In "backwards-compatible renegotiation", the connection initiator's
+   ClientHello MUST include at least one ciphersuite other than those listed
+   above. The connection responder examines the initiator's ciphersuite list
+   to see whether it includes any ciphers other than those included in the
+   list above.  If extra ciphers are included, the responder proceeds as in
+   "renegotiation": it sends a single certificate and does not request
+   client certificates.  Otherwise (in the case that no extra ciphersuites
+   are included in the ClientHello) the responder proceeds as in
+   "certificates up-front": it requests client certificates, and sends a
+   two-certificate chain.  In either case, once the responder has sent its
+   certificate or certificates, the initiator counts them.  If two
+   certificates have been sent, it proceeds as in "certificates up-front";
+   otherwise, it proceeds as in "renegotiation".
+
+   All new implementations of the Tor server protocol MUST support
+   "backwards-compatible renegotiation"; clients SHOULD do this too.  If
+   this is not possible, new client implementations MUST support both
+   "renegotiation" and "certificates up-front" and use the router's
+   published link protocols list (see dir-spec.txt on the "protocols" entry)
+   to decide which to use.
+
+   In all of the above handshake variants, certificates sent in the clear
+   SHOULD NOT include any strings to identify the host as a Tor server.  In
+   the "renegotation" and "backwards-compatible renegotiation", the
+   initiator SHOULD chose a list of ciphersuites and TLS extensions chosen
+   to mimic one used by a popular web browser.
+
+   Responders MUST NOT select any TLS ciphersuite that lacks ephemeral keys,
+   or whose symmetric keys are less then KEY_LEN bits, or whose digests are
+   less than HASH_LEN bits.  Responders SHOULD NOT select any SSLv3
+   ciphersuite other than those listed above.
 
    Even though the connection protocol is identical, we will think of the
    initiator as either an onion router (OR) if it is willing to relay
@@ -158,21 +214,9 @@ see tor-design.pdf.
    local requests. Onion proxies SHOULD NOT provide long-term-trackable
    identifiers in their handshakes.
 
-   During the TLS handshake, the connection initiator always sends a
-   two-certificate chain, consisting of an X.509 certificate using a
-   short-term connection public key and a second, self- signed X.509
-   certificate containing its identity key. The commonName of the first
-   certificate is the OR's nickname, and the commonName of the second
-   certificate is the OR's nickname, followed by a space and the string
-   "<identity>".  The other party sends a similar certificate chain.
-
-   Implementations running Protocol 1 and earlier use an
-   organizationName of "Tor" or "TOR".  Future implementations (which
-   support the version negotiation protocol in section 4.1) MUST NOT
-   have either of these values for their organizationName.
-
-   All parties receiving certificates must confirm that the identity key is
-   as expected.  (When initiating a connection, the expected identity key is
+   In all handshake variants, once all certificates are exchanged, all
+   parties receiving certificates must confirm that the identity key is as
+   expected.  (When initiating a connection, the expected identity key is
    the one given in the directory; when creating a connection because of an
    EXTEND cell, the expected identity key is the one given in the cell.)  If
    the key is not as expected, the party must close the connection.
@@ -216,6 +260,14 @@ see tor-design.pdf.
         Command                               [1 byte]
         Payload (padded with 0 bytes)         [PAYLOAD_LEN bytes]
 
+   On a version 2 connection, all cells are as in version 1 connections,
+   except for the initial VERSIONS cell, whose format is:
+
+        Circuit                               [2 octets; set to 0]
+        Command                               [1 octet; set to 7 for VERSIONS]
+        Length                                [2 octets; big-endian integer]
+        Payload                               [Length bytes]
+
    The CircID field determines which circuit, if any, the cell is
    associated with.
 
@@ -227,6 +279,8 @@ see tor-design.pdf.
          4 -- DESTROY     (Stop using a circuit)    (See Sec 5.4)
          5 -- CREATE_FAST (Create a circuit, no PK) (See Sec 5.1)
          6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
+         7 -- VERSIONS    (Negotiate proto version) (See Sec 4)
+         8 -- NETINFO     (Time and address info)   (See Sec 4)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -246,12 +300,64 @@ see tor-design.pdf.
    cell every few minutes.
 
    CREATE, CREATED, and DESTROY cells are used to manage circuits;
-   see section 4 below.
+   see section 5 below.
 
    RELAY cells are used to send commands and data along a circuit; see
-   section 5 below.
+   section 6 below.
 
-4. [This section deliberately left blank.]
+   VERSIONS and NETINFO cells are used to set up connections.  See section 4
+   below.
+
+4. Negotiating and initializing connections
+
+4.1. Negotiating versions with VERSIONS cells
+
+   There are multiple instances of the Tor link connection protocol.  Any
+   connection negotiated using the "certificates up front" handshake (see
+   section 2 above) is "version 1".  In any connection where both parties
+   have behaved as in the "renegotiation" handshake, the link protocol
+   version is 2 or higher.
+
+   To determine the version, in any connection where the "renegotiation"
+   handshake was used (that is, where the server sent only one certificate
+   at first and where the client did not send any certificates until
+   renegotiation), both parties MUST send a VERSIONS cell immediately after
+   the renegotiation is finished, before any other cells are sent.  Parties
+   MUST NOT send any other cells on a connection until they have received a
+   VERSIONS cell.
+
+   The payload in a VERSIONS cell is a series of big-endian two-byte
+   integers.  Both parties MUST select as the link protocol version the
+   highest number contained both in the VERSIONS cell they sent and in the
+   versions cell they received.  If they have no such version in common,
+   they cannot communicate and MUST close the connection.
+
+   Since the version 1 link protocol does not use the "renegotiation"
+   handshake, implementations MUST NOT list version 1 in their VERSIONS
+   cell.
+
+4.2. NETINFO cells
+
+   If version 2 or higher is negotiated, each party sends the other a
+   NETINFO cell.  The cell's payload is:
+
+         Timestamp              [4 bytes]
+         Other OR's address     [variable]
+         Number of addresses    [1 byte]
+         This OR's addresses    [variable]
+
+   The address format is a type/length/value sequence as given in section
+   6.4 below.  The timestamp is a big-endian unsigned integer number of
+   seconds since the unix epoch.
+
+   Implementations MAY use the timestamp value to help decide if their
+   clocks are skewed.  Initiators MAY use "other OR's address" to help
+   learn which address their connections are originating from, if they do
+   not know it.  Initiators SHOULD use "this OR's address" to make sure
+   that they have connected to another OR at its canonical address.
+
+   [As of 0.2.0.23-rc, implementations use none of the above values.]
+
 
 5. Circuit management
 
@@ -442,6 +548,26 @@ see tor-design.pdf.
    (As an optimization, OR implementations may delay processing onions
    until a break in traffic allows time to do so without harming
    network latency too greatly.)
+
+5.3.1. Canonical connections
+
+   It is possible for an attacker to launch a man-in-the-middle attack
+   against a connection by telling OR Alice to extend to OR Bob at some
+   address X controlled by the attacker.  The attacker cannot read the
+   encrypted traffic, but the attacker is now in a position to count all
+   bytes sent between Alice and Bob (assuming Alice was not already
+   connected to Bob.)
+
+   To prevent this, when an OR we gets an extend request, it SHOULD use an
+   existing OR connection if the ID matches, and ANY of the following
+   conditions hold:
+       - The IP matches the requested IP.
+       - The OR knows that the IP of the connection it's using is canonical
+         because it was listed in the NETINFO cell.
+       - The OR knows that the IP of the connection it's using is canonical
+         because it was listed in the server descriptor.
+
+   [This is not implemented in Tor 0.2.0.23-rc.]
 
 5.4. Tearing down circuits
 

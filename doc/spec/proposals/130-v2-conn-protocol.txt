@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2007-10-25
-Status: Finished
+Status: Closed
 
 Overview:
 

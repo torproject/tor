@@ -573,6 +573,24 @@ $Id$
        supports those descriptor versions. If none are specified, it
        defaults to version 2 descriptors.
 
+       [Versions of Tor before 0.1.2.5-alpha rejected router descriptors
+        with unrecognized items; the protocols line should be preceded with
+        an "opt" until these Tors are obsolete.]
+
+   "protocols" SP "Link" SP LINK-VERSION-LIST SP "Circuit" SP
+          CIRCUIT-VERSION-LIST NL
+
+       [At most once.]
+
+       Both lists are space-separated sequences of numbers, to indicate which
+       protocols the server supports.  As of 30 Mar 2008, specified
+       protocols are "Link 1 2 Circuit 1".  See section 4.1 of tor-spec.txt
+       for more information about link protocol versions.
+
+       [Versions of Tor before 0.1.2.5-alpha rejected router descriptors
+        with unrecognized items; the protocols line should be preceded with
+        an "opt" until these Tors are obsolete.]
+
 2.2. Extra-info documents
 
    Extra-info documents consist of the following items:
