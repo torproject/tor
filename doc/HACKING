@@ -2,6 +2,8 @@
 0. The buildbot.
 
   http://tor-buildbot.freehaven.net:8010/
+  
+  - Down for unknown reasons, ioerror will look into this.
 
 0.1. Useful command-lines that are non-trivial to reproduce but can
 help with tracking bugs or leaks.

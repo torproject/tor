@@ -29,6 +29,9 @@ I     - Figure out who at Mozilla can give us permission to keep the
         name Firefox on our Tor Browser Bundle. Get said permission.
       o Make Torbrowser website
       o Get it integrated into the Tor download pages
+      o Find out what happened to the buildbot and get it back up:
+      - http://tor-buildbot.freehaven.net:8010/
+
 S   - Finish first cut at integrating upnp lib into Vidalia
 R   - get the geoip files onto some bridge relays, and gather stats
 
