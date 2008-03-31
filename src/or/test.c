@@ -2283,7 +2283,7 @@ test_dir_format(void)
           "platform Tor "VERSION" on ", sizeof(buf2));
   strlcat(buf2, get_uname(), sizeof(buf2));
   strlcat(buf2, "\n"
-          "opt protocols Link 1 Circuit 1\n"
+          "opt protocols Link 1 2 Circuit 1\n"
           "published 1970-01-01 00:00:00\n"
           "opt fingerprint ", sizeof(buf2));
   test_assert(!crypto_pk_get_fingerprint(pk2, fingerprint, 1));
