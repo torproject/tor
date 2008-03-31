@@ -29,8 +29,6 @@ I     - Figure out who at Mozilla can give us permission to keep the
         name Firefox on our Tor Browser Bundle. Get said permission.
       o Make Torbrowser website
       o Get it integrated into the Tor download pages
-      o Find out what happened to the buildbot and get it back up:
-      - http://tor-buildbot.freehaven.net:8010/
 
 S   - Finish first cut at integrating upnp lib into Vidalia
 R   - get the geoip files onto some bridge relays, and gather stats
@@ -55,8 +53,8 @@ I   - Translation portal
       - Vidalia translations (via launchpad?)
       - Vidalia installer translations
       - Torbutton translations (via babelzilla?)
-      	- Torbutton is registered with launchpad and babelzilla
-	- https://launchpad.net/torbutton
+      	o Torbutton is registered with launchpad and babelzilla
+	o https://launchpad.net/torbutton
 	- An old babelzilla version of Torbutton requires an update
       - Centralized instructions for how to help translate
       - Continue managing the tor-translations team to keep the Tor
@@ -153,6 +151,9 @@ ioerror
     to let them like Tor.
   - Start converting critical wiki pages into real Tor wml pages. E.g.,
     https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
+  - Find out what happened to the buildbot and get it back up:
+    http://tor-buildbot.freehaven.net:8010/
+
 
 Steven
   - Write a list of research items Tor would like to see done, for the
