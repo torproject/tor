@@ -52,6 +52,9 @@ I   - Translation portal
       - Vidalia translations (via launchpad?)
       - Vidalia installer translations
       - Torbutton translations (via babelzilla?)
+      	- Torbutton is registered with launchpad and babelzilla
+	- https://launchpad.net/torbutton
+	- An old babelzilla version of Torbutton requires an update
       - Centralized instructions for how to help translate
       - Continue managing the tor-translations team to keep the Tor
         website translated
