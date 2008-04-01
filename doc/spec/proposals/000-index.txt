@@ -56,6 +56,7 @@ Proposals by number:
 131  Help users to verify they are using Tor [NEEDS-REVISION]
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
+134  More robust consensus voting with diverse authority sets [DRAFT]
 
 
 Proposals by status:
@@ -108,3 +109,4 @@ Proposals by status:
    128  Families of private bridges
    132  A Tor Web Service For Verifying Correct Browser Configuration
    133  Incorporate Unreachable ORs into the Tor Network
+   134  More robust consensus voting with diverse authority sets
