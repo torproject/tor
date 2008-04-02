@@ -5,6 +5,7 @@ Changes in version 0.2.0.24-?? - 2008-??-??
     - Do not read the configuration file when we've only been told to
       generate a password hash.  Fixes bug 643. Bugfix on 0.0.9pre5.  Fix
       based on patch from Sebastian Hahn.
+    - When opening a logfile fails, tell us why.
 
 Changes in version 0.2.0.23-rc - 2008-03-24
   o Major bugfixes:
