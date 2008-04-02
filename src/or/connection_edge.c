@@ -2770,7 +2770,10 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
    * make sure the exit node of the existing circuit matches exactly.
    */
   if (conn->chosen_exit_name) {
-    if (router_get_by_nickname(conn->chosen_exit_name, 1) != exit) {
+    routerinfo_t *chosen_exit =
+      router_get_by_nickname(conn->chosen_exit_name, 1);
+    if (!chosen_exit || memcpy(chosen_exit->cache_info.identity_digest,
+                               exit->cache_info.identity_digest, DIGEST_LEN)) {
       /* doesn't match */
 //      log_debug(LD_APP,"Requested node '%s', considering node '%s'. No.",
 //                conn->chosen_exit_name, exit->nickname);
