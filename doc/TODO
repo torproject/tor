@@ -154,7 +154,6 @@ ioerror
   - Find out what happened to the buildbot and get it back up:
     http://tor-buildbot.freehaven.net:8010/
 
-
 Steven
   - Write a list of research items Tor would like to see done, for the
     volunteer page. Pick a few you'd like to work on yourself.
@@ -186,6 +185,8 @@ Weasel
   - Fix bug 393.
   - Get oftc to switch to the Tor dns exitlist. Or tell us why it's
     not suitable yet.
+  - Take non-Running entries out of the networkstatus consensus.
+  - Move proposal 134 forward.
 
 =======================================================================
 
