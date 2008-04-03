@@ -2772,7 +2772,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
   if (conn->chosen_exit_name) {
     routerinfo_t *chosen_exit =
       router_get_by_nickname(conn->chosen_exit_name, 1);
-    if (!chosen_exit || memcpy(chosen_exit->cache_info.identity_digest,
+    if (!chosen_exit || memcmp(chosen_exit->cache_info.identity_digest,
                                exit->cache_info.identity_digest, DIGEST_LEN)) {
       /* doesn't match */
 //      log_debug(LD_APP,"Requested node '%s', considering node '%s'. No.",
