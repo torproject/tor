@@ -155,12 +155,44 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
  *   SMARTLIST_FOREACH(list, char *, cp,
  *   {
  *     if (!strcmp(cp, "junk")) {
- *       smartlist_del(list, cp_sl_idx);
  *       tor_free(cp);
- *       --cp_sl_len; // decrement length of list so we don't run off the end
- *       --cp_sl_idx; // decrement idx so we consider the item that moved here
+ *       SMARTLIST_DEL_CURRENT(list, cp);
  *     }
  *   });
+ * </pre>
+ */
+/* Note: these macros use token pasting, and reach into smartlist internals.
+ * This can make them a little daunting. Here's the approximate unpacking of
+ * the above examples, for entertainment value:
+ *
+ * <pre>
+ * smartlist_t *list = smartlist_split("A:B:C", ":", 0, 0);
+ * {
+ *   int cp_sl_idx, cp_sl_len = smartlist_len(list);
+ *   char *cp;
+ *   for (cp_sl_idx = 0; cp_sl_idx < cp_sl_len; ++cp_sl_idx) {
+ *     cp = smartlist_get(list, cp_sl_idx);
+ *     printf("%d: %s\n", cp_sl_idx, cp);
+ *     tor_free(cp);
+ *   }
+ * }
+ * smartlist_free(list);
+ * </pre>
+ *
+ * <pre>
+ * {
+ *   int cp_sl_idx, cp_sl_len = smartlist_len(list);
+ *   char *cp;
+ *   for (cp_sl_idx = 0; cp_sl_idx < cp_sl_len; ++cp_sl_idx) {
+ *     cp = smartlist_get(list, cp_sl_idx);
+ *     if (!strcmp(cp, "junk")) {
+ *       tor_free(cp);
+ *       smartlist_del(list, cp_sl_idx);
+ *       --cp_sl_idx;
+ *       --cp_sl_len;
+ *     }
+ *   }
+ * }
  * </pre>
  */
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
@@ -217,6 +249,20 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
  *     // use k and r
  *   } MAP_FOREACH_END.
  */
+/* Unpacks to, approximately:
+ * {
+ *   digestmap_iter_t *k_iter;
+ *   for (k_iter = digestmap_iter_init(m); !digestmap_iter_done(k_iter);
+ *        k_iter = digestmap_iter_next(m, k_iter)) {
+ *     const char *k;
+ *     void *r_voidp;
+ *     routerinfo_t *r;
+ *     digestmap_iter_get(k_iter, &k, &r_voidp);
+ *     r = r_voidp;
+ *     // use k and r
+ *   }
+ * }
+ */
 #define MAP_FOREACH(prefix, map, keytype, keyvar, valtype, valvar)      \
   STMT_BEGIN                                                            \
     prefix##iter_t *keyvar##_iter;                                      \
@@ -238,6 +284,25 @@ DECLARE_MAP_FNS(digestmap_t, const char *, digestmap_);
  *       MAP_DEL_CURRENT(k);
  *   } MAP_FOREACH_END.
  **/
+/* Unpacks to, approximately:
+ * {
+ *   digestmap_iter_t *k_iter;
+ *   int k_del=0;
+ *   for (k_iter = digestmap_iter_init(m); !digestmap_iter_done(k_iter);
+ *        k_iter = k_del ? digestmap_iter_next(m, k_iter)
+ *                       : digestmap_iter_next_rmv(m, k_iter)) {
+ *     const char *k;
+ *     void *r_voidp;
+ *     routerinfo_t *r;
+ *     k_del=0;
+ *     digestmap_iter_get(k_iter, &k, &r_voidp);
+ *     r = r_voidp;
+ *     if (is_very_old(r)) {
+ *       k_del = 1;
+ *     }
+ *   }
+ * }
+ */
 #define MAP_FOREACH_MODIFY(prefix, map, keytype, keyvar, valtype, valvar) \
   STMT_BEGIN                                                            \
     prefix##iter_t *keyvar##_iter;                                      \
