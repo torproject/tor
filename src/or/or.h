@@ -1219,10 +1219,14 @@ typedef struct signed_descriptor_t {
    * routerlist->old_routers? -1 for none. */
   int routerlist_index;
   /** The valid-until time of the most recent consensus that listed this
-   * descriptor.  0 for "never listed in a consensus, so far as we know." */
+   * descriptor, or a bit after the publication time of the most recent v2
+   * networkstatus that listed it.  0 for "never listed in a consensus or
+   * status, so far as we know." */
   time_t last_listed_as_valid_until;
+#ifdef TRACK_SERVED_TIME
   /** DOCDOC */
   time_t last_served_at; /*XXXX021 remove if not useful. */
+#endif
   /* If true, we do not ever try to save this object in the cache. */
   unsigned int do_not_cache : 1;
   /* If true, this item is meant to represent an extrainfo. */

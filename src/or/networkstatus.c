@@ -697,11 +697,24 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   if (!found)
     smartlist_add(networkstatus_v2_list, ns);
 
-  SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
+/*XXXX021 magic. */
+/*DOCDOC */
+#define V2_NETWORKSTATUS_LIFETIME (3*60*60)
+
+  {
+    time_t live_until = ns->published_on + V2_NETWORKSTATUS_LIFETIME;
+    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
     {
-      if (!router_get_by_descriptor_digest(rs->descriptor_digest))
+      signed_descriptor_t *sd =
+        router_get_by_descriptor_digest(rs->descriptor_digest);
+      if (sd) {
+        if (sd->last_listed_as_valid_until < live_until)
+          sd->last_listed_as_valid_until = live_until;
+      } else {
         rs->need_to_mirror = 1;
+      }
     });
+  }
 
   log_info(LD_DIR, "Setting networkstatus %s %s (published %s)",
            source == NS_FROM_CACHE?"cached from":
@@ -1286,6 +1299,7 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   if (old_remain)
     rs_old = smartlist_get(old_c->routerstatus_list, idx);
 
+  /* XXXX021 candidate for a foreach_matched macro. */
   SMARTLIST_FOREACH(new_c->routerstatus_list, routerstatus_t *, rs_new,
   {
     if (!old_remain) {
@@ -1323,6 +1337,7 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
     return;
 
   rs_old = smartlist_get(old_c->routerstatus_list, idx);
+  /* XXXX021 candidate for a FOREACH_MATCHED macro. */
   SMARTLIST_FOREACH(new_c->routerstatus_list, routerstatus_t *, rs_new,
   {
     int r;
@@ -1709,6 +1724,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   idx = 0;
   rs = smartlist_get(ns->routerstatus_list, idx);
 
+  /* Candidate for a FOREACH_MATCHED macro.XXX021 */
   SMARTLIST_FOREACH(routers, routerinfo_t *, router,
   {
     const char *digest = router->cache_info.identity_digest;

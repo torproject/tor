@@ -2939,7 +2939,9 @@ connection_dirserv_finish_spooling(dir_connection_t *conn)
 static int
 connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 {
+#ifdef TRACK_SERVED_TIME
   time_t now = time(NULL);
+#endif
   int by_fp = (conn->dir_spool_src == DIR_SPOOL_SERVER_BY_FP ||
                conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_FP);
   int extra = (conn->dir_spool_src == DIR_SPOOL_EXTRA_BY_FP ||
@@ -2967,7 +2969,9 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
        * unknown bridge descriptor has shown up between then and now. */
       continue;
     }
+#ifdef TRACK_SERVED_TIME
     sd->last_served_at = now;
+#endif
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
       int last = ! smartlist_len(conn->fingerprint_stack);
