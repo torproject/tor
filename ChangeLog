@@ -56,7 +56,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Refactor code using connection_ap_handshake_attach_circuit() to
       allow that function to mark connections for close.  Part of a fix for
       bug 617.  Bugfix on 0.2.0.1-alpha.
-
+    - Add a macro to implement the common pattern of iterating through
+      two parallel lists in lockstep.
 
 Changes in version 0.2.0.23-rc - 2008-03-24
   o Major bugfixes:

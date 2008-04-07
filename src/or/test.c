@@ -1837,6 +1837,51 @@ test_util_smartlist(void)
     smartlist_clear(sl);
   }
 
+  {
+    smartlist_t *sl2 = smartlist_create(), *sl3 = smartlist_create(),
+                *sl4 = smartlist_create();
+    /* unique, sorted. */
+    smartlist_split_string(sl,
+                           "Abashments Ambush Anchorman Bacon Banks Borscht "
+                           "Bunks Inhumane Insurance Knish Know Manners "
+                           "Maraschinos Stamina Sunbonnets Unicorns Wombats",
+                           " ", 0, 0);
+    /* non-unique, sorted. */
+    smartlist_split_string(sl2,
+                           "Ambush Anchorman Anchorman Anemias Anemias Bacon "
+                           "Crossbowmen Inhumane Insurance Knish Know Manners "
+                           "Manners Maraschinos Wombats Wombats Work",
+                           " ", 0, 0);
+    SMARTLIST_FOREACH_JOIN(sl, char *, cp1,
+                           sl2, char *, cp2,
+                           strcmp(cp1,cp2),
+                           smartlist_add(sl3, cp2)) {
+      test_streq(cp1, cp2);
+      smartlist_add(sl4, cp1);
+    } SMARTLIST_FOREACH_JOIN_END(cp1, cp2);
+
+    SMARTLIST_FOREACH(sl3, const char *, cp,
+                      test_assert(smartlist_isin(sl2, cp) &&
+                                  !smartlist_string_isin(sl, cp)));
+    SMARTLIST_FOREACH(sl4, const char *, cp,
+                      test_assert(smartlist_isin(sl, cp) &&
+                                  smartlist_string_isin(sl2, cp)));
+    cp = smartlist_join_strings(sl3, ",", 0, NULL);
+    test_streq(cp, "Anemias,Anemias,Crossbowmen,Work");
+    tor_free(cp);
+    cp = smartlist_join_strings(sl4, ",", 0, NULL);
+    test_streq(cp, "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
+               "Knish,Know,Manners,Manners,Maraschinos,Wombats,Wombats");
+    tor_free(cp);
+
+    smartlist_free(sl4);
+    smartlist_free(sl3);
+    SMARTLIST_FOREACH(sl2, char *, cp, tor_free(cp));
+    smartlist_free(sl2);
+    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+    smartlist_clear(sl);
+  }
+
   smartlist_free(sl);
 }
 

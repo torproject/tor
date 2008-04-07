@@ -1289,35 +1289,23 @@ static void
 notify_control_networkstatus_changed(const networkstatus_t *old_c,
                                      const networkstatus_t *new_c)
 {
-  int idx = 0;
-  int old_remain = old_c && smartlist_len(old_c->routerstatus_list);
-  const routerstatus_t *rs_old = NULL;
   smartlist_t *changed;
   if (old_c == new_c)
     return;
+  if (!old_c) {
+    control_event_networkstatus_changed(new_c->routerstatus_list);
+    return;
+  }
   changed = smartlist_create();
-  if (old_remain)
-    rs_old = smartlist_get(old_c->routerstatus_list, idx);
 
-  /* XXXX021 candidate for a foreach_matched macro. */
-  SMARTLIST_FOREACH(new_c->routerstatus_list, routerstatus_t *, rs_new,
-  {
-    if (!old_remain) {
+  SMARTLIST_FOREACH_JOIN(old_c->routerstatus_list, routerstatus_t *, rs_old,
+                         new_c->routerstatus_list, routerstatus_t *, rs_new,
+                         memcmp(rs_old->identity_digest,
+                                rs_new->identity_digest, DIGEST_LEN),
+                         smartlist_add(changed, rs_new)) {
+    if (routerstatus_has_changed(rs_old, rs_new))
       smartlist_add(changed, rs_new);
-    } else {
-      int r;
-      while ((r = memcmp(rs_old->identity_digest, rs_new->identity_digest,
-                         DIGEST_LEN)) < 0) {
-        if (++idx == smartlist_len(old_c->routerstatus_list)) {
-          old_remain = 0;
-          break;
-        }
-        rs_old = smartlist_get(old_c->routerstatus_list, idx);
-      }
-      if (r || (!r && routerstatus_has_changed(rs_old, rs_new)))
-        smartlist_add(changed, rs_new);
-    }
-  });
+  } SMARTLIST_FOREACH_JOIN_END(rs_old, rs_new);
 
   control_event_networkstatus_changed(changed);
   smartlist_free(changed);
@@ -1329,28 +1317,16 @@ static void
 networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
                                       const networkstatus_t *old_c)
 {
-  int idx = 0;
-  const routerstatus_t *rs_old;
   if (old_c == new_c)
     return;
-  if (!smartlist_len(old_c->routerstatus_list))
+  if (!old_c || !smartlist_len(old_c->routerstatus_list))
     return;
 
-  rs_old = smartlist_get(old_c->routerstatus_list, idx);
-  /* XXXX021 candidate for a FOREACH_MATCHED macro. */
-  SMARTLIST_FOREACH(new_c->routerstatus_list, routerstatus_t *, rs_new,
-  {
-    int r;
-    while ((r = memcmp(rs_old->identity_digest, rs_new->identity_digest,
-                       DIGEST_LEN))<0) {
-      if (++idx == smartlist_len(old_c->routerstatus_list))
-        goto done;
-      rs_old = smartlist_get(old_c->routerstatus_list, idx);
-    }
-    if (r>0)
-      continue;
-    tor_assert(r==0);
-
+  SMARTLIST_FOREACH_JOIN(old_c->routerstatus_list, routerstatus_t *, rs_old,
+                         new_c->routerstatus_list, routerstatus_t *, rs_new,
+                         memcmp(rs_old->identity_digest,
+                                rs_new->identity_digest, DIGEST_LEN),
+                         STMT_NIL) {
     /* Okay, so we're looking at the same identity. */
     rs_new->name_lookup_warned = rs_old->name_lookup_warned;
     rs_new->last_dir_503_at = rs_old->last_dir_503_at;
@@ -1360,10 +1336,7 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
       /* And the same descriptor too! */
       memcpy(&rs_new->dl_status, &rs_old->dl_status,sizeof(download_status_t));
     }
-  });
-
- done:
-  return;
+  } SMARTLIST_FOREACH_JOIN_END(rs_old, rs_new);
 }
 
 /** Try to replace the current cached v3 networkstatus with the one in
@@ -1709,44 +1682,29 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                    int reset_failures)
 {
   trusted_dir_server_t *ds;
-  routerstatus_t *rs;
   or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
   int namingdir = authdir && options->NamingAuthoritativeDir;
   networkstatus_t *ns = current_consensus;
-  int idx;
   if (!ns || !smartlist_len(ns->routerstatus_list))
     return;
 
   routers_sort_by_identity(routers);
-  /* Now routers and ns->routerstatus_list are both in ascending order
-   * of identity digest. */
-  idx = 0;
-  rs = smartlist_get(ns->routerstatus_list, idx);
 
-  /* Candidate for a FOREACH_MATCHED macro.XXX021 */
-  SMARTLIST_FOREACH(routers, routerinfo_t *, router,
+  SMARTLIST_FOREACH_JOIN(ns->routerstatus_list, routerstatus_t *, rs,
+                         routers, routerinfo_t *, router,
+                         memcmp(rs->identity_digest,
+                               router->cache_info.identity_digest, DIGEST_LEN),
   {
+    /* We have no routerstatus for this router. Clear flags and skip it. */
+    if (!namingdir)
+      router->is_named = 0;
+    if (!authdir) {
+      if (router->purpose == ROUTER_PURPOSE_GENERAL)
+        router_clear_status_flags(router);
+    }
+  }) {
     const char *digest = router->cache_info.identity_digest;
-    int r;
-    while ((r = memcmp(rs->identity_digest, digest, DIGEST_LEN))<0) {
-      if (++idx == smartlist_len(ns->routerstatus_list)) {
-        /* We're out of routerstatuses. Bail. */
-        goto done;
-      }
-      rs = smartlist_get(ns->routerstatus_list, idx);
-    }
-    if (r>0) {
-      /* We have no routerstatus for this router. Clear flags and skip it. */
-      if (!namingdir)
-        router->is_named = 0;
-      if (!authdir) {
-        if (router->purpose == ROUTER_PURPOSE_GENERAL)
-          router_clear_status_flags(router);
-      }
-      continue;
-    }
-    tor_assert(r==0);
 
     ds = router_get_trusteddirserver_by_digest(digest);
 
@@ -1756,6 +1714,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       else
         router->is_named = 0;
     }
+    /*XXXX021 this should always be true! */
     if (!memcmp(router->cache_info.signed_descriptor_digest,
                 rs->descriptor_digest, DIGEST_LEN)) {
       if (ns->valid_until > router->cache_info.last_listed_as_valid_until)
@@ -1780,9 +1739,8 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
     if (reset_failures) {
       download_status_reset(&rs->dl_status);
     }
-  });
+  } SMARTLIST_FOREACH_JOIN_END(rs, router);
 
- done:
   router_dir_info_changed();
 }
 
