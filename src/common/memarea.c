@@ -53,6 +53,8 @@ typedef struct memarea_chunk_t {
 
 #define CHUNK_HEADER_SIZE STRUCT_OFFSET(memarea_chunk_t, u)
 
+#define CHUNK_SIZE 8192
+
 /** A memarea_t is an allocation region for a set of small memory requests
  * that will all be freed at once. */
 struct memarea_t {
@@ -60,25 +62,49 @@ struct memarea_t {
   size_t chunk_size; /**<Size to use when allocating chunks.*/
 };
 
+#define MAX_FREELIST_LEN 4
+int freelist_len=0;
+static memarea_chunk_t *freelist = NULL;
+
 /** Helper: allocate a new memarea chunk of around <b>chunk_size</b> bytes. */
 static memarea_chunk_t *
-alloc_chunk(size_t chunk_size)
+alloc_chunk(size_t sz)
 {
-  memarea_chunk_t *res = tor_malloc_roundup(&chunk_size);
-  res->next_chunk = NULL;
-  res->mem_size = chunk_size - CHUNK_HEADER_SIZE;
-  res->next_mem = res->u.mem;
-  return res;
+  (void)sz; /*XXXX021 remove this argument. */
+  if (freelist) {
+    memarea_chunk_t *res = freelist;
+    freelist = res->next_chunk;
+    --freelist_len;
+    return res;
+  } else {
+    size_t chunk_size = CHUNK_SIZE;
+    memarea_chunk_t *res = tor_malloc_roundup(&chunk_size);
+    res->next_chunk = NULL;
+    res->mem_size = chunk_size - CHUNK_HEADER_SIZE;
+    res->next_mem = res->u.mem;
+    return res;
+  }
 }
 
-/** Allocate and return new memarea, with chunks of approximately
- * <b>chunk_size</b> bytes. (There is indeed some overhead.) */
+static void
+chunk_free(memarea_chunk_t *chunk)
+{
+  if (freelist_len >= MAX_FREELIST_LEN) {
+    ++freelist_len;
+    chunk->next_chunk = freelist;
+    freelist = chunk;
+  } else {
+    tor_free(chunk);
+  }
+}
+
+/** Allocate and return new memarea. */
 memarea_t *
-memarea_new(size_t chunk_size)
+memarea_new(size_t chunk_size)/*XXXX021 remove this argument.*/
 {
   memarea_t *head = tor_malloc(sizeof(memarea_t));
   head->first = alloc_chunk(chunk_size);
-  head->chunk_size = chunk_size;
+  (void)chunk_size;
   return head;
 }
 
@@ -90,7 +116,7 @@ memarea_drop_all(memarea_t *area)
   memarea_chunk_t *chunk, *next;
   for (chunk = area->first; chunk; chunk = next) {
     next = chunk->next_chunk;
-    tor_free(chunk);
+    chunk_free(chunk);
   }
   area->first = NULL; /*fail fast on */
   tor_free(area);
@@ -106,11 +132,24 @@ memarea_clear(memarea_t *area)
   if (area->first->next_chunk) {
     for (chunk = area->first->next_chunk; chunk; chunk = next) {
       next = chunk->next_chunk;
-      tor_free(chunk);
+      chunk_free(chunk);
     }
     area->first->next_chunk = NULL;
   }
   area->first->next_mem = area->first->u.mem;
+}
+
+/** DOCDOC */
+void
+memarea_clear_freelist(void)
+{
+  memarea_chunk_t *chunk, *next;
+  freelist_len = 0;
+  for (chunk = freelist; chunk; chunk = next) {
+    next = chunk->next_chunk;
+    tor_free(chunk);
+  }
+  freelist = NULL;
 }
 
 /** Return true iff <b>p</b> is in a range that has been returned by an

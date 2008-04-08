@@ -18,6 +18,7 @@ const char main_c_id[] =
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #endif
+#include "memarea.h"
 
 void evdns_shutdown(int);
 
@@ -1858,6 +1859,7 @@ tor_free_all(int postfork)
   entry_guards_free_all();
   connection_free_all();
   buf_shrink_freelists(1);
+  memarea_clear_freelist();
   if (!postfork) {
     config_free_all();
     router_free_all();
