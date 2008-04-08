@@ -177,7 +177,7 @@ memarea_alloc(memarea_t *area, size_t sz)
   char *result;
   tor_assert(chunk);
   if (chunk->next_mem+sz > chunk->u.mem+chunk->mem_size) {
-    if (sz+CHUNK_HEADER_SIZE >= area->chunk_size) {
+    if (sz+CHUNK_HEADER_SIZE >= CHUNK_SIZE) {
       /* This allocation is too big.  Stick it in a special chunk, and put
        * that chunk second in the list. */
       memarea_chunk_t *new_chunk = alloc_chunk(sz+CHUNK_HEADER_SIZE, 0);
