@@ -239,24 +239,7 @@ N - Before the feature freeze:
           mismatched address.
         - Learn our outgoing IP address from netinfo cells?
 
-  - Bugs.
-     - Bug reports Roger has heard along the way that don't have enough
-        details/attention to solve them yet.
-        - arma noticed that when his network went away and he tried
-          a new guard node and the connect() syscall failed to it,
-          the guard wasn't being marked as down. 0.2.0.x.
-        - after being without network for 12 hours, arma's tor decided
-          it couldn't fetch any network statuses, and never tried again
-          even when the network came back and arma clicked on things.
-          also 0.2.0.
-R       - for above two, roger should turn them into flyspray entry.
-
   - Proposals:
-    o 101: Voting on the Tor Directory System (plus 103)
-N     - Use if-modified-since on consensus download
-      - Controller support
-        D GETINFO to get consensus
-N       - Event when new consensus arrives
     . 111: Prioritize local traffic over relayed.
 R     - Merge into tor-spec.txt.
 
@@ -410,6 +393,11 @@ N - router_choose_random_node() has a big pile of args. make it "flags".
 
 Deferred from 0.2.0.x:
   - Proposals
+    o 101: Voting on the Tor Directory System (plus 103)
+N     - Use if-modified-since on consensus download
+      - Controller support
+        D GETINFO to get consensus
+N       - Event when new consensus arrives
     - 113: Simplifying directory authority administration
     - 110: prevent infinite-length circuits (phase one)
     - 118: Listen on and advertise multiple ports:
