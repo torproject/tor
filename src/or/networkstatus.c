@@ -1688,6 +1688,8 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   networkstatus_t *ns = current_consensus;
   if (!ns || !smartlist_len(ns->routerstatus_list))
     return;
+  if (!networkstatus_v2_list)
+    networkstatus_v2_list = smartlist_create();
 
   routers_sort_by_identity(routers);
 
@@ -1704,6 +1706,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
         router_clear_status_flags(router);
     }
   }) {
+    /* We have a routersatus for this router. */
     const char *digest = router->cache_info.identity_digest;
 
     ds = router_get_trusteddirserver_by_digest(digest);
@@ -1714,7 +1717,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       else
         router->is_named = 0;
     }
-    /*XXXX021 this should always be true! */
+    /* Is it the same descriptor, or only the same identity? */
     if (!memcmp(router->cache_info.signed_descriptor_digest,
                 rs->descriptor_digest, DIGEST_LEN)) {
       if (ns->valid_until > router->cache_info.last_listed_as_valid_until)
@@ -1740,6 +1743,23 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       download_status_reset(&rs->dl_status);
     }
   } SMARTLIST_FOREACH_JOIN_END(rs, router);
+
+  /* Now update last_listed_as_valid_until from v2 networkstatuses. */
+  /* XXXX021 If this is slow, we need to rethink the code. */
+  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns, {
+    time_t live_until = ns->published_on + V2_NETWORKSTATUS_LIFETIME;
+    SMARTLIST_FOREACH_JOIN(ns->entries, routerstatus_t *, rs,
+                         routers, routerinfo_t *, ri,
+                         memcmp(rs->identity_digest,
+                                ri->cache_info.identity_digest, DIGEST_LEN),
+                         STMT_NIL) {
+      if (!memcmp(ri->cache_info.signed_descriptor_digest,
+                  rs->descriptor_digest, DIGEST_LEN)) {
+        if (live_until > ri->cache_info.last_listed_as_valid_until)
+          ri->cache_info.last_listed_as_valid_until = live_until;
+      }
+    } SMARTLIST_FOREACH_JOIN_END(rs, ri);
+  });
 
   router_dir_info_changed();
 }
