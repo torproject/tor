@@ -29,7 +29,6 @@ I     - Figure out who at Mozilla can give us permission to keep the
         name Firefox on our Tor Browser Bundle. Get said permission.
       o Make Torbrowser website
       o Get it integrated into the Tor download pages
-
 S   - Finish first cut at integrating upnp lib into Vidalia
 R   - get the geoip files onto some bridge relays, and gather stats
 
@@ -44,7 +43,7 @@ N   - Investigate and start resolving (or declare unresolvable) the ram
       least two of:
       o better buffer approaches in Tor
       - better buffer approaches in openssl
-      - shipping Tor with its own integrated allocator.
+      o shipping Tor with its own integrated allocator.
 N   - Write a draft research proposal for how to safely collect and
       aggregate some GeoIP data from non-bridge entry nodes, or conclude
       that we don't know how to do it safely while still being useful
@@ -53,9 +52,9 @@ I   - Translation portal
       - Vidalia translations (via launchpad?)
       - Vidalia installer translations
       - Torbutton translations (via babelzilla?)
-      	o Torbutton is registered with launchpad and babelzilla
-	o https://launchpad.net/torbutton
-	- An old babelzilla version of Torbutton requires an update
+        o Torbutton is registered with launchpad and babelzilla
+        o https://launchpad.net/torbutton
+        - An old babelzilla version of Torbutton requires an update
       - Centralized instructions for how to help translate
       - Continue managing the tor-translations team to keep the Tor
         website translated
@@ -76,7 +75,7 @@ S     - Firefox extension framework for Torbrowser build-time
 S     - Progress bar during startup, including some "timeout" events to
         indicate when Tor's unlikely to succeed at startup.
 R       - Make Tor put out appropriate events
-        - Let Vidalia notice them and change its appearance
+M       - Let Vidalia notice them and change its appearance
 S     - Enumerate and analyze traces left when running from USB
 R   - Finish tor-doc-bridge.wml
     - More bridgedb work:
@@ -136,9 +135,11 @@ Matt
   - Fit Vidalia in 640x480 again.
   - When user changes the language in Vidalia, have it change right then.
   - Vidalia should display/edit PlaintextPorts events/config.
-  - Vidalia's GUI should let you specify an http proxy that it launches
+  . Vidalia's GUI should let you specify an http proxy that it launches
     for you. Maybe in the general config window next to which Tor it
     launches for you.
+  - Vidalia should avoid stomping on your custom exit policy lines
+    just because you click on 'save' for a totally different config thing.
 
 ioerror
   - gmail auto responder so you send us an email and we send you a Tor
@@ -158,6 +159,7 @@ Steven
   - Write a list of research items Tor would like to see done, for the
     volunteer page. Pick a few you'd like to work on yourself.
   - Move proposal 131 or equivalent forward.
+  - Keep bugging us about exploits on the .exit notation.
 
 Andrew
   - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
@@ -169,9 +171,10 @@ Andrew
     given all the holes that Torbutton-dev solves on Firefox?
 
 Karsten
-  - Make a hidden services explanation page with the hidden service
+  . Make a hidden services explanation page with the hidden service
     diagrams. See img/THS-[1-6].png. These need some text to go along
     with them though, so people can follow what's going on.
+    - Roger should review these
   - We should consider a single config option TorPrivateNetwork that
     turns on all the config options for running a private test tor
     network. having to keep updating all the tools, and the docs,
@@ -181,7 +184,6 @@ Weasel
   - Figure out how to make Vidalia and Tor play nicely on Debian, make
     the necessary modifications, and make some Vidalia debs that pass
     muster.
-  - Tell us whether bug 537 can be closed.
   - Fix bug 393.
   - Get oftc to switch to the Tor dns exitlist. Or tell us why it's
     not suitable yet.
