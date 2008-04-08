@@ -68,16 +68,16 @@ static memarea_chunk_t *freelist = NULL;
 
 /** Helper: allocate a new memarea chunk of around <b>chunk_size</b> bytes. */
 static memarea_chunk_t *
-alloc_chunk(size_t sz)
+alloc_chunk(size_t sz, int freelist_ok)
 {
-  (void)sz; /*XXXX021 remove this argument. */
-  if (freelist) {
+  if (freelist && freelist_ok) {
     memarea_chunk_t *res = freelist;
     freelist = res->next_chunk;
+    res->next_chunk = NULL;
     --freelist_len;
     return res;
   } else {
-    size_t chunk_size = CHUNK_SIZE;
+    size_t chunk_size = freelist_ok ? CHUNK_SIZE : sz;
     memarea_chunk_t *res = tor_malloc_roundup(&chunk_size);
     res->next_chunk = NULL;
     res->mem_size = chunk_size - CHUNK_HEADER_SIZE;
@@ -93,6 +93,7 @@ chunk_free(memarea_chunk_t *chunk)
     ++freelist_len;
     chunk->next_chunk = freelist;
     freelist = chunk;
+    chunk->next_mem = chunk->u.mem;
   } else {
     tor_free(chunk);
   }
@@ -103,7 +104,7 @@ memarea_t *
 memarea_new(size_t chunk_size)/*XXXX021 remove this argument.*/
 {
   memarea_t *head = tor_malloc(sizeof(memarea_t));
-  head->first = alloc_chunk(chunk_size);
+  head->first = alloc_chunk(chunk_size, 1);
   (void)chunk_size;
   return head;
 }
@@ -179,12 +180,12 @@ memarea_alloc(memarea_t *area, size_t sz)
     if (sz+CHUNK_HEADER_SIZE >= area->chunk_size) {
       /* This allocation is too big.  Stick it in a special chunk, and put
        * that chunk second in the list. */
-      memarea_chunk_t *new_chunk = alloc_chunk(sz+CHUNK_HEADER_SIZE);
+      memarea_chunk_t *new_chunk = alloc_chunk(sz+CHUNK_HEADER_SIZE, 0);
       new_chunk->next_chunk = chunk->next_chunk;
       chunk->next_chunk = new_chunk;
       chunk = new_chunk;
     } else {
-      memarea_chunk_t *new_chunk = alloc_chunk(area->chunk_size);
+      memarea_chunk_t *new_chunk = alloc_chunk(area->chunk_size, 1);
       new_chunk->next_chunk = chunk;
       area->first = chunk = new_chunk;
     }
