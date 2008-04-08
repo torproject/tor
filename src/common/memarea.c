@@ -89,7 +89,7 @@ alloc_chunk(size_t sz)
 static void
 chunk_free(memarea_chunk_t *chunk)
 {
-  if (freelist_len >= MAX_FREELIST_LEN) {
+  if (freelist_len < MAX_FREELIST_LEN) {
     ++freelist_len;
     chunk->next_chunk = freelist;
     freelist = chunk;
