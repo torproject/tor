@@ -1253,6 +1253,7 @@ format_time_interval(char *out, size_t out_len, long interval)
 
 /* =====
  * Fuzzy time
+ * XXXX021 Use this consistently or rip it out.
  * ===== */
 
 /* In a perfect world, everybody would run ntp, and ntp would be perfect, so

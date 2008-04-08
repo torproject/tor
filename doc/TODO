@@ -242,8 +242,37 @@ N - Before the feature freeze:
   - Proposals:
     . 111: Prioritize local traffic over relayed.
 R     - Merge into tor-spec.txt.
+    - 113: close.
 
 =======================================================================
+
+For 0.2.1.x:
+  - Proposals to do:
+    - 110: avoid infinite-length circuits
+    - 128: families of private bridges
+    - 134: handle authority fragmentation.
+
+  - Proposals to write:
+    - Multilayered guards to keep bridges hidden.
+    - Proposal to supersede 117 by adding IPv6 support for exits and entries.
+    - Fix voting to handle bug 608 case when multiple servers get
+      Named.
+    - Possibly: revise link protocol to allow big circuit IDs,
+      variable-length cells, proposal-110 stuff, and versioned CREATES?
+    - Eliminate use of v2 networkstatus documents in v3 authority
+      decision-making.
+    - Draft proposal for GeoIP aggregation (see external constraints *)
+
+  - Use less RAM *
+  - Handle multi-core cpus better
+  - Use information from NETINFO cells
+  - Better test coverage
+  - Use more mid-level and high-level libevent APIs
+  - Emulate NSS better:
+    - Normalized cipher lists *
+    - Normalized lists of extensions *
+
+
 
 Planned for 0.2.1.x:
   - Refactoring:
