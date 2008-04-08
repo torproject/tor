@@ -2957,7 +2957,7 @@ _compare_duration_idx(const void *_d1, const void *_d2)
 static void
 routerlist_remove_old_cached_routers_with_id(time_t now,
                                              time_t cutoff, int lo, int hi,
-                                             digestmap_t *retain)
+                                             digestset_t *retain)
 {
   int i, n = hi-lo+1;
   unsigned n_extra, n_rmv = 0;
@@ -2974,10 +2974,9 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
     tor_assert(!memcmp(ident, r->identity_digest, DIGEST_LEN));
   }
 #endif
-
   /* Check whether we need to do anything at all. */
   {
-    int mdpr = directory_caches_dir_info(get_options()) ? 5 : 2;
+    int mdpr = directory_caches_dir_info(get_options()) ? 2 : 1;
     if (n <= mdpr)
       return;
     n_extra = n - mdpr;
@@ -2993,7 +2992,7 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
     signed_descriptor_t *r_next;
     lifespans[i-lo].idx = i;
     if (r->last_listed_as_valid_until >= now ||
-        (retain && digestmap_get(retain, r->signed_descriptor_digest))) {
+        (retain && digestset_isin(retain, r->signed_descriptor_digest))) {
       must_keep[i-lo] = 1;
     }
     if (i < hi) {
@@ -3049,10 +3048,11 @@ routerlist_remove_old_routers(void)
   time_t cutoff;
   routerinfo_t *router;
   signed_descriptor_t *sd;
-  digestmap_t *retain;
+  digestset_t *retain;
   int caches = directory_caches_dir_info(get_options());
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
+  int n_expected_retain = 0;
 
   trusted_dirs_remove_old_certs();
 
@@ -3061,7 +3061,18 @@ routerlist_remove_old_routers(void)
 
   // routerlist_assert_ok(routerlist);
 
-  retain = digestmap_new();
+  n_expected_retain = smartlist_len(consensus->routerstatus_list);
+  if (caches &&
+      networkstatus_v2_list && smartlist_len(networkstatus_v2_list)) {
+    SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
+                      n_expected_retain += smartlist_len(ns->entries));
+    /*XXXX021 too much magic. */
+    n_expected_retain /= (smartlist_len(networkstatus_v2_list)/2+1);
+  }
+  //log_notice(LD_DIR,"n_expected_retain=%d",n_expected_retain);
+
+  retain = digestset_new(n_expected_retain);
+
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   /* Build a list of all the descriptors that _anybody_ lists. */
   if (caches) {
@@ -3077,7 +3088,7 @@ routerlist_remove_old_routers(void)
        * system will obsolete this whole thing in 0.2.0.x. */
       SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
         if (rs->published_on >= cutoff)
-          digestmap_set(retain, rs->descriptor_digest, (void*)1));
+          digestset_add(retain, rs->descriptor_digest));
     });
   }
 
@@ -3085,13 +3096,13 @@ routerlist_remove_old_routers(void)
   if (consensus) {
     SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
         if (rs->published_on >= cutoff)
-          digestmap_set(retain, rs->descriptor_digest, (void*)1));
+          digestset_add(retain, rs->descriptor_digest));
   }
 
-  /* If we have a bunch of networkstatuses, we should consider pruning current
-   * routers that are too old and that nobody recommends.  (If we don't have
-   * enough networkstatuses, then we should get more before we decide to kill
-   * routers.) */
+  /* If we have nearly as many networkstatuses as we want, we should consider
+   * pruning current routers that are too old and that nobody recommends.  (If
+   * we don't have enough networkstatuses, then we should get more before we
+   * decide to kill routers.) */
   if (!caches ||
       smartlist_len(networkstatus_v2_list) > get_n_v2_authorities() / 2) {
     cutoff = now - ROUTER_MAX_AGE;
@@ -3100,7 +3111,8 @@ routerlist_remove_old_routers(void)
       router = smartlist_get(routerlist->routers, i);
       if (router->cache_info.published_on <= cutoff &&
           router->cache_info.last_listed_as_valid_until < now &&
-          !digestmap_get(retain,router->cache_info.signed_descriptor_digest)) {
+          !digestset_isin(retain,
+                          router->cache_info.signed_descriptor_digest)) {
         /* Too old: remove it.  (If we're a cache, just move it into
          * old_routers.) */
         log_info(LD_DIR,
@@ -3120,7 +3132,7 @@ routerlist_remove_old_routers(void)
     sd = smartlist_get(routerlist->old_routers, i);
     if (sd->published_on <= cutoff &&
         sd->last_listed_as_valid_until < now &&
-        !digestmap_get(retain, sd->signed_descriptor_digest)) {
+        !digestset_isin(retain, sd->signed_descriptor_digest)) {
       /* Too old.  Remove it. */
       routerlist_remove_old(routerlist, sd, i--);
     }
@@ -3128,11 +3140,9 @@ routerlist_remove_old_routers(void)
 
   //routerlist_assert_ok(routerlist);
 
-  log_info(LD_DIR, "We have %d live routers and %d old router descriptors. "
-           "At most %d must be retained because of networkstatuses.",
+  log_info(LD_DIR, "We have %d live routers and %d old router descriptors.",
            smartlist_len(routerlist->routers),
-           smartlist_len(routerlist->old_routers),
-           digestmap_size(retain));
+           smartlist_len(routerlist->old_routers));
 
   /* Now we might have to look at routerlist->old_routers for extraneous
    * members. (We'd keep all the members if we could, but we need to save
@@ -3141,9 +3151,10 @@ routerlist_remove_old_routers(void)
    * total number doesn't approach max_descriptors_per_router()*len(router).
    */
   if (smartlist_len(routerlist->old_routers) <
-      smartlist_len(routerlist->routers) * (caches?4:2))
+      smartlist_len(routerlist->routers))
     goto done;
 
+  /* Sort by identity, then fix indices. */
   smartlist_sort(routerlist->old_routers, _compare_old_routers_by_identity);
   /* Fix indices. */
   for (i = 0; i < smartlist_len(routerlist->old_routers); ++i) {
@@ -3171,7 +3182,7 @@ routerlist_remove_old_routers(void)
   //routerlist_assert_ok(routerlist);
 
  done:
-  digestmap_free(retain, NULL);
+  digestset_free(retain);
 }
 
 /** We just added a new set of descriptors. Take whatever extra steps

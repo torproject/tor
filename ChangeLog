@@ -51,6 +51,10 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - New --hush command-line option similar to --quiet.  While --quiet
       disables all logging to the console on startup, --hush limits the
       output to messages of warning and error severity.
+    - Use a Bloom filter rather than a digest-based set to track which
+      descriptors we need to keep around when we're cleaning out old
+      router descriptors.  This speeds up the computation significantly, and
+      may reduce fragmentation.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to

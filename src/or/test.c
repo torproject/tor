@@ -1922,6 +1922,40 @@ test_util_bitarray(void)
   bitarray_free(ba);
 }
 
+static void
+test_util_digestset(void)
+{
+  smartlist_t *included = smartlist_create();
+  char d[DIGEST_LEN];
+  int i;
+  int ok = 1;
+  int false_positives = 0;
+  digestset_t *set;
+
+  for (i = 0; i < 1000; ++i) {
+    crypto_rand(d, DIGEST_LEN);
+    smartlist_add(included, tor_memdup(d, DIGEST_LEN));
+  }
+  set = digestset_new(1000);
+  SMARTLIST_FOREACH(included, const char *, cp,
+                    if (digestset_isin(set, cp))
+                      ok = 0);
+  test_assert(ok);
+  SMARTLIST_FOREACH(included, const char *, cp,
+                    digestset_add(set, cp));
+  SMARTLIST_FOREACH(included, const char *, cp,
+                    if (!digestset_isin(set, cp))
+                      ok = 0);
+  test_assert(ok);
+  for (i = 0; i < 1000; ++i) {
+    crypto_rand(d, DIGEST_LEN);
+    if (digestset_isin(set, d))
+      ++false_positives;
+  }
+  test_assert(false_positives < 50); /* Should be far lower. */
+  digestset_free(set);
+}
+
 /* stop threads running at once. */
 static tor_mutex_t *_thread_test_mutex = NULL;
 /* make sure that threads have to run at the same time. */
@@ -3362,6 +3396,69 @@ bench_aes(void)
 }
 
 static void
+bench_dmap(void)
+{
+  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl2 = smartlist_create();
+  struct timeval start, end, pt2, pt3, pt4;
+  const int iters = 10000;
+  const int elts = 4000;
+  const int fpostests = 1000000;
+  char d[20];
+  int i,n=0, fp = 0;
+  digestmap_t *dm = digestmap_new();
+  digestset_t *ds = digestset_new(elts);
+
+  for (i = 0; i < elts; ++i) {
+    crypto_rand(d, 20);
+    smartlist_add(sl, tor_memdup(d, 20));
+  }
+  for (i = 0; i < elts; ++i) {
+    crypto_rand(d, 20);
+    smartlist_add(sl2, tor_memdup(d, 20));
+  }
+  printf("nbits=%d\n", ds->mask+1);
+
+  tor_gettimeofday(&start);
+  for (i = 0; i < iters; ++i) {
+    SMARTLIST_FOREACH(sl, const char *, cp, digestmap_set(dm, cp, (void*)1));
+  }
+  tor_gettimeofday(&pt2);
+  for (i = 0; i < iters; ++i) {
+    SMARTLIST_FOREACH(sl, const char *, cp, digestmap_get(dm, cp));
+    SMARTLIST_FOREACH(sl2, const char *, cp, digestmap_get(dm, cp));
+  }
+  tor_gettimeofday(&pt3);
+  for (i = 0; i < iters; ++i) {
+    SMARTLIST_FOREACH(sl, const char *, cp, digestset_add(ds, cp));
+  }
+  tor_gettimeofday(&pt4);
+  for (i = 0; i < iters; ++i) {
+    SMARTLIST_FOREACH(sl, const char *, cp, n += digestset_isin(ds, cp));
+    SMARTLIST_FOREACH(sl2, const char *, cp, n += digestset_isin(ds, cp));
+  }
+  tor_gettimeofday(&end);
+
+  for (i = 0; i < fpostests; ++i) {
+    crypto_rand(d, 20);
+    if (digestset_isin(ds, d)) ++fp;
+  }
+
+  printf("%ld\n",(unsigned long)tv_udiff(&start, &pt2));
+  printf("%ld\n",(unsigned long)tv_udiff(&pt2, &pt3));
+  printf("%ld\n",(unsigned long)tv_udiff(&pt3, &pt4));
+  printf("%ld\n",(unsigned long)tv_udiff(&pt4, &end));
+  printf("-- %d\n", n);
+  printf("++ %f\n", fp/(double)fpostests);
+  digestmap_free(dm, NULL);
+  digestset_free(ds);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(sl2, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+  smartlist_free(sl2);
+}
+
+static void
 test_util_mempool(void)
 {
   mp_pool_t *pool;
@@ -3850,6 +3947,7 @@ static struct {
   SUBENT(util, datadir),
   SUBENT(util, smartlist),
   SUBENT(util, bitarray),
+  SUBENT(util, digestset),
   SUBENT(util, mempool),
   SUBENT(util, memarea),
   SUBENT(util, strmap),
@@ -3957,6 +4055,11 @@ main(int c, char**v)
 
   if (0) {
     bench_aes();
+    return 0;
+  }
+
+  if (0) {
+    bench_dmap();
     return 0;
   }
 

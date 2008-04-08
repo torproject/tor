@@ -1192,3 +1192,23 @@ IMPLEMENT_ORDER_FUNC(find_nth_double, double)
 IMPLEMENT_ORDER_FUNC(find_nth_uint32, uint32_t)
 IMPLEMENT_ORDER_FUNC(find_nth_long, long)
 
+/** Return a newly allocated digestset_t, optimized to hold a total of
+ * <b>max_elements</b> digests with a reasonably low false positive weight. */
+digestset_t *
+digestset_new(int max_elements)
+{
+  int n_bits = 1u << (tor_log2(max_elements)+5);
+  digestset_t *r = tor_malloc(sizeof(digestset_t));
+  r->mask = n_bits - 1;
+  r->ba = bitarray_init_zero(n_bits);
+  return r;
+}
+
+/** Free all storage held in <b>set</b>. */
+void
+digestset_free(digestset_t *set)
+{
+  bitarray_free(set->ba);
+  tor_free(set);
+}
+

@@ -564,6 +564,49 @@ bitarray_is_set(bitarray_t *b, int bit)
   return b[bit >> BITARRAY_SHIFT] & (1u << (bit & BITARRAY_MASK));
 }
 
+/** A set of digests, implemented as a Bloom filter. */
+typedef struct {
+  int mask; /* One less than the number of bits in <b>ba</b>; always one less
+             * than a power of two. */
+  bitarray_t *ba; /* A bit array to implement the Bloom filter. */
+} digestset_t;
+
+#define BIT(n) ((n) & set->mask)
+/** Add the digest <b>digest</b> to <b>set</b>. */
+static INLINE void
+digestset_add(digestset_t *set, const char *digest)
+{
+  const uint32_t *p = (const uint32_t *)digest;
+  const uint32_t d1 = p[0] + (p[1]>>16);
+  const uint32_t d2 = p[1] + (p[2]>>16);
+  const uint32_t d3 = p[2] + (p[3]>>16);
+  const uint32_t d4 = p[3] + (p[0]>>16);
+  bitarray_set(set->ba, BIT(d1));
+  bitarray_set(set->ba, BIT(d2));
+  bitarray_set(set->ba, BIT(d3));
+  bitarray_set(set->ba, BIT(d4));
+}
+
+/** If <b>digest</b> is in <b>set</b>, return nonzero.  Otherwise,
+ * <em>probably</em> return zero. */
+static INLINE int
+digestset_isin(const digestset_t *set, const char *digest)
+{
+  const uint32_t *p = (const uint32_t *)digest;
+  const uint32_t d1 = p[0] + (p[1]>>16);
+  const uint32_t d2 = p[1] + (p[2]>>16);
+  const uint32_t d3 = p[2] + (p[3]>>16);
+  const uint32_t d4 = p[3] + (p[0]>>16);
+  return bitarray_is_set(set->ba, BIT(d1)) &&
+         bitarray_is_set(set->ba, BIT(d2)) &&
+         bitarray_is_set(set->ba, BIT(d3)) &&
+         bitarray_is_set(set->ba, BIT(d4));
+}
+#undef BIT
+
+digestset_t *digestset_new(int max_elements);
+void digestset_free(digestset_t* set);
+
 /* These functions, given an <b>array</b> of <b>n_elements</b>, return the
  * <b>nth</b> lowest element. <b>nth</b>=0 gives the lowest element;
  * <b>n_elements</b>-1 gives the highest; and (<b>n_elements</b>-1) / 2 gives
