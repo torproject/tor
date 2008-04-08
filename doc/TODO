@@ -160,6 +160,8 @@ Steven
     volunteer page. Pick a few you'd like to work on yourself.
   - Move proposal 131 or equivalent forward.
   - Keep bugging us about exploits on the .exit notation.
+  - If relays have 100KB/s but set relaybandwidthrate to 10KB/s, do your
+    interference attacks still work?
 
 Andrew
   - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
