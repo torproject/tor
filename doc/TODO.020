@@ -6,8 +6,8 @@ Backport items for 0.2.0:
   - r14204: start policy refcounts at 1, not 2.
   - r14205: free authority certs on exit.
   - r14212: free static hashtables and log mutex on exit.
+  - r14214: don't read torrc when all we
+  - r14329: update last_added_nonpadding for relay cells.
 
 Backport for 0.2.0 once better tested:
-
-
 
