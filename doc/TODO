@@ -490,23 +490,12 @@ Future versions:
       before we approve them.
 
   - Hidden services:
-    ****** Have karsten sort these.
-    - Standby/hotswap/redundant hidden services.
-    . Update the hidden service stuff for the new dir approach.  (Much
-      of this will be superseded by 114.)
-      - switch to an ascii format, maybe sexpr?
-      - authdirservers publish blobs of them.
-      - other authdirservers fetch these blobs.
-      - hidserv people have the option of not uploading their blobs.
-      - you can insert a blob via the controller.
-      - and there's some amount of backwards compatibility.
-      - teach clients, intro points, and hidservs about auth mechanisms.
-      - come up with a few more auth mechanisms.
+    d Standby/hotswap/redundant hidden services: needs a proposal.
+    - you can insert a hidserv descriptor via the controller.
     - auth mechanisms to let hidden service midpoint and responder filter
-      connection requests.
+      connection requests: proposal 121.
     - Let each hidden service (or other thing) specify its own
       OutboundBindAddress?
-    - Hidserv offerers shouldn't need to define a SocksPort
 
   - Server operation
     - If the server is spewing complaints about raising your ulimit -n,
