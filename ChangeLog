@@ -11,6 +11,8 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
     - When opening a logfile fails, tell us why.
     - Keep address policies from leaking: start their refcount at 1, not 2.
       Bugfix on 0.2.0.16-alpha.
+    - Free authority certificates on exit, so they don't look like memory
+      leaks.  Bugfix on 0.2.0.19-alpha.
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24

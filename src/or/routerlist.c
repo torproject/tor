@@ -2628,6 +2628,17 @@ routerlist_free_all(void)
     smartlist_free(trusted_dir_servers);
     trusted_dir_servers = NULL;
   }
+
+  if (trusted_dir_certs) {
+    DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
+      SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
+                        authority_cert_free(cert));
+      smartlist_free(cl->certs);
+      tor_free(cl);
+    } DIGESTMAP_FOREACH_END;
+    digestmap_free(trusted_dir_certs, NULL);
+    trusted_dir_certs = NULL;
+  }
 }
 
 /** Forget that we have issued any router-related warnings, so that we'll
