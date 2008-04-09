@@ -234,8 +234,22 @@ For 0.2.1.x:
     - 134: handle authority fragmentation.
 
   - Proposals to write:
-    - Multilayered guards to keep bridges hidden.
+    - Do we want to maintain our own set of entryguards that we use as
+      next hop after the bridge?
+    - Add an 'exit-address' line in the descriptor for servers that exit
+      from something that isn't their published address.
     - Proposal to supersede 117 by adding IPv6 support for exits and entries.
+      - Internal code support for ipv6:
+        o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
+        - Most address variables need to become tor_addr_t
+        - Teach resolving code how to handle ipv6.
+        - Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
+    - 118: Listen on and advertise multiple ports:
+      - Tor should be able to have a pool of outgoing IP addresses that it is
+        able to rotate through. (maybe.  Possible overlap with proposal 118.)
+      - config option to publish what ports you listen on, beyond
+        ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
+        (This is very similar to proposal 118.)
     - Fix voting to handle bug 608 case when multiple servers get
       Named.
     - Possibly: revise link protocol to allow big circuit IDs,
@@ -253,8 +267,9 @@ For 0.2.1.x:
       still be valuable as a blocking-resistance step.
       - Patch our tor.spec rpm package so it knows where to put the fallback
         consensus file.
+    - Something for bug 469, to limit connections per IP.
 
-   - Tiny designs to write:
+  - Tiny designs to write:
     - Better estimate of clock skew; has anonymity implications.  Clients
       should estimate their skew as median of skew from servers over last
       N seconds, but for servers this is not so easy, since a server does
@@ -270,6 +285,8 @@ W     - figure out license *
     - Optimize cell pool allocation.
     - Support (or just always use) jemalloc
     - mmap more files.
+  - Use less bandwidth
+    - Use if-modified-since to download consensuses
   - Handle multi-core cpus better
   - Use information from NETINFO cells
     - Don't extend a circuit over a noncanonical connection with
@@ -291,6 +308,12 @@ W     - figure out license *
     - Get a "use less buffer ram" patch into openssl. *
     - Get IOCP patch into libevent *
 
+  - Security improvements
+    - make is-consensus-fresh-enough check way tighter.
+    - If we haven't tried downloading a consensus for ages since we're tired,
+      try getting a new one before we use old descriptors for a circuit.
+      Related to bug 401.
+
   - Feature removals and deprecations:
     - Get rid of the v1 directory stuff (making, serving, and caching)
       - First verify that the caches won't flip out?
@@ -308,9 +331,18 @@ Nice to have for 0.2.1.x:
   - Better support for private networks: figure out what is hard, and
     make it easier.
 
+  - Proposals to write
+    - steven's plan for replacing check.torproject.org with a built-in
+      answer by tor itself.
+
   - Documentation
 P   - Make documentation realize that location of system configuration file
       will depend on location of system defaults, and isn't always /etc/torrc.
+
+  - Small controller features
+    - A status event for when tor decides to stop fetching directory info
+      if the client hasn't clicked recently: then make the onion change too.
+    - Add a status event when new consensus arrives
 
   - Windows build
 P   - Figure out why dll's compiled in mingw don't work right in WinXP.
@@ -325,6 +357,12 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
       less magic and less control logic.
     - Don't call time(NULL) so much; instead have a static time_t field
       that gets updated only a handful of times per second.
+    - Move all status info out of routerinfo into local_routerstatus.  Make
+      "who can change what" in local_routerstatus explicit.  Make
+      local_routerstatus (or equivalent) subsume all places to go for "what
+      router is this?"
+    - deprecate router_digest_is_trusted_dir() in favor of
+      router_get_trusteddirserver_by_digest()
 
   - Make Tor able to chroot itself
     o allow it to load an entire config file from control interface
@@ -344,6 +382,7 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Make 'safelogging' extend to info-level logs too.
 
   - Interface for letting SOAT modify flags that authorities assign.
+    (How to keep the authority from clobbering them afterwords?
 
 Later, unless people want to implement them now:
   - Actually use SSL_shutdown to close our TLS connections.
@@ -351,10 +390,25 @@ Later, unless people want to implement them now:
     [Nick: bridge authorities output a networkstatus that is missing
      version numbers. This is inconvenient if we want to make sure
      bridgedb gives out bridges with certain characteristics. -RD]
+    [Okay. Is this a separate item, or is it the same issue as the lack of
+     a "v" line in response to the controller GETINFO command? -NM]
   - Let tor dir mirrors proxy connections to the tor download site, so
     if you know a bridge you can fetch the tor software.
   - when somebody uses the controlport as an http proxy, give them
     a "tor isn't an http proxy" error too like we do for the socks port.
+  - MAYBE kill stalled circuits rather than stalled connections.  This is
+    possible thanks to cell queues, but we need to consider the anonymity
+    implications.
+  - Make resolves no longer use edge_connection_t unless they are actually
+    _on_ a socks connection: have edge_connection_t and (say)
+    dns_request_t both extend an edge_stream_t, and have p_streams and
+    n_streams both be linked lists of edge_stream_t.
+  - Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
+    online config documentation from a single source.
+  - It would be potentially helpful to respond to https requests on
+    the OR port by acting like an HTTPS server.
+  - Make the timestamp granularity on logs configurable, with default
+    of "1 second".  This might make some kinds of after-the-fact attack harder.
 
 Can anybody remember why we wanted to do this and/or what it means?
   - config option __ControllerLimit that hangs up if there are a limit
@@ -362,18 +416,23 @@ Can anybody remember why we wanted to do this and/or what it means?
     [This was mwenge's idea. The idea is that a Tor controller can
      "fill" Tor's controller slot quota, so jerks can't do cross-protocol
      attacks like the http form attack. -RD]
-  - configurable timestamp granularity. defaults to 'seconds'.
-    [This was Nick's idea. The idea to make the log timestamps much more
-     vague, so by default they don't help timing attacks much even if
-     they're leaked. -RD]
+  - Bridge issues
+    . Ask all directory questions to bridge via BEGIN_DIR.
+    - use the bridges for dir fetches even when our dirport is open.
+    - drop 'authority' queries if they're to our own identity key; accept
+      them otherwise.
+      - give extend_info_t a router_purpose again
 
 
-* * * *
 
-  - steven's plan for replacing check.torproject.org with a built-in
-    answer by tor itself.
-  - a status event for when tor decides to stop fetching directory info
-    if the client hasn't clicked recently: then make the onion change too.
+If somebody wants to do this in some version, they should:
+  - Create packages for Nokia 800, requested by Chris Soghoian
+  - More work on AvoidDiskWrites
+  - Make DNSPort support TCP DNS.
+
+
+* * * * Roger, please sort these: * * * *
+
   - bridge communities with local bridge authorities:
     - clients who have a password configured decide to ask their bridge
       authority for a networkstatus
@@ -382,102 +441,32 @@ Can anybody remember why we wanted to do this and/or what it means?
   - Consider if we can solve: the Tor client doesn't know what flags
     its bridge has (since it only gets the descriptor), so it can't
     make decisions based on Fast or Stable.
-  - anonymity concern: since our is-consensus-fresh-enough check is
-    sloppy so clients will actually work when a consensus wasn't formed,
-    does that mean that if users are idle for 5 hours and then click on
-    something, we will immediately use the old descriptors we've got,
-    while we try fetching the newer descriptors?
-    related to bug 401.
-  - Create packages for Nokia 800, requested by Chris Soghoian
-  - Bridges:
-    . Bridges users (rudimentary version)
-      . Ask all directory questions to bridge via BEGIN_DIR.
-        - use the bridges for dir fetches even when our dirport is open.
-      - drop 'authority' queries if they're to our own identity key; accept
-        them otherwise.
-      - give extend_info_t a router_purpose again
-  d Limit to 2 dir, 2 OR, N SOCKS connections per IP.
-    - Or maybe close connections from same IP when we get a lot from one.
-    - Or maybe block IPs that connect too many times at once.
+  - Bridge authorities should do reachability testing but only on the
+    purpose==bridge descriptors they have.
+  - Some mechanism for specifying that we want to stop using a cached
+    bridge.
+
+* * * *
+
+Removing these because they're tracked elsewhere:
+
   - we try to build 4 test circuits to break them over different
     servers. but sometimes our entry node is the same for multiple
     test circuits. this defeats the point.
+    [ TRACKED IN BUG 654 ]
+
+  d Limit to 2 dir, 2 OR, N SOCKS connections per IP.
+    - Or maybe close connections from same IP when we get a lot from one.
+    - Or maybe block IPs that connect too many times at once.
+    [ Same as bug 469 ]
+
   - more strategies for distributing bridge addresses in a way that
     doesn't rely on knowing somebody who runs a bridge for you.
-  - A way to adjust router status flags from the controller.  (How do we
-    prevent the authority from clobbering them soon afterward?)
-  - Bridge authorities should do reachability testing but only on the
-    purpose==bridge descriptors they have.
-
-
-Deferred from 0.2.0.x:
-  - Proposals
-    o 101: Voting on the Tor Directory System (plus 103)
-N     - Use if-modified-since on consensus download
-      - Controller support
-        D GETINFO to get consensus
-N       - Event when new consensus arrives
-    - 113: Simplifying directory authority administration
-    - 110: prevent infinite-length circuits (phase one)
-    - 118: Listen on and advertise multiple ports:
-      - Tor should be able to have a pool of outgoing IP addresses that it is
-        able to rotate through. (maybe.  Possible overlap with proposal 118.)
-      - config option to publish what ports you listen on, beyond
-        ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
-        (This is very similar to proposal 118.)
-    - 117: IPv6 Exits
-      - Internal code support for ipv6:
-        o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
-        - Most address variables need to become tor_addr_t
-        - Teach resolving code how to handle ipv6.
-        - Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
-  - Features
-    - Let controller set router flags for authority to transmit, and for
-      client to use.
-    - add an 'exit-address' line in the descriptor for servers that exit
-      from something that isn't their published address.
-    - More work on AvoidDiskWrites?
-  - Features
-    - Make a TCP DNSPort
-  - Protocol work
-    - MAYBE kill stalled circuits rather than stalled connections.  This is
-      possible thanks to cell queues, but we need to consider the anonymity
-      implications.
-    - Implement TLS shutdown properly when possible.
-  - Bugs
-    - If the client's clock is too far in the past, it will drop (or just not
-      try to get) descriptors, so it'll never build circuits.
-  - Refactoring
-    - Make resolves no longer use edge_connection_t unless they are actually
-      _on_ a socks connection: have edge_connection_t and (say)
-      dns_request_t both extend an edge_stream_t, and have p_streams and
-      n_streams both be linked lists of edge_stream_t.
-    - Generate torrc.{complete|sample}.in, tor.1.in, the HTML manual, and the
-      online config documentation from a single source.
-    - Move all status info out of routerinfo into local_routerstatus.  Make
-      "who can change what" in local_routerstatus explicit.  Make
-      local_routerstatus (or equivalent) subsume all places to go for "what
-      router is this?"
-  - Blocking/scanning-resistance
-    - It would be potentially helpful to respond to https requests on
-      the OR port by acting like an HTTPS server.
-    - Do we want to maintain our own set of entryguards that we use as
-      next hop after the bridge? Open research question; let's say no
-      for 0.2.0 unless we learn otherwise.
-    - Some mechanism for specifying that we want to stop using a cached
-      bridge.
-  - Build:
-    - Detect correct version of libraries from autoconf script.
+    [ In birdgedb TODO ]
 
 =======================================================================
 
 Future versions:
-  - deprecate router_digest_is_trusted_dir() in favor of
-    router_get_trusteddirserver_by_digest()
-
-  - See also Flyspray tasks.
-  - See also all OPEN/ACCEPTED proposals.
-  - See also all items marked XXXX and FFFF in the code.
 
   - Protocol:
     - Our current approach to block attempts to use Tor as a single-hop proxy
