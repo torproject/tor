@@ -23,6 +23,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       generate a password hash.  Fixes bug 643. Bugfix on 0.0.9pre5.  Fix
       based on patch from Sebastian Hahn.
     - When opening a logfile fails, tell us why.
+    - Make relay cells written on a connection count as non-padding when
+      tracking how long a connection has been in use. Bugfix on
+      0.2.0.1-alpha.  Spotted by lodger.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging

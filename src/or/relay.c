@@ -1868,7 +1868,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
        * for us.
        */
       assert_active_circuits_ok_paranoid(conn);
-      return n_flushed;
+      goto done;
     }
   }
   tor_assert(*next_circ_on_conn_p(circ,conn));
@@ -1885,6 +1885,9 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
     log_debug(LD_GENERAL, "Made a circuit inactive.");
     make_circuit_inactive_on_conn(circ, conn);
   }
+ done:
+  if (n_flushed)
+    conn->timestamp_last_added_nonpadding = time(NULL);
   return n_flushed;
 }
 
