@@ -132,6 +132,8 @@ Nick
   - Finish buffer stuff in libevent; start using it in Tor.
   - Tors start believing the contents of NETINFO cells.
   - Get a "use less buffer ram" patch into openssl.
+  - Work with Steven and Roger to decide which parts of Paul's project
+    he wants to work on.
 
 Matt
   - Fit Vidalia in 640x480 again.
@@ -164,6 +166,7 @@ Steven
   - Keep bugging us about exploits on the .exit notation.
   - If relays have 100KB/s but set relaybandwidthrate to 10KB/s, do your
     interference attacks still work?
+  - Mike's question #3 on https://www.torproject.org/volunteer#Research
 
 Andrew
   - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
@@ -173,12 +176,12 @@ Andrew
     include Torbutton, they still say it's tor.eff.org, etc.
   - Should we still be telling you how to use Safari on OS X for Tor,
     given all the holes that Torbutton-dev solves on Firefox?
+  - Get Google excited about our T&Cs.
 
 Karsten
   . Make a hidden services explanation page with the hidden service
     diagrams. See img/THS-[1-6].png. These need some text to go along
     with them though, so people can follow what's going on.
-    - Roger should review these
   - We should consider a single config option TorPrivateNetwork that
     turns on all the config options for running a private test tor
     network. having to keep updating all the tools, and the docs,
@@ -196,6 +199,8 @@ Weasel
 
 Roger:
   . Fix FAQ entry on setting up private Tor network
+  - Review Karsten's hidden service diagrams
+  - Prepare the 0.2.0.x Release Notes.
 
 =======================================================================
 
@@ -240,6 +245,14 @@ For 0.2.1.x:
     - Draft proposal for GeoIP aggregation (see external constraints *)
     - Separate Guard flags for "pick this as a new guard" and "keep this
       as an existing guard".  First investigate if we want this.
+    - Figure out how to make good use of the fallback consensus file. Right
+      now many of the addresses in the fallback consensus will be stale,
+      so it will take dozens of minutes to bootstrap from it. This is a
+      bad first Tor experience. But if we check the fallback consensus
+      file *after* we fail to connect to any authorities, then it may
+      still be valuable as a blocking-resistance step.
+      - Patch our tor.spec rpm package so it knows where to put the fallback
+        consensus file.
 
    - Tiny designs to write:
     - Better estimate of clock skew; has anonymity implications.  Clients
@@ -249,10 +262,9 @@ For 0.2.1.x:
     - Do TLS connection rotation more often than "once a week" in the
       extra-stable case.
 
-  - Items to backport to 0.2.0.x-rc once solved in 0.2.1.x:
-R   - Figure out the autoconf problem with adding a fallback consensus.
-R   - add a geoip file
-W     - figure out license
+  - Items to backport to 0.2.0.x once solved in 0.2.1.x:
+R   - add a geoip file *
+W     - figure out license *
 
   - Use less RAM *
     - Optimize cell pool allocation.
@@ -276,8 +288,8 @@ W     - figure out license
     - Normalized cipher lists *
     - Normalized lists of extensions *
   - Tool improvements:
-    - Get a "use less buffer ram" patch into openssl.
-    - Get IOCP patch into libevent
+    - Get a "use less buffer ram" patch into openssl. *
+    - Get IOCP patch into libevent *
 
   - Feature removals and deprecations:
     - Get rid of the v1 directory stuff (making, serving, and caching)
@@ -319,7 +331,6 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - chroot yourself, including inhibit trying to read config file
       and reopen logs, unless they are under datadir.
 
-
   - Should be trivial:
     - Base relative control socket paths (and other stuff in torrc) on datadir.
     - Tor logs the libevent version on startup, for debugging purposes.
@@ -334,18 +345,25 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 
 Later, unless people want to implement them now:
   - Actually use SSL_shutdown to close our TLS connections.
-  - Polipo vs Privoxy
-    - switch out privoxy in the bundles and replace it with polipo.
-    - Consider creating special Tor-Polipo-Vidalia test packages,
-      requested by Dmitri Vitalev (does torbrowser meet this need?)
   - Include "v" line in networkstatus getinfo values.
+    [Nick: bridge authorities output a networkstatus that is missing
+     version numbers. This is inconvenient if we want to make sure
+     bridgedb gives out bridges with certain characteristics. -RD]
   - Let tor dir mirrors proxy connections to the tor download site, so
     if you know a bridge you can fetch the tor software.
+  - when somebody uses the controlport as an http proxy, give them
+    a "tor isn't an http proxy" error too like we do for the socks port.
 
 Can anybody remember why we wanted to do this and/or what it means?
   - config option __ControllerLimit that hangs up if there are a limit
     of controller connections already.
+    [This was mwenge's idea. The idea is that a Tor controller can
+     "fill" Tor's controller slot quota, so jerks can't do cross-protocol
+     attacks like the http form attack. -RD]
   - configurable timestamp granularity. defaults to 'seconds'.
+    [This was Nick's idea. The idea to make the log timestamps much more
+     vague, so by default they don't help timing attacks much even if
+     they're leaked. -RD]
 
 
 * * * *
@@ -379,8 +397,6 @@ Can anybody remember why we wanted to do this and/or what it means?
   d Limit to 2 dir, 2 OR, N SOCKS connections per IP.
     - Or maybe close connections from same IP when we get a lot from one.
     - Or maybe block IPs that connect too many times at once.
-  - when somebody uses the controlport as an http proxy, give them
-    a "tor isn't an http proxy" error too like we do for the socks port.
   - we try to build 4 test circuits to break them over different
     servers. but sometimes our entry node is the same for multiple
     test circuits. this defeats the point.
