@@ -216,6 +216,9 @@ R     - Merge into tor-spec.txt.
 N - document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline.
 R   - then document the bridge user download timeline.
+  - HOWTO for DNSPort. See tup's wiki page.
+  . Document transport and natdport in a good HOWTO.
+  - Quietly document NT Service options: revise (or create) FAQ entry
 
 =======================================================================
 
@@ -235,6 +238,16 @@ For 0.2.1.x:
     - Eliminate use of v2 networkstatus documents in v3 authority
       decision-making.
     - Draft proposal for GeoIP aggregation (see external constraints *)
+    - Separate Guard flags for "pick this as a new guard" and "keep this
+      as an existing guard".  First investigate if we want this.
+
+   - Tiny designs to write:
+    - Better estimate of clock skew; has anonymity implications.  Clients
+      should estimate their skew as median of skew from servers over last
+      N seconds, but for servers this is not so easy, since a server does
+      not choose who it connects to.
+    - Do TLS connection rotation more often than "once a week" in the
+      extra-stable case.
 
   - Items to backport to 0.2.0.x-rc once solved in 0.2.1.x:
 R   - Figure out the autoconf problem with adding a fallback consensus.
@@ -243,81 +256,109 @@ W     - figure out license
 
   - Use less RAM *
     - Optimize cell pool allocation.
+    - Support (or just always use) jemalloc
+    - mmap more files.
   - Handle multi-core cpus better
   - Use information from NETINFO cells
     - Don't extend a circuit over a noncanonical connection with
       mismatched address.
     - Learn our outgoing IP address from netinfo cells?
     - Learn skew from netinfo cells?
-  - Better test coverage
+  - Testing
+    - Better unit test coverage
+    - Refactor unit tests into multiple files
+    - Verify that write limits to linked connections work.
   - Use more mid-level and high-level libevent APIs
+    - For dns?
+    - For http?
+    - For buffers?
   - Emulate NSS better:
     - Normalized cipher lists *
     - Normalized lists of extensions *
+  - Tool improvements:
+    - Get a "use less buffer ram" patch into openssl.
+    - Get IOCP patch into libevent
 
+  - Feature removals and deprecations:
+    - Get rid of the v1 directory stuff (making, serving, and caching)
+      - First verify that the caches won't flip out?
+        - If they will, just stop the caches from caching for now
+      - perhaps replace it with a "this is a tor server" stock webpage.
+    - The v2dir flag isn't used for anything anymore, right? If so, dump it.
+    - Even clients run rep_hist_load_mtbf_data(). Does this waste memory?
+      Dump it?
+    - Unless we start using ftime functions, dump them.
+    - can we deprecate 'getinfo network-status'?
+    - can we deprecate the FastFirstHopPK config option?
+    - Can we deprecate controllers that don't use both features?
 
 Nice to have for 0.2.1.x:
   - Better support for private networks: figure out what is hard, and
     make it easier.
 
-
-Planned for 0.2.1.x:
-  - Refactoring:
-    . Make cells get buffered on circuit, not on the or_conn.
-      . Switch to pool-allocation for cells?
-N       - Benchmark pool-allocation vs straightforward malloc.
-N       - Adjust memory allocation logic in pools to favor a little less
-          slack memory.
-    . Remove socketpair-based bridges conns, and the word "bridge".  (Use
-      shared (or connected) buffers for communication, rather than sockets.)
-      . Implement
-N       - Handle rate-limiting on directory writes to linked directory
-          connections in a more sensible manner.
-          Nick thinks he did this already?
-N       - Find more ways to test this.
-          (moria doesn't rate limit, so testing on moria not so good.)
-
   - Documentation
-    - HOWTO for DNSPort. See tup's wiki page.
-    . Document transport and natdport in a good HOWTO.
-N   - Quietly document NT Service options: revise (or create) FAQ entry
+P   - Make documentation realize that location of system configuration file
+      will depend on location of system defaults, and isn't always /etc/torrc.
 
-P - Make documentation realize that location of system configuration file
-    will depend on location of system defaults, and isn't always /etc/torrc.
-P - Figure out why dll's compiled in mingw don't work right in WinXP.
-P - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
+  - Windows build
+P   - Figure out why dll's compiled in mingw don't work right in WinXP.
+P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 
-  - Things that have been bugging Nick
-    - Make better use of multi-core machines: Do AES crypto and
-      compression in worker threads
-    - Maybe use jemalloc from freebsd via firefox 3, once its windows
-      and osx ports are more mature.
-    - MMap the cached-descriptors.new file as well as the regular ones
-    - Actually use SSL_shutdown to close our TLS connections.
+  - Refactor bad code:
     - Refactor the HTTP logic so the functions aren't so large.
-    - Get a "use less buffer ram" patch into openssl.
-    - Get IOCP patch into libevent
-    - Use libevent's evdns code where applicable.
     - Refactor buf_read and buf_write to have sensible ways to return
       error codes after partial writes
-    - Improve unit test coverage
-    - Logging domains.
+    - Router_choose_random_node() has a big pile of args. make it "flags".
+    - Streamline how we pick entry nodes: Make choose_random_entry() have
+      less magic and less control logic.
 
-  - get rid of the v1 directory stuff (making, serving, and caching).
-    - perhaps replace it with a "this is a tor server" stock webpage.
-  - the v2dir flag isn't used for anything anymore. right?
-  - even clients run rep_hist_load_mtbf_data(). this wastes memory.
+  - Make Tor able to chroot itself
+    o allow it to load an entire config file from control interface
+    - document LOADCONF
+    - log rotation (and FD passing) via control interface
+    - chroot yourself, including inhibit trying to read config file
+      and reopen logs, unless they are under datadir.
+
+
+  - Should be trivial:
+    - Base relative control socket paths (and other stuff in torrc) on datadir.
+    - Tor logs the libevent version on startup, for debugging purposes.
+      This is great. But it does this before configuring the logs, so
+      it only goes to stdout and is then lost.
+    - Make TrackHostExits expire TrackHostExitsExpire seconds after their
+      *last* use, not their *first* use.
+    - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
+    - Make 'safelogging' extend to info-level logs too.
+
+  - Interface for letting SOAT modify flags that authorities assign.
+
+Later, unless people want to implement them now:
+  - Actually use SSL_shutdown to close our TLS connections.
+  - Polipo vs Privoxy
+    - switch out privoxy in the bundles and replace it with polipo.
+    - Consider creating special Tor-Polipo-Vidalia test packages,
+      requested by Dmitri Vitalev (does torbrowser meet this need?)
+  - Include "v" line in networkstatus getinfo values.
+  - Let tor dir mirrors proxy connections to the tor download site, so
+    if you know a bridge you can fetch the tor software.
+
+Can anybody remember why we wanted to do this and/or what it means?
+  - config option __ControllerLimit that hangs up if there are a limit
+    of controller connections already.
+  - configurable timestamp granularity. defaults to 'seconds'.
+
+
+* * * *
+
   - steven's plan for replacing check.torproject.org with a built-in
     answer by tor itself.
   - a status event for when tor decides to stop fetching directory info
     if the client hasn't clicked recently: then make the onion change too.
-
   - bridge communities with local bridge authorities:
     - clients who have a password configured decide to ask their bridge
       authority for a networkstatus
     - be able to have bridges that aren't in your torrc. save them in
       state file, etc.
-N - router_choose_random_node() has a big pile of args. make it "flags".
   - Consider if we can solve: the Tor client doesn't know what flags
     its bridge has (since it only gets the descriptor), so it can't
     make decisions based on Fast or Stable.
@@ -327,38 +368,7 @@ N - router_choose_random_node() has a big pile of args. make it "flags".
     something, we will immediately use the old descriptors we've got,
     while we try fetching the newer descriptors?
     related to bug 401.
-  . Finish path-spec.txt
-  - More prominently, we should have a recommended apps list.
-    - recommend pidgin (gaim is renamed)
-    - unrecommend IE because of ftp:// bug.
-  - we should add a preamble to tor-design saying it's out of date.
-  - Refactor networkstatus generation:
-    - Include "v" line in getinfo values.
-  - config option __ControllerLimit that hangs up if there are a limit
-    of controller connections already.
-  - Features (other than bridges):
-    - Audit how much RAM we're using for buffers and cell pools; try to
-      trim down a lot.
-    - Base relative control socket paths on datadir.
-    - Make TrackHostExits expire TrackHostExitsExpire seconds after their
-       *last* use, not their *first* use.
-  - switch out privoxy in the bundles and replace it with polipo.
-  - Consider creating special Tor-Polipo-Vidalia test packages,
-    requested by Dmitri Vitalev (does torbrowser meet this need?)
   - Create packages for Nokia 800, requested by Chris Soghoian
-  - mirror tor downloads on (via) tor dir caches
-    . spec
-    - deploy
-  - interface for letting soat modify flags that authorities assign
-    . spec
-  - proposal 118 if feasible and obvious
-  - Maintain a skew estimate and use ftime consistently.
-  - Tor logs the libevent version on startup, for debugging purposes.
-    This is great. But it does this before configuring the logs, so
-    it only goes to stdout and is then lost.
-  - Deprecations:
-    - can we deprecate 'getinfo network-status'?
-    - can we deprecate the FastFirstHopPK config option?
   - Bridges:
     . Bridges users (rudimentary version)
       . Ask all directory questions to bridge via BEGIN_DIR.
@@ -369,43 +379,18 @@ N - router_choose_random_node() has a big pile of args. make it "flags".
   d Limit to 2 dir, 2 OR, N SOCKS connections per IP.
     - Or maybe close connections from same IP when we get a lot from one.
     - Or maybe block IPs that connect too many times at once.
-  - Do TLS connection rotation more often than "once a week" in the
-    extra-stable case.
-  - Streamline how we pick entry nodes: Make choose_random_entry() have
-    less magic and less control logic.
   - when somebody uses the controlport as an http proxy, give them
     a "tor isn't an http proxy" error too like we do for the socks port.
   - we try to build 4 test circuits to break them over different
     servers. but sometimes our entry node is the same for multiple
     test circuits. this defeats the point.
-  - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
-  - configurable timestamp granularity. defaults to 'seconds'.
-  - consider making 'safelogging' extend to info-level logs too.
-  - consider whether a single Guard flag lets us distinguish between
-    "was good enough to be a guard when we picked it" and "is still
-    adequate to be used as a guard even after we've picked it". We should
-    write a real proposal for this.
-  - make the new tls handshake blocking-resistant.
-  o figure out some way to collect feedback about what countries are using
-    bridges, in a way that doesn't screw anonymity too much.
-  - let tor dir mirrors proxy connections to the tor download site, so
-    if you know a bridge you can fetch the tor software.
   - more strategies for distributing bridge addresses in a way that
     doesn't rely on knowing somebody who runs a bridge for you.
   - A way to adjust router status flags from the controller.  (How do we
     prevent the authority from clobbering them soon afterward?)
   - Bridge authorities should do reachability testing but only on the
     purpose==bridge descriptors they have.
-  - Clients should estimate their skew as median of skew from servers
-    over last N seconds.
-  - Start on the WSAENOBUFS solution.
-  - Stuff that weasel wants:
-    - Make Tor able to chroot itself
-      o allow it to load an entire config file from control interface
-      - document LOADCONF
-      - log rotation (and FD passing) via control interface
-      - chroot yourself, including inhibit trying to read config file
-        and reopen logs, unless they are under datadir.
+
 
 Deferred from 0.2.0.x:
   - Proposals
@@ -689,6 +674,7 @@ Documentation, non-version-specific.
     - Mark up spec; note unclear points about servers
 NR  - write a spec appendix for 'being nice with tor'
     - Specify the keys and key rotation schedules and stuff
+    . Finish path-spec.txt
   - Mention controller libs someplace.
   - Remove need for HACKING file.
   - document http://wiki.noreply.org/noreply/TheOnionRouter/TransparentProxy on freebsd and osx
@@ -721,7 +707,13 @@ I - add a page for localizing all tor's components.
     work.  Right now, we don't give a lot of guidance wrt
     torbutton/foxproxy/privoxy/polipo in any consistent place.
 P - create a 'blog badge' for tor fans to link to and feature on their
-    blogs. A sample can be found at http://interloper.org/tmp/tor/tor-button.png
+    blogs. A sample is at http://interloper.org/tmp/tor/tor-button.png
+  - More prominently, we should have a recommended apps list.
+    - recommend pidgin (gaim is renamed)
+    - unrecommend IE because of ftp:// bug.
+  - Addenda to tor-design
+    - we should add a preamble to tor-design saying it's out of date.
+    - we should add an appendix or errata on what's changed.
 
   - Tor mirrors
     - make a mailing list with the mirror operators
@@ -736,4 +728,3 @@ P - create a 'blog badge' for tor fans to link to and feature on their
     - ponder how to get users to learn that they should google for
       "tor mirrors" if the main site is blocked.
     - find a mirror volunteer to coordinate all of this
-
