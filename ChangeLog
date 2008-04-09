@@ -9,6 +9,8 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
       using the .exit notation, rather than just launching an infinite
       pile of circuits. Fixes bug 641. Reported by Sebastian Hahn.
     - When opening a logfile fails, tell us why.
+    - Keep address policies from leaking: start their refcount at 1, not 2.
+      Bugfix on 0.2.0.16-alpha.
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24
