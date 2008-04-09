@@ -127,6 +127,8 @@ I     - Figure out a good PKI, document the design, assess security issues:
 Things Roger would be excited to see:
 
 Nick
+  - Send or-dev email about proposal statuses and about window for
+    new proposals.
   - Finish buffer stuff in libevent; start using it in Tor.
   - Tors start believing the contents of NETINFO cells.
   - Get a "use less buffer ram" patch into openssl.
@@ -192,57 +194,28 @@ Weasel
   - Take non-Running entries out of the networkstatus consensus.
   - Move proposal 134 forward.
 
+Roger:
+  . Fix FAQ entry on setting up private Tor network
+
 =======================================================================
 
-For Tor 0.2.0.x-rc:
-R - Figure out the autoconf problem with adding a fallback consensus.
-R - add a geoip file
-W   - figure out license
+Bugs/issues for Tor 0.2.0.x:
 R - let bridges set relaybandwidthrate as low as 5kb
 R - bug: if we launch using bridges, and then stop using bridges, we
     still have our bridges in our entryguards section, and may use them.
-  . make it easier to set up a private tor network on your own computer
-    is very hard.
-R   . FAQ entry which is wrong
-
-N . geoip caching and publishing for bridges
-    d Track consecutive time up, not time since last-forgotten IP.
-    - Mention in dir-spec.txt
-    - Mention in control-spec.txt
-    D have normal relays report geoip stats too.
-    D different thresholds for bridges than for normal relays.
-    o bridge relays round geoip stats *up*, not down.
 R - bridge communities
     . spec
     . deploy
       - man page entries for Alternate*Authority config options
 
-Things we'd like to do in 0.2.0.x:
-N - document the "3/4 and 7/8" business in the clients fetching consensus
-    documents timeline.
-R   - then document the bridge user download timeline.
-
-N - Before the feature freeze:
-    - 105+TLS, if possible.
-      . TLS backend work
-        . Enable.
-      - Test
-        o Verify version negotiation on client
-        o Verify version negotiation on server
-        o Verify that client->server connection becomes open
-        - Verify that server->server connection becomes open and
-          authenticated.
-        - Verify that initiator sends no cert in first stage of TLS
-          handshake.
-      - NETINFO fallout
-        - Don't extend a circuit over a noncanonical connection with
-          mismatched address.
-        - Learn our outgoing IP address from netinfo cells?
-
+Documentation for Tor 0.2.0.x:
   - Proposals:
     . 111: Prioritize local traffic over relayed.
 R     - Merge into tor-spec.txt.
-    - 113: close.
+    - 113: mark as closed close.
+N - document the "3/4 and 7/8" business in the clients fetching consensus
+    documents timeline.
+R   - then document the bridge user download timeline.
 
 =======================================================================
 
@@ -263,15 +236,29 @@ For 0.2.1.x:
       decision-making.
     - Draft proposal for GeoIP aggregation (see external constraints *)
 
+  - Items to backport to 0.2.0.x-rc once solved in 0.2.1.x:
+R   - Figure out the autoconf problem with adding a fallback consensus.
+R   - add a geoip file
+W     - figure out license
+
   - Use less RAM *
+    - Optimize cell pool allocation.
   - Handle multi-core cpus better
   - Use information from NETINFO cells
+    - Don't extend a circuit over a noncanonical connection with
+      mismatched address.
+    - Learn our outgoing IP address from netinfo cells?
+    - Learn skew from netinfo cells?
   - Better test coverage
   - Use more mid-level and high-level libevent APIs
   - Emulate NSS better:
     - Normalized cipher lists *
     - Normalized lists of extensions *
 
+
+Nice to have for 0.2.1.x:
+  - Better support for private networks: figure out what is hard, and
+    make it easier.
 
 
 Planned for 0.2.1.x:
