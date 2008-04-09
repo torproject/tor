@@ -13,6 +13,8 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
       Bugfix on 0.2.0.16-alpha.
     - Free authority certificates on exit, so they don't look like memory
       leaks.  Bugfix on 0.2.0.19-alpha.
+    - Free static hashtables for policy maps and for TLS connections on
+      shutdown, so they don't look like memory leaks.  Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24
