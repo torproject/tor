@@ -1835,7 +1835,8 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
  * <b>conn</b>-&gt;outbuf.  Return the number of cells written.  Advance
  * the active circuit pointer to the next active circuit in the ring. */
 int
-connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
+connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
+                                              time_t now)
 {
   int n_flushed;
   cell_queue_t *queue;
@@ -1887,7 +1888,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max)
   }
  done:
   if (n_flushed)
-    conn->timestamp_last_added_nonpadding = time(NULL);
+    conn->timestamp_last_added_nonpadding = now;
   return n_flushed;
 }
 
@@ -1932,7 +1933,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
      * get called, and we can start putting more data onto the buffer then.
      */
     log_debug(LD_GENERAL, "Primed a buffer.");
-    connection_or_flush_from_first_active_circuit(orconn, 1);
+    connection_or_flush_from_first_active_circuit(orconn, 1, time(NULL));
   }
 }
 

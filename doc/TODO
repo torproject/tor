@@ -323,6 +323,8 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Router_choose_random_node() has a big pile of args. make it "flags".
     - Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.
+    - Don't call time(NULL) so much; instead have a static time_t field
+      that gets updated only a handful of times per second.
 
   - Make Tor able to chroot itself
     o allow it to load an entire config file from control interface
