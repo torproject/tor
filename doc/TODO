@@ -446,24 +446,6 @@ If somebody wants to do this in some version, they should:
   - Some mechanism for specifying that we want to stop using a cached
     bridge.
 
-* * * *
-
-Removing these because they're tracked elsewhere:
-
-  - we try to build 4 test circuits to break them over different
-    servers. but sometimes our entry node is the same for multiple
-    test circuits. this defeats the point.
-    [ TRACKED IN BUG 654 ]
-
-  d Limit to 2 dir, 2 OR, N SOCKS connections per IP.
-    - Or maybe close connections from same IP when we get a lot from one.
-    - Or maybe block IPs that connect too many times at once.
-    [ Same as bug 469 ]
-
-  - more strategies for distributing bridge addresses in a way that
-    doesn't rely on knowing somebody who runs a bridge for you.
-    [ In birdgedb TODO ]
-
 =======================================================================
 
 Future versions:
