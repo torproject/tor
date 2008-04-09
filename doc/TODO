@@ -285,6 +285,7 @@ W     - figure out license *
     - Optimize cell pool allocation.
     - Support (or just always use) jemalloc
     - mmap more files.
+    - Look into pulling serverdescs off buffers as they arrive.
   - Use less bandwidth
     - Use if-modified-since to download consensuses
   - Handle multi-core cpus better
@@ -380,6 +381,10 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
       *last* use, not their *first* use.
     - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
     - Make 'safelogging' extend to info-level logs too.
+    - don't do dns hijacking tests if we're reject *:* exit policy?
+      (deferred until 0.1.1.x is less common)
+    - More consistent error checking in router_parse_entry_from_string().
+      I can say "banana" as my bandwidthcapacity, and it won't even squeak.
 
   - Interface for letting SOAT modify flags that authorities assign.
     (How to keep the authority from clobbering them afterwords?
@@ -450,7 +455,7 @@ If somebody wants to do this in some version, they should:
 
 Future versions:
 
-  - Protocol:
+  - Protocol
     - Our current approach to block attempts to use Tor as a single-hop proxy
       is pretty lame; we should get a better one.
     - Allow small cells and large cells on the same network?
@@ -470,21 +475,22 @@ Future versions:
 
   - Directory system
     - BEGIN_DIR items
-      X turn the received socks addr:port into a digest for setting .exit
       - handle connect-dir streams that don't have a chosen_exit_name set.
     - Have a "Faster" status flag that means it. Fast2, Fast4, Fast8?
     - Add an option (related to AvoidDiskWrites) to disable directory
       caching.  (Is this actually a good idea??)
-    - Add d64 and fp64 along-side d and fp so people can paste status
+    X Add d64 and fp64 along-side d and fp so people can paste status
       entries into a url. since + is a valid base64 char, only allow one
       at a time. Consider adding to controller as well.
+      [abandoned for lack of demand]
     - Some back-out mechanism for auto-approval on authorities
       - a way of rolling back approvals to before a timestamp
         - Consider minion-like fingerprint file/log combination.
-    - Have new people be in limbo and need to demonstrate usefulness
+    X Have new people be in limbo and need to demonstrate usefulness
       before we approve them.
 
   - Hidden services:
+    ****** Have karsten sort these.
     - Standby/hotswap/redundant hidden services.
     . Update the hidden service stuff for the new dir approach.  (Much
       of this will be superseded by 114.)
@@ -503,11 +509,6 @@ Future versions:
     - Hidserv offerers shouldn't need to define a SocksPort
 
   - Server operation
-    X When we notice a 'Rejected: There is already a named server with
-      this nickname' message... or maybe instead when we see in the
-      networkstatuses that somebody else is Named with the name we
-      want: warn the user, send a STATUS_SERVER message, and fall back
-      to unnamed.
     - If the server is spewing complaints about raising your ulimit -n,
       we should add a note about this to the server descriptor so other
       people can notice too.
@@ -553,7 +554,6 @@ Future versions:
       (It's hard to support read > write, since we need better
        congestion control to avoid overfull buffers there.  So,
        defer the whole thing.)
-    - Look into pulling serverdescs off buffers as they arrive.
     - Rate limit exit connections to a given destination -- this helps
       us play nice with websites when Tor users want to crawl them; it
       also introduces DoS opportunities.
@@ -578,8 +578,6 @@ Future versions:
 
   - Security
     - some better fix for bug #516?
-    - don't do dns hijacking tests if we're reject *:* exit policy?
-      (deferred until 0.1.1.x is less common)
     - Directory guards
     - Mini-SoaT:
       - Servers might check certs for known-good ssl websites, and if
@@ -592,8 +590,6 @@ Future versions:
         the BadExit flag set.
       - Alternatively, authorities should be able to import opinions
         from Snakes on a Tor.
-    - More consistent error checking in router_parse_entry_from_string().
-      I can say "banana" as my bandwidthcapacity, and it won't even squeak.
     - Bind to random port when making outgoing connections to Tor servers,
       to reduce remote sniping attacks.
     - Audit everything to make sure rend and intro points are just as
@@ -620,8 +616,6 @@ Future versions:
     - We need a getrlimit equivalent on Windows so we can reserve some
       file descriptors for saving files, etc. Otherwise we'll trigger
       asserts when we're out of file descriptors and crash.
-    - Merge code from Urz into libevent
-    - Make Tor use evbuffers.
 
   - Documentation
     - a way to generate the website diagrams from source, so we can
@@ -629,8 +623,6 @@ Future versions:
       imagemagick?)
     . Flesh out options_description array in src/or/config.c
     . multiple sample torrc files
-    . figure out how to make nt service stuff work?
-      . Document it.
     - Refactor tor man page to divide generally useful options from
       less useful ones?
     - Add a doxygen style checker to make check-spaces so nick doesn't drift
@@ -653,8 +645,6 @@ Future versions:
       fix the https thing in the default configuration:
       http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#PrivoxyWeirdSSLPort
 
-  - Related tools
-    X Patch privoxy and socks protocol to pass strings to the browser.
 
 =======================================================================
 
