@@ -1611,6 +1611,7 @@ dumpstats(int severity)
 {
   time_t now = time(NULL);
   time_t elapsed;
+  int rbuf_cap, wbuf_cap, rbuf_len, wbuf_len;
 
   log(severity, LD_GENERAL, "Dumping stats:");
 
@@ -1638,6 +1639,17 @@ dumpstats(int severity)
           (int)buf_datalen(conn->outbuf),
           (int)buf_allocation(conn->outbuf),
           (int)(now - conn->timestamp_lastwritten));
+      if (conn->type == CONN_TYPE_OR) {
+        or_connection_t *or_conn = TO_OR_CONN(conn);
+        if (or_conn->tls) {
+          tor_tls_get_buffer_sizes(or_conn->tls, &rbuf_cap, &rbuf_len,
+                                   &wbuf_cap, &wbuf_len);
+          log(severity, LD_GENERAL,
+              "Conn %d: %d/%d bytes used on openssl read buffer; "
+              "%d/%d bytes used on write buffer.",
+              i, rbuf_len, rbuf_cap, wbuf_len, wbuf_cap);
+        }
+      }
     }
     circuit_dump_by_conn(conn, severity); /* dump info about all the circuits
                                            * using this conn */

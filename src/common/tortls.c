@@ -1346,3 +1346,14 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
   return 1;
 }
 
+/** DOCDOC */
+void
+tor_tls_get_buffer_sizes(tor_tls_t *tls,
+                         int *rbuf_capacity, int *rbuf_bytes,
+                         int *wbuf_capacity, int *wbuf_bytes)
+{
+  *rbuf_capacity = tls->ssl->s3->rbuf.len;
+  *wbuf_capacity = tls->ssl->s3->wbuf.len;
+  *rbuf_bytes = tls->ssl->s3->rbuf.left;
+  *wbuf_bytes = tls->ssl->s3->wbuf.left;
+}

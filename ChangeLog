@@ -60,6 +60,7 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       descriptors we need to keep around when we're cleaning out old
       router descriptors.  This speeds up the computation significantly, and
       may reduce fragmentation.
+    - Make dumpstats() log the fullness and size of openssl-internal buffers.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to
@@ -67,6 +68,7 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       bug 617.  Bugfix on 0.2.0.1-alpha.
     - Add a macro to implement the common pattern of iterating through
       two parallel lists in lockstep.
+
 
 Changes in version 0.2.0.23-rc - 2008-03-24
   o Major bugfixes:
