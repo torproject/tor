@@ -127,8 +127,9 @@ I     - Figure out a good PKI, document the design, assess security issues:
 Things Roger would be excited to see:
 
 Nick
-  - Send or-dev email about proposal statuses and about window for
-    new proposals.
+  o Send or-dev email about proposal statuses.
+  - Send or-dev email about window for new proposals, once arma and
+    nick agree.
   - Finish buffer stuff in libevent; start using it in Tor.
   - Tors start believing the contents of NETINFO cells.
   - Get a "use less buffer ram" patch into openssl.
