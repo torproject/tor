@@ -236,8 +236,9 @@ For 0.2.1.x:
   - Proposals to write:
     - Do we want to maintain our own set of entryguards that we use as
       next hop after the bridge?
-    - Add an 'exit-address' line in the descriptor for servers that exit
+    X Add an 'exit-address' line in the descriptor for servers that exit
       from something that isn't their published address.
+      [I think tordnsel solved this. -RD]
     - Proposal to supersede 117 by adding IPv6 support for exits and entries.
       - Internal code support for ipv6:
         o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
@@ -268,6 +269,12 @@ For 0.2.1.x:
       - Patch our tor.spec rpm package so it knows where to put the fallback
         consensus file.
     - Something for bug 469, to limit connections per IP.
+    - Put bandwidth weights in the networkstatus? So clients get weight
+      their choices even before they have the descriptors; and so
+      authorities can put in more accurate numbers in the future.
+    - Map out the process of bootstrapping, break it into status events,
+      spec those events. Also, map out the ways where we can realize that
+      bootstrapping is *failing*, and include those. *
 
   - Tiny designs to write:
     - Better estimate of clock skew; has anonymity implications.  Clients
