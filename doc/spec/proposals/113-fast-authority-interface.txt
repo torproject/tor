@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
 Created:
-Status: Open
+Status: Superseded
 
 Overview
 
@@ -79,3 +79,9 @@ Possible solution #4: A separate mailing list for authority operators.
   list that's only for dealing with problems that need prompt action, like
   marking a router as !badexit.
 
+Resolution:
+
+  Solution #2 is described in "Proposal 123: Naming authorities
+  automatically create bindings", and that approach is implemented.
+  There are remaining issues in the problem statement above that need
+  their own solutions.

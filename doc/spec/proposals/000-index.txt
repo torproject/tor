@@ -32,15 +32,15 @@ Proposals by number:
 107  Uptime Sanity Checking [CLOSED]
 108  Base "Stable" Flag on Mean Time Between Failures [CLOSED]
 109  No more than one server per IP address [CLOSED]
-110  Avoiding infinite length circuits [OPEN]
+110  Avoiding infinite length circuits [NEEDS-REVISION]
 111  Prioritizing local traffic over relayed traffic [FINISHED]
 112  Bring Back Pathlen Coin Weight [SUPERSEDED]
-113  Simplifying directory authority administration [OPEN]
+113  Simplifying directory authority administration [SUPERSEDED]
 114  Distributed Storage for Tor Hidden Service Descriptors [CLOSED]
-115  Two Hop Paths [OPEN]
-116  Two hop paths from entry guards [OPEN]
-117  IPv6 exits [OPEN]
-118  Advertising multiple ORPorts at once [NEEDS-RESEARCH]
+115  Two Hop Paths [DEAD]
+116  Two hop paths from entry guards [DEAD]
+117  IPv6 exits [NEEDS-REVISION]
+118  Advertising multiple ORPorts at once [DRAFT]
 119  New PROTOCOLINFO command for controllers [CLOSED]
 120  Suicide descriptors when Tor servers stop [OPEN]
 121  Hidden Service Authentication [OPEN]
@@ -61,19 +61,22 @@ Proposals by number:
 
 Proposals by status:
 
+ DRAFT:
+   118  Advertising multiple ORPorts at once
+   127  Relaying dirport requests to Tor download site / website
+   128  Families of private bridges
+   132  A Tor Web Service For Verifying Correct Browser Configuration
+   133  Incorporate Unreachable ORs into the Tor Network
+   134  More robust consensus voting with diverse authority sets
  OPEN:
-   110  Avoiding infinite length circuits
-   113  Simplifying directory authority administration
-   115  Two Hop Paths
-   116  Two hop paths from entry guards
-   117  IPv6 exits
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
- ACCEPTED:
  NEEDS-REVISION:
+   110  Avoiding infinite length circuits
+   117  IPv6 exits
    131  Help users to verify they are using Tor
  NEEDS-RESEARCH:
-   118  Advertising multiple ORPorts at once
+ ACCEPTED:
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
@@ -101,12 +104,9 @@ Proposals by status:
    130  Version 2 Tor connection protocol
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
+   113  Simplifying directory authority administration
    124  Blocking resistant TLS certificate usage
  DEAD:
    100  Tor Unreliable Datagram Extension Proposal
- DRAFT:
-   127  Relaying dirport requests to Tor download site / website
-   128  Families of private bridges
-   132  A Tor Web Service For Verifying Correct Browser Configuration
-   133  Incorporate Unreachable ORs into the Tor Network
-   134  More robust consensus voting with diverse authority sets
+   115  Two Hop Paths
+   116  Two hop paths from entry guards

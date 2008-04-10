@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 09-Jul-2007
-Status: Needs-Research
+Status: Draft
 
 Some notes follow. Please feel free to flesh them out, discard them,
 add in better ideas, etc.

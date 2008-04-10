@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Michael Lieberman
 Created: 26-Jun-2007
-Status: Open
+Status: Dead
 
 This proposal is related to (but different from) Mike Perry's proposal 115
 "Two Hop Paths."

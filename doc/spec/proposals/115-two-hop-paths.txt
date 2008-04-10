@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Mike Perry
 Created:
-Status: Open
+Status: Dead
 Supersedes: 112
 
 
