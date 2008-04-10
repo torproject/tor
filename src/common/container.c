@@ -30,7 +30,7 @@ const char container_c_id[] =
 #include "ht.h"
 
 /** All newly allocated smartlists have this capacity. */
-#define SMARTLIST_DEFAULT_CAPACITY 32
+#define SMARTLIST_DEFAULT_CAPACITY 16
 
 /** Allocate and return an empty smartlist.
  */

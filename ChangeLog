@@ -26,6 +26,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Make relay cells written on a connection count as non-padding when
       tracking how long a connection has been in use. Bugfix on
       0.2.0.1-alpha.  Spotted by lodger.
+    - Reduce the default smartlist size from 32 to 16; it turns out that
+      most smartlists hold around 8-12 elements tops.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
