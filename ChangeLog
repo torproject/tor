@@ -11,18 +11,12 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Fix the implementation of ClientDNSRejectInternalAddresses so that it
       actually works, and doesn't warn about every single reverse lookup.
       Fixes the other part of bug 617.  Bugfix on 0.2.0.1-alpha.
-    - Initialize log mutex before initializing dmalloc.  Otherwise,
-      running with dmalloc would crash. Bugfix on 0.2.0.x-alpha.
     - Keep address policies from leaking: start their refcount at 1, not
       2. Bugfix on 0.2.0.16-alpha.
     - Free authority certificates on exit, so they don't look like memory
       leaks.  Bugfix on 0.2.0.19-alpha.
     - Free static hashtables for policy maps and for TLS connections on
       shutdown, so they don't look like memory leaks.  Bugfix on 0.2.0.x.
-    - Do not read the configuration file when we've only been told to
-      generate a password hash.  Fixes bug 643. Bugfix on 0.0.9pre5.  Fix
-      based on patch from Sebastian Hahn.
-    - When opening a logfile fails, tell us why.
     - Make relay cells written on a connection count as non-padding when
       tracking how long a connection has been in use. Bugfix on
       0.2.0.1-alpha.  Spotted by lodger.
@@ -71,6 +65,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24
+  Tor 0.2.0.23-rc is the fourth release candidate for the 0.2.0 series. It        makes bootstrapping faster if the first directory mirror you contact
+  is down. The bundles also include the new Vidalia 0.1.2 release.
+
   o Major bugfixes:
     - When a tunneled directory request is made to a directory server
       that's down, notice after 30 seconds rather than 120 seconds. Also,
@@ -79,6 +76,11 @@ Changes in version 0.2.0.23-rc - 2008-03-24
 
 
 Changes in version 0.2.0.22-rc - 2008-03-18
+  Tor 0.2.0.22-rc is the third release candidate for the 0.2.0 series. It
+  enables encrypted directory connections by default for non-relays, fixes
+  some broken TLS behavior we added in 0.2.0.20-rc, and resolves many
+  other bugs. The bundles also include Vidalia 0.1.1 and Torbutton 1.1.17.
+
   o Major features:
     - Enable encrypted directory connections by default for non-relays,
       so censor tools that block Tor directory connections based on their
@@ -140,6 +142,11 @@ Changes in version 0.2.0.22-rc - 2008-03-18
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
+  Tor 0.2.0.21-rc is the second release candidate for the 0.2.0 series. It
+  makes Tor work well with Vidalia again, fixes a rare assert bug,
+  and fixes a pair of more minor bugs. The bundles also include Vidalia
+  0.1.0 and Torbutton 1.1.16.
+
   o Major bugfixes:
     - The control port should declare that it requires password auth
       when HashedControlSessionPassword is set too. Patch from Matt Edman;
