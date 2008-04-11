@@ -18,6 +18,10 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24
+  Tor 0.2.0.23-rc is the fourth release candidate for the 0.2.0 series. It
+  makes bootstrapping faster if the first directory mirror you contact
+  is down. The bundles also include the new Vidalia 0.1.2 release.
+
   o Major bugfixes:
     - When a tunneled directory request is made to a directory server
       that's down, notice after 30 seconds rather than 120 seconds. Also,
@@ -26,6 +30,11 @@ Changes in version 0.2.0.23-rc - 2008-03-24
 
 
 Changes in version 0.2.0.22-rc - 2008-03-18
+  Tor 0.2.0.22-rc is the third release candidate for the 0.2.0 series. It
+  enables encrypted directory connections by default for non-relays, fixes
+  some broken TLS behavior we added in 0.2.0.20-rc, and resolves many
+  other bugs. The bundles also include Vidalia 0.1.1 and Torbutton 1.1.17.
+
   o Major features:
     - Enable encrypted directory connections by default for non-relays,
       so censor tools that block Tor directory connections based on their
@@ -87,6 +96,11 @@ Changes in version 0.2.0.22-rc - 2008-03-18
 
 
 Changes in version 0.2.0.21-rc - 2008-03-02
+  Tor 0.2.0.21-rc is the second release candidate for the 0.2.0 series. It
+  makes Tor work well with Vidalia again, fixes a rare assert bug,
+  and fixes a pair of more minor bugs. The bundles also include Vidalia
+  0.1.0 and Torbutton 1.1.16.
+
   o Major bugfixes:
     - The control port should declare that it requires password auth
       when HashedControlSessionPassword is set too. Patch from Matt Edman;
