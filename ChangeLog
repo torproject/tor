@@ -65,7 +65,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24
-  Tor 0.2.0.23-rc is the fourth release candidate for the 0.2.0 series. It        makes bootstrapping faster if the first directory mirror you contact
+  Tor 0.2.0.23-rc is the fourth release candidate for the 0.2.0 series. It
+  makes bootstrapping faster if the first directory mirror you contact
   is down. The bundles also include the new Vidalia 0.1.2 release.
 
   o Major bugfixes:
