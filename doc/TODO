@@ -289,6 +289,11 @@ For 0.2.1.x:
       not choose who it connects to.
     - Do TLS connection rotation more often than "once a week" in the
       extra-stable case.
+    - If a relay publishes a new descriptor with a significantly lower
+      uptime or with a new IP address, then we should consider its current
+      "running" interval to have ended even if it hadn't yet failed its
+      third reachability test. the interval ended when the new descriptor
+      appeared, and a new interval began then too.
 
   - Items to backport to 0.2.0.x once solved in 0.2.1.x:
 R   - add a geoip file *
