@@ -1513,7 +1513,8 @@ $Id$
            'tor --hash-password <password>'
   or by using the example code in the Python and Java controller libraries.
   To authenticate under this scheme, the controller sends Tor the original
-  secret that was used to generate the password.
+  secret that was used to generate the password, either as a quoted string
+  or encoded in hexadecimal.
 
 5.2. Don't let the buffer get too big.
 
