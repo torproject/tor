@@ -100,7 +100,7 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
   1. Begin every file that should be documented with
          /**
           * \file filename.c
-          * \brief Short desccription of the file.
+          * \brief Short description of the file.
           **/
 
      (Doxygen will recognize any comment beginning with /** as special.)
