@@ -145,6 +145,11 @@ Matt
     launches for you.
   - Vidalia should avoid stomping on your custom exit policy lines
     just because you click on 'save' for a totally different config thing.
+  - "can anyone help me, all of a sudden on tor on the mac, when i
+    start it up, It asks for my control password, which ive never set"
+    We should either give Vidalia another option in that dialog box -- to
+    restart Tor -- or we should make it so when Vidalia spawns Tor and
+    then Vidalia dies, Tor dies too.
 
 ioerror
   - gmail auto responder so you send us an email and we send you a Tor
