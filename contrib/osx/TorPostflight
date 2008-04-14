@@ -124,6 +124,6 @@ fi
 if [ -f /Applications/Firefox.app/Contents/MacOS/firefox ]; then
   if [ -f $TARGET/torbutton-$TORBUTTON_VERSION.xpi ]; then
 # Open firefox with a prompt to install the torbutton xpi
-      su $USER /Applications/Firefox.app/Contents/MacOS/firefox $TARGET/torbutton-$TORBUTTON_VERSION.xpi
+      su $USER open -a /Applications/Firefox.app $TARGET/torbutton-$TORBUTTON_VERSION.xpi
   fi
 fi
