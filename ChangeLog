@@ -1,5 +1,8 @@
 Changes in version 0.2.0.24-rc - 2008-04-0?
   o Minor bugfixes:
+    - Avoid a rare assert that can trigger when Tor doesn't have much
+      directory information yet and it tries to fetch a v2 hidden
+      service descriptor. Fixes bug 651, reported by nwf.
     - Initialize log mutex before initializing dmalloc.  Otherwise,
       running with dmalloc would crash. Bugfix on 0.2.0.x-alpha.
     - Do not read the configuration file when we've only been told to
