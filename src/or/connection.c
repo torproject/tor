@@ -485,7 +485,9 @@ connection_about_to_close_connection(connection_t *conn)
        * retry as needed. (If a fetch is successful, the connection state
        * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC to mark that
        * refetching is unnecessary.) */
-      if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2)
+       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
+           dir_conn->rend_query &&
+           strlen(dir_conn->rend_query) == REND_SERVICE_ID_LEN_BASE32)
         rend_client_refetch_v2_renddesc(dir_conn->rend_query);
       break;
     case CONN_TYPE_OR:
