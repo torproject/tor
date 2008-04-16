@@ -1380,7 +1380,7 @@ static smartlist_t *predicted_ports_times=NULL;
  * some circuits open that will exit to this port.
  */
 static void
-add_predicted_port(uint16_t port, time_t now)
+add_predicted_port(time_t now, uint16_t port)
 {
   /* XXXX we could just use uintptr_t here, I think. */
   uint16_t *tmp_port = tor_malloc(sizeof(uint16_t));
@@ -1401,7 +1401,7 @@ predicted_ports_init(void)
 {
   predicted_ports_list = smartlist_create();
   predicted_ports_times = smartlist_create();
-  add_predicted_port(80, time(NULL)); /* add one to kickstart us */
+  add_predicted_port(time(NULL), 80); /* add one to kickstart us */
 }
 
 /** Free whatever memory is needed for predicting which ports will
@@ -1423,7 +1423,7 @@ predicted_ports_free(void)
  * future and making exit circuits to anticipate that.
  */
 void
-rep_hist_note_used_port(uint16_t port, time_t now)
+rep_hist_note_used_port(time_t now, uint16_t port)
 {
   int i;
   uint16_t *tmp_port;
@@ -1444,7 +1444,7 @@ rep_hist_note_used_port(uint16_t port, time_t now)
     }
   }
   /* it's not there yet; we need to add it */
-  add_predicted_port(port, now);
+  add_predicted_port(now, port);
 }
 
 /** For this long after we've seen a request for a given port, assume that
@@ -1491,7 +1491,7 @@ rep_hist_get_predicted_ports(time_t now)
 void
 rep_hist_note_used_resolve(time_t now)
 {
-  rep_hist_note_used_port(80, now);
+  rep_hist_note_used_port(now, 80);
 }
 
 /** The last time at which we needed an internal circ. */

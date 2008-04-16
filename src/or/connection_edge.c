@@ -1529,7 +1529,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
       if (!conn->use_begindir) {
         /* help predict this next time */
-        rep_hist_note_used_port(socks->port, now);
+        rep_hist_note_used_port(now, socks->port);
       }
     } else if (socks->command == SOCKS_COMMAND_RESOLVE_PTR) {
       rep_hist_note_used_resolve(now); /* help predict this next time */
