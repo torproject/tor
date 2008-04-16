@@ -312,7 +312,7 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
     started_tracking_stability = time(NULL);
   if (hist && hist->start_of_run) {
     /*XXXX We could treat failed connections differently from failed
-     * conect attempts. */
+     * connect attempts. */
     long run_length = when - hist->start_of_run;
     hist->weighted_run_length += run_length;
     hist->total_run_weights += 1.0;
@@ -1484,7 +1484,7 @@ rep_hist_get_predicted_ports(time_t now)
 }
 
 /** The user asked us to do a resolve. Rather than keeping track of
- * timings and such of resolves, we fake it for now by making treating
+ * timings and such of resolves, we fake it for now by treating
  * it the same way as a connection to port 80. This way we will continue
  * to have circuits lying around if the user only uses Tor for resolves.
  */

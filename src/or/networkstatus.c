@@ -1706,7 +1706,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
         router_clear_status_flags(router);
     }
   }) {
-    /* We have a routersatus for this router. */
+    /* We have a routerstatus for this router. */
     const char *digest = router->cache_info.identity_digest;
 
     ds = router_get_trusteddirserver_by_digest(digest);

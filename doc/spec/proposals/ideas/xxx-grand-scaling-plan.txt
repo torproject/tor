@@ -22,7 +22,8 @@ descriptor at every 'extend' operation:
   - Client picks middle hop out of networkstatus, asks guard for
     its descriptor, then extends to it.
   - Clients picks exit hop out of networkstatus, asks middle hop
-    for its descriptor, the extends to it. Done.
+    for its descriptor, then extends to it. Done.
+
 The client needs to ask for the descriptor even if it already has a
 copy, because otherwise we leak too much. Also, the descriptor needs to
 be padded to some large (but not too large) size to prevent the middle

@@ -1968,7 +1968,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
       case TOR_TLS_CLOSE:
       case TOR_TLS_ERROR_IO:
         log_debug(LD_NET,"TLS connection closed %son read. Closing. "
-                 "(Nickname %s, address %s",
+                 "(Nickname %s, address %s)",
                  result == TOR_TLS_CLOSE ? "cleanly " : "",
                  or_conn->nickname ? or_conn->nickname : "not set",
                  conn->address);

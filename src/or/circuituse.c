@@ -83,7 +83,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
     if (!exitrouter && !build_state->onehop_tunnel) {
-        log_debug(LD_CIRC,"Not considering circuit with unknown router.");
+      log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
                  * or is a rendezvous circuit. */
     }

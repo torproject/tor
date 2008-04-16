@@ -65,7 +65,7 @@ geoip_add_entry(uint32_t low, uint32_t high, const char *country)
 }
 
 /** Add an entry to the GeoIP table, parsing it from <b>line</b>.  The
- * format is as for geoip_load_file. */
+ * format is as for geoip_load_file(). */
 /*private*/ int
 geoip_parse_entry(const char *line)
 {
@@ -283,7 +283,7 @@ geoip_remove_old_clients(time_t cutoff)
 /** Do not report any geoip data at all if we have fewer than this number of
  * IPs to report about. */
 #define MIN_IPS_TO_NOTE_ANYTHING 16
-/** When reporting geoip data about countries, round down to the nearest
+/** When reporting geoip data about countries, round up to the nearest
  * multiple of this value. */
 #define IP_GRANULARITY 8
 

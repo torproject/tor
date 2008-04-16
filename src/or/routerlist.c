@@ -3103,6 +3103,7 @@ routerlist_remove_old_routers(void)
    * pruning current routers that are too old and that nobody recommends.  (If
    * we don't have enough networkstatuses, then we should get more before we
    * decide to kill routers.) */
+  /* XXX021 we don't check if we have a v3 consensus, do we? should we? -RD */
   if (!caches ||
       smartlist_len(networkstatus_v2_list) > get_n_v2_authorities() / 2) {
     cutoff = now - ROUTER_MAX_AGE;
