@@ -719,7 +719,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     if (anonymized_connection && use_begindir)
       rep_hist_note_used_internal(time(NULL), 0, 1);
     else if (anonymized_connection && !use_begindir)
-      rep_hist_note_used_port(time(NULL), conn->_base.port);
+      rep_hist_note_used_port(conn->_base.port, time(NULL));
 
     /* make an AP connection
      * populate it and add it at the right state

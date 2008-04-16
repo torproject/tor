@@ -18,6 +18,9 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
       leaks.  Bugfix on 0.2.0.19-alpha.
     - Free static hashtables for policy maps and for TLS connections on
       shutdown, so they don't look like memory leaks.  Bugfix on 0.2.0.x.
+    - Fix a dumb bug that was preventing us from knowing that we should
+      preemptively build circuits to handle expected directory requests.
+      Fixes bug 660. Bugfix on 0.1.2.x.
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24
