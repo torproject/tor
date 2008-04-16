@@ -23,6 +23,10 @@ Changes in version 0.1.2.20 - 2008-??-??
     - Fix a pointer error that kept us from reporting nameserver errors.
     - On Windows, correctly detect errors when listing the contents of a
       directory.  Fix from lodger.
+    - Fix a dumb bug that was preventing us from knowing that we should
+      preemptively build circuits to handle expected directory requests.
+      Fixes bug 660.
+
 
 Changes in version 0.1.2.19 - 2008-01-17
   Tor 0.1.2.19 fixes a huge memory leak on exit relays, makes the default

@@ -457,7 +457,7 @@ directory_initiate_command(const char *address, uint32_t addr,
      */
 
     if (private_connection)
-      rep_hist_note_used_port(time(NULL), conn->_base.port);
+      rep_hist_note_used_port(conn->_base.port, time(NULL));
 
     conn->dirconn_direct = 0;
     conn->_base.s =
