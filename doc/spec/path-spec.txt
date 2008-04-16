@@ -175,7 +175,7 @@ of their choices.
        below)
      - XXXX Choosing the length
 
-   For circuits that do not need to be not "fast", when choosing among
+   For circuits that do not need to be "fast", when choosing among
    multiple candidates for a path element, we choose randomly.
 
    For "fast" circuits, we pick a given router as an exit with probability
