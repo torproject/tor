@@ -21,6 +21,8 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
     - Fix a dumb bug that was preventing us from knowing that we should
       preemptively build circuits to handle expected directory requests.
       Fixes bug 660. Bugfix on 0.1.2.x.
+    - Avoid allocating extra space when computing consensuses on
+      64-bit platforms.  Bug spotted by aakova.
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24
