@@ -22,6 +22,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       0.2.0.1-alpha.  Spotted by lodger.
     - Reduce the default smartlist size from 32 to 16; it turns out that
       most smartlists hold around 8-12 elements tops.
+    - Avoid allocating extra space when computing consensuses on
+      64-bit platforms.  Bug spotted by aakova.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging

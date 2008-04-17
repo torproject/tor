@@ -641,8 +641,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
     n_voter_flags = tor_malloc_zero(sizeof(int) * smartlist_len(votes));
     n_flag_voters = tor_malloc_zero(sizeof(int) * smartlist_len(flags));
     flag_map = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
-    named_flag = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
-    unnamed_flag = tor_malloc_zero(sizeof(int*) * smartlist_len(votes));
+    named_flag = tor_malloc_zero(sizeof(int) * smartlist_len(votes));
+    unnamed_flag = tor_malloc_zero(sizeof(int) * smartlist_len(votes));
     for (i = 0; i < smartlist_len(votes); ++i)
       unnamed_flag[i] = named_flag[i] = -1;
     chosen_named_idx = smartlist_string_pos(flags, "Named");
