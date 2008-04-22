@@ -36,6 +36,8 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
       Patch from mwenge.  Fixes bug 646.
     - Correctly notify one-hop connections when a circuit build has
       failed.  Possible fix for bug 669.  Found by lodger.
+    - Detect address changes correctly on non-directory mirror
+      servers.  Fix for bug 652.
 
   o Minor features (security):
     - Reject requests for reverse-dns lookup of names in a private
