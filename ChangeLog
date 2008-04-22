@@ -31,6 +31,10 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       untrusted sources.  Fixes bug 663.
     - Non-exit relays no longer allow DNS requests.  Fixes bug 619.
       Patch from Lodger.
+    - Make controller stream events for DNS requests more consistent,
+      by adding "new stream" events for DNS requests, and removing
+      spurious "stream closed" events" for cached reverse resolves.
+      Patch from mwenge.  Fixes bug 646.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging

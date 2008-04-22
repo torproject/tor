@@ -1348,13 +1348,15 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                    &map_expires)) {
       char *result = tor_strdup(socks->address);
       /* remember _what_ is supposed to have been resolved. */
-      strlcpy(socks->address, orig_address, sizeof(socks->address));
+      tor_snprintf(socks->address, sizeof(socks->address), "REVERSE[%s]",
+                  orig_address);
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
                                              strlen(result), result, -1,
                                              map_expires);
       connection_mark_unattached_ap(conn,
-                                 END_STREAM_REASON_DONE |
-                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
+                                END_STREAM_REASON_DONE |
+                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED |
+                                END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED);
       return 0;
     }
     if (options->ClientDNSRejectInternalAddresses) {
@@ -2084,9 +2086,11 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
                            string_addr, payload_len) < 0)
     return -1; /* circuit is closed, don't continue */
 
+  ap_conn->_base.address = tor_strdup("(Tor_internal)");
   ap_conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket %d, n_circ_id %d",
            ap_conn->_base.s, circ->_base.n_circ_id);
+  control_event_stream_status(ap_conn, STREAM_EVENT_NEW, 0);
   control_event_stream_status(ap_conn, STREAM_EVENT_SENT_RESOLVE, 0);
   return 0;
 }
