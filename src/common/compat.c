@@ -1746,13 +1746,14 @@ tor_get_thread_id(void)
 struct tor_mutex_t {
   pthread_mutex_t mutex;
 };
+static pthread_mutexattr_t attr_reentrant;
 /** Allocate and return new lock. */
 tor_mutex_t *
 tor_mutex_new(void)
 {
   int err;
   tor_mutex_t *mutex = tor_malloc_zero(sizeof(tor_mutex_t));
-  err = pthread_mutex_init(&mutex->mutex, NULL);
+  err = pthread_mutex_init(&mutex->mutex, &attr_reentrant);
   if (PREDICT_UNLIKELY(err)) {
     log_err(LD_GENERAL, "Error %d creating a mutex.", err);
     tor_fragile_assert();
@@ -1868,6 +1869,8 @@ tor_cond_signal_all(tor_cond_t *cond)
 void
 tor_threads_init(void)
 {
+  pthread_mutexattr_init(&attr_reentrant);
+  pthread_mutexattr_settype(&attr_reentrant, PTHREAD_MUTEX_RECURSIVE);
 }
 #elif defined(USE_WIN32_THREADS)
 #if 0
