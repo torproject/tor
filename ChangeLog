@@ -35,6 +35,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       by adding "new stream" events for DNS requests, and removing
       spurious "stream closed" events" for cached reverse resolves.
       Patch from mwenge.  Fixes bug 646.
+    - Correctly notify one-hop connections when a circuit build has
+      failed.  Possible fix for bug 669.  Found by lodger.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
