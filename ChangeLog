@@ -30,6 +30,10 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
       untrusted sources.  Fixes bug 663.
     - Non-exit relays no longer allow DNS requests.  Fixes bug 619.
       Patch from Lodger.
+    - Make controller stream events for DNS requests more consistent,
+      by adding "new stream" events for DNS requests, and removing
+      spurious "stream closed" events" for cached reverse resolves.
+      Patch from mwenge.  Fixes bug 646.
 
   o Minor features (security):
     - Reject requests for reverse-dns lookup of names in a private
