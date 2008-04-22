@@ -1464,10 +1464,10 @@ typedef struct networkstatus_voter_info_t {
                                         * used by this voter. */
   char *signature; /**< Signature from this voter. */
   int signature_len; /**< Length of <b>signature</b> */
-  unsigned int bad_signature : 1; /**< Set to true if we've verified the sig
-                                   * as good. */
-  unsigned int good_signature : 1; /**< Set to true if we've tried to verify
-                                    * the sig, and we know it's bad. */
+  unsigned int bad_signature : 1; /**< Set to true if we've tried to verify
+                                   * the sig, and we know it's bad. */
+  unsigned int good_signature : 1; /**< Set to true if we've verified the sig
+                                     * as good. */
 } networkstatus_voter_info_t;
 
 /** A common structure to hold a v3 network status vote, or a v3 network
