@@ -26,6 +26,8 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
     - Use recursive pthread mutexes in order to avoid deadlock when
       logging debug-level messages to a controller.  Bug spotted by
       nwf, bugfix on 0.2.0.16-alpha.
+    - Warn less verbosely about clock skew from netinfo cells from
+      untrusted sources.  Fixes bug 663.
 
 
 Changes in version 0.2.0.23-rc - 2008-03-24

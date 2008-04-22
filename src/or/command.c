@@ -577,8 +577,11 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
       router_get_by_digest(conn->identity_digest)) {
     char dbuf[64];
-    /*XXXX This should check the trustedness of the other side. */
-    int severity = server_mode(get_options()) ? LOG_INFO : LOG_WARN;
+    int severity;
+    if (router_digest_is_trusted_dir(conn->identity_digest))
+      severity = LOG_WARN;
+    else
+      severity = LOG_INFO;
     format_time_interval(dbuf, sizeof(dbuf), apparent_skew);
     log_fn(severity, LD_GENERAL, "Received NETINFO cell with skewed time from "
            "server at %s:%d.  It seems that our clock is %s by %s, or "
