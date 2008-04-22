@@ -34,6 +34,8 @@ Changes in version 0.2.0.24-rc - 2008-04-0?
       by adding "new stream" events for DNS requests, and removing
       spurious "stream closed" events" for cached reverse resolves.
       Patch from mwenge.  Fixes bug 646.
+    - Correctly notify one-hop connections when a circuit build has
+      failed.  Possible fix for bug 669.  Found by lodger.
 
   o Minor features (security):
     - Reject requests for reverse-dns lookup of names in a private

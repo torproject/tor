@@ -745,10 +745,10 @@ circuit_build_failed(origin_circuit_t *circ)
       n_conn->_base.or_is_obsolete = 1;
       entry_guard_register_connect_status(n_conn->identity_digest, 0,
                                           time(NULL));
-      /* if there are any one-hop streams waiting on this circuit, fail
-       * them now so they can retry elsewhere. */
-      connection_ap_fail_onehop(n_conn->identity_digest);
     }
+    /* if there are any one-hop streams waiting on this circuit, fail
+     * them now so they can retry elsewhere. */
+    connection_ap_fail_onehop(circ->_base.n_conn_id_digest);
   }
 
   switch (circ->_base.purpose) {
