@@ -889,7 +889,12 @@ connection_or_set_state_open(or_connection_t *conn)
     rep_hist_note_connect_succeeded(conn->identity_digest, now);
     if (entry_guard_register_connect_status(conn->identity_digest,
                                             1, now) < 0) {
-      /* pending circs get closed in circuit_about_to_close_connection() */
+      /* Close any circuits pending on this conn. We leave it in state
+       * 'open' though, because it didn't actually *fail* -- we just
+       * chose not to use it. (Otherwise
+       * connection_about_to_close_connection() will call a big pile of
+       * functions to indicate we shouldn't try it again.) */
+      circuit_n_conn_done(conn, 0);
       return -1;
     }
     router_set_status(conn->identity_digest, 1);

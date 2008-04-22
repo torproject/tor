@@ -37,6 +37,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       Patch from mwenge.  Fixes bug 646.
     - Correctly notify one-hop connections when a circuit build has
       failed.  Possible fix for bug 669.  Found by lodger.
+    - When we choose to abandon a new entry guard because we think our
+      older ones might be better, close any circuits pending on that
+      new entry guard connection. Bugfix on 0.1.2.8-beta; found by lodger.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
@@ -46,7 +49,6 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
       to avoid unused RAM in buffer chunks and memory pools.
     - Downgrade "sslv3 alert handshake failure" message to INFO.
-    - Only log guard node status when guard node status has changed.
     - Add a couple of extra warnings to --enable-gcc-warnings for GCC 4.3,
       and stop using a warning that had become unfixably verbose under GCC
       4.3.
