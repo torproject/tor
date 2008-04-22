@@ -549,9 +549,14 @@ dns_resolve(edge_connection_t *exitconn)
   or_circuit_t *oncirc = TO_OR_CIRCUIT(exitconn->on_circuit);
   int is_resolve, r;
   char *hostname = NULL;
+  routerinfo_t *me = router_get_my_routerinfo();
   is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
 
-  r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
+  if (is_resolve && me &&
+      policy_is_reject_star(me->exit_policy)) /* non-exit */
+    r = -1;
+  else
+    r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
   switch (r) {
     case 1:
       /* We got an answer without a lookup -- either the answer was
@@ -660,9 +665,12 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
    * .in-addr.arpa address but this isn't a resolve request, kill the
    * connection.
    */
-  if ((r = parse_inaddr_arpa_address(exitconn->_base.address, NULL)) != 0) {
-    if (r == 1)
+  if ((r = parse_inaddr_arpa_address(exitconn->_base.address, &in)) != 0) {
+    if (r == 1) {
       is_reverse = 1;
+         if (is_internal_IP(ntohl(in.s_addr), 0)) /* internal address */
+           return -1;
+    }
 
     if (!is_reverse || !is_resolve) {
       if (!is_reverse)
