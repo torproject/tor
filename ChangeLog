@@ -42,6 +42,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       new entry guard connection. Bugfix on 0.1.2.8-beta; found by lodger.
     - Detect address changes correctly on non-directory mirror
       servers.  Fix for bug 652.
+    - Authorities correctly free policies on bad servers on
+      exit. Fixes bug 672.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
