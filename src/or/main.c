@@ -1781,8 +1781,6 @@ tor_init(int argc, char *argv[])
   /* Have the log set up with our application name. */
   tor_snprintf(buf, sizeof(buf), "Tor %s", get_version());
   log_set_application_name(buf);
-  /* Initialize threading. */
-  tor_threads_init();
   /* Initialize the history structures. */
   rep_hist_init();
   /* Initialize the service cache. */
@@ -1988,6 +1986,7 @@ int
 tor_main(int argc, char *argv[])
 {
   int result = 0;
+  tor_threads_init();
   init_logging();
 #ifdef USE_DMALLOC
   int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,

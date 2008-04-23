@@ -3991,6 +3991,7 @@ main(int c, char**v)
   int verbose = 0, any_selected = 0;
   int loglevel = LOG_ERR;
 
+  tor_threads_init();
   init_logging();
 
   for (i = 1; i < c; ++i) {
