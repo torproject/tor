@@ -1,4 +1,10 @@
 Changes in version 0.2.0.24-rc - 2008-04-22
+  o New directory authorities:
+    - Take lefkada out of the list of v3 directory authorities, since
+      it has been down for months.
+    - Set up dizum (run by Alex de Joode) as the new sixth v3 directory
+      authority.
+
   o Major bugfixes:
     - Detect address changes more quickly on non-directory mirror
       relays. Bugfix on 0.2.0.18-alpha; fixes bug 652.
