@@ -1,38 +1,45 @@
 
-Here's a first set of guidelines for how to pick new directory
-authorities.
+0. Overview.
 
-(These won't be formal criteria -- we need to keep this loose since
-we're making it up as we go.)
+   This document contains various informal policies for how to operate
+   a directory authority, how to choose new ones, etc.
 
-o Stability:
-  - Must be a low-downtime Tor server (computer as well as network).
-  - Must have a static IP.
-  - The operator must have been running a stable Tor server for at least
-    3 months.
-  - Must intend for this server to stick around for the next 12 months
-    or more.
-  - Must not hibernate.
-  - Should not be an exit node (as this increases the risk both of
-    downtime and of key compromise).
+1. How to pick a new directory authority.
 
-o Performance:
-  - Must have sufficient bandwidth: at least 300 kB/s symmetric,
-    though in practice the inbound traffic can be considerably less.
+   Here's our current guidelines for how to pick new directory
+   authorities.
 
-o Availability:
-  - Must be available to upgrade within a few days in most cases.
-    (While we're still developing Tor, we periodically find bugs that
-    impact the whole network and require dirserver upgrades.)
+   (These won't ever be formal criteria -- we need to keep this flexible
+   so we can adapt to new situations.)
 
-o Integrity:
-  - Must promise not to censor or attack the network and users.
-  - Should be run by somebody that Tor (i.e. Roger) knows.
-  - Should be widely regarded as fair/trustworthy, or at least
-    known, by many people.
-  - If somebody asks you to backdoor or change your server, legally or
-    otherwise, you will fight it to the extent of your abilities. If
-    you fail to fight it, you must shut down the Tor server and notify
-    us that you have.
-  - Dirservers (and operators) in a variety of jurisdictions are best.
+   o Stability:
+     - Must be a low-downtime Tor server (computer as well as network).
+     - Must have a static IP.
+     - The operator must have been running a stable Tor server for at least
+       3 months.
+     - Must intend for this server to stick around for the next 12 months
+       or more.
+     - Must not hibernate.
+     - Should not be an exit node (as this increases the risk both of
+       downtime and of key compromise).
+
+   o Performance:
+     - Must have sufficient bandwidth: at least 300 kB/s symmetric,
+       though in practice the inbound traffic can be considerably less.
+
+   o Availability:
+     - Must be available to upgrade within a few days in most cases.
+       (While we're still developing Tor, we periodically find bugs that
+       impact the whole network and require dirserver upgrades.)
+
+   o Integrity:
+     - Must promise not to censor or attack the network and users.
+     - Should be run by somebody that Tor (i.e. Roger) knows.
+     - Should be widely regarded as fair/trustworthy, or at least
+       known, by many people.
+     - If somebody asks you to backdoor or change your server, legally or
+       otherwise, you will fight it to the extent of your abilities. If
+       you fail to fight it, you must shut down the Tor server and notify
+       us that you have.
+     - Dirservers (and operators) in a variety of jurisdictions are best.
 
