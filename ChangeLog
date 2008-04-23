@@ -4,6 +4,10 @@ Changes in version 0.2.0.25-rc - 2008-04-23
       Otherwise, many BSD-family implementations will crash hard on
       startup.  Fixes bug 671.  Bugfix on 0.2.0.24-rc.
 
+  o Minor bugfixes
+    - Authorities correctly free policies on bad servers on
+      exit. Fixes bug 672.
+
 
 Changes in version 0.2.0.24-rc - 2008-04-22
   o New directory authorities:

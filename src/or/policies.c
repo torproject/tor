@@ -922,6 +922,10 @@ policies_free_all(void)
   authdir_reject_policy = NULL;
   addr_policy_list_free(authdir_invalid_policy);
   authdir_invalid_policy = NULL;
+  addr_policy_list_free(authdir_baddir_policy);
+  authdir_baddir_policy = NULL;
+  addr_policy_list_free(authdir_badexit_policy);
+  authdir_badexit_policy = NULL;
 
   if (!HT_EMPTY(&policy_root))
     log_warn(LD_MM, "Still had some address policies cached at shutdown.");
