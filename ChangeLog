@@ -1,12 +1,16 @@
 Changes in version 0.1.2.20 - 2008-??-??
+  o Directory authority changes:
+    - Take lefkada out of the list of v2 directory authorities, since
+      it has been down for months.
+
   o Major bugfixes:
     - Patch from "Andrew S. Lists" to catch when we contact a directory
       mirror at IP address X and he says we look like we're coming from
       IP address X. Bugfix on 0.1.2.x.
     - Allow a closing-down linked directory connection to have its
-      blocked_on_or_conn field set.  This prevents a rare assertion error
+      blocked_on_or_conn field set. This prevents a rare assertion error
       that could occur when an OR connection carrying tunneled directory
-      requests closed before the requests were complete.  Fixes bug 406.
+      requests closed before the requests were complete. Fixes bug 406.
     - If we only ever used Tor for hidden service lookups or posts, we
       would stop building circuits and start refusing connections after
       24 hours, since we falsely believed that Tor was dormant. Reported
