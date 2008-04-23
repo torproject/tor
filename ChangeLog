@@ -2,11 +2,11 @@ Changes in version 0.2.0.25-rc - 2008-04-23
   o Major bugfixes:
     - Remember to initialize threading before initializing logging.
       Otherwise, many BSD-family implementations will crash hard on
-      startup.  Fixes bug 671.  Bugfix on 0.2.0.24-rc.
+      startup. Fixes bug 671. Bugfix on 0.2.0.24-rc.
 
-  o Minor bugfixes
+  o Minor bugfixes:
     - Authorities correctly free policies on bad servers on
-      exit. Fixes bug 672.
+      exit. Fixes bug 672. Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.0.24-rc - 2008-04-22
