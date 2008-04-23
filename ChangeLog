@@ -1,3 +1,10 @@
+Changes in version 0.2.0.25-rc - 2008-04-23
+  o Major bugfixes:
+    - Remember to initialize threading before initializing logging.
+      Otherwise, many BSD-family implementations will crash hard on
+      startup.  Fixes bug 671.  Bugfix on 0.2.0.24-rc.
+
+
 Changes in version 0.2.0.24-rc - 2008-04-22
   o New directory authorities:
     - Take lefkada out of the list of v3 directory authorities, since
