@@ -57,6 +57,7 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
 static void note_request(const char *key, size_t bytes);
+static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
 /********* START VARIABLES **********/
 
@@ -2164,6 +2165,57 @@ directory_dump_request_log(void)
 }
 #endif
 
+/** Decide whether a client would accept the consensus we have
+ *
+ * Clients can say they only want a consensus if it's signed by more
+ * than half the authorities in <list>.  They pass this list in
+ * the url as ..consensus/<fpr>+<fpr>+<fpr>
+ * <fpr> may be an abbreviated fingerprint, i.e. only a left substring
+ * of the full authority identity digest. (Only strings of even length,
+ * i.e. encodings of full bytes, are handled correctly.  In the case
+ * of an odd number of hex digits the last one is silently ignored.)
+ *
+ * Returns 1 if more than half of the requested authorities signed the
+ * consensus, 0 otherwise.
+ */
+int
+client_likes_consensus(networkstatus_t *v, const char *want_url)
+{
+  smartlist_t *want_authorities = smartlist_create();
+  int need_at_least;
+  int have = 0;
+
+  dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0, 0);
+  need_at_least = smartlist_len(want_authorities)/2+1;
+  SMARTLIST_FOREACH(want_authorities, const char *, d, {
+    char want_digest[DIGEST_LEN];
+    int want_len = strlen(d)/2;
+    if (want_len > DIGEST_LEN)
+      want_len = DIGEST_LEN;
+
+    if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2) < 0) {
+      log_warn(LD_DIR,"Failed to decode requested authority digest %s.", d);
+      continue;
+    };
+
+    SMARTLIST_FOREACH(v->voters, networkstatus_voter_info_t *, vi, {
+      if (vi->signature &&
+          !memcmp(vi->identity_digest, want_digest, want_len)) {
+        have++;
+        break;
+      };
+    });
+
+    /* early exit, if we already have enough */
+    if (have >= need_at_least)
+      break;
+  });
+
+  SMARTLIST_FOREACH(want_authorities, char *, d, tor_free(d));
+  smartlist_free(want_authorities);
+  return (have >= need_at_least);
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
@@ -2291,7 +2343,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
 
   if (!strcmpstart(url,"/tor/status/")
-      || !strcmp(url, "/tor/status-vote/current/consensus")) {
+      || !strcmpstart(url, "/tor/status-vote/current/consensus")) {
     /* v2 or v3 network status fetch. */
     smartlist_t *dir_fps = smartlist_create();
     int is_v3 = !strcmpstart(url, "/tor/status-vote");
@@ -2312,6 +2364,15 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     } else {
       networkstatus_t *v = networkstatus_get_latest_consensus();
       time_t now = time(NULL);
+      #define CONSENSUS_URL_PREFIX "/tor/status-vote/current/consensus/"
+      if (!strcmpstart(url, CONSENSUS_URL_PREFIX) &&
+          !client_likes_consensus(v, url + strlen(CONSENSUS_URL_PREFIX))) {
+        write_http_status_line(conn, 404, "Consensus not signed by sufficient "
+                                          "number of requested authorities");
+        smartlist_free(dir_fps);
+        goto done;
+      }
+
       smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
                                         "\0\0\0\0\0\0\0\0\0\0", 20));
       request_type = compressed?"v3.z":"v3";
