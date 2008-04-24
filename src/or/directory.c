@@ -789,10 +789,6 @@ directory_get_consensus_url(int supports_conditional_consensus)
   char *url;
   int len;
 
-#ifndef SUPPORTS_CONDITIONAL_CONSENSUS_SINCE_VERSION
-  supports_conditional_consensus = 0;
-#endif
-
   if (supports_conditional_consensus) {
     char *authority_id_list;
     smartlist_t *authority_digets = smartlist_create();

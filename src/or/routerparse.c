@@ -1836,13 +1836,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         tor_version_as_new_as(tok->args[0], "0.2.0.0-alpha-dev (r10070)");
       rs->version_supports_v3_dir =
         tor_version_as_new_as(tok->args[0], "0.2.0.8-alpha");
-#ifdef SUPPORTS_CONDITIONAL_CONSENSUS_SINCE_VERSION
       rs->version_supports_conditional_consensus =
-        tor_version_as_new_as(tok->args[0],
-                              SUPPORTS_CONDITIONAL_CONSENSUS_SINCE_VERSION);
-#else
-      rs->version_supports_conditional_consensus = 0;
-#endif
+        tor_version_as_new_as(tok->args[0], "0.2.1.1-alpha");
     }
     if (vote_rs) {
       vote_rs->version = tor_strdup(tok->args[0]);

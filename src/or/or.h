@@ -709,11 +709,6 @@ typedef enum {
 /** Largest number of bytes that can fit in a relay cell payload. */
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
-/** Version that started supporting conditional consensus downloading
- *  as a dirserver.  This define can go once we know the answer and
- *  want to use the feature. */
-// #define SUPPORTS_CONDITIONAL_CONSENSUS_SINCE_VERSION "0.2.1.1"
-
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
 typedef struct cell_t {
