@@ -773,6 +773,17 @@ connection_dir_is_encrypted(dir_connection_t *conn)
   return TO_CONN(conn)->linked;
 }
 
+/** Helper for sorting
+ *
+ * sort strings alphabetically
+ */
+static int
+_compare_strs(const void **a, const void **b)
+{
+  const char *s1 = *a, *s2 = *b;
+  return strcmp(s1, s2);
+}
+
 /** Return the URL we should use for a consensus download.
  *
  * This url depends on whether or not the server we go to
@@ -801,6 +812,7 @@ directory_get_consensus_url(int supports_conditional_consensus)
                       ds->digest, CONDITIONAL_CONSENSUS_FPR_LEN);
         smartlist_add(authority_digets, hex);
       });
+    smartlist_sort(authority_digets, _compare_strs);
     authority_id_list = smartlist_join_strings(authority_digets,
                                                "+", 0, NULL);
 
