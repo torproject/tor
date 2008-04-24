@@ -1390,23 +1390,6 @@ $Id$
    The most recent v3 consensus should be available at:
       http://<hostname>/tor/status-vote/current/consensus.z
 
-   Starting with Tor version 0.2.1.1-alpha is also available at:
-      http://<hostname>/tor/status-vote/current/consensus/<F1>+<F2>+<F3>.z
-
-   Where F1, F2, etc. are authority identity fingerprints the client trusts.
-   Servers will only return a consensus if more than half of the requested
-   authorities have signed the document, otherwise a 404 error will be sent
-   back.  The fingerprints can be shortened to a length of any multiple of
-   two, using only the leftmost part of the encoded fingerprint.  Tor uses
-   3 bytes (6 hex characters) of the fingerprint.
-
-   Clients SHOULD sort the fingerprints in ascending order.  Server MUST
-   accept any order.
-
-   Clients SHOULD use this format when requesting consensus documents from
-   directory authority servers and from caches running a version of Tor
-   that is known to support this URL format.
-
    A concatenated set of all the current key certificates should be available
    at:
       http://<hostname>/tor/keys/all.z

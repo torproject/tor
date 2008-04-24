@@ -1280,8 +1280,6 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->version_supports_begindir != b->version_supports_begindir ||
          a->version_supports_extrainfo_upload !=
            b->version_supports_extrainfo_upload ||
-         a->version_supports_conditional_consensus !=
-           b->version_supports_conditional_consensus ||
          a->version_supports_v3_dir != b->version_supports_v3_dir;
 }
 

@@ -2924,7 +2924,6 @@ launch_direct_bridge_descriptor_fetch(char *address, bridge_info_t *bridge)
     return; /* it's already on the way */
   directory_initiate_command(address, bridge->addr,
                              bridge->port, 0,
-                             0, /* does not matter */
                              1, bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
