@@ -37,6 +37,7 @@ const char directory_c_id[] =
 static void directory_send_command(dir_connection_t *conn,
                              int purpose, int direct, const char *resource,
                              const char *payload, size_t payload_len,
+                             int supports_conditional_consensus,
                              time_t if_modified_since);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
@@ -57,6 +58,7 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
 static void note_request(const char *key, size_t bytes);
+static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
 /********* START VARIABLES **********/
 
@@ -338,10 +340,13 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       /* want to ask a running bridge for which we have a descriptor. */
       /* XXX021 we assume that all of our bridges can answer any
        * possible directory question. This won't be true forever. -RD */
+      /* It certainly is not true with conditional consensus downloading,
+       * so, for now, never assume the server supports that. */
       routerinfo_t *ri = choose_random_entry(NULL);
       if (ri) {
         directory_initiate_command(ri->address, ri->addr,
                                    ri->or_port, 0,
+                                   0, /* don't use conditional consensus url */
                                    1, ri->cache_info.identity_digest,
                                    dir_purpose,
                                    router_purpose,
@@ -463,6 +468,7 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
   }
   directory_initiate_command(address, status->addr,
                              status->or_port, status->dir_port,
+                             status->version_supports_conditional_consensus,
                              status->version_supports_begindir,
                              status->identity_digest,
                              dir_purpose, router_purpose,
@@ -644,6 +650,7 @@ directory_command_should_use_begindir(or_options_t *options, uint32_t addr,
 void
 directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t or_port, uint16_t dir_port,
+                           int supports_conditional_consensus,
                            int supports_begindir, const char *digest,
                            uint8_t dir_purpose, uint8_t router_purpose,
                            int anonymized_connection, const char *resource,
@@ -706,7 +713,9 @@ directory_initiate_command(const char *address, uint32_t addr,
       case 0:
         /* queue the command on the outbuf */
         directory_send_command(conn, dir_purpose, 1, resource,
-                               payload, payload_len, if_modified_since);
+                               payload, payload_len,
+                               supports_conditional_consensus,
+                               if_modified_since);
         connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -743,7 +752,9 @@ directory_initiate_command(const char *address, uint32_t addr,
     conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
     directory_send_command(conn, dir_purpose, 0, resource,
-                           payload, payload_len, if_modified_since);
+                           payload, payload_len,
+                           supports_conditional_consensus,
+                           if_modified_since);
     connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
     connection_start_reading(TO_CONN(linked_conn));
   }
@@ -762,6 +773,63 @@ connection_dir_is_encrypted(dir_connection_t *conn)
   return TO_CONN(conn)->linked;
 }
 
+/** Helper for sorting
+ *
+ * sort strings alphabetically
+ */
+static int
+_compare_strs(const void **a, const void **b)
+{
+  const char *s1 = *a, *s2 = *b;
+  return strcmp(s1, s2);
+}
+
+/** Return the URL we should use for a consensus download.
+ *
+ * This url depends on whether or not the server we go to
+ * is sufficiently new to support conditional consensus downloading,
+ * i.e. GET .../consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>
+ */
+#define CONDITIONAL_CONSENSUS_FPR_LEN 3
+#if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
+#error "conditional consensus fingerprint length is larger than digest length
+#endif
+static char *
+directory_get_consensus_url(int supports_conditional_consensus)
+{
+  char *url;
+  int len;
+
+  if (supports_conditional_consensus) {
+    char *authority_id_list;
+    smartlist_t *authority_digets = smartlist_create();
+
+    SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                      trusted_dir_server_t *, ds,
+      {
+        char *hex = tor_malloc(2*CONDITIONAL_CONSENSUS_FPR_LEN+1);
+        base16_encode(hex, 2*CONDITIONAL_CONSENSUS_FPR_LEN+1,
+                      ds->digest, CONDITIONAL_CONSENSUS_FPR_LEN);
+        smartlist_add(authority_digets, hex);
+      });
+    smartlist_sort(authority_digets, _compare_strs);
+    authority_id_list = smartlist_join_strings(authority_digets,
+                                               "+", 0, NULL);
+
+    len = strlen(authority_id_list)+64;
+    url = tor_malloc(len);
+    tor_snprintf(url, len, "/tor/status-vote/current/consensus/%s.z",
+                 authority_id_list);
+
+    SMARTLIST_FOREACH(authority_digets, char *, cp, tor_free(cp));
+    smartlist_free(authority_digets);
+    tor_free(authority_id_list);
+  } else {
+    url = tor_strdup("/tor/status-vote/current/consensus.z");
+  }
+  return url;
+}
+
 /** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
  * are as in directory_initiate_command.
  */
@@ -769,6 +837,7 @@ static void
 directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len,
+                       int supports_conditional_consensus,
                        time_t if_modified_since)
 {
   char proxystring[256];
@@ -851,7 +920,10 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(!resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      url = tor_strdup("/tor/status-vote/current/consensus.z");
+      url = directory_get_consensus_url(supports_conditional_consensus);
+      /* XXX021: downgrade/remove once done with conditional consensus fu */
+      log_notice(LD_DIR, "Downloading consensus from %s using %s",
+                 hoststring, url);
       break;
     case DIR_PURPOSE_FETCH_CERTIFICATE:
       tor_assert(resource);
@@ -2164,6 +2236,58 @@ directory_dump_request_log(void)
 }
 #endif
 
+/** Decide whether a client would accept the consensus we have
+ *
+ * Clients can say they only want a consensus if it's signed by more
+ * than half the authorities in a list.  They pass this list in
+ * the url as "...consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>".
+ *
+ * <b>fpr<b/> may be an abbreviated fingerprint, i.e. only a left substring
+ * of the full authority identity digest. (Only strings of even length,
+ * i.e. encodings of full bytes, are handled correctly.  In the case
+ * of an odd number of hex digits the last one is silently ignored.)
+ *
+ * Returns 1 if more than half of the requested authorities signed the
+ * consensus, 0 otherwise.
+ */
+int
+client_likes_consensus(networkstatus_t *v, const char *want_url)
+{
+  smartlist_t *want_authorities = smartlist_create();
+  int need_at_least;
+  int have = 0;
+
+  dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0, 0);
+  need_at_least = smartlist_len(want_authorities)/2+1;
+  SMARTLIST_FOREACH(want_authorities, const char *, d, {
+    char want_digest[DIGEST_LEN];
+    int want_len = strlen(d)/2;
+    if (want_len > DIGEST_LEN)
+      want_len = DIGEST_LEN;
+
+    if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2) < 0) {
+      log_warn(LD_DIR,"Failed to decode requested authority digest %s.", d);
+      continue;
+    };
+
+    SMARTLIST_FOREACH(v->voters, networkstatus_voter_info_t *, vi, {
+      if (vi->signature &&
+          !memcmp(vi->identity_digest, want_digest, want_len)) {
+        have++;
+        break;
+      };
+    });
+
+    /* early exit, if we already have enough */
+    if (have >= need_at_least)
+      break;
+  });
+
+  SMARTLIST_FOREACH(want_authorities, char *, d, tor_free(d));
+  smartlist_free(want_authorities);
+  return (have >= need_at_least);
+}
+
 /** Helper function: called when a dirserver gets a complete HTTP GET
  * request.  Look for a request for a directory or for a rendezvous
  * service descriptor.  On finding one, write a response into
@@ -2291,7 +2415,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
 
   if (!strcmpstart(url,"/tor/status/")
-      || !strcmp(url, "/tor/status-vote/current/consensus")) {
+      || !strcmpstart(url, "/tor/status-vote/current/consensus")) {
     /* v2 or v3 network status fetch. */
     smartlist_t *dir_fps = smartlist_create();
     int is_v3 = !strcmpstart(url, "/tor/status-vote");
@@ -2312,6 +2436,15 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     } else {
       networkstatus_t *v = networkstatus_get_latest_consensus();
       time_t now = time(NULL);
+      #define CONSENSUS_URL_PREFIX "/tor/status-vote/current/consensus/"
+      if (!strcmpstart(url, CONSENSUS_URL_PREFIX) &&
+          !client_likes_consensus(v, url + strlen(CONSENSUS_URL_PREFIX))) {
+        write_http_status_line(conn, 404, "Consensus not signed by sufficient "
+                                          "number of requested authorities");
+        smartlist_free(dir_fps);
+        goto done;
+      }
+
       smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
                                         "\0\0\0\0\0\0\0\0\0\0", 20));
       request_type = compressed?"v3.z":"v3";
