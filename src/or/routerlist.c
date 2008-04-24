@@ -3512,7 +3512,12 @@ add_trusted_dir_server(const char *nickname, const char *address,
 
   if (ent->or_port)
     ent->fake_status.version_supports_begindir = 1;
+/* XX021 - wait until authorities are upgraded */
+#if 0
   ent->fake_status.version_supports_conditional_consensus = 1;
+#else
+  ent->fake_status.version_supports_conditional_consensus = 0;
+#endif
 
   smartlist_add(trusted_dir_servers, ent);
   router_dir_info_changed();
