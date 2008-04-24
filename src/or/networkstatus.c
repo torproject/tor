@@ -452,10 +452,10 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       });
     SMARTLIST_FOREACH(missing_authorities, trusted_dir_server_t *, ds,
       {
-        log(severity, LD_DIR, "Consensus does not include configured "
-            "authority '%s' at %s:%d (identity %s)",
-            ds->nickname, ds->address, (int)ds->dir_port,
-            hex_str(ds->v3_identity_digest, DIGEST_LEN));
+        log_info(LD_DIR, "Consensus does not include configured "
+                 "authority '%s' at %s:%d (identity %s)",
+                 ds->nickname, ds->address, (int)ds->dir_port,
+                 hex_str(ds->v3_identity_digest, DIGEST_LEN));
       });
     log(severity, LD_DIR,
         "%d unknown, %d missing key, %d good, %d bad, %d no signature, "
@@ -1391,10 +1391,8 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
     if (r == -1) {
       /* Okay, so it _might_ be signed enough if we get more certificates. */
       if (!was_waiting_for_certs) {
-        /* XXX020 eventually downgrade this log severity, or make it so
-         * users know why they're being told. */
-        log_notice(LD_DIR, "Not enough certificates to check networkstatus "
-                   "consensus");
+        log_info(LD_DIR,
+                 "Not enough certificates to check networkstatus consensus");
       }
       if (!current_consensus ||
           c->valid_after > current_consensus->valid_after) {
