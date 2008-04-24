@@ -77,6 +77,11 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       may reduce fragmentation.
     - Make dumpstats() log the fullness and size of openssl-internal
       buffers.
+    - Servers support a new URL scheme for consensus downloads that
+      allos the client to specify which authorities are trusted.
+      The server then only sends the consensus if the client will
+      trust it.  Otherwise a 404 error is sent back.  Clients use
+      this new scheme when the server supports it.
 
   o Minor features (security):
     - Reject requests for reverse-dns lookup of names in a private
