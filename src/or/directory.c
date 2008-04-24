@@ -37,6 +37,7 @@ const char directory_c_id[] =
 static void directory_send_command(dir_connection_t *conn,
                              int purpose, int direct, const char *resource,
                              const char *payload, size_t payload_len,
+                             int supports_conditional_consensus,
                              time_t if_modified_since);
 static int directory_handle_command(dir_connection_t *conn);
 static int body_is_plausible(const char *body, size_t body_len, int purpose);
@@ -339,10 +340,13 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       /* want to ask a running bridge for which we have a descriptor. */
       /* XXX021 we assume that all of our bridges can answer any
        * possible directory question. This won't be true forever. -RD */
+      /* It certainly is not true with conditional consensus downloading,
+       * so, for now, never assume the server supports that. */
       routerinfo_t *ri = choose_random_entry(NULL);
       if (ri) {
         directory_initiate_command(ri->address, ri->addr,
                                    ri->or_port, 0,
+                                   0, /* don't use conditional consensus url */
                                    1, ri->cache_info.identity_digest,
                                    dir_purpose,
                                    router_purpose,
@@ -464,6 +468,7 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
   }
   directory_initiate_command(address, status->addr,
                              status->or_port, status->dir_port,
+                             status->version_supports_conditional_consensus,
                              status->version_supports_begindir,
                              status->identity_digest,
                              dir_purpose, router_purpose,
@@ -645,6 +650,7 @@ directory_command_should_use_begindir(or_options_t *options, uint32_t addr,
 void
 directory_initiate_command(const char *address, uint32_t addr,
                            uint16_t or_port, uint16_t dir_port,
+                           int supports_conditional_consensus,
                            int supports_begindir, const char *digest,
                            uint8_t dir_purpose, uint8_t router_purpose,
                            int anonymized_connection, const char *resource,
@@ -707,7 +713,9 @@ directory_initiate_command(const char *address, uint32_t addr,
       case 0:
         /* queue the command on the outbuf */
         directory_send_command(conn, dir_purpose, 1, resource,
-                               payload, payload_len, if_modified_since);
+                               payload, payload_len,
+                               supports_conditional_consensus,
+                               if_modified_since);
         connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
@@ -744,7 +752,9 @@ directory_initiate_command(const char *address, uint32_t addr,
     conn->_base.state = DIR_CONN_STATE_CLIENT_SENDING;
     /* queue the command on the outbuf */
     directory_send_command(conn, dir_purpose, 0, resource,
-                           payload, payload_len, if_modified_since);
+                           payload, payload_len,
+                           supports_conditional_consensus,
+                           if_modified_since);
     connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
     connection_start_reading(TO_CONN(linked_conn));
   }
@@ -763,6 +773,55 @@ connection_dir_is_encrypted(dir_connection_t *conn)
   return TO_CONN(conn)->linked;
 }
 
+/** Return the URL we should use for a consensus download.
+ *
+ * This url depends on whether or not the server we go to
+ * is sufficiently new to support conditional consensus downloading,
+ * i.e. GET .../consensus/<fpr>+<fpr>+<fpr>
+ */
+#define CONDITIONAL_CONSENSUS_FPR_LEN 3
+#if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
+#error "conditional consensus fingerprint length is larger than digest length
+#endif
+static char *
+directory_get_consensus_url(int supports_conditional_consensus)
+{
+  char *url;
+  int len;
+
+#ifndef SUPPORTS_CONDITIONAL_CONSENSUS_SINCE_VERSION
+  supports_conditional_consensus = 0;
+#endif
+
+  if (supports_conditional_consensus) {
+    char *authority_id_list;
+    smartlist_t *authority_digets = smartlist_create();
+
+    SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
+                      trusted_dir_server_t *, ds,
+      {
+        char *hex = tor_malloc(2*CONDITIONAL_CONSENSUS_FPR_LEN+1);
+        base16_encode(hex, 2*CONDITIONAL_CONSENSUS_FPR_LEN+1,
+                      ds->digest, CONDITIONAL_CONSENSUS_FPR_LEN);
+        smartlist_add(authority_digets, hex);
+      });
+    authority_id_list = smartlist_join_strings(authority_digets,
+                                               "+", 0, NULL);
+
+    len = strlen(authority_id_list)+64;
+    url = tor_malloc(len);
+    tor_snprintf(url, len, "/tor/status-vote/current/consensus/%s.z",
+                 authority_id_list);
+
+    SMARTLIST_FOREACH(authority_digets, char *, cp, tor_free(cp));
+    smartlist_free(authority_digets);
+    tor_free(authority_id_list);
+  } else {
+    url = tor_strdup("/tor/status-vote/current/consensus.z");
+  }
+  return url;
+}
+
 /** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
  * are as in directory_initiate_command.
  */
@@ -770,6 +829,7 @@ static void
 directory_send_command(dir_connection_t *conn,
                        int purpose, int direct, const char *resource,
                        const char *payload, size_t payload_len,
+                       int supports_conditional_consensus,
                        time_t if_modified_since)
 {
   char proxystring[256];
@@ -852,7 +912,10 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(!resource);
       tor_assert(!payload);
       httpcommand = "GET";
-      url = tor_strdup("/tor/status-vote/current/consensus.z");
+      url = directory_get_consensus_url(supports_conditional_consensus);
+      /* XXX021: downgrade/remove once done with conditional consensus fu */
+      log_notice(LD_DIR, "Downloading consensus from %s using %s",
+                 hoststring, url);
       break;
     case DIR_PURPOSE_FETCH_CERTIFICATE:
       tor_assert(resource);

@@ -709,6 +709,11 @@ typedef enum {
 /** Largest number of bytes that can fit in a relay cell payload. */
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
+/** Version that started supporting conditional consensus downloading
+ *  as a dirserver.  This define can go once we know the answer and
+ *  want to use the feature. */
+// #define SUPPORTS_CONDITIONAL_CONSENSUS_SINCE_VERSION "0.2.1.1"
+
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
 typedef struct cell_t {
@@ -1369,6 +1374,9 @@ typedef struct routerstatus_t {
   unsigned int version_known:1;
   /** True iff this router is a version that supports BEGIN_DIR cells. */
   unsigned int version_supports_begindir:1;
+  /** True iff this router is a version that supports conditional consensus
+   *  downloads (signed by list of authorities). */
+  unsigned int version_supports_conditional_consensus:1;
   /** True iff this router is a version that we can post extrainfo docs to. */
   unsigned int version_supports_extrainfo_upload:1;
   /** True iff this router is a version that, if it caches directory info,
@@ -3048,6 +3056,7 @@ int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_request_failed(dir_connection_t *conn);
 void directory_initiate_command(const char *address, uint32_t addr,
                                 uint16_t or_port, uint16_t dir_port,
+                                int supports_conditional_consensus,
                                 int supports_begindir, const char *digest,
                                 uint8_t dir_purpose, uint8_t router_purpose,
                                 int anonymized_connection,
