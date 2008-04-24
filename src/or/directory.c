@@ -807,9 +807,13 @@ directory_get_consensus_url(int supports_conditional_consensus)
     SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                       trusted_dir_server_t *, ds,
       {
-        char *hex = tor_malloc(2*CONDITIONAL_CONSENSUS_FPR_LEN+1);
+        char *hex;
+        if (!(ds->type & V3_AUTHORITY))
+          continue;
+
+        hex = tor_malloc(2*CONDITIONAL_CONSENSUS_FPR_LEN+1);
         base16_encode(hex, 2*CONDITIONAL_CONSENSUS_FPR_LEN+1,
-                      ds->digest, CONDITIONAL_CONSENSUS_FPR_LEN);
+                      ds->v3_identity_digest, CONDITIONAL_CONSENSUS_FPR_LEN);
         smartlist_add(authority_digets, hex);
       });
     smartlist_sort(authority_digets, _compare_strs);
