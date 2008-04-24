@@ -777,7 +777,7 @@ connection_dir_is_encrypted(dir_connection_t *conn)
  *
  * This url depends on whether or not the server we go to
  * is sufficiently new to support conditional consensus downloading,
- * i.e. GET .../consensus/<fpr>+<fpr>+<fpr>
+ * i.e. GET .../consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>
  */
 #define CONDITIONAL_CONSENSUS_FPR_LEN 3
 #if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
@@ -2231,9 +2231,10 @@ directory_dump_request_log(void)
 /** Decide whether a client would accept the consensus we have
  *
  * Clients can say they only want a consensus if it's signed by more
- * than half the authorities in <list>.  They pass this list in
- * the url as ..consensus/<fpr>+<fpr>+<fpr>
- * <fpr> may be an abbreviated fingerprint, i.e. only a left substring
+ * than half the authorities in a list.  They pass this list in
+ * the url as "...consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>".
+ *
+ * <b>fpr<b/> may be an abbreviated fingerprint, i.e. only a left substring
  * of the full authority identity digest. (Only strings of even length,
  * i.e. encodings of full bytes, are handled correctly.  In the case
  * of an odd number of hex digits the last one is silently ignored.)
