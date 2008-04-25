@@ -549,11 +549,12 @@ dns_resolve(edge_connection_t *exitconn)
   or_circuit_t *oncirc = TO_OR_CIRCUIT(exitconn->on_circuit);
   int is_resolve, r;
   char *hostname = NULL;
-  routerinfo_t *me = router_get_my_routerinfo();
+  routerinfo_t *me;
   is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
 
-  if (is_resolve && me &&
-      policy_is_reject_star(me->exit_policy)) /* non-exit */
+  if (is_resolve &&
+      (!(me = router_get_my_routerinfo()) ||
+       policy_is_reject_star(me->exit_policy))) /* non-exit */
     r = -1;
   else
     r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
