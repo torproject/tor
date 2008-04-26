@@ -22,17 +22,11 @@ W       - weasel claims
 
 External constraints:
 
-  - Mid Apr
-    - More Torbrowser work:
-      o Get polipo into it
-I     - Figure out who at Mozilla can give us permission to keep the
-        name Firefox on our Tor Browser Bundle. Get said permission.
-      o Make Torbrowser website
-      o Get it integrated into the Tor download pages
+  - End of April
 S   - Finish first cut at integrating upnp lib into Vidalia
 R   - get the geoip files onto some bridge relays, and gather stats
-
-  - End of April
+?   - Figure out who at Mozilla can give us permission to keep the
+      name Firefox on our Tor Browser Bundle. Get said permission.
 S   - Zip-splitting:
       - Document the use of 7-zip to combine fractional files and
         reconstruct them after download.  Host such files.
@@ -49,12 +43,15 @@ N   - Write a draft research proposal for how to safely collect and
       that we don't know how to do it safely while still being useful
       and explain why.
 I   - Translation portal
-      - Vidalia translations (via launchpad?)
-      - Vidalia installer translations
-      - Torbutton translations (via babelzilla?)
-        o Torbutton is registered with launchpad and babelzilla
-        o https://launchpad.net/torbutton
-        - An old babelzilla version of Torbutton requires an update
+      o Vidalia translations (via launchpad?)
+      - Create a doc/translations.txt file in tor svn that somebody else
+        could use to manage the translations in case Jake gets hit by
+        a bus (or in case somebody else wants to help do it):
+        - What are the steps for taking strings from Vidalia and putting them
+          into launchpad?
+        - What are the steps for exporting strings from launchpad and putting
+          them into Vidalia?
+      o Torbutton translations (via babelzilla?)
       - Centralized instructions for how to help translate
       - Continue managing the tor-translations team to keep the Tor
         website translated
@@ -103,6 +100,13 @@ W     - Get closer to downloading far fewer descriptors
           anonymity attacks, like from looking at the size of the
           descriptor you fetch.
 I     - Translation portal
+        - Vidalia installer translations
+          - Find/make a script to convert NSI strings into PO files
+            and back.
+          - Start doing that in the same process as the other Vidalia
+            string translations.
+          - Add these steps to the doc/translations.txt or whatever it's
+            called at this point.
         - Torbutton webpage
         o Torbrowser webpage
         - Tor website
@@ -155,6 +159,8 @@ ioerror
   - gmail auto responder so you send us an email and we send you a Tor
     binary. Probably needs a proposal first.
   - weather.torproject.org should go live.
+  - Get Scott Squires to give you admin access to the Torbutton account
+    on Babelzilla; or give up eventually and fork it.
   - Learn from Steven how to build/maintain the Tor Browser Bundle.
   - Learn from Mike how to run SoaT, and try to make that an automated
     service somewhere.
