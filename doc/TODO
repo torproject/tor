@@ -209,10 +209,15 @@ Weasel
   - Take non-Running entries out of the networkstatus consensus.
   - Move proposal 134 forward.
 
-Roger:
+Roger
   . Fix FAQ entry on setting up private Tor network
   - Review Karsten's hidden service diagrams
   - Prepare the 0.2.0.x Release Notes.
+
+Mike:
+  - Roger wants to get an email every time there's a blog change,
+    e.g. a comment. That way spam doesn't go undetected for weeks.
+  - Maybe just disable linking from blog comments entirely?
 
 =======================================================================
 
