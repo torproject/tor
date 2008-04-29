@@ -1357,3 +1357,4 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
   *rbuf_bytes = tls->ssl->s3->rbuf.left;
   *wbuf_bytes = tls->ssl->s3->wbuf.left;
 }
+
