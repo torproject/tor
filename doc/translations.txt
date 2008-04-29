@@ -1,4 +1,4 @@
-##             Instructions for helping translate text for Vidalia
+##      Instructions for helping translate text for Vidalia and TorButton
 ##  ( More translation information for Tor related apps will accumulate here )
 
 You'll need an account on launchpad[0] and you'll want to request access.
@@ -72,5 +72,29 @@ the process and send .ts files to Matt, you'll want to do the following:
         po2ts --input=$file.po --output=$file.ts;
         done
 
+If you're interested in helping to translate Torbutton, it uses Babelzilla[2].
+You'll need a login to Babelzilla just as you do with Launchpad. Once logged 
+in visit the following page for progress information and downloads of templates:
+
+	http://www.babelzilla.org/index.php?option=com_wts&Itemid=88&extension=3510&type=lang
+
+All information about locales can be viewed at the above url. Click on 
+different languages to see their respective statistics. Explore.
+
+To download all locale strings with missing transations in their original 
+form, you can visit this url:
+
+	http://www.babelzilla.org/index.php?option=com_wts&Itemid=88&type=downloadtar&extension=3510
+
+To download all locale strings with missing translations as an empty string, 
+you can visit this url:
+
+	http://www.babelzilla.org/index.php?option=com_wts&Itemid=88&type=downloadempty&extension=3510
+
+If you plan to translate using Babelzilla often, you'll want to email 
+tor-translation@torproject.org and discuss your desires. Sadly, there is a 
+fixed number of translators allowed per project.
+
 [0] https://www.launchpad.net
 [1] These tools can be found in the Debian package 'translate-toolkit'
+[2] http://www.babelzilla.org/
