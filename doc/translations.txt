@@ -1,0 +1,76 @@
+##             Instructions for helping translate text for Vidalia
+##  ( More translation information for Tor related apps will accumulate here )
+
+You'll need an account on launchpad[0] and you'll want to request access.
+Access will need to be granted by either Matt or Jacob.
+
+Uploading new translations is quite simple. First you'll need to checkout 
+the source to Vidalia. Then you'll want to change into the i18n directory:
+
+	cd vidalia/src/vidalia/i18n;
+
+Now you'll run the proper commands[1] to convert from the native QT .ts format.
+You'll want to convert the .ts format into gnugettext .po files. Do so like so:
+
+	for file in `ls -1|grep .ts$|cut -f1 -d.`;
+	do
+	echo "Attempting to convert" $file.ts;
+	ts2po --input=$file.ts --output=$file.po;
+	done
+
+This is pretty straight forward but also error prone. You'll want to check for 
+proper formatting of the .po files like so:
+
+	for file in `ls -1|grep .po$`
+	do
+	msgfmt -c $file;
+	done
+
+You have to correct all duplicate strings and all errors before uploading.
+Ensure that the .po files are valid, possibly by compiling them into .mo files:
+
+	for file in `ls -1|grep .po$|cut -f1 -d.`
+	do
+	msgfmt -o $file.mo $file.po;
+	file $file.mo;
+	done
+
+If you're able to make proper .mo files and you have no errors, you're probably 
+ready to upload the .po files for translation. A proper .mo file may look like:
+
+	"GNU message catalog (little endian), revision 0, 11 messages"
+
+Once you have the current selection of .po files, you'll want to make a .tgz:
+
+	tar -cvzf vidalia.tar.gz *.po;
+
+Now you're ready to upload 'vidalia.tar.gz' by visiting translation upload 
+area of launchpad:
+
+	https://translations.launchpad.net/vidalia/trunk/+translations-upload
+
+Once you've performed your upload, you will have to wait for admin approval.
+After approval, translators will be able to download the files and translate.
+
+When the files are ready to be put back into Vidalia's trunk repository, visit:
+
+	https://translations.launchpad.net/vidalia/trunk/+export
+
+Download the files in the .po format by following the instructions on the above 
+page. You should see something like:
+
+	"When these translations have been exported, a message will be sent 
+	to your-launchpad-email@yourdoma.example. This message will tell you 
+	where you can download your file."
+
+Once you have the .po files, you'll want to make .ts files from them. To reverse 
+the process and send .ts files to Matt, you'll want to do the following:
+
+        for file in `ls -1|grep .po$|cut -f1 -d.`;
+        do
+        echo "Attempting to convert" $file.po;
+        po2ts --input=$file.po --output=$file.ts;
+        done
+
+[0] https://www.launchpad.net
+[1] These tools can be found in the Debian package 'translate-toolkit'
