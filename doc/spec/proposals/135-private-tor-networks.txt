@@ -1,7 +1,7 @@
 Filename: 135-private-tor-networks.txt
 Title: Simplify Configuration of Private Tor Networks
-Version: $LastChangedRevision$
-Last-Modified: $LastChangedDate$
+Version: $Revision$
+Last-Modified: $Date$
 Author: Karsten Loesing
 Created: 29-Apr-2008
 Status: Open
