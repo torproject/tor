@@ -57,6 +57,7 @@ Proposals by number:
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
 134  More robust consensus voting with diverse authority sets [DRAFT]
+135  Simplify Configuration of Private Tor Networks [OPEN]
 
 
 Proposals by status:
@@ -71,6 +72,7 @@ Proposals by status:
  OPEN:
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
+   135  Simplify Configuration of Private Tor Networks
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits
