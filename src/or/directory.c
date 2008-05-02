@@ -792,7 +792,7 @@ _compare_strs(const void **a, const void **b)
  */
 #define CONDITIONAL_CONSENSUS_FPR_LEN 3
 #if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
-#error "conditional consensus fingerprint length is larger than digest length
+#error "conditional consensus fingerprint length is larger than digest length"
 #endif
 static char *
 directory_get_consensus_url(int supports_conditional_consensus)
