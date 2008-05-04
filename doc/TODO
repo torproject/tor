@@ -10,6 +10,7 @@ M       - Matt/Mike claims
 J       - Jeff claims
 I       - ioerror claims
 W       - weasel claims
+K       - Karsten claims
         - Not done
         * Top priority
         . Partially done
@@ -112,8 +113,17 @@ I     - Translation portal
         - Tor website
         - check.torproject.org
         - should we i18nize polipo's error messages too?
+KS  - Investigate where the slowdown occurs for making hidden service
+      circuits, and/or for publishing hidden service descriptors. Identify
+      areas that can be improved, and make some guesses about which we
+      should focus on.
 
-  - August
+  - mid August
+KS  - Design hidden service improvements, evaluate them and consider
+      security properties: write some proposals, get feedback, revise
+      them, etc.
+
+  - end of August
 I   - Auto update
       o Vidalia learns when Tor thinks it should be updated
 R     - Tor status events should suggest a new version to switch to
@@ -125,6 +135,14 @@ I     - Figure out a good PKI, document the design, assess security issues:
           decide to fetch and decide to swap out the old Tor for the new.
       - Do the same for Polipo
       - and for Vidalia itself
+
+  - mid October
+KS  - Finish implementation of hidden service improvements: have a set
+      of patches that you think work.
+
+  - mid January
+KS  - Finish testing, debugging, unit testing, etc the hidden service
+      changes. Have it in the development version and in use.
 
 =======================================================================
 
