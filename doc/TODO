@@ -94,12 +94,14 @@ N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
         - investigate the feasibility of handing connections off to a
           local apache if they don't look like Tor or if they don't
           portknock or whatever.
-W     - Get closer to downloading far fewer descriptors
-        - Instrument the code to track how many descriptors we download vs how
-          many times we extend a circuit.
-        - Write a proposal for how to fetch far fewer descriptors; assess
-          anonymity attacks, like from looking at the size of the
-          descriptor you fetch.
+      - Get closer to downloading far fewer descriptors
+W       - Instrument the code to track how many descriptors we download vs how
+          many times we extend a circuit. Guess a few other things to
+          instrument, like cache activity, and do those too.
+W       - Start a proposal for how to fetch far fewer descriptors;
+          identify and start assessing anonymity attacks, like from looking
+          at the size of the descriptor you fetch. See xxx-grand-plan.txt
+          for some early thoughts.
 I     - Translation portal
         - Vidalia installer translations
           - Find/make a script to convert NSI strings into PO files
@@ -117,6 +119,13 @@ KS  - Investigate where the slowdown occurs for making hidden service
       circuits, and/or for publishing hidden service descriptors. Identify
       areas that can be improved, and make some guesses about which we
       should focus on.
+
+  - mid July
+W   - Take the results from instrumenting directory downloads on Tor
+      clients, and analyze/simulate some alternate approaches. Finish
+      proposal for how to improve things, iterate based on feedback,
+      convince us that the anonymity tradeoffs and/or scalability
+      tradeoffs are acceptable.
 
   - mid August
 KS  - Design hidden service improvements, evaluate them and consider
@@ -139,9 +148,13 @@ I     - Figure out a good PKI, document the design, assess security issues:
   - mid October
 KS  - Finish implementation of hidden service improvements: have a set
       of patches that you think work.
+W   - Finish implementation of directory overhead changes: have a set
+      of patches that you think work.
 
   - mid January
 KS  - Finish testing, debugging, unit testing, etc the hidden service
+      changes. Have it in the development version and in use.
+W   - Finish testing, debugging, unit testing, etc the directory overhead
       changes. Have it in the development version and in use.
 
 =======================================================================
