@@ -1300,7 +1300,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
-        req->reply[1] = SOCKS5_SUCCEEDED;
+        req->reply[1] = 0; /* tell client to use "none" auth method */
         req->socks_version = 5; /* remember we've already negotiated auth */
         log_debug(LD_APP,"socks5: accepted method 0");
         return 0;
