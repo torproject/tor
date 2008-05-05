@@ -1,4 +1,6 @@
 Changes in version 0.2.0.25-rc - 2008-04-23
+  Tor 0.2.0.25-rc makes Tor work again on OS X and certain BSDs.
+
   o Major bugfixes:
     - Remember to initialize threading before initializing logging.
       Otherwise, many BSD-family implementations will crash hard on
@@ -10,6 +12,11 @@ Changes in version 0.2.0.25-rc - 2008-04-23
 
 
 Changes in version 0.2.0.24-rc - 2008-04-22
+  Tor 0.2.0.24-rc adds dizum (run by Alex de Joode) as the new sixth
+  v3 directory authority, makes relays with dynamic IP addresses and no
+  DirPort notice more quickly when their IP address changes, fixes a few
+  rare crashes and memory leaks, and fixes a few other miscellaneous bugs.
+
   o New directory authorities:
     - Take lefkada out of the list of v3 directory authorities, since
       it has been down for months.
