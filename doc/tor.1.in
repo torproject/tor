@@ -206,10 +206,11 @@ authority for old-style (v1) directories as well.  (Only directory mirrors
 care about this.)  Tor will use this server as an authority for hidden
 service information if the "hs" flag is set, or if the "v1" flag is set and
 the "no-hs" flag is \fBnot\fP set.  Tor will use this authority as a bridge
-authoritative directory if the "bridge" flag is set.  Lastly, if a flag
+authoritative directory if the "bridge" flag is set.  If a flag
 "orport=\fBport\fR" is given, Tor will use the given port when opening
-encrypted tunnels to the dirserver.
-[XXX020 also mention v3ident= flag here]
+encrypted tunnels to the dirserver.  Lastly, if a flag "v3ident=\fBfp\fR" is
+given, the dirserver is a v3 directory authority whose v3 long-term
+signing key has the fingerprint \fBfp\fR.
 
 If no \fBdirserver\fP line is given, Tor will use the default
 directory servers.  NOTE: this option is intended
@@ -218,6 +219,16 @@ you use it, you will be distinguishable from other users, because you won't
 believe the same authorities they do.
 .LP
 .TP
+\fBAlternateDirAuthority \fR[\fInickname\fR] [\fBflags\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
+\fBAlternateHSAuthority \fR[\fInickname\fR] [\fBflags\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
+\fBAlternateBridgeAuthority \fR[\fInickname\fR] [\fBflags\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
+As DirServer, but replaces less of the default directory authorities.
+Using AlternateDirAuthority replaces the default Tor directory
+authorities, but leaves the hidden service authorities and bridge
+authorities in place.  Similarly, Using AlternatieHSAuthority replaces
+the default hidden service authorities, but not the directory or
+bridge authorities.
+
 \fBFetchDirInfoEarly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will always fetch directory information like other
 directory caches, even if you don't meet the normal criteria for
@@ -740,6 +751,19 @@ If Tor doesn't have a cached networkstatus file, it starts out using
 this one instead.  Even if this file is out of date, Tor can still use
 it to learn about directory mirrors, so it doesn't need to put load on
 the authorities.  (Default: None).
+.LP
+.TP
+\fBWarnPlaintextPorts\fP \fR\fIport\fR,\fIport\fR,\fI...\fP
+Tells Tor to issue a warnings whenever the user tries to make an
+anonymous connection to one of these ports.  This option is designed
+to alert users to services that risk sending passwords in the clear.
+(Default: 23,109,110,143).
+.LP
+.TP
+\fBRejectPlaintextPorts\fP \fR\fIport\fR,\fIport\fR,\fI...\fP
+Like WarnPlaintextPorts, but instead of warning about risky port uses,
+Tor will instead refuse to make the connection.
+(Default: None).
 
 .LP
 .TP
@@ -1089,6 +1113,9 @@ directory ports.
 The policies have the same form as exit policies above.
 .LP
 .TP
+
+.SH DIRECTORY AUTHORITY SERVER OPTIONS
+.PP
 \fBRecommendedVersions \fR\fISTRING\fP
 STRING is a comma-separated list of Tor versions currently believed
 to be safe. The list is included in each directory, and nodes which
@@ -1123,6 +1150,12 @@ elements. Otherwise, if the address is not an IP address or is a private
 IP address, it will reject the router descriptor. Defaults to 0.
 .LP
 .TP
+\fBAuthDirBadDir \fR\fIAddressPattern\fR...\fP
+Authoritative directories only.  A set of address patterns for servers that
+will be listed as bad directories in any network status document this authority
+publishes, if \fBAuthDirListBadDirs\fR is set.
+.LP
+.TP
 \fBAuthDirBadExit \fR\fIAddressPattern\fR...\fP
 Authoritative directories only.  A set of address patterns for servers that
 will be listed as bad exits in any network status document this authority
@@ -1140,6 +1173,13 @@ Authoritative directories only.  A set of address patterns for servers that
 will never be listed at all in any network status document that this
 authority publishes, or accepted as an OR address in any descriptor submitted
 for publication by this authority.
+.LP
+.TP
+\fBAuthDirListBadDirs \fR\fB0\fR|\fB1\fR\fP
+Authoritative directories only.  If set to 1, this directory has
+some opinion about which nodes are unsuitable as directory caches.  (Do not
+set this to 1 unless you plan to list nonfunctioning directories as bad;
+otherwise, you are effectively voting in favor of every declared directory.)
 .LP
 .TP
 \fBAuthDirListBadExits \fR\fB0\fR|\fB1\fR\fP
@@ -1166,6 +1206,39 @@ will list as acceptable on a single IP address.  Set this to "0" for
 \fBAuthDirMaxServersPerAuthAddr\fR \fINUM\fP
 Authoritative directories only.  Like AuthDirMaxServersPerAddr, but
 applies to addresses shared with directory authorities.  (Default: 5)
+.LP
+.TP
+\fBV3AuthVotingInterval\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+V3 authoritative directories only.  Configures the server's preferred
+voting interval.  Note that voting will \fIactually\fP happen at an
+interval chosen by consensus from all the authorities' preferred
+intervals.  This time SHOULD divide evenly into a day. (Default: 1 hour)
+.LP
+.TP
+\fBV3AuthVoteDelay\fR \fINUM\fP
+V3 authoritative directories only.  Configures the server's preferred
+delay between publishing its vote and assuming it has all the votes
+from all the other authorities.  Note that the actual time used is not
+the server's preferred time, but the consensus of all preferences.
+(Default: 5 minutes.)
+.LP
+.TP
+\fBV3AuthDistDelay\fR \fINUM\fP
+V3 authoritative directories only.  Configures the server's preferred
+delay between publishing its consensus and signature and assuming it
+has all the signatures from all the other authorities.  Note that the
+actual time used is not the server's preferred time, but the consensus
+of all preferences.  (Default: 5 minutes.)
+.LP
+.TP
+\fBV3AuthNIntervalsValid\fR \fINUM\fP
+V3 authoritative directories only.  Configures the number of
+VotingIntervals for which each consensus should be valid for.
+Choosing high numbers increases network partitioning risks; choosing
+low numbers increases directory traffic. Note that the actual number
+of intervals used is not the server's preferred number, but the
+consensus of all preferences.  Must be at least 2.  (Default: 3.)
+
 
 .SH HIDDEN SERVICE OPTIONS
 .PP

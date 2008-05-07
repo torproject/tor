@@ -55,9 +55,10 @@ while (<F>) {
     if ($considerNextLine and
         m!^\\fB([A-Za-z0-9_]+)!) {
         $manPageOptions{lc $1} = 1;
+	next;
     }
 
-    if (m!^\.(?:SH|TP)!) {
+    if (m!^\.(?:SH|TP|PP)!) {
         $considerNextLine = 1; next;
     } else {
         $considerNextLine = 0;
