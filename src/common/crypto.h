@@ -199,6 +199,7 @@ void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 struct rsa_st;
 struct evp_pkey_st;
 struct dh_st;
+struct rsa_st *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(struct rsa_st *rsa);
 crypto_pk_env_t *_crypto_new_pk_env_evp_pkey(struct evp_pkey_st *pkey);
 struct evp_pkey_st *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env,

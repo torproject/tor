@@ -258,6 +258,12 @@ _crypto_new_pk_env_evp_pkey(EVP_PKEY *pkey)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
+RSA *
+_crypto_pk_env_get_rsa(crypto_pk_env_t *env)
+{
+  return env->key;
+}
+
 /** used by tortls.c: get an equivalent EVP_PKEY* for a crypto_pk_env_t.  Iff
  * private is set, include the private-key portion of the key. */
 EVP_PKEY *
