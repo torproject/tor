@@ -1,4 +1,8 @@
 Changes in version 0.2.0.26-rc - 2008-05-??
+  o Major bugfixes:
+    - List authority signatures as "unrecognized" based on DirServer lines,
+      not on cert cache.
+
   o Minor features:
     - Add a new V3AuthUseLegacyKey option to make it easier for authorities
       to change their identity keys if they have to.
