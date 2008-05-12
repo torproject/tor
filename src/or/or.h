@@ -3195,7 +3195,9 @@ void dirvote_free_all(void);
 char *networkstatus_compute_consensus(smartlist_t *votes,
                                       int total_authorities,
                                       crypto_pk_env_t *identity_key,
-                                      crypto_pk_env_t *signing_key);
+                                      crypto_pk_env_t *signing_key,
+                                      const char *legacy_identity_key_digest,
+                                      crypto_pk_env_t *legacy_signing_key);
 int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           ns_detached_signatures_t *sigs,
                                           const char **msg_out);
