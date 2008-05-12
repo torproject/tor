@@ -344,7 +344,7 @@ init_v3_authority_keys(void)
     return -1;
 
   if (get_options()->V3AuthUseLegacyKey &&
-      load_authority_keyset(0, &legacy_signing_key,
+      load_authority_keyset(1, &legacy_signing_key,
                             &legacy_key_certificate)<0)
     return -1;
 
