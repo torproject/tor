@@ -301,6 +301,7 @@ static config_var_t _option_vars[] = {
   V(V3AuthVoteDelay,             INTERVAL, "5 minutes"),
   V(V3AuthDistDelay,             INTERVAL, "5 minutes"),
   V(V3AuthNIntervalsValid,       UINT,     "3"),
+  V(V3AuthUseLegacyKey,          BOOL,     "0"),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),

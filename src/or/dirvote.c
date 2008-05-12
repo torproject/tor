@@ -105,7 +105,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status vote\n"
-                 "consensus-methods 1 2\n"
+                 "consensus-methods 1 2 3\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -125,6 +125,14 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_free(flags);
     outp = status + strlen(status);
     endp = status + len;
+
+    if (!tor_digest_is_zero(voter->legacy_id_digest)) {
+      char fpbuf[HEX_DIGEST_LEN+1];
+      base16_encode(fpbuf, sizeof(fpbuf), voter->legacy_id_digest, DIGEST_LEN);
+      tor_snprintf(outp, endp-outp, "legacy-dir-key %s\n", fpbuf);
+      outp += strlen(outp);
+    }
+
     tor_assert(outp + cert->cache_info.signed_descriptor_len < endp);
     memcpy(outp, cert->cache_info.signed_descriptor_body,
            cert->cache_info.signed_descriptor_len);
@@ -207,6 +215,12 @@ get_voter(const networkstatus_t *vote)
   return smartlist_get(vote->voters, 0);
 }
 
+typedef struct {
+  networkstatus_t *v;
+  const char *digest;
+  int is_legacy;
+} dir_src_ent_t;
+
 /** Helper for sorting networkstatus_t votes (not consensuses) by the
  * hash of their voters' identity digests. */
 static int
@@ -215,6 +229,19 @@ _compare_votes_by_authority_id(const void **_a, const void **_b)
   const networkstatus_t *a = *_a, *b = *_b;
   return memcmp(get_voter(a)->identity_digest,
                 get_voter(b)->identity_digest, DIGEST_LEN);
+}
+
+static int
+_compare_dir_src_ents_by_authority_id(const void **_a, const void **_b)
+{
+  const dir_src_ent_t *a = *_a, *b = *_b;
+  const networkstatus_voter_info_t *a_v = get_voter(a->v),
+    *b_v = get_voter(b->v);
+  const char *a_id, *b_id;
+  a_id = a->is_legacy ? a_v->legacy_id_digest : a_v->identity_digest;
+  b_id = b->is_legacy ? b_v->legacy_id_digest : b_v->identity_digest;
+
+  return memcmp(a_id, b_id, DIGEST_LEN);
 }
 
 /** Given a sorted list of strings <b>in</b>, add every member to <b>out</b>
@@ -416,7 +443,7 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method >= 1) && (method <= 2);
+  return (method >= 1) && (method <= 3);
 }
 
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
@@ -581,33 +608,64 @@ networkstatus_compute_consensus(smartlist_t *votes,
   /* Sort the votes. */
   smartlist_sort(votes, _compare_votes_by_authority_id);
   /* Add the authority sections. */
-  SMARTLIST_FOREACH(votes, networkstatus_t *, v,
   {
-    char buf[1024];
-    struct in_addr in;
-    char ip[INET_NTOA_BUF_LEN];
-    char fingerprint[HEX_DIGEST_LEN+1];
-    char votedigest[HEX_DIGEST_LEN+1];
-    networkstatus_voter_info_t *voter = get_voter(v);
+    smartlist_t *dir_sources = smartlist_create();
+    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
+    {
+      dir_src_ent_t *e = tor_malloc_zero(sizeof(dir_src_ent_t));
+      e->v = v;
+      e->digest = get_voter(v)->identity_digest;
+      e->is_legacy = 0;
+      smartlist_add(dir_sources, e);
+      if (consensus_method >= 3 &&
+          !tor_digest_is_zero(get_voter(v)->legacy_id_digest)) {
+        dir_src_ent_t *e_legacy = tor_malloc_zero(sizeof(dir_src_ent_t));
+        e_legacy->v = v;
+        e_legacy->digest = get_voter(v)->legacy_id_digest;
+        e_legacy->is_legacy = 1;
+        smartlist_add(dir_sources, e);
+      }
+    });
+    smartlist_sort(dir_sources, _compare_dir_src_ents_by_authority_id);
 
-    in.s_addr = htonl(voter->addr);
-    tor_inet_ntoa(&in, ip, sizeof(ip));
-    base16_encode(fingerprint, sizeof(fingerprint), voter->identity_digest,
-                  DIGEST_LEN);
-    base16_encode(votedigest, sizeof(votedigest), voter->vote_digest,
-                  DIGEST_LEN);
+    SMARTLIST_FOREACH(dir_sources, const dir_src_ent_t *, e,
+    {
+      char buf[1024];
+      struct in_addr in;
+      char ip[INET_NTOA_BUF_LEN];
+      char fingerprint[HEX_DIGEST_LEN+1];
+      char votedigest[HEX_DIGEST_LEN+1];
+      networkstatus_t *v = e->v;
+      networkstatus_voter_info_t *voter = get_voter(v);
 
-    tor_snprintf(buf, sizeof(buf),
-                 "dir-source %s %s %s %s %d %d\n"
-                 "contact %s\n"
-                 "vote-digest %s\n",
-                 voter->nickname, fingerprint, voter->address, ip,
-                    voter->dir_port,
-                    voter->or_port,
-                 voter->contact,
-                 votedigest);
-    smartlist_add(chunks, tor_strdup(buf));
-  });
+      if (e->is_legacy)
+        tor_assert(consensus_method >= 2);
+
+      in.s_addr = htonl(voter->addr);
+      tor_inet_ntoa(&in, ip, sizeof(ip));
+      base16_encode(fingerprint, sizeof(fingerprint), e->digest, DIGEST_LEN);
+      base16_encode(votedigest, sizeof(votedigest), voter->vote_digest,
+                    DIGEST_LEN);
+
+      tor_snprintf(buf, sizeof(buf),
+                   "dir-source %s%s %s %s %s %d %d\n",
+                   voter->nickname, e->is_legacy ? "-legacy" : "",
+                   fingerprint, voter->address, ip,
+                   voter->dir_port,
+                   voter->or_port);
+      smartlist_add(chunks, tor_strdup(buf));
+      if (! e->is_legacy) {
+        tor_snprintf(buf, sizeof(buf),
+                     "contact %s\n"
+                     "vote-digest %s\n",
+                     voter->contact,
+                     votedigest);
+        smartlist_add(chunks, tor_strdup(buf));
+      }
+    });
+    SMARTLIST_FOREACH(dir_sources, dir_src_ent_t *, e, tor_free(e));
+    smartlist_free(dir_sources);
+  }
 
   /* Add the actual router entries. */
   {
@@ -904,6 +962,22 @@ networkstatus_compute_consensus(smartlist_t *votes,
       return NULL; /* This leaks, but it should never happen. */
     }
     smartlist_add(chunks, tor_strdup(buf));
+
+    if (get_options()->V3AuthUseLegacyKey && consensus_method >= 3) {
+      crypto_pk_env_t *legacy_key = get_my_v3_legacy_signing_key();
+      authority_cert_t *legacy_cert = get_my_v3_legacy_cert();
+      smartlist_add(chunks, tor_strdup("directory-signature "));
+      crypto_pk_get_fingerprint(legacy_cert->identity_key, fingerprint, 0);
+      crypto_pk_get_fingerprint(legacy_key, signing_key_fingerprint, 0);
+      tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
+                   signing_key_fingerprint);
+      if (router_append_dirobj_signature(buf, sizeof(buf), digest,
+                                         signing_key)) {
+        log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
+        return NULL; /* This leaks, but it should never happen. */
+      }
+      smartlist_add(chunks, tor_strdup(buf));
+    }
   }
 
   result = smartlist_join_strings(chunks, "", 0, NULL);

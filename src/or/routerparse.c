@@ -79,6 +79,7 @@ typedef enum {
   K_CONSENSUS_DIGEST,
   K_CONSENSUS_METHODS,
   K_CONSENSUS_METHOD,
+  K_LEGACY_DIR_KEY,
 
   A_PURPOSE,
   _A_UNKNOWN,
@@ -365,6 +366,7 @@ static token_rule_t networkstatus_token_table[] = {
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T1( "dir-source",          K_DIR_SOURCE,      GE(6),       NO_OBJ ),
+  T01("legacy-dir-key",      K_LEGACY_DIR_KEY,  GE(1),       NO_OBJ ),
   T1( "known-flags",         K_KNOWN_FLAGS,     CONCAT_ARGS, NO_OBJ ),
   T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
   T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS, NO_OBJ ),
@@ -2280,6 +2282,23 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   } else if (is_vote && smartlist_len(ns->voters) != 1) {
     log_warn(LD_DIR, "Too many dir-source elements in a vote networkstatus.");
     goto err;
+  }
+
+  if (is_vote &&
+      (tok = find_first_by_keyword(tokens, K_LEGACY_DIR_KEY))) {
+    int bad = 1;
+    if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
+      networkstatus_voter_info_t *voter = smartlist_get(ns->voters, 0);
+      if (base16_decode(voter->legacy_id_digest, DIGEST_LEN,
+                        tok->args[0], HEX_DIGEST_LEN)<0)
+        bad = 1;
+      else
+        bad = 0;
+    }
+    if (bad) {
+      log_warn(LD_DIR, "Invalid legacy key digest %s on vote.",
+               escaped(tok->args[0]));
+    }
   }
 
   /* Parse routerstatus lines. */
