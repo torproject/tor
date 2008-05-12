@@ -6,7 +6,8 @@ N       - nick claims
 R       - arma claims
 P       - phobos claims
 S       - Steven claims
-M       - Matt/Mike claims
+E       - Matt claims
+M       - Mike claims
 J       - Jeff claims
 I       - ioerror claims
 W       - weasel claims
@@ -33,16 +34,6 @@ S   - Zip-splitting:
         reconstruct them after download.  Host such files.
       - If it's faster to research a self-extracting splitter
         and use it, with simpler documentation, that's obviously fine.
-N   - Investigate and start resolving (or declare unresolvable) the ram
-      issue for relays. Investigate and document all of, and do at
-      least two of:
-      o better buffer approaches in Tor
-      - better buffer approaches in openssl
-      o shipping Tor with its own integrated allocator.
-N   - Write a draft research proposal for how to safely collect and
-      aggregate some GeoIP data from non-bridge entry nodes, or conclude
-      that we don't know how to do it safely while still being useful
-      and explain why.
 I   - Translation portal
       o Vidalia translations (via launchpad?)
       - Create a doc/translations.txt file in tor svn that somebody else
@@ -63,6 +54,10 @@ S   - More TorBrowser work
       - move portablefirefox nsi goo into vidalia as appropriate
       - Figure out (or give up on) how to run Tor Browser and ordinary
         Firefox side-by-side.
+N   - Write a paragraph or two for Paul's research project describing what
+      we plan to help him research. Roger will then secretly retitle
+      these as a "statement of work", and then we'll have Tor's
+      subcontracting dept contact NRL's subcontract dept.
 
   - mid June
 R   - SRI stuff
@@ -73,7 +68,7 @@ S     - Firefox extension framework for Torbrowser build-time
 S     - Progress bar during startup, including some "timeout" events to
         indicate when Tor's unlikely to succeed at startup.
 R       - Make Tor put out appropriate events
-M       - Let Vidalia notice them and change its appearance
+E       - Let Vidalia notice them and change its appearance
 S     - Enumerate and analyze traces left when running from USB
 R   - Finish tor-doc-bridge.wml
     - More bridgedb work:
@@ -84,9 +79,18 @@ NR    - Include "stable" bridge and "port 443" bridge and "adequately
         new version" bridge free in every specially marked
         box!^W^W^Woutput batch.
 N     - Detect proxies and treat them as the same address
+N   - Continue resolving the ram issue for relays:
+      o better buffer approaches in Tor
+      - better buffer approaches in openssl
+      o shipping Tor with its own integrated allocator.
+      - Write a paragraph for each of the above three items to describe
+        what we've done in the Jan-Jun timeframe, and next steps if any
+        for each item.
+N   - Take our draft research proposal for how to safely collect and
+      aggregate some GeoIP data from non-bridge entry nodes, finish
+      the proposal, and implement and test. Have a plausible plan for
+      deploying.
     - More back-end work:
-N     - If we decided above that we know how to collect geoip data for
-        non bridge relays, deploy that plan.
 N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
         - spoof the cipher suites
         - spoof the extensions list
@@ -145,6 +149,11 @@ I     - Figure out a good PKI, document the design, assess security issues:
       - Do the same for Polipo
       - and for Vidalia itself
 
+  - end of September
+NSE - Write first draft of research study for Paul's research problem.
+      This should be at least vaguely related to what was discussed in
+      the end-of-May deliverable.
+
   - mid October
 KS  - Finish implementation of hidden service improvements: have a set
       of patches that you think work.
@@ -159,7 +168,7 @@ W   - Finish testing, debugging, unit testing, etc the directory overhead
 
 =======================================================================
 
-Things Roger would be excited to see:
+Other things Roger would be excited to see:
 
 Nick
   o Send or-dev email about proposal statuses.
@@ -167,7 +176,6 @@ Nick
     nick agree.
   - Finish buffer stuff in libevent; start using it in Tor.
   - Tors start believing the contents of NETINFO cells.
-  - Get a "use less buffer ram" patch into openssl.
   - Work with Steven and Roger to decide which parts of Paul's project
     he wants to work on.
 
