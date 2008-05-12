@@ -3,6 +3,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Fix assertion failure that could occur when a blocked circuit became
       unblocked, and it had pending client DNS requests.  Bugfix on
       0.2.0.1-alpha.  Fixes bug 632.
+    - List authority signatures as "unrecognized" based on DirServer lines,
+      not on cert cache.  Bugfix on 0.2.0.x.
 
   o Minor bugfixes:
     - Stop giving double-close warn when we reject an address for client DNS.

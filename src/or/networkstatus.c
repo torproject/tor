@@ -392,17 +392,18 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   {
     if (!voter->good_signature && !voter->bad_signature && voter->signature) {
       /* we can try to check the signature. */
+      int is_v3_auth = trusteddirserver_get_by_v3_auth_digest(
+                                          voter->identity_digest) != NULL;
       authority_cert_t *cert =
         authority_cert_get_by_digests(voter->identity_digest,
                                       voter->signing_key_digest);
-      if (! cert) {
-        if (!trusteddirserver_get_by_v3_auth_digest(voter->identity_digest)) {
-          smartlist_add(unrecognized, voter);
-          ++n_unknown;
-        } else {
-          smartlist_add(need_certs_from, voter);
-          ++n_missing_key;
-        }
+      if (!is_v3_auth) {
+        smartlist_add(unrecognized, voter);
+        ++n_unknown;
+        continue;
+      } else if (!cert) {
+        smartlist_add(need_certs_from, voter);
+        ++n_missing_key;
         continue;
       }
       if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
