@@ -2285,6 +2285,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   voter->or_port = options->ORPort;
   voter->contact = tor_strdup(contact);
   memcpy(voter->signing_key_digest, signing_key_digest, DIGEST_LEN);
+  if (options->V3AuthUseLegacyKey) {
+    authority_cert_t *c = get_my_v3_legacy_cert();
+    if (c) {
+      crypto_pk_get_digest(c->identity_key, voter->legacy_id_digest);
+    }
+  }
+
   v3_out->voters = smartlist_create();
   smartlist_add(v3_out->voters, voter);
   v3_out->cert = authority_cert_dup(cert);

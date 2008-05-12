@@ -45,6 +45,9 @@ static crypto_pk_env_t *authority_signing_key = NULL;
  * authorities. */
 static authority_cert_t *authority_key_certificate = NULL;
 
+static crypto_pk_env_t *legacy_signing_key = NULL;
+static authority_cert_t *legacy_key_certificate = NULL;
+
 /* (Note that v3 authorities also have a separate "authority identity key",
  * but this key is never actually loaded by the Tor process.  Instead, it's
  * used by tor-gencert to sign new signing keys and make new key
@@ -142,6 +145,18 @@ crypto_pk_env_t *
 get_my_v3_authority_signing_key(void)
 {
   return authority_signing_key;
+}
+
+authority_cert_t *
+get_my_v3_legacy_cert(void)
+{
+  return legacy_key_certificate;
+}
+
+crypto_pk_env_t *
+get_my_v3_legacy_signing_key(void)
+{
+  return legacy_signing_key;
 }
 
 /** Replace the previous onion key with the current onion key, and generate
@@ -258,26 +273,26 @@ init_key_from_file(const char *fname, int generate, int severity)
   return NULL;
 }
 
-/** Load the v3 (voting) authority signing key and certificate, if they are
- * present.  Return -1 if anything is missing, mismatched, or unloadable;
- * return 0 on success. */
 static int
-init_v3_authority_keys(void)
+load_authority_keyset(int legacy, crypto_pk_env_t **key_out,
+                       authority_cert_t **cert_out)
 {
+  int r = -1;
   char *fname = NULL, *cert = NULL;
   const char *eos = NULL;
   crypto_pk_env_t *signing_key = NULL;
   authority_cert_t *parsed = NULL;
-  int r = -1;
 
-  fname = get_datadir_fname2("keys", "authority_signing_key");
+  fname = get_datadir_fname2("keys",
+                 legacy ? "legacy_signing_key" : "authority_signing_key");
   signing_key = init_key_from_file(fname, 0, LOG_INFO);
   if (!signing_key) {
     log_warn(LD_DIR, "No version 3 directory key found in %s", fname);
     goto done;
   }
   tor_free(fname);
-  fname = get_datadir_fname2("keys", "authority_certificate");
+  fname = get_datadir_fname2("keys",
+               legacy ? "legacy_certificate" : "authority_certificate");
   cert = read_file_to_str(fname, 0, NULL);
   if (!cert) {
     log_warn(LD_DIR, "Signing key found, but no certificate found in %s",
@@ -298,18 +313,16 @@ init_v3_authority_keys(void)
   parsed->cache_info.signed_descriptor_len = eos-cert;
   cert = NULL;
 
-  /* Free old values... */
-  if (authority_key_certificate)
-    authority_cert_free(authority_key_certificate);
-  if (authority_signing_key)
-    crypto_free_pk_env(authority_signing_key);
-  /* ...and replace them. */
-  authority_key_certificate = parsed;
-  authority_signing_key = signing_key;
-  parsed = NULL;
-  signing_key = NULL;
-
+  if (*key_out)
+    crypto_free_pk_env(*key_out);
+  if (*cert_out)
+    authority_cert_free(*cert_out);
+  *key_out = signing_key;
+  *cert_out = parsed;
   r = 0;
+  signing_key = NULL;
+  parsed = NULL;
+
  done:
   tor_free(fname);
   tor_free(cert);
@@ -318,6 +331,24 @@ init_v3_authority_keys(void)
   if (parsed)
     authority_cert_free(parsed);
   return r;
+}
+
+/** Load the v3 (voting) authority signing key and certificate, if they are
+ * present.  Return -1 if anything is missing, mismatched, or unloadable;
+ * return 0 on success. */
+static int
+init_v3_authority_keys(void)
+{
+  if (load_authority_keyset(0, &authority_signing_key,
+                            &authority_key_certificate)<0)
+    return -1;
+
+  if (get_options()->V3AuthUseLegacyKey &&
+      load_authority_keyset(0, &legacy_signing_key,
+                            &legacy_key_certificate)<0)
+    return -1;
+
+  return 0;
 }
 
 /** If we're a v3 authority, check whether we have a certificate that's
@@ -1956,6 +1987,10 @@ router_free_all(void)
     crypto_free_pk_env(authority_signing_key);
   if (authority_key_certificate)
     authority_cert_free(authority_key_certificate);
+  if (legacy_signing_key)
+    crypto_free_pk_env(legacy_signing_key);
+  if (legacy_key_certificate)
+    authority_cert_free(legacy_key_certificate);
 
   if (warned_nonexistent_family) {
     SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));

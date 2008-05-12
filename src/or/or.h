@@ -1452,6 +1452,7 @@ typedef struct networkstatus_voter_info_t {
   uint16_t or_port; /**< OR port of this voter */
   char *contact; /**< Contact information for this voter. */
   char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
+  char legacy_id_digest[DIGEST_LEN]; /**< From vote only. DOCDOC */
 
   /* Nothing from here on is signed. */
   char signing_key_digest[DIGEST_LEN]; /**< Declared digest of signing key
@@ -2329,6 +2330,10 @@ typedef struct {
   int V3AuthDistDelay;
   /** The number of intervals we think a consensus should be valid. */
   int V3AuthNIntervalsValid;
+
+  /** Should advertise and sign consensuses with a legacy key, for key
+   * migration purposes? */
+  int V3AuthUseLegacyKey;
 
   /** File to check for a consensus networkstatus, if we don't have one
    * cached. */
@@ -3751,6 +3756,8 @@ crypto_pk_env_t *get_identity_key(void);
 int identity_key_is_set(void);
 authority_cert_t *get_my_v3_authority_cert(void);
 crypto_pk_env_t *get_my_v3_authority_signing_key(void);
+authority_cert_t *get_my_v3_legacy_cert(void);
+crypto_pk_env_t *get_my_v3_legacy_signing_key(void);
 void dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last);
 void rotate_onion_key(void);
 crypto_pk_env_t *init_key_from_file(const char *fname, int generate,

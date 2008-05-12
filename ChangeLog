@@ -1,3 +1,9 @@
+Changes in version 0.2.0.26-rc - 2008-05-??
+  o Minor features:
+    - Add a new V3AuthUseLegacyKey option to make it easier for authorities
+      to change their identity keys if they have to.
+
+
 Changes in version 0.2.0.25-rc - 2008-04-23
   Tor 0.2.0.25-rc makes Tor work again on OS X and certain BSDs.
 
