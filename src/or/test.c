@@ -2537,6 +2537,7 @@ test_v3_networkstatus(void)
 {
   authority_cert_t *cert1, *cert2, *cert3;
   crypto_pk_env_t *sign_skey_1, *sign_skey_2, *sign_skey_3;
+  crypto_pk_env_t *sign_skey_leg1;
 
   time_t now = time(NULL);
   networkstatus_voter_info_t *voter;
@@ -2556,7 +2557,8 @@ test_v3_networkstatus(void)
   sign_skey_1 = crypto_new_pk_env();
   sign_skey_2 = crypto_new_pk_env();
   sign_skey_3 = crypto_new_pk_env();
-
+  sign_skey_leg1 = pk_generate(4);
+  
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
                                                       AUTHORITY_SIGNKEY_1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,
@@ -2578,6 +2580,8 @@ test_v3_networkstatus(void)
   vote->valid_until = now+3000;
   vote->vote_seconds = 100;
   vote->dist_seconds = 200;
+  vote->supported_methods = smartlist_create();
+  smartlist_split_string(vote->supported_methods, "1 2 3", NULL, 0, -1);
   vote->client_versions = tor_strdup("0.1.2.14,0.1.2.15");
   vote->server_versions = tor_strdup("0.1.2.14,0.1.2.15,0.1.2.16");
   vote->known_flags = smartlist_create();
@@ -2742,6 +2746,7 @@ test_v3_networkstatus(void)
   vote->dist_seconds = 250;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert3);
+  smartlist_add(vote->supported_methods, tor_strdup("4"));
   vote->client_versions = tor_strdup("0.1.2.14,0.1.2.17");
   vote->server_versions = tor_strdup("0.1.2.10,0.1.2.15,0.1.2.16");
   voter = smartlist_get(vote->voters, 0);
@@ -2751,6 +2756,8 @@ test_v3_networkstatus(void)
   voter->address = tor_strdup("3.4.5.6");
   voter->addr = 0x03040506;
   crypto_pk_get_digest(cert3->identity_key, voter->identity_digest);
+  /* This one has a legacy id. */
+  memset(voter->legacy_id_digest, (int)'A', DIGEST_LEN);
   vrs = smartlist_get(vote->routerstatus_list, 0);
   smartlist_del_keeporder(vote->routerstatus_list, 0);
   tor_free(vrs->version);
@@ -2770,7 +2777,9 @@ test_v3_networkstatus(void)
   smartlist_add(votes, v2);
   consensus_text = networkstatus_compute_consensus(votes, 3,
                                                    cert3->identity_key,
-                                                   sign_skey_3);
+                                                   sign_skey_3,
+                                                   "AAAAAAAAAAAAAAAAAAAA",
+                                                   sign_skey_leg1);
   test_assert(consensus_text);
   con = networkstatus_parse_vote_from_string(consensus_text, NULL, 0);
   test_assert(con);
@@ -2791,17 +2800,17 @@ test_v3_networkstatus(void)
   test_streq(cp, "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
              "Running:Stable:V2Dir:Valid");
   tor_free(cp);
-  test_eq(3, smartlist_len(con->voters));
+  test_eq(4, smartlist_len(con->voters)); /*3 voters, 1 legacy key.*/
   /* The voter id digests should be in this order. */
   test_assert(memcmp(cert2->cache_info.identity_digest,
                      cert3->cache_info.identity_digest,DIGEST_LEN)<0);
   test_assert(memcmp(cert3->cache_info.identity_digest,
                      cert1->cache_info.identity_digest,DIGEST_LEN)<0);
-  test_same_voter(smartlist_get(con->voters, 0),
-                  smartlist_get(v2->voters, 0));
   test_same_voter(smartlist_get(con->voters, 1),
-                  smartlist_get(v3->voters, 0));
+                  smartlist_get(v2->voters, 0));
   test_same_voter(smartlist_get(con->voters, 2),
+                  smartlist_get(v3->voters, 0));
+  test_same_voter(smartlist_get(con->voters, 3),
                   smartlist_get(v1->voters, 0));
 
   test_assert(!con->cert);
@@ -2847,19 +2856,19 @@ test_v3_networkstatus(void)
   test_assert(!rs->is_named);
   /* XXXX check version */
 
-  /* Check signatures.  the first voter hasn't got one.  The second one
-   * does: validate it. */
-  voter = smartlist_get(con->voters, 0);
+  /* Check signatures.  the first voter is pseudo.  The second one hasn't
+     signed.  The third one has signed: validate it. */
+  voter = smartlist_get(con->voters, 1);
   test_assert(!voter->signature);
   test_assert(!voter->good_signature);
   test_assert(!voter->bad_signature);
 
-  voter = smartlist_get(con->voters, 1);
+  voter = smartlist_get(con->voters, 2);
   test_assert(voter->signature);
   test_assert(!voter->good_signature);
   test_assert(!voter->bad_signature);
   test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 1),
+                                               smartlist_get(con->voters, 2),
                                                cert3));
   test_assert(voter->signature);
   test_assert(voter->good_signature);
@@ -2875,11 +2884,11 @@ test_v3_networkstatus(void)
     smartlist_shuffle(votes);
     consensus_text2 = networkstatus_compute_consensus(votes, 3,
                                                       cert2->identity_key,
-                                                      sign_skey_2);
+                                                      sign_skey_2, NULL,NULL);
     smartlist_shuffle(votes);
     consensus_text3 = networkstatus_compute_consensus(votes, 3,
                                                       cert1->identity_key,
-                                                      sign_skey_1);
+                                                      sign_skey_1, NULL,NULL);
     test_assert(consensus_text2);
     test_assert(consensus_text3);
     con2 = networkstatus_parse_vote_from_string(consensus_text2, NULL, 0);
@@ -2936,10 +2945,10 @@ test_v3_networkstatus(void)
     test_eq(2, networkstatus_add_detached_signatures(con, dsig2, &msg));
     /* Check signatures */
     test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 0),
+                                               smartlist_get(con->voters, 1),
                                                cert2));
     test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 2),
+                                               smartlist_get(con->voters, 3),
                                                cert1));
 
     networkstatus_vote_free(con2);

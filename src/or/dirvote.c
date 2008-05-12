@@ -458,7 +458,9 @@ char *
 networkstatus_compute_consensus(smartlist_t *votes,
                                 int total_authorities,
                                 crypto_pk_env_t *identity_key,
-                                crypto_pk_env_t *signing_key)
+                                crypto_pk_env_t *signing_key,
+                                const char *legacy_id_key_digest,
+                                crypto_pk_env_t *legacy_signing_key)
 {
   smartlist_t *chunks;
   char *result = NULL;
@@ -623,7 +625,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         e_legacy->v = v;
         e_legacy->digest = get_voter(v)->legacy_id_digest;
         e_legacy->is_legacy = 1;
-        smartlist_add(dir_sources, e);
+        smartlist_add(dir_sources, e_legacy);
       }
     });
     smartlist_sort(dir_sources, _compare_dir_src_ents_by_authority_id);
@@ -963,16 +965,16 @@ networkstatus_compute_consensus(smartlist_t *votes,
     }
     smartlist_add(chunks, tor_strdup(buf));
 
-    if (get_options()->V3AuthUseLegacyKey && consensus_method >= 3) {
-      crypto_pk_env_t *legacy_key = get_my_v3_legacy_signing_key();
-      authority_cert_t *legacy_cert = get_my_v3_legacy_cert();
+    if (legacy_id_key_digest && legacy_signing_key && consensus_method >= 3) {
       smartlist_add(chunks, tor_strdup("directory-signature "));
-      crypto_pk_get_fingerprint(legacy_cert->identity_key, fingerprint, 0);
-      crypto_pk_get_fingerprint(legacy_key, signing_key_fingerprint, 0);
+      base16_encode(fingerprint, sizeof(fingerprint),
+                    legacy_id_key_digest, DIGEST_LEN);
+      crypto_pk_get_fingerprint(legacy_signing_key,
+                                signing_key_fingerprint, 0);
       tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
                    signing_key_fingerprint);
       if (router_append_dirobj_signature(buf, sizeof(buf), digest,
-                                         signing_key)) {
+                                         legacy_signing_key)) {
         log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
         return NULL; /* This leaks, but it should never happen. */
       }
@@ -1751,10 +1753,23 @@ dirvote_compute_consensus(void)
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
                     smartlist_add(votes, v->vote));
 
-  consensus_body = networkstatus_compute_consensus(
+  {
+    char legacy_dbuf[DIGEST_LEN];
+    crypto_pk_env_t *legacy_sign=NULL;
+    char *legacy_id_digest = NULL;
+    if (get_options()->V3AuthUseLegacyKey) {
+      authority_cert_t *cert = get_my_v3_legacy_cert();
+      legacy_sign = get_my_v3_legacy_signing_key();
+      if (cert) {
+        crypto_pk_get_digest(cert->identity_key, legacy_dbuf);
+        legacy_id_digest = legacy_dbuf;
+      }
+    }
+    consensus_body = networkstatus_compute_consensus(
         votes, n_voters,
         my_cert->identity_key,
-        get_my_v3_authority_signing_key());
+        get_my_v3_authority_signing_key(), legacy_id_digest, legacy_sign);
+  }
   if (!consensus_body) {
     log_warn(LD_DIR, "Couldn't generate a consensus at all!");
     goto err;

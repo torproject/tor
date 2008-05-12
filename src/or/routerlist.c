@@ -296,6 +296,7 @@ authority_cert_get_newest_by_id(const char *id_digest)
   if (!trusted_dir_certs ||
       !(cl = digestmap_get(trusted_dir_certs, id_digest)))
     return NULL;
+
   SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
   {
     if (!best || cert->cache_info.published_on > best->cache_info.published_on)
@@ -310,8 +311,16 @@ authority_cert_get_newest_by_id(const char *id_digest)
 authority_cert_t *
 authority_cert_get_by_sk_digest(const char *sk_digest)
 {
+  authority_cert_t *c;
   if (!trusted_dir_certs)
     return NULL;
+
+  if ((c = get_my_v3_authority_cert()) &&
+      !memcmp(c->signing_key_digest, sk_digest, DIGEST_LEN))
+    return c;
+  if ((c = get_my_v3_legacy_cert()) &&
+      !memcmp(c->signing_key_digest, sk_digest, DIGEST_LEN))
+    return c;
 
   DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
