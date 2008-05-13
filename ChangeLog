@@ -1,7 +1,18 @@
-Changes in version 0.2.0.26-rc - 2008-05-??
+Changes in version 0.2.0.26-rc - 2008-05-13
+  Tor 0.2.0.26-rc fixes a major security vulnerability caused by a bug
+  in Debian's OpenSSL packages.  All users running any 0.2.0.x version
+  should upgrade, whether they're running Debian or not.
+
+  o Major security fixes:
+    - Use new V3 directory authority keys on the Tor26, Gabelmoo, and
+      Moria1 V3 directory authorities.  The old keys were generated with
+      a vulnerable version of Debian's OpenSSL package, and must be
+      considered compromised.  Other authorities' keys were not
+      generated with an affected version of OpenSSL.
+
   o Major bugfixes:
     - List authority signatures as "unrecognized" based on DirServer lines,
-      not on cert cache.
+      not on cert cache.  Bugfix on 0.2.0.x.
 
   o Minor features:
     - Add a new V3AuthUseLegacyKey option to make it easier for authorities
