@@ -5,6 +5,11 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       0.2.0.1-alpha.  Fixes bug 632.
     - List authority signatures as "unrecognized" based on DirServer lines,
       not on cert cache.  Bugfix on 0.2.0.x.
+    - Use new V3 directory authority keys on the Tor26, Gabelmoo, and
+      Moria1 V3 directory authorities.  The old keys were generated with
+      a vulnerable version of Debian's OpenSSL package, and must be
+      considered compromised.  Other authorities' keys were not
+      generated with an affected version of OpenSSL.
 
   o Minor bugfixes:
     - Stop giving double-close warn when we reject an address for client DNS.
