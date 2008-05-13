@@ -1,3 +1,20 @@
+tor (0.2.0.26-rc-1) experimental; urgency=critical
+
+  * New upstream version.
+  * Conflict with old libssls.
+  * On upgrading from versions prior to, including, 0.1.2.19-2, or
+    from versions later than 0.2.0 and prior to 0.2.0.26-rc do the
+    following, and if we are a server (we have a /var/lib/tor/keys
+    directory)
+    - move /var/lib/tor/keys/secret_onion_key out of the way.
+    - move /var/lib/tor/keys/secret_onion_key.old out of the way.
+    - move /var/lib/tor/keys/secret_id_key out of the way if it was
+      created on or after 2006-09-17, which is the day the bad
+      libssl was uploaded to Debian unstable.
+  * Add a NEWS file explaining this change.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 13 May 2008 16:11:21 +0200
+
 tor (0.2.0.24-rc-1) experimental; urgency=low
 
   * New upstream version.
