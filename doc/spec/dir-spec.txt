@@ -654,7 +654,7 @@ $Id$
 
 2.3. Nonterminals in router descriptors
 
-   nickname ::= between 1 and 19 alphanumeric characters ([A-Za-z0-0]),
+   nickname ::= between 1 and 19 alphanumeric characters ([A-Za-z0-9]),
       case-insensitive.
    hexdigest ::= a '$', followed by 40 hexadecimal characters
       ([A-Fa-f0-9]). [Represents a server by the digest of its identity
