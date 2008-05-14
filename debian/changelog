@@ -1,10 +1,20 @@
-tor (0.1.2.19-3) unstableunreleased; urgency=low
+tor (0.1.2.19-3) unstable; urgency=critical
 
   * It's 2008.  Now is the time to add copyright statements for 2007.
   * Work around fig2dev failing to build the images on all archs -
     backport from 0.2.0.22-rc-1 (re #457568).
+  * backport from 0.2.0.26-rc-1: Conflict with old libssls.
+  * backport from 0.2.0.26-rc-1: On upgrading from versions prior to,
+    including, 0.1.2.19-2 if we are a server (we have a /var/lib/tor/keys
+    directory)
+    - move /var/lib/tor/keys/secret_onion_key out of the way.
+    - move /var/lib/tor/keys/secret_onion_key.old out of the way.
+    - move /var/lib/tor/keys/secret_id_key out of the way if it was
+      created on or after 2006-09-17, which is the day the bad
+      libssl was uploaded to Debian unstable.
+  * backport from 0.2.0.26-rc-1: Add a NEWS file explaining this change.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 14 May 2008 15:00:47 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 May 2008 15:05:47 +0200
 
 tor (0.1.2.19-2) unstable; urgency=low
 
