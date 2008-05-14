@@ -1,8 +1,10 @@
 tor (0.1.2.19-3) unstableunreleased; urgency=low
 
   * It's 2008.  Now is the time to add copyright statements for 2007.
+  * Work around fig2dev failing to build the images on all archs -
+    backport from 0.2.0.22-rc-1 (re #457568).
 
- -- Peter Palfrader <weasel@debian.org>  Sun,  3 Feb 2008 21:53:04 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed, 14 May 2008 15:00:47 +0200
 
 tor (0.1.2.19-2) unstable; urgency=low
 
