@@ -58,6 +58,7 @@ Proposals by number:
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
 134  More robust consensus voting with diverse authority sets [DRAFT]
 135  Simplify Configuration of Private Tor Networks [OPEN]
+136  Mass authority migration with legacy keys [OPEN]
 
 
 Proposals by status:
@@ -73,6 +74,7 @@ Proposals by status:
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
    135  Simplify Configuration of Private Tor Networks
+   136  Mass authority migration with legacy keys
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits
