@@ -31,6 +31,8 @@
      - Must be available to upgrade within a few days in most cases.
        (While we're still developing Tor, we periodically find bugs that
        impact the whole network and require dirserver upgrades.)
+     - Should be have a well-known way to contact the administrator
+       via PGP-encrypted message.
 
    o Integrity:
      - Must promise not to censor or attack the network and users.
@@ -41,7 +43,23 @@
        otherwise, you will fight it to the extent of your abilities. If
        you fail to fight it, you must shut down the Tor server and notify
        us that you have.
-     - Dirservers (and operators) in a variety of jurisdictions are best.
+
+   o Diversity
+     - We should avoid situations that make it likelier for multiple
+       dirserver failures to happen at the same time.  Therefore...
+       - It's good when dirservers are not all in the same country.
+       - It's good when dirservers are not all in the same jurisdictions.
+       - It's good when dirservers are not all running the same OS.
+       - It's good when dirservers are not all using the same ISP.
+       - It's good when dirservers are not all running the same
+         version of Tor.
+       - No two dirservers should have the same operator.
+     - Maximal diversity, however, is not always practical.  Sometimes,
+       for example, there is only one version of Tor that provides a
+       given consensus generation algorithm.
+     - A small group of authorities with the same country/jurisdiction/OS is
+       not a problem, until that group's size approaches quorum (half the
+       authorities).
 
 2. How to choose the recommended versions
 
@@ -67,4 +85,5 @@
 > reasons include "the old one is really slow, clients should prefer the new
 +one"
 > i try to draw the line at 'good reasons and above'
+
 
