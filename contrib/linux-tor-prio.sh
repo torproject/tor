@@ -1,8 +1,49 @@
 #!/bin/bash
 # Written by Marco Bonetti & Mike Perry
-# Based on instructions from Dan Singletary's ADSL Bandwidth Management HOWTO
+# Based on instructions from Dan Singletary's ADSL BW Management HOWTO:
 # http://www.faqs.org/docs/Linux-HOWTO/ADSL-Bandwidth-Management-HOWTO.html
 # This script is Public Domain.
+
+############################### README #################################
+
+# This script provides prioritization of Tor traffic below other
+# traffic on a Linux server. It has two modes of operation: UID based 
+# and IP based. The UID based method requires that Tor be launched from 
+# a specific user ID. The "User" and "Group" Tor config settings are 
+# insufficient, as they set the UID after the socket is created.
+# Here is a three line C wrapper you can use to execute Tor and drop 
+# privs to UID 501 before it creates any sockets. Change the UID 
+# to the UID for your tor server user, and compile with 
+# 'gcc tor_wrap.c -o tor_wrap':
+
+# #include <unistd.h>
+# int main(int argc, char **argv) {
+# if(setresuid(501, 501, 501) == -1) { perror("setresuid"); return 1; }
+# execl("/bin/tor", "/bin/tor", "-f", "/etc/tor/torrc", NULL);
+# perror("execl"); return 1;
+# }
+
+# The IP setting requires that a separate IP address be dedicated to Tor. 
+# Your Torrc should be set to bind to this IP for "OutboundBindAddress", 
+# "ListenAddress", and "Address".
+
+# You should also tune the individual connection rate parameters below
+# to your individual connection. In particular, you should leave *some* 
+# minimum amount of bandwidth for Tor, so that Tor users are not 
+# completely choked out when you use your server's bandwidth. 30% is 
+# probably a polite choice.
+
+# To start the shaping, run it as: 
+#   ./linux-tor-prio.sh 
+
+# To get status information (useful to verify packets are getting marked
+# and prioritized), run:
+#   ./linux-tor-prio.sh status
+
+# And to stop prioritization:
+#   ./linux-tor-prio.sh stop
+
+########################################################################
 
 # BEGIN USER TUNABLE PARAMETERS
 
@@ -27,7 +68,10 @@ RTT_LATENCY=40
 RATE_UP=5000
 
 # RATE_UP_TOR is the minimum speed your Tor connections will have.
-# They will have at least this much bandwidth for upload
+# They will have at least this much bandwidth for upload. In general, 
+# you probably shouldn't set this too low, or else Tor users who use 
+# your node will be completely choked out whenever your machine
+# does any other network activity. That is not very fun.
 RATE_UP_TOR=1500
 
 # RATE_UP_TOR_CEIL is the maximum rate allowed for all Tor trafic
@@ -38,7 +82,7 @@ CHAIN=OUTPUT
 #CHAIN=POSTROUTING
 
 MTU=1500
-AVG_PKT=900
+AVG_PKT=900 # should be more like 600 for non-exit nodes
 
 # END USER TUNABLE PARAMETERS
 

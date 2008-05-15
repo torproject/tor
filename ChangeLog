@@ -1,3 +1,9 @@
+Changes in version 0.2.0.27-rc - 2008-05-??
+  o New files:
+    - A new contrib/tor-exit-notice.html file that exit relay operators
+      can put on their website to help reduce abuse queries.
+
+
 Changes in version 0.2.0.26-rc - 2008-05-13
   Tor 0.2.0.26-rc fixes a major security vulnerability caused by a bug
   in Debian's OpenSSL packages.  All users running any 0.2.0.x version
