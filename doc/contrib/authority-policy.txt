@@ -43,3 +43,28 @@
        us that you have.
      - Dirservers (and operators) in a variety of jurisdictions are best.
 
+2. How to choose the recommended versions
+
+  The policy, in a nutshell, is to not remove versions without a good
+  reason. So this means we should recommend all versions except:
+
+  - Versions that no longer conform to the spec. That is, if they wouldn't
+    actually interact correctly with the current Tor network.
+  - Versions that have known security problems.
+  - Versions that have frequent crash or assert problems.
+  - Versions that harm the performance or stability of the current Tor
+    network or the anonymity of other users. For example, a version
+    that load balances wrong, or a version that hammers the authorities
+    too much.
+
+
+> some use the slight variant of requiring a *good* reason.
+> excellent reasons include "there's a security flaw"
+> good reasons include "that crashes every time you start it. you would think
++tor is dumb if you tried to use that version and think of it as tor."
+> good reasons include "those old clients do their load balancing wrong, and
++they're screwing up the whole network"
+> reasons include "the old one is really slow, clients should prefer the new
++one"
+> i try to draw the line at 'good reasons and above'
+
