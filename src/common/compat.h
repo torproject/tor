@@ -348,44 +348,47 @@ typedef struct tor_addr_t
   } addr;
 } tor_addr_t;
 
-/* XXXX021 rename these. */
-static INLINE uint32_t IPV4IP(const tor_addr_t *a);
-static INLINE uint32_t IPV4IPh(const tor_addr_t *a);
-static INLINE uint32_t IPV4MAPh(const tor_addr_t *a);
-static INLINE uint16_t IN_FAMILY(const tor_addr_t *a);
-static INLINE const struct in_addr *IN4_ADDRESS(const tor_addr_t *a);
-static INLINE const struct in6_addr *IN6_ADDRESS(const tor_addr_t *a);
+/* DOCDOC*/
+static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
+static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
+static INLINE uint32_t tor_addr_to_mapped_ipv4n(const tor_addr_t *a);
+static INLINE sa_family_t tor_addr_family(const tor_addr_t *a);
+static INLINE const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
+static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
+socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
+                               struct sockaddr *sa_out);
 
 static INLINE const struct in6_addr *
-IN6_ADDRESS(const tor_addr_t *a)
+tor_addr_to_in6(const tor_addr_t *a)
 {
   return &a->addr.in6_addr;
 }
 
-#define IN6_ADDRESS16(x) S6_ADDR16(*IN6_ADDRESS(x))
-#define IN6_ADDRESS32(x) S6_ADDR32(*IN6_ADDRESS(x))
+#define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6(x))
+#define tor_addr_to_in6_addr32(x) S6_ADDR32(*tor_addr_to_in6(x))
 
 static INLINE uint32_t
-IPV4IP(const tor_addr_t *a)
+tor_addr_to_ipv4n(const tor_addr_t *a)
 {
   return a->addr.in_addr.s_addr;
 }
-static INLINE uint32_t IPV4IPh(const tor_addr_t *a)
+static INLINE uint32_t
+tor_addr_to_ipv4h(const tor_addr_t *a)
 {
-  return ntohl(IPV4IP(a));
+  return ntohl(tor_addr_to_ipv4n(a));
 }
 static INLINE uint32_t
-IPV4MAPh(const tor_addr_t *a)
+tor_addr_to_mapped_ipv4n(const tor_addr_t *a)
 {
-  return ntohl(IN6_ADDRESS32(a)[3]);
+  return ntohl(tor_addr_to_in6_addr32(a)[3]);
 }
-static INLINE uint16_t
-IN_FAMILY(const tor_addr_t *a)
+static INLINE sa_family_t
+tor_addr_family(const tor_addr_t *a)
 {
   return a->family;
 }
 static INLINE const struct in_addr *
-IN4_ADDRESS(const tor_addr_t *a)
+tor_addr_to_in(const tor_addr_t *a)
 {
   return &a->addr.in_addr;
 }

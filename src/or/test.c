@@ -1297,10 +1297,10 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
   STMT_BEGIN                                                                \
     test_eq(tor_addr_parse_mask_ports(xx, &t1, &mask, &port1, &port2), f);  \
     p1=tor_inet_ntop(AF_INET6, &t1.addr.in6_addr, bug, sizeof(bug));        \
-    test_eq(htonl(ip1), IN6_ADDRESS32(&t1)[0]);            \
-    test_eq(htonl(ip2), IN6_ADDRESS32(&t1)[1]);            \
-    test_eq(htonl(ip3), IN6_ADDRESS32(&t1)[2]);            \
-    test_eq(htonl(ip4), IN6_ADDRESS32(&t1)[3]);            \
+    test_eq(htonl(ip1), tor_addr_to_in6_addr32(&t1)[0]);            \
+    test_eq(htonl(ip2), tor_addr_to_in6_addr32(&t1)[1]);            \
+    test_eq(htonl(ip3), tor_addr_to_in6_addr32(&t1)[2]);            \
+    test_eq(htonl(ip4), tor_addr_to_in6_addr32(&t1)[3]);            \
     test_eq(mask, mm);                                     \
     test_eq(port1, pt1);                                   \
     test_eq(port2, pt2);                                   \
@@ -2830,7 +2830,7 @@ test_v3_networkstatus(void)
   sign_skey_2 = crypto_new_pk_env();
   sign_skey_3 = crypto_new_pk_env();
   sign_skey_leg1 = pk_generate(4);
-  
+
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
                                                       AUTHORITY_SIGNKEY_1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,

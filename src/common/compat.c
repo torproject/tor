@@ -935,6 +935,31 @@ get_user_homedir(const char *username)
 }
 #endif
 
+/** DOCDOC */
+socklen_t
+tor_addr_to_sockaddr(const tor_addr_t *a,
+                     uint16_t port,
+                     struct sockaddr *sa_out)
+{
+  if (a->family == AF_INET) {
+    struct sockaddr_in *sin = (struct sockaddr_in *)sa_out;
+    sin->sin_family = AF_INET;
+    sin->sin_port = port;
+    sin->sin_addr.s_addr = a->addr.in_addr.s_addr;
+    return sizeof(struct sockaddr_in);
+  } else if (a->family == AF_INET6) {
+    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa_out;
+    tor_assert(a->family == AF_INET6);
+    memset(sin6, 0, sizeof(struct sockaddr_in6));
+    sin6->sin6_family = AF_INET6;
+    sin6->sin6_port = port;
+    memcpy(&sin6->sin6_addr, &a->addr.in6_addr, sizeof(struct in6_addr));
+    return sizeof(struct sockaddr_in6);
+  } else {
+    return -1;
+  }
+}
+
 /** Set *addr to the IP address (in dotted-quad notation) stored in c.
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
  * but works on Windows and Solaris.)
@@ -1166,8 +1191,8 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
   if ((ret = tor_addr_lookup(name, AF_INET, &myaddr)))
     return ret;
 
-  if (IN_FAMILY(&myaddr) == AF_INET) {
-    *addr = IPV4IPh(&myaddr);
+  if (tor_addr_family(&myaddr) == AF_INET) {
+    *addr = tor_addr_to_ipv4h(&myaddr);
     return ret;
   }
 
