@@ -232,11 +232,19 @@ tor_libevent_devpkg_redhat="libevent-devel"
 tor_libevent_devpkg_debian="libevent-dev"
 
 TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $TOR_LIB_WS32], [
+#ifdef WIN32
+#include <winsock2.h>
+#endif
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <event.h>], [void exit(int); void *event_init(void);],
-    [event_init(); exit(0);], [--with-libevent-dir], [/opt/libevent])
+    [
+#ifdef WIN32
+{WSAData d; WSAStartup(0x101,&d); }
+#endif
+event_init(); exit(0);
+], [--with-libevent-dir], [/opt/libevent])
 
 dnl Now check for particular libevent functions.
 save_LIBS="$LIBS"
