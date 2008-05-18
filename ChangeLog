@@ -3,6 +3,9 @@ Changes in version 0.2.0.27-rc - 2008-05-??
     - A new contrib/tor-exit-notice.html file that exit relay operators
       can put on their website to help reduce abuse queries.
 
+  o Minor features (build):
+    - Add support to detect Libevent versions in the 1.4.x series on mingw.
+
 
 Changes in version 0.2.0.26-rc - 2008-05-13
   Tor 0.2.0.26-rc fixes a major security vulnerability caused by a bug
