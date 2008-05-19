@@ -9,6 +9,8 @@ Status: Open
 Change history:
 
   29-Apr-2008  Initial proposal for or-dev
+  19-May-2008  Included changes based on comments by Nick to or-dev and
+               added a section for test cases.
 
 Overview:
 
@@ -58,7 +60,7 @@ Design:
   30 minutes. The effect is that even if people misconfigured their
   directory authorities, they would meet at the default values at the
   latest. The second safeguard is to allow configuration only when the
-  umbrella configuration option PrivateTorNetwork is set.
+  umbrella configuration option TestingTorNetwork is set.
 
   1.2. Immediately Provide Reachability Information (Running flag)
 
@@ -73,12 +75,12 @@ Design:
    * reachability information is not accurate. */
   #define DIRSERV_TIME_TO_GET_REACHABILITY_INFO (30*60)
 
-  There should be another configuration option DirAssumeRunningDelay with
-  a default value of 30 minutes that can be changed when running private
+  There should be another configuration option DirTimeToLearnReachability with
+  a default value of 30 minutes that can be changed when running testing
   Tor networks, e.g. to 0 minutes. The configuration value would simply
   replace the quoted constant. Again, changing this option could be
   safeguarded by requiring the umbrella configuration option
-  PrivateTorNetwork to be set.
+  TestingTorNetwork to be set.
 
   1.3. Reduce Estimated Descriptor Propagation Time
 
@@ -102,13 +104,13 @@ Design:
   Setting up a private Tor network requires a number of specific settings
   that are not required or useful when running Tor in the public Tor
   network. Instead of writing down these options in a FAQ entry, there
-  should be a single configuration option, e.g. PrivateTorNetwork, that
+  should be a single configuration option, e.g. TestingTorNetwork, that
   changes all required settings at once. Newer Tor versions would keep the
   set of configuration options up-to-date. It should still remain possible
   to manually overwrite the settings that the umbrella configuration option
   affects.
 
-  The following configuration options are set by PrivateTorNetwork:
+  The following configuration options are set by TestingTorNetwork:
 
   - ServerDNSAllowBrokenResolvConf 1
       Ignore the situation that private relays are not aware of any name
@@ -141,15 +143,137 @@ Design:
   - V3AuthDistDelay 20 seconds
       Accelerate voting schedule after first consensus has been reached.
 
-    V3AuthInitialVotingInterval 5 minutes
-    V3AuthInitialVoteDelay 20 seconds
-    V3AuthInitialDistDelay 20 seconds
+  - V3AuthInitialVotingInterval 5 minutes
+  - V3AuthInitialVoteDelay 20 seconds
+  - V3AuthInitialDistDelay 20 seconds
       Accelerate initial voting schedule until first consensus is reached.
 
-    DirAssumeRunningDelay 0 minutes
+  - DirTimeToLearnReachability 0 minutes
       Consider routers as Running from the start of running an authority.
 
-    EstimatedDescriptorPropagationTime 0 minutes
+  - EstimatedDescriptorPropagationTime 0 minutes
       Clients try downloading router descriptors from directory caches,
       even when they are not 10 minutes old.
+
+  In addition to changing the defaults for these configuration options,
+  TestingTorNetwork can only be set when a user has manually configured
+  DirServer lines.
+
+Test:
+
+  The implementation of this proposal must pass the following tests:
+
+  1. Set TestingTorNetwork and see if dependent configuration options are
+     correctly changed.
+
+     tor DataDirectory . ControlPort 9051 TestingTorNetwork 1 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     GETCONF TestingTorNetwork DirTimeToLearnReachability
+     250-TestingTorNetwork=1
+     250 DirTimeToLearnReachability=0
+     QUIT
+
+  2. Set TestingTorNetwork and a dependent configuration value to see if
+     the provided value is used for the dependent option.
+
+     tor DataDirectory . ControlPort 9051 TestingTorNetwork 1 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000" \
+       DirTimeToLearnReachability 5
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     GETCONF TestingTorNetwork DirTimeToLearnReachability
+     250-TestingTorNetwork=1
+     250 DirTimeToLearnReachability=5
+     QUIT
+
+  3. Start with TestingTorNetwork set and change a dependent configuration
+     option later on.
+
+     tor DataDirectory . ControlPort 9051 TestingTorNetwork 1 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     SETCONF DirTimeToLearnReachability=5
+     GETCONF DirTimeToLearnReachability
+     250 DirTimeToLearnReachability=5
+     QUIT
+
+  4. Start with TestingTorNetwork set and a dependent configuration value,
+     and reset that dependent configuration value. The result should be
+     the testing-network specific default value.
+
+     tor DataDirectory . ControlPort 9051 TestingTorNetwork 1 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000" \
+       DirTimeToLearnReachability 5
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     GETCONF DirTimeToLearnReachability
+     250 DirTimeToLearnReachability=5
+     RESETCONF DirTimeToLearnReachability
+     GETCONF DirTimeToLearnReachability
+     250 DirTimeToLearnReachability=0
+     QUIT
+
+  5. Leave TestingTorNetwork unset and check if dependent configuration
+     options are left unchanged.
+
+     tor DataDirectory . ControlPort 9051 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     GETCONF TestingTorNetwork DirTimeToLearnReachability
+     250-TestingTorNetwork=0
+     250 DirTimeToLearnReachability=1800
+     QUIT
+
+  6. Leave TestingTorNetwork unset, but set dependent configuration option
+     which should fail.
+
+     tor DataDirectory . ControlPort 9051 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000" \
+       DirTimeToLearnReachability 0
+     [warn] Failed to parse/validate config: DirTimeToLearnReachability may
+     only be changed in testing Tor networks!
+
+  7. Start with TestingTorNetwork unset and change dependent configuration
+     option later on which should fail.
+
+     tor DataDirectory . ControlPort 9051 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     SETCONF DirTimeToLearnReachability=0
+     513 Unacceptable option value: DirTimeToLearnReachability may only be
+     changed in testing Tor networks!
+
+  8. Start with TestingTorNetwork unset and set it later on which should
+     fail.
+
+     tor DataDirectory . ControlPort 9051 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     SETCONF TestingTorNetwork=1
+     553 Transition not allowed: While Tor is running, changing
+     TestingTorNetwork is not allowed.
+
+  9. Start with TestingTorNetwork set and unset it later on which should
+     fail.
+
+     tor DataDirectory . ControlPort 9051 TestingTorNetwork 1 DirServer \
+       "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
+     telnet 127.0.0.1 9051
+     AUTHENTICATE
+     RESETCONF TestingTorNetwork
+     513 Unacceptable option value: V3AuthInitialVotingInterval may only be
+     changed in testing Tor networks!
+
+ 10. Set TestingTorNetwork, but do not provide an alternate DirServer
+     which should fail.
+
+     tor DataDirectory . ControlPort 9051 TestingTorNetwork 1
+     [warn] Failed to parse/validate config: TestingTorNetwork may only be
+     configured in combination with a non-default set of DirServers.
 
