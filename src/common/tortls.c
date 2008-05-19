@@ -564,6 +564,9 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
 #endif
   SSL_CTX_set_options(result->ctx, SSL_OP_SINGLE_DH_USE);
+#ifdef SSL_MODE_RELEASE_BUFFERS
+  SSL_CTX_set_mode(result->ctx, SSL_MODE_RELEASE_BUFFERS);
+#endif
   if (cert && !SSL_CTX_use_certificate(result->ctx,cert))
     goto error;
   X509_free(cert); /* We just added a reference to cert. */

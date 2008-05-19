@@ -91,6 +91,10 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       this new scheme when the server supports it.
     - Add a new V3AuthUseLegacyKey option to make it easier for authorities
       to change their identity keys if they have to.
+    - If the user has applied the experimental SSL_MODE_RELEASE_BUFFERS
+      patch to their OpenSSL, turn it on to save memory on servers.  This
+      patch will (with any luck) get included in a mainline distribution
+      before too long.
 
   o Minor features (security):
     - Reject requests for reverse-dns lookup of names in a private
