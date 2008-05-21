@@ -957,8 +957,9 @@ $Id$
              directory cache (because its directory port isn't working,
              its bandwidth is always throttled, or for some similar
              reason).
-          "Exit" if the router is useful for building general-purpose exit
-             circuits.
+          "Exit" if the router is more useful for building
+             general-purpose exit circuits than for relay circuits.  The
+             path building algorithm uses this flag; see path-spec.txt.
           "Fast" if the router is suitable for high-bandwidth circuits.
           "Guard" if the router is suitable for use as an entry guard.
           "HSDir" if the router is considered a v2 hidden service directory.
@@ -1057,6 +1058,10 @@ $Id$
         weighted MTBF much.
 
         [XXXX what happens when we have less than 4 days of MTBF info.]
+
+   "Exit" -- A router is called an 'Exit' iff it allows exits to at
+    least two of the ports 80, 443, and 6667 and allows exits to at
+    least one /8 address space.
 
    "Fast" -- A router is 'Fast' if it is active, and its bandwidth is
    either in the top 7/8ths for known active routers or at least 100KB/s.

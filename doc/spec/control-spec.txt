@@ -1555,7 +1555,7 @@ $Id$
 
   __DisablePredictedCircuits
 
-    If true, Tor will not launch preemptive "general purpose" circuits for
+    If true, Tor will not launch preemptive "general-purpose" circuits for
     streams to attach to.  (It will still launch circuits for testing and
     for hidden services.)
 
