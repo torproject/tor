@@ -247,6 +247,9 @@ Weasel
     not suitable yet.
   - Take non-Running entries out of the networkstatus consensus.
   - Move proposal 134 forward.
+  - putting port predictions in state file
+  - if tor hasn't been used in a while it stops fetching consensus
+    documents.  Retain that state over restarts.
 
 Roger
   . Fix FAQ entry on setting up private Tor network
