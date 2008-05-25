@@ -2,6 +2,17 @@
 (Remember to include both the revision number _AND_ an abbreviated
 description of the patch.)
 
+Items before a stable 0.2.0.x bundle:
+  - Tor items:
+R   - flyspray bug 675/648
+N   - flyspray bug 681
+R   - releasenotes
+  - Vidalia items:
+E   - get rid of the 'run tor as a service' checkbox.
+E   - a new vidalia release with that included
+  - Torbutton items:
+M   - mike had a big pile
+
 Backport items for 0.2.0:
   o r14204: start policy refcounts at 1, not 2.
   o r14205: free authority certs on exit.
