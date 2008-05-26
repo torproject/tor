@@ -72,7 +72,7 @@ Process:
        key files".
      - At the earliest time that can be arranged, the authorities
        replace their signing keys, identity keys, and certificates
-       with the new compromised versions, and update to the new list
+       with the new uncompromised versions, and update to the new list
        of dirserer lines.
      - They add an "V3DirAdvertiseLegacyKey 1" option to their torrc.
      - Now, new consensuses will be generated using the new keys, but
