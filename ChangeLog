@@ -1,4 +1,9 @@
 Changes in version 0.2.0.27-rc - 2008-05-??
+  o Minor bugfixes (controller):
+    - When tunneling an encrypted directory connection, and its first circuit
+      fails do not leave it unattached and ask the controller to deal.  Fixes
+      the second part of bug 681.
+
   o New files:
     - A new contrib/tor-exit-notice.html file that exit relay operators
       can put on their website to help reduce abuse queries.

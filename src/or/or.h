@@ -369,6 +369,12 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_RENDDESC_V2 18
 #define _DIR_PURPOSE_MAX 18
 
+#define DIR_PURPOSE_IS_UPLOAD(p)                \
+  ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
+   (p)==DIR_PURPOSE_UPLOAD_RENDDESC ||         \
+   (p)==DIR_PURPOSE_UPLOAD_VOTE ||             \
+   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES)
+
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
 #define EXIT_PURPOSE_CONNECT 1
@@ -994,7 +1000,7 @@ typedef struct edge_connection_t {
    * already retried several times. */
   uint8_t num_socks_retries;
 
-  /** True iff this connection is for a dns request only. */
+  /** True iff this connection is for a dnsserv request only. */
   unsigned int is_dns_request:1;
 
   /** True iff this stream must attach to a one-hop circuit (e.g. for

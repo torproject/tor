@@ -543,7 +543,9 @@ connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ,
 {
   control_event_stream_status(conn, STREAM_EVENT_FAILED_RETRIABLE, reason);
   conn->_base.timestamp_lastread = time(NULL);
-  if (! get_options()->LeaveStreamsUnattached) {
+  if (!get_options()->LeaveStreamsUnattached || conn->use_begindir) {
+    /* If we're attaching streams ourself, or if this connection is
+     * a tunneled directory connection, then just attach it. */
     conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
     circuit_detach_stream(TO_CIRCUIT(circ),conn);
     return connection_ap_handshake_attach_circuit(conn);
