@@ -371,8 +371,8 @@ typedef enum {
 
 #define DIR_PURPOSE_IS_UPLOAD(p)                \
   ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
-   (p)==DIR_PURPOSE_UPLOAD_RENDDESC ||         \
-   (p)==DIR_PURPOSE_UPLOAD_VOTE ||             \
+   (p)==DIR_PURPOSE_UPLOAD_RENDDESC ||          \
+   (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
    (p)==DIR_PURPOSE_UPLOAD_SIGNATURES)
 
 #define _EXIT_PURPOSE_MIN 1

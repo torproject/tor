@@ -1,4 +1,8 @@
 Changes in version 0.2.0.27-rc - 2008-05-??
+  o Minor features (controller):
+    - Add a "PURPOSE=" argument to "STREAM NEW" events, as suggested by
+      Robert Hogan. Fixes the first part of bug 681.
+
   o Minor bugfixes (controller):
     - When tunneling an encrypted directory connection, and its first circuit
       fails do not leave it unattached and ask the controller to deal.  Fixes
