@@ -369,6 +369,12 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_RENDDESC_V2 18
 #define _DIR_PURPOSE_MAX 18
 
+#define DIR_PURPOSE_IS_UPLOAD(p)                \
+  ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
+   (p)==DIR_PURPOSE_UPLOAD_RENDDESC ||          \
+   (p)==DIR_PURPOSE_UPLOAD_VOTE ||              \
+   (p)==DIR_PURPOSE_UPLOAD_SIGNATURES)
+
 #define _EXIT_PURPOSE_MIN 1
 /** This exit stream wants to do an ordinary connect. */
 #define EXIT_PURPOSE_CONNECT 1
