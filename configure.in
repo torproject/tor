@@ -748,7 +748,8 @@ if test x$enable_gcc_warnings = xyes; then
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 Use -fstack-protector.
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=5"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1"
+    # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
   fi
 
   if test x$have_shorten64_flag = xyes ; then

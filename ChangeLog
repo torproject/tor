@@ -5,6 +5,7 @@ Changes in version 0.2.0.27-rc - 2008-05-??
 
   o Minor features (build):
     - Add support to detect Libevent versions in the 1.4.x series on mingw.
+    - Fix build on gcc 4.3 with --enable-gcc-warnings set.
 
 
 Changes in version 0.2.0.26-rc - 2008-05-13
