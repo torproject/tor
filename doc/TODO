@@ -25,17 +25,10 @@ K       - Karsten claims
 External constraints:
 
   - End of April
-S   - Finish first cut at integrating upnp lib into Vidalia
 R   - get the geoip files onto some bridge relays, and gather stats
 ?   - Figure out who at Mozilla can give us permission to keep the
       name Firefox on our Tor Browser Bundle. Get said permission.
-S   - Zip-splitting:
-      - Document the use of 7-zip to combine fractional files and
-        reconstruct them after download.  Host such files.
-      - If it's faster to research a self-extracting splitter
-        and use it, with simpler documentation, that's obviously fine.
 I   - Translation portal
-      o Vidalia translations (via launchpad?)
       - Create a doc/translations.txt file in tor svn that somebody else
         could use to manage the translations in case Jake gets hit by
         a bus (or in case somebody else wants to help do it):
@@ -43,10 +36,6 @@ I   - Translation portal
           into launchpad?
         - What are the steps for exporting strings from launchpad and putting
           them into Vidalia?
-      o Torbutton translations (via babelzilla?)
-      - Centralized instructions for how to help translate
-      - Continue managing the tor-translations team to keep the Tor
-        website translated
 
   - End of May
 S   - More TorBrowser work
@@ -63,7 +52,20 @@ N   - Write a paragraph or two for Paul's research project describing what
 R   - SRI stuff
 
   - mid June
+S   - Integrate upnp into Vidalia and have it work
+      - point to (or make, ugh) docs for how to enable upnp on standard
+        routers
+        - pointer in docs to portforward.com. Maybe Vidalia should grow
+          a help page for its upnp button, and that's where these pointers
+          should live?
+      - better error handling for the current miniupnp integration
+      - If UPnP'ing fails, un-check the Vidalia box? Or something
+        else smart.
+      - Have a box or something in the vidalia window that shows progress,
+        output messages, etc. Otherwise if it just sits there for 5
+        minutes, who knows what's going on?
     - More TorBrowser work
+S     - We should point from TBB page to the split downloads page.
 S     - Firefox extension framework for Torbrowser build-time
 S     - Progress bar during startup, including some "timeout" events to
         indicate when Tor's unlikely to succeed at startup.
@@ -193,6 +195,8 @@ Matt
     We should either give Vidalia another option in that dialog box -- to
     restart Tor -- or we should make it so when Vidalia spawns Tor and
     then Vidalia dies, Tor dies too.
+  - How much space do we save in TBB by stripping symbols from Vidalia
+    first? Good idea or crazy idea?
 
 ioerror
   - gmail auto responder so you send us an email and we send you a Tor
@@ -209,6 +213,10 @@ ioerror
     https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
   - Find out what happened to the buildbot and get it back up:
     http://tor-buildbot.freehaven.net:8010/
+  - Look at the "flossmanuals" translation UI, and see if that's something
+    we want to emulate.
+  - We should hack the translation-status perl so it puts high priority
+    pages first, regardless of what directory they're in.
 
 Steven
   - Write a list of research items Tor would like to see done, for the
@@ -218,6 +226,8 @@ Steven
   - If relays have 100KB/s but set relaybandwidthrate to 10KB/s, do your
     interference attacks still work?
   - Mike's question #3 on https://www.torproject.org/volunteer#Research
+  - Worthwhile shipping TBB with some local html help files that come
+    as bookmarks?
 
 Andrew
   - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
@@ -255,6 +265,9 @@ Roger
   . Fix FAQ entry on setting up private Tor network
   - Review Karsten's hidden service diagrams
   - Prepare the 0.2.0.x Release Notes.
+  - Roger should visit Internews DC sometime.
+  - Chris has some detailed TBB download/install/test instructions. Get
+    Chris to send us a copy/pointer.
 
 Mike:
   - Roger wants to get an email every time there's a blog change,
