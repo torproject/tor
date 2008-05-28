@@ -280,9 +280,6 @@ Mike:
 =======================================================================
 
 Bugs/issues for Tor 0.2.0.x:
-N - We still never call geoip_remove_old_clients(). Should we call it,
-    with a cutoff of a day ago, each time we're about to build a
-    descriptor/extrainfo pair?
 N - Rip out the MIN_IPS_* stuff for geoip reporting.
 N - bridge authorities should not serve extrainfo docs.
 N - We still never call geoip_remove_old_clients(). Should we call it,
