@@ -225,7 +225,7 @@ believe the same authorities they do.
 As DirServer, but replaces less of the default directory authorities.
 Using AlternateDirAuthority replaces the default Tor directory
 authorities, but leaves the hidden service authorities and bridge
-authorities in place.  Similarly, Using AlternatieHSAuthority replaces
+authorities in place.  Similarly, Using AlternateHSAuthority replaces
 the default hidden service authorities, but not the directory or
 bridge authorities.
 

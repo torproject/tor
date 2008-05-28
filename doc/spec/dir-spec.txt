@@ -1712,7 +1712,7 @@ $Id$
       -- the authority rejected a malformed posted document, or
 
   404 -- the requested document was not found.
-      -- the user requested statuses or serverdescs, and none of the ones we
+      -- the user requested statuses or serverdescs, and none of the ones
          requested were found (0.2.0.5-alpha and later).
 
   503 -- we are declining the request in order to save bandwidth
