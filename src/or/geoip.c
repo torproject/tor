@@ -287,7 +287,7 @@ geoip_remove_old_clients(time_t cutoff)
 /** Do not report any geoip data at all if we have fewer than this number of
  * IPs to report about. */
 #define MIN_IPS_TO_NOTE_ANYTHING 0
-/** When reporting geoip data about countries, round down to the nearest
+/** When reporting geoip data about countries, round up to the nearest
  * multiple of this value. */
 #define IP_GRANULARITY 8
 
