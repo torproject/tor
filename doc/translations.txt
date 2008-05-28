@@ -72,6 +72,8 @@ the process and send .ts files to Matt, you'll want to do the following:
         po2ts --input=$file.po --output=$file.ts;
         done
 
+----------------------------------------------------------------------------
+
 If you're interested in helping to translate Torbutton, it uses Babelzilla[2].
 You'll need a login to Babelzilla just as you do with Launchpad. Once logged 
 in visit the following page for progress information and downloads of templates:
@@ -98,6 +100,7 @@ please read their Q&A section:
 
 	http://www.babelzilla.org/index.php?option=com_content&task=category&sectionid=3&id=7&Itemid=25
 
-[0] https://www.launchpad.net
+[0] https://www.launchpad.net/
 [1] These tools can be found in the Debian package 'translate-toolkit'
 [2] http://www.babelzilla.org/
+
