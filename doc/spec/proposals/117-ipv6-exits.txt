@@ -1,5 +1,5 @@
-Filename: 117-ipv6-exits.txt
-Title: IPv6 exits
+Filename: 117-ipv6-exits.txtT
+itle: IPv6 exits
 Version: $Revision$
 Last-Modified: $Date$
 Author: coderman
@@ -86,7 +86,9 @@ Contents
    (RELAY_RESOLVE) should perform and respond with both A and AAAA
    resources.
 
-   [NOTE: In a future version, it may make sense to .]
+   [NOTE: In a future version, when we extend the behavior of RESOLVE to
+    encapsulate more of real DNS, it will make sense to allow more
+    flexibility here. -nickm]
 
 1.4. Client interaction with IPv6 exit capability
 
@@ -114,6 +116,11 @@ Contents
    Likewise, RESOLVE and RESOLVE_PTR requests from an IPv6 SOCKS
    connection will return IPv6 addresses when available, and fall back
    to IPv4 addresses if not.
+
+   [NOTE: This means that SocksListenAddress and DNSListenAddress should
+    support IPv6 addresses.  Perhaps there should also be a general option
+    to have listeners that default to 127.0.0.1 and 0.0.0.0 listen
+    additionally or instead on ::1 and :: -nickm]
 
 1.4.3. MAPADDRESS behavior
 
@@ -202,6 +209,12 @@ Contents
 
       "The current codebase has no IPv6 support at all."
 
+   [NOTE: the EXITPOLICY end-cell reason says that it can hold an ipv4 or an
+    ipv6 address, but doesn't say how.  We may want a separate EXITPOLICY2
+    type that can hold an ipv6 address, since the way we encode ipv6
+    addresses elsewhere ("0.0.0.0 indicates that the next 16 bytes are ipv6")
+    is a bit dumb. -nickm]
+
 2.2. Directory specification
 
    In '2.1. Router descriptor format' a new set of directives is needed
@@ -267,6 +280,8 @@ Contents
    reasons for implementing this, however, the inherent complexity of
    the protocol and resolvers make this unappealing.  Is there a
    compelling reason to consider A6 as part of IPv6 exit support?
+
+   [IMO not till anybody needs it. -nickm]
 
 3.2. IPv4 and IPv6 preference
 
