@@ -131,6 +131,9 @@ _geoip_compare_key_to_entry(const void *_key, const void **_member)
  *   "INTIPLOW","INTIPHIGH","CC","CC3","COUNTRY NAME"
  * where INTIPLOW and INTIPHIGH are IPv4 addresses encoded as 4-byte unsigned
  * integers, and CC is a country code.
+ * 
+ * It also recognizes, and skips over, blank lines and lines that start
+ * with '#' (comments).
  */
 int
 geoip_load_file(const char *filename)
