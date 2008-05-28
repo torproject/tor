@@ -43,6 +43,9 @@ S   - More TorBrowser work
       - move portablefirefox nsi goo into vidalia as appropriate
       - Figure out (or give up on) how to run Tor Browser and ordinary
         Firefox side-by-side.
+N   - Write a script to correctly total bandwidth-history observations
+N+P - Make sure RPMs can build correctly with geoip file
+N+P - Make sure other packages build correctly with geoip file
 N   - Write a paragraph or two for Paul's research project describing what
       we plan to help him research. Roger will then secretly retitle
       these as a "statement of work", and then we'll have Tor's
