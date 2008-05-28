@@ -289,6 +289,8 @@ exit 0
 %{_bindir}/torify
 %{_bindir}/tor-resolve
 %{_bindir}/tor-gencert
+%{_datadir}/tor/fallback-consensus
+%{_datadir}/tor/geoip
 %config %{_initrddir}/%{name}
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/logrotate.d/%{name}
 %dir %attr(0755,root,%{torgroup}) %{_sysconfdir}/%{name}/
