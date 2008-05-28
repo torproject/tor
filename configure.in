@@ -237,10 +237,14 @@ TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $TOR_LIB_WS32], [
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <event.h>], [void exit(int); void *event_init(void);],
+#include <event.h>], [
+#ifdef WIN32
+#include <winsock2.h>
+#endif
+void exit(int); void *event_init(void);],
     [
 #ifdef WIN32
-{WSAData d; WSAStartup(0x101,&d); }
+{WSADATA d; WSAStartup(0x101,&d); }
 #endif
 event_init(); exit(0);
 ], [--with-libevent-dir], [/opt/libevent])
