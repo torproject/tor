@@ -86,6 +86,8 @@ Contents
    (RELAY_RESOLVE) should perform and respond with both A and AAAA
    resources.
 
+   [NOTE: In a future version, it may make sense to .]
+
 1.4. Client interaction with IPv6 exit capability
 
 1.4.1. Usability goals

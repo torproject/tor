@@ -2598,7 +2598,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }
 
   if (!strcmpstart(url,"/tor/server/") ||
-      !strcmpstart(url,"/tor/extra/")) {
+      (!options->BridgeAuthoritativeDir && !strcmpstart(url,"/tor/extra/"))) {
     int res;
     const char *msg;
     const char *request_type = NULL;

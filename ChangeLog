@@ -100,6 +100,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       before too long.
     - Add a "PURPOSE=" argument to "STREAM NEW" events, as suggested by
       Robert Hogan. Fixes the first part of bug 681.
+    - Make bridge authorities never serve extrainfo docs.
+    - Allow comments in geoip file.
 
   o Minor features (security):
     - Reject requests for reverse-dns lookup of names in a private

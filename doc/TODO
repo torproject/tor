@@ -44,7 +44,7 @@ S   - More TorBrowser work
       - Figure out (or give up on) how to run Tor Browser and ordinary
         Firefox side-by-side.
 N   - Write a script to correctly total bandwidth-history observations
-N+P - Make sure RPMs can build correctly with geoip file
+    o Make sure RPMs can build correctly with geoip file
 N+P - Make sure other packages build correctly with geoip file
 N   - Write a paragraph or two for Paul's research project describing what
       we plan to help him research. Roger will then secretly retitle
@@ -280,16 +280,19 @@ Mike:
 =======================================================================
 
 Bugs/issues for Tor 0.2.0.x:
-N - Rip out the MIN_IPS_* stuff for geoip reporting.
-N - bridge authorities should not serve extrainfo docs.
-N - We still never call geoip_remove_old_clients(). Should we call it,
+  o Rip out the MIN_IPS_* stuff for geoip reporting.
+  o bridge authorities should not serve extrainfo docs.
+  o We still never call geoip_remove_old_clients(). Should we call it,
     with a cutoff of a day ago, each time we're about to build a
     descriptor/extrainfo pair?
-N - teach geoip_parse_entry() to skip over lines that start with #, so we
+    o Actually, let's do it every 48 hours, so we don't wind up saying
+      too much.
+  o teach geoip_parse_entry() to skip over lines that start with #, so we
     can put a little note at the top of the geoip file to say what it is.
 N d we should have an off-by-default way for relays to dump geoip data to
-    a file in their data directory, for measurement purposes.  it should be
-    listed along with their probability-of-selection
+    a file in their data directory, for measurement purposes.
+    - Basic implementation
+    - Include probability-of-selection
 R d let bridges set relaybandwidthrate as low as 5kb
 R - bug: if we launch using bridges, and then stop using bridges, we
     still have our bridges in our entryguards section, and may use them.
