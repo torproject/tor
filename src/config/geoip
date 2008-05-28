@@ -1,3 +1,5 @@
+# wget http://ip-to-country.webhosting.info/downloads/ip-to-country.csv.zip
+# cut -d, -f0-3 < ip-to-country.csv|sed 's/"//g' > geoip
 33996344,33996351,GB
 50331648,69956103,US
 69956104,69956111,BM
