@@ -76,6 +76,10 @@ geoip_parse_entry(const char *line)
     geoip_entries = smartlist_create();
     country_idxplus1_by_lc_code = strmap_new();
   }
+  while (TOR_ISSPACE(*line))
+    ++line;
+  if (*line == '#')
+    return 0;
   if (sscanf(line,"%u,%u,%2s", &low, &high, b) == 3) {
     geoip_add_entry(low, high, b);
     return 0;
@@ -277,12 +281,12 @@ geoip_remove_old_clients(time_t cutoff)
 }
 
 /** Do not mention any country from which fewer than this number of IPs have
- * connected.  This avoids reporting information that could deanonymize
- * users. */
-#define MIN_IPS_TO_NOTE_COUNTRY 8
+ * connected.  This conceivably avoids reporting information that could
+ * deanonymize users, though analysis is lacking. */
+#define MIN_IPS_TO_NOTE_COUNTRY 0
 /** Do not report any geoip data at all if we have fewer than this number of
  * IPs to report about. */
-#define MIN_IPS_TO_NOTE_ANYTHING 16
+#define MIN_IPS_TO_NOTE_ANYTHING 0
 /** When reporting geoip data about countries, round down to the nearest
  * multiple of this value. */
 #define IP_GRANULARITY 8
@@ -344,8 +348,10 @@ geoip_get_client_history(time_t now)
       ++total;
     }
     /* Don't record anything if we haven't seen enough IPs. */
+#if MIN_IPS_TO_NOTE_ANYTHING > 0
     if (total < MIN_IPS_TO_NOTE_ANYTHING)
       goto done;
+#endif
     /* Make a list of c_hist_t */
     entries = smartlist_create();
     for (i = 0; i < n_countries; ++i) {
@@ -353,7 +359,11 @@ geoip_get_client_history(time_t now)
       const char *countrycode;
       c_hist_t *ent;
       /* Only report a country if it has a minimum number of IPs. */
+#if MIN_IPS_TO_NOTE_COUNTRY > 0
       if (c >= MIN_IPS_TO_NOTE_COUNTRY) {
+#else
+      if (1) {
+#endif
         /* Round up to the next multiple of IP_GRANULARITY */
         c += IP_GRANULARITY-1;
         c -= c % IP_GRANULARITY;
@@ -375,7 +385,9 @@ geoip_get_client_history(time_t now)
         smartlist_add(chunks, tor_strdup(buf));
       });
     result = smartlist_join_strings(chunks, ",", 0, NULL);
+#if MIN_IPS_TO_NOTE_ANYTHING > 0
   done:
+#endif
     tor_free(counts);
     if (chunks) {
       SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));

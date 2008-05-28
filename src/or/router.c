@@ -1822,7 +1822,14 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     return -1;
 
   if (options->BridgeRelay && options->BridgeRecordUsageByCountry) {
-    char *geoip_summary = geoip_get_client_history(time(NULL));
+    static time_t last_purged_at = 0;
+    char *geoip_summary;
+    time_t now = time(NULL);
+    if (now > last_purged_at+48*60*60) {
+      geoip_remove_old_clients(now-48*60*60);
+      last_purged_at = now;
+    }
+    geoip_summary = geoip_get_client_history(time(NULL));
     if (geoip_summary) {
       char geoip_start[ISO_TIME_LEN+1];
       format_iso_time(geoip_start, geoip_get_history_start());
