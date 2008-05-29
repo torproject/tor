@@ -559,15 +559,18 @@ _compare_signed_descriptors_by_age(const void **_a, const void **_b)
   return (int)(r1->published_on - r2->published_on);
 }
 
-/** If the journal is too long, or if <b>force</b> is true, then atomically
- * replace the router store with the routers currently in our routerlist, and
- * clear the journal.  Return 0 on success, -1 on failure.
+#define RRS_FORCE 1
+#define RRS_DONT_REMOVE_OLD 2
+
+/** If the journal is too long, or if RRS_FORCE is set in <b>flags</b>, then
+ * atomically replace the router store with the routers currently in our
+ * routerlist, and clear the journal.  Return 0 on success, -1 on failure.
  *
  * If <b>extrainfo</b> is true, rebuild the extrainfo store; else rebuild the
  * router descriptor store.
  */
 static int
-router_rebuild_store(int force, desc_store_t *store)
+router_rebuild_store(int flags, desc_store_t *store)
 {
   smartlist_t *chunk_list = NULL;
   char *fname = NULL, *fname_tmp = NULL;
@@ -577,6 +580,7 @@ router_rebuild_store(int force, desc_store_t *store)
   int nocache=0;
   size_t total_expected_len = 0;
   int had_any;
+  int force = flags & RRS_FORCE;
 
   if (!force && !router_should_rebuild_store(store))
     return 0;
@@ -590,7 +594,8 @@ router_rebuild_store(int force, desc_store_t *store)
                smartlist_len(routerlist->old_routers))>0;
 
   /* Don't save deadweight. */
-  routerlist_remove_old_routers();
+  if (!(flags & RRS_DONT_REMOVE_OLD))
+    routerlist_remove_old_routers();
 
   log_info(LD_DIR, "Rebuilding %s cache", store->description);
 
@@ -781,7 +786,7 @@ router_reload_router_list_impl(desc_store_t *store)
 
   if (store->journal_len || read_from_old_location) {
     /* Always clear the journal on startup.*/
-    router_rebuild_store(1, store);
+    router_rebuild_store(RRS_FORCE, store);
   } else if (!extrainfo) {
     /* Don't cache expired routers. (This is in an else because
      * router_rebuild_store() also calls remove_old_routers().) */
@@ -3193,6 +3198,8 @@ routerlist_remove_old_routers(void)
 
  done:
   digestset_free(retain);
+  router_rebuild_store(RRS_DONT_REMOVE_OLD, &routerlist->desc_store);
+  router_rebuild_store(RRS_DONT_REMOVE_OLD,&routerlist->extrainfo_store);
 }
 
 /** We just added a new set of descriptors. Take whatever extra steps

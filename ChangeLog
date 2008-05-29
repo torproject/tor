@@ -54,6 +54,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - When tunneling an encrypted directory connection, and its first circuit
       fails do not leave it unattached and ask the controller to deal.  Fixes
       the second part of bug 681.
+    - Make bridge authorities correctly clean extrainfo store from time to
+      time.  Bugfix on 0.2.0.x.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
