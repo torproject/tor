@@ -17,6 +17,10 @@ Changes in version 0.2.0.27-rc - 2008-05-??
     - Allow comments in geoip file.
     - Make bridge authorities never serve extrainfo docs.
 
+  o Minor bugfixes:
+    - Make bridge authorities correctly clean extrainfo store from time to
+      time.
+
   o New files:
     - A new contrib/tor-exit-notice.html file that exit relay operators
       can put on their website to help reduce abuse queries.
