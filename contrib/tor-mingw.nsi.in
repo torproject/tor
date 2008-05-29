@@ -216,7 +216,6 @@ Function un.InstallFiles
 	Delete "$INSTDIR\tor.ico"
 	Delete "$SMSTARTUP\Tor.lnk"
 	Delete "$INSTDIR\Uninstall.exe"
-	Delete "$INSTDIR\geoip"
 FunctionEnd
 
 Function un.InstallDirectories
