@@ -1996,9 +1996,11 @@ tor_main(int argc, char *argv[])
   tor_threads_init();
   init_logging();
 #ifdef USE_DMALLOC
-  int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
-                                      _tor_dmalloc_free);
-  tor_assert(r);
+  {
+    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
+                                        _tor_dmalloc_free);
+    tor_assert(r);
+  }
 #endif
 #ifdef NT_SERVICE
   {
