@@ -4,6 +4,7 @@
 # package_nsis-ming.sh is distributed under this license:
 
 # Copyright (c) 2006-2007 Andrew Lewman
+# Copyright (c) 2008 The Tor Project, Inc.
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -56,9 +57,7 @@ mkdir win_tmp/tmp
 cp src/or/tor.exe win_tmp/bin/
 cp src/tools/tor-resolve.exe win_tmp/bin/
 cp contrib/tor.ico win_tmp/bin/
-
-# YOU must copy torbutton xpi into the contrib dir
-#cp contrib/torbutton-1.0.4-fx+tb.xpi win_tmp/bin/
+cp src/config/geoip win_tmp/bin/
 
 # There is no man2html in mingw.  
 # Maybe we should add this into make dist instead.

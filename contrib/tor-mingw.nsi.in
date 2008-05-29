@@ -1,6 +1,6 @@
 ;tor.nsi - A basic win32 installer for Tor
 ; Originally written by J Doe.
-; Modified by Steve Topletz
+; Modified by Steve Topletz, Andrew Lewman
 ; See the Tor LICENSE for licensing information
 ;-----------------------------------------
 ;
@@ -9,7 +9,7 @@
 !include "FileFunc.nsh"
 !insertmacro GetParameters
   
-!define VERSION "0.2.1.0-alpha-dev"
+!define VERSION "0.2.0.26-rc-dev"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "https://www.torproject.org/"
 !define LICENSE "LICENSE"
@@ -96,6 +96,11 @@ Section "Tor" Tor
 		Next:
 	${EndIf}
 	File /oname=$CONFIGFILE "..\src\config\torrc.sample"
+
+; the geoip file needs to be included and stuffed into the right directory
+; otherwise tor is unhappy
+	SetOutPath $APPDATA\Tor
+	Call ExtractGEOIP
 SectionEnd
 
 Section "Documents" Docs
@@ -113,7 +118,6 @@ Section "Start Menu" StartMenu
   ${If} ${FileExists} "$INSTDIR\Documents\*.*"
     Call CreateDocLinks
   ${EndIf}
-   endifdocs:
 SectionEnd
 
 Section "Desktop" Desktop
@@ -156,12 +160,15 @@ Function ExtractBinaries
 	File "${BIN}\tor-resolve.exe"
 FunctionEnd
 
+Function ExtractGEOIP
+	File "${BIN}\geoip"
+FunctionEnd
+
 Function ExtractIcon
 	File "${BIN}\tor.ico"
 FunctionEnd
 
 Function ExtractSpecs
-	;File "doc\FAQ"
 	File "..\doc\HACKING"
 	File "..\doc\spec\address-spec.txt"
 	File "..\doc\spec\control-spec.txt"
@@ -209,6 +216,7 @@ Function un.InstallFiles
 	Delete "$INSTDIR\tor.ico"
 	Delete "$SMSTARTUP\Tor.lnk"
 	Delete "$INSTDIR\Uninstall.exe"
+	Delete "$INSTDIR\geoip"
 FunctionEnd
 
 Function un.InstallDirectories
