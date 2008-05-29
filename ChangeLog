@@ -107,6 +107,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - New configure/torrc options (--enable-geoip-stats,
       DirRecordUsageByCountry) to record how many IPs we've served directory
       info to in each country code.
+    - Never use OpenSSL compression: it wastes RAM and CPU trying to
+      compress cells, which are basically all encrypted, compressed, or
+      both.
 
   o Minor features (security):
     - Reject requests for reverse-dns lookup of names in a private
