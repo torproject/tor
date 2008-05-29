@@ -199,7 +199,12 @@ static config_var_t _option_vars[] = {
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
   V(GeoIPFile,                   STRING,
-    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
+#ifdef WIN32
+    "<default>"
+#else
+    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"
+#endif
+),
   V(Group,                       STRING,   NULL),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       LINELIST, NULL),
@@ -1252,7 +1257,20 @@ options_act(or_options_t *old_options)
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile, options->GeoIPFile))
        || !geoip_is_loaded())) {
-    geoip_load_file(options->GeoIPFile);
+    /* XXXX021 Don't use this "<default>" junk; make our filename options
+     * understand prefixes somehow. -NM */
+    char *actual_fname = tor_strdup(options->GeoIPFile);
+#ifdef WIN32
+    if (!strcmp(actual_fname, "<default>")) {
+      const char *conf_root = get_windows_conf_root();
+      size_t len = tor_malloc(strlen(conf_root)+16);
+      tor_free(actual_fname);
+      actual_fname = tor_malloc(len+1);
+      tor_snprintf(actual_fname, len, "%s\\geoip", conf_root);
+    }
+#endif
+    geoip_load_file(actual_fname);
+    tor_free(actual_fname);
   }
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
