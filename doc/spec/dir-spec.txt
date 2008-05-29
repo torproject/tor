@@ -1336,9 +1336,15 @@ $Id$
      - The cache has no consensus document.
      - The cache's consensus document is no longer valid.
    Otherwise, the cache downloads a new consensus document at a randomly
-   chosen time after its current consensus stops being fresh.  (This time is
-   chosen at random to avoid swarming the authorities at the start of each
-   period.)
+   chosen time in the first half-interval after its current consensus
+   stops being fresh.  (This time is chosen at random to avoid swarming
+   the authorities at the start of each period.  The interval size is
+   inferred from the difference between the valid-after time and the
+   fresh-until time on the consensus.)
+
+   [For example, if a cache has a consensus that became valid at 1:00,
+    and is fresh until 2:00, that cache will fetch a new consensus at
+    a random time between 2:00 and 2:30.]
 
 4.4. Downloading and storing router descriptors (authorities and caches)
 
@@ -1515,6 +1521,19 @@ $Id$
    from an authority, they should not need to go to the authority directly
    again.)
 
+   To avoid swarming the caches whenever a consensus expires, the
+   clients download new consensuses at a randomly chosen time after the
+   caches are expected to have a fresh consensus, but before their
+   consensus will expire.  (This time is chosen uniformly at random from
+   the interval between the time 3/4 into the first interval after the
+   consensus is no longer fresh, and 7/8 of the time remaining after
+   that before the consensus is invalid.)
+
+   [For example, if a cache has a consensus that became valid at 1:00,
+    and is fresh until 2:00, and expires at 4:00, that cache will fetch
+    a new consensus at a random time between 2:45 and 3:50, since 3/4
+    of the one-hour interval is 45 minutes, and 7/8 of the remaining 75
+    minutes is 65 minutes.]
 
 5.2. Downloading and storing router descriptors
 

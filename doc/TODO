@@ -306,7 +306,7 @@ Documentation for Tor 0.2.0.x:
     . 111: Prioritize local traffic over relayed.
 R     - Merge into tor-spec.txt.
     - 113: mark as closed close.
-N - document the "3/4 and 7/8" business in the clients fetching consensus
+  o document the "3/4 and 7/8" business in the clients fetching consensus
     documents timeline.
 R   - then document the bridge user download timeline.
   - HOWTO for DNSPort. See tup's wiki page.
