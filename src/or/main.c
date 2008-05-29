@@ -832,6 +832,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_clean_caches = 0;
   static time_t time_to_recheck_bandwidth = 0;
   static time_t time_to_check_for_expired_networkstatus = 0;
+  static time_t time_to_dump_geoip_stats = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -956,6 +957,12 @@ run_scheduled_events(time_t now)
     }
 #define CHECK_EXPIRED_NS_INTERVAL (2*60)
     time_to_check_for_expired_networkstatus = now + CHECK_EXPIRED_NS_INTERVAL;
+  }
+
+  if (time_to_dump_geoip_stats < now) {
+#define DUMP_GEOIP_STATS_INTERVAL (60*60);
+    time_to_dump_geoip_stats = now + DUMP_GEOIP_STATS_INTERVAL;
+    dump_geoip_stats();
   }
 
   /** 2. Periodically, we consider getting a new directory, getting a

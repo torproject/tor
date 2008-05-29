@@ -2484,6 +2484,26 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
 
+#ifdef ENABLE_GEOIP_STATS
+    {
+      geoip_client_action_t act =
+        is_v3 ? GEOIP_CLIENT_NETWORKSTATUS : GEOIP_CLIENT_NETWORKSTATUS_V2;
+      uint32_t addr = conn->_base.addr;
+
+      if (conn->_base.linked_conn) {
+        connection_t *c = conn->_base.linked_conn;
+        if (c->type == CONN_TYPE_EXIT) {
+          circuit_t *circ = TO_EDGE_CONN(c)->on_circuit;
+          if (! CIRCUIT_IS_ORIGIN(circ)) {
+            or_connection_t *orconn = TO_OR_CIRCUIT(circ)->p_conn;
+            addr = orconn->_base.addr;
+          }
+        }
+      }
+      geoip_note_client_seen(act, addr, time(NULL));
+    }
+#endif
+
     // note_request(request_type,dlen);
     (void) request_type;
     write_http_response_header(conn, -1, compressed,

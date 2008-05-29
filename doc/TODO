@@ -289,10 +289,10 @@ Bugs/issues for Tor 0.2.0.x:
       too much.
   o teach geoip_parse_entry() to skip over lines that start with #, so we
     can put a little note at the top of the geoip file to say what it is.
-N d we should have an off-by-default way for relays to dump geoip data to
+  . we should have an off-by-default way for relays to dump geoip data to
     a file in their data directory, for measurement purposes.
-    - Basic implementation
-    - Include probability-of-selection
+    o Basic implementation
+N   - Include probability-of-selection
 R d let bridges set relaybandwidthrate as low as 5kb
 R - bug: if we launch using bridges, and then stop using bridges, we
     still have our bridges in our entryguards section, and may use them.

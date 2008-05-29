@@ -87,6 +87,13 @@ case $host in
      ;;
 esac
 
+AC_ARG_ENABLE(geoip-stats,
+     AS_HELP_STRING(--enable-geoip-stats, enable code for directories to collect per-country statistics))
+
+if test "$enable_geoip_stats" = "yes"; then
+  AC_DEFINE(ENABLE_GEOIP_STATS, 1, [Defined if we try to collect per-country statistics])
+fi
+
 AC_ARG_ENABLE(gcc-warnings,
      AS_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
 

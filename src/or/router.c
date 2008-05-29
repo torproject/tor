@@ -1830,7 +1830,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       geoip_remove_old_clients(now-48*60*60);
       last_purged_at = now;
     }
-    geoip_summary = geoip_get_client_history(time(NULL));
+    geoip_summary = geoip_get_client_history(time(NULL), GEOIP_CLIENT_CONNECT);
     if (geoip_summary) {
       char geoip_start[ISO_TIME_LEN+1];
       format_iso_time(geoip_start, geoip_get_history_start());

@@ -2358,6 +2358,10 @@ typedef struct {
    * count of how many client addresses have contacted us so that we can help
    * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
+#ifdef ENABLE_GEOIP_STATS
+  int DirRecordUsageByCountry;
+#endif
+
   /** Optionally, a file with GeoIP data. */
   char *GeoIPFile;
 
@@ -3294,13 +3298,27 @@ int geoip_get_country_by_ip(uint32_t ipaddr);
 int geoip_get_n_countries(void);
 const char *geoip_get_country_name(int num);
 int geoip_is_loaded(void);
-void geoip_note_client_seen(uint32_t addr, time_t now);
+/** Indicates an action that we might be noting geoip statistics on.
+ * Note that if we're noticing CONNECT, we're a bridge, and if we're noticing
+ * the others, we're not.
+ */
+typedef enum {
+  /** We've noticed a connection as a bridge relay. */
+  GEOIP_CLIENT_CONNECT = 0,
+  /** We've served a networkstatus consensus as a directory server. */
+  GEOIP_CLIENT_NETWORKSTATUS = 1,
+  /** We've served a v2 networkstatus consensus as a directory server. */
+  GEOIP_CLIENT_NETWORKSTATUS_V2 = 2,
+} geoip_client_action_t;
+void geoip_note_client_seen(geoip_client_action_t action,
+                            uint32_t addr, time_t now);
 void geoip_remove_old_clients(time_t cutoff);
 time_t geoip_get_history_start(void);
-char *geoip_get_client_history(time_t now);
+char *geoip_get_client_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer);
 void geoip_free_all(void);
+void dump_geoip_stats(void);
 
 /********************************* hibernate.c **********************/
 

@@ -179,6 +179,9 @@ static config_var_t _option_vars[] = {
   V(DirPolicy,                   LINELIST, NULL),
   V(DirPort,                     UINT,     "0"),
   OBSOLETE("DirPostPeriod"),
+#ifdef ENABLE_GEOIP_STATS
+  V(DirRecordUsageByCountry,     BOOL,     "0"),
+#endif
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DNSPort,                     UINT,     "0"),
   V(DNSListenAddress,            LINELIST, NULL),

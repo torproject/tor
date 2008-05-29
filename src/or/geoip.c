@@ -131,7 +131,7 @@ _geoip_compare_key_to_entry(const void *_key, const void **_member)
  *   "INTIPLOW","INTIPHIGH","CC","CC3","COUNTRY NAME"
  * where INTIPLOW and INTIPHIGH are IPv4 addresses encoded as 4-byte unsigned
  * integers, and CC is a country code.
- * 
+ *
  * It also recognizes, and skips over, blank lines and lines that start
  * with '#' (comments).
  */
@@ -208,8 +208,11 @@ geoip_is_loaded(void)
 typedef struct clientmap_entry_t {
   HT_ENTRY(clientmap_entry_t) node;
   uint32_t ipaddr;
-  time_t last_seen;
+  time_t last_seen; /* The last 2 bits of this value hold the client
+                     * operation. */
 } clientmap_entry_t;
+
+#define ACTION_MASK 3
 
 /** Map from client IP address to last time seen. */
 static HT_HEAD(clientmap, clientmap_entry_t) client_history =
@@ -238,12 +241,28 @@ HT_GENERATE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
 /** Note that we've seen a client connect from the IP <b>addr</b> (host order)
  * at time <b>now</b>. Ignored by all but bridges. */
 void
-geoip_note_client_seen(uint32_t addr, time_t now)
+geoip_note_client_seen(geoip_client_action_t action,
+                       uint32_t addr, time_t now)
 {
   or_options_t *options = get_options();
   clientmap_entry_t lookup, *ent;
-  if (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))
+  if (action == GEOIP_CLIENT_CONNECT) {
+    if (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))
+      return;
+  } else {
+#ifndef ENABLE_GEOIP_STATS
     return;
+#else
+    if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
+        !options->DirRecordUsageByCountry)
+      return;
+#endif
+  }
+
+  /* We use the low 3 bits of the time to encode the action. Since we're
+   * potentially remembering times of clients, we don't want to make
+   * clientmap_entry_t larger than it has to be. */
+  now = (now & ~ACTION_MASK) | (((int)action) & ACTION_MASK);
   lookup.ipaddr = addr;
   ent = HT_FIND(clientmap, &client_history, &lookup);
   if (ent) {
@@ -328,7 +347,7 @@ _c_hist_compare(const void **_a, const void **_b)
  * that country, and cc is a lowercased country code.  Returns NULL if we don't
  * want to export geoip data yet. */
 char *
-geoip_get_client_history(time_t now)
+geoip_get_client_history(time_t now, geoip_client_action_t action)
 {
   char *result = NULL;
   if (!geoip_is_loaded())
@@ -343,7 +362,10 @@ geoip_get_client_history(time_t now)
     unsigned *counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
     unsigned total = 0;
     HT_FOREACH(ent, clientmap, &client_history) {
-      int country = geoip_get_country_by_ip((*ent)->ipaddr);
+      int country;
+      if (((*ent)->last_seen & ACTION_MASK) != action)
+        continue;
+      country = geoip_get_country_by_ip((*ent)->ipaddr);
       if (country < 0)
         continue;
       tor_assert(0 <= country && country < n_countries);
@@ -402,6 +424,41 @@ geoip_get_client_history(time_t now)
     }
   }
   return result;
+}
+
+void
+dump_geoip_stats(void)
+{
+#ifdef ENABLE_GEOIP_STATS
+  time_t now = time(NULL);
+  char *filename = get_datadir_fname("geoip-stats");
+  char *data_v2 = NULL, *data_v3 = NULL;
+  char since[ISO_TIME_LEN+1], written[ISO_TIME_LEN+1];
+  open_file_t *open_file = NULL;
+  FILE *out;
+
+  data_v2 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
+  data_v3 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS);
+  format_iso_time(since, geoip_get_history_start());
+  format_iso_time(written, now);
+  if (!data_v2 || !data_v3)
+    goto done;
+  out = start_writing_to_stdio_file(filename, 0, 0600, &open_file);
+  if (!out)
+    goto done;
+  if (fprintf(out, "written %s\nstarted-at %s\nns %s\nns-v2%s\n",
+              written, since, data_v3, data_v2) < 0)
+    goto done;
+
+  finish_writing_to_file(open_file);
+  open_file = NULL;
+ done:
+  if (open_file)
+    abort_writing_to_file(open_file);
+  tor_free(filename);
+  tor_free(data_v2);
+  tor_free(data_v3);
+#endif
 }
 
 /** Helper used to implement GETINFO ip-to-country/... controller command. */

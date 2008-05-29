@@ -1559,7 +1559,6 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   tor_assert((open_flags & (O_BINARY|O_TEXT)) != 0);
 #endif
   new_file->fd = -1;
-  tempname_len = strlen(fname)+16;
   tor_assert(tempname_len > strlen(fname)); /*check for overflow*/
   new_file->filename = tor_strdup(fname);
   if (open_flags & O_APPEND) {
@@ -1577,8 +1576,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     new_file->rename_on_close = 1;
   }
 
-  if ((new_file->fd = open(open_name, open_flags, mode))
-      < 0) {
+  if ((new_file->fd = open(open_name, open_flags, mode)) < 0) {
     log(LOG_WARN, LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
         open_name, fname, strerror(errno));
     goto err;
