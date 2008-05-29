@@ -46,7 +46,7 @@ TORGROUP=daemon
 TARGET=$2/Library/Tor
 TORDIR=$TARGET/var/lib/tor
 LOGFILE=/var/log/tor.log
-TORBUTTON_VERSION="1.1.17-alpha"
+TORBUTTON_VERSION="1.1.18-alpha"
 
 # Check defaults for TARGET
 if [ "$TARGET" == "//Library/Tor" ]; then
@@ -75,6 +75,11 @@ fi
 # Create the configuration file only if there wasn't one already.
 if [ ! -f $TARGET/torrc ]; then
   cp $TARGET/torrc.sample $TARGET/torrc
+fi
+
+# Put the geoip database into the datadir
+if [ ! -f $TORDIR/geoip ]; then
+  cp $PACKAGE_PATH/Contents/Resources/geoip $TORDIR/geoip
 fi
 
 # Ensure symbolic links
@@ -121,6 +126,8 @@ if [ -d /Library/StartupItems/Tor ]; then
    echo "$TARGET" > /Library/StartupItems/Tor/Tor.loc
 fi
 
+# This only works if the user installing us is an Admin user.
+# Otherwise, this will silently fail to install torbutton in firefox.
 if [ -f /Applications/Firefox.app/Contents/MacOS/firefox ]; then
   if [ -f /Library/Torbutton/torbutton-$TORBUTTON_VERSION.xpi ]; then
 # Open firefox with a prompt to install the torbutton xpi

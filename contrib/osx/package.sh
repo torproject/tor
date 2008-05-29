@@ -46,7 +46,7 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
-    	"10.5") OS="leopard" ARCH="universal";;
+    "10.5") OS="leopard" ARCH="universal";;
 	"10.4") OS="tiger" ARCH="universal";;
 	"10.3") OS="panther" ARCH="ppc";;
 	"10.2") OS="jaguar" ARCH="ppc";;
@@ -81,9 +81,7 @@ done
 ### Make Tor package.
 
 make install DESTDIR=$BUILD_DIR/tor_packageroot
-#mv $BUILD_DIR/tor_packageroot/Library/Tor/torrc.sample $BUILD_DIR/tor_packageroot/Library/Tor/torrc
 cp contrib/osx/ReadMe.rtf $BUILD_DIR/tor_resources
-#cp contrib/osx/License.rtf $BUILD_DIR/tor_resources
 chmod 755 contrib/osx/TorPostflight
 cp contrib/osx/TorPostflight $BUILD_DIR/tor_resources/postflight
 cp contrib/osx/addsysuser $BUILD_DIR/tor_resources/addsysuser
@@ -91,6 +89,7 @@ cp contrib/osx/Tor_Uninstaller.applescript $BUILD_DIR/tor_resources/Tor_Uninstal
 cp contrib/osx/uninstall_tor_bundle.sh $BUILD_DIR/tor_resources/uninstall_tor_bundle.sh
 cp contrib/osx/package_list.txt $BUILD_DIR/tor_resources/package_list.txt
 cp contrib/osx/tor_logo.gif $BUILD_DIR/tor_resources/background.gif
+cp src/config/geoip $BUILD_DIR/tor_resources/geoip
 cat <<EOF > $BUILD_DIR/tor_resources/Welcome.txt
 Tor: an anonymous Internet communication system
 
@@ -103,12 +102,6 @@ EOF
 DOC=$BUILD_DIR/tor_resources/documents
 mkdir $DOC
 mkdir $DOC/howto
-#cp doc/website/stylesheet.css doc/website/tor-doc-osx.html.* $DOC/howto
-#cp doc/website/tor-doc-server.html.* $DOC/howto
-#cp doc/website/tor-hidden-service.html.* $DOC/howto
-#cp doc/website/tor-switchproxy.html.* $DOC/howto
-#mkdir $DOC/img
-#cp doc/img/screenshot-osx* $DOC/img
 cp AUTHORS $DOC/AUTHORS.txt
 groff doc/tor.1.in -T ps -m man | pstopdf -i -o $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | pstopdf -i -o $DOC/tor-resolve.pdf
@@ -181,7 +174,6 @@ MPKG=$BUILD_DIR/output/Tor-$VERSION-$OS-$ARCH-Bundle.mpkg
 mkdir -p "$MPKG/Contents/Resources"
 echo -n "pmkrpkg1" > "$MPKG/Contents/PkgInfo"
 cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
-#cp contrib/osx/License.rtf "$MPKG/Contents/Resources"
 cp contrib/osx/TorBundleInfo.plist "$MPKG/Contents/Info.plist"
 cp contrib/osx/TorBundleWelcome.rtf "$MPKG/Contents/Resources/Welcome.rtf"
 cp contrib/osx/TorBundleDesc.plist "$MPKG/Contents/Resources/Description.plist"
