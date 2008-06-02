@@ -609,6 +609,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         log_warn(LD_CIRC,"onion_skin_create (first hop) failed.");
         return - END_CIRC_REASON_INTERNAL;
       }
+      note_request("cell: create", 1);
     } else {
       /* We are not an OR, and we're building the first hop of a circuit to a
        * new OR: we can be speedy and use CREATE_FAST to save an RSA operation
@@ -619,6 +620,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
                   sizeof(circ->cpath->fast_handshake_state));
       memcpy(payload, circ->cpath->fast_handshake_state,
              sizeof(circ->cpath->fast_handshake_state));
+      note_request("cell: create fast", 1);
     }
 
     if (circuit_deliver_create_cell(TO_CIRCUIT(circ), cell_type, payload) < 0)
@@ -672,6 +674,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     }
 
     log_info(LD_CIRC,"Sending extend relay cell.");
+    note_request("cell: extend", 1);
     /* send it to hop->prev, because it will transfer
      * it to a create cell and then send to hop */
     if (relay_send_command_from_edge(0, TO_CIRCUIT(circ),
