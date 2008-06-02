@@ -58,6 +58,7 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
 static void note_request(const char *key, size_t bytes);
+static void note_client_request(int purpose, int compressed, size_t bytes);
 static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
 /********* START VARIABLES **********/
@@ -1501,7 +1502,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       log_notice(LD_DIR,"I failed to parse the directory I fetched from "
                  "'%s:%d'. Ignoring.", conn->_base.address, conn->_base.port);
     }
-    note_request(was_compressed?"dl/dir.z":"dl/dir", orig_len);
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
@@ -1522,8 +1522,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       tor_free(body); tor_free(headers); tor_free(reason);
       return -1;
     }
-    note_request(was_compressed?"dl/running-routers.z":
-                 "dl/running-routers", orig_len);
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
@@ -1542,7 +1540,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       connection_dir_download_networkstatus_failed(conn, status_code);
       return -1;
     }
-    note_request(was_compressed?"dl/status.z":"dl/status", orig_len);
     if (conn->requested_resource &&
         !strcmpstart(conn->requested_resource,"fp/")) {
       source = NS_FROM_DIR_BY_FP;
@@ -1693,10 +1690,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Received %s (size %d) from server '%s:%d'",
              was_ei ? "extra server info" : "server info",
              (int)body_len, conn->_base.address, conn->_base.port);
-    if (was_ei)
-      note_request(was_compressed?"dl/extra.z":"dl/extra", orig_len);
-    else
-      note_request(was_compressed?"dl/server.z":"dl/server", orig_len);
     if (conn->requested_resource &&
         (!strcmpstart(conn->requested_resource,"d/") ||
          !strcmpstart(conn->requested_resource,"fp/"))) {
@@ -1984,6 +1977,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         break;
     }
   }
+  note_client_request(conn->_base.purpose, was_compressed, orig_len);
   tor_free(body); tor_free(headers); tor_free(reason);
   return 0;
 }
@@ -2174,6 +2168,41 @@ already_fetching_directory(int purpose)
  * of request.  Maps from request type to pointer to uint64_t. */
 static strmap_t *request_bytes_map = NULL;
 
+static void
+note_client_request(int purpose, int compressed, size_t bytes)
+{
+  char *key;
+  const char *kind = NULL;
+  switch (purpose) {
+    case DIR_PURPOSE_FETCH_DIR:           kind = "dl/dir"; break;
+    case DIR_PURPOSE_FETCH_RUNNING_LIST:  kind = "dl/running-routers"; break;
+    case DIR_PURPOSE_FETCH_NETWORKSTATUS: kind = "dl/status"; break;
+    case DIR_PURPOSE_FETCH_CONSENSUS:     kind = "dl/consensus"; break;
+    case DIR_PURPOSE_FETCH_CERTIFICATE:   kind = "dl/cert"; break;
+    case DIR_PURPOSE_FETCH_STATUS_VOTE:   kind = "dl/vote"; break;
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES: kind = "dl/detached_sig"; break;
+    case DIR_PURPOSE_FETCH_SERVERDESC:    kind = "dl/server"; break;
+    case DIR_PURPOSE_FETCH_EXTRAINFO:     kind = "dl/extra"; break;
+    case DIR_PURPOSE_UPLOAD_DIR:          kind = "dl/ul-dir"; break;
+    case DIR_PURPOSE_UPLOAD_VOTE:         kind = "dl/ul-vote"; break;
+    case DIR_PURPOSE_UPLOAD_SIGNATURES:   kind = "dl/ul-sig"; break;
+    case DIR_PURPOSE_FETCH_RENDDESC:      kind = "dl/rend"; break;
+    case DIR_PURPOSE_FETCH_RENDDESC_V2:   kind = "dl/rend2"; break;
+    case DIR_PURPOSE_UPLOAD_RENDDESC:     kind = "dl/ul-rend"; break;
+    case DIR_PURPOSE_UPLOAD_RENDDESC_V2:  kind = "dl/ul-rend2"; break;
+  }
+  if (kind) {
+    key = tor_malloc(256);
+    tor_snprintf(key, 256, "%s%s", kind, compressed?"":".z");
+  } else {
+    key = tor_malloc(256);
+    tor_snprintf(key, 256, "unknown purpose (%d)%s",
+                 purpose, compressed?"":".z");
+  }
+  note_request(key, bytes);
+  tor_free(key);
+}
+
 /** Called when we just transmitted or received <b>bytes</b> worth of data
  * because of a request of type <b>key</b> (an arbitrary identifier): adds
  * <b>bytes</b> to the total associated with key. */
@@ -2226,6 +2255,14 @@ directory_dump_request_log(void)
   return result;
 }
 #else
+static void
+note_client_request(int purpose, int compressed, size_t bytes)
+{
+  (void)purpose;
+  (void)compressed;
+  (void)bytes;
+}
+
 static void
 note_request(const char *key, size_t bytes)
 {
