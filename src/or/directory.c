@@ -57,7 +57,6 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int router_purpose,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
-static void note_request(const char *key, size_t bytes);
 static void note_client_request(int purpose, int compressed, size_t bytes);
 static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
@@ -2206,7 +2205,7 @@ note_client_request(int purpose, int compressed, size_t bytes)
 /** Called when we just transmitted or received <b>bytes</b> worth of data
  * because of a request of type <b>key</b> (an arbitrary identifier): adds
  * <b>bytes</b> to the total associated with key. */
-static void
+void
 note_request(const char *key, size_t bytes)
 {
   uint64_t *n;
@@ -2263,7 +2262,7 @@ note_client_request(int purpose, int compressed, size_t bytes)
   (void)bytes;
 }
 
-static void
+void
 note_request(const char *key, size_t bytes)
 {
   (void)key;
