@@ -10,7 +10,12 @@ the source to Vidalia. Then you'll want to change into the i18n directory:
 	cd vidalia/src/vidalia/i18n;
 
 Now you'll run the proper commands[1] to convert from the native QT .ts format.
-You'll want to convert the .ts format into gnugettext .po files. Do so like so:
+This is because of a known issues in Rosetta, the software that drives
+Launchpad. You can read more about this bug here:
+https://bugs.launchpad.net/rosetta/+bug/68959
+
+Because Rosetta doesn't support .ts files, you'll want to convert the .ts
+format into gnugettext .po files. Do so like so:
 
 	for file in `ls -1|grep .ts$|cut -f1 -d.`;
 	do
@@ -18,7 +23,7 @@ You'll want to convert the .ts format into gnugettext .po files. Do so like so:
 	ts2po --input=$file.ts --output=$file.po;
 	done
 
-This is pretty straight forward but also error prone. You'll want to check for 
+This is pretty straight forward but also error prone. You'll want to check for
 proper formatting of the .po files like so:
 
 	for file in `ls -1|grep .po$`
@@ -26,7 +31,13 @@ proper formatting of the .po files like so:
 	msgfmt -c $file;
 	done
 
-You have to correct all duplicate strings and all errors before uploading.
+You have to remove all duplicate strings and all errors before uploading:
+    
+    for file in `ls -1|grep .po$|cut -f1 -d.`
+    do
+    msguniq -o $file.po $file-uniq.po;
+    done
+
 Ensure that the .po files are valid, possibly by compiling them into .mo files:
 
 	for file in `ls -1|grep .po$|cut -f1 -d.`
