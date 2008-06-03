@@ -1,33 +1,25 @@
-Changes in version 0.2.0.27-rc - 2008-05-??
+Changes in version 0.2.0.27-rc - 2008-06-03
   o Major features:
     - Include an IP-to-country GeoIP file in the tarball, so relays
       and bridge relays can report sanitized summaries of the usage
       they're seeing.
 
-  o Minor features (controller):
+  o Minor features:
     - Add a "PURPOSE=" argument to "STREAM NEW" events, as suggested by
       Robert Hogan. Fixes the first part of bug 681.
-
-  o Minor bugfixes (controller):
-    - When tunneling an encrypted directory connection, and its first circuit
-      fails do not leave it unattached and ask the controller to deal.  Fixes
-      the second part of bug 681.
-
-  o Minor features:
-    - Allow comments in geoip file.
     - Make bridge authorities never serve extrainfo docs.
+    - Add support to detect Libevent versions in the 1.4.x series
+      on mingw.
+    - Fix build on gcc 4.3 with --enable-gcc-warnings set.
+    - Include a new contrib/tor-exit-notice.html file that exit relay
+      operators can put on their website to help reduce abuse queries.
 
   o Minor bugfixes:
-    - Make bridge authorities correctly clean extrainfo store from time to
-      time.
-
-  o New files:
-    - A new contrib/tor-exit-notice.html file that exit relay operators
-      can put on their website to help reduce abuse queries.
-
-  o Minor features (build):
-    - Add support to detect Libevent versions in the 1.4.x series on mingw.
-    - Fix build on gcc 4.3 with --enable-gcc-warnings set.
+    - When tunneling an encrypted directory connection, and its first
+      circuit fails do not leave it unattached and ask the controller
+      to deal. Fixes the second part of bug 681.
+    - Make bridge authorities correctly clean extrainfo store from time
+      to time.
 
 
 Changes in version 0.2.0.26-rc - 2008-05-13
