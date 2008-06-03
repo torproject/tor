@@ -1,3 +1,8 @@
+Changes in version 0.2.0.28-rc - 2008-06-??
+  o Minor fixes:
+    - Fix unit tests in 0.2.0.27-rc. [Actually, one is still broken!]
+
+
 Changes in version 0.2.0.27-rc - 2008-06-03
   o Major features:
     - Include an IP-to-country GeoIP file in the tarball, so relays
