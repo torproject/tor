@@ -1,6 +1,7 @@
 Changes in version 0.2.0.28-rc - 2008-06-??
   o Minor fixes:
     - Fix unit tests in 0.2.0.27-rc. [Actually, one is still broken!]
+    - Fix compile on Windows.
 
 
 Changes in version 0.2.0.27-rc - 2008-06-03
