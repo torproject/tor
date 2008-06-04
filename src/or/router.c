@@ -1821,7 +1821,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   if (result<0)
     return -1;
 
-  if (options->BridgeRelay && options->BridgeRecordUsageByCountry) {
+  if (should_record_bridge_info(options)) {
     static time_t last_purged_at = 0;
     char *geoip_summary;
     time_t now = time(NULL);
