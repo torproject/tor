@@ -8,6 +8,7 @@ Standards-Version: 3.7.2
 Package: tor
 Architecture: any
 Depends: ${shlibs:Depends}, adduser, tsocks
+Conflicts: libssl0.9.8 (<< 0.9.8g-9)
 Recommends: privoxy | polipo (>= 1), socat, logrotate
 Suggests: mixmaster, mixminion, anon-proxy
 Description: anonymizing overlay network for TCP
