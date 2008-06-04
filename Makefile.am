@@ -61,6 +61,8 @@ doxygen:
 test:
 	./src/or/test
 
+dist: check
+
 # Avoid strlcpy.c, strlcat.c, tree.h
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
