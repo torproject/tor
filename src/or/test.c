@@ -3919,19 +3919,14 @@ test_geoip(void)
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, i, now-7200);
   s = geoip_get_client_history(now+5*24*60*60, GEOIP_CLIENT_CONNECT);
   test_assert(s);
-  test_streq("zz=24,ab=16", s);
+  test_streq("zz=24,ab=16,xy=8", s);
   tor_free(s);
 
   /* Now clear out all the zz observations. */
   geoip_remove_old_clients(now-6000);
   s = geoip_get_client_history(now+5*24*60*60, GEOIP_CLIENT_CONNECT);
-  test_assert(! s); /* There are only 12 observations left.  Not enough to
-                       build an answer.  Add 4 more in XY... */
-  for (i=55; i < 59; ++i)
-    geoip_note_client_seen(GEOIP_CLIENT_CONNECT, i, now-3600);
-  s = geoip_get_client_history(now+5*24*60*60, GEOIP_CLIENT_CONNECT);
   test_assert(s);
-  test_streq("ab=16", s);
+  test_streq("ab=16,xy=8", s);
   tor_free(s);
 }
 
