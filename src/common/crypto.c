@@ -1684,9 +1684,6 @@ crypto_dh_free(crypto_dh_env_t *dh)
     OPENSSL_VERSION_NUMBER <= 0x00907fffl) ||   \
    (OPENSSL_VERSION_NUMBER >= 0x0090803fl))
 
-/* We could actually get away with calling RAND_poll */
-#define USE_RAND_POLL (HAVE_RAND_POLL && RAND_POLL_IS_SAFE)
-
 /** Seed OpenSSL's random number generator with bytes from the operating
  * system.  <b>startup</b> should be true iff we have just started Tor and
  * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
