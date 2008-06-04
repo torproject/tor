@@ -567,7 +567,7 @@ _compare_signed_descriptors_by_age(const void **_a, const void **_b)
  * routerlist, and clear the journal.  Return 0 on success, -1 on failure.
  *
  * If <b>extrainfo</b> is true, rebuild the extrainfo store; else rebuild the
- * router descriptor store.
+ * router descriptor store. [XXX021 this sentence refers to bad args]
  */
 static int
 router_rebuild_store(int flags, desc_store_t *store)
