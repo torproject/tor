@@ -3497,11 +3497,6 @@ test_geoip(void)
   /* Now clear out all the zz observations. */
   geoip_remove_old_clients(now-6000);
   s = geoip_get_client_history(now+5*24*60*60);
-  test_assert(s); /* Any answer is worth reporting. */
-  /* Add 4 more in XY... */
-  for (i=55; i < 59; ++i)
-    geoip_note_client_seen(i, now-3600);
-  s = geoip_get_client_history(now+5*24*60*60);
   test_assert(s);
   test_streq("ab=16,xy=8", s);
   tor_free(s);
