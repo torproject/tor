@@ -362,7 +362,7 @@ geoip_get_client_history(time_t now)
 #if MIN_IPS_TO_NOTE_COUNTRY > 0
       if (c >= MIN_IPS_TO_NOTE_COUNTRY) {
 #else
-      if (1) {
+      if (c > 0) {
 #endif
         /* Round up to the next multiple of IP_GRANULARITY */
         c += IP_GRANULARITY-1;

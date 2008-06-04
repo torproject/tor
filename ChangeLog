@@ -1,6 +1,8 @@
 Changes in version 0.2.0.28-rc - 2008-06-??
   o Minor fixes:
-    - Fix unit tests in 0.2.0.27-rc. [Actually, one is still broken!]
+    - Bridge relays no longer print "xx=0" in their extrainfo document
+      for every single country code in the geoip db.
+    - Fix unit tests in 0.2.0.27-rc.
     - Fix compile on Windows.
 
 
