@@ -3294,7 +3294,8 @@ int dnsserv_launch_request(const char *name, int is_reverse);
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);
 #endif
-int geoip_load_file(const char *filename);
+int should_record_bridge_info(or_options_t *options);
+int geoip_load_file(const char *filename, or_options_t *options);
 int geoip_get_country_by_ip(uint32_t ipaddr);
 int geoip_get_n_countries(void);
 const char *geoip_get_country_name(int num);

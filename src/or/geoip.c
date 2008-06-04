@@ -122,6 +122,14 @@ _geoip_compare_key_to_entry(const void *_key, const void **_member)
     return 0;
 }
 
+/** Return 1 if we should collect geoip stats on bridge users, and
+ * include them in our extrainfo descriptor. Else return 0. */
+int
+should_record_bridge_info(or_options_t *options)
+{
+  return options->BridgeRelay && options->BridgeRecordUsageByCountry;
+}
+
 /** Clear the GeoIP database and reload it from the file
  * <b>filename</b>. Return 0 on success, -1 on failure.
  *
@@ -136,12 +144,13 @@ _geoip_compare_key_to_entry(const void *_key, const void **_member)
  * with '#' (comments).
  */
 int
-geoip_load_file(const char *filename)
+geoip_load_file(const char *filename, or_options_t *options)
 {
   FILE *f;
+  int severity = should_record_bridge_info(options) ? LOG_WARN : LOG_INFO;
   clear_geoip_db();
   if (!(f = fopen(filename, "r"))) {
-    log_warn(LD_GENERAL, "Failed to open GEOIP file %s.", filename);
+    log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.", filename);
     return -1;
   }
   geoip_countries = smartlist_create();

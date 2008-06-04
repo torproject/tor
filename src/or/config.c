@@ -1282,7 +1282,7 @@ options_act(or_options_t *old_options)
       tor_snprintf(actual_fname, len, "%s\\geoip", conf_root);
     }
 #endif
-    geoip_load_file(actual_fname);
+    geoip_load_file(actual_fname, options);
     tor_free(actual_fname);
   }
   /* Check if we need to parse and add the EntryNodes config option. */
