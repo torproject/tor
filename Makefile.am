@@ -18,7 +18,7 @@ EXTRA_DIST = INSTALL README AUTHORS LICENSE ChangeLog          \
 #	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
 
 # Assume a tarball is in .. for now.
-dist-rpm: 
+dist-rpm:
 	RPM_BUILD_DIR="/tmp/tor-rpm-build-$$$$";                \
 	rm -rf $$RPM_BUILD_DIR;                                 \
 	mkdir $$RPM_BUILD_DIR || exit 1;                        \
@@ -54,6 +54,8 @@ dist-osx:
 	fi
 	$(MAKE) all
 	VERSION=$(VERSION) sh ./contrib/osx/package.sh
+
+dist: check
 
 doxygen:
 	doxygen && cd doc/doxygen/latex && make
