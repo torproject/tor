@@ -609,6 +609,9 @@ typedef struct {
                *(uint32_t*)STRUCT_VAR_P(cfg,fmt->magic_offset));        \
   STMT_END
 
+#ifdef MS_WINDOWS
+static char *get_windows_conf_root(void);
+#endif
 static void config_line_append(config_line_t **lst,
                                const char *key, const char *val);
 static void option_clear(config_format_t *fmt, or_options_t *options,
