@@ -176,12 +176,10 @@ install: build
 
 	install -m 644 debian/tor-geoipdb.lintian-override $(CURDIR)/debian/tor-geoipdb/usr/share/lintian/overrides/tor-geoipdb
 
-# Build architecture-independent files here.
-binary-indep: build install
-# We have nothing to do by default.
-
-# Build architecture-dependent files here.
-binary-arch: build install
+# Must not depend on anything. This is to be called by
+# binary-arch/binary-indep
+# in another 'make' thread.
+binary-common:
 	dh_testdir
 	dh_testroot
 	dh_installchangelogs --package=tor ChangeLog
@@ -200,7 +198,15 @@ binary-arch: build install
 	dh_gencontrol
 	dh_md5sums
 	dh_builddeb
+
+# Build architecture independant packages using the common target.
+binary-indep: install
+	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+
+# Build architecture dependant packages using the common target.
+binary-arch: install
+	$(MAKE) -f debian/rules DH_OPTIONS=-s binary-common
 	@if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then echo; echo; echo; echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Result of testsuite has been ignored.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; echo; echo; echo "Note: 'getent hosts localhost' should return '127.0.0.1 localhost'"; echo; fi
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install 
+.PHONY: build clean binary-common binary-indep binary-arch binary install
