@@ -168,6 +168,8 @@ install: build
 	ln -s ../tor/changelog.gz $(CURDIR)/debian/tor-geoipdb/usr/share/doc/tor-geoipdb
 	ln -s ../tor/changelog.Debian.gz $(CURDIR)/debian/tor-geoipdb/usr/share/doc/tor-geoipdb
 
+	install -m 644 debian/tor-geoipdb.lintian-override $(CURDIR)/debian/tor-geoipdb/usr/share/lintian/overrides/tor-geoipdb
+
 # Build architecture-independent files here.
 binary-indep: build install
 # We have nothing to do by default.
