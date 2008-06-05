@@ -4,12 +4,10 @@ description of the patch.)
 
 Items before a stable 0.2.0.x bundle:
   - Tor items:
-R   - flyspray bug 675/648
-    o flyspray bug 681
+R   - backport r14970
 R   - releasenotes
   - Vidalia items:
-E   - get rid of the 'run tor as a service' checkbox.
-E   - a new vidalia release with that included
+E   d address arma's Linux 100% cpu bug
   - Torbutton items:
 M   - mike had a big pile
 
@@ -23,3 +21,6 @@ Backport items for 0.2.0:
 
 Backport for 0.2.0 once better tested:
   - r14830: disable openssl compression.
+  - r14971: we don't have enough dir info if we have mostly wrong
+    descriptors
+
