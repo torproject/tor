@@ -50,7 +50,7 @@ Description: anonymizing overlay network for TCP
 
 Package: tor-dbg
 Architecture: any
-Depends: tor (= ${Source-Version})
+Depends: tor (= ${binary:Version})
 Suggests: gdb
 Priority: extra
 Description: debugging symbols for Tor
