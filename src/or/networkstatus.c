@@ -719,7 +719,6 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
              "downloaded from":"generated for"),
            trusted_dir->description, published);
   networkstatus_v2_list_has_changed = 1;
-  router_dir_info_changed();
 
   smartlist_sort(networkstatus_v2_list,
                  _compare_networkstatus_v2_published_on);
@@ -757,7 +756,6 @@ networkstatus_v2_list_clean(time_t now)
       dirserv_set_cached_networkstatus_v2(NULL, ns->identity_digest, 0);
     }
     networkstatus_v2_free(ns);
-    router_dir_info_changed();
   }
 
   /* And now go through the directory cache for any cached untrusted
@@ -1538,11 +1536,11 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
   if (!consensus || dir_version < 3) /* nothing more we should do */
     return;
 
-  /* More routers may be up or down now: we need to recalc whether there's
-   * enough directory info. */
-  router_dir_info_changed();
-
+  /* calls router_dir_info_changed() when it's done -- more routers
+   * might be up or down now, which might affect whether there's enough
+   * directory info. */
   routers_update_status_from_consensus_networkstatus(rl->routers, 0);
+
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
                     ri->cache_info.routerlist_index = ri_sl_idx);
   if (rl->old_routers)
