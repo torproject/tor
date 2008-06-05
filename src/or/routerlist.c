@@ -4194,6 +4194,7 @@ update_router_have_minimum_dir_info(void)
   int res;
   or_options_t *options = get_options();
   routerinfo_t *ri;
+  signed_descriptor_t *sd;
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now);
 
@@ -4220,10 +4221,12 @@ update_router_have_minimum_dir_info(void)
      {
        if (client_would_use_router(rs, now, options)) {
          ++num_usable; /* the consensus says we want it. */
-         /* XXX021 shouldn't we look up by descriptor digest? */
-         ri = router_get_by_digest(rs->identity_digest);
-         if (ri) {
-           ++num_present; /* we have some descriptor for it. */
+         if ((sd = router_get_by_descriptor_digest(rs->descriptor_digest)) &&
+             (ri = router_get_by_digest(rs->identity_digest)) &&
+             !memcmp(ri->cache_info.signed_descriptor_digest,
+                     sd->signed_descriptor_digest, DIGEST_LEN)) {
+           /* we have the descriptor listed in the consensus. */
+           ++num_present;
            if (ri->is_running)
              ++num_running; /* our local status says it's still up. */
          }
