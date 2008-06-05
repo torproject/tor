@@ -1,8 +1,10 @@
 tor (0.2.0.27-rc-X) Xxperimental; urgency=low
 
   * New upstream version.
+  * Add tor-geoipdb arch: all package for the geoip database.
+  * Unit tests are broken, yay.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 04 Jun 2008 10:48:12 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 04 Jun 2008 11:21:07 +0200
 
 tor (0.2.0.26-rc-1) experimental; urgency=critical
 

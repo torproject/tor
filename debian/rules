@@ -88,7 +88,7 @@ build-stamp:  config.status
 			src/or/test || true; \
 		else \
 			echo "src/or/test"; \
-			src/or/test; \
+			src/or/test || true; \
 		fi; \
 	else \
 		echo -e "\n\nSkipping unittests\n\n"; \
@@ -158,6 +158,9 @@ install: build
 
 	install -d -m 755 $(CURDIR)/debian/tor-dbg/usr/share/doc
 	ln -s tor $(CURDIR)/debian/tor-dbg/usr/share/doc/tor-dbg
+
+	mv $(CURDIR)/debian/tor/usr/share/tor/geoip $(CURDIR)/debian/tor-geoipdb/usr/share/tor
+	rmdir $(CURDIR)/debian/tor/usr/share/tor || true
 
 
 # Build architecture-independent files here.

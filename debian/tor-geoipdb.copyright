@@ -1,0 +1,35 @@
+This geo-ip database was downloaded as part of the Tor distribution
+from <URL:https://www.torproject.org/>.
+
+
+It is the IP-to-Country Database provided by WebHosting.Info
+(http://www.webhosting.info), available from
+http://ip-to-country.webhosting.info.
+
+
+Copyright (c) 2003 Direct Information Pvt. Ltd. All Rights Reserved.
+
+All usage, reproduction, modification and derivative works created from, and
+distribution and publication of the IP-to-Country Database and your derivative
+works thereof must keep intact all copyright notices and give credit by
+displaying the following acknowledgment by replacing 'work' with one of the
+following: script, product, page, service or application:
+
+"This 'work' uses the IP-to-Country Database
+ provided by WebHosting.Info (http://www.webhosting.info),
+ available from http://ip-to-country.webhosting.info."
+
+BECAUSE THE DATABASE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY FOR THE
+DATABASE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN OTHERWISE
+STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES PROVIDE THE
+DATABASE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE OR ANY WARRANTIES REGARDING THE CONTENTS OR
+ACCURACY OF THE WORK.
+
+IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL ANY
+COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR REDISTRIBUTE THE
+DATABASE AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES, INCLUDING ANY
+GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR
+INABILITY TO USE THE DATABASE, EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
