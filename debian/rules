@@ -187,13 +187,8 @@ binary-arch: build install
 	dh_installchangelogs --package=tor ChangeLog
 	dh_installdocs
 	dh_installexamples
-#	dh_install
-#	dh_installdebconf
 	dh_installlogrotate
-#	dh_installemacsen
-#	dh_installmime
 	dh_installinit
-#	dh_installcron
 	dh_installman
 	dh_link
 	# Change this for debhelper compatibility level 5 or later!
