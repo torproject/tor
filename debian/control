@@ -61,6 +61,7 @@ Description: debugging symbols for Tor
 Package: tor-geoipdb
 Architecture: all
 Priority: extra
+Depends: tor (>= ${source:Version})
 Description: geoIP database for Tor
  This package provides a geoIP database for Tor, i.e. it maps IPv4 addresses
  to countries.

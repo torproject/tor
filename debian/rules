@@ -156,12 +156,17 @@ install: build
 
 	rm -f $(CURDIR)/debian/tor/usr/bin/tor-control.py
 
+	# tor-dbg doc dir
 	install -d -m 755 $(CURDIR)/debian/tor-dbg/usr/share/doc
 	ln -s tor $(CURDIR)/debian/tor-dbg/usr/share/doc/tor-dbg
 
+	# tor-geoip
 	mv $(CURDIR)/debian/tor/usr/share/tor/geoip $(CURDIR)/debian/tor-geoipdb/usr/share/tor
 	rmdir $(CURDIR)/debian/tor/usr/share/tor || true
 
+	install -d -m 755 $(CURDIR)/debian/tor-geoipdb/usr/share/doc/tor-geoipdb
+	ln -s ../tor/changelog.gz $(CURDIR)/debian/tor-geoipdb/usr/share/doc/tor-geoipdb
+	ln -s ../tor/changelog.Debian.gz $(CURDIR)/debian/tor-geoipdb/usr/share/doc/tor-geoipdb
 
 # Build architecture-independent files here.
 binary-indep: build install
@@ -171,7 +176,7 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-	dh_installchangelogs ChangeLog
+	dh_installchangelogs --package=tor ChangeLog
 	dh_installdocs
 	dh_installexamples
 #	dh_install
