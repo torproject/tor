@@ -48,6 +48,12 @@ ifneq (,$(findstring notest,$(DEB_BUILD_OPTIONS)))
 	RUN_TEST = no
 endif
 
+# Support passing of parallel=<n> in build options
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+	MAKEFLAGS += -j$(NUMJOBS)
+endif
+
 CONF_OPTIONS =
 # build against libdmalloc4 - it better be installed
 ifneq (,$(findstring with-dmalloc,$(DEB_BUILD_OPTIONS)))
