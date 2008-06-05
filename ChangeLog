@@ -1,4 +1,13 @@
 Changes in version 0.2.1.1-alpha - 2008-??-??
+  o Major bugfixes:
+    - When we switched to using v3 directories, we threw away the part of
+      the "do we have enough directory info?" calculation that checked
+      how many relays we believed to still be running based on our own
+      experience. So if we went offline, we never gave up trying to make
+      new circuits; worse, when we came back online we didn't recognize
+      that we should give all the relays another chance. Bugfix on
+      0.2.0.9-alpha; fixes bugs 648 and 675.
+
   o Minor bugfixes:
     - Stop giving double-close warn when we reject an address for client DNS.
     - On Windows, correctly detect errors when listing the contents of a

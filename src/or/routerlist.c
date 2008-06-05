@@ -4189,10 +4189,11 @@ get_dir_info_status_string(void)
 static void
 update_router_have_minimum_dir_info(void)
 {
-  int num_present = 0, num_usable=0;
+  int num_present = 0, num_usable=0, num_running=0;
   time_t now = time(NULL);
   int res;
   or_options_t *options = get_options();
+  routerinfo_t *ri;
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now);
 
@@ -4218,9 +4219,13 @@ update_router_have_minimum_dir_info(void)
   SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
      {
        if (client_would_use_router(rs, now, options)) {
-         ++num_usable;
-         if (router_get_by_digest(rs->identity_digest)) {
-           ++num_present;
+         ++num_usable; /* the consensus says we want it. */
+         /* XXX021 shouldn't we look up by descriptor digest? */
+         ri = router_get_by_digest(rs->identity_digest);
+         if (ri) {
+           ++num_present; /* we have some descriptor for it. */
+           if (ri->is_running)
+             ++num_running; /* our local status says it's still up. */
          }
        }
      });
@@ -4229,10 +4234,10 @@ update_router_have_minimum_dir_info(void)
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
             "We have only %d/%d usable descriptors.", num_present, num_usable);
     res = 0;
-  } else if (num_present < 2) {
+  } else if (num_running < 2) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "Only %d usable descriptor%s known!", num_present,
-                 num_present ? "" : "s");
+                 "Only %d descriptor%s believed reachable!", num_running,
+                 num_running ? "" : "s");
     res = 0;
   } else {
     res = 1;
@@ -4247,7 +4252,7 @@ update_router_have_minimum_dir_info(void)
   if (!res && have_min_dir_info) {
     log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "
         "enough to build circuits.%s",
-        num_usable > 2 ? "" : " (Not enough servers seem reachable -- "
+        num_running > 2 ? "" : " (Not enough servers seem reachable -- "
         "is your network connection down?)");
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
