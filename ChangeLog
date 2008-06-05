@@ -1,16 +1,4 @@
 Changes in version 0.2.1.1-alpha - 2008-??-??
-  o Major bugfixes:
-    - Fix assertion failure that could occur when a blocked circuit became
-      unblocked, and it had pending client DNS requests.  Bugfix on
-      0.2.0.1-alpha.  Fixes bug 632.
-    - List authority signatures as "unrecognized" based on DirServer lines,
-      not on cert cache.  Bugfix on 0.2.0.x.
-    - Use new V3 directory authority keys on the Tor26, Gabelmoo, and
-      Moria1 V3 directory authorities.  The old keys were generated with
-      a vulnerable version of Debian's OpenSSL package, and must be
-      considered compromised.  Other authorities' keys were not
-      generated with an affected version of OpenSSL.
-
   o Minor bugfixes:
     - Stop giving double-close warn when we reject an address for client DNS.
     - On Windows, correctly detect errors when listing the contents of a
@@ -121,6 +109,29 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       bug 617.  Bugfix on 0.2.0.1-alpha.
     - Add a macro to implement the common pattern of iterating through
       two parallel lists in lockstep.
+
+
+Changes in version 0.2.0.27-rc - 2008-06-03
+  o Major features:
+    - Include an IP-to-country GeoIP file in the tarball, so bridge
+      relays can report sanitized summaries of the usage they're seeing.
+
+  o Minor features:
+    - Add a "PURPOSE=" argument to "STREAM NEW" events, as suggested by
+      Robert Hogan. Fixes the first part of bug 681.
+    - Make bridge authorities never serve extrainfo docs.
+    - Add support to detect Libevent versions in the 1.4.x series
+      on mingw.
+    - Fix build on gcc 4.3 with --enable-gcc-warnings set.
+    - Include a new contrib/tor-exit-notice.html file that exit relay
+      operators can put on their website to help reduce abuse queries.
+
+  o Minor bugfixes:
+    - When tunneling an encrypted directory connection, and its first
+      circuit fails, do not leave it unattached and ask the controller
+      to deal. Fixes the second part of bug 681.
+    - Make bridge authorities correctly expire old extrainfo documents
+      from time to time.
 
 
 Changes in version 0.2.0.26-rc - 2008-05-13
