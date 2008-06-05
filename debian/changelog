@@ -11,8 +11,9 @@ tor (0.2.0.27-rc-X) Xxperimental; urgency=low
     description.
   * No longer ignore failure of make clean in the clean target.
   * Support passing of parallel=<n> in build options.
+  * Change declared Standards-Version to 3.8.0.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 06 Jun 2008 00:58:37 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri, 06 Jun 2008 00:59:24 +0200
 
 tor (0.2.0.26-rc-1) experimental; urgency=critical
 
