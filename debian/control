@@ -45,7 +45,7 @@ Description: anonymizing overlay network for TCP
  Remember that this is development code -- don't rely on the current Tor
  network if you really need strong anonymity.
  .
- The latest information can be found at http://tor.eff.org/, or on the
+ The latest information can be found at https://www.torproject.org/, or on the
  mailing lists, archived at http://archives.seul.org/or/talk/ or
  http://archives.seul.org/or/announce/.
 
