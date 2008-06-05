@@ -55,9 +55,6 @@ static time_t time_to_download_next_consensus = 0;
 /** Download status for the current consensus networkstatus. */
 static download_status_t consensus_dl_status = { 0, 0, DL_SCHED_CONSENSUS };
 
-/** True iff we have logged a warning about this OR not being valid or
- * not being named. */
-static int have_warned_about_invalid_status = 0;
 /** True iff we have logged a warning about this OR's version being older than
  * listed by the authorities. */
 static int have_warned_about_old_version = 0;
@@ -79,7 +76,6 @@ networkstatus_reset_warnings(void)
                       rs->name_lookup_warned = 0);
   }
 
-  have_warned_about_invalid_status = 0;
   have_warned_about_old_version = 0;
   have_warned_about_new_version = 0;
 }
@@ -1533,10 +1529,8 @@ networkstatus_note_certs_arrived(void)
 void
 routers_update_all_from_networkstatus(time_t now, int dir_version)
 {
-  routerinfo_t *me;
   routerlist_t *rl = router_get_routerlist();
   networkstatus_t *consensus = networkstatus_get_live_consensus(now);
-  or_options_t *options = get_options();
 
   if (networkstatus_v2_list_has_changed)
     download_status_map_update_from_v2_networkstatus();
@@ -1553,29 +1547,6 @@ routers_update_all_from_networkstatus(time_t now, int dir_version)
                     ri->cache_info.routerlist_index = ri_sl_idx);
   if (rl->old_routers)
     signed_descs_update_status_from_consensus_networkstatus(rl->old_routers);
-
-  /* XXX020 these warnings don't help anymore; we should disable them -RD */
-  me = router_get_my_routerinfo();
-  if (me && !have_warned_about_invalid_status) {
-    routerstatus_t *rs = networkstatus_vote_find_entry(consensus,
-                                        me->cache_info.identity_digest);
-
-    if (!rs) {
-      log_info(LD_GENERAL, "The latest consensus does not list us."
-               "Are you misconfigured?");
-      have_warned_about_invalid_status = 1;
-    } else if (rs->is_unnamed) {
-      /* Maybe upgrade this to notice? XXXX020 */
-      log_info(LD_GENERAL,  "The directory have assigned the nickname "
-               "you're using (%s) to a different identity; you may want to "
-               "choose a different nickname.", options->Nickname);
-      have_warned_about_invalid_status = 1;
-    } else if (!rs->is_named) {
-      log_debug(LD_GENERAL, "The directory authorities do not currently "
-                "recognize your nickname.");
-      have_warned_about_invalid_status = 1;
-    }
-  }
 
   if (!have_warned_about_old_version) {
     int is_server = server_mode(get_options());
