@@ -193,7 +193,7 @@ Matt
     launches for you.
   - Vidalia should avoid stomping on your custom exit policy lines
     just because you click on 'save' for a totally different config thing.
-  - "can anyone help me, all of a sudden on tor on the mac, when i
+  o "can anyone help me, all of a sudden on tor on the mac, when i
     start it up, It asks for my control password, which ive never set"
     We should either give Vidalia another option in that dialog box -- to
     restart Tor -- or we should make it so when Vidalia spawns Tor and
@@ -205,9 +205,9 @@ ioerror
   - gmail auto responder so you send us an email and we send you a Tor
     binary. Probably needs a proposal first.
   - weather.torproject.org should go live.
-  - Get Scott Squires to give you admin access to the Torbutton account
+  o Get Scott Squires to give you admin access to the Torbutton account
     on Babelzilla; or give up eventually and fork it.
-  - Learn from Steven how to build/maintain the Tor Browser Bundle.
+  o Learn from Steven how to build/maintain the Tor Browser Bundle.
   - Learn from Mike how to run SoaT, and try to make that an automated
     service somewhere.
   - Keep advocating new Tor servers and working with orgs like Mozilla
@@ -220,6 +220,9 @@ ioerror
     we want to emulate.
   - We should hack the translation-status perl so it puts high priority
     pages first, regardless of what directory they're in.
+  - Some of our translated wml files are very old -- so old that they
+    are harmful to leave in place. We need some sort of way to notice
+    this and disable them.
 
 Steven
   - Write a list of research items Tor would like to see done, for the
@@ -240,10 +243,10 @@ Andrew
     include Torbutton, they still say it's tor.eff.org, etc.
   - Should we still be telling you how to use Safari on OS X for Tor,
     given all the holes that Torbutton-dev solves on Firefox?
-  - Get Google excited about our T&Cs.
+  o Get Google excited about our T&Cs.
 
 Karsten
-  . Make a hidden services explanation page with the hidden service
+  o Make a hidden services explanation page with the hidden service
     diagrams. See img/THS-[1-6].png. These need some text to go along
     with them though, so people can follow what's going on.
   - We should consider a single config option TorPrivateNetwork that
@@ -256,7 +259,7 @@ Weasel
     the necessary modifications, and make some Vidalia debs that pass
     muster.
   - Fix bug 393.
-  - Get oftc to switch to the Tor dns exitlist. Or tell us why it's
+  - Get oftc to switch to Tor dns bulk exitlist. Or tell us why it's
     not suitable yet.
   - Take non-Running entries out of the networkstatus consensus.
   - Move proposal 134 forward.
