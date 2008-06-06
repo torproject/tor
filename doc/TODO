@@ -140,6 +140,7 @@ W   - Take the results from instrumenting directory downloads on Tor
 KS  - Design hidden service improvements, evaluate them and consider
       security properties: write some proposals, get feedback, revise
       them, etc.
+?   - nlnet 'user safety contest'. submit torbrowser, others?
 
   - end of August
 I   - Auto update
