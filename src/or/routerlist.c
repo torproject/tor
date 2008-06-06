@@ -2722,8 +2722,8 @@ router_set_status(const char *digest, int up)
 
   router = router_get_by_digest(digest);
   if (router) {
-    log_debug(LD_DIR,"Marking router '%s' as %s.",
-              router->nickname, up ? "up" : "down");
+    log_debug(LD_DIR,"Marking router '%s/%s' as %s.",
+              router->nickname, router->address, up ? "up" : "down");
     if (!up && router_is_me(router) && !we_are_hibernating())
       log_warn(LD_NET, "We just marked ourself as down. Are your external "
                "addresses reachable?");
@@ -4254,9 +4254,7 @@ update_router_have_minimum_dir_info(void)
   }
   if (!res && have_min_dir_info) {
     log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "
-        "enough to build circuits.%s",
-        num_running > 2 ? "" : " (Not enough servers seem reachable -- "
-        "is your network connection down?)");
+        "enough to build circuits: %s", dir_info_status);
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
   have_min_dir_info = res;
