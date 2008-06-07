@@ -3901,11 +3901,15 @@ control_event_bootstrap(bootstrap_status_t status, int percent)
 
   if (!boring)
 #endif
-  if (status > last_percent || (percent && percent > last_percent))
-    log_notice(LD_CONTROL, "Bootstrapped %d%% (last %d): %s.",
-               status, last_percent, bootstrap_status_to_string(status));
-
-  /* ... This is where we tell the controller ... */
+  if (status > last_percent || (percent && percent > last_percent)) {
+    log_notice(LD_CONTROL, "Bootstrapped %d%%: %s.",
+               percent ? percent : status,
+               bootstrap_status_to_string(status));
+    control_event_client_status(LOG_NOTICE,
+        "BOOTSTRAP PROGRESS=%d SUMMARY=\"%s\"",
+        percent ? percent : status,
+        bootstrap_status_to_string(status));
+  }
 
   if (percent > last_percent) /* incremental progress within a milestone */
     last_percent = percent;
