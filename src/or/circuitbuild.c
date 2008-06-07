@@ -373,6 +373,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     circ->_base.n_port = firsthop->extend_info->port;
 
     if (!n_conn || n_conn->_base.or_is_obsolete) { /* launch the connection */
+      if (circ->build_state->onehop_tunnel)
+        control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
       n_conn = connection_or_connect(firsthop->extend_info->addr,
                                      firsthop->extend_info->port,
                                      firsthop->extend_info->identity_digest);
@@ -590,6 +592,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     int fast;
     uint8_t cell_type;
     log_debug(LD_CIRC,"First skin; sending create cell.");
+    if (circ->build_state->onehop_tunnel)
+      control_event_bootstrap(BOOTSTRAP_STATUS_ONEHOP_CREATE, 0);
+    else
+      control_event_bootstrap(BOOTSTRAP_STATUS_CIRCUIT_CREATE, 0);
 
     router = router_get_by_digest(circ->_base.n_conn->identity_digest);
     fast = should_use_create_fast_for_router(router, circ);
@@ -641,6 +647,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
+      if (circ->build_state->onehop_tunnel)
+        control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
       if (!has_completed_circuit && !circ->build_state->onehop_tunnel) {
         or_options_t *options = get_options();
         has_completed_circuit=1;
@@ -648,6 +656,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         log(LOG_NOTICE, LD_GENERAL,
             "Tor has successfully opened a circuit. "
             "Looks like client functionality is working.");
+        control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0);
         control_event_client_status(LOG_NOTICE, "CIRCUIT_ESTABLISHED");
         if (server_mode(options) && !check_whether_orport_reachable()) {
           inform_testing_reachability();

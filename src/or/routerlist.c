@@ -4217,6 +4217,7 @@ update_router_have_minimum_dir_info(void)
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
             "We have only %d/%d usable descriptors.", num_present, num_usable);
     res = 0;
+    control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
   } else if (num_present < 2) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
                  "Only %d descriptor%s here and believed reachable!",
@@ -4231,6 +4232,7 @@ update_router_have_minimum_dir_info(void)
     log(LOG_NOTICE, LD_DIR,
         "We now have enough directory information to build circuits.");
     control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
+    control_event_bootstrap(BOOTSTRAP_STATUS_CONN_OR, 0);
   }
   if (!res && have_min_dir_info) {
     log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "

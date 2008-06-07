@@ -344,6 +344,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
 
   log_debug(LD_OR,"OR connect() to router at %s:%u finished.",
             conn->address,conn->port);
+  control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
 
   if (get_options()->HttpsProxy) {
     char buf[1024];

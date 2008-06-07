@@ -3016,6 +3016,27 @@ smartlist_t *decode_hashed_passwords(config_line_t *passwords);
 void disable_control_logging(void);
 void enable_control_logging(void);
 
+/** Enum describing various stages of bootstrapping, for use with controller
+ * bootstrap status events. The values range from 0 to 100. */
+typedef enum {
+  BOOTSTRAP_STATUS_STARTING=0,
+  BOOTSTRAP_STATUS_CONN_DIR=5,
+  BOOTSTRAP_STATUS_HANDSHAKE=-1,
+  BOOTSTRAP_STATUS_HANDSHAKE_DIR=10,
+  BOOTSTRAP_STATUS_ONEHOP_CREATE=15,
+  BOOTSTRAP_STATUS_REQUESTING_STATUS=20,
+  BOOTSTRAP_STATUS_LOADING_STATUS=25,
+  BOOTSTRAP_STATUS_LOADING_KEYS=40,
+  BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS=45,
+  BOOTSTRAP_STATUS_LOADING_DESCRIPTORS=50,
+  BOOTSTRAP_STATUS_CONN_OR=80,
+  BOOTSTRAP_STATUS_HANDSHAKE_OR=85,
+  BOOTSTRAP_STATUS_CIRCUIT_CREATE=90,
+  BOOTSTRAP_STATUS_DONE=100
+} bootstrap_status_t;
+
+int control_event_bootstrap(bootstrap_status_t status, int percent);
+
 #ifdef CONTROL_PRIVATE
 /* Used only by control.c and test.c */
 size_t write_escaped_data(const char *data, size_t len, char **out);
@@ -3442,6 +3463,7 @@ void update_consensus_networkstatus_fetch_time(time_t now);
 int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
 void update_certificate_downloads(time_t now);
+int consensus_is_waiting_for_certs(void);
 networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);
 networkstatus_t *networkstatus_get_latest_consensus(void);
 networkstatus_t *networkstatus_get_live_consensus(time_t now);

@@ -1196,6 +1196,14 @@ update_certificate_downloads(time_t now)
     authority_certs_fetch_missing(current_consensus, now);
 }
 
+/** Return 1 if we have a consensus but we don't have enough certificates
+ * to start using it yet. */
+int
+consensus_is_waiting_for_certs(void)
+{
+  return consensus_waiting_for_certs ? 1 : 0;
+}
+
 /** Return the network status with a given identity digest. */
 networkstatus_v2_t *
 networkstatus_v2_get_by_digest(const char *digest)

@@ -932,6 +932,28 @@ connection_edge_process_relay_cell_not_open(
     /* don't send a socks reply to transparent conns */
     if (!conn->socks_request->has_finished)
       connection_ap_handshake_socks_reply(conn, NULL, 0, 0);
+
+    /* Was it a linked dir conn? If so, a dir request just started to
+     * fetch something; this could be a bootstrap status milestone. */
+    log_debug(LD_APP, "considering");
+    if (TO_CONN(conn)->linked_conn &&
+        TO_CONN(conn)->linked_conn->type == CONN_TYPE_DIR) {
+      connection_t *dirconn = TO_CONN(conn)->linked_conn;
+      log_debug(LD_APP, "it is! %d", dirconn->purpose);
+      switch (dirconn->purpose) {
+        case DIR_PURPOSE_FETCH_CERTIFICATE:
+          if (consensus_is_waiting_for_certs())
+            control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_KEYS, 0);
+          break;
+        case DIR_PURPOSE_FETCH_CONSENSUS:
+          control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_STATUS, 0);
+          break;
+        case DIR_PURPOSE_FETCH_SERVERDESC:
+          control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS, 0);
+          break;
+      }
+    }
+
     /* handle anything that might have queued */
     if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
       /* (We already sent an end cell if possible) */

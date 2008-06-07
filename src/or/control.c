@@ -3823,3 +3823,94 @@ init_cookie_authentication(int enabled)
   return 0;
 }
 
+/** Convert the name of a bootstrapping phase <b>s</b> into a string
+ * suitable for display by the controller. */
+static const char *
+bootstrap_status_to_string(bootstrap_status_t s)
+{
+  switch (s) {
+    case BOOTSTRAP_STATUS_STARTING:
+      return "Starting";
+    case BOOTSTRAP_STATUS_CONN_DIR:
+      return "Connecting to directory mirror";
+    case BOOTSTRAP_STATUS_HANDSHAKE:
+      return "Finishing handshake";
+    case BOOTSTRAP_STATUS_HANDSHAKE_DIR:
+      return "Finishing handshake with directory mirror";
+    case BOOTSTRAP_STATUS_ONEHOP_CREATE:
+      return "Establishing one-hop circuit for dir info";
+    case BOOTSTRAP_STATUS_REQUESTING_STATUS:
+      return "Asking for networkstatus consensus";
+    case BOOTSTRAP_STATUS_LOADING_STATUS:
+      return "Loading networkstatus consensus";
+    case BOOTSTRAP_STATUS_LOADING_KEYS:
+      return "Loading authority key certs";
+    case BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS:
+      return "Asking for relay descriptors";
+    case BOOTSTRAP_STATUS_LOADING_DESCRIPTORS:
+      return "Loading relay descriptors";
+    case BOOTSTRAP_STATUS_CONN_OR:
+      return "Connecting to entry guard";
+    case BOOTSTRAP_STATUS_HANDSHAKE_OR:
+      return "Finishing handshake with entry guard";
+    case BOOTSTRAP_STATUS_CIRCUIT_CREATE:
+      return "Establishing circuits";
+    case BOOTSTRAP_STATUS_DONE:
+      return "Done!";
+    default:
+      log_warn(LD_BUG, "Unrecognized bootstrap status code %d", s);
+      return "unknown";
+  }
+}
+
+/** Called when Tor has made progress at bootstrapping its directory
+ * information and initial circuits. <b>status</b> is the new status,
+ * that is, what task we will be doing next. <b>percent</b> is zero if
+ * we just started this task, else it represents progress on the task.
+ */
+int
+control_event_bootstrap(bootstrap_status_t status, int percent)
+{
+  static int last_percent = 0;
+
+  if (last_percent == 100)
+    return 0; /* already bootstrapped; nothing to be done here. */
+
+  /* special case for handshaking status, since our tls handshaking code
+   * can't distinguish what the connection is going to be for. */
+  if (status == BOOTSTRAP_STATUS_HANDSHAKE) {
+    if (last_percent < BOOTSTRAP_STATUS_HANDSHAKE_OR) {
+      status =  BOOTSTRAP_STATUS_HANDSHAKE_DIR;
+    } else {
+      status = BOOTSTRAP_STATUS_HANDSHAKE_OR;
+    }
+  }
+
+#if 0
+  if (status <= last_percent)
+    switch (status) {
+      case BOOTSTRAP_STATUS_CONN_DIR:
+      case BOOTSTRAP_STATUS_ONEHOP_CREATE:
+      case BOOTSTRAP_STATUS_HANDSHAKE_DIR:
+      case BOOTSTRAP_STATUS_REQUESTING_STATUS:
+      case BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS:
+        boring = 1;
+        break;
+      default: ;
+    }
+
+  if (!boring)
+#endif
+  if (status > last_percent || (percent && percent > last_percent))
+    log_notice(LD_CONTROL, "Bootstrapped %d%% (last %d): %s.",
+               status, last_percent, bootstrap_status_to_string(status));
+
+  /* ... This is where we tell the controller ... */
+
+  if (percent > last_percent) /* incremental progress within a milestone */
+    last_percent = percent;
+  if (status > last_percent) /* new milestone reached */
+    last_percent = status ;
+  return 0;
+}
+
