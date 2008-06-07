@@ -4174,12 +4174,10 @@ get_dir_info_status_string(void)
 static void
 update_router_have_minimum_dir_info(void)
 {
-  int num_present = 0, num_usable=0, num_running=0;
+  int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   int res;
   or_options_t *options = get_options();
-  routerinfo_t *ri;
-  signed_descriptor_t *sd;
   const networkstatus_t *consensus =
     networkstatus_get_reasonably_live_consensus(now);
 
@@ -4206,26 +4204,23 @@ update_router_have_minimum_dir_info(void)
      {
        if (client_would_use_router(rs, now, options)) {
          ++num_usable; /* the consensus says we want it. */
-         if ((sd = router_get_by_descriptor_digest(rs->descriptor_digest)) &&
-             (ri = router_get_by_digest(rs->identity_digest)) &&
-             !memcmp(ri->cache_info.signed_descriptor_digest,
-                     sd->signed_descriptor_digest, DIGEST_LEN)) {
+         if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
            /* we have the descriptor listed in the consensus. */
            ++num_present;
-           if (ri->is_running)
-             ++num_running; /* our local status says it's still up. */
          }
        }
      });
+
+  log_debug(LD_DIR, "%d usable, %d present.", num_usable, num_present);
 
   if (num_present < num_usable/4) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
             "We have only %d/%d usable descriptors.", num_present, num_usable);
     res = 0;
-  } else if (num_running < 2) {
+  } else if (num_present < 2) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
-                 "Only %d descriptor%s believed reachable!", num_running,
-                 num_running ? "" : "s");
+                 "Only %d descriptor%s here and believed reachable!",
+                 num_present, num_present ? "" : "s");
     res = 0;
   } else {
     res = 1;
