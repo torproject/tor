@@ -859,21 +859,6 @@ router_pick_directory_server(authority_type_t type, int flags)
   mark_all_trusteddirservers_up();
   /* try again */
   choice = router_pick_directory_server_impl(type, flags);
-  if (choice)
-    return choice;
-
-  /* XXXX021 arma: what's the point of *reloading* and trying again?? -NM */
-  /* XXXX021 <arma> once upon a time, reloading set the is_running back
-     to 1. i think. i bet it has no purpose now. */
-  /* XXXX021 Let's stop reloading in 0.2.1.x, then, and see if anything
-   * breaks -NM */
-  log_info(LD_DIR,"Still no %s router entries. Reloading and trying again.",
-           (flags & PDS_IGNORE_FASCISTFIREWALL) ? "known" : "reachable");
-  if (router_reload_router_list()) {
-    return NULL;
-  }
-  /* give it one last try */
-  choice = router_pick_directory_server_impl(type, flags);
   return choice;
 }
 

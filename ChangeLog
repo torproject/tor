@@ -53,6 +53,10 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       the second part of bug 681.
     - Make bridge authorities correctly clean extrainfo store from time to
       time.  Bugfix on 0.2.0.x.
+    - Stop reloading the router list from disk for no reason when we
+      run out of reachable directory mirrors. Once upon a time reloading
+      it would set the 'is_running' flag back to 1 for them. It hasn't
+      done that for a long time.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
