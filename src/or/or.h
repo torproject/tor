@@ -328,8 +328,8 @@ typedef enum {
 /** A connection to a directory server: set after a rendezvous
  * descriptor is downloaded. */
 #define DIR_PURPOSE_HAS_FETCHED_RENDDESC 4
-/** A connection to a directory server: download one or more network-status
- * objects */
+/** A connection to a directory server: download one or more v2
+ * network-status objects */
 #define DIR_PURPOSE_FETCH_NETWORKSTATUS 5
 /** A connection to a directory server: download one or more server
  * descriptors. */
@@ -347,7 +347,7 @@ typedef enum {
 /** A connection to a directory server: upload a v3 consensus signature */
 #define DIR_PURPOSE_UPLOAD_SIGNATURES 11
 /** A connection to a directory server: download one or more network-status
- * objects */
+ * objects [XXX wtf, these are all the same comment] */
 #define DIR_PURPOSE_FETCH_STATUS_VOTE 12
 /** A connection to a directory server: download one or more network-status
  * objects */
