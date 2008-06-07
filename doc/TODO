@@ -184,6 +184,7 @@ Nick
   - Tors start believing the contents of NETINFO cells.
   - Work with Steven and Roger to decide which parts of Paul's project
     he wants to work on.
+  - let approved-routers lines omit spaces in fingerprint.
 
 Matt
   - Fit Vidalia in 640x480 again.
@@ -224,6 +225,8 @@ ioerror
   - Some of our translated wml files are very old -- so old that they
     are harmful to leave in place. We need some sort of way to notice
     this and disable them.
+  - Learn about locking memory pages that have sensitive content. Get
+    that started in Tor.
 
 Steven
   - Write a list of research items Tor would like to see done, for the

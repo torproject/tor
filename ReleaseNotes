@@ -109,7 +109,7 @@ Changes in version 0.1.2.18 - 2007-10-28
     - Fix a user-triggerable segfault in expand_filename(). (There isn't
       a way to trigger this remotely.)
     - When sending a status event to the controller telling it that an
-      OR address is readable, set the port correctly. (Previously we
+      OR address is reachable, set the port correctly. (Previously we
       were reporting the dir port.)
     - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
       command. Bugfix on 0.1.2.17.

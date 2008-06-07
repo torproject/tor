@@ -1237,7 +1237,7 @@ Changes in version 0.1.2.18 - 2007-10-28
     - Fix a user-triggerable segfault in expand_filename(). (There isn't
       a way to trigger this remotely.)
     - When sending a status event to the controller telling it that an
-      OR address is readable, set the port correctly. (Previously we
+      OR address is reachable, set the port correctly. (Previously we
       were reporting the dir port.)
     - Fix a minor memory leak whenever a controller sends the PROTOCOLINFO
       command. Bugfix on 0.1.2.17.
@@ -1922,7 +1922,7 @@ Changes in version 0.2.0.4-alpha - 2007-08-01
       the bugs that this was supposed to detect a long time ago, and
       now its only effect is to change our buffer sizes from nice
       powers of two (which platform mallocs tend to like) to values
-      siightly over powers of two (which make some platform mallocs sad).
+      slightly over powers of two (which make some platform mallocs sad).
     - Log malloc statistics from mallinfo() on platforms where it
       exists.
 
@@ -6570,6 +6570,7 @@ Changes in version 0.0.2pre14 - 2003-11-29
     - Reloads config on HUP
     - Usage info on -h or --help
     - If you set User and Group config vars, it'll setu/gid to them.
+
 
 Changes in version 0.0.2pre13 - 2003-10-19
   o General stability:
