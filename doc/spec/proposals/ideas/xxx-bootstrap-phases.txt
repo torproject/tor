@@ -1,0 +1,106 @@
+Filename: xxx-bootstrap-phases.txt
+Title: Keep controllers informed as Tor bootstraps
+Version: $Revision$
+Last-Modified: $Date$
+Author: Roger Dingledine
+Created: 07-Jun-2008
+Status: Open
+
+1. Overview.
+
+  Tor has many steps to bootstrapping directory information and
+  initial circuits, but from the controller's perspective we just have
+  a coarse-grained "CIRCUIT_ESTABLISHED" status event. Tor users with
+  slow connections or with connectivity problems can wait a long time
+  staring at the yellow onion, wondering if it will ever change color.
+
+  This proposal describes a new client status event so Tor can give
+  more details to the controller. Section 2 describes the changes to the
+  controller protocol; Section 3 describes Tor's internal bootstrapping
+  phases assuming everything goes correctly; and Section 4 describes
+  how and when Tor chooses to issue bootstrap warnings.
+
+2. Controller event syntax.
+
+  The generic status event is:
+
+    "650" SP StatusType SP StatusSeverity SP StatusAction
+                                        [SP StatusArguments] CRLF
+
+  So in this case we send
+  650 STATUS_CLIENT NOTICE/WARN BOOTSTRAP \
+  PROGRESS=num TAG=string SUMMARY=string
+
+  "Progress" gives a number between 0 and 100 for how far through
+  the bootstrapping process we are. "Summary" is a string that can be
+  displayed to the user to describe the *next* task that Tor will tackle,
+  i.e., the task it is working on after sending the status event. "Tag"
+  is an optional string that controllers can use to recognize bootstrap
+  phases from Section 3, if they want to do something smarter than just
+  blindly displaying the summary string.
+
+  The severity describes whether this is a normal bootstrap phase
+  (severity notice) or an indication of a bootstrapping problem
+  (severity warn).
+
+3. The bootstrap phases.
+
+  Phase 0: tag=STARTING
+
+  Phase 5: tag=CONN_DIR
+
+  Phase 10: tag=HANDSHAKE_DIR
+
+  Phase 15: tag=ONEHOP_CREATE
+
+  Phase 20: tag=REQUESTING_STATUS
+
+  Phase 25: tag=LOADING_STATUS
+
+  Phase 40: tag=LOADING_KEYS
+
+  Phase 45: tag=REQUESTING_DESCRIPTORS
+
+  Phase 50: tag=LOADING_DESCRIPTORS
+
+  Phase 80: tag=CONN_OR
+
+  Phase 85: tag=HANDSHAKE_OR
+
+  Phase 90: tag=CIRCUIT_CREATE
+
+  Phase 100: tag=DONE
+
+
+ 5: fetching authority key certs
+    LOADING_KEYS
+    (authority_certs_fetch_missing)
+10: Connecting to directory mirror
+    CONN_DIR
+    (circuit_handle_first_hop)
+15: Finishing handshake with directory mirror
+    HANDSHAKE_DIR
+    (connection_or_finished_connecting)
+20: Establishing one-hop circuit for dir info
+    ONEHOP_CREATE
+    (circuit_send_next_onion_skin)
+25: Asking for networkstatus consensus
+    REQUESTING_STATUS
+    (circuit_send_next_onion_skin)
+30: Fetching networkstatus consensus
+    LOADING_STATUS
+    (update_consensus_networkstatus_downloads)
+50: Fetching relay descriptors
+    LOADING_DESCRIPTORS
+    (update_router_have_minimum_dir_info)
+80: Connecting to entry guard
+    CONN_OR
+    (update_router_have_minimum_dir_info)
+85: Finishing handshake with entry guard
+    HANDSHAKE_OR
+    (connection_or_finished_connecting)
+90: Establishing circuit
+    CIRCUIT_CREATE
+    (circuit_send_next_onion_skin)
+100: Done
+
