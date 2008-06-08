@@ -3874,6 +3874,9 @@ options_init_logs(or_options_t *options, int validate_only)
       ok = 0; goto cleanup;
     }
     if (!strcasecmp(smartlist_get(elts,1), "stdout")) {
+      /* Starting in 0.2.1.x, we will just decline to open the log file
+       * to stdout, rather than failing the whole program. But I'm leaving
+       * this intact for here so we can stabilize 0.2.0.x. -RD */
       if (daemon) {
         log_warn(LD_CONFIG, "Can't log to stdout with RunAsDaemon set.");
         ok = 0; goto cleanup;
