@@ -1059,7 +1059,7 @@ new_route_len(uint8_t purpose, extend_info_t *exit,
 
   num_acceptable_routers = count_acceptable_routers(routers);
 
-  log_debug(LD_CIRC,"Chosen route length %d (%d/%d routers available).",
+  log_debug(LD_CIRC,"Chosen route length %d (%d/%d routers suitable).",
             routelen, num_acceptable_routers, smartlist_len(routers));
 
   if (num_acceptable_routers < 2) {

@@ -17,8 +17,8 @@ Status: Open
   This proposal describes a new client status event so Tor can give
   more details to the controller. Section 2 describes the changes to the
   controller protocol; Section 3 describes Tor's internal bootstrapping
-  phases assuming everything goes correctly; and Section 4 describes
-  how and when Tor chooses to issue bootstrap warnings.
+  phases, both when everything is going correctly and when Tor detects
+  a problem and issues a bootstrap warning.
 
 2. Controller event syntax.
 
@@ -29,7 +29,7 @@ Status: Open
 
   So in this case we send
   650 STATUS_CLIENT NOTICE/WARN BOOTSTRAP \
-  PROGRESS=num TAG=string SUMMARY=string
+  PROGRESS=num TAG=string SUMMARY=string WARNING=string
 
   "Progress" gives a number between 0 and 100 for how far through
   the bootstrapping process we are. "Summary" is a string that can be
@@ -41,66 +41,135 @@ Status: Open
 
   The severity describes whether this is a normal bootstrap phase
   (severity notice) or an indication of a bootstrapping problem
-  (severity warn).
+  (severity warn). If severity warn, it should also include a "warning"
+  argument with any hints Tor has to offer about why it's having troubles
+  bootstrapping.
+
+  It is suggested that controllers start out in phase 0 ("starting"), and
+  then watch for either a bootstrap status event (meaning the Tor they're
+  using is sufficiently new to produce them) or a circuit_established
+  status event (meaning bootstrapping is finished).
 
 3. The bootstrap phases.
 
-  Phase 0: tag=STARTING
+  This section describes the various phases currently reported by
+  Tor. Controllers should not assume that the percentages and tags listed
+  here will continue to match up, or even that the tags will stay in
+  the same order. Some phases might also be skipped (not reported) if the
+  associated bootstrap step is already complete.
 
-  Phase 5: tag=CONN_DIR
+  Phase 0:
+  tag=starting summary="starting"
 
-  Phase 10: tag=HANDSHAKE_DIR
+  Tor starts out in this phase. It doesn't actually send a status event
+  to say so.
 
-  Phase 15: tag=ONEHOP_CREATE
+  Phase 5:
+  tag=conn_dir summary="Connecting to directory mirror"
 
-  Phase 20: tag=REQUESTING_STATUS
+  Tor sends this event as soon as Tor has chosen a directory mirror ---
+  one of the authorities if bootstrapping for the first time or after
+  a long downtime, or one of the relays listed in its cached directory
+  information otherwise.
 
-  Phase 25: tag=LOADING_STATUS
+  Tor will stay at this phase until it has successfully established
+  a TCP connection with some directory mirror. Problems in this phase
+  generally happen because Tor doesn't have a network connection, or
+  because the local firewall is dropping SYN packets.
 
-  Phase 40: tag=LOADING_KEYS
+  Phase 10
+  tag=handshake_dir summary="Finishing handshake with directory mirror"
 
-  Phase 45: tag=REQUESTING_DESCRIPTORS
+  This event occurs when Tor establishes a TCP connection with a relay
+  (or its https proxy if it's using one). Tor remains in this phase until
+  the TLS handshake with the relay is finished.
 
-  Phase 50: tag=LOADING_DESCRIPTORS
+  Problems in this phase generally happen because Tor's firewall is
+  doing more sophisticated MITM attacks on it, or doing packet-level
+  keyword recognition of Tor's handshake.
 
-  Phase 80: tag=CONN_OR
+  Phase 15:
+  tag=onehop_create summary="Establishing one-hop circuit for dir info"
 
-  Phase 85: tag=HANDSHAKE_OR
+  Once TLS is finished with a relay, Tor will send a CREATE_FAST cell
+  to establish a one-hop circuit for retrieving directory information.
+  It will remain in this phase until it receives the CREATED_FAST cell
+  back, indicating that the circuit is ready.
 
-  Phase 90: tag=CIRCUIT_CREATE
+  Phase 20:
+  tag=requesting_status summary="Asking for networkstatus consensus"
 
-  Phase 100: tag=DONE
+  Once we've finished our one-hop circuit, we will start a new stream
+  for fetching the networkstatus consensus. We'll stay in this phase
+  until we get the 'connected' relay cell back, indicating that we've
+  established a directory connection.
 
+  Phase 25:
+  tag=loading_status summary="Loading networkstatus consensus"
 
- 5: fetching authority key certs
-    LOADING_KEYS
-    (authority_certs_fetch_missing)
-10: Connecting to directory mirror
-    CONN_DIR
-    (circuit_handle_first_hop)
-15: Finishing handshake with directory mirror
-    HANDSHAKE_DIR
-    (connection_or_finished_connecting)
-20: Establishing one-hop circuit for dir info
-    ONEHOP_CREATE
-    (circuit_send_next_onion_skin)
-25: Asking for networkstatus consensus
-    REQUESTING_STATUS
-    (circuit_send_next_onion_skin)
-30: Fetching networkstatus consensus
-    LOADING_STATUS
-    (update_consensus_networkstatus_downloads)
-50: Fetching relay descriptors
-    LOADING_DESCRIPTORS
-    (update_router_have_minimum_dir_info)
-80: Connecting to entry guard
-    CONN_OR
-    (update_router_have_minimum_dir_info)
-85: Finishing handshake with entry guard
-    HANDSHAKE_OR
-    (connection_or_finished_connecting)
-90: Establishing circuit
-    CIRCUIT_CREATE
-    (circuit_send_next_onion_skin)
-100: Done
+  Once we've established a directory connection, we will start fetching
+  the networkstatus consensus document. This could take a while; this
+  phase is a good opportunity for using the "progress" keyword to indicate
+  partial progress.
+
+  This phase could stall if the directory mirror we picked doesn't
+  have a copy of the networkstatus consensus so we have to ask another,
+  or it does give us a copy but we don't find it valid.
+
+  Phase 40:
+  tag=loading_keys summary="Loading authority key certs"
+
+  Sometimes when we've finished loading the networkstatus consensus,
+  we find that we don't have all the authority key certificates for the
+  keys that signed the consensus. At that point we put the consensus we
+  fetched on hold and fetch the keys so we can verify the signatures.
+
+  Phase 45
+  tag=requesting_descriptors summary="Asking for relay descriptors"
+
+  Once we have a valid networkstatus consensus and we've checked all
+  its signatures, we start asking for relay descriptors. We stay in this
+  phase until we have received a 'connected' relay cell in response to
+  a request for descriptors.
+
+  Phase 50:
+  tag=loading_descriptors summary="Loading relay descriptors"
+
+  We will ask for relay descriptors from several different locations,
+  so this step will probably make up the bulk of the bootstrapping,
+  especially for users with slow connections. We stay in this phase until
+  we have descriptors for at least 1/4 of the usable relays listed in
+  the networkstatus consensus. This phase is also a good opportunity to
+  use the "progress" keyword to indicate partial steps.
+
+  Phase 80:
+  tag=conn_or summary="Connecting to entry guard"
+
+  Once we have a valid consensus and enough relay descriptors, we choose
+  some entry guards and start trying to build some circuits. This step
+  is similar to the "conn_dir" phase above; the only difference is
+  the context.
+
+  If a Tor starts with enough recent cached directory information,
+  its first bootstrap status event will be for the conn_or phase.
+
+  Phase 85:
+  tag=handshake_or summary="Finishing handshake with entry guard"
+
+  This phase is similar to the "handshake_dir" phase, but it gets reached
+  if we finish a TCP connection to a Tor relay and we have already reached
+  the "conn_or" phase. We'll stay in this phase until we complete a TLS
+  handshake with a Tor relay.
+
+  Phase 90:
+  tag=circuit_create "Establishing circuits"
+
+  Once we've finished our TLS handshake with an entry guard, we will
+  set about rying to make some 3-hop circuits in case we need them soon.
+
+  Phase 100:
+  tag=done summary="Done"
+
+  A full 3-hop circuit has been established. Tor is ready to handle
+  application connections now.
 

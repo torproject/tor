@@ -3823,43 +3823,72 @@ init_cookie_authentication(int enabled)
   return 0;
 }
 
-/** Convert the name of a bootstrapping phase <b>s</b> into a string
- * suitable for display by the controller. */
-static const char *
-bootstrap_status_to_string(bootstrap_status_t s)
+/** Convert the name of a bootstrapping phase <b>s</b> into strings
+ * <b>tag</b> and <b>summary</b> suitable for display by the controller. */
+static void
+bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
+                           const char **summary)
 {
   switch (s) {
     case BOOTSTRAP_STATUS_STARTING:
-      return "Starting";
+      *tag = "starting";
+      *summary = "Starting";
+      break;
     case BOOTSTRAP_STATUS_CONN_DIR:
-      return "Connecting to directory mirror";
+      *tag = "conn_dir";
+      *summary = "Connecting to directory mirror";
+      break;
     case BOOTSTRAP_STATUS_HANDSHAKE:
-      return "Finishing handshake";
+      *tag = "status_handshake";
+      *summary = "Finishing handshake";
+      break;
     case BOOTSTRAP_STATUS_HANDSHAKE_DIR:
-      return "Finishing handshake with directory mirror";
+      *tag = "handshake_dir";
+      *summary = "Finishing handshake with directory mirror";
+      break;
     case BOOTSTRAP_STATUS_ONEHOP_CREATE:
-      return "Establishing one-hop circuit for dir info";
+      *tag = "onehop_create";
+      *summary = "Establishing one-hop circuit for dir info";
+      break;
     case BOOTSTRAP_STATUS_REQUESTING_STATUS:
-      return "Asking for networkstatus consensus";
+      *tag = "requesting_status";
+      *summary = "Asking for networkstatus consensus";
+      break;
     case BOOTSTRAP_STATUS_LOADING_STATUS:
-      return "Loading networkstatus consensus";
+      *tag = "loading_status";
+      *summary = "Loading networkstatus consensus";
+      break;
     case BOOTSTRAP_STATUS_LOADING_KEYS:
-      return "Loading authority key certs";
+      *tag = "loading_keys";
+      *summary = "Loading authority key certs";
+      break;
     case BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS:
-      return "Asking for relay descriptors";
+      *tag = "requesting_descriptors";
+      *summary = "Asking for relay descriptors";
+      break;
     case BOOTSTRAP_STATUS_LOADING_DESCRIPTORS:
-      return "Loading relay descriptors";
+      *tag = "loading_descriptors";
+      *summary = "Loading relay descriptors";
+      break;
     case BOOTSTRAP_STATUS_CONN_OR:
-      return "Connecting to entry guard";
+      *tag = "conn_or";
+      *summary = "Connecting to entry guard";
+      break;
     case BOOTSTRAP_STATUS_HANDSHAKE_OR:
-      return "Finishing handshake with entry guard";
+      *tag = "handshake_or";
+      *summary = "Finishing handshake with entry guard";
+      break;
     case BOOTSTRAP_STATUS_CIRCUIT_CREATE:
-      return "Establishing circuits";
+      *tag = "circuit_create";
+      *summary = "Establishing circuits";
+      break;
     case BOOTSTRAP_STATUS_DONE:
-      return "Done!";
+      *tag = "done";
+      *summary = "Done";
+      break;
     default:
       log_warn(LD_BUG, "Unrecognized bootstrap status code %d", s);
-      return "unknown";
+      *tag = *summary = "unknown";
   }
 }
 
@@ -3872,6 +3901,7 @@ int
 control_event_bootstrap(bootstrap_status_t status, int percent)
 {
   static int last_percent = 0;
+  const char *tag, *summary;
 
   if (last_percent == 100)
     return 0; /* already bootstrapped; nothing to be done here. */
@@ -3886,35 +3916,19 @@ control_event_bootstrap(bootstrap_status_t status, int percent)
     }
   }
 
-#if 0
-  if (status <= last_percent)
-    switch (status) {
-      case BOOTSTRAP_STATUS_CONN_DIR:
-      case BOOTSTRAP_STATUS_ONEHOP_CREATE:
-      case BOOTSTRAP_STATUS_HANDSHAKE_DIR:
-      case BOOTSTRAP_STATUS_REQUESTING_STATUS:
-      case BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS:
-        boring = 1;
-        break;
-      default: ;
-    }
-
-  if (!boring)
-#endif
   if (status > last_percent || (percent && percent > last_percent)) {
+    bootstrap_status_to_string(status, &tag, &summary);
     log_notice(LD_CONTROL, "Bootstrapped %d%%: %s.",
-               percent ? percent : status,
-               bootstrap_status_to_string(status));
+               percent ? percent : status, summary);
     control_event_client_status(LOG_NOTICE,
-        "BOOTSTRAP PROGRESS=%d SUMMARY=\"%s\"",
-        percent ? percent : status,
-        bootstrap_status_to_string(status));
+        "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
+        percent ? percent : status, tag, summary);
   }
 
-  if (percent > last_percent) /* incremental progress within a milestone */
-    last_percent = percent;
   if (status > last_percent) /* new milestone reached */
     last_percent = status ;
+  if (percent > last_percent) /* incremental progress within a milestone */
+    last_percent = percent;
   return 0;
 }
 
