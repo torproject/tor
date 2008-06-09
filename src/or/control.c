@@ -3825,7 +3825,7 @@ init_cookie_authentication(int enabled)
 
 /** Convert the name of a bootstrapping phase <b>s</b> into strings
  * <b>tag</b> and <b>summary</b> suitable for display by the controller. */
-static void
+static int
 bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
                            const char **summary)
 {
@@ -3887,48 +3887,94 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
       *summary = "Done";
       break;
     default:
-      log_warn(LD_BUG, "Unrecognized bootstrap status code %d", s);
+//      log_warn(LD_BUG, "Unrecognized bootstrap status code %d", s);
       *tag = *summary = "unknown";
+      return -1;
   }
+  return 0;
 }
 
+/** What percentage through the bootstrap process are we? We remember
+ * this so we can avoid sending redundant bootstrap status events, and
+ * so we can guess context for the bootstrap messages which are
+ * ambiguous. */
+static int bootstrap_percent = 0;
+
+/** How many problems have we had getting to the next bootstrapping phase?
+ * These include failure to establish a connection to a Tor relay,
+ * failures to finish the TLS handshake, failures to validate the
+ * consensus document, etc. */
+static int bootstrap_problems = 0;
+
+/* We only tell the controller once we've hit a threshold of problems
+ * for the current phase. */
+#define BOOTSTRAP_PROBLEM_THRESHOLD 10
+
 /** Called when Tor has made progress at bootstrapping its directory
- * information and initial circuits. <b>status</b> is the new status,
- * that is, what task we will be doing next. <b>percent</b> is zero if
- * we just started this task, else it represents progress on the task.
- */
-int
-control_event_bootstrap(bootstrap_status_t status, int percent)
+ * information and initial circuits.
+ *
+ * <b>status</b> is the new status, that is, what task we will be doing
+ * next. <b>percent</b> is zero if we just started this task, else it
+ * represents progress on the task. */
+void
+control_event_bootstrap(bootstrap_status_t status, int progress)
 {
-  static int last_percent = 0;
   const char *tag, *summary;
 
-  if (last_percent == 100)
-    return 0; /* already bootstrapped; nothing to be done here. */
+  if (bootstrap_percent == 100)
+    return; /* already bootstrapped; nothing to be done here. */
 
   /* special case for handshaking status, since our TLS handshaking code
    * can't distinguish what the connection is going to be for. */
   if (status == BOOTSTRAP_STATUS_HANDSHAKE) {
-    if (last_percent < BOOTSTRAP_STATUS_CONN_OR) {
+    if (bootstrap_percent < BOOTSTRAP_STATUS_CONN_OR) {
       status =  BOOTSTRAP_STATUS_HANDSHAKE_DIR;
     } else {
       status = BOOTSTRAP_STATUS_HANDSHAKE_OR;
     }
   }
 
-  if (status > last_percent || (percent && percent > last_percent)) {
+  if (status > bootstrap_percent ||
+      (progress && progress > bootstrap_percent)) {
     bootstrap_status_to_string(status, &tag, &summary);
     log_notice(LD_CONTROL, "Bootstrapped %d%%: %s.",
-               percent ? percent : status, summary);
+               progress ? progress : status, summary);
     control_event_client_status(LOG_NOTICE,
         "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
-        percent ? percent : status, tag, summary);
+        progress ? progress : status, tag, summary);
+    if (status > bootstrap_percent) {
+      bootstrap_percent = status; /* new milestone reached */
+    }
+    if (progress > bootstrap_percent) {
+      /* incremental progress within a milestone */
+      bootstrap_percent = progress;
+    }
+    bootstrap_problems = 0; /* Progress! Reset our problem counter. */
   }
+}
 
-  if (status > last_percent) /* new milestone reached */
-    last_percent = status ;
-  if (percent > last_percent) /* incremental progress within a milestone */
-    last_percent = percent;
-  return 0;
+/* Called when Tor has failed to make bootstrapping progress in a way
+ * that indicates a problem. <b>warn</b> gives a hint as to why, and
+ * <b>reason</b> provides an "or_conn_end_reason" tag).
+ */
+void
+control_event_bootstrap_problem(const char *warn, int reason)
+{
+  int status = bootstrap_percent;
+  const char *tag, *summary;
+
+//  if (++bootstrap_problems != BOOTSTRAP_PROBLEM_THRESHOLD)
+//    return; /* no worries yet */
+
+  while (bootstrap_status_to_string(status, &tag, &summary) < 0)
+    status--; /* find a recognized status string based on current progress */
+
+  log_warn(LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s)",
+           status, summary, warn,
+           or_conn_end_reason_to_string(reason));
+  control_event_client_status(LOG_WARN,
+      "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" %s",
+      bootstrap_percent, tag, summary, warn,
+      or_conn_end_reason_to_string(reason));
 }
 

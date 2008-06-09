@@ -165,7 +165,7 @@ Status: Open
   tag=circuit_create "Establishing circuits"
 
   Once we've finished our TLS handshake with an entry guard, we will
-  set about rying to make some 3-hop circuits in case we need them soon.
+  set about trying to make some 3-hop circuits in case we need them soon.
 
   Phase 100:
   tag=done summary="Done"

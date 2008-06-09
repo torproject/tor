@@ -905,6 +905,9 @@ typedef struct or_connection_t {
 
   tor_tls_t *tls; /**< TLS connection state. */
   int tls_error; /**< Last tor_tls error code. */
+  /* XXX either merge this with tls_error, or do all our activity right
+   * when we compute this value so we don't have to store it. */
+  int socket_error; /**< If conn dies, remember why. */
   /** When we last used this conn for any client traffic. If not
    * recent, we can rate limit it further. */
   time_t client_used;
@@ -3035,7 +3038,8 @@ typedef enum {
   BOOTSTRAP_STATUS_DONE=100
 } bootstrap_status_t;
 
-int control_event_bootstrap(bootstrap_status_t status, int percent);
+void control_event_bootstrap(bootstrap_status_t status, int progress);
+void control_event_bootstrap_problem(const char *warn, int reason);
 
 #ifdef CONTROL_PRIVATE
 /* Used only by control.c and test.c */

@@ -2186,7 +2186,8 @@ note_client_request(int purpose, int compressed, size_t bytes)
     case DIR_PURPOSE_FETCH_CONSENSUS:     kind = "dl/consensus"; break;
     case DIR_PURPOSE_FETCH_CERTIFICATE:   kind = "dl/cert"; break;
     case DIR_PURPOSE_FETCH_STATUS_VOTE:   kind = "dl/vote"; break;
-    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES: kind = "dl/detached_sig"; break;
+    case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES: kind = "dl/detached_sig";
+         break;
     case DIR_PURPOSE_FETCH_SERVERDESC:    kind = "dl/server"; break;
     case DIR_PURPOSE_FETCH_EXTRAINFO:     kind = "dl/extra"; break;
     case DIR_PURPOSE_UPLOAD_DIR:          kind = "dl/ul-dir"; break;
