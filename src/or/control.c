@@ -3963,8 +3963,11 @@ control_event_bootstrap_problem(const char *warn, int reason)
   int status = bootstrap_percent;
   const char *tag, *summary;
 
-//  if (++bootstrap_problems != BOOTSTRAP_PROBLEM_THRESHOLD)
-//    return; /* no worries yet */
+  if (bootstrap_percent == 100)
+    return; /* already bootstrapped; nothing to be done here. */
+
+  if (++bootstrap_problems != BOOTSTRAP_PROBLEM_THRESHOLD)
+    return; /* no worries yet */
 
   while (bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
