@@ -2167,7 +2167,12 @@ already_fetching_directory(int purpose)
 #ifdef INSTRUMENT_DOWNLOADS
 /** Map used to keep track of how much data we've up/downloaded in what kind
  * of request.  Maps from request type to pointer to uint64_t. */
-static strmap_t *request_bytes_map = NULL;
+typedef struct request_t {
+  uint64_t bytes;
+  uint64_t count;
+} request_t;
+
+static strmap_t *request_map = NULL;
 
 static void
 note_client_request(int purpose, int compressed, size_t bytes)
@@ -2204,22 +2209,28 @@ note_client_request(int purpose, int compressed, size_t bytes)
   tor_free(key);
 }
 
+static void
+ensure_request_map_initialized(void) {
+  if (!request_map)
+    request_map = strmap_new();
+}
+
 /** Called when we just transmitted or received <b>bytes</b> worth of data
  * because of a request of type <b>key</b> (an arbitrary identifier): adds
  * <b>bytes</b> to the total associated with key. */
 void
 note_request(const char *key, size_t bytes)
 {
-  uint64_t *n;
-  if (!request_bytes_map)
-    request_bytes_map = strmap_new();
+  request_t *r;
+  ensure_request_map_initialized();
 
-  n = strmap_get(request_bytes_map, key);
-  if (!n) {
-    n = tor_malloc_zero(sizeof(uint64_t));
-    strmap_set(request_bytes_map, key, n);
+  r = strmap_get(request_map, key);
+  if (!r) {
+    r = tor_malloc_zero(sizeof(request_t));
+    strmap_set(request_map, key, r);
   }
-  *n += bytes;
+  r->bytes += bytes;
+  r->count++;
 }
 
 /** Return a newly allocated string holding a summary of bytes used per
@@ -2232,21 +2243,20 @@ directory_dump_request_log(void)
   char *result;
   strmap_iter_t *iter;
 
-  if (!request_bytes_map)
-    request_bytes_map = strmap_new();
+  ensure_request_map_initialized();
 
   lines = smartlist_create();
 
-  for (iter = strmap_iter_init(request_bytes_map);
+  for (iter = strmap_iter_init(request_map);
        !strmap_iter_done(iter);
-       iter = strmap_iter_next(request_bytes_map, iter)) {
+       iter = strmap_iter_next(request_map, iter)) {
     const char *key;
     void *val;
-    uint64_t *n;
+    request_t *r;
     strmap_iter_get(iter, &key, &val);
-    n = val;
-    tor_snprintf(tmp, sizeof(tmp), "%s  "U64_FORMAT"\n",
-                 key, U64_PRINTF_ARG(*n));
+    r = val;
+    tor_snprintf(tmp, sizeof(tmp), "%s  "U64_FORMAT"  "U64_FORMAT"\n",
+                 key, U64_PRINTF_ARG(r->bytes), U64_PRINTF_ARG(r->count));
     smartlist_add(lines, tor_strdup(tmp));
   }
   smartlist_sort_strings(lines);
