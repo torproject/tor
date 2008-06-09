@@ -4168,6 +4168,52 @@ get_dir_info_status_string(void)
   return dir_info_status;
 }
 
+static void
+count_usable_descriptors(int *num_present, int *num_usable,
+                         const networkstatus_t *consensus,
+                         or_options_t *options, time_t now)
+{
+  *num_present = 0, *num_usable=0;
+
+  SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
+     {
+       if (client_would_use_router(rs, now, options)) {
+         ++*num_usable; /* the consensus says we want it. */
+         if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
+           /* we have the descriptor listed in the consensus. */
+           ++*num_present;
+         }
+       }
+     });
+
+  log_debug(LD_DIR, "%d usable, %d present.", *num_usable, *num_present);
+}
+
+int
+count_loading_descriptors_progress(void)
+{
+  int num_present = 0, num_usable=0;
+  time_t now = time(NULL);
+  const networkstatus_t *consensus =
+    networkstatus_get_reasonably_live_consensus(now);
+  double fraction;
+
+  if (!consensus)
+    return 0; /* can't count descriptors if we have no list of them */
+
+  count_usable_descriptors(&num_present, &num_usable,
+                           consensus, get_options(), now);
+
+  if (num_usable == 0)
+    return 0; /* don't div by 0 */
+  fraction = num_present / (num_usable/4.);
+  if (fraction > 1.0)
+    return 0; /* it's not the number of descriptors holding us back */
+  return BOOTSTRAP_STATUS_LOADING_DESCRIPTORS +
+           fraction*(BOOTSTRAP_STATUS_CONN_OR-1 -
+                     BOOTSTRAP_STATUS_LOADING_DESCRIPTORS);
+}
+
 /** Change the value of have_min_dir_info, setting it true iff we have enough
  * network and router information to build circuits.  Clear the value of
  * need_to_update_have_min_dir_info. */
@@ -4200,18 +4246,7 @@ update_router_have_minimum_dir_info(void)
     goto done;
   }
 
-  SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
-     {
-       if (client_would_use_router(rs, now, options)) {
-         ++num_usable; /* the consensus says we want it. */
-         if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
-           /* we have the descriptor listed in the consensus. */
-           ++num_present;
-         }
-       }
-     });
-
-  log_debug(LD_DIR, "%d usable, %d present.", num_usable, num_present);
+  count_usable_descriptors(&num_present, &num_usable, consensus, options, now);
 
   if (num_present < num_usable/4) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
