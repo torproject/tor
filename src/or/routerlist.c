@@ -4189,6 +4189,7 @@ count_usable_descriptors(int *num_present, int *num_usable,
   log_debug(LD_DIR, "%d usable, %d present.", *num_usable, *num_present);
 }
 
+/* XXXX021 should this be static? */
 int
 count_loading_descriptors_progress(void)
 {
@@ -4209,9 +4210,9 @@ count_loading_descriptors_progress(void)
   fraction = num_present / (num_usable/4.);
   if (fraction > 1.0)
     return 0; /* it's not the number of descriptors holding us back */
-  return BOOTSTRAP_STATUS_LOADING_DESCRIPTORS +
-           fraction*(BOOTSTRAP_STATUS_CONN_OR-1 -
-                     BOOTSTRAP_STATUS_LOADING_DESCRIPTORS);
+  return BOOTSTRAP_STATUS_LOADING_DESCRIPTORS + (int)
+    (fraction*(BOOTSTRAP_STATUS_CONN_OR-1 -
+               BOOTSTRAP_STATUS_LOADING_DESCRIPTORS));
 }
 
 /** Change the value of have_min_dir_info, setting it true iff we have enough
