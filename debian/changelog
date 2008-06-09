@@ -4,6 +4,27 @@ tor (0.2.1.0-unreleased-1) XXperimental; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Wed, 19 Mar 2008 20:09:25 +0100
 
+tor (0.2.0.27-rc-1) experimental; urgency=low
+
+  * New upstream version.
+  * Add tor-geoipdb arch: all package for the geoip database.
+  * Update debian/rules so that there now is a binary-common target
+    and the binary-indep and binary-arch targets call make with
+    proper DH_OPTIONS options.  This is taken from the template
+    that dh_make nowadays uses for multi-binary packages.
+  * Unit tests are broken, yay.
+  * Use ${binary:Version} to depend on the right tor binary package from
+    the tor-dbg package instead of ${Source-Version}.  Some guy on the
+    internet said the latter was deprecated.
+  * Add Homepage: https://www.torproject.org/ field to control file.
+  * And mention www.tp.o instead of the old tor.eff.org in the long
+    description.
+  * No longer ignore failure of make clean in the clean target.
+  * Support passing of parallel=<n> in build options.
+  * Change declared Standards-Version to 3.8.0.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 06 Jun 2008 01:11:33 +0200
+
 tor (0.2.0.26-rc-1) experimental; urgency=critical
 
   * New upstream version.
