@@ -4235,7 +4235,7 @@ update_router_have_minimum_dir_info(void)
     control_event_bootstrap(BOOTSTRAP_STATUS_CONN_OR, 0);
   }
   if (!res && have_min_dir_info) {
-    quiet = directory_too_idle_to_fetch_descriptors(options, now);
+    int quiet = directory_too_idle_to_fetch_descriptors(options, now);
     log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
         "Our directory information is no longer up-to-date "
         "enough to build circuits: %s", dir_info_status);
