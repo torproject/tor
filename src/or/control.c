@@ -3906,10 +3906,10 @@ control_event_bootstrap(bootstrap_status_t status, int percent)
   if (last_percent == 100)
     return 0; /* already bootstrapped; nothing to be done here. */
 
-  /* special case for handshaking status, since our tls handshaking code
+  /* special case for handshaking status, since our TLS handshaking code
    * can't distinguish what the connection is going to be for. */
   if (status == BOOTSTRAP_STATUS_HANDSHAKE) {
-    if (last_percent < BOOTSTRAP_STATUS_HANDSHAKE_OR) {
+    if (last_percent < BOOTSTRAP_STATUS_CONN_OR) {
       status =  BOOTSTRAP_STATUS_HANDSHAKE_DIR;
     } else {
       status = BOOTSTRAP_STATUS_HANDSHAKE_OR;
