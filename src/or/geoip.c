@@ -288,7 +288,7 @@ geoip_note_client_seen(geoip_client_action_t action,
   }
 
   /* DOCDOC */
-  while (current_request_period_starts + REQUEST_HIST_PERIOD >= now) {
+  while (current_request_period_starts + REQUEST_HIST_PERIOD < now) {
     if (!geoip_countries)
       geoip_countries = smartlist_create();
     SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
