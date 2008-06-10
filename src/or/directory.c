@@ -2210,8 +2210,10 @@ note_client_request(int purpose, int compressed, size_t bytes)
   tor_free(key);
 }
 
+/** DOCDOC */
 static void
-ensure_request_map_initialized(void) {
+ensure_request_map_initialized(void)
+{
   if (!request_map)
     request_map = strmap_new();
 }
