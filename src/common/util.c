@@ -1604,8 +1604,8 @@ fdopen_file(open_file_t *file_data)
     return file_data->stdio_file;
   tor_assert(file_data->fd >= 0);
   if (!(file_data->stdio_file = fdopen(file_data->fd, "a"))) {
-    log_warn(LD_FS, "Couldn't fdopen \"%s\": %s", file_data->filename,
-             strerror(errno));
+    log_warn(LD_FS, "Couldn't fdopen \"%s\" [%d]: %s", file_data->filename,
+             file_data->fd, strerror(errno));
   }
   return file_data->stdio_file;
 }
@@ -1619,8 +1619,10 @@ start_writing_to_stdio_file(const char *fname, int open_flags, int mode,
   FILE *res;
   if (start_writing_to_file(fname, open_flags, mode, data_out)<0)
     return NULL;
-  if (!(res = fdopen_file(*data_out)))
+  if (!(res = fdopen_file(*data_out))) {
     abort_writing_to_file(*data_out);
+    *data_out = NULL;
+  }
   return res;
 }
 

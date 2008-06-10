@@ -3342,6 +3342,7 @@ void geoip_note_client_seen(geoip_client_action_t action,
 void geoip_remove_old_clients(time_t cutoff);
 time_t geoip_get_history_start(void);
 char *geoip_get_client_history(time_t now, geoip_client_action_t action);
+char *geoip_get_request_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer);
 void geoip_free_all(void);
