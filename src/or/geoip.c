@@ -511,6 +511,8 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
       char buf[32];
       for (i=0; i < REQUEST_HIST_LEN; ++i)
         tot += n[i];
+      if (!tot)
+        continue;
       tor_snprintf(buf, sizeof(buf), "%s=%ld", c->countrycode, (long)tot);
       smartlist_add(entries, tor_strdup(buf));
   });
@@ -541,7 +543,7 @@ dump_geoip_stats(void)
                                     0600, &open_file);
   if (!out)
     goto done;
-  if (fprintf(out, "written %s\nstarted-at %s\nns-ips %s\nns-v2-ips%s\n",
+  if (fprintf(out, "written %s\nstarted-at %s\nns-ips %s\nns-v2-ips %s\n",
               written, since,
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
@@ -553,7 +555,7 @@ dump_geoip_stats(void)
   format_iso_time(since, request_start);
   data_v2 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS);
-  if (fprintf(out, "requests-start %s\nn-ns-reqs %s\nn-v2-ns_reqs%s\n",
+  if (fprintf(out, "requests-start %s\nn-ns-reqs %s\nn-v2-ns_reqs %s\n",
               since,
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
