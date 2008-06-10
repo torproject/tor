@@ -289,6 +289,8 @@ geoip_note_client_seen(geoip_client_action_t action,
 
   /* DOCDOC */
   while (current_request_period_starts + REQUEST_HIST_PERIOD >= now) {
+    if (!geoip_countries)
+      geoip_countries = smartlist_create();
     SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
         memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
                 sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
@@ -509,7 +511,7 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
       char buf[32];
       for (i=0; i < REQUEST_HIST_LEN; ++i)
         tot += n[i];
-      tor_snprintf(buf, sizeof(buf), "%s=%ld", c->countrycode, (long)n);
+      tor_snprintf(buf, sizeof(buf), "%s=%ld", c->countrycode, (long)tot);
       smartlist_add(entries, tor_strdup(buf));
   });
   smartlist_sort_strings(entries);
