@@ -673,7 +673,8 @@ typedef enum {
 #define LEGAL_NICKNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-/** Name to use in client TLS certificates if no nickname is given. */
+/** Name to use in client TLS certificates if no nickname is given. Once
+ * Tor 0.1.2.x is obsolete, we can remove this. */
 #define DEFAULT_CLIENT_NICKNAME "client"
 
 /** Number of bytes in a SOCKS4 header. */

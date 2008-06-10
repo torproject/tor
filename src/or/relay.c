@@ -1289,7 +1289,7 @@ uint64_t stats_n_data_bytes_received = 0;
  * and the appropriate package windows aren't empty, grab a cell
  * and send it down the circuit.
  *
- * Return -1 (and send a RELAY_END cell if necessary) if conn should
+ * Return -1 (and send a RELAY_COMMAND_END cell if necessary) if conn should
  * be marked for close, else return 0.
  */
 int

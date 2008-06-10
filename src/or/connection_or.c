@@ -898,6 +898,8 @@ connection_or_set_state_open(or_connection_t *conn)
        * chose not to use it. (Otherwise
        * connection_about_to_close_connection() will call a big pile of
        * functions to indicate we shouldn't try it again.) */
+      log_debug(LD_OR, "New entry guard was reachable, but closing this "
+                "connection so we can retry the earlier entry guards.");
       circuit_n_conn_done(conn, 0);
       return -1;
     }

@@ -1917,7 +1917,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
   if (e->bad_since)
     return NULL;
   /* no good if it's unreachable, unless assume_unreachable or can_retry. */
-  if ((!assume_reachable && !e->can_retry) &&
+  if (!assume_reachable && !e->can_retry &&
       e->unreachable_since && !entry_is_time_to_retry(e, time(NULL)))
     return NULL;
   r = router_get_by_digest(e->identity);
