@@ -3605,7 +3605,7 @@ int connection_edge_package_raw_inbuf(edge_connection_t *conn,
                                       int package_partial);
 void connection_edge_consider_sending_sendme(edge_connection_t *conn);
 socks5_reply_status_t connection_edge_end_reason_socks5_response(int reason);
-int errno_to_end_reason(int e);
+int errno_to_end_stream_reason(int e);
 
 extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;

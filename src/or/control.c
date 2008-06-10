@@ -3266,32 +3266,32 @@ control_tls_error_to_reason(int e)
 }
 
 /** Convert the reason for ending an OR connection <b>r</b> into the format
- * used in ORCONN events. Return NULL if the reason is unrecognized. */
+ * used in ORCONN events. Return "UNKNOWN" if the reason is unrecognized. */
 static const char *
 or_conn_end_reason_to_string(int r)
 {
   switch (r) {
     case END_OR_CONN_REASON_DONE:
-      return "REASON=DONE";
+      return "DONE";
     case END_OR_CONN_REASON_TCP_REFUSED:
-      return "REASON=CONNECTREFUSED";
+      return "CONNECTREFUSED";
     case END_OR_CONN_REASON_OR_IDENTITY:
-      return "REASON=IDENTITY";
+      return "IDENTITY";
     case END_OR_CONN_REASON_TLS_CONNRESET:
-      return "REASON=CONNECTRESET";
+      return "CONNECTRESET";
     case END_OR_CONN_REASON_TLS_TIMEOUT:
-      return "REASON=TIMEOUT";
+      return "TIMEOUT";
     case END_OR_CONN_REASON_TLS_NO_ROUTE:
-      return "REASON=NOROUTE";
+      return "NOROUTE";
     case END_OR_CONN_REASON_TLS_IO_ERROR:
-      return "REASON=IOERROR";
+      return "IOERROR";
     case END_OR_CONN_REASON_TLS_MISC:
-      return "REASON=MISC";
+      return "MISC";
     case 0:
       return "";
     default:
       log_warn(LD_BUG, "Unrecognized or_conn reason code %d", r);
-      return "REASON=BOGUS";
+      return "UNKNOWN";
   }
 }
 
@@ -3333,15 +3333,17 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
   if (EVENT_IS_INTERESTING1S(EVENT_OR_CONN_STATUS)) {
     orconn_target_get_name(0, name, sizeof(name), conn);
     send_control_event_extended(EVENT_OR_CONN_STATUS, SHORT_NAMES,
-                          "650 ORCONN %s %s@%s%s\r\n",
+                          "650 ORCONN %s %s@%s%s%s\r\n",
                           name, status,
+                          reason ? "REASON=" : "",
                           or_conn_end_reason_to_string(reason), ncircs_buf);
   }
   if (EVENT_IS_INTERESTING1L(EVENT_OR_CONN_STATUS)) {
     orconn_target_get_name(1, name, sizeof(name), conn);
     send_control_event_extended(EVENT_OR_CONN_STATUS, LONG_NAMES,
-                          "650 ORCONN %s %s@%s%s\r\n",
+                          "650 ORCONN %s %s@%s%s%s\r\n",
                           name, status,
+                          reason ? "REASON=" : "",
                           or_conn_end_reason_to_string(reason), ncircs_buf);
   }
 
@@ -3976,7 +3978,7 @@ control_event_bootstrap_problem(const char *warn, int reason)
            status, summary, warn,
            or_conn_end_reason_to_string(reason));
   control_event_client_status(LOG_WARN,
-      "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" %s",
+      "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s",
       bootstrap_percent, tag, summary, warn,
       or_conn_end_reason_to_string(reason));
 }

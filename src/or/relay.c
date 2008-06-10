@@ -663,7 +663,7 @@ connection_edge_end_reason_socks5_response(int reason)
  * appropriate for use in a RELAY END cell.
  */
 int
-errno_to_end_reason(int e)
+errno_to_end_stream_reason(int e)
 {
   switch (e) {
     case EPIPE:

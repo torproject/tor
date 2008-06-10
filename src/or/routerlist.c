@@ -4251,7 +4251,9 @@ count_usable_descriptors(int *num_present, int *num_usable,
   log_debug(LD_DIR, "%d usable, %d present.", *num_usable, *num_present);
 }
 
-/* XXXX021 should this be static? */
+/** We just fetched a new set of descriptors. Compute how far through
+ * the "loading descriptors" bootstrapping phase we are, so we can inform
+ * the controller of our progress. */
 int
 count_loading_descriptors_progress(void)
 {
