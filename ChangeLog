@@ -57,6 +57,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       run out of reachable directory mirrors. Once upon a time reloading
       it would set the 'is_running' flag back to 1 for them. It hasn't
       done that for a long time.
+    - In very rare situations new hidden service descriptors were published
+      earlier than 30 seconds after the last change to the service, with the
+      30 seconds being the current voodoo saying that a descriptor is stable.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
