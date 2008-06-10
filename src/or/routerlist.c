@@ -80,6 +80,11 @@ static smartlist_t *warned_nicknames = NULL;
  * download is low. */
 static time_t last_routerdesc_download_attempted = 0;
 
+/* DOCDOC This is a massive massive kludge XXXX021 */
+static uint64_t sl_last_total_weighted_bw = 0;
+static double sl_last_guard_weight = 0.0;
+static double sl_last_exit_weight = 0.0;
+
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
 int
@@ -862,6 +867,57 @@ router_pick_directory_server(authority_type_t type, int flags)
   return choice;
 }
 
+/** DOCDOC */
+int
+router_get_my_share_of_directory_requests(double *v2_share_out,
+                                          double *v3_share_out)
+{
+  routerinfo_t *me = router_get_my_routerinfo();
+  routerinfo_t *me_published;
+  routerstatus_t *rs;
+  const int pds_flags = PDS_ALLOW_SELF|PDS_IGNORE_FASCISTFIREWALL;
+  uint32_t bw;
+  *v2_share_out = *v3_share_out = 0.0;
+  if (!me)
+    return -1;
+  me_published = router_get_by_digest(me->cache_info.identity_digest);
+  rs = router_get_consensus_status_by_id(me->cache_info.identity_digest);
+  if (!rs || !me_published)
+    return -1;
+  bw = me_published->bandwidthcapacity;
+  if (!rs->is_running)
+    return 0;
+
+  /* Calling for side effect */
+  if (rs->is_v2_dir) {
+    sl_last_total_weighted_bw = 0;
+    router_pick_directory_server(V2_AUTHORITY, pds_flags);
+    if (sl_last_total_weighted_bw != 0) {
+      double share = (double)bw;
+      if (rs->is_exit)
+        share *= sl_last_exit_weight;
+      if (rs->is_possible_guard)
+        share *= sl_last_guard_weight;
+      *v2_share_out = share / U64_TO_DBL(sl_last_total_weighted_bw);
+    }
+  }
+
+  if (rs->version_supports_v3_dir) {
+    sl_last_total_weighted_bw = 0;
+    router_pick_directory_server(V3_AUTHORITY, pds_flags);
+    if (sl_last_total_weighted_bw != 0) {
+      double share = (double)bw;
+      if (rs->is_exit)
+        share *= sl_last_exit_weight;
+      if (rs->is_possible_guard)
+        share *= sl_last_guard_weight;
+      *v2_share_out = share / U64_TO_DBL(sl_last_total_weighted_bw);
+    }
+  }
+
+  return 0;
+}
+
 /** Return the trusted_dir_server_t for the directory authority whose identity
  * key hashes to <b>digest</b>, or NULL if no such authority is known.
  */
@@ -1577,6 +1633,12 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
         total_bw += bandwidths[i];
     }
   }
+
+  /* XXXX021 this is a kludge to expose these values. */
+  sl_last_total_weighted_bw = total_bw;
+  sl_last_guard_weight = guard_weight;
+  sl_last_exit_weight = exit_weight;
+
   log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
             ", exit bw = "U64_FORMAT
             ", nonexit bw = "U64_FORMAT", exit weight = %lf "

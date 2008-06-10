@@ -3967,6 +3967,8 @@ routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
 routerstatus_t *router_pick_trusteddirserver(authority_type_t type, int flags);
+int router_get_my_share_of_directory_requests(double *v2_share_out,
+                                              double *v3_share_out);
 void router_reset_status_download_failures(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 int routers_in_same_family(routerinfo_t *r1, routerinfo_t *r2);

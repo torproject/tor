@@ -528,6 +528,7 @@ dump_geoip_stats(void)
   char *data_v2 = NULL, *data_v3 = NULL;
   char since[ISO_TIME_LEN+1], written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
+  double v2_share = 0.0, v3_share = 0.0;
   FILE *out;
 
   data_v2 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
@@ -554,6 +555,12 @@ dump_geoip_stats(void)
               since,
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
+  if (!router_get_my_share_of_directory_requests(&v2_share, &v3_share)) {
+    if (fprintf(out, "v2-ns-share %0.2lf%%\n", v2_share*100) < 0)
+      goto done;
+    if (fprintf(out, "v3-ns-share %0.2lf%%\n", v3_share*100) < 0)
+      goto done;
+  }
 
   finish_writing_to_file(open_file);
   open_file = NULL;
