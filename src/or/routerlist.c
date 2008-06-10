@@ -911,7 +911,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
         share *= sl_last_exit_weight;
       if (rs->is_possible_guard)
         share *= sl_last_guard_weight;
-      *v2_share_out = share / U64_TO_DBL(sl_last_total_weighted_bw);
+      *v3_share_out = share / U64_TO_DBL(sl_last_total_weighted_bw);
     }
   }
 

@@ -962,8 +962,9 @@ run_scheduled_events(time_t now)
 
   if (time_to_dump_geoip_stats < now) {
 #define DUMP_GEOIP_STATS_INTERVAL (60*60);
+    if (time_to_dump_geoip_stats)
+      dump_geoip_stats();
     time_to_dump_geoip_stats = now + DUMP_GEOIP_STATS_INTERVAL;
-    dump_geoip_stats();
   }
 
   /** 2. Periodically, we consider getting a new directory, getting a

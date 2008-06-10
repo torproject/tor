@@ -559,7 +559,7 @@ dump_geoip_stats(void)
   format_iso_time(since, request_start);
   data_v2 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS);
-  if (fprintf(out, "requests-start %s\nn-ns-reqs %s\nn-v2-ns_reqs %s\n",
+  if (fprintf(out, "requests-start %s\nn-ns-reqs %s\nn-v2-ns-reqs %s\n",
               since,
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
