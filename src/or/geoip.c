@@ -291,6 +291,10 @@ geoip_note_client_seen(geoip_client_action_t action,
   while (current_request_period_starts + REQUEST_HIST_PERIOD < now) {
     if (!geoip_countries)
       geoip_countries = smartlist_create();
+    if (!current_request_period_starts) {
+      current_request_period_starts = now;
+      break;
+    }
     SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
         memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
                 sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
@@ -300,9 +304,9 @@ geoip_note_client_seen(geoip_client_action_t action,
         c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
       });
     current_request_period_starts += REQUEST_HIST_PERIOD;
-    if (n_old_request_periods < REQUEST_HIST_PERIOD-1)
+    if (n_old_request_periods < REQUEST_HIST_LEN-1)
       ++n_old_request_periods;
-  }
+   }
 
   /* We use the low 3 bits of the time to encode the action. Since we're
    * potentially remembering tons of clients, we don't want to make
