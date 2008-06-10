@@ -1335,8 +1335,10 @@ rend_consider_services_upload(time_t now)
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
     if (!service->next_upload_time) { /* never been uploaded yet */
+      /* The fixed lower bound of 30 seconds ensures that the descriptor
+       * is stable before being published. See comment below. */
       service->next_upload_time =
-        now + crypto_rand_int(2*rendpostperiod);
+        now + 30 + crypto_rand_int(2*rendpostperiod);
     }
     if (service->next_upload_time < now ||
         (service->desc_is_dirty &&
