@@ -2200,7 +2200,7 @@ entry_guards_compute_status(void)
         log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s, and %s.",
                entry->nickname,
                entry->unreachable_since ? "unreachable" : "reachable",
-               entry->bad_since ? "unusable: " : "usable",
+               entry->bad_since ? "unusable" : "usable",
                entry_is_live(entry, 0, 1, 0) ? "live" : "not live"));
     log_info(LD_CIRC, "    (%d/%d entry guards are usable/new)",
              num_live_entry_guards(), smartlist_len(entry_guards));
