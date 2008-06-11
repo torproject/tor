@@ -4162,7 +4162,7 @@ update_router_have_minimum_dir_info(void)
      {
        if (client_would_use_router(rs, now, options)) {
          ++num_usable;
-         if (router_get_by_digest(rs->identity_digest)) {
+         if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
            ++num_present;
          }
        }

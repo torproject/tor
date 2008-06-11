@@ -4,7 +4,7 @@ description of the patch.)
 
 Items before a stable 0.2.0.x bundle:
   - Tor items:
-R   - backport r14970
+    X backport r14970
 R   - releasenotes
   - Vidalia items:
 E   d address arma's Linux 100% cpu bug
@@ -21,6 +21,6 @@ Backport items for 0.2.0:
 
 Backport for 0.2.0 once better tested:
   - r14830: disable openssl compression.
-  - r14971: we don't have enough dir info if we have mostly wrong
+  o r14971: we don't have enough dir info if we have mostly wrong
     descriptors
 

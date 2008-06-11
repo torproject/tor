@@ -4,11 +4,14 @@ Changes in version 0.2.0.28-rc - 2008-06-??
       put in our relay end cell that we send to the exit relay, Tor
       clients on Windows were sometimes sending the wrong 'reason'. The
       anonymity problem is that exit relays may be able to guess whether
-      client is running Windows, thus helping partition the anonymity
+      the client is running Windows, thus helping partition the anonymity
       set. Down the road we should stop sending reasons to exit relays,
       or otherwise prevent future versions of this bug.
 
   o Minor fixes:
+    - When we're checking if we have enough dir info for each relay
+      to begin establishing circuits, make sure that we actually have
+      the descriptor listed in the consensus, not just any descriptor.
     - Bridge relays no longer print "xx=0" in their extrainfo document
       for every single country code in the geoip db.
     - Only warn when we fail to load the geoip file if we were planning to
