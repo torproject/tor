@@ -16,6 +16,9 @@ Changes in version 0.2.0.28-rc - 2008-06-??
       for every single country code in the geoip db.
     - Only warn when we fail to load the geoip file if we were planning to
       include geoip stats in our extrainfo document.
+    - If we change our MaxAdvertisedBandwidth and then reload torrc,
+      Tor won't realize it should publish a new relay descriptor. Fixes
+      bug 688, reported by mfr.
     - Fix unit tests in 0.2.0.27-rc.
     - Fix compile on Windows.
 

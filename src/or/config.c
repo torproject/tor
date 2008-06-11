@@ -3447,6 +3447,8 @@ options_transition_affects_descriptor(or_options_t *old_options,
         new_options->_PublishServerDescriptor ||
       old_options->BandwidthRate != new_options->BandwidthRate ||
       old_options->BandwidthBurst != new_options->BandwidthBurst ||
+      old_options->MaxAdvertisedBandwidth !=
+        new_options->MaxAdvertisedBandwidth ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
