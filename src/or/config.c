@@ -3444,6 +3444,10 @@ static int
 options_transition_affects_descriptor(or_options_t *old_options,
                                       or_options_t *new_options)
 {
+  /* XXX021 We can be smarter here. If your DirPort isn't being
+   * published and you just turned it off, no need to republish. If
+   * you changed your bandwidthrate but maxadvertisedbandwidth still
+   * trumps, no need to republish. Etc. */
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       !opt_streq(old_options->Nickname,new_options->Nickname) ||
       !opt_streq(old_options->Address,new_options->Address) ||
@@ -3458,6 +3462,8 @@ options_transition_affects_descriptor(or_options_t *old_options,
         new_options->_PublishServerDescriptor ||
       old_options->BandwidthRate != new_options->BandwidthRate ||
       old_options->BandwidthBurst != new_options->BandwidthBurst ||
+      old_options->MaxAdvertisedBandwidth !=
+        new_options->MaxAdvertisedBandwidth ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
