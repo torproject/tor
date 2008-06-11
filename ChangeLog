@@ -1,4 +1,13 @@
 Changes in version 0.2.0.28-rc - 2008-06-??
+  o Anonymity fixes:
+    - Fix a bug where, when we were choosing the 'end stream reason' to
+      put in our relay end cell that we send to the exit relay, Tor
+      clients on Windows were sometimes sending the wrong 'reason'. The
+      anonymity problem is that exit relays may be able to guess whether
+      client is running Windows, thus helping partition the anonymity
+      set. Down the road we should stop sending reasons to exit relays,
+      or otherwise prevent future versions of this bug.
+
   o Minor fixes:
     - Bridge relays no longer print "xx=0" in their extrainfo document
       for every single country code in the geoip db.

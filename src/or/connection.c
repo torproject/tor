@@ -1842,13 +1842,13 @@ loop_again:
   before = buf_datalen(conn->inbuf);
   if (connection_read_to_buf(conn, &max_to_read) < 0) {
     /* There's a read error; kill the connection.*/
-    connection_close_immediate(conn); /* Don't flush; connection is dead. */
     if (CONN_IS_EDGE(conn)) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
       connection_edge_end_errno(edge_conn);
       if (edge_conn->socks_request) /* broken, don't send a socks reply back */
         edge_conn->socks_request->has_finished = 1;
     }
+    connection_close_immediate(conn); /* Don't flush; connection is dead. */
     connection_mark_for_close(conn);
     return -1;
   }
