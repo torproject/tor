@@ -24,7 +24,7 @@ PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
 
 # Where have we put the xpi and license for Torbutton? Edit this if your
 # torbutton and torbutton license live somewhere else.
-TORBUTTON_PATH=~/tmp/torbutton-1.2.0rc1.xpi
+TORBUTTON_PATH=~/tmp/torbutton-1.2.0rc2.xpi
 TORBUTTON_LIC_PATH=~/tmp/LICENSE
 
 ###
@@ -46,6 +46,7 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
+    "10.6") OS="snowleopard" ARCH="universal";;
     "10.5") OS="leopard" ARCH="universal";;
 	"10.4") OS="tiger" ARCH="universal";;
 	"10.3") OS="panther" ARCH="ppc";;
