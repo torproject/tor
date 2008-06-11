@@ -2918,52 +2918,6 @@ connection_control_process_inbuf(control_connection_t *conn)
   goto again;
 }
 
-/** Convert a numeric reason for destroying a circuit into a string for a
- * CIRCUIT event. */
-static const char *
-circuit_end_reason_to_string(int reason)
-{
-  if (reason >= 0 && reason & END_CIRC_REASON_FLAG_REMOTE)
-    reason &= ~END_CIRC_REASON_FLAG_REMOTE;
-  switch (reason) {
-    case END_CIRC_AT_ORIGIN:
-      /* This shouldn't get passed here; it's a catch-all reason. */
-      return "ORIGIN";
-    case END_CIRC_REASON_NONE:
-      /* This shouldn't get passed here; it's a catch-all reason. */
-      return "NONE";
-    case END_CIRC_REASON_TORPROTOCOL:
-      return "TORPROTOCOL";
-    case END_CIRC_REASON_INTERNAL:
-      return "INTERNAL";
-    case END_CIRC_REASON_REQUESTED:
-      return "REQUESTED";
-    case END_CIRC_REASON_HIBERNATING:
-      return "HIBERNATING";
-    case END_CIRC_REASON_RESOURCELIMIT:
-      return "RESOURCELIMIT";
-    case END_CIRC_REASON_CONNECTFAILED:
-      return "CONNECTFAILED";
-    case END_CIRC_REASON_OR_IDENTITY:
-      return "OR_IDENTITY";
-    case END_CIRC_REASON_OR_CONN_CLOSED:
-      return "OR_CONN_CLOSED";
-    case END_CIRC_REASON_FINISHED:
-      return "FINISHED";
-    case END_CIRC_REASON_TIMEOUT:
-      return "TIMEOUT";
-    case END_CIRC_REASON_DESTROYED:
-      return "DESTROYED";
-    case END_CIRC_REASON_NOPATH:
-      return "NOPATH";
-    case END_CIRC_REASON_NOSUCHSERVICE:
-      return "NOSUCHSERVICE";
-    default:
-      log_warn(LD_BUG, "Unrecognized reason code %d", (int)reason);
-      return NULL;
-  }
-}
-
 /** Something has happened to circuit <b>circ</b>: tell any interested
  * control connections. */
 int
@@ -2994,7 +2948,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
     }
 
   if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
-    const char *reason_str = circuit_end_reason_to_string(reason_code);
+    const char *reason_str = circuit_end_reason_to_control_string(reason_code);
     char *reason = NULL;
     providing_reason=1;
     if (!reason_str) {
@@ -3065,35 +3019,6 @@ write_stream_target_to_buf(edge_connection_t *conn, char *buf, size_t len)
                conn->socks_request->port)<0)
     return -1;
   return 0;
-}
-
-/** Convert the reason for ending a stream <b>reason</b> into the format used
- * in STREAM events. Return NULL if the reason is unrecognized. */
-static const char *
-stream_end_reason_to_string(int reason)
-{
-  reason &= END_STREAM_REASON_MASK;
-  switch (reason) {
-    case END_STREAM_REASON_MISC: return "MISC";
-    case END_STREAM_REASON_RESOLVEFAILED: return "RESOLVEFAILED";
-    case END_STREAM_REASON_CONNECTREFUSED: return "CONNECTREFUSED";
-    case END_STREAM_REASON_EXITPOLICY: return "EXITPOLICY";
-    case END_STREAM_REASON_DESTROY: return "DESTROY";
-    case END_STREAM_REASON_DONE: return "DONE";
-    case END_STREAM_REASON_TIMEOUT: return "TIMEOUT";
-    case END_STREAM_REASON_HIBERNATING: return "HIBERNATING";
-    case END_STREAM_REASON_INTERNAL: return "INTERNAL";
-    case END_STREAM_REASON_RESOURCELIMIT: return "RESOURCELIMIT";
-    case END_STREAM_REASON_CONNRESET: return "CONNRESET";
-    case END_STREAM_REASON_TORPROTOCOL: return "TORPROTOCOL";
-    case END_STREAM_REASON_NOTDIRECTORY: return "NOTDIRECTORY";
-
-    case END_STREAM_REASON_CANT_ATTACH: return "CANT_ATTACH";
-    case END_STREAM_REASON_NET_UNREACHABLE: return "NET_UNREACHABLE";
-    case END_STREAM_REASON_SOCKSPROTOCOL: return "SOCKS_PROTOCOL";
-
-    default: return NULL;
-  }
 }
 
 /** Something has happened to the stream associated with AP connection
@@ -3240,61 +3165,6 @@ orconn_target_get_name(int long_names,
   }
 }
 
-/** Convert a TOR_TLS_* error code into an END_OR_CONN_* reason. */
-int
-control_tls_error_to_reason(int e)
-{
-  switch (e) {
-    case TOR_TLS_ERROR_IO:
-      return END_OR_CONN_REASON_TLS_IO_ERROR;
-    case TOR_TLS_ERROR_CONNREFUSED:
-      return END_OR_CONN_REASON_TCP_REFUSED;
-    case TOR_TLS_ERROR_CONNRESET:
-      return END_OR_CONN_REASON_TLS_CONNRESET;
-    case TOR_TLS_ERROR_NO_ROUTE:
-      return END_OR_CONN_REASON_TLS_NO_ROUTE;
-    case TOR_TLS_ERROR_TIMEOUT:
-      return END_OR_CONN_REASON_TLS_TIMEOUT;
-    case TOR_TLS_WANTREAD:
-    case TOR_TLS_WANTWRITE:
-    case TOR_TLS_CLOSE:
-    case TOR_TLS_DONE:
-      return END_OR_CONN_REASON_DONE;
-    default:
-      return END_OR_CONN_REASON_TLS_MISC;
-  }
-}
-
-/** Convert the reason for ending an OR connection <b>r</b> into the format
- * used in ORCONN events. Return "UNKNOWN" if the reason is unrecognized. */
-static const char *
-or_conn_end_reason_to_string(int r)
-{
-  switch (r) {
-    case END_OR_CONN_REASON_DONE:
-      return "DONE";
-    case END_OR_CONN_REASON_TCP_REFUSED:
-      return "CONNECTREFUSED";
-    case END_OR_CONN_REASON_OR_IDENTITY:
-      return "IDENTITY";
-    case END_OR_CONN_REASON_TLS_CONNRESET:
-      return "CONNECTRESET";
-    case END_OR_CONN_REASON_TLS_TIMEOUT:
-      return "TIMEOUT";
-    case END_OR_CONN_REASON_TLS_NO_ROUTE:
-      return "NOROUTE";
-    case END_OR_CONN_REASON_TLS_IO_ERROR:
-      return "IOERROR";
-    case END_OR_CONN_REASON_TLS_MISC:
-      return "MISC";
-    case 0:
-      return "";
-    default:
-      log_warn(LD_BUG, "Unrecognized or_conn reason code %d", r);
-      return "UNKNOWN";
-  }
-}
-
 /** Called when the status of an OR connection <b>conn</b> changes: tell any
  * interested control connections. <b>tp</b> is the new status for the
  * connection.  If <b>conn</b> has just closed or failed, then <b>reason</b>
@@ -3336,7 +3206,8 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
                           "650 ORCONN %s %s@%s%s%s\r\n",
                           name, status,
                           reason ? "REASON=" : "",
-                          or_conn_end_reason_to_string(reason), ncircs_buf);
+                          orconn_end_reason_to_control_string(reason),
+                          ncircs_buf);
   }
   if (EVENT_IS_INTERESTING1L(EVENT_OR_CONN_STATUS)) {
     orconn_target_get_name(1, name, sizeof(name), conn);
@@ -3344,7 +3215,8 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
                           "650 ORCONN %s %s@%s%s%s\r\n",
                           name, status,
                           reason ? "REASON=" : "",
-                          or_conn_end_reason_to_string(reason), ncircs_buf);
+                          orconn_end_reason_to_control_string(reason),
+                          ncircs_buf);
   }
 
   return 0;
@@ -3976,10 +3848,10 @@ control_event_bootstrap_problem(const char *warn, int reason)
 
   log_warn(LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s)",
            status, summary, warn,
-           or_conn_end_reason_to_string(reason));
+           orconn_end_reason_to_control_string(reason));
   control_event_client_status(LOG_WARN,
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s",
       bootstrap_percent, tag, summary, warn,
-      or_conn_end_reason_to_string(reason));
+      orconn_end_reason_to_control_string(reason));
 }
 

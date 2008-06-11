@@ -560,144 +560,6 @@ connection_edge_send_command(edge_connection_t *fromconn,
                                       payload_len, fromconn->cpath_layer);
 }
 
-/** Translate <b>reason</b>, which came from a relay 'end' cell,
- * into a static const string describing why the stream is closing.
- * <b>reason</b> is -1 if no reason was provided.
- */
-static const char *
-connection_edge_end_reason_str(int reason)
-{
-  switch (reason) {
-    case -1:
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "End cell arrived with length 0. Should be at least 1.");
-      return "MALFORMED";
-    case END_STREAM_REASON_MISC:           return "misc error";
-    case END_STREAM_REASON_RESOLVEFAILED:  return "resolve failed";
-    case END_STREAM_REASON_CONNECTREFUSED: return "connection refused";
-    case END_STREAM_REASON_EXITPOLICY:     return "exit policy failed";
-    case END_STREAM_REASON_DESTROY:        return "destroyed";
-    case END_STREAM_REASON_DONE:           return "closed normally";
-    case END_STREAM_REASON_TIMEOUT:        return "gave up (timeout)";
-    case END_STREAM_REASON_HIBERNATING:    return "server is hibernating";
-    case END_STREAM_REASON_INTERNAL:       return "internal error at server";
-    case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
-    case END_STREAM_REASON_CONNRESET:      return "connection reset";
-    case END_STREAM_REASON_TORPROTOCOL:    return "Tor protocol error";
-    case END_STREAM_REASON_NOTDIRECTORY:   return "not a directory";
-    default:
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Reason for ending (%d) not recognized.",reason);
-      return "unknown";
-  }
-}
-
-/** Translate <b>reason</b> (as from a relay 'end' cell) into an
- * appropriate SOCKS5 reply code.
- *
- * A reason of 0 means that we're not actually expecting to send
- * this code back to the socks client; we just call it 'succeeded'
- * to keep things simple.
- */
-socks5_reply_status_t
-connection_edge_end_reason_socks5_response(int reason)
-{
-  switch (reason & END_STREAM_REASON_MASK) {
-    case 0:
-      return SOCKS5_SUCCEEDED;
-    case END_STREAM_REASON_MISC:
-      return SOCKS5_GENERAL_ERROR;
-    case END_STREAM_REASON_RESOLVEFAILED:
-      return SOCKS5_HOST_UNREACHABLE;
-    case END_STREAM_REASON_CONNECTREFUSED:
-      return SOCKS5_CONNECTION_REFUSED;
-    case END_STREAM_REASON_ENTRYPOLICY:
-      return SOCKS5_NOT_ALLOWED;
-    case END_STREAM_REASON_EXITPOLICY:
-      return SOCKS5_NOT_ALLOWED;
-    case END_STREAM_REASON_DESTROY:
-      return SOCKS5_GENERAL_ERROR;
-    case END_STREAM_REASON_DONE:
-      return SOCKS5_SUCCEEDED;
-    case END_STREAM_REASON_TIMEOUT:
-      return SOCKS5_TTL_EXPIRED;
-    case END_STREAM_REASON_RESOURCELIMIT:
-      return SOCKS5_GENERAL_ERROR;
-    case END_STREAM_REASON_HIBERNATING:
-      return SOCKS5_GENERAL_ERROR;
-    case END_STREAM_REASON_INTERNAL:
-      return SOCKS5_GENERAL_ERROR;
-    case END_STREAM_REASON_CONNRESET:
-      return SOCKS5_CONNECTION_REFUSED;
-    case END_STREAM_REASON_TORPROTOCOL:
-      return SOCKS5_GENERAL_ERROR;
-
-    case END_STREAM_REASON_CANT_ATTACH:
-      return SOCKS5_GENERAL_ERROR;
-    case END_STREAM_REASON_NET_UNREACHABLE:
-      return SOCKS5_NET_UNREACHABLE;
-    case END_STREAM_REASON_SOCKSPROTOCOL:
-      return SOCKS5_GENERAL_ERROR;
-    default:
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Reason for ending (%d) not recognized; "
-             "sending generic socks error.", reason);
-      return SOCKS5_GENERAL_ERROR;
-  }
-}
-
-/* We need to use a few macros to deal with the fact that Windows
- * decided that their sockets interface should be a permakludge.
- * E_CASE is for errors where windows has both a EFOO and a WSAEFOO
- * version, and S_CASE is for errors where windows has only a WSAEFOO
- * version.  (The E is for 'error', the S is for 'socket'). */
-#ifdef MS_WINDOWS
-#define E_CASE(s) case s: case WSA ## s
-#define S_CASE(s) case WSA ## s
-#else
-#define E_CASE(s) case s
-#define S_CASE(s) case s
-#endif
-
-/** Given an errno from a failed exit connection, return a reason code
- * appropriate for use in a RELAY END cell.
- */
-int
-errno_to_end_stream_reason(int e)
-{
-  switch (e) {
-    case EPIPE:
-      return END_STREAM_REASON_DONE;
-    E_CASE(EBADF):
-    E_CASE(EFAULT):
-    E_CASE(EINVAL):
-    S_CASE(EISCONN):
-    S_CASE(ENOTSOCK):
-    S_CASE(EPROTONOSUPPORT):
-    S_CASE(EAFNOSUPPORT):
-    E_CASE(EACCES):
-    S_CASE(ENOTCONN):
-    S_CASE(ENETUNREACH):
-      return END_STREAM_REASON_INTERNAL;
-    S_CASE(ECONNREFUSED):
-      return END_STREAM_REASON_CONNECTREFUSED;
-    S_CASE(ECONNRESET):
-      return END_STREAM_REASON_CONNRESET;
-    S_CASE(ETIMEDOUT):
-      return END_STREAM_REASON_TIMEOUT;
-    S_CASE(ENOBUFS):
-    case ENOMEM:
-    case ENFILE:
-    E_CASE(EMFILE):
-      return END_STREAM_REASON_RESOURCELIMIT;
-    default:
-      log_info(LD_EXIT, "Didn't recognize errno %d (%s); telling the client "
-               "that we are ending a stream for 'misc' reason.",
-               e, tor_socket_strerror(e));
-      return END_STREAM_REASON_MISC;
-  }
-}
-
 /** How many times will I retry a stream that fails due to DNS
  * resolve failure or misc error?
  */
@@ -733,7 +595,7 @@ connection_edge_process_end_not_open(
       conn->_base.type == CONN_TYPE_AP) {
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
              safe_str(conn->socks_request->address),
-             connection_edge_end_reason_str(reason));
+             stream_end_reason_to_string(reason));
     exitrouter =
       router_get_by_digest(circ->build_state->chosen_exit->identity_digest);
     switch (reason) {
@@ -842,7 +704,7 @@ connection_edge_process_end_not_open(
 
   log_info(LD_APP,
            "Edge got end (%s) before we're connected. Marking for close.",
-       connection_edge_end_reason_str(rh->length > 0 ? reason : -1));
+       stream_end_reason_to_string(rh->length > 0 ? reason : -1));
   if (conn->_base.type == CONN_TYPE_AP) {
     circuit_log_path(LOG_INFO,LD_APP,circ);
     /* need to test because of detach_retriable*/
@@ -1123,13 +985,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         *(uint8_t *)(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
       if (!conn) {
         log_info(domain,"end cell (%s) dropped, unknown stream.",
-                 connection_edge_end_reason_str(reason));
+                 stream_end_reason_to_string(reason));
         return 0;
       }
 /* XXX add to this log_fn the exit node's nickname? */
       log_info(domain,"%d: end cell (%s) for stream %d. Removing stream.",
                conn->_base.s,
-               connection_edge_end_reason_str(reason),
+               stream_end_reason_to_string(reason),
                conn->stream_id);
       if (conn->socks_request && !conn->socks_request->has_finished)
         log_warn(LD_BUG,

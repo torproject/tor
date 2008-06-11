@@ -236,7 +236,7 @@ connection_edge_end_errno(edge_connection_t *conn)
 {
   uint8_t reason;
   tor_assert(conn);
-  reason = (uint8_t)errno_to_end_stream_reason(tor_socket_errno(conn->_base.s));
+  reason = (uint8_t)errno_to_stream_end_reason(tor_socket_errno(conn->_base.s));
   return connection_edge_end(conn, reason);
 }
 
@@ -2312,7 +2312,7 @@ connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
 {
   char buf[256];
   socks5_reply_status_t status =
-    connection_edge_end_reason_socks5_response(endreason);
+    stream_end_reason_to_socks5_response(endreason);
 
   tor_assert(conn->socks_request); /* make sure it's an AP stream */
 

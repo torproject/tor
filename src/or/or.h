@@ -2990,7 +2990,6 @@ int control_event_circuit_status(origin_circuit_t *circ,
 int control_event_stream_status(edge_connection_t *conn,
                                 stream_status_event_t e,
                                 int reason);
-int control_tls_error_to_reason(int e);
 int control_event_or_conn_status(or_connection_t *conn,
                                  or_conn_status_event_t e, int reason);
 int control_event_bandwidth_used(uint32_t n_read, uint32_t n_written);
@@ -3585,6 +3584,18 @@ void addr_policy_list_free(smartlist_t *p);
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);
 
+/********************************* reasons.c ***************************/
+
+const char *stream_end_reason_to_control_string(int reason);
+const char *stream_end_reason_to_string(int reason);
+socks5_reply_status_t stream_end_reason_to_socks5_response(int reason);
+int errno_to_stream_end_reason(int e);
+
+const char *orconn_end_reason_to_control_string(int r);
+int tls_error_to_orconn_end_reason(int e);
+
+const char *circuit_end_reason_to_control_string(int reason);
+
 /********************************* relay.c ***************************/
 
 extern uint64_t stats_n_relay_cells_relayed;
@@ -3604,8 +3615,6 @@ int connection_edge_send_command(edge_connection_t *fromconn,
 int connection_edge_package_raw_inbuf(edge_connection_t *conn,
                                       int package_partial);
 void connection_edge_consider_sending_sendme(edge_connection_t *conn);
-socks5_reply_status_t connection_edge_end_reason_socks5_response(int reason);
-int errno_to_end_stream_reason(int e);
 
 extern uint64_t stats_n_data_cells_packaged;
 extern uint64_t stats_n_data_bytes_packaged;

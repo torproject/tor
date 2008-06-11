@@ -504,7 +504,7 @@ connection_about_to_close_connection(connection_t *conn)
             control_event_bootstrap_problem(
               tor_socket_strerror(or_conn->socket_error), 0);
           } else {
-            int reason = control_tls_error_to_reason(or_conn->tls_error);
+            int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                                          reason);
             control_event_bootstrap_problem("foo", reason);
@@ -518,11 +518,11 @@ connection_about_to_close_connection(connection_t *conn)
          * closing a connection. */
         rep_hist_note_disconnect(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
-                control_tls_error_to_reason(or_conn->tls_error));
+                tls_error_to_orconn_end_reason(or_conn->tls_error));
       } else if (or_conn->identity_digest) {
         rep_hist_note_connection_died(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
-                control_tls_error_to_reason(or_conn->tls_error));
+                tls_error_to_orconn_end_reason(or_conn->tls_error));
       }
       /* Now close all the attached circuits on it. */
       circuit_unlink_all_from_or_conn(TO_OR_CONN(conn),
