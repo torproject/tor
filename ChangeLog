@@ -60,6 +60,9 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - In very rare situations new hidden service descriptors were published
       earlier than 30 seconds after the last change to the service, with the
       30 seconds being the current voodoo saying that a descriptor is stable.
+    - While setting up a hidden service, some valid introduction circuits
+      were overlooked and given up.  This might be the reason for the long
+      delay in making a hidden service available.  Bugfix on 0.2.0.13-alpha.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
