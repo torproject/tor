@@ -22,8 +22,7 @@ Motivation
         organizations who are interested in funding The Tor Project's
         work want to know that we're successfully serving parts of the
         world they're interested in, and that efforts to expand our
-        userbase are actually succeeding.  So, when you come right
-        down to it, do we.
+        userbase are actually succeeding.  So do we.
 
 Goals
 
@@ -35,7 +34,7 @@ Goals
    We need to make sure this information isn't exposed in a way that
    helps an adversary.
 
-Methods:
+Methods for curent clients:
 
    Every client downloads network status documents.  There are
    currently three methods (one hypothetical) for clients to get them.
@@ -48,8 +47,9 @@ Methods:
         longer freshest, and when their current document is about to
         expire.
 
-        [In both of the above cases, clients choose a directory cache at
-        random with odds roughly proportional to its bandwidth.]
+        [In both of the above cases, clients choose a running
+        directory cache at random with odds roughly proportional to
+        its bandwidth.]
 
       - In some future version, clients will choose directory caches
         to serve as their "directory guards" to avoid profiling
@@ -60,8 +60,9 @@ Methods:
     categories a client is in by the format of its status request.
 
     A directory cache can be made to count distinct client IP
-    addresses that make a certain request of it in a given timeframe.
-    For the first two cases, a cache can get a picture of the overall
+    addresses that make a certain request of it in a given timeframe,
+    and total requests made to it over that timeframe.  For the first
+    two cases, a cache can get a  picture of the overall
     number and countries of users in the network by dividing the IP
     count by the probability with which they (as a cache) would be
     chosen.  Assuming that our listed bandwidth is such that we expect
@@ -69,7 +70,29 @@ Methods:
     been counting IPs for long enough that we expect the average
     client to have made N requests, they will have visited us at least
     once with probability P' = 1-(1-P)^N, and so we divide the IP
-    counts we've seen by P' for our estimate.
+    counts we've seen by P' for our estimate.  To estimate total
+    number of clients of a given type, determine how many requests a
+    client of that type will make over that time, and assume we'll
+    have seen P of them.
+
+    Both of these numbers are useful: the IP counts will give the
+    total number of IPs connecting to the network, and the request
+    counts will give the total number of users on the network at any
+    given time.
+
+    Notes:
+       - [Over H hours, the N for V2 clients is 2*H, and the N for V3
+         clients is currently around N/2 or N/3. [***FIGURE THIS
+         OUT***XXXX]]
+
+       - (We should only count requests that we actually intend to answer;
+         503 requests shouldn't count.)
+
+       - These measurements *shouldn't* be taken at directory
+         authorities: their picture of the network is too skewed by the
+         special cases in which clients fetch from them directly.
+
+Methods for directory guards:
 
     If directory guards are in use, directory guards get a picture of
     all those users who chose them as a guard when they were listed
@@ -82,7 +105,27 @@ Methods:
     new-guard choices only recently (to get a sample of new users and
     users whose guards have died out.)
 
-    Note that these measurements *shouldn't* be taken at directory
-    authorities: their picture of the network is too skewed by the
-    special cases in which clients fetch from them directly.
+    Since directory guards are currently unspecified, we'll need to
+    make some guesses about how they'll turn out to work.  Here are
+    a couple of approaches that could work.
+       - We could have clients pick completely new directory guards on
+         a rolling basis every two months or so.  This would ensure
+         that staying as a guard for a while would be sufficient to
+         see a sample of users.  This is potentially advantageous for
+         load-balancing the network as well, though it might lose some
+         of the benefits of directory guard.  We need to quantify the
+         impact of this; it might not actually make stuff worse in
+         practice, if most guards don't stay good guards for a month
+         or two.
+
+       - We could try to collect statistics at several directory
+         guards and combine their statisics, but we would need to make
+         sure that for all time, at least one of the directory guards
+         had been recommended as a good choice for new guards.  By
+         looking at new-IP rates for guards, we could get an idea of
+         user uptake; for looking at old-IP decay rates, we could get
+         an idea of turnover.  This approach would entail significant
+         complexity, and we'd probably need to record more information
+         than we'd really like to.
+
 
