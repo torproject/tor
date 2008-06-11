@@ -17,8 +17,9 @@ Status: Open
   This proposal describes a new client status event so Tor can give
   more details to the controller. Section 2 describes the changes to the
   controller protocol; Section 3 describes Tor's internal bootstrapping
-  phases, both when everything is going correctly and when Tor detects
-  a problem and issues a bootstrap warning.
+  phases when everything is going correctly; Section 4 describes when
+  Tor detects a problem and issues a bootstrap warning; Section 5 covers
+  suggestions for how controllers should display the results.
 
 2. Controller event syntax.
 
@@ -29,7 +30,7 @@ Status: Open
 
   So in this case we send
   650 STATUS_CLIENT NOTICE/WARN BOOTSTRAP \
-  PROGRESS=num TAG=string SUMMARY=string WARNING=string
+  PROGRESS=num TAG=string SUMMARY=string WARNING=string REASON=string
 
   "Progress" gives a number between 0 and 100 for how far through
   the bootstrapping process we are. "Summary" is a string that can be
@@ -42,13 +43,9 @@ Status: Open
   The severity describes whether this is a normal bootstrap phase
   (severity notice) or an indication of a bootstrapping problem
   (severity warn). If severity warn, it should also include a "warning"
-  argument with any hints Tor has to offer about why it's having troubles
-  bootstrapping.
-
-  It is suggested that controllers start out in phase 0 ("starting"), and
-  then watch for either a bootstrap status event (meaning the Tor they're
-  using is sufficiently new to produce them) or a circuit_established
-  status event (meaning bootstrapping is finished).
+  argument string with any hints Tor has to offer about why it's having
+  troubles bootstrapping, and a "reason" string that lists of the reasons
+  allowed in the ORConn event.
 
 3. The bootstrap phases.
 
@@ -172,4 +169,48 @@ Status: Open
 
   A full 3-hop circuit has been established. Tor is ready to handle
   application connections now.
+
+4. Bootstrap problem events.
+
+  When an OR Conn fails, we send a "bootstrap problem" status event, which
+  is like the standard bootstrap status event except with severity warn.
+  We include the same progress, tag, and summary values as we would for
+  a normal bootstrap event, but we also include 'warning' and 'reason'
+  strings.
+
+  The reason string is the same argument as the reason string for ORCONN
+  failure events; the controller can recognize the various reasons
+  and help the user accordingly. The warning string currently tries to
+  provide the equivalent of strerror() -- this isn't very useful if the
+  controller can recognize reason tags and be smarter, but for a very
+  simple controller it should be better than nothing.
+
+  Currently Tor ignores the first nine bootstrap problem reports for
+  a given phase, reports the tenth to the controller, and then ignores
+  further problems at that phase. Hopefully this is a good balance between
+  tolerating occasional errors and reporting serious problems quickly. (We
+  will want to revisit this approach if there are many different 'reason'
+  values being reported among the first ten problem reports, since in
+  this case the controller will only hear one of them.)
+
+5. Suggested controller behavior.
+
+  Controllers should start out with a yellow onion or the equivalent
+  ("starting"), and then watch for either a bootstrap status event
+  (meaning the Tor they're using is sufficiently new to produce them,
+  and they should load up the progress bar or whatever they plan to use
+  to indicate progress) or a circuit_established status event (meaning
+  bootstrapping is finished).
+
+  In addition to a progress bar in the display, controllers should also
+  have some way to indicate progress even when no controller window is
+  open. For example, folks using Tor Browser Bundle in hostile Internet
+  cafes don't want a big splashy screen up. One way to let the user keep
+  informed of progress in a more subtle way is to change the task tray
+  icon and/or tooltip string as more bootstrap events come in.
+
+  Controllers should also have some mechanism to alert their user when
+  bootstrapping problems are reported. Perhaps we should gather a set of
+  help texts and the controller can send the user to the right anchor in a
+  "bootstrapping problems" help page?
 
