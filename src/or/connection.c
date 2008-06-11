@@ -500,14 +500,18 @@ connection_about_to_close_connection(connection_t *conn)
           if (!get_options()->HttpsProxy)
             router_set_status(or_conn->identity_digest, 0);
           if (conn->state == OR_CONN_STATE_CONNECTING) {
-            control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED, 0);
+            control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
+              errno_to_orconn_end_reason(or_conn->socket_error));
             control_event_bootstrap_problem(
-              tor_socket_strerror(or_conn->socket_error), 0);
+              tor_socket_strerror(or_conn->socket_error),
+              errno_to_orconn_end_reason(or_conn->socket_error));
           } else {
             int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                                          reason);
-            control_event_bootstrap_problem("foo", reason);
+            /* XXX021 come up with a better string for the first arg */
+            control_event_bootstrap_problem(
+              orconn_end_reason_to_control_string(reason), reason);
           }
         }
         /* Inform any pending (not attached) circs that they should
@@ -1097,8 +1101,9 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
 }
 
 /** Take conn, make a nonblocking socket; try to connect to
- * addr:port (they arrive in *host order*). If fail, return -1. Else
- * assign s to conn-\>s: if connected return 1, if EAGAIN return 0.
+ * addr:port (they arrive in *host order*). If fail, return -1 and if
+ * applicable put your best guess about errno into *<b>socket_error</b>.
+ * Else assign s to conn-\>s: if connected return 1, if EAGAIN return 0.
  *
  * address is used to make the logs useful.
  *
@@ -1106,7 +1111,7 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
  */
 int
 connection_connect(connection_t *conn, const char *address,
-                   uint32_t addr, uint16_t port)
+                   uint32_t addr, uint16_t port, int *socket_error)
 {
   int s, inprogress = 0;
   struct sockaddr_in dest_addr;
@@ -1123,8 +1128,9 @@ connection_connect(connection_t *conn, const char *address,
 
   s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
+    *socket_error = tor_socket_errno(-1);
     log_warn(LD_NET,"Error creating network socket: %s",
-             tor_socket_strerror(tor_socket_errno(-1)));
+             tor_socket_strerror(*socket_error));
     return -1;
   }
 
@@ -1140,8 +1146,9 @@ connection_connect(connection_t *conn, const char *address,
     } else {
       if (bind(s, (struct sockaddr*)&ext_addr,
                (socklen_t)sizeof(ext_addr)) < 0) {
+        *socket_error = tor_socket_errno(s);
         log_warn(LD_NET,"Error binding network socket: %s",
-                 tor_socket_strerror(tor_socket_errno(s)));
+                 tor_socket_strerror(*socket_error));
         tor_close_socket(s);
         return -1;
       }
@@ -1165,6 +1172,7 @@ connection_connect(connection_t *conn, const char *address,
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
+      *socket_error = e;
       log_info(LD_NET,
                "connect() to %s:%u failed: %s",escaped_safe_str(address),
                port, tor_socket_strerror(e));

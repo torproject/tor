@@ -236,7 +236,7 @@ connection_edge_end_errno(edge_connection_t *conn)
 {
   uint8_t reason;
   tor_assert(conn);
-  reason = (uint8_t)errno_to_stream_end_reason(tor_socket_errno(conn->_base.s));
+  reason = errno_to_stream_end_reason(tor_socket_errno(conn->_base.s));
   return connection_edge_end(conn, reason);
 }
 
@@ -2609,6 +2609,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
   uint32_t addr;
   uint16_t port;
   connection_t *conn = TO_CONN(edge_conn);
+  int socket_error = 0;
 
   if (!connection_edge_is_rendezvous_stream(edge_conn) &&
       router_compare_to_my_exit_policy(edge_conn)) {
@@ -2644,8 +2645,10 @@ connection_exit_connect(edge_connection_t *edge_conn)
   }
 
   log_debug(LD_EXIT,"about to try connecting");
-  switch (connection_connect(conn, conn->address, addr, port)) {
+  switch (connection_connect(conn, conn->address, addr, port, &socket_error)) {
     case -1:
+      /* XXX021 use socket_error below rather than trying to piece things
+       * together from the current errno, which may have been clobbered. */
       connection_edge_end_errno(edge_conn);
       circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
       connection_free(conn);

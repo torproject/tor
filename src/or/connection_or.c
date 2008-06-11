@@ -513,6 +513,7 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
 {
   or_connection_t *conn;
   or_options_t *options = get_options();
+  int socket_error = 0;
 
   tor_assert(id_digest);
 
@@ -534,7 +535,8 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
     port = options->HttpsProxyPort;
   }
 
-  switch (connection_connect(TO_CONN(conn), conn->_base.address, addr, port)) {
+  switch (connection_connect(TO_CONN(conn), conn->_base.address,
+                             addr, port, &socket_error)) {
     case -1:
       /* If the connection failed immediately, and we're using
        * an https proxy, our https proxy is down. Don't blame the
@@ -545,9 +547,9 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
         router_set_status(conn->identity_digest, 0);
       }
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
-              END_OR_CONN_REASON_TCP_REFUSED);
-      /* XXX connection_connect() can fail for all sorts of other reasons */
-      control_event_bootstrap_problem("foo", END_OR_CONN_REASON_TCP_REFUSED);
+                                   errno_to_orconn_end_reason(socket_error));
+      control_event_bootstrap_problem(tor_socket_strerror(socket_error),
+                                   errno_to_orconn_end_reason(socket_error));
       connection_free(TO_CONN(conn));
       return NULL;
     case 0:

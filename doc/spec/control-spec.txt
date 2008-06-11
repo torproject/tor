@@ -1070,7 +1070,7 @@ $Id$
 
       Reason = "MISC" / "DONE" / "CONNECTREFUSED" /
                "IDENTITY" / "CONNECTRESET" / "TIMEOUT" / "NOROUTE" /
-               "IOERROR"
+               "IOERROR" / "RESOURCELIMIT"
 
   NumCircuits counts both established and pending circuits.
 

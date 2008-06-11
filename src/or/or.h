@@ -501,14 +501,15 @@ typedef enum {
 #define RELAY_COMMAND_INTRODUCE_ACK 40
 
 /* Reasons why an OR connection is closed */
-#define END_OR_CONN_REASON_DONE 1
-#define END_OR_CONN_REASON_TCP_REFUSED  2
-#define END_OR_CONN_REASON_OR_IDENTITY  3
-#define END_OR_CONN_REASON_TLS_CONNRESET 4 /* tls connection reset by peer */
-#define END_OR_CONN_REASON_TLS_TIMEOUT  5
-#define END_OR_CONN_REASON_TLS_NO_ROUTE  6 /* no route to host/net */
-#define END_OR_CONN_REASON_TLS_IO_ERROR  7 /* tls read/write error */
-#define END_OR_CONN_REASON_TLS_MISC  8
+#define END_OR_CONN_REASON_DONE           1
+#define END_OR_CONN_REASON_REFUSED        2 /* connection refused */
+#define END_OR_CONN_REASON_OR_IDENTITY    3
+#define END_OR_CONN_REASON_CONNRESET      4 /* connection reset by peer */
+#define END_OR_CONN_REASON_TIMEOUT        5
+#define END_OR_CONN_REASON_NO_ROUTE       6 /* no route to host/net */
+#define END_OR_CONN_REASON_IO_ERROR       7 /* read/write error */
+#define END_OR_CONN_REASON_RESOURCE_LIMIT 8 /* sockets, buffers, etc */
+#define END_OR_CONN_REASON_MISC           9
 
 /* Reasons why we (or a remote OR) might close a stream. See tor-spec.txt for
  * documentation of these. */
@@ -2742,7 +2743,7 @@ void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 void connection_expire_held_open(void);
 
 int connection_connect(connection_t *conn, const char *address, uint32_t addr,
-                       uint16_t port);
+                       uint16_t port, int *socket_error);
 int retry_all_listeners(smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
@@ -3589,10 +3590,11 @@ void policies_free_all(void);
 const char *stream_end_reason_to_control_string(int reason);
 const char *stream_end_reason_to_string(int reason);
 socks5_reply_status_t stream_end_reason_to_socks5_response(int reason);
-int errno_to_stream_end_reason(int e);
+uint8_t errno_to_stream_end_reason(int e);
 
 const char *orconn_end_reason_to_control_string(int r);
 int tls_error_to_orconn_end_reason(int e);
+int errno_to_orconn_end_reason(int e);
 
 const char *circuit_end_reason_to_control_string(int reason);
 

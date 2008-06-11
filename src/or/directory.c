@@ -659,6 +659,7 @@ directory_initiate_command(const char *address, uint32_t addr,
 {
   dir_connection_t *conn;
   or_options_t *options = get_options();
+  int socket_error = 0;
   int use_begindir = supports_begindir &&
                      directory_command_should_use_begindir(options, addr,
                        or_port, router_purpose, anonymized_connection);
@@ -699,7 +700,7 @@ directory_initiate_command(const char *address, uint32_t addr,
     }
 
     switch (connection_connect(TO_CONN(conn), conn->_base.address, addr,
-                               dir_port)) {
+                               dir_port, &socket_error)) {
       case -1:
         connection_dir_request_failed(conn); /* retry if we want */
         /* XXX we only pass 'conn' above, not 'resource', 'payload',

@@ -144,9 +144,8 @@ stream_end_reason_to_socks5_response(int reason)
 #endif
 
 /** Given an errno from a failed exit connection, return a reason code
- * appropriate for use in a RELAY END cell.
- */
-int
+ * appropriate for use in a RELAY END cell. */
+uint8_t
 errno_to_stream_end_reason(int e)
 {
   switch (e) {
@@ -192,19 +191,21 @@ orconn_end_reason_to_control_string(int r)
   switch (r) {
     case END_OR_CONN_REASON_DONE:
       return "DONE";
-    case END_OR_CONN_REASON_TCP_REFUSED:
+    case END_OR_CONN_REASON_REFUSED:
       return "CONNECTREFUSED";
     case END_OR_CONN_REASON_OR_IDENTITY:
       return "IDENTITY";
-    case END_OR_CONN_REASON_TLS_CONNRESET:
+    case END_OR_CONN_REASON_CONNRESET:
       return "CONNECTRESET";
-    case END_OR_CONN_REASON_TLS_TIMEOUT:
+    case END_OR_CONN_REASON_TIMEOUT:
       return "TIMEOUT";
-    case END_OR_CONN_REASON_TLS_NO_ROUTE:
+    case END_OR_CONN_REASON_NO_ROUTE:
       return "NOROUTE";
-    case END_OR_CONN_REASON_TLS_IO_ERROR:
+    case END_OR_CONN_REASON_IO_ERROR:
       return "IOERROR";
-    case END_OR_CONN_REASON_TLS_MISC:
+    case END_OR_CONN_REASON_RESOURCE_LIMIT:
+      return "RESOURCELIMIT";
+    case END_OR_CONN_REASON_MISC:
       return "MISC";
     case 0:
       return "";
@@ -220,22 +221,59 @@ tls_error_to_orconn_end_reason(int e)
 {
   switch (e) {
     case TOR_TLS_ERROR_IO:
-      return END_OR_CONN_REASON_TLS_IO_ERROR;
+      return END_OR_CONN_REASON_IO_ERROR;
     case TOR_TLS_ERROR_CONNREFUSED:
-      return END_OR_CONN_REASON_TCP_REFUSED;
+      return END_OR_CONN_REASON_REFUSED;
     case TOR_TLS_ERROR_CONNRESET:
-      return END_OR_CONN_REASON_TLS_CONNRESET;
+      return END_OR_CONN_REASON_CONNRESET;
     case TOR_TLS_ERROR_NO_ROUTE:
-      return END_OR_CONN_REASON_TLS_NO_ROUTE;
+      return END_OR_CONN_REASON_NO_ROUTE;
     case TOR_TLS_ERROR_TIMEOUT:
-      return END_OR_CONN_REASON_TLS_TIMEOUT;
+      return END_OR_CONN_REASON_TIMEOUT;
     case TOR_TLS_WANTREAD:
     case TOR_TLS_WANTWRITE:
     case TOR_TLS_CLOSE:
     case TOR_TLS_DONE:
       return END_OR_CONN_REASON_DONE;
     default:
-      return END_OR_CONN_REASON_TLS_MISC;
+      return END_OR_CONN_REASON_MISC;
+  }
+}
+
+/** Given an errno from a failed ORConn connection, return a reason code
+ * appropriate for use in the controller orconn events. */
+/* XXX021 somebody should think about whether the assignments I've made
+ * are accurate or useful. -RD */
+int
+errno_to_orconn_end_reason(int e)
+{
+  switch (e) {
+    case EPIPE:
+      return END_OR_CONN_REASON_DONE;
+    S_CASE(ENOTCONN):
+    S_CASE(ENETUNREACH):
+    case ENETDOWN: /* << somebody should look into the Windows equiv */
+    case EHOSTUNREACH:
+      return END_OR_CONN_REASON_NO_ROUTE;
+    S_CASE(ECONNREFUSED):
+      return END_OR_CONN_REASON_REFUSED;
+    S_CASE(ECONNRESET):
+      return END_OR_CONN_REASON_CONNRESET;
+    S_CASE(ETIMEDOUT):
+      return END_OR_CONN_REASON_TIMEOUT;
+    S_CASE(ENOBUFS):
+    case ENOMEM:
+    case ENFILE:
+    E_CASE(EMFILE):
+    E_CASE(EACCES):
+    E_CASE(EBADF):
+    E_CASE(EFAULT):
+    E_CASE(EINVAL):
+      return END_OR_CONN_REASON_RESOURCE_LIMIT;
+    default:
+      log_info(LD_OR, "Didn't recognize errno %d (%s).",
+               e, tor_socket_strerror(e));
+      return END_OR_CONN_REASON_MISC;
   }
 }
 
