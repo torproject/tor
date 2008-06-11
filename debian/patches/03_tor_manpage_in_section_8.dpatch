@@ -2,7 +2,7 @@
 ## 03_tor_manpage_in_section_8.dpatch by  <weasel@debian.org>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
-## DP: No description.
+## DP: Move the Tor manpage from section 1 to section 8.
 
 if [ $# -lt 1 ]; then
     echo "`basename $0`: script expects -patch|-unpatch as argument" >&2

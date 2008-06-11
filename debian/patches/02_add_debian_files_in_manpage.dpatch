@@ -2,7 +2,7 @@
 ## 02_add_debian_files_in_manpage.dpatch by  <weasel@debian.org>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
-## DP: No description.
+## DP: Change the FILES section of the manpage to properly describe the situation on Debian systems.
 
 if [ $# -lt 1 ]; then
     echo "`basename $0`: script expects -patch|-unpatch as argument" >&2

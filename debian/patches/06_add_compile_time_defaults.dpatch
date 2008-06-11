@@ -2,7 +2,7 @@
 ## 06_add_compile_time_defaults.dpatch by  <weasel@debian.org>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
-## DP: No description.
+## DP: Change a few compile time defaults so that Tor is better integrated on a Debian system
 
 if [ $# -lt 1 ]; then
     echo "`basename $0`: script expects -patch|-unpatch as argument" >&2
