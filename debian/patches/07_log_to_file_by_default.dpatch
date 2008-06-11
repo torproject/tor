@@ -2,7 +2,7 @@
 ## 07_log_to_file_by_default.dpatch by  <weasel@debian.org>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
-## DP: No description.
+## DP: Change default logging target from stdout to a logfile
 
 if [ $# -lt 1 ]; then
     echo "`basename $0`: script expects -patch|-unpatch as argument" >&2

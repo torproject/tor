@@ -3,8 +3,9 @@ tor (0.2.0.27-rc-X) Xxperimental; urgency=low
   * Remove debian/patches/11_tor_as_root_more_helpful.dpatch as
     it is no longer needed:  We now setuid() to the Tor user
     when run as root and it all just works.
+  * Add comments to the dpatch headers so lintian shuts up.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 11 Jun 2008 11:30:30 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 11 Jun 2008 11:32:27 +0200
 
 tor (0.2.0.27-rc-1) experimental; urgency=low
 
