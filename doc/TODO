@@ -83,18 +83,26 @@ R     - Get the dkimproxy patch in
 NR    - Include "stable" bridge and "port 443" bridge and "adequately
         new version" bridge free in every specially marked
         box!^W^W^Woutput batch.
+        o Port-443 bridge implementation
 N     - Detect proxies and treat them as the same address
-N   - Continue resolving the ram issue for relays:
+    o Continue resolving the ram issue for relays:
       o better buffer approaches in Tor
-      - better buffer approaches in openssl
+      o better buffer approaches in openssl
       o shipping Tor with its own integrated allocator.
-      - Write a paragraph for each of the above three items to describe
+      o Write a paragraph for each of the above three items to describe
         what we've done in the Jan-Jun timeframe, and next steps if any
         for each item.
 N   - Take our draft research proposal for how to safely collect and
       aggregate some GeoIP data from non-bridge entry nodes, finish
       the proposal, and implement and test. Have a plausible plan for
       deploying.
+      - Finish proposal
+        o Figure out what to do
+        - Fix proposal
+        - Include details on dealing with dir guards
+        - Describe deployment
+      o Implement
+      . Test
     - More back-end work:
 N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
         - spoof the cipher suites
