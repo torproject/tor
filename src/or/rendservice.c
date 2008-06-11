@@ -1026,8 +1026,8 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
   tor_assert(intro);
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
-    if (!strcasecmp(circ->build_state->chosen_exit->identity_digest,
-                    intro->extend_info->identity_digest) &&
+    if (!memcmp(circ->build_state->chosen_exit->identity_digest,
+                intro->extend_info->identity_digest, DIGEST_LEN) &&
         circ->rend_desc_version == desc_version) {
       return circ;
     }
@@ -1036,8 +1036,8 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
   circ = NULL;
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
-    if (!strcasecmp(circ->build_state->chosen_exit->identity_digest,
-                    intro->extend_info->identity_digest) &&
+    if (!memcmp(circ->build_state->chosen_exit->identity_digest,
+                intro->extend_info->identity_digest, DIGEST_LEN) &&
         circ->rend_desc_version == desc_version) {
       return circ;
     }

@@ -21,6 +21,9 @@ Changes in version 0.2.0.28-rc - 2008-06-??
       bug 688, reported by mfr.
     - Fix unit tests in 0.2.0.27-rc.
     - Fix compile on Windows.
+    - While setting up a hidden service, some valid introduction circuits
+      were overlooked and given up.  This might be the reason for the long
+      delay in making a hidden service available.  Bugfix on 0.2.0.13-alpha.
 
 
 Changes in version 0.2.0.27-rc - 2008-06-03
