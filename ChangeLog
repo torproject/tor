@@ -19,6 +19,12 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       service, with the 30 seconds being the current voodoo saying that
       a descriptor is stable.
 
+  o Major features:
+    - Modify the list of ciphers advertised by OpenSSL in client mode
+      to even more closely resemble a common web browser.  We cheat a
+      little so that we can advertise ciphers that the locally
+      installed OpenSSL doesn't know about.
+
   o Minor features:
     - Allow separate log levels to be configured for different logging
       domains.  For example, this allows one to log all notices, warnings,
@@ -68,6 +74,8 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
     - Never use OpenSSL compression: it wastes RAM and CPU trying to
       compress cells, which are basically all encrypted, compressed, or
       both.
+    - Use the TLS1 hostname extension to more closely resemble browser
+      behavior.
 
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to

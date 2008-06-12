@@ -101,6 +101,16 @@ struct tor_tls_t {
   void *callback_arg;
 };
 
+#ifdef V2_HANDSHAKE_CLIENT
+/** An array of fake SSL_CIPHER objects that we use in order to trick OpenSSL
+ * in client mode into advertising the ciphers we want.  See
+ * rectify_client_ciphers for details. */
+static SSL_CIPHER *CLIENT_CIPHER_DUMMIES = NULL;
+/** A stack of SSL_CIPHER objects, some real, some fake.
+ * See rectify_client_ciphers for details. */
+static STACK_OF(SSL_CIPHER) *CLIENT_CIPHER_STACK = NULL;
+#endif
+
 /** Helper: compare tor_tls_t objects by its SSL. */
 static INLINE int
 tor_tls_entries_eq(const tor_tls_t *a, const tor_tls_t *b)
@@ -318,6 +328,12 @@ tor_tls_free_all(void)
     log_warn(LD_MM, "Still have entries in the tlsmap at shutdown.");
   }
   HT_CLEAR(tlsmap, &tlsmap_root);
+#ifdef V2_HANDSHAKE_CLIENT
+  if (CLIENT_CIPHER_DUMMIES)
+    tor_free(CLIENT_CIPHER_DUMMIES);
+  if (CLIENT_CIPHER_STACK)
+    sk_SSL_CIPHER_free(CLIENT_CIPHER_STACK);
+#endif
 }
 
 /** We need to give OpenSSL a callback to verify certificates. This is
@@ -427,58 +443,42 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   return x509;
 }
 
-#define SERVER_CIPHER_LIST                      \
-  (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"        \
-   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"        \
+/** List of ciphers that servers should select from.*/
+#define SERVER_CIPHER_LIST                         \
+  (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"           \
+   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"           \
    SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
 /* Note: for setting up your own private testing network with link crypto
  * disabled, set the cipher lists to your cipher list to
  * SSL3_TXT_RSA_NULL_SHA.  If you do this, you won't be able to communicate
  * with any of the "real" Tors, though. */
 
-#if OPENSSL_VERSION_NUMBER >= 0x00908020l
-#define CLIENT_CIPHER_LIST                         \
-  (TLS1_TXT_ECDHE_ECDSA_WITH_AES_256_CBC_SHA ":"   \
-   TLS1_TXT_ECDHE_RSA_WITH_AES_256_CBC_SHA ":"     \
-   TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"           \
-   TLS1_TXT_DHE_DSS_WITH_AES_256_SHA ":"           \
-   TLS1_TXT_ECDH_RSA_WITH_AES_256_CBC_SHA ":"      \
-   TLS1_TXT_ECDH_ECDSA_WITH_AES_256_CBC_SHA ":"    \
-   TLS1_TXT_RSA_WITH_AES_256_SHA ":"               \
-   TLS1_TXT_ECDHE_ECDSA_WITH_RC4_128_SHA ":"       \
-   TLS1_TXT_ECDHE_ECDSA_WITH_AES_128_CBC_SHA ":"   \
-   TLS1_TXT_ECDHE_RSA_WITH_RC4_128_SHA ":"         \
-   TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA ":"     \
-   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"           \
-   TLS1_TXT_DHE_DSS_WITH_AES_128_SHA ":"           \
-   TLS1_TXT_ECDH_RSA_WITH_RC4_128_SHA":"           \
-   TLS1_TXT_ECDH_RSA_WITH_AES_128_CBC_SHA":"       \
-   TLS1_TXT_ECDH_ECDSA_WITH_RC4_128_SHA  ":"       \
-   TLS1_TXT_ECDH_ECDSA_WITH_AES_128_CBC_SHA ":"    \
-   SSL3_TXT_RSA_RC4_128_MD5 ":"                    \
-   SSL3_TXT_RSA_RC4_128_SHA ":"                    \
-   TLS1_TXT_RSA_WITH_AES_128_SHA ":"               \
-   TLS1_TXT_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA ":"  \
-   TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA ":"    \
-   SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA ":"           \
-   SSL3_TXT_EDH_DSS_DES_192_CBC3_SHA ":"           \
-   TLS1_TXT_ECDH_RSA_WITH_DES_192_CBC3_SHA ":"     \
-   TLS1_TXT_ECDH_ECDSA_WITH_DES_192_CBC3_SHA ":"   \
-   /*SSL3_TXT_RSA_FIPS_WITH_3DES_EDE_CBC_SHA ":"*/ \
-   SSL3_TXT_RSA_DES_192_CBC3_SHA)
-/* SSL3_TXT_RSA_FIPS_WITH_3DES_EDE_CBC_SHA is commented out because it doesn't
- * really exist; if I understand correctly, it's a bit of silliness that
- * netscape did on its own before any standard for what they wanted was
- * formally approved.  Nonetheless, Firefox still uses it, so we need to
- * fake it at some point soon. XXXX021 -NM */
-#else
-/* Ug. We don't have as many ciphers with openssl 0.9.7 as we'd like.  Fix
- * this list into something that sucks less. */
-#define CLIENT_CIPHER_LIST \
-  (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"        \
-   TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"        \
-   SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA ":"        \
-   SSL3_TXT_RSA_RC4_128_SHA)
+#ifdef V2_HANDSHAKE_CLIENT
+#define CIPHER(id, name) name ":"
+#define XCIPHER(id, name)
+/** List of ciphers that clients should advertise, omitting items that
+ * our openssl doesn't know about. */
+static const char CLIENT_CIPHER_LIST[] =
+#include "./ciphers.inc"
+  ;
+#undef CIPHER
+#undef XCIPHER
+
+/** Holds a cipher that we want to advertise, and its 2-byte ID. */
+typedef struct cipher_info_t { unsigned id; const char *name; } cipher_info_t;
+/** A list of all the ciphers that clients should advertise, including items
+ * that openssl might not know about. */
+static const cipher_info_t CLIENT_CIPHER_INFO_LIST[] = {
+#define CIPHER(id, name) { id, name },
+#define XCIPHER(id, name) { id, #name },
+#include "./ciphers.inc"
+#undef CIPHER
+#undef XCIPHER
+};
+
+/** The length of CLIENT_CIPHER_INFO_LIST and CLIENT_CIPHER_DUMMIES. */
+static const int N_CLIENT_CIPHERS =
+  sizeof(CLIENT_CIPHER_INFO_LIST)/sizeof(CLIENT_CIPHER_INFO_LIST[0]);
 #endif
 
 #ifndef V2_HANDSHAKE_CLIENT
@@ -730,6 +730,76 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 }
 #endif
 
+/** Replace *<b>ciphers</b> with a new list of SSL ciphersuites: specifically,
+ * a list designed to mimic a common web browser.  Some of the cipher in the
+ * list won't actually be implemented by OpenSSL: that's okay so long as the
+ * server doesn't select them, and the server won't select anything besides
+ * what's in SERVER_CIPHER_LIST.
+ *
+ * [If the server <b>does</b> select a bogus cipher, we won't crash or
+ * anything; we'll just fail later when we try to look up the cipher in
+ * ssl->cipher_list_by_id.]
+ */
+static void
+rectify_client_ciphers(STACK_OF(SSL_CIPHER) **ciphers)
+{
+#ifdef V2_HANDSHAKE_CLIENT
+  if (PREDICT_UNLIKELY(!CLIENT_CIPHER_STACK)) {
+    /* We need to set CLIENT_CIPHER_STACK to an array of the ciphers
+     * we want.*/
+    int i = 0, j = 0;
+
+    /* First, create a dummy SSL_CIPHER for every cipher. */
+    CLIENT_CIPHER_DUMMIES =
+      tor_malloc_zero(sizeof(SSL_CIPHER)*N_CLIENT_CIPHERS);
+    for (i=0; i < N_CLIENT_CIPHERS; ++i) {
+      CLIENT_CIPHER_DUMMIES[i].valid = 1;
+      CLIENT_CIPHER_DUMMIES[i].id = CLIENT_CIPHER_INFO_LIST[i].id | (3<<24);
+      CLIENT_CIPHER_DUMMIES[i].name = CLIENT_CIPHER_INFO_LIST[i].name;
+    }
+
+    CLIENT_CIPHER_STACK = sk_SSL_CIPHER_new_null();
+    tor_assert(CLIENT_CIPHER_STACK);
+
+    log_debug(LD_NET, "List was: %s", CLIENT_CIPHER_LIST);
+    for (j = 0; j < sk_SSL_CIPHER_num(*ciphers); ++j) {
+      SSL_CIPHER *cipher = sk_SSL_CIPHER_value(*ciphers, j);
+      log_debug(LD_NET, "Cipher %d: %lx %s", j, cipher->id, cipher->name);
+    }
+
+    /* Then copy as many ciphers as we can from the good list, inserting
+     * dummies as needed. */
+    j=0;
+    for (i = 0; i < N_CLIENT_CIPHERS; ) {
+      SSL_CIPHER *cipher = NULL;
+      if (j < sk_SSL_CIPHER_num(*ciphers))
+        cipher = sk_SSL_CIPHER_value(*ciphers, j);
+      if (cipher && ((cipher->id >> 24) & 0xff) != 3) {
+        log_debug(LD_NET, "Skipping v2 cipher %s", cipher->name);
+        ++j;
+      } else if (cipher &&
+                 (cipher->id & 0xffff) == CLIENT_CIPHER_INFO_LIST[i].id) {
+        log_debug(LD_NET, "Found cipher %s", cipher->name);
+        sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, cipher);
+        ++j;
+        ++i;
+      } else {
+        log_debug(LD_NET, "Inserting fake %s", CLIENT_CIPHER_DUMMIES[i].name);
+        sk_SSL_CIPHER_push(CLIENT_CIPHER_STACK, &CLIENT_CIPHER_DUMMIES[i]);
+        ++i;
+      }
+    }
+  }
+
+  sk_SSL_CIPHER_free(*ciphers);
+  *ciphers = sk_SSL_CIPHER_dup(CLIENT_CIPHER_STACK);
+  tor_assert(*ciphers);
+
+#else
+    (void)ciphers;
+#endif
+}
+
 /** Create a new TLS object from a file descriptor, and a flag to
  * determine whether it is functioning as a server.
  */
@@ -745,12 +815,25 @@ tor_tls_new(int sock, int isServer)
     tor_free(result);
     return NULL;
   }
+
+#ifdef SSL_set_tlsext_host_name
+  /* Browsers use the TLS hostname extension, so we should too. */
+  {
+    char *fake_hostname = crypto_random_hostname(4,25, "www.",".com");
+    SSL_set_tlsext_host_name(result->ssl, fake_hostname);
+  }
+#endif
+
   if (!SSL_set_cipher_list(result->ssl,
                      isServer ? SERVER_CIPHER_LIST : CLIENT_CIPHER_LIST)) {
+    tls_log_errors(NULL, LOG_WARN, "setting ciphers");
+    log_warn(LD_NET, "WTF?");
     SSL_free(result->ssl);
     tor_free(result);
     return NULL;
   }
+  if (!isServer)
+    rectify_client_ciphers(&result->ssl->cipher_list);
   result->socket = sock;
 #ifdef USE_BSOCKETS
   bio = BIO_new_bsocket(sock, BIO_NOCLOSE);
@@ -982,7 +1065,10 @@ tor_tls_handshake(tor_tls_t *tls)
       if (cert)
         X509_free(cert);
 #endif
-      SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST);
+      if (SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST) == 0) {
+        tls_log_errors(NULL, LOG_WARN, "re-setting ciphers");
+        r = TOR_TLS_ERROR_MISC;
+      }
     }
   }
   return r;

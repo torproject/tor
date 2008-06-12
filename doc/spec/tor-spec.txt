@@ -174,7 +174,10 @@ see tor-design.pdf.
    handshake is complete, the initiator renegotiates the handshake, with each
    parties sending a two-certificate chain as in "certificates up-front".
    The initiator's ClientHello MUST include at least once ciphersuite not in
-   the list above.
+   the list above.  The responder SHOULD NOT select any ciphersuite besides
+   those in the list above.
+     [The above "should not" is because some of the ciphers that
+     clients list may be fake.]
 
    In "backwards-compatible renegotiation", the connection initiator's
    ClientHello MUST include at least one ciphersuite other than those listed

@@ -105,10 +105,10 @@ N   - Take our draft research proposal for how to safely collect and
       . Test
     - More back-end work:
 N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
-        - spoof the cipher suites
-        - spoof the extensions list
+        o spoof the cipher suites
+        o spoof the extensions list
         - red-team testing (a.k.a, look at a packet dump and compare),
-        - investigate the feasibility of handing connections off to a
+        . investigate the feasibility of handing connections off to a
           local apache if they don't look like Tor or if they don't
           portknock or whatever.
       - Get closer to downloading far fewer descriptors
