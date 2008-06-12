@@ -1,133 +1,77 @@
 Changes in version 0.2.1.1-alpha - 2008-??-??
-  o Major bugfixes:
-    - When we switched to using v3 directories, we threw away the part of
-      the "do we have enough directory info?" calculation that checked
-      how many relays we believed to still be running based on our own
-      experience. So if we went offline, we never gave up trying to make
-      new circuits; worse, when we came back online we didn't recognize
-      that we should give all the relays another chance. Bugfix on
-      0.2.0.9-alpha; fixes bugs 648 and 675.
-
   o Minor bugfixes:
-    - Stop giving double-close warn when we reject an address for client DNS.
-    - On Windows, correctly detect errors when listing the contents of a
-      directory.  Fix from lodger.  (Bugfix on 0.1.2.x.)
-    - Fix the implementation of ClientDNSRejectInternalAddresses so that it
-      actually works, and doesn't warn about every single reverse lookup.
-      Fixes the other part of bug 617.  Bugfix on 0.2.0.1-alpha.
-    - Keep address policies from leaking: start their refcount at 1, not
-      2. Bugfix on 0.2.0.16-alpha.
-    - Free authority certificates on exit, so they don't look like memory
-      leaks.  Bugfix on 0.2.0.19-alpha.
-    - Free static hashtables for policy maps and for TLS connections on
-      shutdown, so they don't look like memory leaks.  Bugfix on 0.2.0.x.
+    - Stop giving double-close warn when we reject an address for
+      client DNS.
     - Make relay cells written on a connection count as non-padding when
       tracking how long a connection has been in use. Bugfix on
       0.2.0.1-alpha.  Spotted by lodger.
     - Reduce the default smartlist size from 32 to 16; it turns out that
       most smartlists hold around 8-12 elements tops.
-    - Avoid allocating extra space when computing consensuses on
-      64-bit platforms.  Bug spotted by aakova.
-    - Use recursive pthread mutexes in order to avoid deadlock when
-      logging debug-level messages to a controller.  Bug spotted by
-      nwf, bugfix on 0.2.0.16-alpha.
-    - Warn less verbosely about clock skew from netinfo cells from
-      untrusted sources.  Fixes bug 663.
-    - Non-exit relays no longer allow DNS requests.  Fixes bug 619.
-      Patch from Lodger.
-    - Make controller stream events for DNS requests more consistent,
-      by adding "new stream" events for DNS requests, and removing
-      spurious "stream closed" events" for cached reverse resolves.
-      Patch from mwenge.  Fixes bug 646.
-    - Correctly notify one-hop connections when a circuit build has
-      failed.  Possible fix for bug 669.  Found by lodger.
     - When we choose to abandon a new entry guard because we think our
       older ones might be better, close any circuits pending on that
       new entry guard connection. Bugfix on 0.1.2.8-beta; found by lodger.
-    - Detect address changes correctly on non-directory mirror
-      servers.  Fix for bug 652.
-    - Authorities correctly free policies on bad servers on
-      exit. Fixes bug 672.
-    - When tunneling an encrypted directory connection, and its first circuit
-      fails do not leave it unattached and ask the controller to deal.  Fixes
-      the second part of bug 681.
-    - Make bridge authorities correctly clean extrainfo store from time to
-      time.  Bugfix on 0.2.0.x.
     - Stop reloading the router list from disk for no reason when we
       run out of reachable directory mirrors. Once upon a time reloading
       it would set the 'is_running' flag back to 1 for them. It hasn't
       done that for a long time.
-    - In very rare situations new hidden service descriptors were published
-      earlier than 30 seconds after the last change to the service, with the
-      30 seconds being the current voodoo saying that a descriptor is stable.
-    - While setting up a hidden service, some valid introduction circuits
-      were overlooked and given up.  This might be the reason for the long
-      delay in making a hidden service available.  Bugfix on 0.2.0.13-alpha.
+    - In very rare situations new hidden service descriptors were
+      published earlier than 30 seconds after the last change to the
+      service, with the 30 seconds being the current voodoo saying that
+      a descriptor is stable.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
-      domains.  For example, this allows one to log all notices, warnings, or
-      errors, plus all memory management messages of level debug or higher,
-      with: Log [MM] debug-err [*] notice-err file /var/log/tor.
+      domains.  For example, this allows one to log all notices, warnings,
+      or errors, plus all memory management messages of level debug or
+      higher, with: Log [MM] debug-err [*] notice-err file /var/log/tor.
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
       to avoid unused RAM in buffer chunks and memory pools.
-    - Downgrade "sslv3 alert handshake failure" message to INFO.
     - Add a couple of extra warnings to --enable-gcc-warnings for GCC 4.3,
-      and stop using a warning that had become unfixably verbose under GCC
-      4.3.
-    - Start using OpenSSL's RAND_poll() for better (and more portable)
-      cross-platform entropy collection again.  We used to use it, then
-      stopped using it because of a bug that could crash systems that called
-      RAND_poll when they had a lot of fds open.  It looks like the bug got
-      fixed in late 2006.  Our new behavior is to call RAND_poll() at
-      startup, and to call RAND_poll() when we reseed later only if we
-      have a non-buggy OpenSSL version.
+      and stop using a warning that had become unfixably verbose under
+      GCC 4.3.
+    - Resume using OpenSSL's RAND_poll() for better (and more portable)
+      cross-platform entropy collection again. We used to use it, then
+      stopped using it because of a bug that could crash systems that
+      called RAND_poll when they had a lot of fds open. It looks like the
+      bug got fixed in late 2006. Our new behavior is to call RAND_poll()
+      at startup, and to call RAND_poll() when we reseed later only if
+      we have a non-buggy OpenSSL version.
     - Speed up parsing and cut down on memory fragmentation by using
-      stack-style allocations for parsing directory objects.  Previously,
+      stack-style allocations for parsing directory objects. Previously,
       this accounted for over 40% of allocations from within Tor's code
       on a typical directory cache.
     - Lots of new unit tests.
-    - New --hush command-line option similar to --quiet.  While --quiet
+    - New --hush command-line option similar to --quiet. While --quiet
       disables all logging to the console on startup, --hush limits the
       output to messages of warning and error severity.
     - Use a Bloom filter rather than a digest-based set to track which
       descriptors we need to keep around when we're cleaning out old
-      router descriptors.  This speeds up the computation significantly, and
-      may reduce fragmentation.
+      router descriptors. This speeds up the computation significantly,
+      and may reduce fragmentation.
     - Make dumpstats() log the fullness and size of openssl-internal
       buffers.
     - Servers support a new URL scheme for consensus downloads that
       allows the client to specify which authorities are trusted.
       The server then only sends the consensus if the client will
-      trust it.  Otherwise a 404 error is sent back.  Clients use
+      trust it. Otherwise a 404 error is sent back. Clients use
       this new scheme when the server supports it.
-    - Add a new V3AuthUseLegacyKey option to make it easier for authorities
-      to change their identity keys if they have to.
     - If the user has applied the experimental SSL_MODE_RELEASE_BUFFERS
-      patch to their OpenSSL, turn it on to save memory on servers.  This
+      patch to their OpenSSL, turn it on to save memory on servers. This
       patch will (with any luck) get included in a mainline distribution
       before too long.
-    - Add a "PURPOSE=" argument to "STREAM NEW" events, as suggested by
-      Robert Hogan. Fixes the first part of bug 681.
-    - Make bridge authorities never serve extrainfo docs.
-    - Allow comments in geoip file.
     - New configure/torrc options (--enable-geoip-stats,
-      DirRecordUsageByCountry) to record how many IPs we've served directory
-      info to in each country code, how many status documents total
-      we've sent to each country code, and what share of the total
+      DirRecordUsageByCountry) to record how many IPs we've served
+      directory info to in each country code, how many status documents
+      total we've sent to each country code, and what share of the total
       directory requests we should expect to see.
     - Never use OpenSSL compression: it wastes RAM and CPU trying to
       compress cells, which are basically all encrypted, compressed, or
       both.
 
-  o Minor features (security):
-    - Reject requests for reverse-dns lookup of names in a private
-      address space.  Patch from Lodger.
-
   o Code simplifications and refactoring:
     - Refactor code using connection_ap_handshake_attach_circuit() to
-      allow that function to mark connections for close.  Part of a fix for
-      bug 617.  Bugfix on 0.2.0.1-alpha.
+      allow that function to mark connections for close. Part of a fix
+      for bug 617. Bugfix on 0.2.0.1-alpha.
     - Add a macro to implement the common pattern of iterating through
       two parallel lists in lockstep.
 
