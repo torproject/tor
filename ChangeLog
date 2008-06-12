@@ -52,9 +52,10 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       buffers.
     - Servers support a new URL scheme for consensus downloads that
       allows the client to specify which authorities are trusted.
-      The server then only sends the consensus if the client will
-      trust it. Otherwise a 404 error is sent back. Clients use
-      this new scheme when the server supports it.
+      The server then only sends the consensus if the client will trust
+      it. Otherwise a 404 error is sent back. Clients can use this
+      new scheme when the server supports it. Implements proposal 134;
+      disabled for now though.
     - If the user has applied the experimental SSL_MODE_RELEASE_BUFFERS
       patch to their OpenSSL, turn it on to save memory on servers. This
       patch will (with any luck) get included in a mainline distribution
