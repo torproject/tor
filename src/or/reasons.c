@@ -148,6 +148,9 @@ stream_end_reason_to_socks5_response(int reason)
 uint8_t
 errno_to_stream_end_reason(int e)
 {
+  /* To add new errors here, find out if they exist on Windows, and if a WSA*
+   * equivalent exists on windows. Add a case, an S_CASE, or an E_CASE as
+   * appropriate. */
   switch (e) {
     case EPIPE:
       return END_STREAM_REASON_DONE;
@@ -188,6 +191,9 @@ errno_to_stream_end_reason(int e)
 const char *
 orconn_end_reason_to_control_string(int r)
 {
+  /* To add new errors here, find out if they exist on Windows, and if a WSA*
+   * equivalent exists on windows. Add a case, an S_CASE, or an E_CASE as
+   * appropriate. */
   switch (r) {
     case END_OR_CONN_REASON_DONE:
       return "DONE";
@@ -252,8 +258,8 @@ errno_to_orconn_end_reason(int e)
       return END_OR_CONN_REASON_DONE;
     S_CASE(ENOTCONN):
     S_CASE(ENETUNREACH):
-//    case ENETDOWN: /* << somebody should look into the Windows equiv */
-//    case EHOSTUNREACH:
+    S_CASE(ENETDOWN):
+    S_CASE(EHOSTUNREACH):
       return END_OR_CONN_REASON_NO_ROUTE;
     S_CASE(ECONNREFUSED):
       return END_OR_CONN_REASON_REFUSED;
