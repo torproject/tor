@@ -2109,8 +2109,8 @@ connection_ap_make_link(char *address, uint16_t port,
 {
   edge_connection_t *conn;
 
-  log_info(LD_APP,"Making internal anonymized tunnel to %s:%d ...",
-           safe_str(address),port);
+  log_info(LD_APP,"Making internal %s tunnel to %s:%d ...",
+           want_onehop ? "direct" : "anonymized" , safe_str(address),port);
 
   conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
   conn->_base.linked = 1; /* so that we can add it safely below. */
