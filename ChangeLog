@@ -1,4 +1,4 @@
-Changes in version 0.2.0.28-rc - 2008-06-??
+Changes in version 0.2.0.28-rc - 2008-06-13
   o Anonymity fixes:
     - Fix a bug where, when we were choosing the 'end stream reason' to
       put in our relay end cell that we send to the exit relay, Tor
@@ -8,7 +8,16 @@ Changes in version 0.2.0.28-rc - 2008-06-??
       set. Down the road we should stop sending reasons to exit relays,
       or otherwise prevent future versions of this bug.
 
-  o Minor fixes:
+  o Major bugfixes:
+    - While setting up a hidden service, some valid introduction circuits
+      were overlooked and abandoned. This might be the reason for
+      the long delay in making a hidden service available. Bugfix on
+      0.2.0.13-alpha.
+
+  o Minor features:
+    - Update to the "June 9 2008" ip-to-country file.
+
+  o Minor bugfixes:
     - When we're checking if we have enough dir info for each relay
       to begin establishing circuits, make sure that we actually have
       the descriptor listed in the consensus, not just any descriptor.
@@ -19,10 +28,6 @@ Changes in version 0.2.0.28-rc - 2008-06-??
     - If we change our MaxAdvertisedBandwidth and then reload torrc,
       Tor won't realize it should publish a new relay descriptor. Fixes
       bug 688, reported by mfr.
-    - While setting up a hidden service, some valid introduction circuits
-      were overlooked and abandoned. This might be the reason for
-      the long delay in making a hidden service available. Bugfix on
-      0.2.0.13-alpha.
     - When we haven't had any application requests lately, don't bother
       logging that we have expired a bunch of descriptors.
     - Fix unit tests in 0.2.0.27-rc.
