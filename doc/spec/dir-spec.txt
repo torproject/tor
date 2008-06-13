@@ -1164,6 +1164,9 @@ $Id$
         * The version is given as whichever version is listed by the most
           voters, with ties decided in favor of more recent versions.
 
+        * If consensus-method 4 or later is in use, then routers that
+          do not have the Running flag are not listed at all.
+
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
@@ -1182,6 +1185,7 @@ $Id$
      "1" -- The first implemented version.
      "2" -- Added support for the Unnamed flag.
      "3" -- Added legacy ID key support to aid in authority ID key rollovers
+     "4" -- No longer list routers that are not running in the consensus
 
    Before generating a consensus, an authority must decide which consensus
    method to use.  To do this, it looks for the highest version number
