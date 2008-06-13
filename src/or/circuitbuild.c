@@ -1045,10 +1045,10 @@ new_route_len(uint8_t purpose, extend_info_t *exit,
       purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
     routelen++;
 
-  log_debug(LD_CIRC,"Chosen route length %d (%d routers available).",
-            routelen, smartlist_len(routers));
-
   num_acceptable_routers = count_acceptable_routers(routers);
+
+  log_debug(LD_CIRC,"Chosen route length %d (%d/%d routers available).",
+            routelen, num_acceptable_routers, smartlist_len(routers));
 
   if (num_acceptable_routers < 2) {
     log_info(LD_CIRC,
@@ -1961,7 +1961,7 @@ log_entry_guards(int severity)
     {
       tor_snprintf(buf, sizeof(buf), "%s (%s%s)",
                    e->nickname,
-                   e->bad_since ? "down " : "up ",
+                   entry_is_live(e, 0, 1, 0) ? "up " : "down ",
                    e->made_contact ? "made-contact" : "never-contacted");
       smartlist_add(elements, tor_strdup(buf));
     });
