@@ -22,7 +22,6 @@ const char buffers_c_id[] =
 #include <sys/uio.h>
 #endif
 
-
 //#define PARANOIA
 //#define NOINLINE
 
@@ -761,7 +760,6 @@ flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
     sz = chunk->datalen;
   write_result = tor_socket_send(s, chunk->data, sz, 0);
 #endif
-
 
   if (write_result < 0) {
     int e = tor_socket_errno(s);

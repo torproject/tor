@@ -41,6 +41,50 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
   "--enable-gcc-warnings".  This will give a bunch of extra warning flags to
   the compiler, and help us find divergences from our preferred C style.
 
+1.0.1. Getting emacs to edit Tor source properly.
+
+  Hi, folks!  Nick here.  I like to put the following snippet in my .emacs
+  file:
+    (add-hook 'c-mode-hook
+          (lambda ()
+            (font-lock-mode 1)
+            (set-variable 'show-trailing-whitespace t)
+
+            (let ((fname (expand-file-name (buffer-file-name))))
+              (cond
+               ((string-match "^/home/nickm/src/libevent" fname)
+                (set-variable 'indent-tabs-mode t)
+                (set-variable 'c-basic-offset 4)
+                (set-variable 'tab-width 4))
+               ((string-match "^/home/nickm/src/tor" fname)
+                (set-variable 'indent-tabs-mode nil)
+                (set-variable 'c-basic-offset 2))
+               ((string-match "^/home/nickm/src/openssl" fname)
+                (set-variable 'indent-tabs-mode t)
+                (set-variable 'c-basic-offset 8)
+                (set-variable 'tab-width 8))
+            ))))
+
+  You'll note that it defaults to showing all trailing whitespace.  The
+  "cond" test detects whether the file is one of a few C free software
+  projects that I often edit, and sets up the indentation level and tab
+  preferences to match what they want.
+
+  If you want to try this out, you'll need to change the filename regex
+  patterns to match where you keep your Tor files.
+
+  If you *only* use emacs to edit Tor, you could always just say:
+
+    (add-hook 'c-mode-hook
+          (lambda ()
+            (font-lock-mode 1)
+            (set-variable 'show-trailing-whitespace t)
+            (set-variable 'indent-tabs-mode nil)
+            (set-variable 'c-basic-offset 2)))
+
+  There is probably a better way to do this.  No, we are probably not going
+  to clutter the files with emacs stuff.
+
 1.1. Details
 
   Use tor_malloc, tor_free, tor_strdup, and tor_gettimeofday instead of their

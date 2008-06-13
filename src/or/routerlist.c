@@ -82,8 +82,7 @@ static time_t last_routerdesc_download_attempted = 0;
 
 /* DOCDOC This is a massive massive kludge XXXX021 */
 static uint64_t sl_last_total_weighted_bw = 0;
-static double sl_last_guard_weight = 0.0;
-static double sl_last_exit_weight = 0.0;
+static uint64_t sl_last_weighted_bw_of_me = 0;
 
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
@@ -873,32 +872,20 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
                                           double *v3_share_out)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  routerinfo_t *me_published;
   routerstatus_t *rs;
   const int pds_flags = PDS_ALLOW_SELF|PDS_IGNORE_FASCISTFIREWALL;
-  uint32_t bw;
   *v2_share_out = *v3_share_out = 0.0;
-  if (!me)
-    return -1;
-  me_published = router_get_by_digest(me->cache_info.identity_digest);
   rs = router_get_consensus_status_by_id(me->cache_info.identity_digest);
-  if (!rs || !me_published)
+  if (!me || !rs)
     return -1;
-  bw = me_published->bandwidthcapacity;
-  if (!rs->is_running)
-    return 0;
 
   /* Calling for side effect */
   if (rs->is_v2_dir) {
     sl_last_total_weighted_bw = 0;
     router_pick_directory_server(V2_AUTHORITY, pds_flags);
     if (sl_last_total_weighted_bw != 0) {
-      double share = (double)bw;
-      if (rs->is_exit)
-        share *= sl_last_exit_weight;
-      if (rs->is_possible_guard)
-        share *= sl_last_guard_weight;
-      *v2_share_out = share / U64_TO_DBL(sl_last_total_weighted_bw);
+      *v2_share_out = U64_TO_DBL(sl_last_weighted_bw_of_me) /
+        U64_TO_DBL(sl_last_total_weighted_bw);
     }
   }
 
@@ -906,12 +893,8 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
     sl_last_total_weighted_bw = 0;
     router_pick_directory_server(V3_AUTHORITY, pds_flags);
     if (sl_last_total_weighted_bw != 0) {
-      double share = (double)bw;
-      if (rs->is_exit)
-        share *= sl_last_exit_weight;
-      if (rs->is_possible_guard)
-        share *= sl_last_guard_weight;
-      *v3_share_out = share / U64_TO_DBL(sl_last_total_weighted_bw);
+      *v3_share_out = U64_TO_DBL(sl_last_weighted_bw_of_me) /
+        U64_TO_DBL(sl_last_total_weighted_bw);
     }
   }
 
@@ -1482,6 +1465,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
   bitarray_t *exit_bits;
   bitarray_t *guard_bits;
   uint32_t max_believable_bw = get_max_believable_bandwidth();
+  int me_idx = -1;
 
   /* Can't choose exit and guard at same time */
   tor_assert(rule == NO_WEIGHTING ||
@@ -1505,6 +1489,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
     if (statuses) {
       /* need to extract router info */
       status = smartlist_get(sl, i);
+      if (router_digest_is_me(status->identity_digest))
+        me_idx = i;
       router = router_get_by_digest(status->identity_digest);
       is_exit = status->is_exit;
       is_guard = status->is_possible_guard;
@@ -1518,6 +1504,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
       }
     } else {
       router = smartlist_get(sl, i);
+      if (router_digest_is_me(router->cache_info.identity_digest))
+        me_idx = i;
       is_exit = router->is_exit;
       is_guard = router->is_possible_guard;
       this_bw = router_get_advertised_bandwidth(router);
@@ -1620,24 +1608,27 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
       guard_weight = 0.0;
 
     total_bw = 0;
+    sl_last_weighted_bw_of_me = 0;
     for (i=0; i < (unsigned)smartlist_len(sl); i++) {
+      uint64_t bw;
       is_exit = bitarray_is_set(exit_bits, i);
       is_guard = bitarray_is_set(guard_bits, i);
       if (is_exit && is_guard)
-        total_bw += ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
+        bw = ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
       else if (is_guard)
-        total_bw += ((uint64_t)(bandwidths[i] * guard_weight));
+        bw = ((uint64_t)(bandwidths[i] * guard_weight));
       else if (is_exit)
-        total_bw += ((uint64_t)(bandwidths[i] * exit_weight));
+        bw = ((uint64_t)(bandwidths[i] * exit_weight));
       else
-        total_bw += bandwidths[i];
+        bw = bandwidths[i];
+      total_bw += bw;
+      if (i == (unsigned) me_idx)
+        sl_last_weighted_bw_of_me = bw;
     }
   }
 
   /* XXXX021 this is a kludge to expose these values. */
   sl_last_total_weighted_bw = total_bw;
-  sl_last_guard_weight = guard_weight;
-  sl_last_exit_weight = exit_weight;
 
   log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
             ", exit bw = "U64_FORMAT
