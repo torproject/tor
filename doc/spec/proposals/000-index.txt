@@ -58,7 +58,7 @@ Proposals by number:
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
 134  More robust consensus voting with diverse authority sets [DRAFT]
 135  Simplify Configuration of Private Tor Networks [OPEN]
-136  Mass authority migration with legacy keys [OPEN]
+136  Mass authority migration with legacy keys [FINISHED]
 137  Keep controllers informed as Tor bootstraps [OPEN]
 138  Remove routers that are not Running from consensus documents [CLOSED]
 
@@ -76,7 +76,6 @@ Proposals by status:
    120  Suicide descriptors when Tor servers stop
    121  Hidden Service Authentication
    135  Simplify Configuration of Private Tor Networks
-   136  Mass authority migration with legacy keys
    137  Keep controllers informed as Tor bootstraps
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
@@ -92,6 +91,7 @@ Proposals by status:
  FINISHED:
    111  Prioritizing local traffic over relayed traffic
    125  Behavior for bridge users, bridge relays, and bridge authorities
+   136  Mass authority migration with legacy keys
  CLOSED:
    101  Voting on the Tor Directory System
    102  Dropping "opt" from the directory format

@@ -2,7 +2,7 @@ Filename: 136-legacy-keys.txt
 Title: Mass authority migration with legacy keys
 Author: Nick Mathewson
 Created: 13-May-2008
-Status: Open
+Status: Finished
 
 Overview:
 
