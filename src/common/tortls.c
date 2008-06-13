@@ -104,10 +104,10 @@ struct tor_tls_t {
 #ifdef V2_HANDSHAKE_CLIENT
 /** An array of fake SSL_CIPHER objects that we use in order to trick OpenSSL
  * in client mode into advertising the ciphers we want.  See
- * rectify_client_ciphers for details. */
+ * rectify_client_ciphers() for details. */
 static SSL_CIPHER *CLIENT_CIPHER_DUMMIES = NULL;
 /** A stack of SSL_CIPHER objects, some real, some fake.
- * See rectify_client_ciphers for details. */
+ * See rectify_client_ciphers() for details. */
 static STACK_OF(SSL_CIPHER) *CLIENT_CIPHER_STACK = NULL;
 #endif
 
@@ -731,7 +731,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 #endif
 
 /** Replace *<b>ciphers</b> with a new list of SSL ciphersuites: specifically,
- * a list designed to mimic a common web browser.  Some of the cipher in the
+ * a list designed to mimic a common web browser.  Some of the ciphers in the
  * list won't actually be implemented by OpenSSL: that's okay so long as the
  * server doesn't select them, and the server won't select anything besides
  * what's in SERVER_CIPHER_LIST.

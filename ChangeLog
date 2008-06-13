@@ -1,4 +1,15 @@
-Changes in version 0.2.1.1-alpha - 2008-??-??
+Changes in version 0.2.1.1-alpha - 2008-06-13
+  o Major features:
+    - Modify the list of ciphers advertised by OpenSSL in client mode
+      to even more closely resemble a common web browser.  We cheat a
+      little so that we can advertise ciphers that the locally
+      installed OpenSSL doesn't know about.
+    - Start sending "bootstrap phase" status events to the controller,
+      so it can keep the user informed of progress fetching directory
+      information and establishing circuits. Also inform the controller
+      if we think we're stuck at a particular bootstrap phase. Implements
+      proposal 137.
+
   o Memory fixes and improvements:
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
       to avoid unused RAM in buffer chunks and memory pools.
@@ -36,12 +47,6 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       published earlier than 30 seconds after the last change to the
       service, with the 30 seconds being the current voodoo saying that
       a descriptor is stable.
-
-  o Major features:
-    - Modify the list of ciphers advertised by OpenSSL in client mode
-      to even more closely resemble a common web browser.  We cheat a
-      little so that we can advertise ciphers that the locally
-      installed OpenSSL doesn't know about.
 
   o Minor features:
     - Allow separate log levels to be configured for different logging

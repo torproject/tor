@@ -1,5 +1,5 @@
 /* This is an include file used to define the list of ciphers clients should
- * advertise.  Before including it, you should define the CIPHER and XCPIHER
+ * advertise.  Before including it, you should define the CIPHER and XCIPHER
  * macros. */
 #ifdef TLS1_TXT_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
     CIPHER(0xc00a, TLS1_TXT_ECDHE_ECDSA_WITH_AES_256_CBC_SHA)
