@@ -2227,6 +2227,43 @@ _openssl_locking_cb(int mode, int n, const char *file, int line)
     tor_mutex_release(_openssl_mutexes[n]);
 }
 
+struct CRYPTO_dynlock_value {
+  tor_mutex_t *lock;
+};
+
+static struct CRYPTO_dynlock_value *
+_openssl_dynlock_create_cb(const char *file, int line)
+{
+  struct CRYPTO_dynlock_value *v;
+  (void)file;
+  (void)line;
+  v = tor_malloc(sizeof(struct CRYPTO_dynlock_value));
+  v->lock = tor_mutex_new();
+  return v;
+}
+
+static void
+_openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
+                         const char *file, int line)
+{
+  (void)file;
+  (void)line;
+  if (mode & CRYPTO_LOCK)
+    tor_mutex_acquire(v->lock);
+  else
+    tor_mutex_release(v->lock);
+}
+
+static void
+_openssl_dynlock_destroy_cb(struct CRYPTO_dynlock_value *v,
+                            const char *file, int line)
+{
+  (void)file;
+  (void)line;
+  tor_mutex_free(v->lock);
+  tor_free(v);
+}
+
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
  * multithreaded. */
 static int
@@ -2240,6 +2277,9 @@ setup_openssl_threading(void)
     _openssl_mutexes[i] = tor_mutex_new();
   CRYPTO_set_locking_callback(_openssl_locking_cb);
   CRYPTO_set_id_callback(tor_get_thread_id);
+  CRYPTO_set_dynlock_create_callback(_openssl_dynlock_create_cb);
+  CRYPTO_set_dynlock_lock_callback(_openssl_dynlock_lock_cb);
+  CRYPTO_set_dynlock_destroy_callback(_openssl_dynlock_destroy_cb);
   return 0;
 }
 #else
