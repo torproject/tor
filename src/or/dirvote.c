@@ -105,7 +105,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status vote\n"
-                 "consensus-methods 1 2 3\n"
+                 "consensus-methods 1 2 3 4\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -443,7 +443,7 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method >= 1) && (method <= 3);
+  return (method >= 1) && (method <= 4);
 }
 
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
@@ -788,7 +788,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       const char *lowest_id = NULL;
       const char *chosen_version;
       const char *chosen_name = NULL;
-      int is_named = 0, is_unnamed = 0;
+      int is_named = 0, is_unnamed = 0, is_running = 0;
       int naming_conflict = 0;
       int n_listing = 0;
       int i;
@@ -892,10 +892,18 @@ networkstatus_compute_consensus(smartlist_t *votes,
           if (is_unnamed)
             smartlist_add(chosen_flags, (char*)fl);
         } else {
-          if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2)
+          if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2) {
             smartlist_add(chosen_flags, (char*)fl);
+            if (!strcmp(fl, "Running"))
+              is_running = 1;
+          }
         }
       });
+
+      /* Starting with consensus method 4 we do not list servers
+       * that are not running in a consensus.  See Proposal 138 */
+      if (consensus_method >= 4 && !is_running)
+        continue;
 
       /* Pick the version. */
       if (smartlist_len(versions)) {
@@ -2057,4 +2065,3 @@ dirvote_get_vote(const char *fp, int flags)
   }
   return NULL;
 }
-
