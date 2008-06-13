@@ -30,6 +30,9 @@ Changes in version 0.2.0.28-rc - 2008-06-13
       bug 688, reported by mfr.
     - When we haven't had any application requests lately, don't bother
       logging that we have expired a bunch of descriptors.
+    - Make relay cells written on a connection count as non-padding when
+      tracking how long a connection has been in use. Bugfix on
+      0.2.0.1-alpha. Spotted by lodger.
     - Fix unit tests in 0.2.0.27-rc.
     - Fix compile on Windows.
 

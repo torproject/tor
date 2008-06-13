@@ -16,7 +16,7 @@ Backport items for 0.2.0:
   o r14205: free authority certs on exit.
   o r14212: free static hashtables and log mutex on exit.
   o r14214: don't read torrc when all we do is --hash-password
-  - r14329: update last_added_nonpadding for relay cells.
+  o r14329: update last_added_nonpadding for relay cells.
   - r14247: tor-spec and dir-spec updates [just backport the whole files]
 
 Backport for 0.2.0 once better tested:

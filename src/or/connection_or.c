@@ -285,13 +285,15 @@ int
 connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen = buf_datalen(conn->_base.outbuf);
+  time_t now = time(NULL);
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   if (datalen < OR_CONN_LOWWATER) {
     ssize_t n = (OR_CONN_HIGHWATER - datalen + CELL_NETWORK_SIZE-1)
       / CELL_NETWORK_SIZE;
     while (conn->active_circuits && n > 0) {
-      int flushed = connection_or_flush_from_first_active_circuit(conn, 1);
+      int flushed;
+      flushed = connection_or_flush_from_first_active_circuit(conn, 1, now);
       n -= flushed;
     }
   }

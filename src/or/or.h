@@ -3557,7 +3557,7 @@ void append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
                                   cell_t *cell, int direction);
 void connection_or_unlink_all_active_circs(or_connection_t *conn);
 int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
-                                                  int max);
+                                                  int max, time_t now);
 void assert_active_circuits_ok(or_connection_t *orconn);
 void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
 void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
