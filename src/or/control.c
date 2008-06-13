@@ -3710,7 +3710,7 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
       break;
     case BOOTSTRAP_STATUS_CONN_DIR:
       *tag = "conn_dir";
-      *summary = "Connecting to directory mirror";
+      *summary = "Connecting to directory server";
       break;
     case BOOTSTRAP_STATUS_HANDSHAKE:
       *tag = "status_handshake";
@@ -3718,11 +3718,11 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
       break;
     case BOOTSTRAP_STATUS_HANDSHAKE_DIR:
       *tag = "handshake_dir";
-      *summary = "Finishing handshake with directory mirror";
+      *summary = "Finishing handshake with directory server";
       break;
     case BOOTSTRAP_STATUS_ONEHOP_CREATE:
       *tag = "onehop_create";
-      *summary = "Establishing one-hop circuit for dir info";
+      *summary = "Establishing an encrypted directory connection";
       break;
     case BOOTSTRAP_STATUS_REQUESTING_STATUS:
       *tag = "requesting_status";
@@ -3746,15 +3746,15 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
       break;
     case BOOTSTRAP_STATUS_CONN_OR:
       *tag = "conn_or";
-      *summary = "Connecting to entry guard";
+      *summary = "Connecting to the Tor network";
       break;
     case BOOTSTRAP_STATUS_HANDSHAKE_OR:
       *tag = "handshake_or";
-      *summary = "Finishing handshake with entry guard";
+      *summary = "Finishing handshake with first hop";
       break;
     case BOOTSTRAP_STATUS_CIRCUIT_CREATE:
       *tag = "circuit_create";
-      *summary = "Establishing circuits";
+      *summary = "Establishing a Tor circuit";
       break;
     case BOOTSTRAP_STATUS_DONE:
       *tag = "done";

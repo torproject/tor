@@ -21,7 +21,9 @@ Changes in version 0.2.1.1-alpha - 2008-06-13
   o Major bugfixes:
     - When we choose to abandon a new entry guard because we think our
       older ones might be better, close any circuits pending on that
-      new entry guard connection. Bugfix on 0.1.2.8-beta; found by lodger.
+      new entry guard connection. This fix should make us recover much
+      faster when our network is down and then comes back. Bugfix on
+      0.1.2.8-beta; found by lodger.
 
   o Memory fixes and improvements:
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
