@@ -827,7 +827,6 @@ tor_tls_new(int sock, int isServer)
   if (!SSL_set_cipher_list(result->ssl,
                      isServer ? SERVER_CIPHER_LIST : CLIENT_CIPHER_LIST)) {
     tls_log_errors(NULL, LOG_WARN, "setting ciphers");
-    log_warn(LD_NET, "WTF?");
     SSL_free(result->ssl);
     tor_free(result);
     return NULL;
