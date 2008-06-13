@@ -1,12 +1,30 @@
 Changes in version 0.2.1.1-alpha - 2008-??-??
+  o Memory fixes and improvements:
+    - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
+      to avoid unused RAM in buffer chunks and memory pools.
+    - Speed up parsing and cut down on memory fragmentation by using
+      stack-style allocations for parsing directory objects. Previously,
+      this accounted for over 40% of allocations from within Tor's code
+      on a typical directory cache.
+    - Use a Bloom filter rather than a digest-based set to track which
+      descriptors we need to keep around when we're cleaning out old
+      router descriptors. This speeds up the computation significantly,
+      and may reduce fragmentation.
+    - Reduce the default smartlist size from 32 to 16; it turns out that
+      most smartlists hold around 8-12 elements tops.
+    - Make dumpstats() log the fullness and size of openssl-internal
+      buffers.
+    - If the user has applied the experimental SSL_MODE_RELEASE_BUFFERS
+      patch to their OpenSSL, turn it on to save memory on servers. This
+      patch will (with any luck) get included in a mainline distribution
+      before too long.
+
   o Minor bugfixes:
     - Stop giving double-close warn when we reject an address for
       client DNS.
     - Make relay cells written on a connection count as non-padding when
       tracking how long a connection has been in use. Bugfix on
       0.2.0.1-alpha.  Spotted by lodger.
-    - Reduce the default smartlist size from 32 to 16; it turns out that
-      most smartlists hold around 8-12 elements tops.
     - When we choose to abandon a new entry guard because we think our
       older ones might be better, close any circuits pending on that
       new entry guard connection. Bugfix on 0.1.2.8-beta; found by lodger.
@@ -30,8 +48,6 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       domains.  For example, this allows one to log all notices, warnings,
       or errors, plus all memory management messages of level debug or
       higher, with: Log [MM] debug-err [*] notice-err file /var/log/tor.
-    - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
-      to avoid unused RAM in buffer chunks and memory pools.
     - Add a couple of extra warnings to --enable-gcc-warnings for GCC 4.3,
       and stop using a warning that had become unfixably verbose under
       GCC 4.3.
@@ -42,30 +58,16 @@ Changes in version 0.2.1.1-alpha - 2008-??-??
       bug got fixed in late 2006. Our new behavior is to call RAND_poll()
       at startup, and to call RAND_poll() when we reseed later only if
       we have a non-buggy OpenSSL version.
-    - Speed up parsing and cut down on memory fragmentation by using
-      stack-style allocations for parsing directory objects. Previously,
-      this accounted for over 40% of allocations from within Tor's code
-      on a typical directory cache.
     - Lots of new unit tests.
     - New --hush command-line option similar to --quiet. While --quiet
       disables all logging to the console on startup, --hush limits the
       output to messages of warning and error severity.
-    - Use a Bloom filter rather than a digest-based set to track which
-      descriptors we need to keep around when we're cleaning out old
-      router descriptors. This speeds up the computation significantly,
-      and may reduce fragmentation.
-    - Make dumpstats() log the fullness and size of openssl-internal
-      buffers.
     - Servers support a new URL scheme for consensus downloads that
       allows the client to specify which authorities are trusted.
       The server then only sends the consensus if the client will trust
       it. Otherwise a 404 error is sent back. Clients can use this
       new scheme when the server supports it. Implements proposal 134;
       disabled for now though.
-    - If the user has applied the experimental SSL_MODE_RELEASE_BUFFERS
-      patch to their OpenSSL, turn it on to save memory on servers. This
-      patch will (with any luck) get included in a mainline distribution
-      before too long.
     - New configure/torrc options (--enable-geoip-stats,
       DirRecordUsageByCountry) to record how many IPs we've served
       directory info to in each country code, how many status documents
