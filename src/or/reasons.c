@@ -252,8 +252,8 @@ errno_to_orconn_end_reason(int e)
       return END_OR_CONN_REASON_DONE;
     S_CASE(ENOTCONN):
     S_CASE(ENETUNREACH):
-    case ENETDOWN: /* << somebody should look into the Windows equiv */
-    case EHOSTUNREACH:
+//    case ENETDOWN: /* << somebody should look into the Windows equiv */
+//    case EHOSTUNREACH:
       return END_OR_CONN_REASON_NO_ROUTE;
     S_CASE(ECONNREFUSED):
       return END_OR_CONN_REASON_REFUSED;
