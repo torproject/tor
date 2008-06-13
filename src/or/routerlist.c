@@ -4188,7 +4188,9 @@ update_router_have_minimum_dir_info(void)
     control_event_client_status(LOG_NOTICE, "ENOUGH_DIR_INFO");
   }
   if (!res && have_min_dir_info) {
-    log(LOG_NOTICE, LD_DIR,"Our directory information is no longer up-to-date "
+    int quiet = directory_too_idle_to_fetch_descriptors(options, now);
+    log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
+        "Our directory information is no longer up-to-date "
         "enough to build circuits: %s", dir_info_status);
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
