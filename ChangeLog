@@ -16,6 +16,8 @@ Changes in version 0.2.0.28-rc - 2008-06-13
 
   o Minor features:
     - Update to the "June 9 2008" ip-to-country file.
+    - Run 'make test' as part of 'make dist', so we stop releasing so
+      many development snapshots that fail their unit tests.
 
   o Minor bugfixes:
     - When we're checking if we have enough dir info for each relay
