@@ -1,5 +1,6 @@
-tor (0.2.0.27-rc-X) Xxperimental; urgency=low
+tor (0.2.0.28-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Remove debian/patches/11_tor_as_root_more_helpful.dpatch as
     it is no longer needed:  We now setuid() to the Tor user
     when run as root and it all just works.
@@ -7,7 +8,7 @@ tor (0.2.0.27-rc-X) Xxperimental; urgency=low
   * Add patches/14_fix_geoip_warning: Change geoipdb open failed message.
   * Require unit tests to pass again.
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 13 Jun 2008 10:27:44 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri, 13 Jun 2008 10:28:36 +0200
 
 tor (0.2.0.27-rc-1) experimental; urgency=low
 
