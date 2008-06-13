@@ -94,7 +94,7 @@ build-stamp:  config.status
 			src/or/test || true; \
 		else \
 			echo "src/or/test"; \
-			src/or/test || true; \
+			src/or/test; \
 		fi; \
 	else \
 		echo -e "\n\nSkipping unittests\n\n"; \
