@@ -1,14 +1,27 @@
 Changes in version 0.2.1.1-alpha - 2008-06-13
   o Major features:
-    - Modify the list of ciphers advertised by OpenSSL in client mode
-      to even more closely resemble a common web browser.  We cheat a
-      little so that we can advertise ciphers that the locally
-      installed OpenSSL doesn't know about.
+    - More work on making our TLS handshake blend in: modify the list
+      of ciphers advertised by OpenSSL in client mode to even more
+      closely resemble a common web browser. We cheat a little so that
+      we can advertise ciphers that the locally installed OpenSSL doesn't
+      know about.
     - Start sending "bootstrap phase" status events to the controller,
       so it can keep the user informed of progress fetching directory
       information and establishing circuits. Also inform the controller
       if we think we're stuck at a particular bootstrap phase. Implements
       proposal 137.
+    - Resume using OpenSSL's RAND_poll() for better (and more portable)
+      cross-platform entropy collection again. We used to use it, then
+      stopped using it because of a bug that could crash systems that
+      called RAND_poll when they had a lot of fds open. It looks like the
+      bug got fixed in late 2006. Our new behavior is to call RAND_poll()
+      at startup, and to call RAND_poll() when we reseed later only if
+      we have a non-buggy OpenSSL version.
+
+  o Major bugfixes:
+    - When we choose to abandon a new entry guard because we think our
+      older ones might be better, close any circuits pending on that
+      new entry guard connection. Bugfix on 0.1.2.8-beta; found by lodger.
 
   o Memory fixes and improvements:
     - Add a malloc_good_size implementation to OpenBSD_malloc_linux.c,
@@ -29,65 +42,45 @@ Changes in version 0.2.1.1-alpha - 2008-06-13
       patch to their OpenSSL, turn it on to save memory on servers. This
       patch will (with any luck) get included in a mainline distribution
       before too long.
+    - Never use OpenSSL compression: it wastes RAM and CPU trying to
+      compress cells, which are basically all encrypted, compressed,
+      or both.
 
   o Minor bugfixes:
-    - Stop giving double-close warn when we reject an address for
-      client DNS.
-    - Make relay cells written on a connection count as non-padding when
-      tracking how long a connection has been in use. Bugfix on
-      0.2.0.1-alpha.  Spotted by lodger.
-    - When we choose to abandon a new entry guard because we think our
-      older ones might be better, close any circuits pending on that
-      new entry guard connection. Bugfix on 0.1.2.8-beta; found by lodger.
     - Stop reloading the router list from disk for no reason when we
       run out of reachable directory mirrors. Once upon a time reloading
       it would set the 'is_running' flag back to 1 for them. It hasn't
       done that for a long time.
     - In very rare situations new hidden service descriptors were
       published earlier than 30 seconds after the last change to the
-      service, with the 30 seconds being the current voodoo saying that
-      a descriptor is stable.
+      service. (We currently think that a hidden service descriptor
+      that's been stable for 30 seconds is worth publishing.)
 
   o Minor features:
     - Allow separate log levels to be configured for different logging
-      domains.  For example, this allows one to log all notices, warnings,
+      domains. For example, this allows one to log all notices, warnings,
       or errors, plus all memory management messages of level debug or
       higher, with: Log [MM] debug-err [*] notice-err file /var/log/tor.
     - Add a couple of extra warnings to --enable-gcc-warnings for GCC 4.3,
       and stop using a warning that had become unfixably verbose under
       GCC 4.3.
-    - Resume using OpenSSL's RAND_poll() for better (and more portable)
-      cross-platform entropy collection again. We used to use it, then
-      stopped using it because of a bug that could crash systems that
-      called RAND_poll when they had a lot of fds open. It looks like the
-      bug got fixed in late 2006. Our new behavior is to call RAND_poll()
-      at startup, and to call RAND_poll() when we reseed later only if
-      we have a non-buggy OpenSSL version.
-    - Lots of new unit tests.
     - New --hush command-line option similar to --quiet. While --quiet
       disables all logging to the console on startup, --hush limits the
       output to messages of warning and error severity.
     - Servers support a new URL scheme for consensus downloads that
       allows the client to specify which authorities are trusted.
       The server then only sends the consensus if the client will trust
-      it. Otherwise a 404 error is sent back. Clients can use this
-      new scheme when the server supports it. Implements proposal 134;
-      disabled for now though.
+      it. Otherwise a 404 error is sent back. Clients use this
+      new scheme when the server supports it (meaning it's running
+      0.2.1.1-alpha or later). Implements proposal 134.
     - New configure/torrc options (--enable-geoip-stats,
       DirRecordUsageByCountry) to record how many IPs we've served
       directory info to in each country code, how many status documents
       total we've sent to each country code, and what share of the total
       directory requests we should expect to see.
-    - Never use OpenSSL compression: it wastes RAM and CPU trying to
-      compress cells, which are basically all encrypted, compressed, or
-      both.
     - Use the TLS1 hostname extension to more closely resemble browser
       behavior.
-
-  o Code simplifications and refactoring:
-    - Refactor code using connection_ap_handshake_attach_circuit() to
-      allow that function to mark connections for close. Part of a fix
-      for bug 617. Bugfix on 0.2.0.1-alpha.
+    - Lots of new unit tests.
     - Add a macro to implement the common pattern of iterating through
       two parallel lists in lockstep.
 
