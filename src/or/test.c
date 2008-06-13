@@ -2883,7 +2883,8 @@ test_v3_networkstatus(void)
   rs->addr = 0x99008801;
   rs->or_port = 443;
   rs->dir_port = 8000;
-  /* all flags cleared */
+  /* all flags but running cleared */
+  rs->is_running = 1;
   smartlist_add(vote->routerstatus_list, vrs);
   /* add the second routerstatus. */
   vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
@@ -2912,6 +2913,19 @@ test_v3_networkstatus(void)
   rs->dir_port = 9999;
   rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
     rs->is_running = rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
+  smartlist_add(vote->routerstatus_list, vrs);
+  /* add a fourth routerstatus that is not running. */
+  vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
+  rs = &vrs->status;
+  vrs->version = tor_strdup("0.1.6.3");
+  rs->published_on = now-1000;
+  strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
+  memset(rs->identity_digest, 34, DIGEST_LEN);
+  memset(rs->descriptor_digest, 48, DIGEST_LEN);
+  rs->addr = 0xC0000203;
+  rs->or_port = 500;
+  rs->dir_port = 1999;
+  /* Running flag (and others) cleared */
   smartlist_add(vote->routerstatus_list, vrs);
 
   /* dump the vote and try to parse it. */
@@ -2943,7 +2957,7 @@ test_v3_networkstatus(void)
   cp = smartlist_join_strings(v1->known_flags, ":", 0, NULL);
   test_streq(cp, "Authority:Exit:Fast:Guard:Running:Stable:V2Dir:Valid");
   tor_free(cp);
-  test_eq(smartlist_len(v1->routerstatus_list), 3);
+  test_eq(smartlist_len(v1->routerstatus_list), 4);
   /* Check the first routerstatus. */
   vrs = smartlist_get(v1->routerstatus_list, 0);
   rs = &vrs->status;
@@ -2957,7 +2971,7 @@ test_v3_networkstatus(void)
   test_eq(rs->addr, 0x99008801);
   test_eq(rs->or_port, 443);
   test_eq(rs->dir_port, 8000);
-  test_eq(vrs->flags, U64_LITERAL(0));
+  test_eq(vrs->flags, U64_LITERAL(16)); // no flags except "running"
   /* Check the second routerstatus. */
   vrs = smartlist_get(v1->routerstatus_list, 1);
   rs = &vrs->status;
@@ -3100,7 +3114,7 @@ test_v3_networkstatus(void)
   test_assert(!rs->is_fast);
   test_assert(!rs->is_possible_guard);
   test_assert(!rs->is_stable);
-  test_assert(!rs->is_running);
+  test_assert(rs->is_running); /* If it wasn't running it wouldn't be here */
   test_assert(!rs->is_v2_dir);
   test_assert(!rs->is_valid);
   test_assert(!rs->is_named);
