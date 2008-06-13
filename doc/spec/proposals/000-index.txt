@@ -59,6 +59,8 @@ Proposals by number:
 134  More robust consensus voting with diverse authority sets [DRAFT]
 135  Simplify Configuration of Private Tor Networks [OPEN]
 136  Mass authority migration with legacy keys [OPEN]
+137  Keep controllers informed as Tor bootstraps [OPEN]
+138  Remove routers that are not Running from consensus documents [OPEN]
 
 
 Proposals by status:
@@ -75,6 +77,8 @@ Proposals by status:
    121  Hidden Service Authentication
    135  Simplify Configuration of Private Tor Networks
    136  Mass authority migration with legacy keys
+   137  Keep controllers informed as Tor bootstraps
+   138  Remove routers that are not Running from consensus documents
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits

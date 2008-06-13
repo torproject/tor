@@ -1,5 +1,5 @@
 Filename: 117-ipv6-exits.txtT
-itle: IPv6 exits
+Title: IPv6 exits
 Version: $Revision$
 Last-Modified: $Date$
 Author: coderman
