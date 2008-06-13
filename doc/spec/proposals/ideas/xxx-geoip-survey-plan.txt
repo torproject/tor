@@ -26,7 +26,7 @@ Motivation
 
 Goals
 
-   We want to know about how many Tor users there are, and which
+   We want to know approximately how many Tor users there are, and which
    countries they're in, even in the presence of a hypothetical
    "directory guard" feature.  Some uncertainty is okay, but we'd like
    to be able to put a bound on the uncertainty.
@@ -49,7 +49,7 @@ Methods for curent clients:
 
         [In both of the above cases, clients choose a running
         directory cache at random with odds roughly proportional to
-        its bandwidth.]
+        its bandwidth.  If they're just starting, they know a ]
 
       - In some future version, clients will choose directory caches
         to serve as their "directory guards" to avoid profiling
@@ -82,15 +82,21 @@ Methods for curent clients:
 
     Notes:
        - [Over H hours, the N for V2 clients is 2*H, and the N for V3
-         clients is currently around N/2 or N/3. [***FIGURE THIS
-         OUT***XXXX]]
+         clients is currently around N/2 or N/3.]
 
        - (We should only count requests that we actually intend to answer;
          503 requests shouldn't count.)
 
-       - These measurements *shouldn't* be taken at directory
-         authorities: their picture of the network is too skewed by the
-         special cases in which clients fetch from them directly.
+       - These measurements should also be be taken at a directory
+         authority if possible: their picture of the network is skewed
+         by clients that fetch from them directly.  These clients,
+         however, are all the clients that are just bootstrapping
+         (assuming that the fallback-consensus feature isn't yet used
+         much).
+
+       - These measurements also overestimate the V2 download rate if
+         some downloads fail and clients retry them later after backing
+         off.
 
 Methods for directory guards:
 
