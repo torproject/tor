@@ -1,6 +1,9 @@
 Changes in version 0.2.1.2-alpha - 2008-??-??
   o Minor features:
     - Allow OpenSSL to use dynamic locks if it wants.
+  o Bugfixes:
+    - Asking for a conditional consensus at .../consensus/<fingerprints>
+      would crash a dirserver if it did not already have a consensus.
 
 Changes in version 0.2.1.1-alpha - 2008-06-13
   o Major features:

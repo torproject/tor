@@ -2493,7 +2493,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       networkstatus_t *v = networkstatus_get_latest_consensus();
       time_t now = time(NULL);
       #define CONSENSUS_URL_PREFIX "/tor/status-vote/current/consensus/"
-      if (!strcmpstart(url, CONSENSUS_URL_PREFIX) &&
+      if (v &&
+          !strcmpstart(url, CONSENSUS_URL_PREFIX) &&
           !client_likes_consensus(v, url + strlen(CONSENSUS_URL_PREFIX))) {
         write_http_status_line(conn, 404, "Consensus not signed by sufficient "
                                           "number of requested authorities");
@@ -3430,3 +3431,4 @@ dir_split_resource_into_fingerprints(const char *resource,
   return 0;
 }
 
+/* vim:set et ts=2: */
