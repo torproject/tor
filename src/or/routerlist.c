@@ -3718,10 +3718,6 @@ initiate_descriptor_downloads(routerstatus_t *source,
   tor_free(resource);
 }
 
-/** Clients don't download any descriptor this recent, since it will probably
- * not have propagated to enough caches. */
-#define ESTIMATED_PROPAGATION_TIME (10*60)
-
 /** Return 0 if this routerstatus is obsolete, too new, isn't
  * running, or otherwise not a descriptor that we would make any
  * use of even if we had it. Else return 1. */
@@ -3733,7 +3729,7 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
      * But, if we want to have a complete list, fetch it anyway. */
     return 0;
   }
-  if (rs->published_on + ESTIMATED_PROPAGATION_TIME > now) {
+  if (rs->published_on + options->EstimatedDescriptorPropagationTime > now) {
     /* Most caches probably don't have this descriptor yet. */
     return 0;
   }

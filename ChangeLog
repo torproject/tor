@@ -1,9 +1,15 @@
 Changes in version 0.2.1.2-alpha - 2008-??-??
+  o Major features:
+    - New TestingTorNetwork option to allow adjustment of previously constant
+      values that, while reasonable, could slow bootstrapping.  Implements
+      proposal 135.  Patch from Karsten.
+
   o Minor features:
     - Allow OpenSSL to use dynamic locks if it wants.
     - When building a consensus do not include routers that are down.
       This will cut down 30% to 40% on consensus size.  Implements
       proposal 138.
+
   o Bugfixes:
     - Asking for a conditional consensus at .../consensus/<fingerprints>
       would crash a dirserver if it did not already have a consensus.

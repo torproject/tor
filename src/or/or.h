@@ -2355,6 +2355,31 @@ typedef struct {
    * migration purposes? */
   int V3AuthUseLegacyKey;
 
+  /** The length of time that we think an initial consensus should be
+   * fresh. */
+  int V3AuthInitialVotingInterval;
+
+  /** The length of time we think it will take to distribute initial
+   * votes. */
+  int V3AuthInitialVoteDelay;
+
+  /** The length of time we think it will take to distribute initial
+   * signatures. */
+  int V3AuthInitialDistDelay;
+
+  /** If an authority has been around for less than this amount of time,
+   * its reachability information is not accurate. */
+  int DirTimeToLearnReachability;
+
+  /** Clients don't download any descriptor this recent, since it will
+   * probably not have propagated to enough caches. */
+  int EstimatedDescriptorPropagationTime;
+
+  /** If true, we take part in a testing network. Change the defaults of a
+   * couple of other configuration options and allow to change the values
+   * of certain configuration options. */
+  int TestingTorNetwork;
+
   /** File to check for a consensus networkstatus, if we don't have one
    * cached. */
   char *FallbackNetworkstatusFile;
@@ -3222,9 +3247,6 @@ cached_dir_t *new_cached_dir(char *s, time_t published);
 #define MIN_DIST_SECONDS 20
 /** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
-
-/** If there is no consensus, what interval do we default to? */
-#define DEFAULT_VOTING_INTERVAL_WHEN_NO_CONSENSUS (30*60)
 
 void dirvote_free_all(void);
 

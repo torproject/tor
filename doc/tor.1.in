@@ -220,7 +220,11 @@ believe the same authorities they do.
 .LP
 .TP
 \fBAlternateDirAuthority \fR[\fInickname\fR] [\fBflags\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
+.LP
+.TP
 \fBAlternateHSAuthority \fR[\fInickname\fR] [\fBflags\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
+.LP
+.TP
 \fBAlternateBridgeAuthority \fR[\fInickname\fR] [\fBflags\fR] \fIaddress\fR\fB:\fIport fingerprint\fP
 As DirServer, but replaces less of the default directory authorities.
 Using AlternateDirAuthority replaces the default Tor directory
@@ -228,7 +232,8 @@ authorities, but leaves the hidden service authorities and bridge
 authorities in place.  Similarly, Using AlternateHSAuthority replaces
 the default hidden service authorities, but not the directory or
 bridge authorities.
-
+.LP
+.TP
 \fBFetchDirInfoEarly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will always fetch directory information like other
 directory caches, even if you don't meet the normal criteria for
@@ -765,8 +770,6 @@ Like WarnPlaintextPorts, but instead of warning about risky port uses,
 Tor will instead refuse to make the connection.
 (Default: None).
 
-.LP
-.TP
 .SH SERVER OPTIONS
 .PP
 The following options are useful only for servers (that is, if \fBORPort\fP is non-zero):
@@ -1111,11 +1114,11 @@ addresses/ports.
 Set an entrance policy for this server, to limit who can connect to the
 directory ports.
 The policies have the same form as exit policies above.
-.LP
-.TP
 
 .SH DIRECTORY AUTHORITY SERVER OPTIONS
 .PP
+.LP
+.TP
 \fBRecommendedVersions \fR\fISTRING\fP
 STRING is a comma-separated list of Tor versions currently believed
 to be safe. The list is included in each directory, and nodes which
@@ -1215,7 +1218,7 @@ interval chosen by consensus from all the authorities' preferred
 intervals.  This time SHOULD divide evenly into a day. (Default: 1 hour)
 .LP
 .TP
-\fBV3AuthVoteDelay\fR \fINUM\fP
+\fBV3AuthVoteDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
 V3 authoritative directories only.  Configures the server's preferred
 delay between publishing its vote and assuming it has all the votes
 from all the other authorities.  Note that the actual time used is not
@@ -1223,7 +1226,7 @@ the server's preferred time, but the consensus of all preferences.
 (Default: 5 minutes.)
 .LP
 .TP
-\fBV3AuthDistDelay\fR \fINUM\fP
+\fBV3AuthDistDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
 V3 authoritative directories only.  Configures the server's preferred
 delay between publishing its consensus and signature and assuming it
 has all the signatures from all the other authorities.  Note that the
@@ -1290,6 +1293,67 @@ service. Possible version numbers are 0 and 2. (Default: 0, 2)
 Every time the specified period elapses, Tor uploads any rendezvous
 service descriptors to the directory servers.  This information is also
 uploaded whenever it changes.  (Default: 20 minutes)
+
+.SH TESTING NETWORK OPTIONS
+.PP
+The following options are used for running a testing Tor network.
+.LP
+.TP
+\fBTestingTorNetwork \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor adjusts default values of the configuration options below,
+so that it is easier to set up a testing Tor network. May only be set if
+non-default set of DirServers is set. Cannot be unset while Tor is running.
+(Default: 0)
+
+.PD 0
+.RS 12
+.IP "ServerDNSAllowBrokenResolvConf 1"
+.IP "DirAllowPrivateAddresses 1"
+.IP "EnforceDistinctSubnets 0"
+.IP "AssumeReachable 1"
+.IP "AuthDirMaxServersPerAddr 0"
+.IP "AuthDirMaxServersPerAuthAddr 0"
+.IP "ClientDNSRejectInternalAddresses 0"
+.IP "ExitPolicyRejectPrivate 0"
+.IP "V3AuthVotingInterval 5 minutes"
+.IP "V3AuthVoteDelay 20 seconds"
+.IP "V3AuthDistDelay 20 seconds"
+.IP "V3AuthInitialVotingInterval 5 minutes"
+.IP "V3AuthInitialVoteDelay 20 seconds"
+.IP "V3AuthInitialDistDelay 20 seconds"
+.IP "DirTimeToLearnReachability 0 minutes"
+.IP "EstimatedDescriptorPropagationTime 0 minutes"
+.RE
+.PD
+.LP
+.TP
+\fBV3AuthInitialVotingInterval\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+Like \fBV3AuthVotingInterval\fR, but for initial voting interval before the
+first consensus has been created. Changing this requires that
+\fBTestingTorNetwork\fR is set. (Default: 30 minutes)
+.LP
+.TP
+\fBV3AuthInitialVoteDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+Like \fBV3AuthInitialVoteDelay\fR, but for initial voting interval before
+the first consensus has been created. Changing this requires that
+\fBTestingTorNetwork\fR is set. (Default: 5 minutes)
+.LP
+.TP
+\fBV3AuthInitialDistDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+Like \fBV3AuthInitialDistDelay\fR, but for initial voting interval before
+the first consensus has been created. Changing this requires that
+\fBTestingTorNetwork\fR is set. (Default: 5 minutes)
+.LP
+.TP
+\fBDirTimeToLearnReachability\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+Consider routers as Running this time after starting an authority.
+(Default: 30 minutes)
+.LP
+.TP
+\fBEstimatedDescriptorPropagationTime\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+Clients try downloading router descriptors from directory caches after this
+time. Changing this requires that \fBTestingTorNetwork\fR is set.
+(Default: 10 minutes)
 
 .\" UNDOCUMENTED
 .\" ignoreversion

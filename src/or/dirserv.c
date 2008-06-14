@@ -2122,10 +2122,6 @@ router_clear_status_flags(routerinfo_t *router)
     router->is_bad_exit = router->is_bad_directory = 0;
 }
 
-/** If we've been around for less than this amount of time, our reachability
- * information is not accurate. */
-#define DIRSERV_TIME_TO_GET_REACHABILITY_INFO (30*60)
-
 /** Return a new networkstatus_t* containing our current opinion. (For v3
  * authorities) */
 networkstatus_t *
@@ -2155,7 +2151,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   tor_assert(private_key);
   tor_assert(cert);
 
-  if (now - time_of_process_start < DIRSERV_TIME_TO_GET_REACHABILITY_INFO)
+  if (now - time_of_process_start < options->DirTimeToLearnReachability)
     vote_on_reachability = 0;
 
   if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
@@ -2241,7 +2237,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
       last_consensus_interval = current_consensus->fresh_until -
         current_consensus->valid_after;
     else
-      last_consensus_interval = DEFAULT_VOTING_INTERVAL_WHEN_NO_CONSENSUS;
+      last_consensus_interval = options->V3AuthInitialVotingInterval;
     v3_out->valid_after =
       dirvote_get_start_of_next_interval(now, (int)last_consensus_interval);
     format_iso_time(tbuf, v3_out->valid_after);

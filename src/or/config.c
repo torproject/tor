@@ -174,6 +174,7 @@ static config_var_t _option_vars[] = {
   V(DataDirectory,               STRING,   NULL),
   OBSOLETE("DebugLogFile"),
   V(DirAllowPrivateAddresses,    BOOL,     NULL),
+  V(DirTimeToLearnReachability,  INTERVAL, "30 minutes"),
   V(DirListenAddress,            LINELIST, NULL),
   OBSOLETE("DirFetchPeriod"),
   V(DirPolicy,                   LINELIST, NULL),
@@ -188,6 +189,7 @@ static config_var_t _option_vars[] = {
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V(EntryNodes,                  STRING,   NULL),
+  V(EstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
   V(ExcludeNodes,                STRING,   NULL),
   V(ExitNodes,                   STRING,   NULL),
   V(ExitPolicy,                  LINELIST, NULL),
@@ -252,6 +254,7 @@ static config_var_t _option_vars[] = {
   V(OutboundBindAddress,         STRING,   NULL),
   OBSOLETE("PathlenCoinWeight"),
   V(PidFile,                     STRING,   NULL),
+  V(TestingTorNetwork,           BOOL,     "0"),
   V(PreferTunneledDirConns,      BOOL,     "1"),
   V(ProtocolWarnings,            BOOL,     "0"),
   V(PublishServerDescriptor,     CSV,      "1"),
@@ -306,6 +309,9 @@ static config_var_t _option_vars[] = {
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
+  V(V3AuthInitialVotingInterval, INTERVAL, "30 minutes"),
+  V(V3AuthInitialVoteDelay,      INTERVAL, "5 minutes"),
+  V(V3AuthInitialDistDelay,      INTERVAL, "5 minutes"),
   V(V3AuthVotingInterval,        INTERVAL, "1 hour"),
   V(V3AuthVoteDelay,             INTERVAL, "5 minutes"),
   V(V3AuthDistDelay,             INTERVAL, "5 minutes"),
@@ -320,6 +326,27 @@ static config_var_t _option_vars[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
+  { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
+};
+
+/* Keep defaults synchronous with man page and config value check. */
+static config_var_t testing_tor_network_defaults[] = {
+  V(ServerDNSAllowBrokenResolvConf, BOOL,  "1"),
+  V(DirAllowPrivateAddresses,    BOOL,     "1"),
+  V(EnforceDistinctSubnets,      BOOL,     "0"),
+  V(AssumeReachable,             BOOL,     "1"),
+  V(AuthDirMaxServersPerAddr,    UINT,     "0"),
+  V(AuthDirMaxServersPerAuthAddr,UINT,     "0"),
+  V(ClientDNSRejectInternalAddresses, BOOL,"0"),
+  V(ExitPolicyRejectPrivate,     BOOL,     "0"),
+  V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
+  V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
+  V(V3AuthDistDelay,             INTERVAL, "20 seconds"),
+  V(V3AuthInitialVotingInterval, INTERVAL, "5 minutes"),
+  V(V3AuthInitialVoteDelay,      INTERVAL, "20 seconds"),
+  V(V3AuthInitialDistDelay,      INTERVAL, "20 seconds"),
+  V(DirTimeToLearnReachability,  INTERVAL, "0 minutes"),
+  V(EstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
@@ -3350,6 +3377,73 @@ options_validate(or_options_t *old_options, or_options_t *options,
     });
   }
 
+  if (options->TestingTorNetwork && !options->DirServers) {
+    REJECT("TestingTorNetwork may only be configured in combination with "
+           "a non-default set of DirServers.");
+  }
+
+  /* Keep changes to hard-coded values synchronous to man page and default
+   * values table. */
+  if (options->V3AuthInitialVotingInterval != 30*60 &&
+      !options->TestingTorNetwork) {
+    REJECT("V3AuthInitialVotingInterval may only be changed in testing "
+           "Tor networks!");
+  } else if (options->V3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
+    REJECT("V3AuthInitialVotingInterval is insanely low.");
+  } else if (((30*60) % options->V3AuthInitialVotingInterval) != 0) {
+    REJECT("V3AuthInitialVotingInterval does not divide evenly into "
+           "30 minutes.");
+  }
+
+  if (options->V3AuthInitialVoteDelay != 5*60 &&
+      !options->TestingTorNetwork) {
+    REJECT("V3AuthInitialVoteDelay may only be changed in testing "
+           "Tor networks!");
+  } else if (options->V3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
+    REJECT("V3AuthInitialVoteDelay is way too low.");
+  }
+
+  if (options->V3AuthInitialDistDelay != 5*60 &&
+      !options->TestingTorNetwork) {
+    REJECT("V3AuthInitialDistDelay may only be changed in testing "
+           "Tor networks!");
+  } else if (options->V3AuthInitialDistDelay < MIN_DIST_SECONDS) {
+    REJECT("V3AuthInitialDistDelay is way too low.");
+  }
+
+  if (options->V3AuthInitialVoteDelay + options->V3AuthInitialDistDelay >=
+      options->V3AuthInitialVotingInterval/2) {
+    REJECT("V3AuthInitialVoteDelay plus V3AuthInitialDistDelay must be "
+           "less than half V3AuthInitialVotingInterval");
+  }
+
+  if (options->DirTimeToLearnReachability != 30*60 &&
+      !options->TestingTorNetwork) {
+    REJECT("DirTimeToLearnReachability may only be changed in testing "
+           "Tor networks!");
+  } else if (options->DirTimeToLearnReachability < 0) {
+    REJECT("DirTimeToLearnReachability must be non-negative.");
+  } else if (options->DirTimeToLearnReachability > 2*60*60) {
+    COMPLAIN("DirTimeToLearnReachability is insanely high.");
+  }
+
+  if (options->EstimatedDescriptorPropagationTime != 10*60 &&
+      !options->TestingTorNetwork) {
+    REJECT("EstimatedDescriptorPropagationTime may only be changed in "
+           "testing Tor networks!");
+  } else if (options->EstimatedDescriptorPropagationTime < 0) {
+    REJECT("EstimatedDescriptorPropagationTime must be non-negative.");
+  } else if (options->EstimatedDescriptorPropagationTime > 60*60) {
+    COMPLAIN("EstimatedDescriptorPropagationTime is insanely high.");
+  }
+
+  if (options->TestingTorNetwork) {
+    log_warn(LD_CONFIG, "TestingTorNetwork is set. This will make your node "
+                        "almost unusable in the public Tor network, and is "
+                        "therefore only advised if you are building a "
+                        "testing Tor network!");
+  }
+
   return 0;
 #undef REJECT
 #undef COMPLAIN
@@ -3410,6 +3504,12 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
   if (old->HardwareAccel != new_val->HardwareAccel) {
     *msg = tor_strdup("While Tor is running, changing HardwareAccel is "
                       "not allowed.");
+    return -1;
+  }
+
+  if (old->TestingTorNetwork != new_val->TestingTorNetwork) {
+    *msg = tor_strdup("While Tor is running, changing TestingTorNetwork "
+                      "is not allowed.");
     return -1;
   }
 
@@ -3785,6 +3885,50 @@ options_init_from_string(const char *cf,
   if (retval < 0) {
     err = SETOPT_ERR_PARSE;
     goto err;
+  }
+
+  /* If this is a testing network configuration, change defaults
+   * for a list of dependent config options, re-initialize newoptions
+   * with the new defaults, and assign all options to it second time. */
+  if (newoptions->TestingTorNetwork) {
+
+    /* Change defaults. */
+    int i;
+    for (i = 0; testing_tor_network_defaults[i].name; ++i) {
+      config_var_t *new_var = &testing_tor_network_defaults[i];
+      config_var_t *old_var =
+          config_find_option(&options_format, new_var->name);
+      tor_assert(new_var);
+      tor_assert(old_var);
+      old_var->initvalue = new_var->initvalue;
+    }
+
+    /* Clear newoptions and re-initialize them with new defaults. */
+    config_free(&options_format, newoptions);
+    newoptions = tor_malloc_zero(sizeof(or_options_t));
+    newoptions->_magic = OR_OPTIONS_MAGIC;
+    options_init(newoptions);
+    newoptions->command = command;
+    newoptions->command_arg = command_arg;
+
+    /* Assign all options a second time. */
+    retval = config_get_lines(cf, &cl);
+    if (retval < 0) {
+      err = SETOPT_ERR_PARSE;
+      goto err;
+    }
+    retval = config_assign(&options_format, newoptions, cl, 0, 0, msg);
+    config_free_lines(cl);
+    if (retval < 0) {
+      err = SETOPT_ERR_PARSE;
+      goto err;
+    }
+    retval = config_assign(&options_format, newoptions,
+                           global_cmdline_options, 0, 0, msg);
+    if (retval < 0) {
+      err = SETOPT_ERR_PARSE;
+      goto err;
+    }
   }
 
   /* Validate newoptions */
