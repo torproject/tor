@@ -1276,7 +1276,7 @@ options_act(or_options_t *old_options)
 #ifdef WIN32
     if (!strcmp(actual_fname, "<default>")) {
       const char *conf_root = get_windows_conf_root();
-      size_t len = tor_malloc(strlen(conf_root)+16);
+      size_t len = strlen(conf_root)+16;
       tor_free(actual_fname);
       actual_fname = tor_malloc(len+1);
       tor_snprintf(actual_fname, len, "%s\\geoip", conf_root);
