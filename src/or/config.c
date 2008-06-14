@@ -3382,6 +3382,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "a non-default set of DirServers.");
   }
 
+  /*XXXX021 checking for defaults manually like this is a bit fragile.*/
+
   /* Keep changes to hard-coded values synchronous to man page and default
    * values table. */
   if (options->V3AuthInitialVotingInterval != 30*60 &&
@@ -3891,6 +3893,12 @@ options_init_from_string(const char *cf,
    * for a list of dependent config options, re-initialize newoptions
    * with the new defaults, and assign all options to it second time. */
   if (newoptions->TestingTorNetwork) {
+    /* XXXX021 this is a bit of a kludge.  perhaps there's a better way to do
+     * this?  We could, for example, make the parsing algorithm do two passes
+     * over the configuration.  If it finds any "suite" options like
+     * TestingTorNetwork, it could change the defaults before its second pass.
+     * Not urgent so long as this seems to work, but at any sign of trouble,
+     * let's clean it up.  -NM */
 
     /* Change defaults. */
     int i;

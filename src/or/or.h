@@ -2355,24 +2355,30 @@ typedef struct {
    * migration purposes? */
   int V3AuthUseLegacyKey;
 
-  /** The length of time that we think an initial consensus should be
-   * fresh. */
+  /*XXXX021 I think all these "Testing Networks only" options should perhaps
+   * have a common prefix. -NM */
+  /** The length of time that we think an initial consensus should be fresh.
+   * Only altered on testing networks. */
   int V3AuthInitialVotingInterval;
 
-  /** The length of time we think it will take to distribute initial
-   * votes. */
+  /** The length of time we think it will take to distribute initial votes.
+   * Only altered on testing networks. */
   int V3AuthInitialVoteDelay;
 
   /** The length of time we think it will take to distribute initial
-   * signatures. */
+   * signatures.  Only altered on testing networks.*/
   int V3AuthInitialDistDelay;
 
-  /** If an authority has been around for less than this amount of time,
-   * its reachability information is not accurate. */
+  /*XXXX021 why is this not prefixed to indicate that it's an authority
+   * option? */
+  /** If an authority has been around for less than this amount of time, it
+   * does not believe its reachability information is accurate.  Only
+   * altered on testing networks. */
   int DirTimeToLearnReachability;
 
   /** Clients don't download any descriptor this recent, since it will
-   * probably not have propagated to enough caches. */
+   * probably not have propagated to enough caches.  Only altered on testing
+   * networks. */
   int EstimatedDescriptorPropagationTime;
 
   /** If true, we take part in a testing network. Change the defaults of a

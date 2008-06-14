@@ -1346,7 +1346,9 @@ the first consensus has been created. Changing this requires that
 .LP
 .TP
 \fBDirTimeToLearnReachability\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
-Consider routers as Running this time after starting an authority.
+After starting as an authority, do not make claims about whether routers are
+Running until this much time has passed.
+Changing this requires that\fBTestingTorNetwork\fR is set.
 (Default: 30 minutes)
 .LP
 .TP
