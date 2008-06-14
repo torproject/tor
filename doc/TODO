@@ -309,8 +309,6 @@ Bugs/issues for Tor 0.2.0.x:
     o Basic implementation
 N   - Include probability-of-selection
 R d let bridges set relaybandwidthrate as low as 5kb
-R - bug: if we launch using bridges, and then stop using bridges, we
-    still have our bridges in our entryguards section, and may use them.
 R - bridge communities
     . spec
     . deploy
@@ -329,6 +327,27 @@ R   - then document the bridge user download timeline.
   - Quietly document NT Service options: revise (or create) FAQ entry
 
 =======================================================================
+
+For 0.2.1.2-alpha:
+R - bug: if we launch using bridges, and then stop using bridges, we
+    still have our bridges in our entryguards section, and may use them.
+R - add an event to report geoip summaries to vidalia for bridge relays,
+    so vidalia can say "recent activity (1-8 users) from sa".
+R - investigate: it looks like if the bridge authority is unreachable,
+    we're not falling back on querying bridges directly?
+R - a getinfo so vidalia can query our current bootstrap state, in
+    case it attaches partway through and wants to catch up.
+R - directory authorities shouldn't complain about bootstrapping problems
+    just because they do a lot of reachability testing and some of
+    it fails.
+R - if your bridge is unreachable, it won't generate enough connection
+    failures to generate a bootstrap problem event.
+R - if "no running bridges known", an application request should make
+    us retry all our bridges.
+R - get matt to fix vidalia so it moves to a "starting tor" bootstrap
+    state if it hasn't gotten any status events. Maybe it can even be
+    more certain by checking the version (<0211) and/or looking at the
+    results of the getinfo.
 
 For 0.2.1.x:
   - Proposals to do:
