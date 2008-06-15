@@ -61,6 +61,7 @@ Proposals by number:
 136  Mass authority migration with legacy keys [FINISHED]
 137  Keep controllers informed as Tor bootstraps [OPEN]
 138  Remove routers that are not Running from consensus documents [CLOSED]
+139  Download consensus documents only when it will be trusted [CLOSED]
 
 
 Proposals by status:
@@ -110,6 +111,7 @@ Proposals by status:
    129  Block Insecure Protocols by Default
    130  Version 2 Tor connection protocol
    138  Remove routers that are not Running from consensus documents
+   139  Download consensus documents only when it will be trusted
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
    113  Simplifying directory authority administration
