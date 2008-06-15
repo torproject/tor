@@ -22,6 +22,7 @@ for my $f (@files) {
     my $num = substr($f, 0, 3);
     my $status = undef;
     my $title = undef;
+    my $alleged_fname = undef;
     if ($f !~ /\.txt/) { print "$f doesn't end with .txt\n"; }
     open(F, "$f");
     while (<F>) {
@@ -29,6 +30,10 @@ for my $f (@files) {
 	if (/^Status: (.*)/) {
 	    $status = uc $1;
 	    chomp $status;
+	}
+	if (/^Filename: (.*)/) {
+	    $alleged_fname = $1;
+	    chomp $alleged_fname;
 	}
 	if (/^Title: (.*)/) {
 	    $title = $1;
@@ -41,6 +46,9 @@ for my $f (@files) {
 	unless (grep(/$status/, @KNOWN_STATUSES) == 1);
     die "Proposal $num has a bad status line" if (!defined $status);
     die "Proposal $num has a bad title line" if (!defined $title);
+    die "Proposal $num has no Filename line" unless (defined $alleged_fname);
+    die "Proposal $num says its fname is $alleged_fname, but it's really $f"
+	if ($alleged_fname ne $f);
     $title{$num} = $title;
     $status{$num} = $status;
 }
