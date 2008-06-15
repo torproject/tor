@@ -1,4 +1,4 @@
-Filename: 133-unreachable-ORs.txt
+Filename: 133-unreachable-ors.txt
 Title: Incorporate Unreachable ORs into the Tor Network
 Author: Robert Hogan
 Created: 2008-03-08

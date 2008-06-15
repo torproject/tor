@@ -1,4 +1,4 @@
-Filename: 119-protocolinfo-on-controlport.txt
+Filename: 119-controlport-auth.txt
 Title: New PROTOCOLINFO command for controllers
 Version: $Revision$
 Last-Modified: $Date$

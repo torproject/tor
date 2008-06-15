@@ -1,4 +1,4 @@
-Filename: 126-geoip-fetching.txt
+Filename: 126-geoip-reporting.txt
 Title: Getting GeoIP data and publishing usage summaries
 Version: $Revision$
 Last-Modified: $Date$

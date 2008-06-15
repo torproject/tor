@@ -1,4 +1,4 @@
-Filename: xxx-bootstrap-phases.txt
+Filename: 137-bootstrap-phases.txt
 Title: Keep controllers informed as Tor bootstraps
 Version: $Revision$
 Last-Modified: $Date$

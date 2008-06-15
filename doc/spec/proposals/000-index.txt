@@ -57,7 +57,7 @@ Proposals by number:
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
 134  More robust consensus voting with diverse authority sets [DRAFT]
-135  Simplify Configuration of Private Tor Networks [OPEN]
+135  Simplify Configuration of Private Tor Networks [ACCEPTED]
 136  Mass authority migration with legacy keys [FINISHED]
 137  Keep controllers informed as Tor bootstraps [OPEN]
 138  Remove routers that are not Running from consensus documents [CLOSED]
@@ -75,7 +75,6 @@ Proposals by status:
  OPEN:
    120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
-   135  Simplify Configuration of Private Tor Networks
    137  Keep controllers informed as Tor bootstraps
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
@@ -83,6 +82,7 @@ Proposals by status:
    131  Help users to verify they are using Tor
  NEEDS-RESEARCH:
  ACCEPTED:
+   135  Simplify Configuration of Private Tor Networks
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
