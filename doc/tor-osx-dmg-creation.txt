@@ -7,18 +7,13 @@ OSX builds of tor.
 Summary:
 1) Compile and install a static version of the latest release of
 libevent.
-2) Acquire privoxyosx_setup_3.0.6.zip.  
-http://downloads.sourceforge.net/ijbswa/privoxyosx_setup_3.0.6.zip?modtime=1164104652&big_mirror=0
-  Remember where you put this file.
-3) Acquire torbutton xpi and license file.
-4) Acquire and install your preferred version of tor. Extract.
-5) Update some variables in contrib/osx/package.sh
-6) "make dist-osx"
-7) You now have a dmg from which you can install Tor, Privoxy, and the
-Torbutton extension for Firefox.
+2) Acquire and install your preferred version of tor. Extract.
+3) Update some variables in contrib/osx/package.sh
+4) "make dist-osx"
+5) You now have a dmg from which you can install Tor.
 
 ## Universal Binaries for OSX PPC and X86
-## This method works in OSX 10.4 (Tiger) and 10.5 (Leopard) only.
+## This method works in OSX 10.4 (Tiger) and newer OSX versions.
 ## See far below if you don't care about cross compiling for PPC and X86.
 ## The single architecture process starts with "###"
 
@@ -50,31 +45,10 @@ by default, in /usr/local/lib/.
 /usr/local/lib/libevent.a (for architecture i386):      current ar archive random library
 /usr/local/lib/libevent.a (for architecture ppc):       current ar archive
 
-## Acquiring privoxy
-
-6) Download osx privoxy source from
-http://downloads.sourceforge.net/ijbswa/privoxyosx_setup_3.0.6.zip?modtime=1164104652&big_mirror=0
-
-7) Place the privoxyosx_setup_3.0.6.zip in a location of your choice.
-Remember this location.
-
-8) Get your preferred version of Torbutton from https://torbutton.torproject.org.
-Place into a location of your choosing, remember this location.
-
-9) Get the torbutton LICENSE file from https://torbutton.torproject.org.
-Place into a location of your choosing, remember this location.
-
-10) Get your preferred version of the tor source from https://www.torproject.org/download.  
+6) Get your preferred version of the tor source from https://www.torproject.org/download.  
 Extract the tarball.
 
-11) Update three variables in contrib/osx/package.sh:
-PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
-TORBUTTON_PATH=~/tmp/torbutton-1.1.14-alpha.xpi
-TORBUTTON_LIC_PATH=~/tmp/LICENSE
-
-Make sure the paths are correct.  The build will fail if they are not.
-
-12) In the top level, this means /path/to/tor/, not tor/contrib/osx,
+7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
 CFLAGS="-O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc" \
 LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
@@ -93,12 +67,10 @@ src/or/tor (for architecture ppc):      Mach-O executable ppc
 15) There should exist in the top-level directory a
 Tor-$VERSION-universal-$OS-Bundle.dmg
 
-16) Congrats.  You have a universal binary. You are now ready to install Tor,
-Privoxy, and the Torbutton extension for Firefox.
-
+16) Congrats.  You have a universal binary. You are now ready to install Tor.
 
 ### Single Architecture Binaries for PPC or X86, not both.
-### This method works in all versions of OSX 10.1 through 10.5
+### This method works in all versions of OSX 10.3 through 10.5
 
 ### Compiling libevent
 
@@ -115,37 +87,15 @@ or sudo -s, to complete the "make install".
 4) If you have previouslly installed libevent, go rm the old libevent.so*
 files so the linker doesn't get suckered into using them.
 
-### Acquiring privoxy
-
-1) Download osx privoxy source from
-http://downloads.sourceforge.net/ijbswa/privoxyosx_setup_3.0.6.zip?modtime=1164104652&big_mirror=0
-
-2) Place the privoxyosx_setup_3.0.6.zip in a location of your choice.
-Remember this location.
-
 ### Compiling Tor
 
-1) Get your preferred version of Torbutton from
-https://torbutton.torproject.org.  
-Place into a location of your choosing, remember this location.
-
-2) Get the torbutton LICENSE file from https://torbutton.torproject.org.  
-Place into a location of your choosing, remember this location.
-
-3) Get your preferred version of the tor source from https://www.torproject.org.  Extract the
+1) Get your preferred version of the tor source from https://www.torproject.org.  Extract the
 tarball.
 
-4) Update three variables in contrib/osx/package.sh:
-PRIVOXY_PKG_ZIP=~/tmp/privoxyosx_setup_3.0.6.zip
-TORBUTTON_PATH=~/tmp/torbutton-1.1.14-alpha.xpi
-TORBUTTON_LIC_PATH=~/tmp/LICENSE
-
-Make sure the paths are correct.  The build will fail if they are not.
-
-5) In the top level, this means /path/to/tor/, not tor/contrib/osx,
+2) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
      CONFDIR=/Library/Tor ./configure --prefix=/Library/Tor \
      --bindir=/Library/Tor --sysconfdir=/Library
 
-6) In same top level dir, do a "make dist-osx".  There now exists a
+3) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.

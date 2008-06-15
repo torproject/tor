@@ -22,25 +22,7 @@
 		</dict>
 		<dict>
 			<key>IFPkgFlagPackageLocation</key>
-			<string>Privoxy.pkg</string>
-			<key>IFPkgFlagPackageSelection</key>
-			<string>selected</string>
-		</dict>
-		<dict>
-			<key>IFPkgFlagPackageLocation</key>
-			<string>privoxyconf.pkg</string>
-			<key>IFPkgFlagPackageSelection</key>
-			<string>selected</string>
-		</dict>
-		<dict>
-			<key>IFPkgFlagPackageLocation</key>
 			<string>torstartup.pkg</string>
-			<key>IFPkgFlagPackageSelection</key>
-			<string>selected</string>
-		</dict>
-		<dict>
-			<key>IFPkgFlagPackageLocation</key>
-			<string>torbutton.pkg</string>
 			<key>IFPkgFlagPackageSelection</key>
 			<string>selected</string>
 		</dict>

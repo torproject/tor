@@ -1,6 +1,2 @@
 Tor
-Privoxy
 torstartup
-privoxyconf
-Vidalia
-torbutton
