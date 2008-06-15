@@ -1,5 +1,5 @@
-Filename: 120-suicide-descriptors.txt
-Title: Suicide descriptors when Tor servers stop
+Filename: 120-shutdown-descriptors.txt
+Title: Shutdown descriptors when Tor servers stop
 Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
@@ -56,11 +56,11 @@ Overhead issues:
 
   We are creating more descriptors that want to be remembered. However,
   since the router won't be marked as Running, ordinary clients won't
-  fetch the suicide descriptors. Caches will, though. I hope this is ok.
+  fetch the shutdown descriptors. Caches will, though. I hope this is ok.
 
 Implementation:
 
-  To make things easy, we should publish the suicide descriptor only
+  To make things easy, we should publish the shutdown descriptor only
   on controlled shutdown (SIGINT as opposed to SIGTERM). That would
   leave enough time for publishing that we probably wouldn't need any
   extra synchronization code.
@@ -76,9 +76,6 @@ Acknowledgements:
 
 Comments:
 
-  1) Don't name the official feature "suicide descriptors".  Suicide is
-     irreversible, and the concept pushes many people's buttons. How about
-     "shutdown descriptors"?
   2) Maybe add a rule "Don't do this for hibernation if we expect to wake
      up before the next consensus is published"?
                                                       - NM 9 Oct 2007

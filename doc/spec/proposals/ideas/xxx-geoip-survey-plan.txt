@@ -34,7 +34,7 @@ Goals
    We need to make sure this information isn't exposed in a way that
    helps an adversary.
 
-Methods for curent clients:
+Methods for current clients:
 
    Every client downloads network status documents.  There are
    currently three methods (one hypothetical) for clients to get them.
@@ -49,7 +49,7 @@ Methods for curent clients:
 
         [In both of the above cases, clients choose a running
         directory cache at random with odds roughly proportional to
-        its bandwidth.  If they're just starting, they know a ]
+        its bandwidth.  If they're just starting, they know a XXXX FIXME -NM]
 
       - In some future version, clients will choose directory caches
         to serve as their "directory guards" to avoid profiling
@@ -82,12 +82,12 @@ Methods for curent clients:
 
     Notes:
        - [Over H hours, the N for V2 clients is 2*H, and the N for V3
-         clients is currently around N/2 or N/3.]
+         clients is currently around H/2 or H/3.]
 
        - (We should only count requests that we actually intend to answer;
          503 requests shouldn't count.)
 
-       - These measurements should also be be taken at a directory
+       - These measurements should also be taken at a directory
          authority if possible: their picture of the network is skewed
          by clients that fetch from them directly.  These clients,
          however, are all the clients that are just bootstrapping

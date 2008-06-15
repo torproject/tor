@@ -42,7 +42,7 @@ Proposals by number:
 117  IPv6 exits [NEEDS-REVISION]
 118  Advertising multiple ORPorts at once [DRAFT]
 119  New PROTOCOLINFO command for controllers [CLOSED]
-120  Suicide descriptors when Tor servers stop [OPEN]
+120  Shutdown descriptors when Tor servers stop [OPEN]
 121  Hidden Service Authentication [OPEN]
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [CLOSED]
@@ -73,7 +73,7 @@ Proposals by status:
    133  Incorporate Unreachable ORs into the Tor Network
    134  More robust consensus voting with diverse authority sets
  OPEN:
-   120  Suicide descriptors when Tor servers stop
+   120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
    135  Simplify Configuration of Private Tor Networks
    137  Keep controllers informed as Tor bootstraps

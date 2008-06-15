@@ -23,7 +23,7 @@ Status: Closed
 
   At a typical bootstrap a client downloads a 140KB consensus, about
   10KB of certificates to verify that consensus, and about 1.6MB of
-  server descriptors, about half of which it requires before it will
+  server descriptors, about 1/4 of which it requires before it will
   start building circuits.
 
   Another proposal deals with how to get that huge 1.6MB fraction to
@@ -33,8 +33,8 @@ Status: Closed
   to get in order to work.
 
   About one third of the routers listed in a consensus are not running
-  and will therefor never be used by clients who use this consensus.
-  Not listing those routers will safe about 30% to 40% in size.
+  and will therefore never be used by clients who use this consensus.
+  Not listing those routers will save about 30% to 40% in size.
 
 3. Proposed change
 
@@ -47,3 +47,4 @@ Status: Closed
   they support method 4 then this new method will be used:  The
   consensus document is formed like before but a new last step removes
   all routers from the listing that are not marked as Running.
+
