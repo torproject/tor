@@ -186,13 +186,13 @@ Other things Roger would be excited to see:
 
 Nick
   o Send or-dev email about proposal statuses.
-  - Send or-dev email about window for new proposals, once arma and
+  o Send or-dev email about window for new proposals, once arma and
     nick agree.
   - Finish buffer stuff in libevent; start using it in Tor.
   - Tors start believing the contents of NETINFO cells.
-  - Work with Steven and Roger to decide which parts of Paul's project
+  . Work with Steven and Roger to decide which parts of Paul's project
     he wants to work on.
-  - let approved-routers lines omit spaces in fingerprint.
+  o let approved-routers lines omit spaces in fingerprint.
 
 Matt
   - Fit Vidalia in 640x480 again.

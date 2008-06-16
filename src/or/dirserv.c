@@ -221,6 +221,7 @@ dirserv_load_fingerprint_file(void)
   fingerprint_list_new = authdir_config_new();
 
   for (list=front; list; list=list->next) {
+    char digest_tmp[DIGEST_LEN];
     nickname = list->key; fingerprint = list->value;
     if (strlen(nickname) > MAX_NICKNAME_LEN) {
       log_notice(LD_CONFIG,
@@ -237,8 +238,10 @@ dirserv_load_fingerprint_file(void)
                  nickname);
       continue;
     }
-    if (strlen(fingerprint) != FINGERPRINT_LEN ||
-        !crypto_pk_check_fingerprint_syntax(fingerprint)) {
+    tor_strstrip(fingerprint, " "); /* remove spaces */
+    if (strlen(fingerprint) != HEX_DIGEST_LEN ||
+        base16_decode(digest_tmp, sizeof(digest_tmp),
+                      fingerprint, HEX_DIGEST_LEN) < 0) {
       log_notice(LD_CONFIG,
                  "Invalid fingerprint (nickname '%s', "
                  "fingerprint %s). Skipping.",

@@ -9,6 +9,8 @@ Changes in version 0.2.1.2-alpha - 2008-??-??
     - When building a consensus do not include routers that are down.
       This will cut down 30% to 40% on consensus size.  Implements
       proposal 138.
+    - In directory authorities' approved-routers files, allow
+      fingerprints with or without space.
 
   o Bugfixes:
     - Asking for a conditional consensus at .../consensus/<fingerprints>
