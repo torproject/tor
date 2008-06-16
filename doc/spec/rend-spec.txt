@@ -743,9 +743,9 @@ Foo.
    Hidden service directory nodes accept publish requests for v2 hidden service
    descriptors and store them to their local memory. (It is not necessary to
    make descriptors persistent, because after restarting, the onion router
-   would not be accepted as storing node anyway, because it has not been
+   would not be accepted as a storing node anyway, because it has not been
    running for at least 24 hours.) All requests and replies are formatted as
-   HTTP messages. Requests are contained within BEGIN_DIR cells, directed to
+   HTTP messages. Requests are initiated via BEGIN_DIR cells directed to
    the router's directory port, and formatted as HTTP POST requests to the URL
    "/tor/rendezvous2/publish" relative to the hidden service directory's root,
    containing as its body a v2 service descriptor.
@@ -762,7 +762,7 @@ Foo.
    determine if they are responsible for the passed ID, because it does no harm
    if they deliver a descriptor for which they are not (any more) responsible.)
    All requests and replies are formatted as HTTP messages. Requests are
-   contained within BEGIN_DIR cells, directed to the router's directory port,
+   initiated via BEGIN_DIR cells directed to the router's directory port,
    and formatted as HTTP GET requests for the document "/tor/rendezvous2/<z>",
    where z is replaced with the encoding of the descriptor ID.
 
