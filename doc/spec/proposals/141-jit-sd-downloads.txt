@@ -1,0 +1,219 @@
+Filename: 141-jit-sd-downloads.txt
+Title: Download server descriptors on demand
+Version: $Revision$
+Last-Modified: $Date$
+Author: Peter Palfrader
+Created: 15-Jun-2008
+Status: Draft
+
+1. Overview
+
+  Downloading all server descriptors is the most expensive part
+  of bootstrapping a Tor client.  These server descriptors currently
+  amount to about 1.5 Megabytes of data, and this size will grow
+  linearly with network size.
+
+  Fetching all these server descriptors takes a long while for people
+  behind slow network connections.  It is also a considerable load on
+  our network of directory mirrors.
+
+  This document describes proposed changes to the Tor network and
+  directory protocol so that clients will no longer need to download
+  all server descriptors.
+
+  These changes consist of moving load balancing information into
+  network status documents, implementing a means to download server
+  descriptors on demand in an anonymity-preserving way, and dealing
+  with exit node selection.
+
+2. What is in a server descriptor
+
+  When a Tor client starts the first thing it will try to get is a
+  current network status document, a consensus signed by a majority
+  of directory authorities.  This document is currently about 100
+  Kilobytes in size, tho it will grow linearly with network size.
+  This document lists all servers currently running on the network.
+  The Tor client will then try to get a server descriptor for each
+  of the running servers.  All server descriptors currently amount
+  to about 1.5 Metabytes of downloads.
+
+  A Tor client learns several things about a server from its descriptor.
+  Some of these it already learned from the network status document
+  published by the authorities, but the server descriptor contains it
+  again in a single statement signed by the server itself, not just by
+  the directory authorities.
+
+  Tor clients use the information from server descriptors for
+  different purposes, which are considered in the following sections.
+
+  #three ways:  One, to determine if a server will be able to handle
+  #this client's request; two, to actually communicate or use the server;
+  #three, for load balancing decisions.
+  #
+  #These three points are considered in the following subsections.
+
+2.1 Load balancing
+
+  The Tor load balancing mechanism is quite complex in its details, but
+  it has a simple goal: The more traffic a server can handle the more
+  traffic it should get.  That means the more traffic a server can
+  handle the more likely a client will use it.
+
+  For this purpose each server descriptor has bandwidth information
+  which tries to convey a server's capacity to clients.
+
+  Currently we weigh servers differently for different purposes.  There
+  is a weigh for when we use a server as a guard node (our entry to the
+  Tor network), there is one weigh we assign servers for exit duties,
+  and a third for when we need intermediate (middle) nodes.
+
+2.2 Exit information
+
+  When a Tor wants to exit to some resource on the internet it will
+  build a circuit to an exit node that allows access to that resource's
+  IP address and TCP Port.
+
+  When building that circuit the client can make sure that the circuit
+  ends at a server that will be able to fulfill the request because the
+  client already learned of all the servers' exit policies from their
+  descriptors.
+
+2.3 Capability information
+
+  Server descriptors contain information about the specific version or
+  the Tor protocol they understand [proposal 105].
+
+  Furthermore the server descriptor also contains the exact version of
+  the Tor software that the server is running and some decisions are
+  made based on the server version number (for instance a Tor client
+  will only make conditional consensus requests [proposal from 13 Apr
+  2008 that never got a number] when talking to Tor servers version
+  0.2.1.1-alpha or later).
+
+2.4 Contact/key information
+
+  A server descriptor lists a server's IP address and TCP ports on which
+  it accepts onion and directory connections.  Furthermore it contains
+  the onion key, a short lived RSA key to which clients encrypt CREATE
+  cells.
+
+2.5 Identity information
+
+  A Tor client learns the digest of a server's key from the network
+  status document.  Once it has a server descriptor this descriptor
+  contains the full RSA identity key of the server.  Clients verify
+  that 1) the digest of the identity key matches the expected digest
+  it got from the consensus, and 2) that the signature on the descriptor
+  from that key is valid.
+
+
+3. Doing away with the need for all SDs
+
+3.1 Load balancing info in consensus documents
+
+  One of the reasons why clients download all server descriptors is for
+  doing load proper load balancing as described in 2.1.  In order for
+  clients to not require all server descriptors this information will
+  have to move into the network status document.
+
+  [XXX Two open questions here:
+   a) how do we arrive at a consensus weight?
+   b) how to represent weights in the consensus?
+      Maybe "s Guard=0.13 Exit=0.02 Middle=0.00 Stable.."
+  ]
+
+3.2 Fetching descriptors on demand
+
+  As described in 2.4 a descriptor lists IP address, OR- and Dir-Port,
+  and the onion key for a server.
+
+  A client already knows the IP address and the ports from the consensus
+  documents, but without the onion key it will not be able to send
+  CREATE/EXTEND cells for that server.  Since the client needs the onion
+  key it needs the descriptor.
+
+  If a client only downloaded a few descriptors in an observable manner
+  then that would leak which nodes it was going to use.
+
+  This proposal suggests the following:
+
+  1) when connecting to a guard node for which the client does not
+     yet have a cached descriptor it requests the descriptor it
+     expects by hash.  (The consensus document that the client holds
+     has a hash for the descriptor of this server.  We want exactly
+     that descriptor, not a different one.)
+
+     [XXX: How?  We could either come up with a new cell type,
+      RELAY_REQUEST_SD that takes only a hash (of the SD), or use
+      RELAY_BEGIN_DIR.  The former is probably smarter since we will
+      want to use it later on as well, and there we will require
+      padding.]
+
+     A client MAY cache the descriptor of the guard node so that it does
+     not need to request it every single time it contacts the guard.
+
+  2) when a client wants to extend a circuit that currently ends in
+     server B to a new next server C, the client will send a
+     RELAY_REQUEST_SD cell to server B.  This cell contains in its
+     payload the hash of a server descriptor the client would like
+     to obtain (C's server descriptor).  The server sends back the
+     descriptor and the client can now form a valid EXTEND/CREATE cell
+     encrypted to C's onion key.
+
+     Clients MUST NOT cache such descriptors.  If they did they might
+     leak that they already extended to that server at least once
+     before.
+
+  Replies to RELAY_REQUEST_SD requests need to be padded to some
+  constant upper limit in order to conceal a client's destination
+  from anybody who might be counting cells/bytes.
+
+  [XXX: detailed spec of RELAY_REQUEST_SD cell and its reply]
+  [XXX: figure out a decent padding size]
+
+3.3 Protocol versions
+
+  [XXX: find out where we need "opt protocols Link 1 2 Circuit 1"
+  information described in 2.3 above.  If we need it, it might have
+  to go into the consensus document.]
+
+  [XXX: Similarly find out where we need the version number of a
+  remote tor server.  This information is in the consensus, but
+  maybe we use it in some place where having it signed by the
+  server in question is really important?]
+
+3.4 Exit selection
+
+  Currently finding an appropriate exit node for a user's request is
+  easy for a client because it has complete knowledge of all the exit
+  policies of all servers on the network.
+
+  [XXX: I have no finished ideas here yet.
+    - if clients only rely on the current exit flag they will
+      a) never use servers for exit purposes that don't have it,
+      b) will have a hard time finding a suitable exit node for
+         their weird port that only a few servers allow.
+    - the authorities could create a new summary document that
+      lists all the exit policies and their nodes (by fingerprint).
+      I need to find out how large that document would be.
+    - can we make the "Exit" flag more useful?  can we come
+      up with some "standard policies" and have operators pick
+      one of the standards?
+  ]
+
+4. Future possibilities
+
+  This proposal still requires that all servers have the descriptors of
+  every other node in the network in order to answer RELAY_REQUEST_SD
+  cells.  These cells are sent when a circuit is extended from ending at
+  node B to a new node C.  In that case B would have to answer a
+  RELAY_REQUEST_SD cell that asks for C's server descriptor (by SD digest).
+
+  In order to answer that request B obviously needs a copy of C's server
+  descriptor.  In the future we might amend RELAY_REQUEST_SD cells to
+  contain also the expected IP address and OR-port of the server C (the
+  client learns them from the network status document), so that B no
+  longer needs to know all the descriptors of the entire network but
+  instead can simply go and ask C for its descriptor before passing it
+  back to the client.
+

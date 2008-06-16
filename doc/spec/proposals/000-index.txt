@@ -63,6 +63,7 @@ Proposals by number:
 138  Remove routers that are not Running from consensus documents [CLOSED]
 139  Download consensus documents only when it will be trusted [CLOSED]
 140  Provide diffs between consensuses [OPEN]
+141  Download server descriptors on demand [DRAFT]
 
 
 Proposals by status:
@@ -74,6 +75,7 @@ Proposals by status:
    132  A Tor Web Service For Verifying Correct Browser Configuration
    133  Incorporate Unreachable ORs into the Tor Network
    134  More robust consensus voting with diverse authority sets
+   141  Download server descriptors on demand
  OPEN:
    120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
