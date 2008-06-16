@@ -1,7 +1,8 @@
 Changes in version 0.2.0.29 - 2008-06-13
   o Minor bugfixes:
-    - Fix a macro/CPP interactions that was confusing some compilers.
-      
+    - Fix a macro/CPP interactions that was confusing some compilers:
+      some GCCs don't like #if/#endif pairs inside macro arguments.
+      Fix for bug 707.
 
 
 Changes in version 0.2.0.28-rc - 2008-06-13
