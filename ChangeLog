@@ -15,7 +15,9 @@ Changes in version 0.2.1.2-alpha - 2008-??-??
   o Bugfixes:
     - Asking for a conditional consensus at .../consensus/<fingerprints>
       would crash a dirserver if it did not already have a consensus.
-    - Clean up some macro/cpp interactions.
+    - Clean up some macro/CPP interactions: some GCC versions don't like
+      #if/#endif pairs inside macro arguments.  Fixes bug 707.
+
 
 Changes in version 0.2.1.1-alpha - 2008-06-13
   o Major features:

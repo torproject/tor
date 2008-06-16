@@ -4525,7 +4525,6 @@ routerlist_assert_ok(routerlist_t *rl)
                     r->cache_info.signed_descriptor_digest);
     tor_assert(&(r->cache_info) == sd2);
     tor_assert(r->cache_info.routerlist_index == r_sl_idx);
-#if 0
     /* XXXX021.
      *
      *   Hoo boy.  We need to fix this one, and the fix is a bit tricky, so
@@ -4543,13 +4542,12 @@ routerlist_assert_ok(routerlist_t *rl)
      * reset our retry count for an extrainfo, but that's not the end
      * of the world.  Changing the representation in 0.2.0.x would just
      * destabilize the codebase.
-     */
     if (!tor_digest_is_zero(r->cache_info.extra_info_digest)) {
       signed_descriptor_t *sd3 =
         sdmap_get(rl->desc_by_eid_map, r->cache_info.extra_info_digest);
       tor_assert(sd3 == &(r->cache_info));
     }
-#endif
+    */
   });
   SMARTLIST_FOREACH(rl->old_routers, signed_descriptor_t *, sd,
   {
@@ -4558,14 +4556,13 @@ routerlist_assert_ok(routerlist_t *rl)
     sd2 = sdmap_get(rl->desc_digest_map, sd->signed_descriptor_digest);
     tor_assert(sd == sd2);
     tor_assert(sd->routerlist_index == sd_sl_idx);
-#if 0
-    /* XXXX021 see above. */
+    /* XXXX021 see above.
     if (!tor_digest_is_zero(sd->extra_info_digest)) {
       signed_descriptor_t *sd3 =
         sdmap_get(rl->desc_by_eid_map, sd->extra_info_digest);
       tor_assert(sd3 == sd);
     }
-#endif
+    */
   });
 
   RIMAP_FOREACH(rl->identity_map, d, r) {
