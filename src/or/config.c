@@ -22,6 +22,7 @@ const char config_c_id[] = \
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
+  CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
   CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
   CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
   CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
@@ -171,7 +172,7 @@ static config_var_t _option_vars[] = {
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
-  V(DataDirectory,               STRING,   NULL),
+  V(DataDirectory,               FILENAME, NULL),
   OBSOLETE("DebugLogFile"),
   V(DirAllowPrivateAddresses,    BOOL,     NULL),
   V(DirTimeToLearnReachability,  INTERVAL, "30 minutes"),
@@ -194,7 +195,7 @@ static config_var_t _option_vars[] = {
   V(ExitNodes,                   STRING,   NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
-  V(FallbackNetworkstatusFile,   STRING,
+  V(FallbackNetworkstatusFile,   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
   V(FascistFirewall,             BOOL,     "0"),
   V(FirewallPorts,               CSV,      ""),
@@ -203,13 +204,12 @@ static config_var_t _option_vars[] = {
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
-  V(GeoIPFile,                   STRING,
 #ifdef WIN32
-    "<default>"
+  V(GeoIPFile,                   FILENAME, "<default>"),
 #else
-    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"
+  V(GeoIPFile,                   FILENAME,
+    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
 #endif
-),
   V(Group,                       STRING,   NULL),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       LINELIST, NULL),
@@ -1626,6 +1626,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     break;
 
   case CONFIG_TYPE_STRING:
+  case CONFIG_TYPE_FILENAME:
     tor_free(*(char **)lvalue);
     *(char **)lvalue = tor_strdup(c->value);
     break;
@@ -1850,6 +1851,7 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
   switch (var->type)
     {
     case CONFIG_TYPE_STRING:
+    case CONFIG_TYPE_FILENAME:
       if (*(char**)value) {
         result->value = tor_strdup(*(char**)value);
       } else {
@@ -2080,6 +2082,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
   (void)fmt; /* unused */
   switch (var->type) {
     case CONFIG_TYPE_STRING:
+    case CONFIG_TYPE_FILENAME:
       tor_free(*(char**)lvalue);
       break;
     case CONFIG_TYPE_DOUBLE:
@@ -5107,6 +5110,7 @@ getinfo_helper_config(control_connection_t *conn,
       desc = config_find_description(&options_format, var->name);
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
+        case CONFIG_TYPE_FILENAME: type = "Filename"; break;
         case CONFIG_TYPE_UINT: type = "Integer"; break;
         case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
         case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;
