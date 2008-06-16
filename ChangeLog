@@ -1,3 +1,9 @@
+Changes in version 0.2.0.29 - 2008-06-13
+  o Minor bugfixes:
+    - Fix a macro/CPP interactions that was confusing some compilers.
+      
+
+
 Changes in version 0.2.0.28-rc - 2008-06-13
   o Anonymity fixes:
     - Fix a bug where, when we were choosing the 'end stream reason' to

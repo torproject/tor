@@ -198,13 +198,12 @@ static config_var_t _option_vars[] = {
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
-  V(GeoIPFile,                   STRING,
 #ifdef WIN32
-    "<default>"
+  V(GeoIPFile,                   STRING,   "<default>"),
 #else
-    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"
+  V(GeoIPFile,                   STRING,
+    SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
 #endif
-),
   V(Group,                       STRING,   NULL),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       LINELIST, NULL),
