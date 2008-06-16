@@ -62,6 +62,7 @@ Proposals by number:
 137  Keep controllers informed as Tor bootstraps [OPEN]
 138  Remove routers that are not Running from consensus documents [CLOSED]
 139  Download consensus documents only when it will be trusted [CLOSED]
+140  Provide diffs between consensuses [OPEN]
 
 
 Proposals by status:
@@ -77,6 +78,7 @@ Proposals by status:
    120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
    137  Keep controllers informed as Tor bootstraps
+   140  Provide diffs between consensuses
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits
