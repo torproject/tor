@@ -2205,7 +2205,7 @@ note_client_request(int purpose, int compressed, size_t bytes)
   } else {
     key = tor_malloc(256);
     tor_snprintf(key, 256, "unknown purpose (%d)%s",
-                 purpose, compressed?"":".z");
+                 purpose, compressed?".z":"");
   }
   note_request(key, bytes);
   tor_free(key);
