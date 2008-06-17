@@ -809,7 +809,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
     log_info(LD_REND, "The intro circuit we just cannibalized ends at $%s, "
                       "but we requested an intro circuit to $%s. Updating "
                       "our service.", cann, orig);
-    tor_free(intro->extend_info);
+    extend_info_free(intro->extend_info);
     intro->extend_info = extend_info_dup(launched->build_state->chosen_exit);
   }
 
