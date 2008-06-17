@@ -214,3 +214,13 @@ Status: Open
   help texts and the controller can send the user to the right anchor in a
   "bootstrapping problems" help page?
 
+6. Getting up to speed when the controller connects.
+
+  There's a new "GETINFO /status/bootstrap-phase" option, which returns
+  the most recent bootstrap phase status event sent. Specifically,
+  it returns a string starting with either "NOTICE BOOTSTRAP ..." or
+  "WARN BOOTSTRAP ...".
+
+  Controllers should use this getinfo when they connect or attach to
+  Tor to learn its current state.
+

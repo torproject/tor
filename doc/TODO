@@ -335,7 +335,7 @@ R - add an event to report geoip summaries to vidalia for bridge relays,
     so vidalia can say "recent activity (1-8 users) from sa".
 R - investigate: it looks like if the bridge authority is unreachable,
     we're not falling back on querying bridges directly?
-R - a getinfo so vidalia can query our current bootstrap state, in
+R o a getinfo so vidalia can query our current bootstrap state, in
     case it attaches partway through and wants to catch up.
 R - directory authorities shouldn't complain about bootstrapping problems
     just because they do a lot of reachability testing and some of
@@ -348,6 +348,8 @@ R - get matt to fix vidalia so it moves to a "starting tor" bootstrap
     state if it hasn't gotten any status events. Maybe it can even be
     more certain by checking the version (<0211) and/or looking at the
     results of the getinfo.
+R - in circuituse.c,
+    /* XXX021 consider setting n_conn->socket_error to TIMEOUT */
 
 For 0.2.1.x:
   - Proposals to do:

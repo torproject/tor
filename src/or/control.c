@@ -76,6 +76,13 @@ static int disable_log_messages = 0;
 static int authentication_cookie_is_set = 0;
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
+/** A sufficiently large size to record the last bootstrap phase string. */
+#define BOOTSTRAP_MSG_LEN 1024
+
+/** What was the last bootstrap phase message we sent? We keep track
+ * of this so we can respond to getinfo status/bootstrap-phase queries. */
+static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
+
 #define SHORT_NAMES 1
 #define LONG_NAMES 2
 #define ALL_NAMES (SHORT_NAMES|LONG_NAMES)
@@ -1765,6 +1772,8 @@ getinfo_helper_events(control_connection_t *control_conn,
       tor_snprintf(*answer, 16, "OR=%d DIR=%d",
                    check_whether_orport_reachable() ? 1 : 0,
                    check_whether_dirport_reachable() ? 1 : 0);
+    } else if (!strcmp(question, "status/bootstrap-phase")) {
+      *answer = tor_strdup(last_sent_bootstrap_message);
     } else if (!strcmpstart(question, "status/version/")) {
       int is_server = server_mode(get_options());
       networkstatus_t *c = networkstatus_get_latest_consensus();
@@ -1900,6 +1909,8 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("status/enough-dir-info",
       "Whether we have enough up-to-date directory information to build "
       "circuits."),
+  DOC("status/bootstrap-phase",
+      "The last bootstrap phase status event that Tor sent."),
   DOC("status/version/recommended", "List of currently recommended versions."),
   DOC("status/version/current", "Status of the current version."),
   DOC("status/version/num-versioning", "Number of versioning authorities."),
@@ -3794,6 +3805,7 @@ void
 control_event_bootstrap(bootstrap_status_t status, int progress)
 {
   const char *tag, *summary;
+  char buf[BOOTSTRAP_MSG_LEN];
 
   if (bootstrap_percent == 100)
     return; /* already bootstrapped; nothing to be done here. */
@@ -3813,9 +3825,13 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
     bootstrap_status_to_string(status, &tag, &summary);
     log_notice(LD_CONTROL, "Bootstrapped %d%%: %s.",
                progress ? progress : status, summary);
-    control_event_client_status(LOG_NOTICE,
+    tor_snprintf(buf, sizeof(buf),
         "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
         progress ? progress : status, tag, summary);
+    tor_snprintf(last_sent_bootstrap_message,
+                 sizeof(last_sent_bootstrap_message),
+                 "NOTICE %s", buf);
+    control_event_client_status(LOG_NOTICE, "%s", buf);
     if (status > bootstrap_percent) {
       bootstrap_percent = status; /* new milestone reached */
     }
@@ -3836,6 +3852,7 @@ control_event_bootstrap_problem(const char *warn, int reason)
 {
   int status = bootstrap_percent;
   const char *tag, *summary;
+  char buf[BOOTSTRAP_MSG_LEN];
 
   if (bootstrap_percent == 100)
     return; /* already bootstrapped; nothing to be done here. */
@@ -3849,9 +3866,13 @@ control_event_bootstrap_problem(const char *warn, int reason)
   log_warn(LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s)",
            status, summary, warn,
            orconn_end_reason_to_control_string(reason));
-  control_event_client_status(LOG_WARN,
+  tor_snprintf(buf, sizeof(buf),
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s",
       bootstrap_percent, tag, summary, warn,
       orconn_end_reason_to_control_string(reason));
+  tor_snprintf(last_sent_bootstrap_message,
+               sizeof(last_sent_bootstrap_message),
+               "WARN %s", buf);
+  control_event_client_status(LOG_WARN, "%s", buf);
 }
 
