@@ -1407,6 +1407,9 @@ do_main_loop(void)
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
+  /* initialize the bootstrap status events to know we're starting up */
+  control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
+
   if (trusted_dirs_reload_certs())
     return -1;
   if (router_reload_v2_networkstatus()) {

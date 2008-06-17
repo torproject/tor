@@ -11,6 +11,11 @@ Changes in version 0.2.1.2-alpha - 2008-??-??
       proposal 138.
     - In directory authorities' approved-routers files, allow
       fingerprints with or without space.
+    - Add a "GETINFO /status/bootstrap-phase" controller option, so the
+      controller can query our current bootstrap state in case it attaches
+      partway through and wants to catch up.
+    - Send an initial "Starting" bootstrap status event, so we have a
+      state to start out in.
 
   o Bugfixes:
     - Asking for a conditional consensus at .../consensus/<fingerprints>

@@ -55,11 +55,10 @@ Status: Open
   the same order. Some phases might also be skipped (not reported) if the
   associated bootstrap step is already complete.
 
-  Phase 0:
+  Phase 1:
   tag=starting summary="starting"
 
-  Tor starts out in this phase. It doesn't actually send a status event
-  to say so.
+  Tor starts out in this phase.
 
   Phase 5:
   tag=conn_dir summary="Connecting to directory mirror"
