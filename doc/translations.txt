@@ -1,117 +1,139 @@
-##      Instructions for helping translate text for Vidalia and TorButton
+##      Instructions for helping translate text for Vidalia, TorButton and TorCheck
 ##  ( More translation information for Tor related apps will accumulate here )
 
-You'll need an account on launchpad[0] and you'll want to request access.
-Access will need to be granted by either Matt or Jacob.
+Our translations are handled in one of two places. The Tor Translation Portal
+handles all of the translations for Vidalia, Torbutton and TorCheck. The Tor
+website itself is currently handled by hand translations using subversion.
 
-Uploading new translations is quite simple. First you'll need to checkout 
-the source to Vidalia. Then you'll want to change into the i18n directory:
+All three of the above projects check in their respective .po files into the following subversion urls:
 
-	cd vidalia/src/vidalia/i18n;
+    https://tor-svn.freehaven.net/svn/translation/trunk/projects/torbutton
+    https://tor-svn.freehaven.net/svn/translation/trunk/projects/torcheck
+    https://tor-svn.freehaven.net/svn/translation/trunk/projects/vidalia
 
-Now you'll run the proper commands[1] to convert from the native QT .ts format.
-This is because of a known issues in Rosetta, the software that drives
-Launchpad. You can read more about this bug here:
-https://bugs.launchpad.net/rosetta/+bug/68959
+The current pootle configuration is checked into subversion as well:
 
-Because Rosetta doesn't support .ts files, you'll want to convert the .ts
-format into gnugettext .po files. Do so like so:
-
-	for file in `ls -1|grep .ts$|cut -f1 -d.`;
-	do
-	echo "Attempting to convert" $file.ts;
-	ts2po --input=$file.ts --output=$file.po;
-	done
-
-This is pretty straight forward but also error prone. You'll want to check for
-proper formatting of the .po files like so:
-
-	for file in `ls -1|grep .po$`
-	do
-	msgfmt -c $file;
-	done
-
-You have to remove all duplicate strings and all errors before uploading:
+    https://tor-svn.freehaven.net/svn/translation/trunk/pootle
     
-    for file in `ls -1|grep .po$|cut -f1 -d.`
-    do
-    msguniq -o $file.po $file-uniq.po;
+TorCheck uses our translation portal to accept translations. Users use the portal to check in their changes.
+To make use of the translations that users have commited to the translations/
+subversion module, you'll need to ensure that you have a current checked out
+copy of TorCheck:
+    
+    cd check/trunk/i18n/
+    check/trunk/i18n$ svn up
+
+You should see something like the following:
+
+    Fetching external item into 'pootle'
+    External at revision 15300.
+
+    At revision 15300.
+ 
+Now if you had changes, you'd simply want to move the newly updated .po files
+into the current stable directory.  Moving the .po files from
+'check/trunk/i18n/pootle/' into 'check/trunk/i18n' properly naming the files
+for their respective locale.
+
+Here's an example of how to move all of the current pootle translations into
+the svn trunk area of TorCheck:
+
+    cd check/trunk/i18n/
+    for locale in `ls -1 pootle/|grep -v template`;
+    do 
+    mv -v pootle/$locale/TorCheck_$locale.po TorCheck_$locale.po;
     done
 
-Ensure that the .po files are valid, possibly by compiling them into .mo files:
+Now check the differences (ensure the output looks reasonable):
+    
+    svn diff
 
-	for file in `ls -1|grep .po$|cut -f1 -d.`
-	do
-	msgfmt -o $file.mo $file.po;
-	file $file.mo;
-	done
+Ensure that msgfmt has no errors:
 
-If you're able to make proper .mo files and you have no errors, you're probably 
-ready to upload the .po files for translation. A proper .mo file may look like:
+    msgfmt -C *.po
 
-	"GNU message catalog (little endian), revision 0, 11 messages"
+And finally check in the changes:
 
-Once you have the current selection of .po files, you'll want to make a .tgz:
+    svn commit
 
-	tar -cvzf vidalia.tar.gz *.po;
+Torbutton uses our translation portal to accept translations. Users use the portal to check in their changes.
+To make use of the translations that users have commited to the translations/
+subversion module, you'll need to ensure that you have a current checked out
+copy of Torbutton:
+    
+    cd torbutton/trans_tools 
+    torbutton/trans_tools$ svn up
 
-Now you're ready to upload 'vidalia.tar.gz' by visiting translation upload 
-area of launchpad:
+You should see something like the following:
 
-	https://translations.launchpad.net/vidalia/trunk/+translations-upload
+    Fetching external item into 'pootle'
+    External at revision 15300.
 
-Once you've performed your upload, you will have to wait for admin approval.
-After approval, translators will be able to download the files and translate.
+    At revision 15300.
+ 
+Now if you had changes, you need to convert from .po and move the newly updated mozilla files
+into the current stable locale directory. First convert them with the
+'mkmoz.sh' script and then moving the proper mozilla files from
+'torbutton/trans_tools/moz/' into 'torbutton/src/chrome/locale/' directory
+while properly naming the files for their respective locale.
 
-When the files are ready to be put back into Vidalia's trunk repository, visit:
+Here's an example of how to move all of the current pootle translations into
+the svn trunk area of Torbutton:
 
-	https://translations.launchpad.net/vidalia/trunk/+export
+    cd torbutton/trans_tools 
+    ./mkmoz.sh
+    for locale in `ls -1 moz/`;
+    do 
+    mv -v moz/$locale/*.{rdf,dtd,properties} ../src/chrome/locale/$locale/;
+    done
 
-Download the files in the .po format by following the instructions on the above 
-page. You should see something like:
+Now check the differences (ensure the output looks reasonable):
+    
+    svn diff
 
-	"When these translations have been exported, a message will be sent 
-	to your-launchpad-email@yourdoma.example. This message will tell you 
-	where you can download your file."
+And finally check in the changes:
 
-Once you have the .po files, you'll want to make .ts files from them. To reverse 
-the process and send .ts files to Matt, you'll want to do the following:
+    svn commit
 
-        for file in `ls -1|grep .po$|cut -f1 -d.`;
-        do
-        echo "Attempting to convert" $file.po;
-        po2ts --input=$file.po --output=$file.ts;
-        done
+XXX: Update this to make it correct :XXX
 
-----------------------------------------------------------------------------
+Vidalia uses our translation portal to accept translations. Users use the
+portal to check in their changes.  To make use of the translations that users
+have commited to the translations/
+subversion module, you'll need to ensure that you have a current checked out
+copy of Vidalia:
+    
+    cd vidalia/src/vidalia/i18n/ 
+    vidalia/src/vidalia/i18n/$ svn up
 
-If you're interested in helping to translate Torbutton, it uses Babelzilla[2].
-You'll need a login to Babelzilla just as you do with Launchpad. Once logged 
-in visit the following page for progress information and downloads of templates:
+You should see something like the following:
 
-	http://www.babelzilla.org/index.php?option=com_wts&Itemid=88&extension=3510&type=lang
+    Fetching external item into 'pootle'
+    Updated external to revision 15319.
 
-All information about locales can be viewed at the above url. Click on 
-different languages to see their respective statistics. Explore.
+    Updated to revision 2744.
 
-To download all locale strings with missing transations in their original 
-form, you can visit this url:
+Now if you had changes, you need to convert from .po and move the newly updated .ts files
+into the current stable locale directory. First convert them with the
+'mkts.sh' script and then moving the proper .ts files from
+'vidalia/src/vidalia/i18n/ts/' into 'vidalia/src/vidalia/i18n/' directory
+while properly naming the files for their respective locale.
 
-	http://www.babelzilla.org/index.php?option=com_wts&Itemid=88&type=downloadtar&extension=3510
+Here's an example of how to move all of the current pootle translations into
+the svn trunk area of Torbutton:
 
-To download all locale strings with missing translations as an empty string, 
-you can visit this url:
+    cd vidalia/src/vidalia/i18n/ 
+    ./mkts.sh
+    for locale in `ls -1 ts/`;
+    do 
+    mv -v ts/$locale/vidalia_$locale.ts vidalia_$locale.ts;
+    done
 
-	http://www.babelzilla.org/index.php?option=com_wts&Itemid=88&type=downloadempty&extension=3510
+Now check the differences (ensure the output looks reasonable):
+    
+    svn diff
 
-If you plan to translate using Babelzilla often, you'll want to email 
-tor-translation@torproject.org and discuss your desires. Sadly, there is a 
-fixed number of translators allowed per project. To read more about Babelzilla 
-please read their Q&A section:
+And finally check in the changes:
 
-	http://www.babelzilla.org/index.php?option=com_content&task=category&sectionid=3&id=7&Itemid=25
-
-[0] https://www.launchpad.net/
-[1] These tools can be found in the Debian package 'translate-toolkit'
-[2] http://www.babelzilla.org/
+    svn commit
 
