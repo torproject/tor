@@ -22,6 +22,10 @@ Changes in version 0.2.1.2-alpha - 2008-??-??
       would crash a dirserver if it did not already have a consensus.
     - Clean up some macro/CPP interactions: some GCC versions don't like
       #if/#endif pairs inside macro arguments.  Fixes bug 707.
+    - When establishing a hidden service, introduction points that originate
+      from cannibalized circuits are completely ignored and not included in
+      rendezvous service descriptors. This might be another reason for delay
+      in making a hidden service available. Bugfix on 0.2.0.14-alpha.
 
 
 Changes in version 0.2.1.1-alpha - 2008-06-13
@@ -127,7 +131,7 @@ Changes in version 0.2.0.28-rc - 2008-06-13
     - While setting up a hidden service, some valid introduction circuits
       were overlooked and abandoned. This might be the reason for
       the long delay in making a hidden service available. Bugfix on
-      0.2.0.13-alpha.
+      0.2.0.14-alpha.
 
   o Minor features:
     - Update to the "June 9 2008" ip-to-country file.
