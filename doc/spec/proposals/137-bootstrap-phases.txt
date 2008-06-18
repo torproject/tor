@@ -30,7 +30,10 @@ Status: Open
 
   So in this case we send
   650 STATUS_CLIENT NOTICE/WARN BOOTSTRAP \
-  PROGRESS=num TAG=string SUMMARY=string WARNING=string REASON=string
+  PROGRESS=num TAG=Keyword SUMMARY=String WARNING=String REASON=Keyword
+
+  The arguments MAY appear in any order. Controllers MUST accept unrecognized
+  arguments.
 
   "Progress" gives a number between 0 and 100 for how far through
   the bootstrapping process we are. "Summary" is a string that can be
@@ -53,7 +56,12 @@ Status: Open
   Tor. Controllers should not assume that the percentages and tags listed
   here will continue to match up, or even that the tags will stay in
   the same order. Some phases might also be skipped (not reported) if the
-  associated bootstrap step is already complete.
+  associated bootstrap step is already complete, or if the phase no longer
+  is necessary.  Only "starting" and "done" are guaranteed to exist in all
+  future versions.
+
+  Current Tor versions enter these phases in order, monotonically;
+  future Tors MAY revisit earlier stages.
 
   Phase 0:
   tag=starting summary="starting"
@@ -76,9 +84,9 @@ Status: Open
   Phase 10
   tag=handshake_dir summary="Finishing handshake with directory mirror"
 
-  This event occurs when Tor establishes a TCP connection with a relay
-  (or its https proxy if it's using one). Tor remains in this phase until
-  the TLS handshake with the relay is finished.
+  This event occurs when Tor establishes a TCP connection with a relay used
+  as a directory mirror (or its https proxy if it's using one). Tor remains
+  in this phase until the TLS handshake with the relay is finished.
 
   Problems in this phase generally happen because Tor's firewall is
   doing more sophisticated MITM attacks on it, or doing packet-level
@@ -177,12 +185,10 @@ Status: Open
   a normal bootstrap event, but we also include 'warning' and 'reason'
   strings.
 
-  The reason string is the same argument as the reason string for ORCONN
-  failure events; the controller can recognize the various reasons
-  and help the user accordingly. The warning string currently tries to
-  provide the equivalent of strerror() -- this isn't very useful if the
-  controller can recognize reason tags and be smarter, but for a very
-  simple controller it should be better than nothing.
+  The reason strings are long-term-stable controller-facing tags to
+  identify particular issues in a bootstrapping step.  The warning
+  strings, on the other hand, are human-readable.  Controllers SHOULD
+  NOT rely on the format of any warning string.
 
   Currently Tor ignores the first nine bootstrap problem reports for
   a given phase, reports the tenth to the controller, and then ignores
