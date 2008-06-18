@@ -495,23 +495,26 @@ connection_about_to_close_connection(connection_t *conn)
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
         if (connection_or_nonopen_was_started_here(or_conn)) {
+          or_options_t *options = get_options();
           rep_hist_note_connect_failed(or_conn->identity_digest, now);
           entry_guard_register_connect_status(or_conn->identity_digest,0,now);
-          if (!get_options()->HttpsProxy)
+          if (!options->HttpsProxy)
             router_set_status(or_conn->identity_digest, 0);
           if (conn->state == OR_CONN_STATE_CONNECTING) {
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
               errno_to_orconn_end_reason(or_conn->socket_error));
-            control_event_bootstrap_problem(
-              tor_socket_strerror(or_conn->socket_error),
-              errno_to_orconn_end_reason(or_conn->socket_error));
+            if (!authdir_mode_tests_reachability(options))
+              control_event_bootstrap_problem(
+                tor_socket_strerror(or_conn->socket_error),
+                errno_to_orconn_end_reason(or_conn->socket_error));
           } else {
             int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                                          reason);
             /* XXX021 come up with a better string for the first arg */
-            control_event_bootstrap_problem(
-              orconn_end_reason_to_control_string(reason), reason);
+            if (!authdir_mode_tests_reachability(options))
+              control_event_bootstrap_problem(
+                orconn_end_reason_to_control_string(reason), reason);
           }
         }
         /* Inform any pending (not attached) circs that they should

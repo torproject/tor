@@ -548,8 +548,9 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
       }
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
                                    errno_to_orconn_end_reason(socket_error));
-      control_event_bootstrap_problem(tor_socket_strerror(socket_error),
-                                   errno_to_orconn_end_reason(socket_error));
+      if (!authdir_mode_tests_reachability(options))
+        control_event_bootstrap_problem(tor_socket_strerror(socket_error),
+                                     errno_to_orconn_end_reason(socket_error));
       connection_free(TO_CONN(conn));
       return NULL;
     case 0:
@@ -799,7 +800,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
       router_set_status(conn->identity_digest, 0);
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
               END_OR_CONN_REASON_OR_IDENTITY);
-      control_event_bootstrap_problem("foo", END_OR_CONN_REASON_OR_IDENTITY);
+      if (!authdir_mode_tests_reachability(options))
+        control_event_bootstrap_problem("foo", END_OR_CONN_REASON_OR_IDENTITY);
       as_advertised = 0;
     }
     if (authdir_mode_tests_reachability(options)) {

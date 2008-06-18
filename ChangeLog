@@ -26,6 +26,9 @@ Changes in version 0.2.1.2-alpha - 2008-??-??
       from cannibalized circuits are completely ignored and not included in
       rendezvous service descriptors. This might be another reason for delay
       in making a hidden service available. Bugfix on 0.2.0.14-alpha.
+    - Directory authorities shouldn't complain about bootstrapping
+      problems just because they do a lot of reachability testing and
+      some of the connection attempts fail.
 
 
 Changes in version 0.2.1.1-alpha - 2008-06-13

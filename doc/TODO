@@ -329,15 +329,15 @@ R   - then document the bridge user download timeline.
 =======================================================================
 
 For 0.2.1.2-alpha:
-R - bug: if we launch using bridges, and then stop using bridges, we
+R d bug: if we launch using bridges, and then stop using bridges, we
     still have our bridges in our entryguards section, and may use them.
-R - add an event to report geoip summaries to vidalia for bridge relays,
+R d add an event to report geoip summaries to vidalia for bridge relays,
     so vidalia can say "recent activity (1-8 users) from sa".
 R - investigate: it looks like if the bridge authority is unreachable,
     we're not falling back on querying bridges directly?
-R o a getinfo so vidalia can query our current bootstrap state, in
+  o a getinfo so vidalia can query our current bootstrap state, in
     case it attaches partway through and wants to catch up.
-R - directory authorities shouldn't complain about bootstrapping problems
+  o directory authorities shouldn't complain about bootstrapping problems
     just because they do a lot of reachability testing and some of
     it fails.
 R - if your bridge is unreachable, it won't generate enough connection
