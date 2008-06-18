@@ -17,6 +17,8 @@ const char routerlist_c_id[] =
 
 // #define DEBUG_ROUTERLIST
 
+// #define DUMP_DIR_WEIGHTS
+
 /****************************************************************************/
 
 /* static function prototypes */
@@ -100,6 +102,10 @@ static int have_warned_about_old_version = 0;
 /** True iff we have logged a warning about this OR's version being newer than
  * listed by the authorities  */
 static int have_warned_about_new_version = 0;
+
+#ifdef DUMP_DIR_WEIGHTS
+static int log_dir_weights = 0;
+#endif
 
 /** Return the number of v2 directory authorities */
 static INLINE int
@@ -577,20 +583,56 @@ router_pick_directory_server_impl(int requireother, int fascistfirewall,
   });
 
   if (smartlist_len(tunnel)) {
+#ifdef DUMP_DIR_WEIGHTS
+    if (log_dir_weights)
+      log_notice(LD_DIR, "Picking from tunnel-supporting dirs");
+#endif
     result = routerstatus_sl_choose_by_bandwidth(tunnel);
   } else if (smartlist_len(overloaded_tunnel)) {
+#ifdef DUMP_DIR_WEIGHTS
+    if (log_dir_weights)
+      log_notice(LD_DIR, "Picking from overloaded tunnel-supporting dirs");
+#endif
     result = routerstatus_sl_choose_by_bandwidth(overloaded_tunnel);
   } else if (smartlist_len(trusted_tunnel)) {
     /* FFFF We don't distinguish between trusteds and overloaded trusteds
      * yet. Maybe one day we should. */
     /* FFFF We also don't load balance over authorities yet. I think this
      * is a feature, but it could easily be a bug. -RD */
+#ifdef DUMP_DIR_WEIGHTS
+    if (log_dir_weights) {
+      int n = smartlist_len(trusted_tunnel);
+      double d = n ? 100.0/n : 0.0;
+      log_notice(LD_DIR, "Picking from trusted tunnel-supporting dirs.");
+      SMARTLIST_FOREACH(trusted_tunnel, routerstatus_t *, rs,
+         log_notice(LD_DIR, "  [%05.2lf] %s %s", d,
+                    hex_str(rs->identity_digest, DIGEST_LEN), rs->nickname));
+    }
+#endif
     result = smartlist_choose(trusted_tunnel);
   } else if (smartlist_len(direct)) {
+#ifdef DUMP_DIR_WEIGHTS
+    if (log_dir_weights)
+      log_notice(LD_DIR, "Picking from direct dir connections");
+#endif
     result = routerstatus_sl_choose_by_bandwidth(direct);
   } else if (smartlist_len(overloaded_direct)) {
+#ifdef DUMP_DIR_WEIGHTS
+    if (log_dir_weights)
+      log_notice(LD_DIR, "Picking from overloaded direct dir connections");
+#endif
     result = routerstatus_sl_choose_by_bandwidth(overloaded_direct);
   } else {
+#ifdef DUMP_DIR_WEIGHTS
+    if (log_dir_weights) {
+      int n = smartlist_len(trusted_tunnel);
+      double d = n ? 100.0/n : 0.0;
+      log_notice(LD_DIR, "Picking from trusted direct dir connections");
+      SMARTLIST_FOREACH(trusted_tunnel, routerstatus_t *, rs,
+         log_notice(LD_DIR, "  [%05.2lf] %s %s", d,
+                    hex_str(rs->identity_digest, DIGEST_LEN), rs->nickname));
+    }
+#endif
     result = smartlist_choose(trusted_direct);
   }
   smartlist_free(direct);
@@ -1160,6 +1202,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
   for (i=0; i < smartlist_len(sl); i++) {
+    uint64_t this_bw;
     if (statuses) {
       status = smartlist_get(sl, i);
       is_exit = status->is_exit;
@@ -1172,17 +1215,32 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, int for_exit, int for_guard,
 
     /* Weights can be 0 if not counting guards/exits */
     if (is_exit && is_guard)
-      tmp += ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
+      this_bw = ((uint64_t)(bandwidths[i] * exit_weight * guard_weight));
     else if (is_guard)
-      tmp += ((uint64_t)(bandwidths[i] * guard_weight));
+      this_bw = ((uint64_t)(bandwidths[i] * guard_weight));
     else if (is_exit)
-      tmp += ((uint64_t)(bandwidths[i] * exit_weight));
+      this_bw = ((uint64_t)(bandwidths[i] * exit_weight));
     else
-      tmp += bandwidths[i];
+      this_bw = bandwidths[i];
+    tmp += this_bw;
+
+#ifdef DUMP_DIR_WEIGHTS
+    if (log_dir_weights && statuses) {
+      routerstatus_t *rs = smartlist_get(sl, i);
+      double pct = 100.0 * (U64_TO_DBL(this_bw)/U64_TO_DBL(total_bw));
+      log_notice(LD_DIR, "  [%05.2lf] %s %s", pct,
+                 hex_str(rs->identity_digest, DIGEST_LEN), rs->nickname);
+    } else
+#endif
 
     if (tmp >= rand_bw)
       break;
   }
+#ifdef DUMP_DIR_WEIGHTS
+  if (log_dir_weights)
+    return NULL;
+#endif
+
   if (i == smartlist_len(sl)) {
     /* This is possible due to round-off error. */
     --i;
@@ -3557,6 +3615,16 @@ networkstatus_list_update_recent(time_t now)
   }
 }
 
+#ifdef DUMP_DIR_WEIGHTS
+static void
+dump_dir_weights(void)
+{
+  log_dir_weights = 1;
+  router_pick_directory_server_impl(0, 0, 0, 1);
+  log_dir_weights = 0;
+}
+#endif
+
 /** Helper for routerstatus_list_update_from_networkstatus: remember how many
  * authorities recommend a given descriptor digest. */
 typedef struct {
@@ -3867,6 +3935,10 @@ routerstatus_list_update_from_networkstatus(time_t now)
 
   control_event_networkstatus_changed(changed_list);
   smartlist_free(changed_list);
+
+#ifdef DUMP_DIR_WEIGHTS
+  dump_dir_weights();
+#endif
 }
 
 /** Given a list <b>routers</b> of routerinfo_t *, update each routers's
