@@ -396,7 +396,7 @@ For 0.2.1.x:
     - Put bandwidth weights in the networkstatus? So clients get weight
       their choices even before they have the descriptors; and so
       authorities can put in more accurate numbers in the future.
-    - Map out the process of bootstrapping, break it into status events,
+    . Map out the process of bootstrapping, break it into status events,
       spec those events. Also, map out the ways where we can realize that
       bootstrapping is *failing*, and include those. *
 
@@ -419,7 +419,7 @@ W     - figure out license *
 
   - Use less RAM *
     - Optimize cell pool allocation.
-    - Support (or just always use) jemalloc
+    - Support (or just always use) jemalloc (if it helps)
     - mmap more files.
     - Look into pulling serverdescs off buffers as they arrive.
   - Use less bandwidth
@@ -438,11 +438,11 @@ W     - figure out license *
     - For dns?
     - For http?
     - For buffers?
-  - Emulate NSS better:
-    - Normalized cipher lists *
-    - Normalized lists of extensions *
+  o Emulate NSS better:
+    o Normalized cipher lists
+    o Normalized lists of extensions
   - Tool improvements:
-    - Get a "use less buffer ram" patch into openssl. *
+    o Get a "use less buffer ram" patch into openssl. *
     - Get IOCP patch into libevent *
 
   - Security improvements
@@ -465,7 +465,7 @@ W     - figure out license *
     - Can we deprecate controllers that don't use both features?
 
 Nice to have for 0.2.1.x:
-  - Better support for private networks: figure out what is hard, and
+  o Better support for private networks: figure out what is hard, and
     make it easier.
 
   - Proposals to write
