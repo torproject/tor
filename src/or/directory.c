@@ -3431,4 +3431,3 @@ dir_split_resource_into_fingerprints(const char *resource,
   return 0;
 }
 
-/* vim:set et ts=2: */

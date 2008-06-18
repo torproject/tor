@@ -2066,3 +2066,4 @@ dirvote_get_vote(const char *fp, int flags)
   }
   return NULL;
 }
+
