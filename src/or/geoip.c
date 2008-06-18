@@ -408,6 +408,14 @@ _c_hist_compare(const void **_a, const void **_b)
 /*DOCDOC*/
 #define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
 
+static INLINE unsigned
+round_to_next_multiple_of(unsigned number, unsigned divisor)
+{
+  number += divisor - 1;
+  number -= number % divisor;
+  return number;
+}
+
 /** Return a newly allocated comma-separated string containing entries for all
  * the countries from which we've seen enough clients connect. The entry
  * format is cc=num where num is the number of IPs we've seen connecting from
@@ -428,6 +436,11 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
     clientmap_entry_t **ent;
     unsigned *counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
     unsigned total = 0;
+    unsigned granularity = IP_GRANULARITY;
+#ifdef ENABLE_GEOIP_STATS
+    if (get_options()->DirRecordUsageByCountry)
+      granularity = get_options()->DirRecordUsageGranularity;
+#endif
     HT_FOREACH(ent, clientmap, &client_history) {
       int country;
       if (((*ent)->last_seen & ACTION_MASK) != action)
@@ -456,9 +469,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
 #else
       if (c > 0) {
 #endif
-        /* Round up to the next multiple of IP_GRANULARITY */
-        c += IP_GRANULARITY-1;
-        c -= c % IP_GRANULARITY;
+        c = round_to_next_multiple_of(c, granularity);
         countrycode = geoip_get_country_name(i);
         ent = tor_malloc(sizeof(c_hist_t));
         strlcpy(ent->country, countrycode, sizeof(ent->country));
@@ -493,12 +504,18 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
-  /**DOCDOC*/
+/**DOCDOC*/
 char *
 geoip_get_request_history(time_t now, geoip_client_action_t action)
 {
-  smartlist_t *entries;
+  smartlist_t *entries, *strings;
   char *result;
+  unsigned granularity = IP_GRANULARITY;
+#ifdef ENABLE_GEOIP_STATS
+  if (get_options()->DirRecordUsageByCountry)
+    granularity = get_options()->DirRecordUsageGranularity;
+#endif
+
   if (client_history_starts >= (now - GEOIP_MIN_OBSERVATION_TIME))
     return NULL;
   if (action != GEOIP_CLIENT_NETWORKSTATUS &&
@@ -506,23 +523,36 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
     return NULL;
   if (!geoip_countries)
     return NULL;
+
   entries = smartlist_create();
   SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
       uint32_t *n = (action == GEOIP_CLIENT_NETWORKSTATUS)
         ? c->n_v3_ns_requests : c->n_v2_ns_requests;
       uint32_t tot = 0;
       int i;
-      char buf[32];
+      c_hist_t *ent;
       for (i=0; i < REQUEST_HIST_LEN; ++i)
         tot += n[i];
       if (!tot)
         continue;
-      tor_snprintf(buf, sizeof(buf), "%s=%ld", c->countrycode, (long)tot);
-      smartlist_add(entries, tor_strdup(buf));
+      ent = tor_malloc_zero(sizeof(c_hist_t));
+      strlcpy(ent->country, c->countrycode, sizeof(ent->country));
+      ent->total = round_to_next_multiple_of(tot, granularity);
+      smartlist_add(entries, ent);
   });
-  smartlist_sort_strings(entries);
-  result = smartlist_join_strings(entries, ",", 0, NULL);
-  SMARTLIST_FOREACH(entries, char *, cp, tor_free(cp));
+  smartlist_sort(entries, _c_hist_compare);
+
+  strings = smartlist_create();
+  SMARTLIST_FOREACH(entries, c_hist_t *, ent, {
+      char buf[32];
+      tor_snprintf(buf, sizeof(buf), "%s=%u", ent->country, ent->total);
+      smartlist_add(strings, tor_strdup(buf));
+    });
+  result = smartlist_join_strings(strings, ",", 0, NULL);
+  SMARTLIST_FOREACH(strings, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(entries, c_hist_t *, ent, tor_free(ent));
+  smartlist_free(strings);
+  smartlist_free(entries);
   return result;
 }
 

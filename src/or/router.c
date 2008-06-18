@@ -1826,8 +1826,13 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     static time_t last_purged_at = 0;
     char *geoip_summary;
     time_t now = time(NULL);
-    if (now > last_purged_at+48*60*60) {
-      geoip_remove_old_clients(now-48*60*60);
+    int geoip_purge_interval = 48*60*60;
+#ifdef ENABLE_GEOIP_STATS
+    if (get_options()->DirRecordUsageByCountry)
+      geoip_purge_interval = get_options()->DirRecordUsageRetainIPs;
+#endif
+    if (now > last_purged_at+geoip_purge_interval) {
+      geoip_remove_old_clients(now-geoip_purge_interval);
       last_purged_at = now;
     }
     geoip_summary = geoip_get_client_history(time(NULL), GEOIP_CLIENT_CONNECT);

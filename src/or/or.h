@@ -2396,6 +2396,9 @@ typedef struct {
   int BridgeRecordUsageByCountry;
 #ifdef ENABLE_GEOIP_STATS
   int DirRecordUsageByCountry;
+  int DirRecordUsageGranularity;
+  int DirRecordUsageRetainIPs;
+  int DirRecordUsageSaveInterval;
 #endif
 
   /** Optionally, a file with GeoIP data. */

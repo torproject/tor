@@ -183,6 +183,9 @@ static config_var_t _option_vars[] = {
   OBSOLETE("DirPostPeriod"),
 #ifdef ENABLE_GEOIP_STATS
   V(DirRecordUsageByCountry,     BOOL,     "0"),
+  V(DirRecordUsageGranularity,   UINT,     "4"),
+  V(DirRecordUsageRetainIPs,     INTERVAL, "14 days"),
+  V(DirRecordUsageSaveInterval,  INTERVAL, "6 hours"),
 #endif
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DNSPort,                     UINT,     "0"),
