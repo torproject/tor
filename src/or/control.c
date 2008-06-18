@@ -3715,6 +3715,10 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
                            const char **summary)
 {
   switch (s) {
+    case BOOTSTRAP_STATUS_UNDEF:
+      *tag = "undef";
+      *summary = "Undefined";
+      break;
     case BOOTSTRAP_STATUS_STARTING:
       *tag = "starting";
       *summary = "Starting";
@@ -3782,8 +3786,9 @@ bootstrap_status_to_string(bootstrap_status_t s, const char **tag,
 /** What percentage through the bootstrap process are we? We remember
  * this so we can avoid sending redundant bootstrap status events, and
  * so we can guess context for the bootstrap messages which are
- * ambiguous. */
-static int bootstrap_percent = 0;
+ * ambiguous. It starts at 'undef', but gets set to 'starting' while
+ * Tor initializes. */
+static int bootstrap_percent = BOOTSTRAP_STATUS_UNDEF;
 
 /** How many problems have we had getting to the next bootstrapping phase?
  * These include failure to establish a connection to a Tor relay,
@@ -3807,7 +3812,7 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
   const char *tag, *summary;
   char buf[BOOTSTRAP_MSG_LEN];
 
-  if (bootstrap_percent == 100)
+  if (bootstrap_percent == BOOTSTRAP_STATUS_DONE)
     return; /* already bootstrapped; nothing to be done here. */
 
   /* special case for handshaking status, since our TLS handshaking code
@@ -3860,7 +3865,7 @@ control_event_bootstrap_problem(const char *warn, int reason)
   if (++bootstrap_problems != BOOTSTRAP_PROBLEM_THRESHOLD)
     return; /* no worries yet */
 
-  while (bootstrap_status_to_string(status, &tag, &summary) < 0)
+  while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
 
   log_warn(LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s)",

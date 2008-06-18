@@ -3057,9 +3057,10 @@ void enable_control_logging(void);
 /** Enum describing various stages of bootstrapping, for use with controller
  * bootstrap status events. The values range from 0 to 100. */
 typedef enum {
-  BOOTSTRAP_STATUS_STARTING=1,
+  BOOTSTRAP_STATUS_UNDEF=-1,
+  BOOTSTRAP_STATUS_STARTING=0,
   BOOTSTRAP_STATUS_CONN_DIR=5,
-  BOOTSTRAP_STATUS_HANDSHAKE=-1,
+  BOOTSTRAP_STATUS_HANDSHAKE=-2,
   BOOTSTRAP_STATUS_HANDSHAKE_DIR=10,
   BOOTSTRAP_STATUS_ONEHOP_CREATE=15,
   BOOTSTRAP_STATUS_REQUESTING_STATUS=20,
