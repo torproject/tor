@@ -9,7 +9,7 @@ All three of the above projects check in their respective .po files into the fol
 
     https://tor-svn.freehaven.net/svn/translation/trunk/projects/torbutton
     https://tor-svn.freehaven.net/svn/translation/trunk/projects/torcheck
-    https://tor-svn.freehaven.net/svn/translation/trunk/projects/vidalia
+    http://trac.vidalia-project.net/browser/vidalia/trunk/src/vidalia/i18n
 
 The current pootle configuration is checked into subversion as well:
 
@@ -95,45 +95,7 @@ And finally check in the changes:
 
     svn commit
 
-XXX: Update this to make it correct :XXX
-
 Vidalia uses our translation portal to accept translations. Users use the
-portal to check in their changes.  To make use of the translations that users
-have commited to the translations/
-subversion module, you'll need to ensure that you have a current checked out
-copy of Vidalia:
-    
-    cd vidalia/src/vidalia/i18n/ 
-    vidalia/src/vidalia/i18n/$ svn up
-
-You should see something like the following:
-
-    Fetching external item into 'pootle'
-    Updated external to revision 15319.
-
-    Updated to revision 2744.
-
-Now if you had changes, you need to convert from .po and move the newly updated .ts files
-into the current stable locale directory. First convert them with the
-'mkts.sh' script and then moving the proper .ts files from
-'vidalia/src/vidalia/i18n/ts/' into 'vidalia/src/vidalia/i18n/' directory
-while properly naming the files for their respective locale.
-
-Here's an example of how to move all of the current pootle translations into
-the svn trunk area of Torbutton:
-
-    cd vidalia/src/vidalia/i18n/ 
-    ./mkts.sh
-    for locale in `ls -1 ts/`;
-    do 
-    mv -v ts/$locale/vidalia_$locale.ts vidalia_$locale.ts;
-    done
-
-Now check the differences (ensure the output looks reasonable):
-    
-    svn diff
-
-And finally check in the changes:
-
-    svn commit
+portal to check in their changes. No conversion or moving is required other
+than normal pootle usage.
 
