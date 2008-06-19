@@ -340,15 +340,17 @@ R - investigate: it looks like if the bridge authority is unreachable,
   o directory authorities shouldn't complain about bootstrapping problems
     just because they do a lot of reachability testing and some of
     it fails.
-R - if your bridge is unreachable, it won't generate enough connection
+R * if your bridge is unreachable, it won't generate enough connection
     failures to generate a bootstrap problem event.
 R - if "no running bridges known", an application request should make
     us retry all our bridges.
-R - get matt to fix vidalia so it moves to a "starting tor" bootstrap
+  o get matt to fix vidalia so it moves to a "starting tor" bootstrap
     state if it hasn't gotten any status events. Maybe it can even be
     more certain by checking the version (<0211) and/or looking at the
     results of the getinfo.
-R - in circuituse.c,
+R - get matt to make vidalia do a getinfo status/bootstrap-phase to
+    get caught up after it connects.
+R * in circuituse.c,
     /* XXX021 consider setting n_conn->socket_error to TIMEOUT */
 
 For 0.2.1.x:

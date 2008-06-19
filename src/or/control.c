@@ -3858,12 +3858,15 @@ control_event_bootstrap_problem(const char *warn, int reason)
   int status = bootstrap_percent;
   const char *tag, *summary;
   char buf[BOOTSTRAP_MSG_LEN];
+  const char *recommendation = "ignore";
 
   if (bootstrap_percent == 100)
     return; /* already bootstrapped; nothing to be done here. */
 
-  if (++bootstrap_problems != BOOTSTRAP_PROBLEM_THRESHOLD)
-    return; /* no worries yet */
+  bootstrap_problems++;
+
+  if (bootstrap_problems >= BOOTSTRAP_PROBLEM_THRESHOLD)
+    recommendation = "warn";
 
   while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
@@ -3872,9 +3875,11 @@ control_event_bootstrap_problem(const char *warn, int reason)
            status, summary, warn,
            orconn_end_reason_to_control_string(reason));
   tor_snprintf(buf, sizeof(buf),
-      "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s",
+      "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
+      "COUNT=%d RECOMMENDATION=%s",
       bootstrap_percent, tag, summary, warn,
-      orconn_end_reason_to_control_string(reason));
+      orconn_end_reason_to_control_string(reason), bootstrap_problems,
+      recommendation);
   tor_snprintf(last_sent_bootstrap_message,
                sizeof(last_sent_bootstrap_message),
                "WARN %s", buf);

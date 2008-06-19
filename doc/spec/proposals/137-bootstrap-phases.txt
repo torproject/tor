@@ -30,7 +30,8 @@ Status: Open
 
   So in this case we send
   650 STATUS_CLIENT NOTICE/WARN BOOTSTRAP \
-  PROGRESS=num TAG=Keyword SUMMARY=String WARNING=String REASON=Keyword
+  PROGRESS=num TAG=Keyword SUMMARY=String \
+  [WARNING=String REASON=Keyword COUNT=num RECOMMENDATION=Keyword]
 
   The arguments MAY appear in any order. Controllers MUST accept unrecognized
   arguments.
@@ -47,8 +48,10 @@ Status: Open
   (severity notice) or an indication of a bootstrapping problem
   (severity warn). If severity warn, it should also include a "warning"
   argument string with any hints Tor has to offer about why it's having
-  troubles bootstrapping, and a "reason" string that lists of the reasons
-  allowed in the ORConn event.
+  troubles bootstrapping, a "reason" string that lists one of the reasons
+  allowed in the ORConn event, a "count" number that tells how many
+  bootstrap problems there have been so far at this phase, and a
+  "recommendation" keyword to indicate how the controller ought to react.
 
 3. The bootstrap phases.
 
@@ -182,21 +185,23 @@ Status: Open
   When an OR Conn fails, we send a "bootstrap problem" status event, which
   is like the standard bootstrap status event except with severity warn.
   We include the same progress, tag, and summary values as we would for
-  a normal bootstrap event, but we also include 'warning' and 'reason'
-  strings.
+  a normal bootstrap event, but we also include "warning", "reason",
+  "count", and "recommendation" key/value combos.
 
-  The reason strings are long-term-stable controller-facing tags to
+  The "reason" values are long-term-stable controller-facing tags to
   identify particular issues in a bootstrapping step.  The warning
-  strings, on the other hand, are human-readable.  Controllers SHOULD
-  NOT rely on the format of any warning string.
+  strings, on the other hand, are human-readable. Controllers SHOULD
+  NOT rely on the format of any warning string. Currently the possible
+  values for "recommendation" are either "ignore" or "warn" -- if ignore,
+  the controller can accumulate the string in a pile of problems to show
+  the user if the user asks; if warn, the controller should alert the
+  user that Tor is pretty sure there's a bootstrapping problem.
 
-  Currently Tor ignores the first nine bootstrap problem reports for
-  a given phase, reports the tenth to the controller, and then ignores
-  further problems at that phase. Hopefully this is a good balance between
-  tolerating occasional errors and reporting serious problems quickly. (We
-  will want to revisit this approach if there are many different 'reason'
-  values being reported among the first ten problem reports, since in
-  this case the controller will only hear one of them.)
+  Currently Tor uses recommendation=ignore for the first nine bootstrap
+  problem reports for a given phase, and then uses recommendation=warn
+  for subsequent problems at that phase. Hopefully this is a good
+  balance between tolerating occasional errors and reporting serious
+  problems quickly.
 
 5. Suggested controller behavior.
 
@@ -217,7 +222,7 @@ Status: Open
   Controllers should also have some mechanism to alert their user when
   bootstrapping problems are reported. Perhaps we should gather a set of
   help texts and the controller can send the user to the right anchor in a
-  "bootstrapping problems" help page?
+  "bootstrapping problems" page in the controller's help subsystem?
 
 6. Getting up to speed when the controller connects.
 
