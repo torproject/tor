@@ -340,7 +340,7 @@ R - investigate: it looks like if the bridge authority is unreachable,
   o directory authorities shouldn't complain about bootstrapping problems
     just because they do a lot of reachability testing and some of
     it fails.
-R * if your bridge is unreachable, it won't generate enough connection
+  o if your bridge is unreachable, it won't generate enough connection
     failures to generate a bootstrap problem event.
 R - if "no running bridges known", an application request should make
     us retry all our bridges.

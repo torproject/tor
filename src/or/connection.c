@@ -494,6 +494,10 @@ connection_about_to_close_connection(connection_t *conn)
       or_conn = TO_OR_CONN(conn);
       /* Remember why we're closing this connection. */
       if (conn->state != OR_CONN_STATE_OPEN) {
+        /* Inform any pending (not attached) circs that they should
+         * give up. */
+        circuit_n_conn_done(TO_OR_CONN(conn), 0);
+        /* now mark things down as needed */
         if (connection_or_nonopen_was_started_here(or_conn)) {
           or_options_t *options = get_options();
           rep_hist_note_connect_failed(or_conn->identity_digest, now);
@@ -517,9 +521,6 @@ connection_about_to_close_connection(connection_t *conn)
                 orconn_end_reason_to_control_string(reason), reason);
           }
         }
-        /* Inform any pending (not attached) circs that they should
-         * give up. */
-        circuit_n_conn_done(TO_OR_CONN(conn), 0);
       } else if (conn->hold_open_until_flushed) {
         /* We only set hold_open_until_flushed when we're intentionally
          * closing a connection. */

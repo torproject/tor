@@ -37,9 +37,18 @@ Changes in version 0.2.1.2-alpha - 2008-06-??
       from cannibalized circuits are completely ignored and not included in
       rendezvous service descriptors. This might be another reason for delay
       in making a hidden service available. Bugfix on 0.2.0.14-alpha.
+
+  o Bootstrapping bugfixes:
     - Directory authorities shouldn't complain about bootstrapping
       problems just because they do a lot of reachability testing and
       some of the connection attempts fail.
+    - Start sending "count" and "recommendation" key/value pairs in
+      bootstrap problem status events, so the controller can hear about
+      problems even before Tor decides they're worth reporting for sure.
+    - If you're using bridges, generate "bootstrap problem" warnings
+      as soon as you run out of working bridges, rather than waiting
+      for ten failures -- which will never happen if you have less than
+      ten bridges.
 
 
 Changes in version 0.2.1.1-alpha - 2008-06-13

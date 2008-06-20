@@ -3868,12 +3868,19 @@ control_event_bootstrap_problem(const char *warn, int reason)
   if (bootstrap_problems >= BOOTSTRAP_PROBLEM_THRESHOLD)
     recommendation = "warn";
 
+  if (get_options()->UseBridges &&
+      !any_bridge_descriptors_known() &&
+      !any_pending_bridge_descriptor_fetches())
+    recommendation = "warn";
+
   while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
 
-  log_warn(LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s)",
+  log_warn(LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
+           "count %d; recommendation %s)",
            status, summary, warn,
-           orconn_end_reason_to_control_string(reason));
+           orconn_end_reason_to_control_string(reason),
+           bootstrap_problems, recommendation);
   tor_snprintf(buf, sizeof(buf),
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
       "COUNT=%d RECOMMENDATION=%s",
