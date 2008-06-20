@@ -2288,7 +2288,7 @@ connection_handle_write(connection_t *conn, int force)
   return 0;
 }
 
-/** Openssl TLS record size is 16383; this is close. The goal here is to
+/** OpenSSL TLS record size is 16383; this is close. The goal here is to
  * push data out as soon as we know there's enough for a TLS record, so
  * during periods of high load we won't read entire megabytes from
  * input before pushing any data out. It also has the feature of not

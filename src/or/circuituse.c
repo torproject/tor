@@ -752,7 +752,9 @@ circuit_build_failed(origin_circuit_t *circ)
                "(%s:%d). I'm going to try to rotate to a better connection.",
                n_conn->_base.address, n_conn->_base.port);
       n_conn->_base.or_is_obsolete = 1;
-      /* XXX021 consider setting n_conn->socket_error to TIMEOUT */
+      if (n_conn->_base.state < OR_CONN_STATE_TLS_HANDSHAKING &&
+          !n_conn->socket_error)
+        n_conn->socket_error = END_OR_CONN_REASON_TIMEOUT;
       entry_guard_register_connect_status(n_conn->identity_digest, 0,
                                           time(NULL));
     }

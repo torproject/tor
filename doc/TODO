@@ -350,8 +350,9 @@ R - if "no running bridges known", an application request should make
     results of the getinfo.
 R - get matt to make vidalia do a getinfo status/bootstrap-phase to
     get caught up after it connects.
-R * in circuituse.c,
+  o in circuituse.c,
     /* XXX021 consider setting n_conn->socket_error to TIMEOUT */
+R d Setting DirPort when acting as bridge will give false Warnings
 
 For 0.2.1.x:
   - Proposals to do:
