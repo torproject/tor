@@ -2875,7 +2875,8 @@ int connection_edge_is_rendezvous_stream(edge_connection_t *conn);
 int connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
-void connection_ap_fail_onehop(const char *failed_digest);
+void connection_ap_fail_onehop(const char *failed_digest,
+                               cpath_build_state_t *build_state);
 void circuit_discard_optional_exit_enclaves(extend_info_t *info);
 int connection_ap_detach_retriable(edge_connection_t *conn,
                                    origin_circuit_t *circ,

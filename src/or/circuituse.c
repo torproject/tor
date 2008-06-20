@@ -95,10 +95,19 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
       tor_assert(conn->chosen_exit_name);
       if (build_state->chosen_exit) {
         char digest[DIGEST_LEN];
-        if (hexdigest_to_digest(conn->chosen_exit_name, digest) < 0 ||
-            memcmp(digest, build_state->chosen_exit->identity_digest,
-                   DIGEST_LEN))
+        if (hexdigest_to_digest(conn->chosen_exit_name, digest) < 0)
+          return 0; /* broken digest, we don't want it */
+        if (memcmp(digest, build_state->chosen_exit->identity_digest,
+                          DIGEST_LEN))
           return 0; /* this is a circuit to somewhere else */
+        if (tor_digest_is_zero(digest)) {
+          /* we don't know the digest; have to compare addr:port */
+          struct in_addr in;
+          if (!tor_inet_aton(conn->socks_request->address, &in) ||
+              build_state->chosen_exit->addr != ntohl(in.s_addr) ||
+              build_state->chosen_exit->port != conn->socks_request->port)
+            return 0;
+        }
       }
     } else {
       if (conn->want_onehop) {
@@ -749,7 +758,7 @@ circuit_build_failed(origin_circuit_t *circ)
     }
     /* if there are any one-hop streams waiting on this circuit, fail
      * them now so they can retry elsewhere. */
-    connection_ap_fail_onehop(circ->_base.n_conn_id_digest);
+    connection_ap_fail_onehop(circ->_base.n_conn_id_digest, circ->build_state);
   }
 
   switch (circ->_base.purpose) {
@@ -1330,7 +1339,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
     /* find the circuit that we should use, if there is one. */
     retval = circuit_get_open_circ_or_launch(
         conn, CIRCUIT_PURPOSE_C_GENERAL, &circ);
-    if (retval < 1)
+    if (retval < 1) // XXX021 if we totally fail, this still returns 0 -RD
       return retval;
 
     log_debug(LD_APP|LD_CIRC,

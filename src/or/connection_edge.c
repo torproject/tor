@@ -466,7 +466,8 @@ connection_ap_attach_pending(void)
  * onehop streams to circ->p_streams so they get marked in
  * circuit_mark_for_close like normal p_streams. */
 void
-connection_ap_fail_onehop(const char *failed_digest)
+connection_ap_fail_onehop(const char *failed_digest,
+                          cpath_build_state_t *build_state)
 {
   edge_connection_t *edge_conn;
   char digest[DIGEST_LEN];
@@ -480,12 +481,24 @@ connection_ap_fail_onehop(const char *failed_digest)
     edge_conn = TO_EDGE_CONN(conn);
     if (!edge_conn->want_onehop)
       continue;
-    if (!hexdigest_to_digest(edge_conn->chosen_exit_name, digest) &&
-        !memcmp(digest, failed_digest, DIGEST_LEN)) {
-      log_info(LD_APP, "Closing onehop stream to '%s' because the OR conn "
-                       "just failed.", edge_conn->chosen_exit_name);
-      connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_TIMEOUT);
+    if (hexdigest_to_digest(edge_conn->chosen_exit_name, digest) < 0 ||
+        memcmp(digest, failed_digest, DIGEST_LEN))
+      continue;
+    (void)build_state;
+    if (tor_digest_is_zero(digest)) {
+      /* we don't know the digest; have to compare addr:port */
+      struct in_addr in;
+      if (!build_state || !build_state->chosen_exit ||
+          !edge_conn->socks_request || !edge_conn->socks_request->address ||
+          !tor_inet_aton(edge_conn->socks_request->address, &in) ||
+          build_state->chosen_exit->addr != ntohl(in.s_addr) ||
+          build_state->chosen_exit->port != edge_conn->socks_request->port)
+        continue;
     }
+    log_info(LD_APP, "Closing onehop stream to '%s/%s' because the OR conn "
+                     "just failed.", edge_conn->chosen_exit_name,
+                     edge_conn->socks_request->address);
+    connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_TIMEOUT);
   });
 }
 

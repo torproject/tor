@@ -1,8 +1,19 @@
-Changes in version 0.2.1.2-alpha - 2008-??-??
+Changes in version 0.2.1.2-alpha - 2008-06-??
   o Major features:
     - New TestingTorNetwork option to allow adjustment of previously constant
       values that, while reasonable, could slow bootstrapping.  Implements
       proposal 135.  Patch from Karsten.
+
+  o Major bugfixes:
+    - If you have more than one bridge but don't know their keys,
+      you would only learn a request for the descriptor of the first one
+      on your list. (Tor considered launching requests for the others, but
+      found that it already had a connection on the way for $0000...0000
+      so it didn't open another.)
+    - If you have more than one bridge but don't know their keys, and the
+      connection to one of the bridges failed, you would cancel all
+      pending bridge connections. (After all, they all have the same
+      digest.)
 
   o Minor features:
     - Allow OpenSSL to use dynamic locks if it wants.
