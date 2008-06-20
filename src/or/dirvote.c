@@ -1308,9 +1308,9 @@ dirvote_recalculate_timing(or_options_t *options, time_t now)
     vote_delay = consensus->vote_seconds;
     dist_delay = consensus->dist_seconds;
   } else {
-    interval = options->V3AuthInitialVotingInterval;
-    vote_delay = options->V3AuthInitialVoteDelay;
-    dist_delay = options->V3AuthInitialDistDelay;
+    interval = options->TestingV3AuthInitialVotingInterval;
+    vote_delay = options->TestingV3AuthInitialVoteDelay;
+    dist_delay = options->TestingV3AuthInitialDistDelay;
   }
 
   tor_assert(interval > 0);

@@ -175,7 +175,7 @@ static config_var_t _option_vars[] = {
   V(DataDirectory,               FILENAME, NULL),
   OBSOLETE("DebugLogFile"),
   V(DirAllowPrivateAddresses,    BOOL,     NULL),
-  V(DirTimeToLearnReachability,  INTERVAL, "30 minutes"),
+  V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
   V(DirListenAddress,            LINELIST, NULL),
   OBSOLETE("DirFetchPeriod"),
   V(DirPolicy,                   LINELIST, NULL),
@@ -193,7 +193,7 @@ static config_var_t _option_vars[] = {
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V(EntryNodes,                  STRING,   NULL),
-  V(EstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
+  V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
   V(ExcludeNodes,                STRING,   NULL),
   V(ExitNodes,                   STRING,   NULL),
   V(ExitPolicy,                  LINELIST, NULL),
@@ -312,9 +312,9 @@ static config_var_t _option_vars[] = {
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
   VAR("V3AuthoritativeDirectory",BOOL, V3AuthoritativeDir,   "0"),
-  V(V3AuthInitialVotingInterval, INTERVAL, "30 minutes"),
-  V(V3AuthInitialVoteDelay,      INTERVAL, "5 minutes"),
-  V(V3AuthInitialDistDelay,      INTERVAL, "5 minutes"),
+  V(TestingV3AuthInitialVotingInterval, INTERVAL, "30 minutes"),
+  V(TestingV3AuthInitialVoteDelay, INTERVAL, "5 minutes"),
+  V(TestingV3AuthInitialDistDelay, INTERVAL, "5 minutes"),
   V(V3AuthVotingInterval,        INTERVAL, "1 hour"),
   V(V3AuthVoteDelay,             INTERVAL, "5 minutes"),
   V(V3AuthDistDelay,             INTERVAL, "5 minutes"),
@@ -345,11 +345,11 @@ static config_var_t testing_tor_network_defaults[] = {
   V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
   V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
   V(V3AuthDistDelay,             INTERVAL, "20 seconds"),
-  V(V3AuthInitialVotingInterval, INTERVAL, "5 minutes"),
-  V(V3AuthInitialVoteDelay,      INTERVAL, "20 seconds"),
-  V(V3AuthInitialDistDelay,      INTERVAL, "20 seconds"),
-  V(DirTimeToLearnReachability,  INTERVAL, "0 minutes"),
-  V(EstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
+  V(TestingV3AuthInitialVotingInterval, INTERVAL, "5 minutes"),
+  V(TestingV3AuthInitialVoteDelay, INTERVAL, "20 seconds"),
+  V(TestingV3AuthInitialDistDelay, INTERVAL, "20 seconds"),
+  V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
+  V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
@@ -3392,57 +3392,58 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   /* Keep changes to hard-coded values synchronous to man page and default
    * values table. */
-  if (options->V3AuthInitialVotingInterval != 30*60 &&
+  if (options->TestingV3AuthInitialVotingInterval != 30*60 &&
       !options->TestingTorNetwork) {
-    REJECT("V3AuthInitialVotingInterval may only be changed in testing "
+    REJECT("TestingV3AuthInitialVotingInterval may only be changed in testing "
            "Tor networks!");
-  } else if (options->V3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
-    REJECT("V3AuthInitialVotingInterval is insanely low.");
-  } else if (((30*60) % options->V3AuthInitialVotingInterval) != 0) {
-    REJECT("V3AuthInitialVotingInterval does not divide evenly into "
+  } else if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
+    REJECT("TestingV3AuthInitialVotingInterval is insanely low.");
+  } else if (((30*60) % options->TestingV3AuthInitialVotingInterval) != 0) {
+    REJECT("TestingV3AuthInitialVotingInterval does not divide evenly into "
            "30 minutes.");
   }
 
-  if (options->V3AuthInitialVoteDelay != 5*60 &&
+  if (options->TestingV3AuthInitialVoteDelay != 5*60 &&
       !options->TestingTorNetwork) {
-    REJECT("V3AuthInitialVoteDelay may only be changed in testing "
+    REJECT("TestingV3AuthInitialVoteDelay may only be changed in testing "
            "Tor networks!");
-  } else if (options->V3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
-    REJECT("V3AuthInitialVoteDelay is way too low.");
+  } else if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
+    REJECT("TestingV3AuthInitialVoteDelay is way too low.");
   }
 
-  if (options->V3AuthInitialDistDelay != 5*60 &&
+  if (options->TestingV3AuthInitialDistDelay != 5*60 &&
       !options->TestingTorNetwork) {
-    REJECT("V3AuthInitialDistDelay may only be changed in testing "
+    REJECT("TestingV3AuthInitialDistDelay may only be changed in testing "
            "Tor networks!");
-  } else if (options->V3AuthInitialDistDelay < MIN_DIST_SECONDS) {
-    REJECT("V3AuthInitialDistDelay is way too low.");
+  } else if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
+    REJECT("TestingV3AuthInitialDistDelay is way too low.");
   }
 
-  if (options->V3AuthInitialVoteDelay + options->V3AuthInitialDistDelay >=
-      options->V3AuthInitialVotingInterval/2) {
-    REJECT("V3AuthInitialVoteDelay plus V3AuthInitialDistDelay must be "
-           "less than half V3AuthInitialVotingInterval");
+  if (options->TestingV3AuthInitialVoteDelay +
+      options->TestingV3AuthInitialDistDelay >=
+      options->TestingV3AuthInitialVotingInterval/2) {
+    REJECT("TestingV3AuthInitialVoteDelay plus TestingV3AuthInitialDistDelay "
+           "must be less than half TestingV3AuthInitialVotingInterval");
   }
 
-  if (options->DirTimeToLearnReachability != 30*60 &&
+  if (options->TestingAuthDirTimeToLearnReachability != 30*60 &&
       !options->TestingTorNetwork) {
-    REJECT("DirTimeToLearnReachability may only be changed in testing "
-           "Tor networks!");
-  } else if (options->DirTimeToLearnReachability < 0) {
-    REJECT("DirTimeToLearnReachability must be non-negative.");
-  } else if (options->DirTimeToLearnReachability > 2*60*60) {
-    COMPLAIN("DirTimeToLearnReachability is insanely high.");
-  }
-
-  if (options->EstimatedDescriptorPropagationTime != 10*60 &&
-      !options->TestingTorNetwork) {
-    REJECT("EstimatedDescriptorPropagationTime may only be changed in "
+    REJECT("TestingAuthDirTimeToLearnReachability may only be changed in "
            "testing Tor networks!");
-  } else if (options->EstimatedDescriptorPropagationTime < 0) {
-    REJECT("EstimatedDescriptorPropagationTime must be non-negative.");
-  } else if (options->EstimatedDescriptorPropagationTime > 60*60) {
-    COMPLAIN("EstimatedDescriptorPropagationTime is insanely high.");
+  } else if (options->TestingAuthDirTimeToLearnReachability < 0) {
+    REJECT("TestingAuthDirTimeToLearnReachability must be non-negative.");
+  } else if (options->TestingAuthDirTimeToLearnReachability > 2*60*60) {
+    COMPLAIN("TestingAuthDirTimeToLearnReachability is insanely high.");
+  }
+
+  if (options->TestingEstimatedDescriptorPropagationTime != 10*60 &&
+      !options->TestingTorNetwork) {
+    REJECT("TestingEstimatedDescriptorPropagationTime may only be changed in "
+           "testing Tor networks!");
+  } else if (options->TestingEstimatedDescriptorPropagationTime < 0) {
+    REJECT("TestingEstimatedDescriptorPropagationTime must be non-negative.");
+  } else if (options->TestingEstimatedDescriptorPropagationTime > 60*60) {
+    COMPLAIN("TestingEstimatedDescriptorPropagationTime is insanely high.");
   }
 
   if (options->TestingTorNetwork) {

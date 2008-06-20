@@ -11,6 +11,7 @@ Change history:
   29-Apr-2008  Initial proposal for or-dev
   19-May-2008  Included changes based on comments by Nick to or-dev and
                added a section for test cases.
+  18-Jun-2008  Changed testing-network-only configuration option names.
 
 Overview:
 
@@ -52,13 +53,13 @@ Design:
   V3AuthVotingInterval, V3AuthVoteDelay, and V3AuthDistDelay do not have an
   effect on the _initial_ voting schedule, but only on the schedule that a
   directory authority votes for). This can be achieved by introducing three
-  new configuration options: V3AuthInitialVotingInterval,
-  V3AuthInitialVoteDelay, and V3AuthInitialDistDelay.
+  new configuration options: TestingV3AuthInitialVotingInterval,
+  TestingV3AuthInitialVoteDelay, and TestingV3AuthInitialDistDelay.
 
   As first safeguards, Tor should only accept configuration values for
-  V3AuthInitialVotingInterval that divide evenly into the default value of
-  30 minutes. The effect is that even if people misconfigured their
-  directory authorities, they would meet at the default values at the
+  TestingV3AuthInitialVotingInterval that divide evenly into the default
+  value of 30 minutes. The effect is that even if people misconfigured
+  their directory authorities, they would meet at the default values at the
   latest. The second safeguard is to allow configuration only when the
   umbrella configuration option TestingTorNetwork is set.
 
@@ -75,12 +76,12 @@ Design:
    * reachability information is not accurate. */
   #define DIRSERV_TIME_TO_GET_REACHABILITY_INFO (30*60)
 
-  There should be another configuration option DirTimeToLearnReachability with
-  a default value of 30 minutes that can be changed when running testing
-  Tor networks, e.g. to 0 minutes. The configuration value would simply
-  replace the quoted constant. Again, changing this option could be
-  safeguarded by requiring the umbrella configuration option
-  TestingTorNetwork to be set.
+  There should be another configuration option
+  TestingAuthDirTimeToLearnReachability with a default value of 30 minutes
+  that can be changed when running testing Tor networks, e.g. to 0 minutes.
+  The configuration value would simply replace the quoted constant. Again,
+  changing this option could be safeguarded by requiring the umbrella
+  configuration option TestingTorNetwork to be set.
 
   1.3. Reduce Estimated Descriptor Propagation Time
 
@@ -95,9 +96,9 @@ Design:
   #define ESTIMATED_PROPAGATION_TIME (10*60)
 
   We suggest to introduce a new config option
-  EstimatedDescriptorPropagationTime which defaults to 10 minutes, but that
-  can be set to any lower non-negative value, e.g. 0 minutes. The same
-  safeguards as in 1.2 could be used here, too.
+  TestingEstimatedDescriptorPropagationTime which defaults to 10 minutes,
+  but that can be set to any lower non-negative value, e.g. 0 minutes. The
+  same safeguards as in 1.2 could be used here, too.
 
   2. Umbrella Option for Setting Up Private Tor Networks
 
@@ -143,15 +144,15 @@ Design:
   - V3AuthDistDelay 20 seconds
       Accelerate voting schedule after first consensus has been reached.
 
-  - V3AuthInitialVotingInterval 5 minutes
-  - V3AuthInitialVoteDelay 20 seconds
-  - V3AuthInitialDistDelay 20 seconds
+  - TestingV3AuthInitialVotingInterval 5 minutes
+  - TestingV3AuthInitialVoteDelay 20 seconds
+  - TestingV3AuthInitialDistDelay 20 seconds
       Accelerate initial voting schedule until first consensus is reached.
 
-  - DirTimeToLearnReachability 0 minutes
+  - TestingAuthDirTimeToLearnReachability 0 minutes
       Consider routers as Running from the start of running an authority.
 
-  - EstimatedDescriptorPropagationTime 0 minutes
+  - TestingEstimatedDescriptorPropagationTime 0 minutes
       Clients try downloading router descriptors from directory caches,
       even when they are not 10 minutes old.
 
@@ -170,9 +171,9 @@ Test:
        "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
      telnet 127.0.0.1 9051
      AUTHENTICATE
-     GETCONF TestingTorNetwork DirTimeToLearnReachability
+     GETCONF TestingTorNetwork TestingAuthDirTimeToLearnReachability
      250-TestingTorNetwork=1
-     250 DirTimeToLearnReachability=0
+     250 TestingAuthDirTimeToLearnReachability=0
      QUIT
 
   2. Set TestingTorNetwork and a dependent configuration value to see if
@@ -180,12 +181,12 @@ Test:
 
      tor DataDirectory . ControlPort 9051 TestingTorNetwork 1 DirServer \
        "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000" \
-       DirTimeToLearnReachability 5
+       TestingAuthDirTimeToLearnReachability 5
      telnet 127.0.0.1 9051
      AUTHENTICATE
-     GETCONF TestingTorNetwork DirTimeToLearnReachability
+     GETCONF TestingTorNetwork TestingAuthDirTimeToLearnReachability
      250-TestingTorNetwork=1
-     250 DirTimeToLearnReachability=5
+     250 TestingAuthDirTimeToLearnReachability=5
      QUIT
 
   3. Start with TestingTorNetwork set and change a dependent configuration
@@ -195,9 +196,9 @@ Test:
        "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
      telnet 127.0.0.1 9051
      AUTHENTICATE
-     SETCONF DirTimeToLearnReachability=5
-     GETCONF DirTimeToLearnReachability
-     250 DirTimeToLearnReachability=5
+     SETCONF TestingAuthDirTimeToLearnReachability=5
+     GETCONF TestingAuthDirTimeToLearnReachability
+     250 TestingAuthDirTimeToLearnReachability=5
      QUIT
 
   4. Start with TestingTorNetwork set and a dependent configuration value,
@@ -206,14 +207,14 @@ Test:
 
      tor DataDirectory . ControlPort 9051 TestingTorNetwork 1 DirServer \
        "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000" \
-       DirTimeToLearnReachability 5
+       TestingAuthDirTimeToLearnReachability 5
      telnet 127.0.0.1 9051
      AUTHENTICATE
-     GETCONF DirTimeToLearnReachability
-     250 DirTimeToLearnReachability=5
-     RESETCONF DirTimeToLearnReachability
-     GETCONF DirTimeToLearnReachability
-     250 DirTimeToLearnReachability=0
+     GETCONF TestingAuthDirTimeToLearnReachability
+     250 TestingAuthDirTimeToLearnReachability=5
+     RESETCONF TestingAuthDirTimeToLearnReachability
+     GETCONF TestingAuthDirTimeToLearnReachability
+     250 TestingAuthDirTimeToLearnReachability=0
      QUIT
 
   5. Leave TestingTorNetwork unset and check if dependent configuration
@@ -223,9 +224,9 @@ Test:
        "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
      telnet 127.0.0.1 9051
      AUTHENTICATE
-     GETCONF TestingTorNetwork DirTimeToLearnReachability
+     GETCONF TestingTorNetwork TestingAuthDirTimeToLearnReachability
      250-TestingTorNetwork=0
-     250 DirTimeToLearnReachability=1800
+     250 TestingAuthDirTimeToLearnReachability=1800
      QUIT
 
   6. Leave TestingTorNetwork unset, but set dependent configuration option
@@ -233,9 +234,10 @@ Test:
 
      tor DataDirectory . ControlPort 9051 DirServer \
        "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000" \
-       DirTimeToLearnReachability 0
-     [warn] Failed to parse/validate config: DirTimeToLearnReachability may
-     only be changed in testing Tor networks!
+       TestingAuthDirTimeToLearnReachability 0
+     [warn] Failed to parse/validate config:
+     TestingAuthDirTimeToLearnReachability may only be changed in testing
+     Tor networks!
 
   7. Start with TestingTorNetwork unset and change dependent configuration
      option later on which should fail.
@@ -244,9 +246,9 @@ Test:
        "mydir 127.0.0.1:1234 0000000000000000000000000000000000000000"
      telnet 127.0.0.1 9051
      AUTHENTICATE
-     SETCONF DirTimeToLearnReachability=0
-     513 Unacceptable option value: DirTimeToLearnReachability may only be
-     changed in testing Tor networks!
+     SETCONF TestingAuthDirTimeToLearnReachability=0
+     513 Unacceptable option value: TestingAuthDirTimeToLearnReachability
+     may only be changed in testing Tor networks!
 
   8. Start with TestingTorNetwork unset and set it later on which should
      fail.
@@ -267,8 +269,8 @@ Test:
      telnet 127.0.0.1 9051
      AUTHENTICATE
      RESETCONF TestingTorNetwork
-     513 Unacceptable option value: V3AuthInitialVotingInterval may only be
-     changed in testing Tor networks!
+     513 Unacceptable option value: TestingV3AuthInitialVotingInterval may
+     only be changed in testing Tor networks!
 
  10. Set TestingTorNetwork, but do not provide an alternate DirServer
      which should fail.

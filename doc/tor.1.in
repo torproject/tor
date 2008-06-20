@@ -1318,41 +1318,41 @@ non-default set of DirServers is set. Cannot be unset while Tor is running.
 .IP "V3AuthVotingInterval 5 minutes"
 .IP "V3AuthVoteDelay 20 seconds"
 .IP "V3AuthDistDelay 20 seconds"
-.IP "V3AuthInitialVotingInterval 5 minutes"
-.IP "V3AuthInitialVoteDelay 20 seconds"
-.IP "V3AuthInitialDistDelay 20 seconds"
-.IP "DirTimeToLearnReachability 0 minutes"
-.IP "EstimatedDescriptorPropagationTime 0 minutes"
+.IP "TestingV3AuthInitialVotingInterval 5 minutes"
+.IP "TestingV3AuthInitialVoteDelay 20 seconds"
+.IP "TestingV3AuthInitialDistDelay 20 seconds"
+.IP "TestingAuthDirTimeToLearnReachability 0 minutes"
+.IP "TestingEstimatedDescriptorPropagationTime 0 minutes"
 .RE
 .PD
 .LP
 .TP
-\fBV3AuthInitialVotingInterval\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+\fBTestingV3AuthInitialVotingInterval\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
 Like \fBV3AuthVotingInterval\fR, but for initial voting interval before the
 first consensus has been created. Changing this requires that
 \fBTestingTorNetwork\fR is set. (Default: 30 minutes)
 .LP
 .TP
-\fBV3AuthInitialVoteDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
-Like \fBV3AuthInitialVoteDelay\fR, but for initial voting interval before
-the first consensus has been created. Changing this requires that
+\fBTestingV3AuthInitialVoteDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+Like \fBTestingV3AuthInitialVoteDelay\fR, but for initial voting interval
+before the first consensus has been created. Changing this requires that
 \fBTestingTorNetwork\fR is set. (Default: 5 minutes)
 .LP
 .TP
-\fBV3AuthInitialDistDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
-Like \fBV3AuthInitialDistDelay\fR, but for initial voting interval before
-the first consensus has been created. Changing this requires that
+\fBTestingV3AuthInitialDistDelay\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+Like \fBTestingV3AuthInitialDistDelay\fR, but for initial voting interval
+before the first consensus has been created. Changing this requires that
 \fBTestingTorNetwork\fR is set. (Default: 5 minutes)
 .LP
 .TP
-\fBDirTimeToLearnReachability\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+\fBTestingAuthDirTimeToLearnReachability\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
 After starting as an authority, do not make claims about whether routers are
 Running until this much time has passed.
 Changing this requires that\fBTestingTorNetwork\fR is set.
 (Default: 30 minutes)
 .LP
 .TP
-\fBEstimatedDescriptorPropagationTime\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
+\fBTestingEstimatedDescriptorPropagationTime\fR \fR\fIN\fR \fBminutes\fR|\fBhours\fP
 Clients try downloading router descriptors from directory caches after this
 time. Changing this requires that \fBTestingTorNetwork\fR is set.
 (Default: 10 minutes)

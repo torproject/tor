@@ -3729,7 +3729,8 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
      * But, if we want to have a complete list, fetch it anyway. */
     return 0;
   }
-  if (rs->published_on + options->EstimatedDescriptorPropagationTime > now) {
+  if (rs->published_on + options->TestingEstimatedDescriptorPropagationTime
+      > now) {
     /* Most caches probably don't have this descriptor yet. */
     return 0;
   }

@@ -2154,7 +2154,8 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   tor_assert(private_key);
   tor_assert(cert);
 
-  if (now - time_of_process_start < options->DirTimeToLearnReachability)
+  if (now - time_of_process_start <
+      options->TestingAuthDirTimeToLearnReachability)
     vote_on_reachability = 0;
 
   if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
@@ -2240,7 +2241,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
       last_consensus_interval = current_consensus->fresh_until -
         current_consensus->valid_after;
     else
-      last_consensus_interval = options->V3AuthInitialVotingInterval;
+      last_consensus_interval = options->TestingV3AuthInitialVotingInterval;
     v3_out->valid_after =
       dirvote_get_start_of_next_interval(now, (int)last_consensus_interval);
     format_iso_time(tbuf, v3_out->valid_after);
