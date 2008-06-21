@@ -9,11 +9,16 @@ Changes in version 0.2.1.2-alpha - 2008-06-20
       you would only learn a request for the descriptor of the first one
       on your list. (Tor considered launching requests for the others, but
       found that it already had a connection on the way for $0000...0000
-      so it didn't open another.)
+      so it didn't open another.) Bugfix on 0.2.0.x.
     - If you have more than one bridge but don't know their digests,
       and the connection to one of the bridges failed, you would cancel
       all pending bridge connections. (After all, they all have the
-      same digest.)
+      same digest.) Bugfix on 0.2.0.x.
+    - When establishing a hidden service, introduction points that
+      originate from cannibalized circuits are completely ignored and not
+      included in rendezvous service descriptors. This might be another
+      reason for delay in making a hidden service available. Bugfix
+      from long ago (0.0.9.x?)
 
   o Minor features:
     - Allow OpenSSL to use dynamic locks if it wants.
@@ -28,18 +33,15 @@ Changes in version 0.2.1.2-alpha - 2008-06-20
     - Send an initial "Starting" bootstrap status event, so we have a
       state to start out in.
 
-  o Bugfixes:
+  o Minor bugfixes:
     - Asking for a conditional consensus at .../consensus/<fingerprints>
-      would crash a dirserver if it did not already have a consensus.
+      would crash a dirserver if it did not already have a
+      consensus. Bugfix on 0.2.1.1-alpha.
     - Clean up some macro/CPP interactions: some GCC versions don't like
-      #if/#endif pairs inside macro arguments.  Fixes bug 707.
-    - When establishing a hidden service, introduction points that
-      originate from cannibalized circuits are completely ignored and not
-      included in rendezvous service descriptors. This might be another
-      reason for delay in making a hidden service available. Bugfix
-      from long ago (0.0.9.x?)
+      #if/#endif pairs inside macro arguments. Fixes bug 707. Bugfix on
+      0.2.0.x.
 
-  o Bootstrapping bugfixes:
+  o Bootstrapping bugfixes (on 0.2.1.1-alpha):
     - Directory authorities shouldn't complain about bootstrapping
       problems just because they do a lot of reachability testing and
       some of the connection attempts fail.
