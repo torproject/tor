@@ -5,7 +5,7 @@ Stage One:  Download and Install MinGW.
 ---------------------------------------
 
 Download mingw:
-http://prdownloads.sf.net/mingw/MinGW-5.1.3.exe?download
+http://prdownloads.sf.net/mingw/MinGW-5.1.4.exe?download
 
 Download msys:
 http://prdownloads.sf.net/mingw/MSYS-1.0.10.exe?download
