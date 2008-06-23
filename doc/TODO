@@ -350,7 +350,7 @@ R - if "no running bridges known", an application request should make
     results of the getinfo.
 R - get matt to make vidalia do a getinfo status/bootstrap-phase to
     get caught up after it connects.
-R - get matt to change vidalia's bootstrap status alerts so it doesn't
+  o get matt to change vidalia's bootstrap status alerts so it doesn't
     do anything if the event includes "recommendation=ignore".
   o in circuituse.c,
     /* XXX021 consider setting n_conn->socket_error to TIMEOUT */
@@ -359,11 +359,11 @@ R d Setting DirPort when acting as bridge will give false Warnings
 For 0.2.1.x:
   - Proposals to do:
     - 110: avoid infinite-length circuits
-    - 128: families of private bridges
+R   d 128: families of private bridges
     - 134: handle authority fragmentation.
 
   - Proposals to write:
-    - Do we want to maintain our own set of entryguards that we use as
+R   d Do we want to maintain our own set of entryguards that we use as
       next hop after the bridge?
     X Add an 'exit-address' line in the descriptor for servers that exit
       from something that isn't their published address.
@@ -386,7 +386,7 @@ For 0.2.1.x:
       variable-length cells, proposal-110 stuff, and versioned CREATES?
     - Eliminate use of v2 networkstatus documents in v3 authority
       decision-making.
-    - Draft proposal for GeoIP aggregation (see external constraints *)
+N   . Draft proposal for GeoIP aggregation (see external constraints *)
     - Separate Guard flags for "pick this as a new guard" and "keep this
       as an existing guard".  First investigate if we want this.
     - Figure out how to make good use of the fallback consensus file. Right
@@ -401,9 +401,10 @@ For 0.2.1.x:
     - Put bandwidth weights in the networkstatus? So clients get weight
       their choices even before they have the descriptors; and so
       authorities can put in more accurate numbers in the future.
-    . Map out the process of bootstrapping, break it into status events,
+R   . Map out the process of bootstrapping, break it into status events,
       spec those events. Also, map out the ways where we can realize that
       bootstrapping is *failing*, and include those. *
+    d Fetch an updated geoip file from the directory authorities.
 
   - Tiny designs to write:
     - Better estimate of clock skew; has anonymity implications.  Clients
@@ -412,6 +413,9 @@ For 0.2.1.x:
       not choose who it connects to.
     - Do TLS connection rotation more often than "once a week" in the
       extra-stable case.
+      (One reason not to do it more often is because the old TLS conn
+       probably has a circuit on it, and we don't really want to build up
+       dozens of TCP connections to all the other extra-stable relays.)
     - If a relay publishes a new descriptor with a significantly lower
       uptime or with a new IP address, then we should consider its current
       "running" interval to have ended even if it hadn't yet failed its
@@ -419,12 +423,12 @@ For 0.2.1.x:
       appeared, and a new interval began then too.
 
   - Items to backport to 0.2.0.x once solved in 0.2.1.x:
-R   - add a geoip file *
-W     - figure out license *
+    o add a geoip file *
+      o figure out license *
 
   - Use less RAM *
     - Optimize cell pool allocation.
-    - Support (or just always use) jemalloc (if it helps)
+    d Support (or just always use) jemalloc (if it helps)
     - mmap more files.
     - Look into pulling serverdescs off buffers as they arrive.
   - Use less bandwidth
@@ -528,7 +532,7 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
       I can say "banana" as my bandwidthcapacity, and it won't even squeak.
 
   - Interface for letting SOAT modify flags that authorities assign.
-    (How to keep the authority from clobbering them afterwords?
+    (How to keep the authority from clobbering them afterwards?
 
 Later, unless people want to implement them now:
   - Actually use SSL_shutdown to close our TLS connections.
@@ -587,7 +591,7 @@ If somebody wants to do this in some version, they should:
   - Consider if we can solve: the Tor client doesn't know what flags
     its bridge has (since it only gets the descriptor), so it can't
     make decisions based on Fast or Stable.
-  - Bridge authorities should do reachability testing but only on the
+  o Bridge authorities should do reachability testing but only on the
     purpose==bridge descriptors they have.
   - Some mechanism for specifying that we want to stop using a cached
     bridge.
