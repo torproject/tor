@@ -1,4 +1,15 @@
-Changes in version 0.2.0.29 - 2008-06-13
+Changes in version 0.2.0.29 - 2008-06-xx
+  o Major bugfixes:
+    - If you have more than one bridge but don't know their keys,
+      you would only learn a request for the descriptor of the first one
+      on your list. (Tor considered launching requests for the others, but
+      found that it already had a connection on the way for $0000...0000
+      so it didn't open another.)
+    - If you have more than one bridge but don't know their keys, and the
+      connection to one of the bridges failed, you would cancel all
+      pending bridge connections. (After all, they all have the same
+      digest.)
+
   o Minor bugfixes:
     - Fix a macro/CPP interactions that was confusing some compilers:
       some GCCs don't like #if/#endif pairs inside macro arguments.

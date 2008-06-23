@@ -412,8 +412,9 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
   smartlist_t *pending_circs;
   int err_reason = 0;
 
-  log_debug(LD_CIRC,"or_conn to %s, status=%d",
-            or_conn->nickname ? or_conn->nickname : "NULL", status);
+  log_debug(LD_CIRC,"or_conn to %s/%s, status=%d",
+            or_conn->nickname ? or_conn->nickname : "NULL",
+            or_conn->_base.address, status);
 
   pending_circs = smartlist_create();
   circuit_get_all_pending_on_or_conn(pending_circs, or_conn);
