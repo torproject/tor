@@ -484,7 +484,6 @@ connection_ap_fail_onehop(const char *failed_digest,
     if (hexdigest_to_digest(edge_conn->chosen_exit_name, digest) < 0 ||
         memcmp(digest, failed_digest, DIGEST_LEN))
       continue;
-    (void)build_state;
     if (tor_digest_is_zero(digest)) {
       /* we don't know the digest; have to compare addr:port */
       struct in_addr in;
