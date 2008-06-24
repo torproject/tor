@@ -3828,8 +3828,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
   if (status > bootstrap_percent ||
       (progress && progress > bootstrap_percent)) {
     bootstrap_status_to_string(status, &tag, &summary);
-    log_notice(LD_CONTROL, "Bootstrapped %d%%: %s.",
-               progress ? progress : status, summary);
+    log(status ? LOG_NOTICE : LOG_INFO, LD_CONTROL,
+        "Bootstrapped %d%%: %s.", progress ? progress : status, summary);
     tor_snprintf(buf, sizeof(buf),
         "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\"",
         progress ? progress : status, tag, summary);
@@ -3866,6 +3866,9 @@ control_event_bootstrap_problem(const char *warn, int reason)
   bootstrap_problems++;
 
   if (bootstrap_problems >= BOOTSTRAP_PROBLEM_THRESHOLD)
+    recommendation = "warn";
+
+  if (reason == END_OR_CONN_REASON_NO_ROUTE)
     recommendation = "warn";
 
   if (get_options()->UseBridges &&

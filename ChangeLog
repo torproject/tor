@@ -1,4 +1,8 @@
 Changes in version 0.2.1.3-alpha - 2008-06-xx
+  o Bootstrapping bugfixes (on 0.2.1.x-alpha):
+    - Send a bootstrap problem "warn" event on the first problem if the
+      reason is NO_ROUTE (that is, our network is down).
+
   o Minor bugfixes:
     - Change the contrib/tor.logrotate script so it makes the new
       logs as "_tor:_tor" rather than the default, which is generally

@@ -588,7 +588,7 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
    * it's not their fault. */
 
   /* No need to relaunch descriptor downloads here: we already do it
-   * every 10 seconds (DESCRIPTOR_RETRY_INTERVAL) in main.c. */
+   * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
   tor_assert(conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
              conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
 
