@@ -178,15 +178,18 @@ Changes in version 0.2.0.28-rc - 2008-06-13
     - When we're checking if we have enough dir info for each relay
       to begin establishing circuits, make sure that we actually have
       the descriptor listed in the consensus, not just any descriptor.
+      Bugfix on 0.1.2.x.
     - Bridge relays no longer print "xx=0" in their extrainfo document
-      for every single country code in the geoip db.
+      for every single country code in the geoip db. Bugfix on
+      0.2.0.27-rc.
     - Only warn when we fail to load the geoip file if we were planning to
-      include geoip stats in our extrainfo document.
+      include geoip stats in our extrainfo document. Bugfix on 0.2.0.27-rc.
     - If we change our MaxAdvertisedBandwidth and then reload torrc,
       Tor won't realize it should publish a new relay descriptor. Fixes
-      bug 688, reported by mfr.
+      bug 688, reported by mfr. Bugfix on 0.1.2.x.
     - When we haven't had any application requests lately, don't bother
-      logging that we have expired a bunch of descriptors.
+      logging that we have expired a bunch of descriptors. Bugfix
+      on 0.1.2.x.
     - Make relay cells written on a connection count as non-padding when
       tracking how long a connection has been in use. Bugfix on
       0.2.0.1-alpha. Spotted by lodger.
