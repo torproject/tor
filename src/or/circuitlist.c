@@ -814,9 +814,9 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
 
   circuit_t *_circ;
   origin_circuit_t *best=NULL;
-  int need_uptime = flags & CIRCLAUNCH_NEED_UPTIME;
-  int need_capacity = flags & CIRCLAUNCH_NEED_CAPACITY;
-  int internal = flags & CIRCLAUNCH_IS_INTERNAL;
+  int need_uptime = (flags & CIRCLAUNCH_NEED_UPTIME) != 0;
+  int need_capacity = (flags & CIRCLAUNCH_NEED_CAPACITY) != 0;
+  int internal = (flags & CIRCLAUNCH_IS_INTERNAL) != 0;
 
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
