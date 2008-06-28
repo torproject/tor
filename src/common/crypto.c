@@ -21,6 +21,9 @@ const char crypto_c_id[] =
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <wincrypt.h>
+/* Windows defines this; so does openssl 0.9.8h and later. We don't actually
+ * use either definition. */
+#undef OCSP_RESPONSE
 #endif
 
 #include <openssl/err.h>

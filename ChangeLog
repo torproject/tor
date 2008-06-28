@@ -17,6 +17,8 @@ Changes in version 0.2.0.29 - 2008-06-xx
     - Enable cannibalization of circuits for introduction circuits and
       actually use introduction circuits that originate from
       cannibalization afterwards.
+    - Fix macro collision between OpenSSL 0.9.8h and Windows headers.
+      Fixes bug 704; fix from Steven Murdoch.
 
 
 Changes in version 0.2.0.28-rc - 2008-06-13
