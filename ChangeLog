@@ -1,4 +1,4 @@
-Changes in version 0.2.1.3-alpha - 2008-06-xx
+Changes in version 0.2.1.3-alpha - 2008-07-xx
   o Bootstrapping bugfixes (on 0.2.1.x-alpha):
     - Send a bootstrap problem "warn" event on the first problem if the
       reason is NO_ROUTE (that is, our network is down).
@@ -12,10 +12,16 @@ Changes in version 0.2.1.3-alpha - 2008-06-xx
 
 
 Changes in version 0.2.1.2-alpha - 2008-06-20
+  Tor 0.2.1.2-alpha includes a new "TestingTorNetwork" config option to
+  make it easier to set up your own private Tor network; fixes several
+  big bugs with using more than one bridge relay; fixes a big bug with
+  offering hidden services quickly after Tor starts; and uses a better
+  API for reporting potential bootstrapping problems to the controller.
+
   o Major features:
-    - New TestingTorNetwork option to allow adjustment of previously
-      constant values that, while reasonable, could slow bootstrapping.
-      Implements proposal 135. Patch from Karsten.
+    - New TestingTorNetwork config option to allow adjustment of
+      previously constant values that, while reasonable, could slow
+      bootstrapping. Implements proposal 135. Patch from Karsten.
 
   o Major bugfixes:
     - If you have more than one bridge but don't know their digests,
@@ -71,6 +77,13 @@ Changes in version 0.2.1.2-alpha - 2008-06-20
 
 
 Changes in version 0.2.1.1-alpha - 2008-06-13
+  Tor 0.2.1.1-alpha fixes a lot of memory fragmentation problems that
+  were making the Tor process bloat especially on Linux; makes our TLS
+  handshake blend in better; sends "bootstrap phase" status events to
+  the controller, so it can keep the user informed of progress (and
+  problems) fetching directory information and establishing circuits;
+  and adds a variety of smaller features.
+
   o Major features:
     - More work on making our TLS handshake blend in: modify the list
       of ciphers advertised by OpenSSL in client mode to even more
@@ -160,6 +173,9 @@ Changes in version 0.2.1.1-alpha - 2008-06-13
 
 
 Changes in version 0.2.0.28-rc - 2008-06-13
+  Tor 0.2.0.28-rc fixes an anonymity-related bug, fixes a hidden-service
+  performance bug, and fixes a bunch of smaller bugs.
+
   o Anonymity fixes:
     - Fix a bug where, when we were choosing the 'end stream reason' to
       put in our relay end cell that we send to the exit relay, Tor
@@ -204,6 +220,13 @@ Changes in version 0.2.0.28-rc - 2008-06-13
 
 
 Changes in version 0.2.0.27-rc - 2008-06-03
+  Tor 0.2.0.27-rc adds a few features we left out of the earlier
+  release candidates. In particular, we now include an IP-to-country
+  GeoIP database, so controllers can easily look up what country a
+  given relay is in, and so bridge relays can give us some sanitized
+  summaries about which countries are making use of bridges. (See proposal
+  126-geoip-fetching.txt for details.)
+
   o Major features:
     - Include an IP-to-country GeoIP file in the tarball, so bridge
       relays can report sanitized summaries of the usage they're seeing.
