@@ -64,6 +64,7 @@ Proposals by number:
 139  Download consensus documents only when it will be trusted [CLOSED]
 140  Provide diffs between consensuses [OPEN]
 141  Download server descriptors on demand [DRAFT]
+142  Combine Introduction and Rendezvous Points [OPEN]
 
 
 Proposals by status:
@@ -81,6 +82,7 @@ Proposals by status:
    121  Hidden Service Authentication
    137  Keep controllers informed as Tor bootstraps
    140  Provide diffs between consensuses
+   142  Combine Introduction and Rendezvous Points
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits
