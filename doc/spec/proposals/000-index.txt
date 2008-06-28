@@ -65,6 +65,7 @@ Proposals by number:
 140  Provide diffs between consensuses [OPEN]
 141  Download server descriptors on demand [DRAFT]
 142  Combine Introduction and Rendezvous Points [OPEN]
+143  Improvements of Distributed Storage for Tor Hidden Service Descriptors [OPEN]
 
 
 Proposals by status:
@@ -83,6 +84,7 @@ Proposals by status:
    137  Keep controllers informed as Tor bootstraps
    140  Provide diffs between consensuses
    142  Combine Introduction and Rendezvous Points
+   143  Improvements of Distributed Storage for Tor Hidden Service Descriptors
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits
