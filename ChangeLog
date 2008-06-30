@@ -19,6 +19,10 @@ Changes in version 0.2.0.29 - 2008-06-xx
       so it asked for another one soon after, until there were no
       more preemptive circuits, at which point it launched one from
       scratch. Bugfix on 0.0.9.x.
+    - Make directory servers include the X-Your-Address-Is: http header in
+      their responses even for begin_dir conns. Now clients who only
+      ever use begin_dir connections still have a way to learn their IP
+      address. Fixes bug 737; bugfix on 0.2.0.22-rc. Reported by goldy.
 
   o Minor bugfixes:
     - Fix a macro/CPP interactions that was confusing some compilers:
