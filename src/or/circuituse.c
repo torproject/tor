@@ -855,7 +855,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
                               int flags)
 {
   origin_circuit_t *circ;
-  int onehop_tunnel = flags & CIRCLAUNCH_ONEHOP_TUNNEL;
+  int onehop_tunnel = (flags & CIRCLAUNCH_ONEHOP_TUNNEL) != 0;
 
   if (!onehop_tunnel && !router_have_minimum_dir_info()) {
     log_debug(LD_CIRC,"Haven't fetched enough directory info yet; canceling "
