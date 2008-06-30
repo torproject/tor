@@ -1,7 +1,7 @@
 Changes in version 0.2.0.29 - 2008-06-xx
   o Major bugfixes:
     - If you have more than one bridge but don't know their keys,
-      you would only learn a request for the descriptor of the first one
+      you would only launch a request for the descriptor of the first one
       on your list. (Tor considered launching requests for the others, but
       found that it already had a connection on the way for $0000...0000
       so it didn't open another.)
@@ -9,14 +9,21 @@ Changes in version 0.2.0.29 - 2008-06-xx
       connection to one of the bridges failed, you would cancel all
       pending bridge connections. (After all, they all have the same
       digest.)
+    - When a hidden service was trying to establish an introduction point,
+      and Tor had built circuits preemptively for such purposes, we
+      were ignoring all the preemptive circuits and launching a new one
+      instead. Bugfix on 0.2.0.14-alpha.
+    - When a hidden service was trying to establish an introduction point,
+      and Tor *did* manage to reuse one of the preemptively built
+      circuits, it didn't correctly remember which one it used,
+      so it asked for another one soon after, until there were no
+      more preemptive circuits, at which point it launched one from
+      scratch. Bugfix on 0.0.9.x.
 
   o Minor bugfixes:
     - Fix a macro/CPP interactions that was confusing some compilers:
       some GCCs don't like #if/#endif pairs inside macro arguments.
       Fix for bug 707.
-    - Enable cannibalization of circuits for introduction circuits and
-      actually use introduction circuits that originate from
-      cannibalization afterwards.
     - Fix macro collision between OpenSSL 0.9.8h and Windows headers.
       Fixes bug 704; fix from Steven Murdoch.
 
