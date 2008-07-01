@@ -66,6 +66,7 @@ Proposals by number:
 141  Download server descriptors on demand [DRAFT]
 142  Combine Introduction and Rendezvous Points [OPEN]
 143  Improvements of Distributed Storage for Tor Hidden Service Descriptors [OPEN]
+144  Increase the diversity of circuits by detecting nodes belonging the [DRAFT]
 
 
 Proposals by status:
@@ -78,6 +79,7 @@ Proposals by status:
    133  Incorporate Unreachable ORs into the Tor Network
    134  More robust consensus voting with diverse authority sets
    141  Download server descriptors on demand
+   144  Increase the diversity of circuits by detecting nodes belonging the
  OPEN:
    120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
