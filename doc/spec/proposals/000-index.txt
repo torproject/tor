@@ -70,6 +70,7 @@ Proposals by number:
 145  Separate "suitable as a guard" from "suitable as a new guard" [OPEN]
 146  Add new flag to reflect long-term stability [OPEN]
 147  Eliminate the need for v2 directories in generating v3 directories [OPEN]
+148  Stream end reasons from the client side should be uniform [OPEN]
 
 
 Proposals by status:
@@ -93,6 +94,7 @@ Proposals by status:
    145  Separate "suitable as a guard" from "suitable as a new guard"
    146  Add new flag to reflect long-term stability
    147  Eliminate the need for v2 directories in generating v3 directories
+   148  Stream end reasons from the client side should be uniform
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits
