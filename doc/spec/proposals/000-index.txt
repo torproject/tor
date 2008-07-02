@@ -67,8 +67,9 @@ Proposals by number:
 142  Combine Introduction and Rendezvous Points [OPEN]
 143  Improvements of Distributed Storage for Tor Hidden Service Descriptors [OPEN]
 144  Increase the diversity of circuits by detecting nodes belonging the [DRAFT]
-145  Separate "suitable as a guard" from "suitable as a new guard" [DRAFT]
-146  Add new flag to reflect long-term stability [DRAFT]
+145  Separate "suitable as a guard" from "suitable as a new guard" [OPEN]
+146  Add new flag to reflect long-term stability [OPEN]
+147  Eliminate the need for v2 directories in generating v3 directories [OPEN]
 
 
 Proposals by status:
@@ -82,8 +83,6 @@ Proposals by status:
    134  More robust consensus voting with diverse authority sets
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the
-   145  Separate "suitable as a guard" from "suitable as a new guard"
-   146  Add new flag to reflect long-term stability
  OPEN:
    120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
@@ -91,6 +90,9 @@ Proposals by status:
    140  Provide diffs between consensuses
    142  Combine Introduction and Rendezvous Points
    143  Improvements of Distributed Storage for Tor Hidden Service Descriptors
+   145  Separate "suitable as a guard" from "suitable as a new guard"
+   146  Add new flag to reflect long-term stability
+   147  Eliminate the need for v2 directories in generating v3 directories
  NEEDS-REVISION:
    110  Avoiding infinite length circuits
    117  IPv6 exits
