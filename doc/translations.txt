@@ -6,15 +6,18 @@ Our translations are handled in one of two places. The Tor Translation Portal
 handles all of the translations for Vidalia, Torbutton and TorCheck. The Tor
 website itself is currently handled by hand translations using subversion.
 
-You'll need a Tor SVN account.
+-------------------------------------------------------------------------
+
+For the Tor website, you'll need a Tor SVN account.
 If you do not have one and you need one, please run this command with your
 desired username in place of 'USERNAME':
-
     htdigest -c passwd.tmp "Tor subversion repository" USERNAME
+and send us the contents of passwd.tmp.
 
+-------------------------------------------------------------------------
 
-All three of the above projects check in their respective .po files into
-the following subversion urls:
+For the Portal-based projects, all three check in their respective .po
+files into the following subversion urls:
 
     https://tor-svn.freehaven.net/svn/translation/trunk/projects/torbutton
     https://tor-svn.freehaven.net/svn/translation/trunk/projects/torcheck
