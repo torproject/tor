@@ -16,7 +16,7 @@ All three of the above projects check in their respective .po files into the fol
 
     https://tor-svn.freehaven.net/svn/translation/trunk/projects/torbutton
     https://tor-svn.freehaven.net/svn/translation/trunk/projects/torcheck
-    http://trac.vidalia-project.net/browser/vidalia/trunk/src/vidalia/i18n
+    https://svn.vidalia-project.net/svn/vidalia/trunk/src/vidalia/i18n/
 
 The current pootle configuration is checked into subversion as well:
 
