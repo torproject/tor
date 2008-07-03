@@ -30,6 +30,9 @@ Changes in version 0.2.0.29 - 2008-06-xx
       Fix for bug 707.
     - Fix macro collision between OpenSSL 0.9.8h and Windows headers.
       Fixes bug 704; fix from Steven Murdoch.
+    - When opening /dev/null in finish_daemonize(), do not pass the
+      O_CREAT flag.  Fortify was complaining, and correctly so.  Fixes
+      bug 742; fix from Michael Scherer.  Bugfix on 0.0.2pre19.
 
 
 Changes in version 0.2.0.28-rc - 2008-06-13

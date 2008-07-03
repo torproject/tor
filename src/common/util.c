@@ -3092,8 +3092,7 @@ finish_daemon(const char *desired_cwd)
     exit(1);
   }
 
-  nullfd = open("/dev/null",
-                O_CREAT | O_RDWR | O_APPEND);
+  nullfd = open("/dev/null", O_RDWR | O_APPEND);
   if (nullfd < 0) {
     log_err(LD_GENERAL,"/dev/null can't be opened. Exiting.");
     exit(1);
