@@ -30,6 +30,9 @@ Changes in version 0.1.2.20 - 2008-??-??
     - Fix a dumb bug that was preventing us from knowing that we should
       preemptively build circuits to handle expected directory requests.
       Fixes bug 660.
+    - When opening /dev/null in finish_daemonize(), do not pass the
+      O_CREAT flag.  Fortify was complaining, and correctly so.  Fixes
+      bug 742; fix from Michael Scherer.  Bugfix on 0.0.2pre19.
 
   o Minor testing features:
     - Add disabled-by-default code to log the relative probability of routing
