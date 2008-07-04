@@ -9,6 +9,9 @@ Status: Open
 Change history:
 
   27-Jun-2008  Initial proposal for or-dev
+  04-Jul-2008  Give first security property the new name "Responsibility"
+               and change new cell formats according to rendezvous protocol
+               version 3 draft.
 
 Overview:
 
@@ -22,7 +25,7 @@ Overview:
   service.
 
   There are some reasons for separating the two roles of introduction and
-  rendezvous point: (1) Plausible deniability: A relay shall not be made
+  rendezvous point: (1) Responsibility: A relay shall not be made
   responsible that it relays data for a certain hidden service; in the
   original design as described in [1] an introduction point relays no
   application data, and a rendezvous points neither knows the hidden
@@ -44,8 +47,8 @@ Overview:
   introduced new introduction keys for introduction points and provides for
   user authorization data in hidden service descriptors; it will be shown
   in this proposal that introduction keys in combination with new
-  introduction cookies provide for the first security property of plausible
-  deniability. Further, eliminating the need for a separate introduction
+  introduction cookies provide for the first security property
+  responsibility. Further, eliminating the need for a separate introduction
   connection benefits the overall network load by decreasing the number of
   circuit extensions. After all, having only one connection between client
   and hidden service reduces the overall protocol complexity.
@@ -69,17 +72,15 @@ Design:
   version that implements this proposal.
 
   The easiest way to implement establishment of contact points is to
-  introduce v2 ESTABLISH_INTRO cells and use the currently unused auth type
-  number 1 for contact points.
+  introduce v2 ESTABLISH_INTRO cells. By convention, the relay recognizes
+  version 2 ESTABLISH_INTRO cells as requests to establish a contact point
+  rather than an introduction point.
 
      V      Format byte: set to 255               [1 octet]
      V      Version byte: set to 2                [1 octet]
      KLEN   Key length                           [2 octets]
-     PK     Bob's public key                  [KLEN octets]
+     PK     Public introduction key           [KLEN octets]
      HS     Hash of session info                [20 octets]
-     AUTHT  The auth type that is supported       [1 octet]
-     AUTHL  Length of auth data                  [2 octets]
-     AUTHD  Auth data                            [variable]
      SIG    Signature of above information       [variable]
 
   The hidden service does not create a fixed number of contact points, like
@@ -98,16 +99,17 @@ Design:
   established introduction point. By requiring clients to use this cookie
   in a later connection establishment, an introduction point cannot access
   the hidden service that it works for. Together with the fresh
-  introduction key that was introduced in proposal 114, this results in
-  plausible deniability for the contact point.
+  introduction key that was introduced in proposal 114, this reduces
+  responsibility of a contact point for a specific hidden service.
 
   The v2 hidden service descriptor format contains an
   "intro-authentication" field that may contain introduction-point specific
   keys. The hidden service creates a random string, comparable to the
   rendezvous cookie, and includes it in the descriptor as introduction
-  cookie. Existing clients that do not understand this new protocol simply
-  ignore that cookie. Further, the hidden service lists in the
-  "protocol-versions" field that it supports this protocol.
+  cookie for auth-type "1". By convention, clients recognize existence of
+  auth-type 1 as possibility to connect to a hidden service via a contact
+  point rather than an introduction point. Older clients that do not
+  understand this new protocol simply ignore that cookie.
 
   4. Connection Establishment
 
@@ -128,30 +130,22 @@ Design:
   Cleartext
      V      Version byte: set to 2                [1 octet]
      PK_ID  Identifier for Bob's PK             [20 octets]
-     AUTHT  The auth type that is supported       [1 octet]
-     AUTHL  Length of auth data                  [2 octets]
-     AUTHD  Auth data                            [variable]
-  Encrypted to Bob's PK:
+     RC     Rendezvous cookie                   [20 octets]
+  Encrypted to introduction key:
      VER    Version byte: set to 3.               [1 octet]
      AUTHT  The auth type that is supported       [1 octet]
      AUTHL  Length of auth data                  [2 octets]
      AUTHD  Auth data                            [variable]
-     IP     Rendezvous point's address           [4 octets]
-     PORT   Rendezvous point's OR port           [2 octets]
-     ID     Rendezvous point identity ID        [20 octets]
-     KLEN   Length of onion key                  [2 octets]
-     KEY    Rendezvous point onion key        [KLEN octets]
      RC     Rendezvous cookie                   [20 octets]
      g^x    Diffie-Hellman data, part 1        [128 octets]
 
-  The cleartext part contains the rendezvous cookie as auth data for the
-  currently unused auth type 1. The contact point remembers the rendezvous
-  cookie just as a rendezvous point would do.
+  The cleartext part contains the rendezvous cookie that the contact point
+  remembers just as a rendezvous point would do.
 
   The encrypted part contains the introduction cookie as auth data for the
-  likewise unused auth type 1. The rendezvous cookie is contained as
-  before, but the remaining rendezvous point information is left empty, as
-  there is no separate rendezvous point.
+  auth type 1. The rendezvous cookie is contained as before, but there is
+  no further rendezvous point information, as there is no separate
+  rendezvous point.
 
   5. Rendezvous Establishment
 
@@ -177,7 +171,7 @@ Design:
 
 Security Implications:
 
-  (1) Plausible deniability
+  (1) Responsibility
 
   One of the original reasons for the separation of introduction and
   rendezvous points is that a relay shall not be made responsible that it
@@ -191,11 +185,10 @@ Security Implications:
   cookie, which is unknown to the contact point, prevents it from accessing
   the hidden service itself. The only way for a contact point to access a
   hidden service is to look up whether it is contained in the descriptors
-  of known hidden services. A contact point can plausibly deny knowledge of
-  any hidden services, so that it cannot know for which hidden service it
-  is working. In addition to that, it cannot learn the data that it
-  transfers, because all communication between client and hidden service
-  are end-to-end encrypted.
+  of known hidden services. A contact point cannot directly be made
+  responsible for which hidden service it is working. In addition to that,
+  it cannot learn the data that it transfers, because all communication
+  between client and hidden service are end-to-end encrypted.
 
   (2) Scalability
 
@@ -205,7 +198,7 @@ Security Implications:
   better scalability.
 
   The new protocol eliminates the need for a hidden service to extend
-  circuits on demand, which has a positive effect circuits establishment
+  circuits on demand, which has a positive effect on circuits establishment
   times and overall network load. The solution presented here to establish
   a number of contact points proportional to the history of connection
   requests reduces the number of circuits to a minimum number that fits the

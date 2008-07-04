@@ -16,6 +16,8 @@ Change history:
   24-Dec-2007  Replaced misleading term "authentication" by "authorization"
                and added some clarifications (comments by Sven Kaffille)
   28-Apr-2008  Updated most parts of the concrete authorization protocol
+  04-Jul-2008  Add a simple algorithm to delay descriptor publication for
+               different clients of a hidden service
 
 Overview:
 
@@ -175,6 +177,20 @@ Details:
   users, a distinct cookie per user, or something in between, like one
   cookie per group of users. It is up to the specific protocol and how it
   is applied by a service provider.
+
+  Two or more hidden service descriptors for different groups or users
+  should not be uploaded at the same time. A directory node could conclude
+  easily that the descriptors, were issued by the same hidden service, thus
+  being able to link the two groups or users. Therefore, descriptors for
+  different users or clients that ought to be stored on the same directory
+  are delayed, so that only one descriptor is uploaded to a directory at a
+  time. The remaining descriptors are uploaded with a delay of 30 seconds.
+  Further, descriptors for different groups or users that are to be stored
+  on different directories are delayed for a random time of up to 30
+  seconds to hide relations from colluding directories. Certainly, this
+  does not prevent linking entirely, but it makes it somewhat harder.
+  There is a conflict between hiding links between clients and making a
+  service available in a timely manner.
 
   Although this part of the proposal is meant to describe a general
   infrastructure for authorization, changing the way of using the
@@ -360,8 +376,8 @@ Details:
   services maintain a history of received INTRODUCE2 cells within the last
   hour and only accept INTRODUCE2 cells matching the following rules:
 
-    (1) a maximum of 3 cells coming from the same client and containing the
-        same rendezvous cookie, and
+    (1) no duplicate requests coming from the same client and containing
+        the same rendezvous cookie, and
     (2) a maximum of 10 cells coming from the same client with different
         rendezvous cookies.
 
@@ -467,7 +483,7 @@ Details:
   in INTRODUCE2 cells that it sends to the server.
   The server compares authorization data of incoming INTRODUCE2 cells with
   the locally stored value that it would expect. The authorization type
-  number of this protocol for INTRODUCE2 cells is "1".
+  number of this protocol for INTRODUCE2 cells is "2".
 
   2.4. Providing authorization data
 
@@ -483,6 +499,7 @@ Details:
   or generated and appended to that file. The file format is:
 
      "client-name" human-readable client identifier NL
+     "service-address" onion-address NL
      "descriptor-cookie" 128-bit key ^= 22 base64 chars NL
      "client-key" NL a public key in PEM format
 
