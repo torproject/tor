@@ -31,7 +31,7 @@
 # to your individual connection. In particular, you should leave *some* 
 # minimum amount of bandwidth for Tor, so that Tor users are not 
 # completely choked out when you use your server's bandwidth. 30% is 
-# probably a polite choice.
+# probably a reasonable choice. More is better of course.
 
 # To start the shaping, run it as: 
 #   ./linux-tor-prio.sh 
@@ -61,20 +61,22 @@ TOR_UID=$(id -u tor)
 # Average ping to most places on the net, milliseconds
 RTT_LATENCY=40
 
-# RATE_UP must be less than your connection's upload capacity. If it is
-# larger, then the bottleneck will be at your router's queue, which you
-# do not control. This will cause congestion and a revert to normal TCP
-# fairness no matter what the queing priority is.
+# RATE_UP must be less than your connection's upload capacity in
+# kbits/sec. If it is larger, then the bottleneck will be at your
+# router's queue, which you do not control. This will cause congestion
+# and a revert to normal TCP fairness no matter what the queing
+# priority is.
 RATE_UP=5000
 
-# RATE_UP_TOR is the minimum speed your Tor connections will have.
-# They will have at least this much bandwidth for upload. In general, 
-# you probably shouldn't set this too low, or else Tor users who use 
-# your node will be completely choked out whenever your machine
-# does any other network activity. That is not very fun.
+# RATE_UP_TOR is the minimum speed your Tor connections will have in
+# kbits/sec.  They will have at least this much bandwidth for upload.
+# In general, you probably shouldn't set this too low, or else Tor
+# users who use your node will be completely choked out whenever your
+# machine does any other network activity. That is not very fun.
 RATE_UP_TOR=1500
 
-# RATE_UP_TOR_CEIL is the maximum rate allowed for all Tor trafic
+# RATE_UP_TOR_CEIL is the maximum rate allowed for all Tor trafic in
+# kbits/sec.
 RATE_UP_TOR_CEIL=5000
 
 CHAIN=OUTPUT
