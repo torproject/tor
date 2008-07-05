@@ -272,7 +272,7 @@ static struct pgfree *px;
 char		*malloc_options;
 
 /* Name of the current public function. */
-static char	*malloc_func;
+static const char	*malloc_func;
 
 #define MMAP(size) \
 	mmap((void *)0, (size), PROT_READ|PROT_WRITE, MAP_ANON|MAP_PRIVATE, \
@@ -439,20 +439,20 @@ malloc_dump(int fd)
 extern char	*__progname;
 
 static void
-wrterror(char *p)
+wrterror(const char *p)
 {
-	char		*q = " error: ";
+	const char		*q = " error: ";
 	struct iovec	iov[5];
 
 	iov[0].iov_base = __progname;
 	iov[0].iov_len = strlen(__progname);
-	iov[1].iov_base = malloc_func;
+	iov[1].iov_base = (char*)malloc_func;
 	iov[1].iov_len = strlen(malloc_func);
-	iov[2].iov_base = q;
+	iov[2].iov_base = (char*)q;
 	iov[2].iov_len = strlen(q);
-	iov[3].iov_base = p;
+	iov[3].iov_base = (char*)p;
 	iov[3].iov_len = strlen(p);
-	iov[4].iov_base = "\n";
+	iov[4].iov_base = (char*)"\n";
 	iov[4].iov_len = 1;
 	writev(STDERR_FILENO, iov, 5);
 
@@ -467,9 +467,9 @@ wrterror(char *p)
 }
 
 static void
-wrtwarning(char *p)
+wrtwarning(const char *p)
 {
-	char		*q = " warning: ";
+	const char		*q = " warning: ";
 	struct iovec	iov[5];
 
 	if (malloc_abort)
@@ -479,13 +479,13 @@ wrtwarning(char *p)
 
 	iov[0].iov_base = __progname;
 	iov[0].iov_len = strlen(__progname);
-	iov[1].iov_base = malloc_func;
+	iov[1].iov_base = (char*)malloc_func;
 	iov[1].iov_len = strlen(malloc_func);
-	iov[2].iov_base = q;
+	iov[2].iov_base = (char*)q;
 	iov[2].iov_len = strlen(q);
-	iov[3].iov_base = p;
+	iov[3].iov_base = (char*)p;
 	iov[3].iov_len = strlen(p);
-	iov[4].iov_base = "\n";
+	iov[4].iov_base = (char*)"\n";
 	iov[4].iov_len = 1;
 	
 	writev(STDERR_FILENO, iov, 5);
@@ -1707,6 +1707,7 @@ free_bytes(void *ptr, u_long index, struct pginfo * info)
 #endif	/* MALLOC_EXTRA_SANITY */
 	void		*vp;
 	long		i;
+	(void) index;
 
 	/* Find the chunk number on the page */
 	i = ((u_long) ptr & malloc_pagemask) >> info->shift;
