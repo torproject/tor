@@ -23,4 +23,5 @@ Backport for 0.2.0 once better tested:
   d r14830: disable openssl compression.
   o r14971: we don't have enough dir info if we have mostly wrong
     descriptors
+  - r15699,15700: react quickly to readiness of rendezvous circuits.
 
