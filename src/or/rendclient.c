@@ -543,6 +543,12 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
   log_info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
            "rendezvous.");
   circ->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY;
+  /*XXXX021 This is a pretty brute approach. It'd be better to
+   * attach only the connections that are waiting on this circuit, rather
+   * than trying to attach them all. */
+  /* If we already have the introduction circuit, built make sure we send
+   * the INTRODUCE cell _now_ */
+  connection_ap_attach_pending();
   return 0;
 }
 
@@ -605,6 +611,11 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
 
   onion_append_to_cpath(&circ->cpath, hop);
   circ->build_state->pending_final_cpath = NULL; /* prevent double-free */
+  /*XXXX021 This is a pretty brute approach. It'd be better to
+   * attach only the connections that are waiting on this circuit, rather
+   * than trying to attach them all. */
+  /* */
+  connection_ap_attach_pending();
   return 0;
  err:
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
