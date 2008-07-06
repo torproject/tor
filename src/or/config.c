@@ -413,7 +413,7 @@ static config_var_description_t options_description[] = {
   /*  ControlListenAddress */
   { "ControlPort", "If set, Tor will accept connections from the same machine "
     "(localhost only) on this port, and allow those connections to control "
-    "the Tor process using the Tor Control Protocol (described in"
+    "the Tor process using the Tor Control Protocol (described in "
     "control-spec.txt).", },
   { "CookieAuthentication", "If this option is set to 1, don't allow any "
     "connections to the control port except when the connecting process "
@@ -457,7 +457,7 @@ static config_var_description_t options_description[] = {
   { "TunnelDirConns", "If non-zero, when a directory server we contact "
     "supports it, we will build a one-hop circuit and make an encrypted "
     "connection via its ORPort." },
-  { "User", "On startup, setuid to this user" },
+  { "User", "On startup, setuid to this user." },
 
   /* ==== client options */
   { "AllowInvalidNodes", "Where on our circuits should Tor allow servers "
@@ -558,7 +558,7 @@ static config_var_description_t options_description[] = {
   { "DirListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:DirPort." },
   { "DirPolicy", "Set a policy to limit who can connect to the directory "
-    "port" },
+    "port." },
 
   /*  Authority options: AuthDirBadExit, AuthDirInvalid, AuthDirReject,
    * AuthDirRejectUnlisted, AuthDirListBadExits, AuthoritativeDirectory,
