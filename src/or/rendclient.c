@@ -546,7 +546,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
   /*XXXX021 This is a pretty brute approach. It'd be better to
    * attach only the connections that are waiting on this circuit, rather
    * than trying to attach them all. */
-  /* If we already have the introduction circuit, built make sure we send
+  /* If we already have the introduction circuit built, make sure we send
    * the INTRODUCE cell _now_ */
   connection_ap_attach_pending();
   return 0;
