@@ -123,7 +123,7 @@ struct pginfo {
 };
 
 /* How many bits per u_long in the bitmap */
-#define	MALLOC_BITS	(NBBY * sizeof(u_long))
+#define	MALLOC_BITS	(int)((NBBY * sizeof(u_long)))
 
 /*
  * This structure describes a number of free pages.
@@ -514,16 +514,17 @@ malloc_exit(void)
 
 static void *MMAP_A(size_t pages, size_t alignment)
 {
-	void *j;
-		if (pages%malloc_pagesize != 0)
-	pages = pages - pages%malloc_pagesize + malloc_pagesize;
-	size_t first_size = pages + alignment - malloc_pagesize;
-	void *p = MMAP(first_size);
-	size_t rest = ((size_t)p) % alignment;
+	void *j, *p;
+	size_t first_size, rest, begin, end;
+	if (pages%malloc_pagesize != 0)
+		pages = pages - pages%malloc_pagesize + malloc_pagesize;
+	first_size = pages + alignment - malloc_pagesize;
+	p = MMAP(first_size);
+	rest = ((size_t)p) % alignment;
 	j = (rest == 0) ? p : (void*) ((size_t)p + alignment - rest);
-	size_t begin = (size_t)j - (size_t)p;
+	begin = (size_t)j - (size_t)p;
 	if (begin != 0) munmap(p, begin);
-	size_t end = (size_t)p + first_size - ((size_t)j + pages);
+	end = (size_t)p + first_size - ((size_t)j + pages);
 	if(end != 0) munmap( (void*) ((size_t)j + pages), end);
 
 	return j;
@@ -830,7 +831,7 @@ static void *
 malloc_pages(size_t size)
 {
 	void		*p, *delay_free = NULL, *tp;
-	int		i;
+	size_t		i;
 	struct pginfo	**pd;
 	struct pdinfo	*pi;
 	u_long		pidx, index;
@@ -962,6 +963,7 @@ malloc_pages(size_t size)
 		}
 		pd = pi->base;
 		pd[PI_OFF(index)] = MALLOC_FIRST;
+
 		for (i = 1; i < size; i++) {
 			if (!PI_OFF(index + i)) {
 				pidx++;
@@ -992,6 +994,7 @@ malloc_pages(size_t size)
 			}
 			pd[PI_OFF(index + i)] = MALLOC_FIRST;
 		}
+
 		malloc_used += size << malloc_pageshift;
 		malloc_guarded += malloc_guard;
 
