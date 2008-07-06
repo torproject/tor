@@ -9,9 +9,9 @@ Status: Draft
 Overview
 
   The performance of paths selected can be improved by adjusting the
-  CircuitBuildTimeout and the number of guards. This proposal describes
-  a method of tracking buildtime statistics, and using those statistics
-  to adjust the CircuitBuildTimeout and the number of guards.
+  CircuitBuildTimeout and avoiding failing guard nodes. This proposal
+  describes a method of tracking buildtime statistics, and using those
+  statistics to adjust the CircuitBuildTimeout and the number of guards.
 
 Motivation
 
@@ -26,14 +26,17 @@ Implementation
 
     Based on studies of build times, we found that the distribution of
     circuit buildtimes appears to be a Pareto distribution. The number
-    of circuits to observe (ncircuits_to_observe) before changing the
-    CircuitBuildTimeout will be tunable. From our preliminary
-    measurements, it is likely that ncircuits_to_observe will be
-    somewhere on the order of 1000. The values can be represented
-    compactly in Tor in milliseconds as a circular array of 16 bit
-    integers. More compact long-term storage representations can be
-    implemented by simply storing a histogram with 50 millisecond
-    buckets when writing out the statistics to disk.
+    of circuits to observe (ncircuits_to_cutoff) before changing the
+    CircuitBuildTimeout will be tunable. From out measurements, 
+    ncircuits_to_cuttoff appears to be on the order of 100.
+ 
+	In addition, the total number of circuits gathered
+    (ncircuits_to_observe) will also be tunable. It is likely that
+    ncircuits_to_observe will be somewhere on the order of 1000. The values
+    can be represented compactly in Tor in milliseconds as a circular array
+    of 16 bit integers. More compact long-term storage representations can
+    be implemented by simply storing a histogram with 50 millisecond buckets
+    when writing out the statistics to disk.
 
   Calculating the preferred CircuitBuildTimeout
 
@@ -47,13 +50,43 @@ Implementation
     of expected CDF of timeouts.  Also, in the event of network failure,
     the observation mechanism should stop collecting timeout data.
 
-  Other notes
+  Dropping Failed Guards
+
+    In addition, we have noticed that some entry guards are much more
+    failure prone than others. In particular, the circuit failure rates for
+    the fastest entry guards was approximately 20-25%, where as slower
+    guards exhibit failure rates as high as 45-50%. In [1], it was
+    demonstrated that failing guard nodes can deliberately bias path
+    selection to improve their success at capturing traffic. For both these
+    reasons, failing guards should be avoided. 
+    
+    We propose increasing the number of entry guards to five, and gathering
+    circuit failure statistics on each entry guard. Any guards that exceed
+    the average failure rate of all guards by 10% after we have
+    gathered ncircuits_to_observe circuits will be replaced.
+    
+
+Issues
+
+  Impact on anonymity
 
     Since this follows a Pareto distribution, large reductions on the
     timeout can be achieved without cutting off a great number of the
     total paths.  However, hard statistics on which cutoff percentage
     gives optimal performance have not yet been gathered.
 
-Issues
+  Guard Turnover
 
-  Impact on anonymity
+    We contend that the risk from failing guards biasing path selection
+    outweighs the risk of exposure to larger portions of the network
+    for the first hop. Furthermore, from our observations, it appears
+    that circuit failure is strongly correlated to node load. Allowing
+    clients to migrate away from failing guards should naturally
+    rebalance the network, and eventually clients should converge on
+    a stable set of reliable guards. It is also likely that once clients
+    begin to migrate away from failing guards, their load should go
+    down, causing their failure rates to drop as well.
+
+
+[1] http://www.crhc.uiuc.edu/~nikita/papers/relmix-ccs07.pdf
+
