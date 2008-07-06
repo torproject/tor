@@ -72,6 +72,8 @@ Proposals by number:
 147  Eliminate the need for v2 directories in generating v3 directories [OPEN]
 148  Stream end reasons from the client side should be uniform [OPEN]
 149  Using data from NETINFO cells [OPEN]
+150  Exclude Exit Nodes from a circuit [DRAFT]
+151  Improving Tor Path Selection [DRAFT]
 
 
 Proposals by status:
@@ -85,6 +87,8 @@ Proposals by status:
    134  More robust consensus voting with diverse authority sets
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the
+   150  Exclude Exit Nodes from a circuit
+   151  Improving Tor Path Selection
  OPEN:
    120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
