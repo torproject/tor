@@ -18,6 +18,9 @@ Changes in version 0.2.1.3-alpha - 2008-07-xx
     - When opening /dev/null in finish_daemonize(), do not pass the
       O_CREAT flag.  Fortify was complaining, and correctly so.  Fixes
       bug 742; fix from Michael Scherer.  Bugfix on 0.0.2pre19.
+    - Correctly detect transparent proxy support on Linux hosts that
+      require in.h to be included before netfilter_ipv4.h.  Patch from
+      coderman.
 
 
 Changes in version 0.2.1.2-alpha - 2008-06-20
