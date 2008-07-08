@@ -1,14 +1,14 @@
-Changes in version 0.2.0.29 - 2008-06-xx
+Changes in version 0.2.0.29-rc - 2008-07-08
   o Major bugfixes:
     - If you have more than one bridge but don't know their keys,
       you would only launch a request for the descriptor of the first one
       on your list. (Tor considered launching requests for the others, but
       found that it already had a connection on the way for $0000...0000
-      so it didn't open another.)
+      so it didn't open another.) Bugfix on 0.2.0.x.
     - If you have more than one bridge but don't know their keys, and the
       connection to one of the bridges failed, you would cancel all
       pending bridge connections. (After all, they all have the same
-      digest.)
+      digest.) Bugfix on 0.2.0.x.
     - When a hidden service was trying to establish an introduction point,
       and Tor had built circuits preemptively for such purposes, we
       were ignoring all the preemptive circuits and launching a new one
@@ -31,8 +31,8 @@ Changes in version 0.2.0.29 - 2008-06-xx
     - Fix macro collision between OpenSSL 0.9.8h and Windows headers.
       Fixes bug 704; fix from Steven Murdoch.
     - When opening /dev/null in finish_daemonize(), do not pass the
-      O_CREAT flag.  Fortify was complaining, and correctly so.  Fixes
-      bug 742; fix from Michael Scherer.  Bugfix on 0.0.2pre19.
+      O_CREAT flag. Fortify was complaining, and correctly so. Fixes
+      bug 742; fix from Michael Scherer. Bugfix on 0.0.2pre19.
     - Correctly detect transparent proxy support on Linux hosts that
       require in.h to be included before netfilter_ipv4.h.  Patch
       from coderman.
