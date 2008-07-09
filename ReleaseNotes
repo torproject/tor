@@ -226,9 +226,9 @@ Changes in version 0.2.0.30 - 2008-07-xx
       at least 100KB/s, and consider their bandwidth adequate to be a
       Guard if it is at least 250KB/s, no matter the medians. This fix
       complements proposal 107.
-    - Directory authorities now never mark more than 3 servers per IP as
-      Valid and Running. Implements proposal 109, by Kevin Bauer and
-      Damon McCoy.
+    - Directory authorities now never mark more than 2 servers per IP as
+      Valid and Running (or 5 on addresses shared by authorities).
+      Implements proposal 109, by Kevin Bauer and Damon McCoy.
     - If we're a relay, avoid picking ourselves as an introduction point,
       a rendezvous point, or as the final hop for internal circuits. Bug
       reported by taranis and lodger.

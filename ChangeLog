@@ -1422,7 +1422,7 @@ Changes in version 0.2.0.9-alpha - 2007-10-24
       "Unnamed". Now we can list servers that happen to pick the same
       nickname as a server that registered two years ago and then
       disappeared. Partially implements proposal 122.
-    - If the consensus list a router as "Unnamed", the name is assigned
+    - If the consensus lists a router as "Unnamed", the name is assigned
       to a different router: do not identify the router by that name.
       Partially implements proposal 122.
     - Authorities can now come to a consensus on which method to use to
