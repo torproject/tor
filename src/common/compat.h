@@ -122,7 +122,17 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define ATTR_CONST __attribute__((const))
 #define ATTR_MALLOC __attribute__((malloc))
 #define ATTR_NORETURN __attribute__((noreturn))
-#define ATTR_NONNULL(x) __attribute__((nonnull x))
+/* Alas, nonnull is not at present a good idea for us.  We'd like to get
+ * warnings when we pass NULL where we shouldn't (which nonnull does, albeit
+ * spottily), but we don't want to tell the compiler to make optimizations
+ * with the assumption that the argument can't be NULL (since this would make
+ * many of our checks go away, and make our code less robust against
+ * programming errors).  Unfortunately, nonnull currently does both of these
+ * things, and there's no good way to split them up.
+ *
+ * #define ATTR_NONNULL(x) __attribute__((nonnull x)) */
+#define ATTR_NONNULL(x)
+
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
  * of <b>exp</b> will probably be true. */
 #define PREDICT_LIKELY(exp) __builtin_expect((exp), 1)
