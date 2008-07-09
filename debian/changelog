@@ -1,9 +1,10 @@
-tor (0.2.0.28-rc-X) Xxperimental; urgency=low
+tor (0.2.0.29-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Warn the admin if the number of file descriptors on his system is
     tiny.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 07 Jul 2008 13:25:49 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 09 Jul 2008 14:02:06 +0200
 
 tor (0.2.0.28-rc-1) experimental; urgency=low
 
