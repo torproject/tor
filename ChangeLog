@@ -16,6 +16,10 @@ Changes in version 0.2.1.3-alpha - 2008-07-xx
     - Stop using __attribute__((nonnull)) with GCC: it can give us useful
       warnings (occasionally), but it can also cause the compiler to
       eliminate error-checking code.  Suggested by Peter Gutmann.
+    - When a hidden service is giving up on an introduction point candidate
+      that was not included in the last published rendezvous descriptor,
+      don't reschedule publication of the next descriptor. Fixes bug 763.
+      Bugfix on 0.0.9.3.
 
 
 Changes in version 0.2.0.29-rc - 2008-07-08

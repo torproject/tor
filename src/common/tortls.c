@@ -564,7 +564,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   SSL_CTX_set_options(result->ctx, SSL_OP_NO_SSLv2);
 #endif
   SSL_CTX_set_options(result->ctx, SSL_OP_SINGLE_DH_USE);
-  
+
 #ifdef SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION
   SSL_CTX_set_options(result->ctx,
                       SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
