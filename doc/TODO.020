@@ -24,4 +24,5 @@ Backport for 0.2.0 once better tested:
   o r14971: we don't have enough dir info if we have mostly wrong
     descriptors
   - r15699,15700: react quickly to readiness of rendezvous circuits.
+  - r15821: fix bug related to TLS session negotiation.
 
