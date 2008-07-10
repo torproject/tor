@@ -1,3 +1,10 @@
+Changes in version 0.2.0.30-rc - 2008-07-??
+ o Minor bugsfixes:
+    - Stop using __attribute__((nonnull)) with GCC: it can give us useful
+      warnings (occasionally), but it can also cause the compiler to
+      eliminate error-checking code.  Suggested by Peter Gutmann.
+
+
 Changes in version 0.2.0.29-rc - 2008-07-08
   o Major bugfixes:
     - If you have more than one bridge but don't know their keys,
@@ -36,9 +43,6 @@ Changes in version 0.2.0.29-rc - 2008-07-08
     - Correctly detect transparent proxy support on Linux hosts that
       require in.h to be included before netfilter_ipv4.h.  Patch
       from coderman.
-    - Stop using __attribute__((nonnull)) with GCC: it can give us useful
-      warnings (occasionally), but it can also cause the compiler to
-      eliminate error-checking code.  Suggested by Peter Gutmann.
 
 
 Changes in version 0.2.0.28-rc - 2008-06-13
