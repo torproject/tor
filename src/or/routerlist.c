@@ -875,8 +875,10 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
   routerstatus_t *rs;
   const int pds_flags = PDS_ALLOW_SELF|PDS_IGNORE_FASCISTFIREWALL;
   *v2_share_out = *v3_share_out = 0.0;
+  if (!me)
+    return -1;
   rs = router_get_consensus_status_by_id(me->cache_info.identity_digest);
-  if (!me || !rs)
+  if (!rs)
     return -1;
 
   /* Calling for side effect */
