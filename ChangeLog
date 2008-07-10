@@ -56,6 +56,11 @@ Changes in version 0.2.0.29-rc - 2008-07-08
     - Correctly detect transparent proxy support on Linux hosts that
       require in.h to be included before netfilter_ipv4.h.  Patch
       from coderman.
+    - Disallow session resumption attempts during the renegotiation
+      stage of the v2 handshake protocol.  Clients should never be
+      trying session resumption at this point, but apparently some
+      did, in ways that caused the handshake to fail.  Bugfix on
+      0.2.0.20-rc.  Bug found by Geoff Goodell.
 
 
 Changes in version 0.2.1.2-alpha - 2008-06-20
