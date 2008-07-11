@@ -107,7 +107,7 @@ Status: Draft
   from that key is valid.
 
 
-3. Doing away with the need for all SDs
+3. No longer require clients to have copies of all SDs
 
 3.1 Load balancing info in consensus documents
 
@@ -116,11 +116,32 @@ Status: Draft
   clients to not require all server descriptors this information will
   have to move into the network status document.
 
-  [XXX Two open questions here:
-   a) how do we arrive at a consensus weight?
-   b) how to represent weights in the consensus?
-      Maybe "s Guard=0.13 Exit=0.02 Middle=0.00 Stable.."
-  ]
+  Consensus documents will have a new line per router similar
+  to the "r", "s", and "v" lines that already exist.  This line
+  will convey weight information to clients.
+
+   "w Exit=41 Guard=94 Middle=543 ..."
+
+  It starts with the letter w and then contains any number of Key=Value
+  pairs.  Values will be non-negative integers.  Clients will pick
+  routers with a propability proportional to the number for the intended
+  purpose.
+
+  Clients MUST accept sums of all weights for a given purpose over all
+  routers in a consensus up to UINT64_max.
+
+  [XXX how do we arrive at a consensus weight?
+    option a) Perhaps the vote could contain the node's bandwidth, and
+              this could be used to calculate the weights?  It's
+              necessary that the consensus remain a deterministic
+              function of the votes.
+    option b) Every voter assigns weights for each of the purposes
+              (Exit, Guard, ..) so that their total sum is some constant
+              X.  When building a consensus we take the median for each
+              purpose for each router.
+
+    Option a has the disadvantage that if we want to tweak the weighting
+    we have to make a new consensus-method]
 
 3.2 Fetching descriptors on demand
 
@@ -143,11 +164,7 @@ Status: Draft
      has a hash for the descriptor of this server.  We want exactly
      that descriptor, not a different one.)
 
-     [XXX: How?  We could either come up with a new cell type,
-      RELAY_REQUEST_SD that takes only a hash (of the SD), or use
-      RELAY_BEGIN_DIR.  The former is probably smarter since we will
-      want to use it later on as well, and there we will require
-      padding.]
+     It does that by sending a RELAY_REQUEST_SD cell.
 
      A client MAY cache the descriptor of the guard node so that it does
      not need to request it every single time it contacts the guard.
@@ -168,7 +185,16 @@ Status: Draft
   constant upper limit in order to conceal a client's destination
   from anybody who might be counting cells/bytes.
 
-  [XXX: detailed spec of RELAY_REQUEST_SD cell and its reply]
+  RELAY_REQUEST_SD cells contain the following information:
+    - hash of the server descriptor requested
+    - hash of the identity digest of the server for which we want the SD
+    - IP address and OR-port or the server for which we want the SD
+    - padding factor - the number of cells we want the answer
+      padded to.
+      [XXX this just occured to me and it might be smart.  or it might
+       be stupid.  clients would learn the padding factor they want
+       to use from the consensus document.  This allows us to grow
+       the replies later on should SDs become larger.]
   [XXX: figure out a decent padding size]
 
 3.3 Protocol versions
@@ -210,10 +236,7 @@ Status: Draft
   RELAY_REQUEST_SD cell that asks for C's server descriptor (by SD digest).
 
   In order to answer that request B obviously needs a copy of C's server
-  descriptor.  In the future we might amend RELAY_REQUEST_SD cells to
-  contain also the expected IP address and OR-port of the server C (the
-  client learns them from the network status document), so that B no
-  longer needs to know all the descriptors of the entire network but
-  instead can simply go and ask C for its descriptor before passing it
+  descriptor.  The RELAY_REQUEST_SD cell already has all the info that
+  B needs to contact C so it can ask about the descriptor before passing it
   back to the client.
 
