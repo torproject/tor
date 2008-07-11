@@ -9,6 +9,13 @@ Changes in version 0.2.1.3-alpha - 2008-07-xx
       on the client side when connecting to a hidden service. Bugfix
       on 0.0.6pre1. Found and fixed by Christian Wilms; resolves bug 743.
 
+  o Minor features:
+    - When relays do their initial bandwidth measurement, don't limit
+      to just our our entry guards for the test circuits. Otherwise we
+      tend to have multiple test circuits going through a single entry
+      guard, which makes our bandwidth test less accurate. Fixes part
+      of bug 654; patch contributed by Josh Albrecht.
+
   o Minor bugfixes:
     - Change the contrib/tor.logrotate script so it makes the new
       logs as "_tor:_tor" rather than the default, which is generally

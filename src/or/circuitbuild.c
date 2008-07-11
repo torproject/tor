@@ -1621,9 +1621,9 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   routerinfo_t *r, *choice;
   smartlist_t *excluded;
   or_options_t *options = get_options();
-  (void)purpose; /* not used yet. */
 
-  if (state && options->UseEntryGuards) {
+  if (state && options->UseEntryGuards &&
+      (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
     return choose_random_entry(state);
   }
 
