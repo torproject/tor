@@ -72,7 +72,7 @@ Proposals by number:
 147  Eliminate the need for v2 directories in generating v3 directories [ACCEPTED]
 148  Stream end reasons from the client side should be uniform [ACCEPTED]
 149  Using data from NETINFO cells [OPEN]
-150  Exclude Exit Nodes from a circuit [DRAFT]
+150  Exclude Exit Nodes from a circuit [ACCEPTED]
 151  Improving Tor Path Selection [DRAFT]
 
 
@@ -84,7 +84,6 @@ Proposals by status:
    133  Incorporate Unreachable ORs into the Tor Network
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the
-   150  Exclude Exit Nodes from a circuit
    151  Improving Tor Path Selection
  OPEN:
    121  Hidden Service Authentication
@@ -105,6 +104,7 @@ Proposals by status:
    140  Provide diffs between consensuses
    147  Eliminate the need for v2 directories in generating v3 directories
    148  Stream end reasons from the client side should be uniform
+   150  Exclude Exit Nodes from a circuit
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
