@@ -37,7 +37,7 @@ Risks:
 
    Use of this option can make users partitionable under certain attack
    assumptions.  However, ExitNodes already creates this possibility,
-   so there isn't much increased risk in ExcludeExitNods.
+   so there isn't much increased risk in ExcludeExitNodes.
 
    We should still encourage people who exclude an exit node because
    of bad behavior to report it instead of just adding it to their
