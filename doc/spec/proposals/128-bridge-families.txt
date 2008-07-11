@@ -4,7 +4,10 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2007-12-xx
-Status: Draft
+Status: Finished
+
+  [This proposal is part implemented, and part dead (won't-implement).
+  Roger should add a note and merge it into the spec.]
 
 1. Overview
 

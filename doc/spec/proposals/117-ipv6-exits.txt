@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: coderman
 Created: 10-Jul-2007
-Status: Needs-Revision
+Status: Accepted
 
 Overview
 
@@ -214,6 +214,7 @@ Contents
     type that can hold an ipv6 address, since the way we encode ipv6
     addresses elsewhere ("0.0.0.0 indicates that the next 16 bytes are ipv6")
     is a bit dumb. -nickm]
+   [Actually, the length field lets us distinguish EXITPOLICY. -nickm]
 
 2.2. Directory specification
 

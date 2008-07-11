@@ -32,17 +32,17 @@ Proposals by number:
 107  Uptime Sanity Checking [CLOSED]
 108  Base "Stable" Flag on Mean Time Between Failures [CLOSED]
 109  No more than one server per IP address [CLOSED]
-110  Avoiding infinite length circuits [NEEDS-REVISION]
+110  Avoiding infinite length circuits [ACCEPTED]
 111  Prioritizing local traffic over relayed traffic [FINISHED]
 112  Bring Back Pathlen Coin Weight [SUPERSEDED]
 113  Simplifying directory authority administration [SUPERSEDED]
 114  Distributed Storage for Tor Hidden Service Descriptors [CLOSED]
 115  Two Hop Paths [DEAD]
 116  Two hop paths from entry guards [DEAD]
-117  IPv6 exits [NEEDS-REVISION]
-118  Advertising multiple ORPorts at once [DRAFT]
+117  IPv6 exits [ACCEPTED]
+118  Advertising multiple ORPorts at once [ACCEPTED]
 119  New PROTOCOLINFO command for controllers [CLOSED]
-120  Shutdown descriptors when Tor servers stop [OPEN]
+120  Shutdown descriptors when Tor servers stop [DEAD]
 121  Hidden Service Authentication [OPEN]
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [CLOSED]
@@ -50,27 +50,27 @@ Proposals by number:
 125  Behavior for bridge users, bridge relays, and bridge authorities [FINISHED]
 126  Getting GeoIP data and publishing usage summaries [CLOSED]
 127  Relaying dirport requests to Tor download site / website [DRAFT]
-128  Families of private bridges [DRAFT]
+128  Families of private bridges [FINISHED]
 129  Block Insecure Protocols by Default [CLOSED]
 130  Version 2 Tor connection protocol [CLOSED]
 131  Help users to verify they are using Tor [NEEDS-REVISION]
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
-134  More robust consensus voting with diverse authority sets [DRAFT]
+134  More robust consensus voting with diverse authority sets [ACCEPTED]
 135  Simplify Configuration of Private Tor Networks [ACCEPTED]
 136  Mass authority migration with legacy keys [FINISHED]
-137  Keep controllers informed as Tor bootstraps [OPEN]
+137  Keep controllers informed as Tor bootstraps [FINISHED]
 138  Remove routers that are not Running from consensus documents [CLOSED]
 139  Download consensus documents only when it will be trusted [CLOSED]
-140  Provide diffs between consensuses [OPEN]
+140  Provide diffs between consensuses [ACCEPTED]
 141  Download server descriptors on demand [DRAFT]
 142  Combine Introduction and Rendezvous Points [OPEN]
 143  Improvements of Distributed Storage for Tor Hidden Service Descriptors [OPEN]
 144  Increase the diversity of circuits by detecting nodes belonging the [DRAFT]
 145  Separate "suitable as a guard" from "suitable as a new guard" [OPEN]
 146  Add new flag to reflect long-term stability [OPEN]
-147  Eliminate the need for v2 directories in generating v3 directories [OPEN]
-148  Stream end reasons from the client side should be uniform [OPEN]
+147  Eliminate the need for v2 directories in generating v3 directories [ACCEPTED]
+148  Stream end reasons from the client side should be uniform [ACCEPTED]
 149  Using data from NETINFO cells [OPEN]
 150  Exclude Exit Nodes from a circuit [DRAFT]
 151  Improving Tor Path Selection [DRAFT]
@@ -79,35 +79,32 @@ Proposals by number:
 Proposals by status:
 
  DRAFT:
-   118  Advertising multiple ORPorts at once
    127  Relaying dirport requests to Tor download site / website
-   128  Families of private bridges
    132  A Tor Web Service For Verifying Correct Browser Configuration
    133  Incorporate Unreachable ORs into the Tor Network
-   134  More robust consensus voting with diverse authority sets
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the
    150  Exclude Exit Nodes from a circuit
    151  Improving Tor Path Selection
  OPEN:
-   120  Shutdown descriptors when Tor servers stop
    121  Hidden Service Authentication
-   137  Keep controllers informed as Tor bootstraps
-   140  Provide diffs between consensuses
    142  Combine Introduction and Rendezvous Points
    143  Improvements of Distributed Storage for Tor Hidden Service Descriptors
    145  Separate "suitable as a guard" from "suitable as a new guard"
    146  Add new flag to reflect long-term stability
-   147  Eliminate the need for v2 directories in generating v3 directories
-   148  Stream end reasons from the client side should be uniform
    149  Using data from NETINFO cells
  NEEDS-REVISION:
-   110  Avoiding infinite length circuits
-   117  IPv6 exits
    131  Help users to verify they are using Tor
  NEEDS-RESEARCH:
  ACCEPTED:
+   110  Avoiding infinite length circuits
+   117  IPv6 exits
+   118  Advertising multiple ORPorts at once
+   134  More robust consensus voting with diverse authority sets
    135  Simplify Configuration of Private Tor Networks
+   140  Provide diffs between consensuses
+   147  Eliminate the need for v2 directories in generating v3 directories
+   148  Stream end reasons from the client side should be uniform
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
@@ -116,7 +113,9 @@ Proposals by status:
  FINISHED:
    111  Prioritizing local traffic over relayed traffic
    125  Behavior for bridge users, bridge relays, and bridge authorities
+   128  Families of private bridges
    136  Mass authority migration with legacy keys
+   137  Keep controllers informed as Tor bootstraps
  CLOSED:
    101  Voting on the Tor Directory System
    102  Dropping "opt" from the directory format
@@ -144,3 +143,4 @@ Proposals by status:
    100  Tor Unreliable Datagram Extension Proposal
    115  Two Hop Paths
    116  Two hop paths from entry guards
+   120  Shutdown descriptors when Tor servers stop

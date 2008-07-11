@@ -2,7 +2,7 @@ Filename: 134-robust-voting.txt
 Title: More robust consensus voting with diverse authority sets
 Author: Peter Palfrader
 Created: 2008-04-01
-Status: Draft
+Status: Accepted
 
 Overview:
 
