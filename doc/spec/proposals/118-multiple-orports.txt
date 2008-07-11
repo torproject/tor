@@ -4,63 +4,82 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 09-Jul-2007
-Status: Draft
+Status: Accepted
 
-Some notes follow. Please feel free to flesh them out, discard them,
-add in better ideas, etc.
+Overview:
 
-  - Some way to configure which address:port combinations to listen
-    on, and/or which to advertise.
+   This document is a proposal for servers to advertise multiple
+   address/port combinations for their ORPort.
 
-    (The best way to support lots of ports is to have your firewall
-    route all connections from those ports to Tor: this doesn't need
-    anywhere near as many listening sockets.  You only really want to
-    listen on tons and tons of ports if your firewalling doesn't
-    support this, or you don't have access to your local
-    iptables/ipf/whatever.  But if you want to do this with the
-    firewall, you need the ability to advertise ports you aren't
-    actually listening on.)
+Motivation:
 
-    (Cat would also like to see some discussion of the effect this
-    is likely to have in environments that need to ban or limit Tor.
-    "Speaking only for myself, in an environment where I need to keep
-    a lid on Tor usage, having to chase port settings around makes it
-    more likely that I'm going to move from limiting Tor to just plain
-    banning it.")
+   Sometimes servers want to support multiple ports for incoming
+   connections, either in order to support multiple address families, to
+   better use multiple interfaces, or to support a variety of
+   FascistFirewallPorts settings.  This is easy to set up now, but
+   there's no way to advertise it to clients.
 
-  - Some way to advertise in one's router descriptor which
-    address:port combinations you're listening on.  For backward
-    compatibility this should be a new line, not a change to the
-    format of an existing line.
+New descriptor syntax:
 
-  - Possibly, some way to relay this information in network-status
-    documents.
+   We add a new line in the router descriptor, "or-address".  This line
+   can occur zero, one, or multiple times.  Its format is:
 
-  - Some analysis of the impact on network-status and routerinfo
-    size.  My guess is "not much", but if it turns out to be a bit, we
-    should look into making the notation concise.
+      or-address SP ADDRESS ":" PORTLIST NL
 
-  - What does this imply for self-testing of servers and testing by
-    authorities of servers?  What should the authorities do if one
-    addr:port works but one doesn't?
+      ADDRESS = IP6ADDR / IP4ADDR
+      IPV6ADDR = an ipv6 address, surrounded by square brackets.
+      IPV4ADDR = an ipv4 address, represented as a dotted quad.
+      PORTLIST = PORTSPEC | PORTSPEC "," PORTLIST
+      PORTSPEC = PORT | PORT "-" PORT
 
-  - Some way to pick which addr:port to use when you have a choice of
-    more than one addr:port.
+   [This is the regular format for specifying sets of addresses and
+   ports in Tor.]
 
-  - Some way to avoid having servers open lots and lots of connections
-    between them when they get extend cells to the same server on
-    different ports.
+New OR behavior:
 
-    - Suggested rule:
-      - If we're told to extend to IP:Port:ID, and we have a connection
-        to some server with ID, and we have confirmed that the server
-        likes the address we originally used when connecting to it (via
-        means in proposal 105), then use the existing connection.
-      - If we're told to extend to IP:Port:ID, and we have a descriptor
-        for the ID, and we have a connection to some server with ID,
-        and the existing connection is to an address listed as valid
-        in the descriptor, then use the existing connection.
-      - Otherwise, use a new connection.
+   We add two more options to supplement ORListenAddress:
+   ORPublishedListenAddress, and ORPublishAddressSet.  The former
+   listens on an address-port combination and publishes it in addition
+   to the regular address.  The latter advertises a set of address-port
+   combinations, but does not listen on them.  [To use this option, the
+   server operator should set up port forwarding to the regular ORPort,
+   as for example with firewall rules.]
 
-  - How this all interacts with coderman's ipv6 stuff (proposal 117).
+   Servers should extend their testing to include advertised addresses
+   and ports.  No address or port should be advertised until it's been
+   tested.  [This might get expensive in practice.]
+
+New authority behavior:
+
+   Authorities should spot-test descriptors, and reject any where a
+   substantial part of the addresses can't be reached.
+
+New client behavior:
+
+   When connecting to another server, clients SHOULD pick an
+   address-port ocmbination at random as supported by their
+   reachableaddresses.  If a client has a connection to a server at one
+   address, it SHOULD use that address for any simultaneous connections
+   to that server.  Clients SHOULD use the canonical address for any
+   server when generating extend cells.
+
+Not addressed here:
+
+   * There's no reason to listen on multiple dirports; current Tors
+   mostly don't connect directly to the dirport anyway.
+
+   * It could be advantageous to list something about extra addresses in
+   the network-status document.  This would, however, eat space there.
+   More analysis is needed, particularly in light of proposal 141
+   ("Download server descriptors on demand")
+
+Dependencies:
+
+   Testing for canonical connections needs to be implemented before it's
+   safe to use this proposal.
+
+
+Notes 3 July:
+  - Write up the simple version of this.  No ranges needed yet.  No
+    networkstatus chagnes yet.
 
