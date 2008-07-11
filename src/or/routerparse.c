@@ -37,7 +37,6 @@ typedef enum {
   K_PLATFORM,
   K_OPT,
   K_BANDWIDTH,
-  K_PORTS,
   K_CONTACT,
   K_NETWORK_STATUS,
   K_UPTIME,
