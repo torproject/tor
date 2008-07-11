@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2-Jul-2008
-Status: Open
+Status: Accepted
 
 Overview
 
@@ -32,14 +32,20 @@ Design:
   We add a new value for vote-status in v3 consensus documents in
   addition to "consensus" and "vote": "opinion".  Authorities generate
   and sign an opinion document as if they were generating a vote,
-  except that they send it to one another earlier than they send
-  votes.
+  except that they generate opinions earlier than they generate votes.
 
   Authorities don't need to generate more than one opinion document
   per voting interval, but may.  They should send it to the other
   authorities they know about, at the regular vote upload URL, before
   the authorities begin voting, so that enough time remains for the
   authorities to fetch new descriptors.
+
+  Additionally, authories make their opinions available at
+     http://<hostname>/tor/status-vote/next/opinion.z
+  and download opinions from authorties they haven't heard from in a
+  while.
+
+  Authorities MAY generate opinions on demand.
 
   Upon receiving an opinion document, authorities scan it for any
   descriptors that:
