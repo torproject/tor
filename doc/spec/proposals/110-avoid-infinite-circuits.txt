@@ -4,7 +4,13 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 13-Mar-2007
-Status: Needs-Revision
+Status: Accepted
+
+History:
+
+  Revised 3 July 2008 by nickm: rename from relay_extend to
+     relay_early.  Revise to current migration plan.  Allow K cells
+     over circuit lifetime, not just at start.
 
 Overview:
 
@@ -36,25 +42,25 @@ Motivation:
 
 Design:
 
-  We should split RELAY cells into two types: RELAY and RELAY_EXTEND.
+  We should split RELAY cells into two types: RELAY and RELAY_EARLY.
 
-  Relay_extend cells can only be sent in the first K (say, 10) data
-  cells sent across a circuit, and only relay_extend cells are allowed
-  to contain extend requests. We still support obscuring the length of
-  the circuit (if more research shows us what to do), because Alice can
-  choose how many of the K to mark as relay_extend. Note that relay_extend
-  cells *can* contain any sort of data cell; so in effect it's actually
-  the relay type cells that are restricted. By default, she would just
-  send the first K data cells over the stream as relay_extend cells,
-  regardless of their actual type.
+  Only K (say, 10) Relay_early cells can be sent across a circuit, and
+  only relay_early cells are allowed to contain extend requests. We
+  still support obscuring the length of the circuit (if more research
+  shows us what to do), because Alice can choose how many of the K to
+  mark as relay_early. Note that relay_early cells *can* contain any
+  sort of data cell; so in effect it's actually the relay type cells
+  that are restricted. By default, she would just send the first K
+  data cells over the stream as relay_early cells, regardless of their
+  actual type.
 
   Each intermediate server would pass on the same type of cell that it
-  received (either relay or relay_extend), and the cell's destination
+  received (either relay or relay_early), and the cell's destination
   will be able to learn whether it's allowed to contain an Extend request.
 
-  If an intermediate server receives a relay_extend cell after it has
-  already seen k data cells, or if it sees a relay cell that contains an
-  extend request, then it tears down the circuit (protocol violation).
+  If an intermediate server receives more than K relay_early cells, or
+  if it sees a relay cell that contains an extend request, then it
+  tears down the circuit (protocol violation).
 
 Security implications:
 
@@ -73,32 +79,25 @@ Security implications:
 
 Migration:
 
-  Phase one: servers should recognize relay_extend cells and pass them
-  on just like relay cells. Don't do any enforcement of the protocol
-  yet. We could do this phase in the 0.2.0 timeline.
+  In 0.2.0, servers speaking v2 or later of the link protocol accept
+  RELAY_EARLY cells, and pass them on.  If the next OR in the circuit
+  is not speaking the v2 link protocol, the server relays the cell as
+  a RELAY cell.
 
-  Phase two: once support in phase one is pervasive, clients could start
-  using relay_extend cells when all nodes currently in the circuit would
-  recognize them. We could conceivably do this phase during 0.2.0 too.
+  In 0.2.1.x, clients begin using RELAY_EARLY cells on v2 connections.
+  This functionality can be safely backported to 0.2.0.x.  Clients
+  should pick a random number betweeen (say) 8 and 10 to send.
 
-  Phase three: once clients that don't use relay_extend cells are
-  obsolete, servers should start enforcing the protocol.
+  In 0.2.1.x, servers close any circuit in which more than K
+  relay_early cells are sent.
 
-  (Another migration plan would be to coordinate this with proposal
-  105's new link versions. Would that be better/worse? Can somebody
-  sketch out what it might look like?)
+  Once all versions the do not send RELAY_EARLY cells are obsolete,
+  servers can begin to reject any EXTEND requests not sent in a
+  RELAY_EARLY cell.
 
 Spec:
 
   [We can formalize this part once we think the design is a good one.]
-
-Additional complexity:
-
-  Rather than limiting the relay_extend cells to being in the first K
-  data cells seen, we could instead permit up to K relay_extend cells
-  in the lifetime of the circuit. This would let us extend the circuit
-  later on in its life if we decided it was worth doing, though we would
-  reveal our intent to each node in the circuit when we do.
 
 Acknowledgements:
 
