@@ -1,0 +1,39 @@
+X-Account-Key: account6
+X-UIDL: 1215752284.31537.faustus,S=1469
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 02000000
+Return-Path: <jacob@appelbaum.net>
+Delivered-To: jpopped@appelbaum.net
+Received: (qmail 31535 invoked by uid 89); 11 Jul 2008 04:58:04 -0000
+Delivered-To: appelbaum.net-jacob@appelbaum.net
+Received: (qmail 31531 invoked by uid 89); 11 Jul 2008 04:58:04 -0000
+Received: from unknown (HELO moria.seul.org) (128.31.0.34)
+  by 0 with (DHE-RSA-AES256-SHA encrypted) SMTP; 11 Jul 2008 04:58:04 -0000
+Received-SPF: none (0: domain at appelbaum.net does not designate permitted sender hosts)
+Received: by moria.seul.org (Postfix)
+	id F09581415CD3; Fri, 11 Jul 2008 00:55:45 -0400 (EDT)
+Delivered-To: gettor@seul.org
+Received: from mail.lostinthenoise.net (mail.lostinthenoise.net [64.142.98.226])
+	(using TLSv1 with cipher DHE-RSA-AES256-SHA (256/256 bits))
+	(No client certificate requested)
+	by moria.seul.org (Postfix) with ESMTP id C464A140F476
+	for <gettor@torproject.org>; Fri, 11 Jul 2008 00:55:45 -0400 (EDT)
+Received: (qmail 31524 invoked by uid 89); 11 Jul 2008 04:58:02 -0000
+Received: from unknown (HELO ?127.0.0.1?) (64.142.98.226)
+  by 0 with (DHE-RSA-AES256-SHA encrypted) SMTP; 11 Jul 2008 04:58:02 -0000
+Message-ID: <4876E7D0.5050201@appelbaum.net>
+Date: Thu, 10 Jul 2008 21:55:44 -0700
+From: Jacob Appelbaum <jacob@appelbaum.net>
+User-Agent: Icedove 1.5.0.14eol (X11/20080509)
+MIME-Version: 1.0
+To:  gettor@torproject.org
+Subject: negative DKIM signature
+X-Enigmail-Version: 0.94.2.0
+OpenPGP: id=9D0FACE4;
+	url=http://www.appelbaum.net/gpg.asc
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: 7bit
+
+source-bundle
+
+

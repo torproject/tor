@@ -1,0 +1,57 @@
+X-Account-Key: account6
+X-UIDL: 1214981061.25808.faustus,S=2285
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 02000000
+Return-Path: <ioerror@gmail.com>
+Delivered-To: jpopped@appelbaum.net
+Received: (qmail 25806 invoked by uid 89); 2 Jul 2008 06:44:21 -0000
+Delivered-To: appelbaum.net-jacob@appelbaum.net
+Received: (qmail 25804 invoked by uid 89); 2 Jul 2008 06:44:21 -0000
+Received: from unknown (HELO wa-out-1112.google.com) (209.85.146.180)
+  by 0 with SMTP; 2 Jul 2008 06:44:21 -0000
+Received-SPF: pass (0: SPF record at _spf.google.com designates 209.85.146.180 as permitted sender)
+Received: by wa-out-1112.google.com with SMTP id j40so170432wah.1
+        for <jacob@appelbaum.net>; Tue, 01 Jul 2008 23:42:01 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=gamma;
+        h=domainkey-signature:received:received:message-id:date:from:to
+         :subject:mime-version:content-type;
+        bh=IvFqNkffeoST7vamh2ytuq/b7GpLhg2hStTrQq3I3rE=;
+        b=xQR0hE/J4AXpAqH1UDXTtDrU9Izc6WM8vtFudRBzldWYyRx3Vvfh2I2Opu8+O6wbAv
+         jlDi18anUMbZqlIGSgGOxvXW4CltpX/SFZm1aGL4AisQ1Bi5xEqlrc8OnX3sA2xKeM3g
+         KWsWm+GVSMI4XAqnY9FYAfPx4DmOAfkdMyWCU=
+DomainKey-Signature: a=rsa-sha1; c=nofws;
+        d=gmail.com; s=gamma;
+        h=message-id:date:from:to:subject:mime-version:content-type;
+        b=kyzDtGRDbiC5y4Bz/ylQjyHOChiOP2A6QDzybsVXc0C1hjHLImOQYR8gOxcRY+mRkN
+         1xpBaEF4UloZAxTb79khRRp4TWmjT1DagtLx2MFzIj/F6awtdE/9U3p4QyKr8S43tGcE
+         ET26BSfT5u9zrXblVVAP3JedMPZ8mlIGQxyDs=
+Received: by 10.115.90.1 with SMTP id s1mr6711509wal.51.1214980921268;
+        Tue, 01 Jul 2008 23:42:01 -0700 (PDT)
+Received: by 10.114.184.16 with HTTP; Tue, 1 Jul 2008 23:41:57 -0700 (PDT)
+Message-ID: <7fadd8130807012341n3b3af401mbdb4a29c80310bd3@mail.gmail.com>
+Date: Tue, 1 Jul 2008 23:41:57 -0700
+From: "Jacob Applebaum" <ioerror@gmail.com>
+To: jacob@appelbaum.net
+Subject: Positive DKIM header
+MIME-Version: 1.0
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_462_28562233.1214980917793"
+
+------=_Part_462_28562233.1214980917793
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+This email should have a positive DKIM header.
+
+------=_Part_462_28562233.1214980917793
+Content-Type: text/html; charset=ISO-8859-1
+Content-Transfer-Encoding: 7bit
+Content-Disposition: inline
+
+This email should have a positive DKIM header.<br>
+
+------=_Part_462_28562233.1214980917793--
+
+
