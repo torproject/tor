@@ -24,119 +24,6 @@ K       - Karsten claims
 
 External constraints:
 
-  - End of April
-R   - get the geoip files onto some bridge relays, and gather stats
-?   - Figure out who at Mozilla can give us permission to keep the
-      name Firefox on our Tor Browser Bundle. Get said permission.
-I   - Translation portal
-      - Create a doc/translations.txt file in tor svn that somebody else
-        could use to manage the translations in case Jake gets hit by
-        a bus (or in case somebody else wants to help do it):
-        - What are the steps for taking strings from Vidalia and putting them
-          into launchpad?
-        - What are the steps for exporting strings from launchpad and putting
-          them into Vidalia?
-
-  - End of May
-S   - More TorBrowser work
-      - Integrate pidgin and OTR
-      - move portablefirefox nsi goo into vidalia as appropriate
-      - Figure out (or give up on) how to run Tor Browser and ordinary
-        Firefox side-by-side.
-N   - Write a script to correctly total bandwidth-history observations
-    o Make sure RPMs can build correctly with geoip file
-N+P - Make sure other packages build correctly with geoip file
-N   - Write a paragraph or two for Paul's research project describing what
-      we plan to help him research. Roger will then secretly retitle
-      these as a "statement of work", and then we'll have Tor's
-      subcontracting dept contact NRL's subcontract dept.
-
-  - mid June
-R   - SRI stuff
-
-  - mid June
-S   - Integrate upnp into Vidalia and have it work
-      - point to (or make, ugh) docs for how to enable upnp on standard
-        routers
-        - pointer in docs to portforward.com. Maybe Vidalia should grow
-          a help page for its upnp button, and that's where these pointers
-          should live?
-      - better error handling for the current miniupnp integration
-      - If UPnP'ing fails, un-check the Vidalia box? Or something
-        else smart.
-      - Have a box or something in the vidalia window that shows progress,
-        output messages, etc. Otherwise if it just sits there for 5
-        minutes, who knows what's going on?
-    - More TorBrowser work
-S     - We should point from TBB page to the split downloads page.
-S     - Firefox extension framework for Torbrowser build-time
-S     - Progress bar during startup, including some "timeout" events to
-        indicate when Tor's unlikely to succeed at startup.
-R       - Make Tor put out appropriate events
-E       - Let Vidalia notice them and change its appearance
-S     - Enumerate and analyze traces left when running from USB
-R   - Finish tor-doc-bridge.wml
-    - More bridgedb work:
-R     - Get the dkimproxy patch in
-?     - Brainstorm about safe but effective ways for vidalia to
-        auto-update its user's bridges via Tor in the background.
-NR    - Include "stable" bridge and "port 443" bridge and "adequately
-        new version" bridge free in every specially marked
-        box!^W^W^Woutput batch.
-        o Port-443 bridge implementation
-N     - Detect proxies and treat them as the same address
-    o Continue resolving the ram issue for relays:
-      o better buffer approaches in Tor
-      o better buffer approaches in openssl
-      o shipping Tor with its own integrated allocator.
-      o Write a paragraph for each of the above three items to describe
-        what we've done in the Jan-Jun timeframe, and next steps if any
-        for each item.
-N   - Take our draft research proposal for how to safely collect and
-      aggregate some GeoIP data from non-bridge entry nodes, finish
-      the proposal, and implement and test. Have a plausible plan for
-      deploying.
-      - Finish proposal
-        o Figure out what to do
-        - Fix proposal
-        - Include details on dealing with dir guards
-        - Describe deployment
-      o Implement
-      . Test
-    - More back-end work:
-N     - Additional TLS-camouflage work (spoofing FF cipher suite, etc.)
-        o spoof the cipher suites
-        o spoof the extensions list
-        - red-team testing (a.k.a, look at a packet dump and compare),
-        . investigate the feasibility of handing connections off to a
-          local apache if they don't look like Tor or if they don't
-          portknock or whatever.
-      - Get closer to downloading far fewer descriptors
-W       - Instrument the code to track how many descriptors we download vs how
-          many times we extend a circuit. Guess a few other things to
-          instrument, like cache activity, and do those too.
-W       - Start a proposal for how to fetch far fewer descriptors;
-          identify and start assessing anonymity attacks, like from looking
-          at the size of the descriptor you fetch. See xxx-grand-plan.txt
-          for some early thoughts.
-I     - Translation portal
-        - Vidalia installer translations
-          - Find/make a script to convert NSI strings into PO files
-            and back.
-          - Start doing that in the same process as the other Vidalia
-            string translations.
-          - Add these steps to the doc/translations.txt or whatever it's
-            called at this point.
-        - Torbutton webpage
-        o Torbrowser webpage
-        - Tor website
-        - check.torproject.org
-        - should we i18nize polipo's error messages too?
-KS  - Investigate where the slowdown occurs for making hidden service
-      circuits, and/or for publishing hidden service descriptors. Identify
-      areas that can be improved, and make some guesses about which we
-      should focus on.
-
   - mid July
 W   - Take the results from instrumenting directory downloads on Tor
       clients, and analyze/simulate some alternate approaches. Finish
@@ -185,14 +72,12 @@ W   - Finish testing, debugging, unit testing, etc the directory overhead
 Other things Roger would be excited to see:
 
 Nick
-  o Send or-dev email about proposal statuses.
-  o Send or-dev email about window for new proposals, once arma and
-    nick agree.
   - Finish buffer stuff in libevent; start using it in Tor.
   - Tors start believing the contents of NETINFO cells.
   . Work with Steven and Roger to decide which parts of Paul's project
     he wants to work on.
-  o let approved-routers lines omit spaces in fingerprint.
+  - respond to Steven's red-team TLS testing (a.k.a, look at a packet
+    dump and compare)
 
 Matt
   - Fit Vidalia in 640x480 again.
@@ -203,11 +88,6 @@ Matt
     launches for you.
   - Vidalia should avoid stomping on your custom exit policy lines
     just because you click on 'save' for a totally different config thing.
-  o "can anyone help me, all of a sudden on tor on the mac, when i
-    start it up, It asks for my control password, which ive never set"
-    We should either give Vidalia another option in that dialog box -- to
-    restart Tor -- or we should make it so when Vidalia spawns Tor and
-    then Vidalia dies, Tor dies too.
   - How much space do we save in TBB by stripping symbols from Vidalia
     first? Good idea or crazy idea?
 
@@ -215,28 +95,26 @@ ioerror
   - gmail auto responder so you send us an email and we send you a Tor
     binary. Probably needs a proposal first.
   - weather.torproject.org should go live.
-  o Get Scott Squires to give you admin access to the Torbutton account
-    on Babelzilla; or give up eventually and fork it.
   o Learn from Steven how to build/maintain the Tor Browser Bundle.
-  - Learn from Mike how to run SoaT, and try to make that an automated
-    service somewhere.
   - Keep advocating new Tor servers and working with orgs like Mozilla
     to let them like Tor.
   - Start converting critical wiki pages into real Tor wml pages. E.g.,
     https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
   - Find out what happened to the buildbot and get it back up:
     http://tor-buildbot.freehaven.net:8010/
-  - Look at the "flossmanuals" translation UI, and see if that's something
-    we want to emulate.
-  - We should hack the translation-status perl so it puts high priority
-    pages first, regardless of what directory they're in.
-  - Some of our translated wml files are very old -- so old that they
-    are harmful to leave in place. We need some sort of way to notice
-    this and disable them.
   - Learn about locking memory pages that have sensitive content. Get
     that started in Tor.
+  - Translation portal
+    - Vidalia html help files
+    - should we i18nize polipo's error messages too?
+    - Some of our translated wml files are very old -- so old that they
+      are harmful to leave in place. We need some sort of way to notice
+      this and disable them.
 
 Steven
+  - Figure out (or give up on) how to run Tor Browser and ordinary
+    Firefox side-by-side.
+  - Enumerate and analyze traces left when running from USB
   - Write a list of research items Tor would like to see done, for the
     volunteer page. Pick a few you'd like to work on yourself.
   - Move proposal 131 or equivalent forward.
@@ -255,7 +133,6 @@ Andrew
     include Torbutton, they still say it's tor.eff.org, etc.
   - Should we still be telling you how to use Safari on OS X for Tor,
     given all the holes that Torbutton-dev solves on Firefox?
-  o Get Google excited about our T&Cs.
 
 Karsten
   o Make a hidden services explanation page with the hidden service
@@ -280,30 +157,22 @@ Weasel
     documents.  Retain that state over restarts.
 
 Roger
+  - Finish tor-doc-bridge.wml
   . Fix FAQ entry on setting up private Tor network
   - Review Karsten's hidden service diagrams
-  - Prepare the 0.2.0.x Release Notes.
   - Roger should visit Internews DC sometime.
-  - Chris has some detailed TBB download/install/test instructions. Get
-    Chris to send us a copy/pointer.
+  - Did we actually apply Steven's dkimproxy patch?
+  - Brainstorm about safe but effective ways for vidalia to
+    auto-update its user's bridges via Tor in the background.
 
 Mike:
   - Roger wants to get an email every time there's a blog change,
     e.g. a comment. That way spam doesn't go undetected for weeks.
-  - Maybe just disable linking from blog comments entirely?
+    - Or, maybe just disable linking from blog comments entirely?
 
 =======================================================================
 
 Bugs/issues for Tor 0.2.0.x:
-  o Rip out the MIN_IPS_* stuff for geoip reporting.
-  o bridge authorities should not serve extrainfo docs.
-  o We still never call geoip_remove_old_clients(). Should we call it,
-    with a cutoff of a day ago, each time we're about to build a
-    descriptor/extrainfo pair?
-    o Actually, let's do it every 48 hours, so we don't wind up saying
-      too much.
-  o teach geoip_parse_entry() to skip over lines that start with #, so we
-    can put a little note at the top of the geoip file to say what it is.
   . we should have an off-by-default way for relays to dump geoip data to
     a file in their data directory, for measurement purposes.
     o Basic implementation
@@ -335,25 +204,10 @@ R d add an event to report geoip summaries to vidalia for bridge relays,
     so vidalia can say "recent activity (1-8 users) from sa".
 R - investigate: it looks like if the bridge authority is unreachable,
     we're not falling back on querying bridges directly?
-  o a getinfo so vidalia can query our current bootstrap state, in
-    case it attaches partway through and wants to catch up.
-  o directory authorities shouldn't complain about bootstrapping problems
-    just because they do a lot of reachability testing and some of
-    it fails.
-  o if your bridge is unreachable, it won't generate enough connection
-    failures to generate a bootstrap problem event.
 R - if "no running bridges known", an application request should make
     us retry all our bridges.
-  o get matt to fix vidalia so it moves to a "starting tor" bootstrap
-    state if it hasn't gotten any status events. Maybe it can even be
-    more certain by checking the version (<0211) and/or looking at the
-    results of the getinfo.
 R - get matt to make vidalia do a getinfo status/bootstrap-phase to
     get caught up after it connects.
-  o get matt to change vidalia's bootstrap status alerts so it doesn't
-    do anything if the event includes "recommendation=ignore".
-  o in circuituse.c,
-    /* XXX021 consider setting n_conn->socket_error to TIMEOUT */
 R d Setting DirPort when acting as bridge will give false Warnings
 
 For 0.2.1.x:
@@ -401,9 +255,6 @@ N   . Draft proposal for GeoIP aggregation (see external constraints *)
     - Put bandwidth weights in the networkstatus? So clients get weight
       their choices even before they have the descriptors; and so
       authorities can put in more accurate numbers in the future.
-R   . Map out the process of bootstrapping, break it into status events,
-      spec those events. Also, map out the ways where we can realize that
-      bootstrapping is *failing*, and include those. *
     d Fetch an updated geoip file from the directory authorities.
 
   - Tiny designs to write:
@@ -421,10 +272,6 @@ R   . Map out the process of bootstrapping, break it into status events,
       "running" interval to have ended even if it hadn't yet failed its
       third reachability test. the interval ended when the new descriptor
       appeared, and a new interval began then too.
-
-  - Items to backport to 0.2.0.x once solved in 0.2.1.x:
-    o add a geoip file *
-      o figure out license *
 
   - Use less RAM *
     - Optimize cell pool allocation.
@@ -447,11 +294,7 @@ R   . Map out the process of bootstrapping, break it into status events,
     - For dns?
     - For http?
     - For buffers?
-  o Emulate NSS better:
-    o Normalized cipher lists
-    o Normalized lists of extensions
   - Tool improvements:
-    o Get a "use less buffer ram" patch into openssl. *
     - Get IOCP patch into libevent *
 
   - Security improvements
@@ -474,9 +317,6 @@ R   . Map out the process of bootstrapping, break it into status events,
     - Can we deprecate controllers that don't use both features?
 
 Nice to have for 0.2.1.x:
-  o Better support for private networks: figure out what is hard, and
-    make it easier.
-
   - Proposals to write
     - steven's plan for replacing check.torproject.org with a built-in
       answer by tor itself.
@@ -591,8 +431,6 @@ If somebody wants to do this in some version, they should:
   - Consider if we can solve: the Tor client doesn't know what flags
     its bridge has (since it only gets the descriptor), so it can't
     make decisions based on Fast or Stable.
-  o Bridge authorities should do reachability testing but only on the
-    purpose==bridge descriptors they have.
   - Some mechanism for specifying that we want to stop using a cached
     bridge.
 
@@ -830,7 +668,7 @@ P - create a 'blog badge' for tor fans to link to and feature on their
 
   - Tor mirrors
     - make a mailing list with the mirror operators
-    - make an automated tool to check /project/trace/ at mirrors to
+    o make an automated tool to check /project/trace/ at mirrors to
       learn which ones are lagging behind.
     - auto (or manually) cull the mirrors that are broken; and
       contact their operator?
