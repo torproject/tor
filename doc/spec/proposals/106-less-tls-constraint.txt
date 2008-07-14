@@ -5,6 +5,7 @@ Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 9-Feb-2007
 Status: Closed
+Implemented-In: 0.2.0.x
 
 Overview:
 

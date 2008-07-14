@@ -3,6 +3,7 @@ Title: Mass authority migration with legacy keys
 Author: Nick Mathewson
 Created: 13-May-2008
 Status: Finished
+Implemented-In: 0.2.0.x
 
 Overview:
 

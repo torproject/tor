@@ -22,6 +22,8 @@ for my $f (@files) {
     my $num = substr($f, 0, 3);
     my $status = undef;
     my $title = undef;
+    my $implemented_in = undef;
+    my $target = undef;
     my $alleged_fname = undef;
     if ($f !~ /\.txt/) { print "$f doesn't end with .txt\n"; }
     open(F, "$f");
@@ -40,6 +42,14 @@ for my $f (@files) {
 	    $title =~ s/\.$//;
 	    chomp $title;
 	}
+	if (/^Implemented-In: (.*)/) {
+	    $implemented_in = $1;
+	    chomp $implemented_in;
+	}
+	if (/^Target: (.*)/) {
+	    $target = $1;
+	    chomp $target;
+	}
     }
     close F;
     die "I've never heard of status $status in proposal $num"
@@ -49,6 +59,13 @@ for my $f (@files) {
     die "Proposal $num has no Filename line" unless (defined $alleged_fname);
     die "Proposal $num says its fname is $alleged_fname, but it's really $f"
 	if ($alleged_fname ne $f);
+    print "No Target for proposal $num\n" if (($status eq 'OPEN' or
+					       $status eq 'ACCEPTED')
+					      and !defined $target);
+    print "No Implemented-In for proposal $num\n"
+	if (($status eq 'CLOSED' or $status eq 'FINISHED')
+	    and !defined $implemented_in);
+
     $title{$num} = $title;
     $status{$num} = $status;
 }

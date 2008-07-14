@@ -5,6 +5,7 @@ Last-Modified: $Date$
 Author: Kevin Bauer & Damon McCoy
 Created: 8-March-2007
 Status: Closed
+Implemented-In: 0.2.0.x
 
 Overview:
 

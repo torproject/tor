@@ -3,6 +3,7 @@ Title: Download consensus documents only when it will be trusted
 Author: Peter Palfrader
 Created: 2008-04-13
 Status: Closed
+Implemented-In: 0.2.1.x
 
 Overview:
 

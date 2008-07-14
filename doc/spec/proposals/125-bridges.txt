@@ -5,6 +5,7 @@ Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 11-Nov-2007
 Status: Finished
+Implemented-In: 0.2.0.x
 
 0. Preface
 

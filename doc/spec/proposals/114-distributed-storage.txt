@@ -5,6 +5,7 @@ Last-Modified: $Date$
 Author: Karsten Loesing
 Created: 13-May-2007
 Status: Closed
+Implemented-In: 0.2.0.x
 
 Change history:
 
