@@ -74,6 +74,7 @@ Proposals by number:
 149  Using data from NETINFO cells [OPEN]
 150  Exclude Exit Nodes from a circuit [ACCEPTED]
 151  Improving Tor Path Selection [DRAFT]
+152  Optionally allow exit from single-hop circuits  [DRAFT]
 
 
 Proposals by status:
@@ -85,6 +86,7 @@ Proposals by status:
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the
    151  Improving Tor Path Selection
+   152  Optionally allow exit from single-hop circuits 
  OPEN:
    121  Hidden Service Authentication
    142  Combine Introduction and Rendezvous Points
