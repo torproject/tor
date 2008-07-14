@@ -86,6 +86,13 @@ What should go in a proposal:
    The Version and Last-Modified fields should use the SVN Revision and Date
    tags respectively.
 
+   These fields are optional but recommended:
+     Target, Implemented-In.
+   The Target field should describe which version the proposal is hoped to be
+   implemented in (if it's Open or Accepted).  The Implemented-In field
+   should describe which version the proposal was implemented in (if it's
+   Finished or Closed).
+
    The body of the proposal should start with an Overview section explaining
    what the proposal's about, what it does, and about what state it's in.
 

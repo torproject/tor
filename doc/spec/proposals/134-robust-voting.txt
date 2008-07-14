@@ -3,6 +3,7 @@ Title: More robust consensus voting with diverse authority sets
 Author: Peter Palfrader
 Created: 2008-04-01
 Status: Accepted
+Target: 0.2.1.x
 
 Overview:
 

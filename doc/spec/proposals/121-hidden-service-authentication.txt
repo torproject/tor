@@ -6,6 +6,7 @@ Author: Tobias Kamm, Thomas Lauterbach, Karsten Loesing, Ferdinand Rieger,
         Christoph Weingarten
 Created: 10-Sep-2007
 Status: Open
+Target: 0.2.1.x
 
 Change history:
 
