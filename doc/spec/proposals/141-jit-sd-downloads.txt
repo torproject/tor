@@ -86,9 +86,8 @@ Status: Draft
   Furthermore the server descriptor also contains the exact version of
   the Tor software that the server is running and some decisions are
   made based on the server version number (for instance a Tor client
-  will only make conditional consensus requests [proposal from 13 Apr
-  2008 that never got a number] when talking to Tor servers version
-  0.2.1.1-alpha or later).
+  will only make conditional consensus requests [proposal 139] when
+  talking to Tor servers version 0.2.1.1-alpha or later).
 
 2.4 Contact/key information
 
