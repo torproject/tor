@@ -35,7 +35,7 @@ Status: Draft
   This document lists all servers currently running on the network.
   The Tor client will then try to get a server descriptor for each
   of the running servers.  All server descriptors currently amount
-  to about 1.5 Metabytes of downloads.
+  to about 1.5 Megabytes of downloads.
 
   A Tor client learns several things about a server from its descriptor.
   Some of these it already learned from the network status document
