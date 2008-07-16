@@ -3,10 +3,13 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
-Changes in version 0.2.0.30 - 2008-07-xx
+Changes in version 0.2.0.30 - 2008-07-15
   This new stable release switches to a more efficient directory
-  distribution design, adds features to make Tor harder to block,
-  allows Tor to act as a DNS proxy,
+  distribution design, adds features to make connections to the Tor
+  network harder to block, allows Tor to act as a DNS proxy, adds separate
+  rate limiting for relayed traffic to make it easier for clients to
+  become relays, fix a variety of potential anonymity problems, and
+  includes the usual huge pile of other features and bug fixes.
 
   o New v3 directory design:
     - Tor now uses a new way to learn about and distribute information
@@ -275,6 +278,12 @@ Changes in version 0.2.0.30 - 2008-07-xx
     - Reject uploaded descriptors and extrainfo documents if they're
       huge. Otherwise we'll cache them all over the network and it'll
       clog everything up. Suggested by Aljosha Judmayer.
+    - When a hidden service was trying to establish an introduction point,
+      and Tor *did* manage to reuse one of the preemptively built
+      circuits, it didn't correctly remember which one it used,
+      so it asked for another one soon after, until there were no
+      more preemptive circuits, at which point it launched one from
+      scratch. Bugfix on 0.0.9.x.
 
   o Rate limiting and load balancing improvements:
     - When we add data to a write buffer in response to the data on that
@@ -535,6 +544,9 @@ Changes in version 0.2.0.30 - 2008-07-xx
     - On Windows, we were preventing other processes from reading
       cached-routers while Tor was running. (Reported by janbar)
     - Check return values from pthread_mutex functions.
+    - When opening /dev/null in finish_daemonize(), do not pass the
+      O_CREAT flag. Fortify was complaining, and correctly so. Fixes
+      bug 742; fix from Michael Scherer. Bugfix on 0.0.2pre19.
 
   o Controller features:
     - The GETCONF command now escapes and quotes configuration values
@@ -654,6 +666,14 @@ Changes in version 0.2.0.30 - 2008-07-xx
     - Do not automatically run configure from autogen.sh. This
       non-standard behavior tended to annoy people who have built other
       programs.
+    - Fix a macro/CPP interaction that was confusing some compilers:
+      some GCCs don't like #if/#endif pairs inside macro arguments.
+      Fixes bug 707.
+    - Fix macro collision between OpenSSL 0.9.8h and Windows headers.
+      Fixes bug 704; fix from Steven Murdoch.
+    - Correctly detect transparent proxy support on Linux hosts that
+      require in.h to be included before netfilter_ipv4.h.  Patch
+      from coderman.
 
   o Logging improvements:
     - When we haven't had any application requests lately, don't bother

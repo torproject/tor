@@ -56,9 +56,9 @@ Changes in version 0.2.0.29-rc - 2008-07-08
       address. Fixes bug 737; bugfix on 0.2.0.22-rc. Reported by goldy.
 
   o Minor bugfixes:
-    - Fix a macro/CPP interactions that was confusing some compilers:
+    - Fix a macro/CPP interaction that was confusing some compilers:
       some GCCs don't like #if/#endif pairs inside macro arguments.
-      Fix for bug 707.
+      Fixes bug 707.
     - Fix macro collision between OpenSSL 0.9.8h and Windows headers.
       Fixes bug 704; fix from Steven Murdoch.
     - When opening /dev/null in finish_daemonize(), do not pass the
