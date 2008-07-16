@@ -124,6 +124,8 @@ Steven
   - Mike's question #3 on https://www.torproject.org/volunteer#Research
   - Worthwhile shipping TBB with some local html help files that come
     as bookmarks?
+  - Decide whether TBB should use Torbutton's "lock" feature.
+    http://archives.seul.org/or/cvs/Jun-2008/msg00186.html
 
 Andrew
   - Which bundles include Torbutton? Change the docs/tor-doc-foo pages

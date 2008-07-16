@@ -29,7 +29,7 @@ Status: Draft
 2. What is in a server descriptor
 
   When a Tor client starts the first thing it will try to get is a
-  current network status document, a consensus signed by a majority
+  current network status document: a consensus signed by a majority
   of directory authorities.  This document is currently about 100
   Kilobytes in size, tho it will grow linearly with network size.
   This document lists all servers currently running on the network.
@@ -93,8 +93,8 @@ Status: Draft
 
   A server descriptor lists a server's IP address and TCP ports on which
   it accepts onion and directory connections.  Furthermore it contains
-  the onion key, a short lived RSA key to which clients encrypt CREATE
-  cells.
+  the onion key (a short lived RSA key to which clients encrypt CREATE
+  cells).
 
 2.5 Identity information
 
