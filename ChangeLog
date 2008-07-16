@@ -1,8 +1,8 @@
-Changes in version 0.2.0.30-rc - 2008-07-??
- o Minor bugsfixes:
+Changes in version 0.2.0.30 - 2008-07-15
+ o Minor bugfixes:
     - Stop using __attribute__((nonnull)) with GCC: it can give us useful
       warnings (occasionally), but it can also cause the compiler to
-      eliminate error-checking code.  Suggested by Peter Gutmann.
+      eliminate error-checking code. Suggested by Peter Gutmann.
 
 
 Changes in version 0.2.0.29-rc - 2008-07-08
