@@ -4072,7 +4072,7 @@ main(int c, char**v)
 
   crypto_seed_rng(1);
 
-  if (0) {
+  if (1) {
     bench_aes();
     return 0;
   }

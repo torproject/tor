@@ -28,6 +28,10 @@ Changes in version 0.2.1.3-alpha - 2008-07-xx
       don't reschedule publication of the next descriptor. Fixes bug 763.
       Bugfix on 0.0.9.3.
 
+  o Removed features
+    - Remove all backward-compatibility code to support servers running
+      versions of Tor so old as to no longer work at all on the Tor network.
+
 
 Changes in version 0.2.0.29-rc - 2008-07-08
   o Major bugfixes:

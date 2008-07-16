@@ -367,6 +367,15 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
+  /* 0.1.1.17-rc was the first version that claimed to be stable, doesn't
+   * crash and drop circuits all the time, and is even vaguely compatible with
+   * the current network */
+  if (platform && !tor_version_as_new_as(platform,"0.1.1.17-rc")) {
+    if (msg)
+      *msg = "Tor version is far too old to work.";
+    return FP_REJECT;
+  }
+
   result = dirserv_get_name_status(id_digest, nickname);
   if (result & FP_NAMED) {
     if (should_log)
@@ -437,10 +446,6 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
         *msg = "Authdir rejects unknown routers.";
       return FP_REJECT;
     }
-    /* 0.1.0.2-rc was the first version that did enough self-testing that
-     * we're willing to take its word about whether it's running. */
-    if (platform && !tor_version_as_new_as(platform,"0.1.0.2-rc"))
-      result |= FP_INVALID;
   }
 
   return result;
@@ -2035,7 +2040,6 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  int listbadexits, int listbaddirs)
 {
   int unstable_version =
-    tor_version_as_new_as(ri->platform,"0.1.1.10-alpha") &&
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
   memset(rs, 0, sizeof(routerstatus_t));
 
@@ -2079,10 +2083,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_bad_exit = listbadexits && ri->is_bad_exit;
   ri->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, now);
   rs->is_hs_dir = ri->is_hs_dir;
-  /* 0.1.1.9-alpha is the first version to support fetch by descriptor
-   * hash. */
-  rs->is_v2_dir = ri->dir_port &&
-    tor_version_as_new_as(ri->platform,"0.1.1.9-alpha");
+  rs->is_v2_dir = ri->dir_port != 0;
 
   if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
     rs->is_named = rs->is_unnamed = 0;

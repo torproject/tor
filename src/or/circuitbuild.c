@@ -365,9 +365,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
    * (i.e. old or broken) and the other side will let us make a second
    * connection without dropping it immediately... */
   if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
-      (n_conn->_base.or_is_obsolete &&
-       router_digest_version_as_new_as(firsthop->extend_info->identity_digest,
-                                       "0.1.1.9-alpha-cvs"))) {
+      (n_conn->_base.or_is_obsolete)) {
     /* not currently connected */
     circ->_base.n_addr = firsthop->extend_info->addr;
     circ->_base.n_port = firsthop->extend_info->port;
@@ -551,14 +549,10 @@ should_use_create_fast_for_router(routerinfo_t *router,
                                   origin_circuit_t *circ)
 {
   or_options_t *options = get_options();
+  (void) router; /* ignore the router's version. */
 
   if (!options->FastFirstHopPK) /* create_fast is disabled */
     return 0;
-  if (router && router->platform &&
-      !tor_version_as_new_as(router->platform, "0.1.0.6-rc")) {
-    /* known not to work */
-    return 0;
-  }
   if (server_mode(options) && circ->cpath->extend_info->onion_key) {
     /* We're a server, and we know an onion key. We can choose.
      * Prefer to blend in. */
@@ -762,8 +756,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
    * (i.e. old or broken) and the other side will let us make a second
    * connection without dropping it immediately... */
   if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
-    (n_conn->_base.or_is_obsolete &&
-     router_digest_version_as_new_as(id_digest,"0.1.1.9-alpha-cvs"))) {
+      n_conn->_base.or_is_obsolete) {
     struct in_addr in;
     char tmpbuf[INET_NTOA_BUF_LEN];
     in.s_addr = htonl(circ->n_addr);

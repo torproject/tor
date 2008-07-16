@@ -814,7 +814,9 @@ typedef struct connection_t {
   /** Edge connections only: true if we've blocked reading until the
    * circuit has fewer queued cells. */
   unsigned int edge_blocked_on_circ:1;
-  /** Used for OR conns that shouldn't get any new circs attached to them. */
+  /** Used for OR conns that shouldn't get any new circs attached to them,
+   * because the connection is too old. */
+  /* XXXX "obsolete" isn't really a good name here. */
   unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
