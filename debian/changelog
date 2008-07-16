@@ -1,8 +1,8 @@
-tor (0.2.1.0-unreleased-1) XXperimental; urgency=low
+tor (0.2.1.2-alpha-1) experimental; urgency=low
 
-  * trunk
+  * New alpha release.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 07 Jul 2008 13:25:49 +0200
+ -- Peter Palfrader <weasel@debian.org>  Wed, 16 Jul 2008 13:05:45 +0200
 
 tor (0.2.0.30-1) unstable; urgency=low
 
