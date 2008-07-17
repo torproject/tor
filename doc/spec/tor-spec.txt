@@ -5,9 +5,11 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-Note: This document aims to specify Tor as implemented in 0.1.2.x
-and earlier.  Future versions of Tor may implement improved protocols, and
-compatibility is not guaranteed.
+Note: This document aims to specify Tor as implemented in 0.2.1.x.  Future
+versions of Tor may implement improved protocols, and compatibility is not
+guaranteed.  Compatibility notes are given for versions 0.1.1.15-rc and
+later; earlier versions are not compatible with the Tor network as of this
+writing.
 
 This specification is not a design document; most design criteria
 are not examined.  For more information on why Tor acts as it does,
@@ -293,8 +295,8 @@ see tor-design.pdf.
       DESTROY: Payload contains a reason for closing the circuit.
                (see 5.4)
    Upon receiving any other value for the command field, an OR must
-   drop the cell.  [XXXX Versions prior to 0.1.0.?? logged a warning
-   when dropping the cell; this is bad behavior. -NM]
+   drop the cell.  Since more cell types may be added in the future, ORs
+   should generally not warn when encountering unrecognized commands.
 
    The payload is padded with 0 bytes.
 
@@ -419,11 +421,6 @@ see tor-design.pdf.
 
    As usual with DH, x and y MUST be generated randomly.
 
-[
-   To implement backward-compatible version negotiation, parties MUST
-   drop CREATE cells with all-[00] onion-skins.
-]
-
 5.1.1. CREATE_FAST/CREATED_FAST cells
 
    When initializing the first hop of a circuit, the OP has already
@@ -445,9 +442,6 @@ see tor-design.pdf.
 
    The values of X and Y must be generated randomly.
 
-   [Versions of Tor before 0.1.0.6-rc did not support these cell types;
-    clients should not send CREATE_FAST cells to older Tor servers.]
-
    If an OR sees a circuit created with CREATE_FAST, the OR is sure to be the
    first hop of a circuit.  ORs SHOULD reject attempts to create streams with
    RELAY_BEGIN exiting the circuit at the first hop: letting Tor be used as a
@@ -468,10 +462,6 @@ see tor-design.pdf.
    cell's g^y with 0 or 1, thus creating a known g^xy and impersonating
    the server. Discarding other keys may allow attacks to learn bits of
    the private key.)
-
-   (The mainline Tor implementation, in the 0.1.1.x-alpha series, discarded
-   all g^x values less than 2^24, greater than p-2^24, or having more than
-   1024-16 identical bits.  This served no useful purpose, and we stopped.)
 
    If CREATE or EXTEND is used to extend a circuit, the client and server
    base their key material on K0=g^xy, represented as a big-endian unsigned
@@ -626,9 +616,6 @@ see tor-design.pdf.
     11 -- DESTROYED       (The circuit was destroyed w/o client TRUNCATE)
     12 -- NOSUCHSERVICE   (Request for unknown hidden service)
 
-   [Versions of Tor prior to 0.1.0.11 didn't send reasons; implementations
-   MUST accept empty TRUNCATED and DESTROY cells.]
-
 5.5. Routing relay cells
 
    When an OR receives a RELAY cell, it checks the cell's circID and
@@ -732,9 +719,7 @@ see tor-design.pdf.
 
    If the RELAY cell is recognized but the relay command is not
    understood, the cell must be dropped and ignored. Its contents
-   still count with respect to the digests, though. [Before
-   0.1.1.10, Tor closed circuits when it received an unknown relay
-   command. Perhaps this will be more forward-compatible. -RD]
+   still count with respect to the digests, though.
 
 6.2. Opening streams and transferring data
 
@@ -766,10 +751,9 @@ see tor-design.pdf.
        An address type (6)     [1 octet]
        The IPv6 address to which the connection was made [16 octets]
        A number of seconds (TTL) for which the address may be cached [4 octets]
-   [XXXX Versions of Tor before 0.1.1.6 ignore and do not generate the TTL
-   field.  No version of Tor currently generates the IPv6 format.
+   [XXXX No version of Tor currently generates the IPv6 format.]
 
-   Tor servers before 0.1.2.0 set the TTL field to a fixed value.  Later
+   [Tor servers before 0.1.2.0 set the TTL field to a fixed value.  Later
    versions set the TTL to the last value seen from a DNS server, and expire
    their own cached entries after a fixed interval.  This prevents certain
    attacks.]
@@ -831,8 +815,8 @@ see tor-design.pdf.
                                    non-directory server.)
 
    (With REASON_EXITPOLICY, the 4-byte IPv4 address or 16-byte IPv6 address
-   forms the optional data; no other reason currently has extra data.
-   As of 0.1.1.6, the body also contains a 4-byte TTL.)
+   forms the optional data, along with a 4-byte TTL; no other reason
+   currently has extra data.)
 
    OPs and ORs MUST accept reasons not on the above list, since future
    versions of Tor may provide more fine-grained reasons.
