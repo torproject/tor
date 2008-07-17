@@ -1,3 +1,10 @@
+tor (0.2.1.X-alpha-X) Xxperimental; urgency=low
+
+  * Do not build with openbsd's malloc unless enable-openbsd-malloc is in
+    DEB_BUILD_OPTIONS.
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 17 Jul 2008 21:37:14 +0200
+
 tor (0.2.1.2-alpha-1) experimental; urgency=low
 
   * New alpha release.
