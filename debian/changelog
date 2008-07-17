@@ -3,10 +3,10 @@ tor (0.2.0.30-2) unstable; urgency=low
   * Stop requiring that the binary in /usr/sbin/tor is still the same as the
     one that actually is the running tor when we try to stop or reload the
     daemon using the init script.  If the process is called tor, running as
-    debian-tor, and the pid file agrees to then it probably is the Tor you
+    debian-tor, and the pid file agrees too then it probably is the Tor you
     want to stop (closes: #491246).
 
- -- Peter Palfrader <weasel@debian.org>  Fri, 18 Jul 2008 01:46:26 +0200
+ -- Peter Palfrader <weasel@debian.org>  Fri, 18 Jul 2008 01:50:37 +0200
 
 tor (0.2.0.30-1) unstable; urgency=low
 
