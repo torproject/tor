@@ -1,3 +1,11 @@
+tor (0.2.0.30-X) unstable; urgency=low
+
+  * Tweak a few error messages in the init script to use the proper variables
+    (not that it should matter, the Right One has the same value, but still)
+    and to list more possible error reasons.
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 18 Jul 2008 01:56:04 +0200
+
 tor (0.2.0.30-2) unstable; urgency=low
 
   * Stop requiring that the binary in /usr/sbin/tor is still the same as the

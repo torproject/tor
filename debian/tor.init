@@ -151,9 +151,9 @@ case "$1" in
 		echo "$NAME."
 	elif kill -0 $pid 2>/dev/null
 	then
-		echo "FAILED (Is $pid not $NAME?)."
+		echo "FAILED (Is $pid not $DAEMON_NAME or not running as $DAEMON_USER?)."
 	else
-		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
+		echo "FAILED ($DAEMON_NAME died: process $pid not running; or permission denied)."
 	fi
 	;;
   reload|force-reload)
@@ -172,9 +172,9 @@ case "$1" in
 		echo "$NAME."
 	elif kill -0 $pid 2>/dev/null
 	then
-		echo "FAILED (Is $pid not $NAME?)."
+		echo "FAILED (Is $pid not $DAEMON_NAME or not running as $DAEMON_USER?)."
 	else
-		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
+		echo "FAILED ($DAEMON_NAME died: process $pid not running; or permission denied)."
 	fi
 	;;
   restart)
