@@ -22,6 +22,8 @@ NAME=tor
 DESC="tor daemon"
 TORPIDDIR=/var/run/tor
 TORPID=$TORPIDDIR/tor.pid
+DAEMON_USER=debian-tor
+DAEMON_NAME=tor
 DEFAULTSFILE=/etc/default/$NAME
 WAITFORDAEMON=60
 ARGS=""
@@ -144,12 +146,12 @@ case "$1" in
 		exit 0
 	fi
 
-	if start-stop-daemon --stop --signal INT --quiet --pidfile $TORPID --exec $DAEMON; then
+	if start-stop-daemon --stop --signal INT --quiet --pidfile $TORPID --name $DAEMON_NAME --user $DAEMON_USER; then
 		wait_for_deaddaemon $pid
 		echo "$NAME."
 	elif kill -0 $pid 2>/dev/null
 	then
-		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
+		echo "FAILED (Is $pid not $NAME?)."
 	else
 		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
 	fi
@@ -165,12 +167,12 @@ case "$1" in
 
 	check_config
 
-	if start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --exec $DAEMON
+	if start-stop-daemon --stop --signal 1 --quiet --pidfile $TORPID --name $DAEMON_NAME --user $DAEMON_USER
 	then
 		echo "$NAME."
 	elif kill -0 $pid 2>/dev/null
 	then
-		echo "FAILED (Is $pid not $NAME?  Is $DAEMON a different binary now?)."
+		echo "FAILED (Is $pid not $NAME?)."
 	else
 		echo "FAILED ($DAEMON died: process $pid not running; or permission denied)."
 	fi
