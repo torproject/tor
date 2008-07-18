@@ -1706,7 +1706,8 @@ routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
 /** Return a random running router from the routerlist.  If any node
  * named in <b>preferred</b> is available, pick one of those.  Never
  * pick a node named in <b>excluded</b>, or whose routerinfo is in
- * <b>excludedsmartlist</b>, even if they are the only nodes
+ * <b>excludedsmartlist</b>, or whose routerinfo matches <b>excludedset</b>,
+ * even if they are the only nodes
  * available.  If <b>strict</b> is true, never pick any node besides
  * those in <b>preferred</b>.
  * If <b>need_uptime</b> is non-zero and any router has more than
@@ -1723,6 +1724,7 @@ routerinfo_t *
 router_choose_random_node(const char *preferred,
                           const char *excluded,
                           smartlist_t *excludedsmartlist,
+                          routerset_t *excludedset,
                           int need_uptime, int need_capacity,
                           int need_guard,
                           int allow_invalid, int strict,
@@ -1752,6 +1754,8 @@ router_choose_random_node(const char *preferred,
     smartlist_subtract(sl,excludednodes);
     if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
+    if (excludedset)
+      routerset_subtract_routers(sl,excludedset);
     choice = smartlist_choose(sl);
     smartlist_free(sl);
   }
@@ -1765,6 +1769,8 @@ router_choose_random_node(const char *preferred,
     smartlist_subtract(sl,excludednodes);
     if (excludedsmartlist)
       smartlist_subtract(sl,excludedsmartlist);
+    if (excludedset)
+      routerset_subtract_routers(sl,excludedset);
 
     if (need_capacity || need_guard)
       choice = routerlist_sl_choose_by_bandwidth(sl, rule);
@@ -1781,7 +1787,7 @@ router_choose_random_node(const char *preferred,
                need_uptime?", stable":"",
                need_guard?", guard":"");
       choice = router_choose_random_node(
-        NULL, excluded, excludedsmartlist,
+        NULL, excluded, excludedsmartlist, excludedset,
         0, 0, 0, allow_invalid, 0, weight_for_exit);
     }
   }
@@ -1798,12 +1804,13 @@ router_choose_random_node(const char *preferred,
   return choice;
 }
 
-/** Return true iff the digest of <b>router</b>'s identity key,
- * encoded in hexadecimal, matches <b>hexdigest</b> (which is
- * optionally prefixed with a single dollar sign).  Return false if
+/** Helper: Return true iff the <b>identity_digest</b> and <b>nickname</b>
+ * combination of a router, encoded in hexadecimal, matches <b>hexdigest</b>
+ * (which is optionally prefixed with a single dollar sign).  Return false if
  * <b>hexdigest</b> is malformed, or it doesn't match.  */
 static INLINE int
-router_hex_digest_matches(routerinfo_t *router, const char *hexdigest)
+hex_digest_matches(const char *hexdigest, const char *identity_digest,
+                   const char *nickname, int is_named)
 {
   char digest[DIGEST_LEN];
   size_t len;
@@ -1817,15 +1824,26 @@ router_hex_digest_matches(routerinfo_t *router, const char *hexdigest)
   else if (len > HEX_DIGEST_LEN &&
            (hexdigest[HEX_DIGEST_LEN] == '=' ||
             hexdigest[HEX_DIGEST_LEN] == '~')) {
-    if (strcasecmp(hexdigest+HEX_DIGEST_LEN+1, router->nickname))
+    if (strcasecmp(hexdigest+HEX_DIGEST_LEN+1, nickname))
       return 0;
-    if (hexdigest[HEX_DIGEST_LEN] == '=' && !router->is_named)
+    if (hexdigest[HEX_DIGEST_LEN] == '=' && !is_named)
       return 0;
   }
 
   if (base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
     return 0;
-  return (!memcmp(digest, router->cache_info.identity_digest, DIGEST_LEN));
+  return (!memcmp(digest, identity_digest, DIGEST_LEN));
+}
+
+/** Return true iff the digest of <b>router</b>'s identity key,
+ * encoded in hexadecimal, matches <b>hexdigest</b> (which is
+ * optionally prefixed with a single dollar sign).  Return false if
+ * <b>hexdigest</b> is malformed, or it doesn't match.  */
+static INLINE int
+router_hex_digest_matches(routerinfo_t *router, const char *hexdigest)
+{
+  return hex_digest_matches(hexdigest, router->cache_info.identity_digest,
+                            router->nickname, router->is_named);
 }
 
 /** Return true if <b>router</b>'s nickname matches <b>nickname</b>
@@ -4643,6 +4661,203 @@ void
 routers_sort_by_identity(smartlist_t *routers)
 {
   smartlist_sort(routers, _compare_routerinfo_by_id_digest);
+}
+
+/** A routerset specifies constraints on a set of possible routerinfos, based
+ * on their names, identities, or addresses.  It is optimized for determining
+ * whether a router is a member or not, in O(1+P) time, where P is the number
+ * of address policy constraints. */
+struct routerset_t {
+  /** A list of strings for the elements of the policy.  Each string is either
+   * a nickname, a hexadecimal identity fingerprint, or an address policy.  A
+   * router belongs to the set if its nickname OR its identity OR its address
+   * matches an entry here. */
+  smartlist_t *list;
+  /** A map from lowercase nicknames of routers in the set to (void*)1 */
+  strmap_t *names;
+  /** A map from identity digests routers in the set to (void*)1 */
+  digestmap_t *digests;
+  /** An address policy for routers in the set.  For implementation reasons,
+   * a router belongs to the set if it is _rejected_ by this policy. */
+  smartlist_t *policies;
+};
+
+/** Return a new empty routerset. */
+routerset_t *
+routerset_new(void)
+{
+  routerset_t *result = tor_malloc_zero(sizeof(routerset_t));
+  result->list = smartlist_create();
+  result->names = strmap_new();
+  result->digests = digestmap_new();
+  result->policies = smartlist_create();
+  return result;
+}
+
+/** Parse the string <b>s</b> to create a set of routerset entries, and add
+ * them to <b>target</b>.  In log messages, refer to the string as
+ * <b>description</b>.  Return 0 on success, -1 on failure.
+ *
+ * Three kinds of elements are allowed in routersets: nicknames, IP address
+ * patterns, and fingerprints.  They may be surrounded by optional space, and
+ * mst be separated by commas.
+ */
+int
+routerset_parse(routerset_t *target, const char *s, const char *description)
+{
+  int r = 0;
+  smartlist_t *list = smartlist_create();
+  smartlist_split_string(list, s, ",",
+                         SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
+  SMARTLIST_FOREACH(list, char *, nick, {
+      addr_policy_t *p;
+      if (is_legal_hexdigest(nick)) {
+        char d[DIGEST_LEN];
+        if (*nick == '$')
+          ++nick;
+        base16_decode(d, sizeof(d), nick, HEX_DIGEST_LEN);
+        digestmap_set(target->digests, d, (void*)1);
+      } else if (is_legal_nickname(nick)) {
+        strmap_set_lc(target->names, nick, (void*)1);
+      } else if ((strchr(nick,'.') || strchr(nick, '*')) &&
+                 (p = router_parse_addr_policy_item_from_string(
+                                             nick, ADDR_POLICY_REJECT))) {
+        smartlist_add(target->policies, p);
+      } else {
+        log_warn(LD_CONFIG, "Nickname '%s' in %s is misformed.", nick,
+                 description);
+        r = -1;
+        tor_free(nick);
+        SMARTLIST_DEL_CURRENT(list, nick);
+      }
+    });
+  smartlist_add_all(target->list, list);
+  smartlist_free(list);
+  return r;
+}
+
+/** Add all members of the set <b>source</b> to <b>target</b>. */
+void
+routerset_union(routerset_t *target, const routerset_t *source)
+{
+  char *s;
+  tor_assert(target);
+  if (!source || !source->list)
+    return;
+  s = routerset_to_string(source);
+  routerset_parse(target, s, "other routerset");
+  tor_free(s);
+}
+
+/** Helper.  Return true iff <b>set</b> contains a router based on the other
+ * provided fields. */
+static int
+routerset_contains(const routerset_t *set, uint32_t addr, uint16_t orport,
+                   const char *nickname, const char *id_digest, int is_named)
+{
+  if (!set || !set->list) return 0;
+  (void) is_named; /* not supported */
+  if (strmap_get_lc(set->names, nickname))
+    return 1;
+  if (digestmap_get(set->digests, id_digest))
+    return 1;
+  if (compare_addr_to_addr_policy(addr, orport, set->policies)
+      == ADDR_POLICY_REJECT)
+    return 1;
+  return 0;
+}
+
+/** Return true iff <b>ri</b> is in <b>set</b>. */
+int
+routerset_contains_router(const routerset_t *set, routerinfo_t *ri)
+{
+  return routerset_contains(set,
+                            ri->addr,
+                            ri->or_port,
+                            ri->nickname,
+                            ri->cache_info.identity_digest,
+                            ri->is_named);
+}
+
+/** Return true iff <b>rs</b> is in <b>set</b>. */
+int
+routerset_contains_routerstatus(const routerset_t *set, routerstatus_t *rs)
+{
+  return routerset_contains(set,
+                            rs->addr,
+                            rs->or_port,
+                            rs->nickname,
+                            rs->identity_digest,
+                            rs->is_named);
+}
+
+/** Add every known routerinfo_t that is a member of <b>routerset</b> to
+ * <b>out</b>.  If <b>running_only</b>, only add the running ones. */
+void
+routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
+                          int running_only)
+{
+  tor_assert(out);
+  if (!routerset || !routerset->list)
+    return;
+  if (!warned_nicknames)
+    warned_nicknames = smartlist_create();
+  SMARTLIST_FOREACH(routerset->list, const char *, name, {
+    routerinfo_t *router = router_get_by_nickname(name, 1);
+    if (router) {
+      if (!running_only || router->is_running)
+        smartlist_add(out, router);
+    }
+  });
+  if (smartlist_len(routerset->policies)) {
+    routerlist_t *rl = router_get_routerlist();
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router,
+      if (compare_addr_to_addr_policy(router->addr, router->or_port,
+               routerset->policies) == ADDR_POLICY_REJECT) {
+        if (!running_only || router->is_running)
+          smartlist_add(out, router);
+      });
+  }
+}
+
+/** Remove every routerinfo_t from <b>lst</b> that is in <b>routerset</b>. */
+void
+routerset_subtract_routers(smartlist_t *lst, const routerset_t *routerset)
+{
+  tor_assert(lst);
+  if (!routerset)
+    return;
+  SMARTLIST_FOREACH(lst, routerinfo_t *, r, {
+      if (routerset_contains_router(routerset, r)) {
+        SMARTLIST_DEL_CURRENT(lst, r);
+      }
+    });
+}
+
+/** Return a new string that when parsed by routerset_parse_string() will
+ * yield <b>set</b>. */
+char *
+routerset_to_string(const routerset_t *set)
+{
+  if (!set || !set->list)
+    return tor_strdup("");
+  return smartlist_join_strings(set->list, ",", 0, NULL);
+}
+
+/** Free all storage held in <b>routerset</b>. */
+void
+routerset_free(routerset_t *routerset)
+{
+  SMARTLIST_FOREACH(routerset->list, char *, cp, tor_free(cp));
+  smartlist_free(routerset->list);
+  SMARTLIST_FOREACH(routerset->policies, addr_policy_t *, p,
+                    addr_policy_free(p));
+  smartlist_free(routerset->policies);
+
+  strmap_free(routerset->names, NULL);
+  digestmap_free(routerset->digests, NULL);
+
+  tor_free(routerset);
 }
 
 /** Determine the routers that are responsible for <b>id</b> (binary) and

@@ -1174,7 +1174,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   smartlist_t *connections;
   int best_support = -1;
   int n_best_support=0;
-  smartlist_t *sl, *preferredexits, *excludedexits;
+  smartlist_t *sl, *preferredexits;
   routerinfo_t *router;
   or_options_t *options = get_options();
 
@@ -1262,9 +1262,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   preferredexits = smartlist_create();
   add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1);
 
-  excludedexits = smartlist_create();
-  add_nickname_list_to_smartlist(excludedexits,options->ExcludeNodes,0);
-
   sl = smartlist_create();
 
   /* If any routers definitely support any pending connections, choose one
@@ -1274,7 +1271,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       if (n_supported[i] == best_support)
         smartlist_add(sl, smartlist_get(dir->routers, i));
 
-    smartlist_subtract(sl,excludedexits);
+    routerset_subtract_routers(sl,options->_ExcludeExitNodesUnion);
     if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
       smartlist_intersect(sl,preferredexits);
     router = routerlist_sl_choose_by_bandwidth(sl, WEIGHT_FOR_EXIT);
@@ -1294,7 +1291,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
                  need_capacity?", fast":"",
                  need_uptime?", stable":"");
         smartlist_free(preferredexits);
-        smartlist_free(excludedexits);
         smartlist_free(sl);
         tor_free(n_supported);
         return choose_good_exit_server_general(dir, 0, 0);
@@ -1316,7 +1312,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
         }
       }
 
-      smartlist_subtract(sl,excludedexits);
+      routerset_subtract_routers(sl,options->_ExcludeExitNodesUnion);
       if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
         smartlist_intersect(sl,preferredexits);
         /* XXX sometimes the above results in null, when the requested
@@ -1330,7 +1326,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   }
 
   smartlist_free(preferredexits);
-  smartlist_free(excludedexits);
   smartlist_free(sl);
   tor_free(n_supported);
   if (router) {
@@ -1363,15 +1358,15 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (is_internal) /* pick it like a middle hop */
-        return router_choose_random_node(NULL, get_options()->ExcludeNodes,
-               NULL, need_uptime, need_capacity, 0,
-               get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
+        return router_choose_random_node(NULL, NULL,
+              NULL, get_options()->ExcludeNodes, need_uptime, need_capacity, 0,
+              get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
       else
         return choose_good_exit_server_general(dir,need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       return router_choose_random_node(
-               options->RendNodes, options->RendExcludeNodes,
-               NULL, need_uptime, need_capacity, 0,
+               options->RendNodes, options->RendExcludeNodes, NULL,
+               options->ExcludeNodes, need_uptime, need_capacity, 0,
                options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS, 0, 0);
   }
   log_warn(LD_BUG,"Unhandled purpose %d", purpose);
@@ -1592,7 +1587,7 @@ choose_good_middle_server(uint8_t purpose,
   if (purpose == CIRCUIT_PURPOSE_TESTING)
     preferred = compute_preferred_testing_list(options->TestVia);
   choice = router_choose_random_node(preferred,
-           options->ExcludeNodes, excluded,
+           NULL, excluded, options->ExcludeNodes,
            state->need_uptime, state->need_capacity, 0,
            options->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
   tor_free(preferred);
@@ -1627,6 +1622,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     routerlist_add_family(excluded, r);
   }
   if (firewall_is_fascist_or()) {
+    /*XXXX021 This can slow things down a lot; use a smarter implementation */
     /* exclude all ORs that listen on the wrong port */
     routerlist_t *rl = router_get_routerlist();
     int i;
@@ -1647,8 +1643,10 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   }
 
   choice = router_choose_random_node(
-           NULL, options->ExcludeNodes,
-           excluded, state ? state->need_uptime : 0,
+           NULL, NULL,
+           excluded,
+           options->ExcludeNodes,
+           state ? state->need_uptime : 0,
            state ? state->need_capacity : 0,
            state ? 0 : 1,
            options->_AllowInvalid & ALLOW_INVALID_ENTRY, 0, 0);
@@ -1845,7 +1843,7 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   else if (!options->UseBridges && !ri->is_possible_guard &&
            !router_nickname_is_in_list(ri, options->EntryNodes))
     *reason = "not recommended as a guard";
-  else if (router_nickname_is_in_list(ri, options->ExcludeNodes))
+  else if (routerset_contains_router(options->ExcludeNodes, ri))
     *reason = "excluded";
 
   if (*reason && ! e->bad_since) {

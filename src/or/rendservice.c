@@ -1229,6 +1229,7 @@ rend_services_introduce(void)
   int changed, prev_intro_nodes;
   smartlist_t *intro_routers, *exclude_routers;
   time_t now;
+  or_options_t *options = get_options();
 
   intro_routers = smartlist_create();
   exclude_routers = smartlist_create();
@@ -1303,7 +1304,8 @@ rend_services_introduce(void)
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
       router = router_choose_random_node(service->intro_prefer_nodes,
-               service->intro_exclude_nodes, exclude_routers, 1, 0, 0,
+               service->intro_exclude_nodes, exclude_routers,
+               options->ExcludeNodes, 1, 0, 0,
                get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION,
                0, 0);
       if (!router) {

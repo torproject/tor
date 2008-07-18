@@ -2028,8 +2028,12 @@ typedef struct {
                         * stop building circuits? */
   int StrictEntryNodes; /**< Boolean: When none of our EntryNodes are up, do we
                          * stop building circuits? */
-  char *ExcludeNodes; /**< Comma-separated list of nicknames of ORs not to
-                       * use in circuits. */
+  struct routerset_t *ExcludeNodes; /**< Comma-separated list of nicknames of
+                       * ORs not to use in circuits. */
+  struct routerset_t *ExcludeExitNodes; /**<DODOC */
+
+  /** Union of ExcludeNodes and ExcludeExitNodes */
+  struct routerset_t *_ExcludeExitNodesUnion;
 
   char *RendNodes; /**< Comma-separated list of nicknames used as introduction
                     * points. */
@@ -4032,9 +4036,11 @@ typedef enum {
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
 routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
+/* XXXX021. This is a truly hideous interface. */
 routerinfo_t *router_choose_random_node(const char *preferred,
                                         const char *excluded,
                                         smartlist_t *excludedsmartlist,
+                                        struct routerset_t *excludedset,
                                         int need_uptime, int need_capacity,
                                         int need_guard,
                                         int allow_invalid, int strict,
@@ -4107,6 +4113,22 @@ int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
 void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
+
+typedef struct routerset_t routerset_t;
+
+routerset_t *routerset_new(void);
+int routerset_parse(routerset_t *target, const char *s,
+                    const char *description);
+void routerset_union(routerset_t *target, const routerset_t *source);
+int routerset_contains_router(const routerset_t *set, routerinfo_t *ri);
+int routerset_contains_routerstatus(const routerset_t *set,
+                                    routerstatus_t *rs);
+void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
+                               int running_only);
+void routerset_subtract_routers(smartlist_t *out,
+                                const routerset_t *routerset);
+char *routerset_to_string(const routerset_t *routerset);
+void routerset_free(routerset_t *routerset);
 
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);

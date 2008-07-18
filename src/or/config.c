@@ -37,6 +37,8 @@ typedef enum config_type_t {
   CONFIG_TYPE_LINELIST_V,   /**< Catch-all "virtual" option to summarize
                              * context-sensitive config lines when fetching.
                              */
+  CONFIG_TYPE_ROUTERSET,    /**< A list of router names, addrs, and fps,
+                             * parsed into a routerset_t. */
   CONFIG_TYPE_OBSOLETE,     /**< Obsolete (ignored) option. */
 } config_type_t;
 
@@ -194,8 +196,9 @@ static config_var_t _option_vars[] = {
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V(EntryNodes,                  STRING,   NULL),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
-  V(ExcludeNodes,                STRING,   NULL),
-  V(ExitNodes,                   STRING,   NULL),
+  V(ExcludeNodes,                ROUTERSET, NULL),
+  V(ExcludeExitNodes,            ROUTERSET, NULL),
+  V(ExitNodes,                   STRING, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(FallbackNetworkstatusFile,   FILENAME,
@@ -1647,6 +1650,19 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     }
     break;
 
+  case CONFIG_TYPE_ROUTERSET:
+    if (*(routerset_t**)lvalue) {
+      routerset_free(*(routerset_t**)lvalue);
+    }
+    *(routerset_t**)lvalue = routerset_new();
+    if (routerset_parse(*(routerset_t**)lvalue, c->value, c->key)<0) {
+      tor_snprintf(buf, sizeof(buf), "Invalid exit list '%s' for option '%s'",
+                   c->value, c->key);
+      *msg = tor_strdup(buf);
+      return -1;
+    }
+    break;
+
   case CONFIG_TYPE_CSV:
     if (*(smartlist_t**)lvalue) {
       SMARTLIST_FOREACH(*(smartlist_t**)lvalue, char *, cp, tor_free(cp));
@@ -1896,6 +1912,9 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
       result->value = tor_strdup(*(int*)value ? "1" : "0");
       escape_val = 0; /* Can't need escape. */
       break;
+    case CONFIG_TYPE_ROUTERSET:
+      result->value = routerset_to_string(*(routerset_t**)value);
+      break;
     case CONFIG_TYPE_CSV:
       if (*(smartlist_t**)value)
         result->value =
@@ -2101,6 +2120,11 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
     case CONFIG_TYPE_MEMUNIT:
       *(uint64_t*)lvalue = 0;
       break;
+    case CONFIG_TYPE_ROUTERSET:
+      if (*(routerset_t**)lvalue) {
+        routerset_free(*(routerset_t**)lvalue);
+        *(routerset_t**)lvalue = NULL;
+      }
     case CONFIG_TYPE_CSV:
       if (*(smartlist_t**)lvalue) {
         SMARTLIST_FOREACH(*(smartlist_t **)lvalue, char *, cp, tor_free(cp));
@@ -2906,6 +2930,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TransPort and TransListenAddress are disabled in this build.");
 #endif
 
+  if (options->ExcludeExitNodes || options->ExcludeNodes) {
+    options->_ExcludeExitNodesUnion = routerset_new();
+    routerset_union(options->_ExcludeExitNodesUnion,options->ExcludeExitNodes);
+    routerset_union(options->_ExcludeExitNodesUnion,options->ExcludeNodes);
+  }
+
   if (options->StrictExitNodes &&
       (!options->ExitNodes || !strlen(options->ExitNodes)) &&
       (!old_options ||
@@ -3283,8 +3313,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
     return -1;
   if (check_nickname_list(options->EntryNodes, "EntryNodes", msg))
-    return -1;
-  if (check_nickname_list(options->ExcludeNodes, "ExcludeNodes", msg))
     return -1;
   if (check_nickname_list(options->RendNodes, "RendNodes", msg))
     return -1;
@@ -5121,6 +5149,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_DOUBLE: type = "Float"; break;
         case CONFIG_TYPE_BOOL: type = "Boolean"; break;
         case CONFIG_TYPE_ISOTIME: type = "Time"; break;
+        case CONFIG_TYPE_ROUTERSET: type = "RouterList"; break;
         case CONFIG_TYPE_CSV: type = "CommaList"; break;
         case CONFIG_TYPE_LINELIST: type = "LineList"; break;
         case CONFIG_TYPE_LINELIST_S: type = "Dependant"; break;
