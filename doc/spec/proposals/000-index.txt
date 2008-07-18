@@ -72,9 +72,10 @@ Proposals by number:
 147  Eliminate the need for v2 directories in generating v3 directories [ACCEPTED]
 148  Stream end reasons from the client side should be uniform [ACCEPTED]
 149  Using data from NETINFO cells [OPEN]
-150  Exclude Exit Nodes from a circuit [ACCEPTED]
+150  Exclude Exit Nodes from a circuit [CLOSED]
 151  Improving Tor Path Selection [DRAFT]
 152  Optionally allow exit from single-hop circuits  [DRAFT]
+153  Automatic software update protocol [DRAFT]
 
 
 Proposals by status:
@@ -87,6 +88,7 @@ Proposals by status:
    144  Increase the diversity of circuits by detecting nodes belonging the
    151  Improving Tor Path Selection
    152  Optionally allow exit from single-hop circuits 
+   153  Automatic software update protocol
  OPEN:
    121  Hidden Service Authentication
    142  Combine Introduction and Rendezvous Points
@@ -106,7 +108,6 @@ Proposals by status:
    140  Provide diffs between consensuses
    147  Eliminate the need for v2 directories in generating v3 directories
    148  Stream end reasons from the client side should be uniform
-   150  Exclude Exit Nodes from a circuit
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
@@ -137,6 +138,7 @@ Proposals by status:
    130  Version 2 Tor connection protocol
    138  Remove routers that are not Running from consensus documents
    139  Download consensus documents only when it will be trusted
+   150  Exclude Exit Nodes from a circuit
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
    113  Simplifying directory authority administration
