@@ -4715,13 +4715,16 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
         char d[DIGEST_LEN];
         if (*nick == '$')
           ++nick;
+        log_debug(LD_CONFIG, "Adding identity %s to %s", nick, description);
         base16_decode(d, sizeof(d), nick, HEX_DIGEST_LEN);
         digestmap_set(target->digests, d, (void*)1);
       } else if (is_legal_nickname(nick)) {
+        log_debug(LD_CONFIG, "Adding nickname %s to %s", nick, description);
         strmap_set_lc(target->names, nick, (void*)1);
       } else if ((strchr(nick,'.') || strchr(nick, '*')) &&
                  (p = router_parse_addr_policy_item_from_string(
-                                             nick, ADDR_POLICY_REJECT))) {
+                                     nick, ADDR_POLICY_REJECT))) {
+        log_debug(LD_CONFIG, "Adding address %s to %s", nick, description);
         smartlist_add(target->policies, p);
       } else {
         log_warn(LD_CONFIG, "Nickname '%s' in %s is misformed.", nick,
@@ -4762,7 +4765,7 @@ routerset_contains(const routerset_t *set, uint32_t addr, uint16_t orport,
   if (digestmap_get(set->digests, id_digest))
     return 1;
   if (compare_addr_to_addr_policy(addr, orport, set->policies)
-      == ADDR_POLICY_REJECT)
+      == ADDR_POLICY_REJECTED)
     return 1;
   return 0;
 }
@@ -4829,6 +4832,7 @@ routerset_subtract_routers(smartlist_t *lst, const routerset_t *routerset)
     return;
   SMARTLIST_FOREACH(lst, routerinfo_t *, r, {
       if (routerset_contains_router(routerset, r)) {
+        //log_debug(LD_DIR, "Subtracting %s",r->nickname);
         SMARTLIST_DEL_CURRENT(lst, r);
       }
     });
