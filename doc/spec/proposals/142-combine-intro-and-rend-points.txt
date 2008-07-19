@@ -13,6 +13,8 @@ Change history:
   04-Jul-2008  Give first security property the new name "Responsibility"
                and change new cell formats according to rendezvous protocol
                version 3 draft.
+  19-Jul-2008  Added comment by Nick (but no solution, yet) that sharing of
+               circuits between multiple clients is not supported by Tor.
 
 Overview:
 
@@ -169,6 +171,10 @@ Design:
   does. The only difference is that the hidden-service-side circuit is not
   exclusive for the client connection, but shared among multiple client
   connections.
+
+  [Tor does not allow sharing of a single circuit among multiple client
+   connections easily. We need to think about a smart and efficient way to
+   implement this. Comment by Nick. -KL]
 
 Security Implications:
 
