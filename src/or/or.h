@@ -717,10 +717,15 @@ typedef enum {
 /** Largest number of bytes that can fit in a relay cell payload. */
 #define RELAY_PAYLOAD_SIZE (CELL_PAYLOAD_SIZE-RELAY_HEADER_SIZE)
 
+/** Identifies a circuit on an or_connection */
+typedef uint16_t circid_t;
+/** Identifies a stream on a circuit */
+typedef uint16_t streamid_t;
+
 /** Parsed onion routing cell.  All communication between nodes
  * is via cells. */
 typedef struct cell_t {
-  uint16_t circ_id; /**< Circuit which received the cell. */
+  circid_t circ_id; /**< Circuit which received the cell. */
   uint8_t command; /**< Type of the cell: one of CELL_PADDING, CELL_CREATE,
                     * CELL_DESTROY, etc */
   char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
@@ -729,7 +734,7 @@ typedef struct cell_t {
 /** Parsed variable-length onion routing cell. */
 typedef struct var_cell_t {
   uint8_t command;
-  uint16_t circ_id;
+  circid_t circ_id;
   uint16_t payload_len;
   char payload[1];
 } var_cell_t;
@@ -752,7 +757,7 @@ typedef struct cell_queue_t {
 typedef struct {
   uint8_t command; /**< The end-to-end relay command. */
   uint16_t recognized; /**< Used to tell whether cell is for us. */
-  uint16_t stream_id; /**< Which stream is this cell associated with? */
+  streamid_t stream_id; /**< Which stream is this cell associated with? */
   char integrity[4]; /**< Used to tell whether cell is corrupted. */
   uint16_t length; /**< How long is the payload body? */
 } relay_header_t;
@@ -932,7 +937,7 @@ typedef struct or_connection_t {
   unsigned int is_canonical:1;
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
-  uint16_t next_circ_id; /**< Which circ_id do we try to use next on
+  circid_t next_circ_id; /**< Which circ_id do we try to use next on
                           * this connection?  This is always in the
                           * range 0..1<<15-1. */
 
@@ -983,8 +988,8 @@ typedef struct edge_connection_t {
   uint32_t address_ttl; /**< TTL for address-to-addr mapping on exit
                          * connection.  Exit connections only. */
 
-  uint16_t stream_id; /**< The stream ID used for this edge connection on its
-                       * circuit */
+  streamid_t stream_id; /**< The stream ID used for this edge connection on its
+                         * circuit */
 
   /** The reason why this connection is closing; passed to the controller. */
   uint16_t end_reason;
@@ -1737,8 +1742,6 @@ typedef struct {
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
 #define OR_CIRCUIT_MAGIC 0x98ABC04Fu
 
-typedef uint16_t circid_t;
-
 /**
  * A circuit is a path over the onion routing
  * network. Applications can connect to one end of the circuit, and can
@@ -1773,7 +1776,7 @@ typedef struct circuit_t {
   /** The identity hash of n_conn. */
   char n_conn_id_digest[DIGEST_LEN];
   /** The circuit_id used in the next (forward) hop of this circuit. */
-  uint16_t n_circ_id;
+  circid_t n_circ_id;
   /** The port for the OR that is next in this circuit. */
   uint16_t n_port;
   /** The IPv4 address of the OR that is next in this circuit. */
@@ -1874,7 +1877,7 @@ typedef struct origin_circuit_t {
 
   /** The next stream_id that will be tried when we're attempting to
    * construct a new AP stream originating at this circuit. */
-  uint16_t next_stream_id;
+  streamid_t next_stream_id;
 
   /** Quasi-global identifier for this circuit; used for control.c */
   /* XXXX NM This can get re-used after 2**32 circuits. */
@@ -2608,17 +2611,17 @@ void entry_guards_free_all(void);
 circuit_t * _circuit_get_global_list(void);
 const char *circuit_state_to_string(int state);
 void circuit_dump_by_conn(connection_t *conn, int severity);
-void circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
+void circuit_set_p_circid_orconn(or_circuit_t *circ, circid_t id,
                                  or_connection_t *conn);
-void circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
+void circuit_set_n_circid_orconn(circuit_t *circ, circid_t id,
                                  or_connection_t *conn);
 void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
 origin_circuit_t *origin_circuit_new(void);
-or_circuit_t *or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn);
-circuit_t *circuit_get_by_circid_orconn(uint16_t circ_id,
+or_circuit_t *or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn);
+circuit_t *circuit_get_by_circid_orconn(circid_t circ_id,
                                         or_connection_t *conn);
-int circuit_id_in_use_on_orconn(uint16_t circ_id, or_connection_t *conn);
+int circuit_id_in_use_on_orconn(circid_t circ_id, or_connection_t *conn);
 circuit_t *circuit_get_by_edge_conn(edge_connection_t *conn);
 void circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason);
 origin_circuit_t *circuit_get_by_global_id(uint32_t id);
@@ -2845,7 +2848,7 @@ void _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
 int connection_edge_reached_eof(edge_connection_t *conn);
 int connection_edge_process_inbuf(edge_connection_t *conn,
                                   int package_partial);
-int connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn);
+int connection_edge_destroy(circid_t circ_id, edge_connection_t *conn);
 int connection_edge_end(edge_connection_t *conn, char reason);
 int connection_edge_end_errno(edge_connection_t *conn);
 int connection_edge_finished_flushing(edge_connection_t *conn);
@@ -2941,7 +2944,7 @@ void connection_or_write_cell_to_buf(const cell_t *cell,
                                      or_connection_t *conn);
 void connection_or_write_var_cell_to_buf(const var_cell_t *cell,
                                          or_connection_t *conn);
-int connection_or_send_destroy(uint16_t circ_id, or_connection_t *conn,
+int connection_or_send_destroy(circid_t circ_id, or_connection_t *conn,
                                int reason);
 int connection_or_send_netinfo(or_connection_t *conn);
 int connection_or_send_cert(or_connection_t *conn);
@@ -3640,7 +3643,7 @@ int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
 
 void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
-int relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
+int relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
                                uint8_t relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer);
 int connection_edge_send_command(edge_connection_t *fromconn,

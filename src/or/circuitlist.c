@@ -34,7 +34,7 @@ static void circuit_free_cpath_node(crypt_path_t *victim);
 typedef struct orconn_circid_circuit_map_t {
   HT_ENTRY(orconn_circid_circuit_map_t) node;
   or_connection_t *or_conn;
-  uint16_t circ_id;
+  circid_t circ_id;
   circuit_t *circuit;
 } orconn_circid_circuit_map_t;
 
@@ -53,7 +53,7 @@ _orconn_circid_entries_eq(orconn_circid_circuit_map_t *a,
 static INLINE unsigned int
 _orconn_circid_entry_hash(orconn_circid_circuit_map_t *a)
 {
-  return (((unsigned)a->circ_id)<<16) ^ (unsigned)(uintptr_t)(a->or_conn);
+  return (((unsigned)a->circ_id)<<8) ^ (unsigned)(uintptr_t)(a->or_conn);
 }
 
 /** Map from [orconn,circid] to circuit. */
@@ -80,13 +80,13 @@ orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
  * XXX "active" isn't an arg anymore */
 static void
 circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
-                                 uint16_t id,
+                                 circid_t id,
                                  or_connection_t *conn)
 {
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
   or_connection_t *old_conn, **conn_ptr;
-  uint16_t old_id, *circid_ptr;
+  circid_t old_id, *circid_ptr;
   int was_active, make_active;
 
   if (direction == CELL_DIRECTION_OUT) {
@@ -159,7 +159,7 @@ circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
  * with the corresponding circuit ID, and add the circuit as appropriate
  * to the (orconn,id)-\>circuit map. */
 void
-circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
+circuit_set_p_circid_orconn(or_circuit_t *circ, circid_t id,
                             or_connection_t *conn)
 {
   circuit_set_circid_orconn_helper(TO_CIRCUIT(circ), CELL_DIRECTION_IN,
@@ -173,7 +173,7 @@ circuit_set_p_circid_orconn(or_circuit_t *circ, uint16_t id,
  * with the corresponding circuit ID, and add the circuit as appropriate
  * to the (orconn,id)-\>circuit map. */
 void
-circuit_set_n_circid_orconn(circuit_t *circ, uint16_t id,
+circuit_set_n_circid_orconn(circuit_t *circ, circid_t id,
                             or_connection_t *conn)
 {
   circuit_set_circid_orconn_helper(circ, CELL_DIRECTION_OUT, id, conn);
@@ -356,7 +356,7 @@ origin_circuit_new(void)
 /** Allocate a new or_circuit_t, connected to <b>p_conn</b> as
  * <b>p_circ_id</b>.  If <b>p_conn</b> is NULL, the circuit is unattached. */
 or_circuit_t *
-or_circuit_new(uint16_t p_circ_id, or_connection_t *p_conn)
+or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn)
 {
   /* CircIDs */
   or_circuit_t *circ;
@@ -603,7 +603,7 @@ circuit_get_by_global_id(uint32_t id)
  * Return NULL if no such circuit exists.
  */
 static INLINE circuit_t *
-circuit_get_by_circid_orconn_impl(uint16_t circ_id, or_connection_t *conn)
+circuit_get_by_circid_orconn_impl(circid_t circ_id, or_connection_t *conn)
 {
   orconn_circid_circuit_map_t search;
   orconn_circid_circuit_map_t *found;
@@ -652,7 +652,7 @@ circuit_get_by_circid_orconn_impl(uint16_t circ_id, or_connection_t *conn)
  * Return NULL if no such circuit exists.
  */
 circuit_t *
-circuit_get_by_circid_orconn(uint16_t circ_id, or_connection_t *conn)
+circuit_get_by_circid_orconn(circid_t circ_id, or_connection_t *conn)
 {
   circuit_t *circ = circuit_get_by_circid_orconn_impl(circ_id, conn);
   if (!circ || circ->marked_for_close)
@@ -664,7 +664,7 @@ circuit_get_by_circid_orconn(uint16_t circ_id, or_connection_t *conn)
 /** Return true iff the circuit ID <b>circ_id</b> is currently used by a
  * circuit, marked or not, on <b>conn</b>. */
 int
-circuit_id_in_use_on_orconn(uint16_t circ_id, or_connection_t *conn)
+circuit_id_in_use_on_orconn(circid_t circ_id, or_connection_t *conn)
 {
   return circuit_get_by_circid_orconn_impl(circ_id, conn) != NULL;
 }

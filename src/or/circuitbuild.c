@@ -69,12 +69,12 @@ static time_t start_of_month(time_t when);
  *
  * Return it, or 0 if can't get a unique circ_id.
  */
-static uint16_t
+static circid_t
 get_unique_circ_id_by_conn(or_connection_t *conn)
 {
-  uint16_t test_circ_id;
-  uint16_t attempts=0;
-  uint16_t high_bit;
+  circid_t test_circ_id;
+  circid_t attempts=0;
+  circid_t high_bit;
 
   tor_assert(conn);
   if (conn->circ_id_type == CIRC_ID_TYPE_NEITHER) {
@@ -488,7 +488,7 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
                             const char *payload)
 {
   cell_t cell;
-  uint16_t id;
+  circid_t id;
 
   tor_assert(circ);
   tor_assert(circ->n_conn);

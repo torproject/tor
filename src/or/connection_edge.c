@@ -153,7 +153,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
  * Mark it for close and return 0.
  */
 int
-connection_edge_destroy(uint16_t circ_id, edge_connection_t *conn)
+connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
 {
   if (!conn->_base.marked_for_close) {
     log_info(LD_EDGE,
@@ -1944,11 +1944,11 @@ connection_ap_process_natd(edge_connection_t *conn)
 /** Iterate over the two bytes of stream_id until we get one that is not
  * already in use; return it. Return 0 if can't get a unique stream_id.
  */
-static uint16_t
+static streamid_t
 get_unique_stream_id_by_circ(origin_circuit_t *circ)
 {
   edge_connection_t *tmpconn;
-  uint16_t test_stream_id;
+  streamid_t test_stream_id;
   uint32_t attempts=0;
 
 again:

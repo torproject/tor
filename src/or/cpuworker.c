@@ -63,7 +63,7 @@ connection_cpu_finished_flushing(connection_t *conn)
 /** Pack addr,port,and circ_id; set *tag to the result. (See note on
  * cpuworker_main for wire format.) */
 static void
-tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id)
+tag_pack(char *tag, uint32_t addr, uint16_t port, circid_t circ_id)
 {
   *(uint32_t *)tag     = addr;
   *(uint16_t *)(tag+4) = port;
@@ -73,7 +73,7 @@ tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id)
 /** Unpack <b>tag</b> into addr, port, and circ_id.
  */
 static void
-tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id)
+tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, circid_t *circ_id)
 {
   struct in_addr in;
   char addrbuf[INET_NTOA_BUF_LEN];
@@ -137,7 +137,7 @@ connection_cpu_process_inbuf(connection_t *conn)
   char buf[LEN_ONION_RESPONSE];
   uint32_t addr;
   uint16_t port;
-  uint16_t circ_id;
+  circid_t circ_id;
   or_connection_t *p_conn;
   circuit_t *circ;
 
