@@ -2035,11 +2035,6 @@ typedef struct {
   /** Union of ExcludeNodes and ExcludeExitNodes */
   struct routerset_t *_ExcludeExitNodesUnion;
 
-  char *RendNodes; /**< Comma-separated list of nicknames used as introduction
-                    * points. */
-  char *RendExcludeNodes; /**< Comma-separated list of nicknames not to use
-                           * as introduction points. */
-
   /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
   smartlist_t *AllowInvalidNodes;
   int _AllowInvalid; /**< Bitmask; derived from AllowInvalidNodes. */

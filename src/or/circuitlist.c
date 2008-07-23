@@ -838,14 +838,6 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
         _circ->purpose == CIRCUIT_PURPOSE_C_GENERAL &&
         !_circ->timestamp_dirty) {
       origin_circuit_t *circ = TO_ORIGIN_CIRCUIT(_circ);
-#if 0 /* XXX here while roger investigates a reported RendNodes bug */
-      if (_circ->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
-          options->RendNodes) {
-        routerinfo_t *exit = build_state_get_exit_router(circ->build_state);
-        if (exit && !router_nickname_is_in_list(exit, options->RendNodes))
-          continue; /* not one of our allowed RendNodes */
-      }
-#endif
       if ((!need_uptime || circ->build_state->need_uptime) &&
           (!need_capacity || circ->build_state->need_capacity) &&
           (internal == circ->build_state->is_internal)) {

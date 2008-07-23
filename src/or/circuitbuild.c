@@ -1365,7 +1365,7 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
         return choose_good_exit_server_general(dir,need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       return router_choose_random_node(
-               options->RendNodes, options->RendExcludeNodes, NULL,
+               NULL, NULL, NULL,
                options->ExcludeNodes, need_uptime, need_capacity, 0,
                options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS, 0, 0);
   }

@@ -221,8 +221,8 @@ static config_var_t _option_vars[] = {
   V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "0"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
-  VAR("HiddenServiceExcludeNodes", LINELIST_S, RendConfigLines, NULL),
-  VAR("HiddenServiceNodes",  LINELIST_S, RendConfigLines,    NULL),
+  OBSOLETE("HiddenServiceExcludeNodes"),
+  OBSOLETE("HiddenServiceNodes"),
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
@@ -275,8 +275,8 @@ static config_var_t _option_vars[] = {
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
-  V(RendExcludeNodes,            STRING,   NULL),
-  V(RendNodes,                   STRING,   NULL),
+  OBSOLETE("RendExcludeNodes"),
+  OBSOLETE("RendNodes"),
   V(RendPostPeriod,              INTERVAL, "1 hour"),
   V(RephistTrackTime,            INTERVAL, "24 hours"),
   OBSOLETE("RouterFile"),
@@ -496,9 +496,6 @@ static config_var_description_t options_description[] = {
   { "ReachableAddresses", "Addresses we can connect to, as IP/bits:port-port. "
     "By default, we assume all addresses are reachable." },
   /* reachablediraddresses, reachableoraddresses. */
-  { "RendNodes", "A list of preferred nodes to use for a rendezvous point, "
-    "when possible." },
-  { "RendExcludenodes", "A list of nodes never to use as rendezvous points." },
   /* SafeSOCKS */
   { "SOCKSPort", "The port where we listen for SOCKS connections from "
     "applications." },
@@ -3313,10 +3310,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
     return -1;
   if (check_nickname_list(options->EntryNodes, "EntryNodes", msg))
-    return -1;
-  if (check_nickname_list(options->RendNodes, "RendNodes", msg))
-    return -1;
-  if (check_nickname_list(options->RendNodes, "RendExcludeNodes", msg))
     return -1;
   if (check_nickname_list(options->TestVia, "TestVia", msg))
     return -1;

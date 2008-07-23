@@ -45,8 +45,6 @@ typedef struct rend_service_t {
   /* Fields specified in config file */
   char *directory; /**< where in the filesystem it stores it */
   smartlist_t *ports; /**< List of rend_service_port_config_t */
-  char *intro_prefer_nodes; /**< comma-separated list of nicknames */
-  char *intro_exclude_nodes; /**< comma-separated list of nicknames */
   int descriptor_version; /**< Rendezvous descriptor version that will be
                            * published. */
   /* Other fields */
@@ -97,8 +95,6 @@ rend_service_free(rend_service_t *service)
       rend_intro_point_free(intro););
     smartlist_free(service->intro_nodes);
   }
-  tor_free(service->intro_prefer_nodes);
-  tor_free(service->intro_exclude_nodes);
   if (service->desc)
     rend_service_descriptor_free(service->desc);
   tor_free(service);
@@ -127,10 +123,6 @@ rend_add_service(rend_service_t *service)
   rend_service_port_config_t *p;
   struct in_addr addr;
 
-  if (!service->intro_prefer_nodes)
-    service->intro_prefer_nodes = tor_strdup("");
-  if (!service->intro_exclude_nodes)
-    service->intro_exclude_nodes = tor_strdup("");
   service->intro_nodes = smartlist_create();
 
   /* If the service is configured to publish unversioned (v0) and versioned
@@ -145,8 +137,6 @@ rend_add_service(rend_service_t *service)
       memcpy(copy, p, sizeof(rend_service_port_config_t));
       smartlist_add(v0_service->ports, copy);
     });
-    v0_service->intro_prefer_nodes = tor_strdup(service->intro_prefer_nodes);
-    v0_service->intro_exclude_nodes = tor_strdup(service->intro_exclude_nodes);
     v0_service->intro_period_started = service->intro_period_started;
     v0_service->descriptor_version = 0; /* Unversioned descriptor. */
     rend_add_service(v0_service);
@@ -285,24 +275,6 @@ rend_config_services(or_options_t *options, int validate_only)
         return -1;
       }
       smartlist_add(service->ports, portcfg);
-    } else if (!strcasecmp(line->key, "HiddenServiceNodes")) {
-      if (service->intro_prefer_nodes) {
-        log_warn(LD_CONFIG,
-                 "Got multiple HiddenServiceNodes lines for a single "
-                 "service.");
-        rend_service_free(service);
-        return -1;
-      }
-      service->intro_prefer_nodes = tor_strdup(line->value);
-    } else if (!strcasecmp(line->key, "HiddenServiceExcludeNodes")) {
-      if (service->intro_exclude_nodes) {
-        log_warn(LD_CONFIG,
-                 "Got multiple HiddenServiceExcludedNodes lines for "
-                 "a single service.");
-        rend_service_free(service);
-        return -1;
-      }
-      service->intro_exclude_nodes = tor_strdup(line->value);
     } else {
       smartlist_t *versions;
       char *version_str;
@@ -1303,8 +1275,7 @@ rend_services_introduce(void)
     smartlist_add_all(exclude_routers, intro_routers);
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
-      router = router_choose_random_node(service->intro_prefer_nodes,
-               service->intro_exclude_nodes, exclude_routers,
+      router = router_choose_random_node(NULL, NULL, exclude_routers,
                options->ExcludeNodes, 1, 0, 0,
                get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION,
                0, 0);
