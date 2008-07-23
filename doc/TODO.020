@@ -13,4 +13,4 @@ Backport for 0.2.0 once better tested:
   d r14830: disable openssl compression.
   - r15699,15700: react quickly to readiness of rendezvous circuits.
   - r15821: fix bug related to TLS session negotiation.
-
+  - r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
