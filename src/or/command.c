@@ -353,8 +353,8 @@ command_process_created_cell(cell_t *cell, or_connection_t *conn)
   }
 }
 
-/** Process a 'relay' <b>cell</b> that just arrived from <b>conn</b>. Make sure
- * it came in with a recognized circ_id. Pass it on to
+/** Process a 'relay' or 'relay_early' <b>cell</b> that just arrived from
+ * <b>conn</b>. Make sure it came in with a recognized circ_id. Pass it on to
  * circuit_receive_relay_cell() for actual processing.
  */
 static void
@@ -389,6 +389,30 @@ command_process_relay_cell(cell_t *cell, or_connection_t *conn)
     direction = CELL_DIRECTION_OUT;
   else
     direction = CELL_DIRECTION_IN;
+
+  /* If we have a relay_early cell, make sure that it's outbound, and we've
+   * gotten no more than MAX_RELAY_EARLY_CELLS_PER_CIRCUIT of them. */
+  if (cell->command == CELL_RELAY_EARLY) {
+    if (direction == CELL_DIRECTION_IN) {
+      log_fn(LOG_PROTOCOL_WARN, LD_OR,
+             "Received an inbound RELAY_EARLY cell on circuit %d from %s:%d."
+             "  Closing circuit.",
+             cell->circ_id, conn->_base.address, conn->_base.port);
+      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+      return;
+    } else {
+      or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
+      if (or_circ->remaining_relay_early_cells == 0) {
+        log_fn(LOG_PROTOCOL_WARN, LD_OR,
+               "Received too many RELAY_EARLY cells on circ %d from %s:%d."
+               "  Closing circuit.",
+               cell->circ_id, safe_str(conn->_base.address), conn->_base.port);
+        circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
+        return;
+      }
+      --or_circ->remaining_relay_early_cells;
+    }
+  }
 
   if ((reason = circuit_receive_relay_cell(cell, circ, direction)) < 0) {
     log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,"circuit_receive_relay_cell "

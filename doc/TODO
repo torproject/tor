@@ -214,7 +214,7 @@ R d Setting DirPort when acting as bridge will give false Warnings
 
 For 0.2.1.x:
   - Proposals to do:
-    - 110: avoid infinite-length circuits
+    o 110: avoid infinite-length circuits
 R   d 128: families of private bridges
     - 134: handle authority fragmentation.
 

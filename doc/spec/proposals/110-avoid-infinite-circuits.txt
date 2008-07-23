@@ -6,9 +6,11 @@ Author: Roger Dingledine
 Created: 13-Mar-2007
 Status: Accepted
 Target: 0.2.1.x
+Implemented-In: 0.2.1.3-alpha
 
 History:
 
+  Revised 28 July 2008 by nickm: set K.
   Revised 3 July 2008 by nickm: rename from relay_extend to
      relay_early.  Revise to current migration plan.  Allow K cells
      over circuit lifetime, not just at start.
@@ -85,16 +87,21 @@ Migration:
   is not speaking the v2 link protocol, the server relays the cell as
   a RELAY cell.
 
-  In 0.2.1.x, clients begin using RELAY_EARLY cells on v2 connections.
-  This functionality can be safely backported to 0.2.0.x.  Clients
-  should pick a random number betweeen (say) 8 and 10 to send.
+  In 0.2.1.3-alpha, clients begin using RELAY_EARLY cells on v2
+  connections.  This functionality can be safely backported to
+  0.2.0.x.  Clients should pick a random number betweeen (say) K and
+  K-2 to send.
 
-  In 0.2.1.x, servers close any circuit in which more than K
+  In 0.2.1.3-alpha, servers close any circuit in which more than K
   relay_early cells are sent.
 
   Once all versions the do not send RELAY_EARLY cells are obsolete,
   servers can begin to reject any EXTEND requests not sent in a
   RELAY_EARLY cell.
+
+Parameters:
+
+  Let K = 8, for no terribly good reason.
 
 Spec:
 

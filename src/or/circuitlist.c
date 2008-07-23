@@ -347,6 +347,8 @@ origin_circuit_new(void)
 
   circ->next_stream_id = crypto_rand_int(1<<16);
   circ->global_identifier = n_circuits_allocated++;
+  circ->remaining_relay_early_cells = MAX_RELAY_EARLY_CELLS_PER_CIRCUIT;
+  circ->remaining_relay_early_cells -= crypto_rand_int(2);
 
   init_circuit_base(TO_CIRCUIT(circ));
 
@@ -366,6 +368,8 @@ or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn)
 
   if (p_conn)
     circuit_set_p_circid_orconn(circ, p_circ_id, p_conn);
+
+  circ->remaining_relay_early_cells = MAX_RELAY_EARLY_CELLS_PER_CIRCUIT;
 
   init_circuit_base(TO_CIRCUIT(circ));
 

@@ -338,6 +338,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
       log_warn(LD_BUG,"outgoing relay cell has n_conn==NULL. Dropping.");
       return 0; /* just drop it */
     }
+
     relay_set_digest(layer_hint->f_digest, cell);
 
     thishop = layer_hint;
@@ -504,6 +505,22 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
     /* if we're using relaybandwidthrate, this conn wants priority */
     /* XXXX021 the call to time() seems little too frequent */
     circ->n_conn->client_used = time(NULL);
+  }
+
+  if (cell_direction == CELL_DIRECTION_OUT) {
+    origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
+    if (origin_circ->remaining_relay_early_cells > 0) {
+      /* If we've got any relay_early cells left, use one.  Don't worry
+       * about the conn protocol version: append_cell_to_circuit_queue will
+       * fix it up. */
+      cell.command = CELL_RELAY_EARLY;
+      --origin_circ->remaining_relay_early_cells;
+      log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",
+                (int)origin_circ->remaining_relay_early_cells);
+    } else if (relay_command == RELAY_COMMAND_EXTEND) {
+      log_warn(LD_BUG, "Uh-oh.  We're sending a RELAY_COMMAND_EXTEND cell, "
+               "but we have run out of RELAY_EARLY cells on that circuit.");
+    }
   }
 
   if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer)

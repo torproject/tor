@@ -1828,6 +1828,10 @@ typedef struct circuit_t {
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
 } circuit_t;
 
+/** Largest number of relay_early cells that we can send on a given
+ * circuit. */
+#define MAX_RELAY_EARLY_CELLS_PER_CIRCUIT 8
+
 /** An origin_circuit_t holds data necessary to build and use a circuit.
  */
 typedef struct origin_circuit_t {
@@ -1870,14 +1874,18 @@ typedef struct origin_circuit_t {
    */
   uint8_t rend_desc_version;
 
-  /* The intro key replaces the hidden service's public key if purpose is
-   * S_ESTABLISH_INTRO or S_INTRO, provided that no unversioned rendezvous
-   * descriptor is used. */
-  crypto_pk_env_t *intro_key;
+  /** How many more relay_early cells can we send on this circuit, according
+   * to the specification? */
+  unsigned int remaining_relay_early_cells : 4;
 
   /** The next stream_id that will be tried when we're attempting to
    * construct a new AP stream originating at this circuit. */
   streamid_t next_stream_id;
+
+  /* The intro key replaces the hidden service's public key if purpose is
+   * S_ESTABLISH_INTRO or S_INTRO, provided that no unversioned rendezvous
+   * descriptor is used. */
+  crypto_pk_env_t *intro_key;
 
   /** Quasi-global identifier for this circuit; used for control.c */
   /* XXXX NM This can get re-used after 2**32 circuits. */
@@ -1945,6 +1953,10 @@ typedef struct or_circuit_t {
 
   /* ???? move to a subtype or adjunct structure? Wastes 20 bytes -NM */
   char handshake_digest[DIGEST_LEN]; /**< Stores KH for the handshake. */
+
+  /** How many more relay_early cells can we send on this circuit, according
+   * to the specification? */
+  unsigned int remaining_relay_early_cells : 4;
 
   /** True iff this circuit was made with a CREATE_FAST cell. */
   unsigned int is_first_hop : 1;
