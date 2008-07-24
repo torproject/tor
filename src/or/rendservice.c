@@ -1275,10 +1275,11 @@ rend_services_introduce(void)
     smartlist_add_all(exclude_routers, intro_routers);
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
-      router = router_choose_random_node(NULL, NULL, exclude_routers,
-               options->ExcludeNodes, 1, 0, 0,
-               get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION,
-               0, 0);
+      router_crn_flags_t flags = CRN_NEED_UPTIME;
+      if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
+        flags |= CRN_ALLOW_INVALID;
+      router = router_choose_random_node(NULL, exclude_routers,
+                                         options->ExcludeNodes, flags);
       if (!router) {
         log_warn(LD_REND,
                  "Could only establish %d introduction points for %s.",

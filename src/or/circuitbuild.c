@@ -1355,19 +1355,26 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
                         int need_uptime, int need_capacity, int is_internal)
 {
   or_options_t *options = get_options();
+  router_crn_flags_t flags = 0;
+  if (need_uptime)
+    flags |= CRN_NEED_UPTIME;
+  if (need_capacity)
+    flags |= CRN_NEED_CAPACITY;
+
   switch (purpose) {
     case CIRCUIT_PURPOSE_C_GENERAL:
+      if (options->_AllowInvalid & ALLOW_INVALID_MIDDLE)
+        flags |= CRN_ALLOW_INVALID;
       if (is_internal) /* pick it like a middle hop */
         return router_choose_random_node(NULL, NULL,
-              NULL, get_options()->ExcludeNodes, need_uptime, need_capacity, 0,
-              get_options()->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
+                                         options->ExcludeNodes, flags);
       else
         return choose_good_exit_server_general(dir,need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
-      return router_choose_random_node(
-               NULL, NULL, NULL,
-               options->ExcludeNodes, need_uptime, need_capacity, 0,
-               options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS, 0, 0);
+      if (options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS)
+        flags |= CRN_ALLOW_INVALID;
+      return router_choose_random_node(NULL, NULL,
+                                       options->ExcludeNodes, flags);
   }
   log_warn(LD_BUG,"Unhandled purpose %d", purpose);
   tor_fragile_assert();
@@ -1569,6 +1576,7 @@ choose_good_middle_server(uint8_t purpose,
   smartlist_t *excluded;
   or_options_t *options = get_options();
   char *preferred = NULL;
+  router_crn_flags_t flags = 0;
   tor_assert(_CIRCUIT_PURPOSE_MIN <= purpose &&
              purpose <= _CIRCUIT_PURPOSE_MAX);
 
@@ -1586,10 +1594,15 @@ choose_good_middle_server(uint8_t purpose,
   }
   if (purpose == CIRCUIT_PURPOSE_TESTING)
     preferred = compute_preferred_testing_list(options->TestVia);
+
+  if (state->need_uptime)
+    flags |= CRN_NEED_UPTIME;
+  if (state->need_capacity)
+    flags |= CRN_NEED_CAPACITY;
+  if (options->_AllowInvalid & ALLOW_INVALID_MIDDLE)
+    flags |= CRN_ALLOW_INVALID;
   choice = router_choose_random_node(preferred,
-           NULL, excluded, options->ExcludeNodes,
-           state->need_uptime, state->need_capacity, 0,
-           options->_AllowInvalid & ALLOW_INVALID_MIDDLE, 0, 0);
+                                     excluded, options->ExcludeNodes, flags);
   tor_free(preferred);
   smartlist_free(excluded);
   return choice;
@@ -1609,6 +1622,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   routerinfo_t *r, *choice;
   smartlist_t *excluded;
   or_options_t *options = get_options();
+  router_crn_flags_t flags = 0;
 
   if (state && options->UseEntryGuards &&
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
@@ -1642,14 +1656,21 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
       });
   }
 
+  if (state) {
+    flags |= CRN_NEED_GUARD;
+    if (state->need_uptime)
+      flags |= CRN_NEED_UPTIME;
+    if (state->need_capacity)
+      flags |= CRN_NEED_CAPACITY;
+  }
+  if (options->_AllowInvalid & ALLOW_INVALID_ENTRY)
+    flags |= CRN_ALLOW_INVALID;
+
   choice = router_choose_random_node(
-           NULL, NULL,
+           NULL,
            excluded,
            options->ExcludeNodes,
-           state ? state->need_uptime : 0,
-           state ? state->need_capacity : 0,
-           state ? 0 : 1,
-           options->_AllowInvalid & ALLOW_INVALID_ENTRY, 0, 0);
+           flags);
   smartlist_free(excluded);
   return choice;
 }

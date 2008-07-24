@@ -1705,31 +1705,34 @@ routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
 
 /** Return a random running router from the routerlist.  If any node
  * named in <b>preferred</b> is available, pick one of those.  Never
- * pick a node named in <b>excluded</b>, or whose routerinfo is in
+ * pick a node whose routerinfo is in
  * <b>excludedsmartlist</b>, or whose routerinfo matches <b>excludedset</b>,
  * even if they are the only nodes
- * available.  If <b>strict</b> is true, never pick any node besides
- * those in <b>preferred</b>.
- * If <b>need_uptime</b> is non-zero and any router has more than
+ * available.  If <b>CRN_STRICT_PREFERRED</b> is set in flags, never pick
+ * any node besides those in <b>preferred</b>.
+ * If <b>CRN_NEED_UPTIME</b> is set in flags and any router has more than
  * a minimum uptime, return one of those.
- * If <b>need_capacity</b> is non-zero, weight your choice by the
+ * If <b>CRN_NEED_CAPACITY</b> is set in flags, weight your choice by the
  * advertised capacity of each router.
- * If ! <b>allow_invalid</b>, consider only Valid routers.
- * If <b>need_guard</b>, consider only Guard routers.
- * If <b>weight_for_exit</b>, we weight bandwidths as if picking an exit node,
- * otherwise we weight bandwidths for picking a relay node (that is, possibly
- * discounting exit nodes).
+ * If <b>CRN_ALLOW_INVALID</b> is not set in flags, consider only Valid routers.
+ * If <b>CRN_NEED_GUARD</b> is set in flags, consider only Guard routers.
+ * If <b>CRN_WEIGHT_AS_EXIT</b> is set in flags, we weight bandwidths as if
+ * picking an exit node, otherwise we weight bandwidths for picking a relay
+ * node (that is, possibly discounting exit nodes).
  */
 routerinfo_t *
 router_choose_random_node(const char *preferred,
-                          const char *excluded,
                           smartlist_t *excludedsmartlist,
                           routerset_t *excludedset,
-                          int need_uptime, int need_capacity,
-                          int need_guard,
-                          int allow_invalid, int strict,
-                          int weight_for_exit)
+                          router_crn_flags_t flags)
 {
+  const int need_uptime = (flags & CRN_NEED_UPTIME) != 0;
+  const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
+  const int need_guard = (flags & CRN_NEED_GUARD) != 0;
+  const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
+  const int strict = (flags & CRN_STRICT_PREFERRED) != 0;
+  const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
+
   smartlist_t *sl, *excludednodes;
   routerinfo_t *choice = NULL, *r;
   bandwidth_weight_rule_t rule;
@@ -1739,7 +1742,6 @@ router_choose_random_node(const char *preferred,
     (need_guard ? WEIGHT_FOR_GUARD : NO_WEIGHTING);
 
   excludednodes = smartlist_create();
-  add_nickname_list_to_smartlist(excludednodes,excluded,0);
 
   if ((r = routerlist_find_my_routerinfo())) {
     smartlist_add(excludednodes, r);
@@ -1786,9 +1788,9 @@ router_choose_random_node(const char *preferred,
                need_capacity?", fast":"",
                need_uptime?", stable":"",
                need_guard?", guard":"");
+      flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD);
       choice = router_choose_random_node(
-        NULL, excluded, excludedsmartlist, excludedset,
-        0, 0, 0, allow_invalid, 0, weight_for_exit);
+                       NULL, excludedsmartlist, excludedset, flags);
     }
   }
   smartlist_free(excludednodes);

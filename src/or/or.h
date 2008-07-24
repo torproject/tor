@@ -4056,15 +4056,24 @@ typedef enum {
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
 routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
-/* XXXX021. This is a truly hideous interface. */
+
+/** Flags to be control router_choose_random_node */
+typedef enum {
+  CRN_NEED_UPTIME = 1<<0,
+  CRN_NEED_CAPACITY = 1<<1,
+  CRN_NEED_GUARD = 1<<2,
+  CRN_ALLOW_INVALID = 1<<3,
+  /* XXXX021 not used, apparently. */
+  CRN_STRICT_PREFERRED = 1<<4,
+  /* XXXX021 not used, apparently. */
+  CRN_WEIGHT_AS_EXIT = 1<<5
+} router_crn_flags_t;
+
 routerinfo_t *router_choose_random_node(const char *preferred,
-                                        const char *excluded,
                                         smartlist_t *excludedsmartlist,
                                         struct routerset_t *excludedset,
-                                        int need_uptime, int need_capacity,
-                                        int need_guard,
-                                        int allow_invalid, int strict,
-                                        int weight_for_exit);
+                                        router_crn_flags_t flags);
+
 routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
 int router_digest_version_as_new_as(const char *digest, const char *cutoff);
