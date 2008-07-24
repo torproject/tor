@@ -2165,7 +2165,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   }
   if (!strchr(hostname, '.')) {
     tor_free(hostname);
-    hostname = tor_dup_addr(addr);
+    hostname = tor_dup_ip(addr);
   }
   if (crypto_pk_get_digest(private_key, signing_key_digest)<0) {
     log_err(LD_BUG, "Error computing signing key digest");

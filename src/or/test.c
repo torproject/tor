@@ -2519,11 +2519,11 @@ test_dir_format(void)
   ex1 = tor_malloc_zero(sizeof(addr_policy_t));
   ex2 = tor_malloc_zero(sizeof(addr_policy_t));
   ex1->policy_type = ADDR_POLICY_ACCEPT;
-  ex1->addr = 0;
+  tor_addr_from_ipv4h(&ex1->addr, 0);
   ex1->maskbits = 0;
   ex1->prt_min = ex1->prt_max = 80;
   ex2->policy_type = ADDR_POLICY_REJECT;
-  ex2->addr = 18 << 24;
+  tor_addr_from_ipv4h(&ex2->addr, 18<<24);
   ex2->maskbits = 8;
   ex2->prt_min = ex2->prt_max = 24;
   r2 = tor_malloc_zero(sizeof(routerinfo_t));
@@ -3279,9 +3279,10 @@ test_policies(void)
   policy = smartlist_create();
 
   p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",-1);
+  test_assert(p != NULL);
   test_eq(ADDR_POLICY_REJECT, p->policy_type);
-  tor_addr_from_ipv4(&tar, 0xc0a80000u);
-  test_assert(p->addr == 0xc0a80000u);
+  tor_addr_from_ipv4h(&tar, 0xc0a80000u);
+  test_eq(0, tor_addr_compare(&p->addr, &tar));
   test_eq(16, p->maskbits);
   test_eq(1, p->prt_min);
   test_eq(65535, p->prt_max);

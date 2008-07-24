@@ -1036,7 +1036,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     /* remember the remote address */
     newconn->addr = ntohl(remote.sin_addr.s_addr);
     newconn->port = ntohs(remote.sin_port);
-    newconn->address = tor_dup_addr(newconn->addr);
+    newconn->address = tor_dup_ip(newconn->addr);
 
   } else if (conn->socket_family == AF_UNIX) {
     /* For now only control ports can be unix domain sockets

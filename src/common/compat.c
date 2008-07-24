@@ -960,6 +960,22 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
   }
 }
 
+/** DOCDOC */
+void
+tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
+{
+  memset(&a, 0, sizeof(tor_addr_t));
+  if (sa->sa_family == AF_INET) {
+    struct sockaddr_in *sin = (struct sockaddr_in *) sa;
+    a->family = AF_INET;
+    a->addr.in_addr.s_addr = sin->sin_addr.s_addr;
+  } else if (sa->sa_family == AF_INET6) {
+    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) sa;
+    a->family = AF_INET6;
+    memcpy(&a->addr.in6_addr, &sin6->sin6_addr, sizeof(struct in6_addr));
+  }
+}
+
 /** Set *addr to the IP address (in dotted-quad notation) stored in c.
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
  * but works on Windows and Solaris.)

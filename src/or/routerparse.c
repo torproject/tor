@@ -23,9 +23,11 @@ const char routerparse_c_id[] =
  */
 typedef enum {
   K_ACCEPT = 0,
+  K_ACCEPT6,
   K_DIRECTORY_SIGNATURE,
   K_RECOMMENDED_SOFTWARE,
   K_REJECT,
+  K_REJECT6,
   K_ROUTER,
   K_SIGNED_DIRECTORY,
   K_SIGNING_KEY,
@@ -214,7 +216,9 @@ typedef struct token_rule_t {
 static token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
-  T1_START( "router",              K_ROUTER,              GE(5),   NO_OBJ ),
+  T0N("reject6",             K_REJECT6,             ARGS,    NO_OBJ ),
+  T0N("accept6",             K_ACCEPT6,             ARGS,    NO_OBJ ),
+  T1_START( "router",        K_ROUTER,              GE(5),   NO_OBJ ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
   T1_END( "router-signature",    K_ROUTER_SIGNATURE,    NO_ARGS, NEED_OBJ ),
@@ -2607,12 +2611,12 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
     goto err;
   }
-  if (tok->tp != K_ACCEPT && tok->tp != K_REJECT) {
+  if (tok->tp != K_ACCEPT && tok->tp != K_ACCEPT6 &&
+      tok->tp != K_REJECT && tok->tp != K_REJECT6) {
     log_warn(LD_DIR, "Expected 'accept' or 'reject'.");
     goto err;
   }
 
-  /* Now that we've gotten an addr policy, add it to the router. */
   r = router_parse_addr_policy(tok);
   goto done;
  err:
@@ -2638,6 +2642,17 @@ router_add_exit_policy(routerinfo_t *router, directory_token_t *tok)
   if (! router->exit_policy)
     router->exit_policy = smartlist_create();
 
+  if (((tok->tp == K_ACCEPT6 || tok->tp == K_REJECT6) &&
+       tor_addr_family(&newe->addr) == AF_INET)
+      ||
+      ((tok->tp == K_ACCEPT || tok->tp == K_REJECT) &&
+       tor_addr_family(&newe->addr) == AF_INET6)) {
+    log_warn(LD_DIR, "Mismatch between field type and address type in exit "
+             "policy");
+    addr_policy_free(newe);
+    return -1;
+  }
+
   smartlist_add(router->exit_policy, newe);
 
   return 0;
@@ -2651,7 +2666,8 @@ router_parse_addr_policy(directory_token_t *tok)
   addr_policy_t newe;
   char *arg;
 
-  tor_assert(tok->tp == K_REJECT || tok->tp == K_ACCEPT);
+  tor_assert(tok->tp == K_REJECT || tok->tp == K_REJECT6 ||
+             tok->tp == K_ACCEPT || tok->tp == K_ACCEPT6);
 
   if (tok->n_args != 1)
     return NULL;
@@ -2662,18 +2678,18 @@ router_parse_addr_policy(directory_token_t *tok)
 
   memset(&newe, 0, sizeof(newe));
 
-  newe.policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
-    : ADDR_POLICY_ACCEPT;
+  if (tok->tp == K_REJECT || tok->tp == K_REJECT6)
+    newe.policy_type = ADDR_POLICY_REJECT;
+  else
+    newe.policy_type = ADDR_POLICY_ACCEPT;
 
-  if (parse_addr_and_port_range(arg, &newe.addr, &newe.maskbits,
-                                &newe.prt_min, &newe.prt_max))
-    goto policy_read_failed;
+  if (tor_addr_parse_mask_ports(arg, &newe.addr, &newe.maskbits,
+                                &newe.prt_min, &newe.prt_max) < 0) {
+    log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
+    return NULL;
+  }
 
   return addr_policy_get_canonical_entry(&newe);
-
-policy_read_failed:
-  log_warn(LD_DIR,"Couldn't parse line %s. Dropping", escaped(arg));
-  return NULL;
 }
 
 /** Parse an exit policy line of the format "accept/reject private:...".
@@ -2700,8 +2716,10 @@ router_parse_addr_policy_private(directory_token_t *tok)
     return NULL;
 
   memset(&result, 0, sizeof(result));
-  result.policy_type = (tok->tp == K_REJECT) ? ADDR_POLICY_REJECT
-    : ADDR_POLICY_ACCEPT;
+  if (tok->tp == K_REJECT || tok->tp == K_REJECT6)
+    result.policy_type = ADDR_POLICY_REJECT;
+  else
+    result.policy_type = ADDR_POLICY_ACCEPT;
   result.is_private = 1;
   result.prt_min = port_min;
   result.prt_max = port_max;
@@ -3076,8 +3094,9 @@ find_all_exitpolicy(smartlist_t *s)
 {
   smartlist_t *out = smartlist_create();
   SMARTLIST_FOREACH(s, directory_token_t *, t,
-                    if (t->tp == K_ACCEPT || t->tp == K_REJECT)
-                      smartlist_add(out,t));
+      if (t->tp == K_ACCEPT || t->tp == K_ACCEPT6 ||
+          t->tp == K_REJECT || t->tp == K_REJECT6)
+        smartlist_add(out,t));
   return out;
 }
 

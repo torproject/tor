@@ -1382,7 +1382,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     uint32_t addr;
     if (router_pick_published_address(get_options(), &addr) < 0)
       return -1;
-    *answer = tor_dup_addr(addr);
+    *answer = tor_dup_ip(addr);
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {

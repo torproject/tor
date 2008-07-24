@@ -1252,7 +1252,7 @@ router_rebuild_descriptor(int force)
 
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
-  ri->address = tor_dup_addr(addr);
+  ri->address = tor_dup_ip(addr);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = options->ORPort;
@@ -1728,7 +1728,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     int i;
     for (i = 0; i < smartlist_len(router->exit_policy); ++i) {
       tmpe = smartlist_get(router->exit_policy, i);
-      result = policy_write_item(s+written, maxlen-written, tmpe);
+      result = policy_write_item(s+written, maxlen-written, tmpe, 1);
       if (result < 0) {
         log_warn(LD_BUG,"descriptor policy_write_item ran out of room!");
         return -1;

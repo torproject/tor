@@ -118,7 +118,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
   TO_CONN(conn)->addr = ntohl(sin->sin_addr.s_addr);
   TO_CONN(conn)->port = ntohs(sin->sin_port);
-  TO_CONN(conn)->address = tor_dup_addr(TO_CONN(conn)->addr);
+  TO_CONN(conn)->address = tor_dup_ip(TO_CONN(conn)->addr);
 
   if (q->type == EVDNS_TYPE_A)
     conn->socks_request->command = SOCKS_COMMAND_RESOLVE;

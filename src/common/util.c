@@ -2230,17 +2230,27 @@ tor_addr_is_internal(const tor_addr_t *addr, int for_listening)
 
 /** Convert a tor_addr_t <b>addr</b> into a string, and store it in
  *  <b>dest</b> of size <b>len</b>.  Returns a pointer to dest on success,
- *  or NULL on failure.
+ *  or NULL on failure.  If <b>decorate</b>, surround IPv6 addresses with
+ *  brackets.
  */
 const char *
-tor_addr_to_str(char *dest, const tor_addr_t *addr, int len)
+tor_addr_to_str(char *dest, const tor_addr_t *addr, int len, int decorate)
 {
   const char *ptr;
   tor_assert(addr && dest);
 
   switch (tor_addr_family(addr)) {
     case AF_INET:
-      ptr = tor_inet_ntop(AF_INET, &addr->addr.in_addr, dest, len);
+      if (len<3)
+        return NULL;
+      if (decorate)
+        ptr = tor_inet_ntop(AF_INET, &addr->addr.in_addr, dest+1, len-2);
+      else
+        ptr = tor_inet_ntop(AF_INET, &addr->addr.in_addr, dest, len);
+      if (ptr && decorate) {
+        *dest = '[';
+        memcpy(dest+strlen(dest), "]", 2);
+      }
       break;
     case AF_INET6:
       ptr = tor_inet_ntop(AF_INET6, &addr->addr.in6_addr, dest, len);
@@ -2739,6 +2749,29 @@ tor_addr_is_null(const tor_addr_t *addr)
   //return 1;
 }
 
+/** Return true iff <b>addr</b> is a loopback address */
+int
+tor_addr_is_loopback(const tor_addr_t *addr)
+{
+  tor_assert(addr);
+  switch (tor_addr_family(addr)) {
+    case AF_INET6: {
+      /* ::1 */
+      uint32_t *a32 = tor_addr_to_in6_addr32(addr);
+      return (a32[0] == 0) && (a32[1] == 0) && (a32[2] == 0) && (a32[3] == 1);
+    }
+    case AF_INET:
+      /* 127.0.0.1 */
+      return (tor_addr_to_ipv4h(addr) & 0xff000000) == 0x7f000000;
+    case AF_UNSPEC:
+      return 0;
+    default:
+      tor_fragile_assert();
+      return 0;
+  }
+}
+
+
 /** Given an IPv4 in_addr struct *<b>in</b> (in network order, as usual),
  *  write it as a string into the <b>buf_len</b>-byte buffer in
  *  <b>buf</b>.
@@ -2756,12 +2789,11 @@ tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len)
 
 /** Take a 32-bit host-order ipv4 address <b>v4addr</b> and store it in the
  *  tor_addr *<b>dest</b>.
- *
- *  XXXX_IP6 Temporary, for use while 32-bit int addresses are still being
- *  passed around.
  */
+/*  XXXX_IP6 Temporary, for use while 32-bit int addresses are still being
+ *  passed around. */
 void
-tor_addr_from_ipv4(tor_addr_t *dest, uint32_t v4addr)
+tor_addr_from_ipv4h(tor_addr_t *dest, uint32_t v4addr)
 {
   tor_assert(dest);
   memset(dest, 0, sizeof(dest));
@@ -2816,12 +2848,22 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
   v_family[0] = tor_addr_family(addr1);
   v_family[1] = tor_addr_family(addr2);
 
+  if (v_family[0] == AF_UNSPEC) {
+    if (v_family[1] == AF_UNSPEC)
+      return 0;
+    else
+      return 1;
+  } else {
+    if (v_family[1] == AF_UNSPEC)
+      return -1;
+  }
+
   if (v_family[0] == AF_INET) { /* If this is native IPv4, note the address */
     /* Later we risk overwriting a v4-mapped address */
     ip4a = tor_addr_to_ipv4h(addr1);
   } else if ((v_family[0] == AF_INET6) && tor_addr_is_v4(addr1)) {
     v_family[0] = AF_INET;
-    ip4a = tor_addr_to_mapped_ipv4n(addr1);
+    ip4a = tor_addr_to_mapped_ipv4h(addr1);
   }
 
   if (v_family[1] == AF_INET) { /* If this is native IPv4, note the address */
@@ -2829,7 +2871,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
     ip4b = tor_addr_to_ipv4h(addr2);
   } else if ((v_family[1] == AF_INET6) && tor_addr_is_v4(addr2)) {
     v_family[1] = AF_INET;
-    ip4b = tor_addr_to_mapped_ipv4n(addr2);
+    ip4b = tor_addr_to_mapped_ipv4h(addr2);
   }
 
   if (v_family[0] > v_family[1]) /* Comparison of virtual families */
@@ -2885,11 +2927,40 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
 
 }
 
+
+/** Return a hash code based on the address addr */
+unsigned int
+tor_addr_hash(const tor_addr_t *addr)
+{
+  switch (tor_addr_family(addr)) {
+  case AF_INET:
+    return tor_addr_to_ipv4h(addr);
+  case AF_UNSPEC:
+    return 0x4e4d5342;
+  case AF_INET6: {
+    const uint32_t *u = tor_addr_to_in6_addr32(addr);
+    return u[0] + u[1] + u[2] + u[3];
+    }
+  default:
+    tor_fragile_assert();
+    return 0;
+  }
+}
+
+/** Return a newly allocatd string with a representation of <b>addr</b>. */
+char *
+tor_dup_addr(const tor_addr_t *addr)
+{
+  char buf[TOR_ADDR_BUF_LEN];
+  tor_addr_to_str(buf, addr, sizeof(buf), 0);
+  return tor_strdup(buf);
+}
+
 /** Given a host-order <b>addr</b>, call tor_inet_ntop() on it
  *  and return a strdup of the resulting address.
  */
 char *
-tor_dup_addr(uint32_t addr)
+tor_dup_ip(uint32_t addr)
 {
   char buf[TOR_ADDR_BUF_LEN];
   struct in_addr in;

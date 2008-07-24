@@ -1148,8 +1148,7 @@ typedef struct addr_policy_t {
   maskbits_t maskbits; /**< Accept/reject all addresses <b>a</b> such that the
                  * first <b>maskbits</b> bits of <b>a</b> match
                  * <b>addr</b>. */
-  /* XXXX_IP6 make this ipv6-capable */
-  uint32_t addr; /**< Base address to accept or reject. */
+  tor_addr_t addr; /**< Base address to accept or reject. */
   uint16_t prt_min; /**< Lowest port number to accept/reject. */
   uint16_t prt_max; /**< Highest port number to accept/reject. */
 } addr_policy_t;
@@ -3635,7 +3634,8 @@ int exit_policy_is_general_exit(smartlist_t *policy);
 int policy_is_reject_star(smartlist_t *policy);
 int getinfo_helper_policies(control_connection_t *conn,
                             const char *question, char **answer);
-int policy_write_item(char *buf, size_t buflen, addr_policy_t *item);
+int policy_write_item(char *buf, size_t buflen, addr_policy_t *item,
+                      int format_for_desc);
 
 void addr_policy_list_free(smartlist_t *p);
 void addr_policy_free(addr_policy_t *p);

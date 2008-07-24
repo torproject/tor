@@ -434,7 +434,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                     conn->identity_digest, DIGEST_LEN);
     }
     tor_free(conn->_base.address);
-    conn->_base.address = tor_dup_addr(addr);
+    conn->_base.address = tor_dup_ip(addr);
   }
 }
 

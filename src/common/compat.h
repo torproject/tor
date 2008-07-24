@@ -361,17 +361,18 @@ typedef struct tor_addr_t
 /* DOCDOC*/
 static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
 static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
-static INLINE uint32_t tor_addr_to_mapped_ipv4n(const tor_addr_t *a);
+static INLINE uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
 static INLINE sa_family_t tor_addr_family(const tor_addr_t *a);
 static INLINE const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
 static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
 socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
                                struct sockaddr *sa_out);
+void tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa);
 
 static INLINE const struct in6_addr *
 tor_addr_to_in6(const tor_addr_t *a)
 {
-  return &a->addr.in6_addr;
+  return a->family == AF_INET6 ? &a->addr.in6_addr : NULL;
 }
 
 #define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6(x))
@@ -380,7 +381,7 @@ tor_addr_to_in6(const tor_addr_t *a)
 static INLINE uint32_t
 tor_addr_to_ipv4n(const tor_addr_t *a)
 {
-  return a->addr.in_addr.s_addr;
+  return a->family == AF_INET ? a->addr.in_addr.s_addr : 0;
 }
 static INLINE uint32_t
 tor_addr_to_ipv4h(const tor_addr_t *a)
@@ -388,7 +389,7 @@ tor_addr_to_ipv4h(const tor_addr_t *a)
   return ntohl(tor_addr_to_ipv4n(a));
 }
 static INLINE uint32_t
-tor_addr_to_mapped_ipv4n(const tor_addr_t *a)
+tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
 {
   return ntohl(tor_addr_to_in6_addr32(a)[3]);
 }
@@ -400,11 +401,12 @@ tor_addr_family(const tor_addr_t *a)
 static INLINE const struct in_addr *
 tor_addr_to_in(const tor_addr_t *a)
 {
-  return &a->addr.in_addr;
+  return a->family == AF_INET ? &a->addr.in_addr : NULL;
 }
 
 #define INET_NTOA_BUF_LEN 16 /* 255.255.255.255 */
-#define TOR_ADDR_BUF_LEN 46 /* ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255 */
+#define TOR_ADDR_BUF_LEN 48 /* [ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]
+                             */
 
 int tor_inet_aton(const char *cp, struct in_addr *addr) ATTR_NONNULL((1,2));
 const char *tor_inet_ntop(int af, const void *src, char *dst, size_t len);

@@ -204,7 +204,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
       if (cert->addr && cert->dir_port &&
           (ds->addr != cert->addr ||
            ds->dir_port != cert->dir_port)) {
-        char *a = tor_dup_addr(cert->addr);
+        char *a = tor_dup_ip(cert->addr);
         log_notice(LD_DIR, "Updating address for directory authority %s "
                    "from %s:%d to %s:%d based on in certificate.",
                    ds->nickname, ds->address, (int)ds->dir_port,

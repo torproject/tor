@@ -45,7 +45,9 @@ policy_expand_private(smartlist_t **policy)
 {
   static const char *private_nets[] = {
     "0.0.0.0/8", "169.254.0.0/16",
-    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12", NULL };
+    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",
+    // "fc00::/7", "fe80::/10", "fec0::/10", "::/127",
+    NULL };
   uint16_t port_min, port_max;
 
   int i;
@@ -67,9 +69,8 @@ policy_expand_private(smartlist_t **policy)
        memcpy(&policy, p, sizeof(addr_policy_t));
        policy.is_private = 0;
        policy.is_canonical = 0;
-       if (parse_addr_and_port_range(private_nets[i],
-                                     &policy.addr,
-                                     &policy.maskbits, &port_min, &port_max)) {
+       if (tor_addr_parse_mask_ports(private_nets[i], &policy.addr,
+                                  &policy.maskbits, &port_min, &port_max)<0) {
          tor_assert(0);
        }
        smartlist_add(tmp, addr_policy_get_canonical_entry(&policy));
@@ -408,7 +409,7 @@ cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
     return r;
   if ((r=((int)a->is_private - (int)b->is_private)))
     return r;
-  if ((r=((int)a->addr - (int)b->addr)))
+  if ((r=tor_addr_compare(&a->addr, &b->addr)))
     return r;
   if ((r=((int)a->maskbits - (int)b->maskbits)))
     return r;
@@ -464,7 +465,7 @@ policy_hash(policy_map_ent_t *ent)
   if (a->is_private)
     r = 0x1234abcd;
   else
-    r = (unsigned int)a->addr;
+    r = tor_addr_hash(&a->addr);
   r += a->prt_min << 8;
   r += a->prt_max << 16;
   r += a->maskbits;
@@ -522,7 +523,7 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
  * addresses (127.0.0.1, and so on).  But we'll try this for now.
  */
 addr_policy_result_t
-compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
+compare_addr_to_addr_policy(uint32_t _addr, uint16_t port,
                             smartlist_t *policy)
 {
   int maybe_reject = 0;
@@ -530,13 +531,18 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
   int match = 0;
   int maybe = 0;
   int i, len;
+  int addr_is_unknown;
+  tor_addr_t addr;
+  /*XXXX021 ipv6 this function should take a tor_addr_t, not a uint32_t. */
+  tor_addr_from_ipv4h(&addr, _addr);
+  addr_is_unknown = tor_addr_is_null(&addr);
 
   len = policy ? smartlist_len(policy) : 0;
 
   for (i = 0; i < len; ++i) {
     addr_policy_t *tmpe = smartlist_get(policy, i);
     maybe = 0;
-    if (!addr) {
+    if (addr_is_unknown) {
       /* Address is unknown. */
       if ((port >= tmpe->prt_min && port <= tmpe->prt_max) ||
            (!port && tmpe->prt_min<=1 && tmpe->prt_max>=65535)) {
@@ -552,7 +558,7 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
       }
     } else {
       /* Address is known */
-      if (!addr_mask_cmp_bits(addr, tmpe->addr, tmpe->maskbits)) {
+      if (!tor_addr_compare_masked(&addr, &tmpe->addr, tmpe->maskbits)) {
         if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
           /* Exact match for the policy */
           match = 1;
@@ -595,7 +601,7 @@ addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
     /* a has more fixed bits than b; it can't possibly cover b. */
     return 0;
   }
-  if (addr_mask_cmp_bits(a->addr, b->addr, a->maskbits)) {
+  if (tor_addr_compare_masked(&a->addr, &b->addr, a->maskbits)) {
     /* There's a fixed bit in a that's set differently in b. */
     return 0;
   }
@@ -618,7 +624,7 @@ addr_policy_intersects(addr_policy_t *a, addr_policy_t *b)
     minbits = a->maskbits;
   else
     minbits = b->maskbits;
-  if (addr_mask_cmp_bits(a->addr, b->addr, minbits))
+  if (tor_addr_compare_masked(&a->addr, &b->addr, minbits))
     return 0;
   if (a->prt_max < b->prt_min || b->prt_max < a->prt_min)
     return 0;
@@ -670,8 +676,8 @@ exit_policy_remove_redundancies(smartlist_t *dest)
       tor_assert(j > i);
       if (addr_policy_covers(ap, tmp)) {
         char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
-        policy_write_item(p1, sizeof(p1), tmp);
-        policy_write_item(p2, sizeof(p2), ap);
+        policy_write_item(p1, sizeof(p1), tmp, 0);
+        policy_write_item(p2, sizeof(p2), ap, 0);
         log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s (%d).  It is made "
             "redundant by %s (%d).", p1, j, p2, i);
         smartlist_del_keeporder(dest, j--);
@@ -699,8 +705,8 @@ exit_policy_remove_redundancies(smartlist_t *dest)
       } else { /* policy_types are equal. */
         if (addr_policy_covers(tmp, ap)) {
           char p1[POLICY_BUF_LEN], p2[POLICY_BUF_LEN];
-          policy_write_item(p1, sizeof(p1), ap);
-          policy_write_item(p2, sizeof(p2), tmp);
+          policy_write_item(p1, sizeof(p1), ap, 0);
+          policy_write_item(p2, sizeof(p2), tmp, 0);
           log(LOG_DEBUG, LD_CONFIG, "Removing exit policy %s.  It is already "
               "covered by %s.", p1, p2);
           smartlist_del_keeporder(dest, i--);
@@ -774,8 +780,8 @@ exit_policy_is_general_exit(smartlist_t *policy)
         continue; /* Doesn't cover our port. */
       if (p->maskbits > 8)
         continue; /* Narrower than a /8. */
-      if ((p->addr & 0xff000000ul) == 0x7f000000ul)
-        continue; /* 127.x */
+      if (tor_addr_is_loopback(&p->addr))
+        continue; /* 127.x or ::1. */
       /* We have a match that is at least a /8. */
       if (p->policy_type == ADDR_POLICY_ACCEPT) {
         ++n_allowed;
@@ -807,16 +813,18 @@ policy_is_reject_star(smartlist_t *policy)
 /** Write a single address policy to the buf_len byte buffer at buf.  Return
  * the number of characters written, or -1 on failure. */
 int
-policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
+policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
+                  int format_for_desc)
 {
-  struct in_addr in;
   size_t written = 0;
-  char addrbuf[INET_NTOA_BUF_LEN];
+  char addrbuf[TOR_ADDR_BUF_LEN];
   const char *addrpart;
   int result;
+  const int is_accept = policy->policy_type == ADDR_POLICY_ACCEPT;
+  const int is_ip6 = tor_addr_family(&policy->addr) == AF_INET6;
 
-  in.s_addr = htonl(policy->addr);
-  tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
+  tor_addr_to_str(buf, &policy->addr, sizeof(buf), 1);
+
   /* write accept/reject 1.2.3.4 */
   if (policy->is_private)
     addrpart = "private";
@@ -824,8 +832,11 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy)
     addrpart = "*";
   else
     addrpart = addrbuf;
-  result = tor_snprintf(buf, buflen, "%s %s",
-            policy->policy_type == ADDR_POLICY_ACCEPT ? "accept" : "reject",
+
+  result = tor_snprintf(buf, buflen, "%s%s%s %s",
+                        (is_ip6&&format_for_desc)?"opt ":"",
+                        is_accept ? "accept" : "reject",
+                        (is_ip6&&format_for_desc)?"6":"",
                         addrpart);
   if (result < 0)
     return -1;
