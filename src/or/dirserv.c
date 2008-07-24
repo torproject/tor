@@ -2230,7 +2230,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
 
   v3_out = tor_malloc_zero(sizeof(networkstatus_t));
 
-  v3_out->is_vote = 1;
+  v3_out->type = NS_TYPE_VOTE;
   dirvote_get_preferred_voting_intervals(&timing);
   v3_out->published = now;
   {

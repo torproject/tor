@@ -290,7 +290,7 @@ networkstatus_vote_free(networkstatus_t *ns)
     authority_cert_free(ns->cert);
 
   if (ns->routerstatus_list) {
-    if (ns->is_vote) {
+    if (ns->type == NS_TYPE_VOTE || ns->type == NS_TYPE_OPINION) {
       SMARTLIST_FOREACH(ns->routerstatus_list, vote_routerstatus_t *, rs,
       {
         tor_free(rs->version);
@@ -382,7 +382,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   smartlist_t *missing_authorities = smartlist_create();
   int severity;
 
-  tor_assert(! consensus->is_vote);
+  tor_assert(consensus->type == NS_TYPE_CONSENSUS);
 
   SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, voter,
   {
@@ -1366,7 +1366,7 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
   const unsigned dl_certs = !(flags & NSSET_DONT_DOWNLOAD_CERTS);
 
   /* Make sure it's parseable. */
-  c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
+  c = networkstatus_parse_vote_from_string(consensus, NULL, NS_TYPE_CONSENSUS);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     result = -2;

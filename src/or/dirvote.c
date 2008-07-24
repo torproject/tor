@@ -50,6 +50,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   networkstatus_voter_info_t *voter;
 
   tor_assert(private_signing_key);
+  tor_assert(v3_ns->type == NS_TYPE_VOTE || v3_ns->type == NS_TYPE_OPINION);
 
   voter = smartlist_get(v3_ns->voters, 0);
 
@@ -104,7 +105,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_assert(cert);
     tor_snprintf(status, len,
                  "network-status-version 3\n"
-                 "vote-status vote\n"
+                 "vote-status %s\n"
                  "consensus-methods 1 2 3 4\n"
                  "published %s\n"
                  "valid-after %s\n"
@@ -115,6 +116,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  "known-flags %s\n"
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n",
+                 v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
                  published, va, fu, vu,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  version_lines,
@@ -182,9 +184,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
 
   {
     networkstatus_t *v;
-    if (!(v = networkstatus_parse_vote_from_string(status, NULL, 1))) {
-      log_err(LD_BUG,"Generated a networkstatus vote we couldn't parse: "
-              "<<%s>>", status);
+    if (!(v = networkstatus_parse_vote_from_string(status, NULL,
+                                                   v3_ns->type))) {
+      log_err(LD_BUG,"Generated a networkstatus %s we couldn't parse: "
+              "<<%s>>",
+              v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion", status);
       goto err;
     }
     networkstatus_vote_free(v);
@@ -209,7 +213,7 @@ static networkstatus_voter_info_t *
 get_voter(const networkstatus_t *vote)
 {
   tor_assert(vote);
-  tor_assert(vote->is_vote);
+  tor_assert(vote->type == NS_TYPE_VOTE);
   tor_assert(vote->voters);
   tor_assert(smartlist_len(vote->voters) == 1);
   return smartlist_get(vote->voters, 0);
@@ -504,7 +508,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     int j;
     SMARTLIST_FOREACH(votes, networkstatus_t *, v,
     {
-      tor_assert(v->is_vote);
+      tor_assert(v->type == NS_TYPE_VOTE);
       va_times[v_sl_idx] = v->valid_after;
       fu_times[v_sl_idx] = v->fresh_until;
       vu_times[v_sl_idx] = v->valid_until;
@@ -1000,7 +1004,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   {
     networkstatus_t *c;
-    if (!(c = networkstatus_parse_vote_from_string(result, NULL, 0))) {
+    if (!(c = networkstatus_parse_vote_from_string(result, NULL,
+                                                   NS_TYPE_CONSENSUS))) {
       log_err(LD_BUG,"Generated a networkstatus consensus we couldn't "
               "parse.");
       tor_free(result);
@@ -1028,7 +1033,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
   int r = 0;
   tor_assert(sigs);
   tor_assert(target);
-  tor_assert(!target->is_vote);
+  tor_assert(target->type == NS_TYPE_CONSENSUS);
 
   /* Do the times seem right? */
   if (target->valid_after != sigs->valid_after) {
@@ -1117,7 +1122,7 @@ networkstatus_get_detached_signatures(networkstatus_t *consensus)
   char *result = NULL;
   int n_sigs = 0;
   tor_assert(consensus);
-  tor_assert(! consensus->is_vote);
+  tor_assert(consensus->type == NS_TYPE_CONSENSUS);
 
   elements = smartlist_create();
 
@@ -1598,7 +1603,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   *msg_out = NULL;
 
  again:
-  vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote, 1);
+  vote = networkstatus_parse_vote_from_string(vote_body, &end_of_vote,
+                                              NS_TYPE_VOTE);
   if (!end_of_vote)
     end_of_vote = vote_body + strlen(vote_body);
   if (!vote) {
@@ -1783,7 +1789,8 @@ dirvote_compute_consensus(void)
     log_warn(LD_DIR, "Couldn't generate a consensus at all!");
     goto err;
   }
-  consensus = networkstatus_parse_vote_from_string(consensus_body, NULL, 0);
+  consensus = networkstatus_parse_vote_from_string(consensus_body, NULL,
+                                                   NS_TYPE_CONSENSUS);
   if (!consensus) {
     log_warn(LD_DIR, "Couldn't parse consensus we generated!");
     goto err;
@@ -1904,7 +1911,8 @@ dirvote_add_signatures_to_pending_consensus(
       ns_detached_signatures_t *sigs =
         networkstatus_parse_detached_signatures(new_detached, NULL);
       networkstatus_t *v = networkstatus_parse_vote_from_string(
-                                             pending_consensus_body, NULL, 0);
+                                             pending_consensus_body, NULL,
+                                             NS_TYPE_CONSENSUS);
       tor_assert(sigs);
       ns_detached_signatures_free(sigs);
       tor_assert(v);

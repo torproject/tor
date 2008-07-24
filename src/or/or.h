@@ -1492,10 +1492,19 @@ typedef struct networkstatus_voter_info_t {
                                      * as good. */
 } networkstatus_voter_info_t;
 
+
+/** Enumerates the possible seriousness values of a networkstatus document. */
+typedef enum {
+  NS_TYPE_VOTE,
+  NS_TYPE_CONSENSUS,
+  NS_TYPE_OPINION,
+} networkstatus_type_t;
+
 /** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */
 typedef struct networkstatus_t {
-  int is_vote; /**< True if this is a vote; false if it is a consensus. */
+  // int is_vote; 
+  networkstatus_type_t type; /**< Vote, consensus, or opinion? */
   time_t published; /**< Vote only: Tiem when vote was written. */
   time_t valid_after; /**< Time after which this vote or consensus applies. */
   time_t fresh_until; /**< Time before which this is the most recent vote or
@@ -4207,8 +4216,8 @@ void dump_distinct_digest_count(int severity);
 
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
-                                                          const char **eos_out,
-                                                          int is_vote);
+                                                 const char **eos_out,
+                                                 networkstatus_type_t ns_type);
 ns_detached_signatures_t *networkstatus_parse_detached_signatures(
                                           const char *s, const char *eos);
 

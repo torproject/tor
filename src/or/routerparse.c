@@ -2058,12 +2058,11 @@ networkstatus_v2_parse_from_string(const char *s)
   return ns;
 }
 
-/** Parse a v3 networkstatus vote (if <b>is_vote</b> is true) or a v3
- * networkstatus consensus (if <b>is_vote</b> is false) from <b>s</b>, and
- * return the result.  Return NULL on failure. */
+/** Parse a v3 networkstatus vote, opinion, or consensus (depending on
+ * ns_type), from <b>s</b>, and return the result.  Return NULL on failure. */
 networkstatus_t *
 networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
-                                     int is_vote)
+                                     networkstatus_type_t ns_type)
 {
   smartlist_t *tokens = smartlist_create();
   smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
@@ -2085,16 +2084,17 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   area = memarea_new(8192);
   end_of_header = find_start_of_next_routerstatus(s);
   if (tokenize_string(area, s, end_of_header, tokens,
-                      is_vote ? networkstatus_token_table :
-                                networkstatus_consensus_token_table, 0)) {
-    log_warn(LD_DIR, "Error tokenizing network-status vote header.");
+                      (ns_type == NS_TYPE_CONSENSUS) ?
+                      networkstatus_consensus_token_table :
+                      networkstatus_token_table, 0)) {
+    log_warn(LD_DIR, "Error tokenizing network-status vote header");
     goto err;
   }
 
   ns = tor_malloc_zero(sizeof(networkstatus_t));
   memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
-  if (is_vote) {
+  if (ns_type != NS_TYPE_CONSENSUS) {
     const char *end_of_cert = NULL;
     if (!(cert = strstr(s, "\ndir-key-certificate-version")))
       goto err;
@@ -2108,20 +2108,22 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   tor_assert(tok);
   tor_assert(tok->n_args != 0);
   if (!strcmp(tok->args[0], "vote")) {
-    ns->is_vote = 1;
+    ns->type = NS_TYPE_VOTE;
   } else if (!strcmp(tok->args[0], "consensus")) {
-    ns->is_vote = 0;
+    ns->type = NS_TYPE_CONSENSUS;
+  } else if (!strcmp(tok->args[0], "opinion")) {
+    ns->type = NS_TYPE_OPINION;
   } else {
     log_warn(LD_DIR, "Unrecognized vote status %s in network-status",
              escaped(tok->args[0]));
     goto err;
   }
-  if (!bool_eq(ns->is_vote, is_vote)) {
+  if (ns_type != ns->type) {
     log_warn(LD_DIR, "Got the wrong kind of v3 networkstatus.");
     goto err;
   }
 
-  if (ns->is_vote) {
+  if (ns->type == NS_TYPE_VOTE || ns->type == NS_TYPE_OPINION) {
     tok = find_first_by_keyword(tokens, K_PUBLISHED);
     if (parse_iso_time(tok->args[0], &ns->published))
       goto err;
@@ -2218,7 +2220,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       if (voter)
         smartlist_add(ns->voters, voter);
       voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
-      if (is_vote)
+      if (ns->type != NS_TYPE_CONSENSUS)
         memcpy(voter->vote_digest, ns_digest, DIGEST_LEN);
 
       voter->nickname = tor_strdup(tok->args[0]);
@@ -2229,8 +2231,9 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                  "network-status vote.", escaped(tok->args[1]));
         goto err;
       }
-      if (is_vote && memcmp(ns->cert->cache_info.identity_digest,
-                            voter->identity_digest, DIGEST_LEN)) {
+      if (ns->type != NS_TYPE_CONSENSUS &&
+          memcmp(ns->cert->cache_info.identity_digest,
+                 voter->identity_digest, DIGEST_LEN)) {
         log_warn(LD_DIR,"Mismatch between identities in certificate and vote");
         goto err;
       }
@@ -2256,7 +2259,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
       voter->contact = tor_strdup(tok->args[0]);
     } else if (tok->tp == K_VOTE_DIGEST) {
-      tor_assert(!is_vote);
+      tor_assert(ns->type == NS_TYPE_CONSENSUS);
       tor_assert(tok->n_args >= 1);
       if (!voter || ! tor_digest_is_zero(voter->vote_digest)) {
         log_warn(LD_DIR, "vote-digest element is out of place.");
@@ -2278,12 +2281,12 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   if (smartlist_len(ns->voters) == 0) {
     log_warn(LD_DIR, "Missing dir-source elements in a vote networkstatus.");
     goto err;
-  } else if (is_vote && smartlist_len(ns->voters) != 1) {
+  } else if (ns->type != NS_TYPE_CONSENSUS && smartlist_len(ns->voters) != 1) {
     log_warn(LD_DIR, "Too many dir-source elements in a vote networkstatus.");
     goto err;
   }
 
-  if (is_vote &&
+  if (ns->type != NS_TYPE_CONSENSUS &&
       (tok = find_first_by_keyword(tokens, K_LEGACY_DIR_KEY))) {
     int bad = 1;
     if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
@@ -2307,7 +2310,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   ns->routerstatus_list = smartlist_create();
 
   while (!strcmpstart(s, "r ")) {
-    if (is_vote) {
+    if (ns->type != NS_TYPE_CONSENSUS) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       if (routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens, ns,
                                                rs, 0))
@@ -2326,7 +2329,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
   for (i = 1; i < smartlist_len(ns->routerstatus_list); ++i) {
     routerstatus_t *rs1, *rs2;
-    if (is_vote) {
+    if (ns->type != NS_TYPE_CONSENSUS) {
       vote_routerstatus_t *a = smartlist_get(ns->routerstatus_list, i-1);
       vote_routerstatus_t *b = smartlist_get(ns->routerstatus_list, i);
       rs1 = &a->status; rs2 = &b->status;
@@ -2389,7 +2392,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       goto err;
     }
 
-    if (is_vote) {
+    if (ns->type != NS_TYPE_CONSENSUS) {
       if (memcmp(declared_identity, ns->cert->cache_info.identity_digest,
                  DIGEST_LEN)) {
         log_warn(LD_DIR, "Digest mismatch between declared and actual on "
@@ -2398,7 +2401,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     }
 
-    if (is_vote) {
+    if (ns->type != NS_TYPE_CONSENSUS) {
       if (check_signature_token(ns_digest, tok, ns->cert->signing_key, 0,
                                 "network-status vote"))
         goto err;

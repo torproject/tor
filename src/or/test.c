@@ -2845,7 +2845,7 @@ test_v3_networkstatus(void)
    * Set up a vote; generate it; try to parse it.
    */
   vote = tor_malloc_zero(sizeof(networkstatus_t));
-  vote->is_vote = 1;
+  vote->type = NS_TYPE_VOTE;
   vote->published = now;
   vote->valid_after = now+1000;
   vote->fresh_until = now+2000;
@@ -2931,11 +2931,11 @@ test_v3_networkstatus(void)
   /* dump the vote and try to parse it. */
   v1_text = format_networkstatus_vote(sign_skey_1, vote);
   test_assert(v1_text);
-  v1 = networkstatus_parse_vote_from_string(v1_text, NULL, 1);
+  v1 = networkstatus_parse_vote_from_string(v1_text, NULL, NS_TYPE_VOTE);
   test_assert(v1);
 
   /* Make sure the parsed thing was right. */
-  test_eq(v1->is_vote, 1);
+  test_eq(v1->type, NS_TYPE_VOTE);
   test_eq(v1->published, vote->published);
   test_eq(v1->valid_after, vote->valid_after);
   test_eq(v1->fresh_until, vote->fresh_until);
@@ -3015,7 +3015,7 @@ test_v3_networkstatus(void)
   /* generate and parse. */
   v2_text = format_networkstatus_vote(sign_skey_2, vote);
   test_assert(v2_text);
-  v2 = networkstatus_parse_vote_from_string(v2_text, NULL, 1);
+  v2 = networkstatus_parse_vote_from_string(v2_text, NULL, NS_TYPE_VOTE);
   test_assert(v2);
   /* Check that flags come out right.*/
   cp = smartlist_join_strings(v2->known_flags, ":", 0, NULL);
@@ -3054,7 +3054,7 @@ test_v3_networkstatus(void)
   v3_text = format_networkstatus_vote(sign_skey_3, vote);
   test_assert(v3_text);
 
-  v3 = networkstatus_parse_vote_from_string(v3_text, NULL, 1);
+  v3 = networkstatus_parse_vote_from_string(v3_text, NULL, NS_TYPE_VOTE);
   test_assert(v3);
 
   /* Compute a consensus as voter 3. */
@@ -3067,13 +3067,14 @@ test_v3_networkstatus(void)
                                                    "AAAAAAAAAAAAAAAAAAAA",
                                                    sign_skey_leg1);
   test_assert(consensus_text);
-  con = networkstatus_parse_vote_from_string(consensus_text, NULL, 0);
+  con = networkstatus_parse_vote_from_string(consensus_text, NULL,
+                                             NS_TYPE_CONSENSUS);
   test_assert(con);
   //log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
   //           v1_text, v2_text, v3_text);
 
   /* Check consensus contents. */
-  test_assert(!con->is_vote);
+  test_assert(con->type == NS_TYPE_CONSENSUS);
   test_eq(con->published, 0); /* this field only appears in votes. */
   test_eq(con->valid_after, now+1000);
   test_eq(con->fresh_until, now+2003); /* median */
@@ -3177,8 +3178,10 @@ test_v3_networkstatus(void)
                                                       sign_skey_1, NULL,NULL);
     test_assert(consensus_text2);
     test_assert(consensus_text3);
-    con2 = networkstatus_parse_vote_from_string(consensus_text2, NULL, 0);
-    con3 = networkstatus_parse_vote_from_string(consensus_text3, NULL, 0);
+    con2 = networkstatus_parse_vote_from_string(consensus_text2, NULL,
+                                                NS_TYPE_CONSENSUS);
+    con3 = networkstatus_parse_vote_from_string(consensus_text3, NULL,
+                                                NS_TYPE_CONSENSUS);
     test_assert(con2);
     test_assert(con3);
 
@@ -4072,7 +4075,7 @@ main(int c, char**v)
 
   crypto_seed_rng(1);
 
-  if (1) {
+  if (0) {
     bench_aes();
     return 0;
   }
