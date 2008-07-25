@@ -1272,7 +1272,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1);    \
     test_eq(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), 1);    \
     t1.family = t2.family = AF_INET6;                             \
-    r = tor_addr_compare(&t1,&t2);                                \
+    r = tor_addr_compare(&t1,&t2,CMP_SEMANTIC);                   \
     if (!(r op 0))                                                \
       test_fail_msg("failed: tor_addr_compare("a","b") "#op" 0"); \
   STMT_END
@@ -1284,7 +1284,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1);    \
     test_eq(tor_inet_pton(AF_INET6, b, &t2.addr.in6_addr), 1);    \
     t1.family = t2.family = AF_INET6;                             \
-    r = tor_addr_compare_masked(&t1,&t2,m);                       \
+    r = tor_addr_compare_masked(&t1,&t2,m,CMP_SEMANTIC);          \
     if (!(r op 0))                                                \
       test_fail_msg("failed: tor_addr_compare_masked("a","b","#m") "#op" 0"); \
   STMT_END
@@ -1445,10 +1445,10 @@ test_util_ip6_helpers(void)
   test_addr_compare("0::ffff:5.2.2.1", <, "::ffff:6.0.0.0"); /* XXXX wrong. */
   tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", &t1, NULL, NULL, NULL);
   tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
-  test_assert(tor_addr_compare(&t1, &t2) == 0);
+  test_assert(tor_addr_compare(&t1, &t2, CMP_SEMANTIC) == 0);
   tor_addr_parse_mask_ports("[::ffff:2.3.4.4]", &t1, NULL, NULL, NULL);
   tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);
-  test_assert(tor_addr_compare(&t1, &t2) < 0);
+  test_assert(tor_addr_compare(&t1, &t2, CMP_SEMANTIC) < 0);
 
   /* test compare_masked */
   test_addr_compare_masked("ffff::", ==, "ffff::0", 128);
@@ -3282,7 +3282,7 @@ test_policies(void)
   test_assert(p != NULL);
   test_eq(ADDR_POLICY_REJECT, p->policy_type);
   tor_addr_from_ipv4h(&tar, 0xc0a80000u);
-  test_eq(0, tor_addr_compare(&p->addr, &tar));
+  test_eq(0, tor_addr_compare(&p->addr, &tar, CMP_EXACT));
   test_eq(16, p->maskbits);
   test_eq(1, p->prt_min);
   test_eq(65535, p->prt_max);

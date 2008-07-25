@@ -81,11 +81,19 @@ tor_addr_to_in(const tor_addr_t *a)
 
 int tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out);
 char *tor_dup_addr(const tor_addr_t *addr) ATTR_MALLOC;
-
 int get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr);
-int tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2);
+
+/** DOCDOC */
+typedef enum {
+  CMP_EXACT,
+  CMP_SEMANTIC,
+} tor_addr_comparison_t;
+
+int tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2,
+                     tor_addr_comparison_t how);
 int tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
-                            maskbits_t mask);
+                            maskbits_t mask, tor_addr_comparison_t how);
+
 unsigned int tor_addr_hash(const tor_addr_t *addr);
 int tor_addr_is_v4(const tor_addr_t *addr);
 int tor_addr_is_internal(const tor_addr_t *ip, int for_listening) ATTR_PURE;

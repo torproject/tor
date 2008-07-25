@@ -409,7 +409,7 @@ cmp_single_addr_policy(addr_policy_t *a, addr_policy_t *b)
     return r;
   if ((r=((int)a->is_private - (int)b->is_private)))
     return r;
-  if ((r=tor_addr_compare(&a->addr, &b->addr)))
+  if ((r=tor_addr_compare(&a->addr, &b->addr, CMP_EXACT)))
     return r;
   if ((r=((int)a->maskbits - (int)b->maskbits)))
     return r;
@@ -558,7 +558,8 @@ compare_addr_to_addr_policy(uint32_t _addr, uint16_t port,
       }
     } else {
       /* Address is known */
-      if (!tor_addr_compare_masked(&addr, &tmpe->addr, tmpe->maskbits)) {
+      if (!tor_addr_compare_masked(&addr, &tmpe->addr, tmpe->maskbits,
+                                   CMP_SEMANTIC)) {
         if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
           /* Exact match for the policy */
           match = 1;
@@ -601,7 +602,7 @@ addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
     /* a has more fixed bits than b; it can't possibly cover b. */
     return 0;
   }
-  if (tor_addr_compare_masked(&a->addr, &b->addr, a->maskbits)) {
+  if (tor_addr_compare_masked(&a->addr, &b->addr, a->maskbits, CMP_SEMANTIC)) {
     /* There's a fixed bit in a that's set differently in b. */
     return 0;
   }
@@ -624,7 +625,7 @@ addr_policy_intersects(addr_policy_t *a, addr_policy_t *b)
     minbits = a->maskbits;
   else
     minbits = b->maskbits;
-  if (tor_addr_compare_masked(&a->addr, &b->addr, minbits))
+  if (tor_addr_compare_masked(&a->addr, &b->addr, minbits, CMP_SEMANTIC))
     return 0;
   if (a->prt_max < b->prt_min || b->prt_max < a->prt_min)
     return 0;

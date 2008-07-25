@@ -649,11 +649,13 @@ tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
  * preceeds addr2, and greater than 0 otherwise.
  *
  * Different address families (IPv4 vs IPv6) are always considered unequal.
+ *   NOT QUITE XXXX DOCDOC.
  */
 int
-tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2)
+tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2,
+                 tor_addr_comparison_t how)
 {
-  return tor_addr_compare_masked(addr1, addr2, 128);
+  return tor_addr_compare_masked(addr1, addr2, 128, how);
 }
 
 /** As tor_addr_compare(), but only looks at the first <b>mask</b> bits of
@@ -663,7 +665,7 @@ tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2)
  */
 int
 tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
-                        maskbits_t mbits)
+                        maskbits_t mbits, tor_addr_comparison_t how)
 {
   uint32_t ip4a=0, ip4b=0;
   sa_family_t v_family[2];
@@ -671,6 +673,28 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
   uint32_t masked_a, masked_b;
 
   tor_assert(addr1 && addr2);
+
+  if (how == CMP_EXACT) {
+    int r = ((int)addr2->family) - ((int)addr1->family);
+    if (r) return r;
+    switch (addr1->family) {
+      case AF_UNSPEC:
+        return 0; /* All unspecified addresses are equal */
+      case AF_INET: {
+        uint32_t a1 = ntohl(addr1->addr.in_addr.s_addr);
+        uint32_t a2 = ntohl(addr2->addr.in_addr.s_addr);
+        return (a1 < a2) ? -1 : (a1 == a2) ? 0 : 1;
+      }
+      case AF_INET6: {
+        uint32_t *a1 = S6_ADDR32(addr1->addr.in6_addr);
+        uint32_t *a2 = S6_ADDR32(addr2->addr.in6_addr);
+        return memcmp(a1, a2, 16);
+      }
+      default:
+        tor_fragile_assert();
+        return 0;
+    }
+  }
 
   /* XXXX021 this code doesn't handle mask bits right it's using v4-mapped v6
    * addresses.  If I ask whether ::ffff:1.2.3.4 and ::ffff:1.2.7.8 are the
