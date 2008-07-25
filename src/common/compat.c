@@ -106,6 +106,7 @@ const char compat_c_id[] =
 #include "log.h"
 #include "util.h"
 #include "container.h"
+#include "address.h"
 
 /* Inline the strl functions if the platform doesn't have them. */
 #ifndef HAVE_STRLCPY
@@ -935,47 +936,6 @@ get_user_homedir(const char *username)
 }
 #endif
 
-/** DOCDOC */
-socklen_t
-tor_addr_to_sockaddr(const tor_addr_t *a,
-                     uint16_t port,
-                     struct sockaddr *sa_out)
-{
-  if (a->family == AF_INET) {
-    struct sockaddr_in *sin = (struct sockaddr_in *)sa_out;
-    sin->sin_family = AF_INET;
-    sin->sin_port = port;
-    sin->sin_addr.s_addr = a->addr.in_addr.s_addr;
-    return sizeof(struct sockaddr_in);
-  } else if (a->family == AF_INET6) {
-    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa_out;
-    tor_assert(a->family == AF_INET6);
-    memset(sin6, 0, sizeof(struct sockaddr_in6));
-    sin6->sin6_family = AF_INET6;
-    sin6->sin6_port = port;
-    memcpy(&sin6->sin6_addr, &a->addr.in6_addr, sizeof(struct in6_addr));
-    return sizeof(struct sockaddr_in6);
-  } else {
-    return -1;
-  }
-}
-
-/** DOCDOC */
-void
-tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
-{
-  memset(&a, 0, sizeof(tor_addr_t));
-  if (sa->sa_family == AF_INET) {
-    struct sockaddr_in *sin = (struct sockaddr_in *) sa;
-    a->family = AF_INET;
-    a->addr.in_addr.s_addr = sin->sin_addr.s_addr;
-  } else if (sa->sa_family == AF_INET6) {
-    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) sa;
-    a->family = AF_INET6;
-    memcpy(&a->addr.in6_addr, &sin6->sin6_addr, sizeof(struct in6_addr));
-  }
-}
-
 /** Set *addr to the IP address (in dotted-quad notation) stored in c.
  * Return 1 on success, 0 if c is badly formatted.  (Like inet_aton(c,addr),
  * but works on Windows and Solaris.)
@@ -1213,129 +1173,6 @@ tor_lookup_hostname(const char *name, uint32_t *addr)
   }
 
   return -1;
-}
-
-/** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
- * *<b>addr</b> to the proper IP address and family. The <b>family</b>
- * argument (which must be AF_INET, AF_INET6, or AF_UNSPEC) declares a
- * <i>preferred</i> family, though another one may be returned if only one
- * family is implemented for this address.
- *
- * Return 0 on success, -1 on failure; 1 on transient failure.
- */
-int
-tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
-{
-  /* Perhaps eventually this should be replaced by a tor_getaddrinfo or
-   * something.
-   */
-  struct in_addr iaddr;
-  struct in6_addr iaddr6;
-  tor_assert(name);
-  tor_assert(addr);
-  tor_assert(family == AF_INET || family == AF_UNSPEC);
-  memset(addr, 0, sizeof(addr)); /* Clear the extraneous fields. */
-  if (!*name) {
-    /* Empty address is an error. */
-    return -1;
-  } else if (tor_inet_pton(AF_INET, name, &iaddr)) {
-    /* It's an IPv4 IP. */
-    addr->family = AF_INET;
-    memcpy(&addr->addr.in_addr, &iaddr, sizeof(struct in_addr));
-    return 0;
-  } else if (tor_inet_pton(AF_INET6, name, &iaddr6)) {
-    addr->family = AF_INET6;
-    memcpy(&addr->addr.in6_addr, &iaddr6, sizeof(struct in6_addr));
-    return 0;
-  } else {
-#ifdef HAVE_GETADDRINFO
-    int err;
-    struct addrinfo *res=NULL, *res_p;
-    struct addrinfo *best=NULL;
-    struct addrinfo hints;
-    int result = -1;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = family;
-    hints.ai_socktype = SOCK_STREAM;
-    err = getaddrinfo(name, NULL, &hints, &res);
-    if (!err) {
-      best = NULL;
-      for (res_p = res; res_p; res_p = res_p->ai_next) {
-        if (family == AF_UNSPEC) {
-          if (res_p->ai_family == AF_INET) {
-            best = res_p;
-            break;
-          } else if (res_p->ai_family == AF_INET6 && !best) {
-            best = res_p;
-          }
-        } else if (family == res_p->ai_family) {
-          best = res_p;
-          break;
-        }
-      }
-      if (!best)
-        best = res;
-      if (best->ai_family == AF_INET) {
-        addr->family = AF_INET;
-        memcpy(&addr->addr.in_addr,
-               &((struct sockaddr_in*)best->ai_addr)->sin_addr,
-               sizeof(struct in_addr));
-        result = 0;
-      } else if (best->ai_family == AF_INET6) {
-        addr->family = AF_INET6;
-        memcpy(&addr->addr.in6_addr,
-               &((struct sockaddr_in6*)best->ai_addr)->sin6_addr,
-               sizeof(struct in6_addr));
-        result = 0;
-      }
-      freeaddrinfo(res);
-      return result;
-    }
-    return (err == EAI_AGAIN) ? 1 : -1;
-#else
-    struct hostent *ent;
-    int err;
-#ifdef HAVE_GETHOSTBYNAME_R_6_ARG
-    char buf[2048];
-    struct hostent hostent;
-    int r;
-    r = gethostbyname_r(name, &hostent, buf, sizeof(buf), &ent, &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_5_ARG)
-    char buf[2048];
-    struct hostent hostent;
-    ent = gethostbyname_r(name, &hostent, buf, sizeof(buf), &err);
-#elif defined(HAVE_GETHOSTBYNAME_R_3_ARG)
-    struct hostent_data data;
-    struct hostent hent;
-    memset(&data, 0, sizeof(data));
-    err = gethostbyname_r(name, &hent, &data);
-    ent = err ? NULL : &hent;
-#else
-    ent = gethostbyname(name);
-#ifdef MS_WINDOWS
-    err = WSAGetLastError();
-#else
-    err = h_errno;
-#endif
-#endif /* endif HAVE_GETHOSTBYNAME_R_6_ARG. */
-    if (ent) {
-      addr->family = ent->h_addrtype;
-      if (ent->h_addrtype == AF_INET) {
-        memcpy(&addr->addr.in_addr, ent->h_addr, sizeof(struct in_addr));
-      } else if (ent->h_addrtype == AF_INET6) {
-        memcpy(&addr->addr.in6_addr, ent->h_addr, sizeof(struct in6_addr));
-      } else {
-        tor_assert(0); /* gethostbyname() returned a bizarre addrtype */
-      }
-      return 0;
-    }
-#ifdef MS_WINDOWS
-    return (err == WSATRY_AGAIN) ? 1 : -1;
-#else
-    return (err == TRY_AGAIN) ? 1 : -1;
-#endif
-#endif
-  }
 }
 
 /** Hold the result of our call to <b>uname</b>. */

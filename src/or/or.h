@@ -80,6 +80,7 @@
 #include "container.h"
 #include "util.h"
 #include "torgzip.h"
+#include "address.h"
 
 #include <event.h>
 

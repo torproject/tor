@@ -345,69 +345,6 @@ struct sockaddr_in6 {
 };
 #endif
 
-typedef uint8_t maskbits_t;
-struct in_addr;
-/** Holds an IPv4 or IPv6 address.  (Uses less memory than struct
- * sockaddr_storage.) */
-typedef struct tor_addr_t
-{
-  sa_family_t family;
-  union {
-    struct in_addr in_addr;
-    struct in6_addr in6_addr;
-  } addr;
-} tor_addr_t;
-
-/* DOCDOC*/
-static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
-static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
-static INLINE uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
-static INLINE sa_family_t tor_addr_family(const tor_addr_t *a);
-static INLINE const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
-static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
-socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
-                               struct sockaddr *sa_out);
-void tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa);
-
-static INLINE const struct in6_addr *
-tor_addr_to_in6(const tor_addr_t *a)
-{
-  return a->family == AF_INET6 ? &a->addr.in6_addr : NULL;
-}
-
-#define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6(x))
-#define tor_addr_to_in6_addr32(x) S6_ADDR32(*tor_addr_to_in6(x))
-
-static INLINE uint32_t
-tor_addr_to_ipv4n(const tor_addr_t *a)
-{
-  return a->family == AF_INET ? a->addr.in_addr.s_addr : 0;
-}
-static INLINE uint32_t
-tor_addr_to_ipv4h(const tor_addr_t *a)
-{
-  return ntohl(tor_addr_to_ipv4n(a));
-}
-static INLINE uint32_t
-tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
-{
-  return ntohl(tor_addr_to_in6_addr32(a)[3]);
-}
-static INLINE sa_family_t
-tor_addr_family(const tor_addr_t *a)
-{
-  return a->family;
-}
-static INLINE const struct in_addr *
-tor_addr_to_in(const tor_addr_t *a)
-{
-  return a->family == AF_INET ? &a->addr.in_addr : NULL;
-}
-
-#define INET_NTOA_BUF_LEN 16 /* 255.255.255.255 */
-#define TOR_ADDR_BUF_LEN 48 /* [ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]
-                             */
-
 int tor_inet_aton(const char *cp, struct in_addr *addr) ATTR_NONNULL((1,2));
 const char *tor_inet_ntop(int af, const void *src, char *dst, size_t len);
 int tor_inet_pton(int af, const char *src, void *dst);
@@ -415,8 +352,6 @@ int tor_lookup_hostname(const char *name, uint32_t *addr) ATTR_NONNULL((1,2));
 void set_socket_nonblocking(int socket);
 int tor_socketpair(int family, int type, int protocol, int fd[2]);
 int network_init(void);
-
-int tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out);
 
 /* For stupid historical reasons, windows sockets have an independent
  * set of errnos, and an independent way to get them.  Also, you can't

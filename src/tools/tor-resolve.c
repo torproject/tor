@@ -8,6 +8,7 @@
 
 #include "compat.h"
 #include "util.h"
+#include "address.h"
 #include "log.h"
 
 #include <stdio.h>

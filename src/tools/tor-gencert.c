@@ -31,6 +31,7 @@
 #include "util.h"
 #include "log.h"
 #include "crypto.h"
+#include "address.h"
 
 #define IDENTITY_KEY_BITS 3072
 #define SIGNING_KEY_BITS 1024

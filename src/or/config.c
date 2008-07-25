@@ -5174,6 +5174,7 @@ getinfo_helper_config(control_connection_t *conn,
 #include "ht.h"
 #include "test.h"
 
+extern const char address_c_id[];
 extern const char aes_c_id[];
 extern const char compat_c_id[];
 extern const char container_c_id[];
@@ -5218,6 +5219,7 @@ extern const char routerparse_c_id[];
 static void
 print_svn_version(void)
 {
+  puts(ADDRESS_H_ID);
   puts(AES_H_ID);
   puts(COMPAT_H_ID);
   puts(CONTAINER_H_ID);
@@ -5229,6 +5231,7 @@ print_svn_version(void)
   puts(TORINT_H_ID);
   puts(TORTLS_H_ID);
   puts(UTIL_H_ID);
+  puts(address_c_id);
   puts(aes_c_id);
   puts(compat_c_id);
   puts(container_c_id);
