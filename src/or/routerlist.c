@@ -1714,7 +1714,8 @@ routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
  * a minimum uptime, return one of those.
  * If <b>CRN_NEED_CAPACITY</b> is set in flags, weight your choice by the
  * advertised capacity of each router.
- * If <b>CRN_ALLOW_INVALID</b> is not set in flags, consider only Valid routers.
+ * If <b>CRN_ALLOW_INVALID</b> is not set in flags, consider only Valid
+ * routers.
  * If <b>CRN_NEED_GUARD</b> is set in flags, consider only Guard routers.
  * If <b>CRN_WEIGHT_AS_EXIT</b> is set in flags, we weight bandwidths as if
  * picking an exit node, otherwise we weight bandwidths for picking a relay

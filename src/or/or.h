@@ -1492,7 +1492,6 @@ typedef struct networkstatus_voter_info_t {
                                      * as good. */
 } networkstatus_voter_info_t;
 
-
 /** Enumerates the possible seriousness values of a networkstatus document. */
 typedef enum {
   NS_TYPE_VOTE,
@@ -1503,7 +1502,6 @@ typedef enum {
 /** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */
 typedef struct networkstatus_t {
-  // int is_vote; 
   networkstatus_type_t type; /**< Vote, consensus, or opinion? */
   time_t published; /**< Vote only: Tiem when vote was written. */
   time_t valid_after; /**< Time after which this vote or consensus applies. */
