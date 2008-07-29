@@ -37,8 +37,9 @@ static INLINE uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
 static INLINE sa_family_t tor_addr_family(const tor_addr_t *a);
 static INLINE const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
 static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
+static INLINE int tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u);
 socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
-                               struct sockaddr *sa_out);
+                               struct sockaddr *sa_out, socklen_t len);
 void tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa);
 
 static INLINE const struct in6_addr *
@@ -47,6 +48,7 @@ tor_addr_to_in6(const tor_addr_t *a)
   return a->family == AF_INET6 ? &a->addr.in6_addr : NULL;
 }
 
+#define tor_addr_to_in6_addr8(x) tor_addr_to_in6(x)->s6_addr
 #define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6(x))
 #define tor_addr_to_in6_addr32(x) S6_ADDR32(*tor_addr_to_in6(x))
 
@@ -74,6 +76,11 @@ static INLINE const struct in_addr *
 tor_addr_to_in(const tor_addr_t *a)
 {
   return a->family == AF_INET ? &a->addr.in_addr : NULL;
+}
+static INLINE int
+tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
+{
+  return a->family == AF_INET ? (tor_addr_to_ipv4h(a) == u) : 0;
 }
 
 #define TOR_ADDR_BUF_LEN 48 /* [ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]

@@ -7,12 +7,8 @@ const char address_c_id[] =
   "$Id$";
 
 /**
- * \file compat.c
- * \brief Wrappers to make calls more portable.  This code defines
- * functions such as tor_malloc, tor_snprintf, get/set various data types,
- * renaming, setting socket options, switching user IDs.  It is basically
- * where the non-portable items are conditionally included depending on
- * the platform.
+ * \file address.c
+ * \brief DOCDOC
  **/
 
 /* This is required on rh7 to make strptime not complain.
@@ -102,21 +98,30 @@ const char address_c_id[] =
 #include <sys/syslimits.h>
 #endif
 
-/** DOCDOC */
+/** Convert the tor_addr_t in <b>a</b>, with port in <b>port</b>, into a
+ * socklen object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
+ * room is free, or on error, return -1.  Else return the length of the
+ * sockaddr. */
 socklen_t
 tor_addr_to_sockaddr(const tor_addr_t *a,
                      uint16_t port,
-                     struct sockaddr *sa_out)
+                     struct sockaddr *sa_out,
+                     socklen_t len)
 {
   if (a->family == AF_INET) {
-    struct sockaddr_in *sin = (struct sockaddr_in *)sa_out;
+    struct sockaddr_in *sin;
+    if (len < sizeof(struct sockaddr_in))
+      return -1;
+    sin = (struct sockaddr_in *)sa_out;
     sin->sin_family = AF_INET;
     sin->sin_port = port;
     sin->sin_addr.s_addr = a->addr.in_addr.s_addr;
     return sizeof(struct sockaddr_in);
   } else if (a->family == AF_INET6) {
-    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa_out;
-    tor_assert(a->family == AF_INET6);
+    struct sockaddr_in6 *sin6;
+    if (len < sizeof(struct sockaddr_in6))
+      return -1;
+    sin6 = (struct sockaddr_in6 *)sa_out;
     memset(sin6, 0, sizeof(struct sockaddr_in6));
     sin6->sin6_family = AF_INET6;
     sin6->sin6_port = port;
@@ -127,11 +132,14 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
   }
 }
 
-/** DOCDOC */
+/** Set the tor_addr_t in <b>a</b> to contain the socket address contained in
+ * <b>sa</b>. */
 void
 tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
 {
-  memset(&a, 0, sizeof(tor_addr_t));
+  tor_assert(a);
+  tor_assert(sa);
+  memset(a, 0, sizeof(tor_addr_t));
   if (sa->sa_family == AF_INET) {
     struct sockaddr_in *sin = (struct sockaddr_in *) sa;
     a->family = AF_INET;
@@ -140,6 +148,8 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) sa;
     a->family = AF_INET6;
     memcpy(&a->addr.in6_addr, &sin6->sin6_addr, sizeof(struct in6_addr));
+  } else {
+    a->family = AF_UNSPEC;
   }
 }
 
@@ -161,7 +171,7 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
   struct in6_addr iaddr6;
   tor_assert(name);
   tor_assert(addr);
-  tor_assert(family == AF_INET || family == AF_UNSPEC);
+  tor_assert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
   memset(addr, 0, sizeof(addr)); /* Clear the extraneous fields. */
   if (!*name) {
     /* Empty address is an error. */
@@ -340,17 +350,19 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, int len, int decorate)
     case AF_INET:
       if (len<3)
         return NULL;
-      if (decorate)
-        ptr = tor_inet_ntop(AF_INET, &addr->addr.in_addr, dest+1, len-2);
-      else
         ptr = tor_inet_ntop(AF_INET, &addr->addr.in_addr, dest, len);
+      break;
+    case AF_INET6:
+      if (decorate)
+        ptr = tor_inet_ntop(AF_INET6, &addr->addr.in6_addr, dest+1, len-2);
+      else
+        ptr = tor_inet_ntop(AF_INET6, &addr->addr.in6_addr, dest, len);
       if (ptr && decorate) {
         *dest = '[';
         memcpy(dest+strlen(dest), "]", 2);
+        tor_assert(ptr == dest+1);
+        ptr = dest;
       }
-      break;
-    case AF_INET6:
-      ptr = tor_inet_ntop(AF_INET6, &addr->addr.in6_addr, dest, len);
       break;
     default:
       return NULL;
@@ -683,12 +695,24 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
       case AF_INET: {
         uint32_t a1 = ntohl(addr1->addr.in_addr.s_addr);
         uint32_t a2 = ntohl(addr2->addr.in_addr.s_addr);
+        a1 >>= (32-mbits);
+        a2 >>= (32-mbits);
         return (a1 < a2) ? -1 : (a1 == a2) ? 0 : 1;
       }
       case AF_INET6: {
-        uint32_t *a1 = S6_ADDR32(addr1->addr.in6_addr);
-        uint32_t *a2 = S6_ADDR32(addr2->addr.in6_addr);
-        return memcmp(a1, a2, 16);
+        uint8_t *a1 = addr1->addr.in6_addr.s6_addr;
+        uint8_t *a2 = addr2->addr.in6_addr.s6_addr;
+        const int bytes = mbits >> 3;
+        const int leftover_bits = mbits & 7;
+        if (bytes && (r = memcmp(a1, a2, bytes))) {
+          return r;
+        } else if (leftover_bits) {
+          uint8_t b1 = a1[bytes] >> (8-leftover_bits);
+          uint8_t b2 = a2[bytes] >> (8-leftover_bits);
+          return (b1 < b2) ? -1 : (b1 == b2) ? 0 : 1;
+        } else {
+          return 0;
+        }
       }
       default:
         tor_fragile_assert();
@@ -706,6 +730,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
   v_family[0] = tor_addr_family(addr1);
   v_family[1] = tor_addr_family(addr2);
 
+  /* All UNSPEC addresses are equal; they are unequal to all other addresses.*/
   if (v_family[0] == AF_UNSPEC) {
     if (v_family[1] == AF_UNSPEC)
       return 0;
@@ -785,7 +810,6 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
 
 }
 
-
 /** Return a hash code based on the address addr */
 unsigned int
 tor_addr_hash(const tor_addr_t *addr)
@@ -824,7 +848,6 @@ tor_addr_from_str(tor_addr_t *addr, const char *src)
   tor_assert(addr && src);
   return tor_addr_parse_mask_ports(src, addr, NULL, NULL, NULL);
 }
-
 
 /** Set *<b>addr</b> to the IP address (if any) of whatever interface
  * connects to the internet.  This address should only be used in checking
@@ -991,7 +1014,7 @@ addr_mask_get_bits(uint32_t mask)
 }
 
 /** Compare two addresses <b>a1</b> and <b>a2</b> for equality under a
- *  etmask of <b>mbits</b> bits.  Return -1, 0, or 1.
+ * netmask of <b>mbits</b> bits.  Return -1, 0, or 1.
  *
  * XXXX_IP6 Temporary function to allow masks as bitcounts everywhere.  This
  * will be replaced with an IPv6-aware version as soon as 32-bit addresses are
@@ -1184,7 +1207,6 @@ tor_dup_ip(uint32_t addr)
   return tor_strdup(buf);
 }
 
-
 /**
  * Set *<b>addr</b> to the host-order IPv4 address (if any) of whatever
  * interface connects to the internet.  This address should only be used in
@@ -1202,3 +1224,4 @@ get_interface_address(int severity, uint32_t *addr)
     *addr = tor_addr_to_ipv4h(&local_addr);
   return r;
 }
+

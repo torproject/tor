@@ -1316,9 +1316,58 @@ test_util_ip6_helpers(void)
   uint16_t port1, port2;
   maskbits_t mask;
   const char *p1;
+  struct sockaddr_storage sa_storage;
+  struct sockaddr_in *sin;
+  struct sockaddr_in6 *sin6;
 
   //  struct in_addr b1, b2;
   /* Test tor_inet_ntop and tor_inet_pton: IPv6 */
+
+  /* ==== Converting to and from sockaddr_t. */
+  sin = (struct sockaddr_in *)&sa_storage;
+  sin->sin_family = AF_INET;
+  sin->sin_port = 9090;
+  sin->sin_addr.s_addr = htonl(0x7f7f0102); /*127.127.1.2*/
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin);
+  test_eq(tor_addr_family(&t1), AF_INET);
+  test_eq(tor_addr_to_ipv4h(&t1), 0x7f7f0102);
+
+  memset(&sa_storage, 0, sizeof(sa_storage));
+  test_eq(sizeof(struct sockaddr_in),
+          tor_addr_to_sockaddr(&t1, 1234, (struct sockaddr *)&sa_storage,
+                               sizeof(sa_storage)));
+  test_eq(1234, sin->sin_port);
+  test_eq(0x7f7f0102, ntohl(sin->sin_addr.s_addr));
+
+  memset(&sa_storage, 0, sizeof(sa_storage));
+  sin6 = (struct sockaddr_in6 *)&sa_storage;
+  sin6->sin6_family = AF_INET6;
+  sin6->sin6_port = 7070;
+  sin6->sin6_addr.s6_addr[0] = 128;
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin6);
+  test_eq(tor_addr_family(&t1), AF_INET6);
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 0);
+  test_streq(p1, "8000::");
+
+  memset(&sa_storage, 0, sizeof(sa_storage));
+  test_eq(sizeof(struct sockaddr_in6),
+          tor_addr_to_sockaddr(&t1, 9999, (struct sockaddr *)&sa_storage,
+                               sizeof(sa_storage)));
+  test_eq(AF_INET6, sin6->sin6_family);
+  test_eq(9999, sin6->sin6_port);
+  test_eq(0x80000000, ntohl(S6_ADDR32(sin6->sin6_addr)[0]));
+
+  /* ==== tor_addr_lookup: static cases.  (Can't test dns without knowing we
+   * have a good resolver. */
+  test_eq(0, tor_addr_lookup("127.128.129.130", AF_UNSPEC, &t1));
+  test_eq(AF_INET, tor_addr_family(&t1));
+  test_eq(tor_addr_to_ipv4h(&t1), 0x7f808182);
+
+  test_eq(0, tor_addr_lookup("9000::5", AF_UNSPEC, &t1));
+  test_eq(AF_INET6, tor_addr_family(&t1));
+  test_eq(0x90, tor_addr_to_in6_addr8(&t1)[0]);
+  test_assert(tor_mem_is_zero((char*)tor_addr_to_in6_addr8(&t1)+1, 14));
+  test_eq(0x05, tor_addr_to_in6_addr8(&t1)[15]);
 
   /* === Test pton: valid af_inet6 */
   /* Simple, valid parsing. */
@@ -1436,6 +1485,7 @@ test_util_ip6_helpers(void)
   test_internal_ip("::ffff:169.254.0.0", 0);
   test_internal_ip("::ffff:169.254.255.255", 0);
   test_external_ip("::ffff:169.255.0.0", 0);
+  test_assert(is_internal_IP(0x7f000001, 0));
 
   /* tor_addr_compare(tor_addr_t x2) */
   test_addr_compare("ffff::", ==, "ffff::0");
@@ -1455,6 +1505,14 @@ test_util_ip6_helpers(void)
   test_addr_compare_masked("ffff::", ==, "ffff::0", 64);
   test_addr_compare_masked("0::2:2:1", <, "0::8000:2:1", 81);
   test_addr_compare_masked("0::2:2:1", ==, "0::8000:2:1", 80);
+
+  /* Test decorated addr_to_string. */
+  test_eq(AF_INET6, tor_addr_from_str(&t1, "[123:45:6789::5005:11]"));
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
+  test_streq(p1, "[123:45:6789::5005:11]");
+  test_eq(AF_INET, tor_addr_from_str(&t1, "18.0.0.1"));
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
+  test_streq(p1, "18.0.0.1");
 
   /* test tor_addr_parse_mask_ports */
   test_addr_mask_ports_parse("[::f]/17:47-95", AF_INET6,

@@ -67,7 +67,7 @@ test:
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
 	        src/common/*.h                        \
-		src/common/[^asO]*.c                  \
+		src/common/[^asO]*.c src/common/address.c \
 		src/or/[^et]*.[ch] src/or/t*.c src/or/eventdns_tor.h
 
 check-docs:
