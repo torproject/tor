@@ -227,15 +227,20 @@ R   d Do we want to maintain our own set of entryguards that we use as
     - Proposal to supersede 117 by adding IPv6 support for exits and entries.
       - Internal code support for ipv6:
         o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
-        - Most address variables need to become tor_addr_t
+        - Many address variables need to become tor_addr_t
+          - addr in connection_t
+          - n_addr in extend_info_t
         - Teach resolving code how to handle ipv6.
-        - Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
+        . Teach exit policies about ipv6 (consider ipv4/ipv6
+          interaction!)
+        - Generate END_REASON_EXITPOLICY cells and parse them right
+        - Generate new BEGIN cell types and parse them right
     - 118: Listen on and advertise multiple ports:
       - Tor should be able to have a pool of outgoing IP addresses that it is
         able to rotate through. (maybe.  Possible overlap with proposal 118.)
       - config option to publish what ports you listen on, beyond
         ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
-        (This is very similar to proposal 118.)
+      - Need to figure out the right format for routerinfo_t on this.
     - Fix voting to handle bug 608 case when multiple servers get
       Named.
     d Possibly: revise link protocol to allow big circuit IDs,
