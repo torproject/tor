@@ -838,15 +838,31 @@ tor_dup_addr(const tor_addr_t *addr)
   return tor_strdup(buf);
 }
 
-/** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.
+/** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.  The string
+ * may be an IPv4 address, an IPv6 address, or an IPv6 address surrounded by
+ * square brackets.
  *
  *  Return an address family on success, or -1 if an invalid address string is
  *  provided. */
 int
 tor_addr_from_str(tor_addr_t *addr, const char *src)
 {
+  char *tmp = NULL; /* Holds substring if we got a dotted quad. */
+  int result;
   tor_assert(addr && src);
-  return tor_addr_parse_mask_ports(src, addr, NULL, NULL, NULL);
+  if (src[0] == '[' && src[1])
+    src = tmp = tor_strndup(src+1, strlen(src)-2);
+
+  if (tor_inet_pton(AF_INET6, src, &addr->addr.in6_addr) > 0) {
+    result = addr->family = AF_INET6;
+  } else if (tor_inet_pton(AF_INET, src, &addr->addr.in_addr) > 0) {
+    result = addr->family = AF_INET;
+  } else {
+    result = -1;
+  }
+
+  tor_free(tmp);
+  return result;
 }
 
 /** Set *<b>addr</b> to the IP address (if any) of whatever interface
