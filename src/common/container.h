@@ -195,15 +195,21 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
  * }
  * </pre>
  */
-#define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
+#define SMARTLIST_FOREACH_BEGIN(sl, type, var)  \
   STMT_BEGIN                                                    \
     int var ## _sl_idx, var ## _sl_len=(sl)->num_used;          \
     type var;                                                   \
     for (var ## _sl_idx = 0; var ## _sl_idx < var ## _sl_len;   \
          ++var ## _sl_idx) {                                    \
-      var = (sl)->list[var ## _sl_idx];                         \
-      cmd;                                                      \
-    } STMT_END
+      var = (sl)->list[var ## _sl_idx];
+
+#define SMARTLIST_FOREACH_END(var)              \
+  } STMT_END
+
+#define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
+  SMARTLIST_FOREACH_BEGIN(sl,type,var) {                        \
+    cmd;                                                        \
+  } SMARTLIST_FOREACH_END(var)
 
 /** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
  * with the variable <b>var</b>, remove the current element in a way that
