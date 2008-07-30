@@ -356,9 +356,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
   log_debug(LD_CIRC,"Looking for firsthop '%s:%u'",tmpbuf,
             firsthop->extend_info->port);
-  /* imprint the circuit with its future n_conn->id */
-  memcpy(circ->_base.n_conn_id_digest, firsthop->extend_info->identity_digest,
-         DIGEST_LEN);
+
   n_conn = connection_or_get_by_identity_digest(
          firsthop->extend_info->identity_digest);
   /* If we don't have an open conn, or the conn we have is obsolete
@@ -367,8 +365,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
       (n_conn->_base.or_is_obsolete)) {
     /* not currently connected */
-    circ->_base.n_addr = firsthop->extend_info->addr;
-    circ->_base.n_port = firsthop->extend_info->port;
+    circ->_base.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (!n_conn || n_conn->_base.or_is_obsolete) { /* launch the connection */
       if (circ->build_state->onehop_tunnel)
@@ -389,8 +386,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
      */
     return 0;
   } else { /* it's already open. use it. */
-    circ->_base.n_addr = n_conn->_base.addr;
-    circ->_base.n_port = n_conn->_base.port;
+    tor_assert(!circ->_base.n_hop);
     circ->_base.n_conn = n_conn;
     log_debug(LD_CIRC,"Conn open. Delivering first onion skin.");
     if ((err_reason = circuit_send_next_onion_skin(circ)) < 0) {
@@ -419,25 +415,24 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
   pending_circs = smartlist_create();
   circuit_get_all_pending_on_or_conn(pending_circs, or_conn);
 
-  SMARTLIST_FOREACH(pending_circs, circuit_t *, circ,
+  SMARTLIST_FOREACH_BEGIN (pending_circs, circuit_t *, circ)
     {
       /* These checks are redundant wrt get_all_pending_on_or_conn, but I'm
        * leaving them in in case it's possible for the status of a circuit to
        * change as we're going down the list. */
-      if (circ->marked_for_close || circ->n_conn ||
+      if (circ->marked_for_close || circ->n_conn || !circ->n_hop ||
           circ->state != CIRCUIT_STATE_OR_WAIT)
         continue;
-      if (tor_digest_is_zero(circ->n_conn_id_digest)) {
+
+      if (tor_digest_is_zero(circ->n_hop->identity_digest)) {
         /* Look at addr/port. This is an unkeyed connection. */
-        if (circ->n_addr != or_conn->_base.addr ||
-            circ->n_port != or_conn->_base.port)
+        if (circ->n_hop->addr != or_conn->_base.addr ||
+            circ->n_hop->port != or_conn->_base.port)
           continue;
-        /* now teach circ the right identity_digest */
-        memcpy(circ->n_conn_id_digest, or_conn->identity_digest, DIGEST_LEN);
       } else {
         /* We expected a key. See if it's the right one. */
         if (memcmp(or_conn->identity_digest,
-                   circ->n_conn_id_digest, DIGEST_LEN))
+                   circ->n_hop->identity_digest, DIGEST_LEN))
           continue;
       }
       if (!status) { /* or_conn failed; close circ */
@@ -450,6 +445,9 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
        * orconn_circuid_circuit_map, so we don't need to call
        * set_circid_orconn here. */
       circ->n_conn = or_conn;
+      extend_info_free(circ->n_hop);
+      circ->n_hop = NULL;
+
       if (CIRCUIT_IS_ORIGIN(circ)) {
         if ((err_reason =
              circuit_send_next_onion_skin(TO_ORIGIN_CIRCUIT(circ))) < 0) {
@@ -471,7 +469,8 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
         tor_free(circ->n_conn_onionskin);
         circuit_set_state(circ, CIRCUIT_STATE_OPEN);
       }
-    });
+    }
+  SMARTLIST_FOREACH_END(circ);
 
   smartlist_free(pending_circs);
 }
@@ -723,6 +722,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   relay_header_t rh;
   char *onionskin;
   char *id_digest=NULL;
+  uint32_t n_addr;
+  uint16_t n_port;
 
   if (circ->n_conn) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -745,11 +746,11 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
-  circ->n_addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
-  circ->n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
-
+  n_addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
+  n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
   onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
+
   n_conn = connection_or_get_by_identity_digest(id_digest);
 
   /* If we don't have an open conn, or the conn we have is obsolete
@@ -759,24 +760,23 @@ circuit_extend(cell_t *cell, circuit_t *circ)
       n_conn->_base.or_is_obsolete) {
     struct in_addr in;
     char tmpbuf[INET_NTOA_BUF_LEN];
-    in.s_addr = htonl(circ->n_addr);
+    in.s_addr = htonl(n_addr);
     tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
     log_debug(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
-              tmpbuf, circ->n_port);
+              tmpbuf, (int)n_port);
+
+    circ->n_hop = extend_info_alloc(NULL /*nickname*/,
+                                    id_digest,
+                                    NULL /*onion_key*/,
+                                    n_addr, n_port);
 
     circ->n_conn_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->n_conn_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circuit_set_state(circ, CIRCUIT_STATE_OR_WAIT);
 
-    /* imprint the circuit with its future n_conn->id */
-    memcpy(circ->n_conn_id_digest, id_digest, DIGEST_LEN);
-
-    if (n_conn && !n_conn->_base.or_is_obsolete) {
-      circ->n_addr = n_conn->_base.addr;
-      circ->n_port = n_conn->_base.port;
-    } else {
-     /* we should try to open a connection */
-      n_conn = connection_or_connect(circ->n_addr, circ->n_port, id_digest);
+    if (! (n_conn && !n_conn->_base.or_is_obsolete)) {
+      /* we should try to open a connection */
+      n_conn = connection_or_connect(n_addr, n_port, id_digest);
       if (!n_conn) {
         log_info(LD_CIRC,"Launching n_conn failed. Closing circuit.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
@@ -791,12 +791,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return 0;
   }
 
-  /* these may be different if the router connected to us from elsewhere */
-  circ->n_addr = n_conn->_base.addr;
-  circ->n_port = n_conn->_base.port;
-
+  tor_assert(circ->n_hop);
   circ->n_conn = n_conn;
-  memcpy(circ->n_conn_id_digest, n_conn->identity_digest, DIGEST_LEN);
   log_debug(LD_CIRC,"n_conn is %s:%u",
             n_conn->_base.address,n_conn->_base.port);
 

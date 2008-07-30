@@ -1780,14 +1780,12 @@ typedef struct circuit_t {
   cell_queue_t n_conn_cells;
   /** The OR connection that is next in this circuit. */
   or_connection_t *n_conn;
-  /** The identity hash of n_conn. */
-  char n_conn_id_digest[DIGEST_LEN];
   /** The circuit_id used in the next (forward) hop of this circuit. */
   circid_t n_circ_id;
-  /** The port for the OR that is next in this circuit. */
-  uint16_t n_port;
-  /** The IPv4 address of the OR that is next in this circuit. */
-  uint32_t n_addr;
+
+  /** The hop to which we want to extend this ciruit.  Should be NULL if
+   * the */
+  extend_info_t *n_hop;
 
   /** True iff we are waiting for n_conn_cells to become less full before
    * allowing p_streams to add any more cells. (Origin circuit only.) */

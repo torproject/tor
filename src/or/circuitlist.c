@@ -235,16 +235,18 @@ circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
   {
     if (circ->marked_for_close)
       continue;
+    if (!circ->n_hop)
+      continue;
     tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
-    if (tor_digest_is_zero(circ->n_conn_id_digest)) {
+    if (tor_digest_is_zero(circ->n_hop->identity_digest)) {
       /* Look at addr/port. This is an unkeyed connection. */
-      if (circ->n_addr != or_conn->_base.addr ||
-          circ->n_port != or_conn->_base.port)
+      if (circ->n_hop->addr != or_conn->_base.addr ||
+          circ->n_hop->port != or_conn->_base.port)
         continue;
     } else {
       /* We expected a key. See if it's the right one. */
       if (memcmp(or_conn->identity_digest,
-                 circ->n_conn_id_digest, DIGEST_LEN))
+                 circ->n_hop->identity_digest, DIGEST_LEN))
         continue;
     }
     smartlist_add(out, circ);
@@ -430,6 +432,8 @@ circuit_free(circuit_t *circ)
     cell_queue_clear(&ocirc->p_conn_cells);
   }
 
+  if (circ->n_hop)
+    extend_info_free(circ->n_hop);
   tor_free(circ->n_conn_onionskin);
 
   /* Remove from map. */
@@ -568,11 +572,11 @@ circuit_dump_by_conn(connection_t *conn, int severity)
         }
       }
     }
-    if (!circ->n_conn && circ->n_addr && circ->n_port &&
-        circ->n_addr == conn->addr &&
-        circ->n_port == conn->port &&
+    if (!circ->n_conn && circ->n_hop &&
+        circ->n_hop->addr == conn->addr &&
+        circ->n_hop->port == conn->port &&
         conn->type == CONN_TYPE_OR &&
-        !memcmp(TO_OR_CONN(conn)->identity_digest, circ->n_conn_id_digest,
+        !memcmp(TO_OR_CONN(conn)->identity_digest, circ->n_hop->identity_digest,
                 DIGEST_LEN)) {
       circuit_dump_details(severity, circ, conn->conn_array_index,
                            (circ->state == CIRCUIT_STATE_OPEN &&
@@ -1152,8 +1156,8 @@ assert_circuit_ok(const circuit_t *c)
   }
 
   if (c->n_conn) {
-    tor_assert(!memcmp(c->n_conn->identity_digest, c->n_conn_id_digest,
-                       DIGEST_LEN));
+    tor_assert(!c->n_hop);
+
     if (c->n_circ_id)
       tor_assert(c == circuit_get_by_circid_orconn(c->n_circ_id, c->n_conn));
   }

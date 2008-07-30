@@ -289,7 +289,7 @@ circuit_expire_building(time_t now)
 
     if (victim->n_conn)
       log_info(LD_CIRC,"Abandoning circ %s:%d:%d (state %d:%s, purpose %d)",
-               victim->n_conn->_base.address, victim->n_port,
+               victim->n_conn->_base.address, victim->n_conn->_base.port,
                victim->n_circ_id,
                victim->state, circuit_state_to_string(victim->state),
                victim->purpose);
@@ -739,12 +739,15 @@ circuit_build_failed(origin_circuit_t *circ)
     /* We failed at the first hop. If there's an OR connection
        to blame, blame it. */
     or_connection_t *n_conn = NULL;
+    const char *n_conn_id = NULL;
     if (circ->_base.n_conn) {
       n_conn = circ->_base.n_conn;
-    } else if (circ->_base.state == CIRCUIT_STATE_OR_WAIT) {
+      if (n_conn) n_conn_id = n_conn->identity_digest;
+    } else if (circ->_base.state == CIRCUIT_STATE_OR_WAIT &&
+               circ->_base.n_hop) {
       /* we have to hunt for it */
-      n_conn = connection_or_get_by_identity_digest(
-                                               circ->_base.n_conn_id_digest);
+      n_conn_id = circ->_base.n_hop->identity_digest;
+      n_conn = connection_or_get_by_identity_digest(n_conn_id);
     }
     if (n_conn) {
       log_info(LD_OR,
@@ -760,7 +763,8 @@ circuit_build_failed(origin_circuit_t *circ)
     }
     /* if there are any one-hop streams waiting on this circuit, fail
      * them now so they can retry elsewhere. */
-    connection_ap_fail_onehop(circ->_base.n_conn_id_digest, circ->build_state);
+    if (n_conn_id)
+      connection_ap_fail_onehop(n_conn_id, circ->build_state);
   }
 
   switch (circ->_base.purpose) {
