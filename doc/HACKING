@@ -2,7 +2,7 @@
 0. The buildbot.
 
   http://tor-buildbot.freehaven.net:8010/
-  
+
   - Down for unknown reasons, ioerror will look into this.
 
 0.1. Useful command-lines that are non-trivial to reproduce but can
@@ -13,6 +13,19 @@ dmalloc -l ~/dmalloc.log
 ./configure --with-dmalloc
 
 valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
+
+0.2. Running gcov for unit test coverage
+
+  make clean
+  make CFLAGS='-g -fprofile-arcs -ftest-coverage'
+  ./src/or/test
+  cd src/common; gcov *.[ch]
+  cd ../or; gcov *.[ch]
+
+  Then, look at the .gcov files.  '-' before a line means that the
+  compiler generated  no code for that line.  '######' means that the
+  line was never reached.  Lines with numbers were called that number
+  of times.
 
 1. Coding conventions
 
