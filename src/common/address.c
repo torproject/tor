@@ -700,8 +700,8 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         return (a1 < a2) ? -1 : (a1 == a2) ? 0 : 1;
       }
       case AF_INET6: {
-        uint8_t *a1 = addr1->addr.in6_addr.s6_addr;
-        uint8_t *a2 = addr2->addr.in6_addr.s6_addr;
+        const uint8_t *a1 = addr1->addr.in6_addr.s6_addr;
+        const uint8_t *a2 = addr2->addr.in6_addr.s6_addr;
         const int bytes = mbits >> 3;
         const int leftover_bits = mbits & 7;
         if (bytes && (r = memcmp(a1, a2, bytes))) {
