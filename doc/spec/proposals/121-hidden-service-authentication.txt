@@ -26,6 +26,8 @@ Change history:
                scalable authorization protocol (2.2), rewrote existing
                authorization protocol (2.3); changes based on discussion
                with Nick
+  31-Jul-2008  Limit maximum descriptor size to 20 kilobytes to prevent
+               abuse.
 
 Overview:
 
@@ -211,6 +213,23 @@ Details:
   hidden service descriptors as understood by hidden service directories
   (clients and servers would have to be upgraded anyway for using the new
   features).
+
+  An adversary could try to abuse the fact that introduction points can be
+  encrypted by storing arbitrary, unrelated data in the hidden service
+  directory. This abuse can be limited by setting a hard descriptor size
+  limit, forcing the adversary to split data into multiple chunks. There
+  are some limitations that make splitting data across multiple descriptors
+  unattractive: 1) The adversary would not be able to choose descriptor IDs
+  freely and have to implement an own indexing structure. 2) Validity of
+  descriptors is limited to at most 24 hours after which descriptors need
+  to be republished.
+
+  The regular descriptor size in bytes is 745 + num_ipos * 837 + auth_data.
+  A large descriptor with 7 introduction points and 5 kilobytes of
+  authorization data would be 11724 bytes in size. The upper size limit of
+  descriptors should be set to 20 kilobytes, which limits the effect of
+  abuse while retaining enough flexibility in designing authorization
+  protocols.
 
   1.2. Client authorization at introduction point
 
