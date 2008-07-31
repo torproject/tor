@@ -69,12 +69,14 @@ typedef struct chunk_t {
                 * more than one byte long. */
 } chunk_t;
 
+#define CHUNK_HEADER_LEN STRUCT_OFFSET(chunk_t, mem[0])
+
 /** Return the number of bytes needed to allocate a chunk to hold
  * <b>memlen</b> bytes. */
-#define CHUNK_ALLOC_SIZE(memlen) (sizeof(chunk_t) + (memlen) - 1)
+#define CHUNK_ALLOC_SIZE(memlen) (CHUNK_HEADER_LEN + (memlen))
 /** Return the number of usable bytes in a chunk allocated with
  * malloc(<b>memlen</b>). */
-#define CHUNK_SIZE_WITH_ALLOC(memlen) ((memlen) - sizeof(chunk_t) + 1)
+#define CHUNK_SIZE_WITH_ALLOC(memlen) ((memlen) - CHUNK_HEADER_LEN)
 
 /** Return the next character in <b>chunk</b> onto which data can be appended.
  * If the chunk is full, this might be off the end of chunk->mem. */

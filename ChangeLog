@@ -52,6 +52,8 @@ Changes in version 0.2.1.3-alpha - 2008-07-xx
       HiddenServiceExcludeNodes as obsolete: they never worked properly,
       and nobody claims to be using them. Fixes bug 754. Bugfix on
       0.1.0.1-rc.  Patch from Christian Wilms.
+    - Fix a small alignment and memory-wasting bug on buffer chunks.  Spotted
+      by rovv.
 
   o Minor bugfixes (controller):
     - When closing an application-side connection because its circuit
