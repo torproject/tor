@@ -28,6 +28,8 @@ Change history:
                with Nick
   31-Jul-2008  Limit maximum descriptor size to 20 kilobytes to prevent
                abuse.
+  01-Aug-2008  Use first part of Diffie-Hellman handshake for replay
+               protection instead of rendezvous cookie.
 
 Overview:
 
@@ -385,10 +387,13 @@ Details:
   When receiving a v3 INTRODUCE2 cell, Bob checks whether a client has
   provided valid authorization data to him. He also requires that the
   timestamp is no more than 30 minutes in the past or future and that the
-  rendezvous cookie has not been used in the past 60 minutes to prevent
-  replay attacks by rogue introduction points. If all checks pass, Bob
-  builds a circuit to the provided rendezvous point and otherwise drops the
-  cell.
+  first part of the Diffie-Hellman handshake has not been used in the past
+  60 minutes to prevent replay attacks by rogue introduction points. (The
+  reason for not using the rendezvous cookie to detect replays---even
+  though it is only sent once in the current design---is that it might be
+  desirable to re-use rendezvous cookies for multiple introduction requests
+  in the future.) If all checks pass, Bob builds a circuit to the provided
+  rendezvous point and otherwise drops the cell.
 
   1.4. Summary of authorization data fields
 
