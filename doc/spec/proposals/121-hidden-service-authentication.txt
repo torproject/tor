@@ -30,6 +30,9 @@ Change history:
                abuse.
   01-Aug-2008  Use first part of Diffie-Hellman handshake for replay
                protection instead of rendezvous cookie.
+  01-Aug-2008  Remove improved hidden service protocol without client
+               authorization (2.1). It might get implemented in proposal
+               142.
 
 Overview:
 
@@ -459,73 +462,24 @@ Details:
 
   2. Specific authorization protocol instances
 
-  In the following we present three specific authorization protocols that
+  In the following we present two specific authorization protocols that
   make use of (parts of) the new authorization infrastructure:
 
-    1. The first protocol does not really perform client authorization, but
-       requires clients to have downloaded a service descriptor before
-       establishing a connection in order to prevent introduction points
-       from accessing a service.
-
-    2. The second protocol allows a service provider to restrict access
+    1. The first protocol allows a service provider to restrict access
        to clients with a previously received secret key only, but does not
        attempt to hide service activity from others.
 
-    3. The third protocol, albeit being feasible for a limited set of about
+    2. The second protocol, albeit being feasible for a limited set of about
        16 clients, performs client authorization and hides service activity
        from everyone but the authorized clients.
 
-  These three protocol instances together are intended to replace the
-  existing hidden service protocol versions 0 and 2 in the long run and
-  shall therefore be considered hidden service protocol version 3. All
-  changes in this version 3 are designed to be fully backward-compatible to
-  version 2 and can be run in parallel to version 0.
+  These two protocol instances are intended to extend existing hidden
+  service protocol versions 0 and 2 and shall therefore be considered
+  hidden service protocol version 3. All changes in this version 3 are
+  designed to be fully backward-compatible to version 2 and can be run in
+  parallel to version 0.
 
-  2.1. Services without client authorization
-
-  Although hidden services without client authorization could be run as
-  before, this proposal allows us to add a new security property at almost
-  no costs: Denying the introduction points to access the hidden service.
-  While this constitutes a defense against rogue introduction points, it
-  also reduces responsibility of a Tor node operator for the doings of a
-  hidden service offering illegal or unethical contents.
-
-  The original hidden service design used the service's permanent key to
-  establish introduction points. If an introduction point wanted to access
-  the service, it could easily download the service's descriptor using its
-  permanent key ID and establish a connection or generate an INTRODUCE2
-  cell itself and forward it directly to the service.
-
-  Hidden service protocol version 2 made it more difficult for introduction
-  points to find out which service they are serving. Here, the hidden
-  service created a fresh introduction key for each introduction point
-  which 1) did not reveal the hidden service's identity and 2) did not
-  allow downloading the service's descriptor. However, the introduction
-  point could still generate an INTRODUCE2 cell itself and establish a
-  connection to the service to find out what it is serving.
-
-  Beginning with this proposal can include a so-called "introduction
-  cookie" in v2 hidden service descriptors and v3 INTRODUCE2 cells. If
-  both, service and client implement this proposal, a service receiving a
-  v3 INTRODUCE2 cell with an introduction cookie in it can be sure that the
-  client has downloaded its descriptor before. As long as hidden services
-  also permit v2 INTRODUCE2 cells, introduction points can work around this
-  safeguard. But the earlier this protocol is introduced, the earlier the
-  services can stop supporting version 2 introductions.
-
-  A hidden service generates a unique introduction cookie for each
-  established introduction point and puts it in the "intro-authentication"
-  field in its descriptor for auth-type "1". Further, the service sets the
-  "protocol-versions" field to "2,3" to announce that it understands both,
-  requests with and without introduction cookie. Clients that understand
-  protocol version 3 include the introduction cookie in the v3 INTRODUCE2
-  cell as auth-type "1" that they send to the service. (Clients that don't
-  understand the protocol v3 do not recognize the authorization data and
-  send a v2 INTRODUCE2 cell as usual.) The hidden service can compare a
-  received introduction cookie with the value that it expects and grant or
-  deny service correspondingly.
-
-  2.2. Service with large-scale client authorization
+  2.1. Service with large-scale client authorization
 
   The first client authorization protocol aims at performing access control
   while consuming as little additional resources as possible. A service
@@ -545,7 +499,7 @@ Details:
   clients and distributes them outside of Tor. The suggested key size is
   128 bits, so that descriptor cookies can be encoded in 22 base64 chars
   (which can hold up to 22 * 5 = 132 bits, leaving 4 bits to encode the
-  authorization type "2" and allow a client to distinguish this
+  authorization type "1" and allow a client to distinguish this
   authorization protocol from others like the one proposed below).
   Typically, the contact information for a hidden service using this
   authorization protocol looks like this:
@@ -569,7 +523,7 @@ Details:
   ###
   ### Here comes the voodoo I've conceived:
   ###
-  ###   ATYPE  Authorization type: set to 2.                      [1 octet]
+  ###   ATYPE  Authorization type: set to 1.                      [1 octet]
   ###   ALEN   Number of authorized clients div 16                [1 octet]
   ### for each symmetric descriptor cookie:
   ###   ID     Client ID: H(descriptor cookie | IV)[:4]          [4 octets]
@@ -588,12 +542,12 @@ Details:
   IDs being equal a client tries to decrypt all of them.)
 
   Upon sending the introduction, the client includes her descriptor cookie
-  as auth type "2" in the INTRODUCE2 cell that she sends to the service.
+  as auth type "1" in the INTRODUCE2 cell that she sends to the service.
   The hidden service checks whether the included descriptor cookie is
   authorized to access the service and either responds to the introduction
   request, or not.
 
-  2.3. Authorization for limited number of clients
+  2.2. Authorization for limited number of clients
 
   A second, more sophisticated client authorization protocol goes the extra
   mile of hiding service activity from unauthorized clients. With all else
@@ -620,8 +574,8 @@ Details:
   created client key and descriptor cookie, he tells them to the client
   outside of Tor. The contact information string looks similar to the one
   used by the preceding authorization protocol (with the only difference
-  that it has "3" encoded as auth-type in the remaining 4 of 132 bits
-  instead of "2" as before).
+  that it has "2" encoded as auth-type in the remaining 4 of 132 bits
+  instead of "1" as before).
 
   When creating a hidden service descriptor for an authorized client, the
   hidden service uses the client key and descriptor cookie to compute
@@ -634,7 +588,7 @@ Details:
   The hidden service also replaces permanent-key in the descriptor with
   client-key and encrypts introduction-points with the descriptor cookie.
 
-     ATYPE  Authorization type: set to 3.                         [1 octet]
+     ATYPE  Authorization type: set to 2.                         [1 octet]
      IV     AES initialization vector                           [16 octets]
      IPOS   Intro points, encr. with descriptor cookie   [remaining octets]
 
@@ -645,51 +599,45 @@ Details:
   When a client is requested to establish a connection to a hidden service
   it looks up whether it has any authorization data configured for that
   service. If the user has configured authorization data for authorization
-  protocol "3", the descriptor ID is determined as described in the last
+  protocol "2", the descriptor ID is determined as described in the last
   paragraph. Upon receiving a descriptor, the client decrypts the
   introduction-point part using its descriptor cookie. Further, the client
-  includes its descriptor cookie as auth-type "3" in INTRODUCE2 cells that
+  includes its descriptor cookie as auth-type "2" in INTRODUCE2 cells that
   it sends to the service.
 
-  2.4. Hidden service configuration
+  2.3. Hidden service configuration
 
   A hidden service that implements this proposal and that is meant to use
-  the new protocols (including the protocol without client authorization as
-  described in 2.1) adds version 3 to the list of supported hidden service
+  the new protocols adds version 3 to the list of supported hidden service
   protocols:
 
     HiddenServiceVersion version,version,... (Default: 0, 2, 3)
 
   If the service shall perform client authorization, another config option
-  is set to either "1" for the protocol described in 2.2 or "2" for the
-  protocol in 2.3 (auth type numbers differ from the internally used
-  numbers primarily to avoid user questions about the whereabouts of auth
-  type 1). This config option also includes a comma-separated list of
-  human-readable client names, so that Tor can create authorization data
+  is set to either "1" for the protocol described in 2.1 or "2" for the
+  protocol in 2.2. This config option also includes a comma-separated list
+  of human-readable client names, so that Tor can create authorization data
   for these clients:
 
     HiddenServiceAuthorizeClient auth-type client-name,client-name,...
 
   If this option is configured, HiddenServiceVersion is automatically
-  reconfigured to contain only version numbers of 3 or higher. If this
-  config option is not set but the configured hidden service version
-  includes 3, the protocol without client authorization as described in 2.1
-  is offered to clients (possibly in parallel to versions 0 and 2).
+  reconfigured to contain only version numbers of 3 or higher.
 
   Tor stores all generated authorization data for the authorization
-  protocols described in Sections 2.2 and 2.3 in a new file using the
+  protocols described in Sections 2.1 and 2.2 in a new file using the
   following file format:
 
      "client-name" human-readable client identifier NL
      "descriptor-cookie" 128-bit key ^= 22 base64 chars NL
 
-  If the authorization protocol of Section 2.3 is used, Tor also generates
+  If the authorization protocol of Section 2.2 is used, Tor also generates
   and stores the following data:
 
      "service-address" client-specific-onion-address NL
      "client-key" NL a public key in PEM format
 
-  2.5. Client configuration
+  2.4. Client configuration
 
   Clients need to make their authorization data known to Tor using another
   configuration option that contains a service name (mainly for the sake of
