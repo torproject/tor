@@ -47,7 +47,7 @@ Proposals by number:
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [CLOSED]
 124  Blocking resistant TLS certificate usage [SUPERSEDED]
-125  Behavior for bridge users, bridge relays, and bridge authorities [FINISHED]
+125  Behavior for bridge users, bridge relays, and bridge authorities [CLOSED]
 126  Getting GeoIP data and publishing usage summaries [CLOSED]
 127  Relaying dirport requests to Tor download site / website [DRAFT]
 128  Families of private bridges [FINISHED]
@@ -59,7 +59,7 @@ Proposals by number:
 134  More robust consensus voting with diverse authority sets [ACCEPTED]
 135  Simplify Configuration of Private Tor Networks [ACCEPTED]
 136  Mass authority migration with legacy keys [FINISHED]
-137  Keep controllers informed as Tor bootstraps [FINISHED]
+137  Keep controllers informed as Tor bootstraps [CLOSED]
 138  Remove routers that are not Running from consensus documents [CLOSED]
 139  Download consensus documents only when it will be trusted [CLOSED]
 140  Provide diffs between consensuses [ACCEPTED]
@@ -117,10 +117,8 @@ Proposals by status:
    099  Miscellaneous proposals
  FINISHED:
    111  Prioritizing local traffic over relayed traffic
-   125  Behavior for bridge users, bridge relays, and bridge authorities
    128  Families of private bridges
    136  Mass authority migration with legacy keys
-   137  Keep controllers informed as Tor bootstraps
  CLOSED:
    101  Voting on the Tor Directory System
    102  Dropping "opt" from the directory format
@@ -135,9 +133,11 @@ Proposals by status:
    119  New PROTOCOLINFO command for controllers
    122  Network status entries need a new Unnamed flag
    123  Naming authorities automatically create bindings
+   125  Behavior for bridge users, bridge relays, and bridge authorities
    126  Getting GeoIP data and publishing usage summaries
    129  Block Insecure Protocols by Default
    130  Version 2 Tor connection protocol
+   137  Keep controllers informed as Tor bootstraps
    138  Remove routers that are not Running from consensus documents
    139  Download consensus documents only when it will be trusted
    150  Exclude Exit Nodes from a circuit

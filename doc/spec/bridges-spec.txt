@@ -1,11 +1,6 @@
-Filename: 125-bridges.txt
-Title: Behavior for bridge users, bridge relays, and bridge authorities
-Version: $Revision$
-Last-Modified: $Date$
-Author: Roger Dingledine
-Created: 11-Nov-2007
-Status: Closed
-Implemented-In: 0.2.0.x
+$Id$
+
+                          Tor bridges specification
 
 0. Preface
 
@@ -36,29 +31,20 @@ Implemented-In: 0.2.0.x
   which will cause your relay to not publish anywhere. This could be
   useful for private bridges.
 
-1.2. Exit policy
+1.2. Recommendations.
 
   Bridge relays should use an exit policy of "reject *:*". This is
   because they only need to relay traffic between the bridge users
   and the rest of the Tor network, so there's no need to let people
   exit directly from them.
 
-1.3. RelayBandwidthRate / RelayBandwidthBurst
-
   We invented the RelayBandwidth* options for this situation: Tor clients
   who want to allow relaying too. See proposal 111 for details. Relay
   operators should feel free to rate-limit their relayed traffic.
 
-1.4. Helping the user with port forwarding, NAT, etc.
+1.3. Implementation note.
 
-  Just as for operating normal relays, our documentation and hints for
-  how to make your ORPort reachable are inadequate for normal users.
-
-  We need to work harder on this step, perhaps in 0.2.2.x.
-
-1.5. Vidalia integration
-
-  Vidalia has turned its "Relay" settings page into a tri-state
+  Vidalia 0.0.15 has turned its "Relay" settings page into a tri-state
   "Don't relay" / "Relay for the Tor network" / "Help censored users".
 
   If you click the third choice, it forces your exit policy to reject *:*.
@@ -73,26 +59,15 @@ Implemented-In: 0.2.0.x
   the bridge identifier to the operator (see Section 3.1) so he can pass
   it on to bridge users.
 
-1.6. What if the default ORPort is already used?
-
-  If the user already has a webserver or some other application
-  bound to port 443, then Tor will fail to bind it and complain to the
-  user, probably in a cryptic way. Rather than just working on a better
-  error message (though we should do this), we should consider an
-  "ORPort auto" option that tells Tor to try to find something that's
-  bindable and reachable. This would also help us tolerate ISPs that
-  filter incoming connections on port 80 and port 443. But this should
-  be a different proposal, and can wait until 0.2.2.x.
-
 2. Bridge authorities.
 
-  Bridge authorities are like normal directory authorities, except they
-  don't create their own network-status documents or votes. So if you
-  ask an authority for a network-status document or consensus, they
-  behave like a directory mirror: they give you one from one of the main
-  authorities. But if you ask the bridge authority for the descriptor
-  corresponding to a particular identity fingerprint, it will happily
-  give you the latest descriptor for that fingerprint.
+  Bridge authorities are like normal v3 directory authorities, except
+  they don't create their own network-status documents or votes. So if
+  you ask a bridge authority for a network-status document or consensus,
+  they behave like a directory mirror: they give you one from one of
+  the main authorities. But if you ask the bridge authority for the
+  descriptor corresponding to a particular identity fingerprint, it will
+  happily give you the latest descriptor for that fingerprint.
 
   To become a bridge authority, add these lines to your torrc:
     AuthoritativeDirectory 1
@@ -124,7 +99,7 @@ Implemented-In: 0.2.0.x
 
   Answering this issue is scheduled for 0.2.1.x.
 
-2.3. Migrating to multiple bridge authorities
+2.3. Future work: migrating to multiple bridge authorities
 
   Having only one bridge authority is both a trust bottleneck (if you
   break into one place you learn about every single bridge we've got)
@@ -146,7 +121,6 @@ Implemented-In: 0.2.0.x
   all their directory information).
 
   To become a bridge user, add the following line to your torrc:
-
     UseBridges 1
 
   and then add at least one "Bridge" line to your torrc based on the
@@ -265,29 +239,12 @@ Implemented-In: 0.2.0.x
 
   In 0.2.2.x we should come up with some smarter retry schedules.
 
-3.6. Vidalia integration
+3.6. Implementation note.
 
-  Vidalia 0.0.16 has a checkbox in its Network config window called
+  Vidalia 0.1.0 has a new checkbox in its Network config window called
   "My ISP blocks connections to the Tor network." Users who click that
   box change their configuration to:
     UseBridges 1
     UpdateBridgesFromAuthority 1
-  and should specify at least one Bridge identifier.
-
-3.7. Do we need a second layer of entry guards?
-
-  If the bridge user uses the bridge as its entry guard, then the
-  triangulation attacks from Lasse and Paul's Oakland paper work to
-  locate the user's bridge(s).
-
-  Worse, this is another way to enumerate bridges: if the bridge users
-  keep rotating through second hops, then if you run a few fast servers
-  (and avoid getting considered an Exit or a Guard) you'll quickly get
-  a list of the bridges in active use.
-
-  That's probably the strongest reason why bridge users will need to
-  pick second-layer guards. Would this mean bridge users should switch
-  to four-hop circuits?
-
-  We should figure this out in the 0.2.1.x timeframe.
+  and should add at least one bridge identifier.
 

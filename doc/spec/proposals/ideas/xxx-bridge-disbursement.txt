@@ -55,7 +55,7 @@ IP-based.
       approach would also resolve the "Make sure you can't construct a
       distinct address to match an existing one" note below. -RD]
 
-        [I think, if we get a replay, we need to sen back the same
+        [I think, if we get a replay, we need to send back the same
         answer as we did the first time, not say "try again."
         Otherwise we need to worry that an attacker can keep people
         from getting bridges by preemtively asking for them,
