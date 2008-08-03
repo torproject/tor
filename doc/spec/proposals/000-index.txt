@@ -76,6 +76,7 @@ Proposals by number:
 151  Improving Tor Path Selection [DRAFT]
 152  Optionally allow exit from single-hop circuits  [DRAFT]
 153  Automatic software update protocol [DRAFT]
+154  Automatic Software Update Protocol [OPEN]
 
 
 Proposals by status:
@@ -96,6 +97,7 @@ Proposals by status:
    145  Separate "suitable as a guard" from "suitable as a new guard"
    146  Add new flag to reflect long-term stability
    149  Using data from NETINFO cells
+   154  Automatic Software Update Protocol
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  NEEDS-RESEARCH:
