@@ -824,7 +824,7 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
   const int is_accept = policy->policy_type == ADDR_POLICY_ACCEPT;
   const int is_ip6 = tor_addr_family(&policy->addr) == AF_INET6;
 
-  tor_addr_to_str(buf, &policy->addr, sizeof(buf), 1);
+  tor_addr_to_str(addrbuf, &policy->addr, sizeof(addrbuf), 1);
 
   /* write accept/reject 1.2.3.4 */
   if (policy->is_private)
