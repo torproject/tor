@@ -33,7 +33,7 @@ Changes in version 0.2.1.3-alpha - 2008-08-03
     - Change the implementation of ExcludeNodes and ExcludeExitNodes to
       be more efficient. Formerly it was quadratic in the number of
       servers; now it should be linear. Fixes bug 509.
-    - Save 16-22 bytes per open circuit by moving the n_hop, n_port,
+    - Save 16-22 bytes per open circuit by moving the n_addr, n_port,
       and n_conn_id_digest fields into a separate structure that's
       only needed when the circuit has not yet attached to an n_conn.
 

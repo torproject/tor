@@ -1784,7 +1784,7 @@ typedef struct circuit_t {
   circid_t n_circ_id;
 
   /** The hop to which we want to extend this ciruit.  Should be NULL if
-   * the */
+   * the circuit has attached to a connection. */
   extend_info_t *n_hop;
 
   /** True iff we are waiting for n_conn_cells to become less full before

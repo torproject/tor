@@ -791,7 +791,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return 0;
   }
 
-  tor_assert(circ->n_hop);
+  tor_assert(!circ->n_hop); /* Connection is already established. */
   circ->n_conn = n_conn;
   log_debug(LD_CIRC,"n_conn is %s:%u",
             n_conn->_base.address,n_conn->_base.port);
