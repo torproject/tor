@@ -1001,15 +1001,18 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
 
   if (!want_onehop && !router_have_minimum_dir_info()) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
+      int severity = LOG_NOTICE;
+      /* FFFF if this is a tunnelled directory fetch, don't yell
+       * as loudly. the user doesn't even know it's happening. */
       if (options->UseBridges && bridges_known_but_down()) {
-        log_notice(LD_APP|LD_DIR,
-                   "Application request when we're believed to be "
-                   "offline. Optimistically trying known bridges again.");
+        log_fn(severity, LD_APP|LD_DIR,
+               "Application request when we're believed to be "
+               "offline. Optimistically trying known bridges again.");
         bridges_retry_all();
       } else if (!options->UseBridges || any_bridge_descriptors_known()) {
-        log_notice(LD_APP|LD_DIR,
-                   "Application request when we're believed to be "
-                   "offline. Optimistically trying directory fetches again.");
+        log_fn(severity, LD_APP|LD_DIR,
+               "Application request when we're believed to be "
+               "offline. Optimistically trying directory fetches again.");
         routerlist_retry_directory_downloads(time(NULL));
       }
     }
