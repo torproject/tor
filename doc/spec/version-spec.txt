@@ -23,7 +23,7 @@ $Id$
 
  After 0.1.0, versions are of the format:
     MAJOR.MINOR.MICRO(.PATCHLEVEL)(-status_tag)
- The stuff in parenthesis is optional.  As before, MAJOR, MINOR, MICRO,
+ The stuff in parentheses is optional.  As before, MAJOR, MINOR, MICRO,
  and PATCHLEVEL are numbers, with an absent number equivalent to 0.
  All versions should be distinguishable purely by those four
  numbers. The status tag is purely informational, and lets you know how
