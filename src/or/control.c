@@ -3850,7 +3850,7 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
 
 /* Called when Tor has failed to make bootstrapping progress in a way
  * that indicates a problem. <b>warn</b> gives a hint as to why, and
- * <b>reason</b> provides an "or_conn_end_reason" tag).
+ * <b>reason</b> provides an "or_conn_end_reason" tag.
  */
 void
 control_event_bootstrap_problem(const char *warn, int reason)
@@ -3879,11 +3879,12 @@ control_event_bootstrap_problem(const char *warn, int reason)
   while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
 
-  log_warn(LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
-           "count %d; recommendation %s)",
-           status, summary, warn,
-           orconn_end_reason_to_control_string(reason),
-           bootstrap_problems, recommendation);
+  log_fn(!strcmp(recommendation, "warn") ? LOG_WARN : LOG_INFO,
+         LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "
+         "count %d; recommendation %s)",
+         status, summary, warn,
+         orconn_end_reason_to_control_string(reason),
+         bootstrap_problems, recommendation);
   tor_snprintf(buf, sizeof(buf),
       "BOOTSTRAP PROGRESS=%d TAG=%s SUMMARY=\"%s\" WARNING=\"%s\" REASON=%s "
       "COUNT=%d RECOMMENDATION=%s",
