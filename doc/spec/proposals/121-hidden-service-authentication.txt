@@ -499,7 +499,7 @@ Details:
   clients and distributes them outside of Tor. The suggested key size is
   128 bits, so that descriptor cookies can be encoded in 22 base64 chars
   (which can hold up to 22 * 5 = 132 bits, leaving 4 bits to encode the
-  authorization type "1" and allow a client to distinguish this
+  authorization type (here: "0") and allow a client to distinguish this
   authorization protocol from others like the one proposed below).
   Typically, the contact information for a hidden service using this
   authorization protocol looks like this:
@@ -524,12 +524,12 @@ Details:
   ### Here comes the voodoo I've conceived:
   ###
   ###   ATYPE  Authorization type: set to 1.                      [1 octet]
-  ###   ALEN   Number of authorized clients div 16                [1 octet]
+  ###   ALEN   Number of clients := 1 + ((clients - 1) div 16)    [1 octet]
   ### for each symmetric descriptor cookie:
   ###   ID     Client ID: H(descriptor cookie | IV)[:4]          [4 octets]
   ###   SKEY   Session key encrypted with descriptor cookie     [16 octets]
   ### (end of client-specific part)
-  ###   RND    Random data  [(16 - (number-of-clients mod 16)) * 20 octets]
+  ###   RND    Random data      [(15 - ((clients - 1) mod 16)) * 20 octets]
   ###   IV     AES initialization vector                        [16 octets]
   ###   IPOS   Intro points, encrypted with session key  [remaining octets]
 
@@ -574,8 +574,8 @@ Details:
   created client key and descriptor cookie, he tells them to the client
   outside of Tor. The contact information string looks similar to the one
   used by the preceding authorization protocol (with the only difference
-  that it has "2" encoded as auth-type in the remaining 4 of 132 bits
-  instead of "1" as before).
+  that it has "1" encoded as auth-type in the remaining 4 of 132 bits
+  instead of "0" as before).
 
   When creating a hidden service descriptor for an authorized client, the
   hidden service uses the client key and descriptor cookie to compute
