@@ -415,7 +415,7 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
   pending_circs = smartlist_create();
   circuit_get_all_pending_on_or_conn(pending_circs, or_conn);
 
-  SMARTLIST_FOREACH_BEGIN (pending_circs, circuit_t *, circ)
+  SMARTLIST_FOREACH_BEGIN(pending_circs, circuit_t *, circ)
     {
       /* These checks are redundant wrt get_all_pending_on_or_conn, but I'm
        * leaving them in in case it's possible for the status of a circuit to

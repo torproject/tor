@@ -576,8 +576,8 @@ circuit_dump_by_conn(connection_t *conn, int severity)
         circ->n_hop->addr == conn->addr &&
         circ->n_hop->port == conn->port &&
         conn->type == CONN_TYPE_OR &&
-        !memcmp(TO_OR_CONN(conn)->identity_digest, circ->n_hop->identity_digest,
-                DIGEST_LEN)) {
+        !memcmp(TO_OR_CONN(conn)->identity_digest,
+                circ->n_hop->identity_digest, DIGEST_LEN)) {
       circuit_dump_details(severity, circ, conn->conn_array_index,
                            (circ->state == CIRCUIT_STATE_OPEN &&
                             !CIRCUIT_IS_ORIGIN(circ)) ?
