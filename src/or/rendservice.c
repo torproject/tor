@@ -1228,14 +1228,8 @@ rend_services_introduce(void)
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
       router = router_get_by_digest(intro->extend_info->identity_digest);
-      if (!router) {
-        log_warn(LD_BUG, "We have picked router %s as introduction point, "
-                         "but we don't have its router descriptor. Skipping.",
-                 intro->extend_info->nickname);
-        continue;
-      }
-      if (!find_intro_circuit(intro, service->pk_digest,
-                              service->descriptor_version)) {
+      if (!router || !find_intro_circuit(intro, service->pk_digest,
+                                         service->descriptor_version)) {
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
                  intro->extend_info->nickname, service->service_id);
         if (service->desc) {
@@ -1254,7 +1248,8 @@ rend_services_introduce(void)
         smartlist_del(service->intro_nodes,j--);
         changed = 1;
       }
-      smartlist_add(intro_routers, router);
+      if (router)
+        smartlist_add(intro_routers, router);
     }
 
     /* We have enough intro points, and the intro points we thought we had were
