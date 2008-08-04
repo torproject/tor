@@ -473,16 +473,14 @@ Details:
        16 clients, performs client authorization and hides service activity
        from everyone but the authorized clients.
 
-  These two protocol instances are intended to extend existing hidden
-  service protocol versions 0 and 2 and shall therefore be considered
-  hidden service protocol version 3. All changes in this version 3 are
-  designed to be fully backward-compatible to version 2 and can be run in
-  parallel to version 0.
+  These two protocol instances extend the existing hidden service protocol
+  version 2. Hidden services that perform client authorization may run in
+  parallel to other services running versions 0, 2, or both.
 
   2.1. Service with large-scale client authorization
 
   The first client authorization protocol aims at performing access control
-  while consuming as little additional resources as possible. A service
+  while consuming as few additional resources as possible. A service
   provider should be able to permit access to a large number of clients
   while denying access for everyone else. However, the price for
   scalability is that the service won't be able to hide its activity from
@@ -510,28 +508,23 @@ Details:
   introduction-point part with a single randomly generated symmetric
   128-bit session key using AES-CTR as described for v2 hidden service
   descriptors in rend-spec. Afterwards, the service encrypts the session
-  key to all descriptor cookies using AES.
+  key to all descriptor cookies using AES. Authorized client should be able
+  to efficiently find the session key that is encrypted for him/her, so
+  that 4 octet long client ID are generated consisting of descriptor cookie
+  and initilization vector. Descriptors always contain a number of
+  encrypted session keys that is a multiple of 16 by adding fake entries.
+  Encrypted session keys are ordered by client IDs in order to conceal
+  addition or removal of authorized clients by the service provider.
 
-  ### What would be a simple solution to include n encrypted session keys
-  ### in the descriptor? The format may be binary and has no strict upper
-  ### size limit. An authorized client should be able to efficiently find
-  ### the session key that is encrypted for him/her. It should be
-  ### impossible to track certain authorized clients over time by finding
-  ### that the session key was encrypted for them in different descriptors.
-  ### It should be hard to determine the exact number of authorized
-  ### clients.
-  ###
-  ### Here comes the voodoo I've conceived:
-  ###
-  ###   ATYPE  Authorization type: set to 1.                      [1 octet]
-  ###   ALEN   Number of clients := 1 + ((clients - 1) div 16)    [1 octet]
-  ### for each symmetric descriptor cookie:
-  ###   ID     Client ID: H(descriptor cookie | IV)[:4]          [4 octets]
-  ###   SKEY   Session key encrypted with descriptor cookie     [16 octets]
-  ### (end of client-specific part)
-  ###   RND    Random data      [(15 - ((clients - 1) mod 16)) * 20 octets]
-  ###   IV     AES initialization vector                        [16 octets]
-  ###   IPOS   Intro points, encrypted with session key  [remaining octets]
+     ATYPE  Authorization type: set to 1.                      [1 octet]
+     ALEN   Number of clients := 1 + ((clients - 1) div 16)    [1 octet]
+   for each symmetric descriptor cookie:
+     ID     Client ID: H(descriptor cookie | IV)[:4]          [4 octets]
+     SKEY   Session key encrypted with descriptor cookie     [16 octets]
+   (end of client-specific part)
+     RND    Random data      [(15 - ((clients - 1) mod 16)) * 20 octets]
+     IV     AES initialization vector                        [16 octets]
+     IPOS   Intro points, encrypted with session key  [remaining octets]
 
   An authorized client needs to configure Tor to use the descriptor cookie
   when accessing the hidden service. Therefore, a user adds the contact
@@ -607,22 +600,17 @@ Details:
 
   2.3. Hidden service configuration
 
-  A hidden service that implements this proposal and that is meant to use
-  the new protocols adds version 3 to the list of supported hidden service
-  protocols:
-
-    HiddenServiceVersion version,version,... (Default: 0, 2, 3)
-
-  If the service shall perform client authorization, another config option
-  is set to either "1" for the protocol described in 2.1 or "2" for the
-  protocol in 2.2. This config option also includes a comma-separated list
-  of human-readable client names, so that Tor can create authorization data
-  for these clients:
+  A hidden service that is meant to perform client authorization adds a
+  new option HiddenServiceAuthorizeClient to its hidden service
+  configuration. This option contains the authorization type which is
+  either "1" for the protocol described in 2.1 or "2" for the protocol in
+  2.2 and a comma-separated list of human-readable client names, so that
+  Tor can create authorization data for these clients:
 
     HiddenServiceAuthorizeClient auth-type client-name,client-name,...
 
   If this option is configured, HiddenServiceVersion is automatically
-  reconfigured to contain only version numbers of 3 or higher.
+  reconfigured to contain only version numbers of 2 or higher.
 
   Tor stores all generated authorization data for the authorization
   protocols described in Sections 2.1 and 2.2 in a new file using the
@@ -634,7 +622,6 @@ Details:
   If the authorization protocol of Section 2.2 is used, Tor also generates
   and stores the following data:
 
-     "service-address" client-specific-onion-address NL
      "client-key" NL a public key in PEM format
 
   2.4. Client configuration
