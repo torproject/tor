@@ -1199,12 +1199,11 @@ rend_services_introduce(void)
   rend_service_t *service;
   rend_intro_point_t *intro;
   int changed, prev_intro_nodes;
-  smartlist_t *intro_routers, *exclude_routers;
+  smartlist_t *intro_routers;
   time_t now;
   or_options_t *options = get_options();
 
   intro_routers = smartlist_create();
-  exclude_routers = smartlist_create();
   now = time(NULL);
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
@@ -1272,13 +1271,12 @@ rend_services_introduce(void)
     /* Remember how many introduction circuits we started with. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
 
-    smartlist_add_all(exclude_routers, intro_routers);
     /* The directory is now here. Pick three ORs as intro points. */
     for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
       router_crn_flags_t flags = CRN_NEED_UPTIME;
       if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
-      router = router_choose_random_node(NULL, exclude_routers,
+      router = router_choose_random_node(NULL, intro_routers,
                                          options->ExcludeNodes, flags);
       if (!router) {
         log_warn(LD_REND,
@@ -1288,7 +1286,6 @@ rend_services_introduce(void)
       }
       changed = 1;
       smartlist_add(intro_routers, router);
-      smartlist_add(exclude_routers, router);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_router(router);
       if (service->descriptor_version == 2) {
@@ -1299,9 +1296,6 @@ rend_services_introduce(void)
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                router->nickname, service->service_id);
     }
-
-    /* Reset exclude_routers, for the next time around the loop. */
-    smartlist_clear(exclude_routers);
 
     /* If there's no need to launch new circuits, stop here. */
     if (!changed)
@@ -1318,7 +1312,6 @@ rend_services_introduce(void)
     }
   }
   smartlist_free(intro_routers);
-  smartlist_free(exclude_routers);
 }
 
 /** Regenerate and upload rendezvous service descriptors for all
