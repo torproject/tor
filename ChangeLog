@@ -560,7 +560,7 @@ Changes in version 0.2.0.21-rc - 2008-03-02
   o Minor bugfixes:
     - Fix compilation with OpenSSL 0.9.8 and 0.9.8a.  All other supported
       OpenSSL versions should have been working fine.  Diagnosis and patch
-      from lodger, Karsten Loesing and Sebastian Hahn.  Fixes bug 616.
+      from lodger, Karsten Loesing, and Sebastian Hahn.  Fixes bug 616.
       Bugfix on 0.2.0.20-rc.
 
 

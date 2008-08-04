@@ -455,9 +455,10 @@ Changes in version 0.2.0.30 - 2008-07-15
       now we expand "-f ~/.tor/torrc" correctly. Suggested by Matt Edman.
 
   o New config options:
-    - New configuration options to override default maximum number of
-      servers allowed on a single IP address. This is important for
-      running a test network on a single host. XXX
+    - New configuration options AuthDirMaxServersPerAddr and
+      AuthDirMaxServersperAuthAddr to override default maximum number
+      of servers allowed on a single IP address. This is important for
+      running a test network on a single host.
     - Three new config options (AlternateDirAuthority,
       AlternateBridgeAuthority, and AlternateHSAuthority) that let the
       user selectively replace the default directory authorities by type,
@@ -481,7 +482,7 @@ Changes in version 0.2.0.30 - 2008-07-15
     - When we have no consensus, check FallbackNetworkstatusFile (defaults
       to $PREFIX/share/tor/fallback-consensus) for a consensus. This way
       we can start out knowing some directory caches. We don't ship with
-      a fallback consensus by default though, because it wasn't making
+      a fallback consensus by default though, because it was making
       bootstrapping take too long while we tried many down relays.
     - Authorities send back an X-Descriptor-Not-New header in response to
       an accepted-but-discarded descriptor upload. Partially implements
