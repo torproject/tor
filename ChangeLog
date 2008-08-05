@@ -1,17 +1,19 @@
-Changes in version 0.2.1.4-alpha - 2008-08-??
+Changes in version 0.2.1.4-alpha - 2008-08-04
   o Major bugfixes:
-    - The address part of exit policies was not correctly written to router
-      descriptors which made them unparseable. Noticed by phobos, fixed by
-      karsten. Bugfix on 0.2.1.3-alpha.
-    - When extending a circuit to a relay to which a connection has
-      been established before, a false assertion was triggered. Noticed by
-      phobos, fixed by karsten. Bugfix on 0.2.1.3-alpha.
+    - The address part of exit policies was not correctly written
+      to router descriptors. This generated router descriptors that failed
+      their self-checks. Noticed by phobos, fixed by Karsten. Bugfix
+      on 0.2.1.3-alpha.
+    - Tor triggered a false assert when extending a circuit to a relay
+      but we already have a connection open to that relay. Noticed by
+      phobos, fixed by Karsten. Bugfix on 0.2.1.3-alpha.
 
   o Minor bugfixes:
-    - In some edge cases it occurs that the router descriptor of a
-      previously picked introduction point becomes obsolete. In that case,
-      don't stick to using this introduction point, but simply give up on
-      it. Observed by xiando. Bugfix on 0.2.1.3-alpha.
+    - Fix a hidden service logging bug: in some edge cases, the router
+      descriptor of a previously picked introduction point becomes
+      obsolete and we need to give up on it rather than continually
+      complaining that it has become obsolete. Observed by xiando. Bugfix
+      on 0.2.1.3-alpha.
 
 
 Changes in version 0.2.1.3-alpha - 2008-08-03
