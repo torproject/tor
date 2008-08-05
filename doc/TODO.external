@@ -24,20 +24,13 @@ K       - Karsten claims
 
 External constraints:
 
-  - mid July
-W   - Take the results from instrumenting directory downloads on Tor
-      clients, and analyze/simulate some alternate approaches. Finish
-      proposal for how to improve things, iterate based on feedback,
-      convince us that the anonymity tradeoffs and/or scalability
-      tradeoffs are acceptable.
-
   - mid August
 KS  - Design hidden service improvements, evaluate them and consider
       security properties: write some proposals, get feedback, revise
       them, etc.
-?   - nlnet 'user safety contest'. submit torbrowser, others?
+P   - nlnet 'user safety contest'. submit torbrowser, others?
 
-  - end of August
+  - end of October
 I   - Auto update
       o Vidalia learns when Tor thinks it should be updated
 R     - Tor status events should suggest a new version to switch to
@@ -50,16 +43,14 @@ I     - Figure out a good PKI, document the design, assess security issues:
       - Do the same for Polipo
       - and for Vidalia itself
 
-  - end of September
-NSE - Write first draft of research study for Paul's research problem.
-      This should be at least vaguely related to what was discussed in
-      the end-of-May deliverable.
-
   - mid October
 KS  - Finish implementation of hidden service improvements: have a set
       of patches that you think work.
 W   - Finish implementation of directory overhead changes: have a set
       of patches that you think work.
+
+  - end of December
+NSE - Write first draft of research study for Paul's research problem.
 
   - mid January
 KS  - Finish testing, debugging, unit testing, etc the hidden service
