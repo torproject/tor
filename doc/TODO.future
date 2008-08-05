@@ -23,6 +23,7 @@ K       - Karsten claims
 =======================================================================
 
 Later, unless people want to implement them now:
+  - tor as a socks proxy should accept (and ignore) password auth
   - Actually use SSL_shutdown to close our TLS connections.
   - Include "v" line in networkstatus getinfo values.
     [Nick: bridge authorities output a networkstatus that is missing

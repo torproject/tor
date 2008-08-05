@@ -1398,7 +1398,7 @@ Changes in version 0.2.0.10-alpha - 2007-11-10
     - Stop leaking memory every time we parse a v3 certificate. Bugfix
       on 0.2.0.1-alpha.
     - Stop leaking memory every time we load a v3 certificate. Bugfix
-      on 0.2.0.1-alpha. Fixes Bug 536.
+      on 0.2.0.1-alpha. Fixes bug 536.
     - Stop leaking a cached networkstatus on exit.  Bugfix on
       0.2.0.3-alpha.
     - Stop leaking voter information every time we free a consensus.
