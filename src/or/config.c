@@ -301,7 +301,7 @@ static config_var_t _option_vars[] = {
   V(StrictExitNodes,             BOOL,     "0"),
   OBSOLETE("SysLog"),
   V(TestSocks,                   BOOL,     "0"),
-  V(TestVia,                     STRING,   NULL),
+  OBSOLETE("TestVia"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
@@ -550,7 +550,6 @@ static config_var_description_t options_description[] = {
   /* ServerDNS: DetectHijacking, ResolvConfFile, SearchDomains */
   { "ShutdownWaitLength", "Wait this long for clients to finish when "
     "shutting down because of a SIGINT." },
-  /* { "TestVia", } */
 
   /* === directory cache options */
   { "DirPort", "Serve directory information from this port, and act as a "
@@ -3310,8 +3309,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
     return -1;
   if (check_nickname_list(options->EntryNodes, "EntryNodes", msg))
-    return -1;
-  if (check_nickname_list(options->TestVia, "TestVia", msg))
     return -1;
   if (check_nickname_list(options->MyFamily, "MyFamily", msg))
     return -1;

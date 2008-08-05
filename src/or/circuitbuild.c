@@ -1508,52 +1508,6 @@ onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop)
   }
 }
 
-/** Pick a random server digest that's running a Tor version that
- * doesn't have the reachability bug. These are versions 0.1.1.21-cvs+
- * and 0.1.2.1-alpha+. Avoid picking authorities, since we're
- * probably already connected to them.
- *
- * We only return one, so this doesn't become stupid when the
- * whole network has upgraded.
- * XXX021 we can great simplify this function now that all the broken
- * versions are obsolete. -RD */
-static char *
-compute_preferred_testing_list(const char *answer)
-{
-  smartlist_t *choices;
-  routerlist_t *rl = router_get_routerlist();
-  routerinfo_t *router;
-  char *s;
-
-  if (answer) /* they have one in mind -- easy */
-    return tor_strdup(answer);
-
-  choices = smartlist_create();
-  /* now count up our choices */
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
-    if (r->is_running && r->is_valid &&
-        ((tor_version_as_new_as(r->platform,"0.1.1.21-cvs") &&
-          !tor_version_as_new_as(r->platform,"0.1.2.0-alpha-cvs")) ||
-         tor_version_as_new_as(r->platform,"0.1.2.1-alpha")) &&
-        !is_local_IP(r->addr) &&
-        !router_get_trusteddirserver_by_digest(r->cache_info.identity_digest))
-      smartlist_add(choices, r));
-  router = smartlist_choose(choices);
-  smartlist_free(choices);
-  if (!router) {
-    log_info(LD_CIRC, "Looking for middle server that doesn't have the "
-             "reachability bug, but didn't find one. Oh well.");
-    return NULL;
-  }
-  log_info(LD_CIRC, "Looking for middle server that doesn't have the "
-             "reachability bug, and chose '%s'. Great.", router->nickname);
-  s = tor_malloc(HEX_DIGEST_LEN+2);
-  s[0] = '$';
-  base16_encode(s+1, HEX_DIGEST_LEN+1,
-                router->cache_info.identity_digest, DIGEST_LEN);
-  return s;
-}
-
 /** A helper function used by onion_extend_cpath(). Use <b>purpose</b>
  * and <b>state</b> and the cpath <b>head</b> (currently populated only
  * to length <b>cur_len</b> to decide a suitable middle hop for a
@@ -1571,7 +1525,6 @@ choose_good_middle_server(uint8_t purpose,
   crypt_path_t *cpath;
   smartlist_t *excluded;
   or_options_t *options = get_options();
-  char *preferred = NULL;
   router_crn_flags_t flags = 0;
   tor_assert(_CIRCUIT_PURPOSE_MIN <= purpose &&
              purpose <= _CIRCUIT_PURPOSE_MAX);
@@ -1588,8 +1541,6 @@ choose_good_middle_server(uint8_t purpose,
       routerlist_add_family(excluded, r);
     }
   }
-  if (purpose == CIRCUIT_PURPOSE_TESTING)
-    preferred = compute_preferred_testing_list(options->TestVia);
 
   if (state->need_uptime)
     flags |= CRN_NEED_UPTIME;
@@ -1597,9 +1548,8 @@ choose_good_middle_server(uint8_t purpose,
     flags |= CRN_NEED_CAPACITY;
   if (options->_AllowInvalid & ALLOW_INVALID_MIDDLE)
     flags |= CRN_ALLOW_INVALID;
-  choice = router_choose_random_node(preferred,
+  choice = router_choose_random_node(NULL,
                                      excluded, options->ExcludeNodes, flags);
-  tor_free(preferred);
   smartlist_free(excluded);
   return choice;
 }

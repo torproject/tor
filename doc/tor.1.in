@@ -576,12 +576,6 @@ unattached waiting for an appropriate circuit, before we fail it.
 (Default: 2 minutes.)
 .LP
 .TP
-\fBTestVia \fR\fInode\fR,\fInode\fR,\fI...\fP
-A list of identity fingerprints or nicknames of nodes to prefer for your middle
-hop when building testing circuits. This option is mainly for debugging
-reachability problems.
-.LP
-.TP
 \fBTrackHostExits \fR\fIhost\fR,\fI.domain\fR,\fI...\fR\fP
 For each value in the comma separated list, Tor will track recent connections
 to hosts that match this value and attempt to
