@@ -1,0 +1,337 @@
+$Id: TODO 16258 2008-07-30 13:04:38Z nickm $
+Legend:
+SPEC!!  - Not specified
+SPEC    - Spec not finalized
+N       - nick claims
+R       - arma claims
+P       - phobos claims
+S       - Steven claims
+E       - Matt claims
+M       - Mike claims
+J       - Jeff claims
+I       - ioerror claims
+W       - weasel claims
+K       - Karsten claims
+        - Not done
+        * Top priority
+        . Partially done
+        o Done
+        d Deferrable
+        D Deferred
+        X Abandoned
+
+=======================================================================
+
+Things Roger would be excited to see:
+
+Nick
+  - Finish buffer stuff in libevent; start using it in Tor.
+  - Tors start believing the contents of NETINFO cells.
+  . Work with Steven and Roger to decide which parts of Paul's project
+    he wants to work on.
+  - respond to Steven's red-team TLS testing (a.k.a, look at a packet
+    dump and compare)
+
+Matt
+  - Fit Vidalia in 640x480 again.
+  - When user changes the language in Vidalia, have it change right then.
+  - Vidalia should display/edit PlaintextPorts events/config.
+  . Vidalia's GUI should let you specify an http proxy that it launches
+    for you. Maybe in the general config window next to which Tor it
+    launches for you.
+  - Vidalia should avoid stomping on your custom exit policy lines
+    just because you click on 'save' for a totally different config thing.
+  - How much space do we save in TBB by stripping symbols from Vidalia
+    first? Good idea or crazy idea?
+
+ioerror
+  - gmail auto responder so you send us an email and we send you a Tor
+    binary. Probably needs a proposal first.
+  - weather.torproject.org should go live.
+  o Learn from Steven how to build/maintain the Tor Browser Bundle.
+  - Keep advocating new Tor servers and working with orgs like Mozilla
+    to let them like Tor.
+  - Start converting critical wiki pages into real Tor wml pages. E.g.,
+    https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
+  - Find out what happened to the buildbot and get it back up:
+    http://tor-buildbot.freehaven.net:8010/
+  - Learn about locking memory pages that have sensitive content. Get
+    that started in Tor.
+  - Translation portal
+    - Vidalia html help files
+    - should we i18nize polipo's error messages too?
+    - Some of our translated wml files are very old -- so old that they
+      are harmful to leave in place. We need some sort of way to notice
+      this and disable them.
+
+Steven
+  - Figure out (or give up on) how to run Tor Browser and ordinary
+    Firefox side-by-side.
+  - Enumerate and analyze traces left when running from USB
+  - Write a list of research items Tor would like to see done, for the
+    volunteer page. Pick a few you'd like to work on yourself.
+  - Move proposal 131 or equivalent forward.
+  - Keep bugging us about exploits on the .exit notation.
+  - If relays have 100KB/s but set relaybandwidthrate to 10KB/s, do your
+    interference attacks still work?
+  - Mike's question #3 on https://www.torproject.org/volunteer#Research
+  - Worthwhile shipping TBB with some local html help files that come
+    as bookmarks?
+  - Decide whether TBB should use Torbutton's "lock" feature.
+    http://archives.seul.org/or/cvs/Jun-2008/msg00186.html
+
+Andrew
+  - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
+    so they admit that Torbutton is in them too. Change the download
+    page too.
+  - The OS X bundle screenshots are from forever ago -- they don't
+    include Torbutton, they still say it's tor.eff.org, etc.
+  - Should we still be telling you how to use Safari on OS X for Tor,
+    given all the holes that Torbutton-dev solves on Firefox?
+
+Karsten
+  o Make a hidden services explanation page with the hidden service
+    diagrams. See img/THS-[1-6].png. These need some text to go along
+    with them though, so people can follow what's going on.
+  - We should consider a single config option TorPrivateNetwork that
+    turns on all the config options for running a private test tor
+    network. having to keep updating all the tools, and the docs,
+    just isn't working.
+
+Weasel
+  - Figure out how to make Vidalia and Tor play nicely on Debian, make
+    the necessary modifications, and make some Vidalia debs that pass
+    muster.
+  - Fix bug 393.
+  - Get oftc to switch to Tor dns bulk exitlist. Or tell us why it's
+    not suitable yet.
+  - Take non-Running entries out of the networkstatus consensus.
+  - Move proposal 134 forward.
+  - putting port predictions in state file
+  - if tor hasn't been used in a while it stops fetching consensus
+    documents.  Retain that state over restarts.
+
+Roger
+  - Finish tor-doc-bridge.wml
+  . Fix FAQ entry on setting up private Tor network
+  - Review Karsten's hidden service diagrams
+  - Roger should visit Internews DC sometime.
+  - Did we actually apply Steven's dkimproxy patch?
+  - Brainstorm about safe but effective ways for vidalia to
+    auto-update its user's bridges via Tor in the background.
+
+Mike:
+  - Roger wants to get an email every time there's a blog change,
+    e.g. a comment. That way spam doesn't go undetected for weeks.
+    - Or, maybe just disable linking from blog comments entirely?
+
+=======================================================================
+
+Bugs/issues for Tor 0.2.0.x:
+  . we should have an off-by-default way for relays to dump geoip data to
+    a file in their data directory, for measurement purposes.
+    o Basic implementation
+N   - Include probability-of-selection
+R d let bridges set relaybandwidthrate as low as 5kb
+R - bridge communities
+    . spec
+    . deploy
+      - man page entries for Alternate*Authority config options
+
+Documentation for Tor 0.2.0.x:
+  - Proposals:
+    . 111: Prioritize local traffic over relayed.
+R     - Merge into tor-spec.txt.
+    - 113: mark as closed close.
+  o document the "3/4 and 7/8" business in the clients fetching consensus
+    documents timeline.
+R   - then document the bridge user download timeline.
+  - HOWTO for DNSPort. See tup's wiki page.
+  . Document transport and natdport in a good HOWTO.
+  - Quietly document NT Service options: revise (or create) FAQ entry
+
+=======================================================================
+
+For 0.2.1.2-alpha:
+R d bug: if we launch using bridges, and then stop using bridges, we
+    still have our bridges in our entryguards section, and may use them.
+R d add an event to report geoip summaries to vidalia for bridge relays,
+    so vidalia can say "recent activity (1-8 users) from sa".
+R - investigate: it looks like if the bridge authority is unreachable,
+    we're not falling back on querying bridges directly?
+R - if "no running bridges known", an application request should make
+    us retry all our bridges.
+R - get matt to make vidalia do a getinfo status/bootstrap-phase to
+    get caught up after it connects.
+R d Setting DirPort when acting as bridge will give false Warnings
+
+For 0.2.1.x:
+  - Proposals to do:
+    o 110: avoid infinite-length circuits
+R   d 128: families of private bridges
+    - 134: handle authority fragmentation.
+
+  - Proposals to write:
+R   d Do we want to maintain our own set of entryguards that we use as
+      next hop after the bridge?
+    X Add an 'exit-address' line in the descriptor for servers that exit
+      from something that isn't their published address.
+      [I think tordnsel solved this. -RD]
+    - Proposal to supersede 117 by adding IPv6 support for exits and entries.
+      - Internal code support for ipv6:
+        o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
+        - Many address variables need to become tor_addr_t
+          - addr in connection_t
+          - n_addr in extend_info_t
+        - Teach resolving code how to handle ipv6.
+        . Teach exit policies about ipv6 (consider ipv4/ipv6
+          interaction!)
+        - Generate END_REASON_EXITPOLICY cells and parse them right
+        - Generate new BEGIN cell types and parse them right
+    - 118: Listen on and advertise multiple ports:
+      - Tor should be able to have a pool of outgoing IP addresses that it is
+        able to rotate through. (maybe.  Possible overlap with proposal 118.)
+      - config option to publish what ports you listen on, beyond
+        ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
+      - Need to figure out the right format for routerinfo_t on this.
+    - Fix voting to handle bug 608 case when multiple servers get
+      Named.
+    d Possibly: revise link protocol to allow big circuit IDs,
+      variable-length cells, proposal-110 stuff, and versioned CREATES?
+    o Eliminate use of v2 networkstatus documents in v3 authority
+      decision-making.
+N   . Draft proposal for GeoIP aggregation (see external constraints *)
+    o Separate Guard flags for "pick this as a new guard" and "keep this
+      as an existing guard".  First investigate if we want this.
+    . Figure out how to make good use of the fallback consensus file. Right
+      now many of the addresses in the fallback consensus will be stale,
+      so it will take dozens of minutes to bootstrap from it. This is a
+      bad first Tor experience. But if we check the fallback consensus
+      file *after* we fail to connect to any authorities, then it may
+      still be valuable as a blocking-resistance step.
+      o Write the proposal.
+      - Patch our tor.spec rpm package so it knows where to put the fallback
+        consensus file.
+    d Something for bug 469, to limit connections per IP.
+    . Put bandwidth weights in the networkstatus? So clients get weight
+      their choices even before they have the descriptors; and so
+      authorities can put in more accurate numbers in the future.
+    d Fetch an updated geoip file from the directory authorities.
+
+  - Tiny designs to write:
+    . Better estimate of clock skew; has anonymity implications.  Clients
+      should estimate their skew as median of skew from servers over last
+      N seconds, but for servers this is not so easy, since a server does
+      not choose who it connects to.
+    - Do TLS connection rotation more often than "once a week" in the
+      extra-stable case.
+      (One reason not to do it more often is because the old TLS conn
+       probably has a circuit on it, and we don't really want to build up
+       dozens of TCP connections to all the other extra-stable relays.)
+    - If a relay publishes a new descriptor with a significantly lower
+      uptime or with a new IP address, then we should consider its current
+      "running" interval to have ended even if it hadn't yet failed its
+      third reachability test. the interval ended when the new descriptor
+      appeared, and a new interval began then too.
+
+  - Use less RAM *
+    - Optimize cell pool allocation.
+    d Support (or just always use) jemalloc (if it helps)
+    - mmap more files.
+    - Look into pulling serverdescs off buffers as they arrive.
+  - Use less bandwidth
+    - Use if-modified-since to download consensuses
+  - Handle multi-core cpus better
+  - Use information from NETINFO cells
+    - Don't extend a circuit over a noncanonical connection with
+      mismatched address.
+    - Learn our outgoing IP address from netinfo cells?
+    - Learn skew from netinfo cells?
+  - Testing
+    - Better unit test coverage
+    - Refactor unit tests into multiple files
+    - Verify that write limits to linked connections work.
+  - Use more mid-level and high-level libevent APIs
+    - For dns?
+    - For http?
+    - For buffers?
+  - Tool improvements:
+    - Get IOCP patch into libevent *
+
+  - Security improvements
+    - make is-consensus-fresh-enough check way tighter.
+    - If we haven't tried downloading a consensus for ages since we're tired,
+      try getting a new one before we use old descriptors for a circuit.
+      Related to bug 401.
+
+  - Feature removals and deprecations:
+    - Get rid of the v1 directory stuff (making, serving, and caching)
+      - First verify that the caches won't flip out?
+        - If they will, just stop the caches from caching for now
+      - perhaps replace it with a "this is a tor server" stock webpage.
+    - The v2dir flag isn't used for anything anymore, right? If so, dump it.
+    - Even clients run rep_hist_load_mtbf_data(). Does this waste memory?
+      Dump it?
+    - Unless we start using ftime functions, dump them.
+    - can we deprecate 'getinfo network-status'?
+    - can we deprecate the FastFirstHopPK config option?
+    - Can we deprecate controllers that don't use both features?
+
+Nice to have for 0.2.1.x:
+  - Proposals to write
+    - steven's plan for replacing check.torproject.org with a built-in
+      answer by tor itself.
+
+  - Documentation
+P   - Make documentation realize that location of system configuration file
+      will depend on location of system defaults, and isn't always /etc/torrc.
+
+  - Small controller features
+    - A status event for when tor decides to stop fetching directory info
+      if the client hasn't clicked recently: then make the onion change too.
+    - Add a status event when new consensus arrives
+
+  - Windows build
+P   - Figure out why dll's compiled in mingw don't work right in WinXP.
+P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
+
+  - Refactor bad code:
+    - Refactor the HTTP logic so the functions aren't so large.
+    - Refactor buf_read and buf_write to have sensible ways to return
+      error codes after partial writes
+    - Router_choose_random_node() has a big pile of args. make it "flags".
+    - Streamline how we pick entry nodes: Make choose_random_entry() have
+      less magic and less control logic.
+    - Don't call time(NULL) so much; instead have a static time_t field
+      that gets updated only a handful of times per second.
+    - Move all status info out of routerinfo into local_routerstatus.  Make
+      "who can change what" in local_routerstatus explicit.  Make
+      local_routerstatus (or equivalent) subsume all places to go for "what
+      router is this?"
+    - deprecate router_digest_is_trusted_dir() in favor of
+      router_get_trusteddirserver_by_digest()
+
+  - Make Tor able to chroot itself
+    o allow it to load an entire config file from control interface
+    - document LOADCONF
+    - log rotation (and FD passing) via control interface
+    - chroot yourself, including inhibit trying to read config file
+      and reopen logs, unless they are under datadir.
+
+  - Should be trivial:
+    - Base relative control socket paths (and other stuff in torrc) on datadir.
+    - Tor logs the libevent version on startup, for debugging purposes.
+      This is great. But it does this before configuring the logs, so
+      it only goes to stdout and is then lost.
+    - Make TrackHostExits expire TrackHostExitsExpire seconds after their
+      *last* use, not their *first* use.
+    - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
+    - Make 'safelogging' extend to info-level logs too.
+    - don't do dns hijacking tests if we're reject *:* exit policy?
+      (deferred until 0.1.1.x is less common)
+    - More consistent error checking in router_parse_entry_from_string().
+      I can say "banana" as my bandwidthcapacity, and it won't even squeak.
+
+  - Interface for letting SOAT modify flags that authorities assign.
+    (How to keep the authority from clobbering them afterwards?
+
