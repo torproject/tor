@@ -119,28 +119,19 @@ Status: Draft
   to the "r", "s", and "v" lines that already exist.  This line
   will convey weight information to clients.
 
-   "w Exit=41 Guard=94 Middle=543 ..."
+   "w Bandwidth=193671"
 
-  It starts with the letter w and then contains any number of Key=Value
-  pairs.  Values will be non-negative integers.  Clients will pick
-  routers with a propability proportional to the number for the intended
-  purpose.
+  The bandwidth number is the lesser of observed bandwidth and bandwidth
+  rate limit from the server descriptor that the "r" line referenced by
+  digest (1st and 3rd field of the bandwidth line in the descriptor).
 
-  Clients MUST accept sums of all weights for a given purpose over all
-  routers in a consensus up to UINT64_max.
-
-  [XXX how do we arrive at a consensus weight?
-    option a) Perhaps the vote could contain the node's bandwidth, and
-              this could be used to calculate the weights?  It's
-              necessary that the consensus remain a deterministic
-              function of the votes.
-    option b) Every voter assigns weights for each of the purposes
-              (Exit, Guard, ..) so that their total sum is some constant
-              X.  When building a consensus we take the median for each
-              purpose for each router.
-
-    Option a has the disadvantage that if we want to tweak the weighting
-    we have to make a new consensus-method]
+  The bandwidth item is added as another item in the router tuple
+  described in dir-spec section 3.4:
+   | * Two router entries are "the same" if they have the same
+   | <descriptor digest, published time, nickname, IP, ports> tuple.
+   | We choose the tuple for a given router as whichever tuple appears
+   | for that router in the most votes.  We break ties in favor of
+   | the more recently published.
 
 3.2 Fetching descriptors on demand
 
@@ -198,14 +189,15 @@ Status: Draft
 
 3.3 Protocol versions
 
-  [XXX: find out where we need "opt protocols Link 1 2 Circuit 1"
-  information described in 2.3 above.  If we need it, it might have
-  to go into the consensus document.]
+  Server descriptors contain optional information of supported
+  link-level and circuit-level protocols in the form of
+  "opt protocols Link 1 2 Circuit 1".  These are not currently needed
+  and will probably eventually move into the "v" (version) line in
+  the consensus.  This proposal does not deal with them.
 
-  [XXX: Similarly find out where we need the version number of a
-  remote tor server.  This information is in the consensus, but
-  maybe we use it in some place where having it signed by the
-  server in question is really important?]
+  Similarly a server descriptor contains the version number of
+  a Tor node.  This information is already present in the consensus
+  and is thus available to all clients immediately.
 
 3.4 Exit selection
 
