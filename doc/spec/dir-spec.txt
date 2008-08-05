@@ -1145,8 +1145,9 @@ $Id$
         * Two router entries are "the same" if they have the same
           <descriptor digest, published time, nickname, IP, ports> tuple.
           We choose the tuple for a given router as whichever tuple appears
-          for that router in the most votes.  We break ties in favor of
-          the more recently published.
+          for that router in the most votes.  We break ties first in favor of
+          the more recently published, then in favor of smaller server
+          descriptor digest.
 
         * The Named flag appears if it is included for this routerstatus by
           _any_ authority, and if all authorities that list it list the same

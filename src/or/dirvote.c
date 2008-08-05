@@ -337,7 +337,8 @@ _compare_vote_rs(const void **_a, const void **_b)
 
 /** Given a list of vote_routerstatus_t, all for the same router identity,
  * return whichever is most frequent, breaking ties in favor of more
- * recently published vote_routerstatus_t.
+ * recently published vote_routerstatus_t and in case of ties there,
+ * in favour of smaller descriptor digest.
  */
 static vote_routerstatus_t *
 compute_routerstatus_consensus(smartlist_t *votes)
@@ -346,6 +347,10 @@ compute_routerstatus_consensus(smartlist_t *votes)
   int most_n = 0, cur_n = 0;
   time_t most_published = 0;
 
+  /* _compare_vote_rs() sorts the items by identity digest (all the same),
+   * then by SD digest.  That way, if we have a tie that the published_on
+   * date cannot tie, we use the descriptor with the smaller digest.
+   */
   smartlist_sort(votes, _compare_vote_rs);
   SMARTLIST_FOREACH(votes, vote_routerstatus_t *, rs,
   {
