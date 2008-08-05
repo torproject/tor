@@ -1839,6 +1839,57 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   }
 }
 
+/** DOCDOC */
+int
+append_address_to_payload(char *payload_out, const tor_addr_t *addr)
+{
+  uint32_t a;
+  switch (tor_addr_family(addr)) {
+  case AF_INET:
+    payload_out[0] = RESOLVED_TYPE_IPV4;
+    payload_out[1] = 4;
+    a = tor_addr_to_ipv4n(addr);
+    memcpy(payload_out+2, &a, 4);
+    return 6;
+  case AF_INET6:
+    payload_out[0] = RESOLVED_TYPE_IPV6;
+    payload_out[1] = 16;
+    memcpy(payload_out+2, tor_addr_to_in6_addr8(addr), 16);
+    return 18;
+  case AF_UNSPEC:
+  default:
+    return -1;
+  }
+}
+
+/** DODOC */
+const char *
+decode_address_from_payload(tor_addr_t *addr_out, const char *payload,
+                            int payload_len)
+{
+  if (payload_len < 2)
+    return NULL;
+  if (payload_len < 2+(uint8_t)payload[1])
+    return NULL;
+
+  switch (payload[0]) {
+  case RESOLVED_TYPE_IPV4:
+    if (payload[1] != 4)
+      return NULL;
+    tor_addr_from_ipv4n(addr_out, get_uint32(payload+2));
+    break;
+  case RESOLVED_TYPE_IPV6:
+    if (payload[1] != 16)
+      return NULL;
+    tor_addr_from_ipv6_bytes(addr_out, payload+2);
+    break;
+  default:
+    tor_addr_make_unspec(addr_out);
+    break;
+  }
+  return payload + 2 + (uint8_t)payload[1];
+}
+
 /** Fail with an assert if the active circuits ring on <b>orconn</b> is
  * corrupt.  */
 void

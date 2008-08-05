@@ -870,8 +870,8 @@ typedef struct connection_t {
   int socket_family; /**< Address family of this connection's socket.  Usually
                       * AF_INET, but it can also be AF_UNIX, or in the future
                       * AF_INET6 */
-  uint32_t addr; /**< IP of the other side of the connection; used to identify
-                  * routers, along with port. */
+  tor_addr_t addr; /**< IP of the other side of the connection; used to
+                    * identify routers, along with port. */
   uint16_t port; /**< If non-zero, port  on the other end
                   * of the connection. */
   uint16_t marked_for_close; /**< Should we close this conn on the next
@@ -922,7 +922,7 @@ typedef struct or_connection_t {
    * recent, we can rate limit it further. */
   time_t client_used;
 
-  uint32_t real_addr; /**< The actual address that this connection came from
+  tor_addr_t real_addr; /**< The actual address that this connection came from
                        * or went to.  The <b>addr</b> field is prone to
                        * getting overridden by the address from the router
                        * descriptor matching <b>identity_digest</b>. */
@@ -1629,7 +1629,7 @@ typedef struct extend_info_t {
                                           * display. */
   char identity_digest[DIGEST_LEN]; /**< Hash of this router's identity key. */
   uint16_t port; /**< OR port. */
-  uint32_t addr; /**< IP address in host order. */
+  tor_addr_t addr; /**< IP address. */
   crypto_pk_env_t *onion_key; /**< Current onionskin key. */
 } extend_info_t;
 
@@ -1997,14 +1997,12 @@ static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
 /** An entry specifying a set of addresses and ports that should be remapped
  * to another address and port before exiting this exit node. */
 typedef struct exit_redirect_t {
-  /* XXXX_IP6 make this whole mess ipv6-capable.  (Does anybody use it? */
-
-  uint32_t addr;
+  tor_addr_t addr;
   uint16_t port_min;
   uint16_t port_max;
   maskbits_t maskbits;
 
-  uint32_t addr_dest;
+  tor_addr_t addr_dest;
   uint16_t port_dest;
   unsigned int is_redirect:1;
 } exit_redirect_t;
@@ -2591,7 +2589,7 @@ int circuit_extend_to_new_exit(origin_circuit_t *circ, extend_info_t *info);
 void onion_append_to_cpath(crypt_path_t **head_ptr, crypt_path_t *new_hop);
 extend_info_t *extend_info_alloc(const char *nickname, const char *digest,
                                  crypto_pk_env_t *onion_key,
-                                 uint32_t addr, uint16_t port);
+                                 const tor_addr_t *addr, uint16_t port);
 extend_info_t *extend_info_from_router(routerinfo_t *r);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);
@@ -2611,8 +2609,9 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
 
 void clear_bridge_list(void);
 int routerinfo_is_a_configured_bridge(routerinfo_t *ri);
-void bridge_add_from_config(uint32_t addr, uint16_t port, char *digest);
-void retry_bridge_descriptor_fetch_directly(char *digest);
+void bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
+                            char *digest);
+void retry_bridge_descriptor_fetch_directly(const char *digest);
 void fetch_bridge_descriptors(time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);
 int any_bridge_descriptors_known(void);
@@ -2739,7 +2738,7 @@ int options_trial_assign(config_line_t *list, int use_defaults,
                          int clear_first, char **msg);
 int resolve_my_address(int warn_severity, or_options_t *options,
                        uint32_t *addr, char **hostname_out);
-int is_local_IP(uint32_t ip) ATTR_PURE;
+int is_local_addr(const tor_addr_t *addr) ATTR_PURE;
 void options_init(or_options_t *options);
 int options_init_from_torrc(int argc, char **argv);
 setopt_err_t options_init_from_string(const char *cf,
@@ -2794,7 +2793,8 @@ void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 
 void connection_expire_held_open(void);
 
-int connection_connect(connection_t *conn, const char *address, uint32_t addr,
+int connection_connect(connection_t *conn, const char *address,
+                       const tor_addr_t *addr,
                        uint16_t port, int *socket_error);
 int retry_all_listeners(smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
@@ -2835,7 +2835,8 @@ edge_connection_t *connection_get_by_global_id(uint32_t id);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_purpose(int type, int purpose);
-connection_t *connection_get_by_type_addr_port_purpose(int type, uint32_t addr,
+connection_t *connection_get_by_type_addr_port_purpose(int type,
+                                                   const tor_addr_t *addr,
                                                    uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
@@ -2948,8 +2949,8 @@ int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
 
-or_connection_t *connection_or_connect(uint32_t addr, uint16_t port,
-                                    const char *id_digest);
+or_connection_t *connection_or_connect(const tor_addr_t *addr, uint16_t port,
+                                       const char *id_digest);
 
 int connection_tls_start_handshake(or_connection_t *conn, int receiving);
 int connection_tls_continue_handshake(or_connection_t *conn);
@@ -3144,7 +3145,7 @@ int connection_dir_process_inbuf(dir_connection_t *conn);
 int connection_dir_finished_flushing(dir_connection_t *conn);
 int connection_dir_finished_connecting(dir_connection_t *conn);
 void connection_dir_request_failed(dir_connection_t *conn);
-void directory_initiate_command(const char *address, uint32_t addr,
+void directory_initiate_command(const char *address, const tor_addr_t *addr,
                                 uint16_t or_port, uint16_t dir_port,
                                 int supports_conditional_consensus,
                                 int supports_begindir, const char *digest,
@@ -3606,10 +3607,11 @@ typedef enum {
 } addr_policy_result_t;
 
 int firewall_is_fascist_or(void);
-int fascist_firewall_allows_address_or(uint32_t addr, uint16_t port);
-int fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port);
-int dir_policy_permits_address(uint32_t addr);
-int socks_policy_permits_address(uint32_t addr);
+int fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port);
+int fascist_firewall_allows_or(routerinfo_t *ri);
+int fascist_firewall_allows_address_dir(const tor_addr_t *addr, uint16_t port);
+int dir_policy_permits_address(const tor_addr_t *addr);
+int socks_policy_permits_address(const tor_addr_t *addr);
 int authdir_policy_permits_address(uint32_t addr, uint16_t port);
 int authdir_policy_valid_address(uint32_t addr, uint16_t port);
 int authdir_policy_baddir_address(uint32_t addr, uint16_t port);
@@ -3621,6 +3623,8 @@ int policies_parse_from_options(or_options_t *options);
 
 addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
 int cmp_addr_policies(smartlist_t *a, smartlist_t *b);
+addr_policy_result_t compare_tor_addr_to_addr_policy(const tor_addr_t *addr,
+                              uint16_t port, smartlist_t *policy);
 addr_policy_result_t compare_addr_to_addr_policy(uint32_t addr,
                               uint16_t port, smartlist_t *policy);
 int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
@@ -3692,6 +3696,11 @@ int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
 void assert_active_circuits_ok(or_connection_t *orconn);
 void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
 void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
+
+int append_address_to_payload(char *payload_out, const tor_addr_t *addr);
+const char *decode_address_from_payload(tor_addr_t *addr_out,
+                                        const char *payload,
+                                        int payload_len);
 
 /********************************* rephist.c ***************************/
 

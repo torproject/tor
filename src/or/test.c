@@ -1336,13 +1336,13 @@ test_util_ip6_helpers(void)
   test_eq(sizeof(struct sockaddr_in),
           tor_addr_to_sockaddr(&t1, 1234, (struct sockaddr *)&sa_storage,
                                sizeof(sa_storage)));
-  test_eq(1234, sin->sin_port);
+  test_eq(1234, ntohs(sin->sin_port));
   test_eq(0x7f7f0102, ntohl(sin->sin_addr.s_addr));
 
   memset(&sa_storage, 0, sizeof(sa_storage));
   sin6 = (struct sockaddr_in6 *)&sa_storage;
   sin6->sin6_family = AF_INET6;
-  sin6->sin6_port = 7070;
+  sin6->sin6_port = htons(7070);
   sin6->sin6_addr.s6_addr[0] = 128;
   tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin6);
   test_eq(tor_addr_family(&t1), AF_INET6);
@@ -1354,7 +1354,7 @@ test_util_ip6_helpers(void)
           tor_addr_to_sockaddr(&t1, 9999, (struct sockaddr *)&sa_storage,
                                sizeof(sa_storage)));
   test_eq(AF_INET6, sin6->sin6_family);
-  test_eq(9999, sin6->sin6_port);
+  test_eq(9999, ntohs(sin6->sin6_port));
   test_eq(0x80000000, ntohl(S6_ADDR32(sin6->sin6_addr)[0]));
 
   /* ==== tor_addr_lookup: static cases.  (Can't test dns without knowing we
@@ -3901,8 +3901,8 @@ test_rend_fns_v2(void)
     base16_encode(intro->extend_info->nickname + 1,
                   sizeof(intro->extend_info->nickname) - 1,
                   intro->extend_info->identity_digest, DIGEST_LEN);
-    intro->extend_info->addr = crypto_rand_int(65536); /* Does not cover all
-                                                        * IP addresses. */
+    /* Does not cover all IP addresses. */
+    tor_addr_from_ipv4h(&intro->extend_info->addr, crypto_rand_int(65536));
     intro->extend_info->port = crypto_rand_int(65536);
     intro->intro_key = crypto_pk_dup_key(pk2);
     smartlist_add(generated->intro_nodes, intro);
@@ -3940,7 +3940,7 @@ test_rend_fns_v2(void)
     test_memeq(gen_info->identity_digest, par_info->identity_digest,
                DIGEST_LEN);
     test_streq(gen_info->nickname, par_info->nickname);
-    test_eq(gen_info->addr, par_info->addr);
+    test_assert(tor_addr_eq(&gen_info->addr, &par_info->addr));
     test_eq(gen_info->port, par_info->port);
   }
   tor_free(intro_points_encrypted);

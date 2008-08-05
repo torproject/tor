@@ -197,11 +197,11 @@ firewall_is_fascist_or(void)
  * connection to <b>addr</b>:<b>port</b>.
  */
 static int
-addr_policy_permits_address(uint32_t addr, uint16_t port,
+addr_policy_permits_tor_addr(const tor_addr_t *addr, uint16_t port,
                             smartlist_t *policy)
 {
   addr_policy_result_t p;
-  p = compare_addr_to_addr_policy(addr, port, policy);
+  p = compare_tor_addr_to_addr_policy(addr, port, policy);
   switch (p) {
     case ADDR_POLICY_PROBABLY_ACCEPTED:
     case ADDR_POLICY_ACCEPTED:
@@ -215,40 +215,60 @@ addr_policy_permits_address(uint32_t addr, uint16_t port,
   }
 }
 
+/* DOCDOC XXXX021 deprecate? */
+static int
+addr_policy_permits_address(uint32_t addr, uint16_t port,
+                            smartlist_t *policy)
+{
+  tor_addr_t a;
+  tor_addr_from_ipv4h(&a, addr);
+  return addr_policy_permits_tor_addr(&a, port, policy);
+}
+
 /** Return true iff we think our firewall will let us make an OR connection to
  * addr:port. */
 int
-fascist_firewall_allows_address_or(uint32_t addr, uint16_t port)
+fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port)
 {
-  return addr_policy_permits_address(addr, port,
+  return addr_policy_permits_tor_addr(addr, port,
                                      reachable_or_addr_policy);
+}
+
+/** DOCDOC */
+int
+fascist_firewall_allows_or(routerinfo_t *ri)
+{
+  /* XXXX021 proposal 118 */
+  tor_addr_t addr;
+  tor_addr_from_ipv4h(&addr, ri->addr);
+  return fascist_firewall_allows_address_or(&addr, ri->or_port);
 }
 
 /** Return true iff we think our firewall will let us make a directory
  * connection to addr:port. */
 int
-fascist_firewall_allows_address_dir(uint32_t addr, uint16_t port)
+fascist_firewall_allows_address_dir(const tor_addr_t *addr, uint16_t port)
 {
-  return addr_policy_permits_address(addr, port,
-                                     reachable_dir_addr_policy);
+  return addr_policy_permits_tor_addr(addr, port,
+                                      reachable_dir_addr_policy);
 }
 
 /** Return 1 if <b>addr</b> is permitted to connect to our dir port,
  * based on <b>dir_policy</b>. Else return 0.
  */
 int
-dir_policy_permits_address(uint32_t addr)
+dir_policy_permits_address(const tor_addr_t *addr)
 {
-  return addr_policy_permits_address(addr, 1, dir_policy);
+  return addr_policy_permits_tor_addr(addr, 1, dir_policy);
 }
 
 /** Return 1 if <b>addr</b> is permitted to connect to our socks port,
  * based on <b>socks_policy</b>. Else return 0.
  */
 int
-socks_policy_permits_address(uint32_t addr)
+socks_policy_permits_address(const tor_addr_t *addr)
 {
-  return addr_policy_permits_address(addr, 1, socks_policy);
+  return addr_policy_permits_tor_addr(addr, 1, socks_policy);
 }
 
 /** Return 1 if <b>addr</b>:<b>port</b> is permitted to publish to our
@@ -505,6 +525,16 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
   return found->policy;
 }
 
+/** DOCDOC */
+addr_policy_result_t
+compare_addr_to_addr_policy(uint32_t addr, uint16_t port, smartlist_t *policy)
+{
+  /*XXXX021 deprecate this function? */
+  tor_addr_t a;
+  tor_addr_from_ipv4h(&a, addr);
+  return compare_tor_addr_to_addr_policy(&a, port, policy);
+}
+
 /** Decide whether a given addr:port is definitely accepted,
  * definitely rejected, probably accepted, or probably rejected by a
  * given policy.  If <b>addr</b> is 0, we don't know the IP of the
@@ -523,8 +553,8 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
  * addresses (127.0.0.1, and so on).  But we'll try this for now.
  */
 addr_policy_result_t
-compare_addr_to_addr_policy(uint32_t _addr, uint16_t port,
-                            smartlist_t *policy)
+compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
+                                smartlist_t *policy)
 {
   int maybe_reject = 0;
   int maybe_accept = 0;
@@ -532,10 +562,7 @@ compare_addr_to_addr_policy(uint32_t _addr, uint16_t port,
   int maybe = 0;
   int i, len;
   int addr_is_unknown;
-  tor_addr_t addr;
-  /*XXXX021 ipv6 this function should take a tor_addr_t, not a uint32_t. */
-  tor_addr_from_ipv4h(&addr, _addr);
-  addr_is_unknown = tor_addr_is_null(&addr);
+  addr_is_unknown = tor_addr_is_null(addr);
 
   len = policy ? smartlist_len(policy) : 0;
 
@@ -558,7 +585,7 @@ compare_addr_to_addr_policy(uint32_t _addr, uint16_t port,
       }
     } else {
       /* Address is known */
-      if (!tor_addr_compare_masked(&addr, &tmpe->addr, tmpe->maskbits,
+      if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
                                    CMP_SEMANTIC)) {
         if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
           /* Exact match for the policy */

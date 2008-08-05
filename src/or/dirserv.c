@@ -2770,8 +2770,9 @@ dirserv_test_reachability(time_t now, int try_all)
   static char ctr = 0;
   int bridge_auth = authdir_mode_bridge(get_options());
 
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
+  SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, router) {
     const char *id_digest = router->cache_info.identity_digest;
+    tor_addr_t router_addr;
     if (router_is_me(router))
       continue;
     if (bridge_auth && router->purpose != ROUTER_PURPOSE_BRIDGE)
@@ -2784,10 +2785,10 @@ dirserv_test_reachability(time_t now, int try_all)
       /* Remember when we started trying to determine reachability */
       if (!router->testing_since)
         router->testing_since = now;
-      connection_or_connect(router->addr, router->or_port,
-                            id_digest);
+      tor_addr_from_ipv4h(&router_addr, router->addr);
+      connection_or_connect(&router_addr, router->or_port, id_digest);
     }
-  });
+  } SMARTLIST_FOREACH_END(router);
   if (!try_all) /* increment ctr */
     ctr = (ctr + 1) % 128;
 }

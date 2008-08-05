@@ -63,9 +63,10 @@ connection_cpu_finished_flushing(connection_t *conn)
 /** Pack addr,port,and circ_id; set *tag to the result. (See note on
  * cpuworker_main for wire format.) */
 static void
-tag_pack(char *tag, uint32_t addr, uint16_t port, circid_t circ_id)
+tag_pack(char *tag, const tor_addr_t *addr, uint16_t port, circid_t circ_id)
 {
-  *(uint32_t *)tag     = addr;
+  /*XXXX RETHINK THIS WHOLE MESS !!!! !NM NM NM NM*/
+  *(uint32_t *)tag     = tor_addr_to_ipv4h(addr);
   *(uint16_t *)(tag+4) = port;
   *(uint16_t *)(tag+6) = circ_id;
 }
@@ -161,6 +162,8 @@ connection_cpu_process_inbuf(connection_t *conn)
     /* (Here we use connection_or_exact_get_by_addr_port rather than
      * get_by_identity_digest: we want a specific port here in
      * case there are multiple connections.) */
+    /* XXXX021 This is dumb. We don't want just any connection with a matching
+     * IP and port: we want the exact one that sent us this CREATE cell. */
     p_conn = connection_or_exact_get_by_addr_port(addr,port);
     if (p_conn)
       circ = circuit_get_by_circid_orconn(circ_id, p_conn);
@@ -468,7 +471,7 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
       tor_free(onionskin);
       return -1;
     }
-    tag_pack(tag, circ->p_conn->_base.addr, circ->p_conn->_base.port,
+    tag_pack(tag, &circ->p_conn->_base.addr, circ->p_conn->_base.port,
              circ->p_circ_id);
 
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;

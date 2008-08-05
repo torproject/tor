@@ -243,10 +243,10 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
   /* This tries dirservers which we believe to be down, but ultimately, that's
    * harmless, and we may as well err on the side of getting things uploaded.
    */
-  SMARTLIST_FOREACH(dirservers, trusted_dir_server_t *, ds,
-    {
+  SMARTLIST_FOREACH_BEGIN(dirservers, trusted_dir_server_t *, ds) {
       routerstatus_t *rs = &(ds->fake_status);
       size_t upload_len = payload_len;
+      tor_addr_t ds_addr;
 
       if ((type & ds->type) == 0)
         continue;
@@ -260,13 +260,14 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
         log_info(LD_DIR, "Uploading an extrainfo (length %d)",
                  (int) extrainfo_len);
       }
+      tor_addr_from_ipv4h(&ds_addr, ds->addr);
       post_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose) ||
-              !fascist_firewall_allows_address_dir(ds->addr, ds->dir_port);
+        !fascist_firewall_allows_address_dir(&ds_addr, ds->dir_port);
       directory_initiate_command_routerstatus(rs, dir_purpose,
                                               router_purpose,
                                               post_via_tor,
                                               NULL, payload, upload_len, 0);
-    });
+  } SMARTLIST_FOREACH_END(ds);
   if (!found) {
     char *s = authority_type_to_string(type);
     log_warn(LD_DIR, "Publishing server descriptor to directory authorities "
@@ -344,7 +345,9 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
        * so, for now, never assume the server supports that. */
       routerinfo_t *ri = choose_random_entry(NULL);
       if (ri) {
-        directory_initiate_command(ri->address, ri->addr,
+        tor_addr_t addr;
+        tor_addr_from_ipv4h(&addr, ri->addr);
+        directory_initiate_command(ri->address, &addr,
                                    ri->or_port, 0,
                                    0, /* don't use conditional consensus url */
                                    1, ri->cache_info.identity_digest,
@@ -459,6 +462,7 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
   const char *address;
+  tor_addr_t addr;
   if ((router = router_get_by_digest(status->identity_digest))) {
     address = router->address;
   } else {
@@ -466,7 +470,8 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
     tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
     address = address_buf;
   }
-  directory_initiate_command(address, status->addr,
+  tor_addr_from_ipv4h(&addr, status->addr);
+  directory_initiate_command(address, &addr,
                              status->or_port, status->dir_port,
                              status->version_supports_conditional_consensus,
                              status->version_supports_begindir,
@@ -487,7 +492,7 @@ directory_conn_is_self_reachability_test(dir_connection_t *conn)
     routerinfo_t *me = router_get_my_routerinfo();
     if (me &&
         router_digest_is_me(conn->identity_digest) &&
-        me->addr == conn->_base.addr &&
+        tor_addr_eq_ipv4h(&conn->_base.addr, me->addr) && /*XXXX021 prop 118*/
         me->dir_port == conn->_base.port)
       return 1;
   }
@@ -626,7 +631,8 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
  * 3) Else yes.
  */
 static int
-directory_command_should_use_begindir(or_options_t *options, uint32_t addr,
+directory_command_should_use_begindir(or_options_t *options,
+                                      const tor_addr_t *addr,
                                       int or_port, uint8_t router_purpose,
                                       int anonymized_connection)
 {
@@ -648,7 +654,7 @@ directory_command_should_use_begindir(or_options_t *options, uint32_t addr,
  * <b>supports_begindir</b>, and whose identity key digest is
  * <b>digest</b>. */
 void
-directory_initiate_command(const char *address, uint32_t addr,
+directory_initiate_command(const char *address, const tor_addr_t *_addr,
                            uint16_t or_port, uint16_t dir_port,
                            int supports_conditional_consensus,
                            int supports_begindir, const char *digest,
@@ -661,13 +667,16 @@ directory_initiate_command(const char *address, uint32_t addr,
   or_options_t *options = get_options();
   int socket_error = 0;
   int use_begindir = supports_begindir &&
-                     directory_command_should_use_begindir(options, addr,
+                     directory_command_should_use_begindir(options, _addr,
                        or_port, router_purpose, anonymized_connection);
+  tor_addr_t addr;
 
   tor_assert(address);
-  tor_assert(addr);
+  tor_assert(_addr);
   tor_assert(or_port || dir_port);
   tor_assert(digest);
+
+  tor_addr_copy(&addr, _addr);
 
   log_debug(LD_DIR, "anonymized %d, use_begindir %d.",
             anonymized_connection, use_begindir);
@@ -677,7 +686,7 @@ directory_initiate_command(const char *address, uint32_t addr,
   conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR, AF_INET));
 
   /* set up conn so it's got all the data we need to remember */
-  conn->_base.addr = addr;
+  tor_addr_copy(&conn->_base.addr, &addr);
   conn->_base.port = use_begindir ? or_port : dir_port;
   conn->_base.address = tor_strdup(address);
   memcpy(conn->identity_digest, digest, DIGEST_LEN);
@@ -695,11 +704,11 @@ directory_initiate_command(const char *address, uint32_t addr,
     /* then we want to connect to dirport directly */
 
     if (options->HttpProxy) {
-      addr = options->HttpProxyAddr;
+      tor_addr_from_ipv4h(&addr, options->HttpProxyAddr);
       dir_port = options->HttpProxyPort;
     }
 
-    switch (connection_connect(TO_CONN(conn), conn->_base.address, addr,
+    switch (connection_connect(TO_CONN(conn), conn->_base.address, &addr,
                                dir_port, &socket_error)) {
       case -1:
         connection_dir_request_failed(conn); /* retry if we want */
@@ -2092,7 +2101,7 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
     tor_snprintf(cp, sizeof(tmp)-(cp-tmp), "Content-Type: %s\r\n", type);
     cp += strlen(cp);
   }
-  if (!is_local_IP(conn->_base.addr)) {
+  if (!is_local_addr(&conn->_base.addr)) {
     /* Don't report the source address for a nearby/private connection.
      * Otherwise we tend to mis-report in cases where incoming ports are
      * being forwarded to a Tor server running behind the firewall. */
@@ -2541,19 +2550,26 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     {
       geoip_client_action_t act =
         is_v3 ? GEOIP_CLIENT_NETWORKSTATUS : GEOIP_CLIENT_NETWORKSTATUS_V2;
-      uint32_t addr = conn->_base.addr;
 
-      if (conn->_base.linked_conn) {
-        connection_t *c = conn->_base.linked_conn;
-        if (c->type == CONN_TYPE_EXIT) {
-          circuit_t *circ = TO_EDGE_CONN(c)->on_circuit;
-          if (! CIRCUIT_IS_ORIGIN(circ)) {
-            or_connection_t *orconn = TO_OR_CIRCUIT(circ)->p_conn;
-            addr = orconn->_base.addr;
+      if (tor_addr_family(&conn->_base.addr) == AF_INET) {
+        uint32_t addr = tor_addr_to_ipv4h(&conn->_base.addr);
+
+        if (conn->_base.linked_conn) {
+          connection_t *c = conn->_base.linked_conn;
+          if (c->type == CONN_TYPE_EXIT) {
+            circuit_t *circ = TO_EDGE_CONN(c)->on_circuit;
+            if (! CIRCUIT_IS_ORIGIN(circ)) {
+              or_connection_t *orconn = TO_OR_CIRCUIT(circ)->p_conn;
+              if (tor_addr_family(&conn->_base.addr) == AF_INET)
+                addr = tor_addr_to_ipv4h(&orconn->_base.addr);
+              else
+                addr = 0;
+            }
           }
         }
+        if (addr)
+          geoip_note_client_seen(act, addr, time(NULL));
       }
-      geoip_note_client_seen(act, addr, time(NULL));
     }
 #endif
 

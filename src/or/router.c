@@ -736,6 +736,7 @@ consider_testing_reachability(int test_or, int test_dir)
 {
   routerinfo_t *me = router_get_my_routerinfo();
   int orport_reachable = check_whether_orport_reachable();
+  tor_addr_t addr;
   if (!me)
     return;
 
@@ -750,12 +751,13 @@ consider_testing_reachability(int test_or, int test_dir)
                                 me->address, me->or_port);
   }
 
+  tor_addr_from_ipv4h(&addr, me->addr);
   if (test_dir && !check_whether_dirport_reachable() &&
       !connection_get_by_type_addr_port_purpose(
-                CONN_TYPE_DIR, me->addr, me->dir_port,
+                CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
-    directory_initiate_command(me->address, me->addr,
+    directory_initiate_command(me->address, &addr,
                                me->or_port, me->dir_port,
                                0, /* does not matter */
                                0, me->cache_info.identity_digest,
@@ -1111,10 +1113,10 @@ router_compare_to_my_exit_policy(edge_connection_t *conn)
 
   /* make sure it's resolved to something. this way we can't get a
      'maybe' below. */
-  if (!conn->_base.addr)
+  if (tor_addr_is_null(&conn->_base.addr))
     return -1;
 
-  return compare_addr_to_addr_policy(conn->_base.addr, conn->_base.port,
+  return compare_tor_addr_to_addr_policy(&conn->_base.addr, conn->_base.port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 }
 
@@ -1543,7 +1545,7 @@ router_new_address_suggestion(const char *suggestion,
     /* Don't believe anybody who says our IP is, say, 127.0.0.1. */
     return;
   }
-  if (addr == d_conn->_base.addr) {
+  if (tor_addr_eq_ipv4h(&d_conn->_base.addr, addr)) {
     /* Don't believe anybody who says our IP is their IP. */
     log_debug(LD_DIR, "A directory server told us our IP address is %s, "
               "but he's just reporting his own IP address. Ignoring.",

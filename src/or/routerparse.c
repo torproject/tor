@@ -3548,7 +3548,6 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   directory_token_t *tok;
   rend_intro_point_t *intro;
   extend_info_t *info;
-  struct in_addr ip;
   int result, num_ok=1;
   memarea_t *area = NULL;
   tor_assert(parsed);
@@ -3621,12 +3620,17 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
                   info->identity_digest, DIGEST_LEN);
     /* Parse IP address. */
     tok = find_first_by_keyword(tokens, R_IPO_IP_ADDRESS);
-    if (tor_inet_aton(tok->args[0], &ip) == 0) {
-      log_warn(LD_REND, "Could not parse IP address.");
+    if (tor_addr_from_str(&info->addr, tok->args[0])<0) {
+      log_warn(LD_REND, "Could not parse introduction point address.");
       rend_intro_point_free(intro);
       goto err;
     }
-    info->addr = ntohl(ip.s_addr);
+    if (tor_addr_family(&info->addr) != AF_INET) {
+      log_warn(LD_REND, "Introduction point address was not ipv4.");
+      rend_intro_point_free(intro);
+      goto err;
+    }
+
     /* Parse onion port. */
     tok = find_first_by_keyword(tokens, R_IPO_ONION_PORT);
     info->port = (uint16_t) tor_parse_long(tok->args[0],10,1,65535,

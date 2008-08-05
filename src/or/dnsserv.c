@@ -25,9 +25,9 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   struct evdns_server_question *q = NULL;
   struct sockaddr_storage addr;
   struct sockaddr *sa;
-  struct sockaddr_in *sin;
   int addrlen;
-  uint32_t ipaddr;
+  tor_addr_t tor_addr;
+  uint16_t port;
   int err = DNS_ERR_NONE;
   char *q_name;
 
@@ -46,21 +46,23 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   }
   (void) addrlen;
   sa = (struct sockaddr*) &addr;
-  if (sa->sa_family != AF_INET) {
-    /* XXXX_IP6 Handle IPV6 */
-    log_warn(LD_APP, "Requesting address wasn't ipv4.");
+  if (tor_addr_from_sockaddr(&tor_addr, sa)<0) {
+    log_warn(LD_APP, "Requesting address wasn't recognized.");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;
-  } else {
-    sin = (struct sockaddr_in*)&addr;
-    ipaddr = ntohl(sin->sin_addr.s_addr);
   }
 
-  if (!socks_policy_permits_address(ipaddr)) {
+  if (!socks_policy_permits_address(&tor_addr)) {
     log_warn(LD_APP, "Rejecting DNS request from disallowed IP.");
     evdns_server_request_respond(req, DNS_ERR_REFUSED);
     return;
   }
+
+  if (sa->sa_family == AF_INET)
+    port = ((struct sockaddr_in *)sa)->sin_port;
+  else
+    port = ((struct sockaddr_in6 *)sa)->sin6_port;
+  port = ntohs(port);
 
   /* Now, let's find the first actual question of a type we can answer in this
    * DNS request.  It makes us a little noncompliant to act like this; we
@@ -116,9 +118,9 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   conn->is_dns_request = 1;
 
-  TO_CONN(conn)->addr = ntohl(sin->sin_addr.s_addr);
-  TO_CONN(conn)->port = ntohs(sin->sin_port);
-  TO_CONN(conn)->address = tor_dup_ip(TO_CONN(conn)->addr);
+  tor_addr_copy(&TO_CONN(conn)->addr, &tor_addr);
+  TO_CONN(conn)->port = port;
+  TO_CONN(conn)->address = tor_dup_addr(&tor_addr);
 
   if (q->type == EVDNS_TYPE_A)
     conn->socks_request->command = SOCKS_COMMAND_RESOLVE;

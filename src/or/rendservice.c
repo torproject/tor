@@ -22,7 +22,7 @@ static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
 typedef struct rend_service_port_config_t {
   uint16_t virtual_port;
   uint16_t real_port;
-  uint32_t real_addr;
+  tor_addr_t real_addr;
 } rend_service_port_config_t;
 
 /** Try to maintain this many intro points per service if possible. */
@@ -121,7 +121,6 @@ rend_add_service(rend_service_t *service)
 {
   int i;
   rend_service_port_config_t *p;
-  struct in_addr addr;
 
   service->intro_nodes = smartlist_create();
 
@@ -152,12 +151,9 @@ rend_add_service(rend_service_t *service)
     log_debug(LD_REND,"Configuring service with directory \"%s\"",
               service->directory);
     for (i = 0; i < smartlist_len(service->ports); ++i) {
-      char addrbuf[INET_NTOA_BUF_LEN];
       p = smartlist_get(service->ports, i);
-      addr.s_addr = htonl(p->real_addr);
-      tor_inet_ntoa(&addr, addrbuf, sizeof(addrbuf));
       log_debug(LD_REND,"Service maps port %d to %s:%d",
-                p->virtual_port, addrbuf, p->real_port);
+                p->virtual_port, fmt_addr(&p->real_addr), p->real_port);
     }
   }
 }
@@ -176,7 +172,7 @@ parse_port_config(const char *string)
   int virtport;
   int realport;
   uint16_t p;
-  uint32_t addr;
+  tor_addr_t addr;
   const char *addrport;
   rend_service_port_config_t *result = NULL;
 
@@ -198,11 +194,11 @@ parse_port_config(const char *string)
   if (smartlist_len(sl) == 1) {
     /* No addr:port part; use default. */
     realport = virtport;
-    addr = 0x7F000001u; /* 127.0.0.1 */
+    tor_addr_from_ipv4h(&addr, 0x7F000001u); /* 127.0.0.1 */
   } else {
     addrport = smartlist_get(sl,1);
     if (strchr(addrport, ':') || strchr(addrport, '.')) {
-      if (parse_addr_port(LOG_WARN, addrport, NULL, &addr, &p)<0) {
+      if (tor_addr_port_parse(addrport, &addr, &p)<0) {
         log_warn(LD_CONFIG,"Unparseable address in hidden service port "
                  "configuration.");
         goto err;
@@ -216,14 +212,14 @@ parse_port_config(const char *string)
                  "service port configuration.", escaped(addrport));
         goto err;
       }
-      addr = 0x7F000001u; /* Default to 127.0.0.1 */
+      tor_addr_from_ipv4h(&addr, 0x7F000001u); /* Default to 127.0.0.1 */
     }
   }
 
   result = tor_malloc(sizeof(rend_service_port_config_t));
   result->virtual_port = virtport;
   result->real_port = realport;
-  result->real_addr = addr;
+  tor_addr_copy(&result->real_addr, &addr);
  err:
   SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
   smartlist_free(sl);
@@ -538,7 +534,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     /* Version 2 INTRODUCE2 cell. */
     int klen;
     extend_info = tor_malloc_zero(sizeof(extend_info_t));
-    extend_info->addr = ntohl(get_uint32(buf+1));
+    tor_addr_from_ipv4n(&extend_info->addr, get_uint32(buf+1));
     extend_info->port = ntohs(get_uint16(buf+5));
     memcpy(extend_info->identity_digest, buf+7, DIGEST_LEN);
     extend_info->nickname[0] = '$';
@@ -1415,7 +1411,7 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   chosen_port = smartlist_choose(matching_ports);
   smartlist_free(matching_ports);
   if (chosen_port) {
-    conn->_base.addr = chosen_port->real_addr;
+    tor_addr_copy(&conn->_base.addr, &chosen_port->real_addr);
     conn->_base.port = chosen_port->real_port;
     return 0;
   }

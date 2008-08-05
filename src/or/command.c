@@ -576,22 +576,19 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   while (n_other_addrs && cp < end-2) {
     /* Consider all the other addresses; if any matches, this connection is
      * "canonical." */
-    uint8_t other_addr_type = (uint8_t) *cp++;
-    uint8_t other_addr_len = (uint8_t) *cp++;
-    if (cp + other_addr_len >= end) {
-      log_fn(LOG_PROTOCOL_WARN, LD_OR,
-             "Address too long in netinfo cell; closing connection.");
+    tor_addr_t addr;
+    const char *next = decode_address_from_payload(&addr, cp, end-cp);
+    if (next == NULL) {
+      log_fn(LOG_PROTOCOL_WARN,  LD_OR,
+             "Bad ddress in netinfo cell; closing connection.");
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
-    if (other_addr_type == RESOLVED_TYPE_IPV4 && other_addr_len == 4) {
-      uint32_t addr = ntohl(get_uint32(cp));
-      if (addr == conn->real_addr) {
-        conn->is_canonical = 1;
-        break;
-      }
+    if (tor_addr_eq(&addr, &conn->real_addr)) {
+      conn->is_canonical = 1;
+      break;
     }
-    cp += other_addr_len;
+    cp = next;
     --n_other_addrs;
   }
 

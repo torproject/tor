@@ -231,8 +231,7 @@ circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
   if (!circuits_pending_or_conns)
     return;
 
-  SMARTLIST_FOREACH(circuits_pending_or_conns, circuit_t *, circ,
-  {
+  SMARTLIST_FOREACH_BEGIN(circuits_pending_or_conns, circuit_t *, circ) {
     if (circ->marked_for_close)
       continue;
     if (!circ->n_hop)
@@ -240,7 +239,7 @@ circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
     tor_assert(circ->state == CIRCUIT_STATE_OR_WAIT);
     if (tor_digest_is_zero(circ->n_hop->identity_digest)) {
       /* Look at addr/port. This is an unkeyed connection. */
-      if (circ->n_hop->addr != or_conn->_base.addr ||
+      if (!tor_addr_eq(&circ->n_hop->addr, &or_conn->_base.addr) ||
           circ->n_hop->port != or_conn->_base.port)
         continue;
     } else {
@@ -250,7 +249,7 @@ circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
         continue;
     }
     smartlist_add(out, circ);
-  });
+  } SMARTLIST_FOREACH_END(circ);
 }
 
 /** Return the number of circuits in state OR_WAIT, waiting for the given
@@ -573,7 +572,7 @@ circuit_dump_by_conn(connection_t *conn, int severity)
       }
     }
     if (!circ->n_conn && circ->n_hop &&
-        circ->n_hop->addr == conn->addr &&
+        tor_addr_eq(&circ->n_hop->addr, &conn->addr) &&
         circ->n_hop->port == conn->port &&
         conn->type == CONN_TYPE_OR &&
         !memcmp(TO_OR_CONN(conn)->identity_digest,

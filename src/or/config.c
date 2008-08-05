@@ -2365,26 +2365,31 @@ resolve_my_address(int warn_severity, or_options_t *options,
   return 0;
 }
 
-/** Return true iff <b>ip</b> (in host order) is judged to be on the
- * same network as us, or on a private network.
+/** Return true iff <b>addr</b> is judged to be on the same network as us, or
+ * on a private network.
  */
 int
-is_local_IP(uint32_t ip)
+is_local_addr(const tor_addr_t *addr)
 {
-  if (is_internal_IP(ip, 0))
+  if (tor_addr_is_internal(addr, 0))
     return 1;
   /* Check whether ip is on the same /24 as we are. */
   if (get_options()->EnforceDistinctSubnets == 0)
     return 0;
-  /* It's possible that this next check will hit before the first time
-   * resolve_my_address actually succeeds.  (For clients, it is likely that
-   * resolve_my_address will never be called at all).  In those cases,
-   * last_resolved_addr will be 0, and so checking to see whether ip is on the
-   * same /24 as last_resolved_addr will be the same as checking whether it
-   * was on net 0, which is already done by is_internal_IP.
-   */
-  if ((last_resolved_addr & 0xffffff00ul) == (ip & 0xffffff00ul))
-    return 1;
+  if (tor_addr_family(addr) == AF_INET) {
+    /*XXXX021 IP6 what corresponds to an /24? */
+    uint32_t ip = tor_addr_to_ipv4h(addr);
+
+    /* It's possible that this next check will hit before the first time
+     * resolve_my_address actually succeeds.  (For clients, it is likely that
+     * resolve_my_address will never be called at all).  In those cases,
+     * last_resolved_addr will be 0, and so checking to see whether ip is on
+     * the same /24 as last_resolved_addr will be the same as checking whether
+     * it was on net 0, which is already done by is_internal_IP.
+     */
+    if ((last_resolved_addr & 0xffffff00ul) == (ip & 0xffffff00ul))
+      return 1;
+  }
   return 0;
 }
 
@@ -4153,7 +4158,7 @@ parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
     *msg = tor_strdup("Wrong number of elements in RedirectExit line");
     goto err;
   }
-  if (parse_addr_and_port_range(smartlist_get(elements,0),&r->addr,
+  if (tor_addr_parse_mask_ports(smartlist_get(elements,0),&r->addr,
                                 &r->maskbits,&r->port_min,&r->port_max)) {
     *msg = tor_strdup("Error parsing source address in RedirectExit line");
     goto err;
@@ -4161,8 +4166,8 @@ parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
   if (0==strcasecmp(smartlist_get(elements,1), "pass")) {
     r->is_redirect = 0;
   } else {
-    if (parse_addr_port(LOG_WARN, smartlist_get(elements,1),NULL,
-                        &r->addr_dest, &r->port_dest)) {
+    if (tor_addr_port_parse(smartlist_get(elements,1),
+                            &r->addr_dest, &r->port_dest)) {
       *msg = tor_strdup("Error parsing dest address in RedirectExit line");
       goto err;
     }
@@ -4196,8 +4201,8 @@ parse_bridge_line(const char *line, int validate_only)
 {
   smartlist_t *items = NULL;
   int r;
-  char *addrport=NULL, *address=NULL, *fingerprint=NULL;
-  uint32_t addr = 0;
+  char *addrport=NULL, *fingerprint=NULL;
+  tor_addr_t addr;
   uint16_t port = 0;
   char digest[DIGEST_LEN];
 
@@ -4210,7 +4215,7 @@ parse_bridge_line(const char *line, int validate_only)
   }
   addrport = smartlist_get(items, 0);
   smartlist_del_keeporder(items, 0);
-  if (parse_addr_port(LOG_WARN, addrport, &address, &addr, &port)<0) {
+  if (tor_addr_port_parse(addrport, &addr, &port)<0) {
     log_warn(LD_CONFIG, "Error parsing Bridge address '%s'", addrport);
     goto err;
   }
@@ -4232,10 +4237,10 @@ parse_bridge_line(const char *line, int validate_only)
   }
 
   if (!validate_only) {
-    log_debug(LD_DIR, "Bridge at %s:%d (%s)", address,
+    log_debug(LD_DIR, "Bridge at %s:%d (%s)", fmt_addr(&addr),
               (int)port,
               fingerprint ? fingerprint : "no key listed");
-    bridge_add_from_config(addr, port, fingerprint ? digest : NULL);
+    bridge_add_from_config(&addr, port, fingerprint ? digest : NULL);
   }
 
   r = 0;
@@ -4248,7 +4253,6 @@ parse_bridge_line(const char *line, int validate_only)
   SMARTLIST_FOREACH(items, char*, s, tor_free(s));
   smartlist_free(items);
   tor_free(addrport);
-  tor_free(address);
   tor_free(fingerprint);
   return r;
 }

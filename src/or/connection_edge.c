@@ -207,9 +207,16 @@ connection_edge_end(edge_connection_t *conn, char reason)
   payload[0] = reason;
   if (reason == END_STREAM_REASON_EXITPOLICY &&
       !connection_edge_is_rendezvous_stream(conn)) {
-    set_uint32(payload+1, htonl(conn->_base.addr));
-    set_uint32(payload+5, htonl(dns_clip_ttl(conn->address_ttl)));
-    payload_len += 8;
+    int addrlen;
+    if (tor_addr_family(&conn->_base.addr) == AF_INET) {
+      set_uint32(payload+1, tor_addr_to_ipv4n(&conn->_base.addr));
+      addrlen = 4;
+    } else {
+      memcpy(payload+1, tor_addr_to_in6_addr8(&conn->_base.addr), 16);
+      addrlen = 16;
+    }
+    set_uint32(payload+1+addrlen, htonl(dns_clip_ttl(conn->address_ttl)));
+    payload_len += 4+addrlen;
   }
 
   circ = circuit_get_by_edge_conn(conn);
@@ -285,15 +292,12 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
 {
   char valbuf[INET_NTOA_BUF_LEN];
   connection_t *conn;
-  struct in_addr in;
 
   tor_assert(edge_conn);
   tor_assert(edge_conn->_base.type == CONN_TYPE_EXIT);
   conn = TO_CONN(edge_conn);
   tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
 
-  in.s_addr = htonl(conn->addr);
-  tor_inet_ntoa(&in,valbuf,sizeof(valbuf));
   log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
            escaped_safe_str(conn->address),conn->port,safe_str(valbuf));
 
@@ -308,13 +312,22 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
                                      RELAY_COMMAND_CONNECTED, NULL, 0) < 0)
       return 0; /* circuit is closed, don't continue */
   } else {
-    char connected_payload[8];
-    set_uint32(connected_payload, htonl(conn->addr));
-    set_uint32(connected_payload+4,
-               htonl(dns_clip_ttl(edge_conn->address_ttl)));
+    char connected_payload[20];
+    int connected_payload_len;
+    if (tor_addr_family(&conn->addr) == AF_INET) {
+      set_uint32(connected_payload, tor_addr_to_ipv4n(&conn->addr));
+      set_uint32(connected_payload+4,
+                 htonl(dns_clip_ttl(edge_conn->address_ttl)));
+      connected_payload_len = 8;
+    } else {
+      memcpy(connected_payload, tor_addr_to_in6_addr8(&conn->addr), 16);
+      set_uint32(connected_payload+16,
+                 htonl(dns_clip_ttl(edge_conn->address_ttl)));
+      connected_payload_len = 20;
+    }
     if (connection_edge_send_command(edge_conn,
-                                     RELAY_COMMAND_CONNECTED,
-                                     connected_payload, 8) < 0)
+                                 RELAY_COMMAND_CONNECTED,
+                                 connected_payload, connected_payload_len) < 0)
       return 0; /* circuit is closed, don't continue */
   }
   tor_assert(edge_conn->package_window > 0);
@@ -356,13 +369,12 @@ connection_ap_expire_beginning(void)
   int seconds_idle;
   smartlist_t *conns = get_connection_array();
 
-  SMARTLIST_FOREACH(conns, connection_t *, c,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
     if (c->type != CONN_TYPE_AP)
       continue;
     conn = TO_EDGE_CONN(c);
     /* if it's an internal linked connection, don't yell its status. */
-    severity = (!conn->_base.addr && !conn->_base.port)
+    severity = (tor_addr_is_null(&conn->_base.addr) && !conn->_base.port)
       ? LOG_INFO : LOG_NOTICE;
     seconds_idle = (int)( now - conn->_base.timestamp_lastread );
 
@@ -434,7 +446,7 @@ connection_ap_expire_beginning(void)
       if (!conn->_base.marked_for_close)
         connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
     }
-  }); /* end foreach */
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** Tell any AP streams that are waiting for a new circuit to try again,
@@ -472,8 +484,7 @@ connection_ap_fail_onehop(const char *failed_digest,
   edge_connection_t *edge_conn;
   char digest[DIGEST_LEN];
   smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
         conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
@@ -486,11 +497,12 @@ connection_ap_fail_onehop(const char *failed_digest,
       continue;
     if (tor_digest_is_zero(digest)) {
       /* we don't know the digest; have to compare addr:port */
-      struct in_addr in;
+      tor_addr_t addr;
       if (!build_state || !build_state->chosen_exit ||
-          !edge_conn->socks_request || !edge_conn->socks_request->address ||
-          !tor_inet_aton(edge_conn->socks_request->address, &in) ||
-          build_state->chosen_exit->addr != ntohl(in.s_addr) ||
+          !edge_conn->socks_request || !edge_conn->socks_request->address)
+        continue;
+      if (tor_addr_from_str(&addr, edge_conn->socks_request->address)<0 ||
+          !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
           build_state->chosen_exit->port != edge_conn->socks_request->port)
         continue;
     }
@@ -498,7 +510,7 @@ connection_ap_fail_onehop(const char *failed_digest,
                      "just failed.", edge_conn->chosen_exit_name,
                      edge_conn->socks_request->address);
     connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_TIMEOUT);
-  });
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** A circuit failed to finish on its last hop <b>info</b>. If there
@@ -2147,7 +2159,7 @@ connection_ap_make_link(char *address, uint16_t port,
   }
 
   conn->_base.address = tor_strdup("(Tor_internal)");
-  conn->_base.addr = 0;
+  tor_addr_make_unspec(&conn->_base.addr);
   conn->_base.port = 0;
 
   if (connection_add(TO_CONN(conn)) < 0) { /* no space, forget it */
@@ -2535,7 +2547,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     tor_assert(or_circ);
-    if (or_circ->p_conn && or_circ->p_conn->_base.addr)
+    if (or_circ->p_conn && !tor_addr_is_null(&or_circ->p_conn->_base.addr))
       n_stream->_base.addr = or_circ->p_conn->_base.addr;
     return connection_exit_connect_dir(n_stream);
   }
@@ -2618,7 +2630,7 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
 void
 connection_exit_connect(edge_connection_t *edge_conn)
 {
-  uint32_t addr;
+  const tor_addr_t *addr;
   uint16_t port;
   connection_t *conn = TO_CONN(edge_conn);
   int socket_error = 0;
@@ -2633,23 +2645,20 @@ connection_exit_connect(edge_connection_t *edge_conn)
     return;
   }
 
-  addr = conn->addr;
+  addr = &conn->addr;
   port = conn->port;
   if (redirect_exit_list) {
     SMARTLIST_FOREACH(redirect_exit_list, exit_redirect_t *, r,
     {
-      if (!addr_mask_cmp_bits(addr, r->addr, r->maskbits) &&
+      if (tor_addr_compare_masked(addr, &r->addr, r->maskbits, CMP_SEMANTIC) &&
           (r->port_min <= port) && (port <= r->port_max)) {
-        struct in_addr in;
         if (r->is_redirect) {
-          char tmpbuf[INET_NTOA_BUF_LEN];
-          addr = r->addr_dest;
-          port = r->port_dest;
-          in.s_addr = htonl(addr);
-          tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
+          addr = &r->addr_dest;
+          if (r->port_dest)
+            port = r->port_dest;
           log_debug(LD_EXIT, "Redirecting connection from %s:%d to %s:%d",
                     escaped_safe_str(conn->address), conn->port,
-                    safe_str(tmpbuf), port);
+                    fmt_addr(addr), port);
         }
         break;
       }
@@ -2692,13 +2701,21 @@ connection_exit_connect(edge_connection_t *edge_conn)
                                  NULL, 0);
   } else { /* normal stream */
     /* This must be the original address, not the redirected address. */
-    char connected_payload[8];
-    set_uint32(connected_payload, htonl(conn->addr));
-    set_uint32(connected_payload+4,
+    char connected_payload[20];
+    int connected_payload_len;
+    if (tor_addr_family(&conn->addr) == AF_INET) {
+      set_uint32(connected_payload, tor_addr_to_ipv4n(&conn->addr));
+      connected_payload_len = 4;
+    } else {
+      memcpy(connected_payload, tor_addr_to_in6_addr8(&conn->addr), 16);
+      connected_payload_len = 16;
+    }
+    set_uint32(connected_payload+connected_payload_len,
                htonl(dns_clip_ttl(edge_conn->address_ttl)));
+    connected_payload_len += 4;
     connection_edge_send_command(edge_conn,
                                  RELAY_COMMAND_CONNECTED,
-                                 connected_payload, 8);
+                                 connected_payload, connected_payload_len);
   }
 }
 

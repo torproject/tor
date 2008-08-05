@@ -124,7 +124,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     int klen;
     tmp[0] = 2; /* version 2 of the cell format */
     /* nul pads */
-    set_uint32(tmp+1, htonl(extend_info->addr));
+    set_uint32(tmp+1, tor_addr_to_ipv4h(&extend_info->addr));
     set_uint16(tmp+5, htons(extend_info->port));
     memcpy(tmp+7, extend_info->identity_digest, DIGEST_LEN);
     klen = crypto_pk_asn1_encode(extend_info->onion_key, tmp+7+DIGEST_LEN+2,

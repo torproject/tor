@@ -907,24 +907,36 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
 /** Do basic sanity checking on a newly received socket. Return 0
  * if it looks ok, else return -1. */
 static int
-check_sockaddr_in(struct sockaddr *sa, int len, int level)
+check_sockaddr(struct sockaddr *sa, int len, int level)
 {
   int ok = 1;
-  struct sockaddr_in *sin=(struct sockaddr_in*)sa;
 
-  if (len != sizeof(struct sockaddr_in)) {
-    log_fn(level, LD_NET, "Length of address not as expected: %d vs %d",
-           len,(int)sizeof(struct sockaddr_in));
-    ok = 0;
-  }
-  if (sa->sa_family != AF_INET) {
-    log_fn(level, LD_NET, "Family of address not as expected: %d vs %d",
-           sa->sa_family, AF_INET);
-    ok = 0;
-  }
-  if (sin->sin_addr.s_addr == 0 || sin->sin_port == 0) {
-    log_fn(level, LD_NET,
-           "Address for new connection has address/port equal to zero.");
+  if (sa->sa_family == AF_INET) {
+    struct sockaddr_in *sin=(struct sockaddr_in*)sa;
+    if (len != sizeof(struct sockaddr_in)) {
+      log_fn(level, LD_NET, "Length of address not as expected: %d vs %d",
+             len,(int)sizeof(struct sockaddr_in));
+      ok = 0;
+    }
+    if (sin->sin_addr.s_addr == 0 || sin->sin_port == 0) {
+      log_fn(level, LD_NET,
+             "Address for new connection has address/port equal to zero.");
+      ok = 0;
+    }
+  } else if (sa->sa_family == AF_INET6) {
+    struct sockaddr_in6 *sin6=(struct sockaddr_in6*)sa;
+    if (len != sizeof(struct sockaddr_in6)) {
+      log_fn(level, LD_NET, "Length of address not as expected: %d vs %d",
+             len,(int)sizeof(struct sockaddr_in6));
+      ok = 0;
+    }
+    if (tor_mem_is_zero((void*)sin6->sin6_addr.s6_addr, 16) ||
+        sin6->sin6_port == 0) {
+      log_fn(level, LD_NET,
+             "Address for new connection has address/port equal to zero.");
+      ok = 0;
+    }
+  } else {
     ok = 0;
   }
   return ok ? 0 : -1;
@@ -939,17 +951,16 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   int news; /* the new socket */
   connection_t *newconn;
   /* information about the remote peer when connecting to other routers */
-  struct sockaddr_in remote;
   char addrbuf[256];
+  struct sockaddr *remote = (struct sockaddr*)addrbuf;
   /* length of the remote address. Must be whatever accept() needs. */
   socklen_t remotelen = (socklen_t)sizeof(addrbuf);
-  char tmpbuf[INET_NTOA_BUF_LEN];
   or_options_t *options = get_options();
 
   tor_assert((size_t)remotelen >= sizeof(struct sockaddr_in));
   memset(addrbuf, 0, sizeof(addrbuf));
 
-  news = tor_accept_socket(conn->s,(struct sockaddr *)&addrbuf,&remotelen);
+  news = tor_accept_socket(conn->s,remote,&remotelen);
   if (news < 0) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
@@ -974,30 +985,32 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
 
-  if (((struct sockaddr*)addrbuf)->sa_family != conn->socket_family) {
+  if (remote->sa_family != conn->socket_family) {
     /* This is annoying, but can apparently happen on some Darwins. */
     log_info(LD_BUG, "A listener connection returned a socket with a "
              "mismatched family. %s for addr_family %d gave us a socket "
              "with address family %d.  Dropping.",
              conn_type_to_string(conn->type),
              (int)conn->socket_family,
-             (int)((struct sockaddr*)addrbuf)->sa_family);
+             (int)remote->sa_family);
     tor_close_socket(news);
     return 0;
   }
 
-  if (conn->socket_family == AF_INET) {
-    if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen, LOG_INFO)<0) {
+  if (conn->socket_family == AF_INET || conn->socket_family == AF_INET6) {
+    tor_addr_t addr;
+    uint16_t port;
+    if (check_sockaddr(remote, remotelen, LOG_INFO)<0) {
       log_info(LD_NET,
                "accept() returned a strange address; trying getsockname().");
-      remotelen=256;
+      remotelen=sizeof(addrbuf);
       memset(addrbuf, 0, sizeof(addrbuf));
-      if (getsockname(news, (struct sockaddr*)addrbuf, &remotelen)<0) {
+      if (getsockname(news, remote, &remotelen)<0) {
         int e = tor_socket_errno(news);
         log_warn(LD_NET, "getsockname() for new connection failed: %s",
                  tor_socket_strerror(e));
       } else {
-        if (check_sockaddr_in((struct sockaddr*)addrbuf, remotelen,
+        if (check_sockaddr((struct sockaddr*)addrbuf, remotelen,
                               LOG_WARN) < 0) {
           log_warn(LD_NET,"Something's wrong with this conn. Closing it.");
           tor_close_socket(news);
@@ -1005,26 +1018,43 @@ connection_handle_listener_read(connection_t *conn, int new_type)
         }
       }
     }
-    memcpy(&remote, addrbuf, sizeof(struct sockaddr_in));
+
+    /* Duplicate code. XXXX021 */
+    if (remote->sa_family != conn->socket_family) {
+      /* This is annoying, but can apparently happen on some Darwins. */
+      log_info(LD_BUG, "A listener connection returned a socket with a "
+               "mismatched family. %s for addr_family %d gave us a socket "
+               "with address family %d.  Dropping.",
+               conn_type_to_string(conn->type),
+               (int)conn->socket_family,
+               (int)remote->sa_family);
+      tor_close_socket(news);
+      return 0;
+    }
+
+    tor_addr_from_sockaddr(&addr, remote);
+    if (remote->sa_family == AF_INET)
+      port = ((struct sockaddr_in *)remote)->sin_port;
+    else
+      port = ((struct sockaddr_in6 *)remote)->sin6_port;
+    port = ntohs(port);
 
     /* process entrance policies here, before we even create the connection */
     if (new_type == CONN_TYPE_AP) {
       /* check sockspolicy to see if we should accept it */
-      if (socks_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
-        tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
+      if (socks_policy_permits_address(&addr) == 0) {
         log_notice(LD_APP,
                    "Denying socks connection from untrusted address %s.",
-                   tmpbuf);
+                   fmt_addr(&addr));
         tor_close_socket(news);
         return 0;
       }
     }
     if (new_type == CONN_TYPE_DIR) {
       /* check dirpolicy to see if we should accept it */
-      if (dir_policy_permits_address(ntohl(remote.sin_addr.s_addr)) == 0) {
-        tor_inet_ntoa(&remote.sin_addr, tmpbuf, sizeof(tmpbuf));
+      if (dir_policy_permits_address(&addr) == 0) {
         log_notice(LD_DIRSERV,"Denying dir connection from address %s.",
-                   tmpbuf);
+                   fmt_addr(&addr));
         tor_close_socket(news);
         return 0;
       }
@@ -1034,9 +1064,9 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     newconn->s = news;
 
     /* remember the remote address */
-    newconn->addr = ntohl(remote.sin_addr.s_addr);
-    newconn->port = ntohs(remote.sin_port);
-    newconn->address = tor_dup_ip(newconn->addr);
+    tor_addr_copy(&newconn->addr, &addr);
+    newconn->port = port;
+    newconn->address = tor_dup_addr(&addr);
 
   } else if (conn->socket_family == AF_UNIX) {
     /* For now only control ports can be unix domain sockets
@@ -1047,7 +1077,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     newconn->s = news;
 
     /* remember the remote address -- do we have anything sane to put here? */
-    newconn->addr = 0;
+    tor_addr_make_unspec(&newconn->addr);
     newconn->port = 1;
     newconn->address = tor_strdup(conn->address);
   } else {
@@ -1115,11 +1145,14 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
  */
 int
 connection_connect(connection_t *conn, const char *address,
-                   uint32_t addr, uint16_t port, int *socket_error)
+                   const tor_addr_t *addr, uint16_t port, int *socket_error)
 {
   int s, inprogress = 0;
-  struct sockaddr_in dest_addr;
+  char addrbuf[256];
+  struct sockaddr *dest_addr = (struct sockaddr*) addrbuf;
+  socklen_t dest_addr_len;
   or_options_t *options = get_options();
+  int protocol_family;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
     int n_conns = get_n_open_sockets();
@@ -1130,7 +1163,12 @@ connection_connect(connection_t *conn, const char *address,
     return -1;
   }
 
-  s = tor_open_socket(PF_INET,SOCK_STREAM,IPPROTO_TCP);
+  if (tor_addr_family(addr) == AF_INET6)
+    protocol_family = PF_INET6;
+  else
+    protocol_family = PF_INET;
+
+  s = tor_open_socket(protocol_family,SOCK_STREAM,IPPROTO_TCP);
   if (s < 0) {
     *socket_error = tor_socket_errno(-1);
     log_warn(LD_NET,"Error creating network socket: %s",
@@ -1164,15 +1202,14 @@ connection_connect(connection_t *conn, const char *address,
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(s, (int)options->ConstrainedSockSize);
 
-  memset(&dest_addr,0,sizeof(dest_addr));
-  dest_addr.sin_family = AF_INET;
-  dest_addr.sin_port = htons(port);
-  dest_addr.sin_addr.s_addr = htonl(addr);
+  memset(addrbuf,0,sizeof(addrbuf));
+  dest_addr = (struct sockaddr*) addrbuf;
+  dest_addr_len = tor_addr_to_sockaddr(addr, port, dest_addr, sizeof(addrbuf));
+  tor_assert(dest_addr_len > 0);
 
   log_debug(LD_NET,"Connecting to %s:%u.",escaped_safe_str(address),port);
 
-  if (connect(s,(struct sockaddr *)&dest_addr,
-              (socklen_t)sizeof(dest_addr)) < 0) {
+  if (connect(s, dest_addr, dest_addr_len) < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
@@ -1422,7 +1459,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
 static int
 connection_is_rate_limited(connection_t *conn)
 {
-  if (conn->linked || is_internal_IP(conn->addr, 0))
+  if (conn->linked || tor_addr_is_internal(&conn->addr, 0))
     return 0;
   else
     return 1;
@@ -2165,7 +2202,8 @@ connection_handle_write(connection_t *conn, int force)
     if (e) {
       /* some sort of error, but maybe just inprogress still */
       if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
-        log_info(LD_NET,"in-progress connect failed. Removing.");
+        log_info(LD_NET,"in-progress connect failed. Removing. (%s)",
+                 tor_socket_strerror(e));
         if (CONN_IS_EDGE(conn))
           connection_edge_end_errno(TO_EDGE_CONN(conn));
         if (conn->type == CONN_TYPE_OR)
@@ -2400,13 +2438,15 @@ _connection_write_to_buf_impl(const char *string, size_t len,
 or_connection_t *
 connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port)
 {
+  /* XXXX021 IP6 make this take a tor_addr_t, or deprecate it. */
+
   or_connection_t *best=NULL;
   smartlist_t *conns = get_connection_array();
 
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
     if (conn->type == CONN_TYPE_OR &&
-        conn->addr == addr &&
+        tor_addr_eq_ipv4h(&conn->addr, addr) &&
         conn->port == port &&
         !conn->marked_for_close &&
         (!best || best->_base.timestamp_created < conn->timestamp_created))
@@ -2419,14 +2459,14 @@ connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port)
  * or NULL if no such connection exists. */
 connection_t *
 connection_get_by_type_addr_port_purpose(int type,
-                                         uint32_t addr, uint16_t port,
+                                         const tor_addr_t *addr, uint16_t port,
                                          int purpose)
 {
   smartlist_t *conns = get_connection_array();
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
     if (conn->type == type &&
-        conn->addr == addr &&
+        tor_addr_eq(&conn->addr, addr) &&
         conn->port == port &&
         conn->purpose == purpose &&
         !conn->marked_for_close)

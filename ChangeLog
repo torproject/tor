@@ -1,3 +1,10 @@
+Changes in version 0.2.1.5-alpha - 2008-08-??
+  o Major features [IPv6 support]:
+    - Convert many internal address representations to optionally hold
+      IPv6 addresses.
+    - Generate and accept IPv6 addresses in many protocol elements.
+
+
 Changes in version 0.2.1.4-alpha - 2008-08-04
   o Major bugfixes:
     - The address part of exit policies was not correctly written

@@ -348,13 +348,8 @@ connection_or_finished_connecting(or_connection_t *or_conn)
 
   if (get_options()->HttpsProxy) {
     char buf[1024];
-    char addrbuf[INET_NTOA_BUF_LEN];
-    struct in_addr in;
     char *base64_authenticator=NULL;
     const char *authenticator = get_options()->HttpsProxyAuthenticator;
-
-    in.s_addr = htonl(conn->addr);
-    tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
 
     if (authenticator) {
       base64_authenticator = alloc_http_authenticator(authenticator);
@@ -363,12 +358,13 @@ connection_or_finished_connecting(or_connection_t *or_conn)
     }
     if (base64_authenticator) {
       tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.1\r\n"
-                   "Proxy-Authorization: Basic %s\r\n\r\n", addrbuf,
+                   "Proxy-Authorization: Basic %s\r\n\r\n",
+                   fmt_addr(&conn->addr),
                    conn->port, base64_authenticator);
       tor_free(base64_authenticator);
     } else {
       tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.0\r\n\r\n",
-                   addrbuf, conn->port);
+                   fmt_addr(&conn->addr), conn->port);
     }
     connection_write_to_buf(buf, strlen(buf), conn);
     conn->state = OR_CONN_STATE_PROXY_FLUSHING;
@@ -388,7 +384,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
  * by checking to see if this describes a router we know. */
 static void
 connection_or_init_conn_from_address(or_connection_t *conn,
-                                     uint32_t addr, uint16_t port,
+                                     const tor_addr_t *addr, uint16_t port,
                                      const char *id_digest,
                                      int started_here)
 {
@@ -397,11 +393,13 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   conn->bandwidthrate = (int)options->BandwidthRate;
   conn->read_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
   connection_or_set_identity_digest(conn, id_digest);
-  conn->_base.addr = addr;
+
   conn->_base.port = port;
-  conn->real_addr = addr;
+  tor_addr_copy(&conn->_base.addr, addr);
+  tor_addr_copy(&conn->real_addr, addr);
   if (r) {
-    if (conn->_base.addr == r->addr)
+    /* XXXX021 proposal 118 will make this more complex. */
+    if (tor_addr_eq_ipv4h(&conn->_base.addr, r->addr))
       conn->is_canonical = 1;
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
@@ -413,8 +411,8 @@ connection_or_init_conn_from_address(or_connection_t *conn,
        * we wanted to log what OR a connection was to, and if we logged the
        * right IP address and port 56244, that wouldn't be as helpful. now we
        * log the "right" port too, so we know if it's moria1 or moria2.
-      */
-      conn->_base.addr = r->addr;
+       */
+      tor_addr_from_ipv4h(&conn->_base.addr, r->addr);
       conn->_base.port = r->or_port;
     }
     conn->nickname = tor_strdup(r->nickname);
@@ -434,7 +432,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                     conn->identity_digest, DIGEST_LEN);
     }
     tor_free(conn->_base.address);
-    conn->_base.address = tor_dup_ip(addr);
+    conn->_base.address = tor_dup_addr(addr);
   }
 }
 
@@ -509,13 +507,17 @@ connection_or_get_by_identity_digest(const char *digest)
  * Return the launched conn, or NULL if it failed.
  */
 or_connection_t *
-connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
+connection_or_connect(const tor_addr_t *_addr, uint16_t port,
+                      const char *id_digest)
 {
   or_connection_t *conn;
   or_options_t *options = get_options();
   int socket_error = 0;
+  tor_addr_t addr;
 
+  tor_assert(_addr);
   tor_assert(id_digest);
+  tor_addr_copy(&addr, _addr);
 
   if (server_mode(options) && router_digest_is_me(id_digest)) {
     log_info(LD_PROTOCOL,"Client asked me to connect to myself. Refusing.");
@@ -525,18 +527,18 @@ connection_or_connect(uint32_t addr, uint16_t port, const char *id_digest)
   conn = TO_OR_CONN(connection_new(CONN_TYPE_OR, AF_INET));
 
   /* set up conn so it's got all the data we need to remember */
-  connection_or_init_conn_from_address(conn, addr, port, id_digest, 1);
+  connection_or_init_conn_from_address(conn, &addr, port, id_digest, 1);
   conn->_base.state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
   if (options->HttpsProxy) {
     /* we shouldn't connect directly. use the https proxy instead. */
-    addr = options->HttpsProxyAddr;
+    tor_addr_from_ipv4h(&addr, options->HttpsProxyAddr);
     port = options->HttpsProxyPort;
   }
 
   switch (connection_connect(TO_CONN(conn), conn->_base.address,
-                             addr, port, &socket_error)) {
+                             &addr, port, &socket_error)) {
     case -1:
       /* If the connection failed immediately, and we're using
        * an https proxy, our https proxy is down. Don't blame the
@@ -846,7 +848,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
     if (!started_here) {
-      connection_or_init_conn_from_address(conn,conn->_base.addr,
+      connection_or_init_conn_from_address(conn, &conn->_base.addr,
                                            conn->_base.port, digest_rcvd, 0);
     }
     return connection_or_set_state_open(conn);
@@ -855,7 +857,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
     if (connection_init_or_handshake_state(conn, started_here) < 0)
       return -1;
     if (!started_here) {
-      connection_or_init_conn_from_address(conn,conn->_base.addr,
+      connection_or_init_conn_from_address(conn, &conn->_base.addr,
                                            conn->_base.port, digest_rcvd, 0);
     }
     return connection_or_send_versions(conn);
@@ -910,8 +912,13 @@ connection_or_set_state_open(or_connection_t *conn)
     router_set_status(conn->identity_digest, 1);
   } else {
     /* only report it to the geoip module if it's not a known router */
-    if (!router_get_by_digest(conn->identity_digest))
-      geoip_note_client_seen(GEOIP_CLIENT_CONNECT, TO_CONN(conn)->addr, now);
+    if (!router_get_by_digest(conn->identity_digest)) {
+      if (tor_addr_family(&TO_CONN(conn)->addr) == AF_INET) {
+        /*XXXX021 IP6 support ipv6 geoip.*/
+        uint32_t a = tor_addr_to_ipv4h(&TO_CONN(conn)->addr);
+        geoip_note_client_seen(GEOIP_CLIENT_CONNECT, a, now);
+      }
+    }
   }
   if (conn->handshake_state) {
     or_handshake_state_free(conn->handshake_state);
@@ -1086,24 +1093,34 @@ connection_or_send_netinfo(or_connection_t *conn)
   cell_t cell;
   time_t now = time(NULL);
   routerinfo_t *me;
+  int len;
+  char *out;
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
 
-  /* Their address. */
+  /* Timestamp. */
   set_uint32(cell.payload, htonl((uint32_t)now));
-  cell.payload[4] = RESOLVED_TYPE_IPV4;
-  cell.payload[5] = 4;
-  set_uint32(cell.payload+6, htonl(conn->_base.addr));
+
+  /* Their address. */
+  out = cell.payload + 4;
+  len = append_address_to_payload(out, &conn->_base.addr);
+  if (len<0)
+    return -1;
+  out += len;
 
   /* My address. */
   if ((me = router_get_my_routerinfo())) {
-    cell.payload[10] = 1; /* only one address is supported. */
-    cell.payload[11] = RESOLVED_TYPE_IPV4;
-    cell.payload[12] = 4;
-    set_uint32(cell.payload+13, htonl(me->addr));
+    tor_addr_t my_addr;
+    *out++ = 1; /* only one address is supported. */
+
+    tor_addr_from_ipv4h(&my_addr, me->addr);
+    len = append_address_to_payload(out, &my_addr);
+    if (len < 0)
+      return -1;
+    out += len;
   } else {
-    cell.payload[10] = 0;
+    *out++ = 0;
   }
 
   connection_or_write_cell_to_buf(&cell, conn);

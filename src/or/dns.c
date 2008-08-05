@@ -78,6 +78,7 @@ typedef struct cached_resolve_t {
   uint32_t magic;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   union {
+    /*XXXX021 Make this use a tor_addr_t OP6 */
     uint32_t addr;  /**< IPv4 addr for <b>address</b>. */
     char *hostname; /**< Hostname for <b>address</b> (if a reverse lookup) */
   } result;
@@ -420,10 +421,11 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
     {
     case RESOLVED_TYPE_IPV4:
       buf[1] = 4;
-      set_uint32(buf+2, htonl(conn->_base.addr));
+      set_uint32(buf+2, tor_addr_to_ipv4n(&conn->_base.addr));
       set_uint32(buf+6, htonl(ttl));
       buflen = 10;
       break;
+    /*XXXX021 IP6 need ipv6 implementation */
     case RESOLVED_TYPE_ERROR_TRANSIENT:
     case RESOLVED_TYPE_ERROR:
       {
@@ -644,7 +646,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
   if (tor_inet_aton(exitconn->_base.address, &in) != 0) {
-    exitconn->_base.addr = ntohl(in.s_addr);
+    tor_addr_from_ipv4n(&exitconn->_base.addr, in.s_addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
     return 1;
   }
@@ -714,7 +716,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
           tor_assert(is_resolve);
           *hostname_out = tor_strdup(resolve->result.hostname);
         } else {
-          exitconn->_base.addr = resolve->result.addr;
+          tor_addr_from_ipv4h(&exitconn->_base.addr, resolve->result.addr);
         }
         return 1;
       case CACHE_STATE_CACHED_FAILED:
@@ -1017,7 +1019,7 @@ dns_found_answer(const char *address, uint8_t is_reverse, uint32_t addr,
     pendconn = pend->conn; /* don't pass complex things to the
                               connection_mark_for_close macro */
     assert_connection_ok(TO_CONN(pendconn),time(NULL));
-    pendconn->_base.addr = addr;
+    tor_addr_from_ipv4h(&pendconn->_base.addr, addr);
     pendconn->address_ttl = ttl;
 
     if (outcome != DNS_RESOLVE_SUCCEEDED) {

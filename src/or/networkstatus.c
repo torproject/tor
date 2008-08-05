@@ -1002,15 +1002,18 @@ update_v2_networkstatus_cache_downloads(time_t now)
 
   if (authority) {
     /* An authority launches a separate connection for everybody. */
-    SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
-       {
+    SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds)
+      {
          char resource[HEX_DIGEST_LEN+6]; /* fp/hexdigit.z\0 */
+         tor_addr_t addr;
          if (!(ds->type & V2_AUTHORITY))
            continue;
          if (router_digest_is_me(ds->digest))
            continue;
+         tor_addr_from_ipv4h(&addr, ds->addr);
+         /* Is this quite sensible with IPv6 or multiple addresses? */
          if (connection_get_by_type_addr_port_purpose(
-                CONN_TYPE_DIR, ds->addr, ds->dir_port,
+                CONN_TYPE_DIR, &addr, ds->dir_port,
                 DIR_PURPOSE_FETCH_NETWORKSTATUS)) {
            /* XXX020 the above dir_port won't be accurate if we're
             * doing a tunneled conn. In that case it should be or_port.
@@ -1031,7 +1034,8 @@ update_v2_networkstatus_cache_downloads(time_t now)
                resource,
                NULL, 0 /* No payload. */,
                0 /* No I-M-S. */);
-       });
+      }
+    SMARTLIST_FOREACH_END(ds);
   } else {
     /* A non-authority cache launches one connection to a random authority. */
     /* (Check whether we're currently fetching network-status objects.) */

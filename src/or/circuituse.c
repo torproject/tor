@@ -102,9 +102,10 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
           return 0; /* this is a circuit to somewhere else */
         if (tor_digest_is_zero(digest)) {
           /* we don't know the digest; have to compare addr:port */
-          struct in_addr in;
-          if (!tor_inet_aton(conn->socks_request->address, &in) ||
-              build_state->chosen_exit->addr != ntohl(in.s_addr) ||
+          tor_addr_t addr;
+          int r = tor_addr_from_str(&addr, conn->socks_request->address);
+          if (r < 0 ||
+              !tor_addr_eq(&build_state->chosen_exit->addr, &addr) ||
               build_state->chosen_exit->port != conn->socks_request->port)
             return 0;
         }
@@ -1082,18 +1083,19 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
              * we don't have a routerinfo about. Make up an extend_info. */
             char digest[DIGEST_LEN];
             char *hexdigest = conn->chosen_exit_name+1;
-            struct in_addr in;
+            tor_addr_t addr;
             if (strlen(hexdigest) < HEX_DIGEST_LEN ||
                 base16_decode(digest,DIGEST_LEN,hexdigest,HEX_DIGEST_LEN)<0) {
               log_info(LD_DIR, "Broken exit digest on tunnel conn. Closing.");
               return -1;
             }
-            if (!tor_inet_aton(conn->socks_request->address, &in)) {
-              log_info(LD_DIR, "Broken address on tunnel conn. Closing.");
+            if (tor_addr_from_str(&addr, conn->socks_request->address) < 0) {
+              log_info(LD_DIR, "Broken address %s on tunnel conn. Closing.",
+                       escaped_safe_str(conn->socks_request->address));
               return -1;
             }
             extend_info = extend_info_alloc(conn->chosen_exit_name+1,
-                                            digest, NULL, ntohl(in.s_addr),
+                                            digest, NULL, &addr,
                                             conn->socks_request->port);
           } else {
             /* We will need an onion key for the router, and we
@@ -1306,8 +1308,8 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
   conn_age = (int)(time(NULL) - conn->_base.timestamp_created);
 
   if (conn_age >= get_options()->SocksTimeout) {
-    int severity = (!conn->_base.addr && !conn->_base.port) ?
-                     LOG_INFO : LOG_NOTICE;
+    int severity = (tor_addr_is_null(&conn->_base.addr) && !conn->_base.port) ?
+      LOG_INFO : LOG_NOTICE;
     log_fn(severity, LD_APP,
            "Tried for %d seconds to get a connection to %s:%d. Giving up.",
            conn_age, safe_str(conn->socks_request->address),

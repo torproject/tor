@@ -8,7 +8,7 @@ const char address_c_id[] =
 
 /**
  * \file address.c
- * \brief DOCDOC
+ * \brief Functions to use and manipulate the tor_addr_t structure.
  **/
 
 /* This is required on rh7 to make strptime not complain.
@@ -27,29 +27,11 @@ const char address_c_id[] =
 #include <windows.h>
 #endif
 
-#ifdef HAVE_UNAME
-#include <sys/utsname.h>
-#endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
-#ifdef HAVE_SYS_FCNTL_H
-#include <sys/fcntl.h>
-#endif
-#ifdef HAVE_PWD_H
-#include <pwd.h>
-#endif
-#ifdef HAVE_GRP_H
-#include <grp.h>
-#endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
-#ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
@@ -59,11 +41,6 @@ const char address_c_id[] =
 #endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
-#endif
-#ifndef HAVE_GETTIMEOFDAY
-#ifdef HAVE_FTIME
-#include <sys/timeb.h>
-#endif
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
@@ -79,24 +56,6 @@ const char address_c_id[] =
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#endif
-#ifdef HAVE_SIGNAL_H
-#include <signal.h>
-#endif
-#ifdef HAVE_UTIME_H
-#include <utime.h>
-#endif
-#ifdef HAVE_SYS_UTIME_H
-#include <sys/utime.h>
-#endif
-#ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
-#endif
-#ifdef HAVE_SYS_SYSLIMITS_H
-#include <sys/syslimits.h>
-#endif
 
 /** Convert the tor_addr_t in <b>a</b>, with port in <b>port</b>, into a
  * socklen object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
@@ -113,9 +72,10 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     if (len < sizeof(struct sockaddr_in))
       return -1;
     sin = (struct sockaddr_in *)sa_out;
+    sin->sin_len = sizeof(*sin);
     sin->sin_family = AF_INET;
-    sin->sin_port = port;
-    sin->sin_addr.s_addr = a->addr.in_addr.s_addr;
+    sin->sin_port = htons(port);
+    sin->sin_addr.s_addr = tor_addr_to_ipv4n(a);
     return sizeof(struct sockaddr_in);
   } else if (a->family == AF_INET6) {
     struct sockaddr_in6 *sin6;
@@ -123,8 +83,9 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
       return -1;
     sin6 = (struct sockaddr_in6 *)sa_out;
     memset(sin6, 0, sizeof(struct sockaddr_in6));
+    sin6->sin6_len = sizeof(sin6);
     sin6->sin6_family = AF_INET6;
-    sin6->sin6_port = port;
+    sin6->sin6_port = htons(port);
     memcpy(&sin6->sin6_addr, &a->addr.in6_addr, sizeof(struct in6_addr));
     return sizeof(struct sockaddr_in6);
   } else {
@@ -134,7 +95,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
 
 /** Set the tor_addr_t in <b>a</b> to contain the socket address contained in
  * <b>sa</b>. */
-void
+int
 tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
 {
   tor_assert(a);
@@ -150,7 +111,18 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
     memcpy(&a->addr.in6_addr, &sin6->sin6_addr, sizeof(struct in6_addr));
   } else {
     a->family = AF_UNSPEC;
+    return -1;
   }
+  return 0;
+}
+
+/** Set address <b>a</b> to the unspecified address.  This address belongs to
+ * no family. */
+void
+tor_addr_make_unspec(tor_addr_t *a)
+{
+  memset(a, 0, sizeof(*a));
+  a->family = AF_UNSPEC;
 }
 
 /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
@@ -178,10 +150,14 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     return -1;
   } else if (tor_inet_pton(AF_INET, name, &iaddr)) {
     /* It's an IPv4 IP. */
+    if (family == AF_INET6)
+      return -1;
     addr->family = AF_INET;
     memcpy(&addr->addr.in_addr, &iaddr, sizeof(struct in_addr));
     return 0;
   } else if (tor_inet_pton(AF_INET6, name, &iaddr6)) {
+    if (family == AF_INET)
+      return -1;
     addr->family = AF_INET6;
     memcpy(&addr->addr.in6_addr, &iaddr6, sizeof(struct in6_addr));
     return 0;
@@ -633,18 +609,27 @@ tor_addr_is_loopback(const tor_addr_t *addr)
   }
 }
 
-/** Take a 32-bit host-order ipv4 address <b>v4addr</b> and store it in the
- *  tor_addr *<b>dest</b>.
- */
-/*  XXXX_IP6 Temporary, for use while 32-bit int addresses are still being
- *  passed around. */
+/** Set <b>dest</b> to equal the IPv4 address in <b>v4addr</b> (given in
+ * network order. */
 void
-tor_addr_from_ipv4h(tor_addr_t *dest, uint32_t v4addr)
+tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr)
 {
   tor_assert(dest);
   memset(dest, 0, sizeof(dest));
   dest->family = AF_INET;
-  dest->addr.in_addr.s_addr = htonl(v4addr);
+  dest->addr.in_addr.s_addr = v4addr;
+}
+
+/** Set <b>dest</b> to equal the IPv6 address in the 16 bytes at
+ * <b>ipv6_bytes</b>. */
+void
+tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *ipv6_bytes)
+{
+  tor_assert(dest);
+  tor_assert(ipv6_bytes);
+  memset(dest, 0, sizeof(dest));
+  dest->family = AF_INET6;
+  memcpy(dest->addr.in6_addr.s6_addr, ipv6_bytes, 16);
 }
 
 /** Copy a tor_addr_t from <b>src</b> to <b>dest</b>.
@@ -652,7 +637,8 @@ tor_addr_from_ipv4h(tor_addr_t *dest, uint32_t v4addr)
 void
 tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
 {
-  tor_assert(src && dest);
+  tor_assert(src);
+  tor_assert(dest);
   memcpy(dest, src, sizeof(tor_addr_t));
 }
 
@@ -838,6 +824,19 @@ tor_dup_addr(const tor_addr_t *addr)
   return tor_strdup(buf);
 }
 
+/** Return a string representing the address <b>addr</b>.  This string is
+ * statically allocated, and must not be freed.  Each call to
+ * <b>fmt_addr</b> invalidates the last result of the function.  This
+ * function is not thread-safe. */
+const char *
+fmt_addr(const tor_addr_t *addr)
+{
+  static char buf[TOR_ADDR_BUF_LEN];
+  if (!addr) return "<null>";
+  tor_addr_to_str(buf, addr, sizeof(buf), 0);
+  return buf;
+}
+
 /** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.  The string
  * may be an IPv4 address, an IPv6 address, or an IPv6 address surrounded by
  * square brackets.
@@ -863,6 +862,64 @@ tor_addr_from_str(tor_addr_t *addr, const char *src)
 
   tor_free(tmp);
   return result;
+}
+
+/** Parse an address or address-port combination from <b>s</b>, and put the
+    result in <b>addr_out</b? and (optionally) <b>port_out</b>.  Return 0 on
+    success, negative on failure.*/
+int
+tor_addr_port_parse(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
+{
+  const char *port;
+  tor_addr_t addr;
+  uint16_t portval;
+  char *tmp = NULL;
+
+  tor_assert(s);
+  tor_assert(addr_out);
+
+  s = eat_whitespace(s);
+
+  if (*s == '[') {
+    port = strstr(s, "]");
+    if (!port)
+      goto err;
+    tmp = tor_strndup(s+1, port-s);
+    port = port+1;
+    if (*port == ':')
+      port++;
+    else
+      port = NULL;
+  } else {
+    port = strchr(s, ':');
+    if (port)
+      tmp = tor_strndup(s, port-s);
+    else
+      tmp = tor_strdup(s);
+    if (port)
+      ++port;
+  }
+
+  if (tor_addr_lookup(tmp, AF_UNSPEC, &addr) < 0)
+    goto err;
+  tor_free(tmp);
+
+  if (port) {
+    portval = (int) tor_parse_long(port, 10, 1, 65535, NULL, NULL);
+    if (!portval)
+      goto err;
+  } else {
+    portval = 0;
+  }
+
+  if (*port_out)
+    *port_out = portval;
+  tor_addr_copy(addr_out, &addr);
+
+  return 0;
+ err:
+  tor_free(tmp);
+  return -1;
 }
 
 /** Set *<b>addr</b> to the IP address (if any) of whatever interface

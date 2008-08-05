@@ -200,7 +200,7 @@ rend_encode_v2_intro_points(char **ipos_base64,
       goto done;
     }
     /* Assemble everything for this introduction point. */
-    address = tor_dup_ip(info->addr);
+    address = tor_dup_addr(&info->addr);
     res = tor_snprintf(unenc + unenc_written, unenc_len - unenc_written,
                          "introduction-point %s\n"
                          "ip-address %s\n"

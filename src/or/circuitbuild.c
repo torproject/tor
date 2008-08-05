@@ -343,8 +343,6 @@ circuit_handle_first_hop(origin_circuit_t *circ)
 {
   crypt_path_t *firsthop;
   or_connection_t *n_conn;
-  char tmpbuf[INET_NTOA_BUF_LEN];
-  struct in_addr in;
   int err_reason = 0;
 
   firsthop = onion_next_hop_in_cpath(circ->cpath);
@@ -352,9 +350,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   tor_assert(firsthop->extend_info);
 
   /* now see if we're already connected to the first OR in 'route' */
-  in.s_addr = htonl(firsthop->extend_info->addr);
-  tor_inet_ntoa(&in, tmpbuf, sizeof(tmpbuf));
-  log_debug(LD_CIRC,"Looking for firsthop '%s:%u'",tmpbuf,
+  log_debug(LD_CIRC,"Looking for firsthop '%s:%u'",
+            fmt_addr(&firsthop->extend_info->addr),
             firsthop->extend_info->port);
 
   n_conn = connection_or_get_by_identity_digest(
@@ -370,7 +367,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     if (!n_conn || n_conn->_base.or_is_obsolete) { /* launch the connection */
       if (circ->build_state->onehop_tunnel)
         control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
-      n_conn = connection_or_connect(firsthop->extend_info->addr,
+      n_conn = connection_or_connect(&firsthop->extend_info->addr,
                                      firsthop->extend_info->port,
                                      firsthop->extend_info->identity_digest);
       if (!n_conn) { /* connect failed, forget the whole thing */
@@ -426,7 +423,7 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
 
       if (tor_digest_is_zero(circ->n_hop->identity_digest)) {
         /* Look at addr/port. This is an unkeyed connection. */
-        if (circ->n_hop->addr != or_conn->_base.addr ||
+        if (!tor_addr_eq(&circ->n_hop->addr, &or_conn->_base.addr) ||
             circ->n_hop->port != or_conn->_base.port)
           continue;
       } else {
@@ -662,7 +659,12 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       return 0;
     }
 
-    set_uint32(payload, htonl(hop->extend_info->addr));
+    if (tor_addr_family(&hop->extend_info->addr) != AF_INET) {
+      log_warn(LD_BUG, "Trying to extend to a non-IPv4 address.");
+      return - END_CIRC_REASON_INTERNAL;
+    }
+
+    set_uint32(payload, tor_addr_to_ipv4n(&hop->extend_info->addr));
     set_uint16(payload+4, htons(hop->extend_info->port));
 
     onionskin = payload+2+4;
@@ -758,17 +760,16 @@ circuit_extend(cell_t *cell, circuit_t *circ)
    * connection without dropping it immediately... */
   if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
       n_conn->_base.or_is_obsolete) {
-    struct in_addr in;
-    char tmpbuf[INET_NTOA_BUF_LEN];
-    in.s_addr = htonl(n_addr);
-    tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
+    tor_addr_t addr;
+    tor_addr_from_ipv4h(&addr, n_addr);
+
     log_debug(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
-              tmpbuf, (int)n_port);
+              fmt_addr(&addr), (int)n_port);
 
     circ->n_hop = extend_info_alloc(NULL /*nickname*/,
                                     id_digest,
                                     NULL /*onion_key*/,
-                                    n_addr, n_port);
+                                    &addr, n_port);
 
     circ->n_conn_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->n_conn_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
@@ -776,7 +777,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
     if (! (n_conn && !n_conn->_base.or_is_obsolete)) {
       /* we should try to open a connection */
-      n_conn = connection_or_connect(n_addr, n_port, id_digest);
+      n_conn = connection_or_connect(&addr, n_port, id_digest);
       if (!n_conn) {
         log_info(LD_CIRC,"Launching n_conn failed. Closing circuit.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
@@ -1015,7 +1016,7 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
                                circ->p_conn, &cell, CELL_DIRECTION_IN);
   log_debug(LD_CIRC,"Finished sending 'created' cell.");
 
-  if (!is_local_IP(circ->p_conn->_base.addr) &&
+  if (!is_local_addr(&circ->p_conn->_base.addr) &&
       !connection_or_nonopen_was_started_here(circ->p_conn)) {
     /* record that we could process create cells from a non-local conn
      * that we didn't initiate; presumably this means that create cells
@@ -1589,7 +1590,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 
     for (i=0; i < smartlist_len(rl->routers); i++) {
       r = smartlist_get(rl->routers, i);
-      if (!fascist_firewall_allows_address_or(r->addr,r->or_port))
+      if (!fascist_firewall_allows_or(r))
         smartlist_add(excluded, r);
     }
   }
@@ -1708,7 +1709,7 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 extend_info_t *
 extend_info_alloc(const char *nickname, const char *digest,
                   crypto_pk_env_t *onion_key,
-                  uint32_t addr, uint16_t port)
+                  const tor_addr_t *addr, uint16_t port)
 {
   extend_info_t *info = tor_malloc_zero(sizeof(extend_info_t));
   memcpy(info->identity_digest, digest, DIGEST_LEN);
@@ -1716,7 +1717,7 @@ extend_info_alloc(const char *nickname, const char *digest,
     strlcpy(info->nickname, nickname, sizeof(info->nickname));
   if (onion_key)
     info->onion_key = crypto_pk_dup_key(onion_key);
-  info->addr = addr;
+  tor_addr_copy(&info->addr, addr);
   info->port = port;
   return info;
 }
@@ -1726,9 +1727,11 @@ extend_info_alloc(const char *nickname, const char *digest,
 extend_info_t *
 extend_info_from_router(routerinfo_t *r)
 {
+  tor_addr_t addr;
   tor_assert(r);
+  tor_addr_from_ipv4h(&addr, r->addr);
   return extend_info_alloc(r->nickname, r->cache_info.identity_digest,
-                           r->onion_pkey, r->addr, r->or_port);
+                           r->onion_pkey, &addr, r->or_port);
 }
 
 /** Release storage held by an extend_info_t struct. */
@@ -1888,7 +1891,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
     return NULL;
   if (router_is_unreliable(r, need_uptime, need_capacity, 0))
     return NULL;
-  if (!fascist_firewall_allows_address_or(r->addr,r->or_port))
+  if (!fascist_firewall_allows_or(r))
     return NULL;
   return r;
 }
@@ -2781,8 +2784,8 @@ getinfo_helper_entry_guards(control_connection_t *conn,
  * ones in the torrc file, but one day we may be able to learn about new
  * bridges on our own, and remember them in the state file. */
 typedef struct {
-  /** IPv4 address of the bridge. */
-  uint32_t addr;
+  /** Address of the bridge. */
+  tor_addr_t addr;
   /** TLS port for the bridge. */
   uint16_t port;
   /** Expected identity digest, or all \0's if we don't know what the
@@ -2814,15 +2817,17 @@ routerinfo_get_configured_bridge(routerinfo_t *ri)
 {
   if (!bridge_list)
     return NULL;
-  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
       if (tor_digest_is_zero(bridge->identity) &&
-          bridge->addr == ri->addr && bridge->port == ri->or_port)
+          tor_addr_eq_ipv4h(&bridge->addr, ri->addr) &&
+          bridge->port == ri->or_port)
         return bridge;
       if (!memcmp(bridge->identity, ri->cache_info.identity_digest,
                   DIGEST_LEN))
         return bridge;
-    });
+    }
+  SMARTLIST_FOREACH_END(bridge);
   return NULL;
 }
 
@@ -2836,10 +2841,10 @@ routerinfo_is_a_configured_bridge(routerinfo_t *ri)
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
  * is set, it tells us the identity key too. */
 void
-bridge_add_from_config(uint32_t addr, uint16_t port, char *digest)
+bridge_add_from_config(const tor_addr_t *addr, uint16_t port, char *digest)
 {
   bridge_info_t *b = tor_malloc_zero(sizeof(bridge_info_t));
-  b->addr = addr;
+  tor_addr_copy(&b->addr, addr);
   b->port = port;
   if (digest)
     memcpy(b->identity, digest, DIGEST_LEN);
@@ -2874,7 +2879,7 @@ bridge_fetch_status_arrived(bridge_info_t *bridge, time_t now)
 
 /** If <b>digest</b> is one of our known bridges, return it. */
 static bridge_info_t *
-find_bridge_by_digest(char *digest)
+find_bridge_by_digest(const char *digest)
 {
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
@@ -2887,36 +2892,36 @@ find_bridge_by_digest(char *digest)
 /** We need to ask <b>bridge</b> for its server descriptor. <b>address</b>
  * is a helpful string describing this bridge. */
 static void
-launch_direct_bridge_descriptor_fetch(char *address, bridge_info_t *bridge)
+launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
+  char *address;
+
   if (connection_get_by_type_addr_port_purpose(
-      CONN_TYPE_DIR, bridge->addr, bridge->port,
+      CONN_TYPE_DIR, &bridge->addr, bridge->port,
       DIR_PURPOSE_FETCH_SERVERDESC))
     return; /* it's already on the way */
-  directory_initiate_command(address, bridge->addr,
+
+  address = tor_dup_addr(&bridge->addr);
+  directory_initiate_command(address, &bridge->addr,
                              bridge->port, 0,
                              0, /* does not matter */
                              1, bridge->identity,
                              DIR_PURPOSE_FETCH_SERVERDESC,
                              ROUTER_PURPOSE_BRIDGE,
                              0, "authority.z", NULL, 0, 0);
+  tor_free(address);
 }
 
 /** Fetching the bridge descriptor from the bridge authority returned a
  * "not found". Fall back to trying a direct fetch. */
 void
-retry_bridge_descriptor_fetch_directly(char *digest)
+retry_bridge_descriptor_fetch_directly(const char *digest)
 {
   bridge_info_t *bridge = find_bridge_by_digest(digest);
-  char address_buf[INET_NTOA_BUF_LEN+1];
-  struct in_addr in;
-
   if (!bridge)
     return; /* not found? oh well. */
 
-  in.s_addr = htonl(bridge->addr);
-  tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
-  launch_direct_bridge_descriptor_fetch(address_buf, bridge);
+  launch_direct_bridge_descriptor_fetch(bridge);
 }
 
 /** For each bridge in our list for which we don't currently have a
@@ -2925,8 +2930,6 @@ retry_bridge_descriptor_fetch_directly(char *digest)
 void
 fetch_bridge_descriptors(time_t now)
 {
-  char address_buf[INET_NTOA_BUF_LEN+1];
-  struct in_addr in;
   or_options_t *options = get_options();
   int num_bridge_auths = get_n_authorities(BRIDGE_AUTHORITY);
   int ask_bridge_directly;
@@ -2935,16 +2938,13 @@ fetch_bridge_descriptors(time_t now)
   if (!bridge_list)
     return;
 
-  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
       if (bridge->fetch_status.next_attempt_at > now)
         continue; /* don't bother, no need to retry yet */
 
       /* schedule another fetch as if this one will fail, in case it does */
       bridge_fetch_status_increment(bridge, now);
-
-      in.s_addr = htonl(bridge->addr);
-      tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
 
       can_use_bridge_authority = !tor_digest_is_zero(bridge->identity) &&
                                  num_bridge_auths;
@@ -2955,9 +2955,10 @@ fetch_bridge_descriptors(time_t now)
                 !options->UpdateBridgesFromAuthority, !num_bridge_auths);
 
       if (ask_bridge_directly &&
-          !fascist_firewall_allows_address_or(bridge->addr, bridge->port)) {
+          !fascist_firewall_allows_address_or(&bridge->addr, bridge->port)) {
         log_notice(LD_DIR, "Bridge at '%s:%d' isn't reachable by our "
-                   "firewall policy. %s.", address_buf, bridge->port,
+                   "firewall policy. %s.", fmt_addr(&bridge->addr),
+                   bridge->port,
                    can_use_bridge_authority ?
                      "Asking bridge authority instead" : "Skipping");
         if (can_use_bridge_authority)
@@ -2968,7 +2969,7 @@ fetch_bridge_descriptors(time_t now)
 
       if (ask_bridge_directly) {
         /* we need to ask the bridge itself for its descriptor. */
-        launch_direct_bridge_descriptor_fetch(address_buf, bridge);
+        launch_direct_bridge_descriptor_fetch(bridge);
       } else {
         /* We have a digest and we want to ask an authority. We could
          * combine all the requests into one, but that may give more
@@ -2983,7 +2984,8 @@ fetch_bridge_descriptors(time_t now)
         directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
                 ROUTER_PURPOSE_BRIDGE, resource, 0);
       }
-    });
+    }
+  SMARTLIST_FOREACH_END(bridge);
 }
 
 /** We just learned a descriptor for a bridge. See if that

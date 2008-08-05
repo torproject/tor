@@ -994,10 +994,11 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   overloaded_tunnel = smartlist_create();
 
   /* Find all the running dirservers we know about. */
-  SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, status,
-  {
+  SMARTLIST_FOREACH_BEGIN(consensus->routerstatus_list, routerstatus_t *,
+                          status) {
     int is_trusted;
     int is_overloaded = status->last_dir_503_at + DIR_503_TIMEOUT > now;
+    tor_addr_t addr;
     if (!status->is_running || !status->dir_port || !status->is_valid)
       continue;
     if (status->is_bad_directory)
@@ -1016,18 +1017,21 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
     if ((type & EXTRAINFO_CACHE) &&
         !router_supports_extrainfo(status->identity_digest, 0))
       continue;
+
+    /* XXXX021 IP6 proposal 118 */
+    tor_addr_from_ipv4h(&addr, status->addr);
+
     if (prefer_tunnel &&
         status->version_supports_begindir &&
         (!fascistfirewall ||
-         fascist_firewall_allows_address_or(status->addr, status->or_port)))
+         fascist_firewall_allows_address_or(&addr, status->or_port)))
       smartlist_add(is_trusted ? trusted_tunnel :
                       is_overloaded ? overloaded_tunnel : tunnel, status);
     else if (!fascistfirewall ||
-             fascist_firewall_allows_address_dir(status->addr,
-                                                 status->dir_port))
+             fascist_firewall_allows_address_dir(&addr, status->dir_port))
       smartlist_add(is_trusted ? trusted_direct :
                       is_overloaded ? overloaded_direct : direct, status);
-  });
+  } SMARTLIST_FOREACH_END(status);
 
   if (smartlist_len(tunnel)) {
     result = routerstatus_sl_choose_by_bandwidth(tunnel);
@@ -1078,10 +1082,11 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags)
   overloaded_direct = smartlist_create();
   overloaded_tunnel = smartlist_create();
 
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, d)
     {
       int is_overloaded =
           d->fake_status.last_dir_503_at + DIR_503_TIMEOUT > now;
+      tor_addr_t addr;
       if (!d->is_running) continue;
       if ((type & d->type) == 0)
         continue;
@@ -1090,17 +1095,22 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags)
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
+
+      /* XXXX021 IP6 proposal 118 */
+      tor_addr_from_ipv4h(&addr, d->addr);
+
       if (prefer_tunnel &&
           d->or_port &&
           (!fascistfirewall ||
-           fascist_firewall_allows_address_or(d->addr, d->or_port)))
+           fascist_firewall_allows_address_or(&addr, d->or_port)))
         smartlist_add(is_overloaded ? overloaded_tunnel : tunnel,
                       &d->fake_status);
       else if (!fascistfirewall ||
-               fascist_firewall_allows_address_dir(d->addr, d->dir_port))
+               fascist_firewall_allows_address_dir(&addr, d->dir_port))
         smartlist_add(is_overloaded ? overloaded_direct : direct,
                       &d->fake_status);
-    });
+    }
+  SMARTLIST_FOREACH_END(d);
 
   if (smartlist_len(tunnel)) {
     result = smartlist_choose(tunnel);
