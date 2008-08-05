@@ -72,7 +72,6 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     if (len < sizeof(struct sockaddr_in))
       return -1;
     sin = (struct sockaddr_in *)sa_out;
-    sin->sin_len = sizeof(*sin);
     sin->sin_family = AF_INET;
     sin->sin_port = htons(port);
     sin->sin_addr.s_addr = tor_addr_to_ipv4n(a);
@@ -83,7 +82,6 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
       return -1;
     sin6 = (struct sockaddr_in6 *)sa_out;
     memset(sin6, 0, sizeof(struct sockaddr_in6));
-    sin6->sin6_len = sizeof(sin6);
     sin6->sin6_family = AF_INET6;
     sin6->sin6_port = htons(port);
     memcpy(&sin6->sin6_addr, &a->addr.in6_addr, sizeof(struct in6_addr));
