@@ -180,7 +180,7 @@ R   d Do we want to maintain our own set of entryguards that we use as
     - Proposal to supersede 117 by adding IPv6 support for exits and entries.
       - Internal code support for ipv6:
         o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
-        - Many address variables need to become tor_addr_t
+        . Many address variables need to become tor_addr_t
           - addr in connection_t
           - n_addr in extend_info_t
         - Teach resolving code how to handle ipv6.
