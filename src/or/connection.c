@@ -1459,7 +1459,9 @@ retry_all_listeners(smartlist_t *replaced_conns,
 static int
 connection_is_rate_limited(connection_t *conn)
 {
-  if (conn->linked || tor_addr_is_internal(&conn->addr, 0))
+  if (conn->linked || /* internal connection */
+      tor_addr_family(&conn->addr) == AF_UNSPEC || /* no address */
+      tor_addr_is_internal(&conn->addr, 0)) /* internal address */
     return 0;
   else
     return 1;
