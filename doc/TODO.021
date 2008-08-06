@@ -284,6 +284,7 @@ N   . Draft proposal for GeoIP aggregation (see external constraints *)
     - can we deprecate 'getinfo network-status'?
     - can we deprecate the FastFirstHopPK config option?
     - Can we deprecate controllers that don't use both features?
+    - Dump most uint32_t addr functions.
 
 Nice to have for 0.2.1.x:
   - Proposals to write
