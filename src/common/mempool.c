@@ -144,7 +144,7 @@ struct mp_chunk_t {
 };
 
 /** Number of extra bytes needed beyond mem_size to allocate a chunk. */
-#define CHUNK_OVERHEAD (sizeof(mp_chunk_t)-1)
+#define CHUNK_OVERHEAD STRUCT_OFFSET(mp_chunk_t, mem[0])
 
 /** Given a pointer to a mp_allocated_t, return a pointer to the memory
  * item it holds. */
