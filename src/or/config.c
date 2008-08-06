@@ -1059,6 +1059,16 @@ options_act_reversible(or_options_t *old_options, char **msg)
     }
   }
 
+#if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
+  /* Open /dev/pf before dropping privileges. */
+  if (options->TransPort) {
+    if (get_pf_socket() < 0) {
+      *msg = tor_strdup("Unable to open /dev/pf for transparent proxy.");
+      goto rollback;
+    }
+  }
+#endif
+
   /* Setuid/setgid as appropriate */
   if (options->User || options->Group) {
     /* XXXX021 We should only do this the first time through, not on

@@ -2937,6 +2937,10 @@ typedef enum hostname_type_t {
 } hostname_type_t;
 hostname_type_t parse_extended_hostname(char *address);
 
+#if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
+int get_pf_socket(void);
+#endif
+
 /********************************* connection_or.c ***************************/
 
 void connection_or_remove_from_identity_map(or_connection_t *conn);

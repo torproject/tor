@@ -7,6 +7,10 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
   o Minor bugfixes:
     - Recover 3-7 bytes that were wasted per memory chunk.  Fixes bug
       794; bug spotted by rovv.  Bugfix on 0.2.0.1-alpha.
+    - When using the TransPort option on OpenBSD, and using the User
+      option to change UID and drop privileges, make sure to open
+      /dev/pf before dropping privileges.  Fixes bug 782.  Patch from
+      Christopher Davis.  Bugfix on 0.1.2.1-alpha.
 
 
 Changes in version 0.2.1.4-alpha - 2008-08-04
