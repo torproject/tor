@@ -8,7 +8,6 @@ Summary:
 1) Compile and install a static version of the latest release of
 libevent.
 2) Acquire and install your preferred version of tor. Extract.
-3) Update some variables in contrib/osx/package.sh
 4) "make dist-osx"
 5) You now have a dmg from which you can install Tor.
 
@@ -21,7 +20,7 @@ libevent.
 
 ## Compiling libevent
 
-2)  Download latest libevent from
+2)  Download latest stable libevent from
 http://www.monkey.org/~provos/libevent/
 
 3) The first step of compiling libevent is to configure it as
@@ -74,7 +73,7 @@ Tor-$VERSION-universal-$OS-Bundle.dmg
 
 ### Compiling libevent
 
-1)  Download the latest libevent from
+1)  Download the latest stable libevent from
 http://www.monkey.org/~provos/libevent/
 
 2) The first step of compiling libevent is to configure it as
