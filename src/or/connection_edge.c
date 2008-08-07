@@ -1692,9 +1692,9 @@ connection_ap_get_original_destination(edge_connection_t *conn,
 {
 #ifdef TRANS_NETFILTER
   /* Linux 2.4+ */
-  struct sockaddr_in orig_dst;
+  struct sockaddr_storage orig_dst;
   socklen_t orig_dst_len = sizeof(orig_dst);
-  char tmpbuf[INET_NTOA_BUF_LEN];
+  tor_addr_t addr;
 
   if (getsockopt(conn->_base.s, SOL_IP, SO_ORIGINAL_DST,
                  (struct sockaddr*)&orig_dst, &orig_dst_len) < 0) {
@@ -1703,16 +1703,17 @@ connection_ap_get_original_destination(edge_connection_t *conn,
     return -1;
   }
 
-  tor_inet_ntoa(&orig_dst.sin_addr, tmpbuf, sizeof(tmpbuf));
-  strlcpy(req->address, tmpbuf, sizeof(req->address));
-  req->port = ntohs(orig_dst.sin_port);
+  tor_addr_from_sockaddr(&addr, (struct sockaddr*)&orig_dst, &req->port);
+  tor_addr_to_str(req->address, &addr, sizeof(req->address), 0);
 
   return 0;
 #elif defined(TRANS_PF)
-  struct sockaddr_in proxy_addr;
+  struct sockaddr_storage proxy_addr;
   socklen_t proxy_addr_len = sizeof(proxy_addr);
+  struct sockaddr *proxy_sa = (struct sockaddr*) &proxy_addr;
   char tmpbuf[INET_NTOA_BUF_LEN];
   struct pfioc_natlook pnl;
+  tor_addr_t addr;
   int pf = -1;
 
   if (getsockname(conn->_base.s, (struct sockaddr*)&proxy_addr,
@@ -1724,13 +1725,28 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   }
 
   memset(&pnl, 0, sizeof(pnl));
-  pnl.af              = AF_INET;
   pnl.proto           = IPPROTO_TCP;
   pnl.direction       = PF_OUT;
-  pnl.saddr.v4.s_addr = htonl(conn->_base.addr);
-  pnl.sport           = htons(conn->_base.port);
-  pnl.daddr.v4.s_addr = proxy_addr.sin_addr.s_addr;
-  pnl.dport           = proxy_addr.sin_port;
+  if (proxy_sa->sa_family == AF_INET) {
+    struct sockaddr_in *sin = (struct sockaddr_in *)proxy_sa;
+    pnl.af              = AF_INET;
+    pnl.saddr.v4.s_addr = tor_addr_to_ipv4n(conn->_base.addr);
+    pnl.sport           = htons(conn->_base.port);
+    pnl.daddr.v4.s_addr = sin->sin_addr.s_addr;
+    pnl.dport           = sin->sin_port;
+  } else if (proxy_sa->sa_family == AF_INET6) {
+    struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)proxy_sa;
+    pnl.af = AF_INET6;
+    memcpy(&pnl.saddr.v6, tor_addr_to_in6(conn->_base.addr),
+           sizeof(struct in6_addr));
+    pnl.sport = htons(conn->_base.port);
+    memcpy(&pnl.daddr.v6, &sin6->sin6_addr, siszeof(struct in6_addr));
+    pnl.dport = sin6->sin6_port;
+  } else {
+    log_warn(LD_NET, "getsockname() gave an unexpected address family (%d)",
+             (int)proxy_sa->sa_family);
+    return -1;
+  }
 
   pf = get_pf_socket();
   if (pf<0)
@@ -1741,8 +1757,16 @@ connection_ap_get_original_destination(edge_connection_t *conn,
     return -1;
   }
 
-  tor_inet_ntoa(&pnl.rdaddr.v4, tmpbuf, sizeof(tmpbuf));
-  strlcpy(req->address, tmpbuf, sizeof(req->address));
+  if (pnl->af == AF_INET) {
+    tor_addr_from_ipv4n(&addr, &pnl.rdaddr.v4);
+  } else if (pnl->af == AF_INET6) {
+    tor_addr_from_ipv6_bytes(&addr, &pnl.rdaddr.v6.s6_addr);
+  } else {
+    tor_fragile_assert();
+    return -1;
+  }
+
+  tor_addr_to_sring(req->address, &addr, sizeof(req->address), 0);
   req->port = ntohs(pnl.rdport);
 
   return 0;
