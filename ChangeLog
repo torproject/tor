@@ -4,6 +4,8 @@ Changes in version 0.2.0.31 - 2008-08-??
       by rovv.
     - Recover 3-7 bytes that were wasted per memory chunk.  Fixes bug
       794; bug spotted by rovv.  Bugfix on 0.2.0.1-alpha.
+    - Correctly detect the presence of the linux/netfilter_ipv4.h header
+      when building against recent kernels.  Bugfix on 0.1.2.1-alpha.
 
 
 Changes in version 0.2.0.30 - 2008-07-15
