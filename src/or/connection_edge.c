@@ -14,6 +14,9 @@ const char connection_edge_c_id[] =
 
 #include "or.h"
 
+#ifdef HAVE_LINUX_TYPES_H
+#include <linux/types.h>
+#endif
 #ifdef HAVE_LINUX_NETFILTER_IPV4_H
 #include <linux/netfilter_ipv4.h>
 #define TRANS_NETFILTER

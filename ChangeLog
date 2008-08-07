@@ -11,6 +11,8 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
       option to change UID and drop privileges, make sure to open
       /dev/pf before dropping privileges.  Fixes bug 782.  Patch from
       Christopher Davis.  Bugfix on 0.1.2.1-alpha.
+    - Correctly detect the presence of the linux/netfilter_ipv4.h header
+      when building against recent kernels.  Bugfix on 0.1.2.1-alpha.
 
 
 Changes in version 0.2.1.4-alpha - 2008-08-04
