@@ -13,6 +13,7 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
       Christopher Davis.  Bugfix on 0.1.2.1-alpha.
     - Correctly detect the presence of the linux/netfilter_ipv4.h header
       when building against recent kernels.  Bugfix on 0.1.2.1-alpha.
+    - Add a missing safe_str() call for a debug log message.
 
 
 Changes in version 0.2.1.4-alpha - 2008-08-04

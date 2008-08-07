@@ -837,7 +837,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
   int started_here = connection_or_nonopen_was_started_here(conn);
 
   log_debug(LD_OR,"tls handshake with %s done. verifying.",
-            conn->_base.address);
+            safe_str(conn->_base.address));
 
   directory_set_dirty();
 
