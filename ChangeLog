@@ -1,4 +1,9 @@
 Changes in version 0.2.0.31 - 2008-08-??
+ o Major bugfixes:
+    - Make sure that two circuits can never exist on the same connection
+      with the same circuit ID, even if one is marked for close.  This
+      is conceivably a bugfix for bug 779; fixes a bug on 0.1.0.4-rc.
+
  o Minor bugfixes:
     - Fix a small alignment and memory-wasting bug on buffer chunks.  Spotted
       by rovv.
