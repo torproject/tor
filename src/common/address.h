@@ -40,7 +40,8 @@ static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
 static INLINE int tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u);
 socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
                                struct sockaddr *sa_out, socklen_t len);
-int tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa);
+int tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
+                           uint16_t *port_out);
 void tor_addr_make_unspec(tor_addr_t *a);
 
 static INLINE const struct in6_addr *

@@ -1328,7 +1328,7 @@ test_util_ip6_helpers(void)
   sin->sin_family = AF_INET;
   sin->sin_port = 9090;
   sin->sin_addr.s_addr = htonl(0x7f7f0102); /*127.127.1.2*/
-  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin);
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin, NULL);
   test_eq(tor_addr_family(&t1), AF_INET);
   test_eq(tor_addr_to_ipv4h(&t1), 0x7f7f0102);
 
@@ -1344,7 +1344,7 @@ test_util_ip6_helpers(void)
   sin6->sin6_family = AF_INET6;
   sin6->sin6_port = htons(7070);
   sin6->sin6_addr.s6_addr[0] = 128;
-  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin6);
+  tor_addr_from_sockaddr(&t1, (struct sockaddr *)sin6, NULL);
   test_eq(tor_addr_family(&t1), AF_INET6);
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 0);
   test_streq(p1, "8000::");

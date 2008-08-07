@@ -46,7 +46,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   }
   (void) addrlen;
   sa = (struct sockaddr*) &addr;
-  if (tor_addr_from_sockaddr(&tor_addr, sa)<0) {
+  if (tor_addr_from_sockaddr(&tor_addr, sa, &port)<0) {
     log_warn(LD_APP, "Requesting address wasn't recognized.");
     evdns_server_request_respond(req, DNS_ERR_SERVERFAILED);
     return;
@@ -57,12 +57,6 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     evdns_server_request_respond(req, DNS_ERR_REFUSED);
     return;
   }
-
-  if (sa->sa_family == AF_INET)
-    port = ((struct sockaddr_in *)sa)->sin_port;
-  else
-    port = ((struct sockaddr_in6 *)sa)->sin6_port;
-  port = ntohs(port);
 
   /* Now, let's find the first actual question of a type we can answer in this
    * DNS request.  It makes us a little noncompliant to act like this; we

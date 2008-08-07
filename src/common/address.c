@@ -94,7 +94,8 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
 /** Set the tor_addr_t in <b>a</b> to contain the socket address contained in
  * <b>sa</b>. */
 int
-tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
+tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
+                       uint16_t *port_out)
 {
   tor_assert(a);
   tor_assert(sa);
@@ -103,10 +104,14 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa)
     struct sockaddr_in *sin = (struct sockaddr_in *) sa;
     a->family = AF_INET;
     a->addr.in_addr.s_addr = sin->sin_addr.s_addr;
+    if (port_out)
+      *port_out = ntohs(sin->sin_port);
   } else if (sa->sa_family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) sa;
     a->family = AF_INET6;
     memcpy(&a->addr.in6_addr, &sin6->sin6_addr, sizeof(struct in6_addr));
+    if (port_out)
+      *port_out = ntohs(sin6->sin6_port);
   } else {
     a->family = AF_UNSPEC;
     return -1;

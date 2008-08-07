@@ -1032,12 +1032,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       return 0;
     }
 
-    tor_addr_from_sockaddr(&addr, remote);
-    if (remote->sa_family == AF_INET)
-      port = ((struct sockaddr_in *)remote)->sin_port;
-    else
-      port = ((struct sockaddr_in6 *)remote)->sin6_port;
-    port = ntohs(port);
+    tor_addr_from_sockaddr(&addr, remote, &port);
 
     /* process entrance policies here, before we even create the connection */
     if (new_type == CONN_TYPE_AP) {
