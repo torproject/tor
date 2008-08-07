@@ -615,6 +615,14 @@ circuit_get_by_circid_orconn(uint16_t circ_id, or_connection_t *conn)
     return circ;
 }
 
+/** Return true iff the circuit ID <b>circ_id</b> is currently used by a
+ * circuit, marked or not, on <b>conn</b>. */
+int
+circuit_id_in_use_on_orconn(uint16_t circ_id, or_connection_t *conn)
+{
+  return circuit_get_by_circid_orconn_impl(circ_id, conn) != NULL;
+}
+
 /** Return the circuit that a given edge connection is using. */
 circuit_t *
 circuit_get_by_edge_conn(edge_connection_t *conn)

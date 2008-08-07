@@ -15,6 +15,9 @@ Changes in version 0.1.2.20 - 2008-??-??
       would stop building circuits and start refusing connections after
       24 hours, since we falsely believed that Tor was dormant. Reported
       by nwf.
+    - Ensure that two circuits can never exist on the same connection
+      with the same circuit ID, even if one is marked for close.  This
+      is conceivably a bugfix for bug 779; fixes a bug on 0.1.0.4-rc.
 
   o Minor bugfixes:
     - Stop recommending that every server operator send mail to tor-ops.
