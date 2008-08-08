@@ -1309,7 +1309,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                      int log_sockstype, int safe_socks)
 {
   unsigned int len;
-  char tmpbuf[INET_NTOA_BUF_LEN];
+  char tmpbuf[TOR_ADDR_BUF_LEN+1];
+  tor_addr_t destaddr;
   uint32_t destip;
   uint8_t socksver;
   enum {socks4, socks4a} socks4_prot = socks4a;
@@ -1374,13 +1375,20 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       }
       switch (*(buf->head->data+3)) { /* address type */
         case 1: /* IPv4 address */
+        case 4: /* IPv6 address */ {
+          const int is_v6 = *(buf->head->data+3) == 4;
+          const unsigned addrlen = is_v6 ? 16 : 4;
           log_debug(LD_APP,"socks5: ipv4 address type");
-          if (buf->datalen < 10) /* ip/port there? */
+          if (buf->datalen < 6+addrlen) /* ip/port there? */
             return 0; /* not yet */
 
-          destip = ntohl(*(uint32_t*)(buf->head->data+4));
-          in.s_addr = htonl(destip);
-          tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
+          if (is_v6)
+            tor_addr_from_ipv6_bytes(&destaddr, buf->head->data+4);
+          else
+            tor_addr_from_ipv4n(&destaddr, get_uint32(buf->head->data+4));
+
+          tor_addr_to_str(tmpbuf, &destaddr, sizeof(tmpbuf), 1);
+
           if (strlen(tmpbuf)+1 > MAX_SOCKS_ADDR_LEN) {
             log_warn(LD_APP,
                      "socks5 IP takes %d bytes, which doesn't fit in %d. "
@@ -1389,8 +1397,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
             return -1;
           }
           strlcpy(req->address,tmpbuf,sizeof(req->address));
-          req->port = ntohs(*(uint16_t*)(buf->head->data+8));
-          buf_remove_from_front(buf, 10);
+          req->port = ntohs(get_uint16(buf->head->data+4+addrlen));
+          buf_remove_from_front(buf, 6+addrlen);
           if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
               !addressmap_have_mapping(req->address) &&
               !have_warned_about_unsafe_socks) {
@@ -1410,6 +1418,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
               return -1;
           }
           return 1;
+        }
         case 3: /* fqdn */
           log_debug(LD_APP,"socks5: fqdn address type");
           if (req->command == SOCKS_COMMAND_RESOLVE_PTR) {

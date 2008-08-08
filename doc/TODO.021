@@ -186,14 +186,14 @@ R   d Do we want to maintain our own set of entryguards that we use as
         - Teach resolving code how to handle ipv6.
         . Teach exit policies about ipv6 (consider ipv4/ipv6 interaction!)
 	o Use IPv6 in connect/connected/failed-exitpolicy cells
-	- accept ipv6 from socks
+	o accept ipv6 from socks
         o Generate END_REASON_EXITPOLICY cells right
 	  . ... and parse them right
         . Generate new BEGIN cell types and parse them right
 	- Detect availability of ipv6
 	- Advertise availability of ipv6.
 	- Geoip support, if only to add a zone called "ipv6"
-	-
+
     - 118: Listen on and advertise multiple ports:
       - Tor should be able to have a pool of outgoing IP addresses that it is
         able to rotate through. (maybe.  Possible overlap with proposal 118.)
