@@ -40,6 +40,13 @@ typedef struct rend_service_port_config_t {
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
 
+/** DOCDOC */
+typedef enum rend_auth_type_t {
+  REND_NO_AUTH      = 0,
+  REND_BASIC_AUTH   = 1,
+  REND_STEALTH_AUTH = 2,
+} rend_auth_type_t;
+
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
   /* Fields specified in config file */
@@ -47,6 +54,10 @@ typedef struct rend_service_t {
   smartlist_t *ports; /**< List of rend_service_port_config_t */
   int descriptor_version; /**< Rendezvous descriptor version that will be
                            * published. */
+  rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
+                               * authorization is performed. */
+  smartlist_t *clients; /**< List of rend_authorized_client_t's of
+                         * clients that may access our service. */
   /* Other fields */
   crypto_pk_env_t *private_key; /**< Permanent hidden-service key. */
   char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
@@ -79,6 +90,24 @@ num_rend_services(void)
   return smartlist_len(rend_service_list);
 }
 
+/** Helper: free storage held by a single service authorized client entry. */
+static void
+rend_authorized_client_free(rend_authorized_client_t *client)
+{
+  if (!client) return;
+  if (client->client_key)
+    crypto_free_pk_env(client->client_key);
+  tor_free(client->client_name);
+  tor_free(client);
+}
+
+/** Helper for strmap_free. */
+static void
+rend_authorized_client_strmap_item_free(void *authorized_client)
+{
+  rend_authorized_client_free(authorized_client);
+}
+
 /** Release the storage held by <b>service</b>.
  */
 static void
@@ -97,6 +126,11 @@ rend_service_free(rend_service_t *service)
   }
   if (service->desc)
     rend_service_descriptor_free(service->desc);
+  if (service->clients) {
+    SMARTLIST_FOREACH(service->clients, rend_authorized_client_t *, c,
+      rend_authorized_client_free(c););
+    smartlist_free(service->clients);
+  }
   tor_free(service);
 }
 
@@ -125,22 +159,40 @@ rend_add_service(rend_service_t *service)
   service->intro_nodes = smartlist_create();
 
   /* If the service is configured to publish unversioned (v0) and versioned
-   * descriptors (v2 or higher), split it up into two separate services. */
+   * descriptors (v2 or higher), split it up into two separate services
+   * (unless it is configured to perform client authorization). */
   if (service->descriptor_version == -1) {
-    rend_service_t *v0_service = tor_malloc_zero(sizeof(rend_service_t));
-    v0_service->directory = tor_strdup(service->directory);
-    v0_service->ports = smartlist_create();
-    SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p, {
-      rend_service_port_config_t *copy =
-        tor_malloc_zero(sizeof(rend_service_port_config_t));
-      memcpy(copy, p, sizeof(rend_service_port_config_t));
-      smartlist_add(v0_service->ports, copy);
-    });
-    v0_service->intro_period_started = service->intro_period_started;
-    v0_service->descriptor_version = 0; /* Unversioned descriptor. */
-    rend_add_service(v0_service);
+    if (service->auth_type == REND_NO_AUTH) {
+      rend_service_t *v0_service = tor_malloc_zero(sizeof(rend_service_t));
+      v0_service->directory = tor_strdup(service->directory);
+      v0_service->ports = smartlist_create();
+      SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p, {
+        rend_service_port_config_t *copy =
+          tor_malloc_zero(sizeof(rend_service_port_config_t));
+        memcpy(copy, p, sizeof(rend_service_port_config_t));
+        smartlist_add(v0_service->ports, copy);
+      });
+      v0_service->intro_period_started = service->intro_period_started;
+      v0_service->descriptor_version = 0; /* Unversioned descriptor. */
+      v0_service->auth_type = REND_NO_AUTH;
+      rend_add_service(v0_service);
+    }
 
     service->descriptor_version = 2; /* Versioned descriptor. */
+  }
+
+  if (service->auth_type && !service->descriptor_version) {
+    log_warn(LD_CONFIG, "Hidden service with client authorization and "
+                        "version 0 descriptors configured; ignoring.");
+    rend_service_free(service);
+    return;
+  }
+
+  if (service->auth_type && smartlist_len(service->clients) == 0) {
+    log_warn(LD_CONFIG, "Hidden service with client authorization but no "
+                        "clients; ignoring.");
+    rend_service_free(service);
+    return;
   }
 
   if (!smartlist_len(service->ports)) {
@@ -271,6 +323,130 @@ rend_config_services(or_options_t *options, int validate_only)
         return -1;
       }
       smartlist_add(service->ports, portcfg);
+    } else if (!strcasecmp(line->key, "HiddenServiceAuthorizeClient")) {
+      /* Parse auth type and comma-separated list of client names and add a
+       * rend_authorized_client_t for each client to the service's list
+       * of authorized clients. */
+      smartlist_t *type_names_split, *clients;
+      const char *authname;
+      if (service->auth_type) {
+        log_warn(LD_CONFIG, "Got multiple HiddenServiceAuthorizeClient "
+                 "lines for a single service.");
+        rend_service_free(service);
+        return -1;
+      }
+      type_names_split = smartlist_create();
+      smartlist_split_string(type_names_split, line->value, " ", 0, 0);
+      if (smartlist_len(type_names_split) < 1) {
+        log_warn(LD_BUG, "HiddenServiceAuthorizeClient has no value. This "
+                         "should have been prevented when parsing the "
+                         "configuration.");
+        smartlist_free(type_names_split);
+        rend_service_free(service);
+        return -1;
+      }
+      authname = smartlist_get(type_names_split, 0);
+      if (!strcasecmp(authname, "basic") || !strcmp(authname, "1")) {
+        service->auth_type = REND_BASIC_AUTH;
+      } else if (!strcasecmp(authname, "stealth") || !strcmp(authname, "2")) {
+        service->auth_type = REND_STEALTH_AUTH;
+      } else {
+        log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
+                 "unrecognized auth-type '%s'. Only 1 or 2 are recognized.",
+                 (char *) smartlist_get(type_names_split, 0));
+        SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
+        smartlist_free(type_names_split);
+        rend_service_free(service);
+        return -1;
+      }
+      service->clients = smartlist_create();
+      if (smartlist_len(type_names_split) < 2) {
+        log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
+                            "authorization type %d, but no client names.",
+                 service->auth_type);
+        SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
+        smartlist_free(type_names_split);
+        continue;
+      }
+      if (smartlist_len(type_names_split) > 2) {
+        log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
+                            "illegal value '%s'. Must be formatted "
+                            "as 'HiddenServiceAuthorizeClient auth-type "
+                            "client-name,client-name,...' (without "
+                            "additional spaces in comma-separated client "
+                            "list).",
+                 line->value);
+        SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
+        smartlist_free(type_names_split);
+        rend_service_free(service);
+        return -1;
+      }
+      clients = smartlist_create();
+      smartlist_split_string(clients, smartlist_get(type_names_split, 1),
+                             ",", 0, 0);
+      SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
+      smartlist_free(type_names_split);
+      SMARTLIST_FOREACH_BEGIN(clients, const char *, client_name)
+      {
+        rend_authorized_client_t *client;
+        size_t len = strlen(client_name);
+        int found_duplicate = 0;
+        /* XXXX proposal 121 Why 19?  Also, this should be a constant. */
+        if (len < 1 || len > 19) {
+          log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains an "
+                              "illegal client name: '%s'. Length must be "
+                              "between 1 and 19 characters.",
+                   client_name);
+          SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
+          smartlist_free(clients);
+          rend_service_free(service);
+          return -1;
+        }
+        if (strspn(client_name, REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
+          log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains an "
+                              "illegal client name: '%s'. Valid "
+                              "characters are [A-Za-z0-9+-_].",
+                   client_name);
+          SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
+          smartlist_free(clients);
+          rend_service_free(service);
+          return -1;
+        }
+        /* Check if client name is duplicate. */
+        /*XXXX proposal 121 This is O(N^2).  That's not so good. */
+        SMARTLIST_FOREACH(service->clients, rend_authorized_client_t *, c, {
+          if (!strcmp(c->client_name, client_name)) {
+            log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains a "
+                     "duplicate client name: '%s'; ignoring.", client_name);
+            found_duplicate = 1;
+            break;
+          }
+        });
+        if (found_duplicate)
+          continue;
+        client = tor_malloc_zero(sizeof(rend_authorized_client_t));
+        client->client_name = tor_strdup(client_name);
+        smartlist_add(service->clients, client);
+        log_debug(LD_REND, "Adding client name '%s'", client_name);
+      }
+      SMARTLIST_FOREACH_END(client_name);
+      SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
+      smartlist_free(clients);
+      /* Ensure maximum number of clients. */
+      if ((service->auth_type == REND_BASIC_AUTH &&
+            smartlist_len(service->clients) > 512) ||
+          (service->auth_type == REND_STEALTH_AUTH &&
+            smartlist_len(service->clients) > 16)) {
+        log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains %d "
+                            "client authorization entries, but only a "
+                            "maximum of %d entries is allowed for "
+                            "authorization type %d.",
+                 smartlist_len(service->clients),
+                 service->auth_type == REND_BASIC_AUTH ? 512 : 16,
+                 (int)service->auth_type);
+        rend_service_free(service);
+        return -1;
+      }
     } else {
       smartlist_t *versions;
       char *version_str;
@@ -351,19 +527,18 @@ rend_service_update_descriptor(rend_service_t *service)
   }
 }
 
-/** Load and/or generate private keys for all hidden services.  Return 0 on
- * success, -1 on failure.
+/** Load and/or generate private keys for all hidden services, possibly
+ * including keys for client authorization.  Return 0 on success, -1 on
+ * failure.
  */
 int
 rend_service_load_keys(void)
 {
-  int i;
-  rend_service_t *s;
+  int r;
   char fname[512];
-  char buf[128];
+  char buf[1500];
 
-  for (i=0; i < smartlist_len(rend_service_list); ++i) {
-    s = smartlist_get(rend_service_list,i);
+  SMARTLIST_FOREACH_BEGIN(rend_service_list, rend_service_t *, s) {
     if (s->private_key)
       continue;
     log_info(LD_REND, "Loading hidden-service keys from \"%s\"",
@@ -402,10 +577,177 @@ rend_service_load_keys(void)
       return -1;
     }
     tor_snprintf(buf, sizeof(buf),"%s.onion\n", s->service_id);
-    if (write_str_to_file(fname,buf,0)<0)
+    if (write_str_to_file(fname,buf,0)<0) {
+      log_warn(LD_CONFIG, "Could not write onion address to hostname file.");
       return -1;
-  }
-  return 0;
+    }
+
+    /* If client authorization is configured, load or generate keys. */
+    if (s->auth_type) {
+      char *client_keys_str = NULL;
+      strmap_t *parsed_clients = strmap_new();
+      char cfname[512];
+      FILE *cfile, *hfile;
+      open_file_t *open_cfile = NULL, *open_hfile = NULL;
+
+      /* Load client keys and descriptor cookies, if available. */
+      if (tor_snprintf(cfname, sizeof(cfname), "%s"PATH_SEPARATOR"client_keys",
+                       s->directory)<0) {
+        log_warn(LD_CONFIG, "Directory name too long to store client keys "
+                 "file: \"%s\".", s->directory);
+        goto err;
+      }
+      client_keys_str = read_file_to_str(cfname, RFTS_IGNORE_MISSING, NULL);
+      if (client_keys_str) {
+        if (rend_parse_client_keys(parsed_clients, client_keys_str) < 0) {
+          log_warn(LD_CONFIG, "Previously stored client_keys file could not "
+                              "be parsed.");
+          goto err;
+        } else {
+          log_info(LD_CONFIG, "Parsed %d previously stored client entries.",
+                   strmap_size(parsed_clients));
+          tor_free(client_keys_str);
+        }
+      }
+
+      /* Prepare client_keys and hostname files. */
+      if (!(cfile = start_writing_to_stdio_file(cfname, OPEN_FLAGS_REPLACE,
+                                                0600, &open_cfile))) {
+        log_warn(LD_CONFIG, "Could not open client_keys file %s",
+                 escaped(cfname));
+        goto err;
+      }
+      if (!(hfile = start_writing_to_stdio_file(fname, OPEN_FLAGS_REPLACE,
+                                                0600, &open_hfile))) {
+        log_warn(LD_CONFIG, "Could not open hostname file %s", escaped(fname));
+        goto err;
+      }
+
+      /* Either use loaded keys for configured clients or generate new
+       * ones if a client is new. */
+      SMARTLIST_FOREACH_BEGIN(s->clients, rend_authorized_client_t *, client)
+      {
+        char desc_cook_out[3*REND_DESC_COOKIE_LEN_BASE64+1];
+        char service_id[16+1];
+        rend_authorized_client_t *parsed =
+            strmap_get(parsed_clients, client->client_name);
+        int written;
+        size_t len;
+        /* Copy descriptor cookie from parsed entry or create new one. */
+        if (parsed) {
+          memcpy(client->descriptor_cookie, parsed->descriptor_cookie,
+                 REND_DESC_COOKIE_LEN);
+        } else {
+          crypto_rand(client->descriptor_cookie, REND_DESC_COOKIE_LEN);
+        }
+        if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
+                          client->descriptor_cookie,
+                          REND_DESC_COOKIE_LEN) < 0) {
+          log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
+          strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
+          return -1;
+        }
+        /* Copy client key from parsed entry or create new one if required. */
+        if (parsed && parsed->client_key) {
+          client->client_key = crypto_pk_dup_key(parsed->client_key);
+        } else if (s->auth_type == REND_STEALTH_AUTH) {
+          /* Create private key for client. */
+          crypto_pk_env_t *prkey = NULL;
+          if (!(prkey = crypto_new_pk_env())) {
+            log_warn(LD_BUG,"Error constructing client key");
+            goto err;
+          }
+          if (crypto_pk_generate_key(prkey)) {
+            log_warn(LD_BUG,"Error generating client key");
+            goto err;
+          }
+          if (crypto_pk_check_key(prkey) <= 0) {
+            log_warn(LD_BUG,"Generated client key seems invalid");
+            crypto_free_pk_env(prkey);
+            goto err;
+          }
+          client->client_key = prkey;
+        }
+        /* Add entry to client_keys file. */
+        desc_cook_out[strlen(desc_cook_out)-1] = '\0'; /* Remove newline. */
+        written = tor_snprintf(buf, sizeof(buf),
+                               "client-name %s\ndescriptor-cookie %s\n",
+                               client->client_name, desc_cook_out);
+        if (written < 0) {
+          log_warn(LD_BUG, "Could not write client entry.");
+          goto err;
+
+        }
+        if (client->client_key) {
+          char *client_key_out;
+          crypto_pk_write_private_key_to_string(client->client_key,
+                                                &client_key_out, &len);
+          if (rend_get_service_id(client->client_key, service_id)<0) {
+            log_warn(LD_BUG, "Internal error: couldn't encode service ID.");
+            goto err;
+          }
+          written = tor_snprintf(buf + written, sizeof(buf) - written,
+                                 "client-key\n%s", client_key_out);
+          if (written < 0) {
+            log_warn(LD_BUG, "Could not write client entry.");
+            goto err;
+          }
+        }
+
+        if (fputs(buf, cfile) < 0) {
+          log_warn(LD_FS, "Could not append client entry to file: %s",
+                   strerror(errno));
+          goto err;
+        }
+
+        /* Add line to hostname file. */
+        if (s->auth_type == REND_BASIC_AUTH) {
+          /* Remove == signs (newline has been removed above). */
+          desc_cook_out[strlen(desc_cook_out)-2] = '\0';
+          tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
+                       s->service_id, desc_cook_out, client->client_name);
+        } else {
+          char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
+          memcpy(extended_desc_cookie, client->descriptor_cookie,
+                 REND_DESC_COOKIE_LEN);
+          extended_desc_cookie[REND_DESC_COOKIE_LEN] = (s->auth_type - 1) << 4;
+          if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
+                            extended_desc_cookie,
+                            REND_DESC_COOKIE_LEN+1) < 0) {
+            log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
+            goto err;
+          }
+          desc_cook_out[strlen(desc_cook_out)-3] = '\0'; /* Remove A= and
+                                                            newline. */
+          tor_snprintf(buf, sizeof(buf),"%s.onion %s # client: %s\n",
+                       service_id, desc_cook_out, client->client_name);
+        }
+
+        if (fputs(buf, hfile)<0) {
+          log_warn(LD_FS, "Could not append host entry to file: %s",
+                   strerror(errno));
+          goto err;
+        }
+      }
+      SMARTLIST_FOREACH_END(client);
+
+      goto done;
+    err:
+      r = -1;
+    done:
+      tor_free(client_keys_str);
+      strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
+      if (r<0) {
+        abort_writing_to_file(open_cfile);
+        abort_writing_to_file(open_hfile);
+        return r;
+      } else {
+        finish_writing_to_file(open_cfile);
+        finish_writing_to_file(open_hfile);
+      }
+    }
+  } SMARTLIST_FOREACH_END(s);
+  return r;
 }
 
 /** Return the service whose public key has a digest of <b>digest</b> and

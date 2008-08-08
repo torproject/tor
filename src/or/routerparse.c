@@ -100,6 +100,10 @@ typedef enum {
   R_IPO_ONION_KEY,
   R_IPO_SERVICE_KEY,
 
+  C_CLIENT_NAME,
+  C_DESCRIPTOR_COOKIE,
+  C_CLIENT_KEY,
+
   _UNRECOGNIZED,
   _ERR,
   _EOF,
@@ -141,6 +145,7 @@ typedef struct directory_token_t {
 typedef enum {
   NO_OBJ,        /**< No object, ever. */
   NEED_OBJ,      /**< Object is required. */
+  NEED_SKEY_1024,/**< Object is required, and must be a 1024 bit private key */
   NEED_KEY_1024, /**< Object is required, and must be a 1024 bit public key */
   NEED_KEY,      /**< Object is required, and must be a public key. */
   OBJ_OK,        /**< Object is optional. */
@@ -349,6 +354,15 @@ static token_rule_t ipo_token_table[] = {
   T1("onion-port", R_IPO_ONION_PORT, EQ(1), NO_OBJ),
   T1("onion-key", R_IPO_ONION_KEY, NO_ARGS, NEED_KEY_1024),
   T1("service-key", R_IPO_SERVICE_KEY, NO_ARGS, NEED_KEY_1024),
+  END_OF_TABLE
+};
+
+/** List of tokens allowed in the (possibly encrypted) list of introduction
+ * points of rendezvous service descriptors */
+static token_rule_t client_keys_token_table[] = {
+  T1_START("client-name", C_CLIENT_NAME, CONCAT_ARGS, NO_OBJ),
+  T1("descriptor-cookie", C_DESCRIPTOR_COOKIE, EQ(1), NO_OBJ),
+  T01("client-key", C_CLIENT_KEY, NO_ARGS, NEED_SKEY_1024),
   END_OF_TABLE
 };
 
@@ -2789,6 +2803,7 @@ token_check_object(memarea_t *area, const char *kwd,
       }
       break;
     case NEED_KEY_1024:
+    case NEED_SKEY_1024:
       if (tok->key && crypto_pk_keysize(tok->key) != PK_BYTES) {
         tor_snprintf(ebuf, sizeof(ebuf), "Wrong size on key for %s: %d bits",
                      kwd, (int)crypto_pk_keysize(tok->key));
@@ -2798,6 +2813,19 @@ token_check_object(memarea_t *area, const char *kwd,
     case NEED_KEY:
       if (!tok->key) {
         tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
+      }
+      if (o_syn != NEED_SKEY_1024) {
+        if (crypto_pk_key_is_private(tok->key)) {
+          tor_snprintf(ebuf, sizeof(ebuf),
+               "Private key given for %s, which wants a public key", kwd);
+          RET_ERR(ebuf);
+        }
+      } else { /* o_syn == NEED_SKEY_1024 */
+        if (!crypto_pk_key_is_private(tok->key)) {
+          tor_snprintf(ebuf, sizeof(ebuf),
+               "Public key given for %s, which wants a private key", kwd);
+          RET_ERR(ebuf);
+        }
       }
       break;
     case OBJ_OK:
@@ -2948,10 +2976,14 @@ get_next_token(memarea_t *area,
     ebuf[sizeof(ebuf)-1] = '\0';
     RET_ERR(ebuf);
   }
-  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a key... */
+  if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
     tok->key = crypto_new_pk_env();
     if (crypto_pk_read_public_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse public key.");
+  } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
+    tok->key = crypto_new_pk_env();
+    if (crypto_pk_read_private_key_from_string(tok->key, obstart))
+      RET_ERR("Couldn't parse private key.");
   } else { /* If it's something else, try to base64-decode it */
     int r;
     tok->object_body = ALLOC(next-*s); /* really, this is too much RAM. */
@@ -3665,6 +3697,120 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   if (area)
     memarea_drop_all(area);
 
+  return result;
+}
+
+/** Parse the content of a client_key file in <b>ckstr</b> and add
+ * rend_authorized_client_t's for each parsed client to
+ * <b>parsed_clients</b>. Return the number of parsed clients as result
+ * or -1 for failure. */
+int
+rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
+{
+  int result = -1;
+  smartlist_t *tokens;
+  directory_token_t *tok;
+  const char *current_entry = NULL;
+  memarea_t *area = NULL;
+  if (!ckstr || strlen(ckstr) == 0)
+    return -1;
+  tokens = smartlist_create();
+  /* Begin parsing with first entry, skipping comments or whitespace at the
+   * beginning. */
+  area = memarea_new(4096);
+  /* XXXX proposal 121 This skips _everything_, not just comments or
+   * whitespace.  That's no good. */
+  current_entry = strstr(ckstr, "client-name ");
+  while (!strcmpstart(current_entry, "client-name ")) {
+    rend_authorized_client_t *parsed_entry;
+    size_t len;
+    char descriptor_cookie_base64[REND_DESC_COOKIE_LEN_BASE64+2+1];
+    char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
+    /* Determine end of string. */
+    const char *eos = strstr(current_entry, "\nclient-name ");
+    if (!eos)
+      eos = current_entry + strlen(current_entry);
+    else
+      eos = eos + 1;
+    /* Free tokens and clear token list. */
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    smartlist_clear(tokens);
+    memarea_clear(area);
+    /* Tokenize string. */
+    if (tokenize_string(area, current_entry, eos, tokens,
+                        client_keys_token_table, 0)) {
+      log_warn(LD_REND, "Error tokenizing client keys file.");
+      goto err;
+    }
+    /* Advance to next entry, if available. */
+    current_entry = eos;
+    /* Check minimum allowed length of token list. */
+    if (smartlist_len(tokens) < 2) {
+      log_warn(LD_REND, "Impossibly short client key entry.");
+      goto err;
+    }
+    /* Parse client name. */
+    tok = find_first_by_keyword(tokens, C_CLIENT_NAME);
+    tor_assert(tok);
+    tor_assert(tok == smartlist_get(tokens, 0));
+    tor_assert(tok->n_args == 1);
+
+    len = strlen(tok->args[0]);
+    if (len < 1 || len > 19 ||
+      strspn(tok->args[0], REND_LEGAL_CLIENTNAME_CHARACTERS) != len) {
+      log_warn(LD_CONFIG, "Illegal client name: %s. (Length must be "
+               "between 1 and 19, and valid characters are "
+               "[A-Za-z0-9+-_].)", tok->args[0]);
+      goto err;
+    }
+    /* Check if client name is duplicate. */
+    if (strmap_get(parsed_clients, tok->args[0])) {
+      log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains a "
+               "duplicate client name: '%s'. Ignoring.", tok->args[0]);
+      goto err;
+    }
+    parsed_entry = tor_malloc_zero(sizeof(rend_authorized_client_t));
+    parsed_entry->client_name = tor_strdup(tok->args[0]);
+    strmap_set(parsed_clients, parsed_entry->client_name, parsed_entry);
+    /* Parse client key. */
+    tok = find_first_by_keyword(tokens, C_CLIENT_KEY);
+    if (tok) {
+      parsed_entry->client_key = tok->key;
+      tok->key = NULL; /* Prevent free */
+    }
+
+    /* Parse descriptor cookie. */
+    tok = find_first_by_keyword(tokens, C_DESCRIPTOR_COOKIE);
+    tor_assert(tok);
+    tor_assert(tok->n_args == 1);
+    if (strlen(tok->args[0]) != REND_DESC_COOKIE_LEN_BASE64 + 2) {
+      log_warn(LD_REND, "Descriptor cookie has illegal length: %s",
+               escaped(tok->args[0]));
+      goto err;
+    }
+    /* The size of descriptor_cookie_tmp needs to be REND_DESC_COOKIE_LEN+2,
+     * because a base64 encoding of length 24 does not fit into 16 bytes in all
+     * cases. */
+    if ((base64_decode(descriptor_cookie_tmp, REND_DESC_COOKIE_LEN+2,
+                       tok->args[0], REND_DESC_COOKIE_LEN_BASE64+2+1)
+           != REND_DESC_COOKIE_LEN)) {
+      log_warn(LD_REND, "Descriptor cookie contains illegal characters: "
+                        "%s", descriptor_cookie_base64);
+      goto err;
+    }
+    memcpy(parsed_entry->descriptor_cookie, descriptor_cookie_tmp,
+           REND_DESC_COOKIE_LEN);
+  }
+  result = strmap_size(parsed_clients);
+  goto done;
+ err:
+  result = -1;
+ done:
+  /* Free tokens and clear token list. */
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  smartlist_free(tokens);
+  if (area)
+    memarea_drop_all(area);
   return result;
 }
 

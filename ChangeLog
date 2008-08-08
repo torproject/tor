@@ -3,6 +3,9 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
     - Convert many internal address representations to optionally hold
       IPv6 addresses.
     - Generate and accept IPv6 addresses in many protocol elements.
+    - Begin implementation of proposal 121 (Client authorization for
+      hidden services): associate keys, client lists, and authorization
+      types with hidden services.
 
   o Minor bugfixes:
     - Recover 3-7 bytes that were wasted per memory chunk.  Fixes bug

@@ -226,6 +226,7 @@ static config_var_t _option_vars[] = {
   VAR("HiddenServiceOptions",LINELIST_V, RendConfigLines,    NULL),
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
+  VAR("HiddenServiceAuthorizeClient",LINELIST_S,RendConfigLines, NULL),
   V(HSAuthoritativeDir,          BOOL,     "0"),
   V(HSAuthorityRecordStats,      BOOL,     "0"),
   V(HttpProxy,                   STRING,   NULL),

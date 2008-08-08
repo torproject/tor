@@ -474,17 +474,14 @@ crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
   return 0;
 }
 
-/** PEM-encode the public key portion of <b>env</b> and write it to a
- * newly allocated string.  On success, set *<b>dest</b> to the new
- * string, *<b>len</b> to the string's length, and return 0.  On
- * failure, return -1.
- */
-int
-crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
-                                     size_t *len)
+/** Helper function to implement crypto_pk_write_*_key_to_string. */
+static int
+crypto_pk_write_key_to_string_impl(crypto_pk_env_t *env, char **dest,
+                                   size_t *len, int is_public)
 {
   BUF_MEM *buf;
   BIO *b;
+  int r;
 
   tor_assert(env);
   tor_assert(env->key);
@@ -495,8 +492,13 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
   /* Now you can treat b as if it were a file.  Just use the
    * PEM_*_bio_* functions instead of the non-bio variants.
    */
-  if (!PEM_write_bio_RSAPublicKey(b, env->key)) {
-    crypto_log_errors(LOG_WARN, "writing public key to string");
+  if (is_public)
+    r = PEM_write_bio_RSAPublicKey(b, env->key);
+  else
+    r = PEM_write_bio_RSAPrivateKey(b, env->key, NULL,NULL,0,NULL,NULL);
+
+  if (!r) {
+    crypto_log_errors(LOG_WARN, "writing RSA key to string");
     BIO_free(b);
     return -1;
   }
@@ -513,6 +515,30 @@ crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
   BUF_MEM_free(buf);
 
   return 0;
+}
+
+/** PEM-encode the public key portion of <b>env</b> and write it to a
+ * newly allocated string.  On success, set *<b>dest</b> to the new
+ * string, *<b>len</b> to the string's length, and return 0.  On
+ * failure, return -1.
+ */
+int
+crypto_pk_write_public_key_to_string(crypto_pk_env_t *env, char **dest,
+                                     size_t *len)
+{
+  return crypto_pk_write_key_to_string_impl(env, dest, len, 1);
+}
+
+/** PEM-encode the private key portion of <b>env</b> and write it to a
+ * newly allocated string.  On success, set *<b>dest</b> to the new
+ * string, *<b>len</b> to the string's length, and return 0.  On
+ * failure, return -1.
+ */
+int
+crypto_pk_write_private_key_to_string(crypto_pk_env_t *env, char **dest,
+                                     size_t *len)
+{
+  return crypto_pk_write_key_to_string_impl(env, dest, len, 0);
 }
 
 /** Read a PEM-encoded public key from the first <b>len</b> characters of
@@ -591,6 +617,15 @@ crypto_pk_check_key(crypto_pk_env_t *env)
   if (r <= 0)
     crypto_log_errors(LOG_WARN,"checking RSA key");
   return r;
+}
+
+/** Return true iff <b>key</b> contains the private-key portion of the RSA
+ * key. */
+int
+crypto_pk_key_is_private(const crypto_pk_env_t *key)
+{
+  tor_assert(key);
+  return PRIVATE_KEY_OK(key);
 }
 
 /** Compare the public-key components of a and b.  Return -1 if a\<b, 0

@@ -640,6 +640,19 @@ typedef enum {
  * identity key. */
 #define REND_INTRO_POINT_ID_LEN_BASE32 32
 
+/** Length of the descriptor cookie that is used for client authorization
+ * to hidden services. */
+#define REND_DESC_COOKIE_LEN 16
+
+/** Length of the base64-encoded descriptor cookie that is used for
+ * exchanging client authorization between hidden service and client. */
+#define REND_DESC_COOKIE_LEN_BASE64 22
+
+/** Legal characters for use in authorized client names for a hidden
+ * service. */
+#define REND_LEGAL_CLIENTNAME_CHARACTERS \
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-_"
+
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
 
@@ -3792,6 +3805,13 @@ int rend_client_send_introduction(origin_circuit_t *introcirc,
 
 /********************************* rendcommon.c ***************************/
 
+/** Hidden-service side configuration of client authorization. */
+typedef struct rend_authorized_client_t {
+  char *client_name;
+  char descriptor_cookie[REND_DESC_COOKIE_LEN];
+  crypto_pk_env_t *client_key;
+} rend_authorized_client_t;
+
 /** ASCII-encoded v2 hidden service descriptor. */
 typedef struct rend_encoded_v2_service_descriptor_t {
   char desc_id[DIGEST_LEN]; /**< Descriptor ID. */
@@ -4251,6 +4271,7 @@ int rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
                                      const char *descriptor_cookie,
                                      const char *intro_content,
                                      size_t intro_size);
+int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
 
 #endif
 
