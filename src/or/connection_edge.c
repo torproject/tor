@@ -1714,7 +1714,6 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   struct sockaddr_storage proxy_addr;
   socklen_t proxy_addr_len = sizeof(proxy_addr);
   struct sockaddr *proxy_sa = (struct sockaddr*) &proxy_addr;
-  char tmpbuf[INET_NTOA_BUF_LEN];
   struct pfioc_natlook pnl;
   tor_addr_t addr;
   int pf = -1;
@@ -1733,17 +1732,17 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   if (proxy_sa->sa_family == AF_INET) {
     struct sockaddr_in *sin = (struct sockaddr_in *)proxy_sa;
     pnl.af              = AF_INET;
-    pnl.saddr.v4.s_addr = tor_addr_to_ipv4n(conn->_base.addr);
+    pnl.saddr.v4.s_addr = tor_addr_to_ipv4n(&conn->_base.addr);
     pnl.sport           = htons(conn->_base.port);
     pnl.daddr.v4.s_addr = sin->sin_addr.s_addr;
     pnl.dport           = sin->sin_port;
   } else if (proxy_sa->sa_family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)proxy_sa;
     pnl.af = AF_INET6;
-    memcpy(&pnl.saddr.v6, tor_addr_to_in6(conn->_base.addr),
+    memcpy(&pnl.saddr.v6, tor_addr_to_in6(&conn->_base.addr),
            sizeof(struct in6_addr));
     pnl.sport = htons(conn->_base.port);
-    memcpy(&pnl.daddr.v6, &sin6->sin6_addr, siszeof(struct in6_addr));
+    memcpy(&pnl.daddr.v6, &sin6->sin6_addr, sizeof(struct in6_addr));
     pnl.dport = sin6->sin6_port;
   } else {
     log_warn(LD_NET, "getsockname() gave an unexpected address family (%d)",
@@ -1760,16 +1759,16 @@ connection_ap_get_original_destination(edge_connection_t *conn,
     return -1;
   }
 
-  if (pnl->af == AF_INET) {
-    tor_addr_from_ipv4n(&addr, &pnl.rdaddr.v4);
-  } else if (pnl->af == AF_INET6) {
-    tor_addr_from_ipv6_bytes(&addr, &pnl.rdaddr.v6.s6_addr);
+  if (pnl.af == AF_INET) {
+    tor_addr_from_ipv4n(&addr, pnl.rdaddr.v4.s_addr);
+  } else if (pnl.af == AF_INET6) {
+    tor_addr_from_ipv6_bytes(&addr, pnl.rdaddr.v6.s6_addr);
   } else {
     tor_fragile_assert();
     return -1;
   }
 
-  tor_addr_to_sring(req->address, &addr, sizeof(req->address), 0);
+  tor_addr_to_string(req->address, &addr, sizeof(req->address), 0);
   req->port = ntohs(pnl.rdport);
 
   return 0;
