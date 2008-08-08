@@ -534,7 +534,7 @@ rend_service_update_descriptor(rend_service_t *service)
 int
 rend_service_load_keys(void)
 {
-  int r;
+  int r = 0;
   char fname[512];
   char buf[1500];
 
