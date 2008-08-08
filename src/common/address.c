@@ -635,6 +635,13 @@ tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *ipv6_bytes)
   memcpy(dest->addr.in6_addr.s6_addr, ipv6_bytes, 16);
 }
 
+/** DOCDOC */
+void
+tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6)
+{
+  tor_addr_from_ipv6_bytes(dest, (const char*)in6->s6_addr);
+}
+
 /** Copy a tor_addr_t from <b>src</b> to <b>dest</b>.
  */
 void

@@ -1762,13 +1762,13 @@ connection_ap_get_original_destination(edge_connection_t *conn,
   if (pnl.af == AF_INET) {
     tor_addr_from_ipv4n(&addr, pnl.rdaddr.v4.s_addr);
   } else if (pnl.af == AF_INET6) {
-    tor_addr_from_ipv6_bytes(&addr, pnl.rdaddr.v6.s6_addr);
+    tor_addr_from_in6(&addr, &pnl.rdaddr.v6);
   } else {
     tor_fragile_assert();
     return -1;
   }
 
-  tor_addr_to_string(req->address, &addr, sizeof(req->address), 0);
+  tor_addr_to_str(req->address, &addr, sizeof(req->address), 0);
   req->port = ntohs(pnl.rdport);
 
   return 0;
