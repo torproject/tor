@@ -18,6 +18,10 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
       when building against recent kernels.  Bugfix on 0.1.2.1-alpha.
     - Add a missing safe_str() call for a debug log message.
 
+  o Minor features
+    - Rate-limit too-many-sockets messages: when they happen, they
+      happen a lot.  Resolves bug 748.
+
 
 Changes in version 0.2.1.4-alpha - 2008-08-04
   o Major bugfixes:
