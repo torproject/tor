@@ -3718,9 +3718,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   /* Begin parsing with first entry, skipping comments or whitespace at the
    * beginning. */
   area = memarea_new(4096);
-  /* XXXX proposal 121 This skips _everything_, not just comments or
-   * whitespace.  That's no good. */
-  current_entry = strstr(ckstr, "client-name ");
+  current_entry = eat_whitespace(ckstr);
   while (!strcmpstart(current_entry, "client-name ")) {
     rend_authorized_client_t *parsed_entry;
     size_t len;

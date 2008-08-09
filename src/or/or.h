@@ -653,6 +653,9 @@ typedef enum {
 #define REND_LEGAL_CLIENTNAME_CHARACTERS \
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-_"
 
+/** Maximum length of authorized client names for a hidden service. */
+#define REND_CLIENTNAME_MAX_LEN 16
+
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
 

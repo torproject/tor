@@ -757,6 +757,21 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address)
 };
 #endif /* HAVE_SYS_UN_H */
 
+static void
+warn_too_many_conns(void)
+{
+#define WARN_TOO_MANY_CONNS_INTERVAL (6*60*60)
+  time_t last_warned = 0, now = time(NULL);
+  if (last_warned + WARN_TOO_MANY_CONNS_INTERVAL < now) {
+    int n_conns = get_n_open_sockets();
+    log_warn(LD_NET,"Failing because we have %d connections already. Please "
+             "raise your ulimit -n.", n_conns);
+    last_warned = now;
+  }
+  control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
+                               n_conns);
+}
+
 /** Bind a new non-blocking socket listening to the socket described
  * by <b>listensockaddr</b>.
  *
@@ -774,11 +789,7 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
   int start_reading = 0;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
-    int n_conns = get_n_open_sockets();
-    log_warn(LD_NET,"Failing because we have %d connections already. Please "
-             "raise your ulimit -n.", n_conns);
-    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
-                                 n_conns);
+    warn_too_many_conns();
     return NULL;
   }
 
@@ -1150,11 +1161,7 @@ connection_connect(connection_t *conn, const char *address,
   int protocol_family;
 
   if (get_n_open_sockets() >= get_options()->_ConnLimit-1) {
-    int n_conns = get_n_open_sockets();
-    log_warn(LD_NET,"Failing because we have %d connections already. Please "
-             "raise your ulimit -n.", n_conns);
-    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
-                                 n_conns);
+    warn_too_many_conns();
     return -1;
   }
 

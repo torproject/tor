@@ -57,7 +57,8 @@ typedef struct rend_service_t {
   rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
                                * authorization is performed. */
   smartlist_t *clients; /**< List of rend_authorized_client_t's of
-                         * clients that may access our service. */
+                         * clients that may access our service. Can be NULL
+                         * if no client authorization is peformed. */
   /* Other fields */
   crypto_pk_env_t *private_key; /**< Permanent hidden-service key. */
   char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
@@ -181,14 +182,15 @@ rend_add_service(rend_service_t *service)
     service->descriptor_version = 2; /* Versioned descriptor. */
   }
 
-  if (service->auth_type && !service->descriptor_version) {
+  if (service->auth_type != REND_NO_AUTH && !service->descriptor_version) {
     log_warn(LD_CONFIG, "Hidden service with client authorization and "
                         "version 0 descriptors configured; ignoring.");
     rend_service_free(service);
     return;
   }
 
-  if (service->auth_type && smartlist_len(service->clients) == 0) {
+  if (service->auth_type != REND_NO_AUTH &&
+      smartlist_len(service->clients) == 0) {
     log_warn(LD_CONFIG, "Hidden service with client authorization but no "
                         "clients; ignoring.");
     rend_service_free(service);
@@ -329,14 +331,15 @@ rend_config_services(or_options_t *options, int validate_only)
        * of authorized clients. */
       smartlist_t *type_names_split, *clients;
       const char *authname;
-      if (service->auth_type) {
+      int num_clients;
+      if (service->auth_type != REND_NO_AUTH) {
         log_warn(LD_CONFIG, "Got multiple HiddenServiceAuthorizeClient "
                  "lines for a single service.");
         rend_service_free(service);
         return -1;
       }
       type_names_split = smartlist_create();
-      smartlist_split_string(type_names_split, line->value, " ", 0, 0);
+      smartlist_split_string(type_names_split, line->value, " ", 0, 2);
       if (smartlist_len(type_names_split) < 1) {
         log_warn(LD_BUG, "HiddenServiceAuthorizeClient has no value. This "
                          "should have been prevented when parsing the "
@@ -346,13 +349,14 @@ rend_config_services(or_options_t *options, int validate_only)
         return -1;
       }
       authname = smartlist_get(type_names_split, 0);
-      if (!strcasecmp(authname, "basic") || !strcmp(authname, "1")) {
+      if (!strcasecmp(authname, "basic")) {
         service->auth_type = REND_BASIC_AUTH;
-      } else if (!strcasecmp(authname, "stealth") || !strcmp(authname, "2")) {
+      } else if (!strcasecmp(authname, "stealth")) {
         service->auth_type = REND_STEALTH_AUTH;
       } else {
         log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
-                 "unrecognized auth-type '%s'. Only 1 or 2 are recognized.",
+                 "unrecognized auth-type '%s'. Only 'basic' or 'stealth' "
+                 "are recognized.",
                  (char *) smartlist_get(type_names_split, 0));
         SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
         smartlist_free(type_names_split);
@@ -362,41 +366,36 @@ rend_config_services(or_options_t *options, int validate_only)
       service->clients = smartlist_create();
       if (smartlist_len(type_names_split) < 2) {
         log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
-                            "authorization type %d, but no client names.",
-                 service->auth_type);
+                            "auth-type '%s', but no client names.",
+                 service->auth_type == 1 ? "basic" : "stealth");
         SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
         smartlist_free(type_names_split);
         continue;
       }
-      if (smartlist_len(type_names_split) > 2) {
-        log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
-                            "illegal value '%s'. Must be formatted "
-                            "as 'HiddenServiceAuthorizeClient auth-type "
-                            "client-name,client-name,...' (without "
-                            "additional spaces in comma-separated client "
-                            "list).",
-                 line->value);
-        SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
-        smartlist_free(type_names_split);
-        rend_service_free(service);
-        return -1;
-      }
       clients = smartlist_create();
       smartlist_split_string(clients, smartlist_get(type_names_split, 1),
-                             ",", 0, 0);
+                             ",", SPLIT_SKIP_SPACE, 0);
       SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
       smartlist_free(type_names_split);
+      /* Remove duplicate client names. */
+      num_clients = smartlist_len(clients);
+      smartlist_sort_strings(clients);
+      smartlist_uniq_strings(clients);
+      if (smartlist_len(clients) < num_clients) {
+        log_info(LD_CONFIG, "HiddenServiceAuthorizeClient contains %d "
+                            "duplicate client name(s); removing.",
+                 num_clients - smartlist_len(clients));
+        num_clients = smartlist_len(clients);
+      }
       SMARTLIST_FOREACH_BEGIN(clients, const char *, client_name)
       {
         rend_authorized_client_t *client;
         size_t len = strlen(client_name);
-        int found_duplicate = 0;
-        /* XXXX proposal 121 Why 19?  Also, this should be a constant. */
-        if (len < 1 || len > 19) {
+        if (len < 1 || len > REND_CLIENTNAME_MAX_LEN) {
           log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains an "
                               "illegal client name: '%s'. Length must be "
-                              "between 1 and 19 characters.",
-                   client_name);
+                              "between 1 and %d characters.",
+                   client_name, REND_CLIENTNAME_MAX_LEN);
           SMARTLIST_FOREACH(clients, char *, cp, tor_free(cp));
           smartlist_free(clients);
           rend_service_free(service);
@@ -412,18 +411,6 @@ rend_config_services(or_options_t *options, int validate_only)
           rend_service_free(service);
           return -1;
         }
-        /* Check if client name is duplicate. */
-        /*XXXX proposal 121 This is O(N^2).  That's not so good. */
-        SMARTLIST_FOREACH(service->clients, rend_authorized_client_t *, c, {
-          if (!strcmp(c->client_name, client_name)) {
-            log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains a "
-                     "duplicate client name: '%s'; ignoring.", client_name);
-            found_duplicate = 1;
-            break;
-          }
-        });
-        if (found_duplicate)
-          continue;
         client = tor_malloc_zero(sizeof(rend_authorized_client_t));
         client->client_name = tor_strdup(client_name);
         smartlist_add(service->clients, client);
@@ -440,10 +427,10 @@ rend_config_services(or_options_t *options, int validate_only)
         log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains %d "
                             "client authorization entries, but only a "
                             "maximum of %d entries is allowed for "
-                            "authorization type %d.",
+                            "authorization type '%s'.",
                  smartlist_len(service->clients),
                  service->auth_type == REND_BASIC_AUTH ? 512 : 16,
-                 (int)service->auth_type);
+                 service->auth_type == 1 ? "basic" : "stealth");
         rend_service_free(service);
         return -1;
       }
@@ -583,7 +570,7 @@ rend_service_load_keys(void)
     }
 
     /* If client authorization is configured, load or generate keys. */
-    if (s->auth_type) {
+    if (s->auth_type != REND_NO_AUTH) {
       char *client_keys_str = NULL;
       strmap_t *parsed_clients = strmap_new();
       char cfname[512];
@@ -676,7 +663,6 @@ rend_service_load_keys(void)
         if (written < 0) {
           log_warn(LD_BUG, "Could not write client entry.");
           goto err;
-
         }
         if (client->client_key) {
           char *client_key_out;
@@ -710,7 +696,8 @@ rend_service_load_keys(void)
           char extended_desc_cookie[REND_DESC_COOKIE_LEN+1];
           memcpy(extended_desc_cookie, client->descriptor_cookie,
                  REND_DESC_COOKIE_LEN);
-          extended_desc_cookie[REND_DESC_COOKIE_LEN] = (s->auth_type - 1) << 4;
+          extended_desc_cookie[REND_DESC_COOKIE_LEN] =
+              ((int)s->auth_type - 1) << 4;
           if (base64_encode(desc_cook_out, 3*REND_DESC_COOKIE_LEN_BASE64+1,
                             extended_desc_cookie,
                             REND_DESC_COOKIE_LEN+1) < 0) {
