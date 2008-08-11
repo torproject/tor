@@ -205,20 +205,44 @@ Status: Draft
   easy for a client because it has complete knowledge of all the exit
   policies of all servers on the network.
 
-  [XXX: I have no finished ideas here yet.
-    - if clients only rely on the current exit flag they will
-      a) never use servers for exit purposes that don't have it,
-      b) will have a hard time finding a suitable exit node for
-         their weird port that only a few servers allow.
-    - the authorities could create a new summary document that
-      lists all the exit policies and their nodes (by fingerprint).
-      I need to find out how large that document would be.
-    - can we make the "Exit" flag more useful?  can we come
-      up with some "standard policies" and have operators pick
-      one of the standards?
-  ]
+  The consensus document will once again be extended to contain the
+  information required by clients.  This information will be a summary
+  of each node's exit policy.  The exit policy summary will only contain
+  the list of ports to which a node exits to most destination IP
+  addresses.
 
-4. Future possibilities
+  A summary should claim a router exits to a specific TCP port if,
+  ignoring private IP addresses (link and site local per RFC3300), the
+  exit policy indicates that the router would exit to this port to any
+  IP address with the exception of at most 2^25 single addresses (That's
+  either two /8 netblocks, or one /8 and a couple of /12s or any other
+  combination).
+
+  An exit policy summary will be included in votes and consensus as a
+  new line attached to each exit node.  A lack of policy should indicate
+  a non-exit policy.  The line will have the format
+   "p" <space> "accept"|"reject" <portlist>
+  where portlist is a comma seperated list of single port numbers or
+  portranges (e.g.  "22,80-88,1024-6000,6667").  Whether the summary
+  shows the list of accepted ports or the list of rejected ports depends
+  on which list is shorter (has less elements).  In case of ties we
+  choose the list of accepted ports.
+
+  Similarly to IP address, ports, timestamp, and bandwidth a consensus
+  should list the exit policy matching the descriptor digest referenced
+  in the consensus document.
+
+4. Migration
+
+4.1 Consensus document changes.
+
+  The consensus will need to include
+    - bandwidth information (see 3.1)
+    - exit policy summaries (3.4)
+
+  A new consensus method (number TBD) will be chosen for this.
+
+5. Future possibilities
 
   This proposal still requires that all servers have the descriptors of
   every other node in the network in order to answer RELAY_REQUEST_SD
