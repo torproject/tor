@@ -232,6 +232,22 @@ Status: Draft
   should list the exit policy matching the descriptor digest referenced
   in the consensus document.
 
+3.4.1 Client behaviour
+
+  When choosing an exit node for a specific request a Tor client will
+  choose from the list of nodes that exit to the requested port as given
+  by the consensus document.  If a client has additional knowledge (like
+  cached full descriptors) that indicates the so chosen exit node will
+  reject the request then it MAY use that knowledge (or not include such
+  nodes in the selection to begin with).  However, clients MUST NOT use
+  nodes that do not list the port as accepted in the summary (but for
+  which they know that the node would exit to that address from other
+  sources, like a cached descriptor).
+
+  An exception to this is exit enclave behaviour: A client MAY use the
+  node at a specific IP address to exit to any port on the same address
+  even if that node is not listed as exiting to the port in the summary.
+
 4. Migration
 
 4.1 Consensus document changes.
