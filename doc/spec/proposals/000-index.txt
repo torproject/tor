@@ -57,7 +57,7 @@ Proposals by number:
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
 134  More robust consensus voting with diverse authority sets [ACCEPTED]
-135  Simplify Configuration of Private Tor Networks [ACCEPTED]
+135  Simplify Configuration of Private Tor Networks [FINISHED]
 136  Mass authority migration with legacy keys [FINISHED]
 137  Keep controllers informed as Tor bootstraps [CLOSED]
 138  Remove routers that are not Running from consensus documents [CLOSED]
@@ -106,7 +106,6 @@ Proposals by status:
    117  IPv6 exits
    118  Advertising multiple ORPorts at once
    134  More robust consensus voting with diverse authority sets
-   135  Simplify Configuration of Private Tor Networks
    140  Provide diffs between consensuses
    147  Eliminate the need for v2 directories in generating v3 directories
    148  Stream end reasons from the client side should be uniform
@@ -118,6 +117,7 @@ Proposals by status:
  FINISHED:
    111  Prioritizing local traffic over relayed traffic
    128  Families of private bridges
+   135  Simplify Configuration of Private Tor Networks
    136  Mass authority migration with legacy keys
  CLOSED:
    101  Voting on the Tor Directory System

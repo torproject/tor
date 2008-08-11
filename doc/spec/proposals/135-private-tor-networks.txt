@@ -4,8 +4,9 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Karsten Loesing
 Created: 29-Apr-2008
-Status: Accepted
+Status: Finished
 Target: 0.2.1.x
+Implemented-In: 0.2.1.2-alpha
 
 Change history:
 
