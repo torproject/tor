@@ -168,16 +168,7 @@ R d Setting DirPort when acting as bridge will give false Warnings
 For 0.2.1.x:
   - Proposals to do:
     o 110: avoid infinite-length circuits
-R   d 128: families of private bridges
-    - 134: handle authority fragmentation.
-
-  - Proposals to write:
-R   d Do we want to maintain our own set of entryguards that we use as
-      next hop after the bridge?
-    X Add an 'exit-address' line in the descriptor for servers that exit
-      from something that isn't their published address.
-      [I think tordnsel solved this. -RD]
-    - Proposal to supersede 117 by adding IPv6 support for exits and entries.
+    - 117: IPv6 Exits
       - Internal code support for ipv6:
         o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
         o Many address variables need to become tor_addr_t
@@ -200,8 +191,27 @@ R   d Do we want to maintain our own set of entryguards that we use as
       - config option to publish what ports you listen on, beyond
         ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Need to figure out the right format for routerinfo_t on this.
+    - 121: Hidden service authentication
+R   d 128: families of private bridges
+    - 134: handle authority fragmentation.
+    o 135: simplify configuration of private tor networks.  Th
+    - 140: Provide diffs betweeen consensuses
+    - 147: Eliminate the need for v2 directories in generating v3 directories
+    - 148: Stream end reasons from the client side should be uniform.
+
+  - Maybe:
+    - 145: Separate "suitable from a guard" from "suitable as a new guard"
+    - 146: Adding new flag to reflect long-term stability
+    - 149: Using data from NETINFO cells
+
+  - Proposals to write:
     - Fix voting to handle bug 608 case when multiple servers get
       Named.
+R   d Do we want to maintain our own set of entryguards that we use as
+      next hop after the bridge?
+    X Add an 'exit-address' line in the descriptor for servers that exit
+      from something that isn't their published address.
+      [I think tordnsel solved this. -RD]
     d Possibly: revise link protocol to allow big circuit IDs,
       variable-length cells, proposal-110 stuff, and versioned CREATES?
     o Eliminate use of v2 networkstatus documents in v3 authority
@@ -308,7 +318,7 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Refactor the HTTP logic so the functions aren't so large.
     - Refactor buf_read and buf_write to have sensible ways to return
       error codes after partial writes
-    - Router_choose_random_node() has a big pile of args. make it "flags".
+    o Router_choose_random_node() has a big pile of args. make it "flags".
     - Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.
     - Don't call time(NULL) so much; instead have a static time_t field
