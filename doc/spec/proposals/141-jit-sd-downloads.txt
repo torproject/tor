@@ -229,12 +229,12 @@ Status: Draft
   where portlist is a comma seperated list of single port numbers or
   portranges (e.g.  "22,80-88,1024-6000,6667").  Whether the summary
   shows the list of accepted ports or the list of rejected ports depends
-  on which list is shorter (has less elements).  In case of ties we
-  choose the list of accepted ports.
+  on which list is shorter (has a shorter string representation).  In case of
+  ties we choose the list of accepted ports.
 
-  Similarly to IP address, ports, timestamp, and bandwidth a consensus
-  should list the exit policy matching the descriptor digest referenced
-  in the consensus document.
+  Similarly to IP address, ports, and timestamp a consensus should list
+  the exit policy matching the descriptor digest referenced in the
+  consensus document (See dir-spec section 3.4).
 
 3.4.1 Client behaviour
 
