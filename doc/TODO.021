@@ -47,10 +47,13 @@ Matt
 ioerror
   - gmail auto responder so you send us an email and we send you a Tor
     binary. Probably needs a proposal first.
+    - document how it works / what its interface is
+    - set it up so people can 'get tor' in many languages, and so the
+      docs we send back are in many languages.
   - weather.torproject.org should go live.
-  o Learn from Steven how to build/maintain the Tor Browser Bundle.
   - Keep advocating new Tor servers and working with orgs like Mozilla
     to let them like Tor.
+  - solve the huge green onion on check.tp.o
   - Start converting critical wiki pages into real Tor wml pages. E.g.,
     https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
   - Find out what happened to the buildbot and get it back up:
