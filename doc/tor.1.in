@@ -706,7 +706,7 @@ When this option is enabled, and we get a request to resolve an
 address that ends with one of the suffixes in
 \fBAutomapHostsSuffixes\fP, we map an unused virtual address to that
 address, and return the new virtual address.  This is handy for making
-.onion addresses work with applications that resolve an address and
+".onion" addresses work with applications that resolve an address and
 then connect to it.
 (Default: 0).
 .LP
