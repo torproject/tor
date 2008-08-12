@@ -216,11 +216,21 @@ Status: Draft
   addresses.
 
   A summary should claim a router exits to a specific TCP port if,
-  ignoring private IP addresses (link and site local per RFC3300), the
-  exit policy indicates that the router would exit to this port to any
-  IP address with the exception of at most 2^25 single addresses (That's
-  either two /8 netblocks, or one /8 and a couple of /12s or any other
-  combination).
+  ignoring private IP addresses, the exit policy indicates that the
+  router would exit to this port to most IP address.  either two /8
+  netblocks, or one /8 and a couple of /12s or any other combination).
+  The exact algorith used is this:  Going through all exit policy items
+   - ignore any accept that is not for all IP addresses ("*"),
+   - ignore rejects for these netblocks (exactly, no subnetting):
+     0.0.0.0/8, 169.254.0.0/16, 127.0.0.0/8, 192.168.0.0/16, 10.0.0.0/8,
+     and 172.16.0.0/12m
+   - for each reject count the number of IP addresses rejected against
+     the affected ports,
+   - once we hit an accept for all IP addresses ("*") add the ports in
+     that policy item to the list of accepted ports, if they don't have
+     more than 2^25 IP addresses (that's two /8 networks) counted
+     against them (i.e. if the router exits to a port to everywhere but
+     at most two /8 networks).
 
   An exit policy summary will be included in votes and consensus as a
   new line attached to each exit node.  A lack of policy should indicate
@@ -230,7 +240,10 @@ Status: Draft
   portranges (e.g.  "22,80-88,1024-6000,6667").  Whether the summary
   shows the list of accepted ports or the list of rejected ports depends
   on which list is shorter (has a shorter string representation).  In case of
-  ties we choose the list of accepted ports.
+  ties we choose the list of accepted ports.  Summary items are
+  compressed, that is instead of "80-88,89-100" there only is a single
+  item of "80-100", similarly instead of "20,21" a summary will say
+  "20-21".
 
   Similarly to IP address, ports, and timestamp a consensus should list
   the exit policy matching the descriptor digest referenced in the
