@@ -125,13 +125,17 @@ Status: Draft
   rate limit from the server descriptor that the "r" line referenced by
   digest (1st and 3rd field of the bandwidth line in the descriptor).
 
-  The bandwidth item is added as another item in the router tuple
-  described in dir-spec section 3.4:
-   | * Two router entries are "the same" if they have the same
-   | <descriptor digest, published time, nickname, IP, ports> tuple.
-   | We choose the tuple for a given router as whichever tuple appears
-   | for that router in the most votes.  We break ties in favor of
-   | the more recently published.
+  Authorities will cap the bandwidth number at some arbitrary value,
+  currently 10MB/sec.  If a router claims a larger bandwidth an
+  authority's vote will still only show Bandwidth=10000000.
+
+  The consensus value for bandwidth is the median of all bandwidth
+  numbers given in votes.  In case of an even number of votes we use
+  the lower median.  (Using this procedure allows us to change the
+  cap value more easily.)
+
+  Clients should believe the bandwidth as presented in the consensus,
+  not capping it again.
 
 3.2 Fetching descriptors on demand
 
