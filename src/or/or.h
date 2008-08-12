@@ -612,6 +612,9 @@ typedef enum {
 /** Length of 'y' portion of 'y.onion' URL. */
 #define REND_SERVICE_ID_LEN_BASE32 16
 
+/** Length of 'y.onion' including '.onion' URL. */
+#define REND_SERVICE_ADDRESS_LEN (16+1+5)
+
 /** Length of a binary-encoded rendezvous service ID. */
 #define REND_SERVICE_ID_LEN 10
 
@@ -2239,6 +2242,8 @@ typedef struct {
                    * other ORs are running. */
   config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
+  config_line_t *HidServAuth; /**< List of configuration lines for client-side
+                               * authorizations for hidden services */
   char *ContactInfo; /**< Contact info to be published in the directory. */
 
   char *HttpProxy; /**< hostname[:port] to use as http proxy, if any. */
@@ -3805,6 +3810,26 @@ extend_info_t *rend_client_get_random_intro(const char *query);
 
 int rend_client_send_introduction(origin_circuit_t *introcirc,
                                   origin_circuit_t *rendcirc);
+
+/** Client authorization type that a hidden service performs. */
+typedef enum rend_auth_type_t {
+  REND_NO_AUTH      = 0,
+  REND_BASIC_AUTH   = 1,
+  REND_STEALTH_AUTH = 2,
+} rend_auth_type_t;
+
+/** Client-side configuration of authorization for a hidden service. */
+typedef struct rend_service_authorization_t {
+  char descriptor_cookie[REND_DESC_COOKIE_LEN];
+  char onion_address[REND_SERVICE_ADDRESS_LEN+1];
+  rend_auth_type_t auth_type;
+} rend_service_authorization_t;
+
+int rend_parse_service_authorization(or_options_t *options,
+                                     int validate_only);
+rend_service_authorization_t *rend_client_lookup_service_authorization(
+                                                const char *onion_address);
+void rend_service_authorization_free_all(void);
 
 /********************************* rendcommon.c ***************************/
 

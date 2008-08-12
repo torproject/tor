@@ -227,6 +227,7 @@ static config_var_t _option_vars[] = {
   VAR("HiddenServicePort",   LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceVersion",LINELIST_S, RendConfigLines,    NULL),
   VAR("HiddenServiceAuthorizeClient",LINELIST_S,RendConfigLines, NULL),
+  V(HidServAuth,                 LINELIST, NULL),
   V(HSAuthoritativeDir,          BOOL,     "0"),
   V(HSAuthorityRecordStats,      BOOL,     "0"),
   V(HttpProxy,                   STRING,   NULL),
@@ -1188,6 +1189,12 @@ options_act(or_options_t *old_options)
   if (running_tor && rend_config_services(options, 0)<0) {
     log_warn(LD_BUG,
        "Previously validated hidden services line could not be added!");
+    return -1;
+  }
+
+  if (running_tor && rend_parse_service_authorization(options, 0) < 0) {
+    log_warn(LD_BUG, "Previously validated client authorization for "
+                     "hidden services could not be added!");
     return -1;
   }
 
@@ -3401,6 +3408,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (rend_config_services(options, 1) < 0)
     REJECT("Failed to configure rendezvous options. See logs for details.");
+
+  /* Parse client-side authorization for hidden services. */
+  if (rend_parse_service_authorization(options, 1) < 0)
+    REJECT("Failed to configure client authorization for hidden services. "
+           "See logs for details.");
 
   if (parse_virtual_addr_network(options->VirtualAddrNetwork, 1, NULL)<0)
     return -1;

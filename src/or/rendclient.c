@@ -713,3 +713,136 @@ rend_client_get_random_intro(const char *query)
   return extend_info_dup(intro->extend_info);
 }
 
+/** Client-side authorizations for hidden services; map of onion address to
+ * rend_service_authorization_t*. */
+static strmap_t *auth_hid_servs = NULL;
+
+/** Look up the client-side authorization for the hidden service with
+ * <b>onion_address</b>. Return NULL if no authorization is available for
+ * that address. */
+rend_service_authorization_t*
+rend_client_lookup_service_authorization(const char *onion_address)
+{
+  tor_assert(onion_address);
+  if (!auth_hid_servs) return NULL;
+  return strmap_get(auth_hid_servs, onion_address);
+}
+
+/** Helper: Free storage held by rend_service_authorization_t. */
+static void
+rend_service_authorization_free(rend_service_authorization_t *auth)
+{
+  tor_free(auth);
+}
+
+/** Helper for strmap_free. */
+static void
+rend_service_authorization_strmap_item_free(void *service_auth)
+{
+  rend_service_authorization_free(service_auth);
+}
+
+/** Release all the storage held in auth_hid_servs.
+ */
+void
+rend_service_authorization_free_all(void)
+{
+  if (!auth_hid_servs) {
+    return;
+  }
+  strmap_free(auth_hid_servs, rend_service_authorization_strmap_item_free);
+  auth_hid_servs = NULL;
+}
+
+/** Parse <b>config_line</b> as a client-side authorization for a hidden
+ * service and add it to the local map of hidden service authorizations.
+ * Return 0 for success and -1 for failure. */
+int
+rend_parse_service_authorization(or_options_t *options, int validate_only)
+{
+  config_line_t *line;
+  int res = -1;
+  strmap_t *parsed = strmap_new();
+  smartlist_t *sl = smartlist_create();
+
+  for (line = options->HidServAuth; line; line = line->next) {
+    char *onion_address, *descriptor_cookie;
+    char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
+    char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_BASE64+2+1];
+    rend_service_authorization_t *auth = NULL;
+    int auth_type_val = 0;
+    SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
+    smartlist_clear(sl);
+    smartlist_split_string(sl, line->value, " ",
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
+    if (smartlist_len(sl) < 2) {
+      log_warn(LD_CONFIG, "Configuration line does not consist of "
+               "\"onion-address authorization-cookie [service-name]\": "
+               "'%s'", line->value);
+      goto err;
+    }
+    auth = tor_malloc_zero(sizeof(rend_service_authorization_t));
+    /* Parse onion address. */
+    onion_address = smartlist_get(sl, 0);
+    if (strlen(onion_address) != REND_SERVICE_ADDRESS_LEN ||
+        strcmpend(onion_address, ".onion")) {
+      log_warn(LD_CONFIG, "Onion address has wrong format: '%s'",
+               onion_address);
+      goto err;
+    }
+    strlcpy(auth->onion_address, onion_address, REND_SERVICE_ID_LEN_BASE32+1);
+    if (!rend_valid_service_id(auth->onion_address)) {
+      log_warn(LD_CONFIG, "Onion address has wrong format: '%s'",
+               onion_address);
+      goto err;
+    }
+    /* Parse descriptor cookie. */
+    descriptor_cookie = smartlist_get(sl, 1);
+    if (strlen(descriptor_cookie) != REND_DESC_COOKIE_LEN_BASE64) {
+      log_warn(LD_CONFIG, "Authorization cookie has wrong length: '%s'",
+               descriptor_cookie);
+      goto err;
+    }
+    /* Add trailing zero bytes (AA) to make base64-decoding happy. */
+    tor_snprintf(descriptor_cookie_base64ext,
+                 REND_DESC_COOKIE_LEN_BASE64+2+1,
+                 "%sAA", descriptor_cookie);
+    if (base64_decode(descriptor_cookie_tmp, sizeof(descriptor_cookie_tmp),
+                      descriptor_cookie_base64ext,
+                      strlen(descriptor_cookie_base64ext)) < 0) {
+      log_warn(LD_CONFIG, "Decoding authorization cookie failed: '%s'",
+               descriptor_cookie);
+      goto err;
+    }
+    auth_type_val = (descriptor_cookie_tmp[16] >> 4) + 1;
+    if (auth_type_val < 1 || auth_type_val > 2) {
+      log_warn(LD_CONFIG, "Authorization cookie has unknown authorization "
+                          "type encoded.");
+      goto err;
+    }
+    auth->auth_type = auth_type_val == 1 ? REND_BASIC_AUTH : REND_STEALTH_AUTH;
+    memcpy(auth->descriptor_cookie, descriptor_cookie_tmp,
+           REND_DESC_COOKIE_LEN);
+    if (strmap_get(parsed, auth->onion_address)) {
+      log_warn(LD_CONFIG, "Duplicate authorization for the same hidden "
+                          "service.");
+      goto err;
+    }
+    strmap_set(parsed, auth->onion_address, auth);
+  }
+  res = 0;
+  goto done;
+ err:
+  res = -1;
+ done:
+  SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
+  smartlist_free(sl);
+  if (!validate_only && res == 0) {
+    rend_service_authorization_free_all();
+    auth_hid_servs = parsed;
+  } else {
+    strmap_free(parsed, rend_service_authorization_strmap_item_free);
+  }
+  return res;
+}
+

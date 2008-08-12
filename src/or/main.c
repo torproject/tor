@@ -1873,6 +1873,7 @@ tor_free_all(int postfork)
   dirserv_free_all();
   rend_service_free_all();
   rend_cache_free_all();
+  rend_service_authorization_free_all();
   rep_hist_free_all();
   hs_usage_free_all();
   dns_free_all();

@@ -40,13 +40,6 @@ typedef struct rend_service_port_config_t {
  * rendezvous point before giving up? */
 #define MAX_REND_TIMEOUT 30
 
-/** DOCDOC */
-typedef enum rend_auth_type_t {
-  REND_NO_AUTH      = 0,
-  REND_BASIC_AUTH   = 1,
-  REND_STEALTH_AUTH = 2,
-} rend_auth_type_t;
-
 /** Represents a single hidden service running at this OP. */
 typedef struct rend_service_t {
   /* Fields specified in config file */
