@@ -930,6 +930,7 @@ policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old, uin
 
 /** Create a new exit policy summary, initially only with a single
  *  port 1-64k item */
+/* XXXX This entire thing is O(N^2).  Use an RB-tree if that turns out to matter. */
 smartlist_t *
 policy_summary_create(void)
 {
@@ -971,7 +972,10 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts) {
   return new;
 }
 
+/* XXXX Nick says I'm going to hell for this.  If he feels charitably towards
+ * my immortal soul, he can clean it up himself. */
 #define AT(x) ((policy_summary_item_t*)smartlist_get(summary, x))
+
 #define REJECT_CUTOFF_COUNT (1<<25)
 /* Split an exit policy summary so that prt_min and prt_max
  * fall at exactly the start and end of an item respectively.
@@ -983,6 +987,7 @@ policy_summary_split(smartlist_t *summary,
   int start_at_index;
 
   int i = 0;
+  /* XXXX Do a binary search if run time matters */
   while (AT(i)->prt_max < prt_min)
     i++;
   if (AT(i)->prt_min != prt_min) {
