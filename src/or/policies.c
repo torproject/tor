@@ -1039,7 +1039,7 @@ policy_summary_reject(smartlist_t *summary,
 {
   int i = policy_summary_split(summary, prt_min, prt_max);
   /* XXX: ipv4 specific */
-  int count = (1 << (32-maskbits));
+  uint64_t count = (U64_LITERAL(1) << (32-maskbits));
   while (i < smartlist_len(summary) &&
          AT(i)->prt_max <= prt_max) {
     AT(i)->reject_count += count;
@@ -1160,7 +1160,21 @@ policy_summarize(smartlist_t *policy)
   accepts_str = smartlist_join_strings(accepts, ",", 0, &accepts_len);
   rejects_str = smartlist_join_strings(rejects, ",", 0, &rejects_len);
 
-  if (rejects_len < accepts_len) {
+  if (rejects_len > MAX_EXITPOLICY_SUMMARY_LEN &&
+      accepts_len > MAX_EXITPOLICY_SUMMARY_LEN) {
+    char *c;
+    shorter_str = accepts_str;
+    prefix = "accept";
+
+    c = shorter_str + (MAX_EXITPOLICY_SUMMARY_LEN-strlen(prefix)-1);
+    while (*c != ',' && c >= shorter_str)
+      c--;
+    tor_assert(c >= shorter_str);
+    tor_assert(*c == ',');
+    *c = '\0';
+
+    shorter_len = strlen(shorter_str);
+  } else if (rejects_len < accepts_len) {
     shorter_str = rejects_str;
     shorter_len = rejects_len;
     prefix = "reject";
@@ -1171,6 +1185,7 @@ policy_summarize(smartlist_t *policy)
   }
 
   final_size = strlen(prefix)+1+shorter_len+1;
+  tor_assert(final_size <= MAX_EXITPOLICY_SUMMARY_LEN+1);
   result = malloc(final_size);
   tor_snprintf(result, final_size, "%s %s", prefix, shorter_str);
 

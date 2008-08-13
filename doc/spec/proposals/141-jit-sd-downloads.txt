@@ -246,6 +246,13 @@ Status: Draft
   of "80-88,89-100" there only is a single item of "80-100", similarly
   instead of "20,21" a summary will say "20-21".
 
+  Port lists are sorted in ascending order.
+
+  The maximum allowed length of a policy summary (including the "accept "
+  or "reject ") is 1000 characters.  If a summary exceeds that length we
+  use an accept-style summary and list as much of the port list as is
+  possible within these 1000 bytes.
+
   Similarly to IP address, ports, and timestamp a consensus should list
   the exit policy matching the descriptor digest referenced in the
   consensus document (See dir-spec section 3.4).

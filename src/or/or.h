@@ -3208,11 +3208,19 @@ download_status_is_ready(download_status_t *dls, time_t now,
 }
 
 /********************************* dirserv.c ***************************/
+/** Maximum length of an exit policy summary. */
+#define MAX_EXITPOLICY_SUMMARY_LEN (1000)
+
 /** Maximum allowable length of a version line in a networkstatus. */
 #define MAX_V_LINE_LEN 128
 /** Length of "r Authority BadDirectory BadExit Exit Fast Guard HSDir Named
  * Running Stable Unnamed V2Dir Valid\n". */
 #define MAX_FLAG_LINE_LEN 96
+/** Length of "w" line for weighting.  Currently at most
+ * "w Bandwidth=<uint32t>\n" */
+#define MAX_WEIGHT_LINE_LEN (13+10)
+/** Maximum length of an exit policy summary line. */
+#define MAX_POLICY_LINE_LEN (3+MAX_EXITPOLICY_SUMMARY_LEN)
 /** Amount of space to allocate for each entry: r, s, and v lines. */
 #define RS_ENTRY_LEN                                                    \
   ( /* first line */                                                    \
@@ -3220,6 +3228,10 @@ download_status_is_ready(download_status_t *dls, time_t now,
    5*2 /* ports */ + 10 /* punctuation */ +                             \
    /* second line */                                                    \
    MAX_FLAG_LINE_LEN +                                                  \
+   /* weight line */                                                    \
+   MAX_WEIGHT_LINE_LEN +                                                \
+   /* p line. */                                                        \
+   MAX_POLICY_LINE_LEN +                                                \
    /* v line. */                                                        \
    MAX_V_LINE_LEN                                                       \
    )
@@ -4108,6 +4120,7 @@ routerinfo_t *router_find_exact_exit_enclave(const char *address,
 int router_is_unreliable(routerinfo_t *router, int need_uptime,
                          int need_capacity, int need_guard);
 uint32_t router_get_advertised_bandwidth(routerinfo_t *router);
+uint32_t router_get_advertised_bandwidth_capped(routerinfo_t *router);
 
 typedef enum {
   NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_GUARD
