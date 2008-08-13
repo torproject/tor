@@ -3327,6 +3327,31 @@ test_v3_networkstatus(void)
 }
 
 static void
+test_policy_summary_helper(const char *policy_str, const char *expected_summary)
+{
+  config_line_t line;
+  smartlist_t *policy;
+  char *summary;
+
+  policy = NULL;
+  line.key = (char*)"foo";
+  line.value = (char *)policy_str;
+  line.next = NULL;
+
+  test_assert(0 == policies_parse_exit_policy(&line, &policy, 0, NULL));
+  summary = policy_summarize(policy);
+
+  if (expected_summary == NULL)
+    test_assert(summary == NULL);
+  else {
+    test_assert(summary != NULL);
+    test_streq(summary, expected_summary);
+    tor_free(summary);
+  };
+  addr_policy_list_free(policy);
+}
+
+static void
 test_policies(void)
 {
   smartlist_t *policy, *policy2;
@@ -3386,6 +3411,20 @@ test_policies(void)
   test_eq(smartlist_len(policy), 2);
 
   addr_policy_list_free(policy);
+
+  /* test policy summaries */
+  /* check if we properly ignore private IP addresses */
+  test_policy_summary_helper("reject 192.168.0.0/16:*,reject 0.0.0.0/8:*,reject 10.0.0.0/8:*,accept *:10-30,accept *:90,reject *:*", "accept 10-30,90");
+  /* check all accept policies, and proper counting of rejects */
+  test_policy_summary_helper("reject 11.0.0.0/9:80, reject 12.0.0.0/9:80, reject 13.0.0.0/9:80, reject 14.0.0.0/9:80,                     accept *:*", "accept 1-65535");
+  test_policy_summary_helper("reject 11.0.0.0/9:80, reject 12.0.0.0/9:80, reject 13.0.0.0/9:80, reject 14.0.0.0/9:80, reject 15.0.0.0:81, accept *:*", "accept 1-65535");
+  test_policy_summary_helper("reject 11.0.0.0/9:80, reject 12.0.0.0/9:80, reject 13.0.0.0/9:80, reject 14.0.0.0/9:80, reject 15.0.0.0:80, accept *:*", "reject 80");
+  /* no exits */
+  test_policy_summary_helper("accept 11.0.0.0/9:80, reject *:*", NULL);
+  /* port merging */
+  test_policy_summary_helper("accept *:80, accept *:81, accept *:100-110, accept *:111, reject *:*", "accept 80-81,100-111");
+  /* border ports */
+  test_policy_summary_helper("accept *:1, accept *:3, accept *:65535, reject *:*", "accept 1,3,65535");
 }
 
 static void
