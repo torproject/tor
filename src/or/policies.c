@@ -38,6 +38,22 @@ static smartlist_t *reachable_or_addr_policy = NULL;
  * to directories at. */
 static smartlist_t *reachable_dir_addr_policy = NULL;
 
+/** Element of an exit policy summary */
+typedef struct policy_summary_item_t {
+    uint16_t prt_min; /**< Lowest port number to accept/reject. */
+    uint16_t prt_max; /**< Highest port number to accept/reject. */
+    uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
+                                this portrange. */
+    int accepted:1; /** Has this port already been accepted */
+} policy_summary_item_t;
+
+smartlist_t *policy_summary_create(void);
+void policy_summary_accept(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
+void policy_summary_reject(smartlist_t *summary, maskbits_t maskbits, uint16_t prt_min, uint16_t prt_max);
+void policy_summary_add_item(smartlist_t *summary, addr_policy_t *p);
+int policy_summary_split(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
+policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts);
+
 /** Private networks.  This list is used in two places, once to expand the
  *  "private" keyword when parsing our own exit policy, secondly to ignore
  *  just such networks when building exit policy summaries.  It is important
@@ -911,23 +927,6 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
   return (int)written;
 }
 
-/** Element of an exit policy summary */
-typedef struct policy_summary_item_t {
-    uint16_t prt_min; /**< Lowest port number to accept/reject. */
-    uint16_t prt_max; /**< Highest port number to accept/reject. */
-    uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
-                                this portrange. */
-    int accepted:1; /** Has this port already been accepted */
-} policy_summary_item_t;
-
-smartlist_t *policy_summary_create(void);
-void policy_summary_accept(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
-void policy_summary_reject(smartlist_t *summary, maskbits_t maskbits, uint16_t prt_min, uint16_t prt_max);
-void policy_summary_add_item(smartlist_t *summary, addr_policy_t *p);
-char * policy_summarize(smartlist_t *policy);
-int policy_summary_split(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
-policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts);
-
 /** Create a new exit policy summary, initially only with a single
  *  port 1-64k item */
 /* XXXX This entire thing will do most stuff in O(N^2), or worse.  Use an
@@ -1168,7 +1167,6 @@ policy_summarize(smartlist_t *policy)
 
   return result;
 }
-
 
 /** Implementation for GETINFO control command: knows the answer for questions
  * about "exit-policy/..." */

@@ -3666,6 +3666,8 @@ void addr_policy_list_free(smartlist_t *p);
 void addr_policy_free(addr_policy_t *p);
 void policies_free_all(void);
 
+char *policy_summarize(smartlist_t *policy);
+
 /********************************* reasons.c ***************************/
 
 const char *stream_end_reason_to_control_string(int reason);
