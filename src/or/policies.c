@@ -967,8 +967,8 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts) {
 
   old->prt_max = new_starts-1;
 
-  tor_assert(old->prt_min < old->prt_max);
-  tor_assert(new->prt_min < new->prt_max);
+  tor_assert(old->prt_min <= old->prt_max);
+  tor_assert(new->prt_min <= new->prt_max);
   return new;
 }
 
@@ -1054,7 +1054,7 @@ void
 policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
 {
   if (p->policy_type == ADDR_POLICY_ACCEPT) {
-    if (p->maskbits != 0) {
+    if (p->maskbits == 0) {
       policy_summary_accept(summary, p->prt_min, p->prt_max);
     }
   } else if (p->policy_type == ADDR_POLICY_REJECT) {
