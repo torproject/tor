@@ -1015,13 +1015,14 @@ policy_summary_accept(smartlist_t *summary,
                       uint16_t prt_min, uint16_t prt_max)
 {
   int i = policy_summary_split(summary, prt_min, prt_max);
-  while (AT(i)->prt_max <= prt_max) {
-    if (AT(i)->accepted ||
-        AT(i)->reject_count > REJECT_CUTOFF_COUNT)
-      continue;
-    AT(i)->accepted = 1;
+  while (i < smartlist_len(summary) &&
+         AT(i)->prt_max <= prt_max) {
+    if (!AT(i)->accepted &&
+        AT(i)->reject_count <= REJECT_CUTOFF_COUNT)
+      AT(i)->accepted = 1;
     i++;
   }
+  tor_assert(i < smartlist_len(summary) || prt_max==65535);
 }
 
 /** Count the number of addresses in a network with prefixlen maskbits
@@ -1034,10 +1035,12 @@ policy_summary_reject(smartlist_t *summary,
   int i = policy_summary_split(summary, prt_min, prt_max);
   /* XXX: ipv4 specific */
   int count = (1 << (32-maskbits));
-  while (AT(i)->prt_max <= prt_max) {
+  while (i < smartlist_len(summary) &&
+         AT(i)->prt_max <= prt_max) {
     AT(i)->reject_count += count;
     i++;
   }
+  tor_assert(i < smartlist_len(summary) || prt_max==65535);
 }
 
 /** Add a single exit policy item to our summary:
