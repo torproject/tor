@@ -48,11 +48,15 @@ typedef struct policy_summary_item_t {
 } policy_summary_item_t;
 
 smartlist_t *policy_summary_create(void);
-void policy_summary_accept(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
-void policy_summary_reject(smartlist_t *summary, maskbits_t maskbits, uint16_t prt_min, uint16_t prt_max);
+void policy_summary_accept(smartlist_t *summary,
+                           uint16_t prt_min, uint16_t prt_max);
+void policy_summary_reject(smartlist_t *summary, maskbits_t maskbits,
+                           uint16_t prt_min, uint16_t prt_max);
 void policy_summary_add_item(smartlist_t *summary, addr_policy_t *p);
-int policy_summary_split(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
-policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts);
+int policy_summary_split(smartlist_t *summary,
+                         uint16_t prt_min, uint16_t prt_max);
+policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old,
+                                                 uint16_t new_starts);
 
 /** Private networks.  This list is used in two places, once to expand the
  *  "private" keyword when parsing our own exit policy, secondly to ignore
@@ -956,7 +960,8 @@ policy_summary_create(void)
  * previously ended.
  */
 policy_summary_item_t*
-policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts) {
+policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
+{
   policy_summary_item_t* new;
 
   new = tor_malloc_zero(sizeof(policy_summary_item_t));
@@ -998,7 +1003,7 @@ policy_summary_split(smartlist_t *summary,
   }
   start_at_index = i;
 
-  while(AT(i)->prt_max < prt_max)
+  while (AT(i)->prt_max < prt_max)
     i++;
   if (AT(i)->prt_max != prt_max) {
     policy_summary_item_t* new_item;
@@ -1253,4 +1258,3 @@ policies_free_all(void)
   HT_CLEAR(policy_map, &policy_root);
 }
 
-/* vim:set et ts=2 shiftwidth=2: */
