@@ -1085,6 +1085,8 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
 /** Create a string representing a summary for an exit policy.
  * The summary will either be an "accept" plus a comma-seperated list of port
  * ranges or a "reject" plus portranges, depending on which is shorter.
+ *
+ * If no exits are allowed at all then NULL is returned.
  */
 char *
 policy_summarize(smartlist_t *policy)
@@ -1139,6 +1141,9 @@ policy_summarize(smartlist_t *policy)
   /* Figure out which of the two stringlists will be shorter and use
    * that to build the result
    */
+  if (smartlist_len(accepts) == 0) /* no exits at all */
+    return NULL;
+
   accepts_str = smartlist_join_strings(accepts, ",", 0, &accepts_len);
   rejects_str = smartlist_join_strings(rejects, ",", 0, &rejects_len);
 
