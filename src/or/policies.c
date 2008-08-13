@@ -38,16 +38,23 @@ static smartlist_t *reachable_or_addr_policy = NULL;
  * to directories at. */
 static smartlist_t *reachable_dir_addr_policy = NULL;
 
+/** Private networks.  This list is used in two places, once to expand the
+ *  "private" keyword when parsing our own exit policy, secondly to ignore
+ *  just such networks when building exit policy summaries.  It is important
+ *  that all authorities agree on that list when creating summaries, so don't
+ *  just change this without a proper migration plan and a proposal and stuff.
+ */
+static const char *private_nets[] = {
+  "0.0.0.0/8", "169.254.0.0/16",
+  "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",
+  // "fc00::/7", "fe80::/10", "fec0::/10", "::/127",
+  NULL };
+
 /** Replace all "private" entries in *<b>policy</b> with their expanded
  * equivalents. */
 void
 policy_expand_private(smartlist_t **policy)
 {
-  static const char *private_nets[] = {
-    "0.0.0.0/8", "169.254.0.0/16",
-    "127.0.0.0/8", "192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12",
-    // "fc00::/7", "fe80::/10", "fec0::/10", "::/127",
-    NULL };
   uint16_t port_min, port_max;
 
   int i;
@@ -904,6 +911,105 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
   return (int)written;
 }
 
+/** Element of an exit policy summary */
+typedef struct policy_summary_item_t {
+    uint16_t prt_min; /**< Lowest port number to accept/reject. */
+    uint16_t prt_max; /**< Highest port number to accept/reject. */
+    uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
+                                this portrange. */
+} policy_summary_item_t;
+
+smartlist_t *policy_summary_create(void);
+void policy_summary_accept(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
+void policy_summary_reject(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
+void policy_summary_add_item(smartlist_t *summary, addr_policy_t *p);
+void policy_summarize(smartlist_t *policy);
+
+/** Create a new exit policy summary, initially only with a single
+ *  port 1-64k item */
+smartlist_t *
+policy_summary_create(void)
+{
+  smartlist_t *summary;
+  policy_summary_item_t* item;
+
+  item = tor_malloc_zero(sizeof(policy_summary_item_t));
+  item->prt_min = 1;
+  item->prt_max = 65535;
+  item->reject_count = 0;
+
+  summary = smartlist_create();
+  smartlist_add(summary, item);
+
+  return summary;
+}
+
+void
+policy_summary_accept(smartlist_t *summary, 
+                      uint16_t prt_min, uint16_t prt_max)
+{
+ /* XXX */
+ (void) summary;
+ (void) prt_min;
+ (void) prt_max;
+}
+
+void
+policy_summary_reject(smartlist_t *summary, 
+                      uint16_t prt_min, uint16_t prt_max)
+{
+ /* XXX */
+ (void) summary;
+ (void) prt_min;
+ (void) prt_max;
+}
+
+/** Add a single exit policy item to our summary */
+void
+policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
+{
+  if (p->policy_type == ADDR_POLICY_ACCEPT) {
+    if (p->maskbits != 0) {
+      policy_summary_accept(summary, p->prt_min, p->prt_max);
+    }
+  } else if (p->policy_type == ADDR_POLICY_REJECT) {
+
+     int is_private = 0;
+     int i;
+     for (i = 0; private_nets[i]; ++i) {
+       tor_addr_t addr;
+       maskbits_t maskbits;
+       if (tor_addr_parse_mask_ports(private_nets[i], &addr,
+                                  &maskbits, NULL, NULL)<0) {
+         tor_assert(0);
+       }
+       if (tor_addr_compare(&p->addr, &addr, CMP_EXACT) == 0 &&
+           p->maskbits == maskbits) {
+         is_private = 1;
+         break;
+       }
+     }
+
+     if (!is_private) {
+       policy_summary_reject(summary, p->prt_min, p->prt_max);
+     }
+  } else
+    tor_assert(0);
+}
+
+void
+policy_summarize(smartlist_t *policy)
+{
+  smartlist_t *summary = policy_summary_create();
+  tor_assert(policy);
+
+  SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
+    policy_summary_add_item(summary, p);
+  });
+
+}
+
+
 /** Implementation for GETINFO control command: knows the answer for questions
  * about "exit-policy/..." */
 int
@@ -972,3 +1078,4 @@ policies_free_all(void)
   HT_CLEAR(policy_map, &policy_root);
 }
 
+/* vim:set et ts=2 shiftwidth=2: */
