@@ -917,13 +917,16 @@ typedef struct policy_summary_item_t {
     uint16_t prt_max; /**< Highest port number to accept/reject. */
     uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
                                 this portrange. */
+    int accepted:1; /** Has this port already been accepted */
 } policy_summary_item_t;
 
 smartlist_t *policy_summary_create(void);
 void policy_summary_accept(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
-void policy_summary_reject(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
+void policy_summary_reject(smartlist_t *summary, maskbits_t maskbits, uint16_t prt_min, uint16_t prt_max);
 void policy_summary_add_item(smartlist_t *summary, addr_policy_t *p);
 void policy_summarize(smartlist_t *policy);
+int policy_summary_split(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
+policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts);
 
 /** Create a new exit policy summary, initially only with a single
  *  port 1-64k item */
@@ -937,6 +940,7 @@ policy_summary_create(void)
   item->prt_min = 1;
   item->prt_max = 65535;
   item->reject_count = 0;
+  item->accepted = 0;
 
   summary = smartlist_create();
   smartlist_add(summary, item);
@@ -944,24 +948,91 @@ policy_summary_create(void)
   return summary;
 }
 
-void
-policy_summary_accept(smartlist_t *summary, 
-                      uint16_t prt_min, uint16_t prt_max)
-{
- /* XXX */
- (void) summary;
- (void) prt_min;
- (void) prt_max;
+/** Split the summary item in <b>item</b> at the port <b>new_starts</b>.
+ * The current item is changed to end at new-starts - 1, the new item
+ * copies reject_count and accepted from the old item,
+ * starts at new_starts and ends at the port where the original item
+ * previously ended.
+ */
+policy_summary_item_t*
+policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts) {
+  policy_summary_item_t* new;
+
+  new = tor_malloc_zero(sizeof(policy_summary_item_t));
+  new->prt_min = new_starts;
+  new->prt_max = old->prt_max;
+  new->reject_count = old->reject_count;
+  new->accepted = old->accepted;
+
+  old->prt_max = new_starts-1;
+
+  tor_assert(old->prt_min < old->prt_max);
+  tor_assert(new->prt_min < new->prt_max);
+  return new;
 }
 
+#define AT(x) ((policy_summary_item_t*)smartlist_get(summary, x))
+#define REJECT_CUTOFF_COUNT (1<<25)
+/* Split an exit policy summary so that prt_min and prt_max
+ * fall at exactly the start and end of an item respectively.
+ */
+int
+policy_summary_split(smartlist_t *summary,
+                     uint16_t prt_min, uint16_t prt_max)
+{
+  int start_at_index;
+
+  int i = 0;
+  while (AT(i)->prt_max < prt_min)
+    i++;
+  if (AT(i)->prt_min != prt_min) {
+    policy_summary_item_t* new_item;
+    new_item = policy_summary_item_split(AT(i), prt_min);
+    smartlist_insert(summary, i+1, new_item);
+    i++;
+  }
+  start_at_index = i;
+
+  while(AT(i)->prt_max < prt_max)
+    i++;
+  if (AT(i)->prt_max != prt_max) {
+    policy_summary_item_t* new_item;
+    new_item = policy_summary_item_split(AT(i), prt_max+1);
+    smartlist_insert(summary, i+1, new_item);
+  }
+
+  return start_at_index;
+}
+
+/** Mark port ranges as accepted if they are below the reject_count */
 void
-policy_summary_reject(smartlist_t *summary, 
+policy_summary_accept(smartlist_t *summary,
                       uint16_t prt_min, uint16_t prt_max)
 {
- /* XXX */
- (void) summary;
- (void) prt_min;
- (void) prt_max;
+  int i = policy_summary_split(summary, prt_min, prt_max);
+  while (AT(i)->prt_max <= prt_max) {
+    if (AT(i)->accepted ||
+        AT(i)->reject_count > REJECT_CUTOFF_COUNT)
+      continue;
+    AT(i)->accepted = 1;
+    i++;
+  }
+}
+
+/** Count the number of addresses in a network with prefixlen maskbits
+ * against the given portrange. */
+void
+policy_summary_reject(smartlist_t *summary,
+                      maskbits_t maskbits,
+                      uint16_t prt_min, uint16_t prt_max)
+{
+  int i = policy_summary_split(summary, prt_min, prt_max);
+  /* XXX: ipv4 specific */
+  int count = (1 << (32-maskbits));
+  while (AT(i)->prt_max <= prt_max) {
+    AT(i)->reject_count += count;
+    i++;
+  }
 }
 
 /** Add a single exit policy item to our summary */
@@ -991,7 +1062,7 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
      }
 
      if (!is_private) {
-       policy_summary_reject(summary, p->prt_min, p->prt_max);
+       policy_summary_reject(summary, p->maskbits, p->prt_min, p->prt_max);
      }
   } else
     tor_assert(0);
