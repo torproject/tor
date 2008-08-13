@@ -1086,7 +1086,9 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
  * The summary will either be an "accept" plus a comma-seperated list of port
  * ranges or a "reject" plus portranges, depending on which is shorter.
  *
- * If no exits are allowed at all then NULL is returned.
+ * If no exits are allowed at all then NULL is returned, if no ports
+ * are blocked instead of "reject " we return "accept 1-65535" (this
+ * is an exception to the shorter-representation-wins rule).
  */
 char *
 policy_summarize(smartlist_t *policy)
@@ -1095,7 +1097,7 @@ policy_summarize(smartlist_t *policy)
   smartlist_t *accepts, *rejects;
   int i, last, start_prt;
   size_t accepts_len, rejects_len, shorter_len, final_size;
-  char *accepts_str, *rejects_str, *shorter_str, *result;
+  char *accepts_str = NULL, *rejects_str = NULL, *shorter_str, *result;
   const char *prefix;
 
   tor_assert(policy);
@@ -1141,8 +1143,14 @@ policy_summarize(smartlist_t *policy)
   /* Figure out which of the two stringlists will be shorter and use
    * that to build the result
    */
-  if (smartlist_len(accepts) == 0) /* no exits at all */
-    return NULL;
+  if (smartlist_len(accepts) == 0) { /* no exits at all */
+    result = NULL;
+    goto cleanup;
+  }
+  if (smartlist_len(rejects) == 0) { /* no rejects at all */
+    result = tor_strdup("accept 1-65535");
+    goto cleanup;
+  }
 
   accepts_str = smartlist_join_strings(accepts, ",", 0, &accepts_len);
   rejects_str = smartlist_join_strings(rejects, ",", 0, &rejects_len);
@@ -1161,6 +1169,7 @@ policy_summarize(smartlist_t *policy)
   result = malloc(final_size);
   tor_snprintf(result, final_size, "%s %s", prefix, shorter_str);
 
+cleanup:
   /* cleanup */
   SMARTLIST_FOREACH(summary, policy_summary_item_t *, s, tor_free(s));
   smartlist_clear(summary);
