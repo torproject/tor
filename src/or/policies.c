@@ -924,13 +924,14 @@ smartlist_t *policy_summary_create(void);
 void policy_summary_accept(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
 void policy_summary_reject(smartlist_t *summary, maskbits_t maskbits, uint16_t prt_min, uint16_t prt_max);
 void policy_summary_add_item(smartlist_t *summary, addr_policy_t *p);
-void policy_summarize(smartlist_t *policy);
+char * policy_summarize(smartlist_t *policy);
 int policy_summary_split(smartlist_t *summary, uint16_t prt_min, uint16_t prt_max);
 policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts);
 
 /** Create a new exit policy summary, initially only with a single
  *  port 1-64k item */
-/* XXXX This entire thing is O(N^2).  Use an RB-tree if that turns out to matter. */
+/* XXXX This entire thing will do most stuff in O(N^2), or worse.  Use an
+ *      RB-tree if that turns out to matter. */
 smartlist_t *
 policy_summary_create(void)
 {
@@ -1040,7 +1041,13 @@ policy_summary_reject(smartlist_t *summary,
   }
 }
 
-/** Add a single exit policy item to our summary */
+/** Add a single exit policy item to our summary:
+ *  If it is an accept ignore it unless it is for all IP addresses
+ *  ("*"), i.e. it's prefixlen/maskbits is 0, else call
+ *  policy_summary_accept().
+ *  If it's a reject ignore it if it is about one of the private
+ *  networks, else call policy_summary_reject().
+ */
 void
 policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
 {
@@ -1073,16 +1080,93 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
     tor_assert(0);
 }
 
-void
+/** Create a string representing a summary for an exit policy.
+ * The summary will either be an "accept" plus a comma-seperated list of port
+ * ranges or a "reject" plus portranges, depending on which is shorter.
+ */
+char *
 policy_summarize(smartlist_t *policy)
 {
   smartlist_t *summary = policy_summary_create();
+  smartlist_t *accepts, *rejects;
+  int i, last, start_prt;
+  size_t accepts_len, rejects_len, shorter_len, final_size;
+  char *accepts_str, *rejects_str, *shorter_str, *result;
+  const char *prefix;
+
   tor_assert(policy);
 
+  /* Create the summary list */
   SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
     policy_summary_add_item(summary, p);
   });
 
+  /* Now create two lists of strings, one for accepted and one
+   * for rejected ports.  We take care to merge ranges so that
+   * we avoid getting stuff like "1-4,5-9,10", instead we want
+   * "1-10"
+   */
+  i = 0;
+  start_prt = 1;
+  accepts = smartlist_create();
+  rejects = smartlist_create();
+  while (1) {
+    last = i == smartlist_len(summary)-1;
+    if (last ||
+        AT(i)->accepted != AT(i+1)->accepted) {
+      char buf[POLICY_BUF_LEN];
+
+      if (start_prt == AT(i)->prt_max)
+        tor_snprintf(buf, sizeof(buf), "%d", start_prt);
+      else
+        tor_snprintf(buf, sizeof(buf), "%d-%d", start_prt, AT(i)->prt_max);
+
+      if (AT(i)->accepted)
+        smartlist_add(accepts, tor_strdup(buf));
+      else
+        smartlist_add(rejects, tor_strdup(buf));
+
+      if (last)
+        break;
+
+      start_prt = AT(i+1)->prt_min;
+    };
+    i++;
+  };
+
+  /* Figure out which of the two stringlists will be shorter and use
+   * that to build the result
+   */
+  accepts_str = smartlist_join_strings(accepts, ",", 0, &accepts_len);
+  rejects_str = smartlist_join_strings(rejects, ",", 0, &rejects_len);
+
+  if (rejects_len < accepts_len) {
+    shorter_str = rejects_str;
+    shorter_len = rejects_len;
+    prefix = "reject";
+  } else {
+    shorter_str = accepts_str;
+    shorter_len = accepts_len;
+    prefix = "accept";
+  }
+
+  final_size = strlen(prefix)+1+shorter_len+1;
+  result = malloc(final_size);
+  tor_snprintf(result, final_size, "%s %s", prefix, shorter_str);
+
+  /* cleanup */
+  SMARTLIST_FOREACH(summary, policy_summary_item_t *, s, tor_free(s));
+  smartlist_clear(summary);
+
+  tor_free(accepts_str);
+  SMARTLIST_FOREACH(accepts, char *, s, tor_free(s));
+  smartlist_clear(accepts);
+
+  tor_free(rejects_str);
+  SMARTLIST_FOREACH(rejects, char *, s, tor_free(s));
+  smartlist_clear(rejects);
+
+  return result;
 }
 
 
