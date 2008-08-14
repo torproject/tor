@@ -1966,7 +1966,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
 
     r = tor_snprintf(cp, buf_len - (cp-buf),
                      "w Bandwidth=%d\n",
-                     router_get_advertised_bandwidth_capped(desc));
+                     router_get_advertised_bandwidth_capped(desc) / 1024);
     if (r<0) {
       log_warn(LD_BUG, "Not enough space in buffer.");
       return -1;

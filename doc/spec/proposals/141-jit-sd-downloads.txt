@@ -119,15 +119,18 @@ Status: Draft
   to the "r", "s", and "v" lines that already exist.  This line
   will convey weight information to clients.
 
-   "w Bandwidth=193671"
+   "w Bandwidth=193"
 
   The bandwidth number is the lesser of observed bandwidth and bandwidth
   rate limit from the server descriptor that the "r" line referenced by
   digest (1st and 3rd field of the bandwidth line in the descriptor).
+  It is given in kilobytes per second so the byte value in the
+  descriptor has to be divided by 1024 (and is then truncated, i.e.
+  rounded down).
 
   Authorities will cap the bandwidth number at some arbitrary value,
   currently 10MB/sec.  If a router claims a larger bandwidth an
-  authority's vote will still only show Bandwidth=10000000.
+  authority's vote will still only show Bandwidth=10240.
 
   The consensus value for bandwidth is the median of all bandwidth
   numbers given in votes.  In case of an even number of votes we use
