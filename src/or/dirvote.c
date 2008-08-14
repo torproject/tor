@@ -959,9 +959,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
         SMARTLIST_FOREACH(matching_descs, vote_routerstatus_t *, vsr, {
           /* Check if the vote where this status comes from had the
            * proper descriptor */
-          tor_assert(!memcmp(rs_out.identity_digest, vsr->status.identity_digest, DIGEST_LEN));
+          tor_assert(!memcmp(rs_out.identity_digest,
+                             vsr->status.identity_digest,
+                             DIGEST_LEN));
           if (vsr->status.has_exitsummary &&
-               !memcmp(rs_out.descriptor_digest, vsr->status.descriptor_digest, DIGEST_LEN)) {
+               !memcmp(rs_out.descriptor_digest,
+                       vsr->status.descriptor_digest,
+                       DIGEST_LEN)) {
             tor_assert(vsr->status.exitsummary);
             smartlist_add(exitsummaries, vsr->status.exitsummary);
             if (!chosen_exitsummary) {
@@ -1012,7 +1016,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
         if (chosen_exitsummary) {
           rs_out.has_exitsummary = 1;
-          rs_out.exitsummary = (char *)chosen_exitsummary; /* yea, discards the const */
+          /* yea, discards the const */
+          rs_out.exitsummary = (char *)chosen_exitsummary;
         }
       }
 
@@ -1031,7 +1036,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
-        int r = tor_snprintf(buf, sizeof(buf), "w Bandwidth=%d\n", rs_out.bandwidth);
+        int r = tor_snprintf(buf, sizeof(buf),
+                             "w Bandwidth=%d\n", rs_out.bandwidth);
         if (r<0) {
           log_warn(LD_BUG, "Not enough space in buffer for weight line.");
           *buf = '\0';
