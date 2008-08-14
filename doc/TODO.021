@@ -108,7 +108,8 @@ Weasel
   - Fix bug 393.
   - Get oftc to switch to Tor dns bulk exitlist. Or tell us why it's
     not suitable yet.
-  - Take non-Running entries out of the networkstatus consensus.
+  o Take non-Running entries out of the networkstatus consensus.
+    [proposal 138]
   - Move proposal 134 forward.
   - putting port predictions in state file
   - if tor hasn't been used in a while it stops fetching consensus
