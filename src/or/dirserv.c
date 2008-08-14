@@ -1875,21 +1875,6 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   char ipaddr[INET_NTOA_BUF_LEN];
   char identity64[BASE64_DIGEST_LEN+1];
   char digest64[BASE64_DIGEST_LEN+1];
-  routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
-
-  if (!desc) {
-    char id[HEX_DIGEST_LEN+1];
-    char dd[HEX_DIGEST_LEN+1];
-
-    base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
-    base16_encode(dd, sizeof(dd), rs->descriptor_digest, DIGEST_LEN);
-    log_warn(LD_BUG, "Cannot get the descriptor with digest %s for %s.",
-             id, dd);
-    return -1;
-  };
-  tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,
-                     rs->descriptor_digest,
-                     DIGEST_LEN));
 
   format_iso_time(published, rs->published_on);
   digest_to_base64(identity64, rs->identity_digest);
@@ -1912,6 +1897,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   }
   if (first_line_only)
     return 0;
+
   cp = buf + strlen(buf);
   /* NOTE: Whenever this list expands, be sure to increase MAX_FLAG_LINE_LEN*/
   r = tor_snprintf(cp, buf_len - (cp-buf),
@@ -1947,6 +1933,37 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   }
 
   if (!v2_format) {
+    routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
+
+    /* Blow up more or less nicely if we didn't get anything or not the
+     * thing we expected.
+     */
+    if (!desc) {
+      char id[HEX_DIGEST_LEN+1];
+      char dd[HEX_DIGEST_LEN+1];
+
+      base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
+      base16_encode(dd, sizeof(dd), rs->descriptor_digest, DIGEST_LEN);
+      log_warn(LD_BUG, "Cannot get the descriptor with digest %s for %s.",
+               id, dd);
+      return -1;
+    };
+    if(memcmp(desc->cache_info.signed_descriptor_digest,
+                       rs->descriptor_digest,
+                       DIGEST_LEN)) {
+      char rl_d[HEX_DIGEST_LEN+1];
+      char rs_d[HEX_DIGEST_LEN+1];
+
+      base16_encode(rl_d, sizeof(rl_d), desc->cache_info.signed_descriptor_digest, DIGEST_LEN);
+      base16_encode(rs_d, sizeof(rs_d), rs->descriptor_digest, DIGEST_LEN);
+      log_err(LD_BUG, "descriptor digest in routerlist does not match the one in routerstatus: %s vs %s\n",
+              rl_d, rs_d);
+
+      tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,
+                       rs->descriptor_digest,
+                       DIGEST_LEN));
+    };
+
     r = tor_snprintf(cp, buf_len - (cp-buf),
                      "w Bandwidth=%d\n",
                      router_get_advertised_bandwidth_capped(desc));
