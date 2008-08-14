@@ -1398,7 +1398,7 @@ typedef struct routerstatus_t {
                                * an exit node. */
   unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
                                     * underpowered, or otherwise useless? */
-  unsigned int is_hs_dir:1; /** True iff this router is a v2-or-later hidden
+  unsigned int is_hs_dir:1; /**< True iff this router is a v2-or-later hidden
                              * service directory. */
   /** True iff we know version info for this router. (i.e., a "v" entry was
    * included.)  We'll replace all these with a big tor_version_t or a char[]
