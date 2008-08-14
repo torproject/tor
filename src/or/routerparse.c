@@ -1888,9 +1888,9 @@ routerstatus_parse_entry_from_string(memarea_t *area,
   if ((tok = find_first_by_keyword(tokens, K_P))) {
     tor_assert(tok->n_args == 2);
     if (!strcmp(tok->args[0], "accept"))
-      rs->exitsummarytype = ADDR_POLICY_ACCEPT;
+      rs->exitsummary_type = ADDR_POLICY_ACCEPT;
     else if (!strcmp(tok->args[0], "reject"))
-      rs->exitsummarytype = ADDR_POLICY_REJECT;
+      rs->exitsummary_type = ADDR_POLICY_REJECT;
     else {
       log_warn(LD_DIR, "Unknown exit policy summary type %s.",
                escaped(tok->args[0]));

@@ -1420,7 +1420,7 @@ typedef struct routerstatus_t {
 
   uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
-  addr_policy_action_t exitsummarytype; /**< is the list of ports a list of
+  addr_policy_action_t exitsummary_type; /**< is the list of ports a list of
                                          * rejected or accepted ports? */
   char *exitsummary; /**< exit policy summary -
                       * XXX weasel: this probably should not stay a string. */
