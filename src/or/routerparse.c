@@ -53,9 +53,11 @@ typedef enum {
   K_DIR_OPTIONS,
   K_CLIENT_VERSIONS,
   K_SERVER_VERSIONS,
+  K_P,
   K_R,
   K_S,
   K_V,
+  K_W,
   K_EVENTDNS,
   K_EXTRA_INFO,
   K_EXTRA_INFO_DIGEST,
@@ -264,9 +266,11 @@ static token_rule_t extrainfo_token_table[] = {
 /** List of tokens allowable in the body part of v2 and v3 networkstatus
  * documents. */
 static token_rule_t rtrstatus_token_table[] = {
+  T01("p",                   K_P,                   GE(2),   NO_OBJ ),
   T1( "r",                   K_R,                   GE(8),   NO_OBJ ),
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
+  T01("w",                   K_W,                   ARGS,    NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   END_OF_TABLE
 };
@@ -1861,6 +1865,38 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     if (vote_rs) {
       vote_rs->version = tor_strdup(tok->args[0]);
     }
+  }
+
+  /* handle weighting/bandwidth info */
+  if ((tok = find_first_by_keyword(tokens, K_W))) {
+    int i;
+    for (i=0; i < tok->n_args; ++i) {
+      if (!strcmpstart(tok->args[i], "Bandwidth=")) {
+        int ok;
+        rs->bandwidth = tor_parse_ulong(strchr(tok->args[i], '=')+1, 10,
+                                        0, UINT32_MAX, &ok, NULL);
+        if (!ok) {
+          log_warn(LD_DIR, "Invalid Bandwidth %s", escaped(tok->args[i]));
+          goto err;
+        }
+      }
+    }
+  }
+
+  /* parse exit policy summaries */
+  if ((tok = find_first_by_keyword(tokens, K_P))) {
+    tor_assert(tok->n_args == 2);
+    if (!strcmp(tok->args[0], "accept"))
+      rs->exitsummarytype = ADDR_POLICY_ACCEPT;
+    else if (!strcmp(tok->args[0], "reject"))
+      rs->exitsummarytype = ADDR_POLICY_REJECT;
+    else {
+      log_warn(LD_DIR, "Unknown exit policy summary type %s.",
+               escaped(tok->args[0]));
+      goto err;
+    }
+    /* XXX weasel: parse this into ports and represent them somehow smart */
+    rs->exitsummary = tor_strdup(tok->args[1]);
   }
 
   if (!strcasecmp(rs->nickname, UNNAMED_ROUTER_NICKNAME))

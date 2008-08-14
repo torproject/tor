@@ -1415,6 +1415,13 @@ typedef struct routerstatus_t {
    * we can get v3 downloads from. */
   unsigned int version_supports_v3_dir:1;
 
+  uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
+                       * the vote/consensus, in kilobytes/sec. */
+  addr_policy_action_t exitsummarytype; /**< is the list of ports a list of
+                                         * rejected or accepted ports? */
+  char *exitsummary; /**< exit policy summary -
+                      * XXX weasel: this probably should not stay a string. */
+
   /* ---- The fields below aren't derived from the networkstatus; they
    * hold local information only. */
 
