@@ -1943,6 +1943,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       log_warn(LD_BUG, "Unable to print router version.");
       return -1;
     }
+    cp += strlen(cp);
   }
 
   if (!v2_format) {
@@ -1953,6 +1954,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       log_warn(LD_BUG, "Not enough space in buffer.");
       return -1;
     }
+    cp += strlen(cp);
 
     summary = policy_summarize(desc->exit_policy);
     if (summary) {
@@ -1961,6 +1963,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
         log_warn(LD_BUG, "Not enough space in buffer.");
         return -1;
       }
+      cp += strlen(cp);
       tor_free(summary);
     }
   }
