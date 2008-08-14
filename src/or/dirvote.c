@@ -145,7 +145,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
   {
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
-                                  vrs->version, 0) < 0) {
+                                  vrs->version, 0, 0) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
       goto err;
     }
@@ -924,7 +924,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Okay!! Now we can write the descriptor... */
       /*     First line goes into "buf". */
-      routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL, 1);
+      routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL, 1, 0);
       smartlist_add(chunks, tor_strdup(buf));
       /*     Second line is all flags.  The "\n" is missing. */
       smartlist_add(chunks,

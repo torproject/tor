@@ -1779,7 +1779,7 @@ char *
 networkstatus_getinfo_helper_single(routerstatus_t *rs)
 {
   char buf[RS_ENTRY_LEN+1];
-  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, 0);
+  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, 0, 0);
   return tor_strdup(buf);
 }
 

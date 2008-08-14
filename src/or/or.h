@@ -3301,7 +3301,7 @@ size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
 int routerstatus_format_entry(char *buf, size_t buf_len,
                               routerstatus_t *rs, const char *platform,
-                              int first_line_only);
+                              int first_line_only, int v2_format);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
