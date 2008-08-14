@@ -106,7 +106,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status %s\n"
-                 "consensus-methods 1 2 3 4\n"
+                 "consensus-methods 1 2 3 4 5\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -452,7 +452,7 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method >= 1) && (method <= 4);
+  return (method >= 1) && (method <= 5);
 }
 
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
@@ -688,6 +688,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *matching_descs = smartlist_create();
     smartlist_t *chosen_flags = smartlist_create();
     smartlist_t *versions = smartlist_create();
+    uint32_t *bandwidths = tor_malloc(sizeof(uint32_t) * smartlist_len(votes));
+    int num_bandwidths;
 
     int *n_voter_flags; /* n_voter_flags[j] is the number of flags that
                          * votes[j] knows about. */
@@ -819,6 +821,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(matching_descs);
       smartlist_clear(chosen_flags);
       smartlist_clear(versions);
+      num_bandwidths = 0;
 
       /* Okay, go through all the entries for this digest. */
       SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
@@ -850,6 +853,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
           }
           chosen_name = rs->status.nickname;
         }
+
+        /* count bandwidths */
+        if (rs->status.has_bandwidth)
+          bandwidths[num_bandwidths++] = rs->status.bandwidth;
       });
 
       /* We don't include this router at all unless more than half of
@@ -922,6 +929,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
         chosen_version = NULL;
       }
 
+      /* Pick a bandwidth */
+      if (consensus_method >= 5 && num_bandwidths > 0) {
+        rs_out.has_bandwidth = 1;
+        rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
+      }
+
       /* Okay!! Now we can write the descriptor... */
       /*     First line goes into "buf". */
       routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL, 1, 0);
@@ -935,6 +948,15 @@ networkstatus_compute_consensus(smartlist_t *votes,
         smartlist_add(chunks, tor_strdup(chosen_version));
       }
       smartlist_add(chunks, tor_strdup("\n"));
+      /*     Now the weight line. */
+      if (rs_out.has_bandwidth) {
+        int r = tor_snprintf(buf, sizeof(buf), "w Bandwidth=%d\n", rs_out.bandwidth);
+        if (r<0) {
+          log_warn(LD_BUG, "Not enough space in buffer for weight line.");
+          *buf = '\0';
+        }
+        smartlist_add(chunks, tor_strdup(buf));
+      };
 
       /* And the loop is over and we move on to the next router */
     }

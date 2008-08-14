@@ -1415,6 +1415,9 @@ typedef struct routerstatus_t {
    * we can get v3 downloads from. */
   unsigned int version_supports_v3_dir:1;
 
+  unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
+  unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
+
   uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
   addr_policy_action_t exitsummarytype; /**< is the list of ports a list of

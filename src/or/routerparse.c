@@ -1879,6 +1879,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
           log_warn(LD_DIR, "Invalid Bandwidth %s", escaped(tok->args[i]));
           goto err;
         }
+        rs->has_bandwidth = 1;
       }
     }
   }
@@ -1897,6 +1898,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     }
     /* XXX weasel: parse this into ports and represent them somehow smart */
     rs->exitsummary = tor_strdup(tok->args[1]);
+    rs->has_exitsummary = 1;
   }
 
   if (!strcasecmp(rs->nickname, UNNAMED_ROUTER_NICKNAME))
