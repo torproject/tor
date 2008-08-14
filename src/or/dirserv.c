@@ -1866,11 +1866,27 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   int r;
   struct in_addr in;
   char *cp;
+  char *summary;
 
   char published[ISO_TIME_LEN+1];
   char ipaddr[INET_NTOA_BUF_LEN];
   char identity64[BASE64_DIGEST_LEN+1];
   char digest64[BASE64_DIGEST_LEN+1];
+  routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
+
+  if (!desc) {
+    char id[HEX_DIGEST_LEN+1];
+    char dd[HEX_DIGEST_LEN+1];
+
+    base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
+    base16_encode(dd, sizeof(dd), rs->descriptor_digest, DIGEST_LEN);
+    log_warn(LD_BUG, "Cannot get the descriptor with digest %s for %s.",
+             id, dd);
+    return -1;
+  };
+  tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,
+                     rs->descriptor_digest,
+                     DIGEST_LEN));
 
   format_iso_time(published, rs->published_on);
   digest_to_base64(identity64, rs->identity_digest);
@@ -1896,7 +1912,8 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   cp = buf + strlen(buf);
   /* NOTE: Whenever this list expands, be sure to increase MAX_FLAG_LINE_LEN*/
   r = tor_snprintf(cp, buf_len - (cp-buf),
-                   "s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+                   "s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
+                   "w Bandwidth=%d\n",
                   /* These must stay in alphabetical order. */
                    rs->is_authority?" Authority":"",
                    rs->is_bad_directory?" BadDirectory":"",
@@ -1910,7 +1927,8 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    rs->is_stable?" Stable":"",
                    rs->is_unnamed?" Unnamed":"",
                    rs->is_v2_dir?" V2Dir":"",
-                   rs->is_valid?" Valid":"");
+                   rs->is_valid?" Valid":"",
+                   router_get_advertised_bandwidth_capped(desc));
   if (r<0) {
     log_warn(LD_BUG, "Not enough space in buffer.");
     return -1;
@@ -1924,6 +1942,16 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       log_warn(LD_BUG, "Unable to print router version.");
       return -1;
     }
+  }
+
+  summary = policy_summarize(desc->exit_policy);
+  if (summary) {
+    r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
+    if (r<0) {
+      log_warn(LD_BUG, "Not enough space in buffer.");
+      return -1;
+    }
+    tor_free(summary);
   }
 
   return 0;

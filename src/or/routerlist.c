@@ -1431,6 +1431,19 @@ router_get_advertised_bandwidth(routerinfo_t *router)
  * routers by bandwidth. */
 #define DEFAULT_MAX_BELIEVABLE_BANDWIDTH 10000000 /* 10 MB/sec */
 
+/** Return the smaller of the router's configured BandwidthRate
+ * and its advertised capacity, capped by max-believe-bw. */
+uint32_t
+router_get_advertised_bandwidth_capped(routerinfo_t *router)
+{
+  uint32_t result = router->bandwidthcapacity;
+  if (result > router->bandwidthrate)
+    result = router->bandwidthrate;
+  if (result > DEFAULT_MAX_BELIEVABLE_BANDWIDTH)
+    result = DEFAULT_MAX_BELIEVABLE_BANDWIDTH;
+  return result;
+}
+
 /** Eventually, the number we return will come from the directory
  * consensus, so clients can dynamically update to better numbers.
  *
