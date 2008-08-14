@@ -266,7 +266,7 @@ static token_rule_t extrainfo_token_table[] = {
 /** List of tokens allowable in the body part of v2 and v3 networkstatus
  * documents. */
 static token_rule_t rtrstatus_token_table[] = {
-  T01("p",                   K_P,                   GE(2),   NO_OBJ ),
+  T01("p",                   K_P,               CONCAT_ARGS, NO_OBJ ),
   T1( "r",                   K_R,                   GE(8),   NO_OBJ ),
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
@@ -1886,18 +1886,18 @@ routerstatus_parse_entry_from_string(memarea_t *area,
 
   /* parse exit policy summaries */
   if ((tok = find_first_by_keyword(tokens, K_P))) {
-    tor_assert(tok->n_args == 2);
-    if (!strcmp(tok->args[0], "accept"))
-      rs->exitsummary_type = ADDR_POLICY_ACCEPT;
-    else if (!strcmp(tok->args[0], "reject"))
-      rs->exitsummary_type = ADDR_POLICY_REJECT;
-    else {
-      log_warn(LD_DIR, "Unknown exit policy summary type %s.",
+    tor_assert(tok->n_args == 1);
+    if (strcmpstart(tok->args[0], "accept ") &&
+        strcmpstart(tok->args[0], "reject ")) {
+      log_err(LD_DIR, "Unknown exit policy summary type %s.",
                escaped(tok->args[0]));
       goto err;
     }
-    /* XXX weasel: parse this into ports and represent them somehow smart */
-    rs->exitsummary = tor_strdup(tok->args[1]);
+    /* XXX weasel: parse this into ports and represent them somehow smart,
+     * maybe not here but somewhere on if we need it for the client.
+     * we should still parse it here to check it's valid tho.
+     */
+    rs->exitsummary = tor_strdup(tok->args[0]);
     rs->has_exitsummary = 1;
   }
 
