@@ -688,6 +688,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *matching_descs = smartlist_create();
     smartlist_t *chosen_flags = smartlist_create();
     smartlist_t *versions = smartlist_create();
+    smartlist_t *exitsummaries = smartlist_create();
     uint32_t *bandwidths = tor_malloc(sizeof(uint32_t) * smartlist_len(votes));
     int num_bandwidths;
 
@@ -799,6 +800,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       const char *lowest_id = NULL;
       const char *chosen_version;
       const char *chosen_name = NULL;
+      int exitsummary_disagreement = 0;
       int is_named = 0, is_unnamed = 0, is_running = 0;
       int naming_conflict = 0;
       int n_listing = 0;
@@ -935,6 +937,85 @@ networkstatus_compute_consensus(smartlist_t *votes,
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
       }
 
+      /* Ok, we already picked a descriptor digest we want to list
+       * previously.  Now we want to use the exit policy summary from
+       * that descriptor.  If everybody plays nice all the voters who
+       * listed that descriptor will have the same summary.  If not then
+       * something is fishy and we'll use the most common one (breaking
+       * ties in favor of lexigraphically larger one (only because it
+       * lets me reuse more existing code.
+       *
+       * The other case that can happen is that no authority that voted
+       * for that descriptor has an exit policy summary.  That's
+       * probably quite unlikely but can happen.  In that case we use
+       * the policy that was most often listed in votes, again breaking
+       * ties like in the previous case.
+       */
+      if (consensus_method >= 5) {
+        /* Okay, go through all the votes for this router.  We prepared
+         * that list previously */
+        const char *chosen_exitsummary = NULL;
+        smartlist_clear(exitsummaries);
+        SMARTLIST_FOREACH(matching_descs, vote_routerstatus_t *, vsr, {
+          /* Check if the vote where this status comes from had the
+           * proper descriptor */
+          tor_assert(!memcmp(rs_out.identity_digest, vsr->status.identity_digest, DIGEST_LEN));
+          if (vsr->status.has_exitsummary &&
+               !memcmp(rs_out.descriptor_digest, vsr->status.descriptor_digest, DIGEST_LEN)) {
+            tor_assert(vsr->status.exitsummary);
+            smartlist_add(exitsummaries, vsr->status.exitsummary);
+            if (!chosen_exitsummary) {
+              chosen_exitsummary = vsr->status.exitsummary;
+            } else if (strcmp(chosen_exitsummary, vsr->status.exitsummary)) {
+              /* Great.  There's disagreement among the voters.  That
+               * really shouldn't be */
+              exitsummary_disagreement = 1;
+            }
+          }
+        });
+
+        if (exitsummary_disagreement) {
+          char id[HEX_DIGEST_LEN+1];
+          char dd[HEX_DIGEST_LEN+1];
+          base16_encode(id, sizeof(dd), rs_out.identity_digest, DIGEST_LEN);
+          base16_encode(dd, sizeof(dd), rs_out.descriptor_digest, DIGEST_LEN);
+          log_warn(LD_DIR, "The voters disgreed on the exit policy summary for"
+                   " router %s with descriptor %s.  This really shouldn't"
+                   " have happened.", id, dd);
+
+          smartlist_sort_strings(exitsummaries);
+          chosen_exitsummary = get_most_frequent_member(exitsummaries);
+        } else if (!chosen_exitsummary) {
+          char id[HEX_DIGEST_LEN+1];
+          char dd[HEX_DIGEST_LEN+1];
+          base16_encode(id, sizeof(dd), rs_out.identity_digest, DIGEST_LEN);
+          base16_encode(dd, sizeof(dd), rs_out.descriptor_digest, DIGEST_LEN);
+          log_warn(LD_DIR, "Not one of the voters that made us select"
+                   "descriptor %s for router %s had an exit policy"
+                   "summary", dd, id);
+
+          /* Ok, none of those voting for the digest we chose had an
+           * exit policy for us.  Well, that kinda sucks.
+           */
+          smartlist_clear(exitsummaries);
+          SMARTLIST_FOREACH(matching_descs, vote_routerstatus_t *, vsr, {
+            if (vsr->status.has_exitsummary)
+              smartlist_add(exitsummaries, vsr->status.exitsummary);
+          });
+          smartlist_sort_strings(exitsummaries);
+          chosen_exitsummary = get_most_frequent_member(exitsummaries);
+
+          if (!chosen_exitsummary)
+            log_warn(LD_DIR, "Wow, not one of the voters had an exit "
+                     "policy summary for %s.  Wow.", id);
+        }
+
+        if (chosen_exitsummary) {
+          rs_out.has_exitsummary = 1;
+          rs_out.exitsummary = (char *)chosen_exitsummary; /* yea, discards the const */
+        }
+      }
+
       /* Okay!! Now we can write the descriptor... */
       /*     First line goes into "buf". */
       routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL, 1, 0);
@@ -957,6 +1038,15 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
         smartlist_add(chunks, tor_strdup(buf));
       };
+      /*     Now the exitpolicy summary line. */
+      if (rs_out.has_exitsummary) {
+        int r = tor_snprintf(buf, sizeof(buf), "p %s\n", rs_out.exitsummary);
+        if (r<0) {
+          log_warn(LD_BUG, "Not enough space in buffer for exitpolicy line.");
+          *buf = '\0';
+        }
+        smartlist_add(chunks, tor_strdup(buf));
+      };
 
       /* And the loop is over and we move on to the next router */
     }
@@ -975,6 +1065,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(matching_descs);
     smartlist_free(chosen_flags);
     smartlist_free(versions);
+    smartlist_free(exitsummaries);
   }
 
   /* Add a signature. */

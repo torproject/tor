@@ -259,11 +259,32 @@ Status: Draft
   use an accept-style summary and list as much of the port list as is
   possible within these 1000 bytes.
 
-  Similarly to IP address, ports, and timestamp a consensus should list
-  the exit policy matching the descriptor digest referenced in the
-  consensus document (See dir-spec section 3.4).
+3.4.1 Consensus selection
 
-3.4.1 Client behaviour
+  When building a consensus, authorities have to agree on a digest of
+  the server descriptor to list in the router line for each router.
+  This is documented in dir-spec section 3.4.
+
+  All authorities that listed that agreed upon descriptor digest in
+  their vote should also list the same exit policy summary - or list
+  none at all if the authority has not been upgraded to list that
+  information in their vote.
+
+  If we have votes with matching server descriptor digest of which at
+  least one of them has an exit policy then we differ between two cases:
+   a) all authorities agree (or abstained) on the policy summary, and we
+      use the exit policy summary that they all listed in their vote,
+   b) something went wrong (or some authority is playing foul) and we
+      have different policy summaries.  In that case we pick the one
+      that is most commonly listed in votes with the matching
+      descriptor.  We break ties in favour of the lexigraphically larger
+      vote.
+
+  If none one of the votes with a matching server descriptor digest has
+  an exit policy summary we use the most commonly listed one in all
+  votes, breaking ties like in case b above.
+
+3.4.2 Client behaviour
 
   When choosing an exit node for a specific request a Tor client will
   choose from the list of nodes that exit to the requested port as given
