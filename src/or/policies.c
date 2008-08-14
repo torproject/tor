@@ -1139,7 +1139,7 @@ policy_summarize(smartlist_t *policy)
    * that to build the result
    */
   if (smartlist_len(accepts) == 0) { /* no exits at all */
-    result = NULL;
+    result = tor_strdup("reject 1-65535");
     goto cleanup;
   }
   if (smartlist_len(rejects) == 0) { /* no rejects at all */

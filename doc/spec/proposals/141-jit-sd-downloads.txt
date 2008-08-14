@@ -233,18 +233,21 @@ Status: Draft
      at most two /8 networks).
 
   An exit policy summary will be included in votes and consensus as a
-  new line attached to each exit node.  A lack of policy should indicate
-  a non-exit policy.  The line will have the format
+  new line attached to each exit node.  The line will have the format
    "p" <space> "accept"|"reject" <portlist>
   where portlist is a comma seperated list of single port numbers or
-  portranges (e.g.  "22,80-88,1024-6000,6667").  Whether the summary
-  shows the list of accepted ports or the list of rejected ports depends
-  on which list is shorter (has a shorter string representation).  In
-  case of ties we choose the list of accepted ports.  As an exception to
-  this rule an allow-all policy is represented as "accept 1-65535"
-  instead of "reject ".  Summary items are compressed, that is instead
-  of "80-88,89-100" there only is a single item of "80-100", similarly
-  instead of "20,21" a summary will say "20-21".
+  portranges (e.g.  "22,80-88,1024-6000,6667").
+
+  Whether the summary shows the list of accepted ports or the list of
+  rejected ports depends on which list is shorter (has a shorter string
+  representation).  In case of ties we choose the list of accepted
+  ports.  As an exception to this rule an allow-all policy is
+  represented as "accept 1-65535" instead of "reject " and a reject-all
+  policy is similarly given as "reject 1-65535".
+
+  Summary items are compressed, that is instead of "80-88,89-100" there
+  only is a single item of "80-100", similarly instead of "20,21" a
+  summary will say "20-21".
 
   Port lists are sorted in ascending order.
 

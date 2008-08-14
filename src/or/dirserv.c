@@ -1974,15 +1974,13 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     cp += strlen(cp);
 
     summary = policy_summarize(desc->exit_policy);
-    if (summary) {
-      r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
-      if (r<0) {
-        log_warn(LD_BUG, "Not enough space in buffer.");
-        return -1;
-      }
-      cp += strlen(cp);
-      tor_free(summary);
+    r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
+    if (r<0) {
+      log_warn(LD_BUG, "Not enough space in buffer.");
+      return -1;
     }
+    cp += strlen(cp);
+    tor_free(summary);
   }
 
   return 0;

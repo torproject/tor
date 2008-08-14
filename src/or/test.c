@@ -3369,13 +3369,9 @@ test_policy_summary_helper(const char *policy_str,
   test_assert(0 == policies_parse_exit_policy(&line, &policy, 0, NULL));
   summary = policy_summarize(policy);
 
-  if (expected_summary == NULL)
-    test_assert(summary == NULL);
-  else {
-    test_assert(summary != NULL);
-    test_streq(summary, expected_summary);
-    tor_free(summary);
-  };
+  test_assert(summary != NULL);
+  test_streq(summary, expected_summary);
+  tor_free(summary);
   addr_policy_list_free(policy);
 }
 
@@ -3474,7 +3470,7 @@ test_policies(void)
   /* no exits */
   test_policy_summary_helper("accept 11.0.0.0/9:80,"
                              "reject *:*",
-                             NULL);
+                             "reject 1-65535");
   /* port merging */
   test_policy_summary_helper("accept *:80,"
                              "accept *:81,"
