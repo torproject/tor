@@ -47,16 +47,6 @@ typedef struct policy_summary_item_t {
     int accepted:1; /** Has this port already been accepted */
 } policy_summary_item_t;
 
-smartlist_t *policy_summary_create(void);
-void policy_summary_accept(smartlist_t *summary,
-                           uint16_t prt_min, uint16_t prt_max);
-void policy_summary_reject(smartlist_t *summary, maskbits_t maskbits,
-                           uint16_t prt_min, uint16_t prt_max);
-void policy_summary_add_item(smartlist_t *summary, addr_policy_t *p);
-int policy_summary_split(smartlist_t *summary,
-                         uint16_t prt_min, uint16_t prt_max);
-policy_summary_item_t* policy_summary_item_split(policy_summary_item_t* old,
-                                                 uint16_t new_starts);
 
 /** Private networks.  This list is used in two places, once to expand the
  *  "private" keyword when parsing our own exit policy, secondly to ignore
@@ -935,7 +925,7 @@ policy_write_item(char *buf, size_t buflen, addr_policy_t *policy,
  *  port 1-64k item */
 /* XXXX This entire thing will do most stuff in O(N^2), or worse.  Use an
  *      RB-tree if that turns out to matter. */
-smartlist_t *
+static smartlist_t *
 policy_summary_create(void)
 {
   smartlist_t *summary;
@@ -959,7 +949,7 @@ policy_summary_create(void)
  * starts at new_starts and ends at the port where the original item
  * previously ended.
  */
-policy_summary_item_t*
+static policy_summary_item_t*
 policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
 {
   policy_summary_item_t* new;
@@ -985,7 +975,7 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
 /* Split an exit policy summary so that prt_min and prt_max
  * fall at exactly the start and end of an item respectively.
  */
-int
+static int
 policy_summary_split(smartlist_t *summary,
                      uint16_t prt_min, uint16_t prt_max)
 {
@@ -1015,7 +1005,7 @@ policy_summary_split(smartlist_t *summary,
 }
 
 /** Mark port ranges as accepted if they are below the reject_count */
-void
+static void
 policy_summary_accept(smartlist_t *summary,
                       uint16_t prt_min, uint16_t prt_max)
 {
@@ -1032,7 +1022,7 @@ policy_summary_accept(smartlist_t *summary,
 
 /** Count the number of addresses in a network with prefixlen maskbits
  * against the given portrange. */
-void
+static void
 policy_summary_reject(smartlist_t *summary,
                       maskbits_t maskbits,
                       uint16_t prt_min, uint16_t prt_max)
@@ -1055,7 +1045,7 @@ policy_summary_reject(smartlist_t *summary,
  *  If it's a reject ignore it if it is about one of the private
  *  networks, else call policy_summary_reject().
  */
-void
+static void
 policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
 {
   if (p->policy_type == ADDR_POLICY_ACCEPT) {
