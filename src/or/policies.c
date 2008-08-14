@@ -47,7 +47,6 @@ typedef struct policy_summary_item_t {
     int accepted:1; /** Has this port already been accepted */
 } policy_summary_item_t;
 
-
 /** Private networks.  This list is used in two places, once to expand the
  *  "private" keyword when parsing our own exit policy, secondly to ignore
  *  just such networks when building exit policy summaries.  It is important

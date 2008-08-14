@@ -1948,15 +1948,17 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                id, dd);
       return -1;
     };
-    if(memcmp(desc->cache_info.signed_descriptor_digest,
-                       rs->descriptor_digest,
-                       DIGEST_LEN)) {
+    if (memcmp(desc->cache_info.signed_descriptor_digest,
+               rs->descriptor_digest,
+               DIGEST_LEN)) {
       char rl_d[HEX_DIGEST_LEN+1];
       char rs_d[HEX_DIGEST_LEN+1];
 
-      base16_encode(rl_d, sizeof(rl_d), desc->cache_info.signed_descriptor_digest, DIGEST_LEN);
+      base16_encode(rl_d, sizeof(rl_d),
+                    desc->cache_info.signed_descriptor_digest, DIGEST_LEN);
       base16_encode(rs_d, sizeof(rs_d), rs->descriptor_digest, DIGEST_LEN);
-      log_err(LD_BUG, "descriptor digest in routerlist does not match the one in routerstatus: %s vs %s\n",
+      log_err(LD_BUG, "descriptor digest in routerlist does not match "
+                      "the one in routerstatus: %s vs %s\n",
               rl_d, rs_d);
 
       tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,

@@ -2863,18 +2863,22 @@ test_util_order_functions(void)
 }
 
 static routerinfo_t *
-generate_ri_from_rs(const vote_routerstatus_t *vrs) {
+generate_ri_from_rs(const vote_routerstatus_t *vrs)
+{
   routerinfo_t *r;
   const routerstatus_t *rs = &vrs->status;
   static time_t published = 0;
 
   r = tor_malloc_zero(sizeof(routerinfo_t));
   memcpy(r->cache_info.identity_digest, rs->identity_digest, DIGEST_LEN);
-  memcpy(r->cache_info.signed_descriptor_digest, rs->descriptor_digest, DIGEST_LEN);
+  memcpy(r->cache_info.signed_descriptor_digest, rs->descriptor_digest,
+         DIGEST_LEN);
   r->cache_info.do_not_cache = 1;
   r->cache_info.routerlist_index = -1;
-  r->cache_info.signed_descriptor_body = tor_strdup("123456789012345678901234567890123");
-  r->cache_info.signed_descriptor_len = strlen(r->cache_info.signed_descriptor_body);
+  r->cache_info.signed_descriptor_body =
+    tor_strdup("123456789012345678901234567890123");
+  r->cache_info.signed_descriptor_len =
+    strlen(r->cache_info.signed_descriptor_body);
   r->exit_policy = smartlist_create();
   r->cache_info.published_on = ++published + time(NULL);
   return r;
@@ -2963,7 +2967,7 @@ test_v3_networkstatus(void)
   /* all flags but running cleared */
   rs->is_running = 1;
   smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg, 0, 0) >= 0);
+  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
   /* add the second routerstatus. */
   vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
@@ -2979,7 +2983,7 @@ test_v3_networkstatus(void)
   rs->is_exit = rs->is_stable = rs->is_fast = rs->is_running =
     rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
   smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg, 0, 0) >= 0);
+  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
   /* add the third routerstatus. */
   vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
@@ -2995,7 +2999,7 @@ test_v3_networkstatus(void)
   rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
     rs->is_running = rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
   smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg, 0, 0) >= 0);
+  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
   /* add a fourth routerstatus that is not running. */
   vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
@@ -3010,7 +3014,7 @@ test_v3_networkstatus(void)
   rs->dir_port = 1999;
   /* Running flag (and others) cleared */
   smartlist_add(vote->routerstatus_list, vrs);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg, 0, 0) >= 0);
+  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
   /* dump the vote and try to parse it. */
   v1_text = format_networkstatus_vote(sign_skey_1, vote);
@@ -3134,7 +3138,7 @@ test_v3_networkstatus(void)
   tor_free(vrs);
   vrs = smartlist_get(vote->routerstatus_list, 0);
   memset(vrs->status.descriptor_digest, (int)'Z', DIGEST_LEN);
-  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg, 0, 0) >= 0);
+  test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
   v3_text = format_networkstatus_vote(sign_skey_3, vote);
   test_assert(v3_text);
