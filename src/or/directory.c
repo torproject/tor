@@ -2939,7 +2939,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   }while(0);
 
   if (!strcmp(url,"/tor/mallinfo.txt") &&
-      (conn->_base.addr == 0x7f000001ul)) {
+      (tor_addr_eq_ipv4h(&conn->_base.addr, 0x7f000001ul))) {
     char *result;
     size_t len;
     struct mallinfo mi;
