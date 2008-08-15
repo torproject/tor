@@ -7,6 +7,13 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
       hidden services): associate keys, client lists, and authorization
       types with hidden services.
 
+  o Major bugfixes:
+    - When sending CREATED cells back for a given circuit, use a 64-bit
+      connection ID to find the right connection, rather than an addr:port
+      combination.  Now that we can have multiple OR connections between the
+      same ORs, it is no longer possible to use addr:port to uniquely
+      identify a connection.
+
   o Minor bugfixes:
     - Recover 3-7 bytes that were wasted per memory chunk.  Fixes bug
       794; bug spotted by rovv.  Bugfix on 0.2.0.1-alpha.
@@ -17,6 +24,8 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
     - Correctly detect the presence of the linux/netfilter_ipv4.h header
       when building against recent kernels.  Bugfix on 0.1.2.1-alpha.
     - Add a missing safe_str() call for a debug log message.
+    - Use 64 bits instead of 32 bits for connection identifiers used with
+      the controller protocol, to greatly reduce risk of identifier reuse.
 
   o Minor features
     - Rate-limit too-many-sockets messages: when they happen, they
