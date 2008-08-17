@@ -23,7 +23,7 @@ Motivation
   weighted mean time between failure (WMTBF) and weighted fractional
   uptime (WFU).  WFU is computed as the fraction of time for which the
   server is running, with measurements weighted to exponentially
-  decay such that old days count less.  WMTBF is computed as the the
+  decay such that old days count less.  WMTBF is computed as the
   average length of intervals for which the server runs between
   downtime, with old intervals weighted to count less.
 
@@ -48,7 +48,7 @@ Motivation
        "If I find this server in a current consensus, how long is it
        likely to exist on the network?"
 
-  This one is usefule if we're trying to pick introduction points or
+  This one is useful if we're trying to pick introduction points or
   something and care more about churn rate than about whether every IP
   will be up all the time.
 
