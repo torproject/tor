@@ -878,6 +878,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
       rs_out.published_on = rs->status.published_on;
       rs_out.dir_port = rs->status.dir_port;
       rs_out.or_port = rs->status.or_port;
+      rs_out.has_bandwidth = 0;
+      rs_out.has_exitsummary = 0;
 
       if (chosen_name && !naming_conflict) {
         strlcpy(rs_out.nickname, chosen_name, sizeof(rs_out.nickname));
@@ -1046,6 +1048,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       };
       /*     Now the exitpolicy summary line. */
       if (rs_out.has_exitsummary) {
+        char buf[MAX_POLICY_LINE_LEN+1];
         int r = tor_snprintf(buf, sizeof(buf), "p %s\n", rs_out.exitsummary);
         if (r<0) {
           log_warn(LD_BUG, "Not enough space in buffer for exitpolicy line.");
