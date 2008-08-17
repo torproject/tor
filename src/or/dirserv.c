@@ -1944,7 +1944,8 @@ routerstatus_format_entry(char *buf, size_t buf_len,
 
       base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
       base16_encode(dd, sizeof(dd), rs->descriptor_digest, DIGEST_LEN);
-      log_warn(LD_BUG, "Cannot get the descriptor with digest %s for %s.",
+      log_warn(LD_BUG, "Cannot get any descriptor for %s "
+                       "(wanted descriptor %s).",
                id, dd);
       return -1;
     };
