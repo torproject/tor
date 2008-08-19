@@ -237,7 +237,7 @@ rend_encode_v2_intro_points(char **encoded, rend_service_descriptor_t *desc)
 /** Encrypt the encoded introduction points in <b>encoded</b> using
  * authorization type  'basic' with <b>client_cookies</b> and write the
  * result to a newly allocated string pointed to by <b>encrypted_out</b> of
- * length <b>encrypted_len</b>. Return 0 for success, -1 otherwise. */
+ * length <b>encrypted_len_out</b>. Return 0 for success, -1 otherwise. */
 static int
 rend_encrypt_v2_intro_points_basic(char **encrypted_out,
                                    size_t *encrypted_len_out,
@@ -352,8 +352,8 @@ rend_encrypt_v2_intro_points_basic(char **encrypted_out,
 /** Encrypt the encoded introduction points in <b>encoded</b> using
  * authorization type 'stealth' with <b>descriptor_cookie</b> of length
  * REND_DESC_COOKIE_LEN and write the result to a newly allocated string
- * pointed to by <b>encrypted</b> of length <b>encrypted_len</b>. Return 0
- * for success, -1 otherwise. */
+ * pointed to by <b>encrypted_out</b> of length <b>encrypted_len_out</b>.
+ * Return 0 for success, -1 otherwise. */
 static int
 rend_encrypt_v2_intro_points_stealth(char **encrypted_out,
                                      size_t *encrypted_len_out,
