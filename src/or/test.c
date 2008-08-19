@@ -4049,8 +4049,8 @@ test_rend_fns_v2(void)
     intro->intro_key = crypto_pk_dup_key(pk2);
     smartlist_add(generated->intro_nodes, intro);
   }
-  test_assert(rend_encode_v2_descriptors(descs, generated, now,
-                                         NULL, 0) > 0);
+  test_assert(rend_encode_v2_descriptors(descs, generated, now, 0,
+                                         REND_NO_AUTH, NULL, NULL) > 0);
   test_assert(rend_compute_v2_desc_id(computed_desc_id, service_id_base32,
                                       NULL, now, 0) == 0);
   test_memeq(((rend_encoded_v2_service_descriptor_t *)
@@ -4065,9 +4065,8 @@ test_rend_fns_v2(void)
   test_assert(parsed);
   test_memeq(((rend_encoded_v2_service_descriptor_t *)
              smartlist_get(descs, 0))->desc_id, parsed_desc_id, DIGEST_LEN);
-  test_assert(rend_decrypt_introduction_points(parsed, NULL,
-                                               intro_points_encrypted,
-                                               intro_points_size) == 3);
+  test_assert(rend_parse_introduction_points(parsed, intro_points_encrypted,
+                                             intro_points_size) == 3);
   test_assert(!crypto_pk_cmp_keys(generated->pk, parsed->pk));
   test_eq(parsed->timestamp, now);
   test_eq(parsed->version, 2);

@@ -150,15 +150,11 @@ rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
   return 0;
 }
 
-/* Encode the introduction points in <b>desc</b>, optionally encrypt them with
- * an optional <b>descriptor_cookie</b> of length REND_DESC_COOKIE_LEN,
- * encode it in base64, and write it to a newly allocated string, and write a
- * pointer to it to *<b>ipos_base64</b>. Return 0 for success, -1
- * otherwise. */
+/** Encode the introduction points in <b>desc</b> and write the result to a
+ * newly allocated string pointed to by <b>encoded</b>. Return 0 for
+ * success, -1 otherwise. */
 static int
-rend_encode_v2_intro_points(char **ipos_base64,
-                            rend_service_descriptor_t *desc,
-                            const char *descriptor_cookie)
+rend_encode_v2_intro_points(char **encoded, rend_service_descriptor_t *desc)
 {
   size_t unenc_len;
   char *unenc = NULL;
@@ -166,7 +162,6 @@ rend_encode_v2_intro_points(char **ipos_base64,
   int i;
   int r = -1;
   /* Assemble unencrypted list of introduction points. */
-  *ipos_base64 = NULL;
   unenc_len = smartlist_len(desc->intro_nodes) * 1000; /* too long, but ok. */
   unenc = tor_malloc_zero(unenc_len);
   for (i = 0; i < smartlist_len(desc->intro_nodes); i++) {
@@ -231,37 +226,163 @@ rend_encode_v2_intro_points(char **ipos_base64,
   }
   unenc[unenc_written++] = '\n';
   unenc[unenc_written++] = 0;
-  /* If a descriptor cookie is passed, encrypt introduction points. */
-  if (descriptor_cookie) {
-    char *enc = tor_malloc_zero(unenc_written + CIPHER_IV_LEN);
-    crypto_cipher_env_t *cipher =
-      crypto_create_init_cipher(descriptor_cookie, 1);
-    int enclen = crypto_cipher_encrypt_with_iv(cipher, enc,
-                                               unenc_written + CIPHER_IV_LEN,
-                                               unenc, unenc_written);
-    crypto_free_cipher_env(cipher);
-    if (enclen < 0) {
-      log_warn(LD_REND, "Could not encrypt introduction point string.");
-      tor_free(enc);
-      goto done;
-    }
-    /* Replace original string with the encrypted one. */
-    tor_free(unenc);
-    unenc = enc;
-    unenc_written = enclen;
-  }
-  /* Base64-encode introduction points. */
-  *ipos_base64 = tor_malloc_zero(unenc_written * 2);
-  if (base64_encode(*ipos_base64, unenc_written * 2, unenc, unenc_written)<0) {
-    log_warn(LD_REND, "Could not encode introduction point string to "
-             "base64.");
-    goto done;
-  }
+  *encoded = unenc;
   r = 0;
  done:
   if (r<0)
-    tor_free(*ipos_base64);
-  tor_free(unenc);
+    tor_free(unenc);
+  return r;
+}
+
+/** Encrypt the encoded introduction points in <b>encoded</b> using
+ * authorization type  'basic' with <b>client_cookies</b> and write the
+ * result to a newly allocated string pointed to by <b>encrypted_out</b> of
+ * length <b>encrypted_len</b>. Return 0 for success, -1 otherwise. */
+static int
+rend_encrypt_v2_intro_points_basic(char **encrypted_out,
+                                   size_t *encrypted_len_out,
+                                   const char *encoded,
+                                   smartlist_t *client_cookies)
+{
+  int r = -1, i, pos, enclen, client_blocks;
+  size_t len, client_entries_len;
+  char *enc = NULL, iv[CIPHER_IV_LEN], *client_part = NULL,
+       session_key[CIPHER_KEY_LEN];
+  smartlist_t *encrypted_session_keys = NULL;
+  crypto_digest_env_t *digest;
+  crypto_cipher_env_t *cipher;
+  tor_assert(encoded);
+  tor_assert(client_cookies && smartlist_len(client_cookies) > 0);
+
+  /* Generate session key. */
+  if (crypto_rand(session_key, CIPHER_KEY_LEN) < 0) {
+    log_warn(LD_REND, "Unable to generate random session key to encrypt "
+                      "introduction point string.");
+    goto done;
+  }
+
+  /* Determine length of encrypted introduction points including session
+   * keys. */
+  client_blocks = 1 + ((smartlist_len(client_cookies) - 1) /
+                       REND_BASIC_AUTH_CLIENT_MULTIPLE);
+  client_entries_len = client_blocks * REND_BASIC_AUTH_CLIENT_MULTIPLE *
+                       REND_BASIC_AUTH_CLIENT_ENTRY_LEN;
+  len = 2 + client_entries_len + CIPHER_IV_LEN + strlen(encoded);
+  if (client_blocks >= 256) {
+    log_warn(LD_REND, "Too many clients in introduction point string.");
+    goto done;
+  }
+  enc = tor_malloc_zero(len);
+  enc[0] = 0x01; /* type of authorization. */
+  enc[1] = (uint8_t)client_blocks;
+
+  /* Encrypt with random session key. */
+  cipher = crypto_create_init_cipher(session_key, 1);
+  enclen = crypto_cipher_encrypt_with_iv(cipher,
+      enc + 2 + client_entries_len,
+      CIPHER_IV_LEN + strlen(encoded), encoded, strlen(encoded));
+  crypto_free_cipher_env(cipher);
+  if (enclen < 0) {
+    log_warn(LD_REND, "Could not encrypt introduction point string.");
+    goto done;
+  }
+  memcpy(iv, enc + 2 + client_entries_len, CIPHER_IV_LEN);
+
+  /* Encrypt session key for cookies, determine client IDs, and put both
+   * in a smartlist. */
+  encrypted_session_keys = smartlist_create();
+  SMARTLIST_FOREACH_BEGIN(client_cookies, const char *, cookie) {
+    client_part = tor_malloc_zero(REND_BASIC_AUTH_CLIENT_ENTRY_LEN);
+    /* Encrypt session key. */
+    cipher = crypto_create_init_cipher(cookie, 1);
+    if (crypto_cipher_encrypt(cipher, client_part +
+                                  REND_BASIC_AUTH_CLIENT_ID_LEN,
+                              session_key, CIPHER_KEY_LEN) < 0) {
+      log_warn(LD_REND, "Could not encrypt session key for client.");
+      crypto_free_cipher_env(cipher);
+      tor_free(client_part);
+      goto done;
+    }
+    crypto_free_cipher_env(cipher);
+
+    /* Determine client ID. */
+    digest = crypto_new_digest_env();
+    crypto_digest_add_bytes(digest, cookie, REND_DESC_COOKIE_LEN);
+    crypto_digest_add_bytes(digest, iv, CIPHER_IV_LEN);
+    crypto_digest_get_digest(digest, client_part,
+                             REND_BASIC_AUTH_CLIENT_ID_LEN);
+    crypto_free_digest_env(digest);
+
+    /* Put both together. */
+    smartlist_add(encrypted_session_keys, client_part);
+  } SMARTLIST_FOREACH_END(cookie);
+
+  /* Add some fake client IDs and encrypted session keys. */
+  for (i = (smartlist_len(client_cookies) - 1) %
+           REND_BASIC_AUTH_CLIENT_MULTIPLE;
+       i < REND_BASIC_AUTH_CLIENT_MULTIPLE - 1; i++) {
+    client_part = tor_malloc_zero(REND_BASIC_AUTH_CLIENT_ENTRY_LEN);
+    if (crypto_rand(client_part, REND_BASIC_AUTH_CLIENT_ENTRY_LEN) < 0) {
+      log_warn(LD_REND, "Unable to generate fake client entry.");
+      tor_free(client_part);
+      goto done;
+    }
+    smartlist_add(encrypted_session_keys, client_part);
+  }
+  /* Sort smartlist and put elements in result in order. */
+  smartlist_sort_digests(encrypted_session_keys);
+  pos = 2;
+  SMARTLIST_FOREACH(encrypted_session_keys, const char *, entry, {
+    memcpy(enc + pos, entry, REND_BASIC_AUTH_CLIENT_ENTRY_LEN);
+    pos += REND_BASIC_AUTH_CLIENT_ENTRY_LEN;
+  });
+  *encrypted_out = enc;
+  *encrypted_len_out = len;
+  enc = NULL; /* prevent free. */
+  r = 0;
+ done:
+  tor_free(enc);
+  if (encrypted_session_keys) {
+    SMARTLIST_FOREACH(encrypted_session_keys, char *, d, tor_free(d););
+    smartlist_free(encrypted_session_keys);
+  }
+  return r;
+}
+
+/** Encrypt the encoded introduction points in <b>encoded</b> using
+ * authorization type 'stealth' with <b>descriptor_cookie</b> of length
+ * REND_DESC_COOKIE_LEN and write the result to a newly allocated string
+ * pointed to by <b>encrypted</b> of length <b>encrypted_len</b>. Return 0
+ * for success, -1 otherwise. */
+static int
+rend_encrypt_v2_intro_points_stealth(char **encrypted_out,
+                                     size_t *encrypted_len_out,
+                                     const char *encoded,
+                                     const char *descriptor_cookie)
+{
+  int r = -1, enclen;
+  crypto_cipher_env_t *cipher;
+  char *enc;
+  tor_assert(encoded);
+  tor_assert(descriptor_cookie);
+
+  enc = tor_malloc_zero(1 + CIPHER_IV_LEN + strlen(encoded));
+  enc[0] = 0x02; /* Auth type */
+  cipher = crypto_create_init_cipher(descriptor_cookie, 1);
+  enclen = crypto_cipher_encrypt_with_iv(cipher, enc + 1,
+                                         CIPHER_IV_LEN+strlen(encoded),
+                                         encoded, strlen(encoded));
+  crypto_free_cipher_env(cipher);
+  if (enclen < 0) {
+    log_warn(LD_REND, "Could not encrypt introduction point string.");
+    goto done;
+  }
+  *encrypted_out = enc;
+  *encrypted_len_out = enclen;
+  enc = NULL; /* prevent free */
+  r = 0;
+ done:
+  tor_free(enc);
   return r;
 }
 
@@ -308,38 +429,97 @@ rend_intro_point_free(rend_intro_point_t *intro)
 }
 
 /** Encode a set of rend_encoded_v2_service_descriptor_t's for <b>desc</b>
- * at time <b>now</b> using <b>descriptor_cookie</b> (may be <b>NULL</b> if
- * introduction points shall not be encrypted) and <b>period</b> (e.g. 0
- * for the current period, 1 for the next period, etc.) and add them to
- * the existing list <b>descs_out</b>; return the number of seconds that
- * the descriptors will be found by clients, or -1 if the encoding was not
- * successful. */
+ * at time <b>now</b> using <b>service_key</b>, depending on
+ * <b>auth_type</b> a <b>descriptor_cookie</b> and a list of
+ * <b>client_cookies</b> (which are both <b>NULL</b> if no client
+ * authorization is performed), and <b>period</b> (e.g. 0 for the current
+ * period, 1 for the next period, etc.) and add them to the existing list
+ * <b>descs_out</b>; return the number of seconds that the descriptors will
+ * be found by clients, or -1 if the encoding was not successful. */
 int
 rend_encode_v2_descriptors(smartlist_t *descs_out,
                            rend_service_descriptor_t *desc, time_t now,
-                           const char *descriptor_cookie, uint8_t period)
+                           uint8_t period, rend_auth_type_t auth_type,
+                           crypto_pk_env_t *client_key,
+                           smartlist_t *client_cookies)
 {
   char service_id[DIGEST_LEN];
   uint32_t time_period;
-  char *ipos_base64 = NULL;
+  char *ipos_base64 = NULL, *ipos = NULL, *ipos_encrypted = NULL,
+       *descriptor_cookie = NULL;
+  size_t ipos_len = 0, ipos_encrypted_len = 0;
   int k;
   uint32_t seconds_valid;
+  crypto_pk_env_t *service_key = auth_type == REND_STEALTH_AUTH ?
+                                 client_key : desc->pk;
+  tor_assert(service_key);
+  if (auth_type == REND_STEALTH_AUTH) {
+    descriptor_cookie = smartlist_get(client_cookies, 0);
+    tor_assert(descriptor_cookie);
+  }
   if (!desc) {
     log_warn(LD_REND, "Could not encode v2 descriptor: No desc given.");
     return -1;
   }
   /* Obtain service_id from public key. */
-  crypto_pk_get_digest(desc->pk, service_id);
+  crypto_pk_get_digest(service_key, service_id);
   /* Calculate current time-period. */
   time_period = get_time_period(now, period, service_id);
   /* Determine how many seconds the descriptor will be valid. */
   seconds_valid = period * REND_TIME_PERIOD_V2_DESC_VALIDITY +
                   get_seconds_valid(now, service_id);
   /* Assemble, possibly encrypt, and encode introduction points. */
-  if (smartlist_len(desc->intro_nodes) > 0 &&
-      rend_encode_v2_intro_points(&ipos_base64, desc, descriptor_cookie) < 0) {
-    log_warn(LD_REND, "Encoding of introduction points did not succeed.");
-    return -1;
+  if (smartlist_len(desc->intro_nodes) > 0) {
+    if (rend_encode_v2_intro_points(&ipos, desc) < 0) {
+      log_warn(LD_REND, "Encoding of introduction points did not succeed.");
+      return -1;
+    }
+    switch (auth_type) {
+      case REND_NO_AUTH:
+        ipos_len = strlen(ipos);
+        break;
+      case REND_BASIC_AUTH:
+        if (rend_encrypt_v2_intro_points_basic(&ipos_encrypted,
+                                               &ipos_encrypted_len, ipos,
+                                               client_cookies) < 0) {
+          log_warn(LD_REND, "Encrypting of introduction points did not "
+                            "succeed.");
+          tor_free(ipos);
+          return -1;
+        }
+        tor_free(ipos);
+        ipos = ipos_encrypted;
+        ipos_len = ipos_encrypted_len;
+        break;
+      case REND_STEALTH_AUTH:
+        if (rend_encrypt_v2_intro_points_stealth(&ipos_encrypted,
+                                                 &ipos_encrypted_len, ipos,
+                                                 descriptor_cookie) < 0) {
+          log_warn(LD_REND, "Encrypting of introduction points did not "
+                            "succeed.");
+          tor_free(ipos);
+          return -1;
+        }
+        tor_free(ipos);
+        ipos = ipos_encrypted;
+        ipos_len = ipos_encrypted_len;
+        break;
+      default:
+        log_warn(LD_REND|LD_BUG, "Unrecognized authorization type %d",
+                 (int)auth_type);
+        tor_free(ipos);
+        return -1;
+    }
+    /* Base64-encode introduction points. */
+    ipos_base64 = tor_malloc_zero(ipos_len * 2);
+    if (base64_encode(ipos_base64, ipos_len * 2, ipos, ipos_len)<0) {
+      log_warn(LD_REND, "Could not encode introduction point string to "
+               "base64. length=%d", ipos_len);
+      tor_free(ipos_base64);
+      tor_free(ipos);
+      return -1;
+    }
+    tor_free(ipos);
   }
   /* Encode REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS descriptors. */
   for (k = 0; k < REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS; k++) {
@@ -369,7 +549,7 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
     base32_encode(desc_id_base32, sizeof(desc_id_base32),
                   enc->desc_id, DIGEST_LEN);
     /* PEM-encode the public key */
-    if (crypto_pk_write_public_key_to_string(desc->pk, &permanent_key,
+    if (crypto_pk_write_public_key_to_string(service_key, &permanent_key,
                                              &permanent_key_len) < 0) {
       log_warn(LD_BUG, "Could not write public key to string.");
       rend_encoded_v2_service_descriptor_free(enc);
@@ -437,7 +617,7 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
     }
     if (router_append_dirobj_signature(desc_str + written,
                                        desc_len - written,
-                                       desc_digest, desc->pk) < 0) {
+                                       desc_digest, service_key) < 0) {
       log_warn(LD_BUG, "Couldn't sign desc.");
       rend_encoded_v2_service_descriptor_free(enc);
       goto err;
@@ -1085,6 +1265,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   rend_cache_entry_t *e;
   tor_assert(rend_cache);
   tor_assert(desc);
+  (void) descriptor_cookie; /* We don't use it, yet. */
   /* Parse the descriptor. */
   if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                        &intro_size, &encoded_size,
@@ -1103,8 +1284,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   }
   /* Decode/decrypt introduction points. */
   if (intro_content) {
-    if (rend_decrypt_introduction_points(parsed, descriptor_cookie,
-                                         intro_content, intro_size) < 0) {
+    if (rend_parse_introduction_points(parsed, intro_content,
+                                       intro_size) < 0) {
       log_warn(LD_PROTOCOL,"Couldn't decode/decrypt introduction points.");
       rend_service_descriptor_free(parsed);
       tor_free(intro_content);

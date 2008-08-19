@@ -3460,6 +3460,13 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     eos = desc + strlen(desc);
   else
     eos = eos + 1;
+  /* Check length. */
+  if (strlen(desc) > REND_DESC_MAX_SIZE) {
+    log_warn(LD_REND, "Descriptor length is %i which exceeds "
+             "maximum rendezvous descriptor size of %i kilobytes.",
+             strlen(desc), REND_DESC_MAX_SIZE);
+    goto err;
+  }
   /* Tokenize descriptor. */
   area = memarea_new(4096);
   if (tokenize_string(area, desc, eos, tokens, desc_token_table, 0)) {
@@ -3599,21 +3606,123 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   return -1;
 }
 
-/** Decrypt and decode the introduction points in
- * <b>intro_points_encrypted</b> of length
- * <b>intro_points_encrypted_size</b> using <b>descriptor_cookie</b>
- * (which may also be <b>NULL</b> if no decryption, but only parsing is
- * required), parse the introduction points, and write the result to
- * <b>parsed</b>; return the number of successfully parsed introduction
- * points or -1 in case of a failure.
- */
+/** Decrypt the encrypted introduction points in <b>ipos_encrypted</b> of
+ * length <b>ipos_encrypted_size</b> using <b>descriptor_cookie</b> and
+ * write the result to a newly allocated string that is pointed to by
+ * <b>ipos_decrypted</b> and its length to <b>ipos_decrypted_size</b>.
+ * Return 0 if decryption was successful and -1 otherwise. */
 int
-rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
+rend_decrypt_introduction_points(char **ipos_decrypted,
+                                 size_t *ipos_decrypted_size,
                                  const char *descriptor_cookie,
-                                 const char *intro_points_encrypted,
-                                 size_t intro_points_encrypted_size)
+                                 const char *ipos_encrypted,
+                                 size_t ipos_encrypted_size)
 {
-  char *ipos_decrypted = NULL;
+  tor_assert(ipos_encrypted);
+  tor_assert(descriptor_cookie);
+  if (ipos_encrypted_size < 2) {
+    log_warn(LD_REND, "Size of encrypted introduction points is too "
+                      "small.");
+    return -1;
+  }
+  if (ipos_encrypted[0] == (int)REND_BASIC_AUTH) {
+    char iv[CIPHER_IV_LEN], client_id[REND_BASIC_AUTH_CLIENT_ID_LEN],
+         session_key[CIPHER_KEY_LEN], *dec;
+    int declen, client_blocks;
+    size_t pos = 0, len, client_entries_len;
+    crypto_digest_env_t *digest;
+    crypto_cipher_env_t *cipher;
+    client_blocks = (int) ipos_encrypted[1];
+    client_entries_len = client_blocks * REND_BASIC_AUTH_CLIENT_MULTIPLE *
+                         REND_BASIC_AUTH_CLIENT_ENTRY_LEN;
+    if (ipos_encrypted_size < 2 + client_entries_len + CIPHER_IV_LEN + 1) {
+      log_warn(LD_REND, "Size of encrypted introduction points is too "
+                        "small.");
+      return -1;
+    }
+    memcpy(iv, ipos_encrypted + 2 + client_entries_len, CIPHER_IV_LEN);
+    digest = crypto_new_digest_env();
+    crypto_digest_add_bytes(digest, descriptor_cookie, REND_DESC_COOKIE_LEN);
+    crypto_digest_add_bytes(digest, iv, CIPHER_IV_LEN);
+    crypto_digest_get_digest(digest, client_id,
+                             REND_BASIC_AUTH_CLIENT_ID_LEN);
+    crypto_free_digest_env(digest);
+    for (pos = 2; pos < 2 + client_entries_len;
+         pos += REND_BASIC_AUTH_CLIENT_ENTRY_LEN) {
+      if (!memcmp(ipos_encrypted + pos, client_id,
+                  REND_BASIC_AUTH_CLIENT_ID_LEN)) {
+        /* Attempt to decrypt introduction points. */
+        cipher = crypto_create_init_cipher(descriptor_cookie, 0);
+        if (crypto_cipher_decrypt(cipher, session_key, ipos_encrypted
+                                  + pos + REND_BASIC_AUTH_CLIENT_ID_LEN,
+                                  CIPHER_KEY_LEN) < 0) {
+          log_warn(LD_REND, "Could not decrypt session key for client.");
+          crypto_free_cipher_env(cipher);
+          return -1;
+        }
+        crypto_free_cipher_env(cipher);
+        cipher = crypto_create_init_cipher(session_key, 0);
+        len = ipos_encrypted_size - 2 - client_entries_len - CIPHER_IV_LEN;
+        dec = tor_malloc_zero(len);
+        declen = crypto_cipher_decrypt_with_iv(cipher, dec, len,
+            ipos_encrypted + 2 + client_entries_len,
+            ipos_encrypted_size - 2 - client_entries_len);
+        crypto_free_cipher_env(cipher);
+        if (declen < 0) {
+          log_warn(LD_REND, "Could not decrypt introduction point string.");
+          tor_free(dec);
+          return -1;
+        }
+        if (strcmpstart(dec, "introduction-point ")) {
+          log_warn(LD_REND, "Decrypted introduction points don't "
+                            "look like we could parse them.");
+          tor_free(dec);
+          continue;
+        }
+        *ipos_decrypted = dec;
+        *ipos_decrypted_size = declen;
+        return 0;
+      }
+    }
+    log_warn(LD_REND, "Could not decrypt introduction points. Please "
+             "check your authorization for this service!");
+    return -1;
+  } else if (ipos_encrypted[0] == (int)REND_STEALTH_AUTH) {
+    crypto_cipher_env_t *cipher;
+    char *dec;
+    int declen;
+    dec = tor_malloc_zero(ipos_encrypted_size - CIPHER_IV_LEN - 1);
+    cipher = crypto_create_init_cipher(descriptor_cookie, 0);
+    declen = crypto_cipher_decrypt_with_iv(cipher, dec,
+                                           ipos_encrypted_size -
+                                               CIPHER_IV_LEN - 1,
+                                           ipos_encrypted + 1,
+                                           ipos_encrypted_size - 1);
+    crypto_free_cipher_env(cipher);
+    if (declen < 0) {
+      log_warn(LD_REND, "Decrypting introduction points failed!");
+      tor_free(dec);
+      return -1;
+    }
+    *ipos_decrypted = dec;
+    *ipos_decrypted_size = declen;
+    return 0;
+  } else {
+    log_warn(LD_REND, "Unknown authorization type number: %d",
+             ipos_encrypted[0]);
+    return -1;
+  }
+}
+
+/** Parse the encoded introduction points in <b>intro_points_encoded</b> of
+ * length <b>intro_points_encoded_size</b> and write the result to the
+ * descriptor in <b>parsed</b>; return the number of successfully parsed
+ * introduction points or -1 in case of a failure. */
+int
+rend_parse_introduction_points(rend_service_descriptor_t *parsed,
+                               const char *intro_points_encoded,
+                               size_t intro_points_encoded_size)
+{
   const char **current_ipo;
   smartlist_t *tokens;
   directory_token_t *tok;
@@ -3624,28 +3733,10 @@ rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
   tor_assert(parsed);
   /** Function may only be invoked once. */
   tor_assert(!parsed->intro_nodes);
-  tor_assert(intro_points_encrypted);
-  tor_assert(intro_points_encrypted_size > 0);
-  /* Decrypt introduction points, if required. */
-  if (descriptor_cookie) {
-    crypto_cipher_env_t *cipher;
-    int unenclen;
-    ipos_decrypted = tor_malloc_zero(intro_points_encrypted_size - 16);
-    cipher = crypto_create_init_cipher(descriptor_cookie, 0);
-    unenclen = crypto_cipher_decrypt_with_iv(cipher, ipos_decrypted,
-                                             intro_points_encrypted_size - 16,
-                                             intro_points_encrypted,
-                                             intro_points_encrypted_size);
-    crypto_free_cipher_env(cipher);
-    if (unenclen < 0) {
-      tor_free(ipos_decrypted);
-      return -1;
-    }
-    intro_points_encrypted = ipos_decrypted;
-    intro_points_encrypted_size = unenclen;
-  }
+  tor_assert(intro_points_encoded);
+  tor_assert(intro_points_encoded_size > 0);
   /* Consider one intro point after the other. */
-  current_ipo = &intro_points_encrypted;
+  current_ipo = &intro_points_encoded;
   tokens = smartlist_create();
   parsed->intro_nodes = smartlist_create();
   area = memarea_new(4096);

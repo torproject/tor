@@ -651,6 +651,23 @@ typedef enum {
  * exchanging client authorization between hidden service and client. */
 #define REND_DESC_COOKIE_LEN_BASE64 22
 
+/** Length of client identifier in encrypted introduction points for hidden
+ * service authorization type 'basic'. */
+#define REND_BASIC_AUTH_CLIENT_ID_LEN 4
+
+/** Multiple of the number of clients to which the real number of clients
+ * is padded with fake clients for hidden service authorization type
+ * 'basic'. */
+#define REND_BASIC_AUTH_CLIENT_MULTIPLE 16
+
+/** Length of client entry consisting of client identifier and encrypted
+ * session key for hidden service authorization type 'basic'. */
+#define REND_BASIC_AUTH_CLIENT_ENTRY_LEN (REND_BASIC_AUTH_CLIENT_ID_LEN \
+                                          + CIPHER_KEY_LEN)
+
+/** Maximum size of v2 hidden service descriptors. */
+#define REND_DESC_MAX_SIZE (20 * 1024)
+
 /** Legal characters for use in authorized client names for a hidden
  * service. */
 #define REND_LEGAL_CLIENTNAME_CHARACTERS \
@@ -3926,7 +3943,9 @@ int rend_cache_store_v2_desc_as_dir(const char *desc);
 int rend_cache_size(void);
 int rend_encode_v2_descriptors(smartlist_t *descs_out,
                                rend_service_descriptor_t *desc, time_t now,
-                               const char *descriptor_cookie, uint8_t period);
+                               uint8_t period, rend_auth_type_t auth_type,
+                               crypto_pk_env_t *client_key,
+                               smartlist_t *client_cookies);
 int rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
                             const char *descriptor_cookie,
                             time_t now, uint8_t replica);
@@ -4315,10 +4334,14 @@ int rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
                                      size_t *intro_points_encrypted_size_out,
                                      size_t *encoded_size_out,
                                      const char **next_out, const char *desc);
-int rend_decrypt_introduction_points(rend_service_descriptor_t *parsed,
+int rend_decrypt_introduction_points(char **ipos_decrypted,
+                                     size_t *ipos_decrypted_size,
                                      const char *descriptor_cookie,
-                                     const char *intro_content,
-                                     size_t intro_size);
+                                     const char *ipos_encrypted,
+                                     size_t ipos_encrypted_size);
+int rend_parse_introduction_points(rend_service_descriptor_t *parsed,
+                                   const char *intro_points_encoded,
+                                   size_t intro_points_encoded_size);
 int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
 
 #endif
