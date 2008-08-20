@@ -2,10 +2,6 @@
 (Remember to include both the revision number _AND_ an abbreviated
 description of the patch.)
 
-Items before a stable 0.2.0.x bundle:
-  - Torbutton items:
-M   - mike had a big pile
-
 Backport items for 0.2.0:
   - r14247: tor-spec and dir-spec updates [just backport the whole files]
 
@@ -15,3 +11,4 @@ Backport for 0.2.0 once better tested:
   - r15821: fix bug related to TLS session negotiation.
   - r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
   - r16143: generate stream close events from connection_edge_destroy().
+  - r16605: relays reject risky extend cells.
