@@ -7,12 +7,16 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
       hidden services): associate keys, client lists, and authorization
       types with hidden services.
 
-  o Major bugfixes:
+  o Major bugfixes (on 0.2.0.x and before):
     - When sending CREATED cells back for a given circuit, use a 64-bit
       connection ID to find the right connection, rather than an addr:port
       combination.  Now that we can have multiple OR connections between the
       same ORs, it is no longer possible to use addr:port to uniquely
       identify a connection.
+    - Relays now reject risky extend cells: if the extend cell includes
+      a digest of all zeroes, or asks to extend back to the relay that
+      sent the extend cell, tear down the circuit. Ideas suggested
+      by rovv.
 
   o Minor bugfixes:
     - Recover 3-7 bytes that were wasted per memory chunk.  Fixes bug

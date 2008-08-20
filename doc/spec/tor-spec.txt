@@ -398,9 +398,9 @@ see tor-design.pdf.
    The port and address field denote the IPV4 address and port of the next
    onion router in the circuit; the public key hash is the hash of the PKCS#1
    ASN1 encoding of the next onion router's identity (signing) key.  (See 0.3
-   above.)  (Including this hash allows the extending OR verify that it is
+   above.)  Including this hash allows the extending OR verify that it is
    indeed connected to the correct target OR, and prevents certain
-   man-in-the-middle attacks.)
+   man-in-the-middle attacks.
 
    The payload for a CREATED cell, or the relay payload for an
    EXTENDED cell, contains:
@@ -525,10 +525,12 @@ see tor-design.pdf.
 
    When an onion router receives an EXTEND relay cell, it sends a CREATE
    cell to the next onion router, with the enclosed onion skin as its
-   payload.  The initiating onion router chooses some circID not yet
-   used on the connection between the two onion routers.  (But see
-   section 5.1. above, concerning choosing circIDs based on
-   lexicographic order of nicknames.)
+   payload.  As special cases, if the extend cell includes a digest of
+   all zeroes, or asks to extend back to the relay that sent the extend
+   cell, the circuit will fail and be torn down. The initiating onion
+   router chooses some circID not yet used on the connection between the
+   two onion routers.  (But see section 5.1. above, concerning choosing
+   circIDs based on lexicographic order of nicknames.)
 
    When an onion router receives a CREATE cell, if it already has a
    circuit on the given connection with the given circID, it drops the
