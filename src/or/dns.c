@@ -78,8 +78,10 @@ typedef struct cached_resolve_t {
   uint32_t magic;
   char address[MAX_ADDRESSLEN]; /**< The hostname to be resolved. */
   union {
-    /*XXXX021 Make this use a tor_addr_t OP6 */
-    uint32_t addr;  /**< IPv4 addr for <b>address</b>. */
+    struct {
+      struct in6_addr addr6; /**< IPv6 addr for <b>address</b>. */
+      uint32_t addr;  /**< IPv4 addr for <b>address</b>. */
+    } a;
     char *hostname; /**< Hostname for <b>address</b> (if a reverse lookup) */
   } result;
   uint8_t state; /**< Is this cached entry pending/done/valid/failed? */
@@ -716,7 +718,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
           tor_assert(is_resolve);
           *hostname_out = tor_strdup(resolve->result.hostname);
         } else {
-          tor_addr_from_ipv4h(&exitconn->_base.addr, resolve->result.addr);
+          tor_addr_from_ipv4h(&exitconn->_base.addr, resolve->result.a.addr);
         }
         return 1;
       case CACHE_STATE_CACHED_FAILED:
@@ -947,7 +949,7 @@ add_answer_to_cache(const char *address, uint8_t is_reverse, uint32_t addr,
     }
   } else {
     tor_assert(!hostname);
-    resolve->result.addr = addr;
+    resolve->result.a.addr = addr;
   }
   resolve->ttl = ttl;
   assert_resolve_ok(resolve);
@@ -1589,7 +1591,7 @@ assert_resolve_ok(cached_resolve_t *resolve)
     if (resolve->is_reverse)
       tor_assert(!resolve->result.hostname);
     else
-      tor_assert(!resolve->result.addr);
+      tor_assert(!resolve->result.a.addr);
   }
 }
 
