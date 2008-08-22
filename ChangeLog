@@ -3,6 +3,7 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
     - Convert many internal address representations to optionally hold
       IPv6 addresses.
     - Generate and accept IPv6 addresses in many protocol elements.
+    - Make resolver code handle nameservers located at ipv6 addresses.
     - Begin implementation of proposal 121 (Client authorization for
       hidden services): associate keys, client lists, and authorization
       types with hidden services.
@@ -34,6 +35,8 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
   o Minor features
     - Rate-limit too-many-sockets messages: when they happen, they
       happen a lot.  Resolves bug 748.
+    - Resist DNS poisoning a little better by making sure that names
+      in answer sections match.
 
 
 Changes in version 0.2.1.4-alpha - 2008-08-04

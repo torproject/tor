@@ -155,7 +155,8 @@ typedef unsigned int uint;
 #define CLEAR(x) do { memset((x), 0, sizeof(*(x))); } while(0)
 
 struct request {
-	u8 *request;  /* the dns packet data */
+	u8 *request; /* the dns packet data */
+	char *name; /* the name we requested. */
 	unsigned int request_len;
 	int reissue_count;
 	int tx_count;  /* the number of times that this packet has been sent */
@@ -206,7 +207,7 @@ struct reply {
 
 struct nameserver {
 	int socket;	 /* a connected UDP socket */
-	u32 address;
+	struct sockaddr_storage address;
 	int failed_times;  /* number of times which we have given this server a chance */
 	int timedout;  /* number of times in a row a request has timed out */
 	struct event event;
@@ -391,6 +392,22 @@ debug_ntoa(u32 address)
 			(int)(u8)((a	)&0xff));
 	return buf;
 }
+static const char *
+debug_ntop(const struct sockaddr *sa)
+{
+	if (sa->sa_family == AF_INET) {
+		struct sockaddr_in *sin = (struct sockaddr_in *) sa;
+		return debug_ntoa(ntohl(sin->sin_addr.s_addr));
+	}
+	if (sa->sa_family == AF_INET6) {
+		/* Tor-specific.  In libevent, add more check code. */
+		static char buf[128];
+		struct sockaddr_in6 *sin = (struct sockaddr_in6 *) sa;
+		tor_inet_ntop(AF_INET6, &sin->sin6_addr, buf, sizeof(buf));
+		return buf;
+	}
+	return "<unknown>";
+}
 #endif
 
 static evdns_debug_log_fn_type evdns_log_fn = NULL;
@@ -427,6 +444,39 @@ _evdns_log(int warn, const char *fmt, ...)
 }
 
 #define log _evdns_log
+
+static int
+sockaddr_eq(const struct sockaddr *sa1, const struct sockaddr *sa2,
+			int include_port)
+{
+	if (sa1->sa_family != sa2->sa_family)
+		return 0;
+	if (sa1->sa_family == AF_INET) {
+		const struct sockaddr_in *sin1, *sin2;
+		sin1 = (const struct sockaddr_in *)sa1;
+		sin2 = (const struct sockaddr_in *)sa2;
+		if (sin1->sin_addr.s_addr != sin2->sin_addr.s_addr)
+			return 0;
+		else if (include_port && sin1->sin_port != sin2->sin_port)
+			return 0;
+		else
+			return 1;
+	}
+#ifdef AF_INET6
+	if (sa1->sa_family == AF_INET6) {
+		const struct sockaddr_in6 *sin1, *sin2;
+		sin1 = (const struct sockaddr_in6 *)sa1;
+		sin2 = (const struct sockaddr_in6 *)sa2;
+		if (memcmp(sin1->sin6_addr.s6_addr, sin2->sin6_addr.s6_addr, 16))
+			return 0;
+		else if (include_port && sin1->sin6_port != sin2->sin6_port)
+			return 0;
+		else
+			return 1;
+	}
+#endif
+	return 1;
+}
 
 /* This walks the list of inflight requests to find the */
 /* one with a matching transaction id. Returns NULL on */
@@ -479,7 +529,7 @@ nameserver_probe_failed(struct nameserver *const ns) {
 	if (evtimer_add(&ns->timeout_event, (struct timeval *) timeout) < 0) {
 		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
-			debug_ntoa(ns->address));
+			debug_ntop((struct sockaddr *)&ns->address));
 		/* ???? Do more? */
 	}
 }
@@ -494,7 +544,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	if (!ns->state) return;
 
 	log(EVDNS_LOG_WARN, "Nameserver %s has failed: %s",
-			debug_ntoa(ns->address), msg);
+		debug_ntop((struct sockaddr *)&ns->address), msg);
 	global_good_nameservers--;
 	assert(global_good_nameservers >= 0);
 	if (global_good_nameservers == 0) {
@@ -508,7 +558,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	if (evtimer_add(&ns->timeout_event, (struct timeval *) &global_nameserver_timeouts[0]) < 0) {
 		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
-			debug_ntoa(ns->address));
+			debug_ntop((struct sockaddr *)&ns->address));
 		/* ???? Do more? */
 	}
 
@@ -538,7 +588,7 @@ static void
 nameserver_up(struct nameserver *const ns) {
 	if (ns->state) return;
 	log(EVDNS_LOG_WARN, "Nameserver %s is back up",
-		debug_ntoa(ns->address));
+		debug_ntop((struct sockaddr *)&ns->address));
 	evtimer_del(&ns->timeout_event);
 	CLEAR(&ns->timeout_event);
 	ns->state = 1;
@@ -724,7 +774,7 @@ reply_handle(struct request *const req, u16 flags, u32 ttl, struct reply *reply)
 			/*XXXX refactor the parts of */
 			log(EVDNS_LOG_DEBUG, "Got a SERVERFAILED from nameserver %s; "
 				"will allow the request to time out.",
-				debug_ntoa(req->ns->address));
+				debug_ntop((struct sockaddr *)&req->ns->address));
 			break;
 		default:
 			/* we got a good reply from the nameserver */
@@ -847,12 +897,12 @@ reply_parse(u8 *packet, int length) {
 	}
 	/* if (!answers) return; */  /* must have an answer of some form */
 
-	/* This macro skips a name in the DNS reply. */
-#define SKIP_NAME														\
+	/* This macro copies a name in the DNS reply into tmp_name */
+#define GET_NAME														\
 	do { tmp_name[0] = '\0';											\
 		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
 			goto err;													\
-	} while(0);
+	} while(0)
 
 	reply.type = req->request_type;
 
@@ -861,7 +911,7 @@ reply_parse(u8 *packet, int length) {
 		/* the question looks like
 		 * <label:name><u16:type><u16:class>
 		 */
-		SKIP_NAME;
+		GET_NAME;
 		j += 4;
 		if (j >= length) goto err;
 	}
@@ -872,14 +922,15 @@ reply_parse(u8 *packet, int length) {
 
 	for (i = 0; i < answers; ++i) {
 		u16 type, class;
+		int name_matches;
 
-		/* XXX I'd be more comfortable if we actually checked the name */
-		/* here. -NM */
-		SKIP_NAME;
+		GET_NAME;
 		GET16(type);
 		GET16(class);
 		GET32(ttl);
 		GET16(datalength);
+
+		name_matches = !strcasecmp(req->name, tmp_name);
 
 		if (type == TYPE_A && class == CLASS_INET) {
 			int addrcount, addrtocopy;
@@ -894,21 +945,25 @@ reply_parse(u8 *packet, int length) {
 			ttl_r = MIN(ttl_r, ttl);
 			/* we only bother with the first four addresses. */
 			if (j + 4*addrtocopy > length) goto err;
-			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
-				   packet + j, 4*addrtocopy);
+			if (name_matches) {
+				memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
+					   packet + j, 4*addrtocopy);
+				reply.data.a.addrcount += addrtocopy;
+				reply.have_answer = 1;
+				if (reply.data.a.addrcount == MAX_ADDRS) break;
+			}
 			j += 4*addrtocopy;
-			reply.data.a.addrcount += addrtocopy;
-			reply.have_answer = 1;
-			if (reply.data.a.addrcount == MAX_ADDRS) break;
 		} else if (type == TYPE_PTR && class == CLASS_INET) {
 			if (req->request_type != TYPE_PTR) {
 				j += datalength; continue;
 			}
-			if (name_parse(packet, length, &j, reply.data.ptr.name,
-						   sizeof(reply.data.ptr.name))<0)
-				goto err;
-			ttl_r = MIN(ttl_r, ttl);
-			reply.have_answer = 1;
+			GET_NAME;
+			if (name_matches) {
+				strlcpy(reply.data.ptr.name, tmp_name,
+						sizeof(reply.data.ptr.name));
+				ttl_r = MIN(ttl_r, ttl);
+				reply.have_answer = 1;
+			}
 			break;
 		} else if (type == TYPE_AAAA && class == CLASS_INET) {
 			int addrcount, addrtocopy;
@@ -923,12 +978,14 @@ reply_parse(u8 *packet, int length) {
 
 			/* we only bother with the first four addresses. */
 			if (j + 16*addrtocopy > length) goto err;
-			memcpy(&reply.data.aaaa.addresses[reply.data.aaaa.addrcount],
-				   packet + j, 16*addrtocopy);
-			reply.data.aaaa.addrcount += addrtocopy;
+			if (name_matches) {
+				memcpy(&reply.data.aaaa.addresses[reply.data.aaaa.addrcount],
+					   packet + j, 16*addrtocopy);
+				reply.data.aaaa.addrcount += addrtocopy;
+				reply.have_answer = 1;
+				if (reply.data.aaaa.addrcount == MAX_ADDRS) break;
+			}
 			j += 16*addrtocopy;
-			reply.have_answer = 1;
-			if (reply.data.aaaa.addrcount == MAX_ADDRS) break;
 		} else {
 			/* skip over any other type of resource */
 			j += datalength;
@@ -1143,15 +1200,26 @@ nameserver_pick(void) {
 /* this is called when a namesever socket is ready for reading */
 static void
 nameserver_read(struct nameserver *ns) {
+	struct sockaddr_storage ss;
+	struct sockaddr *sa = (struct sockaddr *) &ss;
+	socklen_t addrlen = sizeof(ss);
 	u8 packet[1500];
 
 	for (;;) {
 		const int r =
-            (int)recv(ns->socket, packet,(socklen_t)sizeof(packet), 0);
+            (int)recvfrom(ns->socket, packet, (socklen_t)sizeof(packet), 0,
+						  sa, &addrlen);
 		if (r < 0) {
 			int err = last_error(ns->socket);
 			if (error_is_eagain(err)) return;
 			nameserver_failed(ns, strerror(err));
+			return;
+		}
+		/* XXX Match port too? */
+		if (!sockaddr_eq(sa, (struct sockaddr*)&ns->address, 0)) {
+			log(EVDNS_LOG_WARN,
+				"Address mismatch on received DNS packet.  Address was %s",
+				debug_ntop(sa));
 			return;
 		}
 		ns->timedout = 0;
@@ -1228,7 +1296,7 @@ nameserver_write_waiting(struct nameserver *ns, char waiting) {
 			  nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
 		log(EVDNS_LOG_WARN, "Error from libevent when adding event for %s",
-			debug_ntoa(ns->address));
+			debug_ntop((struct sockaddr *)&ns->address));
 		/* ???? Do more? */
 	}
 }
@@ -1983,7 +2051,7 @@ nameserver_send_probe(struct nameserver *const ns) {
 	/* here we need to send a probe to a given nameserver */
 	/* in the hope that it is up now. */
 
-	log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntoa(ns->address));
+	log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntop((struct sockaddr *)&ns->address));
 
 	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
 	if (!req) return;
@@ -2095,18 +2163,22 @@ evdns_resume(void)
 }
 
 static int
-_evdns_nameserver_add_impl(u32 address, int port) {
+_evdns_nameserver_add_impl(const struct sockaddr *address) {
 	/* first check to see if we already have this nameserver */
 
 	const struct nameserver *server = server_head, *const started_at = server_head;
 	struct nameserver *ns;
-	struct sockaddr_in sin;
+
 	int err = 0;
 	if (server) {
 		do {
-			if (server->address == address) return 3;
+			if (!sockaddr_eq(address, (struct sockaddr *)&server->address, 1))
+				return 3;
 			server = server->next;
 		} while (server != started_at);
+	}
+	if (address->sa_len > sizeof(ns->address)) {
+		return 2;
 	}
 
 	ns = (struct nameserver *) malloc(sizeof(struct nameserver));
@@ -2124,17 +2196,13 @@ _evdns_nameserver_add_impl(u32 address, int port) {
 #else
 	fcntl(ns->socket, F_SETFL, O_NONBLOCK);
 #endif
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_addr.s_addr = address;
-	sin.sin_port = htons(port);
-	sin.sin_family = AF_INET;
-	if (connect(ns->socket, (struct sockaddr *) &sin,
-                (socklen_t)sizeof(sin)) != 0) {
+
+	if (connect(ns->socket, address, address->sa_len) != 0) {
 		err = 2;
 		goto out2;
 	}
 
-	ns->address = address;
+	memcpy(&ns->address, address, address->sa_len);
 	ns->state = 1;
 	event_set(&ns->event, ns->socket, EV_READ | EV_PERSIST, nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
@@ -2142,7 +2210,7 @@ _evdns_nameserver_add_impl(u32 address, int port) {
 		goto out2;
 	}
 
-	log(EVDNS_LOG_DEBUG, "Added nameserver %s", debug_ntoa(address));
+	log(EVDNS_LOG_DEBUG, "Added nameserver %s", debug_ntop(address));
 
 	/* insert this nameserver into the list of them */
 	if (!server_head) {
@@ -2166,44 +2234,102 @@ out2:
 out1:
 	CLEAR(ns);
 	free(ns);
-	log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d", debug_ntoa(address), err);
+	log(EVDNS_LOG_WARN, "Unable to add nameserver %s: error %d", debug_ntop(address), err);
 	return err;
 }
 
 /* exported function */
 int
 evdns_nameserver_add(unsigned long int address) {
-	return _evdns_nameserver_add_impl((u32)address, 53);
+	struct sockaddr_in sin;
+	sin.sin_len = sizeof(sin);
+	sin.sin_addr.s_addr = htonl(address);
+	sin.sin_port = 53;
+	return _evdns_nameserver_add_impl((struct sockaddr*) &sin);
 }
 
 /* exported function */
 int
 evdns_nameserver_ip_add(const char *ip_as_string) {
-	struct in_addr ina;
 	int port;
-	char buf[20];
-	const char *cp;
+	char buf[128];
+	const char *cp, *addr_part, *port_part;
+	int is_ipv6;
+	/* recognized formats are:
+	 * [ipv6]:port
+	 * ipv6
+	 * [ipv6]
+	 * ipv4:port
+	 * ipv4
+	 */
+
 	cp = strchr(ip_as_string, ':');
-	if (! cp) {
-		cp = ip_as_string;
-		port = 53;
-	} else {
-		port = strtoint(cp+1);
-		if (port < 0 || port > 65535) {
+	if (*ip_as_string == '[') {
+		int len;
+		if (!(cp = strchr(ip_as_string, ']')))
 			return 4;
-		}
-		if ((cp-ip_as_string) >= (int)sizeof(buf)) {
+		len = cp-(ip_as_string + 1);
+		if (len > (int)sizeof(buf)-1)
 			return 4;
-		}
-		assert(cp >= ip_as_string);
+		memcpy(buf, ip_as_string+1, len);
+		buf[len] = '\0';
+		addr_part = buf;
+		if (cp[1] == ':')
+			port_part = cp+2;
+		else
+			port_part = NULL;
+		is_ipv6 = 1;
+	} else if (cp && strchr(cp+1, ':')) {
+		is_ipv6 = 1;
+		addr_part = ip_as_string;
+		port_part = NULL;
+	} else if (cp) {
+		is_ipv6 = 0;
+		if (cp - ip_as_string > (int)sizeof(buf)-1)
+			return 4;
 		memcpy(buf, ip_as_string, cp-ip_as_string);
 		buf[cp-ip_as_string] = '\0';
-		cp = buf;
+		addr_part = buf;
+		port_part = cp+1;
+	} else {
+		addr_part = ip_as_string;
+		port_part = NULL;
+		is_ipv6 = 0;
 	}
-	if (!inet_aton(cp, &ina)) {
-		return 4;
+
+	if (port_part == NULL) {
+		port = 53;
+	} else {
+		port = strtoint(port_part);
+		if (port <= 0 || port > 65535) {
+			return 4;
+		}
 	}
-	return _evdns_nameserver_add_impl(ina.s_addr, port);
+
+	/* Tor-only.  needs a more general fix. */
+	assert(addr_part);
+	if (is_ipv6) {
+		struct sockaddr_in6 sin6;
+		sin6.sin6_len = sizeof(struct sockaddr_in6);
+		sin6.sin6_port = htons(port);
+		if (1 != tor_inet_pton(AF_INET6, addr_part, &sin6.sin6_addr))
+			return 4;
+		return _evdns_nameserver_add_impl((struct sockaddr*)&sin6);
+	} else {
+		struct sockaddr_in sin;
+		sin.sin_len = sizeof(struct sockaddr_in);
+		sin.sin_port = htons(port);
+		if (!inet_aton(addr_part, &sin.sin_addr))
+			return 4;
+		return _evdns_nameserver_add_impl((struct sockaddr*)&sin);
+	}
+}
+
+int
+evdns_nameserver_sockaddr_add(const struct sockaddr *sa, socklen_t len)
+{
+	assert(sa->sa_len == len);
+	return _evdns_nameserver_add_impl(sa);
 }
 
 /* insert into the tail of the queue */
@@ -2242,7 +2368,8 @@ request_new(int type, const char *name, int flags,
 	const u16 trans_id = issuing_now ? transaction_id_pick() : 0xffff;
 	/* the request data is alloced in a single block with the header */
 	struct request *const req =
-		(struct request *) malloc(sizeof(struct request) + request_max_len);
+		(struct request *) malloc(sizeof(struct request) + request_max_len
+								  + name_len + 1);
 	int rlen;
 	(void) flags;
 
@@ -2251,6 +2378,10 @@ request_new(int type, const char *name, int flags,
 
 	/* request data lives just after the header */
 	req->request = ((u8 *) req) + sizeof(struct request);
+	/* A copy of the name sits after the request data */
+	req->name = ((char *)req) + sizeof(struct request) + request_max_len;
+	strlcpy(req->name, name, name_len + 1);
+
 	/* denotes that the request data shouldn't be free()ed */
 	req->request_appended = 1;
 	rlen = evdns_request_data_build(name, name_len, trans_id,
@@ -2705,12 +2836,7 @@ resolv_conf_parse_line(char *const start, int flags) {
 
 	if (!strcmp(first_token, "nameserver") && (flags & DNS_OPTION_NAMESERVERS)) {
 		const char *const nameserver = NEXT_TOKEN;
-		struct in_addr ina;
-
-		if (inet_aton(nameserver, &ina)) {
-			/* address is valid */
-			evdns_nameserver_add(ina.s_addr);
-		}
+		evdns_nameserver_ip_add(nameserver);
 	} else if (!strcmp(first_token, "domain") && (flags & DNS_OPTION_SEARCH)) {
 		const char *const domain = NEXT_TOKEN;
 		if (domain) {
@@ -2820,7 +2946,7 @@ evdns_nameserver_ip_add_line(const char *ips) {
 		while (ISSPACE(*ips) || *ips == ',' || *ips == '\t')
 			++ips;
 		addr = ips;
-		while (ISDIGIT(*ips) || *ips == '.' || *ips == ':')
+		while (ISDIGIT(*ips) || *ips == '.' || *ips == ':' || *ips == '[' || *ips == ']')
 			++ips;
 		buf = malloc(ips-addr+1);
 		if (!buf) return 4;

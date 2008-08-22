@@ -263,6 +263,7 @@ int evdns_count_nameservers(void);
 int evdns_clear_nameservers_and_suspend(void);
 int evdns_resume(void);
 int evdns_nameserver_ip_add(const char *ip_as_string);
+int evdns_nameserver_sockaddr_add(const struct sockaddr *sa, socklen_t len);
 int evdns_resolve_ipv4(const char *name, int flags, evdns_callback_type callback, void *ptr);
 int evdns_resolve_ipv6(const char *name, int flags, evdns_callback_type callback, void *ptr);
 struct in_addr;
