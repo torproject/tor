@@ -129,7 +129,7 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
 
   if test "$tor_$1_dir_found" = no; then
     if test "$tor_$1_any_linkable" = no ; then
-      AC_MSG_WARN([Could not find a linkable $1.  If you have it installed somewhere unusal, you can specify an explicit path using $7])
+      AC_MSG_WARN([Could not find a linkable $1.  If you have it installed somewhere unusual, you can specify an explicit path using $7])
       TOR_WARN_MISSING_LIB($1, pkg)
       AC_MSG_ERROR([Missing libraries; unable to proceed.])
     else
