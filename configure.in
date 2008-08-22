@@ -283,10 +283,19 @@ tor_openssl_pkg_debian="libssl"
 tor_openssl_devpkg_redhat="openssl-devel"
 tor_openssl_devpkg_debian="libssl-dev"
 
+ALT_openssl_WITHVAL=""
+AC_ARG_WITH(ssl-dir,
+  [  --with-ssl-dir=PATH    Obsolete alias for --with-openssl-dir ],
+  [
+      if test "x$withval" != xno && test "x$withval" != "x" ; then
+         ALT_openssl_WITHVAL="$withval"
+      fi
+  ])
+
 TOR_SEARCH_LIBRARY(openssl, $tryssldir, [-lssl -lcrypto $TOR_LIB_GDI],
     [#include <openssl/rand.h>],
     [void RAND_add(const void *buf, int num, double entropy);],
-    [RAND_add((void*)0,0,0); exit(0);], [--with-ssl-dir],
+    [RAND_add((void*)0,0,0); exit(0);], [],
     [/usr/local/openssl /usr/lib/openssl /usr/local/ssl /usr/lib/ssl /usr/local /usr/athena /opt/openssl])
 
 dnl XXXX check for OPENSSL_VERSION_NUMBER == SSLeay()
