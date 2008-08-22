@@ -13,6 +13,10 @@ Changes in version 0.2.0.31 - 2008-08-??
       when building against recent kernels.  Bugfix on 0.1.2.1-alpha.
     - Pick size of default geoip filename string correctly on windows.
       Fixes bug 806. Bugfix on 0.2.0.30.
+    - Make the autoconf script accept the obsolete --with-ssl-dir option as
+      an alias for the actually-working --with-openssl-dir option.  Fix the
+      help documentation to recommend --with-openssl-dir.  Based on a patch
+      by "Dave". Bugfix on 0.2.0.1-alpha.
 
 
 Changes in version 0.2.0.30 - 2008-07-15

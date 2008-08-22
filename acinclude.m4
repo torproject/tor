@@ -72,7 +72,12 @@ dnl against it.
 dnl
 dnl TOR_SEARCH_LIBRARY(1:libname, 2:IGNORED, 3:linkargs, 4:headers,
 dnl                    5:prototype,
-dnl                    6:code, 7:optionname, 8:searchextra)
+dnl                    6:code, 7:IGNORED, 8:searchextra)
+dnl
+dnl Special variables:
+dnl   ALT_{libname}_WITHVAL -- another possible value for --with-$1-dir.
+dnl       Used to support renaming --with-ssl-dir to --with-openssl-dir
+dnl
 AC_DEFUN([TOR_SEARCH_LIBRARY], [
 try$1dir=""
 AC_ARG_WITH($1-dir,
@@ -82,6 +87,10 @@ AC_ARG_WITH($1-dir,
         try$1dir="$withval"
      fi
   ])
+if test "x$try$1dir" = x && test "x$ALT_$1_WITHVAL" != x ; then
+  try$1dir="$ALT_$1_WITHVAL"
+fi
+
 tor_saved_LIBS="$LIBS"
 tor_saved_LDFLAGS="$LDFLAGS"
 tor_saved_CPPFLAGS="$CPPFLAGS"
@@ -129,7 +138,7 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
 
   if test "$tor_$1_dir_found" = no; then
     if test "$tor_$1_any_linkable" = no ; then
-      AC_MSG_WARN([Could not find a linkable $1.  If you have it installed somewhere unusal, you can specify an explicit path using $7])
+      AC_MSG_WARN([Could not find a linkable $1.  If you have it installed somewhere unusual, you can specify an explicit path using --with-$1-dir])
       TOR_WARN_MISSING_LIB($1, pkg)
       AC_MSG_ERROR([Missing libraries; unable to proceed.])
     else
@@ -178,7 +187,7 @@ if test "$cross_compiling" != yes; then
    done
 
    if test "$runnable" = no; then
-     AC_MSG_ERROR([Found linkable $1 in $tor_cv_library_$1_dir, but it does not seem to run, even with -R. Maybe specify another using $7}])
+     AC_MSG_ERROR([Found linkable $1 in $tor_cv_library_$1_dir, but it does not seem to run, even with -R. Maybe specify another using --with-$1-dir}])
    fi
    LDFLAGS="$orig_LDFLAGS"
   ]) dnl end cache check check for extra options.
