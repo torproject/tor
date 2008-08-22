@@ -2163,7 +2163,8 @@ evdns_resume(void)
 }
 
 static int
-_evdns_nameserver_add_impl(const struct sockaddr *address) {
+_evdns_nameserver_add_impl(const struct sockaddr *address,
+						   socklen_t addrlen) {
 	/* first check to see if we already have this nameserver */
 
 	const struct nameserver *server = server_head, *const started_at = server_head;
@@ -2177,7 +2178,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address) {
 			server = server->next;
 		} while (server != started_at);
 	}
-	if (address->sa_len > sizeof(ns->address)) {
+	if (addrlen > sizeof(ns->address)) {
 		return 2;
 	}
 
@@ -2197,12 +2198,12 @@ _evdns_nameserver_add_impl(const struct sockaddr *address) {
 	fcntl(ns->socket, F_SETFL, O_NONBLOCK);
 #endif
 
-	if (connect(ns->socket, address, address->sa_len) != 0) {
+	if (connect(ns->socket, address, addrlen) != 0) {
 		err = 2;
 		goto out2;
 	}
 
-	memcpy(&ns->address, address, address->sa_len);
+	memcpy(&ns->address, address, addrlen);
 	ns->state = 1;
 	event_set(&ns->event, ns->socket, EV_READ | EV_PERSIST, nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
@@ -2242,10 +2243,9 @@ out1:
 int
 evdns_nameserver_add(unsigned long int address) {
 	struct sockaddr_in sin;
-	sin.sin_len = sizeof(sin);
 	sin.sin_addr.s_addr = htonl(address);
 	sin.sin_port = 53;
-	return _evdns_nameserver_add_impl((struct sockaddr*) &sin);
+	return _evdns_nameserver_add_impl((struct sockaddr*) &sin, sizeof(sin));
 }
 
 /* exported function */
@@ -2310,26 +2310,25 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	assert(addr_part);
 	if (is_ipv6) {
 		struct sockaddr_in6 sin6;
-		sin6.sin6_len = sizeof(struct sockaddr_in6);
 		sin6.sin6_port = htons(port);
 		if (1 != tor_inet_pton(AF_INET6, addr_part, &sin6.sin6_addr))
 			return 4;
-		return _evdns_nameserver_add_impl((struct sockaddr*)&sin6);
+		return _evdns_nameserver_add_impl((struct sockaddr*)&sin6,
+										  sizeof(sin6));
 	} else {
 		struct sockaddr_in sin;
-		sin.sin_len = sizeof(struct sockaddr_in);
 		sin.sin_port = htons(port);
 		if (!inet_aton(addr_part, &sin.sin_addr))
 			return 4;
-		return _evdns_nameserver_add_impl((struct sockaddr*)&sin);
+		return _evdns_nameserver_add_impl((struct sockaddr*)&sin,
+										  sizeof(sin));
 	}
 }
 
 int
 evdns_nameserver_sockaddr_add(const struct sockaddr *sa, socklen_t len)
 {
-	assert(sa->sa_len == len);
-	return _evdns_nameserver_add_impl(sa);
+	return _evdns_nameserver_add_impl(sa, len);
 }
 
 /* insert into the tail of the queue */
