@@ -1524,73 +1524,16 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
 #endif
 #endif
 
-#if defined(USE_WIN32_THREADS) && 0
-/** A generic lock structure for multithreaded builds. */
-struct tor_mutex_t {
-  HANDLE handle;
-};
-tor_mutex_t *
-tor_mutex_new(void)
-{
-  tor_mutex_t *m;
-  m = tor_malloc_zero(sizeof(tor_mutex_t));
-  m->handle = CreateMutex(NULL, FALSE, NULL);
-  tor_assert(m->handle != NULL);
-  return m;
-}
+#if defined(USE_WIN32_THREADS)
 void
-tor_mutex_free(tor_mutex_t *m)
+tor_mutex_init(tor_mutex_t *m)
 {
-  CloseHandle(m->handle);
-  tor_free(m);
-}
-void
-tor_mutex_acquire(tor_mutex_t *m)
-{
-  DWORD r;
-  r = WaitForSingleObject(m->handle, INFINITE);
-  switch (r) {
-    case WAIT_ABANDONED: /* holding thread exited. */
-    case WAIT_OBJECT_0: /* we got the mutex normally. */
-      break;
-    case WAIT_TIMEOUT: /* Should never happen. */
-      tor_assert(0);
-      break;
-    case WAIT_FAILED:
-      log_warn(LD_GENERAL, "Failed to acquire mutex: %d",(int) GetLastError());
-  }
-}
-void
-tor_mutex_release(tor_mutex_t *m)
-{
-  BOOL r;
-  r = ReleaseMutex(m->handle);
-  if (!r) {
-    log_warn(LD_GENERAL, "Failed to release mutex: %d", (int) GetLastError());
-  }
-}
-unsigned long
-tor_get_thread_id(void)
-{
-  return (unsigned long)GetCurrentThreadId();
-}
-#elif defined(USE_WIN32_THREADS)
-/** A generic lock structure for multithreaded builds. */
-struct tor_mutex_t {
-  CRITICAL_SECTION mutex;
-};
-tor_mutex_t *
-tor_mutex_new(void)
-{
-  tor_mutex_t *m = tor_malloc_zero(sizeof(tor_mutex_t));
   InitializeCriticalSection(&m->mutex);
-  return m;
 }
 void
-tor_mutex_free(tor_mutex_t *m)
+tor_mutex_uninit(tor_mutex_t *m)
 {
   DeleteCriticalSection(&m->mutex);
-  tor_free(m);
 }
 void
 tor_mutex_acquire(tor_mutex_t *m)
@@ -1609,18 +1552,12 @@ tor_get_thread_id(void)
   return (unsigned long)GetCurrentThreadId();
 }
 #elif defined(USE_PTHREADS)
-/** A generic lock structure for multithreaded builds. */
-struct tor_mutex_t {
-  pthread_mutex_t mutex;
-};
 static pthread_mutexattr_t attr_reentrant;
 static int threads_initialized = 0;
-/** Allocate and return new lock. */
-tor_mutex_t *
-tor_mutex_new(void)
+void
+tor_mutex_init(tor_mutex_t *mutex)
 {
   int err;
-  tor_mutex_t *mutex = tor_malloc_zero(sizeof(tor_mutex_t));
   if (PREDICT_UNLIKELY(!threads_initialized))
     tor_threads_init();
   err = pthread_mutex_init(&mutex->mutex, &attr_reentrant);
@@ -1628,7 +1565,6 @@ tor_mutex_new(void)
     log_err(LD_GENERAL, "Error %d creating a mutex.", err);
     tor_fragile_assert();
   }
-  return mutex;
 }
 /** Wait until <b>m</b> is free, then acquire it. */
 void
@@ -1654,9 +1590,8 @@ tor_mutex_release(tor_mutex_t *m)
     tor_fragile_assert();
   }
 }
-/** Free all storage held by the lock <b>m</b>. */
 void
-tor_mutex_free(tor_mutex_t *m)
+tor_mutex_uninit(tor_mutex_t *m)
 {
   int err;
   tor_assert(m);
@@ -1665,7 +1600,6 @@ tor_mutex_free(tor_mutex_t *m)
     log_err(LD_GENERAL, "Error %d destroying a mutex.", err);
     tor_fragile_assert();
   }
-  tor_free(m);
 }
 /** Return an integer representing this thread. */
 unsigned long
@@ -1678,11 +1612,22 @@ tor_get_thread_id(void)
   r.thr = pthread_self();
   return r.id;
 }
-#else
-/** A generic lock structure for multithreaded builds. */
-struct tor_mutex_t {
-  int _unused;
-};
+#endif
+
+#ifdef TOR_IS_MULTITHREADED
+tor_mutex_t *
+tor_mutex_new(void)
+{
+  tor_mutex_t *m = tor_malloc_zero(sizeof(tor_mutex_t));
+  tor_mutex_init(m);
+  return m;
+}
+void
+tor_mutex_free(tor_mutex_t *m)
+{
+  tor_mutex_uninit(m);
+  tor_free(m);
+}
 #endif
 
 /* Conditions. */

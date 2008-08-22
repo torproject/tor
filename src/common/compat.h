@@ -426,19 +426,33 @@ void spawn_exit(void) ATTR_NORETURN;
  * Linux, etc), we need locking for them.  On platforms with poor thread
  * support or broken gethostbyname_r, these functions are no-ops. */
 
-typedef struct tor_mutex_t tor_mutex_t;
+/** A generic lock structure for multithreaded builds. */
+typedef struct tor_mutex_t {
+#if defined(USE_WIN32_THREADS)
+  CRITICAL_SECTION mutex;
+#elif defined(USE_PTHREADS)
+  pthread_mutex_t mutex;
+#else
+  int _unused;
+#endif
+} tor_mutex_t;
+
 #ifdef TOR_IS_MULTITHREADED
 tor_mutex_t *tor_mutex_new(void);
+void tor_mutex_init(tor_mutex_t *m);
 void tor_mutex_acquire(tor_mutex_t *m);
 void tor_mutex_release(tor_mutex_t *m);
 void tor_mutex_free(tor_mutex_t *m);
+void tor_mutex_uninit(tor_mutex_t *m);
 unsigned long tor_get_thread_id(void);
 void tor_threads_init(void);
 #else
 #define tor_mutex_new() ((tor_mutex_t*)tor_malloc(sizeof(int)))
+#define tor_mutex_init(m) STMT_NIL
 #define tor_mutex_acquire(m) STMT_NIL
 #define tor_mutex_release(m) STMT_NIL
 #define tor_mutex_free(m) STMT_BEGIN tor_free(m); STMT_END
+#define tor_mutex_uninit(m) STMT_NIL
 #define tor_get_thread_id() (1UL)
 #define tor_threads_init() STMT_NIL
 #endif
