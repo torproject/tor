@@ -170,12 +170,10 @@ for high-stakes anonymity.
 %build
 %if %{is_suse}
 %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
-	--build=%{_host} --host=%{_host} --target=%{_host}             \
-    --enable-openbsd-malloc
+	--build=%{_host} --host=%{_host} --target=%{_host}             
 %else
 %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
-	--build=%{_host} --host=%{_host} --target=%{_host}             \
-    --enable-openbsd-malloc
+	--build=%{_host} --host=%{_host} --target=%{_host}          
 %endif
 %make
 
