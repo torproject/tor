@@ -137,6 +137,34 @@ parse_socks4a_resolve_response(const char *response, size_t len,
   return 0;
 }
 
+/* It would be nice to let someone know what SOCKS5 issue a user may have */
+const char *
+socks5_reason_to_string(char reason)
+{
+    switch(reason){
+      case SOCKS5_SUCCEEDED:
+        return "succeeded";
+      case SOCKS5_GENERAL_ERROR:
+        return "general error";
+      case SOCKS5_NOT_ALLOWED:
+        return "not allowed";
+      case SOCKS5_NET_UNREACHABLE:
+        return "network is unreachable";
+      case SOCKS5_HOST_UNREACHABLE:
+        return "host is unreachable";
+      case SOCKS5_CONNECTION_REFUSED:
+        return "connection refused";
+      case SOCKS5_TTL_EXPIRED:
+        return "ttl explired";
+      case SOCKS5_COMMAND_NOT_SUPPORTED:
+        return "command not supported";
+      case SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED:
+        return "address type not supported";
+      default:
+        return "unknown SOCKS5 code.";
+    }
+}
+
 /** Send a resolve request for <b>hostname</b> to the Tor listening on
  * <b>sockshost</b>:<b>socksport</b>.  Store the resulting IPv4
  * address (in host order) into *<b>result_addr</b>.
@@ -228,9 +256,11 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
       log_err(LD_NET, "Bad SOCKS5 reply version.");
       return -1;
     }
+    /* Give a user some useful feedback about SOCKS5 errors */
     if (reply_buf[1] != 0) {
-      log_warn(LD_NET,"Got status response '%u': SOCKS5 request failed.",
-               (unsigned)reply_buf[1]);
+      log_warn(LD_NET,"Got SOCKS5 status response '%u': %s",
+               (unsigned)reply_buf[1],
+               socks5_reason_to_string(reply_buf[1]));
       return -1;
     }
     if (reply_buf[3] == 1) {
