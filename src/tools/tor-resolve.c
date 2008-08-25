@@ -138,7 +138,7 @@ parse_socks4a_resolve_response(const char *response, size_t len,
 }
 
 /* It would be nice to let someone know what SOCKS5 issue a user may have */
-const char *
+static const char *
 socks5_reason_to_string(char reason)
 {
     switch(reason){
