@@ -28,6 +28,9 @@ const char connection_edge_c_id[] =
 #define TRANS_PF
 #endif
 
+#define SOCKS4_GRANTED          90
+#define SOCKS4_REJECT           91
+
 /** List of exit_redirect_t for every configured RedirectExit. */
 static smartlist_t *redirect_exit_list = NULL;
 
@@ -2298,12 +2301,12 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   if (conn->socks_request->socks_version == 4) {
     buf[0] = 0x00; /* version */
     if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4) {
-      buf[1] = 90; /* "Granted" */
+      buf[1] = SOCKS4_GRANTED;
       set_uint16(buf+2, 0);
       memcpy(buf+4, answer, 4); /* address */
       replylen = SOCKS4_NETWORK_LEN;
-    } else {
-      buf[1] = 91; /* "error" */
+    } else { /* "error" */
+      buf[1] = SOCKS4_REJECT;
       memset(buf+2, 0, 6);
       replylen = SOCKS4_NETWORK_LEN;
     }
@@ -2382,8 +2385,6 @@ connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
   }
   if (conn->socks_request->socks_version == 4) {
     memset(buf,0,SOCKS4_NETWORK_LEN);
-#define SOCKS4_GRANTED          90
-#define SOCKS4_REJECT           91
     buf[1] = (status==SOCKS5_SUCCEEDED ? SOCKS4_GRANTED : SOCKS4_REJECT);
     /* leave version, destport, destip zero */
     connection_write_to_buf(buf, SOCKS4_NETWORK_LEN, TO_CONN(conn));
