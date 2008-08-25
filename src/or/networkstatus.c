@@ -233,10 +233,19 @@ router_reload_consensus_networkstatus(void)
   return 0;
 }
 
+static void
+vote_routerstatus_free(vote_routerstatus_t *rs)
+{
+  tor_free(rs->version);
+  tor_free(rs->status.exitsummary);
+  tor_free(rs);
+}
+
 /** Free all storage held by the routerstatus object <b>rs</b>. */
 void
 routerstatus_free(routerstatus_t *rs)
 {
+  tor_free(rs->exitsummary);
   tor_free(rs);
 }
 
@@ -292,13 +301,10 @@ networkstatus_vote_free(networkstatus_t *ns)
   if (ns->routerstatus_list) {
     if (ns->type == NS_TYPE_VOTE || ns->type == NS_TYPE_OPINION) {
       SMARTLIST_FOREACH(ns->routerstatus_list, vote_routerstatus_t *, rs,
-      {
-        tor_free(rs->version);
-        tor_free(rs);
-      });
+                        vote_routerstatus_free(rs));
     } else {
       SMARTLIST_FOREACH(ns->routerstatus_list, routerstatus_t *, rs,
-                        tor_free(rs));
+                        routerstatus_free(rs));
     }
 
     smartlist_free(ns->routerstatus_list);
