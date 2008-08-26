@@ -141,7 +141,7 @@ parse_socks4a_resolve_response(const char *response, size_t len,
 static const char *
 socks5_reason_to_string(char reason)
 {
-    switch(reason){
+    switch(reason) {
       case SOCKS5_SUCCEEDED:
         return "succeeded";
       case SOCKS5_GENERAL_ERROR:
@@ -155,13 +155,13 @@ socks5_reason_to_string(char reason)
       case SOCKS5_CONNECTION_REFUSED:
         return "connection refused";
       case SOCKS5_TTL_EXPIRED:
-        return "ttl explired";
+        return "ttl expired";
       case SOCKS5_COMMAND_NOT_SUPPORTED:
         return "command not supported";
       case SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED:
         return "address type not supported";
       default:
-        return "unknown SOCKS5 code.";
+        return "unknown SOCKS5 code";
     }
 }
 
