@@ -141,28 +141,28 @@ parse_socks4a_resolve_response(const char *response, size_t len,
 static const char *
 socks5_reason_to_string(char reason)
 {
-    switch(reason) {
-      case SOCKS5_SUCCEEDED:
-        return "succeeded";
-      case SOCKS5_GENERAL_ERROR:
-        return "general error";
-      case SOCKS5_NOT_ALLOWED:
-        return "not allowed";
-      case SOCKS5_NET_UNREACHABLE:
-        return "network is unreachable";
-      case SOCKS5_HOST_UNREACHABLE:
-        return "host is unreachable";
-      case SOCKS5_CONNECTION_REFUSED:
-        return "connection refused";
-      case SOCKS5_TTL_EXPIRED:
-        return "ttl expired";
-      case SOCKS5_COMMAND_NOT_SUPPORTED:
-        return "command not supported";
-      case SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED:
-        return "address type not supported";
-      default:
-        return "unknown SOCKS5 code";
-    }
+  switch(reason) {
+    case SOCKS5_SUCCEEDED:
+      return "succeeded";
+    case SOCKS5_GENERAL_ERROR:
+      return "general error";
+    case SOCKS5_NOT_ALLOWED:
+      return "not allowed";
+    case SOCKS5_NET_UNREACHABLE:
+      return "network is unreachable";
+    case SOCKS5_HOST_UNREACHABLE:
+      return "host is unreachable";
+    case SOCKS5_CONNECTION_REFUSED:
+      return "connection refused";
+    case SOCKS5_TTL_EXPIRED:
+      return "ttl expired";
+    case SOCKS5_COMMAND_NOT_SUPPORTED:
+      return "command not supported";
+    case SOCKS5_ADDRESS_TYPE_NOT_SUPPORTED:
+      return "address type not supported";
+    default:
+      return "unknown SOCKS5 code";
+  }
 }
 
 /** Send a resolve request for <b>hostname</b> to the Tor listening on
