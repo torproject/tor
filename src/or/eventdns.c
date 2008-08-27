@@ -2310,6 +2310,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	assert(addr_part);
 	if (is_ipv6) {
 		struct sockaddr_in6 sin6;
+		sin6.sin6_family = AF_INET6;
 		sin6.sin6_port = htons(port);
 		if (1 != tor_inet_pton(AF_INET6, addr_part, &sin6.sin6_addr))
 			return 4;
@@ -2317,6 +2318,7 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 										  sizeof(sin6));
 	} else {
 		struct sockaddr_in sin;
+		sin.sin_family = AF_INET;
 		sin.sin_port = htons(port);
 		if (!inet_aton(addr_part, &sin.sin_addr))
 			return 4;
