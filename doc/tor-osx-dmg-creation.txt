@@ -16,7 +16,7 @@ libevent.
 ## See far below if you don't care about cross compiling for PPC and X86.
 ## The single architecture process starts with "###"
 
-1) Install XCode 2.4.1 updates available from http://developer.apple.com.
+1) Install the latest XCode updates available from http://developer.apple.com.
 
 ## Compiling libevent
 
