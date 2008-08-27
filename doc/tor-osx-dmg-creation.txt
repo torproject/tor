@@ -8,8 +8,8 @@ Summary:
 1) Compile and install a static version of the latest release of
 libevent.
 2) Acquire and install your preferred version of tor. Extract.
-4) "make dist-osx"
-5) You now have a dmg from which you can install Tor.
+3) "make dist-osx"
+4) You now have a dmg from which you can install Tor.
 
 ## Universal Binaries for OSX PPC and X86
 ## This method works in OSX 10.4 (Tiger) and newer OSX versions.
@@ -29,11 +29,8 @@ CFLAGS="-O -g -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sd
 LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
 ./configure --enable-static --disable-shared --disable-dependency-tracking
 
-3) Complete the "make" and "make install".  You will need to be root,
+4) Complete the "make" and "make install".  You will need to be root,
 or sudo -s, to complete the "make install".
-
-4) If you have previouslly installed libevent, rm the old libevent.*, located
-by default, in /usr/local/lib/.  
 
 5) Check for a successful universal binary of libevent.a in, by default,
 /usr/local/lib by using the following command:
@@ -55,18 +52,18 @@ CONFDIR=/Library/Tor \
 ./configure --prefix=/Library/Tor --bindir=/Library/Tor \
 --sysconfdir=/Library --disable-dependency-tracking
 
-13) "make dist-osx"
+8) "make dist-osx"
 
-14) Confirm you have created a universal binary by issuing the follow command:
+9) Confirm you have created a universal binary by issuing the follow command:
 "file src/or/tor".  Its output should be as follows:
 src/or/tor: Mach-O fat file with 2 architectures
 src/or/tor (for architecture i386):     Mach-O executable i386
 src/or/tor (for architecture ppc):      Mach-O executable ppc
 
-15) There should exist in the top-level directory a
+10) There should exist in the top-level directory a
 Tor-$VERSION-universal-$OS-Bundle.dmg
 
-16) Congrats.  You have a universal binary. You are now ready to install Tor.
+11) Congrats.  You have a universal binary. You are now ready to install Tor.
 
 ### Single Architecture Binaries for PPC or X86, not both.
 ### This method works in all versions of OSX 10.3 through 10.5
@@ -83,18 +80,15 @@ follows:
 3) Complete the "make" and "make install".  You will need to be root,
 or sudo -s, to complete the "make install".
 
-4) If you have previouslly installed libevent, go rm the old libevent.so*
-files so the linker doesn't get suckered into using them.
-
 ### Compiling Tor
 
-1) Get your preferred version of the tor source from https://www.torproject.org.  Extract the
+4) Get your preferred version of the tor source from https://www.torproject.org.  Extract the
 tarball.
 
-2) In the top level, this means /path/to/tor/, not tor/contrib/osx,
+5) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
      CONFDIR=/Library/Tor ./configure --prefix=/Library/Tor \
      --bindir=/Library/Tor --sysconfdir=/Library
 
-3) In same top level dir, do a "make dist-osx".  There now exists a
+6) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
