@@ -34,7 +34,7 @@ if [ -x /usr/bin/sw_vers ]; then
  	"10.0") ARCH="ppc";;
       esac
 else
-	OS="unknown"
+	ARCH="unknown"
 fi
  
 if [ $ARCH != "universal" ]; then
