@@ -25,13 +25,13 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
       case "$OSVER" in
-    "10.6") OS="snowleopard" ARCH="universal";;
-	"10.5") OS="leopard" ARCH="universal";;
- 	"10.4") OS="tiger" ARCH="universal";;
- 	"10.3") OS="panther" ARCH="ppc";;
- 	"10.2") OS="jaguar" ARCH="ppc";;
- 	"10.1") OS="puma" ARCH="ppc";;
- 	"10.0") OS="cheetah" ARCH="ppc";;
+    "10.6") ARCH="universal";;
+	"10.5") ARCH="universal";;
+ 	"10.4") ARCH="universal";;
+ 	"10.3") ARCH="ppc";;
+ 	"10.2") ARCH="ppc";;
+ 	"10.1") ARCH="ppc";;
+ 	"10.0") ARCH="ppc";;
       esac
 else
 	OS="unknown"

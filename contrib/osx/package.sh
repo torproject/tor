@@ -35,17 +35,17 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
-    "10.6") OS="snowleopard" ARCH="universal";;
-    "10.5") OS="leopard" ARCH="universal";;
-	"10.4") OS="tiger" ARCH="universal";;
-	"10.3") OS="panther" ARCH="ppc";;
-	"10.2") OS="jaguar" ARCH="ppc";;
-	"10.1") OS="puma" ARCH="ppc";;
-	"10.0") OS="cheetah" ARCH="ppc";;
-	*) OS="unknown";;
+    "10.6") ARCH="universal";;
+    "10.5") ARCH="universal";;
+	"10.4") ARCH="universal";;
+	"10.3") ARCH="ppc";;
+	"10.2") ARCH="ppc";;
+	"10.1") ARCH="ppc";;
+	"10.0") ARCH="ppc";;
+	*) ARCH="unknown";;
     esac
 else
-  OS="unknown"
+  ARCH="unknown"
 fi
 
 # Where will we put our temporary files?
@@ -132,7 +132,7 @@ $PACKAGEMAKER -build 		       \
 ### Assemble the metapackage.  Packagemaker won't buld metapackages from
 # the command line, so we need to do it by hand.
 
-MPKG=$BUILD_DIR/output/Tor-$VERSION-$OS-$ARCH-Bundle.mpkg
+MPKG=$BUILD_DIR/output/Tor-$VERSION-$ARCH-Bundle.mpkg
 mkdir -p "$MPKG/Contents/Resources"
 echo -n "pmkrpkg1" > "$MPKG/Contents/PkgInfo"
 cp contrib/osx/ReadMe.rtf "$MPKG/Contents/Resources"
@@ -154,10 +154,10 @@ cp LICENSE $BUILD_DIR/output/Tor\ License.txt
 
 find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
-mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$OS-$ARCH-Bundle"
-rm -f "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
+mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle"
+rm -f "Tor-$VERSION-$ARCH-Bundle.dmg"
 USER="`whoami`"
-sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$OS-$ARCH-Bundle" "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
-sudo chown "$USER" "Tor-$VERSION-$OS-$ARCH-Bundle.dmg"
+sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle" "Tor-$VERSION-$ARCH-Bundle.dmg"
+sudo chown "$USER" "Tor-$VERSION-$ARCH-Bundle.dmg"
 
 sudo rm -rf $BUILD_DIR
