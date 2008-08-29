@@ -1702,11 +1702,12 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
   SMARTLIST_FOREACH(chunks, sized_chunk_t *, chunk,
   {
     result = write_all(fd, chunk->bytes, chunk->len, 0);
-    if (result < 0 || (size_t)result != chunk->len) {
+    if (result < 0) {
       log(LOG_WARN, LD_FS, "Error writing to \"%s\": %s", fname,
           strerror(errno));
       goto err;
     }
+    tor_assert((size_t)result == chunk->len);
   });
 
   return finish_writing_to_file(file);
