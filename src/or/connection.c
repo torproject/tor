@@ -760,7 +760,8 @@ static void
 warn_too_many_conns(void)
 {
 #define WARN_TOO_MANY_CONNS_INTERVAL (6*60*60)
-  time_t last_warned = 0, now = time(NULL);
+  static time_t last_warned = 0;
+  time_t now = time(NULL);
   int n_conns = get_n_open_sockets();
   if (last_warned + WARN_TOO_MANY_CONNS_INTERVAL < now) {
     log_warn(LD_NET,"Failing because we have %d connections already. Please "

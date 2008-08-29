@@ -406,7 +406,7 @@ _c_hist_compare(const void **_a, const void **_b)
 }
 
 /*DOCDOC*/
-#define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
+#define GEOIP_MIN_OBSERVATION_TIME (60*60)
 
 static INLINE unsigned
 round_to_next_multiple_of(unsigned number, unsigned divisor)
