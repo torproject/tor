@@ -7,6 +7,11 @@ Changes in version 0.2.1.5-alpha - 2008-08-31
     - Begin implementation of proposal 121 (Client authorization for
       hidden services): associate keys, client lists, and authorization
       types with hidden services.
+    - Network status consensus documents and votes now contain for each
+      router bandwidth information and a summary of that router's exit
+      policy.  This will in the future be used by clients so that they
+      do not have to download every descriptor there is before building
+      circuits (Re proposal 141).
 
   o Major bugfixes (on 0.2.0.x and before):
     - When sending CREATED cells back for a given circuit, use a 64-bit
