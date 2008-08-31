@@ -22,7 +22,7 @@
 #   man packagemaker
 
 # Make sure VERSION is set, so we don't name the package
-# "Tor--$OS-$ARCH-Bundle.dmg"
+# "Tor--$ARCH-Bundle.dmg"
 if [ "XX$VERSION" = 'XX' ]; then
   echo "VERSION not set."
   exit 1

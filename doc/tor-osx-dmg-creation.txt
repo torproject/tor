@@ -61,7 +61,7 @@ src/or/tor (for architecture i386):     Mach-O executable i386
 src/or/tor (for architecture ppc):      Mach-O executable ppc
 
 10) There should exist in the top-level directory a
-Tor-$VERSION-universal-$OS-Bundle.dmg
+Tor-$VERSION-universal-Bundle.dmg
 
 11) Congrats.  You have a universal binary. You are now ready to install Tor.
 
