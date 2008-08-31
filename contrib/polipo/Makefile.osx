@@ -30,7 +30,7 @@ FILE_DEFINES = -DLOCAL_ROOT=\"$(LOCAL_ROOT)/\" \
 
 DEFINES = $(FILE_DEFINES) $(PLATFORM_DEFINES)
 
-UNIVERSAL = -O -g -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc
+UNIVERSAL = -O -g -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc
 LDFLAGS = -Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk
 CFLAGS = $(MD5INCLUDES) $(CDEBUGFLAGS) $(DEFINES) $(EXTRA_DEFINES) $(UNIVERSAL)
 

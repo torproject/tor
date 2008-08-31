@@ -18,16 +18,16 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
-    "10.5") OS="leopard" ARCH="universal";;
-	"10.4") OS="tiger" ARCH="universal";;
-	"10.3") OS="panther" ARCH="ppc";;
-	"10.2") OS="jaguar" ARCH="ppc";;
-	"10.1") OS="puma" ARCH="ppc";;
-	"10.0") OS="cheetah" ARCH="ppc";;
-	*) OS="unknown";;
+    "10.5") ARCH="universal";;
+	"10.4") ARCH="universal";;
+	"10.3") ARCH="ppc";;
+	"10.2") ARCH="ppc";;
+	"10.1") ARCH="ppc";;
+	"10.0") ARCH="ppc";;
+	*) ARCH="unknown";;
     esac
 else
-  OS="unknown"
+  ARCH="unknown"
 fi
 
 # Where will we put our temporary files?
@@ -78,10 +78,10 @@ $PACKAGEMAKER -build              \
 
 find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
-mv $BUILD_DIR/output "$BUILD_DIR/Polipo-$VERSION-$OS-$ARCH"
-rm -f "Polipo-$VERSION-$OS-$ARCH-Bundle.dmg"
+mv $BUILD_DIR/output "$BUILD_DIR/Polipo-$VERSION-$ARCH"
+rm -f "Polipo-$VERSION-$ARCH-Bundle.dmg"
 USER="`whoami`"
-sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Polipo-$VERSION-$OS-$ARCH" "Polipo-$VERSION-$OS-$ARCH.dmg"
-sudo chown "$USER" "Polipo-$VERSION-$OS-$ARCH.dmg"
+sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Polipo-$VERSION-$ARCH" "Polipo-$VERSION-$ARCH.dmg"
+sudo chown "$USER" "Polipo-$VERSION-$ARCH.dmg"
 
 #sudo rm -rf $BUILD_DIR
