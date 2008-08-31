@@ -13,4 +13,5 @@ Backport for 0.2.0 once better tested:
   - r16143: generate stream close events from connection_edge_destroy().
   - r16450: open /dev/pf before dropping privileges.
   - r16605: relays reject risky extend cells.
+  - r16698: don't use a new entry guard that's also your exit.
 
