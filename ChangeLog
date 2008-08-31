@@ -4,17 +4,17 @@ Changes in version 0.2.1.5-alpha - 2008-08-31
       IPv6 addresses.
     - Generate and accept IPv6 addresses in many protocol elements.
     - Make resolver code handle nameservers located at ipv6 addresses.
-    - Begin implementation of proposal 121 (Client authorization for
-      hidden services): configure hidden services with client
+    - Begin implementation of proposal 121 ("Client authorization for
+      hidden services"): configure hidden services with client
       authorization, publish descriptors for them, and configure
-      authorization data for hidden services at clients. (The only missing
-      piece is to actually access hidden services that perform client
-      authorization.)
-    - Network status consensus documents and votes now contain for each
-      router bandwidth information and a summary of that router's exit
-      policy.  This will in the future be used by clients so that they
-      do not have to download every descriptor there is before building
-      circuits (Re proposal 141).
+      authorization data for hidden services at clients. The next
+      step is to actually access hidden services that perform client
+      authorization.
+    - More progress toward proposal 141: Network status consensus
+      documents and votes now contain bandwidth information for each
+      router and a summary of that router's exit policy. Eventually this
+      will be used by clients so that they do not have to download every
+      known descriptor before building circuits.
 
   o Major bugfixes (on 0.2.0.x and before):
     - When sending CREATED cells back for a given circuit, use a 64-bit
@@ -53,6 +53,8 @@ Changes in version 0.2.1.5-alpha - 2008-08-31
       a lot. Resolves bug 748.
     - Resist DNS poisoning a little better by making sure that names in
       answer sections match.
+    - Print the SOCKS5 error message string as well as the error code
+      when a tor-resolve request fails. Patch from Jacob.
 
 
 Changes in version 0.2.1.4-alpha - 2008-08-04
