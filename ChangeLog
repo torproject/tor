@@ -1,4 +1,4 @@
-Changes in version 0.2.1.5-alpha - 2008-08-??
+Changes in version 0.2.1.5-alpha - 2008-09-??
   o Major features [IPv6 support]:
     - Convert many internal address representations to optionally hold
       IPv6 addresses.
@@ -18,6 +18,10 @@ Changes in version 0.2.1.5-alpha - 2008-08-??
       a digest of all zeroes, or asks to extend back to the relay that
       sent the extend cell, tear down the circuit. Ideas suggested
       by rovv.
+    - If not enough of our entry guards are available so we add a new
+      one, we might use the new one even if it overlapped with the
+      current circuit's exit relay (or its family). Anonymity bugfix
+      pointed out by rovv.
 
   o Minor bugfixes:
     - Recover 3-7 bytes that were wasted per memory chunk.  Fixes bug
