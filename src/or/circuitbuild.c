@@ -2503,8 +2503,13 @@ choose_random_entry(cpath_build_state_t *state)
        * be a long time til we get it. -RD */
       r = add_an_entry_guard(NULL, 0);
       if (r) {
-        smartlist_add(live_entry_guards, r);
         entry_guards_changed();
+        /* XXX we start over here in case the new node we added shares
+         * a family with our exit node. There's a chance that we'll just
+         * load up on entry guards here, if the network we're using is
+         * one big family. Perhaps we should teach add_an_entry_guard()
+         * to understand nodes-to-avoid-if-possible? -RD */
+        goto retry;
       }
     }
     if (!r && need_uptime) {

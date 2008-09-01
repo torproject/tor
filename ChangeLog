@@ -7,6 +7,10 @@ Changes in version 0.2.0.31 - 2008-09-??
       a digest of all zeroes, or asks to extend back to the relay that
       sent the extend cell, tear down the circuit. Ideas suggested
       by rovv.
+    - If not enough of our entry guards are available so we add a new
+      one, we might use the new one even if it overlapped with the
+      current circuit's exit relay (or its family). Anonymity bugfix
+      pointed out by rovv.
 
  o Minor bugfixes:
     - Fix a small alignment and memory-wasting bug on buffer chunks.  Spotted
