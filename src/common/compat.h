@@ -266,6 +266,11 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 int replace_file(const char *from, const char *to);
 int touch_file(const char *fname);
 
+typedef struct tor_lockfile_t tor_lockfile_t;
+tor_lockfile_t *tor_lockfile_lock(const char *filename, int blocking,
+                                  int *locked_out);
+void tor_lockfile_unlock(tor_lockfile_t *lockfile);
+
 #ifdef MS_WINDOWS
 #define PATH_SEPARATOR "\\"
 #else

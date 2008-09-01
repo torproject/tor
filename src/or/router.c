@@ -235,6 +235,17 @@ init_key_from_file(const char *fname, int generate, int severity)
       goto error;
     case FN_NOENT:
       if (generate) {
+        if (!have_lockfile()) {
+          if (try_locking(get_options(), 0)<0) {
+            /* Make sure that --list-fingerprint only creates new keys
+             * if there is no possibility for a deadlock. */
+            log(severity, LD_FS, "Another Tor process has locked \"%s\". Not "
+                "writing any new keys.", fname);
+            /*XXXX The 'other process' might make a key in a second or two;
+             * maybe we should wait for it. */
+            goto error;
+          }
+        }
         log_info(LD_GENERAL, "No key found in \"%s\"; generating fresh key.",
                  fname);
         if (crypto_pk_generate_key(prkey)) {

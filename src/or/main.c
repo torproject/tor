@@ -1850,6 +1850,54 @@ tor_init(int argc, char *argv[])
   return 0;
 }
 
+static tor_lockfile_t *lockfile = NULL;
+
+int
+try_locking(or_options_t *options, int err_if_locked)
+{
+  if (lockfile)
+    return 0;
+  else {
+    char *fname = options_get_datadir_fname2_suffix(options, "lock",NULL,NULL);
+    int already_locked = 0;
+    tor_lockfile_t *lf = tor_lockfile_lock(fname, 0, &already_locked);
+    tor_free(fname);
+    if (!lf) {
+      if (err_if_locked && already_locked) {
+        int r;
+        log_warn(LD_GENERAL, "It looks like another Tor process is running "
+                 "with the same data directory.  Waiting 5 seconds to see "
+                 "if it goes away.");
+        sleep(5);
+        r = try_locking(options, 0);
+        if (r<0) {
+          log_err(LD_GENERAL, "No, it's still there.  Exiting.");
+          exit(0);
+        }
+        return r;
+      }
+      return -1;
+    }
+    lockfile = lf;
+    return 0;
+  }
+}
+
+int
+have_lockfile(void)
+{
+  return lockfile != NULL;
+}
+
+void
+release_lockfile(void)
+{
+  if (lockfile) {
+    tor_lockfile_unlock(lockfile);
+    lockfile = NULL;
+  }
+}
+
 /** Free all memory that we might have allocated somewhere.
  * If <b>postfork</b>, we are a worker process and we want to free
  * only the parts of memory that we won't touch. If !<b>postfork</b>,

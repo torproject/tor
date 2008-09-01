@@ -26,6 +26,7 @@ const char compat_c_id[] =
 #ifdef MS_WINDOWS
 #include <process.h>
 #include <windows.h>
+#include <sys/locking.h>
 #endif
 
 #ifdef HAVE_UNAME
@@ -97,6 +98,9 @@ const char compat_c_id[] =
 #endif
 #ifdef HAVE_SYS_SYSLIMITS_H
 #include <sys/syslimits.h>
+#endif
+#ifdef HAVE_SYS_FILE_H
+#include <sys/file.h>
 #endif
 
 #ifdef USE_BSOCKETS
@@ -486,6 +490,77 @@ touch_file(const char *fname)
   if (utime(fname, NULL)!=0)
     return -1;
   return 0;
+}
+
+struct tor_lockfile_t {
+  char *filename;
+  int fd;
+};
+
+tor_lockfile_t *
+tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
+{
+  tor_lockfile_t *result;
+  int fd;
+  *locked_out = 0;
+
+  log_info(LD_FS, "Locking \"%s\"", filename);
+  fd = open(filename, O_RDWR|O_CREAT|O_TRUNC, 0600);
+  if (fd < 0) {
+    log_warn(LD_FS,"Couldn't open \"%s\" for locking: %s", filename,
+             strerror(errno));
+    return NULL;
+  }
+#ifdef WIN32
+  _lseek(fd, 0, SEEK_SET);
+  if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLOCK, 0) < 0) {
+    if (errno != EDEADLOCK)
+      log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
+    else
+      *locked_out = 1;
+    close(fd);
+    return NULL;
+  }
+#else
+  if (flock(fd, LOCK_EX|(blocking ? 0 : LOCK_NB)) < 0) {
+    if (errno != EWOULDBLOCK)
+      log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
+    else
+      *locked_out = 1;
+    close(fd);
+    return NULL;
+  }
+#endif
+
+  result = tor_malloc(sizeof(tor_lockfile_t));
+  result->filename = tor_strdup(filename);
+  result->fd = fd;
+  return result;
+}
+
+void
+tor_lockfile_unlock(tor_lockfile_t *lockfile)
+{
+  tor_assert(lockfile);
+
+  log_info(LD_FS, "Unlocking \"%s\"", lockfile->filename);
+#ifdef WIN32
+  _lseek(fd, 0, SEEK_SET);
+  if (_locking(fd, _LK_UNLCK, 0) < 0) {
+    log_warn(LD_FS,"Error unlocking \"%s\": %s", lockfile->filename,
+             strerror(errno));
+  }
+#else
+  if (flock(lockfile->fd, LOCK_UN) < 0) {
+    log_warn(LD_FS, "Error unlocking \"%s\": %s", lockfile->filename,
+             strerror(errno));
+  }
+#endif
+
+  close(lockfile->fd);
+  lockfile->fd = -1;
+  tor_free(lockfile->filename);
+  tor_free(lockfile);
 }
 
 #undef DEBUG_SOCKET_COUNTING

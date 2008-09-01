@@ -2781,8 +2781,11 @@ config_line_t *option_get_assignment(or_options_t *options,
                                      const char *key);
 int options_save_current(void);
 const char *get_torrc_fname(void);
-char *get_datadir_fname2_suffix(const char *sub1, const char *sub2,
-                                const char *suffix);
+char *options_get_datadir_fname2_suffix(or_options_t *options,
+                                        const char *sub1, const char *sub2,
+                                        const char *suffix);
+#define get_datadir_fname2_suffix(sub1, sub2, suffix) \
+  options_get_datadir_fname2_suffix(get_options(), (sub1), (sub2), (suffix))
 /** Return a newly allocated string containing datadir/sub1.  See
  * get_datadir_fname2_suffix.  */
 #define get_datadir_fname(sub1) get_datadir_fname2_suffix((sub1), NULL, NULL)
@@ -3493,6 +3496,11 @@ void dns_servers_relaunch_checks(void);
 
 void control_signal_act(int the_signal);
 void handle_signals(int is_parent);
+
+int try_locking(or_options_t *options, int err_if_locked);
+int have_lockfile(void);
+void release_lockfile(void);
+
 void tor_cleanup(void);
 void tor_free_all(int postfork);
 

@@ -1172,6 +1172,11 @@ options_act(or_options_t *old_options)
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg;
 
+  if (running_tor && !have_lockfile()) {
+    if (try_locking(options, 1) < 0)
+      return -1;
+  }
+
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
@@ -4883,10 +4888,10 @@ get_or_state(void)
  * Note: Consider using the get_datadir_fname* macros in or.h.
  */
 char *
-get_datadir_fname2_suffix(const char *sub1, const char *sub2,
-                          const char *suffix)
+options_get_datadir_fname2_suffix(or_options_t *options,
+                                  const char *sub1, const char *sub2,
+                                  const char *suffix)
 {
-  or_options_t *options = get_options();
   char *fname = NULL;
   size_t len;
   tor_assert(options);
