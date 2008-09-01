@@ -11,11 +11,6 @@ const char address_c_id[] =
  * \brief Functions to use and manipulate the tor_addr_t structure.
  **/
 
-/* This is required on rh7 to make strptime not complain.
- * We also need it to make memmem get defined (where available)
- */
-#define _GNU_SOURCE
-
 #include "orconfig.h"
 #include "compat.h"
 #include "util.h"
