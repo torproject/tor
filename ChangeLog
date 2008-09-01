@@ -17,6 +17,11 @@ Changes in version 0.2.0.31 - 2008-08-??
       an alias for the actually-working --with-openssl-dir option.  Fix the
       help documentation to recommend --with-openssl-dir.  Based on a patch
       by "Dave". Bugfix on 0.2.0.1-alpha.
+    - Disallow session resumption attempts during the renegotiation
+      stage of the v2 handshake protocol.  Clients should never be
+      trying session resumption at this point, but apparently some
+      did, in ways that caused the handshake to fail.  Bugfix on
+      0.2.0.20-rc.  Bug found by Geoff Goodell.
 
 
 Changes in version 0.2.0.30 - 2008-07-15
