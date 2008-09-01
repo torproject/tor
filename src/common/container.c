@@ -14,7 +14,6 @@ const char container_c_id[] =
  * a digest-to-void* map.
  **/
 
-#include "orconfig.h"
 #include "compat.h"
 #include "util.h"
 #include "log.h"
