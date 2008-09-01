@@ -7,10 +7,10 @@ Backport items for 0.2.0:
 
 Backport for 0.2.0 once better tested:
   d r14830: disable openssl compression.
-  - r15699,15700: react quickly to readiness of rendezvous circuits.
+  o r15699,15700: react quickly to readiness of rendezvous circuits.
   o r15821: fix bug related to TLS session negotiation.
   o r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
-  - r16143: generate stream close events from connection_edge_destroy().
+  o r16143: generate stream close events from connection_edge_destroy().
   o r16450: open /dev/pf before dropping privileges.
   o r16605: relays reject risky extend cells.
   o r16698: don't use a new entry guard that's also your exit.

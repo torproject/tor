@@ -34,6 +34,15 @@ Changes in version 0.2.0.31 - 2008-09-??
       option to change UID and drop privileges, make sure to open
       /dev/pf before dropping privileges.  Fixes bug 782.  Patch from
       Christopher Davis.  Bugfix on 0.1.2.1-alpha.
+    - Try to attach connections immediately upon receiving a RENDEZVOUS2 or
+      RENDEZVOUS_ESTABLISHED cell.  This can save a second or two on the
+      client side when connecting to a hidden service.  Bugfix on 0.0.6pre1.
+      Found and fixed by Christian Wilms; resolves bug 743.
+
+ o Minor bugfixes (controller):
+    - When closing an application-side connection because its circuit is
+      getting torn down, generate the stream event correctly.  Bugfix on
+      0.1.2.x.  Anonymous patch.
 
 
 Changes in version 0.2.0.30 - 2008-07-15
