@@ -1,3 +1,9 @@
+tor (0.2.1.5-alpha-1) experimental; urgency=low
+
+  * New alpha release.
+
+ -- Peter Palfrader <weasel@debian.org>  Tue, 02 Sep 2008 00:18:55 +0200
+
 tor (0.2.1.4-alpha-1) experimental; urgency=low
 
   * New alpha release.
