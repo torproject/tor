@@ -20,7 +20,6 @@ const char compat_c_id[] =
  */
 #define _GNU_SOURCE
 
-#include "orconfig.h"
 #include "compat.h"
 
 #ifdef MS_WINDOWS
@@ -31,9 +30,6 @@ const char compat_c_id[] =
 
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -50,40 +46,28 @@ const char compat_c_id[] =
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
-#endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
 #endif
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+
 #ifndef HAVE_GETTIMEOFDAY
 #ifdef HAVE_FTIME
 #include <sys/timeb.h>
 #endif
 #endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
+
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
-#endif
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
 #endif
