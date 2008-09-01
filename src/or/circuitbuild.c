@@ -705,10 +705,13 @@ circuit_note_clock_jumped(int seconds_elapsed)
   circuit_expire_all_dirty_circs();
 }
 
-/** Take the 'extend' cell, pull out addr/port plus the onion skin. Make
- * sure we're connected to the next hop, and pass it the onion skin using
- * a create cell. Return -1 if we want to warn and tear down the circuit,
- * else return 0.
+/** Take the 'extend' <b>cell</b>, pull out addr/port plus the onion
+ * skin and identity digest for the next hop. If we're already connected,
+ * pass the onion skin to the next hop using a create cell; otherwise
+ * launch a new OR connection, and <b>circ</b> will notice when the
+ * connection succeeds or fails.
+ *
+ * Return -1 if we want to warn and tear down the circuit, else return 0.
  */
 int
 circuit_extend(cell_t *cell, circuit_t *circ)
@@ -744,6 +747,29 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
+
+  /* First, check if they asked us for 0000..0000. We support using
+   * an empty fingerprint for the first hop (e.g. for a bridge relay),
+   * but we don't want to let people send us extend cells for empty
+   * fingerprints -- a) because it opens the user up to a mitm attack,
+   * and b) because it lets an attacker force the relay to hold open a
+   * new TLS connection for each extend request. */
+  if (tor_digest_is_zero(id_digest)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend without specifying an id_digest.");
+    return -1;
+  }
+
+  /* Next, check if we're being asked to connect to the hop that the
+   * extend cell came from. There isn't any reason for that, and it can
+   * assist circular-path attacks. */
+  if (!memcmp(id_digest, TO_OR_CIRCUIT(circ)->p_conn->identity_digest,
+              DIGEST_LEN)) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend back to the previous hop.");
+    return -1;
+  }
+
   n_conn = connection_or_get_by_identity_digest(id_digest);
 
   /* If we don't have an open conn, or the conn we have is obsolete
