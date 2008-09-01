@@ -8,7 +8,7 @@ Changes in version 0.2.0.30 - 2008-07-15
   distribution design, adds features to make connections to the Tor
   network harder to block, allows Tor to act as a DNS proxy, adds separate
   rate limiting for relayed traffic to make it easier for clients to
-  become relays, fix a variety of potential anonymity problems, and
+  become relays, fixes a variety of potential anonymity problems, and
   includes the usual huge pile of other features and bug fixes.
 
   o New v3 directory design:
