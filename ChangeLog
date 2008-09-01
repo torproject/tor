@@ -1,3 +1,9 @@
+Changes in version 0.2.1.6-alpha - 2008-09-xx
+  o Minor bugfixes:
+    - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.
+      Reported by Tas.
+
+
 Changes in version 0.2.1.5-alpha - 2008-08-31
   o Major features:
     - Convert many internal address representations to optionally hold

@@ -36,6 +36,9 @@
 #ifdef HAVE_CTYPE_H
 #include <ctype.h>
 #endif
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#endif
 #include <stdarg.h>
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
