@@ -1636,11 +1636,11 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
 #ifdef TRANS_PF
 static int pf_socket = -1;
-static int
+int
 get_pf_socket(void)
 {
   int pf;
-  /*  Ideally, this should be opened before dropping privs. */
+  /* This should be opened before dropping privs. */
   if (pf_socket >= 0)
     return pf_socket;
 
