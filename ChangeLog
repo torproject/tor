@@ -1,4 +1,4 @@
-Changes in version 0.2.0.31 - 2008-09-??
+Changes in version 0.2.0.31 - 2008-09-03
   o Major bugfixes:
     - Make sure that two circuits can never exist on the same connection
       with the same circuit ID, even if one is marked for close. This
