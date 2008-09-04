@@ -1868,7 +1868,11 @@ try_locking(or_options_t *options, int err_if_locked)
         log_warn(LD_GENERAL, "It looks like another Tor process is running "
                  "with the same data directory.  Waiting 5 seconds to see "
                  "if it goes away.");
+#ifndef WIN32
         sleep(5);
+#else
+        Sleep(5000);
+#endif
         r = try_locking(options, 0);
         if (r<0) {
           log_err(LD_GENERAL, "No, it's still there.  Exiting.");

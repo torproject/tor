@@ -443,7 +443,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
 #endif
     HT_FOREACH(ent, clientmap, &client_history) {
       int country;
-      if (((*ent)->last_seen & ACTION_MASK) != action)
+      if (((*ent)->last_seen & ACTION_MASK) != (int)action)
         continue;
       country = geoip_get_country_by_ip((*ent)->ipaddr);
       if (country < 0)

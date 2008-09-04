@@ -64,7 +64,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
 {
   if (a->family == AF_INET) {
     struct sockaddr_in *sin;
-    if (len < sizeof(struct sockaddr_in))
+    if (len < (int)sizeof(struct sockaddr_in))
       return -1;
     sin = (struct sockaddr_in *)sa_out;
     sin->sin_family = AF_INET;
@@ -73,7 +73,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     return sizeof(struct sockaddr_in);
   } else if (a->family == AF_INET6) {
     struct sockaddr_in6 *sin6;
-    if (len < sizeof(struct sockaddr_in6))
+    if (len < (int)sizeof(struct sockaddr_in6))
       return -1;
     sin6 = (struct sockaddr_in6 *)sa_out;
     memset(sin6, 0, sizeof(struct sockaddr_in6));

@@ -2178,7 +2178,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 			server = server->next;
 		} while (server != started_at);
 	}
-	if (addrlen > sizeof(ns->address)) {
+	if (addrlen > (int)sizeof(ns->address)) {
 		return 2;
 	}
 

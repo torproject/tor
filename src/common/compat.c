@@ -497,7 +497,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
   }
 #ifdef WIN32
   _lseek(fd, 0, SEEK_SET);
-  if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLOCK, 0) < 0) {
+  if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLCK, 0) < 0) {
     if (errno != EDEADLOCK)
       log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
     else
@@ -529,8 +529,8 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
 
   log_info(LD_FS, "Unlocking \"%s\"", lockfile->filename);
 #ifdef WIN32
-  _lseek(fd, 0, SEEK_SET);
-  if (_locking(fd, _LK_UNLCK, 0) < 0) {
+  _lseek(lockfile->fd, 0, SEEK_SET);
+  if (_locking(lockfile->fd, _LK_UNLCK, 0) < 0) {
     log_warn(LD_FS,"Error unlocking \"%s\": %s", lockfile->filename,
              strerror(errno));
   }
