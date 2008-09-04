@@ -977,8 +977,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
     } else if (ERRNO_IS_ACCEPT_RESOURCE_LIMIT(e)) {
-      log_notice(LD_NET,"accept failed: %s. Dropping incoming connection.",
-                 tor_socket_strerror(e));
+      warn_too_many_conns();
       return 0;
     }
     /* else there was a real error. */
