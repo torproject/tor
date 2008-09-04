@@ -917,7 +917,7 @@ tor_addr_port_parse(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
     portval = 0;
   }
 
-  if (*port_out)
+  if (port_out)
     *port_out = portval;
   tor_addr_copy(addr_out, &addr);
 

@@ -2,6 +2,9 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.
       Reported by Tas.
+    - When parsing ports in tor_addr_port_parse(), yield the port if
+      the port variable is provided, not just if it's nonzero.  Fixes
+      bug 809.  Bugfix on 0.2.1.5-alpha.
 
   o Minor features:
     - Use a lockfile to make sure that two Tor processes are not
