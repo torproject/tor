@@ -15,3 +15,6 @@ Backport for 0.2.0 once better tested:
   o r16605: relays reject risky extend cells.
   o r16698: don't use a new entry guard that's also your exit.
 
+  - r16558: Avoid mis-routing CREATED cells.
+  - r16621: Make some DNS code more robust (partial; see also libevent
+            approach). (Also maybe r16674)
