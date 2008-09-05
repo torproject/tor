@@ -5,6 +5,9 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
     - When parsing ports in tor_addr_port_parse(), yield the port if
       the port variable is provided, not just if it's nonzero.  Fixes
       bug 809.  Bugfix on 0.2.1.5-alpha.
+    - Fixed some memory leaks --some quite frequent, some almost impossible
+      to trigger-- based on results of a static analysis tool. (XXX Can we
+      say which? -NM)
 
   o Minor features:
     - Use a lockfile to make sure that two Tor processes are not
