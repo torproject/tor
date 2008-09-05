@@ -925,6 +925,7 @@ directory_send_command(dir_connection_t *conn,
       url = tor_strdup("/tor/running-routers");
       break;
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+      tor_assert(resource);
       httpcommand = "GET";
       len = strlen(resource)+32;
       url = tor_malloc(len);
@@ -962,12 +963,14 @@ directory_send_command(dir_connection_t *conn,
       url = tor_strdup("/tor/status-vote/next/consensus-signatures.z");
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
+      tor_assert(resource);
       httpcommand = "GET";
       len = strlen(resource)+32;
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/server/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_EXTRAINFO:
+      tor_assert(resource);
       httpcommand = "GET";
       len = strlen(resource)+32;
       url = tor_malloc(len);

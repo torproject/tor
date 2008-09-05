@@ -4500,24 +4500,24 @@ write_configuration_file(const char *fname, or_options_t *options)
   int rename_old = 0, r;
   size_t len;
 
-  if (fname) {
-    switch (file_status(fname)) {
-      case FN_FILE:
-        old_val = read_file_to_str(fname, 0, NULL);
-        if (strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
-          rename_old = 1;
-        }
-        tor_free(old_val);
-        break;
-      case FN_NOENT:
-        break;
-      case FN_ERROR:
-      case FN_DIR:
-      default:
-        log_warn(LD_CONFIG,
-                 "Config file \"%s\" is not a file? Failing.", fname);
-        return -1;
-    }
+  tor_assert(fname);
+
+  switch (file_status(fname)) {
+    case FN_FILE:
+      old_val = read_file_to_str(fname, 0, NULL);
+      if (strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
+        rename_old = 1;
+      }
+      tor_free(old_val);
+      break;
+    case FN_NOENT:
+      break;
+    case FN_ERROR:
+    case FN_DIR:
+    default:
+      log_warn(LD_CONFIG,
+               "Config file \"%s\" is not a file? Failing.", fname);
+      return -1;
   }
 
   if (!(new_conf = options_dump(options, 1))) {

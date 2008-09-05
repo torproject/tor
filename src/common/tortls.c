@@ -521,7 +521,6 @@ int
 tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 {
   crypto_pk_env_t *rsa = NULL;
-  crypto_dh_env_t *dh = NULL;
   EVP_PKEY *pkey = NULL;
   tor_tls_context_t *result = NULL;
   X509 *cert = NULL, *idcert = NULL;
@@ -597,9 +596,11 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   pkey = NULL;
   if (!SSL_CTX_check_private_key(result->ctx))
     goto error;
-  dh = crypto_dh_new();
-  SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_env_get_dh(dh));
-  crypto_dh_free(dh);
+  {
+    crypto_dh_env_t *dh = crypto_dh_new();
+    SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_env_get_dh(dh));
+    crypto_dh_free(dh);
+  }
   SSL_CTX_set_verify(result->ctx, SSL_VERIFY_PEER,
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
@@ -625,8 +626,6 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
     EVP_PKEY_free(pkey);
   if (rsa)
     crypto_free_pk_env(rsa);
-  if (dh)
-    crypto_dh_free(dh);
   if (result)
     tor_tls_context_decref(result);
   if (cert)

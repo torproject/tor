@@ -221,7 +221,6 @@ crypto_pk_env_t *
 init_key_from_file(const char *fname, int generate, int severity)
 {
   crypto_pk_env_t *prkey = NULL;
-  FILE *file = NULL;
 
   if (!(prkey = crypto_new_pk_env())) {
     log(severity, LD_GENERAL,"Error constructing key");
@@ -279,8 +278,6 @@ init_key_from_file(const char *fname, int generate, int severity)
  error:
   if (prkey)
     crypto_free_pk_env(prkey);
-  if (file)
-    fclose(file);
   return NULL;
 }
 
