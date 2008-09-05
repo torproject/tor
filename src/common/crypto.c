@@ -1465,12 +1465,10 @@ init_dh_param(void)
 crypto_dh_env_t *
 crypto_dh_new(void)
 {
-  crypto_dh_env_t *res = NULL;
+  crypto_dh_env_t *res = tor_malloc_zero(sizeof(crypto_dh_env_t));
 
   if (!dh_param_p)
     init_dh_param();
-
-  res = tor_malloc_zero(sizeof(crypto_dh_env_t));
 
   if (!(res->dh = DH_new()))
     goto err;
@@ -1486,8 +1484,8 @@ crypto_dh_new(void)
   return res;
  err:
   crypto_log_errors(LOG_WARN, "creating DH object");
-  if (res && res->dh) DH_free(res->dh); /* frees p and g too */
-  if (res) tor_free(res);
+  if (res->dh) DH_free(res->dh); /* frees p and g too */
+  tor_free(res);
   return NULL;
 }
 
