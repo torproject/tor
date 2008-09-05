@@ -696,6 +696,8 @@ clear_trackexithost_mappings(const char *exitname)
       MAP_DEL_CURRENT(address);
     }
   } STRMAP_FOREACH_END;
+
+  tor_free(suffix);
 }
 
 /** Remove all entries from the addressmap that were set via the

@@ -884,6 +884,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   if (!published && strmap_get_lc(rend_cache, key)) {
     log_info(LD_REND, "We already have a v2 descriptor for service %s.",
              safe_str(query));
+    rend_service_descriptor_free(parsed);
     return -1;
   }
   /* report novel publication to statistics */
