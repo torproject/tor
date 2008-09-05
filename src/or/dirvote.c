@@ -455,6 +455,23 @@ consensus_method_is_supported(int method)
   return (method >= 1) && (method <= 5);
 }
 
+/** Helper: given <b>lst</b>, a list of version strings such that every
+ * version appears once for every versioning voter who recommends it, returna
+ * newly allocated string holding the resulting client-versions or
+ * server-versions list. May change contents of <b>lst</b> */
+static char *
+compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
+{
+  int min = n_versioning / 2;
+  smartlist_t *good = smartlist_create();
+  char *result;
+  sort_version_list(lst, 0);
+  get_frequent_members(good, lst, min);
+  result = smartlist_join_strings(good, ",", 0, NULL);
+  smartlist_free(good);
+  return result;
+}
+
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -510,7 +527,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     int n_versioning_clients = 0, n_versioning_servers = 0;
     smartlist_t *combined_client_versions = smartlist_create();
     smartlist_t *combined_server_versions = smartlist_create();
-    int j;
+
     SMARTLIST_FOREACH(votes, networkstatus_t *, v,
     {
       tor_assert(v->type == NS_TYPE_VOTE);
@@ -551,23 +568,15 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_assert(vote_seconds >= MIN_VOTE_SECONDS);
     tor_assert(dist_seconds >= MIN_DIST_SECONDS);
 
-    for (j = 0; j < 2; ++j) {
-      smartlist_t *lst =
-        j ? combined_server_versions : combined_client_versions;
-      int min = (j ? n_versioning_servers : n_versioning_clients) / 2;
-      smartlist_t *good = smartlist_create();
-      char *res;
-      sort_version_list(lst, 0);
-      get_frequent_members(good, lst, min);
-      res = smartlist_join_strings(good, ",", 0, NULL);
-      if (j)
-        server_versions = res;
-      else
-        client_versions = res;
-      SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
-      smartlist_free(good);
-      smartlist_free(lst);
-    }
+    server_versions = compute_consensus_versions_list(combined_server_versions,
+                                                      n_versioning_servers);
+    client_versions = compute_consensus_versions_list(combined_client_versions,
+                                                      n_versioning_clients);
+
+    SMARTLIST_FOREACH(combined_server_versions, char *, cp, tor_free(cp));
+    SMARTLIST_FOREACH(combined_client_versions, char *, cp, tor_free(cp));
+    smartlist_free(combined_server_versions);
+    smartlist_free(combined_client_versions);
 
     smartlist_sort_strings(flags);
     smartlist_uniq_strings(flags);
