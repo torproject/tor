@@ -120,13 +120,13 @@ int parse_log_severity_config(const char **cfg,
                               log_severity_list_t *severity_out);
 void set_log_severity_config(int minSeverity, int maxSeverity,
                              log_severity_list_t *severity_out);
-void add_stream_log(log_severity_list_t *severity, const char *name,
+void add_stream_log(const log_severity_list_t *severity, const char *name,
                     FILE *stream);
-int add_file_log(log_severity_list_t *severity, const char *filename);
+int add_file_log(const log_severity_list_t *severity, const char *filename);
 #ifdef HAVE_SYSLOG_H
-int add_syslog_log(log_severity_list_t *severity);
+int add_syslog_log(const log_severity_list_t *severity);
 #endif
-int add_callback_log(log_severity_list_t *severity, log_callback cb);
+int add_callback_log(const log_severity_list_t *severity, log_callback cb);
 int get_min_log_level(void);
 void switch_logs_debug(void);
 void logs_free_all(void);

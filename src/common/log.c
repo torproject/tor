@@ -497,7 +497,7 @@ set_log_severity_config(int loglevelMin, int loglevelMax,
 /** Add a log handler named <b>name</b> to send all messages in <b>severity</b>
  * to <b>stream</b>. Copies <b>severity</b>. Helper: does no locking. */
 static void
-add_stream_log_impl(log_severity_list_t *severity,
+add_stream_log_impl(const log_severity_list_t *severity,
                     const char *name, FILE *stream)
 {
   logfile_t *lf;
@@ -515,7 +515,7 @@ add_stream_log_impl(log_severity_list_t *severity,
  * to <b>stream</b>. Steals a reference to <b>severity</b>; the caller must
  * not use it after calling this function. */
 void
-add_stream_log(log_severity_list_t *severity,
+add_stream_log(const log_severity_list_t *severity,
                const char *name, FILE *stream)
 {
   LOCK_LOGS();
@@ -551,7 +551,7 @@ add_temp_log(int min_severity)
  * to the function <b>cb</b>.
  */
 int
-add_callback_log(log_severity_list_t *severity, log_callback cb)
+add_callback_log(const log_severity_list_t *severity, log_callback cb)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
@@ -640,7 +640,7 @@ mark_logs_temp(void)
  * (by fopen).
  */
 int
-add_file_log(log_severity_list_t *severity, const char *filename)
+add_file_log(const log_severity_list_t *severity, const char *filename)
 {
   FILE *f;
   logfile_t *lf;
@@ -667,7 +667,7 @@ add_file_log(log_severity_list_t *severity, const char *filename)
  * Add a log handler to send messages to they system log facility.
  */
 int
-add_syslog_log(log_severity_list_t *severity)
+add_syslog_log(const log_severity_list_t *severity)
 {
   logfile_t *lf;
   if (syslog_count++ == 0)
