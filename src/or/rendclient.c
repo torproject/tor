@@ -764,13 +764,14 @@ rend_parse_service_authorization(or_options_t *options, int validate_only)
   int res = -1;
   strmap_t *parsed = strmap_new();
   smartlist_t *sl = smartlist_create();
+  rend_service_authorization_t *auth = NULL;
 
   for (line = options->HidServAuth; line; line = line->next) {
     char *onion_address, *descriptor_cookie;
     char descriptor_cookie_tmp[REND_DESC_COOKIE_LEN+2];
     char descriptor_cookie_base64ext[REND_DESC_COOKIE_LEN_BASE64+2+1];
-    rend_service_authorization_t *auth = NULL;
     int auth_type_val = 0;
+    auth = NULL;
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
     smartlist_clear(sl);
     smartlist_split_string(sl, line->value, " ",
@@ -829,12 +830,15 @@ rend_parse_service_authorization(or_options_t *options, int validate_only)
       goto err;
     }
     strmap_set(parsed, auth->onion_address, auth);
+    auth = NULL;
   }
   res = 0;
   goto done;
  err:
   res = -1;
  done:
+  if (auth)
+    rend_service_authorization_free(auth);
   SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
   smartlist_free(sl);
   if (!validate_only && res == 0) {

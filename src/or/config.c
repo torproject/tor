@@ -1488,9 +1488,12 @@ config_get_lines(const char *string, config_line_t **result)
 
   next = &list;
   do {
+    k = v = NULL;
     string = parse_config_line_from_str(string, &k, &v);
     if (!string) {
       config_free_lines(list);
+      tor_free(k);
+      tor_free(v);
       return -1;
     }
     if (k && v) {

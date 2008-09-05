@@ -638,6 +638,7 @@ rend_service_load_keys(void)
           }
           if (crypto_pk_generate_key(prkey)) {
             log_warn(LD_BUG,"Error generating client key");
+            crypto_free_pk_env(prkey);
             goto err;
           }
           if (crypto_pk_check_key(prkey) <= 0) {
@@ -657,15 +658,17 @@ rend_service_load_keys(void)
           goto err;
         }
         if (client->client_key) {
-          char *client_key_out;
+          char *client_key_out = NULL;
           crypto_pk_write_private_key_to_string(client->client_key,
                                                 &client_key_out, &len);
           if (rend_get_service_id(client->client_key, service_id)<0) {
             log_warn(LD_BUG, "Internal error: couldn't encode service ID.");
+            tor_free(client_key_out);
             goto err;
           }
           written = tor_snprintf(buf + written, sizeof(buf) - written,
                                  "client-key\n%s", client_key_out);
+          tor_free(client_key_out);
           if (written < 0) {
             log_warn(LD_BUG, "Could not write client entry.");
             goto err;

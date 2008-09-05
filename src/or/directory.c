@@ -3032,7 +3032,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
      * receive anything. */
     write_http_status_line(conn, 400, "Nonauthoritative directory does not "
                            "accept posted server descriptors");
-    return 0;
+    goto done;
   }
 
   if (authdir_mode_handles_descs(options, -1) &&

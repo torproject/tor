@@ -1983,6 +1983,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
     if (r<0) {
       log_warn(LD_BUG, "Not enough space in buffer.");
+      tor_free(summary);
       return -1;
     }
     cp += strlen(cp);

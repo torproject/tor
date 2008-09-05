@@ -1181,15 +1181,15 @@ policy_summarize(smartlist_t *policy)
 cleanup:
   /* cleanup */
   SMARTLIST_FOREACH(summary, policy_summary_item_t *, s, tor_free(s));
-  smartlist_clear(summary);
+  smartlist_free(summary);
 
   tor_free(accepts_str);
   SMARTLIST_FOREACH(accepts, char *, s, tor_free(s));
-  smartlist_clear(accepts);
+  smartlist_free(accepts);
 
   tor_free(rejects_str);
   SMARTLIST_FOREACH(rejects, char *, s, tor_free(s));
-  smartlist_clear(rejects);
+  smartlist_free(rejects);
 
   return result;
 }
