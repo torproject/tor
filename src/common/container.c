@@ -358,6 +358,8 @@ smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
         ;
     }
 
+    tor_assert(end);
+
     if (!*end) {
       next = NULL;
     } else if (sep) {
