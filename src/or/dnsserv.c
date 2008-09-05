@@ -108,7 +108,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   }
 
   /* Make a new dummy AP connection, and attach the request to it. */
-  conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
+  conn = edge_connection_new(CONN_TYPE_AP, AF_INET);
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   conn->is_dns_request = 1;
 
@@ -161,7 +161,7 @@ dnsserv_launch_request(const char *name, int reverse)
   char *q_name;
 
   /* Make a new dummy AP connection, and attach the request to it. */
-  conn = TO_EDGE_CONN(connection_new(CONN_TYPE_AP, AF_INET));
+  conn = edge_connection_new(CONN_TYPE_AP, AF_INET);
   conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
 
   if (reverse)

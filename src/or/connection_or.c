@@ -524,7 +524,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
     return NULL;
   }
 
-  conn = TO_OR_CONN(connection_new(CONN_TYPE_OR, AF_INET));
+  conn = or_connection_new(AF_INET);
 
   /* set up conn so it's got all the data we need to remember */
   connection_or_init_conn_from_address(conn, &addr, port, id_digest, 1);

@@ -18,6 +18,8 @@ const char connection_c_id[] =
 static connection_t *connection_create_listener(
                                struct sockaddr *listensockaddr, int type,
                                char* address);
+static void connection_init(time_t now, connection_t *conn, int type,
+                            int socket_family);
 static int connection_init_accepted_conn(connection_t *conn,
                                          uint8_t listener_type);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
@@ -150,8 +152,72 @@ conn_state_to_string(int type, int state)
   return buf;
 }
 
-/** Allocate space for a new connection_t. This function just initializes
- * conn; you must call connection_add() to link it into the main array.
+dir_connection_t *
+dir_connection_new(int socket_family)
+{
+  dir_connection_t *dir_conn = tor_malloc_zero(sizeof(dir_connection_t));
+  connection_init(time(NULL), TO_CONN(dir_conn), CONN_TYPE_DIR, socket_family);
+  return dir_conn;
+}
+or_connection_t *
+or_connection_new(int socket_family)
+{
+  or_connection_t *or_conn = tor_malloc_zero(sizeof(or_connection_t));
+  time_t now = time(NULL);
+  connection_init(now, TO_CONN(or_conn), CONN_TYPE_OR, socket_family);
+
+  or_conn->timestamp_last_added_nonpadding = time(NULL);
+  or_conn->next_circ_id = crypto_rand_int(1<<15);
+
+  return or_conn;
+}
+edge_connection_t *
+edge_connection_new(int type, int socket_family)
+{
+  edge_connection_t *edge_conn = tor_malloc_zero(sizeof(edge_connection_t));
+  tor_assert(type == CONN_TYPE_EXIT || type == CONN_TYPE_AP);
+  connection_init(time(NULL), TO_CONN(edge_conn), type, socket_family);
+  if (type == CONN_TYPE_AP)
+    edge_conn->socks_request = tor_malloc_zero(sizeof(socks_request_t));
+  return edge_conn;
+}
+control_connection_t *
+control_connection_new(int socket_family)
+{
+  control_connection_t *control_conn =
+    tor_malloc_zero(sizeof(control_connection_t));
+  connection_init(time(NULL),
+                  TO_CONN(control_conn), CONN_TYPE_CONTROL, socket_family);
+  return control_conn;
+}
+
+connection_t *
+connection_new(int type, int socket_family)
+{
+  switch (type) {
+    case CONN_TYPE_OR:
+      return TO_CONN(or_connection_new(socket_family));
+
+    case CONN_TYPE_EXIT:
+    case CONN_TYPE_AP:
+      return TO_CONN(edge_connection_new(type, socket_family));
+
+    case CONN_TYPE_DIR:
+      return TO_CONN(dir_connection_new(socket_family));
+
+    case CONN_TYPE_CONTROL:
+      return TO_CONN(control_connection_new(socket_family));
+
+    default: {
+      connection_t *conn = tor_malloc_zero(sizeof(connection_t));
+      connection_init(time(NULL), conn, type, socket_family);
+      return conn;
+    }
+  }
+}
+
+/** Initializes conn. (you must call connection_add() to link it into the main
+ * array).
  *
  * Set conn-\>type to <b>type</b>. Set conn-\>s and conn-\>conn_array_index to
  * -1 to signify they are not yet assigned.
@@ -163,42 +229,30 @@ conn_state_to_string(int type, int state)
  *
  * Initialize conn's timestamps to now.
  */
-connection_t *
-connection_new(int type, int socket_family)
+static void
+connection_init(time_t now, connection_t *conn, int type, int socket_family)
 {
   static uint64_t n_connections_allocated = 1;
 
-  connection_t *conn;
-  time_t now = time(NULL);
-  size_t length;
-  uint32_t magic;
-
   switch (type) {
     case CONN_TYPE_OR:
-      length = sizeof(or_connection_t);
-      magic = OR_CONNECTION_MAGIC;
+      conn->magic = OR_CONNECTION_MAGIC;
       break;
     case CONN_TYPE_EXIT:
     case CONN_TYPE_AP:
-      length = sizeof(edge_connection_t);
-      magic = EDGE_CONNECTION_MAGIC;
+      conn->magic = EDGE_CONNECTION_MAGIC;
       break;
     case CONN_TYPE_DIR:
-      length = sizeof(dir_connection_t);
-      magic = DIR_CONNECTION_MAGIC;
+      conn->magic = DIR_CONNECTION_MAGIC;
       break;
     case CONN_TYPE_CONTROL:
-      length = sizeof(control_connection_t);
-      magic = CONTROL_CONNECTION_MAGIC;
+      conn->magic = CONTROL_CONNECTION_MAGIC;
       break;
     default:
-      length = sizeof(connection_t);
-      magic = BASE_CONNECTION_MAGIC;
+      conn->magic = BASE_CONNECTION_MAGIC;
       break;
   }
 
-  conn = tor_malloc_zero(length);
-  conn->magic = magic;
   conn->s = -1; /* give it a default of 'not used' */
   conn->conn_array_index = -1; /* also default to 'not used' */
   conn->global_identifier = n_connections_allocated++;
@@ -209,20 +263,10 @@ connection_new(int type, int socket_family)
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
   }
-  if (type == CONN_TYPE_AP) {
-    TO_EDGE_CONN(conn)->socks_request =
-      tor_malloc_zero(sizeof(socks_request_t));
-  }
-  if (type == CONN_TYPE_OR) {
-    TO_OR_CONN(conn)->timestamp_last_added_nonpadding = now;
-    TO_OR_CONN(conn)->next_circ_id = crypto_rand_int(1<<15);
-  }
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;
   conn->timestamp_lastwritten = now;
-
-  return conn;
 }
 
 /** Create a link between <b>conn_a</b> and <b>conn_b</b>. */

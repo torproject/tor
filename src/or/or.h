@@ -2814,7 +2814,12 @@ or_options_t *options_new(void);
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
+dir_connection_t *dir_connection_new(int socket_family);
+or_connection_t *or_connection_new(int socket_family);
+edge_connection_t *edge_connection_new(int type, int socket_family);
+control_connection_t *control_connection_new(int socket_family);
 connection_t *connection_new(int type, int socket_family);
+
 void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
 void connection_unregister_events(connection_t *conn);
 void connection_free(connection_t *conn);

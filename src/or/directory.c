@@ -683,7 +683,7 @@ directory_initiate_command(const char *address, const tor_addr_t *_addr,
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
-  conn = TO_DIR_CONN(connection_new(CONN_TYPE_DIR, AF_INET));
+  conn = dir_connection_new(AF_INET);
 
   /* set up conn so it's got all the data we need to remember */
   tor_addr_copy(&conn->_base.addr, &addr);
