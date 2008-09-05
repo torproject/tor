@@ -1175,7 +1175,7 @@ policy_summarize(smartlist_t *policy)
 
   final_size = strlen(prefix)+1+shorter_len+1;
   tor_assert(final_size <= MAX_EXITPOLICY_SUMMARY_LEN+1);
-  result = malloc(final_size);
+  result = tor_malloc(final_size);
   tor_snprintf(result, final_size, "%s %s", prefix, shorter_str);
 
 cleanup:
