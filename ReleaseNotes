@@ -3,6 +3,53 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.0.31 - 2008-09-03
+  Tor 0.2.0.31 addresses two potential anonymity issues, starts to fix
+  a big bug we're seeing where in rare cases traffic from one Tor stream
+  gets mixed into another stream, and fixes a variety of smaller issues.
+
+  o Major bugfixes:
+    - Make sure that two circuits can never exist on the same connection
+      with the same circuit ID, even if one is marked for close. This
+      is conceivably a bugfix for bug 779. Bugfix on 0.1.0.4-rc.
+    - Relays now reject risky extend cells: if the extend cell includes
+      a digest of all zeroes, or asks to extend back to the relay that
+      sent the extend cell, tear down the circuit. Ideas suggested
+      by rovv.
+    - If not enough of our entry guards are available so we add a new
+      one, we might use the new one even if it overlapped with the
+      current circuit's exit relay (or its family). Anonymity bugfix
+      pointed out by rovv.
+
+  o Minor bugfixes:
+    - Recover 3-7 bytes that were wasted per memory chunk. Fixes bug
+      794; bug spotted by rovv. Bugfix on 0.2.0.1-alpha.
+    - Correctly detect the presence of the linux/netfilter_ipv4.h header
+      when building against recent kernels. Bugfix on 0.1.2.1-alpha.
+    - Pick size of default geoip filename string correctly on windows.
+      Fixes bug 806. Bugfix on 0.2.0.30.
+    - Make the autoconf script accept the obsolete --with-ssl-dir
+      option as an alias for the actually-working --with-openssl-dir
+      option. Fix the help documentation to recommend --with-openssl-dir.
+      Based on a patch by "Dave". Bugfix on 0.2.0.1-alpha.
+    - Disallow session resumption attempts during the renegotiation
+      stage of the v2 handshake protocol. Clients should never be trying
+      session resumption at this point, but apparently some did, in
+      ways that caused the handshake to fail. Bug found by Geoff Goodell.
+      Bugfix on 0.2.0.20-rc.
+    - When using the TransPort option on OpenBSD, and using the User
+      option to change UID and drop privileges, make sure to open
+      /dev/pf before dropping privileges. Fixes bug 782. Patch from
+      Christopher Davis. Bugfix on 0.1.2.1-alpha.
+    - Try to attach connections immediately upon receiving a RENDEZVOUS2
+      or RENDEZVOUS_ESTABLISHED cell. This can save a second or two
+      on the client side when connecting to a hidden service. Bugfix
+      on 0.0.6pre1. Found and fixed by Christian Wilms; resolves bug 743.
+    - When closing an application-side connection because its circuit is
+      getting torn down, generate the stream event correctly. Bugfix on
+      0.1.2.x. Anonymous patch.
+
+
 Changes in version 0.2.0.30 - 2008-07-15
   This new stable release switches to a more efficient directory
   distribution design, adds features to make connections to the Tor
