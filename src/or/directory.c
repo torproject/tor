@@ -465,8 +465,8 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
   tor_addr_t addr;
   router = router_get_by_digest(status->identity_digest);
   if (!router && anonymized_connection) {
-    log_info(LD_DIR, "Not sending anonymized request to directory; we "
-                     "don't have its router descriptor.");
+    log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
+                     "don't have its router descriptor.", status->nickname);
     return;
   } else if (router) {
     address = router->address;
