@@ -10,6 +10,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       say which? -NM)
     - When testing for libevent functions, set the LDFLAGS variable
       correctly.  (Found by Riastradh.)
+    - Fix an assertion bug in parsing policy-related options; possible fix
+      for bug 811.
 
   o Minor features:
     - Use a lockfile to make sure that two Tor processes are not

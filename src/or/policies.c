@@ -102,6 +102,10 @@ policy_expand_private(smartlist_t **policy)
  * Given a linked list of config lines containing "allow" and "deny"
  * tokens, parse them and append the result to <b>dest</b>. Return -1
  * if any tokens are malformed (and don't append any), else return 0.
+ *
+ * If <b>assume_action</b> is nonnegative, then insert its action
+ * (ADDR_POLICY_ACCEPT or ADDR_POLICY_REJECT) for items that specify no
+ * action.
  */
 static int
 parse_addr_policy(config_line_t *cfg, smartlist_t **dest,
@@ -399,11 +403,18 @@ load_policy_from_option(config_line_t *config, smartlist_t **policy,
     return -1;
   }
   if (*policy) {
-    SMARTLIST_FOREACH(*policy, addr_policy_t *, n, {
-        /* ports aren't used. */
-        n->prt_min = 1;
-        n->prt_max = 65535;
-      });
+    SMARTLIST_FOREACH_BEGIN(*policy, addr_policy_t *, n) {
+      /* ports aren't used in these. */
+      if (n->prt_min > 1 || n->prt_max != 65535) {
+        addr_policy_t newp, *c;
+        memcpy(&newp, n, sizeof(newp));
+        newp.prt_min = 1;
+        newp.prt_max = 65535;
+        c = addr_policy_get_canonical_entry(&newp);
+        SMARTLIST_REPLACE_CURRENT(*policy, n, c);
+        addr_policy_free(n);
+      }
+    } SMARTLIST_FOREACH_END(n);
   }
   return 0;
 }

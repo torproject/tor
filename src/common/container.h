@@ -222,6 +222,15 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
     --var ## _sl_len;                           \
   STMT_END
 
+/** Helper: While in a SMARTLIST_FOREACH loop over the list <b>sl</b> indexed
+ * with the variable <b>var</b>, replace the current element with <b>val</b>.
+ * Does not deallocate the current value of <b>var</b>.
+ */
+#define SMARTLIST_REPLACE_CURRENT(sl, var, val) \
+  STMT_BEGIN                                    \
+    smartlist_set(sl, var ## _sl_idx, val);     \
+  STMT_END
+
 /* Helper: Given two lists of items, possibly of different types, such that
  * both lists are sorted on some common field (as determened by a comparison
  * expression <b>cmpexpr</b>), and such that one list (<b>sl1</b>) has no
