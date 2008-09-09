@@ -463,7 +463,12 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
   struct in_addr in;
   const char *address;
   tor_addr_t addr;
-  if ((router = router_get_by_digest(status->identity_digest))) {
+  router = router_get_by_digest(status->identity_digest);
+  if (!router && anonymized_connection) {
+    log_info(LD_DIR, "Not sending anonymized request to directory; we "
+                     "don't have its router descriptor.");
+    return;
+  } else if (router) {
     address = router->address;
   } else {
     in.s_addr = htonl(status->addr);
