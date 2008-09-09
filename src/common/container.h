@@ -204,7 +204,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
       var = (sl)->list[var ## _sl_idx];
 
 #define SMARTLIST_FOREACH_END(var)              \
-    (void)var;                                  \
+    var = NULL;                                 \
   } STMT_END
 
 #define SMARTLIST_FOREACH(sl, type, var, cmd)                   \
