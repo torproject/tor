@@ -244,6 +244,8 @@ connection_in_array(connection_t *conn)
 smartlist_t *
 get_connection_array(void)
 {
+  if (!connection_array)
+    connection_array = smartlist_create();
   return connection_array;
 }
 
@@ -1951,9 +1953,12 @@ tor_free_all(int postfork)
     tor_tls_free_all();
   }
   /* stuff in main.c */
-  smartlist_free(connection_array);
-  smartlist_free(closeable_connection_lst);
-  smartlist_free(active_linked_connection_lst);
+  if (connection_array)
+    smartlist_free(connection_array);
+  if (closeable_connection_lst)
+    smartlist_free(closeable_connection_lst);
+  if (active_linked_connection_lst)
+    smartlist_free(active_linked_connection_lst);
   tor_free(timeout_event);
   /* Stuff in util.c and address.c*/
   if (!postfork) {

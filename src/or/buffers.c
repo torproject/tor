@@ -9,7 +9,7 @@ const char buffers_c_id[] =
 
 /**
  * \file buffers.c
- * \brief Implements a generic buffer interface.  Buffers are
+ * \brief Implements a generic interface buffer.  Buffers are
  * fairly opaque string holders that can read to or flush from:
  * memory, file descriptors, or TLS connections.
  **/

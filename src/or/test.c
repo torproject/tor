@@ -14,6 +14,7 @@ const char tor_svn_revision[] = "";
  **/
 
 #include "orconfig.h"
+
 #include <stdio.h>
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -43,6 +44,10 @@ const char tor_svn_revision[] = "";
 #include "torgzip.h"
 #include "mempool.h"
 #include "memarea.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
 
 int have_failed = 0;
 
@@ -341,20 +346,22 @@ test_buffers(void)
   test_eq(eof, 1);
   }
 #endif
+
+ done:
+  ;
 }
 
 static void
 test_crypto_dh(void)
 {
-  crypto_dh_env_t *dh1, *dh2;
+  crypto_dh_env_t *dh1 = crypto_dh_new();
+  crypto_dh_env_t *dh2 = crypto_dh_new();
   char p1[DH_BYTES];
   char p2[DH_BYTES];
   char s1[DH_BYTES];
   char s2[DH_BYTES];
   int s1len, s2len;
 
-  dh1 = crypto_dh_new();
-  dh2 = crypto_dh_new();
   test_eq(crypto_dh_get_bytes(dh1), DH_BYTES);
   test_eq(crypto_dh_get_bytes(dh2), DH_BYTES);
 
@@ -380,6 +387,7 @@ test_crypto_dh(void)
      */
   }
 
+ done:
   crypto_dh_free(dh1);
   crypto_dh_free(dh2);
 }
@@ -771,6 +779,9 @@ test_crypto(void)
     crypto_digest(d_out2, "abcdef", 6);
     test_memeq(d_out1, d_out2, DIGEST_LEN);
   }
+
+ done:
+  ;
 }
 
 static void
@@ -778,7 +789,7 @@ test_crypto_s2k(void)
 {
   char buf[29];
   char buf2[29];
-  char *buf3;
+  char *buf3 = NULL;
   int i;
 
   memset(buf, 0, sizeof(buf));
@@ -800,6 +811,8 @@ test_crypto_s2k(void)
   }
   crypto_digest(buf2+9, buf3, 65536);
   test_memeq(buf, buf2, 29);
+
+ done:
   tor_free(buf3);
 }
 
@@ -1184,6 +1197,9 @@ test_util(void)
   test_eq(round_to_power_of_2(U64_LITERAL(40000000000000000)),
           U64_LITERAL(1)<<55);
   test_eq(round_to_power_of_2(0), 2);
+
+ done:
+  ;
 }
 
 /** Helper: assert that IPv6 addresses <b>a</b> and <b>b</b> are the same.  On
@@ -1562,6 +1578,9 @@ test_util_ip6_helpers(void)
   tor_inet_ntop(AF_INET6, &t2.sa6.sin6_addr, buf, sizeof(buf));
   printf("\nv6 address: %s  (family=%i)", buf, IN_FAMILY(&t2));
 #endif
+
+ done:
+  ;
 }
 
 static void
@@ -1941,12 +1960,15 @@ test_util_smartlist(void)
   }
 
   smartlist_free(sl);
+
+ done:
+  ;
 }
 
 static void
 test_util_bitarray(void)
 {
-  bitarray_t *ba;
+  bitarray_t *ba = NULL;
   int i, j, ok=1;
 
   ba = bitarray_init_zero(1);
@@ -1977,7 +1999,10 @@ test_util_bitarray(void)
     else
       i += 7;
   }
-  bitarray_free(ba);
+
+ done:
+  if (ba)
+    bitarray_free(ba);
 }
 
 static void
@@ -1988,7 +2013,7 @@ test_util_digestset(void)
   int i;
   int ok = 1;
   int false_positives = 0;
-  digestset_t *set;
+  digestset_t *set = NULL;
 
   for (i = 0; i < 1000; ++i) {
     crypto_rand(d, DIGEST_LEN);
@@ -2011,7 +2036,12 @@ test_util_digestset(void)
       ++false_positives;
   }
   test_assert(false_positives < 50); /* Should be far lower. */
-  digestset_free(set);
+
+ done:
+  if (set)
+    digestset_free(set);
+  SMARTLIST_FOREACH(included, char *, cp, tor_free(cp));
+  smartlist_free(included);
 }
 
 /* stop threads running at once. */
@@ -2118,6 +2148,8 @@ test_util_threads(void)
 
   tor_free(s1);
   tor_free(s2);
+ done:
+  ;
 }
 
 static int
@@ -2129,7 +2161,7 @@ _compare_strings_for_pqueue(const void *s1, const void *s2)
 static void
 test_util_pqueue(void)
 {
-  smartlist_t *sl;
+  smartlist_t *sl = NULL;
   int (*cmp)(const void *, const void*);
 #define OK() smartlist_pqueue_assert_ok(sl, cmp)
 
@@ -2177,7 +2209,10 @@ test_util_pqueue(void)
   test_eq(smartlist_len(sl), 0);
   OK();
 #undef OK
-  smartlist_free(sl);
+
+ done:
+  if (sl)
+    smartlist_free(sl);
 }
 
 static void
@@ -2284,6 +2319,8 @@ test_util_gzip(void)
   tor_free(buf2);
   tor_free(buf3);
   tor_free(buf1);
+ done:
+  ;
 }
 
 static void
@@ -2367,6 +2404,9 @@ test_util_strmap(void)
   strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), NULL);
   strmap_free(map,NULL);
+
+ done:
+  ;
 }
 
 static void
@@ -2435,12 +2475,14 @@ test_util_mmap(void)
   tor_free(fname2);
   tor_free(fname3);
   tor_free(buf);
+ done:
+  ;
 }
 
 static void
 test_util_control_formats(void)
 {
-  char *out;
+  char *out = NULL;
   const char *inp =
     "..This is a test\r\nof the emergency \nbroadcast\r\n..system.\r\nZ.\r\n";
   size_t sz;
@@ -2450,6 +2492,7 @@ test_util_control_formats(void)
              ".This is a test\nof the emergency \nbroadcast\n.system.\nZ.\n");
   test_eq(sz, strlen(out));
 
+ done:
   tor_free(out);
 }
 
@@ -2484,8 +2527,6 @@ test_onion_handshake(void)
   memset(c_keys, 0, 40);
   test_assert(! onion_skin_client_handshake(c_dh, s_buf, c_keys, 40));
 
-  crypto_dh_free(c_dh);
-
   if (memcmp(c_keys, s_keys, 40)) {
     puts("Aiiiie");
     exit(1);
@@ -2493,7 +2534,12 @@ test_onion_handshake(void)
   test_memeq(c_keys, s_keys, 40);
   memset(s_buf, 0, 40);
   test_memneq(c_keys, s_buf, 40);
-  crypto_free_pk_env(pk);
+
+ done:
+  if (c_dh)
+    crypto_dh_free(c_dh);
+  if (pk)
+    crypto_free_pk_env(pk);
 }
 
 extern smartlist_t *fingerprint_list;
@@ -2813,6 +2859,8 @@ test_dir_format(void)
                                    "Tor 0.2.1.0-dev (r99)"));
   test_eq(1, tor_version_as_new_as("Tor 0.2.1.1",
                                    "Tor 0.2.1.0-dev (r99)"));
+ done:
+  ;
 }
 
 extern const char AUTHORITY_CERT_1[];
@@ -2834,6 +2882,8 @@ test_same_voter(networkstatus_voter_info_t *v1,
   test_eq(v1->or_port, v2->or_port);
   test_streq(v1->contact, v2->contact);
   test_memeq(v1->vote_digest, v2->vote_digest, DIGEST_LEN);
+ done:
+  ;
 }
 
 static void
@@ -2860,6 +2910,9 @@ test_util_order_functions(void)
   //smartlist_shuffle(sl);
   test_eq(25, median()); /* 12,12,24,25,60,77,77 */
 #undef median
+
+ done:
+  ;
 }
 
 static routerinfo_t *
@@ -2882,7 +2935,7 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
   r->exit_policy = smartlist_create();
   r->cache_info.published_on = ++published + time(NULL);
   return r;
-};
+}
 
 static void
 test_v3_networkstatus(void)
@@ -3355,6 +3408,8 @@ test_v3_networkstatus(void)
   authority_cert_free(cert1);
   authority_cert_free(cert2);
   authority_cert_free(cert3);
+ done:
+  ;
 }
 
 static void
@@ -3362,8 +3417,8 @@ test_policy_summary_helper(const char *policy_str,
                            const char *expected_summary)
 {
   config_line_t line;
-  smartlist_t *policy;
-  char *summary;
+  smartlist_t *policy = NULL;
+  char *summary = NULL;
 
   policy = NULL;
   line.key = (char*)"foo";
@@ -3375,8 +3430,11 @@ test_policy_summary_helper(const char *policy_str,
 
   test_assert(summary != NULL);
   test_streq(summary, expected_summary);
+
+ done:
   tor_free(summary);
-  addr_policy_list_free(policy);
+  if (policy)
+    addr_policy_list_free(policy);
 }
 
 static void
@@ -3528,6 +3586,8 @@ test_policies(void)
   tor_free(policy_str);
   SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
   smartlist_clear(sm);
+ done:
+  ;
 }
 
 static void
@@ -3589,6 +3649,8 @@ test_rend_fns(void)
 
   crypto_free_pk_env(pk1);
   crypto_free_pk_env(pk2);
+ done:
+  ;
 }
 
 static void
@@ -3731,6 +3793,8 @@ test_util_mempool(void)
   mp_pool_assert_ok(pool);
   mp_pool_destroy(pool);
   smartlist_free(allocated);
+ done:
+  ;
 }
 
 static void
@@ -3821,14 +3885,17 @@ test_util_memarea(void)
   test_assert(memarea_owns_ptr(area, p1));
   test_assert(memarea_owns_ptr(area, p2));
 
+
+ done:
   memarea_drop_all(area);
+  ;
 }
 
 static void
 test_util_datadir(void)
 {
   char buf[1024];
-  char *f;
+  char *f = NULL;
 
   f = get_datadir_fname(NULL);
   test_streq(f, temp_dir);
@@ -3851,6 +3918,8 @@ test_util_datadir(void)
   tor_snprintf(buf, sizeof(buf), "%s"PATH_SEPARATOR"cache.foo",
                temp_dir);
   test_streq(f, buf);
+
+ done:
   tor_free(f);
 }
 
@@ -3968,6 +4037,8 @@ test_crypto_aes_iv(void)
   tor_free(encrypted2);
   tor_free(decrypted1);
   tor_free(decrypted2);
+ done:
+  ;
 }
 
 /* Test base32 decoding. */
@@ -4000,6 +4071,9 @@ test_crypto_base32_decode(void)
   encoded[0] = '!';
   res = base32_decode(decoded, 60, encoded, 96);
   test_assert(res < 0);
+
+ done:
+  ;
 }
 
 /* Test encoding and parsing of v2 rendezvous service descriptors. */
@@ -4090,6 +4164,8 @@ test_rend_fns_v2(void)
   smartlist_free(descs);
   rend_service_descriptor_free(parsed);
   rend_service_descriptor_free(generated);
+ done:
+  ;
 }
 
 static void
@@ -4145,6 +4221,8 @@ test_geoip(void)
   test_assert(s);
   test_streq("ab=16,xy=8", s);
   tor_free(s);
+ done:
+  ;
 }
 
 #define ENT(x) { #x, test_ ## x, 0, 0 }
@@ -4301,7 +4379,15 @@ main(int c, char**v)
   }
   puts("");
 
-  crypto_global_cleanup();
+  {
+    void *x = tor_malloc(1024);
+    (void)x;
+  }
+
+#ifdef USE_DMALLOC
+  tor_free_all(0);
+  dmalloc_log_unfreed();
+#endif
 
   if (have_failed)
     return 1;

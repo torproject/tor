@@ -31,7 +31,7 @@ extern int have_failed;
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       msg);                                                     \
-    return;                                                     \
+    goto done;                                                  \
   STMT_END
 
 #define test_fail() test_fail_msg("Assertion failed.")
@@ -45,7 +45,7 @@ extern int have_failed;
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr);                                                   \
-    return;                                                     \
+    goto done;                                                  \
   } STMT_END
 
 #define test_eq_type(tp, fmt, expr1, expr2) \
@@ -61,7 +61,7 @@ extern int have_failed;
              PRETTY_FUNCTION,                                           \
              #expr1, #expr2,                                            \
            _test_v1, _test_v2);                                         \
-    return;                                                             \
+    goto done;                                                          \
   } STMT_END
 
 #define test_eq(expr1, expr2)                   \
@@ -83,7 +83,7 @@ extern int have_failed;
            PRETTY_FUNCTION,                                             \
            #expr1, #expr2,                                              \
            _test_v1, _test_v2);                                         \
-    return;                                                             \
+    goto done;                                                          \
   } STMT_END
 
 #define test_neq(expr1, expr2)                  \
@@ -104,7 +104,7 @@ extern int have_failed;
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
       _test_v1, _test_v2);                                      \
-    return;                                                     \
+    goto done;                                                  \
   } STMT_END
 
 #define test_strneq(expr1, expr2)                               \
@@ -119,7 +119,7 @@ extern int have_failed;
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2,                                           \
       _test_v1, _test_v2);                                      \
-    return;                                                     \
+    goto done;                                                  \
   } STMT_END
 
 #define test_memeq(expr1, expr2, len)                           \
@@ -139,7 +139,7 @@ extern int have_failed;
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2, mem1, mem2);                              \
-    return;                                                     \
+    goto done;                                                  \
   } STMT_END
 
 #define test_memeq_hex(expr1, hex)                                      \
@@ -160,7 +160,7 @@ extern int have_failed;
              __LINE__,                                                  \
              PRETTY_FUNCTION,                                           \
              #expr1, _test_v2, _mem1, _test_v2);                        \
-      return;                                                           \
+      goto done;                                                        \
     }                                                                   \
     tor_free(_mem2);                                                    \
   STMT_END
@@ -177,7 +177,7 @@ extern int have_failed;
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2);                                          \
-    return;                                                     \
+    goto done;                                                  \
   } STMT_END
 
 #endif

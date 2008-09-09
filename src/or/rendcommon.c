@@ -837,8 +837,10 @@ _rend_cache_entry_free(void *p)
 void
 rend_cache_free_all(void)
 {
-  strmap_free(rend_cache, _rend_cache_entry_free);
-  digestmap_free(rend_cache_v2_dir, _rend_cache_entry_free);
+  if (rend_cache)
+    strmap_free(rend_cache, _rend_cache_entry_free);
+  if (rend_cache_v2_dir)
+    digestmap_free(rend_cache_v2_dir, _rend_cache_entry_free);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
 }
