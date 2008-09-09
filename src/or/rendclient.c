@@ -354,12 +354,13 @@ directory_get_from_hs_dir(const char *desc_id, const char *query)
                 desc_id, DIGEST_LEN);
 
   /* Only select those hidden service directories to which we did not send
-   * a request recently. */
+   * a request recently and for which we have a router descriptor here. */
   directory_clean_last_hid_serv_requests(); /* Clean request history first. */
 
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
     if (lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0) +
-        REND_HID_SERV_DIR_REQUERY_PERIOD >= now)
+            REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
+        !router_get_by_digest(dir->identity_digest))
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
   });
 

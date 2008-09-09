@@ -1321,6 +1321,11 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->_base.chosen_exit_optional;
       if (!router && !want_onehop) {
+        /* We ran into this warning when trying to extend a circuit to a
+         * hidden service directory for which we didn't have a router
+         * descriptor. See flyspray task 767 for more details. We should
+         * keep this in mind when deciding to use BEGIN_DIR cells for other
+         * directory requests as well. -KL*/
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' is not known. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");

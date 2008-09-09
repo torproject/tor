@@ -32,6 +32,10 @@ rend_service_descriptor_free(rend_service_descriptor_t *desc)
       rend_intro_point_free(intro););
     smartlist_free(desc->intro_nodes);
   }
+  if (desc->successful_uploads) {
+    SMARTLIST_FOREACH(desc->successful_uploads, char *, c, tor_free(c););
+    smartlist_free(desc->successful_uploads);
+  }
   tor_free(desc);
 }
 
