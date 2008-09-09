@@ -1127,8 +1127,8 @@ run_scheduled_events(time_t now)
 
   /** 7. And upload service descriptors if necessary. */
   if (has_completed_circuit && !we_are_hibernating()) {
-    rend_consider_descriptor_republication();
     rend_consider_services_upload(now);
+    rend_consider_descriptor_republication();
   }
 
   /** 8. and blow away any connections that need to die. have to do this now,

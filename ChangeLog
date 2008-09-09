@@ -5,12 +5,13 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       relay. Fixes bug 809. Bugfix on 0.2.1.5-alpha.
     - When extending a circuit to a hidden service directory to upload a
       rendezvous descriptor using a BEGIN_DIR cell, almost 1/6 of all
-      requests failed, because the router descriptor has not been downloaded
-      before. In these cases, do not attempt to upload the rendezvous
-      descriptor, but wait until the router descriptor is downloaded and
-      retry. Likewise, do not attempt to fetch a rendezvous from a hidden
-      service directory for which the router descriptor has not been
-      downloaded, yet. Fixes bug 767. Bugfix on 0.2.0.10-alpha.
+      requests failed, because the router descriptor has not been
+      downloaded yet. In these cases, do not attempt to upload the
+      rendezvous descriptor, but wait until the router descriptor is
+      downloaded and retry. Likewise, do not attempt to fetch a rendezvous
+      descriptor from a hidden service directory for which the router
+      descriptor has not yet been downloaded. Fixes bug 767. Bugfix
+      on 0.2.0.10-alpha.
 
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.

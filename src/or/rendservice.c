@@ -1420,7 +1420,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       SMARTLIST_FOREACH(renddesc->successful_uploads, char *, c, tor_free(c););
       smartlist_free(renddesc->successful_uploads);
     }
-    renddesc->all_uploads_performed = -1;
+    renddesc->all_uploads_performed = 1;
   } else {
     /* Remember which routers worked this time, so that we don't upload the
      * descriptor to them again. */
