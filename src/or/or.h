@@ -941,9 +941,6 @@ typedef struct or_connection_t {
 
   tor_tls_t *tls; /**< TLS connection state. */
   int tls_error; /**< Last tor_tls error code. */
-  /* XXX either merge this with tls_error, or do all our activity right
-   * when we compute this value so we don't have to store it. */
-  int socket_error; /**< If conn dies, remember why. */
   /** When we last used this conn for any client traffic. If not
    * recent, we can rate limit it further. */
   time_t client_used;
@@ -2991,6 +2988,8 @@ int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
 
+void connection_or_connect_failed(or_connection_t *conn,
+                                  int reason, const char *msg);
 or_connection_t *connection_or_connect(const tor_addr_t *addr, uint16_t port,
                                        const char *id_digest);
 

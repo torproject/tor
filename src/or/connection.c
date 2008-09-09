@@ -547,14 +547,7 @@ connection_about_to_close_connection(connection_t *conn)
           entry_guard_register_connect_status(or_conn->identity_digest,0,now);
           if (!options->HttpsProxy)
             router_set_status(or_conn->identity_digest, 0);
-          if (conn->state == OR_CONN_STATE_CONNECTING) {
-            control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
-              errno_to_orconn_end_reason(or_conn->socket_error));
-            if (!authdir_mode_tests_reachability(options))
-              control_event_bootstrap_problem(
-                tor_socket_strerror(or_conn->socket_error),
-                errno_to_orconn_end_reason(or_conn->socket_error));
-          } else {
+          if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
             int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                                          reason);
@@ -1947,8 +1940,13 @@ loop_again:
   before = buf_datalen(conn->inbuf);
   if (connection_read_to_buf(conn, &max_to_read) < 0) {
     /* There's a read error; kill the connection.*/
-    if (conn->type == CONN_TYPE_OR)
-      TO_OR_CONN(conn)->socket_error = tor_socket_errno(conn->s);
+    if (conn->type == CONN_TYPE_OR &&
+        conn->state == OR_CONN_STATE_CONNECTING) {
+      int socket_error = tor_socket_errno(conn->s);
+      connection_or_connect_failed(TO_OR_CONN(conn),
+                                   errno_to_orconn_end_reason(socket_error),
+                                   tor_socket_strerror(socket_error));
+    }
     if (CONN_IS_EDGE(conn)) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
       connection_edge_end_errno(edge_conn);
@@ -2254,7 +2252,9 @@ connection_handle_write(connection_t *conn, int force)
         if (CONN_IS_EDGE(conn))
           connection_edge_end_errno(TO_EDGE_CONN(conn));
         if (conn->type == CONN_TYPE_OR)
-          TO_OR_CONN(conn)->socket_error = e;
+          connection_or_connect_failed(TO_OR_CONN(conn),
+                                       errno_to_orconn_end_reason(e),
+                                       tor_socket_strerror(e));
 
         connection_close_immediate(conn);
         connection_mark_for_close(conn);

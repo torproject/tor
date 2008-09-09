@@ -743,6 +743,10 @@ run_connection_housekeeping(int i, time_t now)
     log_info(LD_OR,
              "Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
              conn->s, conn->address, conn->port);
+    if (conn->state == OR_CONN_STATE_CONNECTING)
+      connection_or_connect_failed(TO_OR_CONN(conn),
+                                   END_OR_CONN_REASON_TIMEOUT,
+                                   "Tor gave up on the connection");
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1;
     return;

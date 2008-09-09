@@ -492,6 +492,21 @@ connection_or_get_by_identity_digest(const char *digest)
   return best;
 }
 
+/** <b>conn</b> is in the 'connecting' state, and it failed to complete
+ * a TCP connection. Send notifications appropriately.
+ *
+ * <b>reason</b> specifies the or_conn_end_reason for the failure;
+ * <b>msg</b> specifies the strerror-style error message.
+ */
+void
+connection_or_connect_failed(or_connection_t *conn,
+                             int reason, const char *msg)
+{
+  control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED, reason);
+  if (!authdir_mode_tests_reachability(get_options()))
+    control_event_bootstrap_problem(msg, reason);
+}
+
 /** Launch a new OR connection to <b>addr</b>:<b>port</b> and expect to
  * handshake with an OR with identity digest <b>id_digest</b>.
  *
@@ -548,11 +563,9 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
                                             time(NULL));
         router_set_status(conn->identity_digest, 0);
       }
-      control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
-                                   errno_to_orconn_end_reason(socket_error));
-      if (!authdir_mode_tests_reachability(options))
-        control_event_bootstrap_problem(tor_socket_strerror(socket_error),
-                                     errno_to_orconn_end_reason(socket_error));
+      connection_or_connect_failed(conn,
+                                   errno_to_orconn_end_reason(socket_error),
+                                   tor_socket_strerror(socket_error));
       connection_free(TO_CONN(conn));
       return NULL;
     case 0:

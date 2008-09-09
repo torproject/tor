@@ -1,10 +1,12 @@
 Changes in version 0.2.1.6-alpha - 2008-09-xx
+  o Major bugfixes:
+    - Fix a bug when parsing ports in tor_addr_port_parse() that caused
+      Tor to fail to start if you had it configured to use a bridge
+      relay. Fixes bug 809. Bugfix on 0.2.1.5-alpha.
+
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.
       Reported by Tas.
-    - When parsing ports in tor_addr_port_parse(), yield the port if
-      the port variable is provided, not just if it's nonzero.  Fixes
-      bug 809.  Bugfix on 0.2.1.5-alpha.
     - Fixed some memory leaks --some quite frequent, some almost impossible
       to trigger-- based on results of a static analysis tool. (XXX Can we
       say which? -NM)
@@ -12,6 +14,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       correctly.  (Found by Riastradh.)
     - Fix an assertion bug in parsing policy-related options; possible fix
       for bug 811.
+    - Catch and report a few more bootstrapping failure cases when Tor
+      fails to establish a TCP connection. Cleanup on 0.2.1.x.
 
   o Minor features:
     - Use a lockfile to make sure that two Tor processes are not
