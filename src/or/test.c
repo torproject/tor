@@ -2058,6 +2058,8 @@ static tor_mutex_t *_thread_test_mutex = NULL;
 static tor_mutex_t *_thread_test_start1 = NULL;
 static tor_mutex_t *_thread_test_start2 = NULL;
 static strmap_t *_thread_test_strmap = NULL;
+static char *_thread1_name = NULL;
+static char *_thread2_name = NULL;
 
 static void _thread_test_func(void* _s) ATTR_NORETURN;
 
@@ -2067,31 +2069,36 @@ static int t2_count = 0;
 static void
 _thread_test_func(void* _s)
 {
+  /* This function runs in a subthread. It grabs its own mutex (start1 or
+   * start2) to make sure that it should start, then it repeatedly alters
+   * _test_thread_strmap protected by _thread_test_mutex. */
   char *s = _s;
   int i, *count;
   tor_mutex_t *m;
   char buf[64];
-  char *cp;
+  char **cp;
   if (!strcmp(s, "thread 1")) {
     m = _thread_test_start1;
+    cp = &_thread1_name;
     count = &t1_count;
   } else {
     m = _thread_test_start2;
+    cp = &_thread2_name;
     count = &t2_count;
   }
   tor_mutex_acquire(m);
 
   tor_snprintf(buf, sizeof(buf), "%lu", tor_get_thread_id());
-  cp = tor_strdup(buf);
+  *cp = tor_strdup(buf);
 
   for (i=0; i<10000; ++i) {
     tor_mutex_acquire(_thread_test_mutex);
-    strmap_set(_thread_test_strmap, "last to run", cp);
+    strmap_set(_thread_test_strmap, "last to run", *cp);
     ++*count;
     tor_mutex_release(_thread_test_mutex);
   }
   tor_mutex_acquire(_thread_test_mutex);
-  strmap_set(_thread_test_strmap, s, tor_strdup(buf));
+  strmap_set(_thread_test_strmap, s, *cp);
   tor_mutex_release(_thread_test_mutex);
 
   tor_mutex_release(m);
@@ -2102,7 +2109,7 @@ _thread_test_func(void* _s)
 static void
 test_util_threads(void)
 {
-  char *s1, *s2;
+  char *s1 = NULL, *s2 = NULL;
   int done = 0, timedout = 0;
   time_t started;
 #ifndef TOR_IS_MULTITHREADED
@@ -2137,6 +2144,11 @@ test_util_threads(void)
   }
   tor_mutex_free(_thread_test_mutex);
 
+  tor_mutex_acquire(_thread_test_start1);
+  tor_mutex_release(_thread_test_start1);
+  tor_mutex_acquire(_thread_test_start2);
+  tor_mutex_release(_thread_test_start2);
+
   if (timedout) {
     printf("\nTimed out: %d %d", t1_count, t2_count);
     test_assert(strmap_get(_thread_test_strmap, "thread 1"));
@@ -2152,12 +2164,17 @@ test_util_threads(void)
               !strcmp(strmap_get(_thread_test_strmap, "thread 2"),
                       strmap_get(_thread_test_strmap, "last to run")));
 
-  strmap_free(_thread_test_strmap, _tor_free);
-
+ done:
   tor_free(s1);
   tor_free(s2);
- done:
-  ;
+  tor_free(_thread1_name);
+  tor_free(_thread2_name);
+  if (_thread_test_strmap)
+    strmap_free(_thread_test_strmap, NULL);
+  if (_thread_test_start1)
+    tor_mutex_free(_thread_test_start1);
+  if (_thread_test_start2)
+    tor_mutex_free(_thread_test_start2);
 }
 
 static int
@@ -3457,11 +3474,11 @@ static void
 test_policies(void)
 {
   int i;
-  smartlist_t *policy, *policy2;
+  smartlist_t *policy = NULL, *policy2 = NULL;
   addr_policy_t *p;
   tor_addr_t tar;
   config_line_t line;
-  smartlist_t *sm;
+  smartlist_t *sm = NULL;
   char *policy_str;
 
   policy = smartlist_create();
@@ -3502,7 +3519,9 @@ test_policies(void)
   test_assert(policy_is_reject_star(NULL));
 
   addr_policy_list_free(policy);
+  policy = NULL;
   addr_policy_list_free(policy2);
+  policy2 = NULL;
 
   /* make sure compacting logic works. */
   policy = NULL;
@@ -3516,6 +3535,7 @@ test_policies(void)
   test_eq(smartlist_len(policy), 2);
 
   addr_policy_list_free(policy);
+  policy = NULL;
 
   /* test policy summaries */
   /* check if we properly ignore private IP addresses */
@@ -3575,6 +3595,7 @@ test_policies(void)
                              "reject *:7,"
                              "accept *:*",
                              "reject 1,3,5,7");
+
   /* truncation ports */
   sm = smartlist_create();
   for (i=1; i<2000; i+=2) {
@@ -3601,7 +3622,7 @@ test_policies(void)
     "490,492,494,496,498,500,502,504,506,508,510,512,514,516,518,520,522");
   tor_free(policy_str);
   SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
-  smartlist_clear(sm);
+  smartlist_free(sm);
  done:
   ;
 }
@@ -3785,7 +3806,7 @@ test_util_mempool(void)
   test_assert(pool->new_chunk_capacity < 60);
 
   allocated = smartlist_create();
-  for (i = 0; i < 100000; ++i) {
+  for (i = 0; i < 20000; ++i) {
     if (smartlist_len(allocated) < 20 || crypto_rand_int(2)) {
       void *m = mp_pool_get(pool);
       memset(m, 0x09, 241);
@@ -4356,9 +4377,10 @@ main(int c, char**v)
   }
 
   {
-    log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
-    set_log_severity_config(loglevel, LOG_ERR, s);
-    add_stream_log(s, "", stdout);
+    log_severity_list_t s;
+    memset(&s, 0, sizeof(s));
+    set_log_severity_config(loglevel, LOG_ERR, &s);
+    add_stream_log(&s, "", stdout);
   }
 
   options->command = CMD_RUN_UNITTESTS;
@@ -4401,11 +4423,6 @@ main(int c, char**v)
     test_array[i].test_fn();
   }
   puts("");
-
-  {
-    void *x = tor_malloc(1024);
-    (void)x;
-  }
 
 #ifdef USE_DMALLOC
   tor_free_all(0);
