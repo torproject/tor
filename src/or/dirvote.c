@@ -528,8 +528,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *combined_client_versions = smartlist_create();
     smartlist_t *combined_server_versions = smartlist_create();
 
-    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
-    {
+    SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
       tor_assert(v->type == NS_TYPE_VOTE);
       va_times[v_sl_idx] = v->valid_after;
       fu_times[v_sl_idx] = v->fresh_until;
@@ -556,7 +555,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
       SMARTLIST_FOREACH(v->known_flags, const char *, cp,
                         smartlist_add(flags, tor_strdup(cp)));
-    });
+    } SMARTLIST_FOREACH_END(v);
     valid_after = median_time(va_times, n_votes);
     fresh_until = median_time(fu_times, n_votes);
     valid_until = median_time(vu_times, n_votes);
@@ -835,7 +834,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       num_bandwidths = 0;
 
       /* Okay, go through all the entries for this digest. */
-      SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
+      SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
         if (index[v_sl_idx] >= size[v_sl_idx])
           continue; /* out of entries. */
         rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
@@ -868,7 +867,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         /* count bandwidths */
         if (rs->status.has_bandwidth)
           bandwidths[num_bandwidths++] = rs->status.bandwidth;
-      });
+      } SMARTLIST_FOREACH_END(v);
 
       /* We don't include this router at all unless more than half of
        * the authorities we believe in list it. */
@@ -1084,6 +1083,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(chosen_flags);
     smartlist_free(versions);
     smartlist_free(exitsummaries);
+    tor_free(bandwidths);
   }
 
   /* Add a signature. */
@@ -1134,6 +1134,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
   tor_free(client_versions);
   tor_free(server_versions);
+  SMARTLIST_FOREACH(flags, char *, cp, tor_free(cp));
   smartlist_free(flags);
   SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
   smartlist_free(chunks);
