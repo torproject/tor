@@ -6,6 +6,10 @@ Changes in version 0.2.0.32 - 2008-??-??
 
 
 Changes in version 0.2.0.31 - 2008-09-03
+  Tor 0.2.0.31 addresses two potential anonymity issues, starts to fix
+  a big bug we're seeing where in rare cases traffic from one Tor stream
+  gets mixed into another stream, and fixes a variety of smaller issues.
+
   o Major bugfixes:
     - Make sure that two circuits can never exist on the same connection
       with the same circuit ID, even if one is marked for close. This
@@ -56,6 +60,9 @@ Changes in version 0.2.0.30 - 2008-07-15
 
 
 Changes in version 0.2.0.29-rc - 2008-07-08
+  Tor 0.2.0.29-rc fixes two big bugs with using bridges, fixes more
+  hidden-service performance bugs, and fixes a bunch of smaller bugs.
+
   o Major bugfixes:
     - If you have more than one bridge but don't know their keys,
       you would only launch a request for the descriptor of the first one
