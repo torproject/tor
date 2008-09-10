@@ -2218,10 +2218,10 @@ test_util_pqueue(void)
 static void
 test_util_gzip(void)
 {
-  char *buf1, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
+  char *buf1=NULL, *buf2=NULL, *buf3=NULL, *cp1, *cp2;
   const char *ccp2;
   size_t len1, len2;
-  tor_zlib_state_t *state;
+  tor_zlib_state_t *state = NULL;
 
   buf1 = tor_strdup("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAZ");
   test_assert(detect_compression_method(buf1, strlen(buf1)) == UNKNOWN_METHOD);
@@ -2312,15 +2312,13 @@ test_util_gzip(void)
   tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf1, 1024-len1,
                                   ZLIB_METHOD, 1, LOG_WARN));
   test_streq(buf3, "ABCDEFGHIJABCDEFGHIJ"); /*Make sure it compressed right.*/
-  tor_free(buf3);
 
-  tor_zlib_free(state);
-
+ done:
+  if (state)
+    tor_zlib_free(state);
   tor_free(buf2);
   tor_free(buf3);
   tor_free(buf1);
- done:
-  ;
 }
 
 static void
@@ -2330,8 +2328,8 @@ test_util_strmap(void)
   strmap_iter_t *iter;
   const char *k;
   void *v;
-  char *visited;
-  smartlist_t *found_keys;
+  char *visited = NULL;
+  smartlist_t *found_keys = NULL;
 
   map = strmap_new();
   test_eq(strmap_size(map), 0);
@@ -2385,13 +2383,11 @@ test_util_strmap(void)
   smartlist_sort_strings(found_keys);
   visited = smartlist_join_strings(found_keys, ":", 0, NULL);
   test_streq(visited, "K1:K2:K3:K4:K5:K6");
-  tor_free(visited);
-  SMARTLIST_FOREACH(found_keys, char *, cp, tor_free(cp));
-  smartlist_free(found_keys);
 
   strmap_assert_ok(map);
   /* Clean up after ourselves. */
   strmap_free(map, NULL);
+  map = NULL;
 
   /* Now try some lc functions. */
   map = strmap_new();
@@ -2403,10 +2399,16 @@ test_util_strmap(void)
   test_eq_ptr(strmap_remove_lc(map,"aB.C"), (void*)1);
   strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), NULL);
-  strmap_free(map,NULL);
+
 
  done:
-  ;
+  if (map)
+    strmap_free(map,NULL);
+  if (found_keys) {
+    SMARTLIST_FOREACH(found_keys, char *, cp, tor_free(cp));
+    smartlist_free(found_keys);
+  }
+  tor_free(visited);
 }
 
 static void
@@ -2417,7 +2419,7 @@ test_util_mmap(void)
   char *fname3 = tor_strdup(get_fname("mapped_3"));
   const size_t buflen = 17000;
   char *buf = tor_malloc(17000);
-  tor_mmap_t *mapping;
+  tor_mmap_t *mapping = NULL;
 
   crypto_rand(buf, buflen);
 
@@ -2434,12 +2436,14 @@ test_util_mmap(void)
   test_streq(mapping->data, "Short file.");
 #ifdef MS_WINDOWS
   tor_munmap_file(mapping);
+  mapping = NULL;
   test_assert(unlink(fname1) == 0);
 #else
   /* make sure we can unlink. */
   test_assert(unlink(fname1) == 0);
   test_streq(mapping->data, "Short file.");
   tor_munmap_file(mapping);
+  mapping = NULL;
 #endif
 
   /* Now a zero-length file. */
@@ -2459,6 +2463,7 @@ test_util_mmap(void)
   test_eq(mapping->size, buflen);
   test_memeq(mapping->data, buf, buflen);
   tor_munmap_file(mapping);
+  mapping = NULL;
 
   /* Now try a big aligned file. */
   mapping = tor_mmap_file(fname3);
@@ -2466,8 +2471,10 @@ test_util_mmap(void)
   test_eq(mapping->size, 16384);
   test_memeq(mapping->data, buf, 16384);
   tor_munmap_file(mapping);
+  mapping = NULL;
 
-  /* fname1 got unlinked above */
+ done:
+  unlink(fname1);
   unlink(fname2);
   unlink(fname3);
 
@@ -2475,8 +2482,9 @@ test_util_mmap(void)
   tor_free(fname2);
   tor_free(fname3);
   tor_free(buf);
- done:
-  ;
+
+  if (mapping)
+    tor_munmap_file(mapping);
 }
 
 static void
@@ -3597,10 +3605,10 @@ test_rend_fns(void)
   char address2[] = "aaaaaaaaaaaaaaaa.onion";
   char address3[] = "fooaddress.exit";
   char address4[] = "www.torproject.org";
-  rend_service_descriptor_t *d1, *d2;
-  char *encoded;
+  rend_service_descriptor_t *d1 = NULL, *d2 = NULL;
+  char *encoded = NULL;
   size_t len;
-  crypto_pk_env_t *pk1, *pk2;
+  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
   time_t now;
   int i;
   pk1 = pk_generate(0);
@@ -3638,19 +3646,21 @@ test_rend_fns(void)
                intro2->extend_info->nickname);
   }
 
-  rend_service_descriptor_free(d1);
-  rend_service_descriptor_free(d2);
-  tor_free(encoded);
-
   test_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
   test_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
   test_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
   test_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
 
-  crypto_free_pk_env(pk1);
-  crypto_free_pk_env(pk2);
  done:
-  ;
+  if (pk1)
+    crypto_free_pk_env(pk1);
+  if (pk2)
+    crypto_free_pk_env(pk2);
+  if (d1)
+    rend_service_descriptor_free(d1);
+  if (d2)
+    rend_service_descriptor_free(d2);
+  tor_free(encoded);
 }
 
 static void
@@ -3750,14 +3760,15 @@ bench_dmap(void)
 static void
 test_util_mempool(void)
 {
-  mp_pool_t *pool;
-  smartlist_t *allocated;
+  mp_pool_t *pool = NULL;
+  smartlist_t *allocated = NULL;
   int i;
 
   pool = mp_pool_new(1, 100);
   test_assert(pool->new_chunk_capacity >= 100);
   test_assert(pool->item_alloc_size >= sizeof(void*)+1);
   mp_pool_destroy(pool);
+  pool = NULL;
 
   pool = mp_pool_new(241, 2500);
   test_assert(pool->new_chunk_capacity >= 10);
@@ -3787,14 +3798,18 @@ test_util_mempool(void)
     if (i % 777)
       mp_pool_assert_ok(pool);
   }
-  SMARTLIST_FOREACH(allocated, void *, m, mp_pool_release(m));
-  mp_pool_assert_ok(pool);
-  mp_pool_clean(pool, 0, 0);
-  mp_pool_assert_ok(pool);
-  mp_pool_destroy(pool);
-  smartlist_free(allocated);
+
  done:
-  ;
+  if (allocated) {
+    SMARTLIST_FOREACH(allocated, void *, m, mp_pool_release(m));
+    mp_pool_assert_ok(pool);
+    mp_pool_clean(pool, 0, 0);
+    mp_pool_assert_ok(pool);
+    smartlist_free(allocated);
+  }
+
+  if (pool)
+    mp_pool_destroy(pool);
 }
 
 static void
@@ -3888,7 +3903,6 @@ test_util_memarea(void)
 
  done:
   memarea_drop_all(area);
-  ;
 }
 
 static void
@@ -4105,6 +4119,7 @@ test_rend_fns_v2(void)
   generated->version = 2;
   generated->protocols = 42;
   generated->intro_nodes = smartlist_create();
+
   for (i = 0; i < 3; i++) {
     rend_intro_point_t *intro = tor_malloc_zero(sizeof(rend_intro_point_t));
     crypto_pk_env_t *okey = pk_generate(2 + i);
@@ -4173,7 +4188,7 @@ test_geoip(void)
 {
   int i, j;
   time_t now = time(NULL);
-  char *s;
+  char *s = NULL;
 
   /* Populate the DB a bit.  Add these in order, since we can't do the final
    * 'sort' step.  These aren't very good IP addresses, but they're perfectly
@@ -4220,9 +4235,9 @@ test_geoip(void)
   s = geoip_get_client_history(now+5*24*60*60, GEOIP_CLIENT_CONNECT);
   test_assert(s);
   test_streq("ab=16,xy=8", s);
-  tor_free(s);
+
  done:
-  ;
+  tor_free(s);
 }
 
 #define ENT(x) { #x, test_ ## x, 0, 0 }
