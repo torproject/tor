@@ -123,7 +123,7 @@ test_buffers(void)
   char str[256];
   char str2[256];
 
-  buf_t *buf, *buf2;
+  buf_t *buf = NULL, *buf2 = NULL;
   const char *cp;
 
   int j;
@@ -174,6 +174,7 @@ test_buffers(void)
   }
   test_eq(buf_datalen(buf), 0);
   buf_free(buf);
+  buf = NULL;
 
   /* Okay, now make sure growing can work. */
   buf = buf_new_with_capacity(16);
@@ -262,6 +263,7 @@ test_buffers(void)
   }
   buf_free(buf);
   buf_free(buf2);
+  buf = buf2 = NULL;
 
   buf = buf_new_with_capacity(5);
   cp = "Testing. This is a moderately long Testing string.";
@@ -278,6 +280,7 @@ test_buffers(void)
   test_eq(-1, buf_find_string_offset(buf, "Testing thing", 13));
   test_eq(-1, buf_find_string_offset(buf, "ngx", 3));
   buf_free(buf);
+  buf = NULL;
 
 #if 0
   {
@@ -320,6 +323,7 @@ test_buffers(void)
   test_eq(i, 6);
   test_memeq(str+10, (char*)_buf_peek_raw_buffer(buf2), 6);
   buf_free(buf2);
+  buf2 = NULL;
 
   /* Now test when buffer is filled with more data to read. */
   buf2 = buf_new_with_capacity(32);
@@ -329,6 +333,7 @@ test_buffers(void)
   test_eq(eof, 0);
   test_eq(i, 32);
   buf_free(buf2);
+  buf2 = NULL;
 
   /* Now read to eof. */
   test_assert(buf_capacity(buf) > 256);
@@ -348,7 +353,10 @@ test_buffers(void)
 #endif
 
  done:
-  ;
+  if (buf)
+    buf_free(buf);
+  if (buf2)
+    buf_free(buf2);
 }
 
 static void
