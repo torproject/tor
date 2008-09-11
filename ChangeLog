@@ -28,6 +28,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
   o Minor features:
     - Use a lockfile to make sure that two Tor processes are not
       simultaneously running with the same datadir.
+    - Directory mirrors store and serve v2 hidden service descriptors by
+      default (new default value for HidServDirectoryV2 is 1).
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant

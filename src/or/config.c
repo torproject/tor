@@ -219,7 +219,7 @@ static config_var_t _option_vars[] = {
   V(Group,                       STRING,   NULL),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       LINELIST, NULL),
-  V(HidServDirectoryV2,          BOOL,     "0"),
+  V(HidServDirectoryV2,          BOOL,     "1"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
   OBSOLETE("HiddenServiceExcludeNodes"),
   OBSOLETE("HiddenServiceNodes"),
@@ -3021,9 +3021,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->HSAuthorityRecordStats && !options->HSAuthoritativeDir)
     REJECT("HSAuthorityRecordStats is set but we're not running as "
            "a hidden service authority.");
-
-  if (options->HidServDirectoryV2 && !options->DirPort)
-    REJECT("Running as hidden service directory, but no DirPort set.");
 
   if (options->ConnLimit <= 0) {
     r = tor_snprintf(buf, sizeof(buf),

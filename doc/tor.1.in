@@ -1077,7 +1077,7 @@ usage to a file \fBhsusage\fP  in its data directory. (Default: 0)
 .TP
 \fBHidServDirectoryV2 \fR\fB0\fR|\fB1\fR\fP
 When this option is set, Tor accepts and serves v2 hidden service
-descriptors. (Default: 0)
+descriptors. (Default: 1)
 .LP
 .TP
 \fBBridgeAuthoritativeDir \fR\fB0\fR|\fB1\fR\fP
