@@ -83,7 +83,7 @@ Motivation:
 
   (2) Better protection of service location: Unauthorized clients could not
   force Bob to create circuits to their rendezvous points, thus preventing
-  the attack described by Ã˜verlier and Syverson in their paper "Locating
+  the attack described by Øverlier and Syverson in their paper "Locating
   Hidden Servers" even without the need for guards.
 
   (3) Hiding activity: Apart from performing the actual authorization, a
