@@ -18,19 +18,9 @@
 ## Target a specific arch and OS
 #
 # default is i386 linux
-%define target gnu
-%define target_cpu i386
-%define target_os linux
 
 ## Override any system rpm macros
 #
-%define _arch %{target_cpu}
-%define _build_arch %{target_cpu}
-%define _vendor %{target_os}
-%define _host %{target_cpu}-pc-%{target_os}-%{target}
-%define _host_cpu %{target_cpu}
-%define _host_vendor %{target_os}
-%define optflags -march=%{target_cpu} -mtune=%{target_cpu} -O2
 
 ## Version song and dance
 #
@@ -45,7 +35,6 @@
 ## Define output filename 
 # 
 # This creates filenames based upon the value of target_cpu defined above
-%define _build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%{target_cpu}.rpm
 
 ## Release and OS identification song and dance
 #
@@ -128,8 +117,8 @@ Packager: Andrew Lewman <phobos@rootme.org>
 Requires: openssl >= 0.9.6
 BuildRequires: openssl-devel >= 0.9.6, rpm >= 4.0, zlib-devel
 %else 
-Requires: openssl >= 0.9.6
-BuildRequires: openssl-devel >= 0.9.6, libevent-devel >= 1.1a
+Requires: openssl >= 0.9.6, libevent >= 1.1
+BuildRequires: openssl-devel >= 0.9.6, libevent-devel >= 1.1
 %endif
 %if %{is_fc}
 BuildRequires: rpm-build >= 4.0
@@ -169,11 +158,9 @@ for high-stakes anonymity.
 
 %build
 %if %{is_suse}
-%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
-	--build=%{_host} --host=%{_host} --target=%{_host} 
+%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
 %else
-%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} \
-	--build=%{_host} --host=%{_host} --target=%{_host} 
+%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} 
 %endif
 %make
 
@@ -190,7 +177,7 @@ for high-stakes anonymity.
 %__install -p -m 755 contrib/torctl ${RPM_BUILD_ROOT}%{_bindir}
 
 # Set up config file; "sample" file implements a basic user node.
-%__install -p -m 644 src/config/torrc.sample ${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc.sample
+%__install -p -m 644 ${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc.sample ${RPM_BUILD_ROOT}%{_sysconfdir}/%{name}/torrc
 
 # Install the logrotate control file.
 %__mkdir_p -m 755 ${RPM_BUILD_ROOT}%{_sysconfdir}/logrotate.d
