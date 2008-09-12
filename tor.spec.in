@@ -285,6 +285,10 @@ exit 0
 
 %changelog
 
+* Thu Sep 11 2008 Andrew Lewman <phobos@rootme.org>
+- See r16867 
+- http://archives.seul.org/or/cvs/Sep-2008/msg00156.html
+
 * Tue Feb 27 2007 Andrew Lewman <phobos@rootme.org>
 - Fix a potential race condition in how we determine the running state of tor.  Found by Stefan Nordhausen.
 - see OR-CVS for details
