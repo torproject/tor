@@ -26,6 +26,10 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       fails to establish a TCP connection. Cleanup on 0.2.1.x.
 
   o Minor features:
+    - Allow ports 465 and 587 in the default exit policy again. We had
+      rejected them in 0.1.0.15, because back in 2005 they were commonly
+      misconfigured and ended up as spam targets. We hear they are better
+      locked down these days.
     - Use a lockfile to make sure that two Tor processes are not
       simultaneously running with the same datadir.
     - Directory mirrors store and serve v2 hidden service descriptors by
