@@ -1176,11 +1176,11 @@ typedef struct addr_policy_t {
 /** A cached_dir_t represents a cacheable directory object, along with its
  * compressed form. */
 typedef struct cached_dir_t {
-  char *dir; /**< Contents of this object */
+  char *dir; /**< Contents of this object, nul-terminated. */
   char *dir_z; /**< Compressed contents of this object. */
-  size_t dir_len; /**< Length of <b>dir</b> */
-  size_t dir_z_len; /**< Length of <b>dir_z</b> */
-  time_t published; /**< When was this object published */
+  size_t dir_len; /**< Length of <b>dir</b> (not counting its nul). */
+  size_t dir_z_len; /**< Length of <b>dir_z</b>. */
+  time_t published; /**< When was this object published. */
   int refcnt; /**< Reference count for this cached_dir_t. */
 } cached_dir_t;
 
