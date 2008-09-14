@@ -941,9 +941,8 @@ directory_send_command(dir_connection_t *conn,
       tor_assert(!payload);
       httpcommand = "GET";
       url = directory_get_consensus_url(supports_conditional_consensus);
-      /* XXX021: downgrade/remove once done with conditional consensus fu */
-      log_notice(LD_DIR, "Downloading consensus from %s using %s",
-                 hoststring, url);
+      log_info(LD_DIR, "Downloading consensus from %s using %s",
+               hoststring, url);
       break;
     case DIR_PURPOSE_FETCH_CERTIFICATE:
       tor_assert(resource);
