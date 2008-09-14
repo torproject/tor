@@ -2408,7 +2408,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     url_len -= 2;
   }
 
-  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir")) { /* dir fetch */
+  if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir")) { /* v1 dir fetch */
     cached_dir_t *d = dirserv_get_directory();
 
     if (!d) {

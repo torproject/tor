@@ -1300,7 +1300,7 @@ _free_cached_dir(void *_d)
   cached_dir_decref(d);
 }
 
-/** If we have no cached directory, or it is older than <b>published</b>,
+/** If we have no cached v1 directory, or it is older than <b>published</b>,
  * then replace it with <b>directory</b>, published at <b>published</b>.
  *
  * If <b>published</b> is too old, do nothing.

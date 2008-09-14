@@ -531,6 +531,7 @@ $Id$
     "next-circuit/IP:port"
       XXX todo.
 
+    "dir/status-vote/current/consensus" [added in Tor 0.2.1.6-alpha]
     "dir/status/authority"
     "dir/status/fp/<F>"
     "dir/status/fp/<F1>+<F2>+<F3>"

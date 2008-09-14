@@ -1401,7 +1401,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
  * <b>ei</b> into the resulting string.  The thing you get back won't
  * necessarily have a valid signature.
  *
- * New code should never use this; it's for backward compatibiliy.
+ * New code should never use this; it's for backward compatibility.
  *
  * NOTE: <b>ri_body</b> is as returned by signed_descriptor_get_body: it might
  * not be NUL-terminated. */
@@ -1572,7 +1572,18 @@ getinfo_helper_dir(control_connection_t *control_conn,
       SMARTLIST_FOREACH(status_list, char *, s, tor_free(s));
       smartlist_free(status_list);
     }
-  } else if (!strcmp(question, "network-status")) {
+  } else if (!strcmp(question, "dir/status-vote/current/consensus")) { /* v3 */
+    if (directory_caches_dir_info(get_options())) {
+      const cached_dir_t *consensus = dirserv_get_consensus();
+      if (consensus)
+        *answer = tor_strdup(consensus->dir);
+    }
+    if (!*answer) { /* try loading it from disk */
+      char *filename = get_datadir_fname("cached-consensus");
+      *answer = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+      tor_free(filename);
+    }
+  } else if (!strcmp(question, "network-status")) { /* v1 */
     routerlist_t *routerlist = router_get_routerlist();
     int verbose = control_conn->use_long_names;
     if (!routerlist || !routerlist->routers ||
@@ -1920,7 +1931,10 @@ static const getinfo_item_t getinfo_items[] = {
   ITEM("dir-usage", misc, "Breakdown of bytes transferred over DirPort."),
   PREFIX("desc-annotations/id/", dir, "Router annotations by hexdigest."),
   PREFIX("dir/server/", dir,"Router descriptors as retrieved from a DirPort."),
-  PREFIX("dir/status/", dir,"Networkstatus docs as retrieved from a DirPort."),
+  PREFIX("dir/status/", dir,
+         "v2 networkstatus docs as retrieved from a DirPort."),
+  ITEM("dir/status-vote/current/consensus", dir,
+       "v3 Networkstatus consensus as retrieved from a DirPort."),
   PREFIX("exit-policy/default", policies,
          "The default value appended to the configured exit policy."),
   PREFIX("ip-to-country/", geoip, "Perform a GEOIP lookup"),
