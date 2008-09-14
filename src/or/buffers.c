@@ -562,7 +562,7 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
  * and the number of bytes read otherwise. */
 static INLINE int
 read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
-              int *reached_eof)
+              int *reached_eof, int *socket_error)
 {
   ssize_t read_result;
 #if 0 && defined(HAVE_READV) && !defined(WIN32)
@@ -592,6 +592,7 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
       if (e == WSAENOBUFS)
         log_warn(LD_NET,"recv() failed: WSAENOBUFS. Not enough ram?");
 #endif
+      *socket_error = e;
       return -1;
     }
     return 0; /* would block. */
@@ -641,7 +642,8 @@ read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
  */
 /* XXXX021 indicate "read blocked" somehow? */
 int
-read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
+read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof,
+            int *socket_error)
 {
   /* XXXX021 It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes read" are not mutually exclusive.
@@ -667,7 +669,7 @@ read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof)
         readlen = cap;
     }
 
-    r = read_to_chunk(buf, chunk, s, readlen, reached_eof);
+    r = read_to_chunk(buf, chunk, s, readlen, reached_eof, socket_error);
     check();
     if (r < 0)
       return r; /* Error */

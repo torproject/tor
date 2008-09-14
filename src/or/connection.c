@@ -28,7 +28,8 @@ static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
 static int connection_reached_eof(connection_t *conn);
-static int connection_read_to_buf(connection_t *conn, int *max_to_read);
+static int connection_read_to_buf(connection_t *conn, int *max_to_read,
+                                  int *socket_error);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
 static void client_check_address_changed(int sock);
 static void set_constrained_socket_buffers(int sock, int size);
@@ -1910,6 +1911,7 @@ connection_handle_read(connection_t *conn)
 {
   int max_to_read=-1, try_to_read;
   size_t before, n_read = 0;
+  int socket_error = 0;
 
   if (conn->marked_for_close)
     return 0; /* do nothing */
@@ -1938,11 +1940,10 @@ loop_again:
   tor_assert(!conn->marked_for_close);
 
   before = buf_datalen(conn->inbuf);
-  if (connection_read_to_buf(conn, &max_to_read) < 0) {
+  if (connection_read_to_buf(conn, &max_to_read, &socket_error) < 0) {
     /* There's a read error; kill the connection.*/
     if (conn->type == CONN_TYPE_OR &&
         conn->state == OR_CONN_STATE_CONNECTING) {
-      int socket_error = tor_socket_errno(conn->s);
       connection_or_connect_failed(TO_OR_CONN(conn),
                                    errno_to_orconn_end_reason(socket_error),
                                    tor_socket_strerror(socket_error));
@@ -2022,7 +2023,7 @@ loop_again:
  * Return -1 if we want to break conn, else return 0.
  */
 static int
-connection_read_to_buf(connection_t *conn, int *max_to_read)
+connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
 {
   int result;
   ssize_t at_most = *max_to_read;
@@ -2129,7 +2130,8 @@ connection_read_to_buf(connection_t *conn, int *max_to_read)
     /* !connection_speaks_cells, !conn->linked_conn. */
     int reached_eof = 0;
     CONN_LOG_PROTECT(conn,
-        result = read_to_buf(conn->s, at_most, conn->inbuf, &reached_eof));
+        result = read_to_buf(conn->s, at_most, conn->inbuf, &reached_eof,
+                             socket_error));
     if (reached_eof)
       conn->inbuf_reached_eof = 1;
 

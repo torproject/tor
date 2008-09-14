@@ -2558,7 +2558,8 @@ size_t buf_allocation(const buf_t *buf);
 size_t buf_slack(const buf_t *buf);
 const char *_buf_peek_raw_buffer(const buf_t *buf);
 
-int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof);
+int read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof,
+                int *socket_error);
 int read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf);
 
 int flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen);
