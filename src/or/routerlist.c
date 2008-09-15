@@ -4782,27 +4782,42 @@ routerset_union(routerset_t *target, const routerset_t *source)
 /** Helper.  Return true iff <b>set</b> contains a router based on the other
  * provided fields. */
 static int
-routerset_contains(const routerset_t *set, uint32_t addr, uint16_t orport,
+routerset_contains(const routerset_t *set, const tor_addr_t *addr,
+                   uint16_t orport,
                    const char *nickname, const char *id_digest, int is_named)
 {
   if (!set || !set->list) return 0;
   (void) is_named; /* not supported */
-  if (strmap_get_lc(set->names, nickname))
+  if (nickname && strmap_get_lc(set->names, nickname))
     return 1;
-  if (digestmap_get(set->digests, id_digest))
+  if (id_digest && digestmap_get(set->digests, id_digest))
     return 1;
-  if (compare_addr_to_addr_policy(addr, orport, set->policies)
+  if (addr && compare_tor_addr_to_addr_policy(addr, orport, set->policies)
       == ADDR_POLICY_REJECTED)
     return 1;
   return 0;
+}
+
+/** Return true iff we can tell that <b>ei</b> is a member of <b>set</b>. */
+int
+routerset_contains_extendinfo(const routerset_t *set, extend_info_t *ei)
+{
+  return routerset_contains(set,
+                            &ei->addr,
+                            ei->port,
+                            ei->nickname,
+                            ei->identity_digest,
+                            -1);
 }
 
 /** Return true iff <b>ri</b> is in <b>set</b>. */
 int
 routerset_contains_router(const routerset_t *set, routerinfo_t *ri)
 {
+  tor_addr_t addr;
+  tor_addr_from_ipv4h(&addr, ri->addr);
   return routerset_contains(set,
-                            ri->addr,
+                            &addr,
                             ri->or_port,
                             ri->nickname,
                             ri->cache_info.identity_digest,
@@ -4813,8 +4828,10 @@ routerset_contains_router(const routerset_t *set, routerinfo_t *ri)
 int
 routerset_contains_routerstatus(const routerset_t *set, routerstatus_t *rs)
 {
+  tor_addr_t addr;
+  tor_addr_from_ipv4h(&addr, rs->addr);
   return routerset_contains(set,
-                            rs->addr,
+                            &addr,
                             rs->or_port,
                             rs->nickname,
                             rs->identity_digest,

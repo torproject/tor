@@ -212,6 +212,34 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
   return best ? TO_ORIGIN_CIRCUIT(best) : NULL;
 }
 
+/** Check whether, according to the policies in <b>options</b>, the
+ * circuit <b>circ makes sense. */
+/* XXXX021 currently only checks Exclude{Exit}Nodes. */
+int
+circuit_conforms_to_options(const origin_circuit_t *circ,
+                            const or_options_t *options)
+{
+  const crypt_path_t *cpath, *cpath_next = NULL;
+
+  for (cpath = circ->cpath; cpath && cpath_next != circ->cpath;
+       cpath = cpath_next) {
+    cpath_next = cpath->next;
+
+    if (routerset_contains_extendinfo(options->ExcludeNodes,
+                                      cpath->extend_info))
+      return 0;
+
+    if (cpath->next == circ->cpath) {
+      /* This is apparently the exit node. */
+
+      if (routerset_contains_extendinfo(options->ExcludeExitNodes,
+                                        cpath->extend_info))
+        return 0;
+    }
+  }
+  return 1;
+}
+
 /** Close all circuits that start at us, aren't open, and were born
  * at least CircuitBuildTimeout seconds ago.
  */

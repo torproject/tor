@@ -2701,6 +2701,8 @@ void circuit_expire_building(time_t now);
 void circuit_remove_handled_ports(smartlist_t *needed_ports);
 int circuit_stream_is_being_handled(edge_connection_t *conn, uint16_t port,
                                     int min);
+int circuit_conforms_to_options(const origin_circuit_t *circ,
+                                const or_options_t *options);
 void circuit_build_needed_circs(time_t now);
 void circuit_detach_stream(circuit_t *circ, edge_connection_t *conn);
 
@@ -4257,6 +4259,7 @@ void routerset_union(routerset_t *target, const routerset_t *source);
 int routerset_contains_router(const routerset_t *set, routerinfo_t *ri);
 int routerset_contains_routerstatus(const routerset_t *set,
                                     routerstatus_t *rs);
+int routerset_contains_extendinfo(const routerset_t *set, extend_info_t *ei);
 void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
                                int running_only);
 void routerset_subtract_routers(smartlist_t *out,
