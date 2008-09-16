@@ -24,6 +24,12 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       for bug 811.
     - Catch and report a few more bootstrapping failure cases when Tor
       fails to establish a TCP connection. Cleanup on 0.2.1.x.
+    - When fetching v0 and v2 rendezvous service descriptors in parallel,
+      do not fail the whole hidden service request only because the v0
+      descriptor fetch request fails; the v2 request might still succeed.
+      The other way round, when the last v2 request fails and no v0 request
+      is going on, do fail the hidden service request. Fixes bug 814.
+      Bugfix on 0.2.0.10-alpha.
 
   o Minor features:
     - Allow ports 465 and 587 in the default exit policy again. We had

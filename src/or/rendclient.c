@@ -462,6 +462,8 @@ rend_client_refetch_v2_renddesc(const char *query)
   log_info(LD_REND, "Could not pick one of the responsible hidden "
                     "service directories to fetch descriptors, because "
                     "we already tried them all unsuccessfully.");
+  /* Close pending connections (unless a v0 request is still going on). */
+  rend_client_desc_here(query, 2);
   return;
 }
 
@@ -625,11 +627,14 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
 
 /** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
  * are waiting on query. If there's a working cache entry here
- * with at least one intro point, move them to the next state;
- * else fail them.
+ * with at least one intro point, move them to the next state. If
+ * <b>rend_version</b> is non-negative, fail connections that have
+ * requested <b>query</b> unless there are still descriptor fetch
+ * requests in progress for other descriptor versions than
+ * <b>rend_version</b>.
  */
 void
-rend_client_desc_here(const char *query)
+rend_client_desc_here(const char *query, int rend_version)
 {
   edge_connection_t *conn;
   rend_cache_entry_t *entry;
@@ -666,9 +671,15 @@ rend_client_desc_here(const char *query)
           connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
     } else { /* 404, or fetch didn't get that far */
-      log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
-                 "unavailable (try again later).", safe_str(query));
-      connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
+      /* Unless there are requests for another descriptor version pending,
+       * close the connection. */
+      if (rend_version >= 0 &&
+          !connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query,
+                                                  rend_version == 0 ? 2 : 0)) {
+        log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
+                   "unavailable (try again later).", safe_str(query));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
+      }
     }
   });
 }

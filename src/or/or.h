@@ -3842,7 +3842,7 @@ int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
                                  size_t request_len);
 int rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
-void rend_client_desc_here(const char *query);
+void rend_client_desc_here(const char *query, int rend_version);
 
 extend_info_t *rend_client_get_random_intro(const char *query);
 
