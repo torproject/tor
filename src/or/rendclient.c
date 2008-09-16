@@ -463,7 +463,7 @@ rend_client_refetch_v2_renddesc(const char *query)
                     "service directories to fetch descriptors, because "
                     "we already tried them all unsuccessfully.");
   /* Close pending connections (unless a v0 request is still going on). */
-  rend_client_desc_here(query, 2);
+  rend_client_desc_trynow(query, 2);
   return;
 }
 
@@ -634,7 +634,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
  * <b>rend_version</b>.
  */
 void
-rend_client_desc_here(const char *query, int rend_version)
+rend_client_desc_trynow(const char *query, int rend_version)
 {
   edge_connection_t *conn;
   rend_cache_entry_t *entry;

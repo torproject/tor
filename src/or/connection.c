@@ -528,7 +528,7 @@ connection_about_to_close_connection(connection_t *conn)
          * descriptors; if the response is empty or the descriptor is
          * unusable, close pending connections (unless a v2 request is
          * still in progress). */
-        rend_client_desc_here(dir_conn->rend_query, 0);
+        rend_client_desc_trynow(dir_conn->rend_query, 0);
       }
       /* If we were trying to fetch a v2 rend desc and did not succeed,
        * retry as needed. (If a fetch is successful, the connection state

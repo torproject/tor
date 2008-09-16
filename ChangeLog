@@ -25,11 +25,11 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
     - Catch and report a few more bootstrapping failure cases when Tor
       fails to establish a TCP connection. Cleanup on 0.2.1.x.
     - When fetching v0 and v2 rendezvous service descriptors in parallel,
-      do not fail the whole hidden service request only because the v0
-      descriptor fetch request fails; the v2 request might still succeed.
-      The other way round, when the last v2 request fails and no v0 request
-      is going on, do fail the hidden service request. Fixes bug 814.
-      Bugfix on 0.2.0.10-alpha.
+      we were failing the whole hidden service request when the v0
+      descriptor fetch fails, even if the v2 fetch is still pending and
+      might succeed. Similarly, if the last v2 fetch fails, we were
+      failing the whole hidden service request even if a v0 fetch is
+      still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
 
   o Minor features:
     - Allow ports 465 and 587 in the default exit policy again. We had
@@ -49,6 +49,7 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       actual mistakes  we're making here.
     - Refactor unit testing logic so that dmalloc can be used sensibly with
       unit tests to check for memory leaks.
+
 
 Changes in version 0.2.0.31 - 2008-09-03
   Tor 0.2.0.31 addresses two potential anonymity issues, starts to fix
