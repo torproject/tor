@@ -12,6 +12,9 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       descriptor from a hidden service directory for which the router
       descriptor has not yet been downloaded. Fixes bug 767. Bugfix
       on 0.2.0.10-alpha.
+    - DNS replies need to have names matching their requests, but these names
+      should be in the questions section, not necessarily in the answers
+      section.  Fixes bug 823.  Bugfix on 0.2.1.5-alpha.
 
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.

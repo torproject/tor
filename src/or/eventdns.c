@@ -873,6 +873,7 @@ reply_parse(u8 *packet, int length) {
 	struct reply reply;
 	struct request *req = NULL;
 	unsigned int i;
+	int name_matches = 0;
 
 	GET16(trans_id);
 	GET16(flags);
@@ -913,8 +914,13 @@ reply_parse(u8 *packet, int length) {
 		 */
 		GET_NAME;
 		j += 4;
+		if (!strcasecmp(req->name, tmp_name))
+		    name_matches = 1;
 		if (j >= length) goto err;
 	}
+
+	if (!name_matches)
+		goto err;
 
 	/* now we have the answer section which looks like
 	 * <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
@@ -922,15 +928,12 @@ reply_parse(u8 *packet, int length) {
 
 	for (i = 0; i < answers; ++i) {
 		u16 type, class;
-		int name_matches;
 
 		GET_NAME;
 		GET16(type);
 		GET16(class);
 		GET32(ttl);
 		GET16(datalength);
-
-		name_matches = !strcasecmp(req->name, tmp_name);
 
 		if (type == TYPE_A && class == CLASS_INET) {
 			int addrcount, addrtocopy;
@@ -945,25 +948,21 @@ reply_parse(u8 *packet, int length) {
 			ttl_r = MIN(ttl_r, ttl);
 			/* we only bother with the first four addresses. */
 			if (j + 4*addrtocopy > length) goto err;
-			if (name_matches) {
-				memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
-					   packet + j, 4*addrtocopy);
-				reply.data.a.addrcount += addrtocopy;
-				reply.have_answer = 1;
-				if (reply.data.a.addrcount == MAX_ADDRS) break;
-			}
+			memcpy(&reply.data.a.addresses[reply.data.a.addrcount],
+				   packet + j, 4*addrtocopy);
+			reply.data.a.addrcount += addrtocopy;
+			reply.have_answer = 1;
+			if (reply.data.a.addrcount == MAX_ADDRS) break;
 			j += 4*addrtocopy;
 		} else if (type == TYPE_PTR && class == CLASS_INET) {
 			if (req->request_type != TYPE_PTR) {
 				j += datalength; continue;
 			}
 			GET_NAME;
-			if (name_matches) {
-				strlcpy(reply.data.ptr.name, tmp_name,
-						sizeof(reply.data.ptr.name));
-				ttl_r = MIN(ttl_r, ttl);
-				reply.have_answer = 1;
-			}
+			strlcpy(reply.data.ptr.name, tmp_name,
+					sizeof(reply.data.ptr.name));
+			ttl_r = MIN(ttl_r, ttl);
+			reply.have_answer = 1;
 			break;
 		} else if (type == TYPE_AAAA && class == CLASS_INET) {
 			int addrcount, addrtocopy;
@@ -978,13 +977,11 @@ reply_parse(u8 *packet, int length) {
 
 			/* we only bother with the first four addresses. */
 			if (j + 16*addrtocopy > length) goto err;
-			if (name_matches) {
-				memcpy(&reply.data.aaaa.addresses[reply.data.aaaa.addrcount],
-					   packet + j, 16*addrtocopy);
-				reply.data.aaaa.addrcount += addrtocopy;
-				reply.have_answer = 1;
-				if (reply.data.aaaa.addrcount == MAX_ADDRS) break;
-			}
+			memcpy(&reply.data.aaaa.addresses[reply.data.aaaa.addrcount],
+				   packet + j, 16*addrtocopy);
+			reply.data.aaaa.addrcount += addrtocopy;
+			reply.have_answer = 1;
+			if (reply.data.aaaa.addrcount == MAX_ADDRS) break;
 			j += 16*addrtocopy;
 		} else {
 			/* skip over any other type of resource */
