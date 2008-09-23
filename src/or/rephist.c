@@ -284,21 +284,41 @@ rep_hist_note_connection_died(const char* id, time_t when)
   hist->changed = when;
 }
 
-/** We have just decided that this router is reachable, meaning
- * we will give it a "Running" flag for the next while. */
+/** We have just decided that this router with identity digest <b>id</b> is
+ * reachable, meaning we will give it a "Running" flag for the next while. */
 void
 rep_hist_note_router_reachable(const char *id, time_t when)
 {
   or_history_t *hist = get_or_history(id);
+  int was_in_run = 1;
+  char tbuf[ISO_TIME_LEN+1];
+
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
   if (hist && !hist->start_of_run) {
     hist->start_of_run = when;
+    was_in_run = 0;
   }
   if (hist && hist->start_of_downtime) {
-    long down_length = when - hist->start_of_downtime;
+    long down_length;
+
+    format_local_iso_time(tbuf, hist->start_of_downtime);
+    log_info(LD_HIST, "Router %s is now Running; it had been down since %s.",
+             hex_str(id, DIGEST_LEN), tbuf);
+    if (was_in_run)
+      log_info(LD_HIST, "  (Paradoxically, it was already Running too.)");
+
+    down_length = when - hist->start_of_downtime;
     hist->total_weighted_time += down_length;
     hist->start_of_downtime = 0;
+  } else {
+    format_local_iso_time(tbuf, hist->start_of_run);
+    if (was_in_run)
+      log_debug(LD_HIST, "Router %s is still Running; it has been Running "
+                "since %s", hex_str(id, DIGEST_LEN), tbuf);
+    else
+      log_info(LD_HIST, "Router %s is now Running; it was previously untracked",
+               hex_str(id, DIGEST_LEN));
   }
 }
 
@@ -308,21 +328,41 @@ void
 rep_hist_note_router_unreachable(const char *id, time_t when)
 {
   or_history_t *hist = get_or_history(id);
+  char tbuf[ISO_TIME_LEN+1];
+  int was_running = 0;
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
   if (hist && hist->start_of_run) {
     /*XXXX We could treat failed connections differently from failed
      * connect attempts. */
     long run_length = when - hist->start_of_run;
+    format_local_iso_time(tbuf, hist->start_of_run);
+
     hist->weighted_run_length += run_length;
     hist->total_run_weights += 1.0;
     hist->start_of_run = 0;
-
     hist->weighted_uptime += run_length;
     hist->total_weighted_time += run_length;
+
+    was_running = 1;
+    log_info(LD_HIST, "Router %s is now non-Running: it had previously been "
+             "Running since %s.  Its total weighted uptime is %lu/%lu.",
+             hex_str(id, DIGEST_LEN), tbuf, hist->weighted_uptime,
+             hist->total_weighted_time);
   }
   if (hist && !hist->start_of_downtime) {
     hist->start_of_downtime = when;
+
+    if (!was_running)
+      log_info(LD_HIST, "Router %s is now non-Running; it was previously "
+               "untracked.", hex_str(id, DIGEST_LEN));
+  } else {
+    if (!was_running) {
+      format_local_iso_time(tbuf, hist->start_of_downtime);
+
+      log_info(LD_HIST, "Router %s is still non-Running; it has been "
+               "non-Running since %s.", hex_str(id, DIGEST_LEN), tbuf);
+    }
   }
 }
 
@@ -349,6 +389,9 @@ rep_hist_downrate_old_runs(time_t now)
     stability_last_downrated += STABILITY_INTERVAL;
     alpha *= STABILITY_ALPHA;
   }
+
+  log_info(LD_HIST, "Discounting all old stability info by a factor of %lf",
+           alpha);
 
   /* Multiply every w_r_l, t_r_w pair by alpha. */
   for (orhist_it = digestmap_iter_init(history_map);
@@ -526,7 +569,7 @@ rep_hist_dump_stats(time_t now, int severity)
 
   rep_history_clean(now - get_options()->RephistTrackTime);
 
-  log(severity, LD_GENERAL, "--------------- Dumping history information:");
+  log(severity, LD_HIST, "--------------- Dumping history information:");
 
   for (orhist_it = digestmap_iter_init(history_map);
        !digestmap_iter_done(orhist_it);
@@ -551,7 +594,7 @@ rep_hist_dump_stats(time_t now, int severity)
     } else {
       uptime=1.0;
     }
-    log(severity, LD_GENERAL,
+    log(severity, LD_HIST,
         "OR %s [%s]: %ld/%ld good connections; uptime %ld/%ld sec (%.2f%%); "
         "wmtbf %lu:%02lu:%02lu",
         name1, hexdigest1,
@@ -582,7 +625,7 @@ rep_hist_dump_stats(time_t now, int severity)
         else
           len += ret;
       }
-      log(severity, LD_GENERAL, "%s", buffer);
+      log(severity, LD_HIST, "%s", buffer);
     }
   }
 }
@@ -815,7 +858,7 @@ rep_hist_load_mtbf_data(time_t now)
     }
   }
   if (format != 1 && format != 2) {
-    log_warn(LD_GENERAL,
+    log_warn(LD_HIST,
              "Unrecognized format in mtbf history file. Skipping.");
     goto err;
   }
@@ -825,17 +868,17 @@ rep_hist_load_mtbf_data(time_t now)
       break;
     if (!strcmpstart(line, "last-downrated ")) {
       if (parse_iso_time(line+strlen("last-downrated "), &last_downrated)<0)
-        log_warn(LD_GENERAL,"Couldn't parse downrate time in mtbf "
+        log_warn(LD_HIST,"Couldn't parse downrate time in mtbf "
                  "history file.");
     }
     if (!strcmpstart(line, "stored-at ")) {
       if (parse_iso_time(line+strlen("stored-at "), &stored_at)<0)
-        log_warn(LD_GENERAL,"Couldn't parse stored time in mtbf "
+        log_warn(LD_HIST,"Couldn't parse stored time in mtbf "
                  "history file.");
     }
     if (!strcmpstart(line, "tracked-since ")) {
       if (parse_iso_time(line+strlen("tracked-since "), &tracked_since)<0)
-        log_warn(LD_GENERAL,"Couldn't parse started-tracking time in mtbf "
+        log_warn(LD_HIST,"Couldn't parse started-tracking time in mtbf "
                  "history file.");
     }
   }
@@ -845,7 +888,7 @@ rep_hist_load_mtbf_data(time_t now)
     tracked_since = now;
 
   if (!stored_at) {
-    log_warn(LD_GENERAL, "No stored time recorded.");
+    log_warn(LD_HIST, "No stored time recorded.");
     goto err;
   }
 
@@ -878,7 +921,7 @@ rep_hist_load_mtbf_data(time_t now)
       n = sscanf(line, "%40s %ld %lf S=%10s %8s",
                  hexbuf, &wrl, &trw, mtbf_timebuf, mtbf_timebuf+11);
       if (n != 3 && n != 5) {
-        log_warn(LD_GENERAL, "Couldn't scan line %s", escaped(line));
+        log_warn(LD_HIST, "Couldn't scan line %s", escaped(line));
         continue;
       }
       have_mtbf = 1;
@@ -897,7 +940,7 @@ rep_hist_load_mtbf_data(time_t now)
         if (n == 2 || n == 4) {
           have_mtbf = 1;
         } else {
-          log_warn(LD_GENERAL, "Couldn't scan +MTBF line %s",
+          log_warn(LD_HIST, "Couldn't scan +MTBF line %s",
                    escaped(mtbfline));
         }
       }
@@ -909,7 +952,7 @@ rep_hist_load_mtbf_data(time_t now)
         if (n == 2 || n == 4) {
           have_wfu = 1;
         } else {
-          log_warn(LD_GENERAL, "Couldn't scan +WFU line %s", escaped(wfuline));
+          log_warn(LD_HIST, "Couldn't scan +WFU line %s", escaped(wfuline));
         }
       }
       if (wfu_idx > i)
@@ -918,7 +961,7 @@ rep_hist_load_mtbf_data(time_t now)
         i = mtbf_idx;
     }
     if (base16_decode(digest, DIGEST_LEN, hexbuf, HEX_DIGEST_LEN) < 0) {
-      log_warn(LD_GENERAL, "Couldn't hex string %s", escaped(hexbuf));
+      log_warn(LD_HIST, "Couldn't hex string %s", escaped(hexbuf));
       continue;
     }
     hist = get_or_history(digest);
@@ -929,7 +972,7 @@ rep_hist_load_mtbf_data(time_t now)
       if (mtbf_timebuf[0]) {
         mtbf_timebuf[10] = ' ';
         if (parse_possibly_bad_iso_time(mtbf_timebuf, &start_of_run)<0)
-          log_warn(LD_GENERAL, "Couldn't parse time %s",
+          log_warn(LD_HIST, "Couldn't parse time %s",
                    escaped(mtbf_timebuf));
       }
       hist->start_of_run = correct_time(start_of_run, now, stored_at,
@@ -944,7 +987,7 @@ rep_hist_load_mtbf_data(time_t now)
       if (wfu_timebuf[0]) {
         wfu_timebuf[10] = ' ';
         if (parse_possibly_bad_iso_time(wfu_timebuf, &start_of_downtime)<0)
-          log_warn(LD_GENERAL, "Couldn't parse time %s", escaped(wfu_timebuf));
+          log_warn(LD_HIST, "Couldn't parse time %s", escaped(wfu_timebuf));
       }
     }
     hist->start_of_downtime = correct_time(start_of_downtime, now, stored_at,
@@ -953,7 +996,7 @@ rep_hist_load_mtbf_data(time_t now)
     hist->total_weighted_time = total_wt_time;
   }
   if (strcmp(line, "."))
-    log_warn(LD_GENERAL, "Truncated MTBF file.");
+    log_warn(LD_HIST, "Truncated MTBF file.");
 
   if (tracked_since < 86400*365) /* Recover from insanely early value. */
     tracked_since = latest_possible_start;
@@ -1335,7 +1378,7 @@ rep_hist_load_state(or_state_t *state, char **err)
         v = tor_parse_uint64(cp, 10, 0, UINT64_MAX, &ok, NULL);
         if (!ok) {
           all_ok=0;
-          log_notice(LD_GENERAL, "Could not parse '%s' into a number.'", cp);
+          log_notice(LD_HIST, "Could not parse '%s' into a number.'", cp);
         }
         if (start < now) {
           add_obs(b, start, v);
@@ -1617,7 +1660,7 @@ note_crypto_pk_op(pk_op_t operation)
 void
 dump_pk_ops(int severity)
 {
-  log(severity, LD_GENERAL,
+  log(severity, LD_HIST,
       "PK operations: %lu directory objects signed, "
       "%lu directory objects verified, "
       "%lu routerdescs signed, "

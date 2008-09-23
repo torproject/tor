@@ -46,6 +46,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       default (i.e. new default value for HidServDirectoryV2 is 1).
     - Serve the latest v3 networkstatus consensus via the control
       port. Use "getinfo dir/status-vote/current/consensus" to fetch it.
+    - Better logging about stability/reliability calculations on directory
+      servers.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant
