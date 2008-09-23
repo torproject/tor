@@ -33,6 +33,9 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       might succeed. Similarly, if the last v2 fetch fails, we were
       failing the whole hidden service request even if a v0 fetch is
       still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
+    - Avoid a bug where the FistFirstHopPK 0 option would keep Tor from
+      bootstrapping with tunneled directory connections.  Bugfix on
+      0.1.2.5-alpha.  Fixes bug 797.
 
   o Minor features:
     - Update to the "September 1 2008" ip-to-country file.
