@@ -3024,11 +3024,11 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       case -1:
         log_warn(LD_REND, "Rejected v2 rend descriptor (length %d) from %s.",
                  (int)body_len, conn->_base.address);
-        write_http_status_line(conn, 400, "Invalid service descriptor "
-                                          "rejected");
+        write_http_status_line(conn, 400,
+                               "Invalid v2 service descriptor rejected");
         break;
       default:
-        write_http_status_line(conn, 200, "Service descriptor stored");
+        write_http_status_line(conn, 200, "Service descriptor (v2) stored");
         log_info(LD_REND, "Handled v2 rendezvous descriptor post: accepted");
     }
     goto done;
@@ -3082,9 +3082,10 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,
              "Rejected rend descriptor (length %d) from %s.",
              (int)body_len, conn->_base.address);
-      write_http_status_line(conn, 400, "Invalid service descriptor rejected");
+      write_http_status_line(conn, 400,
+                             "Invalid v1 service descriptor rejected");
     } else {
-      write_http_status_line(conn, 200, "Service descriptor stored");
+      write_http_status_line(conn, 200, "Service descriptor (v1) stored");
     }
     goto done;
   }
