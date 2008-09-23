@@ -663,11 +663,14 @@ resolved.  This helps trap accidental attempts to resolve URLs and so on.
 .LP
 .TP
 \fBFastFirstHopPK \fR\fB0\fR|\fB1\fR\fP
-When this option is enabled and we aren't running as a server, Tor
-skips the public key step for the first hop of creating circuits.  This is
-safe since we have already used TLS to authenticate the server and to
-establish forward-secure keys.  Turning this option off makes circuit
-building slower.
+When this option is disabled, Tor uses the public key step for the first
+hop of creating circuits. Skipping it is generally safe since we have
+already used TLS to authenticate the relay and to establish forward-secure
+keys. Turning this option off makes circuit building slower.
+
+Note that Tor will always use the public key step for the first hop if
+it's operating as a relay, and it will never use the public key step if
+it doesn't yet know the onion key of the first hop.
 (Default: 1)
 .LP
 .TP

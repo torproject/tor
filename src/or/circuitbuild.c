@@ -541,23 +541,20 @@ inform_testing_reachability(void)
   return 1;
 }
 
-/** Return true iff we should send a create_fast cell to build a circuit
- * starting at <b>router</b>. (If <b>router</b> is NULL, we don't have
- * information on the router, so assume true.) */
+/** Return true iff we should send a create_fast cell to start building a given
+ * circuit */
 static INLINE int
-should_use_create_fast_for_router(routerinfo_t *router,
-                                  origin_circuit_t *circ)
+should_use_create_fast_for_circuit(origin_circuit_t *circ)
 {
   or_options_t *options = get_options();
+  tor_assert(circ->cpath);
+  tor_assert(circ->cpath->extend_info);
 
-  if (!options->FastFirstHopPK) /* create_fast is disabled */
-    return 0;
-  if (router && router->platform &&
-      !tor_version_as_new_as(router->platform, "0.1.0.6-rc")) {
-    /* known not to work */
-    return 0;
-  }
-  if (server_mode(options) && circ->cpath->extend_info->onion_key) {
+  if (!circ->cpath->extend_info->onion_key)
+    return 1; /* our hand is forced: only a create_fast will work. */
+  if (!options->FastFirstHopPK)
+    return 0; /* we prefer to avoid create_fast */
+  if (server_mode(options)) {
     /* We're a server, and we know an onion key. We can choose.
      * Prefer to blend in. */
     return 0;
@@ -593,14 +590,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     log_debug(LD_CIRC,"First skin; sending create cell.");
 
     router = router_get_by_digest(circ->_base.n_conn->identity_digest);
-    fast = should_use_create_fast_for_router(router, circ);
-    if (!fast && !circ->cpath->extend_info->onion_key) {
-      log_warn(LD_CIRC,
-               "Can't send create_fast, but have no onion key. Failing.");
-      return - END_CIRC_REASON_INTERNAL;
-    }
+    fast = should_use_create_fast_for_circuit(circ);
     if (!fast) {
-      /* We are an OR, or we are connecting to an old Tor: we should
+      /* We are an OR and we know the right onion key: we should
        * send an old slow create cell.
        */
       cell_type = CELL_CREATE;

@@ -3,6 +3,9 @@ Changes in version 0.2.0.32 - 2008-??-??
     - Fix several infrequent memory leaks spotted by Coverity.
     - When testing for libevent functions, set the LDFLAGS variable
       correctly.  (Found by Riastradh.)
+    - Avoid a bug where the FistFirstHopPK 0 option would keep Tor from
+      bootstrapping with tunneled directory connections.  Bugfix on
+      0.1.2.5-alpha.  Fixes bug 797.
 
 
 Changes in version 0.2.0.31 - 2008-09-03
