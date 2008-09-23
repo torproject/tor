@@ -2807,8 +2807,12 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
       addr = ntohl(in.s_addr);
     r = compare_addr_to_addr_policy(addr, conn->socks_request->port,
                                     exit->exit_policy);
-    if (r == ADDR_POLICY_REJECTED || r == ADDR_POLICY_PROBABLY_REJECTED)
-      return 0;
+    if (r == ADDR_POLICY_REJECTED)
+      return 0; /* We know the address, and the exit policy rejects it. */
+    if (r == ADDR_POLICY_PROBABLY_REJECTED && !conn->chosen_exit_name)
+      return 0; /* We don't know the addr, but the exit policy rejects most
+                 * addresses with this port. Since the user didn't ask for
+                 * this node, err on the side of caution. */
   } else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
     /* Can't support reverse lookups without eventdns. */
     if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR &&

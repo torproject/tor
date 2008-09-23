@@ -5,7 +5,12 @@ Changes in version 0.2.0.32 - 2008-??-??
       correctly.  (Found by Riastradh.)
     - Avoid a bug where the FistFirstHopPK 0 option would keep Tor from
       bootstrapping with tunneled directory connections.  Bugfix on
-      0.1.2.5-alpha.  Fixes bug 797.
+      0.1.2.5-alpha.  Fixes bug 797.  Found by Erwin Lam.
+    - When asked to connect to A.B.exit:80, if we don't know the IP for A
+      and we know that server B most-but-not all connections to port 80,
+      we would previously reject the connection.  Now, we assume the user
+      knows what they were asking for.  Fixes bug 752.  Bugfix on 0.0.9rc5.
+      Diagnosed by BarkerJr.
 
 
 Changes in version 0.2.0.31 - 2008-09-03
