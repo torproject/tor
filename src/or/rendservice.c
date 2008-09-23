@@ -1752,7 +1752,7 @@ rend_hsdir_routers_changed(void)
   consider_republishing_rend_descriptors = 1;
 }
 
-/** Consider republication of rendezvous service descriptors that failed
+/** Consider republication of v2 rendezvous service descriptors that failed
  * previously, but without regenerating descriptor contents.
  */
 void
@@ -1770,7 +1770,8 @@ rend_consider_descriptor_republication(void)
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
-    if (service->desc && !service->desc->all_uploads_performed) {
+    if (service->descriptor_version && service->desc &&
+        !service->desc->all_uploads_performed) {
       /* If we failed in uploading a descriptor last time, try again *without*
        * updating the descriptor's contents. */
       upload_service_descriptor(service);
