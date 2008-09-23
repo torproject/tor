@@ -35,6 +35,7 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
 
   o Minor features:
+    - Update to the "September 1 2008" ip-to-country file.
     - Allow ports 465 and 587 in the default exit policy again. We had
       rejected them in 0.1.0.15, because back in 2005 they were commonly
       misconfigured and ended up as spam targets. We hear they are better
