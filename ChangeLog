@@ -35,7 +35,12 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
     - Avoid a bug where the FistFirstHopPK 0 option would keep Tor from
       bootstrapping with tunneled directory connections.  Bugfix on
-      0.1.2.5-alpha.  Fixes bug 797.
+      0.1.2.5-alpha.  Fixes bug 797.  Found by Erwin Lam.
+    - When asked to connect to A.B.exit:80, if we don't know the IP for A
+      and we know that server B most-but-not all connections to port 80,
+      we would previously reject the connection.  Now, we assume the user
+      knows what they were asking for.  Fixes bug 752.  Bugfix on 0.0.9rc5.
+      Diagnosed by BarkerJr.
 
   o Minor features:
     - Update to the "September 1 2008" ip-to-country file.
