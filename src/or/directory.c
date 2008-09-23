@@ -3083,9 +3083,9 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
              "Rejected rend descriptor (length %d) from %s.",
              (int)body_len, conn->_base.address);
       write_http_status_line(conn, 400,
-                             "Invalid v1 service descriptor rejected");
+                             "Invalid v0 service descriptor rejected");
     } else {
-      write_http_status_line(conn, 200, "Service descriptor (v1) stored");
+      write_http_status_line(conn, 200, "Service descriptor (v0) stored");
     }
     goto done;
   }
