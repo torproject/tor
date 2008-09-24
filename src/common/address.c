@@ -820,7 +820,7 @@ tor_addr_hash(const tor_addr_t *addr)
   }
 }
 
-/** Return a newly allocatd string with a representation of <b>addr</b>. */
+/** Return a newly allocated string with a representation of <b>addr</b>. */
 char *
 tor_dup_addr(const tor_addr_t *addr)
 {
