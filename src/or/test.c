@@ -401,18 +401,10 @@ test_crypto_dh(void)
 }
 
 static void
-test_crypto(void)
+test_crypto_rng(void)
 {
-  crypto_cipher_env_t *env1, *env2;
-  crypto_pk_env_t *pk1, *pk2;
-  char *data1, *data2, *data3, *cp;
-  int i, j, p, len, idx, allok;
-  size_t size;
-
-  data1 = tor_malloc(1024);
-  data2 = tor_malloc(1024);
-  data3 = tor_malloc(1024);
-  test_assert(data1 && data2 && data3);
+  int i, j, allok;
+  char data1[100], data2[100];
 
   /* Try out RNG. */
   test_assert(! crypto_seed_rng(0));
@@ -441,6 +433,20 @@ test_crypto(void)
     tor_free(host);
   }
   test_assert(allok);
+ done:
+  ;
+}
+
+static void
+test_crypto_aes(void)
+{
+  char *data1 = NULL, *data2 = NULL, *data3 = NULL;
+  crypto_cipher_env_t *env1 = NULL, *env2 = NULL;
+  int i, j;
+
+  data1 = tor_malloc(1024);
+  data2 = tor_malloc(1024);
+  data3 = tor_malloc(1024);
 
   /* Now, test encryption and decryption with stream cipher. */
   data1[0]='\0';
@@ -483,6 +489,7 @@ test_crypto(void)
   /* Now make sure that when we encrypt with different chunk sizes, we get
      the same results. */
   crypto_free_cipher_env(env2);
+  env2 = NULL;
 
   memset(data3, 0, 1024);
   env2 = crypto_new_cipher_env();
@@ -499,7 +506,9 @@ test_crypto(void)
   }
   test_memeq(data2, data3, 1024-16);
   crypto_free_cipher_env(env1);
+  env1 = NULL;
   crypto_free_cipher_env(env2);
+  env2 = NULL;
 
   /* NIST test vector for aes. */
   env1 = crypto_new_cipher_env(); /* IV starts at 0 */
@@ -546,55 +555,101 @@ test_crypto(void)
                              "\xff\xff\xff\xff\xff\xff\xff\xff");
   crypto_cipher_crypt_inplace(env1, data2, 64);
   test_assert(tor_mem_is_zero(data2, 64));
-  crypto_free_cipher_env(env1);
+
+ done:
+  if (env1)
+    crypto_free_cipher_env(env1);
+  if (env2)
+    crypto_free_cipher_env(env2);
+  tor_free(data1);
+  tor_free(data2);
+  tor_free(data3);
+}
+
+static void
+test_crypto_sha(void)
+{
+  crypto_digest_env_t *d1 = NULL, *d2 = NULL;
+  int i;
+  char key[80];
+  char digest[20];
+  char data[50];
+  char d_out1[DIGEST_LEN], d_out2[DIGEST_LEN];
 
   /* Test SHA-1 with a test vector from the specification. */
-  i = crypto_digest(data1, "abc", 3);
-  test_memeq_hex(data1, "A9993E364706816ABA3E25717850C26C9CD0D89D");
+  i = crypto_digest(data, "abc", 3);
+  test_memeq_hex(data, "A9993E364706816ABA3E25717850C26C9CD0D89D");
 
   /* Test HMAC-SHA-1 with test cases from RFC2202. */
-  {
-    char key[80];
-    char digest[20];
-    char data[50];
 
-    /* Case 1. */
-    memset(key, 0x0b, 20);
-    crypto_hmac_sha1(digest, key, 20, "Hi There", 8);
-    test_streq(hex_str(digest, 20),
-               "B617318655057264E28BC0B6FB378C8EF146BE00");
+  /* Case 1. */
+  memset(key, 0x0b, 20);
+  crypto_hmac_sha1(digest, key, 20, "Hi There", 8);
+  test_streq(hex_str(digest, 20),
+             "B617318655057264E28BC0B6FB378C8EF146BE00");
+  /* Case 2. */
+  crypto_hmac_sha1(digest, "Jefe", 4, "what do ya want for nothing?", 28);
+  test_streq(hex_str(digest, 20),
+             "EFFCDF6AE5EB2FA2D27416D5F184DF9C259A7C79");
 
-    /* Case 2. */
-    crypto_hmac_sha1(digest, "Jefe", 4, "what do ya want for nothing?", 28);
-    test_streq(hex_str(digest, 20),
-               "EFFCDF6AE5EB2FA2D27416D5F184DF9C259A7C79");
+  /* Case 4. */
+  base16_decode(key, 25,
+                "0102030405060708090a0b0c0d0e0f10111213141516171819", 50);
+  memset(data, 0xcd, 50);
+  crypto_hmac_sha1(digest, key, 25, data, 50);
+  test_streq(hex_str(digest, 20),
+             "4C9007F4026250C6BC8414F9BF50C86C2D7235DA");
 
-    /* Case 4. */
-    base16_decode(key, 25,
-                  "0102030405060708090a0b0c0d0e0f10111213141516171819", 50);
-    memset(data, 0xcd, 50);
-    crypto_hmac_sha1(digest, key, 25, data, 50);
-    test_streq(hex_str(digest, 20),
-               "4C9007F4026250C6BC8414F9BF50C86C2D7235DA");
+  /* Case . */
+  memset(key, 0xaa, 80);
+  crypto_hmac_sha1(digest, key, 80,
+                   "Test Using Larger Than Block-Size Key - Hash Key First",
+                   54);
+  test_streq(hex_str(digest, 20),
+             "AA4AE5E15272D00E95705637CE8A3B55ED402112");
 
-    /* Case . */
-    memset(key, 0xaa, 80);
-    crypto_hmac_sha1(digest, key, 80,
-                     "Test Using Larger Than Block-Size Key - Hash Key First",
-                     54);
-    test_streq(hex_str(digest, 20),
-               "AA4AE5E15272D00E95705637CE8A3B55ED402112");
+  /* Incremental digest code. */
+  d1 = crypto_new_digest_env();
+  test_assert(d1);
+  crypto_digest_add_bytes(d1, "abcdef", 6);
+  d2 = crypto_digest_dup(d1);
+  test_assert(d2);
+  crypto_digest_add_bytes(d2, "ghijkl", 6);
+  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest(d_out2, "abcdefghijkl", 12);
+  test_memeq(d_out1, d_out2, DIGEST_LEN);
+  crypto_digest_assign(d2, d1);
+  crypto_digest_add_bytes(d2, "mno", 3);
+  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest(d_out2, "abcdefmno", 9);
+  test_memeq(d_out1, d_out2, DIGEST_LEN);
+  crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
+  crypto_digest(d_out2, "abcdef", 6);
+  test_memeq(d_out1, d_out2, DIGEST_LEN);
 
-  }
+ done:
+  if (d1)
+    crypto_free_digest_env(d1);
+  if (d2)
+    crypto_free_digest_env(d2);
+}
+
+static void
+test_crypto_pk(void)
+{
+  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
+  char *encoded = NULL;
+  char data1[1024], data2[1024], data3[1024];
+  size_t size;
+  int i, j, p, len;
 
   /* Public-key ciphers */
   pk1 = pk_generate(0);
   pk2 = crypto_new_pk_env();
   test_assert(pk1 && pk2);
-  test_assert(! crypto_pk_write_public_key_to_string(pk1, &cp, &size));
-  test_assert(! crypto_pk_read_public_key_from_string(pk2, cp, size));
+  test_assert(! crypto_pk_write_public_key_to_string(pk1, &encoded, &size));
+  test_assert(! crypto_pk_read_public_key_from_string(pk2, encoded, size));
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
-  tor_free(cp);
 
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
@@ -672,8 +727,24 @@ test_crypto(void)
       test_memeq(data1,data3,j);
     }
   }
-  crypto_free_pk_env(pk1);
-  crypto_free_pk_env(pk2);
+ done:
+  if (pk1)
+    crypto_free_pk_env(pk1);
+  if (pk2)
+    crypto_free_pk_env(pk2);
+  tor_free(encoded);
+}
+
+static void
+test_crypto(void)
+{
+  char *data1 = NULL, *data2 = NULL, *data3 = NULL;
+  int i, j, idx;
+
+  data1 = tor_malloc(1024);
+  data2 = tor_malloc(1024);
+  data3 = tor_malloc(1024);
+  test_assert(data1 && data2 && data3);
 
   /* Base64 tests */
   memset(data1, 6, 1024);
@@ -765,31 +836,10 @@ test_crypto(void)
                 "ACD 1234 ABCD 5678 0000 ABCD 1234 ABCD 5678 00000"));
   }
 
-  /* Incremental digest code. */
-  {
-    crypto_digest_env_t *d1, *d2;
-    char d_out1[DIGEST_LEN], d_out2[DIGEST_LEN];
-    d1 = crypto_new_digest_env();
-    test_assert(d1);
-    crypto_digest_add_bytes(d1, "abcdef", 6);
-    d2 = crypto_digest_dup(d1);
-    test_assert(d2);
-    crypto_digest_add_bytes(d2, "ghijkl", 6);
-    crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
-    crypto_digest(d_out2, "abcdefghijkl", 12);
-    test_memeq(d_out1, d_out2, DIGEST_LEN);
-    crypto_digest_assign(d2, d1);
-    crypto_digest_add_bytes(d2, "mno", 3);
-    crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
-    crypto_digest(d_out2, "abcdefmno", 9);
-    test_memeq(d_out1, d_out2, DIGEST_LEN);
-    crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
-    crypto_digest(d_out2, "abcdef", 6);
-    test_memeq(d_out1, d_out2, DIGEST_LEN);
-  }
-
  done:
-  ;
+  tor_free(data1);
+  tor_free(data2);
+  tor_free(data3);
 }
 
 static void
@@ -2425,7 +2475,6 @@ test_util_strmap(void)
   strmap_assert_ok(map);
   test_eq_ptr(strmap_get_lc(map,"AB.C"), NULL);
 
-
  done:
   if (map)
     strmap_free(map,NULL);
@@ -3929,7 +3978,6 @@ test_util_memarea(void)
   test_assert(memarea_owns_ptr(area, p1));
   test_assert(memarea_owns_ptr(area, p2));
 
-
  done:
   memarea_drop_all(area);
 }
@@ -4280,6 +4328,10 @@ static struct {
 } test_array[] = {
   ENT(buffers),
   ENT(crypto),
+  SUBENT(crypto, rng),
+  SUBENT(crypto, aes),
+  SUBENT(crypto, sha),
+  SUBENT(crypto, pk),
   SUBENT(crypto, dh),
   SUBENT(crypto, s2k),
   SUBENT(crypto, aes_iv),
