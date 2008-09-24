@@ -56,6 +56,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       port 80, we would previously reject the connection. Now, we assume
       the user knows what they were asking for. Fixes bug 752. Bugfix
       on 0.0.9rc5. Diagnosed by BarkerJr.
+    - If we are not using BEGIN_DIR cells, don't attempt to contact hidden
+      service directories with non-open dir port. Bugfix on 0.2.0.10-alpha.
 
   o Minor features:
     - Update to the "September 1 2008" ip-to-country file.
