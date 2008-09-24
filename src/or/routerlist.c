@@ -4959,7 +4959,7 @@ hid_serv_acting_as_directory(void)
   routerstatus_t *rs;
   if (!me)
     return 0;
-  if (!get_options()->DirPort || !get_options()->HidServDirectoryV2) {
+  if (!get_options()->HidServDirectoryV2) {
     log_info(LD_REND, "We are not acting as hidden service directory, "
                       "because we have not been configured as such.");
     return 0;

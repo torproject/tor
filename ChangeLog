@@ -32,10 +32,10 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       in the answers section. Fixes bug 823. Bugfix on 0.2.1.5-alpha.
 
   o Major features:
-    - Directory mirrors now store and serve v2 hidden service descriptors
-      by default (i.e. new default value for HidServDirectoryV2 is 1).
-      This is the last step in proposal 114, which aims to make hidden
-      service connections more reliable.
+    - Relays now store and serve v2 hidden service descriptors by default
+      (i.e. new default value for HidServDirectoryV2 is 1). This is the
+      last step in proposal 114, which aims to make hidden service
+      connections more reliable.
 
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.
@@ -71,6 +71,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       port. Use "getinfo dir/status-vote/current/consensus" to fetch it.
     - Better logging about stability/reliability calculations on directory
       servers.
+    - Drop the requirement to have an open dir port for storing and serving
+      v2 hidden service descriptors.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant
