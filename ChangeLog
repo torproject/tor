@@ -21,27 +21,33 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       descriptor from a hidden service directory for which the router
       descriptor has not yet been downloaded. Fixes bug 767. Bugfix
       on 0.2.0.10-alpha.
-    - DNS replies need to have names matching their requests, but these names
-      should be in the questions section, not necessarily in the answers
-      section.  Fixes bug 823.  Bugfix on 0.2.1.5-alpha.
-
-  o Minor bugfixes:
-    - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.
-      Reported by Tas.
-    - Fixed some memory leaks --some quite frequent, some almost impossible
-      to trigger-- based on results from Coverity.
-    - When testing for libevent functions, set the LDFLAGS variable
-      correctly.  (Found by Riastradh.)
-    - Fix an assertion bug in parsing policy-related options; possible fix
-      for bug 811.
-    - Catch and report a few more bootstrapping failure cases when Tor
-      fails to establish a TCP connection. Cleanup on 0.2.1.x.
     - When fetching v0 and v2 rendezvous service descriptors in parallel,
       we were failing the whole hidden service request when the v0
       descriptor fetch fails, even if the v2 fetch is still pending and
       might succeed. Similarly, if the last v2 fetch fails, we were
       failing the whole hidden service request even if a v0 fetch is
       still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
+    - DNS replies need to have names matching their requests, but
+      these names should be in the questions section, not necessarily
+      in the answers section. Fixes bug 823. Bugfix on 0.2.1.5-alpha.
+
+  o Major features:
+    - Directory mirrors now store and serve v2 hidden service descriptors
+      by default (i.e. new default value for HidServDirectoryV2 is 1).
+      This is the last step in proposal 114, which aims to make hidden
+      service connections more reliable.
+
+  o Minor bugfixes:
+    - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.
+      Reported by Tas.
+    - Fixed some memory leaks -- some quite frequent, some almost
+      impossible to trigger -- based on results from Coverity.
+    - When testing for libevent functions, set the LDFLAGS variable
+      correctly. Found by Riastradh.
+    - Fix an assertion bug in parsing policy-related options; possible fix
+      for bug 811.
+    - Catch and report a few more bootstrapping failure cases when Tor
+      fails to establish a TCP connection. Cleanup on 0.2.1.x.
     - Avoid a bug where the FastFirstHopPK 0 option would keep Tor from
       bootstrapping with tunneled directory connections. Bugfix on
       0.1.2.5-alpha. Fixes bug 797. Found by Erwin Lam.
@@ -59,8 +65,6 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       locked down these days.
     - Use a lockfile to make sure that two Tor processes are not
       simultaneously running with the same datadir.
-    - Directory mirrors store and serve v2 hidden service descriptors by
-      default (i.e. new default value for HidServDirectoryV2 is 1).
     - Serve the latest v3 networkstatus consensus via the control
       port. Use "getinfo dir/status-vote/current/consensus" to fetch it.
     - Better logging about stability/reliability calculations on directory
@@ -68,10 +72,10 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant
-      exists.  This will work better with Coverity, and let us find any
+      exists. This will work better with Coverity, and let us find any
       actual mistakes  we're making here.
-    - Refactor unit testing logic so that dmalloc can be used sensibly with
-      unit tests to check for memory leaks.
+    - Refactor unit testing logic so that dmalloc can be used sensibly
+      with unit tests to check for memory leaks.
     - Move all hidden-service related fields from connection and circuit
       structure to substructures: this way they won't eat so much memory.
 
