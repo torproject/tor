@@ -472,6 +472,15 @@ used when \fBFascistFirewall\fR is set. This option is deprecated; use
 ReachableAddresses instead. (Default: 80, 443)
 .LP
 .TP
+\fBHidServAuth \fR\fIonion-address\fR \fIauth-cookie\fP \fIservice-name\fR 
+Client authorization for a hidden service. Valid onion addresses contain 16
+characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
+characters in A-Za-z0-9+/. The service name is only used for internal
+purposes, e.g., for Tor controllers. This option may be used multiple times
+for different hidden services. If a hidden service uses authorization and
+this option is not set, the hidden service is not accessible.
+.LP
+.TP
 \fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
 A comma-separated list of IP addresses and ports that your firewall allows you
 to connect to. The format is as
@@ -1269,6 +1278,18 @@ A list of rendezvous service descriptor versions to publish for the hidden
 service. Possible version numbers are 0 and 2. (Default: 0, 2)
 .LP
 .TP
+\fBHiddenServiceAuthorizeClient \fR\fIauth-type\fR \fR\fIclient-name\fR,\fIclient-name\fR,\fI...\fP
+If configured, the hidden service is accessible for authorized clients
+only. The auth-type can either be 'basic' for a general-purpose
+authorization protocol or 'stealth' for a less scalable protocol that also
+hides service activity from unauthorized clients. Only clients that are
+listed here are authorized to access the hidden service. Valid client names
+are 1 to 19 characters long and only use characters in A-Za-z0-9+-_
+(no spaces). If this option is set, the hidden service is not accessible
+for clients without authorization any more. Generated authorization data
+can be found in the hostname file.
+.LP
+.TP
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
 Every time the specified period elapses, Tor uploads any rendezvous
 service descriptors to the directory servers.  This information is also
@@ -1453,10 +1474,17 @@ Only used by authoritative directory servers.  Tracks measurements for router me
 .TP
 .B \fIHiddenServiceDirectory\fP/hostname 
 The <base32-encoded-fingerprint>.onion domain name for this hidden service.
+If the hidden service is restricted to authorized clients only, this file
+also contains authorization data for all clients.
 .LP
 .TP
 .B \fIHiddenServiceDirectory\fP/private_key 
 The private key for this hidden service.
+.LP
+.TP
+.B \fIHiddenServiceDirectory\fP/client_keys 
+Authorization data for a hidden service that is only accessible by authorized
+clients.
 .SH SEE ALSO
 .BR privoxy (1),
 .BR tsocks (1),

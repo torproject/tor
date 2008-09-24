@@ -1243,7 +1243,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
  */
 int
 rend_cache_store_v2_desc_as_client(const char *desc,
-                                   const char *descriptor_cookie)
+                                   const rend_data_t *rend_query)
 {
   /*XXXX this seems to have a bit of duplicate code with
    * rend_cache_store_v2_desc_as_dir().  Fix that. */
@@ -1272,7 +1272,6 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   rend_cache_entry_t *e;
   tor_assert(rend_cache);
   tor_assert(desc);
-  (void) descriptor_cookie; /* We don't use it, yet. */
   /* Parse the descriptor. */
   if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                        &intro_size, &encoded_size,
@@ -1291,14 +1290,37 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   }
   /* Decode/decrypt introduction points. */
   if (intro_content) {
+    if (rend_query->auth_type != REND_NO_AUTH &&
+        rend_query->descriptor_cookie) {
+      char *ipos_decrypted;
+      size_t ipos_decrypted_size;
+      if (rend_decrypt_introduction_points(&ipos_decrypted,
+                                           &ipos_decrypted_size,
+                                           rend_query->descriptor_cookie,
+                                           intro_content,
+                                           intro_size) < 0) {
+        log_warn(LD_REND, "Failed to decrypt introduction points. We are "
+                 "probably unable to parse the encoded introduction points.");
+      } else {
+        /* Replace encrypted with decrypted introduction points. */
+        log_info(LD_REND, "Successfully decrypted introduction points.");
+        tor_free(intro_content);
+        intro_content = ipos_decrypted;
+        intro_size = ipos_decrypted_size;
+      }
+    }
     if (rend_parse_introduction_points(parsed, intro_content,
-                                       intro_size) < 0) {
-      log_warn(LD_PROTOCOL,"Couldn't decode/decrypt introduction points.");
-      rend_service_descriptor_free(parsed);
+                                       intro_size) <= 0) {
+      log_warn(LD_REND, "Failed to parse introduction points. Either the "
+               "service has published a corrupt descriptor or you have "
+               "provided invalid authorization data.");
+      if (parsed)
+        rend_service_descriptor_free(parsed);
       tor_free(intro_content);
       return -2;
     }
   } else {
+    log_info(LD_REND, "Descriptor does not contain any introduction points.");
     parsed->intro_nodes = smartlist_create();
   }
   /* We don't need the encoded/encrypted introduction points any longer. */
@@ -1424,5 +1446,14 @@ int
 rend_cache_size(void)
 {
   return strmap_size(rend_cache);
+}
+
+/** Allocate and return a new rend_data_t with the same
+ * contents as <b>query</b>. */
+rend_data_t *
+rend_data_dup(const rend_data_t *data)
+{
+  tor_assert(data);
+  return tor_memdup(data, sizeof(rend_data_t));
 }
 

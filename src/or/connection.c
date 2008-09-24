@@ -385,6 +385,8 @@ _connection_free(connection_t *conn)
       memset(edge_conn->socks_request, 0xcc, sizeof(socks_request_t));
       tor_free(edge_conn->socks_request);
     }
+    if (edge_conn->rend_data)
+      rend_data_free(edge_conn->rend_data);
   }
   if (conn->type == CONN_TYPE_CONTROL) {
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
@@ -405,6 +407,8 @@ _connection_free(connection_t *conn)
     }
     if (dir_conn->cached_dir)
       cached_dir_decref(dir_conn->cached_dir);
+    if (dir_conn->rend_data)
+      rend_data_free(dir_conn->rend_data);
   }
 
   if (conn->s >= 0) {
@@ -523,21 +527,22 @@ connection_about_to_close_connection(connection_t *conn)
          * failed: forget about this router, and maybe try again. */
         connection_dir_request_failed(dir_conn);
       }
-      if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC) {
+      if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC && dir_conn->rend_data) {
         /* Give it a try. However, there is no re-fetching for v0 rend
          * descriptors; if the response is empty or the descriptor is
          * unusable, close pending connections (unless a v2 request is
          * still in progress). */
-        rend_client_desc_trynow(dir_conn->rend_query, 0);
+        rend_client_desc_trynow(dir_conn->rend_data->onion_address, 0);
       }
       /* If we were trying to fetch a v2 rend desc and did not succeed,
        * retry as needed. (If a fetch is successful, the connection state
        * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC to mark that
        * refetching is unnecessary.) */
       if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2 &&
-          dir_conn->rend_query &&
-          strlen(dir_conn->rend_query) == REND_SERVICE_ID_LEN_BASE32)
-        rend_client_refetch_v2_renddesc(dir_conn->rend_query);
+          dir_conn->rend_data &&
+          strlen(dir_conn->rend_data->onion_address) ==
+              REND_SERVICE_ID_LEN_BASE32)
+        rend_client_refetch_v2_renddesc(dir_conn->rend_data);
       break;
     case CONN_TYPE_OR:
       or_conn = TO_OR_CONN(conn);
@@ -2565,6 +2570,7 @@ connection_get_by_type_state_rendquery(int type, int state,
 
   tor_assert(type == CONN_TYPE_DIR ||
              type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);
+  tor_assert(rendquery);
 
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
@@ -2572,12 +2578,16 @@ connection_get_by_type_state_rendquery(int type, int state,
         !conn->marked_for_close &&
         (!state || state == conn->state)) {
       if (type == CONN_TYPE_DIR &&
+          TO_DIR_CONN(conn)->rend_data &&
           (rendversion < 0 ||
-           rendversion == TO_DIR_CONN(conn)->rend_version) &&
-          !rend_cmp_service_ids(rendquery, TO_DIR_CONN(conn)->rend_query))
+           rendversion == TO_DIR_CONN(conn)->rend_data->rend_desc_version) &&
+          !rend_cmp_service_ids(rendquery,
+                                TO_DIR_CONN(conn)->rend_data->onion_address))
         return conn;
       else if (CONN_IS_EDGE(conn) &&
-              !rend_cmp_service_ids(rendquery, TO_EDGE_CONN(conn)->rend_query))
+               TO_EDGE_CONN(conn)->rend_data &&
+               !rend_cmp_service_ids(rendquery,
+                            TO_EDGE_CONN(conn)->rend_data->onion_address))
         return conn;
     }
   });

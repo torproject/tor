@@ -60,6 +60,22 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
 static void note_client_request(int purpose, int compressed, size_t bytes);
 static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
+static void directory_initiate_command_rend(const char *address,
+                                            const tor_addr_t *addr,
+                                            uint16_t or_port,
+                                            uint16_t dir_port,
+                                            int supports_conditional_consensus,
+                                            int supports_begindir,
+                                            const char *digest,
+                                            uint8_t dir_purpose,
+                                            uint8_t router_purpose,
+                                            int anonymized_connection,
+                                            const char *resource,
+                                            const char *payload,
+                                            size_t payload_len,
+                                            time_t if_modified_since,
+                                            const rend_data_t *rend_query);
+
 /********* START VARIABLES **********/
 
 /** How far in the future do we allow a directory server to tell us it is
@@ -434,6 +450,48 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
     });
 }
 
+/** Same as directory_initiate_command_routerstatus(), but accepts
+ * rendezvous data to fetch a hidden service descriptor. */
+void
+directory_initiate_command_routerstatus_rend(routerstatus_t *status,
+                                             uint8_t dir_purpose,
+                                             uint8_t router_purpose,
+                                             int anonymized_connection,
+                                             const char *resource,
+                                             const char *payload,
+                                             size_t payload_len,
+                                             time_t if_modified_since,
+                                             const rend_data_t *rend_query)
+{
+  routerinfo_t *router;
+  char address_buf[INET_NTOA_BUF_LEN+1];
+  struct in_addr in;
+  const char *address;
+  tor_addr_t addr;
+  router = router_get_by_digest(status->identity_digest);
+  if (!router && anonymized_connection) {
+    log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
+                     "don't have its router descriptor.", status->nickname);
+    return;
+  } else if (router) {
+    address = router->address;
+  } else {
+    in.s_addr = htonl(status->addr);
+    tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
+    address = address_buf;
+  }
+  tor_addr_from_ipv4h(&addr, status->addr);
+  directory_initiate_command_rend(address, &addr,
+                             status->or_port, status->dir_port,
+                             status->version_supports_conditional_consensus,
+                             status->version_supports_begindir,
+                             status->identity_digest,
+                             dir_purpose, router_purpose,
+                             anonymized_connection, resource,
+                             payload, payload_len, if_modified_since,
+                             rend_query);
+}
+
 /** Launch a new connection to the directory server <b>status</b> to
  * upload or download a server or rendezvous
  * descriptor. <b>dir_purpose</b> determines what
@@ -458,32 +516,11 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
                                         size_t payload_len,
                                         time_t if_modified_since)
 {
-  routerinfo_t *router;
-  char address_buf[INET_NTOA_BUF_LEN+1];
-  struct in_addr in;
-  const char *address;
-  tor_addr_t addr;
-  router = router_get_by_digest(status->identity_digest);
-  if (!router && anonymized_connection) {
-    log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
-                     "don't have its router descriptor.", status->nickname);
-    return;
-  } else if (router) {
-    address = router->address;
-  } else {
-    in.s_addr = htonl(status->addr);
-    tor_inet_ntoa(&in, address_buf, sizeof(address_buf));
-    address = address_buf;
-  }
-  tor_addr_from_ipv4h(&addr, status->addr);
-  directory_initiate_command(address, &addr,
-                             status->or_port, status->dir_port,
-                             status->version_supports_conditional_consensus,
-                             status->version_supports_begindir,
-                             status->identity_digest,
-                             dir_purpose, router_purpose,
-                             anonymized_connection, resource,
-                             payload, payload_len, if_modified_since);
+  directory_initiate_command_routerstatus_rend(status, dir_purpose,
+                                          router_purpose,
+                                          anonymized_connection, resource,
+                                          payload, payload_len,
+                                          if_modified_since, NULL);
 }
 
 /** Return true iff <b>conn</b> is the client side of a directory connection
@@ -668,6 +705,28 @@ directory_initiate_command(const char *address, const tor_addr_t *_addr,
                            const char *payload, size_t payload_len,
                            time_t if_modified_since)
 {
+  directory_initiate_command_rend(address, _addr, or_port, dir_port,
+                             supports_conditional_consensus,
+                             supports_begindir, digest, dir_purpose,
+                             router_purpose, anonymized_connection,
+                             resource, payload, payload_len,
+                             if_modified_since, NULL);
+}
+
+/** Same as directory_initiate_command(), but accepts rendezvous data to
+ * fetch a hidden service descriptor. */
+static void
+directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
+                                uint16_t or_port, uint16_t dir_port,
+                                int supports_conditional_consensus,
+                                int supports_begindir, const char *digest,
+                                uint8_t dir_purpose, uint8_t router_purpose,
+                                int anonymized_connection,
+                                const char *resource,
+                                const char *payload, size_t payload_len,
+                                time_t if_modified_since,
+                                const rend_data_t *rend_query)
+{
   dir_connection_t *conn;
   or_options_t *options = get_options();
   int socket_error = 0;
@@ -704,6 +763,10 @@ directory_initiate_command(const char *address, const tor_addr_t *_addr,
 
   /* decide whether we can learn our IP address from this conn */
   conn->dirconn_direct = !anonymized_connection;
+
+  /* copy rendezvous data, if any */
+  if (rend_query)
+    conn->rend_data = rend_data_dup(rend_query);
 
   if (!anonymized_connection && !use_begindir) {
     /* then we want to connect to dirport directly */
@@ -1005,8 +1068,10 @@ directory_send_command(dir_connection_t *conn,
       /* this must be true or we wouldn't be doing the lookup */
       tor_assert(strlen(resource) <= REND_SERVICE_ID_LEN_BASE32);
       /* This breaks the function abstraction. */
-      strlcpy(conn->rend_query, resource, sizeof(conn->rend_query));
-      conn->rend_version = 0;
+      conn->rend_data = tor_malloc_zero(sizeof(rend_data_t));
+      strlcpy(conn->rend_data->onion_address, resource,
+              sizeof(conn->rend_data->onion_address));
+      conn->rend_data->rend_desc_version = 0;
 
       httpcommand = "GET";
       /* Request the most recent versioned descriptor. */
@@ -1019,10 +1084,8 @@ directory_send_command(dir_connection_t *conn,
     case DIR_PURPOSE_FETCH_RENDDESC_V2:
       tor_assert(resource);
       tor_assert(strlen(resource) <= REND_DESC_ID_V2_LEN_BASE32);
-      /* Remember the query to refer to it when a response arrives. */
-      strlcpy(conn->rend_query, payload, sizeof(conn->rend_query));
-      conn->rend_version = 2;
-      payload = NULL;
+      tor_assert(!payload);
+      conn->rend_data->rend_desc_version = 2;
       httpcommand = "GET";
       len = strlen(resource) + 32;
       url = tor_malloc(len);
@@ -1877,6 +1940,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_RENDDESC) {
+    tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
              (int)body_len, status_code, escaped(reason));
@@ -1892,7 +1956,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
         } else {
           /* success. notify pending connections about this. */
           conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
-          rend_client_desc_trynow(conn->rend_query, -1);
+          rend_client_desc_trynow(conn->rend_data->onion_address, -1);
         }
         break;
       case 404:
@@ -1914,12 +1978,13 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_RENDDESC_V2) {
+    tor_assert(conn->rend_data);
     log_info(LD_REND,"Received rendezvous descriptor (size %d, status %d "
              "(%s))",
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
-        switch (rend_cache_store_v2_desc_as_client(body, NULL)) {
+        switch (rend_cache_store_v2_desc_as_client(body, conn->rend_data)) {
           case -2:
             log_warn(LD_REND,"Fetching v2 rendezvous descriptor failed. "
                      "Retrying at another directory.");
@@ -1938,7 +2003,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             log_info(LD_REND, "Successfully fetched v2 rendezvous "
                      "descriptor.");
             conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
-            rend_client_desc_trynow(conn->rend_query, -1);
+            rend_client_desc_trynow(conn->rend_data->onion_address, -1);
             break;
         }
         break;

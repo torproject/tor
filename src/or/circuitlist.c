@@ -401,7 +401,8 @@ circuit_free(circuit_t *circ)
     circuit_free_cpath(ocirc->cpath);
     if (ocirc->intro_key)
       crypto_free_pk_env(ocirc->intro_key);
-
+    if (ocirc->rend_data)
+      rend_data_free(ocirc->rend_data);
   } else {
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
     mem = ocirc;
@@ -720,7 +721,7 @@ circuit_unlink_all_from_or_conn(or_connection_t *conn, int reason)
 }
 
 /** Return a circ such that:
- *  - circ-\>rend_query is equal to <b>rend_query</b>, and
+ *  - circ-\>rend_data-\>query is equal to <b>rend_query</b>, and
  *  - circ-\>purpose is equal to <b>purpose</b>.
  *
  * Return NULL if no such circuit exists.
@@ -734,9 +735,13 @@ circuit_get_by_rend_query_and_purpose(const char *rend_query, uint8_t purpose)
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (!circ->marked_for_close &&
-        circ->purpose == purpose &&
-        !rend_cmp_service_ids(rend_query, TO_ORIGIN_CIRCUIT(circ)->rend_query))
-      return TO_ORIGIN_CIRCUIT(circ);
+        circ->purpose == purpose) {
+      origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+      if (ocirc->rend_data &&
+          !rend_cmp_service_ids(rend_query,
+                                ocirc->rend_data->onion_address))
+        return ocirc;
+    }
   }
   return NULL;
 }
@@ -764,7 +769,8 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
       continue;
     if (!digest)
       return TO_ORIGIN_CIRCUIT(circ);
-    else if (!memcmp(TO_ORIGIN_CIRCUIT(circ)->rend_pk_digest,
+    else if (TO_ORIGIN_CIRCUIT(circ)->rend_data &&
+             !memcmp(TO_ORIGIN_CIRCUIT(circ)->rend_data->rend_pk_digest,
                      digest, DIGEST_LEN))
       return TO_ORIGIN_CIRCUIT(circ);
   }
@@ -1020,13 +1026,14 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     tor_assert(circ->state == CIRCUIT_STATE_OPEN);
     tor_assert(ocirc->build_state->chosen_exit);
+    tor_assert(ocirc->rend_data);
     /* treat this like getting a nack from it */
     log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
              "Removing from descriptor.",
-             safe_str(ocirc->rend_query),
+             safe_str(ocirc->rend_data->onion_address),
              safe_str(build_state_get_exit_nickname(ocirc->build_state)));
     rend_client_remove_intro_point(ocirc->build_state->chosen_exit,
-                                   ocirc->rend_query);
+                                   ocirc->rend_data);
   }
   if (circ->n_conn)
     connection_or_send_destroy(circ->n_circ_id, circ->n_conn, reason);

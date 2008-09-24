@@ -69,6 +69,11 @@ typedef struct rend_service_t {
                          * up-to-date. */
   time_t next_upload_time; /**< Scheduled next hidden service descriptor
                             * upload time. */
+  /** Map from digests of diffie-hellman values INTRODUCE2 to time_t of when
+   * they were received; used to prevent replays. */
+  digestmap_t *accepted_intros;
+  /** Time at which we last removed expired values from accepted_intros. */
+  time_t last_cleaned_accepted_intros;
 } rend_service_t;
 
 /** A list of rend_service_t's for services run on this OP.
@@ -125,6 +130,8 @@ rend_service_free(rend_service_t *service)
       rend_authorized_client_free(c););
     smartlist_free(service->clients);
   }
+  if (service->accepted_intros)
+    digestmap_free(service->accepted_intros, _tor_free);
   tor_free(service);
 }
 
@@ -360,7 +367,7 @@ rend_config_services(or_options_t *options, int validate_only)
       if (smartlist_len(type_names_split) < 2) {
         log_warn(LD_CONFIG, "HiddenServiceAuthorizeClient contains "
                             "auth-type '%s', but no client names.",
-                 service->auth_type == 1 ? "basic" : "stealth");
+                 service->auth_type == REND_BASIC_AUTH ? "basic" : "stealth");
         SMARTLIST_FOREACH(type_names_split, char *, cp, tor_free(cp));
         smartlist_free(type_names_split);
         continue;
@@ -423,7 +430,7 @@ rend_config_services(or_options_t *options, int validate_only)
                             "authorization type '%s'.",
                  smartlist_len(service->clients),
                  service->auth_type == REND_BASIC_AUTH ? 512 : 16,
-                 service->auth_type == 1 ? "basic" : "stealth");
+                 service->auth_type == REND_BASIC_AUTH ? "basic" : "stealth");
         rend_service_free(service);
         return -1;
       }
@@ -720,8 +727,10 @@ rend_service_load_keys(void)
       tor_free(client_keys_str);
       strmap_free(parsed_clients, rend_authorized_client_strmap_item_free);
       if (r<0) {
-        abort_writing_to_file(open_cfile);
-        abort_writing_to_file(open_hfile);
+        if (open_cfile)
+          abort_writing_to_file(open_cfile);
+        if (open_hfile)
+          abort_writing_to_file(open_hfile);
         return r;
       } else {
         finish_writing_to_file(open_cfile);
@@ -764,6 +773,64 @@ rend_service_requires_uptime(rend_service_t *service)
   return 0;
 }
 
+/** Check client authorization of a given <b>descriptor_cookie</b> for
+ * <b>service</b>. Return 1 for success and 0 for failure. */
+static int
+rend_check_authorization(rend_service_t *service,
+                         const char *descriptor_cookie)
+{
+  rend_authorized_client_t *auth_client = NULL;
+  tor_assert(service);
+  tor_assert(descriptor_cookie);
+  if (!service->clients) {
+    log_warn(LD_BUG, "Can't check authorization for a service that has no "
+                     "authorized clients configured.");
+    return 0;
+  }
+
+  /* Look up client authorization by descriptor cookie. */
+  SMARTLIST_FOREACH(service->clients, rend_authorized_client_t *, client, {
+    if (!memcmp(client->descriptor_cookie, descriptor_cookie,
+                REND_DESC_COOKIE_LEN)) {
+      auth_client = client;
+      break;
+    }
+  });
+  if (!auth_client) {
+    char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
+    base64_encode(descriptor_cookie_base64, sizeof(descriptor_cookie_base64),
+                  descriptor_cookie, REND_DESC_COOKIE_LEN);
+    log_info(LD_REND, "No authorization found for descriptor cookie '%s'! "
+                      "Dropping cell!",
+             descriptor_cookie_base64);
+    return 0;
+  }
+
+  /* Allow the request. */
+  log_debug(LD_REND, "Client %s authorized for service %s.",
+            auth_client->client_name, service->service_id);
+  return 1;
+}
+
+/** Remove elements from <b>service</b>'s replay cache that are old enough to
+ * be noticed by timestamp checking. */
+static void
+clean_accepted_intros(rend_service_t *service, time_t now)
+{
+  const time_t cutoff = now - REND_REPLAY_TIME_INTERVAL;
+
+  service->last_cleaned_accepted_intros = now;
+  if (!service->accepted_intros)
+    return;
+
+  DIGESTMAP_FOREACH_MODIFY(service->accepted_intros, digest, time_t *, t) {
+    if (*t < cutoff) {
+      tor_free(t);
+      MAP_DEL_CURRENT(digest);
+    }
+  } DIGESTMAP_FOREACH_END;
+}
+
 /******
  * Handle cells
  ******/
@@ -780,7 +847,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   char buf[RELAY_PAYLOAD_SIZE];
   char keys[DIGEST_LEN+CPATH_KEY_MATERIAL_LEN]; /* Holds KH, Df, Db, Kf, Kb */
   rend_service_t *service;
-  int r, i;
+  int r, i, v3_shift = 0;
   size_t len, keylen;
   crypto_dh_env_t *dh = NULL;
   origin_circuit_t *launched = NULL;
@@ -791,9 +858,17 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   int reason = END_CIRC_REASON_TORPROTOCOL;
   crypto_pk_env_t *intro_key;
   char intro_key_digest[DIGEST_LEN];
+  int auth_type;
+  size_t auth_len = 0;
+  char auth_data[REND_DESC_COOKIE_LEN];
+  crypto_digest_env_t *digest = NULL;
+  time_t now = time(NULL);
+  char diffie_hellman_hash[DIGEST_LEN];
+  time_t *access_time;
+  tor_assert(circuit->rend_data);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
+                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
   log_info(LD_REND, "Received INTRODUCE2 cell for service %s on circ %d.",
            escaped(serviceid), circuit->_base.n_circ_id);
 
@@ -814,7 +889,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
 
   /* look up service depending on circuit. */
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_pk_digest, circuit->rend_desc_version);
+              circuit->rend_data->rend_pk_digest,
+              circuit->rend_data->rend_desc_version);
   if (!service) {
     log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
              escaped(serviceid));
@@ -822,7 +898,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   }
 
   /* if descriptor version is 2, use intro key instead of service key. */
-  if (circuit->rend_desc_version == 0) {
+  if (circuit->rend_data->rend_desc_version == 0) {
     intro_key = service->private_key;
   } else {
     intro_key = circuit->intro_key;
@@ -854,33 +930,70 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     return -1;
   }
   len = r;
-  if (*buf == 2) {
+  if (*buf == 3) {
+    /* Version 3 INTRODUCE2 cell. */
+    time_t ts = 0, now = time(NULL);
+    v3_shift = 1;
+    auth_type = buf[1];
+    switch (auth_type) {
+      case REND_BASIC_AUTH:
+        /* fall through */
+      case REND_STEALTH_AUTH:
+        auth_len = ntohs(get_uint16(buf+2));
+        if (auth_len != REND_DESC_COOKIE_LEN) {
+          log_info(LD_REND, "Wrong auth data size %d, should be %d.",
+                   (int)auth_len, REND_DESC_COOKIE_LEN);
+          return -1;
+        }
+        memcpy(auth_data, buf+4, sizeof(auth_data));
+        v3_shift += 2+REND_DESC_COOKIE_LEN;
+        break;
+      case REND_NO_AUTH:
+        break;
+      default:
+        log_info(LD_REND, "Unknown authorization type '%d'", auth_type);
+    }
+
+    /* Check timestamp. */
+    memcpy((char*)&ts, buf+1+v3_shift, sizeof(uint32_t));
+    v3_shift += 4;
+    ts = ntohl(ts);
+    if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
+        (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
+      log_warn(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
+          (now - ts) < 0 ? "old" : "new");
+      return -1;
+    }
+  }
+  if (*buf == 2 || *buf == 3) {
     /* Version 2 INTRODUCE2 cell. */
     int klen;
     extend_info = tor_malloc_zero(sizeof(extend_info_t));
-    tor_addr_from_ipv4n(&extend_info->addr, get_uint32(buf+1));
-    extend_info->port = ntohs(get_uint16(buf+5));
-    memcpy(extend_info->identity_digest, buf+7, DIGEST_LEN);
+    tor_addr_from_ipv4n(&extend_info->addr, get_uint32(buf+v3_shift+1));
+    extend_info->port = ntohs(get_uint16(buf+v3_shift+5));
+    memcpy(extend_info->identity_digest, buf+v3_shift+7,
+           DIGEST_LEN);
     extend_info->nickname[0] = '$';
     base16_encode(extend_info->nickname+1, sizeof(extend_info->nickname)-1,
                   extend_info->identity_digest, DIGEST_LEN);
 
-    klen = ntohs(get_uint16(buf+7+DIGEST_LEN));
-    if ((int)len != 7+DIGEST_LEN+2+klen+20+128) {
-      log_warn(LD_PROTOCOL, "Bad length %u for version 2 INTRODUCE2 cell.",
-               (int)len);
+    klen = ntohs(get_uint16(buf+v3_shift+7+DIGEST_LEN));
+    if ((int)len != v3_shift+7+DIGEST_LEN+2+klen+20+128) {
+      log_warn(LD_PROTOCOL, "Bad length %u for version %d INTRODUCE2 cell.",
+               (int)len, *buf);
       reason = END_CIRC_REASON_TORPROTOCOL;
       goto err;
     }
-    extend_info->onion_key = crypto_pk_asn1_decode(buf+7+DIGEST_LEN+2, klen);
+    extend_info->onion_key =
+        crypto_pk_asn1_decode(buf+v3_shift+7+DIGEST_LEN+2, klen);
     if (!extend_info->onion_key) {
-      log_warn(LD_PROTOCOL,
-               "Error decoding onion key in version 2 INTRODUCE2 cell.");
+      log_warn(LD_PROTOCOL, "Error decoding onion key in version %d "
+                            "INTRODUCE2 cell.", *buf);
       reason = END_CIRC_REASON_TORPROTOCOL;
       goto err;
     }
-    ptr = buf+7+DIGEST_LEN+2+klen;
-    len -= 7+DIGEST_LEN+2+klen;
+    ptr = buf+v3_shift+7+DIGEST_LEN+2+klen;
+    len -= v3_shift+7+DIGEST_LEN+2+klen;
   } else {
     char *rp_nickname;
     size_t nickname_field_len;
@@ -932,6 +1045,54 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   r_cookie = ptr;
   base16_encode(hexcookie,9,r_cookie,4);
 
+  /* Determine hash of Diffie-Hellman, part 1 to detect replays. */
+  digest = crypto_new_digest_env();
+  crypto_digest_add_bytes(digest, ptr+REND_COOKIE_LEN, DH_KEY_LEN);
+  crypto_digest_get_digest(digest, diffie_hellman_hash, DIGEST_LEN);
+  crypto_free_digest_env(digest);
+
+  /* Iterate over past requests, remove those which are older than one hour,
+   * and check whether there is one with same Diffie-Hellman, part 1. */
+  if (!service->accepted_intros)
+    service->accepted_intros = digestmap_new();
+
+  access_time = digestmap_get(service->accepted_intros, diffie_hellman_hash);
+  if (access_time != NULL) {
+    log_warn(LD_REND, "Possible replay detected! We received an "
+             "INTRODUCE2 cell with same first part of "
+             "Diffie-Hellman handshake %d seconds ago. Dropping "
+             "cell.",
+             (int) (now - *access_time));
+    goto err;
+  }
+
+  /* Add request to access history, including time and hash of
+   * Diffie-Hellman, part 1. */
+  access_time = tor_malloc(sizeof(time_t));
+  *access_time = now;
+  digestmap_set(service->accepted_intros, diffie_hellman_hash, access_time);
+  if (service->last_cleaned_accepted_intros + REND_REPLAY_TIME_INTERVAL < now)
+    clean_accepted_intros(service, now);
+
+  /* If the service performs client authorization, check included auth data. */
+  if (service->clients) {
+    if (auth_len > 0) {
+      if (rend_check_authorization(service, auth_data)) {
+        log_info(LD_REND, "Authorization data in INTRODUCE2 cell are valid.");
+      } else {
+        log_info(LD_REND, "The authorization data that are contained in "
+                 "the INTRODUCE2 cell are invalid. Dropping cell.");
+        reason = END_CIRC_REASON_CONNECTFAILED;
+        goto err;
+      }
+    } else {
+      log_info(LD_REND, "INTRODUCE2 cell does not contain authentication "
+               "data, but we require client authorization. Dropping cell.");
+      reason = END_CIRC_REASON_CONNECTFAILED;
+      goto err;
+    }
+  }
+
   /* Try DH handshake... */
   dh = crypto_dh_new();
   if (!dh || crypto_dh_generate_public(dh)<0) {
@@ -976,12 +1137,14 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
            escaped_safe_str(extend_info->nickname), hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
-  memcpy(launched->rend_pk_digest, circuit->rend_pk_digest,
+  launched->rend_data = tor_malloc_zero(sizeof(rend_data_t));
+  memcpy(launched->rend_data->rend_pk_digest,
+         circuit->rend_data->rend_pk_digest,
          DIGEST_LEN);
-  memcpy(launched->rend_cookie, r_cookie, REND_COOKIE_LEN);
-  strlcpy(launched->rend_query, service->service_id,
-          sizeof(launched->rend_query));
-  launched->rend_desc_version = service->descriptor_version;
+  memcpy(launched->rend_data->rend_cookie, r_cookie, REND_COOKIE_LEN);
+  strlcpy(launched->rend_data->onion_address, service->service_id,
+          sizeof(launched->rend_data->onion_address));
+  launched->rend_data->rend_desc_version = service->descriptor_version;
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
@@ -1053,13 +1216,7 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   newstate->pending_final_cpath = oldstate->pending_final_cpath;
   oldstate->pending_final_cpath = NULL;
 
-  memcpy(newcirc->rend_query, oldcirc->rend_query,
-         REND_SERVICE_ID_LEN_BASE32+1);
-  memcpy(newcirc->rend_pk_digest, oldcirc->rend_pk_digest,
-         DIGEST_LEN);
-  memcpy(newcirc->rend_cookie, oldcirc->rend_cookie,
-         REND_COOKIE_LEN);
-  newcirc->rend_desc_version = oldcirc->rend_desc_version;
+  newcirc->rend_data = rend_data_dup(oldcirc->rend_data);
 }
 
 /** Launch a circuit to serve as an introduction point for the service
@@ -1105,10 +1262,11 @@ rend_service_launch_establish_intro(rend_service_t *service,
     intro->extend_info = extend_info_dup(launched->build_state->chosen_exit);
   }
 
-  strlcpy(launched->rend_query, service->service_id,
-          sizeof(launched->rend_query));
-  memcpy(launched->rend_pk_digest, service->pk_digest, DIGEST_LEN);
-  launched->rend_desc_version = service->descriptor_version;
+  launched->rend_data = tor_malloc_zero(sizeof(rend_data_t));
+  strlcpy(launched->rend_data->onion_address, service->service_id,
+          sizeof(launched->rend_data->onion_address));
+  memcpy(launched->rend_data->rend_pk_digest, service->pk_digest, DIGEST_LEN);
+  launched->rend_data->rend_desc_version = service->descriptor_version;
   if (service->descriptor_version == 2)
     launched->intro_key = crypto_pk_dup_key(intro->intro_key);
   if (launched->_base.state == CIRCUIT_STATE_OPEN)
@@ -1133,12 +1291,14 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO);
   tor_assert(circuit->cpath);
+  tor_assert(circuit->rend_data);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
+                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
 
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_pk_digest, circuit->rend_desc_version);
+              circuit->rend_data->rend_pk_digest,
+              circuit->rend_data->rend_desc_version);
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
              serviceid, circuit->_base.n_circ_id);
@@ -1214,8 +1374,10 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
              "received INTRO_ESTABLISHED cell on non-intro circuit.");
     goto err;
   }
+  tor_assert(circuit->rend_data);
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_pk_digest, circuit->rend_desc_version);
+              circuit->rend_data->rend_pk_digest,
+              circuit->rend_data->rend_desc_version);
   if (!service) {
     log_warn(LD_REND, "Unknown service on introduction circuit %d.",
              circuit->_base.n_circ_id);
@@ -1225,7 +1387,7 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
   circuit->_base.purpose = CIRCUIT_PURPOSE_S_INTRO;
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32 + 1,
-                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
+                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
   log_info(LD_REND,
            "Received INTRO_ESTABLISHED cell on circuit %d for service %s",
            circuit->_base.n_circ_id, serviceid);
@@ -1252,12 +1414,13 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   tor_assert(circuit->_base.purpose == CIRCUIT_PURPOSE_S_CONNECT_REND);
   tor_assert(circuit->cpath);
   tor_assert(circuit->build_state);
+  tor_assert(circuit->rend_data);
   hop = circuit->build_state->pending_final_cpath;
   tor_assert(hop);
 
-  base16_encode(hexcookie,9,circuit->rend_cookie,4);
+  base16_encode(hexcookie,9,circuit->rend_data->rend_cookie,4);
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circuit->rend_pk_digest, REND_SERVICE_ID_LEN);
+                circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
 
   log_info(LD_REND,
            "Done building circuit %d to rendezvous with "
@@ -1265,7 +1428,8 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
            circuit->_base.n_circ_id, hexcookie, serviceid);
 
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_pk_digest, circuit->rend_desc_version);
+              circuit->rend_data->rend_pk_digest,
+              circuit->rend_data->rend_desc_version);
   if (!service) {
     log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
              "introduction circuit.");
@@ -1274,7 +1438,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   }
 
   /* All we need to do is send a RELAY_RENDEZVOUS1 cell... */
-  memcpy(buf, circuit->rend_cookie, REND_COOKIE_LEN);
+  memcpy(buf, circuit->rend_data->rend_cookie, REND_COOKIE_LEN);
   if (crypto_dh_get_public(hop->dh_handshake_state,
                            buf+REND_COOKIE_LEN, DH_KEY_LEN)<0) {
     log_warn(LD_GENERAL,"Couldn't get DH public key.");
@@ -1336,7 +1500,8 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     if (!memcmp(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
-        circ->rend_desc_version == desc_version) {
+        circ->rend_data &&
+        circ->rend_data->rend_desc_version == desc_version) {
       return circ;
     }
   }
@@ -1346,7 +1511,8 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     if (!memcmp(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
-        circ->rend_desc_version == desc_version) {
+        circ->rend_data &&
+        circ->rend_data->rend_desc_version == desc_version) {
       return circ;
     }
   }
@@ -1827,11 +1993,13 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   rend_service_port_config_t *chosen_port;
 
   tor_assert(circ->_base.purpose == CIRCUIT_PURPOSE_S_REND_JOINED);
+  tor_assert(circ->rend_data);
   log_debug(LD_REND,"beginning to hunt for addr/port");
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                circ->rend_pk_digest, REND_SERVICE_ID_LEN);
-  service = rend_service_get_by_pk_digest_and_version(circ->rend_pk_digest,
-                                                      circ->rend_desc_version);
+                circ->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
+  service = rend_service_get_by_pk_digest_and_version(
+                circ->rend_data->rend_pk_digest,
+                circ->rend_data->rend_desc_version);
   if (!service) {
     log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
              "rendezvous circuit %d; closing.",

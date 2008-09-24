@@ -1,4 +1,13 @@
 Changes in version 0.2.1.6-alpha - 2008-09-xx
+  o Major features:
+    - Implement proposal 121: make it possible to build hidden services
+      that only certain clients are allowed to connect to.  This is
+      enforced at several points, so that unauthorized clients are
+      unable to send INTRODUCE cells to the service, or even (depending
+      on the type of authentication) to learn introduction points.  This
+      feature raises the bar for certain kinds of active attacks against
+      hidden services.
+
   o Major bugfixes:
     - Fix a bug when parsing ports in tor_addr_port_parse() that caused
       Tor to fail to start if you had it configured to use a bridge
@@ -63,6 +72,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       actual mistakes  we're making here.
     - Refactor unit testing logic so that dmalloc can be used sensibly with
       unit tests to check for memory leaks.
+    - Move all hidden-service related fields from connection and circuit
+      structure to substructures: this way they won't eat so much memory.
 
 
 Changes in version 0.2.0.31 - 2008-09-03

@@ -676,6 +676,55 @@ typedef enum {
 /** Maximum length of authorized client names for a hidden service. */
 #define REND_CLIENTNAME_MAX_LEN 16
 
+/** Length of the rendezvous cookie that is used to connect circuits at the
+ * rendezvous point. */
+#define REND_COOKIE_LEN DIGEST_LEN
+
+/** Client authorization type that a hidden service performs. */
+typedef enum rend_auth_type_t {
+  REND_NO_AUTH      = 0,
+  REND_BASIC_AUTH   = 1,
+  REND_STEALTH_AUTH = 2,
+} rend_auth_type_t;
+
+/** Client-side configuration of authorization for a hidden service. */
+typedef struct rend_service_authorization_t {
+  char descriptor_cookie[REND_DESC_COOKIE_LEN];
+  char onion_address[REND_SERVICE_ADDRESS_LEN+1];
+  rend_auth_type_t auth_type;
+} rend_service_authorization_t;
+
+/** Client- and server-side data that is used for hidden service connection
+ * establishment. Not all fields contain data depending on where this struct
+ * is used. */
+typedef struct rend_data_t {
+  /** Onion address (without the .onion part) that a client requests. */
+  char onion_address[REND_SERVICE_ID_LEN_BASE32+1];
+
+  /** (Optional) descriptor cookie that is used by a client. */
+  char descriptor_cookie[REND_DESC_COOKIE_LEN];
+
+  /** Authorization type for accessing a service used by a client. */
+  rend_auth_type_t auth_type;
+
+  /** Hash of the hidden service's PK used by a service. */
+  char rend_pk_digest[DIGEST_LEN];
+
+  /** Rendezvous cookie used by both, client and service. */
+  char rend_cookie[REND_COOKIE_LEN];
+
+  /** Rendezvous descriptor version that is used by a service. Used to
+   * distinguish introduction and rendezvous points belonging to the same
+   * rendezvous service ID, but different descriptor versions.
+   */
+  uint8_t rend_desc_version;
+} rend_data_t;
+
+/** Time interval for tracking possible replays of INTRODUCE2 cells.
+ * Incoming cells with timestamps half of this interval in the past or
+ * future are dropped immediately. */
+#define REND_REPLAY_TIME_INTERVAL (60 * 60)
+
 #define CELL_DIRECTION_IN 1
 #define CELL_DIRECTION_OUT 2
 
@@ -1025,7 +1074,7 @@ typedef struct edge_connection_t {
   uint32_t n_written;
 
   /** What rendezvous service are we querying for? (AP only) */
-  char rend_query[REND_SERVICE_ID_LEN_BASE32+1];
+  rend_data_t *rend_data;
 
   /** Number of times we've reassigned this application connection to
    * a new circuit. We keep track because the timeout is longer if we've
@@ -1078,11 +1127,8 @@ typedef struct dir_connection_t {
   /** The zlib object doing on-the-fly compression for spooled data. */
   tor_zlib_state_t *zlib_state;
 
-  /** What hidden service descriptor are we fetching, if any? */
-  int rend_version;
-
   /** What rendezvous service are we querying for? */
-  char rend_query[REND_SERVICE_ID_LEN_BASE32+1];
+  rend_data_t *rend_data;
 
   char identity_digest[DIGEST_LEN]; /**< Hash of the public RSA key for
                                      * the directory server's signing key. */
@@ -1747,7 +1793,6 @@ typedef struct crypt_path_t {
                                  CIPHER_KEY_LEN+\
                                  DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
-#define REND_COOKIE_LEN DIGEST_LEN
 
 /** Information used to build a circuit. */
 typedef struct {
@@ -1883,28 +1928,8 @@ typedef struct origin_circuit_t {
    */
   crypt_path_t *cpath;
 
-  /** The rend_pk_digest field holds a hash of location-hidden service's
-   * PK if purpose is S_ESTABLISH_INTRO or S_RENDEZVOUSING.
-   */
-  char rend_pk_digest[DIGEST_LEN];
-
-  /** Holds rendezvous cookie if purpose is C_ESTABLISH_REND. Filled with
-   * zeroes otherwise.
-   */
-  char rend_cookie[REND_COOKIE_LEN];
-
-  /**
-   * The rend_query field holds the y portion of y.onion (nul-terminated)
-   * if purpose is C_INTRODUCING or C_ESTABLISH_REND, or is a C_GENERAL
-   * for a hidden service, or is S_*.
-   */
-  char rend_query[REND_SERVICE_ID_LEN_BASE32+1];
-
-  /** Stores the rendezvous descriptor version if purpose is S_*. Used to
-   * distinguish introduction and rendezvous points belonging to the same
-   * rendezvous service ID, but different descriptor versions.
-   */
-  uint8_t rend_desc_version;
+  /** Holds all rendezvous data on either client or service side. */
+  rend_data_t *rend_data;
 
   /** How many more relay_early cells can we send on this circuit, according
    * to the specification? */
@@ -3179,6 +3204,15 @@ void directory_initiate_command_routerstatus(routerstatus_t *status,
                                              const char *payload,
                                              size_t payload_len,
                                              time_t if_modified_since);
+void directory_initiate_command_routerstatus_rend(routerstatus_t *status,
+                                                  uint8_t dir_purpose,
+                                                  uint8_t router_purpose,
+                                                  int anonymized_connection,
+                                                  const char *resource,
+                                                  const char *payload,
+                                                  size_t payload_len,
+                                                  time_t if_modified_since,
+                                                const rend_data_t *rend_query);
 
 int parse_http_response(const char *headers, int *code, time_t *date,
                         compress_method_t *compression, char **response);
@@ -3835,39 +3869,25 @@ void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
 int rend_client_introduction_acked(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
-void rend_client_refetch_v2_renddesc(const char *query);
+void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
-                                   const char *query);
+                                   const rend_data_t *rend_query);
 int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
                                  size_t request_len);
 int rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
 void rend_client_desc_trynow(const char *query, int rend_version);
 
-extend_info_t *rend_client_get_random_intro(const char *query);
+extend_info_t *rend_client_get_random_intro(const rend_data_t *rend_query);
 
 int rend_client_send_introduction(origin_circuit_t *introcirc,
                                   origin_circuit_t *rendcirc);
-
-/** Client authorization type that a hidden service performs. */
-typedef enum rend_auth_type_t {
-  REND_NO_AUTH      = 0,
-  REND_BASIC_AUTH   = 1,
-  REND_STEALTH_AUTH = 2,
-} rend_auth_type_t;
-
-/** Client-side configuration of authorization for a hidden service. */
-typedef struct rend_service_authorization_t {
-  char descriptor_cookie[REND_DESC_COOKIE_LEN];
-  char onion_address[REND_SERVICE_ADDRESS_LEN+1];
-  rend_auth_type_t auth_type;
-} rend_service_authorization_t;
-
 int rend_parse_service_authorization(or_options_t *options,
                                      int validate_only);
 rend_service_authorization_t *rend_client_lookup_service_authorization(
                                                 const char *onion_address);
 void rend_service_authorization_free_all(void);
+rend_data_t *rend_data_dup(const rend_data_t *request);
 
 /********************************* rendcommon.c ***************************/
 
@@ -3910,6 +3930,13 @@ typedef struct rend_service_descriptor_t {
   smartlist_t *successful_uploads;
 } rend_service_descriptor_t;
 
+/** Free all storage associated with <b>data</b> */
+static INLINE void
+rend_data_free(rend_data_t *data)
+{
+  tor_free(data);
+}
+
 int rend_cmp_service_ids(const char *one, const char *two);
 
 void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
@@ -3947,7 +3974,7 @@ int rend_cache_lookup_entry(const char *query, int version,
 int rend_cache_lookup_v2_desc_as_dir(const char *query, const char **desc);
 int rend_cache_store(const char *desc, size_t desc_len, int published);
 int rend_cache_store_v2_desc_as_client(const char *desc,
-                               const char *descriptor_cookie);
+                                       const rend_data_t *rend_query);
 int rend_cache_store_v2_desc_as_dir(const char *desc);
 int rend_cache_size(void);
 int rend_encode_v2_descriptors(smartlist_t *descs_out,

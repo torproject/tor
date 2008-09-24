@@ -1587,6 +1587,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     /* it's a hidden-service request */
     rend_cache_entry_t *entry;
     int r;
+    rend_service_authorization_t *client_auth;
     tor_assert(!automap);
     if (SOCKS_COMMAND_IS_RESOLVE(socks->command)) {
       /* if it's a resolve request, fail it right now, rather than
@@ -1608,14 +1609,16 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       return -1;
     }
 
-    strlcpy(conn->rend_query, socks->address, sizeof(conn->rend_query));
+    conn->rend_data = tor_malloc_zero(sizeof(rend_data_t));
+    strlcpy(conn->rend_data->onion_address, socks->address,
+            sizeof(conn->rend_data->onion_address));
     log_info(LD_REND,"Got a hidden service request for ID '%s'",
-             safe_str(conn->rend_query));
+             safe_str(conn->rend_data->onion_address));
     /* see if we already have it cached */
-    r = rend_cache_lookup_entry(conn->rend_query, -1, &entry);
+    r = rend_cache_lookup_entry(conn->rend_data->onion_address, -1, &entry);
     if (r<0) {
       log_warn(LD_BUG,"Invalid service name '%s'",
-               safe_str(conn->rend_query));
+               safe_str(conn->rend_data->onion_address));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
       return -1;
     }
@@ -1624,14 +1627,26 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
      * a stable circuit yet, but we know we'll need *something*. */
     rep_hist_note_used_internal(now, 0, 1);
 
+    /* Look up if we have client authorization for it. */
+    client_auth = rend_client_lookup_service_authorization(
+                                          conn->rend_data->onion_address);
+    if (client_auth) {
+      log_info(LD_REND, "Using previously configured client authorization "
+                        "for hidden service request.");
+      memcpy(conn->rend_data->descriptor_cookie,
+             client_auth->descriptor_cookie, REND_DESC_COOKIE_LEN);
+      conn->rend_data->auth_type = client_auth->auth_type;
+    }
     if (r==0) {
       conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
-               safe_str(conn->rend_query));
+               safe_str(conn->rend_data->onion_address));
       /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
-       * arrives first. */
-      rend_client_refetch_v2_renddesc(conn->rend_query);
-      rend_client_refetch_renddesc(conn->rend_query);
+       * arrives first. Exception: When using client authorization, only
+       * fetch v2 descriptors.*/
+      rend_client_refetch_v2_renddesc(conn->rend_data);
+      if (conn->rend_data->auth_type == REND_NO_AUTH)
+        rend_client_refetch_renddesc(conn->rend_data->onion_address);
     } else { /* r > 0 */
 /** How long after we receive a hidden service descriptor do we consider
  * it valid? */
@@ -1647,11 +1662,13 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       } else {
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         log_info(LD_REND, "Stale descriptor %s. Refetching.",
-                 safe_str(conn->rend_query));
+                 safe_str(conn->rend_data->onion_address));
         /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
-         * arrives first. */
-        rend_client_refetch_v2_renddesc(conn->rend_query);
-        rend_client_refetch_renddesc(conn->rend_query);
+         * arrives first. Exception: When using client authorization, only
+         * fetch v2 descriptors.*/
+        rend_client_refetch_v2_renddesc(conn->rend_data);
+        if (conn->rend_data->auth_type == REND_NO_AUTH)
+          rend_client_refetch_renddesc(conn->rend_data->onion_address);
       }
     }
     return 0;
@@ -2531,8 +2548,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     log_info(LD_REND,"begin is for rendezvous. configuring stream.");
     n_stream->_base.address = tor_strdup("(rendezvous)");
     n_stream->_base.state = EXIT_CONN_STATE_CONNECTING;
-    strlcpy(n_stream->rend_query, origin_circ->rend_query,
-            sizeof(n_stream->rend_query));
+    n_stream->rend_data = rend_data_dup(origin_circ->rend_data);
     tor_assert(connection_edge_is_rendezvous_stream(n_stream));
     assert_circuit_ok(circ);
     if (rend_service_set_connection_addr_port(n_stream, origin_circ) < 0) {
@@ -2815,7 +2831,7 @@ int
 connection_edge_is_rendezvous_stream(edge_connection_t *conn)
 {
   tor_assert(conn);
-  if (*conn->rend_query) /* XXX */ /* XXXX Why is this XXX? -NM */
+  if (conn->rend_data) /* XXX */ /* XXXX Why is this XXX? -NM */
     return 1;
   return 0;
 }

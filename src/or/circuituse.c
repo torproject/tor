@@ -121,8 +121,12 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
       return 0;
     }
   } else { /* not general */
-    if (rend_cmp_service_ids(conn->rend_query,
-                             TO_ORIGIN_CIRCUIT(circ)->rend_query)) {
+    origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
+    if ((conn->rend_data && !ocirc->rend_data) ||
+        (!conn->rend_data && ocirc->rend_data) ||
+        (conn->rend_data && ocirc->rend_data &&
+         rend_cmp_service_ids(conn->rend_data->onion_address,
+                              ocirc->rend_data->onion_address))) {
       /* this circ is not for this conn */
       return 0;
     }
@@ -300,7 +304,7 @@ circuit_expire_building(time_t now)
           /* c_rend_ready circs measure age since timestamp_dirty,
            * because that's set when they switch purposes
            */
-          if (TO_ORIGIN_CIRCUIT(victim)->rend_query[0] ||
+          if (TO_ORIGIN_CIRCUIT(victim)->rend_data ||
               victim->timestamp_dirty > cutoff)
             continue;
           break;
@@ -1076,18 +1080,24 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
 
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT) {
       /* need to pick an intro point */
-      extend_info = rend_client_get_random_intro(conn->rend_query);
+      tor_assert(conn->rend_data);
+      extend_info = rend_client_get_random_intro(conn->rend_data);
       if (!extend_info) {
         log_info(LD_REND,
                  "No intro points for '%s': refetching service descriptor.",
-                 safe_str(conn->rend_query));
-        rend_client_refetch_renddesc(conn->rend_query);
-        rend_client_refetch_v2_renddesc(conn->rend_query);
+                 safe_str(conn->rend_data->onion_address));
+        /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
+         * arrives first. Exception: When using client authorization, only
+         * fetch v2 descriptors.*/
+        rend_client_refetch_v2_renddesc(conn->rend_data);
+        if (conn->rend_data->auth_type == REND_NO_AUTH)
+          rend_client_refetch_renddesc(conn->rend_data->onion_address);
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
       log_info(LD_REND,"Chose '%s' as intro point for '%s'.",
-               extend_info->nickname, safe_str(conn->rend_query));
+               extend_info->nickname,
+               safe_str(conn->rend_data->onion_address));
     }
 
     /* If we have specified a particular exit node for our
@@ -1163,7 +1173,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       rep_hist_note_used_internal(time(NULL), need_uptime, 1);
       if (circ) {
         /* write the service_id into circ */
-        strlcpy(circ->rend_query, conn->rend_query, sizeof(circ->rend_query));
+        circ->rend_data = rend_data_dup(conn->rend_data);
         if (circ->_base.purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND &&
             circ->_base.state == CIRCUIT_STATE_OPEN)
           rend_client_rendcirc_has_opened(circ);
