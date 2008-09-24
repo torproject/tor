@@ -1051,8 +1051,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   crypto_digest_get_digest(digest, diffie_hellman_hash, DIGEST_LEN);
   crypto_free_digest_env(digest);
 
-  /* Iterate over past requests, remove those which are older than one hour,
-   * and check whether there is one with same Diffie-Hellman, part 1. */
+  /* Check whether there is a past request with the same Diffie-Hellman,
+   * part 1. */
   if (!service->accepted_intros)
     service->accepted_intros = digestmap_new();
 
@@ -1066,8 +1066,9 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     goto err;
   }
 
-  /* Add request to access history, including time and hash of
-   * Diffie-Hellman, part 1. */
+  /* Add request to access history, including time and hash of Diffie-Hellman,
+   * part 1, and possibly remove requests from the history that are older than
+   * one hour. */
   access_time = tor_malloc(sizeof(time_t));
   *access_time = now;
   digestmap_set(service->accepted_intros, diffie_hellman_hash, access_time);
