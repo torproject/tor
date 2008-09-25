@@ -17,6 +17,7 @@ const char main_c_id[] =
 #include "or.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
+#include <openssl/crypto.h>
 #endif
 #include "memarea.h"
 
@@ -2046,14 +2047,6 @@ do_hash_password(void)
   printf("16:%s\n",output);
 }
 
-#ifdef USE_DMALLOC
-#include <openssl/crypto.h>
-static void
-_tor_dmalloc_free(void *p)
-{
-  tor_free(p);
-}
-#endif
 
 /** Main entry point for the Tor process.  Called from main(). */
 /* This function is distinct from main() only so we can link main.c into
@@ -2066,8 +2059,7 @@ tor_main(int argc, char *argv[])
   init_logging();
 #ifdef USE_DMALLOC
   {
-    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc,
-                                        _tor_dmalloc_free);
+    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc, _tor_free);
     tor_assert(r);
   }
 #endif
