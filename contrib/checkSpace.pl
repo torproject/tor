@@ -72,8 +72,8 @@ for $fn (@ARGV) {
                 #    print "       //:$fn:$.\n";
                 s!//.*!!;
             }
-            ## Warn about braces preceded by non-space.
-            if (/([^\s])\{/) {
+            ## Warn about unquoted braces preceded by non-space.
+            if (/([^\s'])\{/) {
                 print "       $1\{:$fn:$.\n";
             }
             ## Warn about multiple internal spaces.

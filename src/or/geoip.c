@@ -42,6 +42,23 @@ static strmap_t *country_idxplus1_by_lc_code = NULL;
 /** A list of all known geoip_entry_t, sorted by ip_low. */
 static smartlist_t *geoip_entries = NULL;
 
+/** Return the index of the <b>country</b>'s entry in the GeoIP DB
+ * if it is a valid 2-letter country code, otherwise return zero.
+ */
+country_t
+geoip_get_country(const char *country)
+{
+  void *_idxplus1;
+  intptr_t idx;
+
+  _idxplus1 = strmap_get_lc(country_idxplus1_by_lc_code, country);
+  if (!_idxplus1)
+    return -1;
+
+  idx = ((uintptr_t)_idxplus1)-1;
+  return (country_t)idx;
+}
+
 /** Add an entry to the GeoIP table, mapping all IPs between <b>low</b> and
  * <b>high</b>, inclusive, to the 2-letter country code <b>country</b>.
  */
@@ -167,9 +184,15 @@ geoip_load_file(const char *filename, or_options_t *options)
     log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.", filename);
     return -1;
   }
-  geoip_countries = smartlist_create();
+  if (!geoip_countries) {
+    geoip_countries = smartlist_create();
+    country_idxplus1_by_lc_code = strmap_new();
+  }
+  if (geoip_entries) {
+    SMARTLIST_FOREACH(geoip_entries, geoip_entry_t *, e, tor_free(e));
+    smartlist_free(geoip_entries);
+  }
   geoip_entries = smartlist_create();
-  country_idxplus1_by_lc_code = strmap_new();
   log_info(LD_GENERAL, "Parsing GEOIP file.");
   while (!feof(f)) {
     char buf[512];
@@ -210,7 +233,7 @@ geoip_get_n_countries(void)
 /** Return the two-letter country code associated with the number <b>num</b>,
  * or "??" for an unknown value. */
 const char *
-geoip_get_country_name(int num)
+geoip_get_country_name(country_t num)
 {
   if (geoip_countries && num >= 0 && num < smartlist_len(geoip_countries)) {
     geoip_country_t *c = smartlist_get(geoip_countries, num);

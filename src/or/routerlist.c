@@ -4707,6 +4707,14 @@ struct routerset_t {
   /** An address policy for routers in the set.  For implementation reasons,
    * a router belongs to the set if it is _rejected_ by this policy. */
   smartlist_t *policies;
+
+  /** DOCDOC */
+  char *description;
+
+  /** DOCDOC */
+  smartlist_t *country_names;
+  int n_countries;
+  bitarray_t *countries;
 };
 
 /** Return a new empty routerset. */
@@ -4718,7 +4726,83 @@ routerset_new(void)
   result->names = strmap_new();
   result->digests = digestmap_new();
   result->policies = smartlist_create();
+  result->country_names = smartlist_create();
   return result;
+}
+
+/** DOCDOC */
+static char *
+routerset_get_countryname(const char *c)
+{
+  char *country;
+
+  if (strlen(c) < 4 || c[0] !='{' || c[3] !='}')
+    return NULL;
+
+  country = tor_strndup(c+1, 2);
+  tor_strlower(country);
+  return country;
+}
+
+#if 0
+/** Add the GeoIP database's integer index (+1) of a valid two-character
+ * country code to the routerset's <b>countries</b> bitarray. Return the
+ * integer index if the country code is valid, -1 otherwise.*/
+static int
+routerset_add_country(const char *c)
+{
+  char country[3];
+  country_t cc;
+
+  /* XXXX: Country codes must be of the form \{[a-z\?]{2}\} but this accepts
+     \{[.]{2}\}. Do we need to be strict? -RH */
+  /* Nope; if the country code is bad, we'll get 0 when we look it up. */
+
+  if (!geoip_is_loaded()) {
+    log(LOG_WARN, LD_CONFIG, "GeoIP database not loaded: Cannot add country"
+                             "entry %s, ignoring.", c);
+    return -1;
+  }
+
+  memcpy(country, c+1, 2);
+  country[2] = '\0';
+  tor_strlower(country);
+
+  if ((cc=geoip_get_country(country))==-1) {
+    log(LOG_WARN, LD_CONFIG, "Country code '%s' is not valid, ignoring.",
+        country);
+  }
+  return cc;
+}
+#endif
+
+/** Update the routerset's <b>countries</b> bitarray_t. Called whenever
+ * the GeoIP database is reloaded.
+ */
+void
+routerset_refresh_countries(routerset_t *target)
+{
+  int cc;
+  if (target->countries) {
+    bitarray_free(target->countries);
+  }
+  if (!geoip_is_loaded()) {
+    target->countries = NULL;
+    target->n_countries = 0;
+    return;
+  }
+  target->n_countries = geoip_get_n_countries();
+  target->countries = bitarray_init_zero(target->n_countries);
+  SMARTLIST_FOREACH_BEGIN(target->country_names, const char *, country) {
+    cc = geoip_get_country(country);
+    if (cc >= 0) {
+      tor_assert(cc < target->n_countries);
+      bitarray_set(target->countries, cc);
+    } else {
+      log(LOG_WARN, LD_CONFIG, "Country code '%s' is not recognized.",
+          country);
+    }
+  } SMARTLIST_FOREACH_END(country);
 }
 
 /** Parse the string <b>s</b> to create a set of routerset entries, and add
@@ -4733,10 +4817,12 @@ int
 routerset_parse(routerset_t *target, const char *s, const char *description)
 {
   int r = 0;
+  int added_countries = 0;
+  char *countryname;
   smartlist_t *list = smartlist_create();
   smartlist_split_string(list, s, ",",
                          SPLIT_SKIP_SPACE | SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(list, char *, nick, {
+  SMARTLIST_FOREACH_BEGIN(list, char *, nick) {
       addr_policy_t *p;
       if (is_legal_hexdigest(nick)) {
         char d[DIGEST_LEN];
@@ -4748,21 +4834,28 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
       } else if (is_legal_nickname(nick)) {
         log_debug(LD_CONFIG, "Adding nickname %s to %s", nick, description);
         strmap_set_lc(target->names, nick, (void*)1);
+      } else if ((countryname = routerset_get_countryname(nick)) != NULL) {
+        log_debug(LD_CONFIG, "Adding country %s to %s", nick,
+                  description);
+        smartlist_add(target->country_names, countryname);
+        added_countries = 1;
       } else if ((strchr(nick,'.') || strchr(nick, '*')) &&
                  (p = router_parse_addr_policy_item_from_string(
                                      nick, ADDR_POLICY_REJECT))) {
         log_debug(LD_CONFIG, "Adding address %s to %s", nick, description);
         smartlist_add(target->policies, p);
       } else {
-        log_warn(LD_CONFIG, "Nickname '%s' in %s is misformed.", nick,
+        log_warn(LD_CONFIG, "Entry '%s' in %s is misformed.", nick,
                  description);
         r = -1;
         tor_free(nick);
         SMARTLIST_DEL_CURRENT(list, nick);
       }
-    });
+  } SMARTLIST_FOREACH_END(nick);
   smartlist_add_all(target->list, list);
   smartlist_free(list);
+  if (added_countries)
+    routerset_refresh_countries(target);
   return r;
 }
 
@@ -4779,22 +4872,48 @@ routerset_union(routerset_t *target, const routerset_t *source)
   tor_free(s);
 }
 
+/** Return true iff <b>set</b> lists only nicknames and digests, and includes
+ * no IP ranges or countries. */
+int
+routerset_is_list(const routerset_t *set)
+{
+  return smartlist_len(set->country_names) == 0 &&
+    smartlist_len(set->policies) == 0;
+}
+
+/** DOCDOC */
+static int
+routerset_is_empty(const routerset_t *set)
+{
+  return !set || smartlist_len(set->list) == 0;
+}
+
 /** Helper.  Return true iff <b>set</b> contains a router based on the other
- * provided fields. */
+ * provided fields.  Return higher values for more specific subentries.
+ (If country is -1, then we take the country from addr.) */
 static int
 routerset_contains(const routerset_t *set, const tor_addr_t *addr,
                    uint16_t orport,
-                   const char *nickname, const char *id_digest, int is_named)
+                   const char *nickname, const char *id_digest, int is_named,
+                   country_t country)
 {
   if (!set || !set->list) return 0;
   (void) is_named; /* not supported */
   if (nickname && strmap_get_lc(set->names, nickname))
-    return 1;
+    return 4;
   if (id_digest && digestmap_get(set->digests, id_digest))
-    return 1;
+    return 4;
   if (addr && compare_tor_addr_to_addr_policy(addr, orport, set->policies)
       == ADDR_POLICY_REJECTED)
-    return 1;
+    return 3;
+  if (set->countries) {
+    if (country < 0 && addr)
+      country = geoip_get_country_by_ip(tor_addr_to_ipv4h(addr));
+
+    if (country >= 0 && country < set->n_countries &&
+        bitarray_is_set(set->countries, country))
+      return 2;
+  }
   return 0;
 }
 
@@ -4807,7 +4926,8 @@ routerset_contains_extendinfo(const routerset_t *set, extend_info_t *ei)
                             ei->port,
                             ei->nickname,
                             ei->identity_digest,
-                            -1);
+                            -1, /*is_named*/
+                            -1 /*country*/);
 }
 
 /** Return true iff <b>ri</b> is in <b>set</b>. */
@@ -4821,7 +4941,8 @@ routerset_contains_router(const routerset_t *set, routerinfo_t *ri)
                             ri->or_port,
                             ri->nickname,
                             ri->cache_info.identity_digest,
-                            ri->is_named);
+                            ri->is_named,
+                            ri->country);
 }
 
 /** Return true iff <b>rs</b> is in <b>set</b>. */
@@ -4835,7 +4956,8 @@ routerset_contains_routerstatus(const routerset_t *set, routerstatus_t *rs)
                             rs->or_port,
                             rs->nickname,
                             rs->identity_digest,
-                            rs->is_named);
+                            rs->is_named,
+                            -1);
 }
 
 /** Add every known routerinfo_t that is a member of <b>routerset</b> to
@@ -4849,22 +4971,54 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
     return;
   if (!warned_nicknames)
     warned_nicknames = smartlist_create();
-  SMARTLIST_FOREACH(routerset->list, const char *, name, {
-    routerinfo_t *router = router_get_by_nickname(name, 1);
-    if (router) {
-      if (!running_only || router->is_running)
-        smartlist_add(out, router);
+  if (routerset_is_list(routerset)) {
+
+    /* No routers are specified by type; all are given by name or digest.
+     * we can do a lookup in O(len(list)). */
+    SMARTLIST_FOREACH(routerset->list, const char *, name, {
+        routerinfo_t *router = router_get_by_nickname(name, 1);
+        if (router) {
+          if (!running_only || router->is_running)
+            smartlist_add(out, router);
+        }
+    });
+  } else {
+    /* We need to iterate over the routerlist to get all the ones of the
+     * right kind. */
+    routerlist_t *rl = router_get_routerlist();
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
+        if (running_only && !router->is_running)
+          continue;
+        if (routerset_contains_router(routerset, router))
+          smartlist_add(out, router);
+    });
+  }
+}
+
+/** Add to <b>target</b> every node from <b>source</b> that is in
+ * <b>include</b> not excluded in a more specific fashion by
+ * <b>exclude</b>. DOCDOC */
+void
+routersets_get_disjunction(smartlist_t *target,
+                           const smartlist_t *source,
+                           const routerset_t *include,
+                           const routerset_t *exclude, int running_only)
+{
+  SMARTLIST_FOREACH(source, routerinfo_t *, router, {
+    int include_result;
+    if (running_only && !router->is_running)
+      continue;
+    if (!routerset_is_empty(include))
+      include_result = routerset_contains_router(include, router);
+    else
+      include_result = 1;
+
+    if (include_result) {
+      int exclude_result = routerset_contains_router(exclude, router);
+      if (include_result >= exclude_result)
+        smartlist_add(target, router);
     }
   });
-  if (smartlist_len(routerset->policies)) {
-    routerlist_t *rl = router_get_routerlist();
-    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router,
-      if (compare_addr_to_addr_policy(router->addr, router->or_port,
-               routerset->policies) == ADDR_POLICY_REJECT) {
-        if (!running_only || router->is_running)
-          smartlist_add(out, router);
-      });
-  }
 }
 
 /** Remove every routerinfo_t from <b>lst</b> that is in <b>routerset</b>. */
@@ -4892,6 +5046,46 @@ routerset_to_string(const routerset_t *set)
   return smartlist_join_strings(set->list, ",", 0, NULL);
 }
 
+/** Helper: return true iff old and new are both NULL, or both non-NULL
+ * equal routersets. */
+int
+routerset_equal(const routerset_t *old, const routerset_t *new)
+{
+  if (smartlist_len(old->list) != smartlist_len(new->list))
+    return 0;
+
+  SMARTLIST_FOREACH(old->list, const char *, cp1, {
+    const char *cp2 = smartlist_get(new->list, cp1_sl_idx);
+    if (strcmp(cp1, cp2))
+      return 0;
+  });
+
+  return 1;
+
+#if 0
+  /* XXXX: This won't work if the names/digests are identical but in a
+     different order. Checking for exact equality would be heavy going,
+     is it worth it? -RH*/
+  /* This code is totally bogus; sizeof doesn't work even remotely like this
+   * code seems to think.  Let's revert to a string-based comparison for
+   * now. -NM*/
+  if (sizeof(old->names) != sizeof(new->names))
+    return 0;
+
+  if (memcmp(old->names,new->names,sizeof(new->names)))
+    return 0;
+  if (sizeof(old->digests) != sizeof(new->digests))
+    return 0;
+  if (memcmp(old->digests,new->digests,sizeof(new->digests)))
+    return 0;
+  if (sizeof(old->countries) != sizeof(new->countries))
+    return 0;
+  if (memcmp(old->countries,new->countries,sizeof(new->countries)))
+    return 0;
+  return 1;
+#endif
+}
+
 /** Free all storage held in <b>routerset</b>. */
 void
 routerset_free(routerset_t *routerset)
@@ -4901,11 +5095,30 @@ routerset_free(routerset_t *routerset)
   SMARTLIST_FOREACH(routerset->policies, addr_policy_t *, p,
                     addr_policy_free(p));
   smartlist_free(routerset->policies);
+  SMARTLIST_FOREACH(routerset->country_names, char *, cp, tor_free(cp));
+  smartlist_free(routerset->country_names);
 
   strmap_free(routerset->names, NULL);
   digestmap_free(routerset->digests, NULL);
-
+  if (routerset->countries)
+    bitarray_free(routerset->countries);
   tor_free(routerset);
+}
+
+/** DOCDOC */
+void
+routerinfo_set_country(routerinfo_t *ri)
+{
+  ri->country = geoip_get_country_by_ip(ri->addr);
+}
+
+/** DOCDOC */
+void
+routerlist_refresh_countries(void)
+{
+  routerlist_t *rl = router_get_routerlist();
+  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri,
+                    routerinfo_set_country(ri));
 }
 
 /** Determine the routers that are responsible for <b>id</b> (binary) and

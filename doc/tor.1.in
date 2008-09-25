@@ -422,28 +422,28 @@ you are reliable and high-bandwidth enough to be a useful server.)
 .LP
 .TP
 \fBExcludeNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
-A list of identity fingerprints, nicknames, and address patterns of
-nodes to never use when building a circuit.  (Example: ExcludeNodes
-SlowServer, $ABCDEFFFFFFFFFFFFFFF, 255.254.0.0/8)
+A list of identity fingerprints, nicknames, country codes and address patterns
+of nodes to never use when building a circuit.  (Example: ExcludeNodes
+SlowServer, $ABCDEFFFFFFFFFFFFFFF, {cc}, 255.254.0.0/8)
 .LP
 .TP
 \fBExcludeExitNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
-A list of identity fingerprints, nicknames, and address patterns of
-nodes to never use when picking an exit node.  Note that any node
+A list of identity fingerprints, nicknames, country codes and address patterns
+of nodes to never use when picking an exit node.  Note that any node
 listed in ExcludeNodes is automatically considered to be part of this
 list.
 .LP
 .TP
 \fBEntryNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
-A list of identity fingerprints or nicknames of preferred nodes to use for the
-first hop in the circuit.
+A list of identity fingerprints, nicknames, country codes and address patterns
+of nodes to use for the first hop in the circuit.
 These are treated only as preferences unless StrictEntryNodes (see
 below) is also set.
 .LP
 .TP
 \fBExitNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
-A list of identity fingerprints or nicknames of preferred nodes to use for the
-last hop in the circuit.
+A list of identity fingerprints, nicknames, country codes and address patterns
+of nodes to use for the last hop in the circuit.
 These are treated only as preferences unless StrictExitNodes (see
 below) is also set.
 .LP

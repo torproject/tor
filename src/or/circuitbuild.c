@@ -1192,7 +1192,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   smartlist_t *connections;
   int best_support = -1;
   int n_best_support=0;
-  smartlist_t *sl, *preferredexits;
   routerinfo_t *router;
   or_options_t *options = get_options();
 
@@ -1277,22 +1276,24 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
            n_best_support, best_support >= 0 ? best_support : 0,
            n_pending_connections);
 
-  preferredexits = smartlist_create();
-  add_nickname_list_to_smartlist(preferredexits,options->ExitNodes,1);
-
-  sl = smartlist_create();
-
   /* If any routers definitely support any pending connections, choose one
    * at random. */
   if (best_support > 0) {
+    smartlist_t *supporting = smartlist_create(), *use = smartlist_create();
+
     for (i = 0; i < smartlist_len(dir->routers); i++)
       if (n_supported[i] == best_support)
-        smartlist_add(sl, smartlist_get(dir->routers, i));
+        smartlist_add(supporting, smartlist_get(dir->routers, i));
 
-    routerset_subtract_routers(sl,options->_ExcludeExitNodesUnion);
-    if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
-      smartlist_intersect(sl,preferredexits);
-    router = routerlist_sl_choose_by_bandwidth(sl, WEIGHT_FOR_EXIT);
+    routersets_get_disjunction(use, supporting, options->ExitNodes,
+                               options->_ExcludeExitNodesUnion, 1);
+    if (smartlist_len(use) == 0 && !options->StrictExitNodes) {
+      routersets_get_disjunction(use, supporting, NULL,
+                                 options->_ExcludeExitNodesUnion, 1);
+    }
+    router = routerlist_sl_choose_by_bandwidth(use, WEIGHT_FOR_EXIT);
+    smartlist_free(use);
+    smartlist_free(supporting);
   } else {
     /* Either there are no pending connections, or no routers even seem to
      * possibly support any of them.  Choose a router at random that satisfies
@@ -1300,6 +1301,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 
     int try;
     smartlist_t *needed_ports;
+    smartlist_t *supporting = smartlist_create(), *use = smartlist_create();
 
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
@@ -1308,8 +1310,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
                  "to list of all routers.",
                  need_capacity?", fast":"",
                  need_uptime?", stable":"");
-        smartlist_free(preferredexits);
-        smartlist_free(sl);
         tor_free(n_supported);
         return choose_good_exit_server_general(dir, 0, 0);
       }
@@ -1326,25 +1326,30 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
             (try || router_handles_some_port(router, needed_ports))) {
 //          log_fn(LOG_DEBUG,"Try %d: '%s' is a possibility.",
 //                 try, router->nickname);
-          smartlist_add(sl, router);
+          smartlist_add(supporting, router);
         }
       }
 
-      routerset_subtract_routers(sl,options->_ExcludeExitNodesUnion);
-      if (options->StrictExitNodes || smartlist_overlap(sl,preferredexits))
-        smartlist_intersect(sl,preferredexits);
-        /* XXX sometimes the above results in null, when the requested
-         * exit node is down. we should pick it anyway. */
-      router = routerlist_sl_choose_by_bandwidth(sl, WEIGHT_FOR_EXIT);
+      routersets_get_disjunction(use, supporting, options->ExitNodes,
+                                 options->_ExcludeExitNodesUnion, 1);
+      if (smartlist_len(use) == 0 && !options->StrictExitNodes) {
+        routersets_get_disjunction(use, supporting, NULL,
+                                   options->_ExcludeExitNodesUnion, 1);
+      }
+      /* XXX sometimes the above results in null, when the requested
+       * exit node is down. we should pick it anyway. */
+      router = routerlist_sl_choose_by_bandwidth(use, WEIGHT_FOR_EXIT);
       if (router)
         break;
+      smartlist_clear(supporting);
+      smartlist_clear(use);
     }
     SMARTLIST_FOREACH(needed_ports, uint16_t *, cp, tor_free(cp));
     smartlist_free(needed_ports);
+    smartlist_free(use);
+    smartlist_free(supporting);
   }
 
-  smartlist_free(preferredexits);
-  smartlist_free(sl);
   tor_free(n_supported);
   if (router) {
     log_info(LD_CIRC, "Chose exit server '%s'", router->nickname);
@@ -1399,6 +1404,24 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
   return NULL;
 }
 
+/** Log a warning if the user specified an exit for the circuit that
+ * has been excluded from use by ExcludeNodes or ExcludeExitNodes. */
+static void
+warn_if_router_excluded(const extend_info_t *exit)
+{
+  or_options_t *options = get_options();
+  routerinfo_t *ri = router_get_by_digest(exit->identity_digest);
+
+  if (!ri || !options->_ExcludeExitNodesUnion)
+    return;
+
+  if (routerset_contains_router(options->_ExcludeExitNodesUnion, ri))
+    log_warn(LD_CIRC,"Requested exit node '%s' is in ExcludeNodes, "
+             "or ExcludeExitNodes, using anyway.",exit->nickname);
+
+  return;
+}
+
 /** Decide a suitable length for circ's cpath, and pick an exit
  * router (or use <b>exit</b> if provided). Store these in the
  * cpath. Return 0 if ok, -1 if circuit should be closed. */
@@ -1419,6 +1442,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
   }
 
   if (exit) { /* the circuit-builder pre-requested one */
+    warn_if_router_excluded(exit);
     log_info(LD_CIRC,"Using requested exit node '%s'", exit->nickname);
     exit = extend_info_dup(exit);
   } else { /* we have to decide one */
@@ -1832,7 +1856,7 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   else if (options->UseBridges && ri->purpose != ROUTER_PURPOSE_BRIDGE)
     *reason = "not a bridge";
   else if (!options->UseBridges && !ri->is_possible_guard &&
-           !router_nickname_is_in_list(ri, options->EntryNodes))
+           !routerset_contains_router(options->EntryNodes,ri))
     *reason = "not recommended as a guard";
   else if (routerset_contains_router(options->ExcludeNodes, ri))
     *reason = "excluded";
@@ -1856,7 +1880,6 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
     control_event_guard(e->nickname, e->identity, "GOOD");
     changed = 1;
   }
-
   return changed;
 }
 
@@ -2346,8 +2369,9 @@ entry_guards_prepend_from_config(void)
     return;
   }
 
-  log_info(LD_CIRC,"Adding configured EntryNodes '%s'.",
-           options->EntryNodes);
+  if (options->EntryNodes)
+    log_info(LD_CIRC,"Adding configured EntryNodes '%s'.",
+             routerset_to_string(options->EntryNodes));
 
   entry_routers = smartlist_create();
   entry_fps = smartlist_create();
@@ -2355,7 +2379,11 @@ entry_guards_prepend_from_config(void)
   old_entry_guards_not_on_list = smartlist_create();
 
   /* Split entry guards into those on the list and those not. */
-  add_nickname_list_to_smartlist(entry_routers, options->EntryNodes, 0);
+  /* XXXX021 Now that we allow countries and IP ranges in EntryNodes, this is
+   *  potentially an enormous list. For now, we disable such values for
+   *  EntryNodes in options_validate(); really, this wants a better solution.
+   */
+  routerset_get_all_routers(entry_routers, options->EntryNodes, 0);
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri,
                     smartlist_add(entry_fps,ri->cache_info.identity_digest));
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {

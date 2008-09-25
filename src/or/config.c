@@ -194,11 +194,11 @@ static config_var_t _option_vars[] = {
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
-  V(EntryNodes,                  STRING,   NULL),
+  V(EntryNodes,                  ROUTERSET,   NULL),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
   V(ExcludeNodes,                ROUTERSET, NULL),
   V(ExcludeExitNodes,            ROUTERSET, NULL),
-  V(ExitNodes,                   STRING, NULL),
+  V(ExitNodes,                   ROUTERSET, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(FallbackNetworkstatusFile,   FILENAME,
@@ -817,13 +817,23 @@ get_version(void)
   return _version;
 }
 
+/** Release additional memory allocated in options
+ */
+static void
+or_options_free(or_options_t *options)
+{
+  if (options->_ExcludeExitNodesUnion)
+    routerset_free(options->_ExcludeExitNodesUnion);
+  config_free(&options_format, options);
+}
+
 /** Release all memory and resources held by global configuration structures.
  */
 void
 config_free_all(void)
 {
   if (global_options) {
-    config_free(&options_format, global_options);
+    or_options_free(global_options);
     global_options = NULL;
   }
   if (global_state) {
@@ -1322,8 +1332,9 @@ options_act(or_options_t *old_options)
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile, options->GeoIPFile))
        || !geoip_is_loaded())) {
-    /* XXXX021 Don't use this "<default>" junk; make our filename options
+    /** XXXX021 Don't use this "<default>" junk; make our filename options
      * understand prefixes somehow. -NM */
+    /** XXXX021 Reload GeoIPFile on SIGHUP. -NM */
     char *actual_fname = tor_strdup(options->GeoIPFile);
 #ifdef WIN32
     if (!strcmp(actual_fname, "<default>")) {
@@ -1336,11 +1347,22 @@ options_act(or_options_t *old_options)
 #endif
     geoip_load_file(actual_fname, options);
     tor_free(actual_fname);
+
+    /* XXXX Would iterating through all option_var's routersets be better? */
+    if (options->EntryNodes)
+      routerset_refresh_countries(options->EntryNodes);
+    if (options->ExitNodes)
+      routerset_refresh_countries(options->ExitNodes);
+    if (options->ExcludeNodes)
+      routerset_refresh_countries(options->ExcludeNodes);
+    if (options->ExcludeExitNodes)
+      routerset_refresh_countries(options->ExcludeExitNodes);
+    routerlist_refresh_countries();
   }
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||
-       !opt_streq(old_options->EntryNodes, options->EntryNodes)))
+      (!routerset_equal(old_options->EntryNodes,options->EntryNodes))))
     entry_nodes_should_be_added();
 
   /* Since our options changed, we might need to regenerate and upload our
@@ -1701,7 +1723,6 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_LINELIST_S:
     config_line_append((config_line_t**)lvalue, c->key, c->value);
     break;
-
   case CONFIG_TYPE_OBSOLETE:
     log_warn(LD_CONFIG, "Skipping obsolete configuration option '%s'", c->key);
     break;
@@ -2964,18 +2985,23 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->StrictExitNodes &&
-      (!options->ExitNodes || !strlen(options->ExitNodes)) &&
+      (!options->ExitNodes) &&
       (!old_options ||
        (old_options->StrictExitNodes != options->StrictExitNodes) ||
-       (!opt_streq(old_options->ExitNodes, options->ExitNodes))))
+       (!routerset_equal(old_options->ExitNodes,options->ExitNodes))))
     COMPLAIN("StrictExitNodes set, but no ExitNodes listed.");
 
   if (options->StrictEntryNodes &&
-      (!options->EntryNodes || !strlen(options->EntryNodes)) &&
+      (!options->EntryNodes) &&
       (!old_options ||
        (old_options->StrictEntryNodes != options->StrictEntryNodes) ||
-       (!opt_streq(old_options->EntryNodes, options->EntryNodes))))
+       (!routerset_equal(old_options->EntryNodes,options->EntryNodes))))
     COMPLAIN("StrictEntryNodes set, but no EntryNodes listed.");
+
+  if (options->EntryNodes && !routerset_is_list(options->EntryNodes)) {
+    /** XXXX021 fix this; see entry_guards_prepend_from_config(). */
+    REJECT("IPs or countries are not yet supported in EntryNodes.");
+  }
 
   if (options->AuthoritativeDir) {
     if (!options->ContactInfo)
@@ -3334,10 +3360,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->UseEntryGuards && ! options->NumEntryGuards)
     REJECT("Cannot enable UseEntryGuards with NumEntryGuards set to 0");
 
-  if (check_nickname_list(options->ExitNodes, "ExitNodes", msg))
-    return -1;
-  if (check_nickname_list(options->EntryNodes, "EntryNodes", msg))
-    return -1;
   if (check_nickname_list(options->MyFamily, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {

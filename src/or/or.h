@@ -1321,6 +1321,9 @@ typedef struct signed_descriptor_t {
   unsigned int send_unencrypted : 1;
 } signed_descriptor_t;
 
+/** A signed integer representing a country code. */
+typedef int16_t country_t;
+
 /** Information about another onion router in the network. */
 typedef struct {
   signed_descriptor_t cache_info;
@@ -1394,7 +1397,8 @@ typedef struct {
   time_t last_reachable;
   /** When did we start testing reachability for this OR? */
   time_t testing_since;
-
+  /** According to the geoip db what country is this router in? */
+  country_t country;
 } routerinfo_t;
 
 /** Information needed to keep and cache a signed extra-info document. */
@@ -2070,6 +2074,8 @@ typedef struct config_line_t {
   struct config_line_t *next;
 } config_line_t;
 
+typedef struct routerset_t routerset_t;
+
 /** Configuration options for a Tor process. */
 typedef struct {
   uint32_t _magic;
@@ -2090,17 +2096,22 @@ typedef struct {
   char *Address; /**< OR only: configured address for this onion router. */
   char *PidFile; /**< Where to store PID of Tor process. */
 
-  char *ExitNodes; /**< Comma-separated list of nicknames of ORs to consider
-                    * as exits. */
-  char *EntryNodes; /**< Comma-separated list of nicknames of ORs to consider
-                     * as entry points. */
+  routerset_t *ExitNodes; /**< Structure containing nicknames, digests,
+                           * country codes and IP address patterns of ORs to
+                           * consider as exits. */
+  routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
+                           * country codes and IP address patterns of ORs to
+                           * consider as entry points. */
   int StrictExitNodes; /**< Boolean: When none of our ExitNodes are up, do we
                         * stop building circuits? */
   int StrictEntryNodes; /**< Boolean: When none of our EntryNodes are up, do we
                          * stop building circuits? */
-  struct routerset_t *ExcludeNodes; /**< Comma-separated list of nicknames of
-                       * ORs not to use in circuits. */
-  struct routerset_t *ExcludeExitNodes; /**<DODOC */
+  routerset_t *ExcludeNodes;/**< Structure containing nicknames, digests,
+                             * country codes and IP address patterns of ORs
+                             * not to use in circuits. */
+  routerset_t *ExcludeExitNodes;/**< Structure containing nicknames, digests,
+                                 * country codes and IP address patterns of
+                                 * ORs not to consider as exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
   struct routerset_t *_ExcludeExitNodesUnion;
@@ -3466,8 +3477,9 @@ int should_record_bridge_info(or_options_t *options);
 int geoip_load_file(const char *filename, or_options_t *options);
 int geoip_get_country_by_ip(uint32_t ipaddr);
 int geoip_get_n_countries(void);
-const char *geoip_get_country_name(int num);
+const char *geoip_get_country_name(country_t num);
 int geoip_is_loaded(void);
+country_t geoip_get_country(const char *countrycode);
 /** Indicates an action that we might be noting geoip statistics on.
  * Note that if we're noticing CONNECT, we're a bridge, and if we're noticing
  * the others, we're not.
@@ -4277,22 +4289,28 @@ void routerlist_assert_ok(routerlist_t *rl);
 const char *esc_router_info(routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
-typedef struct routerset_t routerset_t;
-
 routerset_t *routerset_new(void);
 int routerset_parse(routerset_t *target, const char *s,
                     const char *description);
 void routerset_union(routerset_t *target, const routerset_t *source);
+int routerset_is_list(const routerset_t *set);
 int routerset_contains_router(const routerset_t *set, routerinfo_t *ri);
 int routerset_contains_routerstatus(const routerset_t *set,
                                     routerstatus_t *rs);
 int routerset_contains_extendinfo(const routerset_t *set, extend_info_t *ei);
 void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
                                int running_only);
+void routersets_get_disjunction(smartlist_t *target, const smartlist_t *source,
+                                const routerset_t *include,
+                                const routerset_t *exclude, int running_only);
 void routerset_subtract_routers(smartlist_t *out,
                                 const routerset_t *routerset);
 char *routerset_to_string(const routerset_t *routerset);
+void routerset_refresh_countries(routerset_t *target);
+int routerset_equal(const routerset_t *old, const routerset_t *new);
 void routerset_free(routerset_t *routerset);
+void routerinfo_set_country(routerinfo_t *ri);
+void routerlist_refresh_countries(void);
 
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);
