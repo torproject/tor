@@ -2837,6 +2837,7 @@ char *options_get_datadir_fname2_suffix(or_options_t *options,
 or_state_t *get_or_state(void);
 int or_state_save(time_t now);
 
+int options_need_geoip_info(or_options_t *options, const char **reason_out);
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer);
 
@@ -4294,6 +4295,7 @@ int routerset_parse(routerset_t *target, const char *s,
                     const char *description);
 void routerset_union(routerset_t *target, const routerset_t *source);
 int routerset_is_list(const routerset_t *set);
+int routerset_needs_geoip(const routerset_t *set);
 int routerset_contains_router(const routerset_t *set, routerinfo_t *ri);
 int routerset_contains_routerstatus(const routerset_t *set,
                                     routerstatus_t *rs);

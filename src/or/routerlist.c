@@ -4882,6 +4882,13 @@ routerset_is_list(const routerset_t *set)
 }
 
 /** DOCDOC */
+int
+routerset_needs_geoip(const routerset_t *set)
+{
+  return set && smartlist_len(set->country_names);
+}
+
+/** DOCDOC */
 static int
 routerset_is_empty(const routerset_t *set)
 {

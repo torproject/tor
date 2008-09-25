@@ -1163,6 +1163,30 @@ options_act_reversible(or_options_t *old_options, char **msg)
   return r;
 }
 
+/** DOCDOC */
+int
+options_need_geoip_info(or_options_t *options, const char **reason_out)
+{
+  int bridge_usage =
+    options->BridgeRelay && options->BridgeRecordUsageByCountry;
+  int routerset_usage =
+    routerset_needs_geoip(options->EntryNodes) ||
+    routerset_needs_geoip(options->ExitNodes) ||
+    routerset_needs_geoip(options->ExcludeExitNodes) ||
+    routerset_needs_geoip(options->ExcludeNodes);
+
+  if (routerset_usage && reason_out) {
+    *reason_out = "We've been configured to use (or avoid) nodes in certain "
+      "contries, and we need GEOIP information to figure out which ones they "
+      "are.";
+  } else if (bridge_usage && reason_out) {
+    *reason_out = "We've been configured to see which countries can access "
+      "us as a bridge, and we need GEOIP information to tell which countries "
+      "clients are in.";
+  }
+  return bridge_usage || routerset_usage;
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
