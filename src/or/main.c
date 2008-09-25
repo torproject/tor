@@ -2047,7 +2047,6 @@ do_hash_password(void)
   printf("16:%s\n",output);
 }
 
-
 /** Main entry point for the Tor process.  Called from main(). */
 /* This function is distinct from main() only so we can link main.c into
  * the unittest binary without conflicting with the unittests' main. */

@@ -317,7 +317,7 @@ rep_hist_note_router_reachable(const char *id, time_t when)
       log_debug(LD_HIST, "Router %s is still Running; it has been Running "
                 "since %s", hex_str(id, DIGEST_LEN), tbuf);
     else
-      log_info(LD_HIST, "Router %s is now Running; it was previously untracked",
+      log_info(LD_HIST,"Router %s is now Running; it was previously untracked",
                hex_str(id, DIGEST_LEN));
   }
 }
