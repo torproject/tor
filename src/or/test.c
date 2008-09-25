@@ -3528,7 +3528,7 @@ test_policies(void)
   tor_addr_t tar;
   config_line_t line;
   smartlist_t *sm = NULL;
-  char *policy_str;
+  char *policy_str = NULL;
 
   policy = smartlist_create();
 
@@ -3569,8 +3569,6 @@ test_policies(void)
 
   addr_policy_list_free(policy);
   policy = NULL;
-  addr_policy_list_free(policy2);
-  policy2 = NULL;
 
   /* make sure compacting logic works. */
   policy = NULL;
@@ -3582,9 +3580,6 @@ test_policies(void)
   //test_streq(policy->string, "accept *:80");
   //test_streq(policy->next->string, "reject *:*");
   test_eq(smartlist_len(policy), 2);
-
-  addr_policy_list_free(policy);
-  policy = NULL;
 
   /* test policy summaries */
   /* check if we properly ignore private IP addresses */
@@ -3669,11 +3664,17 @@ test_policies(void)
     "418,420,422,424,426,428,430,432,434,436,438,440,442,444,446,448,450,452,"
     "454,456,458,460,462,464,466,468,470,472,474,476,478,480,482,484,486,488,"
     "490,492,494,496,498,500,502,504,506,508,510,512,514,516,518,520,522");
-  tor_free(policy_str);
-  SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
-  smartlist_free(sm);
+
  done:
-  ;
+  if (policy)
+    addr_policy_list_free(policy);
+  if (policy2)
+    addr_policy_list_free(policy2);
+  tor_free(policy_str);
+  if (sm) {
+    SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
+    smartlist_free(sm);
+  }
 }
 
 static void
@@ -4023,11 +4024,13 @@ test_crypto_aes_iv(void)
   char plain_1[1], plain_15[15], plain_16[16], plain_17[17];
   char key1[16], key2[16];
   size_t encrypted_size, decrypted_size;
+
   plain = tor_malloc(4095);
   encrypted1 = tor_malloc(4095 + 1 + 16);
   encrypted2 = tor_malloc(4095 + 1 + 16);
   decrypted1 = tor_malloc(4095 + 1);
   decrypted2 = tor_malloc(4095 + 1);
+
   crypto_rand(plain, 4095);
   crypto_rand(key1, 16);
   crypto_rand(key2, 16);
@@ -4041,11 +4044,13 @@ test_crypto_aes_iv(void)
   encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 4095,
                                              plain, 4095);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(encrypted_size, 16 + 4095);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 4095,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(decrypted_size, 4095);
   test_memeq(plain, decrypted1, 4095);
   /* Encrypt a second time (with a new random initialization vector). */
@@ -4053,11 +4058,13 @@ test_crypto_aes_iv(void)
   encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted2, 16 + 4095,
                                              plain, 4095);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(encrypted_size, 16 + 4095);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted2, 4095,
                                              encrypted2, encrypted_size);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(decrypted_size, 4095);
   test_memeq(plain, decrypted2, 4095);
   test_memneq(encrypted1, encrypted2, encrypted_size);
@@ -4066,6 +4073,7 @@ test_crypto_aes_iv(void)
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted2, 4095,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_memneq(plain, decrypted2, encrypted_size);
   /* Alter the initialization vector. */
   encrypted1[0] += 42;
@@ -4073,17 +4081,20 @@ test_crypto_aes_iv(void)
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 4095,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_memneq(plain, decrypted2, 4095);
   /* Special length case: 1. */
   cipher = crypto_create_init_cipher(key1, 1);
   encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 1,
                                              plain_1, 1);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(encrypted_size, 16 + 1);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 1,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(decrypted_size, 1);
   test_memeq(plain_1, decrypted1, 1);
   /* Special length case: 15. */
@@ -4091,11 +4102,13 @@ test_crypto_aes_iv(void)
   encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 15,
                                              plain_15, 15);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(encrypted_size, 16 + 15);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 15,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(decrypted_size, 15);
   test_memeq(plain_15, decrypted1, 15);
   /* Special length case: 16. */
@@ -4103,11 +4116,13 @@ test_crypto_aes_iv(void)
   encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 16,
                                              plain_16, 16);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(encrypted_size, 16 + 16);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 16,
                                              encrypted1, encrypted_size);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(decrypted_size, 16);
   test_memeq(plain_16, decrypted1, 16);
   /* Special length case: 17. */
@@ -4115,21 +4130,23 @@ test_crypto_aes_iv(void)
   encrypted_size = crypto_cipher_encrypt_with_iv(cipher, encrypted1, 16 + 17,
                                              plain_17, 17);
   crypto_free_cipher_env(cipher);
+  cipher = NULL;
   test_eq(encrypted_size, 16 + 17);
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 17,
                                              encrypted1, encrypted_size);
-  crypto_free_cipher_env(cipher);
   test_eq(decrypted_size, 17);
   test_memeq(plain_17, decrypted1, 17);
+
+ done:
   /* Free memory. */
   tor_free(plain);
   tor_free(encrypted1);
   tor_free(encrypted2);
   tor_free(decrypted1);
   tor_free(decrypted2);
- done:
-  ;
+  if (cipher)
+    crypto_free_cipher_env(cipher);
 }
 
 /* Test base32 decoding. */
@@ -4171,16 +4188,16 @@ test_crypto_base32_decode(void)
 static void
 test_rend_fns_v2(void)
 {
-  rend_service_descriptor_t *generated, *parsed;
+  rend_service_descriptor_t *generated = NULL, *parsed = NULL;
   char service_id[DIGEST_LEN];
   char service_id_base32[REND_SERVICE_ID_LEN_BASE32+1];
   const char *next_desc;
   smartlist_t *descs = smartlist_create();
   char computed_desc_id[DIGEST_LEN];
   char parsed_desc_id[DIGEST_LEN];
-  crypto_pk_env_t *pk1, *pk2;
+  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
   time_t now;
-  char *intro_points_encrypted;
+  char *intro_points_encrypted = NULL;
   size_t intro_points_size;
   size_t encoded_size;
   int i;
@@ -4250,14 +4267,22 @@ test_rend_fns_v2(void)
     test_assert(tor_addr_eq(&gen_info->addr, &par_info->addr));
     test_eq(gen_info->port, par_info->port);
   }
-  tor_free(intro_points_encrypted);
-  for (i = 0; i < smartlist_len(descs); i++)
-    rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
-  smartlist_free(descs);
-  rend_service_descriptor_free(parsed);
-  rend_service_descriptor_free(generated);
+
  done:
-  ;
+  if (descs) {
+    for (i = 0; i < smartlist_len(descs); i++)
+      rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
+    smartlist_free(descs);
+  }
+  if (parsed)
+    rend_service_descriptor_free(parsed);
+  if (generated)
+    rend_service_descriptor_free(generated);
+  if (pk1)
+    crypto_free_pk_env(pk1);
+  if (pk1)
+    crypto_free_pk_env(pk2);
+  tor_free(intro_points_encrypted);
 }
 
 static void
