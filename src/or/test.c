@@ -47,6 +47,7 @@ const char tor_svn_revision[] = "";
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
+#include <openssl/crypto.h>
 #endif
 
 int have_failed = 0;
@@ -105,16 +106,28 @@ remove_directory(void)
   rmdir(temp_dir);
 }
 
+static crypto_pk_env_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
 static crypto_pk_env_t *
 pk_generate(int idx)
 {
-  static crypto_pk_env_t *pregen[5] = {NULL, NULL, NULL, NULL, NULL};
-  tor_assert(idx < (int)(sizeof(pregen)/sizeof(pregen[0])));
-  if (! pregen[idx]) {
-    pregen[idx] = crypto_new_pk_env();
-    tor_assert(!crypto_pk_generate_key(pregen[idx]));
+  tor_assert(idx < (int)(sizeof(pregen_keys)/sizeof(pregen_keys[0])));
+  if (! pregen_keys[idx]) {
+    pregen_keys[idx] = crypto_new_pk_env();
+    tor_assert(!crypto_pk_generate_key(pregen_keys[idx]));
   }
-  return crypto_pk_dup_key(pregen[idx]);
+  return crypto_pk_dup_key(pregen_keys[idx]);
+}
+
+static void
+free_pregenerated_keys(void)
+{
+  unsigned idx;
+  for (idx = 0; idx < sizeof(pregen_keys)/sizeof(pregen_keys[0]); ++idx) {
+    if (pregen_keys[idx]) {
+      crypto_free_pk_env(pregen_keys[idx]);
+      pregen_keys[idx] = NULL;
+    }
+  }
 }
 
 static void
@@ -4405,12 +4418,20 @@ syntax(void)
 int
 main(int c, char**v)
 {
-  or_options_t *options = options_new();
+  or_options_t *options;
   char *errmsg = NULL;
   int i;
   int verbose = 0, any_selected = 0;
   int loglevel = LOG_ERR;
 
+#ifdef USE_DMALLOC
+  {
+    int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc, _tor_free);
+    tor_assert(r);
+  }
+#endif
+
+  options = options_new();
   tor_threads_init();
   init_logging();
 
@@ -4501,6 +4522,7 @@ main(int c, char**v)
   }
   puts("");
 
+  free_pregenerated_keys();
 #ifdef USE_DMALLOC
   tor_free_all(0);
   dmalloc_log_unfreed();
