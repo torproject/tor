@@ -1827,7 +1827,7 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
   tor_assert(seconds_elapsed >= 0);
 
   write_buckets_empty_last_second =
-    global_relayed_write_bucket == 0 || global_write_bucket == 0;
+    global_relayed_write_bucket <= 0 || global_write_bucket <= 0;
 
   /* refill the global buckets */
   connection_bucket_refill_helper(&global_read_bucket,

@@ -6,7 +6,7 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       unable to send INTRODUCE cells to the service, or even (depending
       on the type of authentication) to learn introduction points.  This
       feature raises the bar for certain kinds of active attacks against
-      hidden services.
+      hidden services.  Code by Karsten Loesing.
     - Relays now store and serve v2 hidden service descriptors by default
       (i.e. new default value for HidServDirectoryV2 is 1). This is the
       last step in proposal 114, which aims to make hidden service
@@ -61,6 +61,11 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       on 0.0.9rc5. Diagnosed by BarkerJr.
     - If we are not using BEGIN_DIR cells, don't attempt to contact hidden
       service directories with non-open dir port. Bugfix on 0.2.0.10-alpha.
+    - If we overrun our per-second write limits a little, count this as
+      having used up our write allocation for the second, and choke outgoing
+      directory writes.  Previously, we had only counted this when we
+      had met our limits precisely. Fixes bug 824. Patch from by rovv.
+      Bugfix on 0.2.0.x (??).
 
   o Minor features:
     - Update to the "September 1 2008" ip-to-country file.
