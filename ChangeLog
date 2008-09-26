@@ -67,6 +67,10 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       had met our limits precisely. Fixes bug 824. Patch from by rovv.
       Bugfix on 0.2.0.x (??).
 
+  o Minor bugfixes (controller):
+    - Make DNS resolved events into "CLOSED", not "FAILED".  Bugfix on
+      0.1.2.5-alpha.  Fix by Robert Hogan.  Resolves bug 807.
+
   o Minor features:
     - Update to the "September 1 2008" ip-to-country file.
     - Allow ports 465 and 587 in the default exit policy again. We had

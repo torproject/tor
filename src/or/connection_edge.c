@@ -1389,8 +1389,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                              map_expires);
       connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_DONE |
-                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED |
-                                END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED);
+                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
       return 0;
     }
     if (options->ClientDNSRejectInternalAddresses) {
