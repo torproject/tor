@@ -2769,6 +2769,7 @@ test_dir_format(void)
   strlcat(buf2, pk1_str, sizeof(buf2));
   strlcat(buf2, "signing-key\n", sizeof(buf2));
   strlcat(buf2, pk2_str, sizeof(buf2));
+  strlcat(buf2, "opt hidden-service-dir\n", sizeof(buf2));
   strlcat(buf2, "reject *:*\nrouter-signature\n", sizeof(buf2));
   buf[strlen(buf2)] = '\0'; /* Don't compare the sig; it's never the same
                              * twice */
