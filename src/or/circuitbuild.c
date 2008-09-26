@@ -1197,8 +1197,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 
   connections = get_connection_array();
 
-  /* XXXX021 Respect ExcludeSingleHopRelays here. */
-
   /* Count how many connections are waiting for a circuit to be built.
    * We use this for log messages now, but in the future we may depend on it.
    */
@@ -1213,6 +1211,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
    * of the pending connections could possibly exit from that
    * router (n_supported[i]). (We can't be sure about cases where we
    * don't know the IP address of the pending connection.)
+   *
+   * -1 means "Don't use this router at all."
    */
   n_supported = tor_malloc(sizeof(int)*smartlist_len(dir->routers));
   for (i = 0; i < smartlist_len(dir->routers); ++i) {/* iterate over routers */
@@ -1239,6 +1239,10 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 //      log_fn(LOG_DEBUG,"Skipping node %s (index %d) -- invalid router.",
 //             router->nickname, i);
       continue; /* skip invalid routers */
+    }
+    if (options->ExcludeSingleHopRelays && router->allow_single_hop_exits) {
+      n_supported[i] = -1;
+      continue;
     }
     if (router_exit_policy_rejects_all(router)) {
       n_supported[i] = -1;
@@ -2459,8 +2463,6 @@ choose_random_entry(cpath_build_state_t *state)
     routerlist_add_family(exit_family, chosen_exit);
     consider_exit_family = 1;
   }
-
-  /* XXXX021 Respect ExcludeSingleHopRelays here. */
 
   if (!entry_guards)
     entry_guards = smartlist_create();
