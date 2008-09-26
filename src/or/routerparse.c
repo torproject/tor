@@ -63,6 +63,7 @@ typedef enum {
   K_EXTRA_INFO_DIGEST,
   K_CACHES_EXTRA_INFO,
   K_HIDDEN_SERVICE_DIR,
+  K_ALLOW_SINGLE_HOP_EXITS,
 
   K_DIR_KEY_CERTIFICATE_VERSION,
   K_DIR_IDENTITY_KEY,
@@ -239,6 +240,7 @@ static token_rule_t routerdesc_token_table[] = {
   T01("write-history",       K_WRITE_HISTORY,       ARGS,    NO_OBJ ),
   T01("extra-info-digest",   K_EXTRA_INFO_DIGEST,   GE(1),   NO_OBJ ),
   T01("hidden-service-dir",  K_HIDDEN_SERVICE_DIR,  NO_ARGS, NO_OBJ ),
+  T01("allow-single-hop-exits",K_ALLOW_SINGLE_HOP_EXITS,    NO_ARGS, NO_OBJ ),
 
   T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
   T01("caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ ),
@@ -1362,6 +1364,9 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if ((tok = find_first_by_keyword(tokens, K_CACHES_EXTRA_INFO)))
     router->caches_extra_info = 1;
+
+  if ((tok = find_first_by_keyword(tokens, K_ALLOW_SINGLE_HOP_EXITS)))
+    router->allow_single_hop_exits = 1;
 
   if ((tok = find_first_by_keyword(tokens, K_EXTRA_INFO_DIGEST))) {
     tor_assert(tok->n_args >= 1);

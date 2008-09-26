@@ -1767,6 +1767,16 @@ router_choose_random_node(const char *preferred,
 
   excludednodes = smartlist_create();
 
+  /* Exclude relays that allow single hop exit circuits, if the user
+   * wants to (such relays might be risky) */
+  if (get_options()->ExcludeSingleHopRelays) {
+    routerlist_t *rl = router_get_routerlist();
+    SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
+      if (r->allow_single_hop_exits) {
+        smartlist_add(excludednodes, r);
+      });
+  }
+
   if ((r = routerlist_find_my_routerinfo())) {
     smartlist_add(excludednodes, r);
     routerlist_add_family(excludednodes, r);

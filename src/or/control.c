@@ -2324,11 +2324,26 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
                     conn);
     return 0;
   }
+  /* Is this a single hop circuit? */
   if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
-    connection_write_str_to_buf(
-                    "551 Can't attach stream to one-hop circuit.\r\n", conn);
-    return 0;
+    routerinfo_t *r = NULL;
+    char* exit_digest;
+    if (circ->build_state &&
+        circ->build_state->chosen_exit &&
+        circ->build_state->chosen_exit->identity_digest) {
+      exit_digest = circ->build_state->chosen_exit->identity_digest;
+      r = router_get_by_digest(exit_digest);
+    }
+    /* Do both the client and relay allow one-hop exit circuits? */
+    if (!r || !r->allow_single_hop_exits ||
+        !get_options()->AllowSingleHopCircuits) {
+      connection_write_str_to_buf(
+      "551 Can't attach stream to this one-hop circuit.\r\n", conn);
+      return 0;
+    }
+    ap_conn->chosen_exit_name = tor_strdup(hex_str(exit_digest, DIGEST_LEN));
   }
+
   if (circ && hop>0) {
     /* find this hop in the circuit, and set cpath */
     cpath = circuit_get_cpath_hop(circ, hop);

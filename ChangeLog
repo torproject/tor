@@ -83,6 +83,10 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       v2 hidden service descriptors.
     - Authorities now serve a /tor/dbg-stability.txt URL to help debug
       WFU and MTBF calculations.
+    - Implement most of Proposal 152: allow specialized servers to permit
+      single-hop circuits, and clients to use those servers to build
+      single-hop circuits when using a specialized controller.  Patch
+      from Josh Albrecht.  Resolves "Bug" 768.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant

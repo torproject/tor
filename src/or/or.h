@@ -1357,6 +1357,8 @@ typedef struct {
                                       * dnsworker code. */
   unsigned int caches_extra_info:1; /**< Whether the router caches and serves
                                      * extrainfo documents. */
+  unsigned int allow_single_hop_exits:1;  /**< Whether the router allows
+                                     * single hop exits. */
 
   /* local info */
   unsigned int is_running:1; /**< As far as we know, is this OR currently
@@ -2419,6 +2421,16 @@ typedef struct {
   /** If true, we try to download extra-info documents (and we serve them,
    * if we are a cache).  For authorities, this is always true. */
   int DownloadExtraInfo;
+
+  /** If true, and we are acting as a relay, allow exit circuits even when
+   * we are the first hop of a circuit. */
+  int AllowSingleHopExits;
+  /** If true, don't allow relays with AllowSingleHopExits=1 to be used in
+   * circuits that we build. */
+  int ExcludeSingleHopRelays;
+  /** If true, and the controller tells us to use a one-hop circuit, and the
+   * exit allows it, we use it. */
+  int AllowSingleHopCircuits;
 
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.

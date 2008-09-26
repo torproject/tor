@@ -2498,8 +2498,10 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       tor_free(address);
       return 0;
     }
-    if (or_circ && or_circ->is_first_hop) {
-      /* Don't let clients use us as a single-hop proxy; it attracts attackers
+    if (or_circ && or_circ->is_first_hop &&
+        !get_options()->AllowSingleHopExits) {
+      /* Don't let clients use us as a single-hop proxy, unless the user
+       * has explicitly allowed that in the config.  It attracts attackers
        * and users who'd be better off with, well, single-hop proxies.
        */
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,

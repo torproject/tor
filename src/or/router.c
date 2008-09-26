@@ -1687,7 +1687,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt extra-info-digest %s\n%s"
                     "onion-key\n%s"
                     "signing-key\n%s"
-                    "%s%s%s",
+                    "%s%s%s%s",
     router->nickname,
     router->address,
     router->or_port,
@@ -1704,7 +1704,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     onion_pkey, identity_pkey,
     family_line,
     we_are_hibernating() ? "opt hibernating 1\n" : "",
-    options->HidServDirectoryV2 ? "opt hidden-service-dir\n" : "");
+    options->HidServDirectoryV2 ? "opt hidden-service-dir\n" : "",
+    options->AllowSingleHopExits ? "opt allow-single-hop-exits\n" : "");
 
   tor_free(family_line);
   tor_free(onion_pkey);

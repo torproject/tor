@@ -591,6 +591,16 @@ $Id$
         with unrecognized items; the protocols line should be preceded with
         an "opt" until these Tors are obsolete.]
 
+   "allow-single-hop-exits"
+
+       [At most one.]
+
+       Present only if the router allows single-hop circuits to make exit
+       connections.  Most Tor servers do not support this: this is
+       included for specialized controllers designed to support perspective
+       access and such.
+
+
 2.2. Extra-info documents
 
    Extra-info documents consist of the following items:

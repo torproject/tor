@@ -387,6 +387,14 @@ can opt to use them in some circuit positions, though. The default is
 "middle,rendezvous", and other choices are not advised.
 .LP
 .TP
+\fBExcludeSingleHopRelays \fR\fB0\fR|\fB1\fR\fP
+This option controls whether circuits built by Tor will include relays with
+the AllowSingleHopExits flag set to true.  If ExcludeSingleHopRelays is set to
+0, these relays will be included.  Note that these relays might be at higher
+risk of being seized or observed, so they are not normally included.
+(Default: 1)
+.LP
+.TP
 \fBBridge \fR\fIIP:ORPort\fR [fingerprint]\fP
 When set along with UseBridges, instructs Tor to use the relay at
 "IP:ORPort" as a "bridge" relaying into the Tor network. If "fingerprint"
@@ -782,6 +790,12 @@ The following options are useful only for servers (that is, if \fBORPort\fP is n
 \fBAddress \fR\fIaddress\fP
 The IP address or fqdn of this server (e.g. moria.mit.edu). You can
 leave this unset, and Tor will guess your IP address.
+.LP
+.TP
+\fBAllowSingleHopExits \fR\fB0\fR|\fB1\fR\fP
+This option controls whether clients can use this server as a single hop 
+proxy.  If set to 1, clients can use this server as an exit even if it is
+the only hop in the circuit.  (Default: 0)
 .LP
 .TP
 \fBAssumeReachable \fR\fB0\fR|\fB1\fR\fP
