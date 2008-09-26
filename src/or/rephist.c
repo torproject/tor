@@ -781,7 +781,7 @@ rep_hist_format_router_status(or_history_t *hist, time_t now)
     up = 1;
   }
   if (hist->start_of_downtime) {
-    format_iso_time(sor_buf, hist->start_of_downtime);
+    format_iso_time(sod_buf, hist->start_of_downtime);
     down = 1;
   }
 
