@@ -81,6 +81,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       servers.
     - Drop the requirement to have an open dir port for storing and serving
       v2 hidden service descriptors.
+    - Authorities now serve a /tor/dbg-stability.txt URL to help debug
+      WFU and MTBF calculations.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant

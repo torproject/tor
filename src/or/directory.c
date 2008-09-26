@@ -3004,6 +3004,21 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     goto done;
   }
 
+  if (!strcmp(url,"/tor/dbg-stability.txt")) {
+    const char *stability;
+    size_t len;
+    if (! authdir_mode_tests_reachability(options) ||
+        ! (stability = rep_hist_get_router_stability_doc(time(NULL)))) {
+      write_http_status_line(conn, 404, "Not found.");
+      goto done;
+    }
+
+    len = strlen(stability);
+    write_http_response_header(conn, len, 0, 0);
+    connection_write_to_buf(stability, len, TO_CONN(conn));
+    goto done;
+  }
+
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #define ADD_MALLINFO_LINE(x) do {                               \
     tor_snprintf(tmp, sizeof(tmp), "%s %d\n", #x, mi.x);        \

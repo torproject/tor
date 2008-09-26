@@ -765,6 +765,101 @@ rep_hist_record_mtbf_data(void)
   return -1;
 }
 
+/** DOCDOC */
+static char *
+rep_hist_format_router_status(or_history_t *hist, time_t now)
+{
+  char buf[1024];
+  char sor_buf[ISO_TIME_LEN+1];
+  char sod_buf[ISO_TIME_LEN+1];
+  double wfu;
+  double mtbf;
+  int up = 0, down = 0;
+
+  if (hist->start_of_run) {
+    format_iso_time(sor_buf, hist->start_of_run);
+    up = 1;
+  }
+  if (hist->start_of_downtime) {
+    format_iso_time(sor_buf, hist->start_of_downtime);
+    down = 1;
+  }
+
+  wfu = get_weighted_fractional_uptime(hist, now);
+  mtbf = get_stability(hist, now);
+  tor_snprintf(buf, sizeof(buf),
+               "%s%s%s"
+               "%s%s%s"
+               "wfu %0.3lf\n"
+               " weighted-time %lu\n"
+               " weighted-uptime %lu\n"
+               "mtbf %0.1lf\n"
+               " weighted-run-length %lu\n"
+               " total-run-weights %lf\n",
+               up?"uptime-started ":"", up?sor_buf:"", up?" UTC\n":"",
+               down?"downtime-started ":"", down?sod_buf:"", down?" UTC\n":"",
+               wfu,
+               hist->total_weighted_time,
+               hist->weighted_uptime,
+               mtbf,
+               hist->weighted_run_length,
+               hist->total_run_weights
+               );
+
+  return tor_strdup(buf);
+}
+
+/* DOCDOC */
+static char *last_stability_doc = NULL;
+static time_t built_last_stability_doc_at = 0;
+#define MAX_STABILITY_DOC_BUILD_RATE (3*60)
+
+/* DOCDOC */
+const char *
+rep_hist_get_router_stability_doc(time_t now)
+{
+  char *result;
+  smartlist_t *chunks;
+  if (built_last_stability_doc_at + MAX_STABILITY_DOC_BUILD_RATE > now)
+    return last_stability_doc;
+
+  if (!history_map)
+    return NULL;
+
+  tor_free(last_stability_doc);
+  chunks = smartlist_create();
+
+  DIGESTMAP_FOREACH(history_map, id, or_history_t *, hist) {
+    routerinfo_t *ri;
+    char dbuf[BASE64_DIGEST_LEN+1];
+    char header_buf[128];
+    char *info;
+    digest_to_base64(dbuf, id);
+    ri = router_get_by_digest(id);
+    if (ri) {
+      char *ip = tor_dup_ip(ri->addr);
+      tor_snprintf(header_buf, sizeof(header_buf), "router %s %s %s\n",
+                   dbuf, ri->nickname, ip);
+      tor_free(ip);
+    } else {
+      tor_snprintf(header_buf, sizeof(header_buf),
+                   "router %s {no descriptor}\n", dbuf);
+    }
+    smartlist_add(chunks, tor_strdup(header_buf));
+    info = rep_hist_format_router_status(hist, now);
+    if (info)
+      smartlist_add(chunks, info);
+  } DIGESTMAP_FOREACH_END;
+
+  result = smartlist_join_strings(chunks, "", 0, NULL);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
+
+  last_stability_doc = result;
+  built_last_stability_doc_at = time(NULL);
+  return result;
+}
+
 /** Helper: return the first j >= i such that !strcmpstart(sl[j], prefix) and
  * such that no line sl[k] with i <= k < j starts with "R ".  Return -1 if no
  * such line exists. */
@@ -1693,6 +1788,8 @@ rep_hist_free_all(void)
   digestmap_free(history_map, free_or_history);
   tor_free(read_array);
   tor_free(write_array);
+  tor_free(last_stability_doc);
+  built_last_stability_doc_at = 0;
   predicted_ports_free();
 }
 
