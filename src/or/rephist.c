@@ -462,6 +462,14 @@ get_weighted_fractional_uptime(or_history_t *hist, time_t when)
   } else if (hist->start_of_downtime) {
     total += (when - hist->start_of_downtime);
   }
+
+  if (!total) {
+    /* Avoid calling anybody's uptime infinity (which should be impossible if
+     * the code is working), or NaN (which can happen for any router we haven't
+     * observed up or down yet). */
+    return 0.0;
+  }
+
   return ((double) up) / total;
 }
 
