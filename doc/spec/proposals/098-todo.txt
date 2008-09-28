@@ -17,7 +17,7 @@ Overview:
    seems irrelevant.
 
 
-For some later protool version.
+For some later protocol version.
 
   - Fix onionskin handshake scheme to be more mainstream, less nutty.
     Can we just do
@@ -85,6 +85,7 @@ B.1. ... and that will require no changes
    - Mention multiple addr/port combos
    - Advertised outbound IP?
    - Migrate streams across circuits.
+   - Fix bug 469 by limiting the number of simultaneous connections per IP.
 
 B.2. ... and that we have no idea how to do.
 
