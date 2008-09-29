@@ -837,17 +837,34 @@ rep_hist_get_router_stability_doc(time_t now)
   tor_free(last_stability_doc);
   chunks = smartlist_create();
 
+  if (rep_hist_have_measured_enough_stability()) {
+    smartlist_add(chunks, tor_strdup("we-have-enough-measurements\n"));
+  } else {
+    smartlist_add(chunks, tor_strdup("we-do-not-have-enough-measurements\n"));
+  }
+
   DIGESTMAP_FOREACH(history_map, id, or_history_t *, hist) {
     routerinfo_t *ri;
     char dbuf[BASE64_DIGEST_LEN+1];
-    char header_buf[128];
+    char header_buf[512];
     char *info;
     digest_to_base64(dbuf, id);
     ri = router_get_by_digest(id);
     if (ri) {
       char *ip = tor_dup_ip(ri->addr);
-      tor_snprintf(header_buf, sizeof(header_buf), "router %s %s %s\n",
-                   dbuf, ri->nickname, ip);
+      char tbuf[ISO_TIME_LEN+1];
+      format_iso_time(tbuf, ri->cache_info.published_on);
+      tor_snprintf(header_buf, sizeof(header_buf),
+                   "router %s %s %s\n"
+                   "published %s\n"
+                   "relevant-flags%s%s%s\n"
+                   "declared-uptime %ld\n",
+                   dbuf, ri->nickname, ip,
+                   tbuf,
+                   ri->is_running ? "Running " : "",
+                   ri->is_valid ? "Valid " : "",
+                   ri->is_hibernating ? "Hibernating " : "",
+                   ri->uptime);
       tor_free(ip);
     } else {
       tor_snprintf(header_buf, sizeof(header_buf),
@@ -857,6 +874,7 @@ rep_hist_get_router_stability_doc(time_t now)
     info = rep_hist_format_router_status(hist, now);
     if (info)
       smartlist_add(chunks, info);
+
   } DIGESTMAP_FOREACH_END;
 
   result = smartlist_join_strings(chunks, "", 0, NULL);
