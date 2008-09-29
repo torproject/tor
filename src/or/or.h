@@ -2769,9 +2769,6 @@ void circuit_build_failed(origin_circuit_t *circ);
 /** Flag to set when the last hop of a circuit doesn't need to be an
  * exit node. */
 #define CIRCLAUNCH_IS_INTERNAL    (1<<3)
-origin_circuit_t *circuit_launch_by_nickname(uint8_t purpose,
-                                             const char *exit_nickname,
-                                             int flags);
 origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
                                                 extend_info_t *info,
                                                 int flags);

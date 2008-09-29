@@ -952,25 +952,6 @@ circuit_launch_by_extend_info(uint8_t purpose,
   return circuit_establish_circuit(purpose, extend_info, flags);
 }
 
-/** Launch a new circuit; see circuit_launch_by_extend_info() for
- * details on arguments. */
-origin_circuit_t *
-circuit_launch_by_nickname(uint8_t purpose,
-                           const char *exit_nickname, int flags)
-{
-  routerinfo_t *router = NULL;
-
-  if (exit_nickname) {
-    router = router_get_by_nickname(exit_nickname, 1);
-    if (!router) {
-      log_warn(LD_GENERAL, "Trying to launch circ by nickname, but "
-               "no such OR as '%s'", exit_nickname);
-      return NULL;
-    }
-  }
-  return circuit_launch_by_router(purpose, router, flags);
-}
-
 /** Record another failure at opening a general circuit. When we have
  * too many, we'll stop trying for the remainder of this minute.
  */
