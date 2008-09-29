@@ -40,6 +40,27 @@ Changes in version 0.2.1.6-alpha - 2008-09-29
       these names should be in the questions section, not necessarily
       in the answers section. Fixes bug 823. Bugfix on 0.2.1.5-alpha.
 
+  o Minor features:
+    - Update to the "September 1 2008" ip-to-country file.
+    - Allow ports 465 and 587 in the default exit policy again. We had
+      rejected them in 0.1.0.15, because back in 2005 they were commonly
+      misconfigured and ended up as spam targets. We hear they are better
+      locked down these days.
+    - Use a lockfile to make sure that two Tor processes are not
+      simultaneously running with the same datadir.
+    - Serve the latest v3 networkstatus consensus via the control
+      port. Use "getinfo dir/status-vote/current/consensus" to fetch it.
+    - Better logging about stability/reliability calculations on directory
+      servers.
+    - Drop the requirement to have an open dir port for storing and
+      serving v2 hidden service descriptors.
+    - Directory authorities now serve a /tor/dbg-stability.txt URL to
+      help debug WFU and MTBF calculations.
+    - Implement most of Proposal 152: allow specialized servers to permit
+      single-hop circuits, and clients to use those servers to build
+      single-hop circuits when using a specialized controller. Patch
+      from Josh Albrecht. Resolves feature request 768.
+
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.
       Reported by Tas.
@@ -69,31 +90,9 @@ Changes in version 0.2.1.6-alpha - 2008-09-29
       Bugfix on 0.2.0.x (??).
     - Avoid a "0 divided by 0" calculation when calculating router uptime
       at directory authorities. Bugfix on 0.2.0.8-alpha.
-
-  o Minor bugfixes (controller):
-    - Make DNS resolved events into "CLOSED", not "FAILED". Bugfix on
-      0.1.2.5-alpha. Fix by Robert Hogan. Resolves bug 807.
-
-  o Minor features:
-    - Update to the "September 1 2008" ip-to-country file.
-    - Allow ports 465 and 587 in the default exit policy again. We had
-      rejected them in 0.1.0.15, because back in 2005 they were commonly
-      misconfigured and ended up as spam targets. We hear they are better
-      locked down these days.
-    - Use a lockfile to make sure that two Tor processes are not
-      simultaneously running with the same datadir.
-    - Serve the latest v3 networkstatus consensus via the control
-      port. Use "getinfo dir/status-vote/current/consensus" to fetch it.
-    - Better logging about stability/reliability calculations on directory
-      servers.
-    - Drop the requirement to have an open dir port for storing and
-      serving v2 hidden service descriptors.
-    - Directory authorities now serve a /tor/dbg-stability.txt URL to
-      help debug WFU and MTBF calculations.
-    - Implement most of Proposal 152: allow specialized servers to permit
-      single-hop circuits, and clients to use those servers to build
-      single-hop circuits when using a specialized controller. Patch
-      from Josh Albrecht. Resolves feature request 768.
+    - Make DNS resolved controller events into "CLOSED", not
+      "FAILED". Bugfix on 0.1.2.5-alpha. Fix by Robert Hogan. Resolves
+      bug 807.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant
