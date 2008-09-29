@@ -2997,7 +2997,7 @@ void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);
 void addressmap_free_all(void);
 int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out);
-int addressmap_have_mapping(const char *address);
+int addressmap_have_mapping(const char *address, int update_timeout);
 typedef enum {
   ADDRMAPSRC_CONTROLLER, ADDRMAPSRC_TORRC, ADDRMAPSRC_TRACKEXIT,
   ADDRMAPSRC_DNS,

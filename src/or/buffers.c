@@ -1402,7 +1402,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           req->port = ntohs(get_uint16(buf->head->data+4+addrlen));
           buf_remove_from_front(buf, 6+addrlen);
           if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
-              !addressmap_have_mapping(req->address) &&
+              !addressmap_have_mapping(req->address,0) &&
               !have_warned_about_unsafe_socks) {
             log_warn(LD_APP,
                 "Your application (using socks5 to port %d) is giving "
@@ -1412,7 +1412,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                 "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
                 "TorFAQ#SOCKSAndDNS.%s", req->port,
                 safe_socks ? " Rejecting." : "");
-//            have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+            /*have_warned_about_unsafe_socks = 1;*/
+                                      /*(for now, warn every time)*/
             control_event_client_status(LOG_WARN,
                           "DANGEROUS_SOCKS PROTOCOL=SOCKS5 ADDRESS=%s:%d",
                           req->address, req->port);
@@ -1514,7 +1515,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
 
       startaddr = NULL;
       if (socks4_prot != socks4a &&
-          !addressmap_have_mapping(tmpbuf) &&
+          !addressmap_have_mapping(tmpbuf,0) &&
           !have_warned_about_unsafe_socks) {
         log_warn(LD_APP,
                  "Your application (using socks4 to port %d) is giving Tor "
@@ -1524,7 +1525,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                  "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
                  "TorFAQ#SOCKSAndDNS.%s", req->port,
                  safe_socks ? " Rejecting." : "");
-//      have_warned_about_unsafe_socks = 1; // (for now, warn every time)
+        /*have_warned_about_unsafe_socks = 1;*/  /*(for now, warn every time)*/
         control_event_client_status(LOG_WARN,
                         "DANGEROUS_SOCKS PROTOCOL=SOCKS4 ADDRESS=%s:%d",
                         tmpbuf, req->port);

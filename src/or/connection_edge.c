@@ -610,7 +610,8 @@ connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ,
  *
  * (We overload the 'expires' field, using "0" for mappings set via
  * the configuration file, "1" for mappings set from the control
- * interface, and other values for DNS mappings that can expire.)
+ * interface, and other values for DNS and TrackHostExit mappings that can
+ * expire.)
  */
 typedef struct {
   char *new_address;
@@ -831,11 +832,19 @@ addressmap_rewrite_reverse(char *address, size_t maxlen, time_t *expires_out)
   return r;
 }
 
-/** Return 1 if <b>address</b> is already registered, else return 0 */
+/** Return 1 if <b>address</b> is already registered, else return 0. If address
+ * is already registered, and <b>update_expires</b> is non-zero, then update
+ * the expiry time on the mapping with update_expires if it is a
+ * mapping created by TrackHostExits. */
 int
-addressmap_have_mapping(const char *address)
+addressmap_have_mapping(const char *address, int update_expiry)
 {
-  return strmap_get_lc(addressmap, address) ? 1 : 0;
+  addressmap_entry_t *ent;
+  if (!(ent=strmap_get_lc(addressmap, address)))
+    return 0;
+  if (update_expiry && ent->source==ADDRMAPSRC_TRACKEXIT)
+    ent->expires=time(NULL) + update_expiry;
+  return 1;
 }
 
 /** Register a request to map <b>address</b> to <b>new_address</b>,

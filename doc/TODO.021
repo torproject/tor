@@ -347,7 +347,7 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Tor logs the libevent version on startup, for debugging purposes.
       This is great. But it does this before configuring the logs, so
       it only goes to stdout and is then lost.
-    - Make TrackHostExits expire TrackHostExitsExpire seconds after their
+    o Make TrackHostExits expire TrackHostExitsExpire seconds after their
       *last* use, not their *first* use.
     - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
     - Make 'safelogging' extend to info-level logs too.
