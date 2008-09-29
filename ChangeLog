@@ -99,6 +99,11 @@ Changes in version 0.2.1.6-alpha - 2008-09-29
       circuit, then it could establish the last hop by using the existing
       connection. Bugfix on 0.1.2.2-alpha, exposed when we made testing
       circuits no longer use entry guards in 0.2.1.3-alpha.
+    - If we have correct permissions on $datadir, we complain to stdout
+      and fail to start. But dangerous permissions on
+      $datadir/cached-status/ would cause us to open a log and complain
+      there. Now complain to stdout and fail to start in both cases. Fixes
+      bug 820, reported by seeess.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant

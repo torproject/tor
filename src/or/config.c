@@ -1108,6 +1108,22 @@ options_act_reversible(or_options_t *old_options, char **msg)
     /* No need to roll back, since you can't change the value. */
   }
 
+ if (directory_caches_v2_dir_info(options)) {
+    size_t len = strlen(options->DataDirectory)+32;
+    char *fn = tor_malloc(len);
+    tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
+                 options->DataDirectory);
+    if (check_private_dir(fn, running_tor ? CPD_CREATE : CPD_CHECK) < 0) {
+      char buf[1024];
+      int tmp = tor_snprintf(buf, sizeof(buf),
+                "Couldn't access/create private data directory \"%s\"", fn);
+      *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
+      tor_free(fn);
+      goto done;
+    }
+    tor_free(fn);
+  }
+
   /* Bail out at this point if we're not going to be a client or server:
    * we don't run Tor itself. */
   if (!running_tor)
@@ -1203,8 +1219,6 @@ static int
 options_act(or_options_t *old_options)
 {
   config_line_t *cl;
-  char *fn;
-  size_t len;
   or_options_t *options = get_options();
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg;
@@ -1238,20 +1252,6 @@ options_act(or_options_t *old_options)
     log_warn(LD_BUG, "Previously validated client authorization for "
                      "hidden services could not be added!");
     return -1;
-  }
-
-  if (running_tor && directory_caches_v2_dir_info(options)) {
-    len = strlen(options->DataDirectory)+32;
-    fn = tor_malloc(len);
-    tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
-                 options->DataDirectory);
-    if (check_private_dir(fn, CPD_CREATE) != 0) {
-      log_warn(LD_CONFIG,
-               "Couldn't access/create private data directory \"%s\"", fn);
-      tor_free(fn);
-      return -1;
-    }
-    tor_free(fn);
   }
 
   /* Load state */
