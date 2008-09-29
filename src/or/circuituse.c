@@ -680,7 +680,12 @@ circuit_enough_testing_circs(void)
 static void
 circuit_testing_opened(origin_circuit_t *circ)
 {
-  if (have_performed_bandwidth_test) {
+  if (have_performed_bandwidth_test ||
+      !check_whether_orport_reachable()) {
+    /* either we've already done everything we want with testing circuits,
+     * or this testing circuit became open due to a fluke, e.g. we picked
+     * a last hop where we already had the connection open due to an
+     * outgoing local circuit. */
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_AT_ORIGIN);
   } else if (circuit_enough_testing_circs()) {
     router_perform_bandwidth_test(NUM_PARALLEL_TESTING_CIRCS, time(NULL));
