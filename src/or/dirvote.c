@@ -1789,7 +1789,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     goto err;
   }
 
-  /* Now see whether we already h<ave a vote from this authority.*/
+  /* Now see whether we already have a vote from this authority. */
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
       if (! memcmp(v->vote->cert->cache_info.identity_digest,
                    vote->cert->cache_info.identity_digest,
@@ -1874,14 +1874,14 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
 /** Try to compute a v3 networkstatus consensus from the currently pending
  * votes.  Return 0 on success, -1 on failure.  Store the consensus in
  * pending_consensus: it won't be ready to be published until we have
- * everybody else's signatures collected too. (V3 Authoritity only) */
+ * everybody else's signatures collected too. (V3 Authority only) */
 static int
 dirvote_compute_consensus(void)
 {
   /* Have we got enough votes to try? */
   int n_votes, n_voters;
-  smartlist_t *votes = NULL;
-  char *consensus_body = NULL, *signatures = NULL;
+  smartlist_t *votes = NULL, *votestrings = NULL;
+  char *consensus_body = NULL, *signatures = NULL, *votefile;
   networkstatus_t *consensus = NULL;
   authority_cert_t *my_cert;
 
@@ -1902,8 +1902,22 @@ dirvote_compute_consensus(void)
   }
 
   votes = smartlist_create();
+  votestrings = smartlist_create();
   SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v,
-                    smartlist_add(votes, v->vote));
+    {
+      sized_chunk_t *c = tor_malloc(sizeof(sized_chunk_t));
+      c->bytes = v->vote_body->dir;
+      c->len = v->vote_body->dir_len;
+      smartlist_add(votestrings, c); /* collect strings to write to disk */
+
+      smartlist_add(votes, v->vote); /* collect votes to compute consensus */
+    });
+
+  votefile = get_datadir_fname("v3-status-votes");
+  write_chunks_to_file(votefile, votestrings, 0);
+  tor_free(votefile);
+  SMARTLIST_FOREACH(votestrings, sized_chunk_t *, c, tor_free(c));
+  smartlist_free(votestrings);
 
   {
     char legacy_dbuf[DIGEST_LEN];
