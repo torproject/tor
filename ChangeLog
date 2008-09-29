@@ -60,6 +60,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-29
       single-hop circuits, and clients to use those servers to build
       single-hop circuits when using a specialized controller. Patch
       from Josh Albrecht. Resolves feature request 768.
+    - Add a -p option to tor-resolve for specifying the SOCKS port: some
+      people find host:port too confusing.
 
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.

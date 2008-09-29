@@ -293,7 +293,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
 static void
 usage(void)
 {
-  puts("Syntax: tor-resolve [-4] [-v] [-x] [-F] "
+  puts("Syntax: tor-resolve [-4] [-v] [-x] [-F] [-p port] "
        "hostname [sockshost:socksport]");
   exit(1);
 }
@@ -303,7 +303,7 @@ int
 main(int argc, char **argv)
 {
   uint32_t sockshost;
-  uint16_t socksport;
+  uint16_t socksport = 0, port_option = 0;
   int isSocks4 = 0, isVerbose = 0, isReverse = 0, force = 0;
   char **arg;
   int n_args;
@@ -336,7 +336,21 @@ main(int argc, char **argv)
       isReverse = 1;
     else if (!strcmp("-F", arg[0]))
       force = 1;
-    else {
+    else if (!strcmp("-p", arg[0])) {
+      int p;
+      if (n_args < 2) {
+        fprintf(stderr, "No arguments given to -p\n");
+        usage();
+      }
+      p = atoi(arg[1]);
+      if (p<1 || p > 65535) {
+        fprintf(stderr, "-p requires a number between 1 and 65535\n");
+        usage();
+      }
+      port_option = (uint16_t) p;
+      ++arg; /* skip the port */
+      --n_args;
+    } else {
       fprintf(stderr, "Unrecognized flag '%s'\n", arg[0]);
       usage();
     }
@@ -356,15 +370,26 @@ main(int argc, char **argv)
   add_stream_log(s, "<stderr>", stderr);
 
   if (n_args == 1) {
-    log_debug(LD_CONFIG, "defaulting to localhost:9050");
+    log_debug(LD_CONFIG, "defaulting to localhost");
     sockshost = 0x7f000001u; /* localhost */
-    socksport = 9050; /* 9050 */
+    if (port_option) {
+      log_debug(LD_CONFIG, "Using port %d", (int)port_option);
+      socksport = port_option;
+    } else {
+      log_debug(LD_CONFIG, "defaulting to port 9050");
+      socksport = 9050; /* 9050 */
+    }
   } else if (n_args == 2) {
     if (parse_addr_port(LOG_WARN, arg[1], NULL, &sockshost, &socksport)<0) {
       fprintf(stderr, "Couldn't parse/resolve address %s", arg[1]);
       return 1;
     }
-    if (socksport == 0) {
+    if (socksport && port_option && socksport != port_option) {
+      log_warn(LD_CONFIG, "Conflicting ports; using %d, not %d",
+               (int)socksport, (int)port_option);
+    } else if (port_option) {
+      socksport = port_option;
+    } else {
       log_debug(LD_CONFIG, "defaulting to port 9050");
       socksport = 9050;
     }
