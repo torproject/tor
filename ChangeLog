@@ -64,6 +64,7 @@ Changes in version 0.2.1.6-alpha - 2008-09-29
       people find host:port too confusing.
     - Make TrackHostExit mappings expire a while after their last use, not
       after their creation.  Patch from Robert Hogan.
+    - Provide circuit purposes along with circuit events to the controller.
 
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.

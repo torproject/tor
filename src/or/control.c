@@ -2964,7 +2964,7 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                              int reason_code)
 {
   const char *status;
-  char reason_buf[64];
+  char extended_buf[96];
   int providing_reason=0;
   char *path=NULL;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
@@ -2986,9 +2986,13 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       return 0;
     }
 
+  tor_snprintf(extended_buf, sizeof(extended_buf), "PURPOSE=%s",
+               circuit_purpose_to_controller_string(circ->_base.purpose));
+
   if (tp == CIRC_EVENT_FAILED || tp == CIRC_EVENT_CLOSED) {
     const char *reason_str = circuit_end_reason_to_control_string(reason_code);
     char *reason = NULL;
+    size_t n=strlen(extended_buf);
     providing_reason=1;
     if (!reason_str) {
       reason = tor_malloc(16);
@@ -2996,41 +3000,29 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
       reason_str = reason;
     }
     if (reason_code > 0 && reason_code & END_CIRC_REASON_FLAG_REMOTE) {
-      tor_snprintf(reason_buf, sizeof(reason_buf),
-                   "REASON=DESTROYED REMOTE_REASON=%s", reason_str);
+      tor_snprintf(extended_buf+n, sizeof(extended_buf)-n,
+                   " REASON=DESTROYED REMOTE_REASON=%s", reason_str);
     } else {
-      tor_snprintf(reason_buf, sizeof(reason_buf),
-                   "REASON=%s", reason_str);
+      tor_snprintf(extended_buf+n, sizeof(extended_buf)-n,
+                   " REASON=%s", reason_str);
     }
     tor_free(reason);
   }
 
   if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
     const char *sp = strlen(path) ? " " : "";
-    if (providing_reason)
-      send_control_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
-                            "650 CIRC %lu %s%s%s@%s\r\n",
-                            (unsigned long)circ->global_identifier,
-                            status, sp, path, reason_buf);
-    else
-      send_control_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
-                            "650 CIRC %lu %s%s%s\r\n",
-                            (unsigned long)circ->global_identifier,
-                            status, sp, path);
+    send_control_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
+                                "650 CIRC %lu %s%s%s@%s\r\n",
+                                (unsigned long)circ->global_identifier,
+                                status, sp, path, extended_buf);
   }
   if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
     char *vpath = circuit_list_path_for_controller(circ);
     const char *sp = strlen(vpath) ? " " : "";
-    if (providing_reason)
-      send_control_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
-                            "650 CIRC %lu %s%s%s@%s\r\n",
-                            (unsigned long)circ->global_identifier,
-                            status, sp, vpath, reason_buf);
-    else
-      send_control_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
-                            "650 CIRC %lu %s%s%s\r\n",
-                            (unsigned long)circ->global_identifier,
-                            status, sp, vpath);
+    send_control_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
+                                "650 CIRC %lu %s%s%s@%s\r\n",
+                                (unsigned long)circ->global_identifier,
+                                status, sp, vpath, extended_buf);
     tor_free(vpath);
   }
 

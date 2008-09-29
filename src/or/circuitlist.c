@@ -319,6 +319,50 @@ circuit_state_to_string(int state)
   }
 }
 
+/** Map a circuit purpose to a string suitable to be displayed to a
+ * controller. */
+const char *
+circuit_purpose_to_controller_string(uint8_t purpose)
+{
+  static char buf[32];
+  switch (purpose) {
+    case CIRCUIT_PURPOSE_OR:
+    case CIRCUIT_PURPOSE_INTRO_POINT:
+    case CIRCUIT_PURPOSE_REND_POINT_WAITING:
+    case CIRCUIT_PURPOSE_REND_ESTABLISHED:
+      return "SERVER"; /* A controller should never see these, actually. */
+
+    case CIRCUIT_PURPOSE_C_GENERAL:
+      return "GENERAL";
+    case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+    case CIRCUIT_PURPOSE_C_INTRODUCE_ACKED:
+      return "HS_CLIENT_INTRO";
+
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+    case CIRCUIT_PURPOSE_C_REND_READY:
+    case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
+    case CIRCUIT_PURPOSE_C_REND_JOINED:
+      return "HS_CLIENT_REND";
+
+    case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+    case CIRCUIT_PURPOSE_S_INTRO:
+      return "HS_SERVICE_INTRO";
+
+    case CIRCUIT_PURPOSE_S_CONNECT_REND:
+    case CIRCUIT_PURPOSE_S_REND_JOINED:
+      return "HS_SERVICE_REND";
+
+    case CIRCUIT_PURPOSE_TESTING:
+      return "TESTING";
+    case CIRCUIT_PURPOSE_CONTROLLER:
+      return "CONTROLLER";
+
+    default:
+      tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
+      return buf;
+  }
+}
+
 /** Initialize the common elements in a circuit_t, and add it to the global
  * list. */
 static void
