@@ -108,6 +108,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-29
       $datadir/cached-status/ would cause us to open a log and complain
       there. Now complain to stdout and fail to start in both cases. Fixes
       bug 820, reported by seeess.
+    - Remove the old v2 directory authority 'lefkada' from the default
+      list. It has been gone for many months.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant
