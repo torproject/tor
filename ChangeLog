@@ -1,21 +1,21 @@
-Changes in version 0.2.1.6-alpha - 2008-09-xx
+Changes in version 0.2.1.6-alpha - 2008-09-29
   o Major features:
     - Implement proposal 121: make it possible to build hidden services
-      that only certain clients are allowed to connect to.  This is
-      enforced at several points, so that unauthorized clients are
-      unable to send INTRODUCE cells to the service, or even (depending
-      on the type of authentication) to learn introduction points.  This
-      feature raises the bar for certain kinds of active attacks against
-      hidden services.  Code by Karsten Loesing.
-    - Relays now store and serve v2 hidden service descriptors by default
-      (i.e. new default value for HidServDirectoryV2 is 1). This is the
-      last step in proposal 114, which aims to make hidden service
-      connections more reliable.
-    - Allow node restrictions to work include country codes.  The syntax
-      to exclude nodes an a country with country code XX is "ExcludeNodes
-      {XX}".  Patch from Robert Hogan.
-    - Allow ExitNodes list to include IP ranges and country codes, just like
-      the Exclude*Nodes lists.  Patch from Robert Hogan.
+      that only certain clients are allowed to connect to. This is
+      enforced at several points, so that unauthorized clients are unable
+      to send INTRODUCE cells to the service, or even (depending on the
+      type of authentication) to learn introduction points. This feature
+      raises the bar for certain kinds of active attacks against hidden
+      services. Code by Karsten Loesing.
+    - Relays now store and serve v2 hidden service descriptors by default,
+      i.e., the new default value for HidServDirectoryV2 is 1. This is
+      the last step in proposal 114, which aims to make hidden service
+      lookups more reliable.
+    - Allow node restrictions to include country codes. The syntax to
+      exclude nodes in a country with country code XX is "ExcludeNodes
+      {XX}". Patch from Robert Hogan.
+    - Allow ExitNodes list to include IP ranges and country codes, just
+      like the Exclude*Nodes lists. Patch from Robert Hogan.
 
   o Major bugfixes:
     - Fix a bug when parsing ports in tor_addr_port_parse() that caused
@@ -23,12 +23,12 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       relay. Fixes bug 809. Bugfix on 0.2.1.5-alpha.
     - When extending a circuit to a hidden service directory to upload a
       rendezvous descriptor using a BEGIN_DIR cell, almost 1/6 of all
-      requests failed, because the router descriptor has not been
-      downloaded yet. In these cases, do not attempt to upload the
-      rendezvous descriptor, but wait until the router descriptor is
-      downloaded and retry. Likewise, do not attempt to fetch a rendezvous
-      descriptor from a hidden service directory for which the router
-      descriptor has not yet been downloaded. Fixes bug 767. Bugfix
+      requests failed, because the router descriptor had not been
+      downloaded yet. In these cases, we now wait until the router
+      descriptor is downloaded, and then retry. Likewise, clients
+      now skip over a hidden service directory if they don't yet have
+      its router descriptor, rather than futilely requesting it and
+      putting mysterious complaints in the logs. Fixes bug 767. Bugfix
       on 0.2.0.10-alpha.
     - When fetching v0 and v2 rendezvous service descriptors in parallel,
       we were failing the whole hidden service request when the v0
@@ -60,18 +60,19 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       the user knows what they were asking for. Fixes bug 752. Bugfix
       on 0.0.9rc5. Diagnosed by BarkerJr.
     - If we are not using BEGIN_DIR cells, don't attempt to contact hidden
-      service directories with non-open dir port. Bugfix on 0.2.0.10-alpha.
+      service directories if they have no advertised dir port. Bugfix
+      on 0.2.0.10-alpha.
     - If we overrun our per-second write limits a little, count this as
-      having used up our write allocation for the second, and choke outgoing
-      directory writes.  Previously, we had only counted this when we
-      had met our limits precisely. Fixes bug 824. Patch from by rovv.
+      having used up our write allocation for the second, and choke
+      outgoing directory writes. Previously, we had only counted this when
+      we had met our limits precisely. Fixes bug 824. Patch from by rovv.
       Bugfix on 0.2.0.x (??).
-    - Avoid a 0/0 calculation when calculating router uptime at directory
-      authorities.  Bugfix on 0.2.0.8-alpha.
+    - Avoid a "0 divided by 0" calculation when calculating router uptime
+      at directory authorities. Bugfix on 0.2.0.8-alpha.
 
   o Minor bugfixes (controller):
-    - Make DNS resolved events into "CLOSED", not "FAILED".  Bugfix on
-      0.1.2.5-alpha.  Fix by Robert Hogan.  Resolves bug 807.
+    - Make DNS resolved events into "CLOSED", not "FAILED". Bugfix on
+      0.1.2.5-alpha. Fix by Robert Hogan. Resolves bug 807.
 
   o Minor features:
     - Update to the "September 1 2008" ip-to-country file.
@@ -85,19 +86,19 @@ Changes in version 0.2.1.6-alpha - 2008-09-xx
       port. Use "getinfo dir/status-vote/current/consensus" to fetch it.
     - Better logging about stability/reliability calculations on directory
       servers.
-    - Drop the requirement to have an open dir port for storing and serving
-      v2 hidden service descriptors.
-    - Authorities now serve a /tor/dbg-stability.txt URL to help debug
-      WFU and MTBF calculations.
+    - Drop the requirement to have an open dir port for storing and
+      serving v2 hidden service descriptors.
+    - Directory authorities now serve a /tor/dbg-stability.txt URL to
+      help debug WFU and MTBF calculations.
     - Implement most of Proposal 152: allow specialized servers to permit
       single-hop circuits, and clients to use those servers to build
-      single-hop circuits when using a specialized controller.  Patch
-      from Josh Albrecht.  Resolves "Bug" 768.
+      single-hop circuits when using a specialized controller. Patch
+      from Josh Albrecht. Resolves feature request 768.
 
   o Code simplifications and refactoring:
     - Revise the connection_new functions so that a more typesafe variant
       exists. This will work better with Coverity, and let us find any
-      actual mistakes  we're making here.
+      actual mistakes we're making here.
     - Refactor unit testing logic so that dmalloc can be used sensibly
       with unit tests to check for memory leaks.
     - Move all hidden-service related fields from connection and circuit
@@ -354,7 +355,7 @@ Changes in version 0.2.0.29-rc - 2008-07-08
       O_CREAT flag. Fortify was complaining, and correctly so. Fixes
       bug 742; fix from Michael Scherer. Bugfix on 0.0.2pre19.
     - Correctly detect transparent proxy support on Linux hosts that
-      require in.h to be included before netfilter_ipv4.h.  Patch
+      require in.h to be included before netfilter_ipv4.h. Patch
       from coderman.
     - Disallow session resumption attempts during the renegotiation
       stage of the v2 handshake protocol. Clients should never be trying
