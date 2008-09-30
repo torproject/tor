@@ -1,4 +1,4 @@
-Changes in version 0.2.1.6-alpha - 2008-09-29
+Changes in version 0.2.1.6-alpha - 2008-09-30
   o Major features:
     - Implement proposal 121: make it possible to build hidden services
       that only certain clients are allowed to connect to. This is
@@ -11,9 +11,11 @@ Changes in version 0.2.1.6-alpha - 2008-09-29
       i.e., the new default value for HidServDirectoryV2 is 1. This is
       the last step in proposal 114, which aims to make hidden service
       lookups more reliable.
-    - Allow node restrictions to include country codes. The syntax to
-      exclude nodes in a country with country code XX is "ExcludeNodes
-      {XX}". Patch from Robert Hogan.
+    - Start work to allow node restrictions to include country codes. The
+      syntax to exclude nodes in a country with country code XX is
+      "ExcludeNodes {XX}". Patch from Robert Hogan. It still needs some
+      refinement to decide what config options should take priority if
+      you ask to both use a particular node and exclude it.
     - Allow ExitNodes list to include IP ranges and country codes, just
       like the Exclude*Nodes lists. Patch from Robert Hogan.
 
