@@ -293,13 +293,15 @@ rep_hist_note_router_reachable(const char *id, time_t when)
   int was_in_run = 1;
   char tbuf[ISO_TIME_LEN+1];
 
+  tor_assert(hist);
+
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
-  if (hist && !hist->start_of_run) {
+  if (!hist->start_of_run) {
     hist->start_of_run = when;
     was_in_run = 0;
   }
-  if (hist && hist->start_of_downtime) {
+  if (hist->start_of_downtime) {
     long down_length;
 
     format_local_iso_time(tbuf, hist->start_of_downtime);
@@ -332,7 +334,9 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
   int was_running = 0;
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
-  if (hist && hist->start_of_run) {
+
+  tor_assert(hist);
+  if (hist->start_of_run) {
     /*XXXX We could treat failed connections differently from failed
      * connect attempts. */
     long run_length = when - hist->start_of_run;
@@ -350,7 +354,7 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
              hex_str(id, DIGEST_LEN), tbuf, hist->weighted_uptime,
              hist->total_weighted_time);
   }
-  if (hist && !hist->start_of_downtime) {
+  if (!hist->start_of_downtime) {
     hist->start_of_downtime = when;
 
     if (!was_running)
