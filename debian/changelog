@@ -1,6 +1,7 @@
 tor (0.2.1.6-alpha-1) experimental; urgency=low
 
   * New alpha release.
+  * Forward port 14_fix_geoip_warning.dpatch.
 
  -- Peter Palfrader <weasel@debian.org>  Tue, 30 Sep 2008 14:37:26 +0200
 
