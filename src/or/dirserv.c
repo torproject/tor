@@ -1660,7 +1660,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
 {
   if (need_uptime) {
     if (!enough_mtbf_info) {
-      /* XXXX Once most authorities are on v3, we should change the rule from
+      /* XXX021 Once most authorities are on v3, we should change the rule from
        * "use uptime if we don't have mtbf data" to "don't advertise Stable on
        * v3 if we don't have enough mtbf data." */
       long uptime = real_uptime(router, now);

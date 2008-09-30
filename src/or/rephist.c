@@ -857,7 +857,7 @@ rep_hist_get_router_stability_doc(time_t now)
       tor_snprintf(header_buf, sizeof(header_buf),
                    "router %s %s %s\n"
                    "published %s\n"
-                   "relevant-flags%s%s%s\n"
+                   "relevant-flags %s%s%s\n"
                    "declared-uptime %ld\n",
                    dbuf, ri->nickname, ip,
                    tbuf,
