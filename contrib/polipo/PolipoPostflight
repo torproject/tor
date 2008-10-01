@@ -10,13 +10,8 @@ fi
 
 POLIPOUSER=_polipo
 POLIPOGROUP=daemon
-TARGET=$2/Library/Polipo
+TARGET=/Library/Polipo
 LOGDIR=$TARGET/log
-
-# Check defaults for TARGET
-if [ "$TARGET" == "//Library/Polipo" ]; then
-	TARGET=/Library/Polipo
-fi
 
 # Create user $POLIPOUSER in group daemon.  If it's already there, great.
 $ADDSYSUSER $POLIPOUSER "Polipo System user" $POLIPODIR
