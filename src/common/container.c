@@ -324,12 +324,17 @@ smartlist_insert(smartlist_t *sl, int idx, void *val)
 
 /**
  * Split a string <b>str</b> along all occurrences of <b>sep</b>,
- * adding the split strings, in order, to <b>sl</b>.  If
- * <b>flags</b>&amp;SPLIT_SKIP_SPACE is true, remove initial and
- * trailing space from each entry.  If
- * <b>flags</b>&amp;SPLIT_IGNORE_BLANK is true, remove any entries of
- * length 0.  If max>0, divide the string into no more than <b>max</b>
- * pieces.  If <b>sep</b> is NULL, split on any sequence of horizontal space.
+ * adding the split strings, in order, to <b>sl</b>.
+ *
+ * If <b>flags</b>&amp;SPLIT_SKIP_SPACE is true, remove initial and
+ * trailing space from each entry.
+ * If <b>flags</b>&amp;SPLIT_IGNORE_BLANK is true, remove any entries
+ * of length 0.
+ * If <b>flags</b>&amp;SPLIT_STRIP_SPACE is true, strip spaces from each
+ * split string.
+ *
+ * If max>0, divide the string into no more than <b>max</b> pieces. If
+ * <b>sep</b> is NULL, split on any sequence of horizontal space.
  */
 int
 smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
@@ -375,7 +380,10 @@ smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
         --end;
     }
     if (end != cp || !(flags&SPLIT_IGNORE_BLANK)) {
-      smartlist_add(sl, tor_strndup(cp, end-cp));
+      char *string = tor_strndup(cp, end-cp);
+      if (flags&SPLIT_STRIP_SPACE)
+        tor_strstrip(string, " ");
+      smartlist_add(sl, string);
       ++n;
     }
     if (!next)

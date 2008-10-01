@@ -121,6 +121,7 @@ void smartlist_pqueue_assert_ok(smartlist_t *sl,
 
 #define SPLIT_SKIP_SPACE   0x01
 #define SPLIT_IGNORE_BLANK 0x02
+#define SPLIT_STRIP_SPACE  0x04
 int smartlist_split_string(smartlist_t *sl, const char *str, const char *sep,
                            int flags, int max);
 char *smartlist_join_strings(smartlist_t *sl, const char *join, int terminate,

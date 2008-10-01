@@ -3740,7 +3740,7 @@ get_default_conf_file(void)
 #endif
 }
 
-/** Verify whether lst is a string containing valid-looking space-separated
+/** Verify whether lst is a string containing valid-looking comma-separated
  * nicknames, or NULL. Return 0 on success. Warn and return -1 on failure.
  */
 static int
@@ -3752,7 +3752,10 @@ check_nickname_list(const char *lst, const char *name, char **msg)
   if (!lst)
     return 0;
   sl = smartlist_create();
-  smartlist_split_string(sl, lst, ",", SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+
+  smartlist_split_string(sl, lst, ",",
+    SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK|SPLIT_STRIP_SPACE, 0);
+
   SMARTLIST_FOREACH(sl, const char *, s,
     {
       if (!is_legal_nickname_or_hexdigest(s)) {

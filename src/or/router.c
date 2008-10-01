@@ -1313,7 +1313,7 @@ router_rebuild_descriptor(int force)
     family = smartlist_create();
     ri->declared_family = smartlist_create();
     smartlist_split_string(family, options->MyFamily, ",",
-                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+      SPLIT_SKIP_SPACE|SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     SMARTLIST_FOREACH(family, char *, name,
      {
        routerinfo_t *member;
