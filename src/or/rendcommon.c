@@ -1027,9 +1027,12 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
  * If we are acting as client due to the published flag and have any v2
  * descriptor with the same ID, reject this one in order to not get
  * confused with having both versions for the same service.
- * Return -1 if it's malformed or otherwise rejected; return 0 if
- * it's the same or older than one we've already got; return 1 if
- * it's novel. The published flag tells us if we store the descriptor
+ *
+ * Return -2 if it's malformed or otherwise rejected; return -1 if we
+ * already have a v2 descriptor here; return 0 if it's the same or older
+ * than one we've already got; return 1 if it's novel.
+ *
+ * The published flag tells us if we store the descriptor
  * in our role as directory (1) or if we cache it as client (0).
  */
 int
@@ -1045,25 +1048,25 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   parsed = rend_parse_service_descriptor(desc,desc_len);
   if (!parsed) {
     log_warn(LD_PROTOCOL,"Couldn't parse service descriptor.");
-    return -1;
+    return -2;
   }
   if (rend_get_service_id(parsed->pk, query)<0) {
     log_warn(LD_BUG,"Couldn't compute service ID.");
     rend_service_descriptor_free(parsed);
-    return -1;
+    return -2;
   }
   now = time(NULL);
   if (parsed->timestamp < now-REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Service descriptor %s is too old.", safe_str(query));
     rend_service_descriptor_free(parsed);
-    return -1;
+    return -2;
   }
   if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
            "Service descriptor %s is too far in the future.", safe_str(query));
     rend_service_descriptor_free(parsed);
-    return -1;
+    return -2;
   }
   /* Do we have a v2 descriptor and fetched this descriptor as a client? */
   tor_snprintf(key, sizeof(key), "2%s", query);

@@ -1946,15 +1946,16 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
-        if (rend_cache_store(body, body_len, 0) < 0) {
-          log_warn(LD_REND,"Failed to fetch rendezvous descriptor.");
+        if (rend_cache_store(body, body_len, 0) < -1) {
+          log_warn(LD_REND,"Failed to parse rendezvous descriptor.");
           /* Any pending rendezvous attempts will notice when
            * connection_about_to_close_connection()
            * cleans this dir conn up. */
           /* We could retry. But since v0 descriptors are going out of
            * style, it isn't worth the hassle. We'll do better in v2. */
         } else {
-          /* success. notify pending connections about this. */
+          /* Success, or at least there's a v2 descriptor already
+           * present. Notify pending connections about this. */
           conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
           rend_client_desc_trynow(conn->rend_data->onion_address, -1);
         }
