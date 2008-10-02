@@ -92,15 +92,6 @@ Andrew
   - Should we still be telling you how to use Safari on OS X for Tor,
     given all the holes that Torbutton-dev solves on Firefox?
 
-Karsten
-  o Make a hidden services explanation page with the hidden service
-    diagrams. See img/THS-[1-6].png. These need some text to go along
-    with them though, so people can follow what's going on.
-  - We should consider a single config option TorPrivateNetwork that
-    turns on all the config options for running a private test tor
-    network. having to keep updating all the tools, and the docs,
-    just isn't working.
-
 Weasel
   - Figure out how to make Vidalia and Tor play nicely on Debian, make
     the necessary modifications, and make some Vidalia debs that pass
@@ -108,8 +99,6 @@ Weasel
   - Fix bug 393.
   - Get oftc to switch to Tor dns bulk exitlist. Or tell us why it's
     not suitable yet.
-  o Take non-Running entries out of the networkstatus consensus.
-    [proposal 138]
   - Move proposal 134 forward.
   - putting port predictions in state file
   - if tor hasn't been used in a while it stops fetching consensus
@@ -118,8 +107,6 @@ Weasel
 Roger
   - Finish tor-doc-bridge.wml
   . Fix FAQ entry on setting up private Tor network
-  - Review Karsten's hidden service diagrams
-  - Roger should visit Internews DC sometime.
   - Did we actually apply Steven's dkimproxy patch?
   - Brainstorm about safe but effective ways for vidalia to
     auto-update its user's bridges via Tor in the background.
@@ -166,8 +153,6 @@ R - investigate: it looks like if the bridge authority is unreachable,
     we're not falling back on querying bridges directly?
 R - if "no running bridges known", an application request should make
     us retry all our bridges.
-R - get matt to make vidalia do a getinfo status/bootstrap-phase to
-    get caught up after it connects.
 R d Setting DirPort when acting as bridge will give false Warnings
 
 For 0.2.1.x:
@@ -214,16 +199,9 @@ R   d 128: families of private bridges
       Named.
 R   d Do we want to maintain our own set of entryguards that we use as
       next hop after the bridge?
-    X Add an 'exit-address' line in the descriptor for servers that exit
-      from something that isn't their published address.
-      [I think tordnsel solved this. -RD]
     d Possibly: revise link protocol to allow big circuit IDs,
       variable-length cells, proposal-110 stuff, and versioned CREATES?
-    o Eliminate use of v2 networkstatus documents in v3 authority
-      decision-making.
 N   . Draft proposal for GeoIP aggregation (see external constraints *)
-    o Separate Guard flags for "pick this as a new guard" and "keep this
-      as an existing guard".  First investigate if we want this.
     . Figure out how to make good use of the fallback consensus file. Right
       now many of the addresses in the fallback consensus will be stale,
       so it will take dozens of minutes to bootstrap from it. This is a
