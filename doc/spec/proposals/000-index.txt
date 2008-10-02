@@ -74,9 +74,10 @@ Proposals by number:
 149  Using data from NETINFO cells [OPEN]
 150  Exclude Exit Nodes from a circuit [CLOSED]
 151  Improving Tor Path Selection [DRAFT]
-152  Optionally allow exit from single-hop circuits  [DRAFT]
+152  Optionally allow exit from single-hop circuits  [CLOSED]
 153  Automatic software update protocol [DRAFT]
 154  Automatic Software Update Protocol [OPEN]
+155  Four Improvements of Hidden Service Performance [OPEN]
 
 
 Proposals by status:
@@ -88,7 +89,6 @@ Proposals by status:
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the
    151  Improving Tor Path Selection
-   152  Optionally allow exit from single-hop circuits 
    153  Automatic software update protocol
  OPEN:
    121  Hidden Service Authentication
@@ -98,6 +98,7 @@ Proposals by status:
    146  Add new flag to reflect long-term stability
    149  Using data from NETINFO cells
    154  Automatic Software Update Protocol
+   155  Four Improvements of Hidden Service Performance
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  NEEDS-RESEARCH:
@@ -141,6 +142,7 @@ Proposals by status:
    138  Remove routers that are not Running from consensus documents
    139  Download consensus documents only when it will be trusted
    150  Exclude Exit Nodes from a circuit
+   152  Optionally allow exit from single-hop circuits 
  SUPERSEDED:
    112  Bring Back Pathlen Coin Weight
    113  Simplifying directory authority administration
