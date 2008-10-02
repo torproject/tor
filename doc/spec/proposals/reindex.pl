@@ -52,10 +52,10 @@ for my $f (@files) {
 	}
     }
     close F;
+    die "Proposal $num has no status line" if (!defined $status);
     die "I've never heard of status $status in proposal $num"
 	unless (grep(/$status/, @KNOWN_STATUSES) == 1);
-    die "Proposal $num has a bad status line" if (!defined $status);
-    die "Proposal $num has a bad title line" if (!defined $title);
+    die "Proposal $num has no title line" if (!defined $title);
     die "Proposal $num has no Filename line" unless (defined $alleged_fname);
     die "Proposal $num says its fname is $alleged_fname, but it's really $f"
 	if ($alleged_fname ne $f);
