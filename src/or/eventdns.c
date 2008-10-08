@@ -3019,7 +3019,7 @@ load_nameservers_with_getnetworkparams(void)
 			status = r;
 			goto done;
 		} else {
-			log(EVDNS_LOG_DEBUG,"Succesfully added %s as nameserver",ns->IpAddress.String);
+			log(EVDNS_LOG_DEBUG,"Successfully added %s as nameserver",ns->IpAddress.String);
 		}
 
 		added_any++;
