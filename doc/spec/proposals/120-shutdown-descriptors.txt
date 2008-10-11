@@ -6,6 +6,10 @@ Author: Roger Dingledine
 Created: 15-Aug-2007
 Status: Dead
 
+[Proposal dead as of 11 Jul 2008. The point of this proposal was to give
+routers a good way to get out of the networkstatus early, but proposal
+138 (already implemented) has achieved this.]
+
 Overview:
 
   Tor servers should publish a last descriptor whenever they shut down,
