@@ -2,7 +2,7 @@ Changes in version 0.2.0.32 - 2008-??-??
   o Minor bugfixes:
     - Fix several infrequent memory leaks spotted by Coverity.
     - When testing for libevent functions, set the LDFLAGS variable
-      correctly.  (Found by Riastradh.)
+      correctly. Found by Riastradh.
     - Avoid a bug where the FastFirstHopPK 0 option would keep Tor from
       bootstrapping with tunneled directory connections. Bugfix on
       0.1.2.5-alpha. Fixes bug 797. Found by Erwin Lam.
@@ -12,14 +12,14 @@ Changes in version 0.2.0.32 - 2008-??-??
       the user knows what they were asking for. Fixes bug 752. Bugfix
       on 0.0.9rc5. Diagnosed by BarkerJr.
     - If we overrun our per-second write limits a little, count this as
-      having used up our write allocation for the second, and choke outgoing
-      directory writes.  Previously, we had only counted this when we
-      had met our limits precisely. Fixes bug 824. Patch from by rovv.
+      having used up our write allocation for the second, and choke
+      outgoing directory writes. Previously, we had only counted this when
+      we had met our limits precisely. Fixes bug 824. Patch from by rovv.
       Bugfix on 0.2.0.x (??).
 
   o Minor bugfixes (controller):
-    - Make DNS resolved events into "CLOSED", not "FAILED".  Bugfix on
-      0.1.2.5-alpha.  Fix by Robert Hogan.  Resolves bug 807.
+    - Make DNS resolved events into "CLOSED", not "FAILED". Bugfix on
+      0.1.2.5-alpha. Fix by Robert Hogan. Resolves bug 807.
 
 
 Changes in version 0.2.0.31 - 2008-09-03
