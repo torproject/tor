@@ -2376,9 +2376,11 @@ entry_guards_prepend_from_config(void)
     return;
   }
 
-  if (options->EntryNodes)
-    log_info(LD_CIRC,"Adding configured EntryNodes '%s'.",
-             routerset_to_string(options->EntryNodes));
+  if (options->EntryNodes) {
+    char *string = routerset_to_string(options->EntryNodes);
+    log_info(LD_CIRC,"Adding configured EntryNodes '%s'.", string);
+    tor_free(string);
+  }
 
   entry_routers = smartlist_create();
   entry_fps = smartlist_create();
