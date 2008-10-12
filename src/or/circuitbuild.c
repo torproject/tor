@@ -1306,8 +1306,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
      * at least one predicted exit port. */
 
     int try;
-    smartlist_t *needed_ports;
-    smartlist_t *supporting = smartlist_create(), *use = smartlist_create();
+    smartlist_t *needed_ports, *supporting, *use;
 
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
@@ -1322,6 +1321,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       log_notice(LD_CIRC, "All routers are down or won't exit -- choosing a "
                  "doomed exit at random.");
     }
+    supporting = smartlist_create();
+    use = smartlist_create();
     needed_ports = circuit_get_unhandled_ports(time(NULL));
     for (try = 0; try < 2; try++) {
       /* try once to pick only from routers that satisfy a needed port,
