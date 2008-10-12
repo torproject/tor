@@ -6,6 +6,10 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30
+  Tor 0.2.1.6-alpha further improves performance and robustness of
+  hidden services, starts work on supporting per-country relay selection,
+  and fixes a variety of smaller issues.
+
   o Major features:
     - Implement proposal 121: make it possible to build hidden services
       that only certain clients are allowed to connect to. This is
