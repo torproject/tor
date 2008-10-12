@@ -16,6 +16,8 @@ Changes in version 0.2.0.32 - 2008-??-??
       outgoing directory writes. Previously, we had only counted this when
       we had met our limits precisely. Fixes bug 824. Patch from by rovv.
       Bugfix on 0.2.0.x (??).
+    - Remove the old v2 directory authority 'lefkada' from the default
+      list. It has been gone for many months.
 
   o Minor bugfixes (controller):
     - Make DNS resolved events into "CLOSED", not "FAILED". Bugfix on
