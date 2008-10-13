@@ -3866,8 +3866,8 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
     if (progress > bootstrap_percent) {
       /* incremental progress within a milestone */
       bootstrap_percent = progress;
+      bootstrap_problems = 0; /* Progress! Reset our problem counter. */
     }
-    bootstrap_problems = 0; /* Progress! Reset our problem counter. */
   }
 }
 
@@ -3901,6 +3901,7 @@ control_event_bootstrap_problem(const char *warn, int reason)
 
   while (status>=0 && bootstrap_status_to_string(status, &tag, &summary) < 0)
     status--; /* find a recognized status string based on current progress */
+  status = bootstrap_percent; /* set status back to the actual number */
 
   log_fn(!strcmp(recommendation, "warn") ? LOG_WARN : LOG_INFO,
          LD_CONTROL, "Problem bootstrapping. Stuck at %d%%: %s. (%s; %s; "

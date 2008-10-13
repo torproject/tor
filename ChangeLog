@@ -4,6 +4,11 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
       identity fingerprints, so it's easier to paste them in.
       Suggested by Lucky Green.
 
+  o Minor bugfixes:
+    - Minor fix in the warning messages when you're having problems
+      bootstrapping; also, be more forgiving of bootstrap problems when
+      we're still making incremental progress on a given bootstrap phase.
+
 
 Changes in version 0.2.1.6-alpha - 2008-09-30
   Tor 0.2.1.6-alpha further improves performance and robustness of
