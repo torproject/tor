@@ -25,10 +25,16 @@ K       - Karsten claims
 External constraints:
 
   - mid August
-KS  - Design hidden service improvements, evaluate them and consider
+KS  o Design hidden service improvements, evaluate them and consider
       security properties: write some proposals, get feedback, revise
       them, etc.
 P   - nlnet 'user safety contest'. submit torbrowser, others?
+
+  - mid October
+KS  - Finish implementation of hidden service improvements: have a set
+      of patches that you think work.
+W   - Finish implementation of directory overhead changes: have a set
+      of patches that you think work.
 
   - end of October
 I   - Auto update
@@ -42,12 +48,6 @@ I     - Figure out a good PKI, document the design, assess security issues:
           decide to fetch and decide to swap out the old Tor for the new.
       - Do the same for Polipo
       - and for Vidalia itself
-
-  - mid October
-KS  - Finish implementation of hidden service improvements: have a set
-      of patches that you think work.
-W   - Finish implementation of directory overhead changes: have a set
-      of patches that you think work.
 
   - end of December
 NSE - Write first draft of research study for Paul's research problem.
