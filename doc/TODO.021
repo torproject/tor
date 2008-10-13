@@ -181,13 +181,17 @@ For 0.2.1.x:
       - config option to publish what ports you listen on, beyond
         ORPort/DirPort.  It should support ranges and bit prefixes (?) too.
       - Need to figure out the right format for routerinfo_t on this.
-    - 121: Hidden service authentication
+K   . 121: Hidden service authentication:
+           missing: delayed descriptor publication for 'stealth' mode.
 R   d 128: families of private bridges
     - 134: handle authority fragmentation.
     o 135: simplify configuration of private tor networks.  Th
     - 140: Provide diffs betweeen consensuses
+K   - 143: Improvements of Distributed Hidden Service Descriptor Storage:
+           only easy parts for 0.2.1.x, defer complex ones to 0.2.2.x.
     - 147: Eliminate the need for v2 directories in generating v3 directories
     - 148: Stream end reasons from the client side should be uniform.
+K   - 155: Four Improvements of Hidden Service Performance
 
   - Maybe:
     - 145: Separate "suitable from a guard" from "suitable as a new guard"
