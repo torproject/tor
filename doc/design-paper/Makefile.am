@@ -21,6 +21,10 @@ tor-design.pdf: cell-struct.pdf interaction.pdf tor-design.bib tor-design.tex us
 	pdflatex tor-design.tex
 	pdflatex tor-design.tex
 
+performance.pdf: performance.tex
+	pdflatex $<
+	pdflatex $<
+
 EXTRA_DIST = cell-struct.fig interaction.fig tor-design.bib usenix.sty latex8.bst tor-design.tex
 
 DISTCLEANFILES = cell-struct.eps interaction.eps cell-struct.pdf interaction.pdf tor-design.aux tor-design.bbl tor-design.blg tor-design.log tor-design.dvi tor-design.ps tor-design.pdf
