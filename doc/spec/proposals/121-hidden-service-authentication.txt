@@ -126,7 +126,7 @@ Motivation:
   However, trying to hide identity from the hidden service is a futile
   task, because a client would never know if he is the only authorized
   client and therefore perfectly identifiable. Therefore, hiding client
-  identity from the hidden service is not aimed by this proposal.
+  identity from the hidden service is not an aim of this proposal.
 
   The current implementation of hidden services does not provide any kind
   of authorization. The hidden service descriptor version 2, introduced by
@@ -138,7 +138,7 @@ Motivation:
 
 Details:
 
-  1. General infrastructure for authorization to hidden services 
+  1. General infrastructure for authorization to hidden services
 
   We spotted three possible authorization points in the hidden service
   protocol:
@@ -178,7 +178,7 @@ Details:
   introduction points, including optional authorization data. Hence, the
   hidden service directories won't learn any introduction information from
   storing a hidden service descriptor. This feature is implemented but
-  unused at the moment, so that this proposal will harness the advantages
+  unused at the moment. So this proposal will harness the advantages
   of proposal 114.
 
   The descriptor cookie can be used for authorization by keeping it secret
@@ -195,11 +195,12 @@ Details:
 
   Two or more hidden service descriptors for different groups or users
   should not be uploaded at the same time. A directory node could conclude
-  easily that the descriptors, were issued by the same hidden service, thus
+  easily that the descriptors were issued by the same hidden service, thus
   being able to link the two groups or users. Therefore, descriptors for
   different users or clients that ought to be stored on the same directory
   are delayed, so that only one descriptor is uploaded to a directory at a
-  time. The remaining descriptors are uploaded with a delay of 30 seconds.
+  time. The remaining descriptors are uploaded with a delay of up to
+  30 seconds.
   Further, descriptors for different groups or users that are to be stored
   on different directories are delayed for a random time of up to 30
   seconds to hide relations from colluding directories. Certainly, this
@@ -216,7 +217,7 @@ Details:
   part of a hidden service descriptor, e.g. a different symmetric key or
   asymmetric encryption, would be easy to implement and compatible to v2
   hidden service descriptors as understood by hidden service directories
-  (clients and servers would have to be upgraded anyway for using the new
+  (clients and services would have to be upgraded anyway for using the new
   features).
 
   An adversary could try to abuse the fact that introduction points can be
@@ -225,9 +226,9 @@ Details:
   limit, forcing the adversary to split data into multiple chunks. There
   are some limitations that make splitting data across multiple descriptors
   unattractive: 1) The adversary would not be able to choose descriptor IDs
-  freely and have to implement an own indexing structure. 2) Validity of
-  descriptors is limited to at most 24 hours after which descriptors need
-  to be republished.
+  freely and would therefore have to implement his own indexing
+  structure. 2) Validity of descriptors is limited to at most 24 hours
+  after which descriptors need to be republished.
 
   The regular descriptor size in bytes is 745 + num_ipos * 837 + auth_data.
   A large descriptor with 7 introduction points and 5 kilobytes of
@@ -248,14 +249,13 @@ Details:
   descriptor cookie and thereby of the hidden service descriptor, but do
   not have authorization data to pass the introduction point or access the
   service (such a situation might occur when authorization data for
-  authorization at the directory is not issued on a per-user base as
-  opposed to authorization data for authorization at the introduction
-  point).
+  authorization at the directory is not issued on a per-user basis, but
+  authorization data for authorization at the introduction point is).
 
   It is important to note that the introduction point must be considered
   untrustworthy, and therefore cannot replace authorization at the hidden
   service itself. Nor should the introduction point learn any sensitive
-  identifiable information from either server or client.
+  identifiable information from either the service or the client.
 
   In order to perform authorization at the introduction point, three
   message formats need to be modified: (1) v2 hidden service descriptors,
@@ -271,8 +271,7 @@ Details:
   data. We propose that authorization data consists of base64 encoded
   objects of arbitrary length, surrounded by "-----BEGIN MESSAGE-----" and
   "-----END MESSAGE-----". This will increase the size of hidden service
-  descriptors, which however is possible, as there is no strict upper
-  limit.
+  descriptors, but this is allowed since there is no strict upper limit.
 
   The current ESTABLISH_INTRO cells as described in section 1.3 of
   rend-spec do not contain either authorization data or version
@@ -296,7 +295,7 @@ Details:
   authorization data. Hence, authorization protocols are bound to use no
   more than these 215 octets, regardless of the number of clients that
   shall be authenticated at the introduction point. Otherwise, one would
-  need to send multiple ESTABLISH_INTRO cells or split them up, what we do
+  need to send multiple ESTABLISH_INTRO cells or split them up, which we do
   not specify here.
 
   In order to understand a v1 ESTABLISH_INTRO cell, the implementation of
@@ -306,7 +305,7 @@ Details:
   that is contained in networkstatus documents to find capable
   introduction points.
 
-  The current INTRODUCE1 cells as described in section 1.8 of rend-spec is
+  The current INTRODUCE1 cell as described in section 1.8 of rend-spec is
   not designed to carry authorization data and has no version number, too.
   Unfortunately, unversioned INTRODUCE1 cells consist only of a fixed-size,
   seemingly random PK_ID, followed by the encrypted INTRODUCE2 cell. This
@@ -322,7 +321,7 @@ Details:
   Cleartext
      V      Version byte: set to 1                [1 octet]
      PK_ID  Identifier for Bob's PK             [20 octets]
-     AUTHT  The auth type that is supported       [1 octet]
+     AUTHT  The auth type that is included        [1 octet]
      AUTHL  Length of auth data                  [2 octets]
      AUTHD  Auth data                            [variable]
   Encrypted to Bob's PK:
@@ -346,8 +345,8 @@ Details:
   point and conclude that it may connect to the service, but the request
   will be dropped without notice. This would appear as a failure to
   clients. Therefore, the number of cases in which a client successfully
-  passes the introduction point, but fails at the hidden service should be
-  zero. However, this does not lead to the conclusion, that the
+  passes the introduction point but fails at the hidden service should be
+  zero. However, this does not lead to the conclusion that the
   authorization data used at the introduction point and the hidden service
   must be the same, but only that both authorization data should lead to
   the same authorization result.
@@ -355,7 +354,7 @@ Details:
   Authorization data is transmitted from client to server via an
   INTRODUCE2 cell that is forwarded by the introduction point. There are
   versions 0 to 2 specified in section 1.8 of rend-spec, but none of these
-  contains fields for carrying authorization data. We propose a slightly
+  contain fields for carrying authorization data. We propose a slightly
   modified version of v3 INTRODUCE2 cells that is specified in section
   1.8.1 and which is not implemented as of December 2007. In contrast to
   the specified v3 we avoid specifying (and implementing) IPv6 capabilities,
@@ -378,7 +377,7 @@ Details:
 
   The maximum possible length of authorization data is related to the
   enclosing INTRODUCE1V cell. A v3 INTRODUCE2 cell with
-  1024 bit = 128 octets long public keys without any authorization data
+  1024 bit = 128 octets long public key without any authorization data
   occupies 306 octets (AUTHL is only used when AUTHT has a value != 0),
   plus 58 octets for hybrid public key encryption (see
   section 5.1 of tor-spec on hybrid encryption of CREATE cells). The
@@ -396,7 +395,7 @@ Details:
   though it is only sent once in the current design---is that it might be
   desirable to re-use rendezvous cookies for multiple introduction requests
   in the future.) If all checks pass, Bob builds a circuit to the provided
-  rendezvous point and otherwise drops the cell.
+  rendezvous point. Otherwise he drops the cell.
 
   1.4. Summary of authorization data fields
 
@@ -430,8 +429,8 @@ Details:
 
   1.5. Managing authorization data at servers and clients
 
-  In order to provide authorization data at the hidden server and the
-  authenticated clients, we propose to use files---either the tor
+  In order to provide authorization data at the hidden service and the
+  authenticated clients, we propose to use files---either the Tor
   configuration file or separate files. The exact format of these special
   files depends on the authorization protocol used.
 
@@ -449,7 +448,7 @@ Details:
        restricts the amount of data that can be used for authorization.
        This forces authorization protocols that require per-user
        authorization data at the introduction point to restrict the number
-       of authorized clients artifically. A possible solution could be to
+       of authorized clients artificially. A possible solution could be to
        split contents among multiple cells and reassemble them at the
        introduction points.
 
@@ -511,7 +510,7 @@ Details:
   key to all descriptor cookies using AES. Authorized client should be able
   to efficiently find the session key that is encrypted for him/her, so
   that 4 octet long client ID are generated consisting of descriptor cookie
-  and initilization vector. Descriptors always contain a number of
+  and initialization vector. Descriptors always contain a number of
   encrypted session keys that is a multiple of 16 by adding fake entries.
   Encrypted session keys are ordered by client IDs in order to conceal
   addition or removal of authorized clients by the service provider.
@@ -640,7 +639,7 @@ Security implications:
   entities in the presented infrastructure and specific protocol. These
   security implications would have to be verified once more when adding
   another protocol. The dishonest entities (theoretically) include the
-  hidden server itself, the authenticated clients, hidden service directory
+  hidden service itself, the authenticated clients, hidden service directory
   nodes, introduction points, and rendezvous points. The relays that are
   part of circuits used during protocol execution, but never learn about
   the exchanged descriptors or cells by design, are not considered.
@@ -650,18 +649,19 @@ Security implications:
   partially trusted entities abusing the trust put in them.
 
   (1) A hidden service directory could attempt to conclude presence of a
-  server from the existence of a locally stored hidden service descriptor:
+  service from the existence of a locally stored hidden service descriptor:
   This passive attack is possible only for a single client-service
-  relation, because descriptors need to contain a
-  publicly visible signature of the server using the client key
-  A possible protection
-  would be to increase the number of hidden service directories in the
-  network.
+  relation, because descriptors need to contain a publicly visible
+  signature of the service using the client key.
+  A possible protection would be to increase the number of hidden service
+  directories in the network.
 
   (2) A hidden service directory could try to break the descriptor cookies
   of locally stored descriptors: This attack can be performed offline. The
   only useful countermeasure against it might be using safe passwords that
   are generated by Tor.
+
+[passwords? where did those come in? -RD]
 
   (3) An introduction point could try to identify the pseudonym of the
   hidden service on behalf of which it operates: This is impossible by
@@ -688,9 +688,8 @@ Security implications:
 
   (6) An introduction point could attempt to replay a correct INTRODUCE2
   cell to the hidden service, e.g. for the same reason as in the last
-  attack: This attack is very limited by the fact that a server will only
-  accept 3 INTRODUCE2 cells containing the same rendezvous cookie and drop
-  all further replayed cells.
+  attack: This attack is stopped by the fact that a service will drop
+  INTRODUCE2 cells containing a DH handshake they have seen recently.
 
   (7) An introduction point could block client requests by sending either
   positive or negative INTRODUCE_ACK cells back to the client, but without
@@ -711,13 +710,13 @@ Security implications:
   useless circuits to rendezvous points; as opposed to an introduction
   point replaying the same INTRODUCE2 cell, a client could include a new
   rendezvous cookie for every request: The countermeasure for this attack
-  is the restriction to 10 connection establishments per client and hour.
+  is the restriction to 10 connection establishments per client per hour.
 
 Compatibility:
 
   An implementation of this proposal would require changes to hidden
-  servers and clients to process authorization data and encode and
-  understand the new formats. However, both servers and clients would
+  services and clients to process authorization data and encode and
+  understand the new formats. However, both services and clients would
   remain compatible to regular hidden services without authorization.
 
 Implementation:
