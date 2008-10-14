@@ -1265,6 +1265,11 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 //               router->nickname, i);
       }
     }); /* End looping over connections. */
+    if (n_pending_connections > 0 && n_supported[i] == 0) {
+      /* Leave best_support at -1 if that's where it is, so we can
+       * distinguish it later. */
+      continue;
+    }
     if (n_supported[i] > best_support) {
       /* If this router is better than previous ones, remember its index
        * and goodness, and start counting how many routers are this good. */
