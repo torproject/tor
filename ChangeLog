@@ -3,18 +3,24 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
     - Now NodeFamily and MyFamily config options allow spaces in
       identity fingerprints, so it's easier to paste them in.
       Suggested by Lucky Green.
+
+  o Hidden service performance improvements:
     - Reduce extension timeout for introduction circuits on the hidden
       service side from 60 to 30 seconds.
     - Launch a second client-side introduction circuit in parallel
       after a delay of 15 seconds (based on work by Christian Wilms).
+    - Hidden services start out building five intro circuits rather
+      than three, and when the first three finish they publish a service
+      descriptor using those. Now we publish our service descriptor much
+      faster after restart.
 
   o Minor bugfixes:
     - Minor fix in the warning messages when you're having problems
       bootstrapping; also, be more forgiving of bootstrap problems when
       we're still making incremental progress on a given bootstrap phase.
-    - When we're choosing an exit node for a circuit, and we have no pending
-      streams, choose a good general exit rather than one that supports "all
-      the pending streams".  Bugfix on 0.1.1.x. (Fix by rovv.)
+    - When we're choosing an exit node for a circuit, and we have
+      no pending streams, choose a good general exit rather than one that
+      supports "all the pending streams". Bugfix on 0.1.1.x. Fix by rovv.
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30

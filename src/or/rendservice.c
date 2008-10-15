@@ -1275,6 +1275,28 @@ rend_service_launch_establish_intro(rend_service_t *service,
   return 0;
 }
 
+/** Return the number of introduction points that are or have been
+ * established for the given service address and rendezvous version. */
+static int
+count_established_intro_points(const char *query, int rend_version)
+{
+  int num_ipos = 0;
+  circuit_t *circ;
+  for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+    if (!circ->marked_for_close &&
+        circ->state == CIRCUIT_STATE_OPEN &&
+        (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+         circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
+      origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
+      if (oc->rend_data &&
+          oc->rend_data->rend_desc_version == rend_version &&
+          !rend_cmp_service_ids(query, oc->rend_data->onion_address))
+        num_ipos++;
+    }
+  }
+  return num_ipos;
+}
+
 /** Called when we're done building a circuit to an introduction point:
  *  sends a RELAY_ESTABLISH_INTRO cell.
  */
@@ -1305,6 +1327,18 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
              serviceid, circuit->_base.n_circ_id);
     reason = END_CIRC_REASON_NOSUCHSERVICE;
     goto err;
+  }
+
+  /* If we already have enough introduction circuits for this service,
+   * redefine this one as a general circuit. */
+  if (count_established_intro_points(serviceid,
+          circuit->rend_data->rend_desc_version) > NUM_INTRO_POINTS) {
+    log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
+             "circuit, but we already have enough. Redefining purpose to "
+             "general.");
+    TO_CIRCUIT(circuit)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+    circuit_has_opened(circuit);
+    return;
   }
 
   log_info(LD_REND,
@@ -1823,9 +1857,12 @@ rend_services_introduce(void)
 
     /* Remember how many introduction circuits we started with. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
-
-    /* The directory is now here. Pick three ORs as intro points. */
-    for (j=prev_intro_nodes; j < NUM_INTRO_POINTS; ++j) {
+    /* The directory is now here. Pick three ORs as intro points (plus, if
+     * we currently have none at all, two more so that we can pick the first
+     * three that complete). */
+#define NUM_INTRO_POINTS_INIT (NUM_INTRO_POINTS + 2)
+    for (j=prev_intro_nodes; j < (prev_intro_nodes == 0 ?
+             NUM_INTRO_POINTS_INIT : NUM_INTRO_POINTS); ++j) {
       router_crn_flags_t flags = CRN_NEED_UPTIME;
       if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
