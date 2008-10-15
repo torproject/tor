@@ -251,11 +251,13 @@ void
 circuit_expire_building(time_t now)
 {
   circuit_t *victim, *circ = global_circuitlist;
-  time_t cutoff = now - get_options()->CircuitBuildTimeout;
-  time_t begindir_cutoff = now - get_options()->CircuitBuildTimeout/2;
+  time_t general_cutoff = now - get_options()->CircuitBuildTimeout;
+  time_t begindir_cutoff = general_cutoff/2;
+  time_t introcirc_cutoff = general_cutoff/2;
   cpath_build_state_t *build_state;
 
   while (circ) {
+    time_t cutoff;
     victim = circ;
     circ = circ->next;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
@@ -263,13 +265,23 @@ circuit_expire_building(time_t now)
       continue;
 
     build_state = TO_ORIGIN_CIRCUIT(victim)->build_state;
-    if (victim->timestamp_created >
-        ((build_state && build_state->onehop_tunnel) ?
-         begindir_cutoff : cutoff))
+    if (build_state && build_state->onehop_tunnel)
+      cutoff = begindir_cutoff;
+    else if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
+      cutoff = introcirc_cutoff;
+    else
+      cutoff = general_cutoff;
+    if (victim->timestamp_created > cutoff)
       continue; /* it's still young, leave it alone */
 
 #if 0
     /* some debug logs, to help track bugs */
+    if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
+        victim->timestamp_created <= introcirc_cutoff &&
+        victim->timestamp_created > general_cutoff)
+      log_info(LD_REND|LD_CIRC, "Timing out introduction circuit which we "
+               "would not have done if it had been a general circuit.");
+
     if (victim->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
         victim->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
       if (!victim->timestamp_dirty)

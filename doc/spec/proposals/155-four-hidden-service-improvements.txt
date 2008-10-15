@@ -18,7 +18,7 @@ Overview:
   in the network as well as connection establishment time. Some of these
   design changes have side-effects on anonymity or overall network load
   which had to be weighed up against individual performance gains. A
-  discussion of seven possible design changes [2] has lead to a selection
+  discussion of seven possible design changes [2] has led to a selection
   of four changes [3] that are proposed to be implemented here.
 
 Design:
