@@ -1857,9 +1857,16 @@ rend_services_introduce(void)
 
     /* Remember how many introduction circuits we started with. */
     prev_intro_nodes = smartlist_len(service->intro_nodes);
-    /* The directory is now here. Pick three ORs as intro points (plus, if
-     * we currently have none at all, two more so that we can pick the first
-     * three that complete). */
+    /* We have enough directory information to start establishing our
+     * intro points. We want to end up with three intro points, but if
+     * we're just starting, we launch five and pick the first three that
+     * complete.
+     *
+     * The ones after the first three will be converted to 'general'
+     * internal circuits in rend_service_intro_has_opened(), and then
+     * we'll drop them from the list of intro points next time we
+     * go through the above "find out which introduction points we have
+     * in progress" loop. */
 #define NUM_INTRO_POINTS_INIT (NUM_INTRO_POINTS + 2)
     for (j=prev_intro_nodes; j < (prev_intro_nodes == 0 ?
              NUM_INTRO_POINTS_INIT : NUM_INTRO_POINTS); ++j) {
