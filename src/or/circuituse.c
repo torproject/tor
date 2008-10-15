@@ -194,6 +194,7 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
 {
   circuit_t *circ, *best=NULL;
   time_t now = time(NULL);
+  int intro_going_on_but_too_old = 0;
 
   tor_assert(conn);
 
@@ -206,12 +207,27 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
                                need_uptime,need_internal,now))
       continue;
 
+/* XXX022 make this 15 be a function of circuit finishing times we've
+ * seen lately, a la Fallon Chen's GSoC work -RD */
+#define REND_PARALLEL_INTRO_DELAY 15
+    if (purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
+             !must_be_open && circ->state != CIRCUIT_STATE_OPEN &&
+             circ->timestamp_created + REND_PARALLEL_INTRO_DELAY < now) {
+      intro_going_on_but_too_old = 1;
+      continue;
+    }
+
     /* now this is an acceptable circ to hand back. but that doesn't
      * mean it's the *best* circ to hand back. try to decide.
      */
     if (!best || circuit_is_better(circ,best,purpose))
       best = circ;
   }
+
+  if (!best && intro_going_on_but_too_old)
+    log_info(LD_REND|LD_CIRC, "There is an intro circuit being created "
+             "right now, but it has already taken quite a while. Starting "
+             "one in parallel.");
 
   return best ? TO_ORIGIN_CIRCUIT(best) : NULL;
 }
@@ -1448,12 +1464,27 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 
     if (retval > 0) {
       /* one has already sent the intro. keep waiting. */
+      circuit_t *c = NULL;
       tor_assert(introcirc);
       log_info(LD_REND, "Intro circ %d present and awaiting ack (rend %d). "
                "Stalling. (stream %d sec old)",
                introcirc->_base.n_circ_id,
                rendcirc ? rendcirc->_base.n_circ_id : 0,
                conn_age);
+      /* abort parallel intro circs, if any */
+      for (c = global_circuitlist; c; c = c->next) {
+        if (c->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
+            CIRCUIT_IS_ORIGIN(c)) {
+          origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(c);
+          if (oc->rend_data &&
+              !rend_cmp_service_ids(conn->rend_data->onion_address,
+                                    oc->rend_data->onion_address)) {
+            log_info(LD_REND|LD_CIRC, "Closing introduction circuit that we "
+                     "built in parallel.");
+            circuit_mark_for_close(c, END_CIRC_REASON_TIMEOUT);
+          }
+        }
+      }
       return 0;
     }
 

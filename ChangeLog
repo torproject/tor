@@ -3,8 +3,10 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
     - Now NodeFamily and MyFamily config options allow spaces in
       identity fingerprints, so it's easier to paste them in.
       Suggested by Lucky Green.
-    - Reduce extension timeout for introduction circuits from 60 to 30
-      seconds.
+    - Reduce extension timeout for introduction circuits on the hidden
+      service side from 60 to 30 seconds.
+    - Launch a second client-side introduction circuit in parallel
+      after a delay of 15 seconds (based on work by Christian Wilms).
 
   o Minor bugfixes:
     - Minor fix in the warning messages when you're having problems
