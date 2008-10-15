@@ -5,8 +5,8 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
       Suggested by Lucky Green.
 
   o Hidden service performance improvements:
-    - Reduce extension timeout for introduction circuits on the hidden
-      service side from 60 to 30 seconds.
+    - When the client launches an introduction circuit, retry with a
+      new circuit after 30 seconds rather than 60 seconds.
     - Launch a second client-side introduction circuit in parallel
       after a delay of 15 seconds (based on work by Christian Wilms).
     - Hidden services start out building five intro circuits rather
