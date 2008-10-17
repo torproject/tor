@@ -1,4 +1,11 @@
 Changes in version 0.2.1.7-alpha - 2008-10-xx
+  o Security fixes:
+    - The "ClientDNSRejectInternalAddresses" config option wasn't being
+      consistently obeyed: if an exit relay refuses a stream because its
+      exit policy doesn't allow it, we would remember what IP address
+      the relay said the destination address resolves to, even if it's
+      an internal IP address. Bugfix on 0.2.0.7-alpha; patch by rovv.
+
   o Minor features:
     - Now NodeFamily and MyFamily config options allow spaces in
       identity fingerprints, so it's easier to paste them in.
@@ -122,7 +129,7 @@ Changes in version 0.2.1.6-alpha - 2008-09-30
     - If we overrun our per-second write limits a little, count this as
       having used up our write allocation for the second, and choke
       outgoing directory writes. Previously, we had only counted this when
-      we had met our limits precisely. Fixes bug 824. Patch from by rovv.
+      we had met our limits precisely. Fixes bug 824. Patch by rovv.
       Bugfix on 0.2.0.x (??).
     - Avoid a "0 divided by 0" calculation when calculating router uptime
       at directory authorities. Bugfix on 0.2.0.8-alpha.
