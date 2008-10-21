@@ -25,3 +25,8 @@ Backport for 0.2.0 once better tested:
   - r16808,r16810,r16817,r16818,r16939: Don't send tunneled hidden service
             directory requests to routers for which we don't have a
             router descriptor. (Will significantly improve reliability.)
+  - r17091: distinguish "no routers support pending circuits" from
+            "no circuits are pending."
+  - r17137: send END cell in response to connect to nonexistent hidserv port.
+  - r17138: reject *:* servers should never do DNS lookups.
+  - r17139: Fix another case of overriding .exit choices.
