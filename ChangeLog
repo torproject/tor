@@ -31,6 +31,9 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
     - Send a valid END cell back when a client tries to connect to a
       nonexistent hidden service port.  Bugfix on 0.1.2.15.  Fixes bug
       840.  Patch from rovv.
+    - If a broken client asks a non-exit router to connect somewhere,
+      do not even do the DNS lookup before rejecting the connection.
+      Fixes another case of bug 619.  Patch from rovv.
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30
