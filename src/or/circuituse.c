@@ -1069,17 +1069,38 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
 
   /* Do we need to check exit policy? */
   if (check_exit_policy) {
-    struct in_addr in;
-    uint32_t addr = 0;
-    if (tor_inet_aton(conn->socks_request->address, &in))
-      addr = ntohl(in.s_addr);
-    if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
-                                              need_uptime)) {
-      log_notice(LD_APP,
-                 "No Tor server exists that allows exit to %s:%d. Rejecting.",
-                 safe_str(conn->socks_request->address),
-                 conn->socks_request->port);
-      return -1;
+    if (!conn->chosen_exit_name) {
+      struct in_addr in;
+      uint32_t addr = 0;
+      if (tor_inet_aton(conn->socks_request->address, &in))
+        addr = ntohl(in.s_addr);
+      if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
+                                                need_uptime)) {
+        log_notice(LD_APP,
+                   "No Tor server exists that allows exit to %s:%d. Rejecting.",
+                   safe_str(conn->socks_request->address),
+                   conn->socks_request->port);
+        return -1;
+      }
+    } else {
+      /* XXXX021 Duplicates checks in connection_ap_handshake_attach_circuit
+       * XXXX021 Fix this, then backport it? */
+      routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
+      int opt = conn->_base.chosen_exit_optional;
+      if (router && !connection_ap_can_use_exit(conn, router)) {
+        log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
+               "Requested exit point '%s' would refuse request. %s.",
+               conn->chosen_exit_name, opt ? "Trying others" : "Closing");
+        if (opt) {
+          conn->_base.chosen_exit_optional = 0;
+          tor_free(conn->chosen_exit_name);
+          /* Try again. */
+          return circuit_get_open_circ_or_launch(conn,
+                                                 desired_circuit_purpose,
+                                                 circp);
+        }
+        return -1;
+      }
     }
   }
 
