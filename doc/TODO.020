@@ -2,22 +2,7 @@
 (Remember to include both the revision number _AND_ an abbreviated
 description of the patch.)
 
-Backport items for 0.2.0:
-  X r14247: tor-spec and dir-spec updates [just backport the whole files]
-
-Backport for 0.2.0 once better tested:
-  d r14830: disable openssl compression.
-  o r15699,15700: react quickly to readiness of rendezvous circuits.
-  o r15821: fix bug related to TLS session negotiation.
-  o r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
-  o r16143: generate stream close events from connection_edge_destroy().
-  o r16450: open /dev/pf before dropping privileges.
-  o r16605: relays reject risky extend cells.
-  o r16698: don't use a new entry guard that's also your exit.
-
-  - r16558: Avoid mis-routing CREATED cells.
-  - r16621: Make some DNS code more robust (partial; see also libevent
-            approach). (Also maybe r16674)
+Backport for 0.2.0:
   - r16915,r16916: Don't fail hidden service request if the descriptor
             fetch fails for one descriptor version, when the other might
             still succeed. (Will be more problematic if not backported
@@ -25,8 +10,16 @@ Backport for 0.2.0 once better tested:
   - r16808,r16810,r16817,r16818,r16939: Don't send tunneled hidden service
             directory requests to routers for which we don't have a
             router descriptor. (Will significantly improve reliability.)
+
+Backport for 0.2.0 once better tested:
+  o r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
+
+  - r16558: Avoid mis-routing CREATED cells.
+  - r16621: Make some DNS code more robust (partial; see also libevent
+            approach). (Also maybe r16674)
   - r17091: distinguish "no routers support pending circuits" from
             "no circuits are pending."
   - r17137: send END cell in response to connect to nonexistent hidserv port.
   - r17138: reject *:* servers should never do DNS lookups.
   - r17139: Fix another case of overriding .exit choices.
+
