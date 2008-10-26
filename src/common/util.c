@@ -95,14 +95,8 @@ const char util_c_id[] = "$Id$";
  #endif
 
 #else /* not using dmalloc */
- #define dmalloc_strdup(file, line, string, xalloc_b) strdup(string)
-
- #define dmalloc_malloc(file, line, size, func_id, alignment, xalloc_b) \
-     malloc(size)
  #define DMALLOC_FUNC_MALLOC 0
 
- #define dmalloc_realloc(file, line, old_pnt, new_size, func_id, xalloc_b) \
-     realloc((old_pnt), (new_size))
  #define DMALLOC_FUNC_REALLOC 0
  #define DMALLOC_FN_ARGS
 #endif
@@ -125,7 +119,12 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
     size=1;
   }
 #endif
+
+#ifdef USE_DMALLOC
   result = dmalloc_malloc(file, line, size, DMALLOC_FUNC_MALLOC, 0, 0);
+#else
+  result = malloc(size);
+#endif
 
   if (PREDICT_UNLIKELY(result == NULL)) {
     log_err(LD_MM,"Out of memory on malloc(). Dying.");
@@ -158,7 +157,12 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
 {
   void *result;
 
+#ifdef USE_DMALLOC
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
+#else
+  result = realloc(ptr, size);
+#endif
+
   if (PREDICT_UNLIKELY(result == NULL)) {
     log_err(LD_MM,"Out of memory on realloc(). Dying.");
     exit(1);
@@ -176,7 +180,11 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
   char *dup;
   tor_assert(s);
 
+#ifdef USE_DMALLOC
   dup = dmalloc_strdup(file, line, s, 0);
+#else 
+  dup = strdup(s);
+#endif
   if (PREDICT_UNLIKELY(dup == NULL)) {
     log_err(LD_MM,"Out of memory on strdup(). Dying.");
     exit(1);
