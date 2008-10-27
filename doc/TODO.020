@@ -23,4 +23,4 @@ Backport for 0.2.0 once better tested:
   - r17137: send END cell in response to connect to nonexistent hidserv port.
   - r17138: reject *:* servers should never do DNS lookups.
   - r17139: Fix another case of overriding .exit choices.
-
+  - r17162: fix another case of not checking cpath_layer.
