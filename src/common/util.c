@@ -83,6 +83,7 @@ const char util_c_id[] = "$Id$";
 #ifdef USE_DMALLOC
  #undef strndup
  #include <dmalloc.h>
+ /* Macro to pass the extra dmalloc args to another function. */
  #define DMALLOC_FN_ARGS , file, line
 
  #if defined(HAVE_DMALLOC_STRDUP)
@@ -95,9 +96,7 @@ const char util_c_id[] = "$Id$";
  #endif
 
 #else /* not using dmalloc */
- #define DMALLOC_FUNC_MALLOC 0
 
- #define DMALLOC_FUNC_REALLOC 0
  #define DMALLOC_FN_ARGS
 #endif
 
@@ -114,7 +113,7 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
   void *result;
 
 #ifndef MALLOC_ZERO_WORKS
-  /* Some libcs don't do the right thing on size==0. Override them. */
+  /* Some libc mallocs don't work when size==0. Override them. */
   if (size==0) {
     size=1;
   }
@@ -143,6 +142,12 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
 void *
 _tor_malloc_zero(size_t size DMALLOC_PARAMS)
 {
+  /* You may ask yourself, "wouldn't it be smart to use calloc instead of
+   * malloc+memset?  Perhaps libc's calloc knows some nifty optimization trick
+   * we don't!"  Indeed it does, but its optimizations are only a big win when
+   * we're allocating something very big (it knows if it just got the memory
+   * from the OS in a pre-zeroed state).  We don't want to use tor_malloc_zero
+   * for big stuff, so we don't bother with calloc. */
   void *result = _tor_malloc(size DMALLOC_FN_ARGS);
   memset(result, 0, size);
   return result;
@@ -182,7 +187,7 @@ _tor_strdup(const char *s DMALLOC_PARAMS)
 
 #ifdef USE_DMALLOC
   dup = dmalloc_strdup(file, line, s, 0);
-#else 
+#else
   dup = strdup(s);
 #endif
   if (PREDICT_UNLIKELY(dup == NULL)) {
@@ -213,8 +218,8 @@ _tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
   return dup;
 }
 
-/** Allocate a chunk of <b>len</b> bytes, with the same contents starting at
- * <b>mem</b>. */
+/** Allocate a chunk of <b>len</b> bytes, with the same contents as the
+ * <b>len</b> bytes starting at <b>mem</b>. */
 void *
 _tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
 {

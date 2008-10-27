@@ -137,10 +137,20 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define ATTR_NONNULL(x)
 
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
- * of <b>exp</b> will probably be true. */
+ * of <b>exp</b> will probably be true.
+ *
+ * In other words, "if (PREDICT_LIKELY(foo))" is the same as "if (foo)",
+ * except that it tells the compiler that the branch will be taken most of the
+ * time.  This can generate slightly better code with some CPUs.
+ */
 #define PREDICT_LIKELY(exp) __builtin_expect((exp), 1)
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
- * of <b>exp</b> will probably be false. */
+ * of <b>exp</b> will probably be false.
+ *
+ * In other words, "if (PREDICT_UNLIKELY(foo))" is the same as "if (foo)",
+ * except that it tells the compiler that the branch will usually not be
+ * taken.  This can generate slightly better code with some CPUs.
+ */
 #define PREDICT_UNLIKELY(exp) __builtin_expect((exp), 0)
 #else
 #define ATTR_NORETURN
@@ -153,9 +163,12 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 #define PREDICT_UNLIKELY(exp) (exp)
 #endif
 
-/* Ways to declare macros. */
+/** Expands to a syntactically valid empty statement.  */
 #define STMT_NIL (void)0
+
 #ifdef __GNUC__
+/** STMT_BEGIN and STMT_END are used to wrap blocks inside macros so that
+ * the macro can be used as if it were a single C statement. */
 #define STMT_BEGIN (void) ({
 #define STMT_END })
 #elif defined(sun) || defined(__sun__)
@@ -180,8 +193,13 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
 
 #ifdef _MSC_VER
+/** Casts the uint64_t value in <b>a</b> to the right type for an argument
+ * to printf. */
 #define U64_PRINTF_ARG(a) (a)
+/** Casts the uint64_t* value in <b>a</b> to the right type for an argument
+ * to scanf. */
 #define U64_SCANF_ARG(a) (a)
+/** Expands to a literal uint64_t-typed constant for the value <b>n</b>. */
 #define U64_LITERAL(n) (n ## ui64)
 #else
 #define U64_PRINTF_ARG(a) ((long long unsigned int)(a))
@@ -190,6 +208,8 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #endif
 
 #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+/** The formatting string used to put a uint64_t value in a printf() or
+ * scanf() function.  See also U64_PRINTF_ARG and U64_SCANF_ARG. */
 #define U64_FORMAT "%I64u"
 #else
 #define U64_FORMAT "%llu"
@@ -219,6 +239,9 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
 {
   return tor_memmem(haystack, hlen, needle, strlen(needle));
 }
+
+/* This cast-to-uchar, then-cast-to-int business is needed to compile and
+ * run properly on some Solarises. */
 
 #define TOR_ISALPHA(c)   isalpha((int)(unsigned char)(c))
 #define TOR_ISALNUM(c)   isalnum((int)(unsigned char)(c))

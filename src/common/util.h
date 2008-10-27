@@ -39,8 +39,11 @@
  * security-critical properties.
  */
 #error "Sorry; we don't support building with NDEBUG."
-#elif defined(__GNUC__)
-/* Give an int-valued version of !x that won't confuse PREDICT_UNLIKELY. */
+#endif
+
+#if defined(__GNUC__)
+/* Give an int-valued version of !x that won't confuse PREDICT_UNLIKELY,
+ * which does poorly with pointer types on some versions of glibc. */
 #define IS_FALSE_AS_INT(x) ((x) == ((typeof(x)) 0))
 #else
 #define IS_FALSE_AS_INT(x) !(x)
@@ -57,6 +60,11 @@
       abort();                                                          \
     } STMT_END
 
+/* If we're building with dmalloc, we want all of our memory allocation
+ * functions to take an extra file/line pair of arguments.  If not, not.
+ * We define DMALLOC_PARAMS to the extra parameters to insert in the
+ * function prototypes, and DMALLOC_ARGS to the extra arguments to add
+ * to calls. */
 #ifdef USE_DMALLOC
 #define DMALLOC_PARAMS , const char *file, const int line
 #define DMALLOC_ARGS , _SHORT_FILE_, __LINE__
@@ -91,6 +99,13 @@ extern int dmalloc_free(const char *file, const int line, void *pnt,
     }                                               \
   STMT_END
 #else
+/** Release memory allocated by tor_malloc, tor_realloc, tor_strdup, etc.
+ * Unlike the free() function, tor_free() will still work on NULL pointers,
+ * and it sets the pointer value to NULL after freeing it.
+ *
+ * This is a macro.  If you need a function pointer to release memory from
+ * tor_malloc(), use _tor_free().
+ */
 #define tor_free(p) STMT_BEGIN                                 \
     if (PREDICT_LIKELY((p)!=NULL)) {                           \
       free(p);                                                 \
