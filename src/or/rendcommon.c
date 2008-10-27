@@ -1387,16 +1387,24 @@ rend_cache_store_v2_desc_as_client(const char *desc,
 /** Called when we get a rendezvous-related relay cell on circuit
  * <b>circ</b>.  Dispatch on rendezvous relay command. */
 void
-rend_process_relay_cell(circuit_t *circ, int command, size_t length,
+rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
+                        int command, size_t length,
                         const char *payload)
 {
   or_circuit_t *or_circ = NULL;
   origin_circuit_t *origin_circ = NULL;
   int r = -2;
-  if (CIRCUIT_IS_ORIGIN(circ))
+  if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
-  else
+    if (layer_hint && layer_hint != origin_circ->cpath->prev) {
+      log_fn(LOG_PROTOCOL_WARN, LD_APP,
+             "Relay cell (rend purpose %d) from wrong hop on origin circ",
+             command);
+      origin_circ = NULL;
+    }
+  } else {
     or_circ = TO_OR_CIRCUIT(circ);
+  }
 
   switch (command) {
     case RELAY_COMMAND_ESTABLISH_INTRO:

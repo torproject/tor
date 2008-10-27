@@ -37,6 +37,10 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
     - Fix another case of assuming, when a specific exit is requested,
       that we know more than the user about what hosts it allows.
       Fixes another case of bug 752.  Patch from rovv.
+    - Check which hops rendezvous stream cells are associated with to
+      prevent possible guess-the-streamid injection attacks from
+      intermediate hops.  Fixes another case of bug 446. Based on patch
+      from rovv.
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30
