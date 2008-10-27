@@ -1396,7 +1396,7 @@ rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
   int r = -2;
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    if (layer_hint && layer_hint != origin_circ->cpath->prev) {
+    if (!layer_hint || layer_hint != origin_circ->cpath->prev) {
       log_fn(LOG_PROTOCOL_WARN, LD_APP,
              "Relay cell (rend purpose %d) from wrong hop on origin circ",
              command);
