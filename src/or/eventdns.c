@@ -156,7 +156,6 @@ typedef unsigned int uint;
 
 struct request {
 	u8 *request; /* the dns packet data */
-	char *name; /* the name we requested. */
 	unsigned int request_len;
 	int reissue_count;
 	int tx_count;  /* the number of times that this packet has been sent */
@@ -308,6 +307,9 @@ static int global_max_retransmits = 3;	/* number of times we'll retransmit a req
 /* number of timeouts in a row before we consider this server to be down */
 static int global_max_nameserver_timeout = 3;
 
+/* DOCDOC */
+static int global_randomize_case = 1;
+
 /* These are the timeout values for nameservers. If we find a nameserver is down */
 /* we try to probe it at intervals as given below. Values are in seconds. */
 static const struct timeval global_nameserver_timeouts[] = {{10, 0}, {60, 0}, {300, 0}, {900, 0}, {3600, 0}};
@@ -378,6 +380,9 @@ inet_aton(const char *c, struct in_addr *addr)
 
 #define ISSPACE(c) isspace((int)(unsigned char)(c))
 #define ISDIGIT(c) isdigit((int)(unsigned char)(c))
+#define ISALPHA(c) isalpha((int)(unsigned char)(c))
+#define TOLOWER(c) (char)tolower((int)(unsigned char)(c))
+#define TOUPPER(c) (char)toupper((int)(unsigned char)(c))
 
 #ifndef NDEBUG
 static const char *
@@ -863,9 +868,10 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, size_t name_out_len
 static int
 reply_parse(u8 *packet, int length) {
 	int j = 0;	/* index into packet */
+	int k;
 	u16 _t;	 /* used by the macros */
 	u32 _t32;  /* used by the macros */
-	char tmp_name[256]; /* used by the macros */
+	char tmp_name[256], cmp_name[256]; /* used by the macros */
 
 	u16 trans_id, questions, answers, authority, additional, datalength;
 	u16 flags = 0;
@@ -898,11 +904,27 @@ reply_parse(u8 *packet, int length) {
 	}
 	/* if (!answers) return; */  /* must have an answer of some form */
 
-	/* This macro copies a name in the DNS reply into tmp_name */
-#define GET_NAME														\
-	do { tmp_name[0] = '\0';											\
-		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
-			goto err;													\
+	/* This macro skips a name in the DNS reply. */
+#define GET_NAME \
+	do { tmp_name[0] = '\0';				\
+		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0)\
+			goto err;				\
+	} while(0)
+#define TEST_NAME \
+	do { tmp_name[0] = '\0';				\
+		cmp_name[0] = '\0';				\
+		k = j;						\
+		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0)\
+			goto err;					\
+		if (name_parse(req->request, req->request_len, &k, cmp_name, sizeof(cmp_name))<0)	\
+			goto err;				\
+		if (global_randomize_case) {							\
+			if (strcmp(tmp_name, cmp_name) == 0)				\
+				name_matches = 1; /* we ignore mismatching names */	\
+		} else {													\
+			if (strcasecmp(tmp_name, cmp_name) == 0)				\
+				name_matches = 1;									\
+		}															\
 	} while(0)
 
 	reply.type = req->request_type;
@@ -912,10 +934,8 @@ reply_parse(u8 *packet, int length) {
 		/* the question looks like
 		 * <label:name><u16:type><u16:class>
 		 */
-		GET_NAME;
+		TEST_NAME;
 		j += 4;
-		if (!strcasecmp(req->name, tmp_name))
-		    name_matches = 1;
 		if (j >= length) goto err;
 	}
 
@@ -1127,6 +1147,32 @@ default_transaction_id_fn(void)
 
 static uint16_t (*trans_id_function)(void) = default_transaction_id_fn;
 
+static void
+default_random_bytes_fn(char *buf, size_t n)
+{
+	unsigned i;
+	for (i = 0; i < n-1; i += 2) {
+		u16 tid = trans_id_function();
+		buf[i] = (tid >> 8) & 0xff;
+		buf[i+1] = tid & 0xff;
+	}
+	if (i < n) {
+		u16 tid = trans_id_function();
+		buf[i] = tid & 0xff;
+	}
+}
+
+static void (*rand_bytes_function)(char *buf, size_t n) =
+	default_random_bytes_fn;
+
+static u16
+trans_id_from_random_bytes_fn(void)
+{
+	u16 tid;
+	rand_bytes_function((char*) &tid, sizeof(tid));
+	return tid;
+}
+
 void
 evdns_set_transaction_id_fn(uint16_t (*fn)(void))
 {
@@ -1134,6 +1180,14 @@ evdns_set_transaction_id_fn(uint16_t (*fn)(void))
 		trans_id_function = fn;
 	else
 		trans_id_function = default_transaction_id_fn;
+	rand_bytes_function = default_random_bytes_fn;
+}
+
+void
+evdns_set_random_bytes_fn(void (*fn)(char *, size_t))
+{
+	rand_bytes_function = fn;
+	trans_id_function = trans_id_from_random_bytes_fn;
 }
 
 /* Try to choose a strong transaction id which isn't already in flight */
@@ -2366,20 +2420,32 @@ request_new(int type, const char *name, int flags,
 	const u16 trans_id = issuing_now ? transaction_id_pick() : 0xffff;
 	/* the request data is alloced in a single block with the header */
 	struct request *const req =
-		(struct request *) malloc(sizeof(struct request) + request_max_len
-								  + name_len + 1);
+		(struct request *) malloc(sizeof(struct request) + request_max_len);
+	char namebuf[256];
 	int rlen;
 	(void) flags;
 
 	if (!req) return NULL;
 	memset(req, 0, sizeof(struct request));
 
+	if (global_randomize_case) {
+		unsigned i;
+		char randbits[32];
+		strlcpy(namebuf, name, sizeof(namebuf));
+		rand_bytes_function(randbits, (name_len+7)/8);
+		for (i = 0; i < name_len; ++i) {
+			if (ISALPHA(namebuf[i])) {
+				if ((randbits[i >> 3] & (1<<(i%7))))
+					namebuf[i] = TOLOWER(namebuf[i]);
+				else
+					namebuf[i] = TOUPPER(namebuf[i]);
+			}
+		}
+		name = namebuf;
+	}
+
 	/* request data lives just after the header */
 	req->request = ((u8 *) req) + sizeof(struct request);
-	/* A copy of the name sits after the request data */
-	req->name = ((char *)req) + sizeof(struct request) + request_max_len;
-	strlcpy(req->name, name, name_len + 1);
-
 	/* denotes that the request data shouldn't be free()ed */
 	req->request_appended = 1;
 	rlen = evdns_request_data_build(name, name_len, trans_id,
@@ -2819,6 +2885,11 @@ evdns_set_option(const char *option, const char *val, int flags)
 		if (!(flags & DNS_OPTION_MISC)) return 0;
 		log(EVDNS_LOG_DEBUG, "Setting retries to %d", retries);
 		global_max_retransmits = retries;
+	} else if (!strncmp(option, "randomize-case:", 15)) {
+		int randcase = strtoint(val);
+		if (!(flags & DNS_OPTION_MISC)) return 0;
+		log(EVDNS_LOG_DEBUG, "Setting randomize_case to %d", randcase);
+		global_randomize_case = randcase;
 	}
 	return 0;
 }
@@ -3251,7 +3322,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data)
 		}
 	}
 
-	r = evdns_request_respond(req, 0);
+	r = evdns_server_request_respond(req, 0);
 	if (r<0)
 		printf("eeek, couldn't send reply.\n");
 }

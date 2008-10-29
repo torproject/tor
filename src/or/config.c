@@ -292,6 +292,7 @@ static config_var_t _option_vars[] = {
   V(ServerDNSAllowBrokenResolvConf, BOOL,  "0"),
   V(ServerDNSAllowNonRFC953Hostnames, BOOL,"0"),
   V(ServerDNSDetectHijacking,    BOOL,     "1"),
+  V(ServerDNSRandomizeCase,      BOOL,     "1"),
   V(ServerDNSResolvConfFile,     STRING,   NULL),
   V(ServerDNSSearchDomains,      BOOL,     "0"),
   V(ServerDNSTestAddresses,      CSV,
