@@ -10,6 +10,8 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
     - Now NodeFamily and MyFamily config options allow spaces in
       identity fingerprints, so it's easier to paste them in.
       Suggested by Lucky Green.
+    - Preserve case in replies to DNSPort requests in order to support
+      the 0x20 hack for resisting DNS poisoning attacks.
 
   o Hidden service performance improvements:
     - When the client launches an introduction circuit, retry with a

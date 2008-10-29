@@ -207,6 +207,38 @@ dnsserv_reject_request(edge_connection_t *conn)
   }
 }
 
+/** Look up the original name that corresponds to 'addr' in req.  We use this
+ * to preserve case in order to facilitate people using 0x20-hacks to avoid
+ * DNS poisoning. */
+static const char *
+evdns_get_orig_address(const struct evdns_server_request *req,
+                       int rtype, const char *addr)
+{
+  int i, type;
+
+  switch (rtype) {
+  case RESOLVED_TYPE_IPV4:
+    type = EVDNS_TYPE_A;
+    break;
+  case RESOLVED_TYPE_HOSTNAME:
+    type = EVDNS_TYPE_PTR;
+    break;
+  case RESOLVED_TYPE_IPV6:
+    type = EVDNS_TYPE_AAAA;
+    break;
+  default:
+    tor_fragile_assert();
+    return addr;
+  }
+
+  for (i = 0; i < req->nquestions; ++i) {
+    const struct evdns_server_question *q = req->questions[i];
+    if (q->type == type && !strcasecmp(q->name, addr))
+      return q->name;
+  }
+  return addr;
+}
+
 /** Tell the dns request waiting for an answer on <b>conn</b> that we have an
  * answer of type <b>answer_type</b> (RESOLVE_TYPE_IPV4/IPV6/ERR), of length
  * <b>answer_len</b>, in <b>answer</b>, with TTL <b>ttl</b>.  Doesn't do
@@ -219,9 +251,11 @@ dnsserv_resolved(edge_connection_t *conn,
                  int ttl)
 {
   struct evdns_server_request *req = conn->dns_server_request;
+  const char *name;
   int err = DNS_ERR_NONE;
   if (!req)
     return;
+  name = evdns_get_orig_address(req, answer_type, conn->socks_request->address);
 
   /* XXXX021 Re-do; this is dumb. */
   if (ttl < 60)
@@ -236,13 +270,13 @@ dnsserv_resolved(edge_connection_t *conn,
   } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len == 4 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
     evdns_server_request_add_a_reply(req,
-                                     conn->socks_request->address,
+                                     name,
                                      1, (char*)answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_HOSTNAME &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
     char *ans = tor_strndup(answer, answer_len);
     evdns_server_request_add_ptr_reply(req, NULL,
-                                       conn->socks_request->address,
+                                       name,
                                        (char*)answer, ttl);
     tor_free(ans);
   } else if (answer_type == RESOLVED_TYPE_ERROR) {
