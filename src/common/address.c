@@ -686,6 +686,8 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
       case AF_INET: {
         uint32_t a1 = ntohl(addr1->addr.in_addr.s_addr);
         uint32_t a2 = ntohl(addr2->addr.in_addr.s_addr);
+        if (mbits > 32)
+          mbits = 32;
         a1 >>= (32-mbits);
         a2 >>= (32-mbits);
         return (a1 < a2) ? -1 : (a1 == a2) ? 0 : 1;

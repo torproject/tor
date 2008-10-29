@@ -41,6 +41,8 @@ Changes in version 0.2.1.7-alpha - 2008-10-xx
       prevent possible guess-the-streamid injection attacks from
       intermediate hops.  Fixes another case of bug 446. Based on patch
       from rovv.
+    - Avoid using a negative right-shift when comparing 32-bit
+      addresses.  Possible fix for bug 845 and bug 811.
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30
