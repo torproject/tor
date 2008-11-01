@@ -1495,7 +1495,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
       /* abort parallel intro circs, if any */
       for (c = global_circuitlist; c; c = c->next) {
         if (c->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
-            CIRCUIT_IS_ORIGIN(c)) {
+            !c->marked_for_close && CIRCUIT_IS_ORIGIN(c)) {
           origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(c);
           if (oc->rend_data &&
               !rend_cmp_service_ids(conn->rend_data->onion_address,

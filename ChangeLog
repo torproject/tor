@@ -1,4 +1,4 @@
-Changes in version 0.2.1.7-alpha - 2008-10-xx
+Changes in version 0.2.1.7-alpha - 2008-11-xx
   o Security fixes:
     - The "ClientDNSRejectInternalAddresses" config option wasn't being
       consistently obeyed: if an exit relay refuses a stream because its
@@ -120,6 +120,8 @@ Changes in version 0.2.1.6-alpha - 2008-09-30
     - Make TrackHostExit mappings expire a while after their last use, not
       after their creation.  Patch from Robert Hogan.
     - Provide circuit purposes along with circuit events to the controller.
+    - Make the assert_circuit_ok() function work correctly on circuits that
+      have already been marked for close.
 
   o Minor bugfixes:
     - Fix compile on OpenBSD 4.4-current. Bugfix on 0.2.1.5-alpha.

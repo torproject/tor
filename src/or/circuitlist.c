@@ -1208,13 +1208,21 @@ assert_circuit_ok(const circuit_t *c)
   if (c->n_conn) {
     tor_assert(!c->n_hop);
 
-    if (c->n_circ_id)
-      tor_assert(c == circuit_get_by_circid_orconn(c->n_circ_id, c->n_conn));
+    if (c->n_circ_id) {
+      /* We use the _impl variant here to make sure we don't fail on marked
+       * circuits, which would not be returned by the regular function. */
+      circuit_t *c2 = circuit_get_by_circid_orconn_impl(c->n_circ_id,
+                                                        c->n_conn);
+      tor_assert(c == c2);
+    }
   }
   if (or_circ && or_circ->p_conn) {
-    if (or_circ->p_circ_id)
-      tor_assert(c == circuit_get_by_circid_orconn(or_circ->p_circ_id,
-                                                   or_circ->p_conn));
+    if (or_circ->p_circ_id) {
+      /* ibid */
+      circuit_t *c2 = circuit_get_by_circid_orconn_impl(or_circ->p_circ_id,
+                                                        or_circ->p_conn);
+      tor_assert(c == c2);
+    }
   }
 #if 0 /* false now that rendezvous exits are attached to p_streams */
   if (origin_circ)
