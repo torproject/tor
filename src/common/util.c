@@ -484,6 +484,22 @@ strcasecmpend(const char *s1, const char *s2)
     return strncasecmp(s1+(n1-n2), s2, n2);
 }
 
+/** Compare the value of the string <b>prefix</b> with the start of the
+ * <b>memlen</b>-byte memory chunk at <b>mem</b>.  Return as for strcmp.
+ *
+ * [As memcmp(mem, prefix, strlen(prefix)) but returns -1 if memlen is less
+ * than strlen(prefix).]
+ */
+int
+memcmpstart(const void *mem, size_t memlen,
+                const char *prefix)
+{
+  size_t plen = strlen(prefix);
+  if (memlen < plen)
+    return -1;
+  return memcmp(mem, prefix, plen);
+}
+
 /** Return a pointer to the first char of s that is not whitespace and
  * not a comment, or to the terminating NUL if no such character exists.
  */
