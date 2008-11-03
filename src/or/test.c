@@ -4262,8 +4262,8 @@ test_rend_fns_v2(void)
   test_assert(parsed);
   test_memeq(((rend_encoded_v2_service_descriptor_t *)
              smartlist_get(descs, 0))->desc_id, parsed_desc_id, DIGEST_LEN);
-  test_assert(rend_parse_introduction_points(parsed, intro_points_encrypted,
-                                             intro_points_size) == 3);
+  test_eq(rend_parse_introduction_points(parsed, intro_points_encrypted,
+                                         intro_points_size), 3);
   test_assert(!crypto_pk_cmp_keys(generated->pk, parsed->pk));
   test_eq(parsed->timestamp, now);
   test_eq(parsed->version, 2);

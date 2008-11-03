@@ -3671,7 +3671,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
         crypto_free_cipher_env(cipher);
         cipher = crypto_create_init_cipher(session_key, 0);
         len = ipos_encrypted_size - 2 - client_entries_len - CIPHER_IV_LEN;
-        dec = tor_malloc_zero(len);
+        dec = tor_malloc(len);
         declen = crypto_cipher_decrypt_with_iv(cipher, dec, len,
             ipos_encrypted + 2 + client_entries_len,
             ipos_encrypted_size - 2 - client_entries_len);
@@ -3681,7 +3681,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
           tor_free(dec);
           return -1;
         }
-        if (strcmpstart(dec, "introduction-point ")) {
+        if (memcmpstart(dec, declen, "introduction-point ")) {
           log_warn(LD_REND, "Decrypted introduction points don't "
                             "look like we could parse them.");
           tor_free(dec);
@@ -3731,7 +3731,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
                                const char *intro_points_encoded,
                                size_t intro_points_encoded_size)
 {
-  const char **current_ipo;
+  const char *current_ipo, *end_of_intro_points;
   smartlist_t *tokens;
   directory_token_t *tok;
   rend_intro_point_t *intro;
@@ -3744,28 +3744,33 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   tor_assert(intro_points_encoded);
   tor_assert(intro_points_encoded_size > 0);
   /* Consider one intro point after the other. */
-  current_ipo = &intro_points_encoded;
+  current_ipo = intro_points_encoded;
+  end_of_intro_points = intro_points_encoded + intro_points_encoded_size;
   tokens = smartlist_create();
   parsed->intro_nodes = smartlist_create();
   area = memarea_new(4096);
-  while (!strcmpstart(*current_ipo, "introduction-point ")) {
+
+  while (!memcmpstart(current_ipo, end_of_intro_points-current_ipo,
+                      "introduction-point ")) {
     /* Determine end of string. */
-    const char *eos = strstr(*current_ipo, "\nintroduction-point ");
+    const char *eos = tor_memstr(current_ipo, end_of_intro_points-current_ipo,
+                                 "\nintroduction-point ");
     if (!eos)
-      eos = *current_ipo+strlen(*current_ipo);
+      eos = end_of_intro_points;
     else
       eos = eos+1;
+    tor_assert(eos <= intro_points_encoded+intro_points_encoded_size);
     /* Free tokens and clear token list. */
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
     smartlist_clear(tokens);
     memarea_clear(area);
     /* Tokenize string. */
-    if (tokenize_string(area, *current_ipo, eos, tokens, ipo_token_table, 0)) {
-      log_warn(LD_REND, "Error tokenizing introduction point.");
+    if (tokenize_string(area, current_ipo, eos, tokens, ipo_token_table, 0)) {
+      log_warn(LD_REND, "Error tokenizing introduction point");
       goto err;
     }
     /* Advance to next introduction point, if available. */
-    *current_ipo = eos;
+    current_ipo = eos;
     /* Check minimum allowed length of introduction point. */
     if (smartlist_len(tokens) < 5) {
       log_warn(LD_REND, "Impossibly short introduction point.");

@@ -54,6 +54,8 @@ Changes in version 0.2.1.7-alpha - 2008-11-xx
       addresses.  Possible fix for bug 845 and bug 811.
     - Make the assert_circuit_ok() function work correctly on circuits that
       have already been marked for close.
+    - Fix read-off-the-end-of-string error in unit tests when decoding
+      introduction points.
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30
