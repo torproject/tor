@@ -268,8 +268,8 @@ circuit_expire_building(time_t now)
 {
   circuit_t *victim, *circ = global_circuitlist;
   time_t general_cutoff = now - get_options()->CircuitBuildTimeout;
-  time_t begindir_cutoff = general_cutoff/2;
-  time_t introcirc_cutoff = general_cutoff/2;
+  time_t begindir_cutoff = now - get_options()->CircuitBuildTimeout/2;
+  time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 
   while (circ) {
