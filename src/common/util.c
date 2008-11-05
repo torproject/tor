@@ -1357,12 +1357,12 @@ ftime_definitely_before(time_t now, time_t when)
  * must be 1 if fd was returned by socket() or accept(), and 0 if fd
  * was returned by open().  Return the number of bytes written, or -1
  * on error.  Only use if fd is a blocking fd.  */
-int
+ssize_t
 write_all(int fd, const char *buf, size_t count, int isSocket)
 {
   size_t written = 0;
   ssize_t result;
-  tor_assert(count < INT_MAX); /*XXXX021 make returnval an ssize_t */
+  tor_assert(count < SSIZE_T_MAX);
 
   while (written != count) {
     if (isSocket)
@@ -1373,7 +1373,7 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
       return -1;
     written += result;
   }
-  return (int)count;
+  return (ssize_t)count;
 }
 
 /** Read from <b>fd</b> to <b>buf</b>, until we get <b>count</b> bytes
@@ -1381,14 +1381,13 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
  * was returned by socket() or accept(), and 0 if fd was returned by
  * open().  Return the number of bytes read, or -1 on error. Only use
  * if fd is a blocking fd. */
-int
+ssize_t
 read_all(int fd, char *buf, size_t count, int isSocket)
 {
-  /*XXXX021 return ssize_t. */
   size_t numread = 0;
   ssize_t result;
 
-  if (count > SIZE_T_CEILING || count > INT_MAX)
+  if (count > SIZE_T_CEILING || count > SSIZE_T_MAX)
     return -1;
 
   while (numread != count) {
@@ -1402,7 +1401,7 @@ read_all(int fd, char *buf, size_t count, int isSocket)
       break;
     numread += result;
   }
-  return (int)numread;
+  return (ssize_t)numread;
 }
 
 /*

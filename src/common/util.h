@@ -232,8 +232,8 @@ int ftime_definitely_after(time_t now, time_t when);
 int ftime_definitely_before(time_t now, time_t when);
 
 /* File helpers */
-int write_all(int fd, const char *buf, size_t count, int isSocket);
-int read_all(int fd, char *buf, size_t count, int isSocket);
+ssize_t write_all(int fd, const char *buf, size_t count, int isSocket);
+ssize_t read_all(int fd, char *buf, size_t count, int isSocket);
 
 /** Return values from file_status(); see that function's documentation
  * for details. */
