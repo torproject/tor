@@ -1107,7 +1107,7 @@ test_util(void)
 
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "kseven");
-  test_streq(v, "a quoted 'string");
+  test_streq(v, "a quoted \'string");
   tor_free(k); tor_free(v);
   test_assert(!strcmpstart(str, "k8 "));
 
