@@ -718,8 +718,8 @@ $Id$
         the protocol described in this document.  Implementations MUST
         reject formats they don't understand.
 
-    "dir-address" IP NL
-        [Once or more]
+    "dir-address" IPPort NL
+        [At most once]
 
         An IP:Port for this authority's directory port.
 
