@@ -676,7 +676,7 @@ router_parse_directory(const char *str)
   const char *end, *cp;
   smartlist_t *tokens = NULL;
   crypto_pk_env_t *declared_key = NULL;
-  memarea_t *area = memarea_new(8192);
+  memarea_t *area = memarea_new();
 
   /* XXXX This could be simplified a lot, but it will all go away
    * once pre-0.1.1.8 is obsolete, and for now it's better not to
@@ -779,7 +779,7 @@ router_parse_runningrouters(const char *str)
     log_warn(LD_DIR, "Unable to compute digest of running-routers");
     goto err;
   }
-  area = memarea_new(8192);
+  area = memarea_new();
   tokens = smartlist_create();
   if (tokenize_string(area,str,eos,tokens,dir_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing running-routers"); goto err;
@@ -846,7 +846,7 @@ find_dir_signing_key(const char *str, const char *eos)
     return NULL;
   ++cp; /* Now cp points to the start of the token. */
 
-  area = memarea_new(1024);
+  area = memarea_new();
   tok = get_next_token(area, &cp, eos, dir_token_table);
   if (!tok) {
     log_warn(LD_DIR, "Unparseable dir-signing-key token");
@@ -1131,7 +1131,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   while (end > s+2 && *(end-1) == '\n' && *(end-2) == '\n')
     --end;
 
-  area = memarea_new(4096);
+  area = memarea_new();
   tokens = smartlist_create();
   if (prepend_annotations) {
     if (tokenize_string(area,prepend_annotations,NULL,tokens,
@@ -1456,7 +1456,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     return NULL;
   }
   tokens = smartlist_create();
-  area = memarea_new(8192);
+  area = memarea_new();
   if (tokenize_string(area,s,end,tokens,extrainfo_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing extra-info document.");
     goto err;
@@ -1574,7 +1574,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   len = eos - s;
 
   tokens = smartlist_create();
-  area = memarea_new(8192);
+  area = memarea_new();
   if (tokenize_string(area,s, eos, tokens, dir_key_certificate_table, 0) < 0) {
     log_warn(LD_DIR, "Error tokenizing key certificate");
     goto err;
@@ -1971,7 +1971,7 @@ networkstatus_v2_parse_from_string(const char *s)
     goto err;
   }
 
-  area = memarea_new(8192);
+  area = memarea_new();
   eos = find_start_of_next_routerstatus(s);
   if (tokenize_string(area, s, eos, tokens, netstatus_token_table,0)) {
     log_warn(LD_DIR, "Error tokenizing network-status header.");
@@ -2146,7 +2146,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     goto err;
   }
 
-  area = memarea_new(8192);
+  area = memarea_new();
   end_of_header = find_start_of_next_routerstatus(s);
   if (tokenize_string(area, s, end_of_header, tokens,
                       (ns_type == NS_TYPE_CONSENSUS) ?
@@ -2370,7 +2370,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   /* Parse routerstatus lines. */
   rs_tokens = smartlist_create();
-  rs_area = memarea_new(512);
+  rs_area = memarea_new();
   s = end_of_header;
   ns->routerstatus_list = smartlist_create();
 
@@ -2539,7 +2539,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   if (!eos)
     eos = s + strlen(s);
 
-  area = memarea_new(8192);
+  area = memarea_new();
   if (tokenize_string(area,s, eos, tokens,
                       networkstatus_detached_signature_token_table, 0)) {
     log_warn(LD_DIR, "Error tokenizing detached networkstatus signatures");
@@ -2666,7 +2666,7 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
   }
 
   eos = cp + strlen(cp);
-  area = memarea_new(128);
+  area = memarea_new();
   tok = get_next_token(area, &cp, eos, routerdesc_token_table);
   if (tok->tp == _ERR) {
     log_warn(LD_DIR, "Error reading address policy: %s", tok->error);
@@ -3476,7 +3476,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     goto err;
   }
   /* Tokenize descriptor. */
-  area = memarea_new(4096);
+  area = memarea_new();
   if (tokenize_string(area, desc, eos, tokens, desc_token_table, 0)) {
     log_warn(LD_REND, "Error tokenizing descriptor.");
     goto err;
@@ -3748,7 +3748,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   end_of_intro_points = intro_points_encoded + intro_points_encoded_size;
   tokens = smartlist_create();
   parsed->intro_nodes = smartlist_create();
-  area = memarea_new(4096);
+  area = memarea_new();
 
   while (!memcmpstart(current_ipo, end_of_intro_points-current_ipo,
                       "introduction-point ")) {
@@ -3860,7 +3860,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   tokens = smartlist_create();
   /* Begin parsing with first entry, skipping comments or whitespace at the
    * beginning. */
-  area = memarea_new(4096);
+  area = memarea_new();
   current_entry = eat_whitespace(ckstr);
   while (!strcmpstart(current_entry, "client-name ")) {
     rend_authorized_client_t *parsed_entry;

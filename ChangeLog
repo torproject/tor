@@ -56,6 +56,8 @@ Changes in version 0.2.1.7-alpha - 2008-11-xx
       have already been marked for close.
     - Fix read-off-the-end-of-string error in unit tests when decoding
       introduction points.
+    - Fix uninitialized size field for memory area allocation: may improve
+      memory performance during directory parsing.
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30

@@ -3908,7 +3908,7 @@ test_util_mempool(void)
 static void
 test_util_memarea(void)
 {
-  memarea_t *area = memarea_new(1024);
+  memarea_t *area = memarea_new();
   char *p1, *p2, *p3, *p1_orig;
   int i;
   test_assert(area);

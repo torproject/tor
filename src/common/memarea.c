@@ -53,13 +53,12 @@ typedef struct memarea_chunk_t {
 
 #define CHUNK_HEADER_SIZE STRUCT_OFFSET(memarea_chunk_t, u)
 
-#define CHUNK_SIZE 8192
+#define CHUNK_SIZE 4096
 
 /** A memarea_t is an allocation region for a set of small memory requests
  * that will all be freed at once. */
 struct memarea_t {
-  struct memarea_chunk_t *first; /**< Top of the chunk stack: never NULL. */
-  size_t chunk_size; /**<Size to use when allocating chunks.*/
+  memarea_chunk_t *first; /**< Top of the chunk stack: never NULL. */
 };
 
 #define MAX_FREELIST_LEN 4
@@ -101,11 +100,10 @@ chunk_free(memarea_chunk_t *chunk)
 
 /** Allocate and return new memarea. */
 memarea_t *
-memarea_new(size_t chunk_size)/*XXXX021 remove this argument.*/
+memarea_new(void)
 {
   memarea_t *head = tor_malloc(sizeof(memarea_t));
-  head->first = alloc_chunk(chunk_size, 1);
-  (void)chunk_size;
+  head->first = alloc_chunk(CHUNK_SIZE, 1);
   return head;
 }
 
@@ -185,7 +183,7 @@ memarea_alloc(memarea_t *area, size_t sz)
       chunk->next_chunk = new_chunk;
       chunk = new_chunk;
     } else {
-      memarea_chunk_t *new_chunk = alloc_chunk(area->chunk_size, 1);
+      memarea_chunk_t *new_chunk = alloc_chunk(CHUNK_SIZE, 1);
       new_chunk->next_chunk = chunk;
       area->first = chunk = new_chunk;
     }
