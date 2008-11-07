@@ -1016,7 +1016,7 @@ log_credential_status(void)
   return 0;
 }
 
-/** Call setuid and setgid to run as <b>user</b> and only switch to their
+/** Call setuid and setgid to run as <b>user</b> and switch to their
  * primary group.  Return 0 on success.  On failure, log and return -1.
  */
 int
@@ -1030,11 +1030,9 @@ switch_id(const char *user)
   tor_assert(user);
 
   /* Log the initial credential state */
-  if (user) {
-    if (log_credential_status()) {
-      return -1;
-    }
-  }
+  if (log_credential_status())
+    return -1;
+
   log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "Changing user and groups");
 
   /* Get old UID/GID to check if we changed correctly */
@@ -1042,15 +1040,9 @@ switch_id(const char *user)
   old_gid = getgid();
 
   /* Lookup the user and group information, if we have a problem, bail out. */
-  if (user) {
-    pw = getpwnam(user);
-    if (pw == NULL) {
-      log_warn(LD_CONFIG, "Error setting configured user: %s not found", user);
-      return -1;
-    }
-  } else {
-    /* We have no user supplied and so we'll bail out. */
-    log_warn(LD_CONFIG, "Error setting configured user: No user supplied.");
+  pw = getpwnam(user);
+  if (pw == NULL) {
+    log_warn(LD_CONFIG, "Error setting configured user: %s not found", user);
     return -1;
   }
 
@@ -1121,10 +1113,8 @@ switch_id(const char *user)
 #endif
 
   /* Check what really happened */
-  if (user) {
-    if (log_credential_status()) {
-      return -1;
-    }
+  if (log_credential_status()) {
+    return -1;
   }
 
   return 0;
