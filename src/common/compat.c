@@ -1026,8 +1026,12 @@ switch_id(const char *user)
   struct passwd *pw = NULL;
   uid_t old_uid;
   gid_t old_gid;
+  static int have_already_switched_id = 0;
 
   tor_assert(user);
+
+  if (have_already_switched_id)
+    return 0;
 
   /* Log the initial credential state */
   if (log_credential_status())
@@ -1117,6 +1121,7 @@ switch_id(const char *user)
     return -1;
   }
 
+  have_already_switched_id = 1; /* mark success so we never try again */
   return 0;
 
 #else

@@ -1084,8 +1084,6 @@ options_act_reversible(or_options_t *old_options, char **msg)
 
   /* Setuid/setgid as appropriate */
   if (options->User) {
-    /* XXXX021 We should only do this the first time through, not on
-     * every setconf. */
     if (switch_id(options->User) != 0) {
       /* No need to roll back, since you can't change the value. */
       *msg = tor_strdup("Problem with User value. See logs for details.");
