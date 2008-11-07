@@ -255,7 +255,8 @@ dnsserv_resolved(edge_connection_t *conn,
   int err = DNS_ERR_NONE;
   if (!req)
     return;
-  name = evdns_get_orig_address(req, answer_type, conn->socks_request->address);
+  name = evdns_get_orig_address(req, answer_type,
+                                conn->socks_request->address);
 
   /* XXXX021 Re-do; this is dumb. */
   if (ttl < 60)
