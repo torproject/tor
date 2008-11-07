@@ -1,4 +1,4 @@
-Changes in version 0.2.1.7-alpha - 2008-11-xx
+Changes in version 0.2.1.7-alpha - 2008-11-07
   o Security fixes:
     - The "ClientDNSRejectInternalAddresses" config option wasn't being
       consistently obeyed: if an exit relay refuses a stream because its
@@ -6,26 +6,26 @@ Changes in version 0.2.1.7-alpha - 2008-11-xx
       the relay said the destination address resolves to, even if it's
       an internal IP address. Bugfix on 0.2.0.7-alpha; patch by rovv.
     - The "User" and "Group" config options did not clear the
-      supplementary group entries for the process. The "User" option
-      has been made more robust, and also now also sets the groups to
-      the specified user's primary group. The "Group" option is now
-      ignored. For more detailed logging on credential switching, set
-      CREDENTIAL_LOG_LEVEL in common/compat.c to LOG_NOTICE or higher;
-      patch by Jacob Appelbaum and Steven Murdoch.
+      supplementary group entries for the Tor process. The "User" option
+      is now more robust, and we now set the groups to the specified
+      user's primary group. The "Group" option is now ignored. For more
+      detailed logging on credential switching, set CREDENTIAL_LOG_LEVEL
+      in common/compat.c to LOG_NOTICE or higher. Patch by Jacob Appelbaum
+      and Steven Murdoch.
 
   o Minor features:
     - Now NodeFamily and MyFamily config options allow spaces in
       identity fingerprints, so it's easier to paste them in.
       Suggested by Lucky Green.
+    - Implement the 0x20 hack to better resist DNS poisoning: set the
+      case on outgoing DNS requests randomly, and reject responses that do
+      not match the case correctly. This logic can be disabled with the
+      ServerDNSRamdomizeCase setting, if you are using one of the 0.3%
+      of servers that do not reliably preserve case in replies. See
+      "Increased DNS Forgery Resistance through 0x20-Bit Encoding"
+      for more info.
     - Preserve case in replies to DNSPort requests in order to support
       the 0x20 hack for resisting DNS poisoning attacks.
-    - Implement the 0x20 hack to better resist DNS poisoning: set the
-      case on outgoing DNS requests randomly, and reject responses
-      that do not match the case correctly.  This logic can be
-      disabled with the ServerDNSRamdomizeCase setting, if you are
-      using one of the 0.3% of servers that do not reliably preserve
-      case in replies.  See "Increased DNS Forgery Resistance through
-      0x20-Bit Encoding" for more info.
 
   o Hidden service performance improvements:
     - When the client launches an introduction circuit, retry with a
@@ -45,20 +45,20 @@ Changes in version 0.2.1.7-alpha - 2008-11-xx
       no pending streams, choose a good general exit rather than one that
       supports "all the pending streams". Bugfix on 0.1.1.x. Fix by rovv.
     - Send a valid END cell back when a client tries to connect to a
-      nonexistent hidden service port.  Bugfix on 0.1.2.15.  Fixes bug
-      840.  Patch from rovv.
+      nonexistent hidden service port. Bugfix on 0.1.2.15. Fixes bug
+      840. Patch from rovv.
     - If a broken client asks a non-exit router to connect somewhere,
       do not even do the DNS lookup before rejecting the connection.
-      Fixes another case of bug 619.  Patch from rovv.
+      Fixes another case of bug 619. Patch from rovv.
     - Fix another case of assuming, when a specific exit is requested,
       that we know more than the user about what hosts it allows.
-      Fixes another case of bug 752.  Patch from rovv.
+      Fixes another case of bug 752. Patch from rovv.
     - Check which hops rendezvous stream cells are associated with to
       prevent possible guess-the-streamid injection attacks from
-      intermediate hops.  Fixes another case of bug 446. Based on patch
+      intermediate hops. Fixes another case of bug 446. Based on patch
       from rovv.
     - Avoid using a negative right-shift when comparing 32-bit
-      addresses.  Possible fix for bug 845 and bug 811.
+      addresses. Possible fix for bug 845 and bug 811.
     - Make the assert_circuit_ok() function work correctly on circuits that
       have already been marked for close.
     - Fix read-off-the-end-of-string error in unit tests when decoding
@@ -138,7 +138,7 @@ Changes in version 0.2.1.6-alpha - 2008-09-30
     - Add a -p option to tor-resolve for specifying the SOCKS port: some
       people find host:port too confusing.
     - Make TrackHostExit mappings expire a while after their last use, not
-      after their creation.  Patch from Robert Hogan.
+      after their creation. Patch from Robert Hogan.
     - Provide circuit purposes along with circuit events to the controller.
 
   o Minor bugfixes:
