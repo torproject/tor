@@ -219,7 +219,7 @@ static config_var_t _option_vars[] = {
   V(GeoIPFile,                   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
 #endif
-  V(Group,                       STRING,   NULL),
+  OBSOLETE("Group"),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "1"),
@@ -434,7 +434,6 @@ static config_var_description_t options_description[] = {
   /* { "FastFirstHopPK", "" }, */
   /* FetchServerDescriptors, FetchHidServDescriptors,
    * FetchUselessDescriptors */
-  { "Group", "On startup, setgid to this group." },
   { "HardwareAccel", "If set, Tor tries to use hardware crypto accelerators "
     "when it can." },
   /* HashedControlPassword */
@@ -1084,13 +1083,12 @@ options_act_reversible(or_options_t *old_options, char **msg)
 #endif
 
   /* Setuid/setgid as appropriate */
-  if (options->User || options->Group) {
+  if (options->User) {
     /* XXXX021 We should only do this the first time through, not on
      * every setconf. */
-    if (switch_id(options->User, options->Group) != 0) {
+    if (switch_id(options->User) != 0) {
       /* No need to roll back, since you can't change the value. */
-      *msg = tor_strdup("Problem with User or Group value. "
-                        "See logs for details.");
+      *msg = tor_strdup("Problem with User value. See logs for details.");
       goto done;
     }
   }

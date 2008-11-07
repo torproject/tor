@@ -630,6 +630,9 @@ syslog_facility="$withval", syslog_facility="LOG_DAEMON")
 AC_DEFINE_UNQUOTED(LOGFACILITY,$syslog_facility,[name of the syslog facility])
 AC_SUBST(LOGFACILITY)
 
+# Check if we have getresuid and getresgid
+AC_CHECK_FUNCS(getresuid getresgid)
+
 # Check for gethostbyname_r in all its glorious incompatible versions.
 #   (This logic is based on that in Python's configure.in)
 AH_TEMPLATE(HAVE_GETHOSTBYNAME_R,
