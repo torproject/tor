@@ -111,6 +111,7 @@ get_cert_list(const char *id_digest)
   cl = digestmap_get(trusted_dir_certs, id_digest);
   if (!cl) {
     cl = tor_malloc_zero(sizeof(cert_list_t));
+    cl->dl_status.schedule = DL_SCHED_CONSENSUS;
     cl->certs = smartlist_create();
     digestmap_set(trusted_dir_certs, id_digest, cl);
   }
@@ -406,6 +407,7 @@ void
 authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 {
   digestmap_t *pending;
+  authority_cert_t *cert;
   smartlist_t *missing_digests;
   char *resource = NULL;
   cert_list_t *cl;
@@ -428,8 +430,9 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
             !trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
           continue; /* We are not a cache, and we don't know this authority.*/
         cl = get_cert_list(voter->identity_digest);
-        if (authority_cert_get_by_digests(voter->identity_digest,
-                                          voter->signing_key_digest)) {
+        cert = authority_cert_get_by_digests(voter->identity_digest,
+                                             voter->signing_key_digest);
+        if (cert && now < cert->expires) {
           download_status_reset(&cl->dl_status);
           continue;
         }
