@@ -923,8 +923,8 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
 /** Log details of current user and group credentials. Return 0 on
  * success. Logs and return -1 on failure.
  */
-int
-log_credential_status()
+static int
+log_credential_status(void)
 {
 #define CREDENTIAL_LOG_LEVEL LOG_INFO
 #ifndef MS_WINDOWS
@@ -943,7 +943,8 @@ log_credential_status()
     log_warn(LD_GENERAL, "Error getting changed UIDs: %s", strerror(errno));
     return -1;
   } else {
-    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "UID is %u (real), %u (effective), %u (saved)", ruid, euid, suid);
+    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+           "UID is %u (real), %u (effective), %u (saved)", ruid, euid, suid);
   }
 #else
   /* getresuid is not present on MacOS X, so we can't get the saved (E)UID */
@@ -951,7 +952,8 @@ log_credential_status()
   euid = geteuid();
   (void)suid;
 
-  log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "UID is %u (real), %u (effective), unknown (saved)", ruid, euid);
+  log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+         "UID is %u (real), %u (effective), unknown (saved)", ruid, euid);
 #endif
 
   /* log GIDs */
@@ -960,19 +962,22 @@ log_credential_status()
     log_warn(LD_GENERAL, "Error getting changed GIDs: %s", strerror(errno));
     return -1;
   } else {
-    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "GID is %u (real), %u (effective), %u (saved)", rgid, egid, sgid);
+    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+           "GID is %u (real), %u (effective), %u (saved)", rgid, egid, sgid);
   }
 #else
   /* getresgid is not present on MacOS X, so we can't get the saved (E)GID */
   rgid = getgid();
   egid = getegid();
   (void)sgid;
-  log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "GID is %u (real), %u (effective), unknown (saved)", rgid, egid);
+  log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+         "GID is %u (real), %u (effective), unknown (saved)", rgid, egid);
 #endif
 
   /* log supplementary groups */
-  if((ngids = getgroups(NGROUPS_MAX + 1, sup_gids)) < 0) {
-    log_warn(LD_GENERAL, "Error getting supplementary GIDs: %s", strerror(errno));
+  if ((ngids = getgroups(NGROUPS_MAX + 1, sup_gids)) < 0) {
+    log_warn(LD_GENERAL, "Error getting supplementary GIDs: %s",
+             strerror(errno));
     return -1;
   } else {
     int i;
@@ -993,7 +998,7 @@ log_credential_status()
 
     s = smartlist_join_strings(elts, " ", 0, NULL);
 
-    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "Supplementary groups are: %s", s);
+    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "Supplementary groups are: %s",s);
 
    error:
     tor_free(s);
@@ -1021,10 +1026,10 @@ switch_id(const char *user)
   struct passwd *pw = NULL;
   uid_t old_uid;
   gid_t old_gid;
-  
+
   tor_assert(user);
 
-  /* Log the initial credential state */ 
+  /* Log the initial credential state */
   if (user) {
     if (log_credential_status()) {
       return -1;
@@ -1040,8 +1045,7 @@ switch_id(const char *user)
   if (user) {
     pw = getpwnam(user);
     if (pw == NULL) {
-      log_warn(LD_CONFIG, "Error setting configured user: "
-      "'%s' not found.", user);
+      log_warn(LD_CONFIG, "Error setting configured user: %s not found", user);
       return -1;
     }
   } else {
@@ -1053,31 +1057,31 @@ switch_id(const char *user)
   /* Properly switch egid,gid,euid,uid here or bail out */
   if (setgroups(1, &pw->pw_gid)) {
     log_warn(LD_GENERAL, "Error setting configured groups: %s",
-    strerror(errno));
+             strerror(errno));
     return -1;
   }
 
   if (setegid(pw->pw_gid)) {
     log_warn(LD_GENERAL, "Error setting configured egid: %s",
-    strerror(errno));
+             strerror(errno));
     return -1;
   }
 
   if (setgid(pw->pw_gid)) {
     log_warn(LD_GENERAL, "Error setting configured gid: %s",
-    strerror(errno));
+             strerror(errno));
     return -1;
   }
 
   if (setuid(pw->pw_uid)) {
     log_warn(LD_GENERAL, "Error setting configured uid: %s",
-    strerror(errno));
+             strerror(errno));
     return -1;
   }
 
-  if (seteuid(pw->pw_uid)){
+  if (seteuid(pw->pw_uid)) {
     log_warn(LD_GENERAL, "Error setting configured euid: %s",
-    strerror(errno));
+             strerror(errno));
     return -1;
   }
 
@@ -1101,13 +1105,15 @@ switch_id(const char *user)
   /* Only check for privilege dropping if we were asked to be non-root */
   if (pw->pw_uid) {
     /* Try changing GID/EGID */
-    if (pw->pw_gid != old_gid && (setgid(old_gid) != -1 || setegid(old_gid) != -1)) {
+    if (pw->pw_gid != old_gid &&
+        (setgid(old_gid) != -1 || setegid(old_gid) != -1)) {
       log_warn(LD_GENERAL, "Was able to restore group credentials");
       return -1;
     }
-  
+
     /* Try changing UID/EUID */
-    if (pw->pw_uid != old_uid && (setuid(old_uid) != -1 || seteuid(old_uid) != -1)) {
+    if (pw->pw_uid != old_uid &&
+        (setuid(old_uid) != -1 || seteuid(old_uid) != -1)) {
       log_warn(LD_GENERAL, "Was able to restore user credentials");
       return -1;
     }
