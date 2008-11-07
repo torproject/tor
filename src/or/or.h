@@ -4223,12 +4223,10 @@ typedef enum {
   CRN_NEED_CAPACITY = 1<<1,
   CRN_NEED_GUARD = 1<<2,
   CRN_ALLOW_INVALID = 1<<3,
-#if 0
   /* XXXX021 not used, apparently. */
   CRN_STRICT_PREFERRED = 1<<4,
   /* XXXX021 not used, apparently. */
   CRN_WEIGHT_AS_EXIT = 1<<5
-#endif
 } router_crn_flags_t;
 
 routerinfo_t *router_choose_random_node(const char *preferred,

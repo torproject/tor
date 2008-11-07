@@ -1237,48 +1237,6 @@ addr_policy_free(addr_policy_t *p)
         search.policy = p;
         found = HT_REMOVE(policy_map, &policy_root, &search);
         if (found) {
-          if (p != found->policy) {
-            /* Debugging code for bug 811/845. XXXX021 remove once that's
-             * fixed. */
-            char *t1, *t2;
-            char b1[TOR_ADDR_BUF_LEN], b2[TOR_ADDR_BUF_LEN];
-            switch (p->policy_type) {
-              case ADDR_POLICY_ACCEPT: t1 = tor_strdup("accept"); break;
-              case ADDR_POLICY_REJECT: t1 = tor_strdup("reject"); break;
-              default:
-                t1 = tor_malloc(16);
-                tor_snprintf(t1, 16, "%d", (int)p->policy_type);
-                break;
-            }
-            switch (found->policy->policy_type) {
-              case ADDR_POLICY_ACCEPT: t2 = tor_strdup("accept"); break;
-              case ADDR_POLICY_REJECT: t2 = tor_strdup("reject"); break;
-              default:
-                t2 = tor_malloc(16);
-                tor_snprintf(t2, 16, "%d", (int)found->policy->policy_type);
-                break;
-            }
-
-            tor_addr_to_str(b1, &p->addr, sizeof(b1), 1);
-            tor_addr_to_str(b2, &found->policy->addr, sizeof(b2), 1);
-            log_err(LD_GENERAL,
-                    "Mismatch between cached policy and freed policy. "
-                    "p==%s %s/%d:%d-%d%s%s.  "
-                    "found->policy==%s %s/%d:%d-%d%s%s.",
-                    t1, b1, (int)p->maskbits, (int)p->prt_min, (int)p->prt_max,
-                      p->is_private?" [Private]":"",
-                      p->is_canonical?" [Canonical]":"",
-                    t2, b2, (int)found->policy->maskbits,
-                      (int)found->policy->prt_min, (int)found->policy->prt_max,
-                      found->policy->is_private?" [Private]":"",
-                      found->policy->is_canonical?" [Canonical]":"");
-
-            log_err(LD_GENERAL,
-              "cmp_single_addr_policy(p,found->policy)==%d.  "
-              "tor_addr_compare(&p->addr, &found->policy->addr, CMP_EXACT)==%d",
-                 cmp_single_addr_policy(p,found->policy),
-                 tor_addr_compare(&p->addr, &found->policy->addr, CMP_EXACT));
-          }
           tor_assert(p == found->policy);
           tor_free(found);
         }
