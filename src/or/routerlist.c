@@ -432,8 +432,9 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
         cl = get_cert_list(voter->identity_digest);
         cert = authority_cert_get_by_digests(voter->identity_digest,
                                              voter->signing_key_digest);
-        if (cert && now < cert->expires) {
-          download_status_reset(&cl->dl_status);
+        if (cert) {
+          if (now < cert->expires)
+            download_status_reset(&cl->dl_status);
           continue;
         }
         if (download_status_is_ready(&cl->dl_status, now,
