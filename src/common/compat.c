@@ -1126,11 +1126,11 @@ switch_id(const char *user)
 
 #else
   (void)user;
-#endif
 
   log_warn(LD_CONFIG,
            "User specified but switching users is unsupported on your OS.");
   return -1;
+#endif
 }
 
 #ifdef HAVE_PWD_H
