@@ -67,6 +67,10 @@ Changes in version 0.2.1.7-alpha - 2008-11-07
       introduction points.
     - Fix uninitialized size field for memory area allocation: may improve
       memory performance during directory parsing.
+    - Treat duplicate certificate fetches as failures, so that we do
+      not try to re-fetch an expired certificate over and over and over.
+    - Do not say we're fetching a certificate when we'll in fact skip it
+      because of a pending download.
 
 
 Changes in version 0.2.1.6-alpha - 2008-09-30

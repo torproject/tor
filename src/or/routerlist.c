@@ -181,6 +181,17 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                "already have.",
                from_store ? "cached" : "downloaded",
                ds ? ds->nickname : "??");
+
+      /* a duplicate on a download should be treated as a failure, since it
+       * probably means we wanted a different secret key or we are trying to
+       * replace an expired cert that has not in fact been updated. */
+      if (!from_store) {
+        log_warn(LD_DIR, "Got a certificate for %s that we already have. "
+                 "Maybe they haven't updated it.  Waiting for a while.",
+                 ds ? ds->nickname : "??");
+        authority_cert_dl_failed(cert->cache_info.identity_digest, 404);
+      }
+
       authority_cert_free(cert);
       continue;
     }
@@ -423,7 +434,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
           continue;
         }
         if (download_status_is_ready(&cl->dl_status, now,
-                                     MAX_CERT_DL_FAILURES)) {
+                                     MAX_CERT_DL_FAILURES) &&
+            !digestmap_get(pending, voter->identity_digest)) {
           log_notice(LD_DIR, "We're missing a certificate from authority "
                      "with signing key %s: launching request.",
                      hex_str(voter->signing_key_digest, DIGEST_LEN));
@@ -449,8 +461,9 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
             break;
           }
         });
-      if (!found && download_status_is_ready(&cl->dl_status, now,
-                                             MAX_CERT_DL_FAILURES)) {
+      if (!found &&
+          download_status_is_ready(&cl->dl_status, now,MAX_CERT_DL_FAILURES) &&
+          !digestmap_get(pending, ds->v3_identity_digest)) {
         log_notice(LD_DIR, "No current certificate known for authority %s; "
                    "launching request.", ds->nickname);
         smartlist_add(missing_digests, ds->v3_identity_digest);
