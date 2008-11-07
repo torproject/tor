@@ -1988,9 +1988,9 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
         result->value = tor_strdup("");
       break;
     case CONFIG_TYPE_OBSOLETE:
-      log_warn(LD_CONFIG,
-               "You asked me for the value of an obsolete config option '%s'.",
-               key);
+      log_fn(LOG_PROTOCOL_WARN, LD_CONFIG,
+             "You asked me for the value of an obsolete config option '%s'.",
+             key);
       tor_free(result->key);
       tor_free(result);
       return NULL;
