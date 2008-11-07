@@ -1576,7 +1576,7 @@ dirvote_perform_vote(void)
   if (!cert || !key) {
     log_warn(LD_NET, "Didn't find key/certificate to generate v3 vote");
     return -1;
-  } else if (now < cert->expires) {
+  } else if (cert->expires < now) {
     log_warn(LD_NET, "Can't generate v3 vote with expired certificate");
     return -1;
   }

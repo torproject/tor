@@ -404,7 +404,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
         smartlist_add(unrecognized, voter);
         ++n_unknown;
         continue;
-      } else if (!cert || now > cert->expires) {
+      } else if (!cert || cert->expires < now) {
         smartlist_add(need_certs_from, voter);
         ++n_missing_key;
         continue;
