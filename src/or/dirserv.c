@@ -1822,7 +1822,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       (unsigned long)guard_tk,
       (unsigned long)guard_bandwidth_including_exits,
       (unsigned long)guard_bandwidth_excluding_exits,
-      enough_mtbf_info ? "" : "don't ");
+      enough_mtbf_info ? "" : " don't ");
 
   tor_free(uptimes);
   tor_free(mtbfs);
