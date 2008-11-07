@@ -12,6 +12,8 @@ Changes in version 0.2.1.7-alpha - 2008-11-07
       detailed logging on credential switching, set CREDENTIAL_LOG_LEVEL
       in common/compat.c to LOG_NOTICE or higher. Patch by Jacob Appelbaum
       and Steven Murdoch.
+    - Do not use or believe expired certificates.  Patch from Karsten.
+      Fixes bug 851.
 
   o Minor features:
     - Now NodeFamily and MyFamily config options allow spaces in

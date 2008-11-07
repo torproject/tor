@@ -387,6 +387,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   smartlist_t *unrecognized = smartlist_create();
   smartlist_t *missing_authorities = smartlist_create();
   int severity;
+  time_t now = time(NULL);
 
   tor_assert(consensus->type == NS_TYPE_CONSENSUS);
 
@@ -403,7 +404,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
         smartlist_add(unrecognized, voter);
         ++n_unknown;
         continue;
-      } else if (!cert) {
+      } else if (!cert || now > cert->expires) {
         smartlist_add(need_certs_from, voter);
         ++n_missing_key;
         continue;

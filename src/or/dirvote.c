@@ -1568,12 +1568,16 @@ dirvote_perform_vote(void)
   networkstatus_t *ns;
   char *contents;
   pending_vote_t *pending_vote;
+  time_t now = time(NULL);
 
   int status;
   const char *msg = "";
 
   if (!cert || !key) {
     log_warn(LD_NET, "Didn't find key/certificate to generate v3 vote");
+    return -1;
+  } else if (now < cert->expires) {
+    log_warn(LD_NET, "Can't generate v3 vote with expired certificate");
     return -1;
   }
   if (!(ns = dirserv_generate_networkstatus_vote_obj(key, cert)))
