@@ -13,12 +13,12 @@ streams to circuits.  Other implementations MAY take other approaches, but
 implementors should be aware of the anonymity and load-balancing implications
 of their choices.
 
-                    THIS SPEC ISN'T DONE OR CORRECT YET.
+                    THIS SPEC ISN'T DONE YET.
 
 1. General operation
 
    Tor begins building circuits as soon as it has enough directory
-   information to do so (see section 5.1 of dir-spec.txt).  Some circuits are
+   information to do so (see section 5 of dir-spec.txt).  Some circuits are
    built preemptively because we expect to need them later (for user
    traffic), and some are built because of immediate need (for user traffic
    that no current circuit can handle, for testing the network or our
