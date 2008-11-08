@@ -143,7 +143,7 @@ Version negotiation and cipher suite selection:
         Cert_Length  [2 bytes]
         Certificate  [<cert_length> bytes]
 
-  Each certificate MUST sign the one prececeding it. The initator MUST
+  Each certificate MUST sign the one preceding it. The initator MUST
   place its connection certificate first; the responder, having
   already sent its connection certificate as part of the TLS handshake
   MUST place its identity certificate first.

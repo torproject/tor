@@ -110,6 +110,8 @@ Roger
   - Did we actually apply Steven's dkimproxy patch?
   - Brainstorm about safe but effective ways for vidalia to
     auto-update its user's bridges via Tor in the background.
+  - it doesn't count as successfully opening a circuit if it's not
+    an exit circuit.
 
 Mike:
   - Roger wants to get an email every time there's a blog change,
@@ -190,6 +192,8 @@ R   d 128: families of private bridges
 K   - 143: Improvements of Distributed Hidden Service Descriptor Storage:
            only easy parts for 0.2.1.x, defer complex ones to 0.2.2.x.
     - 147: Eliminate the need for v2 directories in generating v3 directories
+R     - authorities should initiate a reachability test upon first
+        glimpsing a new descriptor.
     - 148: Stream end reasons from the client side should be uniform.
 K   - 155: Four Improvements of Hidden Service Performance
 
