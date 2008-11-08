@@ -1,4 +1,4 @@
-Changes in version 0.2.1.7-alpha - 2008-11-07
+Changes in version 0.2.1.7-alpha - 2008-11-08
   o Security fixes:
     - The "ClientDNSRejectInternalAddresses" config option wasn't being
       consistently obeyed: if an exit relay refuses a stream because its
@@ -11,9 +11,9 @@ Changes in version 0.2.1.7-alpha - 2008-11-07
       user's primary group. The "Group" option is now ignored. For more
       detailed logging on credential switching, set CREDENTIAL_LOG_LEVEL
       in common/compat.c to LOG_NOTICE or higher. Patch by Jacob Appelbaum
-      and Steven Murdoch.
-    - Do not use or believe expired certificates.  Patch from Karsten.
-      Fixes bug 851.
+      and Steven Murdoch. Bugfix on 0.0.2pre14. Fixes bug 848.
+    - Do not use or believe expired v3 authority certificates. Patch
+      from Karsten. Bugfix in 0.2.0.x. Fixes bug 851.
 
   o Minor features:
     - Now NodeFamily and MyFamily config options allow spaces in
