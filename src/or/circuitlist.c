@@ -334,6 +334,7 @@ circuit_purpose_to_controller_string(uint8_t purpose)
 
     case CIRCUIT_PURPOSE_C_GENERAL:
       return "GENERAL";
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
     case CIRCUIT_PURPOSE_C_INTRODUCE_ACKED:
       return "HS_CLIENT_INTRO";
