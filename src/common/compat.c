@@ -1052,32 +1052,32 @@ switch_id(const char *user)
 
   /* Properly switch egid,gid,euid,uid here or bail out */
   if (setgroups(1, &pw->pw_gid)) {
-    log_warn(LD_GENERAL, "Error setting configured groups: %s",
-             strerror(errno));
+    log_warn(LD_GENERAL, "Error setting groups to gid %d: %s",
+             (int)pw->pw_gid, strerror(errno));
     return -1;
   }
 
   if (setegid(pw->pw_gid)) {
-    log_warn(LD_GENERAL, "Error setting configured egid: %s",
-             strerror(errno));
+    log_warn(LD_GENERAL, "Error setting egid to %d: %s",
+             (int)pw->pw_gid, strerror(errno));
     return -1;
   }
 
   if (setgid(pw->pw_gid)) {
-    log_warn(LD_GENERAL, "Error setting configured gid: %s",
-             strerror(errno));
+    log_warn(LD_GENERAL, "Error setting gid to %d: %s",
+             (int)pw->pw_gid, strerror(errno));
     return -1;
   }
 
   if (setuid(pw->pw_uid)) {
-    log_warn(LD_GENERAL, "Error setting configured uid: %s",
-             strerror(errno));
+    log_warn(LD_GENERAL, "Error setting configured uid to %s (%d): %s",
+             user, (int)pw->pw_uid, strerror(errno));
     return -1;
   }
 
   if (seteuid(pw->pw_uid)) {
-    log_warn(LD_GENERAL, "Error setting configured euid: %s",
-             strerror(errno));
+    log_warn(LD_GENERAL, "Error setting configured euid to %s (%d): %s",
+             user, (int)pw->pw_uid, strerror(errno));
     return -1;
   }
 
@@ -1103,14 +1103,16 @@ switch_id(const char *user)
     /* Try changing GID/EGID */
     if (pw->pw_gid != old_gid &&
         (setgid(old_gid) != -1 || setegid(old_gid) != -1)) {
-      log_warn(LD_GENERAL, "Was able to restore group credentials");
+      log_warn(LD_GENERAL, "Was able to restore group credentials even after "
+               "switching GID: this means that the setgid code didn't work.");
       return -1;
     }
 
     /* Try changing UID/EUID */
     if (pw->pw_uid != old_uid &&
         (setuid(old_uid) != -1 || seteuid(old_uid) != -1)) {
-      log_warn(LD_GENERAL, "Was able to restore user credentials");
+      log_warn(LD_GENERAL, "Was able to restore user credentials even after "
+               "switching UID: this means that the setuid code didn't work.");
       return -1;
     }
   }
