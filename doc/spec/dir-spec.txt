@@ -977,6 +977,8 @@ $Id$
              and this authority binds names.
           "Stable" if the router is suitable for long-lived circuits.
           "Running" if the router is currently usable.
+          "Unnamed" if another router has bound the name used by this
+             router, and this authority binds names.
           "Valid" if the router has been 'validated'.
           "V2Dir" if the router implements the v2 directory protocol.
           "V3Dir" if the router implements this protocol.
@@ -996,6 +998,27 @@ $Id$
         Directory authorities SHOULD omit version strings they receive from
         descriptors if they would cause "v" lines to be over 128 characters
         long.
+
+    "w" SP "Bandwidth=" INT NL
+
+        [At most once.]
+
+        An estimate of the bandwidth of this server, in an arbitrary
+        unit (currently kilobytes per second).  Used to weight router
+        selection.  Other weighting keywords may be added later.
+        Clients MUST ignore keywords they do not recognize.
+
+    "p" SP ("accept" / "reject") SP PortList NL
+
+        [At most once.]
+
+        PortList = PortOrRange
+        PortList = PortList "," PortOrRange
+        PortOrRange = INT "-" INT / INT
+
+        A list of those ports that this router supports (if 'accept')
+        or does not support (if 'reject') for exit to "most
+        addresses".
 
    The signature section contains the following item, which appears
    Exactly Once for a vote, and At Least Once for a consensus.
@@ -1119,6 +1142,19 @@ $Id$
    Thus, the network-status vote includes all non-blacklisted,
    non-expired, non-superseded descriptors.
 
+   The bandwidth in a "w" line should be taken as the best estimate
+   of the router's actual capacity that the authority has.  For now,
+   this should be the lesser of the observed bandwidth and bandwidth
+   rate limit from the router descriptor.  It is given in kilobytes
+   per second, and capped at some arbitrary value (curently 10 MB/s).
+
+   The ports listed in a "p" line should be taken as those ports for
+   which the router's exit policy permits 'most' addresses, ignoring any
+   accept not for all addresses, ignoring all rejects for private
+   netblocks.  "Most" addresses are permitted if no more than 2^25
+   IPv4 addresses (two /8 networks) were blocked.  The list is encoded
+   as described in 3.4.2.
+
 3.4. Computing a consensus from a set of votes
 
    Given a set of votes, authorities compute the contents of the consensus
@@ -1178,6 +1214,17 @@ $Id$
         * If consensus-method 4 or later is in use, then routers that
           do not have the Running flag are not listed at all.
 
+        * If consensus-method 5 or later is in use, then the "w" line
+          is generated using a low-median of the bandwidth values from
+          the votes that included "w" lines for this router.
+
+        * If consensus-method 5 or later is in use, then the "p" line
+          is taken from the votes that have the same policy summary
+          for the descriptor we are listing.  (They should all be the
+          same.  If they are not, we pick the most commonly listed
+          one, breaking ties in favor of the lexigraphically larger
+          vote.)  The port list is encoded as specified in 3.4.2.
+
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
@@ -1197,6 +1244,7 @@ $Id$
      "2" -- Added support for the Unnamed flag.
      "3" -- Added legacy ID key support to aid in authority ID key rollovers
      "4" -- No longer list routers that are not running in the consensus
+     "5" -- adds support for "w" and "p" lines.
 
    Before generating a consensus, an authority must decide which consensus
    method to use.  To do this, it looks for the highest version number
@@ -1208,6 +1256,26 @@ $Id$
    those implementations to compromise their anonymity.  This is a means for
    making changes in the contents of consensus; not for making
    backward-incompatible changes in their format.)
+
+3.4.2. Encoding port lists
+
+  Whether the summary shows the list of accepted ports or the list of
+  rejected ports depends on which list is shorter (has a shorter string
+  representation).  In case of ties we choose the list of accepted
+  ports.  As an exception to this rule an allow-all policy is
+  represented as "accept 1-65535" instead of "reject " and a reject-all
+  policy is similarly given as "reject 1-65535".
+
+  Summary items are compressed, that is instead of "80-88,89-100" there
+  only is a single item of "80-100", similarly instead of "20,21" a
+  summary will say "20-21".
+
+  Port lists are sorted in ascending order.
+
+  The maximum allowed length of a policy summary (including the "accept "
+  or "reject ") is 1000 characters.  If a summary exceeds that length we
+  use an accept-style summary and list as much of the port list as is
+  possible within these 1000 bytes.  [XXXX be more specific.]
 
 3.5. Detached signatures
 
