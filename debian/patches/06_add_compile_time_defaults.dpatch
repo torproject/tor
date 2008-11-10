@@ -53,7 +53,7 @@ diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
    if (argv) { /* first time we're called. save commandline args */
      backup_argv = argv;
      backup_argc = argc;
-@@ -5051,3 +5057,64 @@
+@@ -5051,3 +5057,60 @@
    puts(routerparse_c_id);
  }
  
@@ -109,10 +109,6 @@ diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
 +  var->initvalue = tor_strdup("1");
 +
 +  var = config_find_option(&options_format, "User");
-+  tor_assert(var);
-+  var->initvalue = tor_strdup("debian-tor");
-+
-+  var = config_find_option(&options_format, "Group");
 +  tor_assert(var);
 +  var->initvalue = tor_strdup("debian-tor");
 +
