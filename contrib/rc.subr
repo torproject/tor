@@ -14,7 +14,6 @@
 # tor_conf (str):       Points to your tor conf file
 #                       Default: /usr/local/etc/tor/torrc
 # tor_user (str):       Tor Daemon user. Default _tor
-# tor_groupr (str):     Tor Daemon group. Default _tor
 #
 
 . /etc/rc.subr
@@ -27,7 +26,6 @@ load_rc_config ${name}
 : ${tor_enable="NO"}
 : ${tor_conf="/usr/local/etc/tor/torrc"}
 : ${tor_user="_tor"}
-: ${tor_group="_tor"}
 : ${tor_pidfile="/var/run/tor/tor.pid"}
 : ${tor_logfile="/var/log/tor"}
 : ${tor_datadir="/var/run/tor"}
@@ -35,7 +33,7 @@ load_rc_config ${name}
 required_files=${tor_conf}
 required_dirs=${tor_datadir}
 command="/usr/local/bin/${name}"
-command_args="-f ${tor_conf} --pidfile ${tor_pidfile} --runasdaemon 1 --datadirectory ${tor_datadir} --user ${tor_user} --group ${tor_group}"
+command_args="-f ${tor_conf} --pidfile ${tor_pidfile} --runasdaemon 1 --datadirectory ${tor_datadir} --user ${tor_user}"
 extra_commands="log"
 log_cmd="${name}_log"
 
