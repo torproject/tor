@@ -476,12 +476,22 @@ touch_file(const char *fname)
   return 0;
 }
 
+/** Represents a lockfile on which we hold the lock. */
 struct tor_lockfile_t {
   char *filename;
   int fd;
 };
 
-/** DOCDOC. What's this function do? */
+/** Try to get a lock on the lockfile <b>filename</b>, creating it as
+ * necessary.  If someone else has the lock and <b>blocking</b> is true,
+ * wait until the lock is available.  Otherwise return immediately whether
+ * we succeeded or not.
+ *
+ * Set *<b>locked_out</b> to true if somebody else had the lock, and to false
+ * otherwise.
+ *
+ * Return a <b>tor_lockfile_t</b> on success, NULL on failure.
+ */
 tor_lockfile_t *
 tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
 {
@@ -523,6 +533,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
   return result;
 }
 
+/** Release the lock held as <b>lockfile</b>. */
 void
 tor_lockfile_unlock(tor_lockfile_t *lockfile)
 {

@@ -1861,7 +1861,11 @@ tor_init(int argc, char *argv[])
 
 static tor_lockfile_t *lockfile = NULL;
 
-/** DOCDOC. What's this function do? */
+/** Try to grab the lock file described in <b>options</b>, if we do not
+ * already have it.  If <b>err_if_locked</b> is true, warn if somebody else is
+ * holding the lock, and exit if we can't get it after waiting.  Otherwise,
+ * return -1 if we can't get the lockfile.  Return 0 on success.
+ */
 int
 try_locking(or_options_t *options, int err_if_locked)
 {
