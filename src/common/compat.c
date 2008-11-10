@@ -481,6 +481,7 @@ struct tor_lockfile_t {
   int fd;
 };
 
+/** DOCDOC. What's this function do? */
 tor_lockfile_t *
 tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
 {

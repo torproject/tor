@@ -1861,6 +1861,7 @@ tor_init(int argc, char *argv[])
 
 static tor_lockfile_t *lockfile = NULL;
 
+/** DOCDOC. What's this function do? */
 int
 try_locking(or_options_t *options, int err_if_locked)
 {
