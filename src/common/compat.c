@@ -1052,7 +1052,8 @@ switch_id(const char *user)
 
   /* Properly switch egid,gid,euid,uid here or bail out */
   if (setgroups(1, &pw->pw_gid)) {
-    log_warn(LD_GENERAL, "Error setting groups to gid %d: %s",
+    log_warn(LD_GENERAL, "Error setting groups to gid %d: \"%s\". "
+             "If you set the \"User\" option, you must start Tor as root.",
              (int)pw->pw_gid, strerror(errno));
     return -1;
   }
