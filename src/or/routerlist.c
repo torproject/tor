@@ -278,9 +278,13 @@ trusted_dirs_flush_certs_to_disk(void)
 static void
 trusted_dirs_remove_old_certs(void)
 {
-#define OLD_CERT_LIFETIME (48*60*60)
+  time_t now = time(NULL);
+#define DEAD_CERT_LIFETIME (2*24*60*60)
+#define OLD_CERT_LIFETIME (7*24*60*60)
   if (!trusted_dir_certs)
     return;
+
+  log_notice(LD_DIR, "REMOVE OLD");
 
   DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
     authority_cert_t *newest = NULL;
@@ -288,13 +292,26 @@ trusted_dirs_remove_old_certs(void)
           if (!newest || (cert->cache_info.published_on >
                           newest->cache_info.published_on))
             newest = cert);
-    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-          if (newest && (newest->cache_info.published_on >
-                         cert->cache_info.published_on + OLD_CERT_LIFETIME)) {
-            SMARTLIST_DEL_CURRENT(cl->certs, cert);
-            authority_cert_free(cert);
-            trusted_dir_servers_certs_changed = 1;
-          });
+    if (newest) {
+      const time_t newest_published = newest->cache_info.published_on;
+      SMARTLIST_FOREACH_BEGIN(cl->certs, authority_cert_t *, cert) {
+        int expired;
+        time_t cert_published;
+        if (newest == cert)
+          continue;
+        expired = ftime_definitely_after(now, cert->expires);
+        cert_published = cert->cache_info.published_on;
+        /* Store expired certs for 48 hours after a newer arrives;
+         */
+        if (expired ?
+            (newest_published + DEAD_CERT_LIFETIME < now) :
+            (cert_published + OLD_CERT_LIFETIME < newest_published)) {
+          SMARTLIST_DEL_CURRENT(cl->certs, cert);
+          authority_cert_free(cert);
+          trusted_dir_servers_certs_changed = 1;
+        }
+      } SMARTLIST_FOREACH_END(cert);
+    }
   } DIGESTMAP_FOREACH_END;
 #undef OLD_CERT_LIFETIME
 
