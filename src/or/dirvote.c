@@ -1196,12 +1196,12 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
   }
 
   /* For each voter in src... */
-  SMARTLIST_FOREACH(sigs->signatures, networkstatus_voter_info_t *, src_voter,
-    {
+  SMARTLIST_FOREACH_BEGIN(sigs->signatures, networkstatus_voter_info_t *,
+                          src_voter) {
       char voter_identity[HEX_DIGEST_LEN+1];
       networkstatus_voter_info_t *target_voter =
         networkstatus_get_voter_by_id(target, src_voter->identity_digest);
-      authority_cert_t *cert;
+      authority_cert_t *cert = NULL;
 
       base16_encode(voter_identity, sizeof(voter_identity),
                     src_voter->identity_digest, DIGEST_LEN);
@@ -1228,6 +1228,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
           networkstatus_check_voter_signature(target, src_voter, cert);
         }
       }
+
       /* If this signature is good, or we don't have any signature yet,
        * then add it. */
       if (src_voter->good_signature || !target_voter->signature) {
@@ -1239,12 +1240,12 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
         memcpy(target_voter->signing_key_digest, src_voter->signing_key_digest,
                DIGEST_LEN);
         target_voter->signature_len = src_voter->signature_len;
-        target_voter->good_signature = 1;
-        target_voter->bad_signature = 0;
+        target_voter->good_signature = src_voter->good_signature;
+        target_voter->bad_signature = src_voter->bad_signature;
       } else {
         log_info(LD_DIR, "Not adding signature from %s", voter_identity);
       }
-    });
+  } SMARTLIST_FOREACH_END(src_voter);
 
   return r;
 }
