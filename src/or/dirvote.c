@@ -1872,7 +1872,7 @@ dirvote_add_signatures_to_pending_consensus(
                                             sigs, msg_out);
   log_info(LD_DIR,"Added %d signatures to consensus.", r);
 
-  if (r >= 0) {
+  if (r >= 1) {
     char *new_detached =
       networkstatus_get_detached_signatures(pending_consensus);
     const char *src;
