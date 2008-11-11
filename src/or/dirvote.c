@@ -2049,7 +2049,12 @@ dirvote_add_signatures_to_pending_consensus(
       networkstatus_get_detached_signatures(pending_consensus);
     const char *src;
     char *dst, *dst_end;
-    size_t new_consensus_len =
+    size_t new_consensus_len;
+    if (!new_detached) {
+      *msg_out = "No signatures to add";
+      goto err;
+    }
+    new_consensus_len =
       strlen(pending_consensus_body) + strlen(new_detached) + 1;
     pending_consensus_body = tor_realloc(pending_consensus_body,
                                          new_consensus_len);
