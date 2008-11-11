@@ -278,7 +278,6 @@ NR  - write a spec appendix for 'being nice with tor'
   - Mention controller libs someplace.
   - Remove need for HACKING file.
   - document http://wiki.noreply.org/noreply/TheOnionRouter/TransparentProxy on freebsd and osx
-P - figure out why x86_64 won't build rpms from tor.spec
 P - figure out rpm spec files for bundles of vidalia-tor-polipo
 P - figure out polipo install scripts for bundles of vidalia-tor-polipo on osx, win32
   - figure out selinux policy for tor
@@ -300,7 +299,6 @@ P - figure out a license for the logos and docs we publish (trademark
 figures into this)
     (Phobos reccomends the Open Publication License with Option A at
     http://opencontent.org/openpub/)
-P  - ask Jan/Jens to be the translation coordinator? add to volunteer page.
 I - add a page for localizing all tor's components.
   - It would be neat if we had a single place that described _all_ the
     tor-related tools you can use, and what they give you, and how well they
