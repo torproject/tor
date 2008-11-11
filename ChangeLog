@@ -3,6 +3,9 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
     - Get file locking working on win32.  Bugfix on 0.2.1.6-alpha.  Fixes
       bug 859.
 
+  o Minor features (controller):
+    - Return circuit purposes in response to GETINFO circuit-status.  Fixes
+      bug 858.
 
 Changes in version 0.2.1.7-alpha - 2008-11-08
   o Security fixes:

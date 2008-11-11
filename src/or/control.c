@@ -1631,6 +1631,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       char *s, *path;
       size_t slen;
       const char *state;
+      const char *purpose;
       if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
         continue;
       if (control_conn->use_long_names)
@@ -1644,11 +1645,12 @@ getinfo_helper_events(control_connection_t *control_conn,
       else
         state = "LAUNCHED";
 
-      slen = strlen(path)+strlen(state)+20;
+      purpose = circuit_purpose_to_controller_string(circ->purpose);
+      slen = strlen(path)+strlen(state)+strlen(purpose)+30;
       s = tor_malloc(slen+1);
-      tor_snprintf(s, slen, "%lu %s%s%s",
+      tor_snprintf(s, slen, "%lu %s%s%s PURPOSE=%s",
                    (unsigned long)TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                   state, *path ? " " : "", path);
+                   state, *path ? " " : "", path, purpose);
       smartlist_add(status, s);
       tor_free(path);
     }
