@@ -284,8 +284,6 @@ trusted_dirs_remove_old_certs(void)
   if (!trusted_dir_certs)
     return;
 
-  log_notice(LD_DIR, "REMOVE OLD");
-
   DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
     authority_cert_t *newest = NULL;
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
