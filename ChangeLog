@@ -1,3 +1,9 @@
+Changes in version 0.2.1.8-alpha - 2008-??-??
+  o Minor bugfixes:
+    - Get file locking working on win32.  Bugfix on 0.2.1.6-alpha.  Fixes
+      bug 859.
+
+
 Changes in version 0.2.1.7-alpha - 2008-11-08
   o Security fixes:
     - The "ClientDNSRejectInternalAddresses" config option wasn't being
