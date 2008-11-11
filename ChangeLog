@@ -1,4 +1,8 @@
 Changes in version 0.2.0.32 - 2008-??-??
+  o Major bugfixes:
+    - Fix a DOS opportunity during the voting signature collection process
+      at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.
+
   o Minor bugfixes:
     - Fix several infrequent memory leaks spotted by Coverity.
     - When testing for libevent functions, set the LDFLAGS variable
