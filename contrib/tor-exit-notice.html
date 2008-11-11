@@ -26,21 +26,13 @@ They are marked with FIXME.
 <p>Most likely you are accessing this website because you had some issue with
 the traffic coming from this IP. This router is part of the <a
 href="https://www.torproject.org/">Tor Anonymity Network</a>, which is
-dedicated to providing people with anonymity who need it most: average
-computer users. This router IP should be generating no other traffic, unless
-it has been compromised.
+dedicated to <a href="http://www.torproject.org/30seconds.html.en">providing
+privacy</a> to people who need it most: average computer users. This
+router IP should be generating no other traffic, unless it has been
+compromised.
 
 <p>
 
-While Tor is not designed for malicious computer users, it is inevitable that
-some may use the network for malicious ends. In the mind of this operator,
-the social need for easily accessible censorship-resistant anonymous
-communication trumps the risk. Tor sees use by many important segments of the
-population, including whistle blowers, journalists, Chinese dissidents
-skirting the Great Firewall and oppressive censorship, abuse victims,
-stalker targets, the US military, and law enforcement, just to name a few.
-
-<p>
 
 <!-- FIXME: you should probably grab your own copy of how_tor_works_thumb.png
 and serve it locally -->
@@ -49,11 +41,34 @@ and serve it locally -->
 
 <p>
 
+Tor sees use by <a href="http://www.torproject.org/torusers.html.en">many
+important segments of the population</a>, including whistle blowers,
+journalists, Chinese dissidents skirting the Great Firewall and oppressive
+censorship, abuse victims, stalker targets, the US military, and law
+enforcement, just to name a few.  While Tor is not designed for malicious
+computer users, it is true that they can use the network for malicious ends.
+In reality however, the actual amount of <a
+href="https://www.torproject.org/faq-abuse.html">abuse</a> is quite low. This
+is largely because criminals and hackers have significantly better access to
+privacy and anonymity than do the regular users whom they prey upon. Criminals
+can and do <a
+href="http://voices.washingtonpost.com/securityfix/2008/08/web_fraud_20_tools.html">build,
+sell, and trade</a> far larger and <a
+href="http://voices.washingtonpost.com/securityfix/2008/08/web_fraud_20_distributing_your.html">more
+powerful networks</a> than Tor on a daily basis. Thus, in the mind of this
+operator, the social need for easily accessible censorship-resistant private,
+anonymous communication trumps the risk of bad actors, who are almost always
+more easily uncovered by traditional police work than by extensive monitoring
+and surveillance.
+
+<p>
+
 In terms of applicable law, the best way to understand Tor is to consider it a
 network of routers operating as common carriers, much like the Internet
 backbone. However, unlike the Internet backbone routers, Tor routers
 explicitly do not contain identifiable routing information about the source of
-a packet.
+a packet, and no single Tor node can determine both the origin and destination
+of a given transmission.
 
 <p>
 
@@ -98,7 +113,7 @@ response</a> for more information on this matter.
 <ol>
 <li><a href="https://www.torproject.org/overview.html">Tor Overview</a></li>
 <li><a href="https://www.torproject.org/faq-abuse.html">Tor Abuse FAQ</a></li>
-<li><a href="https://www.torproject.org//eff/tor-legal-faq.html">Tor Legal FAQ</a></li>
+<li><a href="https://www.torproject.org/eff/tor-legal-faq.html">Tor Legal FAQ</a></li>
 </ol>
 <p>
 
@@ -112,9 +127,9 @@ already blocked.
 
 <p>You also have the option of blocking this IP address and others on
 the Tor network if you so desire. The Tor project provides a <a
-href="https://www.torproject.org/cvs/tor/contrib/exitlist">python script</a> to
+href="https://tor-svn.freehaven.net/svn/tor/trunk/contrib/exitlist">python script</a> to
 extract all IP addresses of Tor exit nodes, and an official <a
-href="http://exitlist.torproject.org/">DNSRBL</a> is also available to
+href="https://www.torproject.org/tordnsel/">DNSRBL</a> is also available to
 determine if a given IP address is actually a Tor exit server. Please
 be considerate
 when using these options. It would be unfortunate to deny all Tor users access
