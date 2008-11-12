@@ -463,7 +463,7 @@ void set_uint32(char *cp, uint32_t v) ATTR_NONNULL((1));
 typedef unsigned long rlim_t;
 #endif
 int set_max_file_descriptors(rlim_t limit, int *max);
-int switch_id(const char *user, const char *group);
+int switch_id(const char *user);
 #ifdef HAVE_PWD_H
 char *get_user_homedir(const char *username);
 #endif

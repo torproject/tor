@@ -1,4 +1,13 @@
 Changes in version 0.2.0.32 - 2008-??-??
+  o Security fixes:
+    - The "User" and "Group" config options did not clear the
+      supplementary group entries for the Tor process. The "User" option
+      is now more robust, and we now set the groups to the specified
+      user's primary group. The "Group" option is now ignored. For more
+      detailed logging on credential switching, set CREDENTIAL_LOG_LEVEL
+      in common/compat.c to LOG_NOTICE or higher. Patch by Jacob Appelbaum
+      and Steven Murdoch. Bugfix on 0.0.2pre14. Fixes bug 848 and 857.
+
   o Major bugfixes:
     - Fix a DOS opportunity during the voting signature collection process
       at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.

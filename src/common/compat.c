@@ -871,62 +871,220 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   return 0;
 }
 
-/** Call setuid and setgid to run as <b>user</b>:<b>group</b>.  Return 0 on
- * success.  On failure, log and return -1.
+/** Log details of current user and group credentials. Return 0 on
+ * success. Logs and return -1 on failure.
+ */
+static int
+log_credential_status(void)
+{
+#define CREDENTIAL_LOG_LEVEL LOG_INFO
+#ifndef MS_WINDOWS
+  /* Real, effective and saved UIDs */
+  uid_t ruid, euid, suid;
+  /* Read, effective and saved GIDs */
+  gid_t rgid, egid, sgid;
+  /* Supplementary groups */
+  gid_t sup_gids[NGROUPS_MAX + 1];
+  /* Number of supplementary groups */
+  int ngids;
+
+  /* log UIDs */
+#ifdef HAVE_GETRESUID
+  if (getresuid(&ruid, &euid, &suid) != 0 ) {
+    log_warn(LD_GENERAL, "Error getting changed UIDs: %s", strerror(errno));
+    return -1;
+  } else {
+    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+           "UID is %u (real), %u (effective), %u (saved)", ruid, euid, suid);
+  }
+#else
+  /* getresuid is not present on MacOS X, so we can't get the saved (E)UID */
+  ruid = getuid();
+  euid = geteuid();
+  (void)suid;
+
+  log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+         "UID is %u (real), %u (effective), unknown (saved)", ruid, euid);
+#endif
+
+  /* log GIDs */
+#ifdef HAVE_GETRESGID
+  if (getresgid(&rgid, &egid, &sgid) != 0 ) {
+    log_warn(LD_GENERAL, "Error getting changed GIDs: %s", strerror(errno));
+    return -1;
+  } else {
+    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+           "GID is %u (real), %u (effective), %u (saved)", rgid, egid, sgid);
+  }
+#else
+  /* getresgid is not present on MacOS X, so we can't get the saved (E)GID */
+  rgid = getgid();
+  egid = getegid();
+  (void)sgid;
+  log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
+         "GID is %u (real), %u (effective), unknown (saved)", rgid, egid);
+#endif
+
+  /* log supplementary groups */
+  if ((ngids = getgroups(NGROUPS_MAX + 1, sup_gids)) < 0) {
+    log_warn(LD_GENERAL, "Error getting supplementary GIDs: %s",
+             strerror(errno));
+    return -1;
+  } else {
+    int i;
+    char *strgid;
+    char *s = NULL;
+    int formatting_error = 0;
+    smartlist_t *elts = smartlist_create();
+
+    for (i = 0; i<ngids; i++) {
+      strgid = tor_malloc(11);
+      if (tor_snprintf(strgid, 11, "%u", (unsigned)sup_gids[i]) == -1) {
+        log_warn(LD_GENERAL, "Error printing supplementary GIDs");
+        formatting_error = 1;
+        goto error;
+      }
+      smartlist_add(elts, strgid);
+    }
+
+    s = smartlist_join_strings(elts, " ", 0, NULL);
+
+    log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "Supplementary groups are: %s",s);
+
+   error:
+    tor_free(s);
+    SMARTLIST_FOREACH(elts, char *, cp,
+    {
+      tor_free(cp);
+    });
+    smartlist_free(elts);
+
+    if (formatting_error)
+      return -1;
+  }
+#endif
+
+  return 0;
+}
+
+/** Call setuid and setgid to run as <b>user</b> and switch to their
+ * primary group.  Return 0 on success.  On failure, log and return -1.
  */
 int
-switch_id(const char *user, const char *group)
+switch_id(const char *user)
 {
 #ifndef MS_WINDOWS
   struct passwd *pw = NULL;
-  struct group *gr = NULL;
+  uid_t old_uid;
+  gid_t old_gid;
+  static int have_already_switched_id = 0;
 
-  if (user) {
-    pw = getpwnam(user);
-    if (pw == NULL) {
-      log_warn(LD_CONFIG,"User '%s' not found.", user);
+  tor_assert(user);
+
+  if (have_already_switched_id)
+    return 0;
+
+  /* Log the initial credential state */
+  if (log_credential_status())
+    return -1;
+
+  log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL, "Changing user and groups");
+
+  /* Get old UID/GID to check if we changed correctly */
+  old_uid = getuid();
+  old_gid = getgid();
+
+  /* Lookup the user and group information, if we have a problem, bail out. */
+  pw = getpwnam(user);
+  if (pw == NULL) {
+    log_warn(LD_CONFIG, "Error setting configured user: %s not found", user);
+    return -1;
+  }
+
+  /* Properly switch egid,gid,euid,uid here or bail out */
+  if (setgroups(1, &pw->pw_gid)) {
+    log_warn(LD_GENERAL, "Error setting groups to gid %d: \"%s\". "
+             "If you set the \"User\" option, you must start Tor as root.",
+             (int)pw->pw_gid, strerror(errno));
+    return -1;
+  }
+
+  if (setegid(pw->pw_gid)) {
+    log_warn(LD_GENERAL, "Error setting egid to %d: %s",
+             (int)pw->pw_gid, strerror(errno));
+    return -1;
+  }
+
+  if (setgid(pw->pw_gid)) {
+    log_warn(LD_GENERAL, "Error setting gid to %d: %s",
+             (int)pw->pw_gid, strerror(errno));
+    return -1;
+  }
+
+  if (setuid(pw->pw_uid)) {
+    log_warn(LD_GENERAL, "Error setting configured uid to %s (%d): %s",
+             user, (int)pw->pw_uid, strerror(errno));
+    return -1;
+  }
+
+  if (seteuid(pw->pw_uid)) {
+    log_warn(LD_GENERAL, "Error setting configured euid to %s (%d): %s",
+             user, (int)pw->pw_uid, strerror(errno));
+    return -1;
+  }
+
+  /* This is how OpenBSD rolls:
+  if (setgroups(1, &pw->pw_gid) || setegid(pw->pw_gid) ||
+      setgid(pw->pw_gid) || setuid(pw->pw_uid) || seteuid(pw->pw_uid)) {
+      setgid(pw->pw_gid) || seteuid(pw->pw_uid) || setuid(pw->pw_uid)) {
+    log_warn(LD_GENERAL, "Error setting configured UID/GID: %s",
+    strerror(errno));
+    return -1;
+  }
+  */
+
+  /* We've properly switched egid, gid, euid, uid, and supplementary groups if
+   * we're here. */
+
+#if !defined(CYGWIN) && !defined(__CYGWIN__)
+  /* If we tried to drop privilege to a group/user other than root, attempt to
+   * restore root (E)(U|G)ID, and abort if the operation succeeds */
+
+  /* Only check for privilege dropping if we were asked to be non-root */
+  if (pw->pw_uid) {
+    /* Try changing GID/EGID */
+    if (pw->pw_gid != old_gid &&
+        (setgid(old_gid) != -1 || setegid(old_gid) != -1)) {
+      log_warn(LD_GENERAL, "Was able to restore group credentials even after "
+               "switching GID: this means that the setgid code didn't work.");
+      return -1;
+    }
+
+    /* Try changing UID/EUID */
+    if (pw->pw_uid != old_uid &&
+        (setuid(old_uid) != -1 || seteuid(old_uid) != -1)) {
+      log_warn(LD_GENERAL, "Was able to restore user credentials even after "
+               "switching UID: this means that the setuid code didn't work.");
       return -1;
     }
   }
-
-  /* switch the group first, while we still have the privileges to do so */
-  if (group) {
-    gr = getgrnam(group);
-    if (gr == NULL) {
-      log_warn(LD_CONFIG,"Group '%s' not found.", group);
-      return -1;
-    }
-
-    if (setgid(gr->gr_gid) != 0) {
-      log_warn(LD_GENERAL,"Error setting to configured GID: %s",
-               strerror(errno));
-      return -1;
-    }
-  } else if (user) {
-    if (setgid(pw->pw_gid) != 0) {
-      log_warn(LD_GENERAL,"Error setting to user GID: %s", strerror(errno));
-      return -1;
-    }
-  }
-
-  /* now that the group is switched, we can switch users and lose
-     privileges */
-  if (user) {
-    if (setuid(pw->pw_uid) != 0) {
-      log_warn(LD_GENERAL,"Error setting UID: %s", strerror(errno));
-      return -1;
-    }
-  }
-
-  return 0;
-#else
-  (void)user;
-  (void)group;
 #endif
 
+  /* Check what really happened */
+  if (log_credential_status()) {
+    return -1;
+  }
+
+  have_already_switched_id = 1; /* mark success so we never try again */
+  return 0;
+
+#else
+  (void)user;
+
   log_warn(LD_CONFIG,
-           "User or group specified, but switching users is not supported.");
+           "User specified but switching users is unsupported on your OS.");
   return -1;
+#endif
 }
 
 #ifdef HAVE_PWD_H

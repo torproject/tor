@@ -204,7 +204,7 @@ static config_var_t _option_vars[] = {
   V(GeoIPFile,                   STRING,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "geoip"),
 #endif
-  V(Group,                       STRING,   NULL),
+  OBSOLETE("Group"),
   V(HardwareAccel,               BOOL,     "0"),
   V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "0"),
@@ -391,7 +391,6 @@ static config_var_description_t options_description[] = {
   /* { "FastFirstHopPK", "" }, */
   /* FetchServerDescriptors, FetchHidServDescriptors,
    * FetchUselessDescriptors */
-  { "Group", "On startup, setgid to this group." },
   { "HardwareAccel", "If set, Tor tries to use hardware crypto accelerators "
     "when it can." },
   /* HashedControlPassword */
@@ -1031,13 +1030,10 @@ options_act_reversible(or_options_t *old_options, char **msg)
 #endif
 
   /* Setuid/setgid as appropriate */
-  if (options->User || options->Group) {
-    /* XXXX021 We should only do this the first time through, not on
-     * every setconf. */
-    if (switch_id(options->User, options->Group) != 0) {
+  if (options->User) {
+    if (switch_id(options->User) != 0) {
       /* No need to roll back, since you can't change the value. */
-      *msg = tor_strdup("Problem with User or Group value. "
-                        "See logs for details.");
+      *msg = tor_strdup("Problem with User value. See logs for details.");
       goto done;
     }
   }
@@ -1868,9 +1864,9 @@ get_assigned_option(config_format_t *fmt, or_options_t *options,
         result->value = tor_strdup("");
       break;
     case CONFIG_TYPE_OBSOLETE:
-      log_warn(LD_CONFIG,
-               "You asked me for the value of an obsolete config option '%s'.",
-               key);
+      log_fn(LOG_PROTOCOL_WARN, LD_CONFIG,
+             "You asked me for the value of an obsolete config option '%s'.",
+             key);
       tor_free(result->key);
       tor_free(result);
       return NULL;

@@ -259,10 +259,6 @@ script to enumerate Tor nodes that exit to certain addresses.
 (Default: 0)
 .LP
 .TP
-\fBGroup \fR\fIGID\fP
-On startup, setgid to this group.
-.LP
-.TP
 \fBHttpProxy\fR \fIhost\fR[:\fIport\fR]\fP
 Tor will make all its directory requests through this host:port
 (or host:80 if port is not specified),
@@ -345,7 +341,7 @@ about what sites a user might have visited. (Default: 1)
 .LP
 .TP
 \fBUser \fR\fIUID\fP
-On startup, setuid to this user.
+On startup, setuid to this user and setgid to their primary group.
 .LP
 .TP
 \fBHardwareAccel \fR\fB0\fR|\fB1\fP

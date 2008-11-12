@@ -9,8 +9,8 @@
 # This script provides prioritization of Tor traffic below other
 # traffic on a Linux server. It has two modes of operation: UID based 
 # and IP based. The UID based method requires that Tor be launched from 
-# a specific user ID. The "User" and "Group" Tor config settings are 
-# insufficient, as they set the UID after the socket is created.
+# a specific user ID. The "User" Tor config setting is
+# insufficient, as it sets the UID after the socket is created.
 # Here is a three line C wrapper you can use to execute Tor and drop 
 # privs to UID 501 before it creates any sockets. Change the UID 
 # to the UID for your tor server user, and compile with 
@@ -49,7 +49,7 @@
 
 DEV=eth0
 
-# NOTE! You must START Tor under this UID. Using the Tor User/Group 
+# NOTE! You must START Tor under this UID. Using the Tor User
 # config setting is NOT sufficient.
 TOR_UID=$(id -u tor)
 

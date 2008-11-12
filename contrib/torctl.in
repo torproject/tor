@@ -41,21 +41,17 @@ TORDATA="@LOCALSTATEDIR@/lib/tor"
 TORARGS="--pidfile $PIDFILE --log \"notice file $LOGFILE\" --runasdaemon 1"
 TORARGS="$TORARGS --datadirectory $TORDATA"
 
-# If user and group names are set in the environment, then use them;
+# If user name is set in the environment, then use it;
 # otherwise run as the invoking user (or whatever user the config
 # file says)... unless the invoking user is root. The idea here is to
 # let an unprivileged user run tor for her own use using this script,
 # while still providing for it to be used as a system daemon.
 if [ "x`id -u`" = "x0" ]; then
     TORUSER=@TORUSER@
-    TORGROUP=@TORGROUP@
 fi
 
 if [ "x$TORUSER" != "x" ]; then
     TORARGS="$TORARGS --user $TORUSER"
-fi
-if [ "x$TORGROUP" != "x" ]; then
-    TORARGS="$TORARGS --group $TORGROUP"
 fi
 
 # We no longer wrap the Tor daemon startup in an su when running as
