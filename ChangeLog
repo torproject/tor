@@ -19,6 +19,15 @@ Changes in version 0.2.0.32 - 2008-??-??
       might succeed. Similarly, if the last v2 fetch fails, we were
       failing the whole hidden service request even if a v0 fetch is
       still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
+    - When extending a circuit to a hidden service directory to upload a
+      rendezvous descriptor using a BEGIN_DIR cell, almost 1/6 of all
+      requests failed, because the router descriptor has not been
+      downloaded yet. In these cases, do not attempt to upload the
+      rendezvous descriptor, but wait until the router descriptor is
+      downloaded and retry. Likewise, do not attempt to fetch a rendezvous
+      descriptor from a hidden service directory for which the router
+      descriptor has not yet been downloaded. Fixes bug 767. Bugfix
+      on 0.2.0.10-alpha.
 
   o Minor bugfixes:
     - Fix several infrequent memory leaks spotted by Coverity.

@@ -3,13 +3,6 @@
 description of the patch.)
 
 Backport for 0.2.0:
-  - r16915,r16916: Don't fail hidden service request if the descriptor
-            fetch fails for one descriptor version, when the other might
-            still succeed. (Will be more problematic if not backported
-            as soon as services stop publishing version 0 descriptors.)
-  - r16808,r16810,r16817,r16818,r16939: Don't send tunneled hidden service
-            directory requests to routers for which we don't have a
-            router descriptor. (Will significantly improve reliability.)
   - r17135: ClientDNSRejectInternalAddresses not consistently obeyed.
 
 Backport for 0.2.0 once better tested:

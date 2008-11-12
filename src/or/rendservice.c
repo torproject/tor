@@ -1066,11 +1066,13 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
  * <b>service_id</b> and <b>seconds_valid</b> are only passed for logging
  * purposes. */
 static void
-directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
+directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
+                         smartlist_t *descs, const char *service_id,
                          int seconds_valid)
 {
-  int i, j;
+  int i, j, failed_upload = 0;
   smartlist_t *responsible_dirs = smartlist_create();
+  smartlist_t *successful_uploads = smartlist_create();
   routerstatus_t *hs_dir;
   for (i = 0; i < smartlist_len(descs); i++) {
     rend_encoded_v2_service_descriptor_t *desc = smartlist_get(descs, i);
@@ -1080,11 +1082,24 @@ directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
       log_warn(LD_REND, "Could not determine the responsible hidden service "
                         "directories to post descriptors to.");
       smartlist_free(responsible_dirs);
+      smartlist_free(successful_uploads);
       return;
     }
     for (j = 0; j < smartlist_len(responsible_dirs); j++) {
       char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
       hs_dir = smartlist_get(responsible_dirs, j);
+      if (smartlist_digest_isin(renddesc->successful_uploads,
+                                hs_dir->identity_digest))
+        /* Don't upload descriptor if we succeeded in doing so last time. */
+        continue;
+      if (!router_get_by_digest(hs_dir->identity_digest)) {
+        log_info(LD_REND, "Not sending publish request for v2 descriptor to "
+                          "hidden service directory '%s'; we don't have its "
+                          "router descriptor. Queueing for later upload.",
+                 hs_dir->nickname);
+        failed_upload = -1;
+        continue;
+      }
       /* Send publish request. */
       directory_initiate_command_routerstatus(hs_dir,
                                               DIR_PURPOSE_UPLOAD_RENDDESC_V2,
@@ -1102,10 +1117,33 @@ directory_post_to_hs_dir(smartlist_t *descs, const char *service_id,
                seconds_valid,
                hs_dir->nickname,
                hs_dir->dir_port);
+      /* Remember successful upload to this router for next time. */
+      if (!smartlist_digest_isin(successful_uploads, hs_dir->identity_digest))
+        smartlist_add(successful_uploads, hs_dir->identity_digest);
     }
     smartlist_clear(responsible_dirs);
   }
+  if (!failed_upload) {
+    if (renddesc->successful_uploads) {
+      SMARTLIST_FOREACH(renddesc->successful_uploads, char *, c, tor_free(c););
+      smartlist_free(renddesc->successful_uploads);
+    }
+    renddesc->all_uploads_performed = 1;
+  } else {
+    /* Remember which routers worked this time, so that we don't upload the
+     * descriptor to them again. */
+    if (!renddesc->successful_uploads)
+      renddesc->successful_uploads = smartlist_create();
+    SMARTLIST_FOREACH(successful_uploads, char *, c, {
+      if (!smartlist_digest_isin(renddesc->successful_uploads, c)) {
+        char *hsdir_id = tor_malloc_zero(DIGEST_LEN);
+        memcpy(hsdir_id, c, DIGEST_LEN);
+        smartlist_add(renddesc->successful_uploads, hsdir_id);
+      }
+    });
+  }
   smartlist_free(responsible_dirs);
+  smartlist_free(successful_uploads);
 }
 
 /** Encode and sign up-to-date v0 and/or v2 service descriptors for
@@ -1119,9 +1157,6 @@ upload_service_descriptor(rend_service_t *service)
   int rendpostperiod;
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
   int uploaded = 0;
-
-  /* Update the descriptor. */
-  rend_service_update_descriptor(service);
 
   rendpostperiod = get_options()->RendPostPeriod;
 
@@ -1172,7 +1207,8 @@ upload_service_descriptor(rend_service_t *service)
       rend_get_service_id(service->desc->pk, serviceid);
       log_info(LD_REND, "Sending publish request for hidden service %s",
                    serviceid);
-      directory_post_to_hs_dir(descs, serviceid, seconds_valid);
+      directory_post_to_hs_dir(service->desc, descs, serviceid,
+                               seconds_valid);
       /* Free memory for descriptors. */
       for (i = 0; i < smartlist_len(descs); i++)
         rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
@@ -1196,7 +1232,8 @@ upload_service_descriptor(rend_service_t *service)
           smartlist_free(descs);
           return;
         }
-        directory_post_to_hs_dir(descs, serviceid, seconds_valid);
+        directory_post_to_hs_dir(service->desc, descs, serviceid,
+                                 seconds_valid);
         /* Free memory for descriptors. */
         for (i = 0; i < smartlist_len(descs); i++)
           rend_encoded_v2_service_descriptor_free(smartlist_get(descs, i));
@@ -1360,6 +1397,48 @@ rend_consider_services_upload(time_t now)
       /* if it's time, or if the directory servers have a wrong service
        * descriptor and ours has been stable for 30 seconds, upload a
        * new one of each format. */
+      rend_service_update_descriptor(service);
+      upload_service_descriptor(service);
+    }
+  }
+}
+
+/** True if the list of available router descriptors might have changed so
+ * that we should have a look whether we can republish previously failed
+ * rendezvous service descriptors. */
+static int consider_republishing_rend_descriptors = 1;
+
+/** Called when our internal view of the directory has changed, so that we
+ * might have router descriptors of hidden service directories available that
+ * we did not have before. */
+void
+rend_hsdir_routers_changed(void)
+{
+  consider_republishing_rend_descriptors = 1;
+}
+
+/** Consider republication of v2 rendezvous service descriptors that failed
+ * previously, but without regenerating descriptor contents.
+ */
+void
+rend_consider_descriptor_republication(void)
+{
+  int i;
+  rend_service_t *service;
+
+  if (!consider_republishing_rend_descriptors)
+    return;
+  consider_republishing_rend_descriptors = 0;
+
+  if (!get_options()->PublishHidServDescriptors)
+    return;
+
+  for (i=0; i < smartlist_len(rend_service_list); ++i) {
+    service = smartlist_get(rend_service_list, i);
+    if (service->descriptor_version && service->desc &&
+        !service->desc->all_uploads_performed) {
+      /* If we failed in uploading a descriptor last time, try again *without*
+       * updating the descriptor's contents. */
       upload_service_descriptor(service);
     }
   }

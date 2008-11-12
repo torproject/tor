@@ -3677,6 +3677,13 @@ typedef struct rend_service_descriptor_t {
   /** List of the service's introduction points.  Elements are removed if
    * introduction attempts fail. */
   smartlist_t *intro_nodes;
+  /** Has descriptor been uploaded to all hidden service directories? */
+  int all_uploads_performed;
+  /** List of hidden service directories to which an upload request for
+   * this descriptor could be sent. Smartlist exists only when at least one
+   * of the previous upload requests failed (otherwise it's not important
+   * to know which uploads succeeded and which not). */
+  smartlist_t *successful_uploads;
 } rend_service_descriptor_t;
 
 int rend_cmp_service_ids(const char *one, const char *two);
@@ -3738,6 +3745,8 @@ int rend_service_load_keys(void);
 void rend_services_init(void);
 void rend_services_introduce(void);
 void rend_consider_services_upload(time_t now);
+void rend_hsdir_routers_changed(void);
+void rend_consider_descriptor_republication(void);
 
 void rend_service_intro_has_opened(origin_circuit_t *circuit);
 int rend_service_intro_established(origin_circuit_t *circuit,

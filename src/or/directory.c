@@ -454,7 +454,12 @@ directory_initiate_command_routerstatus(routerstatus_t *status,
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
   const char *address;
-  if ((router = router_get_by_digest(status->identity_digest))) {
+  router = router_get_by_digest(status->identity_digest);
+  if (!router && anonymized_connection) {
+    log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
+                     "don't have its router descriptor.", status->nickname);
+    return;
+  } else if (router) {
     address = router->address;
   } else {
     in.s_addr = htonl(status->addr);
