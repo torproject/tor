@@ -157,7 +157,7 @@ cell_unpack(cell_t *dest, const char *src)
 void
 var_cell_pack_header(const var_cell_t *cell, char *hdr_out)
 {
-  *(uint16_t*)(hdr_out) = htons(cell->circ_id);
+  set_uint16(hdr_out, htons(cell->circ_id));
   *(uint8_t*)(hdr_out+2) = cell->command;
   set_uint16(hdr_out+3, htons(cell->payload_len));
 }

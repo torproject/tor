@@ -966,7 +966,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     return 1;
   result = var_cell_new(length);
   result->command = command;
-  result->circ_id = ntohs(*(uint16_t*)hdr);
+  result->circ_id = ntohs(get_uint16(hdr));
 
   buf_remove_from_front(buf, VAR_CELL_HEADER_SIZE);
   peek_from_buf(result->payload, length, buf);
