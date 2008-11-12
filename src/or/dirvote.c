@@ -1882,7 +1882,7 @@ dirvote_add_signatures_to_pending_consensus(
       *msg_out = "No signatures to add";
       goto err;
     }
-    new_signatures_len =
+    new_consensus_len =
       strlen(pending_consensus_body) + strlen(new_detached) + 1;
     pending_consensus_body = tor_realloc(pending_consensus_body,
                                          new_consensus_len);
