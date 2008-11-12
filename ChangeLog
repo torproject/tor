@@ -12,6 +12,14 @@ Changes in version 0.2.0.32 - 2008-??-??
     - Fix a DOS opportunity during the voting signature collection process
       at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.
 
+  o Major bugfixes (hidden services):
+    - When fetching v0 and v2 rendezvous service descriptors in parallel,
+      we were failing the whole hidden service request when the v0
+      descriptor fetch fails, even if the v2 fetch is still pending and
+      might succeed. Similarly, if the last v2 fetch fails, we were
+      failing the whole hidden service request even if a v0 fetch is
+      still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
+
   o Minor bugfixes:
     - Fix several infrequent memory leaks spotted by Coverity.
     - When testing for libevent functions, set the LDFLAGS variable
