@@ -1010,7 +1010,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     return 0;
   peek_from_buf(hdr, sizeof(hdr), buf);
 
-  command = *(uint8_t*)(hdr+2);
+  command = get_uint8(hdr+2);
   if (!(CELL_COMMAND_IS_VAR_LENGTH(command)))
     return 0;
 
@@ -1019,7 +1019,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
     return 1;
   result = var_cell_new(length);
   result->command = command;
-  result->circ_id = ntohs(*(uint16_t*)hdr);
+  result->circ_id = ntohs(get_uint16(hdr));
 
   buf_remove_from_front(buf, VAR_CELL_HEADER_SIZE);
   peek_from_buf(result->payload, length, buf);
