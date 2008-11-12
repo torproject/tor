@@ -443,6 +443,15 @@ uint32_t get_uint32(const char *cp) ATTR_PURE ATTR_NONNULL((1));
 void set_uint16(char *cp, uint16_t v) ATTR_NONNULL((1));
 void set_uint32(char *cp, uint32_t v) ATTR_NONNULL((1));
 
+/* These uint8 variants are defined to make the code more uniform. */
+#define get_uint8(cp) (*(const uint8_t*)(cp))
+static void set_uint8(char *cp, uint8_t v);
+static INLINE void
+set_uint8(char *cp, uint8_t v)
+{
+  *(uint8_t*)cp = v;
+}
+
 #if !defined(HAVE_RLIM_T)
 typedef unsigned long rlim_t;
 #endif
