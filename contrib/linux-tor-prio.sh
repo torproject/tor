@@ -8,41 +8,51 @@
 
 # This script provides prioritization of Tor traffic below other
 # traffic on a Linux server. It has two modes of operation: UID based 
-# and IP based. The UID based method requires that Tor be launched from 
+# and IP based. 
+
+# UID BASED PRIORITIZATION
+#
+# The UID based method requires that Tor be launched from 
 # a specific user ID. The "User" Tor config setting is
 # insufficient, as it sets the UID after the socket is created.
-# Here is a three line C wrapper you can use to execute Tor and drop 
-# privs to UID 501 before it creates any sockets. Change the UID 
-# to the UID for your tor server user, and compile with 
-# 'gcc tor_wrap.c -o tor_wrap':
-
+# Here is a C wrapper you can use to execute Tor and drop privs before 
+# it creates any sockets. 
+#
+# Compile with:
+# gcc -DUID=`id -u tor` -DGID=`id -g tor` tor_wrap.c -o tor_wrap
+#
 # #include <unistd.h>
 # int main(int argc, char **argv) {
-# if(setresuid(501, 501, 501) == -1) { perror("setresuid"); return 1; }
+# if(setresuid(UID, UID, UID) == -1) { perror("setresuid"); return 1; }
+# if(setresgid(GID, GID, GID) == -1) { perror("setresgid"); return 1; }
 # execl("/bin/tor", "/bin/tor", "-f", "/etc/tor/torrc", NULL);
 # perror("execl"); return 1;
 # }
 
+# IP BASED PRIORITIZATION
+#
 # The IP setting requires that a separate IP address be dedicated to Tor. 
 # Your Torrc should be set to bind to this IP for "OutboundBindAddress", 
 # "ListenAddress", and "Address".
 
+# GENERAL USAGE
+#
 # You should also tune the individual connection rate parameters below
 # to your individual connection. In particular, you should leave *some* 
 # minimum amount of bandwidth for Tor, so that Tor users are not 
 # completely choked out when you use your server's bandwidth. 30% is 
 # probably a reasonable choice. More is better of course.
-
+#
 # To start the shaping, run it as: 
 #   ./linux-tor-prio.sh 
-
+#
 # To get status information (useful to verify packets are getting marked
 # and prioritized), run:
 #   ./linux-tor-prio.sh status
-
+#
 # And to stop prioritization:
 #   ./linux-tor-prio.sh stop
-
+#
 ########################################################################
 
 # BEGIN USER TUNABLE PARAMETERS
@@ -50,12 +60,13 @@
 DEV=eth0
 
 # NOTE! You must START Tor under this UID. Using the Tor User
-# config setting is NOT sufficient.
+# config setting is NOT sufficient. See above.
 TOR_UID=$(id -u tor)
 
 # If the UID mechanism doesn't work for you, you can set this parameter
 # instead. If set, it will take precedence over the UID setting. Note that
-# you need multiple IPs for this to work.
+# you need multiple IPs with one specifically devoted to Tor for this to
+# work.
 #TOR_IP="42.42.42.42"
 
 # Average ping to most places on the net, milliseconds
@@ -87,6 +98,8 @@ MTU=1500
 AVG_PKT=900 # should be more like 600 for non-exit nodes
 
 # END USER TUNABLE PARAMETERS
+
+
 
 # The queue size should be no larger than your bandwidth-delay
 # product. This is RT latency*bandwidth/MTU/2
