@@ -23,8 +23,8 @@
 #
 # #include <unistd.h>
 # int main(int argc, char **argv) {
-# if(setresuid(UID, UID, UID) == -1) { perror("setresuid"); return 1; }
 # if(setresgid(GID, GID, GID) == -1) { perror("setresgid"); return 1; }
+# if(setresuid(UID, UID, UID) == -1) { perror("setresuid"); return 1; }
 # execl("/bin/tor", "/bin/tor", "-f", "/etc/tor/torrc", NULL);
 # perror("execl"); return 1;
 # }
