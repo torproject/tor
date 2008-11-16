@@ -2,6 +2,8 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
   o Major bugfixes:
     - Fix a DOS opportunity during the voting signature collection process
       at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.
+    - Fix a possible segfault when establishing an exit connection. Bugfix
+      on 0.2.1.5-alpha.
 
   o Minor bugfixes:
     - Get file locking working on win32.  Bugfix on 0.2.1.6-alpha.  Fixes

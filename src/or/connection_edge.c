@@ -296,7 +296,6 @@ connection_edge_finished_flushing(edge_connection_t *conn)
 int
 connection_edge_finished_connecting(edge_connection_t *edge_conn)
 {
-  char valbuf[INET_NTOA_BUF_LEN];
   connection_t *conn;
 
   tor_assert(edge_conn);
@@ -305,7 +304,8 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
 
   log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
-           escaped_safe_str(conn->address),conn->port,safe_str(valbuf));
+           escaped_safe_str(conn->address),conn->port,
+           fmt_addr(&conn->addr));
 
   conn->state = EXIT_CONN_STATE_OPEN;
   connection_watch_events(conn, EV_READ); /* stop writing, continue reading */
