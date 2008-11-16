@@ -11,7 +11,9 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
     - Made Tor a little less aggressive about deleting expired certificates.
       Partial fix for bug 854.
     - Stop doing unaligned memory access that generated bus errors on
-      sparc64.  Fix for bug 862.
+      sparc64.  Bugfix on 0.2.0.10-alpha.  Fix for bug 862.
+    - Fix a crash bug when changing ExcludeNodes from the controller.  Bugfix
+      on 0.2.1.6-alpha.  Fix for bug 867.  Patched by Sebastian.
 
   o Minor features (controller):
     - Return circuit purposes in response to GETINFO circuit-status.  Fixes

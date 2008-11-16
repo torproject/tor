@@ -5100,6 +5100,11 @@ routerset_to_string(const routerset_t *set)
 int
 routerset_equal(const routerset_t *old, const routerset_t *new)
 {
+  if (old == NULL && new == NULL)
+    return 1;
+  else if (old == NULL || new == NULL)
+    return 0;
+
   if (smartlist_len(old->list) != smartlist_len(new->list))
     return 0;
 
