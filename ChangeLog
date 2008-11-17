@@ -14,6 +14,8 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
       sparc64.  Bugfix on 0.2.0.10-alpha.  Fix for bug 862.
     - Fix a crash bug when changing ExcludeNodes from the controller.  Bugfix
       on 0.2.1.6-alpha.  Fix for bug 867.  Patched by Sebastian.
+    - Make USR2 log-level switch take effect immediately.  Bugfix on
+      0.1.2.8-beta.
 
   o Minor features (controller):
     - Return circuit purposes in response to GETINFO circuit-status.  Fixes

@@ -890,6 +890,7 @@ switch_logs_debug(void)
     for (i = LOG_DEBUG; i >= LOG_ERR; --i)
       lf->severities->masks[SEVERITY_MASK_IDX(i)] = ~0u;
   }
+  _log_global_min_severity = get_min_log_level();
   UNLOCK_LOGS();
 }
 
