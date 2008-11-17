@@ -12,7 +12,7 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
       Partial fix for bug 854.
     - Stop doing unaligned memory access that generated bus errors on
       sparc64.  Bugfix on 0.2.0.10-alpha.  Fix for bug 862.
-    - Fix a crash bug when changing ExcludeNodes from the controller.  Bugfix
+    - Fix a crash bug when changing EntryNodes from the controller.  Bugfix
       on 0.2.1.6-alpha.  Fix for bug 867.  Patched by Sebastian.
     - Make USR2 log-level switch take effect immediately.  Bugfix on
       0.1.2.8-beta.
