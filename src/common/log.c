@@ -701,6 +701,7 @@ switch_logs_debug(void)
   for (lf = logfiles; lf; lf=lf->next) {
     lf->min_loglevel = LOG_DEBUG;
   }
+  _log_global_min_severity = get_min_log_level();
   UNLOCK_LOGS();
 }
 
