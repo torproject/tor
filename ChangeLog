@@ -1,4 +1,4 @@
-Changes in version 0.2.0.32 - 2008-??-??
+Changes in version 0.2.0.32 - 2008-11-20
   o Security fixes:
     - The "User" and "Group" config options did not clear the
       supplementary group entries for the Tor process. The "User" option
@@ -54,8 +54,8 @@ Changes in version 0.2.0.32 - 2008-??-??
     - Remove the old v2 directory authority 'lefkada' from the default
       list. It has been gone for many months.
     - Stop doing unaligned memory access that generated bus errors on
-      sparc64.  Bugfix on 0.2.0.10-alpha.  Fix for bug 862.
-    - Make USR2 log-level switch take effect immediately.  Bugfix on
+      sparc64. Bugfix on 0.2.0.10-alpha. Fixes bug 862.
+    - Make USR2 log-level switch take effect immediately. Bugfix on
       0.1.2.8-beta.
 
   o Minor bugfixes (controller):
