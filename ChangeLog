@@ -7,6 +7,11 @@ Changes in version 0.2.0.32 - 2008-??-??
       detailed logging on credential switching, set CREDENTIAL_LOG_LEVEL
       in common/compat.c to LOG_NOTICE or higher. Patch by Jacob Appelbaum
       and Steven Murdoch. Bugfix on 0.0.2pre14. Fixes bug 848 and 857.
+    - The "ClientDNSRejectInternalAddresses" config option wasn't being
+      consistently obeyed: if an exit relay refuses a stream because its
+      exit policy doesn't allow it, we would remember what IP address
+      the relay said the destination address resolves to, even if it's
+      an internal IP address. Bugfix on 0.2.0.7-alpha; patch by rovv.
 
   o Major bugfixes:
     - Fix a DOS opportunity during the voting signature collection process

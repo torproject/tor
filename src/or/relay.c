@@ -751,8 +751,11 @@ connection_edge_process_end_not_open(
             ttl = (int)ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+5));
           else
             ttl = -1;
-          client_dns_set_addressmap(conn->socks_request->address, addr,
-                                    conn->chosen_exit_name, ttl);
+
+          if (!(get_options()->ClientDNSRejectInternalAddresses &&
+                                           is_internal_IP(addr, 0)))
+            client_dns_set_addressmap(conn->socks_request->address, addr,
+                                      conn->chosen_exit_name, ttl);
         }
         /* check if he *ought* to have allowed it */
         if (exitrouter &&

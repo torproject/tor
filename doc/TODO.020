@@ -3,7 +3,7 @@
 description of the patch.)
 
 Backport for 0.2.0:
-  - r17135: ClientDNSRejectInternalAddresses not consistently obeyed.
+  o r17135: ClientDNSRejectInternalAddresses not consistently obeyed.
 
 Backport for 0.2.0 once better tested:
   o r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
