@@ -72,7 +72,7 @@ diff -urNad trunk~/src/or/config.c trunk/src/or/config.c
    if (errmsg) {
      log(LOG_WARN,LD_CONFIG,"Failed to parse/validate config: %s", errmsg);
      tor_free(errmsg);
-@@ -5011,3 +5018,64 @@
+@@ -5011,3 +5018,60 @@
    puts(routerparse_c_id);
  }
  
@@ -128,10 +128,6 @@ diff -urNad trunk~/src/or/config.c trunk/src/or/config.c
 +  var->initvalue = tor_strdup("1");
 +
 +  var = config_find_option(&options_format, "User");
-+  tor_assert(var);
-+  var->initvalue = tor_strdup("debian-tor");
-+
-+  var = config_find_option(&options_format, "Group");
 +  tor_assert(var);
 +  var->initvalue = tor_strdup("debian-tor");
 +
