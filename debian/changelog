@@ -1,3 +1,11 @@
+tor (0.2.0.31-2) unstable; urgency=low
+
+  * New upstream version.
+    - Properly drops privileges when being configured to do
+      so (closes: #505178).
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 21 Nov 2008 23:28:29 +0100
+
 tor (0.2.0.31-1) unstable; urgency=low
 
   * New upstream version.
