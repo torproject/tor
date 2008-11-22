@@ -157,7 +157,7 @@ find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle"
 rm -f "Tor-$VERSION-$ARCH-Bundle.dmg"
 USER="`whoami`"
-sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle" "Tor-$VERSION-$ARCH-Bundle.dmg"
+sudo hdiutil create -format UDZO -imagekey zlib-level=9 -srcfolder "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle" "Tor-$VERSION-$ARCH-Bundle.dmg"
 sudo chown "$USER" "Tor-$VERSION-$ARCH-Bundle.dmg"
 
 sudo rm -rf $BUILD_DIR
