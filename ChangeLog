@@ -16,6 +16,8 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
       on 0.2.1.6-alpha.  Fix for bug 867.  Patched by Sebastian.
     - Make USR2 log-level switch take effect immediately.  Bugfix on
       0.1.2.8-beta.
+    - If one win32 nameserver fails to get added, continue adding the
+      rest, and don't automatically fail.
 
   o Minor features (controller):
     - Return circuit purposes in response to GETINFO circuit-status.  Fixes

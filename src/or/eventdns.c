@@ -2224,12 +2224,15 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	int err = 0;
 	if (server) {
 		do {
-			if (!sockaddr_eq(address, (struct sockaddr *)&server->address, 1))
+			if (!sockaddr_eq(address, (struct sockaddr *)&server->address, 1)) {
+				log(EVDNS_LOG_DEBUG, "Duplicate nameserver.");
 				return 3;
+			}
 			server = server->next;
 		} while (server != started_at);
 	}
 	if (addrlen > (int)sizeof(ns->address)) {
+		log(EVDNS_LOG_DEBUG, "Addrlen %d too long.", (int)addrlen);
 		return 2;
 	}
 
@@ -2250,6 +2253,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 #endif
 
 	if (connect(ns->socket, address, addrlen) != 0) {
+		log(EVDNS_LOG_DEBUG, "Couldn't open socket to nameserver.");
 		err = 2;
 		goto out2;
 	}
@@ -2258,6 +2262,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	ns->state = 1;
 	event_set(&ns->event, ns->socket, EV_READ | EV_PERSIST, nameserver_ready_callback, ns);
 	if (event_add(&ns->event, NULL) < 0) {
+		log(EVDNS_LOG_DEBUG, "Couldn't add event for nameserver.");
 		err = 2;
 		goto out2;
 	}
@@ -2314,14 +2319,20 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	 * ipv4
 	 */
 
+	log(EVDNS_LOG_DEBUG, "Trying to add nameserver <%s>", ip_as_string);
+
 	cp = strchr(ip_as_string, ':');
 	if (*ip_as_string == '[') {
 		int len;
-		if (!(cp = strchr(ip_as_string, ']')))
+		if (!(cp = strchr(ip_as_string, ']'))) {
+			log(EVDNS_LOG_DEBUG, "Nameserver missing closing ]");
 			return 4;
+		}
 		len = cp-(ip_as_string + 1);
-		if (len > (int)sizeof(buf)-1)
+		if (len > (int)sizeof(buf)-1) {
+			log(EVDNS_LOG_DEBUG, "[Nameserver] does not fit in buffer.");
 			return 4;
+		}
 		memcpy(buf, ip_as_string+1, len);
 		buf[len] = '\0';
 		addr_part = buf;
@@ -2336,8 +2347,10 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 		port_part = NULL;
 	} else if (cp) {
 		is_ipv6 = 0;
-		if (cp - ip_as_string > (int)sizeof(buf)-1)
+		if (cp - ip_as_string > (int)sizeof(buf)-1) {
+			log(EVDNS_LOG_DEBUG, "Nameserver does not fit in buffer.");
 			return 4;
+		}
 		memcpy(buf, ip_as_string, cp-ip_as_string);
 		buf[cp-ip_as_string] = '\0';
 		addr_part = buf;
@@ -2353,6 +2366,8 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	} else {
 		port = strtoint(port_part);
 		if (port <= 0 || port > 65535) {
+			log(EVDNS_LOG_DEBUG, "Nameserver port <%s> out of range",
+				port_part);
 			return 4;
 		}
 	}
@@ -2363,16 +2378,20 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 		struct sockaddr_in6 sin6;
 		sin6.sin6_family = AF_INET6;
 		sin6.sin6_port = htons(port);
-		if (1 != tor_inet_pton(AF_INET6, addr_part, &sin6.sin6_addr))
+		if (1 != tor_inet_pton(AF_INET6, addr_part, &sin6.sin6_addr)) {
+			log(EVDNS_LOG_DEBUG, "inet_pton(%s) failed", addr_part);
 			return 4;
+		}
 		return _evdns_nameserver_add_impl((struct sockaddr*)&sin6,
 										  sizeof(sin6));
 	} else {
 		struct sockaddr_in sin;
 		sin.sin_family = AF_INET;
 		sin.sin_port = htons(port);
-		if (!inet_aton(addr_part, &sin.sin_addr))
+		if (!inet_aton(addr_part, &sin.sin_addr)) {
+			log(EVDNS_LOG_DEBUG, "anet_pton(%s) failed", addr_part);
 			return 4;
+		}
 		return _evdns_nameserver_add_impl((struct sockaddr*)&sin,
 										  sizeof(sin));
 	}
@@ -3085,21 +3104,24 @@ load_nameservers_with_getnetworkparams(void)
 	while (ns) {
 		r = evdns_nameserver_ip_add_line(ns->IpAddress.String);
 		if (r) {
-			log(EVDNS_LOG_DEBUG,"Could not add nameserver %s to list,error: %d",
-				(ns->IpAddress.String),(int)GetLastError());
+			log(EVDNS_LOG_DEBUG,"Could not add nameserver %s to list, "
+				"error: %d; status: %d",
+				(ns->IpAddress.String),(int)GetLastError(), r);
 			status = r;
-			goto done;
 		} else {
 			log(EVDNS_LOG_DEBUG,"Successfully added %s as nameserver",ns->IpAddress.String);
+			added_any++;
 		}
 
-		added_any++;
 		ns = ns->Next;
 	}
 
 	if (!added_any) {
 		log(EVDNS_LOG_DEBUG, "No nameservers added.");
-		status = -1;
+		if (status == 0)
+			status = -1;
+	} else {
+		status = 0;
 	}
 
  done:
