@@ -3,6 +3,71 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.0.32 - 2008-11-20
+  o Security fixes:
+    - The "User" and "Group" config options did not clear the
+      supplementary group entries for the Tor process. The "User" option
+      is now more robust, and we now set the groups to the specified
+      user's primary group. The "Group" option is now ignored. For more
+      detailed logging on credential switching, set CREDENTIAL_LOG_LEVEL
+      in common/compat.c to LOG_NOTICE or higher. Patch by Jacob Appelbaum
+      and Steven Murdoch. Bugfix on 0.0.2pre14. Fixes bug 848 and 857.
+    - The "ClientDNSRejectInternalAddresses" config option wasn't being
+      consistently obeyed: if an exit relay refuses a stream because its
+      exit policy doesn't allow it, we would remember what IP address
+      the relay said the destination address resolves to, even if it's
+      an internal IP address. Bugfix on 0.2.0.7-alpha; patch by rovv.
+
+  o Major bugfixes:
+    - Fix a DOS opportunity during the voting signature collection process
+      at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.
+
+  o Major bugfixes (hidden services):
+    - When fetching v0 and v2 rendezvous service descriptors in parallel,
+      we were failing the whole hidden service request when the v0
+      descriptor fetch fails, even if the v2 fetch is still pending and
+      might succeed. Similarly, if the last v2 fetch fails, we were
+      failing the whole hidden service request even if a v0 fetch is
+      still pending. Fixes bug 814. Bugfix on 0.2.0.10-alpha.
+    - When extending a circuit to a hidden service directory to upload a
+      rendezvous descriptor using a BEGIN_DIR cell, almost 1/6 of all
+      requests failed, because the router descriptor has not been
+      downloaded yet. In these cases, do not attempt to upload the
+      rendezvous descriptor, but wait until the router descriptor is
+      downloaded and retry. Likewise, do not attempt to fetch a rendezvous
+      descriptor from a hidden service directory for which the router
+      descriptor has not yet been downloaded. Fixes bug 767. Bugfix
+      on 0.2.0.10-alpha.
+
+  o Minor bugfixes:
+    - Fix several infrequent memory leaks spotted by Coverity.
+    - When testing for libevent functions, set the LDFLAGS variable
+      correctly. Found by Riastradh.
+    - Avoid a bug where the FastFirstHopPK 0 option would keep Tor from
+      bootstrapping with tunneled directory connections. Bugfix on
+      0.1.2.5-alpha. Fixes bug 797. Found by Erwin Lam.
+    - When asked to connect to A.B.exit:80, if we don't know the IP for A
+      and we know that server B rejects most-but-not all connections to
+      port 80, we would previously reject the connection. Now, we assume
+      the user knows what they were asking for. Fixes bug 752. Bugfix
+      on 0.0.9rc5. Diagnosed by BarkerJr.
+    - If we overrun our per-second write limits a little, count this as
+      having used up our write allocation for the second, and choke
+      outgoing directory writes. Previously, we had only counted this when
+      we had met our limits precisely. Fixes bug 824. Patch from by rovv.
+      Bugfix on 0.2.0.x (??).
+    - Remove the old v2 directory authority 'lefkada' from the default
+      list. It has been gone for many months.
+    - Stop doing unaligned memory access that generated bus errors on
+      sparc64. Bugfix on 0.2.0.10-alpha. Fixes bug 862.
+    - Make USR2 log-level switch take effect immediately. Bugfix on
+      0.1.2.8-beta.
+
+  o Minor bugfixes (controller):
+    - Make DNS resolved events into "CLOSED", not "FAILED". Bugfix on
+      0.1.2.5-alpha. Fix by Robert Hogan. Resolves bug 807.
+
+
 Changes in version 0.2.0.31 - 2008-09-03
   Tor 0.2.0.31 addresses two potential anonymity issues, starts to fix
   a big bug we're seeing where in rare cases traffic from one Tor stream
