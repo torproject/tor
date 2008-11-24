@@ -78,6 +78,7 @@ Proposals by number:
 153  Automatic software update protocol [DRAFT]
 154  Automatic Software Update Protocol [OPEN]
 155  Four Improvements of Hidden Service Performance [OPEN]
+156  Tracking blocked ports on the client side [OPEN]
 
 
 Proposals by status:
@@ -99,6 +100,7 @@ Proposals by status:
    149  Using data from NETINFO cells
    154  Automatic Software Update Protocol
    155  Four Improvements of Hidden Service Performance
+   156  Tracking blocked ports on the client side
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  NEEDS-RESEARCH:
