@@ -944,7 +944,7 @@ typedef struct connection_t {
                       * AF_INET6 */
   tor_addr_t addr; /**< IP of the other side of the connection; used to
                     * identify routers, along with port. */
-  uint16_t port; /**< If non-zero, port  on the other end
+  uint16_t port; /**< If non-zero, port on the other end
                   * of the connection. */
   uint16_t marked_for_close; /**< Should we close this conn on the next
                               * iteration of the main loop? (If true, holds
