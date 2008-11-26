@@ -18,6 +18,8 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
       0.1.2.8-beta.
     - If one win32 nameserver fails to get added, continue adding the
       rest, and don't automatically fail.
+    - Use fcntl() for locking when flock() is not available.  Should fix
+      compilation on Solaris.  Should fix Bug 873.  Bugfix on 0.2.1.6-alpha.
 
   o Minor features (controller):
     - Return circuit purposes in response to GETINFO circuit-status.  Fixes

@@ -491,6 +491,10 @@ struct tor_lockfile_t {
  * otherwise.
  *
  * Return a <b>tor_lockfile_t</b> on success, NULL on failure.
+ *
+ * (Implementation note: because we need to fall back to fcntl on some
+ *  platforms, these locks are per-process, not per-thread.  If you want
+ *  to do in-process locking, use tor_mutex_t like a normal person.)
  */
 tor_lockfile_t *
 tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
@@ -506,6 +510,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
              strerror(errno));
     return NULL;
   }
+
 #ifdef WIN32
   _lseek(fd, 0, SEEK_SET);
   if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLCK, 1) < 0) {
@@ -516,7 +521,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
     close(fd);
     return NULL;
   }
-#else
+#elif defined(HAVE_FLOCK)
   if (flock(fd, LOCK_EX|(blocking ? 0 : LOCK_NB)) < 0) {
     if (errno != EWOULDBLOCK)
       log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
@@ -524,6 +529,21 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
       *locked_out = 1;
     close(fd);
     return NULL;
+  }
+#else
+  {
+    struct flock lock;
+    memset(&lock, 0, sizeof(lock));
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    if (fcntl(fd, blocking ? F_SETLKW : F_SETLK, &lock) < 0) {
+      if (errno != EACCES && errno != EAGAIN)
+        log_warn(LD_FS, "Couldn't lock \"%s\": %s", filename, strerror(errno));
+      else
+        *locked_out = 1;
+      close(fd);
+      return NULL;
+    }
   }
 #endif
 
@@ -546,11 +566,13 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
     log_warn(LD_FS,"Error unlocking \"%s\": %s", lockfile->filename,
              strerror(errno));
   }
-#else
+#elif defined(HAVE_FLOCK)
   if (flock(lockfile->fd, LOCK_UN) < 0) {
     log_warn(LD_FS, "Error unlocking \"%s\": %s", lockfile->filename,
              strerror(errno));
   }
+#else
+  /* Closing the lockfile is sufficient. */
 #endif
 
   close(lockfile->fd);
