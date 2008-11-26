@@ -108,8 +108,7 @@ void *smartlist_bsearch(smartlist_t *sl, const void *key,
  ATTR_PURE;
 int smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
                           int (*compare)(const void *key, const void **member),
-                          int *found_out)
- ATTR_PURE;
+                          int *found_out);
 
 void smartlist_pqueue_add(smartlist_t *sl,
                           int (*compare)(const void *a, const void *b),
