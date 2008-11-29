@@ -425,7 +425,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
                     "directory '%s' on port %d.",
            rend_query->onion_address, desc_id_base32,
            rend_query->auth_type,
-           (rend_query->auth_type == REND_NO_AUTH ? "NULL" :
+           (rend_query->auth_type == REND_NO_AUTH ? "[none]" :
            escaped_safe_str(descriptor_cookie_base64)),
            hs_dir->nickname, hs_dir->dir_port);
   return 1;

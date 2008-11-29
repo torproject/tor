@@ -140,8 +140,8 @@ connection_add(connection_t *conn)
               conn_write_callback, conn);
   }
 
-  log_debug(LD_NET,"new conn type %s, socket %d, n_conns %d.",
-            conn_type_to_string(conn->type), conn->s,
+  log_debug(LD_NET,"new conn type %s, socket %d, address %s, n_conns %d.",
+            conn_type_to_string(conn->type), conn->s, conn->address,
             smartlist_len(connection_array));
 
   return 0;
