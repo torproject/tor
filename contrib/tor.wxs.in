@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="Windows-1252" ?>
+<!-- 
+  WiX is a Microsoft Installer tool that parses an installation specification XML document
+  and produces an MSI package for use on updated Windows 2000 and newer systems.
+
+  The MSI package format provides some advantages over the existing NSIS packages when used
+  in an automated fashion.  A modified version of the Mondo UI installer is included without
+  EULA and other unnecessary dialogs.  You must update the UIRef element below to change UI.
+
+  Compile MSI installer via WiX: 
+    candle.exe contrib/*.wxs
+    light.exe *.wixobj -out tor.msi -ext C:\Path\to\Wix\bin\WixUIExtension.dll
+
+  A silent installation can be performed with a /quiet option passed.
+    misexec /i tor.msi INSTALLDIR=C:\path\to\install\to /qn
+
+  A repair operation can be performed with /f and remove via /x
+
+  More msiexec command line details at: http://technet.microsoft.com/en-us/library/cc759262.aspx
+ -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+    Name="Tor"
+    Id="1449ef81-e295-43e5-91ac-81b7da0e2024"
+    UpgradeCode="64323a0c-9712-4a7a-8db8-d3c5c0b963df"
+    Version="0.2.1.7"
+    Manufacturer="The Tor Project, Inc."
+    Language="1033" Codepage="1252">
+   
+    <!-- Common package definitions.  Most of these elements are self explanatory or do not need modification.
+         Note that there is no support for signature verification nor patched upgrades at this time.
+      --> 
+    <Package
+      Id="*"
+      Keywords="Installer"
+      Description="Tor Installer"
+      Manufacturer="The Tor Project, Inc."
+      Compressed="yes"
+      InstallerVersion="100"
+      Languages="1033"
+      SummaryCodepage="1252"
+    />
+    <Media
+      Id="1"
+      Cabinet="Tor.cab"
+      CompressionLevel="high"
+      EmbedCab="yes"
+      DiskPrompt="na"
+    />
+    <Property
+      Id="DiskPrompt"
+      Value="Tor Installation"
+    />
+
+    <!-- Most of the installation directives are for populating the "Program Files" directory
+         with the Tor binaries, dynamic link libraries, configuration files, and other documents.
+      -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder" Name="ProgramFilesDir">
+        <Directory Id="INSTALLDIR" Name="Tor">
+
+          <!-- Tor application file -->
+          <Component Id="TorExecutable" Guid="219e0538-7f7f-4445-8406-e4f06ba22417">
+            <File
+              Id="TorExe"
+              Name="Tor.exe"
+              Source="bin\tor.exe"
+              Vital="yes"
+              DiskId="1"
+            />
+          </Component>
+
+          <!-- Tor configuration files
+               The sample config is always kept up to date and the torrc is left as is
+               if it exists and copied from the sample config otherwise.
+            -->
+          <Component Id="TorConfigFile" Guid="1dae9705-0bef-4588-be36-d8a5df5e47cc">
+            <File
+              Id="TorSampleConfig"
+              Name="torrc.sample"
+              Source="src\config\torrc.sample"
+              Vital="yes"
+              ReadOnly="yes"
+              DiskId="1"
+            >
+              <CopyFile
+                Id="TorConfig"
+                DestinationName="torrc"
+              />
+            </File>
+          </Component>
+
+          <!-- Tor OpenSSL shared libraries
+               This optional component is required for shared builds of Tor.  For static builds it is ignored.
+            -->
+          <Component Id="OpenSSLLibrary" Guid="4d99fd44-dc24-46c6-8825-25b9e5916b85">
+            <File
+              Id="cryptoeay32dll"
+              Name="cryptoeay32-0.9.8.dll"
+              Source="bin/cryptoeay32-0.9.8.dll"
+              DiskId="1"
+            />
+            <File
+              Id="ssleay32dll"
+              Name="ssleay32-0.9.8.dll"
+              Source="bin/ssleay32-0.9.8.dll"
+              DiskId="1"
+            />
+          </Component>
+
+          <!-- msys shared libraries 
+               This optional component is required for shared builds of Tor.  For static builds it is ignored.
+            -->
+          <Component Id="MSYSLibrary" Guid="451ffc02-2666-410e-984f-35fb303b05a2">
+            <File
+              Id="msyszdll"
+              Name="msys-z.dll"
+              Source="bin/msys-z.dll"
+              DiskId="1"
+            />
+            <File
+              Id="msys10dll"
+              Name="msys-1.0.dll"
+              Source="bin/msys-1.0.dll"
+              DiskId="1"
+            />
+          </Component>
+
+          <!-- Tor docs -->
+          <Component Id="TorDocuments" Guid="3def35f6-70a0-44af-813a-f96bc8462748">
+            <File
+              Id="TorReadme"
+              Name="README"
+              Source="README"
+              DiskId="1"
+            />
+            <File
+              Id="TorAuthors"
+              Name="Authors"
+              Source="Authors"
+              DiskId="1"
+            />
+            <File
+              Id="TorChangelog"
+              Name="ChangeLog"
+              Source="ChangeLog"
+              DiskId="1"
+            />
+            <File
+              Id="TorLicense"
+              Name="LICENSE"
+              Source="LICENSE"
+              DiskId="1"
+            />
+          </Component>
+        </Directory>
+      </Directory>
+
+      <!-- Create shortcuts if requested
+           Remember that shortcuts must always be tied to a "key" registry value for proper repair and removal.
+        -->
+      <Directory Id="ProgramMenuFolder" Name="Programs">
+        <Directory Id="ShortcutFolder" Name="Tor">
+          <Component Id="AddTorToStartMenu" Guid="a318c037-e1ed-481c-983d-4a0ad3810ba0">
+            <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+              <RegistryValue Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />
+            </RegistryKey>
+            <Shortcut Id="TorStartMenuShortcut"
+                      Name="Tor" Target="[INSTALLDIR]tor.exe"
+                      Directory="ShortcutFolder" WorkingDirectory="INSTALLDIR"
+                      Icon="tor.ico" IconIndex="0" />
+            <RemoveFolder Id="RemoveShortcutFolder" On="uninstall" />
+          </Component>
+        </Directory>
+      </Directory>
+
+      <Directory Id="DesktopFolder" Name="Desktop">
+        <Component Id="AddTorToDesktop" Guid="9a00d5c1-1d5d-4a62-864e-f53f79b3c77a">
+          <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+            <RegistryValue Name="DesktopShortcut" Value="1" Type="integer" KeyPath="yes" />
+          </RegistryKey>
+          <Shortcut Id="TorDesktopShortcut"
+                    Name="Tor" Target="[INSTALLDIR]tor.exe"
+                    Directory="DesktopFolder" WorkingDirectory="INSTALLDIR"
+                    Icon="tor.ico" IconIndex="0" />
+        </Component>
+      </Directory>
+
+      <!-- Current version registry info
+           This value can be used by third party applications to query for the current version installed on the system.
+        -->
+      <Component Id="TorRegistry" Guid="575de318-a649-49fe-95e5-ee091f6cb8c6">
+        <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Tor"
+          Action="createAndRemoveOnUninstall">
+          <RegistryValue Name="Version" Value="@VERSION@" Type="string" KeyPath="yes" />
+        </RegistryKey>
+      </Component>
+
+    </Directory>
+
+    <!-- Define list of application features available for install
+         There are two main sections to this list.  The "MainApplication" section which defines a core
+         set of mandatory files and setup and the other optional components like shortcuts which are not
+         required for functional installation.
+      -->
+    <Feature Id="Complete" Title="Tor"
+             Level="1" Display="expand" ConfigurableDirectory="INSTALLDIR"
+             Description="Tor is an implementation of Onion Routing. You can read more at https://www.torproject.org/">
+
+      <!-- Core files and setup tasks that must always be included in installation -->
+      <Feature Id="MainApplication" Title="Tor Application"
+               AllowAdvertise="no" Absent="disallow" Level="1"
+               Description="Main Tor application">
+        <ComponentRef Id="TorExecutable" />
+        <ComponentRef Id="TorConfigFile" />
+        <ComponentRef Id="OpenSSLLibrary" />
+        <ComponentRef Id="MSYSLibrary" />
+        <ComponentRef Id="TorDocuments" />
+        <ComponentRef Id="TorRegistry" /> 
+      </Feature>
+
+      <!-- Shorcuts on the Start Menu and Desktop are optional but provided by default. -->
+      <Feature Id="Shortcuts" Title="Shortcuts"
+               AllowAdvertise="no" Absent="allow" Level="1"
+               Description="Add shortcuts to Tor.">
+        <Feature Id="StartMenuShortcuts" Title="Add to Start menu"
+                 AllowAdvertise="no" Absent="allow" Level="1"
+                 Description="Add Tor to your Start menu">
+          <ComponentRef Id="AddTorToStartMenu" />
+        </Feature>
+        <Feature Id="DesktopShortcuts" Title="Add to Desktop"
+                 AllowAdvertise="no" Absent="allow" Level="1"
+                 Description="Add Tor to your Desktop">
+          <ComponentRef Id="AddTorToDesktop" />
+        </Feature>
+      </Feature>
+    </Feature>
+
+    <!-- Set the UI options
+         Use a custom UI sequence to avoid EULA and other extraneous parts of Mondo and other GUIs
+      -->
+    <UIRef Id="WixUI_Tor" />
+    <Icon Id="tor.ico" SourceFile="contrib/tor.ico" />
+  </Product>
+</Wix>
+
