@@ -207,7 +207,6 @@
         <ComponentRef Id="TorExecutable" />
         <ComponentRef Id="TorConfigFile" />
         <ComponentRef Id="OpenSSLLibrary" />
-        <ComponentRef Id="MSYSLibrary" />
         <ComponentRef Id="TorDocuments" />
         <ComponentRef Id="TorRegistry" /> 
       </Feature>
