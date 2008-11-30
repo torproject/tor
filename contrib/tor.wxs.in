@@ -116,25 +116,6 @@
             />
           </Component>
 
-          <!-- msys shared libraries 
-               This optional component is required for shared builds
-               of Tor.  For static builds it is ignored.
-            -->
-          <Component Id="MSYSLibrary" Guid="451ffc02-2666-410e-984f-35fb303b05a2">
-            <File
-              Id="msyszdll"
-              Name="msys-z.dll"
-              Source="bin/msys-z.dll"
-              DiskId="1"
-            />
-            <File
-              Id="msys10dll"
-              Name="msys-1.0.dll"
-              Source="bin/msys-1.0.dll"
-              DiskId="1"
-            />
-          </Component>
-
           <!-- Tor docs -->
           <Component Id="TorDocuments" Guid="3def35f6-70a0-44af-813a-f96bc8462748">
             <File
