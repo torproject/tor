@@ -79,6 +79,7 @@ Proposals by number:
 154  Automatic Software Update Protocol [OPEN]
 155  Four Improvements of Hidden Service Performance [OPEN]
 156  Tracking blocked ports on the client side [OPEN]
+157  Make certificate downloads specific [OPEN]
 
 
 Proposals by status:
@@ -101,6 +102,7 @@ Proposals by status:
    154  Automatic Software Update Protocol
    155  Four Improvements of Hidden Service Performance
    156  Tracking blocked ports on the client side
+   157  Make certificate downloads specific
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  NEEDS-RESEARCH:

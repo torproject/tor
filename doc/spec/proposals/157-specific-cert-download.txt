@@ -1,0 +1,91 @@
+Filename: 157-specific-cert-download.txt
+Title: Make certificate downloads specific
+Version: $Revision$
+Last-Modified: $Date$
+Author: Nick Mathewson
+Created: 2-Dec-2008
+Status: Open
+Target: 0.2.1.x
+
+Overview:
+
+  Tor's directory specification gives two ways to download a certificate:
+  by its identity fingerprint, or by the digest of its secret key.  Both
+  are error-prone.  We propose a new download mechanism to make sure that
+  clients get the certificates they want.
+
+Motivation:
+
+  When a client wants a certificate to verify a consensus, it has two choices
+  currently:
+     - Download by identity key fingerprint.  In this case, the client risks
+       getting a certificate for the same authority, but with a different
+       signing key than the one used to sign the consensus.
+
+     - Download by signing key fingerprint.  In this case, the client risks
+       getting a forged certificate that contains the right signing key
+       signed with the wrong identity key.  (Since caches are willing to
+       cache certs from authorities they do not themselves recognize, the
+       attacker wouldn't need to compromise an authority's key to do this.)
+
+Current solution:
+
+  Clients fetch by identity keys, and re-fetch with backoff if they don't get
+  certs with the signing key they want.
+
+Proposed solution:
+
+  Phase 1: Add a URL type for clients to download certs by identity _and_
+  signing key fingerprint.  Unless both fields match, the client doesn't
+  accept the certificate(s).  Clients begin using this method when their
+  randomly chosen directory cache supports it.
+
+  Phase 1A: Simultaneously, add a cross-certification element to
+  certificates.
+
+  Phase 2: Once many directory caches support phase 1, clients should prefer
+  to fetch certificates using that protocol when available.
+
+  Phase 2A: Once all authorities are generating cross-certified certificates
+  as in phase 1A, require cross-certification.
+
+Specification additions:
+
+  The key certificate whose identity key fingerprint is <F> and whose signing
+  key fingerprint is <S> should be available at:
+
+      http://<hostname>/tor/keys/fp-sk/<F>-<S>.z
+
+  As usual, clients may request multiple certificates using:
+
+      http://<hostname>/tor/keys/fp-sk/<F1>-<S1>+<F2>-<S2>.z
+
+  Clients SHOULD use this format whenever they know both key fingerprints for
+  a desired certificate.
+
+
+  Certificates SHOULD contain the following field (at most once):
+
+  "cross-cert" NL CrossSignature NL
+
+  where CrossSignature is a signature, made using the certificate's signing
+  key, of the digest of the PKCS1-padded hash of the certificate's identity
+  key.  For backward compatibility with broken versions of the parser, we
+  wrap the base64-encoded signature in -----BEGIN ID SIGNATURE---- and
+  -----END ID SIGNATURE----- tags.  (See bug 880.) Implementations MUST allow
+  the "ID " portion to be omitted, however.
+
+  When encountering a certificate with a cross-cert entry, implementations
+  MUST verify that the
+
+  (In a future version of this specification, cross-cert entries will be
+  required.)
+
+Why cross-certify too?
+
+  Cross-certification protects clients who haven't updated yet, by reducing
+  the number of caches that are willing to hold and serve bogus certificates.
+
+References:
+
+  This is related to part 2 of bug 854.
