@@ -8,7 +8,7 @@
 	<string>Tor Bundle @VERSION@</string>
 	<key>CFBundleIdentifier</key>
 	<string>net.freehaven.torbundle</string>
-	<key>CFBundleSortVersionString</key>
+	<key>CFBundleShortVersionString</key>
 	<string>@VERSION@</string>
 	<key>IFPkgFlagComponentDirectory</key>
 	<string>../.contained_packages</string>
