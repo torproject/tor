@@ -590,7 +590,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
 #define SEEK_END 2
 #endif
 
-/** Return the position of fd with respect to the start of the file */
+/** Return the position of <b>fd</b> with respect to the start of the file. */
 off_t
 tor_fd_getpos(int fd)
 {
@@ -601,7 +601,7 @@ tor_fd_getpos(int fd)
 #endif
 }
 
-/** Move fd to the end of the file. Return -1 on error, 0 on success. */
+/** Move <b>fd</b> to the end of the file. Return -1 on error, 0 on success. */
 int
 tor_fd_seekend(int fd)
 {
