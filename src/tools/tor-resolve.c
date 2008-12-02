@@ -367,7 +367,7 @@ main(int argc, char **argv)
     set_log_severity_config(LOG_DEBUG, LOG_ERR, s);
   else
     set_log_severity_config(LOG_WARN, LOG_ERR, s);
-  add_stream_log(s, "<stderr>", stderr);
+  add_stream_log(s, "<stderr>", fileno(stderr));
 
   if (n_args == 1) {
     log_debug(LD_CONFIG, "defaulting to localhost");

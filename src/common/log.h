@@ -123,7 +123,7 @@ int parse_log_severity_config(const char **cfg,
 void set_log_severity_config(int minSeverity, int maxSeverity,
                              log_severity_list_t *severity_out);
 void add_stream_log(const log_severity_list_t *severity, const char *name,
-                    FILE *stream);
+                    int fd);
 int add_file_log(const log_severity_list_t *severity, const char *filename);
 #ifdef HAVE_SYSLOG_H
 int add_syslog_log(const log_severity_list_t *severity);

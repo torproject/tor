@@ -195,7 +195,7 @@ parse_commandline(int argc, char **argv)
     set_log_severity_config(LOG_DEBUG, LOG_ERR, &s);
   else
     set_log_severity_config(LOG_WARN, LOG_ERR, &s);
-  add_stream_log(&s, "<stderr>", stderr);
+  add_stream_log(&s, "<stderr>", fileno(stderr));
 
   if (!identity_key_file) {
     identity_key_file = tor_strdup("./authority_identity_key");

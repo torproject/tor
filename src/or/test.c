@@ -4479,7 +4479,7 @@ main(int c, char**v)
     log_severity_list_t s;
     memset(&s, 0, sizeof(s));
     set_log_severity_config(loglevel, LOG_ERR, &s);
-    add_stream_log(&s, "", stdout);
+    add_stream_log(&s, "", fileno(stdout));
   }
 
   options->command = CMD_RUN_UNITTESTS;

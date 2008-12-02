@@ -4170,7 +4170,7 @@ options_init_logs(or_options_t *options, int validate_only)
                    err?"stderr":"stdout");
         } else {
           add_stream_log(severity, err?"<stderr>":"<stdout>",
-                         err?stderr:stdout);
+                         fileno(err?stderr:stdout));
         }
       }
       goto cleanup;

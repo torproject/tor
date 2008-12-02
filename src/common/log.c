@@ -14,7 +14,7 @@ const char log_c_id[] = "$Id$";
 #include "orconfig.h"
 #include <stdarg.h>
 #include <assert.h>
-#include <stdio.h>
+// #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef HAVE_SYS_TIME_H
@@ -23,6 +23,16 @@ const char log_c_id[] = "$Id$";
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+#include "compat.h"
 #include "util.h"
 #define LOG_PRIVATE
 #include "log.h"
@@ -37,7 +47,7 @@ const char log_c_id[] = "$Id$";
 typedef struct logfile_t {
   struct logfile_t *next; /**< Next logfile_t in the linked list. */
   char *filename; /**< Filename to open. */
-  FILE *file; /**< Stream to receive log messages. */
+  int fd; /**< fd to receive log messages, or -1 for none. */
   int seems_dead; /**< Boolean: true if the stream seems to be kaput. */
   int needs_close; /**< Boolean: true if the stream gets closed on shutdown. */
   int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
@@ -170,11 +180,9 @@ log_tor_version(logfile_t *lf, int reset)
   if (lf->is_temporary)
     /* If it's temporary, it isn't really a file. */
     return 0;
-#ifdef HAVE_FTELLO
-  is_new = (ftello(lf->file) == 0);
-#else
-  is_new = (ftell(lf->file) == 0);
-#endif
+
+  is_new = lf->fd >= 0 && tor_fd_getpos(lf->fd) == 0;
+
   if (reset && !is_new)
     /* We are resetting, but we aren't at the start of the file; no
      * need to log again. */
@@ -187,8 +195,7 @@ log_tor_version(logfile_t *lf, int reset)
     tor_snprintf(buf+n, sizeof(buf)-n,
                  "Tor %s opening %slog file.\n", VERSION, is_new?"new ":"");
   }
-  if (fputs(buf, lf->file) == EOF ||
-      fflush(lf->file) == EOF) /* error */
+  if (write_all(lf->fd, buf, strlen(buf), 0) < 0) /* error */
     return -1; /* failed */
   return 0;
 }
@@ -201,7 +208,7 @@ log_tor_version(logfile_t *lf, int reset)
 static INLINE char *
 format_msg(char *buf, size_t buf_len,
            log_domain_mask_t domain, int severity, const char *funcname,
-           const char *format, va_list ap)
+           const char *format, va_list ap, size_t *msg_len_out)
 {
   size_t n;
   int r;
@@ -244,6 +251,7 @@ format_msg(char *buf, size_t buf_len,
   }
   buf[n]='\n';
   buf[n+1]='\0';
+  *msg_len_out = n+1;
   return end_of_prefix;
 }
 
@@ -256,6 +264,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
      const char *format, va_list ap)
 {
   char buf[10024];
+  size_t msg_len = 0;
   int formatted = 0;
   logfile_t *lf;
   char *end_of_prefix=NULL;
@@ -272,7 +281,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
       lf = lf->next;
       continue;
     }
-    if (! (lf->file || lf->is_syslog || lf->callback)) {
+    if (! (lf->fd >= 0 || lf->is_syslog || lf->callback)) {
       lf = lf->next;
       continue;
     }
@@ -283,7 +292,8 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
 
     if (!formatted) {
       end_of_prefix =
-        format_msg(buf, sizeof(buf), domain, severity, funcname, format, ap);
+        format_msg(buf, sizeof(buf), domain, severity, funcname, format, ap,
+                   &msg_len);
       formatted = 1;
     }
     if (lf->is_syslog) {
@@ -299,8 +309,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
       lf = lf->next;
       continue;
     }
-    if (fputs(buf, lf->file) == EOF ||
-        fflush(lf->file) == EOF) { /* error */
+    if (write_all(lf->fd, buf, msg_len, 0) < 0) { /* error */
       /* don't log the error! mark this log entry to be blown away, and
        * continue. */
       lf->seems_dead = 1;
@@ -465,8 +474,9 @@ delete_log(logfile_t *victim)
 static void
 close_log(logfile_t *victim)
 {
-  if (victim->needs_close && victim->file) {
-    fclose(victim->file);
+  if (victim->needs_close && victim->fd >= 0) {
+    close(victim->fd);
+    victim->fd = -1;
   } else if (victim->is_syslog) {
 #ifdef HAVE_SYSLOG_H
     if (--syslog_count == 0) {
@@ -495,16 +505,16 @@ set_log_severity_config(int loglevelMin, int loglevelMax,
 }
 
 /** Add a log handler named <b>name</b> to send all messages in <b>severity</b>
- * to <b>stream</b>. Copies <b>severity</b>. Helper: does no locking. */
+ * to <b>fd</b>. Copies <b>severity</b>. Helper: does no locking. */
 static void
 add_stream_log_impl(const log_severity_list_t *severity,
-                    const char *name, FILE *stream)
+                    const char *name, int fd)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
+  lf->fd = fd;
   lf->filename = tor_strdup(name);
   lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
-  lf->file = stream;
   lf->next = logfiles;
 
   logfiles = lf;
@@ -512,14 +522,14 @@ add_stream_log_impl(const log_severity_list_t *severity,
 }
 
 /** Add a log handler named <b>name</b> to send all messages in <b>severity</b>
- * to <b>stream</b>. Steals a reference to <b>severity</b>; the caller must
+ * to <b>fd</b>. Steals a reference to <b>severity</b>; the caller must
  * not use it after calling this function. */
 void
 add_stream_log(const log_severity_list_t *severity,
-               const char *name, FILE *stream)
+               const char *name, int fd)
 {
   LOCK_LOGS();
-  add_stream_log_impl(severity, name, stream);
+  add_stream_log_impl(severity, name, fd);
   UNLOCK_LOGS();
 }
 
@@ -540,7 +550,7 @@ add_temp_log(int min_severity)
   log_severity_list_t *s = tor_malloc_zero(sizeof(log_severity_list_t));
   set_log_severity_config(min_severity, LOG_ERR, s);
   LOCK_LOGS();
-  add_stream_log_impl(s, "<temp>", stdout);
+  add_stream_log_impl(s, "<temp>", fileno(stdout));
   tor_free(s);
   logfiles->is_temporary = 1;
   UNLOCK_LOGS();
@@ -555,6 +565,7 @@ add_callback_log(const log_severity_list_t *severity, log_callback cb)
 {
   logfile_t *lf;
   lf = tor_malloc_zero(sizeof(logfile_t));
+  lf->fd = -1;
   lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
   lf->filename = tor_strdup("<callback>");
   lf->callback = cb;
@@ -635,19 +646,23 @@ mark_logs_temp(void)
 }
 
 /**
- * Add a log handler to send messages to <b>filename</b>. If opening
- * the logfile fails, -1 is returned and errno is set appropriately
- * (by fopen).
+ * Add a log handler to send messages to <b>filename</b>. If opening the
+ * logfile fails, -1 is returned and errno is set appropriately (by open(2)).
  */
 int
 add_file_log(const log_severity_list_t *severity, const char *filename)
 {
-  FILE *f;
+  int fd;
   logfile_t *lf;
-  f = fopen(filename, "a");
-  if (!f) return -1;
+
+  fd = open(filename, O_WRONLY|O_CREAT|O_APPEND, 0644);
+  if (fd<0)
+    return -1;
+  if (tor_fd_seekend(fd)<0)
+    return -1;
+
   LOCK_LOGS();
-  add_stream_log_impl(severity, filename, f);
+  add_stream_log_impl(severity, filename, fd);
   logfiles->needs_close = 1;
   lf = logfiles;
   _log_global_min_severity = get_min_log_level();
@@ -675,6 +690,7 @@ add_syslog_log(const log_severity_list_t *severity)
     openlog("Tor", LOG_PID | LOG_NDELAY, LOGFACILITY);
 
   lf = tor_malloc_zero(sizeof(logfile_t));
+  lf->fd = -1;
   lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
   lf->filename = tor_strdup("<syslog>");
 

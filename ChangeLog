@@ -26,6 +26,9 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
     - Build correctly on platforms without socklen_t.
     - Avoid potential crash on internal error during signature collection.
       Fixes bug 864.  Patch from rovv.
+    - Do not use C's stdio library for writing to log files.  This will
+      improve logging performance by a minute amount, and will stop leaking
+      fds when our disk is full.  Fixes bug 861.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
