@@ -1,6 +1,8 @@
 
 #define CRYPTO_PRIVATE
 
+#include "orconfig.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "crypto.h"
@@ -18,7 +20,9 @@ int main(int c, char **v)
   init_logging();
 
   if (c < 2) {
-    fprintf(stderr, "Hi. I'm tor-checkkey.  Tell me a filename that has a PEM-encoded RSA public key (like in a cert) and I'll dump the modulus.\n");
+    fprintf(stderr, "Hi. I'm tor-checkkey.  Tell me a filename that "
+            "has a PEM-encoded RSA public key (like in a cert) and I'll "
+            "dump the modulus.\n");
     return 1;
   }
 
@@ -47,3 +51,4 @@ int main(int c, char **v)
 
   return 0;
 }
+
