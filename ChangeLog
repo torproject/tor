@@ -4,6 +4,7 @@ Changes in version 0.2.0.33 - 200?-??-??
       could make gcc generate non-functional binary search code. Bugfix
       on 0.2.0.10-alpha.
     - Build correctly on platforms without socklen_t.
+    - Compile without warnings on solaris.
     - Avoid potential crash on internal error during signature collection.
       Fixes bug 864.  Patch from rovv.
 

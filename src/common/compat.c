@@ -895,7 +895,8 @@ log_credential_status(void)
     return -1;
   } else {
     log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
-           "UID is %u (real), %u (effective), %u (saved)", ruid, euid, suid);
+           "UID is %u (real), %u (effective), %u (saved)",
+           (unsigned)ruid, (unsigned)euid, (unsigned)suid);
   }
 #else
   /* getresuid is not present on MacOS X, so we can't get the saved (E)UID */
@@ -904,7 +905,8 @@ log_credential_status(void)
   (void)suid;
 
   log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
-         "UID is %u (real), %u (effective), unknown (saved)", ruid, euid);
+         "UID is %u (real), %u (effective), unknown (saved)",
+         (unsigned)ruid, (unsigned)euid);
 #endif
 
   /* log GIDs */
@@ -914,7 +916,8 @@ log_credential_status(void)
     return -1;
   } else {
     log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
-           "GID is %u (real), %u (effective), %u (saved)", rgid, egid, sgid);
+           "GID is %u (real), %u (effective), %u (saved)",
+           (unsigned)rgid, (unsigned)egid, (unsigned)sgid);
   }
 #else
   /* getresgid is not present on MacOS X, so we can't get the saved (E)GID */
@@ -922,7 +925,8 @@ log_credential_status(void)
   egid = getegid();
   (void)sgid;
   log_fn(CREDENTIAL_LOG_LEVEL, LD_GENERAL,
-         "GID is %u (real), %u (effective), unknown (saved)", rgid, egid);
+         "GID is %u (real), %u (effective), unknown (saved)",
+         (unsigned)rgid, (unsigned)egid);
 #endif
 
   /* log supplementary groups */
