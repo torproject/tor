@@ -271,6 +271,10 @@ int touch_file(const char *fname);
 
 /* ===== Net compatibility */
 
+#if (SIZEOF_SOCKLEN_T == 0)
+typedef int socklen_t;
+#endif
+
 int tor_close_socket(int s);
 int tor_open_socket(int domain, int type, int protocol);
 int tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len);
@@ -282,10 +286,6 @@ int get_n_open_sockets(void);
 #else
 #define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
 #define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)
-#endif
-
-#if (SIZEOF_SOCKLEN_T == 0)
-typedef int socklen_t;
 #endif
 
 /* Define struct in6_addr on platforms that do not have it.  Generally,

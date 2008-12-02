@@ -3,6 +3,7 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Do not mark smartlist_bsearch_idx() function as ATTR_PURE.  This bug
       could make gcc generate non-functional binary search code. Bugfix
       on 0.2.0.10-alpha.
+    - Build correctly on platforms without socklen_t.
 
 
 Changes in version 0.2.0.32 - 2008-11-20
