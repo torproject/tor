@@ -31,7 +31,7 @@
 
 ### this is the location of a file which contains all the actual package names
 ##	(ie "Tor", "torstartup", ...) the list should be new-line-delimited.
-PACKAGE_LIST_SRC=./package_list.txt
+PACKAGE_LIST_SRC=/Library/Tor/package_list.txt
 
 ### this is the name of the user created in the install process of Tor
 TOR_USER=_tor

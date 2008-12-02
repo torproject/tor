@@ -8,7 +8,7 @@
 	<string>Tor Startup Script</string>
 	<key>CFBundleName</key>
 	<string>Tor Startup Script</string>
-	<key>CFBundleSortVersionString</key>
+	<key>CFBundleShortVersionString</key>
 	<string>0.1</string>
 	<key>IFPkgFlagAllowBackRev</key>
 	<true/>

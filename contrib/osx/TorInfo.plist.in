@@ -8,7 +8,7 @@
 	<string>Tor @VERSION@</string>
 	<key>CFBundleName</key>
 	<string>Tor</string>
-	<key>CFBundleSortVersionString</key>
+	<key>CFBundleShortVersionString</key>
 	<string>@VERSION@</string>
 	<key>IFPkgFlagAllowBackRev</key>
 	<true/>
