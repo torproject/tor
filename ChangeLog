@@ -29,6 +29,8 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
     - Do not use C's stdio library for writing to log files.  This will
       improve logging performance by a minute amount, and will stop leaking
       fds when our disk is full.  Fixes bug 861.
+    - Stop erroneous use of O_APPEND in cases where we did not in fact
+      want to re-seek to the end of a file before every last write().
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected

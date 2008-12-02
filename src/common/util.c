@@ -1577,6 +1577,9 @@ struct open_file_t {
  *
  * NOTE: When not appending, the flags O_CREAT and O_TRUNC are treated
  * as true and the flag O_EXCL is treated as false.
+ *
+ * NOTE: Ordinarily, O_APPEND means "seek to the end of the file before each
+ * write()".  We don't do that.
  */
 int
 start_writing_to_file(const char *fname, int open_flags, int mode,
@@ -1585,6 +1588,8 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   size_t tempname_len = strlen(fname)+16;
   open_file_t *new_file = tor_malloc_zero(sizeof(open_file_t));
   const char *open_name;
+  int append = 0;
+
   tor_assert(fname);
   tor_assert(data_out);
 #if (O_BINARY != 0 && O_TEXT != 0)
@@ -1596,6 +1601,8 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   if (open_flags & O_APPEND) {
     open_name = fname;
     new_file->rename_on_close = 0;
+    append = 1;
+    open_flags &= ~O_APPEND;
   } else {
     open_name = new_file->tempname = tor_malloc(tempname_len);
     if (tor_snprintf(new_file->tempname, tempname_len, "%s.tmp", fname)<0) {
@@ -1613,11 +1620,21 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
         open_name, fname, strerror(errno));
     goto err;
   }
+  if (append) {
+    if (tor_fd_seekend(new_file->fd) < 0) {
+      log_warn(LD_FS, "Couldn't seek to end of file \"%s\": %s", open_name,
+               strerror(errno));
+      goto err;
+    }
+  }
 
   *data_out = new_file;
 
   return new_file->fd;
+
  err:
+  if (new_file->fd >= 0)
+    close(new_file->fd);
   *data_out = NULL;
   tor_free(new_file->filename);
   tor_free(new_file->tempname);
@@ -2277,7 +2294,7 @@ finish_daemon(const char *desired_cwd)
     exit(1);
   }
 
-  nullfd = open("/dev/null", O_RDWR | O_APPEND);
+  nullfd = open("/dev/null", O_RDWR);
   if (nullfd < 0) {
     log_err(LD_GENERAL,"/dev/null can't be opened. Exiting.");
     exit(1);
