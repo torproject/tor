@@ -24,6 +24,13 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
       could make gcc generate non-functional binary search code. Bugfix
       on 0.2.0.10-alpha.
     - Build correctly on platforms without socklen_t.
+    - Avoid potential crash on internal error during signature collection.
+      Fixes bug 864.  Patch from rovv.
+
+  o Minor features:
+    - Report the case where all signatures in a detached set are rejected
+      differently than the case where there is an error handling the detached
+      set.
 
   o Minor features (controller):
     - Return circuit purposes in response to GETINFO circuit-status.  Fixes
