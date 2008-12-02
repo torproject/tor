@@ -581,6 +581,37 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
   tor_free(lockfile);
 }
 
+/* Some old versions of unix didn't define constants for these values,
+ * and instead expect you to say 0, 1, or 2. */
+#ifndef SEEK_CUR
+#define SEEK_CUR 1
+#endif
+#ifndef SEEK_END
+#define SEEK_END 2
+#endif
+
+/** Return the position of fd with respect to the start of the file */
+off_t
+tor_fd_getpos(int fd)
+{
+#ifdef WIN32
+  return (off_t) _lseek(fd, 0, SEEK_CUR);
+#else
+  return (off_t) lseek(fd, 0, SEEK_CUR);
+#endif
+}
+
+/** Move fd to the end of the file. Return -1 on error, 0 on success. */
+int
+tor_fd_seekend(int fd)
+{
+#ifdef WIN32
+  return _lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
+#else
+  return lseek(fd, 0, SEEK_END) < 0 ? -1 : 0;
+#endif
+}
+
 #undef DEBUG_SOCKET_COUNTING
 #ifdef DEBUG_SOCKET_COUNTING
 /** A bitarray of all fds that should be passed to tor_socket_close(). Only

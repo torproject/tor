@@ -294,6 +294,9 @@ tor_lockfile_t *tor_lockfile_lock(const char *filename, int blocking,
                                   int *locked_out);
 void tor_lockfile_unlock(tor_lockfile_t *lockfile);
 
+off_t tor_fd_getpos(int fd);
+int tor_fd_seekend(int fd);
+
 #ifdef MS_WINDOWS
 #define PATH_SEPARATOR "\\"
 #else
