@@ -2630,7 +2630,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 }
 
 /**
- * Called when we receive a RELAY_RESOLVE cell 'cell' along the circuit 'circ';
+ * Called when we receive a RELAY_COMMAND_RESOLVE cell 'cell' along the
+ * circuit <b>circ</b>;
  * begin resolving the hostname, and (eventually) reply with a RESOLVED cell.
  */
 int

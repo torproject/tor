@@ -858,10 +858,11 @@ see tor-design.pdf.
 6.4. Remote hostname lookup
 
    To find the address associated with a hostname, the OP sends a
-   RELAY_RESOLVE cell containing the hostname to be resolved.  (For a reverse
-   lookup, the OP sends a RELAY_RESOLVE cell containing an in-addr.arpa
-   address.)  The OR replies with a RELAY_RESOLVED cell containing a status
-   byte, and any number of answers.  Each answer is of the form:
+   RELAY_RESOLVE cell containing the hostname to be resolved with a nul
+   terminating byte. (For a reverse lookup, the OP sends a RELAY_RESOLVE
+   cell containing an in-addr.arpa address.) The OR replies with a
+   RELAY_RESOLVED cell containing a status byte, and any number of
+   answers. Each answer is of the form:
        Type   (1 octet)
        Length (1 octet)
        Value  (variable-width)
