@@ -76,7 +76,8 @@ Specification additions:
   the "ID " portion to be omitted, however.
 
   When encountering a certificate with a cross-cert entry, implementations
-  MUST verify that the
+  MUST verify that the signature is a correct signature of the hash of the
+  identity key using the signing key.
 
   (In a future version of this specification, cross-cert entries will be
   required.)
