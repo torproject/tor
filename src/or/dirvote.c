@@ -1909,13 +1909,15 @@ dirvote_add_signatures_to_pending_consensus(
     tor_free(pending_consensus_signatures);
     pending_consensus_signatures = new_detached;
     *msg_out = "Signatures added";
+  } else if (r == 0) {
+    *msg_out = "Signatures ignored";
   } else {
     goto err;
   }
 
   goto done;
  err:
-  if (!msg_out)
+  if (!*msg_out)
     *msg_out = "Unrecognized error while adding detached signatures.";
  done:
   if (sigs)
