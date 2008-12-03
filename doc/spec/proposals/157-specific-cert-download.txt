@@ -16,7 +16,7 @@ History:
 Overview:
 
   Tor's directory specification gives two ways to download a certificate:
-  by its identity fingerprint, or by the digest of its secret key.  Both
+  by its identity fingerprint, or by the digest of its signing key.  Both
   are error-prone.  We propose a new download mechanism to make sure that
   clients get the certificates they want.
 
