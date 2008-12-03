@@ -7,6 +7,12 @@ Created: 2-Dec-2008
 Status: Open
 Target: 0.2.1.x
 
+History:
+
+  2008 Dec 2, 22:34
+     Changed name of cross certification field to match the other authority
+     certificate fields.
+
 Overview:
 
   Tor's directory specification gives two ways to download a certificate:
@@ -66,7 +72,7 @@ Specification additions:
 
   Certificates SHOULD contain the following field (at most once):
 
-  "cross-cert" NL CrossSignature NL
+  "dir-key-crosscert" NL CrossSignature NL
 
   where CrossSignature is a signature, made using the certificate's signing
   key, of the digest of the PKCS1-padded hash of the certificate's identity
@@ -75,12 +81,12 @@ Specification additions:
   -----END ID SIGNATURE----- tags.  (See bug 880.) Implementations MUST allow
   the "ID " portion to be omitted, however.
 
-  When encountering a certificate with a cross-cert entry, implementations
-  MUST verify that the signature is a correct signature of the hash of the
-  identity key using the signing key.
+  When encountering a certificate with a dir-key-crosscert entry,
+  implementations MUST verify that the signature is a correct signature of
+  the hash of the identity key using the signing key.
 
-  (In a future version of this specification, cross-cert entries will be
-  required.)
+  (In a future version of this specification, dir-key-crosscert entries will
+  be required.)
 
 Why cross-certify too?
 
