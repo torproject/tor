@@ -31,6 +31,9 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
       fds when our disk is full.  Fixes bug 861.
     - Stop erroneous use of O_APPEND in cases where we did not in fact
       want to re-seek to the end of a file before every last write().
+    - Correct handling of possible malformed authority signing key
+      certificates with internal signature types.  Fixes bug 880.
+      Bugfix on 0.2.0.3-alpha.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected

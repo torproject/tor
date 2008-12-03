@@ -1563,7 +1563,12 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   memarea_t *area = NULL;
 
   s = eat_whitespace(s);
-  eos = strstr(s, "\n-----END SIGNATURE-----\n");
+  eos = strstr(s, "\ndir-key-certification");
+  if (! eos) {
+    log_warn(LD_DIR, "No signature found on key certificate");
+    return NULL;
+  }
+  eos = strstr(eos, "\n-----END SIGNATURE-----\n");
   if (! eos) {
     log_warn(LD_DIR, "No end-of-signature found on key certificate");
     return NULL;
