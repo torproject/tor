@@ -7,6 +7,9 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Compile without warnings on solaris.
     - Avoid potential crash on internal error during signature collection.
       Fixes bug 864.  Patch from rovv.
+    - Correct handling of possible malformed authority signing key
+      certificates with internal signature types.  Fixes bug 880.
+      Bugfix on 0.2.0.3-alpha.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
