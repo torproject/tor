@@ -86,7 +86,7 @@ Done.
 Stage Four: Download, extract, and compile libevent-1.3e
 ------------------------------------------------------
 
-Download the libevent 1.3e release:
+Download the libevent 1.4.7-stable release:
 http://www.monkey.org/~provos/libevent/
 
 Copy the libevent tarball into the "tor-mingw" directory.
