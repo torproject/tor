@@ -33,6 +33,8 @@ Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
 Type "tar zxf openssl-0.9.8g.tar.gz"
+(Note:  There are many symlink errors because Windows doesn't support
+symlinks.  You can ignore these errors.)
 
 Make openssl libraries:
 Type "cd tor-mingw/openssl-0.9.8g/"
