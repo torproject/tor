@@ -1049,17 +1049,17 @@ log_credential_status(void)
              strerror(errno));
     return -1;
   } else {
-    int i;
+    int i, retval = 0;
     char *strgid;
     char *s = NULL;
-    int formatting_error = 0;
     smartlist_t *elts = smartlist_create();
 
     for (i = 0; i<ngids; i++) {
       strgid = tor_malloc(11);
-      if (tor_snprintf(strgid, 11, "%u", (unsigned)sup_gids[i]) == -1) {
+      if (tor_snprintf(strgid, 11, "%u", (unsigned)sup_gids[i]) < 0) {
         log_warn(LD_GENERAL, "Error printing supplementary GIDs");
-        formatting_error = 1;
+        tor_free(strgid);
+        retval = -1;
         goto error;
       }
       smartlist_add(elts, strgid);
@@ -1077,8 +1077,7 @@ log_credential_status(void)
     });
     smartlist_free(elts);
 
-    if (formatting_error)
-      return -1;
+    return retval;
   }
 #endif
 
