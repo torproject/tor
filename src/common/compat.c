@@ -111,14 +111,6 @@ const char compat_c_id[] =
 #endif
 
 #ifdef HAVE_SYS_MMAN_H
-/** Implementation for tor_mmap_t: holds the regular tor_mmap_t, along
- * with extra fields needed for mmap()-based memory mapping. */
-typedef struct tor_mmap_impl_t {
-  tor_mmap_t base;
-  size_t mapping_size; /**< Size of the actual mapping. (This is this file
-                        * size, rounded up to the nearest page.) */
-} tor_mmap_impl_t;
-
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
  * "empty file". */
@@ -128,7 +120,7 @@ tor_mmap_file(const char *filename)
   int fd; /* router file */
   char *string;
   int page_size;
-  tor_mmap_impl_t *res;
+  tor_mmap_t *res;
   size_t size, filesize;
 
   tor_assert(filename);
@@ -168,33 +160,25 @@ tor_mmap_file(const char *filename)
     return NULL;
   }
 
-  res = tor_malloc_zero(sizeof(tor_mmap_impl_t));
-  res->base.data = string;
-  res->base.size = filesize;
+  res = tor_malloc_zero(sizeof(tor_mmap_t));
+  res->data = string;
+  res->size = filesize;
   res->mapping_size = size;
 
-  return &(res->base);
+  return res;
 }
 /** Release storage held for a memory mapping. */
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  tor_mmap_impl_t *h = SUBTYPE_P(handle, tor_mmap_impl_t, base);
-  munmap((char*)h->base.data, h->mapping_size);
-  tor_free(h);
+  munmap((char*)handle->data, handle->mapping_size);
+  tor_free(handle);
 }
 #elif defined(MS_WINDOWS)
-/** Implementation for tor_mmap_t: holds the regular tor_mmap_t, along
- * with extra fields needed for WIN32 memory mapping. */
-typedef struct win_mmap_t {
-  tor_mmap_t base;
-  HANDLE file_handle;
-  HANDLE mmap_handle;
-} win_mmap_t;
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
-  win_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
+  tor_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
   int empty = 0;
   res->file_handle = INVALID_HANDLE_VALUE;
   res->mmap_handle = NULL;
@@ -209,9 +193,9 @@ tor_mmap_file(const char *filename)
   if (res->file_handle == INVALID_HANDLE_VALUE)
     goto win_err;
 
-  res->base.size = GetFileSize(res->file_handle, NULL);
+  res->size = GetFileSize(res->file_handle, NULL);
 
-  if (res->base.size == 0) {
+  if (res->size == 0) {
     log_info(LD_FS,"File \"%s\" is empty. Ignoring.",filename);
     empty = 1;
     goto err;
@@ -229,13 +213,13 @@ tor_mmap_file(const char *filename)
                                        NULL);
   if (res->mmap_handle == NULL)
     goto win_err;
-  res->base.data = (char*) MapViewOfFile(res->mmap_handle,
-                                         FILE_MAP_READ,
-                                         0, 0, 0);
-  if (!res->base.data)
+  res->data = (char*) MapViewOfFile(res->mmap_handle,
+                                    FILE_MAP_READ,
+                                    0, 0, 0);
+  if (!res->data)
     goto win_err;
 
-  return &(res->base);
+  return res;
  win_err: {
     DWORD e = GetLastError();
     int severity = (e == ERROR_FILE_NOT_FOUND || e == ERROR_PATH_NOT_FOUND) ?
@@ -251,23 +235,22 @@ tor_mmap_file(const char *filename)
  err:
   if (empty)
     errno = ERANGE;
-  tor_munmap_file(&res->base);
+  tor_munmap_file(res);
   return NULL;
 }
 void
 tor_munmap_file(tor_mmap_t *handle)
 {
-  win_mmap_t *h = SUBTYPE_P(handle, win_mmap_t, base);
   if (handle->data)
     /* This is an ugly cast, but without it, "data" in struct tor_mmap_t would
        have to be redefined as non-const. */
     UnmapViewOfFile( (LPVOID) handle->data);
 
-  if (h->mmap_handle != NULL)
+  if (handle->mmap_handle != NULL)
     CloseHandle(h->mmap_handle);
-  if (h->file_handle != INVALID_HANDLE_VALUE)
+  if (handle->file_handle != INVALID_HANDLE_VALUE)
     CloseHandle(h->file_handle);
-  tor_free(h);
+  tor_free(handle);
 }
 #else
 tor_mmap_t *

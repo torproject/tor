@@ -220,6 +220,16 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 typedef struct tor_mmap_t {
   const char *data; /**< Mapping of the file's contents. */
   size_t size; /**< Size of the file. */
+
+  /* None of the fields below should be accessed from outside compat.c */
+#ifdef HAVE_SYS_MMAN_H
+  size_t mapping_size; /**< Size of the actual mapping. (This is this file
+                        * size, rounded up to the nearest page.) */
+#elif defined MS_WINDOWS
+  HANDLE file_handle;
+  HANDLE mmap_handle;
+#endif
+
 } tor_mmap_t;
 
 tor_mmap_t *tor_mmap_file(const char *filename) ATTR_NONNULL((1));
