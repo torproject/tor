@@ -2673,7 +2673,7 @@ test_dir_format(void)
   char fingerprint[FINGERPRINT_LEN+1];
   char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
   size_t pk1_str_len, pk2_str_len, pk3_str_len;
-  routerinfo_t *r1, *r2;
+  routerinfo_t *r1=NULL, *r2=NULL;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
   routerinfo_t *rp1 = NULL, *rp2 = NULL;
   addr_policy_t *ex1, *ex2;
@@ -2885,8 +2885,6 @@ test_dir_format(void)
   if (rp2) routerinfo_free(rp2);
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
-  routerinfo_free(r1);
-  routerinfo_free(r2);
 
   /* Try out version parsing functionality */
   test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
@@ -2982,7 +2980,10 @@ test_dir_format(void)
   test_eq(1, tor_version_as_new_as("Tor 0.2.1.1",
                                    "Tor 0.2.1.0-dev (r99)"));
  done:
-  ;
+  if (r1)
+    routerinfo_free(r1);
+  if (r2)
+    routerinfo_free(r2);
 }
 
 extern const char AUTHORITY_CERT_1[];
