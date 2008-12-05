@@ -2552,6 +2552,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   }
 
   tok = find_first_by_keyword(tokens, K_CONSENSUS_DIGEST);
+  tor_assert(tok);
   if (strlen(tok->args[0]) != HEX_DIGEST_LEN) {
     log_warn(LD_DIR, "Wrong length on consensus-digest in detached "
              "networkstatus signatures");

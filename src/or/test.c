@@ -763,6 +763,7 @@ test_crypto(void)
   memset(data1, 6, 1024);
   for (idx = 0; idx < 10; ++idx) {
     i = base64_encode(data2, 1024, data1, idx);
+    test_assert(i >= 0);
     j = base64_decode(data3, 1024, data2, i);
     test_eq(j,idx);
     test_memeq(data3, data1, idx);
