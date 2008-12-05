@@ -1656,11 +1656,9 @@ test_util_ip6_helpers(void)
 }
 
 static void
-test_util_smartlist(void)
+test_util_smartlist_basic(void)
 {
   smartlist_t *sl;
-  char *cp;
-  size_t sz;
 
   /* XXXX test sort_digests, uniq_strings, uniq_digests */
 
@@ -1691,8 +1689,18 @@ test_util_smartlist(void)
   test_assert(smartlist_isin(sl, (void*)3));
   test_assert(!smartlist_isin(sl, (void*)99));
 
+ done:
+  smartlist_free(sl);
+}
+
+static void
+test_util_smartlist_strings(void)
+{
+  smartlist_t *sl = smartlist_create();
+  char *cp;
+  size_t sz;
+
   /* Test split and join */
-  smartlist_clear(sl);
   test_eq(0, smartlist_len(sl));
   smartlist_split_string(sl, "abc", ":", 0, 0);
   test_eq(1, smartlist_len(sl));
@@ -1908,10 +1916,18 @@ test_util_smartlist(void)
   test_eq((int)sz, 40);
   tor_free(cp);
 
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  smartlist_clear(sl);
 
-  {
+ done:
+
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+}
+
+static void
+test_util_smartlist_overlap(void)
+{
+  /* XXXXX021 reindent. */
+    smartlist_t *sl = smartlist_create();
     smartlist_t *ints = smartlist_create();
     smartlist_t *odds = smartlist_create();
     smartlist_t *evens = smartlist_create();
@@ -1952,14 +1968,20 @@ test_util_smartlist(void)
     test_eq(smartlist_len(sl), 1);
     test_assert(smartlist_isin(sl, (void*)2));
 
+ done:
     smartlist_free(odds);
     smartlist_free(evens);
     smartlist_free(ints);
     smartlist_free(primes);
-    smartlist_clear(sl);
-  }
+    smartlist_free(sl);
+}
 
-  {
+static void
+test_util_smartlist_digests(void)
+{
+  smartlist_t *sl = smartlist_create();
+  /*XXXX021 reindent. */
+
     /* digest_isin. */
     smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
     smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
@@ -1982,13 +2004,19 @@ test_util_smartlist(void)
     test_memeq(smartlist_get(sl, 0), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
     test_memeq(smartlist_get(sl, 1), "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
 
+ done:
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-  }
+    smartlist_free(sl);
+}
 
-  {
+static void
+test_util_smartlist_join(void)
+{
+    /*XXXX021 reindent. */
+    smartlist_t *sl = smartlist_create();
     smartlist_t *sl2 = smartlist_create(), *sl3 = smartlist_create(),
                 *sl4 = smartlist_create();
+    char *cp;
     /* unique, sorted. */
     smartlist_split_string(sl,
                            "Abashments Ambush Anchorman Bacon Banks Borscht "
@@ -2023,18 +2051,13 @@ test_util_smartlist(void)
                "Knish,Know,Manners,Manners,Maraschinos,Wombats,Wombats");
     tor_free(cp);
 
+ done:
     smartlist_free(sl4);
     smartlist_free(sl3);
     SMARTLIST_FOREACH(sl2, char *, cp, tor_free(cp));
     smartlist_free(sl2);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_clear(sl);
-  }
-
-  smartlist_free(sl);
-
- done:
-  ;
+    smartlist_free(sl);
 }
 
 static void
@@ -4384,7 +4407,11 @@ static struct {
   SUBENT(util, ip6_helpers),
   SUBENT(util, gzip),
   SUBENT(util, datadir),
-  SUBENT(util, smartlist),
+  SUBENT(util, smartlist_basic),
+  SUBENT(util, smartlist_strings),
+  SUBENT(util, smartlist_overlap),
+  SUBENT(util, smartlist_digests),
+  SUBENT(util, smartlist_join),
   SUBENT(util, bitarray),
   SUBENT(util, digestset),
   SUBENT(util, mempool),
