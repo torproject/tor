@@ -3939,7 +3939,9 @@ test_util_memarea(void)
 {
   memarea_t *area = memarea_new();
   char *p1, *p2, *p3, *p1_orig;
+  void *malloced_ptr = NULL;
   int i;
+
   test_assert(area);
 
   p1_orig = p1 = memarea_alloc(area,64);
@@ -3964,19 +3966,19 @@ test_util_memarea(void)
   p2 = memarea_alloc(area, 1);
   test_eq(p1+sizeof(void*), p2);
   {
-    void *ptr = tor_malloc(64);
-    test_assert(!memarea_owns_ptr(area, ptr));
-    tor_free(ptr);
+    malloced_ptr = tor_malloc(64);
+    test_assert(!memarea_owns_ptr(area, malloced_ptr));
+    tor_free(malloced_ptr);
   }
 
   /* memarea_memdup */
   {
-    char *ptr = tor_malloc(64);
-    crypto_rand(ptr, 64);
-    p1 = memarea_memdup(area, ptr, 64);
-    test_assert(p1 != ptr);
-    test_memeq(p1, ptr, 64);
-    tor_free(ptr);
+    malloced_ptr = tor_malloc(64);
+    crypto_rand((char*)malloced_ptr, 64);
+    p1 = memarea_memdup(area, malloced_ptr, 64);
+    test_assert(p1 != malloced_ptr);
+    test_memeq(p1, malloced_ptr, 64);
+    tor_free(malloced_ptr);
   }
 
   /* memarea_strdup. */
@@ -4024,6 +4026,7 @@ test_util_memarea(void)
 
  done:
   memarea_drop_all(area);
+  tor_free(malloced_ptr);
 }
 
 static void
