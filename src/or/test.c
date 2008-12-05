@@ -2044,6 +2044,7 @@ test_util_bitarray(void)
   int i, j, ok=1;
 
   ba = bitarray_init_zero(1);
+  test_assert(ba);
   test_assert(! bitarray_is_set(ba, 0));
   bitarray_set(ba, 0);
   test_assert(bitarray_is_set(ba, 0));
@@ -2421,6 +2422,7 @@ test_util_strmap(void)
   smartlist_t *found_keys = NULL;
 
   map = strmap_new();
+  test_assert(map);
   test_eq(strmap_size(map), 0);
   test_assert(strmap_isempty(map));
   v = strmap_set(map, "K1", (void*)99);
@@ -3859,12 +3861,14 @@ test_util_mempool(void)
   int i;
 
   pool = mp_pool_new(1, 100);
+  test_assert(pool);
   test_assert(pool->new_chunk_capacity >= 100);
   test_assert(pool->item_alloc_size >= sizeof(void*)+1);
   mp_pool_destroy(pool);
   pool = NULL;
 
   pool = mp_pool_new(241, 2500);
+  test_assert(pool);
   test_assert(pool->new_chunk_capacity >= 10);
   test_assert(pool->item_alloc_size >= sizeof(void*)+241);
   test_eq(pool->item_alloc_size & 0x03, 0);
