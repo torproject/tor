@@ -178,7 +178,7 @@ tor_munmap_file(tor_mmap_t *handle)
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
-  tor_mmap_t *res = tor_malloc_zero(sizeof(win_mmap_t));
+  tor_mmap_t *res = tor_malloc_zero(sizeof(tor_mmap_t));
   int empty = 0;
   res->file_handle = INVALID_HANDLE_VALUE;
   res->mmap_handle = NULL;
@@ -209,7 +209,7 @@ tor_mmap_file(const char *filename)
 #else
                                        0,
 #endif
-                                       (res->base.size & 0xfffffffful),
+                                       (res->size & 0xfffffffful),
                                        NULL);
   if (res->mmap_handle == NULL)
     goto win_err;
@@ -247,9 +247,9 @@ tor_munmap_file(tor_mmap_t *handle)
     UnmapViewOfFile( (LPVOID) handle->data);
 
   if (handle->mmap_handle != NULL)
-    CloseHandle(h->mmap_handle);
+    CloseHandle(handle->mmap_handle);
   if (handle->file_handle != INVALID_HANDLE_VALUE)
-    CloseHandle(h->file_handle);
+    CloseHandle(handle->file_handle);
   tor_free(handle);
 }
 #else
