@@ -1428,8 +1428,7 @@ options_act(or_options_t *old_options)
   if (options->DirPortFrontPage) {
     global_dirfrontpagecontents =
       read_file_to_str(options->DirPortFrontPage, 0, NULL);
-    if (!global_dirfrontpagecontents)
-    {
+    if (!global_dirfrontpagecontents) {
       log_warn(LD_CONFIG,
                "DirPortFrontPage file '%s' not found. Continuing anyway.",
                options->DirPortFrontPage);
