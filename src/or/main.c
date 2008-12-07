@@ -2063,6 +2063,8 @@ tor_main(int argc, char *argv[])
   init_logging();
 #ifdef USE_DMALLOC
   {
+    /* Instruct OpenSSL to use our internal wrappers for malloc,
+       realloc and free. */
     int r = CRYPTO_set_mem_ex_functions(_tor_malloc, _tor_realloc, _tor_free);
     tor_assert(r);
   }
