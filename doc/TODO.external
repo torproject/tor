@@ -12,6 +12,7 @@ J       - Jeff claims
 I       - ioerror claims
 W       - weasel claims
 K       - Karsten claims
+C       - coderman claims
         - Not done
         * Top priority
         . Partially done
@@ -24,36 +25,21 @@ K       - Karsten claims
 
 External constraints:
 
-  - mid August
-KS  o Design hidden service improvements, evaluate them and consider
-      security properties: write some proposals, get feedback, revise
-      them, etc.
-P   - nlnet 'user safety contest'. submit torbrowser, others?
-
   - mid October
-KS  - Finish implementation of hidden service improvements: have a set
-      of patches that you think work.
 W   - Finish implementation of directory overhead changes: have a set
       of patches that you think work.
 
   - end of October
-I   - Auto update
-      o Vidalia learns when Tor thinks it should be updated
-R     - Tor status events should suggest a new version to switch to
-I     - Figure out a good PKI, document the design, assess security issues:
-        "write a proposal"
-      - Vidalia fetches the new one via Tor when possible, but fetches
-        it without Tor "when necessary", whatever that means.
-        - Give an interface for notifying the user, and letting her
-          decide to fetch and decide to swap out the old Tor for the new.
-      - Do the same for Polipo
-      - and for Vidalia itself
+    - Auto update
+C     - Get the MSI working and stable for Windows Tor installer.
+E     . Vidalia calls Thandy, learns when to upgrade, requests the upgrade.
+?     - Teach our OSX installer to register its version on install
 
   - end of December
 NSE - Write first draft of research study for Paul's research problem.
 
   - mid January
-KS  - Finish testing, debugging, unit testing, etc the hidden service
+KS  . Finish testing, debugging, unit testing, etc the hidden service
       changes. Have it in the development version and in use.
 W   - Finish testing, debugging, unit testing, etc the directory overhead
       changes. Have it in the development version and in use.
