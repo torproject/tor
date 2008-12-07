@@ -1,4 +1,4 @@
-Changes in version 0.2.1.8-alpha - 2008-??-??
+Changes in version 0.2.1.8-alpha - 2008-12-06
   o Major bugfixes:
     - Fix a DOS opportunity during the voting signature collection process
       at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.
@@ -6,45 +6,44 @@ Changes in version 0.2.1.8-alpha - 2008-??-??
       on 0.2.1.5-alpha.
 
   o Minor bugfixes:
-    - Get file locking working on win32.  Bugfix on 0.2.1.6-alpha.  Fixes
+    - Get file locking working on win32. Bugfix on 0.2.1.6-alpha. Fixes
       bug 859.
-    - Made Tor a little less aggressive about deleting expired certificates.
-      Partial fix for bug 854.
+    - Made Tor a little less aggressive about deleting expired
+      certificates. Partial fix for bug 854.
     - Stop doing unaligned memory access that generated bus errors on
-      sparc64.  Bugfix on 0.2.0.10-alpha.  Fix for bug 862.
-    - Fix a crash bug when changing EntryNodes from the controller.  Bugfix
-      on 0.2.1.6-alpha.  Fix for bug 867.  Patched by Sebastian.
-    - Make USR2 log-level switch take effect immediately.  Bugfix on
+      sparc64. Bugfix on 0.2.0.10-alpha. Fix for bug 862.
+    - Fix a crash bug when changing EntryNodes from the controller. Bugfix
+      on 0.2.1.6-alpha. Fix for bug 867. Patched by Sebastian.
+    - Make USR2 log-level switch take effect immediately. Bugfix on
       0.1.2.8-beta.
     - If one win32 nameserver fails to get added, continue adding the
       rest, and don't automatically fail.
-    - Use fcntl() for locking when flock() is not available.  Should fix
-      compilation on Solaris.  Should fix Bug 873.  Bugfix on 0.2.1.6-alpha.
-    - Do not mark smartlist_bsearch_idx() function as ATTR_PURE.  This bug
+    - Use fcntl() for locking when flock() is not available. Should fix
+      compilation on Solaris. Should fix Bug 873. Bugfix on 0.2.1.6-alpha.
+    - Do not mark smartlist_bsearch_idx() function as ATTR_PURE. This bug
       could make gcc generate non-functional binary search code. Bugfix
       on 0.2.0.10-alpha.
     - Build correctly on platforms without socklen_t.
     - Avoid potential crash on internal error during signature collection.
-      Fixes bug 864.  Patch from rovv.
-    - Do not use C's stdio library for writing to log files.  This will
-      improve logging performance by a minute amount, and will stop leaking
-      fds when our disk is full.  Fixes bug 861.
+      Fixes bug 864. Patch from rovv.
+    - Do not use C's stdio library for writing to log files. This will
+      improve logging performance by a minute amount, and will stop
+      leaking fds when our disk is full. Fixes bug 861.
     - Stop erroneous use of O_APPEND in cases where we did not in fact
       want to re-seek to the end of a file before every last write().
     - Correct handling of possible malformed authority signing key
-      certificates with internal signature types.  Fixes bug 880.
-      Bugfix on 0.2.0.3-alpha.
+      certificates with internal signature types. Fixes bug 880. Bugfix
+      on 0.2.0.3-alpha.
     - Fix a hard-to-trigger resource leak when logging credential status.
       CID 349.
-    - 
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
-      differently than the case where there is an error handling the detached
-      set.
+      differently than the case where there is an error handling the
+      detached set. r17446
 
   o Minor features (controller):
-    - Return circuit purposes in response to GETINFO circuit-status.  Fixes
+    - Return circuit purposes in response to GETINFO circuit-status. Fixes
       bug 858.
 
 
