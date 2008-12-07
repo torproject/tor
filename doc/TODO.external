@@ -35,12 +35,12 @@ C     - Get the MSI working and stable for Windows Tor installer.
 E     . Vidalia calls Thandy, learns when to upgrade, requests the upgrade.
 ?     - Teach our OSX installer to register its version on install
 
-  - end of December
-NSE - Write first draft of research study for Paul's research problem.
-
   - mid January
 KS  . Finish testing, debugging, unit testing, etc the hidden service
       changes. Have it in the development version and in use.
 W   - Finish testing, debugging, unit testing, etc the directory overhead
       changes. Have it in the development version and in use.
+
+  - end of January
+NSE - Write first draft of research study for Paul's research problem.
 
