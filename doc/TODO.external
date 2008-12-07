@@ -44,3 +44,115 @@ W   - Finish testing, debugging, unit testing, etc the directory overhead
   - end of January
 NSE - Write first draft of research study for Paul's research problem.
 
+  - mid February
+S   - Examine current load balancing issues and evaluate trade-offs
+      associated with other methods.
+      - For each potential routing improvement strategy...
+        - Explain method, calculate theoretical impact, estimate likely
+          impact, prioritize
+        - Establish implementation work plan
+        - Document strategy for metrics and evaluation
+      - Highlight which items on your list are doable in 2009.
+
+N   - Write a summary of progress toward Overlapped I/O on Windows.
+
+S   - Write a summary of progress toward understanding risks to relays
+      (and thus bridges) from letting attackers route traffic through
+      them.
+
+R   - Revise and publish incentive draft paper
+      - Write an explanation for its current flaws
+      - Gather comments, search for new designs
+      - Write up a summary of recommendations and next steps
+
+W   - Download fewer descriptors
+      - Summarize progress so far, on all the different approaches to
+        reducing directory download overhead.
+        - Measure/estimate impact of each improvement.
+      - Build a plan and timeline for implementing the rest.
+
+N   - Write a summary of progress toward "enumerating TLS fingerprint
+      blocking risks and how we would overcome / respond to each".
+
+I   - Email auto-responder
+      - Document the design and spec.
+        - Describe auto-responder "commands"
+        - Describe DKIM requirement (and alternatives)
+        - Describe how we're going to localize the text
+      - Describe the workflow for a user that wants to know she's got
+        the right file. Digitally signed installer? Feed it to the
+        updater that recognizes signatures? Other options?
+      - How do we better support users with limited email
+        bandwidth? Multi-part download? Teach them how to reconnect
+        their gmail? Does downloading your gmail work when your network
+        keeps dying?
+
+K   - Metrics.
+      - Gather and document monthly usage metrics, by country
+        - Using Roger's old method of counting users
+        - Using Nick's new method of counting users
+        - Start playing around with figuring out which one is more
+          accurate, or how to combine them to get better guesses,
+          or something.
+      - Automatically collect and document or publish other monthly
+        statistics
+        - Total data over time
+        - Number, availability and performance of relays
+        - Advertised capacity
+      - With Mike's help, use Torflow to start doing monthly rudimentary
+        performance evaluations:
+        - Circuit throughput and latency
+        - Measure via Broadband and dialup
+      - Make a few graphs of the most interesting public data
+      - Publish a report addressing key long-term metrics questions:
+        - What metrics should we present?
+        - What data are available for these metrics?
+        - What data are missing, and can collect them safely? Can we
+          publish them safely?
+        - What systems are available to present this data?
+
+E   - Vidalia improvements
+      - Implement Vidalia presentation of plaintext port warnings
+      - Figure out a plan for presenting other Tor status warning events.
+      - Move Polipo into the main Vidalia -dev bundle.
+      - Vidalia displays by-country user summary for bridge operators
+R       - Tor sends a status event or something so Vidalia knows what
+          to display
+
+M   - Network scanning and network health
+      - Implement some initial automated scans.
+      - Describe a roadmap for how to get from here to plausible,
+        long-term security scanning tests for Tor network
+      - Document a strategy for incorporating results into directory
+        consensus documents. At what phases will we be ready to automate
+        which parts? How will we recognize when we are ready?
+
+M   - Torbutton development
+      - Keep up with our bugfixes -- build a plan for (or resolve)
+        every item in Flyspray, and other known issues.
+      - Build a strategy for how Torbutton and Vidalia can
+        communicate. E.g., what do we do with the 'new identity' button
+        in Vidalia?
+      - Make Torbutton happy on FF3, especially so TBB can drop FF2.
+
+C   - Transparent interception of connections on Windows
+      - Produce prototype, with screenshots for how to install and test.
+      - Document open issues, future work, things users need to be aware
+        of, etc.
+
+S   - Tor Browser bundle work
+      - Use native Vidalia (non-PortableFirefox) launcher for browser
+      - Close Browser on clean Vidalia exit
+      - Establish feasibility of simultaneous Firefox usage (also
+        considering implications for (OpenVPN-style or other) system-wide
+        Tor interception)
+      - Switch Tor Browser Bundle to Firefox 3, once Torbutton is ready.
+      - Continue analyzing "traces" left on host machine by use of
+        Tor Browser. Write a summary of current progress, and what
+        remains.
+
+I   - Periodic summaries of localization progress
+I   - Collecting user stories
+I   - Revise the 'Tor mirror page' so it doesn't list obsolete-looking
+      timestamps. Just have two tables, "new enough" and "not new enough".
+
