@@ -25,32 +25,23 @@ K       - Karsten claims
 Things Roger would be excited to see:
 
 Nick
-  - Finish buffer stuff in libevent; start using it in Tor.
+  * Look at Roger's proposal 141 discussions on or-dev, and help us
+    decide how to proceed.
   - Tors start believing the contents of NETINFO cells.
-  . Work with Steven and Roger to decide which parts of Paul's project
-    he wants to work on.
   - respond to Steven's red-team TLS testing (a.k.a, look at a packet
     dump and compare)
 
 Matt
   - Fit Vidalia in 640x480 again.
-  - Vidalia should display/edit PlaintextPorts events/config.
   - Vidalia should avoid stomping on your custom exit policy lines
     just because you click on 'save' for a totally different config thing.
   - How much space do we save in TBB by stripping symbols from Vidalia
     first? Good idea or crazy idea?
 
 ioerror
-  - gmail auto responder so you send us an email and we send you a Tor
-    binary. Probably needs a proposal first.
-    - document how it works / what its interface is
-    - set it up so people can 'get tor' in many languages, and so the
-      docs we send back are in many languages.
-  - weather.torproject.org should go live.
+  * weather.torproject.org should go live.
   - Keep advocating new Tor servers and working with orgs like Mozilla
     to let them like Tor.
-  - Start converting critical wiki pages into real Tor wml pages. E.g.,
-    https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
   - Find out what happened to the buildbot and get it back up:
     http://tor-buildbot.freehaven.net:8010/
   - Learn about locking memory pages that have sensitive content. Get
@@ -58,24 +49,18 @@ ioerror
   - Translation portal
     - Vidalia html help files
     - should we i18nize polipo's error messages too?
+    - how to get our diagrams translated, and how to get our screenshots
+      from the right language?
     - Some of our translated wml files are very old -- so old that they
       are harmful to leave in place. We need some sort of way to notice
       this and disable them.
 
 Steven
-  - Figure out (or give up on) how to run Tor Browser and ordinary
-    Firefox side-by-side.
-  - Write a list of research items Tor would like to see done, for the
-    volunteer page. Pick a few you'd like to work on yourself.
   - Move proposal 131 or equivalent forward.
   - Keep bugging us about exploits on the .exit notation.
-  - If relays have 100KB/s but set relaybandwidthrate to 10KB/s, do your
-    interference attacks still work?
   - Mike's question #3 on https://www.torproject.org/volunteer#Research
   - Worthwhile shipping TBB with some local html help files that come
     as bookmarks?
-  - Decide whether TBB should use Torbutton's "lock" feature.
-    http://archives.seul.org/or/cvs/Jun-2008/msg00186.html
 
 Andrew
   - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
@@ -180,7 +165,7 @@ K   . 121: Hidden service authentication:
            missing: delayed descriptor publication for 'stealth' mode.
 R   d 128: families of private bridges
     - 134: handle authority fragmentation.
-    o 135: simplify configuration of private tor networks.  Th
+    o 135: simplify configuration of private tor networks.
     - 140: Provide diffs betweeen consensuses
 K   - 143: Improvements of Distributed Hidden Service Descriptor Storage:
            only easy parts for 0.2.1.x, defer complex ones to 0.2.2.x.
@@ -194,6 +179,10 @@ K   - 155: Four Improvements of Hidden Service Performance
     - 145: Separate "suitable from a guard" from "suitable as a new guard"
     - 146: Adding new flag to reflect long-term stability
     - 149: Using data from NETINFO cells
+      - Don't extend a circuit over a noncanonical connection with
+        mismatched address.
+      - Learn our outgoing IP address from netinfo cells?
+      - Learn skew from netinfo cells?
 
   - Proposals to write:
     - Fix voting to handle bug 608 case when multiple servers get
@@ -244,11 +233,6 @@ N   . Draft proposal for GeoIP aggregation (see external constraints *)
   - Handle multi-core cpus better
     - Split circuit AES across cores?
     - Split TLS across cores?  This will be harder.
-  - Use information from NETINFO cells
-    - Don't extend a circuit over a noncanonical connection with
-      mismatched address.
-    - Learn our outgoing IP address from netinfo cells?
-    - Learn skew from netinfo cells?
   - Testing
     - Better unit test coverage
     - Refactor unit tests into multiple files
@@ -264,13 +248,15 @@ N   . Draft proposal for GeoIP aggregation (see external constraints *)
     - make is-consensus-fresh-enough check way tighter.
     - If we haven't tried downloading a consensus for ages since we're tired,
       try getting a new one before we use old descriptors for a circuit.
-      Related to bug 401.
+      Related to bug 401. [What does "since we're tired" mean? -RD]
 
   - Feature removals and deprecations:
     - Get rid of the v1 directory stuff (making, serving, and caching)
-      - First verify that the caches won't flip out?
-        - If they will, just stop the caches from caching for now
-      - perhaps replace it with a "this is a tor server" stock webpage.
+      . First verify that the caches won't flip out?
+        o If they will, just stop the caches from caching for now
+      . perhaps replace it with a "this is a tor server" stock webpage.
+        - Get the debs to set DirPortFrontPage in the default.
+        - Decide how to handle DirPortFrontPage files with image links.
     - The v2dir flag isn't used for anything anymore, right? If so, dump it.
     - Even clients run rep_hist_load_mtbf_data(). Does this waste memory?
       Dump it?
@@ -302,7 +288,6 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Refactor the HTTP logic so the functions aren't so large.
     - Refactor buf_read and buf_write to have sensible ways to return
       error codes after partial writes
-    o Router_choose_random_node() has a big pile of args. make it "flags".
     - Streamline how we pick entry nodes: Make choose_random_entry() have
       less magic and less control logic.
     - Don't call time(NULL) so much; instead have a static time_t field
@@ -326,8 +311,6 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Tor logs the libevent version on startup, for debugging purposes.
       This is great. But it does this before configuring the logs, so
       it only goes to stdout and is then lost.
-    o Make TrackHostExits expire TrackHostExitsExpire seconds after their
-      *last* use, not their *first* use.
     - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
     - Make 'safelogging' extend to info-level logs too.
     - don't do dns hijacking tests if we're reject *:* exit policy?
@@ -335,7 +318,6 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - More consistent error checking in router_parse_entry_from_string().
       I can say "banana" as my bandwidthcapacity, and it won't even squeak.
 
-  - Interface for letting SOAT modify flags that authorities assign.
+  d Interface for letting SOAT modify flags that authorities assign.
     (How to keep the authority from clobbering them afterwards?
-
 

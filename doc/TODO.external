@@ -32,8 +32,13 @@ W   - Finish implementation of directory overhead changes: have a set
   - end of October
     - Auto update
 C     - Get the MSI working and stable for Windows Tor installer.
+N     - Come up with an interface to export the package/bundle gloss
+        descriptions so Vidalia can display them.
 E     . Vidalia calls Thandy, learns when to upgrade, requests the upgrade.
 ?     - Teach our OSX installer to register its version on install
+
+  - end of December
+I   - Periodic summaries of localization progress: both pootle and wml.
 
   - mid January
 KS  . Finish testing, debugging, unit testing, etc the hidden service
@@ -43,6 +48,7 @@ W   - Finish testing, debugging, unit testing, etc the directory overhead
 
   - end of January
 NSE - Write first draft of research study for Paul's research problem.
+I   - Periodic summaries of localization progress: both pootle and wml.
 
   - mid February
 S   - Examine current load balancing issues and evaluate trade-offs
@@ -58,7 +64,8 @@ N   - Write a summary of progress toward Overlapped I/O on Windows.
 
 S   - Write a summary of progress toward understanding risks to relays
       (and thus bridges) from letting attackers route traffic through
-      them.
+      them. Eg, if relays have 100KB/s but set relaybandwidthrate to
+      10KB/s, do your interference attacks still work?
 
 R   - Revise and publish incentive draft paper
       - Write an explanation for its current flaws
@@ -94,6 +101,9 @@ K   - Metrics.
         - Start playing around with figuring out which one is more
           accurate, or how to combine them to get better guesses,
           or something.
+R       - Roger should walk Karsten through applying (and maybe
+          updating) the patch for each method, and write a summary
+          of what we have tried/guessed so far.
       - Automatically collect and document or publish other monthly
         statistics
         - Total data over time
@@ -150,8 +160,12 @@ S   - Tor Browser bundle work
       - Continue analyzing "traces" left on host machine by use of
         Tor Browser. Write a summary of current progress, and what
         remains.
+      - Decide whether TBB should use Torbutton's "lock" feature.
+        http://archives.seul.org/or/cvs/Jun-2008/msg00186.html
+I     - Jake learns how to build the TBB and takes over doing new
+        releases.
 
-I   - Periodic summaries of localization progress
+I   - Periodic summaries of localization progress: both pootle and wml.
 I   - Collecting user stories
 I   - Revise the 'Tor mirror page' so it doesn't list obsolete-looking
       timestamps. Just have two tables, "new enough" and "not new enough".
