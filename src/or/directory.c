@@ -2479,7 +2479,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 
     if (frontpage) {
       dlen = strlen(frontpage);
-      /* Lets return a disclaimer, users shouldn't use V1 anymore */
+      /* Let's return a disclaimer page (users shouldn't use V1 anymore,
+         and caches don't fetch '/', so this is safe). */
       if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
         log_info(LD_DIRSERV,
                  "Client asked for DirPortFrontPage content, but we've been "
@@ -2493,6 +2494,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
       goto done;
     }
+    /* if no disclaimer file, fall through and continue */
   }
 
   if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir")) { /* v1 dir fetch */

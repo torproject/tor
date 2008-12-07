@@ -108,9 +108,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## below too. You'll need to do ipchains or other port forwarding yourself
 ## to make this work.
 #DirListenAddress 0.0.0.0:9091
-
-## Uncomment this to return an arbitrary blob of html on your DirPort. You may
-## wish to use this blob of html to inform clients about your Tor server.
+## Uncomment to return an arbitrary blob of html on your DirPort. Now you
+## can explain what Tor is if anybody wonders why your IP address is
+## contacting them.
 #DirPortFrontPage /etc/tor/exit-notice.html
 
 ## Uncomment this if you run more than one Tor server, and add the

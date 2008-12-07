@@ -756,7 +756,7 @@ static char *torrc_fname = NULL;
 static or_state_t *global_state = NULL;
 /** Configuration Options set by command line. */
 static config_line_t *global_cmdline_options = NULL;
-/** Contents of most recently read DirPortFrontPage option file. */
+/** Contents of most recently read DirPortFrontPage file. */
 static char *global_dirfrontpagecontents = NULL;
 
 /** Return the contents of our frontpage string, or NULL if not configured. */
