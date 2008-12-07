@@ -34,11 +34,7 @@ Nick
 
 Matt
   - Fit Vidalia in 640x480 again.
-  - When user changes the language in Vidalia, have it change right then.
   - Vidalia should display/edit PlaintextPorts events/config.
-  . Vidalia's GUI should let you specify an http proxy that it launches
-    for you. Maybe in the general config window next to which Tor it
-    launches for you.
   - Vidalia should avoid stomping on your custom exit policy lines
     just because you click on 'save' for a totally different config thing.
   - How much space do we save in TBB by stripping symbols from Vidalia
@@ -53,7 +49,6 @@ ioerror
   - weather.torproject.org should go live.
   - Keep advocating new Tor servers and working with orgs like Mozilla
     to let them like Tor.
-  - solve the huge green onion on check.tp.o
   - Start converting critical wiki pages into real Tor wml pages. E.g.,
     https://wiki.torproject.org/noreply/TheOnionRouter/VerifyingSignatures
   - Find out what happened to the buildbot and get it back up:
@@ -70,7 +65,6 @@ ioerror
 Steven
   - Figure out (or give up on) how to run Tor Browser and ordinary
     Firefox side-by-side.
-  - Enumerate and analyze traces left when running from USB
   - Write a list of research items Tor would like to see done, for the
     volunteer page. Pick a few you'd like to work on yourself.
   - Move proposal 131 or equivalent forward.
@@ -117,7 +111,6 @@ Mike:
   - Roger wants to get an email every time there's a blog change,
     e.g. a comment. That way spam doesn't go undetected for weeks.
     - Or, maybe just disable linking from blog comments entirely?
-  - Get blog.torproject.org a favico
 
 =======================================================================
 
@@ -146,7 +139,7 @@ R   - then document the bridge user download timeline.
 
 =======================================================================
 
-For 0.2.1.2-alpha:
+For 0.2.1.x-alpha:
 R d bug: if we launch using bridges, and then stop using bridges, we
     still have our bridges in our entryguards section, and may use them.
 R d add an event to report geoip summaries to vidalia for bridge relays,
