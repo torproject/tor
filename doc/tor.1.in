@@ -1044,6 +1044,13 @@ probably do not want to set this option.  Please coordinate with the other
 admins at tor-ops@freehaven.net if you think you should be a directory.
 .LP
 .TP
+\fBDirPortFrontPage \fIFILENAME\fP
+When this option is set, it takes an html file and publishes it as "/" on
+the DirPort. Now relay operators can provide a disclaimer without needing
+to set up a separate webserver. There's a sample disclaimer in
+contrib/tor-exit-notice.html.
+.LP
+.TP
 \fBV1AuthoritativeDirectory \fR\fB0\fR|\fB1\fR\fP
 When this option is set in addition to \fBAuthoritativeDirectory\fP, Tor
 generates version 1 directory and running-routers documents (for legacy

@@ -1916,7 +1916,6 @@ test_util_smartlist_strings(void)
   test_eq((int)sz, 40);
   tor_free(cp);
 
-
  done:
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));

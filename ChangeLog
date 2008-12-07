@@ -1,4 +1,10 @@
 Changes in version 0.2.1.8-alpha - 2008-12-06
+  o Major feature:
+    - New DirPortFrontPage option that takes an html file and publishes it as
+      "/" on the DirPort. Now relay operators can provide a disclaimer without
+      needing to set up a separate webserver. There's a sample disclaimer 
+      in contrib/tor-exit-notice.html.
+
   o Major bugfixes:
     - Fix a DOS opportunity during the voting signature collection process
       at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.

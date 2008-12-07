@@ -88,6 +88,7 @@ static void directory_initiate_command_rend(const char *address,
  * kind of document we serve? */
 #define FULL_DIR_CACHE_LIFETIME (60*60)
 #define RUNNINGROUTERS_CACHE_LIFETIME (20*60)
+#define DIRPORTFRONTPAGE_CACHE_LIFETIME (20*60)
 #define NETWORKSTATUS_CACHE_LIFETIME (5*60)
 #define ROUTERDESC_CACHE_LIFETIME (30*60)
 #define ROUTERDESC_BY_DIGEST_CACHE_LIFETIME (48*60*60)
@@ -2471,6 +2472,27 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   if (compressed) {
     url[url_len-2] = '\0';
     url_len -= 2;
+  }
+
+  if (!strcmp(url,"/tor/")) {
+    const char *frontpage = get_dirportfrontpage();
+
+    if (frontpage) {
+      dlen = strlen(frontpage);
+      /* Lets return a disclaimer, users shouldn't use V1 anymore */
+      if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
+        log_info(LD_DIRSERV,
+                 "Client asked for DirPortFrontPage content, but we've been "
+                 "writing too many bytes lately. Sending 503 Dir busy.");
+        write_http_status_line(conn, 503, "Directory busy, try again later");
+        goto done;
+      }
+      note_request(url, dlen);
+      write_http_response_header_impl(conn, dlen, "text/html", "identity",
+                                      NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
+      connection_write_to_buf(frontpage, dlen, TO_CONN(conn));
+      goto done;
+    }
   }
 
   if (!strcmp(url,"/tor/") || !strcmp(url,"/tor/dir")) { /* v1 dir fetch */

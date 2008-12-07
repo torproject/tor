@@ -184,6 +184,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("DirFetchPeriod"),
   V(DirPolicy,                   LINELIST, NULL),
   V(DirPort,                     UINT,     "0"),
+  V(DirPortFrontPage,            STRING,   NULL),
   OBSOLETE("DirPostPeriod"),
 #ifdef ENABLE_GEOIP_STATS
   V(DirRecordUsageByCountry,     BOOL,     "0"),
@@ -559,6 +560,7 @@ static config_var_description_t options_description[] = {
   /* === directory cache options */
   { "DirPort", "Serve directory information from this port, and act as a "
     "directory cache." },
+  { "DirPortFrontPage", "Serve a static html disclaimer on DirPort." },
   { "DirListenAddress", "Bind to this address to listen for connections from "
     "clients and servers, instead of the default 0.0.0.0:DirPort." },
   { "DirPolicy", "Set a policy to limit who can connect to the directory "
@@ -754,6 +756,15 @@ static char *torrc_fname = NULL;
 static or_state_t *global_state = NULL;
 /** Configuration Options set by command line. */
 static config_line_t *global_cmdline_options = NULL;
+/** Contents of most recently read DirPortFrontPage option file. */
+static char *global_dirfrontpagecontents = NULL;
+
+/** Return the contents of our frontpage string, or NULL if not configured. */
+const char *
+get_dirportfrontpage(void)
+{
+  return global_dirfrontpagecontents;
+}
 
 /** Allocate an empty configuration object of a given format type. */
 static void *
@@ -849,6 +860,7 @@ config_free_all(void)
   }
   tor_free(torrc_fname);
   tor_free(_version);
+  tor_free(global_dirfrontpagecontents);
 }
 
 /** If options->SafeLogging is on, return a not very useful string,
@@ -1408,6 +1420,14 @@ options_act(or_options_t *old_options)
        * we had expected. */
       update_consensus_networkstatus_fetch_time(time(NULL));
     }
+  }
+
+  /* Load the webpage we're going to serve everytime someone asks for '/' on
+     our DirPort. */
+  tor_free(global_dirfrontpagecontents);
+  if (options->DirPortFrontPage) {
+    global_dirfrontpagecontents =
+      read_file_to_str(options->DirPortFrontPage, 0, NULL);
   }
 
   return 0;

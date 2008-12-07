@@ -2402,6 +2402,10 @@ typedef struct {
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
                      * /etc/resolv.conf (Unix) or the registry (Windows). */
+  char *DirPortFrontPage; /**< This is a full path to a file with an html
+                    disclaimer. This allows a server administrator to show
+                    that they're running Tor and anyone visiting their server
+                    will know this without any specialized knowledge. */
   /** Boolean: if set, we start even if our resolv.conf file is missing
    * or broken. */
   int ServerDNSAllowBrokenResolvConf;
@@ -2805,6 +2809,7 @@ typedef enum setopt_err_t {
   SETOPT_ERR_SETTING = -4,
 } setopt_err_t;
 
+const char *get_dirportfrontpage(void);
 or_options_t *get_options(void);
 int set_options(or_options_t *new_val, char **msg);
 void config_free_all(void);
