@@ -317,12 +317,7 @@ typedef enum {
 #define CONTROL_CONN_STATE_NEEDAUTH 2
 #define _CONTROL_CONN_STATE_MAX 2
 
-#define _DIR_PURPOSE_MIN 1
-/** A connection to a directory server: download a directory. */
-#define DIR_PURPOSE_FETCH_DIR 1
-/** A connection to a directory server: download just the list
- * of running routers. */
-#define DIR_PURPOSE_FETCH_RUNNING_LIST 2
+#define _DIR_PURPOSE_MIN 3
 /** A connection to a directory server: download a rendezvous
  * descriptor. */
 #define DIR_PURPOSE_FETCH_RENDDESC 3

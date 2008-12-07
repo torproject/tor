@@ -1,4 +1,4 @@
-Changes in version 0.2.1.8-alpha - 2008-12-06
+Changes in version 0.2.1.8-alpha - 2008-12-08
   o Major features:
     - New DirPortFrontPage option that takes an html file and publishes
       it as "/" on the DirPort. Now relay operators can provide a
@@ -47,6 +47,9 @@ Changes in version 0.2.1.8-alpha - 2008-12-06
     - Report the case where all signatures in a detached set are rejected
       differently than the case where there is an error handling the
       detached set. r17446
+    - Directory mirrors no longer fetch the v1 directory or
+      running-routers files. They are obsolete, and nobody asks for them
+      anymore. This is the first step to making v1 authorities obsolete.
 
   o Minor features (controller):
     - Return circuit purposes in response to GETINFO circuit-status. Fixes

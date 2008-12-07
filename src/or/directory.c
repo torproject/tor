@@ -105,11 +105,9 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
     return 1;
   if (router_purpose == ROUTER_PURPOSE_BRIDGE && has_completed_circuit)
     return 1; /* if no circuits yet, we may need this info to bootstrap. */
-  if (dir_purpose == DIR_PURPOSE_FETCH_DIR ||
-      dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
+  if (dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
       dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES ||
-      dir_purpose == DIR_PURPOSE_FETCH_RUNNING_LIST ||
       dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
       dir_purpose == DIR_PURPOSE_FETCH_STATUS_VOTE ||
       dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES ||
@@ -150,8 +148,6 @@ dir_conn_purpose_to_string(int purpose)
 {
   switch (purpose)
     {
-    case DIR_PURPOSE_FETCH_DIR:
-      return "v1 directory fetch";
     case DIR_PURPOSE_FETCH_RENDDESC:
       return "hidden-service descriptor fetch";
     case DIR_PURPOSE_UPLOAD_DIR:
@@ -162,8 +158,6 @@ dir_conn_purpose_to_string(int purpose)
       return "server vote upload";
     case DIR_PURPOSE_UPLOAD_SIGNATURES:
       return "consensus signature upload";
-    case DIR_PURPOSE_FETCH_RUNNING_LIST:
-      return "running-routers fetch";
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
       return "network-status fetch";
     case DIR_PURPOSE_FETCH_SERVERDESC:
@@ -323,10 +317,6 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_SERVERDESC:
       type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
                                                         V2_AUTHORITY);
-      break;
-    case DIR_PURPOSE_FETCH_DIR:
-    case DIR_PURPOSE_FETCH_RUNNING_LIST:
-      type = V1_AUTHORITY;
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       type = HIDSERV_AUTHORITY;
@@ -559,13 +549,7 @@ connection_dir_request_failed(dir_connection_t *conn)
   }
   if (entry_list_can_grow(get_options()))
     router_set_status(conn->identity_digest, 0); /* don't try him again */
-  if (conn->_base.purpose == DIR_PURPOSE_FETCH_DIR ||
-      conn->_base.purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    log_info(LD_DIR, "Giving up on directory server at '%s:%d'; retrying",
-             conn->_base.address, conn->_base.port);
-    directory_get_from_dirserver(conn->_base.purpose, conn->router_purpose,
-                                 NULL, 0 /* don't retry_if_no_servers */);
-  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_networkstatus_failed(conn, -1);
@@ -981,18 +965,6 @@ directory_send_command(dir_connection_t *conn,
   }
 
   switch (purpose) {
-    case DIR_PURPOSE_FETCH_DIR:
-      tor_assert(!resource);
-      tor_assert(!payload);
-      httpcommand = "GET";
-      url = tor_strdup("/tor/dir.z");
-      break;
-    case DIR_PURPOSE_FETCH_RUNNING_LIST:
-      tor_assert(!resource);
-      tor_assert(!payload);
-      httpcommand = "GET";
-      url = tor_strdup("/tor/running-routers");
-      break;
     case DIR_PURPOSE_FETCH_NETWORKSTATUS:
       tor_assert(resource);
       httpcommand = "GET";
@@ -1565,44 +1537,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       body = new_body;
       body_len = new_len;
       was_compressed = 1;
-    }
-  }
-
-  if (conn->_base.purpose == DIR_PURPOSE_FETCH_DIR) {
-    /* fetch/process the directory to cache it. */
-    log_info(LD_DIR,"Received directory (size %d) from server '%s:%d'",
-             (int)body_len, conn->_base.address, conn->_base.port);
-    if (status_code != 200) {
-      log_warn(LD_DIR,"Received http status code %d (%s) from server "
-               "'%s:%d' while fetching directory. I'll try again soon.",
-               status_code, escaped(reason), conn->_base.address,
-               conn->_base.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
-    }
-    if (router_parse_directory(body) < 0) {
-      log_notice(LD_DIR,"I failed to parse the directory I fetched from "
-                 "'%s:%d'. Ignoring.", conn->_base.address, conn->_base.port);
-    }
-  }
-
-  if (conn->_base.purpose == DIR_PURPOSE_FETCH_RUNNING_LIST) {
-    /* just update our list of running routers, if this list is new info */
-    log_info(LD_DIR,"Received running-routers list (size %d)", (int)body_len);
-    if (status_code != 200) {
-      log_warn(LD_DIR,"Received http status code %d (%s) from server "
-               "'%s:%d' while fetching running-routers. I'll try again soon.",
-               status_code, escaped(reason), conn->_base.address,
-               conn->_base.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
-    }
-    if (router_parse_runningrouters(body)<0) {
-      log_warn(LD_DIR,
-               "Bad running-routers from server '%s:%d'. I'll try again soon.",
-               conn->_base.address, conn->_base.port);
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
     }
   }
 
@@ -2264,8 +2198,6 @@ note_client_request(int purpose, int compressed, size_t bytes)
   char *key;
   const char *kind = NULL;
   switch (purpose) {
-    case DIR_PURPOSE_FETCH_DIR:           kind = "dl/dir"; break;
-    case DIR_PURPOSE_FETCH_RUNNING_LIST:  kind = "dl/running-routers"; break;
     case DIR_PURPOSE_FETCH_NETWORKSTATUS: kind = "dl/status"; break;
     case DIR_PURPOSE_FETCH_CONSENSUS:     kind = "dl/consensus"; break;
     case DIR_PURPOSE_FETCH_CERTIFICATE:   kind = "dl/cert"; break;
@@ -2504,11 +2436,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       log_info(LD_DIRSERV,"Client asked for the mirrored directory, but we "
                "don't have a good one yet. Sending 503 Dir not available.");
       write_http_status_line(conn, 503, "Directory unavailable");
-      /* try to get a new one now */
-      if (!already_fetching_directory(DIR_PURPOSE_FETCH_DIR) &&
-          !should_delay_dir_fetches(options))
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR,
-                                     ROUTER_PURPOSE_GENERAL, NULL, 1);
       goto done;
     }
     if (d->published < if_modified_since) {
@@ -2548,11 +2475,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     cached_dir_t *d = dirserv_get_runningrouters();
     if (!d) {
       write_http_status_line(conn, 503, "Directory unavailable");
-      /* try to get a new one now */
-      if (!already_fetching_directory(DIR_PURPOSE_FETCH_RUNNING_LIST) &&
-          !should_delay_dir_fetches(options))
-        directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST,
-                                     ROUTER_PURPOSE_GENERAL, NULL, 1);
       goto done;
     }
     if (d->published < if_modified_since) {

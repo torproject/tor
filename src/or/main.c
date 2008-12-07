@@ -822,8 +822,6 @@ signewnym_impl(time_t now)
 static void
 run_scheduled_events(time_t now)
 {
-  static time_t time_to_fetch_directory = 0;
-  static time_t time_to_fetch_running_routers = 0;
   static time_t last_rotated_x509_certificate = 0;
   static time_t time_to_check_v3_certificate = 0;
   static time_t time_to_check_listeners = 0;
@@ -974,33 +972,6 @@ run_scheduled_events(time_t now)
     time_to_dump_geoip_stats = now + DUMP_GEOIP_STATS_INTERVAL;
   }
 
-  /** 2. Periodically, we consider getting a new directory, getting a
-   * new running-routers list, and/or force-uploading our descriptor
-   * (if we've passed our internal checks). */
-  if (time_to_fetch_directory < now) {
-    /* Only caches actually need to fetch v1 directories now. */
-    if (directory_fetches_dir_info_early(options) &&
-        !authdir_mode_v1(options) && any_trusted_dir_is_v1_authority() &&
-        !should_delay_dir_fetches(options))
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_DIR,
-                                   ROUTER_PURPOSE_GENERAL, NULL, 1);
-/** How often do we (as a cache) fetch a new V1 directory? */
-#define V1_DIR_FETCH_PERIOD (12*60*60)
-    time_to_fetch_directory = now + V1_DIR_FETCH_PERIOD;
-  }
-
-  /* Caches need to fetch running_routers; directory clients don't. */
-  if (time_to_fetch_running_routers < now) {
-    if (directory_fetches_dir_info_early(options) &&
-        !authdir_mode_v1(options) && any_trusted_dir_is_v1_authority() &&
-        !should_delay_dir_fetches(options))
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_RUNNING_LIST,
-                                   ROUTER_PURPOSE_GENERAL, NULL, 1);
-/** How often do we (as a cache) fetch a new V1 runningrouters document? */
-#define V1_RUNNINGROUTERS_FETCH_PERIOD (12*60*60)
-    time_to_fetch_running_routers = now + V1_RUNNINGROUTERS_FETCH_PERIOD;
-  }
-
   /* Remove old information from rephist and the rend cache. */
   if (time_to_clean_caches < now) {
     rep_history_clean(now - options->RephistTrackTime);
@@ -1009,6 +980,9 @@ run_scheduled_events(time_t now)
 #define CLEAN_CACHES_INTERVAL (30*60)
     time_to_clean_caches = now + CLEAN_CACHES_INTERVAL;
   }
+
+  /** 2. Periodically, we consider force-uploading our descriptor
+   * (if we've passed our internal checks). */
 
 /** How often do we check whether part of our router info has changed in a way
  * that would require an upload? */
