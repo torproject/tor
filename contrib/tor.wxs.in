@@ -22,12 +22,24 @@
   http://technet.microsoft.com/en-us/library/cc759262.aspx
  -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <!-- Definitions for critical elements of this MSI package.
+  Note that the product version is compressed into a X.X.X format.  If the four
+  element version is used, the last octet is ignored when comparing versions
+  for upgrade, thus forcing the use of the three element version format.
+  UpgradeCode must remain the same for all packages of this type regardless of
+  Product or Package ID's.  This is how existing versions are located.
+    -->
+  <?define ThisProductVersion="2.1.7" ?>
+  <?define ThisProductVersionDisp="@VERSION@" ?>
+  <?define UpgradeCode="64323a0c-9712-4a7a-8db8-d3c5c0b963df" ?>
+  <?define TPI="The Tor Project, Inc." ?>
+
   <Product
     Name="Tor"
     Id="1449ef81-e295-43e5-91ac-81b7da0e2024"
     UpgradeCode="64323a0c-9712-4a7a-8db8-d3c5c0b963df"
-    Version="0.2.1.7"
-    Manufacturer="The Tor Project, Inc."
+    Version="$(var.ThisProductVersion)"
+    Manufacturer="$(var.TPI)"
     Language="1033" Codepage="1252">
 
     <!-- Common package definitions.  Most of these elements are self
@@ -37,25 +49,60 @@
       --> 
     <Package
       Id="*"
-      Keywords="Installer"
-      Description="Tor Installer"
-      Manufacturer="The Tor Project, Inc."
+      Keywords="Tor,Installer"
+      Description="Tor $(var.ThisProductVersionDisp) Installer"
+      Manufacturer="$(var.TPI)"
       Compressed="yes"
       InstallerVersion="100"
       Languages="1033"
       SummaryCodepage="1252"
     />
-    <Media
-      Id="1"
+    <Media Id="1"
       Cabinet="Tor.cab"
       CompressionLevel="high"
       EmbedCab="yes"
       DiskPrompt="na"
     />
-    <Property
-      Id="DiskPrompt"
-      Value="Tor Installation"
-    />
+
+    <!-- Properties used to control installation or repair features
+    and other invocation options.
+    When ALLUSERS==1 the install is per machine, when 2 it is per user.
+      -->
+    <Property Id="ALLUSERS">1</Property>
+    <Property Id="ReinstallModeText">omus</Property>
+    <Property Id="DiskPrompt">Tor Installation</Property>
+
+    <!-- Support for service type Tor installations (soon). -->
+    <Property Id="SVCINSTALL">0</Property>
+    <Property Id="SERVICENAME">Tor</Property>
+    <Property Id="SERVICEINTERNALNAME">Tor</Property>
+    <Property Id="EXISTING_TOR_SERVICE_PATH">
+      <RegistrySearch 
+        Id="ExistingTorService"
+        Root="HKLM"
+        Key="System\CurrentControlSet\Services\[SERVICEINTERNALNAME]"
+        Name="TorSvcPath"
+        Type="raw"
+      />
+    </Property>
+
+    <!-- Associate this package with the upgrade code for this series
+    to ensure that upgrade installations by Thandy or other means work
+    as expected.
+    The OnlyDetect option must be false to ensure that existing files
+    from an older version are removed and replaced with current files.
+      -->
+    <Upgrade Id="64323a0c-9712-4a7a-8db8-d3c5c0b963df">
+      <UpgradeVersion
+        Property="UPGRADEFOUND"
+        OnlyDetect="no"
+        Minimum="0.0.1"
+        IncludeMinimum="yes"
+        Maximum="$(var.ThisProductVersion)"
+        IncludeMaximum="no"
+      />
+    </Upgrade>
+
 
     <!-- Most of the installation directives are for populating the
     "Program Files" directory with the Tor binaries, dynamic link
@@ -76,30 +123,18 @@
             />
           </Component>
 
-          <!-- Tor configuration files
-               The sample config is always kept up to date and the torrc
-               is left as is if it exists and copied from the sample
-               config otherwise.
-            -->
-          <Component Id="TorConfigFile" Guid="1dae9705-0bef-4588-be36-d8a5df5e47cc">
-            <File
-              Id="TorSampleConfig"
-              Name="torrc.sample"
-              Source="src\config\torrc.sample"
-              Vital="yes"
-              ReadOnly="yes"
-              DiskId="1"
-            >
-              <CopyFile
-                Id="TorConfig"
-                DestinationName="torrc"
-              />
-            </File>
+          <!-- If run as service provide registry pointer to Tor path. -->
+          <Component Id="TorSvcLinks" Guid="b0e44ccf-4e85-4613-a026-9e3d0feef577">
+            <Condition>SVCINSTALL</Condition>
+            <RegistryKey Root="HKLM" Key="System\CurrentControlSet\Services\[SERVICEINTERNALNAME]"
+              Action="createAndRemoveOnUninstall">
+              <RegistryValue Name="TorSvcPath" Value="#1" Type="string" KeyPath="yes" />
+            </RegistryKey>
           </Component>
 
           <!-- Tor OpenSSL shared libraries
-               This optional component is required for shared builds
-               of Tor.  For static builds it is ignored.
+          This optional component is required for shared builds
+          of Tor.  For static builds it is ignored.
             -->
           <Component Id="OpenSSLLibrary" Guid="4d99fd44-dc24-46c6-8825-25b9e5916b85">
             <File
@@ -146,9 +181,54 @@
         </Directory>
       </Directory>
 
+      <Directory Id="LocalAppDataFolder" Name="AppData">
+        <Directory Id="AppRootDirectory" Name="Tor">
+          <!-- Tor configuration files
+          The sample config is always kept up to date and the torrc
+          is left as is if it exists and copied from the sample
+          config otherwise.
+            -->
+          <Component Id="TorConfigFile" Guid="1dae9705-0bef-4588-be36-d8a5df5e47cc">
+            <CreateFolder/>
+            <RemoveFolder Id="RemoveAppRootDirectory" On="uninstall" />
+            <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+              <RegistryValue Name="UserConfigFile" Value="1" Type="integer" KeyPath="yes" />
+            </RegistryKey>
+            <File
+              Id="TorSampleConfig"
+              Name="torrc.sample"
+              Source="src\config\torrc.sample"
+              Vital="yes"
+              ReadOnly="yes"
+              DiskId="1"
+            > 
+              <CopyFile
+                Id="TorConfig"
+                DestinationName="torrc"
+              />
+            </File>
+          </Component>
+  
+          <!-- GeoIP data file.  This is an optional component.  -->
+          <Component Id="TorGeoIPFile" Guid="54dcb7e9-ea49-4be5-8c1a-32bf45306f9b">
+            <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+              <RegistryValue Name="UserGeoIPFile" Value="1" Type="integer" KeyPath="yes" />
+            </RegistryKey>
+            <File
+              Id="GeoIPFile"
+              Name="geoip"
+              Source="share/tor/geoip"
+              Vital="no"
+              ReadOnly="yes"
+              DiskId="1"
+            /> 
+          </Component>
+        </Directory>
+      </Directory>
+
       <!-- Create shortcuts if requested
-           Remember that shortcuts must always be tied to a "key"
-           registry value for proper repair and removal.
+      Remember that shortcuts must always be tied to a "key"
+      registry value for proper repair and removal.
         -->
       <Directory Id="ProgramMenuFolder" Name="Programs">
         <Directory Id="ShortcutFolder" Name="Tor">
@@ -178,23 +258,22 @@
       </Directory>
 
       <!-- Current version registry info
-           This value can be used by third party applications to query
-           for the current version installed on the system.
+      This value can be used by third party applications to query
+      for the current version installed on the system.
         -->
       <Component Id="TorRegistry" Guid="575de318-a649-49fe-95e5-ee091f6cb8c6">
         <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Tor"
           Action="createAndRemoveOnUninstall">
-          <RegistryValue Name="Version" Value="@VERSION@" Type="string" KeyPath="yes" />
+          <RegistryValue Name="Version" Value="$(var.ThisProductVersionDisp)" Type="string" KeyPath="yes" />
         </RegistryKey>
       </Component>
-
     </Directory>
 
     <!-- Define list of application features available for install
-         There are two main sections to this list.  The "MainApplication"
-         section which defines a core set of mandatory files and setup
-         and the other optional components like shortcuts which are not
-         required for functional installation.
+    There are two main sections to this list.  The "MainApplication"
+    section which defines a core set of mandatory files and setup
+    and the other optional components like shortcuts which are not
+    required for functional installation.
       -->
     <Feature Id="Complete" Title="Tor"
              Level="1" Display="expand" ConfigurableDirectory="INSTALLDIR"
@@ -206,9 +285,11 @@
                Description="Main Tor application">
         <ComponentRef Id="TorExecutable" />
         <ComponentRef Id="TorConfigFile" />
+        <ComponentRef Id="TorGeoIPFile" />
         <ComponentRef Id="OpenSSLLibrary" />
         <ComponentRef Id="TorDocuments" />
         <ComponentRef Id="TorRegistry" /> 
+        <ComponentRef Id="TorSvcLinks" />
       </Feature>
 
       <!-- Shortcuts on the Start Menu and Desktop are optional but
@@ -229,9 +310,14 @@
       </Feature>
     </Feature>
 
+    <!-- Upgrade installation sequence. -->
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallFinalize" />
+    </InstallExecuteSequence>
+
     <!-- Set the UI options
-         Use a custom UI sequence to avoid EULA and other extraneous
-         parts of Mondo and other GUIs
+    Use a custom UI sequence to avoid EULA and other extraneous
+    parts of Mondo and other GUIs
       -->
     <UIRef Id="WixUI_Tor" />
     <Icon Id="tor.ico" SourceFile="contrib/tor.ico" />
