@@ -968,6 +968,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
   return 0;
 }
 
+#ifndef MS_WINDOWS
 /** Log details of current user and group credentials. Return 0 on
  * success. Logs and return -1 on failure.
  */
@@ -975,7 +976,6 @@ static int
 log_credential_status(void)
 {
 #define CREDENTIAL_LOG_LEVEL LOG_INFO
-#ifndef MS_WINDOWS
   /* Real, effective and saved UIDs */
   uid_t ruid, euid, suid;
   /* Read, effective and saved GIDs */
@@ -1062,10 +1062,10 @@ log_credential_status(void)
 
     return retval;
   }
-#endif
 
   return 0;
 }
+#endif
 
 /** Call setuid and setgid to run as <b>user</b> and switch to their
  * primary group.  Return 0 on success.  On failure, log and return -1.
