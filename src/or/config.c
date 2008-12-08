@@ -184,7 +184,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("DirFetchPeriod"),
   V(DirPolicy,                   LINELIST, NULL),
   V(DirPort,                     UINT,     "0"),
-  V(DirPortFrontPage,            STRING,   NULL),
+  V(DirPortFrontPage,            FILENAME, NULL),
   OBSOLETE("DirPostPeriod"),
 #ifdef ENABLE_GEOIP_STATS
   V(DirRecordUsageByCountry,     BOOL,     "0"),
