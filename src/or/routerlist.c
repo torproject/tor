@@ -1219,7 +1219,8 @@ routerlist_add_network_family(smartlist_t *sl, routerinfo_t *router)
 }
 
 /** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
- * This is used to make sure we don't pick siblings in a single path.
+ * This is used to make sure we don't pick siblings in a single path,
+ * or pick more than one relay from a family for our entry guard list.
  */
 void
 routerlist_add_family(smartlist_t *sl, routerinfo_t *router)

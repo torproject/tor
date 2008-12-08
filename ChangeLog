@@ -5,6 +5,12 @@ Changes in version 0.2.1.8-alpha - 2008-12-08
       disclaimer without needing to set up a separate webserver. There's
       a sample disclaimer in contrib/tor-exit-notice.html.
 
+  o Security fixes:
+    - When the client is choosing entry guards, now it selects at most
+      one guard from a given relay family. Otherwise we could end up with
+      all of our entry points into the network run by the same operator.
+      Suggested by Camilo Viecco. Fix on 0.1.1.11-alpha.
+
   o Major bugfixes:
     - Fix a DOS opportunity during the voting signature collection process
       at directory authorities. Spotted by rovv. Bugfix on 0.2.0.x.
