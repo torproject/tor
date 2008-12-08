@@ -2163,25 +2163,6 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
                              cache_lifetime);
 }
 
-/** Helper function: return 1 if there are any dir conns of purpose
- * <b>purpose</b> that are going elsewhere than our own ORPort/Dirport.
- * Else return 0.
- */
-static int
-already_fetching_directory(int purpose)
-{
-  smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->type == CONN_TYPE_DIR &&
-        conn->purpose == purpose &&
-        !conn->marked_for_close &&
-        !router_digest_is_me(TO_DIR_CONN(conn)->identity_digest))
-      return 1;
-  });
-  return 0;
-}
-
 #ifdef INSTRUMENT_DOWNLOADS
 /** Map used to keep track of how much data we've up/downloaded in what kind
  * of request.  Maps from request type to pointer to uint64_t. */
