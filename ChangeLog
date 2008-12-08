@@ -50,9 +50,6 @@ Changes in version 0.2.1.8-alpha - 2008-12-08
       CID 349.
 
   o Minor features:
-    - Report the case where all signatures in a detached set are rejected
-      differently than the case where there is an error handling the
-      detached set. r17446
     - Directory mirrors no longer fetch the v1 directory or
       running-routers files. They are obsolete, and nobody asks for them
       anymore. This is the first step to making v1 authorities obsolete.
