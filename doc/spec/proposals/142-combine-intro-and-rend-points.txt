@@ -4,8 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Karsten Loesing, Christian Wilms
 Created: 27-Jun-2008
-Status: Open
-Target: 0.2.2.x
+Status: Dead
 
 Change history:
 

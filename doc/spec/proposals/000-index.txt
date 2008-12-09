@@ -43,7 +43,7 @@ Proposals by number:
 118  Advertising multiple ORPorts at once [ACCEPTED]
 119  New PROTOCOLINFO command for controllers [CLOSED]
 120  Shutdown descriptors when Tor servers stop [DEAD]
-121  Hidden Service Authentication [OPEN]
+121  Hidden Service Authentication [FINISHED]
 122  Network status entries need a new Unnamed flag [CLOSED]
 123  Naming authorities automatically create bindings [CLOSED]
 124  Blocking resistant TLS certificate usage [SUPERSEDED]
@@ -64,7 +64,7 @@ Proposals by number:
 139  Download consensus documents only when it will be trusted [CLOSED]
 140  Provide diffs between consensuses [ACCEPTED]
 141  Download server descriptors on demand [DRAFT]
-142  Combine Introduction and Rendezvous Points [OPEN]
+142  Combine Introduction and Rendezvous Points [DEAD]
 143  Improvements of Distributed Storage for Tor Hidden Service Descriptors [OPEN]
 144  Increase the diversity of circuits by detecting nodes belonging the same provider [DRAFT]
 145  Separate "suitable as a guard" from "suitable as a new guard" [OPEN]
@@ -77,7 +77,7 @@ Proposals by number:
 152  Optionally allow exit from single-hop circuits [CLOSED]
 153  Automatic software update protocol [SUPERSEDED]
 154  Automatic Software Update Protocol [SUPERSEDED]
-155  Four Improvements of Hidden Service Performance [OPEN]
+155  Four Improvements of Hidden Service Performance [FINISHED]
 156  Tracking blocked ports on the client side [OPEN]
 157  Make certificate downloads specific [OPEN]
 
@@ -94,13 +94,10 @@ Proposals by status:
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  OPEN:
-   121  Hidden Service Authentication [for 0.2.1.x]
-   142  Combine Introduction and Rendezvous Points [for 0.2.2.x]
    143  Improvements of Distributed Storage for Tor Hidden Service Descriptors [for 0.2.1.x]
    145  Separate "suitable as a guard" from "suitable as a new guard" [for 0.2.1.x]
    146  Add new flag to reflect long-term stability [for 0.2.1.x]
    149  Using data from NETINFO cells [for 0.2.1.x]
-   155  Four Improvements of Hidden Service Performance [for 0.2.1.x]
    156  Tracking blocked ports on the client side [for 0.2.?]
    157  Make certificate downloads specific [for 0.2.1.x]
  ACCEPTED:
@@ -118,7 +115,9 @@ Proposals by status:
    099  Miscellaneous proposals
  FINISHED:
    111  Prioritizing local traffic over relayed traffic [in 0.2.0.x]
+   121  Hidden Service Authentication [in 0.2.1.x]
    128  Families of private bridges [in 0.2.0.x]
+   155  Four Improvements of Hidden Service Performance [in 0.2.1.x]
  CLOSED:
    101  Voting on the Tor Directory System [in 0.2.0.x]
    102  Dropping "opt" from the directory format [in 0.2.0.x]
@@ -155,3 +154,4 @@ Proposals by status:
    115  Two Hop Paths
    116  Two hop paths from entry guards
    120  Shutdown descriptors when Tor servers stop
+   142  Combine Introduction and Rendezvous Points
