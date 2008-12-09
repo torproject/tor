@@ -3,7 +3,9 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has
       been fetched and validated.
-    - Finally remove deprecated "EXTENEDED_FORMAT" feature.
+    - Finally remove deprecated "EXTENEDED_FORMAT" feature.  It has
+      been called EXTENDED_EVENTS since 0.1.2.4-alpha.
+
 
 Changes in version 0.2.1.8-alpha - 2008-12-08
   o Major features:
