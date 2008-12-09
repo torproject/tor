@@ -2686,7 +2686,7 @@ handle_control_usefeature(control_connection_t *conn,
   SMARTLIST_FOREACH(args, const char *, arg, {
       if (!strcasecmp(arg, "VERBOSE_NAMES"))
         verbose_names = 1;
-      else if (!strcasecmp(arg, "EXTENDED_EVENTS")) /* <- documented */
+      else if (!strcasecmp(arg, "EXTENDED_EVENTS"))
         extended_events = 1;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
