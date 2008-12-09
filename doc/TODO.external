@@ -32,8 +32,10 @@ W   - Finish implementation of directory overhead changes: have a set
   - end of October
     - Auto update
 C     - Get the MSI working and stable for Windows Tor installer.
-N     - Come up with an interface to export the package/bundle gloss
+N     o Come up with an interface to export the package/bundle gloss
         descriptions so Vidalia can display them.
+	(Done; see thandy-client json2xml.  Matt was fine with this,
+	last I heard.)
 E     . Vidalia calls Thandy, learns when to upgrade, requests the upgrade.
 ?     - Teach our OSX installer to register its version on install
 
