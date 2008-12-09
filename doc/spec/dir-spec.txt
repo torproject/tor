@@ -909,6 +909,18 @@ $Id$
         server's administrator.  Administrators should include at least an
         email address and a PGP fingerprint.
 
+    "legacy-key" SP FINGERPRINT NL
+
+        [At most once]
+
+        Lists a fingerprint for an obsolete _identity_ key still used
+        by this authority to keep older clients working.  This option
+        is used to keep key around for a little while in case the
+        authorities need to migrate many identity keys at once.
+        (Generally, this would only happen because of a security
+        vulnerability that affected multiple authorities, like the
+        Debian OpenSSL RNG bug of May 2008.)
+
    The authority section of a consensus contains groups the following items,
    in the order given, with one group for each authority that contributed to
    the consensus, with groups sorted by authority identity digest:
@@ -1176,7 +1188,12 @@ $Id$
      The authority item groups (dir-source, contact, fingerprint,
      vote-digest) are taken from the votes of the voting
      authorities. These groups are sorted by the digests of the
-     authorities identity keys, in ascending order.
+     authorities identity keys, in ascending order.  If the consensus
+     method is 3 or later, a dir-source line must be included for
+     every vote with legacy-key entry, using the legacy-key's
+     fingerprint, the voter's ordinary nickname with the string
+     "-legacy" appended, and all other fields as from the original
+     vote's dir-source line.
 
      A router status entry:
         * is included in the result if some router status entry with the same
