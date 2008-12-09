@@ -1,6 +1,6 @@
 Filename: 144-enforce-distinct-providers.txt
 Title: Increase the diversity of circuits by detecting nodes belonging the
-same provider
+   same provider
 Author: Mfr
 Created: 2008-06-15
 Status: Draft
