@@ -1359,6 +1359,11 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
  * <b>consensus</b>.  If we don't have enough certificates to validate it,
  * store it in consensus_waiting_for_certs and launch a certificate fetch.
  *
+ * If flags & NSSET_FROM_CACHE, this networkstatus has come from the disk
+ * cache.  If flags & NSSET_WAS_WAITING_FOR_CERTS, this networkstatus was
+ * already received, but we were waiting for certificates on it.  If flags &
+ * NSSET_DONT_DOWNLOAD_CERTS, do not launch certificate downloads as needed.
+ *
  * Return 0 on success, <0 on failure.  On failure, caller should increment
  * the failure count as appropriate.
  *
@@ -1447,6 +1452,9 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
       goto done;
     }
   }
+
+  if (!from_cache)
+    control_event_client_status(LOG_NOTICE, "CONSENSUS_ARRIVED");
 
   /* Are we missing any certificates at all? */
   if (r != 1 && dl_certs)

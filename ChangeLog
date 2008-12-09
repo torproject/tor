@@ -1,3 +1,8 @@
+Changes in version 0.2.1.9-alpha - 200?-??-??
+
+  o Minor features (controller):
+    - New CONSENSUS_ARRIVED event 
+
 Changes in version 0.2.1.8-alpha - 2008-12-08
   o Major features:
     - New DirPortFrontPage option that takes an html file and publishes
