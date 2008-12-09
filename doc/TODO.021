@@ -238,6 +238,28 @@ Nice to have for 0.2.1.x:
 
   - Handle multi-core cpus better
     - Split circuit AES across cores
+      - Split cell_queue_t into a new structure with a processed subqueue,
+        an unprocessed subqueue, and a symmetric key.
+      - Write a function to pull cells from the unprocessed subqueue,
+        en/decrypt them, and place them on the processed subqueue.
+      - When a cell is added to a queue that previously had no
+        unprocessed cells, put that queue into a set of queues that
+        need to be processed.  When the last cell is processed in a
+        queue, remove it from the set of queues that need to be
+        processed.
+      - Worker code to process queues in round-robin fashion.
+      - Think about how to be fair to differet circuits _and_ about to get
+        CPU-affinity, if that matters.
+      - When a cell is processed and placed onto a processed subqueue
+        that was previously empty, _and_ the or_conn output buffer
+        that the queue is targetting is empty, stick the buffer onto a
+        list of buffers that need attention and notify the main
+        thread if it was not already on the list.
+      - When the main thread gets notified, it pumps those buffers.
+        (i.e., it puts cells onto them from some of their circuits).
+      - To free a queue that is not currently processing, grab its lock
+        and free it.
+      - To free a queue that _is_ processing, .... ?
 
   - Documentation
 P   - Make documentation realize that location of system configuration file
