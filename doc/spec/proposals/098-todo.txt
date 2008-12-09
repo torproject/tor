@@ -19,28 +19,33 @@ Overview:
 
 For some later protocol version.
 
+  - It would be great to get smarter about identity and linkability.
+    It's not crazy to say, "Never use the same circuit for my SSH
+    connections and my web browsing."  How far can/should we take this?
+
   - Fix onionskin handshake scheme to be more mainstream, less nutty.
     Can we just do
         E(HMAC(g^x), g^x) rather than just E(g^x) ?
     No, that has the same flaws as before. We should send
         E(g^x, C) with random C and expect g^y, HMAC_C(K=g^xy).
     Better ask Ian; probably Stephen too.
-  - Versioned CREATE and friends
+
   - Length on CREATE and friends
-  - Versioning on circuits
-  - Versioning on create cells
-  - SHA1 is showing its age
+
+  - Versioning on circuits and create cells, so we have a clear path
+    to improve the circuit protocol.
+
+  - SHA1 is showing its age.  We should get a design for upgrading our
+    hash once the AHS competition is done, or even sooner.
+
   - Not being able to upgrade ciphersuites or increase key lengths is
     lame.
   - Paul has some ideas about circuit creation; read his PET paper once it's
     out.
-  - Allow more TLS ciphersuites.
 
 Any time:
 
   - Some ideas for revising the directory protocol:
-    - Should we also look into a "delta since last network-status
-      checkpoint" scheme, to reduce overhead further?
     - Extend the "r" line in network-status to give a set of buckets (say,
       comma-separated) for that router.
       - Buckets are deterministic based on IP address.
@@ -54,8 +59,6 @@ Any time:
   - Spec when we should rotate which keys
   - Spec how to publish descriptors less often
   - Describe pros and cons of non-deterministic path lengths
-  - get rid of the Named flag, or automate it at the dir auth end,
-    or automate it at the client end, or something.
 
   - We should use a variable-length path length by default -- 3 +/- some
     distribution. Need to think harder about allowing values less than 3,
@@ -66,7 +69,7 @@ Things that should change...
 B.1. ... but which will require backward-incompatible change
 
   - Circuit IDs should be longer.
-  - IPv6 everywhere.
+  . IPv6 everywhere.
   - Maybe, keys should be longer.
     - Maybe, key-length should be adjustable.  How to do this without
       making anonymity suck?
@@ -82,7 +85,6 @@ B.1. ... but which will require backward-incompatible change
 
 B.1. ... and that will require no changes
 
-   - Mention multiple addr/port combos
    - Advertised outbound IP?
    - Migrate streams across circuits.
    - Fix bug 469 by limiting the number of simultaneous connections per IP.
