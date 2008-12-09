@@ -4,11 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2007-12-xx
-Status: Finished
-Implemented-In: 0.2.0.x
-
-  [This proposal is part implemented, and part dead (won't-implement).
-  Roger should add a note and merge it into the spec.]
+Status: Dead
 
 1. Overview
 
@@ -31,21 +27,40 @@ Implemented-In: 0.2.0.x
   out the details of how these volunteers find each other and decide to
   set up a family.
 
+2. Other notes.
 
-somebody needs to run a bridge authority
+  somebody needs to run a bridge authority
 
-it needs to have a torrc option to publish networkstatuses of its bridges
+  it needs to have a torrc option to publish networkstatuses of its bridges
 
-it should also do reachability testing just of those bridges
+  it should also do reachability testing just of those bridges
 
-people ask for the bridge networkstatus by asking for a url that
-contains a password. (it's safe to do this because of begin_dir.)
+  people ask for the bridge networkstatus by asking for a url that
+  contains a password. (it's safe to do this because of begin_dir.)
 
-so the bridge users need to know a) a password, and b) a bridge
-authority line.
+  so the bridge users need to know a) a password, and b) a bridge
+  authority line.
 
-the bridge users need to know the bridge authority line.
+  the bridge users need to know the bridge authority line.
 
-the bridge authority needs to know the password.
+  the bridge authority needs to know the password.
 
+3. Current state
+
+  I implemented a BridgePassword config option. Bridge authorities
+  should set it, and users who want to use those bridge authorities
+  should set it.
+
+  Now there is a new directory URL "/tor/networkstatus-bridges" that
+  directory mirrors serve if BridgeAuthoritativeDir is set and it's a
+  begin_dir connection. It looks for the header
+    Authorization: Basic %s
+  where %s is the base-64 bridge password.
+
+  I never got around to teaching clients how to set the header though,
+  so it may or may not, and may or may not do what we ultimate want.
+
+  I've marked this proposal dead; it really never should have left the
+  ideas/ directory. Somebody should pick it up sometime and finish the
+  design and implementation.
 

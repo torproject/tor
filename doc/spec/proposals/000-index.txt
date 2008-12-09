@@ -50,7 +50,7 @@ Proposals by number:
 125  Behavior for bridge users, bridge relays, and bridge authorities [CLOSED]
 126  Getting GeoIP data and publishing usage summaries [CLOSED]
 127  Relaying dirport requests to Tor download site / website [DRAFT]
-128  Families of private bridges [FINISHED]
+128  Families of private bridges [DEAD]
 129  Block Insecure Protocols by Default [CLOSED]
 130  Version 2 Tor connection protocol [CLOSED]
 131  Help users to verify they are using Tor [NEEDS-REVISION]
@@ -115,7 +115,6 @@ Proposals by status:
    099  Miscellaneous proposals
  FINISHED:
    121  Hidden Service Authentication [in 0.2.1.x]
-   128  Families of private bridges [in 0.2.0.x]
    155  Four Improvements of Hidden Service Performance [in 0.2.1.x]
  CLOSED:
    101  Voting on the Tor Directory System [in 0.2.0.x]
@@ -154,4 +153,5 @@ Proposals by status:
    115  Two Hop Paths
    116  Two hop paths from entry guards
    120  Shutdown descriptors when Tor servers stop
+   128  Families of private bridges
    142  Combine Introduction and Rendezvous Points
