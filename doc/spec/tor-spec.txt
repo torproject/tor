@@ -885,11 +885,25 @@ see tor-design.pdf.
 
 7.1. Link throttling
 
-   Each node should do appropriate bandwidth throttling to keep its
-   user happy.
+   Each client or relay should do appropriate bandwidth throttling to
+   keep its user happy.
 
    Communicants rely on TCP's default flow control to push back when they
    stop reading.
+
+   The mainline Tor implementation uses token buckets (one for reads,
+   one for writes) for the rate limiting.
+
+   Since 0.2.0.x, Tor has let the user specify an additional pair of
+   token buckets for "relayed" traffic, so people can deploy a Tor relay
+   with strict rate limiting, but also use the same Tor as a client. To
+   avoid partitioning concerns we combine both classes of traffic over a
+   given OR connection, and keep track of the last time we read or wrote
+   a high-priority (non-relayed) cell. If it's been less than N seconds
+   (currently N=30), we give the whole connection high priority, else we
+   give the whole connection low priority. We also give low priority
+   to reads and writes for connections that are serving directory
+   information. See proposal 111 for details.
 
 7.2. Link padding
 
@@ -941,7 +955,6 @@ see tor-design.pdf.
    upon receiving a RELAY_SENDME cell. Edge nodes initiate RELAY_SENDME
    cells when both a) the window is <= 450, and b) there are less than
    ten cell payloads remaining to be flushed at that edge.
-
 
 A.1. Differences between spec and implementation
 

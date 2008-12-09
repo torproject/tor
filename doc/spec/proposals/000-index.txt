@@ -33,7 +33,7 @@ Proposals by number:
 108  Base "Stable" Flag on Mean Time Between Failures [CLOSED]
 109  No more than one server per IP address [CLOSED]
 110  Avoiding infinite length circuits [ACCEPTED]
-111  Prioritizing local traffic over relayed traffic [FINISHED]
+111  Prioritizing local traffic over relayed traffic [CLOSED]
 112  Bring Back Pathlen Coin Weight [SUPERSEDED]
 113  Simplifying directory authority administration [SUPERSEDED]
 114  Distributed Storage for Tor Hidden Service Descriptors [CLOSED]
@@ -114,7 +114,6 @@ Proposals by status:
    098  Proposals that should be written
    099  Miscellaneous proposals
  FINISHED:
-   111  Prioritizing local traffic over relayed traffic [in 0.2.0.x]
    121  Hidden Service Authentication [in 0.2.1.x]
    128  Families of private bridges [in 0.2.0.x]
    155  Four Improvements of Hidden Service Performance [in 0.2.1.x]
@@ -128,6 +127,7 @@ Proposals by status:
    107  Uptime Sanity Checking [in 0.2.0.x]
    108  Base "Stable" Flag on Mean Time Between Failures [in 0.2.0.x]
    109  No more than one server per IP address [in 0.2.0.x]
+   111  Prioritizing local traffic over relayed traffic [in 0.2.0.x]
    114  Distributed Storage for Tor Hidden Service Descriptors [in 0.2.0.x]
    119  New PROTOCOLINFO command for controllers [in 0.2.0.x]
    122  Network status entries need a new Unnamed flag [in 0.2.0.x]
