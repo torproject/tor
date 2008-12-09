@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Karsten Loesing
 Created: 29-Apr-2008
-Status: Finished
+Status: Closed
 Target: 0.2.1.x
 Implemented-In: 0.2.1.2-alpha
 

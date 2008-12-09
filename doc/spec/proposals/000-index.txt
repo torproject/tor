@@ -57,7 +57,7 @@ Proposals by number:
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
 134  More robust consensus voting with diverse authority sets [ACCEPTED]
-135  Simplify Configuration of Private Tor Networks [FINISHED]
+135  Simplify Configuration of Private Tor Networks [CLOSED]
 136  Mass authority migration with legacy keys [CLOSED]
 137  Keep controllers informed as Tor bootstraps [CLOSED]
 138  Remove routers that are not Running from consensus documents [CLOSED]
@@ -120,7 +120,6 @@ Proposals by status:
  FINISHED:
    111  Prioritizing local traffic over relayed traffic
    128  Families of private bridges
-   135  Simplify Configuration of Private Tor Networks
  CLOSED:
    101  Voting on the Tor Directory System
    102  Dropping "opt" from the directory format
@@ -139,6 +138,7 @@ Proposals by status:
    126  Getting GeoIP data and publishing usage summaries
    129  Block Insecure Protocols by Default
    130  Version 2 Tor connection protocol
+   135  Simplify Configuration of Private Tor Networks
    136  Mass authority migration with legacy keys
    137  Keep controllers informed as Tor bootstraps
    138  Remove routers that are not Running from consensus documents
