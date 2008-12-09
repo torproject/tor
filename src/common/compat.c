@@ -1103,9 +1103,18 @@ switch_id(const char *user)
 
   /* Properly switch egid,gid,euid,uid here or bail out */
   if (setgroups(1, &pw->pw_gid)) {
-    log_warn(LD_GENERAL, "Error setting groups to gid %d: \"%s\". "
-             "If you set the \"User\" option, you must start Tor as root.",
+    log_warn(LD_GENERAL, "Error setting groups to gid %d: \"%s\".",
              (int)pw->pw_gid, strerror(errno));
+    if (old_uid == pw->pw_uid) {
+      log_warn(LD_GENERAL, "Tor is already running as %s.  You do not need "
+               "the \"User\" option if you are already running as the user "
+               "you want to be.  (If you did not set the User option in your "
+               "torrc, check whether it was specified on the command line "
+               "by a startup script.)", user);
+    } else {
+      log_warn(LD_GENERAL, "If you set the \"User\" option, you must start Tor"
+               " as root.");
+    }
     return -1;
   }
 

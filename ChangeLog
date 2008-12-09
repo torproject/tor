@@ -1,5 +1,10 @@
 Changes in version 0.2.1.9-alpha - 200?-??-??
 
+  o Minor features:
+    - Give a better error message when an overzealous init script says,
+      "sudo -u username tor --user username".  Makes Bug 882 easier
+      for users to diagnose.
+
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has
       been fetched and validated.
