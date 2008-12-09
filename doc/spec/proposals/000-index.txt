@@ -75,8 +75,8 @@ Proposals by number:
 150  Exclude Exit Nodes from a circuit [CLOSED]
 151  Improving Tor Path Selection [DRAFT]
 152  Optionally allow exit from single-hop circuits  [CLOSED]
-153  Automatic software update protocol [DRAFT]
-154  Automatic Software Update Protocol [OPEN]
+153  Automatic software update protocol [SUPERSEDED]
+154  Automatic Software Update Protocol [SUPERSEDED]
 155  Four Improvements of Hidden Service Performance [OPEN]
 156  Tracking blocked ports on the client side [OPEN]
 157  Make certificate downloads specific [OPEN]
@@ -91,7 +91,6 @@ Proposals by status:
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the
    151  Improving Tor Path Selection
-   153  Automatic software update protocol
  OPEN:
    121  Hidden Service Authentication
    142  Combine Introduction and Rendezvous Points
@@ -99,7 +98,6 @@ Proposals by status:
    145  Separate "suitable as a guard" from "suitable as a new guard"
    146  Add new flag to reflect long-term stability
    149  Using data from NETINFO cells
-   154  Automatic Software Update Protocol
    155  Four Improvements of Hidden Service Performance
    156  Tracking blocked ports on the client side
    157  Make certificate downloads specific
@@ -151,6 +149,8 @@ Proposals by status:
    112  Bring Back Pathlen Coin Weight
    113  Simplifying directory authority administration
    124  Blocking resistant TLS certificate usage
+   153  Automatic software update protocol
+   154  Automatic Software Update Protocol
  DEAD:
    100  Tor Unreliable Datagram Extension Proposal
    115  Two Hop Paths

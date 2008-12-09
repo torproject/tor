@@ -4,9 +4,10 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Matt Edman
 Created: 30-July-2008
-Status: Open
+Status: Superseded
 Target: 0.2.1.x
 
+Superseded by thandy-spec.txt
 
 Scope
 
