@@ -1284,6 +1284,12 @@ $Id$
        {Controllers may want to warn the user if this event occurs; further
        action is generally not possible.}
 
+     COSENSUS_ARRIVED
+
+        Tor has received and validated a new consensus networkstatus.
+        (This event can be delayed a little while after the consensus
+        is received, if Tor needs to fetch certificates.)
+
   Actions for STATUS_CLIENT events can be as follows:
 
      BOOTSTRAP
