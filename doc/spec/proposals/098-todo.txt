@@ -22,6 +22,7 @@ For some later protocol version.
   - It would be great to get smarter about identity and linkability.
     It's not crazy to say, "Never use the same circuit for my SSH
     connections and my web browsing."  How far can/should we take this?
+    See ideas/xxx-separate-streams-by-port.txt for a start.
 
   - Fix onionskin handshake scheme to be more mainstream, less nutty.
     Can we just do
