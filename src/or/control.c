@@ -3117,6 +3117,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
     default:
       tor_snprintf(reason_buf, sizeof(reason_buf), "REASON=UNKNOWN_%d",
                    reason_code);
+      /* XXX do we want SOURCE=UNKNOWN_%d above instead? -RD */
       break;
     }
   }
