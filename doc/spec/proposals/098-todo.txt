@@ -65,6 +65,12 @@ Any time:
     distribution. Need to think harder about allowing values less than 3,
     and there's a tradeoff between having a wide variance and performance.
 
+  - Clients currently use certs during TLS.  Is this wise?  It does make it
+    easier for servers to tell which NATted client is which. We could use a
+    seprate set of certs for each guard, I suppose, but generating so many
+    certs could get expensive.  Omitting them entirely would make OP->OR
+    easier to tell from OR->OR.
+
 Things that should change...
 
 B.1. ... but which will require backward-incompatible change

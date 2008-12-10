@@ -187,6 +187,10 @@ N   . Draft proposal for GeoIP aggregation (see external constraints *)
       their choices even before they have the descriptors; and so
       authorities can put in more accurate numbers in the future.
 
+  - Spec compliance:
+    - Make sure that clients could do the new handshake without sending any
+      certs, if they wanted.
+
   - Tiny designs to write:
     - If a relay publishes a new descriptor with a significantly lower
       uptime or with a new IP address, then we should consider its current

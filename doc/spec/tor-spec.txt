@@ -251,6 +251,11 @@ see tor-design.pdf.
    (As an exception, directory servers may try to stay connected to all of
    the ORs -- though this will be phased out for the Tor 0.1.2.x release.)
 
+   To avoid being trivially distinguished from servers, client-only Tor
+   instances are encouraged but not required to use a two-certificate chain
+   as well.  Clients SHOULD NOT use keep using the same certificates when
+   their IP changes.  Clients MAY send no certificates at all.
+
 3. Cell Packet format
 
    The basic unit of communication for onion routers and onion
