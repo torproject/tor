@@ -1466,7 +1466,8 @@ check_descriptor_bandwidth_changed(time_t now)
 /** Note at log level severity that our best guess of address has changed from
  * <b>prev</b> to <b>cur</b>. */
 static void
-log_addr_has_changed(int severity, uint32_t prev, uint32_t cur)
+log_addr_has_changed(int severity, uint32_t prev, uint32_t cur,
+                     const char *source)
 {
   char addrbuf_prev[INET_NTOA_BUF_LEN];
   char addrbuf_cur[INET_NTOA_BUF_LEN];
@@ -1482,8 +1483,8 @@ log_addr_has_changed(int severity, uint32_t prev, uint32_t cur)
   if (prev)
     log_fn(severity, LD_GENERAL,
            "Our IP Address has changed from %s to %s; "
-           "rebuilding descriptor.",
-           addrbuf_prev, addrbuf_cur);
+           "rebuilding descriptor (source: %s).",
+           addrbuf_prev, addrbuf_cur, source);
   else
     log_notice(LD_GENERAL,
              "Guessed our IP address as %s.",
@@ -1510,7 +1511,7 @@ check_descriptor_ipaddress_changed(time_t now)
   }
 
   if (prev != cur) {
-    log_addr_has_changed(LOG_INFO, prev, cur);
+    log_addr_has_changed(LOG_INFO, prev, cur, "resolve");
     ip_address_changed(0);
   }
 }
@@ -1570,7 +1571,8 @@ router_new_address_suggestion(const char *suggestion,
     control_event_server_status(LOG_NOTICE,
                                 "EXTERNAL_ADDRESS ADDRESS=%s METHOD=DIRSERV",
                                 suggestion);
-    log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr);
+    log_addr_has_changed(LOG_NOTICE, last_guessed_ip, addr,
+                         d_conn->_base.address);
     ip_address_changed(0);
     last_guessed_ip = addr; /* router_rebuild_descriptor() will fetch it */
   }
