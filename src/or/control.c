@@ -3092,7 +3092,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   if (reason_code && (tp == STREAM_EVENT_FAILED ||
                       tp == STREAM_EVENT_CLOSED ||
                       tp == STREAM_EVENT_FAILED_RETRIABLE)) {
-    const char *reason_str = stream_end_reason_to_string(reason_code);
+    const char *reason_str = stream_end_reason_to_control_string(reason_code);
     char *r = NULL;
     if (!reason_str) {
       r = tor_malloc(16);
