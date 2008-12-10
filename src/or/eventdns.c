@@ -2224,7 +2224,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	int err = 0;
 	if (server) {
 		do {
-			if (!sockaddr_eq(address, (struct sockaddr *)&server->address, 1)) {
+			if (sockaddr_eq(address, (struct sockaddr *)&server->address, 1)) {
 				log(EVDNS_LOG_DEBUG, "Duplicate nameserver.");
 				return 3;
 			}

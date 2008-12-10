@@ -1,4 +1,9 @@
 Changes in version 0.2.1.9-alpha - 200?-??-??
+  o Major bugfixes:
+    - Fix a logic error that would automatically reject all but the first
+      configured DNS server.  Bugfix on 0.2.1.5-alpha.  Possible fix for part
+      of bug 813/868.  Bug spotted by coderman.
+
   o Minor features:
     - Give a better error message when an overzealous init script says,
       "sudo -u username tor --user username".  Makes Bug 882 easier
