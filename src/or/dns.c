@@ -33,6 +33,8 @@ const char dns_c_id[] =
 
 /** Have we currently configured nameservers with eventdns? */
 static int nameservers_configured = 0;
+/** Did our most recent attempt to configure nameservers with eventdns fail? */
+static int nameserver_config_failed = 0;
 /** What was the resolv_conf fname we last used when configuring the
  * nameservers? Used to check whether we need to reconfigure. */
 static char *resolv_conf_fname = NULL;
@@ -220,10 +222,18 @@ dns_reset(void)
     tor_free(resolv_conf_fname);
     resolv_conf_mtime = 0;
   } else {
-    if (configure_nameservers(0) < 0)
+    if (configure_nameservers(0) < 0) {
       return -1;
+    }
   }
   return 0;
+}
+
+/**DOCDOC*/
+int
+has_dns_init_failed(void)
+{
+  return nameserver_config_failed;
 }
 
 /** Helper: Given a TTL from a DNS response, determine what TTL to give the
@@ -1109,10 +1119,11 @@ evdns_err_is_transient(int err)
 }
 
 /** Configure eventdns nameservers if force is true, or if the configuration
- * has changed since the last time we called this function.  On Unix, this
- * reads from options->ServerDNSResolvConfFile or /etc/resolv.conf; on
- * Windows, this reads from options->ServerDNSResolvConfFile or the registry.
- * Return 0 on success or -1 on failure. */
+ * has changed since the last time we called this function, or if we failed on
+ * our last attempt.  On Unix, this reads from /etc/resolv.conf or
+ * options->ServerDNSResolvConfFile; on Windows, this reads from
+ * options->ServerDNSResolvConfFile or the registry.  Return 0 on success or
+ * -1 on failure. */
 static int
 configure_nameservers(int force)
 {
@@ -1132,7 +1143,7 @@ configure_nameservers(int force)
     if (stat(conf_fname, &st)) {
       log_warn(LD_EXIT, "Unable to stat resolver configuration in '%s': %s",
                conf_fname, strerror(errno));
-      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
+      goto err;
     }
     if (!force && resolv_conf_fname && !strcmp(conf_fname,resolv_conf_fname)
         && st.st_mtime == resolv_conf_mtime) {
@@ -1147,11 +1158,11 @@ configure_nameservers(int force)
     if ((r = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))) {
       log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s' (%d)",
                conf_fname, conf_fname, r);
-      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
+      goto err;
     }
     if (evdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
-      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
+      goto err;
     }
     tor_free(resolv_conf_fname);
     resolv_conf_fname = tor_strdup(conf_fname);
@@ -1167,13 +1178,12 @@ configure_nameservers(int force)
     }
     if (evdns_config_windows_nameservers())  {
       log_warn(LD_EXIT,"Could not config nameservers.");
-      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
+      goto err;
     }
     if (evdns_count_nameservers() == 0) {
       log_warn(LD_EXIT, "Unable to find any platform nameservers in "
-               "your Windows configuration.  Perhaps you should list a "
-               "ServerDNSResolvConfFile file in your torrc?");
-      return options->ServerDNSAllowBrokenResolvConf ? 0 : -1;
+               "your Windows configuration.");
+      goto err;
     }
     if (nameservers_configured)
       evdns_resume();
@@ -1193,7 +1203,18 @@ configure_nameservers(int force)
   dns_servers_relaunch_checks();
 
   nameservers_configured = 1;
+  if (nameserver_config_failed) {
+    nameserver_config_failed = 0;
+    mark_my_descriptor_dirty();
+  }
   return 0;
+ err:
+  nameservers_configured = 0;
+  if (! nameserver_config_failed) {
+    nameserver_config_failed = 1;
+    mark_my_descriptor_dirty();
+  }
+  return -1;
 }
 
 /** For eventdns: Called when we get an answer for a request we launched.
@@ -1284,8 +1305,9 @@ launch_resolve(edge_connection_t *exitconn)
   if (!nameservers_configured) {
     log_warn(LD_EXIT, "(Harmless.) Nameservers not configured, but resolve "
              "launched.  Configuring.");
-    if (configure_nameservers(1) < 0)
+    if (configure_nameservers(1) < 0) {
       return -1;
+    }
   }
 
   r = parse_inaddr_arpa_address(exitconn->_base.address, &in);

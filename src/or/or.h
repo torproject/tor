@@ -3456,6 +3456,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_key,
 /********************************* dns.c ***************************/
 
 int dns_init(void);
+int has_dns_init_failed(void);
 void dns_free_all(void);
 uint32_t dns_clip_ttl(uint32_t ttl);
 int dns_reset(void);

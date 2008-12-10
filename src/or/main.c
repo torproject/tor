@@ -839,6 +839,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_recheck_bandwidth = 0;
   static time_t time_to_check_for_expired_networkstatus = 0;
   static time_t time_to_dump_geoip_stats = 0;
+  static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
   int i;
   int have_dir_info;
@@ -979,6 +980,14 @@ run_scheduled_events(time_t now)
     rend_cache_clean_v2_descs_as_dir();
 #define CLEAN_CACHES_INTERVAL (30*60)
     time_to_clean_caches = now + CLEAN_CACHES_INTERVAL;
+  }
+
+#define RETRY_DNS_INTERVAL (10*60)
+  /* If we're a server and initializing dns failed, retry periodically. */
+  if (time_to_retry_dns_init < now) {
+    time_to_retry_dns_init = now + RETRY_DNS_INTERVAL;
+    if (server_mode(options) && has_dns_init_failed())
+      dns_init();
   }
 
   /** 2. Periodically, we consider force-uploading our descriptor
@@ -1367,8 +1376,13 @@ do_main_loop(void)
 
   /* initialize dns resolve map, spawn workers if needed */
   if (dns_init() < 0) {
-    log_err(LD_GENERAL,"Error initializing dns subsystem; exiting");
-    return -1;
+    if (get_options()->ServerDNSAllowBrokenResolvConf)
+      log_warn(LD_GENERAL, "Couldn't set up any working nameservers. "
+               "Network not up yet?  Will try again soon.");
+    else {
+      log_err(LD_GENERAL,"Error initializing dns subsystem; exiting.  To "
+              "retry instead, set the ServerDNSAllowBrokenResolvConf option.");
+    }
   }
 
   handle_signals(1);

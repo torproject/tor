@@ -6,6 +6,10 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
     - When a directory authority gives us a new guess for our IP address,
       log which authority we used. Hopefully this will help us debug
       the recent complaints about bad IP address guesses.
+    - When we can't initialize DNS because the network is down, do not
+      automatically stop Tor from starting.  Instead, we retry failed
+      dns_inits() every 10 minutes, and change the exit policy to reject *:*
+      until one succeeds.  Fixes bug 691.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has
@@ -23,7 +27,7 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
   o Minor bugfixes (hidden services):
     - Do not throw away existing introduction points on SIGHUP; do not
       stall hidden services because of introduction points thrown away.
-      Patch by Karsten.  Fixes bug 874.
+      Patch by Karsten.  Fixes bug 874ma.
 
 
 Changes in version 0.2.1.8-alpha - 2008-12-08
