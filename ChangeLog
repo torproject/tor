@@ -12,6 +12,9 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
       been fetched and validated.
     - Finally remove deprecated "EXTENEDED_FORMAT" feature.  It has
       been called EXTENDED_EVENTS since 0.1.2.4-alpha.
+    - When we realize that another process has modified our cached
+      descriptors, print out a more useful error message rather than
+      triggering an assertion. Fixes bug 885.
 
   o Minor bugfixes:
     - Resume using the correct "REASON=" stream when telling the
