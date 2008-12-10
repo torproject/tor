@@ -80,8 +80,9 @@ W   - Download fewer descriptors
         - Measure/estimate impact of each improvement.
       - Build a plan and timeline for implementing the rest.
 
-N   - Write a summary of progress toward "enumerating TLS fingerprint
-      blocking risks and how we would overcome / respond to each".
+N   - TLS arms race: Produce a list of likely avenues for blocking,
+      and for each avenue summarize a plan for how we should respond to
+      get Tor unblocked again.
 
 I   - Email auto-responder
       - Document the design and spec.
@@ -159,16 +160,21 @@ S   - Tor Browser bundle work
         considering implications for (OpenVPN-style or other) system-wide
         Tor interception)
       - Switch Tor Browser Bundle to Firefox 3, once Torbutton is ready.
-      - Continue analyzing "traces" left on host machine by use of
-        Tor Browser. Write a summary of current progress, and what
-        remains.
       - Decide whether TBB should use Torbutton's "lock" feature.
         http://archives.seul.org/or/cvs/Jun-2008/msg00186.html
 I     - Jake learns how to build the TBB and takes over doing new
         releases.
 
+S   - Continue analyzing "traces" left on host machine by use of
+      Tor Browser, especially once we have our new launcher and have moved
+      to FF3. Write a summary of current progress, and what remains. Try
+      to solve some of the low-hanging fruit.
+
 I   - Periodic summaries of localization progress: both pootle and wml.
 I   - Collecting user stories
 I   - Revise the 'Tor mirror page' so it doesn't list obsolete-looking
       timestamps. Just have two tables, "new enough" and "not new enough".
+I   - Get Tor Weather up, stable, and in use by some relay operators.
+I   - Get a relay operator mailing list going, with a plan and supporting
+      scripts and so on.
 
