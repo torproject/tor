@@ -19,6 +19,8 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
     - When we realize that another process has modified our cached
       descriptors, print out a more useful error message rather than
       triggering an assertion. Fixes bug 885.  Patch from Karsten.
+    - Add an internal-use-only __ReloadTorrcOnSIGHUP option for controllers
+      to prevent SIGHUP from reloading the configuration.  Fixes bug 856.
 
   o Minor bugfixes:
     - Resume using the correct "REASON=" stream when telling the

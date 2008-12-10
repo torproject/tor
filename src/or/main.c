@@ -1321,7 +1321,8 @@ do_hup(void)
   dmalloc_log_changed(0, 1, 0, 0);
 #endif
 
-  log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config.");
+  log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config and "
+             "resetting internal state.");
   if (accounting_is_enabled(options))
     accounting_record_bandwidth_usage(time(NULL), get_or_state());
 
@@ -1329,13 +1330,18 @@ do_hup(void)
   routerlist_reset_warnings();
   addressmap_clear_transient();
   /* first, reload config variables, in case they've changed */
-  /* no need to provide argc/v, they've been cached inside init_from_config */
-  if (options_init_from_torrc(0, NULL) < 0) {
-    log_err(LD_CONFIG,"Reading config failed--see warnings above. "
-            "For usage, try -h.");
-    return -1;
+  if (options->ReloadTorrcOnSIGHUP) {
+    /* no need to provide argc/v, they've been cached inside init_from_config */
+    if (options_init_from_torrc(0, NULL) < 0) {
+      log_err(LD_CONFIG,"Reading config failed--see warnings above. "
+              "For usage, try -h.");
+      return -1;
+    }
+    options = get_options(); /* they have changed now */
+  } else {
+    log_notice(LD_GENERAL, "Not reloading config file: the controller told "
+               "us not to.");
   }
-  options = get_options(); /* they have changed now */
   if (authdir_mode_handles_descs(options, -1)) {
     /* reload the approved-routers file */
     if (dirserv_load_fingerprint_file() < 0) {

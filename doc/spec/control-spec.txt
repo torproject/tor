@@ -1650,6 +1650,16 @@ $Id$
     As HashedControlPassword, but is not saved to the torrc file by
     SAVECONF.  Added in Tor 0.2.0.20-rc.
 
+  __ReloadTorrcOnSIGHUP
+
+    If this option is true (the default), we reload the torrc from disk
+    every time we get a SIGHUP (from the controller or via a signal).
+    Otherwise, we don't.  This option exists so that controllers can keep
+    their options from getting overwritten when a user sends Tor a HUP for
+    some other reason (for example, to rotate the logs).
+
+    (Boolean.  Default: "1")
+
 5.5. Phases from the Bootstrap status event.
 
   This section describes the various bootstrap phases currently reported

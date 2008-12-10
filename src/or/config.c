@@ -333,6 +333,7 @@ static config_var_t _option_vars[] = {
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
+  VAR("__ReloadTorrcOnSIGHUP",   BOOL,  ReloadTorrcOnSIGHUP,      "1"),
   VAR("__AllDirActionsPrivate",  BOOL,  AllDirActionsPrivate,     "0"),
   VAR("__DisablePredictedCircuits",BOOL,DisablePredictedCircuits, "0"),
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
