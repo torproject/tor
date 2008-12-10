@@ -20,9 +20,6 @@ K       - Karsten claims
         D Deferred
         X Abandoned
 
-Temporary legend:
-
-
 =======================================================================
 
 Things Roger would be excited to see:
@@ -226,7 +223,7 @@ R   - authorities should initiate a reachability test upon first
       - Both TorK and Vidalia use VERBOSE_NAMES.
       - TorK uses EXTENDED_EVENTS.  Vidalia does not. (As of 9 Dec.)
       - Matt is checking whether Vidalia would break if we started to use
-        EXTENDED_EVENTS by default.
+        EXTENDED_EVENTS by default.  He says no.
 
 External tool improvements:
   - Get IOCP patches into libevent
