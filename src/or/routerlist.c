@@ -2084,6 +2084,11 @@ signed_descriptor_get_body_impl(signed_descriptor_t *desc,
     if (store && store->mmap) {
       tor_assert(desc->saved_offset + len <= store->mmap->size);
       r = store->mmap->data + offset;
+    } else if (store) {
+      log_err(LD_DIR, "We couldn't read a descriptor that is supposedly "
+              "mmaped in our cache.  Is another process running in our data "
+              "directory?  Exiting.");
+      exit(1);
     }
   }
   if (!r) /* no mmap, or not in cache. */
@@ -2094,11 +2099,11 @@ signed_descriptor_get_body_impl(signed_descriptor_t *desc,
   if (!with_annotations) {
     if (memcmp("router ", r, 7) && memcmp("extra-info ", r, 11)) {
       char *cp = tor_strndup(r, 64);
-      log_err(LD_DIR, "descriptor at %p begins with unexpected string %s",
+      log_err(LD_DIR, "descriptor at %p begins with unexpected string %s.  "
+              "Is another process running in our data directory?  Exiting.",
               desc, escaped(cp));
-      tor_free(cp);
+      exit(1);
     }
-    tor_assert(!memcmp("router ", r, 7) || !memcmp("extra-info ", r, 11));
   }
 
   return r;

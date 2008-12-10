@@ -10,11 +10,16 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Correct handling of possible malformed authority signing key
       certificates with internal signature types.  Fixes bug 880.
       Bugfix on 0.2.0.3-alpha.
+    - Fix a hard-to-trigger resource leak when logging credential status.
+      CID 349.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
       differently than the case where there is an error handling the detached
       set.
+    - When we realize that another process has modified our cached
+      descriptors, print out a more useful error message rather than
+      triggering an assertion. Fixes bug 885.  Patch from Karsten.
 
 
 Changes in version 0.2.0.32 - 2008-11-20
