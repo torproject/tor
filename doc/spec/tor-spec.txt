@@ -61,10 +61,8 @@ see tor-design.pdf.
 
    For a public-key cipher, we use RSA with 1024-bit keys and a fixed
    exponent of 65537.  We use OAEP-MGF1 padding, with SHA-1 as its digest
-   function.  We leave optional the "Label" parameter unset. (For OAEP
+   function.  We leave the optional "Label" parameter unset. (For OAEP
    padding, see ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-1/pkcs-1v2-1.pdf)
-
-   [Nick, what does "we leave optional the Label parameter unset" mean? -RD]
 
    For Diffie-Hellman, we use a generator (g) of 2.  For the modulus (p), we
    use the 1024-bit safe prime from rfc2409 section 6.2 whose hex
@@ -382,7 +380,7 @@ see tor-design.pdf.
    This value is hybrid-encrypted (see 0.3) to Bob's onion key, giving
    an onion-skin of:
        PK-encrypted:
-         Padding padding               [PK_PAD_LEN bytes]
+         Padding                       [PK_PAD_LEN bytes]
          Symmetric key                 [KEY_LEN bytes]
          First part of g^x             [PK_ENC_LEN-PK_PAD_LEN-KEY_LEN bytes]
        Symmetrically encrypted:
