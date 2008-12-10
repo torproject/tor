@@ -20,6 +20,11 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
     - Resume using the correct "REASON=" stream when telling the
       controller why we closed a stream. Bugfix in 0.2.1.1-alpha.
 
+  o Minor bugfixes (hidden services):
+    - Do not throw away existing introduction points on SIGHUP; do not
+      stall hidden services because of introduction points thrown away.
+      Patch by Karsten.  Fixes bug 879.
+
 
 Changes in version 0.2.1.8-alpha - 2008-12-08
   o Major features:

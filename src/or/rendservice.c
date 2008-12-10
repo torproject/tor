@@ -291,9 +291,10 @@ rend_config_services(or_options_t *options, int validate_only)
   config_line_t *line;
   rend_service_t *service = NULL;
   rend_service_port_config_t *portcfg;
+  smartlist_t *old_service_list = NULL;
 
   if (!validate_only) {
-    rend_service_free_all();
+    old_service_list = rend_service_list;
     rend_service_list = smartlist_create();
   }
 
@@ -471,6 +472,64 @@ rend_config_services(or_options_t *options, int validate_only)
       rend_service_free(service);
     else
       rend_add_service(service);
+  }
+
+  /* If this is a reload and there were hidden services configured before,
+   * keep the introduction points that are still needed and close the
+   * other ones. */
+  if (old_service_list && !validate_only) {
+    smartlist_t *surviving_services = smartlist_create();
+    circuit_t *circ;
+
+    /* Copy introduction points to new services. */
+    /* XXXX This is O(n^2), but it's only called on reconfigure, so it's
+     * probably ok? */
+    SMARTLIST_FOREACH(rend_service_list, rend_service_t *, new, {
+      SMARTLIST_FOREACH(old_service_list, rend_service_t *, old, {
+        if (!strcmp(old->directory, new->directory) &&
+            old->descriptor_version == new->descriptor_version) {
+          smartlist_add_all(new->intro_nodes, old->intro_nodes);
+          smartlist_clear(old->intro_nodes);
+          smartlist_add(surviving_services, old);
+          break;
+        }
+      });
+    });
+
+    /* Close introduction circuits of services we don't serve anymore. */
+    /* XXXX it would be nicer if we had a nicer abstraction to use here,
+     * so we could just iterate over the list of services to close, but
+     * once again, this isn't critical-path code. */
+    for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
+      if (!circ->marked_for_close &&
+          circ->state == CIRCUIT_STATE_OPEN &&
+          (circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+           circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
+        origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
+        int keep_it = 0;
+        tor_assert(oc->rend_data);
+        SMARTLIST_FOREACH(surviving_services, rend_service_t *, ptr, {
+          if (!memcmp(ptr->pk_digest, oc->rend_data->rend_pk_digest,
+                      DIGEST_LEN) &&
+              ptr->descriptor_version == oc->rend_data->rend_desc_version) {
+            keep_it = 1;
+            break;
+          }
+        });
+        if (keep_it)
+          continue;
+        log_info(LD_REND, "Closing intro point %s for service %s version %d.",
+                 safe_str(oc->build_state->chosen_exit->nickname),
+                 oc->rend_data->onion_address,
+                 oc->rend_data->rend_desc_version);
+        circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+        /* XXXX Is there another reason we should use here? */
+      }
+    }
+    smartlist_free(surviving_services);
+    SMARTLIST_FOREACH(old_service_list, rend_service_t *, ptr,
+                      rend_service_free(ptr));
+    smartlist_free(old_service_list);
   }
 
   return 0;
