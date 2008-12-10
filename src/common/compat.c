@@ -945,6 +945,7 @@ log_credential_status(void)
       strgid = tor_malloc(11);
       if (tor_snprintf(strgid, 11, "%u", (unsigned)sup_gids[i]) == -1) {
         log_warn(LD_GENERAL, "Error printing supplementary GIDs");
+        tor_free(strgid);
         formatting_error = 1;
         goto error;
       }
