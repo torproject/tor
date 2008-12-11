@@ -139,6 +139,8 @@ extern int have_failed;
       __LINE__,                                                 \
       PRETTY_FUNCTION,                                          \
       #expr1, #expr2, mem1, mem2);                              \
+    tor_free(mem1);                                             \
+    tor_free(mem2);                                             \
     goto done;                                                  \
   } STMT_END
 
