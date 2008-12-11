@@ -1331,7 +1331,7 @@ do_hup(void)
   addressmap_clear_transient();
   /* first, reload config variables, in case they've changed */
   if (options->ReloadTorrcOnSIGHUP) {
-    /* no need to provide argc/v, they've been cached inside init_from_config */
+    /* no need to provide argc/v, they've been cached in init_from_config */
     if (options_init_from_torrc(0, NULL) < 0) {
       log_err(LD_CONFIG,"Reading config failed--see warnings above. "
               "For usage, try -h.");
