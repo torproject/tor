@@ -31,12 +31,12 @@ W   - Finish implementation of directory overhead changes: have a set
 
   - end of October
     - Auto update
-C     - Get the MSI working and stable for Windows Tor installer.
+C     * Get the MSI working and stable for Windows Tor installer.
 N     o Come up with an interface to export the package/bundle gloss
         descriptions so Vidalia can display them.
 	(Done; see thandy-client json2xml.  Matt was fine with this,
 	last I heard.)
-E     . Vidalia calls Thandy, learns when to upgrade, requests the upgrade.
+E     * Vidalia calls Thandy, learns when to upgrade, requests the upgrade.
 ?     - Teach our OSX installer to register its version on install
 
   - end of December
@@ -53,7 +53,7 @@ NSE - Write first draft of research study for Paul's research problem.
 I   - Periodic summaries of localization progress: both pootle and wml.
 
   - mid February
-S   - Examine current load balancing issues and evaluate trade-offs
+S   * Examine current load balancing issues and evaluate trade-offs
       associated with other methods.
       - For each potential routing improvement strategy...
         - Explain method, calculate theoretical impact, estimate likely
@@ -69,7 +69,7 @@ S   - Write a summary of progress toward understanding risks to relays
       them. Eg, if relays have 100KB/s but set relaybandwidthrate to
       10KB/s, do your interference attacks still work?
 
-R   - Revise and publish incentive draft paper
+R   * Revise and publish incentive draft paper
       - Write an explanation for its current flaws
       - Gather comments, search for new designs
       - Write up a summary of recommendations and next steps
@@ -84,7 +84,7 @@ N   - TLS arms race: Produce a list of likely avenues for blocking,
       and for each avenue summarize a plan for how we should respond to
       get Tor unblocked again.
 
-I   - Email auto-responder
+I   * Email auto-responder
       - Document the design and spec.
         - Describe auto-responder "commands"
         - Describe DKIM requirement (and alternatives)
@@ -92,22 +92,22 @@ I   - Email auto-responder
       - Describe the workflow for a user that wants to know she's got
         the right file. Digitally signed installer? Feed it to the
         updater that recognizes signatures? Other options?
-      - How do we better support users with limited email
+      * How do we better support users with limited email
         bandwidth? Multi-part download? Teach them how to reconnect
         their gmail? Does downloading your gmail work when your network
         keeps dying?
 
 K   - Metrics.
-      - Gather and document monthly usage metrics, by country
+      * Gather and document monthly usage metrics, by country
         - Using Roger's old method of counting users
         - Using Nick's new method of counting users
         - Start playing around with figuring out which one is more
           accurate, or how to combine them to get better guesses,
           or something.
-R       - Roger should walk Karsten through applying (and maybe
+R       * Roger should walk Karsten through applying (and maybe
           updating) the patch for each method, and write a summary
           of what we have tried/guessed so far.
-      - Automatically collect and document or publish other monthly
+      * Automatically collect and document or publish other monthly
         statistics
         - Total data over time
         - Number, availability and performance of relays
@@ -129,7 +129,7 @@ E   - Vidalia improvements
       - Figure out a plan for presenting other Tor status warning events.
       - Move Polipo into the main Vidalia -dev bundle.
       - Vidalia displays by-country user summary for bridge operators
-R       - Tor sends a status event or something so Vidalia knows what
+R       * Tor sends a status event or something so Vidalia knows what
           to display
 
 M   - Network scanning and network health
@@ -146,7 +146,7 @@ M   - Torbutton development
       - Build a strategy for how Torbutton and Vidalia can
         communicate. E.g., what do we do with the 'new identity' button
         in Vidalia?
-      - Make Torbutton happy on FF3, especially so TBB can drop FF2.
+      * Make Torbutton happy on FF3, especially so TBB can drop FF2.
 
 C   - Transparent interception of connections on Windows
       - Produce prototype, with screenshots for how to install and test.
@@ -162,7 +162,7 @@ S   - Tor Browser bundle work
       - Switch Tor Browser Bundle to Firefox 3, once Torbutton is ready.
       - Decide whether TBB should use Torbutton's "lock" feature.
         http://archives.seul.org/or/cvs/Jun-2008/msg00186.html
-I     - Jake learns how to build the TBB and takes over doing new
+I     . Jake learns how to build the TBB and takes over doing new
         releases.
 
 S   - Continue analyzing "traces" left on host machine by use of
@@ -174,7 +174,7 @@ I   - Periodic summaries of localization progress: both pootle and wml.
 I   - Collecting user stories
 I   - Revise the 'Tor mirror page' so it doesn't list obsolete-looking
       timestamps. Just have two tables, "new enough" and "not new enough".
-I   - Get Tor Weather up, stable, and in use by some relay operators.
+I   * Get Tor Weather up, stable, and in use by some relay operators.
 I   - Get a relay operator mailing list going, with a plan and supporting
       scripts and so on.
 
