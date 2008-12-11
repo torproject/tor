@@ -4086,7 +4086,7 @@ test_crypto_aes_iv(void)
   char *plain, *encrypted1, *encrypted2, *decrypted1, *decrypted2;
   char plain_1[1], plain_15[15], plain_16[16], plain_17[17];
   char key1[16], key2[16];
-  size_t encrypted_size, decrypted_size;
+  ssize_t encrypted_size, decrypted_size;
 
   plain = tor_malloc(4095);
   encrypted1 = tor_malloc(4095 + 1 + 16);
