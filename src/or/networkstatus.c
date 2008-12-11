@@ -1049,7 +1049,8 @@ update_v2_networkstatus_cache_downloads(time_t now)
     if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
                                         DIR_PURPOSE_FETCH_NETWORKSTATUS))
       directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,
-                                   ROUTER_PURPOSE_GENERAL, "all.z",1);
+                                   ROUTER_PURPOSE_GENERAL, "all.z",
+                                   PDS_RETRY_IF_NO_SERVERS);
   }
 }
 
@@ -1092,7 +1093,8 @@ update_consensus_networkstatus_downloads(time_t now)
 
   log_info(LD_DIR, "Launching networkstatus consensus download.");
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CONSENSUS,
-                               ROUTER_PURPOSE_GENERAL, NULL, 1);
+                               ROUTER_PURPOSE_GENERAL, NULL,
+                               PDS_RETRY_IF_NO_SERVERS);
 }
 
 /** Called when an attempt to download a consensus fails: note that the

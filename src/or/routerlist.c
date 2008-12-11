@@ -516,7 +516,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
     smartlist_free(fps);
   }
   directory_get_from_dirserver(DIR_PURPOSE_FETCH_CERTIFICATE, 0,
-                               resource, 1);
+                               resource, PDS_RETRY_IF_NO_SERVERS);
 
  done:
   tor_free(resource);
@@ -3807,7 +3807,8 @@ initiate_descriptor_downloads(routerstatus_t *source,
                                             0, /* not private */
                                             resource, NULL, 0, 0);
   } else {
-    directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource, 1);
+    directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,
+                                 PDS_RETRY_IF_NO_SERVERS);
   }
   tor_free(resource);
 }
@@ -4193,7 +4194,8 @@ update_router_descriptor_downloads(time_t now)
       last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
     last_dummy_download = now;
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                                 ROUTER_PURPOSE_GENERAL, "authority.z", 1);
+                                 ROUTER_PURPOSE_GENERAL, "authority.z",
+                                 PDS_RETRY_IF_NO_SERVERS);
   }
 }
 

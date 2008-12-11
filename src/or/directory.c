@@ -290,19 +290,18 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 /** Start a connection to a random running directory server, using
  * connection purpose <b>dir_purpose</b>, intending to fetch descriptors
  * of purpose <b>router_purpose</b>, and requesting <b>resource</b>.
- * If <b>retry_if_no_servers</b>, then if all the possible servers seem
- * down, mark them up and try again.
+ * Use <b>pds_flags</b> as arguments to router_pick_directory_server
+ * or router_pick_trusteddirserver.
  */
 void
 directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
-                             const char *resource, int retry_if_no_servers)
+                             const char *resource, int pds_flags)
 {
   routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
   int prefer_authority = directory_fetches_from_authorities(options);
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
   authority_type_t type;
-  int flags = retry_if_no_servers ? PDS_RETRY_IF_NO_SERVERS : 0;
   time_t if_modified_since = 0;
 
   /* FFFF we could break this switch into its own function, and call
@@ -368,15 +367,15 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     } else {
       if (prefer_authority || type == BRIDGE_AUTHORITY) {
         /* only ask authdirservers, and don't ask myself */
-        rs = router_pick_trusteddirserver(type, flags);
+        rs = router_pick_trusteddirserver(type, pds_flags);
       }
       if (!rs && type != BRIDGE_AUTHORITY) {
         /* anybody with a non-zero dirport will do */
-        rs = router_pick_directory_server(type, flags);
+        rs = router_pick_directory_server(type, pds_flags);
         if (!rs) {
           log_info(LD_DIR, "No router found for %s; falling back to "
                    "dirserver list.", dir_conn_purpose_to_string(dir_purpose));
-          rs = router_pick_trusteddirserver(type, flags);
+          rs = router_pick_trusteddirserver(type, pds_flags);
           if (!rs)
             get_via_tor = 1; /* last resort: try routing it via Tor */
         }
@@ -386,12 +385,12 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     /* Never use fascistfirewall; we're going via Tor. */
     if (dir_purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask hidserv authorities, any of them will do */
-      flags |= PDS_IGNORE_FASCISTFIREWALL|PDS_ALLOW_SELF;
-      rs = router_pick_trusteddirserver(HIDSERV_AUTHORITY, flags);
+      pds_flags |= PDS_IGNORE_FASCISTFIREWALL|PDS_ALLOW_SELF;
+      rs = router_pick_trusteddirserver(HIDSERV_AUTHORITY, pds_flags);
     } else {
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
-      flags |= PDS_IGNORE_FASCISTFIREWALL;
-      rs = router_pick_directory_server(type, flags);
+      pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
+      rs = router_pick_directory_server(type, pds_flags);
       /* If we have any hope of building an indirect conn, we know some router
        * descriptors.  If (rs==NULL), we can't build circuits anyway, so
        * there's no point in falling back to the authorities in this case. */

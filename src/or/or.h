@@ -3220,7 +3220,7 @@ void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   size_t payload_len, size_t extrainfo_len);
 void directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                                   const char *resource,
-                                  int retry_if_no_servers);
+                                  int pds_flags);
 void directory_get_from_all_authorities(uint8_t dir_purpose,
                                         uint8_t router_purpose,
                                         const char *resource);

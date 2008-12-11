@@ -448,7 +448,8 @@ rend_client_refetch_renddesc(const char *query)
   } else {
     /* not one already; initiate a dir rend desc lookup */
     directory_get_from_dirserver(DIR_PURPOSE_FETCH_RENDDESC,
-                                 ROUTER_PURPOSE_GENERAL, query, 1);
+                                 ROUTER_PURPOSE_GENERAL, query,
+                                 PDS_RETRY_IF_NO_SERVERS);
   }
 }
 
