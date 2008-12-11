@@ -2675,7 +2675,7 @@ test_dir_format(void)
   size_t pk1_str_len, pk2_str_len, pk3_str_len;
   routerinfo_t *r1=NULL, *r2=NULL;
   crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
-  routerinfo_t *rp1 = NULL, *rp2 = NULL;
+  routerinfo_t *rp1 = NULL;
   addr_policy_t *ex1, *ex2;
   routerlist_t *dir1 = NULL, *dir2 = NULL;
   tor_version_t ver1;
@@ -2981,7 +2981,6 @@ test_dir_format(void)
   if (pk2) crypto_free_pk_env(pk2);
   if (pk3) crypto_free_pk_env(pk3);
   if (rp1) routerinfo_free(rp1);
-  if (rp2) routerinfo_free(rp2);
   tor_free(dir1); /* XXXX And more !*/
   tor_free(dir2); /* And more !*/
 }
@@ -3433,9 +3432,6 @@ test_v3_networkstatus(void)
   test_assert(!voter->bad_signature);
 
   {
-    /*XXXX these fields can be leaked. */
-    networkstatus_t *con2, *con3;
-    ns_detached_signatures_t *dsig1, *dsig2;
     const char *msg=NULL;
     /* Compute the other two signed consensuses. */
     smartlist_shuffle(votes);
