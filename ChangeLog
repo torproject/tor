@@ -16,6 +16,9 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
       dns_inits() every 10 minutes, and change the exit policy to reject *:*
       until one succeeds.  Fixes bug 691.
     - Detect svn revision properly when we're using git-svn.
+    - Try not to open more than one descriptor-downloading connection to an
+      authority at once.  This should reduce load on directory authorities.
+      Fixes bug 366.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has

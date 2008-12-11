@@ -4207,9 +4207,16 @@ smartlist_t *router_get_trusted_dir_servers(void);
 #define PDS_IGNORE_FASCISTFIREWALL     (1<<2)
 /** Flag to indicate that we should not use any directory authority to which
  * we have an existing directory connection for downloading server descriptors
- * or extrainfo documents.  [NOTE: Only implemented for
- * router_pick_trusteddirserver, not router_pick_directory_server.]
- * Passed to router_pick_directory_server (et al).*/
+ * or extrainfo documents.
+ *
+ * Passed to router_pick_directory_server (et al)
+ *
+ * [XXXX021 NOTE: This option is only implemented for pick_trusteddirserver,
+ *  not pick_directory_server.  If we make it work on pick_directory_server
+ *  too, we could conservatively make it only prevent multiple fetches to
+ *  the same authority, or we could aggressively make it prevent multiple
+ *  fetches to _any_ directory server.]
+ */
 #define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
 #define _PDS_PREFER_TUNNELED_DIR_CONNS (1<<16)
 routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);

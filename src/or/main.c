@@ -651,6 +651,9 @@ directory_info_has_arrived(time_t now, int from_cache)
     update_router_descriptor_downloads(now);
     return;
   } else {
+    if (directory_fetches_from_authorities(options))
+      update_router_descriptor_downloads(now);
+
     /* if we have enough dir info, then update our guard status with
      * whatever we just learned. */
     entry_guards_compute_status();

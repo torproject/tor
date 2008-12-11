@@ -3802,7 +3802,7 @@ static void
 initiate_descriptor_downloads(routerstatus_t *source,
                               int purpose,
                               smartlist_t *digests,
-                              int lo, int hi)
+                              int lo, int hi, int pds_flags)
 {
   int i, n = hi-lo;
   char *resource, *cp;
@@ -3834,7 +3834,7 @@ initiate_descriptor_downloads(routerstatus_t *source,
                                             resource, NULL, 0, 0);
   } else {
     directory_get_from_dirserver(purpose, ROUTER_PURPOSE_GENERAL, resource,
-                                 PDS_RETRY_IF_NO_SERVERS);
+                                 pds_flags);
   }
   tor_free(resource);
 }
@@ -3924,6 +3924,22 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
   if (! should_delay && n_downloadable) {
     int i, n_per_request;
     const char *req_plural = "", *rtr_plural = "";
+    int pds_flags = PDS_RETRY_IF_NO_SERVERS;
+    if (! authdir_mode_any_nonhidserv(options)) {
+      /* If we wind up going to the authorities, we want to only open one
+       * connection to each authority at a time, so that we don't overload
+       * them.  We do this by setting PDS_NO_EXISTING_SERVERDESC_FETCH
+       * regardless of whether we're a cache or not; it gets ignored if we're
+       * not calling router_pick_trusteddirserver.
+       *
+       * Setting this flag can make initiate_descriptor_downloads() ignore
+       * requests.  We need to make sure that we do in fact call
+       * update_router_descriptor_downloads() later on, once the connections
+       * have succeeded or failed.
+       */
+      pds_flags |= PDS_NO_EXISTING_SERVERDESC_FETCH;
+    }
+
     n_per_request = (n_downloadable+MIN_REQUESTS-1) / MIN_REQUESTS;
     if (n_per_request > MAX_DL_PER_REQUEST)
       n_per_request = MAX_DL_PER_REQUEST;
@@ -3942,7 +3958,8 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
     smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {
       initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_SERVERDESC,
-                                    downloadable, i, i+n_per_request);
+                                    downloadable, i, i+n_per_request,
+                                    pds_flags);
     }
     last_routerdesc_download_attempted = now;
   }
@@ -4068,6 +4085,10 @@ update_router_descriptor_cache_downloads_v2(time_t now)
     trusted_dir_server_t *ds =
       router_get_trusteddirserver_by_digest(ns->identity_digest);
     smartlist_t *dl = download_from[i];
+    int pds_flags = PDS_RETRY_IF_NO_SERVERS;
+    if (! authdir_mode_any_nonhidserv(options))
+      pds_flags |= PDS_NO_EXISTING_SERVERDESC_FETCH; /* XXXX021 ignored*/
+
     if (!ds) {
       log_warn(LD_BUG, "Networkstatus with no corresponding authority!");
       continue;
@@ -4079,7 +4100,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
     for (j=0; j < smartlist_len(dl); j += MAX_DL_PER_REQUEST) {
       initiate_descriptor_downloads(&(ds->fake_status),
                                     DIR_PURPOSE_FETCH_SERVERDESC, dl, j,
-                                    j+MAX_DL_PER_REQUEST);
+                                    j+MAX_DL_PER_REQUEST, pds_flags);
     }
   }
 
@@ -4291,7 +4312,8 @@ update_extrainfo_downloads(time_t now)
   smartlist_shuffle(wanted);
   for (i = 0; i < smartlist_len(wanted); i += MAX_DL_PER_REQUEST) {
     initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_EXTRAINFO,
-                                  wanted, i, i + MAX_DL_PER_REQUEST);
+                                  wanted, i, i + MAX_DL_PER_REQUEST,
+                PDS_RETRY_IF_NO_SERVERS|PDS_NO_EXISTING_SERVERDESC_FETCH);
   }
 
   smartlist_free(wanted);
