@@ -143,7 +143,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
  * except that it tells the compiler that the branch will be taken most of the
  * time.  This can generate slightly better code with some CPUs.
  */
-#define PREDICT_LIKELY(exp) __builtin_expect((exp), 1)
+#define PREDICT_LIKELY(exp) __builtin_expect(!!(exp), 1)
 /** Macro: Evaluates to <b>exp</b> and hints the compiler that the value
  * of <b>exp</b> will probably be false.
  *
@@ -151,7 +151,7 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
  * except that it tells the compiler that the branch will usually not be
  * taken.  This can generate slightly better code with some CPUs.
  */
-#define PREDICT_UNLIKELY(exp) __builtin_expect((exp), 0)
+#define PREDICT_UNLIKELY(exp) __builtin_expect(!!(exp), 0)
 #else
 #define ATTR_NORETURN
 #define ATTR_PURE

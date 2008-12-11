@@ -41,18 +41,10 @@
 #error "Sorry; we don't support building with NDEBUG."
 #endif
 
-#if defined(__GNUC__)
-/* Give an int-valued version of !x that won't confuse PREDICT_UNLIKELY,
- * which does poorly with pointer types on some versions of glibc. */
-#define IS_FALSE_AS_INT(x) ((x) == ((typeof(x)) 0))
-#else
-#define IS_FALSE_AS_INT(x) !(x)
-#endif
-
 /** Like assert(3), but send assertion failures to the log as well as to
  * stderr. */
 #define tor_assert(expr) STMT_BEGIN                                     \
-    if (PREDICT_UNLIKELY(IS_FALSE_AS_INT(expr))) {                      \
+    if (PREDICT_UNLIKELY(!(expr))) {                                    \
       log(LOG_ERR, LD_BUG, "%s:%d: %s: Assertion %s failed; aborting.", \
           _SHORT_FILE_, __LINE__, __func__, #expr);                     \
       fprintf(stderr,"%s:%d %s: Assertion %s failed; aborting.\n",      \
