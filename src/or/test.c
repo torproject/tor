@@ -2874,17 +2874,6 @@ test_dir_format(void)
 #endif
   dirserv_free_fingerprint_list();
 
-  tor_free(pk1_str);
-  tor_free(pk2_str);
-  tor_free(pk3_str);
-  if (pk1) crypto_free_pk_env(pk1);
-  if (pk2) crypto_free_pk_env(pk2);
-  if (pk3) crypto_free_pk_env(pk3);
-  if (rp1) routerinfo_free(rp1);
-  if (rp2) routerinfo_free(rp2);
-  tor_free(dir1); /* XXXX And more !*/
-  tor_free(dir2); /* And more !*/
-
   /* Try out version parsing functionality */
   test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
   test_eq(0, ver1.major);
@@ -2983,6 +2972,17 @@ test_dir_format(void)
     routerinfo_free(r1);
   if (r2)
     routerinfo_free(r2);
+
+  tor_free(pk1_str);
+  tor_free(pk2_str);
+  tor_free(pk3_str);
+  if (pk1) crypto_free_pk_env(pk1);
+  if (pk2) crypto_free_pk_env(pk2);
+  if (pk3) crypto_free_pk_env(pk3);
+  if (rp1) routerinfo_free(rp1);
+  if (rp2) routerinfo_free(rp2);
+  tor_free(dir1); /* XXXX And more !*/
+  tor_free(dir2); /* And more !*/
 }
 
 extern const char AUTHORITY_CERT_1[];
