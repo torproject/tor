@@ -3062,18 +3062,24 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
 static void
 test_v3_networkstatus(void)
 {
-  authority_cert_t *cert1, *cert2, *cert3;
-  crypto_pk_env_t *sign_skey_1, *sign_skey_2, *sign_skey_3;
+  authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
+  crypto_pk_env_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
   crypto_pk_env_t *sign_skey_leg1;
   const char *msg=NULL;
 
   time_t now = time(NULL);
   networkstatus_voter_info_t *voter;
-  networkstatus_t *vote, *v1, *v2, *v3, *con;
+  networkstatus_t *vote=NULL, *v1=NULL, *v2=NULL, *v3=NULL, *con=NULL;
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
-  char *v1_text, *v2_text, *v3_text, *consensus_text, *cp;
+  char *v1_text=NULL, *v2_text=NULL, *v3_text=NULL, *consensus_text=NULL, *cp;
   smartlist_t *votes = smartlist_create();
+
+  /* For generating the two other consensuses. */
+  char *detached_text1=NULL, *detached_text2=NULL;
+  char *consensus_text2=NULL, *consensus_text3=NULL;
+  networkstatus_t *con2=NULL, *con3=NULL;
+  ns_detached_signatures_t *dsig1=NULL, *dsig2=NULL;
 
   /* Parse certificates and keys. */
   cert1 = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
@@ -3426,9 +3432,8 @@ test_v3_networkstatus(void)
   test_assert(!voter->bad_signature);
 
   {
-    char *consensus_text2, *consensus_text3;
+    /*XXXX these fields can be leaked. */
     networkstatus_t *con2, *con3;
-    char *detached_text1, *detached_text2;
     ns_detached_signatures_t *dsig1, *dsig2;
     const char *msg=NULL;
     /* Compute the other two signed consensuses. */
@@ -3504,34 +3509,50 @@ test_v3_networkstatus(void)
                                                smartlist_get(con->voters, 3),
                                                cert1));
 
-    networkstatus_vote_free(con2);
-    networkstatus_vote_free(con3);
-    tor_free(consensus_text2);
-    tor_free(consensus_text3);
-    tor_free(detached_text1);
-    tor_free(detached_text2);
-    ns_detached_signatures_free(dsig1);
-    ns_detached_signatures_free(dsig2);
   }
 
+ done:
   smartlist_free(votes);
   tor_free(v1_text);
   tor_free(v2_text);
   tor_free(v3_text);
   tor_free(consensus_text);
-  networkstatus_vote_free(vote);
-  networkstatus_vote_free(v1);
-  networkstatus_vote_free(v2);
-  networkstatus_vote_free(v3);
-  networkstatus_vote_free(con);
-  crypto_free_pk_env(sign_skey_1);
-  crypto_free_pk_env(sign_skey_2);
-  crypto_free_pk_env(sign_skey_3);
-  authority_cert_free(cert1);
-  authority_cert_free(cert2);
-  authority_cert_free(cert3);
- done:
-  ;
+
+  if (vote)
+    networkstatus_vote_free(vote);
+  if (v1)
+    networkstatus_vote_free(v1);
+  if (v2)
+    networkstatus_vote_free(v2);
+  if (v3)
+    networkstatus_vote_free(v3);
+  if (con)
+    networkstatus_vote_free(con);
+  if (sign_skey_1)
+    crypto_free_pk_env(sign_skey_1);
+  if (sign_skey_2)
+    crypto_free_pk_env(sign_skey_2);
+  if (sign_skey_3)
+    crypto_free_pk_env(sign_skey_3);
+  if (cert1)
+    authority_cert_free(cert1);
+  if (cert2)
+    authority_cert_free(cert2);
+  if (cert3)
+    authority_cert_free(cert3);
+
+  tor_free(consensus_text2);
+  tor_free(consensus_text3);
+  tor_free(detached_text1);
+  tor_free(detached_text2);
+  if (con2)
+    networkstatus_vote_free(con2);
+  if (con3)
+    networkstatus_vote_free(con3);
+  if (dsig1)
+    ns_detached_signatures_free(dsig1);
+  if (dsig2)
+    ns_detached_signatures_free(dsig2);
 }
 
 static void
