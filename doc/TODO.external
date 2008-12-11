@@ -47,10 +47,12 @@ KS  . Finish testing, debugging, unit testing, etc the hidden service
       changes. Have it in the development version and in use.
 W   - Finish testing, debugging, unit testing, etc the directory overhead
       changes. Have it in the development version and in use.
+R     - Roger writes a proposal unifying the or-dev discussions
+?     - Somebody implements the proposal. Who?
 E   - Implement KDE Marble into Vidalia.  In order to improve the user
       interface for easier understanding of circuits and where traffic
       travels, replacing the current Vidalia map with KDE's Marble
-      is desired.  KDE’s Marble widget gives a better quality map and
+      is desired.  KDE's Marble widget gives a better quality map and
       enables improved interactivity.  This is the first step in allowing
       users to choose an exit country, or being able to interact with
       Tor circuits in new ways.
