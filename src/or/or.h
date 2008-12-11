@@ -15,6 +15,18 @@
 #define OR_H_ID "$Id$"
 
 #include "orconfig.h"
+
+#ifdef __COVERITY__
+/* If we're building for a static analysis, turn on all the off-by-default
+ * features. */
+#ifndef INSTRUMENT_DOWNLOADS
+#define INSTRUMENT_DOWNLOADS 1
+#endif
+#ifndef ENABLE_GEOIP_STATS
+#define ENABLE_GEOIP_STATS 1
+#endif
+#endif
+
 #ifdef MS_WINDOWS
 #define WIN32_WINNT 0x400
 #define _WIN32_WINNT 0x400
