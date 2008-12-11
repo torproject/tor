@@ -303,7 +303,7 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   int r;
   if (size == 0)
     return -1; /* no place for the NUL */
-  if (size > SIZE_T_CEILING)
+  if (size > SSIZE_T_MAX-16)
     return -1;
 #ifdef MS_WINDOWS
   r = _vsnprintf(str, size, format, args);
@@ -311,7 +311,7 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   r = vsnprintf(str, size, format, args);
 #endif
   str[size-1] = '\0';
-  if (r < 0 || ((size_t)r) >= size)
+  if (r < 0 || r >= (ssize_t)size)
     return -1;
   return r;
 }
