@@ -1265,7 +1265,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   }
 
   if ((tok = find_opt_by_keyword(tokens, A_PURPOSE))) {
-    tor_assert(tok->n_args != 0);
+    tor_assert(tok->n_args);
     router->purpose = router_purpose_from_string(tok->args[0]);
   } else {
     router->purpose = ROUTER_PURPOSE_GENERAL;
@@ -1607,7 +1607,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   tok->key = NULL;
 
   tok = find_by_keyword(tokens, K_FINGERPRINT);
-  tor_assert(tok->n_args > 0);
+  tor_assert(tok->n_args);
   if (base16_decode(fp_declared, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
     log_warn(LD_DIR, "Couldn't decode key certificate fingerprint %s",
@@ -1627,7 +1627,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
 
   tok = find_opt_by_keyword(tokens, K_DIR_ADDRESS);
   if (tok) {
-    tor_assert(tok->n_args != 0);
+    tor_assert(tok->n_args);
     if (parse_addr_port(LOG_WARN, tok->args[0], NULL, &cert->addr,
                         &cert->dir_port)<0) {
       log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
@@ -2004,7 +2004,7 @@ networkstatus_v2_parse_from_string(const char *s)
   }
 
   tok = find_by_keyword(tokens, K_FINGERPRINT);
-  tor_assert(tok->n_args != 0);
+  tor_assert(tok->n_args);
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
     log_warn(LD_DIR, "Couldn't decode networkstatus fingerprint %s",
@@ -2013,7 +2013,7 @@ networkstatus_v2_parse_from_string(const char *s)
   }
 
   if ((tok = find_opt_by_keyword(tokens, K_CONTACT))) {
-    tor_assert(tok->n_args != 0);
+    tor_assert(tok->n_args);
     ns->contact = tor_strdup(tok->args[0]);
   }
 
@@ -2166,7 +2166,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   tok = find_by_keyword(tokens, K_VOTE_STATUS);
-  tor_assert(tok->n_args != 0);
+  tor_assert(tok->n_args);
   if (!strcmp(tok->args[0], "vote")) {
     ns->type = NS_TYPE_VOTE;
   } else if (!strcmp(tok->args[0], "consensus")) {

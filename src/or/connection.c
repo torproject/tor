@@ -2979,7 +2979,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
   if (conn->linked_conn) {
     tor_assert(conn->linked_conn->linked_conn == conn);
-    tor_assert(conn->linked != 0);
+    tor_assert(conn->linked);
   }
   if (conn->linked)
     tor_assert(conn->s < 0);
@@ -3030,7 +3030,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
       tor_assert(edge_conn->socks_request);
       if (conn->state == AP_CONN_STATE_OPEN) {
-        tor_assert(edge_conn->socks_request->has_finished != 0);
+        tor_assert(edge_conn->socks_request->has_finished);
         if (!conn->marked_for_close) {
           tor_assert(edge_conn->cpath_layer);
           assert_cpath_layer_ok(edge_conn->cpath_layer);
