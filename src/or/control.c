@@ -764,6 +764,8 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
         msg = "553 Unable to set option";
         break;
       case SETOPT_OK:
+        /* coverity[dead_error_line]
+         * (It's okay if we can never get to this point.) */
         msg = "551 Internal error";
         tor_fragile_assert();
         break;
@@ -1191,8 +1193,11 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
 
  err:
   tor_free(password);
-  if (!errstr)
+  if (!errstr) {
+    /* coverity[dead_error_line]
+     * (It's okay if we can never get to this point.) */
     errstr = "Unknown reason.";
+  }
   connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n",
                            errstr);
   connection_mark_for_close(TO_CONN(conn));
