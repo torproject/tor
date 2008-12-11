@@ -24,7 +24,7 @@ const char routerlist_c_id[] =
 static routerstatus_t *router_pick_directory_server_impl(
                                            authority_type_t auth, int flags);
 static routerstatus_t *router_pick_trusteddirserver_impl(
-                                           authority_type_t auth, int flags);
+                          authority_type_t auth, int flags, int *n_busy_out);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
@@ -979,17 +979,25 @@ routerstatus_t *
 router_pick_trusteddirserver(authority_type_t type, int flags)
 {
   routerstatus_t *choice;
+  int busy = 0;
   if (get_options()->PreferTunneledDirConns)
     flags |= _PDS_PREFER_TUNNELED_DIR_CONNS;
 
-  choice = router_pick_trusteddirserver_impl(type, flags);
+  choice = router_pick_trusteddirserver_impl(type, flags, &busy);
   if (choice || !(flags & PDS_RETRY_IF_NO_SERVERS))
     return choice;
+  if (busy) {
+    /* If the reason that we got no server is that servers are "busy",
+     * we must be excluding good servers because we already have serverdesc
+     * fetches with them.  Do not mark down servers up because of this. */
+    tor_assert((flags & PDS_NO_EXISTING_SERVERDESC_FETCH));
+    return NULL;
+  }
 
   log_info(LD_DIR,
            "No trusted dirservers are reachable. Trying them all again.");
   mark_all_trusteddirservers_up();
-  return router_pick_trusteddirserver_impl(type, flags);
+  return router_pick_trusteddirserver_impl(type, flags, NULL);
 }
 
 /** How long do we avoid using a directory server after it's given us a 503? */
@@ -1095,16 +1103,19 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
  * are as for router_pick_directory_server_impl().
  */
 static routerstatus_t *
-router_pick_trusteddirserver_impl(authority_type_t type, int flags)
+router_pick_trusteddirserver_impl(authority_type_t type, int flags,
+                                  int *n_busy_out)
 {
   smartlist_t *direct, *tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   routerinfo_t *me = router_get_my_routerinfo();
   routerstatus_t *result;
   time_t now = time(NULL);
-  int requireother = ! (flags & PDS_ALLOW_SELF);
-  int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
-  int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
+  const int requireother = ! (flags & PDS_ALLOW_SELF);
+  const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
+  const int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
+  const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
+  int n_busy = 0;
 
   if (!trusted_dir_servers)
     return NULL;
@@ -1131,6 +1142,18 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags)
       /* XXXX021 IP6 proposal 118 */
       tor_addr_from_ipv4h(&addr, d->addr);
 
+      if (no_serverdesc_fetching) {
+        if (connection_get_by_type_addr_port_purpose(
+            CONN_TYPE_DIR, &addr, d->dir_port, DIR_PURPOSE_FETCH_SERVERDESC)
+         || connection_get_by_type_addr_port_purpose(
+             CONN_TYPE_DIR, &addr, d->dir_port, DIR_PURPOSE_FETCH_EXTRAINFO)) {
+          //log_debug(LD_DIR, "We have an existing connection to fetch "
+          //           "descriptor from %s; delaying",d->description);
+          ++n_busy;
+          continue;
+        }
+      }
+
       if (prefer_tunnel &&
           d->or_port &&
           (!fascistfirewall ||
@@ -1153,6 +1176,9 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags)
   } else {
     result = smartlist_choose(overloaded_direct);
   }
+
+  if (n_busy_out)
+    *n_busy_out = n_busy;
 
   smartlist_free(direct);
   smartlist_free(tunnel);

@@ -368,6 +368,22 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       if (prefer_authority || type == BRIDGE_AUTHORITY) {
         /* only ask authdirservers, and don't ask myself */
         rs = router_pick_trusteddirserver(type, pds_flags);
+        if (rs == NULL && (pds_flags & PDS_NO_EXISTING_SERVERDESC_FETCH)) {
+          /* We don't want to fetch from any authorities that we're currently
+           * fetching server descriptors from, and we got no match.  Did we
+           * get no match because all the authorities have connections
+           * fetching server descriptors (in which case we should just
+           * return,) or because all the authorities are down or on fire or
+           * unreachable or something (in which case we should go on with
+           * our fallback code)? */
+          pds_flags &= ~PDS_NO_EXISTING_SERVERDESC_FETCH;
+          rs = router_pick_trusteddirserver(type, pds_flags);
+          if (rs) {
+            log_debug(LD_DIR, "Deferring serverdesc fetch: all authorities "
+                      "are in use.");
+            return;
+          }
+        }
       }
       if (!rs && type != BRIDGE_AUTHORITY) {
         /* anybody with a non-zero dirport will do */

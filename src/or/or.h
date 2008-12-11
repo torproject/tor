@@ -4191,9 +4191,26 @@ int router_reload_router_list(void);
 smartlist_t *router_get_trusted_dir_servers(void);
 
 /* Flags for pick_directory_server and pick_trusteddirserver. */
+/** Flag to indicate that we should not automatically be willing to use
+ * ourself to answer a directory request.
+ * Passed to router_pick_directory_server (et al).*/
 #define PDS_ALLOW_SELF                 (1<<0)
+/** Flag to indicate that if no servers seem to be up, we should mark all
+ * directory servers as up and try again.
+ * Passed to router_pick_directory_server (et al).*/
 #define PDS_RETRY_IF_NO_SERVERS        (1<<1)
+/** Flag to indicate that we should not exclude directory servers that
+ * our ReachableAddress settings would exclude.  This usually means that
+ * we're going to connect to the server over Tor, and so we don't need to
+ * worry about our firewall telling us we can't.
+ * Passed to router_pick_directory_server (et al).*/
 #define PDS_IGNORE_FASCISTFIREWALL     (1<<2)
+/** Flag to indicate that we should not use any directory authority to which
+ * we have an existing directory connection for downloading server descriptors
+ * or extrainfo documents.  [NOTE: Only implemented for
+ * router_pick_trusteddirserver, not router_pick_directory_server.]
+ * Passed to router_pick_directory_server (et al).*/
+#define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
 #define _PDS_PREFER_TUNNELED_DIR_CONNS (1<<16)
 routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
