@@ -29,15 +29,30 @@
   UpgradeCode must remain the same for all packages of this type regardless of
   Product or Package ID's.  This is how existing versions are located.
     -->
-  <?define ThisProductVersion="2.1.7" ?>
+  <?define ThisProductVersion="2.1.8" ?>
   <?define ThisProductVersionDisp="@VERSION@" ?>
   <?define UpgradeCode="64323a0c-9712-4a7a-8db8-d3c5c0b963df" ?>
   <?define TPI="The Tor Project, Inc." ?>
 
+  <!-- The remaining GUIDs are assigned to components or other variable
+  identifiers. Whenever a new package is built these values MUST be
+  modified for upgrades to work correctly!  Note that future MSI packages should
+  re-use components that haven't changed to speed installation.
+    -->
+  <?define CurrTorProductGUID="654cd293-e721-44eb-a31c-fc39a36a9975" ?>
+  <?define CurrTorExecutableGUID="1f50bd0d-f731-49b6-b905-5682a419881a" ?>
+  <?define CurrTorSvcLinksGUID="d4104c4a-f940-4f36-acc7-a5d1c8e72828" ?>
+  <?define CurrOpenSSLLibraryGUID="126bd857-348e-48d2-8b79-cd4648e5f471" ?>
+  <?define CurrTorDocumentsGUID="8b36bf4e-1f9d-4f9e-a91a-bab7da486c98" ?>
+  <?define CurrTorConfigFileGUID="a380ee19-470d-4b35-a0fa-aa19f342c4c5" ?>
+  <?define CurrTorGeoIPFileGUID="03afdbae-2e48-45c5-a059-3d3bac63d07f" ?>
+  <?define CurrAddTorToStartMenuGUID="7f0cbd78-9608-4780-a848-771d724727b2" ?>
+  <?define CurrAddTorToDesktopGUID="30b9f30f-b930-4751-856e-e1280f2227bf" ?>
+
   <Product
     Name="Tor"
-    Id="1449ef81-e295-43e5-91ac-81b7da0e2024"
-    UpgradeCode="64323a0c-9712-4a7a-8db8-d3c5c0b963df"
+    Id="$(var.CurrTorProductGUID)"
+    UpgradeCode="$(var.UpgradeCode)"
     Version="$(var.ThisProductVersion)"
     Manufacturer="$(var.TPI)"
     Language="1033" Codepage="1252">
@@ -64,11 +79,28 @@
       DiskPrompt="na"
     />
 
+    <!-- Associate this package with the upgrade code for this series
+    to ensure that upgrade installations by Thandy or other means work
+    as expected.
+    The OnlyDetect option must be false to ensure that existing files
+    from an older version are removed and replaced with current files.
+      -->
+    <Upgrade Id="$(var.UpgradeCode)">
+      <UpgradeVersion
+        Property="UPGRADEFOUND"
+        OnlyDetect="no"
+        Minimum="0.0.1"
+        IncludeMinimum="yes"
+        Maximum="$(var.ThisProductVersion)"
+        IncludeMaximum="no"
+      />
+    </Upgrade>
+
     <!-- Properties used to control installation or repair features
     and other invocation options.
     When ALLUSERS==1 the install is per machine, when 2 it is per user.
       -->
-    <Property Id="ALLUSERS">1</Property>
+    <Property Id="ALLUSERS">2</Property>
     <Property Id="ReinstallModeText">omus</Property>
     <Property Id="DiskPrompt">Tor Installation</Property>
 
@@ -86,34 +118,21 @@
       />
     </Property>
 
-    <!-- Associate this package with the upgrade code for this series
-    to ensure that upgrade installations by Thandy or other means work
-    as expected.
-    The OnlyDetect option must be false to ensure that existing files
-    from an older version are removed and replaced with current files.
-      -->
-    <Upgrade Id="64323a0c-9712-4a7a-8db8-d3c5c0b963df">
-      <UpgradeVersion
-        Property="UPGRADEFOUND"
-        OnlyDetect="no"
-        Minimum="0.0.1"
-        IncludeMinimum="yes"
-        Maximum="$(var.ThisProductVersion)"
-        IncludeMaximum="no"
-      />
-    </Upgrade>
-
-
     <!-- Most of the installation directives are for populating the
     "Program Files" directory with the Tor binaries, dynamic link
     libraries, configuration files, and other documents.
       -->
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder" Name="ProgramFilesDir">
+      <Directory Id="LocalAppDataFolder" Name="AppData">
         <Directory Id="INSTALLDIR" Name="Tor">
 
           <!-- Tor application file -->
-          <Component Id="TorExecutable" Guid="219e0538-7f7f-4445-8406-e4f06ba22417">
+          <Component Id="TorExecutable" Guid="$(var.CurrTorExecutableGUID)">
+            <CreateFolder/>
+            <RemoveFolder Id="RemoveINSTALLDIR" On="uninstall" />
+            <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+              <RegistryValue Name="Version" Value="$(var.ThisProductVersionDisp)" Type="string" KeyPath="yes" />
+            </RegistryKey>
             <File
               Id="TorExe"
               Name="Tor.exe"
@@ -123,20 +142,14 @@
             />
           </Component>
 
-          <!-- If run as service provide registry pointer to Tor path. -->
-          <Component Id="TorSvcLinks" Guid="b0e44ccf-4e85-4613-a026-9e3d0feef577">
-            <Condition>SVCINSTALL</Condition>
-            <RegistryKey Root="HKLM" Key="System\CurrentControlSet\Services\[SERVICEINTERNALNAME]"
-              Action="createAndRemoveOnUninstall">
-              <RegistryValue Name="TorSvcPath" Value="#1" Type="string" KeyPath="yes" />
-            </RegistryKey>
-          </Component>
-
           <!-- Tor OpenSSL shared libraries
           This optional component is required for shared builds
           of Tor.  For static builds it is ignored.
             -->
-          <Component Id="OpenSSLLibrary" Guid="4d99fd44-dc24-46c6-8825-25b9e5916b85">
+          <Component Id="OpenSSLLibrary" Guid="$(var.CurrOpenSSLLibraryGUID)">
+            <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+              <RegistryValue Name="UserSSLLibrary" Value="1" Type="integer" KeyPath="yes" />
+            </RegistryKey>
             <File
               Id="cryptoeay32dll"
               Name="cryptoeay32-0.9.8.dll"
@@ -151,46 +164,12 @@
             />
           </Component>
 
-          <!-- Tor docs -->
-          <Component Id="TorDocuments" Guid="3def35f6-70a0-44af-813a-f96bc8462748">
-            <File
-              Id="TorReadme"
-              Name="README"
-              Source="README"
-              DiskId="1"
-            />
-            <File
-              Id="TorAuthors"
-              Name="Authors"
-              Source="Authors"
-              DiskId="1"
-            />
-            <File
-              Id="TorChangelog"
-              Name="ChangeLog"
-              Source="ChangeLog"
-              DiskId="1"
-            />
-            <File
-              Id="TorLicense"
-              Name="LICENSE"
-              Source="LICENSE"
-              DiskId="1"
-            />
-          </Component>
-        </Directory>
-      </Directory>
-
-      <Directory Id="LocalAppDataFolder" Name="AppData">
-        <Directory Id="AppRootDirectory" Name="Tor">
           <!-- Tor configuration files
           The sample config is always kept up to date and the torrc
           is left as is if it exists and copied from the sample
           config otherwise.
             -->
-          <Component Id="TorConfigFile" Guid="1dae9705-0bef-4588-be36-d8a5df5e47cc">
-            <CreateFolder/>
-            <RemoveFolder Id="RemoveAppRootDirectory" On="uninstall" />
+          <Component Id="TorConfigFile" Guid="$(var.CurrTorConfigFileGUID)">
             <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
               <RegistryValue Name="UserConfigFile" Value="1" Type="integer" KeyPath="yes" />
             </RegistryKey>
@@ -210,7 +189,7 @@
           </Component>
   
           <!-- GeoIP data file.  This is an optional component.  -->
-          <Component Id="TorGeoIPFile" Guid="54dcb7e9-ea49-4be5-8c1a-32bf45306f9b">
+          <Component Id="TorGeoIPFile" Guid="$(var.CurrTorGeoIPFileGUID)">
             <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
               <RegistryValue Name="UserGeoIPFile" Value="1" Type="integer" KeyPath="yes" />
             </RegistryKey>
@@ -223,6 +202,41 @@
               DiskId="1"
             /> 
           </Component>
+
+          <!-- Tor docs -->
+          <Directory Id="TorDocsDirectory" Name="docs">
+            <Component Id="TorDocuments" Guid="$(var.CurrTorDocumentsGUID)">
+              <CreateFolder/>
+              <RemoveFolder Id="RemoveTorDocsDirectory" On="uninstall" />
+              <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+                <RegistryValue Name="UserDocs" Value="1" Type="integer" KeyPath="yes" />
+              </RegistryKey>
+              <File
+                Id="TorReadme"
+                Name="README"
+                Source="README"
+                DiskId="1"
+              />
+              <File
+                Id="TorAuthors"
+                Name="Authors"
+                Source="Authors"
+                DiskId="1"
+              />
+              <File
+                Id="TorChangelog"
+                Name="ChangeLog"
+                Source="ChangeLog"
+                DiskId="1"
+              />
+              <File
+                Id="TorLicense"
+                Name="LICENSE"
+                Source="LICENSE"
+                DiskId="1"
+              />
+            </Component>
+          </Directory>
         </Directory>
       </Directory>
 
@@ -232,7 +246,7 @@
         -->
       <Directory Id="ProgramMenuFolder" Name="Programs">
         <Directory Id="ShortcutFolder" Name="Tor">
-          <Component Id="AddTorToStartMenu" Guid="a318c037-e1ed-481c-983d-4a0ad3810ba0">
+          <Component Id="AddTorToStartMenu" Guid="$(var.CurrAddTorToStartMenuGUID)">
             <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
               <RegistryValue Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />
             </RegistryKey>
@@ -246,7 +260,7 @@
       </Directory>
 
       <Directory Id="DesktopFolder" Name="Desktop">
-        <Component Id="AddTorToDesktop" Guid="9a00d5c1-1d5d-4a62-864e-f53f79b3c77a">
+        <Component Id="AddTorToDesktop" Guid="$(var.CurrAddTorToDesktopGUID)">
           <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
             <RegistryValue Name="DesktopShortcut" Value="1" Type="integer" KeyPath="yes" />
           </RegistryKey>
@@ -256,17 +270,6 @@
                     Icon="tor.ico" IconIndex="0" />
         </Component>
       </Directory>
-
-      <!-- Current version registry info
-      This value can be used by third party applications to query
-      for the current version installed on the system.
-        -->
-      <Component Id="TorRegistry" Guid="575de318-a649-49fe-95e5-ee091f6cb8c6">
-        <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Tor"
-          Action="createAndRemoveOnUninstall">
-          <RegistryValue Name="Version" Value="$(var.ThisProductVersionDisp)" Type="string" KeyPath="yes" />
-        </RegistryKey>
-      </Component>
     </Directory>
 
     <!-- Define list of application features available for install
@@ -288,8 +291,6 @@
         <ComponentRef Id="TorGeoIPFile" />
         <ComponentRef Id="OpenSSLLibrary" />
         <ComponentRef Id="TorDocuments" />
-        <ComponentRef Id="TorRegistry" /> 
-        <ComponentRef Id="TorSvcLinks" />
       </Feature>
 
       <!-- Shortcuts on the Start Menu and Desktop are optional but
@@ -312,7 +313,7 @@
 
     <!-- Upgrade installation sequence. -->
     <InstallExecuteSequence>
-      <RemoveExistingProducts After="InstallFinalize" />
+      <RemoveExistingProducts After="InstallValidate" />
     </InstallExecuteSequence>
 
     <!-- Set the UI options
