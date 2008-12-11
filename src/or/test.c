@@ -1851,7 +1851,7 @@ test_util_smartlist_strings(void)
   cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
   test_streq(cp_alloc,"the,router,onion,nickm,by,arma,and");
   tor_free(cp_alloc);
-  cp = smartlist_pop_last(sl);
+  cp_alloc = smartlist_pop_last(sl);
   test_streq(cp_alloc, "and");
   tor_free(cp_alloc);
   test_eq(smartlist_len(sl), 6);
