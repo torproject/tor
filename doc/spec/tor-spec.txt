@@ -253,8 +253,8 @@ see tor-design.pdf.
 
    To avoid being trivially distinguished from servers, client-only Tor
    instances are encouraged but not required to use a two-certificate chain
-   as well.  Clients SHOULD NOT use keep using the same certificates when
-   their IP changes.  Clients MAY send no certificates at all.
+   as well.  Clients SHOULD NOT keep using the same certificates when
+   their IP address changes.  Clients MAY send no certificates at all.
 
 3. Cell Packet format
 

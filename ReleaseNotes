@@ -4,6 +4,12 @@ of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
 Changes in version 0.2.0.32 - 2008-11-20
+  Tor 0.2.0.32 fixes a major security problem in Debian and Ubuntu
+  packages (and maybe other packages) noticed by Theo de Raadt, fixes
+  a smaller security flaw that might allow an attacker to access local
+  services, further improves hidden service performance, and fixes a
+  variety of other issues.
+
   o Security fixes:
     - The "User" and "Group" config options did not clear the
       supplementary group entries for the Tor process. The "User" option

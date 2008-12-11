@@ -40,6 +40,10 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
 
 
 Changes in version 0.2.1.8-alpha - 2008-12-08
+  Tor 0.2.1.8-alpha fixes some crash bugs in earlier alpha releases,
+  builds better on unusual platforms like Solaris and old OS X, and
+  fixes a variety of other issues.
+
   o Major features:
     - New DirPortFrontPage option that takes an html file and publishes
       it as "/" on the DirPort. Now relay operators can provide a
@@ -101,6 +105,12 @@ Changes in version 0.2.1.8-alpha - 2008-12-08
 
 
 Changes in version 0.2.0.32 - 2008-11-20
+  Tor 0.2.0.32 fixes a major security problem in Debian and Ubuntu
+  packages (and maybe other packages) noticed by Theo de Raadt, fixes
+  a smaller security flaw that might allow an attacker to access local
+  services, further improves hidden service performance, and fixes a
+  variety of other issues.
+
   o Security fixes:
     - The "User" and "Group" config options did not clear the
       supplementary group entries for the Tor process. The "User" option
@@ -166,6 +176,13 @@ Changes in version 0.2.0.32 - 2008-11-20
 
 
 Changes in version 0.2.1.7-alpha - 2008-11-08
+  Tor 0.2.1.7-alpha fixes a major security problem in Debian and Ubuntu
+  packages (and maybe other packages) noticed by Theo de Raadt, fixes
+  a smaller security flaw that might allow an attacker to access local
+  services, adds better defense against DNS poisoning attacks on exit
+  relays, further improves hidden service performance, and fixes a
+  variety of other issues.
+
   o Security fixes:
     - The "ClientDNSRejectInternalAddresses" config option wasn't being
       consistently obeyed: if an exit relay refuses a stream because its
