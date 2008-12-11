@@ -449,8 +449,13 @@ static int router_get_hash_impl(const char *s, char *digest,
                                 char end_char);
 static void token_free(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
-static directory_token_t *find_first_by_keyword(smartlist_t *s,
-                                                directory_keyword keyword);
+static directory_token_t *_find_by_keyword(smartlist_t *s,
+                                           directory_keyword keyword,
+                                           const char *keyword_str);
+#define find_by_keyword(s, keyword) _find_by_keyword((s), (keyword), #keyword)
+static directory_token_t *find_opt_by_keyword(smartlist_t *s,
+                                              directory_keyword keyword);
+
 #define TS_ANNOTATIONS_OK 1
 #define TS_NOCHECK 2
 #define TS_NO_NEW_ANNOTATIONS 4
@@ -729,8 +734,7 @@ router_parse_directory(const char *str)
     log_warn(LD_DIR, "Error tokenizing directory"); goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_PUBLISHED);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_PUBLISHED);
   tor_assert(tok->n_args == 1);
 
   if (parse_iso_time(tok->args[0], &published_on) < 0) {
@@ -790,13 +794,12 @@ router_parse_runningrouters(const char *str)
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_PUBLISHED);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_PUBLISHED);
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &published_on) < 0) {
      goto err;
   }
-  if (!(tok = find_first_by_keyword(tokens, K_DIRECTORY_SIGNATURE))) {
+  if (!(tok = find_opt_by_keyword(tokens, K_DIRECTORY_SIGNATURE))) {
     log_warn(LD_DIR, "Missing signature on running-routers");
     goto err;
   }
@@ -1182,7 +1185,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_ROUTER);
+  tok = find_by_keyword(tokens, K_ROUTER);
   tor_assert(tok->n_args >= 5);
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
@@ -1238,8 +1241,8 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_BANDWIDTH);
-  tor_assert(tok && tok->n_args >= 3);
+  tok = find_by_keyword(tokens, K_BANDWIDTH);
+  tor_assert(tok->n_args >= 3);
   router->bandwidthrate = (int)
     tor_parse_long(tok->args[0],10,1,INT_MAX,&ok,NULL);
 
@@ -1261,7 +1264,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
-  if ((tok = find_first_by_keyword(tokens, A_PURPOSE))) {
+  if ((tok = find_opt_by_keyword(tokens, A_PURPOSE))) {
     tor_assert(tok->n_args != 0);
     router->purpose = router_purpose_from_string(tok->args[0]);
   } else {
@@ -1270,7 +1273,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   router->cache_info.send_unencrypted =
     (router->purpose == ROUTER_PURPOSE_GENERAL) ? 1 : 0;
 
-  if ((tok = find_first_by_keyword(tokens, K_UPTIME))) {
+  if ((tok = find_opt_by_keyword(tokens, K_UPTIME))) {
     tor_assert(tok->n_args >= 1);
     router->uptime = tor_parse_long(tok->args[0],10,0,LONG_MAX,&ok,NULL);
     if (!ok) {
@@ -1279,25 +1282,22 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_HIBERNATING))) {
+  if ((tok = find_opt_by_keyword(tokens, K_HIBERNATING))) {
     tor_assert(tok->n_args >= 1);
     router->is_hibernating
       = (tor_parse_long(tok->args[0],10,0,LONG_MAX,NULL,NULL) != 0);
   }
 
-  tok = find_first_by_keyword(tokens, K_PUBLISHED);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_PUBLISHED);
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &router->cache_info.published_on) < 0)
     goto err;
 
-  tok = find_first_by_keyword(tokens, K_ONION_KEY);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_ONION_KEY);
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
-  tok = find_first_by_keyword(tokens, K_SIGNING_KEY);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_SIGNING_KEY);
   router->identity_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
   if (crypto_pk_get_digest(router->identity_pkey,
@@ -1305,7 +1305,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     log_warn(LD_DIR, "Couldn't calculate key digest"); goto err;
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_FINGERPRINT))) {
+  if ((tok = find_opt_by_keyword(tokens, K_FINGERPRINT))) {
     /* If there's a fingerprint line, it must match the identity digest. */
     char d[DIGEST_LEN];
     tor_assert(tok->n_args == 1);
@@ -1322,15 +1322,15 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_PLATFORM))) {
+  if ((tok = find_opt_by_keyword(tokens, K_PLATFORM))) {
     router->platform = tor_strdup(tok->args[0]);
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_CONTACT))) {
+  if ((tok = find_opt_by_keyword(tokens, K_CONTACT))) {
     router->contact_info = tor_strdup(tok->args[0]);
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_EVENTDNS))) {
+  if ((tok = find_opt_by_keyword(tokens, K_EVENTDNS))) {
     router->has_old_dnsworkers = tok->n_args && !strcmp(tok->args[0], "0");
   } else if (router->platform) {
     if (! tor_version_as_new_as(router->platform, "0.1.2.2-alpha"))
@@ -1349,7 +1349,7 @@ router_parse_entry_from_string(const char *s, const char *end,
                     });
   policy_expand_private(&router->exit_policy);
 
-  if ((tok = find_first_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
+  if ((tok = find_opt_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
     int i;
     router->declared_family = smartlist_create();
     for (i=0;i<tok->n_args;++i) {
@@ -1362,13 +1362,13 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_CACHES_EXTRA_INFO)))
+  if ((tok = find_opt_by_keyword(tokens, K_CACHES_EXTRA_INFO)))
     router->caches_extra_info = 1;
 
-  if ((tok = find_first_by_keyword(tokens, K_ALLOW_SINGLE_HOP_EXITS)))
+  if ((tok = find_opt_by_keyword(tokens, K_ALLOW_SINGLE_HOP_EXITS)))
     router->allow_single_hop_exits = 1;
 
-  if ((tok = find_first_by_keyword(tokens, K_EXTRA_INFO_DIGEST))) {
+  if ((tok = find_opt_by_keyword(tokens, K_EXTRA_INFO_DIGEST))) {
     tor_assert(tok->n_args >= 1);
     if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
       base16_decode(router->cache_info.extra_info_digest,
@@ -1378,12 +1378,11 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_HIDDEN_SERVICE_DIR))) {
+  if ((tok = find_opt_by_keyword(tokens, K_HIDDEN_SERVICE_DIR))) {
     router->wants_to_be_hs_dir = 1;
   }
 
-  tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_ROUTER_SIGNATURE);
   note_crypto_pk_op(VERIFY_RTR);
 #ifdef COUNT_DISTINCT_DIGESTS
   if (!verified_digests)
@@ -1494,8 +1493,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_PUBLISHED);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_PUBLISHED);
   if (parse_iso_time(tok->args[0], &extrainfo->cache_info.published_on)) {
     log_warn(LD_DIR,"Invalid published time %s on \"extra-info\"",
              escaped(tok->args[0]));
@@ -1508,8 +1506,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
     key = router->identity_pkey;
   }
 
-  tok = find_first_by_keyword(tokens, K_ROUTER_SIGNATURE);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_ROUTER_SIGNATURE);
   if (strcmp(tok->object_type, "SIGNATURE") ||
       tok->object_size < 128 || tok->object_size > 512) {
     log_warn(LD_DIR, "Bad object type or length on extra-info signature");
@@ -1597,20 +1594,20 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   cert = tor_malloc_zero(sizeof(authority_cert_t));
   memcpy(cert->cache_info.signed_descriptor_digest, digest, DIGEST_LEN);
 
-  tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY);
-  tor_assert(tok && tok->key);
+  tok = find_by_keyword(tokens, K_DIR_SIGNING_KEY);
+  tor_assert(tok->key);
   cert->signing_key = tok->key;
   tok->key = NULL;
   if (crypto_pk_get_digest(cert->signing_key, cert->signing_key_digest))
     goto err;
 
-  tok = find_first_by_keyword(tokens, K_DIR_IDENTITY_KEY);
-  tor_assert(tok && tok->key);
+  tok = find_by_keyword(tokens, K_DIR_IDENTITY_KEY);
+  tor_assert(tok->key);
   cert->identity_key = tok->key;
   tok->key = NULL;
 
-  tok = find_first_by_keyword(tokens, K_FINGERPRINT);
-  tor_assert(tok && tok->n_args);
+  tok = find_by_keyword(tokens, K_FINGERPRINT);
+  tor_assert(tok->n_args > 0);
   if (base16_decode(fp_declared, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
     log_warn(LD_DIR, "Couldn't decode key certificate fingerprint %s",
@@ -1628,7 +1625,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_DIR_ADDRESS);
+  tok = find_opt_by_keyword(tokens, K_DIR_ADDRESS);
   if (tok) {
     tor_assert(tok->n_args != 0);
     if (parse_addr_port(LOG_WARN, tok->args[0], NULL, &cert->addr,
@@ -1638,13 +1635,11 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     }
   }
 
-  tok = find_first_by_keyword(tokens, K_DIR_KEY_PUBLISHED);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_DIR_KEY_PUBLISHED);
   if (parse_iso_time(tok->args[0], &cert->cache_info.published_on) < 0) {
      goto err;
   }
-  tok = find_first_by_keyword(tokens, K_DIR_KEY_EXPIRES);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_DIR_KEY_EXPIRES);
   if (parse_iso_time(tok->args[0], &cert->expires) < 0) {
      goto err;
   }
@@ -1763,8 +1758,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     log_warn(LD_DIR, "Impossibly short router status");
     goto err;
   }
-  tok = find_first_by_keyword(tokens, K_R);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_R);
   tor_assert(tok->n_args >= 8);
   if (vote_rs) {
     rs = &vote_rs->status;
@@ -1810,7 +1804,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
   rs->or_port =(uint16_t) tor_parse_long(tok->args[6],10,0,65535,NULL,NULL);
   rs->dir_port = (uint16_t) tor_parse_long(tok->args[7],10,0,65535,NULL,NULL);
 
-  tok = find_first_by_keyword(tokens, K_S);
+  tok = find_opt_by_keyword(tokens, K_S);
   if (tok && vote) {
     int i;
     vote_rs->flags = 0;
@@ -1858,7 +1852,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       }
     }
   }
-  if ((tok = find_first_by_keyword(tokens, K_V))) {
+  if ((tok = find_opt_by_keyword(tokens, K_V))) {
     tor_assert(tok->n_args == 1);
     rs->version_known = 1;
     if (strcmpstart(tok->args[0], "Tor ")) {
@@ -1881,7 +1875,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
   }
 
   /* handle weighting/bandwidth info */
-  if ((tok = find_first_by_keyword(tokens, K_W))) {
+  if ((tok = find_opt_by_keyword(tokens, K_W))) {
     int i;
     for (i=0; i < tok->n_args; ++i) {
       if (!strcmpstart(tok->args[i], "Bandwidth=")) {
@@ -1898,7 +1892,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
   }
 
   /* parse exit policy summaries */
-  if ((tok = find_first_by_keyword(tokens, K_P))) {
+  if ((tok = find_opt_by_keyword(tokens, K_P))) {
     tor_assert(tok->n_args == 1);
     if (strcmpstart(tok->args[0], "accept ") &&
         strcmpstart(tok->args[0], "reject ")) {
@@ -1985,16 +1979,15 @@ networkstatus_v2_parse_from_string(const char *s)
   ns = tor_malloc_zero(sizeof(networkstatus_v2_t));
   memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
 
-  tok = find_first_by_keyword(tokens, K_NETWORK_STATUS_VERSION);
-  tor_assert(tok && tok->n_args >= 1);
+  tok = find_by_keyword(tokens, K_NETWORK_STATUS_VERSION);
+  tor_assert(tok->n_args >= 1);
   if (strcmp(tok->args[0], "2")) {
     log_warn(LD_BUG, "Got a non-v2 networkstatus. Version was "
              "%s", escaped(tok->args[0]));
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_DIR_SOURCE);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_DIR_SOURCE);
   tor_assert(tok->n_args >= 3);
   ns->source_address = tor_strdup(tok->args[0]);
   if (tor_inet_aton(tok->args[1], &in) == 0) {
@@ -2010,8 +2003,7 @@ networkstatus_v2_parse_from_string(const char *s)
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_FINGERPRINT);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_FINGERPRINT);
   tor_assert(tok->n_args != 0);
   if (base16_decode(ns->identity_digest, DIGEST_LEN, tok->args[0],
                     strlen(tok->args[0]))) {
@@ -2020,13 +2012,13 @@ networkstatus_v2_parse_from_string(const char *s)
     goto err;
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_CONTACT))) {
+  if ((tok = find_opt_by_keyword(tokens, K_CONTACT))) {
     tor_assert(tok->n_args != 0);
     ns->contact = tor_strdup(tok->args[0]);
   }
 
-  tok = find_first_by_keyword(tokens, K_DIR_SIGNING_KEY);
-  tor_assert(tok && tok->key);
+  tok = find_by_keyword(tokens, K_DIR_SIGNING_KEY);
+  tor_assert(tok->key);
   ns->signing_key = tok->key;
   tok->key = NULL;
 
@@ -2040,7 +2032,7 @@ networkstatus_v2_parse_from_string(const char *s)
     goto err;
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_DIR_OPTIONS))) {
+  if ((tok = find_opt_by_keyword(tokens, K_DIR_OPTIONS))) {
     for (i=0; i < tok->n_args; ++i) {
       if (!strcmp(tok->args[i], "Names"))
         ns->binds_names = 1;
@@ -2054,13 +2046,13 @@ networkstatus_v2_parse_from_string(const char *s)
   }
 
   if (ns->recommends_versions) {
-    if (!(tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS))) {
+    if (!(tok = find_opt_by_keyword(tokens, K_CLIENT_VERSIONS))) {
       log_warn(LD_DIR, "Missing client-versions on versioning directory");
       goto err;
     }
     ns->client_versions = tor_strdup(tok->args[0]);
 
-    if (!(tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS)) ||
+    if (!(tok = find_opt_by_keyword(tokens, K_SERVER_VERSIONS)) ||
         tok->n_args<1) {
       log_warn(LD_DIR, "Missing server-versions on versioning directory");
       goto err;
@@ -2068,8 +2060,7 @@ networkstatus_v2_parse_from_string(const char *s)
     ns->server_versions = tor_strdup(tok->args[0]);
   }
 
-  tok = find_first_by_keyword(tokens, K_PUBLISHED);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_PUBLISHED);
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &ns->published_on) < 0) {
      goto err;
@@ -2174,8 +2165,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_VOTE_STATUS);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_VOTE_STATUS);
   tor_assert(tok->n_args != 0);
   if (!strcmp(tok->args[0], "vote")) {
     ns->type = NS_TYPE_VOTE;
@@ -2194,12 +2184,12 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   if (ns->type == NS_TYPE_VOTE || ns->type == NS_TYPE_OPINION) {
-    tok = find_first_by_keyword(tokens, K_PUBLISHED);
+    tok = find_by_keyword(tokens, K_PUBLISHED);
     if (parse_iso_time(tok->args[0], &ns->published))
       goto err;
 
     ns->supported_methods = smartlist_create();
-    tok = find_first_by_keyword(tokens, K_CONSENSUS_METHODS);
+    tok = find_opt_by_keyword(tokens, K_CONSENSUS_METHODS);
     if (tok) {
       for (i=0; i < tok->n_args; ++i)
         smartlist_add(ns->supported_methods, tor_strdup(tok->args[i]));
@@ -2207,7 +2197,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       smartlist_add(ns->supported_methods, tor_strdup("1"));
     }
   } else {
-    tok = find_first_by_keyword(tokens, K_CONSENSUS_METHOD);
+    tok = find_opt_by_keyword(tokens, K_CONSENSUS_METHOD);
     if (tok) {
       ns->consensus_method = (int)tor_parse_long(tok->args[0], 10, 1, INT_MAX,
                                                  &ok, NULL);
@@ -2218,19 +2208,19 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
   }
 
-  tok = find_first_by_keyword(tokens, K_VALID_AFTER);
+  tok = find_by_keyword(tokens, K_VALID_AFTER);
   if (parse_iso_time(tok->args[0], &ns->valid_after))
     goto err;
 
-  tok = find_first_by_keyword(tokens, K_FRESH_UNTIL);
+  tok = find_by_keyword(tokens, K_FRESH_UNTIL);
   if (parse_iso_time(tok->args[0], &ns->fresh_until))
     goto err;
 
-  tok = find_first_by_keyword(tokens, K_VALID_UNTIL);
+  tok = find_by_keyword(tokens, K_VALID_UNTIL);
   if (parse_iso_time(tok->args[0], &ns->valid_until))
     goto err;
 
-  tok = find_first_by_keyword(tokens, K_VOTING_DELAY);
+  tok = find_by_keyword(tokens, K_VOTING_DELAY);
   tor_assert(tok->n_args >= 2);
   ns->vote_seconds =
     (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &ok, NULL);
@@ -2257,14 +2247,14 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     goto err;
   }
 
-  if ((tok = find_first_by_keyword(tokens, K_CLIENT_VERSIONS))) {
+  if ((tok = find_opt_by_keyword(tokens, K_CLIENT_VERSIONS))) {
     ns->client_versions = tor_strdup(tok->args[0]);
   }
-  if ((tok = find_first_by_keyword(tokens, K_SERVER_VERSIONS))) {
+  if ((tok = find_opt_by_keyword(tokens, K_SERVER_VERSIONS))) {
     ns->server_versions = tor_strdup(tok->args[0]);
   }
 
-  tok = find_first_by_keyword(tokens, K_KNOWN_FLAGS);
+  tok = find_by_keyword(tokens, K_KNOWN_FLAGS);
   ns->known_flags = smartlist_create();
   inorder = 1;
   for (i = 0; i < tok->n_args; ++i) {
@@ -2357,7 +2347,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   if (ns->type != NS_TYPE_CONSENSUS &&
-      (tok = find_first_by_keyword(tokens, K_LEGACY_DIR_KEY))) {
+      (tok = find_opt_by_keyword(tokens, K_LEGACY_DIR_KEY))) {
     int bad = 1;
     if (strlen(tok->args[0]) == HEX_DIGEST_LEN) {
       networkstatus_voter_info_t *voter = smartlist_get(ns->voters, 0);
@@ -2551,8 +2541,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_CONSENSUS_DIGEST);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, K_CONSENSUS_DIGEST);
   if (strlen(tok->args[0]) != HEX_DIGEST_LEN) {
     log_warn(LD_DIR, "Wrong length on consensus-digest in detached "
              "networkstatus signatures");
@@ -2565,19 +2554,19 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_VALID_AFTER);
+  tok = find_by_keyword(tokens, K_VALID_AFTER);
   if (parse_iso_time(tok->args[0], &sigs->valid_after)) {
     log_warn(LD_DIR, "Bad valid-after in detached networkstatus signatures");
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_FRESH_UNTIL);
+  tok = find_by_keyword(tokens, K_FRESH_UNTIL);
   if (parse_iso_time(tok->args[0], &sigs->fresh_until)) {
     log_warn(LD_DIR, "Bad fresh-until in detached networkstatus signatures");
     goto err;
   }
 
-  tok = find_first_by_keyword(tokens, K_VALID_UNTIL);
+  tok = find_by_keyword(tokens, K_VALID_UNTIL);
   if (parse_iso_time(tok->args[0], &sigs->valid_until)) {
     log_warn(LD_DIR, "Bad valid-until in detached networkstatus signatures");
     goto err;
@@ -3165,10 +3154,26 @@ tokenize_string(memarea_t *area,
  * NULL if no such keyword is found.
  */
 static directory_token_t *
-find_first_by_keyword(smartlist_t *s, directory_keyword keyword)
+find_opt_by_keyword(smartlist_t *s, directory_keyword keyword)
 {
   SMARTLIST_FOREACH(s, directory_token_t *, t, if (t->tp == keyword) return t);
   return NULL;
+}
+
+/** Find the first token in <b>s</b> whose keyword is <b>keyword</b>; fail
+ * with an assert if no such keyword is found.
+ */
+static directory_token_t *
+_find_by_keyword(smartlist_t *s, directory_keyword keyword,
+                 const char *keyword_as_string)
+{
+  directory_token_t *tok = find_opt_by_keyword(s, keyword);
+  if (PREDICT_UNLIKELY(!tok)) {
+    log_err(LD_BUG, "Missing %s [%d] in directory object that should have "
+         "been validated. Internal error.", keyword_as_string, (int)keyword);
+    tor_assert(tok);
+  }
+  return tok;
 }
 
 /** Return a newly allocated smartlist of all accept or reject tokens in
@@ -3497,8 +3502,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     goto err;
   }
   /* Parse base32-encoded descriptor ID. */
-  tok = find_first_by_keyword(tokens, R_RENDEZVOUS_SERVICE_DESCRIPTOR);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, R_RENDEZVOUS_SERVICE_DESCRIPTOR);
   tor_assert(tok == smartlist_get(tokens, 0));
   tor_assert(tok->n_args == 1);
   if (strlen(tok->args[0]) != REND_DESC_ID_V2_LEN_BASE32 ||
@@ -3513,8 +3517,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     goto err;
   }
   /* Parse descriptor version. */
-  tok = find_first_by_keyword(tokens, R_VERSION);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, R_VERSION);
   tor_assert(tok->n_args == 1);
   result->version =
     (int) tor_parse_long(tok->args[0], 10, 0, INT_MAX, &num_ok, NULL);
@@ -3528,13 +3531,11 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     goto err;
   }
   /* Parse public key. */
-  tok = find_first_by_keyword(tokens, R_PERMANENT_KEY);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, R_PERMANENT_KEY);
   result->pk = tok->key;
   tok->key = NULL; /* Prevent free */
   /* Parse secret ID part. */
-  tok = find_first_by_keyword(tokens, R_SECRET_ID_PART);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, R_SECRET_ID_PART);
   tor_assert(tok->n_args == 1);
   if (strlen(tok->args[0]) != REND_SECRET_ID_PART_LEN_BASE32 ||
       strspn(tok->args[0], BASE32_CHARS) != REND_SECRET_ID_PART_LEN_BASE32) {
@@ -3548,16 +3549,14 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   }
   /* Parse publication time -- up-to-date check is done when storing the
    * descriptor. */
-  tok = find_first_by_keyword(tokens, R_PUBLICATION_TIME);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, R_PUBLICATION_TIME);
   tor_assert(tok->n_args == 1);
   if (parse_iso_time(tok->args[0], &result->timestamp) < 0) {
     log_warn(LD_REND, "Invalid publication time: '%s'", tok->args[0]);
     goto err;
   }
   /* Parse protocol versions. */
-  tok = find_first_by_keyword(tokens, R_PROTOCOL_VERSIONS);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, R_PROTOCOL_VERSIONS);
   tor_assert(tok->n_args == 1);
   versions = smartlist_create();
   smartlist_split_string(versions, tok->args[0], ",",
@@ -3572,7 +3571,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));
   smartlist_free(versions);
   /* Parse encrypted introduction points. Don't verify. */
-  tok = find_first_by_keyword(tokens, R_INTRODUCTION_POINTS);
+  tok = find_opt_by_keyword(tokens, R_INTRODUCTION_POINTS);
   if (tok) {
     if (strcmp(tok->object_type, "MESSAGE")) {
       log_warn(LD_DIR, "Bad object type: introduction points should be of "
@@ -3587,8 +3586,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     *intro_points_encrypted_size_out = 0;
   }
   /* Parse and verify signature. */
-  tok = find_first_by_keyword(tokens, R_SIGNATURE);
-  tor_assert(tok);
+  tok = find_by_keyword(tokens, R_SIGNATURE);
   note_crypto_pk_op(VERIFY_RTR);
   if (check_signature_token(desc_hash, tok, result->pk, 0,
                             "v2 rendezvous service descriptor") < 0)
@@ -3786,8 +3784,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
     intro = tor_malloc_zero(sizeof(rend_intro_point_t));
     info = intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
     /* Parse identifier. */
-    tok = find_first_by_keyword(tokens, R_IPO_IDENTIFIER);
-    tor_assert(tok);
+    tok = find_by_keyword(tokens, R_IPO_IDENTIFIER);
     if (base32_decode(info->identity_digest, DIGEST_LEN,
                       tok->args[0], REND_INTRO_POINT_ID_LEN_BASE32) < 0) {
       log_warn(LD_REND, "Identity digest contains illegal characters: %s",
@@ -3800,7 +3797,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
     base16_encode(info->nickname + 1, sizeof(info->nickname) - 1,
                   info->identity_digest, DIGEST_LEN);
     /* Parse IP address. */
-    tok = find_first_by_keyword(tokens, R_IPO_IP_ADDRESS);
+    tok = find_by_keyword(tokens, R_IPO_IP_ADDRESS);
     if (tor_addr_from_str(&info->addr, tok->args[0])<0) {
       log_warn(LD_REND, "Could not parse introduction point address.");
       rend_intro_point_free(intro);
@@ -3813,7 +3810,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
     }
 
     /* Parse onion port. */
-    tok = find_first_by_keyword(tokens, R_IPO_ONION_PORT);
+    tok = find_by_keyword(tokens, R_IPO_ONION_PORT);
     info->port = (uint16_t) tor_parse_long(tok->args[0],10,1,65535,
                                            &num_ok,NULL);
     if (!info->port || !num_ok) {
@@ -3823,11 +3820,11 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
       goto err;
     }
     /* Parse onion key. */
-    tok = find_first_by_keyword(tokens, R_IPO_ONION_KEY);
+    tok = find_by_keyword(tokens, R_IPO_ONION_KEY);
     info->onion_key = tok->key;
     tok->key = NULL; /* Prevent free */
     /* Parse service key. */
-    tok = find_first_by_keyword(tokens, R_IPO_SERVICE_KEY);
+    tok = find_by_keyword(tokens, R_IPO_SERVICE_KEY);
     intro->intro_key = tok->key;
     tok->key = NULL; /* Prevent free */
     /* Add extend info to list of introduction points. */
@@ -3897,8 +3894,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
       goto err;
     }
     /* Parse client name. */
-    tok = find_first_by_keyword(tokens, C_CLIENT_NAME);
-    tor_assert(tok);
+    tok = find_by_keyword(tokens, C_CLIENT_NAME);
     tor_assert(tok == smartlist_get(tokens, 0));
     tor_assert(tok->n_args == 1);
 
@@ -3920,15 +3916,14 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
     parsed_entry->client_name = tor_strdup(tok->args[0]);
     strmap_set(parsed_clients, parsed_entry->client_name, parsed_entry);
     /* Parse client key. */
-    tok = find_first_by_keyword(tokens, C_CLIENT_KEY);
+    tok = find_opt_by_keyword(tokens, C_CLIENT_KEY);
     if (tok) {
       parsed_entry->client_key = tok->key;
       tok->key = NULL; /* Prevent free */
     }
 
     /* Parse descriptor cookie. */
-    tok = find_first_by_keyword(tokens, C_DESCRIPTOR_COOKIE);
-    tor_assert(tok);
+    tok = find_by_keyword(tokens, C_DESCRIPTOR_COOKIE);
     tor_assert(tok->n_args == 1);
     if (strlen(tok->args[0]) != REND_DESC_COOKIE_LEN_BASE64 + 2) {
       log_warn(LD_REND, "Descriptor cookie has illegal length: %s",
