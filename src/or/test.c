@@ -1697,7 +1697,7 @@ static void
 test_util_smartlist_strings(void)
 {
   smartlist_t *sl = smartlist_create();
-  char *cp;
+  char *cp=NULL, *cp_alloc=NULL;
   size_t sz;
 
   /* Test split and join */
@@ -1710,21 +1710,21 @@ test_util_smartlist_strings(void)
   test_streq("a", smartlist_get(sl, 1));
   test_streq("bc", smartlist_get(sl, 2));
   test_streq("", smartlist_get(sl, 3));
-  cp = smartlist_join_strings(sl, "", 0, NULL);
-  test_streq(cp, "abcabc");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "!", 0, NULL);
-  test_streq(cp, "abc!a!bc!");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 0, NULL);
-  test_streq(cp, "abcXYaXYbcXY");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 1, NULL);
-  test_streq(cp, "abcXYaXYbcXYXY");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "", 1, NULL);
-  test_streq(cp, "abcabc");
-  tor_free(cp);
+  cp_alloc = smartlist_join_strings(sl, "", 0, NULL);
+  test_streq(cp_alloc, "abcabc");
+  tor_free(cp_alloc);
+  cp_alloc = smartlist_join_strings(sl, "!", 0, NULL);
+  test_streq(cp_alloc, "abc!a!bc!");
+  tor_free(cp_alloc);
+  cp_alloc = smartlist_join_strings(sl, "XY", 0, NULL);
+  test_streq(cp_alloc, "abcXYaXYbcXY");
+  tor_free(cp_alloc);
+  cp_alloc = smartlist_join_strings(sl, "XY", 1, NULL);
+  test_streq(cp_alloc, "abcXYaXYbcXYXY");
+  tor_free(cp_alloc);
+  cp_alloc = smartlist_join_strings(sl, "", 1, NULL);
+  test_streq(cp_alloc, "abcabc");
+  tor_free(cp_alloc);
 
   smartlist_split_string(sl, "/def/  /ghijk", "/", 0, 0);
   test_eq(8, smartlist_len(sl));
@@ -1768,12 +1768,12 @@ test_util_smartlist_strings(void)
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
 
-  cp = smartlist_join_strings(sl, "XY", 0, NULL);
-  test_streq(cp, "");
-  tor_free(cp);
-  cp = smartlist_join_strings(sl, "XY", 1, NULL);
-  test_streq(cp, "XY");
-  tor_free(cp);
+  cp_alloc = smartlist_join_strings(sl, "XY", 0, NULL);
+  test_streq(cp_alloc, "");
+  tor_free(cp_alloc);
+  cp_alloc = smartlist_join_strings(sl, "XY", 1, NULL);
+  test_streq(cp_alloc, "XY");
+  tor_free(cp_alloc);
 
   smartlist_split_string(sl, " z <> zhasd <>  <> bnud<>   ", "<>",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -1805,13 +1805,13 @@ test_util_smartlist_strings(void)
   smartlist_split_string(sl, "the,onion,router,by,arma,and,nickm", ",", 0, 0);
   test_eq(7, smartlist_len(sl));
   smartlist_sort(sl, _compare_strs);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp,"and,arma,by,nickm,onion,router,the");
-  tor_free(cp);
+  cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp_alloc,"and,arma,by,nickm,onion,router,the");
+  tor_free(cp_alloc);
   smartlist_swap(sl, 1, 5);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp,"and,router,by,nickm,onion,arma,the");
-  tor_free(cp);
+  cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp_alloc,"and,router,by,nickm,onion,arma,the");
+  tor_free(cp_alloc);
   smartlist_shuffle(sl);
   test_eq(7, smartlist_len(sl));
   test_assert(smartlist_string_isin(sl, "and"));
@@ -1848,17 +1848,17 @@ test_util_smartlist_strings(void)
 
   /* Test reverse() and pop_last() */
   smartlist_reverse(sl);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp,"the,router,onion,nickm,by,arma,and");
-  tor_free(cp);
+  cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp_alloc,"the,router,onion,nickm,by,arma,and");
+  tor_free(cp_alloc);
   cp = smartlist_pop_last(sl);
-  test_streq(cp, "and");
-  tor_free(cp);
+  test_streq(cp_alloc, "and");
+  tor_free(cp_alloc);
   test_eq(smartlist_len(sl), 6);
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_clear(sl);
-  cp = smartlist_pop_last(sl);
-  test_eq(cp, NULL);
+  cp_alloc = smartlist_pop_last(sl);
+  test_eq(cp_alloc, NULL);
 
   /* Test uniq() */
   smartlist_split_string(sl,
@@ -1866,9 +1866,9 @@ test_util_smartlist_strings(void)
                      ",", 0, 0);
   smartlist_sort(sl, _compare_strs);
   smartlist_uniq(sl, _compare_strs, _tor_free);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp, "50,a,canal,man,noon,panama,plan,radar");
-  tor_free(cp);
+  cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp_alloc, "50,a,canal,man,noon,panama,plan,radar");
+  tor_free(cp_alloc);
 
   /* Test string_isin and isin_case and num_isin */
   test_assert(smartlist_string_isin(sl, "noon"));
@@ -1907,19 +1907,19 @@ test_util_smartlist_strings(void)
   smartlist_add(sl, cp);
   smartlist_remove(sl, cp);
   tor_free(cp);
-  cp = smartlist_join_strings(sl, ",", 0, NULL);
-  test_streq(cp, "Some,say,the,Earth,fire,end,in,ice,and,some,in");
-  tor_free(cp);
+  cp_alloc = smartlist_join_strings(sl, ",", 0, NULL);
+  test_streq(cp_alloc, "Some,say,the,Earth,fire,end,in,ice,and,some,in");
+  tor_free(cp_alloc);
   smartlist_string_remove(sl, "in");
-  cp = smartlist_join_strings2(sl, "+XX", 1, 0, &sz);
-  test_streq(cp, "Some+say+the+Earth+fire+end+some+ice+and");
+  cp_alloc = smartlist_join_strings2(sl, "+XX", 1, 0, &sz);
+  test_streq(cp_alloc, "Some+say+the+Earth+fire+end+some+ice+and");
   test_eq((int)sz, 40);
-  tor_free(cp);
 
  done:
 
   SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
   smartlist_free(sl);
+  tor_free(cp_alloc);
 }
 
 static void
@@ -2015,7 +2015,7 @@ test_util_smartlist_join(void)
     smartlist_t *sl = smartlist_create();
     smartlist_t *sl2 = smartlist_create(), *sl3 = smartlist_create(),
                 *sl4 = smartlist_create();
-    char *cp;
+    char *joined=NULL;
     /* unique, sorted. */
     smartlist_split_string(sl,
                            "Abashments Ambush Anchorman Bacon Banks Borscht "
@@ -2042,13 +2042,13 @@ test_util_smartlist_join(void)
     SMARTLIST_FOREACH(sl4, const char *, cp,
                       test_assert(smartlist_isin(sl, cp) &&
                                   smartlist_string_isin(sl2, cp)));
-    cp = smartlist_join_strings(sl3, ",", 0, NULL);
-    test_streq(cp, "Anemias,Anemias,Crossbowmen,Work");
-    tor_free(cp);
-    cp = smartlist_join_strings(sl4, ",", 0, NULL);
-    test_streq(cp, "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
+    joined = smartlist_join_strings(sl3, ",", 0, NULL);
+    test_streq(joined, "Anemias,Anemias,Crossbowmen,Work");
+    tor_free(joined);
+    joined = smartlist_join_strings(sl4, ",", 0, NULL);
+    test_streq(joined, "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
                "Knish,Know,Manners,Manners,Maraschinos,Wombats,Wombats");
-    tor_free(cp);
+    tor_free(joined);
 
  done:
     smartlist_free(sl4);
@@ -2057,6 +2057,7 @@ test_util_smartlist_join(void)
     smartlist_free(sl2);
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_free(sl);
+    tor_free(joined);
 }
 
 static void
