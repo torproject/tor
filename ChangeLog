@@ -24,6 +24,8 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
       Partial implementation of proposal 157.
     - Start serving certificates by <identity digest, signing key digest>
       pairs.  Partial implementation of proposal 157.
+    - Clients now never report any stream end reason except 'MISC'.
+      Implements proposal 148.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has

@@ -183,14 +183,37 @@ connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
   return 0;
 }
 
-/** Send a relay end cell from stream <b>conn</b> down conn's circuit.  Set
- * the relay end cell's reason for closing as <b>reason</b>.
+/** Send a raw end cell to the stream with ID <b>stream_id</b> out over the
+ * <b>circ</b> towards the hop identified with <b>cpath_layer</b>. If this
+ * is not a client connection, set the relay end cell's reason for closing
+ * as <b>reason</b> */
+static int
+relay_send_end_cell_from_edge(streamid_t stream_id, circuit_t *circ,
+                              uint8_t reason, crypt_path_t *cpath_layer)
+{
+  char payload[1];
+
+  if (CIRCUIT_PURPOSE_IS_CLIENT(circ->purpose)) {
+    /* Never send the server an informative reason code; it doesn't need to
+     * know why the client stream is failing. */
+    reason = END_STREAM_REASON_MISC;
+  }
+
+  payload[0] = (char) reason;
+
+  return relay_send_command_from_edge(stream_id, circ, RELAY_COMMAND_END,
+                                      payload, 1, cpath_layer);
+}
+
+/** Send a relay end cell from stream <b>conn</b> down conn's circuit, and
+ * remember that we've done so.  If this is not a client connection, set the
+ * relay end cell's reason for closing as <b>reason</b>.
  *
  * Return -1 if this function has already been called on this conn,
  * else return 0.
  */
 int
-connection_edge_end(edge_connection_t *conn, char reason)
+connection_edge_end(edge_connection_t *conn, uint8_t reason)
 {
   char payload[RELAY_PAYLOAD_SIZE];
   size_t payload_len=1;
@@ -210,7 +233,15 @@ connection_edge_end(edge_connection_t *conn, char reason)
     return 0;
   }
 
-  payload[0] = reason;
+  circ = circuit_get_by_edge_conn(conn);
+  if (circ && CIRCUIT_PURPOSE_IS_CLIENT(circ->purpose)) {
+    /* If this is a client circuit, don't send the server an informative
+     * reason code; it doesn't need to know why the client stream is
+     * failing. */
+    reason = END_STREAM_REASON_MISC;
+  }
+
+  payload[0] = (char)reason;
   if (reason == END_STREAM_REASON_EXITPOLICY &&
       !connection_edge_is_rendezvous_stream(conn)) {
     int addrlen;
@@ -225,7 +256,6 @@ connection_edge_end(edge_connection_t *conn, char reason)
     payload_len += 4+addrlen;
   }
 
-  circ = circuit_get_by_edge_conn(conn);
   if (circ && !circ->marked_for_close) {
     log_debug(LD_EDGE,"Sending end on conn (fd %d).",conn->_base.s);
     connection_edge_send_command(conn, RELAY_COMMAND_END,
@@ -2455,7 +2485,6 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   relay_header_t rh;
   char *address=NULL;
   uint16_t port;
-  char end_payload[1];
   or_circuit_t *or_circ = NULL;
 
   assert_circuit_ok(circ);
@@ -2473,9 +2502,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Relay begin cell at non-server. Closing.");
-    end_payload[0] = END_STREAM_REASON_EXITPOLICY;
-    relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                 end_payload, 1, NULL);
+    relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                  END_STREAM_REASON_EXITPOLICY, NULL);
     return 0;
   }
 
@@ -2483,26 +2511,23 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     if (!memchr(cell->payload+RELAY_HEADER_SIZE, 0, rh.length)) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Relay begin cell has no \\0. Closing.");
-      end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_TORPROTOCOL, NULL);
       return 0;
     }
     if (parse_addr_port(LOG_PROTOCOL_WARN, cell->payload+RELAY_HEADER_SIZE,
                         &address,NULL,&port)<0) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Unable to parse addr:port in relay begin cell. Closing.");
-      end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_TORPROTOCOL, NULL);
       return 0;
     }
     if (port==0) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Missing port in relay begin cell. Closing.");
-      end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_TORPROTOCOL, NULL);
       tor_free(address);
       return 0;
     }
@@ -2514,18 +2539,16 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
        */
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Attempt to open a stream on first hop of circuit. Closing.");
-      end_payload[0] = END_STREAM_REASON_TORPROTOCOL;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_TORPROTOCOL, NULL);
       tor_free(address);
       return 0;
     }
   } else if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     if (!directory_permits_begindir_requests(get_options()) ||
         circ->purpose != CIRCUIT_PURPOSE_OR) {
-      end_payload[0] = END_STREAM_REASON_NOTDIRECTORY;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_NOTDIRECTORY, NULL);
       return 0;
     }
     if (or_circ && or_circ->p_conn && or_circ->p_conn->_base.address)
@@ -2537,9 +2560,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                * need to set it to something nonzero. */
   } else {
     log_warn(LD_BUG, "Got an unexpected command %d", (int)rh.command);
-    end_payload[0] = END_STREAM_REASON_INTERNAL;
-    relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                 end_payload, 1, NULL);
+    relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                  END_STREAM_REASON_INTERNAL, NULL);
     return 0;
   }
 
@@ -2564,9 +2586,9 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     if (rend_service_set_connection_addr_port(n_stream, origin_circ) < 0) {
       log_info(LD_REND,"Didn't find rendezvous service (port %d)",
                n_stream->_base.port);
-      end_payload[0] = END_STREAM_REASON_EXITPOLICY;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, origin_circ->cpath->prev);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_EXITPOLICY,
+                                    origin_circ->cpath->prev);
       connection_free(TO_CONN(n_stream));
       tor_free(address);
       return 0;
@@ -2591,9 +2613,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   /* default to failed, change in dns_resolve if it turns out not to fail */
 
   if (we_are_hibernating()) {
-    end_payload[0] = END_STREAM_REASON_HIBERNATING;
-    relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                 end_payload, 1, NULL);
+    relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                  END_STREAM_REASON_HIBERNATING, NULL);
     connection_free(TO_CONN(n_stream));
     return 0;
   }
@@ -2617,9 +2638,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       connection_exit_connect(n_stream);
       return 0;
     case -1: /* resolve failed */
-      end_payload[0] = END_STREAM_REASON_RESOLVEFAILED;
-      relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
+      relay_send_end_cell_from_edge(rh.stream_id, circ,
+                                    END_STREAM_REASON_RESOLVEFAILED, NULL);
       /* n_stream got freed. don't touch it. */
       break;
     case 0: /* resolve added to pending list */

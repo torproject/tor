@@ -457,6 +457,8 @@ typedef enum {
 /** Client-side circuit purpose: at Alice, rendezvous established. */
 #define CIRCUIT_PURPOSE_C_REND_JOINED 12
 
+#define _CIRCUIT_PURPOSE_C_MAX 12
+
 /** Hidden-service-side circuit purpose: at Bob, waiting for introductions. */
 #define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 13
 /** Hidden-service-side circuit purpose: at Bob, successfully established
@@ -478,6 +480,9 @@ typedef enum {
 /** True iff the circuit purpose <b>p</b> is for a circuit that
  * originated at this node. */
 #define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
+#define CIRCUIT_PURPOSE_IS_CLIENT(p) \
+  ((p)> _CIRCUIT_PURPOSE_OR_MAX &&    \
+   (p)<=_CIRCUIT_PURPOSE_C_MAX)
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
 
 /** How many circuits do we want simultaneously in-progress to handle
@@ -2970,7 +2975,7 @@ int connection_edge_reached_eof(edge_connection_t *conn);
 int connection_edge_process_inbuf(edge_connection_t *conn,
                                   int package_partial);
 int connection_edge_destroy(circid_t circ_id, edge_connection_t *conn);
-int connection_edge_end(edge_connection_t *conn, char reason);
+int connection_edge_end(edge_connection_t *conn, uint8_t reason);
 int connection_edge_end_errno(edge_connection_t *conn);
 int connection_edge_finished_flushing(edge_connection_t *conn);
 int connection_edge_finished_connecting(edge_connection_t *conn);
