@@ -137,6 +137,7 @@ R d Setting DirPort when acting as bridge will give false Warnings
 For 0.2.1.x:
   - Proposals to do:
     o 110: avoid infinite-length circuits
+      * Figure out the right value for max RELAY_EARLY cells (Bug 878)
     - 117: IPv6 Exits
       - Internal code support for ipv6:
         o Clone ipv6 functions (inet_ntop, inet_pton) where they don't exist.
@@ -160,15 +161,16 @@ R   o 128: families of private bridges
     o 135: simplify configuration of private tor networks.
 K   - 143: Improvements of Distributed Hidden Service Descriptor Storage:
            only easy parts for 0.2.1.x, defer complex ones to 0.2.2.x.
-    - 148: Stream end reasons from the client side should be uniform.
+    * 148: Stream end reasons from the client side should be uniform.
 K   o 155: Four Improvements of Hidden Service Performance
     - 145: Separate "suitable from a guard" from "suitable as a new guard"
     - 146: Adding new flag to reflect long-term stability
     - 149: Using data from NETINFO cells
-      - Don't extend a circuit over a noncanonical connection with
+      * Don't extend a circuit over a noncanonical connection with
         mismatched address.
       - Learn our outgoing IP address from netinfo cells?
       - Learn skew from netinfo cells?
+    * 157: Make certificate downloads specific.
 
   - Proposals to write:
     - Fix voting to handle bug 608 case when multiple servers get
@@ -188,7 +190,7 @@ N   . Draft proposal for GeoIP aggregation (see external constraints *)
       authorities can put in more accurate numbers in the future.
 
   - Spec compliance:
-    - Make sure that clients could do the new handshake without sending any
+    * Make sure that clients could do the new handshake without sending any
       certs, if they wanted.
 
   - Tiny designs to write:
