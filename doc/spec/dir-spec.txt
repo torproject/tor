@@ -758,6 +758,25 @@ $Id$
         The directory server's public signing key.  This key MUST be at
         least 1024 bits, and MAY be longer.
 
+    "dir-key-crosscert" NL CrossSignature NL
+
+        [At most once.]
+
+        NOTE: Authorities MUST include this field in all newly generated
+        certificates.  A future version of this specification will make
+        the field required.
+
+        CrossSignature is a signature, made using the certificate's signing
+        key, of the digest of the PKCS1-padded hash of the certificate's
+        identity key.  For backward compatibility with broken versions of the
+        parser, we wrap the base64-encoded signature in -----BEGIN ID
+        SIGNATURE---- and -----END ID SIGNATURE----- tags.  Implementations
+        MUST allow the "ID " portion to be omitted, however.
+
+        When encountering a certificate with a dir-key-crosscert entry,
+        implementations MUST verify that the signature is a correct signature
+        of the hash of the identity key using the signing key.
+
     "dir-key-certification" NL Signature NL
 
         [At end, exactly once.]

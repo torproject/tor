@@ -13,6 +13,11 @@ History:
      Changed name of cross certification field to match the other authority
      certificate fields.
 
+Status:
+
+  Cross-certification is implemented for new certificates, but not yet
+  required.
+
 Overview:
 
   Tor's directory specification gives two ways to download a certificate:

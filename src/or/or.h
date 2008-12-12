@@ -1729,6 +1729,7 @@ typedef struct authority_cert_t {
   time_t expires;
   uint32_t addr;
   uint16_t dir_port;
+  uint8_t is_cross_certified;
 } authority_cert_t;
 
 /** Bitfield enum type listing types of directory authority/directory

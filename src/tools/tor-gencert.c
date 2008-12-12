@@ -394,6 +394,20 @@ get_fingerprint(EVP_PKEY *pkey, char *out)
   return r;
 }
 
+
+/** Set <b>out</b> to the hex-encoded fingerprint of <b>pkey</b>. */
+static int
+get_digest(EVP_PKEY *pkey, char *out)
+{
+  int r = 1;
+  crypto_pk_env_t *pk = _crypto_new_pk_env_rsa(EVP_PKEY_get1_RSA(pkey));
+  if (pk) {
+    r = crypto_pk_get_digest(pk, out);
+    crypto_free_pk_env(pk);
+  }
+  return r;
+}
+
 /** Generate a new certificate for our loaded or generated keys, and write it
  * to disk.  Return 0 on success, nonzero on failure. */
 static int
@@ -404,6 +418,7 @@ generate_certificate(void)
   struct tm tm;
   char published[ISO_TIME_LEN+1];
   char expires[ISO_TIME_LEN+1];
+  char id_digest[DIGEST_LEN];
   char fingerprint[FINGERPRINT_LEN+1];
   char *ident = key_to_string(identity_key);
   char *signing = key_to_string(signing_key);
@@ -414,6 +429,7 @@ generate_certificate(void)
   int r;
 
   get_fingerprint(identity_key, fingerprint);
+  get_digest(identity_key, id_digest);
 
   tor_localtime_r(&now, &tm);
   tm.tm_mon += months_lifetime;
@@ -429,11 +445,26 @@ generate_certificate(void)
                "dir-key-expires %s\n"
                "dir-identity-key\n%s"
                "dir-signing-key\n%s"
-               "dir-key-certification\n",
+               "dir-key-crosscert\n"
+               "-----BEGIN ID SIGNATURE-----\n",
                address?"\ndir-address ":"", address?address:"",
-               fingerprint, published, expires, ident, signing);
+               fingerprint, published, expires, ident, signing
+               );
   tor_free(ident);
   tor_free(signing);
+
+  /* Append a cross-certification */
+  r = RSA_private_encrypt(DIGEST_LEN, (unsigned char*)id_digest,
+                          (unsigned char*)signature,
+                          EVP_PKEY_get1_RSA(signing_key),
+                          RSA_PKCS1_PADDING);
+  signed_len = strlen(buf);
+  base64_encode(buf+signed_len, sizeof(buf)-signed_len, signature, r);
+
+  strlcat(buf,
+          "-----END ID SIGNATURE-----\n"
+          "dir-key-certification\n", sizeof(buf));
+
   signed_len = strlen(buf);
   SHA1((const unsigned char*)buf,signed_len,(unsigned char*)digest);
 

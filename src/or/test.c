@@ -3084,6 +3084,7 @@ test_v3_networkstatus(void)
   /* Parse certificates and keys. */
   cert1 = authority_cert_parse_from_string(AUTHORITY_CERT_1, NULL);
   test_assert(cert1);
+  test_assert(cert1->is_cross_certified);
   cert2 = authority_cert_parse_from_string(AUTHORITY_CERT_2, NULL);
   test_assert(cert2);
   cert3 = authority_cert_parse_from_string(AUTHORITY_CERT_3, NULL);
@@ -3360,15 +3361,15 @@ test_v3_networkstatus(void)
   test_eq(4, smartlist_len(con->voters)); /*3 voters, 1 legacy key.*/
   /* The voter id digests should be in this order. */
   test_assert(memcmp(cert2->cache_info.identity_digest,
-                     cert3->cache_info.identity_digest,DIGEST_LEN)<0);
-  test_assert(memcmp(cert3->cache_info.identity_digest,
                      cert1->cache_info.identity_digest,DIGEST_LEN)<0);
+  test_assert(memcmp(cert1->cache_info.identity_digest,
+                     cert3->cache_info.identity_digest,DIGEST_LEN)<0);
   test_same_voter(smartlist_get(con->voters, 1),
                   smartlist_get(v2->voters, 0));
   test_same_voter(smartlist_get(con->voters, 2),
-                  smartlist_get(v3->voters, 0));
-  test_same_voter(smartlist_get(con->voters, 3),
                   smartlist_get(v1->voters, 0));
+  test_same_voter(smartlist_get(con->voters, 3),
+                  smartlist_get(v3->voters, 0));
 
   test_assert(!con->cert);
   test_eq(2, smartlist_len(con->routerstatus_list));
@@ -3412,20 +3413,22 @@ test_v3_networkstatus(void)
   test_assert(rs->is_valid);
   test_assert(!rs->is_named);
   /* XXXX check version */
+  // x231
+  // x213
 
-  /* Check signatures.  the first voter is pseudo.  The second one hasn't
-     signed.  The third one has signed: validate it. */
+  /* Check signatures.  the first voter is a pseudo-entry with a legacy key.
+   * The second one hasn't signed.  The fourth one has signed: validate it. */
   voter = smartlist_get(con->voters, 1);
   test_assert(!voter->signature);
   test_assert(!voter->good_signature);
   test_assert(!voter->bad_signature);
 
-  voter = smartlist_get(con->voters, 2);
+  voter = smartlist_get(con->voters, 3);
   test_assert(voter->signature);
   test_assert(!voter->good_signature);
   test_assert(!voter->bad_signature);
   test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 2),
+                                               smartlist_get(con->voters, 3),
                                                cert3));
   test_assert(voter->signature);
   test_assert(voter->good_signature);
@@ -3503,7 +3506,7 @@ test_v3_networkstatus(void)
                                                smartlist_get(con->voters, 1),
                                                cert2));
     test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 3),
+                                               smartlist_get(con->voters, 2),
                                                cert1));
 
   }

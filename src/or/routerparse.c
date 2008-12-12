@@ -70,6 +70,7 @@ typedef enum {
   K_DIR_KEY_PUBLISHED,
   K_DIR_KEY_EXPIRES,
   K_DIR_KEY_CERTIFICATION,
+  K_DIR_KEY_CROSSCERT,
   K_DIR_ADDRESS,
 
   K_VOTE_STATUS,
@@ -328,6 +329,7 @@ static token_rule_t dir_token_table[] = {
   T1("dir-key-published",K_DIR_KEY_PUBLISHED,        CONCAT_ARGS, NO_OBJ),   \
   T1("dir-key-expires",  K_DIR_KEY_EXPIRES,          CONCAT_ARGS, NO_OBJ),   \
   T1("dir-signing-key",  K_DIR_SIGNING_KEY,          NO_ARGS,     NEED_KEY ),\
+  T01("dir-key-crosscert", K_DIR_KEY_CROSSCERT,       NO_ARGS,    NEED_OBJ ),\
   T1("dir-key-certification", K_DIR_KEY_CERTIFICATION,                       \
                                                      NO_ARGS,     NEED_OBJ), \
   T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ),
@@ -468,10 +470,12 @@ static directory_token_t *get_next_token(memarea_t *area,
                                          const char **s,
                                          const char *eos,
                                          token_rule_t *table);
+#define CST_CHECK_AUTHORITY   (1<<0)
+#define CST_NO_CHECK_OBJTYPE  (1<<1)
 static int check_signature_token(const char *digest,
                                  directory_token_t *tok,
                                  crypto_pk_env_t *pkey,
-                                 int check_authority,
+                                 int flags,
                                  const char *doctype);
 static crypto_pk_env_t *find_dir_signing_key(const char *str, const char *eos);
 static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
@@ -714,7 +718,8 @@ router_parse_directory(const char *str)
   }
   declared_key = find_dir_signing_key(str, str+strlen(str));
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_signature_token(digest, tok, declared_key, 1, "directory")<0)
+  if (check_signature_token(digest, tok, declared_key,
+                            CST_CHECK_AUTHORITY, "directory")<0)
     goto err;
 
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
@@ -805,7 +810,8 @@ router_parse_runningrouters(const char *str)
   }
   declared_key = find_dir_signing_key(str, eos);
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_signature_token(digest, tok, declared_key, 1, "running-routers")
+  if (check_signature_token(digest, tok, declared_key,
+                            CST_CHECK_AUTHORITY, "running-routers")
       < 0)
     goto err;
 
@@ -896,18 +902,22 @@ dir_signing_key_is_trusted(crypto_pk_env_t *key)
 
 /** Check whether the object body of the token in <b>tok</b> has a good
  * signature for <b>digest</b> using key <b>pkey</b>.  If
- * <b>check_authority</b> is set, make sure that <b>pkey</b> is the key of a
- * directory authority.  Use <b>doctype</b> as the type of the document when
- * generating log messages.  Return 0 on success, negative on failure.
+ * <b>CST_CHECK_AUTHORITY</b> is set, make sure that <b>pkey</b> is the key of
+ * a directory authority.  If <b>CST_NO_CHECK_OBJTYPE</b> is set, do not check
+ * the object type of the signature object. Use <b>doctype</b> as the type of
+ * the document when generating log messages.  Return 0 on success, negative
+ * on failure.
  */
 static int
 check_signature_token(const char *digest,
                       directory_token_t *tok,
                       crypto_pk_env_t *pkey,
-                      int check_authority,
+                      int flags,
                       const char *doctype)
 {
   char *signed_digest;
+  const int check_authority = (flags & CST_CHECK_AUTHORITY);
+  const int check_objtype = ! (flags & CST_NO_CHECK_OBJTYPE);
 
   tor_assert(pkey);
   tor_assert(tok);
@@ -920,9 +930,11 @@ check_signature_token(const char *digest,
     return -1;
   }
 
-  if (strcmp(tok->object_type, "SIGNATURE")) {
-    log_warn(LD_DIR, "Bad object type on %s signature", doctype);
-    return -1;
+  if (check_objtype) {
+    if (strcmp(tok->object_type, "SIGNATURE")) {
+      log_warn(LD_DIR, "Bad object type on %s signature", doctype);
+      return -1;
+    }
   }
 
   signed_digest = tor_malloc(tok->object_size);
@@ -1664,12 +1676,26 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
       log_debug(LD_DIR, "We already checked the signature on this "
                 "certificate; no need to do so again.");
       found = 1;
+      cert->is_cross_certified = old_cert->is_cross_certified;
     }
   }
   if (!found) {
     if (check_signature_token(digest, tok, cert->identity_key, 0,
                               "key certificate")) {
       goto err;
+    }
+
+    if ((tok = find_opt_by_keyword(tokens, K_DIR_KEY_CROSSCERT))) {
+      /* XXXX Once all authorities generate cross-certified certificates,
+       * make this field mandatory. */
+      if (check_signature_token(cert->cache_info.identity_digest,
+                                tok,
+                                cert->signing_key,
+                                CST_NO_CHECK_OBJTYPE,
+                                "key cross-certification")) {
+        goto err;
+      }
+      cert->is_cross_certified = 1;
     }
   }
 
