@@ -826,6 +826,9 @@ see tor-design.pdf.
    OPs and ORs MUST accept reasons not on the above list, since future
    versions of Tor may provide more fine-grained reasons.
 
+   Tors SHOULD NOT send any reason except REASON_MISC for a stream that they
+   have originated.
+
    [*] Older versions of Tor also send this reason when connections are
        reset.
    [**] Due to a bug in versions of Tor through 0095, error reason 8 must

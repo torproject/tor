@@ -161,7 +161,7 @@ R   o 128: families of private bridges
     o 135: simplify configuration of private tor networks.
 K   - 143: Improvements of Distributed Hidden Service Descriptor Storage:
            only easy parts for 0.2.1.x, defer complex ones to 0.2.2.x.
-    * 148: Stream end reasons from the client side should be uniform.
+    o 148: Stream end reasons from the client side should be uniform.
 K   o 155: Four Improvements of Hidden Service Performance
     - 145: Separate "suitable from a guard" from "suitable as a new guard"
     - 146: Adding new flag to reflect long-term stability
@@ -170,7 +170,7 @@ K   o 155: Four Improvements of Hidden Service Performance
         mismatched address.
       - Learn our outgoing IP address from netinfo cells?
       - Learn skew from netinfo cells?
-    * 157: Make certificate downloads specific.
+    o 157: Make certificate downloads specific.
 
   - Proposals to write:
     - Fix voting to handle bug 608 case when multiple servers get

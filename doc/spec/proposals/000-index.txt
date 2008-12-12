@@ -70,7 +70,7 @@ Proposals by number:
 145  Separate "suitable as a guard" from "suitable as a new guard" [OPEN]
 146  Add new flag to reflect long-term stability [OPEN]
 147  Eliminate the need for v2 directories in generating v3 directories [ACCEPTED]
-148  Stream end reasons from the client side should be uniform [ACCEPTED]
+148  Stream end reasons from the client side should be uniform [CLOSED]
 149  Using data from NETINFO cells [OPEN]
 150  Exclude Exit Nodes from a circuit [CLOSED]
 151  Improving Tor Path Selection [DRAFT]
@@ -106,7 +106,6 @@ Proposals by status:
    134  More robust consensus voting with diverse authority sets [for 0.2.1.x]
    140  Provide diffs between consensuses [for 0.2.1.x]
    147  Eliminate the need for v2 directories in generating v3 directories [for 0.2.1.x]
-   148  Stream end reasons from the client side should be uniform [for 0.2.1.x]
    157  Make certificate downloads specific [for 0.2.1.x]
  META:
    000  Index of Tor Proposals
@@ -140,6 +139,7 @@ Proposals by status:
    137  Keep controllers informed as Tor bootstraps [in 0.2.1.x]
    138  Remove routers that are not Running from consensus documents [in 0.2.1.2-alpha]
    139  Download consensus documents only when it will be trusted [in 0.2.1.x]
+   148  Stream end reasons from the client side should be uniform [in 0.2.1.9-alpha]
    150  Exclude Exit Nodes from a circuit [in 0.2.1.3-alpha]
    152  Optionally allow exit from single-hop circuits [in 0.2.1.6-alpha]
  SUPERSEDED:
