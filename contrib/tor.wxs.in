@@ -98,9 +98,7 @@
 
     <!-- Properties used to control installation or repair features
     and other invocation options.
-    When ALLUSERS==1 the install is per machine, when 2 it is per user.
       -->
-    <Property Id="ALLUSERS">2</Property>
     <Property Id="ReinstallModeText">omus</Property>
     <Property Id="DiskPrompt">Tor Installation</Property>
 
