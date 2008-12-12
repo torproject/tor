@@ -22,6 +22,8 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
     - Add cross-certification to newly generated certificates, so that
       a signing key is enough information to use to look up a certificate.
       Partial implementation of proposal 157.
+    - Start serving certificates by <identity digest, signing key digest>
+      pairs.  Partial implementation of proposal 157.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has

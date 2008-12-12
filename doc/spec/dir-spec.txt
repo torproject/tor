@@ -1556,6 +1556,15 @@ $Id$
    available at:
       http://<hostname>/tor/keys/sk/<F>.z
 
+   The key certificate whose identity key fingerprint is <F> and whose signing
+   key fingerprint is <S> should be available at:
+
+      http://<hostname>/tor/keys/fp-sk/<F>-<S>.z
+
+   (As usual, clients may request multiple certificates using:
+       http://<hostname>/tor/keys/fp-sk/<F1>-<S1>+<F2>-<S2>.z  )
+   [The above fp-sk format was not supported before Tor 0.2.1.9-alpha.]
+
    The most recent descriptor for a server whose identity key has a
    fingerprint of <F> should be available at:
       http://<hostname>/tor/server/fp/<F>.z

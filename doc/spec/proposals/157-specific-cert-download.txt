@@ -15,8 +15,9 @@ History:
 
 Status:
 
-  Cross-certification is implemented for new certificates, but not yet
-  required.
+  As of 0.2.1.9-alpha:
+    Cross-certification is implemented for new certificates, but not yet
+    required.  Directories support the tor/keys/fp-sk urls.
 
 Overview:
 

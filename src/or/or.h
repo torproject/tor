@@ -3277,6 +3277,12 @@ void directory_initiate_command(const char *address, const tor_addr_t *addr,
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
                                     int decode_hex, int sort_uniq);
+typedef struct {
+  char first[DIGEST_LEN];
+  char second[DIGEST_LEN];
+} fp_pair_t;
+int dir_split_resource_into_fingerprint_pairs(const char *res,
+                                              smartlist_t *pairs_out);
 char *directory_dump_request_log(void);
 void note_request(const char *key, size_t bytes);
 int router_supports_extrainfo(const char *identity_digest, int is_authority);

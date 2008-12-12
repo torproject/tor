@@ -2780,6 +2780,17 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
           tor_free(d);
       });
       smartlist_free(fps);
+    } else if (!strcmpstart(url, "/tor/keys/fp-sk/")) {
+      smartlist_t *fp_sks = smartlist_create();
+      dir_split_resource_into_fingerprint_pairs(url+strlen("/tor/keys/fp-sk/"),
+                                                fp_sks);
+      SMARTLIST_FOREACH(fp_sks, fp_pair_t *, pair, {
+          authority_cert_t *c = authority_cert_get_by_digests(pair->first,
+                                                              pair->second);
+          if (c) smartlist_add(certs, c);
+          tor_free(pair);
+      });
+      smartlist_free(fp_sks);
     } else {
       write_http_status_line(conn, 400, "Bad request");
       goto keys_done;
@@ -3381,6 +3392,63 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
 
   /* No need to relaunch descriptor downloads here: we already do it
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
+}
+
+static int
+_compare_pairs(const void **a, const void **b)
+{
+  const fp_pair_t *fp1 = *a, *fp2 = *b;
+  int r;
+  if ((r = memcmp(fp1->first, fp2->first, DIGEST_LEN)))
+    return r;
+  else
+    return memcmp(fp1->second, fp2->second, DIGEST_LEN);
+}
+
+/** DOCDOC */
+int
+dir_split_resource_into_fingerprint_pairs(const char *res,
+                                          smartlist_t *pairs_out)
+{
+  smartlist_t *pairs_tmp = smartlist_create();
+  smartlist_t *pairs_result = smartlist_create();
+
+  smartlist_split_string(pairs_tmp, res, "+", 0, 0);
+  if (smartlist_len(pairs_tmp)) {
+    char *last = smartlist_get(pairs_tmp,smartlist_len(pairs_tmp)-1);
+    size_t last_len = strlen(last);
+    if (last_len > 2 && !strcmp(last+last_len-2, ".z")) {
+      last[last_len-2] = '\0';
+    }
+  }
+  SMARTLIST_FOREACH_BEGIN(pairs_tmp, char *, cp) {
+    if (strlen(cp) != HEX_DIGEST_LEN*2+1) {
+      log_info(LD_DIR,
+             "Skipping digest pair %s with non-standard length.", escaped(cp));
+    } else if (cp[HEX_DIGEST_LEN] != '-') {
+      log_info(LD_DIR,
+             "Skipping digest pair %s with missing dash.", escaped(cp));
+    } else {
+      fp_pair_t pair;
+      if (base16_decode(pair.first, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0 ||
+          base16_decode(pair.second,
+                        DIGEST_LEN, cp+HEX_DIGEST_LEN+1, HEX_DIGEST_LEN)<0) {
+        log_info(LD_DIR, "Skipping non-decodable digest pair %s", escaped(cp));
+      } else {
+        smartlist_add(pairs_result, tor_memdup(&pair, sizeof(pair)));
+      }
+    }
+    tor_free(cp);
+  } SMARTLIST_FOREACH_END(cp);
+  smartlist_free(pairs_tmp);
+
+  /* Uniq-and-sort */
+  smartlist_sort(pairs_result, _compare_pairs);
+  smartlist_uniq(pairs_result, _compare_pairs, _tor_free);
+
+  smartlist_add_all(pairs_out, pairs_result);
+  smartlist_free(pairs_result);
+  return 0;
 }
 
 /** Given a directory <b>resource</b> request, containing zero

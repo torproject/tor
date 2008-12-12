@@ -2985,6 +2985,34 @@ test_dir_format(void)
   tor_free(dir2); /* And more !*/
 }
 
+static void
+test_dirutil(void)
+{
+  smartlist_t *sl = smartlist_create();
+  fp_pair_t *pair;
+
+  dir_split_resource_into_fingerprint_pairs(
+       /* Two pairs, out of order, with one duplicate. */
+       "73656372657420646174612E0000000000FFFFFF-"
+       "557365204145532d32353620696e73746561642e+"
+       "73656372657420646174612E0000000000FFFFFF-"
+       "557365204145532d32353620696e73746561642e+"
+       "48657861646563696d616c2069736e277420736f-"
+       "676f6f6420666f7220686964696e6720796f7572.z", sl);
+
+  test_eq(smartlist_len(sl), 2);
+  pair = smartlist_get(sl, 0);
+  test_memeq(pair->first,  "Hexadecimal isn't so", DIGEST_LEN);
+  test_memeq(pair->second, "good for hiding your", DIGEST_LEN);
+  pair = smartlist_get(sl, 1);
+  test_memeq(pair->first,  "secret data.\0\0\0\0\0\xff\xff\xff", DIGEST_LEN);
+  test_memeq(pair->second, "Use AES-256 instead.", DIGEST_LEN);
+
+ done:
+  SMARTLIST_FOREACH(sl, fp_pair_t *, pair, tor_free(pair));
+  smartlist_free(sl);
+}
+
 extern const char AUTHORITY_CERT_1[];
 extern const char AUTHORITY_SIGNKEY_1[];
 extern const char AUTHORITY_CERT_2[];
@@ -4448,6 +4476,7 @@ static struct {
   SUBENT(util, order_functions),
   ENT(onion_handshake),
   ENT(dir_format),
+  ENT(dirutil),
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),
