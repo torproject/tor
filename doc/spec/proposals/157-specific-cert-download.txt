@@ -4,7 +4,7 @@ Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2-Dec-2008
-Status: Open
+Status: Accepted
 Target: 0.2.1.x
 
 History:
