@@ -151,7 +151,8 @@ M   - Network scanning and network health
 
 M   - Torbutton development
       - Keep up with our bugfixes -- build a plan for (or resolve)
-        every item in Flyspray, and other known issues.
+        every item in Flyspray, and other known issues like the Google
+        captcha issue.
       - Build a strategy for how Torbutton and Vidalia can
         communicate. E.g., what do we do with the 'new identity' button
         in Vidalia?
