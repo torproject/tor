@@ -3,6 +3,12 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
     - Fix a logic error that would automatically reject all but the first
       configured DNS server.  Bugfix on 0.2.1.5-alpha.  Possible fix for part
       of bug 813/868.  Bug spotted by coderman.
+    - When a stream at an exit relay is in state "resolving" or
+      "connecting" and it receives an "end" relay cell, the exit relay
+      would silently ignore the end cell and not close the stream. If
+      the client never closes the circuit, then the exit relay never
+      closes the TCP connection. Bug introduced in Tor 0.1.2.1-alpha;
+      reported by "wood".
 
   o Minor features:
     - Give a better error message when an overzealous init script says,

@@ -594,11 +594,12 @@ edge_reason_is_retriable(int reason)
          reason == END_STREAM_REASON_MISC;
 }
 
-/** Called when we receive an END cell on a stream that isn't open yet.
+/** Called when we receive an END cell on a stream that isn't open yet,
+ * from the client side.
  * Arguments are as for connection_edge_process_relay_cell().
  */
 static int
-connection_edge_process_end_not_open(
+connection_ap_process_end_not_open(
     relay_header_t *rh, cell_t *cell, origin_circuit_t *circ,
     edge_connection_t *conn, crypt_path_t *layer_hint)
 {
@@ -608,8 +609,7 @@ connection_edge_process_end_not_open(
   int control_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
   (void) layer_hint; /* unused */
 
-  if (rh->length > 0 && edge_reason_is_retriable(reason) &&
-      conn->_base.type == CONN_TYPE_AP) {
+  if (rh->length > 0 && edge_reason_is_retriable(reason)) {
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
              safe_str(conn->socks_request->address),
              stream_end_reason_to_string(reason));
@@ -725,17 +725,10 @@ connection_edge_process_end_not_open(
   log_info(LD_APP,
            "Edge got end (%s) before we're connected. Marking for close.",
        stream_end_reason_to_string(rh->length > 0 ? reason : -1));
-  if (conn->_base.type == CONN_TYPE_AP) {
-    circuit_log_path(LOG_INFO,LD_APP,circ);
-    /* need to test because of detach_retriable*/
-    if (!conn->_base.marked_for_close)
-      connection_mark_unattached_ap(conn, control_reason);
-  } else {
-    /* we just got an 'end', don't need to send one */
-    conn->_base.edge_has_sent_end = 1;
-    conn->end_reason = control_reason;
-    connection_mark_for_close(TO_CONN(conn));
-  }
+  circuit_log_path(LOG_INFO,LD_APP,circ);
+  /* need to test because of detach_retriable*/
+  if (!conn->_base.marked_for_close)
+    connection_mark_unattached_ap(conn, control_reason);
   return 0;
 }
 
@@ -767,12 +760,18 @@ connection_edge_process_relay_cell_not_open(
     edge_connection_t *conn, crypt_path_t *layer_hint)
 {
   if (rh->command == RELAY_COMMAND_END) {
-    if (CIRCUIT_IS_ORIGIN(circ))
-      return connection_edge_process_end_not_open(rh, cell,
-                                                 TO_ORIGIN_CIRCUIT(circ), conn,
-                                                 layer_hint);
-    else
+    if (CIRCUIT_IS_ORIGIN(circ) && conn->_base.type == CONN_TYPE_AP) {
+      return connection_ap_process_end_not_open(rh, cell,
+                                                TO_ORIGIN_CIRCUIT(circ), conn,
+                                                layer_hint);
+    } else {
+      /* we just got an 'end', don't need to send one */
+      conn->_base.edge_has_sent_end = 1;
+      conn->end_reason = *(cell->payload+RELAY_HEADER_SIZE) |
+                         END_STREAM_REASON_FLAG_REMOTE;
+      connection_mark_for_close(TO_CONN(conn));
       return 0;
+    }
   }
 
   if (conn->_base.type == CONN_TYPE_AP &&
