@@ -890,8 +890,14 @@ connection_edge_process_relay_cell_not_open(
       return connection_edge_process_end_not_open(rh, cell,
                                                  TO_ORIGIN_CIRCUIT(circ), conn,
                                                  layer_hint);
-    else
+    else {
+      /* we just got an 'end', don't need to send one */
+      conn->_base.edge_has_sent_end = 1;
+      conn->end_reason = *(cell->payload+RELAY_HEADER_SIZE) |
+                         END_STREAM_REASON_FLAG_REMOTE;
+      connection_mark_for_close(TO_CONN(conn));
       return 0;
+    }
   }
 
   if (conn->_base.type == CONN_TYPE_AP &&

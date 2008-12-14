@@ -1,4 +1,12 @@
 Changes in version 0.2.0.33 - 200?-??-??
+  o Major bugfixes:
+    - When a stream at an exit relay is in state "resolving" or
+      "connecting" and it receives an "end" relay cell, the exit relay
+      would silently ignore the end cell and not close the stream. If
+      the client never closes the circuit, then the exit relay never
+      closes the TCP connection. Bug introduced in Tor 0.1.2.1-alpha;
+      reported by "wood".
+
   o Minor bugfixes:
     - Do not mark smartlist_bsearch_idx() function as ATTR_PURE.  This bug
       could make gcc generate non-functional binary search code. Bugfix
