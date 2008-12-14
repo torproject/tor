@@ -290,8 +290,8 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 /** Start a connection to a random running directory server, using
  * connection purpose <b>dir_purpose</b>, intending to fetch descriptors
  * of purpose <b>router_purpose</b>, and requesting <b>resource</b>.
- * Use <b>pds_flags</b> as arguments to router_pick_directory_server
- * or router_pick_trusteddirserver.
+ * Use <b>pds_flags</b> as arguments to router_pick_directory_server()
+ * or router_pick_trusteddirserver().
  */
 void
 directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
