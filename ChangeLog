@@ -12,6 +12,10 @@ Changes in version 0.2.0.33 - 200?-??-??
       Bugfix on 0.2.0.3-alpha.
     - Fix a hard-to-trigger resource leak when logging credential status.
       CID 349.
+    - When we can't initialize DNS because the network is down, do not
+      automatically stop Tor from starting.  Instead, we retry failed
+      dns_inits() every 10 minutes, and change the exit policy to reject *:*
+      until one succeeds.  Fixes bug 691.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected

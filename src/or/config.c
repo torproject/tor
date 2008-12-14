@@ -271,7 +271,7 @@ static config_var_t _option_vars[] = {
   V(RunTesting,                  BOOL,     "0"),
   V(SafeLogging,                 BOOL,     "1"),
   V(SafeSocks,                   BOOL,     "0"),
-  V(ServerDNSAllowBrokenResolvConf, BOOL,  "0"),
+  V(ServerDNSAllowBrokenResolvConf, BOOL,  "1"),
   V(ServerDNSAllowNonRFC953Hostnames, BOOL,"0"),
   V(ServerDNSDetectHijacking,    BOOL,     "1"),
   V(ServerDNSResolvConfFile,     STRING,   NULL),
