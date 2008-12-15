@@ -47,6 +47,10 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
   o Minor bugfixes:
     - Resume using the correct "REASON=" stream when telling the
       controller why we closed a stream. Bugfix in 0.2.1.1-alpha.
+    - When a canonical connection appears later in our internal list
+      than a noncanonical one for a given OR ID, always use the
+      canonical one.  Bugfix on 0.2.0.12-alpha.  Fixes bug 805.
+      Spotted by rovv.
 
   o Minor bugfixes (hidden services):
     - Do not throw away existing introduction points on SIGHUP; bugfix on

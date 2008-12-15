@@ -168,6 +168,10 @@ K   o 155: Four Improvements of Hidden Service Performance
     - 149: Using data from NETINFO cells
       * Don't extend a circuit over a noncanonical connection with
         mismatched address.
+        o Apply rovv's bugfixes wrt preferring canonical connections.
+        - Make sure that having a non-canonical connection doesn't count
+          as _having_ a connection for the purpose of connecting to others,
+          and that when no canonical connection exists, we make one.
       - Learn our outgoing IP address from netinfo cells?
       - Learn skew from netinfo cells?
     o 157: Make certificate downloads specific.

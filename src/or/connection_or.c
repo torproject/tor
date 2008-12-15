@@ -478,6 +478,8 @@ connection_or_get_by_identity_digest(const char *digest)
       continue; /* We never prefer obsolete over non-obsolete connections. */
 
     if (
+      /* We prefer canonical connections: */
+        (!best->is_canonical && conn->is_canonical) ||
       /* We prefer non-obsolete connections: */
         (best->_base.or_is_obsolete && !conn->_base.or_is_obsolete) ||
       /* If both have circuits we prefer the newer: */
