@@ -1,4 +1,10 @@
 Changes in version 0.2.1.9-alpha - 200?-??-??
+  o Major features:
+    - Never use a connection with a mismatched address to extend a
+      circuit, unless that connections is canonical.  A canonical
+      connection is one whose address is authenticated by the router's
+      identity key, either in a NETINFO cell or in a router descriptor.
+
   o Major bugfixes:
     - Fix a logic error that would automatically reject all but the first
       configured DNS server.  Bugfix on 0.2.1.5-alpha.  Possible fix for part

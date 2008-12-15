@@ -27,7 +27,7 @@ Things Roger would be excited to see:
 Nick
   * Look at Roger's proposal 141 discussions on or-dev, and help us
     decide how to proceed.
-  - Tors start believing the contents of NETINFO cells.
+  . Tors start believing the contents of NETINFO cells.
   - respond to Steven's red-team TLS testing (a.k.a, look at a packet
     dump and compare)
 
@@ -166,10 +166,10 @@ K   o 155: Four Improvements of Hidden Service Performance
     - 145: Separate "suitable from a guard" from "suitable as a new guard"
     - 146: Adding new flag to reflect long-term stability
     - 149: Using data from NETINFO cells
-      * Don't extend a circuit over a noncanonical connection with
+      o Don't extend a circuit over a noncanonical connection with
         mismatched address.
         o Apply rovv's bugfixes wrt preferring canonical connections.
-        - Make sure that having a non-canonical connection doesn't count
+        o Make sure that having a non-canonical connection doesn't count
           as _having_ a connection for the purpose of connecting to others,
           and that when no canonical connection exists, we make one.
       - Learn our outgoing IP address from netinfo cells?
@@ -282,6 +282,8 @@ P   - Figure out why dll's compiled in mingw don't work right in WinXP.
 P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
 
   - Refactor bad code:
+    - connection_or_get_by_identity_digest() and connection_good_enough_for
+      _extend() could be merged into a smarter variant, perhaps.
     - Refactor the HTTP logic so the functions aren't so large.
     - Refactor buf_read and buf_write to have sensible ways to return
       error codes after partial writes

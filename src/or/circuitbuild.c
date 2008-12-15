@@ -334,6 +334,46 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit, int flags)
   return circ;
 }
 
+/** Return true iff <b>n_conn</b> (a connection with a desired identity), is
+ * an acceptable choice for extending or launching a circuit to the address
+ * <b>target_addr</b>.  If it is not, set <b>state_out</b> to a message
+ * describing the connection's state and our next action, and set
+ * <b>launch_out</b> to a boolean for whether we should launch a new
+ * connection or not. */
+static int
+connection_good_enough_for_extend(const or_connection_t *n_conn,
+                                  const tor_addr_t *target_addr,
+                                  const char **state_out,
+                                  int *launch_out)
+{
+  tor_assert(state_out);
+  tor_assert(launch_out);
+  tor_assert(target_addr);
+
+  if (!n_conn) {
+    *state_out = "not connected. Connecting.";
+    *launch_out = 1;
+    return 0;
+  } else if (n_conn->_base.state != OR_CONN_STATE_OPEN) {
+    *state_out = "in progress. Waiting.";
+    *launch_out = 0; /* We'll just wait till the connection finishes. */
+    return 0;
+  } else if (n_conn->_base.or_is_obsolete) {
+    *state_out = "too old. Launching a new one.";
+    *launch_out = 1;
+    return 0;
+  } else if (tor_addr_compare(&n_conn->_base.addr, target_addr, CMP_EXACT) &&
+             ! n_conn->is_canonical) {
+    *state_out = "is not from a canonical address. Launching a new one.";
+    *launch_out = 1;
+    return 0;
+  } else {
+    *state_out = "is fine; using it.";
+    *launch_out = 0;
+    return 1;
+  }
+}
+
 /** Start establishing the first hop of our circuit. Figure out what
  * OR we should connect to, and if necessary start the connection to
  * it. If we're already connected, then send the 'create' cell.
@@ -344,6 +384,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
   crypt_path_t *firsthop;
   or_connection_t *n_conn;
   int err_reason = 0;
+  const char *msg = NULL;
+  int should_launch = 0;
 
   firsthop = onion_next_hop_in_cpath(circ->cpath);
   tor_assert(firsthop);
@@ -356,15 +398,17 @@ circuit_handle_first_hop(origin_circuit_t *circ)
 
   n_conn = connection_or_get_by_identity_digest(
          firsthop->extend_info->identity_digest);
+
   /* If we don't have an open conn, or the conn we have is obsolete
    * (i.e. old or broken) and the other side will let us make a second
    * connection without dropping it immediately... */
-  if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
-      (n_conn->_base.or_is_obsolete)) {
+  if (!connection_good_enough_for_extend(n_conn, &firsthop->extend_info->addr,
+                                         &msg, &should_launch)) {
+    /* XXXX021 log msg, maybe. */
     /* not currently connected */
     circ->_base.n_hop = extend_info_dup(firsthop->extend_info);
 
-    if (!n_conn || n_conn->_base.or_is_obsolete) { /* launch the connection */
+    if (should_launch) {
       if (circ->build_state->onehop_tunnel)
         control_event_bootstrap(BOOTSTRAP_STATUS_CONN_DIR, 0);
       n_conn = connection_or_connect(&firsthop->extend_info->addr,
@@ -723,8 +767,11 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   relay_header_t rh;
   char *onionskin;
   char *id_digest=NULL;
-  uint32_t n_addr;
+  uint32_t n_addr32;
   uint16_t n_port;
+  tor_addr_t n_addr;
+  const char *msg = NULL;
+  int should_launch = 0;
 
   if (circ->n_conn) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
@@ -747,10 +794,11 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
-  n_addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
+  n_addr32 = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
   n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
   onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
   id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
+  tor_addr_from_ipv4h(&n_addr, n_addr32);
 
   /* First, check if they asked us for 0000..0000. We support using
    * an empty fingerprint for the first hop (e.g. for a bridge relay),
@@ -779,26 +827,23 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   /* If we don't have an open conn, or the conn we have is obsolete
    * (i.e. old or broken) and the other side will let us make a second
    * connection without dropping it immediately... */
-  if (!n_conn || n_conn->_base.state != OR_CONN_STATE_OPEN ||
-      n_conn->_base.or_is_obsolete) {
-    tor_addr_t addr;
-    tor_addr_from_ipv4h(&addr, n_addr);
-
-    log_debug(LD_CIRC|LD_OR,"Next router (%s:%d) not connected. Connecting.",
-              fmt_addr(&addr), (int)n_port);
+  if (!connection_good_enough_for_extend(n_conn, &n_addr, &msg,
+                                         &should_launch)) {
+    log_debug(LD_CIRC|LD_OR,"Next router (%s:%d) %s",
+              fmt_addr(&n_addr), (int)n_port, msg?msg:"????");
 
     circ->n_hop = extend_info_alloc(NULL /*nickname*/,
                                     id_digest,
                                     NULL /*onion_key*/,
-                                    &addr, n_port);
+                                    &n_addr, n_port);
 
     circ->n_conn_onionskin = tor_malloc(ONIONSKIN_CHALLENGE_LEN);
     memcpy(circ->n_conn_onionskin, onionskin, ONIONSKIN_CHALLENGE_LEN);
     circuit_set_state(circ, CIRCUIT_STATE_OR_WAIT);
 
-    if (! (n_conn && !n_conn->_base.or_is_obsolete)) {
+    if (should_launch) {
       /* we should try to open a connection */
-      n_conn = connection_or_connect(&addr, n_port, id_digest);
+      n_conn = connection_or_connect(&n_addr, n_port, id_digest);
       if (!n_conn) {
         log_info(LD_CIRC,"Launching n_conn failed. Closing circuit.");
         circuit_mark_for_close(circ, END_CIRC_REASON_CONNECTFAILED);
