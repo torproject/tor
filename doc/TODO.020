@@ -7,8 +7,7 @@ Backport for 0.2.0:
 
 Backport for 0.2.0 once better tested:
   o r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
-
-  - r16558: Avoid mis-routing CREATED cells.
+  o r16558: Avoid mis-routing CREATED cells.
   - r16621: Make some DNS code more robust (partial; see also libevent
             approach). (Also maybe r16674)
   - r17091: distinguish "no routers support pending circuits" from

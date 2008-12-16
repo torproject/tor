@@ -166,7 +166,8 @@ conn_state_to_string(int type, int state)
 connection_t *
 connection_new(int type, int socket_family)
 {
-  static uint32_t n_connections_allocated = 1;
+  static uint64_t n_connections_allocated = 1;
+
   connection_t *conn;
   time_t now = time(NULL);
   size_t length;
@@ -200,6 +201,7 @@ connection_new(int type, int socket_family)
   conn->magic = magic;
   conn->s = -1; /* give it a default of 'not used' */
   conn->conn_array_index = -1; /* also default to 'not used' */
+  conn->global_identifier = n_connections_allocated++;
 
   conn->type = type;
   conn->socket_family = socket_family;
@@ -210,9 +212,6 @@ connection_new(int type, int socket_family)
   if (type == CONN_TYPE_AP) {
     TO_EDGE_CONN(conn)->socks_request =
       tor_malloc_zero(sizeof(socks_request_t));
-  }
-  if (CONN_IS_EDGE(conn)) {
-    TO_EDGE_CONN(conn)->global_identifier = n_connections_allocated++;
   }
   if (type == CONN_TYPE_OR) {
     TO_OR_CONN(conn)->timestamp_last_added_nonpadding = now;
@@ -2380,26 +2379,6 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   }
 }
 
-/** Return the conn to addr/port that has the most recent
- * timestamp_created, or NULL if no such conn exists. */
-or_connection_t *
-connection_or_exact_get_by_addr_port(uint32_t addr, uint16_t port)
-{
-  or_connection_t *best=NULL;
-  smartlist_t *conns = get_connection_array();
-
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
-    if (conn->type == CONN_TYPE_OR &&
-        conn->addr == addr &&
-        conn->port == port &&
-        !conn->marked_for_close &&
-        (!best || best->_base.timestamp_created < conn->timestamp_created))
-      best = TO_OR_CONN(conn);
-  });
-  return best;
-}
-
 /** Return a connection with given type, address, port, and purpose;
  * or NULL if no such connection exists. */
 connection_t *
@@ -2423,18 +2402,14 @@ connection_get_by_type_addr_port_purpose(int type,
 /** Return the stream with id <b>id</b> if it is not already marked for
  * close.
  */
-edge_connection_t *
-connection_get_by_global_id(uint32_t id)
+connection_t *
+connection_get_by_global_id(uint64_t id)
 {
   smartlist_t *conns = get_connection_array();
   SMARTLIST_FOREACH(conns, connection_t *, conn,
   {
-    if (CONN_IS_EDGE(conn) && TO_EDGE_CONN(conn)->global_identifier == id) {
-      if (!conn->marked_for_close)
-        return TO_EDGE_CONN(conn);
-      else
-        return NULL;
-    }
+    if (conn->global_identifier == id)
+      return conn;
   });
   return NULL;
 }

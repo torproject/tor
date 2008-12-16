@@ -643,16 +643,16 @@ get_circ(const char *id)
 static edge_connection_t *
 get_stream(const char *id)
 {
-  uint32_t n_id;
+  uint64_t n_id;
   int ok;
-  edge_connection_t *conn;
-  n_id = (uint32_t) tor_parse_ulong(id, 10, 0, UINT32_MAX, &ok, NULL);
+  connection_t *conn;
+  n_id = tor_parse_uint64(id, 10, 0, UINT64_MAX, &ok, NULL);
   if (!ok)
     return NULL;
   conn = connection_get_by_global_id(n_id);
-  if (!conn || conn->_base.type != CONN_TYPE_AP)
+  if (!conn || conn->type != CONN_TYPE_AP || conn->marked_for_close)
     return NULL;
-  return conn;
+  return TO_EDGE_CONN(conn);
 }
 
 /** Helper for setconf and resetconf. Acts like setconf, except
@@ -1586,8 +1586,7 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_t *conns = get_connection_array();
     smartlist_t *status = smartlist_create();
     char buf[256];
-    SMARTLIST_FOREACH(conns, connection_t *, base_conn,
-    {
+    SMARTLIST_FOREACH(conns, connection_t *, base_conn, {
       const char *state;
       edge_connection_t *conn;
       char *s;
@@ -1629,7 +1628,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       slen = strlen(buf)+strlen(state)+32;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%lu %s %lu %s",
-                   (unsigned long) conn->global_identifier,state,
+                   (unsigned long) conn->_base.global_identifier,state,
                    origin_circ?
                          (unsigned long)origin_circ->global_identifier : 0ul,
                    buf);
@@ -3140,8 +3139,8 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
   send_control_event_extended(EVENT_STREAM_STATUS, ALL_NAMES,
-                        "650 STREAM %lu %s %lu %s@%s%s%s\r\n",
-                        (unsigned long)conn->global_identifier, status,
+                        "650 STREAM "U64_FORMAT" %s %lu %s@%s%s%s\r\n",
+                        U64_PRINTF_ARG(conn->_base.global_identifier), status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
                         buf, reason_buf, addrport_buf, purpose);
@@ -3297,8 +3296,7 @@ control_event_stream_bandwidth_used(void)
     smartlist_t *conns = get_connection_array();
     edge_connection_t *edge_conn;
 
-    SMARTLIST_FOREACH(conns, connection_t *, conn,
-    {
+    SMARTLIST_FOREACH(conns, connection_t *, conn, {
         if (conn->type != CONN_TYPE_AP)
           continue;
         edge_conn = TO_EDGE_CONN(conn);
@@ -3306,8 +3304,8 @@ control_event_stream_bandwidth_used(void)
           continue;
 
         send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
-                            "650 STREAM_BW %lu %lu %lu\r\n",
-                            (unsigned long)edge_conn->global_identifier,
+                            "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
+                            U64_PRINTF_ARG(edge_conn->_base.global_identifier),
                             (unsigned long)edge_conn->n_read,
                             (unsigned long)edge_conn->n_written);
 

@@ -23,7 +23,7 @@ const char cpuworker_c_id[] =
 #define MIN_CPUWORKERS 1
 
 /** The tag specifies which circuit this onionskin was from. */
-#define TAG_LEN 8
+#define TAG_LEN 10
 /** How many bytes are sent from the cpuworker back to tor? */
 #define LEN_ONION_RESPONSE \
   (1+TAG_LEN+ONIONSKIN_REPLY_LEN+CPATH_KEY_MATERIAL_LEN)
@@ -60,32 +60,22 @@ connection_cpu_finished_flushing(connection_t *conn)
   return 0;
 }
 
-/** Pack addr,port,and circ_id; set *tag to the result. (See note on
+/** Pack global_id and circ_id; set *tag to the result. (See note on
  * cpuworker_main for wire format.) */
 static void
-tag_pack(char *tag, uint32_t addr, uint16_t port, uint16_t circ_id)
+tag_pack(char *tag, uint64_t conn_id, uint16_t circ_id)
 {
-  *(uint32_t *)tag     = addr;
-  *(uint16_t *)(tag+4) = port;
-  *(uint16_t *)(tag+6) = circ_id;
+  *(uint64_t*)tag = conn_id;
+  *(uint16_t*)(tag+8) = circ_id;
 }
 
 /** Unpack <b>tag</b> into addr, port, and circ_id.
  */
 static void
-tag_unpack(const char *tag, uint32_t *addr, uint16_t *port, uint16_t *circ_id)
+tag_unpack(const char *tag, uint64_t *conn_id, uint16_t *circ_id)
 {
-  struct in_addr in;
-  char addrbuf[INET_NTOA_BUF_LEN];
-
-  *addr    = *(const uint32_t *)tag;
-  *port    = *(const uint16_t *)(tag+4);
-  *circ_id = *(const uint16_t *)(tag+6);
-
-  in.s_addr = htonl(*addr);
-  tor_inet_ntoa(&in, addrbuf, sizeof(addrbuf));
-  log_debug(LD_OR,
-            "onion was from %s:%d, circ_id %d.", addrbuf, *port, *circ_id);
+  *conn_id = *(const uint64_t *)tag;
+  *circ_id = *(const uint16_t *)(tag+8);
 }
 
 /** Called when the onion key has changed and we need to spawn new
@@ -135,10 +125,10 @@ connection_cpu_process_inbuf(connection_t *conn)
 {
   char success;
   char buf[LEN_ONION_RESPONSE];
-  uint32_t addr;
-  uint16_t port;
+  uint64_t conn_id;
   uint16_t circ_id;
-  or_connection_t *p_conn;
+  connection_t *tmp_conn;
+  or_connection_t *p_conn = NULL;
   circuit_t *circ;
 
   tor_assert(conn);
@@ -156,12 +146,13 @@ connection_cpu_process_inbuf(connection_t *conn)
     connection_fetch_from_buf(buf,LEN_ONION_RESPONSE-1,conn);
 
     /* parse out the circ it was talking about */
-    tag_unpack(buf, &addr, &port, &circ_id);
+    tag_unpack(buf, &conn_id, &circ_id);
     circ = NULL;
-    /* (Here we use connection_or_exact_get_by_addr_port rather than
-     * get_by_identity_digest: we want a specific port here in
-     * case there are multiple connections.) */
-    p_conn = connection_or_exact_get_by_addr_port(addr,port);
+    tmp_conn = connection_get_by_global_id(conn_id);
+    if (tmp_conn && !tmp_conn->marked_for_close &&
+        tmp_conn->type == CONN_TYPE_OR)
+      p_conn = TO_OR_CONN(tmp_conn);
+
     if (p_conn)
       circ = circuit_get_by_circid_orconn(circ_id, p_conn);
 
@@ -468,7 +459,7 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
       tor_free(onionskin);
       return -1;
     }
-    tag_pack(tag, circ->p_conn->_base.addr, circ->p_conn->_base.port,
+    tag_pack(tag, circ->p_conn->_base.global_identifier,
              circ->p_circ_id);
 
     cpuworker->state = CPUWORKER_STATE_BUSY_ONION;

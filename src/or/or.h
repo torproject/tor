@@ -875,6 +875,9 @@ typedef struct connection_t {
   /** Another connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
 
+  /** Unique identifier for this connection. */
+  uint64_t global_identifier;
+
   /* XXXX021 move this into a subtype. */
   struct evdns_server_port *dns_server_port;
 
@@ -981,10 +984,6 @@ typedef struct edge_connection_t {
 
   /** The reason why this connection is closing; passed to the controller. */
   uint16_t end_reason;
-
-  /** Quasi-global identifier for this connection; used for control.c */
-  /* XXXX NM This can get re-used after 2**32 streams */
-  uint32_t global_identifier;
 
   /** Bytes read since last call to control_event_stream_bandwidth_used() */
   uint32_t n_read;
@@ -2749,9 +2748,7 @@ connection_write_to_buf_zlib(const char *string, size_t len,
   _connection_write_to_buf_impl(string, len, TO_CONN(conn), done ? -1 : 1);
 }
 
-or_connection_t *connection_or_exact_get_by_addr_port(uint32_t addr,
-                                                   uint16_t port);
-edge_connection_t *connection_get_by_global_id(uint32_t id);
+connection_t *connection_get_by_global_id(uint64_t id);
 
 connection_t *connection_get_by_type(int type);
 connection_t *connection_get_by_type_purpose(int type, int purpose);
