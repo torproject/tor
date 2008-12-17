@@ -2072,11 +2072,14 @@ static INLINE origin_circuit_t *TO_ORIGIN_CIRCUIT(circuit_t *x)
   return DOWNCAST(origin_circuit_t, x);
 }
 
-#define ALLOW_INVALID_ENTRY        1
-#define ALLOW_INVALID_EXIT         2
-#define ALLOW_INVALID_MIDDLE       4
-#define ALLOW_INVALID_RENDEZVOUS   8
-#define ALLOW_INVALID_INTRODUCTION 16
+/** Bitfield type: things that we're willing to use invalid routers for. */
+typedef enum invalid_router_usage_t {
+  ALLOW_INVALID_ENTRY       =1,
+  ALLOW_INVALID_EXIT        =2,
+  ALLOW_INVALID_MIDDLE      =4,
+  ALLOW_INVALID_RENDEZVOUS  =8,
+  ALLOW_INVALID_INTRODUCTION=16,
+} invalid_router_usage_t;
 
 /** An entry specifying a set of addresses and ports that should be remapped
  * to another address and port before exiting this exit node. */
@@ -2146,7 +2149,8 @@ typedef struct {
 
   /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
   smartlist_t *AllowInvalidNodes;
-  int _AllowInvalid; /**< Bitmask; derived from AllowInvalidNodes. */
+  /** Bitmask; derived from AllowInvalidNodes. */
+  invalid_router_usage_t _AllowInvalid;
   config_line_t *ExitPolicy; /**< Lists of exit policy components. */
   int ExitPolicyRejectPrivate; /**< Should we not exit to local addresses? */
   config_line_t *SocksPolicy; /**< Lists of socks policy components */
