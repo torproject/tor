@@ -2841,6 +2841,15 @@ compute_publishserverdescriptor(or_options_t *options)
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
 
+/** Lowest allowable value for CircuitBuildTimeout; values too low will
+ * increase network load because of failing connections being retried, and
+ * might prevent users from connecting to the network at all. */
+#define MIN_CIRCUIT_BUILD_TIMEOUT 30
+
+/** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
+ * will generate too many circuits and potentially overload the network. */
+#define MIN_MAX_CIRCUIT_DIRTINESS 10
+
 /** Return 0 if every setting in <b>options</b> is reasonable, and a
  * permissible transition from <b>old_options</b>. Else return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -3241,8 +3250,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->RendPostPeriod < MIN_REND_POST_PERIOD) {
-    log(LOG_WARN,LD_CONFIG,"RendPostPeriod option must be at least %d seconds."
-        " Clipping.", MIN_REND_POST_PERIOD);
+    log(LOG_WARN,LD_CONFIG,"RendPostPeriod option is too short; "
+        "raising to %d seconds.", MIN_REND_POST_PERIOD);
     options->RendPostPeriod = MIN_REND_POST_PERIOD;
   }
 
@@ -3250,6 +3259,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
         MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
+  }
+
+  if (options->CircuitBuildTimeout < MIN_CIRCUIT_BUILD_TIMEOUT) {
+    log(LOG_WARN, LD_CONFIG, "CircuitBuildTimeout option is too short; "
+      "raising to %d seconds.", MIN_CIRCUIT_BUILD_TIMEOUT);
+    options->CircuitBuildTimeout = MIN_CIRCUIT_BUILD_TIMEOUT;
+  }
+
+  if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {
+    log(LOG_WARN, LD_CONFIG, "MaxCircuitDirtiness option is too short; "
+      "raising to %d seconds.", MIN_MAX_CIRCUIT_DIRTINESS);
+    options->MaxCircuitDirtiness = MIN_MAX_CIRCUIT_DIRTINESS;
   }
 
   if (options->KeepalivePeriod < 1)

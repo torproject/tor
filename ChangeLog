@@ -57,6 +57,12 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
       than a noncanonical one for a given OR ID, always use the
       canonical one.  Bugfix on 0.2.0.12-alpha.  Fixes bug 805.
       Spotted by rovv.
+    - Clip the MaxCircuitDirtiness config option to a minimum of 10
+      seconds. Warn the user if lower values are given in the
+      configuration. Bugfix on 0.1.0.1-rc. Patch by Sebastian.
+    - Clip the CircuitBuildTimeout to a minimum of 30 seconds. Warn the
+      user if lower values are given in the configuration. Bugfix on
+      0.1.1.17-rc. Patch by Sebastian.
 
   o Minor bugfixes (hidden services):
     - Do not throw away existing introduction points on SIGHUP; bugfix on
