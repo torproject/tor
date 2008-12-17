@@ -1186,7 +1186,7 @@ typedef struct control_connection_t {
   /** Number of bytes currently stored in incoming_cmd. */
   uint32_t incoming_cmd_cur_len;
   /** A control command that we're reading from the inbuf, but which has not
-   * yet arrived completely.  */
+   * yet arrived completely. */
   char *incoming_cmd;
 } control_connection_t;
 

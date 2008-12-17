@@ -1,14 +1,14 @@
-Changes in version 0.2.1.9-alpha - 200?-??-??
+Changes in version 0.2.1.9-alpha - 2008-12-2?
   o Major features:
     - Never use a connection with a mismatched address to extend a
-      circuit, unless that connections is canonical.  A canonical
+      circuit, unless that connections is canonical. A canonical
       connection is one whose address is authenticated by the router's
       identity key, either in a NETINFO cell or in a router descriptor.
 
   o Major bugfixes:
     - Fix a logic error that would automatically reject all but the first
-      configured DNS server.  Bugfix on 0.2.1.5-alpha.  Possible fix for part
-      of bug 813/868.  Bug spotted by coderman.
+      configured DNS server. Bugfix on 0.2.1.5-alpha. Possible fix for
+      part of bug 813/868. Bug spotted by coderman.
     - When a stream at an exit relay is in state "resolving" or
       "connecting" and it receives an "end" relay cell, the exit relay
       would silently ignore the end cell and not close the stream. If
@@ -17,45 +17,46 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
       reported by "wood".
 
   o Minor features:
-    - Give a better error message when an overzealous init script says,
-      "sudo -u username tor --user username".  Makes Bug 882 easier
-      for users to diagnose.
+    - Give a better error message when an overzealous init script says
+      "sudo -u username tor --user username". Makes Bug 882 easier for
+      users to diagnose.
     - When a directory authority gives us a new guess for our IP address,
       log which authority we used. Hopefully this will help us debug
       the recent complaints about bad IP address guesses.
     - When we can't initialize DNS because the network is down, do not
-      automatically stop Tor from starting.  Instead, we retry failed
-      dns_inits() every 10 minutes, and change the exit policy to reject *:*
-      until one succeeds.  Fixes bug 691.
+      automatically stop Tor from starting. Instead, we retry failed
+      dns_inits() every 10 minutes, and change the exit policy to reject
+      *:* until one succeeds. Fixes bug 691.
     - Detect svn revision properly when we're using git-svn.
-    - Try not to open more than one descriptor-downloading connection to an
-      authority at once.  This should reduce load on directory authorities.
-      Fixes bug 366.
+    - Try not to open more than one descriptor-downloading connection
+      to an authority at once. This should reduce load on directory
+      authorities. Fixes bug 366.
     - Add cross-certification to newly generated certificates, so that
       a signing key is enough information to use to look up a certificate.
       Partial implementation of proposal 157.
     - Start serving certificates by <identity digest, signing key digest>
-      pairs.  Partial implementation of proposal 157.
+      pairs. Partial implementation of proposal 157.
     - Clients now never report any stream end reason except 'MISC'.
       Implements proposal 148.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has
       been fetched and validated.
-    - Finally remove deprecated "EXTENEDED_FORMAT" feature.  It has
+    - Finally remove deprecated "EXTENDED_FORMAT" feature. It has
       been called EXTENDED_EVENTS since 0.1.2.4-alpha.
     - When we realize that another process has modified our cached
       descriptors, print out a more useful error message rather than
-      triggering an assertion. Fixes bug 885.  Patch from Karsten.
-    - Add an internal-use-only __ReloadTorrcOnSIGHUP option for controllers
-      to prevent SIGHUP from reloading the configuration.  Fixes bug 856.
+      triggering an assertion. Fixes bug 885. Patch from Karsten.
+    - Add an internal-use-only __ReloadTorrcOnSIGHUP option for
+      controllers to prevent SIGHUP from reloading the
+      configuration. Fixes bug 856.
 
   o Minor bugfixes:
     - Resume using the correct "REASON=" stream when telling the
       controller why we closed a stream. Bugfix in 0.2.1.1-alpha.
     - When a canonical connection appears later in our internal list
       than a noncanonical one for a given OR ID, always use the
-      canonical one.  Bugfix on 0.2.0.12-alpha.  Fixes bug 805.
+      canonical one. Bugfix on 0.2.0.12-alpha. Fixes bug 805.
       Spotted by rovv.
     - Clip the MaxCircuitDirtiness config option to a minimum of 10
       seconds. Warn the user if lower values are given in the
@@ -66,16 +67,17 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
 
   o Minor bugfixes (hidden services):
     - Do not throw away existing introduction points on SIGHUP; bugfix on
-      0.0.6pre1; also, do not stall hidden services because of introduction
-      points thrown away; bugfix on 0.2.1.7-alpha. Spotted by John Brooks.
-      Patch by Karsten. Fixes bug 874.
+      0.0.6pre1; also, do not stall hidden services because of
+      introduction points thrown away; bugfix on 0.2.1.7-alpha. Spotted
+      by John Brooks. Patch by Karsten. Fixes bug 874.
 
   o Code simplifications and refactoring:
     - Rename the confusing or_is_obsolete field to the more appropriate
-      is_bad_for_new_circs, and move it to or_connection_t where it belongs.
+      is_bad_for_new_circs, and move it to or_connection_t where it
+      belongs.
     - Move edge-only flags from connection_t to edge_connection_t: not
       only is this better coding, but on machines of plausible alignment,
-      it should save 4-8 bytes per connection_t.  "Every little bit helps."
+      it should save 4-8 bytes per connection_t. "Every little bit helps."
 
 
 Changes in version 0.2.1.8-alpha - 2008-12-08

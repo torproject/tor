@@ -564,7 +564,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   return 0;
 }
 
-/** True iff <b>a</b> is more severe than <b>b</b> */
+/** True iff <b>a</b> is more severe than <b>b</b>. */
 static int
 WRA_MORE_SEVERE(was_router_added_t a, was_router_added_t b)
 {
@@ -577,7 +577,7 @@ WRA_MORE_SEVERE(was_router_added_t a, was_router_added_t b)
   }
 }
 
-/** As for dirserv_add_descriptor, but accepts multiple documents, and
+/** As for dirserv_add_descriptor(), but accepts multiple documents, and
  * returns the most severe error that occurred for any one of them. */
 was_router_added_t
 dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
