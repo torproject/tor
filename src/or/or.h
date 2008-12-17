@@ -362,7 +362,7 @@ typedef enum {
  * object for a consensus. */
 #define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 13
 /** A connection to a directory server: download a v3 networkstatus
- * consensus. */,
+ * consensus. */
 #define DIR_PURPOSE_FETCH_CONSENSUS 14
 /** A connection to a directory server: download one or more directory
  * authority certificates. */
