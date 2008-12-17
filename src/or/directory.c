@@ -108,7 +108,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
   if (dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
       dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES ||
-      dir_purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS ||
+      dir_purpose == DIR_PURPOSE_FETCH_V2_NETWORKSTATUS ||
       dir_purpose == DIR_PURPOSE_FETCH_STATUS_VOTE ||
       dir_purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES ||
       dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS ||
@@ -158,7 +158,7 @@ dir_conn_purpose_to_string(int purpose)
       return "server vote upload";
     case DIR_PURPOSE_UPLOAD_SIGNATURES:
       return "consensus signature upload";
-    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+    case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
       return "network-status fetch";
     case DIR_PURPOSE_FETCH_SERVERDESC:
       return "server descriptor fetch";
@@ -312,7 +312,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
              (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
                                                         V2_AUTHORITY);
       break;
-    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+    case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
     case DIR_PURPOSE_FETCH_SERVERDESC:
       type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
                                                         V2_AUTHORITY);
@@ -564,7 +564,7 @@ connection_dir_request_failed(dir_connection_t *conn)
   }
   if (entry_list_can_grow(get_options()))
     router_set_status(conn->identity_digest, 0); /* don't try him again */
-  if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_V2_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_networkstatus_failed(conn, -1);
@@ -980,7 +980,7 @@ directory_send_command(dir_connection_t *conn,
   }
 
   switch (purpose) {
-    case DIR_PURPOSE_FETCH_NETWORKSTATUS:
+    case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
       tor_assert(resource);
       httpcommand = "GET";
       len = strlen(resource)+32;
@@ -1555,9 +1555,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
   }
 
-  if (conn->_base.purpose == DIR_PURPOSE_FETCH_NETWORKSTATUS) {
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_V2_NETWORKSTATUS) {
     smartlist_t *which = NULL;
-    networkstatus_source_t source;
+    v2_networkstatus_source_t source;
     char *cp;
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
@@ -2194,7 +2194,7 @@ note_client_request(int purpose, int compressed, size_t bytes)
   char *key;
   const char *kind = NULL;
   switch (purpose) {
-    case DIR_PURPOSE_FETCH_NETWORKSTATUS: kind = "dl/status"; break;
+    case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS: kind = "dl/status"; break;
     case DIR_PURPOSE_FETCH_CONSENSUS:     kind = "dl/consensus"; break;
     case DIR_PURPOSE_FETCH_CERTIFICATE:   kind = "dl/cert"; break;
     case DIR_PURPOSE_FETCH_STATUS_VOTE:   kind = "dl/vote"; break;

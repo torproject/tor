@@ -510,7 +510,7 @@ _compare_networkstatus_v2_published_on(const void **_a, const void **_b)
  * appropriate. */
 static int
 add_networkstatus_to_cache(const char *s,
-                           networkstatus_source_t source,
+                           v2_networkstatus_source_t source,
                            networkstatus_v2_t *ns)
 {
   if (source != NS_FROM_CACHE) {
@@ -555,7 +555,8 @@ add_networkstatus_to_cache(const char *s,
  */
 int
 router_set_networkstatus_v2(const char *s, time_t arrived_at,
-            networkstatus_source_t source, smartlist_t *requested_fingerprints)
+                            v2_networkstatus_source_t source,
+                            smartlist_t *requested_fingerprints)
 {
   networkstatus_v2_t *ns;
   int i, found;
@@ -1021,7 +1022,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
          /* Is this quite sensible with IPv6 or multiple addresses? */
          if (connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, &addr, ds->dir_port,
-                DIR_PURPOSE_FETCH_NETWORKSTATUS)) {
+                DIR_PURPOSE_FETCH_V2_NETWORKSTATUS)) {
            /* XXX020 the above dir_port won't be accurate if we're
             * doing a tunneled conn. In that case it should be or_port.
             * How to guess from here? Maybe make the function less general
@@ -1035,7 +1036,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
          base16_encode(resource+3, sizeof(resource)-3, ds->digest, DIGEST_LEN);
          strlcat(resource, ".z", sizeof(resource));
          directory_initiate_command_routerstatus(
-               &ds->fake_status, DIR_PURPOSE_FETCH_NETWORKSTATUS,
+               &ds->fake_status, DIR_PURPOSE_FETCH_V2_NETWORKSTATUS,
                ROUTER_PURPOSE_GENERAL,
                0, /* Not private */
                resource,
@@ -1047,8 +1048,8 @@ update_v2_networkstatus_cache_downloads(time_t now)
     /* A non-authority cache launches one connection to a random authority. */
     /* (Check whether we're currently fetching network-status objects.) */
     if (!connection_get_by_type_purpose(CONN_TYPE_DIR,
-                                        DIR_PURPOSE_FETCH_NETWORKSTATUS))
-      directory_get_from_dirserver(DIR_PURPOSE_FETCH_NETWORKSTATUS,
+                                        DIR_PURPOSE_FETCH_V2_NETWORKSTATUS))
+      directory_get_from_dirserver(DIR_PURPOSE_FETCH_V2_NETWORKSTATUS,
                                    ROUTER_PURPOSE_GENERAL, "all.z",
                                    PDS_RETRY_IF_NO_SERVERS);
   }

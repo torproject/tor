@@ -339,7 +339,7 @@ typedef enum {
 #define DIR_PURPOSE_HAS_FETCHED_RENDDESC 4
 /** A connection to a directory server: download one or more v2
  * network-status objects */
-#define DIR_PURPOSE_FETCH_NETWORKSTATUS 5
+#define DIR_PURPOSE_FETCH_V2_NETWORKSTATUS 5
 /** A connection to a directory server: download one or more server
  * descriptors. */
 #define DIR_PURPOSE_FETCH_SERVERDESC 6
@@ -3679,7 +3679,7 @@ int tor_init(int argc, char **argv);
 /** Location where we found a v2 networkstatus. */
 typedef enum {
   NS_FROM_CACHE, NS_FROM_DIR_BY_FP, NS_FROM_DIR_ALL, NS_GENERATED
-} networkstatus_source_t;
+} v2_networkstatus_source_t;
 
 /** Possible statuses of a version of Tor, given opinions from the directory
  * servers. */
@@ -3712,7 +3712,7 @@ int networkstatus_check_voter_signature(networkstatus_t *consensus,
                                         authority_cert_t *cert);
 char *networkstatus_get_cache_filename(const char *identity_digest);
 int router_set_networkstatus_v2(const char *s, time_t arrived_at,
-                             networkstatus_source_t source,
+                             v2_networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
 void networkstatus_v2_list_clean(time_t now);
 routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
