@@ -16,10 +16,10 @@ const char relay_c_id[] =
 #include "or.h"
 #include "mempool.h"
 
-static int relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
+static int relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
                 crypt_path_t **layer_hint, char *recognized);
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
-                                            int cell_direction,
+                                            cell_direction_t cell_direction,
                                             crypt_path_t *layer_hint);
 
 static int
@@ -141,7 +141,8 @@ relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
  * Return -<b>reason</b> on failure.
  */
 int
-circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
+circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
+                           cell_direction_t cell_direction)
 {
   or_connection_t *or_conn=NULL;
   crypt_path_t *layer_hint=NULL;
@@ -252,7 +253,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ, int cell_direction)
  * else return 0.
  */
 static int
-relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
+relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
             crypt_path_t **layer_hint, char *recognized)
 {
   relay_header_t rh;
@@ -326,7 +327,7 @@ relay_crypt(circuit_t *circ, cell_t *cell, int cell_direction,
  */
 static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
-                           int cell_direction,
+                           cell_direction_t cell_direction,
                            crypt_path_t *layer_hint)
 {
   or_connection_t *conn; /* where to send the cell */
@@ -379,7 +380,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
  * attached to circ, return that conn, else return NULL.
  */
 static edge_connection_t *
-relay_lookup_conn(circuit_t *circ, cell_t *cell, int cell_direction,
+relay_lookup_conn(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
                   crypt_path_t *layer_hint)
 {
   edge_connection_t *tmpconn;
@@ -472,7 +473,7 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
 {
   cell_t cell;
   relay_header_t rh;
-  int cell_direction;
+  cell_direction_t cell_direction;
   /* XXXX NM Split this function into a separate versions per circuit type? */
 
   tor_assert(circ);
@@ -1801,7 +1802,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
  * transmitting in <b>direction</b>. */
 void
 append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
-                             cell_t *cell, int direction)
+                             cell_t *cell, cell_direction_t direction)
 {
   cell_queue_t *queue;
   int streams_blocked;

@@ -745,8 +745,11 @@ typedef struct rend_data_t {
  * future are dropped immediately. */
 #define REND_REPLAY_TIME_INTERVAL (60 * 60)
 
-#define CELL_DIRECTION_IN 1
-#define CELL_DIRECTION_OUT 2
+/** Used to indicate which way a cell is going on a circuit. */
+typedef enum {
+  CELL_DIRECTION_IN=1, /**< The cell is moving towards the origin. */
+  CELL_DIRECTION_OUT=2, /**< The cell is moving away from the origin. */
+} cell_direction_t;
 
 /** Initial value for both sides of a circuit transmission window when the
  * circuit is initialized.  Measured in cells. */
@@ -3823,7 +3826,7 @@ extern uint64_t stats_n_relay_cells_relayed;
 extern uint64_t stats_n_relay_cells_delivered;
 
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
-                               int cell_direction);
+                               cell_direction_t cell_direction);
 
 void relay_header_pack(char *dest, const relay_header_t *src);
 void relay_header_unpack(relay_header_t *dest, const char *src);
@@ -3852,7 +3855,7 @@ void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
 void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell);
 
 void append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
-                                  cell_t *cell, int direction);
+                                  cell_t *cell, cell_direction_t direction);
 void connection_or_unlink_all_active_circs(or_connection_t *conn);
 int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
                                                   int max, time_t now);
