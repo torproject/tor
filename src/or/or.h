@@ -762,7 +762,7 @@ typedef enum {
 /** Amount to increment a stream window when we get a stream SENDME. */
 #define STREAMWINDOW_INCREMENT 50
 
-/* cell commands */
+/* Cell commands.  These values are defined in tor-spec.txt. */
 #define CELL_PADDING 0
 #define CELL_CREATE 1
 #define CELL_CREATED 2
@@ -774,6 +774,8 @@ typedef enum {
 #define CELL_NETINFO 8
 #define CELL_RELAY_EARLY 9
 
+/** True iff the cell command <b>x</b> is one that implies a variable-length
+ * cell. */
 #define CELL_COMMAND_IS_VAR_LENGTH(x) ((x) == CELL_VERSIONS)
 
 /** How long to test reachability before complaining to the user. */
@@ -805,6 +807,7 @@ typedef enum {
 /** Number of bytes in a cell transmitted over the network. */
 #define CELL_NETWORK_SIZE 512
 
+/** Length of a header on a variable-length cell. */
 #define VAR_CELL_HEADER_SIZE 5
 
 /** Number of bytes in a relay cell's header (not including general cell
@@ -961,10 +964,13 @@ typedef struct connection_t {
   /** Another connection that's connected to this one in lieu of a socket. */
   struct connection_t *linked_conn;
 
-  /** Unique identifier for this connection. */
+  /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
 
-  /* XXXX021 move this into a subtype. */
+  /* XXXX021 move this field into a subtype, or (hack, spit) make it a union
+   * with some other fields. */
+  /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
+   * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
 } connection_t;
@@ -1175,8 +1181,12 @@ typedef struct control_connection_t {
   /** True if we have sent a protocolinfo reply on this connection. */
   unsigned int have_sent_protocolinfo:1;
 
+  /** Amount of space allocated in incoming_cmd. */
   uint32_t incoming_cmd_len;
+  /** Number of bytes currently stored in incoming_cmd. */
   uint32_t incoming_cmd_cur_len;
+  /** A control command that we're reading from the inbuf, but which has not
+   * yet arrived completely.  */
   char *incoming_cmd;
 } control_connection_t;
 
@@ -1219,6 +1229,7 @@ static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
   return DOWNCAST(control_connection_t, c);
 }
 
+/** What action type does an address policy indicate: accept or reject? */
 typedef enum {
   ADDR_POLICY_ACCEPT=1,
   ADDR_POLICY_REJECT=2,
@@ -1561,7 +1572,7 @@ typedef struct networkstatus_v2_t {
                          * sorted by identity_digest. */
 } networkstatus_v2_t;
 
-/** The claim about a single router, make in a vote. */
+/** The claim about a single router, made in a vote. */
 typedef struct vote_routerstatus_t {
   routerstatus_t status; /**< Underlying 'status' object for this router.
                           * Flags are redundant. */
@@ -1740,13 +1751,22 @@ typedef struct extend_info_t {
 /** Certificate for v3 directory protocol: binds long-term authority identity
  * keys to medium-term authority signing keys. */
 typedef struct authority_cert_t {
+  /** Information relating to caching this cert on disk and looking it up. */
   signed_descriptor_t cache_info;
+  /** This authority's long-term authority identity key. */
   crypto_pk_env_t *identity_key;
+  /** This authority's medium-term signing key. */
   crypto_pk_env_t *signing_key;
+  /** The digest of <b>signing_key</b> */
   char signing_key_digest[DIGEST_LEN];
+  /** The listed expiration time of this certificate. */
   time_t expires;
+  /** This authority's IPv4 address, in host order. */
   uint32_t addr;
+  /** This authority's directory port. */
   uint16_t dir_port;
+  /** True iff this certificate was cross-certified by signing the identity
+   * key with the signing key. */
   uint8_t is_cross_certified;
 } authority_cert_t;
 
@@ -1754,12 +1774,19 @@ typedef struct authority_cert_t {
  * server.  */
 typedef enum {
   NO_AUTHORITY      = 0,
+  /** Serves/signs v1 directory information: Big lists of routers, and short
+   * routerstatus documents. */
   V1_AUTHORITY      = 1 << 0,
+  /** Serves/signs v2 directory information: i.e. v2 networkstatus documents */
   V2_AUTHORITY      = 1 << 1,
+  /** Serves/signs v3 directory information: votes, consensuses, certs */
   V3_AUTHORITY      = 1 << 2,
+  /** Serves hidden service descriptors. */
   HIDSERV_AUTHORITY = 1 << 3,
+  /** Serves bridge descriptors. */
   BRIDGE_AUTHORITY  = 1 << 4,
-  EXTRAINFO_CACHE   = 1 << 5,  /* not precisely an authority type. */
+  /** Serves extrainfo documents. (XXX Not precisely an authority type)*/
+  EXTRAINFO_CACHE   = 1 << 5,
 } authority_type_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u
@@ -2007,7 +2034,7 @@ typedef struct or_circuit_t {
   /** Linked list of Exit streams associated with this circuit that are
    * still being resolved. */
   edge_connection_t *resolving_streams;
-    /** The cipher used by intermediate hops for cells heading toward the
+  /** The cipher used by intermediate hops for cells heading toward the
    * OP. */
   crypto_cipher_env_t *p_crypto;
   /** The cipher used by intermediate hops for cells heading away from
@@ -2084,13 +2111,16 @@ typedef enum invalid_router_usage_t {
 /** An entry specifying a set of addresses and ports that should be remapped
  * to another address and port before exiting this exit node. */
 typedef struct exit_redirect_t {
-  tor_addr_t addr;
-  uint16_t port_min;
-  uint16_t port_max;
-  maskbits_t maskbits;
+  tor_addr_t addr; /**< Address to remap whenever we see it. */
+  uint16_t port_min; /**< Low end of port range to remap */
+  uint16_t port_max; /**< High end of port range to remap */
+  maskbits_t maskbits; /**< How many bits of addr need to match for us to
+                        * remap an address? */
 
-  tor_addr_t addr_dest;
-  uint16_t port_dest;
+  tor_addr_t addr_dest; /**< What address do we remap these connections to? */
+  uint16_t port_dest; /**< What port do we remap these connections to? */
+  /** False iff this entry indicates a subset of the address space that
+   * <em>should not</em> be remapped. */
   unsigned int is_redirect:1;
 } exit_redirect_t;
 
@@ -2522,6 +2552,7 @@ typedef struct {
    * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
 #ifdef ENABLE_GEOIP_STATS
+  /* DOCDOC all of these. */
   int DirRecordUsageByCountry;
   int DirRecordUsageGranularity;
   int DirRecordUsageRetainIPs;
@@ -3037,8 +3068,18 @@ void addressmap_clear_transient(void);
 void addressmap_free_all(void);
 int addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out);
 int addressmap_have_mapping(const char *address, int update_timeout);
+/** Enumerates possible origins of a client-side address mapping. */
 typedef enum {
-  ADDRMAPSRC_CONTROLLER, ADDRMAPSRC_TORRC, ADDRMAPSRC_TRACKEXIT,
+  /** We're remapping this address because the controller told us to. */
+  ADDRMAPSRC_CONTROLLER,
+  /** We're remapping this address because our configuration (via torrc, the
+   * command line, or a SETCONF command) told us to. */
+  ADDRMAPSRC_TORRC,
+  /** We're remapping this address because we have TrackHostExit configured,
+   * and we want to remember to use the same exit next time. */
+  ADDRMAPSRC_TRACKEXIT,
+  /** We're remapping this address because we got a DNS resolution from a
+   * Tor server that told us what its value was. */
   ADDRMAPSRC_DNS,
 } addressmap_entry_source_t;
 void addressmap_register(const char *address, char *new_address,
@@ -3058,6 +3099,7 @@ int connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 int hostname_is_noconnect_address(const char *address);
 
 void set_exit_redirects(smartlist_t *lst);
+/** Possible return values for parse_extended_hostname. */
 typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME, BAD_HOSTNAME
 } hostname_type_t;
@@ -3109,6 +3151,8 @@ void var_cell_free(var_cell_t *cell);
 
 /********************************* control.c ***************************/
 
+/** Used to indicate the type of a circuit event passed to the controller.
+ * The various types are defined in control-spec.txt */
 typedef enum circuit_status_event_t {
   CIRC_EVENT_LAUNCHED = 0,
   CIRC_EVENT_BUILT    = 1,
@@ -3117,6 +3161,8 @@ typedef enum circuit_status_event_t {
   CIRC_EVENT_CLOSED   = 4,
 } circuit_status_event_t;
 
+/** Used to indicate the type of a stream event passed to the controller.
+ * The various types are defined in control-spec.txt */
 typedef enum stream_status_event_t {
   STREAM_EVENT_SENT_CONNECT = 0,
   STREAM_EVENT_SENT_RESOLVE = 1,
@@ -3129,6 +3175,8 @@ typedef enum stream_status_event_t {
   STREAM_EVENT_REMAP        = 8
 } stream_status_event_t;
 
+/** Used to indicate the type of an OR connection event passed to the
+ * controller.  The various types are defined in control-spec.txt */
 typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_LAUNCHED     = 0,
   OR_CONN_EVENT_CONNECTED    = 1,
@@ -3299,6 +3347,7 @@ void directory_initiate_command(const char *address, const tor_addr_t *addr,
 int dir_split_resource_into_fingerprints(const char *resource,
                                     smartlist_t *fp_out, int *compresseed_out,
                                     int decode_hex, int sort_uniq);
+/** A pair of digests created by dir_split_resource_info_fingerprint_pairs() */
 typedef struct {
   char first[DIGEST_LEN];
   char second[DIGEST_LEN];
@@ -3312,6 +3361,8 @@ int router_supports_extrainfo(const char *identity_digest, int is_authority);
 time_t download_status_increment_failure(download_status_t *dls,
                                          int status_code, const char *item,
                                          int server, time_t now);
+/** Increment the failure count of the download_status_t <b>dls</b>, with
+ * the optional status code <b>sc</b>. */
 #define download_status_failed(dls, sc)                                 \
   download_status_increment_failure((dls), (sc), NULL,                  \
                                     get_options()->DirPort, time(NULL))
@@ -3631,10 +3682,13 @@ int tor_init(int argc, char **argv);
  * completely? */
 #define MAX_NETWORKSTATUS_AGE (10*24*60*60)
 
+/** Location where we found a v2 networkstatus. */
 typedef enum {
   NS_FROM_CACHE, NS_FROM_DIR_BY_FP, NS_FROM_DIR_ALL, NS_GENERATED
 } networkstatus_source_t;
 
+/** Possible statuses of a version of Tor, given opinions from the directory
+ * servers. */
 typedef enum version_status_t {
   VS_RECOMMENDED=0, /**< This version is listed as recommended. */
   VS_OLD=1, /**< This version is older than any recommended version. */
@@ -3765,10 +3819,17 @@ void clear_pending_onions(void);
  */
 #define POLICY_BUF_LEN 52
 
+/** Outcome of applying an address policy to an address. */
 typedef enum {
+  /** The address was accepted */
   ADDR_POLICY_ACCEPTED=0,
+  /** The address was rejected */
   ADDR_POLICY_REJECTED=-1,
+  /** Part of the address was unknown, but as far as we can tell, it was
+   * accepted. */
   ADDR_POLICY_PROBABLY_ACCEPTED=1,
+  /** Part of the address was unknown, but as far as we can tell, it was
+   * rejected. */
   ADDR_POLICY_PROBABLY_REJECTED=2
 } addr_policy_result_t;
 
@@ -4280,6 +4341,8 @@ int router_is_unreliable(routerinfo_t *router, int need_uptime,
 uint32_t router_get_advertised_bandwidth(routerinfo_t *router);
 uint32_t router_get_advertised_bandwidth_capped(routerinfo_t *router);
 
+/** Possible ways to weight routers when choosing one randomly.  See
+ * routerlist_sl_choose_by_bandwidth() for more information.*/
 typedef enum {
   NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_GUARD
 } bandwidth_weight_rule_t;
@@ -4287,7 +4350,8 @@ routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
 routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
 
-/** Flags to be control router_choose_random_node */
+/** Flags to be passed to control router_choose_random_node() to indicate what
+ * kind of nodes to pick according to what algorithm. */
 typedef enum {
   CRN_NEED_UPTIME = 1<<0,
   CRN_NEED_CAPACITY = 1<<1,
