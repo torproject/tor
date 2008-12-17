@@ -1606,6 +1606,7 @@ should_generate_v2_networkstatus(void)
 #define UPTIME_TO_GUARANTEE_STABLE (3600*24*30)
 /** If a router's MTBF is at least this value, then it is always stable.
  * See above.  (Corresponds to about 7 days for current decay rates.) */
+/*XXXX021 Never actually used! */
 #define MTBF_TO_GUARANTEE_STABLE (60*60*24*5)
 /** Similarly, we protect sufficiently fast nodes from being pushed
  * out of the set of Fast nodes. */

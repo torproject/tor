@@ -108,7 +108,6 @@ typedef enum {
   C_DESCRIPTOR_COOKIE,
   C_CLIENT_KEY,
 
-  _UNRECOGNIZED,
   _ERR,
   _EOF,
   _NIL
@@ -208,7 +207,7 @@ typedef struct token_rule_t {
 /** An item that must appear no more than once */
 #define T01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 0 }
 /** An annotation that must appear no more than once */
-#define A01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 0 }
+#define A01(s,t,a,o)  { s, t, a, o, 0, 1, 0, 1 }
 
 /* Argument multiplicity: any number of arguments. */
 #define ARGS        0,INT_MAX,0

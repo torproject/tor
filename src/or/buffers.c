@@ -219,10 +219,6 @@ chunk_new_with_alloc_size(size_t alloc)
 }
 #endif
 
-/** Allocate a new chunk with memory size of <b>sz</b>. */
-#define chunk_new_with_capacity(sz) \
-  (chunk_new_with_alloc_size(CHUNK_ALLOC_SIZE(sz)))
-
 /** Expand <b>chunk</b> until it can hold <b>sz</b> bytes, and return a
  * new pointer to <b>chunk</b>.  Old pointers are no longer valid. */
 static INLINE chunk_t *

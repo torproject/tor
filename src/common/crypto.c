@@ -2073,7 +2073,7 @@ base64_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 }
 #undef X
 #undef SP
-#undef NIL
+#undef PAD
 
 /** Base-64 encode DIGEST_LINE bytes from <b>digest</b>, remove the trailing =
  * and newline characters, and store the nul-terminated result in the first

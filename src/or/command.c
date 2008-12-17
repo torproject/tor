@@ -28,8 +28,6 @@ uint64_t stats_n_relay_cells_processed = 0;
 uint64_t stats_n_destroy_cells_processed = 0;
 uint64_t stats_n_versions_cells_processed = 0;
 uint64_t stats_n_netinfo_cells_processed = 0;
-uint64_t stats_n_cert_cells_processed = 0;
-uint64_t stats_n_link_auth_cells_processed = 0;
 
 /* These are the main functions for processing cells */
 static void command_process_create_cell(cell_t *cell, or_connection_t *conn);

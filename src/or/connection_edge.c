@@ -2923,8 +2923,8 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
   return 1;
 }
 
-/** Make connection redirection follow the provided list of
- * exit_redirect_t */
+/** Make connection redirection follow the provided list of exit_redirect_t.
+ * Steals a reference to <b>lst</b>; caller MUST NOT free <b>list</b>. */
 void
 set_exit_redirects(smartlist_t *lst)
 {

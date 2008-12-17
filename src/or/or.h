@@ -1539,9 +1539,6 @@ typedef struct networkstatus_v2_t {
   /** What was the digest of the document? */
   char networkstatus_digest[DIGEST_LEN];
 
-  unsigned int is_recent; /**< Is this recent enough to influence running
-                           * status? */
-
   /* These fields come from the actual network-status document.*/
   time_t published_on; /**< Declared publication date. */
 
@@ -2382,7 +2379,6 @@ typedef struct {
                                        * node families */
   config_line_t *RedirectExit; /**< List of config lines for simple
                                        * addr/port redirection */
-  smartlist_t *RedirectExitList; /**< List of exit_redirect_t */
   config_line_t *AuthDirBadDir; /**< Address policy for descriptors to
                                  * mark as bad dir mirrors. */
   config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
@@ -2447,8 +2443,6 @@ typedef struct {
   /** Should we always fetch our dir info on the mirror schedule (which
    * means directly from the authorities) no matter our other config? */
   int FetchDirInfoEarly;
-
-  smartlist_t *reachable_addr_policy; /**< Parsed from ReachableAddresses */
 
   char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
                              * MAPADDRESS requests. */
