@@ -12,8 +12,10 @@ Backport for 0.2.0 once better tested:
             approach). (Also maybe r16674)
     [Partially backported.  Instead of the basic name checking, I backported
      r17171 instead, to be even more resistant to poisoning.]
-  - r17091: distinguish "no routers support pending circuits" from
-            "no circuits are pending." See also r17181 and r17184.
+  o r17091: distinguish "no routers support pending circuits" from
+            "no circuits are pending."
+    - See also r17181...
+    - ... and r17184.
   - r17137: send END cell in response to connect to nonexistent hidserv port.
   - r17138: reject *:* servers should never do DNS lookups.
   - r17139: Fix another case of overriding .exit choices.
