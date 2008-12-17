@@ -25,5 +25,5 @@ Backport for 0.2.0 once better tested:
   - r17562: Fix bug 874, wherein a sighup would make us kill all our intro
     points and leave their corpses for the next set of intro points to
     stumble over.
-  - r17566: FIx bug 691, wherein failure to run dns_init() would kill Tor
+  o r17566: FIx bug 691, wherein failure to run dns_init() would kill Tor
     dead.
