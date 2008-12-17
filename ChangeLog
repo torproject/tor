@@ -32,7 +32,6 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Use 64 bits instead of 32 bits for connection identifiers used with
       the controller protocol, to greatly reduce risk of identifier reuse.
 
-
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
       differently than the case where there is an error handling the detached
@@ -40,6 +39,15 @@ Changes in version 0.2.0.33 - 200?-??-??
     - When we realize that another process has modified our cached
       descriptors, print out a more useful error message rather than
       triggering an assertion. Fixes bug 885.  Patch from Karsten.
+    - Implement the 0x20 hack to better resist DNS poisoning: set the
+      case on outgoing DNS requests randomly, and reject responses that do
+      not match the case correctly. This logic can be disabled with the
+      ServerDNSRamdomizeCase setting, if you are using one of the 0.3%
+      of servers that do not reliably preserve case in replies. See
+      "Increased DNS Forgery Resistance through 0x20-Bit Encoding"
+      for more info.
+    - Check DNS replies for more matching fields to better resist DNS
+      poisoning.
 
 
 Changes in version 0.2.0.32 - 2008-11-20

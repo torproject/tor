@@ -2297,6 +2297,8 @@ typedef struct {
                       * the local domains. */
   int ServerDNSDetectHijacking; /**< Boolean: If true, check for DNS failure
                                  * hijacking. */
+  int ServerDNSRandomizeCase; /**< Boolean: Use the 0x20-hack to prevent
+                               * DNS poisoning attacks. */
   char *ServerDNSResolvConfFile; /**< If provided, we configure our internal
                      * resolver from the file here rather than from
                      * /etc/resolv.conf (Unix) or the registry (Windows). */

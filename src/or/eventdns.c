@@ -307,6 +307,9 @@ static int global_max_retransmits = 3;	/* number of times we'll retransmit a req
 /* number of timeouts in a row before we consider this server to be down */
 static int global_max_nameserver_timeout = 3;
 
+/* DOCDOC */
+static int global_randomize_case = 1;
+
 /* These are the timeout values for nameservers. If we find a nameserver is down */
 /* we try to probe it at intervals as given below. Values are in seconds. */
 static const struct timeval global_nameserver_timeouts[] = {{10, 0}, {60, 0}, {300, 0}, {900, 0}, {3600, 0}};
@@ -377,6 +380,9 @@ inet_aton(const char *c, struct in_addr *addr)
 
 #define ISSPACE(c) isspace((int)(unsigned char)(c))
 #define ISDIGIT(c) isdigit((int)(unsigned char)(c))
+#define ISALPHA(c) isalpha((int)(unsigned char)(c))
+#define TOLOWER(c) (char)tolower((int)(unsigned char)(c))
+#define TOUPPER(c) (char)toupper((int)(unsigned char)(c))
 
 #ifndef NDEBUG
 static const char *
@@ -813,9 +819,10 @@ name_parse(u8 *packet, int length, int *idx, char *name_out, size_t name_out_len
 static int
 reply_parse(u8 *packet, int length) {
 	int j = 0;	/* index into packet */
+	int k;
 	u16 _t;	 /* used by the macros */
 	u32 _t32;  /* used by the macros */
-	char tmp_name[256]; /* used by the macros */
+	char tmp_name[256], cmp_name[256]; /* used by the macros */
 
 	u16 trans_id, questions, answers, authority, additional, datalength;
 	u16 flags = 0;
@@ -823,6 +830,7 @@ reply_parse(u8 *packet, int length) {
 	struct reply reply;
 	struct request *req = NULL;
 	unsigned int i;
+	int name_matches = 0;
 
 	GET16(trans_id);
 	GET16(flags);
@@ -848,11 +856,28 @@ reply_parse(u8 *packet, int length) {
 	/* if (!answers) return; */  /* must have an answer of some form */
 
 	/* This macro skips a name in the DNS reply. */
-#define SKIP_NAME														\
+#define GET_NAME														\
 	do { tmp_name[0] = '\0';											\
 		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
 			goto err;													\
 	} while(0);
+#define TEST_NAME														\
+	do { tmp_name[0] = '\0';											\
+		cmp_name[0] = '\0';												\
+		k = j;															\
+		if (name_parse(packet, length, &j, tmp_name, sizeof(tmp_name))<0) \
+			goto err;													\
+		if (name_parse(req->request, req->request_len, &k, cmp_name, sizeof(cmp_name))<0) \
+			goto err;													\
+		if (global_randomize_case) {									\
+			if (strcmp(tmp_name, cmp_name) == 0)						\
+				name_matches = 1; /* we ignore mismatching names */		\
+		} else {														\
+			if (strcasecmp(tmp_name, cmp_name) == 0)					\
+				name_matches = 1;										\
+		}																\
+	} while(0)
+
 
 	reply.type = req->request_type;
 
@@ -861,10 +886,13 @@ reply_parse(u8 *packet, int length) {
 		/* the question looks like
 		 * <label:name><u16:type><u16:class>
 		 */
-		SKIP_NAME;
+	    TEST_NAME;
 		j += 4;
 		if (j >= length) goto err;
 	}
+
+	if (!name_matches)
+		goto err;
 
 	/* now we have the answer section which looks like
 	 * <label:name><u16:type><u16:class><u32:ttl><u16:len><data...>
@@ -875,7 +903,7 @@ reply_parse(u8 *packet, int length) {
 
 		/* XXX I'd be more comfortable if we actually checked the name */
 		/* here. -NM */
-		SKIP_NAME;
+		GET_NAME;
 		GET16(type);
 		GET16(class);
 		GET32(ttl);
@@ -1082,6 +1110,22 @@ evdns_set_transaction_id_fn(uint16_t (*fn)(void))
 		trans_id_function = default_transaction_id_fn;
 }
 
+
+static void
+get_random_bytes(char *buf, size_t n)
+{
+	unsigned i;
+	for (i = 0; i < n-1; i += 2) {
+		u16 tid = trans_id_function();
+		buf[i] = (tid >> 8) & 0xff;
+		buf[i+1] = tid & 0xff;
+	}
+	if (i < n) {
+		u16 tid = trans_id_function();
+		buf[i] = tid & 0xff;
+	}
+}
+
 /* Try to choose a strong transaction id which isn't already in flight */
 static u16
 transaction_id_pick(void) {
@@ -1143,15 +1187,32 @@ nameserver_pick(void) {
 /* this is called when a namesever socket is ready for reading */
 static void
 nameserver_read(struct nameserver *ns) {
+	struct sockaddr_storage ss;
+	struct sockaddr *sa = (struct sockaddr *)&ss;
+	struct sockaddr_in *sin;
+	socklen_t addrlen = sizeof(ss);
 	u8 packet[1500];
 
 	for (;;) {
 		const int r =
-            (int)recv(ns->socket, packet,(socklen_t)sizeof(packet), 0);
+            (int)recvfrom(ns->socket, packet,(socklen_t)sizeof(packet), 0,
+						  sa, &addrlen);
 		if (r < 0) {
 			int err = last_error(ns->socket);
 			if (error_is_eagain(err)) return;
 			nameserver_failed(ns, strerror(err));
+			return;
+		}
+		if (sa->sa_family != AF_INET) {
+			log(EVDNS_LOG_WARN,
+				"Address family mismatch on received DNS packet.");
+			return;
+		}
+		sin = (struct sockaddr_in *)sa;
+		if (sin->sin_addr.s_addr != ns->address) {
+			log(EVDNS_LOG_WARN,
+				"Address mismatch on received DNS packet.  Address was %s.",
+				debug_ntoa(sin->sin_addr.s_addr));
 			return;
 		}
 		ns->timedout = 0;
@@ -2243,11 +2304,28 @@ request_new(int type, const char *name, int flags,
 	/* the request data is alloced in a single block with the header */
 	struct request *const req =
 		(struct request *) malloc(sizeof(struct request) + request_max_len);
+	char namebuf[256];
 	int rlen;
 	(void) flags;
 
 	if (!req) return NULL;
 	memset(req, 0, sizeof(struct request));
+
+	if (global_randomize_case) {
+		unsigned i;
+		char randbits[32];
+		strlcpy(namebuf, name, sizeof(namebuf));
+		get_random_bytes(randbits, (name_len+7)/8);
+		for (i = 0; i < name_len; ++i) {
+			if (ISALPHA(namebuf[i])) {
+				if ((randbits[i >> 3] & (1<<(i%7))))
+					namebuf[i] = TOLOWER(namebuf[i]);
+				else
+					namebuf[i] = TOUPPER(namebuf[i]);
+			}
+		}
+		name = namebuf;
+	}
 
 	/* request data lives just after the header */
 	req->request = ((u8 *) req) + sizeof(struct request);
@@ -2690,7 +2768,13 @@ evdns_set_option(const char *option, const char *val, int flags)
 		if (!(flags & DNS_OPTION_MISC)) return 0;
 		log(EVDNS_LOG_DEBUG, "Setting retries to %d", retries);
 		global_max_retransmits = retries;
+	} else if (!strncmp(option, "randomize-case:", 15)) {
+		int randcase = strtoint(val);
+		if (!(flags & DNS_OPTION_MISC)) return 0;
+		log(EVDNS_LOG_DEBUG, "Setting randomize_case to %d", randcase);
+		global_randomize_case = randcase;
 	}
+
 	return 0;
 }
 
@@ -3127,7 +3211,7 @@ evdns_server_callback(struct evdns_server_request *req, void *data)
 		}
 	}
 
-	r = evdns_request_respond(req, 0);
+	r = evdns_server_request_respond(req, 0);
 	if (r<0)
 		printf("eeek, couldn't send reply.\n");
 }
