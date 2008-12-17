@@ -3061,34 +3061,34 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
 
   if (authdir_mode_handles_descs(options, -1) &&
       !strcmp(url,"/tor/")) { /* server descriptor post */
-    const char *msg = NULL;
+    const char *msg = "[None]";
     uint8_t purpose = authdir_mode_bridge(options) ?
                       ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
-    int r = dirserv_add_multiple_descriptors(body, purpose,
+    was_router_added_t r = dirserv_add_multiple_descriptors(body, purpose,
                                              conn->_base.address, &msg);
     tor_assert(msg);
-    if (r > 0)
+    if (WRA_WAS_ADDED(r))
       dirserv_get_directory(); /* rebuild and write to disk */
-    switch (r) {
-      case -1:
-        log_notice(LD_DIRSERV,
-                   "Rejected router descriptor or extra-info from %s "
-                   "(\"%s\").",
-                   conn->_base.address, msg);
-        /* fall through */
-      case 1:
-        /* malformed descriptor, or something wrong */
-        write_http_status_line(conn, 400, msg);
-        break;
-      case 0: /* accepted but discarded */
-        write_http_response_header_impl(conn, -1, NULL, NULL,
-                                        "X-Descriptor-Not-New: Yes\r\n", -1);
-        break;
-      case 2: /* accepted */
-        write_http_status_line(conn, 200, msg);
-        break;
+
+    if (r == ROUTER_ADDED_NOTIFY_GENERATOR) {
+      /* Accepted with a message. */
+      log_info(LD_DIRSERV,
+               "Problematic router descriptor or extra-info from %s "
+               "(\"%s\").",
+               conn->_base.address, msg);
+      write_http_status_line(conn, 400, msg);
+    } else if (r == ROUTER_ADDED_SUCCESSFULLY) {
+      write_http_status_line(conn, 200, msg);
+    } else if (WRA_WAS_OUTDATED(r)) {
+      write_http_response_header_impl(conn, -1, NULL, NULL,
+                                      "X-Descriptor-Not-New: Yes\r\n", -1);
+    } else {
+      log_info(LD_DIRSERV,
+               "Rejected router descriptor or extra-info from %s "
+               "(\"%s\").",
+               conn->_base.address, msg);
+      write_http_status_line(conn, 400, msg);
     }
-    goto done;
   }
 
   if (options->HSAuthoritativeDir &&

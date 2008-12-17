@@ -2923,7 +2923,7 @@ router_set_status(const char *digest, int up)
  * routers_update_status_from_consensus_networkstatus; subsequently, you
  * should call router_rebuild_store and routerlist_descriptors_added.
  */
-int
+was_router_added_t
 router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          int from_cache, int from_fetch)
 {
@@ -2950,7 +2950,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
              router->nickname);
     *msg = "Router descriptor was not new.";
     routerinfo_free(router);
-    return -1;
+    return ROUTER_WAS_NOT_NEW;
   }
 
   if (authdir) {
@@ -2958,7 +2958,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                                        !from_cache && !from_fetch)) {
       tor_assert(*msg);
       routerinfo_free(router);
-      return -2;
+      return ROUTER_AUTHDIR_REJECTS;
     }
     authdir_believes_valid = router->is_valid;
   } else if (from_fetch) {
@@ -2979,7 +2979,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         signed_desc_append_to_journal(&router->cache_info,
                                       &routerlist->desc_store);
       routerlist_insert_old(routerlist, router);
-      return -1;
+      return ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS;
     }
   }
 
@@ -3013,7 +3013,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                                     &routerlist->desc_store);
     routerlist_insert_old(routerlist, router);
     *msg = "Skipping router descriptor: not in consensus.";
-    return -1;
+    return ROUTER_NOT_IN_CONSENSUS;
   }
 
   /* If we have a router with the same identity key, choose the newer one. */
@@ -3031,7 +3031,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                                       &routerlist->desc_store);
       routerlist_insert_old(routerlist, router);
       *msg = "Router descriptor was not new.";
-      return -1;
+      return ROUTER_WAS_NOT_NEW;
     } else {
       /* Same key, and either new, or listed in the consensus. */
       log_debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
@@ -3052,7 +3052,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       *msg = authdir_believes_valid ? "Valid server updated" :
         ("Invalid server updated. (This dirserver is marking your "
          "server as unapproved.)");
-      return 0;
+      return ROUTER_ADDED_SUCCESSFULLY;
     }
   }
 
@@ -3063,7 +3063,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     signed_desc_append_to_journal(&router->cache_info,
                                   &routerlist->desc_store);
   directory_set_dirty();
-  return 0;
+  return ROUTER_ADDED_SUCCESSFULLY;
 }
 
 /** Insert <b>ei</b> into the routerlist, or free it. Other arguments are
@@ -3390,7 +3390,7 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
                           const char **msg)
 {
   routerinfo_t *ri;
-  int r;
+  was_router_added_t r;
   smartlist_t *lst;
   char annotation_buf[ROUTER_ANNOTATION_BUF_LEN];
   tor_assert(msg);
@@ -3420,10 +3420,11 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
   smartlist_add(lst, ri);
   routers_update_status_from_consensus_networkstatus(lst, 0);
 
-  if ((r=router_add_to_routerlist(ri, msg, 0, 0))<0) {
+  r = router_add_to_routerlist(ri, msg, 0, 0);
+  if (!WRA_WAS_ADDED(r)) {
     /* we've already assigned to *msg now, and ri is already freed */
     tor_assert(*msg);
-    if (r < -1)
+    if (r == ROUTER_AUTHDIR_REJECTS)
       log_warn(LD_DIR, "Couldn't add router to list: %s Dropping.", *msg);
     smartlist_free(lst);
     return 0;
@@ -3469,8 +3470,8 @@ router_load_routers_from_string(const char *s, const char *eos,
 
   log_info(LD_DIR, "%d elements to add", smartlist_len(routers));
 
-  SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
-  {
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+    was_router_added_t r;
     if (requested_fingerprints) {
       base16_encode(fp, sizeof(fp), descriptor_digests ?
                       ri->cache_info.signed_descriptor_digest :
@@ -3491,13 +3492,14 @@ router_load_routers_from_string(const char *s, const char *eos,
       }
     }
 
-    if (router_add_to_routerlist(ri, &msg, from_cache, !from_cache) >= 0) {
+    r = router_add_to_routerlist(ri, &msg, from_cache, !from_cache);
+    if (WRA_WAS_ADDED(r)) {
       any_changed = 1;
       smartlist_add(changed, ri);
       routerlist_descriptors_added(changed, from_cache);
       smartlist_clear(changed);
     }
-  });
+  } SMARTLIST_FOREACH_END(ri);
 
   routerlist_assert_ok(routerlist);
 
@@ -4182,14 +4184,14 @@ update_consensus_router_descriptor_downloads(time_t now)
              smartlist_len(no_longer_old));
     SMARTLIST_FOREACH(no_longer_old, signed_descriptor_t *, sd, {
         const char *msg;
-        int r;
+        was_router_added_t r;
         routerinfo_t *ri = routerlist_reparse_old(rl, sd);
         if (!ri) {
           log_warn(LD_BUG, "Failed to re-parse a router.");
           continue;
         }
         r = router_add_to_routerlist(ri, &msg, 1, 0);
-        if (r == -1) {
+        if (WRA_WAS_OUTDATED(r)) {
           log_warn(LD_DIR, "Couldn't add re-parsed router: %s",
                    msg?msg:"???");
         }

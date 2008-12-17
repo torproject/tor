@@ -3410,10 +3410,12 @@ int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
 int dirserv_load_fingerprint_file(void);
 void dirserv_free_fingerprint_list(void);
 const char *dirserv_get_nickname_by_digest(const char *digest);
-int dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
+enum was_router_added_t dirserv_add_multiple_descriptors(
+                                     const char *desc, uint8_t purpose,
                                      const char *source,
                                      const char **msg);
-int dirserv_add_descriptor(routerinfo_t *ri, const char **msg);
+enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
+                                               const char **msg);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
                                         const char *question, char **answer);
 void dirserv_free_descriptors(void);
@@ -4388,8 +4390,41 @@ void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old);
 void routerlist_free_all(void);
 void routerlist_reset_warnings(void);
 void router_set_status(const char *digest, int up);
-int router_add_to_routerlist(routerinfo_t *router, const char **msg,
-                             int from_cache, int from_fetch);
+
+/** Return value for router_add_to_routerlist() and dirserv_add_descriptor() */
+typedef enum was_router_added_t {
+  ROUTER_ADDED_SUCCESSFULLY = 0,
+  ROUTER_ADDED_NOTIFY_GENERATOR = 1,
+  ROUTER_WAS_NOT_NEW = -1,
+  ROUTER_NOT_IN_CONSENSUS = -2,
+  ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS = -3,
+  ROUTER_AUTHDIR_REJECTS = -4,
+} was_router_added_t;
+
+static int WRA_WAS_ADDED(was_router_added_t s);
+static int WRA_WAS_OUTDATED(was_router_added_t s);
+static int WRA_WAS_REJECTED(was_router_added_t s);
+/**DOCDOC*/
+static INLINE int
+WRA_WAS_ADDED(was_router_added_t s) {
+  return s == ROUTER_ADDED_SUCCESSFULLY || s == ROUTER_ADDED_NOTIFY_GENERATOR;
+}
+/**DOCDOC*/
+static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
+{
+  return (s == ROUTER_WAS_NOT_NEW ||
+          s == ROUTER_NOT_IN_CONSENSUS ||
+          s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS);
+}
+/**DOCDOC*/
+static INLINE int WRA_WAS_REJECTED(was_router_added_t s)
+{
+  return (s == ROUTER_AUTHDIR_REJECTS);
+}
+was_router_added_t router_add_to_routerlist(routerinfo_t *router,
+                                            const char **msg,
+                                            int from_cache,
+                                            int from_fetch);
 int router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                         int from_cache, int from_fetch);
 void routerlist_remove_old_routers(void);

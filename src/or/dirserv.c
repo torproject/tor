@@ -564,14 +564,27 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   return 0;
 }
 
+/** True iff <b>a</b> is more severe than <b>b</b> */
+static int
+WRA_MORE_SEVERE(was_router_added_t a, was_router_added_t b)
+{
+  if (b == ROUTER_ADDED_SUCCESSFULLY) {
+    return a;
+  } else if (b == ROUTER_ADDED_NOTIFY_GENERATOR) {
+    return !WRA_WAS_ADDED(a);
+  } else {
+    return a < b;
+  }
+}
+
 /** As for dirserv_add_descriptor, but accepts multiple documents, and
  * returns the most severe error that occurred for any one of them. */
-int
+was_router_added_t
 dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
                                  const char *source,
                                  const char **msg)
 {
-  int r=100; /* higher than any actual return value. */
+  int r=ROUTER_ADDED_NOTIFY_GENERATOR; /* highest possible return value. */
   int r_tmp;
   const char *msg_out;
   smartlist_t *list;
@@ -603,7 +616,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
         msg_out = NULL;
         tor_assert(ri->purpose == purpose);
         r_tmp = dirserv_add_descriptor(ri, &msg_out);
-        if (r_tmp < r) {
+        if (WRA_MORE_SEVERE(r_tmp, r)) {
           r = r_tmp;
           *msg = msg_out;
         }
@@ -619,7 +632,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
         msg_out = NULL;
 
         r_tmp = dirserv_add_extrainfo(ei, &msg_out);
-        if (r_tmp < r) {
+        if (WRA_MORE_SEVERE(r_tmp, r)) {
           r = r_tmp;
           *msg = msg_out;
         }
@@ -638,25 +651,27 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
     }
   }
 
-  return r <= 2 ? r : 2;
+  return r;
 }
 
 /** Examine the parsed server descriptor in <b>ri</b> and maybe insert it into
  * the list of server descriptors. Set *<b>msg</b> to a message that should be
  * passed back to the origin of this descriptor.
  *
+
  * Return 2 if descriptor is well-formed and accepted;
  *  1 if well-formed and accepted but origin should hear *msg;
  *  0 if well-formed but redundant with one we already have;
  * -1 if it is rejected and origin should hear *msg;
  *
+
  * This function is only called when fresh descriptors are posted, not when
  * we re-load the cache.
  */
-int
+was_router_added_t
 dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
 {
-  int r;
+  was_router_added_t r;
   routerinfo_t *ri_old;
   char *desc = NULL;
   size_t desclen = 0;
@@ -703,11 +718,12 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
     desc = tor_strndup(ri->cache_info.signed_descriptor_body, desclen);
   }
 
-  if ((r = router_add_to_routerlist(ri, msg, 0, 0))<0) {
-    if (r < -1 && desc) /* unless the routerinfo was fine, just out-of-date */
+  r = router_add_to_routerlist(ri, msg, 0, 0);
+  if (!WRA_WAS_ADDED(r)) {
+    /* unless the routerinfo was fine, just out-of-date */
+    if (WRA_WAS_REJECTED(r) && desc)
       control_event_or_authdir_new_descriptor("REJECTED", desc, desclen, *msg);
     tor_free(desc);
-    return r == -1 ? 0 : -1;
   } else {
     smartlist_t *changed;
     control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
@@ -721,8 +737,8 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
         "Descriptor for invalid server accepted";
     }
     tor_free(desc);
-    return r == 0 ? 2 : 1;
   }
+  return r;
 }
 
 /** As dirserv_add_descriptor, but for an extrainfo_t <b>ei</b>. */
