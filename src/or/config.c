@@ -85,7 +85,7 @@ static config_abbrev_t _option_abbrevs[] = {
   { "NumEntryNodes", "NumEntryGuards", 0, 0},
   { "ResolvConf", "ServerDNSResolvConfFile", 0, 1},
   { "SearchDomains", "ServerDNSSearchDomains", 0, 1},
-  { "ServerDNSAllowBrokenResolvConf", "SeverDNSAllowBrokenConfig", 0, 0 },
+  { "ServerDNSAllowBrokenResolvConf", "ServerDNSAllowBrokenConfig", 0, 0 },
   { "PreferTunnelledDirConns", "PreferTunneledDirConns", 0, 0},
   { "BridgeAuthoritativeDirectory", "BridgeAuthoritativeDir", 0, 0},
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
