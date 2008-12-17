@@ -1027,6 +1027,17 @@ client addresses have contacted it so that it can help the bridge
 authority guess which countries have blocked access to it.
 .LP
 .TP
+\fBServerDNSRandomizeCase \fR\fB0\fR|\fB1\fR\fP
+When this option is set, Tor sets the case of each character randomly in
+outgoing DNS requests, and makes sure that the case matches in DNS replies.
+This so-called "0x20 hack" helps resist some types of DNS poisoning attack.
+For more information, see "Increased DNS Forgery Resistance through 0x20-Bit
+Encoding".
+This option only affects name lookups that your server does on
+behalf of clients.
+(Default: 1)
+.LP
+.TP
 \fBGeoIPFile \fR\fIfilename\fP
 A filename containing GeoIP data, for use with BridgeRecordUsageByCountry.
 
