@@ -37,6 +37,12 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Fix another case of assuming, when a specific exit is requested,
       that we know more than the user about what hosts it allows.
       Fixes one case of bug 752.  Patch from rovv.
+    - Clip the MaxCircuitDirtiness config option to a minimum of 10
+      seconds. Warn the user if lower values are given in the
+      configuration. Bugfix on 0.1.0.1-rc. Patch by Sebastian.
+    - Clip the CircuitBuildTimeout to a minimum of 30 seconds. Warn the
+      user if lower values are given in the configuration. Bugfix on
+      0.1.1.17-rc. Patch by Sebastian.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
