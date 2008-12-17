@@ -1178,8 +1178,6 @@ typedef struct control_connection_t {
   uint32_t incoming_cmd_len;
   uint32_t incoming_cmd_cur_len;
   char *incoming_cmd;
-  /* Used only by control v0 connections */
-  uint16_t incoming_cmd_type;
 } control_connection_t;
 
 /** Cast a connection_t subtype pointer to a connection_t **/
