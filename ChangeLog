@@ -34,6 +34,9 @@ Changes in version 0.2.0.33 - 200?-??-??
     - When we're choosing an exit node for a circuit, and we have no pending
       streams, choose a good general exit rather than one that supports "all
       the pending streams".  Bugfix on 0.1.1.x. (Fix by rovv.)
+    - Fix another case of assuming, when a specific exit is requested,
+      that we know more than the user about what hosts it allows.
+      Fixes one case of bug 752.  Patch from rovv.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
