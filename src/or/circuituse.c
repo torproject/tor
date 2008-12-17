@@ -820,7 +820,7 @@ circuit_build_failed(origin_circuit_t *circ)
                "Our circuit failed to get a response from the first hop "
                "(%s:%d). I'm going to try to rotate to a better connection.",
                n_conn->_base.address, n_conn->_base.port);
-      n_conn->_base.or_is_obsolete = 1;
+      n_conn->is_bad_for_new_circs = 1;
       entry_guard_register_connect_status(n_conn->identity_digest, 0,
                                           time(NULL));
     }

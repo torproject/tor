@@ -474,14 +474,14 @@ connection_or_get_by_identity_digest(const char *digest)
     if (best->is_canonical && !conn->is_canonical)
       continue; /* A canonical connection is best. */
 
-    if (!best->_base.or_is_obsolete && conn->_base.or_is_obsolete)
+    if (!best->is_bad_for_new_circs && conn->is_bad_for_new_circs)
       continue; /* We never prefer obsolete over non-obsolete connections. */
 
     if (
       /* We prefer canonical connections: */
         (!best->is_canonical && conn->is_canonical) ||
       /* We prefer non-obsolete connections: */
-        (best->_base.or_is_obsolete && !conn->_base.or_is_obsolete) ||
+        (best->is_bad_for_new_circs && !conn->is_bad_for_new_circs) ||
       /* If both have circuits we prefer the newer: */
         (best->n_circuits && conn->n_circuits && newer) ||
       /* If neither has circuits we prefer the newer: */

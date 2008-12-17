@@ -64,6 +64,10 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
       points thrown away; bugfix on 0.2.1.7-alpha. Spotted by John Brooks.
       Patch by Karsten. Fixes bug 874.
 
+  o Code simplifications and refactoring:
+    - Rename the confusing or_is_obsolete field to the more appropriate
+      is_bad_for_new_circs, and move it to or_connection_t where it belongs.
+
 
 Changes in version 0.2.1.8-alpha - 2008-12-08
   Tor 0.2.1.8-alpha fixes some crash bugs in earlier alpha releases,

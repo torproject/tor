@@ -904,10 +904,6 @@ typedef struct connection_t {
   /** Edge connections only: true if we've blocked reading until the
    * circuit has fewer queued cells. */
   unsigned int edge_blocked_on_circ:1;
-  /** Used for OR conns that shouldn't get any new circs attached to them,
-   * because the connection is too old. */
-  /* XXXX "obsolete" isn't really a good name here. */
-  unsigned int or_is_obsolete:1;
   /** For AP connections only. If 1, and we fail to reach the chosen exit,
    * stop requiring it. */
   unsigned int chosen_exit_optional:1;
@@ -1020,6 +1016,10 @@ typedef struct or_connection_t {
    * address listed in a server descriptor, or because an authenticated
    * NETINFO cell listed the address we're connected to as recognized. */
   unsigned int is_canonical:1;
+  /** True iff this connection shouldn't get any new circs attached to it,
+   * because the connection is too old, or because there's a better one, etc.
+   */
+  unsigned int is_bad_for_new_circs:1;
   uint8_t link_proto; /**< What protocol version are we using? 0 for
                        * "none negotiated yet." */
   circid_t next_circ_id; /**< Which circ_id do we try to use next on

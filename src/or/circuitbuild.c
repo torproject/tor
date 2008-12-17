@@ -358,7 +358,7 @@ connection_good_enough_for_extend(const or_connection_t *n_conn,
     *state_out = "in progress. Waiting.";
     *launch_out = 0; /* We'll just wait till the connection finishes. */
     return 0;
-  } else if (n_conn->_base.or_is_obsolete) {
+  } else if (n_conn->is_bad_for_new_circs) {
     *state_out = "too old. Launching a new one.";
     *launch_out = 1;
     return 0;

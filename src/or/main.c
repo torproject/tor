@@ -99,8 +99,8 @@ int has_completed_circuit=0;
 #define DIR_CONN_MAX_STALL (5*60)
 
 /** How old do we let a connection to an OR get before deciding it's
- * obsolete? */
-#define TIME_BEFORE_OR_CONN_IS_OBSOLETE (60*60*24*7)
+ * too old for new circuits? */
+#define TIME_BEFORE_OR_CONN_IS_TOO_OLD (60*60*24*7)
 /** How long do we let OR connections handshake before we decide that
  * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT (60)
@@ -714,13 +714,14 @@ run_connection_housekeeping(int i, time_t now)
 
   or_conn = TO_OR_CONN(conn);
 
-  if (!conn->or_is_obsolete) {
-    if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_OBSOLETE < now) {
+  if (!or_conn->is_bad_for_new_circs) {
+    if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_TOO_OLD < now) {
       log_info(LD_OR,
-               "Marking OR conn to %s:%d obsolete (fd %d, %d secs old).",
+               "Marking OR conn to %s:%d as too old for new circuits "
+               "(fd %d, %d secs old).",
                conn->address, conn->port, conn->s,
                (int)(now - conn->timestamp_created));
-      conn->or_is_obsolete = 1;
+      or_conn->is_bad_for_new_circs = 1;
     } else {
       or_connection_t *best =
         connection_or_get_by_identity_digest(or_conn->identity_digest);
@@ -735,19 +736,19 @@ run_connection_housekeeping(int i, time_t now)
            * early for router->last_reachable to be updated.
            */
         log_info(LD_OR,
-                 "Marking duplicate conn to %s:%d obsolete "
+                 "Marking duplicate conn to %s:%d as too old for new circuits "
                  "(fd %d, %d secs old).",
                  conn->address, conn->port, conn->s,
                  (int)(now - conn->timestamp_created));
-        conn->or_is_obsolete = 1;
+        or_conn->is_bad_for_new_circs = 1;
       }
     }
   }
 
-  if (conn->or_is_obsolete && !or_conn->n_circuits) {
+  if (or_conn->is_bad_for_new_circs && !or_conn->n_circuits) {
     /* no unmarked circs -- mark it now */
     log_info(LD_OR,
-             "Expiring non-used OR connection to fd %d (%s:%d) [Obsolete].",
+             "Expiring non-used OR connection to fd %d (%s:%d) [Too old].",
              conn->s, conn->address, conn->port);
     if (conn->state == OR_CONN_STATE_CONNECTING)
       connection_or_connect_failed(TO_OR_CONN(conn),
@@ -905,7 +906,7 @@ run_scheduled_events(time_t now)
     }
     last_rotated_x509_certificate = now;
     /* We also make sure to rotate the TLS connections themselves if they've
-     * been up for too long -- but that's done via or_is_obsolete in
+     * been up for too long -- but that's done via is_bad_for_new_circs in
      * connection_run_housekeeping() above. */
   }
 
