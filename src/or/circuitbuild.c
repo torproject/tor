@@ -1163,7 +1163,8 @@ ap_stream_wants_exit_attention(connection_t *conn)
       conn->state == AP_CONN_STATE_CIRCUIT_WAIT &&
       !conn->marked_for_close &&
       !(TO_EDGE_CONN(conn)->want_onehop) && /* ignore one-hop streams */
-      !(TO_EDGE_CONN(conn)->use_begindir) && /* ignore targetted dir fetches */
+      !(TO_EDGE_CONN(conn)->use_begindir) && /* ignore targeted dir fetches */
+      !(TO_EDGE_CONN(conn)->chosen_exit_name) && /* ignore defined streams */
       !connection_edge_is_rendezvous_stream(TO_EDGE_CONN(conn)) &&
       !circuit_stream_is_being_handled(TO_EDGE_CONN(conn), 0,
                                        MIN_CIRCUITS_HANDLING_STREAM))
