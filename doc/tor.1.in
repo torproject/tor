@@ -975,6 +975,14 @@ ServerDNS options, only affects name lookups that your server does on
 behalf of clients. (Defaults to use the system DNS configuration.)
 .LP
 .TP
+\fBServerDNSAllowBrokenConfig \fR\fB0\fR|\fB1\fR\fP
+If this option is false, Tor exits immediately if there are problems
+parsing the system DNS configuration or connecting to nameservers.
+Otherwise, Tor continues to periodically retry the system namesevers
+until it eventually succeeds.
+(Defaults to "1".)
+.LP
+.TP
 \fBServerDNSSearchDomains \fR\fB0\fR|\fB1\fR\fP
 If set to \fB1\fP, then we will search for addresses in the local search
 domain.  For example, if this system is configured to believe it is in
@@ -1332,7 +1340,7 @@ non-default set of DirServers is set. Cannot be unset while Tor is running.
 
 .PD 0
 .RS 12
-.IP "ServerDNSAllowBrokenResolvConf 1"
+.IP "ServerDNSAllowBrokenConfig 1"
 .IP "DirAllowPrivateAddresses 1"
 .IP "EnforceDistinctSubnets 0"
 .IP "AssumeReachable 1"

@@ -85,6 +85,7 @@ static config_abbrev_t _option_abbrevs[] = {
   { "NumEntryNodes", "NumEntryGuards", 0, 0},
   { "ResolvConf", "ServerDNSResolvConfFile", 0, 1},
   { "SearchDomains", "ServerDNSSearchDomains", 0, 1},
+  { "ServerDNSAllowBrokenResolvConf", "SeverDNSAllowBrokenConfig", 0, 0 },
   { "PreferTunnelledDirConns", "PreferTunneledDirConns", 0, 0},
   { "BridgeAuthoritativeDirectory", "BridgeAuthoritativeDir", 0, 0},
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
@@ -290,7 +291,7 @@ static config_var_t _option_vars[] = {
   V(RunTesting,                  BOOL,     "0"),
   V(SafeLogging,                 BOOL,     "1"),
   V(SafeSocks,                   BOOL,     "0"),
-  V(ServerDNSAllowBrokenResolvConf, BOOL,  "1"),
+  V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
   V(ServerDNSAllowNonRFC953Hostnames, BOOL,"0"),
   V(ServerDNSDetectHijacking,    BOOL,     "1"),
   V(ServerDNSRandomizeCase,      BOOL,     "1"),
@@ -345,7 +346,7 @@ static config_var_t _option_vars[] = {
 
 /* Keep defaults synchronous with man page and config value check. */
 static config_var_t testing_tor_network_defaults[] = {
-  V(ServerDNSAllowBrokenResolvConf, BOOL,  "1"),
+  V(ServerDNSAllowBrokenConfig,  BOOL,  "1"),
   V(DirAllowPrivateAddresses,    BOOL,     "1"),
   V(EnforceDistinctSubnets,      BOOL,     "0"),
   V(AssumeReachable,             BOOL,     "1"),

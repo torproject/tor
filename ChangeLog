@@ -78,6 +78,8 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
     - Move edge-only flags from connection_t to edge_connection_t: not
       only is this better coding, but on machines of plausible alignment,
       it should save 4-8 bytes per connection_t. "Every little bit helps."
+    - Rename ServerDNSAllowBrokenResolvConf to ServerDNSAllowBrokenConfig
+      for consistency; keep old option working for backward compatibility.
 
 
 Changes in version 0.2.1.8-alpha - 2008-12-08

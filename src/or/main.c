@@ -1386,7 +1386,7 @@ do_main_loop(void)
 
   /* initialize dns resolve map, spawn workers if needed */
   if (dns_init() < 0) {
-    if (get_options()->ServerDNSAllowBrokenResolvConf)
+    if (get_options()->ServerDNSAllowBrokenConfig)
       log_warn(LD_GENERAL, "Couldn't set up any working nameservers. "
                "Network not up yet?  Will try again soon.");
     else {

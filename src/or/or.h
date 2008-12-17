@@ -2462,7 +2462,7 @@ typedef struct {
                     will know this without any specialized knowledge. */
   /** Boolean: if set, we start even if our resolv.conf file is missing
    * or broken. */
-  int ServerDNSAllowBrokenResolvConf;
+  int ServerDNSAllowBrokenConfig;
 
   smartlist_t *ServerDNSTestAddresses; /**< A list of addresses that definitely
                                         * should be resolveable. Used for
