@@ -31,9 +31,6 @@ const char connection_edge_c_id[] =
 #define SOCKS4_GRANTED          90
 #define SOCKS4_REJECT           91
 
-/** List of exit_redirect_t for every configured RedirectExit. */
-static smartlist_t *redirect_exit_list = NULL;
-
 static int connection_ap_handshake_process_socks(edge_connection_t *conn);
 static int connection_ap_process_natd(edge_connection_t *conn);
 static int connection_exit_connect_dir(edge_connection_t *exitconn);
@@ -2726,23 +2723,6 @@ connection_exit_connect(edge_connection_t *edge_conn)
 
   addr = &conn->addr;
   port = conn->port;
-  if (redirect_exit_list) {
-    SMARTLIST_FOREACH(redirect_exit_list, exit_redirect_t *, r,
-    {
-      if (tor_addr_compare_masked(addr, &r->addr, r->maskbits, CMP_SEMANTIC) &&
-          (r->port_min <= port) && (port <= r->port_max)) {
-        if (r->is_redirect) {
-          addr = &r->addr_dest;
-          if (r->port_dest)
-            port = r->port_dest;
-          log_debug(LD_EXIT, "Redirecting connection from %s:%d to %s:%d",
-                    escaped_safe_str(conn->address), conn->port,
-                    fmt_addr(addr), port);
-        }
-        break;
-      }
-    });
-  }
 
   log_debug(LD_EXIT,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port, &socket_error)) {
@@ -2779,7 +2759,6 @@ connection_exit_connect(edge_connection_t *edge_conn)
                                  RELAY_COMMAND_CONNECTED,
                                  NULL, 0);
   } else { /* normal stream */
-    /* This must be the original address, not the redirected address. */
     char connected_payload[20];
     int connected_payload_len;
     if (tor_addr_family(&conn->addr) == AF_INET) {
@@ -2924,23 +2903,6 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
       return 0;
   }
   return 1;
-}
-
-/** Make connection redirection follow the provided list of exit_redirect_t.
- * Steals a reference to <b>lst</b>; caller MUST NOT free <b>list</b>. */
-void
-set_exit_redirects(smartlist_t *lst)
-{
-  if (redirect_exit_list) {
-    SMARTLIST_FOREACH(redirect_exit_list, exit_redirect_t *, p, tor_free(p));
-    smartlist_free(redirect_exit_list);
-  }
-  if (lst && smartlist_len(lst)) {
-    log_warn(LD_GENERAL,
-             "The RedirectExit option is deprecated; it will go away in a "
-             "future version of Tor.");
-  }
-  redirect_exit_list = lst;
 }
 
 /** If address is of the form "y.onion" with a well-formed handle y:

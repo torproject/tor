@@ -1933,7 +1933,6 @@ tor_free_all(int postfork)
   routerlist_free_all();
   networkstatus_free_all();
   addressmap_free_all();
-  set_exit_redirects(NULL); /* free the registered exit redirects */
   dirserv_free_all();
   rend_service_free_all();
   rend_cache_free_all();

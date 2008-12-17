@@ -2105,22 +2105,6 @@ typedef enum invalid_router_usage_t {
   ALLOW_INVALID_INTRODUCTION=16,
 } invalid_router_usage_t;
 
-/** An entry specifying a set of addresses and ports that should be remapped
- * to another address and port before exiting this exit node. */
-typedef struct exit_redirect_t {
-  tor_addr_t addr; /**< Address to remap whenever we see it. */
-  uint16_t port_min; /**< Low end of port range to remap */
-  uint16_t port_max; /**< High end of port range to remap */
-  maskbits_t maskbits; /**< How many bits of addr need to match for us to
-                        * remap an address? */
-
-  tor_addr_t addr_dest; /**< What address do we remap these connections to? */
-  uint16_t port_dest; /**< What port do we remap these connections to? */
-  /** False iff this entry indicates a subset of the address space that
-   * <em>should not</em> be remapped. */
-  unsigned int is_redirect:1;
-} exit_redirect_t;
-
 /* limits for TCP send and recv buffer size used for constrained sockets */
 #define MIN_CONSTRAINED_TCP_BUFFER 2048
 #define MAX_CONSTRAINED_TCP_BUFFER 262144  /* 256k */
@@ -2377,8 +2361,6 @@ typedef struct {
   char *MyFamily; /**< Declared family for this OR. */
   config_line_t *NodeFamilies; /**< List of config lines for
                                        * node families */
-  config_line_t *RedirectExit; /**< List of config lines for simple
-                                       * addr/port redirection */
   config_line_t *AuthDirBadDir; /**< Address policy for descriptors to
                                  * mark as bad dir mirrors. */
   config_line_t *AuthDirBadExit; /**< Address policy for descriptors to
@@ -3092,7 +3074,6 @@ int connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                                crypt_path_t *cpath);
 int hostname_is_noconnect_address(const char *address);
 
-void set_exit_redirects(smartlist_t *lst);
 /** Possible return values for parse_extended_hostname. */
 typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME, BAD_HOSTNAME

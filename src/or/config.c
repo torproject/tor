@@ -278,7 +278,7 @@ static config_var_t _option_vars[] = {
   V(RecommendedVersions,         LINELIST, NULL),
   V(RecommendedClientVersions,   LINELIST, NULL),
   V(RecommendedServerVersions,   LINELIST, NULL),
-  V(RedirectExit,                LINELIST, NULL),
+  OBSOLETE("RedirectExit"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
@@ -552,9 +552,6 @@ static config_var_description_t options_description[] = {
     "clients and servers, instead of the default 0.0.0.0:ORPort." },
   { "PublishServerDescriptor", "Set to 0 to keep the server from "
     "uploading info to the directory authorities." },
-  /*{ "RedirectExit", "When an outgoing connection tries to connect to a "
-   *"given address, redirect it to another address instead." },
-   */
   /* ServerDNS: DetectHijacking, ResolvConfFile, SearchDomains */
   { "ShutdownWaitLength", "Wait this long for clients to finish when "
     "shutting down because of a SIGINT." },
@@ -679,8 +676,6 @@ static int parse_bridge_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
                                  authority_type_t required_type,
                                  int validate_only);
-static int parse_redirect_line(smartlist_t *result,
-                               config_line_t *line, char **msg);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
@@ -1275,21 +1270,6 @@ options_act(or_options_t *old_options)
    * we want to not fork, and to log stuff to stderr. */
   if (!running_tor)
     return 0;
-
-  {
-    smartlist_t *sl = smartlist_create();
-    char *errmsg = NULL;
-    for (cl = options->RedirectExit; cl; cl = cl->next) {
-      if (parse_redirect_line(sl, cl, &errmsg)<0) {
-        log_warn(LD_CONFIG, "%s", errmsg);
-        tor_free(errmsg);
-        SMARTLIST_FOREACH(sl, exit_redirect_t *, er, tor_free(er));
-        smartlist_free(sl);
-        return -1;
-      }
-    }
-    set_exit_redirects(sl);
-  }
 
   /* Finish backgrounding the process */
   if (running_tor && options->RunAsDaemon) {
@@ -3441,11 +3421,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (validate_addr_policies(options, msg) < 0)
     return -1;
 
-  for (cl = options->RedirectExit; cl; cl = cl->next) {
-    if (parse_redirect_line(NULL, cl, msg)<0)
-      return -1;
-  }
-
   if (validate_dir_authorities(options, old_options) < 0)
     REJECT("Directory authority line did not parse. See logs for details.");
 
@@ -4260,60 +4235,6 @@ options_init_logs(or_options_t *options, int validate_only)
   smartlist_free(elts);
 
   return ok?0:-1;
-}
-
-/** Parse a single RedirectExit line's contents from <b>line</b>.  If
- *  they are valid, and <b>result</b> is not NULL, add an element to
- *  <b>result</b> and return 0. Else if they are valid, return 0.
- *  Else set *msg and return -1. */
-static int
-parse_redirect_line(smartlist_t *result, config_line_t *line, char **msg)
-{
-  smartlist_t *elements = NULL;
-  exit_redirect_t *r;
-
-  tor_assert(line);
-
-  r = tor_malloc_zero(sizeof(exit_redirect_t));
-  elements = smartlist_create();
-  smartlist_split_string(elements, line->value, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(elements) != 2) {
-    *msg = tor_strdup("Wrong number of elements in RedirectExit line");
-    goto err;
-  }
-  if (tor_addr_parse_mask_ports(smartlist_get(elements,0),&r->addr,
-                                &r->maskbits,&r->port_min,&r->port_max)) {
-    *msg = tor_strdup("Error parsing source address in RedirectExit line");
-    goto err;
-  }
-  if (0==strcasecmp(smartlist_get(elements,1), "pass")) {
-    r->is_redirect = 0;
-  } else {
-    if (tor_addr_port_parse(smartlist_get(elements,1),
-                            &r->addr_dest, &r->port_dest)) {
-      *msg = tor_strdup("Error parsing dest address in RedirectExit line");
-      goto err;
-    }
-    r->is_redirect = 1;
-  }
-
-  goto done;
- err:
-  tor_free(r);
- done:
-  SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
-  smartlist_free(elements);
-  if (r) {
-    if (result)
-      smartlist_add(result, r);
-    else
-      tor_free(r);
-    return 0;
-  } else {
-    tor_assert(*msg);
-    return -1;
-  }
 }
 
 /** Read the contents of a Bridge line from <b>line</b>. Return 0

@@ -71,6 +71,9 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       introduction points thrown away; bugfix on 0.2.1.7-alpha. Spotted
       by John Brooks. Patch by Karsten. Fixes bug 874.
 
+  o Deprecated and removed features:
+    - RedirectExits has been removed.  It was deprecated since 0.2.0.3-alpha.
+
   o Code simplifications and refactoring:
     - Rename the confusing or_is_obsolete field to the more appropriate
       is_bad_for_new_circs, and move it to or_connection_t where it

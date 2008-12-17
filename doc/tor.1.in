@@ -917,20 +917,6 @@ to all directory authorities of the type(s) specified. The value "1" is
 treated as a synonym for the default, which is currently "v2,v3".
 .LP
 .TP
-\fBRedirectExit \fR\fIpattern target\fP
-THIS OPTION IS DEPRECATED.  It will go away in a future version of Tor.
-Whenever an outgoing connection tries to connect to one of a given set
-of addresses, connect to \fItarget\fP (an \fIaddress:port\fP pair) instead.
-The address
-pattern is given in the same format as for an exit policy.  The
-address translation applies after exit policies are applied.  Multiple
-\fBRedirectExit\fP options can be used: once any one has matched
-successfully, no subsequent rules are considered.  You can specify that no
-redirection is to be performed on a given set of addresses by using the
-special target string "pass", which prevents subsequent rules from being
-considered.
-.LP
-.TP
 \fBShutdownWaitLength\fR \fINUM\fP
 When we get a SIGINT and we're a server, we begin shutting down: we close
 listeners and start refusing new circuits. After \fBNUM\fP seconds,
