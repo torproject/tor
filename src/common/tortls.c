@@ -1442,7 +1442,11 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
   return 1;
 }
 
-/** DOCDOC */
+/** Examine the amount of memory used and available for buffers in <b>tls</b>.
+ * Set *<b>rbuf_capacity</b> to the amount of storage allocated for the read
+ * buffer and *<b>rbuf_bytes</b> to the amount actually used.
+ * Set *<b>wbuf_capacity</b> to the amount of storage allocated for the write
+ * buffer and *<b>wbuf_bytes</b> to the amount actually used. */
 void
 tor_tls_get_buffer_sizes(tor_tls_t *tls,
                          int *rbuf_capacity, int *rbuf_bytes,

@@ -33,7 +33,8 @@ typedef struct tor_tls_t tor_tls_t;
 #define TOR_TLS_WANTWRITE          -1
 #define TOR_TLS_DONE                0
 
-/** DOCDOC XXXX021 also rename me. */
+/** Collection of case statements for all TLS errors that are not due to
+ * underlying IO failure. */
 #define CASE_TOR_TLS_ERROR_ANY_NONIO            \
   case TOR_TLS_ERROR_MISC:                      \
   case TOR_TLS_ERROR_CONNREFUSED:               \

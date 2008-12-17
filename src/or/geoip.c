@@ -23,10 +23,12 @@ typedef struct geoip_entry_t {
   intptr_t country; /**< An index into geoip_countries */
 } geoip_entry_t;
 
-/** DOCDOC */
+/** For how many periods should we remember per-country request history? */
 #define REQUEST_HIST_LEN 3
+/** How long are the periods for which we should remember request history? */
 #define REQUEST_HIST_PERIOD (8*60*60)
 
+/** A per-country record for GeoIP request history */
 typedef struct geoip_country_t {
   char countrycode[3];
   uint32_t n_v2_ns_requests[REQUEST_HIST_LEN];
@@ -269,8 +271,10 @@ static HT_HEAD(clientmap, clientmap_entry_t) client_history =
 /** Time at which we started tracking client IP history. */
 static time_t client_history_starts = 0;
 
-/** DOCDOC */
+/** When did the current period of checking per-country request history
+ * start? */
 static time_t current_request_period_starts = 0;
+/** How many older request periods are we remembering? */
 static int n_old_request_periods = 0;
 
 /** Hashtable helper: compute a hash of a clientmap_entry_t. */
@@ -312,7 +316,7 @@ geoip_note_client_seen(geoip_client_action_t action,
 #endif
   }
 
-  /* DOCDOC */
+  /* Rotate the current request period. */
   while (current_request_period_starts + REQUEST_HIST_PERIOD < now) {
     if (!geoip_countries)
       geoip_countries = smartlist_create();
@@ -430,7 +434,8 @@ _c_hist_compare(const void **_a, const void **_b)
     return strcmp(a->country, b->country);
 }
 
-/*DOCDOC*/
+/** How long do we have to have observed per-country request history before we
+ * are willing to talk about it? */
 #define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
 
 static INLINE unsigned
@@ -529,7 +534,9 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
-/**DOCDOC*/
+/** Return a newly allocated string holding the per-country request history
+ * for <b>action</b> in a format suitable for an extra-info document, or NULL
+ * on failure. */
 char *
 geoip_get_request_history(time_t now, geoip_client_action_t action)
 {

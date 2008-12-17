@@ -138,7 +138,7 @@ memarea_clear(memarea_t *area)
   area->first->next_mem = area->first->u.mem;
 }
 
-/** DOCDOC */
+/** Remove all unused memarea chunks from the internal freelist. */
 void
 memarea_clear_freelist(void)
 {

@@ -4808,12 +4808,18 @@ struct routerset_t {
    * a router belongs to the set if it is _rejected_ by this policy. */
   smartlist_t *policies;
 
-  /** DOCDOC */
+  /** A human-readable description of what this routerset is for.  Used in
+   * log messages. */
   char *description;
 
-  /** DOCDOC */
+  /** A list of the country codes in this set. */
   smartlist_t *country_names;
+  /** Total number of countries we knew about when we built <b>countries</b>. */
   int n_countries;
+  /** Bit array mapping the return value of geoip_get_country() to 1 iff the
+   * country is a member of this routerset.  Note that we MUST call
+   * routerset_refresh_countries() whenever the geoip country list is
+   * reloaded. */
   bitarray_t *countries;
 };
 
@@ -4830,7 +4836,8 @@ routerset_new(void)
   return result;
 }
 
-/** DOCDOC */
+/** If <b>c</b> is a country code in the form {cc}, return a newly allocated
+ * string holding the "cc" part.  Else, return NULL. */
 static char *
 routerset_get_countryname(const char *c)
 {
@@ -4981,14 +4988,15 @@ routerset_is_list(const routerset_t *set)
     smartlist_len(set->policies) == 0;
 }
 
-/** DOCDOC */
+/** Return true iff we need a GeoIP IP-to-country database to make sense of
+ * <b>set</b>. */
 int
 routerset_needs_geoip(const routerset_t *set)
 {
   return set && smartlist_len(set->country_names);
 }
 
-/** DOCDOC */
+/** Return true iff there are no entries in <b>set</b>. */
 static int
 routerset_is_empty(const routerset_t *set)
 {
@@ -4996,8 +5004,12 @@ routerset_is_empty(const routerset_t *set)
 }
 
 /** Helper.  Return true iff <b>set</b> contains a router based on the other
- * provided fields.  Return higher values for more specific subentries.
- (If country is -1, then we take the country from addr.) */
+ * provided fields.  Return higher values for more specific subentries: a
+ * single router is more specific than an address range of routers, which is
+ * more specific in turn than a country code.
+ *
+ * (If country is -1, then we take the country
+ * from addr.) */
 static int
 routerset_contains(const routerset_t *set, const tor_addr_t *addr,
                    uint16_t orport,
@@ -5102,9 +5114,10 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
   }
 }
 
-/** Add to <b>target</b> every node from <b>source</b> that is in
- * <b>include</b> not excluded in a more specific fashion by
- * <b>exclude</b>. DOCDOC */
+/** Add to <b>target</b> every routerinfo_t from <b>source</b> that is in
+ * <b>include</b>, but not excluded in a more specific fashion by
+ * <b>exclude</b>.  If <b>running_only</b>, only include running routers.
+ */
 void
 routersets_get_disjunction(smartlist_t *target,
                            const smartlist_t *source,
@@ -5217,14 +5230,15 @@ routerset_free(routerset_t *routerset)
   tor_free(routerset);
 }
 
-/** DOCDOC */
+/** Refresh the country code of <b>ri</b>.  This function MUST be called on
+ * each router when the GeoIP database is reloaded, and on all new routers. */
 void
 routerinfo_set_country(routerinfo_t *ri)
 {
   ri->country = geoip_get_country_by_ip(ri->addr);
 }
 
-/** DOCDOC */
+/** Set the country code of all routers in the routerlist. */
 void
 routerlist_refresh_countries(void)
 {

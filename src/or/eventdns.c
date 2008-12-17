@@ -307,7 +307,7 @@ static int global_max_retransmits = 3;	/* number of times we'll retransmit a req
 /* number of timeouts in a row before we consider this server to be down */
 static int global_max_nameserver_timeout = 3;
 
-/* DOCDOC */
+/* true iff we should use the 0x20 hack. */
 static int global_randomize_case = 1;
 
 /* These are the timeout values for nameservers. If we find a nameserver is down */

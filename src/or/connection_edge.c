@@ -1361,6 +1361,11 @@ consider_plaintext_ports(edge_connection_t *conn, uint16_t port)
   return 0;
 }
 
+/** How many times do we try connecting with an exit configured via
+ * TrackHostExits before concluding that it won't work any more and trying a
+ * different one? */
+#define TRACKHOSTEXITS_RETRIES 5
+
 /** Connection <b>conn</b> just finished its socks handshake, or the
  * controller asked us to take care of it. If <b>circ</b> is defined,
  * then that's where we'll want to attach it. Otherwise we have to
@@ -1500,8 +1505,6 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     if (s) {
       if (s[1] != '\0') {
         conn->chosen_exit_name = tor_strdup(s+1);
-/* DOCDOC */
-#define TRACKHOSTEXITS_RETRIES 5
         if (remapped_to_exit) /* 5 tries before it expires the addressmap */
           conn->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
         *s = 0;

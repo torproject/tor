@@ -630,7 +630,7 @@ tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *ipv6_bytes)
   memcpy(dest->addr.in6_addr.s6_addr, ipv6_bytes, 16);
 }
 
-/** DOCDOC */
+/** Set <b>dest</b> equal to the IPv6 address in the in6_addr <b>in6</b>. */
 void
 tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6)
 {

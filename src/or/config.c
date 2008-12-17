@@ -1191,7 +1191,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
   return r;
 }
 
-/** DOCDOC */
+/** If we need to have a GEOIP ip-to-country map to run with our configured
+ * options, return 1 and set *<b>reason_out</b> to a description of why. */
 int
 options_need_geoip_info(or_options_t *options, const char **reason_out)
 {

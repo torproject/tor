@@ -777,7 +777,8 @@ rep_hist_record_mtbf_data(void)
   return -1;
 }
 
-/** DOCDOC */
+/** Format the current tracked status of the router in <b>hist</b> at time
+ * <b>now</b> for analysis; return it in a newly allocated string. */
 static char *
 rep_hist_format_router_status(or_history_t *hist, time_t now)
 {
@@ -821,12 +822,17 @@ rep_hist_format_router_status(or_history_t *hist, time_t now)
   return tor_strdup(buf);
 }
 
-/* DOCDOC */
+/** The last stability analysis document that we created, or NULL if we never
+ * have created one. */
 static char *last_stability_doc = NULL;
+/** The last time we created a stability analysis document, or 0 if we never
+ * have created one. */
 static time_t built_last_stability_doc_at = 0;
+/** Shortest allowable time between building two stability documents. */
 #define MAX_STABILITY_DOC_BUILD_RATE (3*60)
 
-/* DOCDOC */
+/** Return a pointer to a NUL-terminated document describing our view of the
+ * stability of the routers we've been tracking.  Return NULL on failure. */
 const char *
 rep_hist_get_router_stability_doc(time_t now)
 {

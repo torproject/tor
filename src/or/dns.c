@@ -229,7 +229,8 @@ dns_reset(void)
   return 0;
 }
 
-/**DOCDOC*/
+/** Return true iff the most recent attempt to initialize the DNS subsystem
+ * failed. */
 int
 has_dns_init_failed(void)
 {

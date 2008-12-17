@@ -1844,7 +1844,13 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   }
 }
 
-/** DOCDOC */
+/** Append an encoded value of <b>addr<b> to <b>payload_out</b>, which must
+ * have at least 18 bytes of free space.  The encoding is, as specified in
+ * tor-spec.txt:
+ *   RESOLVED_TYPE_IPV4 or RESOLVED_TYPE_IPV6  [1 byte]
+ *   LENGTH                                    [1 byte]
+ *   ADDRESS                                   [length bytes]
+ * Return the number of bytes added, or -1 on error */
 int
 append_address_to_payload(char *payload_out, const tor_addr_t *addr)
 {
@@ -1867,7 +1873,10 @@ append_address_to_payload(char *payload_out, const tor_addr_t *addr)
   }
 }
 
-/** DODOC */
+/** Given <b>payload_len</b> bytes at <b>payload</b>, starting with an address
+ * encoded as by append_address_to_payload(), try to decode the address into
+ * *<b>addr_out</b>.  Return the next byte in the payload after the address on
+ * success, or NULL on failure. */
 const char *
 decode_address_from_payload(tor_addr_t *addr_out, const char *payload,
                             int payload_len)

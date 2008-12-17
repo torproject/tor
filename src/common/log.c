@@ -53,7 +53,8 @@ typedef struct logfile_t {
   int is_temporary; /**< Boolean: close after initializing logging subsystem.*/
   int is_syslog; /**< Boolean: send messages to syslog. */
   log_callback callback; /**< If not NULL, send messages to this function. */
-  log_severity_list_t *severities; /**< DOCDOC */
+  log_severity_list_t *severities; /**< Which severity of messages should we
+                                    * log for each log domain? */
 } logfile_t;
 
 static void log_free(logfile_t *victim);
@@ -415,7 +416,7 @@ _log_err(log_domain_mask_t domain, const char *format, ...)
 }
 #endif
 
-/** DOCDOC */
+/** Free all storage held by <b>victim</b>. */
 static void
 log_free(logfile_t *victim)
 {
@@ -730,14 +731,17 @@ log_level_to_string(int level)
   return sev_to_string(level);
 }
 
-/** DOCDOC */
+/** NULL-terminated array of names for log domains such that domain_list[dom]
+ * is a description of <b>dom</b>. */
 static const char *domain_list[] = {
   "GENERAL", "CRYPTO", "NET", "CONFIG", "FS", "PROTOCOL", "MM",
   "HTTP", "APP", "CONTROL", "CIRC", "REND", "BUG", "DIR", "DIRSERV",
   "OR", "EDGE", "ACCT", "HIST", NULL
 };
 
-/** DOCDOC */
+/** Return the log domain for which <b>domain</b> is the name, or 0 if there
+ * is no such name. */
+/*XXXX021 0 could mean "no such domain" or LD_GENERAL.  Fix that. */
 static log_domain_mask_t
 parse_log_domain(const char *domain)
 {

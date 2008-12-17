@@ -2179,13 +2179,13 @@ write_http_response_header(dir_connection_t *conn, ssize_t length,
 }
 
 #ifdef INSTRUMENT_DOWNLOADS
-/** Map used to keep track of how much data we've up/downloaded in what kind
- * of request.  Maps from request type to pointer to uint64_t. */
 typedef struct request_t {
-  uint64_t bytes;
-  uint64_t count;
+  uint64_t bytes; /**< How many bytes have we transferred? */
+  uint64_t count; /**< How many requests have we made? */
 } request_t;
 
+/** Map used to keep track of how much data we've up/downloaded in what kind
+ * of request.  Maps from request type to pointer to request_t. */
 static strmap_t *request_map = NULL;
 
 static void
@@ -2222,7 +2222,7 @@ note_client_request(int purpose, int compressed, size_t bytes)
   tor_free(key);
 }
 
-/** DOCDOC */
+/** Helper: initialize the request map to instrument downloads. */
 static void
 ensure_request_map_initialized(void)
 {
@@ -3394,6 +3394,8 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
+/** Helper.  Compare two fp_pair_t objects, and return -1, 0, or 1 as
+ * appropriate. */
 static int
 _compare_pairs(const void **a, const void **b)
 {
@@ -3405,7 +3407,10 @@ _compare_pairs(const void **a, const void **b)
     return memcmp(fp1->second, fp2->second, DIGEST_LEN);
 }
 
-/** DOCDOC */
+/** Divide a string <b>res</b> of the form FP1-FP2+FP3-FP4...[.z], where each
+ * FP is a hex-encoded fingerprint, into a sequence of distinct sorted
+ * fp_pair_t. Skip malformed pairs. On success, return 0 and add those
+ * fp_pair_t into <b>pairs_out</b>.  On failure, return -1. */
 int
 dir_split_resource_into_fingerprint_pairs(const char *res,
                                           smartlist_t *pairs_out)
