@@ -16,8 +16,9 @@ const char relay_c_id[] =
 #include "or.h"
 #include "mempool.h"
 
-static int relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
-                crypt_path_t **layer_hint, char *recognized);
+static int relay_crypt(circuit_t *circ, cell_t *cell,
+                       cell_direction_t cell_direction,
+                       crypt_path_t **layer_hint, char *recognized);
 static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
                                             crypt_path_t *layer_hint);
@@ -380,8 +381,8 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
  * attached to circ, return that conn, else return NULL.
  */
 static edge_connection_t *
-relay_lookup_conn(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
-                  crypt_path_t *layer_hint)
+relay_lookup_conn(circuit_t *circ, cell_t *cell,
+                  cell_direction_t cell_direction, crypt_path_t *layer_hint)
 {
   edge_connection_t *tmpconn;
   relay_header_t rh;
