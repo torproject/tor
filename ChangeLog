@@ -67,6 +67,9 @@ Changes in version 0.2.1.9-alpha - 200?-??-??
   o Code simplifications and refactoring:
     - Rename the confusing or_is_obsolete field to the more appropriate
       is_bad_for_new_circs, and move it to or_connection_t where it belongs.
+    - Move edge-only flags from connection_t to edge_connection_t: not
+      only is this better coding, but on machines of plausible alignment,
+      it should save 4-8 bytes per connection_t.  "Every little bit helps."
 
 
 Changes in version 0.2.1.8-alpha - 2008-12-08

@@ -50,7 +50,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
                                int line, const char *file)
 {
   tor_assert(conn->_base.type == CONN_TYPE_AP);
-  conn->_base.edge_has_sent_end = 1; /* no circ yet */
+  conn->edge_has_sent_end = 1; /* no circ yet */
 
   if (conn->_base.marked_for_close) {
     /* This call will warn as appropriate. */
@@ -171,7 +171,7 @@ connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
       conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;
     } else {
       /* closing the circuit, nothing to send an END to */
-      conn->_base.edge_has_sent_end = 1;
+      conn->edge_has_sent_end = 1;
       conn->end_reason = END_STREAM_REASON_DESTROY;
       conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;
       connection_mark_for_close(TO_CONN(conn));
@@ -219,7 +219,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   size_t payload_len=1;
   circuit_t *circ;
 
-  if (conn->_base.edge_has_sent_end) {
+  if (conn->edge_has_sent_end) {
     log_warn(LD_BUG,"(Harmless.) Calling connection_edge_end (reason %d) "
              "on an already ended stream?", reason);
     tor_fragile_assert();
@@ -265,7 +265,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
               conn->_base.s);
   }
 
-  conn->_base.edge_has_sent_end = 1;
+  conn->edge_has_sent_end = 1;
   conn->end_reason = reason;
   return 0;
 }
@@ -465,7 +465,7 @@ connection_ap_expire_beginning(void)
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT);
     /* un-mark it as ending, since we're going to reuse it */
-    conn->_base.edge_has_sent_end = 0;
+    conn->edge_has_sent_end = 0;
     conn->end_reason = 0;
     /* kludge to make us not try this circuit again, yet to allow
      * current streams on it to survive if they can: make it
@@ -560,32 +560,32 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
   routerinfo_t *r1, *r2;
 
   smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->marked_for_close ||
         conn->type != CONN_TYPE_AP ||
-        conn->state != AP_CONN_STATE_CIRCUIT_WAIT ||
-        (!conn->chosen_exit_optional &&
-         !conn->chosen_exit_retries))
+        conn->state != AP_CONN_STATE_CIRCUIT_WAIT)
       continue;
     edge_conn = TO_EDGE_CONN(conn);
+    if (!edge_conn->chosen_exit_optional &&
+        !edge_conn->chosen_exit_retries)
+      continue;
     r1 = router_get_by_nickname(edge_conn->chosen_exit_name, 0);
     r2 = router_get_by_nickname(info->nickname, 0);
     if (!r1 || !r2 || r1 != r2)
       continue;
     tor_assert(edge_conn->socks_request);
-    if (conn->chosen_exit_optional) {
+    if (edge_conn->chosen_exit_optional) {
       log_info(LD_APP, "Giving up on enclave exit '%s' for destination %s.",
                safe_str(edge_conn->chosen_exit_name),
                escaped_safe_str(edge_conn->socks_request->address));
-      conn->chosen_exit_optional = 0;
+      edge_conn->chosen_exit_optional = 0;
       tor_free(edge_conn->chosen_exit_name); /* clears it */
       /* if this port is dangerous, warn or reject it now that we don't
        * think it'll be using an enclave. */
       consider_plaintext_ports(edge_conn, edge_conn->socks_request->port);
     }
-    if (conn->chosen_exit_retries) {
-      if (--conn->chosen_exit_retries == 0) { /* give up! */
+    if (edge_conn->chosen_exit_retries) {
+      if (--edge_conn->chosen_exit_retries == 0) { /* give up! */
         clear_trackexithost_mappings(edge_conn->chosen_exit_name);
         tor_free(edge_conn->chosen_exit_name); /* clears it */
         /* if this port is dangerous, warn or reject it now that we don't
@@ -593,7 +593,7 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
         consider_plaintext_ports(edge_conn, edge_conn->socks_request->port);
       }
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** The AP connection <b>conn</b> has just failed while attaching or
@@ -1503,7 +1503,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 /* DOCDOC */
 #define TRACKHOSTEXITS_RETRIES 5
         if (remapped_to_exit) /* 5 tries before it expires the addressmap */
-          TO_CONN(conn)->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
+          conn->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
         *s = 0;
       } else {
         log_warn(LD_APP,"Malformed exit address '%s.exit'. Refusing.",
@@ -1592,7 +1592,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
              routers with this nickname */
           conn->chosen_exit_name =
             tor_strdup(hex_str(r->cache_info.identity_digest, DIGEST_LEN));
-          conn->_base.chosen_exit_optional = 1;
+          conn->chosen_exit_optional = 1;
         }
       }
 

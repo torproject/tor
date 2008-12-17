@@ -565,7 +565,7 @@ connection_edge_send_command(edge_connection_t *fromconn,
       connection_mark_unattached_ap(fromconn, END_STREAM_REASON_INTERNAL);
     } else {
       log_info(LD_EXIT,"no circ. Closing conn.");
-      fromconn->_base.edge_has_sent_end = 1; /* no circ to send to */
+      fromconn->edge_has_sent_end = 1; /* no circ to send to */
       fromconn->end_reason = END_STREAM_REASON_INTERNAL;
       connection_mark_for_close(TO_CONN(fromconn));
     }
@@ -653,10 +653,10 @@ connection_ap_process_end_not_open(
                                NULL)) {
           control_event_stream_status(conn, STREAM_EVENT_REMAP, 0);
         }
-        if (conn->_base.chosen_exit_optional ||
-            conn->_base.chosen_exit_retries) {
+        if (conn->chosen_exit_optional ||
+            conn->chosen_exit_retries) {
           /* stop wanting a specific exit */
-          conn->_base.chosen_exit_optional = 0;
+          conn->chosen_exit_optional = 0;
           /* A non-zero chosen_exit_retries can happen if we set a
            * TrackHostExits for this address under a port that the exit
            * relay allows, but then try the same address with a different
@@ -664,7 +664,7 @@ connection_ap_process_end_not_open(
            * the mapping, since it is probably still wanted on the
            * original port. But now we give away to the exit relay that
            * we probably have a TrackHostExits on it. So be it. */
-          conn->_base.chosen_exit_retries = 0;
+          conn->chosen_exit_retries = 0;
           tor_free(conn->chosen_exit_name); /* clears it */
         }
         if (connection_ap_detach_retriable(conn, circ, control_reason) >= 0)
@@ -672,7 +672,7 @@ connection_ap_process_end_not_open(
         /* else, conn will get closed below */
         break;
       case END_STREAM_REASON_CONNECTREFUSED:
-        if (!conn->_base.chosen_exit_optional)
+        if (!conn->chosen_exit_optional)
           break; /* break means it'll close, below */
         /* Else fall through: expire this circuit, clear the
          * chosen_exit_name field, and try again. */
@@ -686,9 +686,9 @@ connection_ap_process_end_not_open(
           tor_assert(circ->_base.timestamp_dirty);
           circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 
-          if (conn->_base.chosen_exit_optional) {
+          if (conn->chosen_exit_optional) {
             /* stop wanting a specific exit */
-            conn->_base.chosen_exit_optional = 0;
+            conn->chosen_exit_optional = 0;
             tor_free(conn->chosen_exit_name); /* clears it */
           }
           if (connection_ap_detach_retriable(conn, circ, control_reason) >= 0)
@@ -709,9 +709,9 @@ connection_ap_process_end_not_open(
         if (exitrouter) {
           policies_set_router_exitpolicy_to_reject_all(exitrouter);
         }
-        if (conn->_base.chosen_exit_optional) {
+        if (conn->chosen_exit_optional) {
           /* stop wanting a specific exit */
-          conn->_base.chosen_exit_optional = 0;
+          conn->chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name); /* clears it */
         }
         if (connection_ap_detach_retriable(conn, circ, control_reason) >= 0)
@@ -766,7 +766,7 @@ connection_edge_process_relay_cell_not_open(
                                                 layer_hint);
     } else {
       /* we just got an 'end', don't need to send one */
-      conn->_base.edge_has_sent_end = 1;
+      conn->edge_has_sent_end = 1;
       conn->end_reason = *(cell->payload+RELAY_HEADER_SIZE) |
                          END_STREAM_REASON_FLAG_REMOTE;
       connection_mark_for_close(TO_CONN(conn));
@@ -1016,7 +1016,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         log_warn(LD_BUG,
                  "open stream hasn't sent socks answer yet? Closing.");
       /* We just *got* an end; no reason to send one. */
-      conn->_base.edge_has_sent_end = 1;
+      conn->edge_has_sent_end = 1;
       if (!conn->end_reason)
         conn->end_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
       if (!conn->_base.marked_for_close) {
@@ -1716,7 +1716,7 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
 
   for (; edge; edge = edge->next_stream) {
     connection_t *conn = TO_CONN(edge);
-    conn->edge_blocked_on_circ = block;
+    edge->edge_blocked_on_circ = block;
 
     if (!conn->read_event) {
       /* This connection is a placeholder for something; probably a DNS

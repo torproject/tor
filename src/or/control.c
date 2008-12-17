@@ -2318,7 +2318,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     circuit_t *tmpcirc = circuit_get_by_edge_conn(ap_conn);
     connection_edge_end(ap_conn, END_STREAM_REASON_TIMEOUT);
     /* Un-mark it as ending, since we're going to reuse it. */
-    ap_conn->_base.edge_has_sent_end = 0;
+    ap_conn->edge_has_sent_end = 0;
     ap_conn->end_reason = 0;
     if (tmpcirc)
       circuit_detach_stream(tmpcirc,ap_conn);

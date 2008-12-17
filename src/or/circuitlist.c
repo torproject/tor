@@ -1096,7 +1096,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
         /* The client will see a DESTROY, and infer that the connections
          * are closing because the circuit is getting torn down.  No need
          * to send an end cell. */
-        conn->_base.edge_has_sent_end = 1;
+        conn->edge_has_sent_end = 1;
         conn->end_reason = END_STREAM_REASON_DESTROY;
         conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;
         connection_mark_for_close(TO_CONN(conn));

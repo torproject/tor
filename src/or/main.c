@@ -502,7 +502,7 @@ conn_write_callback(int fd, short events, void *_conn)
         edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
         if (!edge_conn->end_reason)
           edge_conn->end_reason = END_STREAM_REASON_INTERNAL;
-        conn->edge_has_sent_end = 1;
+        edge_conn->edge_has_sent_end = 1;
       }
       connection_close_immediate(conn); /* So we don't try to flush. */
       connection_mark_for_close(conn);

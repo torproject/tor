@@ -223,6 +223,7 @@ typedef enum {
 /* !!!! If _CONN_TYPE_MAX is ever over 15, we must grow the type field in
  * connection_t. */
 
+/** True iff <b>x</b> is an edge connection. */
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
 
@@ -354,17 +355,17 @@ typedef enum {
 #define DIR_PURPOSE_UPLOAD_VOTE 10
 /** A connection to a directory server: upload a v3 consensus signature */
 #define DIR_PURPOSE_UPLOAD_SIGNATURES 11
-/** A connection to a directory server: download one or more network-status
- * objects [XXX wtf, these are all the same comment] */
+/** A connection to a directory server: download one or more v3 networkstatus
+ * votes. */
 #define DIR_PURPOSE_FETCH_STATUS_VOTE 12
-/** A connection to a directory server: download one or more network-status
- * objects */
+/** A connection to a directory server: download a v3 detached signatures
+ * object for a consensus. */
 #define DIR_PURPOSE_FETCH_DETACHED_SIGNATURES 13
-/** A connection to a directory server: download one or more network-status
- * objects */
+/** A connection to a directory server: download a v3 networkstatus
+ * consensus. */,
 #define DIR_PURPOSE_FETCH_CONSENSUS 14
-/** A connection to a directory server: download one or more network-status
- * objects */
+/** A connection to a directory server: download one or more directory
+ * authority certificates. */
 #define DIR_PURPOSE_FETCH_CERTIFICATE 15
 
 /** Purpose for connection at a directory server. */
@@ -377,6 +378,8 @@ typedef enum {
 #define DIR_PURPOSE_FETCH_RENDDESC_V2 18
 #define _DIR_PURPOSE_MAX 18
 
+/** True iff <b>p</b> is a purpose corresponding to uploading data to a
+ * directory server. */
 #define DIR_PURPOSE_IS_UPLOAD(p)                \
   ((p)==DIR_PURPOSE_UPLOAD_DIR ||               \
    (p)==DIR_PURPOSE_UPLOAD_RENDDESC ||          \
@@ -480,15 +483,20 @@ typedef enum {
 /** True iff the circuit purpose <b>p</b> is for a circuit that
  * originated at this node. */
 #define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
+/** True iff the circuit purpose <b>p</b> is for a circuit that originated
+ * here to serve as a client.  (Hidden services don't count here.) */
 #define CIRCUIT_PURPOSE_IS_CLIENT(p) \
   ((p)> _CIRCUIT_PURPOSE_OR_MAX &&    \
    (p)<=_CIRCUIT_PURPOSE_C_MAX)
+/** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
 #define MIN_CIRCUITS_HANDLING_STREAM 2
 
+/* These RELAY_COMMAND constants define values for relay cell commands, and
+* must match those defined in tor-spec.txt. */
 #define RELAY_COMMAND_BEGIN 1
 #define RELAY_COMMAND_DATA 2
 #define RELAY_COMMAND_END 3
@@ -513,7 +521,7 @@ typedef enum {
 #define RELAY_COMMAND_RENDEZVOUS_ESTABLISHED 39
 #define RELAY_COMMAND_INTRODUCE_ACK 40
 
-/* Reasons why an OR connection is closed */
+/* Reasons why an OR connection is closed. */
 #define END_OR_CONN_REASON_DONE           1
 #define END_OR_CONN_REASON_REFUSED        2 /* connection refused */
 #define END_OR_CONN_REASON_OR_IDENTITY    3
@@ -525,7 +533,7 @@ typedef enum {
 #define END_OR_CONN_REASON_MISC           9
 
 /* Reasons why we (or a remote OR) might close a stream. See tor-spec.txt for
- * documentation of these. */
+ * documentation of these.  The values must match. */
 #define END_STREAM_REASON_MISC 1
 #define END_STREAM_REASON_RESOLVEFAILED 2
 #define END_STREAM_REASON_CONNECTREFUSED 3
@@ -897,21 +905,6 @@ typedef struct connection_t {
                                       * before closing it? */
   unsigned int inbuf_reached_eof:1; /**< Boolean: did read() return 0 on this
                                      * conn? */
-  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
-                         * connections.  Set once we've set the stream end,
-                         * and check in connection_about_to_close_connection().
-                         */
-  /** Edge connections only: true if we've blocked reading until the
-   * circuit has fewer queued cells. */
-  unsigned int edge_blocked_on_circ:1;
-  /** For AP connections only. If 1, and we fail to reach the chosen exit,
-   * stop requiring it. */
-  unsigned int chosen_exit_optional:1;
-  /** For AP connections only. If non-zero, this exit node was picked as
-   * a result of the TrackHostExit, and the value decrements every time
-   * we fail to complete a circuit to our chosen exit -- if it reaches
-   * zero, abandon the associated mapaddress. */
-  unsigned int chosen_exit_retries:3;
   /** Set to 1 when we're inside connection_flushed_some to keep us from
    * calling connection_handle_write() recursively. */
   unsigned int in_flushed_some:1;
@@ -1103,6 +1096,22 @@ typedef struct edge_connection_t {
    * itself rather than BEGIN (either via onehop or via a whole circuit). */
   unsigned int use_begindir:1;
 
+  unsigned int edge_has_sent_end:1; /**< For debugging; only used on edge
+                         * connections.  Set once we've set the stream end,
+                         * and check in connection_about_to_close_connection().
+                         */
+  /** True iff we've blocked reading until the circuit has fewer queued
+   * cells. */
+  unsigned int edge_blocked_on_circ:1;
+  /** For AP connections only. If 1, and we fail to reach the chosen exit,
+   * stop requiring it. */
+  unsigned int chosen_exit_optional:1;
+  /** For AP connections only. If non-zero, this exit node was picked as
+   * a result of the TrackHostExit, and the value decrements every time
+   * we fail to complete a circuit to our chosen exit -- if it reaches
+   * zero, abandon the associated mapaddress. */
+  unsigned int chosen_exit_retries:3;
+
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */
   struct evdns_server_request *dns_server_request;
@@ -1261,7 +1270,7 @@ typedef enum {
   SAVED_IN_JOURNAL
 } saved_location_t;
 
-/** Enumeration: what kind of downlaod schedule are we using for a given
+/** Enumeration: what kind of download schedule are we using for a given
  * object? */
 typedef enum {
   DL_SCHED_GENERIC = 0,
@@ -1319,7 +1328,8 @@ typedef struct signed_descriptor_t {
    * status, so far as we know." */
   time_t last_listed_as_valid_until;
 #ifdef TRACK_SERVED_TIME
-  /** DOCDOC */
+  /** The last time we served anybody this descriptor.  Used for internal
+   * testing to see whether we're holding on to descriptors too long. */
   time_t last_served_at; /*XXXX021 remove if not useful. */
 #endif
   /* If true, we do not ever try to save this object in the cache. */
@@ -1570,7 +1580,9 @@ typedef struct networkstatus_voter_info_t {
   uint16_t or_port; /**< OR port of this voter */
   char *contact; /**< Contact information for this voter. */
   char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
-  char legacy_id_digest[DIGEST_LEN]; /**< From vote only. DOCDOC */
+  /** Digest of this voter's "legacy" identity key, if any.  In vote only; for
+   * consensuses, we treat legacy keys as additional signers. */
+  char legacy_id_digest[DIGEST_LEN];
 
   /* Nothing from here on is signed. */
   char signing_key_digest[DIGEST_LEN]; /**< Declared digest of signing key

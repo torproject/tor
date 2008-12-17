@@ -511,7 +511,8 @@ connection_about_to_close_connection(connection_t *conn)
   tor_assert(conn->marked_for_close);
 
   if (CONN_IS_EDGE(conn)) {
-    if (!conn->edge_has_sent_end) {
+    edge_conn = TO_EDGE_CONN(conn);
+    if (!edge_conn->edge_has_sent_end) {
       log_warn(LD_BUG, "(Harmless.) Edge connection (marked at %s:%d) "
                "hasn't sent end yet?",
                conn->marked_for_close_file, conn->marked_for_close);
@@ -2986,7 +2987,7 @@ assert_connection_ok(connection_t *conn, time_t now)
 
   if (conn->outbuf_flushlen > 0) {
     tor_assert(connection_is_writing(conn) || conn->write_blocked_on_bw ||
-               conn->edge_blocked_on_circ);
+            (CONN_IS_EDGE(conn) && TO_EDGE_CONN(conn)->edge_blocked_on_circ));
   }
 
   if (conn->hold_open_until_flushed)
@@ -2999,11 +3000,6 @@ assert_connection_ok(connection_t *conn, time_t now)
   if (!connection_is_listener(conn)) {
     assert_buf_ok(conn->inbuf);
     assert_buf_ok(conn->outbuf);
-  }
-
-  if (conn->chosen_exit_optional || conn->chosen_exit_retries) {
-    tor_assert(conn->type == CONN_TYPE_AP);
-    tor_assert((TO_EDGE_CONN(conn))->chosen_exit_name);
   }
 
   if (conn->type == CONN_TYPE_OR) {
@@ -3025,6 +3021,11 @@ assert_connection_ok(connection_t *conn, time_t now)
 
   if (CONN_IS_EDGE(conn)) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+    if (edge_conn->chosen_exit_optional || edge_conn->chosen_exit_retries) {
+      tor_assert(conn->type == CONN_TYPE_AP);
+      tor_assert(edge_conn->chosen_exit_name);
+    }
+
     /* XXX unchecked: package window, deliver window. */
     if (conn->type == CONN_TYPE_AP) {
 

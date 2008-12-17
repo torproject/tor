@@ -1087,13 +1087,13 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       /* XXXX021 Duplicates checks in connection_ap_handshake_attach_circuit
        * XXXX021 Fix this, then backport it? */
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
-      int opt = conn->_base.chosen_exit_optional;
+      int opt = conn->chosen_exit_optional;
       if (router && !connection_ap_can_use_exit(conn, router)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
-          conn->_base.chosen_exit_optional = 0;
+          conn->chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
           /* Try again. */
           return circuit_get_open_circ_or_launch(conn,
@@ -1142,7 +1142,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (conn->chosen_exit_name) {
         routerinfo_t *r;
-        int opt = conn->_base.chosen_exit_optional;
+        int opt = conn->chosen_exit_optional;
         r = router_get_by_nickname(conn->chosen_exit_name, 1);
         if (r) {
           extend_info = extend_info_from_router(r);
@@ -1175,7 +1175,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
                    "Requested exit point '%s' is not known. %s.",
                    conn->chosen_exit_name, opt ? "Trying others" : "Closing");
             if (opt) {
-              conn->_base.chosen_exit_optional = 0;
+              conn->chosen_exit_optional = 0;
               tor_free(conn->chosen_exit_name);
               return 0;
             }
@@ -1394,7 +1394,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
 
     if (conn->chosen_exit_name) {
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
-      int opt = conn->_base.chosen_exit_optional;
+      int opt = conn->chosen_exit_optional;
       if (!router && !want_onehop) {
         /* We ran into this warning when trying to extend a circuit to a
          * hidden service directory for which we didn't have a router
@@ -1405,7 +1405,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
                "Requested exit point '%s' is not known. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
-          conn->_base.chosen_exit_optional = 0;
+          conn->chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
           return 0;
         }
@@ -1416,7 +1416,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
-          conn->_base.chosen_exit_optional = 0;
+          conn->chosen_exit_optional = 0;
           tor_free(conn->chosen_exit_name);
           return 0;
         }
