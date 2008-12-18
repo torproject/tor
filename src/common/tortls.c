@@ -825,6 +825,7 @@ tor_tls_new(int sock, int isServer)
   {
     char *fake_hostname = crypto_random_hostname(4,25, "www.",".com");
     SSL_set_tlsext_host_name(result->ssl, fake_hostname);
+    tor_free(fake_hostname);
   }
 #endif
 
