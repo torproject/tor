@@ -1349,9 +1349,9 @@ options_act(or_options_t *old_options)
   if (options->GeoIPFile &&
       ((!old_options || !opt_streq(old_options->GeoIPFile, options->GeoIPFile))
        || !geoip_is_loaded())) {
-    /** XXXX021 Don't use this "<default>" junk; make our filename options
+    /* XXXX Don't use this "<default>" junk; make our filename options
      * understand prefixes somehow. -NM */
-    /** XXXX021 Reload GeoIPFile on SIGHUP. -NM */
+    /* XXXX021 Reload GeoIPFile on SIGHUP. -NM */
     char *actual_fname = tor_strdup(options->GeoIPFile);
 #ifdef WIN32
     if (!strcmp(actual_fname, "<default>")) {
@@ -2151,7 +2151,7 @@ options_trial_assign(config_line_t *list, int use_defaults,
 
   if (options_validate(get_options(), trial_options, 1, msg) < 0) {
     config_free(&options_format, trial_options);
-    return SETOPT_ERR_PARSE; /*XXX021 make this separate. */
+    return SETOPT_ERR_PARSE; /*XXX make this a separate return value. */
   }
 
   if (options_transition_allowed(get_options(), trial_options, msg) < 0) {
@@ -3038,7 +3038,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     COMPLAIN("StrictEntryNodes set, but no EntryNodes listed.");
 
   if (options->EntryNodes && !routerset_is_list(options->EntryNodes)) {
-    /** XXXX021 fix this; see entry_guards_prepend_from_config(). */
+    /* XXXX fix this; see entry_guards_prepend_from_config(). */
     REJECT("IPs or countries are not yet supported in EntryNodes.");
   }
 
@@ -3672,7 +3672,7 @@ static int
 options_transition_affects_descriptor(or_options_t *old_options,
                                       or_options_t *new_options)
 {
-  /* XXX021 We can be smarter here. If your DirPort isn't being
+  /* XXX We can be smarter here. If your DirPort isn't being
    * published and you just turned it off, no need to republish. If
    * you changed your bandwidthrate but maxadvertisedbandwidth still
    * trumps, no need to republish. Etc. */
@@ -4022,7 +4022,7 @@ options_init_from_string(const char *cf,
    * for a list of dependent config options, re-initialize newoptions
    * with the new defaults, and assign all options to it second time. */
   if (newoptions->TestingTorNetwork) {
-    /* XXXX021 this is a bit of a kludge.  perhaps there's a better way to do
+    /* XXXX this is a bit of a kludge.  perhaps there's a better way to do
      * this?  We could, for example, make the parsing algorithm do two passes
      * over the configuration.  If it finds any "suite" options like
      * TestingTorNetwork, it could change the defaults before its second pass.
@@ -4070,7 +4070,7 @@ options_init_from_string(const char *cf,
 
   /* Validate newoptions */
   if (options_validate(oldoptions, newoptions, 0, msg) < 0) {
-    err = SETOPT_ERR_PARSE; /*XXX021 make this separate.*/
+    err = SETOPT_ERR_PARSE; /*XXX make this a separate return value.*/
     goto err;
   }
 

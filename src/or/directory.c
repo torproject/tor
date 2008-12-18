@@ -540,7 +540,7 @@ directory_conn_is_self_reachability_test(dir_connection_t *conn)
     routerinfo_t *me = router_get_my_routerinfo();
     if (me &&
         router_digest_is_me(conn->identity_digest) &&
-        tor_addr_eq_ipv4h(&conn->_base.addr, me->addr) && /*XXXX021 prop 118*/
+        tor_addr_eq_ipv4h(&conn->_base.addr, me->addr) && /*XXXX prop 118*/
         me->dir_port == conn->_base.port)
       return 1;
   }
@@ -1804,8 +1804,13 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           int rejected = 0;
           if (rejected_hdr) {
             if (!strcmp(rejected_hdr, "Yes")) {
-              /* XXXX021 use this information; be sure to upload next one
+              /* XXXX use this information; be sure to upload next one
                * sooner. -NM */
+              /* XXXX021 On further thought, the task above implies that we're
+               * basing our regenerate-descriptor time on when we uploaded the
+               * last descriptor, not on the published time of the last
+               * descriptor.  If those are different, that's a bad thing to
+               * do. -NM */
               rejected = 1;
             }
             tor_free(rejected_hdr);

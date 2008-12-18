@@ -597,7 +597,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
       router_get_by_digest(conn->identity_digest)) {
     char dbuf[64];
     int severity;
-    /*XXXX021 be smarter about when everybody says we are skewed. */
+    /*XXXX be smarter about when everybody says we are skewed. */
     if (router_digest_is_trusted_dir(conn->identity_digest))
       severity = LOG_WARN;
     else
@@ -615,7 +615,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
                         apparent_skew, conn->_base.address, conn->_base.port);
   }
 
-  /* XXX021 maybe act on my_apparent_addr, if the source is sufficiently
+  /* XXX maybe act on my_apparent_addr, if the source is sufficiently
    * trustworthy. */
 
   if (connection_or_set_state_open(conn)<0)

@@ -248,8 +248,6 @@ tls_error_to_orconn_end_reason(int e)
 
 /** Given an errno from a failed ORConn connection, return a reason code
  * appropriate for use in the controller orconn events. */
-/* XXX021 somebody should think about whether the assignments I've made
- * are accurate or useful. -RD */
 int
 errno_to_orconn_end_reason(int e)
 {

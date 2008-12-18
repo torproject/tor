@@ -563,7 +563,8 @@ connection_about_to_close_connection(connection_t *conn)
             int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                                          reason);
-            /* XXX021 come up with a better string for the first arg */
+            /* XXX021 come up with a better string for the first arg -RD */
+            /* What did you have in mind? -NM */
             if (!authdir_mode_tests_reachability(options))
               control_event_bootstrap_problem(
                 orconn_end_reason_to_control_string(reason), reason);
@@ -1800,7 +1801,7 @@ connection_bucket_refill_helper(int *bucket, int rate, int burst,
       if (*bucket > burst || *bucket < starting_bucket) {
         /* If we overflow the burst, or underflow our starting bucket,
          * cap the bucket value to burst. */
-        /* XXXX021 this might be redundant now, but it doesn't show up
+        /* XXXX this might be redundant now, but it doesn't show up
          * in profiles.  Remove it after analysis. */
         *bucket = burst;
       }
@@ -2033,7 +2034,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
 
   if (at_most == -1) { /* we need to initialize it */
     /* how many bytes are we allowed to read? */
-    /* XXXX too many calls to time(). Do they hurt? */
+    /* XXXX021 too many calls to time(). Do they hurt? */
     at_most = connection_bucket_read_limit(conn, time(NULL));
   }
 

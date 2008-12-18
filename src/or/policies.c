@@ -69,7 +69,7 @@ policy_expand_private(smartlist_t **policy)
   int i;
   smartlist_t *tmp;
 
-  if (!*policy) /*XXXX021 disallow NULL policies */
+  if (!*policy) /*XXXX disallow NULL policies? */
     return;
 
   tmp = smartlist_create();
@@ -235,7 +235,7 @@ addr_policy_permits_tor_addr(const tor_addr_t *addr, uint16_t port,
   }
 }
 
-/* DOCDOC XXXX021 deprecate? */
+/* DOCDOC XXXX deprecate when possible. */
 static int
 addr_policy_permits_address(uint32_t addr, uint16_t port,
                             smartlist_t *policy)
@@ -258,7 +258,7 @@ fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port)
 int
 fascist_firewall_allows_or(routerinfo_t *ri)
 {
-  /* XXXX021 proposal 118 */
+  /* XXXX proposal 118 */
   tor_addr_t addr;
   tor_addr_from_ipv4h(&addr, ri->addr);
   return fascist_firewall_allows_address_or(&addr, ri->or_port);
@@ -556,7 +556,7 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
 addr_policy_result_t
 compare_addr_to_addr_policy(uint32_t addr, uint16_t port, smartlist_t *policy)
 {
-  /*XXXX021 deprecate this function? */
+  /*XXXX deprecate this function when possible. */
   tor_addr_t a;
   tor_addr_from_ipv4h(&a, addr);
   return compare_tor_addr_to_addr_policy(&a, port, policy);
@@ -825,7 +825,7 @@ exit_policy_is_general_exit(smartlist_t *policy)
   static const int ports[] = { 80, 443, 6667 };
   int n_allowed = 0;
   int i;
-  if (!policy) /*XXXX021 disallow NULL policies */
+  if (!policy) /*XXXX disallow NULL policies? */
     return 0;
 
   for (i = 0; i < 3; ++i) {
@@ -851,7 +851,7 @@ exit_policy_is_general_exit(smartlist_t *policy)
 int
 policy_is_reject_star(smartlist_t *policy)
 {
-  if (!policy) /*XXXX021 disallow NULL policies */
+  if (!policy) /*XXXX disallow NULL policies? */
     return 1;
   SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
     if (p->policy_type == ADDR_POLICY_ACCEPT)

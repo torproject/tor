@@ -1688,8 +1688,8 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     routerlist_add_family(excluded, r);
   }
   if (firewall_is_fascist_or()) {
-    /*XXXX021 This can slow things down a lot; use a smarter implementation */
-    /* exclude all ORs that listen on the wrong port */
+    /*XXXX This could slow things down a lot; use a smarter implementation */
+    /* exclude all ORs that listen on the wrong port, if anybody notices. */
     routerlist_t *rl = router_get_routerlist();
     int i;
 
@@ -1898,7 +1898,7 @@ build_state_get_exit_nickname(cpath_build_state_t *state)
  *
  * If it's not usable, set *<b>reason</b> to a static string explaining why.
  */
-/*XXXX021 take a routerstatus, not a routerinfo. */
+/*XXXX take a routerstatus, not a routerinfo. */
 static int
 entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
                        time_t now, or_options_t *options, const char **reason)

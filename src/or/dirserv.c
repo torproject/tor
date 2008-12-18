@@ -887,7 +887,8 @@ directory_set_dirty(void)
   int set_v1_dirty=0;
 
   /* Regenerate stubs only every 8 hours.
-   * XXXX021 It would be nice to generate less often. */
+   * XXXX It would be nice to generate less often, but these are just
+   * stubs: it doesn't matter. */
 #define STUB_REGENERATE_INTERVAL (8*60*60)
   if (!the_directory || !the_runningrouters.dir)
     set_v1_dirty = 1;
@@ -2727,8 +2728,8 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
  * If -1 is returned *<b>msg</b> will be set to an appropriate error
  * message.
  *
- * XXXX021 rename this function.  It's only called from the controller.
- * XXXX021 in fact, refactor this function, mergeing as much as possible.
+ * XXXX rename this function.  It's only called from the controller.
+ * XXXX in fact, refactor this function, mergeing as much as possible.
  */
 int
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,

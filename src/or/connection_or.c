@@ -398,14 +398,14 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   tor_addr_copy(&conn->_base.addr, addr);
   tor_addr_copy(&conn->real_addr, addr);
   if (r) {
-    /* XXXX021 proposal 118 will make this more complex. */
+    /* XXXX proposal 118 will make this more complex. */
     if (tor_addr_eq_ipv4h(&conn->_base.addr, r->addr))
       conn->is_canonical = 1;
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
        * This is dangerous, since if we ever try looking up a conn by
        * its actual addr/port, we won't remember. Careful! */
-      /* XXXX021 arma: this is stupid, and it's the reason we need real_addr
+      /* XXXX arma: this is stupid, and it's the reason we need real_addr
        * to track is_canonical properly.  What requires it? */
       /* XXXX <arma> i believe the reason we did this, originally, is because
        * we wanted to log what OR a connection was to, and if we logged the
@@ -929,7 +929,7 @@ connection_or_set_state_open(or_connection_t *conn)
     /* only report it to the geoip module if it's not a known router */
     if (!router_get_by_digest(conn->identity_digest)) {
       if (tor_addr_family(&TO_CONN(conn)->addr) == AF_INET) {
-        /*XXXX021 IP6 support ipv6 geoip.*/
+        /*XXXX IP6 support ipv6 geoip.*/
         uint32_t a = tor_addr_to_ipv4h(&TO_CONN(conn)->addr);
         geoip_note_client_seen(GEOIP_CLIENT_CONNECT, a, now);
       }

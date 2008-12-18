@@ -441,7 +441,7 @@ send_resolved_cell(edge_connection_t *conn, uint8_t answer_type)
       set_uint32(buf+6, htonl(ttl));
       buflen = 10;
       break;
-    /*XXXX021 IP6 need ipv6 implementation */
+    /*XXXX IP6 need ipv6 implementation */
     case RESOLVED_TYPE_ERROR_TRANSIENT:
     case RESOLVED_TYPE_ERROR:
       {
@@ -499,7 +499,7 @@ send_resolved_hostname_cell(edge_connection_t *conn, const char *hostname)
  * parse it and place the address in <b>in</b> if present. Return 1 on success;
  * 0 if the address is not in in-addr.arpa format, and -1 if the address is
  * malformed. */
-/* XXXX021 move this to util.c. */
+/* XXXX021 move this to address.c; unify with logic in connection_edge.c */
 int
 parse_inaddr_arpa_address(const char *address, struct in_addr *in)
 {

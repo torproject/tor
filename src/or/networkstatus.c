@@ -908,7 +908,7 @@ router_get_consensus_status_by_nickname(const char *nickname,
 
   /* This name is not canonical for any server; go through the list and
    * see who it matches. */
-  /*XXXX021 This is inefficient. */
+  /*XXXX This is inefficient; optimize it if it matters. */
   matches = smartlist_create();
   SMARTLIST_FOREACH(current_consensus->routerstatus_list,
                     routerstatus_t *, lrs,
@@ -1746,7 +1746,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   } SMARTLIST_FOREACH_JOIN_END(rs, router);
 
   /* Now update last_listed_as_valid_until from v2 networkstatuses. */
-  /* XXXX021 If this is slow, we need to rethink the code. */
+  /* XXXX If this is slow, we need to rethink the code. */
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns, {
     time_t live_until = ns->published_on + V2_NETWORKSTATUS_LIFETIME;
     SMARTLIST_FOREACH_JOIN(ns->entries, routerstatus_t *, rs,

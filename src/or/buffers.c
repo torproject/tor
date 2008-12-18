@@ -186,7 +186,7 @@ chunk_new_with_alloc_size(size_t alloc)
       freelist->lowest_length = freelist->cur_length;
     ++freelist->n_hit;
   } else {
-    /* XXXX021 take advantage of tor_malloc_roundup, once we know how that
+    /* XXXX take advantage of tor_malloc_roundup, once we know how that
      * affects freelists. */
     if (freelist)
       ++freelist->n_alloc;

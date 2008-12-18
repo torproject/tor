@@ -80,7 +80,7 @@ static smartlist_t *warned_nicknames = NULL;
  * download is low. */
 static time_t last_routerdesc_download_attempted = 0;
 
-/* DOCDOC This is a massive massive kludge XXXX021 */
+/* DOCDOC This is a massive massive kludge XXXX */
 static uint64_t sl_last_total_weighted_bw = 0;
 static uint64_t sl_last_weighted_bw_of_me = 0;
 
@@ -1058,7 +1058,7 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
         !router_supports_extrainfo(status->identity_digest, 0))
       continue;
 
-    /* XXXX021 IP6 proposal 118 */
+    /* XXXX IP6 proposal 118 */
     tor_addr_from_ipv4h(&addr, status->addr);
 
     if (prefer_tunnel &&
@@ -1139,7 +1139,7 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
 
-      /* XXXX021 IP6 proposal 118 */
+      /* XXXX IP6 proposal 118 */
       tor_addr_from_ipv4h(&addr, d->addr);
 
       if (no_serverdesc_fetching) {
@@ -3238,7 +3238,7 @@ routerlist_remove_old_routers(void)
       networkstatus_v2_list && smartlist_len(networkstatus_v2_list)) {
     SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
                       n_expected_retain += smartlist_len(ns->entries));
-    /*XXXX021 too much magic. */
+    /* DOCDOC XXX021 too much magic. */
     n_expected_retain /= (smartlist_len(networkstatus_v2_list)/2+1);
   }
   //log_notice(LD_DIR,"n_expected_retain=%d",n_expected_retain);
@@ -4089,7 +4089,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
     smartlist_t *dl = download_from[i];
     int pds_flags = PDS_RETRY_IF_NO_SERVERS;
     if (! authdir_mode_any_nonhidserv(options))
-      pds_flags |= PDS_NO_EXISTING_SERVERDESC_FETCH; /* XXXX021 ignored*/
+      pds_flags |= PDS_NO_EXISTING_SERVERDESC_FETCH; /* XXXX ignored*/
 
     if (!ds) {
       log_warn(LD_BUG, "Networkstatus with no corresponding authority!");
@@ -4673,7 +4673,7 @@ routerlist_assert_ok(routerlist_t *rl)
                     r->cache_info.signed_descriptor_digest);
     tor_assert(&(r->cache_info) == sd2);
     tor_assert(r->cache_info.routerlist_index == r_sl_idx);
-    /* XXXX021.
+    /* XXXX
      *
      *   Hoo boy.  We need to fix this one, and the fix is a bit tricky, so
      * commenting this out is just a band-aid.
@@ -4704,7 +4704,7 @@ routerlist_assert_ok(routerlist_t *rl)
     sd2 = sdmap_get(rl->desc_digest_map, sd->signed_descriptor_digest);
     tor_assert(sd == sd2);
     tor_assert(sd->routerlist_index == sd_sl_idx);
-    /* XXXX021 see above.
+    /* XXXX see above.
     if (!tor_digest_is_zero(sd->extra_info_digest)) {
       signed_descriptor_t *sd3 =
         sdmap_get(rl->desc_by_eid_map, sd->extra_info_digest);
@@ -4730,7 +4730,7 @@ routerlist_assert_ok(routerlist_t *rl)
                        d, DIGEST_LEN));
     sd = sdmap_get(rl->desc_by_eid_map,
                    ei->cache_info.signed_descriptor_digest);
-    // tor_assert(sd); // XXXX021 see above
+    // tor_assert(sd); // XXXX see above
     if (sd) {
       tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
                          sd->extra_info_digest, DIGEST_LEN));

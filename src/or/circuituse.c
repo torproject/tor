@@ -1084,8 +1084,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         return -1;
       }
     } else {
-      /* XXXX021 Duplicates checks in connection_ap_handshake_attach_circuit
-       * XXXX021 Fix this, then backport it? */
+      /* XXXX021 Duplicates checks in connection_ap_handshake_attach_circuit */
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
       if (router && !connection_ap_can_use_exit(conn, router)) {
@@ -1363,7 +1362,7 @@ connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
  * Otherwise, associate conn with a safe live circuit, do the
  * right next step, and return 1.
  */
-/* XXXX021 this function should mark for close whenever it returns -1;
+/* XXXX this function should mark for close whenever it returns -1;
  * its callers shouldn't have to worry about that. */
 int
 connection_ap_handshake_attach_circuit(edge_connection_t *conn)
