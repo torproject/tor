@@ -1963,6 +1963,9 @@ tor_free_all(int postfork)
   if (active_linked_connection_lst)
     smartlist_free(active_linked_connection_lst);
   tor_free(timeout_event);
+  if (!postfork) {
+    release_lockfile();
+  }
   /* Stuff in util.c and address.c*/
   if (!postfork) {
     escaped(NULL);
