@@ -131,6 +131,7 @@ router_reload_v2_networkstatus(void)
   } else if (!smartlist_len(entries) && maybe_delete) {
     rmdir(filename);
     tor_free(filename);
+    smartlist_free(entries);
     return 0;
   }
   tor_free(filename);
