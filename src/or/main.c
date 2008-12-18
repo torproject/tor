@@ -1173,7 +1173,7 @@ second_elapsed_callback(int fd, short event, void *args)
    * time against a bunch of timeouts every second. */
   static struct timeval one_second;
   static long current_second = 0;
-  struct timeval now;
+  time_t now;
   size_t bytes_written;
   size_t bytes_read;
   int seconds_elapsed;
@@ -1191,13 +1191,13 @@ second_elapsed_callback(int fd, short event, void *args)
   n_libevent_errors = 0;
 
   /* log_fn(LOG_NOTICE, "Tick."); */
-  tor_gettimeofday(&now);
-  update_approx_time(now.tv_sec);
+  now = time(NULL);
+  update_approx_time(now);
 
   /* the second has rolled over. check more stuff. */
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
   bytes_read = stats_prev_global_read_bucket - global_read_bucket;
-  seconds_elapsed = current_second ? (int)(now.tv_sec - current_second) : 0;
+  seconds_elapsed = current_second ? (int)(now - current_second) : 0;
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
   if (accounting_is_enabled(options) && seconds_elapsed >= 0)
@@ -1206,7 +1206,7 @@ second_elapsed_callback(int fd, short event, void *args)
   control_event_stream_bandwidth_used();
 
   if (seconds_elapsed > 0)
-    connection_bucket_refill(seconds_elapsed, now.tv_sec);
+    connection_bucket_refill(seconds_elapsed, now);
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
 
@@ -1243,9 +1243,9 @@ second_elapsed_callback(int fd, short event, void *args)
   } else if (seconds_elapsed > 0)
     stats_n_seconds_working += seconds_elapsed;
 
-  run_scheduled_events(now.tv_sec);
+  run_scheduled_events(now);
 
-  current_second = now.tv_sec; /* remember which second it is, for next time */
+  current_second = now; /* remember which second it is, for next time */
 
 #if 0
   if (current_second % 300 == 0) {
