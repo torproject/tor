@@ -46,6 +46,9 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Fix a memory leak when we decline to add a v2 rendezvous descriptor to
       the cache because we already had a v0 descriptor with the same ID.
       Bugfix on 0.2.0.18-alpha.
+    - Fix a race condition when freeing keys shared between main thread
+      and CPU workers that could result in a memory leak.  Bugfix on
+      0.1.0.1-rc.  Fixes bug 889.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected

@@ -631,6 +631,23 @@ crypto_pk_dup_key(crypto_pk_env_t *env)
   return env;
 }
 
+/** Make a real honest-to-goodness copy of <b>env</b>, and return it. */
+crypto_pk_env_t *
+crypto_pk_copy_full(crypto_pk_env_t *env)
+{
+  RSA *new_key;
+  tor_assert(env);
+  tor_assert(env->key);
+
+  if (PRIVATE_KEY_OK(env)) {
+    new_key = RSAPrivateKey_dup(env->key);
+  } else {
+    new_key = RSAPublicKey_dup(env->key);
+  }
+
+  return _crypto_new_pk_env_rsa(new_key);
+}
+
 /** Encrypt <b>fromlen</b> bytes from <b>from</b> with the public key
  * in <b>env</b>, using the padding method <b>padding</b>.  On success,
  * write the result to <b>to</b>, and return the number of bytes
