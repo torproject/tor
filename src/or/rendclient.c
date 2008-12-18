@@ -402,14 +402,19 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   lookup_last_hid_serv_request(hs_dir, desc_id_base32, now, 1);
 
   /* Encode descriptor cookie for logging purposes. */
-  if (rend_query->auth_type != REND_NO_AUTH &&
-      base64_encode(descriptor_cookie_base64, 3*REND_DESC_COOKIE_LEN_BASE64,
-                    rend_query->descriptor_cookie, REND_DESC_COOKIE_LEN) < 0) {
-    log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
-    return 0;
+  if (rend_query->auth_type != REND_NO_AUTH) {
+    if (base64_encode(descriptor_cookie_base64,
+                      sizeof(descriptor_cookie_base64),
+                      rend_query->descriptor_cookie, REND_DESC_COOKIE_LEN)<0) {
+      log_warn(LD_BUG, "Could not base64-encode descriptor cookie.");
+      return 0;
+    }
+    /* Remove == signs and newline. */
+    descriptor_cookie_base64[strlen(descriptor_cookie_base64)-3] = '\0';
+  } else {
+    strlcpy(descriptor_cookie_base64, "(none)",
+            sizeof(descriptor_cookie_base64));
   }
-  /* Remove == signs and newline. */
-  descriptor_cookie_base64[strlen(descriptor_cookie_base64)-3] = '\0';
 
   /* Send fetch request. (Pass query and possibly descriptor cookie so that
    * they can be written to the directory connection and be referred to when

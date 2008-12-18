@@ -15,6 +15,8 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       the client never closes the circuit, then the exit relay never
       closes the TCP connection. Bug introduced in Tor 0.1.2.1-alpha;
       reported by "wood".
+    - Avoid a possible memory corruption bug when receiving hidden service
+      descriptors.  Bugfix on 0.2.1.6-alpha.
 
   o Minor features:
     - Give a better error message when an overzealous init script says
