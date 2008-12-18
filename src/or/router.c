@@ -53,13 +53,15 @@ static authority_cert_t *legacy_key_certificate = NULL;
  * used by tor-gencert to sign new signing keys and make new key
  * certificates. */
 
-/** Replace the current onion key with <b>k</b>.  Does not affect lastonionkey;
- * to update onionkey correctly, call rotate_onion_key().
+/** Replace the current onion key with <b>k</b>.  Does not affect
+ * lastonionkey; to update lastonionkey correctly, call rotate_onion_key().
  */
 static void
 set_onion_key(crypto_pk_env_t *k)
 {
   tor_mutex_acquire(key_lock);
+  if (onionkey)
+    crypto_free_pk_env(onionkey);
   onionkey = k;
   onionkey_set_at = time(NULL);
   tor_mutex_release(key_lock);
