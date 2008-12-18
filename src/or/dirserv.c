@@ -726,7 +726,8 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
     tor_free(desc);
   } else {
     smartlist_t *changed;
-    control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
+    if (desc)
+      control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
 
     changed = smartlist_create();
     smartlist_add(changed, ri);
