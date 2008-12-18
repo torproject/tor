@@ -1192,6 +1192,7 @@ second_elapsed_callback(int fd, short event, void *args)
 
   /* log_fn(LOG_NOTICE, "Tick."); */
   tor_gettimeofday(&now);
+  update_approx_time(now.tv_sec);
 
   /* the second has rolled over. check more stuff. */
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
@@ -1460,6 +1461,8 @@ do_main_loop(void)
     SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
                       event_active(conn->read_event, EV_READ, 1));
     called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+
+    update_approx_time(time(NULL));
 
     /* poll until we have an event, or the second ends, or until we have
      * some active linked connections to trigger events for. */
@@ -2059,6 +2062,7 @@ int
 tor_main(int argc, char *argv[])
 {
   int result = 0;
+  update_approx_time(time(NULL));
   tor_threads_init();
   init_logging();
 #ifdef USE_DMALLOC

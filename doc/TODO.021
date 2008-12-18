@@ -362,7 +362,7 @@ R   d Do we want to maintain our own set of entryguards that we use as
       "who can change what" in local_routerstatus explicit.  Make
       local_routerstatus (or equivalent) subsume all places to go for "what
       router is this?"
-    - Don't call time(NULL) so much; instead have a static time_t field
+    o Don't call time(NULL) so much; instead have a static time_t field
       that gets updated only a handful of times per second.
     - Refactor unit tests into multiple files
 

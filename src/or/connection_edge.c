@@ -2159,7 +2159,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
     uint32_t a;
     size_t len = strlen(ap_conn->socks_request->address);
     char c = 0;
-    /* XXXX021 This logic is a little ugly: we check for an in-addr.arpa ending
+    /* XXXX This logic is a little ugly: we check for an in-addr.arpa ending
      * on the address.  If we have one, the address is already in the right
      * order, so we'll leave it alone later.  Otherwise, we reverse it and
      * turn it into an in-addr.arpa address. */

@@ -1724,7 +1724,7 @@ connection_consider_empty_read_buckets(connection_t *conn)
 
   if (global_read_bucket <= 0) {
     reason = "global read bucket exhausted. Pausing.";
-  } else if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
+  } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
              global_relayed_read_bucket <= 0) {
     reason = "global relayed read bucket exhausted. Pausing.";
   } else if (connection_speaks_cells(conn) &&
@@ -1748,7 +1748,7 @@ connection_consider_empty_write_buckets(connection_t *conn)
 
   if (global_write_bucket <= 0) {
     reason = "global write bucket exhausted. Pausing.";
-  } else if (connection_counts_as_relayed_traffic(conn, time(NULL)) &&
+  } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
              global_relayed_write_bucket <= 0) {
     reason = "global relayed write bucket exhausted. Pausing.";
 #if 0
@@ -1928,7 +1928,7 @@ connection_handle_read(connection_t *conn)
   if (conn->marked_for_close)
     return 0; /* do nothing */
 
-  conn->timestamp_lastread = time(NULL);
+  conn->timestamp_lastread = approx_time();
 
   switch (conn->type) {
     case CONN_TYPE_OR_LISTENER:
@@ -1994,7 +1994,7 @@ loop_again:
 
     if (n_read) {
       /* Probably a no-op, but hey. */
-      connection_buckets_decrement(linked, time(NULL), 0, n_read);
+      connection_buckets_decrement(linked, approx_time(), 0, n_read);
 
       if (connection_flushed_some(linked) < 0)
         connection_mark_for_close(linked);
@@ -2034,8 +2034,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
 
   if (at_most == -1) { /* we need to initialize it */
     /* how many bytes are we allowed to read? */
-    /* XXXX021 too many calls to time(). Do they hurt? */
-    at_most = connection_bucket_read_limit(conn, time(NULL));
+    at_most = connection_bucket_read_limit(conn, approx_time());
   }
 
   slack_in_buf = buf_slack(conn->inbuf);
@@ -2155,7 +2154,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
     edge_conn->n_read += (int)n_read;
   }
 
-  connection_buckets_decrement(conn, time(NULL), n_read, n_written);
+  connection_buckets_decrement(conn, approx_time(), n_read, n_written);
 
   if (more_to_read && result == at_most) {
     slack_in_buf = buf_slack(conn->inbuf);
@@ -2223,7 +2222,7 @@ connection_handle_write(connection_t *conn, int force)
   socklen_t len=(socklen_t)sizeof(e);
   int result;
   ssize_t max_to_write;
-  time_t now = time(NULL);
+  time_t now = approx_time();
   size_t n_read = 0, n_written = 0;
 
   tor_assert(!connection_is_listener(conn));
@@ -2350,7 +2349,7 @@ connection_handle_write(connection_t *conn, int force)
     edge_conn->n_written += (int)n_written;
   }
 
-  connection_buckets_decrement(conn, time(NULL), n_read, n_written);
+  connection_buckets_decrement(conn, approx_time(), n_read, n_written);
 
   if (result > 0) {
     /* If we wrote any bytes from our buffer, then call the appropriate

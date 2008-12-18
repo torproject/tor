@@ -505,8 +505,7 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
 
   if (cell_direction == CELL_DIRECTION_OUT && circ->n_conn) {
     /* if we're using relaybandwidthrate, this conn wants priority */
-    /* XXXX021 the call to time() seems little too frequent */
-    circ->n_conn->client_used = time(NULL);
+    circ->n_conn->client_used = approx_time();
   }
 
   if (cell_direction == CELL_DIRECTION_OUT) {
@@ -1840,7 +1839,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
      * get called, and we can start putting more data onto the buffer then.
      */
     log_debug(LD_GENERAL, "Primed a buffer.");
-    connection_or_flush_from_first_active_circuit(orconn, 1, time(NULL));
+    connection_or_flush_from_first_active_circuit(orconn, 1, approx_time());
   }
 }
 

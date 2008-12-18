@@ -213,6 +213,16 @@ void format_iso_time(char *buf, time_t t);
 int parse_iso_time(const char *buf, time_t *t);
 int parse_http_time(const char *buf, struct tm *tm);
 int format_time_interval(char *out, size_t out_len, long interval);
+
+/* Cached time */
+#ifdef TIME_IS_FAST
+#define approx_time() time(NULL)
+#define update_approx_time(t) STMT_NIL
+#else
+time_t approx_time(void);
+void update_approx_time(time_t now);
+#endif
+
 /* Fuzzy time. */
 void ftime_set_maximum_sloppiness(int seconds);
 void ftime_set_estimated_skew(int seconds);

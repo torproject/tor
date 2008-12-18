@@ -4538,6 +4538,7 @@ main(int c, char**v)
   }
 #endif
 
+  update_approx_time(time(NULL));
   options = options_new();
   tor_threads_init();
   init_logging();
