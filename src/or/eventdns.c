@@ -1598,9 +1598,9 @@ evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type cb,
 void
 evdns_close_server_port(struct evdns_server_port *port)
 {
+	port->closing = 1;
 	if (--port->refcnt == 0)
 		server_port_free(port);
-	port->closing = 1;
 }
 
 /* exported function */
@@ -1943,7 +1943,8 @@ server_request_free(struct server_request *req)
 	return (0);
 }
 
-/* Free all storage held by an evdns_server_port.  Only called when  */
+/* Free all storage held by an evdns_server_port.  Only called when the
+ * reference count is down to 0. */
 static void
 server_port_free(struct evdns_server_port *port)
 {
@@ -1956,8 +1957,8 @@ server_port_free(struct evdns_server_port *port)
 	}
 	(void) event_del(&port->event);
 	CLEAR(&port->event);
-	/* XXXX021 actually free the port? -NM */
-	/* XXXX yes, and fix up evdns_close_server_port to dtrt. -NM */
+	CLEAR(port);
+	free(port);
 }
 
 /* exported function */
