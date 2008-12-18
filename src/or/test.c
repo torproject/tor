@@ -106,16 +106,27 @@ remove_directory(void)
   rmdir(temp_dir);
 }
 
+/** Define this if unit tests spend too much time generating public keys*/
+#undef CACHE_GENERATED_KEYS
+
 static crypto_pk_env_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
 static crypto_pk_env_t *
 pk_generate(int idx)
 {
+#ifdef CACHE_GENERATED_KEYS
   tor_assert(idx < (int)(sizeof(pregen_keys)/sizeof(pregen_keys[0])));
   if (! pregen_keys[idx]) {
     pregen_keys[idx] = crypto_new_pk_env();
     tor_assert(!crypto_pk_generate_key(pregen_keys[idx]));
   }
   return crypto_pk_dup_key(pregen_keys[idx]);
+#else
+  crypto_pk_env_t *result;
+  (void) idx;
+  result = crypto_new_pk_env();
+  tor_assert(!crypto_pk_generate_key(result));
+  return result;
+#endif
 }
 
 static void
