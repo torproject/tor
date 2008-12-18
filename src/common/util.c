@@ -2158,9 +2158,11 @@ tor_listdir(const char *dirname)
       smartlist_add(result, tor_strdup(findData.cFileName));
     }
     if (!FindNextFile(handle, &findData)) {
-      if (GetLastError() != ERROR_NO_MORE_FILES) {
-        /* XXX021 can we say what the error is? */
-        log_warn(LD_FS, "Error reading directory '%s'.", dirname);
+      DWORD err;
+      if ((err = GetLastError()) != ERROR_NO_MORE_FILES) {
+        char *errstr = format_win32_error(err);
+        log_warn(LD_FS, "Error reading directory '%s': %s", dirname, errstr);
+        tor_free(errstr);
       }
       break;
     }
