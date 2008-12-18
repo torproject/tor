@@ -3100,7 +3100,7 @@ test_v3_networkstatus(void)
 {
   authority_cert_t *cert1=NULL, *cert2=NULL, *cert3=NULL;
   crypto_pk_env_t *sign_skey_1=NULL, *sign_skey_2=NULL, *sign_skey_3=NULL;
-  crypto_pk_env_t *sign_skey_leg1;
+  crypto_pk_env_t *sign_skey_leg1=NULL;
   const char *msg=NULL;
 
   time_t now = time(NULL);
@@ -3570,6 +3570,8 @@ test_v3_networkstatus(void)
     crypto_free_pk_env(sign_skey_2);
   if (sign_skey_3)
     crypto_free_pk_env(sign_skey_3);
+  if (sign_skey_leg1)
+    crypto_free_pk_env(sign_skey_leg1);
   if (cert1)
     authority_cert_free(cert1);
   if (cert2)
@@ -4323,7 +4325,7 @@ test_rend_fns_v2(void)
     rend_intro_point_t *intro = tor_malloc_zero(sizeof(rend_intro_point_t));
     crypto_pk_env_t *okey = pk_generate(2 + i);
     intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
-    intro->extend_info->onion_key = crypto_pk_dup_key(okey);
+    intro->extend_info->onion_key = okey;
     crypto_pk_get_digest(intro->extend_info->onion_key,
                          intro->extend_info->identity_digest);
     //crypto_rand(info->identity_digest, DIGEST_LEN); /* Would this work? */
@@ -4385,7 +4387,7 @@ test_rend_fns_v2(void)
     rend_service_descriptor_free(generated);
   if (pk1)
     crypto_free_pk_env(pk1);
-  if (pk1)
+  if (pk2)
     crypto_free_pk_env(pk2);
   tor_free(intro_points_encrypted);
 }
