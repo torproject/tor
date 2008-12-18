@@ -611,7 +611,7 @@ dns_resolve(edge_connection_t *exitconn)
 
       if (!exitconn->_base.marked_for_close) {
         connection_free(TO_CONN(exitconn));
-        //XXX020 ... and we just leak exitconn otherwise? -RD
+        // XXX ... and we just leak exitconn otherwise? -RD
         // If it's marked for close, it's on closeable_connection_lst in
         // main.c.  If it's on the closeable list, it will get freed from
         // main.c. -NM
@@ -1015,7 +1015,7 @@ dns_found_answer(const char *address, uint8_t is_reverse, uint32_t addr,
   assert_resolve_ok(resolve);
 
   if (resolve->state != CACHE_STATE_PENDING) {
-    /* XXXX020 Maybe update addr? or check addr for consistency? Or let
+    /* XXXX Maybe update addr? or check addr for consistency? Or let
      * VALID replace FAILED? */
     int is_test_addr = is_test_address(address);
     if (!is_test_addr)

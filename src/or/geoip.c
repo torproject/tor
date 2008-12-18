@@ -205,7 +205,7 @@ geoip_load_file(const char *filename, or_options_t *options)
     /* FFFF track full country name. */
     geoip_parse_entry(buf);
   }
-  /*XXXX020 abort and return -1 if no entries/illformed?*/
+  /*XXXX abort and return -1 if no entries/illformed?*/
   fclose(f);
 
   smartlist_sort(geoip_entries, _geoip_compare_entries);

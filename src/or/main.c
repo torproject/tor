@@ -958,7 +958,7 @@ run_scheduled_events(time_t now)
    */
   if (time_to_check_for_expired_networkstatus < now) {
     networkstatus_t *ns = networkstatus_get_latest_consensus();
-    /*XXXX020 this value needs to be the same as REASONABLY_LIVE_TIME in
+    /*XXXX RD: This value needs to be the same as REASONABLY_LIVE_TIME in
      * networkstatus_get_reasonably_live_consensus(), but that value is way
      * way too high.  Arma: is the bridge issue there resolved yet? -NM */
 #define NS_EXPIRY_SLOP (24*60*60)

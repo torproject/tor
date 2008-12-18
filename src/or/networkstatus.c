@@ -177,7 +177,7 @@ router_reload_consensus_networkstatus(void)
   or_options_t *options = get_options();
   const unsigned int flags = NSSET_FROM_CACHE | NSSET_DONT_DOWNLOAD_CERTS;
 
-  /* XXXX020 Suppress warnings if cached consensus is bad. */
+  /* FFFF Suppress warnings if cached consensus is bad? */
 
   filename = get_datadir_fname("cached-consensus");
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
@@ -1024,7 +1024,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
          if (connection_get_by_type_addr_port_purpose(
                 CONN_TYPE_DIR, &addr, ds->dir_port,
                 DIR_PURPOSE_FETCH_V2_NETWORKSTATUS)) {
-           /* XXX020 the above dir_port won't be accurate if we're
+           /* XXX the above dir_port won't be accurate if we're
             * doing a tunneled conn. In that case it should be or_port.
             * How to guess from here? Maybe make the function less general
             * and have it know that it's looking for dir conns. -RD */
@@ -1082,7 +1082,7 @@ update_consensus_networkstatus_downloads(time_t now)
     return; /* There's an in-progress download.*/
 
   if (consensus_waiting_for_certs) {
-    /* XXXX020 make sure this doesn't delay sane downloads. */
+    /* XXXX make sure this doesn't delay sane downloads. */
     if (consensus_waiting_for_certs_set_at + DELAY_WHILE_FETCHING_CERTS > now)
       return; /* We're still getting certs for this one. */
     else {
@@ -1252,7 +1252,7 @@ networkstatus_get_live_consensus(time_t now)
     return NULL;
 }
 
-/* XXXX020 remove this in favor of get_live_consensus. But actually,
+/* XXXX remove this in favor of get_live_consensus. But actually,
  * leave something like it for bridge users, who need to not totally
  * lose if they spend a while fetching a new consensus. */
 /** As networkstatus_get_live_consensus(), but is way more tolerant of expired

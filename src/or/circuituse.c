@@ -234,7 +234,7 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
 
 /** Check whether, according to the policies in <b>options</b>, the
  * circuit <b>circ makes sense. */
-/* XXXX021 currently only checks Exclude{Exit}Nodes. */
+/* XXXX currently only checks Exclude{Exit}Nodes. It should check more. */
 int
 circuit_conforms_to_options(const origin_circuit_t *circ,
                             const or_options_t *options)
@@ -933,7 +933,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
   if ((extend_info || purpose != CIRCUIT_PURPOSE_C_GENERAL) &&
       purpose != CIRCUIT_PURPOSE_TESTING && !onehop_tunnel) {
     /* see if there are appropriate circs available to cannibalize. */
-    /* XXX020 if we're planning to add a hop, perhaps we want to look for
+    /* XXX if we're planning to add a hop, perhaps we want to look for
      * internal circs rather than exit circs? -RD */
     circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
