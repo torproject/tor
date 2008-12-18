@@ -1944,139 +1944,136 @@ test_util_smartlist_strings(void)
 static void
 test_util_smartlist_overlap(void)
 {
-  /* XXXXX021 reindent. */
-    smartlist_t *sl = smartlist_create();
-    smartlist_t *ints = smartlist_create();
-    smartlist_t *odds = smartlist_create();
-    smartlist_t *evens = smartlist_create();
-    smartlist_t *primes = smartlist_create();
-    int i;
-    for (i=1; i < 10; i += 2)
-      smartlist_add(odds, (void*)(uintptr_t)i);
-    for (i=0; i < 10; i += 2)
-      smartlist_add(evens, (void*)(uintptr_t)i);
+  smartlist_t *sl = smartlist_create();
+  smartlist_t *ints = smartlist_create();
+  smartlist_t *odds = smartlist_create();
+  smartlist_t *evens = smartlist_create();
+  smartlist_t *primes = smartlist_create();
+  int i;
+  for (i=1; i < 10; i += 2)
+    smartlist_add(odds, (void*)(uintptr_t)i);
+  for (i=0; i < 10; i += 2)
+    smartlist_add(evens, (void*)(uintptr_t)i);
 
-    /* add_all */
-    smartlist_add_all(ints, odds);
-    smartlist_add_all(ints, evens);
-    test_eq(smartlist_len(ints), 10);
+  /* add_all */
+  smartlist_add_all(ints, odds);
+  smartlist_add_all(ints, evens);
+  test_eq(smartlist_len(ints), 10);
 
-    smartlist_add(primes, (void*)2);
-    smartlist_add(primes, (void*)3);
-    smartlist_add(primes, (void*)5);
-    smartlist_add(primes, (void*)7);
+  smartlist_add(primes, (void*)2);
+  smartlist_add(primes, (void*)3);
+  smartlist_add(primes, (void*)5);
+  smartlist_add(primes, (void*)7);
 
-    /* overlap */
-    test_assert(smartlist_overlap(ints, odds));
-    test_assert(smartlist_overlap(odds, primes));
-    test_assert(smartlist_overlap(evens, primes));
-    test_assert(!smartlist_overlap(odds, evens));
+  /* overlap */
+  test_assert(smartlist_overlap(ints, odds));
+  test_assert(smartlist_overlap(odds, primes));
+  test_assert(smartlist_overlap(evens, primes));
+  test_assert(!smartlist_overlap(odds, evens));
 
-    /* intersect */
-    smartlist_add_all(sl, odds);
-    smartlist_intersect(sl, primes);
-    test_eq(smartlist_len(sl), 3);
-    test_assert(smartlist_isin(sl, (void*)3));
-    test_assert(smartlist_isin(sl, (void*)5));
-    test_assert(smartlist_isin(sl, (void*)7));
+  /* intersect */
+  smartlist_add_all(sl, odds);
+  smartlist_intersect(sl, primes);
+  test_eq(smartlist_len(sl), 3);
+  test_assert(smartlist_isin(sl, (void*)3));
+  test_assert(smartlist_isin(sl, (void*)5));
+  test_assert(smartlist_isin(sl, (void*)7));
 
-    /* subtract */
-    smartlist_add_all(sl, primes);
-    smartlist_subtract(sl, odds);
-    test_eq(smartlist_len(sl), 1);
-    test_assert(smartlist_isin(sl, (void*)2));
+  /* subtract */
+  smartlist_add_all(sl, primes);
+  smartlist_subtract(sl, odds);
+  test_eq(smartlist_len(sl), 1);
+  test_assert(smartlist_isin(sl, (void*)2));
 
  done:
-    smartlist_free(odds);
-    smartlist_free(evens);
-    smartlist_free(ints);
-    smartlist_free(primes);
-    smartlist_free(sl);
+  smartlist_free(odds);
+  smartlist_free(evens);
+  smartlist_free(ints);
+  smartlist_free(primes);
+  smartlist_free(sl);
 }
 
 static void
 test_util_smartlist_digests(void)
 {
   smartlist_t *sl = smartlist_create();
-  /*XXXX021 reindent. */
 
-    /* digest_isin. */
-    smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
-    smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
-    smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
-    test_eq(0, smartlist_digest_isin(NULL, "AAAAAAAAAAAAAAAAAAAA"));
-    test_assert(smartlist_digest_isin(sl, "AAAAAAAAAAAAAAAAAAAA"));
-    test_assert(smartlist_digest_isin(sl, "\00090AAB2AAAAaasdAAAAA"));
-    test_eq(0, smartlist_digest_isin(sl, "\00090AAB2AAABaasdAAAAA"));
+  /* digest_isin. */
+  smartlist_add(sl, tor_memdup("AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN));
+  smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
+  smartlist_add(sl, tor_memdup("\00090AAB2AAAAaasdAAAAA", DIGEST_LEN));
+  test_eq(0, smartlist_digest_isin(NULL, "AAAAAAAAAAAAAAAAAAAA"));
+  test_assert(smartlist_digest_isin(sl, "AAAAAAAAAAAAAAAAAAAA"));
+  test_assert(smartlist_digest_isin(sl, "\00090AAB2AAAAaasdAAAAA"));
+  test_eq(0, smartlist_digest_isin(sl, "\00090AAB2AAABaasdAAAAA"));
 
-    /* sort digests */
-    smartlist_sort_digests(sl);
-    test_memeq(smartlist_get(sl, 0), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
-    test_memeq(smartlist_get(sl, 1), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
-    test_memeq(smartlist_get(sl, 2), "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
-    test_eq(3, smartlist_len(sl));
+  /* sort digests */
+  smartlist_sort_digests(sl);
+  test_memeq(smartlist_get(sl, 0), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+  test_memeq(smartlist_get(sl, 1), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+  test_memeq(smartlist_get(sl, 2), "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
+  test_eq(3, smartlist_len(sl));
 
-    /* uniq_digests */
-    smartlist_uniq_digests(sl);
-    test_eq(2, smartlist_len(sl));
-    test_memeq(smartlist_get(sl, 0), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
-    test_memeq(smartlist_get(sl, 1), "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
+  /* uniq_digests */
+  smartlist_uniq_digests(sl);
+  test_eq(2, smartlist_len(sl));
+  test_memeq(smartlist_get(sl, 0), "\00090AAB2AAAAaasdAAAAA", DIGEST_LEN);
+  test_memeq(smartlist_get(sl, 1), "AAAAAAAAAAAAAAAAAAAA", DIGEST_LEN);
 
  done:
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_free(sl);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
 }
 
 static void
 test_util_smartlist_join(void)
 {
-    /*XXXX021 reindent. */
-    smartlist_t *sl = smartlist_create();
-    smartlist_t *sl2 = smartlist_create(), *sl3 = smartlist_create(),
-                *sl4 = smartlist_create();
-    char *joined=NULL;
-    /* unique, sorted. */
-    smartlist_split_string(sl,
-                           "Abashments Ambush Anchorman Bacon Banks Borscht "
-                           "Bunks Inhumane Insurance Knish Know Manners "
-                           "Maraschinos Stamina Sunbonnets Unicorns Wombats",
-                           " ", 0, 0);
-    /* non-unique, sorted. */
-    smartlist_split_string(sl2,
-                           "Ambush Anchorman Anchorman Anemias Anemias Bacon "
-                           "Crossbowmen Inhumane Insurance Knish Know Manners "
-                           "Manners Maraschinos Wombats Wombats Work",
-                           " ", 0, 0);
-    SMARTLIST_FOREACH_JOIN(sl, char *, cp1,
-                           sl2, char *, cp2,
-                           strcmp(cp1,cp2),
-                           smartlist_add(sl3, cp2)) {
-      test_streq(cp1, cp2);
-      smartlist_add(sl4, cp1);
-    } SMARTLIST_FOREACH_JOIN_END(cp1, cp2);
+  smartlist_t *sl = smartlist_create();
+  smartlist_t *sl2 = smartlist_create(), *sl3 = smartlist_create(),
+    *sl4 = smartlist_create();
+  char *joined=NULL;
+  /* unique, sorted. */
+  smartlist_split_string(sl,
+                         "Abashments Ambush Anchorman Bacon Banks Borscht "
+                         "Bunks Inhumane Insurance Knish Know Manners "
+                         "Maraschinos Stamina Sunbonnets Unicorns Wombats",
+                         " ", 0, 0);
+  /* non-unique, sorted. */
+  smartlist_split_string(sl2,
+                         "Ambush Anchorman Anchorman Anemias Anemias Bacon "
+                         "Crossbowmen Inhumane Insurance Knish Know Manners "
+                         "Manners Maraschinos Wombats Wombats Work",
+                         " ", 0, 0);
+  SMARTLIST_FOREACH_JOIN(sl, char *, cp1,
+                         sl2, char *, cp2,
+                         strcmp(cp1,cp2),
+                         smartlist_add(sl3, cp2)) {
+    test_streq(cp1, cp2);
+    smartlist_add(sl4, cp1);
+  } SMARTLIST_FOREACH_JOIN_END(cp1, cp2);
 
-    SMARTLIST_FOREACH(sl3, const char *, cp,
-                      test_assert(smartlist_isin(sl2, cp) &&
-                                  !smartlist_string_isin(sl, cp)));
-    SMARTLIST_FOREACH(sl4, const char *, cp,
-                      test_assert(smartlist_isin(sl, cp) &&
-                                  smartlist_string_isin(sl2, cp)));
-    joined = smartlist_join_strings(sl3, ",", 0, NULL);
-    test_streq(joined, "Anemias,Anemias,Crossbowmen,Work");
-    tor_free(joined);
-    joined = smartlist_join_strings(sl4, ",", 0, NULL);
-    test_streq(joined, "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
-               "Knish,Know,Manners,Manners,Maraschinos,Wombats,Wombats");
-    tor_free(joined);
+  SMARTLIST_FOREACH(sl3, const char *, cp,
+                    test_assert(smartlist_isin(sl2, cp) &&
+                                !smartlist_string_isin(sl, cp)));
+  SMARTLIST_FOREACH(sl4, const char *, cp,
+                    test_assert(smartlist_isin(sl, cp) &&
+                                smartlist_string_isin(sl2, cp)));
+  joined = smartlist_join_strings(sl3, ",", 0, NULL);
+  test_streq(joined, "Anemias,Anemias,Crossbowmen,Work");
+  tor_free(joined);
+  joined = smartlist_join_strings(sl4, ",", 0, NULL);
+  test_streq(joined, "Ambush,Anchorman,Anchorman,Bacon,Inhumane,Insurance,"
+             "Knish,Know,Manners,Manners,Maraschinos,Wombats,Wombats");
+  tor_free(joined);
 
  done:
-    smartlist_free(sl4);
-    smartlist_free(sl3);
-    SMARTLIST_FOREACH(sl2, char *, cp, tor_free(cp));
-    smartlist_free(sl2);
-    SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-    smartlist_free(sl);
-    tor_free(joined);
+  smartlist_free(sl4);
+  smartlist_free(sl3);
+  SMARTLIST_FOREACH(sl2, char *, cp, tor_free(cp));
+  smartlist_free(sl2);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+  tor_free(joined);
 }
 
 static void

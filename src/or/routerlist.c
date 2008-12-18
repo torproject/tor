@@ -4814,7 +4814,7 @@ struct routerset_t {
 
   /** A list of the country codes in this set. */
   smartlist_t *country_names;
-  /** Total number of countries we knew about when we built <b>countries</b>. */
+  /** Total number of countries we knew about when we built <b>countries</b>.*/
   int n_countries;
   /** Bit array mapping the return value of geoip_get_country() to 1 iff the
    * country is a member of this routerset.  Note that we MUST call
