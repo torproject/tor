@@ -3588,15 +3588,16 @@ test_policy_summary_helper(const char *policy_str,
                            const char *expected_summary)
 {
   config_line_t line;
-  smartlist_t *policy = NULL;
+  smartlist_t *policy = smartlist_create();
   char *summary = NULL;
+  int r;
 
-  policy = NULL;
   line.key = (char*)"foo";
   line.value = (char *)policy_str;
   line.next = NULL;
 
-  test_assert(0 == policies_parse_exit_policy(&line, &policy, 0, NULL));
+  r = policies_parse_exit_policy(&line, &policy, 0, NULL);
+  test_eq(r, 0);
   summary = policy_summarize(policy);
 
   test_assert(summary != NULL);
@@ -4184,6 +4185,8 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 1);
+  tor_assert(encrypted_size > 0); /*XXXX021 Obviously this is true. But does
+                                   * this make Coverity happy? */
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 1,
                                              encrypted1, encrypted_size);
