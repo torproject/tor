@@ -1426,10 +1426,8 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 /** The total number of cells we have allocated from the memory pool. */
 static int total_cells_allocated = 0;
 
-#ifdef ENABLE_CELL_POOL /* Defined in ./configure. True by default. */
-/* XXX021 make cell pools the only option once we know they work and improve
- * matters? -RD */
 static mp_pool_t *cell_pool = NULL;
+
 /** Allocate structures to hold cells. */
 void
 init_cell_pool(void)
@@ -1488,43 +1486,6 @@ dump_cell_pool_usage(int severity)
       n_cells, n_circs, total_cells_allocated - n_cells);
   mp_pool_log_status(cell_pool, severity);
 }
-#else
-/* ENABLE_CELL_POOL isn't defined: here are some stubs to use tor_malloc()
- * and tor_free() instead. */
-void
-init_cell_pool(void)
-{
-}
-
-void
-free_cell_pool(void)
-{
-}
-
-void
-clean_cell_pool(void)
-{
-}
-
-static INLINE void
-packed_cell_free(packed_cell_t *cell)
-{
-  --total_cells_allocated;
-  tor_free(cell);
-}
-
-static INLINE packed_cell_t *
-packed_cell_alloc(void)
-{
-  ++total_cells_allocated;
-  return tor_malloc(sizeof(packed_cell_t));
-}
-void
-dump_cell_pool_usage(int severity)
-{
-  (void) severity;
-}
-#endif
 
 /** Allocate a new copy of packed <b>cell</b>. */
 static INLINE packed_cell_t *
