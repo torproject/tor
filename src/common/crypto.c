@@ -1643,13 +1643,6 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
     goto error;
   }
   secret_len = result;
-  /* sometimes secret_len might be less than 128, e.g., 127. that's ok. -RD */
-  /* Actually, http://www.faqs.org/rfcs/rfc2631.html says:
-   *   Leading zeros MUST be preserved, so that ZZ occupies as many
-   *   octets as p. For instance, if p is 1024 bits, ZZ should be 128
-   *   bytes long.
-   * XXX021 What are the security implications here? -NM
-   */
   if (crypto_expand_key_material(secret_tmp, secret_len,
                                  secret_out, secret_bytes_out)<0)
     goto error;
