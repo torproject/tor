@@ -60,6 +60,8 @@ static void
 set_onion_key(crypto_pk_env_t *k)
 {
   tor_mutex_acquire(key_lock);
+  if (onionkey)
+    crypto_free_pk_env(onionkey);
   onionkey = k;
   onionkey_set_at = time(NULL);
   tor_mutex_release(key_lock);
