@@ -1273,29 +1273,28 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   char key[REND_SERVICE_ID_LEN_BASE32+2];
   char service_id[REND_SERVICE_ID_LEN_BASE32+1];
   rend_cache_entry_t *e;
+  int retval;
   tor_assert(rend_cache);
   tor_assert(desc);
   /* Parse the descriptor. */
   if (rend_parse_v2_service_descriptor(&parsed, desc_id, &intro_content,
                                        &intro_size, &encoded_size,
                                        &next_desc, desc) < 0) {
-    if (parsed) rend_service_descriptor_free(parsed);
-    tor_free(intro_content);
     log_warn(LD_REND, "Could not parse descriptor.");
-    return -2;
+    retval = -2;
+    goto err;
   }
   /* Compute service ID from public key. */
   if (rend_get_service_id(parsed->pk, service_id)<0) {
     log_warn(LD_REND, "Couldn't compute service ID.");
-    rend_service_descriptor_free(parsed);
-    tor_free(intro_content);
-    return -2;
+    retval = -2;
+    goto err;
   }
   /* Decode/decrypt introduction points. */
   if (intro_content) {
     if (rend_query->auth_type != REND_NO_AUTH &&
         rend_query->descriptor_cookie) {
-      char *ipos_decrypted;
+      char *ipos_decrypted = NULL;
       size_t ipos_decrypted_size;
       if (rend_decrypt_introduction_points(&ipos_decrypted,
                                            &ipos_decrypted_size,
@@ -1317,10 +1316,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
       log_warn(LD_REND, "Failed to parse introduction points. Either the "
                "service has published a corrupt descriptor or you have "
                "provided invalid authorization data.");
-      if (parsed)
-        rend_service_descriptor_free(parsed);
-      tor_free(intro_content);
-      return -2;
+      retval = -2;
+      goto err;
     }
   } else {
     log_info(LD_REND, "Descriptor does not contain any introduction points.");
@@ -1332,22 +1329,23 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   if (parsed->timestamp < now - REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
     log_warn(LD_REND, "Service descriptor with service ID %s is too old.",
              safe_str(service_id));
-    rend_service_descriptor_free(parsed);
-    return -2;
+    retval = -2;
+    goto err;
   }
   /* Is descriptor too far in the future? */
   if (parsed->timestamp > now + REND_CACHE_MAX_SKEW) {
     log_warn(LD_REND, "Service descriptor with service ID %s is too far in "
                       "the future.", safe_str(service_id));
-    rend_service_descriptor_free(parsed);
-    return -2;
+    retval = -2;
+    goto err;
   }
   /* Do we have a v0 descriptor? */
   tor_snprintf(key, sizeof(key), "0%s", service_id);
   if (strmap_get_lc(rend_cache, key)) {
     log_info(LD_REND, "We already have a v0 descriptor for service ID %s.",
              safe_str(service_id));
-    return -1;
+    retval = -1;
+    goto err;
   }
   /* Do we already have a newer descriptor? */
   tor_snprintf(key, sizeof(key), "2%s", service_id);
@@ -1356,16 +1354,16 @@ rend_cache_store_v2_desc_as_client(const char *desc,
     log_info(LD_REND, "We already have a newer service descriptor for "
                       "service ID %s with the same desc ID and version.",
              safe_str(service_id));
-    rend_service_descriptor_free(parsed);
-    return 0;
+    retval = 0;
+    goto err;
   }
   /* Do we already have this descriptor? */
   if (e && !strcmp(desc, e->desc)) {
     log_info(LD_REND,"We already have this service descriptor %s.",
              safe_str(service_id));
     e->received = time(NULL);
-    rend_service_descriptor_free(parsed);
-    return 0;
+    retval = 0;
+    goto err;
   }
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
@@ -1382,6 +1380,12 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   log_debug(LD_REND,"Successfully stored rend desc '%s', len %d.",
             safe_str(service_id), (int)encoded_size);
   return 1;
+
+ err:
+  if (parsed)
+    rend_service_descriptor_free(parsed);
+  tor_free(intro_content);
+  return retval;
 }
 
 /** Called when we get a rendezvous-related relay cell on circuit

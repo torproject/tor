@@ -70,6 +70,9 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       0.0.6pre1; also, do not stall hidden services because of
       introduction points thrown away; bugfix on 0.2.1.7-alpha. Spotted
       by John Brooks. Patch by Karsten. Fixes bug 874.
+    - Fix a memory leak when we decline to add a v2 rendezvous descriptor to
+      the cache because we already had a v0 descriptor with the same ID.
+      Bugfix on 0.2.0.18-alpha.
 
   o Deprecated and removed features:
     - RedirectExits has been removed.  It was deprecated since 0.2.0.3-alpha.
