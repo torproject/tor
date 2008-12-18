@@ -40,6 +40,9 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       pairs. Partial implementation of proposal 157.
     - Clients now never report any stream end reason except 'MISC'.
       Implements proposal 148.
+    - On platforms with a maximum syslog string length, truncate syslog
+      messages to that length ourselves, rather than relying on the
+      system to do it for us.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has

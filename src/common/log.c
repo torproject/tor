@@ -299,9 +299,23 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
     }
     if (lf->is_syslog) {
 #ifdef HAVE_SYSLOG_H
-      /* XXXX Some syslog implementations have scary limits on the length of
-       * what you can pass them.  Can/should we detect this? */
-      syslog(severity, "%s", end_of_prefix);
+      char *m = end_of_prefix;
+#ifdef MAXLINE
+      /* Some syslog implementations have limits on the length of what you can
+       * pass them, and some very old ones do not detect overflow so well.
+       * Regrettably, they call their maximum line length MAXLINE. */
+#if MAXLINE < 64
+#warn "MAXLINE is a very low number; it might not be from syslog.h after all"
+#endif
+      if (msg_len >= MAXLINE)
+        m = tor_strndup(end_of_prefix, MAXLINE-1);
+#endif
+      syslog(severity, "%s", m);
+#ifdef MAXLINE
+      if (m != end_of_prefix) {
+        tor_free(m);
+      }
+#endif
 #endif
       lf = lf->next;
       continue;
@@ -739,9 +753,8 @@ static const char *domain_list[] = {
   "OR", "EDGE", "ACCT", "HIST", NULL
 };
 
-/** Return the log domain for which <b>domain</b> is the name, or 0 if there
- * is no such name. */
-/*XXXX021 0 could mean "no such domain" or LD_GENERAL.  Fix that. */
+/** Return a bitmask for the log domain for which <b>domain</b> is the name,
+ * or 0 if there is no such name. */
 static log_domain_mask_t
 parse_log_domain(const char *domain)
 {
