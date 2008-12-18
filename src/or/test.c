@@ -740,6 +740,14 @@ test_crypto_pk(void)
       test_memeq(data1,data3,j);
     }
   }
+
+  /* Try copy_full */
+  crypto_free_pk_env(pk2);
+  pk2 = crypto_pk_copy_full(pk1);
+  test_assert(pk2 != NULL);
+  test_neq_ptr(pk1, pk2);
+  test_assert(crypto_pk_cmp_keys(pk1,pk2) == 0);
+
  done:
   if (pk1)
     crypto_free_pk_env(pk1);

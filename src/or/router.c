@@ -75,8 +75,8 @@ get_onion_key(void)
   return onionkey;
 }
 
-/** Store a copy of the current onion key into *<b>key</b>, and a copy
- * of the most recent onion key into *<b>last</b>.
+/** Store a full copy of the current onion key into *<b>key</b>, and a full
+ * copy of the most recent onion key into *<b>last</b>.
  */
 void
 dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
@@ -85,9 +85,9 @@ dup_onion_keys(crypto_pk_env_t **key, crypto_pk_env_t **last)
   tor_assert(last);
   tor_mutex_acquire(key_lock);
   tor_assert(onionkey);
-  *key = crypto_pk_dup_key(onionkey);
+  *key = crypto_pk_copy_full(onionkey);
   if (lastonionkey)
-    *last = crypto_pk_dup_key(lastonionkey);
+    *last = crypto_pk_copy_full(lastonionkey);
   else
     *last = NULL;
   tor_mutex_release(key_lock);

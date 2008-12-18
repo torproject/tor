@@ -66,6 +66,9 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
     - Clip the CircuitBuildTimeout to a minimum of 30 seconds. Warn the
       user if lower values are given in the configuration. Bugfix on
       0.1.1.17-rc. Patch by Sebastian.
+    - Fix a race condition when freeing keys shared between main thread
+      and CPU workers that could result in a memory leak.  Bugfix on
+      0.1.0.1-rc.  Fixes bug 889.
 
   o Minor bugfixes (hidden services):
     - Do not throw away existing introduction points on SIGHUP; bugfix on
