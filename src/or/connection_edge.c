@@ -2198,6 +2198,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
                            string_addr, payload_len) < 0)
     return -1; /* circuit is closed, don't continue */
 
+  tor_free(ap_conn->_base.address); /* Maybe already set by dnsserv. */
   ap_conn->_base.address = tor_strdup("(Tor_internal)");
   ap_conn->_base.state = AP_CONN_STATE_RESOLVE_WAIT;
   log_info(LD_APP,"Address sent for resolve, ap socket %d, n_circ_id %d",
@@ -2352,7 +2353,7 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
       conn->socks_request->has_finished = 1;
       return;
     }
-    /* XXXX020 are we freeing conn anywhere? */
+    /* We shouldn't need to free conn here; it gets marked by the caller. */
   }
 
   if (conn->socks_request->socks_version == 4) {
