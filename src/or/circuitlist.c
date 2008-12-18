@@ -866,18 +866,16 @@ circuit_get_intro_point(const char *digest)
  * flags in <b>flags</b>, and if info is defined, does not already use info
  * as any of its hops; or NULL if no circuit fits this description.
  *
+ * The <b>purpose</b> argument (currently ignored) refers to the purpose of
+ * the circuit we want to create, not the purpose of the circuit we want to
+ * cannibalize.
+ *
  * If !CIRCLAUNCH_NEED_UPTIME, prefer returning non-uptime circuits.
  */
 origin_circuit_t *
 circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
                             int flags)
 {
-  /* XXXX021 arma: The purpose argument is ignored.  Can that possibly be
-   * right? */
-  /* XXXX <arma> i don't know of any actual bugs that this causes. since i
-   * think we only call the function for purposes where we want it to do what
-   * the function does. somebody should check this though. */
-
   circuit_t *_circ;
   origin_circuit_t *best=NULL;
   int need_uptime = (flags & CIRCLAUNCH_NEED_UPTIME) != 0;
