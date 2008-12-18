@@ -43,6 +43,9 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Clip the CircuitBuildTimeout to a minimum of 30 seconds. Warn the
       user if lower values are given in the configuration. Bugfix on
       0.1.1.17-rc. Patch by Sebastian.
+    - Fix a memory leak when we decline to add a v2 rendezvous descriptor to
+      the cache because we already had a v0 descriptor with the same ID.
+      Bugfix on 0.2.0.18-alpha.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected

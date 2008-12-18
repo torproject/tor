@@ -1139,6 +1139,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   if (strmap_get_lc(rend_cache, key)) {
     log_info(LD_REND, "We already have a v0 descriptor for service ID %s.",
              safe_str(service_id));
+    rend_service_descriptor_free(parsed);
     return -1;
   }
   /* Do we already have a newer descriptor? */
