@@ -285,12 +285,12 @@ int
 connection_or_flushed_some(or_connection_t *conn)
 {
   size_t datalen = buf_datalen(conn->_base.outbuf);
-  time_t now = time(NULL);
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   if (datalen < OR_CONN_LOWWATER) {
     ssize_t n = (OR_CONN_HIGHWATER - datalen + CELL_NETWORK_SIZE-1)
       / CELL_NETWORK_SIZE;
+    time_t now = approx_time();
     while (conn->active_circuits && n > 0) {
       int flushed;
       flushed = connection_or_flush_from_first_active_circuit(conn, 1, now);
@@ -962,7 +962,7 @@ connection_or_write_cell_to_buf(const cell_t *cell, or_connection_t *conn)
   connection_write_to_buf(networkcell.body, CELL_NETWORK_SIZE, TO_CONN(conn));
 
   if (cell->command != CELL_PADDING)
-    conn->timestamp_last_added_nonpadding = time(NULL);
+    conn->timestamp_last_added_nonpadding = approx_time();
 }
 
 /** Pack a variable-length <b>cell</b> into wire-format, and write it onto
@@ -980,7 +980,7 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
   connection_write_to_buf(hdr, sizeof(hdr), TO_CONN(conn));
   connection_write_to_buf(cell->payload, cell->payload_len, TO_CONN(conn));
   if (cell->command != CELL_PADDING)
-    conn->timestamp_last_added_nonpadding = time(NULL);
+    conn->timestamp_last_added_nonpadding = approx_time();
 }
 
 /** See whether there's a variable-length cell waiting on <b>conn</b>'s
