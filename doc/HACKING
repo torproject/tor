@@ -1,9 +1,12 @@
 
-0. The buildbot.
+0. Useful tools.
+
+0.0 The buildbot.
 
   http://tor-buildbot.freehaven.net:8010/
 
-  - Down for unknown reasons, ioerror will look into this.
+  - Down because nickm isn't running services at home any more. ioerror says
+    he will resurrect it.
 
 0.1. Useful command-lines that are non-trivial to reproduce but can
 help with tracking bugs or leaks.
@@ -103,8 +106,11 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
   Use tor_malloc, tor_free, tor_strdup, and tor_gettimeofday instead of their
   generic equivalents.  (They always succeed or exit.)
 
-  You can get a full list of the compatibility functions that Tor provides
-  by looking through src/common/util.h and src/common/compat.h.
+  You can get a full list of the compatibility functions that Tor provides by
+  looking through src/common/util.h and src/common/compat.h.  You can see the
+  available containers in src/common/containers.h.  You should probably
+  familiarize yourself with these modules before you write too much code,
+  or else you'll wind up reinventing the wheel.
 
   Use 'INLINE' instead of 'inline', so that we work properly on Windows.
 
@@ -125,6 +131,11 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
   Functions that do things should have imperative-verb names
   (e.g. buffer_clear, buffer_resize); functions that return booleans should
   have predicate names (e.g. buffer_is_empty, buffer_needs_resizing).
+
+  If you find that you have four or more possible return code values, it's
+  probably time to create an enum.  If you find that you are passing three or
+  more flags to a function, it's probably time to create a flags argument
+  that takes a bitfield.
 
 1.3. What To Optimize
 
@@ -203,6 +214,38 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
   6. See the Doxygen manual for more information; this summary just
      scratches the surface.
 
+1.5.1. Doxygen comment conventions
+
+  Say what functions do as a series of one or more imperative sentences, as
+  though you were telling somebody how to be the function.  In other words,
+  DO NOT say:
+
+     /** The strtol function parses a number.
+      *
+      * nptr -- the string to parse.  It can include whitespace.
+      * endptr -- a string pointer to hold the first thing that is not part
+      *    of the number, if present.
+      * base -- the numeric base.
+      * returns: the resulting number.
+      */
+     long strtol(const char *nptr, char **nptr, int base);
+
+  Instead, please DO say:
+
+     /** Parse a number in radix <b>base</b> from the string <b>nptr</b>,
+      * and return the result.  Skip all leading whitespace.  If
+      * <b>endptr</b> is not NULL, set *<b>endptr</b> to the first character
+      * after the number parsed.
+      **/
+     long strtol(const char *nptr, char **nptr, int base);
+
+  Doxygen comments are the contract in our abstraction-by-contract world: if
+  the functions that call your function rely on it doing something, then your
+  function should mention that it does that something in the documentation.
+  If you rely on a function doing something beyond what is in its
+  documentation, then you should watch out, or it might do something else
+  later.
+
 2. Code notes
 
 2.1. Dataflows
@@ -258,3 +301,4 @@ eventdns.c, which is a copy of libevent's evdns.c.  (We don't use
 libevent's version because it is not yet in the versions of libevent
 all our users have.)  DNS replies are read in nameserver_read();
 DNS queries are read in server_port_read().
+
