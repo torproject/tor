@@ -404,8 +404,10 @@ circuit_handle_first_hop(origin_circuit_t *circ)
    * connection without dropping it immediately... */
   if (!connection_good_enough_for_extend(n_conn, &firsthop->extend_info->addr,
                                          &msg, &should_launch)) {
-    /* XXXX021 log msg, maybe. */
-    /* not currently connected */
+    /* not currently connected in a useful way. */
+    const char *name = firsthop->extend_info->nickname ?
+      firsthop->extend_info->nickname : fmt_addr(&firsthop->extend_info->addr);
+    log_info(LD_CIRC, "Next router %s on circuit is %s", safe_str(name), msg);
     circ->_base.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (should_launch) {
