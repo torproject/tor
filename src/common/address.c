@@ -344,6 +344,139 @@ tor_addr_to_str(char *dest, const tor_addr_t *addr, int len, int decorate)
   return ptr;
 }
 
+/** Parse an .in-addr.arpa or .ip6.arpa address from <b>address</b>.  Return 0
+ * if this is not an .in-addr.arpa address or an .ip6.arpa address.  Return -1
+ * if this is an ill-formed .in-addr.arpa address or an .ip6.arpa address.
+ * Also return -1 if <b>family</b> is not AF_UNSPEC, and the parsed address
+ * family does not match <b>family</b>.  On success, return 1, and store the
+ * result, if any, into <b>result</b>, if provided.
+ *
+ * If <b>accept_regular</b> is set and the address is in neither recognized
+ * reverse lookup hostname format, try parsing the address as a regular
+ * IPv4 or IPv6 address too.
+ */
+int
+tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
+                                   int family, int accept_regular)
+{
+  if (!strcasecmpend(address, ".in-addr.arpa")) {
+    /* We have an in-addr.arpa address. */
+    char buf[INET_NTOA_BUF_LEN];
+    size_t len;
+    struct in_addr inaddr;
+    if (family == AF_INET6)
+      return -1;
+
+    len = strlen(address) - strlen(".in-addr.arpa");
+    if (len >= INET_NTOA_BUF_LEN)
+      return -1; /* Too long. */
+
+    memcpy(buf, address, len);
+    buf[len] = '\0';
+    if (tor_inet_aton(buf, &inaddr) == 0)
+      return -1; /* malformed. */
+
+    /* reverse the bytes */
+    inaddr.s_addr = (((inaddr.s_addr & 0x000000fful) << 24)
+                     |((inaddr.s_addr & 0x0000ff00ul) << 8)
+                     |((inaddr.s_addr & 0x00ff0000ul) >> 8)
+                     |((inaddr.s_addr & 0xff000000ul) >> 24));
+
+    if (result) {
+      memset(result, 0, sizeof(tor_addr_t));
+      result->family = AF_INET;
+      result->addr.in_addr.s_addr = inaddr.s_addr;
+    }
+    return 1;
+  }
+
+  if (!strcasecmpend(address, ".ip6.arpa")) {
+    const char *cp;
+    int i;
+    int n0, n1;
+    struct in6_addr in6;
+
+    if (family == AF_INET)
+      return -1;
+
+    cp = address;
+    for (i = 0; i < 16; ++i) {
+      n0 = hex_decode_digit(*cp++); /* The low-order nybble appears first. */
+      if (*cp++ != '.') return -1;  /* Then a dot. */
+      n1 = hex_decode_digit(*cp++); /* The high-order nybble appears first. */
+      if (*cp++ != '.') return -1;  /* Then another dot. */
+      if (n0<0 || n1 < 0) /* Both nybbles must be hex. */
+        return -1;
+
+      /* We don't check the length of the string in here.  But that's okay,
+       * since we already know that the string ends with ".ip6.arpa", and
+       * there is no way to frameshift .ip6.arpa so it fits into the pattern
+       * of hexdigit, period, hexdigit, period that we enforce above.
+       */
+
+      /* Assign from low-byte to high-byte. */
+      in6.s6_addr[15-i] = n0 | (n1 << 4);
+    }
+    if (strcasecmp(cp, "ip6.arpa"))
+      return -1;
+
+    if (result) {
+      result->family = AF_INET6;
+      memcpy(&result->addr.in6_addr, &in6, sizeof(in6));
+    }
+    return 1;
+  }
+
+  if (accept_regular) {
+    tor_addr_t tmp;
+    int r = tor_addr_from_str(&tmp, address);
+    if (r < 0)
+      return 0;
+    if (r != family && family != AF_UNSPEC)
+      return -1;
+
+    if (result)
+      memcpy(result, &tmp, sizeof(tor_addr_t));
+
+    return 1;
+  }
+
+  return 0;
+}
+
+/** Convert <b>addr</b> to an in-addr.arpa name or a .ip6.arpa name, and store
+ * the result in the <b>outlen</b>-byte buffer at <b>out</b>.  Return 0 on
+ * success, -1 on failure. */
+int
+tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
+                                const tor_addr_t *addr)
+{
+  if (addr->family == AF_INET) {
+    uint32_t a = tor_addr_to_ipv4h(addr);
+
+    return tor_snprintf(out, outlen, "%d.%d.%d.%d.in-addr.arpa",
+                        (int)(uint8_t)((a    )&0xff),
+                        (int)(uint8_t)((a>>8 )&0xff),
+                        (int)(uint8_t)((a>>16)&0xff),
+                        (int)(uint8_t)((a>>24)&0xff));
+  } else if (addr->family == AF_INET6) {
+    int i;
+    char *cp = out;
+    if (outlen < REVERSE_LOOKUP_NAME_BUF_LEN)
+      return -1;
+    for (i = 15; i >= 0; --i) {
+      uint8_t byte = addr->addr.in6_addr.s6_addr[i];
+      *cp++ = "0123456789abcdef"[byte & 0x0f];
+      *cp++ = '.';
+      *cp++ = "0123456789abcdef"[byte >> 4];
+      *cp++ = '.';
+    }
+    memcpy(cp, "ip6.arpa", 9); /* 8 characters plus nul */
+    return 0;
+  }
+  return -1;
+}
+
 /** Parse a string <b>s</b> containing an IPv4/IPv6 address, and possibly
  *  a mask and port or port range.  Store the parsed address in
  *  <b>addr_out</b>, a mask (if any) in <b>mask_out</b>, and port(s) (if any)
@@ -829,6 +962,13 @@ tor_dup_addr(const tor_addr_t *addr)
   char buf[TOR_ADDR_BUF_LEN];
   tor_addr_to_str(buf, addr, sizeof(buf), 0);
   return tor_strdup(buf);
+}
+
+/** Copy the address in <b>src</b> to <b>dest</b> */
+void
+tor_addr_assign(tor_addr_t *dest, const tor_addr_t *src)
+{
+  memcpy(dest, src, sizeof(tor_addr_t));
 }
 
 /** Return a string representing the address <b>addr</b>.  This string is

@@ -1436,17 +1436,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     if (options->ClientDNSRejectInternalAddresses) {
       /* Don't let people try to do a reverse lookup on 10.0.0.1. */
       tor_addr_t addr;
-      struct in_addr in;
       int ok;
-      if (!strcasecmpend(socks->address, ".in-addr.arpa"))
-        ok = !parse_inaddr_arpa_address(socks->address, &in);
-      else
-        ok = tor_inet_aton(socks->address, &in);
-      /*XXXX021 make this a function. */
-      addr.family = AF_INET;
-      memcpy(&addr.addr.in_addr, &in, sizeof(struct in_addr));
-
-      if (ok && tor_addr_is_internal(&addr, 0)) {
+      ok = tor_addr_parse_reverse_lookup_name(
+                               &addr, socks->address, AF_UNSPEC, 1);
+      if (ok == 1 && tor_addr_is_internal(&addr, 0)) {
         connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_ERROR,
                                                0, NULL, -1, TIME_MAX);
         connection_mark_unattached_ap(conn,
@@ -2130,7 +2123,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 {
   int payload_len, command;
   const char *string_addr;
-  char inaddr_buf[32];
+  char inaddr_buf[REVERSE_LOOKUP_NAME_BUF_LEN];
   origin_circuit_t *circ;
   tor_assert(ap_conn->on_circuit);
   circ = TO_ORIGIN_CIRCUIT(ap_conn->on_circuit);
@@ -2155,36 +2148,29 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
     payload_len = (int)strlen(string_addr)+1;
     tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
   } else {
-    struct in_addr in;
-    uint32_t a;
-    size_t len = strlen(ap_conn->socks_request->address);
-    char c = 0;
-    /* XXXX This logic is a little ugly: we check for an in-addr.arpa ending
-     * on the address.  If we have one, the address is already in the right
-     * order, so we'll leave it alone later.  Otherwise, we reverse it and
-     * turn it into an in-addr.arpa address. */
-    if (!strcasecmpend(ap_conn->socks_request->address, ".in-addr.arpa")) {
-      /* Temporarily truncate the address, so we can give it to inet_aton. */
-      c = ap_conn->socks_request->address[len-13];
-      ap_conn->socks_request->address[len-13] = '\0';
-    }
-    if (tor_inet_aton(ap_conn->socks_request->address, &in) == 0) {
+    /* command == SOCKS_COMMAND_RESOLVE_PTR */
+    const char *a = ap_conn->socks_request->address;
+    tor_addr_t addr;
+    int r;
+
+    /* We're doing a reverse lookup.  The input could be an IP address, or
+     * could be an .in-addr.arpa or .ip6.arpa address */
+    r = tor_addr_parse_reverse_lookup_name(&addr, a, AF_INET, 1);
+    if (r <= 0) {
+      log_warn(LD_APP, "Rejecting ill-formed reverse lookup of %s",
+               safe_str(a));
       connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
       return -1;
     }
-    if (c) {
-      /* this path happens on DNS. Can we unify? XXXX021 */
-      ap_conn->socks_request->address[len-13] = c;
-      strlcpy(inaddr_buf, ap_conn->socks_request->address, sizeof(inaddr_buf));
-    } else {
-      /* this path happens on tor-resolve. Can we unify? XXXX021 */
-      a = ntohl(in.s_addr);
-      tor_snprintf(inaddr_buf, sizeof(inaddr_buf), "%d.%d.%d.%d.in-addr.arpa",
-                   (int)(uint8_t)((a    )&0xff),
-                   (int)(uint8_t)((a>>8 )&0xff),
-                   (int)(uint8_t)((a>>16)&0xff),
-                   (int)(uint8_t)((a>>24)&0xff));
+
+    r = tor_addr_to_reverse_lookup_name(inaddr_buf, sizeof(inaddr_buf), &addr);
+    if (r < 0) {
+      log_warn(LD_BUG, "Couldn't generate reverse lookup hostname of %s",
+               safe_str(a));
+      connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
+      return -1;
     }
+
     string_addr = inaddr_buf;
     payload_len = (int)strlen(inaddr_buf)+1;
     tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);

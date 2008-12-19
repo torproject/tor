@@ -268,8 +268,8 @@ int evdns_resolve_ipv4(const char *name, int flags, evdns_callback_type callback
 int evdns_resolve_ipv6(const char *name, int flags, evdns_callback_type callback, void *ptr);
 struct in_addr;
 struct in6_addr;
-int evdns_resolve_reverse(struct in_addr *in, int flags, evdns_callback_type callback, void *ptr);
-int evdns_resolve_reverse_ipv6(struct in6_addr *in, int flags, evdns_callback_type callback, void *ptr);
+int evdns_resolve_reverse(const struct in_addr *in, int flags, evdns_callback_type callback, void *ptr);
+int evdns_resolve_reverse_ipv6(const struct in6_addr *in, int flags, evdns_callback_type callback, void *ptr);
 int evdns_set_option(const char *option, const char *val, int flags);
 int evdns_resolv_conf_parse(int flags, const char *);
 #ifdef MS_WINDOWS

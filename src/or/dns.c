@@ -494,49 +494,6 @@ send_resolved_hostname_cell(edge_connection_t *conn, const char *hostname)
   // log_notice(LD_EXIT, "Sent");
 }
 
-/** Given a lower-case <b>address</b>, check to see whether it's a
- * 1.2.3.4.in-addr.arpa address used for reverse lookups.  If so,
- * parse it and place the address in <b>in</b> if present. Return 1 on success;
- * 0 if the address is not in in-addr.arpa format, and -1 if the address is
- * malformed. */
-/* XXXX021 move this to address.c; unify with logic in connection_edge.c */
-int
-parse_inaddr_arpa_address(const char *address, struct in_addr *in)
-{
-  char buf[INET_NTOA_BUF_LEN];
-  char *cp;
-  size_t len;
-  struct in_addr inaddr;
-
-  cp = strstr(address, ".in-addr.arpa");
-  if (!cp || *(cp+strlen(".in-addr.arpa")))
-    return 0; /* not an .in-addr.arpa address  */
-
-  len = cp - address;
-
-  if (len >= INET_NTOA_BUF_LEN)
-    return -1; /* Too long. */
-
-  memcpy(buf, address, len);
-  buf[len] = '\0';
-  if (tor_inet_aton(buf, &inaddr) == 0)
-    return -1; /* malformed. */
-
-  if (in) {
-    uint32_t a;
-    /* reverse the bytes */
-    a = (uint32_t) (  ((inaddr.s_addr & 0x000000fful) << 24)
-                     |((inaddr.s_addr & 0x0000ff00ul) << 8)
-                     |((inaddr.s_addr & 0x00ff0000ul) >> 8)
-                     |((inaddr.s_addr & 0xff000000ul) >> 24));
-    inaddr.s_addr = a;
-
-    memcpy(in, &inaddr, sizeof(inaddr));
-  }
-
-  return 1;
-}
-
 /** See if we have a cache entry for <b>exitconn</b>-\>address. if so,
  * if resolve valid, put it into <b>exitconn</b>-\>addr and return 1.
  * If resolve failed, free exitconn and return -1.
@@ -646,7 +603,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   cached_resolve_t search;
   pending_connection_t *pending_connection;
   routerinfo_t *me;
-  struct in_addr in;
+  tor_addr_t addr;
   time_t now = time(NULL);
   uint8_t is_reverse = 0;
   int r;
@@ -657,8 +614,8 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
-  if (tor_inet_aton(exitconn->_base.address, &in) != 0) {
-    tor_addr_from_ipv4n(&exitconn->_base.addr, in.s_addr);
+  if (tor_addr_from_str(&addr, exitconn->_base.address)<0) {
+    tor_addr_assign(&exitconn->_base.addr, &addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
     return 1;
   }
@@ -685,11 +642,12 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
    * .in-addr.arpa address but this isn't a resolve request, kill the
    * connection.
    */
-  if ((r = parse_inaddr_arpa_address(exitconn->_base.address, &in)) != 0) {
+  if ((r = tor_addr_parse_reverse_lookup_name(&addr, exitconn->_base.address,
+                                              AF_UNSPEC, 0)) != 0) {
     if (r == 1) {
       is_reverse = 1;
-         if (is_internal_IP(ntohl(in.s_addr), 0)) /* internal address */
-           return -1;
+      if (tor_addr_is_internal(&addr, 0)) /* internal address? */
+        return -1;
     }
 
     if (!is_reverse || !is_resolve) {
@@ -1298,7 +1256,7 @@ static int
 launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
-  struct in_addr in;
+  tor_addr_t a;
   int r;
   int options = get_options()->ServerDNSSearchDomains ? 0
     : DNS_QUERY_NO_SEARCH;
@@ -1311,7 +1269,8 @@ launch_resolve(edge_connection_t *exitconn)
     }
   }
 
-  r = parse_inaddr_arpa_address(exitconn->_base.address, &in);
+  r = tor_addr_parse_reverse_lookup_name(
+                            &a, exitconn->_base.address, AF_UNSPEC, 0);
   if (r == 0) {
     log_info(LD_EXIT, "Launching eventdns request for %s",
              escaped_safe_str(exitconn->_base.address));
@@ -1320,8 +1279,12 @@ launch_resolve(edge_connection_t *exitconn)
   } else if (r == 1) {
     log_info(LD_EXIT, "Launching eventdns reverse request for %s",
              escaped_safe_str(exitconn->_base.address));
-    r = evdns_resolve_reverse(&in, DNS_QUERY_NO_SEARCH,
-                                 evdns_callback, addr);
+    if (tor_addr_family(&a) == AF_INET)
+      r = evdns_resolve_reverse(tor_addr_to_in(&a), DNS_QUERY_NO_SEARCH,
+                                evdns_callback, addr);
+    else
+      r = evdns_resolve_reverse_ipv6(tor_addr_to_in6(&a), DNS_QUERY_NO_SEARCH,
+                                     evdns_callback, addr);
   } else if (r == -1) {
     log_warn(LD_BUG, "Somehow a malformed in-addr.arpa address reached here.");
   }

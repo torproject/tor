@@ -1621,6 +1621,70 @@ test_util_ip6_helpers(void)
   p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
   test_streq(p1, "18.0.0.1");
 
+  /* Test tor_addr_parse_reverse_lookup_name */
+  i = tor_addr_parse_reverse_lookup_name(&t1, "Foobar.baz", AF_UNSPEC, 0);
+  test_eq(0, i);
+  i = tor_addr_parse_reverse_lookup_name(&t1, "Foobar.baz", AF_UNSPEC, 1);
+  test_eq(0, i);
+  i = tor_addr_parse_reverse_lookup_name(&t1, "1.0.168.192.in-addr.arpa",
+                                         AF_UNSPEC, 1);
+  test_eq(1, i);
+  test_eq(tor_addr_family(&t1), AF_INET);
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
+  test_streq(p1, "192.168.0.1");
+  i = tor_addr_parse_reverse_lookup_name(&t1, "192.168.0.99", AF_UNSPEC, 0);
+  test_eq(0, i);
+  i = tor_addr_parse_reverse_lookup_name(&t1, "192.168.0.99", AF_UNSPEC, 1);
+  test_eq(1, i);
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
+  test_streq(p1, "192.168.0.99");
+  memset(&t1, 0, sizeof(t1));
+  i = tor_addr_parse_reverse_lookup_name(&t1,
+                                         "0.1.2.3.4.5.6.7.8.9.a.b.c.d.e.f."
+                                         "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
+                                         "ip6.ARPA",
+                                         AF_UNSPEC, 0);
+  test_eq(1, i);
+  p1 = tor_addr_to_str(buf, &t1, sizeof(buf), 1);
+  test_streq(p1, "[9dee:effe:ebe1:beef:fedc:ba98:7654:3210]");
+  /* Failing cases. */
+  i = tor_addr_parse_reverse_lookup_name(&t1,
+                                         "6.7.8.9.a.b.c.d.e.f."
+                                         "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
+                                         "ip6.ARPA",
+                                         AF_UNSPEC, 0);
+  test_eq(i, -1);
+  i = tor_addr_parse_reverse_lookup_name(&t1,
+                                         "6.7.8.9.a.b.c.d.e.f.a.b.c.d.e.f.0."
+                                         "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
+                                         "ip6.ARPA",
+                                         AF_UNSPEC, 0);
+  test_eq(i, -1);
+  i = tor_addr_parse_reverse_lookup_name(&t1,
+                                         "6.7.8.9.a.b.c.d.e.f.X.0.0.0.0.9."
+                                         "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
+                                         "ip6.ARPA",
+                                         AF_UNSPEC, 0);
+  test_eq(i, -1);
+  i = tor_addr_parse_reverse_lookup_name(&t1, "32.1.1.in-addr.arpa",
+                                         AF_UNSPEC, 0);
+  /* test_eq(i, -1); XXXX021 Apparently '32.1.1' is a valid aton address. */
+  i = tor_addr_parse_reverse_lookup_name(&t1, ".in-addr.arpa",
+                                         AF_UNSPEC, 0);
+  test_eq(i, -1);
+  i = tor_addr_parse_reverse_lookup_name(&t1, "1.2.3.4.5.in-addr.arpa",
+                                         AF_UNSPEC, 0);
+  test_eq(i, -1);
+  i = tor_addr_parse_reverse_lookup_name(&t1, "1.2.3.4.5.in-addr.arpa",
+                                         AF_INET6, 0);
+  test_eq(i, -1);
+  i = tor_addr_parse_reverse_lookup_name(&t1,
+                                         "6.7.8.9.a.b.c.d.e.f.a.b.c.d.e.0."
+                                         "f.e.e.b.1.e.b.e.e.f.f.e.e.e.d.9."
+                                         "ip6.ARPA",
+                                         AF_INET, 0);
+  test_eq(i, -1);
+
   /* test tor_addr_parse_mask_ports */
   test_addr_mask_ports_parse("[::f]/17:47-95", AF_INET6,
                              0, 0, 0, 0x0000000f, 17, 47, 95);

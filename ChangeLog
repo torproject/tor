@@ -46,6 +46,7 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
     - Optimize out calls to time(NULL) that occur for every IO operation, or
       for every cell. On systems where time() is a slow syscalls, this will
       be slightly helpful.
+    - Exit servers can now answer resolve requests for ip6.arpa addresses.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has

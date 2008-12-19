@@ -90,6 +90,7 @@ tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
 
 int tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out);
 char *tor_dup_addr(const tor_addr_t *addr) ATTR_MALLOC;
+void tor_addr_assign(tor_addr_t *dest, const tor_addr_t *src);
 const char *fmt_addr(const tor_addr_t *addr);
 int get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr);
 
@@ -113,6 +114,15 @@ int tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
 unsigned int tor_addr_hash(const tor_addr_t *addr);
 int tor_addr_is_v4(const tor_addr_t *addr);
 int tor_addr_is_internal(const tor_addr_t *ip, int for_listening) ATTR_PURE;
+
+/** Longest length that can be required for a reverse lookup name. */
+/* 32 nybbles, 32 dots, 8 characters of "ip6.arpa", 1 NUL: 73 characters. */
+#define REVERSE_LOOKUP_NAME_BUF_LEN 73
+int tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
+                                    const tor_addr_t *addr);
+int tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
+                                       int family, int accept_regular);
+
 int tor_addr_port_parse(const char *s, tor_addr_t *addr_out,
                         uint16_t *port_out);
 int tor_addr_parse_mask_ports(const char *s,
