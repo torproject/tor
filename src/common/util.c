@@ -758,7 +758,7 @@ base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 
 /** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
 static INLINE int
-hex_decode_digit(char c)
+_hex_decode_digit(char c)
 {
   switch (c) {
     case '0': return 0;
@@ -782,6 +782,13 @@ hex_decode_digit(char c)
   }
 }
 
+/** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
+int
+hex_decode_digit(char c)
+{
+  return _hex_decode_digit(c);
+}
+
 /** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode it
  * and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
  * Return 0 on success, -1 on failure. */
@@ -797,8 +804,8 @@ base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
     return -1;
   end = src+srclen;
   while (src<end) {
-    v1 = hex_decode_digit(*src);
-    v2 = hex_decode_digit(*(src+1));
+    v1 = _hex_decode_digit(*src);
+    v2 = _hex_decode_digit(*(src+1));
     if (v1<0||v2<0)
       return -1;
     *(uint8_t*)dest = (v1<<4)|v2;
