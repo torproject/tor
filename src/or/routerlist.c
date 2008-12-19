@@ -598,12 +598,11 @@ _compare_signed_descriptors_by_age(const void **_a, const void **_b)
 #define RRS_FORCE 1
 #define RRS_DONT_REMOVE_OLD 2
 
-/** If the journal is too long, or if RRS_FORCE is set in <b>flags</b>, then
- * atomically replace the router store with the routers currently in our
- * routerlist, and clear the journal.  Return 0 on success, -1 on failure.
- *
- * If <b>extrainfo</b> is true, rebuild the extrainfo store; else rebuild the
- * router descriptor store. [XXX021 this sentence refers to bad args]
+/** If the journal of <b>store</b> is too long, or if RRS_FORCE is set in
+ * <b>flags</b>, then atomically replace the saved router store with the
+ * routers currently in our routerlist, and clear the journal.  Unless
+ * RRS_DONT_REMOVE_OLD is set in <b>flags</b>, delete expired routers before
+ * rebuilding the store.  Return 0 on success, -1 on failure.
  */
 static int
 router_rebuild_store(int flags, desc_store_t *store)
