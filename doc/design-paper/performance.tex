@@ -31,5 +31,30 @@
  
 \maketitle
 
+\section{TLS application record overhead reduction}
+
+OpenSSL will, by default, insert an empty TLS application record before any one which contains data.
+This is to prevent an attack, by which someone who has partial control over the plaintext of a TLS stream, can also confirm guesses as to the plaintext which he does not control.
+By including an empty application record, which incorporates a MAC, the attacker is made unable to control the CBC initialization vector, and hence does not have control of the input to the encryption function\footnote{\url{http://www.openssl.org/~bodo/tls-cbc.txt}}.
+
+This application record does introduce an appreciable overhead.
+Most Tor cells are sent in application records of their own, giving application records of 512 bytes (cell) $+$ 20 bytes (MAC) $+$ 12 bytes (TLS padding) $+$ 5 bytes (TLS application record header) $=$ 549 bytes.
+The empty application records contain only 20 bytes (MAC) $+$ 12 bytes (TLS padding) $+$ 5 bytes (TLS application record header) $=$ 37 bytes.
+There is also a 20 byte IP header and 32 byte TCP header.
+
+Thus the overhead saved by removing the empty TLS application record itself is $37 / (549 + 37 + 20 + 32) = 5.8\%$.
+This calculation is assuming that the same number of IP packets will be sent, because currently Tor sends packets, with only one cell, far smaller than the path MTU.
+If Tor were to pack cells optimally efficiently into packets, then removing the empty application records would also reduce the number of packets, and hence TCP/IP headers, that needed to be sent.
+The reduction in TCP/IP header overhead would be $37/(549 + 37) = 6.3\%$.
+
+Of course, the empty application record was inserted for a reason -- to prevent an attack on the CBC mode of operation used by TLS, so before removing it we must be confident the attack does not apply to Tor.
+Ben Laurie (one of the OpenSSL developers), concluded that in his opinion Tor could safely remove the insertion of empty TLS application records\footnote{\url{http://archives.seul.org/or/dev/Dec-2008/msg00005.html}}.
+I was able to come up with only certificational weaknesses (discussed in the above analysis), which are expensive to exploit and give little information to the attacker.
+
+To be successful, the attacker must have full control of the plaintext application record before the one he wishes to guess.
+Tor makes this difficult because all cells where the payload is controlled by the attacker are prepended with a two byte circuit ID, unknown to the attacker.
+Also, because the majority of cells sent in Tor are encrypted by a key not known by the attacker, the probability that an attacker can guess what a cell might be is extremely small.
+The exception is a padding cell, which has no circuit ID and a zero length payload, however Tor does not currently send padding cells, other than as a periodic keep-alive.
+
 \end{document}
 
