@@ -14,7 +14,7 @@
     light.exe *.wixobj -out tor.msi -ext C:\Path\to\Wix\bin\WixUIExtension.dll
 
   A silent installation can be performed with a /quiet option passed.
-    msiexec /i tor.msi INSTALLDIR=C:\path\to\install\to /qn
+    msiexec /i tor.msi /log debug.txt /qn
 
   A repair operation can be performed with /f and remove via /x
 
@@ -39,18 +39,21 @@
   modified for upgrades to work correctly!  Note that future MSI packages should
   re-use components that haven't changed to speed installation.
     -->
-  <?define CurrTorProductGUID="654cd293-e721-44eb-a31c-fc39a36a9975" ?>
-  <?define CurrTorExecutableGUID="1f50bd0d-f731-49b6-b905-5682a419881a" ?>
-  <?define CurrTorSvcLinksGUID="d4104c4a-f940-4f36-acc7-a5d1c8e72828" ?>
-  <?define CurrOpenSSLLibraryGUID="126bd857-348e-48d2-8b79-cd4648e5f471" ?>
-  <?define CurrTorDocumentsGUID="8b36bf4e-1f9d-4f9e-a91a-bab7da486c98" ?>
-  <?define CurrTorConfigFileGUID="a380ee19-470d-4b35-a0fa-aa19f342c4c5" ?>
-  <?define CurrTorGeoIPFileGUID="03afdbae-2e48-45c5-a059-3d3bac63d07f" ?>
-  <?define CurrAddTorToStartMenuGUID="7f0cbd78-9608-4780-a848-771d724727b2" ?>
-  <?define CurrAddTorToDesktopGUID="30b9f30f-b930-4751-856e-e1280f2227bf" ?>
+  <?define CurrTorProductGUID="9bc19bd1-499f-45b7-b89e-cd3cc5e3e75f" ?>
+  <?define CurrTorExecutableGUID="58bfbf2f-7414-4b55-a684-28f4a3b30745" ?>
+  <?define CurrTorSvcLinksGUID="510a00fd-d67f-45ec-ad9e-7e0efdef8d7f" ?>
+  <?define CurrOpenSSLLibraryGUID="b38efb8a-0fbd-470d-ab7b-1b82b854ef20" ?>
+  <?define CurrTorDocumentsGUID="d48fd2ca-c963-4162-9e75-cc569dbcf232" ?>
+  <?define CurrTorConfigFileGUID="4e45e46d-3c90-42d8-9e90-fa0c186a3c8f" ?>
+  <?define CurrTorGeoIPFileGUID="77c4ca0b-c3ab-468d-8385-991b38d6d439" ?>
+  <?define CurrAddTorToStartMenuGUID="912419e2-39f3-4dc0-8ff9-cd4ee0f5bef1" ?>
+  <?define CurrAddTorToDesktopGUID="011ac12a-ac0e-41eb-987f-f37c45f140fe" ?>
+  <?define CurrAddTorDocsToDesktopGUID="c5198bd9-e93e-4594-a5c8-6e1a1d47ef71" ?>
+  <?define CurrAddTorEditConfToDesktopGUID="186c6d59-3e85-44b8-a308-a3c8d1195d1f" ?>
+  <?define CurrLocalProgramsGUID="889f3be7-16a9-49c3-94fa-9d23fb29e8cf" ?>
 
   <Product
-    Name="Tor"
+    Name="Tor $(var.ThisProductVersionDisp)"
     Id="$(var.CurrTorProductGUID)"
     UpgradeCode="$(var.UpgradeCode)"
     Version="$(var.ThisProductVersion)"
@@ -71,6 +74,7 @@
       InstallerVersion="100"
       Languages="1033"
       SummaryCodepage="1252"
+      InstallPrivileges="limited"
     />
     <Media Id="1"
       Cabinet="Tor.cab"
@@ -95,6 +99,16 @@
         IncludeMaximum="no"
       />
     </Upgrade>
+
+    <!-- for now force per-user installation until run as service is completed. -->
+    <Property Id="ALLUSERS" Secure="yes"/>
+
+    <!-- To avoid placing shortcuts all over the desktop / start menu during a
+    silent installation the NOSC=1 option can be passed to omit shortcuts.
+    This is useful if bundled with other applications like Vidalia that manage
+    configuration and Tor related processes themselves.
+      -->
+    <Property Id="NOSC" Secure="yes"/>
 
     <!-- Properties used to control installation or repair features
     and other invocation options.
@@ -121,67 +135,84 @@
     libraries, configuration files, and other documents.
       -->
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="LocalAppDataFolder" Name="AppData">
-        <Directory Id="INSTALLDIR" Name="Tor">
+      <Directory Id="LocalAppDataFolder" Name="LocalAppData">
+        <Directory Id="LocalProgramsFolder" Name="Programs">
 
-          <!-- Tor application file -->
-          <Component Id="TorExecutable" Guid="$(var.CurrTorExecutableGUID)">
-            <CreateFolder/>
-            <RemoveFolder Id="RemoveINSTALLDIR" On="uninstall" />
-            <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
-              <RegistryValue Name="Version" Value="$(var.ThisProductVersionDisp)" Type="string" KeyPath="yes" />
-            </RegistryKey>
-            <File
-              Id="TorExe"
-              Name="Tor.exe"
-              Source="bin\tor.exe"
-              Vital="yes"
-              DiskId="1"
-            />
-          </Component>
-
-          <!-- Tor OpenSSL shared libraries
-          This optional component is required for shared builds
-          of Tor.  For static builds it is ignored.
+          <!-- Until proper support for per-user installs is available we manage Programs folder.
+          Note that this directory will be left in place if it is in use by any other app.
             -->
-          <Component Id="OpenSSLLibrary" Guid="$(var.CurrOpenSSLLibraryGUID)">
+          <Component Id="LocalProgramsFolderRef" Guid="$(var.CurrLocalProgramsGUID)">
+            <CreateFolder/>
+            <RemoveFolder Id="RemoveLocalProgramsFolder" On="uninstall" />
             <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
-              <RegistryValue Name="UserSSLLibrary" Value="1" Type="integer" KeyPath="yes" />
+              <RegistryValue Name="LocalProgramsFolderRef" Value="1" Type="integer" KeyPath="yes" />
             </RegistryKey>
-            <File
-              Id="cryptoeay32dll"
-              Name="cryptoeay32-0.9.8.dll"
-              Source="bin/cryptoeay32-0.9.8.dll"
-              DiskId="1"
-            />
-            <File
-              Id="ssleay32dll"
-              Name="ssleay32-0.9.8.dll"
-              Source="bin/ssleay32-0.9.8.dll"
-              DiskId="1"
-            />
           </Component>
 
+          <Directory Id="LocalProgramsInstDir" Name="Tor">
+            <!-- Tor application file -->
+            <Component Id="TorExecutable" Guid="$(var.CurrTorExecutableGUID)">
+              <CreateFolder/>
+              <RemoveFolder Id="RemoveLocalProgramsInstDir" On="uninstall" />
+              <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+                <RegistryValue Name="Version" Value="$(var.ThisProductVersionDisp)" Type="string" KeyPath="yes" />
+              </RegistryKey>
+              <File
+                Id="TorExe"
+                Name="Tor.exe"
+                Source="bin\tor.exe"
+                Vital="yes"
+                DiskId="1"
+              />
+            </Component>
+
+            <!-- Tor OpenSSL shared libraries
+            This optional component is required for shared builds
+            of Tor.  For static builds it is ignored.
+              -->
+            <Component Id="OpenSSLLibrary" Guid="$(var.CurrOpenSSLLibraryGUID)">
+              <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+                <RegistryValue Name="UserSSLLibrary" Value="1" Type="integer" KeyPath="yes" />
+              </RegistryKey>
+              <File
+                Id="cryptoeay32dll"
+                Name="cryptoeay32-0.9.8.dll"
+                Source="bin/cryptoeay32-0.9.8.dll"
+                DiskId="1"
+              />
+              <File
+                Id="ssleay32dll"
+                Name="ssleay32-0.9.8.dll"
+                Source="bin/ssleay32-0.9.8.dll"
+                DiskId="1"
+              />
+            </Component>
+          </Directory>
+        </Directory>
+
+        <Directory Id="INSTALLDIR" Name="Tor">
           <!-- Tor configuration files
           The sample config is always kept up to date and the torrc
           is left as is if it exists and copied from the sample
           config otherwise.
             -->
           <Component Id="TorConfigFile" Guid="$(var.CurrTorConfigFileGUID)">
+            <CreateFolder/>
+            <RemoveFolder Id="RemoveINSTALLDIR" On="uninstall" />
             <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
               <RegistryValue Name="UserConfigFile" Value="1" Type="integer" KeyPath="yes" />
             </RegistryKey>
             <File
               Id="TorSampleConfig"
-              Name="torrc.sample"
+              Name="torrc-example.txt"
               Source="src\config\torrc.sample"
               Vital="yes"
-              ReadOnly="yes"
+              ReadOnly="no"
               DiskId="1"
             > 
               <CopyFile
                 Id="TorConfig"
-                DestinationName="torrc"
+                DestinationName="torrc.txt"
               />
             </File>
           </Component>
@@ -201,7 +232,7 @@
             /> 
           </Component>
 
-          <!-- Tor docs -->
+          <!-- Tor docs.  unix2dos.exe on each text file is recommended for win32 packages. -->
           <Directory Id="TorDocsDirectory" Name="docs">
             <Component Id="TorDocuments" Guid="$(var.CurrTorDocumentsGUID)">
               <CreateFolder/>
@@ -211,25 +242,32 @@
               </RegistryKey>
               <File
                 Id="TorReadme"
-                Name="README"
+                Name="README.txt"
                 Source="README"
+                DiskId="1"
+              />
+              <!-- HTML generated via: groff -man doc/tor.1 -T html > Usage.html -->
+              <File
+                Id="TorUsage"
+                Name="Usage.html"
+                Source="Usage.html"
                 DiskId="1"
               />
               <File
                 Id="TorAuthors"
-                Name="Authors"
+                Name="Authors.txt"
                 Source="Authors"
                 DiskId="1"
               />
               <File
                 Id="TorChangelog"
-                Name="ChangeLog"
+                Name="ChangeLog.txt"
                 Source="ChangeLog"
                 DiskId="1"
               />
               <File
                 Id="TorLicense"
-                Name="LICENSE"
+                Name="LICENSE.txt"
                 Source="LICENSE"
                 DiskId="1"
               />
@@ -245,12 +283,13 @@
       <Directory Id="ProgramMenuFolder" Name="Programs">
         <Directory Id="ShortcutFolder" Name="Tor">
           <Component Id="AddTorToStartMenu" Guid="$(var.CurrAddTorToStartMenuGUID)">
+            <Condition><![CDATA[NOSC <> 1]]> </Condition>
             <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
               <RegistryValue Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />
             </RegistryKey>
             <Shortcut Id="TorStartMenuShortcut"
-                      Name="Tor" Target="[INSTALLDIR]tor.exe"
-                      Directory="ShortcutFolder" WorkingDirectory="INSTALLDIR"
+                      Name="Tor" Target="[LocalProgramsInstDir]tor.exe"
+                      Directory="ShortcutFolder" WorkingDirectory="LocalProgramsInstDir"
                       Icon="tor.ico" IconIndex="0" />
             <RemoveFolder Id="RemoveShortcutFolder" On="uninstall" />
           </Component>
@@ -259,13 +298,34 @@
 
       <Directory Id="DesktopFolder" Name="Desktop">
         <Component Id="AddTorToDesktop" Guid="$(var.CurrAddTorToDesktopGUID)">
+          <Condition><![CDATA[NOSC <> 1]]> </Condition>
           <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
             <RegistryValue Name="DesktopShortcut" Value="1" Type="integer" KeyPath="yes" />
           </RegistryKey>
           <Shortcut Id="TorDesktopShortcut"
-                    Name="Tor" Target="[INSTALLDIR]tor.exe"
-                    Directory="DesktopFolder" WorkingDirectory="INSTALLDIR"
+                    Name="Tor" Target="[LocalProgramsInstDir]tor.exe"
+                    Directory="DesktopFolder" WorkingDirectory="LocalProgramsInstDir"
                     Icon="tor.ico" IconIndex="0" />
+        </Component>
+        <Component Id="AddTorDocsToDesktop" Guid="$(var.CurrAddTorDocsToDesktopGUID)">
+          <Condition><![CDATA[NOSC <> 1]]> </Condition>
+          <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+            <RegistryValue Name="DesktopDocsShortcut" Value="1" Type="integer" KeyPath="yes" />
+          </RegistryKey>
+          <Shortcut Id="TorDocsDesktopShortcut"
+                    Name="Tor Docs" Target="[TorDocsDirectory]"
+                    Directory="DesktopFolder" WorkingDirectory="INSTDIR" />
+        </Component>
+        <Component Id="AddTorEditConfToDesktop" Guid="$(var.CurrAddTorEditConfToDesktopGUID)">
+          <Condition><![CDATA[NOSC <> 1]]> </Condition>
+          <RegistryKey Root="HKCU" Key="Software\Tor" Action="createAndRemoveOnUninstall">
+            <RegistryValue Name="DesktopEditConfShortcut" Value="1" Type="integer" KeyPath="yes" />
+          </RegistryKey>
+          <Shortcut Id="TorEditConfDesktopShortcut"
+                    Name="Edit Tor Config"
+                    Target="[WindowsFolder]notepad.exe"
+                    Arguments="[INSTALLDIR]torrc.txt"
+                    Directory="DesktopFolder" WorkingDirectory="INSTDIR" />
         </Component>
       </Directory>
     </Directory>
@@ -284,6 +344,7 @@
       <Feature Id="MainApplication" Title="Tor Application"
                AllowAdvertise="no" Absent="disallow" Level="1"
                Description="Main Tor application">
+        <ComponentRef Id="LocalProgramsFolderRef" />
         <ComponentRef Id="TorExecutable" />
         <ComponentRef Id="TorConfigFile" />
         <ComponentRef Id="TorGeoIPFile" />
@@ -296,15 +357,26 @@
       <Feature Id="Shortcuts" Title="Shortcuts"
                AllowAdvertise="no" Absent="allow" Level="1"
                Description="Add shortcuts to Tor.">
-        <Feature Id="StartMenuShortcuts" Title="Add to Start menu"
+        
+        <Feature Id="StartMenuShortcuts" Title="Add Tor to Start menu"
                  AllowAdvertise="no" Absent="allow" Level="1"
                  Description="Add Tor to your Start menu">
           <ComponentRef Id="AddTorToStartMenu" />
         </Feature>
-        <Feature Id="DesktopShortcuts" Title="Add to Desktop"
+        <Feature Id="DesktopShortcuts" Title="Add Tor shortcut to Desktop"
                  AllowAdvertise="no" Absent="allow" Level="1"
-                 Description="Add Tor to your Desktop">
+                 Description="Add shortcut to launch Tor on Desktop">
           <ComponentRef Id="AddTorToDesktop" />
+        </Feature>
+        <Feature Id="DesktopDocsShortcuts" Title="Add Tor docs folder to Desktop"
+                 AllowAdvertise="no" Absent="allow" Level="1"
+                 Description="Add Tor documentation folder to Desktop">
+          <ComponentRef Id="AddTorDocsToDesktop" />
+        </Feature>
+        <Feature Id="DesktopEditConfShortcuts" Title="Edit Tor config shortcut on Desktop"
+                 AllowAdvertise="no" Absent="allow" Level="1"
+                 Description="Edit Tor config file shortcut on Desktop">
+          <ComponentRef Id="AddTorEditConfToDesktop" />
         </Feature>
       </Feature>
     </Feature>
