@@ -375,7 +375,7 @@ R   d Do we want to maintain our own set of entryguards that we use as
 
   - Should be trivial:
     - Base relative control socket paths (and other stuff in torrc) on datadir.
-    - enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
+    o enforce a lower limit on MaxCircuitDirtiness and CircuitBuildTimeout.
     - Make 'safelogging' extend to info-level logs too.
     - don't do dns hijacking tests if we're reject *:* exit policy?
       (deferred until 0.1.1.x is less common)
