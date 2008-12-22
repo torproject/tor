@@ -51,10 +51,12 @@ const char tor_svn_revision[] = "";
 #include <openssl/crypto.h>
 #endif
 
-/* DOCDOC have_failed */
+/** Set to true if any unit test has failed.  Mostly, this is set by the macros
+ * in test.h */
 int have_failed = 0;
 
-/* DOCDOC temp_dir */
+/** Temporary directory (set up by setup_directory) under which we store all
+ * our files during testing. */
 static char temp_dir[256];
 
 /** Select and create the temporary directory we'll use to run our unit tests.

@@ -1054,10 +1054,11 @@ tor_timegm(struct tm *tm)
 }
 
 /* strftime is locale-specific, so we need to replace those parts */
-/* DOCDOC WEEKDAY_NAMES */
+
+/** A c-locale array of 3-letter names of weekdays, starting with Sun. */
 static const char *WEEKDAY_NAMES[] =
   { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
-/* DOCDOC MONTH_NAMES */
+/** A c-locale array of 3-letter names of months, starting with Jan. */
 static const char *MONTH_NAMES[] =
   { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
@@ -1341,9 +1342,10 @@ update_approx_time(time_t now)
  * have up to <b>ftime_slop</b> seconds of inaccuracy; IOW, our window of
  * estimate for the current time is now + ftime_skew +/- ftime_slop.
  */
-/* DOCDOC ftime_skew */
+/** Our current estimate of our skew, such that we think the current time is
+ * closest to time(NULL)+ftime_skew. */
 static int ftime_skew = 0;
-/* DOCDOC ftime_slop */
+/** Tolerance during time comparisons, in seconds. */
 static int ftime_slop = 60;
 /** Set the largest amount of sloppiness we'll allow in fuzzy time
  * comparisons. */

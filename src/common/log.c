@@ -104,7 +104,8 @@ static tor_mutex_t *log_mutex = NULL;
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 #ifdef HAVE_SYSLOG_H
-/* DOCDOC syslog_count */
+/** The number of open syslog log handlers that we have.  When this reaches 0,
+ * we can close our connection to the syslog facility. */
 static int syslog_count = 0;
 #endif
 
@@ -118,8 +119,8 @@ static int syslog_count = 0;
 #define UNLOCK_LOGS() STMT_NIL
 #endif
 
-/* What's the lowest log level anybody cares about? */
-/* DOCDOC _log_global_min_severity */
+/** What's the lowest log level anybody cares about?  Checking this lets us
+ * bail out early from log_debug if we aren't debugging.  */
 int _log_global_min_severity = LOG_NOTICE;
 
 static void delete_log(logfile_t *victim);

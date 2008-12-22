@@ -261,7 +261,7 @@ _crypto_new_pk_env_evp_pkey(EVP_PKEY *pkey)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
-/* DOCDOC _crypto_pk_env_get_rsa */
+/** Helper, used by tor-checkkey.c.  Return the RSA from a crypto_pk_env_t. */
 RSA *
 _crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {

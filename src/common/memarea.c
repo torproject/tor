@@ -61,10 +61,12 @@ struct memarea_t {
   memarea_chunk_t *first; /**< Top of the chunk stack: never NULL. */
 };
 
+/** How many chunks will we put into the freelist before freeing them? */
 #define MAX_FREELIST_LEN 4
-/* DOCDOC freelist_len */
-int freelist_len=0;
-/* DOCDOC freelist */
+/** The number of memarea chunks currently in our freelist. */
+static int freelist_len=0;
+/** A linked list of unused memory area chunks.  Used to prevent us from
+ * spinning in malloc/free loops. */
 static memarea_chunk_t *freelist = NULL;
 
 /** Helper: allocate a new memarea chunk of around <b>chunk_size</b> bytes. */
