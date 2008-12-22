@@ -249,7 +249,7 @@ _tor_free(void *mem)
 extern size_t malloc_good_size(size_t size);
 #endif
 
-/** Allocate and return a chunk of memory of size at least *<b>size</p>, using
+/** Allocate and return a chunk of memory of size at least *<b>size</b>, using
  * the same resources we would use to malloc *<b>sizep</b>.  Set *<b>sizep</b>
  * to the number of usable bytes in the chunk of memory. */
 void *

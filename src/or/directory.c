@@ -2314,7 +2314,7 @@ directory_dump_request_log(void)
  * than half the authorities in a list.  They pass this list in
  * the url as "...consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>".
  *
- * <b>fpr<b/> may be an abbreviated fingerprint, i.e. only a left substring
+ * <b>fpr</b> may be an abbreviated fingerprint, i.e. only a left substring
  * of the full authority identity digest. (Only strings of even length,
  * i.e. encodings of full bytes, are handled correctly.  In the case
  * of an odd number of hex digits the last one is silently ignored.)
@@ -3278,7 +3278,7 @@ static const int client_consensus_dl_schedule[] = {
 
 /** Called when an attempt to download <b>dls</b> has failed with HTTP status
  * <b>status_code</b>.  Increment the failure count (if the code indicates a
- * real failure) and set <b>dls<b>->next_attempt_at to an appropriate time in
+ * real failure) and set <b>dls</b>->next_attempt_at to an appropriate time in
  * the future. */
 time_t
 download_status_increment_failure(download_status_t *dls, int status_code,

@@ -1354,7 +1354,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     _test_eq_ip6(&a1, &a2, a, b, __LINE__);                             \
   STMT_END
 
-/** Helper: assert that <b>a</a> parses by tor_inet_pton() into a address that
+/** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that
  * passes tor_addr_is_internal() with <b>for_listening</b> */
 #define test_internal_ip(a,for_listening) STMT_BEGIN           \
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
@@ -1363,7 +1363,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
       test_fail_msg( a "was not internal.");                   \
   STMT_END
 
-/** Helper: assert that <b>a</a> parses by tor_inet_pton() into a address that
+/** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that
  * does not pass tor_addr_is_internal() with <b>for_listening</b>. */
 #define test_external_ip(a,for_listening) STMT_BEGIN           \
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
@@ -1397,7 +1397,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
   STMT_END
 
 /** Helper: assert that <b>xx</b> is parseable as a masked IPv6 address with
- * ports by <b>tor_parse_mask_addr_ports(), with family <b>f</b>, IP address
+ * ports by tor_parse_mask_addr_ports(), with family <b>f</b>, IP address
  * as 4 32-bit words <b>ip1...ip4</b>, mask bits as <b>mm</b>, and port range
  * as <b>pt1..pt2</b>. */
 #define test_addr_mask_ports_parse(xx, f, ip1, ip2, ip3, ip4, mm, pt1, pt2) \

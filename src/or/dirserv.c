@@ -1870,7 +1870,7 @@ version_from_platform(const char *platform)
  * which has at least <b>buf_len</b> free characters.  Do NUL-termination.
  * Use the same format as in network-status documents.  If <b>version</b> is
  * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
- * failure.  If <b>first_line_only<b> is true, don't include any flags
+ * failure.  If <b>first_line_only</b> is true, don't include any flags
  * or version line.
  */
 int

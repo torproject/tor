@@ -1804,7 +1804,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   }
 }
 
-/** Append an encoded value of <b>addr<b> to <b>payload_out</b>, which must
+/** Append an encoded value of <b>addr</b> to <b>payload_out</b>, which must
  * have at least 18 bytes of free space.  The encoding is, as specified in
  * tor-spec.txt:
  *   RESOLVED_TYPE_IPV4 or RESOLVED_TYPE_IPV6  [1 byte]

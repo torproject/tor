@@ -233,7 +233,7 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
 }
 
 /** Check whether, according to the policies in <b>options</b>, the
- * circuit <b>circ makes sense. */
+ * circuit <b>circ</b> makes sense. */
 /* XXXX currently only checks Exclude{Exit}Nodes. It should check more. */
 int
 circuit_conforms_to_options(const origin_circuit_t *circ,

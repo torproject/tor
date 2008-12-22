@@ -2908,7 +2908,7 @@ typedef struct {
   tor_addr_t addr;
   /** TLS port for the bridge. */
   uint16_t port;
-  /** Expected identity digest, or all \0's if we don't know what the
+  /** Expected identity digest, or all zero bytes if we don't know what the
    * digest should be. */
   char identity[DIGEST_LEN];
   /** When should we next try to fetch a descriptor for this bridge? */

@@ -337,7 +337,7 @@ authority_cert_get_newest_by_id(const char *id_digest)
 }
 
 /** Return the newest v3 authority certificate whose directory signing key has
- * giest <sk_digest</b>. Return NULL if no such certificate is known.
+ * digest <b>sk_digest</b>. Return NULL if no such certificate is known.
  */
 authority_cert_t *
 authority_cert_get_by_sk_digest(const char *sk_digest)
@@ -2657,7 +2657,7 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old)
 }
 
 /** Remove a signed_descriptor_t <b>sd</b> from <b>rl</b>-\>old_routers, and
- * adjust <b>rl</b> as appropriate.  <b>idx</i> is -1, or the index of
+ * adjust <b>rl</b> as appropriate.  <b>idx</b> is -1, or the index of
  * <b>sd</b>. */
 static void
 routerlist_remove_old(routerlist_t *rl, signed_descriptor_t *sd, int idx)

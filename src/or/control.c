@@ -377,7 +377,7 @@ read_escaped_data(const char *data, size_t len, char **out)
   return outp - *out;
 }
 
-/** If the first <b>in_len_max</b> characters in <b>start<b> contain a
+/** If the first <b>in_len_max</b> characters in <b>start</b> contain a
  * double-quoted string with escaped characters, return the length of that
  * string (as encoded, including quotes).  Otherwise return -1. */
 static INLINE int
@@ -470,7 +470,7 @@ decode_escaped_string(const char *start, size_t in_len_max,
  * but it will always end with a CRLF sequence.
  *
  * Currently the length of the message is limited to 1024 (including the
- * ending \r\n\0. */
+ * ending CR LF NUL ("\\r\\n\\0") . */
 static void
 connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
 {
@@ -567,7 +567,7 @@ send_control_event_string(uint16_t event, event_format_t which,
  * sent only to controllers that have enabled extended events.
  *
  * Currently the length of the message is limited to 1024 (including the
- * ending \n\r\0). */
+ * ending \\r\\n\\0). */
 static void
 send_control_event_impl(uint16_t event, event_format_t which, int extended,
                          const char *format, va_list ap)
@@ -3421,7 +3421,7 @@ control_event_descriptors_changed(smartlist_t *routers)
   return 0;
 }
 
-/** Called whenever an address mapping on <b>from<b> from changes to <b>to</b>.
+/** Called when an address mapping on <b>from</b> from changes to <b>to</b>.
  * <b>expires</b> values less than 3 are special; see connection_edge.c.  If
  * <b>error</b> is non-NULL, it is an error code describing the failure
  * mode of the mapping.

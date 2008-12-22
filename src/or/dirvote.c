@@ -1157,7 +1157,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
 /** Given a consensus vote <b>target</b> and a set of detached signatures in
  * <b>sigs</b> that correspond to the same consensus, check whether there are
  * any new signatures in <b>src_voter_list</b> that should be added to
- * <b>target.  (A signature should be added if we have no signature for that
+ * <b>target</b>. (A signature should be added if we have no signature for that
  * voter in <b>target</b> yet, or if we have no verifiable signature and the
  * new signature is verifiable.)  Return the number of signatures added or
  * changed, or -1 if the document signed by <b>sigs</b> isn't the same
