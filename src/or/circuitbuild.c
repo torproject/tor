@@ -362,8 +362,8 @@ connection_good_enough_for_extend(const or_connection_t *n_conn,
     *state_out = "too old. Launching a new one.";
     *launch_out = 1;
     return 0;
-  } else if (tor_addr_compare(&n_conn->_base.addr, target_addr, CMP_EXACT) &&
-             ! n_conn->is_canonical) {
+  } else if (tor_addr_compare(&n_conn->real_addr, target_addr, CMP_EXACT)
+             && ! n_conn->is_canonical) {
     *state_out = "is not from a canonical address. Launching a new one.";
     *launch_out = 1;
     return 0;
