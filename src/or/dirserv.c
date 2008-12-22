@@ -32,7 +32,9 @@ extern time_t time_of_process_start; /* from main.c */
 
 /** Do we need to regenerate the directory when someone asks for it? */
 static time_t the_directory_is_dirty = 1;
+/* DOCDOC runningrouters_is_dirty */
 static time_t runningrouters_is_dirty = 1;
+/* DOCDOC the_v2_networkstatus_is_dirty */
 static time_t the_v2_networkstatus_is_dirty = 1;
 
 /** Most recently generated encoded signed v1 directory. (v1 auth dirservers
@@ -1222,7 +1224,9 @@ directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now)
 
 /* Used only by non-v1-auth dirservers: The v1 directory and
  * runningrouters we'll serve when requested. */
+/* DOCDOC cached_directory */
 static cached_dir_t *cached_directory = NULL;
+/* DOCDOC cached_runningrouters */
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
 
 /** Used for other dirservers' v2 network statuses.  Map from hexdigest to
@@ -1637,15 +1641,25 @@ should_generate_v2_networkstatus(void)
  * dirserv_compute_performance_thresholds, and used by
  * generate_v2_networkstatus */
 /* XXXX stick these all in a struct. */
+/* DOCDOC stable_uptime */
 static uint32_t stable_uptime = 0; /* start at a safe value */
+/* DOCDOC stable_mtbf */
 static double stable_mtbf = 0.0;
+/* DOCDOC enough_mtbf_info */
 static int enough_mtbf_info = 0;
+/* DOCDOC guard_wfu */
 static double guard_wfu = 0.0;
+/* DOCDOC guard_tk */
 static long guard_tk = 0;
+/* DOCDOC fast_bandwidth */
 static uint32_t fast_bandwidth = 0;
+/* DOCDOC guard_bandwidth_including_exits */
 static uint32_t guard_bandwidth_including_exits = 0;
+/* DOCDOC guard_bandwidth_excluding_exits */
 static uint32_t guard_bandwidth_excluding_exits = 0;
+/* DOCDOC total_bandwidth */
 static uint64_t total_bandwidth = 0;
+/* DOCDOC total_exit_bandwidth */
 static uint64_t total_exit_bandwidth = 0;
 
 /** Helper: estimate the uptime of a router given its stated uptime and the

@@ -3268,15 +3268,19 @@ dir_networkstatus_download_failed(smartlist_t *failed, int status_code)
   });
 }
 
+/* DOCDOC server_dl_schedule */
 static const int server_dl_schedule[] = {
   0, 0, 0, 60, 60, 60*2, 60*5, 60*15, INT_MAX
 };
+/* DOCDOC client_dl_schedule */
 static const int client_dl_schedule[] = {
   0, 0, 60, 60*5, 60*10, INT_MAX
 };
+/* DOCDOC server_consensus_dl_schedule */
 static const int server_consensus_dl_schedule[] = {
   0, 0, 60, 60*5, 60*10, 60*30, 60*30, 60*30, 60*30, 60*30, 60*60, 60*60*2
 };
+/* DOCDOC client_consensus_dl_schedule */
 static const int client_consensus_dl_schedule[] = {
   0, 0, 60, 60*5, 60*10, 60*30, 60*60, 60*60, 60*60, 60*60*3, 60*60*6, 60*60*12
 };

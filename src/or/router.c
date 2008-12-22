@@ -45,7 +45,9 @@ static crypto_pk_env_t *authority_signing_key = NULL;
  * authorities. */
 static authority_cert_t *authority_key_certificate = NULL;
 
+/* DOCDOC legacy_signing_key */
 static crypto_pk_env_t *legacy_signing_key = NULL;
+/* DOCDOC legacy_key_certificate */
 static authority_cert_t *legacy_key_certificate = NULL;
 
 /* (Note that v3 authorities also have a separate "authority identity key",
@@ -1604,6 +1606,7 @@ router_guess_address_from_dir_headers(uint32_t *guess)
   return -1;
 }
 
+/* DOCDOC tor_svn_revision */
 extern const char tor_svn_revision[]; /* from main.c */
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short

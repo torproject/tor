@@ -34,7 +34,9 @@ static int connection_process_inbuf(connection_t *conn, int package_partial);
 static void client_check_address_changed(int sock);
 static void set_constrained_socket_buffers(int sock, int size);
 
+/* DOCDOC last_interface_ip */
 static uint32_t last_interface_ip = 0;
+/* DOCDOC outgoing_addrs */
 static smartlist_t *outgoing_addrs = NULL;
 
 /**************************************************************/

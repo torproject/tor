@@ -1163,9 +1163,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   return 0; /* for forward compatibility, don't kill the circuit */
 }
 
+/* DOCDOC stats_n_data_cells_packaged */
 uint64_t stats_n_data_cells_packaged = 0;
+/* DOCDOC stats_n_data_bytes_packaged */
 uint64_t stats_n_data_bytes_packaged = 0;
+/* DOCDOC stats_n_data_cells_received */
 uint64_t stats_n_data_cells_received = 0;
+/* DOCDOC stats_n_data_bytes_received */
 uint64_t stats_n_data_bytes_received = 0;
 
 /** While conn->inbuf has an entire relay payload of bytes on it,
@@ -1426,6 +1430,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 /** The total number of cells we have allocated from the memory pool. */
 static int total_cells_allocated = 0;
 
+/* DOCDOC cell_pool */
 static mp_pool_t *cell_pool = NULL;
 
 /** Allocate structures to hold cells. */

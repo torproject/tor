@@ -41,12 +41,13 @@ SKIP_FILES = [ "OpenBSD_malloc_Linux.c",
                "aes.h" ]
 
 # What names of things never need javadoc
-SKIP_NAME_PATTERNS = [ r'^.*_c_id$' ]
+SKIP_NAME_PATTERNS = [ r'^.*_c_id$',
+                       r'^.*_H_ID$' ]
 
 # Which types of things should get DOCDOC comments added if they are
 # missing documentation?  Recognized types are in KINDS below.
-ADD_DOCDOCS_TO_TYPES = [ 'function', 'type', 'typedef' ]
-# ADD_DOCDOCS_TO_TYPES += [ 'variable', 'define' ]
+#ADD_DOCDOCS_TO_TYPES = [ 'function', 'type', 'typedef' ]
+ADD_DOCDOCS_TO_TYPES = [ 'variable' ]
 
 # ====================
 # The rest of this should not need hacking.

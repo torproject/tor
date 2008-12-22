@@ -21,6 +21,7 @@
 #define PRETTY_FUNCTION ""
 #endif
 
+/* DOCDOC have_failed */
 extern int have_failed;
 
 #define test_fail_msg(msg)                                      \

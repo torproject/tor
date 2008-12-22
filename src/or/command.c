@@ -22,11 +22,17 @@ const char command_c_id[] =
 
 /** Keep statistics about how many of each type of cell we've received. */
 uint64_t stats_n_padding_cells_processed = 0;
+/* DOCDOC stats_n_create_cells_processed */
 uint64_t stats_n_create_cells_processed = 0;
+/* DOCDOC stats_n_created_cells_processed */
 uint64_t stats_n_created_cells_processed = 0;
+/* DOCDOC stats_n_relay_cells_processed */
 uint64_t stats_n_relay_cells_processed = 0;
+/* DOCDOC stats_n_destroy_cells_processed */
 uint64_t stats_n_destroy_cells_processed = 0;
+/* DOCDOC stats_n_versions_cells_processed */
 uint64_t stats_n_versions_cells_processed = 0;
+/* DOCDOC stats_n_netinfo_cells_processed */
 uint64_t stats_n_netinfo_cells_processed = 0;
 
 /* These are the main functions for processing cells */

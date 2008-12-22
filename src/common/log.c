@@ -104,6 +104,7 @@ static tor_mutex_t *log_mutex = NULL;
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 #ifdef HAVE_SYSLOG_H
+/* DOCDOC syslog_count */
 static int syslog_count = 0;
 #endif
 
@@ -118,6 +119,7 @@ static int syslog_count = 0;
 #endif
 
 /* What's the lowest log level anybody cares about? */
+/* DOCDOC _log_global_min_severity */
 int _log_global_min_severity = LOG_NOTICE;
 
 static void delete_log(logfile_t *victim);

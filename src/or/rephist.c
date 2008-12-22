@@ -1263,7 +1263,9 @@ bw_array_new(void)
   return b;
 }
 
+/* DOCDOC read_array */
 static bw_array_t *read_array = NULL;
+/* DOCDOC write_array */
 static bw_array_t *write_array = NULL;
 
 /** Set up read_array and write_array. */
@@ -1731,16 +1733,27 @@ rep_hist_circbuilding_dormant(time_t now)
   return 1;
 }
 
+/* DOCDOC n_signed_dir_objs */
 static uint32_t n_signed_dir_objs = 0;
+/* DOCDOC n_signed_routerdescs */
 static uint32_t n_signed_routerdescs = 0;
+/* DOCDOC n_verified_dir_objs */
 static uint32_t n_verified_dir_objs = 0;
+/* DOCDOC n_verified_routerdescs */
 static uint32_t n_verified_routerdescs = 0;
+/* DOCDOC n_onionskins_encrypted */
 static uint32_t n_onionskins_encrypted = 0;
+/* DOCDOC n_onionskins_decrypted */
 static uint32_t n_onionskins_decrypted = 0;
+/* DOCDOC n_tls_client_handshakes */
 static uint32_t n_tls_client_handshakes = 0;
+/* DOCDOC n_tls_server_handshakes */
 static uint32_t n_tls_server_handshakes = 0;
+/* DOCDOC n_rend_client_ops */
 static uint32_t n_rend_client_ops = 0;
+/* DOCDOC n_rend_mid_ops */
 static uint32_t n_rend_mid_ops = 0;
+/* DOCDOC n_rend_server_ops */
 static uint32_t n_rend_server_ops = 0;
 
 /** Increment the count of the number of times we've done <b>operation</b>. */
@@ -1900,11 +1913,17 @@ typedef struct hs_usage_current_observation_period_t {
   time_t start_of_next_period;
 } hs_usage_current_observation_period_t;
 
+/* DOCDOC current_period */
 static hs_usage_current_observation_period_t *current_period = NULL;
+/* DOCDOC publish_total */
 static hs_usage_service_related_observation_t *publish_total = NULL;
+/* DOCDOC publish_novel */
 static hs_usage_service_related_observation_t *publish_novel = NULL;
+/* DOCDOC fetch_total */
 static hs_usage_service_related_observation_t *fetch_total = NULL;
+/* DOCDOC fetch_successful */
 static hs_usage_service_related_observation_t *fetch_successful = NULL;
+/* DOCDOC descs */
 static hs_usage_general_period_related_observations_t *descs = NULL;
 
 /** Creates an empty ordered list element. */

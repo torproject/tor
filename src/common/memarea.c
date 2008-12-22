@@ -62,7 +62,9 @@ struct memarea_t {
 };
 
 #define MAX_FREELIST_LEN 4
+/* DOCDOC freelist_len */
 int freelist_len=0;
+/* DOCDOC freelist */
 static memarea_chunk_t *freelist = NULL;
 
 /** Helper: allocate a new memarea chunk of around <b>chunk_size</b> bytes. */

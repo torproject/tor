@@ -54,6 +54,7 @@ static int stats_prev_global_write_bucket;
 /* XXX we might want to keep stats about global_relayed_*_bucket too. Or not.*/
 /** How many bytes have we read/written since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
+/* DOCDOC stats_n_bytes_written */
 static uint64_t stats_n_bytes_written = 0;
 /** What time did this process start up? */
 time_t time_of_process_start = 0;
@@ -1860,6 +1861,7 @@ tor_init(int argc, char *argv[])
   return 0;
 }
 
+/* DOCDOC lockfile */
 static tor_lockfile_t *lockfile = NULL;
 
 /** Try to grab the lock file described in <b>options</b>, if we do not

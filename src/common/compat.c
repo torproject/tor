@@ -1829,7 +1829,9 @@ tor_get_thread_id(void)
   return (unsigned long)GetCurrentThreadId();
 }
 #elif defined(USE_PTHREADS)
+/* DOCDOC attr_reentrant */
 static pthread_mutexattr_t attr_reentrant;
+/* DOCDOC threads_initialized */
 static int threads_initialized = 0;
 /** Initialize <b>mutex</b> so it can be locked.  Every mutex must be set
  * up eith tor_mutex_init() or tor_mutex_new(); not both. */

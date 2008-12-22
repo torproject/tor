@@ -333,6 +333,7 @@ static token_rule_t dir_token_table[] = {
                                                      NO_ARGS,     NEED_OBJ), \
   T01("dir-address",     K_DIR_ADDRESS,              GE(1),       NO_OBJ),
 
+/* DOCDOC dir_key_certificate_table */
 static token_rule_t dir_key_certificate_table[] = {
   CERTIFICATE_MEMBERS
   T1("fingerprint",      K_FINGERPRINT,              CONCAT_ARGS, NO_OBJ ),
@@ -373,6 +374,7 @@ static token_rule_t client_keys_token_table[] = {
   END_OF_TABLE
 };
 
+/* DOCDOC networkstatus_token_table */
 static token_rule_t networkstatus_token_table[] = {
   T1("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
@@ -398,6 +400,7 @@ static token_rule_t networkstatus_token_table[] = {
 
   END_OF_TABLE
 };
+/* DOCDOC networkstatus_consensus_token_table */
 static token_rule_t networkstatus_consensus_token_table[] = {
   T1("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
@@ -429,6 +432,7 @@ static token_rule_t networkstatus_vote_footer_token_table[] = {
   END_OF_TABLE
 };
 
+/* DOCDOC networkstatus_detached_signature_token_table */
 static token_rule_t networkstatus_detached_signature_token_table[] = {
   T1_START("consensus-digest", K_CONSENSUS_DIGEST, GE(1),       NO_OBJ ),
   T1("valid-after",            K_VALID_AFTER,      CONCAT_ARGS, NO_OBJ ),

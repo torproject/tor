@@ -6,6 +6,7 @@
 const char test_c_id[] =
   "$Id$";
 
+/* DOCDOC tor_svn_revision */
 const char tor_svn_revision[] = "";
 
 /**
@@ -50,8 +51,10 @@ const char tor_svn_revision[] = "";
 #include <openssl/crypto.h>
 #endif
 
+/* DOCDOC have_failed */
 int have_failed = 0;
 
+/* DOCDOC temp_dir */
 static char temp_dir[256];
 
 /** Select and create the temporary directory we'll use to run our unit tests.
@@ -2257,17 +2260,25 @@ test_util_digestset(void)
 }
 
 /* stop threads running at once. */
+/* DOCDOC _thread_test_mutex */
 static tor_mutex_t *_thread_test_mutex = NULL;
 /* make sure that threads have to run at the same time. */
+/* DOCDOC _thread_test_start1 */
 static tor_mutex_t *_thread_test_start1 = NULL;
+/* DOCDOC _thread_test_start2 */
 static tor_mutex_t *_thread_test_start2 = NULL;
+/* DOCDOC _thread_test_strmap */
 static strmap_t *_thread_test_strmap = NULL;
+/* DOCDOC _thread1_name */
 static char *_thread1_name = NULL;
+/* DOCDOC _thread2_name */
 static char *_thread2_name = NULL;
 
 static void _thread_test_func(void* _s) ATTR_NORETURN;
 
+/* DOCDOC t1_count */
 static int t1_count = 0;
+/* DOCDOC t2_count */
 static int t2_count = 0;
 
 /** Helper function for threading unit tests: This function runs in a
@@ -2788,6 +2799,7 @@ test_onion_handshake(void)
     crypto_free_pk_env(pk);
 }
 
+/* DOCDOC fingerprint_list */
 extern smartlist_t *fingerprint_list;
 
 /** Run unit tests for router descriptor generation logic. */
@@ -3140,11 +3152,17 @@ test_dirutil(void)
   smartlist_free(sl);
 }
 
+/* DOCDOC AUTHORITY_CERT_1 */
 extern const char AUTHORITY_CERT_1[];
+/* DOCDOC AUTHORITY_SIGNKEY_1 */
 extern const char AUTHORITY_SIGNKEY_1[];
+/* DOCDOC AUTHORITY_CERT_2 */
 extern const char AUTHORITY_CERT_2[];
+/* DOCDOC AUTHORITY_SIGNKEY_2 */
 extern const char AUTHORITY_SIGNKEY_2[];
+/* DOCDOC AUTHORITY_CERT_3 */
 extern const char AUTHORITY_CERT_3[];
+/* DOCDOC AUTHORITY_SIGNKEY_3 */
 extern const char AUTHORITY_SIGNKEY_3[];
 
 /** Helper: Test that two networkstatus_voter_info_t do in fact represent the
@@ -4597,6 +4615,7 @@ static struct {
   int is_subent;
   int selected;
   int is_default;
+/* DOCDOC test_array */
 } test_array[] = {
   ENT(buffers),
   ENT(crypto),

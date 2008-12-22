@@ -39,8 +39,11 @@ static networkstatus_t *current_consensus = NULL;
 /** A v3 consensus networkstatus that we've received, but which we don't
  * have enough certificates to be happy about. */
 static networkstatus_t *consensus_waiting_for_certs = NULL;
+/* DOCDOC consensus_waiting_for_certs_body */
 static char *consensus_waiting_for_certs_body = NULL;
+/* DOCDOC consensus_waiting_for_certs_set_at */
 static time_t consensus_waiting_for_certs_set_at = 0;
+/* DOCDOC consensus_waiting_for_certs_dl_failed */
 static int consensus_waiting_for_certs_dl_failed = 0;
 
 /** The last time we tried to download a networkstatus, or 0 for "never".  We

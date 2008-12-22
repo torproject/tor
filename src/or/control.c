@@ -54,7 +54,9 @@ const char control_c_id[] =
  * list to find out.
  **/
 typedef uint32_t event_mask_t;
+/* DOCDOC global_event_mask1long */
 static event_mask_t global_event_mask1long = 0;
+/* DOCDOC global_event_mask1short */
 static event_mask_t global_event_mask1short = 0;
 
 /** True iff we have disabled log messages from being sent to the controller */
@@ -74,6 +76,7 @@ static int disable_log_messages = 0;
 /** If true, we've set authentication_cookie to a secret code and
  * stored it to disk. */
 static int authentication_cookie_is_set = 0;
+/* DOCDOC authentication_cookie */
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
 /** A sufficiently large size to record the last bootstrap phase string. */
