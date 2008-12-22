@@ -653,13 +653,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
  * the list of server descriptors. Set *<b>msg</b> to a message that should be
  * passed back to the origin of this descriptor.
  *
-
- * Return 2 if descriptor is well-formed and accepted;
- *  1 if well-formed and accepted but origin should hear *msg;
- *  0 if well-formed but redundant with one we already have;
- * -1 if it is rejected and origin should hear *msg;
+ * Return the status of the operation
  *
-
  * This function is only called when fresh descriptors are posted, not when
  * we re-load the cache.
  */
@@ -684,7 +679,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
                ri->cache_info.signed_descriptor_body,
                ri->cache_info.signed_descriptor_len, *msg);
     routerinfo_free(ri);
-    return -1;
+    return ROUTER_AUTHDIR_REJECTS;
   }
 
   /* Check whether this descriptor is semantically identical to the last one
@@ -704,7 +699,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
                          ri->cache_info.signed_descriptor_body,
                          ri->cache_info.signed_descriptor_len, *msg);
     routerinfo_free(ri);
-    return 0;
+    return ROUTER_WAS_NOT_NEW;
   }
   if (control_event_is_interesting(EVENT_AUTHDIR_NEWDESCS)) {
     /* Make a copy of desc, since router_add_to_routerlist might free

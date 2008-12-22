@@ -2904,16 +2904,7 @@ router_set_status(const char *digest, int up)
  * <b>router</b> after subsequent calls with other routerinfo's -- they
  * might cause the original routerinfo to get freed.
  *
- * Returns >= 0 if the router was added; less than 0 if it was not.
- *
- * If we're returning non-zero, then assign to *<b>msg</b> a static string
- * describing the reason for not liking the routerinfo.
- *
- * If the return value is less than -1, there was a problem with the
- * routerinfo. If the return value is equal to -1, then the routerinfo was
- * fine, but out-of-date. If the return value is equal to 1, the
- * routerinfo was accepted, but we should notify the generator of the
- * descriptor using the message *<b>msg</b>.
+ * Returns the status for the operation.
  *
  * If <b>from_cache</b>, this descriptor came from our disk cache. If
  * <b>from_fetch</b>, we received it in response to a request we made.
@@ -3068,8 +3059,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 }
 
 /** Insert <b>ei</b> into the routerlist, or free it. Other arguments are
- * as for router_add_to_routerlist().  Return true iff we actually inserted
- * it.
+ * as for router_add_to_routerlist().  Return ROUTER_ADDED_SUCCESSFULLY iff
+ * we actually inserted it, ROUTER_BAD_EI otherwise.
  */
 was_router_added_t
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,

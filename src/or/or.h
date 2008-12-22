@@ -4385,19 +4385,25 @@ typedef enum was_router_added_t {
 static int WRA_WAS_ADDED(was_router_added_t s);
 static int WRA_WAS_OUTDATED(was_router_added_t s);
 static int WRA_WAS_REJECTED(was_router_added_t s);
-/**DOCDOC*/
+/** Return true iff the descriptor was added. It might still be necessary to
+ * check whether the descriptor generator should be notified.
+ */
 static INLINE int
 WRA_WAS_ADDED(was_router_added_t s) {
   return s == ROUTER_ADDED_SUCCESSFULLY || s == ROUTER_ADDED_NOTIFY_GENERATOR;
 }
-/**DOCDOC*/
+/** Return true iff the descriptor was not added because it was either:
+ * - not in the consensus
+ * - neither in the consensus nor in any networkstatus document
+ * - it was outdated.
+ */
 static INLINE int WRA_WAS_OUTDATED(was_router_added_t s)
 {
   return (s == ROUTER_WAS_NOT_NEW ||
           s == ROUTER_NOT_IN_CONSENSUS ||
           s == ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS);
 }
-/**DOCDOC*/
+/** Return true iff the descriptor rejected because it was malformed. */
 static INLINE int WRA_WAS_REJECTED(was_router_added_t s)
 {
   return (s == ROUTER_AUTHDIR_REJECTS);
