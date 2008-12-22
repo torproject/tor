@@ -172,6 +172,8 @@ def checkf(fn, errs):
 
                 comments.append((ln, kind, name))
 
+    return comments
+
 def applyComments(fn, entries):
     """I apply lots of comments to the file in fn, making a new .newdoc file.
     """
