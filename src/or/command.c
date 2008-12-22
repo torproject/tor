@@ -578,7 +578,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     const char *next = decode_address_from_payload(&addr, cp, end-cp);
     if (next == NULL) {
       log_fn(LOG_PROTOCOL_WARN,  LD_OR,
-             "Bad ddress in netinfo cell; closing connection.");
+             "Bad address in netinfo cell; closing connection.");
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
