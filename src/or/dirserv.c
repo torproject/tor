@@ -744,7 +744,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
 }
 
 /** As dirserv_add_descriptor, but for an extrainfo_t <b>ei</b>. */
-static int
+static was_router_added_t
 dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 {
   routerinfo_t *ri;
@@ -756,7 +756,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
   if (!ri) {
     *msg = "No corresponding router descriptor for extra-info descriptor";
     extrainfo_free(ei);
-    return -1;
+    return ROUTER_BAD_EI;
   }
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
@@ -769,15 +769,15 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
                MAX_EXTRAINFO_UPLOAD_SIZE);
     *msg = "Extrainfo document was too large";
     extrainfo_free(ei);
-    return -1;
+    return ROUTER_BAD_EI;
   }
 
   if ((r = routerinfo_incompatible_with_extrainfo(ri, ei, NULL, msg))) {
     extrainfo_free(ei);
-    return r < 0 ? 0 : -1;
+    return r < 0 ? ROUTER_WAS_NOT_NEW : ROUTER_BAD_EI;
   }
   router_add_extrainfo_to_routerlist(ei, msg, 0, 0);
-  return 2;
+  return ROUTER_ADDED_SUCCESSFULLY;
 }
 
 /** Remove all descriptors whose nicknames or fingerprints no longer
