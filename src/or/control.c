@@ -622,7 +622,7 @@ send_control_event_impl(uint16_t event, event_format_t which, int extended,
  * <b>format</b>, and other arguments as provided.
  *
  * Currently the length of the message is limited to 1024 (including the
- * ending \n\r\0. */
+ * ending \\n\\r\\0. */
 static void
 send_control_event(uint16_t event, event_format_t which,
                     const char *format, ...)
@@ -642,7 +642,7 @@ send_control_event(uint16_t event, event_format_t which,
  * that have enabled extended events.
  *
  * Currently the length of the message is limited to 1024 (including the
- * ending \n\r\0. */
+ * ending \\n\\r\\0. */
 static void
 send_control_event_extended(uint16_t event, event_format_t which,
                              const char *format, ...)
