@@ -584,8 +584,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
                                  const char *source,
                                  const char **msg)
 {
-  int r=ROUTER_ADDED_NOTIFY_GENERATOR; /* highest possible return value. */
-  int r_tmp;
+  was_router_added_t r, r_tmp;
   const char *msg_out;
   smartlist_t *list;
   const char *s;
@@ -595,6 +594,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   char time_buf[ISO_TIME_LEN+1];
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
+
+  r=ROUTER_ADDED_NOTIFY_GENERATOR; /*Least severe return value. */
 
   format_iso_time(time_buf, now);
   if (tor_snprintf(annotation_buf, sizeof(annotation_buf),
@@ -644,8 +645,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   if (! *msg) {
     if (!n_parsed) {
       *msg = "No descriptors found in your POST.";
-      if (r > -1)
-        r = -1;
+      if (WRA_WAS_ADDED(r))
+        r = ROUTER_WAS_NOT_NEW;
     } else {
       *msg = "(no message)";
     }

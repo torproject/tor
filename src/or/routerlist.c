@@ -3069,13 +3069,14 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
  * as for router_add_to_routerlist().  Return true iff we actually inserted
  * it.
  */
-int
+was_router_added_t
 router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
                                    int from_cache, int from_fetch)
 {
   int inserted;
   (void)from_fetch;
   if (msg) *msg = NULL;
+  /*XXXX021 Do something with msg */
 
   inserted = extrainfo_insert(router_get_routerlist(), ei);
 
@@ -3083,7 +3084,10 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
     signed_desc_append_to_journal(&ei->cache_info,
                                   &routerlist->extrainfo_store);
 
-  return inserted;
+  if (inserted)
+    return ROUTER_ADDED_SUCCESSFULLY;
+  else
+    return ROUTER_BAD_EI;
 }
 
 /** Sorting helper: return &lt;0, 0, or &gt;0 depending on whether the
@@ -3528,9 +3532,9 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
   log_info(LD_DIR, "%d elements to add", smartlist_len(extrainfo_list));
 
   SMARTLIST_FOREACH(extrainfo_list, extrainfo_t *, ei, {
-      int added =
+      was_router_added_t added =
         router_add_extrainfo_to_routerlist(ei, &msg, from_cache, !from_cache);
-      if (added && requested_fingerprints) {
+      if (WRA_WAS_ADDED(added) && requested_fingerprints) {
         char fp[HEX_DIGEST_LEN+1];
         base16_encode(fp, sizeof(fp), descriptor_digests ?
                         ei->cache_info.signed_descriptor_digest :

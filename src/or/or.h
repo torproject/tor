@@ -4375,10 +4375,11 @@ void router_set_status(const char *digest, int up);
 typedef enum was_router_added_t {
   ROUTER_ADDED_SUCCESSFULLY = 0,
   ROUTER_ADDED_NOTIFY_GENERATOR = 1,
-  ROUTER_WAS_NOT_NEW = -1,
-  ROUTER_NOT_IN_CONSENSUS = -2,
-  ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS = -3,
-  ROUTER_AUTHDIR_REJECTS = -4,
+  ROUTER_BAD_EI = -1,
+  ROUTER_WAS_NOT_NEW = -2,
+  ROUTER_NOT_IN_CONSENSUS = -3,
+  ROUTER_NOT_IN_CONSENSUS_OR_NETWORKSTATUS = -4,
+  ROUTER_AUTHDIR_REJECTS = -5,
 } was_router_added_t;
 
 static int WRA_WAS_ADDED(was_router_added_t s);
@@ -4405,7 +4406,8 @@ was_router_added_t router_add_to_routerlist(routerinfo_t *router,
                                             const char **msg,
                                             int from_cache,
                                             int from_fetch);
-int router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
+was_router_added_t router_add_extrainfo_to_routerlist(
+                                        extrainfo_t *ei, const char **msg,
                                         int from_cache, int from_fetch);
 void routerlist_remove_old_routers(void);
 int router_load_single_router(const char *s, uint8_t purpose, int cache,
