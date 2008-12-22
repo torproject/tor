@@ -569,7 +569,7 @@ static int
 WRA_MORE_SEVERE(was_router_added_t a, was_router_added_t b)
 {
   if (b == ROUTER_ADDED_SUCCESSFULLY) {
-    return a;
+    return 1;
   } else if (b == ROUTER_ADDED_NOTIFY_GENERATOR) {
     return !WRA_WAS_ADDED(a);
   } else {
