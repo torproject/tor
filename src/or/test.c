@@ -4606,8 +4606,9 @@ test_geoip(void)
   tor_free(s);
 }
 
-#define ENT(x) { #x, test_ ## x, 0, 0 }
-#define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0 }
+#define DISABLED(x) { #x, x, 0, 0, 0 }
+#define ENT(x) { #x, test_ ## x, 0, 0, 1 }
+#define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0, 1 }
 
 static struct {
   const char *test_name;
@@ -4654,6 +4655,9 @@ static struct {
   ENT(rend_fns),
   SUBENT(rend_fns, v2),
   ENT(geoip),
+
+  DISABLED(bench_aes),
+  DISABLED(bench_dmap),
   { NULL, NULL, 0, 0, 0 },
 };
 
@@ -4733,7 +4737,7 @@ main(int c, char**v)
 
   if (!any_selected) {
     for (i = 0; test_array[i].test_name; ++i) {
-      test_array[i].selected = 1;
+      test_array[i].selected = test_array[i].is_default;
     }
   }
 
@@ -4758,16 +4762,6 @@ main(int c, char**v)
   }
 
   crypto_seed_rng(1);
-
-  if (0) {
-    bench_aes();
-    return 0;
-  }
-
-  if (0) {
-    bench_dmap();
-    return 0;
-  }
 
   atexit(remove_directory);
 
