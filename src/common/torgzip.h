@@ -41,6 +41,7 @@ compress_method_t detect_compression_method(const char *in, size_t in_len);
 typedef enum {
   TOR_ZLIB_OK, TOR_ZLIB_DONE, TOR_ZLIB_BUF_FULL, TOR_ZLIB_ERR
 } tor_zlib_output_t;
+/** Internal state for an incremental zlib compression/decompression. */
 typedef struct tor_zlib_state_t tor_zlib_state_t;
 tor_zlib_state_t *tor_zlib_new(int compress, compress_method_t method);
 

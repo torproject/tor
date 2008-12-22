@@ -981,7 +981,7 @@ policy_summary_item_split(policy_summary_item_t* old, uint16_t new_starts)
 #define AT(x) ((policy_summary_item_t*)smartlist_get(summary, x))
 
 #define REJECT_CUTOFF_COUNT (1<<25)
-/* Split an exit policy summary so that prt_min and prt_max
+/** Split an exit policy summary so that prt_min and prt_max
  * fall at exactly the start and end of an item respectively.
  */
 static int

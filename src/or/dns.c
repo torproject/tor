@@ -186,6 +186,7 @@ evdns_log_cb(int warn, const char *msg)
   log(severity, LD_EXIT, "eventdns: %s", msg);
 }
 
+/* DOCDOC randfn */
 static void
 randfn(char *b, size_t n)
 {

@@ -1470,6 +1470,7 @@ packed_cell_alloc(void)
   ++total_cells_allocated;
   return mp_pool_get(cell_pool);
 }
+/* DOCDOC dump_cell_pool_usage */
 void
 dump_cell_pool_usage(int severity)
 {

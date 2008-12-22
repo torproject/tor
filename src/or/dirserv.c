@@ -1156,7 +1156,7 @@ directory_fetches_from_authorities(or_options_t *options)
   return 1;
 }
 
-/* Return 1 if we should fetch new networkstatuses, descriptors, etc
+/** Return 1 if we should fetch new networkstatuses, descriptors, etc
  * on the "mirror" schedule rather than the "client" schedule.
  */
 int
@@ -1165,7 +1165,7 @@ directory_fetches_dir_info_early(or_options_t *options)
   return directory_fetches_from_authorities(options);
 }
 
-/* Return 1 if we should fetch new networkstatuses, descriptors, etc
+/** Return 1 if we should fetch new networkstatuses, descriptors, etc
  * on a very passive schedule -- waiting long enough for ordinary clients
  * to probably have the info we want. These would include bridge users,
  * and maybe others in the future e.g. if a Tor client uses another Tor
@@ -1592,6 +1592,7 @@ dirserv_get_runningrouters(void)
                          "v1 network status list", V1_AUTHORITY);
 }
 
+/* DOCDOC */
 cached_dir_t *
 dirserv_get_consensus(void)
 {

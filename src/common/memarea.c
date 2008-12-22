@@ -26,7 +26,7 @@
 #error "void* is neither 4 nor 8 bytes long. I don't know how to align stuff."
 #endif
 
-/* Increment <b>ptr</b> until it is aligned to MEMAREA_ALIGN. */
+/** Increment <b>ptr</b> until it is aligned to MEMAREA_ALIGN. */
 static INLINE void *
 realign_pointer(void *ptr)
 {
@@ -85,6 +85,7 @@ alloc_chunk(size_t sz, int freelist_ok)
   }
 }
 
+/* DOCDOC chunk_free */
 static void
 chunk_free(memarea_chunk_t *chunk)
 {

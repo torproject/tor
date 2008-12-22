@@ -1341,12 +1341,14 @@ update_approx_time(time_t now)
  */
 static int ftime_skew = 0;
 static int ftime_slop = 60;
+/* DOCDOC ftime_set_maximum_sloppiness */
 void
 ftime_set_maximum_sloppiness(int seconds)
 {
   tor_assert(seconds >= 0);
   ftime_slop = seconds;
 }
+/* DOCDOC ftime_set_estimated_skew */
 void
 ftime_set_estimated_skew(int seconds)
 {
@@ -1360,18 +1362,21 @@ ftime_get_window(time_t now, ftime_t *ft_out)
   ft_out->latest =  now + ftime_skew + ftime_slop;
 }
 #endif
+/* DOCDOC ftime_maybe_after */
 int
 ftime_maybe_after(time_t now, time_t when)
 {
   /* It may be after when iff the latest possible current time is after when */
   return (now + ftime_skew + ftime_slop) >= when;
 }
+/* DOCDOC ftime_maybe_before */
 int
 ftime_maybe_before(time_t now, time_t when)
 {
   /* It may be before when iff the earliest possible current time is before */
   return (now + ftime_skew - ftime_slop) < when;
 }
+/* DOCDOC ftime_definitely_after */
 int
 ftime_definitely_after(time_t now, time_t when)
 {
@@ -1379,6 +1384,7 @@ ftime_definitely_after(time_t now, time_t when)
    * after when. */
   return (now + ftime_skew - ftime_slop) >= when;
 }
+/* DOCDOC ftime_definitely_before */
 int
 ftime_definitely_before(time_t now, time_t when)
 {
@@ -1941,7 +1947,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 
 #define TOR_ISODIGIT(c) ('0' <= (c) && (c) <= '7')
 
-/* Given a c-style double-quoted escaped string in <b>s</b>, extract and
+/** Given a c-style double-quoted escaped string in <b>s</b>, extract and
  * decode its contents into a newly allocated string.  On success, assign this
  * string to *<b>result</b>, assign its length to <b>size_out</b> (if
  * provided), and return a pointer to the position in <b>s</b> immediately

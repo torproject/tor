@@ -549,6 +549,7 @@ router_should_rebuild_store(desc_store_t *store)
     return store->journal_len > (1<<15);
 }
 
+/* DOCDOC desc_get_store */
 static INLINE desc_store_t *
 desc_get_store(routerlist_t *rl, signed_descriptor_t *sd)
 {
@@ -2465,6 +2466,7 @@ dump_routerlist_mem_usage(int severity)
 #endif
 }
 
+/* DOCDOC _routerlist_find_elt */
 static INLINE int
 _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 {
@@ -4368,6 +4370,7 @@ get_dir_info_status_string(void)
   return dir_info_status;
 }
 
+/* DOCDOC count_usable_descriptors */
 static void
 count_usable_descriptors(int *num_present, int *num_usable,
                          const networkstatus_t *consensus,

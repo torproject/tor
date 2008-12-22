@@ -687,6 +687,7 @@ smartlist_uniq_digests(smartlist_t *sl)
   smartlist_uniq(sl, _compare_digests, _tor_free);
 }
 
+/* DOCDOC DEFINE_MAP_STRUCTS */
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
   typedef struct prefix ## entry_t {                      \
     HT_ENTRY(prefix ## entry_t) node;                     \
@@ -697,7 +698,9 @@ smartlist_uniq_digests(smartlist_t *sl)
     HT_HEAD(prefix ## impl, prefix ## entry_t) head;      \
   }
 
+/* DOCDOC DEFINE_MAP_STRUCTS */
 DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
+/* DOCDOC DEFINE_MAP_STRUCTS */
 DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 
 /** Helper: compare strmap_entry_t objects by key value. */
@@ -1004,6 +1007,7 @@ strmap_iter_init(strmap_t *map)
   return HT_START(strmap_impl, &map->head);
 }
 
+/* DOCDOC digestmap_iter_init */
 digestmap_iter_t *
 digestmap_iter_init(digestmap_t *map)
 {
@@ -1021,6 +1025,7 @@ strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
   return HT_NEXT(strmap_impl, &map->head, iter);
 }
 
+/* DOCDOC digestmap_iter_next */
 digestmap_iter_t *
 digestmap_iter_next(digestmap_t *map, digestmap_iter_t *iter)
 {
@@ -1046,6 +1051,7 @@ strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
   return iter;
 }
 
+/* DOCDOC digestmap_iter_next_rmv */
 digestmap_iter_t *
 digestmap_iter_next_rmv(digestmap_t *map, digestmap_iter_t *iter)
 {
@@ -1072,6 +1078,7 @@ strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
   *valp = (*iter)->val;
 }
 
+/* DOCDOC digestmap_iter_get */
 void
 digestmap_iter_get(digestmap_iter_t *iter, const char **keyp, void **valp)
 {
@@ -1090,6 +1097,7 @@ strmap_iter_done(strmap_iter_t *iter)
 {
   return iter == NULL;
 }
+/* DOCDOC digestmap_iter_done */
 int
 digestmap_iter_done(digestmap_iter_t *iter)
 {
@@ -1116,6 +1124,7 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
   HT_CLEAR(strmap_impl, &map->head);
   tor_free(map);
 }
+/* DOCDOC digestmap_free */
 void
 digestmap_free(digestmap_t *map, void (*free_val)(void*))
 {
@@ -1132,11 +1141,13 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
   tor_free(map);
 }
 
+/* DOCDOC strmap_assert_ok */
 void
 strmap_assert_ok(const strmap_t *map)
 {
   tor_assert(!_strmap_impl_HT_REP_IS_BAD(&map->head));
 }
+/* DOCDOC digestmap_assert_ok */
 void
 digestmap_assert_ok(const digestmap_t *map)
 {
@@ -1150,6 +1161,7 @@ strmap_isempty(const strmap_t *map)
   return HT_EMPTY(&map->head);
 }
 
+/* DOCDOC digestmap_isempty */
 int
 digestmap_isempty(const digestmap_t *map)
 {
@@ -1163,6 +1175,7 @@ strmap_size(const strmap_t *map)
   return HT_SIZE(&map->head);
 }
 
+/* DOCDOC digestmap_size */
 int
 digestmap_size(const digestmap_t *map)
 {

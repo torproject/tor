@@ -1902,12 +1902,14 @@ try_locking(or_options_t *options, int err_if_locked)
   }
 }
 
+/* DOCDOC have_lockfile */
 int
 have_lockfile(void)
 {
   return lockfile != NULL;
 }
 
+/* DOCDOC release_lockfile */
 void
 release_lockfile(void)
 {

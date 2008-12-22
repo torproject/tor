@@ -17,6 +17,7 @@
 #include "torint.h"
 #include "compat.h"
 
+/* DOCDOC maskbits_t */
 typedef uint8_t maskbits_t;
 struct in_addr;
 /** Holds an IPv4 or IPv6 address.  (Uses less memory than struct
@@ -32,11 +33,17 @@ typedef struct tor_addr_t
 
 /* DOCDOC*/
 static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
+/* DOCDOC tor_addr_to_ipv4h */
 static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
+/* DOCDOC tor_addr_to_mapped_ipv4h */
 static INLINE uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
+/* DOCDOC tor_addr_family */
 static INLINE sa_family_t tor_addr_family(const tor_addr_t *a);
+/* DOCDOC tor_addr_to_in */
 static INLINE const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
+/* DOCDOC tor_addr_to_in6 */
 static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
+/* DOCDOC tor_addr_eq_ipv4h */
 static INLINE int tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u);
 socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
                                struct sockaddr *sa_out, socklen_t len);
@@ -153,7 +160,8 @@ int parse_addr_and_port_range(const char *s, uint32_t *addr_out,
                               uint16_t *port_max_out);
 int addr_mask_get_bits(uint32_t mask);
 int addr_mask_cmp_bits(uint32_t a1, uint32_t a2, maskbits_t bits);
-#define INET_NTOA_BUF_LEN 16 /* 255.255.255.255 */
+/** Length of a buffer to allocate to hold the results of tor_inet_ntoa.*/
+#define INET_NTOA_BUF_LEN 16
 int tor_inet_ntoa(const struct in_addr *in, char *buf, size_t buf_len);
 char *tor_dup_ip(uint32_t addr) ATTR_MALLOC;
 int get_interface_address(int severity, uint32_t *addr);

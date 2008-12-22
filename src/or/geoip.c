@@ -438,6 +438,7 @@ _c_hist_compare(const void **_a, const void **_b)
  * are willing to talk about it? */
 #define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
 
+/* DOCDOC round_to_next_multiple_of */
 static INLINE unsigned
 round_to_next_multiple_of(unsigned number, unsigned divisor)
 {
@@ -588,6 +589,7 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
+/* DOCDOC dump_geoip_stats */
 void
 dump_geoip_stats(void)
 {

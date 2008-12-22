@@ -2847,6 +2847,7 @@ token_free(directory_token_t *tok)
     goto done_tokenizing;                                          \
   STMT_END
 
+/* DOCDOC token_check_object */
 static INLINE directory_token_t *
 token_check_object(memarea_t *area, const char *kwd,
                    directory_token_t *tok, obj_syntax o_syn)

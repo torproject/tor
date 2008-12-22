@@ -872,6 +872,8 @@ _compare_strs(const void **a, const void **b)
 #if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
 #error "conditional consensus fingerprint length is larger than digest length"
 #endif
+
+/* DOCDOC directory_get_consensus_url */
 static char *
 directory_get_consensus_url(int supports_conditional_consensus)
 {
@@ -2193,6 +2195,7 @@ typedef struct request_t {
  * of request.  Maps from request type to pointer to request_t. */
 static strmap_t *request_map = NULL;
 
+/* DOCDOC note_client_request */
 static void
 note_client_request(int purpose, int compressed, size_t bytes)
 {

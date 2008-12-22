@@ -149,12 +149,14 @@ get_my_v3_authority_signing_key(void)
   return authority_signing_key;
 }
 
+/* DOCDOC get_my_v3_legacy_cert */
 authority_cert_t *
 get_my_v3_legacy_cert(void)
 {
   return legacy_key_certificate;
 }
 
+/* DOCDOC get_my_v3_legacy_signing_key */
 crypto_pk_env_t *
 get_my_v3_legacy_signing_key(void)
 {
@@ -283,6 +285,7 @@ init_key_from_file(const char *fname, int generate, int severity)
   return NULL;
 }
 
+/* DOCDOC load_authority_keyset */
 static int
 load_authority_keyset(int legacy, crypto_pk_env_t **key_out,
                        authority_cert_t **cert_out)
@@ -1200,7 +1203,7 @@ router_get_my_descriptor(void)
   return body;
 }
 
-/* Return the extrainfo document for this OR, or NULL if we have none.
+/** Return the extrainfo document for this OR, or NULL if we have none.
  * Rebuilt it (and the server descriptor) if necessary. */
 extrainfo_t *
 router_get_my_extrainfo(void)

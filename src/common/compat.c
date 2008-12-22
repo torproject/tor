@@ -1831,6 +1831,7 @@ tor_get_thread_id(void)
 #elif defined(USE_PTHREADS)
 static pthread_mutexattr_t attr_reentrant;
 static int threads_initialized = 0;
+/* DOCDOC tor_mutex_init */
 void
 tor_mutex_init(tor_mutex_t *mutex)
 {
@@ -1867,6 +1868,7 @@ tor_mutex_release(tor_mutex_t *m)
     tor_fragile_assert();
   }
 }
+/* DOCDOC tor_mutex_uninit */
 void
 tor_mutex_uninit(tor_mutex_t *m)
 {
@@ -1892,6 +1894,7 @@ tor_get_thread_id(void)
 #endif
 
 #ifdef TOR_IS_MULTITHREADED
+/* DOCDOC tor_mutex_new */
 tor_mutex_t *
 tor_mutex_new(void)
 {
@@ -1899,6 +1902,7 @@ tor_mutex_new(void)
   tor_mutex_init(m);
   return m;
 }
+/* DOCDOC tor_mutex_free */
 void
 tor_mutex_free(tor_mutex_t *m)
 {

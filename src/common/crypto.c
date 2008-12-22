@@ -261,6 +261,7 @@ _crypto_new_pk_env_evp_pkey(EVP_PKEY *pkey)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
+/* DOCDOC _crypto_pk_env_get_rsa */
 RSA *
 _crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
@@ -2273,10 +2274,12 @@ _openssl_locking_cb(int mode, int n, const char *file, int line)
     tor_mutex_release(_openssl_mutexes[n]);
 }
 
+/* DOCDOC CRYPTO_dynlock_value */
 struct CRYPTO_dynlock_value {
   tor_mutex_t *lock;
 };
 
+/* DOCDOC _openssl_dynlock_create_cb */
 static struct CRYPTO_dynlock_value *
 _openssl_dynlock_create_cb(const char *file, int line)
 {
@@ -2288,6 +2291,7 @@ _openssl_dynlock_create_cb(const char *file, int line)
   return v;
 }
 
+/* DOCDOC _openssl_dynlock_lock_cb */
 static void
 _openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
                          const char *file, int line)
@@ -2300,6 +2304,7 @@ _openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
     tor_mutex_release(v->lock);
 }
 
+/* DOCDOC _openssl_dynlock_destroy_cb */
 static void
 _openssl_dynlock_destroy_cb(struct CRYPTO_dynlock_value *v,
                             const char *file, int line)

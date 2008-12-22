@@ -234,6 +234,7 @@ router_reload_consensus_networkstatus(void)
   return 0;
 }
 
+/** Free all storage held by the vote_routerstatus object <b>rs</b>. */
 static void
 vote_routerstatus_free(vote_routerstatus_t *rs)
 {

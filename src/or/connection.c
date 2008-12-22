@@ -153,6 +153,7 @@ conn_state_to_string(int type, int state)
   return buf;
 }
 
+/* DOCDOC dir_connection_new */
 dir_connection_t *
 dir_connection_new(int socket_family)
 {
@@ -160,6 +161,7 @@ dir_connection_new(int socket_family)
   connection_init(time(NULL), TO_CONN(dir_conn), CONN_TYPE_DIR, socket_family);
   return dir_conn;
 }
+/* DOCDOC or_connection_new */
 or_connection_t *
 or_connection_new(int socket_family)
 {
@@ -172,6 +174,7 @@ or_connection_new(int socket_family)
 
   return or_conn;
 }
+/* DOCDOC edge_connection_new */
 edge_connection_t *
 edge_connection_new(int type, int socket_family)
 {
@@ -182,6 +185,7 @@ edge_connection_new(int type, int socket_family)
     edge_conn->socks_request = tor_malloc_zero(sizeof(socks_request_t));
   return edge_conn;
 }
+/* DOCDOC control_connection_new */
 control_connection_t *
 control_connection_new(int socket_family)
 {
@@ -192,6 +196,7 @@ control_connection_new(int socket_family)
   return control_conn;
 }
 
+/* DOCDOC connection_new */
 connection_t *
 connection_new(int type, int socket_family)
 {
@@ -806,6 +811,7 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address)
 };
 #endif /* HAVE_SYS_UN_H */
 
+/* DOCDOC warn_too_many_conns */
 static void
 warn_too_many_conns(void)
 {

@@ -89,6 +89,7 @@ static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
 #define EXTENDED_FORMAT 4
 #define NONEXTENDED_FORMAT 8
 #define ALL_FORMATS (EXTENDED_FORMAT|NONEXTENDED_FORMAT)
+/* DOCDOC event_format_t */
 typedef int event_format_t;
 
 static void connection_printf_to_buf(control_connection_t *conn,
@@ -502,7 +503,7 @@ send_control_done(control_connection_t *conn)
   connection_write_str_to_buf("250 OK\r\n", conn);
 }
 
-/* Send an event to all v1 controllers that are listening for code
+/** Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is given by <b>msg</b>.
  *
  * If <b>which</b> & SHORT_NAMES, the event contains short-format names: send
@@ -604,7 +605,7 @@ send_control_event_impl(uint16_t event, event_format_t which, int extended,
   }
 }
 
-/* Send an event to all v1 controllers that are listening for code
+/** Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided.
  *
@@ -620,7 +621,7 @@ send_control_event(uint16_t event, event_format_t which,
   va_end(ap);
 }
 
-/* Send an event to all v1 controllers that are listening for code
+/** Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided.
  *
@@ -3872,7 +3873,7 @@ control_event_bootstrap(bootstrap_status_t status, int progress)
   }
 }
 
-/* Called when Tor has failed to make bootstrapping progress in a way
+/** Called when Tor has failed to make bootstrapping progress in a way
  * that indicates a problem. <b>warn</b> gives a hint as to why, and
  * <b>reason</b> provides an "or_conn_end_reason" tag.
  */

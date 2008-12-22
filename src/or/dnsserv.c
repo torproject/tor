@@ -14,7 +14,7 @@ const char dnsserv_c_id[] =
 #include "or.h"
 #include "eventdns.h"
 
-/* Helper function: called by evdns whenever the client sends a request to our
+/** Helper function: called by evdns whenever the client sends a request to our
  * DNSPort.  We need to eventually answer the request <b>req</b>.
  */
 static void
@@ -149,7 +149,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   tor_free(q_name);
 }
 
-/* Helper function: called whenever the client sends a resolve request to our
+/** Helper function: called whenever the client sends a resolve request to our
  * controller.  We need to eventually answer the request <b>req</b>.
  * Returns 0 if the controller will be getting (or has gotten) an event in
  * response; -1 if we couldn't launch the request.
@@ -291,7 +291,7 @@ dnsserv_resolved(edge_connection_t *conn,
   conn->dns_server_request = NULL;
 }
 
-/* Set up the evdns server port for the UDP socket on <b>conn</b>, which
+/** Set up the evdns server port for the UDP socket on <b>conn</b>, which
  * must be an AP_DNS_LISTENER */
 void
 dnsserv_configure_listener(connection_t *conn)

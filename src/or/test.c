@@ -54,6 +54,7 @@ int have_failed = 0;
 
 static char temp_dir[256];
 
+/* DOCDOC setup_directory */
 static void
 setup_directory(void)
 {
@@ -78,6 +79,7 @@ setup_directory(void)
   is_setup = 1;
 }
 
+/* DOCDOC get_fname */
 static const char *
 get_fname(const char *name)
 {
@@ -87,6 +89,7 @@ get_fname(const char *name)
   return buf;
 }
 
+/* DOCDOC remove_directory */
 static void
 remove_directory(void)
 {
@@ -110,6 +113,7 @@ remove_directory(void)
 #undef CACHE_GENERATED_KEYS
 
 static crypto_pk_env_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
+/* DOCDOC pk_generate */
 static crypto_pk_env_t *
 pk_generate(int idx)
 {
@@ -129,6 +133,7 @@ pk_generate(int idx)
 #endif
 }
 
+/* DOCDOC free_pregenerated_keys */
 static void
 free_pregenerated_keys(void)
 {
@@ -141,6 +146,7 @@ free_pregenerated_keys(void)
   }
 }
 
+/* DOCDOC test_buffers */
 static void
 test_buffers(void)
 {
@@ -383,6 +389,7 @@ test_buffers(void)
     buf_free(buf2);
 }
 
+/* DOCDOC test_crypto_dh */
 static void
 test_crypto_dh(void)
 {
@@ -424,6 +431,7 @@ test_crypto_dh(void)
   crypto_dh_free(dh2);
 }
 
+/* DOCDOC test_crypto_rng */
 static void
 test_crypto_rng(void)
 {
@@ -461,6 +469,7 @@ test_crypto_rng(void)
   ;
 }
 
+/* DOCDOC test_crypto_aes */
 static void
 test_crypto_aes(void)
 {
@@ -590,6 +599,7 @@ test_crypto_aes(void)
   tor_free(data3);
 }
 
+/* DOCDOC test_crypto_sha */
 static void
 test_crypto_sha(void)
 {
@@ -658,6 +668,7 @@ test_crypto_sha(void)
     crypto_free_digest_env(d2);
 }
 
+/* DOCDOC test_crypto_pk */
 static void
 test_crypto_pk(void)
 {
@@ -767,6 +778,7 @@ test_crypto_pk(void)
   tor_free(encoded);
 }
 
+/* DOCDOC test_crypto */
 static void
 test_crypto(void)
 {
@@ -875,6 +887,7 @@ test_crypto(void)
   tor_free(data3);
 }
 
+/* DOCDOC test_crypto_s2k */
 static void
 test_crypto_s2k(void)
 {
@@ -907,6 +920,7 @@ test_crypto_s2k(void)
   tor_free(buf3);
 }
 
+/* DOCDOC _compare_strs */
 static int
 _compare_strs(const void **a, const void **b)
 {
@@ -914,6 +928,7 @@ _compare_strs(const void **a, const void **b)
   return strcmp(s1, s2);
 }
 
+/* DOCDOC _compare_without_first_ch */
 static int
 _compare_without_first_ch(const void *a, const void **b)
 {
@@ -921,6 +936,7 @@ _compare_without_first_ch(const void *a, const void **b)
   return strcasecmp(s1+1, s2);
 }
 
+/* DOCDOC test_util */
 static void
 test_util(void)
 {
@@ -1413,6 +1429,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     test_eq(port2, pt2);                                   \
   STMT_END
 
+/* DOCDOC test_util_ip6_helpers */
 static void
 test_util_ip6_helpers(void)
 {
@@ -1738,6 +1755,7 @@ test_util_ip6_helpers(void)
   ;
 }
 
+/* DOCDOC test_util_smartlist_basic */
 static void
 test_util_smartlist_basic(void)
 {
@@ -1776,6 +1794,7 @@ test_util_smartlist_basic(void)
   smartlist_free(sl);
 }
 
+/* DOCDOC test_util_smartlist_strings */
 static void
 test_util_smartlist_strings(void)
 {
@@ -2005,6 +2024,7 @@ test_util_smartlist_strings(void)
   tor_free(cp_alloc);
 }
 
+/* DOCDOC test_util_smartlist_overlap */
 static void
 test_util_smartlist_overlap(void)
 {
@@ -2057,6 +2077,7 @@ test_util_smartlist_overlap(void)
   smartlist_free(sl);
 }
 
+/* DOCDOC test_util_smartlist_digests */
 static void
 test_util_smartlist_digests(void)
 {
@@ -2089,6 +2110,7 @@ test_util_smartlist_digests(void)
   smartlist_free(sl);
 }
 
+/* DOCDOC test_util_smartlist_join */
 static void
 test_util_smartlist_join(void)
 {
@@ -2140,6 +2162,7 @@ test_util_smartlist_join(void)
   tor_free(joined);
 }
 
+/* DOCDOC test_util_bitarray */
 static void
 test_util_bitarray(void)
 {
@@ -2181,6 +2204,7 @@ test_util_bitarray(void)
     bitarray_free(ba);
 }
 
+/* DOCDOC test_util_digestset */
 static void
 test_util_digestset(void)
 {
@@ -2229,6 +2253,7 @@ static strmap_t *_thread_test_strmap = NULL;
 static char *_thread1_name = NULL;
 static char *_thread2_name = NULL;
 
+/* DOCDOC _thread_test_func */
 static void _thread_test_func(void* _s) ATTR_NORETURN;
 
 static int t1_count = 0;
@@ -2274,6 +2299,7 @@ _thread_test_func(void* _s)
   spawn_exit();
 }
 
+/* DOCDOC test_util_threads */
 static void
 test_util_threads(void)
 {
@@ -2345,12 +2371,14 @@ test_util_threads(void)
     tor_mutex_free(_thread_test_start2);
 }
 
+/* DOCDOC _compare_strings_for_pqueue */
 static int
 _compare_strings_for_pqueue(const void *s1, const void *s2)
 {
   return strcmp((const char*)s1, (const char*)s2);
 }
 
+/* DOCDOC test_util_pqueue */
 static void
 test_util_pqueue(void)
 {
@@ -2408,6 +2436,7 @@ test_util_pqueue(void)
     smartlist_free(sl);
 }
 
+/* DOCDOC test_util_gzip */
 static void
 test_util_gzip(void)
 {
@@ -2514,6 +2543,7 @@ test_util_gzip(void)
   tor_free(buf1);
 }
 
+/* DOCDOC test_util_strmap */
 static void
 test_util_strmap(void)
 {
@@ -2604,6 +2634,7 @@ test_util_strmap(void)
   tor_free(visited);
 }
 
+/* DOCDOC test_util_mmap */
 static void
 test_util_mmap(void)
 {
@@ -2680,6 +2711,7 @@ test_util_mmap(void)
     tor_munmap_file(mapping);
 }
 
+/* DOCDOC test_util_control_formats */
 static void
 test_util_control_formats(void)
 {
@@ -2697,6 +2729,7 @@ test_util_control_formats(void)
   tor_free(out);
 }
 
+/* DOCDOC test_onion_handshake */
 static void
 test_onion_handshake(void)
 {
@@ -2745,6 +2778,7 @@ test_onion_handshake(void)
 
 extern smartlist_t *fingerprint_list;
 
+/* DOCDOC test_dir_format */
 static void
 test_dir_format(void)
 {
@@ -3065,6 +3099,7 @@ test_dir_format(void)
   tor_free(dir2); /* And more !*/
 }
 
+/* DOCDOC test_dirutil */
 static void
 test_dirutil(void)
 {
@@ -3100,6 +3135,7 @@ extern const char AUTHORITY_SIGNKEY_2[];
 extern const char AUTHORITY_CERT_3[];
 extern const char AUTHORITY_SIGNKEY_3[];
 
+/* DOCDOC test_same_voter */
 static void
 test_same_voter(networkstatus_voter_info_t *v1,
                 networkstatus_voter_info_t *v2)
@@ -3116,6 +3152,7 @@ test_same_voter(networkstatus_voter_info_t *v1,
   ;
 }
 
+/* DOCDOC test_util_order_functions */
 static void
 test_util_order_functions(void)
 {
@@ -3145,6 +3182,7 @@ test_util_order_functions(void)
   ;
 }
 
+/* DOCDOC generate_ri_from_rs */
 static routerinfo_t *
 generate_ri_from_rs(const vote_routerstatus_t *vrs)
 {
@@ -3167,6 +3205,7 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
   return r;
 }
 
+/* DOCDOC test_v3_networkstatus */
 static void
 test_v3_networkstatus(void)
 {
@@ -3665,6 +3704,7 @@ test_v3_networkstatus(void)
     ns_detached_signatures_free(dsig2);
 }
 
+/* DOCDOC test_policy_summary_helper */
 static void
 test_policy_summary_helper(const char *policy_str,
                            const char *expected_summary)
@@ -3691,6 +3731,7 @@ test_policy_summary_helper(const char *policy_str,
     addr_policy_list_free(policy);
 }
 
+/* DOCDOC test_policies */
 static void
 test_policies(void)
 {
@@ -3849,6 +3890,7 @@ test_policies(void)
   }
 }
 
+/* DOCDOC test_rend_fns */
 static void
 test_rend_fns(void)
 {
@@ -3914,6 +3956,7 @@ test_rend_fns(void)
   tor_free(encoded);
 }
 
+/* DOCDOC bench_aes */
 static void
 bench_aes(void)
 {
@@ -3945,6 +3988,7 @@ bench_aes(void)
   crypto_free_cipher_env(c);
 }
 
+/* DOCDOC bench_dmap */
 static void
 bench_dmap(void)
 {
@@ -4008,6 +4052,7 @@ bench_dmap(void)
   smartlist_free(sl2);
 }
 
+/* DOCDOC test_util_mempool */
 static void
 test_util_mempool(void)
 {
@@ -4065,6 +4110,7 @@ test_util_mempool(void)
     mp_pool_destroy(pool);
 }
 
+/* DOCDOC test_util_memarea */
 static void
 test_util_memarea(void)
 {
@@ -4160,6 +4206,7 @@ test_util_memarea(void)
   tor_free(malloced_ptr);
 }
 
+/* DOCDOC test_util_datadir */
 static void
 test_util_datadir(void)
 {
@@ -4193,6 +4240,7 @@ test_util_datadir(void)
 }
 
 /* Test AES-CTR encryption and decryption with IV. */
+/* DOCDOC test_crypto_aes_iv */
 static void
 test_crypto_aes_iv(void)
 {
@@ -4329,6 +4377,7 @@ test_crypto_aes_iv(void)
 }
 
 /* Test base32 decoding. */
+/* DOCDOC test_crypto_base32_decode */
 static void
 test_crypto_base32_decode(void)
 {
@@ -4364,6 +4413,7 @@ test_crypto_base32_decode(void)
 }
 
 /* Test encoding and parsing of v2 rendezvous service descriptors. */
+/* DOCDOC test_rend_fns_v2 */
 static void
 test_rend_fns_v2(void)
 {
@@ -4464,6 +4514,7 @@ test_rend_fns_v2(void)
   tor_free(intro_points_encrypted);
 }
 
+/* DOCDOC test_geoip */
 static void
 test_geoip(void)
 {
@@ -4571,6 +4622,7 @@ static struct {
 };
 
 static void syntax(void) ATTR_NORETURN;
+/* DOCDOC syntax */
 static void
 syntax(void)
 {
@@ -4586,6 +4638,7 @@ syntax(void)
   exit(0);
 }
 
+/* DOCDOC main */
 int
 main(int c, char**v)
 {
