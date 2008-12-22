@@ -1902,14 +1902,14 @@ try_locking(or_options_t *options, int err_if_locked)
   }
 }
 
-/* DOCDOC have_lockfile */
+/** Return true iff we've successfully acquired the lock file. */
 int
 have_lockfile(void)
 {
   return lockfile != NULL;
 }
 
-/* DOCDOC release_lockfile */
+/** If we have successfully acquired the lock file, release it. */
 void
 release_lockfile(void)
 {

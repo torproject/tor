@@ -1470,7 +1470,9 @@ packed_cell_alloc(void)
   ++total_cells_allocated;
   return mp_pool_get(cell_pool);
 }
-/* DOCDOC dump_cell_pool_usage */
+
+/** Log current statistics for cell pool allocation at log level
+ * <b>severity</b>. */
 void
 dump_cell_pool_usage(int severity)
 {

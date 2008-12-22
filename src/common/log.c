@@ -766,7 +766,8 @@ parse_log_domain(const char *domain)
   return 0;
 }
 #if 0
-/** DOCDOC */
+/** Translate a bitmask of log domains to a string, or NULL if the bitmask
+ * is undecodable. */
 static const char *
 domain_to_string(log_domain_mask_t domain)
 {

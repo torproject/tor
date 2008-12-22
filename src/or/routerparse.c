@@ -2847,7 +2847,11 @@ token_free(directory_token_t *tok)
     goto done_tokenizing;                                          \
   STMT_END
 
-/* DOCDOC token_check_object */
+/** Helper: make sure that the token <b>tok</b> with keyword <b>kwd</b> obeys
+ * the object syntax of <b>o_syn</b>.  Allocate all storage in <b>area</b>.
+ * Return <b>tok</b> on success, or a new _ERR token if the token didn't
+ * conform to the syntax we wanted.
+ **/
 static INLINE directory_token_t *
 token_check_object(memarea_t *area, const char *kwd,
                    directory_token_t *tok, obj_syntax o_syn)
@@ -2855,6 +2859,7 @@ token_check_object(memarea_t *area, const char *kwd,
   char ebuf[128];
   switch (o_syn) {
     case NO_OBJ:
+      /* No object is allowed for this token. */
       if (tok->object_body) {
         tor_snprintf(ebuf, sizeof(ebuf), "Unexpected object for %s", kwd);
         RET_ERR(ebuf);
@@ -2865,20 +2870,21 @@ token_check_object(memarea_t *area, const char *kwd,
       }
       break;
     case NEED_OBJ:
+      /* There must be a (non-key) object. */
       if (!tok->object_body) {
         tor_snprintf(ebuf, sizeof(ebuf), "Missing object for %s", kwd);
         RET_ERR(ebuf);
       }
       break;
-    case NEED_KEY_1024:
-    case NEED_SKEY_1024:
+    case NEED_KEY_1024: /* There must be a 1024-bit public key. */
+    case NEED_SKEY_1024: /* There must be a 1024-bit private key. */
       if (tok->key && crypto_pk_keysize(tok->key) != PK_BYTES) {
         tor_snprintf(ebuf, sizeof(ebuf), "Wrong size on key for %s: %d bits",
                      kwd, (int)crypto_pk_keysize(tok->key));
         RET_ERR(ebuf);
       }
       /* fall through */
-    case NEED_KEY:
+    case NEED_KEY: /* There must be some kind of key. */
       if (!tok->key) {
         tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
       }
@@ -2897,6 +2903,7 @@ token_check_object(memarea_t *area, const char *kwd,
       }
       break;
     case OBJ_OK:
+      /* Anything goes with this token. */
       break;
   }
 

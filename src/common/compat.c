@@ -1831,7 +1831,8 @@ tor_get_thread_id(void)
 #elif defined(USE_PTHREADS)
 static pthread_mutexattr_t attr_reentrant;
 static int threads_initialized = 0;
-/* DOCDOC tor_mutex_init */
+/** Initialize <b>mutex</b> so it can be locked.  Every mutex must be set
+ * up eith tor_mutex_init() or tor_mutex_new(); not both. */
 void
 tor_mutex_init(tor_mutex_t *mutex)
 {
@@ -1868,7 +1869,9 @@ tor_mutex_release(tor_mutex_t *m)
     tor_fragile_assert();
   }
 }
-/* DOCDOC tor_mutex_uninit */
+/** Clean up the mutex <b>m</b> so that it no longer uses any system
+ * resources.  Does not free <b>m</b>.  This function must only be called on
+ * mutexes from tor_mutex_init(). */
 void
 tor_mutex_uninit(tor_mutex_t *m)
 {
@@ -1894,7 +1897,7 @@ tor_get_thread_id(void)
 #endif
 
 #ifdef TOR_IS_MULTITHREADED
-/* DOCDOC tor_mutex_new */
+/** Return a newly allocated, ready-for-use mutex. */
 tor_mutex_t *
 tor_mutex_new(void)
 {
@@ -1902,7 +1905,7 @@ tor_mutex_new(void)
   tor_mutex_init(m);
   return m;
 }
-/* DOCDOC tor_mutex_free */
+/** Release all storage and system resources held by <b>m</b>. */
 void
 tor_mutex_free(tor_mutex_t *m)
 {

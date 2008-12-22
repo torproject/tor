@@ -2274,12 +2274,13 @@ _openssl_locking_cb(int mode, int n, const char *file, int line)
     tor_mutex_release(_openssl_mutexes[n]);
 }
 
-/* DOCDOC CRYPTO_dynlock_value */
+/** OpenSSL helper type: wraps a Tor mutex so that openssl can  */
 struct CRYPTO_dynlock_value {
   tor_mutex_t *lock;
 };
 
-/* DOCDOC _openssl_dynlock_create_cb */
+/** Openssl callback function to allocate a lock: see CRYPTO_set_dynlock_*
+ * documentation in OpenSSL's docs for more info. */
 static struct CRYPTO_dynlock_value *
 _openssl_dynlock_create_cb(const char *file, int line)
 {
@@ -2291,7 +2292,8 @@ _openssl_dynlock_create_cb(const char *file, int line)
   return v;
 }
 
-/* DOCDOC _openssl_dynlock_lock_cb */
+/** Openssl callback function to acquire or release a lock: see
+ * CRYPTO_set_dynlock_* documentation in OpenSSL's docs for more info. */
 static void
 _openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
                          const char *file, int line)
@@ -2304,7 +2306,8 @@ _openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
     tor_mutex_release(v->lock);
 }
 
-/* DOCDOC _openssl_dynlock_destroy_cb */
+/** Openssl callback function to free a lock: see CRYPTO_set_dynlock_*
+ * documentation in OpenSSL's docs for more info. */
 static void
 _openssl_dynlock_destroy_cb(struct CRYPTO_dynlock_value *v,
                             const char *file, int line)

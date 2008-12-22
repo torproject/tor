@@ -149,14 +149,17 @@ get_my_v3_authority_signing_key(void)
   return authority_signing_key;
 }
 
-/* DOCDOC get_my_v3_legacy_cert */
+/** If we're an authority, and we're using a legacy authority identity key for
+ * emergency migration purposes, return the certificate associated with that
+ * key. */
 authority_cert_t *
 get_my_v3_legacy_cert(void)
 {
   return legacy_key_certificate;
 }
 
-/* DOCDOC get_my_v3_legacy_signing_key */
+/** If we're an authority, and we're using a legacy authority identity key for
+ * emergency migration purposes, return that key. */
 crypto_pk_env_t *
 get_my_v3_legacy_signing_key(void)
 {
@@ -285,10 +288,14 @@ init_key_from_file(const char *fname, int generate, int severity)
   return NULL;
 }
 
-/* DOCDOC load_authority_keyset */
+/** Try to load the vote-signing private key and certificate for being a v3
+ * directory authority, and make sure they match.  If <b>legacy</b>, load a
+ * legacy key/cert set for emergency key migration; otherwise load the regular
+ * key/cert set.  On success, store them into *<b>key_out</b> and
+ * *<b>cert_out</b> respectively, and return 0.  On failrue, return -1. */
 static int
 load_authority_keyset(int legacy, crypto_pk_env_t **key_out,
-                       authority_cert_t **cert_out)
+                      authority_cert_t **cert_out)
 {
   int r = -1;
   char *fname = NULL, *cert = NULL;

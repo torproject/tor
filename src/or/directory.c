@@ -862,18 +862,17 @@ _compare_strs(const void **a, const void **b)
   return strcmp(s1, s2);
 }
 
+#define CONDITIONAL_CONSENSUS_FPR_LEN 3
+#if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
+#error "conditional consensus fingerprint length is larger than digest length"
+#endif
+
 /** Return the URL we should use for a consensus download.
  *
  * This url depends on whether or not the server we go to
  * is sufficiently new to support conditional consensus downloading,
  * i.e. GET .../consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>
  */
-#define CONDITIONAL_CONSENSUS_FPR_LEN 3
-#if (CONDITIONAL_CONSENSUS_FPR_LEN > DIGEST_LEN)
-#error "conditional consensus fingerprint length is larger than digest length"
-#endif
-
-/* DOCDOC directory_get_consensus_url */
 static char *
 directory_get_consensus_url(int supports_conditional_consensus)
 {
@@ -2195,7 +2194,10 @@ typedef struct request_t {
  * of request.  Maps from request type to pointer to request_t. */
 static strmap_t *request_map = NULL;
 
-/* DOCDOC note_client_request */
+/** Record that a client request of <b>purpose</b> was made, and that
+ * <b>bytes</b> bytes of possibly <b>compressed</b> data were sent/received.
+ * Used to keep track of how much we've up/downloaded in what kind of
+ * request. */
 static void
 note_client_request(int purpose, int compressed, size_t bytes)
 {

@@ -153,7 +153,8 @@ conn_state_to_string(int type, int state)
   return buf;
 }
 
-/* DOCDOC dir_connection_new */
+/** Allocate and return a new dir_connection_t, initialized as by
+ * connection_init(). */
 dir_connection_t *
 dir_connection_new(int socket_family)
 {
@@ -161,7 +162,9 @@ dir_connection_new(int socket_family)
   connection_init(time(NULL), TO_CONN(dir_conn), CONN_TYPE_DIR, socket_family);
   return dir_conn;
 }
-/* DOCDOC or_connection_new */
+
+/** Allocate and return a new or_connection_t, initialized as by
+ * connection_init(). */
 or_connection_t *
 or_connection_new(int socket_family)
 {
@@ -174,7 +177,9 @@ or_connection_new(int socket_family)
 
   return or_conn;
 }
-/* DOCDOC edge_connection_new */
+
+/** Allocate and return a new edge_connection_t, initialized as by
+ * connection_init(). */
 edge_connection_t *
 edge_connection_new(int type, int socket_family)
 {
@@ -185,7 +190,9 @@ edge_connection_new(int type, int socket_family)
     edge_conn->socks_request = tor_malloc_zero(sizeof(socks_request_t));
   return edge_conn;
 }
-/* DOCDOC control_connection_new */
+
+/** Allocate and return a new control_connection_t, initialized as by
+ * connection_init(). */
 control_connection_t *
 control_connection_new(int socket_family)
 {
@@ -196,7 +203,9 @@ control_connection_new(int socket_family)
   return control_conn;
 }
 
-/* DOCDOC connection_new */
+/** Allocate, initialize, and return a new connection_t subtype of <b>type</b>
+ * to make or receive connections of address family <b>socket_family</b>.  The
+ * type should be one of the CONN_TYPE_* constants. */
 connection_t *
 connection_new(int type, int socket_family)
 {
@@ -811,7 +820,9 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address)
 };
 #endif /* HAVE_SYS_UN_H */
 
-/* DOCDOC warn_too_many_conns */
+/** Warn that an accept or a connect has failed because we're running up
+ * against our ulimit.  Rate-limit these warnings so that we don't spam
+ * the log. */
 static void
 warn_too_many_conns(void)
 {

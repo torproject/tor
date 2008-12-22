@@ -235,7 +235,10 @@ addr_policy_permits_tor_addr(const tor_addr_t *addr, uint16_t port,
   }
 }
 
-/* DOCDOC XXXX deprecate when possible. */
+/** Return true iff <b> policy</b> (possibly NULL) will allow a connection to
+ * <b>addr</b>:<b>port</b>.  <b>addr</b> is an IPv4 address given in host
+ * order. */
+/* XXXX deprecate when possible. */
 static int
 addr_policy_permits_address(uint32_t addr, uint16_t port,
                             smartlist_t *policy)
@@ -254,7 +257,8 @@ fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port)
                                      reachable_or_addr_policy);
 }
 
-/** DOCDOC */
+/** Return true iff we think our firewall will let us make an OR connection to
+ * <b>ri</b>. */
 int
 fascist_firewall_allows_or(routerinfo_t *ri)
 {
@@ -552,7 +556,8 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
   return found->policy;
 }
 
-/** DOCDOC */
+/** As compare_to_addr_to_addr_policy, but instead of a tor_addr_t, takes
+ * in host order. */
 addr_policy_result_t
 compare_addr_to_addr_policy(uint32_t addr, uint16_t port, smartlist_t *policy)
 {

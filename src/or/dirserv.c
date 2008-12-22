@@ -1587,7 +1587,8 @@ dirserv_get_runningrouters(void)
                          "v1 network status list", V1_AUTHORITY);
 }
 
-/* DOCDOC */
+/** Return the latest downloaded consensus networkstatus in encoded, signed,
+ * optionally compressed format, suitable for sending to clients. */
 cached_dir_t *
 dirserv_get_consensus(void)
 {

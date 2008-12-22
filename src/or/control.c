@@ -83,13 +83,25 @@ static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
  * of this so we can respond to getinfo status/bootstrap-phase queries. */
 static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
 
+/** Flag for event_format_t.  Indicates that we should use the old
+ * name format of nickname|hexdigest
+ */
 #define SHORT_NAMES 1
+/** Flag for event_format_t.  Indicates that we should use the new
+ * name format of $hexdigest[=~]nickname
+ */
 #define LONG_NAMES 2
 #define ALL_NAMES (SHORT_NAMES|LONG_NAMES)
+/** Flag for event_format_t.  Indicates that we should use the new event
+ * format where extra event fields are allowed using a NAME=VAL format. */
 #define EXTENDED_FORMAT 4
+/** Flag for event_format_t.  Indicates that we are using the old event format
+ * where extra fields aren't allowed. */
 #define NONEXTENDED_FORMAT 8
 #define ALL_FORMATS (EXTENDED_FORMAT|NONEXTENDED_FORMAT)
-/* DOCDOC event_format_t */
+
+/** Bit field of flags to select how to format a controller event.  Recognized
+ * flags are SHORT_NAMES, LONG_NAMES, EXTENDED_FORMAT, NONEXTENDED_FORMAT. */
 typedef int event_format_t;
 
 static void connection_printf_to_buf(control_connection_t *conn,

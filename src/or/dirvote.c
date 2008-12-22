@@ -219,7 +219,9 @@ get_voter(const networkstatus_t *vote)
   return smartlist_get(vote->voters, 0);
 }
 
-/* DOCDOC dir_src_ent_t */
+/** Temporary structure used in constructing a list of dir-source entries
+ * for a consensus.  One of these is generated for every vote, and one more
+ * for every legacy key in each vote. */
 typedef struct dir_src_ent_t {
   networkstatus_t *v;
   const char *digest;
@@ -236,7 +238,9 @@ _compare_votes_by_authority_id(const void **_a, const void **_b)
                 get_voter(b)->identity_digest, DIGEST_LEN);
 }
 
-/* DOCDOC _compare_dir_src_ents_by_authority_id */
+/** Helper: Compare the dir_src_ent_ts in *<b>_a</b> and *<b>_b</b> by
+ * their identity digests, and return -1, 0, or 1 depending on their
+ * ordering */
 static int
 _compare_dir_src_ents_by_authority_id(const void **_a, const void **_b)
 {

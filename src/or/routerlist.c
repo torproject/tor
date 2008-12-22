@@ -549,7 +549,8 @@ router_should_rebuild_store(desc_store_t *store)
     return store->journal_len > (1<<15);
 }
 
-/* DOCDOC desc_get_store */
+/** Return the desc_store_t in <b>rl</b> that should be used to store
+ * <b>sd</b>. */
 static INLINE desc_store_t *
 desc_get_store(routerlist_t *rl, signed_descriptor_t *sd)
 {
@@ -2466,7 +2467,10 @@ dump_routerlist_mem_usage(int severity)
 #endif
 }
 
-/* DOCDOC _routerlist_find_elt */
+/** Debugging helper: If <b>idx</b> is nonnegative, assert that <b>ri</b> is
+ * in <b>sl</b> at position <b>idx</b>. Otherwise, search <b>sl</b> for
+ * <b>ri</b>.  Return the index of <b>ri</b> in <b>sl</b>, or -1 if <b>ri</b>
+ * is not in <b>sl</b>. */
 static INLINE int
 _routerlist_find_elt(smartlist_t *sl, void *ri, int idx)
 {

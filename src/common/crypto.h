@@ -51,13 +51,9 @@
 /** Length of hex encoding of SHA1 digest, not including final NUL. */
 #define HEX_DIGEST_LEN 40
 
-/* DOCDOC crypto_pk_env_t */
 typedef struct crypto_pk_env_t crypto_pk_env_t;
-/* DOCDOC crypto_cipher_env_t */
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
-/* DOCDOC crypto_digest_env_t */
 typedef struct crypto_digest_env_t crypto_digest_env_t;
-/* DOCDOC crypto_dh_env_t */
 typedef struct crypto_dh_env_t crypto_dh_env_t;
 
 /* global state */

@@ -549,7 +549,8 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
   return chunk;
 }
 
-/** DOCDOC */
+/** If we're using readv and writev, how many chunks are we willing to
+ * read/write at a time? */
 #define N_IOV 3
 
 /** Read up to <b>at_most</b> bytes from the socket <b>fd</b> into

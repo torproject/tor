@@ -687,7 +687,10 @@ smartlist_uniq_digests(smartlist_t *sl)
   smartlist_uniq(sl, _compare_digests, _tor_free);
 }
 
-/* DOCDOC DEFINE_MAP_STRUCTS */
+/** Helper: Declare an entry type and a map type to implement a mapping using
+ * ht.h.  The map type will be called <b>maptype</b>.  The key part of each
+ * entry is declared using the C declaration <b>keydecl</b>.  All functions
+ * and types associated with the map get prefixed with <b>prefix</b> */
 #define DEFINE_MAP_STRUCTS(maptype, keydecl, prefix)      \
   typedef struct prefix ## entry_t {                      \
     HT_ENTRY(prefix ## entry_t) node;                     \
@@ -698,9 +701,7 @@ smartlist_uniq_digests(smartlist_t *sl)
     HT_HEAD(prefix ## impl, prefix ## entry_t) head;      \
   }
 
-/* DOCDOC DEFINE_MAP_STRUCTS */
 DEFINE_MAP_STRUCTS(strmap_t, char *key, strmap_);
-/* DOCDOC DEFINE_MAP_STRUCTS */
 DEFINE_MAP_STRUCTS(digestmap_t, char key[DIGEST_LEN], digestmap_);
 
 /** Helper: compare strmap_entry_t objects by key value. */
@@ -1007,7 +1008,7 @@ strmap_iter_init(strmap_t *map)
   return HT_START(strmap_impl, &map->head);
 }
 
-/* DOCDOC digestmap_iter_init */
+/** Start iterating through <b>map</b>.  See strmap_iter_init() for example. */
 digestmap_iter_t *
 digestmap_iter_init(digestmap_t *map)
 {
@@ -1015,8 +1016,8 @@ digestmap_iter_init(digestmap_t *map)
   return HT_START(digestmap_impl, &map->head);
 }
 
-/** Advance the iterator <b>iter</b> for map a single step to the next entry.
- */
+/** Advance the iterator <b>iter</b> for <b>map</b> a single step to the next
+ * entry, and return its new value. */
 strmap_iter_t *
 strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
 {
@@ -1025,7 +1026,8 @@ strmap_iter_next(strmap_t *map, strmap_iter_t *iter)
   return HT_NEXT(strmap_impl, &map->head, iter);
 }
 
-/* DOCDOC digestmap_iter_next */
+/** Advance the iterator <b>iter</b> for map a single step to the next entry,
+ * and return its new value. */
 digestmap_iter_t *
 digestmap_iter_next(digestmap_t *map, digestmap_iter_t *iter)
 {
@@ -1035,7 +1037,7 @@ digestmap_iter_next(digestmap_t *map, digestmap_iter_t *iter)
 }
 
 /** Advance the iterator <b>iter</b> a single step to the next entry, removing
- * the current entry.
+ * the current entry, and return its new value.
  */
 strmap_iter_t *
 strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
@@ -1051,7 +1053,9 @@ strmap_iter_next_rmv(strmap_t *map, strmap_iter_t *iter)
   return iter;
 }
 
-/* DOCDOC digestmap_iter_next_rmv */
+/** Advance the iterator <b>iter</b> a single step to the next entry, removing
+ * the current entry, and return its new value.
+ */
 digestmap_iter_t *
 digestmap_iter_next_rmv(digestmap_t *map, digestmap_iter_t *iter)
 {
@@ -1065,8 +1069,8 @@ digestmap_iter_next_rmv(digestmap_t *map, digestmap_iter_t *iter)
   return iter;
 }
 
-/** Set *keyp and *valp to the current entry pointed to by iter.
- */
+/** Set *<b>keyp</b> and *<b>valp</b> to the current entry pointed to by
+ * iter. */
 void
 strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
 {
@@ -1078,7 +1082,8 @@ strmap_iter_get(strmap_iter_t *iter, const char **keyp, void **valp)
   *valp = (*iter)->val;
 }
 
-/* DOCDOC digestmap_iter_get */
+/** Set *<b>keyp</b> and *<b>valp</b> to the current entry pointed to by
+ * iter. */
 void
 digestmap_iter_get(digestmap_iter_t *iter, const char **keyp, void **valp)
 {
@@ -1090,14 +1095,16 @@ digestmap_iter_get(digestmap_iter_t *iter, const char **keyp, void **valp)
   *valp = (*iter)->val;
 }
 
-/** Return true iff iter has advanced past the last entry of map.
- */
+/** Return true iff <b>iter</b> has advanced past the last entry of
+ * <b>map</b>. */
 int
 strmap_iter_done(strmap_iter_t *iter)
 {
   return iter == NULL;
 }
-/* DOCDOC digestmap_iter_done */
+
+/** Return true iff <b>iter</b> has advanced past the last entry of
+ * <b>map</b>. */
 int
 digestmap_iter_done(digestmap_iter_t *iter)
 {
@@ -1124,7 +1131,11 @@ strmap_free(strmap_t *map, void (*free_val)(void*))
   HT_CLEAR(strmap_impl, &map->head);
   tor_free(map);
 }
-/* DOCDOC digestmap_free */
+
+/** Remove all entries from <b>map</b>, and deallocate storage for those
+ * entries.  If free_val is provided, it is invoked on every value in
+ * <b>map</b>.
+ */
 void
 digestmap_free(digestmap_t *map, void (*free_val)(void*))
 {
@@ -1141,13 +1152,15 @@ digestmap_free(digestmap_t *map, void (*free_val)(void*))
   tor_free(map);
 }
 
-/* DOCDOC strmap_assert_ok */
+/** Fail with an assertion error if anything has gone wrong with the internal
+ * representation of <b>map</b>. */
 void
 strmap_assert_ok(const strmap_t *map)
 {
   tor_assert(!_strmap_impl_HT_REP_IS_BAD(&map->head));
 }
-/* DOCDOC digestmap_assert_ok */
+/** Fail with an assertion error if anything has gone wrong with the internal
+ * representation of <b>map</b>. */
 void
 digestmap_assert_ok(const digestmap_t *map)
 {
@@ -1161,7 +1174,7 @@ strmap_isempty(const strmap_t *map)
   return HT_EMPTY(&map->head);
 }
 
-/* DOCDOC digestmap_isempty */
+/** Return true iff <b>map</b> has no entries. */
 int
 digestmap_isempty(const digestmap_t *map)
 {
@@ -1175,7 +1188,7 @@ strmap_size(const strmap_t *map)
   return HT_SIZE(&map->head);
 }
 
-/* DOCDOC digestmap_size */
+/** Return the number of items in <b>map</b>. */
 int
 digestmap_size(const digestmap_t *map)
 {

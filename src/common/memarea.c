@@ -85,7 +85,8 @@ alloc_chunk(size_t sz, int freelist_ok)
   }
 }
 
-/* DOCDOC chunk_free */
+/** Release <b>chunk</b> from a memarea, either by adding it to the freelist
+ * or by freeing it if the freelist is already too big. */
 static void
 chunk_free(memarea_chunk_t *chunk)
 {

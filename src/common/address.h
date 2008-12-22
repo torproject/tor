@@ -17,8 +17,10 @@
 #include "torint.h"
 #include "compat.h"
 
-/* DOCDOC maskbits_t */
+/** The number of bits from an address to consider while doing a masked
+ * comparison. */
 typedef uint8_t maskbits_t;
+
 struct in_addr;
 /** Holds an IPv4 or IPv6 address.  (Uses less memory than struct
  * sockaddr_storage.) */
@@ -31,20 +33,30 @@ typedef struct tor_addr_t
   } addr;
 } tor_addr_t;
 
-/* DOCDOC*/
+/** Return an IPv4 address in network order for <b>a</b>, or 0 if
+ * <b>a</b> is not an IPv4 address. */
 static INLINE uint32_t tor_addr_to_ipv4n(const tor_addr_t *a);
-/* DOCDOC tor_addr_to_ipv4h */
+/** Return an IPv4 address in host order for <b>a</b>, or 0 if
+ * <b>a</b> is not an IPv4 address. */
 static INLINE uint32_t tor_addr_to_ipv4h(const tor_addr_t *a);
-/* DOCDOC tor_addr_to_mapped_ipv4h */
+/* Given an IPv6 address, return its mapped IPv4 address in host order, or
+ * 0 if <b>a</b> is not an IPv6 address.
+ *
+ * (Does not check whether the address is really a mapped address */
 static INLINE uint32_t tor_addr_to_mapped_ipv4h(const tor_addr_t *a);
-/* DOCDOC tor_addr_family */
+/** Return the address family of <b>a</b>.  Possible values are:
+ * AF_INET6, AF_INET, AF_UNSPEC. */
 static INLINE sa_family_t tor_addr_family(const tor_addr_t *a);
-/* DOCDOC tor_addr_to_in */
+/** Return an in_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
+ * an IPv4 address. */
 static INLINE const struct in_addr *tor_addr_to_in(const tor_addr_t *a);
-/* DOCDOC tor_addr_to_in6 */
+/** Return an in6_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
+ * an IPv6 address. */
 static INLINE const struct in6_addr *tor_addr_to_in6(const tor_addr_t *a);
-/* DOCDOC tor_addr_eq_ipv4h */
+/** Return true iff <b>a</b> is an IPv4 address equal to the host-ordered
+ * address in <b>u</b>. */
 static INLINE int tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u);
+
 socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
                                struct sockaddr *sa_out, socklen_t len);
 int tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
@@ -74,7 +86,7 @@ tor_addr_to_ipv4h(const tor_addr_t *a)
 static INLINE uint32_t
 tor_addr_to_mapped_ipv4h(const tor_addr_t *a)
 {
-  return ntohl(tor_addr_to_in6_addr32(a)[3]);
+  return a->family == AF_INET6 ? ntohl(tor_addr_to_in6_addr32(a)[3]) : 0;
 }
 static INLINE sa_family_t
 tor_addr_family(const tor_addr_t *a)

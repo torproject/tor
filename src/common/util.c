@@ -1341,14 +1341,16 @@ update_approx_time(time_t now)
  */
 static int ftime_skew = 0;
 static int ftime_slop = 60;
-/* DOCDOC ftime_set_maximum_sloppiness */
+/** Set the largest amount of sloppiness we'll allow in fuzzy time
+ * comparisons. */
 void
 ftime_set_maximum_sloppiness(int seconds)
 {
   tor_assert(seconds >= 0);
   ftime_slop = seconds;
 }
-/* DOCDOC ftime_set_estimated_skew */
+/** Set the amount by which we believe our system clock to differ from
+ * real time. */
 void
 ftime_set_estimated_skew(int seconds)
 {
@@ -1362,21 +1364,21 @@ ftime_get_window(time_t now, ftime_t *ft_out)
   ft_out->latest =  now + ftime_skew + ftime_slop;
 }
 #endif
-/* DOCDOC ftime_maybe_after */
+/** Return true iff we think that <b>now</b> might be after <b>when</b>. */
 int
 ftime_maybe_after(time_t now, time_t when)
 {
   /* It may be after when iff the latest possible current time is after when */
   return (now + ftime_skew + ftime_slop) >= when;
 }
-/* DOCDOC ftime_maybe_before */
+/** Return true iff we think that <b>now</b> might be before <b>when</b>. */
 int
 ftime_maybe_before(time_t now, time_t when)
 {
   /* It may be before when iff the earliest possible current time is before */
   return (now + ftime_skew - ftime_slop) < when;
 }
-/* DOCDOC ftime_definitely_after */
+/** Return true if we think that <b>now</b> is definitely after <b>when</b>. */
 int
 ftime_definitely_after(time_t now, time_t when)
 {
@@ -1384,7 +1386,7 @@ ftime_definitely_after(time_t now, time_t when)
    * after when. */
   return (now + ftime_skew - ftime_slop) >= when;
 }
-/* DOCDOC ftime_definitely_before */
+/** Return true if we think that <b>now</b> is definitely before <b>when</b>. */
 int
 ftime_definitely_before(time_t now, time_t when)
 {

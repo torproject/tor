@@ -54,7 +54,9 @@ int have_failed = 0;
 
 static char temp_dir[256];
 
-/* DOCDOC setup_directory */
+/** Select and create the temporary directory we'll use to run our unit tests.
+ * Store it in <b>temp_dir</b>.  Exit immediately if we can't create it.
+ * idempotent. */
 static void
 setup_directory(void)
 {
@@ -79,7 +81,7 @@ setup_directory(void)
   is_setup = 1;
 }
 
-/* DOCDOC get_fname */
+/** Return a filename relative to our testing temporary directory */
 static const char *
 get_fname(const char *name)
 {
@@ -89,7 +91,8 @@ get_fname(const char *name)
   return buf;
 }
 
-/* DOCDOC remove_directory */
+/** Remove all files stored under the temporary directory, and the directory
+ * itself. */
 static void
 remove_directory(void)
 {
@@ -113,12 +116,17 @@ remove_directory(void)
 #undef CACHE_GENERATED_KEYS
 
 static crypto_pk_env_t *pregen_keys[5] = {NULL, NULL, NULL, NULL, NULL};
-/* DOCDOC pk_generate */
+#define N_PREGEN_KEYS ((int)(sizeof(pregen_keys)/sizeof(pregen_keys[0])))
+
+/** Generate and return a new keypair for use in unit tests.  If we're using
+ * the key cache optimization, we might reuse keys: we only guarantee that
+ * keys made with distinct values for <b>idx</b> are different.  The value of
+ * <b>idx</b> must be at least 0, and less than N_PREGEN_KEYS. */
 static crypto_pk_env_t *
 pk_generate(int idx)
 {
 #ifdef CACHE_GENERATED_KEYS
-  tor_assert(idx < (int)(sizeof(pregen_keys)/sizeof(pregen_keys[0])));
+  tor_assert(idx < N_PREGEN_KEYS);
   if (! pregen_keys[idx]) {
     pregen_keys[idx] = crypto_new_pk_env();
     tor_assert(!crypto_pk_generate_key(pregen_keys[idx]));
@@ -133,12 +141,12 @@ pk_generate(int idx)
 #endif
 }
 
-/* DOCDOC free_pregenerated_keys */
+/** Free all storage used for the cached key optimization. */
 static void
 free_pregenerated_keys(void)
 {
   unsigned idx;
-  for (idx = 0; idx < sizeof(pregen_keys)/sizeof(pregen_keys[0]); ++idx) {
+  for (idx = 0; idx < N_PREGEN_KEYS; ++idx) {
     if (pregen_keys[idx]) {
       crypto_free_pk_env(pregen_keys[idx]);
       pregen_keys[idx] = NULL;
@@ -146,7 +154,7 @@ free_pregenerated_keys(void)
   }
 }
 
-/* DOCDOC test_buffers */
+/** Run unit tests for buffers.c */
 static void
 test_buffers(void)
 {
@@ -389,7 +397,7 @@ test_buffers(void)
     buf_free(buf2);
 }
 
-/* DOCDOC test_crypto_dh */
+/** Run unit tests for Diffie-Hellman functionality. */
 static void
 test_crypto_dh(void)
 {
@@ -431,7 +439,8 @@ test_crypto_dh(void)
   crypto_dh_free(dh2);
 }
 
-/* DOCDOC test_crypto_rng */
+/** Run unit tests for our random number generation function and its wrappers.
+ */
 static void
 test_crypto_rng(void)
 {
@@ -469,7 +478,7 @@ test_crypto_rng(void)
   ;
 }
 
-/* DOCDOC test_crypto_aes */
+/** Run unit tests for our AES functionality */
 static void
 test_crypto_aes(void)
 {
@@ -599,7 +608,7 @@ test_crypto_aes(void)
   tor_free(data3);
 }
 
-/* DOCDOC test_crypto_sha */
+/** Run unit tests for our SHA-1 functionality */
 static void
 test_crypto_sha(void)
 {
@@ -668,7 +677,7 @@ test_crypto_sha(void)
     crypto_free_digest_env(d2);
 }
 
-/* DOCDOC test_crypto_pk */
+/** Run unit tests for our public key crypto functions */
 static void
 test_crypto_pk(void)
 {
@@ -778,7 +787,7 @@ test_crypto_pk(void)
   tor_free(encoded);
 }
 
-/* DOCDOC test_crypto */
+/** Run unit tests for misc crypto functionality. */
 static void
 test_crypto(void)
 {
@@ -887,7 +896,7 @@ test_crypto(void)
   tor_free(data3);
 }
 
-/* DOCDOC test_crypto_s2k */
+/** Run unit tests for our secret-to-key passphrase hashing functionality. */
 static void
 test_crypto_s2k(void)
 {
@@ -920,7 +929,8 @@ test_crypto_s2k(void)
   tor_free(buf3);
 }
 
-/* DOCDOC _compare_strs */
+/** Helper: return a tristate based on comparing the strings in *<b>a</b> and
+ * *<b>b</b>. */
 static int
 _compare_strs(const void **a, const void **b)
 {
@@ -928,7 +938,8 @@ _compare_strs(const void **a, const void **b)
   return strcmp(s1, s2);
 }
 
-/* DOCDOC _compare_without_first_ch */
+/** Helper: return a tristate based on comparing the strings in *<b>a</b> and
+ * *<b>b</b>, excluding a's first character, and ignoring case. */
 static int
 _compare_without_first_ch(const void *a, const void **b)
 {
@@ -936,7 +947,7 @@ _compare_without_first_ch(const void *a, const void **b)
   return strcasecmp(s1+1, s2);
 }
 
-/* DOCDOC test_util */
+/** Test basic utility functionality. */
 static void
 test_util(void)
 {
@@ -1429,7 +1440,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     test_eq(port2, pt2);                                   \
   STMT_END
 
-/* DOCDOC test_util_ip6_helpers */
+/** Run unit tests for IPv6 encoding/decoding/manipulation functions. */
 static void
 test_util_ip6_helpers(void)
 {
@@ -1755,7 +1766,7 @@ test_util_ip6_helpers(void)
   ;
 }
 
-/* DOCDOC test_util_smartlist_basic */
+/** Run unit tests for basic dynamic-sized array functionality. */
 static void
 test_util_smartlist_basic(void)
 {
@@ -1794,7 +1805,7 @@ test_util_smartlist_basic(void)
   smartlist_free(sl);
 }
 
-/* DOCDOC test_util_smartlist_strings */
+/** Run unit tests for smartlist-of-strings functionality. */
 static void
 test_util_smartlist_strings(void)
 {
@@ -2024,7 +2035,7 @@ test_util_smartlist_strings(void)
   tor_free(cp_alloc);
 }
 
-/* DOCDOC test_util_smartlist_overlap */
+/** Run unit tests for smartlist set manipulation functions. */
 static void
 test_util_smartlist_overlap(void)
 {
@@ -2077,7 +2088,7 @@ test_util_smartlist_overlap(void)
   smartlist_free(sl);
 }
 
-/* DOCDOC test_util_smartlist_digests */
+/** Run unit tests for smartlist-of-digests functions. */
 static void
 test_util_smartlist_digests(void)
 {
@@ -2110,7 +2121,7 @@ test_util_smartlist_digests(void)
   smartlist_free(sl);
 }
 
-/* DOCDOC test_util_smartlist_join */
+/** Run unit tests for concatenate-a-smartlist-of-strings functions. */
 static void
 test_util_smartlist_join(void)
 {
@@ -2162,7 +2173,7 @@ test_util_smartlist_join(void)
   tor_free(joined);
 }
 
-/* DOCDOC test_util_bitarray */
+/** Run unit tests for bitarray code */
 static void
 test_util_bitarray(void)
 {
@@ -2204,7 +2215,8 @@ test_util_bitarray(void)
     bitarray_free(ba);
 }
 
-/* DOCDOC test_util_digestset */
+/** Run unit tests for digest set code (implemented as a hashtable or as a
+ * bloom filter) */
 static void
 test_util_digestset(void)
 {
@@ -2253,18 +2265,18 @@ static strmap_t *_thread_test_strmap = NULL;
 static char *_thread1_name = NULL;
 static char *_thread2_name = NULL;
 
-/* DOCDOC _thread_test_func */
 static void _thread_test_func(void* _s) ATTR_NORETURN;
 
 static int t1_count = 0;
 static int t2_count = 0;
 
+/** Helper function for threading unit tests: This function runs in a
+ * subthread. It grabs its own mutex (start1 or start2) to make sure that it
+ * should start, then it repeatedly alters _test_thread_strmap protected by
+ * _thread_test_mutex. */
 static void
 _thread_test_func(void* _s)
 {
-  /* This function runs in a subthread. It grabs its own mutex (start1 or
-   * start2) to make sure that it should start, then it repeatedly alters
-   * _test_thread_strmap protected by _thread_test_mutex. */
   char *s = _s;
   int i, *count;
   tor_mutex_t *m;
@@ -2299,7 +2311,7 @@ _thread_test_func(void* _s)
   spawn_exit();
 }
 
-/* DOCDOC test_util_threads */
+/** Run unit tests for threading logic. */
 static void
 test_util_threads(void)
 {
@@ -2371,14 +2383,14 @@ test_util_threads(void)
     tor_mutex_free(_thread_test_start2);
 }
 
-/* DOCDOC _compare_strings_for_pqueue */
+/** Helper: return a tristate based on comparing two strings. */
 static int
 _compare_strings_for_pqueue(const void *s1, const void *s2)
 {
   return strcmp((const char*)s1, (const char*)s2);
 }
 
-/* DOCDOC test_util_pqueue */
+/** Run unit tests for heap-based priority queue functions. */
 static void
 test_util_pqueue(void)
 {
@@ -2436,7 +2448,7 @@ test_util_pqueue(void)
     smartlist_free(sl);
 }
 
-/* DOCDOC test_util_gzip */
+/** Run unit tests for compression functions */
 static void
 test_util_gzip(void)
 {
@@ -2543,7 +2555,7 @@ test_util_gzip(void)
   tor_free(buf1);
 }
 
-/* DOCDOC test_util_strmap */
+/** Run unit tests for string-to-void* map functions */
 static void
 test_util_strmap(void)
 {
@@ -2634,7 +2646,7 @@ test_util_strmap(void)
   tor_free(visited);
 }
 
-/* DOCDOC test_util_mmap */
+/** Run unit tests for mmap() wrapper functionality. */
 static void
 test_util_mmap(void)
 {
@@ -2711,7 +2723,7 @@ test_util_mmap(void)
     tor_munmap_file(mapping);
 }
 
-/* DOCDOC test_util_control_formats */
+/** Run unit tests for escaping/unescaping data for use by controllers. */
 static void
 test_util_control_formats(void)
 {
@@ -2729,7 +2741,7 @@ test_util_control_formats(void)
   tor_free(out);
 }
 
-/* DOCDOC test_onion_handshake */
+/** Run unit tests for the onion handshake code. */
 static void
 test_onion_handshake(void)
 {
@@ -2778,7 +2790,7 @@ test_onion_handshake(void)
 
 extern smartlist_t *fingerprint_list;
 
-/* DOCDOC test_dir_format */
+/** Run unit tests for router descriptor generation logic. */
 static void
 test_dir_format(void)
 {
@@ -3099,7 +3111,7 @@ test_dir_format(void)
   tor_free(dir2); /* And more !*/
 }
 
-/* DOCDOC test_dirutil */
+/** Run unit tests for misc directory functions. */
 static void
 test_dirutil(void)
 {
@@ -3135,7 +3147,9 @@ extern const char AUTHORITY_SIGNKEY_2[];
 extern const char AUTHORITY_CERT_3[];
 extern const char AUTHORITY_SIGNKEY_3[];
 
-/* DOCDOC test_same_voter */
+/** Helper: Test that two networkstatus_voter_info_t do in fact represent the
+ * same voting authority, and that they do in fact have all the same
+ * information. */
 static void
 test_same_voter(networkstatus_voter_info_t *v1,
                 networkstatus_voter_info_t *v2)
@@ -3152,7 +3166,7 @@ test_same_voter(networkstatus_voter_info_t *v1,
   ;
 }
 
-/* DOCDOC test_util_order_functions */
+/** Run unit tests for getting the median of a list. */
 static void
 test_util_order_functions(void)
 {
@@ -3182,7 +3196,8 @@ test_util_order_functions(void)
   ;
 }
 
-/* DOCDOC generate_ri_from_rs */
+/** Helper: Make a new routerinfo containing the right information for a
+ * given vote_routerstatus_t. */
 static routerinfo_t *
 generate_ri_from_rs(const vote_routerstatus_t *vrs)
 {
@@ -3205,7 +3220,8 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
   return r;
 }
 
-/* DOCDOC test_v3_networkstatus */
+/** Run unit tests for generating and parsing V3 consensus networkstatus
+ * documents. */
 static void
 test_v3_networkstatus(void)
 {
@@ -3704,7 +3720,9 @@ test_v3_networkstatus(void)
     ns_detached_signatures_free(dsig2);
 }
 
-/* DOCDOC test_policy_summary_helper */
+/** Helper: Parse the exit policy string in <b>policy_str</b>, and make sure
+ * that policies_summarize() produces the string <b>expected_summary</b> from
+ * it. */
 static void
 test_policy_summary_helper(const char *policy_str,
                            const char *expected_summary)
@@ -3731,7 +3749,7 @@ test_policy_summary_helper(const char *policy_str,
     addr_policy_list_free(policy);
 }
 
-/* DOCDOC test_policies */
+/** Run unit tests for generating summary lines of exit policies */
 static void
 test_policies(void)
 {
@@ -3890,7 +3908,7 @@ test_policies(void)
   }
 }
 
-/* DOCDOC test_rend_fns */
+/** Run unit tests for basic rendezvous functions. */
 static void
 test_rend_fns(void)
 {
@@ -3956,7 +3974,7 @@ test_rend_fns(void)
   tor_free(encoded);
 }
 
-/* DOCDOC bench_aes */
+/** Run AES performance benchmarks. */
 static void
 bench_aes(void)
 {
@@ -3988,7 +4006,7 @@ bench_aes(void)
   crypto_free_cipher_env(c);
 }
 
-/* DOCDOC bench_dmap */
+/** Run digestmap_t performance benchmarks. */
 static void
 bench_dmap(void)
 {
@@ -4052,7 +4070,7 @@ bench_dmap(void)
   smartlist_free(sl2);
 }
 
-/* DOCDOC test_util_mempool */
+/** Run unittests for memory pool allocator */
 static void
 test_util_mempool(void)
 {
@@ -4110,7 +4128,7 @@ test_util_mempool(void)
     mp_pool_destroy(pool);
 }
 
-/* DOCDOC test_util_memarea */
+/** Run unittests for memory area allocator */
 static void
 test_util_memarea(void)
 {
@@ -4206,7 +4224,8 @@ test_util_memarea(void)
   tor_free(malloced_ptr);
 }
 
-/* DOCDOC test_util_datadir */
+/** Run unit tests for utility functions to get file names relative to
+ * the data directory. */
 static void
 test_util_datadir(void)
 {
@@ -4239,8 +4258,7 @@ test_util_datadir(void)
   tor_free(f);
 }
 
-/* Test AES-CTR encryption and decryption with IV. */
-/* DOCDOC test_crypto_aes_iv */
+/** Test AES-CTR encryption and decryption with IV. */
 static void
 test_crypto_aes_iv(void)
 {
@@ -4376,8 +4394,7 @@ test_crypto_aes_iv(void)
     crypto_free_cipher_env(cipher);
 }
 
-/* Test base32 decoding. */
-/* DOCDOC test_crypto_base32_decode */
+/** Test base32 decoding. */
 static void
 test_crypto_base32_decode(void)
 {
@@ -4412,8 +4429,7 @@ test_crypto_base32_decode(void)
   ;
 }
 
-/* Test encoding and parsing of v2 rendezvous service descriptors. */
-/* DOCDOC test_rend_fns_v2 */
+/** Test encoding and parsing of v2 rendezvous service descriptors. */
 static void
 test_rend_fns_v2(void)
 {
@@ -4514,7 +4530,7 @@ test_rend_fns_v2(void)
   tor_free(intro_points_encrypted);
 }
 
-/* DOCDOC test_geoip */
+/** Run unit tests for GeoIP code. */
 static void
 test_geoip(void)
 {
@@ -4580,6 +4596,7 @@ static struct {
   void (*test_fn)(void);
   int is_subent;
   int selected;
+  int is_default;
 } test_array[] = {
   ENT(buffers),
   ENT(crypto),
@@ -4618,11 +4635,12 @@ static struct {
   ENT(rend_fns),
   SUBENT(rend_fns, v2),
   ENT(geoip),
-  { NULL, NULL, 0, 0 },
+  { NULL, NULL, 0, 0, 0 },
 };
 
 static void syntax(void) ATTR_NORETURN;
-/* DOCDOC syntax */
+
+/** Print a syntax usage message, and exit.*/
 static void
 syntax(void)
 {
@@ -4638,7 +4656,8 @@ syntax(void)
   exit(0);
 }
 
-/* DOCDOC main */
+/** Main entry point for unit test code: parse the command line, and run
+ * some unit tests. */
 int
 main(int c, char**v)
 {
