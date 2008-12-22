@@ -4373,8 +4373,8 @@ void router_set_status(const char *digest, int up);
 
 /** Return value for router_add_to_routerlist() and dirserv_add_descriptor() */
 typedef enum was_router_added_t {
-  ROUTER_ADDED_SUCCESSFULLY = 0,
-  ROUTER_ADDED_NOTIFY_GENERATOR = 1,
+  ROUTER_ADDED_SUCCESSFULLY = 1,
+  ROUTER_ADDED_NOTIFY_GENERATOR = 0,
   ROUTER_BAD_EI = -1,
   ROUTER_WAS_NOT_NEW = -2,
   ROUTER_NOT_IN_CONSENSUS = -3,

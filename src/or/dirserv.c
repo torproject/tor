@@ -568,13 +568,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
 static int
 WRA_MORE_SEVERE(was_router_added_t a, was_router_added_t b)
 {
-  if (b == ROUTER_ADDED_SUCCESSFULLY) {
-    return 1;
-  } else if (b == ROUTER_ADDED_NOTIFY_GENERATOR) {
-    return !WRA_WAS_ADDED(a);
-  } else {
-    return a < b;
-  }
+  return a < b;
 }
 
 /** As for dirserv_add_descriptor(), but accepts multiple documents, and
@@ -595,7 +589,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
   int general = purpose == ROUTER_PURPOSE_GENERAL;
   tor_assert(msg);
 
-  r=ROUTER_ADDED_NOTIFY_GENERATOR; /*Least severe return value. */
+  r=ROUTER_ADDED_SUCCESSFULLY; /*Least severe return value. */
 
   format_iso_time(time_buf, now);
   if (tor_snprintf(annotation_buf, sizeof(annotation_buf),
