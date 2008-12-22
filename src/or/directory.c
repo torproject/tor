@@ -3094,6 +3094,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
                conn->_base.address, msg);
       write_http_status_line(conn, 400, msg);
     }
+    goto done;
   }
 
   if (options->HSAuthoritativeDir &&
