@@ -1458,8 +1458,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              LD_HTTP,
              "Received directory with skewed time (server '%s:%d'): "
              "It seems that our clock is %s by %s, or that theirs is %s. "
-             "Tor requires an accurate clock to work: please check your time "
-             "and date settings.",
+             "Tor requires an accurate clock to work: please check your time, "
+             "timezone, and date settings.",
              conn->_base.address, conn->_base.port,
              delta>0 ? "ahead" : "behind", dbuf,
              delta>0 ? "behind" : "ahead");
