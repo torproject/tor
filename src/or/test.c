@@ -2558,7 +2558,7 @@ test_v3_networkstatus(void)
   sign_skey_2 = crypto_new_pk_env();
   sign_skey_3 = crypto_new_pk_env();
   sign_skey_leg1 = pk_generate(4);
-  
+
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
                                                       AUTHORITY_SIGNKEY_1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,

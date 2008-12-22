@@ -1020,10 +1020,12 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       uint32_t addr = 0;
       if (tor_inet_aton(conn->socks_request->address, &in))
         addr = ntohl(in.s_addr);
-      if (router_exit_policy_all_routers_reject(addr, conn->socks_request->port,
+      if (router_exit_policy_all_routers_reject(addr,
+                                                conn->socks_request->port,
                                                 need_uptime)) {
         log_notice(LD_APP,
-                   "No Tor server exists that allows exit to %s:%d. Rejecting.",
+                   "No Tor server exists that allows exit to %s:%d. "
+                   "Rejecting.",
                    safe_str(conn->socks_request->address),
                    conn->socks_request->port);
         return -1;
