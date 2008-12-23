@@ -746,7 +746,7 @@ void
 tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr)
 {
   tor_assert(dest);
-  memset(dest, 0, sizeof(dest));
+  memset(dest, 0, sizeof(tor_addr_t));
   dest->family = AF_INET;
   dest->addr.in_addr.s_addr = v4addr;
 }
@@ -758,7 +758,7 @@ tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *ipv6_bytes)
 {
   tor_assert(dest);
   tor_assert(ipv6_bytes);
-  memset(dest, 0, sizeof(dest));
+  memset(dest, 0, sizeof(tor_addr_t));
   dest->family = AF_INET6;
   memcpy(dest->addr.in6_addr.s6_addr, ipv6_bytes, 16);
 }
