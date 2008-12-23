@@ -1349,8 +1349,10 @@ body_is_plausible(const char *body, size_t len, int purpose)
  * descriptors we requested: descriptor digests if <b>descriptor_digests</b>
  * is true, or identity digests otherwise.  Parse the descriptors, validate
  * them, and annotate them as having purpose <b>purpose</b> and as having been
- * downloaded from <b>source</b>. */
-static void
+ * downloaded from <b>source</b>.
+ *
+ * Return the number of routers actually added. */
+static int
 load_downloaded_routers(const char *body, smartlist_t *which,
                         int descriptor_digests,
                         int router_purpose,
@@ -1358,6 +1360,7 @@ load_downloaded_routers(const char *body, smartlist_t *which,
 {
   char buf[256];
   char time_buf[ISO_TIME_LEN+1];
+  int added = 0;
   int general = router_purpose == ROUTER_PURPOSE_GENERAL;
   format_iso_time(time_buf, time(NULL));
   tor_assert(source);
@@ -1369,12 +1372,13 @@ load_downloaded_routers(const char *body, smartlist_t *which,
                    !general ? "@purpose " : "",
                    !general ? router_purpose_to_string(router_purpose) : "",
                    !general ? "\n" : "")<0)
-    return;
+    return added;
 
-  router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
+  added = router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
                                   descriptor_digests, buf);
   control_event_bootstrap(BOOTSTRAP_STATUS_LOADING_DESCRIPTORS,
                           count_loading_descriptors_progress());
+  return added;
 }
 
 /** We are a client, and we've finished reading the server's
@@ -1772,10 +1776,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       } else {
         //router_load_routers_from_string(body, NULL, SAVED_NOWHERE, which,
         //                       descriptor_digests, conn->router_purpose);
-        load_downloaded_routers(body, which, descriptor_digests,
+        if (load_downloaded_routers(body, which, descriptor_digests,
                                 conn->router_purpose,
-                                conn->_base.address);
-        directory_info_has_arrived(now, 0);
+                                conn->_base.address))
+          directory_info_has_arrived(now, 0);
       }
     }
     if (which) { /* mark remaining ones as failed */
@@ -3297,8 +3301,10 @@ download_status_increment_failure(download_status_t *dls, int status_code,
   size_t schedule_len;
   int increment;
   tor_assert(dls);
-  if (status_code != 503 || server)
-    ++dls->n_download_failures;
+  if (status_code != 503 || server) {
+    if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD)
+      ++dls->n_download_failures;
+  }
 
   switch (dls->schedule) {
     case DL_SCHED_GENERIC:
@@ -3325,6 +3331,8 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
   if (dls->n_download_failures < schedule_len)
     increment = schedule[dls->n_download_failures];
+  else if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD)
+    increment = TIME_MAX;
   else
     increment = schedule[schedule_len-1];
 

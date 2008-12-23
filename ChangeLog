@@ -47,6 +47,12 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       for every cell. On systems where time() is a slow syscalls, this will
       be slightly helpful.
     - Exit servers can now answer resolve requests for ip6.arpa addresses.
+    - When we download a descriptor that we then immediately (as a directory
+      authority) reject, do not retry downloading it right away.  Should
+      save some bandwidth on authorities.  Fix for bug 888.  Patch by
+      Sebastian Hahn.
+    - When a download gets us zero good descriptors, do not notify Tor that
+      new directory information has arrived.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has

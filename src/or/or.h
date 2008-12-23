@@ -1299,6 +1299,9 @@ typedef struct download_status_t {
   download_schedule_t schedule : 8;
 } download_status_t;
 
+/** If n_download_failures is this high, the download can never happen. */
+#define IMPOSSIBLE_TO_DOWNLOAD 255
+
 /** The max size we expect router descriptor annotations we create to
  * be. We'll accept larger ones if we see them on disk, but we won't
  * create any that are larger than this. */
@@ -3361,6 +3364,14 @@ download_status_is_ready(download_status_t *dls, time_t now,
           && dls->next_attempt_at <= now);
 }
 
+static void download_status_mark_impossible(download_status_t *dl);
+/** Mark <b>dl</b> as never downloadable. */
+static INLINE void
+download_status_mark_impossible(download_status_t *dl)
+{
+  dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
+}
+
 /********************************* dirserv.c ***************************/
 /** Maximum length of an exit policy summary. */
 #define MAX_EXITPOLICY_SUMMARY_LEN (1000)
@@ -4424,7 +4435,7 @@ was_router_added_t router_add_extrainfo_to_routerlist(
 void routerlist_remove_old_routers(void);
 int router_load_single_router(const char *s, uint8_t purpose, int cache,
                               const char **msg);
-void router_load_routers_from_string(const char *s, const char *eos,
+int router_load_routers_from_string(const char *s, const char *eos,
                                      saved_location_t saved_location,
                                      smartlist_t *requested_fingerprints,
                                      int descriptor_digests,

@@ -3441,6 +3441,8 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
  * are in response to a query to the network: cache them by adding them to
  * the journal.
  *
+ * Return the number of routers actually added.
+ *
  * If <b>requested_fingerprints</b> is provided, it must contain a list of
  * uppercased fingerprints.  Do not update any router whose
  * fingerprint is not on the list; after updating a router, remove its
@@ -3449,7 +3451,7 @@ router_load_single_router(const char *s, uint8_t purpose, int cache,
  * If <b>descriptor_digests</b> is non-zero, then the requested_fingerprints
  * are descriptor digests. Otherwise they are identity digests.
  */
-void
+int
 router_load_routers_from_string(const char *s, const char *eos,
                                 saved_location_t saved_location,
                                 smartlist_t *requested_fingerprints,
@@ -3494,10 +3496,19 @@ router_load_routers_from_string(const char *s, const char *eos,
 
     r = router_add_to_routerlist(ri, &msg, from_cache, !from_cache);
     if (WRA_WAS_ADDED(r)) {
-      any_changed = 1;
+      any_changed++;
       smartlist_add(changed, ri);
       routerlist_descriptors_added(changed, from_cache);
       smartlist_clear(changed);
+    } else if (WRA_WAS_REJECTED(r)) {
+      download_status_t *dl_status;
+      dl_status = router_get_dl_status_by_descriptor_digest(
+          ri->cache_info.signed_descriptor_digest);
+      if (dl_status) {
+        log_info(LD_GENERAL, "Marking router %s as never downloadable",
+            ri->cache_info.signed_descriptor_digest);
+        download_status_mark_impossible(dl_status);
+      }
     }
   } SMARTLIST_FOREACH_END(ri);
 
@@ -3508,6 +3519,8 @@ router_load_routers_from_string(const char *s, const char *eos,
 
   smartlist_free(routers);
   smartlist_free(changed);
+
+  return any_changed;
 }
 
 /** Parse one or more extrainfos from <b>s</b> (ending immediately before
