@@ -2798,9 +2798,6 @@ test_onion_handshake(void)
     crypto_free_pk_env(pk);
 }
 
-/* DOCDOC fingerprint_list */
-extern smartlist_t *fingerprint_list;
-
 /** Run unit tests for router descriptor generation logic. */
 static void
 test_dir_format(void)
