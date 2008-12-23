@@ -6,6 +6,7 @@
 const char test_data_c_id[] =
   "$Id: /tor/trunk/src/or/test.c 13338 2007-06-10T19:13:32.101740Z nickm  $";
 
+/** First of 3 example authority certificates for unit testing. */
 const char AUTHORITY_CERT_1[] =
 "dir-key-certificate-version 3\n"
 "fingerprint D867ACF56A9D229B35C25F0090BC9867E906BE69\n"
@@ -47,6 +48,7 @@ const char AUTHORITY_CERT_1[] =
 "eCHd0K8NrQK0ipVk/7zcPDKOPeo9Y5aj/f6X/pDHtb+Dd5sT+l82G/Tqy4DIYUYR\n"
 "-----END SIGNATURE-----\n";
 
+/** The private signing key for AUTHORITY_CERT_1 */
 const char AUTHORITY_SIGNKEY_1[] =
 "-----BEGIN RSA PRIVATE KEY-----\n"
 "MIICWwIBAAKBgQCz0lCJ8rhLujVdzY6M6ZWp4iBAc0FxI79cff/pqp8GQAaWFZrs\n"
@@ -64,6 +66,7 @@ const char AUTHORITY_SIGNKEY_1[] =
 "Yx4lqK0ca5IkTp3HevwnlWaJgbaOTUspCVshzJBhDA==\n"
 "-----END RSA PRIVATE KEY-----\n";
 
+/** Second of 3 example authority certificates for unit testing. */
 const char AUTHORITY_CERT_2[] =
 "dir-key-certificate-version 3\n"
 "fingerprint 4D44AE0470B9E88FD4558EFEC82698FB33715400\n"
@@ -99,6 +102,7 @@ const char AUTHORITY_CERT_2[] =
 "a8qDHR0tPS9/VkqTPcvUWCZeY3UiDeWPjoK1nea1pz6DHDWglKPx86a0amjjayZQ\n"
 "-----END SIGNATURE-----\n";
 
+/** The private signing key for AUTHORITY_CERT_2 */
 const char AUTHORITY_SIGNKEY_2[] =
 "-----BEGIN RSA PRIVATE KEY-----\n"
 "MIICXgIBAAKBgQDrt3YK0LYd4qr4v1M38sGgDcNGwVLjDgYZzAXoixHES53iR1CZ\n"
@@ -116,6 +120,7 @@ const char AUTHORITY_SIGNKEY_2[] =
 "rjZyXmEZS3oe7TRCDD28GAGMmxSDvNfOOpyn14ishEs5AQ==\n"
 "-----END RSA PRIVATE KEY-----\n";
 
+/** Third of 3 example authority certificates for unit testing. */
 const char AUTHORITY_CERT_3[] =
 "dir-key-certificate-version 3\n"
 "fingerprint ED3719BF554DE9D7D59F5CA5A4F5AD121D020ED9\n"
@@ -151,6 +156,7 @@ const char AUTHORITY_CERT_3[] =
 "pMc65FviIrc/Q5TUku6NNbCbnGll1599PvWuUzkG42lJ17V6psKHIsqGtVdHlCUc\n"
 "-----END SIGNATURE-----\n";
 
+/** The private signing key for AUTHORITY_CERT_3 */
 const char AUTHORITY_SIGNKEY_3[] =
 "-----BEGIN RSA PRIVATE KEY-----\n"
 "MIICXgIBAAKBgQDa0mZVKt/AaM94rlDsnWEyVee6026tW8/NORT9kBtmftm8KYCi\n"

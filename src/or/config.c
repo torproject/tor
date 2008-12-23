@@ -54,8 +54,8 @@ typedef struct config_abbrev_t {
  * you can abbreviate <b>tok</b>s as <b>tok</b>". */
 #define PLURAL(tok) { #tok, #tok "s", 0, 0 }
 
-/* A list of command-line abbreviations. */
-/* DOCDOC _option_abbrevs */
+/** A list of abbreviations and aliases to map command-line options, obsolete
+ * option names, or alternative option names, to their current values. */
 static config_abbrev_t _option_abbrevs[] = {
   PLURAL(ExitNode),
   PLURAL(EntryNode),
@@ -92,8 +92,8 @@ static config_abbrev_t _option_abbrevs[] = {
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
   { NULL, NULL, 0, 0},
 };
-/* A list of state-file abbreviations, for compatibility. */
-/* DOCDOC _state_abbrevs */
+
+/** A list of state-file "abbreviations," for compatibility. */
 static config_abbrev_t _state_abbrevs[] = {
   { "AccountingBytesReadInterval", "AccountingBytesReadInInterval", 0, 0 },
   { "HelperNode", "EntryGuard", 0, 0 },
@@ -346,8 +346,8 @@ static config_var_t _option_vars[] = {
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
-/* Keep defaults synchronous with man page and config value check. */
-/* DOCDOC testing_tor_network_defaults */
+/** Override default values with these if the user sets the TestingTorNetwork
+ * option. */
 static config_var_t testing_tor_network_defaults[] = {
   V(ServerDNSAllowBrokenConfig,  BOOL,  "1"),
   V(DirAllowPrivateAddresses,    BOOL,     "1"),
@@ -372,7 +372,8 @@ static config_var_t testing_tor_network_defaults[] = {
 #define VAR(name,conftype,member,initvalue)                             \
   { name, CONFIG_TYPE_ ## conftype, STRUCT_OFFSET(or_state_t, member),  \
       initvalue }
-/* DOCDOC _state_vars */
+
+/** Array of "state" variables saved to the ~/.tor/state file. */
 static config_var_t _state_vars[] = {
   V(AccountingBytesReadInInterval,    MEMUNIT,  NULL),
   V(AccountingBytesWrittenInInterval, MEMUNIT,  NULL),
@@ -412,7 +413,9 @@ typedef struct config_var_description_t {
   const char *description;
 } config_var_description_t;
 
-/* DOCDOC options_description */
+/** Descriptions of the configuration options, to be displayed by online
+ * option browsers */
+/* XXXX022 did anybody want this? at all? If not, kill it.*/
 static config_var_description_t options_description[] = {
   /* ==== general options */
   { "AvoidDiskWrites", "If non-zero, try to write to disk less frequently than"
@@ -584,7 +587,7 @@ static config_var_description_t options_description[] = {
   { NULL, NULL },
 };
 
-/* DOCDOC state_description */
+/** Online description of state variables. */
 static config_var_description_t state_description[] = {
   { "AccountingBytesReadInInterval",
     "How many bytes have we read in this accounting period?" },
@@ -814,13 +817,12 @@ set_options(or_options_t *new_val, char **msg)
   return 0;
 }
 
-/* DOCDOC tor_svn_revision */
 extern const char tor_svn_revision[]; /* from tor_main.c */
 
-/* DOCDOC _version */
+/** The version of this Tor process, as parsed. */
 static char *_version = NULL;
 
-/** Return the current Tor version, possibly */
+/** Return the current Tor version. */
 const char *
 get_version(void)
 {
@@ -4617,7 +4619,8 @@ struct unit_table_t {
   uint64_t multiplier;
 };
 
-/* DOCDOC memory_units */
+/** Table to map the names of memory units to the number of bytes they
+ * contain. */
 static struct unit_table_t memory_units[] = {
   { "",          1 },
   { "b",         1<< 0 },
@@ -4645,7 +4648,8 @@ static struct unit_table_t memory_units[] = {
   { NULL, 0 },
 };
 
-/* DOCDOC time_units */
+/** Table to map the names of time units to the number of seconds they
+ * contain. */
 static struct unit_table_t time_units[] = {
   { "",         1 },
   { "second",   1 },

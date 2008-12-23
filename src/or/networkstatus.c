@@ -39,11 +39,14 @@ static networkstatus_t *current_consensus = NULL;
 /** A v3 consensus networkstatus that we've received, but which we don't
  * have enough certificates to be happy about. */
 static networkstatus_t *consensus_waiting_for_certs = NULL;
-/* DOCDOC consensus_waiting_for_certs_body */
+/** The encoded version of consensus_waiting_for_certs. */
 static char *consensus_waiting_for_certs_body = NULL;
-/* DOCDOC consensus_waiting_for_certs_set_at */
+/** When did we set the current value of consensus_waiting_for_certs?  If this
+ * is too recent, we shouldn't try to fetch a new consensus for a little while,
+ * to give ourselves time to get certificates for this one. */
 static time_t consensus_waiting_for_certs_set_at = 0;
-/* DOCDOC consensus_waiting_for_certs_dl_failed */
+/** Set to 1 if we've been holding on to consensus_waiting_for_certs so long
+ * that we should treat it as maybe being bad. */
 static int consensus_waiting_for_certs_dl_failed = 0;
 
 /** The last time we tried to download a networkstatus, or 0 for "never".  We

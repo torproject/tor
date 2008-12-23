@@ -6,7 +6,8 @@
 const char test_c_id[] =
   "$Id$";
 
-/* DOCDOC tor_svn_revision */
+/* Ordinarily defined in tor_main.c; this bit is just here to provide one
+ * since we're not linking to tor_main.c */
 const char tor_svn_revision[] = "";
 
 /**
@@ -2261,27 +2262,23 @@ test_util_digestset(void)
   smartlist_free(included);
 }
 
-/* stop threads running at once. */
-/* DOCDOC _thread_test_mutex */
+/** mutex for thread test to stop the threads hitting data at the same time. */
 static tor_mutex_t *_thread_test_mutex = NULL;
-/* make sure that threads have to run at the same time. */
-/* DOCDOC _thread_test_start1 */
-static tor_mutex_t *_thread_test_start1 = NULL;
-/* DOCDOC _thread_test_start2 */
-static tor_mutex_t *_thread_test_start2 = NULL;
-/* DOCDOC _thread_test_strmap */
+/** mutexes for the thread test to make sure that the threads have to
+ * interleave somewhat. */
+static tor_mutex_t *_thread_test_start1 = NULL,
+                   *_thread_test_start2 = NULL;
+/** Shared strmap for the thread test. */
 static strmap_t *_thread_test_strmap = NULL;
-/* DOCDOC _thread1_name */
+/** The name of thread1 for the thread test */
 static char *_thread1_name = NULL;
-/* DOCDOC _thread2_name */
+/** The name of thread2 for the thread test */
 static char *_thread2_name = NULL;
 
 static void _thread_test_func(void* _s) ATTR_NORETURN;
 
-/* DOCDOC t1_count */
-static int t1_count = 0;
-/* DOCDOC t2_count */
-static int t2_count = 0;
+/** How many iterations have the threads in the unit test run? */
+static int t1_count = 0, t2_count = 0;
 
 /** Helper function for threading unit tests: This function runs in a
  * subthread. It grabs its own mutex (start1 or start2) to make sure that it
@@ -3154,17 +3151,11 @@ test_dirutil(void)
   smartlist_free(sl);
 }
 
-/* DOCDOC AUTHORITY_CERT_1 */
 extern const char AUTHORITY_CERT_1[];
-/* DOCDOC AUTHORITY_SIGNKEY_1 */
 extern const char AUTHORITY_SIGNKEY_1[];
-/* DOCDOC AUTHORITY_CERT_2 */
 extern const char AUTHORITY_CERT_2[];
-/* DOCDOC AUTHORITY_SIGNKEY_2 */
 extern const char AUTHORITY_SIGNKEY_2[];
-/* DOCDOC AUTHORITY_CERT_3 */
 extern const char AUTHORITY_CERT_3[];
-/* DOCDOC AUTHORITY_SIGNKEY_3 */
 extern const char AUTHORITY_SIGNKEY_3[];
 
 /** Helper: Test that two networkstatus_voter_info_t do in fact represent the
@@ -4608,17 +4599,27 @@ test_geoip(void)
   tor_free(s);
 }
 
+/** For test_array. Declare an CLI-invocable off-by-default function in the
+ * unit tests, with function name and user-visible name <b>x</b>*/
 #define DISABLED(x) { #x, x, 0, 0, 0 }
+/** For test_array. Declare an CLI-invocable unit test function, with function
+ * name test_<b>x</b>(), and user-visible name <b>x</b> */
 #define ENT(x) { #x, test_ ## x, 0, 0, 1 }
+/** For test_array. Declare an CLI-invocable unit test function, with function
+ * name test_<b>x</b>_<b>y</b>(), and user-visible name
+ * <b>x</b>/<b>y</b>. This function will be treated as a subentry of <b>x</b>,
+ * so that invoking <b>x</b> from the CLI invokes this test too. */
 #define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0, 1 }
 
+/** An array of functions and information for all the unit tests we can run. */
 static struct {
-  const char *test_name;
-  void (*test_fn)(void);
-  int is_subent;
-  int selected;
-  int is_default;
-/* DOCDOC test_array */
+  const char *test_name; /**< How does the user refer to this test from the
+                          * command line? */
+  void (*test_fn)(void); /**< What function is called to run this test? */
+  int is_subent; /**< Is this a subentry of a bigger set of related tests? */
+  int selected; /**< Are we planning to run this one? */
+  int is_default; /**< If the user doesn't say what tests they want, do they
+                   * get this function by default? */
 } test_array[] = {
   ENT(buffers),
   ENT(crypto),

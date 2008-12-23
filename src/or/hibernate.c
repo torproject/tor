@@ -103,13 +103,12 @@ static time_t interval_wakeup_time = 0;
 static uint64_t expected_bandwidth_usage = 0;
 /** What unit are we using for our accounting? */
 static time_unit_t cfg_unit = UNIT_MONTH;
+
 /** How many days,hours,minutes into each unit does our accounting interval
  * start? */
-static int cfg_start_day = 0;
-/* DOCDOC cfg_start_hour */
-static int cfg_start_hour = 0;
-/* DOCDOC cfg_start_min */
-static int cfg_start_min = 0;
+static int cfg_start_day = 0,
+           cfg_start_hour = 0,
+           cfg_start_min = 0;
 
 static void reset_accounting(time_t now);
 static int read_bandwidth_usage(void);

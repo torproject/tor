@@ -20,19 +20,19 @@ const char command_c_id[] =
 
 #include "or.h"
 
-/** Keep statistics about how many of each type of cell we've received. */
+/** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;
-/* DOCDOC stats_n_create_cells_processed */
+/** How many CELL_CREATE cells have we received, ever? */
 uint64_t stats_n_create_cells_processed = 0;
-/* DOCDOC stats_n_created_cells_processed */
+/** How many CELL_CREATED cells have we received, ever? */
 uint64_t stats_n_created_cells_processed = 0;
-/* DOCDOC stats_n_relay_cells_processed */
+/** How many CELL_RELAY cells have we received, ever? */
 uint64_t stats_n_relay_cells_processed = 0;
-/* DOCDOC stats_n_destroy_cells_processed */
+/** How many CELL_DESTROY cells have we received, ever? */
 uint64_t stats_n_destroy_cells_processed = 0;
-/* DOCDOC stats_n_versions_cells_processed */
+/** How many CELL_VERSIONS cells have we received, ever? */
 uint64_t stats_n_versions_cells_processed = 0;
-/* DOCDOC stats_n_netinfo_cells_processed */
+/** How many CELL_NETINFO cells have we received, ever? */
 uint64_t stats_n_netinfo_cells_processed = 0;
 
 /* These are the main functions for processing cells */

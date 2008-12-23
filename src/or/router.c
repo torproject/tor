@@ -45,9 +45,11 @@ static crypto_pk_env_t *authority_signing_key = NULL;
  * authorities. */
 static authority_cert_t *authority_key_certificate = NULL;
 
-/* DOCDOC legacy_signing_key */
+/** For emergency V3 authority key migration: An extra signing key that we use
+ * with our old (obsolete) identity key for a while. */
 static crypto_pk_env_t *legacy_signing_key = NULL;
-/* DOCDOC legacy_key_certificate */
+/** For emergency V3 authority key migration: An extra certificate to
+ * authenticate legacy_signing_key with our obsolete identity key.*/
 static authority_cert_t *legacy_key_certificate = NULL;
 
 /* (Note that v3 authorities also have a separate "authority identity key",
@@ -1606,8 +1608,7 @@ router_guess_address_from_dir_headers(uint32_t *guess)
   return -1;
 }
 
-/* DOCDOC tor_svn_revision */
-extern const char tor_svn_revision[]; /* from main.c */
+extern const char tor_svn_revision[]; /* from tor_main.c */
 
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
  * string describing the version of Tor and the operating system we're

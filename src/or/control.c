@@ -54,9 +54,13 @@ const char control_c_id[] =
  * list to find out.
  **/
 typedef uint32_t event_mask_t;
-/* DOCDOC global_event_mask1long */
+
+/** An event mask of all the events that controller with the LONG_NAMES option
+ * set is interested in receiving. */
 static event_mask_t global_event_mask1long = 0;
-/* DOCDOC global_event_mask1short */
+
+/** An event mask of all the events that controller with the SHORT_NAMES option
+ * set is interested in receiving. */
 static event_mask_t global_event_mask1short = 0;
 
 /** True iff we have disabled log messages from being sent to the controller */
@@ -66,7 +70,11 @@ static int disable_log_messages = 0;
  * <b>e</b>. */
 #define EVENT_IS_INTERESTING(e) \
   ((global_event_mask1long|global_event_mask1short) & (1<<(e)))
+/** Macro: true if any control connection with the LONG_NAMES option is
+ * interested in events of type <b>e</b>. */
 #define EVENT_IS_INTERESTING1L(e) (global_event_mask1long & (1<<(e)))
+/** Macro: true if any control connection with the SHORT_NAMES option is
+ * interested in events of type <b>e</b>. */
 #define EVENT_IS_INTERESTING1S(e) (global_event_mask1short & (1<<(e)))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
@@ -76,7 +84,9 @@ static int disable_log_messages = 0;
 /** If true, we've set authentication_cookie to a secret code and
  * stored it to disk. */
 static int authentication_cookie_is_set = 0;
-/* DOCDOC authentication_cookie */
+/** If authentication_cookie_is_set, a secret cookie that we've stored to disk
+ * and which we're using to authenticate controllers.  (If the controller can
+ * read it off disk, it has permission to connect. */
 static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
 
 /** A sufficiently large size to record the last bootstrap phase string. */

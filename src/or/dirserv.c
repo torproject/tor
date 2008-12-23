@@ -30,11 +30,13 @@ const char dirserv_c_id[] =
 
 extern time_t time_of_process_start; /* from main.c */
 
-/** Do we need to regenerate the directory when someone asks for it? */
+/** Do we need to regenerate the v1 directory when someone asks for it? */
 static time_t the_directory_is_dirty = 1;
-/* DOCDOC runningrouters_is_dirty */
+/** Do we need to regenerate the v1 runningrouters document when somebody
+ * asks for it? */
 static time_t runningrouters_is_dirty = 1;
-/* DOCDOC the_v2_networkstatus_is_dirty */
+/** Do we need to regenerate our v2 networkstatus document when somebody asks
+ * for it? */
 static time_t the_v2_networkstatus_is_dirty = 1;
 
 /** Most recently generated encoded signed v1 directory. (v1 auth dirservers
@@ -1224,9 +1226,12 @@ directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now)
 
 /* Used only by non-v1-auth dirservers: The v1 directory and
  * runningrouters we'll serve when requested. */
-/* DOCDOC cached_directory */
+
+/** The v1 directory we'll serve (as a cache or as an authority) if
+ * requested. */
 static cached_dir_t *cached_directory = NULL;
-/* DOCDOC cached_runningrouters */
+/** The v1 runningrouters document we'll serve (as a cache or as an authority)
+ * if requested. */
 static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
 
 /** Used for other dirservers' v2 network statuses.  Map from hexdigest to
@@ -1640,7 +1645,7 @@ should_generate_v2_networkstatus(void)
 /* Thresholds for server performance: set by
  * dirserv_compute_performance_thresholds, and used by
  * generate_v2_networkstatus */
-/* XXXX stick these all in a struct. */
+
 /* DOCDOC stable_uptime */
 static uint32_t stable_uptime = 0; /* start at a safe value */
 /* DOCDOC stable_mtbf */

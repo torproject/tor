@@ -2527,11 +2527,17 @@ typedef struct {
    * count of how many client addresses have contacted us so that we can help
    * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
+
 #ifdef ENABLE_GEOIP_STATS
-  /* DOCDOC all of these. */
+  /** If true, and Tor is built with GEOIP_STATS support, and we're a
+   * directory, record how many directory requests we get from each country. */
   int DirRecordUsageByCountry;
+  /** Round all GeoIP results to the next multiple of this value, to avoid
+   * leaking information. */
   int DirRecordUsageGranularity;
+  /** Time interval: purge geoip stats after this long. */
   int DirRecordUsageRetainIPs;
+  /** Time interval: Flush geoip data to disk this often. */
   int DirRecordUsageSaveInterval;
 #endif
 

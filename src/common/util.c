@@ -1392,7 +1392,8 @@ ftime_definitely_after(time_t now, time_t when)
    * after when. */
   return (now + ftime_skew - ftime_slop) >= when;
 }
-/** Return true if we think that <b>now</b> is definitely before <b>when</b>. */
+/** Return true if we think that <b>now</b> is definitely before <b>when</b>.
+ */
 int
 ftime_definitely_before(time_t now, time_t when)
 {

@@ -1163,13 +1163,17 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   return 0; /* for forward compatibility, don't kill the circuit */
 }
 
-/* DOCDOC stats_n_data_cells_packaged */
+/** How many relay_data cells have we built, ever? */
 uint64_t stats_n_data_cells_packaged = 0;
-/* DOCDOC stats_n_data_bytes_packaged */
+/** How many bytes of data have we put in relay_data cells have we built,
+ * ever? This would be RELAY_PAYLOAD_SIZE*stats_n_data_cells_packaged if
+ * every relay cell we ever sent were completely full of data. */
 uint64_t stats_n_data_bytes_packaged = 0;
-/* DOCDOC stats_n_data_cells_received */
+/** How many relay_data cells have we received, ever? */
 uint64_t stats_n_data_cells_received = 0;
-/* DOCDOC stats_n_data_bytes_received */
+/** How many bytes of data have we received relay_data cells, ever? This would
+ * be RELAY_PAYLOAD_SIZE*stats_n_data_cells_packaged if every relay cell we
+ * ever received were completely full of data. */
 uint64_t stats_n_data_bytes_received = 0;
 
 /** While conn->inbuf has an entire relay payload of bytes on it,
@@ -1430,7 +1434,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 /** The total number of cells we have allocated from the memory pool. */
 static int total_cells_allocated = 0;
 
-/* DOCDOC cell_pool */
+/** A memory pool to allocate packed_cell_t objects. */
 static mp_pool_t *cell_pool = NULL;
 
 /** Allocate structures to hold cells. */
