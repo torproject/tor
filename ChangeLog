@@ -53,6 +53,8 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       Sebastian Hahn.
     - When a download gets us zero good descriptors, do not notify Tor that
       new directory information has arrived.
+    - Avoid some nasty corner cases in the logic for marking connections as
+      too old or obsolete or noncanonical for circuits.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has
@@ -105,6 +107,7 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       it should save 4-8 bytes per connection_t. "Every little bit helps."
     - Rename ServerDNSAllowBrokenResolvConf to ServerDNSAllowBrokenConfig
       for consistency; keep old option working for backward compatibility.
+    - Simplify the code for finding connections to use for a circuit.
 
 
 Changes in version 0.2.1.8-alpha - 2008-12-08
