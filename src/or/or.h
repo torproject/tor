@@ -3097,7 +3097,11 @@ int get_pf_socket(void);
 
 void connection_or_remove_from_identity_map(or_connection_t *conn);
 void connection_or_clear_identity_map(void);
-or_connection_t *connection_or_get_by_identity_digest(const char *digest);
+or_connection_t *connection_or_get_for_extend(const char *digest,
+                                              const tor_addr_t *target_addr,
+                                              const char **msg_out,
+                                              int *launch_out);
+void connection_or_set_bad_connections(void);
 
 int connection_or_reached_eof(or_connection_t *conn);
 int connection_or_process_inbuf(or_connection_t *conn);

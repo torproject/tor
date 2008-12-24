@@ -99,9 +99,6 @@ int has_completed_circuit=0;
 /** How long do we let a directory connection stall before expiring it? */
 #define DIR_CONN_MAX_STALL (5*60)
 
-/** How old do we let a connection to an OR get before deciding it's
- * too old for new circuits? */
-#define TIME_BEFORE_OR_CONN_IS_TOO_OLD (60*60*24*7)
 /** How long do we let OR connections handshake before we decide that
  * they are obsolete? */
 #define TLS_HANDSHAKE_TIMEOUT (60)
@@ -715,39 +712,9 @@ run_connection_housekeeping(int i, time_t now)
 
   or_conn = TO_OR_CONN(conn);
 
-  if (!or_conn->is_bad_for_new_circs) {
-    if (conn->timestamp_created + TIME_BEFORE_OR_CONN_IS_TOO_OLD < now) {
-      log_info(LD_OR,
-               "Marking OR conn to %s:%d as too old for new circuits "
-               "(fd %d, %d secs old).",
-               conn->address, conn->port, conn->s,
-               (int)(now - conn->timestamp_created));
-      or_conn->is_bad_for_new_circs = 1;
-    } else {
-      or_connection_t *best =
-        connection_or_get_by_identity_digest(or_conn->identity_digest);
-      if (best && best != or_conn &&
-          (conn->state == OR_CONN_STATE_OPEN ||
-           now > conn->timestamp_created + TLS_HANDSHAKE_TIMEOUT)) {
-          /* We only mark as obsolete connections that already are in
-           * OR_CONN_STATE_OPEN, i.e. that have finished their TLS handshaking.
-           * This is necessary because authorities judge whether a router is
-           * reachable based on whether they were able to TLS handshake with it
-           * recently.  Without this check we would expire connections too
-           * early for router->last_reachable to be updated.
-           */
-        log_info(LD_OR,
-                 "Marking duplicate conn to %s:%d as too old for new circuits "
-                 "(fd %d, %d secs old).",
-                 conn->address, conn->port, conn->s,
-                 (int)(now - conn->timestamp_created));
-        or_conn->is_bad_for_new_circs = 1;
-      }
-    }
-  }
-
   if (or_conn->is_bad_for_new_circs && !or_conn->n_circuits) {
-    /* no unmarked circs -- mark it now */
+    /* It's bad for new circuits, and has no unmarked circuits on it:
+     * mark it now. */
     log_info(LD_OR,
              "Expiring non-used OR connection to fd %d (%s:%d) [Too old].",
              conn->s, conn->address, conn->port);
@@ -1095,6 +1062,7 @@ run_scheduled_events(time_t now)
     circuit_build_needed_circs(now);
 
   /** 5. We do housekeeping for each connection... */
+  connection_or_set_bad_connections();
   for (i=0;i<smartlist_len(connection_array);i++) {
     run_connection_housekeeping(i, now);
   }

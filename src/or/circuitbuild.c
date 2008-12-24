@@ -334,13 +334,14 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit, int flags)
   return circ;
 }
 
+#if 0
 /** Return true iff <b>n_conn</b> (a connection with a desired identity), is
  * an acceptable choice for extending or launching a circuit to the address
  * <b>target_addr</b>.  If it is not, set <b>state_out</b> to a message
  * describing the connection's state and our next action, and set
  * <b>launch_out</b> to a boolean for whether we should launch a new
  * connection or not. */
-static int
+int
 connection_good_enough_for_extend(const or_connection_t *n_conn,
                                   const tor_addr_t *target_addr,
                                   const char **state_out,
@@ -373,6 +374,7 @@ connection_good_enough_for_extend(const or_connection_t *n_conn,
     return 1;
   }
 }
+#endif
 
 /** Start establishing the first hop of our circuit. Figure out what
  * OR we should connect to, and if necessary start the connection to
@@ -396,18 +398,16 @@ circuit_handle_first_hop(origin_circuit_t *circ)
             fmt_addr(&firsthop->extend_info->addr),
             firsthop->extend_info->port);
 
-  n_conn = connection_or_get_by_identity_digest(
-         firsthop->extend_info->identity_digest);
+  n_conn = connection_or_get_for_extend(firsthop->extend_info->identity_digest,
+                                        &firsthop->extend_info->addr,
+                                        &msg,
+                                        &should_launch);
 
-  /* If we don't have an open conn, or the conn we have is obsolete
-   * (i.e. old or broken) and the other side will let us make a second
-   * connection without dropping it immediately... */
-  if (!connection_good_enough_for_extend(n_conn, &firsthop->extend_info->addr,
-                                         &msg, &should_launch)) {
+  if (!n_conn) {
     /* not currently connected in a useful way. */
     const char *name = firsthop->extend_info->nickname ?
       firsthop->extend_info->nickname : fmt_addr(&firsthop->extend_info->addr);
-    log_info(LD_CIRC, "Next router %s on circuit is %s", safe_str(name), msg);
+    log_info(LD_CIRC, "Next router is %s: %s ", safe_str(name), msg?msg:"???");
     circ->_base.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (should_launch) {
@@ -824,14 +824,13 @@ circuit_extend(cell_t *cell, circuit_t *circ)
     return -1;
   }
 
-  n_conn = connection_or_get_by_identity_digest(id_digest);
+  n_conn = connection_or_get_for_extend(id_digest,
+                                        &n_addr,
+                                        &msg,
+                                        &should_launch);
 
-  /* If we don't have an open conn, or the conn we have is obsolete
-   * (i.e. old or broken) and the other side will let us make a second
-   * connection without dropping it immediately... */
-  if (!connection_good_enough_for_extend(n_conn, &n_addr, &msg,
-                                         &should_launch)) {
-    log_debug(LD_CIRC|LD_OR,"Next router (%s:%d) %s",
+  if (!n_conn) {
+    log_debug(LD_CIRC|LD_OR,"Next router (%s:%d): %s",
               fmt_addr(&n_addr), (int)n_port, msg?msg:"????");
 
     circ->n_hop = extend_info_alloc(NULL /*nickname*/,
