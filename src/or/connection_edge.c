@@ -2611,7 +2611,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     tor_assert(or_circ);
     if (or_circ->p_conn && !tor_addr_is_null(&or_circ->p_conn->_base.addr))
-      n_stream->_base.addr = or_circ->p_conn->_base.addr;
+      tor_addr_assign(&n_stream->_base.addr, &or_circ->p_conn->_base.addr);
     return connection_exit_connect_dir(n_stream);
   }
 

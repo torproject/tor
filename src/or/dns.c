@@ -616,7 +616,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
 
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
-  if (tor_addr_from_str(&addr, exitconn->_base.address)<0) {
+  if (tor_addr_from_str(&addr, exitconn->_base.address) >= 0) {
     tor_addr_assign(&exitconn->_base.addr, &addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
     return 1;
