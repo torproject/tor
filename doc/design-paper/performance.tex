@@ -31,6 +31,43 @@
  
 \maketitle
 
+\section{Altering node selection algorithm}
+
+Currently Tor selects nodes with a probability proportional to their bandwidth contribution to the network, however this may not be the optimal algorithm.
+Murdoch and Watson investigated the performance impact of different node selection algorithms, and derived a formula for estimating average latency $T$:
+
+\begin{equation}
+T = \sum_{i=1}^n q_i t_i = \sum_{i=1}^n \frac{q_i x_i (2 - q_i x_i \Lambda)}{2 (1 - q_i x_i \Lambda)}
+\label{eqn:waiting}
+\end{equation}
+
+Where $q_i$ is the probability of the $i$th node (out of $n$ nodes) being selected, $t_i$ is the average latency at the $i$th node, $x_i$ is the reciprocal of the $i$th node's bandwidth, and $\Lambda$ is the total network load.
+
+This calculation is subject to a number of assumptions.
+In particular, it assumes that Tor nodes have infinite length queues and input traffic is Poisson distributed.
+Whereas in practise Tor nodes have finite length queues (which controls network load), and the distribution of input cells is not known.
+Unfortunately, these assumptions are necessary to apply standard queueing theory results.
+
+Despite the simplifications made to the network model, results derived from it may still be useful.
+This is especially the case because it models the entire network, whereas experiments can feasibly change only a few of the clients' behaviour.
+The formula is also amenable to mathematical analysis such as non-linear optimization.
+
+To try and find the optimum node selection probabilities, I used a hill-climbing algorithm to minimize network latency, with a Tor directory snapshot as input.
+The result depends on the network load relative to overall capacity.
+As load approaches capacity, the optimum selection probabilities converge to the one used by Tor: node bandwidth proportional to network capacity.
+However, as load drops, the optimized selection algorithm favours slow nodes less and faster nodes more; many nodes are not used at all.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{node-selection/optimum-selection-probabilities}
+\caption{Optimum node selection probabilities for a variety of network loads. Tor is currently at around 50\% utilization. The node selection probabilities currently used by Tor are shown in black.}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=\textwidth]{node-selection/relative-selection-probabilities}
+\caption{Difference between Tor's current node selection probabilities and the optimum, for a variety of network loads. For Tor's current network load ($\approx 50$\%) shown in pink, the slowest nodes are not used at all, and the slower nodes are favoured less.}
+\end{figure}
+
+
 \section{TLS application record overhead reduction}
 
 OpenSSL will, by default, insert an empty TLS application record before any one which contains data.
