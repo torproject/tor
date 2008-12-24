@@ -52,5 +52,12 @@ lines(t1$bw, t3$prob-o, col=col[3], type="b")
 lines(t1$bw, t4$prob-o, col=col[4], type="b")
 lines(t1$bw, t5$prob-o, col=col[5], type="b")
 lines(t1$bw, tt$prob-o,col=col[8], type="b")
+
+lines(range(t1$bw), rep(0,2), lty=2)
+
 title(main="Selection probabilility compared to Tor")
+x <- rep(8111.669, 4)
+y <- c(1.396915e-02, 4.962766e-03, 1.635106e-03, 7.446809e-06)
+par(xpd=TRUE)
+text(x,y,c("50%", "75%", "90%", ">99%"), adj=c(0,0.5))
 dev.off()
