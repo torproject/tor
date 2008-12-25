@@ -28,7 +28,7 @@ typedef struct geoip_entry_t {
 /** How long are the periods for which we should remember request history? */
 #define REQUEST_HIST_PERIOD (8*60*60)
 
-/** A per-country record for GeoIP request history */
+/** A per-country record for GeoIP request history. */
 typedef struct geoip_country_t {
   char countrycode[3];
   uint32_t n_v2_ns_requests[REQUEST_HIST_LEN];

@@ -1013,7 +1013,7 @@ tor_addr_from_str(tor_addr_t *addr, const char *src)
 
 /** Parse an address or address-port combination from <b>s</b>, and put the
     result in <b>addr_out</b> and (optionally) <b>port_out</b>.  Return 0 on
-    success, negative on failure.*/
+    success, negative on failure. */
 int
 tor_addr_port_parse(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 {

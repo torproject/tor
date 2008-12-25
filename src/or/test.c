@@ -1388,7 +1388,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
   STMT_END
 
 /** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that
- * passes tor_addr_is_internal() with <b>for_listening</b> */
+ * passes tor_addr_is_internal() with <b>for_listening</b>. */
 #define test_internal_ip(a,for_listening) STMT_BEGIN           \
     test_eq(tor_inet_pton(AF_INET6, a, &t1.addr.in6_addr), 1); \
     t1.family = AF_INET6;                                      \

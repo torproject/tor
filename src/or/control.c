@@ -496,7 +496,7 @@ decode_escaped_string(const char *start, size_t in_len_max,
  * but it will always end with a CRLF sequence.
  *
  * Currently the length of the message is limited to 1024 (including the
- * ending CR LF NUL ("\\r\\n\\0") . */
+ * ending CR LF NUL ("\\r\\n\\0"). */
 static void
 connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
 {

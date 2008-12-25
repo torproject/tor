@@ -1,7 +1,7 @@
 Changes in version 0.2.1.9-alpha - 2008-12-2?
-  o Major features:
+  o Security fixes:
     - Never use a connection with a mismatched address to extend a
-      circuit, unless that connections is canonical. A canonical
+      circuit, unless that connection is canonical. A canonical
       connection is one whose address is authenticated by the router's
       identity key, either in a NETINFO cell or in a router descriptor.
 
@@ -59,8 +59,6 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has
       been fetched and validated.
-    - Finally remove deprecated "EXTENDED_FORMAT" feature. It has
-      been called EXTENDED_EVENTS since 0.1.2.4-alpha.
     - When we realize that another process has modified our cached
       descriptors, print out a more useful error message rather than
       triggering an assertion. Fixes bug 885. Patch from Karsten.
@@ -95,7 +93,10 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       Bugfix on 0.2.0.18-alpha.
 
   o Deprecated and removed features:
-    - RedirectExits has been removed.  It was deprecated since 0.2.0.3-alpha.
+    - RedirectExits has been removed. It was deprecated since
+      0.2.0.3-alpha.
+    - Finally remove deprecated "EXTENDED_FORMAT" controller feature. It
+      has been called EXTENDED_EVENTS since 0.1.2.4-alpha.
     - Cell pools are now always enabled; --disable-cell-pools is ignored.
 
   o Code simplifications and refactoring:

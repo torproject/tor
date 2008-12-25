@@ -2908,7 +2908,8 @@ router_set_status(const char *digest, int up)
  * <b>router</b> after subsequent calls with other routerinfo's -- they
  * might cause the original routerinfo to get freed.
  *
- * Returns the status for the operation.
+ * Returns the status for the operation. Might set *<b>msg</b> if it wants
+ * the poster of the router to know something.
  *
  * If <b>from_cache</b>, this descriptor came from our disk cache. If
  * <b>from_fetch</b>, we received it in response to a request we made.
