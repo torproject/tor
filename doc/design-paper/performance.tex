@@ -4,6 +4,14 @@
 \usepackage{color}
 \usepackage{graphicx}
 
+\usepackage{prettyref}
+\newrefformat{sec}{Section~\ref{#1}}
+\newrefformat{tab}{Table~\ref{#1}}
+\newrefformat{fig}{Figure~\ref{#1}}
+\newrefformat{cha}{Chapter~\ref{#1}}
+\newrefformat{eqn}{Equation~\ref{#1}}
+\newrefformat{apx}{Appendix~\ref{#1}}
+
 \usepackage{hyperref}
 \hypersetup{colorlinks, citecolor=MyDarkRed, filecolor=MyDarkBlue, linkcolor=MyDarkRed, urlcolor=MyDarkBlue}
 
@@ -53,20 +61,45 @@ This is especially the case because it models the entire network, whereas experi
 The formula is also amenable to mathematical analysis such as non-linear optimization.
 
 To try and find the optimum node selection probabilities, I used a hill-climbing algorithm to minimize network latency, with a Tor directory snapshot as input.
-The result depends on the network load relative to overall capacity.
+The results (shown in \prettyref{fig:optimum-selection} and \prettyref{fig:relative-selection}) depend on the network load relative to overall capacity.
 As load approaches capacity, the optimum selection probabilities converge to the one used by Tor: node bandwidth proportional to network capacity.
 However, as load drops, the optimized selection algorithm favours slow nodes less and faster nodes more; many nodes are not used at all.
 
 \begin{figure}
 \includegraphics[width=\textwidth]{node-selection/optimum-selection-probabilities}
 \caption{Optimum node selection probabilities for a variety of network loads. Tor is currently at around 50\% utilization. The node selection probabilities currently used by Tor are shown in black.}
+\label{fig:optimum-selection}
 \end{figure}
 
 \begin{figure}
 \includegraphics[width=\textwidth]{node-selection/relative-selection-probabilities}
 \caption{Difference between Tor's current node selection probabilities and the optimum, for a variety of network loads. For Tor's current network load ($\approx 50$\%) shown in pink, the slowest nodes are not used at all, and the slower nodes are favoured less.}
+\label{fig:relative-selection}
 \end{figure}
 
+\subsection{Impact of network load estimation}
+
+The node selection probabilities discussed above are tuned to a particular level of network load.
+It is possible to estimate network load because all Tor nodes report back both their capacity and usage in their descriptor.
+However, this estimate may be inaccurate and it is possible that the network load will change over time.
+In which case the node selection algorithm chosen will no longer be optimal.
+\prettyref{fig:vary-load} shows how average network latency is affected by node selection probabilities, for different levels of network load.
+
+As can be seen, small changes in network load do not significantly affect the network latency, and for all load levels examined, the optimized selection probabilities do offer lower latency when compared to the Tor selection algorithm.
+However, each probability distribution has a cut-off point at which at least one node will have a higher load than its capacity, at which its queue length, and hence latency, will become infinite.
+For the optimized selection probability distributions, this cut-off point is a few percent above the level they were designed to operate at.
+For the Tor selection algorithm, it is when the overall network capacity equals the overall network load.
+
+In this respect the Tor selection algorithm reaches the theoretical optimum, as no network can operate at greater than 100\% utilization while maintaining finite latency.
+However, in a real instantiation of any of these alternative probability distributions, the network latency would not become infinite; instead a connection would time out and a different circuit would be selected.
+So in practise, if the wrong probability distribution was selected, the network would converge at a different one.
+Unfortunately the standard queuing theory models cannot handle this case and it seems likely that a simulation would be required to estimate the effect.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{node-selection/vary-network-load}
+\caption{Average network latency against network load. Three node selection probabilities are shown, optimized for 50\%, 75\%, and 90\% network load. The Tor node selection algorithm is also included (black). The dots on the $x$ axis show the level of network load at which the node selection probability distributions are optimized for. The line is cut off when the model predicts that at least one node will have an infinite queue length, which occurs before load $=$ capacity for all node selection algorithms except for Tor's current one.}
+\label{fig:vary-load}
+\end{figure}
 
 \section{TLS application record overhead reduction}
 
