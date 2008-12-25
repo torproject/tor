@@ -1,9 +1,15 @@
 Changes in version 0.2.1.9-alpha - 2008-12-25
+  o New directory authorities:
+    - gabelmoo (the authority run by Karsten Loesing) now has a new
+      IP address.
+
   o Security fixes:
     - Never use a connection with a mismatched address to extend a
       circuit, unless that connection is canonical. A canonical
       connection is one whose address is authenticated by the router's
       identity key, either in a NETINFO cell or in a router descriptor.
+    - Avoid a possible memory corruption bug when receiving hidden service
+      descriptors. Bugfix on 0.2.1.6-alpha.
 
   o Major bugfixes:
     - Fix a logic error that would automatically reject all but the first
@@ -13,10 +19,12 @@ Changes in version 0.2.1.9-alpha - 2008-12-25
       "connecting" and it receives an "end" relay cell, the exit relay
       would silently ignore the end cell and not close the stream. If
       the client never closes the circuit, then the exit relay never
-      closes the TCP connection. Bug introduced in Tor 0.1.2.1-alpha;
+      closes the TCP connection. Bug introduced in 0.1.2.1-alpha;
       reported by "wood".
-    - Avoid a possible memory corruption bug when receiving hidden service
-      descriptors.  Bugfix on 0.2.1.6-alpha.
+    - When we can't initialize DNS because the network is down, do not
+      automatically stop Tor from starting. Instead, retry failed
+      dns_inits() every 10 minutes, and change the exit policy to reject
+      *:* until one succeeds. Fixes bug 691.
 
   o Minor features:
     - Give a better error message when an overzealous init script says
@@ -25,16 +33,12 @@ Changes in version 0.2.1.9-alpha - 2008-12-25
     - When a directory authority gives us a new guess for our IP address,
       log which authority we used. Hopefully this will help us debug
       the recent complaints about bad IP address guesses.
-    - When we can't initialize DNS because the network is down, do not
-      automatically stop Tor from starting. Instead, we retry failed
-      dns_inits() every 10 minutes, and change the exit policy to reject
-      *:* until one succeeds. Fixes bug 691.
     - Detect svn revision properly when we're using git-svn.
     - Try not to open more than one descriptor-downloading connection
       to an authority at once. This should reduce load on directory
       authorities. Fixes bug 366.
     - Add cross-certification to newly generated certificates, so that
-      a signing key is enough information to use to look up a certificate.
+      a signing key is enough information to look up a certificate.
       Partial implementation of proposal 157.
     - Start serving certificates by <identity digest, signing key digest>
       pairs. Partial implementation of proposal 157.
@@ -44,8 +48,8 @@ Changes in version 0.2.1.9-alpha - 2008-12-25
       messages to that length ourselves, rather than relying on the
       system to do it for us.
     - Optimize out calls to time(NULL) that occur for every IO operation,
-      or for every cell. On systems where time() is a slow syscalls,
-      this will be slightly helpful.
+      or for every cell. On systems where time() is a slow syscall,
+      this fix will be slightly helpful.
     - Exit servers can now answer resolve requests for ip6.arpa addresses.
     - When we download a descriptor that we then immediately (as
       a directory authority) reject, do not retry downloading it right
@@ -60,8 +64,8 @@ Changes in version 0.2.1.9-alpha - 2008-12-25
     - New CONSENSUS_ARRIVED event to note when a new consensus has
       been fetched and validated.
     - When we realize that another process has modified our cached
-      descriptors, print out a more useful error message rather than
-      triggering an assertion. Fixes bug 885. Patch from Karsten.
+      descriptors file, print out a more useful error message rather
+      than triggering an assertion. Fixes bug 885. Patch from Karsten.
     - Add an internal-use-only __ReloadTorrcOnSIGHUP option for
       controllers to prevent SIGHUP from reloading the
       configuration. Fixes bug 856.
@@ -80,13 +84,13 @@ Changes in version 0.2.1.9-alpha - 2008-12-25
       user if lower values are given in the configuration. Bugfix on
       0.1.1.17-rc. Patch by Sebastian.
     - Fix a race condition when freeing keys shared between main thread
-      and CPU workers that could result in a memory leak.  Bugfix on
-      0.1.0.1-rc.  Fixes bug 889.
+      and CPU workers that could result in a memory leak. Bugfix on
+      0.1.0.1-rc. Fixes bug 889.
 
   o Minor bugfixes (hidden services):
-    - Do not throw away existing introduction points on SIGHUP; bugfix on
-      0.0.6pre1; also, do not stall hidden services because of
-      introduction points thrown away; bugfix on 0.2.1.7-alpha. Spotted
+    - Do not throw away existing introduction points on SIGHUP (bugfix on
+      0.0.6pre1); also, do not stall hidden services because we're
+      throwing away introduction points; bugfix on 0.2.1.7-alpha. Spotted
       by John Brooks. Patch by Karsten. Fixes bug 874.
     - Fix a memory leak when we decline to add a v2 rendezvous
       descriptor to the cache because we already had a v0 descriptor
