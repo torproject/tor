@@ -1,4 +1,4 @@
-Changes in version 0.2.1.9-alpha - 2008-12-2?
+Changes in version 0.2.1.9-alpha - 2008-12-25
   o Security fixes:
     - Never use a connection with a mismatched address to extend a
       circuit, unless that connection is canonical. A canonical
@@ -43,18 +43,18 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
     - On platforms with a maximum syslog string length, truncate syslog
       messages to that length ourselves, rather than relying on the
       system to do it for us.
-    - Optimize out calls to time(NULL) that occur for every IO operation, or
-      for every cell. On systems where time() is a slow syscalls, this will
-      be slightly helpful.
+    - Optimize out calls to time(NULL) that occur for every IO operation,
+      or for every cell. On systems where time() is a slow syscalls,
+      this will be slightly helpful.
     - Exit servers can now answer resolve requests for ip6.arpa addresses.
-    - When we download a descriptor that we then immediately (as a directory
-      authority) reject, do not retry downloading it right away.  Should
-      save some bandwidth on authorities.  Fix for bug 888.  Patch by
-      Sebastian Hahn.
-    - When a download gets us zero good descriptors, do not notify Tor that
-      new directory information has arrived.
-    - Avoid some nasty corner cases in the logic for marking connections as
-      too old or obsolete or noncanonical for circuits.
+    - When we download a descriptor that we then immediately (as
+      a directory authority) reject, do not retry downloading it right
+      away. Should save some bandwidth on authorities. Fix for bug
+      888. Patch by Sebastian Hahn.
+    - When a download gets us zero good descriptors, do not notify
+      Tor that new directory information has arrived.
+    - Avoid some nasty corner cases in the logic for marking connections
+      as too old or obsolete or noncanonical for circuits.
 
   o Minor features (controller):
     - New CONSENSUS_ARRIVED event to note when a new consensus has
@@ -88,9 +88,9 @@ Changes in version 0.2.1.9-alpha - 2008-12-2?
       0.0.6pre1; also, do not stall hidden services because of
       introduction points thrown away; bugfix on 0.2.1.7-alpha. Spotted
       by John Brooks. Patch by Karsten. Fixes bug 874.
-    - Fix a memory leak when we decline to add a v2 rendezvous descriptor to
-      the cache because we already had a v0 descriptor with the same ID.
-      Bugfix on 0.2.0.18-alpha.
+    - Fix a memory leak when we decline to add a v2 rendezvous
+      descriptor to the cache because we already had a v0 descriptor
+      with the same ID. Bugfix on 0.2.0.18-alpha.
 
   o Deprecated and removed features:
     - RedirectExits has been removed. It was deprecated since
