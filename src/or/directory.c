@@ -3332,20 +3332,20 @@ download_status_increment_failure(download_status_t *dls, int status_code,
   if (dls->n_download_failures < schedule_len)
     increment = schedule[dls->n_download_failures];
   else if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD)
-    increment = TIME_MAX;
+    increment = INT_MAX;
   else
     increment = schedule[schedule_len-1];
 
   if (increment < INT_MAX)
     dls->next_attempt_at = now+increment;
   else
-    dls->next_attempt_at = TIME_MAX;
+    dls->next_attempt_at = INT_MAX;
 
   if (item) {
     if (dls->next_attempt_at == 0)
       log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
                 item, (int)dls->n_download_failures);
-    else if (dls->next_attempt_at < TIME_MAX)
+    else if (dls->next_attempt_at < INT_MAX)
       log_debug(LD_DIR, "%s failed %d time(s); I'll try again in %d seconds.",
                 item, (int)dls->n_download_failures,
                 (int)(dls->next_attempt_at-now));
