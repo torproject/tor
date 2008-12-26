@@ -1630,9 +1630,9 @@ test_util_ip6_helpers(void)
 
   /* tor_addr_compare(tor_addr_t x2) */
   test_addr_compare("ffff::", ==, "ffff::0");
-  test_addr_compare("0::3:2:1", >, "0::ffff:0.3.2.1");
-  test_addr_compare("0::2:2:1", >, "0::ffff:0.3.2.1");
-  test_addr_compare("0::ffff:0.3.2.1", <, "0::0:0:0");
+  test_addr_compare("0::3:2:1", <, "0::ffff:0.3.2.1");
+  test_addr_compare("0::2:2:1", <, "0::ffff:0.3.2.1");
+  test_addr_compare("0::ffff:0.3.2.1", >, "0::0:0:0");
   test_addr_compare("0::ffff:5.2.2.1", <, "::ffff:6.0.0.0"); /* XXXX wrong. */
   tor_addr_parse_mask_ports("[::ffff:2.3.4.5]", &t1, NULL, NULL, NULL);
   tor_addr_parse_mask_ports("2.3.4.5", &t2, NULL, NULL, NULL);

@@ -784,8 +784,9 @@ tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
  * addresses are equivalent under the mask mbits, less than 0 if addr1
  * preceeds addr2, and greater than 0 otherwise.
  *
- * Different address families (IPv4 vs IPv6) are always considered unequal.
- *   NOT QUITE XXXX DOCDOC.
+ * Different address families (IPv4 vs IPv6) are always considered unequal if
+ * <b>how</b> is CMP_EXACT; otherwise, IPv6-mapped IPv4 addresses are
+ * cosidered equivalent to their IPv4 equivalents.
  */
 int
 tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2,
@@ -798,32 +799,46 @@ tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2,
  * the address.
  *
  * Reduce over-specific masks (>128 for ipv6, >32 for ipv4) to 128 or 32.
+ *
+ * The mask is interpreted relative to <b>addr1</b>, so that if a is
+ * ::ffff:1.2.3.4, and b is 3.4.5.6,
+ * tor_addr_compare_masked(a,b,100,CMP_SEMANTIC) is the same as
+ * -tor_addr_compare_masked(b,a,4,CMP_SEMANTIC).
+ *
+ * We guarantee that the ordering from tor_addr_compare_masked is a total
+ * order on addresses, but not that it is any particular order, or that it
+ * will be the same from one version to the next.
  */
 int
 tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
                         maskbits_t mbits, tor_addr_comparison_t how)
 {
-  uint32_t ip4a=0, ip4b=0;
-  sa_family_t v_family[2];
-  int idx;
-  uint32_t masked_a, masked_b;
+#define TRISTATE(a,b) (((a)<(b))?-1: (((a)==(b))?0:1))
+  sa_family_t family1, family2, v_family1, v_family2;
 
   tor_assert(addr1 && addr2);
 
-  if (how == CMP_EXACT) {
-    int r = ((int)addr2->family) - ((int)addr1->family);
-    if (r) return r;
-    switch (addr1->family) {
+  v_family1 = family1 = tor_addr_family(addr1);
+  v_family2 = family2 = tor_addr_family(addr2);
+
+  if (family1==family2) {
+    /* When the families are the same, there's only one way to do the
+     * comparison: exactly. */
+    int r;
+    switch (family1) {
       case AF_UNSPEC:
         return 0; /* All unspecified addresses are equal */
       case AF_INET: {
         uint32_t a1 = ntohl(addr1->addr.in_addr.s_addr);
         uint32_t a2 = ntohl(addr2->addr.in_addr.s_addr);
+        if (mbits <= 0)
+          return 0;
         if (mbits > 32)
           mbits = 32;
         a1 >>= (32-mbits);
         a2 >>= (32-mbits);
-        return (a1 < a2) ? -1 : (a1 == a2) ? 0 : 1;
+        r = TRISTATE(a1, a2);
+        return r;
       }
       case AF_INET6: {
         const uint8_t *a1 = addr1->addr.in6_addr.s6_addr;
@@ -835,7 +850,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         } else if (leftover_bits) {
           uint8_t b1 = a1[bytes] >> (8-leftover_bits);
           uint8_t b2 = a2[bytes] >> (8-leftover_bits);
-          return (b1 < b2) ? -1 : (b1 == b2) ? 0 : 1;
+          return TRISTATE(b1, b2);
         } else {
           return 0;
         }
@@ -844,96 +859,44 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         tor_fragile_assert();
         return 0;
     }
+  } else if (how == CMP_EXACT) {
+    /* Unequal families and an exact comparison?  Stop now! */
+    return TRISTATE(family1, family2);
   }
 
-  /* XXXX021 this code doesn't handle mask bits right it's using v4-mapped v6
-   * addresses.  If I ask whether ::ffff:1.2.3.4 and ::ffff:1.2.7.8 are the
-   * same in the first 16 bits, it will say "yes."  That's not so intuitive.
-   *
-   * XXXX021 Also, it's way too complicated.
-   */
-
-  v_family[0] = tor_addr_family(addr1);
-  v_family[1] = tor_addr_family(addr2);
-
-  /* All UNSPEC addresses are equal; they are unequal to all other addresses.*/
-  if (v_family[0] == AF_UNSPEC) {
-    if (v_family[1] == AF_UNSPEC)
-      return 0;
-    else
-      return 1;
-  } else {
-    if (v_family[1] == AF_UNSPEC)
-      return -1;
-  }
-
-  if (v_family[0] == AF_INET) { /* If this is native IPv4, note the address */
-    /* Later we risk overwriting a v4-mapped address */
-    ip4a = tor_addr_to_ipv4h(addr1);
-  } else if ((v_family[0] == AF_INET6) && tor_addr_is_v4(addr1)) {
-    v_family[0] = AF_INET;
-    ip4a = tor_addr_to_mapped_ipv4h(addr1);
-  }
-
-  if (v_family[1] == AF_INET) { /* If this is native IPv4, note the address */
-    /* Later we risk overwriting a v4-mapped address */
-    ip4b = tor_addr_to_ipv4h(addr2);
-  } else if ((v_family[1] == AF_INET6) && tor_addr_is_v4(addr2)) {
-    v_family[1] = AF_INET;
-    ip4b = tor_addr_to_mapped_ipv4h(addr2);
-  }
-
-  if (v_family[0] > v_family[1]) /* Comparison of virtual families */
-    return 1;
-  else if (v_family[0] < v_family[1])
-    return -1;
-
-  if (mbits == 0)  /* Under a complete wildcard mask, consider them equal */
+  if (mbits == 0)
     return 0;
 
-  if (v_family[0] == AF_INET) { /* Real or mapped IPv4 */
-    if (mbits >= 32) {
-      masked_a = ip4a;
-      masked_b = ip4b;
-    } else if (mbits == 0) {
-      return 0;
-    } else {
-      masked_a = ip4a >> (32-mbits);
-      masked_b = ip4b >> (32-mbits);
-    }
-    if (masked_a < masked_b)
-      return -1;
-    else if (masked_a > masked_b)
-      return 1;
-    return 0;
-  } else if (v_family[0] == AF_INET6) { /* Real IPv6 */
-    const uint32_t *a1 = tor_addr_to_in6_addr32(addr1);
-    const uint32_t *a2 = tor_addr_to_in6_addr32(addr2);
-    for (idx = 0; idx < 4; ++idx) {
-      uint32_t masked_a = ntohl(a1[idx]);
-      uint32_t masked_b = ntohl(a2[idx]);
-      if (!mbits) {
-        return 0; /* Mask covers both addresses from here on */
-      } else if (mbits < 32) {
-        masked_a >>= (32-mbits);
-        masked_b >>= (32-mbits);
-      }
-
-      if (masked_a > masked_b)
-        return 1;
-      else if (masked_a < masked_b)
-        return -1;
-
-      if (mbits < 32)
+  if (family1 == AF_INET6 && tor_addr_is_v4(addr1))
+    v_family1 = AF_INET;
+  if (family2 == AF_INET6 && tor_addr_is_v4(addr2))
+    v_family2 = AF_INET;
+  if (v_family1 == v_family2) {
+    /* One or both addresses are a mapped ipv4 address. */
+    uint32_t a1, a2;
+    if (family1 == AF_INET6) {
+      a1 = tor_addr_to_mapped_ipv4h(addr1);
+      if (mbits <= 96)
         return 0;
-      mbits -= 32;
+      mbits -= 96; /* We just decided that the first 96 bits of a1 "match". */
+    } else {
+      a1 = tor_addr_to_ipv4h(addr1);
     }
-    return 0;
+    if (family2 == AF_INET6) {
+      a2 = tor_addr_to_mapped_ipv4h(addr2);
+    } else {
+      a2 = tor_addr_to_ipv4h(addr2);
+    }
+    if (mbits <= 0) return 0;
+    if (mbits > 32) mbits = 32;
+    a1 >>= (32-mbits);
+    a2 >>= (32-mbits);
+    return TRISTATE(a1, a2);
+  } else {
+    /* Unequal families, and semantic comparison, and no semantic family
+     * matches. */
+    return TRISTATE(family1, family2);
   }
-
-  tor_assert(0);  /* Unknown address family */
-  return -1; /* unknown address family, return unequal? */
-
 }
 
 /** Return a hash code based on the address addr */
