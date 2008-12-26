@@ -1733,28 +1733,31 @@ rep_hist_circbuilding_dormant(time_t now)
   return 1;
 }
 
-/* DOCDOC n_signed_dir_objs */
-static uint32_t n_signed_dir_objs = 0;
-/* DOCDOC n_signed_routerdescs */
-static uint32_t n_signed_routerdescs = 0;
-/* DOCDOC n_verified_dir_objs */
-static uint32_t n_verified_dir_objs = 0;
-/* DOCDOC n_verified_routerdescs */
-static uint32_t n_verified_routerdescs = 0;
-/* DOCDOC n_onionskins_encrypted */
-static uint32_t n_onionskins_encrypted = 0;
-/* DOCDOC n_onionskins_decrypted */
-static uint32_t n_onionskins_decrypted = 0;
-/* DOCDOC n_tls_client_handshakes */
-static uint32_t n_tls_client_handshakes = 0;
-/* DOCDOC n_tls_server_handshakes */
-static uint32_t n_tls_server_handshakes = 0;
-/* DOCDOC n_rend_client_ops */
-static uint32_t n_rend_client_ops = 0;
-/* DOCDOC n_rend_mid_ops */
-static uint32_t n_rend_mid_ops = 0;
-/* DOCDOC n_rend_server_ops */
-static uint32_t n_rend_server_ops = 0;
+/** Structure to track how many times we've done each public key operation. */
+static struct {
+  /** How many directory objects have we signed? */
+  unsigned long n_signed_dir_objs;
+  /** How many routerdescs have we signed? */
+  unsigned long n_signed_routerdescs;
+  /** How many directory objects have we verified? */
+  unsigned long n_verified_dir_objs;
+  /** How many routerdescs have we verified */
+  unsigned long n_verified_routerdescs;
+  /** How many onionskins have we encrypted to build circuits? */
+  unsigned long n_onionskins_encrypted;
+  /** How many onionskins have we decrypted to do circuit build requests? */
+  unsigned long n_onionskins_decrypted;
+  /** How many times have we done the TLS handshake as a client? */
+  unsigned long n_tls_client_handshakes;
+  /** How many times have we done the TLS handshake as a server? */
+  unsigned long n_tls_server_handshakes;
+  /** How many PK operations have we done as a hidden service client? */
+  unsigned long n_rend_client_ops;
+  /** How many PK operations have we done as a hidden service midpoint? */
+  unsigned long n_rend_mid_ops;
+  /** How many PK operations have we done as a hidden service provider? */
+  unsigned long n_rend_server_ops;
+} pk_op_counts = {0,0,0,0,0,0,0,0,0,0,0};
 
 /** Increment the count of the number of times we've done <b>operation</b>. */
 void
@@ -1763,37 +1766,37 @@ note_crypto_pk_op(pk_op_t operation)
   switch (operation)
     {
     case SIGN_DIR:
-      n_signed_dir_objs++;
+      pk_op_counts.n_signed_dir_objs++;
       break;
     case SIGN_RTR:
-      n_signed_routerdescs++;
+      pk_op_counts.n_signed_routerdescs++;
       break;
     case VERIFY_DIR:
-      n_verified_dir_objs++;
+      pk_op_counts.n_verified_dir_objs++;
       break;
     case VERIFY_RTR:
-      n_verified_routerdescs++;
+      pk_op_counts.n_verified_routerdescs++;
       break;
     case ENC_ONIONSKIN:
-      n_onionskins_encrypted++;
+      pk_op_counts.n_onionskins_encrypted++;
       break;
     case DEC_ONIONSKIN:
-      n_onionskins_decrypted++;
+      pk_op_counts.n_onionskins_decrypted++;
       break;
     case TLS_HANDSHAKE_C:
-      n_tls_client_handshakes++;
+      pk_op_counts.n_tls_client_handshakes++;
       break;
     case TLS_HANDSHAKE_S:
-      n_tls_server_handshakes++;
+      pk_op_counts.n_tls_server_handshakes++;
       break;
     case REND_CLIENT:
-      n_rend_client_ops++;
+      pk_op_counts.n_rend_client_ops++;
       break;
     case REND_MID:
-      n_rend_mid_ops++;
+      pk_op_counts.n_rend_mid_ops++;
       break;
     case REND_SERVER:
-      n_rend_server_ops++;
+      pk_op_counts.n_rend_server_ops++;
       break;
     default:
       log_warn(LD_BUG, "Unknown pk operation %d", operation);
@@ -1816,17 +1819,17 @@ dump_pk_ops(int severity)
       "%lu rendezvous client operations, "
       "%lu rendezvous middle operations, "
       "%lu rendezvous server operations.",
-      (unsigned long) n_signed_dir_objs,
-      (unsigned long) n_verified_dir_objs,
-      (unsigned long) n_signed_routerdescs,
-      (unsigned long) n_verified_routerdescs,
-      (unsigned long) n_onionskins_encrypted,
-      (unsigned long) n_onionskins_decrypted,
-      (unsigned long) n_tls_client_handshakes,
-      (unsigned long) n_tls_server_handshakes,
-      (unsigned long) n_rend_client_ops,
-      (unsigned long) n_rend_mid_ops,
-      (unsigned long) n_rend_server_ops);
+      pk_op_counts.n_signed_dir_objs,
+      pk_op_counts.n_verified_dir_objs,
+      pk_op_counts.n_signed_routerdescs,
+      pk_op_counts.n_verified_routerdescs,
+      pk_op_counts.n_onionskins_encrypted,
+      pk_op_counts.n_onionskins_decrypted,
+      pk_op_counts.n_tls_client_handshakes,
+      pk_op_counts.n_tls_server_handshakes,
+      pk_op_counts.n_rend_client_ops,
+      pk_op_counts.n_rend_mid_ops,
+      pk_op_counts.n_rend_server_ops);
 }
 
 /** Free all storage held by the OR/link history caches, by the
