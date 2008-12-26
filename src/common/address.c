@@ -62,7 +62,8 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
                      struct sockaddr *sa_out,
                      socklen_t len)
 {
-  if (a->family == AF_INET) {
+  sa_family_t family = tor_addr_family(a);
+  if (family == AF_INET) {
     struct sockaddr_in *sin;
     if (len < (int)sizeof(struct sockaddr_in))
       return -1;
@@ -71,7 +72,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     sin->sin_port = htons(port);
     sin->sin_addr.s_addr = tor_addr_to_ipv4n(a);
     return sizeof(struct sockaddr_in);
-  } else if (a->family == AF_INET6) {
+  } else if (family == AF_INET6) {
     struct sockaddr_in6 *sin6;
     if (len < (int)sizeof(struct sockaddr_in6))
       return -1;
@@ -79,7 +80,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     memset(sin6, 0, sizeof(struct sockaddr_in6));
     sin6->sin6_family = AF_INET6;
     sin6->sin6_port = htons(port);
-    memcpy(&sin6->sin6_addr, &a->addr.in6_addr, sizeof(struct in6_addr));
+    memcpy(&sin6->sin6_addr, tor_addr_to_in6(a), sizeof(struct in6_addr));
     return sizeof(struct sockaddr_in6);
   } else {
     return -1;
@@ -94,21 +95,18 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
 {
   tor_assert(a);
   tor_assert(sa);
-  memset(a, 0, sizeof(tor_addr_t));
   if (sa->sa_family == AF_INET) {
     struct sockaddr_in *sin = (struct sockaddr_in *) sa;
-    a->family = AF_INET;
-    a->addr.in_addr.s_addr = sin->sin_addr.s_addr;
+    tor_addr_from_ipv4n(a, sin->sin_addr.s_addr);
     if (port_out)
       *port_out = ntohs(sin->sin_port);
   } else if (sa->sa_family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) sa;
-    a->family = AF_INET6;
-    memcpy(&a->addr.in6_addr, &sin6->sin6_addr, sizeof(struct in6_addr));
+    tor_addr_from_in6(a, &sin6->sin6_addr);
     if (port_out)
       *port_out = ntohs(sin6->sin6_port);
   } else {
-    a->family = AF_UNSPEC;
+    tor_addr_make_unspec(a);
     return -1;
   }
   return 0;
@@ -142,7 +140,6 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
   tor_assert(name);
   tor_assert(addr);
   tor_assert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
-  memset(addr, 0, sizeof(addr)); /* Clear the extraneous fields. */
   if (!*name) {
     /* Empty address is an error. */
     return -1;
@@ -150,14 +147,12 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
     /* It's an IPv4 IP. */
     if (family == AF_INET6)
       return -1;
-    addr->family = AF_INET;
-    memcpy(&addr->addr.in_addr, &iaddr, sizeof(struct in_addr));
+    tor_addr_from_in(addr, &iaddr);
     return 0;
   } else if (tor_inet_pton(AF_INET6, name, &iaddr6)) {
     if (family == AF_INET)
       return -1;
-    addr->family = AF_INET6;
-    memcpy(&addr->addr.in6_addr, &iaddr6, sizeof(struct in6_addr));
+    tor_addr_from_in6(addr, &iaddr6);
     return 0;
   } else {
 #ifdef HAVE_GETADDRINFO
@@ -188,16 +183,12 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
       if (!best)
         best = res;
       if (best->ai_family == AF_INET) {
-        addr->family = AF_INET;
-        memcpy(&addr->addr.in_addr,
-               &((struct sockaddr_in*)best->ai_addr)->sin_addr,
-               sizeof(struct in_addr));
+        tor_addr_from_in(addr,
+                         &((struct sockaddr_in*)best->ai_addr)->sin_addr);
         result = 0;
       } else if (best->ai_family == AF_INET6) {
-        addr->family = AF_INET6;
-        memcpy(&addr->addr.in6_addr,
-               &((struct sockaddr_in6*)best->ai_addr)->sin6_addr,
-               sizeof(struct in6_addr));
+        tor_addr_from_in6(addr,
+                          &((struct sockaddr_in6*)best->ai_addr)->sin6_addr);
         result = 0;
       }
       freeaddrinfo(res);
@@ -231,11 +222,10 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
 #endif
 #endif /* endif HAVE_GETHOSTBYNAME_R_6_ARG. */
     if (ent) {
-      addr->family = ent->h_addrtype;
       if (ent->h_addrtype == AF_INET) {
-        memcpy(&addr->addr.in_addr, ent->h_addr, sizeof(struct in_addr));
+        tor_addr_from_in(addr, (struct in_addr*) ent->h_addr);
       } else if (ent->h_addrtype == AF_INET6) {
-        memcpy(&addr->addr.in6_addr, ent->h_addr, sizeof(struct in6_addr));
+        tor_addr_from_in(addr, (struct in6_addr*) ent->h_addr);
       } else {
         tor_assert(0); /* gethostbyname() returned a bizarre addrtype */
       }
@@ -383,9 +373,7 @@ tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
                      |((inaddr.s_addr & 0xff000000ul) >> 24));
 
     if (result) {
-      memset(result, 0, sizeof(tor_addr_t));
-      result->family = AF_INET;
-      result->addr.in_addr.s_addr = inaddr.s_addr;
+      tor_addr_from_in(result, &inaddr);
     }
     return 1;
   }
@@ -421,8 +409,7 @@ tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
       return -1;
 
     if (result) {
-      result->family = AF_INET6;
-      memcpy(&result->addr.in6_addr, &in6, sizeof(in6));
+      tor_addr_from_in6(result, &in6);
     }
     return 1;
   }
@@ -462,10 +449,11 @@ tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
   } else if (addr->family == AF_INET6) {
     int i;
     char *cp = out;
+    const uint8_t *bytes = tor_addr_to_in6_addr8(addr);
     if (outlen < REVERSE_LOOKUP_NAME_BUF_LEN)
       return -1;
     for (i = 15; i >= 0; --i) {
-      uint8_t byte = addr->addr.in6_addr.s6_addr[i];
+      uint8_t byte = bytes[i];
       *cp++ = "0123456789abcdef"[byte & 0x0f];
       *cp++ = '.';
       *cp++ = "0123456789abcdef"[byte >> 4];
@@ -506,6 +494,9 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   char *base = NULL, *address, *mask = NULL, *port = NULL, *rbracket = NULL;
   char *endptr;
   int any_flag=0, v4map=0;
+  sa_family_t family;
+  struct in6_addr in6_tmp;
+  struct in_addr in_tmp;
 
   tor_assert(s);
   tor_assert(addr_out);
@@ -552,12 +543,14 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   memset(addr_out, 0, sizeof(tor_addr_t));
 
   if (!strcmp(address, "*")) {
-    addr_out->family = AF_INET; /* AF_UNSPEC ???? XXXX_IP6 */
+    family = AF_INET; /* AF_UNSPEC ???? XXXX_IP6 */
     any_flag = 1;
-  } else if (tor_inet_pton(AF_INET6, address, &addr_out->addr.in6_addr) > 0) {
-    addr_out->family = AF_INET6;
-  } else if (tor_inet_pton(AF_INET, address, &addr_out->addr.in_addr) > 0) {
-    addr_out->family = AF_INET;
+  } else if (tor_inet_pton(AF_INET6, address, &in6_tmp) > 0) {
+    family = AF_INET6;
+    tor_addr_from_in6(addr_out, &in6_tmp);
+  } else if (tor_inet_pton(AF_INET, address, &in_tmp) > 0) {
+    family = AF_INET;
+    tor_addr_from_in(addr_out, &in_tmp);
   } else {
     log_warn(LD_GENERAL, "Malformed IP %s in address pattern; rejecting.",
              escaped(address));
@@ -591,7 +584,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
       bits = (int) strtol(mask, &endptr, 10);
       if (!*endptr) {  /* strtol converted everything, so it was an integer */
         if ((bits<0 || bits>128) ||
-            ((tor_addr_family(addr_out) == AF_INET) && bits > 32)) {
+            (family == AF_INET && bits > 32)) {
           log_warn(LD_GENERAL,
                    "Bad number of mask bits (%d) on address range; rejecting.",
                    bits);
@@ -613,7 +606,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
           goto err;
         }
       }
-      if (tor_addr_family(addr_out) == AF_INET6 && v4map) {
+      if (family == AF_INET6 && v4map) {
         if (bits > 32 && bits < 96) { /* Crazy */
           log_warn(LD_GENERAL,
                    "Bad mask bits %i for V4-mapped V6 address; rejecting.",
@@ -829,8 +822,8 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
       case AF_UNSPEC:
         return 0; /* All unspecified addresses are equal */
       case AF_INET: {
-        uint32_t a1 = ntohl(addr1->addr.in_addr.s_addr);
-        uint32_t a2 = ntohl(addr2->addr.in_addr.s_addr);
+        uint32_t a1 = tor_addr_to_ipv4h(addr1);
+        uint32_t a2 = tor_addr_to_ipv4h(addr2);
         if (mbits <= 0)
           return 0;
         if (mbits > 32)
@@ -841,8 +834,8 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         return r;
       }
       case AF_INET6: {
-        const uint8_t *a1 = addr1->addr.in6_addr.s6_addr;
-        const uint8_t *a2 = addr2->addr.in6_addr.s6_addr;
+        const uint8_t *a1 = tor_addr_to_in6_addr8(addr1);
+        const uint8_t *a2 = tor_addr_to_in6_addr8(addr2);
         const int bytes = mbits >> 3;
         const int leftover_bits = mbits & 7;
         if (bytes && (r = memcmp(a1, a2, bytes))) {
@@ -958,14 +951,18 @@ tor_addr_from_str(tor_addr_t *addr, const char *src)
 {
   char *tmp = NULL; /* Holds substring if we got a dotted quad. */
   int result;
+  struct in_addr in_tmp;
+  struct in6_addr in6_tmp;
   tor_assert(addr && src);
   if (src[0] == '[' && src[1])
     src = tmp = tor_strndup(src+1, strlen(src)-2);
 
-  if (tor_inet_pton(AF_INET6, src, &addr->addr.in6_addr) > 0) {
-    result = addr->family = AF_INET6;
-  } else if (tor_inet_pton(AF_INET, src, &addr->addr.in_addr) > 0) {
-    result = addr->family = AF_INET;
+  if (tor_inet_pton(AF_INET6, src, &in6_tmp) > 0) {
+    result = AF_INET6;
+    tor_addr_from_in6(addr, &in6_tmp);
+  } else if (tor_inet_pton(AF_INET, src, &in_tmp) > 0) {
+    result = AF_INET;
+    tor_addr_from_in(addr, &in_tmp);
   } else {
     result = -1;
   }
