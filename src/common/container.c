@@ -1233,6 +1233,16 @@ IMPLEMENT_ORDER_FUNC(find_nth_long, long)
 digestset_t *
 digestset_new(int max_elements)
 {
+  /* The probability of false positivies is about P=(1 - exp(-kn/m))^k, where k
+   * is the number of hash functions per entry, m is the bits in the array,
+   * and n is the number of elements inserted.  For us, k==4, n<=max_elements,
+   * and m==n_bits= approximately max_elements*32.  This gives
+   *   P<(1-exp(-4*n/(32*n)))^4 == (1-exp(1/-8))^4 == .00019
+   *
+   * It would be more optimal in space vs false positives to get this false
+   * positive rate by going for k==13, and m==18.5n, but we also want to
+   * conserve CPU, and k==13 is pretty big.
+   */
   int n_bits = 1u << (tor_log2(max_elements)+5);
   digestset_t *r = tor_malloc(sizeof(digestset_t));
   r->mask = n_bits - 1;
