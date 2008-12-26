@@ -1199,7 +1199,7 @@ digestmap_size(const digestmap_t *map)
  * function for an array of type <b>elt_t</b>*.
  *
  * NOTE: The implementation kind of sucks: It's O(n log n), whereas finding
- * the nth element of a list can be done in O(n).  Then again, this
+ * the kth element of an n-element list can be done in O(n).  Then again, this
  * implementation is not in critical path, and it is obviously correct. */
 #define IMPLEMENT_ORDER_FUNC(funcname, elt_t)                   \
   static int                                                    \

@@ -710,12 +710,12 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   if (!found)
     smartlist_add(networkstatus_v2_list, ns);
 
-/*XXXX021 magic. */
-/*DOCDOC */
-#define V2_NETWORKSTATUS_LIFETIME (3*60*60)
+/** Retain any routerinfo mentioned in a V2 networkstatus for at least this
+ * long. */
+#define V2_NETWORKSTATUS_ROUTER_LIFETIME (3*60*60)
 
   {
-    time_t live_until = ns->published_on + V2_NETWORKSTATUS_LIFETIME;
+    time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
     SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
     {
       signed_descriptor_t *sd =
@@ -1755,7 +1755,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   /* Now update last_listed_as_valid_until from v2 networkstatuses. */
   /* XXXX If this is slow, we need to rethink the code. */
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns, {
-    time_t live_until = ns->published_on + V2_NETWORKSTATUS_LIFETIME;
+    time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
     SMARTLIST_FOREACH_JOIN(ns->entries, routerstatus_t *, rs,
                          routers, routerinfo_t *, ri,
                          memcmp(rs->identity_digest,

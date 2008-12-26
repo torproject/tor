@@ -34,9 +34,11 @@ static int connection_process_inbuf(connection_t *conn, int package_partial);
 static void client_check_address_changed(int sock);
 static void set_constrained_socket_buffers(int sock, int size);
 
-/* DOCDOC last_interface_ip */
+/** The last IPv4 address that our network interface seemed to have been
+ * binding to, in host order.  We use this to detect when our IP changes. */
 static uint32_t last_interface_ip = 0;
-/* DOCDOC outgoing_addrs */
+/** A list of uint32_ts for addresses we've used in outgoing connections.
+ * Used to detect IP address changes. */
 static smartlist_t *outgoing_addrs = NULL;
 
 /**************************************************************/

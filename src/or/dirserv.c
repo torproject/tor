@@ -1646,25 +1646,30 @@ should_generate_v2_networkstatus(void)
  * dirserv_compute_performance_thresholds, and used by
  * generate_v2_networkstatus */
 
-/* DOCDOC stable_uptime */
+/** Any router with an uptime of at least this value is stable. */
 static uint32_t stable_uptime = 0; /* start at a safe value */
-/* DOCDOC stable_mtbf */
+/** Any router with an mtbf of at least this value is stable. */
 static double stable_mtbf = 0.0;
-/* DOCDOC enough_mtbf_info */
+/** If true, we have measured enough mtbf info to look at stable_mtbf rather
+ * than stable_uptime. */
 static int enough_mtbf_info = 0;
-/* DOCDOC guard_wfu */
+/** Any router with a weighted fractional uptime of at least this much might
+ * be good as a guard. */
 static double guard_wfu = 0.0;
-/* DOCDOC guard_tk */
+/** Don't call a router a guard unless we've known about it for at least this
+ * many seconds. */
 static long guard_tk = 0;
-/* DOCDOC fast_bandwidth */
+/** Any router with a bandwidth at least this high is "Fast" */
 static uint32_t fast_bandwidth = 0;
-/* DOCDOC guard_bandwidth_including_exits */
+/** If exits can be guards, then all guards must have a bandwidth this
+ * high. */
 static uint32_t guard_bandwidth_including_exits = 0;
-/* DOCDOC guard_bandwidth_excluding_exits */
+/** If exits can't be guards, then all guards must have a bandwidth this
+ * high. */
 static uint32_t guard_bandwidth_excluding_exits = 0;
-/* DOCDOC total_bandwidth */
+/** Total bandwidth of all the routers we're considering. */
 static uint64_t total_bandwidth = 0;
-/* DOCDOC total_exit_bandwidth */
+/** Total bandwidth of all the exit routers we're considering. */
 static uint64_t total_exit_bandwidth = 0;
 
 /** Helper: estimate the uptime of a router given its stated uptime and the

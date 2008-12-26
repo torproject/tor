@@ -80,9 +80,12 @@ static smartlist_t *warned_nicknames = NULL;
  * download is low. */
 static time_t last_routerdesc_download_attempted = 0;
 
-/* DOCDOC This is a massive massive kludge XXXX */
-static uint64_t sl_last_total_weighted_bw = 0;
-static uint64_t sl_last_weighted_bw_of_me = 0;
+/** When we last computed the weights to use for bandwidths on directory
+ * requests, what were the total weighted bandwidth, and our share of that
+ * bandwidth?  Used to determine what fraction of directory requests we should
+ * expect to see. */
+static uint64_t sl_last_total_weighted_bw = 0,
+  sl_last_weighted_bw_of_me = 0;
 
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
@@ -899,7 +902,10 @@ router_pick_directory_server(authority_type_t type, int flags)
   return choice;
 }
 
-/** DOCDOC */
+/** Try to determine which fraction of v2 and v3 directory requsts aimed at
+ * caches will be sent to us. Set *<b>v2_share_out</b> and
+ * *<b>v3_share_out</b> to the fractions of v2 and v3 protocol shares we
+ * expect to see, respectively.  Return 0 on success, negative on failue. */
 int
 router_get_my_share_of_directory_requests(double *v2_share_out,
                                           double *v3_share_out)
@@ -915,6 +921,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
     return -1;
 
   /* Calling for side effect */
+  /* XXXX This is a bit of a kludge */
   if (rs->is_v2_dir) {
     sl_last_total_weighted_bw = 0;
     router_pick_directory_server(V2_AUTHORITY, pds_flags);
@@ -4379,7 +4386,10 @@ get_dir_info_status_string(void)
   return dir_info_status;
 }
 
-/* DOCDOC count_usable_descriptors */
+/** Iterate over the servers listed in <b>consensus</b>, and count how many of
+ * them seem like ones we'd use, and how many of <em>those</em> we have
+ * descriptors for.  Store the former in *<b>num_usable</b> and the latter in
+ * *<b>num_present</b>.  */
 static void
 count_usable_descriptors(int *num_present, int *num_usable,
                          const networkstatus_t *consensus,

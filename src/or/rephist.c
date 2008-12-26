@@ -1263,9 +1263,9 @@ bw_array_new(void)
   return b;
 }
 
-/* DOCDOC read_array */
+/** Recent history of bandwidth observations for read operations. */
 static bw_array_t *read_array = NULL;
-/* DOCDOC write_array */
+/** Recent history of bandwidth observations for write operations. */
 static bw_array_t *write_array = NULL;
 
 /** Set up read_array and write_array. */
@@ -1913,7 +1913,7 @@ typedef struct hs_usage_current_observation_period_t {
   time_t start_of_next_period;
 } hs_usage_current_observation_period_t;
 
-/* DOCDOC current_period */
+/** Usage statistics for the current observation period. */
 static hs_usage_current_observation_period_t *current_period = NULL;
 /* DOCDOC publish_total */
 static hs_usage_service_related_observation_t *publish_total = NULL;
