@@ -1088,7 +1088,7 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
     goto err;
   }
 
-  memcpy(addr, &my_addr, sizeof(tor_addr_t));
+  tor_addr_from_sockaddr(addr, (struct sockaddr*)&my_addr, NULL);
   r=0;
  err:
   if (sock >= 0)
