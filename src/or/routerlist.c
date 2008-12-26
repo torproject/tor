@@ -3232,7 +3232,6 @@ routerlist_remove_old_routers(void)
   int caches = directory_caches_dir_info(get_options());
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
-  int n_expected_retain = 0;
 
   trusted_dirs_remove_old_certs();
 
@@ -3241,17 +3240,25 @@ routerlist_remove_old_routers(void)
 
   // routerlist_assert_ok(routerlist);
 
-  n_expected_retain = smartlist_len(consensus->routerstatus_list);
-  if (caches &&
-      networkstatus_v2_list && smartlist_len(networkstatus_v2_list)) {
-    SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-                      n_expected_retain += smartlist_len(ns->entries));
-    /* DOCDOC XXX021 too much magic. */
-    n_expected_retain /= (smartlist_len(networkstatus_v2_list)/2+1);
+  /* We need to guess how many router descriptors we will wind up wanting to
+     retain, so that we can be sure to allocate a large enough Bloom filter
+     to hold the digest set.  Overestimating is fine; underestimating is bad.
+  */
+  {
+    /* We'll probably retain everything in the consensus. */
+    int n_max_retain = smartlist_len(consensus->routerstatus_list);
+    if (caches && networkstatus_v2_list) {
+      /* If we care about v2 statuses, we'll retain at most as many as are
+         listed any of the v2 statues.  This will be at least the length of
+         the largest v2 networstatus, and in the worst case, this set will be
+         equal to the sum of the lengths of all v2 consensuses.  Take the
+         worst case.
+      */
+      SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
+                        n_max_retain += smartlist_len(ns->entries));
+    }
+    retain = digestset_new(n_max_retain);
   }
-  //log_notice(LD_DIR,"n_expected_retain=%d",n_expected_retain);
-
-  retain = digestset_new(n_expected_retain);
 
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   /* Build a list of all the descriptors that _anybody_ lists. */
