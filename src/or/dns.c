@@ -617,10 +617,16 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   /* first check if exitconn->_base.address is an IP. If so, we already
    * know the answer. */
   if (tor_addr_from_str(&addr, exitconn->_base.address) >= 0) {
-    tor_addr_assign(&exitconn->_base.addr, &addr);
-    exitconn->address_ttl = DEFAULT_DNS_TTL;
-    return 1;
+    if (tor_addr_family(&addr) == AF_INET) {
+      tor_addr_assign(&exitconn->_base.addr, &addr);
+      exitconn->address_ttl = DEFAULT_DNS_TTL;
+      return 1;
+    } else {
+      /* XXXX IPv6 */
+      return -1;
+    }
   }
+
   /* If we're a non-exit, don't even do DNS lookups. */
   if (!(me = router_get_my_routerinfo()) ||
       policy_is_reject_star(me->exit_policy)) {

@@ -1140,6 +1140,10 @@ router_compare_to_my_exit_policy(edge_connection_t *conn)
   if (tor_addr_is_null(&conn->_base.addr))
     return -1;
 
+  /* XXXX IPv6 */
+  if (tor_addr_family(&conn->_base.addr) != AF_INET)
+    return -1;
+
   return compare_tor_addr_to_addr_policy(&conn->_base.addr, conn->_base.port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
 }
