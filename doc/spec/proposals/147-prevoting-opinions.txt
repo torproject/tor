@@ -43,7 +43,7 @@ Design:
 
   Additionally, authories make their opinions available at
      http://<hostname>/tor/status-vote/next/opinion.z
-  and download opinions from authorties they haven't heard from in a
+  and download opinions from authorities they haven't heard from in a
   while.
 
   Authorities MAY generate opinions on demand.
@@ -57,5 +57,4 @@ Design:
   that claim to have them.
 
   Authorities MAY cache opinion documents, but don't need to.
-
 

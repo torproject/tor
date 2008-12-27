@@ -105,10 +105,6 @@ Bugs/issues for Tor 0.2.0.x:
     o Basic implementation
 N   - Include probability-of-selection
 R d let bridges set relaybandwidthrate as low as 5kb
-R - bridge communities
-    . spec
-    . deploy
-      - man page entries for Alternate*Authority config options
 
 Documentation for Tor 0.2.0.x:
   o Proposals:
@@ -305,6 +301,8 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - can we deprecate 'getinfo network-status'?
     - Dump most uint32_t addr functions.
 
+  - do the part of the "abandon .exit" proposal that involves isolating
+    circuits which have used a .exit stream from those that haven't
 
 Defer:
   - Proposals
@@ -318,12 +316,15 @@ Defer:
 
   - Proposals to write.
     d Something for bug 469, to limit connections per IP.
-R   d Do we want to maintain our own set of entryguards that we use as
+    d Do we want to maintain our own set of entryguards that we use as
       next hop after the bridge?
     d Possibly: revise link protocol to allow big circuit IDs,
       variable-length cells, proposal-110 stuff, and versioned CREATES?
     d Fetch an updated geoip file from the directory authorities.
-
+R   - bridge communities (revive proposal 128)
+      . spec
+      . deploy
+        - man page entries for Alternate*Authority config options
 
   - Tiny designs to write
     - Better estimate of clock skew; has anonymity implications.  Clients
@@ -384,3 +385,4 @@ R   d Do we want to maintain our own set of entryguards that we use as
 
   d Interface for letting SOAT modify flags that authorities assign.
     (How to keep the authority from clobbering them afterwards?
+
