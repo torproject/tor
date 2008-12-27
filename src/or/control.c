@@ -967,7 +967,7 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
 
   smartlist_split_string(events, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(events, const char *, ev,
+  SMARTLIST_FOREACH_BEGIN(events, const char *, ev)
     {
       if (!strcasecmp(ev, "EXTENDED")) {
         extended = 1;
@@ -1008,14 +1008,7 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         event_code = EVENT_STATUS_SERVER;
       else if (!strcasecmp(ev, "GUARD"))
         event_code = EVENT_GUARD;
-      else if (!strcasecmp(ev, "GUARDS")) {
-        /* XXXX021 This check is here to tolerate the controllers that
-         * depended on the buggy spec in 0.1.2.5-alpha through 0.1.2.10-rc.
-         * Once those versions are obsolete, stop supporting this. */
-        log_warn(LD_CONTROL, "Controller used obsolete 'GUARDS' event name; "
-                 "use GUARD instead.");
-        event_code = EVENT_GUARD;
-      } else if (!strcasecmp(ev, "STREAM_BW"))
+      else if (!strcasecmp(ev, "STREAM_BW"))
         event_code = EVENT_STREAM_BANDWIDTH_USED;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
@@ -1025,7 +1018,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         return 0;
       }
       event_mask |= (1 << event_code);
-    });
+    }
+  SMARTLIST_FOREACH_END(ev);
   SMARTLIST_FOREACH(events, char *, e, tor_free(e));
   smartlist_free(events);
 
@@ -1774,10 +1768,15 @@ getinfo_helper_events(control_connection_t *control_conn,
     smartlist_free(status);
   } else if (!strcmpstart(question, "addr-mappings/") ||
              !strcmpstart(question, "address-mappings/")) {
-    /* XXXX021 Warn about deprecated addr-mappings variant. */
     time_t min_e, max_e;
     smartlist_t *mappings;
     int want_expiry = !strcmpstart(question, "address-mappings/");
+    if (!strcmpstart(question, "addr-mappings/")) {
+      /* XXXX022 This has been deprecated since 0.2.0.3-alpha, and has
+         generated a warning since 0.2.1.10-alpha; remove late in 0.2.2.x. */
+      log_warn(LD_CONTROL, "Controller used obsolete addr-mappings/ GETINFO "
+               "key; use address-mappings/ instead.");
+    }
     question += strlen(want_expiry ? "address-mappings/"
                                    : "addr-mappings/");
     if (!strcmp(question, "all")) {
