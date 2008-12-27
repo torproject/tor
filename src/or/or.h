@@ -1287,6 +1287,7 @@ typedef enum {
 typedef enum {
   DL_SCHED_GENERIC = 0,
   DL_SCHED_CONSENSUS = 1,
+  DL_SCHED_BRIDGE = 2,
 } download_schedule_t;
 
 /** Information about our plans for retrying downloads for a downloadable

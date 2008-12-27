@@ -3288,6 +3288,45 @@ static const int server_consensus_dl_schedule[] = {
 static const int client_consensus_dl_schedule[] = {
   0, 0, 60, 60*5, 60*10, 60*30, 60*60, 60*60, 60*60, 60*60*3, 60*60*6, 60*60*12
 };
+/** Schedule for when clients should download bridge descriptors. */
+static const int bridge_dl_schedule[] = {
+  60*60, 15*60, 15*60, 60*60
+};
+
+/** Decide which download schedule we want to use, and then return a
+ * pointer to it along with a pointer to its length. Helper function for
+ * download_status_increment_failure() and download_status_reset(). */
+static void
+find_dl_schedule_and_len(download_status_t *dls, int server,
+                         const int **schedule, size_t *schedule_len)
+{
+  switch (dls->schedule) {
+    case DL_SCHED_GENERIC:
+      if (server) {
+        *schedule = server_dl_schedule;
+        *schedule_len = sizeof(server_dl_schedule)/sizeof(int);
+      } else {
+        *schedule = client_dl_schedule;
+        *schedule_len = sizeof(client_dl_schedule)/sizeof(int);
+      }
+      break;
+    case DL_SCHED_CONSENSUS:
+      if (server) {
+        *schedule = server_consensus_dl_schedule;
+        *schedule_len = sizeof(server_consensus_dl_schedule)/sizeof(int);
+      } else {
+        *schedule = client_consensus_dl_schedule;
+        *schedule_len = sizeof(client_consensus_dl_schedule)/sizeof(int);
+      }
+      break;
+    case DL_SCHED_BRIDGE:
+      *schedule = bridge_dl_schedule;
+      *schedule_len = sizeof(bridge_dl_schedule)/sizeof(int);
+      break;
+    default:
+      tor_assert(0);
+  }
+}
 
 /** Called when an attempt to download <b>dls</b> has failed with HTTP status
  * <b>status_code</b>.  Increment the failure count (if the code indicates a
@@ -3306,28 +3345,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
       ++dls->n_download_failures;
   }
 
-  switch (dls->schedule) {
-    case DL_SCHED_GENERIC:
-      if (server) {
-        schedule = server_dl_schedule;
-        schedule_len = sizeof(server_dl_schedule)/sizeof(int);
-      } else {
-        schedule = client_dl_schedule;
-        schedule_len = sizeof(client_dl_schedule)/sizeof(int);
-      }
-      break;
-    case DL_SCHED_CONSENSUS:
-      if (server) {
-        schedule = server_consensus_dl_schedule;
-        schedule_len = sizeof(server_consensus_dl_schedule)/sizeof(int);
-      } else {
-        schedule = client_consensus_dl_schedule;
-        schedule_len = sizeof(client_consensus_dl_schedule)/sizeof(int);
-      }
-      break;
-    default:
-      tor_assert(0);
-  }
+  find_dl_schedule_and_len(dls, server, &schedule, &schedule_len);
 
   if (dls->n_download_failures < schedule_len)
     increment = schedule[dls->n_download_failures];
@@ -3357,12 +3375,24 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 }
 
 /** Reset <b>dls</b> so that it will be considered downloadable
- * immediately. */
+ * immediately, and/or to show that we don't need it anymore.
+ *
+ * (We find the zeroth element of the download schedule, and set
+ * next_attempt_at to be the appropriate offset from 'now'. In most
+ * cases this means setting it to 'now', so the item will be immediately
+ * downloadable; in the case of bridge descriptors, the zeroth element
+ * is an hour from now.) */
 void
 download_status_reset(download_status_t *dls)
 {
+  const int *schedule;
+  size_t schedule_len;
+
+  find_dl_schedule_and_len(dls, get_options()->DirPort,
+                           &schedule, &schedule_len);
+
   dls->n_download_failures = 0;
-  dls->next_attempt_at = 0;
+  dls->next_attempt_at = time(NULL) + schedule[0];
 }
 
 /** Called when one or more routerdesc (or extrainfo, if <b>was_extrainfo</b>)

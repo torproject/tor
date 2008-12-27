@@ -451,7 +451,7 @@ round_to_next_multiple_of(unsigned number, unsigned divisor)
 /** Return a newly allocated comma-separated string containing entries for all
  * the countries from which we've seen enough clients connect. The entry
  * format is cc=num where num is the number of IPs we've seen connecting from
- * that country, and cc is a lowercased country code.  Returns NULL if we don't
+ * that country, and cc is a lowercased country code. Returns NULL if we don't
  * want to export geoip data yet. */
 char *
 geoip_get_client_history(time_t now, geoip_client_action_t action)
