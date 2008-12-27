@@ -16,7 +16,8 @@ const char connection_c_id[] =
 #include "or.h"
 
 static connection_t *connection_create_listener(
-                               struct sockaddr *listensockaddr, int type,
+                               struct sockaddr *listensockaddr,
+                               socklen_t listensocklen, int type,
                                char* address);
 static void connection_init(time_t now, connection_t *conn, int type,
                             int socket_family);
@@ -850,10 +851,9 @@ warn_too_many_conns(void)
  * to the conn.
  */
 static connection_t *
-connection_create_listener(struct sockaddr *listensockaddr, int type,
-                           char* address)
+connection_create_listener(struct sockaddr *listensockaddr, socklen_t socklen,
+                           int type, char* address)
 {
-  /*XXXX021 this function should take a socklen too. */
   connection_t *conn;
   int s; /* the socket we're going to make */
   uint16_t usePort = 0;
@@ -895,7 +895,7 @@ connection_create_listener(struct sockaddr *listensockaddr, int type,
                (socklen_t)sizeof(one));
 #endif
 
-    if (bind(s,listensockaddr,(socklen_t)sizeof(struct sockaddr_in)) < 0) {
+    if (bind(s,listensockaddr,socklen) < 0) {
       const char *helpfulhint = "";
       int e = tor_socket_errno(s);
       if (ERRNO_IS_EADDRINUSE(e))
@@ -1424,6 +1424,7 @@ retry_listeners(int type, config_line_t *cfg,
       {
         char *address = NULL;
         struct sockaddr *listensockaddr;
+        socklen_t listensocklen;
 
         switch (socket_family) {
           case AF_INET:
@@ -1431,18 +1432,21 @@ retry_listeners(int type, config_line_t *cfg,
                              create_inet_sockaddr(cfg_line->value,
                                                   (uint16_t) port_option,
                                                   &address);
+            listensocklen = sizeof(struct sockaddr_in);
             break;
           case AF_UNIX:
             listensockaddr = (struct sockaddr *)
                              create_unix_sockaddr(cfg_line->value,
                                                   &address);
+            listensocklen = sizeof(struct sockaddr_un);
             break;
           default:
             tor_assert(0);
         }
 
         if (listensockaddr) {
-          conn = connection_create_listener(listensockaddr, type, address);
+          conn = connection_create_listener(listensockaddr, listensocklen,
+                                            type, address);
           tor_free(listensockaddr);
           tor_free(address);
         } else
