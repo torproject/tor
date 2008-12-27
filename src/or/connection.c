@@ -759,7 +759,7 @@ connection_expire_held_open(void)
  */
 static struct sockaddr_in *
 create_inet_sockaddr(const char *listenaddress, uint16_t listenport,
-                     char **readable_address) {
+                     char **readable_address, socklen_t *socklen_out) {
   struct sockaddr_in *listenaddr = NULL;
   uint32_t addr;
   uint16_t usePort = 0;
@@ -777,6 +777,8 @@ create_inet_sockaddr(const char *listenaddress, uint16_t listenport,
   listenaddr->sin_addr.s_addr = htonl(addr);
   listenaddr->sin_family = AF_INET;
   listenaddr->sin_port = htons((uint16_t) usePort);
+
+  *socklen_out = sizeof(struct sockaddr_in);
 
   return listenaddr;
 
@@ -800,7 +802,8 @@ create_inet_sockaddr(const char *listenaddress, uint16_t listenport,
  * The listenaddr struct has to be freed by the caller.
  */
 static struct sockaddr_un *
-create_unix_sockaddr(const char *listenaddress, char **readable_address)
+create_unix_sockaddr(const char *listenaddress, char **readable_address,
+                     socklen_t *len_out)
 {
   struct sockaddr_un *sockaddr = NULL;
 
@@ -811,16 +814,19 @@ create_unix_sockaddr(const char *listenaddress, char **readable_address)
   if (readable_address)
     *readable_address = tor_strdup(listenaddress);
 
+  *len_out = sizeof(struct sockaddr_un);
   return sockaddr;
 }
 #else
 static struct sockaddr *
-create_unix_sockaddr(const char *listenaddress, char **readable_address)
+create_unix_sockaddr(const char *listenaddress, char **readable_address,
+                     socklen_t *len_out)
 {
   (void)listenaddress;
   (void)readable_address;
   log_fn(LOG_ERR, LD_BUG,
          "Unix domain sockets not supported, yet we tried to create one.");
+  *len_out = 0;
   tor_assert(0);
 };
 #endif /* HAVE_SYS_UN_H */
@@ -1420,25 +1426,22 @@ retry_listeners(int type, config_line_t *cfg,
   /* Now open all the listeners that are configured but not opened. */
   r = 0;
   if (!disable_all_conns) {
-    SMARTLIST_FOREACH(launch, config_line_t *, cfg_line,
-      {
+    SMARTLIST_FOREACH_BEGIN(launch, config_line_t *, cfg_line) {
         char *address = NULL;
         struct sockaddr *listensockaddr;
-        socklen_t listensocklen;
+        socklen_t listensocklen = 0;
 
         switch (socket_family) {
           case AF_INET:
             listensockaddr = (struct sockaddr *)
                              create_inet_sockaddr(cfg_line->value,
                                                   (uint16_t) port_option,
-                                                  &address);
-            listensocklen = sizeof(struct sockaddr_in);
+                                                  &address, &listensocklen);
             break;
           case AF_UNIX:
             listensockaddr = (struct sockaddr *)
                              create_unix_sockaddr(cfg_line->value,
-                                                  &address);
-            listensocklen = sizeof(struct sockaddr_un);
+                                                  &address, &listensocklen);
             break;
           default:
             tor_assert(0);
@@ -1458,7 +1461,7 @@ retry_listeners(int type, config_line_t *cfg,
           if (new_conns)
             smartlist_add(new_conns, conn);
         }
-      });
+    } SMARTLIST_FOREACH_END(cfg_line);
   }
 
   if (free_launch_elts) {
