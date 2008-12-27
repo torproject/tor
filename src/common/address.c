@@ -225,7 +225,7 @@ tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr)
       if (ent->h_addrtype == AF_INET) {
         tor_addr_from_in(addr, (struct in_addr*) ent->h_addr);
       } else if (ent->h_addrtype == AF_INET6) {
-        tor_addr_from_in(addr, (struct in6_addr*) ent->h_addr);
+        tor_addr_from_in6(addr, (struct in6_addr*) ent->h_addr);
       } else {
         tor_assert(0); /* gethostbyname() returned a bizarre addrtype */
       }
