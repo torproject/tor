@@ -3265,6 +3265,9 @@ typedef enum {
 void control_event_bootstrap(bootstrap_status_t status, int progress);
 void control_event_bootstrap_problem(const char *warn, int reason);
 
+void control_event_clients_seen(const char *timestarted,
+                                const char *countries);
+
 #ifdef CONTROL_PRIVATE
 /* Used only by control.c and test.c */
 size_t write_escaped_data(const char *data, size_t len, char **out);

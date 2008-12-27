@@ -1,5 +1,11 @@
-Changes in version 0.2.1.10-alpha - 2009-??-??
-  o Minor bugfixes
+Changes in version 0.2.1.10-alpha - 2009-01-??
+  o Minor features:
+    - New controller event "clients_seen" to report a geoip-based summary
+      of which countries we've seen clients from recently. Now controllers
+      like Vidalia can show bridge operators that they're actually making
+      a difference.
+
+  o Minor bugfixes:
     - Make get_interface_address() function work properly again; stop
       guessing the wrong parts of our address as our address.
 

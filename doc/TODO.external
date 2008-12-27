@@ -138,8 +138,8 @@ E   - Vidalia improvements
       - Figure out a plan for presenting other Tor status warning events.
       - Move Polipo into the main Vidalia -dev bundle.
       - Vidalia displays by-country user summary for bridge operators
-R       * Tor sends a status event or something so Vidalia knows what
-          to display
+        o Tor sends a status event or something so Vidalia knows what
+          to display: "clients_seen"
 
 M   - Network scanning and network health
       - Implement some initial automated scans.

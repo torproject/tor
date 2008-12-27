@@ -1878,6 +1878,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                             "geoip-start-time %s\n"
                             "geoip-client-origins %s\n",
                             geoip_start, geoip_summary);
+      control_event_clients_seen(geoip_start, geoip_summary);
       tor_free(geoip_summary);
       if (result<0)
         return -1;

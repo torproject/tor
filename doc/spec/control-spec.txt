@@ -1284,8 +1284,7 @@ $Id$
        {Controllers may want to warn the user if this event occurs; further
        action is generally not possible.}
 
-     COSENSUS_ARRIVED
-
+     CONSENSUS_ARRIVED
         Tor has received and validated a new consensus networkstatus.
         (This event can be delayed a little while after the consensus
         is received, if Tor needs to fetch certificates.)
@@ -1565,6 +1564,28 @@ $Id$
 
   These events apply only to streams entering Tor (such as on a SOCKSPort,
   TransPort, or so on).  They are not generated for exiting streams.
+
+4.1.14. Per-country client stats
+
+  The syntax is:
+     "650" SP "CLIENTS_SEEN" SP TimeStarted SP CountrySummary CRLF
+
+  We just generated a new summary of which countries we've seen clients
+  from recently. The controller could display this for the user, e.g.
+  in their "relay" configuration window, to give them a sense that they
+  are actually being useful.
+
+  Currently only bridge relays will receive this event, but once we figure
+  out how to sufficiently aggregate and sanitize the client counts on
+  main relays, we might start sending these events in other cases too.
+
+  TimeStarted is a quoted string indicating when the reported summary
+  counts from (in GMT).
+
+  The CountrySummary keyword has as its argument a comma-separated
+  set of "countrycode=count" pairs. For example,
+  650-CLIENTS_SEEN TimeStarted="Thu Dec 25 23:50:43 EST 2008"
+  650 CountrySummary=us=16,de=8,uk=8
 
 5. Implementation notes
 

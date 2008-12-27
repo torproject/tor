@@ -44,7 +44,8 @@ const char control_c_id[] =
 #define EVENT_STATUS_GENERAL   0x0012
 #define EVENT_GUARD            0x0013
 #define EVENT_STREAM_BANDWIDTH_USED   0x0014
-#define _EVENT_MAX             0x0014
+#define EVENT_CLIENTS_SEEN     0x0015
+#define _EVENT_MAX             0x0015
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -125,7 +126,7 @@ static void send_control_event(uint16_t event, event_format_t which,
                                const char *format, ...)
   CHECK_PRINTF(3,4);
 static void send_control_event_extended(uint16_t event, event_format_t which,
-                                         const char *format, ...)
+                                        const char *format, ...)
   CHECK_PRINTF(3,4);
 static int handle_control_setconf(control_connection_t *conn, uint32_t len,
                                   char *body);
@@ -596,7 +597,7 @@ send_control_event_string(uint16_t event, event_format_t which,
  * ending \\r\\n\\0). */
 static void
 send_control_event_impl(uint16_t event, event_format_t which, int extended,
-                         const char *format, va_list ap)
+                        const char *format, va_list ap)
 {
   /* This is just a little longer than the longest allowed log message */
 #define SEND_CONTROL1_EVENT_BUFFERSIZE 10064
@@ -638,7 +639,7 @@ send_control_event_impl(uint16_t event, event_format_t which, int extended,
  * ending \\n\\r\\0. */
 static void
 send_control_event(uint16_t event, event_format_t which,
-                    const char *format, ...)
+                   const char *format, ...)
 {
   va_list ap;
   va_start(ap, format);
@@ -658,7 +659,7 @@ send_control_event(uint16_t event, event_format_t which,
  * ending \\n\\r\\0. */
 static void
 send_control_event_extended(uint16_t event, event_format_t which,
-                             const char *format, ...)
+                            const char *format, ...)
 {
   va_list ap;
   va_start(ap, format);
@@ -3299,10 +3300,10 @@ control_event_stream_bandwidth_used(void)
           continue;
 
         send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
-                            "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
-                            U64_PRINTF_ARG(edge_conn->_base.global_identifier),
-                            (unsigned long)edge_conn->n_read,
-                            (unsigned long)edge_conn->n_written);
+                           "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
+                           U64_PRINTF_ARG(edge_conn->_base.global_identifier),
+                           (unsigned long)edge_conn->n_read,
+                           (unsigned long)edge_conn->n_written);
 
         edge_conn->n_written = edge_conn->n_read = 0;
     }
@@ -3319,9 +3320,9 @@ control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 {
   if (EVENT_IS_INTERESTING(EVENT_BANDWIDTH_USED)) {
     send_control_event(EVENT_BANDWIDTH_USED, ALL_NAMES,
-                        "650 BW %lu %lu\r\n",
-                        (unsigned long)n_read,
-                        (unsigned long)n_written);
+                       "650 BW %lu %lu\r\n",
+                       (unsigned long)n_read,
+                       (unsigned long)n_written);
   }
 
   return 0;
@@ -3695,11 +3696,11 @@ control_event_guard(const char *nickname, const char *digest,
       tor_snprintf(buf, sizeof(buf), "$%s~%s", hbuf, nickname);
     }
     send_control_event(EVENT_GUARD, LONG_NAMES,
-                        "650 GUARD ENTRY %s %s\r\n", buf, status);
+                       "650 GUARD ENTRY %s %s\r\n", buf, status);
   }
   if (EVENT_IS_INTERESTING1S(EVENT_GUARD)) {
     send_control_event(EVENT_GUARD, SHORT_NAMES,
-                        "650 GUARD ENTRY $%s %s\r\n", hbuf, status);
+                       "650 GUARD ENTRY $%s %s\r\n", hbuf, status);
   }
   return 0;
 }
@@ -3945,5 +3946,16 @@ control_event_bootstrap_problem(const char *warn, int reason)
                sizeof(last_sent_bootstrap_message),
                "WARN %s", buf);
   control_event_client_status(LOG_WARN, "%s", buf);
+}
+
+/** We just generated a new summary of which countries we've seen clients
+ * from recently. Send a copy to the controller in case it wants to
+ * display it for the user. */
+void
+control_event_clients_seen(const char *timestarted, const char *countries)
+{
+  send_control_event(EVENT_CLIENTS_SEEN, 0,
+    "650 CLIENTS_SEEN Timestarted=\"%s\" CountrySummary=%s\r\n",
+    timestarted, countries);
 }
 
