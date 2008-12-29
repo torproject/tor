@@ -2872,8 +2872,8 @@ const char *get_version(void);
 
 int config_get_lines(const char *string, config_line_t **result);
 void config_free_lines(config_line_t *front);
-int options_trial_assign(config_line_t *list, int use_defaults,
-                         int clear_first, char **msg);
+setopt_err_t options_trial_assign(config_line_t *list, int use_defaults,
+                                  int clear_first, char **msg);
 int resolve_my_address(int warn_severity, or_options_t *options,
                        uint32_t *addr, char **hostname_out);
 int is_local_addr(const tor_addr_t *addr) ATTR_PURE;
