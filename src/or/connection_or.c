@@ -633,7 +633,15 @@ connection_or_group_set_badness(or_connection_t *head)
    * every other open connection.  If it's non-canonical, mark as bad
    * every other open connection to the same address.
    *
-   * XXXX021.
+   * XXXX This isn't optimal; if we have connections to an OR at multiple
+   *   addresses, we'd like to pick the best _for each address_, and mark as
+   *   bad every open connection that isn't best for its address.  But this
+   *   can only occur in cases where the other OR is old (so we have no
+   *   canonical connection to it), or where all the connections to the OR are
+   *   at noncanonical addresses and we have no good direct connection (which
+   *   means we aren't at risk of attaching circuits to it anyway).  As
+   *   0.1.2.x dies out, the first case will go away, and the second one is
+   *   "mostly harmless", so a fix can wait until somebody is bored.
    */
   for (or_conn = head; or_conn; or_conn = or_conn->next_with_same_id) {
     if (or_conn->_base.marked_for_close ||
