@@ -14,6 +14,10 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
   o Minor bugfixes:
     - Make get_interface_address() function work properly again; stop
       guessing the wrong parts of our address as our address.
+    - Do not cannibalize a circuit if we're out of RELAY_EARLY cells to
+      send on that circuit.  Otherwise we might violate the proposal-110
+      limit.  Bugfix on 0.2.1.3-alpha.  Partial fix for Bug 878.  Diagnosis
+      thanks to Karsten.
 
   o Code simplifications and refactoring:
     - Change our header file guard macros to be less likely to conflict
@@ -635,11 +639,6 @@ Changes in version 0.2.1.3-alpha - 2008-08-03
       reason is NO_ROUTE (that is, our network is down).
 
   o Major features:
-    - Implement most of proposal 110: The first K cells to be sent
-      along a circuit are marked as special "early" cells; only K "early"
-      cells will be allowed. Once this code is universal, we can block
-      certain kinds of DOS attack by requiring that EXTEND commands must
-      be sent using an "early" cell.
 
   o Major bugfixes:
     - Try to attach connections immediately upon receiving a RENDEZVOUS2

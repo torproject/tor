@@ -896,7 +896,8 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
       origin_circuit_t *circ = TO_ORIGIN_CIRCUIT(_circ);
       if ((!need_uptime || circ->build_state->need_uptime) &&
           (!need_capacity || circ->build_state->need_capacity) &&
-          (internal == circ->build_state->is_internal)) {
+          (internal == circ->build_state->is_internal) &&
+          circ->remaining_relay_early_cells) {
         if (info) {
           /* need to make sure we don't duplicate hops */
           crypt_path_t *hop = circ->cpath;
