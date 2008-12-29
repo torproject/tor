@@ -510,10 +510,13 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
 
   if (cell_direction == CELL_DIRECTION_OUT) {
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
-    if (origin_circ->remaining_relay_early_cells > 0) {
-      /* If we've got any relay_early cells left, use one.  Don't worry
-       * about the conn protocol version: append_cell_to_circuit_queue will
-       * fix it up. */
+    if (origin_circ->remaining_relay_early_cells > 0 &&
+        (relay_command == RELAY_COMMAND_EXTEND ||
+         cpath_layer != origin_circ->cpath)) {
+      /* If we've got any relay_early cells left, and we're sending a relay
+       * cell or we're not talking to the first hop, use one of them.  Don't
+       * worry about the conn protocol version: append_cell_to_circuit_queue
+       * will fix it up. */
       cell.command = CELL_RELAY_EARLY;
       --origin_circ->remaining_relay_early_cells;
       log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",

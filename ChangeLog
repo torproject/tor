@@ -18,6 +18,11 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
       send on that circuit.  Otherwise we might violate the proposal-110
       limit.  Bugfix on 0.2.1.3-alpha.  Partial fix for Bug 878.  Diagnosis
       thanks to Karsten.
+    - When we're sending non-EXTEND cells to the first hop in a circuit
+      (for example in order to use an encrypted directory connection), we
+      don't need to use RELAY_EARLY cells: the first hop knows what kind of
+      cell it is, and nobody else can even see the cell type.  This makes
+      it easier to cannibalize circuits like this later.
 
   o Code simplifications and refactoring:
     - Change our header file guard macros to be less likely to conflict
