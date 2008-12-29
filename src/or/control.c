@@ -770,12 +770,9 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
   }
   tor_free(config);
 
-  if ((opt_err=options_trial_assign(lines, use_defaults,
-                              clear_first, &errstring)) != SETOPT_OK) {
+  opt_err = options_trial_assign(lines, use_defaults, clear_first, &errstring);
+  {
     const char *msg;
-    log_warn(LD_CONTROL,
-             "Controller gave us config lines that didn't validate: %s",
-             errstring);
     switch (opt_err) {
       case SETOPT_ERR_MISC:
         msg = "552 Unrecognized option";
@@ -791,20 +788,18 @@ control_setconf_helper(control_connection_t *conn, uint32_t len, char *body,
         msg = "553 Unable to set option";
         break;
       case SETOPT_OK:
-        /* (It's okay if we can never get to this point.) */
-        /* coverity[dead_error_line] */
-        msg = "551 Internal error";
-        tor_fragile_assert();
-        break;
+        config_free_lines(lines);
+        send_control_done(conn);
+        return 0;
     }
+    log_warn(LD_CONTROL,
+             "Controller gave us config lines that didn't validate: %s",
+             errstring);
     connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     config_free_lines(lines);
     tor_free(errstring);
     return 0;
   }
-  config_free_lines(lines);
-  send_control_done(conn);
-  return 0;
 }
 
 /** Called when we receive a SETCONF message: parse the body and try
@@ -1214,13 +1209,8 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
 
  err:
   tor_free(password);
-  if (!errstr) {
-    /* (It's okay if we can never get to this point.) */
-    /* coverity[dead_error_line] */
-    errstr = "Unknown reason.";
-  }
   connection_printf_to_buf(conn, "515 Authentication failed: %s\r\n",
-                           errstr);
+                           errstr ? errstr : "Unknown reason.");
   connection_mark_for_close(TO_CONN(conn));
   return 0;
  ok:
