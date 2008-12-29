@@ -10,8 +10,8 @@
  * \brief Master header file for Tor-specific functionality.
  **/
 
-#ifndef __OR_H
-#define __OR_H
+#ifndef _TOR_OR_H
+#define _TOR_OR_H
 #define OR_H_ID "$Id$"
 
 #include "orconfig.h"

@@ -7,8 +7,8 @@
  * \brief Headers for mempool.c
  **/
 
-#ifndef MEMPOOL_H
-#define MEMPOOL_H
+#ifndef _TOR_MEMPOOL_H
+#define _TOR_MEMPOOL_H
 
 /** A memory pool is a context in which a large number of fixed-sized
 * objects can be allocated efficiently.  See mempool.c for implementation

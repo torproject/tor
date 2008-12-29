@@ -11,8 +11,8 @@
  * \brief Headers for crypto.c
  **/
 
-#ifndef __CRYPTO_H
-#define __CRYPTO_H
+#ifndef _TOR_CRYPTO_H
+#define _TOR_CRYPTO_H
 #define CRYPTO_H_ID "$Id$"
 
 #include <stdio.h>

@@ -4,8 +4,8 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#ifndef __CONTAINER_H
-#define __CONTAINER_H
+#ifndef _TOR_CONTAINER_H
+#define _TOR_CONTAINER_H
 #define CONTAINER_H_ID \
   "$Id$"
 

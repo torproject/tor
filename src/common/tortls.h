@@ -4,8 +4,8 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#ifndef _TORTLS_H
-#define _TORTLS_H
+#ifndef _TOR_TORTLS_H
+#define _TOR_TORTLS_H
 #define TORTLS_H_ID "$Id$"
 
 /**

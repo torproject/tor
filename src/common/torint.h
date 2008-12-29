@@ -9,8 +9,8 @@
  * \brief Header file to define uint32_t and friends
  **/
 
-#ifndef __TORINT_H
-#define __TORINT_H
+#ifndef _TOR_TORINT_H
+#define _TOR_TORINT_H
 #define TORINT_H_ID "$Id$"
 
 #include "orconfig.h"

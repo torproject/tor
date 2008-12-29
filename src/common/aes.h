@@ -6,8 +6,8 @@
 
 /* Implements a minimal interface to counter-mode AES. */
 
-#ifndef __AES_H
-#define __AES_H
+#ifndef _TOR_AES_H
+#define _TOR_AES_H
 #define AES_H_ID "$Id$"
 
 /**

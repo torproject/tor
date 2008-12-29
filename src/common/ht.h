@@ -5,8 +5,8 @@
 
 /* Based on ideas by Christopher Clark and interfaces from Niels Provos. */
 
-#ifndef __HT_H
-#define __HT_H
+#ifndef _TOR_HT_H
+#define _TOR_HT_H
 #define HT_H_ID "$Id$"
 
 #define HT_HEAD(name, type)                                             \

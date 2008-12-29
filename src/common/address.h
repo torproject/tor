@@ -9,8 +9,8 @@
  * \brief Headers for address.h
  **/
 
-#ifndef __ADDRESS_H
-#define __ADDRESS_H
+#ifndef _TOR_ADDRESS_H
+#define _TOR_ADDRESS_H
 #define ADDRESS_H_ID "$Id$"
 
 #include "orconfig.h"

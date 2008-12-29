@@ -4,8 +4,8 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#ifndef __COMPAT_H
-#define __COMPAT_H
+#ifndef _TOR_COMPAT_H
+#define _TOR_COMPAT_H
 #define COMPAT_H_ID "$Id$"
 
 #include "orconfig.h"

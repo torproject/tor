@@ -4,8 +4,8 @@
 /* See LICENSE for licensing information */
 /* $Id$ */
 
-#ifndef __TEST_H
-#define __TEST_H
+#ifndef _TOR_TEST_H
+#define _TOR_TEST_H
 #define TEST_H_ID "$Id$"
 
 /**

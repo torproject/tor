@@ -9,8 +9,8 @@
  * \brief Headers for util.c
  **/
 
-#ifndef __UTIL_H
-#define __UTIL_H
+#ifndef _TOR_UTIL_H
+#define _TOR_UTIL_H
 #define UTIL_H_ID "$Id$"
 
 #include "orconfig.h"

@@ -9,8 +9,8 @@
  * \brief Headers for torgzip.h
  **/
 
-#ifndef __TORGZIP_H
-#define __TORGZIP_H
+#ifndef _TOR_TORGZIP_H
+#define _TOR_TORGZIP_H
 #define TORGZIP_H_ID "$Id$"
 
 /** Enumeration of what kind of compression to use.  Only ZLIB_METHOD is

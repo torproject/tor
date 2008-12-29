@@ -11,7 +11,7 @@
  * \brief Headers for log.c
  **/
 
-#ifndef __LOG_H
+#ifndef _TOR_LOG_H
 #define LOG_H_ID "$Id$"
 
 #include "compat.h"
@@ -205,6 +205,6 @@ extern const char *_log_fn_function_name;
 
 #endif /* !GNUC */
 
-# define __LOG_H
+# define _TOR_LOG_H
 #endif
 

@@ -3,8 +3,8 @@
 /* $Id$ */
 /* Tor dependencies */
 
-#ifndef MEMAREA_H
-#define MEMAREA_H
+#ifndef _TOR_MEMAREA_H
+#define _TOR_MEMAREA_H
 
 typedef struct memarea_t memarea_t;
 
