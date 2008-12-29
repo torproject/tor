@@ -2964,7 +2964,6 @@ get_next_token(memarea_t *area,
       tok->tp = table[i].v;
       o_syn = table[i].os;
       *s = eat_whitespace_eos_no_nl(next, eol);
-      next = find_whitespace_eos(*s, eol); /* XXXX021 lower this. */
       /* We go ahead whether there are arguments or not, so that tok->args is
        * always set if we want arguments. */
       if (table[i].concat_args) {
