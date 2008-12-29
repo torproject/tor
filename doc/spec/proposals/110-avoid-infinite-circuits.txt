@@ -57,6 +57,12 @@ Design:
   data cells over the stream as relay_early cells, regardless of their
   actual type.
 
+  (Note that a circuit that is out of relay_early cells MUST NOT be
+  cannibalized later, since it can't extend.  Note also that it's always okay
+  to use regular RELAY cells when sending non-EXTEND commands targetted at
+  the first hop of a circuit, since there is no intermediate hop to try to
+  learn the relay command type.)
+
   Each intermediate server would pass on the same type of cell that it
   received (either relay or relay_early), and the cell's destination
   will be able to learn whether it's allowed to contain an Extend request.

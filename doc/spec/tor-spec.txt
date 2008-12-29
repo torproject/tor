@@ -289,6 +289,7 @@ see tor-design.pdf.
          6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
          7 -- VERSIONS    (Negotiate proto version) (See Sec 4)
          8 -- NETINFO     (Time and address info)   (See Sec 4)
+         9 -- RELAY_EARLY (End-to-end data; limited) (See sec 5.6)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -623,9 +624,9 @@ see tor-design.pdf.
 
 5.5. Routing relay cells
 
-   When an OR receives a RELAY cell, it checks the cell's circID and
-   determines whether it has a corresponding circuit along that
-   connection.  If not, the OR drops the RELAY cell.
+   When an OR receives a RELAY or RELAY_EARLY cell, it checks the cell's
+   circID and determines whether it has a corresponding circuit along that
+   connection.  If not, the OR drops the cell.
 
    Otherwise, if the OR is not at the OP edge of the circuit (that is,
    either an 'exit node' or a non-edge node), it de/encrypts the payload
@@ -652,6 +653,24 @@ see tor-design.pdf.
                 section 6..1), then stop and process the payload.
 
    For more information, see section 6 below.
+
+5.6. Handling relay_early cells
+
+   A RELAY_EARLY cell is designed to limit the length any circuit can reach.
+   When an OR receives a RELAY_EARLY cell, and the next node in the circuit
+   is speaking v2 of the link protocol or later, the OR relays the cell as a
+   RELAY_EARLY cell.  Otherwise, it relays it as a RELAY cell.
+
+   If a node ever receives more than 8 RELAY_EARLY cells on a given circuit,
+   it SHOULD close the circuit.
+
+   When speaking v2 of the link protocol or later, clients MUST only send
+   EXTEND cells inside RELAY_EARLY cells.  Clients SHOULD send the first ~8
+   RELAY cells that are not targeted at the first hop of any circuit as
+   RELAY_EARLY cells too, in order to partially conceal the circuit length.
+
+   [In a future version of Tor, servers will reject any EXTEND cell not
+   received in a RELAY_EARLY cell.  See proposal 110.]
 
 6. Application connections and stream management
 
