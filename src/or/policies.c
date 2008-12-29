@@ -556,10 +556,11 @@ addr_policy_get_canonical_entry(addr_policy_t *e)
   return found->policy;
 }
 
-/** As compare_to_addr_to_addr_policy, but instead of a tor_addr_t, takes
+/** As compare_tor_addr_to_addr_policy, but instead of a tor_addr_t, takes
  * in host order. */
 addr_policy_result_t
-compare_addr_to_addr_policy(uint32_t addr, uint16_t port, smartlist_t *policy)
+compare_addr_to_addr_policy(uint32_t addr, uint16_t port,
+                            const smartlist_t *policy)
 {
   /*XXXX deprecate this function when possible. */
   tor_addr_t a;
@@ -567,87 +568,133 @@ compare_addr_to_addr_policy(uint32_t addr, uint16_t port, smartlist_t *policy)
   return compare_tor_addr_to_addr_policy(&a, port, policy);
 }
 
+/** Helper for compare_tor_addr_to_addr_policy.  Implements the case where
+ * addr and port are both known. */
+static addr_policy_result_t
+compare_known_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
+                                      const smartlist_t *policy)
+{
+  /* We know the address and port, and we know the policy, so we can just
+   * compute an exact match. */
+  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+    /* Address is known */
+    if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
+                                 CMP_SEMANTIC)) {
+      if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
+        /* Exact match for the policy */
+        return tmpe->policy_type == ADDR_POLICY_ACCEPT ?
+          ADDR_POLICY_ACCEPTED : ADDR_POLICY_REJECTED;
+      }
+    }
+  } SMARTLIST_FOREACH_END(tmpe);
+
+  /* accept all by default. */
+  return ADDR_POLICY_ACCEPTED;
+}
+
+/** Helper for compare_tor_addr_to_addr_policy.  Implements the case where
+ * addr is known but port is not. */
+static addr_policy_result_t
+compare_known_tor_addr_to_addr_policy_noport(const tor_addr_t *addr,
+                                             const smartlist_t *policy)
+{
+  /* We look to see if there's a definite match.  If so, we return that
+     match's value, unless there's an intervening possible match that says
+     something different. */
+  int maybe_accept = 0, maybe_reject = 0;
+
+  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+    if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
+                                 CMP_SEMANTIC)) {
+      if (tmpe->prt_min <= 1 && tmpe->prt_max >= 65535) {
+        /* Definitely matches, since it covers all ports. */
+        if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
+          /* If we already hit a clause that might trigger a 'reject', than we
+           * can't be sure of this certain 'accept'.*/
+          return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED :
+            ADDR_POLICY_ACCEPTED;
+        } else {
+          return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED :
+            ADDR_POLICY_REJECTED;
+        }
+      } else {
+        /* Might match. */
+        if (tmpe->policy_type == ADDR_POLICY_REJECT)
+          maybe_reject = 1;
+        else
+          maybe_accept = 1;
+      }
+    }
+  } SMARTLIST_FOREACH_END(tmpe);
+
+  /* accept all by default. */
+  return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
+}
+
+/** Helper for compare_tor_addr_to_addr_policy.  Implements the case where
+ * port is known but address is not. */
+static addr_policy_result_t
+compare_unknown_tor_addr_to_addr_policy(uint16_t port,
+                                        const smartlist_t *policy)
+{
+  /* We look to see if there's a definite match.  If so, we return that
+     match's value, unless there's an intervening possible match that says
+     something different. */
+  int maybe_accept = 0, maybe_reject = 0;
+
+  SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
+    if (tmpe->prt_min <= port && port <= tmpe->prt_max) {
+       if (tmpe->maskbits == 0) {
+        /* Definitely matches, since it covers all addresses. */
+        if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
+          /* If we already hit a clause that might trigger a 'reject', than we
+           * can't be sure of this certain 'accept'.*/
+          return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED :
+            ADDR_POLICY_ACCEPTED;
+        } else {
+          return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED :
+            ADDR_POLICY_REJECTED;
+        }
+      } else {
+        /* Might match. */
+        if (tmpe->policy_type == ADDR_POLICY_REJECT)
+          maybe_reject = 1;
+        else
+          maybe_accept = 1;
+      }
+    }
+  } SMARTLIST_FOREACH_END(tmpe);
+
+  /* accept all by default. */
+  return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
+}
+
 /** Decide whether a given addr:port is definitely accepted,
  * definitely rejected, probably accepted, or probably rejected by a
  * given policy.  If <b>addr</b> is 0, we don't know the IP of the
- * target address. If <b>port</b> is 0, we don't know the port of the
- * target address.
- *
- * For now, the algorithm is pretty simple: we look for definite and
- * uncertain matches.  The first definite match is what we guess; if
- * it was preceded by no uncertain matches of the opposite policy,
- * then the guess is definite; otherwise it is probable.  (If we
- * have a known addr and port, all matches are definite; if we have an
- * unknown addr/port, any address/port ranges other than "all" are
- * uncertain.)
+ * target address.  If <b>port</b> is 0, we don't know the port of the
+ * target address.  (At least one of <b>addr</b> and <b>port</b> must be
+ * provided.  If you want to know whether a policy would definitely reject
+ * an unknown address:port, use policy_is_reject_star().)
  *
  * We could do better by assuming that some ranges never match typical
  * addresses (127.0.0.1, and so on).  But we'll try this for now.
  */
 addr_policy_result_t
 compare_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
-                                smartlist_t *policy)
+                                const smartlist_t *policy)
 {
-  int maybe_reject = 0;
-  int maybe_accept = 0;
-  int match = 0;
-  int maybe = 0;
-  int i, len;
-  int addr_is_unknown;
-  addr_is_unknown = tor_addr_is_null(addr);
-
-  len = policy ? smartlist_len(policy) : 0;
-
-  for (i = 0; i < len; ++i) {
-    addr_policy_t *tmpe = smartlist_get(policy, i);
-    maybe = 0;
-    if (addr_is_unknown) {
-      /* Address is unknown. */
-      if ((port >= tmpe->prt_min && port <= tmpe->prt_max) ||
-           (!port && tmpe->prt_min<=1 && tmpe->prt_max>=65535)) {
-        /* The port definitely matches. */
-        if (tmpe->maskbits == 0) {
-          match = 1;
-        } else {
-          maybe = 1;
-        }
-      } else if (!port) {
-        /* The port maybe matches. */
-        maybe = 1;
-      }
-    } else {
-      /* Address is known */
-      if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
-                                   CMP_SEMANTIC)) {
-        if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
-          /* Exact match for the policy */
-          match = 1;
-        } else if (!port) {
-          maybe = 1;
-        }
-      }
-    }
-    if (maybe) {
-      if (tmpe->policy_type == ADDR_POLICY_REJECT)
-        maybe_reject = 1;
-      else
-        maybe_accept = 1;
-    }
-    if (match) {
-      if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
-        /* If we already hit a clause that might trigger a 'reject', than we
-         * can't be sure of this certain 'accept'.*/
-        return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED :
-                              ADDR_POLICY_ACCEPTED;
-      } else {
-        return maybe_accept ? ADDR_POLICY_PROBABLY_REJECTED :
-                              ADDR_POLICY_REJECTED;
-      }
-    }
+  if (!policy) {
+    /* no policy? accept all. */
+    return ADDR_POLICY_ACCEPTED;
+  } else if (tor_addr_is_null(addr)) {
+    tor_assert(port != 0);
+    return compare_unknown_tor_addr_to_addr_policy(port, policy);
+  } else if (port == 0) {
+    return compare_known_tor_addr_to_addr_policy_noport(addr, policy);
+  } else {
+    return compare_known_tor_addr_to_addr_policy(addr, port, policy);
   }
-
-  /* accept all by default. */
-  return maybe_reject ? ADDR_POLICY_PROBABLY_ACCEPTED : ADDR_POLICY_ACCEPTED;
 }
 
 /** Return true iff the address policy <b>a</b> covers every case that
@@ -854,7 +901,7 @@ exit_policy_is_general_exit(smartlist_t *policy)
 /** Return false if <b>policy</b> might permit access to some addr:port;
  * otherwise if we are certain it rejects everything, return true. */
 int
-policy_is_reject_star(smartlist_t *policy)
+policy_is_reject_star(const smartlist_t *policy)
 {
   if (!policy) /*XXXX disallow NULL policies? */
     return 1;

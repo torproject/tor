@@ -1449,16 +1449,19 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
 {
   uint32_t addr;
   struct in_addr in;
+  tor_addr_t a;
 
   if (!tor_inet_aton(address, &in))
     return NULL; /* it's not an IP already */
   addr = ntohl(in.s_addr);
 
+  tor_addr_from_ipv4h(&a, addr);
+
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
   {
-    if (router->is_running &&
-        router->addr == addr &&
-        compare_addr_to_addr_policy(addr, port, router->exit_policy) ==
+    if (router->addr == addr &&
+        router->is_running &&
+        compare_tor_addr_to_addr_policy(&a, port, router->exit_policy) ==
           ADDR_POLICY_ACCEPTED)
       return router;
   });
@@ -3645,8 +3648,7 @@ router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
 int
 router_exit_policy_rejects_all(routerinfo_t *router)
 {
-  return compare_addr_to_addr_policy(0, 0, router->exit_policy)
-    == ADDR_POLICY_REJECTED;
+  return router->policy_is_reject_star;
 }
 
 /** Add to the list of authorized directory servers one at

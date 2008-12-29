@@ -5,6 +5,10 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
       like Vidalia can show bridge operators that they're actually making
       a difference.
 
+  o Minor bugfixes (performance):
+    - Squeeze 2-5% out of client performance (according to oprofile) by
+      improving the implementation of some policy-manipulation functions.
+
   o Minor bugfixes:
     - Make get_interface_address() function work properly again; stop
       guessing the wrong parts of our address as our address.

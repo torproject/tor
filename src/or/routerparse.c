@@ -1365,6 +1365,8 @@ router_parse_entry_from_string(const char *s, const char *end,
                       goto err;
                     });
   policy_expand_private(&router->exit_policy);
+  if (policy_is_reject_star(router->exit_policy))
+    router->policy_is_reject_star = 1;
 
   if ((tok = find_opt_by_keyword(tokens, K_FAMILY)) && tok->n_args) {
     int i;

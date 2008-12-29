@@ -1418,6 +1418,8 @@ typedef struct {
                                       * a hidden service directory. */
   unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
                              * directory according to the authorities. */
+  unsigned int policy_is_reject_star:1; /**< True iff the exit policy for this
+                                         * router rejects everything. */
 
 /** Tor can use this router for general positions in circuits. */
 #define ROUTER_PURPOSE_GENERAL 0
@@ -3852,14 +3854,14 @@ int policies_parse_from_options(or_options_t *options);
 addr_policy_t *addr_policy_get_canonical_entry(addr_policy_t *ent);
 int cmp_addr_policies(smartlist_t *a, smartlist_t *b);
 addr_policy_result_t compare_tor_addr_to_addr_policy(const tor_addr_t *addr,
-                              uint16_t port, smartlist_t *policy);
+                              uint16_t port, const smartlist_t *policy);
 addr_policy_result_t compare_addr_to_addr_policy(uint32_t addr,
-                              uint16_t port, smartlist_t *policy);
+                              uint16_t port, const smartlist_t *policy);
 int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                int rejectprivate, const char *local_address);
 void policies_set_router_exitpolicy_to_reject_all(routerinfo_t *exitrouter);
 int exit_policy_is_general_exit(smartlist_t *policy);
-int policy_is_reject_star(smartlist_t *policy);
+int policy_is_reject_star(const smartlist_t *policy);
 int getinfo_helper_policies(control_connection_t *conn,
                             const char *question, char **answer);
 int policy_write_item(char *buf, size_t buflen, addr_policy_t *item,
