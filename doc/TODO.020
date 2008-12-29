@@ -27,3 +27,8 @@ Backport for 0.2.0 once better tested:
     stumble over.
   o r17566: FIx bug 691, wherein failure to run dns_init() would kill Tor
     dead.
+
+Backport for 0.2.0, maybe:
+  - r14830: Disable TLS compression.  This saves RAM and CPU, and
+    makes our TLS compression harder to distinguish from
+    firefox's. Win/win/win, right?
