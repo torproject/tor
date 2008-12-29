@@ -1030,6 +1030,26 @@ check_sockaddr(struct sockaddr *sa, int len, int level)
   return ok ? 0 : -1;
 }
 
+/** Check whether the socket family from an accepted socket <b>got</b> is the
+ * same as the one that <b>listener</b> is waiting for.  If it isn't, log
+ * a useful message and return -1.  Else return 0.
+ *
+ * This is annoying, but can apparently happen on some Darwins. */
+static int
+check_sockaddr_family_match(sa_family_t got, connection_t *listener)
+{
+  if (got != listener->socket_family) {
+    log_info(LD_BUG, "A listener connection returned a socket with a "
+             "mismatched family. %s for addr_family %d gave us a socket "
+             "with address family %d.  Dropping.",
+             conn_type_to_string(listener->type),
+             (int)listener->socket_family,
+             (int)got);
+    return -1;
+  }
+  return 0;
+}
+
 /** The listener connection <b>conn</b> told poll() it wanted to read.
  * Call accept() on conn-\>s, and add the new connection if necessary.
  */
@@ -1072,14 +1092,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   if (options->ConstrainedSockets)
     set_constrained_socket_buffers(news, (int)options->ConstrainedSockSize);
 
-  if (remote->sa_family != conn->socket_family) {
-    /* This is annoying, but can apparently happen on some Darwins. */
-    log_info(LD_BUG, "A listener connection returned a socket with a "
-             "mismatched family. %s for addr_family %d gave us a socket "
-             "with address family %d.  Dropping.",
-             conn_type_to_string(conn->type),
-             (int)conn->socket_family,
-             (int)remote->sa_family);
+  if (check_sockaddr_family_match(remote->sa_family, conn) < 0) {
     tor_close_socket(news);
     return 0;
   }
@@ -1106,15 +1119,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
       }
     }
 
-    /* Duplicate code. XXXX021 */
-    if (remote->sa_family != conn->socket_family) {
-      /* This is annoying, but can apparently happen on some Darwins. */
-      log_info(LD_BUG, "A listener connection returned a socket with a "
-               "mismatched family. %s for addr_family %d gave us a socket "
-               "with address family %d.  Dropping.",
-               conn_type_to_string(conn->type),
-               (int)conn->socket_family,
-               (int)remote->sa_family);
+    if (check_sockaddr_family_match(remote->sa_family, conn) < 0) {
       tor_close_socket(news);
       return 0;
     }
