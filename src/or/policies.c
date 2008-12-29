@@ -579,7 +579,7 @@ compare_known_tor_addr_to_addr_policy(const tor_addr_t *addr, uint16_t port,
   SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
     /* Address is known */
     if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
-                                 CMP_SEMANTIC)) {
+                                 CMP_EXACT)) {
       if (port >= tmpe->prt_min && port <= tmpe->prt_max) {
         /* Exact match for the policy */
         return tmpe->policy_type == ADDR_POLICY_ACCEPT ?
@@ -605,7 +605,7 @@ compare_known_tor_addr_to_addr_policy_noport(const tor_addr_t *addr,
 
   SMARTLIST_FOREACH_BEGIN(policy, addr_policy_t *, tmpe) {
     if (!tor_addr_compare_masked(addr, &tmpe->addr, tmpe->maskbits,
-                                 CMP_SEMANTIC)) {
+                                 CMP_EXACT)) {
       if (tmpe->prt_min <= 1 && tmpe->prt_max >= 65535) {
         /* Definitely matches, since it covers all ports. */
         if (tmpe->policy_type == ADDR_POLICY_ACCEPT) {
@@ -708,7 +708,7 @@ addr_policy_covers(addr_policy_t *a, addr_policy_t *b)
     /* a has more fixed bits than b; it can't possibly cover b. */
     return 0;
   }
-  if (tor_addr_compare_masked(&a->addr, &b->addr, a->maskbits, CMP_SEMANTIC)) {
+  if (tor_addr_compare_masked(&a->addr, &b->addr, a->maskbits, CMP_EXACT)) {
     /* There's a fixed bit in a that's set differently in b. */
     return 0;
   }
@@ -731,7 +731,7 @@ addr_policy_intersects(addr_policy_t *a, addr_policy_t *b)
     minbits = a->maskbits;
   else
     minbits = b->maskbits;
-  if (tor_addr_compare_masked(&a->addr, &b->addr, minbits, CMP_SEMANTIC))
+  if (tor_addr_compare_masked(&a->addr, &b->addr, minbits, CMP_EXACT))
     return 0;
   if (a->prt_max < b->prt_min || b->prt_max < a->prt_min)
     return 0;
