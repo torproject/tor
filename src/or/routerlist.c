@@ -3265,7 +3265,7 @@ routerlist_remove_old_routers(void)
 
   cutoff = now - OLD_ROUTER_DESC_MAX_AGE;
   /* Build a list of all the descriptors that _anybody_ lists. */
-  if (caches) {
+  if (caches && networkstatus_v2_list) {
     SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
     {
       /* XXXX The inner loop here gets pretty expensive, and actually shows up
