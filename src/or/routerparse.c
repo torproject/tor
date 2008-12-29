@@ -2556,7 +2556,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 ns_detached_signatures_t *
 networkstatus_parse_detached_signatures(const char *s, const char *eos)
 {
-  /* XXXX021 there is too much duplicate code here. */
+  /* XXXX there is too much duplicate shared between this function and
+   * networkstatus_parse_vote_from_string(). */
   directory_token_t *tok;
   memarea_t *area = NULL;
 
