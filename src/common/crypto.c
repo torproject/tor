@@ -406,7 +406,33 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
 
   if (env->key)
     RSA_free(env->key);
+#if OPENSSL_VERSION_NUMBER < 0x00908000l
+  /* In openssl 0.9.7, RSA_generate_key is all we have. */
   env->key = RSA_generate_key(PK_BYTES*8,65537, NULL, NULL);
+#else
+  /* In openssl 0.9.8, RSA_generate_key is deprecated. */
+  {
+    BIGNUM *e = BN_new();
+    RSA *r = NULL;
+    if (!e)
+      goto done;
+    if (! BN_set_word(e, 65537))
+      goto done;
+    r = RSA_new();
+    if (!r)
+      goto done;
+    if (RSA_generate_key_ex(r, PK_BYTES*8, e, NULL) == -1)
+      goto done;
+
+    env->key = r;
+    r = NULL;
+  done:
+    if (e)
+      BN_free(e);
+    if (r)
+      RSA_free(r);
+    }
+#endif
   if (!env->key) {
     crypto_log_errors(LOG_WARN, "generating RSA key");
     return -1;
