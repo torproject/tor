@@ -2253,6 +2253,7 @@ entry_guards_compute_status(void)
   int changed = 0;
   int severity = LOG_DEBUG;
   or_options_t *options;
+  digestmap_t *reasons;
   if (! entry_guards)
     return;
 
@@ -2260,17 +2261,20 @@ entry_guards_compute_status(void)
 
   now = time(NULL);
 
-  SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
+  reasons = digestmap_new();
+  SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry)
     {
       routerinfo_t *r = router_get_by_digest(entry->identity);
       const char *reason = NULL;
-      /*XXX021 log reason again. */
       if (entry_guard_set_status(entry, r, now, options, &reason))
         changed = 1;
 
       if (entry->bad_since)
         tor_assert(reason);
-    });
+      if (reason)
+        digestmap_set(reasons, entry->identity, (char*)reason);
+    }
+  SMARTLIST_FOREACH_END(entry);
 
   if (remove_dead_entry_guards())
     changed = 1;
@@ -2278,17 +2282,23 @@ entry_guards_compute_status(void)
   severity = changed ? LOG_DEBUG : LOG_INFO;
 
   if (changed) {
-    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
-        log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s, and %s.",
+    SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
+      const char *reason = digestmap_get(reasons, entry->identity);
+      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s%s%s, and %s.",
                entry->nickname,
                entry->unreachable_since ? "unreachable" : "reachable",
                entry->bad_since ? "unusable" : "usable",
-               entry_is_live(entry, 0, 1, 0) ? "live" : "not live"));
+               reason ? ", ": "",
+               reason ? reason : "",
+               entry_is_live(entry, 0, 1, 0) ? "live" : "not live");
+    } SMARTLIST_FOREACH_END(entry);
     log_info(LD_CIRC, "    (%d/%d entry guards are usable/new)",
              num_live_entry_guards(), smartlist_len(entry_guards));
     log_entry_guards(LOG_INFO);
     entry_guards_changed();
   }
+
+  digestmap_free(reasons, NULL);
 }
 
 /** Called when a connection to an OR with the identity digest <b>digest</b>
@@ -2444,9 +2454,12 @@ entry_guards_prepend_from_config(void)
   old_entry_guards_not_on_list = smartlist_create();
 
   /* Split entry guards into those on the list and those not. */
-  /* XXXX021 Now that we allow countries and IP ranges in EntryNodes, this is
+
+  /* XXXX022 Now that we allow countries and IP ranges in EntryNodes, this is
    *  potentially an enormous list. For now, we disable such values for
    *  EntryNodes in options_validate(); really, this wants a better solution.
+   *  Perhaps we should do this calculation once whenever the list of routers
+   *  changes or the entrynodes setting changes.
    */
   routerset_get_all_routers(entry_routers, options->EntryNodes, 0);
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri,
