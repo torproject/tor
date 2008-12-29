@@ -690,13 +690,17 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
   for (i=0; i < smartlist_len(desc->intro_nodes); ++i) {
     rend_intro_point_t *intro = smartlist_get(desc->intro_nodes, i);
     char ipoint[HEX_DIGEST_LEN+2];
+    const size_t ipoint_len = HEX_DIGEST_LEN+1;
     ipoint[0] = '$';
     base16_encode(ipoint+1, HEX_DIGEST_LEN+1,
                   intro->extend_info->identity_digest,
                   DIGEST_LEN);
-    tor_assert(buflen + *str_out >= cp); /* XXX021 This assert is a kludge. */
-    strlcpy(cp, ipoint, buflen-(cp-*str_out));
-    cp += strlen(ipoint)+1;
+    tor_assert(strlen(ipoint) == ipoint_len);
+    /* Assert that appending ipoint and its NUL won't over overun the
+     * buffer. */
+    tor_assert(cp + ipoint_len+1 < *str_out + buflen);
+    memcpy(cp, ipoint, ipoint_len+1);
+    cp += ipoint_len+1;
   }
   note_crypto_pk_op(REND_SERVER);
   r = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
