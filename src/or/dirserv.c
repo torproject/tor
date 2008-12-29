@@ -1625,7 +1625,6 @@ should_generate_v2_networkstatus(void)
 #define UPTIME_TO_GUARANTEE_STABLE (3600*24*30)
 /** If a router's MTBF is at least this value, then it is always stable.
  * See above.  (Corresponds to about 7 days for current decay rates.) */
-/*XXXX021 Never actually used! */
 #define MTBF_TO_GUARANTEE_STABLE (60*60*24*5)
 /** Similarly, we protect sufficiently fast nodes from being pushed
  * out of the set of Fast nodes. */
@@ -1695,7 +1694,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
 {
   if (need_uptime) {
     if (!enough_mtbf_info) {
-      /* XXX021 Once most authorities are on v3, we should change the rule from
+      /* XXX022 Once most authorities are on v3, we should change the rule from
        * "use uptime if we don't have mtbf data" to "don't advertise Stable on
        * v3 if we don't have enough mtbf data." */
       long uptime = real_uptime(router, now);
@@ -1705,7 +1704,8 @@ dirserv_thinks_router_is_unreliable(time_t now,
     } else {
       double mtbf =
         rep_hist_get_stability(router->cache_info.identity_digest, now);
-      if (mtbf < stable_mtbf)
+      if (mtbf < stable_mtbf &&
+          mtbf < MTBF_TO_GUARANTEE_STABLE)
         return 1;
     }
   }
