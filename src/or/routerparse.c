@@ -2919,6 +2919,37 @@ token_check_object(memarea_t *area, const char *kwd,
   return tok;
 }
 
+/** Helper: parse space-separated arguments from the string <b>s</b> ending at
+ * <b>eol</b>, and store them in the args field of <b>tok</b>.  Store the
+ * number of parsed elements into the n_args field of <b>tok</b>.  Allocate
+ * all storage in <b>area</b>.  Return the number of arguments parsed, or
+ * return -1 if there was an insanely high number of arguments. */
+static INLINE int
+get_token_arguments(memarea_t *area, directory_token_t *tok,
+                    const char *s, const char *eol)
+{
+/** Largest number of arguments we'll accept to any token, ever. */
+#define MAX_ARGS 512
+  char *mem = memarea_strndup(area, s, eol-s);
+  char *cp = mem;
+  int j = 0;
+  char *args[MAX_ARGS];
+  while (*cp) {
+    if (j == MAX_ARGS)
+      return -1;
+    args[j++] = cp;
+    cp = (char*)find_whitespace(cp);
+    if (!cp || !*cp)
+      break; /* End of the line. */
+    *cp++ = '\0';
+    cp = (char*)eat_whitespace(cp);
+  }
+  tok->n_args = j;
+  tok->args = memarea_memdup(area, args, j*sizeof(char*));
+  return j;
+#undef MAX_ARGS
+}
+
 /** Helper function: read the next token from *s, advance *s to the end of the
  * token, and return the parsed token.  Parse *<b>s</b> according to the list
  * of tokens in <b>table</b>.
@@ -2973,30 +3004,9 @@ get_next_token(memarea_t *area,
         tok->n_args = 1;
       } else {
         /* This keyword takes multiple arguments. */
-        /* XXXX021 this code is still too complicated. */
-        char *mem = memarea_strndup(area, *s, eol-*s);
-        char *cp = mem;
-        int j = 0;
-        while (*cp) {
-          j++;
-          cp = (char*)find_whitespace(cp);
-          if (!cp || !*cp)
-            break;
-          cp = (char*)eat_whitespace(cp);
-        }
-        tok->n_args = j;
-        if (tok->n_args) {
-          tok->args = memarea_alloc(area, sizeof(char*)*tok->n_args);
-          cp = mem;
-          j = 0;
-          while (*cp) {
-            tok->args[j++] = cp;
-            cp = (char*)find_whitespace(cp);
-              if (!cp || !*cp)
-                break;
-              *cp++ = '\0';
-              cp = (char*)eat_whitespace(cp);
-          }
+        if (get_token_arguments(area, tok, *s, eol)<0) {
+          tor_snprintf(ebuf, sizeof(ebuf),"Far too many arguments to %s", kwd);
+          RET_ERR(ebuf);
         }
         *s = eol;
       }
