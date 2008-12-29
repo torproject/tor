@@ -27,17 +27,17 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8g.tar.gz
+http://www.openssl.org/source/openssl-0.9.8i.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
-Type "tar zxf openssl-0.9.8g.tar.gz"
+Type "tar zxf openssl-0.9.8i.tar.gz"
 (Note:  There are many symlink errors because Windows doesn't support
 symlinks.  You can ignore these errors.)
 
 Make openssl libraries:
-Type "cd tor-mingw/openssl-0.9.8g/"
+Type "cd tor-mingw/openssl-0.9.8i/"
 Type "./Configure -no-idea -no-rc5 -no-mdc2 mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
@@ -52,7 +52,8 @@ Type "make"
 Type "make install"
 
 Alternatively:
-Download the pre-compiled openssl for win32.
+Download the pre-compiled openssl for win32 from 
+http://gnuwin32.sourceforge.net/packages/openssl.htm
 Install and proceed.
 
 
@@ -85,10 +86,10 @@ Type "make -f win32/Makefile.gcc"
 Done.
 
 
-Stage Four: Download, extract, and compile libevent-1.3e
+Stage Four: Download, extract, and compile libevent
 ------------------------------------------------------
 
-Download the libevent 1.4.7-stable release:
+Download the latest libevent release:
 http://www.monkey.org/~provos/libevent/
 
 Copy the libevent tarball into the "tor-mingw" directory.
@@ -103,7 +104,7 @@ Type "make install"
 Stage Five:  Build Tor
 ----------------------
 
-Download the current Tor alpha release from https://www.torproject.org/download.html.
+Download the current Tor alpha release source code from https://torproject.org/download.html.
 Copy the Tor tarball into the "tor-mingw" directory.
 Extract Tor:
 Type "tar zxf latest-tor-alpha.tar.gz"
