@@ -812,13 +812,10 @@ circuit_build_failed(origin_circuit_t *circ)
     } else if (circ->_base.state == CIRCUIT_STATE_OR_WAIT &&
                circ->_base.n_hop) {
       n_conn_id = circ->_base.n_hop->identity_digest;
-#if 0
-      /* XXXX021 I believe this logic was wrong.  If we're in state_or_wait,
-       * it's wrong to blame a particular connection for our failure to extend
-       * and set its is_bad_for_new_circs field: no connection ever got
-       * a chance to hear our CREATE cell. -NM*/
-      n_conn = connection_or_get_by_identity_digest(n_conn_id);
-#endif
+      /* Do not set n_conn.  If we're in state_or_wait, it's wrong to blame a
+       * particular connection for our failure to extend and set its
+       * is_bad_for_new_circs field, since no connection ever got a chance to
+       * hear our CREATE cell. */
     }
     if (n_conn) {
       log_info(LD_OR,
@@ -1089,7 +1086,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         return -1;
       }
     } else {
-      /* XXXX021 Duplicates checks in connection_ap_handshake_attach_circuit */
+      /* XXXX022 Duplicates checks in connection_ap_handshake_attach_circuit */
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
       if (router && !connection_ap_can_use_exit(conn, router)) {

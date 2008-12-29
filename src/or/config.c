@@ -688,8 +688,8 @@ static int parse_dir_server_line(const char *line,
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
 static config_line_t *get_assigned_option(config_format_t *fmt,
-                                      or_options_t *options, const char *key,
-                                      int escape_val);
+                                          void *options, const char *key,
+                                          int escape_val);
 static void config_init(config_format_t *fmt, void *options);
 static int or_state_validate(or_state_t *old_options, or_state_t *options,
                              int from_setconf, char **msg);
@@ -1929,9 +1929,8 @@ config_lines_dup(const config_line_t *inp)
  * value needs to be quoted before it's put in a config file, quote and
  * escape that value. Return NULL if no such key exists. */
 static config_line_t *
-get_assigned_option(config_format_t *fmt, or_options_t *options,
+get_assigned_option(config_format_t *fmt, void *options,
                     const char *key, int escape_val)
-/* XXXX argument is options, but fmt is provided. Inconsistent. */
 {
   config_var_t *var;
   const void *value;
@@ -2464,7 +2463,7 @@ is_local_addr(const tor_addr_t *addr)
   if (get_options()->EnforceDistinctSubnets == 0)
     return 0;
   if (tor_addr_family(addr) == AF_INET) {
-    /*XXXX021 IP6 what corresponds to an /24? */
+    /*XXXX022 IP6 what corresponds to an /24? */
     uint32_t ip = tor_addr_to_ipv4h(addr);
 
     /* It's possible that this next check will hit before the first time

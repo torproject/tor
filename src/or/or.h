@@ -967,8 +967,8 @@ typedef struct connection_t {
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
 
-  /* XXXX021 move this field into a subtype, or (hack, spit) make it a union
-   * with some other fields. */
+  /* XXXX022 move this field, and all the listener-only fields (just
+     socket_family, I think), into a new listener_connection_t subtype. */
   /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
    * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;

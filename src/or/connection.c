@@ -582,8 +582,6 @@ connection_about_to_close_connection(connection_t *conn)
             int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
                                          reason);
-            /* XXX021 come up with a better string for the first arg -RD */
-            /* What did you have in mind? -NM */
             if (!authdir_mode_tests_reachability(options))
               control_event_bootstrap_problem(
                 orconn_end_reason_to_control_string(reason), reason);
