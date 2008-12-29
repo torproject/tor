@@ -544,6 +544,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
 
   if (!strcmp(address, "*")) {
     family = AF_INET; /* AF_UNSPEC ???? XXXX_IP6 */
+    tor_addr_from_ipv4h(addr_out, 0);
     any_flag = 1;
   } else if (tor_inet_pton(AF_INET6, address, &in6_tmp) > 0) {
     family = AF_INET6;
