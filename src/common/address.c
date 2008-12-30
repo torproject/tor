@@ -560,22 +560,6 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
 
   v4map = tor_addr_is_v4(addr_out);
 
-/*
-#ifdef ALWAYS_V6_MAP
-  if (v_family == AF_INET) {
-    v_family = AF_INET6;
-    IN_ADDR6(addr_out).s6_addr32[3] = IN6_ADDRESS(addr_out).s_addr;
-    memset(&IN6_ADDRESS(addr_out), 0, 10);
-    IN_ADDR6(addr_out).s6_addr16[5] = 0xffff;
-  }
-#else
-  if (v_family == AF_INET6 && v4map) {
-    v_family = AF_INET;
-    IN4_ADDRESS((addr_out).s_addr = IN6_ADDRESS(addr_out).s6_addr32[3];
-  }
-#endif
-*/
-
   /* Parse mask */
   if (maskbits_out) {
     int bits = 0;

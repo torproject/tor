@@ -187,21 +187,6 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   if (crypto_dh_get_public(dh, challenge, dhbytes))
     goto err;
 
-#ifdef DEBUG_ONION_SKINS
-#define PA(a,n) \
-  { int _i; for (_i = 0; _i<n; ++_i) printf("%02x ",((int)(a)[_i])&0xFF); }
-
-  printf("Client: client g^x:");
-  PA(challenge+16,3);
-  printf("...");
-  PA(challenge+141,3);
-  puts("");
-
-  printf("Client: client symkey:");
-  PA(challenge+0,16);
-  puts("");
-#endif
-
   note_crypto_pk_op(ENC_ONIONSKIN);
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
@@ -269,14 +254,6 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
     goto err;
   }
 
-#ifdef DEBUG_ONION_SKINS
-  printf("Server: server g^y:");
-  PA(handshake_reply_out+0,3);
-  printf("...");
-  PA(handshake_reply_out+125,3);
-  puts("");
-#endif
-
   key_material_len = DIGEST_LEN+key_out_len;
   key_material = tor_malloc(key_material_len);
   len = crypto_dh_compute_secret(dh, challenge, DH_KEY_LEN,
@@ -291,15 +268,6 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
 
   /* use the rest of the key material for our shared keys, digests, etc */
   memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
-
-#ifdef DEBUG_ONION_SKINS
-  printf("Server: key material:");
-  PA(key_material, DH_KEY_LEN);
-  puts("");
-  printf("Server: keys out:");
-  PA(key_out, key_out_len);
-  puts("");
-#endif
 
   memset(challenge, 0, sizeof(challenge));
   memset(key_material, 0, key_material_len);
@@ -337,14 +305,6 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   size_t key_material_len;
   tor_assert(crypto_dh_get_bytes(handshake_state) == DH_KEY_LEN);
 
-#ifdef DEBUG_ONION_SKINS
-  printf("Client: server g^y:");
-  PA(handshake_reply+0,3);
-  printf("...");
-  PA(handshake_reply+125,3);
-  puts("");
-#endif
-
   key_material_len = DIGEST_LEN + key_out_len;
   key_material = tor_malloc(key_material_len);
   len = crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
@@ -361,12 +321,6 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 
   /* use the rest of the key material for our shared keys, digests, etc */
   memcpy(key_out, key_material+DIGEST_LEN, key_out_len);
-
-#ifdef DEBUG_ONION_SKINS
-  printf("Client: keys out:");
-  PA(key_out, key_out_len);
-  puts("");
-#endif
 
   memset(key_material, 0, key_material_len);
   tor_free(key_material);

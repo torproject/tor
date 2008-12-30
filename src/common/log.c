@@ -95,12 +95,9 @@ should_log_function_name(log_domain_mask_t domain, int severity)
   }
 }
 
-#define USE_LOG_MUTEX
-
-#ifdef USE_LOG_MUTEX
 /** A mutex to guard changes to logfiles and logging. */
 static tor_mutex_t *log_mutex = NULL;
-#endif
+
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
 #ifdef HAVE_SYSLOG_H
@@ -109,15 +106,10 @@ static logfile_t *logfiles = NULL;
 static int syslog_count = 0;
 #endif
 
-#ifdef USE_LOG_MUTEX
 #define LOCK_LOGS() STMT_BEGIN                                          \
   tor_mutex_acquire(log_mutex);                                         \
   STMT_END
 #define UNLOCK_LOGS() STMT_BEGIN tor_mutex_release(log_mutex); STMT_END
-#else
-#define LOCK_LOGS() STMT_NIL
-#define UNLOCK_LOGS() STMT_NIL
-#endif
 
 /** What's the lowest log level anybody cares about?  Checking this lets us
  * bail out early from log_debug if we aren't debugging.  */

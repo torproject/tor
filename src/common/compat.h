@@ -324,13 +324,8 @@ int tor_open_socket(int domain, int type, int protocol);
 int tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len);
 int get_n_open_sockets(void);
 
-#ifdef USE_BSOCKETS
-#define tor_socket_send(s, buf, len, flags) bsend(s, buf, len, flags)
-#define tor_socket_recv(s, buf, len, flags) brecv(s, buf, len, flags)
-#else
 #define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
 #define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)
-#endif
 
 /* Define struct in6_addr on platforms that do not have it.  Generally,
  * these platforms are ones without IPv6 support, but we want to have
@@ -403,7 +398,7 @@ int network_init(void);
  * errnos against expected values, and use tor_socket_errno to find
  * the actual errno after a socket operation fails.
  */
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+#if defined(MS_WINDOWS)
 /** Return true if e is EAGAIN or the local equivalent. */
 #define ERRNO_IS_EAGAIN(e)           ((e) == EAGAIN || (e) == WSAEWOULDBLOCK)
 /** Return true if e is EINPROGRESS or the local equivalent. */

@@ -199,7 +199,7 @@ tls_log_errors(tor_tls_t *tls, int severity, const char *doing)
 static int
 tor_errno_to_tls_error(int e)
 {
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+#if defined(MS_WINDOWS)
   switch (e) {
     case WSAECONNRESET: // most common
       return TOR_TLS_ERROR_CONNRESET;
@@ -839,11 +839,7 @@ tor_tls_new(int sock, int isServer)
   if (!isServer)
     rectify_client_ciphers(&result->ssl->cipher_list);
   result->socket = sock;
-#ifdef USE_BSOCKETS
-  bio = BIO_new_bsocket(sock, BIO_NOCLOSE);
-#else
   bio = BIO_new_socket(sock, BIO_NOCLOSE);
-#endif
   if (! bio) {
     tls_log_errors(NULL, LOG_WARN, "opening BIO");
     SSL_free(result->ssl);

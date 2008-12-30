@@ -23,7 +23,6 @@ const char buffers_c_id[] =
 #endif
 
 //#define PARANOIA
-//#define NOINLINE
 
 #ifdef PARANOIA
 /** Helper: If PARANOIA is defined, assert that the buffer in local variable
@@ -31,11 +30,6 @@ const char buffers_c_id[] =
 #define check() STMT_BEGIN assert_buf_ok(buf); STMT_END
 #else
 #define check() STMT_NIL
-#endif
-
-#ifdef NOINLINE
-#undef INLINE
-#define INLINE
 #endif
 
 /* Implementation notes:

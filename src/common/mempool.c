@@ -12,8 +12,6 @@
 #define MEMPOOL_PRIVATE
 #include "mempool.h"
 
-#define LAZY_CHUNK_SORT
-
 /* OVERVIEW:
  *
  *     This is an implementation of memory pools for Tor cells.  It may be
@@ -407,7 +405,6 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
   return pool;
 }
 
-#ifdef LAZY_CHUNK_SORT
 /** Helper function for qsort: used to sort pointers to mp_chunk_t into
  * descending order of fullness. */
 static int
@@ -449,17 +446,8 @@ mp_pool_sort_used_chunks(mp_pool_t *pool)
   }
   chunks[n-1]->next = NULL;
   FREE(chunks);
-#if 0
-  inverted = 0;
-  for (chunk = pool->used_chunks; chunk; chunk = chunk->next) {
-    if (chunk->next) {
-      ASSERT(chunk->next->n_allocated <= chunk->n_allocated);
-    }
-  }
-#endif
   mp_pool_assert_ok(pool);
 }
-#endif
 
 /** If there are more than <b>n</b> empty chunks in <b>pool</b>, free the
  * excess ones that have been empty for the longest. If
@@ -471,9 +459,7 @@ mp_pool_clean(mp_pool_t *pool, int n_to_keep, int keep_recently_used)
 {
   mp_chunk_t *chunk, **first_to_free;
 
-#ifdef LAZY_CHUNK_SORT
   mp_pool_sort_used_chunks(pool);
-#endif
   ASSERT(n_to_keep >= 0);
 
   if (keep_recently_used) {

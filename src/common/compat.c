@@ -87,10 +87,6 @@ const char compat_c_id[] =
 #include <sys/file.h>
 #endif
 
-#ifdef USE_BSOCKETS
-#include <bsocket.h>
-#endif
-
 #include "log.h"
 #include "util.h"
 #include "container.h"
@@ -630,9 +626,7 @@ tor_close_socket(int s)
    * tor_close_socket to close sockets, and always using close() on
    * files.
    */
-#ifdef USE_BSOCKETS
-  r = bclose(s);
-#elif defined(MS_WINDOWS)
+#if defined(MS_WINDOWS)
   r = closesocket(s);
 #else
   r = close(s);
@@ -718,7 +712,7 @@ get_n_open_sockets(void)
 void
 set_socket_nonblocking(int socket)
 {
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+#if defined(MS_WINDOWS)
   unsigned long nonblocking = 1;
   ioctlsocket(socket, FIONBIO, (unsigned long*) &nonblocking);
 #else
@@ -761,8 +755,6 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
     }
   }
   return r < 0 ? -errno : r;
-#elif defined(USE_BSOCKETS)
-  return bsocketpair(family, type, protocol, fd);
 #else
     /* This socketpair does not work when localhost is down. So
      * it's really not the same thing at all. But it's close enough
@@ -2082,7 +2074,7 @@ tor_threads_init(void)
  * should call tor_socket_errno <em>at most once</em> on the failing
  * socket to get the error.
  */
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+#if defined(MS_WINDOWS)
 int
 tor_socket_errno(int sock)
 {
@@ -2098,7 +2090,7 @@ tor_socket_errno(int sock)
 }
 #endif
 
-#if defined(MS_WINDOWS) && !defined(USE_BSOCKETS)
+#if defined(MS_WINDOWS)
 #define E(code, s) { code, (s " [" #code " ]") }
 struct { int code; const char *msg; } windows_socket_errors[] = {
   E(WSAEINTR, "Interrupted function call"),
