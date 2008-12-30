@@ -458,6 +458,38 @@ relay_header_unpack(relay_header_t *dest, const char *src)
   dest->length = ntohs(get_uint16(src+9));
 }
 
+/** Convert the relay <b>command</b> into a human-readable string. */
+static const char *
+relay_command_to_string(uint8_t command)
+{
+  switch (command) {
+    case RELAY_COMMAND_BEGIN: return "BEGIN";
+    case RELAY_COMMAND_DATA: return "DATA";
+    case RELAY_COMMAND_END: return "END";
+    case RELAY_COMMAND_CONNECTED: return "CONNECTED";
+    case RELAY_COMMAND_SENDME: return "SENDME";
+    case RELAY_COMMAND_EXTEND: return "EXTEND";
+    case RELAY_COMMAND_EXTENDED: return "EXTENDED";
+    case RELAY_COMMAND_TRUNCATE: return "TRUNCATE";
+    case RELAY_COMMAND_TRUNCATED: return "TRUNCATED";
+    case RELAY_COMMAND_DROP: return "DROP";
+    case RELAY_COMMAND_RESOLVE: return "RESOLVE";
+    case RELAY_COMMAND_RESOLVED: return "RESOLVED";
+    case RELAY_COMMAND_BEGIN_DIR: return "BEGIN_DIR";
+    case RELAY_COMMAND_ESTABLISH_INTRO: return "ESTABLISH_INTRO";
+    case RELAY_COMMAND_ESTABLISH_RENDEZVOUS: return "ESTABLISH_RENDEZVOUS";
+    case RELAY_COMMAND_INTRODUCE1: return "INTRODUCE1";
+    case RELAY_COMMAND_INTRODUCE2: return "INTRODUCE2";
+    case RELAY_COMMAND_RENDEZVOUS1: return "RENDEZVOUS1";
+    case RELAY_COMMAND_RENDEZVOUS2: return "RENDEZVOUS2";
+    case RELAY_COMMAND_INTRO_ESTABLISHED: return "INTRO_ESTABLISHED";
+    case RELAY_COMMAND_RENDEZVOUS_ESTABLISHED:
+      return "RENDEZVOUS_ESTABLISHED";
+    case RELAY_COMMAND_INTRODUCE_ACK: return "INTRODUCE_ACK";
+    default: return "(unrecognized)";
+  }
+}
+
 /** Make a relay cell out of <b>relay_command</b> and <b>payload</b>, and send
  * it onto the open circuit <b>circ</b>. <b>stream_id</b> is the ID on
  * <b>circ</b> for the stream that's sending the relay cell, or 0 if it's a
@@ -521,9 +553,26 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
       --origin_circ->remaining_relay_early_cells;
       log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",
                 (int)origin_circ->remaining_relay_early_cells);
+      /* Memorize the command that is sent as RELAY_EARLY cell; helps debug
+       * task 878. */
+      origin_circ->relay_early_commands[
+          origin_circ->relay_early_cells_sent++] = relay_command;
     } else if (relay_command == RELAY_COMMAND_EXTEND) {
+      /* If no RELAY_EARLY cells can be sent over this circuit, log which
+       * commands have been sent as RELAY_EARLY cells before; helps debug
+       * task 878. */
+      smartlist_t *commands_list = smartlist_create();
+      int i = 0;
+      char *commands = NULL;
+      for (; i < origin_circ->relay_early_cells_sent; i++)
+        smartlist_add(commands_list, (char *)
+            relay_command_to_string(origin_circ->relay_early_commands[i]));
+      commands = smartlist_join_strings(commands_list, ",", 0, NULL);
       log_warn(LD_BUG, "Uh-oh.  We're sending a RELAY_COMMAND_EXTEND cell, "
-               "but we have run out of RELAY_EARLY cells on that circuit.");
+               "but we have run out of RELAY_EARLY cells on that circuit. "
+               "Commands sent before: %s", commands);
+      tor_free(commands);
+      smartlist_free(commands_list);
     }
   }
 

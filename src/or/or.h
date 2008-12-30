@@ -1997,6 +1997,14 @@ typedef struct origin_circuit_t {
    * to the specification? */
   unsigned int remaining_relay_early_cells : 4;
 
+  /** What commands were sent over this circuit that decremented the
+   * RELAY_EARLY counter? This is for debugging task 878. */
+  uint8_t relay_early_commands[MAX_RELAY_EARLY_CELLS_PER_CIRCUIT];
+
+  /** How many RELAY_EARLY cells have been sent over this circuit? This is
+   * for debugging task 878, too. */
+  int relay_early_cells_sent;
+
   /** The next stream_id that will be tried when we're attempting to
    * construct a new AP stream originating at this circuit. */
   streamid_t next_stream_id;
