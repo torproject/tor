@@ -402,9 +402,7 @@ debug_ntop(const struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET) {
 		struct sockaddr_in *sin = (struct sockaddr_in *) sa;
-		return debug_ntoa(ntohl(sin->sin_addr.s_addr));
-		/* XXX021 Nick: the above does ntoa of ntohl. This is
-		 * probably one to-host too many. -RD */
+		return debug_ntoa(sin->sin_addr.s_addr);
 	}
 	if (sa->sa_family == AF_INET6) {
 		/* Tor-specific.  In libevent, add more check code. */
