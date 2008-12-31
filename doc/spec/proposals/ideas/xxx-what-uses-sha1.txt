@@ -64,6 +64,7 @@ What Tor uses hashes for today:
    C. Some of the TLS ciphersuites we allow use SHA-1.
    D. When we sign our code with GPG, it might be using SHA-1.
    E. Our GPG keys might be authenticated with SHA-1.
+   F. OpenSSL's random number generator uses SHA-1, I believe.
 
 2. The Tor protocol
 
