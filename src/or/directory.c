@@ -3330,8 +3330,8 @@ find_dl_schedule_and_len(download_status_t *dls, int server,
 
 /** Called when an attempt to download <b>dls</b> has failed with HTTP status
  * <b>status_code</b>.  Increment the failure count (if the code indicates a
- * real failure) and set <b>dls</b>->next_attempt_at to an appropriate time in
- * the future. */
+ * real failure) and set <b>dls</b>-\>next_attempt_at to an appropriate time
+ * in the future. */
 time_t
 download_status_increment_failure(download_status_t *dls, int status_code,
                                   const char *item, int server, time_t now)
@@ -3349,7 +3349,8 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
   if (dls->n_download_failures < schedule_len)
     increment = schedule[dls->n_download_failures];
-  else if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD)
+  else if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD &&
+           dls->schedule != DL_SCHED_BRIDGE)
     increment = INT_MAX;
   else
     increment = schedule[schedule_len-1];
@@ -3360,7 +3361,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
     dls->next_attempt_at = TIME_MAX;
 
   if (item) {
-    if (dls->next_attempt_at == 0)
+    if (increment == 0)
       log_debug(LD_DIR, "%s failed %d time(s); I'll try again immediately.",
                 item, (int)dls->n_download_failures);
     else if (dls->next_attempt_at < TIME_MAX)
