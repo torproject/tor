@@ -2980,33 +2980,10 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port, char *digest)
   b->port = port;
   if (digest)
     memcpy(b->identity, digest, DIGEST_LEN);
+  b->fetch_status.schedule = DL_SCHED_BRIDGE;
   if (!bridge_list)
     bridge_list = smartlist_create();
   smartlist_add(bridge_list, b);
-}
-
-/** Schedule the next fetch for <b>bridge</b>, based on
- * some retry schedule. */
-static void
-bridge_fetch_status_increment(bridge_info_t *bridge, time_t now)
-{
-  switch (bridge->fetch_status.n_download_failures) {
-    case 0: bridge->fetch_status.next_attempt_at = now+60*15; break;
-    case 1: bridge->fetch_status.next_attempt_at = now+60*15; break;
-    default: bridge->fetch_status.next_attempt_at = now+60*60; break;
-  }
-  if (bridge->fetch_status.n_download_failures < 10)
-    bridge->fetch_status.n_download_failures++;
-}
-
-/** We just got a new descriptor for <b>bridge</b>. Reschedule the
- * next fetch for a long time from <b>now</b>. */
-static void
-bridge_fetch_status_arrived(bridge_info_t *bridge, time_t now)
-{
-  tor_assert(bridge);
-  bridge->fetch_status.next_attempt_at = now+60*60;
-  bridge->fetch_status.n_download_failures = 0;
 }
 
 /** If <b>digest</b> is one of our known bridges, return it. */
@@ -3072,11 +3049,12 @@ fetch_bridge_descriptors(time_t now)
 
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
-      if (bridge->fetch_status.next_attempt_at > now)
+      if (!download_status_is_ready(&bridge->fetch_status, now,
+                                    IMPOSSIBLE_TO_DOWNLOAD+1))
         continue; /* don't bother, no need to retry yet */
 
       /* schedule another fetch as if this one will fail, in case it does */
-      bridge_fetch_status_increment(bridge, now);
+      download_status_failed(&bridge->fetch_status, 0);
 
       can_use_bridge_authority = !tor_digest_is_zero(bridge->identity) &&
                                  num_bridge_auths;
@@ -3136,7 +3114,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
     if (bridge) { /* if we actually want to use this one */
       /* it's here; schedule its re-fetch for a long time from now. */
       if (!from_cache)
-        bridge_fetch_status_arrived(bridge, now);
+        download_status_reset(&bridge->fetch_status);
 
       add_an_entry_guard(ri, 1);
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,

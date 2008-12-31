@@ -696,7 +696,7 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
                   intro->extend_info->identity_digest,
                   DIGEST_LEN);
     tor_assert(strlen(ipoint) == ipoint_len);
-    /* Assert that appending ipoint and its NUL won't over overun the
+    /* Assert that appending ipoint and its NUL won't over overrun the
      * buffer. */
     tor_assert(cp + ipoint_len+1 < *str_out + buflen);
     memcpy(cp, ipoint, ipoint_len+1);
