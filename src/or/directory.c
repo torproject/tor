@@ -3341,7 +3341,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
   int increment;
   tor_assert(dls);
   if (status_code != 503 || server) {
-    if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD)
+    if (dls->n_download_failures < IMPOSSIBLE_TO_DOWNLOAD-1)
       ++dls->n_download_failures;
   }
 
