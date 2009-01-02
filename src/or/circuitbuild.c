@@ -3050,7 +3050,7 @@ fetch_bridge_descriptors(time_t now)
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
       if (!download_status_is_ready(&bridge->fetch_status, now,
-                                    IMPOSSIBLE_TO_DOWNLOAD+1))
+                                    IMPOSSIBLE_TO_DOWNLOAD))
         continue; /* don't bother, no need to retry yet */
 
       /* schedule another fetch as if this one will fail, in case it does */

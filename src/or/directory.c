@@ -3349,8 +3349,7 @@ download_status_increment_failure(download_status_t *dls, int status_code,
 
   if (dls->n_download_failures < schedule_len)
     increment = schedule[dls->n_download_failures];
-  else if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD &&
-           dls->schedule != DL_SCHED_BRIDGE)
+  else if (dls->n_download_failures == IMPOSSIBLE_TO_DOWNLOAD)
     increment = INT_MAX;
   else
     increment = schedule[schedule_len-1];
