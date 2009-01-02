@@ -2300,6 +2300,9 @@ out1:
 int
 evdns_nameserver_add(unsigned long int address) {
 	struct sockaddr_in sin;
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_len = sizeof(sin);
 	sin.sin_addr.s_addr = htonl(address);
 	sin.sin_port = 53;
 	return _evdns_nameserver_add_impl((struct sockaddr*) &sin, sizeof(sin));
@@ -2377,6 +2380,8 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 	assert(addr_part);
 	if (is_ipv6) {
 		struct sockaddr_in6 sin6;
+		memset(&sin6, 0, sizeof(sin6));
+		sin6.sin6_len = sizeof(sin6);
 		sin6.sin6_family = AF_INET6;
 		sin6.sin6_port = htons(port);
 		if (1 != tor_inet_pton(AF_INET6, addr_part, &sin6.sin6_addr)) {
@@ -2387,10 +2392,12 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 										  sizeof(sin6));
 	} else {
 		struct sockaddr_in sin;
+		memset(&sin, 0, sizeof(sin));
+		sin.sin_len = sizeof(sin);
 		sin.sin_family = AF_INET;
 		sin.sin_port = htons(port);
 		if (!inet_aton(addr_part, &sin.sin_addr)) {
-			log(EVDNS_LOG_DEBUG, "anet_pton(%s) failed", addr_part);
+			log(EVDNS_LOG_DEBUG, "inet_pton(%s) failed", addr_part);
 			return 4;
 		}
 		return _evdns_nameserver_add_impl((struct sockaddr*)&sin,
