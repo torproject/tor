@@ -3295,7 +3295,8 @@ routerlist_remove_old_routers(void)
    * decide to kill routers.) */
   /* XXX021 we don't check if we have a v3 consensus, do we? should we? -RD */
   if (!caches ||
-      smartlist_len(networkstatus_v2_list) > get_n_v2_authorities() / 2) {
+      (networkstatus_v2_list &&
+       smartlist_len(networkstatus_v2_list) > get_n_v2_authorities() / 2)) {
     cutoff = now - ROUTER_MAX_AGE;
     /* Remove too-old unrecommended members of routerlist->routers. */
     for (i = 0; i < smartlist_len(routerlist->routers); ++i) {
