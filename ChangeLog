@@ -34,6 +34,8 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
     - Change our header file guard macros to be less likely to conflict
       with system headers.  Adam Langley noticed that we were conflicting
       with log.h on Android.
+    - Tool-assisted documentation cleanup.  Nearly every function or static
+      variable in Tor should have its own documentation now.
 
 
 Changes in version 0.2.1.9-alpha - 2008-12-25
