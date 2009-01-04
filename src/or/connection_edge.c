@@ -2497,7 +2497,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                n_stream->_base.port);
       end_payload[0] = END_STREAM_REASON_EXITPOLICY;
       relay_send_command_from_edge(rh.stream_id, circ, RELAY_COMMAND_END,
-                                   end_payload, 1, NULL);
+                                   end_payload, 1, origin_circ->cpath->prev);
       connection_free(TO_CONN(n_stream));
       tor_free(address);
       return 0;

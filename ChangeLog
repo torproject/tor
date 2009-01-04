@@ -49,6 +49,9 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Fix a race condition when freeing keys shared between main thread
       and CPU workers that could result in a memory leak.  Bugfix on
       0.1.0.1-rc.  Fixes bug 889.
+    - Send a valid END cell back when a client tries to connect to a
+      nonexistent hidden service port.  Bugfix on 0.1.2.15.  Fixes bug
+      840.  Patch from rovv.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected
