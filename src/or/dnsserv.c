@@ -1,8 +1,5 @@
 /* Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
-const char dnsserv_c_id[] =
-  "$Id$";
 
 /**
  * \file dnsserv.c \brief Implements client-side DNS proxy server code.  Note:

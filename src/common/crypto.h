@@ -3,7 +3,6 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 /**
  * \file crypto.h
@@ -13,7 +12,6 @@
 
 #ifndef _TOR_CRYPTO_H
 #define _TOR_CRYPTO_H
-#define CRYPTO_H_ID "$Id$"
 
 #include <stdio.h>
 #include "torint.h"

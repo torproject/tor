@@ -2,7 +2,6 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 /**
  * \file torgzip.h
@@ -11,7 +10,6 @@
 
 #ifndef _TOR_TORGZIP_H
 #define _TOR_TORGZIP_H
-#define TORGZIP_H_ID "$Id$"
 
 /** Enumeration of what kind of compression to use.  Only ZLIB_METHOD is
  * guaranteed to be supported by the compress/uncompress functions here;

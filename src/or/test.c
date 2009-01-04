@@ -2,9 +2,6 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
-const char test_c_id[] =
-  "$Id$";
 
 /* Ordinarily defined in tor_main.c; this bit is just here to provide one
  * since we're not linking to tor_main.c */

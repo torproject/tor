@@ -3,9 +3,6 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
-const char config_c_id[] = \
-  "$Id$";
 
 /**
  * \file config.c
@@ -698,7 +695,6 @@ static int options_init_logs(or_options_t *options, int validate_only);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
-static void print_svn_version(void);
 static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
 /** Versions of libevent. */
@@ -3926,9 +3922,6 @@ options_init_from_torrc(int argc, char **argv)
 
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
     printf("Tor version %s.\n",get_version());
-    if (argc > 2 && (!strcmp(argv[2],"--version"))) {
-      print_svn_version();
-    }
     exit(0);
   }
 
@@ -5227,109 +5220,5 @@ getinfo_helper_config(control_connection_t *conn,
     smartlist_free(sl);
   }
   return 0;
-}
-
-#include "aes.h"
-#include "ht.h"
-#include "test.h"
-
-extern const char address_c_id[];
-extern const char aes_c_id[];
-extern const char compat_c_id[];
-extern const char container_c_id[];
-extern const char crypto_c_id[];
-extern const char log_c_id[];
-extern const char torgzip_c_id[];
-extern const char tortls_c_id[];
-extern const char util_c_id[];
-
-extern const char buffers_c_id[];
-extern const char circuitbuild_c_id[];
-extern const char circuitlist_c_id[];
-extern const char circuituse_c_id[];
-extern const char command_c_id[];
-//  extern const char config_c_id[];
-extern const char connection_c_id[];
-extern const char connection_edge_c_id[];
-extern const char connection_or_c_id[];
-extern const char control_c_id[];
-extern const char cpuworker_c_id[];
-extern const char directory_c_id[];
-extern const char dirserv_c_id[];
-extern const char dns_c_id[];
-extern const char hibernate_c_id[];
-extern const char main_c_id[];
-#ifdef NT_SERVICE
-extern const char ntmain_c_id[];
-#endif
-extern const char onion_c_id[];
-extern const char policies_c_id[];
-extern const char relay_c_id[];
-extern const char rendclient_c_id[];
-extern const char rendcommon_c_id[];
-extern const char rendmid_c_id[];
-extern const char rendservice_c_id[];
-extern const char rephist_c_id[];
-extern const char router_c_id[];
-extern const char routerlist_c_id[];
-extern const char routerparse_c_id[];
-
-/** Dump the version of every file to the log. */
-static void
-print_svn_version(void)
-{
-  puts(ADDRESS_H_ID);
-  puts(AES_H_ID);
-  puts(COMPAT_H_ID);
-  puts(CONTAINER_H_ID);
-  puts(CRYPTO_H_ID);
-  puts(HT_H_ID);
-  puts(TEST_H_ID);
-  puts(LOG_H_ID);
-  puts(TORGZIP_H_ID);
-  puts(TORINT_H_ID);
-  puts(TORTLS_H_ID);
-  puts(UTIL_H_ID);
-  puts(address_c_id);
-  puts(aes_c_id);
-  puts(compat_c_id);
-  puts(container_c_id);
-  puts(crypto_c_id);
-  puts(log_c_id);
-  puts(torgzip_c_id);
-  puts(tortls_c_id);
-  puts(util_c_id);
-
-  puts(OR_H_ID);
-  puts(buffers_c_id);
-  puts(circuitbuild_c_id);
-  puts(circuitlist_c_id);
-  puts(circuituse_c_id);
-  puts(command_c_id);
-  puts(config_c_id);
-  puts(connection_c_id);
-  puts(connection_edge_c_id);
-  puts(connection_or_c_id);
-  puts(control_c_id);
-  puts(cpuworker_c_id);
-  puts(directory_c_id);
-  puts(dirserv_c_id);
-  puts(dns_c_id);
-  puts(hibernate_c_id);
-  puts(main_c_id);
-#ifdef NT_SERVICE
-  puts(ntmain_c_id);
-#endif
-  puts(onion_c_id);
-  puts(policies_c_id);
-  puts(relay_c_id);
-  puts(rendclient_c_id);
-  puts(rendcommon_c_id);
-  puts(rendmid_c_id);
-  puts(rendservice_c_id);
-  puts(rephist_c_id);
-  puts(router_c_id);
-  puts(routerlist_c_id);
-  puts(routerparse_c_id);
 }
 

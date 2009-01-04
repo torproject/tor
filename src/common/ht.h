@@ -1,13 +1,11 @@
 /* Copyright 2002 Christopher Clark */
 /* Copyright 2005 Nick Mathewson */
 /* See license at end. */
-/* $Id$ */
 
 /* Based on ideas by Christopher Clark and interfaces from Niels Provos. */
 
 #ifndef _TOR_HT_H
 #define _TOR_HT_H
-#define HT_H_ID "$Id$"
 
 #define HT_HEAD(name, type)                                             \
   struct name {                                                         \

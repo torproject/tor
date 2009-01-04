@@ -2,13 +2,11 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 /* Implements a minimal interface to counter-mode AES. */
 
 #ifndef _TOR_AES_H
 #define _TOR_AES_H
-#define AES_H_ID "$Id$"
 
 /**
  * \file aes.h

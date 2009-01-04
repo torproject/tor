@@ -2,9 +2,6 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id: /tor/trunk/src/or/test.c 13338 2007-06-10T19:13:32.101740Z nickm  $ */
-const char test_data_c_id[] =
-  "$Id: /tor/trunk/src/or/test.c 13338 2007-06-10T19:13:32.101740Z nickm  $";
 
 /** First of 3 example authority certificates for unit testing. */
 const char AUTHORITY_CERT_1[] =

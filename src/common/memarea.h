@@ -1,6 +1,5 @@
 /* Copyright (c) 2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 /* Tor dependencies */
 
 #ifndef _TOR_MEMAREA_H

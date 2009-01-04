@@ -1,4 +1,3 @@
-/* $Id$ */
 /*	$OpenBSD: strlcpy.c,v 1.2 1998/11/06 04:33:16 wvdputte Exp $	*/
 
 /*

@@ -2,7 +2,6 @@
  * Copyright (c) 2007-2008, The Tor Project, Inc.
  */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 #include "orconfig.h"
 

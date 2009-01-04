@@ -2,13 +2,9 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 #define MAIN_PRIVATE
 #include "or.h"
-
-const char ntmain_c_id[] =
-  "$Id$";
 
 #include <tchar.h>
 #define GENSRV_SERVICENAME  TEXT("tor")

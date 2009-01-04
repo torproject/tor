@@ -2,11 +2,9 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 #ifndef _TOR_TEST_H
 #define _TOR_TEST_H
-#define TEST_H_ID "$Id$"
 
 /**
  * \file test.h

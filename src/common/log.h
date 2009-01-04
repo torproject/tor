@@ -3,7 +3,6 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 /**
  * \file log.h
@@ -12,7 +11,6 @@
  **/
 
 #ifndef _TOR_LOG_H
-#define LOG_H_ID "$Id$"
 
 #include "compat.h"
 

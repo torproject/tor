@@ -2,12 +2,9 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 #ifndef _TOR_CONTAINER_H
 #define _TOR_CONTAINER_H
-#define CONTAINER_H_ID \
-  "$Id$"
 
 #include "util.h"
 

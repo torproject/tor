@@ -1,5 +1,3 @@
-/* $Id$ */
-
 /* The original version of this module was written by Adam Langley; for
  * a history of modifications, check out the subversion logs.
  *

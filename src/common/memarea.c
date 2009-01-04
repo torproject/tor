@@ -1,6 +1,5 @@
 /* Copyright (c) 2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 /** \file memarea.c
  * \brief Implementation for memarea_t, an allocator for allocating lots of

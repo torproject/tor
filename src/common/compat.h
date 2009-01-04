@@ -2,11 +2,9 @@
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2008, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
-/* $Id$ */
 
 #ifndef _TOR_COMPAT_H
 #define _TOR_COMPAT_H
-#define COMPAT_H_ID "$Id$"
 
 #include "orconfig.h"
 #include "torint.h"
