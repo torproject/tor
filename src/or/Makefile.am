@@ -10,7 +10,7 @@ else
 tor_platform_source=
 endif
 
-EXTRA_DIST=ntmain.c
+EXTRA_DIST=ntmain.c or_sha1.i
 
 tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
@@ -51,6 +51,8 @@ test_LDADD = ../common/libor.a ../common/libor-crypto.a \
         -lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
+
+config.o: or_sha1.i
 
 tor_main.o: micro-revision.i
 
@@ -102,6 +104,18 @@ micro-revision.i: FORCE
 	  test x"`cat micro-revision.tmp`" != x"`cat micro-revision.i`"; then \
 	  mv micro-revision.tmp micro-revision.i;		\
 	fi; true
+
+or_sha1.i: $(tor_SOURCES) test_data.c test.c
+	if test "@SHA1SUM@" != none; then \
+	  @SHA1SUM@ $(tor_SOURCES) test_data.c test.c | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
+	elif test "@OPENSSL@" != none; then \
+	  @OPENSSL@ sha1 $(tor_SOURCES) test_data.c test.c | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
+	else \
+	  rm or_sha1.i; \
+	  touch or_sha1.i; \
+	fi
+
+
 
 #Dummy target to ensure that micro-revision.i _always_ gets built.
 FORCE:

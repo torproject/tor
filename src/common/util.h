@@ -294,5 +294,7 @@ void start_daemon(void);
 void finish_daemon(const char *desired_cwd);
 void write_pidfile(char *filename);
 
+const char *libor_get_digests(void);
+
 #endif
 

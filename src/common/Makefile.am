@@ -1,6 +1,8 @@
 
 noinst_LIBRARIES = libor.a libor-crypto.a
 
+EXTRA_DIST = common_sha1.i
+
 #CFLAGS  = -Wall -Wpointer-arith -O2
 
 if USE_OPENBSD_MALLOC
@@ -14,3 +16,15 @@ libor_a_SOURCES = address.c log.c util.c compat.c container.c mempool.c \
 libor_crypto_a_SOURCES = crypto.c aes.c tortls.c torgzip.c
 
 noinst_HEADERS = address.h log.h crypto.h test.h util.h compat.h aes.h torint.h tortls.h strlcpy.c strlcat.c torgzip.h container.h ht.h mempool.h memarea.h ciphers.inc
+
+common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
+	if test "@SHA1SUM@" != none; then \
+	  @SHA1SUM@ $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS) | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > common_sha1.i; \
+	elif test "@OPENSSL@" != none; then \
+	  @OPENSSL@ sha1 $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS) | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > common_sha1.i; \
+	else \
+	  rm common_sha1.i; \
+	  touch common_sha1.i; \
+	fi
+
+util.o: common_sha1.i

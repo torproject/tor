@@ -3927,6 +3927,14 @@ options_init_from_torrc(int argc, char **argv)
     printf("Tor version %s.\n",get_version());
     exit(0);
   }
+  if (argc > 1 && (!strcmp(argv[1],"--digests"))) {
+    printf("Tor version %s.\n",get_version());
+    printf("%s", libor_get_digests());
+    printf("%s", ""
+#include "or_sha1.i"
+           );
+    exit(0);
+  }
 
   /* Go through command-line variables */
   if (!global_cmdline_options) {
