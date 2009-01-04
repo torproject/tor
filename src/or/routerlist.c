@@ -3232,6 +3232,7 @@ routerlist_remove_old_routers(void)
   int caches = directory_caches_dir_info(get_options());
   const networkstatus_t *consensus = networkstatus_get_latest_consensus();
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
+  int have_enough_v2;
 
   trusted_dirs_remove_old_certs();
 
@@ -3286,14 +3287,17 @@ routerlist_remove_old_routers(void)
           digestset_add(retain, rs->descriptor_digest));
   }
 
-  /* If we have nearly as many networkstatuses as we want, we should consider
-   * pruning current routers that are too old and that nobody recommends.  (If
-   * we don't have enough networkstatuses, then we should get more before we
-   * decide to kill routers.) */
-  /* XXX021 we don't check if we have a v3 consensus, do we? should we? -RD */
-  if (!caches ||
-      (networkstatus_v2_list &&
-       smartlist_len(networkstatus_v2_list) > get_n_v2_authorities() / 2)) {
+  /* If we have a consensus, and nearly as many v2 networkstatuses as we want,
+   * we should consider pruning current routers that are too old and that
+   * nobody recommends.  (If we don't have a consensus or enough v2
+   * networkstatuses, then we should get more before we decide to kill
+   * routers.) */
+  /* we set this to true iff we don't care about v2 info, or we have enough. */
+  have_enough_v2 = !caches ||
+    (networkstatus_v2_list &&
+     smartlist_len(networkstatus_v2_list) > get_n_v2_authorities() / 2);
+
+  if (have_enough_v2 && consensus) {
     cutoff = now - ROUTER_MAX_AGE;
     /* Remove too-old unrecommended members of routerlist->routers. */
     for (i = 0; i < smartlist_len(routerlist->routers); ++i) {

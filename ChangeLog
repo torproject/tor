@@ -29,6 +29,8 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
     - If we are retrying something slowly over and over, do not
       automatically give up after the 254th failure.  Bugfix on
       0.2.1.9-alpha.
+    - Do not remove routers as too old if we do not have any consensus
+      document.  Bugfix on 0.2.0.7-alpha.
 
   o Deprecated and removed features:
     - The old "tor --version --version" command, which would spit out the
