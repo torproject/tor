@@ -5,7 +5,9 @@
 
 #include "or.h"
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
+#ifndef OPENBSD
 #include <malloc.h>
+#endif
 #endif
 
 /**
