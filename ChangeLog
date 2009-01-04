@@ -1,4 +1,4 @@
-Changes in version 0.2.0.33 - 200?-??-??
+Changes in version 0.2.0.33 - 2009-??-??
   o Major bugfixes:
     - When a stream at an exit relay is in state "resolving" or
       "connecting" and it receives an "end" relay cell, the exit relay
@@ -52,6 +52,10 @@ Changes in version 0.2.0.33 - 200?-??-??
     - Send a valid END cell back when a client tries to connect to a
       nonexistent hidden service port.  Bugfix on 0.1.2.15.  Fixes bug
       840.  Patch from rovv.
+    - Check which hops rendezvous stream cells are associated with to
+      prevent possible guess-the-streamid injection attacks from
+      intermediate hops.  Fixes another case of bug 446. Based on patch
+      from rovv.
 
   o Minor features:
     - Report the case where all signatures in a detached set are rejected

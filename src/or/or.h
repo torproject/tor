@@ -3688,8 +3688,8 @@ typedef struct rend_service_descriptor_t {
 
 int rend_cmp_service_ids(const char *one, const char *two);
 
-void rend_process_relay_cell(circuit_t *circ, int command, size_t length,
-                             const char *payload);
+void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
+                             int command, size_t length, const char *payload);
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
 int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
