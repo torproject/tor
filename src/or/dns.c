@@ -563,14 +563,10 @@ dns_resolve(edge_connection_t *exitconn)
   or_circuit_t *oncirc = TO_OR_CIRCUIT(exitconn->on_circuit);
   int is_resolve, r;
   char *hostname = NULL;
-  routerinfo_t *me = router_get_my_routerinfo();
   is_resolve = exitconn->_base.purpose == EXIT_PURPOSE_RESOLVE;
 
-  if (is_resolve && me &&
-      policy_is_reject_star(me->exit_policy)) /* non-exit */
-    r = -1;
-  else
-    r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
+  r = dns_resolve_impl(exitconn, is_resolve, oncirc, &hostname);
+
   switch (r) {
     case 1:
       /* We got an answer without a lookup -- either the answer was
@@ -645,6 +641,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   cached_resolve_t *resolve;
   cached_resolve_t search;
   pending_connection_t *pending_connection;
+  routerinfo_t *me;
   struct in_addr in;
   time_t now = time(NULL);
   uint8_t is_reverse = 0;
@@ -660,6 +657,11 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
     exitconn->_base.addr = ntohl(in.s_addr);
     exitconn->address_ttl = DEFAULT_DNS_TTL;
     return 1;
+  }
+  /* If we're a non-exit, don't even do DNS lookups. */
+  if (!(me = router_get_my_routerinfo()) ||
+      policy_is_reject_star(me->exit_policy)) {
+    return -1;
   }
   if (address_is_invalid_destination(exitconn->_base.address, 0)) {
     log(LOG_PROTOCOL_WARN, LD_EXIT,
