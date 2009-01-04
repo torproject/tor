@@ -3512,7 +3512,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "a non-default set of DirServers.");
   }
 
-  /*XXXX021 checking for defaults manually like this is a bit fragile.*/
+  /*XXXX022 checking for defaults manually like this is a bit fragile.*/
 
   /* Keep changes to hard-coded values synchronous to man page and default
    * values table. */

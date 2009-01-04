@@ -342,7 +342,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   if (!get_via_tor) {
     if (options->UseBridges && type != BRIDGE_AUTHORITY) {
       /* want to ask a running bridge for which we have a descriptor. */
-      /* XXX021 we assume that all of our bridges can answer any
+      /* XXX022 we assume that all of our bridges can answer any
        * possible directory question. This won't be true forever. -RD */
       /* It certainly is not true with conditional consensus downloading,
        * so, for now, never assume the server supports that. */
@@ -2606,7 +2606,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     ssize_t estimated_len = 0;
     smartlist_t *items = smartlist_create();
     smartlist_t *dir_items = smartlist_create();
-    int lifetime = 60; /* XXXX021 should actually use vote intervals. */
+    int lifetime = 60; /* XXXX022 should actually use vote intervals. */
     url += strlen("/tor/status-vote/");
     current = !strcmpstart(url, "current/");
     url = strchr(url, '/');

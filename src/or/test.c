@@ -4338,8 +4338,9 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 1);
-  tor_assert(encrypted_size > 0); /*XXXX021 Obviously this is true. But does
-                                   * this make Coverity happy? */
+  tor_assert(encrypted_size > 0); /* This is obviously true, since 17 is
+                                   * greater than 0, but its truth is not
+                                   * obvious to all analysis tools. */
   cipher = crypto_create_init_cipher(key1, 0);
   decrypted_size = crypto_cipher_decrypt_with_iv(cipher, decrypted1, 1,
                                              encrypted1, encrypted_size);

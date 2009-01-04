@@ -504,7 +504,7 @@ connection_ap_attach_pending(void)
 
 /** Tell any AP streams that are waiting for a onehop tunnel to
  * <b>failed_digest</b> that they are going to fail. */
-/* XXX021 We should get rid of this function, and instead attach
+/* XXX022 We should get rid of this function, and instead attach
  * onehop streams to circ->p_streams so they get marked in
  * circuit_mark_for_close like normal p_streams. */
 void
@@ -2294,7 +2294,7 @@ tell_controller_about_resolved_result(edge_connection_t *conn,
  * certain errors or for values that didn't come via DNS.  <b>expires</b> is
  * a time when the answer expires, or -1 or TIME_MAX if there's a good TTL.
  **/
-/* XXXX021 the use of the ttl and expires fields is nutty.  Let's make this
+/* XXXX022 the use of the ttl and expires fields is nutty.  Let's make this
  * interface and those that use it less ugly. */
 void
 connection_ap_handshake_socks_resolved(edge_connection_t *conn,
@@ -2828,7 +2828,7 @@ int
 connection_edge_is_rendezvous_stream(edge_connection_t *conn)
 {
   tor_assert(conn);
-  if (conn->rend_data) /* XXX */ /* XXXX Why is this XXX? -NM */
+  if (conn->rend_data)
     return 1;
   return 0;
 }

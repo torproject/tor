@@ -1719,7 +1719,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
     }
   }
 
-  /* XXXX021 this is a kludge to expose these values. */
+  /* XXXX022 this is a kludge to expose these values. */
   sl_last_total_weighted_bw = total_bw;
 
   log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
@@ -3081,7 +3081,7 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
   int inserted;
   (void)from_fetch;
   if (msg) *msg = NULL;
-  /*XXXX021 Do something with msg */
+  /*XXXX022 Do something with msg */
 
   inserted = extrainfo_insert(router_get_routerlist(), ei);
 
