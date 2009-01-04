@@ -22,13 +22,17 @@ Backport for 0.2.0 once better tested:
   o r17162 and r17164: fix another case of not checking cpath_layer.
   - r17208,r17209,r7211,r17212,r17214: Avoid gotterdammerung when an
     authority has an expired certificate.
-  - r17562: Fix bug 874, wherein a sighup would make us kill all our intro
+  o r17562: Fix bug 874, wherein a sighup would make us kill all our intro
     points and leave their corpses for the next set of intro points to
     stumble over.
   o r17566: FIx bug 691, wherein failure to run dns_init() would kill Tor
     dead.
+  - r17886:  Don't remove routerinfos as unlisted unless we have a
+    consensus.
+  - r17887:  Don't accept 1.2.3 as a valid IP address.
+
 
 Backport for 0.2.0, maybe:
-  - r14830: Disable TLS compression.  This saves RAM and CPU, and
+  o r14830: Disable TLS compression.  This saves RAM and CPU, and
     makes our TLS compression harder to distinguish from
     firefox's. Win/win/win, right?
