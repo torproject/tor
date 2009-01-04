@@ -77,6 +77,9 @@ Changes in version 0.2.0.33 - 2009-??-??
       for more info.
     - Check DNS replies for more matching fields to better resist DNS
       poisoning.
+    - Never use OpenSSL compression: it wastes RAM and CPU trying to
+      compress cells, which are basically all encrypted, compressed, or
+      both.
 
 
 Changes in version 0.2.0.32 - 2008-11-20
