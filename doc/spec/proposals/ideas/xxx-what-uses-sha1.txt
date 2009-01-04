@@ -102,7 +102,26 @@ What Tor uses hashes for today:
 
 4. The rendezvous protocol
 
-   XXXX write me
+   A. Hidden servers use SHA-1 to establish introduction points on relays,
+      and relays use SHA-1 to check incoming introduction point
+      establishment requests.
+   B. Hidden servers use SHA-1 in multiple places when generating hidden
+      service descriptors.
+   C. Hidden servers performing basic-type client authorization for their
+      services use SHA-1 when encrypting introduction points contained in
+      hidden service descriptors.
+   D. Hidden service directories use SHA-1 to check whether a given hidden
+      service descriptor may be published under a given descriptor
+      identifier or not.
+   E. Hidden servers use SHA-1 to derive .onion addresses of their
+      services.
+   F. Clients use SHA-1 to generate the current hidden service descriptor
+      identifiers for a given .onion address.
+   G. Hidden servers use SHA-1 to remember digests of the first parts of
+      Diffie-Hellman handshakes contained in introduction requests in order
+      to detect replays.
+   H. Hidden servers use SHA-1 during the Diffie-Hellman key exchange with
+      a connecting client.
 
 5. The bridge protocol
 
