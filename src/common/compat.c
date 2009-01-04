@@ -1207,8 +1207,20 @@ get_user_homedir(const char *username)
  * but works on Windows and Solaris.)
  */
 int
-tor_inet_aton(const char *c, struct in_addr* addr)
+tor_inet_aton(const char *str, struct in_addr* addr)
 {
+  int a,b,c,d;
+  char more;
+  if (sscanf(str, "%d.%d.%d.%d%c", &a,&b,&c,&d,&more) != 4)
+    return 0;
+  if (a < 0 || a > 255) return 0;
+  if (b < 0 || b > 255) return 0;
+  if (c < 0 || c > 255) return 0;
+  if (d < 0 || d > 255) return 0;
+  addr->s_addr = htonl((a<<24) | (b<<16) | (c<<8) | d);
+  return 1;
+
+#if 0
 #ifdef HAVE_INET_ATON
   return inet_aton(c, addr);
 #else
@@ -1224,6 +1236,7 @@ tor_inet_aton(const char *c, struct in_addr* addr)
     return 0;
   addr->s_addr = r;
   return 1;
+#endif
 #endif
 }
 

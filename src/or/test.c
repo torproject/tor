@@ -1699,7 +1699,7 @@ test_util_ip6_helpers(void)
   test_eq(i, -1);
   i = tor_addr_parse_reverse_lookup_name(&t1, "32.1.1.in-addr.arpa",
                                          AF_UNSPEC, 0);
-  /* test_eq(i, -1); XXXX021 Apparently '32.1.1' is a valid aton address. */
+  test_eq(i, -1);
   i = tor_addr_parse_reverse_lookup_name(&t1, ".in-addr.arpa",
                                          AF_UNSPEC, 0);
   test_eq(i, -1);

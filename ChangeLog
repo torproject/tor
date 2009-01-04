@@ -31,6 +31,8 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
       0.2.1.9-alpha.
     - Do not remove routers as too old if we do not have any consensus
       document.  Bugfix on 0.2.0.7-alpha.
+    - Do not accept incomplete ipv4 addresses (like 192.168.0) as valid.
+      Spec conformance issue.  Bugfix on Tor 0.0.2pre27.
 
   o Deprecated and removed features:
     - The old "tor --version --version" command, which would spit out the
