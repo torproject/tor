@@ -1916,23 +1916,23 @@ typedef struct hs_usage_current_observation_period_t {
 /** Usage statistics for the current observation period. */
 static hs_usage_current_observation_period_t *current_period = NULL;
 
-/* Total number of descriptor publish requests in the current observation
+/** Total number of descriptor publish requests in the current observation
  * period. */
 static hs_usage_service_related_observation_t *publish_total = NULL;
 
-/* Number of descriptor publish requests for services that have not been
+/** Number of descriptor publish requests for services that have not been
  * seen before in the current observation period. */
 static hs_usage_service_related_observation_t *publish_novel = NULL;
 
-/* Total number of descriptor fetch requests in the current observation
+/** Total number of descriptor fetch requests in the current observation
  * period. */
 static hs_usage_service_related_observation_t *fetch_total = NULL;
 
-/* Number of successful descriptor fetch requests in the current
+/** Number of successful descriptor fetch requests in the current
  * observation period. */
 static hs_usage_service_related_observation_t *fetch_successful = NULL;
 
-/* Number of descriptors stored in the current observation period. */
+/** Number of descriptors stored in the current observation period. */
 static hs_usage_general_period_related_observations_t *descs = NULL;
 
 /** Creates an empty ordered list element. */
