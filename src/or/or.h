@@ -3758,6 +3758,7 @@ networkstatus_t *networkstatus_get_reasonably_live_consensus(time_t now);
 #define NSSET_FROM_CACHE 1
 #define NSSET_WAS_WAITING_FOR_CERTS 2
 #define NSSET_DONT_DOWNLOAD_CERTS 4
+#define NSSET_ACCEPT_OBSOLETE 8
 int networkstatus_set_current_consensus(const char *consensus, unsigned flags);
 void networkstatus_note_certs_arrived(void);
 void routers_update_all_from_networkstatus(time_t now, int dir_version);

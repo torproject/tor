@@ -1,4 +1,12 @@
 Changes in version 0.2.1.10-alpha - 2009-01-??
+  o Major bugfixes:
+    - If the cached networkstatus consensus is more than five days old,
+      discard it rather than trying to use it. In theory it could
+      be useful because it lists alternate directory mirrors, but in
+      practice it just means we spend many minutes trying directory
+      mirrors that are long gone from the network. Helps bug 887 a bit;
+      bugfix on 0.2.0.x.
+
   o Minor features:
     - New controller event "clients_seen" to report a geoip-based summary
       of which countries we've seen clients from recently. Now controllers
