@@ -3,6 +3,8 @@
 description of the patch.)
 
 Backport for 0.2.0:
+   - r17891: Fix a fun OpenBSD warning.
+   - r17892: Fix another fun OpenBSD warning.
 
 Backport for 0.2.0 once better tested:
   Xo r16621: Make some DNS code more robust (partial; see also libevent
