@@ -143,7 +143,16 @@ tor_gzip_compress(char **out, size_t *out_len,
   }
  done:
   *out_len = stream->total_out;
-  if (stream->total_out > out_size + 4097) {
+#ifdef OPENBSD
+  /* "Hey Rocky!  Watch me change an unsigned field to a signed field in a
+   *    third-party API!"
+   * "Oh, that trick will just make people do unsafe casts to the unsigned
+   *    type in their cross-platform code!"
+   * "Don't be foolish.  I'm _sure_ they'll have the good sense to make sure
+   *    the newly unsigned field isn't negative." */
+  tor_assert(stream->total_out >= 0);
+#endif
+  if (((size_t)stream->total_out) > out_size + 4097) {
     /* If we're wasting more than 4k, don't. */
     *out = tor_realloc(*out, stream->total_out + 1);
   }
