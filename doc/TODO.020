@@ -3,36 +3,17 @@
 description of the patch.)
 
 Backport for 0.2.0:
-  o r17135: ClientDNSRejectInternalAddresses not consistently obeyed.
 
 Backport for 0.2.0 once better tested:
-  o r16136: prevent circid collision.  [Also backport to 0.1.2.x??]
-  o r16558: Avoid mis-routing CREATED cells.
   Xo r16621: Make some DNS code more robust (partial; see also libevent
             approach). (Also maybe r16674)
     [Partially backported.  Instead of the basic name checking, I backported
      r17171 instead, to be even more resistant to poisoning.]
-  o r17091: distinguish "no routers support pending circuits" from
-            "no circuits are pending."
-    o See also r17181...
-    o ... and r17184.
-  o r17137: send END cell in response to connect to nonexistent hidserv port.
-  o r17138: reject *:* servers should never do DNS lookups.
-  o r17139: Fix another case of overriding .exit choices.
-  o r17162 and r17164: fix another case of not checking cpath_layer.
   - r17208,r17209,r7211,r17212,r17214: Avoid gotterdammerung when an
     authority has an expired certificate.
-  o r17562: Fix bug 874, wherein a sighup would make us kill all our intro
-    points and leave their corpses for the next set of intro points to
-    stumble over.
-  o r17566: FIx bug 691, wherein failure to run dns_init() would kill Tor
-    dead.
   - r17886:  Don't remove routerinfos as unlisted unless we have a
     consensus.
   - r17887:  Don't accept 1.2.3 as a valid IP address.
 
-
 Backport for 0.2.0, maybe:
-  o r14830: Disable TLS compression.  This saves RAM and CPU, and
-    makes our TLS compression harder to distinguish from
-    firefox's. Win/win/win, right?
+

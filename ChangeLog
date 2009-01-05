@@ -1,4 +1,4 @@
-Changes in version 0.2.0.33 - 2009-??-??
+Changes in version 0.2.0.33 - 2009-01-??
   o Major bugfixes:
     - When a stream at an exit relay is in state "resolving" or
       "connecting" and it receives an "end" relay cell, the exit relay
@@ -8,7 +8,7 @@ Changes in version 0.2.0.33 - 2009-??-??
       reported by "wood".
     - When sending CREATED cells back for a given circuit, use a 64-bit
       connection ID to find the right connection, rather than an addr:port
-      combination.  Now that we can have multiple OR connections between
+      combination. Now that we can have multiple OR connections between
       the same ORs, it is no longer possible to use addr:port to uniquely
       identify a connection.
 
@@ -47,18 +47,18 @@ Changes in version 0.2.0.33 - 2009-??-??
       the cache because we already had a v0 descriptor with the same ID.
       Bugfix on 0.2.0.18-alpha.
     - Fix a race condition when freeing keys shared between main thread
-      and CPU workers that could result in a memory leak.  Bugfix on
-      0.1.0.1-rc.  Fixes bug 889.
+      and CPU workers that could result in a memory leak. Bugfix on
+      0.1.0.1-rc. Fixes bug 889.
     - Send a valid END cell back when a client tries to connect to a
-      nonexistent hidden service port.  Bugfix on 0.1.2.15.  Fixes bug
-      840.  Patch from rovv.
+      nonexistent hidden service port. Bugfix on 0.1.2.15. Fixes bug
+      840. Patch from rovv.
     - Check which hops rendezvous stream cells are associated with to
       prevent possible guess-the-streamid injection attacks from
-      intermediate hops.  Fixes another case of bug 446. Based on patch
+      intermediate hops. Fixes another case of bug 446. Based on patch
       from rovv.
     - If a broken client asks a non-exit router to connect somewhere,
       do not even do the DNS lookup before rejecting the connection.
-      Fixes another case of bug 619.  Patch from rovv.
+      Fixes another case of bug 619. Patch from rovv.
 
   o Minor bugfixes (hidden services):
     - Do not throw away existing introduction points on SIGHUP. Bugfix on
@@ -243,7 +243,7 @@ Changes in version 0.2.0.29-rc - 2008-07-08
       O_CREAT flag. Fortify was complaining, and correctly so. Fixes
       bug 742; fix from Michael Scherer. Bugfix on 0.0.2pre19.
     - Correctly detect transparent proxy support on Linux hosts that
-      require in.h to be included before netfilter_ipv4.h.  Patch
+      require in.h to be included before netfilter_ipv4.h. Patch
       from coderman.
 
 
