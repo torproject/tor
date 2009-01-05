@@ -5,6 +5,7 @@ description of the patch.)
 Backport for 0.2.0:
    o r17891: Fix a fun OpenBSD warning.
    o r17892: Fix another fun OpenBSD warning.
+   - r17920: bridge relays don't fetch descriptors much
 
 Backport for 0.2.0 once better tested:
   Xo r16621: Make some DNS code more robust (partial; see also libevent
