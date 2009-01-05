@@ -33,8 +33,9 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
       document.  Bugfix on 0.2.0.7-alpha.
     - Do not accept incomplete ipv4 addresses (like 192.168.0) as valid.
       Spec conformance issue.  Bugfix on Tor 0.0.2pre27.
-    - Preserve reporting of stream end reasons to the local control port.
-      They were lost in the changes for Proposal 148.
+    - Resume reporting accurate "stream end" reasons to the local control
+      port. They were lost in the changes for Proposal 148. Bugfix on
+      0.2.1.9-alpha.
 
   o Deprecated and removed features:
     - The old "tor --version --version" command, which would spit out the
@@ -51,6 +52,8 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
 
 
 Changes in version 0.2.1.9-alpha - 2008-12-25
+  Tor 0.2.1.9-alpha fixes many more bugs, some of them security-related.
+
   o New directory authorities:
     - gabelmoo (the authority run by Karsten Loesing) now has a new
       IP address.
