@@ -659,7 +659,9 @@ connection_ap_process_end_not_open(
   int control_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
   (void) layer_hint; /* unused */
 
-  if (rh->length > 0 && edge_reason_is_retriable(reason)) {
+  if (rh->length > 0 && edge_reason_is_retriable(reason) &&
+      !connection_edge_is_rendezvous_stream(conn)  /* avoid retry if rend */
+      ) {
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
              safe_str(conn->socks_request->address),
              stream_end_reason_to_string(reason));
@@ -681,10 +683,15 @@ connection_ap_process_end_not_open(
           else
             ttl = -1;
 
-          if (!(get_options()->ClientDNSRejectInternalAddresses &&
-                                           is_internal_IP(addr, 0)))
-            client_dns_set_addressmap(conn->socks_request->address, addr,
-                                      conn->chosen_exit_name, ttl);
+          if (get_options()->ClientDNSRejectInternalAddresses &&
+              is_internal_IP(addr, 0)) {
+            log_info(LD_APP,"Address '%s' resolved to internal. Closing,",
+                     safe_str(conn->socks_request->address));
+            connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+            return 0;
+          }
+          client_dns_set_addressmap(conn->socks_request->address, addr,
+                                    conn->chosen_exit_name, ttl);
         }
         /* check if he *ought* to have allowed it */
         if (exitrouter &&

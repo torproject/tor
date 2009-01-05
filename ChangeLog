@@ -51,6 +51,11 @@ Changes in version 0.2.1.10-alpha - 2009-01-??
     - Resume reporting accurate "stream end" reasons to the local control
       port. They were lost in the changes for Proposal 148. Bugfix on
       0.2.1.9-alpha.
+    - When an exit resolves an address to a local IP, do not just keep
+      retrying that same exit over and over.   Instead, just close
+      the connection.  Addresses bug 872.  Patch from rovv.
+    - If a hidden service sends us an END cell, do not consider
+      retrying the connection.  Patch from rovv.
 
   o Deprecated and removed features:
     - The old "tor --version --version" command, which would spit out the
