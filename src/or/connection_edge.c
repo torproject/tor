@@ -212,6 +212,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   char payload[RELAY_PAYLOAD_SIZE];
   size_t payload_len=1;
   circuit_t *circ;
+  uint8_t control_reason = reason;
 
   if (conn->edge_has_sent_end) {
     log_warn(LD_BUG,"(Harmless.) Calling connection_edge_end (reason %d) "
@@ -260,7 +261,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   }
 
   conn->edge_has_sent_end = 1;
-  conn->end_reason = reason;
+  conn->end_reason = control_reason;
   return 0;
 }
 
