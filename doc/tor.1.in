@@ -1,4 +1,4 @@
-.TH TOR 1 "February 2008" "TOR"
+.TH TOR 1 "January 2009" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -914,7 +914,7 @@ descriptor to the directory authorities. (This is useful if you're
 testing out your server, or if you're using a Tor controller that handles
 directory publishing for you.) Otherwise, Tor will publish its descriptor
 to all directory authorities of the type(s) specified. The value "1" is
-treated as a synonym for the default, which is currently "v2,v3".
+the default, which means "publish to the appropriate authorities".
 .LP
 .TP
 \fBShutdownWaitLength\fR \fINUM\fP
