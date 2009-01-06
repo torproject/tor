@@ -276,7 +276,10 @@ cpuworker_main(void *data)
           reply_to_proxy, keys, CPATH_KEY_MATERIAL_LEN) < 0) {
         /* failure */
         log_debug(LD_OR,"onion_skin_server_handshake failed.");
-        memset(buf,0,LEN_ONION_RESPONSE); /* send all zeros for failure */
+        *buf = 0; /* indicate failure in first byte */
+        memcpy(buf+1,tag,TAG_LEN);
+        /* send all zeros as answer */
+        memset(buf+1+TAG_LEN, 0, LEN_ONION_RESPONSE-(1+TAG_LEN));
       } else {
         /* success */
         log_debug(LD_OR,"onion_skin_server_handshake succeeded.");

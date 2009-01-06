@@ -70,6 +70,9 @@ Changes in version 0.2.0.33 - 2009-01-??
     - If a broken client asks a non-exit router to connect somewhere,
       do not even do the DNS lookup before rejecting the connection.
       Fixes another case of bug 619. Patch from rovv.
+    - When a relay gets a create cell it can't decrypt (e.g. because it's
+      using the wrong onion key), we were dropping it and letting the
+      client time out. Now actually answer with a destroy cell. Fixes                 bug 904. Bugfix on 0.0.2pre8.
 
   o Minor bugfixes (hidden services):
     - Do not throw away existing introduction points on SIGHUP. Bugfix on
