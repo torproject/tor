@@ -20,4 +20,6 @@ Backport for 0.2.0 once better tested:
   - r17917: tors that haven't run lately take 10+ minutes to start
 
 Backport for 0.2.0, maybe:
+  d r17945: bridges always fail dirport reachability tests. i think
+            it's cosmetic, so no need to backport.
 
