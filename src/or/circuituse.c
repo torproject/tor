@@ -801,32 +801,19 @@ circuit_build_failed(origin_circuit_t *circ)
       circ->cpath->state != CPATH_STATE_OPEN) {
     /* We failed at the first hop. If there's an OR connection
        to blame, blame it. */
-    or_connection_t *n_conn = NULL;
     const char *n_conn_id = circ->_base.n_hop->identity_digest;
     if (circ->_base.n_conn) {
-      n_conn = circ->_base.n_conn;
-      if (n_conn) n_conn_id = n_conn->identity_digest;
-    } else if (circ->_base.state == CIRCUIT_STATE_OR_WAIT &&
-               circ->_base.n_hop) {
-      n_conn_id = circ->_base.n_hop->identity_digest;
-      /* Do not set n_conn.  If we're in state_or_wait, it's wrong to blame a
-       * particular connection for our failure to extend and set its
-       * is_bad_for_new_circs field, since no connection ever got a chance to
-       * hear our CREATE cell. */
-    }
-    if (n_conn) {
+      or_connection_t *n_conn = circ->_base.n_conn;
       log_info(LD_OR,
                "Our circuit failed to get a response from the first hop "
                "(%s:%d). I'm going to try to rotate to a better connection.",
                n_conn->_base.address, n_conn->_base.port);
       n_conn->is_bad_for_new_circs = 1;
     }
-    if (n_conn_id) {
-      entry_guard_register_connect_status(n_conn_id, 0, time(NULL));
-      /* if there are any one-hop streams waiting on this circuit, fail
-       * them now so they can retry elsewhere. */
-      connection_ap_fail_onehop(n_conn_id, circ->build_state);
-    }
+    entry_guard_register_connect_status(n_conn_id, 0, time(NULL));
+    /* if there are any one-hop streams waiting on this circuit, fail
+     * them now so they can retry elsewhere. */
+    connection_ap_fail_onehop(n_conn_id, circ->build_state);
   }
 
   switch (circ->_base.purpose) {
