@@ -67,6 +67,10 @@ Changes in version 0.2.1.10-alpha - 2009-01-0?
       unencrypted links, we also broke DirPort reachability testing for
       bridges. So bridges with a non-zero DirPort were printing spurious
       warns to their logs. Bugfix on 0.2.0.16-alpha. Fixes bug 709.
+    - When a relay gets a create cell it can't decrypt (e.g. because it's
+      using the wrong onion key), we were dropping it and letting the
+      client time out. Now actually answer with a destroy cell. Bugfix
+      on 0.0.2pre8.
 
   o Deprecated and removed features:
     - The old "tor --version --version" command, which would print out
@@ -1239,9 +1243,9 @@ Changes in version 0.2.0.21-rc - 2008-03-02
       Bugfix on 0.2.0.16-alpha. Reported by lodger.
 
   o Minor bugfixes:
-    - Fix compilation with OpenSSL 0.9.8 and 0.9.8a.  All other supported
-      OpenSSL versions should have been working fine.  Diagnosis and patch
-      from lodger, Karsten Loesing, and Sebastian Hahn.  Fixes bug 616.
+    - Fix compilation with OpenSSL 0.9.8 and 0.9.8a. All other supported
+      OpenSSL versions should have been working fine. Diagnosis and patch
+      from lodger, Karsten Loesing, and Sebastian Hahn. Fixes bug 616.
       Bugfix on 0.2.0.20-rc.
 
 
