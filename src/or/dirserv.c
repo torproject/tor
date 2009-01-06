@@ -2680,7 +2680,8 @@ dirserv_get_networkstatus_v2(smartlist_t *result,
  */
 int
 dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
-                                    const char **msg, int for_unencrypted_conn)
+                                    const char **msg, int for_unencrypted_conn,
+                                    int is_extrainfo)
 {
   int by_id = 1;
   *msg = NULL;
@@ -2708,11 +2709,15 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
   }
 
   if (for_unencrypted_conn) {
-    /* Remove anything whose purpose isn't general. */
+    /* Remove anything that insists it not be sent unencrypted. */
     SMARTLIST_FOREACH(fps_out, char *, cp, {
-        signed_descriptor_t *sd =
-          by_id ? get_signed_descriptor_by_fp(cp,0,0) :
-                  router_get_by_descriptor_digest(cp);
+        signed_descriptor_t *sd;
+        if (by_id)
+          sd = get_signed_descriptor_by_fp(cp,is_extrainfo,0);
+        else if (is_extrainfo)
+          sd = extrainfo_get_by_descriptor_digest(cp);
+        else
+          sd = router_get_by_descriptor_digest(cp);
         if (sd && !sd->send_unencrypted) {
           tor_free(cp);
           SMARTLIST_DEL_CURRENT(fps_out, cp);

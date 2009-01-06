@@ -2708,7 +2708,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     conn->fingerprint_stack = smartlist_create();
     res = dirserv_get_routerdesc_fingerprints(conn->fingerprint_stack, url,
                                           &msg,
-                                          !connection_dir_is_encrypted(conn));
+                                          !connection_dir_is_encrypted(conn),
+                                          is_extra);
 
     if (!strcmpstart(url, "fp/")) {
       request_type = compressed?"/tor/server/fp.z":"/tor/server/fp";
