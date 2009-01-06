@@ -53,6 +53,8 @@
  * socklen object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
  * room is free, or on error, return -1.  Else return the length of the
  * sockaddr. */
+/* XXXX021 This returns socklen_t.  socklen_t is sometimes unsigned.  This
+ *   function claims to return -1 sometimes.  Problematic! */
 socklen_t
 tor_addr_to_sockaddr(const tor_addr_t *a,
                      uint16_t port,
