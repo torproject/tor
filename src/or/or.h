@@ -391,7 +391,7 @@ typedef enum {
 #define EXIT_PURPOSE_RESOLVE 2
 #define _EXIT_PURPOSE_MAX 2
 
-/* !!!! If any connection purpose is ever over over 31, we must grow the type
+/* !!!! If any connection purpose is ever over 31, we must grow the type
  * field in connection_t. */
 
 /** Circuit state: I'm the origin, still haven't done all my handshakes. */

@@ -802,7 +802,7 @@ circuit_build_failed(origin_circuit_t *circ)
     /* We failed at the first hop. If there's an OR connection
        to blame, blame it. */
     or_connection_t *n_conn = NULL;
-    const char *n_conn_id = NULL;
+    const char *n_conn_id = circ->_base.n_hop->identity_digest;
     if (circ->_base.n_conn) {
       n_conn = circ->_base.n_conn;
       if (n_conn) n_conn_id = n_conn->identity_digest;
