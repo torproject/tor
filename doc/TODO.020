@@ -14,10 +14,11 @@ Backport for 0.2.0 once better tested:
      r17171 instead, to be even more resistant to poisoning.]
   - r17208,r17209,r7211,r17212,r17214: Avoid gotterdammerung when an
     authority has an expired certificate.
-  - r17886:  Don't remove routerinfos as unlisted unless we have a
+  - r17886: Don't remove routerinfos as unlisted unless we have a
     consensus.
-  - r17887:  Don't accept 1.2.3 as a valid IP address.
+  - r17887: Don't accept 1.2.3 as a valid IP address.
   - r17917: tors that haven't run lately take 10+ minutes to start
+  - r17924: Close streams when an exit hands us a local IP.
 
 Backport for 0.2.0, maybe:
   d r17945: bridges always fail dirport reachability tests. i think
