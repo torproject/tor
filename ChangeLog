@@ -11,6 +11,13 @@ Changes in version 0.2.0.33 - 2009-01-??
       combination. Now that we can have multiple OR connections between
       the same ORs, it is no longer possible to use addr:port to uniquely
       identify a connection.
+    - Bridge relays that had DirPort set to 0 would stop fetching
+      descriptors shortly after startup, and then briefly resume
+      after a new bandwidth test and/or after publishing a new bridge
+      descriptor. Bridge users that try to bootstrap from them would
+      get a recent networkstatus but would get descriptors from up to
+      18 hours earlier, meaning most of the descriptors were obsolete
+      already. Reported by Tas; bugfix on 0.2.0.13-alpha.
 
   o Minor bugfixes:
     - Do not mark smartlist_bsearch_idx() function as ATTR_PURE. This bug
