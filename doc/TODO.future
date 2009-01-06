@@ -49,7 +49,7 @@ Later, unless people want to implement them now:
   - Make the timestamp granularity on logs configurable, with default
     of "1 second".  This might make some kinds of after-the-fact attack harder.
 
-  - We should get smarter about handkling address resolve failures, or
+  - We should get smarter about handling address resolve failures, or
     addresses that resolve to local IPs.  It would be neat to retry
     them, since right now we just close the stream.  But we need to
     make sure we don't retry them on the same exit as before.  But if
