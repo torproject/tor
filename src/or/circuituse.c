@@ -801,17 +801,18 @@ circuit_build_failed(origin_circuit_t *circ)
       circ->cpath->state != CPATH_STATE_OPEN) {
     /* We failed at the first hop. If there's an OR connection
        to blame, blame it. */
-    const char *n_conn_id = circ->_base.n_hop->identity_digest;
+    const char *n_conn_id = circ->_base.n_hop ?
+                              circ->_base.n_hop->identity_digest : NULL;
     if (circ->_base.n_conn) {
       or_connection_t *n_conn = circ->_base.n_conn;
+      if (n_conn) n_conn_id = n_conn->identity_digest;
       log_info(LD_OR,
                "Our circuit failed to get a response from the first hop "
                "(%s:%d). I'm going to try to rotate to a better connection.",
                n_conn->_base.address, n_conn->_base.port);
       n_conn->is_bad_for_new_circs = 1;
     }
-    if (circ->_base.n_hop) {
-      const char *n_conn_id = circ->_base.n_hop->identity_digest;
+    if (n_conn_id) {
       entry_guard_register_connect_status(n_conn_id, 0, time(NULL));
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
