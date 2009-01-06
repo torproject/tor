@@ -3390,16 +3390,24 @@ options_validate(or_options_t *old_options, or_options_t *options,
       if (!options->HashedControlPassword &&
           !options->HashedControlSessionPassword &&
           !options->CookieAuthentication) {
-        log_warn(LD_CONFIG, "You have a ControlListenAddress set to accept "
-                 "connections from a non-local address.  This means that "
-                 "any program on the internet can reconfigure your Tor. "
-                 "That's so bad that I'm closing your ControlPort for you.");
+        log_warn(LD_CONFIG,
+                 "You have a ControlListenAddress set to accept "
+                 "unauthenticated connections from a non-local address.  "
+                 "This means that programs not running on your computer "
+                 "can reconfigure your Tor, without even having to guess a "
+                 "password.  That's so bad that I'm closing your ControlPort "
+                 "for you.  If you need to control your Tor remotely, try "
+                 "enabling authentication and using a tool like stunnel or "
+                 "ssh to encrypt remote access.");
         options->ControlPort = 0;
       } else {
         log_warn(LD_CONFIG, "You have a ControlListenAddress set to accept "
                  "connections from a non-local address.  This means that "
                  "programs not running on your computer can reconfigure your "
-                 "Tor.  That's pretty bad!");
+                 "Tor.  That's pretty bad, since the controller "
+                 "protocol isn't encrypted!  Maybe you should just listen on "
+                 "127.0.0.1 and use a tool like stunnel or ssh to encrypt "
+                 "remote connections to your control port.");
       }
     }
   }
