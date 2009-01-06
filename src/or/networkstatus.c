@@ -185,7 +185,7 @@ router_reload_consensus_networkstatus(void)
   filename = get_datadir_fname("cached-consensus");
   s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
   if (s) {
-    if (networkstatus_set_current_consensus(s, flags)) {
+    if (networkstatus_set_current_consensus(s, flags) < -1) {
       log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                filename);
     }
