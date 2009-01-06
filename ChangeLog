@@ -58,6 +58,10 @@ Changes in version 0.2.1.10-alpha - 2009-01-0?
       from rovv.
     - If a hidden service sends us an END cell, do not consider
       retrying the connection; just close it. Patch from rovv.
+    - When we made bridge authorities stop serving bridge descriptors over
+      unencrypted links, we also broke DirPort reachability testing for
+      bridges. So bridges with a non-zero DirPort were printing spurious
+      warns to their logs. Bugfix on 0.2.0.16-alpha. Fixes bug 709.
 
   o Deprecated and removed features:
     - The old "tor --version --version" command, which would print out
