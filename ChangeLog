@@ -25,6 +25,7 @@ Changes in version 0.2.1.10-alpha - 2009-01-0?
       a difference.
     - Build correctly against versions of OpenSSL 0.9.8 or later built
       without support for deprecated functions.
+    - Update to the "December 19 2008" ip-to-country file.
 
   o Minor bugfixes (performance):
     - Squeeze 2-5% out of client performance (according to oprofile) by
