@@ -1102,6 +1102,25 @@ configure_nameservers(int force)
     conf_fname = "/etc/resolv.conf";
 #endif
 
+  if (options->OutboundBindAddress) {
+    tor_addr_t addr;
+    if (tor_addr_from_str(&addr, options->OutboundBindAddress) < 0) {
+      log_warn(LD_CONFIG,"Outbound bind address '%s' didn't parse. Ignoring.",
+               options->OutboundBindAddress);
+    } else {
+      int socklen;
+      struct sockaddr_storage ss;
+      socklen = tor_addr_to_sockaddr(&addr, 0,
+                                     (struct sockaddr *)&ss, sizeof(ss));
+      if (socklen < 0) {
+        log_warn(LD_BUG, "Couldn't convert outboung bind address to sockaddr."
+                 " Ignoring.");
+      } else {
+        evdns_set_default_outgoing_bind_address((struct sockaddr *)&ss,socklen);
+      }
+    }
+  }
+
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
     if (stat(conf_fname, &st)) {

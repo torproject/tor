@@ -2203,6 +2203,23 @@ evdns_clear_nameservers_and_suspend(void)
 	return 0;
 }
 
+static struct sockaddr_storage global_bind_address;
+static socklen_t global_bind_addrlen = 0;
+static int global_bind_addr_is_set = 0;
+void
+evdns_set_default_outgoing_bind_address(const struct sockaddr *addr,
+										socklen_t addrlen)
+{
+	memset(&global_bind_address, 0, sizeof(global_bind_address));
+	if (addr) {
+		assert(addrlen <= sizeof(global_bind_address));
+		memcpy(&global_bind_address, addr, addrlen);
+		global_bind_addrlen = addrlen;
+		global_bind_addr_is_set = 1;
+	} else {
+		global_bind_addr_is_set = 0;
+	}
+}
 
 /* exported function */
 int
@@ -2250,6 +2267,15 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 #else
 	fcntl(ns->socket, F_SETFL, O_NONBLOCK);
 #endif
+
+	if (global_bind_addr_is_set) {
+		if (bind(ns->socket, (struct sockaddr *)&global_bind_address,
+				 global_bind_addrlen) < 0) {
+			log(EVDNS_LOG_DEBUG, "Couldn't bind to outgoing address.");
+			err = 2;
+			goto out2;
+		}
+	}
 
 	if (connect(ns->socket, address, addrlen) != 0) {
 		log(EVDNS_LOG_DEBUG, "Couldn't open socket to nameserver.");
