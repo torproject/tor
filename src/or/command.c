@@ -624,9 +624,10 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   if (connection_or_set_state_open(conn)<0)
     connection_mark_for_close(TO_CONN(conn));
   else
-    log_info(LD_OR, "Got good NETINFO cell from %s; OR connection is now "
+    log_info(LD_OR, "Got good NETINFO cell from %s:%d; OR connection is now "
              "open, using protocol version %d",
-             safe_str(conn->_base.address), (int)conn->link_proto);
+             safe_str(conn->_base.address), conn->_base.port,
+             (int)conn->link_proto);
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
 
