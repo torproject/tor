@@ -1,4 +1,4 @@
-Changes in version 0.2.1.10-alpha - 2009-01-0?
+Changes in version 0.2.1.10-alpha - 2009-01-06
   o Major bugfixes:
     - If the cached networkstatus consensus is more than five days old,
       discard it rather than trying to use it. In theory it could
@@ -27,40 +27,17 @@ Changes in version 0.2.1.10-alpha - 2009-01-0?
       without support for deprecated functions.
     - Update to the "December 19 2008" ip-to-country file.
 
-  o Minor bugfixes (performance):
-    - Squeeze 2-5% out of client performance (according to oprofile) by
-      improving the implementation of some policy-manipulation functions.
-
-  o Minor bugfixes:
-    - Make get_interface_address() function work properly again; stop
-      guessing the wrong parts of our address as our address.
-    - Do not cannibalize a circuit if we're out of RELAY_EARLY cells to
-      send on that circuit. Otherwise we might violate the proposal-110
-      limit. Bugfix on 0.2.1.3-alpha. Partial fix for Bug 878. Diagnosis
-      thanks to Karsten.
-    - When we're sending non-EXTEND cells to the first hop in a circuit
-      (for example in order to use an encrypted directory connection),
-      we don't need to use RELAY_EARLY cells: the first hop knows what
-      kind of cell it is, and nobody else can even see the cell type.
-      Conserving RELAY_EARLY cells makes it easier to cannibalize circuits
-      like this later.
+  o Minor bugfixes (on 0.2.0.x):
     - Authorities now list vote for the Stable flag for any router whose
       weighted MTBF is at least 5 days, regardless of the mean MTBF.
-    - Stop logging nameserver addresses in reverse order.
-    - If we are retrying a directory download slowly over and over, do
-      not automatically give up after the 254th failure. Bugfix on
-      0.2.1.9-alpha.
     - Do not remove routers as too old if we do not have any consensus
       document. Bugfix on 0.2.0.7-alpha.
     - Do not accept incomplete ipv4 addresses (like 192.168.0) as valid.
       Spec conformance issue. Bugfix on Tor 0.0.2pre27.
-    - Resume reporting accurate "stream end" reasons to the local control
-      port. They were lost in the changes for Proposal 148. Bugfix on
-      0.2.1.9-alpha.
     - When an exit relay resolves a stream address to a local IP address,
       do not just keep retrying that same exit relay over and
-      over. Instead, just close the stream. Addresses bug 872. Patch
-      from rovv.
+      over. Instead, just close the stream. Addresses bug 872. Bugfix
+      on 0.2.0.32. Patch from rovv.
     - If a hidden service sends us an END cell, do not consider
       retrying the connection; just close it. Patch from rovv.
     - When we made bridge authorities stop serving bridge descriptors over
@@ -71,6 +48,29 @@ Changes in version 0.2.1.10-alpha - 2009-01-0?
       using the wrong onion key), we were dropping it and letting the
       client time out. Now actually answer with a destroy cell. Fixes
       bug 904. Bugfix on 0.0.2pre8.
+    - Squeeze 2-5% out of client performance (according to oprofile) by
+      improving the implementation of some policy-manipulation functions.
+
+  o Minor bugfixes (on 0.2.1.x):
+    - Make get_interface_address() function work properly again; stop
+      guessing the wrong parts of our address as our address.
+    - Do not cannibalize a circuit if we're out of RELAY_EARLY cells to
+      send on that circuit. Otherwise we might violate the proposal-110
+      limit. Bugfix on 0.2.1.3-alpha. Partial fix for Bug 878. Diagnosis
+      thanks to Karsten.
+    - When we're sending non-EXTEND cells to the first hop in a circuit,
+      for example to use an encrypted directory connection, we don't need
+      to use RELAY_EARLY cells: the first hop knows what kind of cell
+      it is, and nobody else can even see the cell type. Conserving
+      RELAY_EARLY cells makes it easier to cannibalize circuits like
+      this later.
+    - Stop logging nameserver addresses in reverse order.
+    - If we are retrying a directory download slowly over and over, do
+      not automatically give up after the 254th failure. Bugfix on
+      0.2.1.9-alpha.
+    - Resume reporting accurate "stream end" reasons to the local control
+      port. They were lost in the changes for Proposal 148. Bugfix on
+      0.2.1.9-alpha.
 
   o Deprecated and removed features:
     - The old "tor --version --version" command, which would print out
