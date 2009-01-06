@@ -15,7 +15,8 @@ Changes in version 0.2.1.10-alpha - 2009-01-0?
       already. Reported by Tas; bugfix on 0.2.0.13-alpha.
     - Prevent bridge relays from serving their 'extrainfo' document
       to anybody who asks, now that extrainfo docs include potentially
-      sensitive aggregated client geoip summaries.
+      sensitive aggregated client geoip summaries. Bugfix on
+      0.2.0.13-alpha.
 
   o Minor features:
     - New controller event "clients_seen" to report a geoip-based summary
