@@ -3060,6 +3060,12 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     }
   }
 
+  if (!in_consensus && from_cache &&
+      router->cache_info.published_on < time(NULL) - OLD_ROUTER_DESC_MAX_AGE) {
+    *msg = "Router descriptor was really old.";
+    return ROUTER_WAS_NOT_NEW;
+  }
+
   /* We haven't seen a router with this identity before. Add it to the end of
    * the list. */
   routerlist_insert(routerlist, router);

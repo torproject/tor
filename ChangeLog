@@ -1,4 +1,11 @@
 Changes in version 0.2.1.11-alpha - 2009-01-??
+  o Major bugfixes:
+    - Discard router descriptors as we load them if they are more than
+      five days old. Otherwise if Tor is off for a long time and then
+      starts with cached descriptors, it will try to use the onion
+      keys in those obsolete descriptors when building circuits. Bugfix
+      on 0.2.0.x. Fixes bug 887.
+
   o Minor bugfixes:
     - Make outbound DNS packets respect the OutboundBindAddress setting.
       Fixes the bug part of bug 798. Bugfix on 0.1.2.2-alpha.
