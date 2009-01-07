@@ -2245,7 +2245,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   while (!strcmpstart(s, "r ")) {
     if (is_vote) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
-      if (routerstatus_parse_entry_from_string(&s, tokens, ns, rs, 0))
+      if (routerstatus_parse_entry_from_string(&s, rs_tokens, ns, rs, 0))
         smartlist_add(ns->routerstatus_list, rs);
       else {
         tor_free(rs->version);
@@ -2253,7 +2253,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
     } else {
       routerstatus_t *rs;
-      if ((rs = routerstatus_parse_entry_from_string(&s, tokens, NULL, NULL,
+      if ((rs = routerstatus_parse_entry_from_string(&s, rs_tokens, NULL, NULL,
                                                      ns->consensus_method)))
         smartlist_add(ns->routerstatus_list, rs);
     }
