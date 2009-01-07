@@ -702,10 +702,12 @@ typedef enum {
   /* Note: we compare these, so it's important that "old" precede everything,
    * and that "other" come last. */
   LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
-  LE_13, LE_13A, LE_13B, LE_13C, LE_13D,
+  LE_13, LE_13A, LE_13B, LE_13C, LE_13D, LE_13E,
+  LE_140, LE_141, LE_142, LE_143, LE_144, LE_145, LE_146, LE_147, LE_148,
+  LE_1499,
   LE_OTHER
 } le_version_t;
-static le_version_t decode_libevent_version(void);
+static le_version_t decode_libevent_version(const char *v, int *bincompat_out);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 static void check_libevent_version(const char *m, int server);
 #endif
@@ -4741,10 +4743,71 @@ init_libevent(void)
    */
   suppress_libevent_log_msg("Function not implemented");
 #ifdef __APPLE__
-  if (decode_libevent_version() < LE_11B) {
+  if (decode_libevent_version(event_get_version()) < LE_11B) {
     setenv("EVENT_NOKQUEUE","1",1);
   }
 #endif
+
+  /* In libevent versions before 2.0, it's hard to keep binary compatibility
+   * between upgrades, and unpleasant to detect when the version we compiled
+   * against is unlike the version we have linked against. Here's how. */
+#if defined(_EVENT_VERSION) && defined(HAVE_EVENT_GET_VERSION)
+  /* We have a header-file version and a function-call version. Easy. */
+  if (strcmp(_EVENT_VERSION, event_get_version())) {
+    int compat1 = -1, compat2 = -1;
+    int verybad, prettybad ;
+    decode_libevent_version(_EVENT_VERSION, &compat1);
+    decode_libevent_version(event_get_version(), &compat2);
+    verybad = compat1 != compat2;
+    prettybad = (compat1 == -1 || compat2 == -1) && compat1 != compat2;
+
+    log(verybad ? LOG_WARN : (prettybad ? LOG_NOTICE : LOG_INFO),
+        LD_GENERAL, "We were compiled with headers from version %s "
+        "of Libevent, but we're using a Libevent library that says it's "
+        "version %s.", _EVENT_VERSION, event_get_version());
+    if (verybad)
+      log_warn(LD_GENERAL, "This will almost certainly make Tor crash.");
+    else if (prettybad)
+      log_notice(LD_GENERAL, "If Tor crashes, this might be why.");
+    else
+      log_info(LD_GENERAL, "I think these versions are binary-compatible.");
+  }
+#elif defined(HAVE_EVENT_GET_VERSION)
+  /* event_get_version but no _EVENT_VERSION.  We might be in 1.4.0-beta or
+     earlier, where that's normal.  To see whether we were compiled with an
+     earlier version, let's see whether the struct event defines MIN_HEAP_IDX.
+  */
+#ifdef HAVE_STRUCT_EVENT_MIN_HEAP_IDX
+  /* The header files are 1.4.0-beta or later. If the version is not
+   * 1.4.0-beta, we are incompatible. */
+  {
+    if (strcmp(event_get_version(), "1.4.0-beta")) {
+      log_warn(LD_GENERAL, "It's a little hard to tell, but you seem to have "
+               "Libevent 1.4.0-beta header files, whereas you have linked "
+               "against Libevent %s.  This will probably make Tor crash.",
+               event_get_version());
+    }
+  }
+#else
+  /* Our headers are 1.3e or earlier. If the library version is not 1.4.x or
+     later, we're probably fine. */
+  {
+    const char *v = event_get_version();
+    if ((v[0] == '1' && v[2] == '.' && v[3] > '3') || v[0] > '1') {
+      log_warn(LD_GENERAL, "It's a little hard to tell, but you seem to have "
+               "Libevent header file from 1.3e or earlier, whereas you have "
+               "linked against Libevent %s.  This will probably make Tor "
+               "crash.", event_get_version());
+    }
+  }
+#endif
+
+#elif defined(_EVENT_VERSION)
+#warn "_EVENT_VERSION is defined but not get_event_version(): Libevent is odd."
+#else
+  /* Your libevent is ancient. */
+#endif
+
   event_init();
   suppress_libevent_log_msg(NULL);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
@@ -4763,44 +4826,60 @@ init_libevent(void)
 #endif
 }
 
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 /** Table mapping return value of event_get_version() to le_version_t. */
 static const struct {
-  const char *name; le_version_t version;
+  const char *name; le_version_t version; int bincompat;
 } le_version_table[] = {
   /* earlier versions don't have get_version. */
-  { "1.0c", LE_10C },
-  { "1.0d", LE_10D },
-  { "1.0e", LE_10E },
-  { "1.1",  LE_11 },
-  { "1.1a", LE_11A },
-  { "1.1b", LE_11B },
-  { "1.2",  LE_12 },
-  { "1.2a", LE_12A },
-  { "1.3",  LE_13 },
-  { "1.3a", LE_13A },
-  { "1.3b", LE_13B },
-  { "1.3c", LE_13C },
-  { "1.3d", LE_13D },
-  { NULL, LE_OTHER }
+  { "1.0c", LE_10C, 1},
+  { "1.0d", LE_10D, 1},
+  { "1.0e", LE_10E, 1},
+  { "1.1",  LE_11,  1 },
+  { "1.1a", LE_11A, 1 },
+  { "1.1b", LE_11B, 1 },
+  { "1.2",  LE_12,  1 },
+  { "1.2a", LE_12A, 1 },
+  { "1.3",  LE_13,  1 },
+  { "1.3a", LE_13A, 1 },
+  { "1.3b", LE_13B, 1 },
+  { "1.3c", LE_13C, 1 },
+  { "1.3d", LE_13D, 1 },
+  { "1.3e", LE_13E, 1 },
+  { "1.4.0-beta", LE_140, 2 },
+  { "1.4.1-beta", LE_141, 2 },
+  { "1.4.2-rc",   LE_142, 2 },
+  { "1.4.3-stable", LE_143, 2 },
+  { "1.4.4-stable", LE_144, 2 },
+  { "1.4.5-stable", LE_145, 2 },
+  { "1.4.6-stable", LE_146, 2 },
+  { "1.4.7-stable", LE_147, 2 },
+  { "1.4.8-stable", LE_148, 2 },
+  { "1.4.99-trunk", LE_1499, 3 },
+  { NULL, LE_OTHER, 0 }
 };
 
 /** Return the le_version_t for the current version of libevent.  If the
  * version is very new, return LE_OTHER.  If the version is so old that it
  * doesn't support event_get_version(), return LE_OLD. */
 static le_version_t
-decode_libevent_version(void)
+decode_libevent_version(const char *v, int *bincompat_out)
 {
-  const char *v = event_get_version();
   int i;
   for (i=0; le_version_table[i].name; ++i) {
     if (!strcmp(le_version_table[i].name, v)) {
+      if (bincompat_out)
+        *bincompat_out = le_version_table[i].bincompat;
       return le_version_table[i].version;
     }
   }
+  if (v[0] != '1' && bincompat_out)
+    *bincompat_out = 100;
+  else if (!strcmpstart(v, "1.4") && bincompat_out)
+    *bincompat_out = 2;
   return LE_OTHER;
 }
 
+#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
 /**
  * Compare the given libevent method and version to a list of versions
  * which are known not to work.  Warn the user as appropriate.
@@ -4814,7 +4893,7 @@ check_libevent_version(const char *m, int server)
   const char *badness = NULL;
   const char *sad_os = "";
 
-  version = decode_libevent_version();
+  version = decode_libevent_version(v, NULL);
 
   /* XXX Would it be worthwhile disabling the methods that we know
    * are buggy, rather than just warning about them and then proceeding
@@ -4887,12 +4966,6 @@ check_libevent_version(const char *m, int server)
                                  v, m, badness);
   }
 
-}
-#else
-static le_version_t
-decode_libevent_version(void)
-{
-  return LE_OLD;
 }
 #endif
 

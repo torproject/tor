@@ -6,6 +6,11 @@ Changes in version 0.2.1.11-alpha - 2009-01-??
       keys in those obsolete descriptors when building circuits. Bugfix
       on 0.2.0.x. Fixes bug 887.
 
+  o Minor features:
+    - Try to make sure that the version of Libevent we're running with
+      is binary-compatible with the one we built with.  May address bug
+      897 and others.
+
   o Minor bugfixes:
     - Make outbound DNS packets respect the OutboundBindAddress setting.
       Fixes the bug part of bug 798. Bugfix on 0.1.2.2-alpha.
