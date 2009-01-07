@@ -514,8 +514,9 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
   conn->link_proto = highest_supported_version;
   conn->handshake_state->received_versions = 1;
 
-  log_info(LD_OR, "Negotiated version %d with %s; sending NETINFO.",
-           highest_supported_version, safe_str(conn->_base.address));
+  log_info(LD_OR, "Negotiated version %d with %s:%d; sending NETINFO.",
+           highest_supported_version, safe_str(conn->_base.address),
+           conn->_base.port);
   tor_assert(conn->link_proto >= 2);
 
   if (connection_or_send_netinfo(conn) < 0) {

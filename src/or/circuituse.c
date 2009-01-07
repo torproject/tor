@@ -800,12 +800,11 @@ circuit_build_failed(origin_circuit_t *circ)
   if (circ->cpath &&
       circ->cpath->state != CPATH_STATE_OPEN) {
     /* We failed at the first hop. If there's an OR connection
-       to blame, blame it. */
-    const char *n_conn_id = circ->_base.n_hop ?
-                              circ->_base.n_hop->identity_digest : NULL;
+     * to blame, blame it. Also, avoid this relay for a while, and
+     * fail any one-hop directory fetches destined for it. */
+    const char *n_conn_id = circ->cpath->extend_info->identity_digest;
     if (circ->_base.n_conn) {
       or_connection_t *n_conn = circ->_base.n_conn;
-      if (n_conn) n_conn_id = n_conn->identity_digest;
       log_info(LD_OR,
                "Our circuit failed to get a response from the first hop "
                "(%s:%d). I'm going to try to rotate to a better connection.",
