@@ -4743,7 +4743,7 @@ init_libevent(void)
    */
   suppress_libevent_log_msg("Function not implemented");
 #ifdef __APPLE__
-  if (decode_libevent_version(event_get_version()) < LE_11B) {
+  if (decode_libevent_version(event_get_version(), NULL) < LE_11B) {
     setenv("EVENT_NOKQUEUE","1",1);
   }
 #endif
