@@ -17,7 +17,7 @@ Backport for 0.2.0 once better tested:
   - r17886: Don't remove routerinfos as unlisted unless we have a
     consensus.
   - r17887: Don't accept 1.2.3 as a valid IP address.
-  - r17917: tors that haven't run lately take 10+ minutes to start
+  - r17917, r17993: tors that haven't run lately take 10+ minutes to start
   - r17924: Close streams when an exit hands us a local IP.
 
 Backport for 0.2.0, maybe:
