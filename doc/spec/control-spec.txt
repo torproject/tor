@@ -253,6 +253,10 @@ $Id$
   command, or sends PROTOCOLINFO more than once, Tor sends an error reply and
   closes the connection.
 
+  To prevent some cross-protocol attacks, the AUTHENTICATE command is still
+  required even if all authentication methods in Tor are disabled.  In this
+  case, the controller should just send "AUTHENTICATE" CRLF.
+
   (Versions of Tor before 0.1.2.16 and 0.2.0.4-alpha did not close the
   connection after an authentication failure.)
 
@@ -1591,7 +1595,9 @@ $Id$
 
 5.1. Authentication
 
-  By default, the current Tor implementation trusts all local users.
+  If the control port is open and no authentication operation is enabled, Tor
+  trusts any local user that connects to the control port.  This is generally
+  a poor idea.
 
   If the 'CookieAuthentication' option is true, Tor writes a "magic cookie"
   file named "control_auth_cookie" into its data directory.  To authenticate,
