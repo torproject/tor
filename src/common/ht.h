@@ -418,6 +418,7 @@ ht_string_hash(const char *s)
 #define _HT_FOI_INSERT(field, head, elm, newent, var)       \
   {                                                         \
     newent->field.hte_hash = (elm)->field.hte_hash;         \
+    newent->field.hte_next = NULL;                          \
     *var = newent;                                          \
     ++((head)->hth_n_entries);                              \
   }
