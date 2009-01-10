@@ -10,6 +10,8 @@ Changes in version 0.2.1.11-alpha - 2009-01-??
     - Try to make sure that the version of Libevent we're running with
       is binary-compatible with the one we built with.  May address bug
       897 and others.
+    - Make setting ServerDNSRandomizeCase to 0 actually work.  Bugfix
+      for bug 905.  Bugfix on 0.2.1.7-alpha.
 
   o Minor bugfixes:
     - Make outbound DNS packets respect the OutboundBindAddress setting.
@@ -394,7 +396,7 @@ Changes in version 0.2.1.7-alpha - 2008-11-08
     - Implement the 0x20 hack to better resist DNS poisoning: set the
       case on outgoing DNS requests randomly, and reject responses that do
       not match the case correctly. This logic can be disabled with the
-      ServerDNSRamdomizeCase setting, if you are using one of the 0.3%
+      ServerDNSRandomizeCase setting, if you are using one of the 0.3%
       of servers that do not reliably preserve case in replies. See
       "Increased DNS Forgery Resistance through 0x20-Bit Encoding"
       for more info.
