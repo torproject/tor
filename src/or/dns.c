@@ -199,9 +199,9 @@ dns_init(void)
   init_cache_map();
   evdns_set_transaction_id_fn(dns_get_transaction_id);
   if (get_options()->ServerDNSRandomizeCase)
-    evdns_set_option("randomize-case", "1", DNS_OPTIONS_ALL);
+    evdns_set_option("randomize-case:", "1", DNS_OPTIONS_ALL);
   else
-    evdns_set_option("randomize-case", "0", DNS_OPTIONS_ALL);
+    evdns_set_option("randomize-case:", "0", DNS_OPTIONS_ALL);
   if (server_mode(get_options()))
     return configure_nameservers(1);
   return 0;
