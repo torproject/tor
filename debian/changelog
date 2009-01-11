@@ -1,6 +1,7 @@
-tor (0.2.1.10-alpha-X) Xxperimental; urgency=low
+tor (0.2.1.10-alpha-1) experimental; urgency=low
 
   * New alpha release.
+  * Forward port 03_tor_manpage_in_section_8.dpatch.
 
  -- Peter Palfrader <weasel@debian.org>  Sun, 11 Jan 2009 12:06:28 +0100
 
