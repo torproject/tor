@@ -158,6 +158,8 @@
              __LINE__,                                                  \
              PRETTY_FUNCTION,                                           \
              #expr1, _test_v2, _mem1, _test_v2);                        \
+      tor_free(_mem1);                                                  \
+      tor_free(_mem2);                                                  \
       goto done;                                                        \
     }                                                                   \
     tor_free(_mem2);                                                    \
