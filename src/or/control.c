@@ -823,24 +823,21 @@ static int
 handle_control_getconf(control_connection_t *conn, uint32_t body_len,
                        const char *body)
 {
-  smartlist_t *questions = NULL;
-  smartlist_t *answers = NULL;
-  smartlist_t *unrecognized = NULL;
+  smartlist_t *questions = smartlist_create();
+  smartlist_t *answers = smartlist_create();
+  smartlist_t *unrecognized = smartlist_create();
   char *msg = NULL;
   size_t msg_len;
   or_options_t *options = get_options();
   int i, len;
 
-  questions = smartlist_create();
   (void) body_len; /* body is nul-terminated; so we can ignore len. */
   smartlist_split_string(questions, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  answers = smartlist_create();
-  unrecognized = smartlist_create();
-  SMARTLIST_FOREACH(questions, char *, q,
+  SMARTLIST_FOREACH(questions, const char *, q,
   {
     if (!option_is_recognized(q)) {
-      smartlist_add(unrecognized, q);
+      smartlist_add(unrecognized, (char*) q);
     } else {
       config_line_t *answer = option_get_assignment(options,q);
       if (!answer) {
@@ -886,15 +883,12 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
     connection_write_str_to_buf("250 OK\r\n", conn);
   }
 
-  if (answers) {
-    SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-    smartlist_free(answers);
-  }
-  if (questions) {
-    SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-    smartlist_free(questions);
-  }
+  SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+  smartlist_free(answers);
+  SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+  smartlist_free(questions);
   smartlist_free(unrecognized);
+
   tor_free(msg);
 
   return 0;
@@ -2020,18 +2014,15 @@ static int
 handle_control_getinfo(control_connection_t *conn, uint32_t len,
                        const char *body)
 {
-  smartlist_t *questions = NULL;
-  smartlist_t *answers = NULL;
-  smartlist_t *unrecognized = NULL;
+  smartlist_t *questions = smartlist_create();
+  smartlist_t *answers = smartlist_create();
+  smartlist_t *unrecognized = smartlist_create();
   char *msg = NULL, *ans = NULL;
   int i;
   (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
 
-  questions = smartlist_create();
   smartlist_split_string(questions, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  answers = smartlist_create();
-  unrecognized = smartlist_create();
   SMARTLIST_FOREACH(questions, const char *, q,
   {
     if (handle_getinfo_helper(conn, q, &ans) < 0) {
@@ -2075,14 +2066,10 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   connection_write_str_to_buf("250 OK\r\n", conn);
 
  done:
-  if (answers) {
-    SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
-    smartlist_free(answers);
-  }
-  if (questions) {
-    SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
-    smartlist_free(questions);
-  }
+  SMARTLIST_FOREACH(answers, char *, cp, tor_free(cp));
+  smartlist_free(answers);
+  SMARTLIST_FOREACH(questions, char *, cp, tor_free(cp));
+  smartlist_free(questions);
   smartlist_free(unrecognized);
   tor_free(msg);
 

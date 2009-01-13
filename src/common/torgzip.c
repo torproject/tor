@@ -76,13 +76,13 @@ tor_gzip_compress(char **out, size_t *out_len,
   tor_assert(in);
   tor_assert(in_len < UINT_MAX);
 
+  *out = NULL;
+
   if (method == GZIP_METHOD && !is_gzip_supported()) {
     /* Old zlib version don't support gzip in deflateInit2 */
     log_warn(LD_BUG, "Gzip not supported with zlib %s", ZLIB_VERSION);
-    return -1;
+    goto err;
   }
-
-  *out = NULL;
 
   stream = tor_malloc_zero(sizeof(struct z_stream_s));
   stream->zalloc = Z_NULL;

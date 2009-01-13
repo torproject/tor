@@ -1468,7 +1468,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 
   if (router_get_extrainfo_hash(s, digest) < 0) {
     log_warn(LD_DIR, "Couldn't compute router hash.");
-    return NULL;
+    goto err;
   }
   tokens = smartlist_create();
   area = memarea_new();

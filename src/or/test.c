@@ -2401,13 +2401,12 @@ _compare_strings_for_pqueue(const void *s1, const void *s2)
 static void
 test_util_pqueue(void)
 {
-  smartlist_t *sl = NULL;
+  smartlist_t *sl = smartlist_create();
   int (*cmp)(const void *, const void*);
 #define OK() smartlist_pqueue_assert_ok(sl, cmp)
 
   cmp = _compare_strings_for_pqueue;
 
-  sl = smartlist_create();
   smartlist_pqueue_add(sl, cmp, (char*)"cows");
   smartlist_pqueue_add(sl, cmp, (char*)"zebras");
   smartlist_pqueue_add(sl, cmp, (char*)"fish");
@@ -2451,8 +2450,8 @@ test_util_pqueue(void)
 #undef OK
 
  done:
-  if (sl)
-    smartlist_free(sl);
+
+  smartlist_free(sl);
 }
 
 /** Run unit tests for compression functions */
@@ -3921,17 +3920,16 @@ test_rend_fns(void)
   char address2[] = "aaaaaaaaaaaaaaaa.onion";
   char address3[] = "fooaddress.exit";
   char address4[] = "www.torproject.org";
-  rend_service_descriptor_t *d1 = NULL, *d2 = NULL;
+  rend_service_descriptor_t *d1 =
+    tor_malloc_zero(sizeof(rend_service_descriptor_t));
+  rend_service_descriptor_t *d2 = NULL;
   char *encoded = NULL;
   size_t len;
-  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL;
   time_t now;
   int i;
-  pk1 = pk_generate(0);
-  pk2 = pk_generate(1);
+  crypto_pk_env_t *pk1 = pk_generate(0), *pk2 = pk_generate(1);
 
   /* Test unversioned (v0) descriptor */
-  d1 = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d1->pk = crypto_pk_dup_key(pk1);
   now = time(NULL);
   d1->timestamp = now;
@@ -3966,6 +3964,13 @@ test_rend_fns(void)
   test_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
   test_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
   test_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
+
+  crypto_free_pk_env(pk1);
+  crypto_free_pk_env(pk2);
+  pk1 = pk2 = NULL;
+  rend_service_descriptor_free(d1);
+  rend_service_descriptor_free(d2);
+  d1 = d2 = NULL;
 
  done:
   if (pk1)
@@ -4529,6 +4534,10 @@ test_rend_fns_v2(void)
     test_assert(tor_addr_eq(&gen_info->addr, &par_info->addr));
     test_eq(gen_info->port, par_info->port);
   }
+
+  rend_service_descriptor_free(parsed);
+  rend_service_descriptor_free(generated);
+  parsed = generated = NULL;
 
  done:
   if (descs) {

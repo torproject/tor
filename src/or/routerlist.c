@@ -619,10 +619,14 @@ router_rebuild_store(int flags, desc_store_t *store)
   int had_any;
   int force = flags & RRS_FORCE;
 
-  if (!force && !router_should_rebuild_store(store))
-    return 0;
-  if (!routerlist)
-    return 0;
+  if (!force && !router_should_rebuild_store(store)) {
+    r = 0;
+    goto done;
+  }
+  if (!routerlist) {
+    r = 0;
+    goto done;
+  }
 
   if (store->type == EXTRAINFO_STORE)
     had_any = !eimap_isempty(routerlist->extra_info_map);
