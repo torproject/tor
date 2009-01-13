@@ -4299,7 +4299,7 @@ test_crypto_aes_iv(void)
   crypto_free_cipher_env(cipher);
   cipher = NULL;
   test_eq(encrypted_size, 16 + 4095);
-  tor_assert(encrypted_size > 0); /* This is obviously true, since 17 is
+  tor_assert(encrypted_size > 0); /* This is obviously true, since 4111 is
                                    * greater than 0, but its truth is not
                                    * obvious to all analysis tools. */
   cipher = crypto_create_init_cipher(key1, 0);
