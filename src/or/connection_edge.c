@@ -2137,6 +2137,7 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
+    /*XXXX022 _close_ the circuit because it's full?  That sounds dumb. */
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
     return -1;
   }
@@ -2144,7 +2145,6 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
   if (command == SOCKS_COMMAND_RESOLVE) {
     string_addr = ap_conn->socks_request->address;
     payload_len = (int)strlen(string_addr)+1;
-    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
   } else {
     /* command == SOCKS_COMMAND_RESOLVE_PTR */
     const char *a = ap_conn->socks_request->address;
@@ -2171,7 +2171,13 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 
     string_addr = inaddr_buf;
     payload_len = (int)strlen(inaddr_buf)+1;
-    tor_assert(payload_len <= RELAY_PAYLOAD_SIZE);
+    tor_assert(payload_len <= (int)sizeof(inaddr_buf));
+  }
+
+  if (payload_len > RELAY_PAYLOAD_SIZE) {
+    /* This should be impossible: we don't accept addresses this big. */
+    connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
+    return -1;
   }
 
   log_debug(LD_APP,
