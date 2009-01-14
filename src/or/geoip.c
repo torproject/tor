@@ -395,10 +395,10 @@ geoip_remove_old_clients(time_t cutoff)
 /** Do not mention any country from which fewer than this number of IPs have
  * connected.  This conceivably avoids reporting information that could
  * deanonymize users, though analysis is lacking. */
-#define MIN_IPS_TO_NOTE_COUNTRY 0
+#define MIN_IPS_TO_NOTE_COUNTRY 1
 /** Do not report any geoip data at all if we have fewer than this number of
  * IPs to report about. */
-#define MIN_IPS_TO_NOTE_ANYTHING 0
+#define MIN_IPS_TO_NOTE_ANYTHING 1
 /** When reporting geoip data about countries, round up to the nearest
  * multiple of this value. */
 #define IP_GRANULARITY 8
@@ -482,10 +482,8 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
       ++total;
     }
     /* Don't record anything if we haven't seen enough IPs. */
-#if (MIN_IPS_TO_NOTE_ANYTHING > 0)
     if (total < MIN_IPS_TO_NOTE_ANYTHING)
       goto done;
-#endif
     /* Make a list of c_hist_t */
     entries = smartlist_create();
     for (i = 0; i < n_countries; ++i) {
@@ -493,11 +491,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
       const char *countrycode;
       c_hist_t *ent;
       /* Only report a country if it has a minimum number of IPs. */
-#if (MIN_IPS_TO_NOTE_COUNTRY > 0)
       if (c >= MIN_IPS_TO_NOTE_COUNTRY) {
-#else
-      if (c > 0) {
-#endif
         c = round_to_next_multiple_of(c, granularity);
         countrycode = geoip_get_country_name(i);
         ent = tor_malloc(sizeof(c_hist_t));
@@ -517,9 +511,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
         smartlist_add(chunks, tor_strdup(buf));
       });
     result = smartlist_join_strings(chunks, ",", 0, NULL);
-#if (MIN_IPS_TO_NOTE_ANYTHING > 0)
   done:
-#endif
     tor_free(counts);
     if (chunks) {
       SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));
