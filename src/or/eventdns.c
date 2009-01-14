@@ -2212,7 +2212,7 @@ evdns_set_default_outgoing_bind_address(const struct sockaddr *addr,
 {
 	memset(&global_bind_address, 0, sizeof(global_bind_address));
 	if (addr) {
-		assert(addrlen <= sizeof(global_bind_address));
+		assert(addrlen <= (socklen_t)sizeof(global_bind_address));
 		memcpy(&global_bind_address, addr, addrlen);
 		global_bind_addrlen = addrlen;
 		global_bind_addr_is_set = 1;
