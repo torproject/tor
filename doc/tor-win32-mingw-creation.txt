@@ -27,7 +27,7 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8i.tar.gz
+http://www.openssl.org/source/openssl-0.9.8j.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
