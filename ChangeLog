@@ -12,6 +12,10 @@ Changes in version 0.2.1.11-alpha - 2009-01-??
       897 and others.
     - Make setting ServerDNSRandomizeCase to 0 actually work.  Bugfix
       for bug 905.  Bugfix on 0.2.1.7-alpha.
+    - Add a new --enable-local-appdata configuration switch to change
+      the default location of the datadir on win32 from APPDATA to
+      LOCAL_APPDATA.  In the future, we should migrate entirely.  Patch
+      from coderman.
 
   o Minor bugfixes:
     - Make outbound DNS packets respect the OutboundBindAddress setting.

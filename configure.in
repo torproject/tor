@@ -96,6 +96,13 @@ fi
 AC_ARG_ENABLE(gcc-warnings,
      AS_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
 
+AC_ARG_ENABLE(local-appdata,
+   AS_HELP_STRING(--enable-local-appdata, default to host local application data paths on Windows))
+if test "$enable_local_appdata" = "yes"; then
+  AC_DEFINE(ENABLE_LOCAL_APPDATA, 1,
+            [Defined if we default to host local appdata paths on Windows])
+fi
+
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET

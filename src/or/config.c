@@ -3735,8 +3735,12 @@ get_windows_conf_root(void)
   /* Find X:\documents and settings\username\application data\ .
    * We would use SHGetSpecialFolder path, but that wasn't added until IE4.
    */
-  if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA,
-                                            &idl))) {
+#ifdef ENABLE_LOCAL_APPDATA
+#define APPDATA_PATH CSIDL_LOCAL_APPDATA
+#else
+#define APPDATA_PATH CSIDL_APPDATA
+#endif
+  if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, APPDATA_PATH, &idl))) {
     GetCurrentDirectory(MAX_PATH, path);
     is_set = 1;
     log_warn(LD_CONFIG,
