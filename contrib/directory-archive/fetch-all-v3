@@ -100,7 +100,7 @@ for vote in $votes; do
 	fi
 done
 
-digests=$( for i in ` bzcat $consensus | awk '$1 == "r" {printf "%s===\n", $4}' | sort -u `; do
+digests=$( for i in ` bzcat $consensus | awk '$1 == "r" {printf "%s=\n", $4}' | sort -u `; do
 		echo $i | \
 		base64-decode | \
 		perl -e 'undef $/; $a=<>; print unpack("H\*", $a),"\n";';

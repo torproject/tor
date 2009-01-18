@@ -67,7 +67,7 @@ if [ "$statuses" = "" ]; then
 	exit 1
 fi
 
-digests=$( for i in ` bzcat $statuses | awk '$1 == "r" {printf "%s===\n", $4}' | sort -u `; do
+digests=$( for i in ` bzcat $statuses | awk '$1 == "r" {printf "%s=\n", $4}' | sort -u `; do
 		echo $i | \
 		base64-decode | \
 		perl -e 'undef $/; $a=<>; print unpack("H\*", $a),"\n";';
