@@ -7,7 +7,7 @@ Debian.  If Tor is started as root or the 'debian-tor' user, then:
 - PidFile is set to /var/run/tor/tor.pid (No default upstream),
 - default logging goes to /var/log/tor/log (instead of stdout),
 - DataDirectory is set to /var/lib/tor (uses $HOME/.tor upstream),
-- User and Group are set to "debian-tor".
+- User is set to "debian-tor".
 
 If Tor is started as any other user it behaves just like upstream's.
 

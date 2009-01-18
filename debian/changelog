@@ -1,3 +1,10 @@
+tor (0.2.1.10-XXXXXXX) XXperimental; urgency=low
+
+  * README.Debian: No longer claim we change the default 'Group' setting
+    when run as debian-user.  That setting no longer exists.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 18 Jan 2009 01:49:26 +0100
+
 tor (0.2.1.10-alpha-1) experimental; urgency=low
 
   * New alpha release.
