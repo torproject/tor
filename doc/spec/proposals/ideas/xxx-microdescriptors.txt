@@ -13,14 +13,16 @@ Status: Open
   circuit-building protocol to fetch a server descriptor inline at each
   circuit extend, we instead put all of the information that clients need
   either into the consensus itself, or into a new set of data about each
-  relay called a microdescriptor.
+  relay called a microdescriptor. The microdescriptor is a direct
+  transform from the relay descriptor, so relays don't even need to know
+  this is happening.
 
-  The goal is that descriptor elements that are small and frequently
-  changing should go in the consensus itself, descriptor elements that
-  are small and relatively static should go in the microdescriptor,
-  and if we ever end up with descriptor elements that aren't small yet
-  clients need to know them, we'll need to resume considering some design
-  like the one in proposal 141.
+  Descriptor elements that are small and frequently changing should go
+  in the consensus itself, and descriptor elements that are small and
+  relatively static should go in the microdescriptor. If we ever end up
+  with descriptor elements that aren't small yet clients need to know
+  them, we'll need to resume considering some design like the one in
+  proposal 141.
 
 2. Motivation
 
@@ -37,12 +39,14 @@ Status: Open
   their votes (and thus in the consensus) what relay descriptor elements
   are included in the microdescriptor, and also list the expected hash
   of microdescriptor for each relay. Second, directory mirrors will serve
-  microdescriptors. Third, clients will ask for them and then cache them.
+  microdescriptors. Third, clients will ask for them and cache them.
 
 3.1. Consensus changes
 
   V3 votes should include a new line:
     microdescriptor-elements bar baz foo
+  listing each descriptor element (sorted alphabetically) that authority
+  included when it calculated its expected microdescriptor hashes.
 
   We also need to include the hash of each expected microdescriptor in
   the routerstatus section. I suggest a new "m" line for each stanza,
@@ -65,10 +69,13 @@ Status: Open
   seemed like it should be relatively static, so putting it in the
   microdescriptor is smarter than trying to fit it into the consensus.)
 
+  We could imagine a config option "family,onion-key" so authorities
+  could change their voted preferences without needing to upgrade.
+
 3.1.2. Computing consensus for microdescriptor-elements and "m" lines
 
   One approach is for the consensus microdescriptor-elements line to
-  include all elements listed by a majority of authorities, sorted. The
+  include every element listed by a majority of authorities, sorted. The
   problem here is that it will no longer be deterministic what the correct
   hash for the "m" line should be. We could imagine telling the authority
   to go look in its descriptor and produce the right hash itself, but
@@ -89,7 +96,7 @@ Status: Open
 
   (If there's a tie, use the smaller hash. But really, if there are
   multiple such votes and they differ about a microdescriptor, we caught
-  one of them being lying or buggy. We should log it to track down why.)
+  one of them lying or being buggy. We should log it to track down why.)
 
   If there are no such votes, then we leave out the "m" line for that
   relay. That means clients should avoid it for this time period. (As
@@ -110,13 +117,15 @@ Status: Open
   has a consensus from the previous period, then it should use the
   consensus preferred-microdescriptor-elements when computing its votes
   for microdescriptor-elements and the appropriate hashes in the upcoming
-  period. (If it has no previous consensus, then it just puts down its
+  period. (If it has no previous consensus, then it just writes its
   own preferences in both lines.)
 
 3.2. Directory mirrors serve microdescriptors
 
   Directory mirrors should then read the microdescriptor-elements line
-  from the consensus, and learn how to answer requests.
+  from the consensus, and learn how to answer requests. (Directory mirrors
+  continue to serve normal relay descriptors too, a) to serve old clients
+  and b) to be able to construct microdescriptors on the fly.)
 
   The microdescriptors with hashes <D1>,<D2>,<D3> should be available at:
     http://<hostname>/tor/micro/d/<D1>+<D2>+<D3>.z
@@ -128,23 +137,23 @@ Status: Open
   to name every microdescriptor it's looking for.
 
   The format of a microdescriptor is the header line
-  "microdescriptor 1"
+  "microdescriptor-header"
   followed by each element (keyword and body), alphabetically. There's
-  no need to mention what hash it is, since you can hash the elements
-  to learn this.
+  no need to mention what hash it's for, since it's self-identifying:
+  you can hash the elements to learn this.
 
   (Do we need a footer line to show that it's over, or is the next
   microdescriptor line or EOF enough of a hint? A footer line wouldn't
   hurt much. Also, no fair voting for the microdescriptor-element
-  "microdescriptor".)
+  "microdescriptor-header".)
 
   The hash of the microdescriptor is simply the hash of the concatenated
   elements -- not counting the header line or hypothetical footer line.
-  Is this smart?
+  Unless you prefer that?
 
-  Note that I put a "1" up there in the header line. It isn't part
-  of what's hashed, though. Is there a way to put in a version that's
-  more useful?
+  Is there a reasonable way to version these things? We could say that
+  the microdescriptor-header line can contain arguments which clients
+  must ignore if they don't understand them. Any better ways?
 
   Directory mirrors should check to make sure that the microdescriptors
   they're about to serve match the right hashes (either the hashes from
@@ -165,7 +174,8 @@ Status: Open
 
   Clients maintain a cache of microdescriptors along with metadata like
   when it was last referenced by a consensus. They keep a microdescriptor
-  until it hasn't been mentioned in any consensus for a week.
+  until it hasn't been mentioned in any consensus for a week. Future
+  clients might cache them for longer or shorter times.
 
 3.3.1. Information leaks from clients
 
@@ -188,11 +198,9 @@ Status: Open
   be relatively easy to do.
 
   Phase two, directory mirrors should learn how to serve them, and learn
-  how to read the consensus to find out what they should be serving. It
-  would be great if we can squeeze this in during 0.2.1.x also, so once
-  clients start to fetch them there will be many mirrors to choose from.
-
-  (Are there reasonable ways to build only part of phase two in 0.2.1.x?)
+  how to read the consensus to find out what they should be serving. This
+  phase could be done either in 0.2.1.x or early in 0.2.2.x, depending
+  on how messy it turns out to be and how quickly we get around to it.
 
   Phase three, clients should start fetching and caching them instead
   of normal descriptors. This should happen post 0.2.1.x.
