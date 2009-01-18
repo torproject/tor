@@ -72,7 +72,9 @@ fetch_digest() {
 }
 
 if [ -x /usr/bin/base64 ] ; then
-	alias base64-decode='/usr/bin/base64 -d'
+	base64-decode() {
+		/usr/bin/base64 -d
+	}
 else
 	base64-decode() {
 		perl -MMIME::Base64 -e 'print decode_base64(<>)'
