@@ -1,5 +1,7 @@
-tor (0.2.1.10-XXXXXXX) XXperimental; urgency=low
+tor (0.2.1.11-XXXXXXX) XXperimental; urgency=low
 
+  * New upstream version:
+    - torify(1) manpage mentions DNS leaks now (closes: #495829).
   * README.Debian: No longer claim we change the default 'Group' setting
     when run as debian-user.  That setting no longer exists.
 
