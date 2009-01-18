@@ -128,7 +128,6 @@ R - investigate: it looks like if the bridge authority is unreachable,
     we're not falling back on querying bridges directly?
 R - if "no running bridges known", an application request should make
     us retry all our bridges.
-  o Setting DirPort when acting as bridge will give false Warnings
 
 For 0.2.1.x:
   - Proposals to do:
@@ -153,7 +152,7 @@ For 0.2.1.x:
 
 K   . 121: Hidden service authentication:
       - missing: delayed descriptor publication for 'stealth' mode.
-R   o 128: families of private bridges
+    o 128: families of private bridges
     o 135: simplify configuration of private tor networks.
 K   - 143: Improvements of Distributed Hidden Service Descriptor Storage:
            only easy parts for 0.2.1.x, defer complex ones to 0.2.2.x.

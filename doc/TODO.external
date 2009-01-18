@@ -47,8 +47,8 @@ KS  . Finish testing, debugging, unit testing, etc the hidden service
       changes. Have it in the development version and in use.
 W   - Finish testing, debugging, unit testing, etc the directory overhead
       changes. Have it in the development version and in use.
-R     - Roger writes a proposal unifying the or-dev discussions
-?     - Somebody implements the proposal. Who?
+      o Roger writes a proposal unifying the or-dev discussions
+?     * Somebody implements the proposal. Who?
 E   - Implement KDE Marble into Vidalia.  In order to improve the user
       interface for easier understanding of circuits and where traffic
       travels, replacing the current Vidalia map with KDE's Marble
@@ -78,10 +78,10 @@ S   - Write a summary of progress toward understanding risks to relays
       them. Eg, if relays have 100KB/s but set relaybandwidthrate to
       10KB/s, do your interference attacks still work?
 
-R   * Revise and publish incentive draft paper
-      - Write an explanation for its current flaws
-      - Gather comments, search for new designs
-      - Write up a summary of recommendations and next steps
+    o Revise and publish incentive draft paper
+      o Write an explanation for its current flaws
+R     . Gather comments, search for new designs
+      o Write up a summary of recommendations and next steps
 
 W   - Download fewer descriptors
       - Summarize progress so far, on all the different approaches to
@@ -113,7 +113,7 @@ K   - Metrics.
         - Start playing around with figuring out which one is more
           accurate, or how to combine them to get better guesses,
           or something.
-R       * Roger should walk Karsten through applying (and maybe
+        o Roger should walk Karsten through applying (and maybe
           updating) the patch for each method, and write a summary
           of what we have tried/guessed so far.
       * Automatically collect and document or publish other monthly

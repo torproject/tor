@@ -976,8 +976,8 @@ $Id$
         "Nickname" is the OR's nickname.  "Identity" is a hash of its
         identity key, encoded in base64, with trailing equals sign(s)
         removed.  "Digest" is a hash of its most recent descriptor as
-        signed (that is, not including the signature), encoded in base64 as
-        "identity".  "Publication" is the
+        signed (that is, not including the signature), encoded in base64.
+        "Publication" is the
         publication time of its most recent descriptor, in the form
         YYYY-MM-DD HH:MM:SS, in GMT.  "IP" is its current IP address;
         ORPort is its current OR port, "DirPort" is it's current directory
