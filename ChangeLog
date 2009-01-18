@@ -24,6 +24,8 @@ Changes in version 0.2.1.11-alpha - 2009-01-??
       cell back), avoid using that OR connection anymore, and also
       tell all the one-hop directory requests waiting for it that they
       should fail. Bugfix on 0.2.1.3-alpha.
+    - In the torify(1) manpage mention that tsocks will leak your
+      DNS requests.
 
 
 Changes in version 0.2.1.10-alpha - 2009-01-06
