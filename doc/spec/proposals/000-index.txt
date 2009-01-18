@@ -80,6 +80,7 @@ Proposals by number:
 155  Four Improvements of Hidden Service Performance [FINISHED]
 156  Tracking blocked ports on the client side [OPEN]
 157  Make certificate downloads specific [ACCEPTED]
+158  Clients download consensus + microdescriptors [OPEN]
 
 
 Proposals by status:
@@ -99,6 +100,7 @@ Proposals by status:
    146  Add new flag to reflect long-term stability [for 0.2.1.x]
    149  Using data from NETINFO cells [for 0.2.1.x]
    156  Tracking blocked ports on the client side [for 0.2.?]
+   158  Clients download consensus + microdescriptors
  ACCEPTED:
    110  Avoiding infinite length circuits [for 0.2.1.x] [in 0.2.1.3-alpha]
    117  IPv6 exits [for 0.2.1.x]
