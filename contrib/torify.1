@@ -20,11 +20,13 @@ to suid binaries.
 You should also be aware that the way tsocks currently works only TCP
 connections are socksified.  Be aware that this will in most circumstances
 not include hostname lookups which would still be routed through your
-normal system resolver to your usual resolving nameservers.  The Tor
-FAQ at https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ might
+normal system resolver to your usual resolving nameservers.  The
+\fBtor-resolve\fR(1) tool can be useful as a workaround in some cases.
+The Tor FAQ at https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ might
 have further information on this subject.
 
 .SH SEE ALSO
 .BR tor (1),
+.BR tor-resolve (1),
 .BR tsocks (1),
 .BR tsocks.conf (5).
