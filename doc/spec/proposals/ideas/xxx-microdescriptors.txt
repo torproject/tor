@@ -8,17 +8,19 @@ Status: Open
 
 1. Overview
 
-  This proposal replaces section 3.2 of proposal 141, called "Fetching
-  descriptors on demand". Rather than modifying the circuit-building
-  protocol to fetch a server descriptor inline at each circuit extend,
-  we instead put all of the information that clients need either into
-  the consensus itself, or into a new set of data about each relay
-  called a microdescriptor. The goal is that descriptor elements that
-  are small and frequently changing should go in the consensus itself,
-  descriptor elements that are small and relatively static should go in
-  the microdescriptor, and if we ever end up with descriptor elements
-  that aren't small yet clients need to know them, we'll need to resume
-  considering some design like the one in proposal 141.
+  This proposal replaces section 3.2 of proposal 141, which was
+  called "Fetching descriptors on demand". Rather than modifying the
+  circuit-building protocol to fetch a server descriptor inline at each
+  circuit extend, we instead put all of the information that clients need
+  either into the consensus itself, or into a new set of data about each
+  relay called a microdescriptor.
+
+  The goal is that descriptor elements that are small and frequently
+  changing should go in the consensus itself, descriptor elements that
+  are small and relatively static should go in the microdescriptor,
+  and if we ever end up with descriptor elements that aren't small yet
+  clients need to know them, we'll need to resume considering some design
+  like the one in proposal 141.
 
 2. Motivation
 
@@ -31,10 +33,10 @@ Status: Open
 
 3. Design
 
-  There are three pieces to the proposal. First, authorities will list
-  in their votes (and thus in the consensus) what relay elements are
-  included in the microdescriptor, and also list the expected hash of
-  microdescriptor for each relay. Second, directory mirrors will serve
+  There are three pieces to the proposal. First, authorities will list in
+  their votes (and thus in the consensus) what relay descriptor elements
+  are included in the microdescriptor, and also list the expected hash
+  of microdescriptor for each relay. Second, directory mirrors will serve
   microdescriptors. Third, clients will ask for them and then cache them.
 
 3.1. Consensus changes
@@ -82,8 +84,8 @@ Status: Open
   over the elements that we're declaring it should be for.
 
   Then the "m" line for a given relay is the one that gets the most votes
-  from authorities that a) voted for the microdescriptor-elements line
-  we're using, and b) voted for the descriptor we're using.
+  from authorities that both a) voted for the microdescriptor-elements
+  line we're using, and b) voted for the descriptor we're using.
 
   (If there's a tie, use the smaller hash. But really, if there are
   multiple such votes and they differ about a microdescriptor, we caught
@@ -102,7 +104,7 @@ Status: Open
   each authority will still have to decide what hash to vote for before
   knowing what consensus-method will be used.
 
-  Here's one way we could do that. Each vote / consensus includes both
+  Here's one way we could do it. Each vote / consensus includes
   the microdescriptor-elements that were used to compute the hashes,
   and also a preferred-microdescriptor-elements set. If an authority
   has a consensus from the previous period, then it should use the
@@ -174,6 +176,9 @@ Status: Open
 
   Fetching "all" when you need at least half is a good first order fix,
   but might not be all there is to it.
+
+  Another future option would be to fetch some of the microdescriptors
+  anonymously (via a Tor circuit).
 
 4. Transition and deployment
 
