@@ -1,11 +1,12 @@
-tor (0.2.1.11-XXXXXXX) XXperimental; urgency=low
+tor (0.2.1.11-alpha-1) experimental; urgency=high
 
   * New upstream version:
+    - Fixes a possible remote heap buffer overflow bug.
     - torify(1) manpage mentions DNS leaks now (closes: #495829).
   * README.Debian: No longer claim we change the default 'Group' setting
     when run as debian-user.  That setting no longer exists.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 18 Jan 2009 01:49:26 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed, 21 Jan 2009 00:55:19 +0100
 
 tor (0.2.1.10-alpha-1) experimental; urgency=low
 
