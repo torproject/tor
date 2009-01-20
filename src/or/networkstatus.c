@@ -211,7 +211,8 @@ router_reload_consensus_networkstatus(void)
     s = read_file_to_str(options->FallbackNetworkstatusFile,
                          RFTS_IGNORE_MISSING, NULL);
     if (s) {
-      if (networkstatus_set_current_consensus(s, flags)) {
+      if (networkstatus_set_current_consensus(s,
+                                              flags|NSSET_ACCEPT_OBSOLETE)) {
         log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                  options->FallbackNetworkstatusFile);
       } else {
@@ -1372,12 +1373,22 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
   const unsigned from_cache = flags & NSSET_FROM_CACHE;
   const unsigned was_waiting_for_certs = flags & NSSET_WAS_WAITING_FOR_CERTS;
   const unsigned dl_certs = !(flags & NSSET_DONT_DOWNLOAD_CERTS);
+  const unsigned accept_obsolete = flags & NSSET_ACCEPT_OBSOLETE;
 
   /* Make sure it's parseable. */
   c = networkstatus_parse_vote_from_string(consensus, NULL, 0);
   if (!c) {
     log_warn(LD_DIR, "Unable to parse networkstatus consensus");
     result = -2;
+    goto done;
+  }
+
+  if (from_cache && !accept_obsolete &&
+      c->valid_until < now-OLD_ROUTER_DESC_MAX_AGE) {
+    /* XXX022 when we try to make fallbackconsensus work again, we should
+     * consider taking this out. Until then, believing obsolete consensuses
+     * is causing more harm than good. See also bug 887. */
+    log_info(LD_DIR, "Loaded an obsolete consensus. Discarding.");
     goto done;
   }
 
