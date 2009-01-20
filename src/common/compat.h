@@ -33,9 +33,6 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
 #include <stdarg.h>
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/resource.h>
@@ -217,17 +214,27 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
   return tor_memmem(haystack, hlen, needle, strlen(needle));
 }
 
-#define TOR_ISALPHA(c)   isalpha((int)(unsigned char)(c))
-#define TOR_ISALNUM(c)   isalnum((int)(unsigned char)(c))
-#define TOR_ISSPACE(c)   isspace((int)(unsigned char)(c))
-#define TOR_ISXDIGIT(c) isxdigit((int)(unsigned char)(c))
-#define TOR_ISDIGIT(c)   isdigit((int)(unsigned char)(c))
-#define TOR_ISPRINT(c)   isprint((int)(unsigned char)(c))
-#define TOR_ISLOWER(c)   islower((int)(unsigned char)(c))
-#define TOR_ISUPPER(c)   isupper((int)(unsigned char)(c))
-
-#define TOR_TOLOWER(c)   ((char)tolower((int)(unsigned char)(c)))
-#define TOR_TOUPPER(c)   ((char)toupper((int)(unsigned char)(c)))
+/* Much of the time when we're checking ctypes, we're doing spec compliance,
+ * which all assumes we're doing ASCII. */
+#define DECLARE_CTYPE_FN(name)                                          \
+  static int TOR_##name(char c);                                        \
+  extern const uint32_t const TOR_##name##_TABLE[];                     \
+  static INLINE int TOR_##name(char c) {                                \
+    uint8_t u = c;                                                      \
+    return !!(TOR_##name##_TABLE[(u >> 5) & 7] & (1 << (u & 31)));      \
+  }
+DECLARE_CTYPE_FN(ISALPHA)
+DECLARE_CTYPE_FN(ISALNUM)
+DECLARE_CTYPE_FN(ISSPACE)
+DECLARE_CTYPE_FN(ISDIGIT)
+DECLARE_CTYPE_FN(ISXDIGIT)
+DECLARE_CTYPE_FN(ISPRINT)
+DECLARE_CTYPE_FN(ISLOWER)
+DECLARE_CTYPE_FN(ISUPPER)
+extern const char const TOR_TOUPPER_TABLE[];
+extern const char const TOR_TOLOWER_TABLE[];
+#define TOR_TOLOWER(c) (TOR_TOLOWER_TABLE[(uint8_t)c])
+#define TOR_TOUPPER(c) (TOR_TOUPPER_TABLE[(uint8_t)c])
 
 #ifdef MS_WINDOWS
 #define _SHORT_FILE_ (tor_fix_source_file(__FILE__))

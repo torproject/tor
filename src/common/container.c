@@ -20,9 +20,6 @@ const char container_c_id[] =
 #include "container.h"
 #include "crypto.h"
 
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
