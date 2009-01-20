@@ -346,6 +346,8 @@ R   - bridge communities (revive proposal 128)
 
   - Split TLS across multiple cores
 
+  - "In the future, we should migrate to LOCAL_APPDATA entirely."
+
   - Use more mid-level and high-level libevent APIs
     - For dns?
     - For http?
