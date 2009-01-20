@@ -21,6 +21,18 @@
 \definecolor{MyLightGray}{gray}{.90}
 \definecolor{MyLightGreen}{rgb}{0.5, 0.99, 0.5}
 
+\usepackage{xspace}
+\makeatletter
+\newcommand{\ie}{i.e.\@\xspace}
+\newcommand{\eg}{e.g.\@\xspace}
+\newcommand{\cf}{cf.\@\xspace}
+\newcommand{\vs}{vs.\@\xspace}
+\newcommand{\wrt}{w.r.t.\@\xspace}
+\newcommand{\etal}{\textit{et al.\@\xspace}}
+\newcommand{\detal}{\textit{et al.}}
+\newcommand{\ia}{inter alia\xspace}
+\makeatother
+
 \newcommand{\thetitle}{Performance Improvements on Tor}
 \title{\thetitle}
 
@@ -38,6 +50,36 @@
 \thispagestyle{plain}
  
 \maketitle
+
+\section{Considering exit policy in node selection}
+
+When selecting an exit node for a circuit, a Tor client will build a list of all exit nodes which can carry the desired stream, then select from them with a probability weighted by each node's capacity\footnote{The actual algorithm is slightly more complex, in particular exit nodes which are also guard nodes will be weighted less, and there is also preemptive circuit creation}.
+This means that nodes with more permissive exit policies will be candidates for more circuits, and hence will be more heavily loaded compared to nodes with restrictive policies.
+
+\begin{figure}
+\includegraphics[width=\textwidth]{node-selection/exit-capacity}
+\caption{Exit node capacity, in terms of number of nodes and advertised bandwidth for a selection of port numbers.}
+\label{fig:exit-capacity}
+\end{figure}
+
+\prettyref{fig:exit-capacity} shows the exit node capacity for a selection of port numbers.
+It can be clearly seen that there is a radical difference in the availability of nodes for certain ports, generally those not in the default exit policy.
+Any traffic to these ports will be routed through a small number of exit nodes, and if they have a permissive exit policy, they will likely become overloaded from all the other traffic they receive.
+The extent of this effect will depend on how much traffic in Tor is to ports which are not in the default exit policy.
+
+The overloading of permissive exit nodes can be counteracted by adjusting the selection probability of a node based on its exit policy and knowledge of the network load per-port.
+While it should improve performance, this modification will make it easier for malicious exit nodes to select traffic they wish to monitor.
+For example, an exit node which wants to attack SSH sessions can currently list only port 22 in their exit policy.
+Currently they will get a small amount of traffic compared to their capacity, but with the modification they will get a much larger share of SSH traffic.
+However a malicious exit node could already do this, by artificially inflating their advertised bandwidth capacity.
+
+\subsection{Further work}
+
+To properly balance exit node usage, it is necessary to know the usage of the Tor network, by port.
+McCoy \etal have figures for protocol usage in Tor, but these figures were generated through deep packet inspection, rather than by port number.
+Furthermore, the exit node they ran used the fairly permissive default exit policy.
+Therefore, their measurements will underestimate the relative traffic on ports which are present in the default exit policy, and are also present in more restrictive policies.
+To accurately estimate the Tor network usage by port, it is necessary to measure the network usage by port on one or more exit nodes, while simultaneously recording the exit policy of all other exit nodes considered usable.
 
 \section{Altering node selection algorithm}
 
@@ -125,6 +167,10 @@ To be successful, the attacker must have full control of the plaintext applicati
 Tor makes this difficult because all cells where the payload is controlled by the attacker are prepended with a two byte circuit ID, unknown to the attacker.
 Also, because the majority of cells sent in Tor are encrypted by a key not known by the attacker, the probability that an attacker can guess what a cell might be is extremely small.
 The exception is a padding cell, which has no circuit ID and a zero length payload, however Tor does not currently send padding cells, other than as a periodic keep-alive.
+
+\subsection*{Acknowledgements}
+
+% Mike Perry
 
 \end{document}
 
