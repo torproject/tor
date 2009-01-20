@@ -30,9 +30,6 @@
 #include <pwd.h>
 #endif
 
-#ifdef HAVE_CTYPE_H
-#include <ctype.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
