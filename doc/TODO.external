@@ -32,19 +32,12 @@ W   - Finish implementation of directory overhead changes: have a set
   - end of October
     - Auto update
 C     * Get the MSI working and stable for Windows Tor installer.
-N     o Come up with an interface to export the package/bundle gloss
-        descriptions so Vidalia can display them.
-        (Done; see thandy-client json2xml.  Matt was fine with this,
-        last I heard.)
-E     * Vidalia calls Thandy, learns when to upgrade, requests the upgrade.
 ?     - Teach our OSX installer to register its version on install
 
   - end of December
 I   - Periodic summaries of localization progress: both pootle and wml.
 
   - mid January
-KS  . Finish testing, debugging, unit testing, etc the hidden service
-      changes. Have it in the development version and in use.
 W   - Finish testing, debugging, unit testing, etc the directory overhead
       changes. Have it in the development version and in use.
       o Roger writes a proposal unifying the or-dev discussions
@@ -58,7 +51,9 @@ E   - Implement KDE Marble into Vidalia.  In order to improve the user
       Tor circuits in new ways.
 
   - end of January
-NSE - Write first draft of research study for Paul's research problem.
+    - Write first draft of research study for Paul's research problem.
+R     - Get the stuff in the wiki into a "report" we can show some
+        bureaucrat, for phase one.
 I   - Periodic summaries of localization progress: both pootle and wml.
 
   - mid February
@@ -77,11 +72,6 @@ S   - Write a summary of progress toward understanding risks to relays
       (and thus bridges) from letting attackers route traffic through
       them. Eg, if relays have 100KB/s but set relaybandwidthrate to
       10KB/s, do your interference attacks still work?
-
-    o Revise and publish incentive draft paper
-      o Write an explanation for its current flaws
-R     . Gather comments, search for new designs
-      o Write up a summary of recommendations and next steps
 
 W   - Download fewer descriptors
       - Summarize progress so far, on all the different approaches to
@@ -140,6 +130,9 @@ E   - Vidalia improvements
       - Vidalia displays by-country user summary for bridge operators
         o Tor sends a status event or something so Vidalia knows what
           to display: "clients_seen"
+      - Get the onion icons back into vidalia svn
+        - Find an OS X user who can do design who thinks the OS X onion
+          icons are crappy and need fixing
 
 M   - Network scanning and network health
       - Implement some initial automated scans.
