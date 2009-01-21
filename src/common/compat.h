@@ -249,7 +249,7 @@ tor_memstr(const void *haystack, size_t hlen, const char *needle)
  * which all assumes we're doing ASCII. */
 #define DECLARE_CTYPE_FN(name)                                          \
   static int TOR_##name(char c);                                        \
-  extern const uint32_t const TOR_##name##_TABLE[];                     \
+  extern const uint32_t TOR_##name##_TABLE[];                           \
   static INLINE int TOR_##name(char c) {                                \
     uint8_t u = c;                                                      \
     return !!(TOR_##name##_TABLE[(u >> 5) & 7] & (1 << (u & 31)));      \
@@ -262,8 +262,8 @@ DECLARE_CTYPE_FN(ISXDIGIT)
 DECLARE_CTYPE_FN(ISPRINT)
 DECLARE_CTYPE_FN(ISLOWER)
 DECLARE_CTYPE_FN(ISUPPER)
-extern const char const TOR_TOUPPER_TABLE[];
-extern const char const TOR_TOLOWER_TABLE[];
+extern const char TOR_TOUPPER_TABLE[];
+extern const char TOR_TOLOWER_TABLE[];
 #define TOR_TOLOWER(c) (TOR_TOLOWER_TABLE[(uint8_t)c])
 #define TOR_TOUPPER(c) (TOR_TOUPPER_TABLE[(uint8_t)c])
 

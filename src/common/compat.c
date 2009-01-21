@@ -349,21 +349,21 @@ tor_memmem(const void *_haystack, size_t hlen,
  * has 256 bits to look up whether a character is in some set or not.  This
  * fails on non-ASCII platforms, but it is hard to find a platform whose
  * character set is not a superset of ASCII nowadays. */
-const uint32_t const TOR_ISALPHA_TABLE[8] =
+const uint32_t TOR_ISALPHA_TABLE[8] =
   { 0, 0, 0x7fffffe, 0x7fffffe, 0, 0, 0, 0 };
-const uint32_t const TOR_ISALNUM_TABLE[8] =
+const uint32_t TOR_ISALNUM_TABLE[8] =
   { 0, 0x3ff0000, 0x7fffffe, 0x7fffffe, 0, 0, 0, 0 };
-const uint32_t const TOR_ISSPACE_TABLE[8] = { 0x3e00, 0x1, 0, 0, 0, 0, 0, 0 };
-const uint32_t const TOR_ISXDIGIT_TABLE[8] =
+const uint32_t TOR_ISSPACE_TABLE[8] = { 0x3e00, 0x1, 0, 0, 0, 0, 0, 0 };
+const uint32_t TOR_ISXDIGIT_TABLE[8] =
   { 0, 0x3ff0000, 0x7e, 0x7e, 0, 0, 0, 0 };
-const uint32_t const TOR_ISDIGIT_TABLE[8] = { 0, 0x3ff0000, 0, 0, 0, 0, 0, 0 };
-const uint32_t const TOR_ISPRINT_TABLE[8] =
+const uint32_t TOR_ISDIGIT_TABLE[8] = { 0, 0x3ff0000, 0, 0, 0, 0, 0, 0 };
+const uint32_t TOR_ISPRINT_TABLE[8] =
   { 0, 0xffffffff, 0xffffffff, 0x7fffffff, 0, 0, 0, 0x0 };
-const uint32_t const TOR_ISUPPER_TABLE[8] = { 0, 0, 0x7fffffe, 0, 0, 0, 0, 0 };
-const uint32_t const TOR_ISLOWER_TABLE[8] = { 0, 0, 0, 0x7fffffe, 0, 0, 0, 0 };
+const uint32_t TOR_ISUPPER_TABLE[8] = { 0, 0, 0x7fffffe, 0, 0, 0, 0, 0 };
+const uint32_t TOR_ISLOWER_TABLE[8] = { 0, 0, 0, 0x7fffffe, 0, 0, 0, 0 };
 /* Upper-casing and lowercasing tables to map characters to upper/lowercase
  * equivalents. */
-const char const TOR_TOUPPER_TABLE[256] = {
+const char TOR_TOUPPER_TABLE[256] = {
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
   16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
   32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
@@ -381,7 +381,7 @@ const char const TOR_TOUPPER_TABLE[256] = {
   224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,
   240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
 };
-const char const TOR_TOLOWER_TABLE[256] = {
+const char TOR_TOLOWER_TABLE[256] = {
   0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,
   16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,
   32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,
