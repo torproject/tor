@@ -1,4 +1,7 @@
 Changes in version 0.2.1.12-alpha - 2009-01-??
+  o Minor bugfixes:
+    - Let controllers actually ask for the "clients_seen" event. Bugfix
+      on 0.2.1.10-alpha; reported by Matt Edman.
 
 
 Changes in version 0.2.1.11-alpha - 2009-01-20
