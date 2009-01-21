@@ -5,8 +5,9 @@ tor (0.2.1.11-alpha-1) experimental; urgency=high
     - torify(1) manpage mentions DNS leaks now (closes: #495829).
   * README.Debian: No longer claim we change the default 'Group' setting
     when run as debian-user.  That setting no longer exists.
+  * Forward port 03_tor_manpage_in_section_8.dpatch.
 
- -- Peter Palfrader <weasel@debian.org>  Wed, 21 Jan 2009 00:55:19 +0100
+ -- Peter Palfrader <weasel@debian.org>  Wed, 21 Jan 2009 01:00:15 +0100
 
 tor (0.2.1.10-alpha-1) experimental; urgency=low
 

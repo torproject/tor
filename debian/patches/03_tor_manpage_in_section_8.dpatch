@@ -32,8 +32,8 @@ diff -urNad tor-0.1.1.5/contrib/torify.1 /tmp/dpep.fOA3Mm/tor-0.1.1.5/contrib/to
  .SH SEE ALSO
 -.BR tor (1),
 +.BR tor (8),
+ .BR tor-resolve (1),
  .BR tsocks (1),
- .BR tsocks.conf (5).
 diff -urNad tor-0.1.1.5/doc/tor.1.in /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
 --- tor-0.1.1.5/doc/tor.1.in
 +++ /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
