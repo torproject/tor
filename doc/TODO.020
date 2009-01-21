@@ -19,6 +19,8 @@ Backport for 0.2.0 once better tested:
   - r17887: Don't accept 1.2.3 as a valid IP address.
   o r17917, r17993: tors that haven't run lately take 10+ minutes to start
   - r17924: Close streams when an exit hands us a local IP.
+  - r18210: Call crypto_global_init() with hardwareaccel flag set right in
+    all cases.
 
 Backport for 0.2.0, maybe:
   d r17945: bridges always fail dirport reachability tests. i think
