@@ -444,6 +444,12 @@ init_keys(void)
   if (!key_lock)
     key_lock = tor_mutex_new();
 
+  /* There are a couple of paths that put us here before */
+  if (crypto_global_init(get_options()->HardwareAccel)) {
+    log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
+    return -1;
+  }
+
   /* OP's don't need persistent keys; just make up an identity and
    * initialize the TLS context. */
   if (!server_mode(options)) {

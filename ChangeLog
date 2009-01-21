@@ -6,6 +6,9 @@ Changes in version 0.2.1.12-alpha - 2009-01-??
       0.2.1.11-alpha.
     - Fix a bug in address parsing that was preventing bridges or hidden
       service targets from being at IPv6 addresses.
+    - Solve a bug that kept hardware crypto acceleration from getting
+      enabled when accounting was turned on.  Fixes bug 907.  Bugfix on
+      0.0.9pre6.
 
 
 Changes in version 0.2.1.11-alpha - 2009-01-20

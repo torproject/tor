@@ -197,6 +197,7 @@ crypto_global_init(int useAccel)
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
     }
+    return crypto_seed_rng(1);
   }
   return 0;
 }

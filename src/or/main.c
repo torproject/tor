@@ -1817,9 +1817,8 @@ tor_init(int argc, char *argv[])
              "and you probably shouldn't.");
 #endif
 
-  crypto_global_init(get_options()->HardwareAccel);
-  if (crypto_seed_rng(1)) {
-    log_err(LD_BUG, "Unable to seed random number generator. Exiting.");
+  if (crypto_global_init(get_options()->HardwareAccel)) {
+    log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }
 
