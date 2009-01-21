@@ -1,4 +1,8 @@
-Changes in version 0.2.0.33 - 2009-01-??
+Changes in version 0.2.0.33 - 2009-01-21
+  o Security fixes:
+    - Fix a heap-corruption bug that may be remotely triggerable on
+      some platforms. Reported by Ilja van Sprundel.
+
   o Major bugfixes:
     - When a stream at an exit relay is in state "resolving" or
       "connecting" and it receives an "end" relay cell, the exit relay
