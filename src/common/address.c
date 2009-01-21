@@ -962,9 +962,9 @@ tor_addr_from_str(tor_addr_t *addr, const char *src)
   return result;
 }
 
-/** Parse an address or address-port combination from <b>s</b>, and put the
-    result in <b>addr_out</b> and (optionally) <b>port_out</b>.  Return 0 on
-    success, negative on failure. */
+/** Parse an address or address-port combination from <b>s</b>, resolve the
+ * address as needed, and put the result in <b>addr_out</b> and (optionally)
+ * <b>port_out</b>.  Return 0 on success, negative on failure. */
 int
 tor_addr_port_parse(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 {
@@ -982,7 +982,7 @@ tor_addr_port_parse(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
     port = strstr(s, "]");
     if (!port)
       goto err;
-    tmp = tor_strndup(s+1, port-s);
+    tmp = tor_strndup(s+1, port-(s+1));
     port = port+1;
     if (*port == ':')
       port++;

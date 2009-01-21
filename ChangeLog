@@ -4,6 +4,8 @@ Changes in version 0.2.1.12-alpha - 2009-01-??
       on 0.2.1.10-alpha; reported by Matt Edman.
     - Fix a compile warning on OSX Panther.  Fixes bug 913; bugfix against
       0.2.1.11-alpha.
+    - Fix a bug in address parsing that was preventing bridges or hidden
+      service targets from being at IPv6 addresses.
 
 
 Changes in version 0.2.1.11-alpha - 2009-01-20
