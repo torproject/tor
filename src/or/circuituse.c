@@ -530,7 +530,7 @@ circuit_predict_and_launch_new(void)
 void
 circuit_build_needed_circs(time_t now)
 {
-  static long time_to_new_circuit = 0;
+  static time_t time_to_new_circuit = 0;
   or_options_t *options = get_options();
 
   /* launch a new circ for any pending streams that need one */

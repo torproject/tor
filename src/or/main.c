@@ -1138,7 +1138,7 @@ second_elapsed_callback(int fd, short event, void *args)
    * could use libevent's timers for this rather than checking the current
    * time against a bunch of timeouts every second. */
   static struct timeval one_second;
-  static long current_second = 0;
+  static time_t current_second = 0;
   time_t now;
   size_t bytes_written;
   size_t bytes_read;

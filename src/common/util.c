@@ -1031,8 +1031,7 @@ tor_timegm(struct tm *tm)
   /* This is a pretty ironclad timegm implementation, snarfed from Python2.2.
    * It's way more brute-force than fiddling with tzset().
    */
-  time_t ret;
-  unsigned long year, days, hours, minutes;
+  time_t year, days, hours, minutes, seconds;
   int i;
   year = tm->tm_year + 1900;
   if (year < 1970 || tm->tm_mon < 0 || tm->tm_mon > 11) {
@@ -1049,8 +1048,8 @@ tor_timegm(struct tm *tm)
   hours = days*24 + tm->tm_hour;
 
   minutes = hours*60 + tm->tm_min;
-  ret = minutes*60 + tm->tm_sec;
-  return ret;
+  seconds = minutes*60 + tm->tm_sec;
+  return seconds;
 }
 
 /* strftime is locale-specific, so we need to replace those parts */

@@ -10,6 +10,10 @@ Changes in version 0.2.1.12-alpha - 2009-01-??
       enabled when accounting was turned on.  Fixes bug 907.  Bugfix on
       0.0.9pre6.
 
+  o Minor features:
+    - Support platforms where time_t is 64 bits long. (Congratulations,
+      NetBSD!)  Patch from Matthias Drochner.
+
 
 Changes in version 0.2.1.11-alpha - 2009-01-20
   o Security fixes:
