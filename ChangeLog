@@ -9,6 +9,8 @@ Changes in version 0.2.1.12-alpha - 2009-01-??
     - Solve a bug that kept hardware crypto acceleration from getting
       enabled when accounting was turned on.  Fixes bug 907.  Bugfix on
       0.0.9pre6.
+    - Remove a bash-ism from configure.in to build properly on non-Linux
+      platforms.  Bugfix on 0.2.1.1-alpha.
 
   o Minor features:
     - Support platforms where time_t is 64 bits long. (Congratulations,

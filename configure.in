@@ -48,7 +48,7 @@ if test x$enable_buf_freelists != xno; then
             [Defined if we try to use freelists for buffer RAM chunks])
 fi
 AM_CONDITIONAL(USE_OPENBSD_MALLOC, test x$enable_openbsd_malloc = xyes)
-if test x$enable_instrument_downloads == xyes; then
+if test x$enable_instrument_downloads = xyes; then
   AC_DEFINE(INSTRUMENT_DOWNLOADS, 1,
             [Defined if we want to keep track of how much of each kind of resource we download.])
 fi
