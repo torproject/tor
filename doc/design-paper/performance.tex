@@ -51,6 +51,31 @@
  
 \maketitle
 
+\section{Minimzing latency of paths}
+
+Currently Tor selects paths purely by the random selection of nodes, biased by node bandwidth.
+This will sometimes cause high latency circuits due to multiple ocean crossings or otherwise congested links.
+An alternative approach would be to not only bias selection of nodes based on bandwidth, but to also bias the selection of hops based on expected latency.
+
+One option would be to predict the latency of hops based on geolocation of the node IP address.
+This approach has the advantage of not requiring any additional measurement database to be published.
+However, it does assume that the geolocation database is accurate and that physical distance between hops is an accurate estimator for latency.
+
+A second option would be to actually measure hop latency, and publish the database.
+Nodes could do this themselves and include the results in their descriptor.
+Alternatively, a central authority could perform the measurements and publish the results.
+Performing these measurements would be a $O(n^2)$ problem, where $n$ is the number of nodes, so does not scale well.
+
+Publishing a latency database would also increase the size of the directory that each client must download.
+If na\"{\i}vely implemented, the database would scale with $O(n^2)$.
+However, a more efficient versions could be created, such as by dimension reduction, creating a map in which the distance between any two nodes is an approximation of the latency of a hop between them.
+Delta compression could be used if the map changes slowly.
+
+Reducing the number of potential paths would also have anonymity consequences, and these would need to be carefully considered.
+For example, an attacker who wishes to monitor traffic could create several nodes, on distinct /16 subnets, but with low latency between them.
+A Tor client trying to minimize latency would be more likely to select these nodes for both entry than exit than it would otherwise.
+This particular problem could be mitigated by selecting entry and exit node as normal, and only using latency measurements to select the middle node.
+
 \section{Considering exit policy in node selection}
 
 When selecting an exit node for a circuit, a Tor client will build a list of all exit nodes which can carry the desired stream, then select from them with a probability weighted by each node's capacity\footnote{The actual algorithm is slightly more complex, in particular exit nodes which are also guard nodes will be weighted less, and there is also preemptive circuit creation}.
@@ -170,7 +195,7 @@ The exception is a padding cell, which has no circuit ID and a zero length paylo
 
 \subsection*{Acknowledgements}
 
-% Mike Perry
+% Mike Perry provided many of the ideas discussed here
 
 \end{document}
 
