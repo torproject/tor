@@ -76,6 +76,17 @@ For example, an attacker who wishes to monitor traffic could create several node
 A Tor client trying to minimize latency would be more likely to select these nodes for both entry than exit than it would otherwise.
 This particular problem could be mitigated by selecting entry and exit node as normal, and only using latency measurements to select the middle node.
 
+\section{Peer-to-peer bandwidth estimation}
+
+Snader and Borisov proposed that each Tor node opportunistically monitor the data rates that it achieves when communicating with other Tor nodes.
+Since currently Tor uses a clique topology, given enough time, all nodes will communicate with all other Tor nodes.
+If each Tor node reported their measurements back to a central authority, it would be possible to estimate the capacity of each Tor node.
+This estimate would be difficult to game, when compared to the current self-advertisement of bandwidth capacity.
+
+Experiments show that opportunistic bandwidth measurement has a better systematic error than Tor's current self-advertised measure, although has a poorer log-log correlation (0.48 vs. 0.57).
+The most accurate scheme is active probing of capacity, with a log-log correlation of 0.63, but this introduces network overhead.
+All three schemes do suffer from fairly poor accuracy, presumably due to some nodes with high variance in bandwidth capacity.
+
 \section{Considering exit policy in node selection}
 
 When selecting an exit node for a circuit, a Tor client will build a list of all exit nodes which can carry the desired stream, then select from them with a probability weighted by each node's capacity\footnote{The actual algorithm is slightly more complex, in particular exit nodes which are also guard nodes will be weighted less, and there is also preemptive circuit creation}.
