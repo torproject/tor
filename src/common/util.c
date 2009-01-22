@@ -1011,7 +1011,7 @@ tor_timegm(struct tm *tm)
   hours = days*24 + tm->tm_hour;
 
   minutes = hours*60 + tm->tm_min;
-  ret = minutes*60 + tm->tm_sec;
+  ret = ((time_t)minutes)*60 + tm->tm_sec;
   return ret;
 }
 

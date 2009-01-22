@@ -290,6 +290,8 @@ typedef uint32_t uintptr_t;
 #define TIME_MAX ((time_t)INT_MAX)
 #elif (SIZEOF_TIME_T == SIZEOF_LONG)
 #define TIME_MAX ((time_t)LONG_MAX)
+#elif (SIZEOF_TIME_T == 8)
+#define TIME_MAX ((time_t)INT64_MAX)
 #else
 #error "Can't define (signed) TIME_MAX"
 #endif

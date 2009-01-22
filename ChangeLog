@@ -1,3 +1,9 @@
+Changes in version 0.2.0.34 - 2009-??-??
+  o Minor bugfixes:
+    - Fix compilation on systems where time-t is a 64-bit integer.
+      Patch from Matthias Drochner.
+
+
 Changes in version 0.2.0.33 - 2009-01-21
   o Security fixes:
     - Fix a heap-corruption bug that may be remotely triggerable on
