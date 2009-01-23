@@ -831,7 +831,7 @@ parse_log_severity_config(const char **cfg_ptr,
               }
               d = parse_log_domain(domain);
               if (!d) {
-                log_warn(LD_CONFIG, "No such loggging domain as %s", domain);
+                log_warn(LD_CONFIG, "No such logging domain as %s", domain);
                 err = 1;
               } else {
                 if (negate)
