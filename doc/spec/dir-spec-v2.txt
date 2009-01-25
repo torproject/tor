@@ -587,7 +587,7 @@ $Id$
 
    The most recent network-status documents from all known authorities,
    concatenated, should be available at:
-         http://<hostname>/tor/status/all.z
+      http://<hostname>/tor/status/all.z
 
    The most recent descriptor for a server whose identity key has a
    fingerprint of <F> should be available at:
@@ -774,7 +774,7 @@ $Id$
    Circuits SHOULD NOT be built until the client has enough directory
    information: network-statuses (or failed attempts to download
    network-statuses) for all authorities, network-statuses for at more than
-   half of the authorites, and descriptors for at least 1/4 of the servers
+   half of the authorities, and descriptors for at least 1/4 of the servers
    believed to be running.
 
    A server is "listed" if it is included by more than half of the live

@@ -1177,7 +1177,7 @@ $Id$
    of the router's actual capacity that the authority has.  For now,
    this should be the lesser of the observed bandwidth and bandwidth
    rate limit from the router descriptor.  It is given in kilobytes
-   per second, and capped at some arbitrary value (curently 10 MB/s).
+   per second, and capped at some arbitrary value (currently 10 MB/s).
 
    The ports listed in a "p" line should be taken as those ports for
    which the router's exit policy permits 'most' addresses, ignoring any
@@ -1258,7 +1258,7 @@ $Id$
           is taken from the votes that have the same policy summary
           for the descriptor we are listing.  (They should all be the
           same.  If they are not, we pick the most commonly listed
-          one, breaking ties in favor of the lexigraphically larger
+          one, breaking ties in favor of the lexicographically larger
           vote.)  The port list is encoded as specified in 3.4.2.
 
      The signatures at the end of a consensus document are sorted in

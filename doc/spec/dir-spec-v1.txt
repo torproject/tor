@@ -5,7 +5,7 @@ $Id$
                               Roger Dingledine
                                Nick Mathewson
 
-0. Prelimaries
+0. Preliminaries
 
   THIS SPECIFICATION IS OBSOLETE.
 
