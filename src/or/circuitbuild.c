@@ -331,48 +331,6 @@ circuit_establish_circuit(uint8_t purpose, extend_info_t *exit, int flags)
   return circ;
 }
 
-#if 0
-/** Return true iff <b>n_conn</b> (a connection with a desired identity), is
- * an acceptable choice for extending or launching a circuit to the address
- * <b>target_addr</b>.  If it is not, set <b>state_out</b> to a message
- * describing the connection's state and our next action, and set
- * <b>launch_out</b> to a boolean for whether we should launch a new
- * connection or not. */
-int
-connection_good_enough_for_extend(const or_connection_t *n_conn,
-                                  const tor_addr_t *target_addr,
-                                  const char **state_out,
-                                  int *launch_out)
-{
-  tor_assert(state_out);
-  tor_assert(launch_out);
-  tor_assert(target_addr);
-
-  if (!n_conn) {
-    *state_out = "not connected. Connecting.";
-    *launch_out = 1;
-    return 0;
-  } else if (n_conn->_base.state != OR_CONN_STATE_OPEN) {
-    *state_out = "in progress. Waiting.";
-    *launch_out = 0; /* We'll just wait till the connection finishes. */
-    return 0;
-  } else if (n_conn->is_bad_for_new_circs) {
-    *state_out = "too old. Launching a new one.";
-    *launch_out = 1;
-    return 0;
-  } else if (tor_addr_compare(&n_conn->real_addr, target_addr, CMP_EXACT)
-             && ! n_conn->is_canonical) {
-    *state_out = "is not from a canonical address. Launching a new one.";
-    *launch_out = 1;
-    return 0;
-  } else {
-    *state_out = "is fine; using it.";
-    *launch_out = 0;
-    return 1;
-  }
-}
-#endif
-
 /** Start establishing the first hop of our circuit. Figure out what
  * OR we should connect to, and if necessary start the connection to
  * it. If we're already connected, then send the 'create' cell.
