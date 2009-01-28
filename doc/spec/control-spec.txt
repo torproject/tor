@@ -1702,7 +1702,7 @@ $Id$
   Future Tors MAY revisit earlier stages.
 
   Phase 0:
-  tag=starting summary="starting"
+  tag=starting summary="Starting"
 
   Tor starts out in this phase.
 
@@ -1719,7 +1719,7 @@ $Id$
   generally happen because Tor doesn't have a network connection, or
   because the local firewall is dropping SYN packets.
 
-  Phase 10
+  Phase 10:
   tag=handshake_dir summary="Finishing handshake with directory mirror"
 
   This event occurs when Tor establishes a TCP connection with a relay used
@@ -1804,7 +1804,7 @@ $Id$
   handshake with a Tor relay.
 
   Phase 90:
-  tag=circuit_create "Establishing circuits"
+  tag=circuit_create summary="Establishing circuits"
 
   Once we've finished our TLS handshake with an entry guard, we will
   set about trying to make some 3-hop circuits in case we need them soon.
