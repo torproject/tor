@@ -161,7 +161,7 @@ $Id$
   SETCONF command arrives containing a single ORBindAddress value, the new
   command's value replaces the two old values.
 
-  Somtimes it is not possible to change configuration options solely by
+  Sometimes it is not possible to change configuration options solely by
   issuing a series of SETCONF commands, because the value of one of the
   configuration options depends on the value of another which has not yet
   been set. Such situations can be overcome by setting multiple configuration
