@@ -2165,8 +2165,10 @@ write_http_response_header_impl(dir_connection_t *conn, ssize_t length,
     strlcpy(cp, "Pragma: no-cache\r\n", sizeof(tmp)-(cp-tmp));
     cp += strlen(cp);
   }
-  if (extra_headers)
+  if (extra_headers) {
     strlcpy(cp, extra_headers, sizeof(tmp)-(cp-tmp));
+    cp += strlen(cp);
+  }
   if (sizeof(tmp)-(cp-tmp) > 3)
     memcpy(cp, "\r\n", 3);
   else
