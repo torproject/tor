@@ -1839,23 +1839,20 @@ getinfo_helper_events(control_connection_t *control_conn,
       }
     } else if (!strcmp(question, "status/clients-seen")) {
       char geoip_start[ISO_TIME_LEN+1];
-      char *geoip_summary;
-      smartlist_t *sl;
+      size_t answer_len;
+      char *geoip_summary = extrainfo_get_client_geoip_summary(time(NULL));
 
-      geoip_summary = extrainfo_get_client_geoip_summary(time(NULL));
       if (!geoip_summary)
         return -1;
+
+      answer_len = strlen("TimeStarted=\"\" CountrySummary=") +
+                   ISO_TIME_LEN + strlen(geoip_summary) + 1;
+      *answer = tor_malloc(answer_len);
       format_iso_time(geoip_start, geoip_get_history_start());
-
-      sl = smartlist_create();
-      smartlist_add(sl, (char *)"TimeStarted=\"");
-      smartlist_add(sl, geoip_start);
-      smartlist_add(sl, (char *)"\" CountrySummary=");
-      smartlist_add(sl, geoip_summary);
-      *answer = smartlist_join_strings(sl, "", 0, 0);
-
+      tor_snprintf(*answer, answer_len,
+                   "TimeStarted=\"%s\" CountrySummary=%s",
+                   geoip_start, geoip_summary);
       tor_free(geoip_summary);
-      smartlist_free(sl);
     } else {
       return 0;
     }

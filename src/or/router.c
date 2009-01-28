@@ -1906,11 +1906,12 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   return (int)strlen(s)+1;
 }
 
-/** Return a newly allocated comma-separated string containing entries for all
- * the countries from which we've seen enough clients connect over the
- * previous 48 hours. The entry format is cc=num where num is the number of
- * IPs we've seen connecting from that country, and cc is a lowercased
- * country code. Returns NULL if we don't want to export geoip data yet. */
+/** Wrapper function for geoip_get_client_history(). It first discards
+ * any items in the client history that are too old -- it dumps anything
+ * more than 48 hours old, but it only considers whether to dump at most
+ * once per 48 hours, so we aren't too precise to an observer (see also
+ * r14780).
+ */
 char *
 extrainfo_get_client_geoip_summary(time_t now)
 {
