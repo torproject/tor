@@ -20,6 +20,9 @@ Changes in version 0.2.1.12-alpha - 2009-02-??
       of them created a new connection with just the wrong timing, the other
       might decide to deprecate the new connection erroneously.  Bugfix on
       0.1.1.13-alpha.
+    - Resolve a very rare crash bug that could occur when the user forced
+      a nameserver reconfiguration during the middle of a nameserver
+      probe.  Fixes bug 526.  Bugfix on 0.1.2.1-alpha.
 
   o Minor features:
     - Support platforms where time_t is 64 bits long. (Congratulations,

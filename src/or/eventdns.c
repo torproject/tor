@@ -2083,28 +2083,48 @@ evdns_request_transmit(struct request *req) {
 
 static void
 nameserver_probe_callback(int result, char type, int count, int ttl, void *addresses, void *arg) {
-	struct nameserver *const ns = (struct nameserver *) arg;
+	struct sockaddr *addr = arg;
+	struct nameserver *server;
 	(void) type;
 	(void) count;
 	(void) ttl;
 	(void) addresses;
 
-	if (result == DNS_ERR_NONE || result == DNS_ERR_NOTEXIST) {
-		/* this is a good reply */
-		nameserver_up(ns);
-	} else nameserver_probe_failed(ns);
+	for (server = server_head; server; server = server->next) {
+		if (sockaddr_eq(addr, (struct sockaddr*) &server->address, 1)) {
+			if (result == DNS_ERR_NONE || result == DNS_ERR_NOTEXIST) {
+				/* this is a good reply */
+				nameserver_up(server);
+			} else {
+				nameserver_probe_failed(server);
+			}
+		}
+		if (server->next == server_head)
+			break;
+	}
+
+	free(addr);
 }
 
 static void
 nameserver_send_probe(struct nameserver *const ns) {
 	struct request *req;
+	struct sockaddr_storage *addr;
 	/* here we need to send a probe to a given nameserver */
 	/* in the hope that it is up now. */
 
+	/* We identify the nameserver by its address, in case it is removed before
+	 * our probe comes back. */
+	addr = malloc(sizeof(struct sockaddr_storage));
+	memcpy(addr, &ns->address, sizeof(struct sockaddr_storage));
+
 	log(EVDNS_LOG_DEBUG, "Sending probe to %s", debug_ntop((struct sockaddr *)&ns->address));
 
-	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, ns);
-	if (!req) return;
+	req = request_new(TYPE_A, "www.google.com", DNS_QUERY_NO_SEARCH, nameserver_probe_callback, addr);
+	if (!req) {
+		free(addr);
+		return;
+	}
 	/* we force this into the inflight queue no matter what */
 	request_trans_id_set(req, transaction_id_pick());
 	req->ns = ns;
