@@ -13,6 +13,8 @@ Changes in version 0.2.1.12-alpha - 2009-02-??
       platforms.  Bugfix on 0.2.1.1-alpha.
     - Fix code so authorities _actually_ send back X-Descriptor-Not-New
       headers.  Bugfix on 0.2.0.10-alpha.
+    - Don't consider consider expiring already-closed client connections.
+      Fixes bug 893.  Bugfix on 0.0.2pre20.
 
   o Minor features:
     - Support platforms where time_t is 64 bits long. (Congratulations,
