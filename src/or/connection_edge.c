@@ -361,7 +361,7 @@ connection_ap_expire_beginning(void)
 
   SMARTLIST_FOREACH(conns, connection_t *, c,
   {
-    if (c->type != CONN_TYPE_AP)
+    if (c->type != CONN_TYPE_AP || c->marked_for_close)
       continue;
     conn = TO_EDGE_CONN(c);
     /* if it's an internal linked connection, don't yell its status. */
