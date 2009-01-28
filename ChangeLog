@@ -15,6 +15,11 @@ Changes in version 0.2.1.12-alpha - 2009-02-??
       headers.  Bugfix on 0.2.0.10-alpha.
     - Don't consider consider expiring already-closed client connections.
       Fixes bug 893.  Bugfix on 0.0.2pre20.
+    - Fix another interesting corner-case of bug 891 spotted by rovv:
+      Previously, if two hosts had different amounts of clock drift, and one
+      of them created a new connection with just the wrong timing, the other
+      might decide to deprecate the new connection erroneously.  Bugfix on
+      0.1.1.13-alpha.
 
   o Minor features:
     - Support platforms where time_t is 64 bits long. (Congratulations,

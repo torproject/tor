@@ -441,12 +441,21 @@ connection_or_init_conn_from_address(or_connection_t *conn,
  *
  * Requires that both input connections are open; not is_bad_for_new_circs,
  * and not impossibly non-canonical.
+ *
+ * If </b>forgive_new_connections</b> is true, then we do not call
+ * <b>a</b>better than <b>b</b> simply because b has no circuits,
+ * unless b is also relatively old.
  */
 static int
-connection_or_is_better(const or_connection_t *a,
-                        const or_connection_t *b)
+connection_or_is_better(time_t now,
+                        const or_connection_t *a,
+                        const or_connection_t *b,
+                        int forgive_new_connections)
 {
   int newer;
+/** Do not definitively deprecate a new connection with no circuits on it
+ * until this much time has passed. */
+#define NEW_CONN_GRACE_PERIOD (15*60)
 
   if (b->is_canonical && !a->is_canonical)
     return 0; /* A canonical connection is better than a non-canonical
@@ -454,15 +463,26 @@ connection_or_is_better(const or_connection_t *a,
 
   newer = b->_base.timestamp_created < a->_base.timestamp_created;
 
-  return
-    /* We prefer canonical connections regardless of newness. */
-    (!b->is_canonical && a->is_canonical) ||
-    /* If both have circuits we prefer the newer: */
-    (b->n_circuits && a->n_circuits && newer) ||
-    /* If neither has circuits we prefer the newer: */
-    (!b->n_circuits && !a->n_circuits && newer) ||
-    /* If only one has circuits, use that. */
-    (!b->n_circuits && a->n_circuits);
+  if (
+      /* We prefer canonical connections regardless of newness. */
+      (!b->is_canonical && a->is_canonical) ||
+      /* If both have circuits we prefer the newer: */
+      (b->n_circuits && a->n_circuits && newer) ||
+      /* If neither has circuits we prefer the newer: */
+      (!b->n_circuits && !a->n_circuits && newer))
+    return 1;
+
+  /* If one has no circuits and the other does... */
+  if (!b->n_circuits && a->n_circuits) {
+    /* Then it's bad, unless it's in its grace period and we're forgiving. */
+    if (forgive_new_connections &&
+        now < b->_base.timestamp_created + NEW_CONN_GRACE_PERIOD)
+      return 0;
+    else
+      return 1;
+  }
+
+  return 0;
 }
 
 /** Return the OR connection we should use to extend a circuit to the router
@@ -480,6 +500,7 @@ connection_or_get_for_extend(const char *digest,
 {
   or_connection_t *conn, *best=NULL;
   int n_inprogress_goodaddr = 0, n_old = 0, n_noncanonical = 0, n_possible = 0;
+  time_t now = approx_time();
 
   tor_assert(msg_out);
   tor_assert(launch_out);
@@ -531,7 +552,7 @@ connection_or_get_for_extend(const char *digest,
       continue;
     }
 
-    if (connection_or_is_better(conn, best))
+    if (connection_or_is_better(now, conn, best, 0))
       best = conn;
   }
 
@@ -619,7 +640,7 @@ connection_or_group_set_badness(or_connection_t *head)
       continue;
     }
 
-    if (!best || connection_or_is_better(or_conn, best))
+    if (!best || connection_or_is_better(now, or_conn, best, 0))
       best = or_conn;
   }
 
@@ -645,7 +666,9 @@ connection_or_group_set_badness(or_connection_t *head)
         or_conn->is_bad_for_new_circs ||
         or_conn->_base.state != OR_CONN_STATE_OPEN)
       continue;
-    if (or_conn != best) {
+    if (or_conn != best && connection_or_is_better(now, best, or_conn, 1)) {
+      /* This isn't the best conn, _and_ the best conn is better than it,
+         even when we're being forgiving. */
       if (best->is_canonical) {
         log_info(LD_OR,
                  "Marking OR conn to %s:%d as too old for new circuits: "
