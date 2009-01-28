@@ -197,10 +197,6 @@ dns_init(void)
 {
   init_cache_map();
   evdns_set_random_bytes_fn(_dns_randfn);
-  if (get_options()->ServerDNSRandomizeCase)
-    evdns_set_option("randomize-case:", "1", DNS_OPTIONS_ALL);
-  else
-    evdns_set_option("randomize-case:", "0", DNS_OPTIONS_ALL);
   if (server_mode(get_options())) {
     int r = configure_nameservers(1);
     return r;
@@ -1120,6 +1116,11 @@ configure_nameservers(int force)
       }
     }
   }
+
+  if (options->ServerDNSRandomizeCase)
+    evdns_set_option("randomize-case:", "1", DNS_OPTIONS_ALL);
+  else
+    evdns_set_option("randomize-case:", "0", DNS_OPTIONS_ALL);
 
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
