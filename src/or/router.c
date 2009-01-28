@@ -1863,19 +1863,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     return -1;
 
   if (should_record_bridge_info(options)) {
-    static time_t last_purged_at = 0;
-    char *geoip_summary;
-    time_t now = time(NULL);
-    int geoip_purge_interval = 48*60*60;
-#ifdef ENABLE_GEOIP_STATS
-    if (get_options()->DirRecordUsageByCountry)
-      geoip_purge_interval = get_options()->DirRecordUsageRetainIPs;
-#endif
-    if (now > last_purged_at+geoip_purge_interval) {
-      geoip_remove_old_clients(now-geoip_purge_interval);
-      last_purged_at = now;
-    }
-    geoip_summary = geoip_get_client_history(time(NULL), GEOIP_CLIENT_CONNECT);
+    char *geoip_summary = extrainfo_get_client_geoip_summary(time(NULL));
     if (geoip_summary) {
       char geoip_start[ISO_TIME_LEN+1];
       format_iso_time(geoip_start, geoip_get_history_start());
@@ -1916,6 +1904,27 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
 #endif
 
   return (int)strlen(s)+1;
+}
+
+/** Return a newly allocated comma-separated string containing entries for all
+ * the countries from which we've seen enough clients connect over the
+ * previous 48 hours. The entry format is cc=num where num is the number of
+ * IPs we've seen connecting from that country, and cc is a lowercased
+ * country code. Returns NULL if we don't want to export geoip data yet. */
+char *
+extrainfo_get_client_geoip_summary(time_t now)
+{
+  static time_t last_purged_at = 0;
+  int geoip_purge_interval = 48*60*60;
+#ifdef ENABLE_GEOIP_STATS
+  if (get_options()->DirRecordUsageByCountry)
+    geoip_purge_interval = get_options()->DirRecordUsageRetainIPs;
+#endif
+  if (now > last_purged_at+geoip_purge_interval) {
+    geoip_remove_old_clients(now-geoip_purge_interval);
+    last_purged_at = now;
+  }
+  return geoip_get_client_history(now, GEOIP_CLIENT_CONNECT);
 }
 
 /** Return true iff <b>s</b> is a legally valid server nickname. */

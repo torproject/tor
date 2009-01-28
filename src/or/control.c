@@ -1837,6 +1837,25 @@ getinfo_helper_events(control_connection_t *control_conn,
         log_warn(LD_GENERAL, "%s is deprecated; it no longer gives useful "
                  "information", question);
       }
+    } else if (!strcmp(question, "status/clients-seen")) {
+      char geoip_start[ISO_TIME_LEN+1];
+      char *geoip_summary;
+      smartlist_t *sl;
+
+      geoip_summary = extrainfo_get_client_geoip_summary(time(NULL));
+      if (!geoip_summary)
+        return -1;
+      format_iso_time(geoip_start, geoip_get_history_start());
+
+      sl = smartlist_create();
+      smartlist_add(sl, (char *)"TimeStarted=\"");
+      smartlist_add(sl, geoip_start);
+      smartlist_add(sl, (char *)"\" CountrySummary=");
+      smartlist_add(sl, geoip_summary);
+      *answer = smartlist_join_strings(sl, "", 0, 0);
+
+      tor_free(geoip_summary);
+      smartlist_free(sl);
     } else {
       return 0;
     }
@@ -1937,6 +1956,8 @@ static const getinfo_item_t getinfo_items[] = {
       "circuits."),
   DOC("status/bootstrap-phase",
       "The last bootstrap phase status event that Tor sent."),
+  DOC("status/clients-seen",
+      "Breakdown of client countries seen by a bridge."),
   DOC("status/version/recommended", "List of currently recommended versions."),
   DOC("status/version/current", "Status of the current version."),
   DOC("status/version/num-versioning", "Number of versioning authorities."),
@@ -3931,7 +3952,7 @@ void
 control_event_clients_seen(const char *timestarted, const char *countries)
 {
   send_control_event(EVENT_CLIENTS_SEEN, 0,
-    "650 CLIENTS_SEEN Timestarted=\"%s\" CountrySummary=%s\r\n",
+    "650 CLIENTS_SEEN TimeStarted=\"%s\" CountrySummary=%s\r\n",
     timestarted, countries);
 }
 

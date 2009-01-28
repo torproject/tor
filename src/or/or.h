@@ -4233,6 +4233,7 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 int extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                              crypto_pk_env_t *ident_key);
+char *extrainfo_get_client_geoip_summary(time_t);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
