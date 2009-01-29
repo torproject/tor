@@ -1,14 +1,17 @@
 ## Instructions for building the official rpms.
-## 
-These are instructions for building Tor binaries in the rpm format on
-various cpu architectures and operating systems.  Each rpm will require
-glibc on the target system.  It is believed that any rpm-based linux
-distribution should have semi-current glibc installed by default.
-If you run into a distribution that does not work with glibc, or does
-not contain it, please let us know the details.
+##
+The process used to create the official rpms is as follows:
 
-These are the exact steps used to build the official rpms of Tor.
+Download and Extract the latest tor source code from https://www.torproject.org/.
+In the resulting directory:
+./configure
+make dist-rpm
 
+You should have at least two, maybe three, rpms.  There should be the binary
+i386.rpm, a src.rpm, and on redhat/centos machines, a debuginfo.rpm.
+
+## Optional customization
+##
 If you wish to further tune Tor binaries in rpm format beyond this list,
 see the GCC doc page for further options:
 http://gcc.gnu.org/onlinedocs/gcc-4.0.2/gcc/
@@ -54,13 +57,5 @@ This parameter controls the target operating system.  Normally, this is
 only "linux".  If you wish to build rpms for a non-linux operating
 system, you can replace "linux" with your operating system.
 
-The process used to create the distributed rpms is as follows:
 
-Download and Extract the latest tor source code from https://www.torproject.org/.
-In the Tor directory:
-./configure
-make dist-rpm
-
-You should have at least two, maybe three, rpms.  There should be the binary
-i386.rpm, a src.rpm, and on redhat/centos machines, a debuginfo.rpm.
 
