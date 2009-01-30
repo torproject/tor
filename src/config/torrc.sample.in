@@ -1,20 +1,20 @@
 ## Configuration file for a typical Tor user
-## Last updated 22 December 2007 for Tor 0.2.0.14-alpha.
+## Last updated 30 January 2009 for Tor 0.2.1.12-alpha.
 ## (May or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
 ## that begin with just "#" are disabled commands: you can enable them
 ## by removing the "#" symbol.
 ##
-## See the man page, or https://www.torproject.org/tor-manual-dev.html,
+## See 'man tor', or https://www.torproject.org/tor-manual.html,
 ## for more options you can use in this file.
 ##
 ## Tor will look for this file in various places based on your platform:
-## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#torrc
+## https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#torrc
 
 
 ## Replace this with "SocksPort 0" if you plan to run Tor only as a
-## server, and not make any local application connections yourself.
+## relay, and not make any local application connections yourself.
 SocksPort 9050 # what port to open for local application connections
 SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #SocksListenAddress 192.168.0.1:9100 # listen on this IP:port also
@@ -74,31 +74,32 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #
 ## See https://www.torproject.org/docs/tor-doc-relay for details.
 
-## A unique handle for your server.
-#Nickname ididnteditheconfig
-
-## The IP or FQDN for your server. Leave commented out and Tor will guess.
-#Address noname.example.com
-
-## Define these to limit the bandwidth usage of relayed (server)
-## traffic. Your own traffic is still unthrottled.
-## Note that RelayBandwidthRate must be at least 20 KB.
-#RelayBandwidthRate 100 KBytes  # Throttle traffic to 100KB/s (800Kbps)
-#RelayBandwidthBurst 200 KBytes # But allow bursts up to 200KB/s (1600Kbps)
-
-## Contact info to be published in the directory, so we can contact you
-## if your server is misconfigured or something else goes wrong.
-#ContactInfo Random Person <nobody AT example dot com>
-## You might also include your PGP or GPG fingerprint if you have one:
-#ContactInfo 1234D/FFFFFFFF Random Person <nobody AT example dot com>
-
-## Required: what port to advertise for Tor connections.
+## Required: what port to advertise for incoming Tor connections.
 #ORPort 9001
 ## If you need to listen on a port other than the one advertised
 ## in ORPort (e.g. to advertise 443 but bind to 9090), uncomment the
 ## line below too. You'll need to do ipchains or other port forwarding
 ## yourself to make this work.
 #ORListenAddress 0.0.0.0:9090
+
+## A handle for your relay, so people don't have to refer to it by key.
+#Nickname ididnteditheconfig
+
+## The IP or FQDN for your relay. Leave commented out and Tor will guess.
+#Address noname.example.com
+
+## Define these to limit how much relayed traffic you will allow. Your
+## own traffic is still unthrottled. Note that RelayBandwidthRate must
+## be at least 20 KBytes.
+#RelayBandwidthRate 100 KBytes  # Throttle traffic to 100KB/s (800Kbps)
+#RelayBandwidthBurst 200 KBytes # But allow bursts up to 200KB/s (1600Kbps)
+
+## Contact info to be published in the directory, so we can contact you
+## if your relay is misconfigured or something else goes wrong. Google
+## indexes this, so spammers might also collect it.
+#ContactInfo Random Person <nobody AT example dot com>
+## You might also include your PGP or GPG fingerprint if you have one:
+#ContactInfo 1234D/FFFFFFFF Random Person <nobody AT example dot com>
 
 ## Uncomment this to mirror directory information for others. Please do
 ## if you have enough bandwidth.
@@ -113,19 +114,20 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 ## contacting them.
 #DirPortFrontPage /etc/tor/exit-notice.html
 
-## Uncomment this if you run more than one Tor server, and add the
-## nickname of each Tor server you control, even if they're on different
-## networks. You declare it here so Tor clients can avoid using more than
-## one of your servers in a single circuit. See
-## http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#MultipleServers
-#MyFamily nickname1,nickname2,...
+## Uncomment this if you run more than one Tor relay, and add the identity
+## key fingerprint of each Tor relay you control, even if they're on
+## different networks. You declare it here so Tor clients can avoid
+## using more than one of your relays in a single circuit. See
+## https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#MultipleServers
+#MyFamily $keyid,$keyid,...
 
 ## A comma-separated list of exit policies. They're considered first
 ## to last, and the first match wins. If you want to _replace_
 ## the default exit policy, end this with either a reject *:* or an
 ## accept *:*. Otherwise, you're _augmenting_ (prepending to) the
 ## default exit policy. Leave commented to just use the default, which is
-## available in the man page or at https://www.torproject.org/documentation.html
+## described in the man page or at
+## https://www.torproject.org/documentation.html
 ##
 ## Look at https://www.torproject.org/faq-abuse.html#TypicalAbuses
 ## for issues you might encounter if you use the default exit policy.
@@ -138,17 +140,12 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #ExitPolicy accept *:119 # accept nntp as well as default exit policy
 #ExitPolicy reject *:* # no exits allowed
 #
-################ This section is just for bridge relays ##############
-#
-## Bridge relays (or "bridges" ) are Tor relays that aren't listed in the
+## Bridge relays (or "bridges") are Tor relays that aren't listed in the
 ## main directory. Since there is no complete public list of them, even if an
 ## ISP is filtering connections to all the known Tor relays, they probably
-## won't be able to block all the bridges. Unlike running an exit relay,
-## running a bridge relay just passes data to and from the Tor network --
-## so it shouldn't expose the operator to abuse complaints.
-
-#ORPort 443
+## won't be able to block all the bridges. Also, websites won't treat you
+## differently because they won't know you're running Tor. If you can
+## be a real relay, please do; but if not, be a bridge!
 #BridgeRelay 1
-#RelayBandwidthRate 50KBytes
 #ExitPolicy reject *:*
 
