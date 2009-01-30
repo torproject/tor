@@ -178,6 +178,6 @@ I   - Collecting user stories
 I   - Revise the 'Tor mirror page' so it doesn't list obsolete-looking
       timestamps. Just have two tables, "new enough" and "not new enough".
 I   * Get Tor Weather up, stable, and in use by some relay operators.
-I   - Get a relay operator mailing list going, with a plan and supporting
+I   d Get a relay operator mailing list going, with a plan and supporting
       scripts and so on.
 
