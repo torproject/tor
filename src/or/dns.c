@@ -1112,7 +1112,8 @@ configure_nameservers(int force)
         log_warn(LD_BUG, "Couldn't convert outboung bind address to sockaddr."
                  " Ignoring.");
       } else {
-        evdns_set_default_outgoing_bind_address((struct sockaddr *)&ss,socklen);
+        evdns_set_default_outgoing_bind_address((struct sockaddr *)&ss,
+                                                socklen);
       }
     }
   }
