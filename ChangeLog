@@ -7,6 +7,14 @@ Changes in version 0.2.0.34 - 2009-??-??
 
 
 Changes in version 0.2.0.33 - 2009-01-21
+  Tor 0.2.0.33 fixes a variety of bugs that were making relays less
+  useful to users. It also finally fixes a bug where a relay or client
+  that's been off for many days would take a long time to bootstrap.
+
+  This update also fixes an important security-related bug reported by
+  Ilja van Sprundel. You should upgrade. (We'll send out more details
+  about the bug once people have had some time to upgrade.)
+
   o Security fixes:
     - Fix a heap-corruption bug that may be remotely triggerable on
       some platforms. Reported by Ilja van Sprundel.
@@ -120,6 +128,12 @@ Changes in version 0.2.0.33 - 2009-01-21
 
 
 Changes in version 0.2.0.32 - 2008-11-20
+  Tor 0.2.0.32 fixes a major security problem in Debian and Ubuntu
+  packages (and maybe other packages) noticed by Theo de Raadt, fixes
+  a smaller security flaw that might allow an attacker to access local
+  services, further improves hidden service performance, and fixes a
+  variety of other issues.
+
   o Security fixes:
     - The "User" and "Group" config options did not clear the
       supplementary group entries for the Tor process. The "User" option
