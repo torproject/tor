@@ -25,18 +25,6 @@ C       - coderman claims
 
 External constraints:
 
-  - mid October
-W   - Finish implementation of directory overhead changes: have a set
-      of patches that you think work.
-
-  - end of October
-    - Auto update
-C     * Get the MSI working and stable for Windows Tor installer.
-?     - Teach our OSX installer to register its version on install
-
-  - end of December
-I   - Periodic summaries of localization progress: both pootle and wml.
-
   - mid January
 W   - Finish testing, debugging, unit testing, etc the directory overhead
       changes. Have it in the development version and in use.
@@ -103,9 +91,6 @@ K   - Metrics.
         - Start playing around with figuring out which one is more
           accurate, or how to combine them to get better guesses,
           or something.
-        o Roger should walk Karsten through applying (and maybe
-          updating) the patch for each method, and write a summary
-          of what we have tried/guessed so far.
       * Automatically collect and document or publish other monthly
         statistics
         - Total data over time
@@ -128,8 +113,6 @@ E   - Vidalia improvements
       - Figure out a plan for presenting other Tor status warning events.
       - Move Polipo into the main Vidalia -dev bundle.
       - Vidalia displays by-country user summary for bridge operators
-        o Tor sends a status event or something so Vidalia knows what
-          to display: "clients_seen"
       - Get the onion icons back into vidalia svn
         - Find an OS X user who can do design who thinks the OS X onion
           icons are crappy and need fixing
