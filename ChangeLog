@@ -1,4 +1,8 @@
 Changes in version 0.2.0.34 - 2009-??-??
+  o Major bugfixes:
+    - Fix an infinite-loop bug on handling corrupt votes under certain
+      circumstances.  Bugfix on 0.2.0.8-alpha.
+
   o Minor bugfixes:
     - Fix compilation on systems where time_t is a 64-bit integer.
       Patch from Matthias Drochner.
