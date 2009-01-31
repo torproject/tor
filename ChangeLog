@@ -32,6 +32,11 @@ Changes in version 0.2.1.12-alpha - 2009-02-??
     - Add a 'getinfo status/clients-seen' controller command, in case
       controllers want to hear clients_seen events but connect late.
 
+  o Build changes
+    - Disable GCC's strict alias optimization by default, to avoid the
+      likelihood of its introducing subtle bugs whenever our code violates
+      the letter of C99's alias rules.
+
 
 Changes in version 0.2.1.11-alpha - 2009-01-20
   o Security fixes:

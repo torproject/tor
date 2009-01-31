@@ -754,8 +754,11 @@ AC_SUBST(LOCALSTATEDIR)
 
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
-if test "$ac_cv_c_compiler_gnu" = yes; then
+if test "$GCC" = yes; then
   CFLAGS="$CFLAGS -Wall -g -O2"
+  # Disable GCC's strict aliasing checks.  They are an hours-to-debug
+  # accident waiting to happen.
+  CFLAGS="$CFLAGS -fno-strict-aliasing"
 else
   CFLAGS="$CFLAGS -g -O"
   enable_gcc_warnings=no
