@@ -2167,6 +2167,9 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   memarea_t *area = NULL, *rs_area = NULL;
   tor_assert(s);
 
+  if (eos_out)
+    *eos_out = NULL;
+
   if (router_get_networkstatus_v3_hash(s, ns_digest)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
