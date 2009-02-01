@@ -363,12 +363,12 @@ a limited number of writes.  (Default: 0)
 \fBTunnelDirConns \fR\fB0\fR|\fB1\fP
 If non-zero, when a directory server we contact supports it, we will
 build a one-hop circuit and make an encrypted connection via its
-ORPort. (Default: 0)
+ORPort. (Default: 1)
 .LP
 .TP
 \fBPreferTunneledDirConns \fR\fB0\fR|\fB1\fP
 If non-zero, we will avoid directory servers that don't support tunneled
-directory connections, when possible. (Default: 0)
+directory connections, when possible. (Default: 1)
 
 .SH CLIENT OPTIONS
 .PP
