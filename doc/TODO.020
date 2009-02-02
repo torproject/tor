@@ -3,21 +3,13 @@
 description of the patch.)
 
 Backport for 0.2.0:
-   o r17891: Fix a fun OpenBSD warning.
-   o r17892: Fix another fun OpenBSD warning.
-   o r17920: bridge relays don't fetch descriptors much
+  - r17887: Don't accept 1.2.3 as a valid IP address.
 
 Backport for 0.2.0 once better tested:
-  Xo r16621: Make some DNS code more robust (partial; see also libevent
-            approach). (Also maybe r16674)
-    [Partially backported.  Instead of the basic name checking, I backported
-     r17171 instead, to be even more resistant to poisoning.]
   - r17208,r17209,r7211,r17212,r17214: Avoid gotterdammerung when an
     authority has an expired certificate.
   - r17886: Don't remove routerinfos as unlisted unless we have a
     consensus.
-  - r17887: Don't accept 1.2.3 as a valid IP address.
-  o r17917, r17993: tors that haven't run lately take 10+ minutes to start
   - r17924: Close streams when an exit hands us a local IP.
   - r18210: Call crypto_global_init() with hardwareaccel flag set right in
     all cases.
