@@ -409,6 +409,8 @@ connection_ap_expire_beginning(void)
       ? LOG_INFO : LOG_NOTICE;
     seconds_idle = (int)( now - conn->_base.timestamp_lastread );
 
+    /* XXX022 this clause may be redundant with the clause in
+     * connection_ap_handshake_attach_circuit(). Is it? -RD */
     if (AP_CONN_STATE_IS_UNATTACHED(conn->_base.state)) {
       if (seconds_idle >= options->SocksTimeout) {
         log_fn(severity, LD_APP,
