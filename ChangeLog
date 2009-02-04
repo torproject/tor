@@ -69,7 +69,7 @@ Changes in version 0.2.0.33 - 2009-01-21
       CID 349.
     - When we can't initialize DNS because the network is down, do not
       automatically stop Tor from starting. Instead, we retry failed
-      dns_inits() every 10 minutes, and change the exit policy to reject
+      dns_init() every 10 minutes, and change the exit policy to reject
       *:* until one succeeds. Fixes bug 691.
     - Use 64 bits instead of 32 bits for connection identifiers used with
       the controller protocol, to greatly reduce risk of identifier reuse.
