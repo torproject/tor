@@ -23,10 +23,10 @@ esac
 exit 0
 
 @DPATCH@
-diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
---- git-trunk-conf~/src/or/config.c	2008-03-11 15:23:01.000000000 +0100
-+++ git-trunk-conf/src/or/config.c	2008-03-11 15:30:34.139280421 +0100
-@@ -15,6 +15,7 @@
+diff -urNad tor-trunk~/src/or/config.c tor-trunk/src/or/config.c
+--- tor-trunk~/src/or/config.c	2009-01-18 01:47:33.000000000 +0100
++++ tor-trunk/src/or/config.c	2009-02-05 00:25:17.614844812 +0100
+@@ -12,6 +12,7 @@
  #define CONFIG_PRIVATE
  
  #include "or.h"
@@ -34,7 +34,7 @@ diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
  #ifdef MS_WINDOWS
  #include <shlobj.h>
  #endif
-@@ -658,6 +659,8 @@
+@@ -711,6 +712,8 @@
  #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
  static void check_libevent_version(const char *m, int server);
  #endif
@@ -43,7 +43,7 @@ diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
  
  /** Magic value for or_options_t. */
  #define OR_OPTIONS_MAGIC 9090909
-@@ -3634,6 +3637,9 @@
+@@ -3917,6 +3920,9 @@
    char *command_arg = NULL;
    char *errmsg=NULL;
  
@@ -53,12 +53,12 @@ diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
    if (argv) { /* first time we're called. save commandline args */
      backup_argv = argv;
      backup_argc = argc;
-@@ -5051,3 +5057,60 @@
-   puts(routerparse_c_id);
+@@ -5307,3 +5313,62 @@
+   return 0;
  }
  
 +/* Checks whether we are running as the debian-tor user.
-+ *   Returns -1 on error, 1 if we are debian-tor, 0 if not */
++ *   Returns -1 on error, 2 if we are root, 1 if we are debian-tor, 0 if we are any normal user */
 +static int
 +debian_running_as_debiantor()
 +{
@@ -68,7 +68,7 @@ diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
 +  uid = getuid();
 +  /* If we run as root we also apply our debian defaults. */
 +  if (uid == 0)
-+    return 1;
++    return 2;
 +
 +  pw = getpwuid(uid);
 +  if (!pw) {
@@ -108,9 +108,11 @@ diff -urNad git-trunk-conf~/src/or/config.c git-trunk-conf/src/or/config.c
 +  tor_assert(var);
 +  var->initvalue = tor_strdup("1");
 +
-+  var = config_find_option(&options_format, "User");
-+  tor_assert(var);
-+  var->initvalue = tor_strdup("debian-tor");
++  if (running_as_debian == 2) {
++    var = config_find_option(&options_format, "User");
++    tor_assert(var);
++    var->initvalue = tor_strdup("debian-tor");
++  };
 +
 +  return 0;
 +}

@@ -1,3 +1,12 @@
+tor (0.2.1.11-alpha-2~1) experimental; urgency=low
+
+  * patches/06_add_compile_time_defaults: Only set the User option in
+    the config if we run as root.  Do not set it when run as debian-tor
+    as Tor then always insists on changing users which will fail.  (If
+    we run as any other user we don't set our debian defaults anyway.)
+
+ -- Peter Palfrader <weasel@debian.org>  Thu, 05 Feb 2009 00:27:23 +0100
+
 tor (0.2.1.11-alpha-1) experimental; urgency=high
 
   * New upstream version:
