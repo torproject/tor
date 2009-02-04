@@ -191,7 +191,7 @@ Changes in version 0.2.1.9-alpha - 2008-12-25
       reported by "wood".
     - When we can't initialize DNS because the network is down, do not
       automatically stop Tor from starting. Instead, retry failed
-      dns_inits() every 10 minutes, and change the exit policy to reject
+      dns_init() every 10 minutes, and change the exit policy to reject
       *:* until one succeeds. Fixes bug 691.
 
   o Minor features:
