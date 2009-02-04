@@ -51,7 +51,7 @@
  
 \maketitle
 
-\section{Minimzing latency of paths}
+\section{Minimizing latency of paths}
 
 Currently Tor selects paths purely by the random selection of nodes, biased by node bandwidth.
 This will sometimes cause high latency circuits due to multiple ocean crossings or otherwise congested links.
@@ -209,4 +209,15 @@ The exception is a padding cell, which has no circuit ID and a zero length paylo
 % Mike Perry provided many of the ideas discussed here
 
 \end{document}
+
+Other items to add in somewhere:
+
+UDP transport
+
+Mike and Fallon's proposal
+
+Csaba's proposal to shrink the maximum circuit window.
+
+If extending a circuit fails, try extending a few other places before
+abandoning the circuit.
 
