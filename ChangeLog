@@ -1,32 +1,32 @@
 Changes in version 0.2.1.12-alpha - 2009-02-??
   o Major bugfixes:
     - Fix an infinite-loop bug on handling corrupt votes under certain
-      circumstances.  Bugfix on 0.2.0.8-alpha.
+      circumstances. Bugfix on 0.2.0.8-alpha.
 
   o Minor bugfixes:
     - Let controllers actually ask for the "clients_seen" event. Bugfix
       on 0.2.1.10-alpha; reported by Matt Edman.
-    - Fix a compile warning on OSX Panther.  Fixes bug 913; bugfix against
+    - Fix a compile warning on OSX Panther. Fixes bug 913; bugfix against
       0.2.1.11-alpha.
     - Fix a bug in address parsing that was preventing bridges or hidden
       service targets from being at IPv6 addresses.
     - Solve a bug that kept hardware crypto acceleration from getting
-      enabled when accounting was turned on.  Fixes bug 907.  Bugfix on
+      enabled when accounting was turned on. Fixes bug 907. Bugfix on
       0.0.9pre6.
     - Remove a bash-ism from configure.in to build properly on non-Linux
-      platforms.  Bugfix on 0.2.1.1-alpha.
+      platforms. Bugfix on 0.2.1.1-alpha.
     - Fix code so authorities _actually_ send back X-Descriptor-Not-New
-      headers.  Bugfix on 0.2.0.10-alpha.
+      headers. Bugfix on 0.2.0.10-alpha.
     - Don't consider consider expiring already-closed client connections.
-      Fixes bug 893.  Bugfix on 0.0.2pre20.
+      Fixes bug 893. Bugfix on 0.0.2pre20.
     - Fix another interesting corner-case of bug 891 spotted by rovv:
-      Previously, if two hosts had different amounts of clock drift, and one
-      of them created a new connection with just the wrong timing, the other
-      might decide to deprecate the new connection erroneously.  Bugfix on
-      0.1.1.13-alpha.
+      Previously, if two hosts had different amounts of clock drift, and
+      one of them created a new connection with just the wrong timing,
+      the other might decide to deprecate the new connection erroneously.
+      Bugfix on 0.1.1.13-alpha.
     - Resolve a very rare crash bug that could occur when the user forced
       a nameserver reconfiguration during the middle of a nameserver
-      probe.  Fixes bug 526.  Bugfix on 0.1.2.1-alpha.
+      probe. Fixes bug 526. Bugfix on 0.1.2.1-alpha.
     - Support changing value of ServerDNSRandomizeCase during SIGHUP.
       Bugfix on 0.2.1.7-alpha.
 
@@ -36,7 +36,7 @@ Changes in version 0.2.1.12-alpha - 2009-02-??
     - Add a 'getinfo status/clients-seen' controller command, in case
       controllers want to hear clients_seen events but connect late.
 
-  o Build changes
+  o Build changes:
     - Disable GCC's strict alias optimization by default, to avoid the
       likelihood of its introducing subtle bugs whenever our code violates
       the letter of C99's alias rules.
