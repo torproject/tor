@@ -2741,7 +2741,7 @@ const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 void entry_guards_compute_status(void);
 int entry_guard_register_connect_status(const char *digest, int succeeded,
-                                        time_t now);
+                                        int mark_relay_status, time_t now);
 void entry_nodes_should_be_added(void);
 int entry_list_can_grow(or_options_t *options);
 routerinfo_t *choose_random_entry(cpath_build_state_t *state);

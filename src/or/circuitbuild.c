@@ -2260,10 +2260,15 @@ entry_guards_compute_status(void)
  * is established (<b>succeeded</b>==1) or has failed (<b>succeeded</b>==0).
  * If the OR is an entry, change that entry's up/down status.
  * Return 0 normally, or -1 if we want to tear down the new connection.
+ *
+ * If <b>mark_relay_status</b>, also call router_set_status() on this
+ * relay.
+ *
+ * XXX022 change succeeded and mark_relay_status into 'int flags'.
  */
 int
 entry_guard_register_connect_status(const char *digest, int succeeded,
-                                    time_t now)
+                                    int mark_relay_status, time_t now)
 {
   int changed = 0;
   int refuse_conn = 0;
@@ -2332,6 +2337,11 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
       entry->can_retry = 0; /* We gave it an early chance; no good. */
     }
   }
+
+  /* if the caller asked us to, also update the is_running flags for this
+   * relay */
+  if (mark_relay_status)
+    router_set_status(digest, succeeded);
 
   if (first_contact) {
     /* We've just added a new long-term entry guard. Perhaps the network just
@@ -3139,6 +3149,7 @@ bridges_retry_helper(int act)
         }
       }
     });
+  log_debug(LD_DIR, "any_known %d, any_running %d", any_known, any_running);
   return any_known && !any_running;
 }
 

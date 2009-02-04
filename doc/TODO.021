@@ -126,7 +126,7 @@ R d bug: if we launch using bridges, and then stop using bridges, we
     so vidalia can say "recent activity (1-8 users) from sa".
 R - investigate: it looks like if the bridge authority is unreachable,
     we're not falling back on querying bridges directly?
-R - if "no running bridges known", an application request should make
+  o if "no running bridges known", an application request should make
     us retry all our bridges.
 
 For 0.2.1.x:

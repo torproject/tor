@@ -29,6 +29,9 @@ Changes in version 0.2.1.12-alpha - 2009-02-??
       probe. Fixes bug 526. Bugfix on 0.1.2.1-alpha.
     - Support changing value of ServerDNSRandomizeCase during SIGHUP.
       Bugfix on 0.2.1.7-alpha.
+    - If we're using bridges and our network goes away, be more willing
+      to forgive our bridges and try again when we get an application
+      request. Bugfix on 0.2.0.x.
 
   o Minor features:
     - Support platforms where time_t is 64 bits long. (Congratulations,

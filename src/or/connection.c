@@ -572,9 +572,8 @@ connection_about_to_close_connection(connection_t *conn)
         if (connection_or_nonopen_was_started_here(or_conn)) {
           or_options_t *options = get_options();
           rep_hist_note_connect_failed(or_conn->identity_digest, now);
-          entry_guard_register_connect_status(or_conn->identity_digest,0,now);
-          if (!options->HttpsProxy)
-            router_set_status(or_conn->identity_digest, 0);
+          entry_guard_register_connect_status(or_conn->identity_digest,0,
+                                              !options->HttpsProxy, now);
           if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
             int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,

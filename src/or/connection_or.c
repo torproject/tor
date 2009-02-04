@@ -783,11 +783,9 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
       /* If the connection failed immediately, and we're using
        * an https proxy, our https proxy is down. Don't blame the
        * Tor server. */
-      if (!options->HttpsProxy) {
-        entry_guard_register_connect_status(conn->identity_digest, 0,
-                                            time(NULL));
-        router_set_status(conn->identity_digest, 0);
-      }
+      if (!options->HttpsProxy)
+        entry_guard_register_connect_status(conn->identity_digest,
+                                            0, 1, time(NULL));
       connection_or_connect_failed(conn,
                                    errno_to_orconn_end_reason(socket_error),
                                    tor_socket_strerror(socket_error));
@@ -1036,8 +1034,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
              "Tried connecting to router at %s:%d, but identity key was not "
              "as expected: wanted %s but got %s.",
              conn->_base.address, conn->_base.port, expected, seen);
-      entry_guard_register_connect_status(conn->identity_digest,0,time(NULL));
-      router_set_status(conn->identity_digest, 0);
+      entry_guard_register_connect_status(conn->identity_digest, 0, 1,
+                                          time(NULL));
       control_event_or_conn_status(conn, OR_CONN_EVENT_FAILED,
               END_OR_CONN_REASON_OR_IDENTITY);
       if (!authdir_mode_tests_reachability(options))
@@ -1136,7 +1134,7 @@ connection_or_set_state_open(or_connection_t *conn)
   if (started_here) {
     rep_hist_note_connect_succeeded(conn->identity_digest, now);
     if (entry_guard_register_connect_status(conn->identity_digest,
-                                            1, now) < 0) {
+                                            1, 0, now) < 0) {
       /* Close any circuits pending on this conn. We leave it in state
        * 'open' though, because it didn't actually *fail* -- we just
        * chose not to use it. (Otherwise
