@@ -846,6 +846,13 @@ Changes in version 0.2.1.3-alpha - 2008-08-03
       Tor network.
 
 
+Changes in version 0.2.0.30 - 2008-07-15
+  o Minor bugfixes:
+    - Stop using __attribute__((nonnull)) with GCC: it can give us useful
+      warnings (occasionally), but it can also cause the compiler to
+      eliminate error-checking code. Suggested by Peter Gutmann.
+
+
 Changes in version 0.2.0.29-rc - 2008-07-08
   Tor 0.2.0.29-rc fixes two big bugs with using bridges, fixes more
   hidden-service performance bugs, and fixes a bunch of smaller bugs.
