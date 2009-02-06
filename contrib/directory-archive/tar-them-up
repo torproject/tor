@@ -114,12 +114,14 @@ done
 
 
 
+[ -d Archive ] || mkdir Archive
+
 for kind in consensus status; do
 	t="$kind"es-$year-$month.tar.bz2
-	! [ -e Archive/"$t" ] && mv "$t" Archive
+	! [ -e Archive/"$t" ] && mv "$t" Archive/"$t"
 done
 
 for kind in extra-infos server-descriptors; do
 	t="$kind"-$year-$month.tar.bz2
-	! [ -e Archive/"$t" ] && mv "$t" Archive
+	! [ -e Archive/"$t" ] && mv "$t" Archive/"$t"
 done
