@@ -1165,7 +1165,10 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
             if (opt) {
               conn->chosen_exit_optional = 0;
               tor_free(conn->chosen_exit_name);
-              return 0;
+              /* Try again with no requested exit */
+              return circuit_get_open_circ_or_launch(conn,
+                                                     desired_circuit_purpose,
+                                                     circp);
             }
             return -1;
           }

@@ -5,6 +5,11 @@ Changes in version 0.2.1.13-????? - 2009-0?-??
       We previously did this from the startup script, but that was no
       help to people who didn't use the startup script.  Resolves
       bug 863.
+    - When we had picked an exit node for a connection, but marked it as
+      "optional", and it turned out we had no onion key for the exit,
+      stop preferring the exit and try again.  This situation may not be
+      possible now, but will probably become feasible with proposal 158.
+      Spotted by rovv.  Fixes another case of bug 752.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user
