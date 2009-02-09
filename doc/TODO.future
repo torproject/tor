@@ -72,7 +72,9 @@ Can anybody remember why we wanted to do this and/or what it means?
 
 
 If somebody wants to do this in some version, they should:
-  - Create packages for Nokia 800, requested by Chris Soghoian
+  - Create packages for Maemo/Nokia 800/810, requested by Chris Soghoian
+    - debian already makes ARM-arch debs, can maemo use these asks
+      phobos?
   - More work on AvoidDiskWrites
   - Make DNSPort support TCP DNS.
 

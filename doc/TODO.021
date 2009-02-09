@@ -63,13 +63,6 @@ Steven
     as bookmarks?
 
 Andrew
-  - Which bundles include Torbutton? Change the docs/tor-doc-foo pages
-    so they admit that Torbutton is in them too. Change the download
-    page too.
-  - The OS X bundle screenshots are from forever ago -- they don't
-    include Torbutton, they still say it's tor.eff.org, etc.
-  - Should we still be telling you how to use Safari on OS X for Tor,
-    given all the holes that Torbutton-dev solves on Firefox?
 
 Weasel
   - Figure out how to make Vidalia and Tor play nicely on Debian, make
@@ -273,8 +266,8 @@ P   - Make documentation realize that location of system configuration file
     o Add a status event when new consensus arrives
 
   - Windows build
-P   - Figure out why dll's compiled in mingw don't work right in WinXP.
 P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
+      - Is this obsolete with msi bundle coming soon asks phobos
 
   - Refactor bad code:
     - connection_or_get_by_identity_digest() and connection_good_enough_for
