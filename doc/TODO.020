@@ -3,7 +3,7 @@
 description of the patch.)
 
 Backport for 0.2.0:
-  - r17887: Don't accept 1.2.3 as a valid IP address.
+  o r17887: Don't accept 1.2.3 as a valid IP address.
 
 Backport for 0.2.0 once better tested:
   - r17208,r17209,r7211,r17212,r17214: Avoid gotterdammerung when an
