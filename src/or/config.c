@@ -4735,6 +4735,18 @@ config_parse_interval(const char *s, int *ok)
   return (int)r;
 }
 
+/* This is what passes for version detection on OSX.  We set
+ * MACOSX_KQUEUE_IS_BROKEN to true iff we're on a version of OSX before
+ * 10.4.0 (aka 1040). */
+#ifdef __APPLE__
+#ifdef __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
+#define MACOSX_KQUEUE_IS_BROKEN \
+  (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1040)
+#else
+#define MACOSX_KQUEUE_IS_BROKEN 0
+#endif
+#endif
+
 /**
  * Initialize the libevent library.
  */
@@ -4747,7 +4759,8 @@ init_libevent(void)
    */
   suppress_libevent_log_msg("Function not implemented");
 #ifdef __APPLE__
-  if (decode_libevent_version(event_get_version(), NULL) < LE_11B) {
+  if (MACOSX_KQUEUE_IS_BROKEN ||
+      decode_libevent_version(event_get_version(), NULL) < LE_11B) {
     setenv("EVENT_NOKQUEUE","1",1);
   }
 #endif

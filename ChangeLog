@@ -1,4 +1,11 @@
 Changes in version 0.2.1.13-????? - 2009-0?-??
+  o Minor bugfixes:
+    - Automatically detect MacOSX versions earlier than 10.4.0, and
+      disable kqueue from inside Tor when running with these versions.
+      We previously did this from the startup script, but that was no
+      help to people who didn't use the startup script.  Resolves
+      bug 863.
+
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user
       is option is set.
