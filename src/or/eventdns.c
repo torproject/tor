@@ -378,11 +378,11 @@ inet_aton(const char *c, struct in_addr *addr)
 #define CLOSE_SOCKET(x) close(x)
 #endif
 
-#define ISSPACE(c) isspace((int)(unsigned char)(c))
-#define ISDIGIT(c) isdigit((int)(unsigned char)(c))
-#define ISALPHA(c) isalpha((int)(unsigned char)(c))
-#define TOLOWER(c) (char)tolower((int)(unsigned char)(c))
-#define TOUPPER(c) (char)toupper((int)(unsigned char)(c))
+#define ISSPACE(c) TOR_ISSPACE(c)
+#define ISDIGIT(c) TOR_ISDIGIT(c)
+#define ISALPHA(c) TOR_ISALPHA(c)
+#define TOLOWER(c) TOR_TOLOWER(c)
+#define TOUPPER(c) TOR_TOUPPER(c)
 
 #ifndef NDEBUG
 static const char *
@@ -1115,14 +1115,11 @@ static void
 get_random_bytes(char *buf, size_t n)
 {
 	unsigned i;
-	for (i = 0; i < n-1; i += 2) {
+	for (i = 0; i < n; i += 2) {
 		u16 tid = trans_id_function();
 		buf[i] = (tid >> 8) & 0xff;
-		buf[i+1] = tid & 0xff;
-	}
-	if (i < n) {
-		u16 tid = trans_id_function();
-		buf[i] = tid & 0xff;
+		if (i+1<n)
+			buf[i+1] = tid & 0xff;
 	}
 }
 
@@ -2309,6 +2306,12 @@ request_new(int type, const char *name, int flags,
 	(void) flags;
 
 	if (!req) return NULL;
+
+	if (name_len >= sizeof(namebuf)) {
+		_free(req);
+		return NULL;
+	}
+
 	memset(req, 0, sizeof(struct request));
 
 	if (global_randomize_case) {
