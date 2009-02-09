@@ -1,13 +1,11 @@
 Changes in version 0.2.1.12-alpha - 2009-02-08
   o Security fixes:
-    - Fix a temporary DoS vulnerability that could be performed by
-      a directory mirror. Bugfix on 0.2.0.9-alpha; reported by lark.
-
-  o Major bugfixes:
     - Fix an infinite-loop bug on handling corrupt votes under certain
       circumstances. Bugfix on 0.2.0.8-alpha.
+    - Fix a temporary DoS vulnerability that could be performed by
+      a directory mirror. Bugfix on 0.2.0.9-alpha; reported by lark.
     - Avoid a potential crash on exit nodes when processing malformed
-      input.  Remote DoS opportunity.  Bugfix on 0.2.1.7-alpha.
+      input. Remote DoS opportunity. Bugfix on 0.2.1.7-alpha.
 
   o Minor bugfixes:
     - Let controllers actually ask for the "clients_seen" event. Bugfix
