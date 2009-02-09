@@ -409,8 +409,11 @@ connection_ap_expire_beginning(void)
       ? LOG_INFO : LOG_NOTICE;
     seconds_idle = (int)( now - conn->_base.timestamp_lastread );
 
-    /* XXX022 this clause may be redundant with the clause in
-     * connection_ap_handshake_attach_circuit(). Is it? -RD */
+    /* XXX021 this clause was originally thought redundant with the
+     * clause in connection_ap_handshake_attach_circuit(). But actually,
+     * we need it because controllers that put streams in controller_wait
+     * state never go to the other clause. we should fix so it compares
+     * seconds since timestamp_created, not since last read. -RD */
     if (AP_CONN_STATE_IS_UNATTACHED(conn->_base.state)) {
       if (seconds_idle >= options->SocksTimeout) {
         log_fn(severity, LD_APP,
