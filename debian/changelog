@@ -1,3 +1,13 @@
+tor (0.2.0.34-1) unstable; urgency=high
+
+  * New upstream version:
+     - Avoid a potential crash on exit nodes when processing malformed
+       input.  Remote DoS opportunity (closes: #514579).
+     - Fix a temporary DoS vulnerability that could be performed by
+       a directory mirror (closes: #514580).
+
+ -- Peter Palfrader <weasel@debian.org>  Mon, 09 Feb 2009 09:53:48 +0100
+
 tor (0.2.0.33-1) unstable; urgency=high
 
   * New upstream version:
