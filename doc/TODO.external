@@ -113,8 +113,9 @@ E   - Vidalia improvements
       - Figure out a plan for presenting other Tor status warning events.
       - Move Polipo into the main Vidalia -dev bundle.
       - Vidalia displays by-country user summary for bridge operators
+?       - write a help page for vidalia, "what is this"
       - Get the onion icons back into vidalia svn
-        - Find an OS X user who can do design who thinks the OS X onion
+        d Find an OS X user who can do design who thinks the OS X onion
           icons are crappy and need fixing
 
 M   - Network scanning and network health
@@ -158,7 +159,7 @@ S   - Continue analyzing "traces" left on host machine by use of
 
 I   - Periodic summaries of localization progress: both pootle and wml.
 I   - Collecting user stories
-I   - Revise the 'Tor mirror page' so it doesn't list obsolete-looking
+I   d Revise the 'Tor mirror page' so it doesn't list obsolete-looking
       timestamps. Just have two tables, "new enough" and "not new enough".
 I   * Get Tor Weather up, stable, and in use by some relay operators.
 I   d Get a relay operator mailing list going, with a plan and supporting
