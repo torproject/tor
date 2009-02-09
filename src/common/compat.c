@@ -115,12 +115,6 @@ const char compat_c_id[] =
 #include "strlcat.c"
 #endif
 
-#ifndef INADDR_NONE
-/* This is used by inet_addr, but apparently Solaris doesn't define it
- * anyplace. */
-#define INADDR_NONE ((unsigned long) -1)
-#endif
-
 #ifdef HAVE_SYS_MMAN_H
 /** Implementation for tor_mmap_t: holds the regular tor_mmap_t, along
  * with extra fields needed for mmap()-based memory mapping. */
@@ -1169,24 +1163,18 @@ get_user_homedir(const char *username)
  * but works on Windows and Solaris.)
  */
 int
-tor_inet_aton(const char *c, struct in_addr* addr)
+tor_inet_aton(const char *str, struct in_addr* addr)
 {
-#ifdef HAVE_INET_ATON
-  return inet_aton(c, addr);
-#else
-  uint32_t r;
-  tor_assert(c);
-  tor_assert(addr);
-  if (strcmp(c, "255.255.255.255") == 0) {
-    addr->s_addr = 0xFFFFFFFFu;
-    return 1;
-  }
-  r = inet_addr(c);
-  if (r == INADDR_NONE)
+  int a,b,c,d;
+  char more;
+  if (sscanf(str, "%d.%d.%d.%d%c", &a,&b,&c,&d,&more) != 4)
     return 0;
-  addr->s_addr = r;
+  if (a < 0 || a > 255) return 0;
+  if (b < 0 || b > 255) return 0;
+  if (c < 0 || c > 255) return 0;
+  if (d < 0 || d > 255) return 0;
+  addr->s_addr = htonl((a<<24) | (b<<16) | (c<<8) | d);
   return 1;
-#endif
 }
 
 /** Given <b>af</b>==AF_INET and <b>src</b> a struct in_addr, or

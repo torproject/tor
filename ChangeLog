@@ -10,6 +10,8 @@ Changes in version 0.2.0.34 - 2009-02-08
       Patch from Matthias Drochner.
     - Don't consider expiring already-closed client connections. Fixes
       bug 893. Bugfix on 0.0.2pre20.
+    - Do not accept incomplete ipv4 addresses (like 192.168.0) as valid.
+      Spec conformance issue. Bugfix on Tor 0.0.2pre27.
 
 
 Changes in version 0.2.0.33 - 2009-01-21

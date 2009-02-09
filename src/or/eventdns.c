@@ -357,20 +357,7 @@ error_is_eagain(int err)
 {
 	return err == EAGAIN || err == WSAEWOULDBLOCK;
 }
-static int
-inet_aton(const char *c, struct in_addr *addr)
-{
-	uint32_t r;
-	if (strcmp(c, "255.255.255.255") == 0) {
-		addr->s_addr = 0xffffffffu;
-	} else {
-		r = inet_addr(c);
-		if (r == INADDR_NONE)
-			return 0;
-		addr->s_addr = r;
-	}
-	return 1;
-}
+#define inet_aton(c, addr) tor_inet_aton((c), (addr))
 #define CLOSE_SOCKET(x) closesocket(x)
 #else
 #define last_error(sock) (errno)
