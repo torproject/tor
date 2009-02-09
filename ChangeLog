@@ -1,4 +1,8 @@
 Changes in version 0.2.1.12-alpha - 2009-02-08
+  o Security fixes:
+    - Fix a temporary DoS vulnerability that could be performed by
+      a directory mirror. Bugfix on 0.2.0.9-alpha; reported by lark.
+
   o Major bugfixes:
     - Fix an infinite-loop bug on handling corrupt votes under certain
       circumstances. Bugfix on 0.2.0.8-alpha.
