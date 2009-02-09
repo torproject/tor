@@ -1,4 +1,7 @@
 Changes in version 0.2.1.13-????? - 2009-0?-??
+  o Minor features:
+    - On Linux, use the prctl call to re-enable core dumps when the user
+      is option is set.
 
 
 Changes in version 0.2.1.12-alpha - 2009-02-08

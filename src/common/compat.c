@@ -83,6 +83,10 @@
 #ifdef HAVE_SYS_FILE_H
 #include <sys/file.h>
 #endif
+#if defined(HAVE_SYS_PRCTL_H) && defined(__linux__)
+/* Only use the linux prctl;  the IRIX prctl is totally different */
+#include <sys/prctl.h>
+#endif
 
 #include "log.h"
 #include "util.h"
@@ -1223,6 +1227,18 @@ switch_id(const char *user)
   }
 
   have_already_switched_id = 1; /* mark success so we never try again */
+
+#if defined(__linux__) && defined(HAVE_SYS_PRCTL_H) && defined(HAVE_PRCTL)
+#ifdef PR_SET_DUMPABLE
+  if (pw->pw_uid) {
+    /* Re-enable core dumps if we're not running as root. */
+    log_info(LD_CONFIG, "Re-enabling coredumps");
+    if (prctl(PR_SET_DUMPABLE, 1)) {
+      log_warn(LD_CONFIG, "Unable to re-enable coredumps: %s",strerror(errno));
+    }
+  }
+#endif
+#endif
   return 0;
 
 #else
