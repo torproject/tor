@@ -8,8 +8,9 @@ Changes in version 0.2.1.12-alpha - 2009-02-08
       input. Remote DoS opportunity. Bugfix on 0.2.1.7-alpha.
 
   o Minor bugfixes:
-    - Let controllers actually ask for the "clients_seen" event. Bugfix
-      on 0.2.1.10-alpha; reported by Matt Edman.
+    - Let controllers actually ask for the "clients_seen" event for
+      getting usage summaries on bridge relays. Bugfix on 0.2.1.10-alpha;
+      reported by Matt Edman.
     - Fix a compile warning on OSX Panther. Fixes bug 913; bugfix against
       0.2.1.11-alpha.
     - Fix a bug in address parsing that was preventing bridges or hidden
