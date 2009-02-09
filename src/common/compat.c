@@ -97,12 +97,6 @@
 #include "strlcat.c"
 #endif
 
-#ifndef INADDR_NONE
-/* This is used by inet_addr, but apparently Solaris doesn't define it
- * anyplace. */
-#define INADDR_NONE ((unsigned long) -1)
-#endif
-
 #ifdef HAVE_SYS_MMAN_H
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
@@ -1274,25 +1268,6 @@ tor_inet_aton(const char *str, struct in_addr* addr)
   if (d < 0 || d > 255) return 0;
   addr->s_addr = htonl((a<<24) | (b<<16) | (c<<8) | d);
   return 1;
-
-#if 0
-#ifdef HAVE_INET_ATON
-  return inet_aton(c, addr);
-#else
-  uint32_t r;
-  tor_assert(c);
-  tor_assert(addr);
-  if (strcmp(c, "255.255.255.255") == 0) {
-    addr->s_addr = 0xFFFFFFFFu;
-    return 1;
-  }
-  r = inet_addr(c);
-  if (r == INADDR_NONE)
-    return 0;
-  addr->s_addr = r;
-  return 1;
-#endif
-#endif
 }
 
 /** Given <b>af</b>==AF_INET and <b>src</b> a struct in_addr, or
