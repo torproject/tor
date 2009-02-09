@@ -1643,12 +1643,19 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
 
   tok = find_opt_by_keyword(tokens, K_DIR_ADDRESS);
   if (tok) {
+    struct in_addr in;
+    char *address = NULL;
     tor_assert(tok->n_args);
-    if (parse_addr_port(LOG_WARN, tok->args[0], NULL, &cert->addr,
-                        &cert->dir_port)<0) {
+    /* XXX021 use tor_addr_port_parse() below instead. -RD */
+    if (parse_addr_port(LOG_WARN, tok->args[0], &address, NULL,
+                        &cert->dir_port)<0 ||
+        tor_inet_aton(address, &in) == 0) {
       log_warn(LD_DIR, "Couldn't parse dir-address in certificate");
+      tor_free(address);
       goto err;
     }
+    cert->addr = ntohl(in.s_addr);
+    tor_free(address);
   }
 
   tok = find_by_keyword(tokens, K_DIR_KEY_PUBLISHED);
