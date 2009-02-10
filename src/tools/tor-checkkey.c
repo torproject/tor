@@ -17,12 +17,15 @@ int main(int c, char **v)
   crypto_pk_env_t *env;
   char *str;
   RSA *rsa;
+  int wantdigest=0;
+  int fname_idx;
   init_logging();
 
   if (c < 2) {
     fprintf(stderr, "Hi. I'm tor-checkkey.  Tell me a filename that "
             "has a PEM-encoded RSA public key (like in a cert) and I'll "
-            "dump the modulus.\n");
+            "dump the modulus.  Use the --digest option too and I'll "
+            "dump the digest.\n");
     return 1;
   }
 
@@ -31,9 +34,21 @@ int main(int c, char **v)
     return 1;
   }
 
-  str = read_file_to_str(v[1], 0, NULL);
+  if (!strcmp(v[1], "--digest")) {
+    wantdigest = 1;
+    fname_idx = 2;
+    if (c<3) {
+      fprintf(stderr, "too few arguments");
+      return 1;
+    }
+  } else {
+    wantdigest = 0;
+    fname_idx = 1;
+  }
+
+  str = read_file_to_str(v[fname_idx], 0, NULL);
   if (!str) {
-    fprintf(stderr, "Couldn't read %s\n", v[1]);
+    fprintf(stderr, "Couldn't read %s\n", v[fname_idx]);
     return 1;
   }
 
@@ -44,10 +59,17 @@ int main(int c, char **v)
   }
   tor_free(str);
 
-  rsa = _crypto_pk_env_get_rsa(env);
-  str = BN_bn2hex(rsa->n);
+  if (wantdigest) {
+    char digest[HEX_DIGEST_LEN+1];
+    if (crypto_pk_get_fingerprint(env, digest, 0)<0)
+      return 1;
+    printf("%s\n",digest);
+  } else {
+    rsa = _crypto_pk_env_get_rsa(env);
+    str = BN_bn2hex(rsa->n);
 
-  printf("%s\n", str);
+    printf("%s\n", str);
+  }
 
   return 0;
 }
