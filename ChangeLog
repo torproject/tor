@@ -10,6 +10,8 @@ Changes in version 0.2.1.13-????? - 2009-0?-??
       stop preferring the exit and try again.  This situation may not be
       possible now, but will probably become feasible with proposal 158.
       Spotted by rovv.  Fixes another case of bug 752.
+    - Don't re-extend introduction circuits if we ran out of RELAY_EARLY
+      cells. Bugfix on 0.2.1.3-alpha. Fixes more of bug 878.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user
@@ -160,7 +162,7 @@ Changes in version 0.2.1.10-alpha - 2009-01-06
       guessing the wrong parts of our address as our address.
     - Do not cannibalize a circuit if we're out of RELAY_EARLY cells to
       send on that circuit. Otherwise we might violate the proposal-110
-      limit. Bugfix on 0.2.1.3-alpha. Partial fix for Bug 878. Diagnosis
+      limit. Bugfix on 0.2.1.3-alpha. Partial fix for bug 878. Diagnosis
       thanks to Karsten.
     - When we're sending non-EXTEND cells to the first hop in a circuit,
       for example to use an encrypted directory connection, we don't need

@@ -274,13 +274,31 @@ rend_client_introduction_acked(origin_circuit_t *circ,
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
         return -1;
       }
-      log_info(LD_REND,
-               "Got nack for %s from %s. Re-extending circ %d, "
-               "this time to %s.",
-               escaped_safe_str(circ->rend_data->onion_address),
-               circ->build_state->chosen_exit->nickname, circ->_base.n_circ_id,
-               extend_info->nickname);
-      result = circuit_extend_to_new_exit(circ, extend_info);
+      if (circ->remaining_relay_early_cells) {
+        log_info(LD_REND,
+                 "Got nack for %s from %s. Re-extending circ %d, "
+                 "this time to %s.",
+                 escaped_safe_str(circ->rend_data->onion_address),
+                 circ->build_state->chosen_exit->nickname,
+                 circ->_base.n_circ_id, extend_info->nickname);
+        result = circuit_extend_to_new_exit(circ, extend_info);
+      } else {
+        log_info(LD_REND,
+                 "Got nack for %s from %s. Building a new introduction "
+                 "circuit, this time to %s.",
+                 escaped_safe_str(circ->rend_data->onion_address),
+                 circ->build_state->chosen_exit->nickname,
+                 extend_info->nickname);
+        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
+        if (!circuit_launch_by_extend_info(CIRCUIT_PURPOSE_C_INTRODUCING,
+                                           extend_info,
+                                           CIRCLAUNCH_IS_INTERNAL)) {
+          log_warn(LD_REND, "Building introduction circuit failed.");
+          result = -1;
+        } else {
+          result = 0;
+        }
+      }
       extend_info_free(extend_info);
       return result;
     }
