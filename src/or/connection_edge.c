@@ -330,7 +330,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
 
   log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
            escaped_safe_str(conn->address),conn->port,
-           fmt_addr(&conn->addr));
+           safe_str(fmt_addr(&conn->addr)));
 
   conn->state = EXIT_CONN_STATE_OPEN;
   connection_watch_events(conn, EV_READ); /* stop writing, continue reading */
