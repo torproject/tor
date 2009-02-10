@@ -29,7 +29,7 @@
   UpgradeCode must remain the same for all packages of this type regardless of
   Product or Package ID's.  This is how existing versions are located.
     -->
-  <?define ThisProductVersion="2.1.11" ?>
+  <?define ThisProductVersion="2.1.12" ?>
   <?define ThisProductVersionDisp="@VERSION@" ?>
   <?define UpgradeCode="64323a0c-9712-4a7a-8db8-d3c5c0b963df" ?>
   <?define TPI="The Tor Project, Inc." ?>
@@ -39,18 +39,18 @@
   modified for upgrades to work correctly!  Note that future MSI packages should
   re-use components that haven't changed to speed installation.
     -->
-  <?define CurrTorProductGUID="718c5eec-0b54-46d9-b5b9-8d69eb89fb89" ?>
-  <?define CurrTorExecutableGUID="bfedc5b4-5e94-4b81-8bd8-49ead04b76df" ?>
-  <?define CurrTorSvcLinksGUID="02fd1024-6054-4177-be5f-42a7d138770f" ?>
-  <?define CurrOpenSSLLibraryGUID="55f3a947-5c5c-4653-b9ca-00c8a53200e9" ?>
-  <?define CurrTorDocumentsGUID="f742b056-4ef1-413c-b096-0e8e3df527b5" ?>
-  <?define CurrTorConfigFileGUID="3f272ba6-913d-4dbc-84b9-fd448975b3ee" ?>
-  <?define CurrTorGeoIPFileGUID="917540cd-9bb9-4097-9bc6-1758ba7bc97f" ?>
-  <?define CurrAddTorToStartMenuGUID="3987814e-b673-420e-8ee2-08c25824c9d0" ?>
-  <?define CurrAddTorToDesktopGUID="452df5e8-c9bd-4e46-a95f-9abfe56f67b6" ?>
-  <?define CurrAddTorDocsToDesktopGUID="c9576682-3049-4dbf-a543-8092ce905d3e" ?>
-  <?define CurrAddTorEditConfToDesktopGUID="0973b83b-bf21-42b7-8330-4afa5376e83c" ?>
-  <?define CurrLocalProgramsGUID="7dd27a05-38d4-4e00-9975-97f90db5d3a3" ?>
+  <?define CurrTorProductGUID="cfe3de89-4407-4af2-ac2c-4443bd68a61b" ?>
+  <?define CurrTorExecutableGUID="9c3db54b-05d7-4800-a84c-569105f99b93" ?>
+  <?define CurrTorSvcLinksGUID="4ef7f1e7-282f-4540-93a1-dbe66326d8f2" ?>
+  <?define CurrOpenSSLLibraryGUID="bf2b03ec-f86b-4e71-b59d-268a7b21eb4a" ?>
+  <?define CurrTorDocumentsGUID="46abcd7a-3ff2-45c8-9e58-120cb60d8291" ?>
+  <?define CurrTorConfigFileGUID="994cc2a2-63f9-44f9-950d-4012fd79e945" ?>
+  <?define CurrTorGeoIPFileGUID="0934c295-8d97-4588-924a-9572e7334f59" ?>
+  <?define CurrAddTorToStartMenuGUID="0cb459e2-1c31-4dca-a143-badbb2273170" ?>
+  <?define CurrAddTorToDesktopGUID="a5aee150-186c-4db6-90be-faba50bb0d49" ?>
+  <?define CurrAddTorDocsToDesktopGUID="1b5bd78c-bb4d-4271-a2c4-aeb409aa1774" ?>
+  <?define CurrAddTorEditConfToDesktopGUID="5fef2413-86ad-4ee5-a843-c4432051820c" ?>
+  <?define CurrLocalProgramsGUID="25f95ae1-70f9-4ef4-b709-3412a31f5248" ?>
 
   <Product
     Name="Tor $(var.ThisProductVersionDisp)"
