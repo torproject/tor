@@ -61,6 +61,11 @@ S   - Write a summary of progress toward understanding risks to relays
       them. Eg, if relays have 100KB/s but set relaybandwidthrate to
       10KB/s, do your interference attacks still work?
 
+    o Revise and publish incentive draft paper
+      o Write an explanation for its current flaws
+      . Gather comments, search for new designs
+      o Write up a summary of recommendations and next steps
+
 W   - Download fewer descriptors
       - Summarize progress so far, on all the different approaches to
         reducing directory download overhead.
