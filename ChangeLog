@@ -14,6 +14,8 @@ Changes in version 0.2.1.13-????? - 2009-0?-??
       cells. Bugfix on 0.2.1.3-alpha. Fixes more of bug 878.
     - As an exit node, scrub the IP address to which we are exiting in the
       logs. Bugfix on 0.2.1.8-alpha.
+    - Clients no longer cache certificates for authorities they do not
+      recognize.  Bugfix on 0.2.0.9-alpha.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user

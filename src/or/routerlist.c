@@ -202,10 +202,16 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                "signing key %s", from_store ? "cached" : "downloaded",
                ds->nickname, hex_str(cert->signing_key_digest,DIGEST_LEN));
     } else {
-      log_info(LD_DIR, "Adding %s certificate for unrecognized directory "
+      int adding = directory_caches_dir_info(get_options());
+      log_info(LD_DIR, "%s %s certificate for unrecognized directory "
                "authority with signing key %s",
+               adding ? "Adding" : "Not adding",
                from_store ? "cached" : "downloaded",
                hex_str(cert->signing_key_digest,DIGEST_LEN));
+      if (!adding) {
+        authority_cert_free(cert);
+        continue;
+      }
     }
 
     cl = get_cert_list(cert->cache_info.identity_digest);
