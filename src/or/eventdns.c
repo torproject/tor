@@ -152,7 +152,7 @@ typedef unsigned int uint;
 
 #define CLASS_INET	EVDNS_CLASS_INET
 
-#define CLEAR(x) do { memset((x), 0, sizeof(*(x))); } while(0)
+#define CLEAR(x) do { memset((x), 0xF0, sizeof(*(x))); } while(0)
 
 struct evdns_request {
 	u8 *request; /* the dns packet data */
