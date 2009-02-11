@@ -297,7 +297,7 @@ struct evdns_server_request {
 };
 struct evdns_server_question {
 	int type;
-	int class;
+	int dns_question_class;
 	char name[1];
 };
 typedef void (*evdns_request_callback_fn_type)(struct evdns_server_request *, void *);

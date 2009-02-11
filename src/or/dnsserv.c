@@ -69,7 +69,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
              "handle one question at a time for now.  Skipping the extras.");
   }
   for (i = 0; i < req->nquestions; ++i) {
-    if (req->questions[i]->class != EVDNS_CLASS_INET)
+    if (req->questions[i]->dns_question_class != EVDNS_CLASS_INET)
       continue;
     switch (req->questions[i]->type) {
       case EVDNS_TYPE_A:
