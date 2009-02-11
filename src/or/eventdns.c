@@ -2046,9 +2046,10 @@ evdns_request_transmit(struct evdns_request *req) {
 		nameserver_write_waiting(req->ns, 1);
 		return 1;
 	case 2:
-		/* failed in some other way */
+		/* failed to transmit the request entirely. */
 		retcode = 1;
-		break;
+		/* fall through: we'll set a timeout, which will time out,
+		 * and make us retransmit the request anyway. */
 	default:
 		/* transmitted; we need to check for timeout. */
 		log(EVDNS_LOG_DEBUG,
@@ -2060,11 +2061,10 @@ evdns_request_transmit(struct evdns_request *req) {
 				(unsigned long) req);
 			/* ???? Do more? */
 		}
+		req->tx_count++;
+		req->transmit_me = 0;
+		return retcode;
 	}
-
-	req->tx_count++;
-	req->transmit_me = 0;
-	return retcode;
 }
 
 static void

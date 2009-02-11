@@ -16,6 +16,9 @@ Changes in version 0.2.1.13-????? - 2009-0?-??
       logs. Bugfix on 0.2.1.8-alpha.
     - Clients no longer cache certificates for authorities they do not
       recognize.  Bugfix on 0.2.0.9-alpha.
+    - When we can't transmit a DNS request due to a network error, retry
+      it after a while, and eventually transmit a failing response to the
+      RESOLVED cell.  Bugfix on 0.1.2.5-alpha.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user
