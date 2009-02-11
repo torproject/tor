@@ -1,4 +1,14 @@
 Changes in version 0.2.0.34 - 2009-02-08
+  Tor 0.2.0.34 features several more security-related fixes. You should
+  upgrade, especially if you run an exit relay (remote crash) or a
+  directory authority (remote infinite loop), or you're on an older
+  (pre-XP) or not-recently-patched Windows (remote exploit).
+
+  This release marks end-of-life for Tor 0.1.2.x. Those Tor versions
+  have many known flaws, and nobody should be using them. You should
+  upgrade. If you're using a Linux or BSD and its packages are obsolete,
+  stop using those packages and upgrade anyway.
+
   o Security fixes:
     - Fix an infinite-loop bug on handling corrupt votes under certain
       circumstances. Bugfix on 0.2.0.8-alpha.
