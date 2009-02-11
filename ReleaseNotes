@@ -3,6 +3,34 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.0.34 - 2009-02-08
+  Tor 0.2.0.34 features several more security-related fixes. You should
+  upgrade, especially if you run an exit relay (remote crash) or a
+  directory authority (remote infinite loop), or you're on an older
+  (pre-XP) or not-recently-patched Windows (remote exploit).
+
+  This release marks end-of-life for Tor 0.1.2.x. Those Tor versions
+  have many known flaws, and nobody should be using them. You should
+  upgrade. If you're using a Linux or BSD and its packages are obsolete,
+  stop using those packages and upgrade anyway.
+
+  o Security fixes:
+    - Fix an infinite-loop bug on handling corrupt votes under certain
+      circumstances. Bugfix on 0.2.0.8-alpha.
+    - Fix a temporary DoS vulnerability that could be performed by
+      a directory mirror. Bugfix on 0.2.0.9-alpha; reported by lark.
+    - Avoid a potential crash on exit nodes when processing malformed
+      input. Remote DoS opportunity. Bugfix on 0.2.0.33.
+    - Do not accept incomplete ipv4 addresses (like 192.168.0) as valid.
+      Spec conformance issue. Bugfix on Tor 0.0.2pre27.
+
+  o Minor bugfixes:
+    - Fix compilation on systems where time_t is a 64-bit integer.
+      Patch from Matthias Drochner.
+    - Don't consider expiring already-closed client connections. Fixes
+      bug 893. Bugfix on 0.0.2pre20.
+
+
 Changes in version 0.2.0.33 - 2009-01-21
   Tor 0.2.0.33 fixes a variety of bugs that were making relays less
   useful to users. It also finally fixes a bug where a relay or client
