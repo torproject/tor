@@ -23,6 +23,7 @@ Changes in version 0.2.1.13-????? - 2009-0?-??
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user
       is option is set.
+    - Update to the "January 23 2009" ip-to-country file.
 
 
 Changes in version 0.2.0.34 - 2009-02-08
