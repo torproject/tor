@@ -1,6 +1,6 @@
 1. Scanning process
-   A. Non-HTML/JS mime types compared via SHA1 hash
-   B. Dynamic content filtered at 4 levels:
+   A. Non-HTML/JS HTTP mime types compared via SHA1 hash
+   B. Dynamic HTTP content filtered at 4 levels:
       1. IP change+Tor cookie utilization
          - Tor cookies replayed with new IP in case of changes
       2. HTML Tag+Attribute+JS comparison
@@ -11,7 +11,17 @@
            Non-Tor fetches pruned from comparison
       4. URLS with > N% of node failures removed
          - results purged from filesystem at end of scan loop
-   C. Scanner can be restarted from any point in the event
+   C. SSL scanning handles some forms of dynamic certs
+      1. Catalogs certs for all IPs resolved locally
+         by getaddrinfo over the duration of the scan. 
+         - Updated each test.
+      2. If the domain presents a new cert for each IP, this
+         is noted on the failure result for the node
+      3. If the same IP presents two different certs locally,
+         the cert list is first refreshed, and if it happens
+         again, discarded
+      4. A N% node failure filter also applies
+   D. Scanner can be restarted from any point in the event
       of scanner or system crashes, or graceful shutdown.
       - Results+scan state pickled to filesystem continuously
 2. Cron job checks results periodically for reporting
@@ -20,7 +30,7 @@
    B. write reject lines to approved-routers for those three types:
       1. ID Hex based (for misconfig/network problems easily fixed)
       2. IP based (for content modification)
-      3. IP+mask based (for continuous/eggregious content modification)
+      3. IP+mask based (for continuous/egregious content modification)
    C. Emails results to tor-scanners@freehaven.net
 3. Human Review and Appeal
    A. ID Hex-based BadExit is meant to be possible to removed easily
