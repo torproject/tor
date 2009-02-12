@@ -1,0 +1,34 @@
+1. Scanning process
+   A. Non-HTML/JS mime types compared via SHA1 hash
+   B. Dynamic content filtered at 4 levels:
+      1. IP change+Tor cookie utilization
+         - Tor cookies replayed with new IP in case of changes
+      2. HTML Tag+Attribute+JS comparison
+         - Comparisons made based only on "relevant" HTML tags
+           and attributes 
+      3. HTML Tag+Attribute+JS diffing
+         - Tags, attributes and JS AST nodes that change during
+           Non-Tor fetches pruned from comparison
+      4. URLS with > N% of node failures removed
+         - results purged from filesystem at end of scan loop
+   C. Scanner can be restarted from any point in the event
+      of scanner or system crashes, or graceful shutdown.
+      - Results+scan state pickled to filesystem continuously
+2. Cron job checks results periodically for reporting
+   A. Divide failures into three types of BadExit based on type
+      and frequency over time and incident rate
+   B. write reject lines to approved-routers for those three types:
+      1. ID Hex based (for misconfig/network problems easily fixed)
+      2. IP based (for content modification)
+      3. IP+mask based (for continuous/eggregious content modification)
+   C. Emails results to tor-scanners@freehaven.net
+3. Human Review and Appeal
+   A. ID Hex-based BadExit is meant to be possible to removed easily
+      without needing to beg us.
+      - Should this behavior be encouraged? 
+   B. Optionally can reserve IP based badexits for human review
+      1. Results are encapsulated fully on the filesystem and can be
+         reviewed without network access
+      2. Soat has --rescan to rescan failed nodes from a data directory
+         - New set of URLs used
+
