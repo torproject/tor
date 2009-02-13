@@ -2,12 +2,12 @@
 # $Id$
 # Copyright 2004-2005 Nick Mathewson. 
 # Copyright 2005-2007 Andrew Lewman
-# Copyright 2008 The Tor Project
+# Copyright 2008 The Tor Project, Inc.
 # See LICENSE in Tor distribution for licensing information.
 
 # This script builds a Macintosh OS X metapackage containing 2 packages:
 #    - One for Tor.
-#    - One for Startup scripts for Tor.
+#    - One for Startup script for Tor.
 #
 # This script expects to be run from the toplevel makefile, with VERSION
 # set to the latest Tor version, and Tor already built.
@@ -94,15 +94,7 @@ cp AUTHORS $DOC/AUTHORS.txt
 groff doc/tor.1.in -T ps -m man | pstopdf -i -o $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | pstopdf -i -o $DOC/tor-resolve.pdf
 mkdir $DOC/Advanced
-cp	doc/spec/tor-spec.txt         \
-	doc/spec/rend-spec.txt        \
-	doc/spec/control-spec.txt     \
-	doc/spec/socks-extensions.txt \
-	doc/spec/version-spec.txt     \
-	doc/spec/address-spec.txt     \
-	doc/spec/path-spec.txt        \
-	$DOC/Advanced
-
+cp doc/spec/*.txt $DOC/Advanced
 cp doc/HACKING $DOC/Advanced/HACKING.txt
 cp ChangeLog $DOC/Advanced/ChangeLog.txt
 
