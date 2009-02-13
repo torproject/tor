@@ -1,4 +1,4 @@
-Changes in version 0.2.1.13-????? - 2009-0?-??
+Changes in version 0.2.1.13-????? - 2009-02-??
   o Minor bugfixes:
     - Automatically detect MacOSX versions earlier than 10.4.0, and
       disable kqueue from inside Tor when running with these versions.
@@ -19,6 +19,10 @@ Changes in version 0.2.1.13-????? - 2009-0?-??
     - When we can't transmit a DNS request due to a network error, retry
       it after a while, and eventually transmit a failing response to the
       RESOLVED cell.  Bugfix on 0.1.2.5-alpha.
+    - If the controller claimed responsibility for a stream, but that
+      stream never finished making its connection, it would live
+      forever in circuit_wait state. Now we close it after SocksTimeout
+      seconds. Bugfix on 0.1.2.7-alpha; reported by Mike Perry.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user

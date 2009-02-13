@@ -397,7 +397,7 @@ connection_ap_expire_beginning(void)
   or_options_t *options = get_options();
   int severity;
   int cutoff;
-  int seconds_idle;
+  int seconds_idle, seconds_since_born;
   smartlist_t *conns = get_connection_array();
 
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, c) {
@@ -408,27 +408,27 @@ connection_ap_expire_beginning(void)
     severity = (tor_addr_is_null(&conn->_base.addr) && !conn->_base.port)
       ? LOG_INFO : LOG_NOTICE;
     seconds_idle = (int)( now - conn->_base.timestamp_lastread );
+    seconds_since_born = (int)( now - conn->_base.timestamp_created );
 
-    /* XXX021 this clause was originally thought redundant with the
-     * clause in connection_ap_handshake_attach_circuit(). But actually,
-     * we need it because controllers that put streams in controller_wait
-     * state never go to the other clause. we should fix so it compares
-     * seconds since timestamp_created, not since last read. -RD */
+    if (conn->_base.state == AP_CONN_STATE_OPEN)
+      continue;
+
+    /* We already consider SocksTimeout in
+     * connection_ap_handshake_attach_circuit(), but we need to consider
+     * it here too because controllers that put streams in controller_wait
+     * state never ask Tor to attach the circuit. */
     if (AP_CONN_STATE_IS_UNATTACHED(conn->_base.state)) {
-      if (seconds_idle >= options->SocksTimeout) {
+      if (seconds_since_born >= options->SocksTimeout) {
         log_fn(severity, LD_APP,
             "Tried for %d seconds to get a connection to %s:%d. "
             "Giving up. (%s)",
-            seconds_idle, safe_str(conn->socks_request->address),
+            seconds_since_born, safe_str(conn->socks_request->address),
             conn->socks_request->port,
             conn_state_to_string(CONN_TYPE_AP, conn->_base.state));
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
       }
       continue;
     }
-
-    if (conn->_base.state == AP_CONN_STATE_OPEN)
-      continue;
 
     /* We're in state connect_wait or resolve_wait now -- waiting for a
      * reply to our relay cell. See if we want to retry/give up. */
