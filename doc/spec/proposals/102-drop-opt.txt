@@ -3,7 +3,7 @@ Title: Dropping "opt" from the directory format
 Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
-Created:
+Created: Jan 2007
 Status: Closed
 Implemented-In: 0.2.0.x
 

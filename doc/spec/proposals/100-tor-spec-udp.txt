@@ -3,7 +3,7 @@ Title: Tor Unreliable Datagram Extension Proposal
 Version: $Revision$
 Last-Modified: $Date$
 Author: Marc Liberatore
-Created:
+Created: 23 Feb 2006
 Status: Dead
 
 Overview:

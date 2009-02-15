@@ -3,7 +3,7 @@ Title: Voting on the Tor Directory System
 Version: $Revision$
 Last-Modified: $Date$
 Author: Nick Mathewson
-Created:
+Created: Nov 2006
 Status: Closed
 Implemented-In: 0.2.0.x
 
