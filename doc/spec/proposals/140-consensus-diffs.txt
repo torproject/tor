@@ -5,7 +5,7 @@ Last-Modified: $Date$
 Author: Peter Palfrader
 Created: 13-Jun-2008
 Status: Accepted
-Target: 0.2.1.x
+Target: 0.2.2.x
 
 1. Overview.
 
