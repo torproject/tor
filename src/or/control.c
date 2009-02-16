@@ -3517,8 +3517,10 @@ control_event_or_authdir_new_descriptor(const char *action,
   return 0;
 }
 
-/** Called when the routerstatus_ts <b>statuses</b> have changed: sends
- * an NS event to any controller that cares. */
+/** Helper function for NS-style events. Constructs and sends an event
+ * of type <b>event</b> with string <b>event_string</b> out of the set of
+ * networkstatuses <b>statuses</b>. Currently it is used for NS events
+ * and NEWCONSENSUS events. */
 static int
 control_event_networkstatus_changed_helper(smartlist_t *statuses,
                                            uint16_t event,
@@ -3553,12 +3555,16 @@ control_event_networkstatus_changed_helper(smartlist_t *statuses,
   return 0;
 }
 
+/** Called when the routerstatus_ts <b>statuses</b> have changed: sends
+ * an NS event to any controller that cares. */
 int
 control_event_networkstatus_changed(smartlist_t *statuses)
 {
   return control_event_networkstatus_changed_helper(statuses, EVENT_NS, "NS");
 }
 
+/** Called when we get a new consensus networkstatus. Sends a NEWCONSENSUS
+ * event consisting of an NS-style line for each relay in the consensus. */
 int
 control_event_newconsensus(const networkstatus_t *consensus)
 {

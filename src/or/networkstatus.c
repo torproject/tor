@@ -1318,6 +1318,8 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   if (old_c == new_c)
     return;
 
+  /* tell the controller exactly which relays are still listed, as well
+   * as what they're listed as */
   control_event_newconsensus(new_c);
 
   if (!old_c) {
