@@ -42,7 +42,8 @@
 #define EVENT_GUARD            0x0013
 #define EVENT_STREAM_BANDWIDTH_USED   0x0014
 #define EVENT_CLIENTS_SEEN     0x0015
-#define _EVENT_MAX             0x0015
+#define EVENT_NEWCONSENSUS     0x0016
+#define _EVENT_MAX             0x0016
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -999,6 +1000,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         event_code = EVENT_STREAM_BANDWIDTH_USED;
       else if (!strcasecmp(ev, "CLIENTS_SEEN"))
         event_code = EVENT_CLIENTS_SEEN;
+      else if (!strcasecmp(ev, "NEWCONSENSUS"))
+        event_code = EVENT_NEWCONSENSUS;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                  ev);
@@ -3516,16 +3519,20 @@ control_event_or_authdir_new_descriptor(const char *action,
 
 /** Called when the routerstatus_ts <b>statuses</b> have changed: sends
  * an NS event to any controller that cares. */
-int
-control_event_networkstatus_changed(smartlist_t *statuses)
+static int
+control_event_networkstatus_changed_helper(smartlist_t *statuses,
+                                           uint16_t event,
+                                           const char *event_string)
 {
   smartlist_t *strs;
   char *s, *esc = NULL;
-  if (!EVENT_IS_INTERESTING(EVENT_NS) || !smartlist_len(statuses))
+  if (!EVENT_IS_INTERESTING(event) || !smartlist_len(statuses))
     return 0;
 
   strs = smartlist_create();
-  smartlist_add(strs, tor_strdup("650+NS\r\n"));
+  smartlist_add(strs, tor_strdup("650+"));
+  smartlist_add(strs, tor_strdup(event_string));
+  smartlist_add(strs, tor_strdup("\r\n"));
   SMARTLIST_FOREACH(statuses, routerstatus_t *, rs,
     {
       s = networkstatus_getinfo_helper_single(rs);
@@ -3538,12 +3545,25 @@ control_event_networkstatus_changed(smartlist_t *statuses)
   SMARTLIST_FOREACH(strs, char *, cp, tor_free(cp));
   smartlist_free(strs);
   tor_free(s);
-  send_control_event_string(EVENT_NS, ALL_NAMES|ALL_FORMATS, esc);
-  send_control_event_string(EVENT_NS, ALL_NAMES|ALL_FORMATS,
+  send_control_event_string(event, ALL_NAMES|ALL_FORMATS, esc);
+  send_control_event_string(event, ALL_NAMES|ALL_FORMATS,
                             "650 OK\r\n");
 
   tor_free(esc);
   return 0;
+}
+
+int
+control_event_networkstatus_changed(smartlist_t *statuses)
+{
+  return control_event_networkstatus_changed_helper(statuses, EVENT_NS, "NS");
+}
+
+int
+control_event_newconsensus(const networkstatus_t *consensus)
+{
+  return control_event_networkstatus_changed_helper(
+           consensus->routerstatus_list, EVENT_NEWCONSENSUS, "NEWCONSENSUS");
 }
 
 /** Called when a single local_routerstatus_t has changed: Sends an NS event

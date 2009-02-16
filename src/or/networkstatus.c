@@ -1317,6 +1317,9 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   smartlist_t *changed;
   if (old_c == new_c)
     return;
+
+  control_event_newconsensus(new_c);
+
   if (!old_c) {
     control_event_networkstatus_changed(new_c->routerstatus_list);
     return;

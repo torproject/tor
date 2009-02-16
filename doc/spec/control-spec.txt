@@ -1556,7 +1556,13 @@ $Id$
 4.1.12. Network status has changed
 
   Syntax:
-     "650" "+" "NS" CRLF  1*NetworkStatus "." CRLF "650" SP "OK" CRLF
+     "650" "+" "NS" CRLF 1*NetworkStatus "." CRLF "650" SP "OK" CRLF
+
+  The event is used whenever our local view of a relay status changes.
+  This happens when we get a new v3 consensus (in which case the entries
+  we see are a duplicate of what we see in the NEWCONSENSUS event,
+  below), but it also happens when we decide to mark a relay as up or
+  down in our local status, for example based on connection attempts.
 
   [First added in 0.1.2.3-alpha]
 
@@ -1596,6 +1602,20 @@ $Id$
   set of "countrycode=count" pairs. For example,
   650-CLIENTS_SEEN TimeStarted="Thu Dec 25 23:50:43 EST 2008"
   650 CountrySummary=us=16,de=8,uk=8
+[XXX Matt Edman informs me that the time format above is wrong. -RD]
+
+4.1.15. New consensus networkstatus has arrived.
+
+  The syntax is:
+     "650" "+" "NEWCONSENSUS" CRLF 1*NetworkStatus "." CRLF "650" SP
+     "OK" CRLF
+
+  A new consensus networkstatus has arrived. We include NS-style lines for
+  every relay in the consensus. NEWCONSENSUS is a separate event from the
+  NS event, because the list here represents every usable relay: so any
+  relay *not* mentioned in this list is implicitly no longer recommended.
+
+  [First added in 0.2.1.13-alpha]
 
 5. Implementation notes
 
