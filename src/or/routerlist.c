@@ -5020,6 +5020,26 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
   return r;
 }
 
+/** DOCDOC */
+void
+refresh_all_country_info(void)
+{
+  or_options_t *options = get_options();
+
+  if (options->EntryNodes)
+    routerset_refresh_countries(options->EntryNodes);
+  if (options->ExitNodes)
+    routerset_refresh_countries(options->ExitNodes);
+  if (options->ExcludeNodes)
+    routerset_refresh_countries(options->ExcludeNodes);
+  if (options->ExcludeExitNodes)
+    routerset_refresh_countries(options->ExcludeExitNodes);
+  if (options->_ExcludeExitNodesUnion)
+    routerset_refresh_countries(options->_ExcludeExitNodesUnion);
+
+  routerlist_refresh_countries();
+}
+
 /** Add all members of the set <b>source</b> to <b>target</b>. */
 void
 routerset_union(routerset_t *target, const routerset_t *source)

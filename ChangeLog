@@ -1,4 +1,9 @@
 Changes in version 0.2.1.13-????? - 2009-02-??
+  o Major bugfixes:
+    - Correctly update the list of countries to exclude as exits when
+      the GeoIP file is loaded or reloaded.  Diagnosed by lark.  Bugfix
+      on 0.2.1.6-alpha.
+
   o Minor bugfixes:
     - Automatically detect MacOSX versions earlier than 10.4.0, and
       disable kqueue from inside Tor when running with these versions.

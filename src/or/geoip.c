@@ -206,6 +206,11 @@ geoip_load_file(const char *filename, or_options_t *options)
   fclose(f);
 
   smartlist_sort(geoip_entries, _geoip_compare_entries);
+
+  /* Okay, now we need to maybe change our mind about what is in which
+   * country. */
+  refresh_all_country_info();
+
   return 0;
 }
 

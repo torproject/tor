@@ -4514,6 +4514,7 @@ int routerset_equal(const routerset_t *old, const routerset_t *new);
 void routerset_free(routerset_t *routerset);
 void routerinfo_set_country(routerinfo_t *ri);
 void routerlist_refresh_countries(void);
+void refresh_all_country_info(void);
 
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
                                          const char *id);

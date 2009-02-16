@@ -1372,17 +1372,6 @@ options_act(or_options_t *old_options)
 #endif
     geoip_load_file(actual_fname, options);
     tor_free(actual_fname);
-
-    /* XXXX Would iterating through all option_var's routersets be better? */
-    if (options->EntryNodes)
-      routerset_refresh_countries(options->EntryNodes);
-    if (options->ExitNodes)
-      routerset_refresh_countries(options->ExitNodes);
-    if (options->ExcludeNodes)
-      routerset_refresh_countries(options->ExcludeNodes);
-    if (options->ExcludeExitNodes)
-      routerset_refresh_countries(options->ExcludeExitNodes);
-    routerlist_refresh_countries();
   }
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
