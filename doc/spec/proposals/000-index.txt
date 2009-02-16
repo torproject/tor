@@ -105,8 +105,8 @@ Proposals by status:
    110  Avoiding infinite length circuits [for 0.2.1.x] [in 0.2.1.3-alpha]
    117  IPv6 exits [for 0.2.1.x]
    118  Advertising multiple ORPorts at once [for 0.2.1.x]
-   134  More robust consensus voting with diverse authority sets [for 0.2.1.x]
-   140  Provide diffs between consensuses [for 0.2.1.x]
+   134  More robust consensus voting with diverse authority sets [for 0.2.2.x]
+   140  Provide diffs between consensuses [for 0.2.2.x]
    147  Eliminate the need for v2 directories in generating v3 directories [for 0.2.1.x]
    157  Make certificate downloads specific [for 0.2.1.x]
  META:
