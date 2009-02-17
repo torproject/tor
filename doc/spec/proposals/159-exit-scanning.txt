@@ -39,7 +39,7 @@ SSL scans.
 
 The HTTP scan scrapes Google for common filetype urls such as exe, msi,
 doc, dmg, etc. It then fetches these urls through Non-Tor and Tor, and
-compares the SHA1 hases of the resulting content.
+compares the SHA1 hashes of the resulting content.
 
 The SSL scan downloads certificates for all IPs a domain will locally
 resolve to and compares these certificates to those seen over Tor. The
