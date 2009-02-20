@@ -1322,6 +1322,9 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
    * as what they're listed as */
   control_event_newconsensus(new_c);
 
+  if (!control_event_is_interesting(EVENT_NS))
+    return;
+
   if (!old_c) {
     control_event_networkstatus_changed(new_c->routerstatus_list);
     return;
@@ -1486,8 +1489,7 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
   if (r != 1 && dl_certs)
     authority_certs_fetch_missing(c, now);
 
-  if (control_event_is_interesting(EVENT_NS))
-    notify_control_networkstatus_changed(current_consensus, c);
+  notify_control_networkstatus_changed(current_consensus, c);
 
   if (current_consensus) {
     networkstatus_copy_old_consensus_info(c, current_consensus);
