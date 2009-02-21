@@ -735,6 +735,11 @@ circuit_extend(cell_t *cell, circuit_t *circ)
            "n_conn already set. Bug/attack. Closing.");
     return -1;
   }
+  if (circ->n_hop) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "conn to next hop already launched. Bug/attack. Closing.");
+    return -1;
+  }
 
   if (!server_mode(get_options())) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
