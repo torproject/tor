@@ -28,6 +28,8 @@ Changes in version 0.2.1.13-????? - 2009-02-??
       stream never finished making its connection, it would live
       forever in circuit_wait state. Now we close it after SocksTimeout
       seconds. Bugfix on 0.1.2.7-alpha; reported by Mike Perry.
+    - Drop begin cells to a hidden service if they come from the middle of a
+      circuit.  Patch from lark.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user

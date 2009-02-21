@@ -1019,6 +1019,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "Relay begin request unsupported at AP. Dropping.");
         return 0;
       }
+      if (circ->purpose == CIRCUIT_PURPOSE_S_REND_JOINED &&
+          layer_hint != TO_ORIGIN_CIRCUIT(circ)->cpath->prev) {
+        log_fn(LOG_PROTOCOL_WARN, LD_APP,
+               "Relay begin request to Hidden Service "
+               "from intermediary node. Dropping.");
+        return 0;
+      }
       if (conn) {
         log_fn(LOG_PROTOCOL_WARN, domain,
                "Begin cell for known stream. Dropping.");
