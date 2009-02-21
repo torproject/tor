@@ -4,6 +4,7 @@ description of the patch.)
 
 Backport for 0.2.0:
   o r17887: Don't accept 1.2.3 as a valid IP address.
+  - r18668: Drop duplicate extend cells to same circuit ID; prevent mem leak.
 
 Backport for 0.2.0 once better tested:
   - r17208,r17209,r7211,r17212,r17214: Avoid gotterdammerung when an
@@ -13,6 +14,7 @@ Backport for 0.2.0 once better tested:
   - r17924: Close streams when an exit hands us a local IP.
   - r18210: Call crypto_global_init() with hardwareaccel flag set right in
     all cases.
+  - r18667: Drop BEGIN cells from wrong circuit hop.
 
 Backport for 0.2.0, maybe:
   d r17945: bridges always fail dirport reachability tests. i think
