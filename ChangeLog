@@ -32,6 +32,10 @@ Changes in version 0.2.1.13-????? - 2009-02-??
       circuit.  Patch from lark.
     - When we erroneously receive two EXTEND cells for the same circuit ID
       on the same connection, drop the second.  Patch from lark.
+    - Fix a crash that occurs on exit nodes when a nameserver request
+      timed out.  Bugfix on 0.1.2.1-alpha; our CLEAR debugging code
+      had been suppressing the bug since 0.1.2.10-alpha.  Partial fix
+      for bug 929.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user

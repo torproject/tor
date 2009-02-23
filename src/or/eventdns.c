@@ -2016,14 +2016,17 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 		nameserver_failed(req->ns, "request timed out.");
 	}
 
-	del_timeout_event(req);
-	CLEAR(&req->timeout_event);
 	if (req->tx_count >= global_max_retransmits) {
 		/* this request has failed */
 		reply_callback(req, 0, DNS_ERR_TIMEOUT, NULL);
 		request_finished(req, &req_head);
 	} else {
 		/* retransmit it */
+		/* Stop waiting for the timeout.  No need to do this in
+		 * request_finished; that one already deletes the timeout event.
+		 * XXXX021 port this change to libevent. */
+		del_timeout_event(req);
+		CLEAR(&req->timeout_event);
 		evdns_request_transmit(req);
 	}
 }
