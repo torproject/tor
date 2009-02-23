@@ -109,9 +109,9 @@ Summary: Anonymizing overlay network for TCP (The onion router)
 URL: https://www.torproject.org/
 Group: System Environment/Daemons
 
-License: BSD-like
-Vendor: R. Dingledine <arma@seul.org>
-Packager: Andrew Lewman <phobos@rootme.org>
+License: 3-clause BSD
+Vendor: The Tor Project (https://torproject.org)
+Packager: Andrew Lewman <andrew@torproject.org>
 
 %if %{is_suse}
 Requires: openssl >= 0.9.6
@@ -139,17 +139,17 @@ a "%{torgroup}" group, and set tor up to run as a daemon when the system
 is rebooted.
 
 Applications connect to the local Tor proxy using the SOCKS
-protocol. The local proxy chooses a path through a set of relays, in
+protocol. The tor client chooses a path through a set of relays, in
 which each relay knows its predecessor and successor, but no
 others. Traffic flowing down the circuit is unwrapped by a symmetric
 key at each relay, which reveals the downstream relay.
 
 Warnings: Tor does no protocol cleaning.  That means there is a danger
 that application protocols and associated programs can be induced to
-reveal information about the initiator. Tor depends on Privoxy and
+reveal information about the initiator. Tor depends on Privoxy or 
 similar protocol cleaners to solve this problem. This is alpha code,
 and is even more likely than released code to have anonymity-spoiling
-bugs. The present network is very small -- this further reduces the
+bugs. The present network is small -- this further reduces the
 strength of the anonymity provided. Tor is not presently suitable
 for high-stakes anonymity.
 
@@ -284,6 +284,9 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+
+* Sun Feb 22 2009 Andrew Lewman <andrew@torproject.org>
+- update the description, vendor, and packager
 
 * Thu Sep 11 2008 Andrew Lewman <phobos@rootme.org>
 - See r16867 
