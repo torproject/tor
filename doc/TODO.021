@@ -37,6 +37,8 @@ Matt
     just because you click on 'save' for a totally different config thing.
   - How much space do we save in TBB by stripping symbols from Vidalia
     first? Good idea or crazy idea?
+    (phobos adds you save about 12MB total across all exes by stripping
+    them)  In fact, tbb-1.19 is stripped exes.
 
 ioerror
   * weather.torproject.org should go live.
@@ -89,6 +91,7 @@ Mike:
   - Roger wants to get an email every time there's a blog change,
     e.g. a comment. That way spam doesn't go undetected for weeks.
     - Or, maybe just disable linking from blog comments entirely?
+    (phobos mitigates this by checking it a few times a week)
 
 =======================================================================
 
@@ -282,6 +285,8 @@ P   - create a "make win32-bundle" for vidalia-privoxy-tor-torbutton bundle
     - Tor logs the libevent version on startup, for debugging purposes.
       This is great. But it does this before configuring the logs, so
       it only goes to stdout and is then lost.
+      (phobos asks, is this still the case?  because it shows up in my
+      logs)
 
   - Deprecations
     - Even clients run rep_hist_load_mtbf_data().  This doesn't waste memory
