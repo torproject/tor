@@ -15,6 +15,7 @@ Backport for 0.2.0 once better tested:
   - r18210: Call crypto_global_init() with hardwareaccel flag set right in
     all cases.
   - r18667: Drop BEGIN cells from wrong circuit hop.
+  - r18743: Fix alignment-related crash on Sparc.
 
 Backport for 0.2.0, maybe:
   d r17945: bridges always fail dirport reachability tests. i think
