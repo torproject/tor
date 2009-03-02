@@ -63,8 +63,8 @@ static void
 tag_pack(char *tag, uint64_t conn_id, circid_t circ_id)
 {
   /*XXXX RETHINK THIS WHOLE MESS !!!! !NM NM NM NM*/
-  *(uint64_t *)tag     = conn_id;
-  *(uint16_t *)(tag+8) = circ_id;
+  set_uint64(tag, conn_id);
+  set_uint16(tag+8, circ_id);
 }
 
 /** Unpack <b>tag</b> into addr, port, and circ_id.
@@ -72,8 +72,8 @@ tag_pack(char *tag, uint64_t conn_id, circid_t circ_id)
 static void
 tag_unpack(const char *tag, uint64_t *conn_id, circid_t *circ_id)
 {
-  *conn_id = *(const uint64_t *)tag;
-  *circ_id = *(const uint16_t *)(tag+8);
+  *conn_id = get_uint64(tag);
+  *circ_id = get_uint16(tag+8);
 }
 
 /** Called when the onion key has changed and we need to spawn new

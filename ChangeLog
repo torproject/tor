@@ -36,6 +36,9 @@ Changes in version 0.2.1.13-????? - 2009-02-??
       timed out.  Bugfix on 0.1.2.1-alpha; our CLEAR debugging code
       had been suppressing the bug since 0.1.2.10-alpha.  Partial fix
       for bug 929.
+    - Do not assume that a stack-allocated character array will be
+      64-bit aligned on platforms that demand that uint64_t access is
+      aligned.  Possible fix for bug 604.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user

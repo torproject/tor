@@ -449,8 +449,21 @@ get_uint32(const char *cp)
   return v;
 }
 /**
+ * Read a 32-bit value beginning at <b>cp</b>.  Equivalent to
+ * *(uint32_t*)(cp), but will not cause segfaults on platforms that forbid
+ * unaligned memory access.
+ */
+uint64_t
+get_uint64(const char *cp)
+{
+  uint64_t v;
+  memcpy(&v,cp,8);
+  return v;
+}
+
+/**
  * Set a 16-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
- * *(uint16_t)(cp) = v, but will not cause segfaults on platforms that forbid
+ * *(uint16_t*)(cp) = v, but will not cause segfaults on platforms that forbid
  * unaligned memory access. */
 void
 set_uint16(char *cp, uint16_t v)
@@ -459,12 +472,21 @@ set_uint16(char *cp, uint16_t v)
 }
 /**
  * Set a 32-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
- * *(uint32_t)(cp) = v, but will not cause segfaults on platforms that forbid
+ * *(uint32_t*)(cp) = v, but will not cause segfaults on platforms that forbid
  * unaligned memory access. */
 void
 set_uint32(char *cp, uint32_t v)
 {
   memcpy(cp,&v,4);
+}
+/**
+ * Set a 64-bit value beginning at <b>cp</b> to <b>v</b>. Equivalent to
+ * *(uint64_t*)(cp) = v, but will not cause segfaults on platforms that forbid
+ * unaligned memory access. */
+void
+set_uint64(char *cp, uint64_t v)
+{
+  memcpy(cp,&v,8);
 }
 
 /**
