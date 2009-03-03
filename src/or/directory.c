@@ -1247,7 +1247,7 @@ int
 parse_http_response(const char *headers, int *code, time_t *date,
                     compress_method_t *compression, char **reason)
 {
-  int n1, n2;
+  unsigned n1, n2;
   char datestr[RFC1123_TIME_LEN+1];
   smartlist_t *parsed_headers;
   tor_assert(headers);
@@ -1255,7 +1255,7 @@ parse_http_response(const char *headers, int *code, time_t *date,
 
   while (TOR_ISSPACE(*headers)) headers++; /* tolerate leading whitespace */
 
-  if (sscanf(headers, "HTTP/1.%d %d", &n1, &n2) < 2 ||
+  if (tor_sscanf(headers, "HTTP/1.%u %u", &n1, &n2) < 2 ||
       (n1 != 0 && n1 != 1) ||
       (n2 < 100 || n2 >= 600)) {
     log_warn(LD_HTTP,"Failed to parse header %s",escaped(headers));

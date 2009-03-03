@@ -1296,14 +1296,14 @@ get_user_homedir(const char *username)
 int
 tor_inet_aton(const char *str, struct in_addr* addr)
 {
-  int a,b,c,d;
+  unsigned a,b,c,d;
   char more;
-  if (sscanf(str, "%d.%d.%d.%d%c", &a,&b,&c,&d,&more) != 4)
+  if (tor_sscanf(str, "%3u.%3u.%3u.%3u%c", &a,&b,&c,&d,&more) != 4)
     return 0;
-  if (a < 0 || a > 255) return 0;
-  if (b < 0 || b > 255) return 0;
-  if (c < 0 || c > 255) return 0;
-  if (d < 0 || d > 255) return 0;
+  if (a > 255) return 0;
+  if (b > 255) return 0;
+  if (c > 255) return 0;
+  if (d > 255) return 0;
   addr->s_addr = htonl((a<<24) | (b<<16) | (c<<8) | d);
   return 1;
 }
@@ -1421,7 +1421,7 @@ tor_inet_pton(int af, const char *src, void *dst)
     else if (!dot)
       eow = src+strlen(src);
     else {
-      int byte1,byte2,byte3,byte4;
+      unsigned byte1,byte2,byte3,byte4;
       char more;
       for (eow = dot-1; eow >= src && TOR_ISDIGIT(*eow); --eow)
         ;
@@ -1429,13 +1429,11 @@ tor_inet_pton(int af, const char *src, void *dst)
 
       /* We use "scanf" because some platform inet_aton()s are too lax
        * about IPv4 addresses of the form "1.2.3" */
-      if (sscanf(eow, "%d.%d.%d.%d%c", &byte1,&byte2,&byte3,&byte4,&more) != 4)
+      if (tor_sscanf(eow, "%3u.%3u.%3u.%3u%c",
+                     &byte1,&byte2,&byte3,&byte4,&more) != 4)
         return 0;
 
-      if (byte1 > 255 || byte1 < 0 ||
-          byte2 > 255 || byte2 < 0 ||
-          byte3 > 255 || byte3 < 0 ||
-          byte4 > 255 || byte4 < 0)
+      if (byte1 > 255 || byte2 > 255 || byte3 > 255 || byte4 > 255)
         return 0;
 
       words[6] = (byte1<<8) | byte2;

@@ -1095,18 +1095,30 @@ parse_rfc1123_time(const char *buf, time_t *t)
   char month[4];
   char weekday[4];
   int i, m;
+  unsigned tm_mday, tm_year, tm_hour, tm_min, tm_sec;
 
   if (strlen(buf) != RFC1123_TIME_LEN)
     return -1;
   memset(&tm, 0, sizeof(tm));
-  if (sscanf(buf, "%3s, %d %3s %d %d:%d:%d GMT", weekday,
-             &tm.tm_mday, month, &tm.tm_year, &tm.tm_hour,
-             &tm.tm_min, &tm.tm_sec) < 7) {
+  if (tor_sscanf(buf, "%3s, %2u %3s %u %2u:%2u:%2u GMT", weekday,
+             &tm_mday, month, &tm_year, &tm_hour,
+             &tm_min, &tm_sec) < 7) {
     char *esc = esc_for_log(buf);
     log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
     tor_free(esc);
     return -1;
   }
+  if (tm_mday > 31 || tm_hour > 23 || tm_min > 59 || tm_sec > 61) {
+    char *esc = esc_for_log(buf);
+    log_warn(LD_GENERAL, "Got invalid RFC1123 time %s", esc);
+    tor_free(esc);
+    return -1;
+  }
+  tm.tm_mday = (int)tm_mday;
+  tm.tm_year = (int)tm_year;
+  tm.tm_hour = (int)tm_hour;
+  tm.tm_min = (int)tm_min;
+  tm.tm_sec = (int)tm_sec;
 
   m = -1;
   for (i = 0; i < 12; ++i) {
@@ -1166,19 +1178,20 @@ int
 parse_iso_time(const char *cp, time_t *t)
 {
   struct tm st_tm;
-#ifdef HAVE_STRPTIME
-  if (!strptime(cp, "%Y-%m-%d %H:%M:%S", &st_tm)) {
-    log_warn(LD_GENERAL, "ISO time was unparseable by strptime"); return -1;
-  }
-#else
   unsigned int year=0, month=0, day=0, hour=100, minute=100, second=100;
-  if (sscanf(cp, "%u-%u-%u %u:%u:%u", &year, &month,
+  if (tor_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u", &year, &month,
                 &day, &hour, &minute, &second) < 6) {
-    log_warn(LD_GENERAL, "ISO time was unparseable"); return -1;
+    char *esc = esc_for_log(cp);
+    log_warn(LD_GENERAL, "ISO time %s was unparseable", esc);
+    tor_free(esc);
+    return -1;
   }
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
           hour > 23 || minute > 59 || second > 61) {
-    log_warn(LD_GENERAL, "ISO time was nonsensical"); return -1;
+    char *esc = esc_for_log(cp);
+    log_warn(LD_GENERAL, "ISO time %s was nonsensical", esc);
+    tor_free(esc);
+    return -1;
   }
   st_tm.tm_year = year-1900;
   st_tm.tm_mon = month-1;
@@ -1186,7 +1199,7 @@ parse_iso_time(const char *cp, time_t *t)
   st_tm.tm_hour = hour;
   st_tm.tm_min = minute;
   st_tm.tm_sec = second;
-#endif
+
   if (st_tm.tm_year < 70) {
     char *esc = esc_for_log(cp);
     log_warn(LD_GENERAL, "Got invalid ISO time %s. (Before 1970)", esc);
@@ -1206,6 +1219,7 @@ parse_http_time(const char *date, struct tm *tm)
   char month[4];
   char wkday[4];
   int i;
+  unsigned tm_mday, tm_year, tm_hour, tm_min, tm_sec;
 
   tor_assert(tm);
   memset(tm, 0, sizeof(*tm));
@@ -1213,28 +1227,33 @@ parse_http_time(const char *date, struct tm *tm)
   /* First, try RFC1123 or RFC850 format: skip the weekday.  */
   if ((cp = strchr(date, ','))) {
     ++cp;
-    if (sscanf(date, "%2d %3s %4d %2d:%2d:%2d GMT",
-               &tm->tm_mday, month, &tm->tm_year,
-               &tm->tm_hour, &tm->tm_min, &tm->tm_sec) == 6) {
+    if (tor_sscanf(date, "%2u %3s %4u %2u:%2u:%2u GMT",
+               &tm_mday, month, &tm_year,
+               &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc1123-date */
-      tm->tm_year -= 1900;
-    } else if (sscanf(date, "%2d-%3s-%2d %2d:%2d:%2d GMT",
-                      &tm->tm_mday, month, &tm->tm_year,
-                      &tm->tm_hour, &tm->tm_min, &tm->tm_sec) == 6) {
+      tm_year -= 1900;
+    } else if (tor_sscanf(date, "%2u-%3s-%2u %2u:%2u:%2u GMT",
+                      &tm_mday, month, &tm_year,
+                      &tm_hour, &tm_min, &tm_sec) == 6) {
       /* rfc850-date */
     } else {
       return -1;
     }
   } else {
     /* No comma; possibly asctime() format. */
-    if (sscanf(date, "%3s %3s %2d %2d:%2d:%2d %4d",
-               wkday, month, &tm->tm_mday,
-               &tm->tm_hour, &tm->tm_min, &tm->tm_sec, &tm->tm_year) == 7) {
-      tm->tm_year -= 1900;
+    if (tor_sscanf(date, "%3s %3s %2u %2u:%2u:%2u %4u",
+               wkday, month, &tm_mday,
+               &tm_hour, &tm_min, &tm_sec, &tm_year) == 7) {
+      tm_year -= 1900;
     } else {
       return -1;
     }
   }
+  tm->tm_mday = (int)tm_mday;
+  tm->tm_year = (int)tm_year;
+  tm->tm_hour = (int)tm_hour;
+  tm->tm_min = (int)tm_min;
+  tm->tm_sec = (int)tm_sec;
 
   month[3] = '\0';
   /* Okay, now decode the month. */
@@ -2202,7 +2221,7 @@ scan_unsigned(const char **bufp, unsigned *out, int width)
 {
   unsigned result = 0;
   int scanned_so_far = 0;
-  if (!bufp || !*bufp)
+  if (!bufp || !*bufp || !out)
     return -1;
   if (width<0)
     width=MAX_SCANF_WIDTH;
@@ -2228,7 +2247,7 @@ static int
 scan_string(const char **bufp, char *out, int width)
 {
   int scanned_so_far = 0;
-  if (!bufp || width < 0)
+  if (!bufp || !out || width < 0)
     return -1;
   while (**bufp && ! TOR_ISSPACE(**bufp) && scanned_so_far < width) {
     *out++ = *(*bufp)++;
@@ -2312,7 +2331,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
  * and store the results in the corresponding argument fields.  Differs from
  * sscanf in that it: Only handles %u and %Ns.  Does not handle arbitrarily
  * long widths. %u does not consume any space.  Is locale-independent.
- * Returns -1 on malformed  */
+ * Returns -1 on malformed patterns. */
 int
 tor_sscanf(const char *buf, const char *pattern, ...)
 {

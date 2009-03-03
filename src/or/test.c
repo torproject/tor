@@ -2796,6 +2796,11 @@ test_util_sscanf(void)
   test_eq(u1, 12u);
   test_eq(u2, 3u);
   test_eq(u3, 99u);
+
+  r = tor_sscanf("99% fresh", "%3u%% fresh", &u1); /* percents are scannable.*/
+  test_eq(r, 1);
+  test_eq(u1, 99);
+
   r = tor_sscanf("hello", "%s", s1); /* %s needs a number. */
   test_eq(r, -1);
 
