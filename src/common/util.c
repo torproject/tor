@@ -2185,6 +2185,145 @@ expand_filename(const char *filename)
   }
 }
 
+#define MAX_SCANF_WIDTH 9999
+
+/** DOCDOC */
+static int
+digit_to_num(char d)
+{
+  int num = ((int)d) - (int)'0';
+  tor_assert(num <= 9 && num >= 0);
+  return num;
+}
+
+/** DOCDOC */
+static int
+scan_unsigned(const char **bufp, unsigned *out, int width)
+{
+  unsigned result = 0;
+  int scanned_so_far = 0;
+  if (!bufp || !*bufp)
+    return -1;
+  if (width<0)
+    width=MAX_SCANF_WIDTH;
+
+  while (**bufp && TOR_ISDIGIT(**bufp) && scanned_so_far < width) {
+    int digit = digit_to_num(*(*bufp)++);
+    unsigned new_result = result * 10 + digit;
+    if (new_result > UINT32_MAX || new_result < result)
+      return -1; /* over/underflow. */
+    result = new_result;
+    ++scanned_so_far;
+  }
+
+  if (!scanned_so_far) /* No actual digits scanned */
+    return -1;
+
+  *out = result;
+  return 0;
+}
+
+/** DOCDOC */
+static int
+scan_string(const char **bufp, char *out, int width)
+{
+  int scanned_so_far = 0;
+  if (!bufp || width < 0)
+    return -1;
+  while (**bufp && ! TOR_ISSPACE(**bufp) && scanned_so_far < width) {
+    *out++ = *(*bufp)++;
+    ++scanned_so_far;
+  }
+  *out = '\0';
+  return 0;
+}
+
+/** Locale-independent, minimal, no-surprises scanf variant, accepting only a
+ * restricted pattern format.  For more info on what it supports, see
+ * tor_sscanf() documentation.  */
+int
+tor_vsscanf(const char *buf, const char *pattern, va_list ap)
+{
+  int n_matched = 0;
+
+  while (*pattern) {
+    if (*pattern != '%') {
+      if (*buf == *pattern) {
+        ++buf;
+        ++pattern;
+        continue;
+      } else {
+        return n_matched;
+      }
+    } else {
+      int width = -1;
+      ++pattern;
+      if (TOR_ISDIGIT(*pattern)) {
+        width = digit_to_num(*pattern++);
+        while (TOR_ISDIGIT(*pattern)) {
+          width *= 10;
+          width += digit_to_num(*pattern++);
+          if (width > MAX_SCANF_WIDTH)
+            return -1;
+        }
+        if (!width) /* No zero-width things. */
+          return -1;
+      }
+      if (*pattern == 'u') {
+        unsigned *u = va_arg(ap, unsigned *);
+        if (!*buf)
+          return n_matched;
+        if (scan_unsigned(&buf, u, width)<0)
+          return n_matched;
+        ++pattern;
+        ++n_matched;
+      } else if (*pattern == 's') {
+        char *s = va_arg(ap, char *);
+        if (width < 0)
+          return -1;
+        if (scan_string(&buf, s, width)<0)
+          return n_matched;
+        ++pattern;
+        ++n_matched;
+      } else if (*pattern == 'c') {
+        char *ch = va_arg(ap, char *);
+        if (width != -1)
+          return -1;
+        if (!*buf)
+          return n_matched;
+        *ch = *buf++;
+        ++pattern;
+        ++n_matched;
+      } else if (*pattern == '%') {
+        if (*buf != '%')
+          return -1;
+        ++buf;
+        ++pattern;
+      } else {
+        return -1; /* Unrecognized pattern component. */
+      }
+    }
+  }
+
+  return n_matched;
+}
+
+/** Minimal sscanf replacement: parse <b>buf</b> according to <b>pattern</b>
+ * and store the results in the corresponding argument fields.  Differs from
+ * sscanf in that it: Only handles %u and %Ns.  Does not handle arbitrarily
+ * long widths. %u does not consume any space.  Is locale-independent.
+ * Returns -1 on malformed  */
+int
+tor_sscanf(const char *buf, const char *pattern, ...)
+{
+  int r;
+  va_list ap;
+  va_start(ap, pattern);
+  r = tor_vsscanf(buf, pattern, ap);
+  va_end(ap);
+  return r;
+}
+
 /** Return a new list containing the filenames in the directory <b>dirname</b>.
  * Return NULL on error or if <b>dirname</b> is not a directory.
  */

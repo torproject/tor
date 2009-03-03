@@ -2747,6 +2747,89 @@ test_util_control_formats(void)
   tor_free(out);
 }
 
+static void
+test_util_sscanf(void)
+{
+  unsigned u1, u2, u3;
+  char s1[10], s2[10], s3[10], ch;
+  int r;
+
+  r = tor_sscanf("hello world", "hello world"); /* String match: success */
+  test_eq(r, 0);
+  r = tor_sscanf("hello world 3", "hello worlb %u", &u1); /* String fail */
+  test_eq(r, 0);
+  r = tor_sscanf("12345", "%u", &u1); /* Simple number */
+  test_eq(r, 1);
+  test_eq(u1, 12345u);
+  r = tor_sscanf("", "%u", &u1); /* absent number */
+  test_eq(r, 0);
+  r = tor_sscanf("A", "%u", &u1); /* bogus number */
+  test_eq(r, 0);
+  r = tor_sscanf("4294967295", "%u", &u1); /* UINT32_MAX should work. */
+  test_eq(r, 1);
+  test_eq(u1, 4294967295u);
+  r = tor_sscanf("4294967296", "%u", &u1); /* Always say -1 at 32 bits. */
+  test_eq(r, 0);
+  r = tor_sscanf("123456", "%2u%u", &u1, &u2); /* Width */
+  test_eq(r, 2);
+  test_eq(u1, 12u);
+  test_eq(u2, 3456u);
+  r = tor_sscanf("!12:3:456", "!%2u:%2u:%3u", &u1, &u2, &u3); /* separators */
+  test_eq(r, 3);
+  test_eq(u1, 12u);
+  test_eq(u2, 3u);
+  test_eq(u3, 456u);
+  r = tor_sscanf("12:3:045", "%2u:%2u:%3u", &u1, &u2, &u3); /* 0s */
+  test_eq(r, 3);
+  test_eq(u1, 12u);
+  test_eq(u2, 3u);
+  test_eq(u3, 45u);
+  /* %u does not match space.*/
+  r = tor_sscanf("12:3: 45", "%2u:%2u:%3u", &u1, &u2, &u3);
+  test_eq(r, 2);
+  /* %u does not match negative numbers. */
+  r = tor_sscanf("12:3:-4", "%2u:%2u:%3u", &u1, &u2, &u3);
+  test_eq(r, 2);
+  /* Arbitrary amounts of 0-padding are okay */
+  r = tor_sscanf("12:03:000000000000000099", "%2u:%2u:%u", &u1, &u2, &u3);
+  test_eq(r, 3);
+  test_eq(u1, 12u);
+  test_eq(u2, 3u);
+  test_eq(u3, 99u);
+  r = tor_sscanf("hello", "%s", s1); /* %s needs a number. */
+  test_eq(r, -1);
+
+  r = tor_sscanf("hello", "%3s%7s", s1, s2); /* %s matches characters. */
+  test_eq(r, 2);
+  test_streq(s1, "hel");
+  test_streq(s2, "lo");
+  r = tor_sscanf("WD40", "%2s%u", s3, &u1); /* %s%u */
+  test_eq(r, 2);
+  test_streq(s3, "WD");
+  test_eq(u1, 40);
+  r = tor_sscanf("76trombones", "%6u%9s", &u1, s1); /* %u%s */
+  test_eq(r, 2);
+  test_eq(u1, 76);
+  test_streq(s1, "trombones");
+  r = tor_sscanf("hello world", "%9s %9s", s1, s2); /* %s doesn't eat space. */
+  test_eq(r, 2);
+  test_streq(s1, "hello");
+  test_streq(s2, "world");
+  r = tor_sscanf("hi", "%9s%9s%3s", s1, s2, s3); /* %s can be empty. */
+  test_eq(r, 3);
+  test_streq(s1, "hi");
+  test_streq(s2, "");
+  test_streq(s3, "");
+
+  r = tor_sscanf("1.2.3", "%u.%u.%u%c", &u1, &u2, &u3, &ch);
+  test_eq(r, 3);
+  r = tor_sscanf("1.2.3 foobar", "%u.%u.%u%c", &u1, &u2, &u3, &ch);
+  test_eq(r, 4);
+
+ done:
+  ;
+}
+
 /** Run unit tests for the onion handshake code. */
 static void
 test_onion_handshake(void)
@@ -4665,6 +4748,7 @@ static struct {
   SUBENT(util, mmap),
   SUBENT(util, threads),
   SUBENT(util, order_functions),
+  SUBENT(util, sscanf),
   ENT(onion_handshake),
   ENT(dir_format),
   ENT(dirutil),

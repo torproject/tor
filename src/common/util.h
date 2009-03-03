@@ -195,6 +195,12 @@ const char *escaped(const char *string);
 struct smartlist_t;
 void wrap_string(struct smartlist_t *out, const char *string, size_t width,
                  const char *prefix0, const char *prefixRest);
+int tor_vsscanf(const char *buf, const char *pattern, va_list ap);
+int tor_sscanf(const char *buf, const char *pattern, ...)
+#ifdef __GNUC__
+  __attribute__((format(scanf, 2, 3)))
+#endif
+  ;
 
 int hex_decode_digit(char c);
 void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
