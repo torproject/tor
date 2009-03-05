@@ -48,7 +48,7 @@ Changes in version 0.2.1.13-????? - 2009-02-??
     - New controller event NEWCONSENSUS that lists the networkstatus
       lines for every recommended relay. Now controllers like Torflow
       can keep up-to-date on which relays they should be using.
-    - Update to the "January 23 2009" ip-to-country file.
+    - Update to the "February 26 2009" ip-to-country file.
 
 
 Changes in version 0.2.0.34 - 2009-02-08
