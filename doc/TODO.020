@@ -13,6 +13,7 @@ Backport for 0.2.0 once better tested:
   - r17924: Close streams when an exit hands us a local IP.
   - r18667: Drop BEGIN cells from wrong circuit hop.
   - r18743: Fix alignment-related crash on Sparc.
+  - r18809: Build correctly from outside the main source tree.
 
 Backport for 0.2.0, maybe:
   d r17945: bridges always fail dirport reachability tests. i think
