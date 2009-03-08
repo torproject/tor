@@ -18,7 +18,7 @@ fi
 
 # Not a no-op; we want to make sure that CPPFLAGS is set before we use
 # the += operator on it in src/or/Makefile.am
-CPPFLAGS="$CPPFLAGS -I../common"
+CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 
 AC_ARG_ENABLE(debug,
  AS_HELP_STRING(--enable-debug, compile with debugging info),

@@ -41,6 +41,8 @@ Changes in version 0.2.1.13-????? - 2009-02-??
       aligned.  Possible fix for bug 604.
     - Parse dates and IPv4 addresses in a locale- and libc-independent
       manner, to avoid platform-dependent behavior on malformed input.
+    - Build correctly when configured to build outside the main source
+      path.  Patch from Michael Gold.
 
   o Minor features:
     - On Linux, use the prctl call to re-enable core dumps when the user
@@ -49,7 +51,6 @@ Changes in version 0.2.1.13-????? - 2009-02-??
       lines for every recommended relay. Now controllers like Torflow
       can keep up-to-date on which relays they should be using.
     - Update to the "February 26 2009" ip-to-country file.
-
 
 Changes in version 0.2.0.34 - 2009-02-08
   Tor 0.2.0.34 features several more security-related fixes. You should
