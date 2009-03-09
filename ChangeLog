@@ -38,6 +38,9 @@ Changes in version 0.2.1.13-alpha - 2009-02-09
       manner, to avoid platform-dependent behavior on malformed input.
     - Build correctly when configured to build outside the main source
       path. Patch from Michael Gold.
+    - We were already rejecting relay begin cells with destination port
+      of 0. Now also reject extend cells with destination port or address
+      of 0. Suggested by lark.
 
   o Minor bugfixes (on 0.2.1.x):
     - Don't re-extend introduction circuits if we ran out of RELAY_EARLY

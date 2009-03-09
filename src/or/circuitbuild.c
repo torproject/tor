@@ -762,7 +762,13 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
   tor_addr_from_ipv4h(&n_addr, n_addr32);
 
-  /* First, check if they asked us for 0000..0000. We support using
+  if (!n_port || !n_addr32) {
+    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+           "Client asked me to extend to zero destination port or addr.");
+    return -1;
+  }
+
+  /* Check if they asked us for 0000..0000. We support using
    * an empty fingerprint for the first hop (e.g. for a bridge relay),
    * but we don't want to let people send us extend cells for empty
    * fingerprints -- a) because it opens the user up to a mitm attack,
