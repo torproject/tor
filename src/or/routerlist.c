@@ -3544,7 +3544,7 @@ router_load_routers_from_string(const char *s, const char *eos,
           ri->cache_info.signed_descriptor_digest);
       if (dl_status) {
         log_info(LD_GENERAL, "Marking router %s as never downloadable",
-            ri->cache_info.signed_descriptor_digest);
+                 hex_str(ri->cache_info.signed_descriptor_digest, DIGEST_LEN));
         download_status_mark_impossible(dl_status);
       }
     }
