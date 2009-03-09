@@ -67,7 +67,7 @@ typedef struct tor_tls_context_t {
  */
 struct tor_tls_t {
   HT_ENTRY(tor_tls_t) node;
-  tor_tls_context_t *context; /** A link to the context object for this tls */
+  tor_tls_context_t *context; /** A link to the context object for this tls. */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
   char *address; /**< An address to log when describing this connectinon. */
