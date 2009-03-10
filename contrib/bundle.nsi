@@ -2,7 +2,7 @@
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
   
-!define VERSION "0.2.1.10"
+!define VERSION "0.2.1.13"
 !define INSTALLER "TorBundle.exe"
 !define WEBSITE "https://www.torproject.org/"
 !define LICENSE "LICENSE"
@@ -40,6 +40,7 @@ Section "Tor" Tor
 SectionEnd
 
 Function ExtractPackages
+	File "license.msi"
 	File "tor.msi"
 	File "torbutton.msi"
 	File "thandy.msi"
@@ -49,6 +50,7 @@ Function ExtractPackages
 FunctionEnd
 
 Function RunInstallers
+	ExecWait 'msiexec /i "$INSTDIR\license.msi" /qn'
 	ExecWait 'msiexec /i "$INSTDIR\tor.msi" NOSC=1 /qn'
 	ExecWait 'msiexec /i "$INSTDIR\thandy.msi" NOSC=1 /qn'
 	ExecWait 'msiexec /i "$INSTDIR\polipo.msi" NOSC=1 /qn'

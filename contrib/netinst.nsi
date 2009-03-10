@@ -2,7 +2,7 @@
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
   
-!define VERSION "0.2.1.10"
+!define VERSION "0.2.1.13"
 !define INSTALLER "TorNetInstaller.exe"
 !define WEBSITE "https://www.torproject.org/"
 !define LICENSE "LICENSE"
@@ -41,10 +41,12 @@ Section "Tor" Tor
 SectionEnd
 
 Function ExtractPackages
+	File "license.msi"
 	File "thandy.msi"
 FunctionEnd
 
 Function RunInstallers
+	ExecWait 'msiexec /i "$INSTDIR\license.msi" /qn'
 	ExecWait 'msiexec /i "$INSTDIR\thandy.msi" NOSC=1 /qn'
 	ExecWait '"$LOCALAPPDATA\Programs\Thandy\thandy.exe" update "--repo=$LOCALAPPDATA\Thandy\Tor Updates" /bundleinfo/tor/win32/'
 	ExecWait '"$LOCALAPPDATA\Programs\Thandy\thandy.exe" update "--repo=$LOCALAPPDATA\Thandy\Polipo Updates" /bundleinfo/polipo/win32/'
@@ -64,6 +66,7 @@ Function LaunchVidalia
 FunctionEnd
 
 Function CleanUpTemp
+	ExecWait '"del" "$INSTDIR\license.msi"'
 	ExecWait '"del" "$INSTDIR\thandy.msi"'
 	SetOutPath $TEMP
 	RMDir /r $TEMP\TorInstTmp
