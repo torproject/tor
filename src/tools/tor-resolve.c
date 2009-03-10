@@ -388,7 +388,7 @@ main(int argc, char **argv)
                (int)socksport, (int)port_option);
     } else if (port_option) {
       socksport = port_option;
-    } else {
+    } else if (!socksport) {
       log_debug(LD_CONFIG, "defaulting to port 9050");
       socksport = 9050;
     }
