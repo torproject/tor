@@ -2581,7 +2581,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       geoip_client_action_t act =
         is_v3 ? GEOIP_CLIENT_NETWORKSTATUS : GEOIP_CLIENT_NETWORKSTATUS_V2;
       struct in_addr in;
-      if (!tor_inet_aton((TO_CONN(conn))->address, &in))
+      if (tor_inet_aton((TO_CONN(conn))->address, &in))
         geoip_note_client_seen(act, ntohl(in.s_addr), time(NULL));
     }
 #endif

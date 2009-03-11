@@ -6,6 +6,7 @@ Changes in version 0.2.1.14-??? - 2009-03-??
     - In tor-resolve, when the Tor client to use is specified by
       <hostname>:<port>, actually use the specified port rather than
       defaulting to 9050. Bugfix on 0.2.1.6-alpha.
+    - Make directory usage recording work again. Bugfix on 0.2.1.6-alpha.
 
 
 Changes in version 0.2.1.13-alpha - 2009-03-09
