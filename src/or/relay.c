@@ -1048,7 +1048,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       circuit_consider_sending_sendme(circ, layer_hint);
 
       if (!conn) {
-        log_info(domain,"data cell dropped, unknown stream.");
+        log_info(domain,"data cell dropped, unknown stream (streamid %d).",
+                 rh.stream_id);
         return 0;
       }
 
