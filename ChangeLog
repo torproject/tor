@@ -10,6 +10,9 @@ Changes in version 0.2.1.14-??? - 2009-03-??
 
 
 Changes in version 0.2.1.13-alpha - 2009-03-09
+  Tor 0.2.1.13-alpha includes another big pile of minor bugfixes and
+  cleanups. We're finally getting close to a release candidate.
+
   o Major bugfixes:
     - Correctly update the list of which countries we exclude as
       exits, when the GeoIP file is loaded or reloaded. Diagnosed by
