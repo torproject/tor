@@ -54,6 +54,7 @@ Architecture: any
 Depends: tor (= ${binary:Version})
 Suggests: gdb
 Priority: extra
+Section: debug
 Description: debugging symbols for Tor
  This package provides the debugging symbols for Tor, The Onion Router.
  Those symbols allow your debugger to assign names to your backtraces, which
