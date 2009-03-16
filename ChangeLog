@@ -7,6 +7,9 @@ Changes in version 0.2.1.14-??? - 2009-03-??
       <hostname>:<port>, actually use the specified port rather than
       defaulting to 9050. Bugfix on 0.2.1.6-alpha.
     - Make directory usage recording work again. Bugfix on 0.2.1.6-alpha.
+    - When starting with a cache over a few days old, do not leak
+      memory for the obsolete router descriptors in it.  Bugfix on
+      0.2.0.33.
 
 
 Changes in version 0.2.1.13-alpha - 2009-03-09
