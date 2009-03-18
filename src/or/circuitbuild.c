@@ -133,39 +133,41 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
   hop = circ->cpath;
   do {
     routerinfo_t *ri;
+    routerstatus_t *rs;
     char *elt;
+    const char *id;
     if (!hop)
       break;
+    id = hop->extend_info->identity_digest;
     if (!verbose && hop->state != CPATH_STATE_OPEN)
       break;
     if (!hop->extend_info)
       break;
     if (verbose_names) {
       elt = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
-      if ((ri = router_get_by_digest(hop->extend_info->identity_digest))) {
+      if ((ri = router_get_by_digest(id))) {
         router_get_verbose_nickname(elt, ri);
+      } else if ((rs = router_get_consensus_status_by_id(id))) {
+        routerstatus_get_verbose_nickname(elt, rs);
       } else if (hop->extend_info->nickname &&
                  is_legal_nickname(hop->extend_info->nickname)) {
         elt[0] = '$';
-        base16_encode(elt+1, HEX_DIGEST_LEN+1,
-                      hop->extend_info->identity_digest, DIGEST_LEN);
+        base16_encode(elt+1, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
         elt[HEX_DIGEST_LEN+1]= '~';
         strlcpy(elt+HEX_DIGEST_LEN+2,
                 hop->extend_info->nickname, MAX_NICKNAME_LEN+1);
       } else {
         elt[0] = '$';
-        base16_encode(elt+1, HEX_DIGEST_LEN+1,
-                      hop->extend_info->identity_digest, DIGEST_LEN);
+        base16_encode(elt+1, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
       }
     } else { /* ! verbose_names */
-      if ((ri = router_get_by_digest(hop->extend_info->identity_digest)) &&
+      if ((ri = router_get_by_digest(id)) &&
           ri->is_named) {
         elt = tor_strdup(hop->extend_info->nickname);
       } else {
         elt = tor_malloc(HEX_DIGEST_LEN+2);
         elt[0] = '$';
-        base16_encode(elt+1, HEX_DIGEST_LEN+1,
-                      hop->extend_info->identity_digest, DIGEST_LEN);
+        base16_encode(elt+1, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
       }
     }
     tor_assert(elt);
