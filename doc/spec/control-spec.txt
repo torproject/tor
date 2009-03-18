@@ -96,7 +96,8 @@ $Id$
   Fingerprint = "$" 40*HEXDIG
 
   ; A "=" indicates that the given nickname is canonical; a "~" indicates
-  ; that the given nickname is not canonical.
+  ; that the given nickname is not canonical.  If no nickname is given at
+  ; all, Tor does not even have a guess for what this router calls itself.
   LongName = Fingerprint [ ( "=" / "~" ) Nickname ]
 
   ; How a controller tells Tor about a particular OR.  There are four
