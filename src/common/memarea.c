@@ -31,6 +31,7 @@ realign_pointer(void *ptr)
 {
   uintptr_t x = (uintptr_t)ptr;
   x = (x+MEMAREA_ALIGN_MASK) & ~MEMAREA_ALIGN_MASK;
+  tor_assert(((void*)x) >= ptr); // XXXX021 remove this once bug 930 is solved
   return (void*)x;
 }
 
@@ -84,6 +85,8 @@ alloc_chunk(size_t sz, int freelist_ok)
     res->next_chunk = NULL;
     res->mem_size = chunk_size - CHUNK_HEADER_SIZE;
     res->next_mem = res->u.mem;
+    tor_assert(res->next_mem+res->mem_size == ((char*)res)+chunk_size);
+    tor_assert(realign_pointer(res->next_mem) == res->next_mem);
     return res;
   }
 }
@@ -196,6 +199,9 @@ memarea_alloc(memarea_t *area, size_t sz)
   }
   result = chunk->next_mem;
   chunk->next_mem = realign_pointer(chunk->next_mem + sz);
+  // XXXX021 remove these once bug 930 is solved.
+  tor_assert(chunk->next_mem >= chunk->u.mem);
+  tor_assert(chunk->next_mem <= chunk->u.mem+chunk->mem_size);
   return result;
 }
 
