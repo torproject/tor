@@ -1676,6 +1676,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
     if (renddesc->successful_uploads) {
       SMARTLIST_FOREACH(renddesc->successful_uploads, char *, c, tor_free(c););
       smartlist_free(renddesc->successful_uploads);
+      renddesc->successful_uploads = NULL;
     }
     renddesc->all_uploads_performed = 1;
   } else {
@@ -1683,10 +1684,9 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
      * descriptor to them again. */
     if (!renddesc->successful_uploads)
       renddesc->successful_uploads = smartlist_create();
-    SMARTLIST_FOREACH(successful_uploads, char *, c, {
+    SMARTLIST_FOREACH(successful_uploads, const char *, c, {
       if (!smartlist_digest_isin(renddesc->successful_uploads, c)) {
-        char *hsdir_id = tor_malloc_zero(DIGEST_LEN);
-        memcpy(hsdir_id, c, DIGEST_LEN);
+        char *hsdir_id = tor_memdup(c, DIGEST_LEN);
         smartlist_add(renddesc->successful_uploads, hsdir_id);
       }
     });
