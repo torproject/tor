@@ -50,6 +50,7 @@
 %define is_fc   %(test -e /etc/fedora-release && echo 1 || echo 0)
 %define is_mdk  %(test -e /etc/mandrake-release && echo 1 || echo 0)
 %define is_suse %(test -e /etc/SuSE-release && echo 1 || echo 0)
+%define is_rfl  %(test -e /etc/redflag-release && echo 1 || echo 0)
 
 %if %{is_fc}
 %define ostag %(sed -e 's/^.*release /fc/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/fedora-release)
@@ -68,6 +69,10 @@
 
 %if %{is_suse}
 %define ostag suse
+%endif
+
+%if %{is_rfl}
+%define ostag redflag
 %endif
 
 # Using the build date ensures that every build really does get
