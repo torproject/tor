@@ -2989,13 +2989,9 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
   const char *status;
   char extended_buf[96];
   int providing_reason=0;
-  char *path=NULL;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
-
-  if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS))
-    path = circuit_list_path(circ,0);
 
   switch (tp)
     {
@@ -3033,11 +3029,13 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
   }
 
   if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
+    char *path = circuit_list_path(circ,0);
     const char *sp = strlen(path) ? " " : "";
     send_control_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
                                 "650 CIRC %lu %s%s%s@%s\r\n",
                                 (unsigned long)circ->global_identifier,
                                 status, sp, path, extended_buf);
+    tor_free(path);
   }
   if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
     char *vpath = circuit_list_path_for_controller(circ);
@@ -3048,8 +3046,6 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
                                 status, sp, vpath, extended_buf);
     tor_free(vpath);
   }
-
-  tor_free(path);
 
   return 0;
 }
