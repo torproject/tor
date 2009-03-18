@@ -68,11 +68,11 @@
 %endif
 
 %if %{is_suse}
-%define ostag suse
+%define ostag suse%(grep openSUSE /etc/SuSE-release | awk '{print $2}' | sed -e 's/\\./_/')
 %endif
 
 %if %{is_rfl}
-%define ostag redflag
+%define ostag redflag%(sed -e 's/^.*Desktop /redflag/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/redflag-release)
 %endif
 
 # Using the build date ensures that every build really does get
