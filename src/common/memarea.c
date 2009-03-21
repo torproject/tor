@@ -241,7 +241,8 @@ memarea_strndup(memarea_t *area, const char *s, size_t n)
     ;
   /* cp now points to s+n, or to the 0 in the string. */
   ln = cp-s;
-  result = memarea_memdup(area, s, ln+1);
+  result = memarea_alloc(area, ln+1);
+  memcpy(result, s, ln);
   result[ln]='\0';
   return result;
 }
