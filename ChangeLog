@@ -12,6 +12,10 @@ Changes in version 0.2.1.14-??? - 2009-03-??
       0.2.0.33.
     - Avoid double-free on list of successfully uploaded hidden
       service discriptors.  Fix for bug 948.  Bugfix on 0.2.1.6-alpha.
+    - Change memarea_strndup() implementation to work even when
+      duplicating a string at the end of a page.  This bug was
+      harmless for now, but could have meant crashes later. Fix by
+      lark.  Bugfix on 0.2.1.1-alpha.
 
   o Minor features (controller):
     - Try harder to look up nicknames for routers on a circuit when

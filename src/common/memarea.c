@@ -237,7 +237,7 @@ memarea_strndup(memarea_t *area, const char *s, size_t n)
   size_t ln;
   char *result;
   const char *cp, *end = s+n;
-  for (cp = s; *cp && cp < end; ++cp)
+  for (cp = s; cp < end && *cp; ++cp)
     ;
   /* cp now points to s+n, or to the 0 in the string. */
   ln = cp-s;
