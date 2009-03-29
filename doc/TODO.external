@@ -75,8 +75,8 @@ For mid August:
 Section 0, items that didn't make it into the original roadmap:
 
 0.1, installers and packaging
-C - i18n for the msi bundle files
-P - more consistent TBB builds
+C . i18n for the msi bundle files
+P . more consistent TBB builds
 IC- get a buildbot up again. Have Linux and BSD build machines.
     (Windows would be nice but realistically will come later.)
 E - Get Tor to work properly on the iPhone.
@@ -112,7 +112,7 @@ N - decide whether to do proposal 140. if so, construct an implementation
     plan for how we'll do it. if not, explain why not.
 
 5.1, Normalize TLS fingerprint
-N - write a draft list of possible attacks for this section, with
+N o write a draft list of possible attacks for this section, with
     estimates about difficulty of attack, difficulty of solution, etc
 N - revisit the list and revise our plans as needed
 NR- put up a blog post about the two contradictory conclusions: we can
@@ -121,7 +121,7 @@ NR- put up a blog post about the two contradictory conclusions: we can
     and explain why not.)
 
 5.5, email autoresponder
-I - maintenance and keeping it running
+I . maintenance and keeping it running
 
 5.7.2, metrics
 
@@ -129,7 +129,7 @@ XXX.
 
 6.2, Vidalia work
 E - add breakpad support or similar for windows debugging
-E - let vidalia change languages without needing a restart
+E o let vidalia change languages without needing a restart
 E - Implement the status warning event interface started for the
     phase one deliverables.
 E - Work with Steve Tyree on building a Vidalia plugin API to enable
@@ -172,11 +172,11 @@ S - client attacks
     - website fingerprinting
 
 7.1, Tor VM Research, analysis, and prototyping
-C - Get a working package out, meaning other people are testing it.
+C . Get a working package out, meaning other people are testing it.
 
 7.2, Tor Browser Bundle
 I - Port to one of OS X or Linux, and start the port to the other.
-I - Make it the recommended Tor download on Windows
+I . Make it the recommended Tor download on Windows
 I - Make sure it's easy to un-brand TBB in case Firefox asks us to
 I - Evaluate CCC's Freedom Stick
 
