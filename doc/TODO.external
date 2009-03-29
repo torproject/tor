@@ -25,9 +25,6 @@ C       - coderman claims
 
 External constraints:
 
-Past due:
-N   - Refine proposal 158, and implement.
-
 For June/July:
 NR  - Work more on Paul's NRL research problem.
 
@@ -81,9 +78,43 @@ IC- get a buildbot up again. Have Linux and BSD build machines.
     (Windows would be nice but realistically will come later.)
 E - Get Tor to work properly on the iPhone.
 
-3.1.1, performance work.
-
-XXX
+3.1, performance work. [Section numbers in here are from performance.pdf]
+  - High-priority items from performance.pdf
+RS  - 1.2, new circuit window sizes. make the default package window lower.
+R+  - 2.1, squeeze loud circuits
+      - Evaluate the code to see what stats we can keep about circuit use.
+      - Write proposals for various meddling. Look at the research papers
+        that Juliusz pointed us to. Ask our systems friends. Plan to put
+        a lot of the parameters in the consensus, so we can tune it with
+        short turnaround times.
+E+  - 2.5, Change Vidalia's default exit policy to not click "other
+      protocols". Or choose not to. Think this through first.
+R+  - 2.6, Tell users not to file-share.
+      - Put statement on the Tor front page
+      - Put statement on the download pages too
+      - And the FAQ
+    - 3.1.2, Tor weather
+I     - Implement time-to-notification (immediate, a day, a week)
+R     - Link to it from the Tor relay page
+R     - and the torrc.sample
+SM  - 4.1, balance traffic better
+      - Steven and Mike should decide if we should do Steven's plan
+        (rejigger the bandwidth numbers at the authorities based on
+        Steven's algorithm), or Mike's plan (relay scanning to identify
+        the unbalanced relays and fix them on the fly), or both.
+      - Figure out how to actually modify bandwidths in the consensus. We
+        may need to change the consensus voting algorithm to decide what
+        bandwidth to advertise based on something other than median:
+        if 7 authorities provide bandwidths, and 2 are doing scanning,
+        then the 5 that aren't scanning will outvote any changes. Should
+        all 7 scan? Should only some vote? Extra points if it doesn't
+        change all the numbers every new consensus, so consensus diffing
+        is still practical.
+?   - 4.5, Older entry guards are overloaded
+      - Pick a conservative timeout like a month, and implement.
+M   - 5.2, better timeouts for giving up on circuits/streams
+      - clients gather data about circuit timeouts, and then abandon
+        circuits that take more than a std dev above that.
 
 4.1, IOCP / libevent / windows / tor
 N - get it working for nick
@@ -107,7 +138,7 @@ S - Have a clear plan for how users who become relays will be safe,
       involved in building them.
 
 4.5, clients download less directory info
-N - deploy proposal 158.
+N * deploy proposal 158.
 N - decide whether to do proposal 140. if so, construct an implementation
     plan for how we'll do it. if not, explain why not.
 
