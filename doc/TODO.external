@@ -30,42 +30,23 @@ NR  - Work more on Paul's NRL research problem.
 
 For March 22:
 I   * Email auto-responder
-      * How do we better support users with limited email
-        bandwidth? Multi-part download? Teach them how to reconnect
-        their gmail? Does downloading your gmail work when your network
-        keeps dying?
+      * teach gettor how to ask for (and attach) split files.
 
-K   - Metrics.
-      - With Mike's help, use Torflow to start doing monthly rudimentary
+K   . Metrics.
+      . With Mike's help, use Torflow to start doing monthly rudimentary
         performance evaluations:
-        - Circuit throughput and latency
+        . Circuit throughput and latency
         - Measure via Broadband and dialup
-      - Publish a report addressing key long-term metrics questions:
-        - What metrics should we present?
-        - What data are available for these metrics?
-        - What data are missing, and can collect them safely? Can we
+      . Publish a report addressing key long-term metrics questions:
+        . What metrics should we present?
+        . What data are available for these metrics?
+        . What data are missing, and can collect them safely? Can we
           publish them safely?
-        - What systems are available to present this data?
+        . What systems are available to present this data?
 
-E   - Vidalia improvements
-      - Put out a Vidalia release with the new features in it.
-      - Vidalia displays by-country user summary for bridge operators
+E   . Vidalia improvements
+      o Vidalia displays by-country user summary for bridge operators
 ?       - write a help page for vidalia, "what is this"
-
-M   - Torbutton development
-      - Put out a Torbutton release with the new features in it.
-
-C   - Transparent interception of connections on Windows
-      - Write a summary (with links) of current progress and current
-        limitations.
-
-S   - Continue analyzing "traces" left on host machine by use of
-      Tor Browser, especially once we have our new launcher and have moved
-      to FF3. Write a summary of current progress, and what remains. Try
-      to solve some of the low-hanging fruit.
-
-I   d Get a relay operator mailing list going, with a plan and supporting
-      scripts and so on.
 
 For mid August:
 
@@ -95,8 +76,10 @@ R+  - 2.6, Tell users not to file-share.
       - And the FAQ
     - 3.1.2, Tor weather
 I     - Implement time-to-notification (immediate, a day, a week)
-R     - Link to it from the Tor relay page
-R     - and the torrc.sample
+I     - Get a relay operator mailing list going, with a plan and supporting
+        scripts and so on.
+R     - Link to them from the Tor relay page
+R     - and the torrc.sample?
 SM  - 4.1, balance traffic better
       - Steven and Mike should decide if we should do Steven's plan
         (rejigger the bandwidth numbers at the authorities based on
