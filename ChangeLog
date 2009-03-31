@@ -16,6 +16,10 @@ Changes in version 0.2.1.14-??? - 2009-04-??
       duplicating a string at the end of a page.  This bug was
       harmless for now, but could have meant crashes later. Fix by
       lark.  Bugfix on 0.2.1.1-alpha.
+    - Limit uploaded directory documents to be 16M rather than 500K.
+      The directory authorities were refusing v3 consensus votes from
+      other authorities, since the votes are now 504K. Fixes bug 959;
+      bugfix on 0.0.2pre17 (where we raised it from 50K to 500K ;).
     - Directory authorities should never send a 503 "busy" response to
       requests for votes or keys. Bugfix on 0.2.0.8-alpha; exposed by
       bug 959.

@@ -141,7 +141,7 @@
 #define MAX_HEADERS_SIZE 50000
 /** Maximum size, in bytes, for any directory object that we're accepting
  * as an upload. */
-#define MAX_DIR_UL_SIZE 500000
+#define MAX_DIR_UL_SIZE MAX_BUF_SIZE
 
 /** Maximum size, in bytes, of a single router descriptor uploaded to us
  * as a directory authority. Caches and clients fetch whatever descriptors
