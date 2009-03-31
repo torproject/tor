@@ -2604,7 +2604,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       !strcmpstart(url,"/tor/status-vote/next/")) {
     /* XXXX If-modified-since is only implemented for the current
      * consensus: that's probably fine, since it's the only vote document
-     * people fetch much.*/
+     * people fetch much. */
     int current;
     ssize_t body_len = 0;
     ssize_t estimated_len = 0;
@@ -2670,7 +2670,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         }
       });
 
-    if (global_write_bucket_low(TO_CONN(conn), estimated_len, 1)) {
+    if (global_write_bucket_low(TO_CONN(conn), estimated_len, 2)) {
       write_http_status_line(conn, 503, "Directory busy, try again later.");
       goto vote_done;
     }
@@ -2827,7 +2827,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     SMARTLIST_FOREACH(certs, authority_cert_t *, c,
                       len += c->cache_info.signed_descriptor_len);
 
-    if (global_write_bucket_low(TO_CONN(conn), compressed?len/2:len, 1)) {
+    if (global_write_bucket_low(TO_CONN(conn), compressed?len/2:len, 2)) {
       write_http_status_line(conn, 503, "Directory busy, try again later.");
       goto keys_done;
     }

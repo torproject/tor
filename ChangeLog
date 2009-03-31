@@ -1,4 +1,4 @@
-Changes in version 0.2.1.14-??? - 2009-03-??
+Changes in version 0.2.1.14-??? - 2009-04-??
   o Minor bugfixes:
     - Avoid trying to print raw memory to the logs when we decide to
       give up on downloading a given relay descriptor. Bugfix on
@@ -16,6 +16,9 @@ Changes in version 0.2.1.14-??? - 2009-03-??
       duplicating a string at the end of a page.  This bug was
       harmless for now, but could have meant crashes later. Fix by
       lark.  Bugfix on 0.2.1.1-alpha.
+    - Directory authorities should never send a 503 "busy" response to
+      requests for votes or keys. Bugfix on 0.2.0.8-alpha; exposed by
+      bug 959.
 
   o Minor features (controller):
     - Try harder to look up nicknames for routers on a circuit when
