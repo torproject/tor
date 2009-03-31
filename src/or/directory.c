@@ -1808,6 +1808,9 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           int rejected = 0;
           if (rejected_hdr) {
             if (!strcmp(rejected_hdr, "Yes")) {
+              log_info(LD_GENERAL,
+                       "Authority '%s' declined our descriptor (not new)",
+                       ds->nickname);
               /* XXXX use this information; be sure to upload next one
                * sooner. -NM */
               /* XXXX021 On further thought, the task above implies that we're
