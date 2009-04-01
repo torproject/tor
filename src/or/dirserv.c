@@ -611,7 +611,7 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
     SMARTLIST_FOREACH(list, routerinfo_t *, ri, {
         msg_out = NULL;
         tor_assert(ri->purpose == purpose);
-        r_tmp = dirserv_add_descriptor(ri, &msg_out);
+        r_tmp = dirserv_add_descriptor(ri, &msg_out, source);
         if (WRA_MORE_SEVERE(r_tmp, r)) {
           r = r_tmp;
           *msg = msg_out;
@@ -652,7 +652,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
 
 /** Examine the parsed server descriptor in <b>ri</b> and maybe insert it into
  * the list of server descriptors. Set *<b>msg</b> to a message that should be
- * passed back to the origin of this descriptor.
+ * passed back to the origin of this descriptor. Use <b>source</b> to produce
+ * better log messages.
  *
  * Return the status of the operation
  *
@@ -660,20 +661,20 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
  * we re-load the cache.
  */
 was_router_added_t
-dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
+dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 {
   was_router_added_t r;
   routerinfo_t *ri_old;
-  char *desc = NULL;
+  char *desc, *nickname;
   size_t desclen = 0;
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
    * network and it'll clog everything up. */
   if (ri->cache_info.signed_descriptor_len > MAX_DESCRIPTOR_UPLOAD_SIZE) {
-    log_notice(LD_DIR, "Somebody attempted to publish a router descriptor "
-               "with size %d. Either this is an attack, or the "
+    log_notice(LD_DIR, "Somebody attempted to publish a router descriptor '%s'"
+               " (source: %s) with size %d. Either this is an attack, or the "
                "MAX_DESCRIPTOR_UPLOAD_SIZE (%d) constant is too low.",
-               (int)ri->cache_info.signed_descriptor_len,
+               ri->nickname, source, (int)ri->cache_info.signed_descriptor_len,
                MAX_DESCRIPTOR_UPLOAD_SIZE);
     *msg = "Router descriptor was too large";
     control_event_or_authdir_new_descriptor("REJECTED",
@@ -692,8 +693,9 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
       && router_differences_are_cosmetic(ri_old, ri)
       && !router_is_me(ri)) {
     log_info(LD_DIRSERV,
-             "Not replacing descriptor from '%s'; differences are cosmetic.",
-             ri->nickname);
+             "Not replacing descriptor from '%s' (source: %s); "
+             "differences are cosmetic.",
+             ri->nickname, source);
     *msg = "Not replacing router descriptor; no information has changed since "
       "the last one with this identity.";
     control_event_or_authdir_new_descriptor("DROPPED",
@@ -702,23 +704,24 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
     routerinfo_free(ri);
     return ROUTER_WAS_NOT_NEW;
   }
-  if (control_event_is_interesting(EVENT_AUTHDIR_NEWDESCS)) {
-    /* Make a copy of desc, since router_add_to_routerlist might free
-     * ri and its associated signed_descriptor_t. */
-    desclen = ri->cache_info.signed_descriptor_len;
-    desc = tor_strndup(ri->cache_info.signed_descriptor_body, desclen);
-  }
+
+  /* Make a copy of desc, since router_add_to_routerlist might free
+   * ri and its associated signed_descriptor_t. */
+  desclen = ri->cache_info.signed_descriptor_len;
+  desc = tor_strndup(ri->cache_info.signed_descriptor_body, desclen);
+  nickname = tor_strdup(ri->nickname);
 
   r = router_add_to_routerlist(ri, msg, 0, 0);
   if (!WRA_WAS_ADDED(r)) {
     /* unless the routerinfo was fine, just out-of-date */
-    if (WRA_WAS_REJECTED(r) && desc)
+    if (WRA_WAS_REJECTED(r))
       control_event_or_authdir_new_descriptor("REJECTED", desc, desclen, *msg);
-    tor_free(desc);
+    log_info(LD_DIRSERV,
+             "Did not add descriptor from '%s' (source: %s): %s.",
+             nickname, source, *msg);
   } else {
     smartlist_t *changed;
-    if (desc)
-      control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
+    control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);
 
     changed = smartlist_create();
     smartlist_add(changed, ri);
@@ -728,8 +731,12 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg)
       *msg =  ri->is_valid ? "Descriptor for valid server accepted" :
         "Descriptor for invalid server accepted";
     }
-    tor_free(desc);
+    log_info(LD_DIRSERV,
+             "Added descriptor from '%s' (source: %s): %s.",
+             nickname, source, *msg);
   }
+  tor_free(desc);
+  tor_free(nickname);
   return r;
 }
 

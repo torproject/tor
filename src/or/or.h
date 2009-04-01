@@ -3430,7 +3430,8 @@ enum was_router_added_t dirserv_add_multiple_descriptors(
                                      const char *source,
                                      const char **msg);
 enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
-                                               const char **msg);
+                                               const char **msg,
+                                               const char *source);
 int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
                                         const char *question, char **answer);
 void dirserv_free_descriptors(void);

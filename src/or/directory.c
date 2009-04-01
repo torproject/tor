@@ -267,7 +267,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 
       if (extrainfo_len && router_supports_extrainfo(ds->digest, 1)) {
         upload_len += extrainfo_len;
-        log_info(LD_DIR, "Uploading an extrainfo (length %d)",
+        log_info(LD_DIR, "Uploading an extrainfo too (length %d)",
                  (int) extrainfo_len);
       }
       tor_addr_from_ipv4h(&ds_addr, ds->addr);
