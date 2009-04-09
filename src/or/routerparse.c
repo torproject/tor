@@ -378,7 +378,7 @@ static token_rule_t networkstatus_consensus_token_table[] = {
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
 
-  T1N("dir-source",          K_DIR_SOURCE,          GE(3),   NO_OBJ ),
+  T1N("dir-source",          K_DIR_SOURCE,          GE(6),   NO_OBJ ),
   T1N("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T1N("vote-digest",         K_VOTE_DIGEST,         GE(1),   NO_OBJ ),
 
@@ -2212,7 +2212,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         base16_decode(voter->vote_digest, sizeof(voter->vote_digest),
                       tok->args[0], HEX_DIGEST_LEN) < 0) {
         log_warn(LD_DIR, "Error decoding vote digest %s in "
-                 "network-status consensus.", escaped(tok->args[1]));
+                 "network-status consensus.", escaped(tok->args[0]));
         goto err;
       }
     }
@@ -2825,8 +2825,7 @@ get_next_token(const char **s, const char *eos, token_rule_t *table)
     goto check_object;
 
   obstart = *s; /* Set obstart to start of object spec */
-  tor_assert(eol >= (*s+16));
-  if (*s+11 >= eol-5 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
+  if (*s+16 >= eol || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
       strcmp_len(eol-5, "-----", 5)) {          /* nuls or invalid endings */
     RET_ERR("Malformed object: bad begin line");
   }

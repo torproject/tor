@@ -1,4 +1,8 @@
 Changes in version 0.3.0.35 - 2009-??-??
+  o Security fix:
+    - Avoid crashing in the presence of certain malformed descriptors.
+      Found by lark, and by automated fuzzing.
+
   o Minor bugfixes:
     - When starting with a cache over a few days old, do not leak
       memory for the obsolete router descriptors in it.  Bugfix on
