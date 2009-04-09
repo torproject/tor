@@ -27,17 +27,17 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8j.tar.gz
+http://www.openssl.org/source/openssl-0.9.8k.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
-Type "tar zxf openssl-0.9.8j.tar.gz"
+Type "tar zxf openssl-0.9.8k.tar.gz"
 (Note:  There are many symlink errors because Windows doesn't support
 symlinks.  You can ignore these errors.)
 
 Make openssl libraries:
-Type "cd tor-mingw/openssl-0.9.8j/"
+Type "cd tor-mingw/openssl-0.9.8k/"
 Type "./Configure -no-idea -no-rc5 -no-mdc2 mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
