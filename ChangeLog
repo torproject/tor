@@ -1,4 +1,8 @@
 Changes in version 0.2.1.14-??? - 2009-04-??
+  o Security fixes:
+    - Avoid crashing in the presence of certain malformed descriptors.
+      Found by lark, and by automated fuzzing.
+
   o Minor bugfixes:
     - Avoid trying to print raw memory to the logs when we decide to
       give up on downloading a given relay descriptor. Bugfix on

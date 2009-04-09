@@ -411,7 +411,7 @@ static token_rule_t networkstatus_consensus_token_table[] = {
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
 
-  T1N("dir-source",          K_DIR_SOURCE,          GE(3),   NO_OBJ ),
+  T1N("dir-source",          K_DIR_SOURCE,          GE(6),   NO_OBJ ),
   T1N("contact",             K_CONTACT,         CONCAT_ARGS, NO_OBJ ),
   T1N("vote-digest",         K_VOTE_DIGEST,         GE(1),   NO_OBJ ),
 
@@ -1933,7 +1933,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     tor_assert(tok->n_args == 1);
     if (strcmpstart(tok->args[0], "accept ") &&
         strcmpstart(tok->args[0], "reject ")) {
-      log_err(LD_DIR, "Unknown exit policy summary type %s.",
+      log_warn(LD_DIR, "Unknown exit policy summary type %s.",
                escaped(tok->args[0]));
       goto err;
     }
@@ -2311,8 +2311,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   ns->voters = smartlist_create();
 
-  SMARTLIST_FOREACH(tokens, directory_token_t *, _tok,
-  {
+  SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, _tok) {
     tok = _tok;
     if (tok->tp == K_DIR_SOURCE) {
       tor_assert(tok->n_args >= 6);
@@ -2369,11 +2368,11 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         base16_decode(voter->vote_digest, sizeof(voter->vote_digest),
                       tok->args[0], HEX_DIGEST_LEN) < 0) {
         log_warn(LD_DIR, "Error decoding vote digest %s in "
-                 "network-status consensus.", escaped(tok->args[1]));
+                 "network-status consensus.", escaped(tok->args[0]));
         goto err;
       }
     }
-  });
+  } SMARTLIST_FOREACH_END(_tok);
   if (voter) {
     smartlist_add(ns->voters, voter);
     voter = NULL;
@@ -2903,6 +2902,7 @@ token_check_object(memarea_t *area, const char *kwd,
     case NEED_KEY: /* There must be some kind of key. */
       if (!tok->key) {
         tor_snprintf(ebuf, sizeof(ebuf), "Missing public key for %s", kwd);
+        RET_ERR(ebuf);
       }
       if (o_syn != NEED_SKEY_1024) {
         if (crypto_pk_key_is_private(tok->key)) {
@@ -3049,8 +3049,7 @@ get_next_token(memarea_t *area,
     goto check_object;
 
   obstart = *s; /* Set obstart to start of object spec */
-  tor_assert(eol >= (*s+16));
-  if (*s+11 >= eol-5 || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
+  if (*s+16 >= eol || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
       strcmp_len(eol-5, "-----", 5)) {          /* nuls or invalid endings */
     RET_ERR("Malformed object: bad begin line");
   }
