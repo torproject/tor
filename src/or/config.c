@@ -3039,7 +3039,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->AuthoritativeDir) {
-    if (!options->ContactInfo)
+    if (!options->ContactInfo && !options->TestingTorNetwork)
       REJECT("Authoritative directory servers must set ContactInfo");
     if (options->V1AuthoritativeDir && !options->RecommendedVersions)
       REJECT("V1 auth dir servers must set RecommendedVersions.");
