@@ -1,4 +1,4 @@
-Changes in version 0.3.0.35 - 2009-??-??
+Changes in version 0.2.0.35 - 2009-??-??
   o Security fix:
     - Avoid crashing in the presence of certain malformed descriptors.
       Found by lark, and by automated fuzzing.
