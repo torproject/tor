@@ -2142,27 +2142,33 @@ remove_obsolete_entry_guards(void)
     const char *ver = entry->chosen_by_version;
     const char *msg = NULL;
     tor_version_t v;
+    int version_is_bad = 0, date_is_bad = 0;
     if (!ver) {
       msg = "does not say what version of Tor it was selected by";
+      version_is_bad = 1;
     } else if (tor_version_parse(ver, &v)) {
       msg = "does not seem to be from any recognized version of Tor";
+      version_is_bad = 1;
     } else if ((tor_version_as_new_as(ver, "0.1.0.10-alpha") &&
                 !tor_version_as_new_as(ver, "0.1.2.16-dev")) ||
                (tor_version_as_new_as(ver, "0.2.0.0-alpha") &&
                 !tor_version_as_new_as(ver, "0.2.0.6-alpha"))) {
       msg = "was selected without regard for guard bandwidth";
+      version_is_bad = 1;
     } else if (entry->chosen_on_date + 3600*24*35 < this_month) {
       /* It's been more than a month, and probably more like two since
        * chosen_on_date is clipped to the beginning of its month. */
       msg = "was selected several months ago";
+      date_is_bad = 1;
     }
 
-    if (msg) { /* we need to drop it */
+    if (version_is_bad || date_is_bad) { /* we need to drop it */
       char dbuf[HEX_DIGEST_LEN+1];
+      tor_assert(msg);
       base16_encode(dbuf, sizeof(dbuf), entry->identity, DIGEST_LEN);
-      log_notice(LD_CIRC, "Entry guard '%s' (%s) %s. (Version=%s.)  "
-                 "Replacing it.",
-                 entry->nickname, dbuf, msg, ver?escaped(ver):"none");
+      log_fn(version_is_bad ? LOG_NOTICE : LOG_INFO, LD_CIRC,
+             "Entry guard '%s' (%s) %s. (Version=%s.) Replacing it.",
+             entry->nickname, dbuf, msg, ver?escaped(ver):"none");
       control_event_guard(entry->nickname, entry->identity, "DROPPED");
       entry_guard_free(entry);
       smartlist_del_keeporder(entry_guards, i--);
