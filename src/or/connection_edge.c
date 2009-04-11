@@ -2547,8 +2547,12 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                                     END_STREAM_REASON_NOTDIRECTORY, NULL);
       return 0;
     }
-    if (or_circ && or_circ->p_conn && or_circ->p_conn->_base.address)
-      address = tor_strdup(or_circ->p_conn->_base.address);
+    /* Make sure to get the 'real' address of the previous hop: the
+     * caller might want to know whether his IP address has changed, and
+     * we might already have corrected _base.addr[ess] for the relay's
+     * canonical IP address. */
+    if (or_circ && or_circ->p_conn)
+      address = tor_dup_addr(&or_circ->p_conn->real_addr);
     else
       address = tor_strdup("127.0.0.1");
     port = 1; /* XXXX This value is never actually used anywhere, and there

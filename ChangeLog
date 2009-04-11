@@ -1,21 +1,25 @@
 Changes in version 0.2.1.14-rc - 2009-04-11
-  o Security fixes:
-    - Avoid crashing in the presence of certain malformed descriptors.
-      Found by lark, and by automated fuzzing.
-
   o Major features:
     - Clients replace entry guards that were chosen more than a few months
       ago. This change should significantly improve client performance,
       especially once more people upgrade, since relays that have been
       a guard for a long time are currently overloaded.
 
-  o Major bugfixes:
+  o Major bugfixes (on 0.2.0):
+    - Finally fix the bug where dynamic-IP relays disappear when their
+      IP address changes: directory mirrors were mistakenly telling them
+      their old address if they asked via begin_dir, so they never got
+      an accurate answer about their new address, so they just vanished
+      after a day. Should fix bugs 827, 883, and 900 -- but alas, only
+      after every directory mirror has upgraded.
     - Relays were falling out of the networkstatus consensus for
       part of a day if they changed their local config but the
       authorities discarded their new descriptor as "not sufficiently
       different". Now directory authorities accept a descriptor as changed
       if bandwidthrate or bandwidthburst changed. Partial fix for bug 962;
       patch by Sebastian.
+    - Avoid crashing in the presence of certain malformed descriptors.
+      Found by lark, and by automated fuzzing.
 
   o Minor features:
     - When generating circuit events with verbose nicknames for
