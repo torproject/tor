@@ -2798,7 +2798,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   tor_addr_assign(&dirconn->_base.addr, &exitconn->_base.addr);
   dirconn->_base.port = 0;
-  dirconn->_base.address = tor_strdup(exitconn->address);
+  dirconn->_base.address = tor_strdup(exitconn->_base.address);
   dirconn->_base.type = CONN_TYPE_DIR;
   dirconn->_base.purpose = DIR_PURPOSE_SERVER;
   dirconn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
