@@ -1788,7 +1788,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     return -1;
   }
 
-  /* Sign the directory */
+  /* Sign the descriptor */
   strlcpy(s+written, "router-signature\n", maxlen-written);
   written += strlen(s+written);
   s[written] = '\0';
