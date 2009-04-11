@@ -1,4 +1,4 @@
-Changes in version 0.2.1.14-rc - 2009-04-10
+Changes in version 0.2.1.14-rc - 2009-04-11
   o Security fixes:
     - Avoid crashing in the presence of certain malformed descriptors.
       Found by lark, and by automated fuzzing.
@@ -12,6 +12,10 @@ Changes in version 0.2.1.14-rc - 2009-04-10
       patch by Sebastian.
 
   o Minor features:
+    - When generating circuit events with verbose nicknames for
+      controllers, try harder to look up nicknames for routers on a
+      circuit. (Previously, we would look in the router descriptors we had
+      for nicknames, but not in the consensus.) Partial fix for bug 941.
     - If the bridge config line doesn't specify a port, assume 443.
       This makes bridge lines a bit smaller and easier for users to
       understand.
@@ -25,14 +29,14 @@ Changes in version 0.2.1.14-rc - 2009-04-10
       defaulting to 9050. Bugfix on 0.2.1.6-alpha.
     - Make directory usage recording work again. Bugfix on 0.2.1.6-alpha.
     - When starting with a cache over a few days old, do not leak
-      memory for the obsolete router descriptors in it.  Bugfix on
+      memory for the obsolete router descriptors in it. Bugfix on
       0.2.0.33.
     - Avoid double-free on list of successfully uploaded hidden
-      service discriptors.  Fix for bug 948.  Bugfix on 0.2.1.6-alpha.
+      service discriptors. Fix for bug 948. Bugfix on 0.2.1.6-alpha.
     - Change memarea_strndup() implementation to work even when
-      duplicating a string at the end of a page.  This bug was
+      duplicating a string at the end of a page. This bug was
       harmless for now, but could have meant crashes later. Fix by
-      lark.  Bugfix on 0.2.1.1-alpha.
+      lark. Bugfix on 0.2.1.1-alpha.
     - Limit uploaded directory documents to be 16M rather than 500K.
       The directory authorities were refusing v3 consensus votes from
       other authorities, since the votes are now 504K. Fixes bug 959;
@@ -40,12 +44,6 @@ Changes in version 0.2.1.14-rc - 2009-04-10
     - Directory authorities should never send a 503 "busy" response to
       requests for votes or keys. Bugfix on 0.2.0.8-alpha; exposed by
       bug 959.
-
-  o Minor features (controller):
-    - Try harder to look up nicknames for routers on a circuit when
-      generating circuit events with verbose nicknames.  (Previously, we
-      would look in the router descriptors we had for nicknames, but not
-      in the consensus.)  Partial fix for bug 941.
 
 
 Changes in version 0.2.1.13-alpha - 2009-03-09
