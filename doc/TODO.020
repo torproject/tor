@@ -3,8 +3,8 @@
 description of the patch.)
 
 Backport for 0.2.0:
-  - r19291-2: Dir mirrors tell relays their actual IP address, not
-    just the address listed in the directory currently.
+  - r19291, r19292, r19295, r19296: Dir mirrors tell relays their actual
+    IP address, not just the address listed in the directory currently.
 
 Backport for 0.2.0 once better tested:
   - r17208,r17209,r7211,r17212,r17214: Avoid gotterdammerung when an
