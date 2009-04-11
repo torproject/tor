@@ -7,11 +7,12 @@ Changes in version 0.2.1.14-rc - 2009-04-11
 
   o Major bugfixes (on 0.2.0):
     - Finally fix the bug where dynamic-IP relays disappear when their
-      IP address changes: directory mirrors were mistakenly telling them
-      their old address if they asked via begin_dir, so they never got
-      an accurate answer about their new address, so they just vanished
-      after a day. Should fix bugs 827, 883, and 900 -- but alas, only
-      after every directory mirror has upgraded.
+      IP address changes: directory mirrors were mistakenly telling
+      them their old address if they asked via begin_dir, so they
+      never got an accurate answer about their new address, so they
+      just vanished after a day. For belt-and-suspenders, relays that
+      don't set Address in their config now avoid using begin_dir for
+      all direct connections. Should fix bugs 827, 883, and 900.
     - Relays were falling out of the networkstatus consensus for
       part of a day if they changed their local config but the
       authorities discarded their new descriptor as "not sufficiently
