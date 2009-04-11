@@ -1,7 +1,12 @@
-Changes in version 0.2.1.14-??? - 2009-04-??
+Changes in version 0.2.1.14-rc - 2009-04-??
   o Security fixes:
     - Avoid crashing in the presence of certain malformed descriptors.
       Found by lark, and by automated fuzzing.
+
+  o Minor features:
+    - If the bridge config line doesn't specify a port, assume 443.
+      This makes bridge lines a bit smaller and easier for users to
+      understand.
 
   o Minor bugfixes:
     - Avoid trying to print raw memory to the logs when we decide to
@@ -936,11 +941,6 @@ Changes in version 0.2.0.31 - 2008-09-03
       option as an alias for the actually-working --with-openssl-dir
       option. Fix the help documentation to recommend --with-openssl-dir.
       Based on a patch by "Dave". Bugfix on 0.2.0.1-alpha.
-    - Disallow session resumption attempts during the renegotiation
-      stage of the v2 handshake protocol. Clients should never be trying
-      session resumption at this point, but apparently some did, in
-      ways that caused the handshake to fail. Bug found by Geoff Goodell.
-      Bugfix on 0.2.0.20-rc.
     - When using the TransPort option on OpenBSD, and using the User
       option to change UID and drop privileges, make sure to open
       /dev/pf before dropping privileges. Fixes bug 782. Patch from

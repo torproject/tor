@@ -4270,8 +4270,10 @@ parse_bridge_line(const char *line, int validate_only)
     goto err;
   }
   if (!port) {
-    log_warn(LD_CONFIG, "Missing port in Bridge address '%s'",addrport);
-    goto err;
+    log_info(LD_CONFIG,
+             "Bridge address '%s' has no port; using default port 443.",
+             addrport);
+    port = 443;
   }
 
   if (smartlist_len(items)) {
