@@ -4615,6 +4615,11 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       (r2->bandwidthcapacity < r1->bandwidthcapacity/2))
     return 0;
 
+  /* Did the bandwithrate or bandwithburst change? */
+  if ((r1->bandwidthrate != r2->bandwidthrate) ||
+      (r1->bandwidthburst != r2->bandwidthburst))
+    return 0;
+
   /* Did more than 12 hours pass? */
   if (r1->cache_info.published_on + ROUTER_MAX_COSMETIC_TIME_DIFFERENCE
       < r2->cache_info.published_on)
