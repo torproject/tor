@@ -3,12 +3,18 @@ Changes in version 0.2.1.14-rc - 2009-04-11
     - Avoid crashing in the presence of certain malformed descriptors.
       Found by lark, and by automated fuzzing.
 
+  o Major features:
+    - Clients replace entry guards that were chosen more than a few months
+      ago. This change should significantly improve client performance,
+      especially once more people upgrade, since relays that have been
+      a guard for a long time are currently overloaded.
+
   o Major bugfixes:
     - Relays were falling out of the networkstatus consensus for
-      half a day if they changed their local config but the authorities
-      discarded their new descriptor as "not sufficiently different". Now
-      directory authorities accept a descriptor as changed if
-      bandwidthrate or bandwidthburst changed. Partial fix for bug 962;
+      part of a day if they changed their local config but the
+      authorities discarded their new descriptor as "not sufficiently
+      different". Now directory authorities accept a descriptor as changed
+      if bandwidthrate or bandwidthburst changed. Partial fix for bug 962;
       patch by Sebastian.
 
   o Minor features:
