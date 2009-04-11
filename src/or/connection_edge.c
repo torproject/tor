@@ -2796,7 +2796,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   dirconn = dir_connection_new(AF_INET);
 
-  dirconn->_base.addr = exitconn->_base.addr;
+  tor_addr_assign(&dirconn->_base.addr, &exitconn->_base.addr);
   dirconn->_base.port = 0;
   dirconn->_base.address = tor_strdup(exitconn->address);
   dirconn->_base.type = CONN_TYPE_DIR;
