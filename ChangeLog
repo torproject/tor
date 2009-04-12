@@ -36,6 +36,7 @@ Changes in version 0.2.1.14-rc - 2009-04-12
       with 20KB/s of capacity. Now people running relays won't suddenly
       find themselves not seeing any use, if the network gets faster
       on average.
+    - Update to the "April 3 2009" ip-to-country file.
 
   o Minor bugfixes:
     - Avoid trying to print raw memory to the logs when we decide to
