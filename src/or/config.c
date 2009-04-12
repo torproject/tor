@@ -3271,21 +3271,21 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
 
   if (server_mode(options)) {
-    if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH*2) {
+    if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
       r = tor_snprintf(buf, sizeof(buf),
                        "BandwidthRate is set to %d bytes/second. "
                        "For servers, it must be at least %d.",
                        (int)options->BandwidthRate,
-                       ROUTER_REQUIRED_MIN_BANDWIDTH*2);
+                       ROUTER_REQUIRED_MIN_BANDWIDTH);
       *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     } else if (options->MaxAdvertisedBandwidth <
-               ROUTER_REQUIRED_MIN_BANDWIDTH) {
+               ROUTER_REQUIRED_MIN_BANDWIDTH/2) {
       r = tor_snprintf(buf, sizeof(buf),
                        "MaxAdvertisedBandwidth is set to %d bytes/second. "
                        "For servers, it must be at least %d.",
                        (int)options->MaxAdvertisedBandwidth,
-                       ROUTER_REQUIRED_MIN_BANDWIDTH);
+                       ROUTER_REQUIRED_MIN_BANDWIDTH/2);
       *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }

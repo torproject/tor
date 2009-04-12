@@ -1,4 +1,4 @@
-Changes in version 0.2.1.14-rc - 2009-04-11
+Changes in version 0.2.1.14-rc - 2009-04-12
   o Major features:
     - Clients replace entry guards that were chosen more than a few months
       ago. This change should significantly improve client performance,
@@ -30,6 +30,12 @@ Changes in version 0.2.1.14-rc - 2009-04-11
     - If the bridge config line doesn't specify a port, assume 443.
       This makes bridge lines a bit smaller and easier for users to
       understand.
+    - Raise the minimum bandwidth to be a relay from 20000 bytes to 20480
+      bytes (aka 20KB/s), to match our documentation. Also update
+      directory authorities so they always assign the Fast flag to relays
+      with 20KB/s of capacity. Now people running relays won't suddenly
+      find themselves not seeing any use, if the network gets faster
+      on average.
 
   o Minor bugfixes:
     - Avoid trying to print raw memory to the logs when we decide to

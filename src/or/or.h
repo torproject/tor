@@ -4289,7 +4289,7 @@ typedef struct trusted_dir_server_t {
                                **/
 } trusted_dir_server_t;
 
-#define ROUTER_REQUIRED_MIN_BANDWIDTH 10000
+#define ROUTER_REQUIRED_MIN_BANDWIDTH (20*1024)
 
 #define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
 

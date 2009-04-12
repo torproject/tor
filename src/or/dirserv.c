@@ -1633,7 +1633,7 @@ should_generate_v2_networkstatus(void)
 #define MTBF_TO_GUARANTEE_STABLE (60*60*24*5)
 /** Similarly, we protect sufficiently fast nodes from being pushed
  * out of the set of Fast nodes. */
-#define BANDWIDTH_TO_GUARANTEE_FAST (100*1024)
+#define BANDWIDTH_TO_GUARANTEE_FAST ROUTER_REQUIRED_MIN_BANDWIDTH
 /** Similarly, every node with sufficient bandwidth can be considered
  * for Guard status. */
 #define BANDWIDTH_TO_GUARANTEE_GUARD (250*1024)
@@ -1814,7 +1814,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     /* The 12.5th percentile bandwidth is fast. */
     fast_bandwidth = find_nth_uint32(bandwidths, n_active, n_active/8);
     /* (Now bandwidths is sorted.) */
-    if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH)
+    if (fast_bandwidth < ROUTER_REQUIRED_MIN_BANDWIDTH/2)
       fast_bandwidth = bandwidths[n_active/4];
     guard_bandwidth_including_exits = bandwidths[(n_active-1)/2];
     guard_tk = find_nth_long(tks, n_active, n_active/8);
