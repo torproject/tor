@@ -3672,10 +3672,10 @@ router_exit_policy_rejects_all(routerinfo_t *router)
   return router->policy_is_reject_star;
 }
 
-/** Add to the list of authorized directory servers one at
+/** Add to the list of authoritative directory servers one at
  * <b>address</b>:<b>port</b>, with identity key <b>digest</b>.  If
- * <b>address</b> is NULL, add ourself. Return 0 if success, -1 if
- * we couldn't add it. */
+ * <b>address</b> is NULL, add ourself.  Return the new trusted directory
+ * server entry on success or NULL if we couldn't add it. */
 trusted_dir_server_t *
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
