@@ -1,8 +1,9 @@
-tor (0.2.1.13-alpha-1+) XXperimental; urgency=low
+tor (0.2.1.14-rc-1) experimental; urgency=low
 
+  * New upstream version.
   * Change Section of tor-dbg to debug.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 16 Mar 2009 18:08:13 +0100
+ -- Peter Palfrader <weasel@debian.org>  Thu, 16 Apr 2009 19:54:19 +0200
 
 tor (0.2.1.13-alpha-1) experimental; urgency=low
 
