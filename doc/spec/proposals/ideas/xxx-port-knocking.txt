@@ -35,7 +35,7 @@ relay. Only authorized users should be able to communicate with the private
 bridge. This should be done with Tor and if possible without the help of the
 firewall. It should be possible for a Tor user to enter a secret key into
 Tor or optionally Vidalia on a per bridge basis. This secret key should be
-used
+used to authenticate the bridge user to the private bridge.
 
 1.x Issues with low ports and bind() for ORPort
 
@@ -70,6 +70,23 @@ packets that are not valid. UDP does not require a response and invalid packets
 will not trigger a response from Tor. With base32 encoding it should be
 possible to encode SPA as valid DNS requests. This should allow use of the
 public DNS infrastructure for authorization requests if desired.
+
+2.x Ghetto firewalling with opportunistic connection closing
+
+Until a user has authenticated with Tor, Tor only has a UDP listener. This
+listener should never send data in response, it should only open an ORPort
+when a user has successfully authenticated. After a user has authenticated
+with Tor to open an ORPort, only users who have authenticated will be able
+to use it. All other users as identified by their ip address will have their
+connection closed before any data is sent or received. This should be
+accomplished with an access policy. By default, the access policy should block
+all access to the ORPort.
+
+2.x Timing and reset of access policies
+
+Access to the ORPort is sensitive. The bridge should remove any exceptions
+to its access policy regularly when the ORPort is unused. Valid users should
+reauthenticate if they do not use the ORPort within a given time frame.
 
 2.x Additional considerations
 
