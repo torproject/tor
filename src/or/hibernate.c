@@ -580,7 +580,7 @@ read_bandwidth_usage(void)
   }
 
   if (!state)
-    return 0;
+    return -1;
 
   /* Okay; it looks like the state file is more up-to-date than the
    * bw_accounting file, or the bw_accounting file is nonexistant,
