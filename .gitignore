@@ -1,6 +1,10 @@
-# Global ignores
+# Editor droppings
 \#*\#
 .#*
+*~
+# C stuff
+*.o
+# Diff droppings
 *.orig
 *.rej
 # gcov stuff
