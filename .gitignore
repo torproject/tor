@@ -1,0 +1,132 @@
+# Global ignores
+\#*\#
+.#*
+*.orig
+*.rej
+# gcov stuff
+*.gcno
+*.gcov
+*.gcda
+# latex stuff
+*.aux
+*.dvi
+*.blg
+*.bbl
+*.log
+# Autotools stuff
+.deps
+# Stuff made by our makefiles
+*.bak
+
+# /
+/Makefile
+/Makefile.in
+/aclocal.m4
+/autom4te.cache
+/build-stamp
+/configure
+/Doxyfile
+/orconfig.h
+/orconfig.h.in
+/config.cache
+/config.log
+/config.status
+/config.guess
+/config.sub
+/conftest*
+/patch-stamp
+/stamp-h
+/stamp-h.in
+/stamp-h1
+/tor.sh
+/tor.spec
+/depcomp
+/install-sh
+/missing
+/mkinstalldirs
+/Tor*Bundle.dmg
+/tor-*-win32.exe
+
+# /contrib/
+/contrib/Makefile
+/contrib/Makefile.in
+/contrib/tor.sh
+/contrib/torctl
+/contrib/torify
+/contrib/*.pyc
+/contrib/*.pyo
+/contrib/tor.logrotate
+/contrib/tor.wxs
+
+# /contrib/osx/
+/contrib/osx/Makefile
+/contrib/osx/Makefile.in
+/contrib/osx/TorBundleDesc.plist
+/contrib/osx/TorBundleInfo.plist
+/contrib/osx/TorDesc.plist
+/contrib/osx/TorInfo.plist
+/contrib/osx/TorStartupDesc.plist
+/contrib/osx/net.freehaven.tor.plist
+
+# /contrib/suse/
+/contrib/suse/tor.sh
+/contrib/suse/Makefile.in
+/contrib/suse/Makefile
+
+# /debian/
+/debian/files
+/debian/patched
+/debian/tor
+/debian/tor.postinst.debhelper
+/debian/tor.postrm.debhelper
+/debian/tor.prerm.debhelper
+/debian/tor.substvars
+
+# /doc/
+/doc/Makefile
+/doc/Makefile.in
+/doc/tor.1
+/doc/doxygen
+
+# /doc/design-paper/
+/doc/design-paper/Makefile
+/doc/design-paper/Makefile.in
+
+# /doc/spec/
+/doc/spec/Makefile
+/doc/spec/Makefile.in
+
+# /src/
+/src/Makefile
+/src/Makefile.in
+
+# /src/common/
+/src/common/Makefile
+/src/common/Makefile.in
+/src/common/libor.a
+/src/common/libor-crypto.a
+
+# /src/config/
+/src/config/Makefile
+/src/config/Makefile.in
+/src/config/sample-server-torrc
+/src/config/torrc
+/src/config/torrc.sample
+
+# /src/or/
+/src/or/Makefile
+/src/or/Makefile.in
+/src/or/micro-revision.*
+/src/or/tor
+/src/or/test
+
+# /src/tools/
+/src/tools/tor-checkkey
+/src/tools/tor-resolve
+/src/tools/tor-gencert
+/src/tools/Makefile
+/src/tools/Makefile.in
+
+# /src/win32/
+/src/win32/Makefile
+/src/win32/Makefile.in
