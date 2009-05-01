@@ -1753,19 +1753,10 @@ getinfo_helper_events(control_connection_t *control_conn,
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
-  } else if (!strcmpstart(question, "addr-mappings/") ||
-             !strcmpstart(question, "address-mappings/")) {
+  } else if (!strcmpstart(question, "address-mappings/")) {
     time_t min_e, max_e;
     smartlist_t *mappings;
-    int want_expiry = !strcmpstart(question, "address-mappings/");
-    if (!strcmpstart(question, "addr-mappings/")) {
-      /* XXXX022 This has been deprecated since 0.2.0.3-alpha, and has
-         generated a warning since 0.2.1.10-alpha; remove late in 0.2.2.x. */
-      log_warn(LD_CONTROL, "Controller used obsolete addr-mappings/ GETINFO "
-               "key; use address-mappings/ instead.");
-    }
-    question += strlen(want_expiry ? "address-mappings/"
-                                   : "addr-mappings/");
+    question += strlen("address-mappings/");
     if (!strcmp(question, "all")) {
       min_e = 0; max_e = TIME_MAX;
     } else if (!strcmp(question, "cache")) {
@@ -1778,7 +1769,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       return 0;
     }
     mappings = smartlist_create();
-    addressmap_get_mappings(mappings, min_e, max_e, want_expiry);
+    addressmap_get_mappings(mappings, min_e, max_e, 1);
     *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
@@ -1940,14 +1931,6 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("address-mappings/config",
       "Current address mappings from configuration."),
   DOC("address-mappings/control", "Current address mappings from controller."),
-  PREFIX("addr-mappings/", events, NULL),
-  DOC("addr-mappings/all", "Current address mappings without expiry times."),
-  DOC("addr-mappings/cache",
-      "Current cached DNS replies without expiry times."),
-  DOC("addr-mappings/config",
-      "Current address mappings from configuration without expiry times."),
-  DOC("addr-mappings/control",
-      "Current address mappings from controller without expiry times."),
   PREFIX("status/", events, NULL),
   DOC("status/circuit-established",
       "Whether we think client functionality is working."),
