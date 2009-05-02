@@ -1660,7 +1660,7 @@ prev_circ_on_conn_p(circuit_t *circ, or_connection_t *conn)
 }
 
 /** Add <b>circ</b> to the list of circuits with pending cells on
- * <b>conn</b>.  No effect if <b>circ</b> is already unlinked. */
+ * <b>conn</b>.  No effect if <b>circ</b> is already linked. */
 void
 make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
 {
@@ -1686,7 +1686,7 @@ make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn)
   assert_active_circuits_ok_paranoid(conn);
 }
 
-/** Remove <b>circ</b> to the list of circuits with pending cells on
+/** Remove <b>circ</b> from the list of circuits with pending cells on
  * <b>conn</b>.  No effect if <b>circ</b> is already unlinked. */
 void
 make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn)
