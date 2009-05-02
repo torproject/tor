@@ -60,34 +60,80 @@ Why now?
          one look silly.
 
 
+Triage
+
+   How severe are these problems?  Let's divide them into these
+   categories:
+      PREIMAGE -- A SHA-1 usage that only depends on preimage
+          resistance
+      COLLISION<role> -- A SHA-1 usage that depends on collision
+          resistance, but the only party who could mount a
+          collision-based attack is already in a trusted role
+          (like a distribution signer or a directory authority).
+      COLLISION -- A SHA-1 usage that depends on collision resistance
+          and doesn't need the attacker to have any special keys.
+
+   There is no need to put much effort into fixing PREIMAGE usages in
+   the near-term: even _MD5_ is still preimage resistant.  To fix
+   COLLISION<code-signing> usages is not too important either, since
+   anyone who has the key to sign the code can mount far worse
+   attacks.  It would be good to fix COLLISION<authority> usages,
+   since we try to resist.  The COLLISION usages are the most
+   important to fix.
+
+   Additionally, we need to consider the impact of a successful attack
+   in each of these cases.  SHA-1 collisions are still expensive even
+   if recent results are verified, and anybody with the resources to
+   compute one also has the resources to mount a decent Sybil attack.
+
+   Let be pessimistic, and not assume that producing collisions of a given
+   format is actually any harder than producing collisions at all.
+
 
 What Tor uses hashes for today:
 
 1. Infrastructure.
 
    A. Our X.509 certificates are signed with SHA-1.
+      COLLSION
    B. TLS uses SHA-1 (and MD5) internally to generate keys.
+      PREIMAGE?
    C. Some of the TLS ciphersuites we allow use SHA-1.
+      PREIMAGE?
    D. When we sign our code with GPG, it might be using SHA-1.
+      COLLISION<code-signing>
    E. Our GPG keys might be authenticated with SHA-1.
+      COLLISION<code-signing-key-signing>
    F. OpenSSL's random number generator uses SHA-1, I believe.
+      PREIMAGE
 
 2. The Tor protocol
 
    A. Everything we sign, we sign using SHA-1-based OAEP-MGF1.
+      PREIMAGE?
    B. Our CREATE cell format uses SHA-1 for: OAEP padding.
+      PREIMAGE?
    C. Our EXTEND cells use SHA-1 to hash the identity key of the
       target server.
+      COLLISION
    D. Our CREATED cells use SHA-1 to hash the derived key data.
+      ??
    E. The data we use in CREATE_FAST cells to generate a key is the
       length of a SHA-1.
+      NONE
    F. The data we send back in a CREATED/CREATED_FAST cell is the length
       of a SHA-1.
-   G. We use SHA-1 to derive our circuit keys from the negotiated g^xy value.
+      NONE
+   G. We use SHA-1 to derive our circuit keys from the negotiated g^xy
+      value.
+      NONE
    H. We use SHA-1 to derive the digest field of each RELAY cell, but that's
       used more as a checksum than as a strong digest.
+      NONE
 
 3. Directory services
+
+   [All are COLLISION or COLLISION<authority> ]
 
    A. All signatures are generated on the SHA-1 of their corresponding
       documents, using PKCS1 padding.
@@ -159,9 +205,12 @@ What Tor uses hashes for today:
 
    A. We log information about servers based on SHA-1 hashes of their
       identity keys.
+      COLLISION
    B. The controller identifies servers based on SHA-1 hashes of their
       identity keys.
+      COLLISION
    C. Nearly all of our configuration options that list servers allow SHA-1
       hashes of their identity keys.
+      COLLISION
    E. The deprecated .exit notation uses SHA-1 hashes of identity keys
-
+      COLLISION
