@@ -730,12 +730,6 @@ typedef struct rend_data_t {
 
   /** Rendezvous cookie used by both, client and service. */
   char rend_cookie[REND_COOKIE_LEN];
-
-  /** Rendezvous descriptor version that is used by a service. Used to
-   * distinguish introduction and rendezvous points belonging to the same
-   * rendezvous service ID, but different descriptor versions.
-   */
-  uint8_t rend_desc_version;
 } rend_data_t;
 
 /** Time interval for tracking possible replays of INTRODUCE2 cells.
@@ -4014,7 +4008,6 @@ void rend_client_introcirc_has_opened(origin_circuit_t *circ);
 void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
 int rend_client_introduction_acked(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
-void rend_client_refetch_renddesc(const char *query);
 void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
                                    const rend_data_t *rend_query);
@@ -4089,10 +4082,6 @@ void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
                              int command, size_t length, const char *payload);
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
-int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
-                                   crypto_pk_env_t *key,
-                                   char **str_out,
-                                   size_t *len_out);
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str,
                                                          size_t len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);

@@ -458,10 +458,9 @@ rend_config_services(or_options_t *options, int validate_only)
         });
         if (keep_it)
           continue;
-        log_info(LD_REND, "Closing intro point %s for service %s version %d.",
+        log_info(LD_REND, "Closing intro point %s for service %s.",
                  safe_str(oc->build_state->chosen_exit->nickname),
-                 oc->rend_data->onion_address,
-                 oc->rend_data->rend_desc_version);
+                 oc->rend_data->onion_address);
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         /* XXXX Is there another reason we should use here? */
       }
@@ -889,8 +888,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
 
   /* look up service depending on circuit. */
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+              circuit->rend_data->rend_pk_digest, -1);
   if (!service) {
     log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
              escaped(serviceid));
@@ -1269,12 +1267,14 @@ rend_service_launch_establish_intro(rend_service_t *service,
 }
 
 /** Return the number of introduction points that are or have been
- * established for the given service address and rendezvous version. */
+ * established for the given service address in <b>query</b>.
+ * (<b>rend_version</b> is ignored.) */
 static int
 count_established_intro_points(const char *query, int rend_version)
 {
   int num_ipos = 0;
   circuit_t *circ;
+  (void) rend_version;
   for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
     if (!circ->marked_for_close &&
         circ->state == CIRCUIT_STATE_OPEN &&
@@ -1282,7 +1282,6 @@ count_established_intro_points(const char *query, int rend_version)
          circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
       origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
       if (oc->rend_data &&
-          oc->rend_data->rend_desc_version == rend_version &&
           !rend_cmp_service_ids(query, oc->rend_data->onion_address))
         num_ipos++;
     }
@@ -1313,8 +1312,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
                 circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
 
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+              circuit->rend_data->rend_pk_digest, -1);
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
              serviceid, circuit->_base.n_circ_id);
@@ -1324,8 +1322,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit. */
-  if (count_established_intro_points(serviceid,
-          circuit->rend_data->rend_desc_version) > NUM_INTRO_POINTS) {
+  if (count_established_intro_points(serviceid, -1) > NUM_INTRO_POINTS) {
     log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
              "circuit, but we already have enough. Redefining purpose to "
              "general.");
@@ -1399,8 +1396,7 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
   }
   tor_assert(circuit->rend_data);
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+              circuit->rend_data->rend_pk_digest, -1);
   if (!service) {
     log_warn(LD_REND, "Unknown service on introduction circuit %d.",
              circuit->_base.n_circ_id);
@@ -1451,8 +1447,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
            circuit->_base.n_circ_id, hexcookie, serviceid);
 
   service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+              circuit->rend_data->rend_pk_digest, -1);
   if (!service) {
     log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
              "introduction circuit.");
@@ -1508,23 +1503,23 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
  */
 
 /** Return the (possibly non-open) introduction circuit ending at
- * <b>intro</b> for the service whose public key is <b>pk_digest</b> and
- * which publishes descriptor of version <b>desc_version</b>.  Return
- * NULL if no such service is found.
+ * <b>intro</b> for the service whose public key is <b>pk_digest</b>.
+ * (<b>desc_version</b> is ignored). Return NULL if no such service is
+ * found.
  */
 static origin_circuit_t *
 find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
                    int desc_version)
 {
   origin_circuit_t *circ = NULL;
+  (void) desc_version;
 
   tor_assert(intro);
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     if (!memcmp(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
-        circ->rend_data &&
-        circ->rend_data->rend_desc_version == desc_version) {
+        circ->rend_data) {
       return circ;
     }
   }
@@ -1534,8 +1529,7 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     if (!memcmp(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
-        circ->rend_data &&
-        circ->rend_data->rend_desc_version == desc_version) {
+        circ->rend_data) {
       return circ;
     }
   }
@@ -1998,8 +1992,7 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                 circ->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
   service = rend_service_get_by_pk_digest_and_version(
-                circ->rend_data->rend_pk_digest,
-                circ->rend_data->rend_desc_version);
+                circ->rend_data->rend_pk_digest, -1);
   if (!service) {
     log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
              "rendezvous circuit %d; closing.",

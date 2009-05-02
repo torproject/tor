@@ -544,13 +544,6 @@ connection_about_to_close_connection(connection_t *conn)
          * failed: forget about this router, and maybe try again. */
         connection_dir_request_failed(dir_conn);
       }
-      if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC && dir_conn->rend_data) {
-        /* Give it a try. However, there is no re-fetching for v0 rend
-         * descriptors; if the response is empty or the descriptor is
-         * unusable, close pending connections (unless a v2 request is
-         * still in progress). */
-        rend_client_desc_trynow(dir_conn->rend_data->onion_address, 0);
-      }
       /* If we were trying to fetch a v2 rend desc and did not succeed,
        * retry as needed. (If a fetch is successful, the connection state
        * is changed to DIR_PURPOSE_HAS_FETCHED_RENDDESC to mark that
@@ -2576,8 +2569,8 @@ connection_get_by_type_state(int type, int state)
 
 /** Return a connection of type <b>type</b> that has rendquery equal
  * to <b>rendquery</b>, and that is not marked for close. If state
- * is non-zero, conn must be of that state too. If rendversion is
- * nonnegative, conn must be fetching that rendversion, too.
+ * is non-zero, conn must be of that state too. (rendversion is
+ * ignored.)
  */
 connection_t *
 connection_get_by_type_state_rendquery(int type, int state,
@@ -2585,6 +2578,7 @@ connection_get_by_type_state_rendquery(int type, int state,
                                        int rendversion)
 {
   smartlist_t *conns = get_connection_array();
+  (void) rendversion;
 
   tor_assert(type == CONN_TYPE_DIR ||
              type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);
@@ -2597,8 +2591,6 @@ connection_get_by_type_state_rendquery(int type, int state,
         (!state || state == conn->state)) {
       if (type == CONN_TYPE_DIR &&
           TO_DIR_CONN(conn)->rend_data &&
-          (rendversion < 0 ||
-           rendversion == TO_DIR_CONN(conn)->rend_data->rend_desc_version) &&
           !rend_cmp_service_ids(rendquery,
                                 TO_DIR_CONN(conn)->rend_data->onion_address))
         return conn;

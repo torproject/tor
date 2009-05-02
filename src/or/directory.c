@@ -1050,31 +1050,10 @@ directory_send_command(dir_connection_t *conn,
       httpcommand = "POST";
       url = tor_strdup("/tor/post/consensus-signature");
       break;
-    case DIR_PURPOSE_FETCH_RENDDESC:
-      tor_assert(resource);
-      tor_assert(!payload);
-
-      /* this must be true or we wouldn't be doing the lookup */
-      tor_assert(strlen(resource) <= REND_SERVICE_ID_LEN_BASE32);
-      /* This breaks the function abstraction. */
-      conn->rend_data = tor_malloc_zero(sizeof(rend_data_t));
-      strlcpy(conn->rend_data->onion_address, resource,
-              sizeof(conn->rend_data->onion_address));
-      conn->rend_data->rend_desc_version = 0;
-
-      httpcommand = "GET";
-      /* Request the most recent versioned descriptor. */
-      // (XXXX We were going to switch this to fetch rendezvous1 descriptors,
-      // but that never got testing, and it wasn't a good design.)
-      len = strlen(resource)+32;
-      url = tor_malloc(len);
-      tor_snprintf(url, len, "/tor/rendezvous/%s", resource);
-      break;
     case DIR_PURPOSE_FETCH_RENDDESC_V2:
       tor_assert(resource);
       tor_assert(strlen(resource) <= REND_DESC_ID_V2_LEN_BASE32);
       tor_assert(!payload);
-      conn->rend_data->rend_desc_version = 2;
       httpcommand = "GET";
       len = strlen(resource) + 32;
       url = tor_malloc(len);

@@ -1675,12 +1675,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
       log_info(LD_REND, "Unknown descriptor %s. Fetching.",
                safe_str(conn->rend_data->onion_address));
-      /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
-       * arrives first. Exception: When using client authorization, only
-       * fetch v2 descriptors.*/
       rend_client_refetch_v2_renddesc(conn->rend_data);
-      if (conn->rend_data->auth_type == REND_NO_AUTH)
-        rend_client_refetch_renddesc(conn->rend_data->onion_address);
     } else { /* r > 0 */
 /** How long after we receive a hidden service descriptor do we consider
  * it valid? */
@@ -1697,12 +1692,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         log_info(LD_REND, "Stale descriptor %s. Refetching.",
                  safe_str(conn->rend_data->onion_address));
-        /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
-         * arrives first. Exception: When using client authorization, only
-         * fetch v2 descriptors.*/
         rend_client_refetch_v2_renddesc(conn->rend_data);
-        if (conn->rend_data->auth_type == REND_NO_AUTH)
-          rend_client_refetch_renddesc(conn->rend_data->onion_address);
       }
     }
     return 0;
