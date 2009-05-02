@@ -4000,78 +4000,6 @@ test_policies(void)
   }
 }
 
-/** Run unit tests for basic rendezvous functions. */
-static void
-test_rend_fns(void)
-{
-  char address1[] = "fooaddress.onion";
-  char address2[] = "aaaaaaaaaaaaaaaa.onion";
-  char address3[] = "fooaddress.exit";
-  char address4[] = "www.torproject.org";
-  rend_service_descriptor_t *d1 =
-    tor_malloc_zero(sizeof(rend_service_descriptor_t));
-  rend_service_descriptor_t *d2 = NULL;
-  char *encoded = NULL;
-  size_t len;
-  time_t now;
-  int i;
-  crypto_pk_env_t *pk1 = pk_generate(0), *pk2 = pk_generate(1);
-
-  /* Test unversioned (v0) descriptor */
-  d1->pk = crypto_pk_dup_key(pk1);
-  now = time(NULL);
-  d1->timestamp = now;
-  d1->version = 0;
-  d1->intro_nodes = smartlist_create();
-  for (i = 0; i < 3; i++) {
-    rend_intro_point_t *intro = tor_malloc_zero(sizeof(rend_intro_point_t));
-    intro->extend_info = tor_malloc_zero(sizeof(extend_info_t));
-    crypto_rand(intro->extend_info->identity_digest, DIGEST_LEN);
-    intro->extend_info->nickname[0] = '$';
-    base16_encode(intro->extend_info->nickname+1, HEX_DIGEST_LEN+1,
-                  intro->extend_info->identity_digest, DIGEST_LEN);
-    smartlist_add(d1->intro_nodes, intro);
-  }
-  test_assert(! rend_encode_service_descriptor(d1, pk1, &encoded, &len));
-  d2 = rend_parse_service_descriptor(encoded, len);
-  test_assert(d2);
-
-  test_assert(!crypto_pk_cmp_keys(d1->pk, d2->pk));
-  test_eq(d2->timestamp, now);
-  test_eq(d2->version, 0);
-  test_eq(d2->protocols, 1<<2);
-  test_eq(smartlist_len(d2->intro_nodes), 3);
-  for (i = 0; i < 3; i++) {
-    rend_intro_point_t *intro1 = smartlist_get(d1->intro_nodes, i);
-    rend_intro_point_t *intro2 = smartlist_get(d2->intro_nodes, i);
-    test_streq(intro1->extend_info->nickname,
-               intro2->extend_info->nickname);
-  }
-
-  test_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
-  test_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
-  test_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
-  test_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
-
-  crypto_free_pk_env(pk1);
-  crypto_free_pk_env(pk2);
-  pk1 = pk2 = NULL;
-  rend_service_descriptor_free(d1);
-  rend_service_descriptor_free(d2);
-  d1 = d2 = NULL;
-
- done:
-  if (pk1)
-    crypto_free_pk_env(pk1);
-  if (pk2)
-    crypto_free_pk_env(pk2);
-  if (d1)
-    rend_service_descriptor_free(d1);
-  if (d2)
-    rend_service_descriptor_free(d2);
-  tor_free(encoded);
-}
-
 /** Run AES performance benchmarks. */
 static void
 bench_aes(void)
@@ -4539,9 +4467,9 @@ test_crypto_base32_decode(void)
   ;
 }
 
-/** Test encoding and parsing of v2 rendezvous service descriptors. */
+/** Test encoding and parsing of rendezvous service descriptors. */
 static void
-test_rend_fns_v2(void)
+test_rend_fns(void)
 {
   rend_service_descriptor_t *generated = NULL, *parsed = NULL;
   char service_id[DIGEST_LEN];
@@ -4556,6 +4484,16 @@ test_rend_fns_v2(void)
   size_t intro_points_size;
   size_t encoded_size;
   int i;
+  char address1[] = "fooaddress.onion";
+  char address2[] = "aaaaaaaaaaaaaaaa.onion";
+  char address3[] = "fooaddress.exit";
+  char address4[] = "www.torproject.org";
+
+  test_assert(BAD_HOSTNAME == parse_extended_hostname(address1));
+  test_assert(ONION_HOSTNAME == parse_extended_hostname(address2));
+  test_assert(EXIT_HOSTNAME == parse_extended_hostname(address3));
+  test_assert(NORMAL_HOSTNAME == parse_extended_hostname(address4));
+
   pk1 = pk_generate(0);
   pk2 = pk_generate(1);
   generated = tor_malloc_zero(sizeof(rend_service_descriptor_t));
@@ -4760,7 +4698,6 @@ static struct {
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),
-  SUBENT(rend_fns, v2),
   ENT(geoip),
 
   DISABLED(bench_aes),

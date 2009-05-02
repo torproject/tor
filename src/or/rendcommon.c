@@ -655,61 +655,6 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
   return seconds_valid;
 }
 
-/** Encode a service descriptor for <b>desc</b>, and sign it with
- * <b>key</b>. Store the descriptor in *<b>str_out</b>, and set
- * *<b>len_out</b> to its length.
- */
-int
-rend_encode_service_descriptor(rend_service_descriptor_t *desc,
-                               crypto_pk_env_t *key,
-                               char **str_out, size_t *len_out)
-{
-  char *cp;
-  char *end;
-  int i, r;
-  size_t asn1len;
-  size_t buflen =
-         PK_BYTES*2*(smartlist_len(desc->intro_nodes)+2);/*Too long, but ok*/
-  cp = *str_out = tor_malloc(buflen);
-  end = cp + PK_BYTES*2*(smartlist_len(desc->intro_nodes)+1);
-  r = crypto_pk_asn1_encode(desc->pk, cp+2, end-(cp+2));
-  if (r < 0) {
-    tor_free(*str_out);
-    return -1;
-  }
-  asn1len = r;
-  set_uint16(cp, htons((uint16_t)asn1len));
-  cp += 2+asn1len;
-  set_uint32(cp, htonl((uint32_t)desc->timestamp));
-  cp += 4;
-  set_uint16(cp, htons((uint16_t)smartlist_len(desc->intro_nodes)));
-  cp += 2;
-  for (i=0; i < smartlist_len(desc->intro_nodes); ++i) {
-    rend_intro_point_t *intro = smartlist_get(desc->intro_nodes, i);
-    char ipoint[HEX_DIGEST_LEN+2];
-    const size_t ipoint_len = HEX_DIGEST_LEN+1;
-    ipoint[0] = '$';
-    base16_encode(ipoint+1, HEX_DIGEST_LEN+1,
-                  intro->extend_info->identity_digest,
-                  DIGEST_LEN);
-    tor_assert(strlen(ipoint) == ipoint_len);
-    /* Assert that appending ipoint and its NUL won't over overrun the
-     * buffer. */
-    tor_assert(cp + ipoint_len+1 < *str_out + buflen);
-    memcpy(cp, ipoint, ipoint_len+1);
-    cp += ipoint_len+1;
-  }
-  note_crypto_pk_op(REND_SERVER);
-  r = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
-  if (r<0) {
-    tor_free(*str_out);
-    return -1;
-  }
-  cp += r;
-  *len_out = (size_t)(cp-*str_out);
-  return 0;
-}
-
 /** Parse a service descriptor at <b>str</b> (<b>len</b> bytes).  On
  * success, return a newly alloced service_descriptor_t.  On failure,
  * return NULL.
