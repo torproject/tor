@@ -2569,16 +2569,13 @@ connection_get_by_type_state(int type, int state)
 
 /** Return a connection of type <b>type</b> that has rendquery equal
  * to <b>rendquery</b>, and that is not marked for close. If state
- * is non-zero, conn must be of that state too. (rendversion is
- * ignored.)
+ * is non-zero, conn must be of that state too.
  */
 connection_t *
 connection_get_by_type_state_rendquery(int type, int state,
-                                       const char *rendquery,
-                                       int rendversion)
+                                       const char *rendquery)
 {
   smartlist_t *conns = get_connection_array();
-  (void) rendversion;
 
   tor_assert(type == CONN_TYPE_DIR ||
              type == CONN_TYPE_AP || type == CONN_TYPE_EXIT);

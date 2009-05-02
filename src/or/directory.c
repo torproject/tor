@@ -1899,7 +1899,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
           /* Success, or at least there's a v2 descriptor already
            * present. Notify pending connections about this. */
           conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
-          rend_client_desc_trynow(conn->rend_data->onion_address, -1);
+          rend_client_desc_trynow(conn->rend_data->onion_address);
         }
         break;
       case 404:
@@ -1946,7 +1946,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             log_info(LD_REND, "Successfully fetched v2 rendezvous "
                      "descriptor.");
             conn->_base.purpose = DIR_PURPOSE_HAS_FETCHED_RENDDESC;
-            rend_client_desc_trynow(conn->rend_data->onion_address, -1);
+            rend_client_desc_trynow(conn->rend_data->onion_address);
             break;
         }
         break;

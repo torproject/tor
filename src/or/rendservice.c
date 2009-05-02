@@ -10,8 +10,7 @@
 #include "or.h"
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
-                                            const char *pk_digest,
-                                            int desc_version);
+                                            const char *pk_digest);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -56,7 +55,7 @@ typedef struct rend_service_t {
                              * or are trying to establish. */
   time_t intro_period_started; /**< Start of the current period to build
                                 * introduction points. */
-  int n_intro_circuits_launched; /**< count of intro circuits we have
+  int n_intro_circuits_launched; /**< Count of intro circuits we have
                                   * established in this period. */
   rend_service_descriptor_t *desc; /**< Current hidden service descriptor. */
   time_t desc_is_dirty; /**< Time at which changes to the hidden service
@@ -497,7 +496,7 @@ rend_service_update_descriptor(rend_service_t *service)
   for (i = 0; i < smartlist_len(service->intro_nodes); ++i) {
     rend_intro_point_t *intro_svc = smartlist_get(service->intro_nodes, i);
     rend_intro_point_t *intro_desc;
-    circ = find_intro_circuit(intro_svc, service->pk_digest, d->version);
+    circ = find_intro_circuit(intro_svc, service->pk_digest);
     if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO)
       continue;
 
@@ -738,16 +737,12 @@ rend_service_load_keys(void)
   return r;
 }
 
-/** Return the service whose public key has a digest of <b>digest</b> and
- * which publishes the given descriptor <b>version</b>.  (There is no other
- * version than 2, so version is ignored.)  Return NULL if no such service
- * exists.
+/** Return the service whose public key has a digest of <b>digest</b>, or
+ * NULL if no such service exists.
  */
 static rend_service_t *
-rend_service_get_by_pk_digest_and_version(const char* digest,
-                                          uint8_t version)
+rend_service_get_by_pk_digest(const char* digest)
 {
-  (void) version;
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, s,
                     if (!memcmp(s->pk_digest,digest,DIGEST_LEN))
                         return s);
@@ -887,8 +882,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   }
 
   /* look up service depending on circuit. */
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest, -1);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
              escaped(serviceid));
@@ -1267,14 +1262,12 @@ rend_service_launch_establish_intro(rend_service_t *service,
 }
 
 /** Return the number of introduction points that are or have been
- * established for the given service address in <b>query</b>.
- * (<b>rend_version</b> is ignored.) */
+ * established for the given service address in <b>query</b>. */
 static int
-count_established_intro_points(const char *query, int rend_version)
+count_established_intro_points(const char *query)
 {
   int num_ipos = 0;
   circuit_t *circ;
-  (void) rend_version;
   for (circ = _circuit_get_global_list(); circ; circ = circ->next) {
     if (!circ->marked_for_close &&
         circ->state == CIRCUIT_STATE_OPEN &&
@@ -1311,8 +1304,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                 circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
 
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest, -1);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
              serviceid, circuit->_base.n_circ_id);
@@ -1322,7 +1315,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit. */
-  if (count_established_intro_points(serviceid, -1) > NUM_INTRO_POINTS) {
+  if (count_established_intro_points(serviceid) > NUM_INTRO_POINTS) {
     log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
              "circuit, but we already have enough. Redefining purpose to "
              "general.");
@@ -1395,8 +1388,8 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
     goto err;
   }
   tor_assert(circuit->rend_data);
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest, -1);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unknown service on introduction circuit %d.",
              circuit->_base.n_circ_id);
@@ -1446,8 +1439,8 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
            "cookie %s for service %s",
            circuit->_base.n_circ_id, hexcookie, serviceid);
 
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest, -1);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
              "introduction circuit.");
@@ -1508,11 +1501,9 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
  * found.
  */
 static origin_circuit_t *
-find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
-                   int desc_version)
+find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
 {
   origin_circuit_t *circ = NULL;
-  (void) desc_version;
 
   tor_assert(intro);
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
@@ -1774,7 +1765,7 @@ rend_services_introduce(void)
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
       router = router_get_by_digest(intro->extend_info->identity_digest);
-      if (!router || !find_intro_circuit(intro, service->pk_digest, -1)) {
+      if (!router || !find_intro_circuit(intro, service->pk_digest)) {
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
                  intro->extend_info->nickname, service->service_id);
         if (service->desc) {
@@ -1960,7 +1951,7 @@ rend_service_dump_stats(int severity)
       intro = smartlist_get(service->intro_nodes, j);
       safe_name = safe_str(intro->extend_info->nickname);
 
-      circ = find_intro_circuit(intro, service->pk_digest, -1);
+      circ = find_intro_circuit(intro, service->pk_digest);
       if (!circ) {
         log(severity, LD_GENERAL, "  Intro point %d at %s: no circuit",
             j, safe_name);
@@ -1991,8 +1982,8 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   log_debug(LD_REND,"beginning to hunt for addr/port");
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                 circ->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
-  service = rend_service_get_by_pk_digest_and_version(
-                circ->rend_data->rend_pk_digest, -1);
+  service = rend_service_get_by_pk_digest(
+                circ->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
              "rendezvous circuit %d; closing.",

@@ -2985,8 +2985,7 @@ connection_t *connection_get_by_type_addr_port_purpose(int type,
                                                    uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
-                                                     const char *rendquery,
-                                                     int rendversion);
+                                                     const char *rendquery);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 int connection_is_listener(connection_t *conn);
@@ -4015,7 +4014,7 @@ int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
                                  size_t request_len);
 int rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
-void rend_client_desc_trynow(const char *query, int rend_version);
+void rend_client_desc_trynow(const char *query);
 
 extend_info_t *rend_client_get_random_intro(const rend_data_t *rend_query);
 

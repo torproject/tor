@@ -498,8 +498,8 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
   log_info(LD_REND, "Could not pick one of the responsible hidden "
                     "service directories to fetch descriptors, because "
                     "we already tried them all unsuccessfully.");
-  /* Close pending connections (unless a v0 request is still going on). */
-  rend_client_desc_trynow(rend_query->onion_address, 2);
+  /* Close pending connections. */
+  rend_client_desc_trynow(rend_query->onion_address);
   return;
 }
 
@@ -549,7 +549,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
     /* move all pending streams back to renddesc_wait */
     while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                    AP_CONN_STATE_CIRCUIT_WAIT,
-                                   rend_query->onion_address, -1))) {
+                                   rend_query->onion_address))) {
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
     }
 
@@ -658,22 +658,16 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
   return -1;
 }
 
-/** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
- * are waiting on query. If there's a working cache entry here
- * with at least one intro point, move them to the next state.
- * (<b>rend_version</b> was used to keep the connection open when
- * there were still descriptor fetch requests in progress for other
- * descriptor versions than <b>rend_version</b>, but this is obsolete
- * now that we support only version 2.)
- */
+/** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that are
+ * waiting on <b>query</b>. If there's a working cache entry here with at
+ * least one intro point, move them to the next state. */
 void
-rend_client_desc_trynow(const char *query, int rend_version)
+rend_client_desc_trynow(const char *query)
 {
   edge_connection_t *conn;
   rend_cache_entry_t *entry;
   time_t now = time(NULL);
   smartlist_t *conns = get_connection_array();
-  (void) rend_version;
 
   SMARTLIST_FOREACH(conns, connection_t *, _conn,
   {
