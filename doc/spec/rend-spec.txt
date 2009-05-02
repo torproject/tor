@@ -145,33 +145,10 @@ $Id$
 1.2. Bob's OP generates service descriptors.
 
    The first time the OP provides an advertised service, it generates
-   a public/private keypair (stored locally).  Periodically, the OP
-   generates and publishes a descriptor of type "V0".
+   a public/private keypair (stored locally).
 
-   The "V0" descriptor contains:
-
-         KL    Key length                            [2 octets]
-         PK    Bob's public key                      [KL octets]
-         TS    A timestamp                           [4 octets]
-         NI    Number of introduction points         [2 octets]
-         Ipt   A list of NUL-terminated ORs          [variable]
-         SIG   Signature of above fields             [variable]
-
-   KL is the length of PK, in octets.
-   TS is the number of seconds elapsed since Jan 1, 1970.
-
-   The members of Ipt may be either (a) nicknames, or (b) identity key
-   digests, encoded in hex, and prefixed with a '$'.  Clients must
-   accept both forms. Services must only generate the second form.
-   Once 0.0.9.x is obsoleted, we can drop the first form.
-
-   [It's ok for Bob to advertise 0 introduction points. He might want
-    to do that if he previously advertised some introduction points,
-    and now he doesn't have any. -RD]
-
-   Beginning with 0.2.0.10-alpha, Bob's OP encodes "V2" descriptors in
-   addition to "V0" descriptors. The format of a "V2" descriptor is as
-   follows:
+   Beginning with 0.2.0.10-alpha, Bob's OP encodes "V2" descriptors. The
+   format of a "V2" descriptor is as follows:
 
      "rendezvous-service-descriptor" descriptor-id NL
 
@@ -340,6 +317,10 @@ $Id$
 
         (This ends the fields in the encrypted portion of the descriptor.)
 
+       [It's ok for Bob to advertise 0 introduction points. He might want
+        to do that if he previously advertised some introduction points,
+        and now he doesn't have any. -RD]
+
      "signature" NL signature-string
 
        [At end, exactly once]
@@ -348,6 +329,21 @@ $Id$
        service.
 
 1.2.1. Other descriptor formats we don't use.
+
+   Support for the V0 descriptor format was dropped in 0.2.2.0-alpha-dev:
+
+         KL    Key length                            [2 octets]
+         PK    Bob's public key                      [KL octets]
+         TS    A timestamp                           [4 octets]
+         NI    Number of introduction points         [2 octets]
+         Ipt   A list of NUL-terminated ORs          [variable]
+         SIG   Signature of above fields             [variable]
+
+   KL is the length of PK, in octets.
+   TS is the number of seconds elapsed since Jan 1, 1970.
+
+   The members of Ipt may be either (a) nicknames, or (b) identity key
+   digests, encoded in hex, and prefixed with a '$'.
 
    The V1 descriptor format was understood and accepted from
    0.1.1.5-alpha-cvs to 0.2.0.6-alpha-dev, but no Tors generated it and
@@ -409,7 +405,7 @@ $Id$
    RELAY_ESTABLISH_INTRO cell, containing:
 
         KL   Key length                             [2 octets]
-        PK   Bob's public key                       [KL octets]
+        PK   Introduction public key                [KL octets]
         HS   Hash of session info                   [20 octets]
         SIG  Signature of above information         [variable]
 
@@ -431,16 +427,13 @@ $Id$
    currently associated with PK.  On success, the OR sends Bob a
    RELAY_INTRO_ESTABLISHED cell with an empty payload.
 
-   If a hidden service is configured to publish only v2 hidden service
-   descriptors, Bob's OP does not include its own public key in the
-   RELAY_ESTABLISH_INTRO cell, but the public key of a freshly generated
-   key pair. The OP also includes these fresh public keys in the v2 hidden
-   service descriptor together with the other introduction point
-   information. The reason is that the introduction point does not need to
-   and therefore should not know for which hidden service it works, so as
-   to prevent it from tracking the hidden service's activity. If the hidden
-   service is configured to publish both, v0 and v2 descriptors, two
-   separate sets of introduction points are established.
+   Bob's OP does not include its own public key in the RELAY_ESTABLISH_INTRO
+   cell, but the public key of a freshly generated introduction key pair.
+   The OP also includes these fresh public keys in the v2 hidden service
+   descriptor together with the other introduction point information. The
+   reason is that the introduction point does not need to and therefore
+   should not know for which hidden service it works, so as to prevent it
+   from tracking the hidden service's activity.
 
 1.4. Bob's OP advertises his service descriptor(s).
 
@@ -464,10 +457,8 @@ $Id$
    after its timestamp.  At least every 18 hours, Bob's OP uploads a
    fresh descriptor.
 
-   If Bob's OP is configured to publish v2 descriptors instead of or in
-   addition to v0 descriptors, it does so to a changing subset of all v2
-   hidden service directories instead of the authoritative directory
-   servers. Therefore, Bob's OP opens a stream via Tor to each
+   Bob's OP publishes v2 descriptors to a changing subset of all v2 hidden
+   service directories. Therefore, Bob's OP opens a stream via Tor to each
    responsible hidden service directory. (He may re-use old circuits
    for this.) Over this stream, Bob's OP makes an HTTP 'POST' request to a
    URL "/tor/rendezvous2/publish" relative to the hidden service
@@ -520,12 +511,21 @@ $Id$
 
 1.6. Alice's OP retrieves a service descriptor.
 
-   Alice opens a stream to a directory server via Tor, and makes an HTTP GET
-   request for the document '/tor/rendezvous/<z>', where '<z>' is replaced
-   with the encoding of Bob's public key as described above. (She may re-use
-   old circuits for this.) The directory replies with a 404 HTTP response if
-   it does not recognize <z>, and otherwise returns Bob's most recently
-   uploaded service descriptor.
+   Similarly to the description in section 1.4, Alice's OP fetches a v2
+   descriptor from a randomly chosen hidden service directory out of the
+   changing subset of 6 nodes. If the request is unsuccessful, Alice retries
+   the other remaining responsible hidden service directories in a random
+   order. Alice relies on Bob to care about a potential clock skew between
+   the two by possibly storing two sets of descriptors (see end of section
+   1.4).
+
+   Alice's OP opens a stream via Tor to the chosen v2 hidden service
+   directory. (She may re-use old circuits for this.) Over this stream,
+   Alice's OP makes an HTTP 'GET' request for the document
+   "/tor/rendezvous2/<z>", where z is replaced with the encoding of the
+   descriptor ID. The directory replies with a 404 HTTP response if it does
+   not recognize <z>, and otherwise returns Bob's most recently uploaded
+   service descriptor.
 
    If Alice's OP receives a 404 response, it tries the other directory
    servers, and only fails the lookup if none recognize the public key hash.
@@ -540,22 +540,6 @@ $Id$
    descriptors that are more than 24 hours older than their timestamp.
    [Caching may make her partitionable, but she fetched it anonymously,
     and we can't very well *not* cache it. -RD]
-
-   Alice's OP fetches v2 descriptors in parallel to v0 descriptors. Similarly
-   to the description in section 1.4, the OP fetches a v2 descriptor from a
-   randomly chosen hidden service directory out of the changing subset of
-   6 nodes. If the request is unsuccessful, Alice retries the other
-   remaining responsible hidden service directories in a random order.
-   Alice relies on Bob to care about a potential clock skew between the two
-   by possibly storing two sets of descriptors (see end of section 1.4).
-
-   Alice's OP opens a stream via Tor to the chosen v2 hidden service
-   directory. (She may re-use old circuits for this.) Over this stream,
-   Alice's OP makes an HTTP 'GET' request for the document
-   "/tor/rendezvous2/<z>", where z is replaced with the encoding of the
-   descriptor ID. The directory replies with a 404 HTTP response if it does
-   not recognize <z>, and otherwise returns Bob's most recently uploaded
-   service descriptor.
 
 1.7. Alice's OP establishes a rendezvous point.
 
