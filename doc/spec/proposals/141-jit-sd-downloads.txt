@@ -63,8 +63,8 @@ Status: Draft
   which tries to convey a server's capacity to clients.
 
   Currently we weigh servers differently for different purposes.  There
-  is a weigh for when we use a server as a guard node (our entry to the
-  Tor network), there is one weigh we assign servers for exit duties,
+  is a weight for when we use a server as a guard node (our entry to the
+  Tor network), there is one weight we assign servers for exit duties,
   and a third for when we need intermediate (middle) nodes.
 
 2.2 Exit information
@@ -80,7 +80,7 @@ Status: Draft
 
 2.3 Capability information
 
-  Server descriptors contain information about the specific version or
+  Server descriptors contain information about the specific version of
   the Tor protocol they understand [proposal 105].
 
   Furthermore the server descriptor also contains the exact version of
