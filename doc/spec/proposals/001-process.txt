@@ -47,7 +47,7 @@ How to change the specs now:
    Like an RFC, every proposal gets a number.  Unlike RFCs, proposals can
    change over time and keep the same number, until they are finally
    accepted or rejected.  The history for each proposal
-   will be stored in the Tor Subversion repository.
+   will be stored in the Tor repository.
 
    Once a proposal is in the repository, we should discuss and improve it
    until we've reached consensus that it's a good idea, and that it's
@@ -82,9 +82,7 @@ How new proposals get added:
 What should go in a proposal:
 
    Every proposal should have a header containing these fields:
-     Filename, Title, Version, Last-Modified, Author, Created, Status.
-   The Version and Last-Modified fields should use the SVN Revision and Date
-   tags respectively.
+     Filename, Title, Author, Created, Status.
 
    These fields are optional but recommended:
      Target, Implemented-In.
