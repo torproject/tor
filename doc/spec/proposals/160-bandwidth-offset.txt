@@ -1,0 +1,80 @@
+Filename: 160-bandwidth-offset.txt
+Title: Authorities vote for bandwidth offsets in consensus
+Version: $Revision$
+Last-Modified: $Date$
+Author: Roger Dingledine
+Created: 4-May-2009
+Status: Open
+Target: 0.2.2.x
+
+1. Motivation
+
+  As part of proposal 141, we moved the bandwidth value for each relay
+  into the consensus. Now clients can know how they should load balance
+  even before they've fetched the corresponding relay descriptors.
+
+  Putting the bandwidth in the consensus also lets the directory
+  authorities choose more accurate numbers to advertise, if we come up
+  with a better algorithm for deciding weightings.
+
+  Our original plan was to teach directory authorities how to measure
+  bandwidth themselves; then every authority would vote for the bandwidth
+  it prefers, and we'd take the median of votes as usual.
+
+  The problem comes when we have 7 authorities, and only a few of them
+  have smarter bandwidth allocation algorithms. So long as the majority
+  of them are voting for the number in the relay descriptor, the minority
+  that have better numbers will be ignored.
+
+2. Options
+
+  One fix would be to demand that every authority also run the
+  new bandwidth measurement algorithms: in that case, part of the
+  responsibility of being an authority operator is that you need to run
+  this code too. But in practice we can't really require all current
+  authority operators to do that; and if we want to expand the set of
+  authority operators even further, it will become even more impractical.
+  Also, bandwidth testing adds load to the network, so we don't really
+  want to require that the number of concurrent bandwidth tests match
+  the number of authorities we have.
+
+  The better fix is to allow certain authorities to specify that they are
+  voting on bandwidth "offsets": how much they think the weight should
+  be changed for the relay in question. We should put the offset vote in
+  the stanza for the relay in question, so a given authority can choose
+  which relays to express preferences for and which not.
+
+3. Security implications
+
+  If only some authorities choose to vote on an offset, then a majority of
+  those voting authorities can arbitrarily change the bandwidth weighting
+  for the relay. At the extreme, if there's only one offset-voting
+  authority, then that authority can dictate which relays clients will
+  find attractive.
+
+  This problem isn't entirely new: we already have the worry wrt
+  the subset of authorities that vote for BadExit.
+
+  To make it not so bad, we should deploy at least three offset-voting
+  authorities.
+
+  Also, authorities that know how to vote for offsets should vote for
+  an offset of zero for new nodes, rather than choosing not to vote on
+  any offset in those cases.
+
+4. Design
+
+  First, we need a new consensus method to support this new calculation.
+
+  Now v3 votes can have a new weight on the "w" line:
+    "Bandwidth_Offset=" INT.
+  Once we're using the new consensus method, the new way to compute the
+  Bandwidth weight is by taking the old vote (explained in proposal 141:
+  median, then choose the lower number in the case of ties), and adding
+  or subtracting the median offset (using the offset closer to 0 in the
+  case of ties, and with a sum of 0 if the sum is negative).
+
+  Then the actual consensus looks just the same as it did before,
+  so clients never have to know that this additional calculation is
+  happening.
+
