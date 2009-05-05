@@ -1,7 +1,5 @@
 Filename: 114-distributed-storage.txt
 Title: Distributed Storage for Tor Hidden Service Descriptors
-Version: $Revision$
-Last-Modified: $Date$
 Author: Karsten Loesing
 Created: 13-May-2007
 Status: Closed

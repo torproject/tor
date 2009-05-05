@@ -1,7 +1,5 @@
 Filename: 000-index.txt
 Title: Index of Tor Proposals
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 26-Jan-2007
 Status: Meta

@@ -1,7 +1,5 @@
 Filename: 140-consensus-diffs.txt
 Title: Provide diffs between consensuses
-Version: $Revision$
-Last-Modified: $Date$
 Author: Peter Palfrader
 Created: 13-Jun-2008
 Status: Accepted

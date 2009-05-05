@@ -1,7 +1,5 @@
 Filename: 158-microdescriptors.txt
 Title: Clients download consensus + microdescriptors
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 17-Jan-2009
 Status: Open

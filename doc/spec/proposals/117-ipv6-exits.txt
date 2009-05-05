@@ -1,7 +1,5 @@
 Filename: 117-ipv6-exits.txt
 Title: IPv6 exits
-Version: $Revision$
-Last-Modified: $Date$
 Author: coderman
 Created: 10-Jul-2007
 Status: Accepted

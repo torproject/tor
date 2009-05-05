@@ -1,7 +1,5 @@
 Filename: 120-shutdown-descriptors.txt
 Title: Shutdown descriptors when Tor servers stop
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 15-Aug-2007
 Status: Dead

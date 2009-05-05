@@ -1,7 +1,5 @@
 Filename: 141-jit-sd-downloads.txt
 Title: Download server descriptors on demand
-Version: $Revision$
-Last-Modified: $Date$
 Author: Peter Palfrader
 Created: 15-Jun-2008
 Status: Draft

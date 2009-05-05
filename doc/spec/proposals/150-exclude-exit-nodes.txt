@@ -1,6 +1,5 @@
 Filename: 150-exclude-exit-nodes.txt
 Title: Exclude Exit Nodes from a circuit
-Version: $Revision$
 Author: Mfr
 Created: 2008-06-15
 Status: Closed

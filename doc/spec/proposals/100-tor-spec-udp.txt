@@ -1,7 +1,5 @@
 Filename: 100-tor-spec-udp.txt
 Title: Tor Unreliable Datagram Extension Proposal
-Version: $Revision$
-Last-Modified: $Date$
 Author: Marc Liberatore
 Created: 23 Feb 2006
 Status: Dead

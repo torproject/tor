@@ -1,7 +1,5 @@
 Filename: xxx-hide-platform.txt
 Title: Hide Tor Platform Information
-Version: $Revision$
-Last-Modified: $Date$
 Author: Jacob Appelbaum 
 Created: 24-July-2008
 Status: Draft

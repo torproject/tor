@@ -1,7 +1,5 @@
 Filename: 130-v2-conn-protocol.txt
 Title: Version 2 Tor connection protocol
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2007-10-25
 Status: Closed

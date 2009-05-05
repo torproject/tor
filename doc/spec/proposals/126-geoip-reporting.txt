@@ -1,7 +1,5 @@
 Filename: 126-geoip-reporting.txt
 Title: Getting GeoIP data and publishing usage summaries
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2007-11-24
 Status: Closed

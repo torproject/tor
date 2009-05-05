@@ -1,4 +1,3 @@
-$Id$
 Tor's extensions to the SOCKS protocol
 
 1. Overview

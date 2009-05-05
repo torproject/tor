@@ -1,7 +1,5 @@
 Filename: 154-automatic-updates.txt
 Title: Automatic Software Update Protocol
-Version: $Revision$
-Last-Modified: $Date$
 Author: Matt Edman
 Created: 30-July-2008
 Status: Superseded

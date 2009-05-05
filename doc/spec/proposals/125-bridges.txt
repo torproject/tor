@@ -1,7 +1,5 @@
 Filename: 125-bridges.txt
 Title: Behavior for bridge users, bridge relays, and bridge authorities
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 11-Nov-2007
 Status: Closed

@@ -1,7 +1,5 @@
 Filename: 148-uniform-client-end-reason.txt
 Title: Stream end reasons from the client side should be uniform
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2-Jul-2008
 Status: Closed

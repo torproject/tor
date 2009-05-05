@@ -1,7 +1,5 @@
 Filename: xxx-separate-streams-by-port.txt
 Title: Separate streams across circuits by destination port
-Version: $Revision$
-Last-Modified: $Date$
 Author: Robert Hogan
 Created: 21-Oct-2008
 Status: Draft

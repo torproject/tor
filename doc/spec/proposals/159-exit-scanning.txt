@@ -1,7 +1,5 @@
 Filename: 159-exit-scanning.txt
 Title: Exit Scanning
-Version: $Revision$
-Last-Modified: $Date$
 Author: Mike Perry
 Created: 13-Feb-2009
 Status: Open

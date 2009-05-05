@@ -1,7 +1,5 @@
 Filename: 142-combine-intro-and-rend-points.txt
 Title: Combine Introduction and Rendezvous Points
-Version: $Revision$
-Last-Modified: $Date$
 Author: Karsten Loesing, Christian Wilms
 Created: 27-Jun-2008
 Status: Dead

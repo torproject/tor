@@ -1,4 +1,3 @@
-$Id$
 
                           Special Hostnames in Tor
                                Nick Mathewson

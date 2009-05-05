@@ -1,7 +1,5 @@
 Filename: 143-distributed-storage-improvements.txt
 Title: Improvements of Distributed Storage for Tor Hidden Service Descriptors
-Version: $Revision$
-Last-Modified: $Date$
 Author: Karsten Loesing
 Created: 28-Jun-2008
 Status: Open

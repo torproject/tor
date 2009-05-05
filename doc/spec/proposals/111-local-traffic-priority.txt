@@ -1,7 +1,5 @@
 Filename: 111-local-traffic-priority.txt
 Title: Prioritizing local traffic over relayed traffic
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 14-Mar-2007
 Status: Closed

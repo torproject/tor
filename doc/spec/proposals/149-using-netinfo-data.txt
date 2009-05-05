@@ -1,7 +1,5 @@
 Filename: 149-using-netinfo-data.txt
 Title: Using data from NETINFO cells
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2-Jul-2008
 Status: Open

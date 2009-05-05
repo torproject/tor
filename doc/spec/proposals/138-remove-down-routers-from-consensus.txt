@@ -1,7 +1,5 @@
 Filename: 138-remove-down-routers-from-consensus.txt
 Title: Remove routers that are not Running from consensus documents
-Version: $Revision$
-Last-Modified: $Date$
 Author: Peter Palfrader
 Created: 11-Jun-2008
 Status: Closed

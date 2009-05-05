@@ -1,7 +1,5 @@
 Filename: xxx-what-uses-sha1.txt
 Title: Where does Tor use SHA-1 today?
-Version: $Revision$
-Last-Modified: 1-May-2009
 Authors: Nick Mathewson, Marian
 Created: 30-Dec-2008
 Status: Meta
