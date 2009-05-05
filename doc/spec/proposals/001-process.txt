@@ -93,7 +93,7 @@ What should go in a proposal:
    what the proposal's about, what it does, and about what state it's in.
 
    After the Overview, the proposal becomes more free-form.  Depending on its
-   the length and complexity, the proposal can break into sections as
+   length and complexity, the proposal can break into sections as
    appropriate, or follow a short discursive format.  Every proposal should
    contain at least the following information before it is "ACCEPTED",
    though the information does not need to be in sections with these names.
