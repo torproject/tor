@@ -3930,9 +3930,7 @@ options_init_from_torrc(int argc, char **argv)
   if (argc > 1 && (!strcmp(argv[1],"--digests"))) {
     printf("Tor version %s.\n",get_version());
     printf("%s", libor_get_digests());
-    printf("%s", ""
-#include "or_sha1.i"
-           );
+    printf("%s", tor_get_digests());
     exit(0);
   }
 

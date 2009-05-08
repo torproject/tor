@@ -20,7 +20,7 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	networkstatus.c onion.c policies.c \
 	reasons.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
-	eventdns.c \
+	eventdns.c config_codedigest.c \
 	tor_main.c
 
 AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
@@ -42,7 +42,7 @@ test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	networkstatus.c onion.c policies.c \
 	reasons.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
-	eventdns.c \
+	eventdns.c config_codedigest.c \
 	test_data.c test.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
@@ -52,7 +52,7 @@ test_LDADD = ../common/libor.a ../common/libor-crypto.a \
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 
-config.o: or_sha1.i
+config_codedigest.o: or_sha1.i
 
 tor_main.o: micro-revision.i
 

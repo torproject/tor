@@ -2911,6 +2911,8 @@ int options_need_geoip_info(or_options_t *options, const char **reason_out);
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer);
 
+const char *tor_get_digests(void);
+
 #ifdef CONFIG_PRIVATE
 /* Used only by config.c and test.c */
 or_options_t *options_new(void);

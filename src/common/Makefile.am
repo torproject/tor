@@ -12,7 +12,7 @@ libor_extra_source=
 endif
 
 libor_a_SOURCES = address.c log.c util.c compat.c container.c mempool.c \
-	memarea.c $(libor_extra_source)
+	memarea.c util_codedigest.c $(libor_extra_source)
 libor_crypto_a_SOURCES = crypto.c aes.c tortls.c torgzip.c
 
 noinst_HEADERS = address.h log.h crypto.h test.h util.h compat.h aes.h torint.h tortls.h strlcpy.c strlcat.c torgzip.h container.h ht.h mempool.h memarea.h ciphers.inc
@@ -27,4 +27,4 @@ common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
 	  touch common_sha1.i; \
 	fi
 
-util.o: common_sha1.i
+util_codedigest.o: common_sha1.i
