@@ -8,7 +8,7 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
         0.2.2, figure out how long the stuff we want will take, and
         triage accordingly, or vice versa.
 
-- Design
+- Design only
   - Begin design work for UDP transition; identify areas where we need to
     make changes or instrument stuff early.
 
@@ -30,14 +30,31 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
 
   - Figure out good ways to instrument Tor internals so we can tell
     how well our bandwidth and flow-control stuff is actually working.
+    - What ports eat the bandwidth?
+    - How full do queues get?
+    - How much latency do queues get?
 
-- Features
+  - Rate limit at clients:
+    - Give clients an upper bound on how much they're willing to use
+      the network if they're not relaying?
+    - ... or group client circuits by IP at the server and rate-limit
+      like that.
+
+
+
+- Other features
   - Proposals to implement:
     - 146: reflect long-term stability
     - 147: Stop using v2 directories to generate v3 votes.
+      - Start pinging as soon as we learn about a relay, not on a
+        22-minute cycle.  Prioritize new and volatile relays for
+        testing.
 
   - Proposals to improve and implement
     - 158: microdescriptors
+    - 160: list bandwidth in consensus
+      - and actually set it reasonably
+      - and actually use it.
 
   - Proposals to improve and implement if not broken
     - IPv6 support.  (Parts of 117, but figure out how to handle DNS
@@ -45,6 +62,23 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
     - 140: Directory diffs
     - 149: learn info from netinfo cells.
     - 134: handle authority fragmentation (Needs more analysis)
+
+  - Needs a proposal, or at least some design
+    - Detect client-status better
+    - Have authorities report relay and voting status better: make it
+      easy to answer, "Why is my server not listed/not Guard/not
+      Running/etc"
+    - Have consensuses come in multiple "flavours".
+    - Weaken the requirements for being a Guard, based on K's
+      measurements.
+    - Adaptive timeouts for giving up on circuits and streams.
+    - Have weight for picking new nodes as guards be less stupid
+    - Lagged weight updates in consensuses: don't just move abruptly.
+    d Don't kill a circuit on the first failed extend.
+
+- Installers
+  - Switch to MSI on win32
+  - Use Thandy, perhaps?
 
 - Deprecations
   - Make .exit safe, or make it off-by-default.
