@@ -75,18 +75,14 @@ Triage
           SHA-1 usage that depends on collision resistance
           and doesn't need the attacker to have any special keys.
 
-   There is no need to put much effort into fixing PREIMAGE and 
-   SECOND PREIMAGE usages in the near-term: while SHA-1 is 
-   theoretically broken with regards to those attacks, no practical 
-   attack has been published as far as we know. The difference 
-   between finding any collisions and finding a second preimage is 
-   like the difference between finding any two people with the same 
-   birthday and finding someone with the same birthday as you 
-   personally.  To fix COLLISION<code-signing> usages is not too 
-   important either, since anyone who has the key to sign the code 
-   can mount far worse attacks.  It would be good to fix 
-   COLLISION<authority> usages, since we try to resist bad authorities 
-   to a limited extent.  The COLLISION usages are the most important 
+   There is no need to put much effort into fixing PREIMAGE and SECOND
+   PREIMAGE usages in the near-term: while there have been some
+   theoretical results doing these attacks against SHA-1, they don't
+   seem to be close to practical yet.  To fix COLLISION<code-signing>
+   usages is not too important either, since anyone who has the key to
+   sign the code can mount far worse attacks.  It would be good to fix
+   COLLISION<authority> usages, since we try to resist bad authorities
+   to a limited extent.  The COLLISION usages are the most important
    to fix.
 
    Kelsey and Schneier published a theoretical second preimage attack 
