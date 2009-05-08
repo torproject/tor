@@ -14,6 +14,9 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       do not request or use version 0 descriptors. However, the authorities
       still accept and serve version 0 descriptors when contacted by older
       hidden services/clients.
+    - The EXTENDED_EVENTS and VERBOSE_NAMES controller features are now
+      always on; using them is necessary for correct forward-compatible
+      controllers.
 
 
 Changes in version 0.2.1.15??? - ????-??-??

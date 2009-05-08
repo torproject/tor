@@ -964,7 +964,6 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
  * *<b>router_status_out</b>.  Return 0 on success, -1 on failure.
  *
  * If for_controller is true, include the routers with very old descriptors.
- * If for_controller is &gt;1, use the verbose nickname format.
  */
 int
 list_server_status_v1(smartlist_t *routers, char **router_status_out,
@@ -984,23 +983,22 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
 
   rs_entries = smartlist_create();
 
-  SMARTLIST_FOREACH(routers, routerinfo_t *, ri,
-  {
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     if (authdir) {
       /* Update router status in routerinfo_t. */
       dirserv_set_router_is_running(ri, now);
     }
-    if (for_controller == 1 || ri->cache_info.published_on >= cutoff)
-      smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
-    else if (for_controller > 2) {
+    if (for_controller) {
       char name_buf[MAX_VERBOSE_NICKNAME_LEN+2];
       char *cp = name_buf;
       if (!ri->is_running)
         *cp++ = '!';
       router_get_verbose_nickname(cp, ri);
       smartlist_add(rs_entries, tor_strdup(name_buf));
+    } else if (ri->cache_info.published_on >= cutoff) {
+      smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
     }
-  });
+  } SMARTLIST_FOREACH_END(ri);
 
   *router_status_out = smartlist_join_strings(rs_entries, " ", 0, NULL);
 

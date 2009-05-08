@@ -1163,12 +1163,6 @@ typedef struct control_connection_t {
 
   uint32_t event_mask; /**< Bitfield: which events does this controller
                         * care about? */
-  unsigned int use_long_names:1; /**< True if we should use long nicknames
-                                  * on this (v1) connection. Only settable
-                                  * via v1 controllers. */
-  /** For control connections only. If set, we send extended info with control
-   * events as appropriate. */
-  unsigned int use_extended_events:1;
 
   /** True if we have sent a protocolinfo reply on this connection. */
   unsigned int have_sent_protocolinfo:1;
