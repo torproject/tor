@@ -61,31 +61,49 @@ Why now?
 Triage
 
    How severe are these problems?  Let's divide them into these
-   categories:
-      PREIMAGE -- A SHA-1 usage that only depends on preimage
-          resistance
+   categories, where H(x) is the SHA-1 hash of x:
+      PREIMAGE -- find any x such that a H(x) has a chosen value 
+      -- A SHA-1 usage that only depends on preimage
+           resistance
+           * Also SECOND PREIMAGE. Given x, find a y not equal to 
+             x such that H(x) = H(y)
       COLLISION<role> -- A SHA-1 usage that depends on collision
           resistance, but the only party who could mount a
           collision-based attack is already in a trusted role
           (like a distribution signer or a directory authority).
-      COLLISION -- A SHA-1 usage that depends on collision resistance
+      COLLISION -- find any x and y such that H(x) = H(y) -- A 
+          SHA-1 usage that depends on collision resistance
           and doesn't need the attacker to have any special keys.
 
-   There is no need to put much effort into fixing PREIMAGE usages in
-   the near-term: even _MD5_ is still preimage resistant.  To fix
-   COLLISION<code-signing> usages is not too important either, since
-   anyone who has the key to sign the code can mount far worse
-   attacks.  It would be good to fix COLLISION<authority> usages,
-   since we try to resist.  The COLLISION usages are the most
-   important to fix.
+   There is no need to put much effort into fixing PREIMAGE and 
+   SECOND PREIMAGE usages in the near-term: while SHA-1 is 
+   theoretically broken with regards to those attacks, no practical 
+   attack has been published as far as we know. The difference 
+   between finding any collisions and finding a second preimage is 
+   like the difference between finding any two people with the same 
+   birthday and finding someone with the same birthday as you 
+   personally.  To fix COLLISION<code-signing> usages is not too 
+   important either, since anyone who has the key to sign the code 
+   can mount far worse attacks.  It would be good to fix 
+   COLLISION<authority> usages, since we try to resist bad authorities 
+   to a limited extent.  The COLLISION usages are the most important 
+   to fix.
+
+   Kelsey and Schneier published a theoretical second preimage attack 
+   against SHA-1 in 2005, so it would be a good idea to fix PREIMAGE 
+   and SECOND PREIMAGE usages after fixing COLLISION usages or where fixes 
+   require minimal effort. 
+
+   http://www.schneier.com/paper-preimages.html 
 
    Additionally, we need to consider the impact of a successful attack
    in each of these cases.  SHA-1 collisions are still expensive even
    if recent results are verified, and anybody with the resources to
    compute one also has the resources to mount a decent Sybil attack.
 
-   Let be pessimistic, and not assume that producing collisions of a given
-   format is actually any harder than producing collisions at all.
+   Let's be pessimistic, and not assume that producing collisions of 
+   a given format is actually any harder than producing collisions at 
+   all.
 
 
 What Tor uses hashes for today:
@@ -96,10 +114,16 @@ What Tor uses hashes for today:
       COLLSION
    B. TLS uses SHA-1 (and MD5) internally to generate keys.
       PREIMAGE?
+      * At least breaking SHA-1 and MD5 simultaneously is 
+        much more difficult than breaking either 
+        independently.
    C. Some of the TLS ciphersuites we allow use SHA-1.
       PREIMAGE?
    D. When we sign our code with GPG, it might be using SHA-1.
       COLLISION<code-signing>
+      * GPG 1.4 and up have writing support for SHA-2 hashes.
+        This blog has help for converting:
+        http://www.schwer.us/journal/2005/02/19/sha-1-broken-and-gnupg-gpg/
    E. Our GPG keys might be authenticated with SHA-1.
       COLLISION<code-signing-key-signing>
    F. OpenSSL's random number generator uses SHA-1, I believe.
@@ -179,6 +203,12 @@ What Tor uses hashes for today:
       establishment requests.
    B. Hidden servers use SHA-1 in multiple places when generating hidden
       service descriptors.
+      * The permanent-id is the first 80 bits of the SHA-1 hash of the 
+        public key
+      ** time-period performs caclulations using the permanent-id
+      * The secret-id-part is the SHA-1 has of the time period, the 
+        descriptor-cookie, and replica.
+      * Hash of introduction point's identity key.
    C. Hidden servers performing basic-type client authorization for their
       services use SHA-1 when encrypting introduction points contained in
       hidden service descriptors.
@@ -187,17 +217,24 @@ What Tor uses hashes for today:
       identifier or not.
    E. Hidden servers use SHA-1 to derive .onion addresses of their
       services.
+      * What's worse, it only uses the first 80 bits of the SHA-1 hash.
+        However, the rend-spec.txt says we aren't worried about arbitrary
+        collisons?
    F. Clients use SHA-1 to generate the current hidden service descriptor
       identifiers for a given .onion address.
    G. Hidden servers use SHA-1 to remember digests of the first parts of
       Diffie-Hellman handshakes contained in introduction requests in order
-      to detect replays.
+      to detect replays. See the RELAY_ESTABLISH_INTRO cell. We seem to be
+      taking a hash of a hash here.
    H. Hidden servers use SHA-1 during the Diffie-Hellman key exchange with
       a connecting client.
 
 5. The bridge protocol
 
    XXXX write me
+   
+   A. Client may attempt to query for bridges where he knows a digest
+      (probably SHA-1) before a direct query.
 
 6. The Tor user interface
 
