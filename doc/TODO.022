@@ -12,6 +12,8 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
   - Begin design work for UDP transition; identify areas where we need to
     make changes or instrument stuff early.
 
+    [multiple weeks, ongoing.  Need to do a draft early.]
+
 - Performance, mostly protocol-neutral.
   - Work with Libevent 2.0's bufferevent interface
     - Identify any performance stuff we need to push back into
@@ -44,7 +46,7 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
 
 - Other features
   - Proposals to implement:
-    - 146: reflect long-term stability
+    - 146: reflect long-term stability in consensuses
     - 147: Stop using v2 directories to generate v3 votes.
       - Start pinging as soon as we learn about a relay, not on a
         22-minute cycle.  Prioritize new and volatile relays for
@@ -52,7 +54,9 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
 
   - Proposals to improve and implement
     - 158: microdescriptors
+N     - Revise proposal
     - 160: list bandwidth in consensus
+RNM?  - Finish proposal
       - and actually set it reasonably
       - and actually use it.
 
@@ -65,15 +69,24 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
 
   - Needs a proposal, or at least some design
     - Detect client-status better
+N     - Write proposal
     - Have authorities report relay and voting status better: make it
       easy to answer, "Why is my server not listed/not Guard/not
       Running/etc"
+N     - Write proposal
     - Have consensuses come in multiple "flavours".
+N     - Write proposal
     - Weaken the requirements for being a Guard, based on K's
       measurements.
+K     - Finish measurements
+K?    - Write proposal
     - Adaptive timeouts for giving up on circuits and streams.
-    - Have weight for picking new nodes as guards be less stupid
+M/N   - Revise proposal 151
+    - Downweight guards more sensibly: be more forgiving about using
+      Guard nodes as non-first-hop.
+      - Write proposal.
     - Lagged weight updates in consensuses: don't just move abruptly.
+M?    - Write proposal
     d Don't kill a circuit on the first failed extend.
 
 - Installers
