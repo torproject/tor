@@ -13,6 +13,10 @@
 #include "compat.h"
 #include "log.h"
 
+/** If true, we try to detect any attempts to write beyond the length of a
+ * memarea. */
+#define USE_SENTINELS
+
 /** All returned pointers should be aligned to the nearest multiple of this
  * value. */
 #define MEMAREA_ALIGN SIZEOF_VOID_P
@@ -23,6 +27,24 @@
 #define MEMAREA_ALIGN_MASK 7lu
 #else
 #error "void* is neither 4 nor 8 bytes long. I don't know how to align stuff."
+#endif
+
+#ifdef USE_SENTINELS
+#define SENTINEL_VAL 0x90806622u
+#define SENTINEL_LEN sizeof(uint32_t)
+#define SET_SENTINEL(chunk)                                     \
+  STMT_BEGIN                                                    \
+  set_uint32( &(chunk)->u.mem[chunk->mem_size], SENTINEL_VAL ); \
+  STMT_END
+#define CHECK_SENTINEL(chunk)                                           \
+  STMT_BEGIN                                                            \
+  uint32_t sent_val = get_uint32(&(chunk)->u.mem[chunk->mem_size]);     \
+  tor_assert(sent_val == SENTINEL_VAL);                                 \
+  STMT_END
+#else
+#define SENTINEL_LEN 0
+#define SET_SENTINEL(chunk) STMT_NIL
+#define CHECK_SENTINEL(chunk) STMT_NIL
 #endif
 
 /** Increment <b>ptr</b> until it is aligned to MEMAREA_ALIGN. */
@@ -78,15 +100,20 @@ alloc_chunk(size_t sz, int freelist_ok)
     freelist = res->next_chunk;
     res->next_chunk = NULL;
     --freelist_len;
+    CHECK_SENTINEL(res);
     return res;
   } else {
     size_t chunk_size = freelist_ok ? CHUNK_SIZE : sz;
-    memarea_chunk_t *res = tor_malloc_roundup(&chunk_size);
+    memarea_chunk_t *res;
+    chunk_size += SENTINEL_LEN;
+    res = tor_malloc_roundup(&chunk_size);
     res->next_chunk = NULL;
-    res->mem_size = chunk_size - CHUNK_HEADER_SIZE;
+    res->mem_size = chunk_size - CHUNK_HEADER_SIZE - SENTINEL_LEN;
     res->next_mem = res->u.mem;
-    tor_assert(res->next_mem+res->mem_size == ((char*)res)+chunk_size);
+    tor_assert(res->next_mem+res->mem_size+SENTINEL_LEN ==
+               ((char*)res)+chunk_size);
     tor_assert(realign_pointer(res->next_mem) == res->next_mem);
+    SET_SENTINEL(res);
     return res;
   }
 }
@@ -96,6 +123,7 @@ alloc_chunk(size_t sz, int freelist_ok)
 static void
 chunk_free(memarea_chunk_t *chunk)
 {
+  CHECK_SENTINEL(chunk);
   if (freelist_len < MAX_FREELIST_LEN) {
     ++freelist_len;
     chunk->next_chunk = freelist;
@@ -182,6 +210,7 @@ memarea_alloc(memarea_t *area, size_t sz)
   memarea_chunk_t *chunk = area->first;
   char *result;
   tor_assert(chunk);
+  CHECK_SENTINEL(chunk);
   if (chunk->next_mem+sz > chunk->u.mem+chunk->mem_size) {
     if (sz+CHUNK_HEADER_SIZE >= CHUNK_SIZE) {
       /* This allocation is too big.  Stick it in a special chunk, and put
@@ -255,6 +284,7 @@ memarea_get_stats(memarea_t *area, size_t *allocated_out, size_t *used_out)
   size_t a = 0, u = 0;
   memarea_chunk_t *chunk;
   for (chunk = area->first; chunk; chunk = chunk->next_chunk) {
+    CHECK_SENTINEL(chunk);
     a += CHUNK_HEADER_SIZE + chunk->mem_size;
     tor_assert(chunk->next_mem >= chunk->u.mem);
     u += CHUNK_HEADER_SIZE + (chunk->next_mem - chunk->u.mem);
@@ -271,6 +301,7 @@ memarea_assert_ok(memarea_t *area)
   tor_assert(area->first);
 
   for (chunk = area->first; chunk; chunk = chunk->next_chunk) {
+    CHECK_SENTINEL(chunk);
     tor_assert(chunk->next_mem >= chunk->u.mem);
     tor_assert(chunk->next_mem <= chunk->u.mem+chunk->mem_size+MEMAREA_ALIGN);
   }
