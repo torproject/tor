@@ -3013,6 +3013,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TransPort and TransListenAddress are disabled in this build.");
 #endif
 
+#ifndef MS_WINDOWS
+    if (options->AccountingMax &&
+        (options->DirPort < 1024 || options->ORPort < 1024))
+      log(LOG_WARN, LD_CONFIG,
+          "You have set AccountingMax to use hibernation. You have also "
+          "chosen a low DirPort or OrPort. This combination can make Tor stop "
+          "working when it tries to re-attach the port after a period of "
+          "hibernation. Please choose a different port or turn off "
+          "hibernation unless you know this combination will work on your "
+          "platform.");
+#endif
+
   if (options->ExcludeExitNodes || options->ExcludeNodes) {
     options->_ExcludeExitNodesUnion = routerset_new();
     routerset_union(options->_ExcludeExitNodesUnion,options->ExcludeExitNodes);
