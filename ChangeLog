@@ -5,6 +5,9 @@ Changes in version 0.2.1.15??? - ????-??-??
       Bugfix on 0.2.0.9-alpha.
     - Provide a more useful log message if bug 977 (related to buffer
       freelists) ever reappears, and do not crash right away.
+    - Protect the count of open sockets with a mutex, so we can't
+      corrupt it when two threads are closing or opening sockets at once.
+      Fix for bug 939.  Bugfix on 0.2.0.1-alpha.
 
 
 Changes in version 0.2.1.14-rc - 2009-04-12
