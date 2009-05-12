@@ -258,6 +258,7 @@ buf_shrink_freelists(int free_all)
       int n_to_free = free_all ? freelists[i].cur_length :
         (freelists[i].lowest_length - slack);
       int n_to_skip = freelists[i].cur_length - n_to_free;
+      int orig_n_to_free = n_to_free, n_freed=0;
       int new_length = n_to_skip;
       chunk_t **chp = &freelists[i].head;
       chunk_t *chunk;
@@ -276,9 +277,19 @@ buf_shrink_freelists(int free_all)
         tor_free(chunk);
         chunk = next;
         --n_to_free;
+        ++n_freed;
         ++freelists[i].n_free;
       }
-      tor_assert(!n_to_free);
+      if (n_to_free) {
+        log_warn(LD_BUG, "Freelist length for %d-byte chunks may have been "
+                 "messed up somehow.", (int)freelists[i].alloc_size);
+        log_warn(LD_BUG, "There were %d chunks at the start.  I decided to "
+                 "keep %d. I wanted to free %d.  I freed %d.  I somehow think "
+                 "I have %d left to free.",
+                 freelists[i].cur_length, n_to_skip, orig_n_to_free,
+                 n_freed, n_to_free);
+      }
+      // tor_assert(!n_to_free);
       freelists[i].cur_length = new_length;
     }
     freelists[i].lowest_length = freelists[i].cur_length;

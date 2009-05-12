@@ -18,6 +18,9 @@ Changes in version 0.2.1.15??? - ????-??-??
     - Actually return -1 in the error case for read_bandwidth_usage. Bug
       was harmless, we currently don't care for the return value anywhere.
       Bugfix on 0.2.0.9-alpha.
+    - Provide a more useful log message if bug 977 (related to buffer
+      freelists) ever reappears, and do not crash right away.
+
 
 Changes in version 0.2.1.14-rc - 2009-04-12
   o Major features:
