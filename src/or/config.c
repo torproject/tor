@@ -1329,6 +1329,11 @@ options_act(or_options_t *old_options)
       circuit_expire_all_dirty_circs();
     }
 
+    if (! bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
+      log_info(LD_GENERAL, "Bridge status changed.  Forgetting GeoIP stats.");
+      geoip_remove_old_clients(time(NULL)+3600);
+    }
+
     if (options_transition_affects_workers(old_options, options)) {
       log_info(LD_GENERAL,
                "Worker-related options changed. Rotating workers.");
