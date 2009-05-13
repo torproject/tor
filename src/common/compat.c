@@ -676,6 +676,23 @@ static int max_socket = -1;
  * eventdns and libevent.) */
 static int n_sockets_open = 0;
 
+/** Mutex to protect open_sockets, max_socket, and n_sockets_open. */
+static tor_mutex_t *socket_accounting_mutex = NULL;
+
+static INLINE void
+socket_accounting_lock(void)
+{
+  if (PREDICT_UNLIKELY(!socket_accounting_mutex))
+    socket_accounting_mutex = tor_mutex_new();
+  tor_mutex_acquire(socket_accounting_mutex);
+}
+
+static INLINE void
+socket_accounting_unlock(void)
+{
+  tor_mutex_release(socket_accounting_mutex);
+}
+
 /** As close(), but guaranteed to work for sockets across platforms (including
  * Windows, where close()ing a socket doesn't work.  Returns 0 on success, -1
  * on failure. */
@@ -683,15 +700,7 @@ int
 tor_close_socket(int s)
 {
   int r = 0;
-#ifdef DEBUG_SOCKET_COUNTING
-  if (s > max_socket || ! bitarray_is_set(open_sockets, s)) {
-    log_warn(LD_BUG, "Closing a socket (%d) that wasn't returned by tor_open_"
-             "socket(), or that was already closed or something.", s);
-  } else {
-    tor_assert(open_sockets && s <= max_socket);
-    bitarray_clear(open_sockets, s);
-  }
-#endif
+
   /* On Windows, you have to call close() on fds returned by open(),
    * and closesocket() on fds returned by socket().  On Unix, everything
    * gets close()'d.  We abstract this difference by always using
@@ -702,6 +711,17 @@ tor_close_socket(int s)
   r = closesocket(s);
 #else
   r = close(s);
+#endif
+
+  socket_accounting_lock();
+#ifdef DEBUG_SOCKET_COUNTING
+  if (s > max_socket || ! bitarray_is_set(open_sockets, s)) {
+    log_warn(LD_BUG, "Closing a socket (%d) that wasn't returned by tor_open_"
+             "socket(), or that was already closed or something.", s);
+  } else {
+    tor_assert(open_sockets && s <= max_socket);
+    bitarray_clear(open_sockets, s);
+  }
 #endif
   if (r == 0) {
     --n_sockets_open;
@@ -717,9 +737,11 @@ tor_close_socket(int s)
 #endif
     r = -1;
   }
+
   if (n_sockets_open < 0)
     log_warn(LD_BUG, "Our socket count is below zero: %d. Please submit a "
              "bug report.", n_sockets_open);
+  socket_accounting_unlock();
   return r;
 }
 
@@ -754,8 +776,10 @@ tor_open_socket(int domain, int type, int protocol)
 {
   int s = socket(domain, type, protocol);
   if (s >= 0) {
+    socket_accounting_lock();
     ++n_sockets_open;
     mark_socket_open(s);
+    socket_accounting_unlock();
   }
   return s;
 }
@@ -766,8 +790,10 @@ tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len)
 {
   int s = accept(sockfd, addr, len);
   if (s >= 0) {
+    socket_accounting_lock();
     ++n_sockets_open;
     mark_socket_open(s);
+    socket_accounting_unlock();
   }
   return s;
 }
@@ -776,7 +802,11 @@ tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len)
 int
 get_n_open_sockets(void)
 {
-  return n_sockets_open;
+  int n;
+  socket_accounting_lock();
+  n = n_sockets_open;
+  socket_accounting_unlock();
+  return n;
 }
 
 /** Turn <b>socket</b> into a nonblocking socket.
@@ -817,6 +847,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
   int r;
   r = socketpair(family, type, protocol, fd);
   if (r == 0) {
+    socket_accounting_lock();
     if (fd[0] >= 0) {
       ++n_sockets_open;
       mark_socket_open(fd[0]);
@@ -825,6 +856,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
       ++n_sockets_open;
       mark_socket_open(fd[1]);
     }
+    socket_accounting_unlock();
   }
   return r < 0 ? -errno : r;
 #else

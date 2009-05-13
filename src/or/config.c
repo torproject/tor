@@ -1329,6 +1329,11 @@ options_act(or_options_t *old_options)
       circuit_expire_all_dirty_circs();
     }
 
+    if (! bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
+      log_info(LD_GENERAL, "Bridge status changed.  Forgetting GeoIP stats.");
+      geoip_remove_old_clients(time(NULL)+3600);
+    }
+
     if (options_transition_affects_workers(old_options, options)) {
       log_info(LD_GENERAL,
                "Worker-related options changed. Rotating workers.");
@@ -3231,6 +3236,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
                      "Unrecognized value in PublishServerDescriptor");
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
+  }
+
+  if ((options->BridgeRelay
+        || options->_PublishServerDescriptor & BRIDGE_AUTHORITY)
+      && (options->_PublishServerDescriptor
+          & (V1_AUTHORITY|V2_AUTHORITY|V3_AUTHORITY))) {
+    REJECT("Bridges are not supposed to publish router descriptors to the "
+           "directory authorities. Please correct your "
+           "PublishServerDescriptor line.");
   }
 
   if (options->MinUptimeHidServDirectoryV2 < 0) {
