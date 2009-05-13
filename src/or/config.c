@@ -3240,8 +3240,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if ((options->BridgeRelay
         || options->_PublishServerDescriptor & BRIDGE_AUTHORITY)
-      && options->_PublishServerDescriptor
-        & (V1_AUTHORITY + V2_AUTHORITY + V3_AUTHORITY)) {
+      && (options->_PublishServerDescriptor
+          & (V1_AUTHORITY|V2_AUTHORITY|V3_AUTHORITY))) {
     REJECT("Bridges are not supposed to publish router descriptors to the "
            "directory authorities. Please correct your "
            "PublishServerDescriptor line.");
