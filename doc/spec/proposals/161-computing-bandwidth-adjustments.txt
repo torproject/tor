@@ -1,0 +1,115 @@
+Title: Computing Bandwidth Adjustments
+Filename: 161-computing-bandwidth-adjustments.txt
+Author: Mike Perry
+Created: 12-May-2009
+Target: 0.2.2.x
+Status: Open
+
+
+1. Motivation
+
+  There is high variance in the performance of the Tor network. Despite
+  our efforts to balance load evenly across the Tor nodes, some nodes are
+  significantly slower and more overloaded than others.
+
+  Proposal 160 describes how we can augment the directory authorities to
+  vote on measured bandwidths for routers. This proposal describes what
+  goes into the measuring process.
+
+
+2. Measurement Selection
+
+  The general idea is to determine a load factor representing the ratio
+  of the capacity of measured nodes to the rest of the network. This load
+  factor could be computed from three potentially relevant statistics:
+  circuit failure rates, circuit extend times, or stream capacity.
+
+  Circuit failure rates and circuit extend times appear to be
+  non-linearly proportional to node load. We've observed that the same
+  nodes when scanned at US nighttime hours (when load is presumably
+  lower) exhibit almost no circuit failure, and significantly faster
+  extend times than when scanned during the day.
+
+  Stream capacity, however, is much more uniform, even during US
+  nighttime hours. Moreover, it is a more intuitive representation of
+  node capacity, and also less dependent upon distance and latency
+  if amortized over large stream fetches.
+
+
+2. Average Stream Bandwidth Calculation
+
+  The average stream bandwidths are obtained by dividing the network
+  into 3% slices according to advertised node bandwidth, yielding
+  about 45 nodes per slice in the current network.
+
+  Two hop circuits are built using nodes from the same slice, and a large
+  file is downloaded via these circuits. This process is repeated
+  several hundred times, and average stream capacities are assigned to
+  each node from these results.
+
+
+3. Ratio Calculation Options
+
+  There are two options for deriving the ratios themselves. They can
+  be obtained by dividing each nodes' average stream capacity by
+  either the average for the slice, or the average for the network as a
+  whole.
+
+  Dividing by the network-wide average has the advantage that it will
+  account for issues related to unbalancing between higher vs lower
+  capacity, such as Steven Murdoch's queuing theory weighting result.
+
+  Dividing by the slice average has the advantage that many scans can
+  be run in parallel from a single authority, and that results are
+  typically available sooner after a given scan takes place.
+
+
+3. Ratio Filtering
+
+  After the base ratios are calculated, a second pass is performed
+  to remove any streams with nodes of ratios less than X=0.5 from
+  the results of other nodes. In addition, all outlying streams
+  with capacity of one standard deviation below a node's average
+  are also removed.
+
+  The final ratio result will be calculated as the maximum of
+  these two resulting ratios if both are less than 1.0, the minimum
+  if both are greater than 1.0, and the mean if one is greater
+  and one is less than 1.0.
+
+
+4. Security implications
+
+  The ratio filtering will deal with cases of sabotage by dropping
+  both very slow outliers in stream average calculations, as well
+  as dropping streams that used very slow nodes from the calculation
+  of other nodes.
+
+  This scheme will not address nodes that try to game the system by
+  providing better service to scanners. The scanners can be detected
+  at the entry by IP address, and at the exit by the destination fetch.
+
+  Measures can be taken to obfuscate and separate the scanners' source
+  IP address from the directory authority IP address. For instance,
+  scans can happen offsite and the results can be rsynced into the
+  authorities.  The destination fetch can also be obscured by using SSL
+  and periodically changing the large document that is fetched.
+
+  Neither of these methods are foolproof, but such nodes can already
+  lie about their bandwidth to attract more traffic, so this solution
+  does not set us back any in that regard.
+
+
+4. Integration with Proposal 160
+
+  The final results will be produced for the voting mechanism
+  described in Proposal 160 by multiplying the derived ratio by
+  the average observed advertised bandwidth during the course of the
+  scan. This will produce a new bandwidth value that will be
+  output into a file consisting of lines of the form:
+
+  <node-idhex> SP new_bandwidth NL
+
+  This file can be either copied or rsynced into a directory readable
+  by the directory authority.
+
