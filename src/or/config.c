@@ -3238,6 +3238,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     return -1;
   }
 
+  if ((options->BridgeRelay
+        || options->_PublishServerDescriptor & BRIDGE_AUTHORITY)
+      && options->_PublishServerDescriptor
+        & (V1_AUTHORITY + V2_AUTHORITY + V3_AUTHORITY)) {
+    REJECT("Bridges are not supposed to publish router descriptors to the "
+           "directory authorities. Please correct your "
+           "PublishServerDescriptor line.");
+  }
+
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
                         "least 0 seconds. Changing to 0.");
