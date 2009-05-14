@@ -3258,6 +3258,28 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
   return 0;
 }
 
+/**
+ * Print out STREAM_BW event for a single conn
+ */
+int
+control_event_stream_bandwidth(edge_connection_t *edge_conn)
+{
+  if (EVENT_IS_INTERESTING(EVENT_STREAM_BANDWIDTH_USED)) {
+    if (!edge_conn->n_read && !edge_conn->n_written)
+      return 0;
+
+    send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
+                       "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
+                       U64_PRINTF_ARG(edge_conn->_base.global_identifier),
+                       (unsigned long)edge_conn->n_read,
+                       (unsigned long)edge_conn->n_written);
+
+    edge_conn->n_written = edge_conn->n_read = 0;
+  }
+
+  return 0;
+}
+
 /** A second or more has elapsed: tell any interested control
  * connections how much bandwidth streams have used. */
 int
