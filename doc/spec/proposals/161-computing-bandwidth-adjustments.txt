@@ -36,19 +36,27 @@ Status: Open
   if amortized over large stream fetches.
 
 
-2. Average Stream Bandwidth Calculation
+3. Average Stream Bandwidth Calculation
 
-  The average stream bandwidths are obtained by dividing the network
-  into 3% slices according to advertised node bandwidth, yielding
-  about 45 nodes per slice in the current network.
+  The average stream bandwidths are obtained by dividing the network into
+  slices of 50 nodes each, grouped according to advertised node bandwidth.
 
   Two hop circuits are built using nodes from the same slice, and a large
-  file is downloaded via these circuits. This process is repeated
-  several hundred times, and average stream capacities are assigned to
-  each node from these results.
+  file is downloaded via these circuits. For nodes in the first 15% of the
+  network, a 500K file will be used. For nodes in the next 15%, a 250K file
+  will be used. For nodes in next 15%, a 100K file will be used. The 
+  remainder of the nodes will fetch a 75K file.[1]
 
+  This process is repeated 250 times, and average stream capacities are 
+  assigned to each node from these results. 
+  
+  In the future, a node generator type can be created to ensure that
+  each node is chosen to participate in an equal number of circuits,
+  and the selection will continue until every live node is chosen
+  to participate in at least 7 circuits.
+  
 
-3. Ratio Calculation Options
+4. Ratio Calculation Options
 
   There are two options for deriving the ratios themselves. They can
   be obtained by dividing each nodes' average stream capacity by
@@ -64,7 +72,7 @@ Status: Open
   typically available sooner after a given scan takes place.
 
 
-3. Ratio Filtering
+5. Ratio Filtering
 
   After the base ratios are calculated, a second pass is performed
   to remove any streams with nodes of ratios less than X=0.5 from
@@ -78,7 +86,41 @@ Status: Open
   and one is less than 1.0.
 
 
-4. Security implications
+6. Pseudocode for Ratio Calculation Algorithm
+
+  Here is the complete pseudocode for the ratio algorithm:
+
+    Slices = {S | S is 50 nodes of similar consensus capacity}
+    for S in Slices:
+      while exists node N in S with circ_chosen(N) < 7:
+        fetch_slice_file(build_2hop_circuit(N, (exit in S)))
+      for N in S:
+        BW_measured(N) = MEAN(b | b is bandwidth of a stream through N)
+        Bw_stddev(N) = STDDEV(b | b is bandwidth of a stream through N)
+      Bw_avg(S) = MEAN(b | b = BW_measured(N) for all N in S)  
+      Normal_Routers(S) = {N | Bw_measured(N)/Bw_avg(S) > 0.5 }
+      for N in S:
+        Normal_Streams(N) =
+          {stream via N | all nodes in stream not in {Normal_Routers(S)-N}
+                          and bandwidth > BW_measured(N)-Bw_stddev(N)} 
+        BW_Norm_measured(N) =  MEAN(b | b is a bandwidth of Normal_Streams(N))
+
+    Bw_net_avg(Slices) = MEAN(BW_measured(N) for all N in Slices)
+    Bw_Norm_net_avg(Slices) = MEAN(BW_Norm_measured(N) for all N in Slices)
+
+    for N in all Slices:
+      Bw_net_ratio(N) = Bw_measured(N)/Bw_net_avg(Slices)
+      Bw_Norm_net_ratio(N) = Bw_measured2(N)/Bw_Norm_net_avg(Slices)
+
+      if Bw_net_ratio(N) < 1.0 and Bw_Norm_net_ratio(N) < 1.0:
+        ResultRatio(N) = MAX(Bw_net_ratio(N), Bw_Norm_net_ratio(N))
+      else if Bw_net_ratio(N) > 1.0 and Bw_Norm_net_ratio(N) > 1.0:
+        ResultRatio(N) = MIN(Bw_net_ratio(N), Bw_Norm_net_ratio(N))
+      else: 
+        ResultRatio(N) = MEAN(Bw_net_ratio(N), Bw_Norm_net_ratio(N))
+
+
+7. Security implications
 
   The ratio filtering will deal with cases of sabotage by dropping
   both very slow outliers in stream average calculations, as well
@@ -100,16 +142,24 @@ Status: Open
   does not set us back any in that regard.
 
 
-4. Integration with Proposal 160
+8. Integration with Proposal 160
 
   The final results will be produced for the voting mechanism
   described in Proposal 160 by multiplying the derived ratio by
-  the average observed advertised bandwidth during the course of the
-  scan. This will produce a new bandwidth value that will be
-  output into a file consisting of lines of the form:
+  the average published consensus bandwidth during the course of the
+  scan, and taking the weighted average with the previous consensus
+  bandwidth:
 
-  <node-idhex> SP new_bandwidth NL
+     Bw_new = (Bw_current * Alpha + Bw_scan_avg*Bw_ratio)/(Alpha + 1)
 
+  The Alpha parameter is a smoothing parameter intended to prevent
+  rapid oscillation between loaded and unloaded conditions. 
+
+  This will produce a new bandwidth value that will be output into a 
+  file consisting of lines of the form:
+
+  node_id=<idhex> SP bw=<Bw_new> NL
+  
   This file can be either copied or rsynced into a directory readable
   by the directory authority.
 
