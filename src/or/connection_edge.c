@@ -160,6 +160,7 @@ connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
              "CircID %d: At an edge. Marking connection for close.", circ_id);
     if (conn->_base.type == CONN_TYPE_AP) {
       connection_mark_unattached_ap(conn, END_STREAM_REASON_DESTROY);
+      control_event_stream_bandwidth(conn);
       control_event_stream_status(conn, STREAM_EVENT_CLOSED,
                                   END_STREAM_REASON_DESTROY);
       conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;

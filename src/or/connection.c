@@ -618,6 +618,7 @@ connection_about_to_close_connection(connection_t *conn)
                  conn->marked_for_close_file, conn->marked_for_close);
         dnsserv_reject_request(edge_conn);
       }
+      control_event_stream_bandwidth(edge_conn);
       control_event_stream_status(edge_conn, STREAM_EVENT_CLOSED,
                                   edge_conn->end_reason);
       circ = circuit_get_by_edge_conn(edge_conn);
