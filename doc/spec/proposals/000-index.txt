@@ -82,6 +82,7 @@ Proposals by number:
 159  Exit Scanning [OPEN]
 160  Authorities vote for bandwidth offsets in consensus [OPEN]
 161  Computing Bandwidth Adjustments [OPEN]
+162  Publish the consensus in multiple flavors [OPEN]
 
 
 Proposals by status:
@@ -105,6 +106,7 @@ Proposals by status:
    159  Exit Scanning
    160  Authorities vote for bandwidth offsets in consensus [for 0.2.2.x]
    161  Computing Bandwidth Adjustments [for 0.2.2.x]
+   162  Publish the consensus in multiple flavors [for 0.2.2]
  ACCEPTED:
    110  Avoiding infinite length circuits [for 0.2.1.x] [in 0.2.1.3-alpha]
    117  IPv6 exits [for 0.2.1.x]
