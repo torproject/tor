@@ -172,4 +172,7 @@ Migration:
       waiting a version or two for enough caches to begin supporting
       it.
 
+Acknowledgements:
 
+    Aspects of this design and its applications to hash migration were
+    heavily influenced by IRC conversations with Marian.
