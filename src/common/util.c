@@ -258,7 +258,9 @@ _tor_malloc_roundup(size_t *sizep DMALLOC_PARAMS)
 #ifdef HAVE_MALLOC_GOOD_SIZE
   *sizep = malloc_good_size(*sizep);
   return _tor_malloc(*sizep DMALLOC_FN_ARGS);
-#elif defined(HAVE_MALLOC_USABLE_SIZE) && !defined(USE_DMALLOC)
+#elif 0 && defined(HAVE_MALLOC_USABLE_SIZE) && !defined(USE_DMALLOC)
+  /* Never use malloc_usable_size(); it makes valgrind really unhappy,
+   * and doesn't win much in terms of usable space where it exists. */
   void *result = _tor_malloc(*sizep DMALLOC_FN_ARGS);
   *sizep = malloc_usable_size(result);
   return result;

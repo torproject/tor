@@ -18,6 +18,9 @@ Changes in version 0.2.1.15??? - ????-??-??
       memory right up to the end of a memarea, then realigned the
       memory one step beyond the end.  Fixes a possible cause of bug
       930.
+    - Stop using malloc_usable_size() to use more area than we had
+      actually allocated: it was safe, but made valgrind really
+      unhappy.  Bugfix on 0.2.0.x.
 
 
 Changes in version 0.2.1.14-rc - 2009-04-12
