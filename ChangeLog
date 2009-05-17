@@ -1,7 +1,7 @@
 Changes in version 0.2.2.1-alpha - 2009-??-??
   o Minor features
-    - New --digests command-line switch to output the digests of the source
-      files Tor was built with.
+    - New --digests command-line switch to output the digests of the
+      source files Tor was built with.
     - The "torify" script now uses torsocks where available.
     - The memarea code now uses a sentinel value at the end of each area
       to make sure nothing writes beyond the end of an area.  This might
