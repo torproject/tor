@@ -3513,6 +3513,7 @@ router_load_routers_from_string(const char *s, const char *eos,
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     was_router_added_t r;
+    char d[DIGEST_LEN];
     if (requested_fingerprints) {
       base16_encode(fp, sizeof(fp), descriptor_digests ?
                       ri->cache_info.signed_descriptor_digest :
@@ -3533,6 +3534,7 @@ router_load_routers_from_string(const char *s, const char *eos,
       }
     }
 
+    memcpy(d, ri->cache_info.signed_descriptor_digest, DIGEST_LEN);
     r = router_add_to_routerlist(ri, &msg, from_cache, !from_cache);
     if (WRA_WAS_ADDED(r)) {
       any_changed++;
@@ -3541,11 +3543,10 @@ router_load_routers_from_string(const char *s, const char *eos,
       smartlist_clear(changed);
     } else if (WRA_WAS_REJECTED(r)) {
       download_status_t *dl_status;
-      dl_status = router_get_dl_status_by_descriptor_digest(
-          ri->cache_info.signed_descriptor_digest);
+      dl_status = router_get_dl_status_by_descriptor_digest(d);
       if (dl_status) {
         log_info(LD_GENERAL, "Marking router %s as never downloadable",
-                 hex_str(ri->cache_info.signed_descriptor_digest, DIGEST_LEN));
+                 hex_str(d, DIGEST_LEN));
         download_status_mark_impossible(dl_status);
       }
     }

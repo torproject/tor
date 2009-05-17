@@ -21,6 +21,8 @@ Changes in version 0.2.1.15??? - ????-??-??
     - Stop using malloc_usable_size() to use more area than we had
       actually allocated: it was safe, but made valgrind really
       unhappy.  Bugfix on 0.2.0.x.
+    - Fix use of freed memory when deciding to mark a non-addable
+      descriptor as never-downloadable.  Bugfix on 0.2.1.9-alpha.
 
 
 Changes in version 0.2.1.14-rc - 2009-04-12
