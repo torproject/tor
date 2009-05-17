@@ -1,8 +1,8 @@
 Changes in version 0.2.1.15??? - ????-??-??
   o Minor bugfixes:
-    - Actually return -1 in the error case for read_bandwidth_usage. Bug
-      was harmless, we currently don't care for the return value anywhere.
-      Bugfix on 0.2.0.9-alpha.
+    - Actually return -1 in the error case for read_bandwidth_usage().
+      Harmless bug, since we currently don't care about the return value
+      anywhere. Bugfix on 0.2.0.9-alpha.
     - Provide a more useful log message if bug 977 (related to buffer
       freelists) ever reappears, and do not crash right away.
     - Protect the count of open sockets with a mutex, so we can't
