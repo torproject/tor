@@ -211,6 +211,8 @@ memarea_alloc(memarea_t *area, size_t sz)
   char *result;
   tor_assert(chunk);
   CHECK_SENTINEL(chunk);
+  if (sz == 0)
+    sz = 1;
   if (chunk->next_mem+sz > chunk->u.mem+chunk->mem_size) {
     if (sz+CHUNK_HEADER_SIZE >= CHUNK_SIZE) {
       /* This allocation is too big.  Stick it in a special chunk, and put
@@ -227,10 +229,11 @@ memarea_alloc(memarea_t *area, size_t sz)
     tor_assert(chunk->mem_size >= sz);
   }
   result = chunk->next_mem;
-  chunk->next_mem = realign_pointer(chunk->next_mem + sz);
+  chunk->next_mem = chunk->next_mem + sz;
   // XXXX021 remove these once bug 930 is solved.
   tor_assert(chunk->next_mem >= chunk->u.mem);
   tor_assert(chunk->next_mem <= chunk->u.mem+chunk->mem_size);
+  chunk->next_mem = realign_pointer(chunk->next_mem);
   return result;
 }
 
@@ -303,7 +306,8 @@ memarea_assert_ok(memarea_t *area)
   for (chunk = area->first; chunk; chunk = chunk->next_chunk) {
     CHECK_SENTINEL(chunk);
     tor_assert(chunk->next_mem >= chunk->u.mem);
-    tor_assert(chunk->next_mem <= chunk->u.mem+chunk->mem_size+MEMAREA_ALIGN);
+    tor_assert(chunk->next_mem <=
+          (char*) realign_pointer(chunk->u.mem+chunk->mem_size));
   }
 }
 

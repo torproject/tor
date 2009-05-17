@@ -30,6 +30,12 @@ Changes in version 0.2.1.15??? - ????-??-??
       directory authority.  Fixes part of bug 932.
     - When we change to or from being a bridge, reset our counts of
       client usage by country.  Fixes bug 932.
+    - Fix a bug that made stream bandwidth get misreported to the
+      controller.
+    - Fix an assertion failure on 64-bit platforms when we allocated
+      memory right up to the end of a memarea, then realigned the
+      memory one step beyond the end.  Fixes a possible cause of bug
+      930.
 
 
 Changes in version 0.2.1.14-rc - 2009-04-12
