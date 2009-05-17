@@ -330,9 +330,6 @@ load_authority_keyset(int legacy, crypto_pk_env_t **key_out,
              "certificate");
     goto done;
   }
-  parsed->cache_info.signed_descriptor_body = cert;
-  parsed->cache_info.signed_descriptor_len = eos-cert;
-  cert = NULL;
 
   if (*key_out)
     crypto_free_pk_env(*key_out);
