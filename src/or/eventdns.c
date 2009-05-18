@@ -490,7 +490,7 @@ _del_timeout_event(u16 *lineno, struct event *ev, int line)
 {
 	if (*lineno) {
 		log(EVDNS_LOG_WARN,
-			"Duplicate timeout event_del from line %d: first call "
+			"BUG: Duplicate timeout event_del from line %d: first call "
 			"was at %d.", line, (int)*lineno);
 		return 0;
 	} else {
@@ -501,6 +501,24 @@ _del_timeout_event(u16 *lineno, struct event *ev, int line)
 #define del_timeout_event(s)											\
 	(_del_timeout_event(&(s)->timeout_event_deleted, &(s)->timeout_event, \
 						__LINE__))
+/* For debugging bug 929/957. XXXX021 */
+static int
+_del_timeout_event_if_set(u16 *lineno, struct event *ev, int line)
+{
+	if (*lineno == 0) {
+		log(EVDNS_LOG_WARN,
+			"BUG: Event that I thought was non-added as of line %d "
+			"was actually added on line %d",
+			line, (int)*lineno);
+		*lineno = line;
+		return event_del(ev);
+	}
+	return 0;
+}
+#define del_timeout_event_if_set(s)				\
+	_del_timeout_event_if_set(&(s)->timeout_event_deleted,	\
+							  &(s)->timeout_event,			\
+							  __LINE__)
 
 /* This walks the list of inflight requests to find the */
 /* one with a matching transaction id. Returns NULL on */
@@ -549,6 +567,7 @@ nameserver_probe_failed(struct nameserver *const ns) {
 										global_nameserver_timeouts_length - 1)];
 	ns->failed_times++;
 
+	del_timeout_event_if_set(ns);
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (add_timeout_event(ns, (struct timeval *) timeout) < 0) {
 		log(EVDNS_LOG_WARN,
@@ -578,6 +597,7 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	ns->state = 0;
 	ns->failed_times = 1;
 
+	del_timeout_event_if_set(ns);
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (add_timeout_event(ns, (struct timeval *) &global_nameserver_timeouts[0]) < 0) {
 		log(EVDNS_LOG_WARN,
@@ -2089,6 +2109,7 @@ evdns_request_transmit(struct evdns_request *req) {
 		/* transmitted; we need to check for timeout. */
 		log(EVDNS_LOG_DEBUG,
 			"Setting timeout for request %lx", (unsigned long) req);
+		del_timeout_event_if_set(req);
 		evtimer_set(&req->timeout_event, evdns_request_timeout_callback, req);
 		if (add_timeout_event(req, &global_timeout) < 0) {
 			log(EVDNS_LOG_WARN,
@@ -2297,6 +2318,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	if (!ns) return -1;
 
 	memset(ns, 0, sizeof(struct nameserver));
+	ns->timeout_event_deleted = __LINE__;
 
 	ns->socket = socket(PF_INET, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
@@ -2531,6 +2553,7 @@ request_new(int type, const char *name, int flags,
 	}
 
 	memset(req, 0, sizeof(struct evdns_request));
+	req->timeout_event_deleted = __LINE__;
 
 	if (global_randomize_case) {
 		unsigned i;

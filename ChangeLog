@@ -25,6 +25,8 @@ Changes in version 0.2.1.15??? - ????-??-??
       descriptor as never-downloadable.  Bugfix on 0.2.1.9-alpha.
     - Fix a memory leak when v3 directory authorities load their keys
       and cert from disk. Bugfix on 0.2.0.1-alpha.
+    - Add a test and fix for a possible cause of bug 957.  If it's
+      the real cause, it should display some warning messages.
 
 
 Changes in version 0.2.1.14-rc - 2009-04-12
