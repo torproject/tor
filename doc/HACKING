@@ -11,11 +11,19 @@
 0.1. Useful command-lines that are non-trivial to reproduce but can
 help with tracking bugs or leaks.
 
+0.1.1. Dmalloc
+
 dmalloc -l ~/dmalloc.log
 (run the commands it tells you)
 ./configure --with-dmalloc
 
+0.2.2. Valgrind
+
 valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
+
+(Note that if you get a zillion openssl warnings, you will also need to
+ pass --undef-value-errors=no to valgrind, or rebuild your openssl
+ with -DPURIFY.)
 
 0.2. Running gcov for unit test coverage
 
