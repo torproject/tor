@@ -66,10 +66,7 @@ Status: Open
   Dividing by the network-wide average has the advantage that it will
   account for issues related to unbalancing between higher vs lower
   capacity, such as Steven Murdoch's queuing theory weighting result.
-
-  Dividing by the slice average has the advantage that many scans can
-  be run in parallel from a single authority, and that results are
-  typically available sooner after a given scan takes place.
+  For this reason, we will opt for network-wide averages.
 
 
 5. Ratio Filtering
@@ -142,7 +139,26 @@ Status: Open
   does not set us back any in that regard.
 
 
-8. Integration with Proposal 160
+8. Parallelization
+
+  Because each slice takes as long as 6 hours to complete, we will want
+  to parallelize as much as possible. This will be done by concurrently
+  running multiple scanners from each authority to deal with different
+  segments of the network. Each scanner piece will continually loop 
+  over a portion of the network, outputting files of the form:
+
+   node_id=<idhex> SP strm_bw=<BW_measured(N)> SP 
+            filt_bw=<BW_Norm_measured(N)> NL
+
+  The most recent file from each scanner will be periodically gathered 
+  by another script that uses them to produce network-wide averages 
+  and calculate ratios as per the algorithm in section 6. Because nodes 
+  may shift in capacity, they may appear in more than one slice and/or 
+  appear more than once in the file set. The line that yields a ratio 
+  closest to 1.0 will be chosen in this case.
+
+
+9. Integration with Proposal 160
 
   The final results will be produced for the voting mechanism
   described in Proposal 160 by multiplying the derived ratio by
@@ -158,8 +174,15 @@ Status: Open
   This will produce a new bandwidth value that will be output into a 
   file consisting of lines of the form:
 
-  node_id=<idhex> SP bw=<Bw_new> NL
-  
+     node_id=<idhex> SP bw=<Bw_new> NL
+ 
+  The first line of the file will contain a timestamp in UNIX time()
+  seconds. This will be used by the authority to decide if the 
+  measured values are too old to use.
+ 
   This file can be either copied or rsynced into a directory readable
   by the directory authority.
 
+
+1. Exact values for each segment are still being determined via 
+test scans.
