@@ -3,6 +3,11 @@ Changes in version 0.2.0.35 - 2009-??-??
     - Avoid crashing in the presence of certain malformed descriptors.
       Found by lark, and by automated fuzzing.
 
+  o Major bugfixes:
+    - Fix a timing-dependent, allocator-dependent, DNS-related crash bug
+      that would occur on some exit nodes when DNS failures and timeouts
+      occurred in certain patterns.  Fix for bug 957.
+
   o Minor bugfixes:
     - When starting with a cache over a few days old, do not leak
       memory for the obsolete router descriptors in it.  Bugfix on
