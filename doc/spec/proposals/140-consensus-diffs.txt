@@ -5,6 +5,11 @@ Created: 13-Jun-2008
 Status: Accepted
 Target: 0.2.2.x
 
+0. History
+
+  22-May-2009: Restricted the ed format even more strictly for ease of
+  implementation. -nickm
+
 1. Overview.
 
   Tor clients and servers need a list of which relays are on the
@@ -132,6 +137,10 @@ Target: 0.2.2.x
 
   Note that line numbers always apply to the file after all previous
   commands have already been applied.
+
+  The commands MUST apply to the file from back to front, such that
+  lines are only ever referred to by their position in the original
+  file.
 
   The "current line" is either the first line of the file, if this is
   the first command, the last line of a block we added in an append or
