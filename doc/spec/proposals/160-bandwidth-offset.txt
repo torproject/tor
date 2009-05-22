@@ -38,7 +38,10 @@ Target: 0.2.2.x
 
   The better fix is to allow certain authorities to specify that they are
   voting on bandwidth measurements: more accurate bandwidth values that
-  have actually been evaluated. In this way, authorities 
+  have actually been evaluated. In this way, authorities can vote on 
+  the median measured value if sufficient measured votes exist for a router,
+  and otherwise fall back to the median value taken from the published router
+  descriptors.
 
 3. Security implications
 
