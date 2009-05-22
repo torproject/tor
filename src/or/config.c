@@ -1209,7 +1209,7 @@ options_need_geoip_info(or_options_t *options, const char **reason_out)
 
   if (routerset_usage && reason_out) {
     *reason_out = "We've been configured to use (or avoid) nodes in certain "
-      "contries, and we need GEOIP information to figure out which ones they "
+      "countries, and we need GEOIP information to figure out which ones they "
       "are.";
   } else if (bridge_usage && reason_out) {
     *reason_out = "We've been configured to see which countries can access "

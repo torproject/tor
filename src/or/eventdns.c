@@ -474,7 +474,7 @@ sockaddr_eq(const struct sockaddr *sa1, const struct sockaddr *sa2,
 	return 1;
 }
 
-/* for debugging bug 929.  XXXX021 */
+/* for debugging bug 929.  XXXX022 */
 static int
 _add_timeout_event(u16 *lineno, struct event *ev, struct timeval *to)
 {
@@ -484,13 +484,13 @@ _add_timeout_event(u16 *lineno, struct event *ev, struct timeval *to)
 #define add_timeout_event(s, to) \
 	(_add_timeout_event(&(s)->timeout_event_deleted, &(s)->timeout_event, (to)))
 
-/* for debugging bug 929.  XXXX021 */
+/* for debugging bug 929.  XXXX022 */
 static int
 _del_timeout_event(u16 *lineno, struct event *ev, int line)
 {
 	if (*lineno) {
-		log(EVDNS_LOG_WARN,
-			"BUG: Duplicate timeout event_del from line %d: first call "
+		log(EVDNS_LOG_DEBUG,
+			"Duplicate timeout event_del from line %d: first call "
 			"was at %d.", line, (int)*lineno);
 		return 0;
 	} else {
@@ -501,13 +501,13 @@ _del_timeout_event(u16 *lineno, struct event *ev, int line)
 #define del_timeout_event(s)											\
 	(_del_timeout_event(&(s)->timeout_event_deleted, &(s)->timeout_event, \
 						__LINE__))
-/* For debugging bug 929/957. XXXX021 */
+/* For debugging bug 929/957. XXXX022 */
 static int
 _del_timeout_event_if_set(u16 *lineno, struct event *ev, int line)
 {
 	if (*lineno == 0) {
-		log(EVDNS_LOG_WARN,
-			"BUG: Event that I thought was non-added as of line %d "
+		log(EVDNS_LOG_DEBUG,
+			"Event that I thought was non-added as of line %d "
 			"was actually added on line %d",
 			line, (int)*lineno);
 		*lineno = line;
