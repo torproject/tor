@@ -173,8 +173,6 @@ struct evdns_request {
 	/* these objects are kept in a circular list */
 	struct evdns_request *next, *prev;
 
-	u16 timeout_event_deleted; /**< Debugging: where was timeout_event
-								* deleted?  0 for "it's added." */
 	struct event timeout_event;
 
 	u16 trans_id;  /* the transaction id */
@@ -214,8 +212,6 @@ struct nameserver {
 	struct event event;
 	/* these objects are kept in a circular list */
 	struct nameserver *next, *prev;
-	u16 timeout_event_deleted; /**< Debugging: where was timeout_event
-								* deleted?  0 for "it's added." */
 	struct event timeout_event; /* used to keep the timeout for */
 								/* when we next probe this server. */
 								/* Valid if state == 0 */
@@ -474,51 +470,10 @@ sockaddr_eq(const struct sockaddr *sa1, const struct sockaddr *sa2,
 	return 1;
 }
 
-/* for debugging bug 929.  XXXX022 */
-static int
-_add_timeout_event(u16 *lineno, struct event *ev, struct timeval *to)
-{
-	*lineno = 0;
-	return evtimer_add(ev, to);
-}
-#define add_timeout_event(s, to) \
-	(_add_timeout_event(&(s)->timeout_event_deleted, &(s)->timeout_event, (to)))
-
-/* for debugging bug 929.  XXXX022 */
-static int
-_del_timeout_event(u16 *lineno, struct event *ev, int line)
-{
-	if (*lineno) {
-		log(EVDNS_LOG_DEBUG,
-			"Duplicate timeout event_del from line %d: first call "
-			"was at %d.", line, (int)*lineno);
-		return 0;
-	} else {
-		*lineno = (u16)line;
-		return event_del(ev);
-	}
-}
-#define del_timeout_event(s)											\
-	(_del_timeout_event(&(s)->timeout_event_deleted, &(s)->timeout_event, \
-						__LINE__))
-/* For debugging bug 929/957. XXXX022 */
-static int
-_del_timeout_event_if_set(u16 *lineno, struct event *ev, int line)
-{
-	if (*lineno == 0) {
-		log(EVDNS_LOG_DEBUG,
-			"Event that I thought was non-added as of line %d "
-			"was actually added on line %d",
-			line, (int)*lineno);
-		*lineno = line;
-		return event_del(ev);
-	}
-	return 0;
-}
-#define del_timeout_event_if_set(s)				\
-	_del_timeout_event_if_set(&(s)->timeout_event_deleted,	\
-							  &(s)->timeout_event,			\
-							  __LINE__)
+#define add_timeout_event(s, to)				\
+	(event_add(&(s)->timeout_event, (to)))
+#define del_timeout_event(s)					\
+	(event_del(&(s)->timeout_event))
 
 /* This walks the list of inflight requests to find the */
 /* one with a matching transaction id. Returns NULL on */
@@ -555,7 +510,7 @@ static void
 nameserver_probe_failed(struct nameserver *const ns) {
 	const struct timeval * timeout;
 	del_timeout_event(ns);
-	CLEAR(&ns->timeout_event);
+
 	if (ns->state == 1) {
 		/* This can happen if the nameserver acts in a way which makes us mark */
 		/* it as bad and then starts sending good replies. */
@@ -567,8 +522,6 @@ nameserver_probe_failed(struct nameserver *const ns) {
 										global_nameserver_timeouts_length - 1)];
 	ns->failed_times++;
 
-	del_timeout_event_if_set(ns);
-	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (add_timeout_event(ns, (struct timeval *) timeout) < 0) {
 		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
@@ -597,8 +550,6 @@ nameserver_failed(struct nameserver *const ns, const char *msg) {
 	ns->state = 0;
 	ns->failed_times = 1;
 
-	del_timeout_event_if_set(ns);
-	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 	if (add_timeout_event(ns, (struct timeval *) &global_nameserver_timeouts[0]) < 0) {
 		log(EVDNS_LOG_WARN,
 			"Error from libevent when adding timer event for %s",
@@ -634,7 +585,6 @@ nameserver_up(struct nameserver *const ns) {
 	log(EVDNS_LOG_WARN, "Nameserver %s is back up",
 		debug_ntop((struct sockaddr *)&ns->address));
 	del_timeout_event(ns);
-	CLEAR(&ns->timeout_event);
 	ns->state = 1;
 	ns->failed_times = 0;
 	ns->timedout = 0;
@@ -666,7 +616,6 @@ request_finished(struct evdns_request *const req, struct evdns_request **head) {
 	log(EVDNS_LOG_DEBUG, "Removing timeout for request %lx",
 		(unsigned long) req);
 	del_timeout_event(req);
-	CLEAR(&req->timeout_event);
 
 	search_request_finished(req);
 	global_requests_inflight--;
@@ -2046,7 +1995,6 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 		 * request_finished; that one already deletes the timeout event.
 		 * XXXX021 port this change to libevent. */
 		del_timeout_event(req);
-		CLEAR(&req->timeout_event);
 		evdns_request_transmit(req);
 	}
 }
@@ -2109,8 +2057,7 @@ evdns_request_transmit(struct evdns_request *req) {
 		/* transmitted; we need to check for timeout. */
 		log(EVDNS_LOG_DEBUG,
 			"Setting timeout for request %lx", (unsigned long) req);
-		del_timeout_event_if_set(req);
-		evtimer_set(&req->timeout_event, evdns_request_timeout_callback, req);
+
 		if (add_timeout_event(req, &global_timeout) < 0) {
 			log(EVDNS_LOG_WARN,
 				"Error from libevent when adding timer for request %lx",
@@ -2225,7 +2172,6 @@ evdns_clear_nameservers_and_suspend(void)
 		(void) event_del(&server->event);
 		CLEAR(&server->event);
 		del_timeout_event(server);
-		CLEAR(&server->timeout_event);
 		if (server->socket >= 0)
 			CLOSE_SOCKET(server->socket);
 		CLEAR(server);
@@ -2243,7 +2189,6 @@ evdns_clear_nameservers_and_suspend(void)
 		req->ns = NULL;
 		/* ???? What to do about searches? */
 		del_timeout_event(req);
-		CLEAR(&req->timeout_event);
 		req->trans_id = 0;
 		req->transmit_me = 0;
 
@@ -2318,7 +2263,8 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	if (!ns) return -1;
 
 	memset(ns, 0, sizeof(struct nameserver));
-	ns->timeout_event_deleted = __LINE__;
+
+	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 
 	ns->socket = socket(PF_INET, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
@@ -2553,7 +2499,8 @@ request_new(int type, const char *name, int flags,
 	}
 
 	memset(req, 0, sizeof(struct evdns_request));
-	req->timeout_event_deleted = __LINE__;
+
+	evtimer_set(&req->timeout_event, evdns_request_timeout_callback, req);
 
 	if (global_randomize_case) {
 		unsigned i;
@@ -3384,8 +3331,7 @@ evdns_shutdown(int fail_requests)
 		if (server->socket >= 0)
 			CLOSE_SOCKET(server->socket);
 		(void) event_del(&server->event);
-		if (server->state == 0)
-			del_timeout_event(server);
+		del_timeout_event(server);
 		CLEAR(server);
 		mm_free(server);
 		if (server_next == server_head)
