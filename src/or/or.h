@@ -483,7 +483,7 @@ typedef enum {
 #define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
 /** True iff the circuit purpose <b>p</b> is for a circuit that originated
  * here to serve as a client.  (Hidden services don't count here.) */
-#define CIRCUIT_PURPOSE_IS_CLIENT(p) \
+#define CIRCUIT_PURPOSE_IS_CLIENT(p)  \
   ((p)> _CIRCUIT_PURPOSE_OR_MAX &&    \
    (p)<=_CIRCUIT_PURPOSE_C_MAX)
 /** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
@@ -3573,6 +3573,7 @@ int dns_resolve(edge_connection_t *exitconn);
 void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
 void dns_reset_correctness_checks(void);
+void dump_dns_mem_usage(int severity);
 
 /********************************* dnsserv.c ************************/
 

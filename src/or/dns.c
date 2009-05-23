@@ -1612,6 +1612,31 @@ assert_resolve_ok(cached_resolve_t *resolve)
   }
 }
 
+/** Return the number of DNS cache entries as an int */
+static int
+dns_cache_entry_count(void)
+{
+   return HT_SIZE(&cache_root);
+}
+
+/** Log memory information about our internal DNS cache at level 'severity'. */
+void
+dump_dns_mem_usage(int severity)
+{
+  /* This should never be larger than INT_MAX. */
+  int hash_count = dns_cache_entry_count();
+  size_t hash_mem = sizeof(struct cached_resolve_t) * hash_count;
+  hash_mem += HT_MEM_USAGE(&cache_root);
+
+  /* Print out the count and estimated size of our &cache_root.  It undercounts
+     hostnames in cached reverse resolves.
+   */
+  log(severity, LD_MM, "Our DNS cache has %d entries.", hash_count);
+  log(severity, LD_MM, "Our DNS cache size is approximately %u bytes.",
+      (unsigned)hash_mem);
+}
+
+
 #ifdef DEBUG_DNS_CACHE
 /** Exit with an assertion if the DNS cache is corrupt. */
 static void
