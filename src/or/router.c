@@ -442,7 +442,9 @@ init_keys(void)
     key_lock = tor_mutex_new();
 
   /* There are a couple of paths that put us here before */
-  if (crypto_global_init(get_options()->HardwareAccel)) {
+  if (crypto_global_init(get_options()->HardwareAccel,
+                         get_options()->AccelName,
+                         get_options()->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }

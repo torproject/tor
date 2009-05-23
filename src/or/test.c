@@ -4793,7 +4793,7 @@ main(int c, char**v)
   }
 
   options->command = CMD_RUN_UNITTESTS;
-  crypto_global_init(0);
+  crypto_global_init(0, NULL, NULL);
   rep_hist_init();
   network_init();
   setup_directory();
