@@ -1280,14 +1280,14 @@ options_act(or_options_t *old_options)
     return 0;
 
   /* Finish backgrounding the process */
-  if (running_tor && options->RunAsDaemon) {
+  if (options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon(options->DataDirectory);
   }
 
   /* Write our pid to the pid file. If we do not have write permissions we
    * will log a warning */
-  if (running_tor && options->PidFile)
+  if (options->PidFile)
     write_pidfile(options->PidFile);
 
   /* Register addressmap directives */
