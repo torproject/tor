@@ -84,16 +84,9 @@ SM  - 4.1, balance traffic better
         (rejigger the bandwidth numbers at the authorities based on
         Steven's algorithm), or Mike's plan (relay scanning to identify
         the unbalanced relays and fix them on the fly), or both.
-      - Figure out how to actually modify bandwidths in the consensus. We
-        may need to change the consensus voting algorithm to decide what
-        bandwidth to advertise based on something other than median:
-        if 7 authorities provide bandwidths, and 2 are doing scanning,
-        then the 5 that aren't scanning will outvote any changes. Should
-        all 7 scan? Should only some vote? Extra points if it doesn't
-        change all the numbers every new consensus, so consensus diffing
-        is still practical.
-?   - 4.5, Older entry guards are overloaded
-      - Pick a conservative timeout like a month, and implement.
+      - Implement Proposal 160
+    o 4.5, Older entry guards are overloaded
+      o Pick a conservative timeout like a month, and implement.
 M   - 5.2, better timeouts for giving up on circuits/streams
       - clients gather data about circuit timeouts, and then abandon
         circuits that take more than a std dev above that.
