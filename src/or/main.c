@@ -774,7 +774,7 @@ run_connection_housekeeping(int i, time_t now)
   }
 }
 
-/** Honor a NEWNYM request: make future requests unlinkability to past
+/** Honor a NEWNYM request: make future requests unlinkable to past
  * requests. */
 static void
 signewnym_impl(time_t now)
