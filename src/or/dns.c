@@ -1636,7 +1636,6 @@ dump_dns_mem_usage(int severity)
       (unsigned)hash_mem);
 }
 
-
 #ifdef DEBUG_DNS_CACHE
 /** Exit with an assertion if the DNS cache is corrupt. */
 static void

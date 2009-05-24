@@ -8,3 +8,4 @@ tor_get_digests(void)
 #include "or_sha1.i"
     ;
 }
+
