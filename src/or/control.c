@@ -3148,7 +3148,7 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
     if (!edge_conn->n_read && !edge_conn->n_written)
       return 0;
 
-    send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
+    send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_FORMATS,
                        "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
                        U64_PRINTF_ARG(edge_conn->_base.global_identifier),
                        (unsigned long)edge_conn->n_read,
