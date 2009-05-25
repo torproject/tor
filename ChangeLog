@@ -1,3 +1,9 @@
+Changes in version 0.2.1.16-?? - 2009-??-??
+  o Minor bugfixes (on 0.2.0.x):
+    - Log correct error messages for DNS-related network errors on
+      Windows.
+
+
 Changes in version 0.2.1.15-rc - 2009-05-25
   o Major bugfixes (on 0.2.0.x):
     - Fix a timing-dependent, allocator-dependent, DNS-related crash bug
