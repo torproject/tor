@@ -33,6 +33,11 @@ Changes in version 0.2.1.15-rc - 2009-05-25
 
 
 Changes in version 0.2.1.14-rc - 2009-04-12
+  Tor 0.2.1.14-rc marks the first release candidate for the 0.2.1.x
+  series. It begins fixing some major performance problems, and also
+  finally addresses the bug that was causing relays on dynamic IP
+  addresses to fall out of the directory.
+
   o Major features:
     - Clients replace entry guards that were chosen more than a few months
       ago. This change should significantly improve client performance,
