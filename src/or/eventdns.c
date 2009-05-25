@@ -1248,7 +1248,7 @@ nameserver_read(struct nameserver *ns) {
 		if (r < 0) {
 			int err = last_error(ns->socket);
 			if (error_is_eagain(err)) return;
-			nameserver_failed(ns, strerror(err));
+			nameserver_failed(ns, tor_socket_strerror(err));
 			return;
 		}
 		/* XXX Match port too? */
@@ -1280,7 +1280,7 @@ server_port_read(struct evdns_server_port *s) {
 			int err = last_error(s->socket);
 			if (error_is_eagain(err)) return;
 			log(EVDNS_LOG_WARN, "Error %s (%d) while reading request.",
-				strerror(err), err);
+				tor_socket_strerror(err), err);
 			return;
 		}
 		request_parse(packet, r, s, (struct sockaddr*) &addr, addrlen);
@@ -1299,7 +1299,7 @@ server_port_flush(struct evdns_server_port *port)
 			int err = last_error(port->socket);
 			if (error_is_eagain(err))
 				return;
-			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", strerror(err), err);
+			log(EVDNS_LOG_WARN, "Error %s (%d) while writing response to port; dropping", tor_socket_strerror(err), err);
 		}
 		if (server_request_free(req)) {
 			/* we released the last reference to req->port. */
@@ -2011,7 +2011,7 @@ evdns_request_transmit_to(struct evdns_request *req, struct nameserver *server) 
 	if (r < 0) {
 		int err = last_error(server->socket);
 		if (error_is_eagain(err)) return 1;
-		nameserver_failed(req->ns, strerror(err));
+		nameserver_failed(req->ns, tor_socket_strerror(err));
 		return 2;
 	} else if (r != (ssize_t)req->request_len) {
 		return 1;  /* short write */

@@ -19,41 +19,52 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       controllers.
 
 
-Changes in version 0.2.1.15??? - ????-??-??
-  o Major bugfixes:
+Changes in version 0.2.1.16-?? - 2009-??-??
+  o Minor bugfixes (on 0.2.0.x):
+    - Log correct error messages for DNS-related network errors on
+      Windows.
+
+
+Changes in version 0.2.1.15-rc - 2009-05-25
+  o Major bugfixes (on 0.2.0.x):
     - Fix a timing-dependent, allocator-dependent, DNS-related crash bug
       that would occur on some exit nodes when DNS failures and timeouts
-      occurred in certain patterns.  Fix for bug 957.
+      occurred in certain patterns. Fix for bug 957.
 
-  o Minor bugfixes:
+  o Minor bugfixes (on 0.2.0.x):
     - Actually return -1 in the error case for read_bandwidth_usage().
       Harmless bug, since we currently don't care about the return value
       anywhere. Bugfix on 0.2.0.9-alpha.
     - Provide a more useful log message if bug 977 (related to buffer
       freelists) ever reappears, and do not crash right away.
+    - Fix an assertion failure on 64-bit platforms when we allocated
+      memory right up to the end of a memarea, then realigned the memory
+      one step beyond the end. Fixes a possible cause of bug 930.
     - Protect the count of open sockets with a mutex, so we can't
       corrupt it when two threads are closing or opening sockets at once.
-      Fix for bug 939.  Bugfix on 0.2.0.1-alpha.
-    - Don't allow a bridge to publish its router descriptor to a non-bridge
-      directory authority.  Fixes part of bug 932.
+      Fix for bug 939. Bugfix on 0.2.0.1-alpha.
+    - Don't allow a bridge to publish its router descriptor to a
+      non-bridge directory authority. Fixes part of bug 932.
     - When we change to or from being a bridge, reset our counts of
-      client usage by country.  Fixes bug 932.
+      client usage by country. Fixes bug 932.
     - Fix a bug that made stream bandwidth get misreported to the
       controller.
-    - Fix an assertion failure on 64-bit platforms when we allocated
-      memory right up to the end of a memarea, then realigned the
-      memory one step beyond the end.  Fixes a possible cause of bug
-      930.
     - Stop using malloc_usable_size() to use more area than we had
-      actually allocated: it was safe, but made valgrind really
-      unhappy.  Bugfix on 0.2.0.x.
-    - Fix use of freed memory when deciding to mark a non-addable
-      descriptor as never-downloadable.  Bugfix on 0.2.1.9-alpha.
+      actually allocated: it was safe, but made valgrind really unhappy.
     - Fix a memory leak when v3 directory authorities load their keys
       and cert from disk. Bugfix on 0.2.0.1-alpha.
 
+  o Minor bugfixes (on 0.2.1.x):
+    - Fix use of freed memory when deciding to mark a non-addable
+      descriptor as never-downloadable. Bugfix on 0.2.1.9-alpha.
+
 
 Changes in version 0.2.1.14-rc - 2009-04-12
+  Tor 0.2.1.14-rc marks the first release candidate for the 0.2.1.x
+  series. It begins fixing some major performance problems, and also
+  finally addresses the bug that was causing relays on dynamic IP
+  addresses to fall out of the directory.
+
   o Major features:
     - Clients replace entry guards that were chosen more than a few months
       ago. This change should significantly improve client performance,
