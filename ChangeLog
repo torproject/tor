@@ -2,6 +2,9 @@ Changes in version 0.2.1.16-?? - 2009-??-??
   o Minor bugfixes (on 0.2.0.x):
     - Log correct error messages for DNS-related network errors on
       Windows.
+    - Don't warn users about low port and hibernation mix when they
+      provide a *ListenAddress directive to fix that. Bugfix on
+      0.2.1.15-rc.
 
   o Minor bugfixes (on 0.2.1.x):
     - When switching back and forth between bridge mode, do not start
