@@ -42,7 +42,7 @@ static strmap_t *country_idxplus1_by_lc_code = NULL;
 static smartlist_t *geoip_entries = NULL;
 
 /** Return the index of the <b>country</b>'s entry in the GeoIP DB
- * if it is a valid 2-letter country code, otherwise return zero.
+ * if it is a valid 2-letter country code, otherwise return -1.
  */
 country_t
 geoip_get_country(const char *country)
@@ -261,8 +261,8 @@ geoip_is_loaded(void)
 typedef struct clientmap_entry_t {
   HT_ENTRY(clientmap_entry_t) node;
   uint32_t ipaddr;
-  time_t last_seen; /* The last 2 bits of this value hold the client
-                     * operation. */
+  unsigned int last_seen_in_minutes:30;
+  unsigned int action:2;
 } clientmap_entry_t;
 
 #define ACTION_MASK 3
@@ -289,7 +289,7 @@ clientmap_entry_hash(const clientmap_entry_t *a)
 static INLINE int
 clientmap_entries_eq(const clientmap_entry_t *a, const clientmap_entry_t *b)
 {
-  return a->ipaddr == b->ipaddr;
+  return a->ipaddr == b->ipaddr && a->action == b->action;
 }
 
 HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
@@ -298,7 +298,8 @@ HT_GENERATE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
             clientmap_entries_eq, 0.6, malloc, realloc, free);
 
 /** Note that we've seen a client connect from the IP <b>addr</b> (host order)
- * at time <b>now</b>. Ignored by all but bridges. */
+ * at time <b>now</b>. Ignored by all but bridges and directories if
+ * configured accordingly. */
 void
 geoip_note_client_seen(geoip_client_action_t action,
                        uint32_t addr, time_t now)
@@ -337,20 +338,18 @@ geoip_note_client_seen(geoip_client_action_t action,
     current_request_period_starts += REQUEST_HIST_PERIOD;
     if (n_old_request_periods < REQUEST_HIST_LEN-1)
       ++n_old_request_periods;
-   }
+  }
 
-  /* We use the low 3 bits of the time to encode the action. Since we're
-   * potentially remembering tons of clients, we don't want to make
-   * clientmap_entry_t larger than it has to be. */
-  now = (now & ~ACTION_MASK) | (((int)action) & ACTION_MASK);
   lookup.ipaddr = addr;
+  lookup.action = (int)action;
   ent = HT_FIND(clientmap, &client_history, &lookup);
   if (ent) {
-    ent->last_seen = now;
+    ent->last_seen_in_minutes = now / 60;
   } else {
     ent = tor_malloc_zero(sizeof(clientmap_entry_t));
     ent->ipaddr = addr;
-    ent->last_seen = now;
+    ent->last_seen_in_minutes = now / 60;
+    ent->action = (int)action;
     HT_INSERT(clientmap, &client_history, ent);
   }
 
@@ -377,8 +376,8 @@ geoip_note_client_seen(geoip_client_action_t action,
 static int
 _remove_old_client_helper(struct clientmap_entry_t *ent, void *_cutoff)
 {
-  time_t cutoff = *(time_t*)_cutoff;
-  if (ent->last_seen < cutoff) {
+  time_t cutoff = *(time_t*)_cutoff / 60;
+  if (ent->last_seen_in_minutes < cutoff) {
     tor_free(ent);
     return 1;
   } else {
@@ -477,7 +476,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
 #endif
     HT_FOREACH(ent, clientmap, &client_history) {
       int country;
-      if (((*ent)->last_seen & ACTION_MASK) != (int)action)
+      if ((*ent)->action != (int)action)
         continue;
       country = geoip_get_country_by_ip((*ent)->ipaddr);
       if (country < 0)
