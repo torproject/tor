@@ -308,6 +308,9 @@ geoip_note_client_seen(geoip_client_action_t action,
   if (action == GEOIP_CLIENT_CONNECT) {
     if (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))
       return;
+    /* Did we recently switch from bridge to relay or back? */
+    if (client_history_starts > now)
+      return;
   } else {
 #ifndef ENABLE_GEOIP_STATS
     return;
