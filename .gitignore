@@ -2,6 +2,7 @@
 \#*\#
 .#*
 *~
+*.swp
 # C stuff
 *.o
 # Diff droppings
