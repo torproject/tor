@@ -54,7 +54,7 @@ Proposals by number:
 131  Help users to verify they are using Tor [NEEDS-REVISION]
 132  A Tor Web Service For Verifying Correct Browser Configuration [DRAFT]
 133  Incorporate Unreachable ORs into the Tor Network [DRAFT]
-134  More robust consensus voting with diverse authority sets [ACCEPTED]
+134  More robust consensus voting with diverse authority sets [REJECTED]
 135  Simplify Configuration of Private Tor Networks [CLOSED]
 136  Mass authority migration with legacy keys [CLOSED]
 137  Keep controllers informed as Tor bootstraps [CLOSED]
@@ -115,7 +115,6 @@ Proposals by status:
    110  Avoiding infinite length circuits [for 0.2.1.x] [in 0.2.1.3-alpha]
    117  IPv6 exits [for 0.2.1.x]
    118  Advertising multiple ORPorts at once [for 0.2.1.x]
-   134  More robust consensus voting with diverse authority sets [for 0.2.2.x]
    140  Provide diffs between consensuses [for 0.2.2.x]
    147  Eliminate the need for v2 directories in generating v3 directories [for 0.2.1.x]
    157  Make certificate downloads specific [for 0.2.1.x]
@@ -167,3 +166,5 @@ Proposals by status:
    120  Shutdown descriptors when Tor servers stop
    128  Families of private bridges
    142  Combine Introduction and Rendezvous Points
+ REJECTED:
+   134  More robust consensus voting with diverse authority sets
