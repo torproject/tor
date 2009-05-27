@@ -1938,7 +1938,7 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  * right now. (Else return NULL.) In particular, it must be
  * - Listed as either up or never yet contacted;
  * - Present in the routerlist;
- * - Listed as 'stable' or 'fast' by the current dirserver concensus,
+ * - Listed as 'stable' or 'fast' by the current dirserver consensus,
  *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>;
  *   (This check is currently redundant with the Guard flag, but in
  *   the future that might change. Best to leave it in for now.)
@@ -2025,7 +2025,7 @@ log_entry_guards(int severity)
 
 /** Called when one or more guards that we would previously have used for some
  * purpose are no longer in use because a higher-priority guard has become
- * useable again. */
+ * usable again. */
 static void
 control_event_guard_deferred(void)
 {

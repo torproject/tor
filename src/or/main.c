@@ -910,7 +910,7 @@ run_scheduled_events(time_t now)
     }
   }
 
-  /* 1e. Periodicaly, if we're a v3 authority, we check whether our cert is
+  /* 1e. Periodically, if we're a v3 authority, we check whether our cert is
    * close to expiring and warn the admin if it is. */
   if (time_to_check_v3_certificate < now) {
     v3_authority_check_key_expiry();
@@ -1127,7 +1127,7 @@ static void
 second_elapsed_callback(int fd, short event, void *args)
 {
   /* XXXX This could be sensibly refactored into multiple callbacks, and we
-   * could use libevent's timers for this rather than checking the current
+   * could use Libevent's timers for this rather than checking the current
    * time against a bunch of timeouts every second. */
   static struct timeval one_second;
   static time_t current_second = 0;
@@ -1464,7 +1464,7 @@ do_main_loop(void)
  *   1. We handle a different set of signals than those allowed in catch.
  *   2. Platforms without signal() are unlikely to define SIGfoo.
  *   3. The control spec is defined to use fixed numeric signal values
- *      which just happen to match the unix values.
+ *      which just happen to match the Unix values.
  */
 void
 control_signal_act(int the_signal)
@@ -1523,7 +1523,7 @@ signal_callback(int fd, short events, void *arg)
       break;
 #ifdef SIGPIPE
     case SIGPIPE:
-      log_debug(LD_GENERAL,"Caught sigpipe. Ignoring.");
+      log_debug(LD_GENERAL,"Caught SIGPIPE. Ignoring.");
       break;
 #endif
     case SIGUSR1:
@@ -1626,7 +1626,7 @@ dumpstats(int severity)
           tor_tls_get_buffer_sizes(or_conn->tls, &rbuf_cap, &rbuf_len,
                                    &wbuf_cap, &wbuf_len);
           log(severity, LD_GENERAL,
-              "Conn %d: %d/%d bytes used on openssl read buffer; "
+              "Conn %d: %d/%d bytes used on OpenSSL read buffer; "
               "%d/%d bytes used on write buffer.",
               i, rbuf_len, rbuf_cap, wbuf_len, wbuf_cap);
         }
@@ -1702,12 +1702,12 @@ exit_function(void)
 void
 handle_signals(int is_parent)
 {
-#ifndef MS_WINDOWS /* do signal stuff only on unix */
+#ifndef MS_WINDOWS /* do signal stuff only on Unix */
   int i;
   static int signals[] = {
     SIGINT,  /* do a controlled slow shutdown */
     SIGTERM, /* to terminate now */
-    SIGPIPE, /* otherwise sigpipe kills us */
+    SIGPIPE, /* otherwise SIGPIPE kills us */
     SIGUSR1, /* dump stats */
     SIGUSR2, /* go to loglevel debug */
     SIGHUP,  /* to reload config, retry conns, etc */
@@ -1887,7 +1887,7 @@ release_lockfile(void)
  *
  * Helps us find the real leaks with dmalloc and the like. Also valgrind
  * should then report 0 reachable in its leak report (in an ideal world --
- * in practice libevent, ssl, libc etc never quite free everything). */
+ * in practice libevent, SSL, libc etc never quite free everything). */
 void
 tor_free_all(int postfork)
 {

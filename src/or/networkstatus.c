@@ -947,7 +947,7 @@ router_get_consensus_status_by_nickname(const char *nickname,
       });
     if (any_unwarned) {
       log_warn(LD_CONFIG,"There are multiple matches for the nickname \"%s\","
-               " but none is listed as named by the directory authorites. "
+               " but none is listed as named by the directory authorities. "
                "Choosing one arbitrarily.", nickname);
     }
   } else if (warn_if_unnamed && best && !best->name_lookup_warned) {

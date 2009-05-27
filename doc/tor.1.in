@@ -244,7 +244,7 @@ fetching early. Normal users should leave it off.
 \fBFetchHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
 If set to 0, Tor will never fetch any hidden service descriptors from
 the rendezvous directories. This option is only useful if you're using
-a Tor controller that handles hidserv fetches for you.
+a Tor controller that handles hidden service fetches for you.
 (Default: 1)
 .LP
 .TP
@@ -264,31 +264,31 @@ script to enumerate Tor nodes that exit to certain addresses.
 (Default: 0)
 .LP
 .TP
-\fBHttpProxy\fR \fIhost\fR[:\fIport\fR]\fP
+\fBHTTPProxy\fR \fIhost\fR[:\fIport\fR]\fP
 Tor will make all its directory requests through this host:port
 (or host:80 if port is not specified),
 rather than connecting directly to any directory servers.
 .LP
 .TP
-\fBHttpProxyAuthenticator\fR \fIusername:password\fP
-If defined, Tor will use this username:password for Basic Http proxy
+\fBHTTPProxyAuthenticator\fR \fIusername:password\fP
+If defined, Tor will use this username:password for Basic HTTP proxy
 authentication, as in RFC 2617. This is currently the only form of
-Http proxy authentication that Tor supports; feel free to submit a
+HTTP proxy authentication that Tor supports; feel free to submit a
 patch if you want it to support others.
 .LP
 .TP
-\fBHttpsProxy\fR \fIhost\fR[:\fIport\fR]\fP
+\fBHTTPSProxy\fR \fIhost\fR[:\fIport\fR]\fP
 Tor will make all its OR (SSL) connections through this host:port
 (or host:443 if port is not specified), via HTTP CONNECT rather than
 connecting directly to servers.  You may want to set \fBFascistFirewall\fR
-to restrict the set of ports you might try to connect to, if your Https
+to restrict the set of ports you might try to connect to, if your HTTPS
 proxy only allows connecting to certain ports.
 .LP
 .TP
-\fBHttpsProxyAuthenticator\fR \fIusername:password\fP
-If defined, Tor will use this username:password for Basic Https proxy
+\fBHTTPSProxyAuthenticator\fR \fIusername:password\fP
+If defined, Tor will use this username:password for Basic HTTPS proxy
 authentication, as in RFC 2617. This is currently the only form of
-Https proxy authentication that Tor supports; feel free to submit a
+HTTPS proxy authentication that Tor supports; feel free to submit a
 patch if you want it to support others.
 .LP
 .TP
@@ -500,7 +500,7 @@ firewall allows connections to everything inside net 99, rejects port
 Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
 these restrictions when fetching directory information, using standard HTTP
 GET requests. If not set explicitly then the value of \fBReachableAddresses\fP
-is used.  If \fBHttpProxy\fR is set then these connections will go through that
+is used.  If \fBHTTPProxy\fR is set then these connections will go through that
 proxy.
 .LP
 .TP
@@ -508,11 +508,11 @@ proxy.
 Like \fBReachableAddresses\fP, a list of addresses and ports.  Tor will obey
 these restrictions when connecting to Onion Routers, using TLS/SSL.  If not set
 explicitly then the value of \fBReachableAddresses\fP is used. If
-\fBHttpsProxy\fR is set then these connections will go through that proxy.
+\fBHTTPSProxy\fR is set then these connections will go through that proxy.
 
 The separation between \fBReachableORAddresses\fP and
 \fBReachableDirAddresses\fP is only interesting when you are connecting through
-proxies (see \fBHttpProxy\fR and \fBHttpsProxy\fR).  Most proxies limit TLS
+proxies (see \fBHTTPProxy\fR and \fBHTTPSProxy\fR).  Most proxies limit TLS
 connections (which Tor uses to connect to Onion Routers) to port 443, and some
 limit HTTP GET requests (which Tor uses for fetching directory information) to
 port 80.
@@ -595,7 +595,7 @@ to hosts that match this value and attempt to
 reuse the same exit node for each. If the value is prepended with a '.', it is
 treated as matching an entire domain. If one of the values is just a '.', it
 means match everything. This option is useful if you frequently connect to
-sites that will expire all your authentication cookies (ie log you out) if
+sites that will expire all your authentication cookies (i.e. log you out) if
 your IP address changes. Note that this option does have the disadvantage of
 making it more clear that a given history is
 associated with a single user. However, most people who would wish to observe
@@ -784,7 +784,7 @@ The following options are useful only for servers (that is, if \fBORPort\fP is n
 .LP
 .TP
 \fBAddress \fR\fIaddress\fP
-The IP address or fqdn of this server (e.g. moria.mit.edu). You can
+The IP address or fully qualified domain name of this server (e.g. moria.mit.edu). You can
 leave this unset, and Tor will guess your IP address.
 .LP
 .TP
@@ -964,7 +964,7 @@ behalf of clients. (Defaults to use the system DNS configuration.)
 \fBServerDNSAllowBrokenConfig \fR\fB0\fR|\fB1\fR\fP
 If this option is false, Tor exits immediately if there are problems
 parsing the system DNS configuration or connecting to nameservers.
-Otherwise, Tor continues to periodically retry the system namesevers
+Otherwise, Tor continues to periodically retry the system nameservers
 until it eventually succeeds.
 (Defaults to "1".)
 .LP
@@ -1045,7 +1045,7 @@ admins at tor-ops@freehaven.net if you think you should be a directory.
 .LP
 .TP
 \fBDirPortFrontPage \fIFILENAME\fP
-When this option is set, it takes an html file and publishes it as "/" on
+When this option is set, it takes an HTML file and publishes it as "/" on
 the DirPort. Now relay operators can provide a disclaimer without needing
 to set up a separate webserver. There's a sample disclaimer in
 contrib/tor-exit-notice.html.
@@ -1201,14 +1201,14 @@ for publication by this authority.
 \fBAuthDirListBadDirs \fR\fB0\fR|\fB1\fR\fP
 Authoritative directories only.  If set to 1, this directory has
 some opinion about which nodes are unsuitable as directory caches.  (Do not
-set this to 1 unless you plan to list nonfunctioning directories as bad;
+set this to 1 unless you plan to list non-functioning directories as bad;
 otherwise, you are effectively voting in favor of every declared directory.)
 .LP
 .TP
 \fBAuthDirListBadExits \fR\fB0\fR|\fB1\fR\fP
 Authoritative directories only.  If set to 1, this directory has
 some opinion about which nodes are unsuitable as exit nodes.  (Do not
-set this to 1 unless you plan to list nonfunctioning exits as bad;
+set this to 1 unless you plan to list non-functioning exits as bad;
 otherwise, you are effectively voting in favor of every declared exit
 as an exit.)
 .LP
@@ -1217,7 +1217,7 @@ as an exit.)
 Authoritative directories only.  If set to 1, the directory server
 rejects all uploaded server descriptors that aren't explicitly listed
 in the fingerprints file. This acts as a "panic button" if we get
-Sybiled. (Default: 0)
+with a Sybil attack. (Default: 0)
 .LP
 .TP
 \fBAuthDirMaxServersPerAddr\fR \fINUM\fP

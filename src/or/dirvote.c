@@ -341,7 +341,7 @@ _compare_vote_rs(const void **_a, const void **_b)
 /** Given a list of vote_routerstatus_t, all for the same router identity,
  * return whichever is most frequent, breaking ties in favor of more
  * recently published vote_routerstatus_t and in case of ties there,
- * in favour of smaller descriptor digest.
+ * in favor of smaller descriptor digest.
  */
 static vote_routerstatus_t *
 compute_routerstatus_consensus(smartlist_t *votes)
@@ -459,7 +459,7 @@ consensus_method_is_supported(int method)
 }
 
 /** Helper: given <b>lst</b>, a list of version strings such that every
- * version appears once for every versioning voter who recommends it, returna
+ * version appears once for every versioning voter who recommends it, return a
  * newly allocated string holding the resulting client-versions or
  * server-versions list. May change contents of <b>lst</b> */
 static char *
@@ -843,7 +843,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
         if (memcmp(rs->status.identity_digest, lowest_id, DIGEST_LEN))
           continue; /* doesn't include this router. */
-        /* At this point, we know that we're looking at a routersatus with
+        /* At this point, we know that we're looking at a routerstatus with
          * identity "lowest".
          */
         ++index[v_sl_idx];
@@ -955,7 +955,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
        * that descriptor.  If everybody plays nice all the voters who
        * listed that descriptor will have the same summary.  If not then
        * something is fishy and we'll use the most common one (breaking
-       * ties in favor of lexigraphically larger one (only because it
+       * ties in favor of lexicographically larger one (only because it
        * lets me reuse more existing code.
        *
        * The other case that can happen is that no authority that voted
@@ -996,7 +996,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
           char dd[HEX_DIGEST_LEN+1];
           base16_encode(id, sizeof(dd), rs_out.identity_digest, DIGEST_LEN);
           base16_encode(dd, sizeof(dd), rs_out.descriptor_digest, DIGEST_LEN);
-          log_warn(LD_DIR, "The voters disgreed on the exit policy summary for"
+          log_warn(LD_DIR, "The voters disagreed on the exit policy summary for"
                    " router %s with descriptor %s.  This really shouldn't"
                    " have happened.", id, dd);
 
@@ -2101,7 +2101,7 @@ dirvote_add_signatures_to_pending_consensus(
   return r;
 }
 
-/** Helper: we just got the <b>deteached_signatures_body</b> sent to us as
+/** Helper: we just got the <b>detached_signatures_body</b> sent to us as
  * signatures on the currently pending consensus.  Add them to the pending
  * consensus (if we have one); otherwise queue them until we have a
  * consensus.  Return negative on failure, nonnegative on success. */
@@ -2117,7 +2117,7 @@ dirvote_add_signatures(const char *detached_signatures_body,
                                      detached_signatures_body, msg);
   } else {
     log_notice(LD_DIR, "Got a signature from %s. "
-                       "Queueing it for the next consensus.", source);
+                       "Queuing it for the next consensus.", source);
     if (!pending_consensus_signature_list)
       pending_consensus_signature_list = smartlist_create();
     smartlist_add(pending_consensus_signature_list,

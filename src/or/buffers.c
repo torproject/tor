@@ -161,7 +161,7 @@ chunk_free(chunk_t *chunk)
 }
 
 /** Allocate a new chunk with a given allocation size, or get one from the
- * freelist.  Note that a chunk with allocation size A can actualy hold only
+ * freelist.  Note that a chunk with allocation size A can actually hold only
  * CHUNK_SIZE_WITH_ALLOC(A) bytes in its mem field. */
 static INLINE chunk_t *
 chunk_new_with_alloc_size(size_t alloc)
@@ -787,7 +787,7 @@ flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
  * <b>chunk</b> of buffer <b>buf</b> onto socket <b>s</b>.  (Tries to write
  * more if there is a forced pending write size.)  On success, deduct the
  * bytes written from *<b>buf_flushlen</b>.  Return the number of bytes
- * written on success, and a TOR_TLS error code on failue or blocking.
+ * written on success, and a TOR_TLS error code on failure or blocking.
  */
 static INLINE int
 flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
@@ -1108,7 +1108,7 @@ buf_find_pos_of_char(char ch, buf_pos_t *out)
 }
 
 /** Advance <b>pos</b> by a single character, if there are any more characters
- * in the buffer.  Returns 0 on sucess, -1 on failure. */
+ * in the buffer.  Returns 0 on success, -1 on failure. */
 static INLINE int
 buf_pos_inc(buf_pos_t *pos)
 {
@@ -1169,13 +1169,13 @@ buf_find_string_offset(const buf_t *buf, const char *s, size_t n)
 }
 
 /** There is a (possibly incomplete) http statement on <b>buf</b>, of the
- * form "\%s\\r\\n\\r\\n\%s", headers, body. (body may contain nuls.)
+ * form "\%s\\r\\n\\r\\n\%s", headers, body. (body may contain NULs.)
  * If a) the headers include a Content-Length field and all bytes in
  * the body are present, or b) there's no Content-Length field and
  * all headers are present, then:
  *
- *  - strdup headers into <b>*headers_out</b>, and nul-terminate it.
- *  - memdup body into <b>*body_out</b>, and nul-terminate it.
+ *  - strdup headers into <b>*headers_out</b>, and NUL-terminate it.
+ *  - memdup body into <b>*body_out</b>, and NUL-terminate it.
  *  - Then remove them from <b>buf</b>, and return 1.
  *
  *  - If headers or body is NULL, discard that part of the buf.
@@ -1259,14 +1259,14 @@ fetch_from_buf_http(buf_t *buf,
   if (headers_out) {
     *headers_out = tor_malloc(headerlen+1);
     fetch_from_buf(*headers_out, headerlen, buf);
-    (*headers_out)[headerlen] = 0; /* nul terminate it */
+    (*headers_out)[headerlen] = 0; /* NUL terminate it */
   }
   if (body_out) {
     tor_assert(body_used);
     *body_used = bodylen;
     *body_out = tor_malloc(bodylen+1);
     fetch_from_buf(*body_out, bodylen, buf);
-    (*body_out)[bodylen] = 0; /* nul terminate it */
+    (*body_out)[bodylen] = 0; /* NUL terminate it */
   }
   check();
   return 1;

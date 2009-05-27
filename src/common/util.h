@@ -29,7 +29,7 @@
  */
 #ifdef NDEBUG
 /* Nobody should ever want to build with NDEBUG set.  99% of our asserts will
- * be outside the critical path anyway, so it's silly to disable bugchecking
+ * be outside the critical path anyway, so it's silly to disable bug-checking
  * throughout the entire program just because a few asserts are slowing you
  * down.  Profile, optimize the critical path, and keep debugging on.
  *

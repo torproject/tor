@@ -45,7 +45,7 @@ typedef struct rend_service_t {
                                * authorization is performed. */
   smartlist_t *clients; /**< List of rend_authorized_client_t's of
                          * clients that may access our service. Can be NULL
-                         * if no client authorization is peformed. */
+                         * if no client authorization is performed. */
   /* Other fields */
   crypto_pk_env_t *private_key; /**< Permanent hidden-service key. */
   char service_id[REND_SERVICE_ID_LEN_BASE32+1]; /**< Onion address without
@@ -63,7 +63,7 @@ typedef struct rend_service_t {
                          * up-to-date. */
   time_t next_upload_time; /**< Scheduled next hidden service descriptor
                             * upload time. */
-  /** Map from digests of diffie-hellman values INTRODUCE2 to time_t of when
+  /** Map from digests of Diffie-Hellman values INTRODUCE2 to time_t of when
    * they were received; used to prevent replays. */
   digestmap_t *accepted_intros;
   /** Time at which we last removed expired values from accepted_intros. */
@@ -1561,7 +1561,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
       if (!router_get_by_digest(hs_dir->identity_digest)) {
         log_info(LD_REND, "Not sending publish request for v2 descriptor to "
                           "hidden service directory '%s'; we don't have its "
-                          "router descriptor. Queueing for later upload.",
+                          "router descriptor. Queuing for later upload.",
                  hs_dir->nickname);
         failed_upload = -1;
         continue;

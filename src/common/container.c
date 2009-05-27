@@ -1227,7 +1227,7 @@ IMPLEMENT_ORDER_FUNC(find_nth_long, long)
 digestset_t *
 digestset_new(int max_elements)
 {
-  /* The probability of false positivies is about P=(1 - exp(-kn/m))^k, where k
+  /* The probability of false positives is about P=(1 - exp(-kn/m))^k, where k
    * is the number of hash functions per entry, m is the bits in the array,
    * and n is the number of elements inserted.  For us, k==4, n<=max_elements,
    * and m==n_bits= approximately max_elements*32.  This gives

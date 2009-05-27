@@ -54,7 +54,7 @@
  *   - One pointer overhead per allocated thing.  (The alternative is
  *     something like glib's use of an RB-tree to keep track of what
  *     chunk any given piece of memory is in.)
- *   - Only aligns allocated things to void* level: redefign ALIGNMENT_TYPE
+ *   - Only aligns allocated things to void* level: redefine ALIGNMENT_TYPE
  *     if you need doubles.
  *   - Could probably be optimized a bit; the representation contains
  *     a bit more info than it really needs to have.
