@@ -12,6 +12,10 @@ Changes in version 0.2.1.16-?? - 2009-??-??
   o Minor bugfixes (on 0.2.1.x):
     - When switching back and forth between bridge mode, do not start
       gathering GeoIP data until two hours have passed.
+    - Do not complain that the user has requested an excluded node as
+      an exit when the node is not really an exit.  This could happen
+      because the circuit was for testing, or an introduction point.
+      Fix for bug 984.
 
 
 Changes in version 0.2.1.15-rc - 2009-05-25

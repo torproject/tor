@@ -1436,17 +1436,67 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
 /** Log a warning if the user specified an exit for the circuit that
  * has been excluded from use by ExcludeNodes or ExcludeExitNodes. */
 static void
-warn_if_router_excluded(const extend_info_t *exit)
+warn_if_last_router_excluded(uint8_t purpose, const extend_info_t *exit)
 {
   or_options_t *options = get_options();
-  routerinfo_t *ri = router_get_by_digest(exit->identity_digest);
+  routerset_t *rs = options->ExcludeNodes;
+  const char *description;
+  int severity;
+  int domain = LD_CIRC;
 
-  if (!ri || !options->_ExcludeExitNodesUnion)
-    return;
+  switch (purpose)
+    {
+    default:
+    case CIRCUIT_PURPOSE_OR:
+    case CIRCUIT_PURPOSE_INTRO_POINT:
+    case CIRCUIT_PURPOSE_REND_POINT_WAITING:
+    case CIRCUIT_PURPOSE_REND_ESTABLISHED:
+      log_warn(LD_BUG, "Called on non-origin circuit (purpose %d)",
+               (int)purpose);
+      return;
+    case CIRCUIT_PURPOSE_C_GENERAL:
+      description = "Requested exit node";
+      rs = options->_ExcludeExitNodesUnion;
+      severity = LOG_WARN;
+      break;
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
+    case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+    case CIRCUIT_PURPOSE_C_INTRODUCE_ACKED:
+      description = "Introduction point for hidden service";
+      severity = LOG_INFO;
+      break;
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+    case CIRCUIT_PURPOSE_C_REND_READY:
+    case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
+    case CIRCUIT_PURPOSE_C_REND_JOINED:
+      description = "Chosen rendezvous point";
+      severity = LOG_WARN;
+      domain = LD_BUG;
+      break;
+    case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+      description = "Chosen introduction point";
+      severity = LOG_INFO;
+      break;
+    case CIRCUIT_PURPOSE_S_CONNECT_REND:
+    case CIRCUIT_PURPOSE_S_REND_JOINED:
+      description = "Client-selected rendezvous point";
+      severity = LOG_INFO;
+      break;
+    case CIRCUIT_PURPOSE_TESTING:
+      description = "Target for testing circuit";
+      severity = LOG_INFO;
+      break;
+    case CIRCUIT_PURPOSE_CONTROLLER:
+      rs = options->_ExcludeExitNodesUnion;
+      description = "Controller-selected circuit target";
+      severity = LOG_WARN;
+      break;
+    }
 
-  if (routerset_contains_router(options->_ExcludeExitNodesUnion, ri))
-    log_warn(LD_CIRC,"Requested exit node '%s' is in ExcludeNodes, "
-             "or ExcludeExitNodes, using anyway.",exit->nickname);
+  if (routerset_contains_extendinfo(rs, exit))
+    log_fn(severity, domain, "%s '%s' is in ExcludeNodes%s.  Using anyway.",
+           description,exit->nickname,
+           rs==options->ExcludeNodes?"":" or ExcludeExitNodes.");
 
   return;
 }
@@ -1471,7 +1521,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
   }
 
   if (exit) { /* the circuit-builder pre-requested one */
-    warn_if_router_excluded(exit);
+    warn_if_last_router_excluded(circ->_base.purpose, exit);
     log_info(LD_CIRC,"Using requested exit node '%s'", exit->nickname);
     exit = extend_info_dup(exit);
   } else { /* we have to decide one */
