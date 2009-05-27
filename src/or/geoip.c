@@ -466,7 +466,7 @@ char *
 geoip_get_client_history(time_t now, geoip_client_action_t action)
 {
   char *result = NULL;
-  unsigned min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
+  int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
 #ifdef ENABLE_GEOIP_STATS
   min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
 #endif
@@ -549,7 +549,7 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   smartlist_t *entries, *strings;
   char *result;
   unsigned granularity = IP_GRANULARITY;
-  unsigned min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
+  int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
 #ifdef ENABLE_GEOIP_STATS
   granularity = DIR_RECORD_USAGE_GRANULARITY;
   min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
