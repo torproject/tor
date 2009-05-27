@@ -12,6 +12,7 @@
 #include "ht.h"
 
 static void clear_geoip_db(void);
+static void dump_geoip_stats(void);
 
 /** An entry from the GeoIP file: maps an IP range to a country. */
 typedef struct geoip_entry_t {
@@ -21,9 +22,9 @@ typedef struct geoip_entry_t {
 } geoip_entry_t;
 
 /** For how many periods should we remember per-country request history? */
-#define REQUEST_HIST_LEN 3
+#define REQUEST_HIST_LEN 1
 /** How long are the periods for which we should remember request history? */
-#define REQUEST_HIST_PERIOD (8*60*60)
+#define REQUEST_HIST_PERIOD (24*60*60)
 
 /** A per-country record for GeoIP request history. */
 typedef struct geoip_country_t {
@@ -313,8 +314,7 @@ geoip_note_client_seen(geoip_client_action_t action,
 #ifndef ENABLE_GEOIP_STATS
     return;
 #else
-    if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
-        !options->DirRecordUsageByCountry)
+    if (options->BridgeRelay || options->BridgeAuthoritativeDir)
       return;
 #endif
   }
@@ -327,6 +327,14 @@ geoip_note_client_seen(geoip_client_action_t action,
       current_request_period_starts = now;
       break;
     }
+    /* Also discard all items in the client history that are too old.
+     * (This only works here because bridge and directory stats are
+     * independent. Otherwise, we'd only want to discard those items
+     * with action GEOIP_CLIENT_NETWORKSTATUS{_V2}.) */
+    geoip_remove_old_clients(current_request_period_starts);
+    /* Before rotating, write the current stats to disk. */
+    dump_geoip_stats();
+    /* Now rotate request period */
     SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
         memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
                 sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
@@ -458,9 +466,13 @@ char *
 geoip_get_client_history(time_t now, geoip_client_action_t action)
 {
   char *result = NULL;
+  unsigned min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
+#ifdef ENABLE_GEOIP_STATS
+  min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
+#endif
   if (!geoip_is_loaded())
     return NULL;
-  if (client_history_starts < (now - GEOIP_MIN_OBSERVATION_TIME)) {
+  if (client_history_starts < (now - min_observation_time)) {
     char buf[32];
     smartlist_t *chunks = NULL;
     smartlist_t *entries = NULL;
@@ -471,8 +483,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
     unsigned total = 0;
     unsigned granularity = IP_GRANULARITY;
 #ifdef ENABLE_GEOIP_STATS
-    if (get_options()->DirRecordUsageByCountry)
-      granularity = get_options()->DirRecordUsageGranularity;
+    granularity = DIR_RECORD_USAGE_GRANULARITY;
 #endif
     HT_FOREACH(ent, clientmap, &client_history) {
       int country;
@@ -538,12 +549,13 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   smartlist_t *entries, *strings;
   char *result;
   unsigned granularity = IP_GRANULARITY;
+  unsigned min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
 #ifdef ENABLE_GEOIP_STATS
-  if (get_options()->DirRecordUsageByCountry)
-    granularity = get_options()->DirRecordUsageGranularity;
+  granularity = DIR_RECORD_USAGE_GRANULARITY;
+  min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
 #endif
 
-  if (client_history_starts >= (now - GEOIP_MIN_OBSERVATION_TIME))
+  if (client_history_starts >= (now - min_observation_time))
     return NULL;
   if (action != GEOIP_CLIENT_NETWORKSTATUS &&
       action != GEOIP_CLIENT_NETWORKSTATUS_V2)
@@ -584,7 +596,7 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
 }
 
 /** Store all our geoip statistics into $DATADIR/geoip-stats. */
-void
+static void
 dump_geoip_stats(void)
 {
 #ifdef ENABLE_GEOIP_STATS
@@ -601,7 +613,7 @@ dump_geoip_stats(void)
   data_v3 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS);
   format_iso_time(since, geoip_get_history_start());
   format_iso_time(written, now);
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_REPLACE,
+  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
   if (!out)
     goto done;

@@ -6,6 +6,8 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
     - The memarea code now uses a sentinel value at the end of each area
       to make sure nothing writes beyond the end of an area.  This might
       help debug some conceivable causes of bug 930.
+    - Directories that are configured with the --enable-geoip-stats flag
+      now write their GeoIP stats to disk exactly every 24 hours.
 
   o Deprecated and removed features:
     - The controller no longer accepts the old obsolete "addr-mappings/"

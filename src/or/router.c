@@ -1915,10 +1915,13 @@ extrainfo_get_client_geoip_summary(time_t now)
   static time_t last_purged_at = 0;
   int geoip_purge_interval = 48*60*60;
 #ifdef ENABLE_GEOIP_STATS
-  if (get_options()->DirRecordUsageByCountry)
-    geoip_purge_interval = get_options()->DirRecordUsageRetainIPs;
+  geoip_purge_interval = DIR_RECORD_USAGE_RETAIN_IPS;
 #endif
   if (now > last_purged_at+geoip_purge_interval) {
+    /* (Note that this also discards items in the client history with
+     * action GEOIP_CLIENT_NETWORKSTATUS{_V2}, which doesn't matter
+     * because bridge and directory stats are independent. Keep in mind
+     * for future extensions, though.) */
     geoip_remove_old_clients(now-geoip_purge_interval);
     last_purged_at = now;
   }

@@ -2528,7 +2528,7 @@ typedef struct {
    * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
 
-#ifdef ENABLE_GEOIP_STATS
+#if 0
   /** If true, and Tor is built with GEOIP_STATS support, and we're a
    * directory, record how many directory requests we get from each country. */
   int DirRecordUsageByCountry;
@@ -3583,6 +3583,15 @@ int dnsserv_launch_request(const char *name, int is_reverse);
 
 /********************************* geoip.c **************************/
 
+/** Round all GeoIP results to the next multiple of this value, to avoid
+ * leaking information. */
+#define DIR_RECORD_USAGE_GRANULARITY 8
+/** Time interval: Flush geoip data to disk this often. */
+#define DIR_RECORD_USAGE_RETAIN_IPS (24*60*60)
+/** How long do we have to have observed per-country request history before
+ * we are willing to talk about it? */
+#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (24*60*60)
+
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);
 #endif
@@ -3614,7 +3623,6 @@ char *geoip_get_request_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer);
 void geoip_free_all(void);
-void dump_geoip_stats(void);
 
 /********************************* hibernate.c **********************/
 
