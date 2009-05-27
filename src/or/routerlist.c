@@ -911,10 +911,10 @@ router_pick_directory_server(authority_type_t type, int flags)
   return choice;
 }
 
-/** Try to determine which fraction of v2 and v3 directory requsts aimed at
+/** Try to determine which fraction of v2 and v3 directory requests aimed at
  * caches will be sent to us. Set *<b>v2_share_out</b> and
  * *<b>v3_share_out</b> to the fractions of v2 and v3 protocol shares we
- * expect to see, respectively.  Return 0 on success, negative on failue. */
+ * expect to see, respectively.  Return 0 on success, negative on failure. */
 int
 router_get_my_share_of_directory_requests(double *v2_share_out,
                                           double *v3_share_out)
@@ -3270,7 +3270,7 @@ routerlist_remove_old_routers(void)
     if (caches && networkstatus_v2_list) {
       /* If we care about v2 statuses, we'll retain at most as many as are
          listed any of the v2 statues.  This will be at least the length of
-         the largest v2 networstatus, and in the worst case, this set will be
+         the largest v2 networkstatus, and in the worst case, this set will be
          equal to the sum of the lengths of all v2 consensuses.  Take the
          worst case.
       */
@@ -4616,7 +4616,7 @@ router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2)
       (r2->bandwidthcapacity < r1->bandwidthcapacity/2))
     return 0;
 
-  /* Did the bandwithrate or bandwithburst change? */
+  /* Did the bandwidthrate or bandwidthburst change? */
   if ((r1->bandwidthrate != r2->bandwidthrate) ||
       (r1->bandwidthburst != r2->bandwidthburst))
     return 0;
@@ -4979,7 +4979,7 @@ routerset_refresh_countries(routerset_t *target)
  *
  * Three kinds of elements are allowed in routersets: nicknames, IP address
  * patterns, and fingerprints.  They may be surrounded by optional space, and
- * mst be separated by commas.
+ * must be separated by commas.
  */
 int
 routerset_parse(routerset_t *target, const char *s, const char *description)

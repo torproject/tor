@@ -1109,7 +1109,7 @@ configure_nameservers(int force)
       socklen = tor_addr_to_sockaddr(&addr, 0,
                                      (struct sockaddr *)&ss, sizeof(ss));
       if (socklen < 0) {
-        log_warn(LD_BUG, "Couldn't convert outboung bind address to sockaddr."
+        log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
                  " Ignoring.");
       } else {
         evdns_set_default_outgoing_bind_address((struct sockaddr *)&ss,
@@ -1553,7 +1553,7 @@ dns_launch_correctness_checks(void)
   }
 }
 
-/** Return true iff our DNS servers lie to us too much to be trustd. */
+/** Return true iff our DNS servers lie to us too much to be trusted. */
 int
 dns_seems_to_be_broken(void)
 {

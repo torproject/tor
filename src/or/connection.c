@@ -369,7 +369,7 @@ _connection_free(connection_t *conn)
     buf_free(conn->outbuf);
   } else {
     if (conn->socket_family == AF_UNIX) {
-      /* For now only control ports can be unix domain sockets
+      /* For now only control ports can be Unix domain sockets
        * and listeners at the same time */
       tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
 
@@ -474,7 +474,7 @@ connection_free(connection_t *conn)
 }
 
 /** Call _connection_free() on every connection in our array, and release all
- * storage helpd by connection.c. This is used by cpuworkers and dnsworkers
+ * storage held by connection.c. This is used by cpuworkers and dnsworkers
  * when they fork, so they don't keep resources held open (especially
  * sockets).
  *
@@ -747,7 +747,7 @@ connection_expire_held_open(void)
  * for the new structure.  If no port is provided in <b>listenaddress</b> then
  * <b>listenport</b> is used.
  *
- * If not NULL <b>readable_addrress</b> will contain a copy of the host part of
+ * If not NULL <b>readable_address</b> will contain a copy of the host part of
  * <b>listenaddress</b>.
  *
  * The listenaddr struct has to be freed by the caller.
@@ -784,14 +784,14 @@ create_inet_sockaddr(const char *listenaddress, uint16_t listenport,
 
 #ifdef HAVE_SYS_UN_H
 /** Create an AF_UNIX listenaddr struct.
- * <b>listenaddress</b> provides the path to the unix socket.
+ * <b>listenaddress</b> provides the path to the Unix socket.
  *
  * Eventually <b>listenaddress</b> will also optionally contain user, group,
  * and file permissions for the new socket.  But not yet. XXX
  * Also, since we do not create the socket here the information doesn't help
  * here.
  *
- * If not NULL <b>readable_addrress</b> will contain a copy of the path part of
+ * If not NULL <b>readable_address</b> will contain a copy of the path part of
  * <b>listenaddress</b>.
  *
  * The listenaddr struct has to be freed by the caller.
@@ -919,7 +919,7 @@ connection_create_listener(struct sockaddr *listensockaddr, socklen_t socklen,
   } else if (listensockaddr->sa_family == AF_UNIX) {
     start_reading = 1;
 
-    /* For now only control ports can be unix domain sockets
+    /* For now only control ports can be Unix domain sockets
      * and listeners at the same time */
     tor_assert(type == CONN_TYPE_CONTROL_LISTENER);
 
@@ -1151,7 +1151,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
     newconn->address = tor_dup_addr(&addr);
 
   } else if (conn->socket_family == AF_UNIX) {
-    /* For now only control ports can be unix domain sockets
+    /* For now only control ports can be Unix domain sockets
      * and listeners at the same time */
     tor_assert(conn->type == CONN_TYPE_CONTROL_LISTENER);
 
@@ -1179,7 +1179,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
 }
 
 /** Initialize states for newly accepted connection <b>conn</b>.
- * If conn is an OR, start the tls handshake.
+ * If conn is an OR, start the TLS handshake.
  * If conn is a transparent AP, get its original destination
  * and place it in circuit_wait.
  */
@@ -1810,7 +1810,7 @@ connection_bucket_init(void)
   }
 }
 
-/** Refill a single <b>bucket</b> called <b>name</b> with bandwith rate
+/** Refill a single <b>bucket</b> called <b>name</b> with bandwidth rate
  * <b>rate</b> and bandwidth burst <b>burst</b>, assuming that
  * <b>seconds_elapsed</b> seconds have passed since the last call.
  **/

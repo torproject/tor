@@ -7,7 +7,7 @@
 /**
  * \file relay.c
  * \brief Handle relay cell encryption/decryption, plus packaging and
- *    receiving from circuits, plus queueing on circuits.
+ *    receiving from circuits, plus queuing on circuits.
  **/
 
 #include "or.h"
@@ -783,7 +783,7 @@ connection_ap_process_end_not_open(
            "Edge got end (%s) before we're connected. Marking for close.",
        stream_end_reason_to_string(rh->length > 0 ? reason : -1));
   circuit_log_path(LOG_INFO,LD_APP,circ);
-  /* need to test because of detach_retriable*/
+  /* need to test because of detach_retryable*/
   if (!conn->_base.marked_for_close)
     connection_mark_unattached_ap(conn, control_reason);
   return 0;
@@ -1353,7 +1353,7 @@ connection_edge_consider_sending_sendme(edge_connection_t *conn)
 
   while (conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
     log_debug(conn->cpath_layer?LD_APP:LD_EXIT,
-              "Outbuf %d, Queueing stream sendme.",
+              "Outbuf %d, Queuing stream sendme.",
               (int)conn->_base.outbuf_flushlen);
     conn->deliver_window += STREAMWINDOW_INCREMENT;
     if (connection_edge_send_command(conn, RELAY_COMMAND_SENDME,
@@ -1467,7 +1467,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 //         layer_hint ? "defined" : "null");
   while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <
           CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
-    log_debug(LD_CIRC,"Queueing circuit sendme.");
+    log_debug(LD_CIRC,"Queuing circuit sendme.");
     if (layer_hint)
       layer_hint->deliver_window += CIRCWINDOW_INCREMENT;
     else

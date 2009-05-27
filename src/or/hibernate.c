@@ -583,10 +583,10 @@ read_bandwidth_usage(void)
     return -1;
 
   /* Okay; it looks like the state file is more up-to-date than the
-   * bw_accounting file, or the bw_accounting file is nonexistant,
+   * bw_accounting file, or the bw_accounting file is nonexistent,
    * or the bw_accounting file is corrupt.
    */
-  log_info(LD_ACCT, "Reading bandwdith accounting data from state file");
+  log_info(LD_ACCT, "Reading bandwidth accounting data from state file");
   n_bytes_read_in_interval = state->AccountingBytesReadInInterval;
   n_bytes_written_in_interval = state->AccountingBytesWrittenInInterval;
   n_seconds_active_in_interval = state->AccountingSecondsActive;
@@ -651,7 +651,7 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
 
   if (new_state == HIBERNATE_STATE_EXITING &&
       hibernate_state != HIBERNATE_STATE_LIVE) {
-    log_notice(LD_GENERAL,"Sigint received %s; exiting now.",
+    log_notice(LD_GENERAL,"SIGINT received %s; exiting now.",
                hibernate_state == HIBERNATE_STATE_EXITING ?
                "a second time" : "while hibernating");
     tor_cleanup();

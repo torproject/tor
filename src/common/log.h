@@ -53,7 +53,7 @@
 
 /** Catch-all for miscellaneous events and fatal errors. */
 #define LD_GENERAL  (1u<<0)
-/** The cryptography subsytem. */
+/** The cryptography subsystem. */
 #define LD_CRYPTO   (1u<<1)
 /** Networking. */
 #define LD_NET      (1u<<2)

@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2004, Roger Dingledinex
+/* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2009, The Tor Project, Inc. */
 /* See LICENSE for licensing information */

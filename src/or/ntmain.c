@@ -299,7 +299,7 @@ nt_service_main(void)
       case CMD_LIST_FINGERPRINT:
       case CMD_HASH_PASSWORD:
       case CMD_VERIFY_CONFIG:
-        log_err(LD_CONFIG, "Unsupported command (--list-fingerint, "
+        log_err(LD_CONFIG, "Unsupported command (--list-fingerprint, "
                 "--hash-password, or --verify-config) in NT service.");
         break;
       case CMD_RUN_UNITTESTS:

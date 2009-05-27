@@ -136,7 +136,7 @@
 /** Maximum size, in bytes, for any directory object that we've downloaded. */
 #define MAX_DIR_DL_SIZE MAX_BUF_SIZE
 
-/** For http parsing: Maximum number of bytes we'll accept in the headers
+/** For HTTP parsing: Maximum number of bytes we'll accept in the headers
  * of an HTTP request or response. */
 #define MAX_HEADERS_SIZE 50000
 /** Maximum size, in bytes, for any directory object that we're accepting
@@ -263,7 +263,7 @@ typedef enum {
 #define _OR_CONN_STATE_MAX 8
 
 #define _EXIT_CONN_STATE_MIN 1
-/** State for an exit connection: waiting for response from dns farm. */
+/** State for an exit connection: waiting for response from DNS farm. */
 #define EXIT_CONN_STATE_RESOLVING 1
 /** State for an exit connection: waiting for connect() to finish. */
 #define EXIT_CONN_STATE_CONNECTING 2
@@ -943,7 +943,7 @@ typedef struct connection_t {
                                  * could write? */
   time_t timestamp_created; /**< When was this connection_t created? */
 
-  /* XXXX_IP6 make this ipv6-capable */
+  /* XXXX_IP6 make this IPv6-capable */
   int socket_family; /**< Address family of this connection's socket.  Usually
                       * AF_INET, but it can also be AF_UNIX, or in the future
                       * AF_INET6 */
@@ -1093,7 +1093,7 @@ typedef struct edge_connection_t {
    * already retried several times. */
   uint8_t num_socks_retries;
 
-  /** True iff this connection is for a dns request only. */
+  /** True iff this connection is for a DNS request only. */
   unsigned int is_dns_request:1;
 
   /** True iff this stream must attach to a one-hop circuit (e.g. for
@@ -1146,7 +1146,7 @@ typedef struct dir_connection_t {
   /** If we're fetching descriptors, what router purpose shall we assign
    * to them? */
   uint8_t router_purpose;
-  /** List of fingerprints for networkstatuses or desriptors to be spooled. */
+  /** List of fingerprints for networkstatuses or descriptors to be spooled. */
   smartlist_t *fingerprint_stack;
   /** A cached_dir_t object that we're currently spooling out */
   struct cached_dir_t *cached_dir;
@@ -1253,9 +1253,9 @@ typedef struct addr_policy_t {
 /** A cached_dir_t represents a cacheable directory object, along with its
  * compressed form. */
 typedef struct cached_dir_t {
-  char *dir; /**< Contents of this object, nul-terminated. */
+  char *dir; /**< Contents of this object, NUL-terminated. */
   char *dir_z; /**< Compressed contents of this object. */
-  size_t dir_len; /**< Length of <b>dir</b> (not counting its nul). */
+  size_t dir_len; /**< Length of <b>dir</b> (not counting its NUL). */
   size_t dir_z_len; /**< Length of <b>dir_z</b>. */
   time_t published; /**< When was this object published. */
   int refcnt; /**< Reference count for this cached_dir_t. */
@@ -1312,7 +1312,7 @@ typedef struct signed_descriptor_t {
    * necessarily NUL-terminated.  If saved_location is SAVED_IN_CACHE, this
    * pointer is null. */
   char *signed_descriptor_body;
-  /** Length of the annotations preceeding the server descriptor. */
+  /** Length of the annotations preceding the server descriptor. */
   size_t annotations_len;
   /** Length of the server descriptor. */
   size_t signed_descriptor_len;
@@ -1619,7 +1619,7 @@ typedef enum {
  * status consensus. */
 typedef struct networkstatus_t {
   networkstatus_type_t type; /**< Vote, consensus, or opinion? */
-  time_t published; /**< Vote only: Tiem when vote was written. */
+  time_t published; /**< Vote only: Time when vote was written. */
   time_t valid_after; /**< Time after which this vote or consensus applies. */
   time_t fresh_until; /**< Time before which this is the most recent vote or
                        * consensus. */
@@ -1634,7 +1634,7 @@ typedef struct networkstatus_t {
   /** How long does this vote/consensus claim that authorities take to
    * distribute their votes to one another? */
   int vote_seconds;
-  /** How long does this vote/consensus claim that authorites take to
+  /** How long does this vote/consensus claim that authorities take to
    * distribute their consensus signatures to one another? */
   int dist_seconds;
 
@@ -1915,7 +1915,7 @@ typedef struct circuit_t {
   /** The circuit_id used in the next (forward) hop of this circuit. */
   circid_t n_circ_id;
 
-  /** The hop to which we want to extend this ciruit.  Should be NULL if
+  /** The hop to which we want to extend this circuit.  Should be NULL if
    * the circuit has attached to a connection. */
   extend_info_t *n_hop;
 
@@ -2180,7 +2180,7 @@ typedef struct {
   config_line_t *DirPolicy; /**< Lists of dir policy components */
   /** Addresses to bind for listening for SOCKS connections. */
   config_line_t *SocksListenAddress;
-  /** Addresses to bind for listening for transparent pf/nefilter
+  /** Addresses to bind for listening for transparent pf/netfilter
    * connections. */
   config_line_t *TransListenAddress;
   /** Addresses to bind for listening for transparent natd connections */
@@ -2459,7 +2459,7 @@ typedef struct {
   int ServerDNSAllowBrokenConfig;
 
   smartlist_t *ServerDNSTestAddresses; /**< A list of addresses that definitely
-                                        * should be resolveable. Used for
+                                        * should be resolvable. Used for
                                         * testing our DNS server. */
   int EnforceDistinctSubnets; /**< If true, don't allow multiple routers in the
                                * same network zone in the same circuit. */
@@ -2566,7 +2566,7 @@ typedef struct {
 typedef struct {
   uint32_t _magic;
   /** The time at which we next plan to write the state to the disk.  Equal to
-   * TIME_MAX if there are no saveable changes, 0 if there are changes that
+   * TIME_MAX if there are no savable changes, 0 if there are changes that
    * should be saved right away. */
   time_t next_write;
 
@@ -2830,7 +2830,7 @@ void circuit_build_failed(origin_circuit_t *circ);
 #define CIRCLAUNCH_ONEHOP_TUNNEL  (1<<0)
 /** Flag to set when a circuit needs to be built of high-uptime nodes */
 #define CIRCLAUNCH_NEED_UPTIME    (1<<1)
-/** Flag to set when a circuit needs to be build of high-capcity nodes */
+/** Flag to set when a circuit needs to be build of high-capacity nodes */
 #define CIRCLAUNCH_NEED_CAPACITY  (1<<2)
 /** Flag to set when the last hop of a circuit doesn't need to be an
  * exit node. */
@@ -3829,7 +3829,7 @@ void clear_pending_onions(void);
 /********************************* policies.c ************************/
 
 /* (length of "accept 255.255.255.255/255.255.255.255:65535-65535\n" plus a
- * nul.)
+ * NUL.)
  */
 #define POLICY_BUF_LEN 52
 

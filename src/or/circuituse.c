@@ -298,13 +298,13 @@ circuit_expire_building(time_t now)
     if (victim->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
         victim->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
       if (!victim->timestamp_dirty)
-        log_fn(LOG_DEBUG,"Considering %sopen purp %d to %s (circid %d)."
+        log_fn(LOG_DEBUG,"Considering %sopen purpose %d to %s (circid %d)."
                "(clean).",
                victim->state == CIRCUIT_STATE_OPEN ? "" : "non",
                victim->purpose, victim->build_state->chosen_exit_name,
                victim->n_circ_id);
       else
-        log_fn(LOG_DEBUG,"Considering %sopen purp %d to %s (circid %d). "
+        log_fn(LOG_DEBUG,"Considering %sopen purpose %d to %s (circid %d). "
                "%d secs since dirty.",
                victim->state == CIRCUIT_STATE_OPEN ? "" : "non",
                victim->purpose, victim->build_state->chosen_exit_name,
@@ -512,7 +512,7 @@ circuit_predict_and_launch_new(void)
     flags |= CIRCLAUNCH_IS_INTERNAL;
     log_info(LD_CIRC,
              "Have %d clean circs (%d uptime-internal, %d internal), need"
-             " another hidserv circ.",
+             " another hidden service circ.",
              num, num_uptime_internal, num_internal);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
     return;
@@ -642,7 +642,7 @@ circuit_expire_old_circuits(time_t now)
     if (circ->timestamp_dirty &&
         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now &&
         !TO_ORIGIN_CIRCUIT(circ)->p_streams /* nothing attached */ ) {
-      log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, purp %d)",
+      log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, purpose %d)",
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
@@ -1035,7 +1035,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
   if (!want_onehop && !router_have_minimum_dir_info()) {
     if (!connection_get_by_type(CONN_TYPE_DIR)) {
       int severity = LOG_NOTICE;
-      /* FFFF if this is a tunnelled directory fetch, don't yell
+      /* FFFF if this is a tunneled directory fetch, don't yell
        * as loudly. the user doesn't even know it's happening. */
       if (options->UseBridges && bridges_known_but_down()) {
         log_fn(severity, LD_APP|LD_DIR,
@@ -1108,7 +1108,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       extend_info = rend_client_get_random_intro(conn->rend_data);
       if (!extend_info) {
         log_info(LD_REND,
-                 "No intro points for '%s': refetching service descriptor.",
+                 "No intro points for '%s': re-fetching service descriptor.",
                  safe_str(conn->rend_data->onion_address));
         /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
          * arrives first. Exception: When using client authorization, only
@@ -1451,7 +1451,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
                rendcirc->_base.n_circ_id, conn_age);
       /* Mark rendezvous circuits as 'newly dirty' every time you use
        * them, since the process of rebuilding a rendezvous circ is so
-       * expensive. There is a tradeoffs between linkability and
+       * expensive. There is a tradeoff between linkability and
        * feasibility, at this point.
        */
       rendcirc->_base.timestamp_dirty = time(NULL);

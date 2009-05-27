@@ -403,7 +403,7 @@ const char TOR_TOLOWER_TABLE[256] = {
  * function is called on __FILE__ to fix a MSVC nit where __FILE__
  * contains the full path to the file.  This is bad, because it
  * confuses users to find the home directory of the person who
- * compiled the binary in their warrning messages.
+ * compiled the binary in their warning messages.
  */
 const char *
 tor_fix_source_file(const char *fname)
@@ -490,7 +490,7 @@ set_uint64(char *cp, uint64_t v)
 }
 
 /**
- * Rename the file <b>from</b> to the file <b>to</b>.  On unix, this is
+ * Rename the file <b>from</b> to the file <b>to</b>.  On Unix, this is
  * the same as rename(2).  On windows, this removes <b>to</b> first if
  * it already exists.
  * Returns 0 on success.  Returns -1 and sets errno on failure.
@@ -632,7 +632,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
   tor_free(lockfile);
 }
 
-/* Some old versions of unix didn't define constants for these values,
+/* Some old versions of Unix didn't define constants for these values,
  * and instead expect you to say 0, 1, or 2. */
 #ifndef SEEK_CUR
 #define SEEK_CUR 1
@@ -1568,7 +1568,7 @@ get_uname(void)
   if (!uname_result_is_set) {
 #ifdef HAVE_UNAME
     if (uname(&u) != -1) {
-      /* (linux says 0 is success, solaris says 1 is success) */
+      /* (Linux says 0 is success, Solaris says 1 is success) */
       tor_snprintf(uname_result, sizeof(uname_result), "%s %s",
                u.sysname, u.machine);
     } else
@@ -1729,7 +1729,7 @@ tor_pthread_helper_fn(void *_data)
 #endif
 
 /** Minimalist interface to run a void function in the background.  On
- * unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
+ * Unix calls fork, on win32 calls beginthread.  Returns -1 on failure.
  * func should not return, but rather should call spawn_exit.
  *
  * NOTE: if <b>data</b> is used, it should not be allocated on the stack,
@@ -1803,7 +1803,7 @@ tor_gettimeofday(struct timeval *timeval)
 {
 #ifdef MS_WINDOWS
   /* Epoch bias copied from perl: number of units between windows epoch and
-   * unix epoch. */
+   * Unix epoch. */
 #define EPOCH_BIAS U64_LITERAL(116444736000000000)
 #define UNITS_PER_SEC U64_LITERAL(10000000)
 #define USEC_PER_SEC U64_LITERAL(1000000)
@@ -1936,7 +1936,7 @@ static pthread_mutexattr_t attr_reentrant;
 /** True iff we've called tor_threads_init() */
 static int threads_initialized = 0;
 /** Initialize <b>mutex</b> so it can be locked.  Every mutex must be set
- * up eith tor_mutex_init() or tor_mutex_new(); not both. */
+ * up with tor_mutex_init() or tor_mutex_new(); not both. */
 void
 tor_mutex_init(tor_mutex_t *mutex)
 {
@@ -2259,7 +2259,7 @@ struct { int code; const char *msg; } windows_socket_errors[] = {
    */
   { -1, NULL },
 };
-/** There does not seem to be a strerror equivalent for winsock errors.
+/** There does not seem to be a strerror equivalent for Winsock errors.
  * Naturally, we have to roll our own.
  */
 const char *
@@ -2301,7 +2301,7 @@ network_init(void)
 /** Return a newly allocated string describing the windows system error code
  * <b>err</b>.  Note that error codes are different from errno.  Error codes
  * come from GetLastError() when a winapi call fails.  errno is set only when
- * ansi functions fail.  Whee. */
+ * ANSI functions fail.  Whee. */
 char *
 format_win32_error(DWORD err)
 {

@@ -25,7 +25,7 @@ typedef enum config_type_t {
   CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
   CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
   CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
-  CONFIG_TYPE_ISOTIME,      /**< An ISO-formated time relative to GMT. */
+  CONFIG_TYPE_ISOTIME,      /**< An ISO-formatted time relative to GMT. */
   CONFIG_TYPE_CSV,          /**< A list of strings, separated by commas and
                               * optional whitespace. */
   CONFIG_TYPE_LINELIST,     /**< Uninterpreted config lines */
@@ -449,7 +449,7 @@ static config_var_description_t options_description[] = {
     "host:port (or host:80 if port is not set)." },
   { "HTTPProxyAuthenticator", "A username:password pair to be used with "
     "HTTPProxy." },
-  { "HTTPSProxy", "Force Tor to make all TLS (SSL) connectinos through this "
+  { "HTTPSProxy", "Force Tor to make all TLS (SSL) connections through this "
     "host:port (or host:80 if port is not set)." },
   { "HTTPSProxyAuthenticator", "A username:password pair to be used with "
     "HTTPSProxy." },
@@ -1285,7 +1285,7 @@ options_act(or_options_t *old_options)
     finish_daemon(options->DataDirectory);
   }
 
-  /* Write our pid to the pid file. If we do not have write permissions we
+  /* Write our PID to the PID file. If we do not have write permissions we
    * will log a warning */
   if (running_tor && options->PidFile)
     write_pidfile(options->PidFile);
@@ -1407,7 +1407,7 @@ options_act(or_options_t *old_options)
     }
   }
 
-  /* Load the webpage we're going to serve everytime someone asks for '/' on
+  /* Load the webpage we're going to serve every time someone asks for '/' on
      our DirPort. */
   tor_free(global_dirfrontpagecontents);
   if (options->DirPortFrontPage) {
@@ -1440,7 +1440,7 @@ expand_abbrev(config_format_t *fmt, const char *option, int command_line,
   if (! fmt->abbrevs)
     return option;
   for (i=0; fmt->abbrevs[i].abbreviated; ++i) {
-    /* Abbreviations are casei. */
+    /* Abbreviations are case insensitive. */
     if (!strcasecmp(option,fmt->abbrevs[i].abbreviated) &&
         (command_line || !fmt->abbrevs[i].commandline_only)) {
       if (warn_obsolete && fmt->abbrevs[i].warn) {
@@ -1501,7 +1501,7 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1, 1));
     (*new)->value = tor_strdup(argv[i+1]);
     (*new)->next = NULL;
-    log(LOG_DEBUG, LD_CONFIG, "Commandline: parsed keyword '%s', value '%s'",
+    log(LOG_DEBUG, LD_CONFIG, "command line: parsed keyword '%s', value '%s'",
         (*new)->key, (*new)->value);
 
     new = &((*new)->next);
@@ -1610,7 +1610,7 @@ config_find_option(config_format_t *fmt, const char *key)
   int i;
   size_t keylen = strlen(key);
   if (!keylen)
-    return NULL; /* if they say "--" on the commandline, it's not an option */
+    return NULL; /* if they say "--" on the command line, it's not an option */
   /* First, check for an exact (case-insensitive) match */
   for (i=0; fmt->vars[i].name; ++i) {
     if (!strcasecmp(key, fmt->vars[i].name)) {
@@ -1815,7 +1815,7 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
     if (!clear_first) {
       if (var->type == CONFIG_TYPE_LINELIST ||
           var->type == CONFIG_TYPE_LINELIST_S) {
-        /* We got an empty linelist from the torrc or commandline.
+        /* We got an empty linelist from the torrc or command line.
            As a special case, call this an error. Warn and ignore. */
         log_warn(LD_CONFIG,
                  "Linelist option '%s' has no value. Skipping.", c->key);
@@ -1865,7 +1865,7 @@ option_get_canonical_name(const char *key)
   return var ? var->name : NULL;
 }
 
-/** Return a canonicalized list of the options assigned for key.
+/** Return a canonical list of the options assigned for key.
  */
 config_line_t *
 option_get_assignment(or_options_t *options, const char *key)
@@ -3059,7 +3059,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (!options->ContactInfo && !options->TestingTorNetwork)
       REJECT("Authoritative directory servers must set ContactInfo");
     if (options->V1AuthoritativeDir && !options->RecommendedVersions)
-      REJECT("V1 auth dir servers must set RecommendedVersions.");
+      REJECT("V1 authoritative dir servers must set RecommendedVersions.");
     if (!options->RecommendedClientVersions)
       options->RecommendedClientVersions =
         config_lines_dup(options->RecommendedVersions);
@@ -3069,7 +3069,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (options->VersioningAuthoritativeDir &&
         (!options->RecommendedClientVersions ||
          !options->RecommendedServerVersions))
-      REJECT("Versioning auth dir servers must set Recommended*Versions.");
+      REJECT("Versioning authoritative dir servers must set Recommended*Versions.");
     if (options->UseEntryGuards) {
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
                "UseEntryGuards. Disabling.");
@@ -3675,7 +3675,7 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
 }
 
 /** Return 1 if any change from <b>old_options</b> to <b>new_options</b>
- * will require us to rotate the cpu and dns workers; else return 0. */
+ * will require us to rotate the CPU and DNS workers; else return 0. */
 static int
 options_transition_affects_workers(or_options_t *old_options,
                                    or_options_t *new_options)
@@ -3932,7 +3932,7 @@ options_init_from_torrc(int argc, char **argv)
   char *command_arg = NULL;
   char *errmsg=NULL;
 
-  if (argv) { /* first time we're called. save commandline args */
+  if (argv) { /* first time we're called. save command line args */
     backup_argv = argv;
     backup_argc = argc;
   } else { /* we're reloading. need to clean up old options first. */
@@ -4141,7 +4141,7 @@ get_torrc_fname(void)
     return get_default_conf_file();
 }
 
-/** Adjust the address map mased on the MapAddress elements in the
+/** Adjust the address map based on the MapAddress elements in the
  * configuration <b>options</b>
  */
 static void

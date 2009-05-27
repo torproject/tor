@@ -80,8 +80,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     goto err;
   }
 
-  /* first 20 bytes of payload are the hash of bob's pk */
-  if (entry->parsed->version == 0) { /* unversioned descriptor */
+  /* first 20 bytes of payload are the hash of Bob's pk */
+  if (entry->parsed->version == 0) { /* un-versioned descriptor */
     intro_key = entry->parsed->pk;
   } else { /* versioned descriptor */
     intro_key = NULL;

@@ -2492,7 +2492,7 @@ test_util_gzip(void)
   test_assert(buf3);
   test_streq(buf1,buf3);
 
-  /* Check whether we can uncompress concatenated, compresed strings. */
+  /* Check whether we can uncompress concatenated, compressed strings. */
   tor_free(buf3);
   buf2 = tor_realloc(buf2, len1*2);
   memcpy(buf2+len1, buf2, len1);
@@ -2514,7 +2514,7 @@ test_util_gzip(void)
   test_assert(!tor_gzip_compress(&buf2, &len1, buf1, strlen(buf1)+1,
                                  ZLIB_METHOD));
   tor_assert(len1>16);
-  /* when we allow an uncomplete string, we should succeed.*/
+  /* when we allow an incomplete string, we should succeed.*/
   tor_assert(!tor_gzip_uncompress(&buf3, &len2, buf2, len1-16,
                                   ZLIB_METHOD, 0, LOG_INFO));
   buf3[len2]='\0';
@@ -3004,7 +3004,7 @@ test_dir_format(void)
   test_assert(!crypto_pk_get_fingerprint(pk2, fingerprint, 1));
   strlcat(buf2, fingerprint, sizeof(buf2));
   strlcat(buf2, "\nuptime 0\n"
-  /* XXX the "0" above is hardcoded, but even if we made it reflect
+  /* XXX the "0" above is hard-coded, but even if we made it reflect
    * uptime, that still wouldn't make it right, because the two
    * descriptors might be made on different seconds... hm. */
          "bandwidth 1000 5000 10000\n"
