@@ -996,8 +996,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
           char dd[HEX_DIGEST_LEN+1];
           base16_encode(id, sizeof(dd), rs_out.identity_digest, DIGEST_LEN);
           base16_encode(dd, sizeof(dd), rs_out.descriptor_digest, DIGEST_LEN);
-          log_warn(LD_DIR, "The voters disagreed on the exit policy summary for"
-                   " router %s with descriptor %s.  This really shouldn't"
+          log_warn(LD_DIR, "The voters disagreed on the exit policy summary "
+                   " for router %s with descriptor %s.  This really shouldn't"
                    " have happened.", id, dd);
 
           smartlist_sort_strings(exitsummaries);

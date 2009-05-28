@@ -642,7 +642,8 @@ circuit_expire_old_circuits(time_t now)
     if (circ->timestamp_dirty &&
         circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now &&
         !TO_ORIGIN_CIRCUIT(circ)->p_streams /* nothing attached */ ) {
-      log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, purpose %d)",
+      log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, "
+                "purpose %d)",
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
