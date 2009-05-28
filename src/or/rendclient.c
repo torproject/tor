@@ -455,14 +455,14 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
  * for the service ID <b>query</b>, start a directory connection to fetch a
  * new one.
  */
-void
+static void
 rend_client_refetch_renddesc(const char *query)
 {
   if (!get_options()->FetchHidServDescriptors)
     return;
   log_info(LD_REND, "Fetching rendezvous descriptor for service %s",
            escaped_safe_str(query));
-  if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query, 0)) {
+  if (connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query)) {
     log_info(LD_REND,"Would fetch a new renddesc here (for %s), but one is "
              "already in progress.", escaped_safe_str(query));
   } else {
@@ -524,8 +524,8 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
   log_info(LD_REND, "Could not pick one of the responsible hidden "
                     "service directories to fetch descriptors, because "
                     "we already tried them all unsuccessfully.");
-  /* Close pending connections (unless a v0 request is still going on). */
-  rend_client_desc_trynow(rend_query->onion_address, 2);
+  /* Close pending connections. */
+  rend_client_desc_trynow(rend_query->onion_address);
   return;
 }
 
@@ -585,7 +585,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
     /* move all pending streams back to renddesc_wait */
     while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
                                    AP_CONN_STATE_CIRCUIT_WAIT,
-                                   rend_query->onion_address, -1))) {
+                                   rend_query->onion_address))) {
       conn->state = AP_CONN_STATE_RENDDESC_WAIT;
     }
 
@@ -694,24 +694,18 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
   return -1;
 }
 
-/** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that
- * are waiting on query. If there's a working cache entry here
- * with at least one intro point, move them to the next state. If
- * <b>rend_version</b> is non-negative, fail connections that have
- * requested <b>query</b> unless there are still descriptor fetch
- * requests in progress for other descriptor versions than
- * <b>rend_version</b>.
- */
+/** Find all the apconns in state AP_CONN_STATE_RENDDESC_WAIT that are
+ * waiting on <b>query</b>. If there's a working cache entry here with at
+ * least one intro point, move them to the next state. */
 void
-rend_client_desc_trynow(const char *query, int rend_version)
+rend_client_desc_trynow(const char *query)
 {
   edge_connection_t *conn;
   rend_cache_entry_t *entry;
   time_t now = time(NULL);
 
   smartlist_t *conns = get_connection_array();
-  SMARTLIST_FOREACH(conns, connection_t *, _conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, _conn) {
     if (_conn->type != CONN_TYPE_AP ||
         _conn->state != AP_CONN_STATE_RENDDESC_WAIT ||
         _conn->marked_for_close)
@@ -743,17 +737,11 @@ rend_client_desc_trynow(const char *query, int rend_version)
           connection_mark_unattached_ap(conn, END_STREAM_REASON_CANT_ATTACH);
       }
     } else { /* 404, or fetch didn't get that far */
-      /* Unless there are requests for another descriptor version pending,
-       * close the connection. */
-      if (rend_version >= 0 &&
-          !connection_get_by_type_state_rendquery(CONN_TYPE_DIR, 0, query,
-                                                  rend_version == 0 ? 2 : 0)) {
-        log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
-                   "unavailable (try again later).", safe_str(query));
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
-      }
+      log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
+                 "unavailable (try again later).", safe_str(query));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
     }
-  });
+  } SMARTLIST_FOREACH_END(_conn);
 }
 
 /** Return a newly allocated extend_info_t* for a randomly chosen introduction
