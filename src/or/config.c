@@ -3069,7 +3069,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (options->VersioningAuthoritativeDir &&
         (!options->RecommendedClientVersions ||
          !options->RecommendedServerVersions))
-      REJECT("Versioning authoritative dir servers must set Recommended*Versions.");
+      REJECT("Versioning authoritative dir servers must set "
+             "Recommended*Versions.");
     if (options->UseEntryGuards) {
       log_info(LD_CONFIG, "Authoritative directory servers can't set "
                "UseEntryGuards. Disabling.");

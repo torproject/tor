@@ -783,7 +783,7 @@ connection_ap_process_end_not_open(
            "Edge got end (%s) before we're connected. Marking for close.",
        stream_end_reason_to_string(rh->length > 0 ? reason : -1));
   circuit_log_path(LOG_INFO,LD_APP,circ);
-  /* need to test because of detach_retryable*/
+  /* need to test because of detach_retriable */
   if (!conn->_base.marked_for_close)
     connection_mark_unattached_ap(conn, control_reason);
   return 0;

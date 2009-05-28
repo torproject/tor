@@ -2298,7 +2298,8 @@ _openssl_locking_cb(int mode, int n, const char *file, int line)
     tor_mutex_release(_openssl_mutexes[n]);
 }
 
-/** OpenSSL helper type: wraps a Tor mutex so that OpenSSL can  */
+/** OpenSSL helper type: wraps a Tor mutex so that OpenSSL can use it
+ * as a lock. */
 struct CRYPTO_dynlock_value {
   tor_mutex_t *lock;
 };
