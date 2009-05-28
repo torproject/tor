@@ -85,6 +85,7 @@ Proposals by number:
 162  Publish the consensus in multiple flavors [OPEN]
 163  Detecting whether a connection comes from a client [OPEN]
 164  Reporting the status of server votes [OPEN]
+165  Easy migration for voting authority sets [OPEN]
 
 
 Proposals by status:
@@ -111,6 +112,7 @@ Proposals by status:
    162  Publish the consensus in multiple flavors [for 0.2.2]
    163  Detecting whether a connection comes from a client [for 0.2.2]
    164  Reporting the status of server votes [for 0.2.2]
+   165  Easy migration for voting authority sets
  ACCEPTED:
    110  Avoiding infinite length circuits [for 0.2.1.x] [in 0.2.1.3-alpha]
    117  IPv6 exits [for 0.2.1.x]
