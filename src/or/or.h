@@ -2830,7 +2830,7 @@ void circuit_build_failed(origin_circuit_t *circ);
 #define CIRCLAUNCH_ONEHOP_TUNNEL  (1<<0)
 /** Flag to set when a circuit needs to be built of high-uptime nodes */
 #define CIRCLAUNCH_NEED_UPTIME    (1<<1)
-/** Flag to set when a circuit needs to be build of high-capacity nodes */
+/** Flag to set when a circuit needs to be built of high-capacity nodes */
 #define CIRCLAUNCH_NEED_CAPACITY  (1<<2)
 /** Flag to set when the last hop of a circuit doesn't need to be an
  * exit node. */
