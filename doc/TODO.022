@@ -11,13 +11,14 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
 - Design only
   - Begin design work for UDP transition; identify areas where we need to
     make changes or instrument stuff early.
-
     [multiple weeks, ongoing.  Need to do a draft early.]
 
 - Performance, mostly protocol-neutral.
   - Work with Libevent 2.0's bufferevent interface
     - Identify any performance stuff we need to push back into
       libevent to make it as fast as we want.
+    - Get a decent rate-limiting feature into Libevent
+    - Get openssl support into Libevent.
 
   - Revise how we do bandwidth limiting and round-robining between
     circuits on a connection.
@@ -42,6 +43,7 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
     - ... or group client circuits by IP at the server and rate-limit
       like that.
 
+  - Use if-modified-since to download consensuses
 
 
 - Other features
@@ -54,34 +56,43 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
 
   - Proposals to improve and implement
     - 158: microdescriptors
-N     - Revise proposal
+      o Revise proposal
+      - Implement
     - 160: list bandwidth in consensus
-RNM?  - Finish proposal
+RNM?  . Finish proposal
       - and actually set it reasonably
       - and actually use it.
 
   - Proposals to improve and implement if not broken
-    - IPv6 support.  (Parts of 117, but figure out how to handle DNS
+    D IPv6 support.  (Parts of 117, but figure out how to handle DNS
       requests.)
     - 140: Directory diffs
+      - Need a decent simple C diff implementation.
+      - Need a decent simple C ed patch implementation.
     - 149: learn info from netinfo cells.
-    - 134: handle authority fragmentation (Needs more analysis)
-
-  - Needs a proposal, or at least some design
-    - Detect client-status better
-N     - Write proposal
-    - Have authorities report relay and voting status better: make it
+      o Start discussion
+      - Revise proposal based on discussion.
+    X 134: handle authority fragmentation (Needs more analysis)
+    - 165: Easy migration for voting authority sets
+    - 163: Detect client-status better
+      o Write proposal
+      - Possibly implement, depending on discussion.
+    - 164: Have authorities report relay and voting status better: make it
       easy to answer, "Why is my server not listed/not Guard/not
       Running/etc"
-N     - Write proposal
-    - Have consensuses come in multiple "flavours".
-N     - Write proposal
+      o Write proposal
+      - Possibly implement, depending on discussion
+    - 162: Have consensuses come in multiple "flavours".
+      o Write proposal
+      - Possibly implement, depending on discussion.
+
+  - Needs a proposal, or at least some design
     - Weaken the requirements for being a Guard, based on K's
       measurements.
 K     - Finish measurements
 K?    - Write proposal
     - Adaptive timeouts for giving up on circuits and streams.
-M/N   - Revise proposal 151
+M     - Revise proposal 151
     - Downweight guards more sensibly: be more forgiving about using
       Guard nodes as non-first-hop.
       - Write proposal.
