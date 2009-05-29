@@ -2480,6 +2480,8 @@ start_daemon(void)
     if (fork() != 0) {
       exit(0);
     }
+    set_main_thread(); /* We are now the main thread. */
+
     return;
   }
 }

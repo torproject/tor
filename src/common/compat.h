@@ -522,6 +522,9 @@ void tor_threads_init(void);
 #define tor_threads_init() STMT_NIL
 #endif
 
+void set_main_thread(void);
+int in_main_thread(void);
+
 #ifdef TOR_IS_MULTITHREADED
 #if 0
 typedef struct tor_cond_t tor_cond_t;

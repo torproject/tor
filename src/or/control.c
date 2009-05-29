@@ -3367,6 +3367,11 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
 {
   int event;
 
+  /* Don't even think of trying to add stuff to a buffer from a cpuworker
+   * thread. */
+  if (! in_main_thread())
+    return;
+
   if (disable_log_messages)
     return;
 
