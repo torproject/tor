@@ -354,6 +354,16 @@ If non-zero, try to use crypto hardware acceleration when
 available. This is untested and probably buggy. (Default: 0)
 .LP
 .TP
+\fBAccelName \fR\fIEngineName\fP
+When using OpenSSL hardware crypto acceleration attempt to load the dynamic
+engine of this name. This must be used for any dynamic hardware engine.
+.LP
+.TP
+\fBAccelDir \fR\fIPath\fP
+Specify this option if using dynamic hardware acceleration and the engine
+implementation library resides somewhere other than the OpenSSL default.
+.LP
+.TP
 \fBAvoidDiskWrites \fR\fB0\fR|\fB1\fP
 If non-zero, try to write to disk less frequently than we would otherwise.
 This is useful when running on flash memory or other media that support only
