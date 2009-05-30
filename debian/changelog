@@ -1,3 +1,10 @@
+tor (0.2.1.15-rc-1) experimental; urgency=low
+
+  * New upstream version.
+  * Change build time dependency on gs to ghostscript.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 30 May 2009 21:10:03 +0200
+
 tor (0.2.1.14-rc-1) experimental; urgency=low
 
   * New upstream version.
