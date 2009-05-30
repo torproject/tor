@@ -2634,12 +2634,11 @@ is_listening_on_low_port(uint16_t port_option,
 #else
   const config_line_t *l;
   uint16_t p;
-  if (listen_options == NULL) {
-    if (port_option < 1024) {
-      return 1;
-    }
-    return 0;
-  }
+  if (port_option == 0)
+    return 0; /* We're not listening */
+  if (listen_options == NULL)
+    return (port_option < 1024);
+
   for (l = listen_options; l; l = l->next) {
     parse_addr_port(LOG_WARN, l->value, NULL, NULL, &p);
     if (p<1024) {
