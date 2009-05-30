@@ -1378,6 +1378,14 @@ options_act(or_options_t *old_options)
     geoip_load_file(actual_fname, options);
     tor_free(actual_fname);
   }
+#ifdef ENABLE_GEOIP_STATS
+  /* Check if GeoIP database could be loaded. */
+  if (!geoip_is_loaded()) {
+    log_warn(LD_CONFIG, "Configured to measure GeoIP statistics, but no "
+                        "GeoIP database found!");
+    return -1;
+  }
+#endif
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||
