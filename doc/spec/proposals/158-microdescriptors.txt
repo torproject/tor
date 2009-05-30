@@ -58,8 +58,8 @@ Status: Open
   A microdescriptor should in every case be a pure function of the
   router descriptor and the conensus method.
 
-  In votes, need to include the hash of each expected microdescriptor in
-  the routerstatus section. I suggest a new "m" line for each stanza,
+  In votes, we need to include the hash of each expected microdescriptor
+  in the routerstatus section. I suggest a new "m" line for each stanza,
   with the base64 of the SHA256 hash of the router's microdescriptor.
 
   For every consensus method that an authority supports, it includes a
@@ -84,7 +84,7 @@ Status: Open
 
 3.1.2. Computing consensus for microdescriptor-elements and "m" lines
 
-  When we generating a consensus, we use whichever m line
+  When we are generating a consensus, we use whichever m line
   unambiguously corresponds to the descriptor digest that will be
   included in the consensus.  (If there are multiple m lines for that
   descriptor digest, we use whichever is most common.  If they are
@@ -103,7 +103,7 @@ Status: Open
 
   This flavor can safely omit descriptor digests.
 
-  We still need to descide whether to move ports into microdescriptors
+  We still need to decide whether to move ports into microdescriptors
   or not.  In either case, they can be removed from the current "ns"
   flavor of consensus, since no current clients use them, and they
   take up about 5% of the compressed consensus.

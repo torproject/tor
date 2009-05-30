@@ -37,7 +37,7 @@ Motivation:
 
 Design in brief:
 
-   Let the voting process will remain as it is, until a consensus is
+   Let the voting process remain as it is, until a consensus is
    generated.  With future versions of the voting algorithm, instead
    of just a single consensus being generated, multiple consensus
    "flavors" are produced.
@@ -116,7 +116,7 @@ Spec modifications:
        Signature = "directory-signature" SP algname SP identity
                            SP signing-key-digest NL signature
 
-    There must be one Document line for each generated consensus flavor
+    There must be one Document line for each generated consensus flavor.
     Each Document line describes the length of the signed portion of
     a consensus (the signatures themselves are not included), along
     with one or more digests of that signed portion.  Digests are

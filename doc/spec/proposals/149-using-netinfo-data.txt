@@ -22,14 +22,14 @@ Motivation
    idea of their own IP addresses, so they can publish correct
    descriptors.  This is also in NETINFO cells.
 
-Learning the time and IP
+Learning the time and IP address
 
    We need to think about attackers here.  Just because a router tells
    us that we have a given IP or a given clock skew doesn't mean that
    it's true.  We believe this information only if we've heard it from
    a majority of the routers we've connected to recently, including at
    least 3 routers.  Routers only believe this information if the
-   majority inclues at least one authority.
+   majority includes at least one authority.
 
 Avoiding MITM attacks
 

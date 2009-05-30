@@ -51,14 +51,14 @@ Proposed protocol design:
 
    A "Voting Set" is a set of authorities.  Each authority has a list of
    the voting sets it considers acceptable.  These sets are chosen
-   manually by the authority operators. they must always contain the
+   manually by the authority operators. They must always contain the
    authority itself.  Each authority lists all of these voting sets in
    its votes.
 
    Authorities exchange votes with every other authority in any of their
    voting sets.
 
-   When it comes time to calculate a consensus, an authority votes with
+   When it is time to calculate a consensus, an authority votes with
    whichever voting set it lists that is listed by the most members of
    that set.  In other words, given two sets S1 and S2 that an authority
    lists, that authority will prefer to vote with S1 over S2 whenever
@@ -116,7 +116,7 @@ Data format changes:
    implement the proposal), add this line to the consensus format as
    well, before the first dir-source line.  [This information is not
    redundant with the dir-source sections in the consensus: If an
-   authority is recognized didn't vote, that authority will appear in
+   authority is recognized but didn't vote, that authority will appear in
    the voting-set line but not in the dir-source sections.]
 
    We don't need to list other information about authorities in our
