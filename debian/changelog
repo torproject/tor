@@ -13,8 +13,9 @@ tor (0.2.1.15-rc-1XXX) XXXerimental; urgency=low
   * Change debhelper compatibility version from 4 to 5:
     - Change dh_strip call from --dbg-package=tor
       to --dbg-package=tor-dbg.
+    - Update versioned build time dependency on debhelper.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 31 May 2009 11:14:12 +0000
+ -- Peter Palfrader <weasel@debian.org>  Sun, 31 May 2009 13:18:47 +0200
 
 tor (0.2.1.15-rc-1) experimental; urgency=low
 
