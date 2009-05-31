@@ -27,6 +27,7 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
+#include <openssl/engine.h>
 #include <openssl/rand.h>
 #include <openssl/opensslv.h>
 #include <openssl/bn.h>
@@ -166,36 +167,70 @@ log_engine(const char *fn, ENGINE *e)
   }
 }
 
+/** Try to load an engine in a shared library via fully qualified path.
+ */
+static ENGINE *
+try_load_engine(const char *path, const char *engine)
+{
+  ENGINE *e = ENGINE_by_id("dynamic");
+  if (e) {
+    if (!ENGINE_ctrl_cmd_string(e, "ID", engine, 0) ||
+        !ENGINE_ctrl_cmd_string(e, "DIR_LOAD", "2", 0) ||
+        !ENGINE_ctrl_cmd_string(e, "DIR_ADD", path, 0) ||
+        !ENGINE_ctrl_cmd_string(e, "LOAD", NULL, 0)) {
+      ENGINE_free(e);
+      e = NULL;
+    }
+  }
+  return e;
+}
+
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int
-crypto_global_init(int useAccel)
+crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 {
   if (!_crypto_global_initialized) {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
-    /* XXX the below is a bug, since we can't know if we're supposed
-     * to be using hardware acceleration or not. we should arrange
-     * for this function to be called before init_keys. But make it
-     * not complain loudly, at least until we make acceleration work. */
-    if (useAccel < 0) {
-      log_info(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
-    }
     if (useAccel > 0) {
+      ENGINE *e = NULL;
       log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
-      if (!ENGINE_register_all_complete())
-        return -1;
-
-      /* XXXX make sure this isn't leaking. */
+      ENGINE_register_all_complete();
+      if (accelName) {
+        if (accelDir) {
+          log_info(LD_CRYPTO, "Trying to load dynamic OpenSSL engine \"%s\""
+                   " via path \"%s\".", accelName, accelDir);
+          e = try_load_engine(accelName, accelDir);
+        } else {
+          log_info(LD_CRYPTO, "Initializing dynamic OpenSSL engine \"%s\""
+                   " acceleration support.", accelName);
+          e = ENGINE_by_id(accelName);
+        }
+        if (!e) {
+          log_warn(LD_CRYPTO, "Unable to load dynamic OpenSSL engine \"%s\".",
+                   accelName);
+        } else {
+          log_info(LD_CRYPTO, "Loaded dynamic OpenSSL engine \"%s\".",
+                   accelName);
+        }
+      }
+      if (e) {
+        log_info(LD_CRYPTO, "Loaded OpenSSL hardware acceleration engine,"
+                 " setting default ciphers.");
+        ENGINE_set_default(e, ENGINE_METHOD_ALL);
+      }
       log_engine("RSA", ENGINE_get_default_RSA());
       log_engine("DH", ENGINE_get_default_DH());
       log_engine("RAND", ENGINE_get_default_RAND());
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+    } else {
+      log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
     return crypto_seed_rng(1);
   }

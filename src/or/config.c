@@ -222,6 +222,8 @@ static config_var_t _option_vars[] = {
 #endif
   OBSOLETE("Group"),
   V(HardwareAccel,               BOOL,     "0"),
+  V(AccelName,                   STRING,   NULL),
+  V(AccelDir,                    FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "1"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
@@ -444,6 +446,10 @@ static config_var_description_t options_description[] = {
    * FetchUselessDescriptors */
   { "HardwareAccel", "If set, Tor tries to use hardware crypto accelerators "
     "when it can." },
+  { "AccelName", "If set, try to use hardware crypto accelerator with this "
+    "specific ID." },
+  { "AccelDir", "If set, look in this directory for the dynamic hardware "
+    "engine in addition to OpenSSL default path." },
   /* HashedControlPassword */
   { "HTTPProxy", "Force Tor to make all HTTP directory requests through this "
     "host:port (or host:80 if port is not set)." },
@@ -3611,6 +3617,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
                         "testing Tor network!");
   }
 
+  if (options->AccelName && !options->HardwareAccel)
+    options->HardwareAccel = 1;
+  if (options->AccelDir && !options->AccelName)
+    REJECT("Can't use hardware crypto accelerator dir without engine name.");
+
   return 0;
 #undef REJECT
 #undef COMPLAIN
@@ -3668,9 +3679,11 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
     return -1;
   }
 
-  if (old->HardwareAccel != new_val->HardwareAccel) {
-    *msg = tor_strdup("While Tor is running, changing HardwareAccel is "
-                      "not allowed.");
+  if ((old->HardwareAccel != new_val->HardwareAccel)
+      || !opt_streq(old->AccelName, new_val->AccelName)
+      || !opt_streq(old->AccelDir, new_val->AccelDir)) {
+    *msg = tor_strdup("While Tor is running, changing OpenSSL hardware "
+                      "acceleration engine is not allowed.");
     return -1;
   }
 
