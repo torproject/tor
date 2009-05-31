@@ -2076,6 +2076,7 @@ tor_threads_init(void)
     pthread_mutexattr_init(&attr_reentrant);
     pthread_mutexattr_settype(&attr_reentrant, PTHREAD_MUTEX_RECURSIVE);
     threads_initialized = 1;
+    set_main_thread();
   }
 }
 #elif defined(USE_WIN32_THREADS)
@@ -2168,8 +2169,26 @@ tor_threads_init(void)
 #if 0
   cond_event_tls_index = TlsAlloc();
 #endif
+  set_main_thread();
 }
 #endif
+
+/** Identity of the "main" thread */
+static unsigned long main_thread_id = -1;
+
+/** Start considering the current thread to be the 'main thread'.  This has
+ * no effect on anything besides in_main_thread(). */
+void
+set_main_thread(void)
+{
+  main_thread_id = tor_get_thread_id();
+}
+/** Return true iff called from the main thread. */
+int
+in_main_thread(void)
+{
+  return main_thread_id == tor_get_thread_id();
+}
 
 /**
  * On Windows, WSAEWOULDBLOCK is not always correct: when you see it,

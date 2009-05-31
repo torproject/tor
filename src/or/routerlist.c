@@ -5119,7 +5119,7 @@ routerset_contains(const routerset_t *set, const tor_addr_t *addr,
 
 /** Return true iff we can tell that <b>ei</b> is a member of <b>set</b>. */
 int
-routerset_contains_extendinfo(const routerset_t *set, extend_info_t *ei)
+routerset_contains_extendinfo(const routerset_t *set, const extend_info_t *ei)
 {
   return routerset_contains(set,
                             &ei->addr,

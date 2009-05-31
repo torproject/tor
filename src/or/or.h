@@ -4499,7 +4499,8 @@ int routerset_needs_geoip(const routerset_t *set);
 int routerset_contains_router(const routerset_t *set, routerinfo_t *ri);
 int routerset_contains_routerstatus(const routerset_t *set,
                                     routerstatus_t *rs);
-int routerset_contains_extendinfo(const routerset_t *set, extend_info_t *ei);
+int routerset_contains_extendinfo(const routerset_t *set,
+                                  const extend_info_t *ei);
 void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
                                int running_only);
 void routersets_get_disjunction(smartlist_t *target, const smartlist_t *source,

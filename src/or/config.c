@@ -699,6 +699,9 @@ static int or_state_validate(or_state_t *old_options, or_state_t *options,
 static int or_state_load(void);
 static int options_init_logs(or_options_t *options, int validate_only);
 
+static int is_listening_on_low_port(uint16_t port_option,
+                                    const config_line_t *listen_options);
+
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void init_libevent(void);
@@ -2631,6 +2634,35 @@ options_init(or_options_t *options)
   config_init(&options_format, options);
 }
 
+/* Check if the port number given in <b>port_option</b> in combination with
+ * the specified port in <b>listen_options</b> will result in Tor actually
+ * opening a low port (meaning a port lower than 1024). Return 1 if
+ * it is, or 0 if it isn't or the concept of a low port isn't applicable for
+ * the platform we're on. */
+static int
+is_listening_on_low_port(uint16_t port_option,
+                         const config_line_t *listen_options)
+{
+#ifdef MS_WINDOWS
+  return 0; /* No port is too low for windows. */
+#else
+  const config_line_t *l;
+  uint16_t p;
+  if (port_option == 0)
+    return 0; /* We're not listening */
+  if (listen_options == NULL)
+    return (port_option < 1024);
+
+  for (l = listen_options; l; l = l->next) {
+    parse_addr_port(LOG_WARN, l->value, NULL, NULL, &p);
+    if (p<1024) {
+      return 1;
+    }
+  }
+  return 0;
+#endif
+}
+
 /** Set all vars in the configuration object <b>options</b> to their default
  * values. */
 static void
@@ -3032,17 +3064,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("TransPort and TransListenAddress are disabled in this build.");
 #endif
 
-#ifndef MS_WINDOWS
-    if (options->AccountingMax &&
-        (options->DirPort < 1024 || options->ORPort < 1024))
-      log(LOG_WARN, LD_CONFIG,
+  if (options->AccountingMax &&
+      (is_listening_on_low_port(options->ORPort, options->ORListenAddress) ||
+       is_listening_on_low_port(options->DirPort, options->DirListenAddress)))
+  {
+    log(LOG_WARN, LD_CONFIG,
           "You have set AccountingMax to use hibernation. You have also "
           "chosen a low DirPort or OrPort. This combination can make Tor stop "
           "working when it tries to re-attach the port after a period of "
           "hibernation. Please choose a different port or turn off "
           "hibernation unless you know this combination will work on your "
           "platform.");
-#endif
+  }
 
   if (options->ExcludeExitNodes || options->ExcludeNodes) {
     options->_ExcludeExitNodesUnion = routerset_new();
