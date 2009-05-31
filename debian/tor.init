@@ -88,7 +88,7 @@ wait_for_deaddaemon () {
 
 check_torpiddir () {
 	if test ! -d $TORPIDDIR; then
-		echo "There is no $TORPIDDIR directory.  Creating one for you."
+		#echo "There is no $TORPIDDIR directory.  Creating one for you."
 		mkdir -m 02700 "$TORPIDDIR"
 		chown debian-tor:debian-tor "$TORPIDDIR"
 	fi

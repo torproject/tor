@@ -1,3 +1,11 @@
+tor (0.2.1.15-rc-X) XXperimental; urgency=low
+
+  * No longer inform the user if/when we re-create the /var/run/tor
+    directory in the init script.  With /var/run on tmpfs this is
+    completely normal now so our message was just noise.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 31 May 2009 10:37:22 +0000
+
 tor (0.2.1.15-rc-1) experimental; urgency=low
 
   * New upstream version.
