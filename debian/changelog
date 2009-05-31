@@ -1,4 +1,4 @@
-tor (0.2.1.15-rc-X) XXperimental; urgency=low
+tor (0.2.1.15-rc-1XXX) XXXerimental; urgency=low
 
   * No longer inform the user if/when we re-create the /var/run/tor
     directory in the init script.  With /var/run on tmpfs this is
@@ -6,8 +6,12 @@ tor (0.2.1.15-rc-X) XXperimental; urgency=low
   * Stop shipping /var/run/tor in the package.
   * Only clean up permissions of /var/run/tor in postinst if the
     directory actually exists.
+  * Update Standards-Version from 3.8.0 to 3.8.1.  No real changes
+    required, we already support nocheck in DEB_BUILD_OPTIONS since
+    August 2004, and we already create our var/run directory in the
+    init script (tho we now no longer ship it either - see above).
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 31 May 2009 10:40:29 +0000
+ -- Peter Palfrader <weasel@debian.org>  Sun, 31 May 2009 10:43:21 +0000
 
 tor (0.2.1.15-rc-1) experimental; urgency=low
 
