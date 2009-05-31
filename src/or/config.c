@@ -3671,8 +3671,8 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
   }
 
   if ((old->HardwareAccel != new_val->HardwareAccel)
-      || (old->AccelName != new_val->AccelName)
-      || (old->AccelDir != new_val->AccelDir)) {
+      || !opt_streq(old->AccelName, new_val->AccelName)
+      || !opt_streq(old->AccelDir, new_val->AccelDir)) {
     *msg = tor_strdup("While Tor is running, changing OpenSSL hardware "
                       "acceleration engine is not allowed.");
     return -1;
