@@ -4,6 +4,13 @@ Changes in version 0.2.0.35 - 2009-??-??
       Found by lark, and by automated fuzzing.
 
   o Major bugfixes:
+    - Finally fix the bug where dynamic-IP relays disappear when their
+      IP address changes: directory mirrors were mistakenly telling
+      them their old address if they asked via begin_dir, so they
+      never got an accurate answer about their new address, so they
+      just vanished after a day. For belt-and-suspenders, relays that
+      don't set Address in their config now avoid using begin_dir for
+      all direct connections. Should fix bugs 827, 883, and 900.
     - Fix a timing-dependent, allocator-dependent, DNS-related crash bug
       that would occur on some exit nodes when DNS failures and timeouts
       occurred in certain patterns.  Fix for bug 957.

@@ -2458,8 +2458,12 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                                    end_payload, 1, NULL);
       return 0;
     }
-    if (or_circ && or_circ->p_conn && or_circ->p_conn->_base.address)
-      address = tor_strdup(or_circ->p_conn->_base.address);
+    /* Make sure to get the 'real' address of the previous hop: the
+     * caller might want to know whether his IP address has changed, and
+     * we might already have corrected _base.addr[ess] for the relay's
+     * canonical IP address. */
+    if (or_circ && or_circ->p_conn)
+      address = tor_dup_addr(or_circ->p_conn->real_addr);
     else
       address = tor_strdup("127.0.0.1");
     port = 1; /* XXXX This value is never actually used anywhere, and there
@@ -2533,8 +2537,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
     tor_assert(or_circ);
-    if (or_circ->p_conn && or_circ->p_conn->_base.addr)
-      n_stream->_base.addr = or_circ->p_conn->_base.addr;
+    if (or_circ->p_conn && &or_circ->p_conn->real_addr)
+      n_stream->_base.addr = or_circ->p_conn->real_addr;
     return connection_exit_connect_dir(n_stream);
   }
 
@@ -2718,7 +2722,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 
   dirconn->_base.addr = exitconn->_base.addr;
   dirconn->_base.port = 0;
-  dirconn->_base.address = tor_strdup(circ->p_conn->_base.address);
+  dirconn->_base.address = tor_strdup(exitconn->_base.address);
   dirconn->_base.type = CONN_TYPE_DIR;
   dirconn->_base.purpose = DIR_PURPOSE_SERVER;
   dirconn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
