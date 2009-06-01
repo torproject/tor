@@ -18,7 +18,7 @@ Changes in version 0.2.0.35 - 2009-??-??
   o Minor bugfixes:
     - When starting with a cache over a few days old, do not leak
       memory for the obsolete router descriptors in it.  Bugfix on
-      0.2.1.11-alpha; fixes bug 672.
+      0.2.0.33; fixes bug 672.
 
 
 Changes in version 0.2.0.34 - 2009-02-08
