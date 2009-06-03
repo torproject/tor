@@ -1,4 +1,12 @@
 Changes in version 0.2.1.16-?? - 2009-??-??
+  o Major performance improvements (on 0.2.0.x):
+    - Disable and refactor some debugging checks that forced a linear scan
+      over the whole server-side DNS cache.  These accounted for over 50%
+      of CPU time on a relatively busy exit node's gprof profile. Found by
+      Jacob.
+    - Disable some debugging checks that appeared in exit node profile
+      data.
+
   o Minor bugfixes (on 0.2.0.x):
     - Log correct error messages for DNS-related network errors on
       Windows.

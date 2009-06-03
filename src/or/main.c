@@ -451,7 +451,7 @@ conn_read_callback(int fd, short event, void *_conn)
 
   log_debug(LD_NET,"socket %d wants to read.",conn->s);
 
-  assert_connection_ok(conn, time(NULL));
+  /* assert_connection_ok(conn, time(NULL)); */
 
   if (connection_handle_read(conn) < 0) {
     if (!conn->marked_for_close) {
@@ -483,7 +483,7 @@ conn_write_callback(int fd, short events, void *_conn)
 
   LOG_FN_CONN(conn, (LOG_DEBUG, LD_NET, "socket %d wants to write.",conn->s));
 
-  assert_connection_ok(conn, time(NULL));
+  /* assert_connection_ok(conn, time(NULL)); */
 
   if (connection_handle_write(conn, 0) < 0) {
     if (!conn->marked_for_close) {
@@ -529,7 +529,7 @@ conn_close_if_marked(int i)
     return 0; /* nothing to see here, move along */
   now = time(NULL);
   assert_connection_ok(conn, now);
-  assert_all_pending_dns_resolves_ok();
+  /* assert_all_pending_dns_resolves_ok(); */
 
   log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
   if ((conn->s >= 0 || conn->linked_conn) && connection_wants_to_flush(conn)) {
