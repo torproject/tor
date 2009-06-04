@@ -93,6 +93,12 @@
 #include "address.h"
 #include "compat_libevent.h"
 
+#ifdef HAVE_EVENT2_EVENT_H
+#include <event2/event.h>
+#else
+#include <event.h>
+#endif
+
 /* These signals are defined to help control_signal_act work.
  */
 #ifndef SIGHUP

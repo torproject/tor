@@ -706,20 +706,6 @@ static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
-/** Versions of libevent. */
-typedef enum {
-  /* Note: we compare these, so it's important that "old" precede everything,
-   * and that "other" come last. */
-  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
-  LE_13, LE_13A, LE_13B, LE_13C, LE_13D, LE_13E,
-  LE_140, LE_141, LE_142, LE_143, LE_144, LE_145, LE_146, LE_147, LE_148,
-  LE_1499,
-  LE_OTHER
-} le_version_t;
-static le_version_t decode_libevent_version(const char *v, int *bincompat_out);
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-static void check_libevent_version(const char *m, int server);
-#endif
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -4813,258 +4799,37 @@ config_parse_interval(const char *s, int *ok)
   return (int)r;
 }
 
-/* This is what passes for version detection on OSX.  We set
- * MACOSX_KQUEUE_IS_BROKEN to true iff we're on a version of OSX before
- * 10.4.0 (aka 1040). */
-#ifdef __APPLE__
-#ifdef __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
-#define MACOSX_KQUEUE_IS_BROKEN \
-  (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1040)
-#else
-#define MACOSX_KQUEUE_IS_BROKEN 0
-#endif
-#endif
-
 /**
  * Initialize the libevent library.
  */
 static void
 init_libevent(void)
 {
+  const char *badness=NULL;
+
   configure_libevent_logging();
   /* If the kernel complains that some method (say, epoll) doesn't
    * exist, we don't care about it, since libevent will cope.
    */
   suppress_libevent_log_msg("Function not implemented");
-#ifdef __APPLE__
-  if (MACOSX_KQUEUE_IS_BROKEN ||
-      decode_libevent_version(event_get_version(), NULL) < LE_11B) {
-    setenv("EVENT_NOKQUEUE","1",1);
-  }
-#endif
 
-  /* In libevent versions before 2.0, it's hard to keep binary compatibility
-   * between upgrades, and unpleasant to detect when the version we compiled
-   * against is unlike the version we have linked against. Here's how. */
-#if defined(_EVENT_VERSION) && defined(HAVE_EVENT_GET_VERSION)
-  /* We have a header-file version and a function-call version. Easy. */
-  if (strcmp(_EVENT_VERSION, event_get_version())) {
-    int compat1 = -1, compat2 = -1;
-    int verybad, prettybad ;
-    decode_libevent_version(_EVENT_VERSION, &compat1);
-    decode_libevent_version(event_get_version(), &compat2);
-    verybad = compat1 != compat2;
-    prettybad = (compat1 == -1 || compat2 == -1) && compat1 != compat2;
-
-    log(verybad ? LOG_WARN : (prettybad ? LOG_NOTICE : LOG_INFO),
-        LD_GENERAL, "We were compiled with headers from version %s "
-        "of Libevent, but we're using a Libevent library that says it's "
-        "version %s.", _EVENT_VERSION, event_get_version());
-    if (verybad)
-      log_warn(LD_GENERAL, "This will almost certainly make Tor crash.");
-    else if (prettybad)
-      log_notice(LD_GENERAL, "If Tor crashes, this might be why.");
-    else
-      log_info(LD_GENERAL, "I think these versions are binary-compatible.");
-  }
-#elif defined(HAVE_EVENT_GET_VERSION)
-  /* event_get_version but no _EVENT_VERSION.  We might be in 1.4.0-beta or
-     earlier, where that's normal.  To see whether we were compiled with an
-     earlier version, let's see whether the struct event defines MIN_HEAP_IDX.
-  */
-#ifdef HAVE_STRUCT_EVENT_MIN_HEAP_IDX
-  /* The header files are 1.4.0-beta or later. If the version is not
-   * 1.4.0-beta, we are incompatible. */
-  {
-    if (strcmp(event_get_version(), "1.4.0-beta")) {
-      log_warn(LD_GENERAL, "It's a little hard to tell, but you seem to have "
-               "Libevent 1.4.0-beta header files, whereas you have linked "
-               "against Libevent %s.  This will probably make Tor crash.",
-               event_get_version());
-    }
-  }
-#else
-  /* Our headers are 1.3e or earlier. If the library version is not 1.4.x or
-     later, we're probably fine. */
-  {
-    const char *v = event_get_version();
-    if ((v[0] == '1' && v[2] == '.' && v[3] > '3') || v[0] > '1') {
-      log_warn(LD_GENERAL, "It's a little hard to tell, but you seem to have "
-               "Libevent header file from 1.3e or earlier, whereas you have "
-               "linked against Libevent %s.  This will probably make Tor "
-               "crash.", event_get_version());
-    }
-  }
-#endif
-
-#elif defined(_EVENT_VERSION)
-#warn "_EVENT_VERSION is defined but not get_event_version(): Libevent is odd."
-#else
-  /* Your libevent is ancient. */
-#endif
+  tor_check_libevent_header_compatibility();
 
   tor_libevent_initialize();
 
   suppress_libevent_log_msg(NULL);
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-  /* Making this a NOTICE for now so we can link bugs to a libevent versions
-   * or methods better. */
-  log(LOG_NOTICE, LD_GENERAL,
-      "Initialized libevent version %s using method %s. Good.",
-      event_get_version(), tor_libevent_get_method());
-  check_libevent_version(tor_libevent_get_method(),
-                         get_options()->ORPort != 0);
-#else
-  log(LOG_NOTICE, LD_GENERAL,
-      "Initialized old libevent (version 1.0b or earlier).");
-  log(LOG_WARN, LD_GENERAL,
-      "You have a *VERY* old version of libevent.  It is likely to be buggy; "
-      "please build Tor with a more recent version.");
-#endif
-}
 
-/** Table mapping return value of event_get_version() to le_version_t. */
-static const struct {
-  const char *name; le_version_t version; int bincompat;
-} le_version_table[] = {
-  /* earlier versions don't have get_version. */
-  { "1.0c", LE_10C, 1},
-  { "1.0d", LE_10D, 1},
-  { "1.0e", LE_10E, 1},
-  { "1.1",  LE_11,  1 },
-  { "1.1a", LE_11A, 1 },
-  { "1.1b", LE_11B, 1 },
-  { "1.2",  LE_12,  1 },
-  { "1.2a", LE_12A, 1 },
-  { "1.3",  LE_13,  1 },
-  { "1.3a", LE_13A, 1 },
-  { "1.3b", LE_13B, 1 },
-  { "1.3c", LE_13C, 1 },
-  { "1.3d", LE_13D, 1 },
-  { "1.3e", LE_13E, 1 },
-  { "1.4.0-beta", LE_140, 2 },
-  { "1.4.1-beta", LE_141, 2 },
-  { "1.4.2-rc",   LE_142, 2 },
-  { "1.4.3-stable", LE_143, 2 },
-  { "1.4.4-stable", LE_144, 2 },
-  { "1.4.5-stable", LE_145, 2 },
-  { "1.4.6-stable", LE_146, 2 },
-  { "1.4.7-stable", LE_147, 2 },
-  { "1.4.8-stable", LE_148, 2 },
-  { "1.4.99-trunk", LE_1499, 3 },
-  { NULL, LE_OTHER, 0 }
-};
-
-/** Return the le_version_t for the current version of libevent.  If the
- * version is very new, return LE_OTHER.  If the version is so old that it
- * doesn't support event_get_version(), return LE_OLD. */
-static le_version_t
-decode_libevent_version(const char *v, int *bincompat_out)
-{
-  int i;
-  for (i=0; le_version_table[i].name; ++i) {
-    if (!strcmp(le_version_table[i].name, v)) {
-      if (bincompat_out)
-        *bincompat_out = le_version_table[i].bincompat;
-      return le_version_table[i].version;
-    }
-  }
-  if (v[0] != '1' && bincompat_out)
-    *bincompat_out = 100;
-  else if (!strcmpstart(v, "1.4") && bincompat_out)
-    *bincompat_out = 2;
-  return LE_OTHER;
-}
-
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-/**
- * Compare the given libevent method and version to a list of versions
- * which are known not to work.  Warn the user as appropriate.
- */
-static void
-check_libevent_version(const char *m, int server)
-{
-  int buggy = 0, iffy = 0, slow = 0, thread_unsafe = 0;
-  le_version_t version;
-  const char *v = event_get_version();
-  const char *badness = NULL;
-  const char *sad_os = "";
-
-  version = decode_libevent_version(v, NULL);
-
-  /* XXX Would it be worthwhile disabling the methods that we know
-   * are buggy, rather than just warning about them and then proceeding
-   * to use them? If so, we should probably not wrap this whole thing
-   * in HAVE_EVENT_GET_VERSION and HAVE_EVENT_GET_METHOD. -RD */
-  /* XXXX The problem is that it's not trivial to get libevent to change it's
-   * method once it's initialized, and it's not trivial to tell what method it
-   * will use without initializing it.  I guess we could preemptively disable
-   * buggy libevent modes based on the version _before_ initializing it,
-   * though, but then there's no good way (afaict) to warn "I would have used
-   * kqueue, but instead I'm using select." -NM */
-  if (!strcmp(m, "kqueue")) {
-    if (version < LE_11B)
-      buggy = 1;
-  } else if (!strcmp(m, "epoll")) {
-    if (version < LE_11)
-      iffy = 1;
-  } else if (!strcmp(m, "poll")) {
-    if (version < LE_10E)
-      buggy = 1;
-    else if (version < LE_11)
-      slow = 1;
-  } else if (!strcmp(m, "select")) {
-    if (version < LE_11)
-      slow = 1;
-  } else if (!strcmp(m, "win32")) {
-    if (version < LE_11B)
-      buggy = 1;
-  }
-
-  /* Libevent versions before 1.3b do very badly on operating systems with
-   * user-space threading implementations. */
-#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
-  if (server && version < LE_13B) {
-    thread_unsafe = 1;
-    sad_os = "BSD variants";
-  }
-#elif defined(__APPLE__) || defined(__darwin__)
-  if (server && version < LE_13B) {
-    thread_unsafe = 1;
-    sad_os = "Mac OS X";
-  }
-#endif
-
-  if (thread_unsafe) {
-    log(LOG_WARN, LD_GENERAL,
-        "Libevent version %s often crashes when running a Tor server with %s. "
-        "Please use the latest version of libevent (1.3b or later)",v,sad_os);
-    badness = "BROKEN";
-  } else if (buggy) {
-    log(LOG_WARN, LD_GENERAL,
-        "There are serious bugs in using %s with libevent %s. "
-        "Please use the latest version of libevent.", m, v);
-    badness = "BROKEN";
-  } else if (iffy) {
-    log(LOG_WARN, LD_GENERAL,
-        "There are minor bugs in using %s with libevent %s. "
-        "You may want to use the latest version of libevent.", m, v);
-    badness = "BUGGY";
-  } else if (slow && server) {
-    log(LOG_WARN, LD_GENERAL,
-        "libevent %s can be very slow with %s. "
-        "When running a server, please use the latest version of libevent.",
-        v,m);
-    badness = "SLOW";
-  }
+  tor_check_libevent_version(tor_libevent_get_method(),
+                             get_options()->ORPort != 0,
+                             &badness);
   if (badness) {
+    const char *v = tor_libevent_get_version_str();
+    const char *m = tor_libevent_get_method();
     control_event_general_status(LOG_WARN,
         "BAD_LIBEVENT VERSION=%s METHOD=%s BADNESS=%s RECOVERED=NO",
                                  v, m, badness);
   }
-
 }
-#endif
 
 /** Return the persistent state struct for this Tor. */
 or_state_t *

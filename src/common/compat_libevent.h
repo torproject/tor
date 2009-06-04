@@ -6,10 +6,12 @@
 
 #include "orconfig.h"
 
+struct event;
+struct event_base;
+
 #ifdef HAVE_EVENT2_EVENT_H
-#include <event2/event.h>
+#include <event2/util.h>
 #else
-#include <event.h>
 #define evutil_socket_t int
 #endif
 
@@ -34,6 +36,9 @@ void tor_event_free(struct event *ev);
 void tor_libevent_initialize(void);
 struct event_base *tor_libevent_get_base(void);
 const char *tor_libevent_get_method(void);
+void tor_check_libevent_version(const char *m, int server,
+                                const char **badness_out);
+void tor_check_libevent_header_compatibility(void);
+const char *tor_libevent_get_version_str(void);
 
 #endif
-
