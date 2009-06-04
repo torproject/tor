@@ -91,8 +91,7 @@
 #include "util.h"
 #include "torgzip.h"
 #include "address.h"
-
-#include <event.h>
+#include "compat_libevent.h"
 
 /* These signals are defined to help control_signal_act work.
  */
@@ -922,8 +921,8 @@ typedef struct connection_t {
    * connection. */
   unsigned int linked_conn_is_closed:1;
 
-  int s; /**< Our socket; -1 if this connection is closed, or has no
-          * socket. */
+  /** Our socket; -1 if this connection is closed, or has no socket. */
+  evutil_socket_t s;
   int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */

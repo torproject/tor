@@ -127,12 +127,10 @@ connection_add(connection_t *conn)
   smartlist_add(connection_array, conn);
 
   if (conn->s >= 0 || conn->linked) {
-    conn->read_event = tor_malloc_zero(sizeof(struct event));
-    conn->write_event = tor_malloc_zero(sizeof(struct event));
-    event_set(conn->read_event, conn->s, EV_READ|EV_PERSIST,
-              conn_read_callback, conn);
-    event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
-              conn_write_callback, conn);
+    conn->read_event = tor_event_new(tor_libevent_get_base(),
+         conn->s, EV_READ|EV_PERSIST, conn_read_callback, conn);
+    conn->write_event = tor_event_new(tor_libevent_get_base(),
+         conn->s, EV_WRITE|EV_PERSIST, conn_write_callback, conn);
   }
 
   log_debug(LD_NET,"new conn type %s, socket %d, address %s, n_conns %d.",
@@ -393,11 +391,11 @@ connection_start_reading_from_linked_conn(connection_t *conn)
     smartlist_add(active_linked_connection_lst, conn);
     if (!called_loop_once) {
       /* This is the first event on the list; we won't be in LOOP_ONCE mode,
-       * so we need to make sure that the event_loop() actually exits at the
-       * end of its run through the current connections and
-       * lets us activate read events for linked connections. */
+       * so we need to make sure that the event_base_loop() actually exits at
+       * the end of its run through the current connections and lets us
+       * activate read events for linked connections. */
       struct timeval tv = { 0, 0 };
-      event_loopexit(&tv);
+      event_base_loopexit(tor_libevent_get_base(), &tv);
     }
   } else {
     tor_assert(smartlist_isin(active_linked_connection_lst, conn));
@@ -1140,8 +1138,8 @@ second_elapsed_callback(int fd, short event, void *args)
   (void)event;
   (void)args;
   if (!timeout_event) {
-    timeout_event = tor_malloc_zero(sizeof(struct event));
-    evtimer_set(timeout_event, second_elapsed_callback, NULL);
+    timeout_event = tor_evtimer_new(tor_libevent_get_base(),
+                                    second_elapsed_callback, NULL);
     one_second.tv_sec = 1;
     one_second.tv_usec = 0;
   }
@@ -1213,7 +1211,7 @@ second_elapsed_callback(int fd, short event, void *args)
   }
 #endif
 
-  if (evtimer_add(timeout_event, &one_second))
+  if (event_add(timeout_event, &one_second))
     log_err(LD_NET,
             "Error from libevent when setting one-second timeout event");
 }
@@ -1424,20 +1422,16 @@ do_main_loop(void)
 
     /* poll until we have an event, or the second ends, or until we have
      * some active linked connections to trigger events for. */
-    loop_result = event_loop(called_loop_once ? EVLOOP_ONCE : 0);
+    loop_result = event_base_loop(tor_libevent_get_base(),
+                                  called_loop_once ? EVLOOP_ONCE : 0);
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
     if (loop_result < 0) {
       int e = tor_socket_errno(-1);
       /* let the program survive things like ^z */
       if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
-#ifdef HAVE_EVENT_GET_METHOD
         log_err(LD_NET,"libevent call with %s failed: %s [%d]",
-                event_get_method(), tor_socket_strerror(e), e);
-#else
-        log_err(LD_NET,"libevent call failed: %s [%d]",
-                tor_socket_strerror(e), e);
-#endif
+                tor_libevent_get_method(), tor_socket_strerror(e), e);
         return -1;
 #ifndef MS_WINDOWS
       } else if (e == EINVAL) {
@@ -1704,7 +1698,7 @@ handle_signals(int is_parent)
 {
 #ifndef MS_WINDOWS /* do signal stuff only on Unix */
   int i;
-  static int signals[] = {
+  static const int signals[] = {
     SIGINT,  /* do a controlled slow shutdown */
     SIGTERM, /* to terminate now */
     SIGPIPE, /* otherwise SIGPIPE kills us */
@@ -1716,12 +1710,13 @@ handle_signals(int is_parent)
 #endif
     SIGCHLD, /* handle dns/cpu workers that exit */
     -1 };
-  static struct event signal_events[16]; /* bigger than it has to be. */
+  static struct event *signal_events[16]; /* bigger than it has to be. */
   if (is_parent) {
     for (i = 0; signals[i] >= 0; ++i) {
-      signal_set(&signal_events[i], signals[i], signal_callback,
-                 (void*)(uintptr_t)signals[i]);
-      if (signal_add(&signal_events[i], NULL))
+      signal_events[i] = tor_evsignal_new(
+                       tor_libevent_get_base(), signals[i], signal_callback,
+                       (void*)(uintptr_t)signals[i]);
+      if (event_add(signal_events[i], NULL))
         log_warn(LD_BUG, "Error from libevent when adding event for signal %d",
                  signals[i]);
     }

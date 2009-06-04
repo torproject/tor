@@ -4903,15 +4903,17 @@ init_libevent(void)
   /* Your libevent is ancient. */
 #endif
 
-  event_init();
+  tor_libevent_initialize();
+
   suppress_libevent_log_msg(NULL);
 #if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
   /* Making this a NOTICE for now so we can link bugs to a libevent versions
    * or methods better. */
   log(LOG_NOTICE, LD_GENERAL,
       "Initialized libevent version %s using method %s. Good.",
-      event_get_version(), event_get_method());
-  check_libevent_version(event_get_method(), get_options()->ORPort != 0);
+      event_get_version(), tor_libevent_get_method());
+  check_libevent_version(tor_libevent_get_method(),
+                         get_options()->ORPort != 0);
 #else
   log(LOG_NOTICE, LD_GENERAL,
       "Initialized old libevent (version 1.0b or earlier).");

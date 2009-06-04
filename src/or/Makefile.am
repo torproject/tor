@@ -12,7 +12,13 @@ endif
 
 EXTRA_DIST=ntmain.c or_sha1.i
 
-tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
+if USE_EXTERNAL_EVDNS
+evdns_source=
+else
+evdns_source=eventdns.c
+endif
+
+COMMON_SRC = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
@@ -20,8 +26,9 @@ tor_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	networkstatus.c onion.c policies.c \
 	reasons.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
-	eventdns.c config_codedigest.c \
-	tor_main.c
+	$(evdns_source) config_codedigest.c
+
+tor_SOURCES = $(COMMON_SRC) tor_main.c
 
 AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
@@ -33,22 +40,15 @@ AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 
 tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
 tor_LDADD = ../common/libor.a ../common/libor-crypto.a \
-  -lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
-test_SOURCES = buffers.c circuitbuild.c circuitlist.c \
-	circuituse.c command.c config.c \
-	connection.c connection_edge.c connection_or.c control.c \
-	cpuworker.c directory.c dirserv.c dirvote.c \
-	dns.c dnsserv.c geoip.c hibernate.c main.c $(tor_platform_source) \
-	networkstatus.c onion.c policies.c \
-	reasons.c relay.c rendcommon.c rendclient.c rendmid.c \
-	rendservice.c rephist.c router.c routerlist.c routerparse.c \
-	eventdns.c config_codedigest.c \
-	test_data.c test.c
+	../common/libor-event.a \
+	-lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
+test_SOURCES = $(COMMON_SRC) test_data.c test.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 test_LDADD = ../common/libor.a ../common/libor-crypto.a \
-        -lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
+	../common/libor-event.a \
+	-lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 

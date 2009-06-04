@@ -89,6 +89,7 @@
 #include <stdarg.h>
 
 #include "eventdns.h"
+
 #ifdef WIN32
 #include <windows.h>
 #include <winsock2.h>

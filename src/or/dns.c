@@ -13,7 +13,15 @@
 
 #include "or.h"
 #include "ht.h"
+#ifdef HAVE_EVENT2_DNS_H
+#include <event2/dns.h>
+#include <event2/dns_compat.h>
+#else
 #include "eventdns.h"
+#ifndef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
+#define HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
+#endif
+#endif
 
 /** Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
@@ -1108,6 +1116,7 @@ configure_nameservers(int force)
     conf_fname = "/etc/resolv.conf";
 #endif
 
+#ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
   if (options->OutboundBindAddress) {
     tor_addr_t addr;
     if (tor_addr_from_str(&addr, options->OutboundBindAddress) < 0) {
@@ -1127,6 +1136,7 @@ configure_nameservers(int force)
       }
     }
   }
+#endif
 
   if (options->ServerDNSRandomizeCase)
     evdns_set_option("randomize-case:", "1", DNS_OPTIONS_ALL);
@@ -1547,7 +1557,7 @@ dns_launch_wildcard_checks(void)
 void
 dns_launch_correctness_checks(void)
 {
-  static struct event launch_event;
+  static struct event *launch_event = NULL;
   struct timeval timeout;
   if (!get_options()->ServerDNSDetectHijacking)
     return;
@@ -1555,10 +1565,11 @@ dns_launch_correctness_checks(void)
 
   /* Wait a while before launching requests for test addresses, so we can
    * get the results from checking for wildcarding. */
-  evtimer_set(&launch_event, launch_test_addresses, NULL);
+  if (! launch_event)
+    launch_event = tor_evtimer_new(NULL, launch_test_addresses, NULL);
   timeout.tv_sec = 30;
   timeout.tv_usec = 0;
-  if (evtimer_add(&launch_event, &timeout)<0) {
+  if (evtimer_add(launch_event, &timeout)<0) {
     log_warn(LD_BUG, "Couldn't add timer for checking for dns hijacking");
   }
 }

@@ -273,14 +273,18 @@ save_CPPFLAGS="$CPPFLAGS"
 LIBS="-levent $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
-AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
+AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback evdns_set_outgoing_bind_address)
 AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>
 ])
 
+AC_CHECK_HEADERS(event2/event.h event2/dns.h)
+
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
 CPPFLAGS="$save_CPPFLAGS"
+
+AM_CONDITIONAL(USE_EXTERNAL_EVDNS, test x$ac_cv_header_event2_dns_h = xyes)
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?

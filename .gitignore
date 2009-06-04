@@ -111,6 +111,7 @@
 /src/common/common_sha1.i
 /src/common/libor.a
 /src/common/libor-crypto.a
+/src/common/libor-event.a
 
 # /src/config/
 /src/config/Makefile
