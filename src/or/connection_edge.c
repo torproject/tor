@@ -334,7 +334,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
            safe_str(fmt_addr(&conn->addr)));
 
   conn->state = EXIT_CONN_STATE_OPEN;
-  connection_watch_events(conn, EV_READ); /* stop writing, continue reading */
+  connection_watch_events(conn, READ_EVENT);/* stop writing, continue reading */
   if (connection_wants_to_flush(conn)) /* in case there are any queued relay
                                         * cells */
     connection_start_writing(conn);
@@ -2727,7 +2727,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     case 0:
       conn->state = EXIT_CONN_STATE_CONNECTING;
 
-      connection_watch_events(conn, EV_WRITE | EV_READ);
+      connection_watch_events(conn, READ_EVENT | WRITE_EVENT);
       /* writable indicates finish;
        * readable/error indicates broken link in windows-land. */
       return;
@@ -2740,7 +2740,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
     log_warn(LD_BUG,"newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
-  connection_watch_events(conn, EV_READ);
+  connection_watch_events(conn, READ_EVENT);
 
   /* also, deliver a 'connected' cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(edge_conn)) {

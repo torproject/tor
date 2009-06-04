@@ -14,9 +14,11 @@
 #include "or.h"
 #include "ht.h"
 #ifdef HAVE_EVENT2_DNS_H
+#include <event2/event.h>
 #include <event2/dns.h>
 #include <event2/dns_compat.h>
 #else
+#include <event.h>
 #include "eventdns.h"
 #ifndef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
 #define HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS

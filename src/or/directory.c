@@ -794,7 +794,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
                                payload, payload_len,
                                supports_conditional_consensus,
                                if_modified_since);
-        connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
+        connection_watch_events(TO_CONN(conn), READ_EVENT | WRITE_EVENT);
         /* writable indicates finish, readable indicates broken link,
            error indicates broken link in windowsland. */
     }
@@ -833,7 +833,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
                            payload, payload_len,
                            supports_conditional_consensus,
                            if_modified_since);
-    connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
+    connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
     connection_start_reading(TO_CONN(linked_conn));
   }
 }

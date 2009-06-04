@@ -299,25 +299,6 @@ connection_link_connections(connection_t *conn_a, connection_t *conn_b)
   conn_b->linked_conn = conn_a;
 }
 
-/** Tell libevent that we don't care about <b>conn</b> any more. */
-void
-connection_unregister_events(connection_t *conn)
-{
-  if (conn->read_event) {
-    if (event_del(conn->read_event))
-      log_warn(LD_BUG, "Error removing read event for %d", conn->s);
-    tor_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    if (event_del(conn->write_event))
-      log_warn(LD_BUG, "Error removing write event for %d", conn->s);
-    tor_free(conn->write_event);
-  }
-  if (conn->dns_server_port) {
-    dnsserv_close_listener(conn);
-  }
-}
-
 /** Deallocate memory used by <b>conn</b>. Deallocate its buffers if
  * necessary, close its socket if necessary, and mark the directory as dirty
  * if <b>conn</b> is an OR or OP connection.

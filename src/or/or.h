@@ -93,12 +93,6 @@
 #include "address.h"
 #include "compat_libevent.h"
 
-#ifdef HAVE_EVENT2_EVENT_H
-#include <event2/event.h>
-#else
-#include <event.h>
-#endif
-
 /* These signals are defined to help control_signal_act work.
  */
 #ifndef SIGHUP
@@ -2931,7 +2925,6 @@ control_connection_t *control_connection_new(int socket_family);
 connection_t *connection_new(int type, int socket_family);
 
 void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
-void connection_unregister_events(connection_t *conn);
 void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
@@ -3652,13 +3645,18 @@ extern int has_completed_circuit;
 
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
+void connection_unregister_events(connection_t *conn);
 int connection_in_array(connection_t *conn);
 void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
 smartlist_t *get_connection_array(void);
 
-void connection_watch_events(connection_t *conn, short events);
+typedef enum watchable_events {
+  READ_EVENT=0x02,
+  WRITE_EVENT=0x04
+} watchable_events_t;
+void connection_watch_events(connection_t *conn, watchable_events_t events);
 int connection_is_reading(connection_t *conn);
 void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);

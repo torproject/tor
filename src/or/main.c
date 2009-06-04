@@ -18,6 +18,12 @@
 #endif
 #include "memarea.h"
 
+#ifdef HAVE_EVENT2_EVENT_H
+#include <event2/event.h>
+#else
+#include <event.h>
+#endif
+
 void evdns_shutdown(int);
 
 /********* PROTOTYPES **********/
@@ -140,6 +146,25 @@ connection_add(connection_t *conn)
   return 0;
 }
 
+/** Tell libevent that we don't care about <b>conn</b> any more. */
+void
+connection_unregister_events(connection_t *conn)
+{
+  if (conn->read_event) {
+    if (event_del(conn->read_event))
+      log_warn(LD_BUG, "Error removing read event for %d", conn->s);
+    tor_free(conn->read_event);
+  }
+  if (conn->write_event) {
+    if (event_del(conn->write_event))
+      log_warn(LD_BUG, "Error removing write event for %d", conn->s);
+    tor_free(conn->write_event);
+  }
+  if (conn->dns_server_port) {
+    dnsserv_close_listener(conn);
+  }
+}
+
 /** Remove the connection from the global list, and remove the
  * corresponding poll entry.  Calling this function will shift the last
  * connection (if any) into the position occupied by conn.
@@ -244,17 +269,17 @@ get_connection_array(void)
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
- * mask is a bitmask whose bits are EV_READ and EV_WRITE.)
+ * mask is a bitmask whose bits are READ_EVENT and WRITE_EVENT)
  */
 void
-connection_watch_events(connection_t *conn, short events)
+connection_watch_events(connection_t *conn, watchable_events_t events)
 {
-  if (events & EV_READ)
+  if (events & READ_EVENT)
     connection_start_reading(conn);
   else
     connection_stop_reading(conn);
 
-  if (events & EV_WRITE)
+  if (events & WRITE_EVENT)
     connection_start_writing(conn);
   else
     connection_stop_writing(conn);

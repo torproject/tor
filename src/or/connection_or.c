@@ -792,7 +792,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
       connection_free(TO_CONN(conn));
       return NULL;
     case 0:
-      connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
+      connection_watch_events(TO_CONN(conn), READ_EVENT | WRITE_EVENT);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
       return conn;
