@@ -33,6 +33,15 @@ struct event *tor_evsignal_new(struct event_base * base, int sig,
 void tor_event_free(struct event *ev);
 #endif
 
+/* XXXX022 If we can drop support for Libevent before 1.1, we can
+ * do without this wrapper. */
+#ifdef HAVE_EVENT_BASE_LOOPEXIT
+#define tor_event_base_loopexit event_base_loopexit
+#else
+struct timeval;
+int tor_event_base_loopexit(struct event_base *base, struct timeval *tv);
+#endif
+
 void tor_libevent_initialize(void);
 struct event_base *tor_libevent_get_base(void);
 const char *tor_libevent_get_method(void);

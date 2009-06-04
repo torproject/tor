@@ -395,7 +395,7 @@ connection_start_reading_from_linked_conn(connection_t *conn)
        * the end of its run through the current connections and lets us
        * activate read events for linked connections. */
       struct timeval tv = { 0, 0 };
-      event_base_loopexit(tor_libevent_get_base(), &tv);
+      tor_event_base_loopexit(tor_libevent_get_base(), &tv);
     }
   } else {
     tor_assert(smartlist_isin(active_linked_connection_lst, conn));

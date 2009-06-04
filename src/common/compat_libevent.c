@@ -134,7 +134,6 @@ tor_event_free(struct event *ev)
 /** Global event base for use by the main thread. */
 struct event_base *the_event_base = NULL;
 
-
 /* This is what passes for version detection on OSX.  We set
  * MACOSX_KQUEUE_IS_BROKEN to true iff we're on a version of OSX before
  * 10.4.0 (aka 1040). */
@@ -187,6 +186,18 @@ tor_libevent_get_base(void)
 {
   return the_event_base;
 }
+
+
+#ifndef HAVE_EVENT_BASE_LOOPEXIT
+/* Replacement for event_base_loopexit on some very old versions of Libevent
+   that we are not yet brave enough to deprecate. */
+int
+tor_event_base_loopexit(struct event_base *base, struct timeval *tv)
+{
+  tor_assert(base == the_event_base);
+  return event_loopexit(tv);
+}
+#endif
 
 /** Return the name of the Libevent backend we're using. */
 const char *
