@@ -88,6 +88,9 @@ Changes in version 0.2.1.14-rc - 2009-04-12
       patch by Sebastian.
     - Avoid crashing in the presence of certain malformed descriptors.
       Found by lark, and by automated fuzzing.
+    - Avoid crashing when we have "private" in a policy specified in
+      a DirPolicy or SocksPolicy or ReachableAddresses option and we
+      re-load the policy.  May fix bug 996.
 
   o Minor features:
     - When generating circuit events with verbose nicknames for
