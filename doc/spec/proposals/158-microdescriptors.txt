@@ -8,7 +8,7 @@ Status: Open
 
   15 May 2009: Substantially revised based on discussions on or-dev
   from late January.  Removed the notion of voting on how to choose
-  microdescriptors; made it just a function of the consesus method.
+  microdescriptors; made it just a function of the consensus method.
   (This lets us avoid the possibility of "desynchronization.")
   Added suggestion to use a new consensus flavor.  Specified use of
   SHA256 for new hashes. -nickm
@@ -47,7 +47,7 @@ Status: Open
 3. Design
 
   There are three pieces to the proposal. First, authorities will list in
-  their votes (and thus in the consensus)  the expected hash
+  their votes (and thus in the consensus) the expected hash
   of microdescriptor for each relay. Second, directory mirrors will serve
   microdescriptors. Third, clients will ask for them and cache them.
 
@@ -111,7 +111,7 @@ Status: Open
   This new consensus flavor should be signed with the sha256 signature
   format as documented in proposal 162.
 
-3.2. Directory mirrors serve microdescriptors
+3.2. Directory mirrors fetch, cache, and serve microdescriptors
 
   Directory mirrors should then read the microdescriptor-elements line
   from the consensus, and learn how to answer requests. (Directory mirrors
@@ -122,6 +122,7 @@ Status: Open
     http://<hostname>/tor/micro/d/<D1>-<D2>-<D3>.z
   (We use base64 for size and for consistency with the consensus
   format. We use -s instead of +s to separate these items, since
+  ... since...?
 
   All the microdescriptors from the current consensus should also be
   available at:
