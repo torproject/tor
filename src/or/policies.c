@@ -411,6 +411,7 @@ load_policy_from_option(config_line_t *config, smartlist_t **policy,
         memcpy(&newp, n, sizeof(newp));
         newp.prt_min = 1;
         newp.prt_max = 65535;
+        newp.is_canonical = 0;
         c = addr_policy_get_canonical_entry(&newp);
         SMARTLIST_REPLACE_CURRENT(*policy, n, c);
         addr_policy_free(n);

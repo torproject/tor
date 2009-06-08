@@ -34,6 +34,9 @@ Changes in version 0.2.1.16-?? - 2009-??-??
     - Disable some debugging checks that appeared in exit node profile
       data.
 
+  o Minor features:
+    - Update to the "June 3 2009" ip-to-country file.
+
   o Minor bugfixes (on 0.2.0.x):
     - Log correct error messages for DNS-related network errors on
       Windows.
@@ -43,6 +46,9 @@ Changes in version 0.2.1.16-?? - 2009-??-??
     - Fix a race condition that could cause crashes or memory
       corruption when running as a server with a controller listening
       for log messages.
+    - Avoid crashing when we have a policy specified in a DirPolicy or
+      SocksPolicy or ReachableAddresses option with ports set on it, and we
+      re-load the policy.  May fix bug 996.
 
   o Minor bugfixes (on 0.2.1.x):
     - When switching back and forth between bridge mode, do not start
