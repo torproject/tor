@@ -7,6 +7,9 @@ Changes in version 0.2.1.16-?? - 2009-??-??
     - Disable some debugging checks that appeared in exit node profile
       data.
 
+  o Minor features:
+    - Update to the "June 3 2009" ip-to-country file.
+
   o Minor bugfixes (on 0.2.0.x):
     - Log correct error messages for DNS-related network errors on
       Windows.
