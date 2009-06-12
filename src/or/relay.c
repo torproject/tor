@@ -947,7 +947,7 @@ connection_edge_process_relay_cell_not_open(
                    cell->payload+RELAY_HEADER_SIZE+2, /*answer*/
                    ttl,
                    -1);
-    if (answer_type == RESOLVED_TYPE_IPV4) {
+    if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {
       uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
       remap_event_helper(conn, addr);
     }
