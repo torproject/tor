@@ -1,4 +1,9 @@
 Changes in version 0.2.1.16-?? - 2009-??-??
+  o Security fixes:
+    - Fix an edge case where a malicious exit relay could convince a
+      controller that the client's DNS question resolves to an internal IP
+      address. Bug found and fixed by "optimist"; bugfix on 0.1.2.8-beta.
+
   o Major performance improvements (on 0.2.0.x):
     - Disable and refactor some debugging checks that forced a linear scan
       over the whole server-side DNS cache.  These accounted for over 50%
