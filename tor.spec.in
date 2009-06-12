@@ -62,7 +62,7 @@
 %endif
 
 %if %{is_rfl}
-%define ostag redflag%(sed -e 's/^.*Desktop /redflag/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/redflag-release)
+%define ostag %(sed -e 's/^.*Desktop /redflag/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/redflag-release)
 %endif
 
 # Using the build date ensures that every build really does get
@@ -109,11 +109,11 @@ Vendor: The Tor Project (https://torproject.org)
 Packager: Andrew Lewman <andrew@torproject.org>
 
 %if %{is_suse}
-Requires: openssl >= 0.9.6
-BuildRequires: openssl-devel >= 0.9.6, rpm >= 4.0, zlib-devel
+Requires: openssl >= 0.9.7
+BuildRequires: openssl-devel >= 0.9.7, rpm >= 4.0, zlib-devel
 %else 
-Requires: openssl >= 0.9.6, libevent >= 1.1
-BuildRequires: openssl-devel >= 0.9.6, libevent-devel >= 1.1
+Requires: openssl >= 0.9.7
+BuildRequires: openssl-devel >= 0.9.7
 %endif
 %if %{is_fc}
 BuildRequires: rpm-build >= 4.0
