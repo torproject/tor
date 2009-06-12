@@ -52,7 +52,7 @@ then
 	shift 1
 fi
 
-if [ "$PROG" == "$TSOCKS" ]
+if [ "$PROG" = "$TSOCKS" ]
 then
 	# Define our tsocks config file
 	TSOCKS_CONF_FILE="/etc/tor/tor-tsocks.conf"
@@ -70,7 +70,7 @@ then
 		exit 1
 	fi
 fi
-if [ "$PROG" == "$TORSOCKS" ]
+if [ "$PROG" = "$TORSOCKS" ]
 then
 	exec torsocks "$@"
 fi
