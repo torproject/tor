@@ -334,7 +334,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
            safe_str(fmt_addr(&conn->addr)));
 
   conn->state = EXIT_CONN_STATE_OPEN;
-  connection_watch_events(conn, READ_EVENT);/* stop writing, continue reading */
+  connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
   if (connection_wants_to_flush(conn)) /* in case there are any queued relay
                                         * cells */
     connection_start_writing(conn);

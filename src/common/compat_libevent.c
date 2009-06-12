@@ -36,6 +36,15 @@
 */
 typedef uint32_t le_version_t;
 
+/* Macros: returns the number of a libevent version. */
+#define V(major, minor, patch) \
+  (((major) << 24) | ((minor) << 16) | ((patch) << 8))
+#define V_OLD(major, minor, patch) \
+  V((major), (minor), (patch)-'a'+1)
+
+#define LE_OLD V(0,0,0)
+#define LE_OTHER V(0,0,99)
+
 static le_version_t tor_get_libevent_version(const char **v_out);
 
 #ifdef HAVE_EVENT_SET_LOG_CALLBACK
@@ -187,7 +196,6 @@ tor_libevent_get_base(void)
   return the_event_base;
 }
 
-
 #ifndef HAVE_EVENT_BASE_LOOPEXIT
 /* Replacement for event_base_loopexit on some very old versions of Libevent
    that we are not yet brave enough to deprecate. */
@@ -211,15 +219,6 @@ tor_libevent_get_method(void)
   return "<unknown>";
 #endif
 }
-
-/* Macros: returns the number of a libevent version. */
-#define V(major, minor, patch) \
-  (((major) << 24) | ((minor) << 16) | ((patch) << 8))
-#define V_OLD(major, minor, patch) \
-  V((major), (minor), (patch)-'a'+1)
-
-#define LE_OLD V(0,0,0)
-#define LE_OTHER V(0,0,99)
 
 /** Return the le_version_t for the current version of libevent.  If the
  * version is very new, return LE_OTHER.  If the version is so old that it
@@ -354,12 +353,12 @@ tor_check_libevent_version(const char *m, int server,
   /* Libevent versions before 1.3b do very badly on operating systems with
    * user-space threading implementations. */
 #if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
-  if (server && version < V_OLD(1,3,'b'))
+  if (server && version < V_OLD(1,3,'b')) {
     thread_unsafe = 1;
     sad_os = "BSD variants";
   }
 #elif defined(__APPLE__) || defined(__darwin__)
-  if (server && version < V_OLD(1,3,'b'))
+  if (server && version < V_OLD(1,3,'b')) {
     thread_unsafe = 1;
     sad_os = "Mac OS X";
   }
@@ -467,3 +466,4 @@ tor_check_libevent_header_compatibility(void)
   /* Your libevent is ancient. */
 #endif
 }
+

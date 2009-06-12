@@ -51,3 +51,4 @@ void tor_check_libevent_header_compatibility(void);
 const char *tor_libevent_get_version_str(void);
 
 #endif
+
