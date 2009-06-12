@@ -5,7 +5,7 @@
 
 /* Ordinarily defined in tor_main.c; this bit is just here to provide one
  * since we're not linking to tor_main.c */
-const char tor_svn_revision[] = "";
+const char tor_git_revision[] = "";
 
 /**
  * \file test.c
@@ -3212,6 +3212,19 @@ test_dir_format(void)
                                    "Tor 0.2.1.0-dev (r99)"));
   test_eq(1, tor_version_as_new_as("Tor 0.2.1.1",
                                    "Tor 0.2.1.0-dev (r99)"));
+
+  /* Now try git revisions */
+  test_eq(0, tor_version_parse("0.5.6.7 (git-ff00ff)", &ver1));
+  test_eq(0, ver1.major);
+  test_eq(5, ver1.minor);
+  test_eq(6, ver1.micro);
+  test_eq(7, ver1.patchlevel);
+  test_eq(3, ver1.git_tag_len);
+  test_memeq(ver1.git_tag, "\xff\x00\xff", 3);
+  test_eq(-1, tor_version_parse("0.5.6.7 (git-ff00xx)", &ver1));
+  test_eq(-1, tor_version_parse("0.5.6.7 (git-ff00fff)", &ver1));
+  test_eq(0, tor_version_parse("0.5.6.7 (git ff00fff)", &ver1));
+
  done:
   if (r1)
     routerinfo_free(r1);

@@ -38,6 +38,8 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
       setting FetchDirInfoEarly to 1. Previous behavior will stay the same
       as only certain clients who must have this information sooner should
       set this option.
+    - Instead of adding the svn revision to the Tor version string, report
+      the git commit (when we're building from a git checkout).
 
   o Minor bugfixes:
     - If any the v3 certs we download are unparseable, we should actually

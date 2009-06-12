@@ -4698,6 +4698,9 @@ typedef struct tor_version_t {
   int patchlevel;
   char status_tag[MAX_STATUS_TAG_LEN];
   int svn_revision;
+
+  int git_tag_len;
+  char git_tag[DIGEST_LEN];
 } tor_version_t;
 
 int router_get_router_hash(const char *s, char *digest);

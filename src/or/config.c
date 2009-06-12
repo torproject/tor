@@ -817,7 +817,7 @@ set_options(or_options_t *new_val, char **msg)
   return 0;
 }
 
-extern const char tor_svn_revision[]; /* from tor_main.c */
+extern const char tor_git_revision[]; /* from tor_main.c */
 
 /** The version of this Tor process, as parsed. */
 static char *_version = NULL;
@@ -827,10 +827,10 @@ const char *
 get_version(void)
 {
   if (_version == NULL) {
-    if (strlen(tor_svn_revision)) {
-      size_t len = strlen(VERSION)+strlen(tor_svn_revision)+8;
+    if (strlen(tor_git_revision)) {
+      size_t len = strlen(VERSION)+strlen(tor_git_revision)+16;
       _version = tor_malloc(len);
-      tor_snprintf(_version, len, "%s (r%s)", VERSION, tor_svn_revision);
+      tor_snprintf(_version, len, "%s (git-%s)", VERSION, tor_git_revision);
     } else {
       _version = tor_strdup(VERSION);
     }

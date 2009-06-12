@@ -3325,7 +3325,7 @@ tor_version_as_new_as(const char *platform, const char *cutoff)
   if (!*start) return 0;
   s = (char *)find_whitespace(start); /* also finds '\0', which is fine */
   s2 = (char*)eat_whitespace(s);
-  if (!strcmpstart(s2, "(r"))
+  if (!strcmpstart(s2, "(r") || !strcmpstart(s2, "(git-"))
     s = (char*)find_whitespace(s2);
 
   if ((size_t)(s-start+1) >= sizeof(tmp)) /* too big, no */
@@ -3421,6 +3421,21 @@ tor_version_parse(const char *s, tor_version_t *out)
   if (!strcmpstart(cp, "(r")) {
     cp += 2;
     out->svn_revision = (int) strtol(cp,&eos,10);
+  } else if (!strcmpstart(cp, "(git-")) {
+    char *close_paren = strchr(cp, ')');
+    int hexlen;
+    char digest[DIGEST_LEN];
+    if (! close_paren)
+      return -1;
+    cp += 5;
+    hexlen = (close_paren-cp);
+    memset(digest, 0, sizeof(digest));
+    if (hexlen > HEX_DIGEST_LEN || hexlen == 0 || (hexlen % 2) == 1)
+      return -1;
+    if (base16_decode(digest, hexlen/2, cp, hexlen))
+      return -1;
+    memcpy(out->git_tag, digest, hexlen/2);
+    out->git_tag_len = hexlen/2;
   }
 
   return 0;
@@ -3446,8 +3461,14 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
     return i;
   else if ((i = strcmp(a->status_tag, b->status_tag)))
     return i;
+  else if ((i = a->svn_revision - b->svn_revision))
+    return i;
+  else if ((i = a->git_tag_len - b->git_tag_len))
+    return i;
+  else if (a->git_tag_len)
+    return memcmp(a->git_tag, b->git_tag, a->git_tag_len);
   else
-    return a->svn_revision - b->svn_revision;
+    return 0;
 }
 
 /** Return true iff versions <b>a</b> and <b>b</b> belong to the same series.
