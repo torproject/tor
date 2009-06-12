@@ -13,6 +13,13 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
     - Directories that are configured with the --enable-geoip-stats flag
       now write their GeoIP stats to disk exactly every 24 hours.
 
+  o Minor bugfixes
+    - Hidden service clients didn't use a cached service descriptor that
+      was older than 15 minutes, but wouldn't fetch a new one either. Now,
+      use a cached descriptor no matter how old it is and only fetch a new
+      one when all introduction points fail. Fix for bug 997. Patch from
+      Marcus Griep.
+
   o Deprecated and removed features:
     - The controller no longer accepts the old obsolete "addr-mappings/"
       GETINFO value.
