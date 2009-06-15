@@ -13,6 +13,8 @@ Status: Open
   Added suggestion to use a new consensus flavor.  Specified use of
   SHA256 for new hashes. -nickm
 
+  15 June 2009: Cleaned up based on comments from Roger. -nickm
+
 1. Overview
 
   This proposal replaces section 3.2 of proposal 141, which was
@@ -20,9 +22,7 @@ Status: Open
   circuit-building protocol to fetch a server descriptor inline at each
   circuit extend, we instead put all of the information that clients need
   either into the consensus itself, or into a new set of data about each
-  relay called a microdescriptor. The microdescriptor is a direct
-  transform from the relay descriptor, so relays don't even need to know
-  this is happening.
+  relay called a microdescriptor.
 
   Descriptor elements that are small and frequently changing should go
   in the consensus itself, and descriptor elements that are small and
@@ -47,16 +47,17 @@ Status: Open
 3. Design
 
   There are three pieces to the proposal. First, authorities will list in
-  their votes (and thus in the consensus) the expected hash
-  of microdescriptor for each relay. Second, directory mirrors will serve
-  microdescriptors. Third, clients will ask for them and cache them.
+  their votes (and thus in the consensus) the expected hash of
+  microdescriptor for each relay. Second, authorities will serve
+  microdescriptors, directory mirrors will cache and serve
+  them. Third, clients will ask for them and cache them.
 
 3.1. Consensus changes
 
   If the authorities choose a consensus method of a given version or
   later, a microdescriptor format is implicit in that version.
   A microdescriptor should in every case be a pure function of the
-  router descriptor and the conensus method.
+  router descriptor and the consensus method.
 
   In votes, we need to include the hash of each expected microdescriptor
   in the routerstatus section. I suggest a new "m" line for each stanza,
@@ -64,7 +65,7 @@ Status: Open
 
   For every consensus method that an authority supports, it includes a
   separate "m" line in each router section of its vote, containing:
-    "m" SP methods SP digest NL
+    "m" SP methods 1*(SP AlgorithmName "=" digest) NL
   where methods is a comma-separated list of the consensus methods
   that the authority believes will produce "digest".
 
@@ -77,20 +78,28 @@ Status: Open
   (This means we need a new consensus-method that knows
   how to compute the microdescriptor-elements and add "m" lines.)
 
+  The microdescriptor consensus uses the directory-signature format from
+  proposal 162, with the "sha256" algorithm.
+
+
 3.1.1. Descriptor elements to include for now
 
   In the first version, the microdescriptor should contain the
-  onion-key element and the family element from the router descriptor.
+  onion-key element, and the family element from the router descriptor,
+  and the exit policy summary as currently specified in dir-spec.txt.
 
 3.1.2. Computing consensus for microdescriptor-elements and "m" lines
 
   When we are generating a consensus, we use whichever m line
   unambiguously corresponds to the descriptor digest that will be
-  included in the consensus.  (If there are multiple m lines for that
-  descriptor digest, we use whichever is most common.  If they are
-  equally common, we break ties in the favor of the lexically
-  earliest.  Either way, we should log a warning: That's likely a
-  bug.)
+  included in the consensus.
+
+  (If different votes have different microdescriptor digests for a
+  single <descriptor-digest, consensus-method> pair, then at least one
+  of the authorities is broken.  If this happens, the consensus should
+  contain whichever microdescriptor digest is most common.  If there is
+  no winner, we break ties in the favor of the lexically earliest.
+  Either way, we should log a warning: there is definitely a bug.)
 
   The "m" lines in a consensus contain only the digest, not a list of
   consensus methods.
@@ -103,26 +112,26 @@ Status: Open
 
   This flavor can safely omit descriptor digests.
 
-  We still need to decide whether to move ports into microdescriptors
-  or not.  In either case, they can be removed from the current "ns"
-  flavor of consensus, since no current clients use them, and they
-  take up about 5% of the compressed consensus.
+  When we implement this voting method, we can remove the exit policy
+  summary from the current "ns" flavor of consensus, since no current
+  clients use them, and they take up about 5% of the compressed
+  consensus.
 
   This new consensus flavor should be signed with the sha256 signature
   format as documented in proposal 162.
 
 3.2. Directory mirrors fetch, cache, and serve microdescriptors
 
-  Directory mirrors should then read the microdescriptor-elements line
-  from the consensus, and learn how to answer requests. (Directory mirrors
-  continue to serve normal relay descriptors too, a) to serve old clients
-  and b) to be able to construct microdescriptors on the fly.)
+  Directory mirrors should fetch, catch, and serve each microdescriptor
+  from the authorities.  (They need to continue to serve normal relay
+  descriptors too, to handle old clients.)
 
-  The microdescriptors with base64 hashes <D1>,<D2>,<D3> should be available at:
+  The microdescriptors with base64 hashes <D1>,<D2>,<D3> should be
+  available at:
     http://<hostname>/tor/micro/d/<D1>-<D2>-<D3>.z
   (We use base64 for size and for consistency with the consensus
   format. We use -s instead of +s to separate these items, since
-  the + character use used in base64 encoding.)
+  the + character is used in base64 encoding.)
 
   All the microdescriptors from the current consensus should also be
   available at:
@@ -173,11 +182,13 @@ Status: Open
   Another future option would be to fetch some of the microdescriptors
   anonymously (via a Tor circuit).
 
+  Another crazy option (Roger's phrasing) is to do decoy fetches as
+  well.
+
 4. Transition and deployment
 
   Phase one, the directory authorities should start voting on
-  microdescriptors and microdescriptor elements, and putting them in the
-  consensus.
+  microdescriptors, and putting them in the consensus.
 
   Phase two, directory mirrors should learn how to serve them, and learn
   how to read the consensus to find out what they should be serving.

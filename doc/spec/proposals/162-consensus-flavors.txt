@@ -134,7 +134,7 @@ Spec modifications:
     Caches should fetch this document so they can check the
     correctness of the different consensus documents they fetch.
     They do not need to check anything about an unrecognized
-    consensus document beyond its digest.
+    consensus document beyond its digest and length.
 
     4.1. The "sha256" signature format.
 
