@@ -27,6 +27,14 @@ Changes in version 0.2.1.16-?? - 2009-??-??
     - Avoid crashing when we have a policy specified in a DirPolicy or
       SocksPolicy or ReachableAddresses option with ports set on it, and we
       re-load the policy.  May fix bug 996.
+    - Hidden service clients didn't use a cached service descriptor that
+      was older than 15 minutes, but wouldn't fetch a new one either. Now,
+      use a cached descriptor no matter how old it is and only fetch a new
+      one when all introduction points fail. Fix for bug 997. Patch from
+      Marcus Griep.
+    - Fix refetching of hidden service descriptors when all introduction
+      points have turned out to not work. Fixes more of bug 997.
+
 
   o Minor bugfixes (on 0.2.1.x):
     - When switching back and forth between bridge mode, do not start
