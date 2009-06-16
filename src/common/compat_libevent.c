@@ -114,6 +114,8 @@ tor_event_new(struct event_base *base, int sock, short what,
 {
   struct event *e = tor_malloc_zero(sizeof(struct event));
   event_set(e, sock, what, cb, arg);
+  if (! base)
+    base = tor_libevent_get_base();
   event_base_set(base, e);
   return e;
 }
