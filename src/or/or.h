@@ -220,6 +220,21 @@ typedef enum {
 /* !!!! If _CONN_TYPE_MAX is ever over 15, we must grow the type field in
  * connection_t. */
 
+/* Proxy client types */
+#define PROXY_NONE 0
+#define PROXY_CONNECT 1
+#define PROXY_SOCKS4 2
+#define PROXY_SOCKS5 3
+
+/* Proxy client handshake states */
+#define PROXY_HTTPS_WANT_CONNECT_OK 1
+#define PROXY_SOCKS4_WANT_CONNECT_OK 2
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_NONE 3
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929 4
+#define PROXY_SOCKS5_WANT_AUTH_RFC1929_OK 5
+#define PROXY_SOCKS5_WANT_CONNECT_OK 6
+#define PROXY_CONNECTED 7
+
 /** True iff <b>x</b> is an edge connection. */
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
@@ -240,26 +255,24 @@ typedef enum {
 #define _OR_CONN_STATE_MIN 1
 /** State for a connection to an OR: waiting for connect() to finish. */
 #define OR_CONN_STATE_CONNECTING 1
-/** State for a connection to an OR: waiting for proxy command to flush. */
-#define OR_CONN_STATE_PROXY_FLUSHING 2
-/** State for a connection to an OR: waiting for proxy response. */
-#define OR_CONN_STATE_PROXY_READING 3
+/** State for a connection to an OR: waiting for proxy handshake to complete */
+#define OR_CONN_STATE_PROXY_HANDSHAKING 2
 /** State for a connection to an OR or client: SSL is handshaking, not done
  * yet. */
-#define OR_CONN_STATE_TLS_HANDSHAKING 4
+#define OR_CONN_STATE_TLS_HANDSHAKING 3
 /** State for a connection to an OR: We're doing a second SSL handshake for
  * renegotiation purposes. */
-#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 5
+#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 4
 /** State for a connection at an OR: We're waiting for the client to
  * renegotiate. */
-#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 6
+#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 5
 /** State for a connection to an OR: We're done with our SSL handshake, but we
  * haven't yet negotiated link protocol versions and sent a netinfo cell.
  */
-#define OR_CONN_STATE_OR_HANDSHAKING 7
+#define OR_CONN_STATE_OR_HANDSHAKING 6
 /** State for a connection to an OR: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 8
-#define _OR_CONN_STATE_MAX 8
+#define OR_CONN_STATE_OPEN 7
+#define _OR_CONN_STATE_MAX 7
 
 #define _EXIT_CONN_STATE_MIN 1
 /** State for an exit connection: waiting for response from DNS farm. */
@@ -963,6 +976,9 @@ typedef struct connection_t {
   /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
    * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
+
+  /** CONNECT/SOCKS proxy client handshake state (for outgoing connections). */
+  unsigned int proxy_state:4;
 
 } connection_t;
 
@@ -2342,6 +2358,16 @@ typedef struct {
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any. */
   char *HttpsProxyAuthenticator; /**< username:password string, if any. */
 
+  char *Socks4Proxy;
+  uint32_t Socks4ProxyAddr;
+  uint16_t Socks4ProxyPort;
+
+  char *Socks5Proxy;
+  uint32_t Socks5ProxyAddr;
+  uint16_t Socks5ProxyPort;
+  char *Socks5ProxyUsername;
+  char *Socks5ProxyPassword;
+
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
    * use the "Alternate*Authority" options below instead. */
@@ -2679,6 +2705,7 @@ int fetch_from_buf_http(buf_t *buf,
                         int force_complete);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                          int log_sockstype, int safe_socks);
+int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 int peek_buf_has_control0_command(buf_t *buf);
@@ -2939,6 +2966,10 @@ void connection_expire_held_open(void);
 int connection_connect(connection_t *conn, const char *address,
                        const tor_addr_t *addr,
                        uint16_t port, int *socket_error);
+
+int connection_proxy_connect(connection_t *conn, int type);
+int connection_read_proxy_handshake(connection_t *conn);
+
 int retry_all_listeners(smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
