@@ -107,7 +107,8 @@ build_socks_resolve_request(char **out,
  * Return 0 on success, -1 on error.
  */
 static int
-parse_socks4a_resolve_response(const char *response, size_t len,
+parse_socks4a_resolve_response(const char *hostname,
+                               const char *response, size_t len,
                                uint32_t *addr_out)
 {
   uint8_t status;
@@ -129,6 +130,13 @@ parse_socks4a_resolve_response(const char *response, size_t len,
   }
   if (status != 90) {
     log_warn(LD_NET,"Got status response '%d': socks request failed.", status);
+    if (!strcasecmpend(hostname, ".onion")) {
+      log_warn(LD_NET,
+        "%s is a hidden service; those don't have IP addresses. "
+        "To connect to a hidden service, you need to send the hostname "
+        "to Tor; we suggest an application that uses SOCKS 4a.",hostname);
+      return -1;
+    }
     return -1;
   }
 
@@ -241,7 +249,8 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
       log_err(LD_NET, "Error reading SOCKS4 response.");
       return -1;
     }
-    if (parse_socks4a_resolve_response(reply_buf, RESPONSE_LEN_4,
+    if (parse_socks4a_resolve_response(hostname,
+                                       reply_buf, RESPONSE_LEN_4,
                                        result_addr)<0){
       return -1;
     }
@@ -260,6 +269,13 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
       log_warn(LD_NET,"Got SOCKS5 status response '%u': %s",
                (unsigned)reply_buf[1],
                socks5_reason_to_string(reply_buf[1]));
+      if (reply_buf[1] == 4 && !strcasecmpend(hostname, ".onion")) {
+        log_warn(LD_NET,
+            "%s is a hidden service; those don't have IP addresses. "
+            "To connect to a hidden service, you need to send the hostname "
+            "to Tor; we suggest an application that uses SOCKS 4a.",
+            hostname);
+      }
       return -1;
     }
     if (reply_buf[3] == 1) {
@@ -394,14 +410,6 @@ main(int argc, char **argv)
     }
   } else {
     usage();
-  }
-
-  if (!strcasecmpend(arg[0], ".onion") && !force) {
-    fprintf(stderr,
-       "%s is a hidden service; those don't have IP addresses.\n\n"
-       "To connect to a hidden service, you need to send the hostname\n"
-       "to Tor; we suggest an application that uses SOCKS 4a.\n", arg[0]);
-    return 1;
   }
 
   if (network_init()<0) {
