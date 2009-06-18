@@ -55,6 +55,8 @@ Changes in version 0.2.1.16-?? - 2009-??-??
 
   o Minor features:
     - Update to the "June 3 2009" ip-to-country file.
+    - Do not have tor-resolve automatically refuse all .onion addresses;
+      if AutomapHostsOnResolve is set, this will work fine.
 
   o Minor bugfixes (on 0.2.0.x):
     - Log correct error messages for DNS-related network errors on
