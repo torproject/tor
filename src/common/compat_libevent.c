@@ -131,7 +131,7 @@ struct event *
 tor_evsignal_new(struct event_base * base, int sig,
                  void (*cb)(int, short, void *), void *arg)
 {
-  return tor_event_new(base, sig, EV_SIGNAL, cb, arg);
+  return tor_event_new(base, sig, EV_SIGNAL|EV_PERSIST, cb, arg);
 }
 /** Work-alike replacement for event_free() on pre-Libevent-2.0 systems. */
 void
