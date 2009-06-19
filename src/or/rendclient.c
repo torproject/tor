@@ -473,9 +473,10 @@ rend_client_refetch_renddesc(const char *query)
   }
 }
 
-/** Unless we already have a descriptor for <b>rend_query</b> with at least
- * one (possibly) working introduction point in it, start a connection to a
- * hidden service directory to fetch a v2 rendezvous service descriptor. */
+/** Start a connection to a hidden service directory to fetch a v2
+ * rendezvous service descriptor for the base32-encoded service ID
+ * <b>query</b>.
+ */
 void
 rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
 {
