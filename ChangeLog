@@ -22,13 +22,6 @@ Changes in version 0.2.0.35 - 2009-??-??
     - When starting with a cache over a few days old, do not leak
       memory for the obsolete router descriptors in it.  Bugfix on
       0.2.0.33; fixes bug 672.
-    - Hidden service clients didn't use a cached service descriptor that
-      was older than 15 minutes, but wouldn't fetch a new one either. Now,
-      use a cached descriptor no matter how old it is and only fetch a new
-      one when all introduction points fail. Fix for bug 997. Patch from
-      Marcus Griep.
-    - Fix refetching of hidden service descriptors when all introduction
-      points have turned out to not work. Fixes more of bug 997.
 
 
 Changes in version 0.2.0.34 - 2009-02-08
