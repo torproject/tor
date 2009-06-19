@@ -1641,22 +1641,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
         return 0;
 
       if (data[1] != 0x5a) {
-        switch (data[1]) {
-          case 0x5b:
-            *reason = tor_strdup("server rejected connection");
-            break;
-          case 0x5c:
-            *reason = tor_strdup("server cannot connect to identd "
-                                 "on this client");
-            break;
-          case 0x5d:
-            *reason = tor_strdup("user id does not match identd");
-            break;
-          default:
-            *reason = tor_strdup("invalid SOCKS 4 response code");
-            break;
-        }
-
+        *reason = tor_strdup(socks4_response_code_to_string(data[1]));
         return -1;
       }
 
@@ -1738,37 +1723,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
         return 0;
 
       if (data[1] != 0x00) {
-
-        switch (data[1]) {
-          case 0x01:
-            *reason = tor_strdup("general SOCKS server failure");
-            break;
-          case 0x02:
-            *reason = tor_strdup("connection not allowed by ruleset");
-            break;
-          case 0x03:
-            *reason = tor_strdup("Network unreachable");
-            break;
-          case 0x04:
-            *reason = tor_strdup("Host unreachable");
-            break;
-          case 0x05:
-            *reason = tor_strdup("Connection refused");
-            break;
-          case 0x06:
-            *reason = tor_strdup("TTL expired");
-            break;
-          case 0x07:
-            *reason = tor_strdup("Command not supported");
-            break;
-          case 0x08:
-            *reason = tor_strdup("Address type not supported");
-            break;
-          default:
-            *reason = tor_strdup("unknown reason");
-            break;
-        }
-
+        *reason = tor_strdup(socks5_response_code_to_string(data[1]));
         return -1;
       }
 

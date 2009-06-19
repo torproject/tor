@@ -3930,6 +3930,8 @@ int tls_error_to_orconn_end_reason(int e);
 int errno_to_orconn_end_reason(int e);
 
 const char *circuit_end_reason_to_control_string(int reason);
+const char *socks4_response_code_to_string(uint8_t code);
+const char *socks5_response_code_to_string(uint8_t code);
 
 /********************************* relay.c ***************************/
 
