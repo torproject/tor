@@ -1683,9 +1683,6 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       if (conn->rend_data->auth_type == REND_NO_AUTH)
         rend_client_refetch_renddesc(conn->rend_data->onion_address);
     } else { /* r > 0 */
-/** How long after we receive a hidden service descriptor do we consider
- * it valid? */
-#define NUM_SECONDS_BEFORE_HS_REFETCH (60*15)
       if (now - entry->received < NUM_SECONDS_BEFORE_HS_REFETCH) {
         conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
         log_info(LD_REND, "Descriptor is here and fresh enough. Great.");

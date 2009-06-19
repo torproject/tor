@@ -482,8 +482,9 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
 {
   char descriptor_id[DIGEST_LEN];
   int replicas_left_to_try[REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS];
-  int i, tries_left;
+  int i, tries_left, r;
   rend_cache_entry_t *e = NULL;
+  time_t now = time(NULL);
   tor_assert(rend_query);
   /* Are we configured to fetch descriptors? */
   if (!get_options()->FetchHidServDescriptors) {
@@ -492,9 +493,11 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
     return;
   }
   /* Before fetching, check if we already have the descriptor here. */
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &e) > 0) {
+  r = rend_cache_lookup_entry(rend_query->onion_address, -1, &e);
+  if (r > 0 && now - e->received < NUM_SECONDS_BEFORE_HS_REFETCH) {
     log_info(LD_REND, "We would fetch a v2 rendezvous descriptor, but we "
-                      "already have that descriptor here. Not fetching.");
+                      "already have a fresh copy of that descriptor here. "
+                      "Not fetching.");
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
