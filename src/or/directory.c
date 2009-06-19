@@ -781,7 +781,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
     /* then we want to connect to dirport directly */
 
     if (options->HttpProxy) {
-      tor_addr_from_ipv4h(&addr, options->HttpProxyAddr);
+      tor_addr_copy(&addr, &options->HttpProxyAddr);
       dir_port = options->HttpProxyPort;
     }
 

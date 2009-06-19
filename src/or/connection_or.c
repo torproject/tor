@@ -721,15 +721,15 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   /* use a proxy server if available */
   if (options->HttpsProxy) {
     using_proxy = 1;
-    tor_addr_from_ipv4h(&addr, options->HttpsProxyAddr);
+    tor_addr_copy(&addr, &options->HttpsProxyAddr);
     port = options->HttpsProxyPort;
   } else if (options->Socks4Proxy) {
     using_proxy = 1;
-    tor_addr_from_ipv4h(&addr, options->Socks4ProxyAddr);
+    tor_addr_copy(&addr, &options->Socks4ProxyAddr);
     port = options->Socks4ProxyPort;
   } else if (options->Socks5Proxy) {
     using_proxy = 1;
-    tor_addr_from_ipv4h(&addr, options->Socks5ProxyAddr);
+    tor_addr_copy(&addr, &options->Socks5ProxyAddr);
     port = options->Socks5ProxyPort;
   }
 

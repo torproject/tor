@@ -2349,21 +2349,21 @@ typedef struct {
   char *ContactInfo; /**< Contact info to be published in the directory. */
 
   char *HttpProxy; /**< hostname[:port] to use as http proxy, if any. */
-  uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
+  tor_addr_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
   uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any. */
   char *HttpProxyAuthenticator; /**< username:password string, if any. */
 
   char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any. */
-  uint32_t HttpsProxyAddr; /**< Parsed IPv4 addr for https proxy, if any. */
+  tor_addr_t HttpsProxyAddr; /**< Parsed addr for https proxy, if any. */
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any. */
   char *HttpsProxyAuthenticator; /**< username:password string, if any. */
 
   char *Socks4Proxy;
-  uint32_t Socks4ProxyAddr;
+  tor_addr_t Socks4ProxyAddr;
   uint16_t Socks4ProxyPort;
 
   char *Socks5Proxy;
-  uint32_t Socks5ProxyAddr;
+  tor_addr_t Socks5ProxyAddr;
   uint16_t Socks5ProxyPort;
   char *Socks5ProxyUsername;
   char *Socks5ProxyPassword;

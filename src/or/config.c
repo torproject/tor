@@ -3386,7 +3386,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->HttpProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpProxy, NULL,
+    if (tor_addr_port_parse(options->HttpProxy,
                         &options->HttpProxyAddr, &options->HttpProxyPort) < 0)
       REJECT("HttpProxy failed to parse or resolve. Please fix.");
     if (options->HttpProxyPort == 0) { /* give it a default */
@@ -3400,7 +3400,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HttpsProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpsProxy, NULL,
+    if (tor_addr_port_parse(options->HttpsProxy,
                         &options->HttpsProxyAddr, &options->HttpsProxyPort) <0)
       REJECT("HttpsProxy failed to parse or resolve. Please fix.");
     if (options->HttpsProxyPort == 0) { /* give it a default */
@@ -3414,7 +3414,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->Socks4Proxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->Socks4Proxy, NULL,
+    if (tor_addr_port_parse(options->Socks4Proxy,
                         &options->Socks4ProxyAddr,
                         &options->Socks4ProxyPort) <0)
       REJECT("Socks4Proxy failed to parse or resolve. Please fix.");
@@ -3424,9 +3424,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->Socks5Proxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->Socks5Proxy, NULL,
-                        &options->Socks5ProxyAddr,
-                        &options->Socks5ProxyPort) <0)
+    if (tor_addr_port_parse(options->Socks5Proxy,
+                            &options->Socks5ProxyAddr,
+                            &options->Socks5ProxyPort) <0)
       REJECT("Socks5Proxy failed to parse or resolve. Please fix.");
     if (options->Socks5ProxyPort == 0) { /* give it a default */
       options->Socks5ProxyPort = 1080;
