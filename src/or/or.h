@@ -613,6 +613,10 @@ typedef enum {
 /** Length of a binary-encoded rendezvous service ID. */
 #define REND_SERVICE_ID_LEN 10
 
+/** How long after we receive a hidden service descriptor do we consider
+ * it fresh? */
+#define NUM_SECONDS_BEFORE_HS_REFETCH (60*15)
+
 /** Time period for which a v2 descriptor will be valid. */
 #define REND_TIME_PERIOD_V2_DESC_VALIDITY (24*60*60)
 
