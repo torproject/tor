@@ -951,8 +951,8 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     answer = get_options()->AssumeReachable ||
              now < router->last_reachable + REACHABLE_TIMEOUT;
 
-  if (router->is_running && !answer) {
-    /* it was running but now it's not. tell rephist. */
+  if (!answer) {
+    /* not considered reachable. tell rephist. */
     rep_hist_note_router_unreachable(router->cache_info.identity_digest, now);
   }
 
