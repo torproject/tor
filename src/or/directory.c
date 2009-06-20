@@ -2894,7 +2894,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                                         "application/octet-stream",
                                         NULL, NULL, 0);
         note_request("/tor/rendezvous?/", desc_len);
-        /* need to send descp separately, because it may include nuls */
+        /* need to send descp separately, because it may include NULs */
         connection_write_to_buf(descp, desc_len, TO_CONN(conn));
         /* report successful fetch to statistic */
         if (options->HSAuthorityRecordStats) {

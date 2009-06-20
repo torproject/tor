@@ -26,7 +26,7 @@
 #include <openssl/opensslv.h>
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000l
-#error "We require openssl >= 0.9.7"
+#error "We require OpenSSL >= 0.9.7"
 #endif
 
 #define CRYPTO_PRIVATE /* to import prototypes from crypto.h */
@@ -70,7 +70,7 @@ struct tor_tls_t {
   tor_tls_context_t *context; /** A link to the context object for this tls. */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
-  char *address; /**< An address to log when describing this connectinon. */
+  char *address; /**< An address to log when describing this connection. */
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
@@ -454,7 +454,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
 #define CIPHER(id, name) name ":"
 #define XCIPHER(id, name)
 /** List of ciphers that clients should advertise, omitting items that
- * our openssl doesn't know about. */
+ * our OpenSSL doesn't know about. */
 static const char CLIENT_CIPHER_LIST[] =
 #include "./ciphers.inc"
   ;
@@ -464,7 +464,7 @@ static const char CLIENT_CIPHER_LIST[] =
 /** Holds a cipher that we want to advertise, and its 2-byte ID. */
 typedef struct cipher_info_t { unsigned id; const char *name; } cipher_info_t;
 /** A list of all the ciphers that clients should advertise, including items
- * that openssl might not know about. */
+ * that OpenSSL might not know about. */
 static const cipher_info_t CLIENT_CIPHER_INFO_LIST[] = {
 #define CIPHER(id, name) { id, name },
 #define XCIPHER(id, name) { id, #name },
@@ -879,7 +879,7 @@ tor_tls_set_logged_address(tor_tls_t *tls, const char *address)
 
 /** Set <b>cb</b> to be called with argument <b>arg</b> whenever <b>tls</b>
  * next gets a client-side renegotiate in the middle of a read.  Do not
- * invoke this function untile <em>after</em> initial handshaking is done!
+ * invoke this function until <em>after</em> initial handshaking is done!
  */
 void
 tor_tls_set_renegotiate_callback(tor_tls_t *tls,

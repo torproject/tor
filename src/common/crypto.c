@@ -18,7 +18,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <wincrypt.h>
-/* Windows defines this; so does openssl 0.9.8h and later. We don't actually
+/* Windows defines this; so does OpenSSL 0.9.8h and later. We don't actually
  * use either definition. */
 #undef OCSP_RESPONSE
 #endif
@@ -56,7 +56,7 @@
 #include "compat.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000l
-#error "We require openssl >= 0.9.7"
+#error "We require OpenSSL >= 0.9.7"
 #endif
 
 #include <openssl/engine.h>
@@ -67,13 +67,13 @@
 #define PRIVATE_KEY_OK(k) ((k) && (k)->key && (k)->key->p)
 
 #ifdef TOR_IS_MULTITHREADED
-/** A number of prealloced mutexes for use by openssl. */
+/** A number of preallocated mutexes for use by OpenSSL. */
 static tor_mutex_t **_openssl_mutexes = NULL;
-/** How many mutexes have we allocated for use by openssl? */
+/** How many mutexes have we allocated for use by OpenSSL? */
 static int _n_openssl_mutexes = 0;
 #endif
 
-/** A public key, or a public/private keypair. */
+/** A public key, or a public/private key-pair. */
 struct crypto_pk_env_t
 {
   int refs; /* reference counting so we don't have to copy keys */
@@ -405,10 +405,10 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
   if (env->key)
     RSA_free(env->key);
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
-  /* In openssl 0.9.7, RSA_generate_key is all we have. */
+  /* In OpenSSL 0.9.7, RSA_generate_key is all we have. */
   env->key = RSA_generate_key(PK_BYTES*8,65537, NULL, NULL);
 #else
-  /* In openssl 0.9.8, RSA_generate_key is deprecated. */
+  /* In OpenSSL 0.9.8, RSA_generate_key is deprecated. */
   {
     BIGNUM *e = BN_new();
     RSA *r = NULL;
@@ -452,7 +452,7 @@ crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
   tor_assert(env);
   tor_assert(s);
 
-  /* Create a read-only memory BIO, backed by the nul-terminated string 's' */
+  /* Create a read-only memory BIO, backed by the NUL-terminated string 's' */
   b = BIO_new_mem_buf((char*)s, -1);
 
   if (env->key)
@@ -1054,7 +1054,7 @@ crypto_pk_asn1_decode(const char *str, size_t len)
   RSA *rsa;
   unsigned char *buf;
   /* This ifdef suppresses a type warning.  Take out the first case once
-   * everybody is using openssl 0.9.7 or later.
+   * everybody is using OpenSSL 0.9.7 or later.
    */
   const unsigned char *cp;
   cp = buf = tor_malloc(len);
@@ -1393,7 +1393,7 @@ crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
   tor_assert(digest);
   tor_assert(data);
   /* Using the SHA1_*() calls directly means we don't support doing
-   * sha1 in hardware. But so far the delay of getting the question
+   * SHA1 in hardware. But so far the delay of getting the question
    * to the hardware, and hearing the answer, is likely higher than
    * just doing it ourselves. Hashes are fast.
    */
@@ -1554,7 +1554,7 @@ crypto_dh_generate_public(crypto_dh_env_t *dh)
   if (tor_check_dh_key(dh->dh->pub_key)<0) {
     log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Trying again.");
-    /* Free and clear the keys, so openssl will actually try again. */
+    /* Free and clear the keys, so OpenSSL will actually try again. */
     BN_free(dh->dh->pub_key);
     BN_free(dh->dh->priv_key);
     dh->dh->pub_key = dh->dh->priv_key = NULL;
@@ -1593,7 +1593,7 @@ crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
   return 0;
 }
 
-/** Check for bad diffie-hellman public keys (g^x).  Return 0 if the key is
+/** Check for bad Diffie-Hellman public keys (g^x).  Return 0 if the key is
  * okay (in the subgroup [2,p-2]), or -1 if it's bad.
  * See http://www.cl.cam.ac.uk/ftp/users/rja14/psandqs.ps.gz for some tips.
  */
@@ -1742,11 +1742,11 @@ crypto_dh_free(crypto_dh_env_t *dh)
  * work for us too. */
 #define ADD_ENTROPY 32
 
-/* Use RAND_poll if openssl is 0.9.6 release or later.  (The "f" means
+/* Use RAND_poll if OpenSSL is 0.9.6 release or later.  (The "f" means
    "release".)  */
 #define HAVE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
 
-/* Versions of openssl prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
+/* Versions of OpenSSL prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
  * would allocate an fd_set on the stack, open a new file, and try to FD_SET
  * that fd without checking whether it fit in the fd_set.  Thus, if the
  * system has not just been started up, it is unsafe to call */
@@ -2281,7 +2281,7 @@ secret_to_key(char *key_out, size_t key_out_len, const char *secret,
 }
 
 #ifdef TOR_IS_MULTITHREADED
-/** Helper: openssl uses this callback to manipulate mutexes. */
+/** Helper: OpenSSL uses this callback to manipulate mutexes. */
 static void
 _openssl_locking_cb(int mode, int n, const char *file, int line)
 {
@@ -2298,12 +2298,13 @@ _openssl_locking_cb(int mode, int n, const char *file, int line)
     tor_mutex_release(_openssl_mutexes[n]);
 }
 
-/** OpenSSL helper type: wraps a Tor mutex so that openssl can  */
+/** OpenSSL helper type: wraps a Tor mutex so that OpenSSL can use it
+ * as a lock. */
 struct CRYPTO_dynlock_value {
   tor_mutex_t *lock;
 };
 
-/** Openssl callback function to allocate a lock: see CRYPTO_set_dynlock_*
+/** OpenSSL callback function to allocate a lock: see CRYPTO_set_dynlock_*
  * documentation in OpenSSL's docs for more info. */
 static struct CRYPTO_dynlock_value *
 _openssl_dynlock_create_cb(const char *file, int line)
@@ -2316,7 +2317,7 @@ _openssl_dynlock_create_cb(const char *file, int line)
   return v;
 }
 
-/** Openssl callback function to acquire or release a lock: see
+/** OpenSSL callback function to acquire or release a lock: see
  * CRYPTO_set_dynlock_* documentation in OpenSSL's docs for more info. */
 static void
 _openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
@@ -2330,7 +2331,7 @@ _openssl_dynlock_lock_cb(int mode, struct CRYPTO_dynlock_value *v,
     tor_mutex_release(v->lock);
 }
 
-/** Openssl callback function to free a lock: see CRYPTO_set_dynlock_*
+/** OpenSSL callback function to free a lock: see CRYPTO_set_dynlock_*
  * documentation in OpenSSL's docs for more info. */
 static void
 _openssl_dynlock_destroy_cb(struct CRYPTO_dynlock_value *v,

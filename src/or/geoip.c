@@ -308,6 +308,9 @@ geoip_note_client_seen(geoip_client_action_t action,
   if (action == GEOIP_CLIENT_CONNECT) {
     if (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))
       return;
+    /* Did we recently switch from bridge to relay or back? */
+    if (client_history_starts > now)
+      return;
   } else {
 #ifndef ENABLE_GEOIP_STATS
     return;
@@ -386,7 +389,10 @@ _remove_old_client_helper(struct clientmap_entry_t *ent, void *_cutoff)
   }
 }
 
-/** Forget about all clients that haven't connected since <b>cutoff</b>. */
+/** Forget about all clients that haven't connected since <b>cutoff</b>.
+ * If <b>cutoff</b> is in the future, clients won't be added to the history
+ * until this time is reached. This is useful to prevent relays that switch
+ * to bridges from reporting unbelievable numbers of clients. */
 void
 geoip_remove_old_clients(time_t cutoff)
 {

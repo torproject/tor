@@ -465,7 +465,7 @@ tor_addr_to_reverse_lookup_name(char *out, size_t outlen,
       *cp++ = "0123456789abcdef"[byte >> 4];
       *cp++ = '.';
     }
-    memcpy(cp, "ip6.arpa", 9); /* 8 characters plus nul */
+    memcpy(cp, "ip6.arpa", 9); /* 8 characters plus NUL */
     return 0;
   }
   return -1;
@@ -619,7 +619,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   } else {
     if (mask) {
       log_warn(LD_GENERAL,
-               "Unexpected mask in addrss %s; rejecting", escaped(s));
+               "Unexpected mask in address %s; rejecting", escaped(s));
       goto err;
     }
   }
@@ -642,7 +642,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   } else {
     if (port) {
       log_warn(LD_GENERAL,
-               "Unexpected ports in addrss %s; rejecting", escaped(s));
+               "Unexpected ports in address %s; rejecting", escaped(s));
       goto err;
     }
   }
@@ -654,9 +654,9 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   return -1;
 }
 
-/** Determine whether an address is IPv4, either native or ipv4-mapped ipv6.
+/** Determine whether an address is IPv4, either native or IPv4-mapped IPv6.
  * Note that this is about representation only, as any decent stack will
- * reject ipv4-mapped addresses received on the wire (and won't use them
+ * reject IPv4-mapped addresses received on the wire (and won't use them
  * on the wire either).
  */
 int
@@ -766,11 +766,11 @@ tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
 
 /** Given two addresses <b>addr1</b> and <b>addr2</b>, return 0 if the two
  * addresses are equivalent under the mask mbits, less than 0 if addr1
- * preceeds addr2, and greater than 0 otherwise.
+ * precedes addr2, and greater than 0 otherwise.
  *
  * Different address families (IPv4 vs IPv6) are always considered unequal if
  * <b>how</b> is CMP_EXACT; otherwise, IPv6-mapped IPv4 addresses are
- * cosidered equivalent to their IPv4 equivalents.
+ * considered equivalent to their IPv4 equivalents.
  */
 int
 tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2,
@@ -1021,7 +1021,7 @@ tor_addr_port_parse(const char *s, tor_addr_t *addr_out, uint16_t *port_out)
 }
 
 /** Set *<b>addr</b> to the IP address (if any) of whatever interface
- * connects to the internet.  This address should only be used in checking
+ * connects to the Internet.  This address should only be used in checking
  * whether our address has changed.  Return 0 on success, -1 on failure.
  */
 int
@@ -1039,7 +1039,7 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
   /* Use the "discard" service port */
   ((struct sockaddr_in*)&target_addr)->sin_port = 9;
   /* Don't worry: no packets are sent. We just need to use a real address
-   * on the actual internet. */
+   * on the actual Internet. */
   if (family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)&target_addr;
     sock = tor_open_socket(PF_INET6,SOCK_DGRAM,IPPROTO_UDP);
@@ -1380,7 +1380,7 @@ tor_dup_ip(uint32_t addr)
 
 /**
  * Set *<b>addr</b> to the host-order IPv4 address (if any) of whatever
- * interface connects to the internet.  This address should only be used in
+ * interface connects to the Internet.  This address should only be used in
  * checking whether our address has changed.  Return 0 on success, -1 on
  * failure.
  */

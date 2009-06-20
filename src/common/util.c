@@ -1088,7 +1088,7 @@ format_rfc1123_time(char *buf, time_t t)
 /** Parse the the RFC1123 encoding of some time (in GMT) from <b>buf</b>,
  * and store the result in *<b>t</b>.
  *
- * Return 0 on succcess, -1 on failure.
+ * Return 0 on success, -1 on failure.
 */
 int
 parse_rfc1123_time(const char *buf, time_t *t)
@@ -1319,7 +1319,7 @@ format_time_interval(char *out, size_t out_len, long interval)
  * ===== */
 
 #ifndef TIME_IS_FAST
-/** Cached estimate of the currrent time.  Updated around once per second;
+/** Cached estimate of the current time.  Updated around once per second;
  * may be a few seconds off if we are really busy.  This is a hack to avoid
  * calling time(NULL) (which not everybody has optimized) on critical paths.
  */
@@ -1350,7 +1350,7 @@ update_approx_time(time_t now)
  * XXXX022 Use this consistently or rip most of it out.
  * ===== */
 
-/* In a perfect world, everybody would run ntp, and ntp would be perfect, so
+/* In a perfect world, everybody would run NTP, and NTP would be perfect, so
  * if we wanted to know "Is the current time before time X?" we could just say
  * "time(NULL) < X".
  *
@@ -2480,6 +2480,8 @@ start_daemon(void)
     if (fork() != 0) {
       exit(0);
     }
+    set_main_thread(); /* We are now the main thread. */
+
     return;
   }
 }

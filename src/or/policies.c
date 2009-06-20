@@ -40,7 +40,7 @@ typedef struct policy_summary_item_t {
     uint16_t prt_min; /**< Lowest port number to accept/reject. */
     uint16_t prt_max; /**< Highest port number to accept/reject. */
     uint64_t reject_count; /**< Number of IP-Addresses that are rejected to
-                                this portrange. */
+                                this port range. */
     int accepted:1; /** Has this port already been accepted */
 } policy_summary_item_t;
 
@@ -411,6 +411,7 @@ load_policy_from_option(config_line_t *config, smartlist_t **policy,
         memcpy(&newp, n, sizeof(newp));
         newp.prt_min = 1;
         newp.prt_max = 65535;
+        newp.is_canonical = 0;
         c = addr_policy_get_canonical_entry(&newp);
         SMARTLIST_REPLACE_CURRENT(*policy, n, c);
         addr_policy_free(n);
@@ -795,7 +796,7 @@ exit_policy_remove_redundancies(smartlist_t *dest)
    * (accept/reject), A is a subset of B, and there is no other entry of
    * different type in between those two that intersects with A.
    *
-   * Anybody want to doublecheck the logic here? XXX
+   * Anybody want to double-check the logic here? XXX
    */
   for (i = 0; i < smartlist_len(dest)-1; ++i) {
     ap = smartlist_get(dest, i);
@@ -1136,8 +1137,8 @@ policy_summary_add_item(smartlist_t *summary, addr_policy_t *p)
 }
 
 /** Create a string representing a summary for an exit policy.
- * The summary will either be an "accept" plus a comma-seperated list of port
- * ranges or a "reject" plus portranges, depending on which is shorter.
+ * The summary will either be an "accept" plus a comma-separated list of port
+ * ranges or a "reject" plus port-ranges, depending on which is shorter.
  *
  * If no exits are allowed at all then NULL is returned, if no ports
  * are blocked instead of "reject " we return "accept 1-65535" (this

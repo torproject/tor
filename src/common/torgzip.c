@@ -365,7 +365,7 @@ tor_zlib_new(int compress, compress_method_t method)
  return NULL;
 }
 
-/** Compress/decommpress some bytes using <b>state</b>.  Read up to
+/** Compress/decompress some bytes using <b>state</b>.  Read up to
  * *<b>in_len</b> bytes from *<b>in</b>, and write up to *<b>out_len</b> bytes
  * to *<b>out</b>, adjusting the values as we go.  If <b>finish</b> is true,
  * we've reached the end of the input.

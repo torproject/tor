@@ -2755,7 +2755,7 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
  * message.
  *
  * XXXX rename this function.  It's only called from the controller.
- * XXXX in fact, refactor this function, mergeing as much as possible.
+ * XXXX in fact, refactor this function, merging as much as possible.
  */
 int
 dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
@@ -2972,7 +2972,7 @@ get_signed_descriptor_by_fp(const char *fp, int extrainfo,
   return NULL;
 }
 
-/** Return true iff we have any of the docments (extrainfo or routerdesc)
+/** Return true iff we have any of the documents (extrainfo or routerdesc)
  * specified by the fingerprints in <b>fps</b> and <b>spool_src</b>.  Used to
  * decide whether to send a 404.  */
 int
@@ -3018,7 +3018,7 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
     routerinfo_t *me = router_get_my_routerinfo();
     result = (me?me->cache_info.signed_descriptor_len:2048) * n;
     if (compressed)
-      result /= 2; /* observed compressability is between 35 and 55%. */
+      result /= 2; /* observed compressibility is between 35 and 55%. */
   } else {
     result = 0;
     SMARTLIST_FOREACH(fps, const char *, digest, {

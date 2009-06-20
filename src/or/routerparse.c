@@ -167,7 +167,7 @@ typedef struct token_rule_t {
   /** If true, we concatenate all arguments for this item into a single
    * string. */
   int concat_args;
-  /** Requirments on object syntax for this item. */
+  /** Requirements on object syntax for this item. */
   obj_syntax os;
   /** Lowest number of times this item may appear in a document. */
   int min_cnt;
@@ -217,7 +217,7 @@ typedef struct token_rule_t {
 /* Argument multiplicity: exactly <b>n</b> arguments. */
 #define EQ(n)       n,n,0
 
-/** List of tokens allowable in router derscriptors */
+/** List of tokens allowable in router descriptors */
 static token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
@@ -601,7 +601,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
  * <b>versionlist</b> is newer than <b>myversion</b>.  Else, return
  * VS_NEW_IN_SERIES if there is at least one member of <b>versionlist</b> in
  * the same series (major.minor.micro) as <b>myversion</b>, but no such member
- * is newer than <b>myversion.</b>.  Else, return VS_NEW if every memeber of
+ * is newer than <b>myversion.</b>.  Else, return VS_NEW if every member of
  * <b>versionlist</b> is older than <b>myversion</b>.  Else, return
  * VS_UNRECOMMENDED.
  *
@@ -3166,7 +3166,7 @@ tokenize_string(memarea_t *area,
     }
     if ((flags & TS_NO_NEW_ANNOTATIONS)) {
       if (first_nonannotation != prev_len) {
-        log_warn(LD_DIR, "parse error: Unexpectd annotations.");
+        log_warn(LD_DIR, "parse error: Unexpected annotations.");
         return -1;
       }
     }
@@ -3453,7 +3453,7 @@ tor_version_same_series(tor_version_t *a, tor_version_t *b)
 }
 
 /** Helper: Given pointers to two strings describing tor versions, return -1
- * if _a precedes _b, 1 if _b preceeds _a, and 0 if they are equivalent.
+ * if _a precedes _b, 1 if _b precedes _a, and 0 if they are equivalent.
  * Used to sort a list of versions. */
 static int
 _compare_tor_version_str_ptr(const void **_a, const void **_b)
