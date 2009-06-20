@@ -15,8 +15,9 @@ tor (0.2.1.16-rc-1) unreleased; urgency=low
     - Change dh_strip call from --dbg-package=tor
       to --dbg-package=tor-dbg.
     - Update versioned build time dependency on debhelper.
+  * Forward port 06_add_compile_time_defaults.
 
- -- Peter Palfrader <weasel@debian.org>  Sat, 20 Jun 2009 12:59:29 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat, 20 Jun 2009 13:00:14 +0200
 
 tor (0.2.1.15-rc-1) experimental; urgency=low
 
