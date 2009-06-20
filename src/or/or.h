@@ -4411,7 +4411,8 @@ void routerinfo_free(routerinfo_t *router);
 void extrainfo_free(extrainfo_t *extrainfo);
 void routerlist_free(routerlist_t *rl);
 void dump_routerlist_mem_usage(int severity);
-void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old);
+void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old,
+                       time_t now);
 void routerlist_free_all(void);
 void routerlist_reset_warnings(void);
 void router_set_status(const char *digest, int up);

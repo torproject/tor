@@ -2629,13 +2629,16 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
  * If <b>make_old</b> is true, instead of deleting the router, we try adding
  * it to rl-&gt;old_routers. */
 void
-routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old)
+routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old, time_t now)
 {
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
   int idx = ri->cache_info.routerlist_index;
   tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
   tor_assert(smartlist_get(rl->routers, idx) == ri);
+
+  /* make sure the rephist module knows that it's not running */
+  rep_hist_note_router_unreachable(ri->cache_info.identity_digest, now);
 
   ri->cache_info.routerlist_index = -1;
   smartlist_del(rl->routers, idx);
@@ -3328,7 +3331,7 @@ routerlist_remove_old_routers(void)
         log_info(LD_DIR,
                  "Forgetting obsolete (too old) routerinfo for router '%s'",
                  router->nickname);
-        routerlist_remove(routerlist, router, 1);
+        routerlist_remove(routerlist, router, 1, now);
         i--;
       }
     }
