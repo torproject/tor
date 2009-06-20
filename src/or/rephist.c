@@ -24,7 +24,7 @@ uint32_t rephist_total_num=0;
 /** If the total weighted run count of all runs for a router ever falls
  * below this amount, the router can be treated as having 0 MTBF. */
 #define STABILITY_EPSILON   0.0001
-/** Value by which to discount all old intervals for MTBF purposses.  This
+/** Value by which to discount all old intervals for MTBF purposes.  This
  * is compounded every STABILITY_INTERVAL. */
 #define STABILITY_ALPHA     0.95
 /** Interval at which to discount all old intervals for MTBF purposes. */
@@ -501,7 +501,7 @@ rep_hist_get_weighted_fractional_uptime(const char *id, time_t when)
 /** Return a number representing how long we've known about the router whose
  * digest is <b>id</b>. Return 0 if the router is unknown.
  *
- * Be careful: this measure incresases monotonically as we know the router for
+ * Be careful: this measure increases monotonically as we know the router for
  * longer and longer, but it doesn't increase linearly.
  */
 long

@@ -11,7 +11,7 @@
 /** A resizeable list of pointers, with associated helpful functionality.
  *
  * The members of this struct are exposed only so that macros and inlines can
- * use them; all access to smartlist internals should go throuch the functions
+ * use them; all access to smartlist internals should go through the functions
  * and macros defined here.
  **/
 typedef struct smartlist_t {
@@ -229,7 +229,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
   STMT_END
 
 /* Helper: Given two lists of items, possibly of different types, such that
- * both lists are sorted on some common field (as determened by a comparison
+ * both lists are sorted on some common field (as determined by a comparison
  * expression <b>cmpexpr</b>), and such that one list (<b>sl1</b>) has no
  * duplicates on the common field, loop through the lists in lockstep, and
  * execute <b>unmatched_var2</b> on items in var2 that do not appear in

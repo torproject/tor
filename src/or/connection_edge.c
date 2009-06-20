@@ -266,7 +266,7 @@ connection_edge_end(edge_connection_t *conn, uint8_t reason)
   return 0;
 }
 
-/** An error has just occured on an operation on an edge connection
+/** An error has just occurred on an operation on an edge connection
  * <b>conn</b>.  Extract the errno; convert it to an end reason, and send an
  * appropriate relay end cell to the other end of the connection's circuit.
  **/
@@ -509,10 +509,10 @@ connection_ap_attach_pending(void)
   });
 }
 
-/** Tell any AP streams that are waiting for a onehop tunnel to
+/** Tell any AP streams that are waiting for a one-hop tunnel to
  * <b>failed_digest</b> that they are going to fail. */
 /* XXX022 We should get rid of this function, and instead attach
- * onehop streams to circ->p_streams so they get marked in
+ * one-hop streams to circ->p_streams so they get marked in
  * circuit_mark_for_close like normal p_streams. */
 void
 connection_ap_fail_onehop(const char *failed_digest,
@@ -543,7 +543,7 @@ connection_ap_fail_onehop(const char *failed_digest,
           build_state->chosen_exit->port != edge_conn->socks_request->port)
         continue;
     }
-    log_info(LD_APP, "Closing onehop stream to '%s/%s' because the OR conn "
+    log_info(LD_APP, "Closing one-hop stream to '%s/%s' because the OR conn "
                      "just failed.", edge_conn->chosen_exit_name,
                      edge_conn->socks_request->address);
     connection_mark_unattached_ap(edge_conn, END_STREAM_REASON_TIMEOUT);
@@ -631,12 +631,12 @@ connection_ap_detach_retriable(edge_connection_t *conn, origin_circuit_t *circ,
  * - A MapAddress command from the controller [permanent]
  * - An AddressMap directive in the torrc [permanent]
  * - When a TrackHostExits torrc directive is triggered [temporary]
- * - When a dns resolve succeeds [temporary]
- * - When a dns resolve fails [temporary]
+ * - When a DNS resolve succeeds [temporary]
+ * - When a DNS resolve fails [temporary]
  *
  * When an addressmap request is made but one is already registered,
  * the new one is replaced only if the currently registered one has
- * no "new_address" (that is, it's in the process of dns resolve),
+ * no "new_address" (that is, it's in the process of DNS resolve),
  * or if the new one is permanent (expires==0 or 1).
  *
  * (We overload the 'expires' field, using "0" for mappings set via
@@ -955,7 +955,7 @@ client_dns_incr_failures(const char *address)
   return ent->num_resolve_failures;
 }
 
-/** If <b>address</b> is in the client dns addressmap, reset
+/** If <b>address</b> is in the client DNS addressmap, reset
  * the number of resolve failures we have on record for it.
  * This is used when we fail a stream because it won't resolve:
  * otherwise future attempts on that address will only try once.
@@ -1683,9 +1683,6 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       if (conn->rend_data->auth_type == REND_NO_AUTH)
         rend_client_refetch_renddesc(conn->rend_data->onion_address);
     } else { /* r > 0 */
-/** How long after we receive a hidden service descriptor do we consider
- * it valid? */
-#define NUM_SECONDS_BEFORE_HS_REFETCH (60*15)
       if (now - entry->received < NUM_SECONDS_BEFORE_HS_REFETCH) {
         conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
         log_info(LD_REND, "Descriptor is here and fresh enough. Great.");
@@ -1696,7 +1693,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         }
       } else {
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
-        log_info(LD_REND, "Stale descriptor %s. Refetching.",
+        log_info(LD_REND, "Stale descriptor %s. Re-fetching.",
                  safe_str(conn->rend_data->onion_address));
         /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
          * arrives first. Exception: When using client authorization, only
@@ -1717,7 +1714,7 @@ int
 get_pf_socket(void)
 {
   int pf;
-  /*  This should be opened before dropping privs. */
+  /*  This should be opened before dropping privileges. */
   if (pf_socket >= 0)
     return pf_socket;
 
@@ -2739,7 +2736,7 @@ connection_exit_connect(edge_connection_t *edge_conn)
 
       connection_watch_events(conn, EV_WRITE | EV_READ);
       /* writable indicates finish;
-       * readable/error indicates broken link in windowsland. */
+       * readable/error indicates broken link in windows-land. */
       return;
     /* case 1: fall through */
   }
@@ -2925,14 +2922,14 @@ parse_extended_hostname(char *address)
     if (!s)
       return NORMAL_HOSTNAME; /* no dot, thus normal */
     if (!strcmp(s+1,"exit")) {
-      *s = 0; /* nul-terminate it */
+      *s = 0; /* NUL-terminate it */
       return EXIT_HOSTNAME; /* .exit */
     }
     if (strcmp(s+1,"onion"))
       return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */
 
     /* so it is .onion */
-    *s = 0; /* nul-terminate it */
+    *s = 0; /* NUL-terminate it */
     if (strlcpy(query, address, REND_SERVICE_ID_LEN_BASE32+1) >=
         REND_SERVICE_ID_LEN_BASE32+1)
       goto failed;

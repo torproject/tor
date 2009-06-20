@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2004, Roger Dingledinex
+/* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
  * Copyright (c) 2007-2009, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
@@ -521,6 +521,9 @@ void tor_threads_init(void);
 #define tor_get_thread_id() (1UL)
 #define tor_threads_init() STMT_NIL
 #endif
+
+void set_main_thread(void);
+int in_main_thread(void);
 
 #ifdef TOR_IS_MULTITHREADED
 #if 0

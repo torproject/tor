@@ -27,9 +27,9 @@
  * via OpenSSL's EVP_EncryptUpdate function, or via the built-in AES
  * implementation below. */
 
-/** Defined iff we're using openssl's AES functions for AES. */
+/** Defined iff we're using OpenSSL's AES functions for AES. */
 #undef USE_OPENSSL_AES
-/** Defined iff we're using openssl's EVP code for AES. */
+/** Defined iff we're using OpenSSL's EVP code for AES. */
 #undef USE_OPENSSL_EVP
 /** Defined iff we're using Tor's internal AES implementation, defined
  * below. */
@@ -64,13 +64,13 @@
      !defined(USE_OPENSSL_EVP))
 
 /* OpenSSL 0.9.7 was the first to support AES.  It was slower than our
- *    builtin implementation.
+ *    built-in implementation.
  * OpenSSL 0.9.8 added assembly implementations for i386 and ia64.
  *    Either the i386 stuff isn't used for x86-64, or it isn't faster.
  * OpenSSL 0.9.9 (not yet out) has added assembly implementations for
  *    x86_64 (aka amd64), sparc9, and arm
  *
- * Note: the "f" at the end of openssl version numbers below means
+ * Note: the "f" at the end of OpenSSL version numbers below means
  * "release". */
 # if defined(CPU_IS_X86) || defined(CPU_IS_IA64)
 #  if OPENSSL_VERSION_NUMBER >= 0x0090800fL
@@ -84,7 +84,7 @@
 #  endif
 # endif
 
-/* Otherwise, use the builtin implementation below. */
+/* Otherwise, use the built-in implementation below. */
 # ifndef USE_OPENSSL_AES
 #  define USE_BUILTIN_AES
 # endif
@@ -380,7 +380,7 @@ aes_set_iv(aes_cnt_cipher_t *cipher, const char *iv)
  *
  * @version 3.0 (December 2000)
  *
- * Optimised ANSI C code for the Rijndael cipher (now AES)
+ * Optimized ANSI C code for the Rijndael cipher (now AES)
  *
  * @author Vincent Rijmen <vincent.rijmen@esat.kuleuven.ac.be>
  * @author Antoon Bosselaers <antoon.bosselaers@esat.kuleuven.ac.be>

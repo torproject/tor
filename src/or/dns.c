@@ -736,15 +736,25 @@ void
 assert_connection_edge_not_dns_pending(edge_connection_t *conn)
 {
   pending_connection_t *pend;
-  cached_resolve_t **resolve;
+  cached_resolve_t search;
 
+#if 1
+  cached_resolve_t *resolve;
+  strlcpy(search.address, conn->_base.address, sizeof(search.address));
+  resolve = HT_FIND(cache_map, &cache_root, &search);
+  if (!resolve)
+    return;
+  for (pend = resolve->pending_connections; pend; pend = pend->next) {
+    tor_assert(pend->conn != conn);
+  }
+#else
+  cached_resolve_t **resolve;
   HT_FOREACH(resolve, cache_map, &cache_root) {
-    for (pend = (*resolve)->pending_connections;
-         pend;
-         pend = pend->next) {
+    for (pend = (*resolve)->pending_connections; pend; pend = pend->next) {
       tor_assert(pend->conn != conn);
     }
   }
+#endif
 }
 
 /** Log an error and abort if any connection waiting for a DNS resolve is
@@ -1109,7 +1119,7 @@ configure_nameservers(int force)
       socklen = tor_addr_to_sockaddr(&addr, 0,
                                      (struct sockaddr *)&ss, sizeof(ss));
       if (socklen < 0) {
-        log_warn(LD_BUG, "Couldn't convert outboung bind address to sockaddr."
+        log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
                  " Ignoring.");
       } else {
         evdns_set_default_outgoing_bind_address((struct sockaddr *)&ss,
@@ -1553,7 +1563,7 @@ dns_launch_correctness_checks(void)
   }
 }
 
-/** Return true iff our DNS servers lie to us too much to be trustd. */
+/** Return true iff our DNS servers lie to us too much to be trusted. */
 int
 dns_seems_to_be_broken(void)
 {

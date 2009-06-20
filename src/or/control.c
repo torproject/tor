@@ -533,7 +533,7 @@ send_control_done(control_connection_t *conn)
  * If <b>which</b> & SHORT_NAMES, the event contains short-format names: send
  * it to controllers that haven't enabled the VERBOSE_NAMES feature.  If
  * <b>which</b> & LONG_NAMES, the event contains long-format names: send it
- * to contollers that <em>have</em> enabled VERBOSE_NAMES.
+ * to controllers that <em>have</em> enabled VERBOSE_NAMES.
  *
  * The EXTENDED_FORMAT and NONEXTENDED_FORMAT flags behave similarly with
  * respect to the EXTENDED_EVENTS feature. */
@@ -832,7 +832,7 @@ handle_control_getconf(control_connection_t *conn, uint32_t body_len,
   or_options_t *options = get_options();
   int i, len;
 
-  (void) body_len; /* body is nul-terminated; so we can ignore len. */
+  (void) body_len; /* body is NUL-terminated; so we can ignore len. */
   smartlist_split_string(questions, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(questions, const char *, q,
@@ -1286,7 +1286,7 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
 }
 
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
- * and report success or failrue. */
+ * and report success or failure. */
 static int
 handle_control_mapaddress(control_connection_t *conn, uint32_t len,
                           const char *body)
@@ -1296,7 +1296,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
   smartlist_t *reply;
   char *r;
   size_t sz;
-  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
+  (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
   lines = smartlist_create();
   elts = smartlist_create();
@@ -2042,7 +2042,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
   smartlist_t *unrecognized = smartlist_create();
   char *msg = NULL, *ans = NULL;
   int i;
-  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
+  (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
   smartlist_split_string(questions, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
@@ -2253,7 +2253,7 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
   origin_circuit_t *circ = NULL;
   uint8_t new_purpose;
   smartlist_t *args;
-  (void) len; /* body is nul-terminated, so it's safe to ignore the length. */
+  (void) len; /* body is NUL-terminated, so it's safe to ignore the length. */
 
   args = getargs_helper("SETCIRCUITPURPOSE", conn, body, 2, -1);
   if (!args)
@@ -3367,6 +3367,11 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
 {
   int event;
 
+  /* Don't even think of trying to add stuff to a buffer from a cpuworker
+   * thread. */
+  if (! in_main_thread())
+    return;
+
   if (disable_log_messages)
     return;
 
@@ -3593,7 +3598,7 @@ control_event_newconsensus(const networkstatus_t *consensus)
 }
 
 /** Called when a single local_routerstatus_t has changed: Sends an NS event
- * to any countroller that cares. */
+ * to any controller that cares. */
 int
 control_event_networkstatus_changed_single(routerstatus_t *rs)
 {
