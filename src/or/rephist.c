@@ -683,9 +683,13 @@ rep_history_clean(time_t before)
   }
 }
 
-/** Write MTBF data to disk.  Returns 0 on success, negative on failure. */
+/** Write MTBF data to disk. Return 0 on success, negative on failure.
+ *
+ * If <b>missing_means_down</b>, then if we're about to write an entry
+ * that is still considered up but isn't in our routerlist, consider it
+ * to be down. */
 int
-rep_hist_record_mtbf_data(void)
+rep_hist_record_mtbf_data(time_t now, int missing_means_down)
 {
   char time_buf[ISO_TIME_LEN+1];
 
@@ -745,6 +749,18 @@ rep_hist_record_mtbf_data(void)
     hist = (or_history_t*) or_history_p;
 
     base16_encode(dbuf, sizeof(dbuf), digest, DIGEST_LEN);
+
+    if (missing_means_down && hist->start_of_run &&
+        !router_get_by_digest(digest)) {
+      /* We think this relay is running, but it's not listed in our
+       * routerlist. Somehow it fell out without telling us it went
+       * down. Complain and also correct it. */
+      log_info(LD_HIST,
+               "Relay '%s' is listed as up in rephist, but it's not in "
+               "our routerlist. Correcting.", dbuf);
+      rep_hist_note_router_unreachable(digest, now);
+    }
+
     PRINTF((f, "R %s\n", dbuf));
     if (hist->start_of_run > 0) {
       format_iso_time(time_buf, hist->start_of_run);
