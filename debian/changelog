@@ -1,5 +1,6 @@
-tor (0.2.1.15-rc-1XXX) XXXerimental; urgency=low
+tor (0.2.1.16-rc-1) unreleased; urgency=low
 
+  * New upstream version.
   * No longer inform the user if/when we re-create the /var/run/tor
     directory in the init script.  With /var/run on tmpfs this is
     completely normal now so our message was just noise.
@@ -15,7 +16,7 @@ tor (0.2.1.15-rc-1XXX) XXXerimental; urgency=low
       to --dbg-package=tor-dbg.
     - Update versioned build time dependency on debhelper.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 31 May 2009 13:18:47 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sat, 20 Jun 2009 12:59:29 +0200
 
 tor (0.2.1.15-rc-1) experimental; urgency=low
 
