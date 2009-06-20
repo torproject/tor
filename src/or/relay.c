@@ -992,7 +992,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   relay_header_unpack(&rh, cell->payload);
 //  log_fn(LOG_DEBUG,"command %d stream %d", rh.command, rh.stream_id);
   num_seen++;
-  log_debug(domain, "Now seen %d relay cells here.", num_seen);
+  log_debug(domain, "Now seen %d relay cells here (command %d, stream %d).",
+            num_seen, rh.command, rh.stream_id);
 
   if (rh.length > RELAY_PAYLOAD_SIZE) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,

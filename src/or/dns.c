@@ -1461,8 +1461,8 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
     }
     log(dns_wildcard_one_notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider gave an answer for \"%s\", which "
-        "is not supposed to exist.  Apparently they are hijacking "
-        "DNS failures. Trying to correct for this.  We've noticed %d "
+        "is not supposed to exist. Apparently they are hijacking "
+        "DNS failures. Trying to correct for this. We've noticed %d "
         "possibly bad address%s so far.",
         string_address, strmap_size(dns_wildcard_response_count),
         (strmap_size(dns_wildcard_response_count) == 1) ? "" : "es");

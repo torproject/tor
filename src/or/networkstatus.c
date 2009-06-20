@@ -1154,7 +1154,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
     }
     if (dl_interval < 1)
       dl_interval = 1;
-    /* We must not try to replace c while it's still the most valid: */
+    /* We must not try to replace c while it's still fresh: */
     tor_assert(c->fresh_until < start);
     /* We must download the next one before c is invalid: */
     tor_assert(start+dl_interval < c->valid_until);

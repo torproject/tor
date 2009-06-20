@@ -2948,7 +2948,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
        !strcmpstart(uname, "Windows Me"))) {
     log(LOG_WARN, LD_CONFIG, "Tor is running as a server, but you are "
         "running %s; this probably won't work. See "
-        "http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerOS "
+        "https://wiki.torproject.org/TheOnionRouter/TorFAQ#ServerOS "
         "for details.", uname);
   }
 

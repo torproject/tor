@@ -1400,7 +1400,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                 "Tor only an IP address. Applications that do DNS resolves "
                 "themselves may leak information. Consider using Socks4A "
                 "(e.g. via privoxy or socat) instead. For more information, "
-                "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
+                "please see https://wiki.torproject.org/TheOnionRouter/"
                 "TorFAQ#SOCKSAndDNS.%s", req->port,
                 safe_socks ? " Rejecting." : "");
             /*have_warned_about_unsafe_socks = 1;*/
@@ -1513,7 +1513,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                  "only an IP address. Applications that do DNS resolves "
                  "themselves may leak information. Consider using Socks4A "
                  "(e.g. via privoxy or socat) instead. For more information, "
-                 "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
+                 "please see https://wiki.torproject.org/TheOnionRouter/"
                  "TorFAQ#SOCKSAndDNS.%s", req->port,
                  safe_socks ? " Rejecting." : "");
         /*have_warned_about_unsafe_socks = 1;*/  /*(for now, warn every time)*/

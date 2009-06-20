@@ -2183,7 +2183,7 @@ dirvote_get_pending_consensus(void)
 }
 
 /** Return the signatures that we know for the consensus that we're currently
- * trying to build */
+ * trying to build. */
 const char *
 dirvote_get_pending_detached_signatures(void)
 {

@@ -881,7 +881,7 @@ directory_get_consensus_url(int supports_conditional_consensus)
 
   if (supports_conditional_consensus) {
     char *authority_id_list;
-    smartlist_t *authority_digets = smartlist_create();
+    smartlist_t *authority_digests = smartlist_create();
 
     SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                       trusted_dir_server_t *, ds,
@@ -893,10 +893,10 @@ directory_get_consensus_url(int supports_conditional_consensus)
         hex = tor_malloc(2*CONDITIONAL_CONSENSUS_FPR_LEN+1);
         base16_encode(hex, 2*CONDITIONAL_CONSENSUS_FPR_LEN+1,
                       ds->v3_identity_digest, CONDITIONAL_CONSENSUS_FPR_LEN);
-        smartlist_add(authority_digets, hex);
+        smartlist_add(authority_digests, hex);
       });
-    smartlist_sort(authority_digets, _compare_strs);
-    authority_id_list = smartlist_join_strings(authority_digets,
+    smartlist_sort(authority_digests, _compare_strs);
+    authority_id_list = smartlist_join_strings(authority_digests,
                                                "+", 0, NULL);
 
     len = strlen(authority_id_list)+64;
@@ -904,8 +904,8 @@ directory_get_consensus_url(int supports_conditional_consensus)
     tor_snprintf(url, len, "/tor/status-vote/current/consensus/%s.z",
                  authority_id_list);
 
-    SMARTLIST_FOREACH(authority_digets, char *, cp, tor_free(cp));
-    smartlist_free(authority_digets);
+    SMARTLIST_FOREACH(authority_digests, char *, cp, tor_free(cp));
+    smartlist_free(authority_digests);
     tor_free(authority_id_list);
   } else {
     url = tor_strdup("/tor/status-vote/current/consensus.z");
