@@ -1,4 +1,4 @@
-Changes in version 0.2.1.16-rc - 2009-06-19
+Changes in version 0.2.1.16-rc - 2009-06-20
   o Security fixes:
     - Fix an edge case where a malicious exit relay could convince a
       controller that the client's DNS question resolves to an internal IP
