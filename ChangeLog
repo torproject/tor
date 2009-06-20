@@ -1,4 +1,14 @@
 Changes in version 0.2.1.17-?? - 2009-??-??
+  o Major bugfixes:
+    - Directory authorities were neglecting to mark relays down in their
+      internal histories if the relays fall off the routerlist without
+      ever being found unreachable. So there were relays in the histories
+      that haven't been seen for eight months, and are listed as being
+      up for eight months. This wreaked havoc on the "median wfu"
+      and "median mtbf" calculations, in turn making Guard and Stable
+      flags very wrong, hurting network performance. Fixes bugs 696 and
+      969. Bugfix on 0.2.0.6-alpha.
+
   o Minor bugfixes:
     - Serve the DirPortFrontPage page even when we have been approaching
       our quotas recently.  Fixes bug 1013; bugfix on 0.2.1.8-alpha.
