@@ -1380,6 +1380,9 @@ options_act(or_options_t *old_options)
                         "GeoIP database found!");
     return -1;
   }
+  log_notice(LD_CONFIG, "Configured to measure usage by country and "
+    "write aggregate statistics to disk. Check the geoip-stats file "
+    "in your data directory once I've been running for 24 hours.");
 #endif
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
