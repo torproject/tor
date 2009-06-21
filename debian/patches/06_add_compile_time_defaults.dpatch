@@ -50,7 +50,7 @@ diff -urNad tor-trunk~/src/or/config.c tor-trunk/src/or/config.c
 +  if (debian_config_fix_defaults() < 0)
 +    goto err;
 +
-   if (argv) { /* first time we're called. save commandline args */
+   if (argv) { /* first time we're called. save command line args */
      backup_argv = argv;
      backup_argc = argc;
 @@ -5307,3 +5313,62 @@

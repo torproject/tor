@@ -189,8 +189,7 @@ binary-common:
 	dh_installinit
 	dh_installman
 	dh_link
-	# Change this for debhelper compatibility level 5 or later!
-	dh_strip --dbg-package=tor
+	dh_strip --dbg-package=tor-dbg
 	dh_compress
 	dh_fixperms
 	dh_installdeb
