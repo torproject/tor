@@ -1591,28 +1591,42 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
     int32_t flags = 0;
     uint32_t this_bw = 0;
     if (statuses) {
-      /* need to extract router info */
       status = smartlist_get(sl, i);
       if (router_digest_is_me(status->identity_digest))
         me_idx = i;
       router = router_get_by_digest(status->identity_digest);
       is_exit = status->is_exit;
       is_guard = status->is_possible_guard;
-      if (router) {
-        this_bw = router_get_advertised_bandwidth(router);
+      if (status->has_bandwidth) {
+        this_bw = status->bandwidth*1000;
       } else { /* guess */
+        /* XXX022 once consensuses always list bandwidths, we can take
+         * this guessing business out. -RD */
         is_known = 0;
         flags = status->is_fast ? 1 : 0;
         flags |= is_exit ? 2 : 0;
         flags |= is_guard ? 4 : 0;
       }
     } else {
+      routerstatus_t *rs;
       router = smartlist_get(sl, i);
+      rs = router_get_consensus_status_by_id(
+             router->cache_info.identity_digest);
       if (router_digest_is_me(router->cache_info.identity_digest))
         me_idx = i;
       is_exit = router->is_exit;
       is_guard = router->is_possible_guard;
-      this_bw = router_get_advertised_bandwidth(router);
+      if (rs && rs->has_bandwidth) {
+        this_bw = rs->bandwidth*1000;
+      } else if (rs) { /* guess; don't trust the descriptor */
+        /* XXX022 once consensuses always list bandwidths, we can take
+         * this guessing business out. -RD */
+        is_known = 0;
+        flags = router->is_fast ? 1 : 0;
+        flags |= is_exit ? 2 : 0;
+        flags |= is_guard ? 4 : 0;
+      } else /* bridge or other descriptor not in our consensus */
+        this_bw = router_get_advertised_bandwidth(router);
     }
     if (is_exit)
       bitarray_set(exit_bits, i);
