@@ -43,9 +43,11 @@ find /var/lib/tor \( \( ! -user debian-tor \) -o \( ! -group debian-tor \) \) -p
 find /var/lib/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02700
 find /var/lib/tor -type f -print0 | xargs -0 --no-run-if-empty chmod 00600
 
-find /var/run/tor \( \( ! -user debian-tor \) -o \( ! -group debian-tor \) \) -print0 | xargs -0 --no-run-if-empty chown debian-tor:debian-tor
-find /var/run/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02750
-find /var/run/tor -type f -print0 | xargs -0 --no-run-if-empty chmod 00600
+if [ -e /var/run/tor ]; then
+	find /var/run/tor \( \( ! -user debian-tor \) -o \( ! -group debian-tor \) \) -print0 | xargs -0 --no-run-if-empty chown debian-tor:debian-tor
+	find /var/run/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02750
+	find /var/run/tor -type f -print0 | xargs -0 --no-run-if-empty chmod 00600
+fi
 
 find /var/log/tor \( \( ! -user debian-tor \) -o \( ! -group adm \) \) -print0 | xargs -0 --no-run-if-empty chown debian-tor:adm
 find /var/log/tor -type d -print0 | xargs -0 --no-run-if-empty chmod 02750

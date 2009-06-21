@@ -1,3 +1,31 @@
+tor (0.2.1.16-rc-1) experimental; urgency=low
+
+  * New upstream version.
+  * No longer inform the user if/when we re-create the /var/run/tor
+    directory in the init script.  With /var/run on tmpfs this is
+    completely normal now so our message was just noise.
+  * Stop shipping /var/run/tor in the package.
+  * Only clean up permissions of /var/run/tor in postinst if the
+    directory actually exists.
+  * Update Standards-Version from 3.8.0 to 3.8.1.  No real changes
+    required, we already support nocheck in DEB_BUILD_OPTIONS since
+    August 2004, and we already create our var/run directory in the
+    init script (tho we now no longer ship it either - see above).
+  * Change debhelper compatibility version from 4 to 5:
+    - Change dh_strip call from --dbg-package=tor
+      to --dbg-package=tor-dbg.
+    - Update versioned build time dependency on debhelper.
+  * Forward port 06_add_compile_time_defaults.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 20 Jun 2009 13:16:02 +0200
+
+tor (0.2.1.15-rc-1) experimental; urgency=low
+
+  * New upstream version.
+  * Change build time dependency on gs to ghostscript.
+
+ -- Peter Palfrader <weasel@debian.org>  Sat, 30 May 2009 21:10:03 +0200
+
 tor (0.2.1.14-rc-1) experimental; urgency=low
 
   * New upstream version.
