@@ -71,6 +71,24 @@ of their choices.
    is unknown (usually its target IP), but we believe the path probably
    supports the request according to the rules given below.
 
+1.1. A server's bandwidth
+
+   Old versions of Tor did not report bandwidths in network status
+   documents, so clients had to learn them from the routers' advertised
+   server descriptors.
+
+   For versions of Tor prior to 0.2.1.17-rc, everywhere below where we
+   refer to a server's "bandwidth", we mean its clipped advertised
+   bandwidth, computed by taking the smaller of the 'rate' and
+   'observed' arguments to the "bandwidth" element in the server's
+   descriptor.  If a router's advertised bandwidth is greater than
+   MAX_BELIEVABLE_BANDWIDTH (currently 10 MB/s), we clipped to that
+   value.
+
+   For more recent versions of Tor, we take the bandwidth value declared
+   in the consensus, and fall back to the clipped advertised bandwidth
+   only if the consensus does not have bandwidths listed.
+
 2. Building circuits
 
 2.1. When we build
@@ -178,16 +196,13 @@ of their choices.
    multiple candidates for a path element, we choose randomly.
 
    For "fast" circuits, we pick a given router as an exit with probability
-   proportional to its advertised bandwidth [the smaller of the 'rate' and
-   'observed' arguments to the "bandwidth" element in its descriptor].  If a
-   router's advertised bandwidth is greater than MAX_BELIEVABLE_BANDWIDTH
-   (currently 10 MB/s), we clip to that value.
+   proportional to its bandwidth.
 
    For non-exit positions on "fast" circuits, we pick routers as above, but
-   we weight the clipped advertised bandwidth of Exit-flagged nodes depending
+   we weight the bandwidth of Exit-flagged nodes depending
    on the fraction of bandwidth available from non-Exit nodes.  Call the
-   total clipped advertised bandwidth for Exit nodes under consideration E,
-   and the total clipped advertised bandwidth for all nodes under
+   total bandwidth for Exit nodes under consideration E,
+   and the total bandwidth for all nodes under
    consideration T.  If E<T/3, we do not consider Exit-flagged nodes.
    Otherwise, we weight their bandwidth with the factor (E-T/3)/E. This 
    ensures that bandwidth is evenly distributed over nodes in 3-hop paths.
@@ -305,7 +320,7 @@ of their choices.
   We use Guard nodes (also called "helper nodes" in the literature) to
   prevent certain profiling attacks.  Here's the risk: if we choose entry and
   exit nodes at random, and an attacker controls C out of N servers
-  (ignoring advertised bandwidth), then the
+  (ignoring bandwidth), then the
   attacker will control the entry and exit node of any given circuit with
   probability (C/N)^2.  But as we make many different circuits over time,
   then the probability that the attacker will see a sample of about (C/N)^2
