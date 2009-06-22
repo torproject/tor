@@ -1,3 +1,9 @@
+Changes in version 0.2.1.17-?? - 2009-??-??
+  o Minor bugfixes:
+    - Serve the DirPortFrontPage page even when we have been approaching
+      our quotas recently.  Fixes bug 1013; bugfix on 0.2.1.8-alpha.
+
+
 Changes in version 0.2.1.16-rc - 2009-06-20
   o Security fixes:
     - Fix an edge case where a malicious exit relay could convince a
