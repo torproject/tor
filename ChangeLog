@@ -44,6 +44,13 @@ Changes in version 0.2.1.17-?? - 2009-??-??
     - Serve the DirPortFrontPage page even when we have been approaching
       our quotas recently.  Fixes bug 1013; bugfix on 0.2.1.8-alpha.
 
+  o Major features:
+    - Clients now use the bandwidth values in the consensus, rather than
+      the bandwidth values in each relay descriptor. This approach opens
+      the door to more accurate bandwidth estimates once the directory
+      authorities start doing active measurements. Implements more of
+      proposal 141.
+
 
 Changes in version 0.2.1.16-rc - 2009-06-20
   o Security fixes:
