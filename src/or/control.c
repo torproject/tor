@@ -2892,6 +2892,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
     connection_write_str_to_buf("250 closing connection\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
+    conn->_base.hold_open_until_flushed = 1;
     return 0;
   }
 
