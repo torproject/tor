@@ -2888,7 +2888,12 @@ connection_control_process_inbuf(control_connection_t *conn)
     --data_len;
   }
 
-  /* Quit is always valid. */
+  /* If the connection is already closing, ignore further commands */
+  if (TO_CONN(conn)->marked_for_close) {
+    return 0;
+  }
+
+  /* Otherwise, Quit is always valid. */
   if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
     connection_write_str_to_buf("250 closing connection\r\n", conn);
     connection_mark_for_close(TO_CONN(conn));
