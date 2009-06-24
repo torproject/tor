@@ -51,6 +51,16 @@ Changes in version 0.2.1.17-?? - 2009-??-??
       authorities start doing active measurements. Implements more of
       proposal 141.
 
+  o Minor bugfixes (on 0.2.0.x):
+    - Control port would close the connection before flushing long
+      replies, such as the network consensus, if a QUIT command was
+      issued before the reply had completed. Now, the control port
+      flushes all pending replies before closing the connection.
+      Also fixed a condition where a QUIT command issued after a
+      malformed or rejected AUTHENTICATE command, but before the
+      connection was closed would result in a warning in the logger
+      for a doubly-closed connection. Fixes bugs 1015 and 1016.
+
 
 Changes in version 0.2.1.16-rc - 2009-06-20
   o Security fixes:
