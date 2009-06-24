@@ -1,10 +1,10 @@
-Changes in version 0.2.0.35 - 2009-??-??
+Changes in version 0.2.0.35 - 2009-06-24
   o Security fix:
     - Avoid crashing in the presence of certain malformed descriptors.
       Found by lark, and by automated fuzzing.
     - Fix an edge case where a malicious exit relay could convince a
       controller that the client's DNS question resolves to an internal IP
-      address. Bug found and fixed by "optimist"; bugfix on 0.1.2.8-beta
+      address. Bug found and fixed by "optimist"; bugfix on 0.1.2.8-beta.
 
   o Major bugfixes:
     - Finally fix the bug where dynamic-IP relays disappear when their
@@ -16,11 +16,11 @@ Changes in version 0.2.0.35 - 2009-??-??
       all direct connections. Should fix bugs 827, 883, and 900.
     - Fix a timing-dependent, allocator-dependent, DNS-related crash bug
       that would occur on some exit nodes when DNS failures and timeouts
-      occurred in certain patterns.  Fix for bug 957.
+      occurred in certain patterns. Fix for bug 957.
 
   o Minor bugfixes:
     - When starting with a cache over a few days old, do not leak
-      memory for the obsolete router descriptors in it.  Bugfix on
+      memory for the obsolete router descriptors in it. Bugfix on
       0.2.0.33; fixes bug 672.
     - Hidden service clients didn't use a cached service descriptor that
       was older than 15 minutes, but wouldn't fetch a new one either,
