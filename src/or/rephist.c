@@ -1320,6 +1320,176 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
   add_obs(read_array, when, num_bytes);
 }
 
+#ifdef ENABLE_EXIT_STATS
+/* Some constants */
+/** How long are the intervals for measuring exit stats? */
+#define EXIT_STATS_INTERVAL_SEC (24 * 60 * 60)
+/** To what multiple should byte numbers be rounded up? */
+#define EXIT_STATS_ROUND_UP_BYTES 1024
+/** To what multiple should stream counts be rounded up? */
+#define EXIT_STATS_ROUND_UP_STREAMS 4
+/** Number of TCP ports */
+#define EXIT_STATS_NUM_PORTS 65536
+
+/* The following data structures are arrays and no fancy smartlists or maps,
+ * so that all write operations can be done in constant time. This comes at
+ * the price of some memory (1.25 MB) and linear complexity when writing
+ * stats. */
+/** Number of bytes read in current period by exit port */
+static uint64_t exit_bytes_read[EXIT_STATS_NUM_PORTS];
+/** Number of bytes written in current period by exit port */
+static uint64_t exit_bytes_written[EXIT_STATS_NUM_PORTS];
+/** Number of streams opened in current period by exit port */
+static uint32_t exit_streams[EXIT_STATS_NUM_PORTS];
+
+/** When does the current exit stats period end? */
+static time_t end_of_current_exit_stats_period = 0;
+
+/** Write exit stats for the current period to disk and reset counters. */
+static void
+write_exit_stats(time_t when)
+{
+  char t[ISO_TIME_LEN+1];
+  int r, i, comma;
+  uint64_t *b;
+
+  char *filename = get_datadir_fname("exit-stats");
+  open_file_t *open_file = NULL;
+  FILE *out = NULL;
+
+  log_debug(LD_HIST, "Considering writing exit port statistics to disk..");
+  while (when > end_of_current_exit_stats_period) {
+    format_iso_time(t, end_of_current_exit_stats_period);
+    log_info(LD_HIST, "Writing exit port statistics to disk for period "
+             "ending at %s.", t);
+
+    if (!open_file) {
+      out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
+                                        0600, &open_file);
+      if (!out) {
+        log_warn(LD_HIST, "Couldn't open '%s'.", filename);
+        goto done;
+      }
+    }
+
+    /* written yyyy-mm-dd HH:MM:SS (n s) */
+    if (fprintf(out, "written %s (%d s)\n", t, EXIT_STATS_INTERVAL_SEC) < 0)
+      goto done;
+
+    /* kibibytes-(read|written) port=kibibytes,.. */
+    for (r = 0; r < 2; r++) {
+      b = r ? exit_bytes_read : exit_bytes_written;
+      tor_assert(b);
+      if (fprintf(out, "%s ",
+                  r == 0 ? "kibibytes-read" : "kibibytes-written")<0)
+        goto done;
+
+      comma = 0;
+      for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+        if (b[i] > 0) {
+          uint64_t num = b[i];
+          num += EXIT_STATS_ROUND_UP_BYTES - 1;
+          num /= EXIT_STATS_ROUND_UP_BYTES;
+          num *= EXIT_STATS_ROUND_UP_BYTES;
+          num /= 1024;
+          if (fprintf(out, "%s%d="U64_FORMAT,
+                      comma++ ? "," : "", i,
+                      U64_PRINTF_ARG(num)) < 0)
+            goto done;
+        }
+      }
+      if (fprintf(out, "\n")<0)
+        goto done;
+      /* Reset counters */
+      memset(b, 0, EXIT_STATS_NUM_PORTS*sizeof(uint64_t));
+    }
+    /* streams-opened port=num,.. */
+    if (fprintf(out, "streams-opened ")<0)
+      goto done;
+    comma = 0;
+    for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+      if (exit_streams[i] > 0) {
+        uint32_t num = exit_streams[i];
+        num += EXIT_STATS_ROUND_UP_STREAMS - 1;
+        num /= EXIT_STATS_ROUND_UP_STREAMS;
+        num *= EXIT_STATS_ROUND_UP_STREAMS;
+        if (fprintf(out, "%s%d=%d",
+                    comma++ ? "," : "", i, num)<0)
+          goto done;
+      }
+    }
+    if (fprintf(out, "\n")<0)
+      goto done;
+    /* Reset counters */
+    memset(exit_streams, 0, sizeof(exit_streams));
+    end_of_current_exit_stats_period += EXIT_STATS_INTERVAL_SEC;
+  }
+
+  if (open_file)
+    finish_writing_to_file(open_file);
+  open_file = NULL;
+ done:
+  if (open_file)
+    abort_writing_to_file(open_file);
+  tor_free(filename);
+}
+
+/** Prepare to add an exit stats observation at second <b>when</b> by
+ * checking whether this observation lies in the current observation
+ * period; if not, shift the current period forward by one until the
+ * reported event fits it and write all results in between to disk. */
+static void
+add_exit_obs(time_t when)
+{
+  if (when > end_of_current_exit_stats_period) {
+    if (end_of_current_exit_stats_period)
+      write_exit_stats(when);
+    else
+      end_of_current_exit_stats_period = when + EXIT_STATS_INTERVAL_SEC;
+  }
+}
+
+/** Note that we wrote <b>num_bytes</b> to an exit connection to
+ * <b>port</b> in second <b>when</b>. */
+void
+rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes,
+                                 time_t when)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  add_exit_obs(when);
+  exit_bytes_written[port] += num_bytes;
+  log_debug(LD_HIST, "Written %lu bytes to exit connection to port %d.",
+            (unsigned long)num_bytes, port);
+}
+
+/** Note that we read <b>num_bytes</b> from an exit connection to
+ * <b>port</b> in second <b>when</b>. */
+void
+rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes,
+                              time_t when)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  add_exit_obs(when);
+  exit_bytes_read[port] += num_bytes;
+  log_debug(LD_HIST, "Read %lu bytes from exit connection to port %d.",
+            (unsigned long)num_bytes, port);
+}
+
+/** Note that we opened an exit stream to <b>port</b> in second
+ * <b>when</b>. */
+void
+rep_hist_note_exit_stream_opened(uint16_t port, time_t when)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  add_exit_obs(when);
+  exit_streams[port]++;
+  log_debug(LD_HIST, "Opened exit stream to port %d", port);
+}
+#endif
+
 /** Helper: Return the largest value in b->maxima.  (This is equal to the
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
  * NUM_SECS_BW_SUM_IS_VALID seconds.)

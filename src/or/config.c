@@ -205,6 +205,7 @@ static config_var_t _option_vars[] = {
   V(ExitNodes,                   ROUTERSET, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
+  V(ExitPortStatistics,          BOOL,     "0"),
   V(FallbackNetworkstatusFile,   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
   V(FascistFirewall,             BOOL,     "0"),
@@ -1383,6 +1384,16 @@ options_act(or_options_t *old_options)
   log_notice(LD_CONFIG, "Configured to measure usage by country and "
     "write aggregate statistics to disk. Check the geoip-stats file "
     "in your data directory once I've been running for 24 hours.");
+#endif
+#ifdef ENABLE_EXIT_STATS
+  if (options->ExitPortStatistics)
+    log_notice(LD_CONFIG, "Configured to measure exit port statistics. "
+               "Look for the exit-stats file that will first be written to "
+               "the data directory in 24 hours from now.");
+#else
+  if (options->ExitPortStatistics)
+    log_warn(LD_CONFIG, "ExitPortStatistics enabled, but Tor was built "
+             "without port statistics support.");
 #endif
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&

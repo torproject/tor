@@ -17,6 +17,10 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       help debug some conceivable causes of bug 930.
     - Directories that are configured with the --enable-geoip-stats flag
       now write their GeoIP stats to disk exactly every 24 hours.
+    - Exit nodes can write statistics on the number of exit streams and
+      transferred bytes per port to disk every 24 hours.  To enable this,
+      run configure with the --enable-exit-stats option, and set
+      "ExitPortStatistics 1" in your torrc.
 
   o Minor bugfixes
     - Hidden service clients didn't use a cached service descriptor that

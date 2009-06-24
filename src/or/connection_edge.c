@@ -333,6 +333,8 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
            escaped_safe_str(conn->address),conn->port,
            safe_str(fmt_addr(&conn->addr)));
 
+  rep_hist_note_exit_stream_opened(conn->port, approx_time());
+
   conn->state = EXIT_CONN_STATE_OPEN;
   connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
   if (connection_wants_to_flush(conn)) /* in case there are any queued relay

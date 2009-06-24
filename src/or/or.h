@@ -2475,6 +2475,9 @@ typedef struct {
    * exit allows it, we use it. */
   int AllowSingleHopCircuits;
 
+  /** If true, the user wants us to collect statistics on port usage. */
+  int ExitPortStatistics;
+
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
    * Helps avoid some cross-site attacks. */
@@ -3961,6 +3964,17 @@ void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
+#ifdef ENABLE_EXIT_STATS
+void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes,
+                                   time_t now);
+void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes,
+                                      time_t now);
+void rep_hist_note_exit_stream_opened(uint16_t port, time_t now);
+#else
+#define rep_hist_note_exit_bytes_read(p,n,t) STMT_NIL
+#define rep_hist_note_exit_bytes_written(p,n,t) STMT_NIL
+#define rep_hist_note_exit_stream_opened(p,t) STMT_NIL
+#endif
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);
