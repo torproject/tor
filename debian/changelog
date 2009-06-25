@@ -1,3 +1,23 @@
+tor (0.2.0.35-1) unstable; urgency=low
+
+  * New upstream version:
+    o security fixes:
+      - Avoid crashing in the presence of certain malformed descriptors.
+      - Fix an edge case where a malicious exit relay could convince a
+        controller that the client's DNS question resolves to an internal IP
+        address.
+    o bugfixes:
+      - Finally fix the bug where dynamic-IP relays disappear when their
+        IP address changes.
+      - Fix a DNS-related crash bug (apparently depending on everything
+        but the phase of the moon).
+      - Fix a memory leak when starting with a cache over a few days old
+      - Hidden service clients didn't use a cached service descriptor that
+        was older than 15 minutes, but wouldn't fetch a new one either.
+    [More details are in the upstream changelog.]
+
+ -- Peter Palfrader <weasel@debian.org>  Fri, 26 Jun 2009 01:56:14 +0200
+
 tor (0.2.0.34-1) unstable; urgency=high
 
   * New upstream version:
