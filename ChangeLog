@@ -2,6 +2,8 @@ Changes in version 0.2.1.17-?? - 2009-??-??
   o Minor bugfixes:
     - Serve the DirPortFrontPage page even when we have been approaching
       our quotas recently.  Fixes bug 1013; bugfix on 0.2.1.8-alpha.
+    - Do not cap bandwidths reported by directory authorities; they are
+      already adjusted to reflect reality.
 
   o Major features:
     - Clients now use the bandwidth values in the consensus, rather than
