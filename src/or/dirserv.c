@@ -1943,6 +1943,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
 
   if (format != NS_V2) {
     routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
+    u_int32_t bw;
 
     if (format != NS_CONTROL_PORT) {
       /* Blow up more or less nicely if we didn't get anything or not the
@@ -1985,9 +1986,14 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       };
     }
 
+    if (format == NS_CONTROL_PORT && rs->has_bandwidth) {
+      bw = rs->bandwidth;
+    } else {
+      tor_assert(desc);
+      bw = router_get_advertised_bandwidth_capped(desc) / 1000;
+    }
     r = tor_snprintf(cp, buf_len - (cp-buf),
-                     "w Bandwidth=%d\n",
-                     router_get_advertised_bandwidth_capped(desc) / 1024);
+                     "w Bandwidth=%d\n", bw);
 
     if (r<0) {
       log_warn(LD_BUG, "Not enough space in buffer.");
