@@ -1523,15 +1523,12 @@ router_get_advertised_bandwidth_capped(routerinfo_t *router)
   return result;
 }
 
-/** Eventually, the number we return will come from the directory
- * consensus, so clients can dynamically update to better numbers.
- *
- * But for now, or in case there is no consensus available, just return
- * a sufficient default. */
-static uint32_t
-get_max_believable_bandwidth(void)
+/** Return bw*1000, unless bw*1000 would overflow, in which case return
+ * INT32_MAX. */
+static INLINE int32_t
+kb_to_bytes(uint32_t bw)
 {
-  return DEFAULT_MAX_BELIEVABLE_BANDWIDTH;
+  return (bw > (INT32_MAX/1000)) ? INT32_MAX : bw*1000;
 }
 
 /** Helper function:
@@ -1568,7 +1565,6 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
   int n_unknown = 0;
   bitarray_t *exit_bits;
   bitarray_t *guard_bits;
-  uint32_t max_believable_bw = get_max_believable_bandwidth();
   int me_idx = -1;
 
   /* Can't choose exit and guard at same time */
@@ -1598,7 +1594,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
       is_exit = status->is_exit;
       is_guard = status->is_possible_guard;
       if (status->has_bandwidth) {
-        this_bw = status->bandwidth*1000;
+        this_bw = kb_to_bytes(status->bandwidth);
       } else { /* guess */
         /* XXX022 once consensuses always list bandwidths, we can take
          * this guessing business out. -RD */
@@ -1617,7 +1613,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
       is_exit = router->is_exit;
       is_guard = router->is_possible_guard;
       if (rs && rs->has_bandwidth) {
-        this_bw = rs->bandwidth*1000;
+        this_bw = kb_to_bytes(rs->bandwidth);
       } else if (rs) { /* guess; don't trust the descriptor */
         /* XXX022 once consensuses always list bandwidths, we can take
          * this guessing business out. -RD */
@@ -1626,27 +1622,15 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
         flags |= is_exit ? 2 : 0;
         flags |= is_guard ? 4 : 0;
       } else /* bridge or other descriptor not in our consensus */
-        this_bw = router_get_advertised_bandwidth(router);
+        this_bw = router_get_advertised_bandwidth_capped(router);
     }
     if (is_exit)
       bitarray_set(exit_bits, i);
     if (is_guard)
       bitarray_set(guard_bits, i);
-    /* if they claim something huge, don't believe it */
-    if (this_bw > max_believable_bw) {
-      char fp[HEX_DIGEST_LEN+1];
-      base16_encode(fp, sizeof(fp), statuses ?
-                      status->identity_digest :
-                      router->cache_info.identity_digest,
-                    DIGEST_LEN);
-      log_fn(LOG_PROTOCOL_WARN, LD_DIR,
-             "Bandwidth %d for router %s (%s) exceeds allowed max %d, capping",
-             this_bw, router ? router->nickname : "(null)",
-             fp, max_believable_bw);
-      this_bw = max_believable_bw;
-    }
     if (is_known) {
       bandwidths[i] = (int32_t) this_bw; // safe since MAX_BELIEVABLE<INT32_MAX
+      tor_assert(bandwidths[i] >= 0);
       if (is_guard)
         total_guard_bw += this_bw;
       else
@@ -2645,13 +2629,16 @@ routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
  * If <b>make_old</b> is true, instead of deleting the router, we try adding
  * it to rl-&gt;old_routers. */
 void
-routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old)
+routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old, time_t now)
 {
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
   int idx = ri->cache_info.routerlist_index;
   tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
   tor_assert(smartlist_get(rl->routers, idx) == ri);
+
+  /* make sure the rephist module knows that it's not running */
+  rep_hist_note_router_unreachable(ri->cache_info.identity_digest, now);
 
   ri->cache_info.routerlist_index = -1;
   smartlist_del(rl->routers, idx);
@@ -3344,7 +3331,7 @@ routerlist_remove_old_routers(void)
         log_info(LD_DIR,
                  "Forgetting obsolete (too old) routerinfo for router '%s'",
                  router->nickname);
-        routerlist_remove(routerlist, router, 1);
+        routerlist_remove(routerlist, router, 1, now);
         i--;
       }
     }

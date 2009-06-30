@@ -3969,7 +3969,7 @@ void rep_history_clean(time_t before);
 
 void rep_hist_note_router_reachable(const char *id, time_t when);
 void rep_hist_note_router_unreachable(const char *id, time_t when);
-int rep_hist_record_mtbf_data(void);
+int rep_hist_record_mtbf_data(time_t now, int missing_means_down);
 int rep_hist_load_mtbf_data(time_t now);
 
 time_t rep_hist_downrate_old_runs(time_t now);
@@ -4405,7 +4405,8 @@ void routerinfo_free(routerinfo_t *router);
 void extrainfo_free(extrainfo_t *extrainfo);
 void routerlist_free(routerlist_t *rl);
 void dump_routerlist_mem_usage(int severity);
-void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old);
+void routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old,
+                       time_t now);
 void routerlist_free_all(void);
 void routerlist_reset_warnings(void);
 void router_set_status(const char *digest, int up);

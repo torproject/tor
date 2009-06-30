@@ -797,7 +797,7 @@ directory_remove_invalid(void)
     if (r & FP_REJECT) {
       log_info(LD_DIRSERV, "Router '%s' is now rejected: %s",
                ent->nickname, msg?msg:"");
-      routerlist_remove(rl, ent, 0);
+      routerlist_remove(rl, ent, 0, time(NULL));
       i--;
       changed = 1;
       continue;
@@ -951,8 +951,8 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     answer = get_options()->AssumeReachable ||
              now < router->last_reachable + REACHABLE_TIMEOUT;
 
-  if (router->is_running && !answer) {
-    /* it was running but now it's not. tell rephist. */
+  if (!answer) {
+    /* not considered reachable. tell rephist. */
     rep_hist_note_router_unreachable(router->cache_info.identity_digest, now);
   }
 
