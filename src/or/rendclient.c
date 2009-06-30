@@ -94,8 +94,24 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       }
     });
     if (!intro_key) {
-      log_warn(LD_BUG, "Internal error: could not find intro key.");
-      goto err;
+      if (rend_cache_lookup_entry(introcirc->rend_data->onion_address,
+          0, &entry) > 0) {
+        log_warn(LD_BUG, "We have both a v0 and a v2 rend desc for this "
+                 "service. The v2 desc doesn't contain the introduction "
+                 "point (and key) to send an INTRODUCE1/2 cell to this "
+                 "introduction point. Assuming the introduction point "
+                 "is for v0 rend clients and using the service key "
+                 "from the v0 desc instead. (This is probably a bug, "
+                 "because we shouldn't even have both a v0 and a v2 "
+                 "descriptor for the same service.)");
+        /* See flyspray task 1024. */
+        intro_key = entry->parsed->pk;
+      } else {
+        log_warn(LD_BUG, "Internal error: could not find intro key; we "
+                 "only have a v2 rend desc with %d intro points.",
+                 smartlist_len(entry->parsed->intro_nodes));
+        goto err;
+      }
     }
   }
   if (crypto_pk_get_digest(intro_key, payload)<0) {
