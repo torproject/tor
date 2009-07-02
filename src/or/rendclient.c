@@ -91,7 +91,9 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     }
   });
   if (!intro_key) {
-    log_warn(LD_BUG, "Internal error: could not find intro key.");
+    log_warn(LD_BUG, "Internal error: could not find intro key; we "
+             "only have a v2 rend desc with %d intro points.",
+             smartlist_len(entry->parsed->intro_nodes));
     goto err;
   }
   if (crypto_pk_get_digest(intro_key, payload)<0) {
