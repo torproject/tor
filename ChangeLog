@@ -28,6 +28,9 @@ Changes in version 0.2.2.4-alpha - 2009-10-??
     - Don't count one-hop circuits when we're estimating how long it
       takes circuits to build on average. Otherwise we'll set our circuit
       build timeout lower than we should. Bugfix on 0.2.2.2-alpha.
+    - Directory authorities no longer change their opinion of, or vote on,
+      whether a router is Running, unless they have themselves been online
+      long enough to have some idea.  Fix for bug 1023.
 
   o Code simplifications and refactoring:
     - Revise our unit tests to use the "tinytest" framework, so we
