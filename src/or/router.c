@@ -1919,6 +1919,9 @@ extrainfo_get_client_geoip_summary(time_t now)
 #ifdef ENABLE_GEOIP_STATS
   geoip_purge_interval = DIR_RECORD_USAGE_RETAIN_IPS;
 #endif
+#ifdef ENABLE_ENTRY_STATS
+  geoip_purge_interval = ENTRY_RECORD_USAGE_RETAIN_IPS;
+#endif
   if (now > last_purged_at+geoip_purge_interval) {
     /* (Note that this also discards items in the client history with
      * action GEOIP_CLIENT_NETWORKSTATUS{_V2}, which doesn't matter

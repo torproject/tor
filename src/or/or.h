@@ -2478,6 +2478,9 @@ typedef struct {
   /** If true, the user wants us to collect statistics on port usage. */
   int ExitPortStatistics;
 
+  /** If true, the user wants us to collect statistics as entry node. */
+  int EntryStatistics;
+
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
    * Helps avoid some cross-site attacks. */
@@ -3595,6 +3598,10 @@ int dnsserv_launch_request(const char *name, int is_reverse);
  * we are willing to talk about it? */
 #define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (24*60*60)
 
+/** Time interval: Flush geoip data to disk this often when measuring on an
+ * entry guard. */
+#define ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
+
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);
 #endif
@@ -3610,7 +3617,7 @@ country_t geoip_get_country(const char *countrycode);
  * the others, we're not.
  */
 typedef enum {
-  /** We've noticed a connection as a bridge relay. */
+  /** We've noticed a connection as a bridge relay or entry guard. */
   GEOIP_CLIENT_CONNECT = 0,
   /** We've served a networkstatus consensus as a directory server. */
   GEOIP_CLIENT_NETWORKSTATUS = 1,

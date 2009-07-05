@@ -13,6 +13,7 @@
 
 static void clear_geoip_db(void);
 static void dump_geoip_stats(void);
+static void dump_entry_stats(void);
 
 /** An entry from the GeoIP file: maps an IP range to a country. */
 typedef struct geoip_entry_t {
@@ -308,8 +309,13 @@ geoip_note_client_seen(geoip_client_action_t action,
   or_options_t *options = get_options();
   clientmap_entry_t lookup, *ent;
   if (action == GEOIP_CLIENT_CONNECT) {
+#ifdef ENABLE_ENTRY_STATS
+    if (!options->EntryStatistics)
+      return;
+#else
     if (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))
       return;
+#endif
     /* Did we recently switch from bridge to relay or back? */
     if (client_history_starts > now)
       return;
@@ -337,6 +343,8 @@ geoip_note_client_seen(geoip_client_action_t action,
     geoip_remove_old_clients(current_request_period_starts);
     /* Before rotating, write the current stats to disk. */
     dump_geoip_stats();
+    if (get_options()->EntryStatistics)
+      dump_entry_stats();
     /* Now rotate request period */
     SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
         memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
@@ -654,6 +662,40 @@ dump_geoip_stats(void)
   tor_free(filename);
   tor_free(data_v2);
   tor_free(data_v3);
+#endif
+}
+
+/** Store all our geoip statistics as entry guards into
+ * $DATADIR/entry-stats. */
+static void
+dump_entry_stats(void)
+{
+#ifdef ENABLE_ENTRY_STATS
+  time_t now = time(NULL);
+  char *filename = get_datadir_fname("entry-stats");
+  char *data = NULL;
+  char since[ISO_TIME_LEN+1], written[ISO_TIME_LEN+1];
+  open_file_t *open_file = NULL;
+  FILE *out;
+
+  data = geoip_get_client_history(now, GEOIP_CLIENT_CONNECT);
+  format_iso_time(since, geoip_get_history_start());
+  format_iso_time(written, now);
+  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
+                                    0600, &open_file);
+  if (!out)
+    goto done;
+  if (fprintf(out, "written %s\nstarted-at %s\nips %s\n",
+              written, since, data ? data : "") < 0)
+    goto done;
+
+  finish_writing_to_file(open_file);
+  open_file = NULL;
+ done:
+  if (open_file)
+    abort_writing_to_file(open_file);
+  tor_free(filename);
+  tor_free(data);
 #endif
 }
 

@@ -198,6 +198,7 @@ static config_var_t _option_vars[] = {
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V(EntryNodes,                  ROUTERSET,   NULL),
+  V(EntryStatistics,             BOOL,     "0"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
   V(ExcludeNodes,                ROUTERSET, NULL),
   V(ExcludeExitNodes,            ROUTERSET, NULL),
@@ -1394,6 +1395,25 @@ options_act(or_options_t *old_options)
   if (options->ExitPortStatistics)
     log_warn(LD_CONFIG, "ExitPortStatistics enabled, but Tor was built "
              "without port statistics support.");
+#endif
+#ifdef ENABLE_ENTRY_STATS
+  if (options->EntryStatistics) {
+    if (should_record_bridge_info(options)) {
+      /* Don't allow measuring statistics on entry guards when configured
+       * as bridge. */
+      log_warn(LD_CONFIG, "Bridges cannot be configured to measure "
+               "additional GeoIP statistics as entry guards.");
+      return -1;
+    } else
+      log_notice(LD_CONFIG, "Configured to measure entry node "
+                 "statistics. Look for the entry-stats file that will "
+                 "first be written to the data directory in 24 hours "
+                 "from now.");
+  }
+#else
+  if (options->EntryStatistics)
+    log_warn(LD_CONFIG, "EntryStatistics enabled, but Tor was built "
+             "without entry node statistics support.");
 #endif
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&

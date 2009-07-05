@@ -21,6 +21,10 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       transferred bytes per port to disk every 24 hours.  To enable this,
       run configure with the --enable-exit-stats option, and set
       "ExitPortStatistics 1" in your torrc.
+    - Entry nodes can write statistics on the rough number and origins of
+      connecting clients to disk every 24 hours. To enable this, run
+      configure with the --enable-entry-stats option, and set
+      "EntryStatistics 1" in your torrc.
 
   o Minor bugfixes
     - Hidden service clients didn't use a cached service descriptor that
