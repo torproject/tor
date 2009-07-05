@@ -162,6 +162,7 @@ static config_var_t _option_vars[] = {
   V(BridgePassword,              STRING,   NULL),
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
+  V(CellStatistics,              BOOL,     "0"),
   V(CircuitBuildTimeout,         INTERVAL, "1 minute"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
@@ -1394,6 +1395,16 @@ options_act(or_options_t *old_options)
   if (options->ExitPortStatistics)
     log_warn(LD_CONFIG, "ExitPortStatistics enabled, but Tor was built "
              "without port statistics support.");
+#endif
+#ifdef ENABLE_BUFFER_STATS
+  if (options->CellStatistics)
+    log_notice(LD_CONFIG, "Configured to measure cell statistics. Look "
+               "for the buffer-stats file that will first be written to "
+               "the data directory in 24 hours from now.");
+#else
+  if (options->CellStatistics)
+    log_warn(LD_CONFIG, "CellStatistics enabled, but Tor was built "
+             "without cell statistics support.");
 #endif
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&

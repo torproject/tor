@@ -1592,7 +1592,13 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
 void
 cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
 {
-  cell_queue_append(queue, packed_cell_copy(cell));
+  packed_cell_t *copy = packed_cell_copy(cell);
+#ifdef ENABLE_BUFFER_STATS
+  /* Remember the exact time when this cell was put in the queue. */
+  if (get_options()->CellStatistics)
+    tor_gettimeofday(&copy->packed_timeval);
+#endif
+  cell_queue_append(queue, copy);
 }
 
 /** Remove and free every cell in <b>queue</b>. */
@@ -1801,6 +1807,19 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
     packed_cell_t *cell = cell_queue_pop(queue);
     tor_assert(*next_circ_on_conn_p(circ,conn));
 
+#ifdef ENABLE_BUFFER_STATS
+    /* Calculate the exact time that this cell has spent in the queue. */
+    if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
+      struct timeval flushed_from_queue;
+      uint32_t cell_waiting_time;
+      or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+      tor_gettimeofday(&flushed_from_queue);
+      cell_waiting_time = (uint32_t)
+            (tv_udiff(&cell->packed_timeval, &flushed_from_queue) / 1000);
+      orcirc->total_cell_waiting_time += cell_waiting_time;
+      orcirc->processed_cells++;
+    }
+#endif
     connection_write_to_buf(cell->body, CELL_NETWORK_SIZE, TO_CONN(conn));
 
     packed_cell_free(cell);
