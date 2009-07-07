@@ -43,7 +43,7 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       controllers.
 
 
-Changes in version 0.2.1.17-rc - 2009-07-02
+Changes in version 0.2.1.17-rc - 2009-07-07
   o Major features:
     - Clients now use the bandwidth values in the consensus, rather than
       the bandwidth values in each relay descriptor. This approach opens
@@ -81,6 +81,8 @@ Changes in version 0.2.1.17-rc - 2009-07-02
     - When we can't find an intro key for a v2 hidden service descriptor,
       fall back to the v0 hidden service descriptor and log a bug message.
       Workaround for bug 1024.
+    - Fix a log message that did not respect the SafeLogging option.
+      Resolves bug 1027.
 
   o Minor features:
     - If we're a relay and we change our IP address, be more verbose
