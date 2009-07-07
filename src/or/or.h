@@ -23,6 +23,9 @@
 #ifndef ENABLE_GEOIP_STATS
 #define ENABLE_GEOIP_STATS 1
 #endif
+#ifndef ENABLE_BUFFER_STATS
+#define ENABLE_BUFFER_STATS 1
+#endif
 #endif
 
 #ifdef MS_WINDOWS
@@ -833,6 +836,9 @@ typedef struct var_cell_t {
 typedef struct packed_cell_t {
   struct packed_cell_t *next; /**< Next cell queued on this circuit. */
   char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
+#ifdef ENABLE_BUFFER_STATS
+  struct timeval packed_timeval; /**< When was this cell packed? */
+#endif
 } packed_cell_t;
 
 /** A queue of cells on a circuit, waiting to be added to the
@@ -2072,6 +2078,17 @@ typedef struct or_circuit_t {
 
   /** True iff this circuit was made with a CREATE_FAST cell. */
   unsigned int is_first_hop : 1;
+
+#ifdef ENABLE_BUFFER_STATS
+  /** Number of cells that were removed from circuit queue; reset every
+   * time when writing buffer stats to disk. */
+  uint32_t processed_cells;
+
+  /** Total time in milliseconds that cells spent in both app-ward and
+   * exit-ward queues of this circuit; reset every time when writing
+   * buffer stats to disk. */
+  uint64_t total_cell_waiting_time;
+#endif
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t.*/
@@ -2477,6 +2494,9 @@ typedef struct {
 
   /** If true, the user wants us to collect statistics on port usage. */
   int ExitPortStatistics;
+
+  /** If true, the user wants us to collect cell statistics. */
+  int CellStatistics;
 
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
@@ -4025,6 +4045,12 @@ void hs_usage_note_fetch_total(const char *service_id, time_t now);
 void hs_usage_note_fetch_successful(const char *service_id, time_t now);
 void hs_usage_write_statistics_to_file(time_t now);
 void hs_usage_free_all(void);
+
+#ifdef ENABLE_BUFFER_STATS
+#define DUMP_BUFFER_STATS_INTERVAL (24*60*60)
+void add_circ_to_buffer_stats(circuit_t *circ, time_t end_of_interval);
+void dump_buffer_stats(void);
+#endif
 
 /********************************* rendclient.c ***************************/
 

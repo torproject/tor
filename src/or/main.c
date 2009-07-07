@@ -830,6 +830,9 @@ run_scheduled_events(time_t now)
   static time_t time_to_clean_caches = 0;
   static time_t time_to_recheck_bandwidth = 0;
   static time_t time_to_check_for_expired_networkstatus = 0;
+#ifdef ENABLE_BUFFER_STATS
+  static time_t time_to_dump_buffer_stats = 0;
+#endif
   static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
   int i;
@@ -956,6 +959,14 @@ run_scheduled_events(time_t now)
 #define CHECK_EXPIRED_NS_INTERVAL (2*60)
     time_to_check_for_expired_networkstatus = now + CHECK_EXPIRED_NS_INTERVAL;
   }
+
+#ifdef ENABLE_BUFFER_STATS
+  if (time_to_dump_buffer_stats < now) {
+    if (get_options()->CellStatistics && time_to_dump_buffer_stats)
+      dump_buffer_stats();
+    time_to_dump_buffer_stats = now + DUMP_BUFFER_STATS_INTERVAL;
+  }
+#endif
 
   /* Remove old information from rephist and the rend cache. */
   if (time_to_clean_caches < now) {

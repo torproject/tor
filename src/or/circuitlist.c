@@ -447,6 +447,11 @@ circuit_free(circuit_t *circ)
       rend_data_free(ocirc->rend_data);
   } else {
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
+#ifdef ENABLE_BUFFER_STATS
+    /* Remember cell statistics for this circuit before deallocating. */
+    if (get_options()->CellStatistics)
+      add_circ_to_buffer_stats(circ, time(NULL));
+#endif
     mem = ocirc;
     memlen = sizeof(or_circuit_t);
     tor_assert(circ->magic == OR_CIRCUIT_MAGIC);
