@@ -10,6 +10,10 @@ Changes in version 0.2.1.19 - 2009-07-??
       and confuse fewer users.
 
   o Minor bugfixes:
+    - Relays no longer publish a new server descriptor if they change
+      their MaxAdvertisedBandwidth config option but it doesn't end up
+      changing their advertised bandwidth numbers. Bugfix on 0.2.0.28-rc;
+      fixes bug 1026. Patch from Sebastian.
     - Avoid leaking memory every time we get a create cell but we have
       so many already queued that we refuse it. Bugfix on 0.2.0.19-alpha;
       fixes bug 1034. Reported by BarkerJr.

@@ -1300,18 +1300,10 @@ router_rebuild_descriptor(int force)
   ri->platform = tor_strdup(platform);
 
   /* compute ri->bandwidthrate as the min of various options */
-  ri->bandwidthrate = (int)options->BandwidthRate;
-  if (ri->bandwidthrate > options->MaxAdvertisedBandwidth)
-    ri->bandwidthrate = (int)options->MaxAdvertisedBandwidth;
-  if (options->RelayBandwidthRate > 0 &&
-      ri->bandwidthrate > options->RelayBandwidthRate)
-    ri->bandwidthrate = (int)options->RelayBandwidthRate;
+  ri->bandwidthrate = get_effective_bwrate(options);
 
   /* and compute ri->bandwidthburst similarly */
-  ri->bandwidthburst = (int)options->BandwidthBurst;
-  if (options->RelayBandwidthBurst > 0 &&
-      ri->bandwidthburst > options->RelayBandwidthBurst)
-    ri->bandwidthburst = (int)options->RelayBandwidthBurst;
+  ri->bandwidthburst = get_effective_bwburst(options);
 
   ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
 
