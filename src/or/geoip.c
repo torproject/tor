@@ -188,7 +188,14 @@ geoip_load_file(const char *filename, or_options_t *options)
     return -1;
   }
   if (!geoip_countries) {
+    geoip_country_t *geoip_unresolved;
     geoip_countries = smartlist_create();
+    /* Add a geoip_country_t for requests that could not be resolved to a
+     * country as first element (index 0) to geoip_countries. */
+    geoip_unresolved = tor_malloc_zero(sizeof(geoip_country_t));
+    strlcpy(geoip_unresolved->countrycode, "??",
+            sizeof(geoip_unresolved->countrycode));
+    smartlist_add(geoip_countries, geoip_unresolved);
     country_idxplus1_by_lc_code = strmap_new();
   }
   if (geoip_entries) {
@@ -375,6 +382,8 @@ geoip_note_client_seen(geoip_client_action_t action,
   if (action == GEOIP_CLIENT_NETWORKSTATUS ||
       action == GEOIP_CLIENT_NETWORKSTATUS_V2) {
     int country_idx = geoip_get_country_by_ip(addr);
+    if (country_idx < 0)
+      country_idx = 0; /** unresolved requests are stored at index 0. */
     if (country_idx >= 0 && country_idx < smartlist_len(geoip_countries)) {
       geoip_country_t *country = smartlist_get(geoip_countries, country_idx);
       if (action == GEOIP_CLIENT_NETWORKSTATUS)
@@ -505,7 +514,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
         continue;
       country = geoip_get_country_by_ip((*ent)->ipaddr);
       if (country < 0)
-        continue;
+        country = 0; /** unresolved requests are stored at index 0. */
       tor_assert(0 <= country && country < n_countries);
       ++counts[country];
       ++total;
