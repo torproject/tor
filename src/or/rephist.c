@@ -1330,6 +1330,9 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
 #define EXIT_STATS_ROUND_UP_STREAMS 4
 /** Number of TCP ports */
 #define EXIT_STATS_NUM_PORTS 65536
+/** Reciprocal of threshold (= 0.01%) of total bytes that a port needs to
+ * see in order to be included in exit stats. */
+#define EXIT_STATS_THRESHOLD 10000
 
 /* The following data structures are arrays and no fancy smartlists or maps,
  * so that all write operations can be done in constant time. This comes at
@@ -1351,7 +1354,8 @@ write_exit_stats(time_t when)
 {
   char t[ISO_TIME_LEN+1];
   int r, i, comma;
-  uint64_t *b;
+  uint64_t *b, total_bytes, other_bytes;
+  uint32_t other_streams;
 
   char *filename = get_datadir_fname("exit-stats");
   open_file_t *open_file = NULL;
@@ -1376,51 +1380,81 @@ write_exit_stats(time_t when)
     if (fprintf(out, "written %s (%d s)\n", t, EXIT_STATS_INTERVAL_SEC) < 0)
       goto done;
 
+    /* Count the total number of bytes, so that we can attribute all
+     * observations below a threshold of 1 / EXIT_STATS_THRESHOLD of all
+     * bytes to a special port 'other'. */
+    total_bytes = 0;
+    for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+      total_bytes += exit_bytes_read[i];
+      total_bytes += exit_bytes_written[i];
+    }
+
     /* kibibytes-(read|written) port=kibibytes,.. */
     for (r = 0; r < 2; r++) {
       b = r ? exit_bytes_read : exit_bytes_written;
       tor_assert(b);
       if (fprintf(out, "%s ",
-                  r == 0 ? "kibibytes-read" : "kibibytes-written")<0)
+                  r ? "kibibytes-read" : "kibibytes-written")<0)
         goto done;
 
       comma = 0;
+      other_bytes = 0;
       for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
         if (b[i] > 0) {
-          uint64_t num = b[i];
-          num += EXIT_STATS_ROUND_UP_BYTES - 1;
-          num /= EXIT_STATS_ROUND_UP_BYTES;
-          num *= EXIT_STATS_ROUND_UP_BYTES;
-          num /= 1024;
-          if (fprintf(out, "%s%d="U64_FORMAT,
-                      comma++ ? "," : "", i,
-                      U64_PRINTF_ARG(num)) < 0)
-            goto done;
+          if (exit_bytes_read[i] + exit_bytes_written[i] > 0 &&
+              (total_bytes / (exit_bytes_read[i] + exit_bytes_written[i])
+              < EXIT_STATS_THRESHOLD)) {
+            uint64_t num = b[i];
+            num += EXIT_STATS_ROUND_UP_BYTES - 1;
+            num /= EXIT_STATS_ROUND_UP_BYTES;
+            num *= EXIT_STATS_ROUND_UP_BYTES;
+            num /= 1024;
+            if (fprintf(out, "%s%d="U64_FORMAT,
+                        comma++ ? "," : "", i,
+                        U64_PRINTF_ARG(num)) < 0)
+              goto done;
+          } else
+            other_bytes += b[i];
         }
       }
-      if (fprintf(out, "\n")<0)
+      other_bytes += EXIT_STATS_ROUND_UP_BYTES - 1;
+      other_bytes /= EXIT_STATS_ROUND_UP_BYTES;
+      other_bytes *= EXIT_STATS_ROUND_UP_BYTES;
+      other_bytes /= 1024;
+      if (fprintf(out, "%sother="U64_FORMAT"\n",
+                  comma ? "," : "", other_bytes)<0)
         goto done;
-      /* Reset counters */
-      memset(b, 0, EXIT_STATS_NUM_PORTS*sizeof(uint64_t));
     }
     /* streams-opened port=num,.. */
     if (fprintf(out, "streams-opened ")<0)
       goto done;
     comma = 0;
+    other_streams = 0;
     for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
       if (exit_streams[i] > 0) {
-        uint32_t num = exit_streams[i];
-        num += EXIT_STATS_ROUND_UP_STREAMS - 1;
-        num /= EXIT_STATS_ROUND_UP_STREAMS;
-        num *= EXIT_STATS_ROUND_UP_STREAMS;
-        if (fprintf(out, "%s%d=%d",
-                    comma++ ? "," : "", i, num)<0)
-          goto done;
+        if (exit_bytes_read[i] + exit_bytes_written[i] > 0 &&
+             (total_bytes / (exit_bytes_read[i] + exit_bytes_written[i])
+             < EXIT_STATS_THRESHOLD)) {
+          uint32_t num = exit_streams[i];
+          num += EXIT_STATS_ROUND_UP_STREAMS - 1;
+          num /= EXIT_STATS_ROUND_UP_STREAMS;
+          num *= EXIT_STATS_ROUND_UP_STREAMS;
+          if (fprintf(out, "%s%d=%d",
+                      comma++ ? "," : "", i, num)<0)
+            goto done;
+        } else
+          other_streams += exit_streams[i];
       }
     }
-    if (fprintf(out, "\n")<0)
+    other_streams += EXIT_STATS_ROUND_UP_STREAMS - 1;
+    other_streams /= EXIT_STATS_ROUND_UP_STREAMS;
+    other_streams *= EXIT_STATS_ROUND_UP_STREAMS;
+    if (fprintf(out, "%sother=%d\n",
+                comma ? "," : "", other_streams)<0)
       goto done;
     /* Reset counters */
+    memset(exit_bytes_read, 0, sizeof(exit_bytes_read));
+    memset(exit_bytes_written, 0, sizeof(exit_bytes_written));
     memset(exit_streams, 0, sizeof(exit_streams));
     end_of_current_exit_stats_period += EXIT_STATS_INTERVAL_SEC;
   }
