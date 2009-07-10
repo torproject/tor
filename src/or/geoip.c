@@ -461,16 +461,6 @@ _c_hist_compare(const void **_a, const void **_b)
  * are willing to talk about it? */
 #define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
 
-/** Return the lowest x such that x is at least <b>number</b>, and x modulo
- * <b>divisor</b> == 0. */
-static INLINE unsigned
-round_to_next_multiple_of(unsigned number, unsigned divisor)
-{
-  number += divisor - 1;
-  number -= number % divisor;
-  return number;
-}
-
 /** Return a newly allocated comma-separated string containing entries for all
  * the countries from which we've seen enough clients connect. The entry
  * format is cc=num where num is the number of IPs we've seen connecting from

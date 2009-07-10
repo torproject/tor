@@ -2669,6 +2669,16 @@ struct socks_request_t {
                               * every connection. */
 };
 
+/** Return the lowest x such that x is at least <b>number</b>, and x modulo
+ * <b>divisor</b> == 0. */
+static INLINE unsigned
+round_to_next_multiple_of(unsigned number, unsigned divisor)
+{
+  number += divisor - 1;
+  number -= number % divisor;
+  return number;
+}
+
 /* all the function prototypes go here */
 
 /********************************* buffers.c ***************************/

@@ -1404,10 +1404,8 @@ write_exit_stats(time_t when)
           if (exit_bytes_read[i] + exit_bytes_written[i] > 0 &&
               (total_bytes / (exit_bytes_read[i] + exit_bytes_written[i])
               < EXIT_STATS_THRESHOLD)) {
-            uint64_t num = b[i];
-            num += EXIT_STATS_ROUND_UP_BYTES - 1;
-            num /= EXIT_STATS_ROUND_UP_BYTES;
-            num *= EXIT_STATS_ROUND_UP_BYTES;
+            uint64_t num = round_to_next_multiple_of(b[i],
+                                         EXIT_STATS_ROUND_UP_BYTES);
             num /= 1024;
             if (fprintf(out, "%s%d="U64_FORMAT,
                         comma++ ? "," : "", i,
@@ -1417,9 +1415,8 @@ write_exit_stats(time_t when)
             other_bytes += b[i];
         }
       }
-      other_bytes += EXIT_STATS_ROUND_UP_BYTES - 1;
-      other_bytes /= EXIT_STATS_ROUND_UP_BYTES;
-      other_bytes *= EXIT_STATS_ROUND_UP_BYTES;
+      other_bytes = round_to_next_multiple_of(other_bytes,
+                                  EXIT_STATS_ROUND_UP_BYTES);
       other_bytes /= 1024;
       if (fprintf(out, "%sother="U64_FORMAT"\n",
                   comma ? "," : "", other_bytes)<0)
@@ -1435,10 +1432,8 @@ write_exit_stats(time_t when)
         if (exit_bytes_read[i] + exit_bytes_written[i] > 0 &&
              (total_bytes / (exit_bytes_read[i] + exit_bytes_written[i])
              < EXIT_STATS_THRESHOLD)) {
-          uint32_t num = exit_streams[i];
-          num += EXIT_STATS_ROUND_UP_STREAMS - 1;
-          num /= EXIT_STATS_ROUND_UP_STREAMS;
-          num *= EXIT_STATS_ROUND_UP_STREAMS;
+          uint32_t num = round_to_next_multiple_of(exit_streams[i],
+                                       EXIT_STATS_ROUND_UP_STREAMS);
           if (fprintf(out, "%s%d=%d",
                       comma++ ? "," : "", i, num)<0)
             goto done;
@@ -1446,9 +1441,8 @@ write_exit_stats(time_t when)
           other_streams += exit_streams[i];
       }
     }
-    other_streams += EXIT_STATS_ROUND_UP_STREAMS - 1;
-    other_streams /= EXIT_STATS_ROUND_UP_STREAMS;
-    other_streams *= EXIT_STATS_ROUND_UP_STREAMS;
+    other_streams = round_to_next_multiple_of(other_streams,
+                                  EXIT_STATS_ROUND_UP_STREAMS);
     if (fprintf(out, "%sother=%d\n",
                 comma ? "," : "", other_streams)<0)
       goto done;
