@@ -3448,8 +3448,6 @@ enum was_router_added_t dirserv_add_multiple_descriptors(
 enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
                                                const char **msg,
                                                const char *source);
-int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
-                                        const char *question, char **answer);
 void dirserv_free_descriptors(void);
 void dirserv_set_router_is_running(routerinfo_t *router, time_t now);
 int list_server_status_v1(smartlist_t *routers, char **router_status_out,

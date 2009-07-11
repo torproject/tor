@@ -834,46 +834,6 @@ directory_remove_invalid(void)
   routerlist_assert_ok(rl);
 }
 
-/** Write a list of unregistered descriptors into a newly allocated
- * string and return it. Used by dirserv operators to keep track of
- * fast nodes that haven't registered.
- */
-int
-getinfo_helper_dirserv_unregistered(control_connection_t *control_conn,
-                                    const char *question, char **answer_out)
-{
-  smartlist_t *answerlist;
-  char buf[1024];
-  char *answer;
-  int min_bw = atoi(question);
-  routerlist_t *rl = router_get_routerlist();
-
-  (void) control_conn;
-
-  if (strcmpstart(question, "unregistered-servers-"))
-    return 0;
-  question += strlen("unregistered-servers-");
-
-  answerlist = smartlist_create();
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ent, {
-    uint32_t r = dirserv_router_get_status(ent, NULL);
-    if (router_get_advertised_bandwidth(ent) >= (size_t)min_bw &&
-        !(r & FP_NAMED)) {
-      /* then log this one */
-      tor_snprintf(buf, sizeof(buf),
-                   "%s: BW %d on '%s'.",
-                   ent->nickname, router_get_advertised_bandwidth(ent),
-                   ent->platform ? ent->platform : "");
-      smartlist_add(answerlist, tor_strdup(buf));
-    }
-  });
-  answer = smartlist_join_strings(answerlist, "\r\n", 0, NULL);
-  SMARTLIST_FOREACH(answerlist, char *, cp, tor_free(cp));
-  smartlist_free(answerlist);
-  *answer_out = answer;
-  return 0;
-}
-
 /** Mark the directory as <b>dirty</b> -- when we're next asked for a
  * directory, we will rebuild it instead of reusing the most recently
  * generated one.

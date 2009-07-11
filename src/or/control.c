@@ -1835,7 +1835,6 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("ns/purpose/", networkstatus,
          "Brief summary of router status by purpose (v2 directory format)."),
 
-  PREFIX("unregistered-servers-", dirserv_unregistered, NULL),
   ITEM("network-status", dir,
        "Brief summary of router status (v1 directory format)"),
   ITEM("circuit-status", events, "List of current circuits originating here."),
