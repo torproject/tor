@@ -970,6 +970,10 @@ typedef struct connection_t {
    * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
+#ifdef ENABLE_GEOIP_STATS
+  /** Unique ID for measuring tunneled network status requests. */
+  uint64_t request_id;
+#endif
 } connection_t;
 
 /** Stores flags and information related to the portion of a v2 Tor OR
@@ -1956,6 +1960,10 @@ typedef struct circuit_t {
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_conn;
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
+#ifdef ENABLE_GEOIP_STATS
+  /** Unique ID for measuring tunneled network status requests. */
+  uint64_t request_id;
+#endif
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -3671,6 +3679,42 @@ char *geoip_get_request_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer);
 void geoip_free_all(void);
+
+/** Directory requests that we are measuring can be either direct or
+ * tunneled. */
+typedef enum {
+  REQUEST_DIRECT = 0,
+  REQUEST_TUNNELED = 1,
+} directory_request_type_t;
+
+/** Possible states for either direct or tunneled directory requests that
+ * are relevant for determining network status download times. */
+typedef enum {
+  /** Found that the client requests a network status; applies to both
+   * direct and tunneled requests; initial state of a request that we are
+   * measuring. */
+  REQUEST_IS_FOR_NETWORK_STATUS = 0,
+  /** Finished writing a network status to the directory connection;
+   * applies to both direct and tunneled requests; completes a direct
+   * request. */
+  FLUSHING_DIR_CONN_FINISHED = 1,
+  /** END cell sent to circuit that initiated a tunneled request. */
+  END_CELL_SENT = 2,
+  /** Flushed last cell from queue of the circuit that initiated a
+    * tunneled request to the outbuf of the OR connection. */
+  CIRC_QUEUE_FLUSHED = 3,
+  /** Flushed last byte from buffer of the OR connection belonging to the
+    * circuit that initiated a tunneled request; completes a tunneled
+    * request. */
+  OR_CONN_BUFFER_FLUSHED = 4
+} directory_request_state_t;
+
+void geoip_start_dirreq(uint64_t request_id, size_t response_size,
+                        geoip_client_action_t action,
+                        directory_request_type_t type);
+void geoip_change_dirreq_state(uint64_t request_id,
+                               directory_request_type_t type,
+                               directory_request_state_t new_state);
 
 /********************************* hibernate.c **********************/
 

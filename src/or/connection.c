@@ -2302,6 +2302,13 @@ connection_handle_write(connection_t *conn, int force)
     /* else open, or closing */
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
+#ifdef ENABLE_GEOIP_STATS
+    /* If we just flushed the last bytes, check if this tunneled dir
+     * request is done. */
+    if (buf_datalen(conn->outbuf) == 0 && conn->request_id)
+      geoip_change_dirreq_state(conn->request_id, REQUEST_TUNNELED,
+                                OR_CONN_BUFFER_FLUSHED);
+#endif
     switch (result) {
       CASE_TOR_TLS_ERROR_ANY:
       case TOR_TLS_CLOSE:

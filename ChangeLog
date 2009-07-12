@@ -20,6 +20,7 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       Estimated shares of v2 and v3 requests are determined as averages,
       not at the end of a measurement period. Also, unresolved requests
       are listed with country code '??'.
+      Directories now also measure download times of network statuses.
     - Exit nodes can write statistics on the number of exit streams and
       transferred bytes per port to disk every 24 hours.  To enable this,
       run configure with the --enable-exit-stats option, and set

@@ -2565,9 +2565,18 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
 #ifdef ENABLE_GEOIP_STATS
     {
       struct in_addr in;
-      if (tor_inet_aton((TO_CONN(conn))->address, &in))
+      if (tor_inet_aton((TO_CONN(conn))->address, &in)) {
         geoip_note_client_seen(act, ntohl(in.s_addr), time(NULL));
         geoip_note_ns_response(act, GEOIP_SUCCESS);
+        /* Note that a request for a network status has started, so that we
+         * can measure the download time later on. */
+        if (TO_CONN(conn)->request_id)
+          geoip_start_dirreq(TO_CONN(conn)->request_id, dlen, act,
+                             REQUEST_TUNNELED);
+        else
+          geoip_start_dirreq(TO_CONN(conn)->global_identifier, dlen, act,
+                             REQUEST_DIRECT);
+      }
     }
 #endif
 
@@ -3201,6 +3210,17 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_DIR);
 
+#ifdef ENABLE_GEOIP_STATS
+  /* Note that we have finished writing the directory response. For direct
+   * connections this means we're done, for tunneled connections its only
+   * an intermediate step. */
+  if (TO_CONN(conn)->request_id)
+    geoip_change_dirreq_state(TO_CONN(conn)->request_id, REQUEST_TUNNELED,
+                              FLUSHING_DIR_CONN_FINISHED);
+  else
+    geoip_change_dirreq_state(TO_CONN(conn)->global_identifier,
+                              REQUEST_DIRECT, FLUSHING_DIR_CONN_FINISHED);
+#endif
   switch (conn->_base.state) {
     case DIR_CONN_STATE_CLIENT_SENDING:
       log_debug(LD_DIR,"client finished sending command.");
