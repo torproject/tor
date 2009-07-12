@@ -611,7 +611,7 @@ static void
 _dirreqdlmap_put(dirreqdlmap_entry_t *entry,
                  directory_request_type_t type, uint64_t request_id)
 {
-  char key[3+20+1]; /* dir|tun + -9223372036854775808 + \0 */
+  char key[3+20+1]; /* dir|tun + 18446744073709551616 + \0 */
   dirreqdlmap_entry_t *ent;
   if (!dirreqdlmap)
     dirreqdlmap = strmap_new();
@@ -633,7 +633,7 @@ _dirreqdlmap_put(dirreqdlmap_entry_t *entry,
 static dirreqdlmap_entry_t *
 _dirreqdlmap_get(directory_request_type_t type, uint64_t request_id)
 {
-  char key[3+20+1]; /* dir|tun + -9223372036854775808 + \0 */
+  char key[3+20+1]; /* dir|tun + 18446744073709551616 + \0 */
   if (!dirreqdlmap)
     dirreqdlmap = strmap_new();
   tor_snprintf(key, sizeof(key), "%s"U64_FORMAT,
@@ -731,8 +731,8 @@ geoip_get_dirreqdl_history(geoip_client_action_t action,
     }
   } STRMAP_FOREACH_END;
   result = tor_malloc_zero(bufsize);
-  written = tor_snprintf(result, bufsize, "complete=%d,timeout=%d,"
-                         "running=%d", complete, timeouts, running);
+  written = tor_snprintf(result, bufsize, "complete=%u,timeout=%u,"
+                         "running=%u", complete, timeouts, running);
   if (written < 0)
     return NULL;
 #define MIN_DIR_REQ_RESPONSES 16
@@ -744,8 +744,8 @@ geoip_get_dirreqdl_history(geoip_client_action_t action,
     });
     median_uint32(dltimes, complete); /* sort */
     written = tor_snprintf(result + written, bufsize - written,
-                           ",min=%d,d1=%d,d2=%d,q1=%d,d3=%d,d4=%d,md=%d,"
-                           "d6=%d,d7=%d,q3=%d,d8=%d,d9=%d,max=%d",
+                           ",min=%u,d1=%u,d2=%u,q1=%u,d3=%u,d4=%u,md=%u,"
+                           "d6=%u,d7=%u,q3=%u,d8=%u,d9=%u,max=%u",
                            dltimes[0],
                            dltimes[1*complete/10-1],
                            dltimes[2*complete/10-1],
