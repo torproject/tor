@@ -214,6 +214,7 @@ static config_var_t _option_vars[] = {
   V(FirewallPorts,               CSV,      ""),
   V(FastFirstHopPK,              BOOL,     "1"),
   V(FetchDirInfoEarly,           BOOL,     "0"),
+  V(FetchDirInfoExtraEarly,      BOOL,     "0"),
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
@@ -3180,6 +3181,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->HSAuthorityRecordStats && !options->HSAuthoritativeDir)
     REJECT("HSAuthorityRecordStats is set but we're not running as "
            "a hidden service authority.");
+
+  if (options->FetchDirInfoExtraEarly && !options->FetchDirInfoEarly)
+    REJECT("FetchDirInfoExtraEarly requires that you also set "
+           "FetchDirInfoEarly");
 
   if (options->ConnLimit <= 0) {
     r = tor_snprintf(buf, sizeof(buf),

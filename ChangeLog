@@ -29,6 +29,12 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       connecting clients to disk every 24 hours. To enable this, run
       configure with the --enable-entry-stats option, and set
       "EntryStatistics 1" in your torrc.
+     - Certain Tor clients (such as those behind check.torproject.org) may
+       want to fetch the consensus in an extra early manner. To enable this
+       a user may now set FetchDirInfoExtraEarly to 1. This also depends on
+       setting FetchDirInfoEarly to 1. Previous behavior will stay the same
+       as only certain clients who must have this information sooner should
+       set this option.
 
   o Minor bugfixes
     - Hidden service clients didn't use a cached service descriptor that

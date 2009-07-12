@@ -241,6 +241,13 @@ fetching early. Normal users should leave it off.
 (Default: 0)
 .LP
 .TP
+\fBFetchDirInfoExtraEarly \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will fetch directory information before other
+directory caches. It will attempt to download directory information closer to
+the start of the consensus period. Normal users should leave it off.
+(Default: 0)
+.LP
+.TP
 \fBFetchHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
 If set to 0, Tor will never fetch any hidden service descriptors from
 the rendezvous directories. This option is only useful if you're using
