@@ -1434,7 +1434,7 @@ write_exit_stats(time_t when)
              < EXIT_STATS_THRESHOLD)) {
           uint32_t num = round_to_next_multiple_of(exit_streams[i],
                                        EXIT_STATS_ROUND_UP_STREAMS);
-          if (fprintf(out, "%s%d=%d",
+          if (fprintf(out, "%s%d=%u",
                       comma++ ? "," : "", i, num)<0)
             goto done;
         } else
@@ -1443,7 +1443,7 @@ write_exit_stats(time_t when)
     }
     other_streams = round_to_next_multiple_of(other_streams,
                                   EXIT_STATS_ROUND_UP_STREAMS);
-    if (fprintf(out, "%sother=%d\n",
+    if (fprintf(out, "%sother=%u\n",
                 comma ? "," : "", other_streams)<0)
       goto done;
     /* Reset counters */
