@@ -1509,8 +1509,8 @@ log_addr_has_changed(int severity, uint32_t prev, uint32_t cur,
            addrbuf_prev, addrbuf_cur, source);
   else
     log_notice(LD_GENERAL,
-             "Guessed our IP address as %s.",
-             addrbuf_cur);
+             "Guessed our IP address as %s (source: %s).",
+             addrbuf_cur, source);
 }
 
 /** Check whether our own address as defined by the Address configuration
@@ -1533,7 +1533,7 @@ check_descriptor_ipaddress_changed(time_t now)
   }
 
   if (prev != cur) {
-    log_addr_has_changed(LOG_INFO, prev, cur, "resolve");
+    log_addr_has_changed(LOG_NOTICE, prev, cur, "resolve");
     ip_address_changed(0);
   }
 }

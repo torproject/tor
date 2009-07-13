@@ -1484,7 +1484,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   addresstype = parse_extended_hostname(socks->address);
 
   if (addresstype == BAD_HOSTNAME) {
-    log_warn(LD_APP, "Invalid hostname %s; rejecting", socks->address);
+    log_warn(LD_APP, "Invalid onion hostname %s; rejecting",
+             safe_str(socks->address));
     control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
                                 escaped(socks->address));
     connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
