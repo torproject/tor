@@ -677,14 +677,14 @@ dump_geoip_stats(void)
     goto done;
 #define RESPONSE_GRANULARITY 8
   for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
-    ns_v2_responses[i] = round_to_next_multiple_of(ns_v2_responses[i],
-                                                   RESPONSE_GRANULARITY);
-    ns_v3_responses[i] = round_to_next_multiple_of(ns_v3_responses[i],
-                                                   RESPONSE_GRANULARITY);
+    ns_v2_responses[i] = round_uint32_to_next_multiple_of(
+                               ns_v2_responses[i], RESPONSE_GRANULARITY);
+    ns_v3_responses[i] = round_uint32_to_next_multiple_of(
+                               ns_v3_responses[i], RESPONSE_GRANULARITY);
   }
 #undef RESPONSE_GRANULARITY
-  if (fprintf(out, "n-ns-resp ok=%d,not-enough-sigs=%d,unavailable=%d,"
-                   "not-found=%d,not-modified=%d,busy=%d\n",
+  if (fprintf(out, "n-ns-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
+                   "not-found=%u,not-modified=%u,busy=%u\n",
                    ns_v3_responses[GEOIP_SUCCESS],
                    ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
                    ns_v3_responses[GEOIP_REJECT_UNAVAILABLE],
@@ -692,8 +692,8 @@ dump_geoip_stats(void)
                    ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
                    ns_v3_responses[GEOIP_REJECT_BUSY]) < 0)
     goto done;
-  if (fprintf(out, "n-v2-ns-resp ok=%d,unavailable=%d,"
-                   "not-found=%d,not-modified=%d,busy=%d\n",
+  if (fprintf(out, "n-v2-ns-resp ok=%u,unavailable=%u,"
+                   "not-found=%u,not-modified=%u,busy=%u\n",
                    ns_v2_responses[GEOIP_SUCCESS],
                    ns_v2_responses[GEOIP_REJECT_UNAVAILABLE],
                    ns_v2_responses[GEOIP_REJECT_NOT_FOUND],
