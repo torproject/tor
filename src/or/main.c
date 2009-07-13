@@ -903,7 +903,7 @@ run_scheduled_events(time_t now)
     time_to_downrate_stability = rep_hist_downrate_old_runs(now);
   if (authdir_mode_tests_reachability(options)) {
     if (time_to_save_stability < now) {
-      if (time_to_save_stability && rep_hist_record_mtbf_data()<0) {
+      if (time_to_save_stability && rep_hist_record_mtbf_data(now, 1)<0) {
         log_warn(LD_GENERAL, "Couldn't store mtbf data.");
       }
 #define SAVE_STABILITY_INTERVAL (30*60)
@@ -1955,14 +1955,15 @@ tor_cleanup(void)
   /* Remove our pid file. We don't care if there was an error when we
    * unlink, nothing we could do about it anyways. */
   if (options->command == CMD_RUN_TOR) {
+    time_t now = time(NULL);
     if (options->PidFile)
       unlink(options->PidFile);
     if (accounting_is_enabled(options))
-      accounting_record_bandwidth_usage(time(NULL), get_or_state());
+      accounting_record_bandwidth_usage(now, get_or_state());
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */
-    or_state_save(time(NULL));
+    or_state_save(now);
     if (authdir_mode_tests_reachability(options))
-      rep_hist_record_mtbf_data();
+      rep_hist_record_mtbf_data(now, 0);
   }
 #ifdef USE_DMALLOC
   dmalloc_log_stats();

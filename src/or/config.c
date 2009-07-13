@@ -1381,6 +1381,13 @@ options_act(or_options_t *old_options)
     geoip_load_file(actual_fname, options);
     tor_free(actual_fname);
   }
+#ifdef ENABLE_GEOIP_STATS
+  log_warn(LD_CONFIG, "We are configured to measure GeoIP statistics, but "
+           "the way these statistics are measured has changed "
+           "significantly in later versions of Tor. The results may not be "
+           "as expected if you are used to later versions.  Be sure you "
+           "know what you are doing.");
+#endif
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||

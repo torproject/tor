@@ -1,3 +1,50 @@
+Changes in version 0.2.1.17-rc - 2009-07-07
+  o Major features:
+    - Clients now use the bandwidth values in the consensus, rather than
+      the bandwidth values in each relay descriptor. This approach opens
+      the door to more accurate bandwidth estimates once the directory
+      authorities start doing active measurements. Implements more of
+      proposal 141.
+
+  o Major bugfixes:
+    - When Tor clients restart after 1-5 days, they discard all their
+      cached descriptors as too old, but they still use the cached
+      consensus document. This approach is good for robustness, but
+      bad for performance: since they don't know any bandwidths, they
+      end up choosing at random rather than weighting their choice by
+      speed. Fixed by the above feature of putting bandwidths in the
+      consensus. Bugfix on 0.2.0.x.
+    - Directory authorities were neglecting to mark relays down in their
+      internal histories if the relays fall off the routerlist without
+      ever being found unreachable. So there were relays in the histories
+      that haven't been seen for eight months, and are listed as being
+      up for eight months. This wreaked havoc on the "median wfu"
+      and "median mtbf" calculations, in turn making Guard and Stable
+      flags very wrong, hurting network performance. Fixes bugs 696 and
+      969. Bugfix on 0.2.0.6-alpha.
+
+  o Minor bugfixes:
+    - Serve the DirPortFrontPage page even when we have been approaching
+      our quotas recently. Fixes bug 1013; bugfix on 0.2.1.8-alpha.
+    - The control port would close the connection before flushing long
+      replies, such as the network consensus, if a QUIT command was issued
+      before the reply had completed. Now, the control port flushes all
+      pending replies before closing the connection. Also fixed a spurious
+      warning when a QUIT command is issued after a malformed or rejected
+      AUTHENTICATE command, but before the connection was closed. Patch
+      by Marcus Griep. Bugfix on 0.2.0.x; fixes bugs 1015 and 1016.
+    - When we can't find an intro key for a v2 hidden service descriptor,
+      fall back to the v0 hidden service descriptor and log a bug message.
+      Workaround for bug 1024.
+    - Fix a log message that did not respect the SafeLogging option.
+      Resolves bug 1027.
+
+  o Minor features:
+    - If we're a relay and we change our IP address, be more verbose
+      about the reason that made us change. Should help track down
+      further bugs for relays on dynamic IP addresses.
+
+
 Changes in version 0.2.1.16-rc - 2009-06-20
   o Security fixes:
     - Fix an edge case where a malicious exit relay could convince a

@@ -2428,13 +2428,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       dlen = strlen(frontpage);
       /* Let's return a disclaimer page (users shouldn't use V1 anymore,
          and caches don't fetch '/', so this is safe). */
-      if (global_write_bucket_low(TO_CONN(conn), dlen, 1)) {
-        log_info(LD_DIRSERV,
-                 "Client asked for DirPortFrontPage content, but we've been "
-                 "writing too many bytes lately. Sending 503 Dir busy.");
-        write_http_status_line(conn, 503, "Directory busy, try again later");
-        goto done;
-      }
+
+      /* [We don't check for write_bucket_low here, since we want to serve
+       *  this page no matter what.] */
       note_request(url, dlen);
       write_http_response_header_impl(conn, dlen, "text/html", "identity",
                                       NULL, DIRPORTFRONTPAGE_CACHE_LIFETIME);
