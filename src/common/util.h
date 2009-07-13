@@ -154,6 +154,9 @@ void tor_log_mallinfo(int severity);
 /* Math functions */
 int tor_log2(uint64_t u64) ATTR_CONST;
 uint64_t round_to_power_of_2(uint64_t u64);
+unsigned round_to_next_multiple_of(unsigned number, unsigned divisor);
+uint32_t round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor);
+uint64_t round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor);
 
 /* String manipulation */
 

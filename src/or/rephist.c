@@ -1332,7 +1332,7 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
 #define EXIT_STATS_NUM_PORTS 65536
 /** Reciprocal of threshold (= 0.01%) of total bytes that a port needs to
  * see in order to be included in exit stats. */
-#define EXIT_STATS_THRESHOLD 10000
+#define EXIT_STATS_THRESHOLD_RECIPROCAL 10000
 
 /* The following data structures are arrays and no fancy smartlists or maps,
  * so that all write operations can be done in constant time. This comes at
@@ -1354,7 +1354,7 @@ write_exit_stats(time_t when)
 {
   char t[ISO_TIME_LEN+1];
   int r, i, comma;
-  uint64_t *b, total_bytes, other_bytes;
+  uint64_t *b, total_bytes, threshold_bytes, other_bytes;
   uint32_t other_streams;
 
   char *filename = get_datadir_fname("exit-stats");
@@ -1381,13 +1381,14 @@ write_exit_stats(time_t when)
       goto done;
 
     /* Count the total number of bytes, so that we can attribute all
-     * observations below a threshold of 1 / EXIT_STATS_THRESHOLD of all
-     * bytes to a special port 'other'. */
+     * observations below a threshold of 1 / EXIT_STATS_THRESHOLD_RECIPROCAL
+     * of all bytes to a special port 'other'. */
     total_bytes = 0;
     for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
       total_bytes += exit_bytes_read[i];
       total_bytes += exit_bytes_written[i];
     }
+    threshold_bytes = total_bytes / EXIT_STATS_THRESHOLD_RECIPROCAL;
 
     /* kibibytes-(read|written) port=kibibytes,.. */
     for (r = 0; r < 2; r++) {
@@ -1401,11 +1402,9 @@ write_exit_stats(time_t when)
       other_bytes = 0;
       for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
         if (b[i] > 0) {
-          if (exit_bytes_read[i] + exit_bytes_written[i] > 0 &&
-              (total_bytes / (exit_bytes_read[i] + exit_bytes_written[i])
-              < EXIT_STATS_THRESHOLD)) {
-            uint64_t num = round_to_next_multiple_of(b[i],
-                                         EXIT_STATS_ROUND_UP_BYTES);
+          if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
+            uint64_t num = round_uint64_to_next_multiple_of(b[i],
+                                                EXIT_STATS_ROUND_UP_BYTES);
             num /= 1024;
             if (fprintf(out, "%s%d="U64_FORMAT,
                         comma++ ? "," : "", i,
@@ -1415,8 +1414,8 @@ write_exit_stats(time_t when)
             other_bytes += b[i];
         }
       }
-      other_bytes = round_to_next_multiple_of(other_bytes,
-                                  EXIT_STATS_ROUND_UP_BYTES);
+      other_bytes = round_uint64_to_next_multiple_of(other_bytes,
+                                         EXIT_STATS_ROUND_UP_BYTES);
       other_bytes /= 1024;
       if (fprintf(out, "%sother="U64_FORMAT"\n",
                   comma ? "," : "", other_bytes)<0)
@@ -1429,11 +1428,9 @@ write_exit_stats(time_t when)
     other_streams = 0;
     for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
       if (exit_streams[i] > 0) {
-        if (exit_bytes_read[i] + exit_bytes_written[i] > 0 &&
-             (total_bytes / (exit_bytes_read[i] + exit_bytes_written[i])
-             < EXIT_STATS_THRESHOLD)) {
-          uint32_t num = round_to_next_multiple_of(exit_streams[i],
-                                       EXIT_STATS_ROUND_UP_STREAMS);
+        if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
+          uint32_t num = round_uint32_to_next_multiple_of(exit_streams[i],
+                                              EXIT_STATS_ROUND_UP_STREAMS);
           if (fprintf(out, "%s%d=%u",
                       comma++ ? "," : "", i, num)<0)
             goto done;
@@ -1441,8 +1438,8 @@ write_exit_stats(time_t when)
           other_streams += exit_streams[i];
       }
     }
-    other_streams = round_to_next_multiple_of(other_streams,
-                                  EXIT_STATS_ROUND_UP_STREAMS);
+    other_streams = round_uint32_to_next_multiple_of(other_streams,
+                                         EXIT_STATS_ROUND_UP_STREAMS);
     if (fprintf(out, "%sother=%u\n",
                 comma ? "," : "", other_streams)<0)
       goto done;
