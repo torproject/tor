@@ -347,6 +347,7 @@ geoip_determine_shares(time_t now)
   last_time_determined_shares = now;
 }
 
+#ifdef ENABLE_GEOIP_STATS
 /** Calculate which fraction of v2 and v3 directory requests aimed at caches
  * have been sent to us since the last call of this function up to time
  * <b>now</b>. Set *<b>v2_share_out</b> and *<b>v3_share_out</b> to the
@@ -366,6 +367,7 @@ geoip_get_mean_shares(time_t now, double *v2_share_out,
   share_seconds = 0;
   return 0;
 }
+#endif
 
 /** Note that we've seen a client connect from the IP <b>addr</b> (host order)
  * at time <b>now</b>. Ignored by all but bridges and directories if
