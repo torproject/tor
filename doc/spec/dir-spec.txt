@@ -1029,13 +1029,20 @@
         descriptors if they would cause "v" lines to be over 128 characters
         long.
 
-    "w" SP "Bandwidth=" INT NL
+    "w" SP "Bandwidth=" INT [SP "Measured=" INT] NL
 
         [At most once.]
 
         An estimate of the bandwidth of this server, in an arbitrary
         unit (currently kilobytes per second).  Used to weight router
-        selection.  Other weighting keywords may be added later.
+        selection. 
+
+        Additionally, the Measured= keyword is present in votes by 
+        participating bandwidth measurement authorites to indicate
+        a measured bandwidth currently produced by measuring stream 
+        capacities. 
+
+        Other weighting keywords may be added later.
         Clients MUST ignore keywords they do not recognize.
 
     "p" SP ("accept" / "reject") SP PortList NL
@@ -1178,6 +1185,13 @@
    rate limit from the router descriptor.  It is given in kilobytes
    per second, and capped at some arbitrary value (currently 10 MB/s).
 
+   The Measured= keyword on a "w" line vote is currently computed
+   by multiplying the previous published consensus bandwidth by the 
+   ratio of the measured average node stream capacity to the network 
+   average. If 3 or more authorities provide a Measured= keyword for 
+   a router, the authorites produce a consensus containing a "w" 
+   Bandwidth= keyword equal to the median of the Measured= votes.
+
    The ports listed in a "p" line should be taken as those ports for
    which the router's exit policy permits 'most' addresses, ignoring any
    accept not for all addresses, ignoring all rejects for private
@@ -1260,6 +1274,11 @@
           one, breaking ties in favor of the lexicographically larger
           vote.)  The port list is encoded as specified in 3.4.2.
 
+        * If consensus-method 6 or later is in use and if 3 or more 
+          authorities provide a Measured= keyword in their votes for 
+          a router, the authorities produce a consensus containing a 
+          Bandwidth= keyword equal to the median of the Measured= votes.
+
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
@@ -1280,6 +1299,7 @@
      "3" -- Added legacy ID key support to aid in authority ID key rollovers
      "4" -- No longer list routers that are not running in the consensus
      "5" -- adds support for "w" and "p" lines.
+     "6" -- Prefers measured bandwidth values rather than advertised
 
    Before generating a consensus, an authority must decide which consensus
    method to use.  To do this, it looks for the highest version number
