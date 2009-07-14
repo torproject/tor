@@ -2493,6 +2493,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     /* v2 or v3 network status fetch. */
     smartlist_t *dir_fps = smartlist_create();
     int is_v3 = !strcmpstart(url, "/tor/status-vote");
+    geoip_client_action_t act =
+        is_v3 ? GEOIP_CLIENT_NETWORKSTATUS : GEOIP_CLIENT_NETWORKSTATUS_V2;
     const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
     long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
@@ -2517,6 +2519,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         write_http_status_line(conn, 404, "Consensus not signed by sufficient "
                                           "number of requested authorities");
         smartlist_free(dir_fps);
+        geoip_note_ns_response(act, GEOIP_REJECT_NOT_ENOUGH_SIGS);
         goto done;
       }
 
@@ -2529,6 +2532,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     if (!smartlist_len(dir_fps)) { /* we failed to create/cache cp */
       write_http_status_line(conn, 503, "Network status object unavailable");
       smartlist_free(dir_fps);
+      geoip_note_ns_response(act, GEOIP_REJECT_UNAVAILABLE);
       goto done;
     }
 
@@ -2536,11 +2540,13 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 404, "Not found");
       SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
       smartlist_free(dir_fps);
+      geoip_note_ns_response(act, GEOIP_REJECT_NOT_FOUND);
       goto done;
     } else if (!smartlist_len(dir_fps)) {
       write_http_status_line(conn, 304, "Not modified");
       SMARTLIST_FOREACH(dir_fps, char *, cp, tor_free(cp));
       smartlist_free(dir_fps);
+      geoip_note_ns_response(act, GEOIP_REJECT_NOT_MODIFIED);
       goto done;
     }
 
@@ -2552,16 +2558,16 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, 503, "Directory busy, try again later");
       SMARTLIST_FOREACH(dir_fps, char *, fp, tor_free(fp));
       smartlist_free(dir_fps);
+      geoip_note_ns_response(act, GEOIP_REJECT_BUSY);
       goto done;
     }
 
 #ifdef ENABLE_GEOIP_STATS
     {
-      geoip_client_action_t act =
-        is_v3 ? GEOIP_CLIENT_NETWORKSTATUS : GEOIP_CLIENT_NETWORKSTATUS_V2;
       struct in_addr in;
       if (tor_inet_aton((TO_CONN(conn))->address, &in))
         geoip_note_client_seen(act, ntohl(in.s_addr), time(NULL));
+        geoip_note_ns_response(act, GEOIP_SUCCESS);
     }
 #endif
 

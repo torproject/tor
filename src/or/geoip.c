@@ -492,6 +492,43 @@ geoip_remove_old_clients(time_t cutoff)
     client_history_starts = cutoff;
 }
 
+#ifdef ENABLE_GEOIP_STATS
+/** How many responses are we giving to clients requesting v2 network
+ * statuses? */
+static uint32_t ns_v2_responses[GEOIP_NS_RESPONSE_NUM];
+
+/** How many responses are we giving to clients requesting v3 network
+ * statuses? */
+static uint32_t ns_v3_responses[GEOIP_NS_RESPONSE_NUM];
+#endif
+
+/** Note that we've rejected a client's request for a v2 or v3 network
+ * status, encoded in <b>action</b> for reason <b>reason</b> at time
+ * <b>now</b>. */
+void
+geoip_note_ns_response(geoip_client_action_t action,
+                       geoip_ns_response_t response)
+{
+#ifdef ENABLE_GEOIP_STATS
+  static int arrays_initialized = 0;
+  if (!arrays_initialized) {
+    memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
+    memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
+    arrays_initialized = 1;
+  }
+  tor_assert(action == GEOIP_CLIENT_NETWORKSTATUS ||
+             action == GEOIP_CLIENT_NETWORKSTATUS_V2);
+  tor_assert(response < GEOIP_NS_RESPONSE_NUM);
+  if (action == GEOIP_CLIENT_NETWORKSTATUS)
+    ns_v3_responses[response]++;
+  else
+    ns_v2_responses[response]++;
+#else
+  (void) action;
+  (void) response;
+#endif
+}
+
 /** Do not mention any country from which fewer than this number of IPs have
  * connected.  This conceivably avoids reporting information that could
  * deanonymize users, though analysis is lacking. */
@@ -686,6 +723,7 @@ dump_geoip_stats(void)
   open_file_t *open_file = NULL;
   double v2_share = 0.0, v3_share = 0.0;
   FILE *out;
+  int i;
 
   data_v2 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS);
@@ -711,6 +749,33 @@ dump_geoip_stats(void)
               since,
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
+#define RESPONSE_GRANULARITY 8
+  for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
+    ns_v2_responses[i] = round_uint32_to_next_multiple_of(
+                               ns_v2_responses[i], RESPONSE_GRANULARITY);
+    ns_v3_responses[i] = round_uint32_to_next_multiple_of(
+                               ns_v3_responses[i], RESPONSE_GRANULARITY);
+  }
+#undef RESPONSE_GRANULARITY
+  if (fprintf(out, "n-ns-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
+                   "not-found=%u,not-modified=%u,busy=%u\n",
+                   ns_v3_responses[GEOIP_SUCCESS],
+                   ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
+                   ns_v3_responses[GEOIP_REJECT_UNAVAILABLE],
+                   ns_v3_responses[GEOIP_REJECT_NOT_FOUND],
+                   ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
+                   ns_v3_responses[GEOIP_REJECT_BUSY]) < 0)
+    goto done;
+  if (fprintf(out, "n-v2-ns-resp ok=%u,unavailable=%u,"
+                   "not-found=%u,not-modified=%u,busy=%u\n",
+                   ns_v2_responses[GEOIP_SUCCESS],
+                   ns_v2_responses[GEOIP_REJECT_UNAVAILABLE],
+                   ns_v2_responses[GEOIP_REJECT_NOT_FOUND],
+                   ns_v2_responses[GEOIP_REJECT_NOT_MODIFIED],
+                   ns_v2_responses[GEOIP_REJECT_BUSY]) < 0)
+    goto done;
+  memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
+  memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
   if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
     if (fprintf(out, "v2-ns-share %0.2lf%%\n", v2_share*100) < 0)
       goto done;

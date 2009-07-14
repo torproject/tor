@@ -3645,6 +3645,26 @@ typedef enum {
 void geoip_note_client_seen(geoip_client_action_t action,
                             uint32_t addr, time_t now);
 void geoip_remove_old_clients(time_t cutoff);
+/** Indicates either a positive reply or a reason for rejectng a network
+ * status request that will be included in geoip statistics. */
+typedef enum {
+  /** Request is answered successfully. */
+  GEOIP_SUCCESS = 0,
+  /** V3 network status is not signed by a sufficient number of requested
+   * authorities. */
+  GEOIP_REJECT_NOT_ENOUGH_SIGS = 1,
+  /** Requested network status object is unavailable. */
+  GEOIP_REJECT_UNAVAILABLE = 2,
+  /** Requested network status not found. */
+  GEOIP_REJECT_NOT_FOUND = 3,
+  /** Network status has not been modified since If-Modified-Since time. */
+  GEOIP_REJECT_NOT_MODIFIED = 4,
+  /** Directory is busy. */
+  GEOIP_REJECT_BUSY = 5,
+} geoip_ns_response_t;
+#define GEOIP_NS_RESPONSE_NUM 6
+void geoip_note_ns_response(geoip_client_action_t action,
+                            geoip_ns_response_t response);
 time_t geoip_get_history_start(void);
 char *geoip_get_client_history(time_t now, geoip_client_action_t action);
 char *geoip_get_request_history(time_t now, geoip_client_action_t action);
