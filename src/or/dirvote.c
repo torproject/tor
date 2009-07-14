@@ -103,8 +103,10 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status %s\n"
-                 /* TODO-160: add 6 when ready */
-                 "consensus-methods 1 2 3 4 5\n"
+                 /* XXX: If you change this value, you also need to
+                  * change consensus_method_is_supported().
+                  * Perhaps we should unify these somehow? */
+                 "consensus-methods 1 2 3 4 5 6\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -456,7 +458,10 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method >= 1) && (method <= 5);
+  /* XXX: If you change this value, you also need to change
+   * format_networkstatus_vote(). Perhaps we should unify
+   * these somehow? */
+  return (method >= 1) && (method <= 6);
 }
 
 /** Helper: given <b>lst</b>, a list of version strings such that every
