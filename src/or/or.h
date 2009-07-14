@@ -972,7 +972,7 @@ typedef struct connection_t {
 
 #ifdef ENABLE_GEOIP_STATS
   /** Unique ID for measuring tunneled network status requests. */
-  uint64_t request_id;
+  uint64_t dirreq_id;
 #endif
 } connection_t;
 
@@ -1962,7 +1962,7 @@ typedef struct circuit_t {
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
 #ifdef ENABLE_GEOIP_STATS
   /** Unique ID for measuring tunneled network status requests. */
-  uint64_t request_id;
+  uint64_t dirreq_id;
 #endif
 } circuit_t;
 
@@ -3683,9 +3683,9 @@ void geoip_free_all(void);
 /** Directory requests that we are measuring can be either direct or
  * tunneled. */
 typedef enum {
-  REQUEST_DIRECT = 0,
-  REQUEST_TUNNELED = 1,
-} directory_request_type_t;
+  DIRREQ_DIRECT = 0,
+  DIRREQ_TUNNELED = 1,
+} dirreq_type_t;
 
 /** Possible states for either direct or tunneled directory requests that
  * are relevant for determining network status download times. */
@@ -3693,28 +3693,26 @@ typedef enum {
   /** Found that the client requests a network status; applies to both
    * direct and tunneled requests; initial state of a request that we are
    * measuring. */
-  REQUEST_IS_FOR_NETWORK_STATUS = 0,
+  DIRREQ_IS_FOR_NETWORK_STATUS = 0,
   /** Finished writing a network status to the directory connection;
    * applies to both direct and tunneled requests; completes a direct
    * request. */
-  FLUSHING_DIR_CONN_FINISHED = 1,
+  DIRREQ_FLUSHING_DIR_CONN_FINISHED = 1,
   /** END cell sent to circuit that initiated a tunneled request. */
-  END_CELL_SENT = 2,
+  DIRREQ_END_CELL_SENT = 2,
   /** Flushed last cell from queue of the circuit that initiated a
     * tunneled request to the outbuf of the OR connection. */
-  CIRC_QUEUE_FLUSHED = 3,
+  DIRREQ_CIRC_QUEUE_FLUSHED = 3,
   /** Flushed last byte from buffer of the OR connection belonging to the
     * circuit that initiated a tunneled request; completes a tunneled
     * request. */
-  OR_CONN_BUFFER_FLUSHED = 4
-} directory_request_state_t;
+  DIRREQ_OR_CONN_BUFFER_FLUSHED = 4
+} dirreq_state_t;
 
-void geoip_start_dirreq(uint64_t request_id, size_t response_size,
-                        geoip_client_action_t action,
-                        directory_request_type_t type);
-void geoip_change_dirreq_state(uint64_t request_id,
-                               directory_request_type_t type,
-                               directory_request_state_t new_state);
+void geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
+                        geoip_client_action_t action, dirreq_type_t type);
+void geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
+                               dirreq_state_t new_state);
 
 /********************************* hibernate.c **********************/
 

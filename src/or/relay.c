@@ -535,9 +535,9 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
 #ifdef ENABLE_GEOIP_STATS
   /* If we are sending an END cell and this circuit is used for a tunneled
    * directory request, advance its state. */
-  if (relay_command == RELAY_COMMAND_END && circ->request_id)
-    geoip_change_dirreq_state(circ->request_id, REQUEST_TUNNELED,
-                              END_CELL_SENT);
+  if (relay_command == RELAY_COMMAND_END && circ->dirreq_id)
+    geoip_change_dirreq_state(circ->dirreq_id, DIRREQ_TUNNELED,
+                              DIRREQ_END_CELL_SENT);
 #endif
 
   if (cell_direction == CELL_DIRECTION_OUT && circ->n_conn) {
@@ -1047,8 +1047,8 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
          * connection will be assigned the same ID when they are created
          * and linked. */
         static uint64_t next_id = 0;
-        circ->request_id = ++next_id;
-        TO_CONN(TO_OR_CIRCUIT(circ)->p_conn)->request_id = circ->request_id;
+        circ->dirreq_id = ++next_id;
+        TO_CONN(TO_OR_CIRCUIT(circ)->p_conn)->dirreq_id = circ->dirreq_id;
       }
 #endif
 
@@ -1844,9 +1844,10 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
 #ifdef ENABLE_GEOIP_STATS
     /* If we just flushed our queue and this circuit is used for a
      * tunneled directory request, possibly advance its state. */
-    if (queue->n == 0 && TO_CONN(conn)->request_id)
-      geoip_change_dirreq_state(TO_CONN(conn)->request_id,
-                                REQUEST_TUNNELED, CIRC_QUEUE_FLUSHED);
+    if (queue->n == 0 && TO_CONN(conn)->dirreq_id)
+      geoip_change_dirreq_state(TO_CONN(conn)->dirreq_id,
+                                DIRREQ_TUNNELED,
+                                DIRREQ_CIRC_QUEUE_FLUSHED);
 #endif
 
     connection_write_to_buf(cell->body, CELL_NETWORK_SIZE, TO_CONN(conn));

@@ -2554,7 +2554,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 #ifdef ENABLE_GEOIP_STATS
   /* Remember the tunneled request ID in the new edge connection, so that
    * we can measure download times. */
-  TO_CONN(n_stream)->request_id = circ->request_id;
+  TO_CONN(n_stream)->dirreq_id = circ->dirreq_id;
 #endif
   n_stream->_base.purpose = EXIT_PURPOSE_CONNECT;
 
@@ -2795,7 +2795,7 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
 #ifdef ENABLE_GEOIP_STATS
   /* Note that the new dir conn belongs to the same tunneled request as
    * the edge conn, so that we can measure download times. */
-  TO_CONN(dirconn)->request_id = TO_CONN(exitconn)->request_id;
+  TO_CONN(dirconn)->dirreq_id = TO_CONN(exitconn)->dirreq_id;
 #endif
   connection_link_connections(TO_CONN(dirconn), TO_CONN(exitconn));
 

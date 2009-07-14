@@ -2305,9 +2305,9 @@ connection_handle_write(connection_t *conn, int force)
 #ifdef ENABLE_GEOIP_STATS
     /* If we just flushed the last bytes, check if this tunneled dir
      * request is done. */
-    if (buf_datalen(conn->outbuf) == 0 && conn->request_id)
-      geoip_change_dirreq_state(conn->request_id, REQUEST_TUNNELED,
-                                OR_CONN_BUFFER_FLUSHED);
+    if (buf_datalen(conn->outbuf) == 0 && conn->dirreq_id)
+      geoip_change_dirreq_state(conn->dirreq_id, DIRREQ_TUNNELED,
+                                DIRREQ_OR_CONN_BUFFER_FLUSHED);
 #endif
     switch (result) {
       CASE_TOR_TLS_ERROR_ANY:
