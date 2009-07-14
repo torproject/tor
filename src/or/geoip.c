@@ -730,6 +730,13 @@ geoip_get_dirreqdl_history(geoip_client_action_t action,
       MAP_DEL_CURRENT(key);
     }
   } STRMAP_FOREACH_END;
+#define DIR_REQ_GRANULARITY 4
+  complete = round_uint32_to_next_multiple_of(complete,
+                                              DIR_REQ_GRANULARITY);
+  timeouts = round_uint32_to_next_multiple_of(timeouts,
+                                              DIR_REQ_GRANULARITY);
+  running = round_uint32_to_next_multiple_of(running,
+                                             DIR_REQ_GRANULARITY);
   result = tor_malloc_zero(bufsize);
   written = tor_snprintf(result, bufsize, "complete=%u,timeout=%u,"
                          "running=%u", complete, timeouts, running);
