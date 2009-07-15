@@ -32,6 +32,9 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       connecting clients to disk every 24 hours. To enable this, run
       configure with the --enable-entry-stats option, and set
       "EntryStatistics 1" in your torrc.
+    - Time and memory units in the configuration file can now be set to
+      fractional units.  For example, "2.5 MB" is now a valid value for
+      AccountingMax.
 
   o Minor bugfixes
     - Hidden service clients didn't use a cached service descriptor that

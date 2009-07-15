@@ -4791,30 +4791,55 @@ static struct unit_table_t time_units[] = {
 static uint64_t
 config_parse_units(const char *val, struct unit_table_t *u, int *ok)
 {
-  uint64_t v;
-  char *cp;
+  uint64_t v = 0;
+  double d = 0;
+  int use_float = 0;
+
+  smartlist_t *sl;
 
   tor_assert(ok);
+  sl = smartlist_create();
+  smartlist_split_string(sl, val, NULL, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
 
-  v = tor_parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
-  if (!*ok)
-    return 0;
-  if (!cp) {
-    *ok = 1;
-    return v;
+  if (smartlist_len(sl) < 1 || smartlist_len(sl) > 2) {
+    *ok = 0;
+    goto done;
   }
-  while (TOR_ISSPACE(*cp))
-    ++cp;
+
+  v = tor_parse_uint64(smartlist_get(sl,0), 10, 0, UINT64_MAX, ok, NULL);
+  if (!*ok) {
+    int r = sscanf(smartlist_get(sl,0), "%lf", &d);
+    if (r == 0 || d < 0)
+      goto done;
+    use_float = 1;
+  }
+
+  if (smartlist_len(sl) == 1) {
+    *ok = 1;
+    v = use_float ? DBL_TO_U64(d) :  v;
+    goto done;
+  }
+
   for ( ;u->unit;++u) {
-    if (!strcasecmp(u->unit, cp)) {
-      v *= u->multiplier;
+    if (!strcasecmp(u->unit, smartlist_get(sl,1))) {
+      if (use_float)
+        v = u->multiplier * d;
+      else
+        v *= u->multiplier;
       *ok = 1;
-      return v;
+      goto done;
     }
   }
-  log_warn(LD_CONFIG, "Unknown unit '%s'.", cp);
+  log_warn(LD_CONFIG, "Unknown unit '%s'.", (char*)smartlist_get(sl,1));
   *ok = 0;
-  return 0;
+ done:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+
+  if (*ok)
+    return v;
+  else
+    return 0;
 }
 
 /** Parse a string in the format "number unit", where unit is a unit of
