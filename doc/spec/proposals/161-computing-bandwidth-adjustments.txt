@@ -45,12 +45,11 @@ Status: Open
   file is downloaded via these circuits. The file sizes are set based
   on node percentile rank as follows:
     
-     0-10: 4M
-     10-20: 2M
-     20-30: 1M
-     30-50: 512k
-     50-75: 256k
-     75-100: 128k
+     0-10: 2M
+     10-20: 1M
+     20-30: 512k
+     30-50: 256k
+     50-100: 128k
 
   These sizes are based on measurements performed during test scans.
 
@@ -72,8 +71,8 @@ Status: Open
   with capacity of one standard deviation below a node's average
   are also removed.
 
-  The final ratio result will be the unfiltered ratio if it is 
-  close to 1.0, otherwise it will be the filtered ratio.
+  The final ratio result will be greater of the unfiltered ratio
+  and the filtered ratio.
 
 
 6. Pseudocode for Ratio Calculation Algorithm
@@ -88,11 +87,8 @@ Status: Open
         BW_measured(N) = MEAN(b | b is bandwidth of a stream through N)
         Bw_stddev(N) = STDDEV(b | b is bandwidth of a stream through N)
       Bw_avg(S) = MEAN(b | b = BW_measured(N) for all N in S)  
-      Normal_Routers(S) = {N | Bw_measured(N)/Bw_avg(S) > 0.5 }
       for N in S:
-        Normal_Streams(N) =
-          {stream via N | all nodes in stream not in {Normal_Routers(S)-N}
-                          and bandwidth > BW_measured(N)-Bw_stddev(N)} 
+        Normal_Streams(N) = {stream via N | bandwidth >= BW_measured(N)} 
         BW_Norm_measured(N) =  MEAN(b | b is a bandwidth of Normal_Streams(N))
 
     Bw_net_avg(Slices) = MEAN(BW_measured(N) for all N in Slices)
@@ -100,9 +96,9 @@ Status: Open
 
     for N in all Slices:
       Bw_net_ratio(N) = Bw_measured(N)/Bw_net_avg(Slices)
-      Bw_Norm_net_ratio(N) = Bw_measured2(N)/Bw_Norm_net_avg(Slices)
+      Bw_Norm_net_ratio(N) = BW_Norm_measured(N)/Bw_Norm_net_avg(Slices)
 
-      ResultRatio(N) = ClosestToOne(Bw_net_ratio(N), Bw_Norm_net_ratio(N))
+      ResultRatio(N) = MAX(Bw_net_ratio(N), Bw_Norm_net_ratio(N))
 
 
 7. Security implications
@@ -142,8 +138,8 @@ Status: Open
   by another script that uses them to produce network-wide averages 
   and calculate ratios as per the algorithm in section 6. Because nodes 
   may shift in capacity, they may appear in more than one slice and/or 
-  appear more than once in the file set. The line that yields a ratio 
-  closest to 1.0 will be chosen in this case.
+  appear more than once in the file set. The most recently measured
+  line will be chosen in this case.
 
 
 9. Integration with Proposal 160
