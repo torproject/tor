@@ -347,7 +347,7 @@ geoip_determine_shares(time_t now)
   last_time_determined_shares = now;
 }
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
 /** Calculate which fraction of v2 and v3 directory requests aimed at caches
  * have been sent to us since the last call of this function up to time
  * <b>now</b>. Set *<b>v2_share_out</b> and *<b>v3_share_out</b> to the
@@ -390,10 +390,11 @@ geoip_note_client_seen(geoip_client_action_t action,
     if (client_history_starts > now)
       return;
   } else {
-#ifndef ENABLE_GEOIP_STATS
+#ifndef ENABLE_DIRREQ_STATS
     return;
 #else
-    if (options->BridgeRelay || options->BridgeAuthoritativeDir)
+    if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
+        !options->DirReqStatistics)
       return;
 #endif
   }
@@ -494,7 +495,7 @@ geoip_remove_old_clients(time_t cutoff)
     client_history_starts = cutoff;
 }
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
 /** How many responses are we giving to clients requesting v2 network
  * statuses? */
 static uint32_t ns_v2_responses[GEOIP_NS_RESPONSE_NUM];
@@ -511,8 +512,10 @@ void
 geoip_note_ns_response(geoip_client_action_t action,
                        geoip_ns_response_t response)
 {
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   static int arrays_initialized = 0;
+  if (!get_options()->DirReqStatistics)
+    return;
   if (!arrays_initialized) {
     memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
     memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
@@ -649,7 +652,10 @@ void
 geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
                    geoip_client_action_t action, dirreq_type_t type)
 {
-  dirreq_map_entry_t *ent = tor_malloc_zero(sizeof(dirreq_map_entry_t));
+  dirreq_map_entry_t *ent;
+  if (!get_options()->DirReqStatistics)
+    return;
+  ent = tor_malloc_zero(sizeof(dirreq_map_entry_t));
   ent->dirreq_id = dirreq_id;
   tor_gettimeofday(&ent->request_time);
   ent->response_size = response_size;
@@ -668,7 +674,10 @@ void
 geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
                           dirreq_state_t new_state)
 {
-  dirreq_map_entry_t *ent = _dirreq_map_get(type, dirreq_id);
+  dirreq_map_entry_t *ent;
+  if (!get_options()->DirReqStatistics)
+    return;
+  ent = _dirreq_map_get(type, dirreq_id);
   if (!ent)
     return;
   if (new_state == DIRREQ_IS_FOR_NETWORK_STATUS)
@@ -685,7 +694,7 @@ geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
   }
 }
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
 /** Return a newly allocated comma-separated string containing statistics
  * on network status downloads. The string contains the number of completed
  * requests, timeouts, and still running requests as well as the download
@@ -788,7 +797,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
 {
   char *result = NULL;
   int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
 #endif
   if (!geoip_is_loaded())
@@ -803,7 +812,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
     unsigned *counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
     unsigned total = 0;
     unsigned granularity = IP_GRANULARITY;
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
     granularity = DIR_RECORD_USAGE_GRANULARITY;
 #endif
     HT_FOREACH(ent, clientmap, &client_history) {
@@ -871,7 +880,7 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   char *result;
   unsigned granularity = IP_GRANULARITY;
   int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   granularity = DIR_RECORD_USAGE_GRANULARITY;
   min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
 #endif
@@ -916,20 +925,23 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
-/** Store all our geoip statistics into $DATADIR/geoip-stats. */
+/** Store all our geoip statistics into $DATADIR/dirreq-stats. */
 static void
 dump_geoip_stats(void)
 {
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   time_t now = time(NULL);
   time_t request_start;
-  char *filename = get_datadir_fname("geoip-stats");
+  char *filename = get_datadir_fname("dirreq-stats");
   char *data_v2 = NULL, *data_v3 = NULL;
   char since[ISO_TIME_LEN+1], written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
   double v2_share = 0.0, v3_share = 0.0;
   FILE *out;
   int i;
+
+  if (!get_options()->DirReqStatistics)
+    goto done;
 
   data_v2 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS);

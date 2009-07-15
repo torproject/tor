@@ -2562,7 +2562,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
     {
       struct in_addr in;
       if (tor_inet_aton((TO_CONN(conn))->address, &in)) {
@@ -3210,7 +3210,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_DIR);
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   /* Note that we have finished writing the directory response. For direct
    * connections this means we're done, for tunneled connections its only
    * an intermediate step. */

@@ -20,8 +20,8 @@
 #ifndef INSTRUMENT_DOWNLOADS
 #define INSTRUMENT_DOWNLOADS 1
 #endif
-#ifndef ENABLE_GEOIP_STATS
-#define ENABLE_GEOIP_STATS 1
+#ifndef ENABLE_DIRREQ_STATS
+#define ENABLE_DIRREQ_STATS 1
 #endif
 #ifndef ENABLE_BUFFER_STATS
 #define ENABLE_BUFFER_STATS 1
@@ -970,7 +970,7 @@ typedef struct connection_t {
    * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
 #endif
@@ -1960,7 +1960,7 @@ typedef struct circuit_t {
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_conn;
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
 #endif
@@ -2500,6 +2500,10 @@ typedef struct {
    * exit allows it, we use it. */
   int AllowSingleHopCircuits;
 
+  /** If true, the user wants us to collect statistics on clients
+   * requesting network statuses from us as directory. */
+  int DirReqStatistics;
+
   /** If true, the user wants us to collect statistics on port usage. */
   int ExitPortStatistics;
 
@@ -2564,7 +2568,7 @@ typedef struct {
   int BridgeRecordUsageByCountry;
 
 #if 0
-  /** If true, and Tor is built with GEOIP_STATS support, and we're a
+  /** If true, and Tor is built with DIRREQ_STATS support, and we're a
    * directory, record how many directory requests we get from each country. */
   int DirRecordUsageByCountry;
   /** Round all GeoIP results to the next multiple of this value, to avoid

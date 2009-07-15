@@ -187,12 +187,13 @@ static config_var_t _option_vars[] = {
   V(DirPort,                     UINT,     "0"),
   V(DirPortFrontPage,            FILENAME, NULL),
   OBSOLETE("DirPostPeriod"),
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   OBSOLETE("DirRecordUsageByCountry"),
   OBSOLETE("DirRecordUsageGranularity"),
   OBSOLETE("DirRecordUsageRetainIPs"),
   OBSOLETE("DirRecordUsageSaveInterval"),
 #endif
+  V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DNSPort,                     UINT,     "0"),
   V(DNSListenAddress,            LINELIST, NULL),
@@ -1376,17 +1377,25 @@ options_act(or_options_t *old_options)
     geoip_load_file(actual_fname, options);
     tor_free(actual_fname);
   }
-#ifdef ENABLE_GEOIP_STATS
-  /* Check if GeoIP database could be loaded. */
-  if (!geoip_is_loaded()) {
-    log_warn(LD_CONFIG, "Configured to measure GeoIP statistics, but no "
-                        "GeoIP database found!");
-    return -1;
+
+#ifdef ENABLE_DIRREQ_STATS
+  if (options->DirReqStatistics) {
+    /* Check if GeoIP database could be loaded. */
+    if (!geoip_is_loaded()) {
+      log_warn(LD_CONFIG, "Configured to measure directory request "
+               "statistics, but no GeoIP database found!");
+      return -1;
+    }
+    log_notice(LD_CONFIG, "Configured to count directory requests by "
+               "country and write aggregate statistics to disk. Check the "
+               "dirreq-stats file in your data directory that will first "
+               "be written in 24 hours from now.");
   }
-  log_notice(LD_CONFIG, "Configured to measure usage by country and "
-    "write aggregate statistics to disk. Check the geoip-stats file "
-    "in your data directory once I've been running for 24 hours.");
+#else
+  log_warn(LD_CONFIG, "DirReqStatistics enabled, but Tor was built "
+           "without support for directory request statistics.");
 #endif
+
 #ifdef ENABLE_EXIT_STATS
   if (options->ExitPortStatistics)
     log_notice(LD_CONFIG, "Configured to measure exit port statistics. "
@@ -1416,6 +1425,11 @@ options_act(or_options_t *old_options)
        * as bridge. */
       log_warn(LD_CONFIG, "Bridges cannot be configured to measure "
                "additional GeoIP statistics as entry guards.");
+      return -1;
+    } else if (!geoip_is_loaded()) {
+      /* Check if GeoIP database could be loaded. */
+      log_warn(LD_CONFIG, "Configured to measure entry node statistics, "
+               "but no GeoIP database found!");
       return -1;
     } else
       log_notice(LD_CONFIG, "Configured to measure entry node "
