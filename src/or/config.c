@@ -4799,7 +4799,8 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
 
   tor_assert(ok);
   sl = smartlist_create();
-  smartlist_split_string(sl, val, NULL, SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
+  smartlist_split_string(sl, val, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
 
   if (smartlist_len(sl) < 1 || smartlist_len(sl) > 2) {
     *ok = 0;
