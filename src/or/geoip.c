@@ -584,6 +584,7 @@ _c_hist_compare(const void **_a, const void **_b)
  * measure download times of requests to derive average client
  * bandwidths. */
 typedef struct dirreq_map_entry_t {
+  HT_ENTRY(dirreq_map_entry_t) node;
   /** Unique identifier for this network status request; this is either the
    * conn->global_identifier of the dir conn (direct request) or a new
    * locally unique identifier of a circuit (tunneled request). This ID is
@@ -600,11 +601,30 @@ typedef struct dirreq_map_entry_t {
 } dirreq_map_entry_t;
 
 /** Map of all directory requests asking for v2 or v3 network statuses in
- * the current geoip-stats interval. Keys are strings starting with either
- * "dir" for direct requests or "tun" for tunneled requests, followed by
- * a unique uint64_t identifier represented as decimal string. Values are
+ * the current geoip-stats interval. Values are
  * of type *<b>dirreq_map_entry_t</b>. */
-static strmap_t *dirreq_map = NULL;
+static HT_HEAD(dirreqmap, dirreq_map_entry_t) dirreq_map =
+     HT_INITIALIZER();
+
+static int
+dirreq_map_ent_eq(const dirreq_map_entry_t *a,
+                  const dirreq_map_entry_t *b)
+{
+  return a->dirreq_id == b->dirreq_id && a->type == b->type;
+}
+
+static unsigned
+dirreq_map_ent_hash(const dirreq_map_entry_t *entry)
+{
+  unsigned u = (unsigned) entry->dirreq_id;
+  u += entry->type << 20;
+  return u;
+}
+
+HT_PROTOTYPE(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
+             dirreq_map_ent_eq);
+HT_GENERATE(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
+            dirreq_map_ent_eq, 0.6, malloc, realloc, free);
 
 /** Helper: Put <b>entry</b> into map of directory requests using
  * <b>tunneled</b> and <b>dirreq_id</b> as key parts. If there is
@@ -613,20 +633,18 @@ static void
 _dirreq_map_put(dirreq_map_entry_t *entry, dirreq_type_t type,
                uint64_t dirreq_id)
 {
-  char key[3+20+1]; /* dir|tun + 18446744073709551616 + \0 */
-  dirreq_map_entry_t *ent;
-  if (!dirreq_map)
-    dirreq_map = strmap_new();
-  tor_snprintf(key, sizeof(key), "%s"U64_FORMAT,
-               type == DIRREQ_TUNNELED ? "tun" : "dir",
-               U64_PRINTF_ARG(dirreq_id));
-  ent = strmap_get(dirreq_map, key);
-  if (ent) {
+  dirreq_map_entry_t *old_ent;
+  tor_assert(entry->type == type);
+  tor_assert(entry->dirreq_id == dirreq_id);
+
+  /* XXXX022 once we're sure the bug case never happens, we can switch
+   * to HT_INSERT */
+  old_ent = HT_REPLACE(dirreqmap, &dirreq_map, entry);
+  if (old_ent && old_ent != entry) {
     log_warn(LD_BUG, "Error when putting directory request into local "
-             "map. There is already an entry for the same identifier.");
+             "map. There was already an entry for the same identifier.");
     return;
   }
-  strmap_set(dirreq_map, key, entry);
 }
 
 /** Helper: Look up and return an entry in the map of directory requests
@@ -635,13 +653,10 @@ _dirreq_map_put(dirreq_map_entry_t *entry, dirreq_type_t type,
 static dirreq_map_entry_t *
 _dirreq_map_get(dirreq_type_t type, uint64_t dirreq_id)
 {
-  char key[3+20+1]; /* dir|tun + 18446744073709551616 + \0 */
-  if (!dirreq_map)
-    dirreq_map = strmap_new();
-  tor_snprintf(key, sizeof(key), "%s"U64_FORMAT,
-               type == DIRREQ_TUNNELED ? "tun" : "dir",
-               U64_PRINTF_ARG(dirreq_id));
-  return strmap_get(dirreq_map, key);
+  dirreq_map_entry_t lookup;
+  lookup.type = type;
+  lookup.dirreq_id = dirreq_id;
+  return HT_FIND(dirreqmap, &dirreq_map, &lookup);
 }
 
 /** Note that an either direct or tunneled (see <b>type</b>) directory
@@ -708,16 +723,20 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   smartlist_t *dirreq_times = NULL;
   uint32_t complete = 0, timeouts = 0, running = 0;
   int i = 0, bufsize = 1024, written;
+  dirreq_map_entry_t **ptr, **next, *ent;
   struct timeval now;
+
   tor_gettimeofday(&now);
-  if (!dirreq_map)
-    return NULL;
   if (action != GEOIP_CLIENT_NETWORKSTATUS &&
       action != GEOIP_CLIENT_NETWORKSTATUS_V2)
     return NULL;
   dirreq_times = smartlist_create();
-  STRMAP_FOREACH_MODIFY(dirreq_map, key, dirreq_map_entry_t *, ent) {
-    if (ent->action == action && type == ent->type) {
+  for (ptr = HT_START(dirreqmap, &dirreq_map); ptr; ptr = next) {
+    ent = *ptr;
+    if (ent->action != action || ent->type != type) {
+      next = HT_NEXT(dirreqmap, &dirreq_map, ptr);
+      continue;
+    } else {
       if (ent->completed) {
         uint32_t *bytes_per_second = tor_malloc_zero(sizeof(uint32_t));
         uint32_t time_diff = (uint32_t) tv_udiff(&ent->request_time,
@@ -734,10 +753,10 @@ geoip_get_dirreq_history(geoip_client_action_t action,
         else
           running++;
       }
+      next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ptr);
       tor_free(ent);
-      MAP_DEL_CURRENT(key);
     }
-  } STRMAP_FOREACH_END;
+  }
 #define DIR_REQ_GRANULARITY 4
   complete = round_uint32_to_next_multiple_of(complete,
                                               DIR_REQ_GRANULARITY);
@@ -1106,13 +1125,24 @@ clear_geoip_db(void)
 void
 geoip_free_all(void)
 {
-  clientmap_entry_t **ent, **next, *this;
-  for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
-    this = *ent;
-    next = HT_NEXT_RMV(clientmap, &client_history, ent);
-    tor_free(this);
+  {
+    clientmap_entry_t **ent, **next, *this;
+    for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
+      this = *ent;
+      next = HT_NEXT_RMV(clientmap, &client_history, ent);
+      tor_free(this);
+    }
+    HT_CLEAR(clientmap, &client_history);
   }
-  HT_CLEAR(clientmap, &client_history);
+  {
+    dirreq_map_entry_t **ent, **next, *this;
+    for (ent = HT_START(dirreqmap, &dirreq_map); ent != NULL; ent = next) {
+      this = *ent;
+      next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ent);
+      tor_free(this);
+    }
+    HT_CLEAR(dirreqmap, &dirreq_map);
+  }
 
   clear_geoip_db();
 }
