@@ -99,6 +99,19 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #RelayBandwidthRate 100 KBytes  # Throttle traffic to 100KB/s (800Kbps)
 #RelayBandwidthBurst 200 KBytes # But allow bursts up to 200KB/s (1600Kbps)
 
+## Use these to restrict the maximum traffic per day, week, or month.
+## Note that this threshold applies to sent _and_ to received bytes,
+## not to their sum: Setting "1 GB" may allow up to 2 GB total before
+## hibernating.
+##
+## Set a maximum of 1 gigabyte per period.
+#AccountingMax 1 GB
+## Each period starts daily at midnight (AccountingMax is per day)
+#AccountingStart day 00:00
+## Each period starts on the 3rd of the month at 15:00 (AccountingMax
+## is per month)
+#AccountingStart month 3 15:00
+
 ## Contact info to be published in the directory, so we can contact you
 ## if your relay is misconfigured or something else goes wrong. Google
 ## indexes this, so spammers might also collect it.
