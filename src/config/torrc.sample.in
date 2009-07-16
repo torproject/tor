@@ -1,5 +1,5 @@
 ## Configuration file for a typical Tor user
-## Last updated 12 April 2009 for Tor 0.2.1.14-rc.
+## Last updated 16 July 2009 for Tor 0.2.2.1-alpha.
 ## (May or may not work for much older or much newer versions of Tor.)
 ##
 ## Lines that begin with "## " try to explain what's going on. Lines
@@ -101,11 +101,11 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 
 ## Use these to restrict the maximum traffic per day, week, or month.
 ## Note that this threshold applies to sent _and_ to received bytes,
-## not to their sum: Setting "1 GB" may allow up to 2 GB total before
-## hibernating.
+## not to their sum: Setting "4 GBytes" may allow up to 8 GBytes
+## total before hibernating.
 ##
-## Set a maximum of 1 gigabyte per period.
-#AccountingMax 1 GB
+## Set a maximum of 4 gigabytes each way per period.
+#AccountingMax 4 GBytes
 ## Each period starts daily at midnight (AccountingMax is per day)
 #AccountingStart day 00:00
 ## Each period starts on the 3rd of the month at 15:00 (AccountingMax
