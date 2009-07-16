@@ -1916,7 +1916,7 @@ extrainfo_get_client_geoip_summary(time_t now)
 {
   static time_t last_purged_at = 0;
   int geoip_purge_interval = 48*60*60;
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   geoip_purge_interval = DIR_RECORD_USAGE_RETAIN_IPS;
 #endif
 #ifdef ENABLE_ENTRY_STATS

@@ -2551,6 +2551,11 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
 
   log_debug(LD_EXIT,"Creating new exit connection.");
   n_stream = edge_connection_new(CONN_TYPE_EXIT, AF_INET);
+#ifdef ENABLE_DIRREQ_STATS
+  /* Remember the tunneled request ID in the new edge connection, so that
+   * we can measure download times. */
+  TO_CONN(n_stream)->dirreq_id = circ->dirreq_id;
+#endif
   n_stream->_base.purpose = EXIT_PURPOSE_CONNECT;
 
   n_stream->stream_id = rh.stream_id;
@@ -2787,6 +2792,11 @@ connection_exit_connect_dir(edge_connection_t *exitconn)
   dirconn->_base.purpose = DIR_PURPOSE_SERVER;
   dirconn->_base.state = DIR_CONN_STATE_SERVER_COMMAND_WAIT;
 
+#ifdef ENABLE_DIRREQ_STATS
+  /* Note that the new dir conn belongs to the same tunneled request as
+   * the edge conn, so that we can measure download times. */
+  TO_CONN(dirconn)->dirreq_id = TO_CONN(exitconn)->dirreq_id;
+#endif
   connection_link_connections(TO_CONN(dirconn), TO_CONN(exitconn));
 
   if (connection_add(TO_CONN(exitconn))<0) {

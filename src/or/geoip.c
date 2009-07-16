@@ -347,7 +347,7 @@ geoip_determine_shares(time_t now)
   last_time_determined_shares = now;
 }
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
 /** Calculate which fraction of v2 and v3 directory requests aimed at caches
  * have been sent to us since the last call of this function up to time
  * <b>now</b>. Set *<b>v2_share_out</b> and *<b>v3_share_out</b> to the
@@ -390,10 +390,11 @@ geoip_note_client_seen(geoip_client_action_t action,
     if (client_history_starts > now)
       return;
   } else {
-#ifndef ENABLE_GEOIP_STATS
+#ifndef ENABLE_DIRREQ_STATS
     return;
 #else
-    if (options->BridgeRelay || options->BridgeAuthoritativeDir)
+    if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
+        !options->DirReqStatistics)
       return;
 #endif
   }
@@ -494,7 +495,7 @@ geoip_remove_old_clients(time_t cutoff)
     client_history_starts = cutoff;
 }
 
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
 /** How many responses are we giving to clients requesting v2 network
  * statuses? */
 static uint32_t ns_v2_responses[GEOIP_NS_RESPONSE_NUM];
@@ -511,8 +512,10 @@ void
 geoip_note_ns_response(geoip_client_action_t action,
                        geoip_ns_response_t response)
 {
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   static int arrays_initialized = 0;
+  if (!get_options()->DirReqStatistics)
+    return;
   if (!arrays_initialized) {
     memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
     memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
@@ -570,6 +573,235 @@ _c_hist_compare(const void **_a, const void **_b)
     return strcmp(a->country, b->country);
 }
 
+/** When there are incomplete directory requests at the end of a 24-hour
+ * period, consider those requests running for longer than this timeout as
+ * failed, the others as still running. */
+#define DIRREQ_TIMEOUT (10*60)
+
+/** Entry in a map from either conn->global_identifier for direct requests
+ * or a unique circuit identifier for tunneled requests to request time,
+ * response size, and completion time of a network status request. Used to
+ * measure download times of requests to derive average client
+ * bandwidths. */
+typedef struct dirreq_map_entry_t {
+  HT_ENTRY(dirreq_map_entry_t) node;
+  /** Unique identifier for this network status request; this is either the
+   * conn->global_identifier of the dir conn (direct request) or a new
+   * locally unique identifier of a circuit (tunneled request). This ID is
+   * only unique among other direct or tunneled requests, respectively. */
+  uint64_t dirreq_id;
+  unsigned int state:3; /**< State of this directory request. */
+  unsigned int type:1; /**< Is this a direct or a tunneled request? */
+  unsigned int completed:1; /**< Is this request complete? */
+  unsigned int action:2; /**< Is this a v2 or v3 request? */
+  /** When did we receive the request and started sending the response? */
+  struct timeval request_time;
+  size_t response_size; /**< What is the size of the response in bytes? */
+  struct timeval completion_time; /**< When did the request succeed? */
+} dirreq_map_entry_t;
+
+/** Map of all directory requests asking for v2 or v3 network statuses in
+ * the current geoip-stats interval. Values are
+ * of type *<b>dirreq_map_entry_t</b>. */
+static HT_HEAD(dirreqmap, dirreq_map_entry_t) dirreq_map =
+     HT_INITIALIZER();
+
+static int
+dirreq_map_ent_eq(const dirreq_map_entry_t *a,
+                  const dirreq_map_entry_t *b)
+{
+  return a->dirreq_id == b->dirreq_id && a->type == b->type;
+}
+
+static unsigned
+dirreq_map_ent_hash(const dirreq_map_entry_t *entry)
+{
+  unsigned u = (unsigned) entry->dirreq_id;
+  u += entry->type << 20;
+  return u;
+}
+
+HT_PROTOTYPE(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
+             dirreq_map_ent_eq);
+HT_GENERATE(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
+            dirreq_map_ent_eq, 0.6, malloc, realloc, free);
+
+/** Helper: Put <b>entry</b> into map of directory requests using
+ * <b>tunneled</b> and <b>dirreq_id</b> as key parts. If there is
+ * already an entry for that key, print out a BUG warning and return. */
+static void
+_dirreq_map_put(dirreq_map_entry_t *entry, dirreq_type_t type,
+               uint64_t dirreq_id)
+{
+  dirreq_map_entry_t *old_ent;
+  tor_assert(entry->type == type);
+  tor_assert(entry->dirreq_id == dirreq_id);
+
+  /* XXXX022 once we're sure the bug case never happens, we can switch
+   * to HT_INSERT */
+  old_ent = HT_REPLACE(dirreqmap, &dirreq_map, entry);
+  if (old_ent && old_ent != entry) {
+    log_warn(LD_BUG, "Error when putting directory request into local "
+             "map. There was already an entry for the same identifier.");
+    return;
+  }
+}
+
+/** Helper: Look up and return an entry in the map of directory requests
+ * using <b>tunneled</b> and <b>dirreq_id</b> as key parts. If there
+ * is no such entry, return NULL. */
+static dirreq_map_entry_t *
+_dirreq_map_get(dirreq_type_t type, uint64_t dirreq_id)
+{
+  dirreq_map_entry_t lookup;
+  lookup.type = type;
+  lookup.dirreq_id = dirreq_id;
+  return HT_FIND(dirreqmap, &dirreq_map, &lookup);
+}
+
+/** Note that an either direct or tunneled (see <b>type</b>) directory
+ * request for a network status with unique ID <b>dirreq_id</b> of size
+ * <b>response_size</b> and action <b>action</b> (either v2 or v3) has
+ * started. */
+void
+geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
+                   geoip_client_action_t action, dirreq_type_t type)
+{
+  dirreq_map_entry_t *ent;
+  if (!get_options()->DirReqStatistics)
+    return;
+  ent = tor_malloc_zero(sizeof(dirreq_map_entry_t));
+  ent->dirreq_id = dirreq_id;
+  tor_gettimeofday(&ent->request_time);
+  ent->response_size = response_size;
+  ent->action = action;
+  ent->type = type;
+  _dirreq_map_put(ent, type, dirreq_id);
+}
+
+/** Change the state of the either direct or tunneled (see <b>type</b>)
+ * directory request with <b>dirreq_id</b> to <b>new_state</b> and
+ * possibly mark it as completed. If no entry can be found for the given
+ * key parts (e.g., if this is a directory request that we are not
+ * measuring, or one that was started in the previous measurement period),
+ * or if the state cannot be advanced to <b>new_state</b>, do nothing. */
+void
+geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
+                          dirreq_state_t new_state)
+{
+  dirreq_map_entry_t *ent;
+  if (!get_options()->DirReqStatistics)
+    return;
+  ent = _dirreq_map_get(type, dirreq_id);
+  if (!ent)
+    return;
+  if (new_state == DIRREQ_IS_FOR_NETWORK_STATUS)
+    return;
+  if (new_state - 1 != ent->state)
+    return;
+  ent->state = new_state;
+  if ((type == DIRREQ_DIRECT &&
+         new_state == DIRREQ_FLUSHING_DIR_CONN_FINISHED) ||
+      (type == DIRREQ_TUNNELED &&
+         new_state == DIRREQ_OR_CONN_BUFFER_FLUSHED)) {
+    tor_gettimeofday(&ent->completion_time);
+    ent->completed = 1;
+  }
+}
+
+#ifdef ENABLE_DIRREQ_STATS
+/** Return a newly allocated comma-separated string containing statistics
+ * on network status downloads. The string contains the number of completed
+ * requests, timeouts, and still running requests as well as the download
+ * times by deciles and quartiles. Return NULL if we have not observed
+ * requests for long enough. */
+static char *
+geoip_get_dirreq_history(geoip_client_action_t action,
+                           dirreq_type_t type)
+{
+  char *result = NULL;
+  smartlist_t *dirreq_times = NULL;
+  uint32_t complete = 0, timeouts = 0, running = 0;
+  int i = 0, bufsize = 1024, written;
+  dirreq_map_entry_t **ptr, **next, *ent;
+  struct timeval now;
+
+  tor_gettimeofday(&now);
+  if (action != GEOIP_CLIENT_NETWORKSTATUS &&
+      action != GEOIP_CLIENT_NETWORKSTATUS_V2)
+    return NULL;
+  dirreq_times = smartlist_create();
+  for (ptr = HT_START(dirreqmap, &dirreq_map); ptr; ptr = next) {
+    ent = *ptr;
+    if (ent->action != action || ent->type != type) {
+      next = HT_NEXT(dirreqmap, &dirreq_map, ptr);
+      continue;
+    } else {
+      if (ent->completed) {
+        uint32_t *bytes_per_second = tor_malloc_zero(sizeof(uint32_t));
+        uint32_t time_diff = (uint32_t) tv_udiff(&ent->request_time,
+                                                 &ent->completion_time);
+        if (time_diff == 0)
+          time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
+                          * anyway by law of nature or something.. */
+        *bytes_per_second = 1000000 * ent->response_size / time_diff;
+        smartlist_add(dirreq_times, bytes_per_second);
+        complete++;
+      } else {
+        if (tv_udiff(&ent->request_time, &now) / 1000000 > DIRREQ_TIMEOUT)
+          timeouts++;
+        else
+          running++;
+      }
+      next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ptr);
+      tor_free(ent);
+    }
+  }
+#define DIR_REQ_GRANULARITY 4
+  complete = round_uint32_to_next_multiple_of(complete,
+                                              DIR_REQ_GRANULARITY);
+  timeouts = round_uint32_to_next_multiple_of(timeouts,
+                                              DIR_REQ_GRANULARITY);
+  running = round_uint32_to_next_multiple_of(running,
+                                             DIR_REQ_GRANULARITY);
+  result = tor_malloc_zero(bufsize);
+  written = tor_snprintf(result, bufsize, "complete=%u,timeout=%u,"
+                         "running=%u", complete, timeouts, running);
+  if (written < 0)
+    return NULL;
+#define MIN_DIR_REQ_RESPONSES 16
+  if (complete >= MIN_DIR_REQ_RESPONSES) {
+    uint32_t *dltimes = tor_malloc(sizeof(uint32_t) * complete);
+    SMARTLIST_FOREACH(dirreq_times, uint32_t *, dlt, {
+      dltimes[i++] = *dlt;
+      tor_free(dlt);
+    });
+    median_uint32(dltimes, complete); /* sort */
+    written = tor_snprintf(result + written, bufsize - written,
+                           ",min=%u,d1=%u,d2=%u,q1=%u,d3=%u,d4=%u,md=%u,"
+                           "d6=%u,d7=%u,q3=%u,d8=%u,d9=%u,max=%u",
+                           dltimes[0],
+                           dltimes[1*complete/10-1],
+                           dltimes[2*complete/10-1],
+                           dltimes[1*complete/4-1],
+                           dltimes[3*complete/10-1],
+                           dltimes[4*complete/10-1],
+                           dltimes[5*complete/10-1],
+                           dltimes[6*complete/10-1],
+                           dltimes[7*complete/10-1],
+                           dltimes[3*complete/4-1],
+                           dltimes[8*complete/10-1],
+                           dltimes[9*complete/10-1],
+                           dltimes[complete-1]);
+    tor_free(dltimes);
+  }
+  if (written < 0)
+    result = NULL;
+  smartlist_free(dirreq_times);
+  return result;
+}
+#endif
+
 /** How long do we have to have observed per-country request history before we
  * are willing to talk about it? */
 #define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
@@ -584,7 +816,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
 {
   char *result = NULL;
   int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
 #endif
   if (!geoip_is_loaded())
@@ -599,7 +831,7 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
     unsigned *counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
     unsigned total = 0;
     unsigned granularity = IP_GRANULARITY;
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
     granularity = DIR_RECORD_USAGE_GRANULARITY;
 #endif
     HT_FOREACH(ent, clientmap, &client_history) {
@@ -667,7 +899,7 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   char *result;
   unsigned granularity = IP_GRANULARITY;
   int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   granularity = DIR_RECORD_USAGE_GRANULARITY;
   min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
 #endif
@@ -712,20 +944,23 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
-/** Store all our geoip statistics into $DATADIR/geoip-stats. */
+/** Store all our geoip statistics into $DATADIR/dirreq-stats. */
 static void
 dump_geoip_stats(void)
 {
-#ifdef ENABLE_GEOIP_STATS
+#ifdef ENABLE_DIRREQ_STATS
   time_t now = time(NULL);
   time_t request_start;
-  char *filename = get_datadir_fname("geoip-stats");
+  char *filename = get_datadir_fname("dirreq-stats");
   char *data_v2 = NULL, *data_v3 = NULL;
   char since[ISO_TIME_LEN+1], written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
   double v2_share = 0.0, v3_share = 0.0;
   FILE *out;
   int i;
+
+  if (!get_options()->DirReqStatistics)
+    goto done;
 
   data_v2 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS);
@@ -784,6 +1019,23 @@ dump_geoip_stats(void)
     if (fprintf(out, "v3-ns-share %0.2lf%%\n", v3_share*100) < 0)
       goto done;
   }
+
+  data_v2 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS_V2,
+                                       DIRREQ_DIRECT);
+  data_v3 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS,
+                                       DIRREQ_DIRECT);
+  if (fprintf(out, "ns-direct-dl %s\nns-v2-direct-dl %s\n",
+              data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
+    goto done;
+  tor_free(data_v2);
+  tor_free(data_v3);
+  data_v2 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS_V2,
+                                       DIRREQ_TUNNELED);
+  data_v3 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS,
+                                       DIRREQ_TUNNELED);
+  if (fprintf(out, "ns-tunneled-dl %s\nns-v2-tunneled-dl %s\n",
+              data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
+    goto done;
 
   finish_writing_to_file(open_file);
   open_file = NULL;
@@ -873,13 +1125,24 @@ clear_geoip_db(void)
 void
 geoip_free_all(void)
 {
-  clientmap_entry_t **ent, **next, *this;
-  for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
-    this = *ent;
-    next = HT_NEXT_RMV(clientmap, &client_history, ent);
-    tor_free(this);
+  {
+    clientmap_entry_t **ent, **next, *this;
+    for (ent = HT_START(clientmap, &client_history); ent != NULL; ent = next) {
+      this = *ent;
+      next = HT_NEXT_RMV(clientmap, &client_history, ent);
+      tor_free(this);
+    }
+    HT_CLEAR(clientmap, &client_history);
   }
-  HT_CLEAR(clientmap, &client_history);
+  {
+    dirreq_map_entry_t **ent, **next, *this;
+    for (ent = HT_START(dirreqmap, &dirreq_map); ent != NULL; ent = next) {
+      this = *ent;
+      next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ent);
+      tor_free(this);
+    }
+    HT_CLEAR(dirreqmap, &dirreq_map);
+  }
 
   clear_geoip_db();
 }
