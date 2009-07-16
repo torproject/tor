@@ -1418,7 +1418,7 @@ write_exit_stats(time_t when)
                                          EXIT_STATS_ROUND_UP_BYTES);
       other_bytes /= 1024;
       if (fprintf(out, "%sother="U64_FORMAT"\n",
-                  comma ? "," : "", other_bytes)<0)
+                  comma ? "," : "", U64_PRINTF_ARG(other_bytes))<0)
         goto done;
     }
     /* streams-opened port=num,.. */
