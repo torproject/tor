@@ -1378,8 +1378,8 @@ options_act(or_options_t *old_options)
     tor_free(actual_fname);
   }
 
-#ifdef ENABLE_DIRREQ_STATS
   if (options->DirReqStatistics) {
+#ifdef ENABLE_DIRREQ_STATS
     /* Check if GeoIP database could be loaded. */
     if (!geoip_is_loaded()) {
       log_warn(LD_CONFIG, "Configured to measure directory request "
@@ -1390,11 +1390,11 @@ options_act(or_options_t *old_options)
                "country and write aggregate statistics to disk. Check the "
                "dirreq-stats file in your data directory that will first "
                "be written in 24 hours from now.");
-  }
 #else
   log_warn(LD_CONFIG, "DirReqStatistics enabled, but Tor was built "
            "without support for directory request statistics.");
 #endif
+  }
 
 #ifdef ENABLE_EXIT_STATS
   if (options->ExitPortStatistics)
