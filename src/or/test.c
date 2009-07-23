@@ -4799,6 +4799,7 @@ main(int c, char**v)
   setup_directory();
   options_init(options);
   options->DataDirectory = tor_strdup(temp_dir);
+  options->EntryStatistics = 1;
   if (set_options(options, &errmsg) < 0) {
     printf("Failed to set initial options: %s\n", errmsg);
     tor_free(errmsg);
