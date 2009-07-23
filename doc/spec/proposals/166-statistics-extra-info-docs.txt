@@ -1,0 +1,391 @@
+Filename: 166-statistics-extra-info-docs.txt
+Title: Including Network Statistics in Extra-Info Documents
+Author: Karsten Loesing
+Created: 21-Jul-2009
+Target: 0.2.2
+Status: Open
+
+Change history:
+
+  21-Jul-2009  Initial proposal for or-dev
+
+
+Overview:
+
+  The Tor network has grown to almost two thousand relays and millions
+  of casual users over the past few years. With growth has come
+  increasing performance problems and attempts by some countries to
+  block access to the Tor network. In order to address these problems,
+  we need to learn more about the Tor network. This proposal suggests to
+  measure additional statistics and include them in extra-info documents
+  to help us understand the Tor network better.
+
+
+Introduction:
+
+  As of May 2009, relays, bridges, and directories gather the following
+  data for statistical purposes:
+
+  - Relays and bridges count the number of bytes that they have pushed
+    in 15-minute intervals over the past 24 hours. Relays and bridges
+    include these data in extra-info documents that they send to the
+    directory authorities whenever they publish their server descriptor.
+
+  - Bridges further include a rough number of clients per country that
+    they have seen in the past 48 hours in their extra-info documents.
+
+  - Directories can be configured to count the number of clients they
+    see per country in the past 24 hours and to write them to a local
+    file.
+
+  Since then we extended the network statistics in Tor. These statistics
+  include:
+
+  - Directories now gather more precise statistics about connecting
+    clients. Fixes include measuring in intervals of exactly 24 hours,
+    counting unsuccessful requests, measuring download times, etc. The
+    directories append their statistics to a local file every 24 hours.
+
+  - Entry guards count the number of clients per country per day like
+    bridges do and write them to a local file every 24 hours.
+
+  - Relays measure statistics of the number of cells in their circuit
+    queues and how much time these cells spend waiting there. Relays
+    write these statistics to a local file every 24 hours.
+
+  - Exit nodes count the number of read and written bytes on exit
+    connections per port as well as the number of opened exit streams
+    per port in 24-hour intervals. Exit nodes write their statistics to
+    a local file.
+
+  The following four sections contain descriptions for adding these
+  statistics to the relays' extra-info documents.
+
+
+Directory request statistics:
+
+  The first type of statistics aims at measuring directory requests sent
+  by clients to a directory mirror or directory authority. More
+  precisely, these statistics aim at requests for v2 and v3 network
+  statuses only. These directory requests are sent non-anonymously,
+  either via HTTP-like requests to a directory's Dir port or tunneled
+  over a 1-hop circuit.
+
+  Measuring directory request statistics is useful for several reasons:
+  First, the number of locally seen directory requests can be used to
+  estimate the total number of clients in the Tor network. Second, the
+  country-wise classification of requests using a GeoIP database can
+  help counting the relative and absolute number of users per country.
+  Third, the download times can give hints on the available bandwidth
+  capacity at clients.
+
+  Directory requests do not give any hints on the contents that clients
+  send or receive over the Tor network. Every client requests network
+  statuses from the directories, so that there are no anonymity-related
+  concerns to gather these statistics. It might be, though, that clients
+  wish to hide the fact that they are connecting to the Tor network.
+  Therefore, IP addresses are resolved to country codes in memory,
+  events are accumulated over 24 hours, and numbers are rounded up to
+  multiples of 4 or 8.
+
+   "dirreq-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+      [At most once.]
+
+      YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+      interval of length NSEC seconds (86400 seconds by default).
+
+      A "dirreq-stats-end" line, as well as any other "dirreq-*" line,
+      is only added when the relay has opened its Dir port and after 24
+      hours of measuring directory requests.
+
+   "dirreq-v2-ips" CC=N,CC=N,... NL
+      [At most once.]
+   "dirreq-v3-ips" CC=N,CC=N,... NL
+      [At most once.]
+
+      List of mappings from two-letter country codes to the number of
+      unique IP addresses that have connected from that country to
+      request a v2/v3 network status, rounded up to the nearest multiple
+      of 8. Only those IP addresses are counted that the directory can
+      answer with a 200 OK status code.
+
+   "dirreq-v2-reqs" CC=N,CC=N,... NL
+      [At most once.]
+   "dirreq-v3-reqs" CC=N,CC=N,... NL
+      [At most once.]
+
+      List of mappings from two-letter country codes to the number of
+      requests for v2/v3 network statuses from that country, rounded up
+      to the nearest multiple of 8. Only those requests are counted that
+      the directory can answer with a 200 OK status code.
+
+   "dirreq-v2-share" num% NL
+      [At most once.]
+   "dirreq-v3-share" num% NL
+      [At most once.]
+
+      The share of v2/v3 network status requests that the directory
+      expects to receive from clients based on its advertised bandwidth
+      compared to the overall network bandwidth capacity. Shares are
+      formatted in percent with two decimal places. Shares are
+      calculated as means over the whole 24-hour interval.
+
+   "dirreq-v2-resp" status=num,... NL
+      [At most once.]
+   "dirreq-v3-resp" status=nul,... NL
+      [At most once.]
+
+      List of mappings from response statuses to the number of requests
+      for v2/v3 network statuses that were answered with that response
+      status, rounded up to the nearest multiple of 4. Only response
+      statuses with at least 1 response are reported. New response
+      statuses can be added at any time. The current list of response
+      statuses is as follows:
+
+      "ok": a network status request is answered; this number
+         corresponds to the sum of all requests as reported in
+         "dirreq-v2-reqs" or "dirreq-v3-reqs", respectively, before
+         rounding up.
+      "not-enough-sigs: a version 3 network status is not signed by a
+         sufficient number of requested authorities.
+      "unavailable": a requested network status object is unavailable.
+      "not-found": a requested network status is not found.
+      "not-modified": a network status has not been modified since the
+         If-Modified-Since time that is included in the request.
+      "busy": the directory is busy.
+
+   "dirreq-v2-direct-dl" key=val,... NL
+      [At most once.]
+   "dirreq-v3-direct-dl" key=val,... NL
+      [At most once.]
+   "dirreq-v2-tunneled-dl" key=val,... NL
+      [At most once.]
+   "dirreq-v3-tunneled-dl" key=val,... NL
+      [At most once.]
+
+      List of statistics about possible failures in the download process
+      of v2/v3 network statuses. Requests are either "direct"
+      HTTP-encoded requests over the relay's directory port, or
+      "tunneled" requests using a BEGIN_DIR cell over the relay's OR
+      port. The list of possible statistics can change, and statistics
+      can be left out from reporting. The current list of statistics is
+      as follows:
+
+      Successful downloads and failures:
+
+      "complete": a client has finished the download successfully.
+      "timeout": a download did not finish within 10 minutes after
+         starting to send the response.
+      "running": a download is still running at the end of the
+         measurement period for less than 10 minutes after starting to
+         send the response.
+
+      Download times:
+
+      "min", "max": smallest and largest measured bandwidth in B/s.
+      "d[1-4,6-9]": 1st to 4th and 6th to 9th decile of measured
+         bandwidth in B/s. For a given decile i, i/10 of all downloads
+         had a smaller bandwidth than di, and (10-i)/10 of all downloads
+         had a larger bandwidth than di.
+      "q[1,3]": 1st and 3rd quartile of measured bandwidth in B/s. One
+         fourth of all downloads had a smaller bandwidth than q1, one
+         fourth of all downloads had a larger bandwidth than q3, and the
+         remaining half of all downloads had a bandwidth between q1 and
+         q3.
+      "md": median of measured bandwidth in B/s. Half of the downloads
+         had a smaller bandwidth than md, the other half had a larger
+         bandwidth than md.
+
+
+Entry guard statistics:
+
+  Entry guard statistics include the number of clients per country and
+  per day that are connecting directly to an entry guard.
+
+  Entry guard statistics are important to learn more about the
+  distribution of clients to countries. In the future, this knowledge
+  can be useful to detect if there are or start to be any restrictions
+  for clients connecting from specific countries.
+
+  The information which client connects to a given entry guard is very
+  sensitive. This information must not be combined with the information
+  what contents are leaving the network at the exit nodes. Therefore,
+  entry guard statistics need to be aggregated to prevent them from
+  becoming useful for de-anonymization. Aggregation includes resolving
+  IP addresses to country codes, counting events over 24-hour intervals,
+  and rounding up numbers to the next multiple of 8.
+
+   "entry-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+      [At most once.]
+
+      YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+      interval of length NSEC seconds (86400 seconds by default).
+
+      An "entry-stats-end" line, as well as any other "entry-*"
+      line, is first added after the relay has been running for at least
+      24 hours.
+
+   "entry-ips" CC=N,CC=N,... NL
+      [At most once.]
+
+      List of mappings from two-letter country codes to the number of
+      unique IP addresses that have connected from that country to the
+      relay and which are no known other relays, rounded up to the
+      nearest multiple of 8.
+
+
+Cell statistics:
+
+  The third type of statistics have to do with the time that cells spend
+  in circuit queues. In order to gather these statistics, the relay
+  memorizes when it puts a given cell in a circuit queue and when this
+  cell is flushed. The relay further notes the life time of the circuit.
+  These data are sufficient to determine the mean number of cells in a
+  queue over time and the mean time that cells spend in a queue.
+
+  Cell statistics are necessary to learn more about possible reasons for
+  the poor network performance of the Tor network, especially high
+  latencies. The same statistics are also useful to determine the
+  effects of design changes by comparing today's data with future data.
+
+  There are basically no privacy concerns from measuring cell
+  statistics, regardless of a node being an entry, middle, or exit node.
+
+   "cell-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+      [At most once.]
+
+      YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+      interval of length NSEC seconds (86400 seconds by default).
+
+      A "cell-stats-end" line, as well as any other "cell-*" line,
+      is first added after the relay has been running for at least 24
+      hours.
+
+   "cell-processed-cells" num,...,num NL
+      [At most once.]
+
+      Mean number of processed cells per circuit, subdivided into
+      deciles of circuits by the number of cells they have processed in
+      descending order from loudest to quietest circuits.
+
+   "cell-queued-cells" num,...,num NL
+      [At most once.]
+
+      Mean number of cells contained in queues by circuit decile. These
+      means are calculated by 1) determining the mean number of cells in
+      a single circuit between its creation and its termination and 2)
+      calculating the mean for all circuits in a given decile as
+      determined in "cell-processed-cells". Numbers have a precision of
+      two decimal places.
+
+   "cell-time-in-queue" num,...,num NL
+      [At most once.]
+
+      Mean time cells spend in circuit queues in milliseconds. Times are
+      calculated by 1) determining the mean time cells spend in the
+      queue of a single circuit and 2) calculating the mean for all
+      circuits in a given decile as determined in
+      "cell-processed-cells".
+
+   "cell-circuits-per-decile" num NL
+      [At most once.]
+
+      Mean number of circuits that are included in any of the deciles,
+      rounded up to the next integer.
+
+
+Exit statistics:
+
+  The last type of statistics affects exit nodes counting the number of
+  bytes written and read and the number of streams opened per port and
+  per 24 hours. Exit port statistics can be measured from looking of
+  headers of BEGIN and DATA cells. A BEGIN cell contains the exit port
+  that is required for the exit node to open a new exit stream.
+  Subsequent DATA cells coming from the client or being sent back to the
+  client contain a length field stating how many bytes of application
+  data are contained in the cell.
+
+  Exit port statistics are important to measure in order to identify
+  possible load-balancing problems with respect to exit policies. Exit
+  nodes that permit more ports than others are very likely overloaded
+  with traffic for those ports plus traffic for other ports. Improving
+  load balancing in the Tor network improves the overall utilization of
+  bandwidth capacity.
+
+  Exit traffic is one of the most sensitive parts of network data in the
+  Tor network. Even though these statistics do not require looking at
+  traffic contents, statistics are aggregated so that they are not
+  useful for de-anonymizing users. Only those ports are reported that
+  have seen at least 0.1% of exiting or incoming bytes, numbers of bytes
+  are rounded up to full kibibytes (KiB), and stream numbers are rounded
+  up to the next multiple of 4.
+
+   "exit-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+      [At most once.]
+
+      YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+      interval of length NSEC seconds (86400 seconds by default).
+
+      An "exit-stats-end" line, as well as any other "exit-*" line, is
+      first added after the relay has been running for at least 24 hours
+      and only if the relay permits exiting (where exiting to a single
+      port and IP address is sufficient).
+
+   "exit-kibibytes-written" port=N,port=N,... NL
+      [At most once.]
+   "exit-kibibytes-read" port=N,port=N,... NL
+      [At most once.]
+
+      List of mappings from ports to the number of kibibytes that the
+      relay has written to or read from exit connections to that port,
+      rounded up to the next full kibibyte.
+
+   "exit-streams-opened" port=N,port=N,... NL
+      [At most once.]
+
+      List of mappings from ports to the number of opened exit streams
+      to that port, rounded up to the nearest multiple of 4.
+
+
+Implementation notes:
+
+  Right now, relays that are configured accordingly write similar
+  statistics to those described in this proposal to disk every 24 hours.
+  With this proposal being implemented, relays include the contents of
+  these files in extra-info documents.
+
+  The following steps are necessary to implement this proposal:
+
+  1. The current format of [dirreq|entry|buffer|exit]-stats files needs
+     to be adapted to the description in this proposal. This step
+     basically means renaming keywords.
+
+  2. The timing of writing the four *-stats files should be unified, so
+     that they are written exactly after 24 hours after starting the
+     relay. Right now, the measurement intervals for dirreq, entry, and
+     exit stats starts with the first observed request, and files are
+     written when observing the first request that occurs more than 24
+     hours after the beginning of the measurement interval. With this
+     proposal, the measurement intervals should all start at the same
+     time, and files should be written exactly 24 hours later.
+
+  3. It is advantageous to cache statistics in local files in the data
+     directory until they are included in extra-info documents. The
+     reason is that the 24-hour measurement interval can be very
+     different from the 18-hour publication interval of extra-info
+     documents. When a relay crashed after finishing a measurement
+     interval, but before publishing the next extra-info document,
+     statistics would get lost. Therefore, statistics are written to
+     disk when finishing a measurement interval and read from disk when
+     generating an extra-info document. As a result, the *-stats files
+     need to be overwritten after 24 hours, rather than appending new
+     statistics to them. Further, the contents of the *-stats files need
+     to be checked in the process of generating extra-info documents.
+
+  4. With the statistics patches being tested, the ./configure options
+     should be removed and the statistics code be compiled by default.
+     It is still required for relay operators to add configuration
+     options (DirReqStatistics, ExitPortStatistics, etc.) to enable
+     gathering statistics. However, in the near future, statistics shall
+     be enabled gathered by all relays by default, where requiring a
+     ./configure option would be a barrier for many relay operators.
