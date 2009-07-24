@@ -1,12 +1,26 @@
-Changes in version 0.2.2.1-alpha - 2009-??-??
-  o Security fixes:
-    - Fix an edge case where a malicious exit relay could convince a
-      controller that the client's DNS question resolves to an internal IP
-      address. Bug found and fixed by "optimist"; bugfix on 0.1.2.8-beta.
-
+Changes in version 0.2.2.1-alpha - 2009-07-2?
   o Major features:
     - Add support for dynamic OpenSSL hardware crypto acceleration engines
       via new AccelName and AccelDir options.
+
+  o New options for gathering stats safely:
+    - Directories that configure with --enable-dirreq-stats and set
+      "DirReqStatistics 1" write directory request stats to disk every
+      24 hours. As compared to the --enable-geoip-stats flag in 0.2.1.x,
+      there are a few improvements: 1) stats are written to disk exactly
+      every 24 hours; 2) estimated shares of v2 and v3 requests are
+      determined as mean values, not at the end of a measurement period;
+      3) unresolved requests are listed with country code '??';
+      4) directories also measure download times.
+    - Exit nodes that configure with --enable-exit-stats and set
+      "ExitPortStatistics 1" write statistics on the number of exit
+      streams and transferred bytes per port to disk every 24 hours.
+    - Relays that configure with --enable-buffer-stats and set
+      "CellStatistics 1" write statistics to disk every 24 hours on how
+      long cells spend in their circuit queues.
+    - Entry nodes that configure with --enable-entry-stats and set
+      "EntryStatistics 1" write statistics to disk every 24 hours on
+      the rough number and origins of connecting clients.
 
   o Minor features:
     - New --digests command-line switch to output the digests of the
@@ -15,42 +29,13 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
     - The memarea code now uses a sentinel value at the end of each area
       to make sure nothing writes beyond the end of an area.  This might
       help debug some conceivable causes of bug 930.
-    - Directories that are configured with the --enable-dirreq-stats flag
-      and have "DirReqStatistics 1" set write directory request stats to
-      disk every 24 hours. As compared to the --enable-geoip-stats flag
-      in 0.2.1.x, there are a few improvements: 1) stats are written to
-      disk exactly every 24 hours; 2) estimated shares of v2 and v3
-      requests are determined as mean values, not at the end of a
-      measurement period; 3) unresolved requests are listed with country
-      code '??'; 4) directories also measure download times.
-    - Exit nodes can write statistics on the number of exit streams and
-      transferred bytes per port to disk every 24 hours.  To enable this,
-      run configure with the --enable-exit-stats option, and set
-      "ExitPortStatistics 1" in your torrc.
-    - Relays write statistics on how long cells spend in their circuit
-      queues to disk every 24 hours. To enable this, run configure with
-      the --enable-buffer-stats option, and set "CellStatistics 1" in your
-      torrc.
-    - Entry nodes can write statistics on the rough number and origins of
-      connecting clients to disk every 24 hours. To enable this, run
-      configure with the --enable-entry-stats option, and set
-      "EntryStatistics 1" in your torrc.
     - Time and memory units in the configuration file can now be set to
       fractional units.  For example, "2.5 MB" is now a valid value for
       AccountingMax.
 
-  o Minor bugfixes
-    - Hidden service clients didn't use a cached service descriptor that
-      was older than 15 minutes, but wouldn't fetch a new one either. Now,
-      use a cached descriptor no matter how old it is and only fetch a new
-      one when all introduction points fail. Fix for bug 997. Patch from
-      Marcus Griep.
-    - Fix refetching of hidden service descriptors when all introduction
-      points have turned out to not work. Fixes more of bug 997.
-
   o Deprecated and removed features:
     - The controller no longer accepts the old obsolete "addr-mappings/"
-      GETINFO value.
+      or "unregistered-servers-" GETINFO values.
     - Hidden services no longer publish version 0 descriptors, and clients
       do not request or use version 0 descriptors. However, the authorities
       still accept and serve version 0 descriptors when contacted by older
