@@ -60,7 +60,23 @@ Changes in version 0.2.2.1-alpha - 2009-??-??
       controllers.
 
 
+Changes in version 0.2.1.18 - 2009-07-24
+  o Build fixes:
+    - Add LIBS=-lrt to Makefile.am so the Tor RPMs use a static libevent.
+
+
 Changes in version 0.2.1.17-rc - 2009-07-07
+  Tor 0.2.1.17-rc marks the fourth -- and hopefully last -- release
+  candidate for the 0.2.1.x series. It lays the groundwork for further
+  client performance improvements, and also fixes a big bug with directory
+  authorities that were causing them to assign Guard and Stable flags
+  poorly.
+
+  The Windows bundles also finally include the geoip database that we
+  thought we'd been shipping since 0.2.0.x (oops), and the OS X bundles
+  should actually install Torbutton rather than giving you a cryptic
+  failure message (oops).
+
   o Major features:
     - Clients now use the bandwidth values in the consensus, rather than
       the bandwidth values in each relay descriptor. This approach opens
@@ -108,6 +124,9 @@ Changes in version 0.2.1.17-rc - 2009-07-07
 
 
 Changes in version 0.2.1.16-rc - 2009-06-20
+  Tor 0.2.1.16-rc speeds up performance for fast exit relays, and fixes
+  a bunch of minor bugs.
+
   o Security fixes:
     - Fix an edge case where a malicious exit relay could convince a
       controller that the client's DNS question resolves to an internal IP
@@ -154,6 +173,10 @@ Changes in version 0.2.1.16-rc - 2009-06-20
 
 
 Changes in version 0.2.1.15-rc - 2009-05-25
+  Tor 0.2.1.15-rc marks the second release candidate for the 0.2.1.x
+  series. It fixes a major bug on fast exit relays, as well as a variety
+  of more minor bugs.
+
   o Major bugfixes (on 0.2.0.x):
     - Fix a timing-dependent, allocator-dependent, DNS-related crash bug
       that would occur on some exit nodes when DNS failures and timeouts
