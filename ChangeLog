@@ -1,3 +1,8 @@
+Changes in version 0.2.1.18 - 2009-07-24
+  o Build fixes:
+    - Add LIBS=-lrt to Makefile.am so the Tor RPMs use a static libevent.
+
+
 Changes in version 0.2.1.17-rc - 2009-07-07
   Tor 0.2.1.17-rc marks the fourth -- and hopefully last -- release
   candidate for the 0.2.1.x series. It lays the groundwork for further
