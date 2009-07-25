@@ -1133,8 +1133,13 @@ update_consensus_networkstatus_fetch_time(time_t now)
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
       start = c->fresh_until + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
-      /* But only in the first half-interval after that. */
-      dl_interval = interval/2;
+      /* Some clients may need the consensus sooner than others. */
+      if (options->FetchDirInfoExtraEarly) {
+        dl_interval = 60;
+      } else {
+        /* But only in the first half-interval after that. */
+        dl_interval = interval/2;
+      }
     } else {
       /* We're an ordinary client or a bridge. Give all the caches enough
        * time to download the consensus. */

@@ -32,6 +32,12 @@ Changes in version 0.2.2.1-alpha - 2009-07-2?
     - Time and memory units in the configuration file can now be set to
       fractional units.  For example, "2.5 MB" is now a valid value for
       AccountingMax.
+    - Certain Tor clients (such as those behind check.torproject.org) may
+      want to fetch the consensus in an extra early manner. To enable this
+      a user may now set FetchDirInfoExtraEarly to 1. This also depends on
+      setting FetchDirInfoEarly to 1. Previous behavior will stay the same
+      as only certain clients who must have this information sooner should
+      set this option.
 
   o Deprecated and removed features:
     - The controller no longer accepts the old obsolete "addr-mappings/"

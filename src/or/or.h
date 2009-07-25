@@ -2452,6 +2452,9 @@ typedef struct {
    * means directly from the authorities) no matter our other config? */
   int FetchDirInfoEarly;
 
+  /** Should we fetch our dir info at the start of the consensus period? */
+  int FetchDirInfoExtraEarly;
+
   char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
                              * MAPADDRESS requests. */
   int ServerDNSSearchDomains; /**< Boolean: If set, we don't force exit
