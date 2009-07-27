@@ -1032,12 +1032,31 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
   long secdiff = end->tv_sec - start->tv_sec;
 
   if (labs(secdiff+1) > LONG_MAX/1000000) {
-    log_warn(LD_GENERAL, "comparing times too far apart.");
+    log_warn(LD_GENERAL, "comparing times on microsecond detail too far "
+             "apart: %ld seconds", secdiff);
     return LONG_MAX;
   }
 
   udiff = secdiff*1000000L + (end->tv_usec - start->tv_usec);
   return udiff;
+}
+
+/** Return the number of milliseconds elapsed between *start and *end.
+ */
+long
+tv_mdiff(const struct timeval *start, const struct timeval *end)
+{
+  long mdiff;
+  long secdiff = end->tv_sec - start->tv_sec;
+
+  if (labs(secdiff+1) > LONG_MAX/1000) {
+    log_warn(LD_GENERAL, "comparing times on millisecond detail too far "
+             "apart: %ld seconds", secdiff);
+    return LONG_MAX;
+  }
+
+  mdiff = secdiff*1000L + (end->tv_usec - start->tv_usec) / 1000L;
+  return mdiff;
 }
 
 /** Yield true iff <b>y</b> is a leap-year. */

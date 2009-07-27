@@ -739,16 +739,16 @@ geoip_get_dirreq_history(geoip_client_action_t action,
     } else {
       if (ent->completed) {
         uint32_t *bytes_per_second = tor_malloc_zero(sizeof(uint32_t));
-        uint32_t time_diff = (uint32_t) tv_udiff(&ent->request_time,
+        uint32_t time_diff = (uint32_t) tv_mdiff(&ent->request_time,
                                                  &ent->completion_time);
         if (time_diff == 0)
           time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
                           * anyway by law of nature or something.. */
-        *bytes_per_second = 1000000 * ent->response_size / time_diff;
+        *bytes_per_second = 1000 * ent->response_size / time_diff;
         smartlist_add(dirreq_times, bytes_per_second);
         complete++;
       } else {
-        if (tv_udiff(&ent->request_time, &now) / 1000000 > DIRREQ_TIMEOUT)
+        if (tv_mdiff(&ent->request_time, &now) / 1000 > DIRREQ_TIMEOUT)
           timeouts++;
         else
           running++;

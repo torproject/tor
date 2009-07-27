@@ -1836,7 +1836,8 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
       tor_gettimeofday(&flushed_from_queue);
       cell_waiting_time = (uint32_t)
-            (tv_udiff(&cell->packed_timeval, &flushed_from_queue) / 1000);
+            tv_mdiff(&cell->packed_timeval, &flushed_from_queue);
+
       orcirc->total_cell_waiting_time += cell_waiting_time;
       orcirc->processed_cells++;
     }

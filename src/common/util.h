@@ -211,6 +211,7 @@ int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Time helpers */
 long tv_udiff(const struct timeval *start, const struct timeval *end);
+long tv_mdiff(const struct timeval *start, const struct timeval *end);
 time_t tor_timegm(struct tm *tm);
 #define RFC1123_TIME_LEN 29
 void format_rfc1123_time(char *buf, time_t t);
