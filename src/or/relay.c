@@ -208,6 +208,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
       tor_assert(circ->purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
       tor_assert(splice->_base.purpose == CIRCUIT_PURPOSE_REND_ESTABLISHED);
       cell->circ_id = splice->p_circ_id;
+      cell->command = CELL_RELAY; /* can't be relay_early anyway */
       if ((reason = circuit_receive_relay_cell(cell, TO_CIRCUIT(splice),
                                                CELL_DIRECTION_IN)) < 0) {
         log_warn(LD_REND, "Error relaying cell across rendezvous; closing "
@@ -549,11 +550,17 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     if (origin_circ->remaining_relay_early_cells > 0 &&
         (relay_command == RELAY_COMMAND_EXTEND ||
-         cpath_layer != origin_circ->cpath)) {
-      /* If we've got any relay_early cells left, and we're sending a relay
-       * cell or we're not talking to the first hop, use one of them.  Don't
-       * worry about the conn protocol version: append_cell_to_circuit_queue
-       * will fix it up. */
+         (cpath_layer != origin_circ->cpath &&
+          !CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(circ->purpose)))) {
+      /* If we've got any relay_early cells left, and we're sending
+       * an extend cell or (we're not talking to the first hop and we're
+       * not talking to a rendezvous circuit), use one of them.
+       * Don't worry about the conn protocol version:
+       * append_cell_to_circuit_queue will fix it up. */
+      /* XXX For now, clients don't use RELAY_EARLY cells when sending
+       * relay cells on rendezvous circuits. See bug 1038. Eventually,
+       * we can take this behavior away in favor of having clients avoid
+       * rendezvous points running 0.2.1.3-alpha through 0.2.1.18. -RD */
       cell.command = CELL_RELAY_EARLY;
       --origin_circ->remaining_relay_early_cells;
       log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",

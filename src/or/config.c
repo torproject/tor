@@ -1219,6 +1219,30 @@ options_need_geoip_info(or_options_t *options, const char **reason_out)
   return bridge_usage || routerset_usage;
 }
 
+/** Return the bandwidthrate that we are going to report to the authorities
+ * based on the config options. */
+int
+get_effective_bwrate(or_options_t *options)
+{
+  int bw = (int)options->BandwidthRate;
+  if (bw > options->MaxAdvertisedBandwidth)
+    bw = (int)options->MaxAdvertisedBandwidth;
+  if (options->RelayBandwidthRate > 0 && bw > options->RelayBandwidthRate)
+    bw = (int)options->RelayBandwidthRate;
+  return bw;
+}
+
+/** Return the bandwidthburst that we are going to report to the authorities
+ * based on the config options. */
+int
+get_effective_bwburst(or_options_t *options)
+{
+  int bw = (int)options->BandwidthBurst;
+  if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
+    bw = (int)options->RelayBandwidthBurst;
+  return bw;
+}
+
 /** Fetch the active option list, and take actions based on it. All of the
  * things we do should survive being done repeatedly.  If present,
  * <b>old_options</b> contains the previous value of the options.
@@ -3810,9 +3834,7 @@ options_transition_affects_descriptor(or_options_t *old_options,
                                       or_options_t *new_options)
 {
   /* XXX We can be smarter here. If your DirPort isn't being
-   * published and you just turned it off, no need to republish. If
-   * you changed your bandwidthrate but maxadvertisedbandwidth still
-   * trumps, no need to republish. Etc. */
+   * published and you just turned it off, no need to republish. Etc. */
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
       !opt_streq(old_options->Nickname,new_options->Nickname) ||
       !opt_streq(old_options->Address,new_options->Address) ||
@@ -3825,10 +3847,9 @@ options_transition_affects_descriptor(or_options_t *old_options,
       old_options->NoPublish != new_options->NoPublish ||
       old_options->_PublishServerDescriptor !=
         new_options->_PublishServerDescriptor ||
-      old_options->BandwidthRate != new_options->BandwidthRate ||
-      old_options->BandwidthBurst != new_options->BandwidthBurst ||
-      old_options->MaxAdvertisedBandwidth !=
-        new_options->MaxAdvertisedBandwidth ||
+      get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
+      get_effective_bwburst(old_options) !=
+        get_effective_bwburst(new_options) ||
       !opt_streq(old_options->ContactInfo, new_options->ContactInfo) ||
       !opt_streq(old_options->MyFamily, new_options->MyFamily) ||
       !opt_streq(old_options->AccountingStart, new_options->AccountingStart) ||
