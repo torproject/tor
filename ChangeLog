@@ -1,4 +1,4 @@
-Changes in version 0.2.1.19 - 2009-07-??
+Changes in version 0.2.1.19 - 2009-07-28
   o Major bugfixes:
     - Make accessing hidden services on 0.2.1.x work right
       again. Bugfix on 0.2.1.3-alpha; workaround for bug 1038.
