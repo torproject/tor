@@ -661,8 +661,11 @@ see tor-design.pdf.
    is speaking v2 of the link protocol or later, the OR relays the cell as a
    RELAY_EARLY cell.  Otherwise, it relays it as a RELAY cell.
 
-   If a node ever receives more than 8 RELAY_EARLY cells on a given circuit,
-   it SHOULD close the circuit.
+   If a node ever receives more than 8 RELAY_EARLY cells on a given
+   outbound circuit, it SHOULD close the circuit. (For historical reasons,
+   we don't limit the number of inbound RELAY_EARLY cells; they should
+   be harmless anyway because clients won't accept extend requests. See
+   bug 1038.)
 
    When speaking v2 of the link protocol or later, clients MUST only send
    EXTEND cells inside RELAY_EARLY cells.  Clients SHOULD send the first ~8
