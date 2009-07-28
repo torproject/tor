@@ -3,6 +3,12 @@ Changes in version 0.2.1.19 - 2009-07-??
     - Make accessing hidden services on 0.2.1.x work right
       again. Bugfix on 0.2.1.3-alpha; workaround for bug 1038.
 
+  o Minor features:
+    - When a relay/bridge is writing out its identity key fingerprint to
+      the "fingerprint" file and to its logs, write it without spaces. Now
+      it will look like the fingerprints in our bridges documentation,
+      and confuse fewer users.
+
   o Minor bugfixes:
     - Avoid leaking memory every time we get a create cell but we have
       so many already queued that we refuse it. Bugfix on 0.2.0.19-alpha;

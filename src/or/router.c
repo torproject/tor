@@ -568,7 +568,7 @@ init_keys(void)
   /* 5. Dump fingerprint to 'fingerprint' */
   keydir = get_datadir_fname("fingerprint");
   log_info(LD_GENERAL,"Dumping fingerprint to \"%s\"...",keydir);
-  if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 1)<0) {
+  if (crypto_pk_get_fingerprint(get_identity_key(), fingerprint, 0)<0) {
     log_err(LD_GENERAL,"Error computing fingerprint");
     tor_free(keydir);
     return -1;
