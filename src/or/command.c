@@ -395,12 +395,8 @@ command_process_relay_cell(cell_t *cell, or_connection_t *conn)
    * gotten no more than MAX_RELAY_EARLY_CELLS_PER_CIRCUIT of them. */
   if (cell->command == CELL_RELAY_EARLY) {
     if (direction == CELL_DIRECTION_IN) {
-      log_fn(LOG_PROTOCOL_WARN, LD_OR,
-             "Received an inbound RELAY_EARLY cell on circuit %d from %s:%d."
-             "  Closing circuit.",
-             cell->circ_id, conn->_base.address, conn->_base.port);
-      circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
-      return;
+      /* XXX Allow an unlimited number of inbound relay_early cells for
+       * now, for hidden service compatibility. See bug 1038. -RD */
     } else {
       or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
       if (or_circ->remaining_relay_early_cells == 0) {

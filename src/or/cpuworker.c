@@ -444,8 +444,10 @@ assign_onionskin_to_cpuworker(connection_t *cpuworker,
   if (1) {
     if (num_cpuworkers_busy == num_cpuworkers) {
       log_debug(LD_OR,"No idle cpuworkers. Queuing.");
-      if (onion_pending_add(circ, onionskin) < 0)
+      if (onion_pending_add(circ, onionskin) < 0) {
+        tor_free(onionskin);
         return -1;
+      }
       return 0;
     }
 
