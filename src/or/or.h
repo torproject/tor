@@ -488,6 +488,11 @@ typedef enum {
    (p)<=_CIRCUIT_PURPOSE_C_MAX)
 /** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
 #define CIRCUIT_IS_ORIGIN(c) (CIRCUIT_PURPOSE_IS_ORIGIN((c)->purpose))
+/** True iff the circuit purpose <b>p</b> is for an established rendezvous
+ * circuit. */
+#define CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(p) \
+  ((p) == CIRCUIT_PURPOSE_C_REND_JOINED ||     \
+   (p) == CIRCUIT_PURPOSE_S_REND_JOINED)
 
 /** How many circuits do we want simultaneously in-progress to handle
  * a given stream? */
@@ -2920,6 +2925,9 @@ int or_state_save(time_t now);
 int options_need_geoip_info(or_options_t *options, const char **reason_out);
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer);
+
+int get_effective_bwrate(or_options_t *options);
+int get_effective_bwburst(or_options_t *options);
 
 #ifdef CONFIG_PRIVATE
 /* Used only by config.c and test.c */
