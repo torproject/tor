@@ -219,7 +219,7 @@
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
          "AUTHDIR_NEWDESCS" / "DESCCHANGED" / "STATUS_GENERAL" /
          "STATUS_CLIENT" / "STATUS_SERVER" / "GUARD" / "NS" / "STREAM_BW" /
-         "CLIENTS_SEEN"
+         "CLIENTS_SEEN" / "NEWCONSENSUS"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -562,14 +562,14 @@
       states. See Section 4.1.10 for explanations. (Only a few of the
       status events are available as getinfo's currently. Let us know if
       you want more exposed.)
-    "status/reachability/or"
+    "status/reachability-succeeded/or"
       0 or 1, depending on whether we've found our ORPort reachable.
-    "status/reachability/dir"
+    "status/reachability-succeeded/dir"
       0 or 1, depending on whether we've found our DirPort reachable.
-    "status/reachability"
+    "status/reachability-succeeded"
       "OR=" ("0"/"1") SP "DIR=" ("0"/"1")
-      Combines status/reachability/*; controllers MUST ignore unrecognized
-      elements in this entry.
+      Combines status/reachability-succeeded/*; controllers MUST ignore
+      unrecognized elements in this entry.
     "status/bootstrap-phase"
       Returns the most recent bootstrap phase status event
       sent. Specifically, it returns a string starting with either
