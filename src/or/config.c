@@ -1224,12 +1224,12 @@ options_need_geoip_info(or_options_t *options, const char **reason_out)
 int
 get_effective_bwrate(or_options_t *options)
 {
-  int bw = (int)options->BandwidthRate;
+  uint64_t bw = options->BandwidthRate;
   if (bw > options->MaxAdvertisedBandwidth)
-    bw = (int)options->MaxAdvertisedBandwidth;
+    bw = options->MaxAdvertisedBandwidth;
   if (options->RelayBandwidthRate > 0 && bw > options->RelayBandwidthRate)
-    bw = (int)options->RelayBandwidthRate;
-  return bw;
+    bw = options->RelayBandwidthRate;
+  return (int)bw;
 }
 
 /** Return the bandwidthburst that we are going to report to the authorities
@@ -1237,10 +1237,10 @@ get_effective_bwrate(or_options_t *options)
 int
 get_effective_bwburst(or_options_t *options)
 {
-  int bw = (int)options->BandwidthBurst;
+  uint64_t bw = options->BandwidthBurst;
   if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
-    bw = (int)options->RelayBandwidthBurst;
-  return bw;
+    bw = options->RelayBandwidthBurst;
+  return (int)bw;
 }
 
 /** Fetch the active option list, and take actions based on it. All of the
