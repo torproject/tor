@@ -2953,8 +2953,8 @@ int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer);
 
 const char *tor_get_digests(void);
-int get_effective_bwrate(or_options_t *options);
-int get_effective_bwburst(or_options_t *options);
+uint32_t get_effective_bwrate(or_options_t *options);
+uint32_t get_effective_bwburst(or_options_t *options);
 
 #ifdef CONFIG_PRIVATE
 /* Used only by config.c and test.c */

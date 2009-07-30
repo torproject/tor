@@ -1,3 +1,11 @@
+tor (0.2.1.19-1) unstable; urgency=low
+
+  * New upstream version.
+    - Make accessing hidden services on 0.2.1.x work right (closes: #538960).
+    [More items are in the upstream changelog.]
+
+ -- Peter Palfrader <weasel@debian.org>  Wed, 29 Jul 2009 12:49:03 +0200
+
 tor (0.2.1.18-1) unstable; urgency=low
 
   * New upstream version.
