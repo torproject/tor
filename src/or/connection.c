@@ -2609,7 +2609,11 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
 int
 connection_fetch_from_buf(char *string, size_t len, connection_t *conn)
 {
-  return fetch_from_buf(string, len, conn->inbuf);
+  IF_HAS_BUFFEREVENT(conn, {
+    return bufferevent_read(conn->bufev, string, len);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return fetch_from_buf(string, len, conn->inbuf);
+  }
 }
 
 /** Return conn-\>outbuf_flushlen: how many bytes conn wants to flush
@@ -2857,6 +2861,14 @@ _connection_write_to_buf_impl(const char *string, size_t len,
   /* if it's marked for close, only allow write if we mean to flush it */
   if (conn->marked_for_close && !conn->hold_open_until_flushed)
     return;
+
+  IF_HAS_BUFFEREVENT(conn, {
+      if (bufferevent_write(conn->bufev, string, len)<0) {
+        /* XXXX mark for close? */
+        log_warn(LD_NET, "bufferevent_write failed! That shouldn't happen.");
+      }
+      return;
+  });
 
   old_datalen = buf_datalen(conn->outbuf);
   if (zlib) {
