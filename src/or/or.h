@@ -2974,8 +2974,6 @@ struct socks_request_t {
                               * every connection. */
 };
 
-/* all the function prototypes go here */
-
 /********************************* circuitbuild.c **********************/
 
 /** How many hops does a general-purpose circuit have by default? */

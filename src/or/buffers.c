@@ -1008,6 +1008,98 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
   return 1;
 }
 
+#ifdef USE_BUFFEREVENTS
+static size_t
+inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out)
+{
+  int n_vecs, i;
+
+  if (evbuffer_get_length(buf) < n)
+    n = evbuffer_get_length(buf);
+  if (n == 0)
+    return 0;
+  n_vecs = evbuffer_peek(buf, n, NULL, NULL, 0);
+  if (n_vecs <= 0)
+    return -1;
+  if (n_vecs == 1) {
+    struct evbuffer_iovec v;
+    i = evbuffer_peek(buf, n, NULL, &v, 1);
+    tor_assert(i == 1);
+    *data = v.iov_base;
+    *free_out = 0;
+    return v.iov_len;
+  } else {
+    struct evbuffer_iovec *vecs =
+      tor_malloc(sizeof(struct evbuffer_iovec)*n_vecs);
+    size_t copied = 0;
+    i = evbuffer_peek(buf, n, NULL, vecs, n_vecs);
+    tor_assert(i == n_vecs);
+    *data = tor_malloc(n);
+    for (i=0; i < n_vecs; ++i) {
+      size_t copy = n - copied;
+      if (copy > vecs[i].iov_len)
+        copy = vecs[i].iov_len;
+      tor_assert(copied+copy <= n);
+      memcpy(data+copied, vecs[i].iov_base, copy);
+      copied += copy;
+    }
+    *free_out = 0;
+    return copied;
+  }
+}
+
+/** As fetch_var_cell_from_buf, buf works on an evbuffer. */
+int
+fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
+                             int linkproto)
+{
+  char *hdr = NULL;
+  int free_hdr = 0;
+  size_t n;
+  size_t buf_len;
+  uint8_t command;
+  uint16_t cell_length;
+  var_cell_t *cell;
+  int result;
+  if (linkproto == 1)
+    return 0;
+
+  *out = NULL;
+  buf_len = evbuffer_get_length(buf);
+  if (buf_len < VAR_CELL_HEADER_SIZE) {
+    result = 0;
+    goto done;
+  }
+  n = inspect_evbuffer(buf, &hdr, VAR_CELL_HEADER_SIZE, &free_hdr);
+  tor_assert(n == VAR_CELL_HEADER_SIZE);
+
+  command = get_uint8(hdr+2);
+  if (!(CELL_COMMAND_IS_VAR_LENGTH(command))) {
+    result = 0;
+    goto done;
+  }
+
+  cell_length = ntohs(get_uint16(hdr+3));
+  if (buf_len < (size_t)(VAR_CELL_HEADER_SIZE+cell_length)) {
+    result = 1; /* Not all here yet. */
+    goto done;
+  }
+
+  cell = var_cell_new(cell_length);
+  cell->command = command;
+  cell->circ_id = ntohs(get_uint16(hdr));
+  evbuffer_drain(buf, VAR_CELL_HEADER_SIZE);
+  evbuffer_remove(buf, cell->payload, cell_length);
+  *out = cell;
+  result = 1;
+
+ done:
+  if (free_hdr && hdr)
+    tor_free(hdr);
+  return result;
+}
+#endif
+
 /** Move up to *<b>buf_flushlen</b> bytes from <b>buf_in</b> to
  * <b>buf_out</b>, and modify *<b>buf_flushlen</b> appropriately.
  * Return the number of bytes actually copied.

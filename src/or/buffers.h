@@ -35,6 +35,10 @@ int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
                       const char *data, size_t data_len, int done);
 int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
+#ifdef USE_BUFFEREVENTS
+int fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
+                                 int linkproto);
+#endif
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
 int fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto);
 int fetch_from_buf_http(buf_t *buf,
