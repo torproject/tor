@@ -12,6 +12,11 @@
 #ifndef _TOR_CONNECTION_H
 #define _TOR_CONNECTION_H
 
+#ifndef USE_BUFFEREVENTS
+/* XXXX For buf_datalen in inline function */
+#include "buffers.h"
+#endif
+
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
@@ -71,6 +76,29 @@ connection_write_to_buf_zlib(const char *string, size_t len,
                              dir_connection_t *conn, int done)
 {
   _connection_write_to_buf_impl(string, len, TO_CONN(conn), done ? -1 : 1);
+}
+
+static size_t connection_get_inbuf_len(connection_t *conn);
+static size_t connection_get_outbuf_len(connection_t *conn);
+
+static INLINE size_t
+connection_get_inbuf_len(connection_t *conn)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    return evbuffer_get_length(bufferevent_get_input(conn->bufev));
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return buf_datalen(conn->inbuf);
+  }
+}
+
+static INLINE size_t
+connection_get_outbuf_len(connection_t *conn)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    return evbuffer_get_length(bufferevent_get_output(conn->bufev));
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return buf_datalen(conn->outbuf);
+  }
 }
 
 connection_t *connection_get_by_global_id(uint64_t id);

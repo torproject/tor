@@ -662,8 +662,8 @@ conn_close_if_marked(int i)
       }
       log_debug(LD_GENERAL, "Flushed last %d bytes from a linked conn; "
                "%d left; flushlen %d; wants-to-flush==%d", retval,
-               (int)buf_datalen(conn->outbuf),
-               (int)conn->outbuf_flushlen,
+                (int)connection_get_outbuf_len(conn),
+                (int)conn->outbuf_flushlen,
                 connection_wants_to_flush(conn));
     } else if (connection_speaks_cells(conn)) {
       if (conn->state == OR_CONN_STATE_OPEN) {
@@ -700,7 +700,7 @@ conn_close_if_marked(int i)
              "something is wrong with your network connection, or "
              "something is wrong with theirs. "
              "(fd %d, type %s, state %d, marked at %s:%d).",
-             (int)buf_datalen(conn->outbuf),
+             (int)connection_get_outbuf_len(conn),
              escaped_safe_str_client(conn->address),
              conn->s, conn_type_to_string(conn->type), conn->state,
              conn->marked_for_close_file,
@@ -793,7 +793,8 @@ run_connection_housekeeping(int i, time_t now)
   int past_keepalive =
     now >= conn->timestamp_lastwritten + options->KeepalivePeriod;
 
-  if (conn->outbuf && !buf_datalen(conn->outbuf) && conn->type == CONN_TYPE_OR)
+  if (conn->outbuf && !connection_get_outbuf_len(conn) &&
+      conn->type == CONN_TYPE_OR)
     TO_OR_CONN(conn)->timestamp_lastempty = now;
 
   if (conn->marked_for_close) {
@@ -813,7 +814,7 @@ run_connection_housekeeping(int i, time_t now)
     /* This check is temporary; it's to let us know whether we should consider
      * parsing partial serverdesc responses. */
     if (conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
-        buf_datalen(conn->inbuf)>=1024) {
+        connection_get_inbuf_len(conn) >= 1024) {
       log_info(LD_DIR,"Trying to extract information from wedged server desc "
                "download.");
       connection_dir_reached_eof(TO_DIR_CONN(conn));
@@ -852,7 +853,7 @@ run_connection_housekeeping(int i, time_t now)
       connection_mark_for_close(conn);
     }
   } else if (we_are_hibernating() && !or_conn->n_circuits &&
-             !buf_datalen(conn->outbuf)) {
+             !connection_get_outbuf_len(conn)) {
     /* We're hibernating, there's no circuits, and nothing to flush.*/
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
@@ -874,10 +875,10 @@ run_connection_housekeeping(int i, time_t now)
            "Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to "
            "flush; %d seconds since last write)",
            conn->s, conn->address, conn->port,
-           (int)buf_datalen(conn->outbuf),
+           (int)connection_get_outbuf_len(conn),
            (int)(now-conn->timestamp_lastwritten));
     connection_mark_for_close(conn);
-  } else if (past_keepalive && !buf_datalen(conn->outbuf)) {
+  } else if (past_keepalive && !connection_get_outbuf_len(conn)) {
     /* send a padding cell */
     log_fn(LOG_DEBUG,LD_OR,"Sending keepalive to (%s:%d)",
            conn->address, conn->port);
@@ -1768,13 +1769,13 @@ dumpstats(int severity)
       log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
           i,
-          (int)buf_datalen(conn->inbuf),
+          (int)connection_get_inbuf_len(conn),
           (int)buf_allocation(conn->inbuf),
           (int)(now - conn->timestamp_lastread));
       log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on outbuf "
           "(len %d, last written %d secs ago)",i,
-          (int)buf_datalen(conn->outbuf),
+          (int)connection_get_outbuf_len(conn),
           (int)buf_allocation(conn->outbuf),
           (int)(now - conn->timestamp_lastwritten));
       if (conn->type == CONN_TYPE_OR) {

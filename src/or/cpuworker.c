@@ -141,7 +141,7 @@ connection_cpu_process_inbuf(connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CPUWORKER);
 
-  if (!buf_datalen(conn->inbuf))
+  if (!connection_get_inbuf_len(conn))
     return 0;
 
   if (conn->state == CPUWORKER_STATE_BUSY_ONION) {

@@ -83,6 +83,12 @@
 #define snprintf _snprintf
 #endif
 
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+#endif
+
+#include "crypto.h"
 #include "tortls.h"
 #include "../common/torlog.h"
 #include "container.h"
@@ -1270,17 +1276,45 @@ static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
   return DOWNCAST(control_connection_t, c);
 }
 
+/* Conditional macros to help write code that works whether bufferevents are
+   disabled or not.
+
+   We can't just write:
+      if (conn->bufev) {
+        do bufferevent stuff;
+      } else {
+        do other stuff;
+      }
+   because the bufferevent stuff won't even compile unless we have a fairly
+   new version of Libevent.  Instead, we say:
+      IF_HAS_BUFFEREVENT(conn, { do_bufferevent_stuff } );
+   or:
+      IF_HAS_BUFFEREVENT(conn, {
+        do bufferevent stuff;
+      }) ELSE_IF_NO_BUFFEREVENT {
+        do non-bufferevent stuff;
+      }
+   If we're compiling with bufferevent support, then the macros expand more or
+   less to:
+      if (conn->bufev) {
+        do_bufferevent_stuff;
+      } else {
+        do non-bufferevent stuff;
+      }
+   and if we aren't using bufferevents, they expand more or less to:
+      { do non-bufferevent stuff; }
+*/
 #ifdef USE_BUFFEREVENTS
 #define HAS_BUFFEREVENT(c) (((c)->bufev) != NULL)
-#define IF_HAS_BUFFEREVENT(c, stmt)               \
-  do {                                               \
-    if ((conn)->bufev) do {                          \
-        stmt ;                                       \
-      } while(0);                                    \
+#define IF_HAS_BUFFEREVENT(c, stmt)                \
+  if ((c)->bufev) do {                             \
+      stmt ;                                       \
   } while (0)
+#define ELSE_IF_NO_BUFFEREVENT ; else
 #else
 #define HAS_BUFFEREVENT(c) (0)
 #define IF_HAS_BUFFEREVENT(c, stmt) (void)0
+#define ELSE_IF_NO_BUFFEREVENT ;
 #endif
 
 /** What action type does an address policy indicate: accept or reject? */

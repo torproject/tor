@@ -100,7 +100,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
 int
 connection_edge_reached_eof(edge_connection_t *conn)
 {
-  if (buf_datalen(conn->_base.inbuf) &&
+  if (connection_get_inbuf_len(TO_CONN(conn)) &&
       connection_state_is_open(TO_CONN(conn))) {
     /* it still has stuff to process. don't let it die yet. */
     return 0;

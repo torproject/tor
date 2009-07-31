@@ -36,10 +36,6 @@
 #include "router.h"
 #include "routerparse.h"
 
-#ifdef USE_BUFFEREVENTS
-#include <event2/bufferevent.h>
-#endif
-
 static connection_t *connection_create_listener(
                                struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
@@ -381,7 +377,8 @@ _connection_free(connection_t *conn)
              "bytes on inbuf, %d on outbuf.",
              conn_type_to_string(conn->type),
              conn_state_to_string(conn->type, conn->state),
-             (int)buf_datalen(conn->inbuf), (int)buf_datalen(conn->outbuf));
+             (int)connection_get_inbuf_len(conn),
+             (int)connection_get_outbuf_len(conn));
   }
 
   if (!connection_is_listener(conn)) {

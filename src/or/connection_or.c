@@ -248,7 +248,7 @@ connection_or_process_inbuf(or_connection_t *conn)
 int
 connection_or_flushed_some(or_connection_t *conn)
 {
-  size_t datalen = buf_datalen(conn->_base.outbuf);
+  size_t datalen = connection_get_outbuf_len(TO_CONN(conn));
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   if (datalen < OR_CONN_LOWWATER) {
@@ -1277,7 +1277,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
   while (1) {
     log_debug(LD_OR,
               "%d: starting, inbuf_datalen %d (%d pending in tls object).",
-              conn->_base.s,(int)buf_datalen(conn->_base.inbuf),
+              conn->_base.s,(int)connection_get_inbuf_len(TO_CONN(conn)),
               tor_tls_get_pending_bytes(conn->tls));
     if (connection_fetch_var_cell_from_buf(conn, &var_cell)) {
       if (!var_cell)
@@ -1288,8 +1288,8 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
     } else {
       char buf[CELL_NETWORK_SIZE];
       cell_t cell;
-      if (buf_datalen(conn->_base.inbuf) < CELL_NETWORK_SIZE) /* whole response
-                                                                 available? */
+      if (connection_get_inbuf_len(TO_CONN(conn))
+          < CELL_NETWORK_SIZE) /* whole response available? */
         return 0; /* not yet */
 
       circuit_build_times_network_is_live(&circ_times);
