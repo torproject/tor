@@ -3406,6 +3406,16 @@ assert_connection_ok(connection_t *conn, time_t now)
   tor_assert(conn);
   tor_assert(conn->type >= _CONN_TYPE_MIN);
   tor_assert(conn->type <= _CONN_TYPE_MAX);
+
+#ifdef USE_BUFFEREVENT
+  if (conn->bufev) {
+    tor_assert(conn->read_event == NULL);
+    tor_assert(conn->write_event == NULL);
+    tor_assert(conn->inbuf == NULL);
+    tor_assert(conn->outbuf == NULL);
+  }
+#endif
+
   switch (conn->type) {
     case CONN_TYPE_OR:
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
