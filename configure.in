@@ -118,6 +118,9 @@ if test "$enable_local_appdata" = "yes"; then
             [Defined if we default to host local appdata paths on Windows])
 fi
 
+AC_ARG_ENABLE(bufferevents,
+     AS_HELP_STRING(--enable-bufferevents, use Libevent's buffered IO.))
+
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
@@ -302,7 +305,7 @@ AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>
 ])
 
-AC_CHECK_HEADERS(event2/event.h event2/dns.h)
+AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
 
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
@@ -322,6 +325,17 @@ else
 fi
 AC_SUBST(TOR_LIBEVENT_LIBS)
 
+
+dnl This isn't the best test for Libevent 2.0.3-alpha.  Once it's released,
+dnl we can do much better.
+if test "$enable_bufferevents" = "yes" && test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes" ; then
+  AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.3-alpha or later.  If it isn't released yet, use Libevent from SVN, and talk to Nick.])
+fi
+
+AM_CONDITIONAL(USE_BUFFEREVENTS, test "$enable_bufferevents" = "yes")
+if test "$enable_bufferevents" = "yes"; then
+   AC_DEFINE(USE_BUFFEREVENTS, 1, [Defined if we're going to use Libevent's buffered IO API])
+fi
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?

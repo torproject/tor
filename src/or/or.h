@@ -959,6 +959,7 @@ typedef struct connection_t {
   /** Our socket; -1 if this connection is closed, or has no socket. */
   evutil_socket_t s;
   int conn_array_index; /**< Index into the global connection array. */
+
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
@@ -969,6 +970,11 @@ typedef struct connection_t {
                               * read? */
   time_t timestamp_lastwritten; /**< When was the last time libevent said we
                                  * could write? */
+
+#ifdef USE_BUFFEREVENTS
+  struct bufferevent *bufev; /**< A Libevent buffered IO structure. */
+#endif
+
   time_t timestamp_created; /**< When was this connection_t created? */
 
   /* XXXX_IP6 make this IPv6-capable */
@@ -1263,6 +1269,19 @@ static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
   tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
   return DOWNCAST(control_connection_t, c);
 }
+
+#ifdef USE_BUFFEREVENTS
+#define HAS_BUFFEREVENT(c) (((c)->bufev) != NULL)
+#define IF_HAS_BUFFEREVENT(c, stmt)               \
+  do {                                               \
+    if ((conn)->bufev) do {                          \
+        stmt ;                                       \
+      } while(0);                                    \
+  } while (0)
+#else
+#define HAS_BUFFEREVENT(c) (0)
+#define IF_HAS_BUFFEREVENT(c, stmt) (void)0
+#endif
 
 /** What action type does an address policy indicate: accept or reject? */
 typedef enum {

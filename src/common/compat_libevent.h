@@ -8,6 +8,9 @@
 
 struct event;
 struct event_base;
+#ifdef USE_BUFFEREVENTS
+struct bufferevent;
+#endif
 
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/util.h>

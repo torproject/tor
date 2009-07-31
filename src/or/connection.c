@@ -36,6 +36,10 @@
 #include "router.h"
 #include "routerparse.h"
 
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent.h>
+#endif
+
 static connection_t *connection_create_listener(
                                struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
@@ -424,6 +428,10 @@ _connection_free(connection_t *conn)
 
   tor_free(conn->read_event); /* Probably already freed by connection_free. */
   tor_free(conn->write_event); /* Probably already freed by connection_free. */
+  IF_HAS_BUFFEREVENT(conn, {
+      bufferevent_free(conn->bufev);
+      conn->bufev = NULL;
+  });
 
   if (conn->type == CONN_TYPE_DIR) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);

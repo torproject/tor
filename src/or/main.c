@@ -56,6 +56,10 @@
 #include <event.h>
 #endif
 
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent.h>
+#endif
+
 void evdns_shutdown(int);
 
 /********* PROTOTYPES **********/
@@ -168,7 +172,7 @@ connection_add(connection_t *conn)
   conn->conn_array_index = smartlist_len(connection_array);
   smartlist_add(connection_array, conn);
 
-  if (conn->s >= 0 || conn->linked) {
+  if (!HAS_BUFFEREVENT(conn) && (conn->s >= 0 || conn->linked)) {
     conn->read_event = tor_event_new(tor_libevent_get_base(),
          conn->s, EV_READ|EV_PERSIST, conn_read_callback, conn);
     conn->write_event = tor_event_new(tor_libevent_get_base(),
@@ -196,6 +200,12 @@ connection_unregister_events(connection_t *conn)
       log_warn(LD_BUG, "Error removing write event for %d", conn->s);
     tor_free(conn->write_event);
   }
+#ifdef USE_BUFFEREVENTS
+  if (conn->bufev) {
+    bufferevent_free(conn->bufev);
+    conn->bufev = NULL;
+  }
+#endif
   if (conn->dns_server_port) {
     dnsserv_close_listener(conn);
   }
@@ -310,6 +320,15 @@ get_connection_array(void)
 void
 connection_watch_events(connection_t *conn, watchable_events_t events)
 {
+  IF_HAS_BUFFEREVENT(conn, {
+      short ev = ((short)events) & (EV_READ|EV_WRITE);
+      short old_ev = bufferevent_get_enabled(conn->bufev);
+      if ((ev & ~old_ev) != 0)
+        bufferevent_enable(conn->bufev, ev);
+      if ((old_ev & ~ev) != 0)
+        bufferevent_disable(conn->bufev, old_ev & ~ev);
+      return;
+  });
   if (events & READ_EVENT)
     connection_start_reading(conn);
   else
@@ -327,6 +346,9 @@ connection_is_reading(connection_t *conn)
 {
   tor_assert(conn);
 
+  IF_HAS_BUFFEREVENT(conn,
+    return (bufferevent_get_enabled(conn->bufev) & EV_READ) != 0;
+  );
   return conn->reading_from_linked_conn ||
     (conn->read_event && event_pending(conn->read_event, EV_READ, NULL));
 }
@@ -336,6 +358,12 @@ void
 connection_stop_reading(connection_t *conn)
 {
   tor_assert(conn);
+
+  IF_HAS_BUFFEREVENT(conn, {
+      bufferevent_disable(conn->bufev, EV_READ);
+      return;
+  });
+
   tor_assert(conn->read_event);
 
   if (conn->linked) {
@@ -355,6 +383,12 @@ void
 connection_start_reading(connection_t *conn)
 {
   tor_assert(conn);
+
+  IF_HAS_BUFFEREVENT(conn, {
+      bufferevent_enable(conn->bufev, EV_READ);
+      return;
+  });
+
   tor_assert(conn->read_event);
 
   if (conn->linked) {
@@ -376,6 +410,10 @@ connection_is_writing(connection_t *conn)
 {
   tor_assert(conn);
 
+  IF_HAS_BUFFEREVENT(conn,
+    return (bufferevent_get_enabled(conn->bufev) & EV_WRITE) != 0;
+  );
+
   return conn->writing_to_linked_conn ||
     (conn->write_event && event_pending(conn->write_event, EV_WRITE, NULL));
 }
@@ -385,6 +423,12 @@ void
 connection_stop_writing(connection_t *conn)
 {
   tor_assert(conn);
+
+  IF_HAS_BUFFEREVENT(conn, {
+      bufferevent_disable(conn->bufev, EV_WRITE);
+      return;
+  });
+
   tor_assert(conn->write_event);
 
   if (conn->linked) {
@@ -406,6 +450,11 @@ connection_start_writing(connection_t *conn)
 {
   tor_assert(conn);
   tor_assert(conn->write_event);
+
+  IF_HAS_BUFFEREVENT(conn, {
+      bufferevent_enable(conn->bufev, EV_WRITE);
+      return;
+  });
 
   if (conn->linked) {
     conn->writing_to_linked_conn = 1;
