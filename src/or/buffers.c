@@ -23,9 +23,6 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef HAVE_SYS_UIO_H
-#include <sys/uio.h>
-#endif
 
 //#define PARANOIA
 
@@ -575,10 +572,6 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
   return chunk;
 }
 
-/** If we're using readv and writev, how many chunks are we willing to
- * read/write at a time? */
-#define N_IOV 3
-
 /** Read up to <b>at_most</b> bytes from the socket <b>fd</b> into
  * <b>chunk</b> (which must be on <b>buf</b>). If we get an EOF, set
  * *<b>reached_eof</b> to 1.  Return -1 on error, 0 on eof or blocking,
@@ -588,25 +581,9 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
               int *reached_eof, int *socket_error)
 {
   ssize_t read_result;
-#if 0 && defined(HAVE_READV) && !defined(WIN32)
-  struct iovec iov[N_IOV];
-  int i;
-  size_t remaining = at_most;
-  for (i=0; chunk && i < N_IOV && remaining; ++i) {
-    iov[i].iov_base = CHUNK_WRITE_PTR(chunk);
-    if (remaining > CHUNK_REMAINING_CAPACITY(chunk))
-      iov[i].iov_len = CHUNK_REMAINING_CAPACITY(chunk);
-    else
-      iov[i].iov_len = remaining;
-    remaining -= iov[i].iov_len;
-    chunk = chunk->next;
-  }
-  read_result = readv(fd, iov, i);
-#else
   if (at_most > CHUNK_REMAINING_CAPACITY(chunk))
     at_most = CHUNK_REMAINING_CAPACITY(chunk);
   read_result = tor_socket_recv(fd, CHUNK_WRITE_PTR(chunk), at_most, 0);
-#endif
 
   if (read_result < 0) {
     int e = tor_socket_errno(fd);
@@ -625,14 +602,6 @@ read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
     return 0;
   } else { /* actually got bytes. */
     buf->datalen += read_result;
-#if 0 && defined(HAVE_READV) && !defined(WIN32)
-    while ((size_t)read_result > CHUNK_REMAINING_CAPACITY(chunk)) {
-      chunk->datalen += CHUNK_REMAINING_CAPACITY(chunk);
-      read_result -= CHUNK_REMAINING_CAPACITY(chunk);
-      chunk = chunk->next;
-      tor_assert(chunk);
-    }
-#endif
     chunk->datalen += read_result;
     log_debug(LD_NET,"Read %ld bytes. %d on inbuf.", (long)read_result,
               (int)buf->datalen);
@@ -768,25 +737,10 @@ flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
             size_t *buf_flushlen)
 {
   ssize_t write_result;
-#if 0 && defined(HAVE_WRITEV) && !defined(WIN32)
-  struct iovec iov[N_IOV];
-  int i;
-  size_t remaining = sz;
-  for (i=0; chunk && i < N_IOV && remaining; ++i) {
-    iov[i].iov_base = chunk->data;
-    if (remaining > chunk->datalen)
-      iov[i].iov_len = chunk->datalen;
-    else
-      iov[i].iov_len = remaining;
-    remaining -= iov[i].iov_len;
-    chunk = chunk->next;
-  }
-  write_result = writev(s, iov, i);
-#else
+
   if (sz > chunk->datalen)
     sz = chunk->datalen;
   write_result = tor_socket_send(s, chunk->data, sz, 0);
-#endif
 
   if (write_result < 0) {
     int e = tor_socket_errno(s);

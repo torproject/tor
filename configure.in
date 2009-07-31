@@ -223,7 +223,7 @@ dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull getaddrinfo localtime_r gmtime_r memmem strtok_r writev readv flock prctl vasprintf)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull getaddrinfo localtime_r gmtime_r memmem strtok_r flock prctl vasprintf)
 
 using_custom_malloc=no
 if test x$enable_openbsd_malloc = xyes ; then
@@ -393,7 +393,7 @@ AC_SYS_LARGEFILE
 
 AC_CHECK_HEADERS(unistd.h string.h signal.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(Some headers were not found, compilation may fail.  If compilation succeeds, please send your orconfig.h to the developers so we can fix this warning.))
 
-AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h sys/un.h sys/uio.h)
+AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h sys/un.h)
 
 dnl These headers are not essential
 
