@@ -35,10 +35,6 @@ int write_to_buf(const char *string, size_t string_len, buf_t *buf);
 int write_to_buf_zlib(buf_t *buf, tor_zlib_state_t *state,
                       const char *data, size_t data_len, int done);
 int move_buf_to_buf(buf_t *buf_out, buf_t *buf_in, size_t *buf_flushlen);
-#ifdef USE_BUFFEREVENTS
-int fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
-                                 int linkproto);
-#endif
 int fetch_from_buf(char *string, size_t string_len, buf_t *buf);
 int fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto);
 int fetch_from_buf_http(buf_t *buf,
@@ -51,6 +47,13 @@ int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 int peek_buf_has_control0_command(buf_t *buf);
+
+#ifdef USE_BUFFEREVENTS
+int fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
+                                 int linkproto);
+int fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
+                              int log_sockstype, int safe_socks);
+#endif
 
 void assert_buf_ok(buf_t *buf);
 

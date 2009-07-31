@@ -53,6 +53,10 @@
  * forever.
  */
 
+static int parse_socks(const char *data, size_t datalen, socks_request_t *req,
+                       int log_sockstype, int safe_socks, ssize_t *drain_out,
+                       size_t *want_length_out);
+
 /* Chunk manipulation functions */
 
 /** A single chunk on a buffer or in a freelist. */
@@ -1372,6 +1376,87 @@ int
 fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                      int log_sockstype, int safe_socks)
 {
+  int res;
+  ssize_t n_drain;
+  size_t want_length = 128;
+
+  if (buf->datalen < 2) /* version and another byte */
+    return 0;
+
+  do {
+    n_drain = 0;
+    buf_pullup(buf, want_length, 0);
+    tor_assert(buf->head && buf->head->datalen >= 2);
+    want_length = 0;
+
+    res = parse_socks(buf->head->data, buf->head->datalen, req, log_sockstype,
+                      safe_socks, &n_drain, &want_length);
+
+    if (n_drain < 0)
+      buf_clear(buf);
+    else if (n_drain > 0)
+      buf_remove_from_front(buf, n_drain);
+
+  } while (res == 0 && buf->head &&
+           buf->datalen > buf->head->datalen &&
+           want_length < buf->head->datalen);
+
+  return res;
+}
+
+#ifdef USE_BUFFEREVENTS
+/* As fetch_from_buf_socks(), but targets an evbuffer instead. */
+int
+fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
+                          int log_sockstype, int safe_socks)
+{
+  const char *data;
+  ssize_t n_drain;
+  size_t datalen, buflen, want_length;
+  int res;
+
+  buflen = evbuffer_get_length(buf);
+  if (buflen < 2)
+    return 0;
+
+  want_length = evbuffer_get_contiguous_space(buf);
+
+  do {
+    n_drain = 0;
+    data = (const char*) evbuffer_pullup(buf, want_length);
+    datalen = evbuffer_get_contiguous_space(buf);
+    want_length = 0;
+
+    res = parse_socks(data, datalen, req, log_sockstype,
+                      safe_socks, &n_drain, &want_length);
+
+    if (n_drain < 0)
+      evbuffer_drain(buf, evbuffer_get_length(buf));
+    else if (n_drain > 0)
+      evbuffer_drain(buf, n_drain);
+
+    datalen = evbuffer_get_contiguous_space(buf);
+    buflen = evbuffer_get_length(buf);
+
+  } while (res == 0 &&
+           want_length > datalen && buflen > datalen);
+
+  return res;
+}
+#endif
+
+/** Implementation helper to implement fetch_from_*_socks.  Instead of looking
+ * at a buffer's contents, we look at the <b>datalen</b> bytes of data in
+ * <b>data</b>. Instead of removing data from the buffer, we set
+ * <b>drain_out</b> to the amount of data that should be removed (or -1 if the
+ * buffer should be cleared.  Instead of pulling more data into the first
+ * chunk of the buffer, we set *<b>want_length_out</b> to the number of bytes
+ * we'd like to see in the input buffer. */
+static int
+parse_socks(const char *data, size_t datalen, socks_request_t *req,
+            int log_sockstype, int safe_socks, ssize_t *drain_out,
+            size_t *want_length_out)
+{
   unsigned int len;
   char tmpbuf[TOR_ADDR_BUF_LEN+1];
   tor_addr_t destaddr;
@@ -1385,25 +1470,20 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
    * then log a warning to let him know that it might be unwise. */
   static int have_warned_about_unsafe_socks = 0;
 
-  if (buf->datalen < 2) /* version and another byte */
-    return 0;
-
-  buf_pullup(buf, 128, 0);
-  tor_assert(buf->head && buf->head->datalen >= 2);
-
-  socksver = *buf->head->data;
+  socksver = *data;
 
   switch (socksver) { /* which version of socks? */
 
     case 5: /* socks5 */
 
       if (req->socks_version != 5) { /* we need to negotiate a method */
-        unsigned char nummethods = (unsigned char)*(buf->head->data+1);
+        unsigned char nummethods = (unsigned char)*(data+1);
         tor_assert(!req->socks_version);
-        if (buf->datalen < 2u+nummethods)
+        if (datalen < 2u+nummethods) {
+          *want_length_out = 2u+nummethods;
           return 0;
-        buf_pullup(buf, 2u+nummethods, 0);
-        if (!nummethods || !memchr(buf->head->data+2, 0, nummethods)) {
+        }
+        if (!nummethods || !memchr(data+2, 0, nummethods)) {
           log_warn(LD_APP,
                    "socks5: offered methods don't include 'no auth'. "
                    "Rejecting.");
@@ -1414,7 +1494,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         }
         /* remove packet from buf. also remove any other extraneous
          * bytes, to support broken socks clients. */
-        buf_clear(buf);
+        *drain_out = -1;
 
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
@@ -1425,10 +1505,11 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       }
       /* we know the method; read in the request */
       log_debug(LD_APP,"socks5: checking request");
-      if (buf->datalen < 8) /* basic info plus >=2 for addr plus 2 for port */
+      if (datalen < 8) {/* basic info plus >=2 for addr plus 2 for port */
+        *want_length_out = 8;
         return 0; /* not yet */
-      tor_assert(buf->head->datalen >= 8);
-      req->command = (unsigned char) *(buf->head->data+1);
+      }
+      req->command = (unsigned char) *(data+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE &&
           req->command != SOCKS_COMMAND_RESOLVE_PTR) {
@@ -1437,19 +1518,21 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                  req->command);
         return -1;
       }
-      switch (*(buf->head->data+3)) { /* address type */
+      switch (*(data+3)) { /* address type */
         case 1: /* IPv4 address */
         case 4: /* IPv6 address */ {
-          const int is_v6 = *(buf->head->data+3) == 4;
+          const int is_v6 = *(data+3) == 4;
           const unsigned addrlen = is_v6 ? 16 : 4;
           log_debug(LD_APP,"socks5: ipv4 address type");
-          if (buf->datalen < 6+addrlen) /* ip/port there? */
+          if (datalen < 6+addrlen) {/* ip/port there? */
+            *want_length_out = 6+addrlen;
             return 0; /* not yet */
+          }
 
           if (is_v6)
-            tor_addr_from_ipv6_bytes(&destaddr, buf->head->data+4);
+            tor_addr_from_ipv6_bytes(&destaddr, data+4);
           else
-            tor_addr_from_ipv4n(&destaddr, get_uint32(buf->head->data+4));
+            tor_addr_from_ipv4n(&destaddr, get_uint32(data+4));
 
           tor_addr_to_str(tmpbuf, &destaddr, sizeof(tmpbuf), 1);
 
@@ -1461,8 +1544,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
             return -1;
           }
           strlcpy(req->address,tmpbuf,sizeof(req->address));
-          req->port = ntohs(get_uint16(buf->head->data+4+addrlen));
-          buf_remove_from_front(buf, 6+addrlen);
+          req->port = ntohs(get_uint16(data+4+addrlen));
+          *drain_out = 6+addrlen;
           if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
               !addressmap_have_mapping(req->address,0) &&
               !have_warned_about_unsafe_socks) {
@@ -1493,21 +1576,21 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                      "hostname type. Rejecting.");
             return -1;
           }
-          len = (unsigned char)*(buf->head->data+4);
-          if (buf->datalen < 7+len) /* addr/port there? */
+          len = (unsigned char)*(data+4);
+          if (datalen < 7+len) { /* addr/port there? */
+            *want_length_out = 7+len;
             return 0; /* not yet */
-          buf_pullup(buf, 7+len, 0);
-          tor_assert(buf->head->datalen >= 7+len);
+          }
           if (len+1 > MAX_SOCKS_ADDR_LEN) {
             log_warn(LD_APP,
                      "socks5 hostname is %d bytes, which doesn't fit in "
                      "%d. Rejecting.", len+1,MAX_SOCKS_ADDR_LEN);
             return -1;
           }
-          memcpy(req->address,buf->head->data+5,len);
+          memcpy(req->address,data+5,len);
           req->address[len] = 0;
-          req->port = ntohs(get_uint16(buf->head->data+5+len));
-          buf_remove_from_front(buf, 5+len+2);
+          req->port = ntohs(get_uint16(data+5+len));
+          *drain_out = 5+len+2;
           if (!tor_strisprint(req->address) || strchr(req->address,'\"')) {
             log_warn(LD_PROTOCOL,
                      "Your application (using socks5 to port %d) gave Tor "
@@ -1523,7 +1606,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           return 1;
         default: /* unsupported */
           log_warn(LD_APP,"socks5: unsupported address type %d. Rejecting.",
-                   (int) *(buf->head->data+3));
+                   (int) *(data+3));
           return -1;
       }
       tor_assert(0);
@@ -1532,10 +1615,12 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       /* http://archive.socks.permeo.com/protocol/socks4a.protocol */
 
       req->socks_version = 4;
-      if (buf->datalen < SOCKS4_NETWORK_LEN) /* basic info available? */
+      if (datalen < SOCKS4_NETWORK_LEN) {/* basic info available? */
+        *want_length_out = SOCKS4_NETWORK_LEN;
         return 0; /* not yet */
-      buf_pullup(buf, 1280, 0);
-      req->command = (unsigned char) *(buf->head->data+1);
+      }
+      // buf_pullup(buf, 1280, 0);
+      req->command = (unsigned char) *(data+1);
       if (req->command != SOCKS_COMMAND_CONNECT &&
           req->command != SOCKS_COMMAND_RESOLVE) {
         /* not a connect or resolve? we don't support it. (No resolve_ptr with
@@ -1545,8 +1630,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         return -1;
       }
 
-      req->port = ntohs(get_uint16(buf->head->data+2));
-      destip = ntohl(get_uint32(buf->head->data+4));
+      req->port = ntohs(get_uint16(data+2));
+      destip = ntohl(get_uint32(data+4));
       if ((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
         log_warn(LD_APP,"socks4: Port or DestIP is zero. Rejecting.");
         return -1;
@@ -1566,17 +1651,18 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         socks4_prot = socks4;
       }
 
-      next = memchr(buf->head->data+SOCKS4_NETWORK_LEN, 0,
-                    buf->head->datalen-SOCKS4_NETWORK_LEN);
+      next = memchr(data+SOCKS4_NETWORK_LEN, 0,
+                    datalen-SOCKS4_NETWORK_LEN);
       if (!next) {
-        if (buf->head->datalen >= 1024) {
+        if (datalen >= 1024) {
           log_debug(LD_APP, "Socks4 user name too long; rejecting.");
           return -1;
         }
         log_debug(LD_APP,"socks4: Username not here yet.");
+        *want_length_out = datalen+1024; /* ???? */
         return 0;
       }
-      tor_assert(next < CHUNK_WRITE_PTR(buf->head));
+      tor_assert(next < data+datalen);
 
       startaddr = NULL;
       if (socks4_prot != socks4a &&
@@ -1601,18 +1687,20 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           return -1;
       }
       if (socks4_prot == socks4a) {
-        if (next+1 == CHUNK_WRITE_PTR(buf->head)) {
+        if (next+1 == data+datalen) {
           log_debug(LD_APP,"socks4: No part of destaddr here yet.");
+          *want_length_out = datalen + 1024; /* ???? */
           return 0;
         }
         startaddr = next+1;
-        next = memchr(startaddr, 0, CHUNK_WRITE_PTR(buf->head)-startaddr);
+        next = memchr(startaddr, 0, data + datalen - startaddr);
         if (!next) {
-          if (buf->head->datalen >= 1024) {
+          if (datalen >= 1024) {
             log_debug(LD_APP,"socks4: Destaddr too long.");
             return -1;
           }
           log_debug(LD_APP,"socks4: Destaddr not all here yet.");
+          *want_length_out = datalen + 1024;
           return 0;
         }
         if (MAX_SOCKS_ADDR_LEN <= next-startaddr) {
@@ -1638,7 +1726,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         return -1;
       }
       /* next points to the final \0 on inbuf */
-      buf_remove_from_front(buf, next - buf->head->data + 1);
+      *drain_out = next - data + 1;
       return 1;
 
     case 'G': /* get */
@@ -1676,9 +1764,9 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
     default: /* version is not socks4 or socks5 */
       log_warn(LD_APP,
                "Socks version %d not recognized. (Tor is not an http proxy.)",
-               *(buf->head->data));
+               *(data));
       {
-        char *tmp = tor_strndup(buf->head->data, 8); /*XXXX what if longer?*/
+        char *tmp = tor_strndup(data, 8); /*XXXX what if longer?*/
         control_event_client_status(LOG_WARN,
                                     "SOCKS_UNKNOWN_PROTOCOL DATA=\"%s\"",
                                     escaped(tmp));
