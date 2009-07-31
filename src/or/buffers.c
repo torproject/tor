@@ -1755,12 +1755,12 @@ buf_find_offset_of_char(buf_t *buf, char ch)
   return -1;
 }
 
-/** Try to read a single LF-terminated line from <b>buf</b>, and write it,
- * NUL-terminated, into the *<b>data_len</b> byte buffer at <b>data_out</b>.
- * Set *<b>data_len</b> to the number of bytes in the line, not counting the
- * terminating NUL.  Return 1 if we read a whole line, return 0 if we don't
- * have a whole line yet, and return -1 if the line length exceeds
- * *<b>data_len</b>.
+/** Try to read a single LF-terminated line from <b>buf</b>, and write it
+ * (including the LF), NUL-terminated, into the *<b>data_len</b> byte buffer
+ * at <b>data_out</b>.  Set *<b>data_len</b> to the number of bytes in the
+ * line, not counting the terminating NUL.  Return 1 if we read a whole line,
+ * return 0 if we don't have a whole line yet, and return -1 if the line
+ * length exceeds *<b>data_len</b>.
  */
 int
 fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len)

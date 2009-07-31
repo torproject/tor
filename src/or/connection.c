@@ -2616,6 +2616,32 @@ connection_fetch_from_buf(char *string, size_t len, connection_t *conn)
   }
 }
 
+/** As fetch_from_buf_line(), but read from a connection's input buffer. */
+int
+connection_fetch_from_buf_line(connection_t *conn, char *data,
+                               size_t *data_len)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    int r;
+    size_t eol_len=0;
+    struct evbuffer *input = bufferevent_get_input(conn->bufev);
+    struct evbuffer_ptr ptr =
+      evbuffer_search_eol(input, NULL, &eol_len, EVBUFFER_EOL_LF);
+    if (ptr.pos == -1)
+      return 0; /* No EOL found. */
+    if ((size_t)ptr.pos+eol_len >= *data_len) {
+      return -1; /* Too long */
+    }
+    *data_len = ptr.pos+eol_len;
+    r = evbuffer_remove(input, data, ptr.pos+eol_len);
+    tor_assert(r >= 0);
+    data[ptr.pos+eol_len] = '\0';
+    return 1;
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return fetch_from_buf_line(conn->inbuf, data, data_len);
+  }
+}
+
 /** Return conn-\>outbuf_flushlen: how many bytes conn wants to flush
  * from its outbuf. */
 int

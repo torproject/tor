@@ -56,6 +56,8 @@ void connection_bucket_refill(int seconds_elapsed, time_t now);
 int connection_handle_read(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
+int connection_fetch_from_buf_line(connection_t *conn, char *data,
+                                   size_t *data_len);
 
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
