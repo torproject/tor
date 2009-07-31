@@ -3232,6 +3232,72 @@ test_dirutil(void)
   smartlist_free(sl);
 }
 
+static void
+test_dirutil_measured_bw(void)
+{
+  measured_bw_line_t mbwl;
+  int i;
+  const char *lines_pass[] = {
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024\n",
+    "node_id=$557365204145532d32353620696e73746561642e\t  bw=1024 \n",
+    " node_id=$557365204145532d32353620696e73746561642e  bw=1024\n",
+    "\tnoise\tnode_id=$557365204145532d32353620696e73746561642e  "
+                "bw=1024 junk=007\n",
+    "misc=junk node_id=$557365204145532d32353620696e73746561642e  "
+                "bw=1024 junk=007\n",
+    "end"
+  };
+  const char *lines_fail[] = {
+    /* Test possible python stupidity on input */
+    "node_id=None bw=1024\n",
+    "node_id=$None bw=1024\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=None\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024.0\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=.1024\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=1.024\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024 bw=0\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024 bw=None\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=-1024\n",
+    /* Test incomplete writes due to race conditions, partial copies, etc */
+    "node_i",
+    "node_i\n",
+    "node_id=",
+    "node_id=\n",
+    "node_id=$557365204145532d32353620696e73746561642e bw=",
+    "node_id=$557365204145532d32353620696e73746561642e bw=1024",
+    "node_id=$557365204145532d32353620696e73746561642e bw=\n",
+    "node_id=$557365204145532d32353620696e7374",
+    "node_id=$557365204145532d32353620696e7374\n",
+    "",
+    "\n",
+    " \n ",
+    " \n\n",
+    /* Test assorted noise */
+    " node_id= ",
+    "node_id==$557365204145532d32353620696e73746561642e bw==1024\n",
+    "node_id=$55736520414552d32353620696e73746561642e bw=1024\n",
+    "node_id=557365204145532d32353620696e73746561642e bw=1024\n",
+    "node_id= $557365204145532d32353620696e73746561642e bw=0.23\n",
+    "end"
+  };
+
+  for (i = 0; strcmp(lines_fail[i], "end"); i++) {
+    //fprintf(stderr, "Testing: %s\n", lines_fail[i]);
+    test_assert(measured_bw_line_parse(&mbwl, lines_fail[i]) == -1);
+  }
+
+  for (i = 0; strcmp(lines_pass[i], "end"); i++) {
+    //fprintf(stderr, "Testing: %s %d\n", lines_pass[i], TOR_ISSPACE('\n'));
+    test_assert(measured_bw_line_parse(&mbwl, lines_pass[i]) == 0);
+    test_assert(mbwl.bw == 1024);
+    test_assert(strcmp(mbwl.node_hex,
+                "557365204145532d32353620696e73746561642e") == 0);
+  }
+
+done:
+  return;
+}
+
 extern const char AUTHORITY_CERT_1[];
 extern const char AUTHORITY_SIGNKEY_1[];
 extern const char AUTHORITY_CERT_2[];
@@ -3511,6 +3577,17 @@ test_v3_networkstatus(void)
   test_eq(rs->or_port, 443);
   test_eq(rs->dir_port, 0);
   test_eq(vrs->flags, U64_LITERAL(254)); // all flags except "authority."
+
+  {
+    measured_bw_line_t mbw;
+    memset(mbw.node_id, 33, sizeof(mbw.node_id));
+    mbw.bw = 1024;
+    test_assert(measured_bw_line_apply(&mbw,
+                v1->routerstatus_list) == 1);
+    vrs = smartlist_get(v1->routerstatus_list, 2);
+    test_assert(vrs->status.has_measured_bw &&
+                vrs->status.measured_bw == 1024);
+  }
 
   /* Generate second vote. It disagrees on some of the times,
    * and doesn't list versions, and knows some crazy flags */
@@ -4695,6 +4772,7 @@ static struct {
   ENT(onion_handshake),
   ENT(dir_format),
   ENT(dirutil),
+  SUBENT(dirutil, measured_bw),
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),
