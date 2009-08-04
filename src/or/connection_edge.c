@@ -1895,8 +1895,14 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
 
   log_debug(LD_APP,"entered.");
 
-  sockshere = fetch_from_buf_socks(conn->_base.inbuf, socks,
-                                   options->TestSocks, options->SafeSocks);
+  IF_HAS_BUFFEREVENT(TO_CONN(conn), {
+    struct evbuffer *input = bufferevent_get_input(conn->_base.bufev);
+    sockshere = fetch_from_evbuffer_socks(input, socks,
+                                     options->TestSocks, options->SafeSocks);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    sockshere = fetch_from_buf_socks(conn->_base.inbuf, socks,
+                                     options->TestSocks, options->SafeSocks);
+  };
   if (sockshere == 0) {
     if (socks->replylen) {
       connection_write_to_buf(socks->reply, socks->replylen, TO_CONN(conn));
