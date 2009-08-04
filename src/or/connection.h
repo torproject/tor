@@ -12,10 +12,8 @@
 #ifndef _TOR_CONNECTION_H
 #define _TOR_CONNECTION_H
 
-#ifndef USE_BUFFEREVENTS
 /* XXXX For buf_datalen in inline function */
 #include "buffers.h"
-#endif
 
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
@@ -125,6 +123,10 @@ void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(or_connection_t *conn);
 void connection_dump_buffer_mem_stats(int severity);
 void remove_file_if_very_old(const char *fname, time_t now);
+
+#ifdef USE_BUFFEREVENTS
+void connection_configure_bufferevent_callbacks(connection_t *conn);
+#endif
 
 #endif
 
