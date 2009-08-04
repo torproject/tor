@@ -1347,6 +1347,76 @@ fetch_from_buf_http(buf_t *buf,
   return 1;
 }
 
+#ifdef USE_BUFFEREVENTS
+int
+fetch_from_evbuffer_http(struct evbuffer *buf,
+                    char **headers_out, size_t max_headerlen,
+                    char **body_out, size_t *body_used, size_t max_bodylen,
+                    int force_complete)
+{
+  struct evbuffer_ptr crlf;
+  unsigned char *headers;
+  size_t headerlen, bodylen, contentlen;
+  char *p;
+
+  crlf = evbuffer_search(buf, "\r\n\r\n", 4, NULL);
+  if (crlf.pos < 0) {
+    if (evbuffer_get_length(buf) > max_headerlen)
+      return -1; /* Headers too long. */
+    return 0; /* Headers not here yet. */
+  } else if (crlf.pos > (int)max_headerlen)
+    return -1; /* Headers too long. */
+
+  /* Okay, we've found the end of the headers. Pull them into the first
+   * chunk. */
+  /* XXXX Or don't!  It would be better to scan for the Content-Length as-is.*/
+  headerlen = crlf.pos + 4;
+  bodylen = evbuffer_get_length(buf) - headerlen;
+  if (bodylen > max_bodylen)
+    return -1; /* body too long */
+
+  headers = evbuffer_pullup(buf, headerlen);
+  tor_assert(headers && evbuffer_get_contiguous_space(buf) >= headerlen);
+  p = (char*) tor_memstr(headers, headerlen, CONTENT_LENGTH);
+  if (p) {
+    int i = atoi(p+strlen(CONTENT_LENGTH));
+    if (i < 0) {
+      log_warn(LD_PROTOCOL, "Content-Length is less than zero; it looks like "
+               "someone is trying to crash us.");
+      return -1;
+    }
+    contentlen = i;
+    /* if content-length is malformed, then our body length is 0. fine. */
+    log_debug(LD_HTTP,"Got a contentlen of %d.",(int)contentlen);
+    if (bodylen < contentlen) {
+      if (!force_complete) {
+        log_debug(LD_HTTP,"body not all here yet.");
+        return 0; /* not all there yet */
+      }
+    }
+    if (bodylen > contentlen) {
+      bodylen = contentlen;
+      log_debug(LD_HTTP,"bodylen reduced to %d.",(int)bodylen);
+    }
+  }
+
+  if (headers_out) {
+    *headers_out = tor_malloc(headerlen+1);
+    evbuffer_remove(buf, *headers_out, headerlen);
+    (*headers_out)[headerlen] = '\0';
+  }
+  if (body_out) {
+    tor_assert(headers_out);
+    tor_assert(body_used);
+    *body_used = bodylen;
+    *body_out = tor_malloc(bodylen+1);
+    evbuffer_remove(buf, *body_out, bodylen);
+    (*body_out)[bodylen] = '\0';
+  }
+  return 1;
+}
+#endif
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"

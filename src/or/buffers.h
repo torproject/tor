@@ -53,6 +53,10 @@ int fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
                                  int linkproto);
 int fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
                               int log_sockstype, int safe_socks);
+int fetch_from_evbuffer_http(struct evbuffer *buf,
+                        char **headers_out, size_t max_headerlen,
+                        char **body_out, size_t *body_used, size_t max_bodylen,
+                        int force_complete);
 #endif
 
 void assert_buf_ok(buf_t *buf);
