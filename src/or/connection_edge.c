@@ -319,7 +319,6 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   switch (conn->_base.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      connection_stop_writing(TO_CONN(conn));
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
@@ -328,7 +327,6 @@ connection_edge_finished_flushing(edge_connection_t *conn)
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
     case AP_CONN_STATE_CONTROLLER_WAIT:
-      connection_stop_writing(TO_CONN(conn));
       return 0;
     default:
       log_warn(LD_BUG, "Called in unexpected state %d.",conn->_base.state);

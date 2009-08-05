@@ -62,7 +62,6 @@ connection_cpu_finished_flushing(connection_t *conn)
 {
   tor_assert(conn);
   tor_assert(conn->type == CONN_TYPE_CPUWORKER);
-  connection_stop_writing(conn);
   return 0;
 }
 

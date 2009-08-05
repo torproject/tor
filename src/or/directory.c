@@ -3355,7 +3355,6 @@ connection_dir_finished_flushing(dir_connection_t *conn)
     case DIR_CONN_STATE_CLIENT_SENDING:
       log_debug(LD_DIR,"client finished sending command.");
       conn->_base.state = DIR_CONN_STATE_CLIENT_READING;
-      connection_stop_writing(TO_CONN(conn));
       return 0;
     case DIR_CONN_STATE_SERVER_WRITING:
       log_debug(LD_DIRSERV,"Finished writing server response. Closing.");

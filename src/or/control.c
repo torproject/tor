@@ -2719,8 +2719,6 @@ int
 connection_control_finished_flushing(control_connection_t *conn)
 {
   tor_assert(conn);
-
-  connection_stop_writing(TO_CONN(conn));
   return 0;
 }
 

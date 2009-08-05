@@ -1312,10 +1312,14 @@ static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
       stmt ;                                       \
   } while (0)
 #define ELSE_IF_NO_BUFFEREVENT ; else
+#define IF_HAS_NO_BUFFEREVENT(c)                   \
+  if (NULL == (c)->bufev)
 #else
 #define HAS_BUFFEREVENT(c) (0)
 #define IF_HAS_BUFFEREVENT(c, stmt) (void)0
 #define ELSE_IF_NO_BUFFEREVENT ;
+#define IF_HAS_NO_BUFFEREVENT(c)                \
+  if (1)
 #endif
 
 /** What action type does an address policy indicate: accept or reject? */

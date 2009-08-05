@@ -3430,6 +3430,9 @@ connection_finished_flushing(connection_t *conn)
 
 //  log_fn(LOG_DEBUG,"entered. Socket %u.", conn->s);
 
+  IF_HAS_NO_BUFFEREVENT(conn)
+    connection_stop_writing(conn);
+
   switch (conn->type) {
     case CONN_TYPE_OR:
       return connection_or_finished_flushing(TO_OR_CONN(conn));
