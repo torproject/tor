@@ -690,6 +690,13 @@ resolved.  This helps trap accidental attempts to resolve URLs and so on.
 (Default: 0)
 .LP
 .TP
+\fBAllowDotOnion \fR\fB0\fR|\fB1\fR\fP
+If enabled, we convert "www.google.com.foo.exit" addresses on the
+SocksPort/TransPort/NatdPort into "www.google.com" addresses that exit
+from the node "foo". Disabled by default since attacking websites and
+exit relays can use it to manipulate your path selection. (Default: 0)
+.LP
+.TP
 \fBFastFirstHopPK \fR\fB0\fR|\fB1\fR\fP
 When this option is disabled, Tor uses the public key step for the first
 hop of creating circuits. Skipping it is generally safe since we have
