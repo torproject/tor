@@ -773,7 +773,7 @@
      Same as passing 'EXTENDED' to SETEVENTS; this is the preferred way to
      request the extended event syntax.
 
-    This feaure was first used in 0.1.2.3-alpha.  It is always-on in
+    This feature was first used in 0.1.2.3-alpha.  It is always-on in
     Tor 0.2.2.1-alpha and later.
 
   VERBOSE_NAMES
