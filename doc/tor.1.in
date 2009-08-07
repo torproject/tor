@@ -690,7 +690,7 @@ resolved.  This helps trap accidental attempts to resolve URLs and so on.
 (Default: 0)
 .LP
 .TP
-\fBAllowDotOnion \fR\fB0\fR|\fB1\fR\fP
+\fBAllowDotExit \fR\fB0\fR|\fB1\fR\fP
 If enabled, we convert "www.google.com.foo.exit" addresses on the
 SocksPort/TransPort/NatdPort into "www.google.com" addresses that exit
 from the node "foo". Disabled by default since attacking websites and
