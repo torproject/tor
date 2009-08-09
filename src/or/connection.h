@@ -34,6 +34,15 @@ void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 #define connection_mark_for_close(c) \
   _connection_mark_for_close((c), __LINE__, _SHORT_FILE_)
 
+#define connection_mark_and_flush(c)                                    \
+  do {                                                                  \
+    connection_t *tmp_conn_ = (c);                                      \
+    _connection_mark_for_close(tmp_conn_, __LINE__, _SHORT_FILE_);      \
+    tmp_conn_->hold_open_until_flushed = 1;                             \
+    IF_HAS_BUFFEREVENT(tmp_conn_,                                       \
+                       connection_start_writing(tmp_conn_));            \
+  } while (0)
+
 void connection_expire_held_open(void);
 
 int connection_connect(connection_t *conn, const char *address,

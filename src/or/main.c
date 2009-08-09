@@ -172,6 +172,17 @@ connection_add(connection_t *conn)
   conn->conn_array_index = smartlist_len(connection_array);
   smartlist_add(connection_array, conn);
 
+#ifdef USE_BUFFEREVENTS
+  if (conn->type == CONN_TYPE_AP && conn->s >= 0 && !conn->linked) {
+    conn->bufev = bufferevent_socket_new(
+                         tor_libevent_get_base(),
+                         conn->s,
+                         BEV_OPT_DEFER_CALLBACKS);
+
+    connection_configure_bufferevent_callbacks(conn);
+  }
+#endif
+
   if (!HAS_BUFFEREVENT(conn) && (conn->s >= 0 || conn->linked)) {
     conn->read_event = tor_event_new(tor_libevent_get_base(),
          conn->s, EV_READ|EV_PERSIST, conn_read_callback, conn);
@@ -323,10 +334,12 @@ connection_watch_events(connection_t *conn, watchable_events_t events)
   IF_HAS_BUFFEREVENT(conn, {
       short ev = ((short)events) & (EV_READ|EV_WRITE);
       short old_ev = bufferevent_get_enabled(conn->bufev);
-      if ((ev & ~old_ev) != 0)
+      if ((ev & ~old_ev) != 0) {
         bufferevent_enable(conn->bufev, ev);
-      if ((old_ev & ~ev) != 0)
+      }
+      if ((old_ev & ~ev) != 0) {
         bufferevent_disable(conn->bufev, old_ev & ~ev);
+      }
       return;
   });
   if (events & READ_EVENT)
@@ -449,12 +462,13 @@ void
 connection_start_writing(connection_t *conn)
 {
   tor_assert(conn);
-  tor_assert(conn->write_event);
 
   IF_HAS_BUFFEREVENT(conn, {
       bufferevent_enable(conn->bufev, EV_WRITE);
       return;
   });
+
+  tor_assert(conn->write_event);
 
   if (conn->linked) {
     conn->writing_to_linked_conn = 1;
@@ -863,8 +877,7 @@ run_connection_housekeeping(int i, time_t now)
     log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
              "[Hibernating or exiting].",
              conn->s,conn->address, conn->port);
-    connection_mark_for_close(conn);
-    conn->hold_open_until_flushed = 1;
+    connection_mark_and_flush(conn);
   } else if (!or_conn->n_circuits &&
              now >= or_conn->timestamp_last_added_nonpadding +
                                          IDLE_OR_CONN_TIMEOUT) {
@@ -872,7 +885,6 @@ run_connection_housekeeping(int i, time_t now)
              "[idle %d].", conn->s,conn->address, conn->port,
              (int)(now - or_conn->timestamp_last_added_nonpadding));
     connection_mark_for_close(conn);
-    conn->hold_open_until_flushed = 1;
   } else if (
       now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
       now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {

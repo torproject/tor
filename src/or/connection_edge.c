@@ -92,6 +92,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
 
   _connection_mark_for_close(TO_CONN(conn), line, file);
   conn->_base.hold_open_until_flushed = 1;
+  IF_HAS_BUFFEREVENT(TO_CONN(conn), connection_start_writing(TO_CONN(conn)));
   conn->end_reason = endreason;
 }
 
@@ -191,8 +192,7 @@ connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
       conn->edge_has_sent_end = 1;
       conn->end_reason = END_STREAM_REASON_DESTROY;
       conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;
-      connection_mark_for_close(TO_CONN(conn));
-      conn->_base.hold_open_until_flushed = 1;
+      connection_mark_and_flush(TO_CONN(conn));
     }
   }
   conn->cpath_layer = NULL;
@@ -327,6 +327,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
     case AP_CONN_STATE_CONTROLLER_WAIT:
+    case AP_CONN_STATE_RESOLVE_WAIT:
       return 0;
     default:
       log_warn(LD_BUG, "Called in unexpected state %d.",conn->_base.state);

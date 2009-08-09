@@ -1157,8 +1157,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (!conn->_base.marked_for_close) {
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
-        connection_mark_for_close(TO_CONN(conn));
-        conn->_base.hold_open_until_flushed = 1;
+        connection_mark_and_flush(TO_CONN(conn));
       }
       return 0;
     case RELAY_COMMAND_EXTEND:
