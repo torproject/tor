@@ -134,7 +134,10 @@ void connection_dump_buffer_mem_stats(int severity);
 void remove_file_if_very_old(const char *fname, time_t now);
 
 #ifdef USE_BUFFEREVENTS
+int connection_type_uses_bufferevent(connection_t *conn);
 void connection_configure_bufferevent_callbacks(connection_t *conn);
+#else
+#define connection_type_uses_bufferevent(c) (0)
 #endif
 
 #endif

@@ -173,12 +173,22 @@ connection_add(connection_t *conn)
   smartlist_add(connection_array, conn);
 
 #ifdef USE_BUFFEREVENTS
-  if (conn->type == CONN_TYPE_AP && conn->s >= 0 && !conn->linked) {
+  if (connection_type_uses_bufferevent(conn) &&
+      conn->s >= 0 && !conn->linked) {
     conn->bufev = bufferevent_socket_new(
                          tor_libevent_get_base(),
                          conn->s,
                          BEV_OPT_DEFER_CALLBACKS);
-
+    if (conn->inbuf) {
+      /* XXX Instead we should assert that there is no inbuf, once we
+       * have linked connections using bufferevents. */
+      tor_assert(conn->outbuf);
+      tor_assert(buf_datalen(conn->inbuf) == 0);
+      tor_assert(buf_datalen(conn->outbuf) == 0);
+      buf_free(conn->inbuf);
+      buf_free(conn->outbuf);
+      conn->inbuf = conn->outbuf = NULL;
+    }
     connection_configure_bufferevent_callbacks(conn);
   }
 #endif

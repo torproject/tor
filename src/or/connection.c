@@ -183,6 +183,21 @@ conn_state_to_string(int type, int state)
   return buf;
 }
 
+#ifdef USE_BUFFEREVENTS
+/** Return true iff the connection's type is one that can use a
+    bufferevent-based implementation. */
+int
+connection_type_uses_bufferevent(connection_t *conn)
+{
+  switch (conn->type) {
+    case CONN_TYPE_AP:
+      return 1;
+    default:
+      return 0;
+  }
+}
+#endif
+
 /** Allocate and return a new dir_connection_t, initialized as by
  * connection_init(). */
 dir_connection_t *
@@ -308,7 +323,10 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
 
   conn->type = type;
   conn->socket_family = socket_family;
-  if (!connection_is_listener(conn)) { /* listeners never use their buf */
+  if (!connection_is_listener(conn)) {
+    /* listeners never use their buf */
+    /* XXX and bufferevents don't either, but for now we leave this here
+     * so that linked connections can still work. */
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
   }
@@ -3566,8 +3584,8 @@ assert_connection_ok(connection_t *conn, time_t now)
   if (conn->bufev) {
     tor_assert(conn->read_event == NULL);
     tor_assert(conn->write_event == NULL);
-    /* XXX reinstate tor_assert(conn->inbuf == NULL);
-       tor_assert(conn->outbuf == NULL);*/
+    tor_assert(conn->inbuf == NULL);
+    tor_assert(conn->outbuf == NULL);
   }
 #endif
 
@@ -3609,10 +3627,10 @@ assert_connection_ok(connection_t *conn, time_t now)
    * marked_for_close. */
 
   /* buffers */
-  if (!connection_is_listener(conn)) {
+  if (conn->inbuf)
     assert_buf_ok(conn->inbuf);
+  if (conn->outbuf)
     assert_buf_ok(conn->outbuf);
-  }
 
   if (conn->type == CONN_TYPE_OR) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
