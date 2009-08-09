@@ -2785,6 +2785,24 @@ connection_fetch_from_buf_line(connection_t *conn, char *data,
   }
 }
 
+/** As fetch_from_buf_http, but fetches from a conncetion's input buffer_t or
+ * its bufferevent as appropriate. */
+int
+connection_fetch_from_buf_http(connection_t *conn,
+                               char **headers_out, size_t max_headerlen,
+                               char **body_out, size_t *body_used,
+                               size_t max_bodylen, int force_complete)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    struct evbuffer *input = bufferevent_get_input(conn->bufev);
+    return fetch_from_evbuffer_http(input, headers_out, max_headerlen,
+                            body_out, body_used, max_bodylen, force_complete);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return fetch_from_buf_http(conn->inbuf, headers_out, max_headerlen,
+                            body_out, body_used, max_bodylen, force_complete);
+  }
+}
+
 /** Return conn-\>outbuf_flushlen: how many bytes conn wants to flush
  * from its outbuf. */
 int

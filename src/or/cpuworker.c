@@ -144,9 +144,9 @@ connection_cpu_process_inbuf(connection_t *conn)
     return 0;
 
   if (conn->state == CPUWORKER_STATE_BUSY_ONION) {
-    if (buf_datalen(conn->inbuf) < LEN_ONION_RESPONSE) /* answer available? */
+    if (connection_get_inbuf_len(conn) < LEN_ONION_RESPONSE)
       return 0; /* not yet */
-    tor_assert(buf_datalen(conn->inbuf) == LEN_ONION_RESPONSE);
+    tor_assert(connection_get_inbuf_len(conn) == LEN_ONION_RESPONSE);
 
     connection_fetch_from_buf(&success,1,conn);
     connection_fetch_from_buf(buf,LEN_ONION_RESPONSE-1,conn);

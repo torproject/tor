@@ -1988,6 +1988,27 @@ peek_buf_has_control0_command(buf_t *buf)
   return 0;
 }
 
+#ifdef USE_BUFFEREVENTS
+int
+peek_evbuffer_has_control0_command(struct evbuffer *buf)
+{
+  int result = 0;
+  if (evbuffer_get_length(buf) >= 4) {
+    int free_out = 0;
+    char *data = NULL;
+    size_t n = inspect_evbuffer(buf, &data, 4, &free_out);
+    uint16_t cmd;
+    tor_assert(n >= 4);
+    cmd = ntohs(get_uint16(data+2));
+    if (cmd <= 0x14)
+      result = 1;
+    if (free_out)
+      tor_free(data);
+  }
+  return result;
+}
+#endif
+
 /** Return the index within <b>buf</b> at which <b>ch</b> first appears,
  * or -1 if <b>ch</b> does not appear on buf. */
 static off_t

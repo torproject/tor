@@ -57,6 +57,7 @@ int fetch_from_evbuffer_http(struct evbuffer *buf,
                         char **headers_out, size_t max_headerlen,
                         char **body_out, size_t *body_used, size_t max_bodylen,
                         int force_complete);
+int peek_evbuffer_has_control0_command(struct evbuffer *buf);
 #endif
 
 void assert_buf_ok(buf_t *buf);

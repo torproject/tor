@@ -1466,7 +1466,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   int was_compressed=0;
   time_t now = time(NULL);
 
-  switch (fetch_from_buf_http(conn->_base.inbuf,
+  switch (connection_fetch_from_buf_http(TO_CONN(conn),
                               &headers, MAX_HEADERS_SIZE,
                               &body, &body_len, MAX_DIR_DL_SIZE,
                               allow_partial)) {
@@ -3299,7 +3299,7 @@ directory_handle_command(dir_connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_DIR);
 
-  switch (fetch_from_buf_http(conn->_base.inbuf,
+  switch (connection_fetch_from_buf_http(TO_CONN(conn),
                               &headers, MAX_HEADERS_SIZE,
                               &body, &body_len, MAX_DIR_UL_SIZE, 0)) {
     case -1: /* overflow */

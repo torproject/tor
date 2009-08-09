@@ -2753,6 +2753,17 @@ is_valid_initial_command(control_connection_t *conn, const char *cmd)
  * interfaces is broken. */
 #define MAX_COMMAND_LINE_LENGTH (1024*1024)
 
+static int
+peek_connection_has_control0_command(connection_t *conn)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    struct evbuffer *input = bufferevent_get_input(conn->bufev);
+    return peek_evbuffer_has_control0_command(input);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return peek_buf_has_control0_command(conn->inbuf);
+  }
+}
+
 /** Called when data has arrived on a v1 control connection: Try to fetch
  * commands from conn->inbuf, and execute them.
  */
@@ -2775,7 +2786,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   }
 
   if (conn->_base.state == CONTROL_CONN_STATE_NEEDAUTH &&
-      peek_buf_has_control0_command(conn->_base.inbuf)) {
+      peek_connection_has_control0_command(TO_CONN(conn))) {
     /* Detect v0 commands and send a "no more v0" message. */
     size_t body_len;
     char buf[128];

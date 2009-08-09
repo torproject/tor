@@ -1253,12 +1253,18 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
     conn->timestamp_last_added_nonpadding = approx_time();
 }
 
-/** See whether there's a variable-length cell waiting on <b>conn</b>'s
+/** See whether there's a variable-length cell waiting on <b>or_conn</b>'s
  * inbuf.  Return values as for fetch_var_cell_from_buf(). */
 static int
-connection_fetch_var_cell_from_buf(or_connection_t *conn, var_cell_t **out)
+connection_fetch_var_cell_from_buf(or_connection_t *or_conn, var_cell_t **out)
 {
-  return fetch_var_cell_from_buf(conn->_base.inbuf, out, conn->link_proto);
+  connection_t *conn = TO_CONN(or_conn);
+  IF_HAS_BUFFEREVENT(conn, {
+      struct evbuffer *input = bufferevent_get_input(conn->bufev);
+      return fetch_var_cell_from_evbuffer(input, out, or_conn->link_proto);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return fetch_var_cell_from_buf(conn->inbuf, out, or_conn->link_proto);
+  }
 }
 
 /** Process cells from <b>conn</b>'s inbuf.

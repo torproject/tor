@@ -65,6 +65,10 @@ int connection_handle_read(connection_t *conn);
 int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
 int connection_fetch_from_buf_line(connection_t *conn, char *data,
                                    size_t *data_len);
+int connection_fetch_from_buf_http(connection_t *conn,
+                               char **headers_out, size_t max_headerlen,
+                               char **body_out, size_t *body_used,
+                               size_t max_bodylen, int force_complete);
 
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
