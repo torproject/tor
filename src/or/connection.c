@@ -2661,14 +2661,17 @@ static void
 connection_handle_write_cb(struct bufferevent *bufev, void *arg)
 {
   connection_t *conn = arg;
-  (void) bufev;
+  struct evbuffer *output;
   if (connection_flushed_some(conn)<0) {
     connection_mark_for_close(conn);
     return;
   }
 
-  if (!connection_wants_to_flush(conn)) {
+  output = bufferevent_get_output(bufev);
+  if (!evbuffer_get_length(output)) {
     connection_finished_flushing(conn);
+    if (conn->marked_for_close && conn->hold_open_until_flushed)
+      conn->hold_open_until_flushed = 0;
   }
 }
 

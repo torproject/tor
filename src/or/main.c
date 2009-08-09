@@ -639,6 +639,11 @@ conn_close_if_marked(int i)
   assert_connection_ok(conn, now);
   /* assert_all_pending_dns_resolves_ok(); */
 
+#ifdef USE_BUFFEREVENTS
+  if (conn->bufev && conn->hold_open_until_flushed)
+    return 0;
+#endif
+
   log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
   if ((conn->s >= 0 || conn->linked_conn) && connection_wants_to_flush(conn)) {
     /* s == -1 means it's an incomplete edge connection, or that the socket
