@@ -92,12 +92,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     evdns_server_request_respond(req, DNS_ERR_NONE);
     return;
   }
-  if (q->type == EVDNS_TYPE_A) {
-    /* Refuse any attempt to resolve a noconnect address, right now. */
-    if (hostname_is_noconnect_address(q->name)) {
-      err = DNS_ERR_REFUSED;
-    }
-  } else {
+  if (q->type != EVDNS_TYPE_A) {
     tor_assert(q->type == EVDNS_TYPE_PTR);
   }
 

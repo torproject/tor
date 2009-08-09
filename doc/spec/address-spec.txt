@@ -53,15 +53,3 @@
   When Tor sees an address in this format, it tries to look up and connect to
   the specified hidden service.  See rend-spec.txt for full details.
 
-4. .noconnect
-
-  SYNTAX:  [string].noconnect
-
-  When Tor sees an address in this format, it immediately closes the
-  connection without attaching it to any circuit.  This is useful for
-  controllers that want to test whether a given application is indeed using
-  the same instance of Tor that they're controlling.
-
-5. [XXX Is there a ".virtual" address that we expose too, or is that
-just intended to be internal? -RD]
-

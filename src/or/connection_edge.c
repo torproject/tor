@@ -1875,14 +1875,6 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
     return -1;
   } /* else socks handshake is done, continue processing */
 
-  if (hostname_is_noconnect_address(socks->address))
-  {
-    control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
-    control_event_stream_status(conn, STREAM_EVENT_CLOSED, 0);
-    connection_mark_unattached_ap(conn, END_STREAM_REASON_DONE);
-    return -1;
-  }
-
   if (SOCKS_COMMAND_IS_CONNECT(socks->command))
     control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
   else
@@ -2942,13 +2934,5 @@ failed:
     /* otherwise, return to previous state and return 0 */
     *s = '.';
     return BAD_HOSTNAME;
-}
-
-/** Check if the address is of the form "y.noconnect"
- */
-int
-hostname_is_noconnect_address(const char *address)
-{
-  return ! strcasecmpend(address, ".noconnect");
 }
 
