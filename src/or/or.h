@@ -3544,12 +3544,10 @@ typedef struct measured_bw_line_t {
   long int bw;
 } measured_bw_line_t;
 
-int
-measured_bw_line_parse(measured_bw_line_t *out, const char *line);
+int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
 
-int
-measured_bw_line_apply(measured_bw_line_t *parsed_line,
-                       smartlist_t *routerstatuses);
+int measured_bw_line_apply(measured_bw_line_t *parsed_line,
+                           smartlist_t *routerstatuses);
 #endif
 
 int dirserv_read_measured_bandwidths(const char *from_file,

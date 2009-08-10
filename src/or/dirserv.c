@@ -1943,7 +1943,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
 
   if (format != NS_V2) {
     routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
-    u_int32_t bw;
+    uint32_t bw;
 
     if (format != NS_CONTROL_PORT) {
       /* Blow up more or less nicely if we didn't get anything or not the
@@ -2270,7 +2270,8 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
   }
 
   do {
-    if (strncasecmp(cp, "bw=", strlen("bw=")) == 0) {
+    if (strcmpstart(cp, "bw=") == 0) {
+      int parse_ok = 0;
       char *endptr;
       if (got_bw) {
         log_warn(LD_DIRSERV, "Double bw= in bandwidth file line: %s",
@@ -2279,17 +2280,16 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
         return -1;
       }
       cp+=strlen("bw=");
-      errno=0;
-      out->bw = strtol(cp, &endptr, 0);
-      if (errno || endptr == cp || (*endptr && !TOR_ISSPACE(*endptr)) ||
-          out->bw < 0) {
+
+      out->bw = tor_parse_long(cp, 0, 0, LONG_MAX, &parse_ok, &endptr);
+      if (!parse_ok || (*endptr && !TOR_ISSPACE(*endptr))) {
         log_warn(LD_DIRSERV, "Invalid bandwidth in bandwidth file line: %s",
                  escaped(orig_line));
         tor_free(line);
         return -1;
       }
       got_bw=1;
-    } else if (strncasecmp(cp, "node_id=$", strlen("node_id=$")) == 0) {
+    } else if (strcmpstart(cp, "node_id=$") == 0) {
       if (got_node_id) {
         log_warn(LD_DIRSERV, "Double node_id= in bandwidth file line: %s",
                  escaped(orig_line));
@@ -2367,9 +2367,8 @@ dirserv_read_measured_bandwidths(const char *from_file,
     return -1;
   }
 
-  fgets(line, sizeof(line), fp);
-
-  if (line[strlen(line)-1] != '\n') {
+  if (!fgets(line, sizeof(line), fp)
+          || !strlen(line) || line[strlen(line)-1] != '\n') {
     log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
              escaped(line));
     fclose(fp);
@@ -2397,11 +2396,11 @@ dirserv_read_measured_bandwidths(const char *from_file,
 
   while (!feof(fp)) {
     measured_bw_line_t parsed_line;
-    fgets(line, sizeof(line), fp);
-
-    if (measured_bw_line_parse(&parsed_line, line) != -1) {
-      if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
-        applied_lines++;
+    if (fgets(line, sizeof(line), fp) && strlen(line)) {
+      if (measured_bw_line_parse(&parsed_line, line) != -1) {
+        if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
+          applied_lines++;
+      }
     }
   }
 
