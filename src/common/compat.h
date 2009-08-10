@@ -267,6 +267,13 @@ extern const char TOR_TOLOWER_TABLE[];
 #define TOR_TOLOWER(c) (TOR_TOLOWER_TABLE[(uint8_t)c])
 #define TOR_TOUPPER(c) (TOR_TOUPPER_TABLE[(uint8_t)c])
 
+char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
+#ifdef HAVE_STRTOK_R
+#define tor_strok_r(str, sep, lasts) strtok_r(str, sep, lasts)
+#else
+#define tor_strok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
+#endif
+
 #ifdef MS_WINDOWS
 #define _SHORT_FILE_ (tor_fix_source_file(__FILE__))
 const char *tor_fix_source_file(const char *fname);
