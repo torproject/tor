@@ -919,6 +919,8 @@ add_default_trusted_dir_authorities(authority_type_t type)
     "dannenberg orport=443 no-v2 "
       "v3ident=585769C78764D58426B8B52B6651A5A71137189A "
       "213.73.91.31:80 7BE6 83E6 5D48 1413 21C5 ED92 F075 C553 64AC 7123",
+    "urras orport=80 no-v2 v3ident=80550987E1D626E3EBA5E5E75A458DE0626D088C "
+      "208.83.223.34:443 0AD3 FA88 4D18 F89E EA2D 89C0 1937 9E0E 7FD9 4417",
     NULL
   };
   for (i=0; dirservers[i]; i++) {

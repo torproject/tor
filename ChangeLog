@@ -53,6 +53,10 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
 
 
 Changes in version 0.2.1.20 - 2009-??-??
+  o New directory authorities:
+    - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
+      authority.
+
   o Minor bugfixes:
     - Fix a signed/unsigned compile warning in 0.2.1.19.
 
