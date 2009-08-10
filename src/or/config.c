@@ -134,6 +134,7 @@ static config_var_t _option_vars[] = {
   V(AccountingMax,               MEMUNIT,  "0 bytes"),
   V(AccountingStart,             STRING,   NULL),
   V(Address,                     STRING,   NULL),
+  V(AllowDotExit,                BOOL,     "0"),
   V(AllowInvalidNodes,           CSV,      "middle,rendezvous"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
   V(AllowSingleHopCircuits,      BOOL,     "0"),

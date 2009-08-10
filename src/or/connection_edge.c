@@ -1483,7 +1483,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   /* Parse the address provided by SOCKS.  Modify it in-place if it
    * specifies a hidden-service (.onion) or particular exit node (.exit).
    */
-  addresstype = parse_extended_hostname(socks->address);
+  addresstype = parse_extended_hostname(socks->address,
+                         remapped_to_exit || options->AllowDotExit);
 
   if (addresstype == BAD_HOSTNAME) {
     log_warn(LD_APP, "Invalid onion hostname %s; rejecting",
@@ -1496,7 +1497,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
   if (addresstype == EXIT_HOSTNAME) {
     /* foo.exit -- modify conn->chosen_exit_node to specify the exit
-     * node, and conn->address to hold only the address portion.*/
+     * node, and conn->address to hold only the address portion. */
     char *s = strrchr(socks->address,'.');
     tor_assert(!automap);
     if (s) {
@@ -2902,14 +2903,14 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
 /** If address is of the form "y.onion" with a well-formed handle y:
  *     Put a NUL after y, lower-case it, and return ONION_HOSTNAME.
  *
- * If address is of the form "y.exit":
+ * If address is of the form "y.exit" and <b>allowdotexit</b> is true:
  *     Put a NUL after y and return EXIT_HOSTNAME.
  *
  * Otherwise:
  *     Return NORMAL_HOSTNAME and change nothing.
  */
 hostname_type_t
-parse_extended_hostname(char *address)
+parse_extended_hostname(char *address, int allowdotexit)
 {
     char *s;
     char query[REND_SERVICE_ID_LEN_BASE32+1];
@@ -2918,8 +2919,13 @@ parse_extended_hostname(char *address)
     if (!s)
       return NORMAL_HOSTNAME; /* no dot, thus normal */
     if (!strcmp(s+1,"exit")) {
-      *s = 0; /* NUL-terminate it */
-      return EXIT_HOSTNAME; /* .exit */
+      if (allowdotexit) {
+        *s = 0; /* NUL-terminate it */
+        return EXIT_HOSTNAME; /* .exit */
+      } /* else */
+      log_warn(LD_APP, "The \".exit\" notation is disabled in Tor due to "
+               "security risks. Set AllowDotExit in your torrc to enable it.");
+      /* FFFF send a controller event too to notify Vidalia users */
     }
     if (strcmp(s+1,"onion"))
       return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */

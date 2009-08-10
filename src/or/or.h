@@ -2508,6 +2508,13 @@ typedef struct {
    * exit allows it, we use it. */
   int AllowSingleHopCircuits;
 
+  /** If true, we convert "www.google.com.foo.exit" addresses on the
+   * socks/trans/natd ports into "www.google.com" addresses that
+   * exit from the node "foo". Disabled by default since attacking
+   * websites and exit relays can use it to manipulate your path
+   * selection. */
+  int AllowDotExit;
+
   /** If true, the user wants us to collect statistics on clients
    * requesting network statuses from us as directory. */
   int DirReqStatistics;
@@ -3133,7 +3140,7 @@ int hostname_is_noconnect_address(const char *address);
 typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME, BAD_HOSTNAME
 } hostname_type_t;
-hostname_type_t parse_extended_hostname(char *address);
+hostname_type_t parse_extended_hostname(char *address, int allowdotexit);
 
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
 int get_pf_socket(void);
