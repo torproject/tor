@@ -53,6 +53,14 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
 
 
 Changes in version 0.2.1.20 - 2009-??-??
+  o Major bugfixes:
+    - Send circuit or stream sendme cells when our window has decreased
+      by 100 cells, not when it has decreased by 101 cells. Bug uncovered
+      by Karsten when testing the "reduce circuit window" performance
+      patch. Bugfix on the 54th commit on Tor -- from July 2002,
+      before the release of Tor 0.0.0. This is the new winner of the
+      oldest-bug prize.
+
   o New directory authorities:
     - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
       authority.

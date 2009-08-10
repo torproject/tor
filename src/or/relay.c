@@ -1379,7 +1379,7 @@ connection_edge_consider_sending_sendme(edge_connection_t *conn)
     return;
   }
 
-  while (conn->deliver_window < STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
+  while (conn->deliver_window <= STREAMWINDOW_START - STREAMWINDOW_INCREMENT) {
     log_debug(conn->cpath_layer?LD_APP:LD_EXIT,
               "Outbuf %d, Queuing stream sendme.",
               (int)conn->_base.outbuf_flushlen);
@@ -1493,7 +1493,7 @@ circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint)
 {
 //  log_fn(LOG_INFO,"Considering: layer_hint is %s",
 //         layer_hint ? "defined" : "null");
-  while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <
+  while ((layer_hint ? layer_hint->deliver_window : circ->deliver_window) <=
           CIRCWINDOW_START - CIRCWINDOW_INCREMENT) {
     log_debug(LD_CIRC,"Queuing circuit sendme.");
     if (layer_hint)
