@@ -2889,14 +2889,6 @@ evdns_resolv_set_defaults(int flags) {
 	if (flags & DNS_OPTION_NAMESERVERS) evdns_nameserver_ip_add("127.0.0.1");
 }
 
-#ifndef HAVE_STRTOK_R
-static char *
-strtok_r(char *s, const char *delim, char **state) {
-	(void)state;
-	return strtok(s, delim);
-}
-#endif
-
 /* helper version of atoi which returns -1 on error */
 static int
 strtoint(const char *const str) {
@@ -2973,9 +2965,9 @@ static void
 resolv_conf_parse_line(char *const start, int flags) {
 	char *strtok_state;
 	static const char *const delims = " \t";
-#define NEXT_TOKEN strtok_r(NULL, delims, &strtok_state)
+#define NEXT_TOKEN tor_strtok_r(NULL, delims, &strtok_state)
 
-	char *const first_token = strtok_r(start, delims, &strtok_state);
+	char *const first_token = tor_strtok_r(start, delims, &strtok_state);
 	if (!first_token) return;
 
 	if (!strcmp(first_token, "nameserver") && (flags & DNS_OPTION_NAMESERVERS)) {

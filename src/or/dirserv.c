@@ -2224,22 +2224,6 @@ router_clear_status_flags(routerinfo_t *router)
     router->is_bad_exit = router->is_bad_directory = 0;
 }
 
-#ifndef HAVE_STRTOK_R
-/*
- * XXX-MP: If a system lacks strtok_r and we use a non-reentrant strtok,
- * we may introduce odd bugs if we call a codepath that also uses strtok
- * and resets its internal state. Do we want to abandon use of strtok
- * entirely for this reason? Roger mentioned smartlist_split and
- * eat_whitespace() as alternatives.
- */
-static char *
-strtok_r(char *s, const char *delim, char **state)
-{
-  (void)state;
-  return strtok(s, delim);
-}
-#endif
-
 /**
  * Helper function to parse out a line in the measured bandwidth file
  * into a measured_bw_line_t output structure. Returns -1 on failure
@@ -2253,7 +2237,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
   int got_bw = 0;
   int got_node_id = 0;
   char *strtok_state; /* lame sauce d'jour */
-  cp = strtok_r(cp, " \t", &strtok_state);
+  cp = tor_strtok_r(cp, " \t", &strtok_state);
 
   if (!cp) {
     log_warn(LD_DIRSERV, "Invalid line in bandwidth file: %s",
@@ -2308,7 +2292,7 @@ measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
       strncpy(out->node_hex, cp, sizeof(out->node_hex));
       got_node_id=1;
     }
-  } while ((cp = strtok_r(NULL, " \t", &strtok_state)));
+  } while ((cp = tor_strtok_r(NULL, " \t", &strtok_state)));
 
   if (got_bw && got_node_id) {
     tor_free(line);

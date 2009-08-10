@@ -269,9 +269,9 @@ extern const char TOR_TOLOWER_TABLE[];
 
 char *tor_strtok_r_impl(char *str, const char *sep, char **lasts);
 #ifdef HAVE_STRTOK_R
-#define tor_strok_r(str, sep, lasts) strtok_r(str, sep, lasts)
+#define tor_strtok_r(str, sep, lasts) strtok_r(str, sep, lasts)
 #else
-#define tor_strok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
+#define tor_strtok_r(str, sep, lasts) tor_strtok_r_impl(str, sep, lasts)
 #endif
 
 #ifdef MS_WINDOWS
