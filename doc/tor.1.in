@@ -494,13 +494,15 @@ used when \fBFascistFirewall\fR is set. This option is deprecated; use
 ReachableAddresses instead. (Default: 80, 443)
 .LP
 .TP
-\fBHidServAuth \fR\fIonion-address\fR \fIauth-cookie\fP \fIservice-name\fR 
+\fBHidServAuth \fR\fIonion-address\fR \fIauth-cookie\fP [\fIservice-name\fR]
 Client authorization for a hidden service. Valid onion addresses contain 16
 characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
 characters in A-Za-z0-9+/. The service name is only used for internal
 purposes, e.g., for Tor controllers. This option may be used multiple times
 for different hidden services. If a hidden service uses authorization and
-this option is not set, the hidden service is not accessible.
+this option is not set, the hidden service is not accessible. Hidden
+services can be configured to require authorization using the
+\fBHiddenServiceAuthorizeClient\fR option.
 .LP
 .TP
 \fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
@@ -1323,7 +1325,8 @@ listed here are authorized to access the hidden service. Valid client names
 are 1 to 19 characters long and only use characters in A-Za-z0-9+-_
 (no spaces). If this option is set, the hidden service is not accessible
 for clients without authorization any more. Generated authorization data
-can be found in the hostname file.
+can be found in the hostname file. Clients need to put this authorization
+data in their configuration file using \fBHidServAuth\fR.
 .LP
 .TP
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP
