@@ -4361,6 +4361,39 @@ test_util_datadir(void)
   tor_free(f);
 }
 
+static void
+test_util_strtok(void)
+{
+  char buf[128];
+  char buf2[128];
+  char *cp1, *cp2;
+  strlcpy(buf, "Graved on the dark in gestures of descent", sizeof(buf));
+  strlcpy(buf2, "they.seemed;their!own;most.perfect;monument", sizeof(buf2));
+  /*  -- "Year's End", Richard Wilbur */
+
+  test_streq("Graved", tor_strtok_r_impl(buf, " ", &cp1));
+  test_streq("they", tor_strtok_r_impl(buf2, ".!..;!", &cp2));
+#define S1() tor_strtok_r_impl(NULL, " ", &cp1)
+#define S2() tor_strtok_r_impl(NULL, ".!..;!", &cp2)
+  test_streq("on", S1());
+  test_streq("the", S1());
+  test_streq("dark", S1());
+  test_streq("seemed", S2());
+  test_streq("their", S2());
+  test_streq("own", S2());
+  test_streq("in", S1());
+  test_streq("gestures", S1());
+  test_streq("of", S1());
+  test_streq("most", S2());
+  test_streq("perfect", S2());
+  test_streq("descent", S1());
+  test_streq("monument", S2());
+  test_assert(NULL == S1());
+  test_assert(NULL == S2());
+ done:
+  ;
+}
+
 /** Test AES-CTR encryption and decryption with IV. */
 static void
 test_crypto_aes_iv(void)
@@ -4769,6 +4802,7 @@ static struct {
   SUBENT(util, threads),
   SUBENT(util, order_functions),
   SUBENT(util, sscanf),
+  SUBENT(util, strtok),
   ENT(onion_handshake),
   ENT(dir_format),
   ENT(dirutil),
