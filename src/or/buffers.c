@@ -1013,8 +1013,10 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 }
 
 #ifdef USE_BUFFEREVENTS
+/* DOCDOC */
 static size_t
-inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out)
+inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
+                 struct evbuffer_ptr *pos)
 {
   int n_vecs, i;
 
@@ -1022,12 +1024,12 @@ inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out)
     n = evbuffer_get_length(buf);
   if (n == 0)
     return 0;
-  n_vecs = evbuffer_peek(buf, n, NULL, NULL, 0);
+  n_vecs = evbuffer_peek(buf, n, pos, NULL, 0);
   if (n_vecs <= 0)
     return -1;
   if (n_vecs == 1) {
     struct evbuffer_iovec v;
-    i = evbuffer_peek(buf, n, NULL, &v, 1);
+    i = evbuffer_peek(buf, n, pos, &v, 1);
     tor_assert(i == 1);
     *data = v.iov_base;
     *free_out = 0;
@@ -1074,7 +1076,7 @@ fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
     result = 0;
     goto done;
   }
-  n = inspect_evbuffer(buf, &hdr, VAR_CELL_HEADER_SIZE, &free_hdr);
+  n = inspect_evbuffer(buf, &hdr, VAR_CELL_HEADER_SIZE, &free_hdr, NULL);
   tor_assert(n == VAR_CELL_HEADER_SIZE);
 
   command = get_uint8(hdr+2);
@@ -1354,10 +1356,8 @@ fetch_from_evbuffer_http(struct evbuffer *buf,
                     char **body_out, size_t *body_used, size_t max_bodylen,
                     int force_complete)
 {
-  struct evbuffer_ptr crlf;
-  unsigned char *headers;
+  struct evbuffer_ptr crlf, content_length;
   size_t headerlen, bodylen, contentlen;
-  char *p;
 
   crlf = evbuffer_search(buf, "\r\n\r\n", 4, NULL);
   if (crlf.pos < 0) {
@@ -1367,19 +1367,31 @@ fetch_from_evbuffer_http(struct evbuffer *buf,
   } else if (crlf.pos > (int)max_headerlen)
     return -1; /* Headers too long. */
 
-  /* Okay, we've found the end of the headers. Pull them into the first
-   * chunk. */
-  /* XXXX Or don't!  It would be better to scan for the Content-Length as-is.*/
   headerlen = crlf.pos + 4;
   bodylen = evbuffer_get_length(buf) - headerlen;
   if (bodylen > max_bodylen)
     return -1; /* body too long */
 
-  headers = evbuffer_pullup(buf, headerlen);
-  tor_assert(headers && evbuffer_get_contiguous_space(buf) >= headerlen);
-  p = (char*) tor_memstr(headers, headerlen, CONTENT_LENGTH);
-  if (p) {
-    int i = atoi(p+strlen(CONTENT_LENGTH));
+  content_length = evbuffer_search_range(buf, CONTENT_LENGTH,
+                                         strlen(CONTENT_LENGTH), NULL, &crlf);
+
+  if (content_length.pos >= 0) {
+    struct evbuffer_ptr eol;
+    char *data = NULL;
+    int free_data = 0;
+    int n, i;
+    n = evbuffer_ptr_set(buf, &content_length, strlen(CONTENT_LENGTH),
+                         EVBUFFER_PTR_ADD);
+    tor_assert(n == 0);
+    eol = evbuffer_search_eol(buf, &content_length, NULL, EVBUFFER_EOL_CRLF);
+    tor_assert(eol.pos > content_length.pos);
+    tor_assert(eol.pos <= crlf.pos);
+    inspect_evbuffer(buf, &data, eol.pos - content_length.pos, &free_data,
+                         &content_length);
+
+    i = atoi(data);
+    if (free_data)
+      tor_free(data);
     if (i < 0) {
       log_warn(LD_PROTOCOL, "Content-Length is less than zero; it looks like "
                "someone is trying to crash us.");
@@ -1996,7 +2008,7 @@ peek_evbuffer_has_control0_command(struct evbuffer *buf)
   if (evbuffer_get_length(buf) >= 4) {
     int free_out = 0;
     char *data = NULL;
-    size_t n = inspect_evbuffer(buf, &data, 4, &free_out);
+    size_t n = inspect_evbuffer(buf, &data, 4, &free_out, NULL);
     uint16_t cmd;
     tor_assert(n >= 4);
     cmd = ntohs(get_uint16(data+2));
