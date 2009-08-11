@@ -1498,7 +1498,7 @@ int
 fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
                           int log_sockstype, int safe_socks)
 {
-  const char *data;
+  char *data;
   ssize_t n_drain;
   size_t datalen, buflen, want_length;
   int res;
@@ -1507,13 +1507,15 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
   if (buflen < 2)
     return 0;
 
-  want_length = evbuffer_get_contiguous_space(buf);
-
-  do {
+  {
+    struct evbuffer_iovec v;
+    int i;
+    want_length = evbuffer_get_contiguous_space(buf);
     n_drain = 0;
-    data = (const char*) evbuffer_pullup(buf, want_length);
-    datalen = evbuffer_get_contiguous_space(buf);
-    want_length = 0;
+    i = evbuffer_peek(buf, want_length, NULL, &v, 1);
+    tor_assert(i == i);
+    data = v.iov_base;
+    datalen = v.iov_len;
 
     res = parse_socks(data, datalen, req, log_sockstype,
                       safe_socks, &n_drain, &want_length);
@@ -1523,11 +1525,33 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
     else if (n_drain > 0)
       evbuffer_drain(buf, n_drain);
 
-    datalen = evbuffer_get_contiguous_space(buf);
-    buflen = evbuffer_get_length(buf);
+    if (res)
+      return res;
+  }
 
-  } while (res == 0 &&
-           want_length > datalen && buflen > datalen);
+  while (evbuffer_get_length(buf) > datalen) {
+    int free_data = 0;
+    n_drain = 0;
+    data = NULL;
+    datalen = inspect_evbuffer(buf, &data, want_length, &free_data, NULL);
+
+    res = parse_socks(data, datalen, req, log_sockstype,
+                      safe_socks, &n_drain, &want_length);
+
+    if (free_data)
+      tor_free(data);
+
+    if (n_drain < 0)
+      evbuffer_drain(buf, evbuffer_get_length(buf));
+    else if (n_drain > 0)
+      evbuffer_drain(buf, n_drain);
+
+    if (res)
+      return res;
+
+    if (want_length <= datalen)
+      break;
+  }
 
   return res;
 }
