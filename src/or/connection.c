@@ -191,8 +191,8 @@ connection_type_uses_bufferevent(connection_t *conn)
 {
   switch (conn->type) {
     case CONN_TYPE_AP:
-      return 1;
     case CONN_TYPE_EXIT:
+    case CONN_TYPE_DIR:
       return 1;
     default:
       return 0;

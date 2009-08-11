@@ -100,7 +100,7 @@ connection_get_inbuf_len(connection_t *conn)
   IF_HAS_BUFFEREVENT(conn, {
     return evbuffer_get_length(bufferevent_get_input(conn->bufev));
   }) ELSE_IF_NO_BUFFEREVENT {
-    return buf_datalen(conn->inbuf);
+    return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
   }
 }
 
@@ -110,7 +110,7 @@ connection_get_outbuf_len(connection_t *conn)
   IF_HAS_BUFFEREVENT(conn, {
     return evbuffer_get_length(bufferevent_get_output(conn->bufev));
   }) ELSE_IF_NO_BUFFEREVENT {
-    return buf_datalen(conn->outbuf);
+    return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
   }
 }
 

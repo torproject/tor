@@ -892,14 +892,14 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
      * hook up both sides
      */
     linked_conn =
-      connection_ap_make_link(conn->_base.address, conn->_base.port,
+      connection_ap_make_link(TO_CONN(conn),
+                              conn->_base.address, conn->_base.port,
                               digest, use_begindir, conn->dirconn_direct);
     if (!linked_conn) {
       log_warn(LD_NET,"Making tunnel to dirserver failed.");
       connection_mark_for_close(TO_CONN(conn));
       return;
     }
-    connection_link_connections(TO_CONN(conn), TO_CONN(linked_conn));
 
     if (connection_add(TO_CONN(conn)) < 0) {
       log_warn(LD_NET,"Unable to add connection for link to dirserver.");
@@ -912,8 +912,12 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
                            payload, payload_len,
                            supports_conditional_consensus,
                            if_modified_since);
+
     connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
-    connection_start_reading(TO_CONN(linked_conn));
+    IF_HAS_BUFFEREVENT(TO_CONN(linked_conn), {
+      connection_watch_events(TO_CONN(linked_conn), READ_EVENT|WRITE_EVENT);
+    }) ELSE_IF_NO_BUFFEREVENT
+      connection_start_reading(TO_CONN(linked_conn));
   }
 }
 
@@ -3352,6 +3356,7 @@ connection_dir_finished_flushing(dir_connection_t *conn)
                               DIRREQ_DIRECT,
                               DIRREQ_FLUSHING_DIR_CONN_FINISHED);
   switch (conn->_base.state) {
+    case DIR_CONN_STATE_CONNECTING:
     case DIR_CONN_STATE_CLIENT_SENDING:
       log_debug(LD_DIR,"client finished sending command.");
       conn->_base.state = DIR_CONN_STATE_CLIENT_READING;

@@ -155,6 +155,32 @@ int can_complete_circuit=0;
 *
 ****************************************************************************/
 
+#ifdef USE_BUFFEREVENTS
+static void
+free_old_inbuf(connection_t *conn)
+{
+  if (! conn->inbuf)
+    return;
+
+  tor_assert(conn->outbuf);
+  tor_assert(buf_datalen(conn->inbuf) == 0);
+  tor_assert(buf_datalen(conn->outbuf) == 0);
+  buf_free(conn->inbuf);
+  buf_free(conn->outbuf);
+  conn->inbuf = conn->outbuf = NULL;
+
+  if (conn->read_event) {
+    event_del(conn->read_event);
+    tor_event_free(conn->read_event);
+  }
+  if (conn->write_event) {
+    event_del(conn->read_event);
+    tor_event_free(conn->write_event);
+  }
+  conn->read_event = conn->write_event = NULL;
+}
+#endif
+
 /** Add <b>conn</b> to the array of connections that we can poll on.  The
  * connection's socket must be set; the connection starts out
  * non-reading and non-writing.
@@ -173,28 +199,47 @@ connection_add_impl(connection_t *conn, int is_connecting)
   smartlist_add(connection_array, conn);
 
 #ifdef USE_BUFFEREVENTS
-  if (connection_type_uses_bufferevent(conn) &&
-      conn->s >= 0 && !conn->linked) {
-    conn->bufev = bufferevent_socket_new(
+  if (connection_type_uses_bufferevent(conn)) {
+    if (conn->s >= 0 && !conn->linked) {
+      conn->bufev = bufferevent_socket_new(
                          tor_libevent_get_base(),
                          conn->s,
                          BEV_OPT_DEFER_CALLBACKS);
-   if (conn->inbuf) {
+      /* XXXX CHECK FOR NULL RETURN! */
+      if (is_connecting) {
+        /* Put the bufferevent into a "connecting" state so that we'll get
+         * a "connected" event callback on successful write. */
+        bufferevent_socket_connect(conn->bufev, NULL, 0);
+      }
+      connection_configure_bufferevent_callbacks(conn);
+    } else if (conn->linked && conn->linked_conn &&
+               connection_type_uses_bufferevent(conn->linked_conn)) {
+      tor_assert(conn->s < 0);
+      if (!conn->bufev) {
+        struct bufferevent *pair[2] = { NULL, NULL };
+        /* XXXX CHECK FOR ERROR RETURN! */
+        bufferevent_pair_new(tor_libevent_get_base(),
+                             BEV_OPT_DEFER_CALLBACKS,
+                             pair);
+        tor_assert(pair[0]);
+        conn->bufev = pair[0];
+        conn->linked_conn->bufev = pair[1];
+      } /* else the other side already was added, and got a bufferevent_pair */
+      connection_configure_bufferevent_callbacks(conn);
+    }
+
+    if (conn->bufev && conn->inbuf) {
       /* XXX Instead we should assert that there is no inbuf, once we
        * have linked connections using bufferevents. */
-      tor_assert(conn->outbuf);
-      tor_assert(buf_datalen(conn->inbuf) == 0);
-      tor_assert(buf_datalen(conn->outbuf) == 0);
-      buf_free(conn->inbuf);
-      buf_free(conn->outbuf);
-      conn->inbuf = conn->outbuf = NULL;
+      free_old_inbuf(conn);
     }
-    if (is_connecting) {
-      /* Put the bufferevent into a "connecting" state so that we'll get
-       * a "connected" event callback on successful write. */
-      bufferevent_socket_connect(conn->bufev, NULL, 0);
+
+    if (conn->linked_conn && conn->linked_conn->bufev &&
+        conn->linked_conn->inbuf) {
+      /* XXX Instead we should assert that there is no inbuf, once we
+       * have linked connections using bufferevents. */
+      free_old_inbuf(conn->linked_conn);
     }
-    connection_configure_bufferevent_callbacks(conn);
   }
 #else
   (void) is_connecting;
@@ -205,6 +250,7 @@ connection_add_impl(connection_t *conn, int is_connecting)
          conn->s, EV_READ|EV_PERSIST, conn_read_callback, conn);
     conn->write_event = tor_event_new(tor_libevent_get_base(),
          conn->s, EV_WRITE|EV_PERSIST, conn_write_callback, conn);
+    /* XXXX CHECK FOR NULL RETURN! */
   }
 
   log_debug(LD_NET,"new conn type %s, socket %d, address %s, n_conns %d.",
@@ -671,11 +717,19 @@ conn_close_if_marked(int i)
   /* assert_all_pending_dns_resolves_ok(); */
 
 #ifdef USE_BUFFEREVENTS
-  if (conn->bufev && conn->hold_open_until_flushed)
+  if (conn->bufev && conn->hold_open_until_flushed) {
+    if (conn->linked) {
+      /* We need to do this explicitly so that the linked connection
+       * notices that there was an EOF. */
+      bufferevent_flush(conn->bufev, EV_WRITE, BEV_FINISHED);
+      /* XXXX Now can we free it? */
+    }
     return 0;
+  }
 #endif
 
   log_debug(LD_NET,"Cleaning up connection (fd %d).",conn->s);
+  IF_HAS_BUFFEREVENT(conn, goto unlink);
   if ((conn->s >= 0 || conn->linked_conn) && connection_wants_to_flush(conn)) {
     /* s == -1 means it's an incomplete edge connection, or that the socket
      * has already been closed as unflushable. */
@@ -743,6 +797,10 @@ conn_close_if_marked(int i)
              conn->marked_for_close);
     }
   }
+
+#ifdef USE_BUFFEREVENTS
+ unlink:
+#endif
   connection_unlink(conn); /* unlink, remove, free */
   return 1;
 }
