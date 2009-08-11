@@ -652,8 +652,8 @@ dirserv_add_multiple_descriptors(const char *desc, uint8_t purpose,
 
 /** Examine the parsed server descriptor in <b>ri</b> and maybe insert it into
  * the list of server descriptors. Set *<b>msg</b> to a message that should be
- * passed back to the origin of this descriptor. Use <b>source</b> to produce
- * better log messages.
+ * passed back to the origin of this descriptor, or NULL if there is no such
+ * message. Use <b>source</b> to produce better log messages.
  *
  * Return the status of the operation
  *
@@ -667,6 +667,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   routerinfo_t *ri_old;
   char *desc, *nickname;
   size_t desclen = 0;
+  *msg = NULL;
 
   /* If it's too big, refuse it now. Otherwise we'll cache it all over the
    * network and it'll clog everything up. */
@@ -718,7 +719,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
       control_event_or_authdir_new_descriptor("REJECTED", desc, desclen, *msg);
     log_info(LD_DIRSERV,
              "Did not add descriptor from '%s' (source: %s): %s.",
-             nickname, source, *msg);
+             nickname, source, *msg ? *msg : "(no message)");
   } else {
     smartlist_t *changed;
     control_event_or_authdir_new_descriptor("ACCEPTED", desc, desclen, *msg);

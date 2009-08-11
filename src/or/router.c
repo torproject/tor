@@ -544,7 +544,7 @@ init_keys(void)
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
   if (authdir_mode(options)) {
-    const char *m;
+    const char *m = NULL;
     routerinfo_t *ri;
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
