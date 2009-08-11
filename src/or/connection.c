@@ -700,10 +700,9 @@ connection_close_immediate(connection_t *conn)
   conn->s = -1;
   if (conn->linked)
     conn->linked_conn_is_closed = 1;
-  if (!connection_is_listener(conn)) {
+  if (conn->outbuf)
     buf_clear(conn->outbuf);
-    conn->outbuf_flushlen = 0;
-  }
+  conn->outbuf_flushlen = 0;
 }
 
 /** Mark <b>conn</b> to be closed next time we loop through
@@ -2721,12 +2720,14 @@ connection_handle_event_cb(struct bufferevent *bufev, short event, void *arg)
                                    tor_socket_strerror(socket_error));
     } else if (CONN_IS_EDGE(conn)) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      connection_edge_end_errno(edge_conn);
+      if (!edge_conn->edge_has_sent_end)
+        connection_edge_end_errno(edge_conn);
       if (edge_conn->socks_request) /* broken, don't send a socks reply back */
         edge_conn->socks_request->has_finished = 1;
     }
     connection_close_immediate(conn); /* Connection is dead. */
-    connection_mark_for_close(conn);
+    if (!conn->marked_for_close)
+      connection_mark_for_close(conn);
   }
 }
 
