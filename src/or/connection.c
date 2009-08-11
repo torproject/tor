@@ -193,6 +193,7 @@ connection_type_uses_bufferevent(connection_t *conn)
     case CONN_TYPE_AP:
     case CONN_TYPE_EXIT:
     case CONN_TYPE_DIR:
+    case CONN_TYPE_CONTROL:
       return 1;
     default:
       return 0;
