@@ -1013,7 +1013,13 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 }
 
 #ifdef USE_BUFFEREVENTS
-/* DOCDOC */
+/** Try to read <b>n</b> bytes from <b>buf</b> at <b>pos</b> (which may be
+ * NULL for the start fo the buffer), copying the data only if necessary.  Set
+ * *<b>data</b> to a pointer to the desired bytes.  Set <b>free_out</b> to 1
+ * if we needed to malloc *<b>data</b> because the original bytes were
+ * noncontiguous; 0 otherwise.  Return the number of bytes actually available
+ * at <b>data</b>.
+ */
 static size_t
 inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
                  struct evbuffer_ptr *pos)
