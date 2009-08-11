@@ -160,7 +160,7 @@ int can_complete_circuit=0;
  * non-reading and non-writing.
  */
 int
-connection_add(connection_t *conn)
+connection_add_impl(connection_t *conn, int is_connecting)
 {
   tor_assert(conn);
   tor_assert(conn->s >= 0 ||
@@ -179,7 +179,7 @@ connection_add(connection_t *conn)
                          tor_libevent_get_base(),
                          conn->s,
                          BEV_OPT_DEFER_CALLBACKS);
-    if (conn->inbuf) {
+   if (conn->inbuf) {
       /* XXX Instead we should assert that there is no inbuf, once we
        * have linked connections using bufferevents. */
       tor_assert(conn->outbuf);
@@ -189,8 +189,15 @@ connection_add(connection_t *conn)
       buf_free(conn->outbuf);
       conn->inbuf = conn->outbuf = NULL;
     }
+    if (is_connecting) {
+      /* Put the bufferevent into a "connecting" state so that we'll get
+       * a "connected" event callback on successful write. */
+      bufferevent_socket_connect(conn->bufev, NULL, 0);
+    }
     connection_configure_bufferevent_callbacks(conn);
   }
+#else
+  (void) is_connecting;
 #endif
 
   if (!HAS_BUFFEREVENT(conn) && (conn->s >= 0 || conn->linked)) {

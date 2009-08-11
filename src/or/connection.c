@@ -192,6 +192,8 @@ connection_type_uses_bufferevent(connection_t *conn)
   switch (conn->type) {
     case CONN_TYPE_AP:
       return 1;
+    case CONN_TYPE_EXIT:
+      return 1;
     default:
       return 0;
   }
@@ -1342,7 +1344,7 @@ connection_connect(connection_t *conn, const char *address,
          escaped_safe_str_client(address),
          port, inprogress?"in progress":"established", s);
   conn->s = s;
-  if (connection_add(conn) < 0) /* no space, forget it */
+  if (connection_add_connecting(conn) < 0) /* no space, forget it */
     return -1;
   return inprogress ? 0 : 1;
 }

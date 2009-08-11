@@ -14,7 +14,9 @@
 
 extern int can_complete_circuit;
 
-int connection_add(connection_t *conn);
+int connection_add_impl(connection_t *conn, int is_connecting);
+#define connection_add(conn) connection_add_impl((conn), 0)
+#define connection_add_connecting(conn) connection_add_impl((conn), 1)
 int connection_remove(connection_t *conn);
 void connection_unregister_events(connection_t *conn);
 int connection_in_array(connection_t *conn);
