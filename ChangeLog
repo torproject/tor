@@ -67,6 +67,8 @@ Changes in version 0.2.1.20 - 2009-??-??
 
   o Minor bugfixes:
     - Fix a signed/unsigned compile warning in 0.2.1.19.
+    - Fix possible segmentation fault on directory authorities. Bugfix on
+      0.2.1.14-rc.
 
 
 Changes in version 0.2.1.19 - 2009-07-28
