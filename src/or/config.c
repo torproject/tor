@@ -1424,16 +1424,10 @@ options_act(or_options_t *old_options)
                "Look for the exit-stats file that will first be written to "
                "the data directory in 24 hours from now.");
 
-#ifdef ENABLE_BUFFER_STATS
   if (options->CellStatistics)
     log_notice(LD_CONFIG, "Configured to measure cell statistics. Look "
                "for the buffer-stats file that will first be written to "
                "the data directory in 24 hours from now.");
-#else
-  if (options->CellStatistics)
-    log_warn(LD_CONFIG, "CellStatistics enabled, but Tor was built "
-             "without cell statistics support.");
-#endif
 
   if (options->EntryStatistics) {
     if (should_record_bridge_info(options)) {

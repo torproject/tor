@@ -2620,7 +2620,6 @@ hs_usage_write_statistics_to_file(time_t now)
 
 /*** cell statistics ***/
 
-#ifdef ENABLE_BUFFER_STATS
 /** Start of the current buffer stats interval. */
 time_t start_of_buffer_stats_interval;
 
@@ -2787,5 +2786,4 @@ dump_buffer_stats(void)
   tor_free(str);
 #undef SHARES
 }
-#endif
 

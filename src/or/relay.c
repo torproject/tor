@@ -1612,16 +1612,48 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
   ++queue->n;
 }
 
+/** Number of cells added to a circuit queue including their insertion
+ * time on millisecond detail; used for buffer statistics. */
+typedef struct insertion_time_elem_t {
+  uint32_t insertion_time; /**< When were cells inserted (in ms starting
+                                at 0:00 of the current day)? */
+  unsigned counter; /**< How many cells were inserted? */
+} insertion_time_elem_t;
+
 /** Append a newly allocated copy of <b>cell</b> to the end of <b>queue</b> */
 void
 cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
 {
   packed_cell_t *copy = packed_cell_copy(cell);
-#ifdef ENABLE_BUFFER_STATS
-  /* Remember the exact time when this cell was put in the queue. */
-  if (get_options()->CellStatistics)
-    tor_gettimeofday(&copy->packed_timeval);
-#endif
+  /* Remember the time in millis when this cell was put in the queue. */
+  if (get_options()->CellStatistics) {
+    struct timeval now;
+    uint32_t added;
+    insertion_time_elem_t *last_elem = NULL;
+    int add_new_elem = 0;
+    tor_gettimeofday(&now);
+    added = now.tv_sec % 86400L * 1000L + now.tv_usec / 1000L;
+    if (!queue->insertion_times) {
+      queue->insertion_times = smartlist_create();
+    }
+    if (smartlist_len(queue->insertion_times) < 1) {
+      add_new_elem = 1;
+    } else {
+      last_elem = smartlist_get(queue->insertion_times,
+                      smartlist_len(queue->insertion_times) - 1);
+      if (last_elem->insertion_time == added)
+        last_elem->counter++;
+      else
+        add_new_elem = 1;
+    }
+    if (add_new_elem) {
+      insertion_time_elem_t *elem =
+          tor_malloc_zero(sizeof(insertion_time_elem_t));
+      elem->insertion_time = added;
+      elem->counter = 1;
+      smartlist_add(queue->insertion_times, elem);
+    }
+  }
   cell_queue_append(queue, copy);
 }
 
@@ -1638,6 +1670,11 @@ cell_queue_clear(cell_queue_t *queue)
   }
   queue->head = queue->tail = NULL;
   queue->n = 0;
+  if (queue->insertion_times) {
+    SMARTLIST_FOREACH(queue->insertion_times, void *, e, tor_free(e));
+    smartlist_free(queue->insertion_times);
+    queue->insertion_times = NULL;
+  }
 }
 
 /** Extract and return the cell at the head of <b>queue</b>; return NULL if
@@ -1831,20 +1868,33 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
     packed_cell_t *cell = cell_queue_pop(queue);
     tor_assert(*next_circ_on_conn_p(circ,conn));
 
-#ifdef ENABLE_BUFFER_STATS
     /* Calculate the exact time that this cell has spent in the queue. */
     if (get_options()->CellStatistics && !CIRCUIT_IS_ORIGIN(circ)) {
-      struct timeval flushed_from_queue;
+      struct timeval now;
+      uint32_t flushed;
       uint32_t cell_waiting_time;
-      or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
-      tor_gettimeofday(&flushed_from_queue);
-      cell_waiting_time = (uint32_t)
-            tv_mdiff(&cell->packed_timeval, &flushed_from_queue);
-
-      orcirc->total_cell_waiting_time += cell_waiting_time;
-      orcirc->processed_cells++;
+      tor_gettimeofday(&now);
+      flushed = now.tv_sec % 86400L * 1000L + now.tv_usec / 1000L;
+      if (!queue->insertion_times ||
+          smartlist_len(queue->insertion_times) < 1) {
+        log_warn(LD_BUG, "Cannot determine insertion time of cell.");
+      } else {
+        or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+        insertion_time_elem_t *elem = smartlist_get(
+            queue->insertion_times, 0);
+        cell_waiting_time = (flushed + 86400000L - elem->insertion_time) %
+                            86400000L;
+        elem->counter--;
+        if (elem->counter < 1) {
+// TODO this operation is really expensive! write own queue impl?
+//          smartlist_del(queue->insertion_times, 0);
+          smartlist_remove(queue->insertion_times, elem);
+          tor_free(elem);
+        }
+        orcirc->total_cell_waiting_time += cell_waiting_time;
+        orcirc->processed_cells++;
+      }
     }
-#endif
 
     /* If we just flushed our queue and this circuit is used for a
      * tunneled directory request, possibly advance its state. */
