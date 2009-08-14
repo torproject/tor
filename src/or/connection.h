@@ -140,6 +140,10 @@ void remove_file_if_very_old(const char *fname, time_t now);
 #ifdef USE_BUFFEREVENTS
 int connection_type_uses_bufferevent(connection_t *conn);
 void connection_configure_bufferevent_callbacks(connection_t *conn);
+void connection_handle_read_cb(struct bufferevent *bufev, void *arg);
+void connection_handle_write_cb(struct bufferevent *bufev, void *arg);
+void connection_handle_event_cb(struct bufferevent *bufev, short event,
+                                 void *arg);
 #else
 #define connection_type_uses_bufferevent(c) (0)
 #endif

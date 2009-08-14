@@ -36,6 +36,10 @@
 #include "router.h"
 #include "routerparse.h"
 
+#ifdef USE_BUFFEREVENTS
+#include <event2/event.h>
+#endif
+
 static connection_t *connection_create_listener(
                                struct sockaddr *listensockaddr,
                                socklen_t listensocklen, int type,
@@ -194,6 +198,7 @@ connection_type_uses_bufferevent(connection_t *conn)
     case CONN_TYPE_EXIT:
     case CONN_TYPE_DIR:
     case CONN_TYPE_CONTROL:
+    case CONN_TYPE_OR:
       return 1;
     default:
       return 0;
@@ -2648,6 +2653,7 @@ evbuffer_inbuf_callback(struct evbuffer *buf,
   }
 }
 
+/** DOCDOC */
 static void
 evbuffer_outbuf_callback(struct evbuffer *buf,
                          const struct evbuffer_cb_info *info, void *arg)
@@ -2667,7 +2673,8 @@ evbuffer_outbuf_callback(struct evbuffer *buf,
   }
 }
 
-static void
+/** DOCDOC */
+void
 connection_handle_read_cb(struct bufferevent *bufev, void *arg)
 {
   connection_t *conn = arg;
@@ -2677,7 +2684,8 @@ connection_handle_read_cb(struct bufferevent *bufev, void *arg)
       connection_mark_for_close(conn);
 }
 
-static void
+/** DOCDOC */
+void
 connection_handle_write_cb(struct bufferevent *bufev, void *arg)
 {
   connection_t *conn = arg;
@@ -2690,12 +2698,18 @@ connection_handle_write_cb(struct bufferevent *bufev, void *arg)
   output = bufferevent_get_output(bufev);
   if (!evbuffer_get_length(output)) {
     connection_finished_flushing(conn);
-    if (conn->marked_for_close && conn->hold_open_until_flushed)
+    if (conn->marked_for_close && conn->hold_open_until_flushed) {
       conn->hold_open_until_flushed = 0;
+      if (conn->linked) {
+        /* send eof */
+        bufferevent_flush(conn->bufev, EV_WRITE, BEV_FINISHED);
+      }
+    }
   }
 }
 
-static void
+/** DOCDOC */
+void
 connection_handle_event_cb(struct bufferevent *bufev, short event, void *arg)
 {
   connection_t *conn = arg;

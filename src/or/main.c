@@ -722,9 +722,9 @@ conn_close_if_marked(int i)
       /* We need to do this explicitly so that the linked connection
        * notices that there was an EOF. */
       bufferevent_flush(conn->bufev, EV_WRITE, BEV_FINISHED);
-      /* XXXX Now can we free it? */
     }
-    return 0;
+    if (evbuffer_get_length(bufferevent_get_output(conn->bufev)))
+      return 0;
   }
 #endif
 

@@ -1083,7 +1083,7 @@ fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
     goto done;
   }
   n = inspect_evbuffer(buf, &hdr, VAR_CELL_HEADER_SIZE, &free_hdr, NULL);
-  tor_assert(n == VAR_CELL_HEADER_SIZE);
+  tor_assert(n >= VAR_CELL_HEADER_SIZE);
 
   command = get_uint8(hdr+2);
   if (!(CELL_COMMAND_IS_VAR_LENGTH(command))) {

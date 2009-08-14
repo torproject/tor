@@ -45,6 +45,10 @@ tor_LDADD = ./libtor.a ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
 	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
+if USE_BUFFEREVENTS
+tor_LDADD += -levent_openssl
+endif
+
 noinst_HEADERS = buffers.h circuitbuild.h circuitlist.h circuituse.h \
 	command.h config.h connection_edge.h connection.h connection_or.h \
 	control.h cpuworker.h directory.h dirserv.h dirvote.h dns.h \
