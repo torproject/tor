@@ -1960,7 +1960,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     extrainfo_t *ei_tmp;
     cp = s_dup = tor_strdup(s);
     ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
-    if (ei_tmp) {
+    if (!ei_tmp) {
       log_err(LD_BUG,
               "We just generated an extrainfo descriptor we can't parse.");
       log_err(LD_BUG, "Descriptor was: <<%s>>", s);
