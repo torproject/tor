@@ -1509,6 +1509,9 @@ typedef struct routerstatus_t {
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
+  unsigned int has_measured_bw:1; /**< The vote/consensus had a measured bw */
+
+  uint32_t measured_bw; /**< Measured bandwidth (capacity) of the router */
 
   uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
@@ -2546,6 +2549,9 @@ typedef struct {
    * migration purposes? */
   int V3AuthUseLegacyKey;
 
+  /** Location of bandwidth measurement file */
+  char *V3BandwidthsFile;
+
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
@@ -3444,8 +3450,8 @@ download_status_mark_impossible(download_status_t *dl)
  * Running Stable Unnamed V2Dir Valid\n". */
 #define MAX_FLAG_LINE_LEN 96
 /** Length of "w" line for weighting.  Currently at most
- * "w Bandwidth=<uint32t>\n" */
-#define MAX_WEIGHT_LINE_LEN (13+10)
+ * "w Bandwidth=<uint32t> Measured=<uint32t>\n" */
+#define MAX_WEIGHT_LINE_LEN (12+10+10+10+1)
 /** Maximum length of an exit policy summary line. */
 #define MAX_POLICY_LINE_LEN (3+MAX_EXITPOLICY_SUMMARY_LEN)
 /** Amount of space to allocate for each entry: r, s, and v lines. */
@@ -3528,12 +3534,31 @@ int dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff);
 int dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
+typedef enum {
+  NS_V2, NS_V3_CONSENSUS, NS_V3_VOTE, NS_CONTROL_PORT
+} routerstatus_format_type_t;
 int routerstatus_format_entry(char *buf, size_t buf_len,
                               routerstatus_t *rs, const char *platform,
-                              int first_line_only, int v2_format);
+                              routerstatus_format_type_t format);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
+
+#ifdef DIRSERV_PRIVATE
+typedef struct measured_bw_line_t {
+  char node_id[DIGEST_LEN];
+  char node_hex[MAX_HEX_NICKNAME_LEN+1];
+  long int bw;
+} measured_bw_line_t;
+
+int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
+
+int measured_bw_line_apply(measured_bw_line_t *parsed_line,
+                           smartlist_t *routerstatuses);
+#endif
+
+int dirserv_read_measured_bandwidths(const char *from_file,
+                                     smartlist_t *routerstatuses);
 
 /********************************* dirvote.c ************************/
 
@@ -3848,6 +3873,8 @@ int router_set_networkstatus_v2(const char *s, time_t arrived_at,
                              v2_networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
 void networkstatus_v2_list_clean(time_t now);
+int compare_digest_to_routerstatus_entry(const void *_key,
+                                         const void **_member);
 routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
                                          const char *digest);
 routerstatus_t *networkstatus_vote_find_entry(networkstatus_t *ns,
@@ -4712,6 +4739,7 @@ void sort_version_list(smartlist_t *lst, int remove_duplicates);
 void assert_addr_policy_ok(smartlist_t *t);
 void dump_distinct_digest_count(int severity);
 
+int compare_routerstatus_entries(const void **_a, const void **_b);
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                                  const char **eos_out,

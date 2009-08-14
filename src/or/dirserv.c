@@ -63,6 +63,9 @@ static signed_descriptor_t *get_signed_descriptor_by_fp(const char *fp,
                                                         time_t publish_cutoff);
 static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
 
+/************** Measured Bandwidth parsing code ******/
+#define MAX_MEASUREMENT_AGE (3*24*60*60) /* 3 days */
+
 /************** Fingerprint handling code ************/
 
 #define FP_NAMED   1  /**< Listed in fingerprint file. */
@@ -1855,16 +1858,18 @@ version_from_platform(const char *platform)
  * which has at least <b>buf_len</b> free characters.  Do NUL-termination.
  * Use the same format as in network-status documents.  If <b>version</b> is
  * non-NULL, add a "v" line for the platform.  Return 0 on success, -1 on
- * failure.  If <b>first_line_only</b> is true, don't include any flags
- * or version line.
+ * failure.
+ *
+ * The format argument has three possible values:
+ *   NS_V2 - Output an entry suitable for a V2 NS opinion document
+ *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
+ *   NS_V3_VOTE - Output a complete V3 NS vote
+ *   NS_CONTROL_PORT - Output a NS docunent for the control port
  */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
                           routerstatus_t *rs, const char *version,
-                          int first_line_only, int v2_format)
-/* XXX: first_line_only and v2_format should probably be be both
- *      replaced by a single purpose parameter.
- */
+                          routerstatus_format_type_t format)
 {
   int r;
   struct in_addr in;
@@ -1895,7 +1900,12 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     log_warn(LD_BUG, "Not enough space in buffer.");
     return -1;
   }
-  if (first_line_only)
+
+  /* TODO: Maybe we want to pass in what we need to build the rest of
+   * this here, instead of in the caller. Then we could use the
+   * networkstatus_type_t values, with an additional control port value
+   * added -MP */
+  if (format == NS_V3_CONSENSUS)
     return 0;
 
   cp = buf + strlen(buf);
@@ -1932,62 +1942,87 @@ routerstatus_format_entry(char *buf, size_t buf_len,
     cp += strlen(cp);
   }
 
-  if (!v2_format) {
+  if (format != NS_V2) {
     routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
+    uint32_t bw;
 
-    /* Blow up more or less nicely if we didn't get anything or not the
-     * thing we expected.
-     */
-    if (!desc) {
-      char id[HEX_DIGEST_LEN+1];
-      char dd[HEX_DIGEST_LEN+1];
+    if (format != NS_CONTROL_PORT) {
+      /* Blow up more or less nicely if we didn't get anything or not the
+       * thing we expected.
+       */
+      if (!desc) {
+        char id[HEX_DIGEST_LEN+1];
+        char dd[HEX_DIGEST_LEN+1];
 
-      base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
-      base16_encode(dd, sizeof(dd), rs->descriptor_digest, DIGEST_LEN);
-      log_warn(LD_BUG, "Cannot get any descriptor for %s "
-                       "(wanted descriptor %s).",
-               id, dd);
-      return -1;
-    };
-    if (memcmp(desc->cache_info.signed_descriptor_digest,
-               rs->descriptor_digest,
-               DIGEST_LEN)) {
-      char rl_d[HEX_DIGEST_LEN+1];
-      char rs_d[HEX_DIGEST_LEN+1];
-      char id[HEX_DIGEST_LEN+1];
+        base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
+        base16_encode(dd, sizeof(dd), rs->descriptor_digest, DIGEST_LEN);
+        log_warn(LD_BUG, "Cannot get any descriptor for %s "
+            "(wanted descriptor %s).",
+            id, dd);
+        return -1;
+      };
 
-      base16_encode(rl_d, sizeof(rl_d),
-                    desc->cache_info.signed_descriptor_digest, DIGEST_LEN);
-      base16_encode(rs_d, sizeof(rs_d), rs->descriptor_digest, DIGEST_LEN);
-      base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
-      log_err(LD_BUG, "descriptor digest in routerlist does not match "
-                      "the one in routerstatus: %s vs %s "
-                      "(router %s)\n",
-              rl_d, rs_d, id);
+      /* This assert can fire for the control port, because
+       * it can request NS documents before all descriptors
+       * have been fetched. */
+      if (memcmp(desc->cache_info.signed_descriptor_digest,
+            rs->descriptor_digest,
+            DIGEST_LEN)) {
+        char rl_d[HEX_DIGEST_LEN+1];
+        char rs_d[HEX_DIGEST_LEN+1];
+        char id[HEX_DIGEST_LEN+1];
 
-      tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,
-                       rs->descriptor_digest,
-                       DIGEST_LEN));
-    };
+        base16_encode(rl_d, sizeof(rl_d),
+            desc->cache_info.signed_descriptor_digest, DIGEST_LEN);
+        base16_encode(rs_d, sizeof(rs_d), rs->descriptor_digest, DIGEST_LEN);
+        base16_encode(id, sizeof(id), rs->identity_digest, DIGEST_LEN);
+        log_err(LD_BUG, "descriptor digest in routerlist does not match "
+            "the one in routerstatus: %s vs %s "
+            "(router %s)\n",
+            rl_d, rs_d, id);
 
+        tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,
+              rs->descriptor_digest,
+              DIGEST_LEN));
+      };
+    }
+
+    if (format == NS_CONTROL_PORT && rs->has_bandwidth) {
+      bw = rs->bandwidth;
+    } else {
+      tor_assert(desc);
+      bw = router_get_advertised_bandwidth_capped(desc) / 1000;
+    }
     r = tor_snprintf(cp, buf_len - (cp-buf),
-                     "w Bandwidth=%d\n",
-                     router_get_advertised_bandwidth_capped(desc) / 1024);
-    if (r<0) {
-      log_warn(LD_BUG, "Not enough space in buffer.");
-      return -1;
-    }
-    cp += strlen(cp);
+                     "w Bandwidth=%d\n", bw);
 
-    summary = policy_summarize(desc->exit_policy);
-    r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
     if (r<0) {
       log_warn(LD_BUG, "Not enough space in buffer.");
-      tor_free(summary);
       return -1;
     }
     cp += strlen(cp);
-    tor_free(summary);
+    if (format == NS_V3_VOTE && rs->has_measured_bw) {
+      *--cp = '\0'; /* Kill "\n" */
+      r = tor_snprintf(cp, buf_len - (cp-buf),
+                       " Measured=%d\n", rs->measured_bw);
+      if (r<0) {
+        log_warn(LD_BUG, "Not enough space in buffer for weight line.");
+        return -1;
+      }
+      cp += strlen(cp);
+    }
+
+    if (desc) {
+      summary = policy_summarize(desc->exit_policy);
+      r = tor_snprintf(cp, buf_len - (cp-buf), "p %s\n", summary);
+      if (r<0) {
+        log_warn(LD_BUG, "Not enough space in buffer.");
+        tor_free(summary);
+        return -1;
+      }
+      cp += strlen(cp);
+      tor_free(summary);
+    }
   }
 
   return 0;
@@ -2190,6 +2225,177 @@ router_clear_status_flags(routerinfo_t *router)
     router->is_bad_exit = router->is_bad_directory = 0;
 }
 
+/**
+ * Helper function to parse out a line in the measured bandwidth file
+ * into a measured_bw_line_t output structure. Returns -1 on failure
+ * or 0 on success.
+ */
+int
+measured_bw_line_parse(measured_bw_line_t *out, const char *orig_line)
+{
+  char *line = tor_strdup(orig_line);
+  char *cp = line;
+  int got_bw = 0;
+  int got_node_id = 0;
+  char *strtok_state; /* lame sauce d'jour */
+  cp = tor_strtok_r(cp, " \t", &strtok_state);
+
+  if (!cp) {
+    log_warn(LD_DIRSERV, "Invalid line in bandwidth file: %s",
+             escaped(orig_line));
+    tor_free(line);
+    return -1;
+  }
+
+  if (orig_line[strlen(orig_line)-1] != '\n') {
+    log_warn(LD_DIRSERV, "Incomplete line in bandwidth file: %s",
+             escaped(orig_line));
+    tor_free(line);
+    return -1;
+  }
+
+  do {
+    if (strcmpstart(cp, "bw=") == 0) {
+      int parse_ok = 0;
+      char *endptr;
+      if (got_bw) {
+        log_warn(LD_DIRSERV, "Double bw= in bandwidth file line: %s",
+                 escaped(orig_line));
+        tor_free(line);
+        return -1;
+      }
+      cp+=strlen("bw=");
+
+      out->bw = tor_parse_long(cp, 0, 0, LONG_MAX, &parse_ok, &endptr);
+      if (!parse_ok || (*endptr && !TOR_ISSPACE(*endptr))) {
+        log_warn(LD_DIRSERV, "Invalid bandwidth in bandwidth file line: %s",
+                 escaped(orig_line));
+        tor_free(line);
+        return -1;
+      }
+      got_bw=1;
+    } else if (strcmpstart(cp, "node_id=$") == 0) {
+      if (got_node_id) {
+        log_warn(LD_DIRSERV, "Double node_id= in bandwidth file line: %s",
+                 escaped(orig_line));
+        tor_free(line);
+        return -1;
+      }
+      cp+=strlen("node_id=$");
+
+      if (strlen(cp) != HEX_DIGEST_LEN ||
+          base16_decode(out->node_id, DIGEST_LEN, cp, HEX_DIGEST_LEN)) {
+        log_warn(LD_DIRSERV, "Invalid node_id in bandwidth file line: %s",
+                 escaped(orig_line));
+        tor_free(line);
+        return -1;
+      }
+      strncpy(out->node_hex, cp, sizeof(out->node_hex));
+      got_node_id=1;
+    }
+  } while ((cp = tor_strtok_r(NULL, " \t", &strtok_state)));
+
+  if (got_bw && got_node_id) {
+    tor_free(line);
+    return 0;
+  } else {
+    log_warn(LD_DIRSERV, "Incomplete line in bandwidth file: %s",
+             escaped(orig_line));
+    tor_free(line);
+    return -1;
+  }
+}
+
+/**
+ * Helper function to apply a parsed measurement line to a list
+ * of bandwidth statuses. Returns true if a line is found,
+ * false otherwise.
+ */
+int
+measured_bw_line_apply(measured_bw_line_t *parsed_line,
+                       smartlist_t *routerstatuses)
+{
+  routerstatus_t *rs = NULL;
+  if (!routerstatuses)
+    return 0;
+
+  rs = smartlist_bsearch(routerstatuses, parsed_line->node_id,
+                         compare_digest_to_routerstatus_entry);
+
+  if (rs) {
+    rs->has_measured_bw = 1;
+    rs->measured_bw = parsed_line->bw;
+  } else {
+    log_info(LD_DIRSERV, "Node ID %s not found in routerstatus list",
+             parsed_line->node_hex);
+  }
+
+  return rs != NULL;
+}
+
+/**
+ * Read the measured bandwidth file and apply it to the list of
+ * routerstatuses. Returns -1 on error, 0 otherwise.
+ */
+int
+dirserv_read_measured_bandwidths(const char *from_file,
+                                 smartlist_t *routerstatuses)
+{
+  char line[256];
+  FILE *fp = fopen(from_file, "r");
+  int applied_lines = 0;
+  time_t file_time;
+  int ok;
+  if (fp == NULL) {
+    log_warn(LD_CONFIG, "Can't open bandwidth file at configured location: %s",
+             from_file);
+    return -1;
+  }
+
+  if (!fgets(line, sizeof(line), fp)
+          || !strlen(line) || line[strlen(line)-1] != '\n') {
+    log_warn(LD_DIRSERV, "Long or truncated time in bandwidth file: %s",
+             escaped(line));
+    fclose(fp);
+    return -1;
+  }
+
+  line[strlen(line)-1] = '\0';
+  file_time = tor_parse_ulong(line, 10, 0, ULONG_MAX, &ok, NULL);
+  if (!ok) {
+    log_warn(LD_DIRSERV, "Non-integer time in bandwidth file: %s",
+             escaped(line));
+    fclose(fp);
+    return -1;
+  }
+
+  if ((time(NULL) - file_time) > MAX_MEASUREMENT_AGE) {
+    log_warn(LD_DIRSERV, "Bandwidth measurement file stale. Age: %u",
+             (unsigned)(time(NULL) - file_time));
+    fclose(fp);
+    return -1;
+  }
+
+  if (routerstatuses)
+    smartlist_sort(routerstatuses, compare_routerstatus_entries);
+
+  while (!feof(fp)) {
+    measured_bw_line_t parsed_line;
+    if (fgets(line, sizeof(line), fp) && strlen(line)) {
+      if (measured_bw_line_parse(&parsed_line, line) != -1) {
+        if (measured_bw_line_apply(&parsed_line, routerstatuses) > 0)
+          applied_lines++;
+      }
+    }
+  }
+
+  fclose(fp);
+  log_notice(LD_DIRSERV,
+             "Bandwidth measurement file successfully read. "
+             "Applied %d measurements.", applied_lines);
+  return 0;
+}
+
 /** Return a new networkstatus_t* containing our current opinion. (For v3
  * authorities) */
 networkstatus_t *
@@ -2289,8 +2495,14 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
       smartlist_add(routerstatuses, vrs);
     }
   });
+
   smartlist_free(routers);
   digestmap_free(omit_as_sybil, NULL);
+
+  if (options->V3BandwidthsFile) {
+    dirserv_read_measured_bandwidths(options->V3BandwidthsFile,
+                                     routerstatuses);
+  }
 
   v3_out = tor_malloc_zero(sizeof(networkstatus_t));
 
@@ -2495,7 +2707,7 @@ generate_v2_networkstatus_opinion(void)
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(&rs);
 
-      if (routerstatus_format_entry(outp, endp-outp, &rs, version, 0, 1)) {
+      if (routerstatus_format_entry(outp, endp-outp, &rs, version, NS_V2)) {
         log_warn(LD_BUG, "Unable to print router status.");
         tor_free(version);
         goto done;

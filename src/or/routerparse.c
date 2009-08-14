@@ -1924,6 +1924,16 @@ routerstatus_parse_entry_from_string(memarea_t *area,
           goto err;
         }
         rs->has_bandwidth = 1;
+      } else if (!strcmpstart(tok->args[i], "Measured=")) {
+        int ok;
+        rs->measured_bw = tor_parse_ulong(strchr(tok->args[i], '=')+1, 10,
+                                          0, UINT32_MAX, &ok, NULL);
+        if (!ok) {
+          log_warn(LD_DIR, "Invalid Measured Bandwidth %s",
+                   escaped(tok->args[i]));
+          goto err;
+        }
+        rs->has_measured_bw = 1;
       }
     }
   }
@@ -1966,8 +1976,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
 }
 
 /** Helper to sort a smartlist of pointers to routerstatus_t */
-static int
-_compare_routerstatus_entries(const void **_a, const void **_b)
+int
+compare_routerstatus_entries(const void **_a, const void **_b)
 {
   const routerstatus_t *a = *_a, *b = *_b;
   return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
@@ -2114,8 +2124,8 @@ networkstatus_v2_parse_from_string(const char *s)
                                                    NULL, NULL, 0)))
       smartlist_add(ns->entries, rs);
   }
-  smartlist_sort(ns->entries, _compare_routerstatus_entries);
-  smartlist_uniq(ns->entries, _compare_routerstatus_entries,
+  smartlist_sort(ns->entries, compare_routerstatus_entries);
+  smartlist_uniq(ns->entries, compare_routerstatus_entries,
                  _free_duplicate_routerstatus_entry);
 
   if (tokenize_string(area,s, NULL, footer_tokens, dir_footer_token_table,0)) {

@@ -398,6 +398,37 @@ const char TOR_TOLOWER_TABLE[256] = {
   240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
 };
 
+/** Implementation of strtok_r for platforms whose coders haven't figured out
+ * how to write one.  Hey guys!  You can use this code here for free! */
+char *
+tor_strtok_r_impl(char *str, const char *sep, char **lasts)
+{
+  char *cp, *start;
+  if (str)
+    start = cp = *lasts = str;
+  else if (!*lasts)
+    return NULL;
+  else
+    start = cp = *lasts;
+
+  tor_assert(*sep);
+  if (sep[1]) {
+    while (*cp && !strchr(sep, *cp))
+      ++cp;
+  } else {
+    tor_assert(strlen(sep) == 1);
+    cp = strchr(cp, *sep);
+  }
+
+  if (!cp || !*cp) {
+    *lasts = NULL;
+  } else {
+    *cp++ = '\0';
+    *lasts = cp;
+  }
+  return start;
+}
+
 #ifdef MS_WINDOWS
 /** Take a filename and return a pointer to its final element.  This
  * function is called on __FILE__ to fix a MSVC nit where __FILE__

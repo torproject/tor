@@ -103,7 +103,10 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status %s\n"
-                 "consensus-methods 1 2 3 4 5\n"
+                 /* XXX: If you change this value, you also need to
+                  * change consensus_method_is_supported().
+                  * Perhaps we should unify these somehow? */
+                 "consensus-methods 1 2 3 4 5 6\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -142,7 +145,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
   {
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
-                                  vrs->version, 0, 0) < 0) {
+                                  vrs->version, NS_V3_VOTE) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
       goto err;
     }
@@ -455,7 +458,10 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method >= 1) && (method <= 5);
+  /* XXX: If you change this value, you also need to change
+   * format_networkstatus_vote(). Perhaps we should unify
+   * these somehow? */
+  return (method >= 1) && (method <= 6);
 }
 
 /** Helper: given <b>lst</b>, a list of version strings such that every
@@ -701,7 +707,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *versions = smartlist_create();
     smartlist_t *exitsummaries = smartlist_create();
     uint32_t *bandwidths = tor_malloc(sizeof(uint32_t) * smartlist_len(votes));
+    uint32_t *measured_bws = tor_malloc(sizeof(uint32_t) *
+                                        smartlist_len(votes));
     int num_bandwidths;
+    int num_mbws;
 
     int *n_voter_flags; /* n_voter_flags[j] is the number of flags that
                          * votes[j] knows about. */
@@ -835,6 +844,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(chosen_flags);
       smartlist_clear(versions);
       num_bandwidths = 0;
+      num_mbws = 0;
 
       /* Okay, go through all the entries for this digest. */
       SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
@@ -868,6 +878,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
 
         /* count bandwidths */
+        if (rs->status.has_measured_bw)
+          measured_bws[num_mbws++] = rs->status.measured_bw;
+
         if (rs->status.has_bandwidth)
           bandwidths[num_bandwidths++] = rs->status.bandwidth;
       } SMARTLIST_FOREACH_END(v);
@@ -945,7 +958,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       /* Pick a bandwidth */
-      if (consensus_method >= 5 && num_bandwidths > 0) {
+      if (consensus_method >= 6 && num_mbws > 2) {
+        rs_out.has_bandwidth = 1;
+        rs_out.bandwidth = median_uint32(measured_bws, num_mbws);
+      } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
       }
@@ -1036,7 +1052,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Okay!! Now we can write the descriptor... */
       /*     First line goes into "buf". */
-      routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL, 1, 0);
+      routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
+                                NS_V3_CONSENSUS);
       smartlist_add(chunks, tor_strdup(buf));
       /*     Second line is all flags.  The "\n" is missing. */
       smartlist_add(chunks,
@@ -1055,8 +1072,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
           log_warn(LD_BUG, "Not enough space in buffer for weight line.");
           *buf = '\0';
         }
+
         smartlist_add(chunks, tor_strdup(buf));
       };
+
       /*     Now the exitpolicy summary line. */
       if (rs_out.has_exitsummary) {
         char buf[MAX_POLICY_LINE_LEN+1];
