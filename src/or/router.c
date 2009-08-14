@@ -1382,8 +1382,10 @@ router_rebuild_descriptor(int force)
   ei->cache_info.published_on = ri->cache_info.published_on;
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
-  ei->cache_info.signed_descriptor_body = tor_malloc(8192);
-  if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body, 8192,
+  ei->cache_info.signed_descriptor_body =
+      tor_malloc(MAX_EXTRAINFO_UPLOAD_SIZE);
+  if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body,
+                               MAX_EXTRAINFO_UPLOAD_SIZE,
                                ei, get_identity_key()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
     extrainfo_free(ei);
@@ -1824,6 +1826,31 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   return (int)written+1;
 }
 
+/** Load the contents of <b>filename</b> and write its contents to
+ * **<b>contents</b>. Return 1 for success, 0 if the file does not exit,
+ * or -1 for failure. */
+static int
+load_stats_file(const char *filename, char **contents)
+{
+  int r = -1;
+  char *fname = get_datadir_fname(filename);
+  switch (file_status(fname)) {
+    case FN_FILE:
+      if ((*contents = read_file_to_str(fname, 0, NULL)))
+        r = 1;
+      break;
+    case FN_NOENT:
+      r = 0;
+      break;
+    case FN_ERROR:
+    case FN_DIR:
+    default:
+      break;
+  }
+  tor_free(fname);
+  return r;
+}
+
 /** Write the contents of <b>extrainfo</b> to the <b>maxlen</b>-byte string
  * <b>s</b>, signing them with <b>ident_key</b>.  Return 0 on success,
  * negative on failure. */
@@ -1838,6 +1865,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   char *bandwidth_usage;
   int result;
   size_t len;
+  static int write_stats_to_extrainfo = 1;
 
   base16_encode(identity, sizeof(identity),
                 extrainfo->cache_info.identity_digest, DIGEST_LEN);
@@ -1849,6 +1877,56 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                         "published %s\n%s",
                         extrainfo->nickname, identity,
                         published, bandwidth_usage);
+
+  if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
+    char *contents = NULL;
+    log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
+    if (options->DirReqStatistics &&
+        load_stats_file("dirreq-stats", &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write dirreq-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+    if (options->EntryStatistics &&
+        load_stats_file("entry-stats", &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write entry-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+    if (options->CellStatistics &&
+        load_stats_file("buffer-stats", &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write buffer-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+    if (options->ExitPortStatistics &&
+        load_stats_file("exit-stats", &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write exit-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+  }
+
   tor_free(bandwidth_usage);
   if (result<0)
     return -1;
@@ -1877,22 +1955,45 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   if (router_append_dirobj_signature(s+len, maxlen-len, digest, ident_key)<0)
     return -1;
 
-#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   {
     char *cp, *s_dup;
     extrainfo_t *ei_tmp;
     cp = s_dup = tor_strdup(s);
     ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
-    if (!ei_tmp) {
+    if (ei_tmp) {
       log_err(LD_BUG,
               "We just generated an extrainfo descriptor we can't parse.");
       log_err(LD_BUG, "Descriptor was: <<%s>>", s);
       return -1;
+    } else {
+      log_debug(LD_GENERAL, "We generated an extra-info descriptor:\n%s",
+                s);
     }
     tor_free(s_dup);
     extrainfo_free(ei_tmp);
   }
-#endif
+
+  if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
+    char *cp, *s_dup;
+    extrainfo_t *ei_tmp;
+    cp = s_dup = tor_strdup(s);
+    ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
+    if (!ei_tmp) {
+      log_warn(LD_GENERAL,
+               "We just generated an extra-info descriptor with "
+               "statistics that we can't parse. Not adding statistics to "
+               "this or any future extra-info descriptors. Descriptor "
+               "was:\n%s", s);
+      write_stats_to_extrainfo = 0;
+      tor_free(s);
+      s = NULL;
+      extrainfo_dump_to_string(s, maxlen, extrainfo, ident_key);
+    }
+    tor_free(s_dup);
+    extrainfo_free(ei_tmp);
+  }
+
+  log_info(LD_GENERAL, "Done with dumping our extra-info descriptor.");
 
   return (int)strlen(s)+1;
 }

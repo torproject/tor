@@ -1390,7 +1390,8 @@ write_exit_stats(time_t when)
     }
 
     /* written yyyy-mm-dd HH:MM:SS (n s) */
-    if (fprintf(out, "written %s (%d s)\n", t, EXIT_STATS_INTERVAL_SEC) < 0)
+    if (fprintf(out, "exit-stats-end %s (%d s)\n", t,
+                EXIT_STATS_INTERVAL_SEC) < 0)
       goto done;
 
     /* Count the total number of bytes, so that we can attribute all
@@ -1408,7 +1409,8 @@ write_exit_stats(time_t when)
       b = r ? exit_bytes_read : exit_bytes_written;
       tor_assert(b);
       if (fprintf(out, "%s ",
-                  r ? "kibibytes-read" : "kibibytes-written")<0)
+                  r ? "exit-kibibytes-read"
+                    : "exit-kibibytes-written") < 0)
         goto done;
 
       comma = 0;
@@ -1435,7 +1437,7 @@ write_exit_stats(time_t when)
         goto done;
     }
     /* streams-opened port=num,.. */
-    if (fprintf(out, "streams-opened ")<0)
+    if (fprintf(out, "exit-streams-opened ") < 0)
       goto done;
     comma = 0;
     other_streams = 0;
@@ -2733,7 +2735,7 @@ dump_buffer_stats(void)
   if (!out)
     goto done;
   format_iso_time(written, now);
-  if (fprintf(out, "written %s (%d s)\n", written,
+  if (fprintf(out, "cell-stats-end %s (%d s)\n", written,
               DUMP_BUFFER_STATS_INTERVAL) < 0)
     goto done;
   for (i = 0; i < SHARES; i++) {
@@ -2742,7 +2744,7 @@ dump_buffer_stats(void)
     smartlist_add(str_build, tor_strdup(buf));
   }
   str = smartlist_join_strings(str_build, ",", 0, NULL);
-  if (fprintf(out, "processed-cells %s\n", str) < 0)
+  if (fprintf(out, "cell-processed-cells %s\n", str) < 0)
     goto done;
   tor_free(str);
   SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
@@ -2753,7 +2755,7 @@ dump_buffer_stats(void)
     smartlist_add(str_build, tor_strdup(buf));
   }
   str = smartlist_join_strings(str_build, ",", 0, NULL);
-  if (fprintf(out, "queued-cells %s\n", str) < 0)
+  if (fprintf(out, "cell-queued-cells %s\n", str) < 0)
     goto done;
   tor_free(str);
   SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
@@ -2764,13 +2766,13 @@ dump_buffer_stats(void)
     smartlist_add(str_build, tor_strdup(buf));
   }
   str = smartlist_join_strings(str_build, ",", 0, NULL);
-  if (fprintf(out, "time-in-queue %s\n", str) < 0)
+  if (fprintf(out, "cell-time-in-queue %s\n", str) < 0)
     goto done;
   tor_free(str);
   SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
   smartlist_free(str_build);
   str_build = NULL;
-  if (fprintf(out, "number-of-circuits-per-share %d\n",
+  if (fprintf(out, "cell-circuits-per-decile %d\n",
               (number_of_circuits + SHARES - 1) / SHARES) < 0)
     goto done;
   finish_writing_to_file(open_file);

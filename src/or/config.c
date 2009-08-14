@@ -208,6 +208,7 @@ static config_var_t _option_vars[] = {
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
+  V(ExtraInfoStatistics,         BOOL,     "0"),
   V(FallbackNetworkstatusFile,   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
   V(FascistFirewall,             BOOL,     "0"),

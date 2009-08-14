@@ -2516,6 +2516,9 @@ typedef struct {
   /** If true, the user wants us to collect statistics as entry node. */
   int EntryStatistics;
 
+  /** If true, include statistics file contents in extra-info documents. */
+  int ExtraInfoStatistics;
+
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
    * Helps avoid some cross-site attacks. */

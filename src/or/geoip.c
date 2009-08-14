@@ -948,7 +948,7 @@ dump_geoip_stats(void)
   time_t request_start;
   char *filename = get_datadir_fname("dirreq-stats");
   char *data_v2 = NULL, *data_v3 = NULL;
-  char since[ISO_TIME_LEN+1], written[ISO_TIME_LEN+1];
+  char written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
   double v2_share = 0.0, v3_share = 0.0;
   FILE *out;
@@ -961,14 +961,13 @@ dump_geoip_stats(void)
                 GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history_dirreq(now,
                 GEOIP_CLIENT_NETWORKSTATUS);
-  format_iso_time(since, geoip_get_history_start());
-  format_iso_time(written, now);
+  format_iso_time(written, geoip_get_history_start() + REQUEST_HIST_PERIOD);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
   if (!out)
     goto done;
-  if (fprintf(out, "written %s\nstarted-at %s\nns-ips %s\nns-v2-ips %s\n",
-              written, since,
+  if (fprintf(out, "dirreq-stats-end %s (%d s)\ndirreq-v3-ips %s\n"
+              "dirreq-v2-ips %s\n", written, REQUEST_HIST_PERIOD,
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
   tor_free(data_v2);
@@ -976,11 +975,9 @@ dump_geoip_stats(void)
 
   request_start = current_request_period_starts -
     (n_old_request_periods * REQUEST_HIST_PERIOD);
-  format_iso_time(since, request_start);
   data_v2 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS);
-  if (fprintf(out, "requests-start %s\nn-ns-reqs %s\nn-v2-ns-reqs %s\n",
-              since,
+  if (fprintf(out, "dirreq-v3-reqs %s\ndirreq-v2-reqs %s\n",
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
 #define RESPONSE_GRANULARITY 8
@@ -991,7 +988,7 @@ dump_geoip_stats(void)
                                ns_v3_responses[i], RESPONSE_GRANULARITY);
   }
 #undef RESPONSE_GRANULARITY
-  if (fprintf(out, "n-ns-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
+  if (fprintf(out, "dirreq-v3-resp ok=%u,not-enough-sigs=%u,unavailable=%u,"
                    "not-found=%u,not-modified=%u,busy=%u\n",
                    ns_v3_responses[GEOIP_SUCCESS],
                    ns_v3_responses[GEOIP_REJECT_NOT_ENOUGH_SIGS],
@@ -1000,7 +997,7 @@ dump_geoip_stats(void)
                    ns_v3_responses[GEOIP_REJECT_NOT_MODIFIED],
                    ns_v3_responses[GEOIP_REJECT_BUSY]) < 0)
     goto done;
-  if (fprintf(out, "n-v2-ns-resp ok=%u,unavailable=%u,"
+  if (fprintf(out, "dirreq-v2-resp ok=%u,unavailable=%u,"
                    "not-found=%u,not-modified=%u,busy=%u\n",
                    ns_v2_responses[GEOIP_SUCCESS],
                    ns_v2_responses[GEOIP_REJECT_UNAVAILABLE],
@@ -1011,9 +1008,9 @@ dump_geoip_stats(void)
   memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
   memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
   if (!geoip_get_mean_shares(now, &v2_share, &v3_share)) {
-    if (fprintf(out, "v2-ns-share %0.2lf%%\n", v2_share*100) < 0)
+    if (fprintf(out, "dirreq-v2-share %0.2lf%%\n", v2_share*100) < 0)
       goto done;
-    if (fprintf(out, "v3-ns-share %0.2lf%%\n", v3_share*100) < 0)
+    if (fprintf(out, "dirreq-v3-share %0.2lf%%\n", v3_share*100) < 0)
       goto done;
   }
 
@@ -1021,7 +1018,7 @@ dump_geoip_stats(void)
                                        DIRREQ_DIRECT);
   data_v3 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS,
                                        DIRREQ_DIRECT);
-  if (fprintf(out, "ns-direct-dl %s\nns-v2-direct-dl %s\n",
+  if (fprintf(out, "dirreq-v3-direct-dl %s\ndirreq-v2-direct-dl %s\n",
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
   tor_free(data_v2);
@@ -1030,7 +1027,7 @@ dump_geoip_stats(void)
                                        DIRREQ_TUNNELED);
   data_v3 = geoip_get_dirreq_history(GEOIP_CLIENT_NETWORKSTATUS,
                                        DIRREQ_TUNNELED);
-  if (fprintf(out, "ns-tunneled-dl %s\nns-v2-tunneled-dl %s\n",
+  if (fprintf(out, "dirreq-v3-tunneled-dl %s\ndirreq-v2-tunneled-dl %s\n",
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
 
@@ -1053,19 +1050,18 @@ dump_entry_stats(void)
   time_t now = time(NULL);
   char *filename = get_datadir_fname("entry-stats");
   char *data = NULL;
-  char since[ISO_TIME_LEN+1], written[ISO_TIME_LEN+1];
+  char written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
   FILE *out;
 
   data = geoip_get_client_history(now, GEOIP_CLIENT_CONNECT);
-  format_iso_time(since, geoip_get_history_start());
-  format_iso_time(written, now);
+  format_iso_time(written, geoip_get_history_start() + REQUEST_HIST_PERIOD);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
   if (!out)
     goto done;
-  if (fprintf(out, "written %s\nstarted-at %s\nips %s\n",
-              written, since, data ? data : "") < 0)
+  if (fprintf(out, "entry-stats-end %s (%d s)\nentry-ips %s\n",
+              written, REQUEST_HIST_PERIOD, data ? data : "") < 0)
     goto done;
 
   finish_writing_to_file(open_file);
