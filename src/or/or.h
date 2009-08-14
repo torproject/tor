@@ -20,9 +20,6 @@
 #ifndef INSTRUMENT_DOWNLOADS
 #define INSTRUMENT_DOWNLOADS 1
 #endif
-#ifndef ENABLE_DIRREQ_STATS
-#define ENABLE_DIRREQ_STATS 1
-#endif
 #ifndef ENABLE_BUFFER_STATS
 #define ENABLE_BUFFER_STATS 1
 #endif
@@ -975,10 +972,8 @@ typedef struct connection_t {
    * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
-#ifdef ENABLE_DIRREQ_STATS
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
-#endif
 } connection_t;
 
 /** Stores flags and information related to the portion of a v2 Tor OR
@@ -1965,10 +1960,9 @@ typedef struct circuit_t {
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_conn;
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
-#ifdef ENABLE_DIRREQ_STATS
+
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
-#endif
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -3640,14 +3634,10 @@ int dnsserv_launch_request(const char *name, int is_reverse);
  * leaking information. */
 #define DIR_RECORD_USAGE_GRANULARITY 8
 /** Time interval: Flush geoip data to disk this often. */
-#define DIR_RECORD_USAGE_RETAIN_IPS (24*60*60)
+#define DIR_ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
 /** How long do we have to have observed per-country request history before
  * we are willing to talk about it? */
 #define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (24*60*60)
-
-/** Time interval: Flush geoip data to disk this often when measuring on an
- * entry guard. */
-#define ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
 
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);
@@ -3695,7 +3685,10 @@ typedef enum {
 void geoip_note_ns_response(geoip_client_action_t action,
                             geoip_ns_response_t response);
 time_t geoip_get_history_start(void);
-char *geoip_get_client_history(time_t now, geoip_client_action_t action);
+char *geoip_get_client_history_dirreq(time_t now,
+                                      geoip_client_action_t action);
+char *geoip_get_client_history_bridge(time_t now,
+                                      geoip_client_action_t action);
 char *geoip_get_request_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer);

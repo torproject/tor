@@ -533,13 +533,11 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
   log_debug(LD_OR,"delivering %d cell %s.", relay_command,
             cell_direction == CELL_DIRECTION_OUT ? "forward" : "backward");
 
-#ifdef ENABLE_DIRREQ_STATS
   /* If we are sending an END cell and this circuit is used for a tunneled
    * directory request, advance its state. */
   if (relay_command == RELAY_COMMAND_END && circ->dirreq_id)
     geoip_change_dirreq_state(circ->dirreq_id, DIRREQ_TUNNELED,
                               DIRREQ_END_CELL_SENT);
-#endif
 
   if (cell_direction == CELL_DIRECTION_OUT && circ->n_conn) {
     /* if we're using relaybandwidthrate, this conn wants priority */
@@ -1047,7 +1045,6 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
                "Begin cell for known stream. Dropping.");
         return 0;
       }
-#ifdef ENABLE_DIRREQ_STATS
       if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
         /* Assign this circuit and its app-ward OR connection a unique ID,
          * so that we can measure download times. The local edge and dir
@@ -1057,7 +1054,6 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
         circ->dirreq_id = ++next_id;
         TO_CONN(TO_OR_CIRCUIT(circ)->p_conn)->dirreq_id = circ->dirreq_id;
       }
-#endif
 
       return connection_exit_begin_conn(cell, circ);
     case RELAY_COMMAND_DATA:
@@ -1849,14 +1845,13 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       orcirc->processed_cells++;
     }
 #endif
-#ifdef ENABLE_DIRREQ_STATS
+
     /* If we just flushed our queue and this circuit is used for a
      * tunneled directory request, possibly advance its state. */
     if (queue->n == 0 && TO_CONN(conn)->dirreq_id)
       geoip_change_dirreq_state(TO_CONN(conn)->dirreq_id,
                                 DIRREQ_TUNNELED,
                                 DIRREQ_CIRC_QUEUE_FLUSHED);
-#endif
 
     connection_write_to_buf(cell->body, CELL_NETWORK_SIZE, TO_CONN(conn));
 

@@ -92,20 +92,6 @@ if test "$enable_dirreq_stats" = "yes"; then
   AC_DEFINE(ENABLE_DIRREQ_STATS, 1, [Defined if we try to collect per-country statistics])
 fi
 
-AC_ARG_ENABLE(buffer-stats,
-     AS_HELP_STRING(--enable-buffer-stats, enable code for relays to collect buffer statistics))
-
-if test "$enable_buffer_stats" = "yes"; then
-  AC_DEFINE(ENABLE_BUFFER_STATS, 1, [Defined if we try to collect buffer statistics])
-fi
-
-AC_ARG_ENABLE(entry-stats,
-     AS_HELP_STRING(--enable-entry-stats, enable code for entry guards to collect per-country statistics))
-
-if test "$enable_entry_stats" = "yes"; then
-  AC_DEFINE(ENABLE_ENTRY_STATS, 1, [Defined if we try to collect per-country statistics])
-fi
-
 AC_ARG_ENABLE(gcc-warnings,
      AS_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
 

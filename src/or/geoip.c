@@ -347,7 +347,6 @@ geoip_determine_shares(time_t now)
   last_time_determined_shares = now;
 }
 
-#ifdef ENABLE_DIRREQ_STATS
 /** Calculate which fraction of v2 and v3 directory requests aimed at caches
  * have been sent to us since the last call of this function up to time
  * <b>now</b>. Set *<b>v2_share_out</b> and *<b>v3_share_out</b> to the
@@ -367,7 +366,6 @@ geoip_get_mean_shares(time_t now, double *v2_share_out,
   share_seconds = 0;
   return 0;
 }
-#endif
 
 /** Note that we've seen a client connect from the IP <b>addr</b> (host order)
  * at time <b>now</b>. Ignored by all but bridges and directories if
@@ -379,24 +377,17 @@ geoip_note_client_seen(geoip_client_action_t action,
   or_options_t *options = get_options();
   clientmap_entry_t lookup, *ent;
   if (action == GEOIP_CLIENT_CONNECT) {
-#ifdef ENABLE_ENTRY_STATS
-    if (!options->EntryStatistics)
+    /* Only remember statistics as entry guard or as bridge. */
+    if (!options->EntryStatistics ||
+        (!(options->BridgeRelay && options->BridgeRecordUsageByCountry)))
       return;
-#else
-    if (!(options->BridgeRelay && options->BridgeRecordUsageByCountry))
-      return;
-#endif
     /* Did we recently switch from bridge to relay or back? */
     if (client_history_starts > now)
       return;
   } else {
-#ifndef ENABLE_DIRREQ_STATS
-    return;
-#else
     if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
         !options->DirReqStatistics)
       return;
-#endif
   }
 
   /* Rotate the current request period. */
@@ -495,7 +486,6 @@ geoip_remove_old_clients(time_t cutoff)
     client_history_starts = cutoff;
 }
 
-#ifdef ENABLE_DIRREQ_STATS
 /** How many responses are we giving to clients requesting v2 network
  * statuses? */
 static uint32_t ns_v2_responses[GEOIP_NS_RESPONSE_NUM];
@@ -503,7 +493,6 @@ static uint32_t ns_v2_responses[GEOIP_NS_RESPONSE_NUM];
 /** How many responses are we giving to clients requesting v3 network
  * statuses? */
 static uint32_t ns_v3_responses[GEOIP_NS_RESPONSE_NUM];
-#endif
 
 /** Note that we've rejected a client's request for a v2 or v3 network
  * status, encoded in <b>action</b> for reason <b>reason</b> at time
@@ -512,7 +501,6 @@ void
 geoip_note_ns_response(geoip_client_action_t action,
                        geoip_ns_response_t response)
 {
-#ifdef ENABLE_DIRREQ_STATS
   static int arrays_initialized = 0;
   if (!get_options()->DirReqStatistics)
     return;
@@ -528,10 +516,6 @@ geoip_note_ns_response(geoip_client_action_t action,
     ns_v3_responses[response]++;
   else
     ns_v2_responses[response]++;
-#else
-  (void) action;
-  (void) response;
-#endif
 }
 
 /** Do not mention any country from which fewer than this number of IPs have
@@ -709,7 +693,6 @@ geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
   }
 }
 
-#ifdef ENABLE_DIRREQ_STATS
 /** Return a newly allocated comma-separated string containing statistics
  * on network status downloads. The string contains the number of completed
  * requests, timeouts, and still running requests as well as the download
@@ -800,25 +783,18 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   smartlist_free(dirreq_times);
   return result;
 }
-#endif
 
 /** How long do we have to have observed per-country request history before we
  * are willing to talk about it? */
 #define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
 
-/** Return a newly allocated comma-separated string containing entries for all
- * the countries from which we've seen enough clients connect. The entry
- * format is cc=num where num is the number of IPs we've seen connecting from
- * that country, and cc is a lowercased country code. Returns NULL if we don't
- * want to export geoip data yet. */
-char *
-geoip_get_client_history(time_t now, geoip_client_action_t action)
+/** Helper for geoip_get_client_history_dirreq() and
+ * geoip_get_client_history_bridge(). */
+static char *
+geoip_get_client_history(time_t now, geoip_client_action_t action,
+                         int min_observation_time, unsigned granularity)
 {
   char *result = NULL;
-  int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
-#ifdef ENABLE_DIRREQ_STATS
-  min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
-#endif
   if (!geoip_is_loaded())
     return NULL;
   if (client_history_starts < (now - min_observation_time)) {
@@ -830,10 +806,6 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
     clientmap_entry_t **ent;
     unsigned *counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
     unsigned total = 0;
-    unsigned granularity = IP_GRANULARITY;
-#ifdef ENABLE_DIRREQ_STATS
-    granularity = DIR_RECORD_USAGE_GRANULARITY;
-#endif
     HT_FOREACH(ent, clientmap, &client_history) {
       int country;
       if ((*ent)->action != (int)action)
@@ -889,6 +861,34 @@ geoip_get_client_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
+/** Return a newly allocated comma-separated string containing entries for
+ * all the countries from which we've seen enough clients connect as a
+ * directory. The entry format is cc=num where num is the number of IPs
+ * we've seen connecting from that country, and cc is a lowercased country
+ * code. Returns NULL if we don't want to export geoip data yet. */
+char *
+geoip_get_client_history_dirreq(time_t now,
+                                geoip_client_action_t action)
+{
+  return geoip_get_client_history(now, action,
+                                  DIR_RECORD_USAGE_MIN_OBSERVATION_TIME,
+                                  DIR_RECORD_USAGE_GRANULARITY);
+}
+
+/** Return a newly allocated comma-separated string containing entries for
+ * all the countries from which we've seen enough clients connect as a
+ * bridge. The entry format is cc=num where num is the number of IPs
+ * we've seen connecting from that country, and cc is a lowercased country
+ * code. Returns NULL if we don't want to export geoip data yet. */
+char *
+geoip_get_client_history_bridge(time_t now,
+                                geoip_client_action_t action)
+{
+  return geoip_get_client_history(now, action,
+                                  GEOIP_MIN_OBSERVATION_TIME,
+                                  IP_GRANULARITY);
+}
+
 /** Return a newly allocated string holding the per-country request history
  * for <b>action</b> in a format suitable for an extra-info document, or NULL
  * on failure. */
@@ -899,10 +899,6 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   char *result;
   unsigned granularity = IP_GRANULARITY;
   int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
-#ifdef ENABLE_DIRREQ_STATS
-  granularity = DIR_RECORD_USAGE_GRANULARITY;
-  min_observation_time = DIR_RECORD_USAGE_MIN_OBSERVATION_TIME;
-#endif
 
   if (client_history_starts >= (now - min_observation_time))
     return NULL;
@@ -948,7 +944,6 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
 static void
 dump_geoip_stats(void)
 {
-#ifdef ENABLE_DIRREQ_STATS
   time_t now = time(NULL);
   time_t request_start;
   char *filename = get_datadir_fname("dirreq-stats");
@@ -962,8 +957,10 @@ dump_geoip_stats(void)
   if (!get_options()->DirReqStatistics)
     goto done;
 
-  data_v2 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
-  data_v3 = geoip_get_client_history(now, GEOIP_CLIENT_NETWORKSTATUS);
+  data_v2 = geoip_get_client_history_dirreq(now,
+                GEOIP_CLIENT_NETWORKSTATUS_V2);
+  data_v3 = geoip_get_client_history_dirreq(now,
+                GEOIP_CLIENT_NETWORKSTATUS);
   format_iso_time(since, geoip_get_history_start());
   format_iso_time(written, now);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
@@ -1045,7 +1042,6 @@ dump_geoip_stats(void)
   tor_free(filename);
   tor_free(data_v2);
   tor_free(data_v3);
-#endif
 }
 
 /** Store all our geoip statistics as entry guards into

@@ -188,12 +188,10 @@ static config_var_t _option_vars[] = {
   V(DirPort,                     UINT,     "0"),
   V(DirPortFrontPage,            FILENAME, NULL),
   OBSOLETE("DirPostPeriod"),
-#ifdef ENABLE_DIRREQ_STATS
   OBSOLETE("DirRecordUsageByCountry"),
   OBSOLETE("DirRecordUsageGranularity"),
   OBSOLETE("DirRecordUsageRetainIPs"),
   OBSOLETE("DirRecordUsageSaveInterval"),
-#endif
   V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DNSPort,                     UINT,     "0"),
@@ -1409,7 +1407,6 @@ options_act(or_options_t *old_options)
   }
 
   if (options->DirReqStatistics) {
-#ifdef ENABLE_DIRREQ_STATS
     /* Check if GeoIP database could be loaded. */
     if (!geoip_is_loaded()) {
       log_warn(LD_CONFIG, "Configured to measure directory request "
@@ -1420,10 +1417,6 @@ options_act(or_options_t *old_options)
                "country and write aggregate statistics to disk. Check the "
                "dirreq-stats file in your data directory that will first "
                "be written in 24 hours from now.");
-#else
-  log_warn(LD_CONFIG, "DirReqStatistics enabled, but Tor was built "
-           "without support for directory request statistics.");
-#endif
   }
 
   if (options->ExitPortStatistics)
@@ -1442,7 +1435,6 @@ options_act(or_options_t *old_options)
              "without cell statistics support.");
 #endif
 
-#ifdef ENABLE_ENTRY_STATS
   if (options->EntryStatistics) {
     if (should_record_bridge_info(options)) {
       /* Don't allow measuring statistics on entry guards when configured
@@ -1461,11 +1453,7 @@ options_act(or_options_t *old_options)
                  "first be written to the data directory in 24 hours "
                  "from now.");
   }
-#else
-  if (options->EntryStatistics)
-    log_warn(LD_CONFIG, "EntryStatistics enabled, but Tor was built "
-             "without entry node statistics support.");
-#endif
+
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||

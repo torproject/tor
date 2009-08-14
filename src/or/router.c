@@ -1907,13 +1907,9 @@ char *
 extrainfo_get_client_geoip_summary(time_t now)
 {
   static time_t last_purged_at = 0;
-  int geoip_purge_interval = 48*60*60;
-#ifdef ENABLE_DIRREQ_STATS
-  geoip_purge_interval = DIR_RECORD_USAGE_RETAIN_IPS;
-#endif
-#ifdef ENABLE_ENTRY_STATS
-  geoip_purge_interval = ENTRY_RECORD_USAGE_RETAIN_IPS;
-#endif
+  int geoip_purge_interval =
+      (get_options()->DirReqStatistics || get_options()->EntryStatistics) ?
+      DIR_ENTRY_RECORD_USAGE_RETAIN_IPS : 48*60*60;
   if (now > last_purged_at+geoip_purge_interval) {
     /* (Note that this also discards items in the client history with
      * action GEOIP_CLIENT_NETWORKSTATUS{_V2}, which doesn't matter
@@ -1922,7 +1918,7 @@ extrainfo_get_client_geoip_summary(time_t now)
     geoip_remove_old_clients(now-geoip_purge_interval);
     last_purged_at = now;
   }
-  return geoip_get_client_history(now, GEOIP_CLIENT_CONNECT);
+  return geoip_get_client_history_bridge(now, GEOIP_CLIENT_CONNECT);
 }
 
 /** Return true iff <b>s</b> is a legally valid server nickname. */
