@@ -1320,7 +1320,6 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
   add_obs(read_array, when, num_bytes);
 }
 
-#ifdef ENABLE_EXIT_STATS
 /* Some constants */
 /** How long are the intervals for measuring exit stats? */
 #define EXIT_STATS_INTERVAL_SEC (24 * 60 * 60)
@@ -1339,11 +1338,23 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
  * the price of some memory (1.25 MB) and linear complexity when writing
  * stats. */
 /** Number of bytes read in current period by exit port */
-static uint64_t exit_bytes_read[EXIT_STATS_NUM_PORTS];
+static uint64_t *exit_bytes_read = NULL;
 /** Number of bytes written in current period by exit port */
-static uint64_t exit_bytes_written[EXIT_STATS_NUM_PORTS];
+static uint64_t *exit_bytes_written = NULL;
 /** Number of streams opened in current period by exit port */
-static uint32_t exit_streams[EXIT_STATS_NUM_PORTS];
+static uint32_t *exit_streams = NULL;
+
+/** Set up arrays for exit port statistics. */
+static void
+exit_stats_init(void)
+{
+  exit_bytes_read = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                    sizeof(uint64_t));
+  exit_bytes_written = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                       sizeof(uint64_t));
+  exit_streams = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                 sizeof(uint32_t));
+}
 
 /** When does the current exit stats period end? */
 static time_t end_of_current_exit_stats_period = 0;
@@ -1362,6 +1373,8 @@ write_exit_stats(time_t when)
   FILE *out = NULL;
 
   log_debug(LD_HIST, "Considering writing exit port statistics to disk..");
+  if (!exit_bytes_read)
+    exit_stats_init();
   while (when > end_of_current_exit_stats_period) {
     format_iso_time(t, end_of_current_exit_stats_period);
     log_info(LD_HIST, "Writing exit port statistics to disk for period "
@@ -1466,6 +1479,8 @@ write_exit_stats(time_t when)
 static void
 add_exit_obs(time_t when)
 {
+  if (!exit_bytes_read)
+    exit_stats_init();
   if (when > end_of_current_exit_stats_period) {
     if (end_of_current_exit_stats_period)
       write_exit_stats(when);
@@ -1513,7 +1528,6 @@ rep_hist_note_exit_stream_opened(uint16_t port, time_t when)
   exit_streams[port]++;
   log_debug(LD_HIST, "Opened exit stream to port %d", port);
 }
-#endif
 
 /** Helper: Return the largest value in b->maxima.  (This is equal to the
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
@@ -2049,6 +2063,9 @@ rep_hist_free_all(void)
   tor_free(read_array);
   tor_free(write_array);
   tor_free(last_stability_doc);
+  tor_free(exit_bytes_read);
+  tor_free(exit_bytes_written);
+  tor_free(exit_streams);
   built_last_stability_doc_at = 0;
   predicted_ports_free();
 }

@@ -1426,16 +1426,10 @@ options_act(or_options_t *old_options)
 #endif
   }
 
-#ifdef ENABLE_EXIT_STATS
   if (options->ExitPortStatistics)
     log_notice(LD_CONFIG, "Configured to measure exit port statistics. "
                "Look for the exit-stats file that will first be written to "
                "the data directory in 24 hours from now.");
-#else
-  if (options->ExitPortStatistics)
-    log_warn(LD_CONFIG, "ExitPortStatistics enabled, but Tor was built "
-             "without port statistics support.");
-#endif
 
 #ifdef ENABLE_BUFFER_STATS
   if (options->CellStatistics)
