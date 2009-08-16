@@ -1613,10 +1613,10 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
 }
 
 /** Number of cells added to a circuit queue including their insertion
- * time on millisecond detail; used for buffer statistics. */
+ * time on 10 millisecond detail; used for buffer statistics. */
 typedef struct insertion_time_elem_t {
-  uint32_t insertion_time; /**< When were cells inserted (in ms starting
-                                at 0:00 of the current day)? */
+  uint32_t insertion_time; /**< When were cells inserted (in 10 ms steps
+                             * starting at 0:00 of the current day)? */
   unsigned counter; /**< How many cells were inserted? */
 } insertion_time_elem_t;
 
@@ -1632,7 +1632,8 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
     insertion_time_elem_t *last_elem = NULL;
     int add_new_elem = 0;
     tor_gettimeofday(&now);
-    added = now.tv_sec % 86400L * 1000L + now.tv_usec / 1000L;
+#define SECONDS_IN_A_DAY 86400L
+    added = now.tv_sec % SECONDS_IN_A_DAY * 10L + now.tv_usec / 100000L;
     if (!queue->insertion_times) {
       queue->insertion_times = smartlist_create();
     }
@@ -1874,7 +1875,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       uint32_t flushed;
       uint32_t cell_waiting_time;
       tor_gettimeofday(&now);
-      flushed = now.tv_sec % 86400L * 1000L + now.tv_usec / 1000L;
+      flushed = now.tv_sec % SECONDS_IN_A_DAY * 10L + now.tv_usec / 100000L;
       if (!queue->insertion_times ||
           smartlist_len(queue->insertion_times) < 1) {
         log_warn(LD_BUG, "Cannot determine insertion time of cell.");
@@ -1882,8 +1883,9 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
         or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
         insertion_time_elem_t *elem = smartlist_get(
             queue->insertion_times, 0);
-        cell_waiting_time = (flushed + 86400000L - elem->insertion_time) %
-                            86400000L;
+        cell_waiting_time = (flushed + SECONDS_IN_A_DAY * 10L -
+                            elem->insertion_time) % (SECONDS_IN_A_DAY * 10L);
+#undef SECONDS_IN_A_DAY
         elem->counter--;
         if (elem->counter < 1) {
 // TODO this operation is really expensive! write own queue impl?
