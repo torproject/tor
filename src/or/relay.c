@@ -1612,14 +1612,6 @@ cell_queue_append(cell_queue_t *queue, packed_cell_t *cell)
   ++queue->n;
 }
 
-/** Number of cells added to a circuit queue including their insertion
- * time on 10 millisecond detail; used for buffer statistics. */
-typedef struct insertion_time_elem_t {
-  uint32_t insertion_time; /**< When were cells inserted (in 10 ms steps
-                             * starting at 0:00 of the current day)? */
-  unsigned counter; /**< How many cells were inserted? */
-} insertion_time_elem_t;
-
 /** Append a newly allocated copy of <b>cell</b> to the end of <b>queue</b> */
 void
 cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
@@ -1629,21 +1621,20 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
   if (get_options()->CellStatistics) {
     struct timeval now;
     uint32_t added;
-    insertion_time_elem_t *last_elem = NULL;
+    insertion_time_queue_t *it_queue = queue->insertion_times;
     int add_new_elem = 0;
     tor_gettimeofday(&now);
 #define SECONDS_IN_A_DAY 86400L
-    added = now.tv_sec % SECONDS_IN_A_DAY * 10L + now.tv_usec / 100000L;
-    if (!queue->insertion_times) {
-      queue->insertion_times = smartlist_create();
+    added = (now.tv_sec % SECONDS_IN_A_DAY) * 100L + now.tv_usec / 10000L;
+    if (!it_queue) {
+      it_queue = tor_malloc_zero(sizeof(insertion_time_queue_t));
+      queue->insertion_times = it_queue;
     }
-    if (smartlist_len(queue->insertion_times) < 1) {
+    if (!it_queue->first) {
       add_new_elem = 1;
     } else {
-      last_elem = smartlist_get(queue->insertion_times,
-                      smartlist_len(queue->insertion_times) - 1);
-      if (last_elem->insertion_time == added)
-        last_elem->counter++;
+      if (it_queue->last->insertion_time == added)
+        it_queue->last->counter++;
       else
         add_new_elem = 1;
     }
@@ -1652,7 +1643,12 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
           tor_malloc_zero(sizeof(insertion_time_elem_t));
       elem->insertion_time = added;
       elem->counter = 1;
-      smartlist_add(queue->insertion_times, elem);
+      if (it_queue->last) {
+        it_queue->last->next = elem;
+        it_queue->last = elem;
+      } else {
+        it_queue->first = it_queue->last = elem;
+      }
     }
   }
   cell_queue_append(queue, copy);
@@ -1672,8 +1668,11 @@ cell_queue_clear(cell_queue_t *queue)
   queue->head = queue->tail = NULL;
   queue->n = 0;
   if (queue->insertion_times) {
-    SMARTLIST_FOREACH(queue->insertion_times, void *, e, tor_free(e));
-    smartlist_free(queue->insertion_times);
+    while (queue->insertion_times->first) {
+      insertion_time_elem_t *elem = queue->insertion_times->first;
+      queue->insertion_times->first = elem->next;
+      tor_free(elem);
+    }
     queue->insertion_times = NULL;
   }
 }
@@ -1874,23 +1873,23 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       struct timeval now;
       uint32_t flushed;
       uint32_t cell_waiting_time;
+      insertion_time_queue_t *it_queue = queue->insertion_times;
       tor_gettimeofday(&now);
-      flushed = now.tv_sec % SECONDS_IN_A_DAY * 10L + now.tv_usec / 100000L;
-      if (!queue->insertion_times ||
-          smartlist_len(queue->insertion_times) < 1) {
+      flushed = (now.tv_sec % SECONDS_IN_A_DAY) * 100L +
+                 now.tv_usec / 10000L;
+      if (!it_queue || !it_queue->first) {
         log_warn(LD_BUG, "Cannot determine insertion time of cell.");
       } else {
         or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
-        insertion_time_elem_t *elem = smartlist_get(
-            queue->insertion_times, 0);
-        cell_waiting_time = (flushed + SECONDS_IN_A_DAY * 10L -
-                            elem->insertion_time) % (SECONDS_IN_A_DAY * 10L);
+        insertion_time_elem_t *elem = it_queue->first;
+        cell_waiting_time = (flushed * 10L + SECONDS_IN_A_DAY * 1000L -
+            elem->insertion_time * 10L) % (SECONDS_IN_A_DAY * 1000L);
 #undef SECONDS_IN_A_DAY
         elem->counter--;
         if (elem->counter < 1) {
-// TODO this operation is really expensive! write own queue impl?
-//          smartlist_del(queue->insertion_times, 0);
-          smartlist_remove(queue->insertion_times, elem);
+          it_queue->first = elem->next;
+          if (elem == it_queue->last)
+            it_queue->last = NULL;
           tor_free(elem);
         }
         orcirc->total_cell_waiting_time += cell_waiting_time;
