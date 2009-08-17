@@ -1525,6 +1525,10 @@ static int total_cells_allocated = 0;
 /** A memory pool to allocate packed_cell_t objects. */
 static mp_pool_t *cell_pool = NULL;
 
+/** Memory pool to allocate insertion_time_elem_t objects used for cell
+ * statistics. */
+static mp_pool_t *it_pool = NULL;
+
 /** Allocate structures to hold cells. */
 void
 init_cell_pool(void)
@@ -1533,7 +1537,8 @@ init_cell_pool(void)
   cell_pool = mp_pool_new(sizeof(packed_cell_t), 128*1024);
 }
 
-/** Free all storage used to hold cells. */
+/** Free all storage used to hold cells (and insertion times if we measure
+ * cell statistics). */
 void
 free_cell_pool(void)
 {
@@ -1541,6 +1546,10 @@ free_cell_pool(void)
   if (cell_pool) {
     mp_pool_destroy(cell_pool);
     cell_pool = NULL;
+  }
+  if (it_pool) {
+    mp_pool_destroy(it_pool);
+    it_pool = NULL;
   }
 }
 
@@ -1623,6 +1632,8 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
     uint32_t added;
     insertion_time_queue_t *it_queue = queue->insertion_times;
     int add_new_elem = 0;
+    if (!it_pool)
+      it_pool = mp_pool_new(sizeof(insertion_time_elem_t), 1024);
     tor_gettimeofday(&now);
 #define SECONDS_IN_A_DAY 86400L
     added = (now.tv_sec % SECONDS_IN_A_DAY) * 100L + now.tv_usec / 10000L;
@@ -1639,8 +1650,8 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
         add_new_elem = 1;
     }
     if (add_new_elem) {
-      insertion_time_elem_t *elem =
-          tor_malloc_zero(sizeof(insertion_time_elem_t));
+      insertion_time_elem_t *elem = mp_pool_get(it_pool);
+      elem->next = NULL;
       elem->insertion_time = added;
       elem->counter = 1;
       if (it_queue->last) {
@@ -1671,7 +1682,7 @@ cell_queue_clear(cell_queue_t *queue)
     while (queue->insertion_times->first) {
       insertion_time_elem_t *elem = queue->insertion_times->first;
       queue->insertion_times->first = elem->next;
-      tor_free(elem);
+      mp_pool_release(elem);
     }
     queue->insertion_times = NULL;
   }
@@ -1890,7 +1901,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
           it_queue->first = elem->next;
           if (elem == it_queue->last)
             it_queue->last = NULL;
-          tor_free(elem);
+          mp_pool_release(elem);
         }
         orcirc->total_cell_waiting_time += cell_waiting_time;
         orcirc->processed_cells++;
