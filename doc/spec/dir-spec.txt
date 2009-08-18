@@ -641,6 +641,200 @@
         "geoip-start" is the time at which we began collecting geoip
         statistics.
 
+    "dirreq-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+        [At most once.]
+
+        YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+        interval of length NSEC seconds (86400 seconds by default).
+
+        A "dirreq-stats-end" line, as well as any other "dirreq-*" line,
+        is only added when the relay has opened its Dir port and after 24
+        hours of measuring directory requests.
+
+    "dirreq-v2-ips" CC=N,CC=N,... NL
+        [At most once.]
+    "dirreq-v3-ips" CC=N,CC=N,... NL
+        [At most once.]
+
+        List of mappings from two-letter country codes to the number of
+        unique IP addresses that have connected from that country to
+        request a v2/v3 network status, rounded up to the nearest multiple
+        of 8. Only those IP addresses are counted that the directory can
+        answer with a 200 OK status code.
+
+    "dirreq-v2-reqs" CC=N,CC=N,... NL
+        [At most once.]
+    "dirreq-v3-reqs" CC=N,CC=N,... NL
+        [At most once.]
+
+        List of mappings from two-letter country codes to the number of
+        requests for v2/v3 network statuses from that country, rounded up
+        to the nearest multiple of 8. Only those requests are counted that
+        the directory can answer with a 200 OK status code.
+
+    "dirreq-v2-share" num% NL
+        [At most once.]
+    "dirreq-v3-share" num% NL
+        [At most once.]
+
+        The share of v2/v3 network status requests that the directory
+        expects to receive from clients based on its advertised bandwidth
+        compared to the overall network bandwidth capacity. Shares are
+        formatted in percent with two decimal places. Shares are
+        calculated as means over the whole 24-hour interval.
+
+    "dirreq-v2-resp" status=num,... NL
+        [At most once.]
+    "dirreq-v3-resp" status=nul,... NL
+        [At most once.]
+
+        List of mappings from response statuses to the number of requests
+        for v2/v3 network statuses that were answered with that response
+        status, rounded up to the nearest multiple of 4. Only response
+        statuses with at least 1 response are reported. New response
+        statuses can be added at any time. The current list of response
+        statuses is as follows:
+
+        "ok": a network status request is answered; this number
+           corresponds to the sum of all requests as reported in
+           "dirreq-v2-reqs" or "dirreq-v3-reqs", respectively, before
+           rounding up.
+        "not-enough-sigs: a version 3 network status is not signed by a
+           sufficient number of requested authorities.
+        "unavailable": a requested network status object is unavailable.
+        "not-found": a requested network status is not found.
+        "not-modified": a network status has not been modified since the
+           If-Modified-Since time that is included in the request.
+        "busy": the directory is busy.
+
+    "dirreq-v2-direct-dl" key=val,... NL
+        [At most once.]
+    "dirreq-v3-direct-dl" key=val,... NL
+        [At most once.]
+    "dirreq-v2-tunneled-dl" key=val,... NL
+        [At most once.]
+    "dirreq-v3-tunneled-dl" key=val,... NL
+        [At most once.]
+
+        List of statistics about possible failures in the download process
+        of v2/v3 network statuses. Requests are either "direct"
+        HTTP-encoded requests over the relay's directory port, or
+        "tunneled" requests using a BEGIN_DIR cell over the relay's OR
+        port. The list of possible statistics can change, and statistics
+        can be left out from reporting. The current list of statistics is
+        as follows:
+
+        Successful downloads and failures:
+
+        "complete": a client has finished the download successfully.
+        "timeout": a download did not finish within 10 minutes after
+           starting to send the response.
+        "running": a download is still running at the end of the
+           measurement period for less than 10 minutes after starting to
+           send the response.
+
+        Download times:
+
+        "min", "max": smallest and largest measured bandwidth in B/s.
+        "d[1-4,6-9]": 1st to 4th and 6th to 9th decile of measured
+           bandwidth in B/s. For a given decile i, i/10 of all downloads
+           had a smaller bandwidth than di, and (10-i)/10 of all downloads
+           had a larger bandwidth than di.
+        "q[1,3]": 1st and 3rd quartile of measured bandwidth in B/s. One
+           fourth of all downloads had a smaller bandwidth than q1, one
+           fourth of all downloads had a larger bandwidth than q3, and the
+           remaining half of all downloads had a bandwidth between q1 and
+           q3.
+        "md": median of measured bandwidth in B/s. Half of the downloads
+           had a smaller bandwidth than md, the other half had a larger
+           bandwidth than md.
+
+    "entry-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+        [At most once.]
+
+        YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+        interval of length NSEC seconds (86400 seconds by default).
+
+        An "entry-stats-end" line, as well as any other "entry-*"
+        line, is first added after the relay has been running for at least
+        24 hours.
+
+    "entry-ips" CC=N,CC=N,... NL
+        [At most once.]
+
+        List of mappings from two-letter country codes to the number of
+        unique IP addresses that have connected from that country to the
+        relay and which are no known other relays, rounded up to the
+        nearest multiple of 8.
+
+    "cell-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+        [At most once.]
+
+        YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+        interval of length NSEC seconds (86400 seconds by default).
+
+        A "cell-stats-end" line, as well as any other "cell-*" line,
+        is first added after the relay has been running for at least 24
+        hours.
+
+    "cell-processed-cells" num,...,num NL
+        [At most once.]
+
+        Mean number of processed cells per circuit, subdivided into
+        deciles of circuits by the number of cells they have processed in
+        descending order from loudest to quietest circuits.
+
+    "cell-queued-cells" num,...,num NL
+        [At most once.]
+
+        Mean number of cells contained in queues by circuit decile. These
+        means are calculated by 1) determining the mean number of cells in
+        a single circuit between its creation and its termination and 2)
+        calculating the mean for all circuits in a given decile as
+        determined in "cell-processed-cells". Numbers have a precision of
+        two decimal places.
+
+    "cell-time-in-queue" num,...,num NL
+        [At most once.]
+
+        Mean time cells spend in circuit queues in milliseconds. Times are
+        calculated by 1) determining the mean time cells spend in the
+        queue of a single circuit and 2) calculating the mean for all
+        circuits in a given decile as determined in
+        "cell-processed-cells".
+
+    "cell-circuits-per-decile" num NL
+        [At most once.]
+
+        Mean number of circuits that are included in any of the deciles,
+        rounded up to the next integer.
+
+    "exit-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
+        [At most once.]
+
+        YYYY-MM-DD HH:MM:SS defines the end of the included measurement
+        interval of length NSEC seconds (86400 seconds by default).
+
+        An "exit-stats-end" line, as well as any other "exit-*" line, is
+        first added after the relay has been running for at least 24 hours
+        and only if the relay permits exiting (where exiting to a single
+        port and IP address is sufficient).
+
+    "exit-kibibytes-written" port=N,port=N,... NL
+        [At most once.]
+    "exit-kibibytes-read" port=N,port=N,... NL
+        [At most once.]
+
+        List of mappings from ports to the number of kibibytes that the
+        relay has written to or read from exit connections to that port,
+        rounded up to the next full kibibyte.
+
+    "exit-streams-opened" port=N,port=N,... NL
+        [At most once.]
+
+        List of mappings from ports to the number of opened exit streams
+        to that port, rounded up to the nearest multiple of 4.
+
     "router-signature" NL Signature NL
         [At end, exactly once.]
 
