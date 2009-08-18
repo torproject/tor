@@ -1626,12 +1626,11 @@ void
 cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
 {
   packed_cell_t *copy = packed_cell_copy(cell);
-  /* Remember the time in millis when this cell was put in the queue. */
+  /* Remember the time when this cell was put in the queue. */
   if (get_options()->CellStatistics) {
     struct timeval now;
     uint32_t added;
     insertion_time_queue_t *it_queue = queue->insertion_times;
-    int add_new_elem = 0;
     if (!it_pool)
       it_pool = mp_pool_new(sizeof(insertion_time_elem_t), 1024);
     tor_gettimeofday(&now);
@@ -1641,15 +1640,9 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
       it_queue = tor_malloc_zero(sizeof(insertion_time_queue_t));
       queue->insertion_times = it_queue;
     }
-    if (!it_queue->first) {
-      add_new_elem = 1;
+    if (it_queue->last && it_queue->last->insertion_time == added) {
+      it_queue->last->counter++;
     } else {
-      if (it_queue->last->insertion_time == added)
-        it_queue->last->counter++;
-      else
-        add_new_elem = 1;
-    }
-    if (add_new_elem) {
       insertion_time_elem_t *elem = mp_pool_get(it_pool);
       elem->next = NULL;
       elem->insertion_time = added;

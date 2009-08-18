@@ -1336,7 +1336,7 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
 /* The following data structures are arrays and no fancy smartlists or maps,
  * so that all write operations can be done in constant time. This comes at
  * the price of some memory (1.25 MB) and linear complexity when writing
- * stats. */
+ * stats for measuring relays. */
 /** Number of bytes read in current period by exit port */
 static uint64_t *exit_bytes_read = NULL;
 /** Number of bytes written in current period by exit port */

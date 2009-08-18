@@ -1269,6 +1269,7 @@ router_rebuild_descriptor(int force)
   uint32_t addr;
   char platform[256];
   int hibernating = we_are_hibernating();
+  size_t ei_size;
   or_options_t *options = get_options();
 
   if (desc_clean_since && !force)
@@ -1382,11 +1383,10 @@ router_rebuild_descriptor(int force)
   ei->cache_info.published_on = ri->cache_info.published_on;
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
-  ei->cache_info.signed_descriptor_body =
-      tor_malloc(MAX_EXTRAINFO_UPLOAD_SIZE);
+  ei_size = options->ExtraInfoStatistics ? MAX_EXTRAINFO_UPLOAD_SIZE : 8192;
+  ei->cache_info.signed_descriptor_body = tor_malloc(ei_size);
   if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body,
-                               MAX_EXTRAINFO_UPLOAD_SIZE,
-                               ei, get_identity_key()) < 0) {
+                               ei_size, ei, get_identity_key()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
     extrainfo_free(ei);
     return -1;
