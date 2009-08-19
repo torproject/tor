@@ -3,7 +3,7 @@ Title: Including Network Statistics in Extra-Info Documents
 Author: Karsten Loesing
 Created: 21-Jul-2009
 Target: 0.2.2
-Status: Open
+Status: Accepted
 
 Change history:
 

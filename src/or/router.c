@@ -1847,18 +1847,18 @@ load_stats_file(const char *filename, const char *end_line, time_t after,
           if (start != contents)
             start++; /* Avoid infinite loops. */
           if (!(start = strstr(start, end_line)))
-            goto err;
-          if (strlen(start) < strlen(end_line) + sizeof(timestr))
-            goto err;
+            goto notfound;
+          if (strlen(start) < strlen(end_line) + 1 + sizeof(timestr))
+            goto notfound;
           strlcpy(timestr, start + 1 + strlen(end_line), sizeof(timestr));
           if (parse_iso_time(timestr, &written) < 0)
-            goto err;
-        } while (written < after);
+            goto notfound;
+        } while (written <= after);
         *out = tor_malloc(strlen(start));
         strlcpy(*out, start, strlen(start));
         r = 1;
       }
-     err:
+     notfound:
       tor_free(contents);
       break;
     case FN_NOENT:
@@ -2010,8 +2010,6 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     tor_free(s_dup);
     extrainfo_free(ei_tmp);
   }
-
-  log_info(LD_GENERAL, "Done with dumping our extra-info descriptor.");
 
   return (int)strlen(s)+1;
 }

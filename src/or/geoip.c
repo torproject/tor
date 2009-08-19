@@ -388,6 +388,36 @@ geoip_note_client_seen(geoip_client_action_t action,
       return;
   }
 
+  /* As a bridge that doesn't rotate request periods every 24 hours,
+   * possibly rotate now. */
+  if (options->BridgeRelay) {
+    while (current_request_period_starts + REQUEST_HIST_PERIOD < now) {
+      if (!geoip_countries)
+        geoip_countries = smartlist_create();
+      if (!current_request_period_starts) {
+        current_request_period_starts = now;
+        break;
+      }
+      /* Also discard all items in the client history that are too old.
+       * (This only works here because bridge and directory stats are
+       * independent. Otherwise, we'd only want to discard those items
+       * with action GEOIP_CLIENT_NETWORKSTATUS{_V2}.) */
+      geoip_remove_old_clients(current_request_period_starts);
+      /* Now rotate request period */
+      SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+          memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
+                  sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
+          memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
+                  sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
+          c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
+          c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
+        });
+      current_request_period_starts += REQUEST_HIST_PERIOD;
+      if (n_old_request_periods < REQUEST_HIST_LEN-1)
+        ++n_old_request_periods;
+    }
+  }
+
   lookup.ipaddr = addr;
   lookup.action = (int)action;
   ent = HT_FIND(clientmap, &client_history, &lookup);
@@ -949,7 +979,8 @@ geoip_dirreq_stats_write(time_t now)
   if (!out)
     goto done;
   if (fprintf(out, "dirreq-stats-end %s (%d s)\ndirreq-v3-ips %s\n"
-              "dirreq-v2-ips %s\n", written, REQUEST_HIST_PERIOD,
+              "dirreq-v2-ips %s\n", written,
+              (unsigned) (now - start_of_dirreq_stats_interval),
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
   tor_free(data_v2);

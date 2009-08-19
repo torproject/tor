@@ -4,20 +4,21 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
       via new AccelName and AccelDir options.
 
   o New options for gathering stats safely:
-    - Directories that set "DirReqStatistics 1" write directory request
-      stats to disk every 24 hours. As compared to the --enable-geoip-stats
-      flag in 0.2.1.x, there are a few improvements: 1) stats are written
-      to disk exactly every 24 hours; 2) estimated shares of v2 and v3
-      requests are determined as mean values, not at the end of a
-      measurement period; 3) unresolved requests are listed with country
-      code '??'; 4) directories also measure download times.
+    - Directories that set "DirReqStatistics 1" write statistics on
+      directory request to disk every 24 hours. As compared to the
+      --enable-geoip-stats flag in 0.2.1.x, there are a few improvements:
+      1) stats are written to disk exactly every 24 hours; 2) estimated
+      shares of v2 and v3 requests are determined as mean values, not at
+      the end of a measurement period; 3) unresolved requests are listed
+      with country code '??'; 4) directories also measure download times.
     - Exit nodes that set "ExitPortStatistics 1" write statistics on the
       number of exit streams and transferred bytes per port to disk every
       24 hours.
-    - Relays that set "CellStatistics 1" write statistics to disk every
-      24 hours on how long cells spend in their circuit queues.
-    - Entry nodes that set "EntryStatistics 1" write statistics to disk
-      every 24 hours on the rough number and origins of connecting clients.
+    - Relays that set "CellStatistics 1" write statistics on how long
+      cells spend in their circuit queues to disk every 24 hours.
+    - Entry nodes that set "EntryStatistics 1" write statistics on the
+      rough number and origins of connecting clients to disk every 24
+      hours.
     - Relays that write any of the above statistics to disk and set
       "ExtraInfoStatistics 1" include the past 24 hours of statistics in
       their extra-info documents.

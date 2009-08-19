@@ -962,7 +962,6 @@ run_scheduled_events(time_t now)
    */
   if (time_to_write_stats_files >= 0 && time_to_write_stats_files < now) {
 #define WRITE_STATS_INTERVAL (24*60*60)
-    or_options_t *options = get_options();
     if (options->CellStatistics || options->DirReqStatistics ||
         options->EntryStatistics || options->ExitPortStatistics) {
       if (!time_to_write_stats_files) {
