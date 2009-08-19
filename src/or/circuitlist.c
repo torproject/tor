@@ -449,7 +449,7 @@ circuit_free(circuit_t *circ)
     or_circuit_t *ocirc = TO_OR_CIRCUIT(circ);
     /* Remember cell statistics for this circuit before deallocating. */
     if (get_options()->CellStatistics)
-      add_circ_to_buffer_stats(circ, time(NULL));
+      rep_hist_buffer_stats_add_circ(circ, time(NULL));
     mem = ocirc;
     memlen = sizeof(or_circuit_t);
     tor_assert(circ->magic == OR_CIRCUIT_MAGIC);

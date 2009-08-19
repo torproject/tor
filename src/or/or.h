@@ -3739,6 +3739,11 @@ void geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
 void geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
                                dirreq_state_t new_state);
 
+void geoip_dirreq_stats_init(time_t now);
+void geoip_dirreq_stats_write(time_t now);
+void geoip_entry_stats_init(time_t now);
+void geoip_entry_stats_write(time_t now);
+
 /********************************* hibernate.c **********************/
 
 int accounting_parse_options(or_options_t *options, int validate_only);
@@ -4076,11 +4081,11 @@ void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
-void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes,
-                                   time_t now);
-void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes,
-                                      time_t now);
-void rep_hist_note_exit_stream_opened(uint16_t port, time_t now);
+void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes);
+void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes);
+void rep_hist_note_exit_stream_opened(uint16_t port);
+void rep_hist_exit_stats_init(time_t now);
+void rep_hist_exit_stats_write(time_t now);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);
@@ -4132,9 +4137,10 @@ void hs_usage_note_fetch_successful(const char *service_id, time_t now);
 void hs_usage_write_statistics_to_file(time_t now);
 void hs_usage_free_all(void);
 
-#define DUMP_BUFFER_STATS_INTERVAL (24*60*60)
-void add_circ_to_buffer_stats(circuit_t *circ, time_t end_of_interval);
-void dump_buffer_stats(void);
+void rep_hist_buffer_stats_init(time_t now);
+void rep_hist_buffer_stats_add_circ(circuit_t *circ,
+                                    time_t end_of_interval);
+void rep_hist_buffer_stats_write(time_t now);
 
 /********************************* rendclient.c ***************************/
 

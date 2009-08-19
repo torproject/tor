@@ -12,8 +12,6 @@
 #include "ht.h"
 
 static void clear_geoip_db(void);
-static void dump_geoip_stats(void);
-static void dump_entry_stats(void);
 
 /** An entry from the GeoIP file: maps an IP range to a country. */
 typedef struct geoip_entry_t {
@@ -388,37 +386,6 @@ geoip_note_client_seen(geoip_client_action_t action,
     if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
         !options->DirReqStatistics)
       return;
-  }
-
-  /* Rotate the current request period. */
-  while (current_request_period_starts + REQUEST_HIST_PERIOD < now) {
-    if (!geoip_countries)
-      geoip_countries = smartlist_create();
-    if (!current_request_period_starts) {
-      current_request_period_starts = now;
-      break;
-    }
-    /* Also discard all items in the client history that are too old.
-     * (This only works here because bridge and directory stats are
-     * independent. Otherwise, we'd only want to discard those items
-     * with action GEOIP_CLIENT_NETWORKSTATUS{_V2}.) */
-    geoip_remove_old_clients(current_request_period_starts);
-    /* Before rotating, write the current stats to disk. */
-    dump_geoip_stats();
-    if (get_options()->EntryStatistics)
-      dump_entry_stats();
-    /* Now rotate request period */
-    SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
-        memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
-                sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-        memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
-                sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-        c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
-        c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
-      });
-    current_request_period_starts += REQUEST_HIST_PERIOD;
-    if (n_old_request_periods < REQUEST_HIST_LEN-1)
-      ++n_old_request_periods;
   }
 
   lookup.ipaddr = addr;
@@ -940,12 +907,20 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
-/** Store all our geoip statistics into $DATADIR/dirreq-stats. */
-static void
-dump_geoip_stats(void)
+/** Start time of directory request stats. */
+static time_t start_of_dirreq_stats_interval;
+
+/** Initialize directory request stats. */
+void
+geoip_dirreq_stats_init(time_t now)
 {
-  time_t now = time(NULL);
-  time_t request_start;
+  start_of_dirreq_stats_interval = now;
+}
+
+/** Store all our geoip statistics into $DATADIR/dirreq-stats. */
+void
+geoip_dirreq_stats_write(time_t now)
+{
   char *filename = get_datadir_fname("dirreq-stats");
   char *data_v2 = NULL, *data_v3 = NULL;
   char written[ISO_TIME_LEN+1];
@@ -957,11 +932,14 @@ dump_geoip_stats(void)
   if (!get_options()->DirReqStatistics)
     goto done;
 
+  /* Discard all items in the client history that are too old. */
+  geoip_remove_old_clients(start_of_dirreq_stats_interval);
+
   data_v2 = geoip_get_client_history_dirreq(now,
                 GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history_dirreq(now,
                 GEOIP_CLIENT_NETWORKSTATUS);
-  format_iso_time(written, geoip_get_history_start() + REQUEST_HIST_PERIOD);
+  format_iso_time(written, now);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
   if (!out)
@@ -973,8 +951,6 @@ dump_geoip_stats(void)
   tor_free(data_v2);
   tor_free(data_v3);
 
-  request_start = current_request_period_starts -
-    (n_old_request_periods * REQUEST_HIST_PERIOD);
   data_v2 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS);
   if (fprintf(out, "dirreq-v3-reqs %s\ndirreq-v2-reqs %s\n",
@@ -1033,6 +1009,22 @@ dump_geoip_stats(void)
 
   finish_writing_to_file(open_file);
   open_file = NULL;
+
+  /* Rotate request period */
+  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+      memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
+              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
+      memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
+              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
+      c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
+      c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
+    });
+  current_request_period_starts += REQUEST_HIST_PERIOD;
+  if (n_old_request_periods < REQUEST_HIST_LEN-1)
+    ++n_old_request_periods;
+
+  start_of_dirreq_stats_interval = now;
+
  done:
   if (open_file)
     abort_writing_to_file(open_file);
@@ -1041,28 +1033,45 @@ dump_geoip_stats(void)
   tor_free(data_v3);
 }
 
+/** Start time of entry stats. */
+static time_t start_of_entry_stats_interval;
+
+/** Initialize entry stats. */
+void
+geoip_entry_stats_init(time_t now)
+{
+  start_of_entry_stats_interval = now;
+}
+
 /** Store all our geoip statistics as entry guards into
  * $DATADIR/entry-stats. */
-static void
-dump_entry_stats(void)
+void
+geoip_entry_stats_write(time_t now)
 {
-#ifdef ENABLE_ENTRY_STATS
-  time_t now = time(NULL);
   char *filename = get_datadir_fname("entry-stats");
   char *data = NULL;
   char written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
   FILE *out;
 
-  data = geoip_get_client_history(now, GEOIP_CLIENT_CONNECT);
-  format_iso_time(written, geoip_get_history_start() + REQUEST_HIST_PERIOD);
+  if (!get_options()->EntryStatistics)
+    goto done;
+
+  /* Discard all items in the client history that are too old. */
+  geoip_remove_old_clients(start_of_entry_stats_interval);
+
+  data = geoip_get_client_history_dirreq(now, GEOIP_CLIENT_CONNECT);
+  format_iso_time(written, now);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
   if (!out)
     goto done;
-  if (fprintf(out, "entry-stats-end %s (%d s)\nentry-ips %s\n",
-              written, REQUEST_HIST_PERIOD, data ? data : "") < 0)
+  if (fprintf(out, "entry-stats-end %s (%u s)\nentry-ips %s\n",
+              written, (unsigned) (now - start_of_entry_stats_interval),
+              data ? data : "") < 0)
     goto done;
+
+  start_of_entry_stats_interval = now;
 
   finish_writing_to_file(open_file);
   open_file = NULL;
@@ -1071,7 +1080,6 @@ dump_entry_stats(void)
     abort_writing_to_file(open_file);
   tor_free(filename);
   tor_free(data);
-#endif
 }
 
 /** Helper used to implement GETINFO ip-to-country/... controller command. */

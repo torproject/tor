@@ -333,7 +333,7 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
            escaped_safe_str(conn->address),conn->port,
            safe_str(fmt_addr(&conn->addr)));
 
-  rep_hist_note_exit_stream_opened(conn->port, approx_time());
+  rep_hist_note_exit_stream_opened(conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
   connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
