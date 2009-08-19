@@ -917,11 +917,11 @@ geoip_dirreq_stats_init(time_t now)
   start_of_dirreq_stats_interval = now;
 }
 
-/** Store all our geoip statistics into $DATADIR/dirreq-stats. */
+/** Write dirreq statistics to $DATADIR/stats/dirreq-stats. */
 void
 geoip_dirreq_stats_write(time_t now)
 {
-  char *filename = get_datadir_fname("dirreq-stats");
+  char *statsdir = NULL, *filename = NULL;
   char *data_v2 = NULL, *data_v3 = NULL;
   char written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
@@ -935,6 +935,10 @@ geoip_dirreq_stats_write(time_t now)
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_dirreq_stats_interval);
 
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname("stats"PATH_SEPARATOR"dirreq-stats");
   data_v2 = geoip_get_client_history_dirreq(now,
                 GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history_dirreq(now,
@@ -1029,6 +1033,7 @@ geoip_dirreq_stats_write(time_t now)
   if (open_file)
     abort_writing_to_file(open_file);
   tor_free(filename);
+  tor_free(statsdir);
   tor_free(data_v2);
   tor_free(data_v3);
 }
@@ -1043,12 +1048,11 @@ geoip_entry_stats_init(time_t now)
   start_of_entry_stats_interval = now;
 }
 
-/** Store all our geoip statistics as entry guards into
- * $DATADIR/entry-stats. */
+/** Write entry statistics to $DATADIR/stats/entry-stats. */
 void
 geoip_entry_stats_write(time_t now)
 {
-  char *filename = get_datadir_fname("entry-stats");
+  char *statsdir = NULL, *filename = NULL;
   char *data = NULL;
   char written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
@@ -1060,6 +1064,10 @@ geoip_entry_stats_write(time_t now)
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_entry_stats_interval);
 
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname("stats"PATH_SEPARATOR"entry-stats");
   data = geoip_get_client_history_dirreq(now, GEOIP_CLIENT_CONNECT);
   format_iso_time(written, now);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
@@ -1079,6 +1087,7 @@ geoip_entry_stats_write(time_t now)
   if (open_file)
     abort_writing_to_file(open_file);
   tor_free(filename);
+  tor_free(statsdir);
   tor_free(data);
 }
 

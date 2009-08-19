@@ -1903,8 +1903,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     time_t since = time(NULL) - (24*60*60);
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     if (options->DirReqStatistics &&
-        load_stats_file("dirreq-stats", "dirreq-stats-end", since,
-                        &contents) > 0) {
+        load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
+                        "dirreq-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1915,8 +1915,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       tor_free(contents);
     }
     if (options->EntryStatistics &&
-        load_stats_file("entry-stats", "entry-stats-end", since,
-                        &contents) > 0) {
+        load_stats_file("stats"PATH_SEPARATOR"entry-stats",
+                        "entry-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1927,8 +1927,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       tor_free(contents);
     }
     if (options->CellStatistics &&
-        load_stats_file("buffer-stats", "cell-stats-end", since,
-                        &contents) > 0) {
+        load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
+                        "cell-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1939,8 +1939,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       tor_free(contents);
     }
     if (options->ExitPortStatistics &&
-        load_stats_file("exit-stats", "exit-stats-end", since,
-                        &contents) > 0) {
+        load_stats_file("stats"PATH_SEPARATOR"exit-stats",
+                        "exit-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {

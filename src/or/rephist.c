@@ -1358,7 +1358,7 @@ rep_hist_exit_stats_init(time_t now)
                                  sizeof(uint32_t));
 }
 
-/** Write exit stats for the current period to disk and reset counters. */
+/** Write exit stats to $DATADIR/stats/exit-stats and reset counters. */
 void
 rep_hist_exit_stats_write(time_t now)
 {
@@ -1367,10 +1367,14 @@ rep_hist_exit_stats_write(time_t now)
   uint64_t *b, total_bytes, threshold_bytes, other_bytes;
   uint32_t other_streams;
 
-  char *filename = get_datadir_fname("exit-stats");
+  char *statsdir = NULL, *filename = NULL;
   open_file_t *open_file = NULL;
   FILE *out = NULL;
 
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname("stats"PATH_SEPARATOR"exit-stats");
   format_iso_time(t, now);
   log_info(LD_HIST, "Writing exit port statistics to disk for period "
            "ending at %s.", t);
@@ -1466,6 +1470,7 @@ rep_hist_exit_stats_write(time_t now)
   if (open_file)
     abort_writing_to_file(open_file);
   tor_free(filename);
+  tor_free(statsdir);
 }
 
 /** Note that we wrote <b>num_bytes</b> to an exit connection to
@@ -2663,11 +2668,11 @@ _buffer_stats_compare_entries(const void **_a, const void **_b)
     return 0;
 }
 
-/** Append buffer statistics to local file. */
+/** Write buffer statistics to $DATADIR/stats/buffer-stats. */
 void
 rep_hist_buffer_stats_write(time_t now)
 {
-  char *filename;
+  char *statsdir = NULL, *filename = NULL;
   char written[ISO_TIME_LEN+1];
   open_file_t *open_file = NULL;
   FILE *out;
@@ -2706,7 +2711,10 @@ rep_hist_buffer_stats_write(time_t now)
       stat, tor_free(stat));
   smartlist_clear(circuits_for_buffer_stats);
   /* write to file */
-  filename = get_datadir_fname("buffer-stats");
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname("stats"PATH_SEPARATOR"buffer-stats");
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
   if (!out)
@@ -2758,6 +2766,7 @@ rep_hist_buffer_stats_write(time_t now)
   if (open_file)
     abort_writing_to_file(open_file);
   tor_free(filename);
+  tor_free(statsdir);
   if (str_build) {
     SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
     smartlist_free(str_build);
