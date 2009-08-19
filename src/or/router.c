@@ -1826,18 +1826,38 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   return (int)written+1;
 }
 
-/** Load the contents of <b>filename</b> and write its contents to
- * **<b>contents</b>. Return 1 for success, 0 if the file does not exit,
- * or -1 for failure. */
+/** Load the contents of <b>filename</b>, find the first line starting
+ * with <b>end_line</b> that has a timestamp after <b>after</b>, and write
+ * the file contents starting with that line to **<b>contents</b>. Return
+ * 1 for success, 0 if the file does not exist or does not contain a line
+ * matching these criteria, or -1 for failure. */
 static int
-load_stats_file(const char *filename, char **contents)
+load_stats_file(const char *filename, const char *end_line, time_t after,
+                char **out)
 {
   int r = -1;
   char *fname = get_datadir_fname(filename);
+  char *contents, *start, timestr[ISO_TIME_LEN+1];
+  time_t written;
   switch (file_status(fname)) {
     case FN_FILE:
-      if ((*contents = read_file_to_str(fname, 0, NULL)))
+      if ((contents = read_file_to_str(fname, 0, NULL))) {
+        do {
+          if ((start = strstr(contents, end_line)))
+            goto err;
+          if (strlen(start) < strlen(end_line) + sizeof(timestr))
+            goto err;
+          if (strlcpy(timestr, start + strlen(end_line), sizeof(timestr)))
+            goto err;
+          if (parse_iso_time(timestr, &written) < 0)
+            goto err;
+        } while (written < after);
+        *out = tor_malloc(strlen(start));
+        strlcpy(*out, start, strlen(start));
         r = 1;
+      }
+     err:
+      tor_free(contents);
       break;
     case FN_NOENT:
       r = 0;
@@ -1880,9 +1900,11 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     char *contents = NULL;
+    time_t since = time(NULL) - (24*60*60);
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     if (options->DirReqStatistics &&
-        load_stats_file("dirreq-stats", &contents) > 0) {
+        load_stats_file("dirreq-stats", "dirreq-stats-end", since,
+                        &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1893,7 +1915,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       tor_free(contents);
     }
     if (options->EntryStatistics &&
-        load_stats_file("entry-stats", &contents) > 0) {
+        load_stats_file("entry-stats", "entry-stats-end", since,
+                        &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1904,7 +1927,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       tor_free(contents);
     }
     if (options->CellStatistics &&
-        load_stats_file("buffer-stats", &contents) > 0) {
+        load_stats_file("buffer-stats", "cell-stats-end", since,
+                        &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1915,7 +1939,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       tor_free(contents);
     }
     if (options->ExitPortStatistics &&
-        load_stats_file("exit-stats", &contents) > 0) {
+        load_stats_file("exit-stats", "exit-stats-end", since,
+                        &contents) > 0) {
       int pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
