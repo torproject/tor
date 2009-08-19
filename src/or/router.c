@@ -1990,9 +1990,6 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
               "We just generated an extrainfo descriptor we can't parse.");
       log_err(LD_BUG, "Descriptor was: <<%s>>", s);
       return -1;
-    } else {
-      log_debug(LD_GENERAL, "We generated an extra-info descriptor:\n%s",
-                s);
     }
     tor_free(s_dup);
     extrainfo_free(ei_tmp);
