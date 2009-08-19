@@ -1842,13 +1842,15 @@ load_stats_file(const char *filename, const char *end_line, time_t after,
   switch (file_status(fname)) {
     case FN_FILE:
       if ((contents = read_file_to_str(fname, 0, NULL))) {
+        start = contents;
         do {
-          if ((start = strstr(contents, end_line)))
+          if (start != contents)
+            start++; /* Avoid infinite loops. */
+          if (!(start = strstr(start, end_line)))
             goto err;
           if (strlen(start) < strlen(end_line) + sizeof(timestr))
             goto err;
-          if (strlcpy(timestr, start + strlen(end_line), sizeof(timestr)))
-            goto err;
+          strlcpy(timestr, start + 1 + strlen(end_line), sizeof(timestr));
           if (parse_iso_time(timestr, &written) < 0)
             goto err;
         } while (written < after);
@@ -1906,8 +1908,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
+      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
         log_warn(LD_DIR, "Could not write dirreq-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';
@@ -1918,8 +1919,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
                         "entry-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
+      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
         log_warn(LD_DIR, "Could not write entry-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';
@@ -1930,8 +1930,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
                         "cell-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
+      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
         log_warn(LD_DIR, "Could not write buffer-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';
@@ -1942,8 +1941,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"exit-stats",
                         "exit-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
+      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
         log_warn(LD_DIR, "Could not write exit-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';
@@ -2007,8 +2005,6 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                "this or any future extra-info descriptors. Descriptor "
                "was:\n%s", s);
       write_stats_to_extrainfo = 0;
-      tor_free(s);
-      s = NULL;
       extrainfo_dump_to_string(s, maxlen, extrainfo, ident_key);
     }
     tor_free(s_dup);
