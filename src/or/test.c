@@ -618,13 +618,18 @@ test_crypto_sha(void)
   crypto_digest_env_t *d1 = NULL, *d2 = NULL;
   int i;
   char key[80];
-  char digest[20];
+  char digest[32];
   char data[50];
-  char d_out1[DIGEST_LEN], d_out2[DIGEST_LEN];
+  char d_out1[DIGEST_LEN], d_out2[DIGEST256_LEN];
 
   /* Test SHA-1 with a test vector from the specification. */
   i = crypto_digest(data, "abc", 3);
   test_memeq_hex(data, "A9993E364706816ABA3E25717850C26C9CD0D89D");
+
+  /* Test SHA-256 with a test vector from the specification. */
+  i = crypto_digest256(data, "abc", 3, DIGEST_SHA256);
+  test_memeq_hex(data, "BA7816BF8F01CFEA414140DE5DAE2223B00361A3"
+                       "96177A9CB410FF61F20015AD");
 
   /* Test HMAC-SHA-1 with test cases from RFC2202. */
 
@@ -646,7 +651,7 @@ test_crypto_sha(void)
   test_streq(hex_str(digest, 20),
              "4C9007F4026250C6BC8414F9BF50C86C2D7235DA");
 
-  /* Case . */
+  /* Case 5. */
   memset(key, 0xaa, 80);
   crypto_hmac_sha1(digest, key, 80,
                    "Test Using Larger Than Block-Size Key - Hash Key First",
@@ -671,6 +676,27 @@ test_crypto_sha(void)
   test_memeq(d_out1, d_out2, DIGEST_LEN);
   crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
   crypto_digest(d_out2, "abcdef", 6);
+  test_memeq(d_out1, d_out2, DIGEST_LEN);
+  crypto_free_digest_env(d1);
+  crypto_free_digest_env(d2);
+
+  /* Incremental digest code with sha256 */
+  d1 = crypto_new_digest256_env(DIGEST_SHA256);
+  test_assert(d1);
+  crypto_digest_add_bytes(d1, "abcdef", 6);
+  d2 = crypto_digest_dup(d1);
+  test_assert(d2);
+  crypto_digest_add_bytes(d2, "ghijkl", 6);
+  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest256(d_out2, "abcdefghijkl", 12, DIGEST_SHA256);
+  test_memeq(d_out1, d_out2, DIGEST_LEN);
+  crypto_digest_assign(d2, d1);
+  crypto_digest_add_bytes(d2, "mno", 3);
+  crypto_digest_get_digest(d2, d_out1, sizeof(d_out1));
+  crypto_digest256(d_out2, "abcdefmno", 9, DIGEST_SHA256);
+  test_memeq(d_out1, d_out2, DIGEST_LEN);
+  crypto_digest_get_digest(d1, d_out1, sizeof(d_out1));
+  crypto_digest256(d_out2, "abcdef", 6, DIGEST_SHA256);
   test_memeq(d_out1, d_out2, DIGEST_LEN);
 
  done:

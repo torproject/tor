@@ -18,6 +18,9 @@
 
 /** Length of the output of our message digest. */
 #define DIGEST_LEN 20
+/** Length of the output of our second (improved) message digests.  (For now
+ * this is just sha256, but any it can be any other 256-byte digest). */
+#define DIGEST256_LEN 32
 /** Length of our symmetric cipher's keys. */
 #define CIPHER_KEY_LEN 16
 /** Length of our symmetric cipher's IV. */
@@ -27,9 +30,12 @@
 /** Length of our DH keys. */
 #define DH_BYTES (1024/8)
 
-/** Length of a message digest when encoded in base64 with trailing = signs
- * removed. */
+/** Length of a sha1 message digest when encoded in base64 with trailing =
+ * signs removed. */
 #define BASE64_DIGEST_LEN 27
+/** Length of a sha256 message digest when encoded in base64 with trailing =
+ * signs removed. */
+#define BASE64_DIGEST256_LEN 43
 
 /** Constants used to indicate no padding for public-key encryption */
 #define PK_NO_PADDING         60000
@@ -48,6 +54,13 @@
 #define FINGERPRINT_LEN 49
 /** Length of hex encoding of SHA1 digest, not including final NUL. */
 #define HEX_DIGEST_LEN 40
+/** Length of hex encoding of SHA256 digest, not including final NUL. */
+#define HEX_DIGEST256_LEN 64
+
+typedef enum {
+  DIGEST_SHA1,
+  DIGEST_SHA256,
+} digest_algorithm_t;
 
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
@@ -145,7 +158,10 @@ int crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *env,
 
 /* SHA-1 */
 int crypto_digest(char *digest, const char *m, size_t len);
+int crypto_digest256(char *digest, const char *m, size_t len,
+                     digest_algorithm_t algorithm);
 crypto_digest_env_t *crypto_new_digest_env(void);
+crypto_digest_env_t *crypto_new_digest256_env(digest_algorithm_t algorithm);
 void crypto_free_digest_env(crypto_digest_env_t *digest);
 void crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
                              size_t len);

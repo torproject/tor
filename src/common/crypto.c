@@ -1394,9 +1394,23 @@ crypto_digest(char *digest, const char *m, size_t len)
   return (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
 }
 
+int
+crypto_digest256(char *digest, const char *m, size_t len,
+                 digest_algorithm_t algorithm)
+{
+  tor_assert(m);
+  tor_assert(digest);
+  tor_assert(algorithm == DIGEST_SHA256);
+  return (SHA256((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+}
+
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_env_t {
-  SHA_CTX d;
+  union {
+    SHA_CTX sha1;
+    SHA256_CTX sha2;
+  } d;
+  digest_algorithm_t algorithm : 8;
 };
 
 /** Allocate and return a new digest object.
@@ -1406,7 +1420,19 @@ crypto_new_digest_env(void)
 {
   crypto_digest_env_t *r;
   r = tor_malloc(sizeof(crypto_digest_env_t));
-  SHA1_Init(&r->d);
+  SHA1_Init(&r->d.sha1);
+  r->algorithm = DIGEST_SHA1;
+  return r;
+}
+
+crypto_digest_env_t *
+crypto_new_digest256_env(digest_algorithm_t algorithm)
+{
+  crypto_digest_env_t *r;
+  tor_assert(algorithm == DIGEST_SHA256);
+  r = tor_malloc(sizeof(crypto_digest_env_t));
+  SHA256_Init(&r->d.sha2);
+  r->algorithm = algorithm;
   return r;
 }
 
@@ -1427,30 +1453,51 @@ crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
 {
   tor_assert(digest);
   tor_assert(data);
-  /* Using the SHA1_*() calls directly means we don't support doing
-   * SHA1 in hardware. But so far the delay of getting the question
+  /* Using the SHA*_*() calls directly means we don't support doing
+   * SHA in hardware. But so far the delay of getting the question
    * to the hardware, and hearing the answer, is likely higher than
    * just doing it ourselves. Hashes are fast.
    */
-  SHA1_Update(&digest->d, (void*)data, len);
+  switch (digest->algorithm) {
+    case DIGEST_SHA1:
+      SHA1_Update(&digest->d.sha1, (void*)data, len);
+      break;
+    case DIGEST_SHA256:
+      SHA256_Update(&digest->d.sha2, (void*)data, len);
+      break;
+    default:
+      tor_fragile_assert();
+      break;
+  }
 }
 
 /** Compute the hash of the data that has been passed to the digest
  * object; write the first out_len bytes of the result to <b>out</b>.
- * <b>out_len</b> must be \<= DIGEST_LEN.
+ * <b>out_len</b> must be \<= DIGEST256_LEN.
  */
 void
 crypto_digest_get_digest(crypto_digest_env_t *digest,
                          char *out, size_t out_len)
 {
-  unsigned char r[DIGEST_LEN];
-  SHA_CTX tmpctx;
+  unsigned char r[DIGEST256_LEN];
+  crypto_digest_env_t tmpenv;
   tor_assert(digest);
   tor_assert(out);
-  tor_assert(out_len <= DIGEST_LEN);
-  /* memcpy into a temporary ctx, since SHA1_Final clears the context */
-  memcpy(&tmpctx, &digest->d, sizeof(SHA_CTX));
-  SHA1_Final(r, &tmpctx);
+  /* memcpy into a temporary ctx, since SHA*_Final clears the context */
+  memcpy(&tmpenv, digest, sizeof(crypto_digest_env_t));
+  switch (digest->algorithm) {
+    case DIGEST_SHA1:
+      tor_assert(out_len <= DIGEST_LEN);
+      SHA1_Final(r, &digest->d.sha1);
+      break;
+    case DIGEST_SHA256:
+      tor_assert(out_len <= DIGEST256_LEN);
+      SHA256_Final(r, &digest->d.sha2);
+      break;
+    default:
+      tor_fragile_assert();
+      break;
+  }
   memcpy(out, r, out_len);
   memset(r, 0, sizeof(r));
 }
