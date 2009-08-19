@@ -4,23 +4,23 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
       via new AccelName and AccelDir options.
 
   o New options for gathering stats safely:
-    - Directories that configure with --enable-dirreq-stats and set
-      "DirReqStatistics 1" write directory request stats to disk every
-      24 hours. As compared to the --enable-geoip-stats flag in 0.2.1.x,
-      there are a few improvements: 1) stats are written to disk exactly
-      every 24 hours; 2) estimated shares of v2 and v3 requests are
-      determined as mean values, not at the end of a measurement period;
-      3) unresolved requests are listed with country code '??';
-      4) directories also measure download times.
-    - Exit nodes that configure with --enable-exit-stats and set
-      "ExitPortStatistics 1" write statistics on the number of exit
-      streams and transferred bytes per port to disk every 24 hours.
-    - Relays that configure with --enable-buffer-stats and set
-      "CellStatistics 1" write statistics to disk every 24 hours on how
-      long cells spend in their circuit queues.
-    - Entry nodes that configure with --enable-entry-stats and set
-      "EntryStatistics 1" write statistics to disk every 24 hours on
-      the rough number and origins of connecting clients.
+    - Directories that set "DirReqStatistics 1" write directory request
+      stats to disk every 24 hours. As compared to the --enable-geoip-stats
+      flag in 0.2.1.x, there are a few improvements: 1) stats are written
+      to disk exactly every 24 hours; 2) estimated shares of v2 and v3
+      requests are determined as mean values, not at the end of a
+      measurement period; 3) unresolved requests are listed with country
+      code '??'; 4) directories also measure download times.
+    - Exit nodes that set "ExitPortStatistics 1" write statistics on the
+      number of exit streams and transferred bytes per port to disk every
+      24 hours.
+    - Relays that set "CellStatistics 1" write statistics to disk every
+      24 hours on how long cells spend in their circuit queues.
+    - Entry nodes that set "EntryStatistics 1" write statistics to disk
+      every 24 hours on the rough number and origins of connecting clients.
+    - Relays that write any of the above statistics to disk and set
+      "ExtraInfoStatistics 1" include the past 24 hours of statistics in
+      their extra-info documents.
 
   o Minor features:
     - New --digests command-line switch to output the digests of the
