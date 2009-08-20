@@ -55,6 +55,7 @@ typedef enum {
   K_S,
   K_V,
   K_W,
+  K_M,
   K_EVENTDNS,
   K_EXTRA_INFO,
   K_EXTRA_INFO_DIGEST,
@@ -321,6 +322,7 @@ static token_rule_t rtrstatus_token_table[] = {
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
   T01("w",                   K_W,                   ARGS,    NO_OBJ ),
+  T0N("m",                   K_M,               CONCAT_ARGS, NO_OBJ ),
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   END_OF_TABLE
 };
@@ -2048,6 +2050,18 @@ routerstatus_parse_entry_from_string(memarea_t *area,
      */
     rs->exitsummary = tor_strdup(tok->args[0]);
     rs->has_exitsummary = 1;
+  }
+
+  if (vote_rs) {
+    SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, t) {
+      if (t->tp == K_M && t->n_args) {
+        vote_microdesc_hash_t *line =
+          tor_malloc(sizeof(vote_microdesc_hash_t));
+        line->next = vote_rs->microdesc;
+        line->microdesc_hash_line = tor_strdup(t->args[0]);
+        vote_rs->microdesc = line;
+      }
+    } SMARTLIST_FOREACH_END(t);
   }
 
   if (!strcasecmp(rs->nickname, UNNAMED_ROUTER_NICKNAME))

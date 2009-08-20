@@ -1557,6 +1557,14 @@ typedef struct routerstatus_t {
 
 } routerstatus_t;
 
+/**DOCDOC*/
+typedef struct microdescriptor_t {
+  crypto_pk_env_t *onion_pkey;
+  smartlist_t *family;
+  char *exitsummary; /**< exit policy summary -
+                      * XXX weasel: this probably should not stay a string. */
+} microdescriptor_t;
+
 /** How many times will we try to download a router's descriptor before giving
  * up? */
 #define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
@@ -1599,6 +1607,11 @@ typedef struct networkstatus_v2_t {
                          * sorted by identity_digest. */
 } networkstatus_v2_t;
 
+typedef struct vote_microdesc_hash_t {
+  struct vote_microdesc_hash_t *next;
+  char *microdesc_hash_line;
+} vote_microdesc_hash_t;
+
 /** The claim about a single router, made in a vote. */
 typedef struct vote_routerstatus_t {
   routerstatus_t status; /**< Underlying 'status' object for this router.
@@ -1607,6 +1620,7 @@ typedef struct vote_routerstatus_t {
                    * networkstatus_t.known_flags. */
   char *version; /**< The version that the authority says this router is
                   * running. */
+  vote_microdesc_hash_t *microdesc;
 } vote_routerstatus_t;
 
 /** Information about a single voter in a vote or a consensus. */
