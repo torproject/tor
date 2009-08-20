@@ -21,7 +21,7 @@ static int dirvote_perform_vote(void);
 static void dirvote_clear_votes(int all_votes);
 static int dirvote_compute_consensus(void);
 static int dirvote_publish_consensus(void);
-static char *make_consensus_method_list(int low, int high);
+static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 7
@@ -102,7 +102,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     char *params;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
-      make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD);
+      make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD, " ");
     format_iso_time(published, v3_ns->published);
     format_iso_time(va, v3_ns->valid_after);
     format_iso_time(fu, v3_ns->fresh_until);
@@ -480,7 +480,7 @@ consensus_method_is_supported(int method)
 /** Return a newly allocated string holding the numbers between low and high
  * (inclusive) that are supported consensus methods. */
 static char *
-make_consensus_method_list(int low, int high)
+make_consensus_method_list(int low, int high, const char *separator)
 {
   char *list;
 
@@ -494,7 +494,7 @@ make_consensus_method_list(int low, int high)
     tor_snprintf(b, sizeof(b), "%d", i);
     smartlist_add(lst, tor_strdup(b));
   }
-  list = smartlist_join_strings(lst, " ", 0, NULL);
+  list = smartlist_join_strings(lst, separator, 0, NULL);
   tor_assert(list);
   SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
   smartlist_free(lst);
@@ -2387,5 +2387,73 @@ dirvote_get_vote(const char *fp, int flags)
     }
   }
   return NULL;
+}
+
+int
+dirvote_create_microdescriptor(char *out, size_t outlen,
+                               const routerinfo_t *ri)
+{
+  char *key = NULL, *summary = NULL, *family = NULL;
+  size_t keylen;
+  int result = -1;
+  char *start = out, *end = out+outlen;
+
+  if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
+    goto done;
+  summary = policy_summarize(ri->exit_policy);
+  if (ri->declared_family)
+    family = smartlist_join_strings(ri->declared_family, " ", 0, NULL);
+
+  if (tor_snprintf(out, end-out, "onion-key\n%s", key)<0)
+    goto done;
+  out += strlen(out);
+  if (family) {
+    if (tor_snprintf(out, end-out, "family %s\n", family)<0)
+      goto done;
+    out += strlen(out);
+  }
+  if (summary && strcmp(summary, "reject 1-65535")) {
+    if (tor_snprintf(out, end-out, "p %s\n", summary)<0)
+      goto done;
+    out += strlen(out);
+  }
+  result = out - start;
+
+ done:
+  tor_free(key);
+  tor_free(summary);
+  tor_free(family);
+  return result;
+}
+
+/** Lowest consensus method that generates microdescriptors */
+#define MIN_CM_MICRODESC 7
+/** Cached space-separated string to hold */
+static char *microdesc_consensus_methods = NULL;
+
+int
+dirvote_format_microdescriptor_vote_line(char *out, size_t out_len,
+                                         const char *microdesc,
+                                         size_t microdescriptor_len)
+{
+  char d[DIGEST256_LEN];
+  char d64[BASE64_DIGEST256_LEN];
+  if (!microdesc_consensus_methods) {
+    microdesc_consensus_methods =
+      make_consensus_method_list(MIN_CM_MICRODESC,
+                                 MAX_SUPPORTED_CONSENSUS_METHOD,
+                                 ",");
+    tor_assert(microdesc_consensus_methods);
+  }
+  if (crypto_digest256(d, microdesc, microdescriptor_len, DIGEST_SHA256)<0)
+    return -1;
+  if (digest256_to_base64(d64, d)<0)
+    return -1;
+
+  if (tor_snprintf(out, out_len, "m %s sha256=%s\n",
+                   microdesc_consensus_methods, d64)<0)
+    return -1;
+
+  return strlen(out);
 }
 

@@ -3823,6 +3823,12 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert);
 
+int dirvote_create_microdescriptor(char *out,
+                                   size_t outlen, const routerinfo_t *ri);
+int dirvote_format_microdescriptor_vote_line(char *out, size_t out_len,
+                                             const char *microdesc,
+                                             size_t microdescriptor_len);
+
 #ifdef DIRVOTE_PRIVATE
 char *format_networkstatus_vote(crypto_pk_env_t *private_key,
                                  networkstatus_t *v3_ns);
