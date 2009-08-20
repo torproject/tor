@@ -545,6 +545,34 @@ static int tor_version_same_series(tor_version_t *a, tor_version_t *b);
 #define DUMP_AREA(a,name) STMT_NIL
 #endif
 
+/** Last time we dumped a descriptor to disk. */
+static time_t last_desc_dumped = 0;
+
+/** For debugging purposes, dump unparseable descriptor *<b>desc</b> of
+ * type *<b>type</b> to file $DATADIR/unparseable-desc. Do not write more
+ * than one descriptor to disk per minute. If there is already such a
+ * file in the data directory, overwrite it. */
+static void
+dump_desc(const char *desc, const char *type)
+{
+  time_t now = time(NULL);
+  tor_assert(desc);
+  tor_assert(type);
+  if (!last_desc_dumped || last_desc_dumped + 60 < now) {
+    char *debugfile = get_datadir_fname("unparseable-desc");
+    size_t filelen = 50 + strlen(type) + strlen(desc);
+    char *content = tor_malloc_zero(filelen);
+    tor_snprintf(content, filelen, "Unable to parse descriptor of type "
+                 "%s:\n%s", type, desc);
+    write_str_to_file(debugfile, content, 0);
+    log_info(LD_DIR, "Unable to parse descriptor of type %s. See file "
+             "unparseable-desc in data directory for details.", type);
+    tor_free(content);
+    tor_free(debugfile);
+    last_desc_dumped = now;
+  }
+}
+
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the directory in
  * <b>s</b>.  Return 0 on success, -1 on failure.
  */
@@ -734,7 +762,7 @@ router_parse_directory(const char *str)
   char digest[DIGEST_LEN];
   time_t published_on;
   int r;
-  const char *end, *cp;
+  const char *end, *cp, *str_dup = str;
   smartlist_t *tokens = NULL;
   crypto_pk_env_t *declared_key = NULL;
   memarea_t *area = memarea_new();
@@ -807,6 +835,7 @@ router_parse_directory(const char *str)
   r = 0;
   goto done;
  err:
+  dump_desc(str_dup, "v1 directory");
   r = -1;
  done:
   if (declared_key) crypto_free_pk_env(declared_key);
@@ -833,7 +862,7 @@ router_parse_runningrouters(const char *str)
   int r = -1;
   crypto_pk_env_t *declared_key = NULL;
   smartlist_t *tokens = NULL;
-  const char *eos = str + strlen(str);
+  const char *eos = str + strlen(str), *str_dup = str;
   memarea_t *area = NULL;
 
   if (router_get_runningrouters_hash(str, digest)) {
@@ -874,6 +903,7 @@ router_parse_runningrouters(const char *str)
 
   r = 0;
  err:
+  dump_desc(str_dup, "v1 running-routers");
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
@@ -1183,7 +1213,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   smartlist_t *tokens = NULL, *exit_policy_tokens = NULL;
   directory_token_t *tok;
   struct in_addr in;
-  const char *start_of_annotations, *cp;
+  const char *start_of_annotations, *cp, *s_dup = s;
   size_t prepend_len = prepend_annotations ? strlen(prepend_annotations) : 0;
   int ok = 1;
   memarea_t *area = NULL;
@@ -1473,6 +1503,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   goto done;
 
  err:
+  dump_desc(s_dup, "router descriptor");
   routerinfo_free(router);
   router = NULL;
  done:
@@ -1507,6 +1538,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   crypto_pk_env_t *key = NULL;
   routerinfo_t *router = NULL;
   memarea_t *area = NULL;
+  const char *s_dup = s;
 
   if (!end) {
     end = s + strlen(s);
@@ -1595,6 +1627,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 
   goto done;
  err:
+  dump_desc(s_dup, "extra-info descriptor");
   if (extrainfo)
     extrainfo_free(extrainfo);
   extrainfo = NULL;
@@ -1624,6 +1657,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   size_t len;
   int found;
   memarea_t *area = NULL;
+  const char *s_dup = s;
 
   s = eat_whitespace(s);
   eos = strstr(s, "\ndir-key-certification");
@@ -1777,6 +1811,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   }
   return cert;
  err:
+  dump_desc(s_dup, "authority cert");
   authority_cert_free(cert);
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
   smartlist_free(tokens);
@@ -1827,7 +1862,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
                                      vote_routerstatus_t *vote_rs,
                                      int consensus_method)
 {
-  const char *eos;
+  const char *eos, *s_dup = *s;
   routerstatus_t *rs = NULL;
   directory_token_t *tok;
   char timebuf[ISO_TIME_LEN+1];
@@ -2010,6 +2045,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
 
   goto done;
  err:
+  dump_desc(s_dup, "routerstatus entry");
   if (rs && !vote_rs)
     routerstatus_free(rs);
   rs = NULL;
@@ -2051,7 +2087,7 @@ _free_duplicate_routerstatus_entry(void *e)
 networkstatus_v2_t *
 networkstatus_v2_parse_from_string(const char *s)
 {
-  const char *eos;
+  const char *eos, *s_dup = s;
   smartlist_t *tokens = smartlist_create();
   smartlist_t *footer_tokens = smartlist_create();
   networkstatus_v2_t *ns = NULL;
@@ -2200,6 +2236,7 @@ networkstatus_v2_parse_from_string(const char *s)
 
   goto done;
  err:
+  dump_desc(s_dup, "v2 networkstatus");
   if (ns)
     networkstatus_v2_free(ns);
   ns = NULL;
@@ -2226,7 +2263,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   networkstatus_voter_info_t *voter = NULL;
   networkstatus_t *ns = NULL;
   char ns_digest[DIGEST_LEN];
-  const char *cert, *end_of_header, *end_of_footer;
+  const char *cert, *end_of_header, *end_of_footer, *s_dup = s;
   directory_token_t *tok;
   int ok;
   struct in_addr in;
@@ -2584,6 +2621,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   goto done;
  err:
+  dump_desc(s_dup, "v3 networkstatus");
   if (ns)
     networkstatus_vote_free(ns);
   ns = NULL;
