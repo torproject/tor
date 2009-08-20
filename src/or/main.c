@@ -1410,8 +1410,10 @@ do_main_loop(void)
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
 
-  if (trusted_dirs_reload_certs())
-    return -1;
+  if (trusted_dirs_reload_certs()) {
+    log_warn(LD_DIR,
+             "Couldn't load all cached v3 certificates. Starting anyway.");
+  }
   if (router_reload_v2_networkstatus()) {
     return -1;
   }
