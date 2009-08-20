@@ -472,6 +472,17 @@ test_crypto_formats(void)
 
   test_assert(digest_from_base64(data3, "###") < 0);
 
+  /* Encoding SHA256 */
+  crypto_rand(data2, DIGEST256_LEN);
+  memset(data2, 100, 1024);
+  digest256_to_base64(data2, data1);
+  test_eq(BASE64_DIGEST256_LEN, strlen(data2));
+  test_eq(100, data2[BASE64_DIGEST256_LEN+2]);
+  memset(data3, 99, 1024);
+  test_eq(digest256_from_base64(data3, data2), 0);
+  test_memeq(data1, data3, DIGEST256_LEN);
+  test_eq(99, data3[DIGEST256_LEN+1]);
+
   /* Base32 tests */
   strlcpy(data1, "5chrs", 1024);
   /* bit pattern is:  [35 63 68 72 73] ->

@@ -211,6 +211,8 @@ int base32_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 int digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
+int digest256_to_base64(char *d64, const char *digest);
+int digest256_from_base64(char *digest, const char *d64);
 
 /** Length of RFC2440-style S2K specifier: the first 8 bytes are a salt, the
  * 9th describes how much iteration to do. */

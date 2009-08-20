@@ -2274,6 +2274,44 @@ digest_from_base64(char *digest, const char *d64)
 #endif
 }
 
+/** Base-64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
+ * trailing = and newline characters, and store the nul-terminated result in
+ * the first BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.  */
+int
+digest256_to_base64(char *d64, const char *digest)
+{
+  char buf[256];
+  base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN);
+  buf[BASE64_DIGEST256_LEN] = '\0';
+  memcpy(d64, buf, BASE64_DIGEST256_LEN+1);
+  return 0;
+}
+
+/** Given a base-64 encoded, nul-terminated digest in <b>d64</b> (without
+ * trailing newline or = characters), decode it and store the result in the
+ * first DIGEST256_LEN bytes at <b>digest</b>. */
+int
+digest256_from_base64(char *digest, const char *d64)
+{
+#ifdef USE_OPENSSL_BASE64
+  char buf_in[BASE64_DIGEST256_LEN+3];
+  char buf[256];
+  if (strlen(d64) != BASE64_DIGEST256_LEN)
+    return -1;
+  memcpy(buf_in, d64, BASE64_DIGEST256_LEN);
+  memcpy(buf_in+BASE64_DIGEST256_LEN, "=\n\0", 3);
+  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST256_LEN)
+    return -1;
+  memcpy(digest, buf, DIGEST256_LEN);
+  return 0;
+#else
+  if (base64_decode(digest, DIGEST256_LEN, d64, strlen(d64)) == DIGEST256_LEN)
+    return 0;
+  else
+    return -1;
+#endif
+}
+
 /** Implements base32 encoding as in rfc3548.  Limitation: Requires
  * that srclen*8 is a multiple of 5.
  */
