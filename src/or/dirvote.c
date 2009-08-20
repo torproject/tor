@@ -21,6 +21,10 @@ static int dirvote_perform_vote(void);
 static void dirvote_clear_votes(int all_votes);
 static int dirvote_compute_consensus(void);
 static int dirvote_publish_consensus(void);
+static char *make_consensus_method_list(int low, int high);
+
+/** The highest consensus method that we currently support. */
+#define MAX_SUPPORTED_CONSENSUS_METHOD 6
 
 /* =====
  * Voting
@@ -94,6 +98,8 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     char vu[ISO_TIME_LEN+1];
     char *flags = smartlist_join_strings(v3_ns->known_flags, " ", 0, NULL);
     authority_cert_t *cert = v3_ns->cert;
+    char *methods =
+      make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD);
     format_iso_time(published, v3_ns->published);
     format_iso_time(va, v3_ns->valid_after);
     format_iso_time(fu, v3_ns->fresh_until);
@@ -103,10 +109,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status %s\n"
-                 /* XXX: If you change this value, you also need to
-                  * change consensus_method_is_supported().
-                  * Perhaps we should unify these somehow? */
-                 "consensus-methods 1 2 3 4 5 6\n"
+                 "consensus-methods %s\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -117,6 +120,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n",
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
+                 methods,
                  published, va, fu, vu,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  version_lines,
@@ -125,6 +129,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                    ipaddr, voter->dir_port, voter->or_port, voter->contact);
 
     tor_free(flags);
+    tor_free(methods);
     outp = status + strlen(status);
     endp = status + len;
 
@@ -458,10 +463,31 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  /* XXX: If you change this value, you also need to change
-   * format_networkstatus_vote(). Perhaps we should unify
-   * these somehow? */
-  return (method >= 1) && (method <= 6);
+  return (method >= 1) && (method <= MAX_SUPPORTED_CONSENSUS_METHOD);
+}
+
+/** Return a newly allocated string holding the numbers between low and high
+ * (inclusive) that are supported consensus methods. */
+static char *
+make_consensus_method_list(int low, int high)
+{
+  char *list;
+
+  char b[32];
+  int i;
+  smartlist_t *lst;
+  lst = smartlist_create();
+  for (i = low; i <= high; ++i) {
+    if (!consensus_method_is_supported(i))
+      continue;
+    tor_snprintf(b, sizeof(b), "%d", i);
+    smartlist_add(lst, tor_strdup(b));
+  }
+  list = smartlist_join_strings(lst, " ", 0, NULL);
+  tor_assert(list);
+  SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
+  smartlist_free(lst);
+  return list;
 }
 
 /** Helper: given <b>lst</b>, a list of version strings such that every
