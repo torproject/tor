@@ -1510,11 +1510,11 @@ crypto_digest_get_digest(crypto_digest_env_t *digest,
   switch (digest->algorithm) {
     case DIGEST_SHA1:
       tor_assert(out_len <= DIGEST_LEN);
-      SHA1_Final(r, &digest->d.sha1);
+      SHA1_Final(r, &tmpenv.d.sha1);
       break;
     case DIGEST_SHA256:
       tor_assert(out_len <= DIGEST256_LEN);
-      SHA256_Final(r, &digest->d.sha2);
+      SHA256_Final(r, &tmpenv.d.sha2);
       break;
     default:
       tor_fragile_assert();
