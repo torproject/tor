@@ -1649,6 +1649,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
     if (trusted_dirs_load_certs_from_string(body, 0, 1)<0) {
       log_warn(LD_DIR, "Unable to parse fetched certificates");
+      /* if we fetched more than one and only some failed, the successful
+       * ones got flushed to disk so it's safe to call this on them */
       connection_dir_download_cert_failed(conn, status_code);
     } else {
       directory_info_has_arrived(now, 0);

@@ -39,6 +39,11 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
       as only certain clients who must have this information sooner should
       set this option.
 
+  o Minor bugfixes:
+    - If any the v3 certs we download are unparseable, we should actually
+      notice the failure so we don't retry indefinitely. Bugfix on
+      0.2.0.x; reported by "rotator".
+
   o Deprecated and removed features:
     - The controller no longer accepts the old obsolete "addr-mappings/"
       or "unregistered-servers-" GETINFO values.
