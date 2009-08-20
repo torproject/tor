@@ -1,7 +1,7 @@
 
 noinst_LIBRARIES = libor.a libor-crypto.a libor-event.a
 
-EXTRA_DIST = common_sha1.i
+EXTRA_DIST = common_sha1.i sha256.c
 
 #CFLAGS  = -Wall -Wpointer-arith -O2
 
@@ -29,3 +29,4 @@ common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
 	fi
 
 util_codedigest.o: common_sha1.i
+crypto.o: sha256.c

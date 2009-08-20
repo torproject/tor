@@ -62,6 +62,28 @@
 
 #include <openssl/engine.h>
 
+#if OPENSSL_VERSION_NUMBER < 0x00908000l
+/* On OpenSSL versions before 0.9.8, there is no working SHA256
+ * implementation, so we use Tom St Denis's nice speedy one, slightly adapted
+ * to our needs */
+#define SHA256_CTX sha256_state
+#define SHA256_Init sha256_init
+#define SHA256_Update sha256_process
+#define LTC_ARGCHK(x) tor_assert(x)
+#include "sha256.c"
+#define SHA256_Final(a,b) sha256_done(b,a)
+
+static unsigned char *
+SHA256(const unsigned char *m, size_t len, unsigned char *d)
+{
+  SHA256_CTX ctx;
+  SHA256_Init(&ctx);
+  SHA256_Update(&ctx, m, len);
+  SHA256_Final(d, &ctx);
+  return d;
+}
+#endif
+
 /** Macro: is k a valid RSA public or private key? */
 #define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
 /** Macro: is k a valid RSA private key? */
