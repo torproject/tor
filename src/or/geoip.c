@@ -720,9 +720,9 @@ geoip_get_dirreq_history(geoip_client_action_t action,
                            dirreq_type_t type)
 {
   char *result = NULL;
-  smartlist_t *dirreq_times = NULL;
+  smartlist_t *dirreq_completed = NULL;
   uint32_t complete = 0, timeouts = 0, running = 0;
-  int i = 0, bufsize = 1024, written;
+  int bufsize = 1024, written;
   dirreq_map_entry_t **ptr, **next, *ent;
   struct timeval now;
 
@@ -730,7 +730,7 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   if (action != GEOIP_CLIENT_NETWORKSTATUS &&
       action != GEOIP_CLIENT_NETWORKSTATUS_V2)
     return NULL;
-  dirreq_times = smartlist_create();
+  dirreq_completed = smartlist_create();
   for (ptr = HT_START(dirreqmap, &dirreq_map); ptr; ptr = next) {
     ent = *ptr;
     if (ent->action != action || ent->type != type) {
@@ -738,24 +738,17 @@ geoip_get_dirreq_history(geoip_client_action_t action,
       continue;
     } else {
       if (ent->completed) {
-        uint32_t *bytes_per_second = tor_malloc_zero(sizeof(uint32_t));
-        uint32_t time_diff = (uint32_t) tv_mdiff(&ent->request_time,
-                                                 &ent->completion_time);
-        if (time_diff == 0)
-          time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
-                          * by law of nature or something, but a milisecond
-                          * is a bit greater than "instantly" */
-        *bytes_per_second = 1000 * ent->response_size / time_diff;
-        smartlist_add(dirreq_times, bytes_per_second);
+        smartlist_add(dirreq_completed, ent);
         complete++;
+        next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ptr);
       } else {
         if (tv_mdiff(&ent->request_time, &now) / 1000 > DIRREQ_TIMEOUT)
           timeouts++;
         else
           running++;
+        next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ptr);
+        tor_free(ent);
       }
-      next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ptr);
-      tor_free(ent);
     }
   }
 #define DIR_REQ_GRANULARITY 4
@@ -769,18 +762,29 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   written = tor_snprintf(result, bufsize, "complete=%u,timeout=%u,"
                          "running=%u", complete, timeouts, running);
   if (written < 0) {
-    SMARTLIST_FOREACH(dirreq_times, uint32_t *, dlt, tor_free(dlt));
-    smartlist_free(dirreq_times);
-    return NULL;
+    tor_free(result);
+    goto done;
   }
+
 #define MIN_DIR_REQ_RESPONSES 16
   if (complete >= MIN_DIR_REQ_RESPONSES) {
-    uint32_t *dltimes = tor_malloc(sizeof(uint32_t) * complete);
-    SMARTLIST_FOREACH(dirreq_times, uint32_t *, dlt, {
-      dltimes[i++] = *dlt;
-      tor_free(dlt);
-    });
-    median_uint32(dltimes, complete); /* sort */
+    uint32_t *dltimes;
+    /* We may have rounded 'completed' up.  Here we want to use the
+     * real value. */
+    complete = smartlist_len(dirreq_completed);
+    dltimes = tor_malloc_zero(sizeof(uint32_t) * complete);
+    SMARTLIST_FOREACH_BEGIN(dirreq_completed, dirreq_map_entry_t *, ent) {
+      uint32_t bytes_per_second;
+      uint32_t time_diff = (uint32_t) tv_mdiff(&ent->request_time,
+                                               &ent->completion_time);
+      if (time_diff == 0)
+        time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
+                        * by law of nature or something, but a milisecond
+                        * is a bit greater than "instantly" */
+      bytes_per_second = 1000 * ent->response_size / time_diff;
+      dltimes[ent_sl_idx] = bytes_per_second;
+    } SMARTLIST_FOREACH_END(ent);
+    median_uint32(dltimes, complete); /* sorts as a side effect. */
     written = tor_snprintf(result + written, bufsize - written,
                            ",min=%u,d1=%u,d2=%u,q1=%u,d3=%u,d4=%u,md=%u,"
                            "d6=%u,d7=%u,q3=%u,d8=%u,d9=%u,max=%u",
@@ -797,13 +801,14 @@ geoip_get_dirreq_history(geoip_client_action_t action,
                            dltimes[8*complete/10-1],
                            dltimes[9*complete/10-1],
                            dltimes[complete-1]);
+    if (written<0)
+      tor_free(result);
     tor_free(dltimes);
-  } else {
-    SMARTLIST_FOREACH(dirreq_times, uint32_t *, dlt, tor_free(dlt));
   }
-  if (written < 0)
-    tor_free(result);
-  smartlist_free(dirreq_times);
+ done:
+  SMARTLIST_FOREACH(dirreq_completed, dirreq_map_entry_t *, ent,
+                    tor_free(ent));
+  smartlist_free(dirreq_completed);
   return result;
 }
 #endif
