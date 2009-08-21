@@ -743,7 +743,8 @@ geoip_get_dirreq_history(geoip_client_action_t action,
                                                  &ent->completion_time);
         if (time_diff == 0)
           time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
-                          * anyway by law of nature or something.. */
+                          * by law of nature or something, but a milisecond
+                          * is a bit greater than "instantly" */
         *bytes_per_second = 1000 * ent->response_size / time_diff;
         smartlist_add(dirreq_times, bytes_per_second);
         complete++;
@@ -767,8 +768,11 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   result = tor_malloc_zero(bufsize);
   written = tor_snprintf(result, bufsize, "complete=%u,timeout=%u,"
                          "running=%u", complete, timeouts, running);
-  if (written < 0)
+  if (written < 0) {
+    SMARTLIST_FOREACH(dirreq_times, uint32_t *, dlt, tor_free(dlt));
+    smartlist_free(dirreq_times);
     return NULL;
+  }
 #define MIN_DIR_REQ_RESPONSES 16
   if (complete >= MIN_DIR_REQ_RESPONSES) {
     uint32_t *dltimes = tor_malloc(sizeof(uint32_t) * complete);
@@ -794,9 +798,11 @@ geoip_get_dirreq_history(geoip_client_action_t action,
                            dltimes[9*complete/10-1],
                            dltimes[complete-1]);
     tor_free(dltimes);
+  } else {
+    SMARTLIST_FOREACH(dirreq_times, uint32_t *, dlt, tor_free(dlt));
   }
   if (written < 0)
-    result = NULL;
+    tor_free(result);
   smartlist_free(dirreq_times);
   return result;
 }
