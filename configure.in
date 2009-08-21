@@ -127,7 +127,9 @@ AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
-AC_PROG_SED
+
+dnl autoconf 2.59 appears not to support AC_PROG_SED
+AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
 
 AC_PATH_PROG([SHA1SUM], [sha1sum], none)
 AC_PATH_PROG([OPENSSL], [openssl], none)
