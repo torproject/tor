@@ -365,6 +365,23 @@ geoip_get_mean_shares(time_t now, double *v2_share_out,
   return 0;
 }
 
+/* Rotate period of v2 and v3 network status requests. */
+static void
+rotate_request_period(void)
+{
+  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+      memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
+              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
+      memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
+              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
+      c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
+      c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
+    });
+  current_request_period_starts += REQUEST_HIST_PERIOD;
+  if (n_old_request_periods < REQUEST_HIST_LEN-1)
+    ++n_old_request_periods;
+}
+
 /** Note that we've seen a client connect from the IP <b>addr</b> (host order)
  * at time <b>now</b>. Ignored by all but bridges and directories if
  * configured accordingly. */
@@ -404,17 +421,7 @@ geoip_note_client_seen(geoip_client_action_t action,
        * with action GEOIP_CLIENT_NETWORKSTATUS{_V2}.) */
       geoip_remove_old_clients(current_request_period_starts);
       /* Now rotate request period */
-      SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
-          memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
-                  sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-          memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
-                  sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-          c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
-          c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
-        });
-      current_request_period_starts += REQUEST_HIST_PERIOD;
-      if (n_old_request_periods < REQUEST_HIST_LEN-1)
-        ++n_old_request_periods;
+      rotate_request_period();
     }
   }
 
@@ -1046,17 +1053,7 @@ geoip_dirreq_stats_write(time_t now)
   open_file = NULL;
 
   /* Rotate request period */
-  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
-      memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
-              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-      memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
-              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-      c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
-      c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
-    });
-  current_request_period_starts += REQUEST_HIST_PERIOD;
-  if (n_old_request_periods < REQUEST_HIST_LEN-1)
-    ++n_old_request_periods;
+  rotate_request_period();
 
   start_of_dirreq_stats_interval = now;
 

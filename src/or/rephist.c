@@ -1371,6 +1371,9 @@ rep_hist_exit_stats_write(time_t now)
   open_file_t *open_file = NULL;
   FILE *out = NULL;
 
+  if (!exit_streams)
+    return; /* Not initialized */
+
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
@@ -1480,6 +1483,8 @@ rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes)
 {
   if (!get_options()->ExitPortStatistics)
     return;
+  if (!exit_bytes_written)
+    return; /* Not initialized */
   exit_bytes_written[port] += num_bytes;
   log_debug(LD_HIST, "Written %lu bytes to exit connection to port %d.",
             (unsigned long)num_bytes, port);
@@ -1492,6 +1497,8 @@ rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes)
 {
   if (!get_options()->ExitPortStatistics)
     return;
+  if (!exit_bytes_read)
+    return; /* Not initialized */
   exit_bytes_read[port] += num_bytes;
   log_debug(LD_HIST, "Read %lu bytes from exit connection to port %d.",
             (unsigned long)num_bytes, port);
@@ -1503,6 +1510,8 @@ rep_hist_note_exit_stream_opened(uint16_t port)
 {
   if (!get_options()->ExitPortStatistics)
     return;
+  if (!exit_streams)
+    return; /* Not initialized */
   exit_streams[port]++;
   log_debug(LD_HIST, "Opened exit stream to port %d", port);
 }

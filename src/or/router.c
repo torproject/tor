@@ -1826,36 +1826,40 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   return (int)written+1;
 }
 
-/** Load the contents of <b>filename</b>, find the first line starting
- * with <b>end_line</b> that has a timestamp after <b>after</b>, and write
- * the file contents starting with that line to **<b>contents</b>. Return
- * 1 for success, 0 if the file does not exist or does not contain a line
- * matching these criteria, or -1 for failure. */
+/** Load the contents of <b>filename</b>, find the last line starting with
+ * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
+ * the past or more than 1 hour in the future with respect to <b>now</b>,
+ * and write the file contents starting with that line to **<b>out</b>.
+ * Return 1 for success, 0 if the file does not exist or does not contain
+ * a line matching these criteria, or -1 for failure. */
 static int
-load_stats_file(const char *filename, const char *end_line, time_t after,
+load_stats_file(const char *filename, const char *end_line, time_t now,
                 char **out)
 {
   int r = -1;
   char *fname = get_datadir_fname(filename);
-  char *contents, *start, timestr[ISO_TIME_LEN+1];
+  char *contents, *start = NULL, *tmp, timestr[ISO_TIME_LEN+1];
   time_t written;
   switch (file_status(fname)) {
     case FN_FILE:
+      /* X022 Find an alternative to reading the whole file to memory. */
       if ((contents = read_file_to_str(fname, 0, NULL))) {
-        start = contents;
-        do {
-          if (start != contents)
-            start++; /* Avoid infinite loops. */
-          if (!(start = strstr(start, end_line)))
-            goto notfound;
-          if (strlen(start) < strlen(end_line) + 1 + sizeof(timestr))
-            goto notfound;
-          strlcpy(timestr, start + 1 + strlen(end_line), sizeof(timestr));
-          if (parse_iso_time(timestr, &written) < 0)
-            goto notfound;
-        } while (written <= after);
-        *out = tor_malloc(strlen(start));
-        strlcpy(*out, start, strlen(start));
+        tmp = strstr(contents, end_line);
+        /* Find last block starting with end_line */
+        while (tmp) {
+          start = tmp;
+          tmp = strstr(tmp + 1, end_line);
+        }
+        if (!start)
+          goto notfound;
+        if (strlen(start) < strlen(end_line) + 1 + sizeof(timestr))
+          goto notfound;
+        strlcpy(timestr, start + 1 + strlen(end_line), sizeof(timestr));
+        if (parse_iso_time(timestr, &written) < 0)
+          goto notfound;
+        if (written < now - (25*60*60) || written > now + (1*60*60))
+          goto notfound;
+        *out = tor_strdup(start);
         r = 1;
       }
      notfound:
@@ -1908,7 +1912,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
         log_warn(LD_DIR, "Could not write dirreq-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';
@@ -1919,7 +1924,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
                         "entry-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
         log_warn(LD_DIR, "Could not write entry-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';
@@ -1930,7 +1936,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
                         "cell-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
         log_warn(LD_DIR, "Could not write buffer-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';
@@ -1941,7 +1948,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
         load_stats_file("stats"PATH_SEPARATOR"exit-stats",
                         "exit-stats-end", since, &contents) > 0) {
       int pos = strlen(s);
-      if (tor_snprintf(s + pos, maxlen - strlen(s), "%s\n", contents) < 0) {
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
         log_warn(LD_DIR, "Could not write exit-stats to extra-info "
                  "descriptor.");
         s[pos] = '\0';

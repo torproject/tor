@@ -1677,7 +1677,7 @@ cell_queue_clear(cell_queue_t *queue)
       queue->insertion_times->first = elem->next;
       mp_pool_release(elem);
     }
-    queue->insertion_times = NULL;
+    tor_free(queue->insertion_times);
   }
 }
 
