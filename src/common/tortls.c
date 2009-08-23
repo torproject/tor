@@ -1205,6 +1205,14 @@ tor_tls_handshake(tor_tls_t *tls)
   return r;
 }
 
+/** Perform the final part of the intial TLS handshake on <b>tls</b>.  This
+ * should be called for the first handshake only: it determiens whether the v1
+ * or the v2 handshake was used, and adjusts things for the renegotiation
+ * handshake as appropriate.
+ *
+ * tor_tls_handshake() calls this on its own; you only need to call this if
+ * bufferevent is doing the handshake for you.
+ */
 int
 tor_tls_finish_handshake(tor_tls_t *tls)
 {
@@ -1258,7 +1266,8 @@ tor_tls_finish_handshake(tor_tls_t *tls)
 }
 
 #ifdef USE_BUFFEREVENTS
-/** DOCDOC */
+/** Put <b>tls</b>, which must be a client connection, into renegotiation
+ * mode. */
 int
 tor_tls_start_renegotiating(tor_tls_t *tls)
 {
@@ -1660,7 +1669,20 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
 }
 
 #ifdef USE_BUFFEREVENTS
-/** DOCDOC may free bufev_in */
+/** Construct and return an TLS-encrypting bufferevent to send data over
+ * <b>socket</b>, which must match the socket of the underlying bufferevent
+ * <b>bufev_in</b>.  The TLS object <b>tls</b> is used for encryption.
+ *
+ * This function will either create a filtering bufferevent that wraps around
+ * <b>bufev_in</b>, or it will free bufev_in and return a new bufferevent that
+ * uses the <b>tls</b> to talk to the network directly.  Do not use
+ * <b>bufev_in</b> after calling this function.
+ *
+ * The connection will start out doing a server handshake if <b>receiving</b>
+ * is strue, and a client handshake otherwise.
+ *
+ * Returns NULL on failure.
+ */
 struct bufferevent *
 tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
                          evutil_socket_t socket, int receiving)

@@ -2633,6 +2633,9 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
 #ifdef USE_BUFFEREVENTS
 /* XXXX These generic versions could be simplified by making them
    type-specific */
+
+/** Callback: Invoked whenever bytes are added to or drained from an input
+ * evbuffer.  Used to track the number of bytes read. */
 static void
 evbuffer_inbuf_callback(struct evbuffer *buf,
                         const struct evbuffer_cb_info *info, void *arg)
@@ -2653,7 +2656,8 @@ evbuffer_inbuf_callback(struct evbuffer *buf,
   }
 }
 
-/** DOCDOC */
+/** Callback: Invoked whenever bytes are added to or drained from an output
+ * evbuffer.  Used to track the number of bytes written. */
 static void
 evbuffer_outbuf_callback(struct evbuffer *buf,
                          const struct evbuffer_cb_info *info, void *arg)
@@ -2673,7 +2677,7 @@ evbuffer_outbuf_callback(struct evbuffer *buf,
   }
 }
 
-/** DOCDOC */
+/** Callback: invoked whenever a bufferevent has read data. */
 void
 connection_handle_read_cb(struct bufferevent *bufev, void *arg)
 {
@@ -2684,7 +2688,7 @@ connection_handle_read_cb(struct bufferevent *bufev, void *arg)
       connection_mark_for_close(conn);
 }
 
-/** DOCDOC */
+/** Callback: invoked whenever a bufferevent has written data. */
 void
 connection_handle_write_cb(struct bufferevent *bufev, void *arg)
 {
@@ -2708,7 +2712,8 @@ connection_handle_write_cb(struct bufferevent *bufev, void *arg)
   }
 }
 
-/** DOCDOC */
+/** Callback: invoked whenever a bufferevent has had an event (like a
+ * connection, or an eof, or an error) occur. */
 void
 connection_handle_event_cb(struct bufferevent *bufev, short event, void *arg)
 {
@@ -2746,6 +2751,7 @@ connection_handle_event_cb(struct bufferevent *bufev, short event, void *arg)
   }
 }
 
+/** Set up the generic callbacks for the bufferevent on <b>conn</b>. */
 void
 connection_configure_bufferevent_callbacks(connection_t *conn)
 {
