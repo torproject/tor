@@ -1901,10 +1901,11 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
 
   r = tor_snprintf(buf, buf_len,
-                   "r %s %s %s %s %s %d %d\n",
+                   "r %s %s %s%s%s %s %d %d\n",
                    rs->nickname,
                    identity64,
-                   digest64,
+                   (format==NS_V3_CONSENSUS_MICRODESC)?"":digest64,
+                   (format==NS_V3_CONSENSUS_MICRODESC)?"":" ",
                    published,
                    ipaddr,
                    (int)rs->or_port,
@@ -1918,7 +1919,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
    * this here, instead of in the caller. Then we could use the
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
-  if (format == NS_V3_CONSENSUS)
+  if (format == NS_V3_CONSENSUS || format == NS_V3_CONSENSUS_MICRODESC)
     return 0;
 
   cp = buf + strlen(buf);
@@ -2434,6 +2435,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   vote_timing_t timing;
   digestmap_t *omit_as_sybil = NULL;
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
+  smartlist_t *microdescriptors = NULL;
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -2482,11 +2484,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   omit_as_sybil = get_possible_sybil_list(routers);
 
   routerstatuses = smartlist_create();
+  microdescriptors = smartlist_create();
 
-  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     if (ri->cache_info.published_on >= cutoff) {
       routerstatus_t *rs;
       vote_routerstatus_t *vrs;
+      microdesc_t *md;
 
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
@@ -2501,9 +2505,30 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
         rs->is_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
+      md = dirvote_create_microdescriptor(ri);
+      if (md) {
+        char buf[128];
+        vote_microdesc_hash_t *h;
+        dirvote_format_microdesc_vote_line(buf, sizeof(buf), md);
+        h = tor_malloc(sizeof(vote_microdesc_hash_t));
+        h->microdesc_hash_line = tor_strdup(buf);
+        h->next = NULL;
+        vrs->microdesc = h;
+        md->last_listed = now;
+        smartlist_add(microdescriptors, md);
+      }
+
       smartlist_add(routerstatuses, vrs);
     }
-  });
+  } SMARTLIST_FOREACH_END(ri);
+
+  {
+    smartlist_t *added =
+      microdescs_add_list_to_cache(get_microdesc_cache(),
+                                   microdescriptors, SAVED_NOWHERE, 0);
+    smartlist_free(added);
+    smartlist_free(microdescriptors);
+  }
 
   smartlist_free(routers);
   digestmap_free(omit_as_sybil, NULL);

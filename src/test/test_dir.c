@@ -858,7 +858,8 @@ test_dir_v3_networkstatus(void)
                                                    cert3->identity_key,
                                                    sign_skey_3,
                                                    "AAAAAAAAAAAAAAAAAAAA",
-                                                   sign_skey_leg1);
+                                                   sign_skey_leg1,
+                                                   FLAV_NS);
   test_assert(consensus_text);
   con = networkstatus_parse_vote_from_string(consensus_text, NULL,
                                              NS_TYPE_CONSENSUS);
@@ -966,11 +967,13 @@ test_dir_v3_networkstatus(void)
     smartlist_shuffle(votes);
     consensus_text2 = networkstatus_compute_consensus(votes, 3,
                                                       cert2->identity_key,
-                                                      sign_skey_2, NULL,NULL);
+                                                      sign_skey_2, NULL,NULL,
+                                                      FLAV_NS);
     smartlist_shuffle(votes);
     consensus_text3 = networkstatus_compute_consensus(votes, 3,
                                                       cert1->identity_key,
-                                                      sign_skey_1, NULL,NULL);
+                                                      sign_skey_1, NULL,NULL,
+                                                      FLAV_NS);
     test_assert(consensus_text2);
     test_assert(consensus_text3);
     con2 = networkstatus_parse_vote_from_string(consensus_text2, NULL,

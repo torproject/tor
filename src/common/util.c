@@ -684,6 +684,13 @@ tor_digest_is_zero(const char *digest)
   return tor_mem_is_zero(digest, DIGEST_LEN);
 }
 
+/** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
+int
+tor_digest256_is_zero(const char *digest)
+{
+  return tor_mem_is_zero(digest, DIGEST256_LEN);
+}
+
 /* Helper: common code to check whether the result of a strtol or strtoul or
  * strtoll is correct. */
 #define CHECK_STRTOX_RESULT()                           \

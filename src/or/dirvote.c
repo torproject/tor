@@ -24,13 +24,19 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 7
+#define MAX_SUPPORTED_CONSENSUS_METHOD 8
 
 #define MIN_METHOD_FOR_PARAMS 7
+
+/** Lowest consensus method that generates microdescriptors */
+#define MIN_METHOD_FOR_MICRODESC 8
 
 /* =====
  * Voting
  * =====*/
+
+/* Overestimated. */
+#define MICRODESC_LINE_LEN 80
 
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
@@ -89,7 +95,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
 
   len = 8192;
   len += strlen(version_lines);
-  len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
+  len += (RS_ENTRY_LEN+MICRODESC_LINE_LEN)*smartlist_len(rl->routers);
   len += v3_ns->cert->cache_info.signed_descriptor_len;
 
   status = tor_malloc(len);
@@ -158,15 +164,25 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     outp += cert->cache_info.signed_descriptor_len;
   }
 
-  SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
-  {
+  SMARTLIST_FOREACH_BEGIN(v3_ns->routerstatus_list, vote_routerstatus_t *,
+                          vrs) {
+    vote_microdesc_hash_t *h;
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
                                   vrs->version, NS_V3_VOTE) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
       goto err;
     }
     outp += strlen(outp);
-  });
+
+    for (h = vrs->microdesc; h; h = h->next) {
+      size_t mlen = strlen(h->microdesc_hash_line);
+      if (outp+mlen >= endp) {
+        log_warn(LD_BUG, "Can't fit microdesc line in vote.");
+      }
+      memcpy(outp, h->microdesc_hash_line, mlen+1);
+      outp += strlen(outp);
+    }
+  } SMARTLIST_FOREACH_END(vrs);
 
   {
     char signing_key_fingerprint[FINGERPRINT_LEN+1];
@@ -189,7 +205,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     outp += strlen(outp);
   }
 
-  if (router_get_networkstatus_v3_hash(status, digest)<0)
+  if (router_get_networkstatus_v3_hash(status, digest, DIGEST_SHA1)<0)
     goto err;
   note_crypto_pk_op(SIGN_DIR);
   if (router_append_dirobj_signature(outp,endp-outp,digest, DIGEST_LEN,
@@ -294,34 +310,8 @@ get_frequent_members(smartlist_t *out, smartlist_t *in, int min)
 
 /** Given a sorted list of strings <b>lst</b>, return the member that appears
  * most.  Break ties in favor of later-occurring members. */
-static const char *
-get_most_frequent_member(smartlist_t *lst)
-{
-  const char *most_frequent = NULL;
-  int most_frequent_count = 0;
-
-  const char *cur = NULL;
-  int count = 0;
-
-  SMARTLIST_FOREACH(lst, const char *, s,
-  {
-    if (cur && !strcmp(s, cur)) {
-      ++count;
-    } else {
-      if (count >= most_frequent_count) {
-        most_frequent = cur;
-        most_frequent_count = count;
-      }
-      cur = s;
-      count = 1;
-    }
-  });
-  if (count >= most_frequent_count) {
-    most_frequent = cur;
-    most_frequent_count = count;
-  }
-  return most_frequent;
-}
+#define get_most_frequent_member(lst)           \
+  smartlist_get_most_frequent_string(lst)
 
 /** Return 0 if and only if <b>a</b> and <b>b</b> are routerstatuses
  * that come from the same routerinfo, with the same derived elements.
@@ -363,7 +353,8 @@ _compare_vote_rs(const void **_a, const void **_b)
  * in favor of smaller descriptor digest.
  */
 static vote_routerstatus_t *
-compute_routerstatus_consensus(smartlist_t *votes)
+compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
+                               char *microdesc_digest256_out)
 {
   vote_routerstatus_t *most = NULL, *cur = NULL;
   int most_n = 0, cur_n = 0;
@@ -399,6 +390,26 @@ compute_routerstatus_consensus(smartlist_t *votes)
   }
 
   tor_assert(most);
+
+  if (consensus_method >= MIN_METHOD_FOR_MICRODESC &&
+      microdesc_digest256_out) {
+    smartlist_t *digests = smartlist_create();
+    const char *best_microdesc_digest;
+    SMARTLIST_FOREACH(votes, vote_routerstatus_t *, rs, {
+        char d[DIGEST256_LEN];
+        if (compare_vote_rs(rs, most))
+          continue;
+        if (!vote_routerstatus_find_microdesc_hash(d, rs, consensus_method))
+          smartlist_add(digests, tor_memdup(d, sizeof(d)));
+    });
+    smartlist_sort_digests256(digests);
+    best_microdesc_digest = smartlist_get_most_frequent_digest256(digests);
+    if (best_microdesc_digest)
+      memcpy(microdesc_digest256_out, best_microdesc_digest, DIGEST256_LEN);
+    SMARTLIST_FOREACH(digests, char *, cp, tor_free(cp));
+    smartlist_free(digests);
+  }
+
   return most;
 }
 
@@ -615,16 +626,20 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                 crypto_pk_env_t *identity_key,
                                 crypto_pk_env_t *signing_key,
                                 const char *legacy_id_key_digest,
-                                crypto_pk_env_t *legacy_signing_key)
+                                crypto_pk_env_t *legacy_signing_key,
+                                consensus_flavor_t flavor)
 {
   smartlist_t *chunks;
   char *result = NULL;
   int consensus_method;
-
   time_t valid_after, fresh_until, valid_until;
   int vote_seconds, dist_seconds;
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
+  const routerstatus_format_type_t rs_format =
+    flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
+
+  tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
 
   if (!smartlist_len(votes)) {
@@ -955,6 +970,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int n_listing = 0;
       int i;
       char buf[256];
+      char microdesc_digest[DIGEST256_LEN];
 
       /* Of the next-to-be-considered digest in each voter, which is first? */
       SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
@@ -1021,7 +1037,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Figure out the most popular opinion of what the most recent
        * routerinfo and its contents are. */
-      rs = compute_routerstatus_consensus(matching_descs);
+      memset(microdesc_digest, 0, sizeof(microdesc_digest));
+      rs = compute_routerstatus_consensus(matching_descs, consensus_method,
+                                          microdesc_digest);
       /* Copy bits of that into rs_out. */
       tor_assert(!memcmp(lowest_id, rs->status.identity_digest, DIGEST_LEN));
       memcpy(rs_out.identity_digest, lowest_id, DIGEST_LEN);
@@ -1182,9 +1200,19 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Okay!! Now we can write the descriptor... */
       /*     First line goes into "buf". */
       routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
-                                NS_V3_CONSENSUS);
+                                rs_format);
       smartlist_add(chunks, tor_strdup(buf));
-      /*     Second line is all flags.  The "\n" is missing. */
+      /*     Now an m line, if applicable. */
+      if (flavor == FLAV_MICRODESC &&
+          !tor_digest256_is_zero(microdesc_digest)) {
+        char m[BASE64_DIGEST256_LEN+1], *cp;
+        const size_t mlen = BASE64_DIGEST256_LEN+5;
+        digest256_to_base64(m, microdesc_digest);
+        cp = tor_malloc(mlen);
+        tor_snprintf(cp, mlen, "m %s\n", m);
+        smartlist_add(chunks, cp);
+      }
+      /*     Next line is all flags.  The "\n" is missing. */
       smartlist_add(chunks,
                     smartlist_join_strings(chosen_flags, " ", 0, NULL));
       /*     Now the version line. */
@@ -1206,7 +1234,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       };
 
       /*     Now the exitpolicy summary line. */
-      if (rs_out.has_exitsummary) {
+      if (rs_out.has_exitsummary && flavor == FLAV_NS) {
         char buf[MAX_POLICY_LINE_LEN+1];
         int r = tor_snprintf(buf, sizeof(buf), "p %s\n", rs_out.exitsummary);
         if (r<0) {
@@ -2090,7 +2118,8 @@ dirvote_compute_consensus(void)
     consensus_body = networkstatus_compute_consensus(
         votes, n_voters,
         my_cert->identity_key,
-        get_my_v3_authority_signing_key(), legacy_id_digest, legacy_sign);
+        get_my_v3_authority_signing_key(), legacy_id_digest, legacy_sign,
+        FLAV_NS);
   }
   if (!consensus_body) {
     log_warn(LD_DIR, "Couldn't generate a consensus at all!");
@@ -2389,14 +2418,21 @@ dirvote_get_vote(const char *fp, int flags)
   return NULL;
 }
 
-int
-dirvote_create_microdescriptor(char *out, size_t outlen,
-                               const routerinfo_t *ri)
+/** Construct and return a new microdescriptor from a routerinfo <b>ri</b>.
+ *
+ * XXX Right now, there is only one way to generate microdescriptors from
+ * router descriptors.  This may change in future consensus methods.  If so,
+ * we'll need an internal way to remember which method we used, and ask for a
+ * particular method.
+ **/
+microdesc_t *
+dirvote_create_microdescriptor(const routerinfo_t *ri)
 {
+  microdesc_t *result = NULL;
   char *key = NULL, *summary = NULL, *family = NULL;
+  char buf[1024];
   size_t keylen;
-  int result = -1;
-  char *start = out, *end = out+outlen;
+  char *out = buf, *end = buf+sizeof(buf);
 
   if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
     goto done;
@@ -2417,7 +2453,19 @@ dirvote_create_microdescriptor(char *out, size_t outlen,
       goto done;
     out += strlen(out);
   }
-  result = out - start;
+  *out = '\0'; /* Make sure it's nul-terminated.  This should be a no-op */
+
+  {
+    smartlist_t *lst = microdescs_parse_from_string(buf, out, 0, 1);
+    if (smartlist_len(lst) != 1) {
+      log_warn(LD_DIR, "We generated a microdescriptor we couldn't parse.");
+      SMARTLIST_FOREACH(lst, microdesc_t *, md, microdesc_free(md));
+      smartlist_free(lst);
+      goto done;
+    }
+    result = smartlist_get(lst, 0);
+    smartlist_free(lst);
+  }
 
  done:
   tor_free(key);
@@ -2426,28 +2474,23 @@ dirvote_create_microdescriptor(char *out, size_t outlen,
   return result;
 }
 
-/** Lowest consensus method that generates microdescriptors */
-#define MIN_CM_MICRODESC 7
 /** Cached space-separated string to hold */
 static char *microdesc_consensus_methods = NULL;
 
+/** DOCDOC */
 int
-dirvote_format_microdescriptor_vote_line(char *out, size_t out_len,
-                                         const char *microdesc,
-                                         size_t microdescriptor_len)
+dirvote_format_microdesc_vote_line(char *out, size_t out_len,
+                                   const microdesc_t *md)
 {
-  char d[DIGEST256_LEN];
   char d64[BASE64_DIGEST256_LEN];
   if (!microdesc_consensus_methods) {
     microdesc_consensus_methods =
-      make_consensus_method_list(MIN_CM_MICRODESC,
+      make_consensus_method_list(MIN_METHOD_FOR_MICRODESC,
                                  MAX_SUPPORTED_CONSENSUS_METHOD,
                                  ",");
     tor_assert(microdesc_consensus_methods);
   }
-  if (crypto_digest256(d, microdesc, microdescriptor_len, DIGEST_SHA256)<0)
-    return -1;
-  if (digest256_to_base64(d64, d)<0)
+  if (digest256_to_base64(d64, md->digest)<0)
     return -1;
 
   if (tor_snprintf(out, out_len, "m %s sha256=%s\n",
@@ -2455,5 +2498,46 @@ dirvote_format_microdescriptor_vote_line(char *out, size_t out_len,
     return -1;
 
   return strlen(out);
+}
+
+/** DOCDOC */
+int
+vote_routerstatus_find_microdesc_hash(char *digest256_out,
+                                      const vote_routerstatus_t *vrs,
+                                      int method)
+{
+  /* XXXX only returns the sha256 method. */
+  const vote_microdesc_hash_t *h;
+  char mstr[64];
+  size_t mlen;
+
+  tor_snprintf(mstr, sizeof(mstr), "%d", method);
+  mlen = strlen(mstr);
+
+  for (h = vrs->microdesc; h; h = h->next) {
+    const char *cp = h->microdesc_hash_line;
+    size_t num_len;
+    /* cp looks like \d+(,\d+)* (digesttype=val )+ .  Let's hunt for mstr in
+     * the first part. */
+    while (1) {
+      num_len = strspn(cp, "1234567890");
+      if (num_len == mlen && !memcmp(mstr, cp, mlen)) {
+        /* This is the line. */
+        char buf[BASE64_DIGEST256_LEN+1];
+        /* XXXX ignores extraneous stuff if the digest is too long.  This
+         * seems harmless enough, right? */
+        cp = strstr(cp, " sha256=");
+        if (!cp)
+          return -1;
+        cp += strlen(" sha256=");
+        strlcpy(buf, cp, sizeof(buf));
+        return digest256_from_base64(digest256_out, buf);
+      }
+      if (num_len == 0 || cp[num_len] != ',')
+        break;
+      cp += num_len + 1;
+    }
+  }
+  return -1;
 }
 

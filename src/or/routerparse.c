@@ -111,6 +111,7 @@ typedef enum {
   K_LEGACY_DIR_KEY,
 
   A_PURPOSE,
+  A_LAST_LISTED,
   _A_UNKNOWN,
 
   R_RENDEZVOUS_SERVICE_DESCRIPTOR,
@@ -496,6 +497,14 @@ static token_rule_t networkstatus_detached_signature_token_table[] = {
   END_OF_TABLE
 };
 
+static token_rule_t microdesc_token_table[] = {
+  T1_START("onion-key",        K_ONION_KEY,        NO_ARGS,     NEED_KEY_1024),
+  T01("family",                K_FAMILY,           ARGS,        NO_OBJ ),
+  T01("p",                     K_P,                CONCAT_ARGS, NO_OBJ ),
+  A01("@last-listed",          A_LAST_LISTED,      CONCAT_ARGS, NO_OBJ ),
+  END_OF_TABLE
+};
+
 #undef T
 
 /* static function prototypes */
@@ -505,7 +514,8 @@ static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
 static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str, const char *end_str,
-                                char end_char);
+                                char end_char,
+                                digest_algorithm_t alg);
 static void token_free(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *_find_by_keyword(smartlist_t *s,
@@ -586,7 +596,8 @@ int
 router_get_dir_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "signed-directory","\ndirectory-signature",'\n');
+                              "signed-directory","\ndirectory-signature",'\n',
+                              DIGEST_SHA1);
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the first router in
@@ -596,7 +607,8 @@ int
 router_get_router_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "router ","\nrouter-signature", '\n');
+                              "router ","\nrouter-signature", '\n',
+                              DIGEST_SHA1);
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the running-routers
@@ -606,7 +618,8 @@ int
 router_get_runningrouters_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
-                              "network-status","\ndirectory-signature", '\n');
+                              "network-status","\ndirectory-signature", '\n',
+                              DIGEST_SHA1);
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the network-status
@@ -616,17 +629,19 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
 {
   return router_get_hash_impl(s,digest,
                               "network-status-version","\ndirectory-signature",
-                              '\n');
+                              '\n',
+                              DIGEST_SHA1);
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the network-status
  * string in <b>s</b>.  Return 0 on success, -1 on failure. */
 int
-router_get_networkstatus_v3_hash(const char *s, char *digest)
+router_get_networkstatus_v3_hash(const char *s, char *digest,
+                                 digest_algorithm_t alg)
 {
   return router_get_hash_impl(s,digest,
                               "network-status-version","\ndirectory-signature",
-                              ' ');
+                              ' ', alg);
 }
 
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the extrainfo
@@ -634,7 +649,8 @@ router_get_networkstatus_v3_hash(const char *s, char *digest)
 int
 router_get_extrainfo_hash(const char *s, char *digest)
 {
-  return router_get_hash_impl(s,digest,"extra-info","\nrouter-signature",'\n');
+  return router_get_hash_impl(s,digest,"extra-info","\nrouter-signature",'\n',
+                              DIGEST_SHA1);
 }
 
 /** Helper: used to generate signatures for routers, directories and
@@ -643,6 +659,8 @@ router_get_extrainfo_hash(const char *s, char *digest)
  * surround it with -----BEGIN/END----- pairs, and write it to the
  * <b>buf_len</b>-byte buffer at <b>buf</b>.  Return 0 on success, -1 on
  * failure.
+ *
+ * DOCDOC alg
  */
 int
 router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
@@ -1691,7 +1709,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     goto err;
   }
   if (router_get_hash_impl(s, digest, "dir-key-certificate-version",
-                           "\ndir-key-certification", '\n') < 0)
+                           "\ndir-key-certification", '\n', DIGEST_SHA1) < 0)
     goto err;
   tok = smartlist_get(tokens, 0);
   if (tok->tp != K_DIR_KEY_CERTIFICATE_VERSION || strcmp(tok->args[0], "3")) {
@@ -2298,7 +2316,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   if (eos_out)
     *eos_out = NULL;
 
-  if (router_get_networkstatus_v3_hash(s, ns_digest)) {
+  if (router_get_networkstatus_v3_hash(s, ns_digest, DIGEST_SHA1)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
   }
@@ -3410,7 +3428,7 @@ find_all_exitpolicy(smartlist_t *s)
   return out;
 }
 
-/** Compute the SHA-1 digest of the substring of <b>s</b> taken from the first
+/** Compute the digest of the substring of <b>s</b> taken from the first
  * occurrence of <b>start_str</b> through the first instance of c after the
  * first subsequent occurrence of <b>end_str</b>; store the 20-byte result in
  * <b>digest</b>; return 0 on success.
@@ -3420,7 +3438,8 @@ find_all_exitpolicy(smartlist_t *s)
 static int
 router_get_hash_impl(const char *s, char *digest,
                      const char *start_str,
-                     const char *end_str, char end_c)
+                     const char *end_str, char end_c,
+                     digest_algorithm_t alg)
 {
   char *start, *end;
   start = strstr(s, start_str);
@@ -3446,12 +3465,167 @@ router_get_hash_impl(const char *s, char *digest,
   }
   ++end;
 
-  if (crypto_digest(digest, start, end-start)) {
-    log_warn(LD_BUG,"couldn't compute digest");
-    return -1;
+  if (alg == DIGEST_SHA1) {
+    if (crypto_digest(digest, start, end-start)) {
+      log_warn(LD_BUG,"couldn't compute digest");
+      return -1;
+    }
+  } else {
+    if (crypto_digest256(digest, start, end-start, alg)) {
+      log_warn(LD_BUG,"couldn't compute digest");
+      return -1;
+    }
   }
 
   return 0;
+}
+
+/** DOCDOC Assuming that s starts with a microdesc, return the start of the
+ * *NEXT* one. */
+static const char *
+find_start_of_next_microdesc(const char *s, const char *eos)
+{
+  int started_with_annotations;
+  s = eat_whitespace_eos(s, eos);
+  if (!s)
+    return NULL;
+
+#define CHECK_LENGTH() STMT_BEGIN \
+    if (s+32 > eos)               \
+      return NULL;                \
+  STMT_END
+
+#define NEXT_LINE() STMT_BEGIN            \
+    s = memchr(s, '\n', eos-s);           \
+    if (!s || s+1 >= eos)                 \
+      return NULL;                        \
+    s++;                                  \
+  STMT_END
+
+  CHECK_LENGTH();
+
+  started_with_annotations = (*s == '@');
+
+  if (started_with_annotations) {
+    /* Start by advancing to the first non-annotation line. */
+    while (*s == '@')
+      NEXT_LINE();
+  }
+  CHECK_LENGTH();
+
+  /* Now we should be pointed at an onion-key line.  If we are, then skip
+   * it. */
+  if (!strcmpstart(s, "onion-key"))
+    NEXT_LINE();
+
+  /* Okay, now we're pointed at the first line of the microdescriptor which is
+     not an annotation or onion-key.  The next line that _is_ an annotation or
+     onion-key is the start of the next microdescriptor. */
+  while (s+32 < eos) {
+    if (*s == '@' || !strcmpstart(s, "onion-key"))
+      return s;
+    NEXT_LINE();
+  }
+  return NULL;
+
+#undef CHECK_LENGTH
+#undef NEXT_LINE
+}
+
+/**DOCDOC*/
+smartlist_t *
+microdescs_parse_from_string(const char *s, const char *eos,
+                             int allow_annotations, int copy_body)
+{
+  smartlist_t *tokens;
+  smartlist_t *result;
+  microdesc_t *md = NULL;
+  memarea_t *area;
+  const char *start = s;
+  const char *start_of_next_microdesc;
+  int flags = allow_annotations ? TS_ANNOTATIONS_OK : 0;
+
+  directory_token_t *tok;
+
+  if (!eos)
+    eos = s + strlen(s);
+
+  s = eat_whitespace_eos(s, eos);
+  area = memarea_new();
+  result = smartlist_create();
+  tokens = smartlist_create();
+
+  while (s < eos) {
+    start_of_next_microdesc = find_start_of_next_microdesc(s, eos);
+    if (!start_of_next_microdesc)
+      start_of_next_microdesc = eos;
+
+    if (tokenize_string(area, s, start_of_next_microdesc, tokens,
+                        microdesc_token_table, flags)) {
+      log_warn(LD_DIR, "Unparseable microdescriptor");
+      goto next;
+    }
+
+    md = tor_malloc_zero(sizeof(microdesc_t));
+    {
+      const char *cp = tor_memstr(s, start_of_next_microdesc-s,
+                                  "onion-key");
+      tor_assert(cp);
+
+      md->bodylen = start_of_next_microdesc - cp;
+      if (copy_body)
+        md->body = tor_strndup(cp, md->bodylen);
+      else
+        md->body = (char*)cp;
+      md->off = cp - start;
+    }
+
+    if ((tok = find_opt_by_keyword(tokens, A_LAST_LISTED))) {
+      if (parse_iso_time(tok->args[0], &md->last_listed)) {
+        log_warn(LD_DIR, "Bad last-listed time in microdescriptor");
+        goto next;
+      }
+    }
+
+    tok = find_by_keyword(tokens, K_ONION_KEY);
+    md->onion_pkey = tok->key;
+    tok->key = NULL;
+
+    if ((tok = find_opt_by_keyword(tokens, K_FAMILY))) {
+      int i;
+      md->family = smartlist_create();
+      for (i=0;i<tok->n_args;++i) {
+        if (!is_legal_nickname_or_hexdigest(tok->args[i])) {
+          log_warn(LD_DIR, "Illegal nickname %s in family line",
+                   escaped(tok->args[i]));
+          goto next;
+        }
+        smartlist_add(md->family, tor_strdup(tok->args[i]));
+      }
+    }
+
+    if ((tok = find_opt_by_keyword(tokens, K_P))) {
+      md->exitsummary = tor_strdup(tok->args[0]);
+    }
+
+    crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);
+
+    smartlist_add(result, md);
+
+    md = NULL;
+  next:
+    if (md)
+      microdesc_free(md);
+
+    memarea_clear(area);
+    smartlist_clear(tokens);
+    s = start_of_next_microdesc;
+  }
+
+  memarea_drop_all(area);
+  smartlist_free(tokens);
+
+  return result;
 }
 
 /** Parse the Tor version of the platform string <b>platform</b>,
@@ -3712,7 +3886,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   /* Compute descriptor hash for later validation. */
   if (router_get_hash_impl(desc, desc_hash,
                            "rendezvous-service-descriptor ",
-                           "\nsignature", '\n') < 0) {
+                           "\nsignature", '\n', DIGEST_SHA1) < 0) {
     log_warn(LD_REND, "Couldn't compute descriptor hash.");
     goto err;
   }

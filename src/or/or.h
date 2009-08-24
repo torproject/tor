@@ -89,6 +89,7 @@
 #include "torgzip.h"
 #include "address.h"
 #include "compat_libevent.h"
+#include "ht.h"
 
 /* These signals are defined to help control_signal_act work.
  */
@@ -1558,12 +1559,29 @@ typedef struct routerstatus_t {
 } routerstatus_t;
 
 /**DOCDOC*/
-typedef struct microdescriptor_t {
+typedef struct microdesc_t {
+  HT_ENTRY(microdesc_t) node;
+
+  /* Cache information */
+
+  time_t last_listed;
+  saved_location_t saved_location : 3;
+  unsigned int no_save : 1;
+  off_t off;
+
+  /* The string containing the microdesc. */
+
+  char *body;
+  size_t bodylen;
+  char digest[DIGEST256_LEN];
+
+  /* Fields in the microdescriptor. */
+
   crypto_pk_env_t *onion_pkey;
   smartlist_t *family;
   char *exitsummary; /**< exit policy summary -
-                      * XXX weasel: this probably should not stay a string. */
-} microdescriptor_t;
+                      * XXX this probably should not stay a string. */
+} microdesc_t;
 
 /** How many times will we try to download a router's descriptor before giving
  * up? */
@@ -3748,7 +3766,8 @@ int dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
 typedef enum {
-  NS_V2, NS_V3_CONSENSUS, NS_V3_VOTE, NS_CONTROL_PORT
+  NS_V2, NS_V3_CONSENSUS, NS_V3_VOTE, NS_CONTROL_PORT,
+  NS_V3_CONSENSUS_MICRODESC
 } routerstatus_format_type_t;
 int routerstatus_format_entry(char *buf, size_t buf_len,
                               routerstatus_t *rs, const char *platform,
@@ -3784,13 +3803,20 @@ int dirserv_read_measured_bandwidths(const char *from_file,
 
 void dirvote_free_all(void);
 
+/** DOCDOC */
+typedef enum {
+  FLAV_NS,
+  FLAV_MICRODESC,
+} consensus_flavor_t;
+
 /* vote manipulation */
 char *networkstatus_compute_consensus(smartlist_t *votes,
                                       int total_authorities,
                                       crypto_pk_env_t *identity_key,
                                       crypto_pk_env_t *signing_key,
                                       const char *legacy_identity_key_digest,
-                                      crypto_pk_env_t *legacy_signing_key);
+                                      crypto_pk_env_t *legacy_signing_key,
+                                      consensus_flavor_t flavor);
 int networkstatus_add_detached_signatures(networkstatus_t *target,
                                           ns_detached_signatures_t *sigs,
                                           const char **msg_out);
@@ -3837,11 +3863,12 @@ networkstatus_t *
 dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert);
 
-int dirvote_create_microdescriptor(char *out,
-                                   size_t outlen, const routerinfo_t *ri);
-int dirvote_format_microdescriptor_vote_line(char *out, size_t out_len,
-                                             const char *microdesc,
-                                             size_t microdescriptor_len);
+microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri);
+int dirvote_format_microdesc_vote_line(char *out, size_t out_len,
+                                       const microdesc_t *md);
+int vote_routerstatus_find_microdesc_hash(char *digest256_out,
+                                          const vote_routerstatus_t *vrs,
+                                          int method);
 
 #ifdef DIRVOTE_PRIVATE
 char *format_networkstatus_vote(crypto_pk_env_t *private_key,
@@ -4050,6 +4077,25 @@ int do_list_fingerprint(void);
 void do_hash_password(void);
 int tor_init(int argc, char **argv);
 #endif
+
+/********************************* microdesc.c *************************/
+
+typedef struct microdesc_cache_t microdesc_cache_t;
+
+microdesc_cache_t *get_microdesc_cache(void);
+
+smartlist_t *microdescs_add_to_cache(microdesc_cache_t *cache,
+                        const char *s, const char *eos, saved_location_t where,
+                        int no_save);
+smartlist_t *microdescs_add_list_to_cache(microdesc_cache_t *cache,
+                        smartlist_t *descriptors, saved_location_t where,
+                        int no_save);
+
+int microdesc_cache_rebuild(microdesc_cache_t *cache);
+int microdesc_cache_reload(microdesc_cache_t *cache);
+void microdesc_cache_clear(microdesc_cache_t *cache);
+
+void microdesc_free(microdesc_t *md);
 
 /********************************* networkstatus.c *********************/
 
@@ -4927,7 +4973,8 @@ int router_get_router_hash(const char *s, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_get_networkstatus_v2_hash(const char *s, char *digest);
-int router_get_networkstatus_v3_hash(const char *s, char *digest);
+int router_get_networkstatus_v3_hash(const char *s, char *digest,
+                                     digest_algorithm_t algorithm);
 int router_get_extrainfo_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
@@ -4970,6 +5017,10 @@ networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                                  networkstatus_type_t ns_type);
 ns_detached_signatures_t *networkstatus_parse_detached_signatures(
                                           const char *s, const char *eos);
+
+smartlist_t *microdescs_parse_from_string(const char *s, const char *eos,
+                                          int allow_annotations,
+                                          int copy_body);
 
 authority_cert_t *authority_cert_parse_from_string(const char *s,
                                                    const char **end_of_string);
