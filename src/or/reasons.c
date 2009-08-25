@@ -369,3 +369,4 @@ socks5_response_code_to_string(uint8_t code)
       return "unknown reason";
   }
 }
+

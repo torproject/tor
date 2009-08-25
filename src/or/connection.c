@@ -1386,7 +1386,7 @@ connection_proxy_connect(connection_t *conn, int type)
       memcpy(buf + 4, &ip4addr, 4); /* addr */
       buf[8] = 0; /* userid (empty) */
 
-      connection_write_to_buf((char *)buf, sizeof buf, conn);
+      connection_write_to_buf((char *)buf, sizeof(buf), conn);
       conn->proxy_state = PROXY_SOCKS4_WANT_CONNECT_OK;
       break;
     }
