@@ -58,10 +58,10 @@ NOTE 2: It's easy to list stuff like this with no time estimates and
     - 158: microdescriptors
       o Revise proposal
       - Implement
-    - 160: list bandwidth in consensus
-RNM?  . Finish proposal
-      - and actually set it reasonably
-      - and actually use it.
+    o 160: list bandwidth in consensus
+      o Finish proposal
+      o and actually set it reasonably
+      o and actually use it.
 
   - Proposals to improve and implement if not broken
     D IPv6 support.  (Parts of 117, but figure out how to handle DNS
