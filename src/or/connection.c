@@ -1572,6 +1572,19 @@ connection_send_socks5_connect(connection_t *conn)
   conn->proxy_state = PROXY_SOCKS5_WANT_CONNECT_OK;
 }
 
+/** DOCDOC */
+static int
+connection_fetch_from_buf_socks_client(connection_t *conn,
+                                       int state, char **reason)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    struct evbuffer *input = bufferevent_get_input(conn->bufev);
+    return fetch_from_evbuffer_socks_client(input, state, reason);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return fetch_from_buf_socks_client(conn->inbuf, state, reason);
+  }
+}
+
 /** Call this from connection_*_process_inbuf() to advance the proxy
  * handshake.
  *
@@ -1599,17 +1612,17 @@ connection_read_proxy_handshake(connection_t *conn)
       break;
 
     case PROXY_SOCKS4_WANT_CONNECT_OK:
-      ret = fetch_from_buf_socks_client(conn->inbuf,
-                                        conn->proxy_state,
-                                        &reason);
+      ret = connection_fetch_from_buf_socks_client(conn,
+                                                   conn->proxy_state,
+                                                   &reason);
       if (ret == 1)
         conn->proxy_state = PROXY_CONNECTED;
       break;
 
     case PROXY_SOCKS5_WANT_AUTH_METHOD_NONE:
-      ret = fetch_from_buf_socks_client(conn->inbuf,
-                                        conn->proxy_state,
-                                        &reason);
+      ret = connection_fetch_from_buf_socks_client(conn,
+                                                   conn->proxy_state,
+                                                   &reason);
       /* no auth needed, do connect */
       if (ret == 1) {
         connection_send_socks5_connect(conn);
@@ -1618,9 +1631,9 @@ connection_read_proxy_handshake(connection_t *conn)
       break;
 
     case PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929:
-      ret = fetch_from_buf_socks_client(conn->inbuf,
-                                        conn->proxy_state,
-                                        &reason);
+      ret = connection_fetch_from_buf_socks_client(conn,
+                                                   conn->proxy_state,
+                                                   &reason);
 
       /* send auth if needed, otherwise do connect */
       if (ret == 1) {
@@ -1655,9 +1668,9 @@ connection_read_proxy_handshake(connection_t *conn)
       break;
 
     case PROXY_SOCKS5_WANT_AUTH_RFC1929_OK:
-      ret = fetch_from_buf_socks_client(conn->inbuf,
-                                        conn->proxy_state,
-                                        &reason);
+      ret = connection_fetch_from_buf_socks_client(conn,
+                                                   conn->proxy_state,
+                                                   &reason);
       /* send the connect request */
       if (ret == 1) {
         connection_send_socks5_connect(conn);
@@ -1666,9 +1679,9 @@ connection_read_proxy_handshake(connection_t *conn)
       break;
 
     case PROXY_SOCKS5_WANT_CONNECT_OK:
-      ret = fetch_from_buf_socks_client(conn->inbuf,
-                                        conn->proxy_state,
-                                        &reason);
+      ret = connection_fetch_from_buf_socks_client(conn,
+                                                   conn->proxy_state,
+                                                   &reason);
       if (ret == 1)
         conn->proxy_state = PROXY_CONNECTED;
       break;

@@ -56,6 +56,9 @@
 static int parse_socks(const char *data, size_t datalen, socks_request_t *req,
                        int log_sockstype, int safe_socks, ssize_t *drain_out,
                        size_t *want_length_out);
+static int parse_socks_client(const uint8_t *data, size_t datalen,
+                              int state, char **reason,
+                              ssize_t *drain_out);
 
 /* Chunk manipulation functions */
 
@@ -1513,7 +1516,7 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
     want_length = evbuffer_get_contiguous_space(buf);
     n_drain = 0;
     i = evbuffer_peek(buf, want_length, NULL, &v, 1);
-    tor_assert(i == i);
+    tor_assert(i == 1);
     data = v.iov_base;
     datalen = v.iov_len;
 
@@ -1900,21 +1903,61 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 int
 fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
 {
-  unsigned char *data;
-  size_t addrlen;
-
+  ssize_t drain = 0;
+  int r;
   if (buf->datalen < 2)
     return 0;
 
   buf_pullup(buf, 128, 0);
   tor_assert(buf->head && buf->head->datalen >= 2);
 
-  data = (unsigned char *) buf->head->data;
+  r = parse_socks_client((uint8_t*)buf->head->data, buf->head->datalen,
+                         state, reason, &drain);
+  if (drain > 0)
+    buf_remove_from_front(buf, drain);
+  else if (drain < 0)
+    buf_clear(buf);
+
+  return r;
+}
+
+#ifdef USE_BUFFEREVENTS
+/** As fetch_from_buf_socks_client, buf works on an evbuffer */
+int
+fetch_from_evbuffer_socks_client(struct evbuffer *buf, int state,
+                                 char **reason)
+{
+  ssize_t drain = 0;
+  uint8_t *data;
+  size_t datalen = evbuffer_get_contiguous_space(buf);
+  int r;
+
+  data = evbuffer_pullup(buf, 128);
+  r = parse_socks_client(data, datalen, state, reason, &drain);
+  if (drain > 0)
+    evbuffer_drain(buf, drain);
+  else
+    evbuffer_drain(buf, evbuffer_get_length(buf));
+
+  return r;
+}
+#endif
+
+/** Implementation logic for fetch_from_*_socks_client. */
+static int
+parse_socks_client(const uint8_t *data, size_t datalen,
+                   int state, char **reason,
+                   ssize_t *drain_out)
+{
+  unsigned int addrlen;
+  *drain_out = 0;
+  if (datalen < 2)
+    return 0;
 
   switch (state) {
     case PROXY_SOCKS4_WANT_CONNECT_OK:
       /* Wait for the complete response */
-      if (buf->head->datalen < 8)
+      if (datalen < 8)
         return 0;
 
       if (data[1] != 0x5a) {
@@ -1923,7 +1966,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
       }
 
       /* Success */
-      buf_remove_from_front(buf, 8);
+      *drain_out = 8;
       return 1;
 
     case PROXY_SOCKS5_WANT_AUTH_METHOD_NONE:
@@ -1935,7 +1978,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
       }
 
       log_info(LD_NET, "SOCKS 5 client: continuing without authentication");
-      buf_clear(buf);
+      *drain_out = -1;
       return 1;
 
     case PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929:
@@ -1945,11 +1988,11 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
         case 0x00:
           log_info(LD_NET, "SOCKS 5 client: we have auth details but server "
                             "doesn't require authentication.");
-          buf_clear(buf);
+          *drain_out = -1;
           return 1;
         case 0x02:
           log_info(LD_NET, "SOCKS 5 client: need authentication.");
-          buf_clear(buf);
+          *drain_out = -1;
           return 2;
         /* fall through */
       }
@@ -1966,7 +2009,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
       }
 
       log_info(LD_NET, "SOCKS 5 client: authentication successful.");
-      buf_clear(buf);
+      *drain_out = -1;
       return 1;
 
     case PROXY_SOCKS5_WANT_CONNECT_OK:
@@ -1975,7 +2018,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
        * the data used */
 
       /* wait for address type field to arrive */
-      if (buf->datalen < 4)
+      if (datalen < 4)
         return 0;
 
       switch (data[3]) {
@@ -1986,7 +2029,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
           addrlen = 16;
           break;
         case 0x03: /* fqdn (can this happen here?) */
-          if (buf->datalen < 5)
+          if (datalen < 5)
             return 0;
           addrlen = 1 + data[4];
           break;
@@ -1996,7 +2039,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
       }
 
       /* wait for address and port */
-      if (buf->datalen < 6 + addrlen)
+      if (datalen < 6 + addrlen)
         return 0;
 
       if (data[1] != 0x00) {
@@ -2004,7 +2047,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
         return -1;
       }
 
-      buf_remove_from_front(buf, 6 + addrlen);
+      *drain_out = 6 + addrlen;
       return 1;
   }
 
