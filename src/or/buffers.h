@@ -60,6 +60,9 @@ int fetch_from_evbuffer_http(struct evbuffer *buf,
                         char **body_out, size_t *body_used, size_t max_bodylen,
                         int force_complete);
 int peek_evbuffer_has_control0_command(struct evbuffer *buf);
+int write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
+                           const char *data, size_t data_len,
+                           int done);
 #endif
 
 void assert_buf_ok(buf_t *buf);

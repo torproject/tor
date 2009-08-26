@@ -3088,11 +3088,19 @@ _connection_write_to_buf_impl(const char *string, size_t len,
     return;
 
   IF_HAS_BUFFEREVENT(conn, {
-      if (bufferevent_write(conn->bufev, string, len)<0) {
-        /* XXXX mark for close? */
-        log_warn(LD_NET, "bufferevent_write failed! That shouldn't happen.");
-      }
-      return;
+    if (zlib) {
+      int done = zlib < 0;
+      r = write_to_evbuffer_zlib(bufferevent_get_output(conn->bufev),
+                                 TO_DIR_CONN(conn)->zlib_state,
+                                 string, len, done);
+    } else {
+      r = bufferevent_write(conn->bufev, string, len);
+    }
+    if (r < 0) {
+      /* XXXX mark for close? */
+      log_warn(LD_NET, "bufferevent_write failed! That shouldn't happen.");
+    }
+    return;
   });
 
   old_datalen = buf_datalen(conn->outbuf);
