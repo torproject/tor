@@ -1,4 +1,10 @@
 Changes in version 0.2.2.1-alpha - 2009-08-26
+  o Security fixes:
+    - Start the process of disabling ".exit" address notation, since it
+      can be used for a variety of esoteric application-level attacks
+      on users. To reenable it, set "AllowDotExit 1" in your torrc. Fix
+      on 0.0.9rc5.
+
   o New directory authorities:
     - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
       authority.

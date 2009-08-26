@@ -33,10 +33,13 @@
   "www.google.com.foo.exit=64.233.161.99.foo.exit" to speed subsequent
   lookups.
 
+  The .exit notation is disabled by default as of Tor 0.2.2.1-alpha, due
+  to potential application-level attacks.
+
   EXAMPLES:
      www.example.com.exampletornode.exit
 
-        Connect to www.example.com from the node called "exampletornode."
+        Connect to www.example.com from the node called "exampletornode".
 
      exampletornode.exit
 
