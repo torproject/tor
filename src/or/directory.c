@@ -747,6 +747,15 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
 
   log_debug(LD_DIR, "Initiating %s", dir_conn_purpose_to_string(dir_purpose));
 
+  /* ensure that we don't make direct connections when a SOCKS server is
+   * configured. */
+  if (!anonymized_connection && !use_begindir && !options->HttpProxy &&
+      (options->Socks4Proxy || options->Socks5Proxy)) {
+    log_warn(LD_DIR, "Cannot connect to a directory server through a "
+                     "SOCKS proxy!");
+    return;
+  }
+
   conn = dir_connection_new(AF_INET);
 
   /* set up conn so it's got all the data we need to remember */
@@ -772,7 +781,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
     /* then we want to connect to dirport directly */
 
     if (options->HttpProxy) {
-      tor_addr_from_ipv4h(&addr, options->HttpProxyAddr);
+      tor_addr_copy(&addr, &options->HttpProxyAddr);
       dir_port = options->HttpProxyPort;
     }
 

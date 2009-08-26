@@ -246,6 +246,10 @@ static config_var_t _option_vars[] = {
   V(HttpProxyAuthenticator,      STRING,   NULL),
   V(HttpsProxy,                  STRING,   NULL),
   V(HttpsProxyAuthenticator,     STRING,   NULL),
+  V(Socks4Proxy,                 STRING,   NULL),
+  V(Socks5Proxy,                 STRING,   NULL),
+  V(Socks5ProxyUsername,         STRING,   NULL),
+  V(Socks5ProxyPassword,         STRING,   NULL),
   OBSOLETE("IgnoreVersion"),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   VAR("Log",                     LINELIST, Logs,             NULL),
@@ -3482,7 +3486,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->HttpProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpProxy, NULL,
+    if (tor_addr_port_parse(options->HttpProxy,
                         &options->HttpProxyAddr, &options->HttpProxyPort) < 0)
       REJECT("HttpProxy failed to parse or resolve. Please fix.");
     if (options->HttpProxyPort == 0) { /* give it a default */
@@ -3496,7 +3500,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HttpsProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpsProxy, NULL,
+    if (tor_addr_port_parse(options->HttpsProxy,
                         &options->HttpsProxyAddr, &options->HttpsProxyPort) <0)
       REJECT("HttpsProxy failed to parse or resolve. Please fix.");
     if (options->HttpsProxyPort == 0) { /* give it a default */
@@ -3508,6 +3512,42 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (strlen(options->HttpsProxyAuthenticator) >= 48)
       REJECT("HttpsProxyAuthenticator is too long (>= 48 chars).");
   }
+
+  if (options->Socks4Proxy) { /* parse it now */
+    if (tor_addr_port_parse(options->Socks4Proxy,
+                        &options->Socks4ProxyAddr,
+                        &options->Socks4ProxyPort) <0)
+      REJECT("Socks4Proxy failed to parse or resolve. Please fix.");
+    if (options->Socks4ProxyPort == 0) { /* give it a default */
+      options->Socks4ProxyPort = 1080;
+    }
+  }
+
+  if (options->Socks5Proxy) { /* parse it now */
+    if (tor_addr_port_parse(options->Socks5Proxy,
+                            &options->Socks5ProxyAddr,
+                            &options->Socks5ProxyPort) <0)
+      REJECT("Socks5Proxy failed to parse or resolve. Please fix.");
+    if (options->Socks5ProxyPort == 0) { /* give it a default */
+      options->Socks5ProxyPort = 1080;
+    }
+  }
+
+  if (options->Socks5ProxyUsername) {
+    size_t len;
+
+    len = strlen(options->Socks5ProxyUsername);
+    if (len < 1 || len > 255)
+      REJECT("Socks5ProxyUsername must be between 1 and 255 characters.");
+
+    if (!options->Socks5ProxyPassword)
+      REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
+
+    len = strlen(options->Socks5ProxyPassword);
+    if (len < 1 || len > 255)
+      REJECT("Socks5ProxyPassword must be between 1 and 255 characters.");
+  } else if (options->Socks5ProxyPassword)
+    REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
 
   if (options->HashedControlPassword) {
     smartlist_t *sl = decode_hashed_passwords(options->HashedControlPassword);
@@ -3656,6 +3696,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->PreferTunneledDirConns && !options->TunnelDirConns)
     REJECT("Must set TunnelDirConns if PreferTunneledDirConns is set.");
+
+  if ((options->Socks4Proxy || options->Socks5Proxy) &&
+      !options->HttpProxy && !options->PreferTunneledDirConns)
+    REJECT("When Socks4Proxy or Socks5Proxy is configured, "
+           "PreferTunneledDirConns and TunnelDirConns must both be "
+           "set to 1, or HttpProxy must be configured.");
 
   if (options->AutomapHostsSuffixes) {
     SMARTLIST_FOREACH(options->AutomapHostsSuffixes, char *, suf,

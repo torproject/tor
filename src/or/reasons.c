@@ -326,3 +326,47 @@ circuit_end_reason_to_control_string(int reason)
   }
 }
 
+const char *
+socks4_response_code_to_string(uint8_t code)
+{
+  switch (code) {
+    case 0x5a:
+      return "connection accepted";
+    case 0x5b:
+      return "server rejected connection";
+    case 0x5c:
+      return "server cannot connect to identd on this client";
+    case 0x5d:
+      return "user id does not match identd";
+    default:
+      return "invalid SOCKS 4 response code";
+  }
+}
+
+const char *
+socks5_response_code_to_string(uint8_t code)
+{
+  switch (code) {
+    case 0x00:
+      return "connection accepted";
+    case 0x01:
+      return "general SOCKS server failure";
+    case 0x02:
+      return "connection not allowed by ruleset";
+    case 0x03:
+      return "Network unreachable";
+    case 0x04:
+      return "Host unreachable";
+    case 0x05:
+      return "Connection refused";
+    case 0x06:
+      return "TTL expired";
+    case 0x07:
+      return "Command not supported";
+    case 0x08:
+      return "Address type not supported";
+    default:
+      return "unknown reason";
+  }
+}
+

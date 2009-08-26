@@ -299,6 +299,25 @@ HTTPS proxy authentication that Tor supports; feel free to submit a
 patch if you want it to support others.
 .LP
 .TP
+\fBSocks4Proxy\fR \fIhost\fR[:\fIport\fR]\fP
+Tor will make all OR connections through the SOCKS 4 proxy at host:port
+(or host:1080 if port is not specified).
+.LP
+.TP
+\fBSocks5Proxy\fR \fIhost\fR[:\fIport\fR]\fP
+Tor will make all OR connections through the SOCKS 5 proxy at host:port
+(or host:1080 if port is not specified).
+.LP
+.TP
+\fBSocks5ProxyUsername\fR \fIusername\fP
+.LP
+.TP
+\fBSocks5ProxyPassword\fR \fIpassword\fP
+If defined, authenticate to the SOCKS 5 server using username and password
+in accordance to RFC 1929. Both username and password must be between 1 and 255
+characters.
+.LP
+.TP
 \fBKeepalivePeriod \fR\fINUM\fP
 To keep firewalls from expiring connections, send a padding keepalive
 cell every NUM seconds on open connections that are in use. If the
