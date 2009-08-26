@@ -593,7 +593,7 @@
 
    "allow-single-hop-exits"
 
-       [At most one.]
+       [At most once.]
 
        Present only if the router allows single-hop circuits to make exit
        connections.  Most Tor servers do not support this: this is
@@ -991,7 +991,7 @@
    documents are described in section XXX below.
 
    Status documents contain a preamble, an authority section, a list of
-   router status entries, and one more footers signature, in that order.
+   router status entries, and one or more footer signature, in that order.
 
    Unlike other formats described above, a SP in these documents must be a
    single space character (hex 20).
