@@ -1,10 +1,22 @@
-Changes in version 0.2.2.1-alpha - 2009-0?-??
+Changes in version 0.2.2.1-alpha - 2009-08-26
+  o New directory authorities:
+    - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
+      authority.
+
   o Major features:
-    - Add support for dynamic OpenSSL hardware crypto acceleration engines
-      via new AccelName and AccelDir options.
-    - Tor now supports tunneling all of its outgoing connections over a SOCKS
-      proxy, using the SOCKS4Proxy and/or SOCKS5Proxy configuration options.
-      Code by Christopher Davis.
+    - New AccelName and AccelDir options add support for dynamic OpenSSL
+      hardware crypto acceleration engines.
+    - Tor now supports tunneling all of its outgoing connections over
+      a SOCKS proxy, using the SOCKS4Proxy and/or SOCKS5Proxy
+      configuration options. Code by Christopher Davis.
+
+  o Major bugfixes:
+    - Send circuit or stream sendme cells when our window has decreased
+      by 100 cells, not when it has decreased by 101 cells. Bug uncovered
+      by Karsten when testing the "reduce circuit window" performance
+      patch. Bugfix on the 54th commit on Tor -- from July 2002,
+      before the release of Tor 0.0.0. This is the new winner of the
+      oldest-bug prize.
 
   o New options for gathering stats safely:
     - Directories that set "DirReqStatistics 1" write statistics on
@@ -31,10 +43,10 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
       source files Tor was built with.
     - The "torify" script now uses torsocks where available.
     - The memarea code now uses a sentinel value at the end of each area
-      to make sure nothing writes beyond the end of an area.  This might
+      to make sure nothing writes beyond the end of an area. This might
       help debug some conceivable causes of bug 930.
     - Time and memory units in the configuration file can now be set to
-      fractional units.  For example, "2.5 MB" is now a valid value for
+      fractional units. For example, "2.5 GB" is now a valid value for
       AccountingMax.
     - Certain Tor clients (such as those behind check.torproject.org) may
       want to fetch the consensus in an extra early manner. To enable this
@@ -50,18 +62,22 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
       notice the failure so we don't retry indefinitely. Bugfix on
       0.2.0.x; reported by "rotator".
     - If the cached cert file is unparseable, warn but don't exit.
+    - Fix possible segmentation fault on directory authorities. Bugfix on
+      0.2.1.14-rc.
 
   o Deprecated and removed features:
     - The controller no longer accepts the old obsolete "addr-mappings/"
       or "unregistered-servers-" GETINFO values.
     - Hidden services no longer publish version 0 descriptors, and clients
-      do not request or use version 0 descriptors. However, the authorities
-      still accept and serve version 0 descriptors when contacted by older
-      hidden services/clients.
+      do not request or use version 0 descriptors. However, the old hidden
+      service authorities still accept and serve version 0 descriptors
+      when contacted by older hidden services/clients.
     - The EXTENDED_EVENTS and VERBOSE_NAMES controller features are now
       always on; using them is necessary for correct forward-compatible
       controllers.
-    - Removal of support for .noconnect style addresses.
+    - Remove support for .noconnect style addresses. Nobody was using
+      them, and they provided another avenue for detecting Tor users
+      via application-level web tricks.
 
 
 Changes in version 0.2.1.20 - 2009-??-??
