@@ -409,6 +409,11 @@ static config_var_t _state_vars[] = {
   V(LastRotatedOnionKey,              ISOTIME,  NULL),
   V(LastWritten,                      ISOTIME,  NULL),
 
+  VAR("TotalBuildTimes",         UINT,        TotalBuildTimes,     NULL),
+  VAR("CircuitBuildTimeBin",      LINELIST_S,  BuildtimeHistogram,     NULL),
+  VAR("BuildtimeHistogram",      LINELIST_V,  BuildtimeHistogram,     NULL),
+
+
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
@@ -596,6 +601,10 @@ static config_var_description_t options_description[] = {
 
   /* Hidden service options: HiddenService: dir,excludenodes, nodes,
    * options, port.  PublishHidServDescriptor */
+
+  /* Circuit build time histogram options */
+  { "CircuitBuildTimeBin", "Histogram of recent circuit build times"},
+  { "TotalBuildTimes", "Total number of buildtimes in histogram"},
 
   /* Nonpersistent options: __LeaveStreamsUnattached, __AllDirActionsPrivate */
   { NULL, NULL },
@@ -5060,6 +5069,13 @@ or_state_set(or_state_t *new_state)
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
     tor_free(err);
   }
+
+  if(circuit_build_times_parse_state(global_state, &err) < 0)   {
+    log_warn(LD_GENERAL,"%s",err);
+    tor_free(err);
+
+  }
+
 }
 
 /** Reload the persistent state from disk, generating a new state as needed.
@@ -5192,6 +5208,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
+  circuit_build_times_update_state(global_state);
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 

@@ -1884,6 +1884,13 @@ typedef struct crypt_path_t {
                                  DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
 
+// XXX: Do we want to artifically tweak CircuitIdleTimeout and
+// the number of circuits we build at a time if < MIN here?
+#define MIN_CIRCUITS_TO_OBSERVE 1000
+#define NCIRCUITS_TO_OBSERVE 10000 /* approx 3 weeks worth of circuits */
+#define BUILDTIME_BIN_WIDTH 50
+
+
 /** Information used to build a circuit. */
 typedef struct {
   /** Intended length of the final circuit. */
@@ -1977,6 +1984,7 @@ typedef struct circuit_t {
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
                            * circuit is clean. */
+  struct timeval highres_created; /**< When exactly was this circuit created? */
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of
                               * the main loop? (If true, holds the line number
@@ -2683,6 +2691,11 @@ typedef struct {
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
 
+  /** Build time histogram */
+  config_line_t * BuildtimeHistogram;
+  uint16_t TotalBuildTimes;
+
+
   /** What version of Tor wrote this state file? */
   char *TorVersion;
 
@@ -2851,6 +2864,11 @@ int bridges_known_but_down(void);
 void bridges_retry_all(void);
 
 void entry_guards_free_all(void);
+
+void circuit_build_times_update_state(or_state_t *state);
+int  circuit_build_times_parse_state(or_state_t *state, char **msg);
+
+
 
 /********************************* circuitlist.c ***********************/
 

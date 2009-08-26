@@ -379,6 +379,7 @@ static void
 init_circuit_base(circuit_t *circ)
 {
   circ->timestamp_created = time(NULL);
+  tor_gettimeofday(&circ->highres_created);
 
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
