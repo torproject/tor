@@ -830,9 +830,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_clean_caches = 0;
   static time_t time_to_recheck_bandwidth = 0;
   static time_t time_to_check_for_expired_networkstatus = 0;
-#ifdef ENABLE_BUFFER_STATS
-  static time_t time_to_dump_buffer_stats = 0;
-#endif
+  static time_t time_to_write_stats_files = 0;
   static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
   int i;
@@ -960,13 +958,44 @@ run_scheduled_events(time_t now)
     time_to_check_for_expired_networkstatus = now + CHECK_EXPIRED_NS_INTERVAL;
   }
 
-#ifdef ENABLE_BUFFER_STATS
-  if (time_to_dump_buffer_stats < now) {
-    if (get_options()->CellStatistics && time_to_dump_buffer_stats)
-      dump_buffer_stats();
-    time_to_dump_buffer_stats = now + DUMP_BUFFER_STATS_INTERVAL;
+  /* 1g. Check whether we should write statistics to disk.
+   */
+  if (time_to_write_stats_files >= 0 && time_to_write_stats_files < now) {
+#define WRITE_STATS_INTERVAL (24*60*60)
+    if (options->CellStatistics || options->DirReqStatistics ||
+        options->EntryStatistics || options->ExitPortStatistics) {
+      if (!time_to_write_stats_files) {
+        /* Initialize stats. */
+        if (options->CellStatistics)
+          rep_hist_buffer_stats_init(now);
+        if (options->DirReqStatistics)
+          geoip_dirreq_stats_init(now);
+        if (options->EntryStatistics)
+          geoip_entry_stats_init(now);
+        if (options->ExitPortStatistics)
+          rep_hist_exit_stats_init(now);
+        log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
+                   "the *-stats files that will first be written to the "
+                   "data directory in %d hours from now.",
+                   WRITE_STATS_INTERVAL / (60 * 60));
+        time_to_write_stats_files = now + WRITE_STATS_INTERVAL;
+      } else {
+        /* Write stats to disk. */
+        time_to_write_stats_files += WRITE_STATS_INTERVAL;
+        if (options->CellStatistics)
+          rep_hist_buffer_stats_write(time_to_write_stats_files);
+        if (options->DirReqStatistics)
+          geoip_dirreq_stats_write(time_to_write_stats_files);
+        if (options->EntryStatistics)
+          geoip_entry_stats_write(time_to_write_stats_files);
+        if (options->ExitPortStatistics)
+          rep_hist_exit_stats_write(time_to_write_stats_files);
+      }
+    } else {
+      /* Never write stats to disk */
+      time_to_write_stats_files = -1;
+    }
   }
-#endif
 
   /* Remove old information from rephist and the rend cache. */
   if (time_to_clean_caches < now) {

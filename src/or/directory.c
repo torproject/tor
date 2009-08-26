@@ -2573,7 +2573,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       goto done;
     }
 
-#ifdef ENABLE_DIRREQ_STATS
     {
       struct in_addr in;
       if (tor_inet_aton((TO_CONN(conn))->address, &in)) {
@@ -2589,7 +2588,6 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
                              DIRREQ_DIRECT);
       }
     }
-#endif
 
     // note_request(request_type,dlen);
     (void) request_type;
@@ -3221,7 +3219,6 @@ connection_dir_finished_flushing(dir_connection_t *conn)
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_DIR);
 
-#ifdef ENABLE_DIRREQ_STATS
   /* Note that we have finished writing the directory response. For direct
    * connections this means we're done, for tunneled connections its only
    * an intermediate step. */
@@ -3232,7 +3229,6 @@ connection_dir_finished_flushing(dir_connection_t *conn)
     geoip_change_dirreq_state(TO_CONN(conn)->global_identifier,
                               DIRREQ_DIRECT,
                               DIRREQ_FLUSHING_DIR_CONN_FINISHED);
-#endif
   switch (conn->_base.state) {
     case DIR_CONN_STATE_CLIENT_SENDING:
       log_debug(LD_DIR,"client finished sending command.");

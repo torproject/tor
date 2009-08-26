@@ -188,12 +188,10 @@ static config_var_t _option_vars[] = {
   V(DirPort,                     UINT,     "0"),
   V(DirPortFrontPage,            FILENAME, NULL),
   OBSOLETE("DirPostPeriod"),
-#ifdef ENABLE_DIRREQ_STATS
   OBSOLETE("DirRecordUsageByCountry"),
   OBSOLETE("DirRecordUsageGranularity"),
   OBSOLETE("DirRecordUsageRetainIPs"),
   OBSOLETE("DirRecordUsageSaveInterval"),
-#endif
   V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DNSPort,                     UINT,     "0"),
@@ -210,6 +208,7 @@ static config_var_t _option_vars[] = {
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
+  V(ExtraInfoStatistics,         BOOL,     "0"),
   V(FallbackNetworkstatusFile,   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
   V(FascistFirewall,             BOOL,     "0"),
@@ -1413,47 +1412,13 @@ options_act(or_options_t *old_options)
     tor_free(actual_fname);
   }
 
-  if (options->DirReqStatistics) {
-#ifdef ENABLE_DIRREQ_STATS
+  if (options->DirReqStatistics && !geoip_is_loaded()) {
     /* Check if GeoIP database could be loaded. */
-    if (!geoip_is_loaded()) {
-      log_warn(LD_CONFIG, "Configured to measure directory request "
-               "statistics, but no GeoIP database found!");
-      return -1;
-    }
-    log_notice(LD_CONFIG, "Configured to count directory requests by "
-               "country and write aggregate statistics to disk. Check the "
-               "dirreq-stats file in your data directory that will first "
-               "be written in 24 hours from now.");
-#else
-  log_warn(LD_CONFIG, "DirReqStatistics enabled, but Tor was built "
-           "without support for directory request statistics.");
-#endif
+    log_warn(LD_CONFIG, "Configured to measure directory request "
+             "statistics, but no GeoIP database found!");
+    return -1;
   }
 
-#ifdef ENABLE_EXIT_STATS
-  if (options->ExitPortStatistics)
-    log_notice(LD_CONFIG, "Configured to measure exit port statistics. "
-               "Look for the exit-stats file that will first be written to "
-               "the data directory in 24 hours from now.");
-#else
-  if (options->ExitPortStatistics)
-    log_warn(LD_CONFIG, "ExitPortStatistics enabled, but Tor was built "
-             "without port statistics support.");
-#endif
-
-#ifdef ENABLE_BUFFER_STATS
-  if (options->CellStatistics)
-    log_notice(LD_CONFIG, "Configured to measure cell statistics. Look "
-               "for the buffer-stats file that will first be written to "
-               "the data directory in 24 hours from now.");
-#else
-  if (options->CellStatistics)
-    log_warn(LD_CONFIG, "CellStatistics enabled, but Tor was built "
-             "without cell statistics support.");
-#endif
-
-#ifdef ENABLE_ENTRY_STATS
   if (options->EntryStatistics) {
     if (should_record_bridge_info(options)) {
       /* Don't allow measuring statistics on entry guards when configured
@@ -1466,17 +1431,9 @@ options_act(or_options_t *old_options)
       log_warn(LD_CONFIG, "Configured to measure entry node statistics, "
                "but no GeoIP database found!");
       return -1;
-    } else
-      log_notice(LD_CONFIG, "Configured to measure entry node "
-                 "statistics. Look for the entry-stats file that will "
-                 "first be written to the data directory in 24 hours "
-                 "from now.");
+    }
   }
-#else
-  if (options->EntryStatistics)
-    log_warn(LD_CONFIG, "EntryStatistics enabled, but Tor was built "
-             "without entry node statistics support.");
-#endif
+
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||
@@ -3858,6 +3815,16 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
   if (old->TestingTorNetwork != new_val->TestingTorNetwork) {
     *msg = tor_strdup("While Tor is running, changing TestingTorNetwork "
                       "is not allowed.");
+    return -1;
+  }
+
+  if (old->CellStatistics != new_val->CellStatistics ||
+      old->DirReqStatistics != new_val->DirReqStatistics ||
+      old->EntryStatistics != new_val->EntryStatistics ||
+      old->ExitPortStatistics != new_val->ExitPortStatistics) {
+    *msg = tor_strdup("While Tor is running, changing either "
+                      "CellStatistics, DirReqStatistics, EntryStatistics, "
+                      "or ExitPortStatistics is not allowed.");
     return -1;
   }
 

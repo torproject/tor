@@ -2054,12 +2054,12 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 
   if (num_read > 0) {
     if (conn->type == CONN_TYPE_EXIT)
-      rep_hist_note_exit_bytes_read(conn->port, num_read, now);
+      rep_hist_note_exit_bytes_read(conn->port, num_read);
     rep_hist_note_bytes_read(num_read, now);
   }
   if (num_written > 0) {
     if (conn->type == CONN_TYPE_EXIT)
-      rep_hist_note_exit_bytes_written(conn->port, num_written, now);
+      rep_hist_note_exit_bytes_written(conn->port, num_written);
     rep_hist_note_bytes_written(num_written, now);
   }
 
@@ -2652,13 +2652,13 @@ connection_handle_write(connection_t *conn, int force)
     /* else open, or closing */
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
-#ifdef ENABLE_DIRREQ_STATS
+
     /* If we just flushed the last bytes, check if this tunneled dir
      * request is done. */
     if (buf_datalen(conn->outbuf) == 0 && conn->dirreq_id)
       geoip_change_dirreq_state(conn->dirreq_id, DIRREQ_TUNNELED,
                                 DIRREQ_OR_CONN_BUFFER_FLUSHED);
-#endif
+
     switch (result) {
       CASE_TOR_TLS_ERROR_ANY:
       case TOR_TLS_CLOSE:

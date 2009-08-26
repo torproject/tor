@@ -3,7 +3,7 @@ Title: Including Network Statistics in Extra-Info Documents
 Author: Karsten Loesing
 Created: 21-Jul-2009
 Target: 0.2.2
-Status: Open
+Status: Accepted
 
 Change history:
 
@@ -298,7 +298,7 @@ Exit statistics:
 
   The last type of statistics affects exit nodes counting the number of
   bytes written and read and the number of streams opened per port and
-  per 24 hours. Exit port statistics can be measured from looking of
+  per 24 hours. Exit port statistics can be measured from looking at
   headers of BEGIN and DATA cells. A BEGIN cell contains the exit port
   that is required for the exit node to open a new exit stream.
   Subsequent DATA cells coming from the client or being sent back to the
@@ -361,7 +361,7 @@ Implementation notes:
      basically means renaming keywords.
 
   2. The timing of writing the four *-stats files should be unified, so
-     that they are written exactly after 24 hours after starting the
+     that they are written exactly 24 hours after starting the
      relay. Right now, the measurement intervals for dirreq, entry, and
      exit stats starts with the first observed request, and files are
      written when observing the first request that occurs more than 24
@@ -373,14 +373,14 @@ Implementation notes:
      directory until they are included in extra-info documents. The
      reason is that the 24-hour measurement interval can be very
      different from the 18-hour publication interval of extra-info
-     documents. When a relay crashed after finishing a measurement
+     documents. When a relay crashes after finishing a measurement
      interval, but before publishing the next extra-info document,
      statistics would get lost. Therefore, statistics are written to
      disk when finishing a measurement interval and read from disk when
-     generating an extra-info document. As a result, the *-stats files
-     need to be overwritten after 24 hours, rather than appending new
-     statistics to them. Further, the contents of the *-stats files need
-     to be checked in the process of generating extra-info documents.
+     generating an extra-info document. Only the statistics that were
+     appended to the *-stats files within the past 24 hours are included
+     in extra-info documents. Further, the contents of the *-stats files
+     need to be checked in the process of generating extra-info documents.
 
   4. With the statistics patches being tested, the ./configure options
      should be removed and the statistics code be compiled by default.

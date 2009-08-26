@@ -20,12 +20,6 @@
 #ifndef INSTRUMENT_DOWNLOADS
 #define INSTRUMENT_DOWNLOADS 1
 #endif
-#ifndef ENABLE_DIRREQ_STATS
-#define ENABLE_DIRREQ_STATS 1
-#endif
-#ifndef ENABLE_BUFFER_STATS
-#define ENABLE_BUFFER_STATS 1
-#endif
 #endif
 
 #ifdef MS_WINDOWS
@@ -854,10 +848,22 @@ typedef struct var_cell_t {
 typedef struct packed_cell_t {
   struct packed_cell_t *next; /**< Next cell queued on this circuit. */
   char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
-#ifdef ENABLE_BUFFER_STATS
-  struct timeval packed_timeval; /**< When was this cell packed? */
-#endif
 } packed_cell_t;
+
+/** Number of cells added to a circuit queue including their insertion
+ * time on 10 millisecond detail; used for buffer statistics. */
+typedef struct insertion_time_elem_t {
+  struct insertion_time_elem_t *next; /**< Next element in queue. */
+  uint32_t insertion_time; /**< When were cells inserted (in 10 ms steps
+                             * starting at 0:00 of the current day)? */
+  unsigned counter; /**< How many cells were inserted? */
+} insertion_time_elem_t;
+
+/** Queue of insertion times. */
+typedef struct insertion_time_queue_t {
+  struct insertion_time_elem_t *first; /**< First element in queue. */
+  struct insertion_time_elem_t *last; /**< Last element in queue. */
+} insertion_time_queue_t;
 
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
@@ -865,6 +871,7 @@ typedef struct cell_queue_t {
   packed_cell_t *head; /**< The first cell, or NULL if the queue is empty. */
   packed_cell_t *tail; /**< The last cell, or NULL if the queue is empty. */
   int n; /**< The number of cells in the queue. */
+  insertion_time_queue_t *insertion_times; /**< Insertion times of cells. */
 } cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
@@ -991,11 +998,8 @@ typedef struct connection_t {
    * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
-#ifdef ENABLE_DIRREQ_STATS
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
-#endif
-
 } connection_t;
 
 /** Stores flags and information related to the portion of a v2 Tor OR
@@ -1985,10 +1989,9 @@ typedef struct circuit_t {
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_conn;
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
-#ifdef ENABLE_DIRREQ_STATS
+
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
-#endif
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -2112,7 +2115,6 @@ typedef struct or_circuit_t {
   /** True iff this circuit was made with a CREATE_FAST cell. */
   unsigned int is_first_hop : 1;
 
-#ifdef ENABLE_BUFFER_STATS
   /** Number of cells that were removed from circuit queue; reset every
    * time when writing buffer stats to disk. */
   uint32_t processed_cells;
@@ -2121,7 +2123,6 @@ typedef struct or_circuit_t {
    * exit-ward queues of this circuit; reset every time when writing
    * buffer stats to disk. */
   uint64_t total_cell_waiting_time;
-#endif
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t.*/
@@ -2557,6 +2558,9 @@ typedef struct {
 
   /** If true, the user wants us to collect statistics as entry node. */
   int EntryStatistics;
+
+  /** If true, include statistics file contents in extra-info documents. */
+  int ExtraInfoStatistics;
 
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
@@ -3697,14 +3701,10 @@ int dnsserv_launch_request(const char *name, int is_reverse);
  * leaking information. */
 #define DIR_RECORD_USAGE_GRANULARITY 8
 /** Time interval: Flush geoip data to disk this often. */
-#define DIR_RECORD_USAGE_RETAIN_IPS (24*60*60)
+#define DIR_ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
 /** How long do we have to have observed per-country request history before
  * we are willing to talk about it? */
 #define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (24*60*60)
-
-/** Time interval: Flush geoip data to disk this often when measuring on an
- * entry guard. */
-#define ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
 
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);
@@ -3752,7 +3752,10 @@ typedef enum {
 void geoip_note_ns_response(geoip_client_action_t action,
                             geoip_ns_response_t response);
 time_t geoip_get_history_start(void);
-char *geoip_get_client_history(time_t now, geoip_client_action_t action);
+char *geoip_get_client_history_dirreq(time_t now,
+                                      geoip_client_action_t action);
+char *geoip_get_client_history_bridge(time_t now,
+                                      geoip_client_action_t action);
 char *geoip_get_request_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer);
@@ -3791,6 +3794,11 @@ void geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
                         geoip_client_action_t action, dirreq_type_t type);
 void geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
                                dirreq_state_t new_state);
+
+void geoip_dirreq_stats_init(time_t now);
+void geoip_dirreq_stats_write(time_t now);
+void geoip_entry_stats_init(time_t now);
+void geoip_entry_stats_write(time_t now);
 
 /********************************* hibernate.c **********************/
 
@@ -4133,17 +4141,11 @@ void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
-#ifdef ENABLE_EXIT_STATS
-void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes,
-                                   time_t now);
-void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes,
-                                      time_t now);
-void rep_hist_note_exit_stream_opened(uint16_t port, time_t now);
-#else
-#define rep_hist_note_exit_bytes_read(p,n,t) STMT_NIL
-#define rep_hist_note_exit_bytes_written(p,n,t) STMT_NIL
-#define rep_hist_note_exit_stream_opened(p,t) STMT_NIL
-#endif
+void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes);
+void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes);
+void rep_hist_note_exit_stream_opened(uint16_t port);
+void rep_hist_exit_stats_init(time_t now);
+void rep_hist_exit_stats_write(time_t now);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);
@@ -4195,11 +4197,10 @@ void hs_usage_note_fetch_successful(const char *service_id, time_t now);
 void hs_usage_write_statistics_to_file(time_t now);
 void hs_usage_free_all(void);
 
-#ifdef ENABLE_BUFFER_STATS
-#define DUMP_BUFFER_STATS_INTERVAL (24*60*60)
-void add_circ_to_buffer_stats(circuit_t *circ, time_t end_of_interval);
-void dump_buffer_stats(void);
-#endif
+void rep_hist_buffer_stats_init(time_t now);
+void rep_hist_buffer_stats_add_circ(circuit_t *circ,
+                                    time_t end_of_interval);
+void rep_hist_buffer_stats_write(time_t now);
 
 /********************************* rendclient.c ***************************/
 

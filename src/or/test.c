@@ -4774,14 +4774,16 @@ test_geoip(void)
   /* and 17 observations in ZZ... */
   for (i=110; i < 127; ++i)
     geoip_note_client_seen(GEOIP_CLIENT_CONNECT, i, now);
-  s = geoip_get_client_history(now+5*24*60*60, GEOIP_CLIENT_CONNECT);
+  s = geoip_get_client_history_bridge(now+5*24*60*60,
+                                      GEOIP_CLIENT_CONNECT);
   test_assert(s);
   test_streq("zz=24,ab=16,xy=8", s);
   tor_free(s);
 
   /* Now clear out all the AB observations. */
   geoip_remove_old_clients(now-6000);
-  s = geoip_get_client_history(now+5*24*60*60, GEOIP_CLIENT_CONNECT);
+  s = geoip_get_client_history_bridge(now+5*24*60*60,
+                                      GEOIP_CLIENT_CONNECT);
   test_assert(s);
   test_streq("zz=24,xy=8", s);
 
