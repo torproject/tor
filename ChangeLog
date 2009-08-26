@@ -2,6 +2,9 @@ Changes in version 0.2.2.1-alpha - 2009-0?-??
   o Major features:
     - Add support for dynamic OpenSSL hardware crypto acceleration engines
       via new AccelName and AccelDir options.
+    - Tor now supports tunneling all of its outgoing connections over a SOCKS
+      proxy, using the SOCKS4Proxy and/or SOCKS5Proxy configuration options.
+      Code by Christopher Davis.
 
   o New options for gathering stats safely:
     - Directories that configure with --enable-dirreq-stats and set

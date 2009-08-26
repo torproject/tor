@@ -3533,6 +3533,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   }
 
+  if (options->Socks4Proxy && options->Socks5Proxy)
+    REJECT("You cannot specify both Socks4Proxy and SOCKS5Proxy");
+
   if (options->Socks5ProxyUsername) {
     size_t len;
 

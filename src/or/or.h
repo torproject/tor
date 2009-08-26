@@ -2392,15 +2392,15 @@ typedef struct {
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any. */
   char *HttpsProxyAuthenticator; /**< username:password string, if any. */
 
-  char *Socks4Proxy;
-  tor_addr_t Socks4ProxyAddr;
-  uint16_t Socks4ProxyPort;
+  char *Socks4Proxy; /**< hostname:port to use as a SOCKS4 proxy, if any. */
+  tor_addr_t Socks4ProxyAddr; /**< Derived from Socks4Proxy. */
+  uint16_t Socks4ProxyPort; /**< Derived from Socks4Proxy. */
 
-  char *Socks5Proxy;
-  tor_addr_t Socks5ProxyAddr;
-  uint16_t Socks5ProxyPort;
-  char *Socks5ProxyUsername;
-  char *Socks5ProxyPassword;
+  char *Socks5Proxy; /**< hostname:port to use as a SOCKS5 proxy, if any. */
+  tor_addr_t Socks5ProxyAddr; /**< Derived from Sock5Proxy. */
+  uint16_t Socks5ProxyPort; /**< Derived from Socks5Proxy. */
+  char *Socks5ProxyUsername; /**< Username for SOCKS5 authentication, if any */
+  char *Socks5ProxyPassword; /**< Password for SOCKS5 authentication, if any */
 
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
