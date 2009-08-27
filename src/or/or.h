@@ -1890,6 +1890,8 @@ typedef struct crypt_path_t {
 #define NCIRCUITS_TO_OBSERVE 10000 /* approx 3 weeks worth of circuits */
 #define BUILDTIME_BIN_WIDTH 50
 
+/* TODO: This should be moved to the consensus */
+#define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
 
 /** Information used to build a circuit. */
 typedef struct {
@@ -1984,7 +1986,7 @@ typedef struct circuit_t {
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
                            * circuit is clean. */
-  struct timeval highres_created; /**< When exactly was this circuit created? */
+  struct timeval highres_created; /**< When exactly was the circuit created? */
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of
                               * the main loop? (If true, holds the line number
@@ -2695,7 +2697,6 @@ typedef struct {
   config_line_t * BuildtimeHistogram;
   uint16_t TotalBuildTimes;
 
-
   /** What version of Tor wrote this state file? */
   char *TorVersion;
 
@@ -2865,10 +2866,25 @@ void bridges_retry_all(void);
 
 void entry_guards_free_all(void);
 
-void circuit_build_times_update_state(or_state_t *state);
-int  circuit_build_times_parse_state(or_state_t *state, char **msg);
+/* Circuit Build Timeout "public" functions (I love C... No wait.) */
+typedef struct {
+  // XXX: Make this a smartlist..
+  uint16_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
+  int build_times_idx;
+  int total_build_times;
+  int pre_timeouts;
+  uint16_t Xm;
+  double alpha;
+} circuit_build_times_t;
 
-
+extern circuit_build_times_t circ_times;
+void circuit_build_times_update_state(circuit_build_times_t *cbt,
+                                      or_state_t *state);
+int  circuit_build_times_parse_state(circuit_build_times_t *cbt,
+                                     or_state_t *state, char **msg);
+void circuit_build_times_add_timeout(circuit_build_times_t *cbt);
+void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
+int circuit_build_times_add_time(circuit_build_times_t *cbt, long time);
 
 /********************************* circuitlist.c ***********************/
 

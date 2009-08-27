@@ -358,6 +358,8 @@ circuit_expire_building(time_t now)
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
     circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
+    circuit_build_times_add_timeout(&circ_times);
+    circuit_build_times_set_timeout(&circ_times);
   }
 }
 

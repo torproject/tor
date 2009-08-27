@@ -41,14 +41,14 @@ AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
 tor_LDADD = ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
-	-lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
+	-lz -lm -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 test_SOURCES = $(COMMON_SRC) test_data.c test.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 test_LDADD = ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
-	-lz -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
+	-lz -lm -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 

@@ -413,7 +413,6 @@ static config_var_t _state_vars[] = {
   VAR("CircuitBuildTimeBin",      LINELIST_S,  BuildtimeHistogram,     NULL),
   VAR("BuildtimeHistogram",      LINELIST_V,  BuildtimeHistogram,     NULL),
 
-
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
@@ -2923,7 +2922,7 @@ compute_publishserverdescriptor(or_options_t *options)
 /** Lowest allowable value for CircuitBuildTimeout; values too low will
  * increase network load because of failing connections being retried, and
  * might prevent users from connecting to the network at all. */
-#define MIN_CIRCUIT_BUILD_TIMEOUT 30
+#define MIN_CIRCUIT_BUILD_TIMEOUT 5
 
 /** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
@@ -5070,7 +5069,7 @@ or_state_set(or_state_t *new_state)
     tor_free(err);
   }
 
-  if(circuit_build_times_parse_state(global_state, &err) < 0)   {
+  if (circuit_build_times_parse_state(&circ_times, global_state, &err) < 0)   {
     log_warn(LD_GENERAL,"%s",err);
     tor_free(err);
 
@@ -5208,7 +5207,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
-  circuit_build_times_update_state(global_state);
+  circuit_build_times_update_state(&circ_times, global_state);
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 

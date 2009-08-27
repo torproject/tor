@@ -9,14 +9,23 @@
  * \brief The actual details of building circuits.
  **/
 
+#include <math.h>
+
+long int lround(double x);
+
+double
+ln(double x)
+{
+  return log(x);
+}
+#undef log
+
 #include "or.h"
+#include "crypto.h"
 
 /********* START VARIABLES **********/
 /** Global list of circuit build times */
-// XXX: Make this a smartlist..
-uint16_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
-int build_times_idx = 0;
-int total_build_times = 0;
+circuit_build_times_t circ_times;
 
 /** A global list of all circuits at this hop. */
 extern circuit_t *global_circuitlist;
@@ -65,25 +74,24 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static void entry_guards_changed(void);
 static time_t start_of_month(time_t when);
 
-static int circuit_build_times_add_time(time_t time);
-/** circuit_build_times is a circular array, so loop around when
- *  array is full
+/**
+ * circuit_build_times is a circular array, so loop around when
+ * array is full
  *
  * time units are milliseconds
  */
-static
 int
-circuit_build_times_add_time(long time)
+circuit_build_times_add_time(circuit_build_times_t *cbt, long time)
 {
-  if(time > UINT16_MAX) {
+  if (time > UINT16_MAX) {
     log_notice(LD_CIRC,
-       "Circuit build time of %dms exceeds max. Capping at 65536ms", time);
+       "Circuit build time of %ldms exceeds max. Capping at 65536ms", time);
     time = UINT16_MAX;
   }
-  circuit_build_times[build_times_idx] = time;
-  build_times_idx = (build_times_idx + 1) % NCIRCUITS_TO_OBSERVE;
-  if(total_build_times + 1 < NCIRCUITS_TO_OBSERVE)
-    total_build_times++;
+  cbt->circuit_build_times[cbt->build_times_idx] = time;
+  cbt->build_times_idx = (cbt->build_times_idx + 1) % NCIRCUITS_TO_OBSERVE;
+  if (cbt->total_build_times + 1 < NCIRCUITS_TO_OBSERVE)
+    cbt->total_build_times++;
 
   return 0;
 }
@@ -91,15 +99,16 @@ circuit_build_times_add_time(long time)
 /**
  * Calculate histogram
  */
-void
-circuit_build_times_create_histogram(uint16_t * histogram)
+static void
+circuit_build_times_create_histogram(circuit_build_times_t *cbt,
+                                     uint16_t *histogram)
 {
- int i, c;
-   // calculate histogram
-  for(i = 0; i < NCIRCUITS_TO_OBSERVE; i++) {
-    if(circuit_build_times[i] == 0) continue; /* 0 <-> uninitialized */
+  int i, c;
+  // calculate histogram
+  for (i = 0; i < NCIRCUITS_TO_OBSERVE; i++) {
+    if (cbt->circuit_build_times[i] == 0) continue; /* 0 <-> uninitialized */
 
-    c = (circuit_build_times[i] / BUILDTIME_BIN_WIDTH);
+    c = (cbt->circuit_build_times[i] / BUILDTIME_BIN_WIDTH);
     histogram[c]++;
   }
 }
@@ -107,26 +116,29 @@ circuit_build_times_create_histogram(uint16_t * histogram)
 /**
  * Find maximum circuit build time
  */
-uint16_t
-circuit_build_times_max()
+static uint16_t
+circuit_build_times_max(circuit_build_times_t *cbt)
 {
   int i = 0, max_build_time = 0;
-  for( i = 0; i < NCIRCUITS_TO_OBSERVE; i++) {
-    if(circuit_build_times[i] > max_build_time)
-      max_build_time = circuit_build_times[i];
+  for (i = 0; i < NCIRCUITS_TO_OBSERVE; i++) {
+    if (cbt->circuit_build_times[i] > max_build_time)
+      max_build_time = cbt->circuit_build_times[i];
   }
   return max_build_time;
 }
 
-uint16_t
-circuit_build_times_min()
+static uint16_t
+circuit_build_times_min(circuit_build_times_t *cbt)
 {
   int i = 0;
   uint16_t min_build_time = UINT16_MAX;
-  for( i = 0; i < NCIRCUITS_TO_OBSERVE; i++) {
-    if(circuit_build_times[i] && /* 0 <-> uninitialized */
-            circuit_build_times[i] < min_build_time)
-      min_build_time = circuit_build_times[i];
+  for (i = 0; i < NCIRCUITS_TO_OBSERVE; i++) {
+    if (cbt->circuit_build_times[i] && /* 0 <-> uninitialized */
+            cbt->circuit_build_times[i] < min_build_time)
+      min_build_time = cbt->circuit_build_times[i];
+  }
+  if (min_build_time == UINT16_MAX) {
+    log_warn(LD_CIRC, "No build times less than UIN16_MAX!");
   }
   return min_build_time;
 }
@@ -135,85 +147,218 @@ circuit_build_times_min()
  * output a histogram of current circuit build times
  */
 void
-circuit_build_times_update_state(or_state_t * state)
+circuit_build_times_update_state(circuit_build_times_t *cbt,
+                                 or_state_t *state)
 {
   uint16_t max_build_time = 0, *histogram;
   int i = 0, nbins = 0;
   config_line_t **next, *line;
 
-  max_build_time = circuit_build_times_max();
+  max_build_time = circuit_build_times_max(cbt);
   nbins = 1 + (max_build_time / BUILDTIME_BIN_WIDTH);
   histogram = tor_malloc_zero(nbins * sizeof(uint16_t));
 
-  circuit_build_times_create_histogram(histogram);
+  circuit_build_times_create_histogram(cbt, histogram);
   // write to state
   config_free_lines(state->BuildtimeHistogram);
   next = &state->BuildtimeHistogram;
   *next = NULL;
 
-  state->TotalBuildTimes = total_build_times;
+  state->TotalBuildTimes = cbt->total_build_times;
 
   // total build times?
-  for(i = 0; i < nbins; i++) {
-    if(histogram[i] == 0) continue; // compress the histogram by skipping the blanks
+  for (i = 0; i < nbins; i++) {
+    // compress the histogram by skipping the blanks
+    if (histogram[i] == 0) continue;
     *next = line = tor_malloc_zero(sizeof(config_line_t));
     line->key = tor_strdup("CircuitBuildTimeBin");
-    line->value = tor_malloc(20);
-    tor_snprintf(line->value, 20, "%d %d", i*BUILDTIME_BIN_WIDTH,
+    line->value = tor_malloc(25);
+    tor_snprintf(line->value, 25, "%d %d", i*BUILDTIME_BIN_WIDTH,
                  histogram[i]);
     next = &(line->next);
   }
-  if(!get_options()->AvoidDiskWrites)
+  if (!get_options()->AvoidDiskWrites)
     or_state_mark_dirty(get_or_state(), 0);
 
-  if(histogram) tor_free(histogram);
-}
-
-int
-find_next_available(int chosen)
-{// find index of next open slot in circuit_build_times
-  int idx = 0;
-  for(idx = (chosen + 1) % NCIRCUITS_TO_OBSERVE; idx < chosen;
-          idx = ((idx + 1 ) % NCIRCUITS_TO_OBSERVE)) {
-    if(circuit_build_times[idx] == 0) {
-      return idx;
-    }
-  }
-  return 0;
+  if (histogram) tor_free(histogram);
 }
 
 /** Load histogram from state */
 int
-circuit_build_times_parse_state(or_state_t *state, char **msg)
+circuit_build_times_parse_state(circuit_build_times_t *cbt,
+                                or_state_t *state, char **msg)
 {
+  int tot_values = 0, lines = 0;
   config_line_t *line;
   msg = NULL;
-  memset(circuit_build_times, 0, NCIRCUITS_TO_OBSERVE);
-  total_build_times = state->TotalBuildTimes;
+  memset(cbt->circuit_build_times, 0, NCIRCUITS_TO_OBSERVE);
+  cbt->total_build_times = state->TotalBuildTimes;
 
-  for(line = state->BuildtimeHistogram; line; line = line->next) {
+  for (line = state->BuildtimeHistogram; line; line = line->next) {
     smartlist_t * args = smartlist_create();
     smartlist_split_string(args, line->value, " ",
                                   SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    if(smartlist_len(args) < 2) {
+    if (smartlist_len(args) < 2) {
       *msg = tor_strdup("Unable to parse circuit build times: "
                           "Too few arguments to CircuitBuildTIme");
       break;
     } else {
-      uint16_t ms, count, i;
-      /* XXX: use tor_strtol */
-      ms = atol(smartlist_get(args,0));
-      count = atol(smartlist_get(args,1));
-      for(i = 0; i < count; i++) {
-        circuit_build_times_add_time(ms);
+      const char *ms_str = smartlist_get(args,0);
+      const char *count_str = smartlist_get(args,1);
+      uint32_t count, i;
+      uint16_t ms;
+      int ok;
+      ms = tor_parse_ulong(ms_str, 0, 0, UINT16_MAX, &ok, NULL);
+      if (!ok) {
+        *msg = tor_strdup("Unable to parse circuit build times: "
+                          "Unparsable bin number");
+        break;
+      }
+      count = tor_parse_ulong(count_str, 0, 0, UINT32_MAX, &ok, NULL);
+      if (!ok) {
+        *msg = tor_strdup("Unable to parse circuit build times: "
+                          "Unparsable bin count");
+        break;
+      }
+      lines++;
+      for (i = 0; i < count; i++) {
+        circuit_build_times_add_time(cbt, ms);
+        tot_values++;
       }
     }
   }
+  log_info(LD_CIRC, "Loaded %d values from %d lines in circuit time histogram",
+           tot_values, lines);
+  circuit_build_times_set_timeout(cbt);
   return (msg ? -1 : 0);
 }
 
+static void
+circuit_build_times_update_alpha(circuit_build_times_t *cbt)
+{
+  uint16_t *x=cbt->circuit_build_times;
+  double a = 0;
+  int n=0,i=0;
 
+  /* http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation */
+  cbt->Xm = circuit_build_times_min(cbt);
 
+  for (i=0; i< NCIRCUITS_TO_OBSERVE; i++) {
+    if (!x[i]) continue;
+    a += ln(x[i]);
+    n++;
+  }
+  tor_assert(n==cbt->total_build_times);
+  a -= n*ln(cbt->Xm);
+  a = n/a;
+
+  cbt->alpha = a;
+}
+
+/**
+ * This is the Pareto Quantile Function. It calculates the point x
+ * in the distribution such that F(x) < quantile (ie quantile*100%
+ * of the mass of the density function is below x on the curve).
+ *
+ * We use it to calculate the timeout and also synthetic values of
+ * time for circuits that timeout before completion.
+ *
+ * See http://en.wikipedia.org/wiki/Quantile_function,
+ * http://en.wikipedia.org/wiki/Inverse_transform_sampling and
+ * http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation
+ * That's right. I'll cite wikipedia all day long.
+ */
+static double
+circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
+                                      double quantile)
+{
+  return cbt->Xm/pow(1.0-quantile,1.0/cbt->alpha);
+}
+
+static void
+circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt)
+{
+  /* Generate 0.8-1.0... */
+  uint64_t r = crypto_rand_uint64(UINT64_MAX-1);
+  double u = BUILDTIMEOUT_QUANTILE_CUTOFF +
+             ((1.0-BUILDTIMEOUT_QUANTILE_CUTOFF)*r)/(1.0*UINT64_MAX);
+
+  long gentime = lround(circuit_build_times_calculate_timeout(cbt, u));
+
+  if (gentime < get_options()->CircuitBuildTimeout*1000) {
+    log_warn(LD_CIRC,
+      "Generated a synthetic timeout LESS than the current timeout: %ld vs %d",
+      gentime, get_options()->CircuitBuildTimeout*1000);
+    tor_assert(gentime >= get_options()->CircuitBuildTimeout*1000);
+  } else if (gentime > UINT16_MAX) {
+    gentime = UINT16_MAX;
+    log_info(LD_CIRC,
+      "Generated a synthetic timeout LESS than the current timeout: %ld vs %d",
+      gentime, get_options()->CircuitBuildTimeout*1000);
+  } else {
+    log_info(LD_CIRC, "Generated synthetic time %ld for timeout",
+             gentime);
+  }
+
+  circuit_build_times_add_time(cbt, gentime);
+}
+
+/**
+ * Store a timeout as a synthetic value
+ */
+void
+circuit_build_times_add_timeout(circuit_build_times_t *cbt)
+{
+  if (cbt->total_build_times < MIN_CIRCUITS_TO_OBSERVE) {
+    /* Store a timeout before we have enough data as special */
+    cbt->pre_timeouts++;
+    return;
+  }
+
+  /* Store a timeout as a random position on this curve */
+  if (cbt->pre_timeouts && get_options()->CircuitBuildTimeout != 60) {
+    cbt->Xm = circuit_build_times_min(cbt);
+    // Use current timeout to get an estimate on alpha
+    // Q(u) = Xm/((1-u)^(1/a))
+    // Q(0.8) = Xm/((1-0.8))^(1/a)) = CircBuildTimeout
+    // CircBuildTimeout = Xm/((1-0.8))^(1/a))
+    // CircBuildTimeout = Xm*((1-0.8))^(-1/a))
+    // ln(CircBuildTimeout) = ln(Xm)+ln(((1-0.8)))*(-1/a)
+    // -ln(1-0.8)/(ln(CircBuildTimeout)-ln(Xm))=a
+    cbt->alpha = -ln(1-BUILDTIMEOUT_QUANTILE_CUTOFF)/
+             (ln(get_options()->CircuitBuildTimeout)-ln(cbt->Xm));
+    while (cbt->pre_timeouts-- != 0) {
+      circuit_build_times_add_timeout_worker(cbt);
+    }
+  }
+
+  cbt->pre_timeouts = 0;
+  circuit_build_times_add_timeout_worker(cbt);
+}
+
+void
+circuit_build_times_set_timeout(circuit_build_times_t *cbt)
+{
+  double timeout;
+
+  if (cbt->total_build_times < MIN_CIRCUITS_TO_OBSERVE) {
+    log_info(LD_CIRC,
+            "Not enough circuits yet to calculate a new build timeout."
+            " Need %d more.",
+            MIN_CIRCUITS_TO_OBSERVE-cbt->total_build_times);
+    return;
+  }
+
+  circuit_build_times_update_alpha(cbt);
+  timeout = circuit_build_times_calculate_timeout(cbt,
+                                BUILDTIMEOUT_QUANTILE_CUTOFF);
+
+  get_options()->CircuitBuildTimeout = lround(timeout/1000.0);
+
+  log_info(LD_CIRC,
+           "Set circuit build timeout to %d based on %d circuit times",
+           get_options()->CircuitBuildTimeout, cbt->total_build_times);
+}
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
  * and with the high bit specified by conn-\>circ_id_type, until we get
@@ -800,9 +945,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       tor_gettimeofday(&end);
       /* done building the circuit. whew. */
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-      circuit_build_times_add_time(tor_mdiff(&circ->_base.timestamp_created,
-                  &end));
-      circuit_build_times_recompute();
+      circuit_build_times_add_time(&circ_times,
+                  tv_mdiff(&circ->_base.highres_created, &end));
+      circuit_build_times_set_timeout(&circ_times);
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
       if (circ->build_state->onehop_tunnel)
