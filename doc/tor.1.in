@@ -1,4 +1,4 @@
-.TH TOR 1 "January 2009" "TOR"
+.TH TOR 1 "August 2009" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -1369,7 +1369,7 @@ if you're using a Tor controller that handles hidserv publishing for you.
 .TP
 \fBHiddenServiceVersion \fR\fIversion\fR,\fIversion\fR,\fI...\fP
 A list of rendezvous service descriptor versions to publish for the hidden
-service. Possible version numbers are 0 and 2. (Default: 0, 2)
+service. Currently, only version 2 is supported. (Default: 2)
 .LP
 .TP
 \fBHiddenServiceAuthorizeClient \fR\fIauth-type\fR \fR\fIclient-name\fR,\fIclient-name\fR,\fI...\fP
