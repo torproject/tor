@@ -115,6 +115,11 @@ Changes in version 0.2.1.20 - 2009-??-??
     - Fix an extremely rare infinite recursion bug that could occur if
       we tried to log a message after shutting down the log subsystem.
       Found by Matt Edman. Bugfix on 0.2.0.16-alpha.
+    - We were triggering a CLOCK_SKEW controller status event whenever
+      we connect via the v2 connection protocol to any relay that has
+      a wrong clock. Instead, we should only inform the controller when
+      it's a trusted authority that claims our clock is wrong. Bugfix
+      on 0.2.0.20-rc; starts to fix bug 1074. Reported by SwissTorExit.
 
 
 Changes in version 0.2.1.19 - 2009-07-28

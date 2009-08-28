@@ -1254,20 +1254,26 @@
      CLOCK_SKEW
        SKEW="+" / "-" SECONDS
        MIN_SKEW="+" / "-" SECONDS.
-       SOURCE="DIRSERV:IP:Port" / "NETWORKSTATUS:IP:PORT" / "CONSENSUS"
+       SOURCE="DIRSERV:" IP ":" Port /
+              "NETWORKSTATUS:" IP ":" Port /
+              "OR:" IP ":" Port /
+              "CONSENSUS"
          If "SKEW" is present, it's an estimate of how far we are from the
          time declared in the source.  (In other words, if we're an hour in
          the past, the value is -3600.)  "MIN_SKEW" is present, it's a lower
          bound.  If the source is a DIRSERV, we got the current time from a
          connection to a dirserver.  If the source is a NETWORKSTATUS, we
          decided we're skewed because we got a v2 networkstatus from far in
-         the future.  If the source is CONSENSUS, we decided we're skewed
-         because we got a networkstatus consensus from the future.
+         the future.  If the source is OR, the skew comes from a NETINFO
+         cell from a connection to another relay.  If the source is
+         CONSENSUS, we decided we're skewed because we got a networkstatus
+         consensus from the future.
 
-         {Controllers may want to warn the user if the skew is high, or if
-         multiple skew messages appear at severity WARN.  Controllers
-         shouldn't blindly adjust the clock, since the more accurate source
-         of skew info (DIRSERV) is currently unauthenticated.}
+         {Tor should send this message to controllers when it thinks the
+         skew is so high that it will interfere with proper Tor operation.
+         Controllers shouldn't blindly adjust the clock, since the more
+         accurate source of skew info (DIRSERV) is currently
+         unauthenticated.}
 
      BAD_LIBEVENT
      "METHOD=" libevent method
