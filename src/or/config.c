@@ -5207,7 +5207,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
-  circuit_build_times_update_state(&circ_times, global_state);
+  circuit_build_times_update_state(&circ_times, global_state, 0);
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 

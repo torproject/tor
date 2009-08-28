@@ -37,6 +37,9 @@ const char tor_git_revision[] = "";
 #define GEOIP_PRIVATE
 #define MEMPOOL_PRIVATE
 #define ROUTER_PRIVATE
+#define CIRCUIT_PRIVATE
+
+#include <math.h>
 
 #include "or.h"
 #include "test.h"
@@ -3404,6 +3407,69 @@ test_dirutil_param_voting(void)
   smartlist_free(vote3.net_params);
   smartlist_free(vote4.net_params);
 
+  return;
+}
+
+static void
+test_circuit_timeout(void)
+{
+  /* Plan:
+   *  1. Generate 1000 samples
+   *  2. Estimate parameters
+   *  3. If difference, repeat
+   *  4. Save state
+   *  5. load state
+   *  6. Estimate parameters
+   *  7. compare differences
+   */
+  circuit_build_times_t initial;
+  circuit_build_times_t estimate;
+  circuit_build_times_t final;
+  or_state_t state;
+  int i;
+  char *msg;
+  double timeout1, timeout2;
+  memset(&initial, 0, sizeof(circuit_build_times_t));
+  memset(&estimate, 0, sizeof(circuit_build_times_t));
+  memset(&final, 0, sizeof(circuit_build_times_t));
+  memset(&state, 0, sizeof(or_state_t));
+
+#define timeout0 (30*1000.0)
+  initial.Xm = 750;
+  circuit_build_times_initial_alpha(&initial, BUILDTIMEOUT_QUANTILE_CUTOFF,
+                                    timeout0);
+  do {
+    int n = 0;
+    for (i=0; i < MIN_CIRCUITS_TO_OBSERVE; i++) {
+      if (circuit_build_times_add_time(&estimate,
+              circuit_build_times_generate_sample(&initial, 0, 1)) == 0) {
+        n++;
+      }
+    }
+    circuit_build_times_update_alpha(&estimate);
+    timeout1 = circuit_build_times_calculate_timeout(&estimate,
+                                  BUILDTIMEOUT_QUANTILE_CUTOFF);
+    log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout1, estimate.Xm);
+  } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
+                circuit_build_times_cdf(&initial, timeout1)) > 0.05
+                /* 5% error */
+           && estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+
+  test_assert(estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+
+  circuit_build_times_update_state(&estimate, &state, 1);
+  test_assert(circuit_build_times_parse_state(&final, &state, &msg) == 0);
+
+  circuit_build_times_update_alpha(&final);
+  timeout2 = circuit_build_times_calculate_timeout(&final,
+                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
+  log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout2, final.Xm);
+
+  test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
+                circuit_build_times_cdf(&initial, timeout2)) < 0.05);
+
+done:
+  return;
 }
 
 extern const char AUTHORITY_CERT_1[];
@@ -4931,6 +4997,7 @@ static struct {
   ENT(dirutil),
   SUBENT(dirutil, measured_bw),
   SUBENT(dirutil, param_voting),
+  ENT(circuit_timeout),
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),

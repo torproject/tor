@@ -1884,15 +1884,6 @@ typedef struct crypt_path_t {
                                  DH_KEY_LEN)
 #define ONIONSKIN_REPLY_LEN (DH_KEY_LEN+DIGEST_LEN)
 
-// XXX: Do we want to artifically tweak CircuitIdleTimeout and
-// the number of circuits we build at a time if < MIN here?
-#define MIN_CIRCUITS_TO_OBSERVE 1000
-#define NCIRCUITS_TO_OBSERVE 10000 /* approx 3 weeks worth of circuits */
-#define BUILDTIME_BIN_WIDTH 50
-
-/* TODO: This should be moved to the consensus */
-#define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
-
 /** Information used to build a circuit. */
 typedef struct {
   /** Intended length of the final circuit. */
@@ -2866,25 +2857,51 @@ void bridges_retry_all(void);
 
 void entry_guards_free_all(void);
 
-/* Circuit Build Timeout "public" functions (I love C... No wait.) */
+/* Circuit Build Timeout "public" functions and structures.
+ * (I love C... No wait.) */
+
+// XXX: Do we want to artifically tweak CircuitIdleTimeout and
+// the number of circuits we build at a time if < MIN here?
+#define MIN_CIRCUITS_TO_OBSERVE 500
+#define NCIRCUITS_TO_OBSERVE 5000 /* approx 1.5 weeks worth of circuits */
+#define BUILDTIME_BIN_WIDTH 50
+
+/* TODO: This should be moved to the consensus */
+#define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
+
+typedef uint32_t build_time_t;
+#define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
+
 typedef struct {
   // XXX: Make this a smartlist..
-  uint16_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
+  build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
   int build_times_idx;
   int total_build_times;
   int pre_timeouts;
-  uint16_t Xm;
+  build_time_t Xm;
   double alpha;
 } circuit_build_times_t;
 
 extern circuit_build_times_t circ_times;
 void circuit_build_times_update_state(circuit_build_times_t *cbt,
-                                      or_state_t *state);
+                                      or_state_t *state, int do_unit);
 int  circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                      or_state_t *state, char **msg);
 void circuit_build_times_add_timeout(circuit_build_times_t *cbt);
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
-int circuit_build_times_add_time(circuit_build_times_t *cbt, long time);
+int circuit_build_times_add_time(circuit_build_times_t *cbt,
+                                 build_time_t time);
+
+#ifdef CIRCUIT_PRIVATE
+double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
+                                             double quantile);
+build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
+                                                 double q_lo, double q_hi);
+void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
+                                       double quantile, build_time_t time);
+void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
+double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
+#endif
 
 /********************************* circuitlist.c ***********************/
 
