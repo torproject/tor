@@ -301,8 +301,7 @@ circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
 
 /* Pareto CDF */
 double
-circuit_build_times_cdf(circuit_build_times_t *cbt,
-                                   double x)
+circuit_build_times_cdf(circuit_build_times_t *cbt, double x)
 {
   double ret = 1.0-pow(cbt->Xm/x,cbt->alpha);
   tor_assert(0 <= ret && ret <= 1.0);
@@ -360,6 +359,23 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout));
 }
 
+static void
+circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
+{
+  /* Store a timeout as a random position on this curve. */
+  if (cbt->pre_timeouts) {
+    cbt->Xm = circuit_build_times_min(cbt);
+    // Use current timeout to get an estimate on alpha
+    circuit_build_times_initial_alpha(cbt,
+                     1.0-((double)cbt->pre_timeouts)/cbt->total_build_times,
+                     get_options()->CircuitBuildTimeout*1000);
+    while (cbt->pre_timeouts-- != 0) {
+      circuit_build_times_add_timeout_worker(cbt);
+    }
+    cbt->pre_timeouts = 0;
+  }
+}
+
 /**
  * Store a timeout as a synthetic value
  */
@@ -376,19 +392,7 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt)
     return;
   }
 
-  /* Store a timeout as a random position on this curve */
-  if (cbt->pre_timeouts) {
-    cbt->Xm = circuit_build_times_min(cbt);
-    // Use current timeout to get an estimate on alpha
-    circuit_build_times_initial_alpha(cbt,
-                     1.0-((double)cbt->pre_timeouts)/cbt->total_build_times,
-                     get_options()->CircuitBuildTimeout*1000);
-    while (cbt->pre_timeouts-- != 0) {
-      circuit_build_times_add_timeout_worker(cbt);
-    }
-  }
-
-  cbt->pre_timeouts = 0;
+  circuit_build_times_count_pretimeouts(cbt);
   circuit_build_times_add_timeout_worker(cbt);
 }
 
@@ -405,6 +409,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
     return;
   }
 
+  circuit_build_times_count_pretimeouts(cbt);
   circuit_build_times_update_alpha(cbt);
   timeout = circuit_build_times_calculate_timeout(cbt,
                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
