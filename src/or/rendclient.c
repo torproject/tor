@@ -94,6 +94,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       }
     });
     if (!intro_key) {
+      int num_intro_points = smartlist_len(entry->parsed->intro_nodes);
       if (rend_cache_lookup_entry(introcirc->rend_data->onion_address,
           0, &entry) > 0) {
         log_warn(LD_BUG, "We have both a v0 and a v2 rend desc for this "
@@ -109,7 +110,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       } else {
         log_warn(LD_BUG, "Internal error: could not find intro key; we "
                  "only have a v2 rend desc with %d intro points.",
-                 smartlist_len(entry->parsed->intro_nodes));
+                 num_intro_points);
         goto err;
       }
     }
