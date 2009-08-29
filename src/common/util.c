@@ -746,7 +746,7 @@ tor_parse_double(const char *s, double min, double max, int *ok, char **next)
   CHECK_STRTOX_RESULT();
 }
 
-/** As tor_parse_log, but return a unit64_t.  Only base 10 is guaranteed to
+/** As tor_parse_long, but return a uint64_t.  Only base 10 is guaranteed to
  * work for now. */
 uint64_t
 tor_parse_uint64(const char *s, int base, uint64_t min,
