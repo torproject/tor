@@ -558,6 +558,7 @@ $Id$
     "status/circuit-established"
     "status/enough-dir-info"
     "status/good-server-descriptor"
+    "status/accepted-server-descriptor"
     "status/..."
       These provide the current internal Tor values for various Tor
       states. See Section 4.1.10 for explanations. (Only a few of the
@@ -1488,18 +1489,22 @@ $Id$
        We successfully uploaded our server descriptor to at least one
        of the directory authorities, with no complaints.
 
-       {This event could affect the controller's idea of server status, but
-       the controller should not interrupt the user to tell them so.}
+       {Originally, the goal of this event was to declare "every authority
+       has accepted the descriptor, so there will be no complaints
+       about it." But since some authorities might be offline, it's
+       harder to get certainty than we had thought. As such, this event
+       is equivalent to ACCEPTED_SERVER_DESCRIPTOR below. Controllers
+       should just look at ACCEPTED_SERVER_DESCRIPTOR and should ignore
+       this event for now.}
 
      NAMESERVER_STATUS
      "NS=addr"
      "STATUS=" "UP" / "DOWN"
      "ERR=" message
         One of our nameservers has changed status.
-        // actually notice
 
-       {This event could affect the controller's idea of server status, but
-       the controller should not interrupt the user to tell them so.}
+        {This event could affect the controller's idea of server status, but
+        the controller should not interrupt the user to tell them so.}
 
      NAMESERVER_ALL_DOWN
         All of our nameservers have gone down.

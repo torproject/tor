@@ -1789,7 +1789,11 @@ getinfo_helper_events(control_connection_t *control_conn,
       *answer = tor_strdup(has_completed_circuit ? "1" : "0");
     } else if (!strcmp(question, "status/enough-dir-info")) {
       *answer = tor_strdup(router_have_minimum_dir_info() ? "1" : "0");
-    } else if (!strcmp(question, "status/good-server-descriptor")) {
+    } else if (!strcmp(question, "status/good-server-descriptor") ||
+               !strcmp(question, "status/accepted-server-descriptor")) {
+      /* They're equivalent for now, until we can figure out how to make
+       * good-server-descriptor be what we want. See comment in
+       * control-spec.txt. */
       *answer = tor_strdup(directories_have_accepted_server_descriptor()
                            ? "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded/or")) {
