@@ -527,9 +527,16 @@ inform_testing_reachability(void)
   routerinfo_t *me = router_get_my_routerinfo();
   if (!me)
     return 0;
-  if (me->dir_port)
+  control_event_server_status(LOG_NOTICE,
+                              "CHECKING_REACHABILITY ORADDRESS=%s:%d",
+                              me->address, me->or_port);
+  if (me->dir_port) {
     tor_snprintf(dirbuf, sizeof(dirbuf), " and DirPort %s:%d",
                  me->address, me->dir_port);
+    control_event_server_status(LOG_NOTICE,
+                                "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
+                                me->address, me->dir_port);
+  }
   log(LOG_NOTICE, LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... "
                          "(this may take up to %d minutes -- look for log "
                          "messages indicating success)",
@@ -537,6 +544,7 @@ inform_testing_reachability(void)
       me->dir_port ? dirbuf : "",
       me->dir_port ? "are" : "is",
       TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT/60);
+
   return 1;
 }
 

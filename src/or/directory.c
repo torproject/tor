@@ -554,11 +554,6 @@ void
 connection_dir_request_failed(dir_connection_t *conn)
 {
   if (directory_conn_is_self_reachability_test(conn)) {
-    routerinfo_t *me = router_get_my_routerinfo();
-    if (me)
-      control_event_server_status(LOG_WARN,
-                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                  me->address, me->dir_port);
     return; /* this was a test fetch. don't retry. */
   }
   if (entry_list_can_grow(get_options()))

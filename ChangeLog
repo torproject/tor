@@ -120,6 +120,12 @@ Changes in version 0.2.1.20 - 2009-??-??
       a wrong clock. Instead, we should only inform the controller when
       it's a trusted authority that claims our clock is wrong. Bugfix
       on 0.2.0.20-rc; starts to fix bug 1074. Reported by SwissTorExit.
+    - We were telling the controller about CHECKING_REACHABILITY and
+      REACHABILITY_FAILED status events whenever we launch a testing
+      circuit or notice that one has failed. Instead, only tell the
+      controller when we want to inform the user of overall success or
+      overall failure. Bugfix on 0.1.2.6-alpha. Fixes bug 1075. Reported
+      by SwissTorExit.
 
 
 Changes in version 0.2.1.19 - 2009-07-28
