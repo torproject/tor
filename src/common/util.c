@@ -735,6 +735,17 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   CHECK_STRTOX_RESULT();
 }
 
+/** As tor_parse_long(), but return a double. */
+double
+tor_parse_double(const char *s, double min, double max, int *ok, char **next)
+{
+  char *endptr;
+  double r;
+
+  r = strtod(s, &endptr);
+  CHECK_STRTOX_RESULT();
+}
+
 /** As tor_parse_log, but return a unit64_t.  Only base 10 is guaranteed to
  * work for now. */
 uint64_t
