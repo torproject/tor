@@ -2877,8 +2877,8 @@ typedef uint32_t build_time_t;
 /* How often in seconds should we build a test circuit */
 #define BUILD_TIMES_TEST_FREQUENCY 60
 
-/* Save state every 25 circuits */
-#define BUILD_TIMES_SAVE_STATE_EVERY  25
+/* Save state every 5 circuits */
+#define BUILD_TIMES_SAVE_STATE_EVERY  5
 
 typedef struct {
   build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
@@ -2916,7 +2916,8 @@ void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
 void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
 double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
 int circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt);
-void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt);
+void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
+                                       double quantile_cutoff);
 #endif
 
 /********************************* circuitlist.c ***********************/

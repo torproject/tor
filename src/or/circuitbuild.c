@@ -46,6 +46,10 @@ ln(double x)
 /********* START VARIABLES **********/
 /** Global list of circuit build times */
 // FIXME: Add this as a member for entry_guard_t instead of global?
+// Then we could do per-guard statistics, as guards are likely to
+// vary in their own latency. The downside of this is that guards
+// can change frequently, so we'd be building a lot more circuits
+// most likely.
 circuit_build_times_t circ_times;
 
 /** A global list of all circuits at this hop. */
@@ -209,7 +213,7 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
                                  or_state_t *state, int do_unit)
 {
   uint32_t *histogram;
-  build_time_t i = 0;
+  int i = 0;
   build_time_t nbins = 0;
   config_line_t **next, *line;
 
@@ -221,8 +225,11 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
 
   state->TotalBuildTimes = cbt->total_build_times;
 
-  // total build times?
-  for (i = 0; i < nbins; i++) {
+  /* Write the bins in reverse so that on startup, the faster
+     times are at the end. This is needed because of
+     the checks in circuit_build_times_check_too_many_timeouts()
+     which check the end of the array for recent values */
+  for (i = nbins-1; i >= 0; i--) {
     // compress the histogram by skipping the blanks
     if (histogram[i] == 0) continue;
     *next = line = tor_malloc_zero(sizeof(config_line_t));
@@ -372,11 +379,12 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
 }
 
 void
-circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt)
+circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
+                                       double quantile_cutoff)
 {
   /* Generate 0.8-1.0... */
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
-              BUILDTIMEOUT_QUANTILE_CUTOFF, 1.0);
+              quantile_cutoff, 1.0);
 
   if (gentime < (build_time_t)get_options()->CircuitBuildTimeout*1000) {
     log_warn(LD_CIRC,
@@ -413,13 +421,14 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
 {
   /* Store a timeout as a random position on this curve. */
   if (cbt->pre_timeouts) {
+    double timeout_quantile = 1.0-
+          ((double)cbt->pre_timeouts)/cbt->total_build_times;
     cbt->Xm = circuit_build_times_min(cbt);
     // Use current timeout to get an estimate on alpha
-    circuit_build_times_initial_alpha(cbt,
-                     1.0-((double)cbt->pre_timeouts)/cbt->total_build_times,
+    circuit_build_times_initial_alpha(cbt, timeout_quantile,
                      get_options()->CircuitBuildTimeout*1000);
     while (cbt->pre_timeouts-- != 0) {
-      circuit_build_times_add_timeout_worker(cbt);
+      circuit_build_times_add_timeout_worker(cbt, timeout_quantile);
     }
     cbt->pre_timeouts = 0;
   }
@@ -454,8 +463,11 @@ int
 circuit_build_times_is_network_live(circuit_build_times_t *cbt)
 {
   time_t now = approx_time();
-  if (now - cbt->network_last_live > NETWORK_LIVE_INTERVAL)
+  if (now - cbt->network_last_live > NETWORK_LIVE_INTERVAL) {
+    log_info(LD_CIRC, "Network is no longer live. Dead for %ld seconds.",
+             now - cbt->network_last_live);
     return 0;
+  }
   return 1;
 }
 
@@ -558,7 +570,7 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt)
   }
 
   circuit_build_times_count_pretimeouts(cbt);
-  circuit_build_times_add_timeout_worker(cbt);
+  circuit_build_times_add_timeout_worker(cbt, BUILDTIMEOUT_QUANTILE_CUTOFF);
 }
 
 void

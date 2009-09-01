@@ -3484,9 +3484,11 @@ test_circuit_timeout(void)
   test_assert(!circuit_build_times_check_too_many_timeouts(&final));
 
   for (i = 0; i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS; i++) {
-    circuit_build_times_add_timeout_worker(&estimate);
+    circuit_build_times_add_timeout_worker(&estimate,
+            BUILDTIMEOUT_QUANTILE_CUTOFF);
     if (i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS-1) {
-      circuit_build_times_add_timeout_worker(&final);
+      circuit_build_times_add_timeout_worker(&final,
+              BUILDTIMEOUT_QUANTILE_CUTOFF);
     }
   }
 
