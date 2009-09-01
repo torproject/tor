@@ -2889,6 +2889,7 @@ typedef struct {
   int pre_timeouts;
   build_time_t Xm;
   double alpha;
+  int estimated;
 } circuit_build_times_t;
 
 extern circuit_build_times_t circ_times;
