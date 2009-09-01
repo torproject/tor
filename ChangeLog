@@ -3,6 +3,8 @@ Changes in version 0.2.2.2-alpha - 2009-09-??
     - Fix an extremely rare infinite recursion bug that could occur if
       we tried to log a message after shutting down the log subsystem.
       Found by Matt Edman. Bugfix on 0.2.0.16-alpha.
+    - Fix parsing for memory or time units given without a space between
+      the number and the unit.  Bugfix on 0.2.2.1-alpha; fixes bug 1076.
 
 
 Changes in version 0.2.2.1-alpha - 2009-08-26
