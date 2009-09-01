@@ -1066,7 +1066,7 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
     return LONG_MAX;
   }
 
-  mdiff = secdiff*1000L + (end->tv_usec - start->tv_usec) / 1000L;
+  mdiff = secdiff*1000L + ((long)end->tv_usec - (long)start->tv_usec) / 1000L;
   return mdiff;
 }
 

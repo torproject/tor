@@ -1908,7 +1908,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write dirreq-stats to extra-info "
@@ -1920,7 +1920,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->EntryStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
                         "entry-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write entry-stats to extra-info "
@@ -1932,7 +1932,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->CellStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
                         "cell-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write buffer-stats to extra-info "
@@ -1944,7 +1944,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->ExitPortStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"exit-stats",
                         "exit-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write exit-stats to extra-info "

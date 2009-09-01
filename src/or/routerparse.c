@@ -2012,8 +2012,9 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         rs->has_bandwidth = 1;
       } else if (!strcmpstart(tok->args[i], "Measured=")) {
         int ok;
-        rs->measured_bw = tor_parse_ulong(strchr(tok->args[i], '=')+1, 10,
-                                          0, UINT32_MAX, &ok, NULL);
+        rs->measured_bw =
+            (uint32_t)tor_parse_ulong(strchr(tok->args[i], '=')+1,
+                                      10, 0, UINT32_MAX, &ok, NULL);
         if (!ok) {
           log_warn(LD_DIR, "Invalid Measured Bandwidth %s",
                    escaped(tok->args[i]));
@@ -3517,9 +3518,11 @@ tor_version_parse(const char *s, tor_version_t *out)
     if (! close_paren)
       return -1;
     cp += 5;
-    hexlen = (close_paren-cp);
+    if (close_paren-cp > HEX_DIGEST_LEN)
+      return -1;
+    hexlen = (int)(close_paren-cp);
     memset(digest, 0, sizeof(digest));
-    if (hexlen > HEX_DIGEST_LEN || hexlen == 0 || (hexlen % 2) == 1)
+    if ( hexlen == 0 || (hexlen % 2) == 1)
       return -1;
     if (base16_decode(digest, hexlen/2, cp, hexlen))
       return -1;

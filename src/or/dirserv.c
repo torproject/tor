@@ -2324,7 +2324,7 @@ measured_bw_line_apply(measured_bw_line_t *parsed_line,
 
   if (rs) {
     rs->has_measured_bw = 1;
-    rs->measured_bw = parsed_line->bw;
+    rs->measured_bw = (uint32_t)parsed_line->bw;
   } else {
     log_info(LD_DIRSERV, "Node ID %s not found in routerstatus list",
              parsed_line->node_hex);
