@@ -527,6 +527,7 @@ circuit_predict_and_launch_new(void)
     log_info(LD_CIRC,
              "Have %d clean circs need another buildtime test circ.", num);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+    return;
   }
 }
 

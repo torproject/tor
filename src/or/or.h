@@ -2877,6 +2877,9 @@ typedef uint32_t build_time_t;
 /* How often in seconds should we build a test circuit */
 #define BUILD_TIMES_TEST_FREQUENCY 60
 
+/* Save state every 25 circuits */
+#define BUILD_TIMES_SAVE_STATE_EVERY  25
+
 typedef struct {
   build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
   time_t network_last_live;

@@ -9,25 +9,39 @@
  * \brief The actual details of building circuits.
  **/
 
-// XXX: Move this noise to common/compat.c?
-#include <math.h>
+#define CIRCUIT_PRIVATE
 
-// also use pow()
+#include "or.h"
+#include "crypto.h"
 
+/*
+ * This madness is needed because if we simply #undef log
+ * before including or.h or log.h, we get linker collisions
+ * and random segfaults due to memory corruption (and
+ * not even at calls to log() either!)
+ */
+#undef log
+
+/*
+ * Linux doesn't provide lround in math.h by default,
+ * but mac os does... Its best just to leave math.h
+ * out of the picture entirely.
+ */
+//#define log math_h_log
+//#include <math.h>
+//#undef log
 long int lround(double x);
 double ln(double x);
+double log(double x);
+double pow(double x, double y);
 
 double
 ln(double x)
 {
   return log(x);
 }
-#undef log
 
-#define CIRCUIT_PRIVATE
-
-#include "or.h"
-#include "crypto.h"
+#define log _log
 
 /********* START VARIABLES **********/
 /** Global list of circuit build times */
@@ -98,11 +112,16 @@ circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
     return -1;
   }
 
-  cbt->last_circ_at = approx_time();
   cbt->circuit_build_times[cbt->build_times_idx] = time;
   cbt->build_times_idx = (cbt->build_times_idx + 1) % NCIRCUITS_TO_OBSERVE;
   if (cbt->total_build_times < NCIRCUITS_TO_OBSERVE)
     cbt->total_build_times++;
+
+  if ((cbt->total_build_times % BUILD_TIMES_SAVE_STATE_EVERY) == 0) {
+    /* Save state every 100 circuit builds */
+    if (!get_options()->AvoidDiskWrites)
+      or_state_mark_dirty(get_or_state(), 0);
+  }
 
   return 0;
 }
@@ -471,8 +490,10 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   get_options()->CircuitBuildTimeout = lround(timeout/1000.0);
 
   log_notice(LD_CIRC,
-           "Set circuit build timeout to %d based on %d recent circuit times",
-           get_options()->CircuitBuildTimeout, RECENT_CIRCUITS);
+           "Reset circuit build timeout to %d (Xm: %d a: %lf) based on "
+           "%d recent circuit times",
+           get_options()->CircuitBuildTimeout, cbt->Xm, cbt->alpha,
+           RECENT_CIRCUITS);
 
 reset:
 
@@ -532,8 +553,11 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
   get_options()->CircuitBuildTimeout = lround(timeout/1000.0);
 
   log_info(LD_CIRC,
-           "Set circuit build timeout to %d based on %d circuit times",
-           get_options()->CircuitBuildTimeout, cbt->total_build_times);
+          "Set circuit build timeout to %d (Xm: %d a: %lf) based on "
+           "%d circuit times",
+           get_options()->CircuitBuildTimeout, cbt->Xm, cbt->alpha,
+           cbt->total_build_times);
+
 }
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
