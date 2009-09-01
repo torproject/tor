@@ -575,7 +575,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     /* Consider all the other addresses; if any matches, this connection is
      * "canonical." */
     tor_addr_t addr;
-    const char *next = decode_address_from_payload(&addr, cp, end-cp);
+    const char *next = decode_address_from_payload(&addr, cp, (int)(end-cp));
     if (next == NULL) {
       log_fn(LOG_PROTOCOL_WARN,  LD_OR,
              "Bad address in netinfo cell; closing connection.");

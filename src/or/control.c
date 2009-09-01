@@ -2601,7 +2601,7 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   int is_reverse = 0;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
 
-  if (!(conn->event_mask & (1L<<EVENT_ADDRMAP))) {
+  if (!(conn->event_mask & ((uint32_t)1L<<EVENT_ADDRMAP))) {
     log_warn(LD_CONTROL, "Controller asked us to resolve an address, but "
              "isn't listening for ADDRMAP events.  It probably won't see "
              "the answer.");

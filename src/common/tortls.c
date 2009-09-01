@@ -1443,8 +1443,8 @@ tor_tls_used_v1_handshake(tor_tls_t *tls)
  * buffer and *<b>wbuf_bytes</b> to the amount actually used. */
 void
 tor_tls_get_buffer_sizes(tor_tls_t *tls,
-                         int *rbuf_capacity, int *rbuf_bytes,
-                         int *wbuf_capacity, int *wbuf_bytes)
+                         size_t *rbuf_capacity, size_t *rbuf_bytes,
+                         size_t *wbuf_capacity, size_t *wbuf_bytes)
 {
   if (tls->ssl->s3->rbuf.buf)
     *rbuf_capacity = tls->ssl->s3->rbuf.len;

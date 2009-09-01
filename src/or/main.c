@@ -1608,7 +1608,7 @@ dumpstats(int severity)
 {
   time_t now = time(NULL);
   time_t elapsed;
-  int rbuf_cap, wbuf_cap, rbuf_len, wbuf_len;
+  size_t rbuf_cap, wbuf_cap, rbuf_len, wbuf_len;
 
   log(severity, LD_GENERAL, "Dumping stats:");
 
@@ -1644,7 +1644,7 @@ dumpstats(int severity)
           log(severity, LD_GENERAL,
               "Conn %d: %d/%d bytes used on OpenSSL read buffer; "
               "%d/%d bytes used on write buffer.",
-              i, rbuf_len, rbuf_cap, wbuf_len, wbuf_cap);
+              i, (int)rbuf_len, (int)rbuf_cap, (int)wbuf_len, (int)wbuf_cap);
         }
       }
     }

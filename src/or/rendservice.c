@@ -1013,7 +1013,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     /* Check timestamp. */
     memcpy((char*)&ts, buf+1+v3_shift, sizeof(uint32_t));
     v3_shift += 4;
-    ts = ntohl(ts);
+    ts = ntohl((uint32_t)ts);
     if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
         (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
       log_warn(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",

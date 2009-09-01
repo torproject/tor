@@ -1917,8 +1917,9 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     for (i=0; i < tok->n_args; ++i) {
       if (!strcmpstart(tok->args[i], "Bandwidth=")) {
         int ok;
-        rs->bandwidth = tor_parse_ulong(strchr(tok->args[i], '=')+1, 10,
-                                        0, UINT32_MAX, &ok, NULL);
+        rs->bandwidth = (uint32_t)tor_parse_ulong(strchr(tok->args[i], '=')+1,
+                                                  10, 0, UINT32_MAX,
+                                                  &ok, NULL);
         if (!ok) {
           log_warn(LD_DIR, "Invalid Bandwidth %s", escaped(tok->args[i]));
           goto err;

@@ -373,10 +373,10 @@ tor_addr_parse_reverse_lookup_name(tor_addr_t *result, const char *address,
       return -1; /* malformed. */
 
     /* reverse the bytes */
-    inaddr.s_addr = (((inaddr.s_addr & 0x000000fful) << 24)
-                     |((inaddr.s_addr & 0x0000ff00ul) << 8)
-                     |((inaddr.s_addr & 0x00ff0000ul) >> 8)
-                     |((inaddr.s_addr & 0xff000000ul) >> 24));
+    inaddr.s_addr = (((inaddr.s_addr & (uint32_t)0x000000fful) << 24)
+                     |((inaddr.s_addr & (uint32_t)0x0000ff00ul) << 8)
+                     |((inaddr.s_addr & (uint32_t)0x00ff0000ul) >> 8)
+                     |((inaddr.s_addr & (uint32_t)0xff000000ul) >> 24));
 
     if (result) {
       tor_addr_from_in(result, &inaddr);
