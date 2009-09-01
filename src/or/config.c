@@ -4908,7 +4908,6 @@ static uint64_t
 config_parse_memunit(const char *s, int *ok)
 {
   uint64_t u = config_parse_units(s, memory_units, ok);
-  printf("%s -> %d\n", s, (int)u);
   return u;
 }
 
