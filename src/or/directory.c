@@ -881,7 +881,7 @@ static char *
 directory_get_consensus_url(int supports_conditional_consensus)
 {
   char *url;
-  int len;
+  size_t len;
 
   if (supports_conditional_consensus) {
     char *authority_id_list;
@@ -2332,7 +2332,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
   need_at_least = smartlist_len(want_authorities)/2+1;
   SMARTLIST_FOREACH(want_authorities, const char *, d, {
     char want_digest[DIGEST_LEN];
-    int want_len = strlen(d)/2;
+    size_t want_len = strlen(d)/2;
     if (want_len > DIGEST_LEN)
       want_len = DIGEST_LEN;
 

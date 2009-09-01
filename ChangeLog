@@ -129,6 +129,13 @@ Changes in version 0.2.1.20 - 2009-??-??
       overall failure. Bugfix on 0.1.2.6-alpha. Fixes bug 1075. Reported
       by SwissTorExit.
 
+  o Minor features:
+    - Add a "getinfo status/accepted-server-descriptor" controller
+      command, which is the recommended way for controllers to learn
+      whether our server descriptor has been successfully received by at
+      least on directory authority. Un-recommend good-server-descriptor
+      getinfo and status events until we have a better design for them.
+
 
 Changes in version 0.2.1.19 - 2009-07-28
   Tor 0.2.1.19 fixes a major bug with accessing and providing hidden

@@ -1876,7 +1876,8 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
                           int open_flags)
 {
   open_file_t *file = NULL;
-  int fd, result;
+  int fd;
+  ssize_t result;
   fd = start_writing_to_file(fname, open_flags, 0600, &file);
   if (fd<0)
     return -1;
@@ -1961,7 +1962,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   int fd; /* router file */
   struct stat statbuf;
   char *string;
-  int r;
+  ssize_t r;
   int bin = flags & RFTS_BIN;
 
   tor_assert(filename);
@@ -2020,7 +2021,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
        * match for size. */
       int save_errno = errno;
       log_warn(LD_FS,"Could read only %d of %ld bytes of file \"%s\".",
-               r, (long)statbuf.st_size,filename);
+               (int)r, (long)statbuf.st_size,filename);
       tor_free(string);
       close(fd);
       errno = save_errno;

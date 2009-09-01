@@ -2332,7 +2332,7 @@ out1:
 
 /* exported function */
 int
-evdns_nameserver_add(unsigned long int address) {
+evdns_nameserver_add(uint32_t address) {
 	struct sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
@@ -2363,13 +2363,13 @@ evdns_nameserver_ip_add(const char *ip_as_string) {
 
 	cp = strchr(ip_as_string, ':');
 	if (*ip_as_string == '[') {
-		int len;
+		size_t len;
 		if (!(cp = strchr(ip_as_string, ']'))) {
 			log(EVDNS_LOG_DEBUG, "Nameserver missing closing ]");
 			return 4;
 		}
 		len = cp-(ip_as_string + 1);
-		if (len > (int)sizeof(buf)-1) {
+		if (len > sizeof(buf)-1) {
 			log(EVDNS_LOG_DEBUG, "[Nameserver] does not fit in buffer.");
 			return 4;
 		}

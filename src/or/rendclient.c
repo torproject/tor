@@ -128,7 +128,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
              REND_DESC_COOKIE_LEN);
       v3_shift += 2+REND_DESC_COOKIE_LEN;
     }
-    set_uint32(tmp+v3_shift+1, htonl(time(NULL)));
+    set_uint32(tmp+v3_shift+1, htonl((uint32_t)time(NULL)));
     v3_shift += 4;
   } /* if version 2 only write version number */
   else if (entry->parsed->protocols & (1<<2)) {

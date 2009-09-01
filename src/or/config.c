@@ -2521,7 +2521,8 @@ is_local_addr(const tor_addr_t *addr)
      * the same /24 as last_resolved_addr will be the same as checking whether
      * it was on net 0, which is already done by is_internal_IP.
      */
-    if ((last_resolved_addr & 0xffffff00ul) == (ip & 0xffffff00ul))
+    if ((last_resolved_addr & (uint32_t)0xffffff00ul)
+        == (ip & (uint32_t)0xffffff00ul))
       return 1;
   }
   return 0;
@@ -4280,7 +4281,7 @@ options_init_from_string(const char *cf,
  err:
   config_free(&options_format, newoptions);
   if (*msg) {
-    int len = strlen(*msg)+256;
+    int len = (int)strlen(*msg)+256;
     char *newmsg = tor_malloc(len);
 
     tor_snprintf(newmsg, len, "Failed to parse/validate config: %s", *msg);
