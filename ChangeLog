@@ -37,6 +37,21 @@ Changes in version 0.2.1.20 - 2009-??-??
       least on directory authority. Un-recommend good-server-descriptor
       getinfo and status events until we have a better design for them.
 
+  o Packaging changes:
+    - Upgrade Vidalia to 0.2.3 from 0.1.15.  See
+     https://trac.vidalia-project.net/browser/vidalia/tags/vidalia-0.2.3/CHANGELOG
+     for details of what's new in Vidalia 0.2.3.
+    - Windows Vidalia Bundle: update Privoxy to 3.0.14-beta from 3.0.6
+    - OS X Vidalia Bundle: replace Privoxy with Polipo 1.0.4 plus Tor
+      specific configuration
+    - OS X Vidalia Bundle: Vidalia, Tor, and Polipo are compiled as
+     x86-only for better compatibility with OS X 10.6, aka Snow Leopard.
+    - OS X Tor Expert Bundle: Tor is compiled as x86-only for
+      better compatibility with OS X 10.6, aka Snow Leopard.
+    - OS X Vidalia Bundle: The multi-package installer is now replaced
+      by a simple drag and drop to the /Applications folder.  This change
+      occured with the upgrade to Vidalia 0.2.3.
+
 
 Changes in version 0.2.1.19 - 2009-07-28
   Tor 0.2.1.19 fixes a major bug with accessing and providing hidden
