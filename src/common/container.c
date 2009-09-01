@@ -459,6 +459,42 @@ smartlist_sort(smartlist_t *sl, int (*compare)(const void **a, const void **b))
         (int (*)(const void *,const void*))compare);
 }
 
+/** Given a smartlist <b>sl</b> sorted with the function <b>compare</b>,
+ * return the most frequent member in the list.  Break ties in favor of
+ * later elements.  If the list is empty, return NULL.
+ */
+void *
+smartlist_get_most_frequent(const smartlist_t *sl,
+                            int (*compare)(const void **a, const void **b))
+{
+  const void *most_frequent = NULL;
+  int most_frequent_count = 0;
+
+  const void **cur = NULL;
+  int i, count=0;
+
+  if (!sl->num_used)
+    return NULL;
+  for (i = 0; i < sl->num_used; ++i) {
+    const void *item = sl->list[i];
+    if (cur && 0 == compare(cur, &item)) {
+      ++count;
+    } else {
+      if (cur && count >= most_frequent_count) {
+        most_frequent = *cur;
+        most_frequent_count = count;
+      }
+      cur = &item;
+      count = 1;
+    }
+  }
+  if (cur && count >= most_frequent_count) {
+    most_frequent = *cur;
+    most_frequent_count = count;
+  }
+  return (void*)most_frequent;
+}
+
 /** Given a sorted smartlist <b>sl</b> and the comparison function used to
  * sort it, remove all duplicate members.  If free_fn is provided, calls
  * free_fn on each duplicate.  Otherwise, just removes them.  Preserves order.
@@ -548,6 +584,13 @@ void
 smartlist_sort_strings(smartlist_t *sl)
 {
   smartlist_sort(sl, _compare_string_ptrs);
+}
+
+/** Return the most frequent string in the sorted list <b>sl</b> */
+char *
+smartlist_get_most_frequent_string(smartlist_t *sl)
+{
+  return smartlist_get_most_frequent(sl, _compare_string_ptrs);
 }
 
 /** Remove duplicate strings from a sorted list, and free them with tor_free().
@@ -679,6 +722,37 @@ void
 smartlist_uniq_digests(smartlist_t *sl)
 {
   smartlist_uniq(sl, _compare_digests, _tor_free);
+}
+
+/** Helper: compare two DIGEST256_LEN digests. */
+static int
+_compare_digests256(const void **_a, const void **_b)
+{
+  return memcmp((const char*)*_a, (const char*)*_b, DIGEST256_LEN);
+}
+
+/** Sort the list of DIGEST256_LEN-byte digests into ascending order. */
+void
+smartlist_sort_digests256(smartlist_t *sl)
+{
+  smartlist_sort(sl, _compare_digests256);
+}
+
+/** Return the most frequent member of the sorted list of DIGEST256_LEN
+ * digests in <b>sl</b> */
+char *
+smartlist_get_most_frequent_digest256(smartlist_t *sl)
+{
+  return smartlist_get_most_frequent(sl, _compare_digests256);
+}
+
+/** Remove duplicate 256-bit digests from a sorted list, and free them with
+ * tor_free().
+ */
+void
+smartlist_uniq_digests256(smartlist_t *sl)
+{
+  smartlist_uniq(sl, _compare_digests256, _tor_free);
 }
 
 /** Helper: Declare an entry type and a map type to implement a mapping using
