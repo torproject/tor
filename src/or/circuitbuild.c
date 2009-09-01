@@ -97,6 +97,8 @@ circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
     log_err(LD_CIRC, "Circuit build time is %u!", time);
     return -1;
   }
+
+  cbt->last_circ_at = approx_time();
   cbt->circuit_build_times[cbt->build_times_idx] = time;
   cbt->build_times_idx = (cbt->build_times_idx + 1) % NCIRCUITS_TO_OBSERVE;
   if (cbt->total_build_times < NCIRCUITS_TO_OBSERVE)
@@ -322,7 +324,7 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
   return ret;
 }
 
-static void
+void
 circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt)
 {
   /* Generate 0.8-1.0... */
@@ -377,15 +379,128 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
 }
 
 /**
+ * Returns true if we need circuits to be built
+ */
+int
+circuit_build_times_needs_circuits(circuit_build_times_t *cbt)
+{
+  /* Return true if < MIN_CIRCUITS_TO_OBSERVE */
+  if (cbt->total_build_times < MIN_CIRCUITS_TO_OBSERVE)
+    return 1;
+  return 0;
+}
+
+int
+circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
+{
+  return circuit_build_times_needs_circuits(cbt) &&
+      approx_time()-cbt->last_circ_at > BUILD_TIMES_TEST_FREQUENCY;
+}
+
+void
+circuit_build_times_network_is_live(circuit_build_times_t *cbt)
+{
+  cbt->network_last_live = approx_time();
+}
+
+int
+circuit_build_times_is_network_live(circuit_build_times_t *cbt)
+{
+  time_t now = approx_time();
+  if (now - cbt->network_last_live > NETWORK_LIVE_INTERVAL)
+    return 0;
+  return 1;
+}
+
+int
+circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
+{
+  double timeout_rate=0;
+  build_time_t Xm = BUILD_TIME_MAX;
+  double timeout;
+  int i;
+
+  if (cbt->total_build_times < RECENT_CIRCUITS) {
+    return 0;
+  }
+
+  /* Get timeout rate and Xm for recent circs */
+  for (i = (cbt->build_times_idx - RECENT_CIRCUITS) % NCIRCUITS_TO_OBSERVE;
+       i != cbt->build_times_idx;
+       i = (i + 1) % NCIRCUITS_TO_OBSERVE) {
+    if (cbt->circuit_build_times[i] < Xm) {
+      Xm = cbt->circuit_build_times[i];
+    }
+    if (cbt->circuit_build_times[i] >
+            (build_time_t)get_options()->CircuitBuildTimeout*1000) {
+      timeout_rate++;
+    }
+  }
+  timeout_rate /= RECENT_CIRCUITS;
+
+  /* If more then 80% of our recent circuits are timing out,
+   * we need to re-estimate a new initial alpha and timeout */
+  if (timeout_rate < MAX_RECENT_TIMEOUT_RATE) {
+    return 0;
+  }
+
+  log_notice(LD_CIRC,
+            "Network connection type appears to have changed. "
+            "Resetting timeouts.");
+
+  if (Xm >= (build_time_t)get_options()->CircuitBuildTimeout*1000) {
+    Xm = circuit_build_times_min(cbt);
+    if (Xm >= (build_time_t)get_options()->CircuitBuildTimeout*1000) {
+      /* No circuits have completed */
+      get_options()->CircuitBuildTimeout *= 2;
+      log_warn(LD_CIRC,
+              "Adjusting CircuitBuildTimeout to %d in the hopes that "
+              "some connections will succeed",
+              get_options()->CircuitBuildTimeout);
+      goto reset;
+    }
+  }
+  cbt->Xm = Xm;
+
+  circuit_build_times_initial_alpha(cbt, 1.0-timeout_rate,
+          get_options()->CircuitBuildTimeout*1000.0);
+
+  timeout = circuit_build_times_calculate_timeout(cbt,
+                                BUILDTIMEOUT_QUANTILE_CUTOFF);
+
+  get_options()->CircuitBuildTimeout = lround(timeout/1000.0);
+
+  log_notice(LD_CIRC,
+           "Set circuit build timeout to %d based on %d recent circuit times",
+           get_options()->CircuitBuildTimeout, RECENT_CIRCUITS);
+
+reset:
+
+  /* Reset all data. Do we need a constructor? */
+  memset(cbt->circuit_build_times, 0, sizeof(cbt->circuit_build_times));
+  cbt->pre_timeouts = 0;
+  cbt->total_build_times = 0;
+  cbt->build_times_idx = 0;
+  return 1;
+}
+
+/**
  * Store a timeout as a synthetic value
  */
 void
 circuit_build_times_add_timeout(circuit_build_times_t *cbt)
 {
-  /* XXX: If there are a ton of timeouts, we should reduce
-   * the circuit build timeout by like 2X or something...
-   * But then how do we differentiate between that and network
-   * failure? */
+  /* Only count timeouts if network is live.. */
+  if (!circuit_build_times_is_network_live(cbt)) {
+    return;
+  }
+
+  /* If there are a ton of timeouts, we should reduce
+   * the circuit build timeout */
+  if (circuit_build_times_check_too_many_timeouts(cbt)) {
+    return;
+  }
+
   if (cbt->total_build_times < MIN_CIRCUITS_TO_OBSERVE) {
     /* Store a timeout before we have enough data as special */
     cbt->pre_timeouts++;

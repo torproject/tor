@@ -2857,14 +2857,13 @@ void bridges_retry_all(void);
 
 void entry_guards_free_all(void);
 
-/* Circuit Build Timeout "public" functions and structures.
- * (I love C... No wait.) */
-
-// XXX: Do we want to artifically tweak CircuitIdleTimeout and
-// the number of circuits we build at a time if < MIN here?
+/* Circuit Build Timeout "public" functions and structures. */
+#define RECENT_CIRCUITS 20
 #define MIN_CIRCUITS_TO_OBSERVE 500
 #define NCIRCUITS_TO_OBSERVE 5000 /* approx 1.5 weeks worth of circuits */
 #define BUILDTIME_BIN_WIDTH 50
+
+#define MAX_RECENT_TIMEOUT_RATE 0.80
 
 /* TODO: This should be moved to the consensus */
 #define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
@@ -2872,9 +2871,16 @@ void entry_guards_free_all(void);
 typedef uint32_t build_time_t;
 #define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
 
+/* Have we recieved a cell in the last 90 seconds? */
+#define NETWORK_LIVE_INTERVAL 90
+
+/* How often in seconds should we build a test circuit */
+#define BUILD_TIMES_TEST_FREQUENCY 60
+
 typedef struct {
-  // XXX: Make this a smartlist..
   build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
+  time_t network_last_live;
+  time_t last_circ_at;
   int build_times_idx;
   int total_build_times;
   int pre_timeouts;
@@ -2891,6 +2897,10 @@ void circuit_build_times_add_timeout(circuit_build_times_t *cbt);
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
                                  build_time_t time);
+void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
+int circuit_build_times_is_network_live(circuit_build_times_t *cbt);
+int circuit_build_times_needs_circuits(circuit_build_times_t *cbt);
+int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
 
 #ifdef CIRCUIT_PRIVATE
 double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
@@ -2901,6 +2911,8 @@ void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
                                        double quantile, build_time_t time);
 void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
 double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
+int circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt);
+void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt);
 #endif
 
 /********************************* circuitlist.c ***********************/

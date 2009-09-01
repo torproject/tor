@@ -519,6 +519,15 @@ circuit_predict_and_launch_new(void)
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
     return;
   }
+
+  /* Finally, check to see if we still need more circuits to learn
+   * a good build timeout */
+  if (circuit_build_times_needs_circuits_now(&circ_times)) {
+    flags = CIRCLAUNCH_NEED_CAPACITY;
+    log_info(LD_CIRC,
+             "Have %d clean circs need another buildtime test circ.", num);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+  }
 }
 
 /** Build a new test circuit every 5 minutes */
@@ -633,7 +642,15 @@ static void
 circuit_expire_old_circuits(time_t now)
 {
   circuit_t *circ;
-  time_t cutoff = now - get_options()->CircuitIdleTimeout;
+  time_t cutoff;
+
+  if (circuit_build_times_needs_circuits(&circ_times)) {
+    /* Circuits should be shorter lived if we need them
+     * for build time testing */
+    cutoff = now - get_options()->MaxCircuitDirtiness;
+  } else {
+    cutoff = now - get_options()->CircuitIdleTimeout;
+  }
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (circ->marked_for_close || ! CIRCUIT_IS_ORIGIN(circ))
@@ -840,6 +857,7 @@ circuit_build_failed(origin_circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       /* at Alice, connecting to intro point */
+      circuit_increment_failure_count();
       /* Don't increment failure count, since Bob may have picked
        * the introduction point maliciously */
       /* Alice will pick a new intro point when this one dies, if
@@ -853,6 +871,7 @@ circuit_build_failed(origin_circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */
+      circuit_increment_failure_count();
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
       log_info(LD_REND,

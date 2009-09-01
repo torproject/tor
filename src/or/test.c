@@ -3450,6 +3450,7 @@ test_circuit_timeout(void)
     timeout1 = circuit_build_times_calculate_timeout(&estimate,
                                   BUILDTIMEOUT_QUANTILE_CUTOFF);
     log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout1, estimate.Xm);
+    /* XXX: 5% distribution error may not be the right metric */
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
                 circuit_build_times_cdf(&initial, timeout1)) > 0.05
                 /* 5% error */
@@ -3467,6 +3468,30 @@ test_circuit_timeout(void)
 
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
                 circuit_build_times_cdf(&initial, timeout2)) < 0.05);
+
+  /* Generate MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS timeouts
+   * and 1-that regular values. Then check for timeout error
+   * Do the same for one less timeout */
+  for (i = 0; i < RECENT_CIRCUITS; i++) {
+    circuit_build_times_add_time(&estimate,
+          circuit_build_times_generate_sample(&estimate, 0,
+              BUILDTIMEOUT_QUANTILE_CUTOFF));
+    circuit_build_times_add_time(&final,
+          circuit_build_times_generate_sample(&final, 0,
+              BUILDTIMEOUT_QUANTILE_CUTOFF));
+  }
+  test_assert(!circuit_build_times_check_too_many_timeouts(&estimate));
+  test_assert(!circuit_build_times_check_too_many_timeouts(&final));
+
+  for (i = 0; i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS; i++) {
+    circuit_build_times_add_timeout_worker(&estimate);
+    if (i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS-1) {
+      circuit_build_times_add_timeout_worker(&final);
+    }
+  }
+
+  test_assert(circuit_build_times_check_too_many_timeouts(&estimate));
+  test_assert(!circuit_build_times_check_too_many_timeouts(&final));
 
 done:
   return;
