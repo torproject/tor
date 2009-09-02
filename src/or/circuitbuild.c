@@ -583,9 +583,9 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   cbt->timeout = lround(timeout/1000.0);
 
   log_notice(LD_CIRC,
-           "Reset circuit build timeout to %d (Xm: %d a: %lf) based on "
-           "%d recent circuit times", cbt->timeout, cbt->Xm, cbt->alpha,
-           RECENT_CIRCUITS);
+           "Reset circuit build timeout to %d (%lf, Xm: %d, a: %lf) based on "
+           "%d recent circuit times", cbt->timeout, timeout, cbt->Xm,
+           cbt->alpha, RECENT_CIRCUITS);
 
 reset:
 
@@ -643,9 +643,8 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
   cbt->timeout = lround(timeout/1000.0);
 
   log_info(LD_CIRC,
-          "Set circuit build timeout to %d (Xm: %d a: %lf) based on "
-           "%d circuit times",
-           cbt->timeout, cbt->Xm, cbt->alpha,
+          "Set circuit build timeout to %d (%lf, Xm: %d, a: %lf) based on "
+           "%d circuit times", cbt->timeout, timeout, cbt->Xm, cbt->alpha,
            cbt->total_build_times);
 
 }
