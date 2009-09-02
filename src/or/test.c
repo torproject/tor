@@ -1114,6 +1114,24 @@ test_util(void)
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
   test_assert(i == 0);
 
+  {
+  /* Test tor_parse_double. */
+  double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  test_assert(DBL_TO_U64(d) == 10);
+  d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  test_assert(DBL_TO_U64(d) == 0);
+  d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 0);
+  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 0);
+  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
+  test_assert(i == 1);
+  d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  }
+
   /* Test failing snprintf cases */
   test_eq(-1, tor_snprintf(buf, 0, "Foo"));
   test_eq(-1, tor_snprintf(buf, 2, "Foo"));
