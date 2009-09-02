@@ -224,7 +224,7 @@ circuit_build_times_mode(circuit_build_times_t *cbt)
   uint32_t *histogram = circuit_build_times_create_histogram(cbt, &nbins);
 
   for (i = 0; i < nbins; i++) {
-    if (histogram[i] > histogram[max_bin]) {
+    if (histogram[i] >= histogram[max_bin]) {
       max_bin = i;
     }
   }
