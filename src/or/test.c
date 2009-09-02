@@ -3429,11 +3429,13 @@ test_circuit_timeout(void)
   int i;
   char *msg;
   double timeout1, timeout2;
-  memset(&initial, 0, sizeof(circuit_build_times_t));
-  memset(&estimate, 0, sizeof(circuit_build_times_t));
-  memset(&final, 0, sizeof(circuit_build_times_t));
+  circuit_build_times_init(&initial);
+  circuit_build_times_init(&estimate);
+  circuit_build_times_init(&final);
+
   memset(&state, 0, sizeof(or_state_t));
 
+  circuitbuild_running_unit_tests();
 #define timeout0 (30*1000.0)
   initial.Xm = 750;
   circuit_build_times_initial_alpha(&initial, BUILDTIMEOUT_QUANTILE_CUTOFF,
@@ -3449,6 +3451,7 @@ test_circuit_timeout(void)
     circuit_build_times_update_alpha(&estimate);
     timeout1 = circuit_build_times_calculate_timeout(&estimate,
                                   BUILDTIMEOUT_QUANTILE_CUTOFF);
+    circuit_build_times_set_timeout(&estimate);
     log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout1, estimate.Xm);
     /* XXX: 5% distribution error may not be the right metric */
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
@@ -3458,12 +3461,14 @@ test_circuit_timeout(void)
 
   test_assert(estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
 
-  circuit_build_times_update_state(&estimate, &state, 1);
+  circuit_build_times_update_state(&estimate, &state);
   test_assert(circuit_build_times_parse_state(&final, &state, &msg) == 0);
 
   circuit_build_times_update_alpha(&final);
   timeout2 = circuit_build_times_calculate_timeout(&final,
                                  BUILDTIMEOUT_QUANTILE_CUTOFF);
+
+  circuit_build_times_set_timeout(&final);
   log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout2, final.Xm);
 
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
@@ -3480,6 +3485,7 @@ test_circuit_timeout(void)
           circuit_build_times_generate_sample(&final, 0,
               BUILDTIMEOUT_QUANTILE_CUTOFF));
   }
+
   test_assert(!circuit_build_times_check_too_many_timeouts(&estimate));
   test_assert(!circuit_build_times_check_too_many_timeouts(&final));
 
@@ -3492,7 +3498,7 @@ test_circuit_timeout(void)
     }
   }
 
-  test_assert(circuit_build_times_check_too_many_timeouts(&estimate));
+  test_assert(circuit_build_times_check_too_many_timeouts(&estimate) == 1);
   test_assert(!circuit_build_times_check_too_many_timeouts(&final));
 
 done:

@@ -164,7 +164,7 @@ static config_var_t _option_vars[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
-  V(CircuitBuildTimeout,         INTERVAL, "1 minute"),
+  V(CircuitBuildTimeout,         INTERVAL, "0"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
@@ -2922,7 +2922,7 @@ compute_publishserverdescriptor(or_options_t *options)
 /** Lowest allowable value for CircuitBuildTimeout; values too low will
  * increase network load because of failing connections being retried, and
  * might prevent users from connecting to the network at all. */
-#define MIN_CIRCUIT_BUILD_TIMEOUT 5
+#define MIN_CIRCUIT_BUILD_TIMEOUT 3
 
 /** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
@@ -5207,7 +5207,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
-  circuit_build_times_update_state(&circ_times, global_state, 0);
+  circuit_build_times_update_state(&circ_times, global_state);
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 

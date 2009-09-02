@@ -2863,7 +2863,7 @@ void entry_guards_free_all(void);
 #define NCIRCUITS_TO_OBSERVE 5000 /* approx 1.5 weeks worth of circuits */
 #define BUILDTIME_BIN_WIDTH 50
 
-#define MAX_RECENT_TIMEOUT_RATE 0.80
+#define MAX_RECENT_TIMEOUT_RATE 0.7999999
 
 /* TODO: This should be moved to the consensus */
 #define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
@@ -2873,6 +2873,8 @@ typedef uint32_t build_time_t;
 
 /* Have we recieved a cell in the last 90 seconds? */
 #define NETWORK_LIVE_INTERVAL 90
+
+#define BUILD_TIMEOUT_INITIAL_VALUE 60
 
 /* How often in seconds should we build a test circuit */
 #define BUILD_TIMES_TEST_FREQUENCY 60
@@ -2889,12 +2891,13 @@ typedef struct {
   int pre_timeouts;
   build_time_t Xm;
   double alpha;
-  int estimated;
+  int computed;
+  int timeout;
 } circuit_build_times_t;
 
 extern circuit_build_times_t circ_times;
 void circuit_build_times_update_state(circuit_build_times_t *cbt,
-                                      or_state_t *state, int do_unit);
+                                      or_state_t *state);
 int  circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                      or_state_t *state, char **msg);
 void circuit_build_times_add_timeout(circuit_build_times_t *cbt);
@@ -2905,6 +2908,7 @@ void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
 int circuit_build_times_is_network_live(circuit_build_times_t *cbt);
 int circuit_build_times_needs_circuits(circuit_build_times_t *cbt);
 int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
+void circuit_build_times_init(circuit_build_times_t *cbt);
 
 #ifdef CIRCUIT_PRIVATE
 double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
@@ -2918,6 +2922,8 @@ double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
 int circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt);
 void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff);
+void circuitbuild_running_unit_tests(void);
+void circuit_build_times_reset(circuit_build_times_t *cbt);
 #endif
 
 /********************************* circuitlist.c ***********************/
