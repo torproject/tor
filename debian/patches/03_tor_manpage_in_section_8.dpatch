@@ -26,20 +26,21 @@ exit 0
 diff -urNad tor-0.1.1.5/contrib/torify.1 /tmp/dpep.fOA3Mm/tor-0.1.1.5/contrib/torify.1
 --- tor-0.1.1.5/contrib/torify.1
 +++ /tmp/dpep.fOA3Mm/tor-0.1.1.5/contrib/torify.1
-@@ -18,6 +18,6 @@
+@@ -35,7 +35,7 @@
  to suid binaries.
  
  .SH SEE ALSO
 -.BR tor (1),
 +.BR tor (8),
  .BR tor-resolve (1),
+ .BR torsocks (1),
  .BR tsocks (1),
 diff -urNad tor-0.1.1.5/doc/tor.1.in /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
 --- tor-0.1.1.5/doc/tor.1.in
 +++ /tmp/dpep.fOA3Mm/tor-0.1.1.5/doc/tor.1.in
 @@ -1,4 +1,4 @@
--.TH TOR 1 "January 2009" "TOR"
-+.TH TOR 8 "January 2009" "TOR"
+-.TH TOR 1 "August 2009" "TOR"
++.TH TOR 8 "August 2009" "TOR"
  .SH NAME
  tor \- The second-generation onion router
  .SH SYNOPSIS
