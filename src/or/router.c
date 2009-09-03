@@ -442,7 +442,9 @@ init_keys(void)
     key_lock = tor_mutex_new();
 
   /* There are a couple of paths that put us here before */
-  if (crypto_global_init(get_options()->HardwareAccel)) {
+  if (crypto_global_init(get_options()->HardwareAccel,
+                         get_options()->AccelName,
+                         get_options()->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }
@@ -544,7 +546,7 @@ init_keys(void)
   /* Must be called after keys are initialized. */
   mydesc = router_get_my_descriptor();
   if (authdir_mode(options)) {
-    const char *m;
+    const char *m = NULL;
     routerinfo_t *ri;
     /* We need to add our own fingerprint so it gets recognized. */
     if (dirserv_add_own_fingerprint(options->Nickname, get_identity_key())) {
@@ -1267,6 +1269,7 @@ router_rebuild_descriptor(int force)
   uint32_t addr;
   char platform[256];
   int hibernating = we_are_hibernating();
+  size_t ei_size;
   or_options_t *options = get_options();
 
   if (desc_clean_since && !force)
@@ -1380,9 +1383,10 @@ router_rebuild_descriptor(int force)
   ei->cache_info.published_on = ri->cache_info.published_on;
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
-  ei->cache_info.signed_descriptor_body = tor_malloc(8192);
-  if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body, 8192,
-                               ei, get_identity_key()) < 0) {
+  ei_size = options->ExtraInfoStatistics ? MAX_EXTRAINFO_UPLOAD_SIZE : 8192;
+  ei->cache_info.signed_descriptor_body = tor_malloc(ei_size);
+  if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body,
+                               ei_size, ei, get_identity_key()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
     extrainfo_free(ei);
     return -1;
@@ -1606,8 +1610,6 @@ router_guess_address_from_dir_headers(uint32_t *guess)
   return -1;
 }
 
-extern const char tor_svn_revision[]; /* from tor_main.c */
-
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
  * string describing the version of Tor and the operating system we're
  * currently running on.
@@ -1822,6 +1824,57 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   return (int)written+1;
 }
 
+/** Load the contents of <b>filename</b>, find the last line starting with
+ * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
+ * the past or more than 1 hour in the future with respect to <b>now</b>,
+ * and write the file contents starting with that line to **<b>out</b>.
+ * Return 1 for success, 0 if the file does not exist or does not contain
+ * a line matching these criteria, or -1 for failure. */
+static int
+load_stats_file(const char *filename, const char *end_line, time_t now,
+                char **out)
+{
+  int r = -1;
+  char *fname = get_datadir_fname(filename);
+  char *contents, *start = NULL, *tmp, timestr[ISO_TIME_LEN+1];
+  time_t written;
+  switch (file_status(fname)) {
+    case FN_FILE:
+      /* X022 Find an alternative to reading the whole file to memory. */
+      if ((contents = read_file_to_str(fname, 0, NULL))) {
+        tmp = strstr(contents, end_line);
+        /* Find last block starting with end_line */
+        while (tmp) {
+          start = tmp;
+          tmp = strstr(tmp + 1, end_line);
+        }
+        if (!start)
+          goto notfound;
+        if (strlen(start) < strlen(end_line) + 1 + sizeof(timestr))
+          goto notfound;
+        strlcpy(timestr, start + 1 + strlen(end_line), sizeof(timestr));
+        if (parse_iso_time(timestr, &written) < 0)
+          goto notfound;
+        if (written < now - (25*60*60) || written > now + (1*60*60))
+          goto notfound;
+        *out = tor_strdup(start);
+        r = 1;
+      }
+     notfound:
+      tor_free(contents);
+      break;
+    case FN_NOENT:
+      r = 0;
+      break;
+    case FN_ERROR:
+    case FN_DIR:
+    default:
+      break;
+  }
+  tor_free(fname);
+  return r;
+}
+
 /** Write the contents of <b>extrainfo</b> to the <b>maxlen</b>-byte string
  * <b>s</b>, signing them with <b>ident_key</b>.  Return 0 on success,
  * negative on failure. */
@@ -1836,6 +1889,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   char *bandwidth_usage;
   int result;
   size_t len;
+  static int write_stats_to_extrainfo = 1;
 
   base16_encode(identity, sizeof(identity),
                 extrainfo->cache_info.identity_digest, DIGEST_LEN);
@@ -1847,6 +1901,61 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                         "published %s\n%s",
                         extrainfo->nickname, identity,
                         published, bandwidth_usage);
+
+  if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
+    char *contents = NULL;
+    time_t since = time(NULL) - (24*60*60);
+    log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
+    if (options->DirReqStatistics &&
+        load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
+                        "dirreq-stats-end", since, &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write dirreq-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+    if (options->EntryStatistics &&
+        load_stats_file("stats"PATH_SEPARATOR"entry-stats",
+                        "entry-stats-end", since, &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write entry-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+    if (options->CellStatistics &&
+        load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
+                        "cell-stats-end", since, &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write buffer-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+    if (options->ExitPortStatistics &&
+        load_stats_file("stats"PATH_SEPARATOR"exit-stats",
+                        "exit-stats-end", since, &contents) > 0) {
+      int pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write exit-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+      }
+      tor_free(contents);
+    }
+  }
+
   tor_free(bandwidth_usage);
   if (result<0)
     return -1;
@@ -1875,7 +1984,6 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   if (router_append_dirobj_signature(s+len, maxlen-len, digest, ident_key)<0)
     return -1;
 
-#ifdef DEBUG_ROUTER_DUMP_ROUTER_TO_STRING
   {
     char *cp, *s_dup;
     extrainfo_t *ei_tmp;
@@ -1890,7 +1998,24 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     tor_free(s_dup);
     extrainfo_free(ei_tmp);
   }
-#endif
+
+  if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
+    char *cp, *s_dup;
+    extrainfo_t *ei_tmp;
+    cp = s_dup = tor_strdup(s);
+    ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
+    if (!ei_tmp) {
+      log_warn(LD_GENERAL,
+               "We just generated an extra-info descriptor with "
+               "statistics that we can't parse. Not adding statistics to "
+               "this or any future extra-info descriptors. Descriptor "
+               "was:\n%s", s);
+      write_stats_to_extrainfo = 0;
+      extrainfo_dump_to_string(s, maxlen, extrainfo, ident_key);
+    }
+    tor_free(s_dup);
+    extrainfo_free(ei_tmp);
+  }
 
   return (int)strlen(s)+1;
 }
@@ -1905,16 +2030,18 @@ char *
 extrainfo_get_client_geoip_summary(time_t now)
 {
   static time_t last_purged_at = 0;
-  int geoip_purge_interval = 48*60*60;
-#ifdef ENABLE_GEOIP_STATS
-  if (get_options()->DirRecordUsageByCountry)
-    geoip_purge_interval = get_options()->DirRecordUsageRetainIPs;
-#endif
+  int geoip_purge_interval =
+      (get_options()->DirReqStatistics || get_options()->EntryStatistics) ?
+      DIR_ENTRY_RECORD_USAGE_RETAIN_IPS : 48*60*60;
   if (now > last_purged_at+geoip_purge_interval) {
+    /* (Note that this also discards items in the client history with
+     * action GEOIP_CLIENT_NETWORKSTATUS{_V2}, which doesn't matter
+     * because bridge and directory stats are independent. Keep in mind
+     * for future extensions, though.) */
     geoip_remove_old_clients(now-geoip_purge_interval);
     last_purged_at = now;
   }
-  return geoip_get_client_history(now, GEOIP_CLIENT_CONNECT);
+  return geoip_get_client_history_bridge(now, GEOIP_CLIENT_CONNECT);
 }
 
 /** Return true iff <b>s</b> is a legally valid server nickname. */

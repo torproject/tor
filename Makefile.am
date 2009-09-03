@@ -1,4 +1,3 @@
-# $Id$
 # Copyright (c) 2001-2004, Roger Dingledine
 # Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 # Copyright (c) 2007-2009, The Tor Project, Inc.

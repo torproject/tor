@@ -1,7 +1,5 @@
 Filename: 124-tls-certificates.txt
 Title: Blocking resistant TLS certificate usage
-Version: $Revision$
-Last-Modified: $Date$
 Author: Steven J. Murdoch
 Created: 2007-10-25
 Status: Superseded

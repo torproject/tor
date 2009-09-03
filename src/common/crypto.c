@@ -27,6 +27,7 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
+#include <openssl/engine.h>
 #include <openssl/rand.h>
 #include <openssl/opensslv.h>
 #include <openssl/bn.h>
@@ -60,6 +61,28 @@
 #endif
 
 #include <openssl/engine.h>
+
+#if OPENSSL_VERSION_NUMBER < 0x00908000l
+/* On OpenSSL versions before 0.9.8, there is no working SHA256
+ * implementation, so we use Tom St Denis's nice speedy one, slightly adapted
+ * to our needs */
+#define SHA256_CTX sha256_state
+#define SHA256_Init sha256_init
+#define SHA256_Update sha256_process
+#define LTC_ARGCHK(x) tor_assert(x)
+#include "sha256.c"
+#define SHA256_Final(a,b) sha256_done(b,a)
+
+static unsigned char *
+SHA256(const unsigned char *m, size_t len, unsigned char *d)
+{
+  SHA256_CTX ctx;
+  SHA256_Init(&ctx);
+  SHA256_Update(&ctx, m, len);
+  SHA256_Final(d, &ctx);
+  return d;
+}
+#endif
 
 /** Macro: is k a valid RSA public or private key? */
 #define PUBLIC_KEY_OK(k) ((k) && (k)->key && (k)->key->n)
@@ -166,36 +189,70 @@ log_engine(const char *fn, ENGINE *e)
   }
 }
 
+/** Try to load an engine in a shared library via fully qualified path.
+ */
+static ENGINE *
+try_load_engine(const char *path, const char *engine)
+{
+  ENGINE *e = ENGINE_by_id("dynamic");
+  if (e) {
+    if (!ENGINE_ctrl_cmd_string(e, "ID", engine, 0) ||
+        !ENGINE_ctrl_cmd_string(e, "DIR_LOAD", "2", 0) ||
+        !ENGINE_ctrl_cmd_string(e, "DIR_ADD", path, 0) ||
+        !ENGINE_ctrl_cmd_string(e, "LOAD", NULL, 0)) {
+      ENGINE_free(e);
+      e = NULL;
+    }
+  }
+  return e;
+}
+
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
 int
-crypto_global_init(int useAccel)
+crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
 {
   if (!_crypto_global_initialized) {
     ERR_load_crypto_strings();
     OpenSSL_add_all_algorithms();
     _crypto_global_initialized = 1;
     setup_openssl_threading();
-    /* XXX the below is a bug, since we can't know if we're supposed
-     * to be using hardware acceleration or not. we should arrange
-     * for this function to be called before init_keys. But make it
-     * not complain loudly, at least until we make acceleration work. */
-    if (useAccel < 0) {
-      log_info(LD_CRYPTO, "Initializing OpenSSL via tor_tls_init().");
-    }
     if (useAccel > 0) {
+      ENGINE *e = NULL;
       log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
-      if (!ENGINE_register_all_complete())
-        return -1;
-
-      /* XXXX make sure this isn't leaking. */
+      ENGINE_register_all_complete();
+      if (accelName) {
+        if (accelDir) {
+          log_info(LD_CRYPTO, "Trying to load dynamic OpenSSL engine \"%s\""
+                   " via path \"%s\".", accelName, accelDir);
+          e = try_load_engine(accelName, accelDir);
+        } else {
+          log_info(LD_CRYPTO, "Initializing dynamic OpenSSL engine \"%s\""
+                   " acceleration support.", accelName);
+          e = ENGINE_by_id(accelName);
+        }
+        if (!e) {
+          log_warn(LD_CRYPTO, "Unable to load dynamic OpenSSL engine \"%s\".",
+                   accelName);
+        } else {
+          log_info(LD_CRYPTO, "Loaded dynamic OpenSSL engine \"%s\".",
+                   accelName);
+        }
+      }
+      if (e) {
+        log_info(LD_CRYPTO, "Loaded OpenSSL hardware acceleration engine,"
+                 " setting default ciphers.");
+        ENGINE_set_default(e, ENGINE_METHOD_ALL);
+      }
       log_engine("RSA", ENGINE_get_default_RSA());
       log_engine("DH", ENGINE_get_default_DH());
       log_engine("RAND", ENGINE_get_default_RAND());
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+    } else {
+      log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
     return crypto_seed_rng(1);
   }
@@ -1359,9 +1416,23 @@ crypto_digest(char *digest, const char *m, size_t len)
   return (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
 }
 
+int
+crypto_digest256(char *digest, const char *m, size_t len,
+                 digest_algorithm_t algorithm)
+{
+  tor_assert(m);
+  tor_assert(digest);
+  tor_assert(algorithm == DIGEST_SHA256);
+  return (SHA256((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+}
+
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_env_t {
-  SHA_CTX d;
+  union {
+    SHA_CTX sha1;
+    SHA256_CTX sha2;
+  } d;
+  digest_algorithm_t algorithm : 8;
 };
 
 /** Allocate and return a new digest object.
@@ -1371,7 +1442,19 @@ crypto_new_digest_env(void)
 {
   crypto_digest_env_t *r;
   r = tor_malloc(sizeof(crypto_digest_env_t));
-  SHA1_Init(&r->d);
+  SHA1_Init(&r->d.sha1);
+  r->algorithm = DIGEST_SHA1;
+  return r;
+}
+
+crypto_digest_env_t *
+crypto_new_digest256_env(digest_algorithm_t algorithm)
+{
+  crypto_digest_env_t *r;
+  tor_assert(algorithm == DIGEST_SHA256);
+  r = tor_malloc(sizeof(crypto_digest_env_t));
+  SHA256_Init(&r->d.sha2);
+  r->algorithm = algorithm;
   return r;
 }
 
@@ -1392,30 +1475,51 @@ crypto_digest_add_bytes(crypto_digest_env_t *digest, const char *data,
 {
   tor_assert(digest);
   tor_assert(data);
-  /* Using the SHA1_*() calls directly means we don't support doing
-   * SHA1 in hardware. But so far the delay of getting the question
+  /* Using the SHA*_*() calls directly means we don't support doing
+   * SHA in hardware. But so far the delay of getting the question
    * to the hardware, and hearing the answer, is likely higher than
    * just doing it ourselves. Hashes are fast.
    */
-  SHA1_Update(&digest->d, (void*)data, len);
+  switch (digest->algorithm) {
+    case DIGEST_SHA1:
+      SHA1_Update(&digest->d.sha1, (void*)data, len);
+      break;
+    case DIGEST_SHA256:
+      SHA256_Update(&digest->d.sha2, (void*)data, len);
+      break;
+    default:
+      tor_fragile_assert();
+      break;
+  }
 }
 
 /** Compute the hash of the data that has been passed to the digest
  * object; write the first out_len bytes of the result to <b>out</b>.
- * <b>out_len</b> must be \<= DIGEST_LEN.
+ * <b>out_len</b> must be \<= DIGEST256_LEN.
  */
 void
 crypto_digest_get_digest(crypto_digest_env_t *digest,
                          char *out, size_t out_len)
 {
-  unsigned char r[DIGEST_LEN];
-  SHA_CTX tmpctx;
+  unsigned char r[DIGEST256_LEN];
+  crypto_digest_env_t tmpenv;
   tor_assert(digest);
   tor_assert(out);
-  tor_assert(out_len <= DIGEST_LEN);
-  /* memcpy into a temporary ctx, since SHA1_Final clears the context */
-  memcpy(&tmpctx, &digest->d, sizeof(SHA_CTX));
-  SHA1_Final(r, &tmpctx);
+  /* memcpy into a temporary ctx, since SHA*_Final clears the context */
+  memcpy(&tmpenv, digest, sizeof(crypto_digest_env_t));
+  switch (digest->algorithm) {
+    case DIGEST_SHA1:
+      tor_assert(out_len <= DIGEST_LEN);
+      SHA1_Final(r, &tmpenv.d.sha1);
+      break;
+    case DIGEST_SHA256:
+      tor_assert(out_len <= DIGEST256_LEN);
+      SHA256_Final(r, &tmpenv.d.sha2);
+      break;
+    default:
+      tor_fragile_assert();
+      break;
+  }
   memcpy(out, r, out_len);
   memset(r, 0, sizeof(r));
 }

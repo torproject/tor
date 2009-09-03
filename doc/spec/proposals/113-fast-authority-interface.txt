@@ -1,7 +1,5 @@
 Filename: 113-fast-authority-interface.txt
 Title: Simplifying directory authority administration
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created:
 Status: Superseded

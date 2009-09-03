@@ -1400,7 +1400,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                 "Tor only an IP address. Applications that do DNS resolves "
                 "themselves may leak information. Consider using Socks4A "
                 "(e.g. via privoxy or socat) instead. For more information, "
-                "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
+                "please see https://wiki.torproject.org/TheOnionRouter/"
                 "TorFAQ#SOCKSAndDNS.%s", req->port,
                 safe_socks ? " Rejecting." : "");
             /*have_warned_about_unsafe_socks = 1;*/
@@ -1513,7 +1513,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                  "only an IP address. Applications that do DNS resolves "
                  "themselves may leak information. Consider using Socks4A "
                  "(e.g. via privoxy or socat) instead. For more information, "
-                 "please see http://wiki.noreply.org/noreply/TheOnionRouter/"
+                 "please see https://wiki.torproject.org/TheOnionRouter/"
                  "TorFAQ#SOCKSAndDNS.%s", req->port,
                  safe_socks ? " Rejecting." : "");
         /*have_warned_about_unsafe_socks = 1;*/  /*(for now, warn every time)*/
@@ -1609,6 +1609,132 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       }
       return -1;
   }
+}
+
+/** Inspect a reply from SOCKS server stored in <b>buf</b> according
+ * to <b>state</b>, removing the protocol data upon success. Return 0 on
+ * incomplete response, 1 on success and -1 on error, in which case
+ * <b>reason</b> is set to a descriptive message (free() when finished
+ * with it).
+ *
+ * As a special case, 2 is returned when user/pass is required
+ * during SOCKS5 handshake and user/pass is configured.
+ */
+int
+fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
+{
+  unsigned char *data;
+  size_t addrlen;
+
+  if (buf->datalen < 2)
+    return 0;
+
+  buf_pullup(buf, 128, 0);
+  tor_assert(buf->head && buf->head->datalen >= 2);
+
+  data = (unsigned char *) buf->head->data;
+
+  switch (state) {
+    case PROXY_SOCKS4_WANT_CONNECT_OK:
+      /* Wait for the complete response */
+      if (buf->head->datalen < 8)
+        return 0;
+
+      if (data[1] != 0x5a) {
+        *reason = tor_strdup(socks4_response_code_to_string(data[1]));
+        return -1;
+      }
+
+      /* Success */
+      buf_remove_from_front(buf, 8);
+      return 1;
+
+    case PROXY_SOCKS5_WANT_AUTH_METHOD_NONE:
+      /* we don't have any credentials */
+      if (data[1] != 0x00) {
+        *reason = tor_strdup("server doesn't support any of our "
+                             "available authentication methods");
+        return -1;
+      }
+
+      log_info(LD_NET, "SOCKS 5 client: continuing without authentication");
+      buf_clear(buf);
+      return 1;
+
+    case PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929:
+      /* we have a username and password. return 1 if we can proceed without
+       * providing authentication, or 2 otherwise. */
+      switch (data[1]) {
+        case 0x00:
+          log_info(LD_NET, "SOCKS 5 client: we have auth details but server "
+                            "doesn't require authentication.");
+          buf_clear(buf);
+          return 1;
+        case 0x02:
+          log_info(LD_NET, "SOCKS 5 client: need authentication.");
+          buf_clear(buf);
+          return 2;
+        /* fall through */
+      }
+
+      *reason = tor_strdup("server doesn't support any of our available "
+                           "authentication methods");
+      return -1;
+
+    case PROXY_SOCKS5_WANT_AUTH_RFC1929_OK:
+      /* handle server reply to rfc1929 authentication */
+      if (data[1] != 0x00) {
+        *reason = tor_strdup("authentication failed");
+        return -1;
+      }
+
+      log_info(LD_NET, "SOCKS 5 client: authentication successful.");
+      buf_clear(buf);
+      return 1;
+
+    case PROXY_SOCKS5_WANT_CONNECT_OK:
+      /* response is variable length. BND.ADDR, etc, isn't needed
+       * (don't bother with buf_pullup()), but make sure to eat all
+       * the data used */
+
+      /* wait for address type field to arrive */
+      if (buf->datalen < 4)
+        return 0;
+
+      switch (data[3]) {
+        case 0x01: /* ip4 */
+          addrlen = 4;
+          break;
+        case 0x04: /* ip6 */
+          addrlen = 16;
+          break;
+        case 0x03: /* fqdn (can this happen here?) */
+          if (buf->datalen < 5)
+            return 0;
+          addrlen = 1 + data[4];
+          break;
+        default:
+          *reason = tor_strdup("invalid response to connect request");
+          return -1;
+      }
+
+      /* wait for address and port */
+      if (buf->datalen < 6 + addrlen)
+        return 0;
+
+      if (data[1] != 0x00) {
+        *reason = tor_strdup(socks5_response_code_to_string(data[1]));
+        return -1;
+      }
+
+      buf_remove_from_front(buf, 6 + addrlen);
+      return 1;
+  }
+
+  /* shouldn't get here... */
+  tor_assert(0);
+
+  return -1;
 }
 
 /** Return 1 iff buf looks more like it has an (obsolete) v0 controller

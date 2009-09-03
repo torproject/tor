@@ -18,6 +18,12 @@
 #endif
 #include "memarea.h"
 
+#ifdef HAVE_EVENT2_EVENT_H
+#include <event2/event.h>
+#else
+#include <event.h>
+#endif
+
 void evdns_shutdown(int);
 
 /********* PROTOTYPES **********/
@@ -127,12 +133,10 @@ connection_add(connection_t *conn)
   smartlist_add(connection_array, conn);
 
   if (conn->s >= 0 || conn->linked) {
-    conn->read_event = tor_malloc_zero(sizeof(struct event));
-    conn->write_event = tor_malloc_zero(sizeof(struct event));
-    event_set(conn->read_event, conn->s, EV_READ|EV_PERSIST,
-              conn_read_callback, conn);
-    event_set(conn->write_event, conn->s, EV_WRITE|EV_PERSIST,
-              conn_write_callback, conn);
+    conn->read_event = tor_event_new(tor_libevent_get_base(),
+         conn->s, EV_READ|EV_PERSIST, conn_read_callback, conn);
+    conn->write_event = tor_event_new(tor_libevent_get_base(),
+         conn->s, EV_WRITE|EV_PERSIST, conn_write_callback, conn);
   }
 
   log_debug(LD_NET,"new conn type %s, socket %d, address %s, n_conns %d.",
@@ -140,6 +144,25 @@ connection_add(connection_t *conn)
             smartlist_len(connection_array));
 
   return 0;
+}
+
+/** Tell libevent that we don't care about <b>conn</b> any more. */
+void
+connection_unregister_events(connection_t *conn)
+{
+  if (conn->read_event) {
+    if (event_del(conn->read_event))
+      log_warn(LD_BUG, "Error removing read event for %d", conn->s);
+    tor_free(conn->read_event);
+  }
+  if (conn->write_event) {
+    if (event_del(conn->write_event))
+      log_warn(LD_BUG, "Error removing write event for %d", conn->s);
+    tor_free(conn->write_event);
+  }
+  if (conn->dns_server_port) {
+    dnsserv_close_listener(conn);
+  }
 }
 
 /** Remove the connection from the global list, and remove the
@@ -246,17 +269,17 @@ get_connection_array(void)
 }
 
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
- * mask is a bitmask whose bits are EV_READ and EV_WRITE.)
+ * mask is a bitmask whose bits are READ_EVENT and WRITE_EVENT)
  */
 void
-connection_watch_events(connection_t *conn, short events)
+connection_watch_events(connection_t *conn, watchable_events_t events)
 {
-  if (events & EV_READ)
+  if (events & READ_EVENT)
     connection_start_reading(conn);
   else
     connection_stop_reading(conn);
 
-  if (events & EV_WRITE)
+  if (events & WRITE_EVENT)
     connection_start_writing(conn);
   else
     connection_stop_writing(conn);
@@ -393,11 +416,11 @@ connection_start_reading_from_linked_conn(connection_t *conn)
     smartlist_add(active_linked_connection_lst, conn);
     if (!called_loop_once) {
       /* This is the first event on the list; we won't be in LOOP_ONCE mode,
-       * so we need to make sure that the event_loop() actually exits at the
-       * end of its run through the current connections and
-       * lets us activate read events for linked connections. */
+       * so we need to make sure that the event_base_loop() actually exits at
+       * the end of its run through the current connections and lets us
+       * activate read events for linked connections. */
       struct timeval tv = { 0, 0 };
-      event_loopexit(&tv);
+      tor_event_base_loopexit(tor_libevent_get_base(), &tv);
     }
   } else {
     tor_assert(smartlist_isin(active_linked_connection_lst, conn));
@@ -774,7 +797,7 @@ run_connection_housekeeping(int i, time_t now)
   }
 }
 
-/** Honor a NEWNYM request: make future requests unlinkability to past
+/** Honor a NEWNYM request: make future requests unlinkable to past
  * requests. */
 static void
 signewnym_impl(time_t now)
@@ -807,7 +830,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_clean_caches = 0;
   static time_t time_to_recheck_bandwidth = 0;
   static time_t time_to_check_for_expired_networkstatus = 0;
-  static time_t time_to_dump_geoip_stats = 0;
+  static time_t time_to_write_stats_files = 0;
   static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
   int i;
@@ -935,11 +958,43 @@ run_scheduled_events(time_t now)
     time_to_check_for_expired_networkstatus = now + CHECK_EXPIRED_NS_INTERVAL;
   }
 
-  if (time_to_dump_geoip_stats < now) {
-#define DUMP_GEOIP_STATS_INTERVAL (60*60);
-    if (time_to_dump_geoip_stats)
-      dump_geoip_stats();
-    time_to_dump_geoip_stats = now + DUMP_GEOIP_STATS_INTERVAL;
+  /* 1g. Check whether we should write statistics to disk.
+   */
+  if (time_to_write_stats_files >= 0 && time_to_write_stats_files < now) {
+#define WRITE_STATS_INTERVAL (24*60*60)
+    if (options->CellStatistics || options->DirReqStatistics ||
+        options->EntryStatistics || options->ExitPortStatistics) {
+      if (!time_to_write_stats_files) {
+        /* Initialize stats. */
+        if (options->CellStatistics)
+          rep_hist_buffer_stats_init(now);
+        if (options->DirReqStatistics)
+          geoip_dirreq_stats_init(now);
+        if (options->EntryStatistics)
+          geoip_entry_stats_init(now);
+        if (options->ExitPortStatistics)
+          rep_hist_exit_stats_init(now);
+        log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
+                   "the *-stats files that will first be written to the "
+                   "data directory in %d hours from now.",
+                   WRITE_STATS_INTERVAL / (60 * 60));
+        time_to_write_stats_files = now + WRITE_STATS_INTERVAL;
+      } else {
+        /* Write stats to disk. */
+        time_to_write_stats_files += WRITE_STATS_INTERVAL;
+        if (options->CellStatistics)
+          rep_hist_buffer_stats_write(time_to_write_stats_files);
+        if (options->DirReqStatistics)
+          geoip_dirreq_stats_write(time_to_write_stats_files);
+        if (options->EntryStatistics)
+          geoip_entry_stats_write(time_to_write_stats_files);
+        if (options->ExitPortStatistics)
+          rep_hist_exit_stats_write(time_to_write_stats_files);
+      }
+    } else {
+      /* Never write stats to disk */
+      time_to_write_stats_files = -1;
+    }
   }
 
   /* Remove old information from rephist and the rend cache. */
@@ -1148,8 +1203,8 @@ second_elapsed_callback(int fd, short event, void *args)
   (void)event;
   (void)args;
   if (!timeout_event) {
-    timeout_event = tor_malloc_zero(sizeof(struct event));
-    evtimer_set(timeout_event, second_elapsed_callback, NULL);
+    timeout_event = tor_evtimer_new(tor_libevent_get_base(),
+                                    second_elapsed_callback, NULL);
     one_second.tv_sec = 1;
     one_second.tv_usec = 0;
   }
@@ -1221,7 +1276,7 @@ second_elapsed_callback(int fd, short event, void *args)
   }
 #endif
 
-  if (evtimer_add(timeout_event, &one_second))
+  if (event_add(timeout_event, &one_second))
     log_err(LD_NET,
             "Error from libevent when setting one-second timeout event");
 }
@@ -1384,8 +1439,10 @@ do_main_loop(void)
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);
 
-  if (trusted_dirs_reload_certs())
-    return -1;
+  if (trusted_dirs_reload_certs()) {
+    log_warn(LD_DIR,
+             "Couldn't load all cached v3 certificates. Starting anyway.");
+  }
   if (router_reload_v2_networkstatus()) {
     return -1;
   }
@@ -1432,20 +1489,16 @@ do_main_loop(void)
 
     /* poll until we have an event, or the second ends, or until we have
      * some active linked connections to trigger events for. */
-    loop_result = event_loop(called_loop_once ? EVLOOP_ONCE : 0);
+    loop_result = event_base_loop(tor_libevent_get_base(),
+                                  called_loop_once ? EVLOOP_ONCE : 0);
 
     /* let catch() handle things like ^c, and otherwise don't worry about it */
     if (loop_result < 0) {
       int e = tor_socket_errno(-1);
       /* let the program survive things like ^z */
       if (e != EINTR && !ERRNO_IS_EINPROGRESS(e)) {
-#ifdef HAVE_EVENT_GET_METHOD
         log_err(LD_NET,"libevent call with %s failed: %s [%d]",
-                event_get_method(), tor_socket_strerror(e), e);
-#else
-        log_err(LD_NET,"libevent call failed: %s [%d]",
-                tor_socket_strerror(e), e);
-#endif
+                tor_libevent_get_method(), tor_socket_strerror(e), e);
         return -1;
 #ifndef MS_WINDOWS
       } else if (e == EINVAL) {
@@ -1588,6 +1641,7 @@ dumpmemusage(int severity)
       U64_PRINTF_ARG(rephist_total_alloc), rephist_total_num);
   dump_routerlist_mem_usage(severity);
   dump_cell_pool_usage(severity);
+  dump_dns_mem_usage(severity);
   buf_dump_freelist_sizes(severity);
   tor_log_mallinfo(severity);
 }
@@ -1711,7 +1765,7 @@ handle_signals(int is_parent)
 {
 #ifndef MS_WINDOWS /* do signal stuff only on Unix */
   int i;
-  static int signals[] = {
+  static const int signals[] = {
     SIGINT,  /* do a controlled slow shutdown */
     SIGTERM, /* to terminate now */
     SIGPIPE, /* otherwise SIGPIPE kills us */
@@ -1723,12 +1777,13 @@ handle_signals(int is_parent)
 #endif
     SIGCHLD, /* handle dns/cpu workers that exit */
     -1 };
-  static struct event signal_events[16]; /* bigger than it has to be. */
+  static struct event *signal_events[16]; /* bigger than it has to be. */
   if (is_parent) {
     for (i = 0; signals[i] >= 0; ++i) {
-      signal_set(&signal_events[i], signals[i], signal_callback,
-                 (void*)(uintptr_t)signals[i]);
-      if (signal_add(&signal_events[i], NULL))
+      signal_events[i] = tor_evsignal_new(
+                       tor_libevent_get_base(), signals[i], signal_callback,
+                       (void*)(uintptr_t)signals[i]);
+      if (event_add(signal_events[i], NULL))
         log_warn(LD_BUG, "Error from libevent when adding event for signal %d",
                  signals[i]);
     }
@@ -1817,7 +1872,9 @@ tor_init(int argc, char *argv[])
              "and you probably shouldn't.");
 #endif
 
-  if (crypto_global_init(get_options()->HardwareAccel)) {
+  if (crypto_global_init(get_options()->HardwareAccel,
+                         get_options()->AccelName,
+                         get_options()->AccelDir)) {
     log_err(LD_BUG, "Unable to initialize OpenSSL. Exiting.");
     return -1;
   }

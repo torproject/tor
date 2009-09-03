@@ -1,7 +1,5 @@
 Filename: 155-four-hidden-service-improvements.txt
 Title: Four Improvements of Hidden Service Performance
-Version: $Revision$
-Last-Modified: $Date$
 Author: Karsten Loesing, Christian Wilms
 Created: 25-Sep-2008
 Status: Finished

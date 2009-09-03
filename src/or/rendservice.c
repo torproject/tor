@@ -10,8 +10,7 @@
 #include "or.h"
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
-                                            const char *pk_digest,
-                                            int desc_version);
+                                            const char *pk_digest);
 
 /** Represents the mapping from a virtual port of a rendezvous service to
  * a real port on some IP.
@@ -42,8 +41,6 @@ typedef struct rend_service_t {
   /* Fields specified in config file */
   char *directory; /**< where in the filesystem it stores it */
   smartlist_t *ports; /**< List of rend_service_port_config_t */
-  int descriptor_version; /**< Rendezvous descriptor version that will be
-                           * published. */
   rend_auth_type_t auth_type; /**< Client authorization type or 0 if no client
                                * authorization is performed. */
   smartlist_t *clients; /**< List of rend_authorized_client_t's of
@@ -58,7 +55,7 @@ typedef struct rend_service_t {
                              * or are trying to establish. */
   time_t intro_period_started; /**< Start of the current period to build
                                 * introduction points. */
-  int n_intro_circuits_launched; /**< count of intro circuits we have
+  int n_intro_circuits_launched; /**< Count of intro circuits we have
                                   * established in this period. */
   rend_service_descriptor_t *desc; /**< Current hidden service descriptor. */
   time_t desc_is_dirty; /**< Time at which changes to the hidden service
@@ -155,36 +152,6 @@ rend_add_service(rend_service_t *service)
   rend_service_port_config_t *p;
 
   service->intro_nodes = smartlist_create();
-
-  /* If the service is configured to publish unversioned (v0) and versioned
-   * descriptors (v2 or higher), split it up into two separate services
-   * (unless it is configured to perform client authorization). */
-  if (service->descriptor_version == -1) {
-    if (service->auth_type == REND_NO_AUTH) {
-      rend_service_t *v0_service = tor_malloc_zero(sizeof(rend_service_t));
-      v0_service->directory = tor_strdup(service->directory);
-      v0_service->ports = smartlist_create();
-      SMARTLIST_FOREACH(service->ports, rend_service_port_config_t *, p, {
-        rend_service_port_config_t *copy =
-          tor_malloc_zero(sizeof(rend_service_port_config_t));
-        memcpy(copy, p, sizeof(rend_service_port_config_t));
-        smartlist_add(v0_service->ports, copy);
-      });
-      v0_service->intro_period_started = service->intro_period_started;
-      v0_service->descriptor_version = 0; /* Unversioned descriptor. */
-      v0_service->auth_type = REND_NO_AUTH;
-      rend_add_service(v0_service);
-    }
-
-    service->descriptor_version = 2; /* Versioned descriptor. */
-  }
-
-  if (service->auth_type != REND_NO_AUTH && !service->descriptor_version) {
-    log_warn(LD_CONFIG, "Hidden service with client authorization and "
-                        "version 0 descriptors configured; ignoring.");
-    rend_service_free(service);
-    return;
-  }
 
   if (service->auth_type != REND_NO_AUTH &&
       smartlist_len(service->clients) == 0) {
@@ -307,7 +274,6 @@ rend_config_services(or_options_t *options, int validate_only)
       service->directory = tor_strdup(line->value);
       service->ports = smartlist_create();
       service->intro_period_started = time(NULL);
-      service->descriptor_version = -1; /**< All descriptor versions. */
       continue;
     }
     if (!service) {
@@ -433,35 +399,13 @@ rend_config_services(or_options_t *options, int validate_only)
         return -1;
       }
     } else {
-      smartlist_t *versions;
-      char *version_str;
-      int i, version, ver_ok=1, versions_bitmask = 0;
       tor_assert(!strcasecmp(line->key, "HiddenServiceVersion"));
-      versions = smartlist_create();
-      smartlist_split_string(versions, line->value, ",",
-                             SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-      for (i = 0; i < smartlist_len(versions); i++) {
-        version_str = smartlist_get(versions, i);
-        if (strlen(version_str) != 1 || strspn(version_str, "02") != 1) {
-          log_warn(LD_CONFIG,
-                   "HiddenServiceVersion can only be 0 and/or 2.");
-          SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));
-          smartlist_free(versions);
-          rend_service_free(service);
-          return -1;
-        }
-        version = (int)tor_parse_long(version_str, 10, 0, INT_MAX, &ver_ok,
-                                      NULL);
-        if (!ver_ok)
-          continue;
-        versions_bitmask |= 1 << version;
+      if (strcmp(line->value, "2")) {
+        log_warn(LD_CONFIG,
+                 "The only supported HiddenServiceVersion is 2.");
+        rend_service_free(service);
+        return -1;
       }
-      /* If exactly one version is set, change descriptor_version to that
-       * value; otherwise leave it at -1. */
-      if (versions_bitmask == 1 << 0) service->descriptor_version = 0;
-      if (versions_bitmask == 1 << 2) service->descriptor_version = 2;
-      SMARTLIST_FOREACH(versions, char *, cp, tor_free(cp));
-      smartlist_free(versions);
     }
   }
   if (service) {
@@ -483,8 +427,7 @@ rend_config_services(or_options_t *options, int validate_only)
      * probably ok? */
     SMARTLIST_FOREACH(rend_service_list, rend_service_t *, new, {
       SMARTLIST_FOREACH(old_service_list, rend_service_t *, old, {
-        if (!strcmp(old->directory, new->directory) &&
-            old->descriptor_version == new->descriptor_version) {
+        if (!strcmp(old->directory, new->directory)) {
           smartlist_add_all(new->intro_nodes, old->intro_nodes);
           smartlist_clear(old->intro_nodes);
           smartlist_add(surviving_services, old);
@@ -507,18 +450,16 @@ rend_config_services(or_options_t *options, int validate_only)
         tor_assert(oc->rend_data);
         SMARTLIST_FOREACH(surviving_services, rend_service_t *, ptr, {
           if (!memcmp(ptr->pk_digest, oc->rend_data->rend_pk_digest,
-                      DIGEST_LEN) &&
-              ptr->descriptor_version == oc->rend_data->rend_desc_version) {
+                      DIGEST_LEN)) {
             keep_it = 1;
             break;
           }
         });
         if (keep_it)
           continue;
-        log_info(LD_REND, "Closing intro point %s for service %s version %d.",
+        log_info(LD_REND, "Closing intro point %s for service %s.",
                  safe_str(oc->build_state->chosen_exit->nickname),
-                 oc->rend_data->onion_address,
-                 oc->rend_data->rend_desc_version);
+                 oc->rend_data->onion_address);
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         /* XXXX Is there another reason we should use here? */
       }
@@ -548,7 +489,6 @@ rend_service_update_descriptor(rend_service_t *service)
   d = service->desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);
-  d->version = service->descriptor_version;
   d->intro_nodes = smartlist_create();
   /* Support intro protocols 2 and 3. */
   d->protocols = (1 << 2) + (1 << 3);
@@ -556,7 +496,7 @@ rend_service_update_descriptor(rend_service_t *service)
   for (i = 0; i < smartlist_len(service->intro_nodes); ++i) {
     rend_intro_point_t *intro_svc = smartlist_get(service->intro_nodes, i);
     rend_intro_point_t *intro_desc;
-    circ = find_intro_circuit(intro_svc, service->pk_digest, d->version);
+    circ = find_intro_circuit(intro_svc, service->pk_digest);
     if (!circ || circ->_base.purpose != CIRCUIT_PURPOSE_S_INTRO)
       continue;
 
@@ -797,17 +737,15 @@ rend_service_load_keys(void)
   return r;
 }
 
-/** Return the service whose public key has a digest of <b>digest</b> and
- * which publishes the given descriptor <b>version</b>.  Return NULL if no
- * such service exists.
+/** Return the service whose public key has a digest of <b>digest</b>, or
+ * NULL if no such service exists.
  */
 static rend_service_t *
-rend_service_get_by_pk_digest_and_version(const char* digest,
-                                          uint8_t version)
+rend_service_get_by_pk_digest(const char* digest)
 {
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, s,
-                    if (!memcmp(s->pk_digest,digest,DIGEST_LEN) &&
-                        s->descriptor_version == version) return s);
+                    if (!memcmp(s->pk_digest,digest,DIGEST_LEN))
+                        return s);
   return NULL;
 }
 
@@ -944,21 +882,16 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   }
 
   /* look up service depending on circuit. */
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Got an INTRODUCE2 cell for an unrecognized service %s.",
              escaped(serviceid));
     return -1;
   }
 
-  /* if descriptor version is 2, use intro key instead of service key. */
-  if (circuit->rend_data->rend_desc_version == 0) {
-    intro_key = service->private_key;
-  } else {
-    intro_key = circuit->intro_key;
-  }
+  /* use intro key instead of service key. */
+  intro_key = circuit->intro_key;
 
   /* first DIGEST_LEN bytes of request is intro or service pk digest */
   crypto_pk_get_digest(intro_key, intro_key_digest);
@@ -1201,7 +1134,6 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   memcpy(launched->rend_data->rend_cookie, r_cookie, REND_COOKIE_LEN);
   strlcpy(launched->rend_data->onion_address, service->service_id,
           sizeof(launched->rend_data->onion_address));
-  launched->rend_data->rend_desc_version = service->descriptor_version;
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
@@ -1323,18 +1255,16 @@ rend_service_launch_establish_intro(rend_service_t *service,
   strlcpy(launched->rend_data->onion_address, service->service_id,
           sizeof(launched->rend_data->onion_address));
   memcpy(launched->rend_data->rend_pk_digest, service->pk_digest, DIGEST_LEN);
-  launched->rend_data->rend_desc_version = service->descriptor_version;
-  if (service->descriptor_version == 2)
-    launched->intro_key = crypto_pk_dup_key(intro->intro_key);
+  launched->intro_key = crypto_pk_dup_key(intro->intro_key);
   if (launched->_base.state == CIRCUIT_STATE_OPEN)
     rend_service_intro_has_opened(launched);
   return 0;
 }
 
 /** Return the number of introduction points that are or have been
- * established for the given service address and rendezvous version. */
+ * established for the given service address in <b>query</b>. */
 static int
-count_established_intro_points(const char *query, int rend_version)
+count_established_intro_points(const char *query)
 {
   int num_ipos = 0;
   circuit_t *circ;
@@ -1345,7 +1275,6 @@ count_established_intro_points(const char *query, int rend_version)
          circ->purpose == CIRCUIT_PURPOSE_S_INTRO)) {
       origin_circuit_t *oc = TO_ORIGIN_CIRCUIT(circ);
       if (oc->rend_data &&
-          oc->rend_data->rend_desc_version == rend_version &&
           !rend_cmp_service_ids(query, oc->rend_data->onion_address))
         num_ipos++;
     }
@@ -1375,9 +1304,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                 circuit->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
 
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unrecognized service ID %s on introduction circuit %d.",
              serviceid, circuit->_base.n_circ_id);
@@ -1387,8 +1315,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
   /* If we already have enough introduction circuits for this service,
    * redefine this one as a general circuit. */
-  if (count_established_intro_points(serviceid,
-          circuit->rend_data->rend_desc_version) > NUM_INTRO_POINTS) {
+  if (count_established_intro_points(serviceid) > NUM_INTRO_POINTS) {
     log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
              "circuit, but we already have enough. Redefining purpose to "
              "general.");
@@ -1401,13 +1328,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
            "Established circuit %d as introduction point for service %s",
            circuit->_base.n_circ_id, serviceid);
 
-  /* If the introduction point will not be used in an unversioned
-   * descriptor, use the intro key instead of the service key in
-   * ESTABLISH_INTRO. */
-  if (service->descriptor_version == 0)
-    intro_key = service->private_key;
-  else
-    intro_key = circuit->intro_key;
+  /* Use the intro key instead of the service key in ESTABLISH_INTRO. */
+  intro_key = circuit->intro_key;
   /* Build the payload for a RELAY_ESTABLISH_INTRO cell. */
   r = crypto_pk_asn1_encode(intro_key, buf+2,
                             RELAY_PAYLOAD_SIZE-2);
@@ -1466,9 +1388,8 @@ rend_service_intro_established(origin_circuit_t *circuit, const char *request,
     goto err;
   }
   tor_assert(circuit->rend_data);
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Unknown service on introduction circuit %d.",
              circuit->_base.n_circ_id);
@@ -1518,9 +1439,8 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
            "cookie %s for service %s",
            circuit->_base.n_circ_id, hexcookie, serviceid);
 
-  service = rend_service_get_by_pk_digest_and_version(
-              circuit->rend_data->rend_pk_digest,
-              circuit->rend_data->rend_desc_version);
+  service = rend_service_get_by_pk_digest(
+                circuit->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_GENERAL, "Internal error: unrecognized service ID on "
              "introduction circuit.");
@@ -1576,13 +1496,12 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
  */
 
 /** Return the (possibly non-open) introduction circuit ending at
- * <b>intro</b> for the service whose public key is <b>pk_digest</b> and
- * which publishes descriptor of version <b>desc_version</b>.  Return
- * NULL if no such service is found.
+ * <b>intro</b> for the service whose public key is <b>pk_digest</b>.
+ * (<b>desc_version</b> is ignored). Return NULL if no such service is
+ * found.
  */
 static origin_circuit_t *
-find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
-                   int desc_version)
+find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest)
 {
   origin_circuit_t *circ = NULL;
 
@@ -1591,8 +1510,7 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
     if (!memcmp(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
-        circ->rend_data &&
-        circ->rend_data->rend_desc_version == desc_version) {
+        circ->rend_data) {
       return circ;
     }
   }
@@ -1602,8 +1520,7 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
     if (!memcmp(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
-        circ->rend_data &&
-        circ->rend_data->rend_desc_version == desc_version) {
+        circ->rend_data) {
       return circ;
     }
   }
@@ -1695,9 +1612,8 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
   smartlist_free(successful_uploads);
 }
 
-/** Encode and sign up-to-date v0 and/or v2 service descriptors for
- * <b>service</b>, and upload it/them to all the dirservers/to the
- * responsible hidden service directories.
+/** Encode and sign an up-to-date service descriptor for <b>service</b>,
+ * and upload it/them to the responsible hidden service directories.
  */
 static void
 upload_service_descriptor(rend_service_t *service)
@@ -1709,35 +1625,8 @@ upload_service_descriptor(rend_service_t *service)
 
   rendpostperiod = get_options()->RendPostPeriod;
 
-  /* Upload unversioned (v0) descriptor? */
-  if (service->descriptor_version == 0 &&
-      get_options()->PublishHidServDescriptors) {
-    char *desc;
-    size_t desc_len;
-    /* Encode the descriptor. */
-    if (rend_encode_service_descriptor(service->desc,
-                                       service->private_key,
-                                       &desc, &desc_len)<0) {
-      log_warn(LD_BUG, "Internal error: couldn't encode service descriptor; "
-               "not uploading.");
-      return;
-    }
-
-    /* Post it to the dirservers */
-    rend_get_service_id(service->desc->pk, serviceid);
-    log_info(LD_REND, "Sending publish request for hidden service %s",
-             serviceid);
-    directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_RENDDESC,
-                                 ROUTER_PURPOSE_GENERAL,
-                                 HIDSERV_AUTHORITY, desc, desc_len, 0);
-    tor_free(desc);
-    service->next_upload_time = now + rendpostperiod;
-    uploaded = 1;
-  }
-
-  /* Upload v2 descriptor? */
-  if (service->descriptor_version == 2 &&
-      get_options()->PublishHidServDescriptors) {
+  /* Upload descriptor? */
+  if (get_options()->PublishHidServDescriptors) {
     networkstatus_t *c = networkstatus_get_latest_consensus();
     if (c && smartlist_len(c->routerstatus_list) > 0) {
       int seconds_valid, i, j, num_descs;
@@ -1876,8 +1765,7 @@ rend_services_introduce(void)
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
       router = router_get_by_digest(intro->extend_info->identity_digest);
-      if (!router || !find_intro_circuit(intro, service->pk_digest,
-                                         service->descriptor_version)) {
+      if (!router || !find_intro_circuit(intro, service->pk_digest)) {
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
                  intro->extend_info->nickname, service->service_id);
         if (service->desc) {
@@ -1941,10 +1829,8 @@ rend_services_introduce(void)
       smartlist_add(intro_routers, router);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_router(router);
-      if (service->descriptor_version == 2) {
-        intro->intro_key = crypto_new_pk_env();
-        tor_assert(!crypto_pk_generate_key(intro->intro_key));
-      }
+      intro->intro_key = crypto_new_pk_env();
+      tor_assert(!crypto_pk_generate_key(intro->intro_key));
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
                router->nickname, service->service_id);
@@ -2037,8 +1923,7 @@ rend_consider_descriptor_republication(void)
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
     service = smartlist_get(rend_service_list, i);
-    if (service->descriptor_version && service->desc &&
-        !service->desc->all_uploads_performed) {
+    if (service->desc && !service->desc->all_uploads_performed) {
       /* If we failed in uploading a descriptor last time, try again *without*
        * updating the descriptor's contents. */
       upload_service_descriptor(service);
@@ -2066,8 +1951,7 @@ rend_service_dump_stats(int severity)
       intro = smartlist_get(service->intro_nodes, j);
       safe_name = safe_str(intro->extend_info->nickname);
 
-      circ = find_intro_circuit(intro, service->pk_digest,
-                                service->descriptor_version);
+      circ = find_intro_circuit(intro, service->pk_digest);
       if (!circ) {
         log(severity, LD_GENERAL, "  Intro point %d at %s: no circuit",
             j, safe_name);
@@ -2098,9 +1982,8 @@ rend_service_set_connection_addr_port(edge_connection_t *conn,
   log_debug(LD_REND,"beginning to hunt for addr/port");
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                 circ->rend_data->rend_pk_digest, REND_SERVICE_ID_LEN);
-  service = rend_service_get_by_pk_digest_and_version(
-                circ->rend_data->rend_pk_digest,
-                circ->rend_data->rend_desc_version);
+  service = rend_service_get_by_pk_digest(
+                circ->rend_data->rend_pk_digest);
   if (!service) {
     log_warn(LD_REND, "Couldn't find any service associated with pk %s on "
              "rendezvous circuit %d; closing.",

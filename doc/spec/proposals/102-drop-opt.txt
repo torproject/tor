@@ -1,7 +1,5 @@
 Filename: 102-drop-opt.txt
 Title: Dropping "opt" from the directory format
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: Jan 2007
 Status: Closed

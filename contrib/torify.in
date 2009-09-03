@@ -10,36 +10,67 @@
 
 # Define and ensure we have tsocks
 # XXX: what if we don't have which?
+TORSOCKS="`which torsocks`"
 TSOCKS="`which tsocks`"
+PROG=""
 if [ ! -x "$TSOCKS" ]
 then
-        echo "$0: Can't find tsocks in PATH. Perhaps you haven't installed it?" >&2
-        exit 1
+	echo "$0: Can't find tsocks in PATH. Perhaps you haven't installed it?" >&2
+else
+	PROG=$TSOCKS
+fi
+if [ ! -x "$TORSOCKS" ]
+then
+	echo "$0: Can't find torsocks in PATH. Perhaps you haven't installed it?" >&2
+else
+	PROG=$TORSOCKS
+fi
+
+if [ ! -x "$PROG" ]
+then
+	echo "$0: Can't find the required tor helpers in our PATH. Perhaps you haven't installed them?" >&2
+	exit 1;
 fi
 
 # Check for any argument list
 if [ "$#" = 0 ]
 then
-        echo "Usage: $0 <command> [<options>...]" >&2
-        exit 1
+	echo "Usage: $0 [-hv] <command> [<options>...]" >&2
+	exit 1
 fi
 if [ "$#" = 1 ] && ( [ "$1" = "-h" ] || [ "$1" = "--help" ] )
 then
-        echo "Usage: $0 <command> [<options>...]"
-        exit 0
+	echo "Usage: $0 [-hv] <command> [<options>...]"
+	exit 0
 fi
 
-# Define our tsocks config file
-TSOCKS_CONF_FILE="@CONFDIR@/tor-tsocks.conf"
-export TSOCKS_CONF_FILE
-
-# Check that we've got a tsocks config file
-if [ -r "$TSOCKS_CONF_FILE" ]
+if [ "$1" = "-v" ] || [ "$1" = "--verbose" ]
 then
-	exec tsocks "$@"
-	echo "$0: Failed to exec tsocks $@" >&2
-	exit 1
-else
-	echo "$0: Missing tsocks configuration file \"$TSOCKS_CONF_FILE\"." >&2
-	exit 1
+	echo "We're armed with the following tsocks: $TSOCKS"
+	echo "We're armed with the following torsocks: $TORSOCKS"
+	echo "We're attempting to use $PROG for all tor action."
+	shift 1
+fi
+
+if [ "$PROG" = "$TSOCKS" ]
+then
+	# Define our tsocks config file
+	TSOCKS_CONF_FILE="/etc/tor/tor-tsocks.conf"
+	export TSOCKS_CONF_FILE
+
+	# Check that we've got a tsocks config file
+	if [ -r "$TSOCKS_CONF_FILE" ]
+	then
+		echo "WARNING: tsocks is known to leak DNS and UDP data." >&2
+		exec tsocks "$@"
+		echo "$0: Failed to exec tsocks $@" >&2
+		exit 1
+	else
+		echo "$0: Missing tsocks configuration file \"$TSOCKS_CONF_FILE\"." >&2
+		exit 1
+	fi
+fi
+if [ "$PROG" = "$TORSOCKS" ]
+then
+	exec torsocks "$@"
 fi

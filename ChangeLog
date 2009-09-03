@@ -1,7 +1,120 @@
-Changes in version 0.2.1.19 - 2009-07-28
+Changes in version 0.2.2.1-alpha - 2009-08-26
+  o Security fixes:
+    - Start the process of disabling ".exit" address notation, since it
+      can be used for a variety of esoteric application-level attacks
+      on users. To reenable it, set "AllowDotExit 1" in your torrc. Fix
+      on 0.0.9rc5.
+
+  o New directory authorities:
+    - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
+      authority.
+
+  o Major features:
+    - New AccelName and AccelDir options add support for dynamic OpenSSL
+      hardware crypto acceleration engines.
+    - Tor now supports tunneling all of its outgoing connections over
+      a SOCKS proxy, using the SOCKS4Proxy and/or SOCKS5Proxy
+      configuration options. Code by Christopher Davis.
+
   o Major bugfixes:
-    - Make accessing hidden services on 0.2.1.x work right
-      again. Bugfix on 0.2.1.3-alpha; workaround for bug 1038.
+    - Send circuit or stream sendme cells when our window has decreased
+      by 100 cells, not when it has decreased by 101 cells. Bug uncovered
+      by Karsten when testing the "reduce circuit window" performance
+      patch. Bugfix on the 54th commit on Tor -- from July 2002,
+      before the release of Tor 0.0.0. This is the new winner of the
+      oldest-bug prize.
+
+  o New options for gathering stats safely:
+    - Directories that set "DirReqStatistics 1" write statistics on
+      directory request to disk every 24 hours. As compared to the
+      --enable-geoip-stats flag in 0.2.1.x, there are a few improvements:
+      1) stats are written to disk exactly every 24 hours; 2) estimated
+      shares of v2 and v3 requests are determined as mean values, not at
+      the end of a measurement period; 3) unresolved requests are listed
+      with country code '??'; 4) directories also measure download times.
+    - Exit nodes that set "ExitPortStatistics 1" write statistics on the
+      number of exit streams and transferred bytes per port to disk every
+      24 hours.
+    - Relays that set "CellStatistics 1" write statistics on how long
+      cells spend in their circuit queues to disk every 24 hours.
+    - Entry nodes that set "EntryStatistics 1" write statistics on the
+      rough number and origins of connecting clients to disk every 24
+      hours.
+    - Relays that write any of the above statistics to disk and set
+      "ExtraInfoStatistics 1" include the past 24 hours of statistics in
+      their extra-info documents.
+
+  o Minor features:
+    - New --digests command-line switch to output the digests of the
+      source files Tor was built with.
+    - The "torify" script now uses torsocks where available.
+    - The memarea code now uses a sentinel value at the end of each area
+      to make sure nothing writes beyond the end of an area. This might
+      help debug some conceivable causes of bug 930.
+    - Time and memory units in the configuration file can now be set to
+      fractional units. For example, "2.5 GB" is now a valid value for
+      AccountingMax.
+    - Certain Tor clients (such as those behind check.torproject.org) may
+      want to fetch the consensus in an extra early manner. To enable this
+      a user may now set FetchDirInfoExtraEarly to 1. This also depends on
+      setting FetchDirInfoEarly to 1. Previous behavior will stay the same
+      as only certain clients who must have this information sooner should
+      set this option.
+    - Instead of adding the svn revision to the Tor version string, report
+      the git commit (when we're building from a git checkout).
+
+  o Minor bugfixes:
+    - If any the v3 certs we download are unparseable, we should actually
+      notice the failure so we don't retry indefinitely. Bugfix on
+      0.2.0.x; reported by "rotator".
+    - If the cached cert file is unparseable, warn but don't exit.
+    - Fix possible segmentation fault on directory authorities. Bugfix on
+      0.2.1.14-rc.
+    - When Tor fails to parse a descriptor of any kind, dump it to disk.
+      Might help diagnosing bug 1051.
+
+  o Deprecated and removed features:
+    - The controller no longer accepts the old obsolete "addr-mappings/"
+      or "unregistered-servers-" GETINFO values.
+    - Hidden services no longer publish version 0 descriptors, and clients
+      do not request or use version 0 descriptors. However, the old hidden
+      service authorities still accept and serve version 0 descriptors
+      when contacted by older hidden services/clients.
+    - The EXTENDED_EVENTS and VERBOSE_NAMES controller features are now
+      always on; using them is necessary for correct forward-compatible
+      controllers.
+    - Remove support for .noconnect style addresses. Nobody was using
+      them, and they provided another avenue for detecting Tor users
+      via application-level web tricks.
+
+
+Changes in version 0.2.1.20 - 2009-??-??
+  o Major bugfixes:
+    - Send circuit or stream sendme cells when our window has decreased
+      by 100 cells, not when it has decreased by 101 cells. Bug uncovered
+      by Karsten when testing the "reduce circuit window" performance
+      patch. Bugfix on the 54th commit on Tor -- from July 2002,
+      before the release of Tor 0.0.0. This is the new winner of the
+      oldest-bug prize.
+
+  o New directory authorities:
+    - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
+      authority.
+
+  o Minor bugfixes:
+    - Fix a signed/unsigned compile warning in 0.2.1.19.
+    - Fix possible segmentation fault on directory authorities. Bugfix on
+      0.2.1.14-rc.
+
+
+Changes in version 0.2.1.19 - 2009-07-28
+  Tor 0.2.1.19 fixes a major bug with accessing and providing hidden
+  services on Tor 0.2.1.3-alpha through 0.2.1.18.
+
+  o Major bugfixes:
+    - Make accessing hidden services on 0.2.1.x work right again.
+      Bugfix on 0.2.1.3-alpha; workaround for bug 1038. Diagnosis and
+      part of patch provided by "optimist".
 
   o Minor features:
     - When a relay/bridge is writing out its identity key fingerprint to
@@ -20,6 +133,12 @@ Changes in version 0.2.1.19 - 2009-07-28
 
 
 Changes in version 0.2.1.18 - 2009-07-24
+  Tor 0.2.1.18 lays the foundations for performance improvements,
+  adds status events to help users diagnose bootstrap problems, adds
+  optional authentication/authorization for hidden services, fixes a
+  variety of potential anonymity problems, and includes a huge pile of
+  other features and bug fixes.
+
   o Build fixes:
     - Add LIBS=-lrt to Makefile.am so the Tor RPMs use a static libevent.
 

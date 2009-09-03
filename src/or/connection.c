@@ -32,6 +32,10 @@ static int connection_process_inbuf(connection_t *conn, int package_partial);
 static void client_check_address_changed(int sock);
 static void set_constrained_socket_buffers(int sock, int size);
 
+static const char *connection_proxy_state_to_string(int state);
+static int connection_read_https_proxy_response(connection_t *conn);
+static void connection_send_socks5_connect(connection_t *conn);
+
 /** The last IPv4 address that our network interface seemed to have been
  * binding to, in host order.  We use this to detect when our IP changes. */
 static uint32_t last_interface_ip = 0;
@@ -92,8 +96,7 @@ conn_state_to_string(int type, int state)
     case CONN_TYPE_OR:
       switch (state) {
         case OR_CONN_STATE_CONNECTING: return "connect()ing";
-        case OR_CONN_STATE_PROXY_FLUSHING: return "proxy flushing";
-        case OR_CONN_STATE_PROXY_READING: return "proxy reading";
+        case OR_CONN_STATE_PROXY_HANDSHAKING: return "handshaking (proxy)";
         case OR_CONN_STATE_TLS_HANDSHAKING: return "handshaking (TLS)";
         case OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING:
           return "renegotiating (TLS)";
@@ -297,25 +300,6 @@ connection_link_connections(connection_t *conn_a, connection_t *conn_b)
   conn_b->linked = 1;
   conn_a->linked_conn = conn_b;
   conn_b->linked_conn = conn_a;
-}
-
-/** Tell libevent that we don't care about <b>conn</b> any more. */
-void
-connection_unregister_events(connection_t *conn)
-{
-  if (conn->read_event) {
-    if (event_del(conn->read_event))
-      log_warn(LD_BUG, "Error removing read event for %d", conn->s);
-    tor_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    if (event_del(conn->write_event))
-      log_warn(LD_BUG, "Error removing write event for %d", conn->s);
-    tor_free(conn->write_event);
-  }
-  if (conn->dns_server_port) {
-    dnsserv_close_listener(conn);
-  }
 }
 
 /** Deallocate memory used by <b>conn</b>. Deallocate its buffers if
@@ -543,13 +527,6 @@ connection_about_to_close_connection(connection_t *conn)
         /* It's a directory connection and connecting or fetching
          * failed: forget about this router, and maybe try again. */
         connection_dir_request_failed(dir_conn);
-      }
-      if (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC && dir_conn->rend_data) {
-        /* Give it a try. However, there is no re-fetching for v0 rend
-         * descriptors; if the response is empty or the descriptor is
-         * unusable, close pending connections (unless a v2 request is
-         * still in progress). */
-        rend_client_desc_trynow(dir_conn->rend_data->onion_address, 0);
       }
       /* If we were trying to fetch a v2 rend desc and did not succeed,
        * retry as needed. (If a fetch is successful, the connection state
@@ -1315,6 +1292,353 @@ connection_connect(connection_t *conn, const char *address,
   return inprogress ? 0 : 1;
 }
 
+/** Convert state number to string representation for logging purposes.
+ */
+static const char *
+connection_proxy_state_to_string(int state)
+{
+  static const char *unknown = "???";
+  static const char *states[] = {
+    "PROXY_NONE",
+    "PROXY_HTTPS_WANT_CONNECT_OK",
+    "PROXY_SOCKS4_WANT_CONNECT_OK",
+    "PROXY_SOCKS5_WANT_AUTH_METHOD_NONE",
+    "PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929",
+    "PROXY_SOCKS5_WANT_AUTH_RFC1929_OK",
+    "PROXY_SOCKS5_WANT_CONNECT_OK",
+    "PROXY_CONNECTED",
+  };
+
+  if (state < PROXY_NONE || state > PROXY_CONNECTED)
+    return unknown;
+
+  return states[state];
+}
+
+/** Write a proxy request of <b>type</b> (socks4, socks5, https) to conn
+ * for conn->addr:conn->port, authenticating with the auth details given
+ * in the configuration (if available). SOCKS 5 and HTTP CONNECT proxies
+ * support authentication.
+ *
+ * Returns -1 if conn->addr is incompatible with the proxy protocol, and
+ * 0 otherwise.
+ *
+ * Use connection_read_proxy_handshake() to complete the handshake.
+ */
+int
+connection_proxy_connect(connection_t *conn, int type)
+{
+  or_options_t *options;
+
+  tor_assert(conn);
+
+  options = get_options();
+
+  switch (type) {
+    case PROXY_CONNECT: {
+      char buf[1024];
+      char *base64_authenticator=NULL;
+      const char *authenticator = options->HttpsProxyAuthenticator;
+
+      /* Send HTTP CONNECT and authentication (if available) in
+       * one request */
+
+      if (authenticator) {
+        base64_authenticator = alloc_http_authenticator(authenticator);
+        if (!base64_authenticator)
+          log_warn(LD_OR, "Encoding https authenticator failed");
+      }
+
+      if (base64_authenticator) {
+        tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.1\r\n"
+                     "Proxy-Authorization: Basic %s\r\n\r\n",
+                     fmt_addr(&conn->addr),
+                     conn->port, base64_authenticator);
+        tor_free(base64_authenticator);
+      } else {
+        tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.0\r\n\r\n",
+                     fmt_addr(&conn->addr), conn->port);
+      }
+
+      connection_write_to_buf(buf, strlen(buf), conn);
+      conn->proxy_state = PROXY_HTTPS_WANT_CONNECT_OK;
+      break;
+    }
+
+    case PROXY_SOCKS4: {
+      unsigned char buf[9];
+      uint16_t portn;
+      uint32_t ip4addr;
+
+      /* Send a SOCKS4 connect request with empty user id */
+
+      if (tor_addr_family(&conn->addr) != AF_INET) {
+        log_warn(LD_NET, "SOCKS4 client is incompatible with with IPv6");
+        return -1;
+      }
+
+      ip4addr = tor_addr_to_ipv4n(&conn->addr);
+      portn = htons(conn->port);
+
+      buf[0] = 4; /* version */
+      buf[1] = SOCKS_COMMAND_CONNECT; /* command */
+      memcpy(buf + 2, &portn, 2); /* port */
+      memcpy(buf + 4, &ip4addr, 4); /* addr */
+      buf[8] = 0; /* userid (empty) */
+
+      connection_write_to_buf((char *)buf, sizeof(buf), conn);
+      conn->proxy_state = PROXY_SOCKS4_WANT_CONNECT_OK;
+      break;
+    }
+
+    case PROXY_SOCKS5: {
+      unsigned char buf[4]; /* fields: vers, num methods, method list */
+
+      /* Send a SOCKS5 greeting (connect request must wait) */
+
+      buf[0] = 5; /* version */
+
+      /* number of auth methods */
+      if (options->Socks5ProxyUsername) {
+        buf[1] = 2;
+        buf[2] = 0x00; /* no authentication */
+        buf[3] = 0x02; /* rfc1929 Username/Passwd auth */
+        conn->proxy_state = PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929;
+      } else {
+        buf[1] = 1;
+        buf[2] = 0x00; /* no authentication */
+        conn->proxy_state = PROXY_SOCKS5_WANT_AUTH_METHOD_NONE;
+      }
+
+      connection_write_to_buf((char *)buf, 2 + buf[1], conn);
+      break;
+    }
+
+    default:
+      log_err(LD_BUG, "Invalid proxy protocol, %d", type);
+      tor_fragile_assert();
+      return -1;
+  }
+
+  log_debug(LD_NET, "set state %s",
+            connection_proxy_state_to_string(conn->proxy_state));
+
+  return 0;
+}
+
+/** Read conn's inbuf. If the http response from the proxy is all
+ * here, make sure it's good news, then return 1. If it's bad news,
+ * return -1. Else return 0 and hope for better luck next time.
+ */
+static int
+connection_read_https_proxy_response(connection_t *conn)
+{
+  char *headers;
+  char *reason=NULL;
+  int status_code;
+  time_t date_header;
+
+  switch (fetch_from_buf_http(conn->inbuf,
+                              &headers, MAX_HEADERS_SIZE,
+                              NULL, NULL, 10000, 0)) {
+    case -1: /* overflow */
+      log_warn(LD_PROTOCOL,
+               "Your https proxy sent back an oversized response. Closing.");
+      return -1;
+    case 0:
+      log_info(LD_NET,"https proxy response not all here yet. Waiting.");
+      return 0;
+    /* case 1, fall through */
+  }
+
+  if (parse_http_response(headers, &status_code, &date_header,
+                          NULL, &reason) < 0) {
+    log_warn(LD_NET,
+             "Unparseable headers from proxy (connecting to '%s'). Closing.",
+             conn->address);
+    tor_free(headers);
+    return -1;
+  }
+  if (!reason) reason = tor_strdup("[no reason given]");
+
+  if (status_code == 200) {
+    log_info(LD_NET,
+             "HTTPS connect to '%s' successful! (200 %s) Starting TLS.",
+             conn->address, escaped(reason));
+    tor_free(reason);
+    return 1;
+  }
+  /* else, bad news on the status code */
+  log_warn(LD_NET,
+           "The https proxy sent back an unexpected status code %d (%s). "
+           "Closing.",
+           status_code, escaped(reason));
+  tor_free(reason);
+  return -1;
+}
+
+/** Send SOCKS5 CONNECT command to <b>conn</b>, copying <b>conn->addr</b>
+ * and <b>conn->port</b> into the request.
+ */
+static void
+connection_send_socks5_connect(connection_t *conn)
+{
+  unsigned char buf[1024];
+  size_t reqsize = 6;
+  uint16_t port = htons(conn->port);
+
+  buf[0] = 5; /* version */
+  buf[1] = SOCKS_COMMAND_CONNECT; /* command */
+  buf[2] = 0; /* reserved */
+
+  if (tor_addr_family(&conn->addr) == AF_INET) {
+    uint32_t addr = tor_addr_to_ipv4n(&conn->addr);
+
+    buf[3] = 1;
+    reqsize += 4;
+    memcpy(buf + 4, &addr, 4);
+    memcpy(buf + 8, &port, 2);
+  } else { /* AF_INET6 */
+    buf[3] = 4;
+    reqsize += 16;
+    memcpy(buf + 4, tor_addr_to_in6(&conn->addr), 16);
+    memcpy(buf + 20, &port, 2);
+  }
+
+  connection_write_to_buf((char *)buf, reqsize, conn);
+
+  conn->proxy_state = PROXY_SOCKS5_WANT_CONNECT_OK;
+}
+
+/** Call this from connection_*_process_inbuf() to advance the proxy
+ * handshake.
+ *
+ * No matter what proxy protocol is used, if this function returns 1, the
+ * handshake is complete, and the data remaining on inbuf may contain the
+ * start of the communication with the requested server.
+ *
+ * Returns 0 if the current buffer contains an incomplete response, and -1
+ * on error.
+ */
+int
+connection_read_proxy_handshake(connection_t *conn)
+{
+  int ret = 0;
+  char *reason = NULL;
+
+  log_debug(LD_NET, "enter state %s",
+            connection_proxy_state_to_string(conn->proxy_state));
+
+  switch (conn->proxy_state) {
+    case PROXY_HTTPS_WANT_CONNECT_OK:
+      ret = connection_read_https_proxy_response(conn);
+      if (ret == 1)
+        conn->proxy_state = PROXY_CONNECTED;
+      break;
+
+    case PROXY_SOCKS4_WANT_CONNECT_OK:
+      ret = fetch_from_buf_socks_client(conn->inbuf,
+                                        conn->proxy_state,
+                                        &reason);
+      if (ret == 1)
+        conn->proxy_state = PROXY_CONNECTED;
+      break;
+
+    case PROXY_SOCKS5_WANT_AUTH_METHOD_NONE:
+      ret = fetch_from_buf_socks_client(conn->inbuf,
+                                        conn->proxy_state,
+                                        &reason);
+      /* no auth needed, do connect */
+      if (ret == 1) {
+        connection_send_socks5_connect(conn);
+        ret = 0;
+      }
+      break;
+
+    case PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929:
+      ret = fetch_from_buf_socks_client(conn->inbuf,
+                                        conn->proxy_state,
+                                        &reason);
+
+      /* send auth if needed, otherwise do connect */
+      if (ret == 1) {
+        connection_send_socks5_connect(conn);
+        ret = 0;
+      } else if (ret == 2) {
+        unsigned char buf[1024];
+        size_t reqsize, usize, psize;
+        const char *user, *pass;
+
+        user = get_options()->Socks5ProxyUsername;
+        pass = get_options()->Socks5ProxyPassword;
+        tor_assert(user && pass);
+
+        /* XXX len of user and pass must be <= 255 !!! */
+        usize = strlen(user);
+        psize = strlen(pass);
+        tor_assert(usize <= 255 && psize <= 255);
+        reqsize = 3 + usize + psize;
+
+        buf[0] = 1; /* negotiation version */
+        buf[1] = usize;
+        memcpy(buf + 2, user, usize);
+        buf[2 + usize] = psize;
+        memcpy(buf + 3 + usize, pass, psize);
+
+        connection_write_to_buf((char *)buf, reqsize, conn);
+
+        conn->proxy_state = PROXY_SOCKS5_WANT_AUTH_RFC1929_OK;
+        ret = 0;
+      }
+      break;
+
+    case PROXY_SOCKS5_WANT_AUTH_RFC1929_OK:
+      ret = fetch_from_buf_socks_client(conn->inbuf,
+                                        conn->proxy_state,
+                                        &reason);
+      /* send the connect request */
+      if (ret == 1) {
+        connection_send_socks5_connect(conn);
+        ret = 0;
+      }
+      break;
+
+    case PROXY_SOCKS5_WANT_CONNECT_OK:
+      ret = fetch_from_buf_socks_client(conn->inbuf,
+                                        conn->proxy_state,
+                                        &reason);
+      if (ret == 1)
+        conn->proxy_state = PROXY_CONNECTED;
+      break;
+
+    default:
+      log_err(LD_BUG, "Invalid proxy_state for reading, %d",
+              conn->proxy_state);
+      tor_fragile_assert();
+      ret = -1;
+      break;
+  }
+
+  log_debug(LD_NET, "leaving state %s",
+            connection_proxy_state_to_string(conn->proxy_state));
+
+  if (ret < 0) {
+    if (reason) {
+      log_warn(LD_NET, "Proxy Client: unable to connect to %s:%d (%s)",
+                conn->address, conn->port, escaped(reason));
+      tor_free(reason);
+    } else {
+      log_warn(LD_NET, "Proxy Client: unable to connect to %s:%d",
+                conn->address, conn->port);
+    }
+  } else if (ret == 1) {
+    log_info(LD_NET, "Proxy Client: connection to %s:%d successful",
+              conn->address, conn->port);
+  }
+
+  return ret;
+}
+
 /**
  * Launch any configured listener connections of type <b>type</b>.  (A
  * listener is configured if <b>port_option</b> is non-zero.  If any
@@ -1728,10 +2052,16 @@ connection_buckets_decrement(connection_t *conn, time_t now,
     tor_fragile_assert();
   }
 
-  if (num_read > 0)
+  if (num_read > 0) {
+    if (conn->type == CONN_TYPE_EXIT)
+      rep_hist_note_exit_bytes_read(conn->port, num_read);
     rep_hist_note_bytes_read(num_read, now);
-  if (num_written > 0)
+  }
+  if (num_written > 0) {
+    if (conn->type == CONN_TYPE_EXIT)
+      rep_hist_note_exit_bytes_written(conn->port, num_written);
     rep_hist_note_bytes_written(num_written, now);
+  }
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
     global_relayed_read_bucket -= (int)num_read;
@@ -2075,7 +2405,7 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
   }
 
   if (connection_speaks_cells(conn) &&
-      conn->state > OR_CONN_STATE_PROXY_READING) {
+      conn->state > OR_CONN_STATE_PROXY_HANDSHAKING) {
     int pending;
     or_connection_t *or_conn = TO_OR_CONN(conn);
     size_t initial_size;
@@ -2303,7 +2633,7 @@ connection_handle_write(connection_t *conn, int force)
     : connection_bucket_write_limit(conn, now);
 
   if (connection_speaks_cells(conn) &&
-      conn->state > OR_CONN_STATE_PROXY_READING) {
+      conn->state > OR_CONN_STATE_PROXY_HANDSHAKING) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
     if (conn->state == OR_CONN_STATE_TLS_HANDSHAKING ||
         conn->state == OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING) {
@@ -2322,6 +2652,13 @@ connection_handle_write(connection_t *conn, int force)
     /* else open, or closing */
     result = flush_buf_tls(or_conn->tls, conn->outbuf,
                            max_to_write, &conn->outbuf_flushlen);
+
+    /* If we just flushed the last bytes, check if this tunneled dir
+     * request is done. */
+    if (buf_datalen(conn->outbuf) == 0 && conn->dirreq_id)
+      geoip_change_dirreq_state(conn->dirreq_id, DIRREQ_TUNNELED,
+                                DIRREQ_OR_CONN_BUFFER_FLUSHED);
+
     switch (result) {
       CASE_TOR_TLS_ERROR_ANY:
       case TOR_TLS_CLOSE:
@@ -2577,13 +2914,11 @@ connection_get_by_type_state(int type, int state)
 
 /** Return a connection of type <b>type</b> that has rendquery equal
  * to <b>rendquery</b>, and that is not marked for close. If state
- * is non-zero, conn must be of that state too. If rendversion is
- * nonnegative, conn must be fetching that rendversion, too.
+ * is non-zero, conn must be of that state too.
  */
 connection_t *
 connection_get_by_type_state_rendquery(int type, int state,
-                                       const char *rendquery,
-                                       int rendversion)
+                                       const char *rendquery)
 {
   smartlist_t *conns = get_connection_array();
 
@@ -2598,8 +2933,6 @@ connection_get_by_type_state_rendquery(int type, int state,
         (!state || state == conn->state)) {
       if (type == CONN_TYPE_DIR &&
           TO_DIR_CONN(conn)->rend_data &&
-          (rendversion < 0 ||
-           rendversion == TO_DIR_CONN(conn)->rend_data->rend_desc_version) &&
           !rend_cmp_service_ids(rendquery,
                                 TO_DIR_CONN(conn)->rend_data->onion_address))
         return conn;
@@ -3033,7 +3366,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     }
 //    tor_assert(conn->addr && conn->port);
     tor_assert(conn->address);
-    if (conn->state > OR_CONN_STATE_PROXY_READING)
+    if (conn->state > OR_CONN_STATE_PROXY_HANDSHAKING)
       tor_assert(or_conn->tls);
   }
 

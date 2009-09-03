@@ -2899,8 +2899,7 @@ int
 getinfo_helper_entry_guards(control_connection_t *conn,
                             const char *question, char **answer)
 {
-  int use_long_names = conn->use_long_names;
-
+  (void) conn;
   if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
     smartlist_t *sl = smartlist_create();
@@ -2908,12 +2907,13 @@ getinfo_helper_entry_guards(control_connection_t *conn,
     char nbuf[MAX_VERBOSE_NICKNAME_LEN+1];
     if (!entry_guards)
       entry_guards = smartlist_create();
-    SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
-      {
+    SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, e) {
         size_t len = MAX_VERBOSE_NICKNAME_LEN+ISO_TIME_LEN+32;
         char *c = tor_malloc(len);
         const char *status = NULL;
         time_t when = 0;
+        routerinfo_t *ri;
+
         if (!e->made_contact) {
           status = "never-connected";
         } else if (e->bad_since) {
@@ -2922,19 +2922,17 @@ getinfo_helper_entry_guards(control_connection_t *conn,
         } else {
           status = "up";
         }
-        if (use_long_names) {
-          routerinfo_t *ri = router_get_by_digest(e->identity);
-          if (ri) {
-            router_get_verbose_nickname(nbuf, ri);
-          } else {
-            nbuf[0] = '$';
-            base16_encode(nbuf+1, sizeof(nbuf)-1, e->identity, DIGEST_LEN);
-            /* e->nickname field is not very reliable if we don't know about
-             * this router any longer; don't include it. */
-          }
+
+        ri = router_get_by_digest(e->identity);
+        if (ri) {
+          router_get_verbose_nickname(nbuf, ri);
         } else {
-          base16_encode(nbuf, sizeof(nbuf), e->identity, DIGEST_LEN);
+          nbuf[0] = '$';
+          base16_encode(nbuf+1, sizeof(nbuf)-1, e->identity, DIGEST_LEN);
+          /* e->nickname field is not very reliable if we don't know about
+           * this router any longer; don't include it. */
         }
+
         if (when) {
           format_iso_time(tbuf, when);
           tor_snprintf(c, len, "%s %s %s\n", nbuf, status, tbuf);
@@ -2942,7 +2940,7 @@ getinfo_helper_entry_guards(control_connection_t *conn,
           tor_snprintf(c, len, "%s %s\n", nbuf, status);
         }
         smartlist_add(sl, c);
-      });
+    } SMARTLIST_FOREACH_END(e);
     *answer = smartlist_join_strings(sl, "", 0, NULL);
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);

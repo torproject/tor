@@ -308,7 +308,6 @@ tor_tls_init(void)
   if (!tls_library_is_initialized) {
     SSL_library_init();
     SSL_load_error_strings();
-    crypto_global_init(-1);
     tls_library_is_initialized = 1;
   }
 }

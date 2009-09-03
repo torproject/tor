@@ -1,7 +1,5 @@
 Filename: 131-verify-tor-usage.txt
 Title: Help users to verify they are using Tor
-Version: $Revision$
-Last-Modified: $Date$
 Author: Steven J. Murdoch
 Created: 2008-01-25
 Status: Needs-Revision

@@ -1320,6 +1320,202 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
   add_obs(read_array, when, num_bytes);
 }
 
+/* Some constants */
+/** To what multiple should byte numbers be rounded up? */
+#define EXIT_STATS_ROUND_UP_BYTES 1024
+/** To what multiple should stream counts be rounded up? */
+#define EXIT_STATS_ROUND_UP_STREAMS 4
+/** Number of TCP ports */
+#define EXIT_STATS_NUM_PORTS 65536
+/** Reciprocal of threshold (= 0.01%) of total bytes that a port needs to
+ * see in order to be included in exit stats. */
+#define EXIT_STATS_THRESHOLD_RECIPROCAL 10000
+
+/* The following data structures are arrays and no fancy smartlists or maps,
+ * so that all write operations can be done in constant time. This comes at
+ * the price of some memory (1.25 MB) and linear complexity when writing
+ * stats for measuring relays. */
+/** Number of bytes read in current period by exit port */
+static uint64_t *exit_bytes_read = NULL;
+/** Number of bytes written in current period by exit port */
+static uint64_t *exit_bytes_written = NULL;
+/** Number of streams opened in current period by exit port */
+static uint32_t *exit_streams = NULL;
+
+/** When does the current exit stats period end? */
+static time_t start_of_exit_stats_interval;
+
+/** Initialize exit port stats. */
+void
+rep_hist_exit_stats_init(time_t now)
+{
+  start_of_exit_stats_interval = now;
+  exit_bytes_read = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                    sizeof(uint64_t));
+  exit_bytes_written = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                       sizeof(uint64_t));
+  exit_streams = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                 sizeof(uint32_t));
+}
+
+/** Write exit stats to $DATADIR/stats/exit-stats and reset counters. */
+void
+rep_hist_exit_stats_write(time_t now)
+{
+  char t[ISO_TIME_LEN+1];
+  int r, i, comma;
+  uint64_t *b, total_bytes, threshold_bytes, other_bytes;
+  uint32_t other_streams;
+
+  char *statsdir = NULL, *filename = NULL;
+  open_file_t *open_file = NULL;
+  FILE *out = NULL;
+
+  if (!exit_streams)
+    return; /* Not initialized */
+
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname("stats"PATH_SEPARATOR"exit-stats");
+  format_iso_time(t, now);
+  log_info(LD_HIST, "Writing exit port statistics to disk for period "
+           "ending at %s.", t);
+
+  if (!open_file) {
+    out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
+                                      0600, &open_file);
+    if (!out) {
+      log_warn(LD_HIST, "Couldn't open '%s'.", filename);
+      goto done;
+    }
+  }
+
+  /* written yyyy-mm-dd HH:MM:SS (n s) */
+  if (fprintf(out, "exit-stats-end %s (%d s)\n", t,
+              (unsigned) (now - start_of_exit_stats_interval)) < 0)
+    goto done;
+
+  /* Count the total number of bytes, so that we can attribute all
+   * observations below a threshold of 1 / EXIT_STATS_THRESHOLD_RECIPROCAL
+   * of all bytes to a special port 'other'. */
+  total_bytes = 0;
+  for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+    total_bytes += exit_bytes_read[i];
+    total_bytes += exit_bytes_written[i];
+  }
+  threshold_bytes = total_bytes / EXIT_STATS_THRESHOLD_RECIPROCAL;
+
+  /* exit-kibibytes-(read|written) port=kibibytes,.. */
+  for (r = 0; r < 2; r++) {
+    b = r ? exit_bytes_read : exit_bytes_written;
+    tor_assert(b);
+    if (fprintf(out, "%s ",
+                r ? "exit-kibibytes-read"
+                  : "exit-kibibytes-written") < 0)
+      goto done;
+
+    comma = 0;
+    other_bytes = 0;
+    for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+      if (b[i] > 0) {
+        if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
+          uint64_t num = round_uint64_to_next_multiple_of(b[i],
+                                              EXIT_STATS_ROUND_UP_BYTES);
+          num /= 1024;
+          if (fprintf(out, "%s%d="U64_FORMAT,
+                      comma++ ? "," : "", i,
+                      U64_PRINTF_ARG(num)) < 0)
+            goto done;
+        } else
+          other_bytes += b[i];
+      }
+    }
+    other_bytes = round_uint64_to_next_multiple_of(other_bytes,
+                                       EXIT_STATS_ROUND_UP_BYTES);
+    other_bytes /= 1024;
+    if (fprintf(out, "%sother="U64_FORMAT"\n",
+                comma ? "," : "", U64_PRINTF_ARG(other_bytes))<0)
+      goto done;
+  }
+  /* exit-streams-opened port=num,.. */
+  if (fprintf(out, "exit-streams-opened ") < 0)
+    goto done;
+  comma = 0;
+  other_streams = 0;
+  for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+    if (exit_streams[i] > 0) {
+      if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
+        uint32_t num = round_uint32_to_next_multiple_of(exit_streams[i],
+                                            EXIT_STATS_ROUND_UP_STREAMS);
+        if (fprintf(out, "%s%d=%u",
+                    comma++ ? "," : "", i, num)<0)
+          goto done;
+      } else
+        other_streams += exit_streams[i];
+    }
+  }
+  other_streams = round_uint32_to_next_multiple_of(other_streams,
+                                       EXIT_STATS_ROUND_UP_STREAMS);
+  if (fprintf(out, "%sother=%u\n",
+              comma ? "," : "", other_streams)<0)
+    goto done;
+  /* Reset counters */
+  memset(exit_bytes_read, 0, sizeof(exit_bytes_read));
+  memset(exit_bytes_written, 0, sizeof(exit_bytes_written));
+  memset(exit_streams, 0, sizeof(exit_streams));
+  start_of_exit_stats_interval = now;
+
+  if (open_file)
+    finish_writing_to_file(open_file);
+  open_file = NULL;
+ done:
+  if (open_file)
+    abort_writing_to_file(open_file);
+  tor_free(filename);
+  tor_free(statsdir);
+}
+
+/** Note that we wrote <b>num_bytes</b> to an exit connection to
+ * <b>port</b>. */
+void
+rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  if (!exit_bytes_written)
+    return; /* Not initialized */
+  exit_bytes_written[port] += num_bytes;
+  log_debug(LD_HIST, "Written %lu bytes to exit connection to port %d.",
+            (unsigned long)num_bytes, port);
+}
+
+/** Note that we read <b>num_bytes</b> from an exit connection to
+ * <b>port</b>. */
+void
+rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  if (!exit_bytes_read)
+    return; /* Not initialized */
+  exit_bytes_read[port] += num_bytes;
+  log_debug(LD_HIST, "Read %lu bytes from exit connection to port %d.",
+            (unsigned long)num_bytes, port);
+}
+
+/** Note that we opened an exit stream to <b>port</b>. */
+void
+rep_hist_note_exit_stream_opened(uint16_t port)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  if (!exit_streams)
+    return; /* Not initialized */
+  exit_streams[port]++;
+  log_debug(LD_HIST, "Opened exit stream to port %d", port);
+}
+
 /** Helper: Return the largest value in b->maxima.  (This is equal to the
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
  * NUM_SECS_BW_SUM_IS_VALID seconds.)
@@ -1854,6 +2050,9 @@ rep_hist_free_all(void)
   tor_free(read_array);
   tor_free(write_array);
   tor_free(last_stability_doc);
+  tor_free(exit_bytes_read);
+  tor_free(exit_bytes_written);
+  tor_free(exit_streams);
   built_last_stability_doc_at = 0;
   predicted_ports_free();
 }
@@ -2404,5 +2603,184 @@ hs_usage_write_statistics_to_file(time_t now)
   write_str_to_file(fname,buf,0);
   tor_free(buf);
   tor_free(fname);
+}
+
+/*** cell statistics ***/
+
+/** Start of the current buffer stats interval. */
+static time_t start_of_buffer_stats_interval;
+
+/** Initialize buffer stats. */
+void
+rep_hist_buffer_stats_init(time_t now)
+{
+  start_of_buffer_stats_interval = now;
+}
+
+typedef struct circ_buffer_stats_t {
+  uint32_t processed_cells;
+  double mean_num_cells_in_queue;
+  double mean_time_cells_in_queue;
+  uint32_t local_circ_id;
+} circ_buffer_stats_t;
+
+/** Holds stats. */
+smartlist_t *circuits_for_buffer_stats = NULL;
+
+/** Remember cell statistics for circuit <b>circ</b> at time
+ * <b>end_of_interval</b> and reset cell counters in case the circuit
+ * remains open in the next measurement interval. */
+void
+rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
+{
+  circ_buffer_stats_t *stat;
+  time_t start_of_interval;
+  int interval_length;
+  or_circuit_t *orcirc;
+  if (CIRCUIT_IS_ORIGIN(circ))
+    return;
+  orcirc = TO_OR_CIRCUIT(circ);
+  if (!orcirc->processed_cells)
+    return;
+  if (!circuits_for_buffer_stats)
+    circuits_for_buffer_stats = smartlist_create();
+  start_of_interval = circ->timestamp_created >
+      start_of_buffer_stats_interval ?
+        circ->timestamp_created :
+        start_of_buffer_stats_interval;
+  interval_length = (int) (end_of_interval - start_of_interval);
+  stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));
+  stat->processed_cells = orcirc->processed_cells;
+  /* 1000.0 for s -> ms; 2.0 because of app-ward and exit-ward queues */
+  stat->mean_num_cells_in_queue = interval_length == 0 ? 0.0 :
+      (double) orcirc->total_cell_waiting_time /
+      (double) interval_length / 1000.0 / 2.0;
+  stat->mean_time_cells_in_queue =
+      (double) orcirc->total_cell_waiting_time /
+      (double) orcirc->processed_cells;
+  smartlist_add(circuits_for_buffer_stats, stat);
+  orcirc->total_cell_waiting_time = 0;
+  orcirc->processed_cells = 0;
+}
+
+/** Sorting helper: return -1, 1, or 0 based on comparison of two
+ * circ_buffer_stats_t */
+static int
+_buffer_stats_compare_entries(const void **_a, const void **_b)
+{
+  const circ_buffer_stats_t *a = *_a, *b = *_b;
+  if (a->processed_cells < b->processed_cells)
+    return 1;
+  else if (a->processed_cells > b->processed_cells)
+    return -1;
+  else
+    return 0;
+}
+
+/** Write buffer statistics to $DATADIR/stats/buffer-stats. */
+void
+rep_hist_buffer_stats_write(time_t now)
+{
+  char *statsdir = NULL, *filename = NULL;
+  char written[ISO_TIME_LEN+1];
+  open_file_t *open_file = NULL;
+  FILE *out;
+#define SHARES 10
+  int processed_cells[SHARES], circs_in_share[SHARES],
+      number_of_circuits, i;
+  double queued_cells[SHARES], time_in_queue[SHARES];
+  smartlist_t *str_build = smartlist_create();
+  char *str = NULL;
+  char buf[32];
+  circuit_t *circ;
+  /* add current circuits to stats */
+  for (circ = _circuit_get_global_list(); circ; circ = circ->next)
+    rep_hist_buffer_stats_add_circ(circ, now);
+  /* calculate deciles */
+  memset(processed_cells, 0, SHARES * sizeof(int));
+  memset(circs_in_share, 0, SHARES * sizeof(int));
+  memset(queued_cells, 0, SHARES * sizeof(double));
+  memset(time_in_queue, 0, SHARES * sizeof(double));
+  smartlist_sort(circuits_for_buffer_stats,
+                 _buffer_stats_compare_entries);
+  number_of_circuits = smartlist_len(circuits_for_buffer_stats);
+  i = 0;
+  SMARTLIST_FOREACH_BEGIN(circuits_for_buffer_stats,
+                          circ_buffer_stats_t *, stat)
+  {
+    int share = i++ * SHARES / number_of_circuits;
+    processed_cells[share] += stat->processed_cells;
+    queued_cells[share] += stat->mean_num_cells_in_queue;
+    time_in_queue[share] += stat->mean_time_cells_in_queue;
+    circs_in_share[share]++;
+  }
+  SMARTLIST_FOREACH_END(stat);
+  /* clear buffer stats history */
+  SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
+      stat, tor_free(stat));
+  smartlist_clear(circuits_for_buffer_stats);
+  /* write to file */
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname("stats"PATH_SEPARATOR"buffer-stats");
+  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
+                                    0600, &open_file);
+  if (!out)
+    goto done;
+  format_iso_time(written, now);
+  if (fprintf(out, "cell-stats-end %s (%d s)\n", written,
+              (unsigned) (now - start_of_buffer_stats_interval)) < 0)
+    goto done;
+  for (i = 0; i < SHARES; i++) {
+    tor_snprintf(buf, sizeof(buf), "%d", !circs_in_share[i] ? 0 :
+                 processed_cells[i] / circs_in_share[i]);
+    smartlist_add(str_build, tor_strdup(buf));
+  }
+  str = smartlist_join_strings(str_build, ",", 0, NULL);
+  if (fprintf(out, "cell-processed-cells %s\n", str) < 0)
+    goto done;
+  tor_free(str);
+  SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
+  smartlist_clear(str_build);
+  for (i = 0; i < SHARES; i++) {
+    tor_snprintf(buf, sizeof(buf), "%.2f", circs_in_share[i] == 0 ? 0.0 :
+                 queued_cells[i] / (double) circs_in_share[i]);
+    smartlist_add(str_build, tor_strdup(buf));
+  }
+  str = smartlist_join_strings(str_build, ",", 0, NULL);
+  if (fprintf(out, "cell-queued-cells %s\n", str) < 0)
+    goto done;
+  tor_free(str);
+  SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
+  smartlist_clear(str_build);
+  for (i = 0; i < SHARES; i++) {
+    tor_snprintf(buf, sizeof(buf), "%.0f", circs_in_share[i] == 0 ? 0.0 :
+                 time_in_queue[i] / (double) circs_in_share[i]);
+    smartlist_add(str_build, tor_strdup(buf));
+  }
+  str = smartlist_join_strings(str_build, ",", 0, NULL);
+  if (fprintf(out, "cell-time-in-queue %s\n", str) < 0)
+    goto done;
+  tor_free(str);
+  SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
+  smartlist_free(str_build);
+  str_build = NULL;
+  if (fprintf(out, "cell-circuits-per-decile %d\n",
+              (number_of_circuits + SHARES - 1) / SHARES) < 0)
+    goto done;
+  finish_writing_to_file(open_file);
+  open_file = NULL;
+ done:
+  if (open_file)
+    abort_writing_to_file(open_file);
+  tor_free(filename);
+  tor_free(statsdir);
+  if (str_build) {
+    SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
+    smartlist_free(str_build);
+  }
+  tor_free(str);
+#undef SHARES
 }
 

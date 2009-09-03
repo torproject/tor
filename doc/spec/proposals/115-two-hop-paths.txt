@@ -1,7 +1,5 @@
 Filename: 115-two-hop-paths.txt
 Title: Two Hop Paths
-Version: $Revision$
-Last-Modified: $Date$
 Author: Mike Perry
 Created:
 Status: Dead

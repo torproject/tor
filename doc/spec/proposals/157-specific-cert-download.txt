@@ -1,7 +1,5 @@
 Filename: 157-specific-cert-download.txt
 Title: Make certificate downloads specific
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2-Dec-2008
 Status: Accepted

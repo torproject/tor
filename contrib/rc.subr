@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 # $FreeBSD: ports/security/tor-devel/files/tor.in,v 1.1 2006/02/17 22:21:25 mnag Exp $
 #
 # (rc.subr written by Peter Thoenen for Net/FreeBSD)

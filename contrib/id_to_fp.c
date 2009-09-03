@@ -1,5 +1,4 @@
 /* Copyright 2006 Nick Mathewson; see LICENSE for licensing information */
-/* $Id$ */
 
 /* id_to_fp.c : Helper for directory authority ops.  When somebody sends us
  * a private key, this utility converts the private key into a fingerprint

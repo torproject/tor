@@ -156,21 +156,24 @@ already_have_cert(authority_cert_t *cert)
 
 /** Load a bunch of new key certificates from the string <b>contents</b>.  If
  * <b>from_store</b> is true, the certificates are from the cache, and we
- * don't need to flush them to disk.  If <b>from_store</b> is false, we need
- * to flush any changed certificates to disk.  Return 0 on success, -1 on
- * failure. */
+ * don't need to flush them to disk. If <b>flush</b> is true, we need
+ * to flush any changed certificates to disk now.  Return 0 on success, -1
+ * if any certs fail to parse. */
 int
 trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                                     int flush)
 {
   trusted_dir_server_t *ds;
   const char *s, *eos;
+  int failure_code = 0;
 
   for (s = contents; *s; s = eos) {
     authority_cert_t *cert = authority_cert_parse_from_string(s, &eos);
     cert_list_t *cl;
-    if (!cert)
+    if (!cert) {
+      failure_code = -1;
       break;
+    }
     ds = trusteddirserver_get_by_v3_auth_digest(
                                        cert->cache_info.identity_digest);
     log_debug(LD_DIR, "Parsed certificate for %s",
@@ -224,7 +227,7 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
            ds->dir_port != cert->dir_port)) {
         char *a = tor_dup_ip(cert->addr);
         log_notice(LD_DIR, "Updating address for directory authority %s "
-                   "from %s:%d to %s:%d based on in certificate.",
+                   "from %s:%d to %s:%d based on certificate.",
                    ds->nickname, ds->address, (int)ds->dir_port,
                    a, cert->dir_port);
         tor_free(a);
@@ -241,8 +244,11 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
   if (flush)
     trusted_dirs_flush_certs_to_disk();
 
+  /* call this even if failure_code is <0, since some certs might have
+   * succeeded. */
   networkstatus_note_certs_arrived();
-  return 0;
+
+  return failure_code;
 }
 
 /** Save all v3 key certificates to the cached-certs file. */

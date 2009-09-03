@@ -54,13 +54,9 @@
  **/
 typedef uint32_t event_mask_t;
 
-/** An event mask of all the events that controller with the LONG_NAMES option
- * set is interested in receiving. */
-static event_mask_t global_event_mask1long = 0;
-
-/** An event mask of all the events that controller with the SHORT_NAMES option
- * set is interested in receiving. */
-static event_mask_t global_event_mask1short = 0;
+/** An event mask of all the events that any controller is interested in
+ * receiving. */
+static event_mask_t global_event_mask = 0;
 
 /** True iff we have disabled log messages from being sent to the controller */
 static int disable_log_messages = 0;
@@ -68,13 +64,7 @@ static int disable_log_messages = 0;
 /** Macro: true if any control connection is interested in events of type
  * <b>e</b>. */
 #define EVENT_IS_INTERESTING(e) \
-  ((global_event_mask1long|global_event_mask1short) & (1<<(e)))
-/** Macro: true if any control connection with the LONG_NAMES option is
- * interested in events of type <b>e</b>. */
-#define EVENT_IS_INTERESTING1L(e) (global_event_mask1long & (1<<(e)))
-/** Macro: true if any control connection with the SHORT_NAMES option is
- * interested in events of type <b>e</b>. */
-#define EVENT_IS_INTERESTING1S(e) (global_event_mask1short & (1<<(e)))
+  (global_event_mask & (1<<(e)))
 
 /** If we're using cookie-type authentication, how long should our cookies be?
  */
@@ -95,25 +85,13 @@ static char authentication_cookie[AUTHENTICATION_COOKIE_LEN];
  * of this so we can respond to getinfo status/bootstrap-phase queries. */
 static char last_sent_bootstrap_message[BOOTSTRAP_MSG_LEN];
 
-/** Flag for event_format_t.  Indicates that we should use the old
- * name format of nickname|hexdigest
+/** Flag for event_format_t.  Indicates that we should use the one standard
+    format.
  */
-#define SHORT_NAMES 1
-/** Flag for event_format_t.  Indicates that we should use the new
- * name format of $hexdigest[=~]nickname
- */
-#define LONG_NAMES 2
-#define ALL_NAMES (SHORT_NAMES|LONG_NAMES)
-/** Flag for event_format_t.  Indicates that we should use the new event
- * format where extra event fields are allowed using a NAME=VAL format. */
-#define EXTENDED_FORMAT 4
-/** Flag for event_format_t.  Indicates that we are using the old event format
- * where extra fields aren't allowed. */
-#define NONEXTENDED_FORMAT 8
-#define ALL_FORMATS (EXTENDED_FORMAT|NONEXTENDED_FORMAT)
+#define ALL_FORMATS 1
 
 /** Bit field of flags to select how to format a controller event.  Recognized
- * flags are SHORT_NAMES, LONG_NAMES, EXTENDED_FORMAT, NONEXTENDED_FORMAT. */
+ * flag is ALL_FORMATS. */
 typedef int event_format_t;
 
 static void connection_printf_to_buf(control_connection_t *conn,
@@ -122,9 +100,6 @@ static void connection_printf_to_buf(control_connection_t *conn,
 static void send_control_done(control_connection_t *conn);
 static void send_control_event(uint16_t event, event_format_t which,
                                const char *format, ...)
-  CHECK_PRINTF(3,4);
-static void send_control_event_extended(uint16_t event, event_format_t which,
-                                        const char *format, ...)
   CHECK_PRINTF(3,4);
 static int handle_control_setconf(control_connection_t *conn, uint32_t len,
                                   char *body);
@@ -174,7 +149,7 @@ static int handle_control_usefeature(control_connection_t *conn,
                                      const char *body);
 static int write_stream_target_to_buf(edge_connection_t *conn, char *buf,
                                       size_t len);
-static void orconn_target_get_name(int long_names, char *buf, size_t len,
+static void orconn_target_get_name(char *buf, size_t len,
                                    or_connection_t *conn);
 static char *get_cookie_file(void);
 
@@ -214,25 +189,19 @@ control_update_global_event_mask(void)
 {
   smartlist_t *conns = get_connection_array();
   event_mask_t old_mask, new_mask;
-  old_mask = global_event_mask1short;
-  old_mask |= global_event_mask1long;
+  old_mask = global_event_mask;
 
-  global_event_mask1short = 0;
-  global_event_mask1long = 0;
+  global_event_mask = 0;
   SMARTLIST_FOREACH(conns, connection_t *, _conn,
   {
     if (_conn->type == CONN_TYPE_CONTROL &&
         STATE_IS_OPEN(_conn->state)) {
       control_connection_t *conn = TO_CONTROL_CONN(_conn);
-      if (conn->use_long_names)
-        global_event_mask1long |= conn->event_mask;
-      else
-        global_event_mask1short |= conn->event_mask;
+      global_event_mask |= conn->event_mask;
     }
   });
 
-  new_mask = global_event_mask1short;
-  new_mask |= global_event_mask1long;
+  new_mask = global_event_mask;
 
   /* Handle the aftermath.  Set up the log callback to tell us only what
    * we want to hear...*/
@@ -542,28 +511,15 @@ send_control_event_string(uint16_t event, event_format_t which,
                           const char *msg)
 {
   smartlist_t *conns = get_connection_array();
+  (void)which;
   tor_assert(event >= _EVENT_MIN && event <= _EVENT_MAX);
 
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->type == CONN_TYPE_CONTROL &&
         !conn->marked_for_close &&
         conn->state == CONTROL_CONN_STATE_OPEN) {
       control_connection_t *control_conn = TO_CONTROL_CONN(conn);
-      if (control_conn->use_long_names) {
-        if (!(which & LONG_NAMES))
-          continue;
-      } else {
-        if (!(which & SHORT_NAMES))
-          continue;
-      }
-      if (control_conn->use_extended_events) {
-        if (!(which & EXTENDED_FORMAT))
-          continue;
-      } else {
-        if (!(which & NONEXTENDED_FORMAT))
-          continue;
-      }
+
       if (control_conn->event_mask & (1<<event)) {
         int is_err = 0;
         connection_write_to_buf(msg, strlen(msg), TO_CONN(control_conn));
@@ -579,7 +535,7 @@ send_control_event_string(uint16_t event, event_format_t which,
           connection_handle_write(TO_CONN(control_conn), 1);
       }
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
 }
 
 /** Helper for send_control1_event and send_control1_event_extended:
@@ -587,22 +543,17 @@ send_control_event_string(uint16_t event, event_format_t which,
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided.
  *
- * If <b>extended</b> is true, and the format contains a single '@' character,
- * it will be replaced with a space and all text after that character will be
- * sent only to controllers that have enabled extended events.
- *
  * Currently the length of the message is limited to 1024 (including the
  * ending \\r\\n\\0). */
 static void
-send_control_event_impl(uint16_t event, event_format_t which, int extended,
-                        const char *format, va_list ap)
+send_control_event_impl(uint16_t event, event_format_t which,
+                         const char *format, va_list ap)
 {
   /* This is just a little longer than the longest allowed log message */
 #define SEND_CONTROL1_EVENT_BUFFERSIZE 10064
   int r;
   char buf[SEND_CONTROL1_EVENT_BUFFERSIZE];
   size_t len;
-  char *cp;
 
   r = tor_vsnprintf(buf, sizeof(buf), format, ap);
   if (r<0) {
@@ -618,15 +569,7 @@ send_control_event_impl(uint16_t event, event_format_t which, int extended,
     buf[SEND_CONTROL1_EVENT_BUFFERSIZE-3] = '\r';
   }
 
-  if (extended && (cp = strchr(buf, '@'))) {
-    which &= ~ALL_FORMATS;
-    *cp = ' ';
-    send_control_event_string(event, which|EXTENDED_FORMAT, buf);
-    memcpy(cp, "\r\n\0", 3);
-    send_control_event_string(event, which|NONEXTENDED_FORMAT, buf);
-  } else {
-    send_control_event_string(event, which|ALL_FORMATS, buf);
-  }
+  send_control_event_string(event, which|ALL_FORMATS, buf);
 }
 
 /** Send an event to all v1 controllers that are listening for code
@@ -641,27 +584,7 @@ send_control_event(uint16_t event, event_format_t which,
 {
   va_list ap;
   va_start(ap, format);
-  send_control_event_impl(event, which, 0, format, ap);
-  va_end(ap);
-}
-
-/** Send an event to all v1 controllers that are listening for code
- * <b>event</b>.  The event's body is created by the printf-style format in
- * <b>format</b>, and other arguments as provided.
- *
- * If the format contains a single '@' character, it will be replaced with a
- * space and all text after that character will be sent only to controllers
- * that have enabled extended events.
- *
- * Currently the length of the message is limited to 1024 (including the
- * ending \\n\\r\\0. */
-static void
-send_control_event_extended(uint16_t event, event_format_t which,
-                            const char *format, ...)
-{
-  va_list ap;
-  va_start(ap, format);
-  send_control_event_impl(event, which, 1, format, ap);
+  send_control_event_impl(event, which, format, ap);
   va_end(ap);
 }
 
@@ -948,7 +871,6 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
 {
   uint16_t event_code;
   uint32_t event_mask = 0;
-  unsigned int extended = 0;
   smartlist_t *events = smartlist_create();
 
   (void) len;
@@ -958,7 +880,6 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
   SMARTLIST_FOREACH_BEGIN(events, const char *, ev)
     {
       if (!strcasecmp(ev, "EXTENDED")) {
-        extended = 1;
         continue;
       } else if (!strcasecmp(ev, "CIRC"))
         event_code = EVENT_CIRCUIT_STATUS;
@@ -1016,8 +937,6 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
   smartlist_free(events);
 
   conn->event_mask = event_mask;
-  if (extended)
-    conn->use_extended_events = 1;
 
   control_update_global_event_mask();
   send_control_done(conn);
@@ -1463,6 +1382,7 @@ static int
 getinfo_helper_dir(control_connection_t *control_conn,
                    const char *question, char **answer)
 {
+  (void) control_conn;
   if (!strcmpstart(question, "desc/id/")) {
     routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
     if (ri) {
@@ -1597,10 +1517,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
     }
   } else if (!strcmp(question, "network-status")) { /* v1 */
     routerlist_t *routerlist = router_get_routerlist();
-    int verbose = control_conn->use_long_names;
     if (!routerlist || !routerlist->routers ||
-        list_server_status_v1(routerlist->routers, answer,
-                              verbose ? 2 : 1) < 0) {
+        list_server_status_v1(routerlist->routers, answer, 1) < 0) {
       return -1;
     }
   } else if (!strcmpstart(question, "extra-info/digest/")) {
@@ -1636,6 +1554,7 @@ static int
 getinfo_helper_events(control_connection_t *control_conn,
                       const char *question, char **answer)
 {
+  (void) control_conn;
   if (!strcmp(question, "circuit-status")) {
     circuit_t *circ;
     smartlist_t *status = smartlist_create();
@@ -1646,10 +1565,9 @@ getinfo_helper_events(control_connection_t *control_conn,
       const char *purpose;
       if (! CIRCUIT_IS_ORIGIN(circ) || circ->marked_for_close)
         continue;
-      if (control_conn->use_long_names)
-        path = circuit_list_path_for_controller(TO_ORIGIN_CIRCUIT(circ));
-      else
-        path = circuit_list_path(TO_ORIGIN_CIRCUIT(circ),0);
+
+      path = circuit_list_path_for_controller(TO_ORIGIN_CIRCUIT(circ));
+
       if (circ->state == CIRCUIT_STATE_OPEN)
         state = "BUILT";
       else if (strlen(path))
@@ -1727,8 +1645,7 @@ getinfo_helper_events(control_connection_t *control_conn,
   } else if (!strcmp(question, "orconn-status")) {
     smartlist_t *conns = get_connection_array();
     smartlist_t *status = smartlist_create();
-    SMARTLIST_FOREACH(conns, connection_t *, base_conn,
-    {
+    SMARTLIST_FOREACH_BEGIN(conns, connection_t *, base_conn) {
       const char *state;
       char *s;
       char name[128];
@@ -1743,29 +1660,19 @@ getinfo_helper_events(control_connection_t *control_conn,
         state = "LAUNCHED";
       else
         state = "NEW";
-      orconn_target_get_name(control_conn->use_long_names, name, sizeof(name),
-                             conn);
+      orconn_target_get_name(name, sizeof(name), conn);
       slen = strlen(name)+strlen(state)+2;
       s = tor_malloc(slen+1);
       tor_snprintf(s, slen, "%s %s", name, state);
       smartlist_add(status, s);
-    });
+    } SMARTLIST_FOREACH_END(base_conn);
     *answer = smartlist_join_strings(status, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(status, char *, cp, tor_free(cp));
     smartlist_free(status);
-  } else if (!strcmpstart(question, "addr-mappings/") ||
-             !strcmpstart(question, "address-mappings/")) {
+  } else if (!strcmpstart(question, "address-mappings/")) {
     time_t min_e, max_e;
     smartlist_t *mappings;
-    int want_expiry = !strcmpstart(question, "address-mappings/");
-    if (!strcmpstart(question, "addr-mappings/")) {
-      /* XXXX022 This has been deprecated since 0.2.0.3-alpha, and has
-         generated a warning since 0.2.1.10-alpha; remove late in 0.2.2.x. */
-      log_warn(LD_CONTROL, "Controller used obsolete addr-mappings/ GETINFO "
-               "key; use address-mappings/ instead.");
-    }
-    question += strlen(want_expiry ? "address-mappings/"
-                                   : "addr-mappings/");
+    question += strlen("address-mappings/");
     if (!strcmp(question, "all")) {
       min_e = 0; max_e = TIME_MAX;
     } else if (!strcmp(question, "cache")) {
@@ -1778,7 +1685,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       return 0;
     }
     mappings = smartlist_create();
-    addressmap_get_mappings(mappings, min_e, max_e, want_expiry);
+    addressmap_get_mappings(mappings, min_e, max_e, 1);
     *answer = smartlist_join_strings(mappings, "\r\n", 0, NULL);
     SMARTLIST_FOREACH(mappings, char *, cp, tor_free(cp));
     smartlist_free(mappings);
@@ -1928,7 +1835,6 @@ static const getinfo_item_t getinfo_items[] = {
   PREFIX("ns/purpose/", networkstatus,
          "Brief summary of router status by purpose (v2 directory format)."),
 
-  PREFIX("unregistered-servers-", dirserv_unregistered, NULL),
   ITEM("network-status", dir,
        "Brief summary of router status (v1 directory format)"),
   ITEM("circuit-status", events, "List of current circuits originating here."),
@@ -1940,14 +1846,6 @@ static const getinfo_item_t getinfo_items[] = {
   DOC("address-mappings/config",
       "Current address mappings from configuration."),
   DOC("address-mappings/control", "Current address mappings from controller."),
-  PREFIX("addr-mappings/", events, NULL),
-  DOC("addr-mappings/all", "Current address mappings without expiry times."),
-  DOC("addr-mappings/cache",
-      "Current cached DNS replies without expiry times."),
-  DOC("addr-mappings/config",
-      "Current address mappings from configuration without expiry times."),
-  DOC("addr-mappings/control",
-      "Current address mappings from controller without expiry times."),
   PREFIX("status/", events, NULL),
   DOC("status/circuit-established",
       "Whether we think client functionality is working."),
@@ -2705,7 +2603,6 @@ handle_control_usefeature(control_connection_t *conn,
                           const char *body)
 {
   smartlist_t *args;
-  int verbose_names = 0, extended_events = 0;
   int bad = 0;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
   args = smartlist_create();
@@ -2713,9 +2610,9 @@ handle_control_usefeature(control_connection_t *conn,
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
   SMARTLIST_FOREACH(args, const char *, arg, {
       if (!strcasecmp(arg, "VERBOSE_NAMES"))
-        verbose_names = 1;
+        ;
       else if (!strcasecmp(arg, "EXTENDED_EVENTS"))
-        extended_events = 1;
+        ;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized feature \"%s\"\r\n",
                                  arg);
@@ -2725,12 +2622,6 @@ handle_control_usefeature(control_connection_t *conn,
     });
 
   if (!bad) {
-    if (verbose_names) {
-      conn->use_long_names = 1;
-      control_update_global_event_mask();
-    }
-    if (extended_events)
-      conn->use_extended_events = 1;
     send_control_done(conn);
   }
 
@@ -3034,20 +2925,11 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
     tor_free(reason);
   }
 
-  if (EVENT_IS_INTERESTING1S(EVENT_CIRCUIT_STATUS)) {
-    char *path = circuit_list_path(circ,0);
-    const char *sp = strlen(path) ? " " : "";
-    send_control_event_extended(EVENT_CIRCUIT_STATUS, SHORT_NAMES,
-                                "650 CIRC %lu %s%s%s@%s\r\n",
-                                (unsigned long)circ->global_identifier,
-                                status, sp, path, extended_buf);
-    tor_free(path);
-  }
-  if (EVENT_IS_INTERESTING1L(EVENT_CIRCUIT_STATUS)) {
+  {
     char *vpath = circuit_list_path_for_controller(circ);
     const char *sp = strlen(vpath) ? " " : "";
-    send_control_event_extended(EVENT_CIRCUIT_STATUS, LONG_NAMES,
-                                "650 CIRC %lu %s%s%s@%s\r\n",
+    send_control_event(EVENT_CIRCUIT_STATUS, ALL_FORMATS,
+                                "650 CIRC %lu %s%s%s %s\r\n",
                                 (unsigned long)circ->global_identifier,
                                 status, sp, vpath, extended_buf);
     tor_free(vpath);
@@ -3183,8 +3065,8 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   circ = circuit_get_by_edge_conn(conn);
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
-  send_control_event_extended(EVENT_STREAM_STATUS, ALL_NAMES,
-                        "650 STREAM "U64_FORMAT" %s %lu %s@%s%s%s\r\n",
+  send_control_event(EVENT_STREAM_STATUS, ALL_FORMATS,
+                        "650 STREAM "U64_FORMAT" %s %lu %s %s%s%s\r\n",
                         U64_PRINTF_ARG(conn->_base.global_identifier), status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
@@ -3197,30 +3079,21 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
 
 /** Figure out the best name for the target router of an OR connection
  * <b>conn</b>, and write it into the <b>len</b>-character buffer
- * <b>name</b>.  Use verbose names if <b>long_names</b> is set. */
+ * <b>name</b>. */
 static void
-orconn_target_get_name(int long_names,
-                       char *name, size_t len, or_connection_t *conn)
+orconn_target_get_name(char *name, size_t len, or_connection_t *conn)
 {
-  if (! long_names) {
-    if (conn->nickname)
-      strlcpy(name, conn->nickname, len);
-    else
-      tor_snprintf(name, len, "%s:%d",
-                   conn->_base.address, conn->_base.port);
+  routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
+  if (ri) {
+    tor_assert(len > MAX_VERBOSE_NICKNAME_LEN);
+    router_get_verbose_nickname(name, ri);
+  } else if (! tor_digest_is_zero(conn->identity_digest)) {
+    name[0] = '$';
+    base16_encode(name+1, len-1, conn->identity_digest,
+                  DIGEST_LEN);
   } else {
-    routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
-    if (ri) {
-      tor_assert(len > MAX_VERBOSE_NICKNAME_LEN);
-      router_get_verbose_nickname(name, ri);
-    } else if (! tor_digest_is_zero(conn->identity_digest)) {
-      name[0] = '$';
-      base16_encode(name+1, len-1, conn->identity_digest,
-                    DIGEST_LEN);
-    } else {
-     tor_snprintf(name, len, "%s:%d",
-                   conn->_base.address, conn->_base.port);
-    }
+    tor_snprintf(name, len, "%s:%d",
+                 conn->_base.address, conn->_base.port);
   }
 }
 
@@ -3259,24 +3132,13 @@ control_event_or_conn_status(or_connection_t *conn, or_conn_status_event_t tp,
                  reason ? " " : "", ncircs);
   }
 
-  if (EVENT_IS_INTERESTING1S(EVENT_OR_CONN_STATUS)) {
-    orconn_target_get_name(0, name, sizeof(name), conn);
-    send_control_event_extended(EVENT_OR_CONN_STATUS, SHORT_NAMES,
-                          "650 ORCONN %s %s@%s%s%s\r\n",
-                          name, status,
-                          reason ? "REASON=" : "",
-                          orconn_end_reason_to_control_string(reason),
-                          ncircs_buf);
-  }
-  if (EVENT_IS_INTERESTING1L(EVENT_OR_CONN_STATUS)) {
-    orconn_target_get_name(1, name, sizeof(name), conn);
-    send_control_event_extended(EVENT_OR_CONN_STATUS, LONG_NAMES,
-                          "650 ORCONN %s %s@%s%s%s\r\n",
-                          name, status,
-                          reason ? "REASON=" : "",
-                          orconn_end_reason_to_control_string(reason),
-                          ncircs_buf);
-  }
+  orconn_target_get_name(name, sizeof(name), conn);
+  send_control_event(EVENT_OR_CONN_STATUS, ALL_FORMATS,
+                              "650 ORCONN %s %s %s%s%s\r\n",
+                              name, status,
+                              reason ? "REASON=" : "",
+                              orconn_end_reason_to_control_string(reason),
+                              ncircs_buf);
 
   return 0;
 }
@@ -3291,7 +3153,7 @@ control_event_stream_bandwidth(edge_connection_t *edge_conn)
     if (!edge_conn->n_read && !edge_conn->n_written)
       return 0;
 
-    send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
+    send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_FORMATS,
                        "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
                        U64_PRINTF_ARG(edge_conn->_base.global_identifier),
                        (unsigned long)edge_conn->n_read,
@@ -3320,7 +3182,7 @@ control_event_stream_bandwidth_used(void)
         if (!edge_conn->n_read && !edge_conn->n_written)
           continue;
 
-        send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_NAMES,
+        send_control_event(EVENT_STREAM_BANDWIDTH_USED, ALL_FORMATS,
                            "650 STREAM_BW "U64_FORMAT" %lu %lu\r\n",
                            U64_PRINTF_ARG(edge_conn->_base.global_identifier),
                            (unsigned long)edge_conn->n_read,
@@ -3340,7 +3202,7 @@ int
 control_event_bandwidth_used(uint32_t n_read, uint32_t n_written)
 {
   if (EVENT_IS_INTERESTING(EVENT_BANDWIDTH_USED)) {
-    send_control_event(EVENT_BANDWIDTH_USED, ALL_NAMES,
+    send_control_event(EVENT_BANDWIDTH_USED, ALL_FORMATS,
                        "650 BW %lu %lu\r\n",
                        (unsigned long)n_read,
                        (unsigned long)n_written);
@@ -3410,7 +3272,7 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
       default: s = "UnknownLogSeverity"; break;
     }
     ++disable_log_messages;
-    send_control_event(event, ALL_NAMES, "650 %s %s\r\n", s, b?b:msg);
+    send_control_event(event, ALL_FORMATS, "650 %s %s\r\n", s, b?b:msg);
     --disable_log_messages;
     tor_free(b);
   }
@@ -3423,31 +3285,12 @@ control_event_logmsg(int severity, uint32_t domain, const char *msg)
 int
 control_event_descriptors_changed(smartlist_t *routers)
 {
-  size_t len;
   char *msg;
-  smartlist_t *identities = NULL;
-  char buf[HEX_DIGEST_LEN+1];
 
   if (!EVENT_IS_INTERESTING(EVENT_NEW_DESC))
     return 0;
-  if (EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
-    identities = smartlist_create();
-    SMARTLIST_FOREACH(routers, routerinfo_t *, r,
-    {
-      base16_encode(buf,sizeof(buf),r->cache_info.identity_digest,DIGEST_LEN);
-      smartlist_add(identities, tor_strdup(buf));
-    });
-  }
-  if (EVENT_IS_INTERESTING1S(EVENT_NEW_DESC)) {
-    char *ids = smartlist_join_strings(identities, " ", 0, &len);
-    size_t ids_len = strlen(ids)+32;
-    msg = tor_malloc(ids_len);
-    tor_snprintf(msg, ids_len, "650 NEWDESC %s\r\n", ids);
-    send_control_event_string(EVENT_NEW_DESC, SHORT_NAMES|ALL_FORMATS, msg);
-    tor_free(ids);
-    tor_free(msg);
-  }
-  if (EVENT_IS_INTERESTING1L(EVENT_NEW_DESC)) {
+
+  {
     smartlist_t *names = smartlist_create();
     char *ids;
     size_t names_len;
@@ -3460,15 +3303,11 @@ control_event_descriptors_changed(smartlist_t *routers)
     names_len = strlen(ids)+32;
     msg = tor_malloc(names_len);
     tor_snprintf(msg, names_len, "650 NEWDESC %s\r\n", ids);
-    send_control_event_string(EVENT_NEW_DESC, LONG_NAMES|ALL_FORMATS, msg);
+    send_control_event_string(EVENT_NEW_DESC, ALL_FORMATS, msg);
     tor_free(ids);
     tor_free(msg);
     SMARTLIST_FOREACH(names, char *, cp, tor_free(cp));
     smartlist_free(names);
-  }
-  if (identities) {
-    SMARTLIST_FOREACH(identities, char *, cp, tor_free(cp));
-    smartlist_free(identities);
   }
   return 0;
 }
@@ -3486,17 +3325,17 @@ control_event_address_mapped(const char *from, const char *to, time_t expires,
     return 0;
 
   if (expires < 3 || expires == TIME_MAX)
-    send_control_event_extended(EVENT_ADDRMAP, ALL_NAMES,
-                                "650 ADDRMAP %s %s NEVER@%s\r\n", from, to,
+    send_control_event(EVENT_ADDRMAP, ALL_FORMATS,
+                                "650 ADDRMAP %s %s NEVER %s\r\n", from, to,
                                 error?error:"");
   else {
     char buf[ISO_TIME_LEN+1];
     char buf2[ISO_TIME_LEN+1];
     format_local_iso_time(buf,expires);
     format_iso_time(buf2,expires);
-    send_control_event_extended(EVENT_ADDRMAP, ALL_NAMES,
+    send_control_event(EVENT_ADDRMAP, ALL_FORMATS,
                                 "650 ADDRMAP %s %s \"%s\""
-                                "@%s%sEXPIRES=\"%s\"\r\n",
+                                " %s%sEXPIRES=\"%s\"\r\n",
                                 from, to, buf,
                                 error?error:"", error?" ":"",
                                 buf2);
@@ -3536,9 +3375,9 @@ control_event_or_authdir_new_descriptor(const char *action,
   buf = tor_malloc(totallen);
   strlcpy(buf, firstline, totallen);
   strlcpy(buf+strlen(firstline), esc, totallen);
-  send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_NAMES|ALL_FORMATS,
+  send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_FORMATS,
                             buf);
-  send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_NAMES|ALL_FORMATS,
+  send_control_event_string(EVENT_AUTHDIR_NEWDESCS, ALL_FORMATS,
                             "650 OK\r\n");
   tor_free(esc);
   tor_free(buf);
@@ -3576,8 +3415,8 @@ control_event_networkstatus_changed_helper(smartlist_t *statuses,
   SMARTLIST_FOREACH(strs, char *, cp, tor_free(cp));
   smartlist_free(strs);
   tor_free(s);
-  send_control_event_string(event, ALL_NAMES|ALL_FORMATS, esc);
-  send_control_event_string(event, ALL_NAMES|ALL_FORMATS,
+  send_control_event_string(event, ALL_FORMATS, esc);
+  send_control_event_string(event, ALL_FORMATS,
                             "650 OK\r\n");
 
   tor_free(esc);
@@ -3626,7 +3465,7 @@ control_event_networkstatus_changed_single(routerstatus_t *rs)
 int
 control_event_my_descriptor_changed(void)
 {
-  send_control_event(EVENT_DESCCHANGED, ALL_NAMES, "650 DESCCHANGED\r\n");
+  send_control_event(EVENT_DESCCHANGED, ALL_FORMATS, "650 DESCCHANGED\r\n");
   return 0;
 }
 
@@ -3674,7 +3513,7 @@ control_event_status(int type, int severity, const char *format, va_list args)
     return -1;
   }
 
-  send_control_event_impl(type, ALL_NAMES|ALL_FORMATS, 0, format_buf, args);
+  send_control_event_impl(type, ALL_FORMATS, format_buf, args);
   return 0;
 }
 
@@ -3738,7 +3577,7 @@ control_event_guard(const char *nickname, const char *digest,
   if (!EVENT_IS_INTERESTING(EVENT_GUARD))
     return 0;
 
-  if (EVENT_IS_INTERESTING1L(EVENT_GUARD)) {
+  {
     char buf[MAX_VERBOSE_NICKNAME_LEN+1];
     routerinfo_t *ri = router_get_by_digest(digest);
     if (ri) {
@@ -3746,12 +3585,8 @@ control_event_guard(const char *nickname, const char *digest,
     } else {
       tor_snprintf(buf, sizeof(buf), "$%s~%s", hbuf, nickname);
     }
-    send_control_event(EVENT_GUARD, LONG_NAMES,
+    send_control_event(EVENT_GUARD, ALL_FORMATS,
                        "650 GUARD ENTRY %s %s\r\n", buf, status);
-  }
-  if (EVENT_IS_INTERESTING1S(EVENT_GUARD)) {
-    send_control_event(EVENT_GUARD, SHORT_NAMES,
-                       "650 GUARD ENTRY $%s %s\r\n", hbuf, status);
   }
   return 0;
 }

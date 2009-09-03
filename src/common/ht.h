@@ -42,6 +42,10 @@
 #define HT_SIZE(head)                           \
   ((head)->hth_n_entries)
 
+/* Return memory usage for a hashtable (not counting the entries themselves) */
+#define HT_MEM_USAGE(head)                         \
+  (sizeof(*head) + (head)->hth_table_length * sizeof(void*))
+
 #define HT_FIND(name, head, elm)     name##_HT_FIND((head), (elm))
 #define HT_INSERT(name, head, elm)   name##_HT_INSERT((head), (elm))
 #define HT_REPLACE(name, head, elm)  name##_HT_REPLACE((head), (elm))

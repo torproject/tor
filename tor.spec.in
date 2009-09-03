@@ -15,13 +15,6 @@
 %define toruser @TORUSER@
 %define torgroup @TORGROUP@
 
-## Target a specific arch and OS
-#
-# default is i386 linux
-
-## Override any system rpm macros
-#
-
 ## Version song and dance
 #
 # This should be the Tor version number, as it appears on the tarball,
@@ -54,14 +47,11 @@
 
 %if %{is_fc}
 %define ostag %(sed -e 's/^.*release /fc/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/fedora-release)
-%else
+%endif
+
 %if %{is_rh}
 %define ostag %(sed -e 's/^.*release /rh/' -e 's/ .*$//' -e 's/\\./_/g' < /etc/redhat-release)
 %endif
-%endif
-
-# These are probably wrong... just placeholders should we actually
-# end up supporting these distributions
 
 %if %{is_mdk}
 %define ostag mdk
@@ -289,6 +279,9 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+
+* Fri May 01 2009 Andrew Lewman <andrew@torproject.org>
+- clean up distro detection and remove dead comment blocks
 
 * Sun Feb 22 2009 Andrew Lewman <andrew@torproject.org>
 - update the description, vendor, and packager

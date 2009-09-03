@@ -2,8 +2,10 @@ Filename: 134-robust-voting.txt
 Title: More robust consensus voting with diverse authority sets
 Author: Peter Palfrader
 Created: 2008-04-01
-Status: Accepted
-Target: 0.2.2.x
+Status: Rejected
+
+History:
+  2009 May 27: Added note on rejecting this proposal -- Nick
 
 Overview:
 
@@ -103,3 +105,19 @@ Possible Attacks/Open Issues/Some thinking required:
  Q: Can this ever force us to build a consensus with authorities we do not
     recognize?
  A: No, we can never build a fully connected set with them in step 3.
+
+------------------------------
+
+I'm rejecting this proposal as insecure.
+
+Suppose that we have a clique of size N, and M hostile members in the
+clique.  If these hostile members stop declaring trust for up to M-1
+good members of the clique, the clique with the hostile members will
+in it will be larger than the one without them.
+
+The M hostile members will constitute a majority of this new clique
+when M > (N-(M-1)) / 2, or when M > (N + 1) / 3.  This breaks our
+requirement that an adversary must compromise a majority of authorities
+in order to control the consensus.
+
+-- Nick

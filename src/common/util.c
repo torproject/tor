@@ -345,6 +345,36 @@ round_to_power_of_2(uint64_t u64)
     return low;
 }
 
+/** Return the lowest x such that x is at least <b>number</b>, and x modulo
+ * <b>divisor</b> == 0. */
+unsigned
+round_to_next_multiple_of(unsigned number, unsigned divisor)
+{
+  number += divisor - 1;
+  number -= number % divisor;
+  return number;
+}
+
+/** Return the lowest x such that x is at least <b>number</b>, and x modulo
+ * <b>divisor</b> == 0. */
+uint32_t
+round_uint32_to_next_multiple_of(uint32_t number, uint32_t divisor)
+{
+  number += divisor - 1;
+  number -= number % divisor;
+  return number;
+}
+
+/** Return the lowest x such that x is at least <b>number</b>, and x modulo
+ * <b>divisor</b> == 0. */
+uint64_t
+round_uint64_to_next_multiple_of(uint64_t number, uint64_t divisor)
+{
+  number += divisor - 1;
+  number -= number % divisor;
+  return number;
+}
+
 /* =====
  * String manipulation
  * ===== */
@@ -1002,12 +1032,31 @@ tv_udiff(const struct timeval *start, const struct timeval *end)
   long secdiff = end->tv_sec - start->tv_sec;
 
   if (labs(secdiff+1) > LONG_MAX/1000000) {
-    log_warn(LD_GENERAL, "comparing times too far apart.");
+    log_warn(LD_GENERAL, "comparing times on microsecond detail too far "
+             "apart: %ld seconds", secdiff);
     return LONG_MAX;
   }
 
   udiff = secdiff*1000000L + (end->tv_usec - start->tv_usec);
   return udiff;
+}
+
+/** Return the number of milliseconds elapsed between *start and *end.
+ */
+long
+tv_mdiff(const struct timeval *start, const struct timeval *end)
+{
+  long mdiff;
+  long secdiff = end->tv_sec - start->tv_sec;
+
+  if (labs(secdiff+1) > LONG_MAX/1000) {
+    log_warn(LD_GENERAL, "comparing times on millisecond detail too far "
+             "apart: %ld seconds", secdiff);
+    return LONG_MAX;
+  }
+
+  mdiff = secdiff*1000L + (end->tv_usec - start->tv_usec) / 1000L;
+  return mdiff;
 }
 
 /** Yield true iff <b>y</b> is a leap-year. */

@@ -1,7 +1,5 @@
 Filename: 153-automatic-software-update-protocol.txt
 Title: Automatic software update protocol
-Version: $Revision$
-Last-Modified: $Date$
 Author: Jacob Appelbaum 
 Created: 14-July-2008
 Status: Superseded

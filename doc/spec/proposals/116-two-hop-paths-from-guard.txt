@@ -1,7 +1,5 @@
 Filename: 116-two-hop-paths-from-guard.txt
 Title: Two hop paths from entry guards
-Version: $Revision$
-Last-Modified: $Date$
 Author: Michael Lieberman
 Created: 26-Jun-2007
 Status: Dead

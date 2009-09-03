@@ -1111,12 +1111,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         log_info(LD_REND,
                  "No intro points for '%s': re-fetching service descriptor.",
                  safe_str(conn->rend_data->onion_address));
-        /* Fetch both, v0 and v2 rend descriptors in parallel. Use whichever
-         * arrives first. Exception: When using client authorization, only
-         * fetch v2 descriptors.*/
         rend_client_refetch_v2_renddesc(conn->rend_data);
-        if (conn->rend_data->auth_type == REND_NO_AUTH)
-          rend_client_refetch_renddesc(conn->rend_data->onion_address);
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }

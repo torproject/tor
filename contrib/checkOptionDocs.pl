@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-# $Id
 use strict;
 
 my %options = ();
