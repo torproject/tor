@@ -1,0 +1,105 @@
+Filename: 160-bandwidth-offset.txt
+Title: Authorities vote for bandwidth offsets in consensus
+Author: Roger Dingledine
+Created: 4-May-2009
+Status: Open
+Target: 0.2.2.x
+
+1. Motivation
+
+  As part of proposal 141, we moved the bandwidth value for each relay
+  into the consensus. Now clients can know how they should load balance
+  even before they've fetched the corresponding relay descriptors.
+
+  Putting the bandwidth in the consensus also lets the directory
+  authorities choose more accurate numbers to advertise, if we come up
+  with a better algorithm for deciding weightings.
+
+  Our original plan was to teach directory authorities how to measure
+  bandwidth themselves; then every authority would vote for the bandwidth
+  it prefers, and we'd take the median of votes as usual.
+
+  The problem comes when we have 7 authorities, and only a few of them
+  have smarter bandwidth allocation algorithms. So long as the majority
+  of them are voting for the number in the relay descriptor, the minority
+  that have better numbers will be ignored.
+
+2. Options
+
+  One fix would be to demand that every authority also run the
+  new bandwidth measurement algorithms: in that case, part of the
+  responsibility of being an authority operator is that you need to run
+  this code too. But in practice we can't really require all current
+  authority operators to do that; and if we want to expand the set of
+  authority operators even further, it will become even more impractical.
+  Also, bandwidth testing adds load to the network, so we don't really
+  want to require that the number of concurrent bandwidth tests match
+  the number of authorities we have.
+
+  The better fix is to allow certain authorities to specify that they are
+  voting on bandwidth measurements: more accurate bandwidth values that
+  have actually been evaluated. In this way, authorities can vote on 
+  the median measured value if sufficient measured votes exist for a router,
+  and otherwise fall back to the median value taken from the published router
+  descriptors.
+
+3. Security implications
+
+  If only some authorities choose to vote on an offset, then a majority of
+  those voting authorities can arbitrarily change the bandwidth weighting
+  for the relay. At the extreme, if there's only one offset-voting
+  authority, then that authority can dictate which relays clients will
+  find attractive.
+
+  This problem isn't entirely new: we already have the worry wrt
+  the subset of authorities that vote for BadExit.
+
+  To make it not so bad, we should deploy at least three offset-voting
+  authorities.
+
+  Also, authorities that know how to vote for offsets should vote for
+  an offset of zero for new nodes, rather than choosing not to vote on
+  any offset in those cases.
+
+4. Design
+
+  First, we need a new consensus method to support this new calculation.
+
+  Now v3 votes can have an additional value on the "w" line:
+    "w Bandwidth=X Measured=" INT.
+
+  Once we're using the new consensus method, the new way to compute the
+  Bandwidth weight is by checking if there are at least 3 "Measured"
+  votes. If so, the median of these is taken. Otherwise, the median
+  of the "Bandwidth=" values are taken, as described in Proposal 141.
+
+  Then the actual consensus looks just the same as it did before,
+  so clients never have to know that this additional calculation is
+  happening.
+
+5. Implementation
+
+  The Measured values will be read from a file provided by the scanners
+  described in proposal 161. Files with a timestamp older than 3 days
+  will be ignored.
+
+  The file will be read in from dirserv_generate_networkstatus_vote_obj()
+  in a location specified by a new config option "V3MeasuredBandwidths".
+  A helper function will be called to populate new 'measured' and
+  'has_measured' fields of the routerstatus_t 'routerstatuses' list with 
+  values read from this file.
+
+  An additional for_vote flag will be passed to 
+  routerstatus_format_entry() from format_networkstatus_vote(), which will 
+  indicate that the "Measured=" string should be appended to the "w Bandwith=" 
+  line with the measured value in the struct.
+
+  routerstatus_parse_entry_from_string() will be modified to parse the
+  "Measured=" lines into routerstatus_t struct fields.
+
+  Finally, networkstatus_compute_consensus() will set rs_out.bandwidth 
+  to the median of the measured values if there are more than 3, otherwise
+  it will use the bandwidth value median as normal.
+
+
+

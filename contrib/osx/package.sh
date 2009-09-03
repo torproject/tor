@@ -1,5 +1,4 @@
 #!/bin/sh
-# $Id$
 # Copyright 2004-2005 Nick Mathewson. 
 # Copyright 2005-2007 Andrew Lewman
 # Copyright 2008 The Tor Project, Inc.

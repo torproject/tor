@@ -1,7 +1,5 @@
 Filename: 118-multiple-orports.txt
 Title: Advertising multiple ORPorts at once
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 09-Jul-2007
 Status: Accepted

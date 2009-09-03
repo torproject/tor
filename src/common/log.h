@@ -134,8 +134,6 @@ void add_temp_log(int min_severity);
 void close_temp_logs(void);
 void rollback_log_changes(void);
 void mark_logs_temp(void);
-void configure_libevent_logging(void);
-void suppress_libevent_log_msg(const char *msg);
 void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
 void log_set_application_name(const char *name);

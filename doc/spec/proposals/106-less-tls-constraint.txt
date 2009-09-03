@@ -1,7 +1,5 @@
 Filename: 106-less-tls-constraint.txt
 Title: Checking fewer things during TLS handshakes
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 9-Feb-2007
 Status: Closed

@@ -1,7 +1,5 @@
 Filename: 145-newguard-flag.txt
 Title: Separate "suitable as a guard" from "suitable as a new guard"
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 1-Jul-2008
 Status: Open

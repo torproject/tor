@@ -20,9 +20,6 @@
 #ifndef INSTRUMENT_DOWNLOADS
 #define INSTRUMENT_DOWNLOADS 1
 #endif
-#ifndef ENABLE_GEOIP_STATS
-#define ENABLE_GEOIP_STATS 1
-#endif
 #endif
 
 #ifdef MS_WINDOWS
@@ -91,8 +88,7 @@
 #include "util.h"
 #include "torgzip.h"
 #include "address.h"
-
-#include <event.h>
+#include "compat_libevent.h"
 
 /* These signals are defined to help control_signal_act work.
  */
@@ -221,6 +217,21 @@ typedef enum {
 /* !!!! If _CONN_TYPE_MAX is ever over 15, we must grow the type field in
  * connection_t. */
 
+/* Proxy client types */
+#define PROXY_NONE 0
+#define PROXY_CONNECT 1
+#define PROXY_SOCKS4 2
+#define PROXY_SOCKS5 3
+
+/* Proxy client handshake states */
+#define PROXY_HTTPS_WANT_CONNECT_OK 1
+#define PROXY_SOCKS4_WANT_CONNECT_OK 2
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_NONE 3
+#define PROXY_SOCKS5_WANT_AUTH_METHOD_RFC1929 4
+#define PROXY_SOCKS5_WANT_AUTH_RFC1929_OK 5
+#define PROXY_SOCKS5_WANT_CONNECT_OK 6
+#define PROXY_CONNECTED 7
+
 /** True iff <b>x</b> is an edge connection. */
 #define CONN_IS_EDGE(x) \
   ((x)->type == CONN_TYPE_EXIT || (x)->type == CONN_TYPE_AP)
@@ -241,26 +252,24 @@ typedef enum {
 #define _OR_CONN_STATE_MIN 1
 /** State for a connection to an OR: waiting for connect() to finish. */
 #define OR_CONN_STATE_CONNECTING 1
-/** State for a connection to an OR: waiting for proxy command to flush. */
-#define OR_CONN_STATE_PROXY_FLUSHING 2
-/** State for a connection to an OR: waiting for proxy response. */
-#define OR_CONN_STATE_PROXY_READING 3
+/** State for a connection to an OR: waiting for proxy handshake to complete */
+#define OR_CONN_STATE_PROXY_HANDSHAKING 2
 /** State for a connection to an OR or client: SSL is handshaking, not done
  * yet. */
-#define OR_CONN_STATE_TLS_HANDSHAKING 4
+#define OR_CONN_STATE_TLS_HANDSHAKING 3
 /** State for a connection to an OR: We're doing a second SSL handshake for
  * renegotiation purposes. */
-#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 5
+#define OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING 4
 /** State for a connection at an OR: We're waiting for the client to
  * renegotiate. */
-#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 6
+#define OR_CONN_STATE_TLS_SERVER_RENEGOTIATING 5
 /** State for a connection to an OR: We're done with our SSL handshake, but we
  * haven't yet negotiated link protocol versions and sent a netinfo cell.
  */
-#define OR_CONN_STATE_OR_HANDSHAKING 7
+#define OR_CONN_STATE_OR_HANDSHAKING 6
 /** State for a connection to an OR: Ready to send/receive cells. */
-#define OR_CONN_STATE_OPEN 8
-#define _OR_CONN_STATE_MAX 8
+#define OR_CONN_STATE_OPEN 7
+#define _OR_CONN_STATE_MAX 7
 
 #define _EXIT_CONN_STATE_MIN 1
 /** State for an exit connection: waiting for response from DNS farm. */
@@ -483,7 +492,7 @@ typedef enum {
 #define CIRCUIT_PURPOSE_IS_ORIGIN(p) ((p)>_CIRCUIT_PURPOSE_OR_MAX)
 /** True iff the circuit purpose <b>p</b> is for a circuit that originated
  * here to serve as a client.  (Hidden services don't count here.) */
-#define CIRCUIT_PURPOSE_IS_CLIENT(p) \
+#define CIRCUIT_PURPOSE_IS_CLIENT(p)  \
   ((p)> _CIRCUIT_PURPOSE_OR_MAX &&    \
    (p)<=_CIRCUIT_PURPOSE_C_MAX)
 /** True iff the circuit_t <b>c</b> is actually an origin_circuit_t. */
@@ -641,10 +650,6 @@ typedef enum {
 /** Length of a binary-encoded rendezvous service ID. */
 #define REND_SERVICE_ID_LEN 10
 
-/** How long after we receive a hidden service descriptor do we consider
- * it fresh? */
-#define NUM_SECONDS_BEFORE_HS_REFETCH (60*15)
-
 /** Time period for which a v2 descriptor will be valid. */
 #define REND_TIME_PERIOD_V2_DESC_VALIDITY (24*60*60)
 
@@ -739,12 +744,6 @@ typedef struct rend_data_t {
 
   /** Rendezvous cookie used by both, client and service. */
   char rend_cookie[REND_COOKIE_LEN];
-
-  /** Rendezvous descriptor version that is used by a service. Used to
-   * distinguish introduction and rendezvous points belonging to the same
-   * rendezvous service ID, but different descriptor versions.
-   */
-  uint8_t rend_desc_version;
 } rend_data_t;
 
 /** Time interval for tracking possible replays of INTRODUCE2 cells.
@@ -851,12 +850,28 @@ typedef struct packed_cell_t {
   char body[CELL_NETWORK_SIZE]; /**< Cell as packed for network. */
 } packed_cell_t;
 
+/** Number of cells added to a circuit queue including their insertion
+ * time on 10 millisecond detail; used for buffer statistics. */
+typedef struct insertion_time_elem_t {
+  struct insertion_time_elem_t *next; /**< Next element in queue. */
+  uint32_t insertion_time; /**< When were cells inserted (in 10 ms steps
+                             * starting at 0:00 of the current day)? */
+  unsigned counter; /**< How many cells were inserted? */
+} insertion_time_elem_t;
+
+/** Queue of insertion times. */
+typedef struct insertion_time_queue_t {
+  struct insertion_time_elem_t *first; /**< First element in queue. */
+  struct insertion_time_elem_t *last; /**< Last element in queue. */
+} insertion_time_queue_t;
+
 /** A queue of cells on a circuit, waiting to be added to the
  * or_connection_t's outbuf. */
 typedef struct cell_queue_t {
   packed_cell_t *head; /**< The first cell, or NULL if the queue is empty. */
   packed_cell_t *tail; /**< The last cell, or NULL if the queue is empty. */
   int n; /**< The number of cells in the queue. */
+  insertion_time_queue_t *insertion_times; /**< Insertion times of cells. */
 } cell_queue_t;
 
 /** Beginning of a RELAY cell payload. */
@@ -937,8 +952,11 @@ typedef struct connection_t {
    * connection. */
   unsigned int linked_conn_is_closed:1;
 
-  int s; /**< Our socket; -1 if this connection is closed, or has no
-          * socket. */
+  /** CONNECT/SOCKS proxy client handshake state (for outgoing connections). */
+  unsigned int proxy_state:4;
+
+  /** Our socket; -1 if this connection is closed, or has no socket. */
+  evutil_socket_t s;
   int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
@@ -980,6 +998,8 @@ typedef struct connection_t {
    * to the evdns_server_port is uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
+  /** Unique ID for measuring tunneled network status requests. */
+  uint64_t dirreq_id;
 } connection_t;
 
 /** Stores flags and information related to the portion of a v2 Tor OR
@@ -1178,12 +1198,6 @@ typedef struct control_connection_t {
 
   uint32_t event_mask; /**< Bitfield: which events does this controller
                         * care about? */
-  unsigned int use_long_names:1; /**< True if we should use long nicknames
-                                  * on this (v1) connection. Only settable
-                                  * via v1 controllers. */
-  /** For control connections only. If set, we send extended info with control
-   * events as appropriate. */
-  unsigned int use_extended_events:1;
 
   /** True if we have sent a protocolinfo reply on this connection. */
   unsigned int have_sent_protocolinfo:1;
@@ -1516,6 +1530,9 @@ typedef struct routerstatus_t {
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
+  unsigned int has_measured_bw:1; /**< The vote/consensus had a measured bw */
+
+  uint32_t measured_bw; /**< Measured bandwidth (capacity) of the router */
 
   uint32_t bandwidth; /**< Bandwidth (capacity) of the router as reported in
                        * the vote/consensus, in kilobytes/sec. */
@@ -1972,6 +1989,9 @@ typedef struct circuit_t {
    * linked to an OR connection. */
   struct circuit_t *prev_active_on_n_conn;
   struct circuit_t *next; /**< Next circuit in linked list of all circuits. */
+
+  /** Unique ID for measuring tunneled network status requests. */
+  uint64_t dirreq_id;
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -2094,6 +2114,15 @@ typedef struct or_circuit_t {
 
   /** True iff this circuit was made with a CREATE_FAST cell. */
   unsigned int is_first_hop : 1;
+
+  /** Number of cells that were removed from circuit queue; reset every
+   * time when writing buffer stats to disk. */
+  uint32_t processed_cells;
+
+  /** Total time in milliseconds that cells spent in both app-ward and
+   * exit-ward queues of this circuit; reset every time when writing
+   * buffer stats to disk. */
+  uint64_t total_cell_waiting_time;
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t.*/
@@ -2355,14 +2384,24 @@ typedef struct {
   char *ContactInfo; /**< Contact info to be published in the directory. */
 
   char *HttpProxy; /**< hostname[:port] to use as http proxy, if any. */
-  uint32_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
+  tor_addr_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
   uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any. */
   char *HttpProxyAuthenticator; /**< username:password string, if any. */
 
   char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any. */
-  uint32_t HttpsProxyAddr; /**< Parsed IPv4 addr for https proxy, if any. */
+  tor_addr_t HttpsProxyAddr; /**< Parsed addr for https proxy, if any. */
   uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any. */
   char *HttpsProxyAuthenticator; /**< username:password string, if any. */
+
+  char *Socks4Proxy; /**< hostname:port to use as a SOCKS4 proxy, if any. */
+  tor_addr_t Socks4ProxyAddr; /**< Derived from Socks4Proxy. */
+  uint16_t Socks4ProxyPort; /**< Derived from Socks4Proxy. */
+
+  char *Socks5Proxy; /**< hostname:port to use as a SOCKS5 proxy, if any. */
+  tor_addr_t Socks5ProxyAddr; /**< Derived from Sock5Proxy. */
+  uint16_t Socks5ProxyPort; /**< Derived from Socks5Proxy. */
+  char *Socks5ProxyUsername; /**< Username for SOCKS5 authentication, if any */
+  char *Socks5ProxyPassword; /**< Password for SOCKS5 authentication, if any */
 
   /** List of configuration lines for replacement directory authorities.
    * If you just want to replace one class of authority at a time,
@@ -2437,6 +2476,8 @@ typedef struct {
                   * log whether it was DNS-leaking or not? */
   int HardwareAccel; /**< Boolean: Should we enable OpenSSL hardware
                       * acceleration where available? */
+  char *AccelName; /**< Optional hardware acceleration engine name. */
+  char *AccelDir; /**< Optional hardware acceleration engine search dir. */
   int UseEntryGuards; /**< Boolean: Do we try to enter from a smallish number
                        * of fixed nodes? */
   int NumEntryGuards; /**< How many entry guards do we try to establish? */
@@ -2446,6 +2487,9 @@ typedef struct {
   /** Should we always fetch our dir info on the mirror schedule (which
    * means directly from the authorities) no matter our other config? */
   int FetchDirInfoEarly;
+
+  /** Should we fetch our dir info at the start of the consensus period? */
+  int FetchDirInfoExtraEarly;
 
   char *VirtualAddrNetwork; /**< Address and mask to hand out for virtual
                              * MAPADDRESS requests. */
@@ -2495,6 +2539,29 @@ typedef struct {
    * exit allows it, we use it. */
   int AllowSingleHopCircuits;
 
+  /** If true, we convert "www.google.com.foo.exit" addresses on the
+   * socks/trans/natd ports into "www.google.com" addresses that
+   * exit from the node "foo". Disabled by default since attacking
+   * websites and exit relays can use it to manipulate your path
+   * selection. */
+  int AllowDotExit;
+
+  /** If true, the user wants us to collect statistics on clients
+   * requesting network statuses from us as directory. */
+  int DirReqStatistics;
+
+  /** If true, the user wants us to collect statistics on port usage. */
+  int ExitPortStatistics;
+
+  /** If true, the user wants us to collect cell statistics. */
+  int CellStatistics;
+
+  /** If true, the user wants us to collect statistics as entry node. */
+  int EntryStatistics;
+
+  /** If true, include statistics file contents in extra-info documents. */
+  int ExtraInfoStatistics;
+
   /** If true, do not believe anybody who tells us that a domain resolves
    * to an internal address, or that an internal address has a PTR mapping.
    * Helps avoid some cross-site attacks. */
@@ -2512,6 +2579,9 @@ typedef struct {
   /** Should advertise and sign consensuses with a legacy key, for key
    * migration purposes? */
   int V3AuthUseLegacyKey;
+
+  /** Location of bandwidth measurement file */
+  char *V3BandwidthsFile;
 
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
@@ -2549,8 +2619,8 @@ typedef struct {
    * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
 
-#ifdef ENABLE_GEOIP_STATS
-  /** If true, and Tor is built with GEOIP_STATS support, and we're a
+#if 0
+  /** If true, and Tor is built with DIRREQ_STATS support, and we're a
    * directory, record how many directory requests we get from each country. */
   int DirRecordUsageByCountry;
   /** Round all GeoIP results to the next multiple of this value, to avoid
@@ -2699,6 +2769,7 @@ int fetch_from_buf_http(buf_t *buf,
                         int force_complete);
 int fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                          int log_sockstype, int safe_socks);
+int fetch_from_buf_socks_client(buf_t *buf, int state, char **reason);
 int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 int peek_buf_has_control0_command(buf_t *buf);
@@ -2926,8 +2997,9 @@ int options_need_geoip_info(or_options_t *options, const char **reason_out);
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer);
 
-int get_effective_bwrate(or_options_t *options);
-int get_effective_bwburst(or_options_t *options);
+const char *tor_get_digests(void);
+uint32_t get_effective_bwrate(or_options_t *options);
+uint32_t get_effective_bwburst(or_options_t *options);
 
 #ifdef CONFIG_PRIVATE
 /* Used only by config.c and test.c */
@@ -2946,7 +3018,6 @@ control_connection_t *control_connection_new(int socket_family);
 connection_t *connection_new(int type, int socket_family);
 
 void connection_link_connections(connection_t *conn_a, connection_t *conn_b);
-void connection_unregister_events(connection_t *conn);
 void connection_free(connection_t *conn);
 void connection_free_all(void);
 void connection_about_to_close_connection(connection_t *conn);
@@ -2961,6 +3032,10 @@ void connection_expire_held_open(void);
 int connection_connect(connection_t *conn, const char *address,
                        const tor_addr_t *addr,
                        uint16_t port, int *socket_error);
+
+int connection_proxy_connect(connection_t *conn, int type);
+int connection_read_proxy_handshake(connection_t *conn);
+
 int retry_all_listeners(smartlist_t *replaced_conns,
                         smartlist_t *new_conns);
 
@@ -3003,8 +3078,7 @@ connection_t *connection_get_by_type_addr_port_purpose(int type,
                                                    uint16_t port, int purpose);
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
-                                                     const char *rendquery,
-                                                     int rendversion);
+                                                     const char *rendquery);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 int connection_is_listener(connection_t *conn);
@@ -3108,7 +3182,7 @@ int hostname_is_noconnect_address(const char *address);
 typedef enum hostname_type_t {
   NORMAL_HOSTNAME, ONION_HOSTNAME, EXIT_HOSTNAME, BAD_HOSTNAME
 } hostname_type_t;
-hostname_type_t parse_extended_hostname(char *address);
+hostname_type_t parse_extended_hostname(char *address, int allowdotexit);
 
 #if defined(HAVE_NET_IF_H) && defined(HAVE_NET_PFVAR_H)
 int get_pf_socket(void);
@@ -3412,8 +3486,8 @@ download_status_mark_impossible(download_status_t *dl)
  * Running Stable Unnamed V2Dir Valid\n". */
 #define MAX_FLAG_LINE_LEN 96
 /** Length of "w" line for weighting.  Currently at most
- * "w Bandwidth=<uint32t>\n" */
-#define MAX_WEIGHT_LINE_LEN (13+10)
+ * "w Bandwidth=<uint32t> Measured=<uint32t>\n" */
+#define MAX_WEIGHT_LINE_LEN (12+10+10+10+1)
 /** Maximum length of an exit policy summary line. */
 #define MAX_POLICY_LINE_LEN (3+MAX_EXITPOLICY_SUMMARY_LEN)
 /** Amount of space to allocate for each entry: r, s, and v lines. */
@@ -3445,8 +3519,6 @@ enum was_router_added_t dirserv_add_multiple_descriptors(
 enum was_router_added_t dirserv_add_descriptor(routerinfo_t *ri,
                                                const char **msg,
                                                const char *source);
-int getinfo_helper_dirserv_unregistered(control_connection_t *conn,
-                                        const char *question, char **answer);
 void dirserv_free_descriptors(void);
 void dirserv_set_router_is_running(routerinfo_t *router, time_t now);
 int list_server_status_v1(smartlist_t *routers, char **router_status_out,
@@ -3498,12 +3570,31 @@ int dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff);
 int dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
+typedef enum {
+  NS_V2, NS_V3_CONSENSUS, NS_V3_VOTE, NS_CONTROL_PORT
+} routerstatus_format_type_t;
 int routerstatus_format_entry(char *buf, size_t buf_len,
                               routerstatus_t *rs, const char *platform,
-                              int first_line_only, int v2_format);
+                              routerstatus_format_type_t format);
 void dirserv_free_all(void);
 void cached_dir_decref(cached_dir_t *d);
 cached_dir_t *new_cached_dir(char *s, time_t published);
+
+#ifdef DIRSERV_PRIVATE
+typedef struct measured_bw_line_t {
+  char node_id[DIGEST_LEN];
+  char node_hex[MAX_HEX_NICKNAME_LEN+1];
+  long int bw;
+} measured_bw_line_t;
+
+int measured_bw_line_parse(measured_bw_line_t *out, const char *line);
+
+int measured_bw_line_apply(measured_bw_line_t *parsed_line,
+                           smartlist_t *routerstatuses);
+#endif
+
+int dirserv_read_measured_bandwidths(const char *from_file,
+                                     smartlist_t *routerstatuses);
 
 /********************************* dirvote.c ************************/
 
@@ -3590,6 +3681,7 @@ int dns_resolve(edge_connection_t *exitconn);
 void dns_launch_correctness_checks(void);
 int dns_seems_to_be_broken(void);
 void dns_reset_correctness_checks(void);
+void dump_dns_mem_usage(int severity);
 
 /********************************* dnsserv.c ************************/
 
@@ -3604,6 +3696,15 @@ void dnsserv_reject_request(edge_connection_t *conn);
 int dnsserv_launch_request(const char *name, int is_reverse);
 
 /********************************* geoip.c **************************/
+
+/** Round all GeoIP results to the next multiple of this value, to avoid
+ * leaking information. */
+#define DIR_RECORD_USAGE_GRANULARITY 8
+/** Time interval: Flush geoip data to disk this often. */
+#define DIR_ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
+/** How long do we have to have observed per-country request history before
+ * we are willing to talk about it? */
+#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (24*60*60)
 
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);
@@ -3620,7 +3721,7 @@ country_t geoip_get_country(const char *countrycode);
  * the others, we're not.
  */
 typedef enum {
-  /** We've noticed a connection as a bridge relay. */
+  /** We've noticed a connection as a bridge relay or entry guard. */
   GEOIP_CLIENT_CONNECT = 0,
   /** We've served a networkstatus consensus as a directory server. */
   GEOIP_CLIENT_NETWORKSTATUS = 1,
@@ -3630,13 +3731,74 @@ typedef enum {
 void geoip_note_client_seen(geoip_client_action_t action,
                             uint32_t addr, time_t now);
 void geoip_remove_old_clients(time_t cutoff);
+/** Indicates either a positive reply or a reason for rejectng a network
+ * status request that will be included in geoip statistics. */
+typedef enum {
+  /** Request is answered successfully. */
+  GEOIP_SUCCESS = 0,
+  /** V3 network status is not signed by a sufficient number of requested
+   * authorities. */
+  GEOIP_REJECT_NOT_ENOUGH_SIGS = 1,
+  /** Requested network status object is unavailable. */
+  GEOIP_REJECT_UNAVAILABLE = 2,
+  /** Requested network status not found. */
+  GEOIP_REJECT_NOT_FOUND = 3,
+  /** Network status has not been modified since If-Modified-Since time. */
+  GEOIP_REJECT_NOT_MODIFIED = 4,
+  /** Directory is busy. */
+  GEOIP_REJECT_BUSY = 5,
+} geoip_ns_response_t;
+#define GEOIP_NS_RESPONSE_NUM 6
+void geoip_note_ns_response(geoip_client_action_t action,
+                            geoip_ns_response_t response);
 time_t geoip_get_history_start(void);
-char *geoip_get_client_history(time_t now, geoip_client_action_t action);
+char *geoip_get_client_history_dirreq(time_t now,
+                                      geoip_client_action_t action);
+char *geoip_get_client_history_bridge(time_t now,
+                                      geoip_client_action_t action);
 char *geoip_get_request_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer);
 void geoip_free_all(void);
-void dump_geoip_stats(void);
+
+/** Directory requests that we are measuring can be either direct or
+ * tunneled. */
+typedef enum {
+  DIRREQ_DIRECT = 0,
+  DIRREQ_TUNNELED = 1,
+} dirreq_type_t;
+
+/** Possible states for either direct or tunneled directory requests that
+ * are relevant for determining network status download times. */
+typedef enum {
+  /** Found that the client requests a network status; applies to both
+   * direct and tunneled requests; initial state of a request that we are
+   * measuring. */
+  DIRREQ_IS_FOR_NETWORK_STATUS = 0,
+  /** Finished writing a network status to the directory connection;
+   * applies to both direct and tunneled requests; completes a direct
+   * request. */
+  DIRREQ_FLUSHING_DIR_CONN_FINISHED = 1,
+  /** END cell sent to circuit that initiated a tunneled request. */
+  DIRREQ_END_CELL_SENT = 2,
+  /** Flushed last cell from queue of the circuit that initiated a
+    * tunneled request to the outbuf of the OR connection. */
+  DIRREQ_CIRC_QUEUE_FLUSHED = 3,
+  /** Flushed last byte from buffer of the OR connection belonging to the
+    * circuit that initiated a tunneled request; completes a tunneled
+    * request. */
+  DIRREQ_OR_CONN_BUFFER_FLUSHED = 4
+} dirreq_state_t;
+
+void geoip_start_dirreq(uint64_t dirreq_id, size_t response_size,
+                        geoip_client_action_t action, dirreq_type_t type);
+void geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
+                               dirreq_state_t new_state);
+
+void geoip_dirreq_stats_init(time_t now);
+void geoip_dirreq_stats_write(time_t now);
+void geoip_entry_stats_init(time_t now);
+void geoip_entry_stats_write(time_t now);
 
 /********************************* hibernate.c **********************/
 
@@ -3659,13 +3821,18 @@ extern int has_completed_circuit;
 
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
+void connection_unregister_events(connection_t *conn);
 int connection_in_array(connection_t *conn);
 void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
 smartlist_t *get_connection_array(void);
 
-void connection_watch_events(connection_t *conn, short events);
+typedef enum watchable_events {
+  READ_EVENT=0x02,
+  WRITE_EVENT=0x04
+} watchable_events_t;
+void connection_watch_events(connection_t *conn, watchable_events_t events);
 int connection_is_reading(connection_t *conn);
 void connection_stop_reading(connection_t *conn);
 void connection_start_reading(connection_t *conn);
@@ -3746,6 +3913,8 @@ int router_set_networkstatus_v2(const char *s, time_t arrived_at,
                              v2_networkstatus_source_t source,
                              smartlist_t *requested_fingerprints);
 void networkstatus_v2_list_clean(time_t now);
+int compare_digest_to_routerstatus_entry(const void *_key,
+                                         const void **_member);
 routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
                                          const char *digest);
 routerstatus_t *networkstatus_vote_find_entry(networkstatus_t *ns,
@@ -3908,6 +4077,8 @@ int tls_error_to_orconn_end_reason(int e);
 int errno_to_orconn_end_reason(int e);
 
 const char *circuit_end_reason_to_control_string(int reason);
+const char *socks4_response_code_to_string(uint8_t code);
+const char *socks5_response_code_to_string(uint8_t code);
 
 /********************************* relay.c ***************************/
 
@@ -3970,6 +4141,11 @@ void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
+void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes);
+void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes);
+void rep_hist_note_exit_stream_opened(uint16_t port);
+void rep_hist_exit_stats_init(time_t now);
+void rep_hist_exit_stats_write(time_t now);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);
@@ -4021,13 +4197,17 @@ void hs_usage_note_fetch_successful(const char *service_id, time_t now);
 void hs_usage_write_statistics_to_file(time_t now);
 void hs_usage_free_all(void);
 
+void rep_hist_buffer_stats_init(time_t now);
+void rep_hist_buffer_stats_add_circ(circuit_t *circ,
+                                    time_t end_of_interval);
+void rep_hist_buffer_stats_write(time_t now);
+
 /********************************* rendclient.c ***************************/
 
 void rend_client_introcirc_has_opened(origin_circuit_t *circ);
 void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
 int rend_client_introduction_acked(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
-void rend_client_refetch_renddesc(const char *query);
 void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
                                    const rend_data_t *rend_query);
@@ -4035,7 +4215,7 @@ int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
                                  size_t request_len);
 int rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
                                    size_t request_len);
-void rend_client_desc_trynow(const char *query, int rend_version);
+void rend_client_desc_trynow(const char *query);
 
 extend_info_t *rend_client_get_random_intro(const rend_data_t *rend_query);
 
@@ -4102,10 +4282,6 @@ void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
                              int command, size_t length, const char *payload);
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
-int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
-                                   crypto_pk_env_t *key,
-                                   char **str_out,
-                                   size_t *len_out);
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str,
                                                          size_t len);
 int rend_get_service_id(crypto_pk_env_t *pk, char *out);
@@ -4557,6 +4733,9 @@ typedef struct tor_version_t {
   int patchlevel;
   char status_tag[MAX_STATUS_TAG_LEN];
   int svn_revision;
+
+  int git_tag_len;
+  char git_tag[DIGEST_LEN];
 } tor_version_t;
 
 int router_get_router_hash(const char *s, char *digest);
@@ -4598,6 +4777,7 @@ void sort_version_list(smartlist_t *lst, int remove_duplicates);
 void assert_addr_policy_ok(smartlist_t *t);
 void dump_distinct_digest_count(int severity);
 
+int compare_routerstatus_entries(const void **_a, const void **_b);
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                                  const char **eos_out,

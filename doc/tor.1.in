@@ -1,4 +1,4 @@
-.TH TOR 1 "January 2009" "TOR"
+.TH TOR 1 "August 2009" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -241,6 +241,13 @@ fetching early. Normal users should leave it off.
 (Default: 0)
 .LP
 .TP
+\fBFetchDirInfoExtraEarly \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will fetch directory information before other
+directory caches. It will attempt to download directory information closer to
+the start of the consensus period. Normal users should leave it off.
+(Default: 0)
+.LP
+.TP
 \fBFetchHidServDescriptors \fR\fB0\fR|\fB1\fR\fP
 If set to 0, Tor will never fetch any hidden service descriptors from
 the rendezvous directories. This option is only useful if you're using
@@ -290,6 +297,25 @@ If defined, Tor will use this username:password for Basic HTTPS proxy
 authentication, as in RFC 2617. This is currently the only form of
 HTTPS proxy authentication that Tor supports; feel free to submit a
 patch if you want it to support others.
+.LP
+.TP
+\fBSocks4Proxy\fR \fIhost\fR[:\fIport\fR]\fP
+Tor will make all OR connections through the SOCKS 4 proxy at host:port
+(or host:1080 if port is not specified).
+.LP
+.TP
+\fBSocks5Proxy\fR \fIhost\fR[:\fIport\fR]\fP
+Tor will make all OR connections through the SOCKS 5 proxy at host:port
+(or host:1080 if port is not specified).
+.LP
+.TP
+\fBSocks5ProxyUsername\fR \fIusername\fP
+.LP
+.TP
+\fBSocks5ProxyPassword\fR \fIpassword\fP
+If defined, authenticate to the SOCKS 5 server using username and password
+in accordance to RFC 1929. Both username and password must be between 1 and 255
+characters.
 .LP
 .TP
 \fBKeepalivePeriod \fR\fINUM\fP
@@ -350,8 +376,19 @@ On startup, setuid to this user and setgid to their primary group.
 .LP
 .TP
 \fBHardwareAccel \fR\fB0\fR|\fB1\fP
-If non-zero, try to use crypto hardware acceleration when
-available. This is untested and probably buggy. (Default: 0)
+If non-zero, try to use built-in (static) crypto hardware acceleration when
+available. (Default: 0)
+.LP
+.TP
+\fBAccelName \fR\fINAME\fP
+When using OpenSSL hardware crypto acceleration attempt to load the dynamic
+engine of this name. This must be used for any dynamic hardware engine. Names
+can be verified with the openssl engine command.
+.LP
+.TP
+\fBAccelDir \fR\fIDIR\fP
+Specify this option if using dynamic hardware acceleration and the engine
+implementation library resides somewhere other than the OpenSSL default.
 .LP
 .TP
 \fBAvoidDiskWrites \fR\fB0\fR|\fB1\fP
@@ -476,13 +513,15 @@ used when \fBFascistFirewall\fR is set. This option is deprecated; use
 ReachableAddresses instead. (Default: 80, 443)
 .LP
 .TP
-\fBHidServAuth \fR\fIonion-address\fR \fIauth-cookie\fP \fIservice-name\fR 
+\fBHidServAuth \fR\fIonion-address\fR \fIauth-cookie\fP [\fIservice-name\fR]
 Client authorization for a hidden service. Valid onion addresses contain 16
 characters in a-z2-7 plus ".onion", and valid auth cookies contain 22
 characters in A-Za-z0-9+/. The service name is only used for internal
 purposes, e.g., for Tor controllers. This option may be used multiple times
 for different hidden services. If a hidden service uses authorization and
-this option is not set, the hidden service is not accessible.
+this option is not set, the hidden service is not accessible. Hidden
+services can be configured to require authorization using the
+\fBHiddenServiceAuthorizeClient\fR option.
 .LP
 .TP
 \fBReachableAddresses \fR\fIADDR\fP[\fB/\fP\fIMASK\fP][:\fIPORT\fP]...\fP
@@ -670,6 +709,13 @@ When this option is disabled, Tor blocks hostnames containing illegal
 characters (like @ and :) rather than sending them to an exit node to be
 resolved.  This helps trap accidental attempts to resolve URLs and so on.
 (Default: 0)
+.LP
+.TP
+\fBAllowDotExit \fR\fB0\fR|\fB1\fR\fP
+If enabled, we convert "www.google.com.foo.exit" addresses on the
+SocksPort/TransPort/NatdPort into "www.google.com" addresses that exit
+from the node "foo". Disabled by default since attacking websites and
+exit relays can use it to manipulate your path selection. (Default: 0)
 .LP
 .TP
 \fBFastFirstHopPK \fR\fB0\fR|\fB1\fR\fP
@@ -1029,6 +1075,36 @@ behalf of clients.
 .TP
 \fBGeoIPFile \fR\fIfilename\fP
 A filename containing GeoIP data, for use with BridgeRecordUsageByCountry.
+.LP
+.TP
+\fBCellStatistics \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, Tor writes statistics on the mean time that
+cells spend in circuit queues to disk every 24 hours. Cannot be changed
+while Tor is running. (Default: 0)
+.LP
+.TP
+\fBDirReqStatistics \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, Tor writes statistics on the number and
+response time of network status requests to disk every 24 hours. Cannot be
+changed while Tor is running. (Default: 0)
+.LP
+.TP
+\fBEntryStatistics \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, Tor writes statistics on the number of
+directly connecting clients to disk every 24 hours. Cannot be changed
+while Tor is running. (Default: 0)
+.LP
+.TP
+\fBExitPortStatistics \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, Tor writes statistics on the number of
+relayed bytes and opened stream per exit port to disk every 24 hours.
+Cannot be changed while Tor is running. (Default: 0)
+.LP
+.TP
+\fBExtraInfoStatistics \fR\fB0\fR|\fB1\fR\fP
+When this option is enabled, Tor includes previously gathered statistics
+in its extra-info documents that it uploads to the directory authorities.
+(Default: 0)
 
 .SH DIRECTORY SERVER OPTIONS
 .PP
@@ -1293,7 +1369,7 @@ if you're using a Tor controller that handles hidserv publishing for you.
 .TP
 \fBHiddenServiceVersion \fR\fIversion\fR,\fIversion\fR,\fI...\fP
 A list of rendezvous service descriptor versions to publish for the hidden
-service. Possible version numbers are 0 and 2. (Default: 0, 2)
+service. Currently, only version 2 is supported. (Default: 2)
 .LP
 .TP
 \fBHiddenServiceAuthorizeClient \fR\fIauth-type\fR \fR\fIclient-name\fR,\fIclient-name\fR,\fI...\fP
@@ -1305,7 +1381,8 @@ listed here are authorized to access the hidden service. Valid client names
 are 1 to 19 characters long and only use characters in A-Za-z0-9+-_
 (no spaces). If this option is set, the hidden service is not accessible
 for clients without authorization any more. Generated authorization data
-can be found in the hostname file.
+can be found in the hostname file. Clients need to put this authorization
+data in their configuration file using \fBHidServAuth\fR.
 .LP
 .TP
 \fBRendPostPeriod \fR\fIN\fR \fBseconds\fR|\fBminutes\fR|\fBhours\fR|\fBdays\fR|\fBweeks\fP

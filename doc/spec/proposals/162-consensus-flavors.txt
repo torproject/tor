@@ -1,0 +1,178 @@
+Filename: 162-consensus-flavors.txt
+Title: Publish the consensus in multiple flavors
+Author: Nick Mathewson
+Created: 14-May-2009
+Target: 0.2.2
+Status: Open
+
+Overview:
+
+   This proposal describes a way to publish each consensus in
+   multiple simultaneous formats, or "flavors".  This will reduce the
+   amount of time needed to deploy new consensus-like documents, and
+   reduce the size of consensus documents in the long term.
+
+Motivation:
+
+   In the future, we will almost surely want different fields and
+   data in the network-status document.  Examples include:
+      - Publishing hashes of microdescriptors instead of hashes of
+        full descriptors (Proposal 158).
+      - Including different digests of descriptors, instead of the
+        perhaps-soon-to-be-totally-broken SHA1.
+
+   Note that in both cases, from the client's point of view, this
+   information _replaces_ older information.  If we're using a
+   SHA256 hash, we don't need to see the SHA1.  If clients only want
+   microdescriptors, they don't (necessarily) need to see hashes of
+   other things.
+
+   Our past approach to cases like this has been to shovel all of
+   the data into the consensus document.  But this is rather poor
+   for bandwidth.  Adding a single SHA256 hash to a consensus for
+   each router increases the compressed consensus size by 47%.  In
+   comparison, replacing a single SHA1 hash with a SHA256 hash for
+   each listed router increases the consensus size by only 18%.
+
+Design in brief:
+
+   Let the voting process remain as it is, until a consensus is
+   generated.  With future versions of the voting algorithm, instead
+   of just a single consensus being generated, multiple consensus
+   "flavors" are produced.
+
+   Consensuses (all of them) include a list of which flavors are
+   being generated.  Caches fetch and serve all flavors of consensus
+   that are listed, regardless of whether they can parse or validate
+   them, and serve them to clients.  Thus, once this design is in
+   place, we won't need to deploy more cache changes in order to get
+   new flavors of consensus to be cached.
+
+   Clients download only the consensus flavor they want.
+
+A note on hashes:
+
+   Everything in this document is specified to use SHA256, and to be
+   upgradeable to use better hashes in the future.
+
+Spec modifications:
+
+   1. URLs and changes to the current consensus format.
+
+   Every consensus flavor has a name consisting of a sequence of one
+   or more alphanumeric characters and dashes.  For compatibility
+   current descriptor flavor is called "ns".
+
+   The supported consensus flavors are defined as part of the
+   authorities' consensus method.
+
+   For each supported flavor, every authority calculates another
+   consensus document of as-yet-unspecified format, and exchanges
+   detached signatures for these documents as in the current consensus
+   design.
+
+   In addition to the consensus currently served at
+   /tor/status-vote/(current|next)/consensus.z , authorities serve
+   another consensus of each flavor "F" from the location
+   /tor/status-vote/(current|next)/F/consensus.z.
+
+   When caches serve these documents, they do so from the same
+   locations.
+
+   2. Document format: generic consensus.
+
+   The format of a flavored consensus is as-yet-unspecified, except
+   that the first line is:
+      "network-status-version" SP version SP flavor NL
+
+   where version is 3 or higher, and the flavor is a string
+   consisting of alphanumeric characters and dashes, matching the
+   corresponding flavor listed in the unflavored consensus.
+
+   3. Document format: detached signatures.
+
+   In addition to the current detached signature format, we allow
+   the first line to take the form,
+      "consensus-digest" SP flavor SP 1*(Algname "=" Digest) NL
+
+   The consensus-signatures URL should contain the signatures
+   for _all_ flavors of consensus.
+
+   4. The consensus index:
+
+   Authorities additionally generate and serve a consensus-index
+   document.  Its format is:
+
+       Header ValidAfter ValidUntil Documents Signatures
+
+       Header = "consensus-index" SP version NL
+       ValidAfter = as in a consensus
+       ValidUntil = as in a consensus
+       Documents = Document*
+       Document = "document" SP flavor SP SignedLength
+                                    1*(SP AlgorithmName "=" Digest) NL
+       Signatures = Signature*
+       Signature = "directory-signature" SP algname SP identity
+                           SP signing-key-digest NL signature
+
+    There must be one Document line for each generated consensus flavor.
+    Each Document line describes the length of the signed portion of
+    a consensus (the signatures themselves are not included), along
+    with one or more digests of that signed portion.  Digests are
+    given in hex.  The algorithm "sha256" MUST be included; others
+    are allowed.
+
+    The algname part of a signature describes what algorithm was
+    used to hash the identity and signing keys, and to compute the
+    signature.  The algorithm "sha256" MUST be recognized;
+    signatures with unrecognized algorithms MUST be ignored.
+    (See below).
+
+    The consensus index is made available at
+       /tor/status-vote/(current|next)/consensus-index.z.
+
+    Caches should fetch this document so they can check the
+    correctness of the different consensus documents they fetch.
+    They do not need to check anything about an unrecognized
+    consensus document beyond its digest and length.
+
+    4.1. The "sha256" signature format.
+
+    The 'SHA256' signature format for directory objects is defined as
+    the RSA signature of the OAEP+-padded SHA256 digest of the SHA256
+    digest of the item to be signed.  When checking signatures,
+    the signature MUST be treated as valid if the signature material
+    begins with SHA256(SHA256(document)); this allows us to add other
+    data later.
+
+Considerations:
+
+    - We should not create a new flavor of consensus when adding a
+      field instead wouldn't be too onerous.
+
+    - We should not proliferate flavors lightly: clients will be
+      distinguishable based on which flavor they download.
+
+Migration:
+
+    - Stage one: authorities begin generating and serving
+      consensus-index files.
+
+    - Stage two: Caches begin downloading consensus-index files,
+      validating them, and using them to decide what flavors of
+      consensus documents to cache.  They download all listed
+      documents, and compare them to the digests given in the
+      consensus.
+
+    - Stage three: Once we want to make a significant change to the
+      consensus format, we deploy another flavor of consensus at the
+      authorities.  This will immediately start getting cached by the
+      caches, and clients can start fetching the new flavor without
+      waiting a version or two for enough caches to begin supporting
+      it.
+
+Acknowledgements:
+
+    Aspects of this design and its applications to hash migration were
+    heavily influenced by IRC conversations with Marian.
+

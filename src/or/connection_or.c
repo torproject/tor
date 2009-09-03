@@ -187,66 +187,6 @@ connection_or_reached_eof(or_connection_t *conn)
   return 0;
 }
 
-/** Read conn's inbuf. If the http response from the proxy is all
- * here, make sure it's good news, and begin the tls handshake. If
- * it's bad news, close the connection and return -1. Else return 0
- * and hope for better luck next time.
- */
-static int
-connection_or_read_proxy_response(or_connection_t *or_conn)
-{
-  char *headers;
-  char *reason=NULL;
-  int status_code;
-  time_t date_header;
-  connection_t *conn = TO_CONN(or_conn);
-
-  switch (fetch_from_buf_http(conn->inbuf,
-                              &headers, MAX_HEADERS_SIZE,
-                              NULL, NULL, 10000, 0)) {
-    case -1: /* overflow */
-      log_warn(LD_PROTOCOL,
-               "Your https proxy sent back an oversized response. Closing.");
-      return -1;
-    case 0:
-      log_info(LD_OR,"https proxy response not all here yet. Waiting.");
-      return 0;
-    /* case 1, fall through */
-  }
-
-  if (parse_http_response(headers, &status_code, &date_header,
-                          NULL, &reason) < 0) {
-    log_warn(LD_OR,
-             "Unparseable headers from proxy (connecting to '%s'). Closing.",
-             conn->address);
-    tor_free(headers);
-    return -1;
-  }
-  if (!reason) reason = tor_strdup("[no reason given]");
-
-  if (status_code == 200) {
-    log_info(LD_OR,
-             "HTTPS connect to '%s' successful! (200 %s) Starting TLS.",
-             conn->address, escaped(reason));
-    tor_free(reason);
-    if (connection_tls_start_handshake(or_conn, 0) < 0) {
-      /* TLS handshaking error of some kind. */
-      connection_mark_for_close(conn);
-
-      return -1;
-    }
-    return 0;
-  }
-  /* else, bad news on the status code */
-  log_warn(LD_OR,
-           "The https proxy sent back an unexpected status code %d (%s). "
-           "Closing.",
-           status_code, escaped(reason));
-  tor_free(reason);
-  connection_mark_for_close(conn);
-  return -1;
-}
-
 /** Handle any new bytes that have come in on connection <b>conn</b>.
  * If conn is in 'open' state, hand it to
  * connection_or_process_cells_from_inbuf()
@@ -255,11 +195,24 @@ connection_or_read_proxy_response(or_connection_t *or_conn)
 int
 connection_or_process_inbuf(or_connection_t *conn)
 {
+  int ret;
   tor_assert(conn);
 
   switch (conn->_base.state) {
-    case OR_CONN_STATE_PROXY_READING:
-      return connection_or_read_proxy_response(conn);
+    case OR_CONN_STATE_PROXY_HANDSHAKING:
+      ret = connection_read_proxy_handshake(TO_CONN(conn));
+
+      /* start TLS after handshake completion, or deal with error */
+      if (ret == 1) {
+        tor_assert(TO_CONN(conn)->proxy_state == PROXY_CONNECTED);
+        if (connection_tls_start_handshake(conn, 0) < 0)
+          ret = -1;
+      }
+      if (ret < 0) {
+        connection_mark_for_close(TO_CONN(conn));
+      }
+
+      return ret;
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING:
       return connection_or_process_cells_from_inbuf(conn);
@@ -312,11 +265,7 @@ connection_or_finished_flushing(or_connection_t *conn)
   assert_connection_ok(TO_CONN(conn),0);
 
   switch (conn->_base.state) {
-    case OR_CONN_STATE_PROXY_FLUSHING:
-      log_debug(LD_OR,"finished sending CONNECT to proxy.");
-      conn->_base.state = OR_CONN_STATE_PROXY_READING;
-      connection_stop_writing(TO_CONN(conn));
-      break;
+    case OR_CONN_STATE_PROXY_HANDSHAKING:
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING:
       connection_stop_writing(TO_CONN(conn));
@@ -334,6 +283,7 @@ connection_or_finished_flushing(or_connection_t *conn)
 int
 connection_or_finished_connecting(or_connection_t *or_conn)
 {
+  int proxy_type;
   connection_t *conn;
   tor_assert(or_conn);
   conn = TO_CONN(or_conn);
@@ -343,28 +293,24 @@ connection_or_finished_connecting(or_connection_t *or_conn)
             conn->address,conn->port);
   control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
 
-  if (get_options()->HttpsProxy) {
-    char buf[1024];
-    char *base64_authenticator=NULL;
-    const char *authenticator = get_options()->HttpsProxyAuthenticator;
+  proxy_type = PROXY_NONE;
 
-    if (authenticator) {
-      base64_authenticator = alloc_http_authenticator(authenticator);
-      if (!base64_authenticator)
-        log_warn(LD_OR, "Encoding https authenticator failed");
+  if (get_options()->HttpsProxy)
+    proxy_type = PROXY_CONNECT;
+  else if (get_options()->Socks4Proxy)
+    proxy_type = PROXY_SOCKS4;
+  else if (get_options()->Socks5Proxy)
+    proxy_type = PROXY_SOCKS5;
+
+  if (proxy_type != PROXY_NONE) {
+    /* start proxy handshake */
+    if (connection_proxy_connect(conn, proxy_type) < 0) {
+      connection_mark_for_close(conn);
+      return -1;
     }
-    if (base64_authenticator) {
-      tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.1\r\n"
-                   "Proxy-Authorization: Basic %s\r\n\r\n",
-                   fmt_addr(&conn->addr),
-                   conn->port, base64_authenticator);
-      tor_free(base64_authenticator);
-    } else {
-      tor_snprintf(buf, sizeof(buf), "CONNECT %s:%d HTTP/1.0\r\n\r\n",
-                   fmt_addr(&conn->addr), conn->port);
-    }
-    connection_write_to_buf(buf, strlen(buf), conn);
-    conn->state = OR_CONN_STATE_PROXY_FLUSHING;
+
+    connection_start_reading(conn);
+    conn->state = OR_CONN_STATE_PROXY_HANDSHAKING;
     return 0;
   }
 
@@ -753,6 +699,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   or_connection_t *conn;
   or_options_t *options = get_options();
   int socket_error = 0;
+  int using_proxy = 0;
   tor_addr_t addr;
 
   tor_assert(_addr);
@@ -771,19 +718,27 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   conn->_base.state = OR_CONN_STATE_CONNECTING;
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
+  /* use a proxy server if available */
   if (options->HttpsProxy) {
-    /* we shouldn't connect directly. use the https proxy instead. */
-    tor_addr_from_ipv4h(&addr, options->HttpsProxyAddr);
+    using_proxy = 1;
+    tor_addr_copy(&addr, &options->HttpsProxyAddr);
     port = options->HttpsProxyPort;
+  } else if (options->Socks4Proxy) {
+    using_proxy = 1;
+    tor_addr_copy(&addr, &options->Socks4ProxyAddr);
+    port = options->Socks4ProxyPort;
+  } else if (options->Socks5Proxy) {
+    using_proxy = 1;
+    tor_addr_copy(&addr, &options->Socks5ProxyAddr);
+    port = options->Socks5ProxyPort;
   }
 
   switch (connection_connect(TO_CONN(conn), conn->_base.address,
                              &addr, port, &socket_error)) {
     case -1:
       /* If the connection failed immediately, and we're using
-       * an https proxy, our https proxy is down. Don't blame the
-       * Tor server. */
-      if (!options->HttpsProxy)
+       * a proxy, our proxy is down. Don't blame the Tor server. */
+      if (!using_proxy)
         entry_guard_register_connect_status(conn->identity_digest,
                                             0, 1, time(NULL));
       connection_or_connect_failed(conn,
@@ -792,7 +747,7 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
       connection_free(TO_CONN(conn));
       return NULL;
     case 0:
-      connection_watch_events(TO_CONN(conn), EV_READ | EV_WRITE);
+      connection_watch_events(TO_CONN(conn), READ_EVENT | WRITE_EVENT);
       /* writable indicates finish, readable indicates broken link,
          error indicates broken link on windows */
       return conn;

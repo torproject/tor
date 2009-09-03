@@ -1,7 +1,5 @@
 Filename: 119-controlport-auth.txt
 Title: New PROTOCOLINFO command for controllers
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 14-Aug-2007
 Status: Closed

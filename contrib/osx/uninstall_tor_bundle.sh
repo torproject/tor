@@ -134,7 +134,7 @@ fi
 ## clean up
 echo ". Cleaning up"
 rm -rf $TEMP_BOM_CONTENTS
-rm -rf /Library/Privoxy/ /Library/StartupItems/Privoxy/ /Library/Tor/ /Library/StartupItems/Tor/ /Library/Torbutton/ 
+rm -rf /Library/Privoxy/ /Library/StartupItems/Privoxy/ /Library/Tor/ /Library/StartupItems/Tor/ /Library/Torbutton/ /Library/Receipts/Privoxy.pkg /Library/Receipts/torbutton.pkg /Library/Receipts/Tor.pkg /Library/Receipts/Vidalia.pkg /Library/Receipts/TorStartup.pkg
 
 echo ". Finished"
 

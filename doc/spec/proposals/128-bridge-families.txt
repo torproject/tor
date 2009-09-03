@@ -1,7 +1,5 @@
 Filename: 128-bridge-families.txt
 Title: Families of private bridges
-Version: $Revision$
-Last-Modified: $Date$
 Author: Roger Dingledine
 Created: 2007-12-xx
 Status: Dead

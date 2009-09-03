@@ -4,7 +4,7 @@ import re, os
 class Error(Exception): pass
 
 STATUSES = """DRAFT NEEDS-REVISION NEEDS-RESEARCH OPEN ACCEPTED META FINISHED
-   CLOSED SUPERSEDED DEAD""".split()
+   CLOSED SUPERSEDED DEAD REJECTED""".split()
 REQUIRED_FIELDS = [ "Filename", "Status", "Title" ]
 CONDITIONAL_FIELDS = { "OPEN" : [ "Target" ],
                        "ACCEPTED" : [ "Target "],

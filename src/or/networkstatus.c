@@ -780,8 +780,8 @@ networkstatus_v2_list_clean(time_t now)
 
 /** Helper for bsearching a list of routerstatus_t pointers: compare a
  * digest in the key to the identity digest of a routerstatus_t. */
-static int
-_compare_digest_to_routerstatus_entry(const void *_key, const void **_member)
+int
+compare_digest_to_routerstatus_entry(const void *_key, const void **_member)
 {
   const char *key = _key;
   const routerstatus_t *rs = *_member;
@@ -794,7 +794,7 @@ routerstatus_t *
 networkstatus_v2_find_entry(networkstatus_v2_t *ns, const char *digest)
 {
   return smartlist_bsearch(ns->entries, digest,
-                           _compare_digest_to_routerstatus_entry);
+                           compare_digest_to_routerstatus_entry);
 }
 
 /** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
@@ -803,7 +803,7 @@ routerstatus_t *
 networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
 {
   return smartlist_bsearch(ns->routerstatus_list, digest,
-                           _compare_digest_to_routerstatus_entry);
+                           compare_digest_to_routerstatus_entry);
 }
 
 /*XXXX make this static once functions are moved into this file. */
@@ -815,7 +815,7 @@ networkstatus_vote_find_entry_idx(networkstatus_t *ns,
                                   const char *digest, int *found_out)
 {
   return smartlist_bsearch_idx(ns->routerstatus_list, digest,
-                               _compare_digest_to_routerstatus_entry,
+                               compare_digest_to_routerstatus_entry,
                                found_out);
 }
 
@@ -868,7 +868,7 @@ router_get_consensus_status_by_id(const char *digest)
   if (!current_consensus)
     return NULL;
   return smartlist_bsearch(current_consensus->routerstatus_list, digest,
-                           _compare_digest_to_routerstatus_entry);
+                           compare_digest_to_routerstatus_entry);
 }
 
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
@@ -1133,8 +1133,13 @@ update_consensus_networkstatus_fetch_time(time_t now)
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
       start = c->fresh_until + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
-      /* But only in the first half-interval after that. */
-      dl_interval = interval/2;
+      /* Some clients may need the consensus sooner than others. */
+      if (options->FetchDirInfoExtraEarly) {
+        dl_interval = 60;
+      } else {
+        /* But only in the first half-interval after that. */
+        dl_interval = interval/2;
+      }
     } else {
       /* We're an ordinary client or a bridge. Give all the caches enough
        * time to download the consensus. */
@@ -1154,7 +1159,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
     }
     if (dl_interval < 1)
       dl_interval = 1;
-    /* We must not try to replace c while it's still the most valid: */
+    /* We must not try to replace c while it's still fresh: */
     tor_assert(c->fresh_until < start);
     /* We must download the next one before c is invalid: */
     tor_assert(start+dl_interval < c->valid_until);
@@ -1822,7 +1827,7 @@ char *
 networkstatus_getinfo_helper_single(routerstatus_t *rs)
 {
   char buf[RS_ENTRY_LEN+1];
-  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, 0, 1);
+  routerstatus_format_entry(buf, sizeof(buf), rs, NULL, NS_CONTROL_PORT);
   return tor_strdup(buf);
 }
 

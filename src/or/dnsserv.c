@@ -9,7 +9,14 @@
  **/
 
 #include "or.h"
+#ifdef HAVE_EVENT2_DNS_H
+#include <event2/dns.h>
+#include <event2/dns_compat.h>
+/* XXXX022 this implies we want an improved evdns  */
+#include <event2/dns_struct.h>
+#else
 #include "eventdns.h"
+#endif
 
 /** Helper function: called by evdns whenever the client sends a request to our
  * DNSPort.  We need to eventually answer the request <b>req</b>.
@@ -85,12 +92,7 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
     evdns_server_request_respond(req, DNS_ERR_NONE);
     return;
   }
-  if (q->type == EVDNS_TYPE_A) {
-    /* Refuse any attempt to resolve a noconnect address, right now. */
-    if (hostname_is_noconnect_address(q->name)) {
-      err = DNS_ERR_REFUSED;
-    }
-  } else {
+  if (q->type != EVDNS_TYPE_A) {
     tor_assert(q->type == EVDNS_TYPE_PTR);
   }
 

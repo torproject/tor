@@ -1,4 +1,3 @@
-$Id$
 
                    TC: A Tor control protocol (Version 0)
 

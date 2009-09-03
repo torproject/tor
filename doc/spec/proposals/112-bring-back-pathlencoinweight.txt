@@ -1,7 +1,5 @@
 Filename: 112-bring-back-pathlencoinweight.txt
 Title: Bring Back Pathlen Coin Weight
-Version: $Revision$
-Last-Modified: $Date$
 Author: Mike Perry
 Created:
 Status: Superseded

@@ -1,7 +1,5 @@
 Filename: 147-prevoting-opinions.txt
 Title: Eliminate the need for v2 directories in generating v3 directories
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 2-Jul-2008
 Status: Accepted

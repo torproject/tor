@@ -21,6 +21,10 @@ static int dirvote_perform_vote(void);
 static void dirvote_clear_votes(int all_votes);
 static int dirvote_compute_consensus(void);
 static int dirvote_publish_consensus(void);
+static char *make_consensus_method_list(int low, int high);
+
+/** The highest consensus method that we currently support. */
+#define MAX_SUPPORTED_CONSENSUS_METHOD 6
 
 /* =====
  * Voting
@@ -94,6 +98,8 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     char vu[ISO_TIME_LEN+1];
     char *flags = smartlist_join_strings(v3_ns->known_flags, " ", 0, NULL);
     authority_cert_t *cert = v3_ns->cert;
+    char *methods =
+      make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD);
     format_iso_time(published, v3_ns->published);
     format_iso_time(va, v3_ns->valid_after);
     format_iso_time(fu, v3_ns->fresh_until);
@@ -103,7 +109,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status %s\n"
-                 "consensus-methods 1 2 3 4 5\n"
+                 "consensus-methods %s\n"
                  "published %s\n"
                  "valid-after %s\n"
                  "fresh-until %s\n"
@@ -114,6 +120,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n",
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
+                 methods,
                  published, va, fu, vu,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  version_lines,
@@ -122,6 +129,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                    ipaddr, voter->dir_port, voter->or_port, voter->contact);
 
     tor_free(flags);
+    tor_free(methods);
     outp = status + strlen(status);
     endp = status + len;
 
@@ -142,7 +150,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
   {
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
-                                  vrs->version, 0, 0) < 0) {
+                                  vrs->version, NS_V3_VOTE) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
       goto err;
     }
@@ -455,7 +463,31 @@ compute_consensus_method(smartlist_t *votes)
 static int
 consensus_method_is_supported(int method)
 {
-  return (method >= 1) && (method <= 5);
+  return (method >= 1) && (method <= MAX_SUPPORTED_CONSENSUS_METHOD);
+}
+
+/** Return a newly allocated string holding the numbers between low and high
+ * (inclusive) that are supported consensus methods. */
+static char *
+make_consensus_method_list(int low, int high)
+{
+  char *list;
+
+  char b[32];
+  int i;
+  smartlist_t *lst;
+  lst = smartlist_create();
+  for (i = low; i <= high; ++i) {
+    if (!consensus_method_is_supported(i))
+      continue;
+    tor_snprintf(b, sizeof(b), "%d", i);
+    smartlist_add(lst, tor_strdup(b));
+  }
+  list = smartlist_join_strings(lst, " ", 0, NULL);
+  tor_assert(list);
+  SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
+  smartlist_free(lst);
+  return list;
 }
 
 /** Helper: given <b>lst</b>, a list of version strings such that every
@@ -701,7 +733,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_t *versions = smartlist_create();
     smartlist_t *exitsummaries = smartlist_create();
     uint32_t *bandwidths = tor_malloc(sizeof(uint32_t) * smartlist_len(votes));
+    uint32_t *measured_bws = tor_malloc(sizeof(uint32_t) *
+                                        smartlist_len(votes));
     int num_bandwidths;
+    int num_mbws;
 
     int *n_voter_flags; /* n_voter_flags[j] is the number of flags that
                          * votes[j] knows about. */
@@ -835,6 +870,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_clear(chosen_flags);
       smartlist_clear(versions);
       num_bandwidths = 0;
+      num_mbws = 0;
 
       /* Okay, go through all the entries for this digest. */
       SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
@@ -868,6 +904,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
 
         /* count bandwidths */
+        if (rs->status.has_measured_bw)
+          measured_bws[num_mbws++] = rs->status.measured_bw;
+
         if (rs->status.has_bandwidth)
           bandwidths[num_bandwidths++] = rs->status.bandwidth;
       } SMARTLIST_FOREACH_END(v);
@@ -945,7 +984,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       }
 
       /* Pick a bandwidth */
-      if (consensus_method >= 5 && num_bandwidths > 0) {
+      if (consensus_method >= 6 && num_mbws > 2) {
+        rs_out.has_bandwidth = 1;
+        rs_out.bandwidth = median_uint32(measured_bws, num_mbws);
+      } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
       }
@@ -1036,7 +1078,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Okay!! Now we can write the descriptor... */
       /*     First line goes into "buf". */
-      routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL, 1, 0);
+      routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
+                                NS_V3_CONSENSUS);
       smartlist_add(chunks, tor_strdup(buf));
       /*     Second line is all flags.  The "\n" is missing. */
       smartlist_add(chunks,
@@ -1055,8 +1098,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
           log_warn(LD_BUG, "Not enough space in buffer for weight line.");
           *buf = '\0';
         }
+
         smartlist_add(chunks, tor_strdup(buf));
       };
+
       /*     Now the exitpolicy summary line. */
       if (rs_out.has_exitsummary) {
         char buf[MAX_POLICY_LINE_LEN+1];
@@ -2183,7 +2228,7 @@ dirvote_get_pending_consensus(void)
 }
 
 /** Return the signatures that we know for the consensus that we're currently
- * trying to build */
+ * trying to build. */
 const char *
 dirvote_get_pending_detached_signatures(void)
 {

@@ -1,11 +1,10 @@
-dnl $Id$
 dnl Copyright (c) 2001-2004, Roger Dingledine
 dnl Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
 dnl Copyright (c) 2007-2008, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.2.1.19)
+AM_INIT_AUTOMAKE(tor, 0.2.2.1-alpha)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
@@ -86,13 +85,6 @@ case $host in
      ;;
 esac
 
-AC_ARG_ENABLE(geoip-stats,
-     AS_HELP_STRING(--enable-geoip-stats, enable code for directories to collect per-country statistics))
-
-if test "$enable_geoip_stats" = "yes"; then
-  AC_DEFINE(ENABLE_GEOIP_STATS, 1, [Defined if we try to collect per-country statistics])
-fi
-
 AC_ARG_ENABLE(gcc-warnings,
      AS_HELP_STRING(--enable-gcc-warnings, enable verbose warnings))
 
@@ -107,6 +99,12 @@ AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
+
+dnl autoconf 2.59 appears not to support AC_PROG_SED
+AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
+
+AC_PATH_PROG([SHA1SUM], [sha1sum], none)
+AC_PATH_PROG([OPENSSL], [openssl], none)
 
 TORUSER=_tor
 AC_ARG_WITH(tor-user,
@@ -270,14 +268,18 @@ save_CPPFLAGS="$CPPFLAGS"
 LIBS="-levent $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
-AC_CHECK_FUNCS(event_get_version event_get_method event_set_log_callback)
+AC_CHECK_FUNCS(event_get_version event_get_version_number event_get_method event_set_log_callback evdns_set_outgoing_bind_address event_base_loopexit)
 AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>
 ])
 
+AC_CHECK_HEADERS(event2/event.h event2/dns.h)
+
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
 CPPFLAGS="$save_CPPFLAGS"
+
+AM_CONDITIONAL(USE_EXTERNAL_EVDNS, test x$ac_cv_header_event2_dns_h = xyes)
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?

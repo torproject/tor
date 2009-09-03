@@ -13,7 +13,17 @@
 
 #include "or.h"
 #include "ht.h"
+#ifdef HAVE_EVENT2_DNS_H
+#include <event2/event.h>
+#include <event2/dns.h>
+#include <event2/dns_compat.h>
+#else
+#include <event.h>
 #include "eventdns.h"
+#ifndef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
+#define HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
+#endif
+#endif
 
 /** Longest hostname we're willing to resolve. */
 #define MAX_ADDRESSLEN 256
@@ -1108,6 +1118,7 @@ configure_nameservers(int force)
     conf_fname = "/etc/resolv.conf";
 #endif
 
+#ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
   if (options->OutboundBindAddress) {
     tor_addr_t addr;
     if (tor_addr_from_str(&addr, options->OutboundBindAddress) < 0) {
@@ -1127,6 +1138,7 @@ configure_nameservers(int force)
       }
     }
   }
+#endif
 
   if (options->ServerDNSRandomizeCase)
     evdns_set_option("randomize-case:", "1", DNS_OPTIONS_ALL);
@@ -1449,8 +1461,8 @@ evdns_wildcard_check_callback(int result, char type, int count, int ttl,
     }
     log(dns_wildcard_one_notice_given ? LOG_INFO : LOG_NOTICE, LD_EXIT,
         "Your DNS provider gave an answer for \"%s\", which "
-        "is not supposed to exist.  Apparently they are hijacking "
-        "DNS failures. Trying to correct for this.  We've noticed %d "
+        "is not supposed to exist. Apparently they are hijacking "
+        "DNS failures. Trying to correct for this. We've noticed %d "
         "possibly bad address%s so far.",
         string_address, strmap_size(dns_wildcard_response_count),
         (strmap_size(dns_wildcard_response_count) == 1) ? "" : "es");
@@ -1547,7 +1559,7 @@ dns_launch_wildcard_checks(void)
 void
 dns_launch_correctness_checks(void)
 {
-  static struct event launch_event;
+  static struct event *launch_event = NULL;
   struct timeval timeout;
   if (!get_options()->ServerDNSDetectHijacking)
     return;
@@ -1555,10 +1567,11 @@ dns_launch_correctness_checks(void)
 
   /* Wait a while before launching requests for test addresses, so we can
    * get the results from checking for wildcarding. */
-  evtimer_set(&launch_event, launch_test_addresses, NULL);
+  if (! launch_event)
+    launch_event = tor_evtimer_new(NULL, launch_test_addresses, NULL);
   timeout.tv_sec = 30;
   timeout.tv_usec = 0;
-  if (evtimer_add(&launch_event, &timeout)<0) {
+  if (evtimer_add(launch_event, &timeout)<0) {
     log_warn(LD_BUG, "Couldn't add timer for checking for dns hijacking");
   }
 }
@@ -1620,6 +1633,30 @@ assert_resolve_ok(cached_resolve_t *resolve)
     else
       tor_assert(!resolve->result.a.addr);
   }
+}
+
+/** Return the number of DNS cache entries as an int */
+static int
+dns_cache_entry_count(void)
+{
+   return HT_SIZE(&cache_root);
+}
+
+/** Log memory information about our internal DNS cache at level 'severity'. */
+void
+dump_dns_mem_usage(int severity)
+{
+  /* This should never be larger than INT_MAX. */
+  int hash_count = dns_cache_entry_count();
+  size_t hash_mem = sizeof(struct cached_resolve_t) * hash_count;
+  hash_mem += HT_MEM_USAGE(&cache_root);
+
+  /* Print out the count and estimated size of our &cache_root.  It undercounts
+     hostnames in cached reverse resolves.
+   */
+  log(severity, LD_MM, "Our DNS cache has %d entries.", hash_count);
+  log(severity, LD_MM, "Our DNS cache size is approximately %u bytes.",
+      (unsigned)hash_mem);
 }
 
 #ifdef DEBUG_DNS_CACHE

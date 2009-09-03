@@ -1,7 +1,5 @@
 Filename: 109-no-sharing-ips.txt
 Title: No more than one server per IP address.
-Version: $Revision$
-Last-Modified: $Date$
 Author: Kevin Bauer & Damon McCoy
 Created: 9-March-2007
 Status: Closed

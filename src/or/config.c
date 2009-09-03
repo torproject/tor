@@ -134,6 +134,7 @@ static config_var_t _option_vars[] = {
   V(AccountingMax,               MEMUNIT,  "0 bytes"),
   V(AccountingStart,             STRING,   NULL),
   V(Address,                     STRING,   NULL),
+  V(AllowDotExit,                BOOL,     "0"),
   V(AllowInvalidNodes,           CSV,      "middle,rendezvous"),
   V(AllowNonRFC953Hostnames,     BOOL,     "0"),
   V(AllowSingleHopCircuits,      BOOL,     "0"),
@@ -162,6 +163,7 @@ static config_var_t _option_vars[] = {
   V(BridgePassword,              STRING,   NULL),
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
+  V(CellStatistics,              BOOL,     "0"),
   V(CircuitBuildTimeout,         INTERVAL, "1 minute"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
@@ -186,18 +188,18 @@ static config_var_t _option_vars[] = {
   V(DirPort,                     UINT,     "0"),
   V(DirPortFrontPage,            FILENAME, NULL),
   OBSOLETE("DirPostPeriod"),
-#ifdef ENABLE_GEOIP_STATS
-  V(DirRecordUsageByCountry,     BOOL,     "0"),
-  V(DirRecordUsageGranularity,   UINT,     "4"),
-  V(DirRecordUsageRetainIPs,     INTERVAL, "14 days"),
-  V(DirRecordUsageSaveInterval,  INTERVAL, "6 hours"),
-#endif
+  OBSOLETE("DirRecordUsageByCountry"),
+  OBSOLETE("DirRecordUsageGranularity"),
+  OBSOLETE("DirRecordUsageRetainIPs"),
+  OBSOLETE("DirRecordUsageSaveInterval"),
+  V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DNSPort,                     UINT,     "0"),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
   V(EntryNodes,                  ROUTERSET,   NULL),
+  V(EntryStatistics,             BOOL,     "0"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "10 minutes"),
   V(ExcludeNodes,                ROUTERSET, NULL),
   V(ExcludeExitNodes,            ROUTERSET, NULL),
@@ -205,12 +207,15 @@ static config_var_t _option_vars[] = {
   V(ExitNodes,                   ROUTERSET, NULL),
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
+  V(ExitPortStatistics,          BOOL,     "0"),
+  V(ExtraInfoStatistics,         BOOL,     "0"),
   V(FallbackNetworkstatusFile,   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
   V(FascistFirewall,             BOOL,     "0"),
   V(FirewallPorts,               CSV,      ""),
   V(FastFirstHopPK,              BOOL,     "1"),
   V(FetchDirInfoEarly,           BOOL,     "0"),
+  V(FetchDirInfoExtraEarly,      BOOL,     "0"),
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
@@ -222,6 +227,8 @@ static config_var_t _option_vars[] = {
 #endif
   OBSOLETE("Group"),
   V(HardwareAccel,               BOOL,     "0"),
+  V(AccelName,                   STRING,   NULL),
+  V(AccelDir,                    FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
   V(HidServDirectoryV2,          BOOL,     "1"),
   VAR("HiddenServiceDir",    LINELIST_S, RendConfigLines,    NULL),
@@ -238,6 +245,10 @@ static config_var_t _option_vars[] = {
   V(HttpProxyAuthenticator,      STRING,   NULL),
   V(HttpsProxy,                  STRING,   NULL),
   V(HttpsProxyAuthenticator,     STRING,   NULL),
+  V(Socks4Proxy,                 STRING,   NULL),
+  V(Socks5Proxy,                 STRING,   NULL),
+  V(Socks5ProxyUsername,         STRING,   NULL),
+  V(Socks5ProxyPassword,         STRING,   NULL),
   OBSOLETE("IgnoreVersion"),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   VAR("Log",                     LINELIST, Logs,             NULL),
@@ -330,6 +341,7 @@ static config_var_t _option_vars[] = {
   V(V3AuthDistDelay,             INTERVAL, "5 minutes"),
   V(V3AuthNIntervalsValid,       UINT,     "3"),
   V(V3AuthUseLegacyKey,          BOOL,     "0"),
+  V(V3BandwidthsFile,            FILENAME, NULL),
   VAR("VersioningAuthoritativeDirectory",BOOL,VersioningAuthoritativeDir, "0"),
   V(VirtualAddrNetwork,          STRING,   "127.192.0.0/10"),
   V(WarnPlaintextPorts,          CSV,      "23,109,110,143"),
@@ -444,6 +456,10 @@ static config_var_description_t options_description[] = {
    * FetchUselessDescriptors */
   { "HardwareAccel", "If set, Tor tries to use hardware crypto accelerators "
     "when it can." },
+  { "AccelName", "If set, try to use hardware crypto accelerator with this "
+    "specific ID." },
+  { "AccelDir", "If set, look in this directory for the dynamic hardware "
+    "engine in addition to OpenSSL default path." },
   /* HashedControlPassword */
   { "HTTPProxy", "Force Tor to make all HTTP directory requests through this "
     "host:port (or host:80 if port is not set)." },
@@ -700,20 +716,6 @@ static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void init_libevent(void);
 static int opt_streq(const char *s1, const char *s2);
-/** Versions of libevent. */
-typedef enum {
-  /* Note: we compare these, so it's important that "old" precede everything,
-   * and that "other" come last. */
-  LE_OLD=0, LE_10C, LE_10D, LE_10E, LE_11, LE_11A, LE_11B, LE_12, LE_12A,
-  LE_13, LE_13A, LE_13B, LE_13C, LE_13D, LE_13E,
-  LE_140, LE_141, LE_142, LE_143, LE_144, LE_145, LE_146, LE_147, LE_148,
-  LE_1499,
-  LE_OTHER
-} le_version_t;
-static le_version_t decode_libevent_version(const char *v, int *bincompat_out);
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-static void check_libevent_version(const char *m, int server);
-#endif
 
 /** Magic value for or_options_t. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -818,7 +820,7 @@ set_options(or_options_t *new_val, char **msg)
   return 0;
 }
 
-extern const char tor_svn_revision[]; /* from tor_main.c */
+extern const char tor_git_revision[]; /* from tor_main.c */
 
 /** The version of this Tor process, as parsed. */
 static char *_version = NULL;
@@ -828,10 +830,10 @@ const char *
 get_version(void)
 {
   if (_version == NULL) {
-    if (strlen(tor_svn_revision)) {
-      size_t len = strlen(VERSION)+strlen(tor_svn_revision)+8;
+    if (strlen(tor_git_revision)) {
+      size_t len = strlen(VERSION)+strlen(tor_git_revision)+16;
       _version = tor_malloc(len);
-      tor_snprintf(_version, len, "%s (r%s)", VERSION, tor_svn_revision);
+      tor_snprintf(_version, len, "%s (git-%s)", VERSION, tor_git_revision);
     } else {
       _version = tor_strdup(VERSION);
     }
@@ -921,6 +923,8 @@ add_default_trusted_dir_authorities(authority_type_t type)
     "dannenberg orport=443 no-v2 "
       "v3ident=585769C78764D58426B8B52B6651A5A71137189A "
       "213.73.91.31:80 7BE6 83E6 5D48 1413 21C5 ED92 F075 C553 64AC 7123",
+    "urras orport=80 no-v2 v3ident=80550987E1D626E3EBA5E5E75A458DE0626D088C "
+      "208.83.223.34:443 0AD3 FA88 4D18 F89E EA2D 89C0 1937 9E0E 7FD9 4417",
     NULL
   };
   for (i=0; dirservers[i]; i++) {
@@ -1224,26 +1228,28 @@ options_need_geoip_info(or_options_t *options, const char **reason_out)
 
 /** Return the bandwidthrate that we are going to report to the authorities
  * based on the config options. */
-int
+uint32_t
 get_effective_bwrate(or_options_t *options)
 {
-  int bw = (int)options->BandwidthRate;
+  uint64_t bw = options->BandwidthRate;
   if (bw > options->MaxAdvertisedBandwidth)
-    bw = (int)options->MaxAdvertisedBandwidth;
+    bw = options->MaxAdvertisedBandwidth;
   if (options->RelayBandwidthRate > 0 && bw > options->RelayBandwidthRate)
-    bw = (int)options->RelayBandwidthRate;
-  return bw;
+    bw = options->RelayBandwidthRate;
+  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
+  return (uint32_t)bw;
 }
 
 /** Return the bandwidthburst that we are going to report to the authorities
  * based on the config options. */
-int
+uint32_t
 get_effective_bwburst(or_options_t *options)
 {
-  int bw = (int)options->BandwidthBurst;
+  uint64_t bw = options->BandwidthBurst;
   if (options->RelayBandwidthBurst > 0 && bw > options->RelayBandwidthBurst)
-    bw = (int)options->RelayBandwidthBurst;
-  return bw;
+    bw = options->RelayBandwidthBurst;
+  /* ensure_bandwidth_cap() makes sure that this cast can't overflow. */
+  return (uint32_t)bw;
 }
 
 /** Fetch the active option list, and take actions based on it. All of the
@@ -1307,14 +1313,14 @@ options_act(or_options_t *old_options)
     return 0;
 
   /* Finish backgrounding the process */
-  if (running_tor && options->RunAsDaemon) {
+  if (options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon(options->DataDirectory);
   }
 
   /* Write our PID to the PID file. If we do not have write permissions we
    * will log a warning */
-  if (running_tor && options->PidFile)
+  if (options->PidFile)
     write_pidfile(options->PidFile);
 
   /* Register addressmap directives */
@@ -1405,13 +1411,29 @@ options_act(or_options_t *old_options)
     geoip_load_file(actual_fname, options);
     tor_free(actual_fname);
   }
-#ifdef ENABLE_GEOIP_STATS
-  log_warn(LD_CONFIG, "We are configured to measure GeoIP statistics, but "
-           "the way these statistics are measured has changed "
-           "significantly in later versions of Tor. The results may not be "
-           "as expected if you are used to later versions.  Be sure you "
-           "know what you are doing.");
-#endif
+
+  if (options->DirReqStatistics && !geoip_is_loaded()) {
+    /* Check if GeoIP database could be loaded. */
+    log_warn(LD_CONFIG, "Configured to measure directory request "
+             "statistics, but no GeoIP database found!");
+    return -1;
+  }
+
+  if (options->EntryStatistics) {
+    if (should_record_bridge_info(options)) {
+      /* Don't allow measuring statistics on entry guards when configured
+       * as bridge. */
+      log_warn(LD_CONFIG, "Bridges cannot be configured to measure "
+               "additional GeoIP statistics as entry guards.");
+      return -1;
+    } else if (!geoip_is_loaded()) {
+      /* Check if GeoIP database could be loaded. */
+      log_warn(LD_CONFIG, "Configured to measure entry node statistics, "
+               "but no GeoIP database found!");
+      return -1;
+    }
+  }
+
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||
@@ -2932,7 +2954,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
        !strcmpstart(uname, "Windows Me"))) {
     log(LOG_WARN, LD_CONFIG, "Tor is running as a server, but you are "
         "running %s; this probably won't work. See "
-        "http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ServerOS "
+        "https://wiki.torproject.org/TheOnionRouter/TorFAQ#ServerOS "
         "for details.", uname);
   }
 
@@ -3150,6 +3172,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
           options->V3AuthoritativeDir))
       REJECT("AuthoritativeDir is set, but none of "
              "(Bridge/HS/V1/V2/V3)AuthoritativeDir is set.");
+    /* If we have a v3bandwidthsfile and it's broken, complain on startup */
+    if (options->V3BandwidthsFile && !old_options) {
+      dirserv_read_measured_bandwidths(options->V3BandwidthsFile, NULL);
+    }
   }
 
   if (options->AuthoritativeDir && !options->DirPort)
@@ -3164,6 +3190,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->HSAuthorityRecordStats && !options->HSAuthoritativeDir)
     REJECT("HSAuthorityRecordStats is set but we're not running as "
            "a hidden service authority.");
+
+  if (options->FetchDirInfoExtraEarly && !options->FetchDirInfoEarly)
+    REJECT("FetchDirInfoExtraEarly requires that you also set "
+           "FetchDirInfoEarly");
 
   if (options->ConnLimit <= 0) {
     r = tor_snprintf(buf, sizeof(buf),
@@ -3413,7 +3443,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Failed to parse accounting options. See logs for details.");
 
   if (options->HttpProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpProxy, NULL,
+    if (tor_addr_port_parse(options->HttpProxy,
                         &options->HttpProxyAddr, &options->HttpProxyPort) < 0)
       REJECT("HttpProxy failed to parse or resolve. Please fix.");
     if (options->HttpProxyPort == 0) { /* give it a default */
@@ -3427,7 +3457,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HttpsProxy) { /* parse it now */
-    if (parse_addr_port(LOG_WARN, options->HttpsProxy, NULL,
+    if (tor_addr_port_parse(options->HttpsProxy,
                         &options->HttpsProxyAddr, &options->HttpsProxyPort) <0)
       REJECT("HttpsProxy failed to parse or resolve. Please fix.");
     if (options->HttpsProxyPort == 0) { /* give it a default */
@@ -3439,6 +3469,45 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (strlen(options->HttpsProxyAuthenticator) >= 48)
       REJECT("HttpsProxyAuthenticator is too long (>= 48 chars).");
   }
+
+  if (options->Socks4Proxy) { /* parse it now */
+    if (tor_addr_port_parse(options->Socks4Proxy,
+                        &options->Socks4ProxyAddr,
+                        &options->Socks4ProxyPort) <0)
+      REJECT("Socks4Proxy failed to parse or resolve. Please fix.");
+    if (options->Socks4ProxyPort == 0) { /* give it a default */
+      options->Socks4ProxyPort = 1080;
+    }
+  }
+
+  if (options->Socks5Proxy) { /* parse it now */
+    if (tor_addr_port_parse(options->Socks5Proxy,
+                            &options->Socks5ProxyAddr,
+                            &options->Socks5ProxyPort) <0)
+      REJECT("Socks5Proxy failed to parse or resolve. Please fix.");
+    if (options->Socks5ProxyPort == 0) { /* give it a default */
+      options->Socks5ProxyPort = 1080;
+    }
+  }
+
+  if (options->Socks4Proxy && options->Socks5Proxy)
+    REJECT("You cannot specify both Socks4Proxy and SOCKS5Proxy");
+
+  if (options->Socks5ProxyUsername) {
+    size_t len;
+
+    len = strlen(options->Socks5ProxyUsername);
+    if (len < 1 || len > 255)
+      REJECT("Socks5ProxyUsername must be between 1 and 255 characters.");
+
+    if (!options->Socks5ProxyPassword)
+      REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
+
+    len = strlen(options->Socks5ProxyPassword);
+    if (len < 1 || len > 255)
+      REJECT("Socks5ProxyPassword must be between 1 and 255 characters.");
+  } else if (options->Socks5ProxyPassword)
+    REJECT("Socks5ProxyPassword must be included with Socks5ProxyUsername.");
 
   if (options->HashedControlPassword) {
     smartlist_t *sl = decode_hashed_passwords(options->HashedControlPassword);
@@ -3588,6 +3657,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->PreferTunneledDirConns && !options->TunnelDirConns)
     REJECT("Must set TunnelDirConns if PreferTunneledDirConns is set.");
 
+  if ((options->Socks4Proxy || options->Socks5Proxy) &&
+      !options->HttpProxy && !options->PreferTunneledDirConns)
+    REJECT("When Socks4Proxy or Socks5Proxy is configured, "
+           "PreferTunneledDirConns and TunnelDirConns must both be "
+           "set to 1, or HttpProxy must be configured.");
+
   if (options->AutomapHostsSuffixes) {
     SMARTLIST_FOREACH(options->AutomapHostsSuffixes, char *, suf,
     {
@@ -3667,6 +3742,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
                         "testing Tor network!");
   }
 
+  if (options->AccelName && !options->HardwareAccel)
+    options->HardwareAccel = 1;
+  if (options->AccelDir && !options->AccelName)
+    REJECT("Can't use hardware crypto accelerator dir without engine name.");
+
   return 0;
 #undef REJECT
 #undef COMPLAIN
@@ -3724,15 +3804,27 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
     return -1;
   }
 
-  if (old->HardwareAccel != new_val->HardwareAccel) {
-    *msg = tor_strdup("While Tor is running, changing HardwareAccel is "
-                      "not allowed.");
+  if ((old->HardwareAccel != new_val->HardwareAccel)
+      || !opt_streq(old->AccelName, new_val->AccelName)
+      || !opt_streq(old->AccelDir, new_val->AccelDir)) {
+    *msg = tor_strdup("While Tor is running, changing OpenSSL hardware "
+                      "acceleration engine is not allowed.");
     return -1;
   }
 
   if (old->TestingTorNetwork != new_val->TestingTorNetwork) {
     *msg = tor_strdup("While Tor is running, changing TestingTorNetwork "
                       "is not allowed.");
+    return -1;
+  }
+
+  if (old->CellStatistics != new_val->CellStatistics ||
+      old->DirReqStatistics != new_val->DirReqStatistics ||
+      old->EntryStatistics != new_val->EntryStatistics ||
+      old->ExitPortStatistics != new_val->ExitPortStatistics) {
+    *msg = tor_strdup("While Tor is running, changing either "
+                      "CellStatistics, DirReqStatistics, EntryStatistics, "
+                      "or ExitPortStatistics is not allowed.");
     return -1;
   }
 
@@ -4013,6 +4105,12 @@ options_init_from_torrc(int argc, char **argv)
 
   if (argc > 1 && (!strcmp(argv[1],"--version"))) {
     printf("Tor version %s.\n",get_version());
+    exit(0);
+  }
+  if (argc > 1 && (!strcmp(argv[1],"--digests"))) {
+    printf("Tor version %s.\n",get_version());
+    printf("%s", libor_get_digests());
+    printf("%s", tor_get_digests());
     exit(0);
   }
 
@@ -4759,30 +4857,56 @@ static struct unit_table_t time_units[] = {
 static uint64_t
 config_parse_units(const char *val, struct unit_table_t *u, int *ok)
 {
-  uint64_t v;
-  char *cp;
+  uint64_t v = 0;
+  double d = 0;
+  int use_float = 0;
+
+  smartlist_t *sl;
 
   tor_assert(ok);
+  sl = smartlist_create();
+  smartlist_split_string(sl, val, NULL,
+                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
 
-  v = tor_parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
-  if (!*ok)
-    return 0;
-  if (!cp) {
-    *ok = 1;
-    return v;
+  if (smartlist_len(sl) < 1 || smartlist_len(sl) > 2) {
+    *ok = 0;
+    goto done;
   }
-  while (TOR_ISSPACE(*cp))
-    ++cp;
+
+  v = tor_parse_uint64(smartlist_get(sl,0), 10, 0, UINT64_MAX, ok, NULL);
+  if (!*ok) {
+    int r = sscanf(smartlist_get(sl,0), "%lf", &d);
+    if (r == 0 || d < 0)
+      goto done;
+    use_float = 1;
+  }
+
+  if (smartlist_len(sl) == 1) {
+    *ok = 1;
+    v = use_float ? DBL_TO_U64(d) :  v;
+    goto done;
+  }
+
   for ( ;u->unit;++u) {
-    if (!strcasecmp(u->unit, cp)) {
-      v *= u->multiplier;
+    if (!strcasecmp(u->unit, smartlist_get(sl,1))) {
+      if (use_float)
+        v = u->multiplier * d;
+      else
+        v *= u->multiplier;
       *ok = 1;
-      return v;
+      goto done;
     }
   }
-  log_warn(LD_CONFIG, "Unknown unit '%s'.", cp);
+  log_warn(LD_CONFIG, "Unknown unit '%s'.", (char*)smartlist_get(sl,1));
   *ok = 0;
-  return 0;
+ done:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+
+  if (*ok)
+    return v;
+  else
+    return 0;
 }
 
 /** Parse a string in the format "number unit", where unit is a unit of
@@ -4814,256 +4938,37 @@ config_parse_interval(const char *s, int *ok)
   return (int)r;
 }
 
-/* This is what passes for version detection on OSX.  We set
- * MACOSX_KQUEUE_IS_BROKEN to true iff we're on a version of OSX before
- * 10.4.0 (aka 1040). */
-#ifdef __APPLE__
-#ifdef __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
-#define MACOSX_KQUEUE_IS_BROKEN \
-  (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1040)
-#else
-#define MACOSX_KQUEUE_IS_BROKEN 0
-#endif
-#endif
-
 /**
  * Initialize the libevent library.
  */
 static void
 init_libevent(void)
 {
+  const char *badness=NULL;
+
   configure_libevent_logging();
   /* If the kernel complains that some method (say, epoll) doesn't
    * exist, we don't care about it, since libevent will cope.
    */
   suppress_libevent_log_msg("Function not implemented");
-#ifdef __APPLE__
-  if (MACOSX_KQUEUE_IS_BROKEN ||
-      decode_libevent_version(event_get_version(), NULL) < LE_11B) {
-    setenv("EVENT_NOKQUEUE","1",1);
-  }
-#endif
 
-  /* In libevent versions before 2.0, it's hard to keep binary compatibility
-   * between upgrades, and unpleasant to detect when the version we compiled
-   * against is unlike the version we have linked against. Here's how. */
-#if defined(_EVENT_VERSION) && defined(HAVE_EVENT_GET_VERSION)
-  /* We have a header-file version and a function-call version. Easy. */
-  if (strcmp(_EVENT_VERSION, event_get_version())) {
-    int compat1 = -1, compat2 = -1;
-    int verybad, prettybad ;
-    decode_libevent_version(_EVENT_VERSION, &compat1);
-    decode_libevent_version(event_get_version(), &compat2);
-    verybad = compat1 != compat2;
-    prettybad = (compat1 == -1 || compat2 == -1) && compat1 != compat2;
+  tor_check_libevent_header_compatibility();
 
-    log(verybad ? LOG_WARN : (prettybad ? LOG_NOTICE : LOG_INFO),
-        LD_GENERAL, "We were compiled with headers from version %s "
-        "of Libevent, but we're using a Libevent library that says it's "
-        "version %s.", _EVENT_VERSION, event_get_version());
-    if (verybad)
-      log_warn(LD_GENERAL, "This will almost certainly make Tor crash.");
-    else if (prettybad)
-      log_notice(LD_GENERAL, "If Tor crashes, this might be why.");
-    else
-      log_info(LD_GENERAL, "I think these versions are binary-compatible.");
-  }
-#elif defined(HAVE_EVENT_GET_VERSION)
-  /* event_get_version but no _EVENT_VERSION.  We might be in 1.4.0-beta or
-     earlier, where that's normal.  To see whether we were compiled with an
-     earlier version, let's see whether the struct event defines MIN_HEAP_IDX.
-  */
-#ifdef HAVE_STRUCT_EVENT_MIN_HEAP_IDX
-  /* The header files are 1.4.0-beta or later. If the version is not
-   * 1.4.0-beta, we are incompatible. */
-  {
-    if (strcmp(event_get_version(), "1.4.0-beta")) {
-      log_warn(LD_GENERAL, "It's a little hard to tell, but you seem to have "
-               "Libevent 1.4.0-beta header files, whereas you have linked "
-               "against Libevent %s.  This will probably make Tor crash.",
-               event_get_version());
-    }
-  }
-#else
-  /* Our headers are 1.3e or earlier. If the library version is not 1.4.x or
-     later, we're probably fine. */
-  {
-    const char *v = event_get_version();
-    if ((v[0] == '1' && v[2] == '.' && v[3] > '3') || v[0] > '1') {
-      log_warn(LD_GENERAL, "It's a little hard to tell, but you seem to have "
-               "Libevent header file from 1.3e or earlier, whereas you have "
-               "linked against Libevent %s.  This will probably make Tor "
-               "crash.", event_get_version());
-    }
-  }
-#endif
+  tor_libevent_initialize();
 
-#elif defined(_EVENT_VERSION)
-#warn "_EVENT_VERSION is defined but not get_event_version(): Libevent is odd."
-#else
-  /* Your libevent is ancient. */
-#endif
-
-  event_init();
   suppress_libevent_log_msg(NULL);
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-  /* Making this a NOTICE for now so we can link bugs to a libevent versions
-   * or methods better. */
-  log(LOG_NOTICE, LD_GENERAL,
-      "Initialized libevent version %s using method %s. Good.",
-      event_get_version(), event_get_method());
-  check_libevent_version(event_get_method(), get_options()->ORPort != 0);
-#else
-  log(LOG_NOTICE, LD_GENERAL,
-      "Initialized old libevent (version 1.0b or earlier).");
-  log(LOG_WARN, LD_GENERAL,
-      "You have a *VERY* old version of libevent.  It is likely to be buggy; "
-      "please build Tor with a more recent version.");
-#endif
-}
 
-/** Table mapping return value of event_get_version() to le_version_t. */
-static const struct {
-  const char *name; le_version_t version; int bincompat;
-} le_version_table[] = {
-  /* earlier versions don't have get_version. */
-  { "1.0c", LE_10C, 1},
-  { "1.0d", LE_10D, 1},
-  { "1.0e", LE_10E, 1},
-  { "1.1",  LE_11,  1 },
-  { "1.1a", LE_11A, 1 },
-  { "1.1b", LE_11B, 1 },
-  { "1.2",  LE_12,  1 },
-  { "1.2a", LE_12A, 1 },
-  { "1.3",  LE_13,  1 },
-  { "1.3a", LE_13A, 1 },
-  { "1.3b", LE_13B, 1 },
-  { "1.3c", LE_13C, 1 },
-  { "1.3d", LE_13D, 1 },
-  { "1.3e", LE_13E, 1 },
-  { "1.4.0-beta", LE_140, 2 },
-  { "1.4.1-beta", LE_141, 2 },
-  { "1.4.2-rc",   LE_142, 2 },
-  { "1.4.3-stable", LE_143, 2 },
-  { "1.4.4-stable", LE_144, 2 },
-  { "1.4.5-stable", LE_145, 2 },
-  { "1.4.6-stable", LE_146, 2 },
-  { "1.4.7-stable", LE_147, 2 },
-  { "1.4.8-stable", LE_148, 2 },
-  { "1.4.99-trunk", LE_1499, 3 },
-  { NULL, LE_OTHER, 0 }
-};
-
-/** Return the le_version_t for the current version of libevent.  If the
- * version is very new, return LE_OTHER.  If the version is so old that it
- * doesn't support event_get_version(), return LE_OLD. */
-static le_version_t
-decode_libevent_version(const char *v, int *bincompat_out)
-{
-  int i;
-  for (i=0; le_version_table[i].name; ++i) {
-    if (!strcmp(le_version_table[i].name, v)) {
-      if (bincompat_out)
-        *bincompat_out = le_version_table[i].bincompat;
-      return le_version_table[i].version;
-    }
-  }
-  if (v[0] != '1' && bincompat_out)
-    *bincompat_out = 100;
-  else if (!strcmpstart(v, "1.4") && bincompat_out)
-    *bincompat_out = 2;
-  return LE_OTHER;
-}
-
-#if defined(HAVE_EVENT_GET_VERSION) && defined(HAVE_EVENT_GET_METHOD)
-/**
- * Compare the given libevent method and version to a list of versions
- * which are known not to work.  Warn the user as appropriate.
- */
-static void
-check_libevent_version(const char *m, int server)
-{
-  int buggy = 0, iffy = 0, slow = 0, thread_unsafe = 0;
-  le_version_t version;
-  const char *v = event_get_version();
-  const char *badness = NULL;
-  const char *sad_os = "";
-
-  version = decode_libevent_version(v, NULL);
-
-  /* XXX Would it be worthwhile disabling the methods that we know
-   * are buggy, rather than just warning about them and then proceeding
-   * to use them? If so, we should probably not wrap this whole thing
-   * in HAVE_EVENT_GET_VERSION and HAVE_EVENT_GET_METHOD. -RD */
-  /* XXXX The problem is that it's not trivial to get libevent to change it's
-   * method once it's initialized, and it's not trivial to tell what method it
-   * will use without initializing it.  I guess we could preemptively disable
-   * buggy libevent modes based on the version _before_ initializing it,
-   * though, but then there's no good way (afaict) to warn "I would have used
-   * kqueue, but instead I'm using select." -NM */
-  if (!strcmp(m, "kqueue")) {
-    if (version < LE_11B)
-      buggy = 1;
-  } else if (!strcmp(m, "epoll")) {
-    if (version < LE_11)
-      iffy = 1;
-  } else if (!strcmp(m, "poll")) {
-    if (version < LE_10E)
-      buggy = 1;
-    else if (version < LE_11)
-      slow = 1;
-  } else if (!strcmp(m, "select")) {
-    if (version < LE_11)
-      slow = 1;
-  } else if (!strcmp(m, "win32")) {
-    if (version < LE_11B)
-      buggy = 1;
-  }
-
-  /* Libevent versions before 1.3b do very badly on operating systems with
-   * user-space threading implementations. */
-#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)
-  if (server && version < LE_13B) {
-    thread_unsafe = 1;
-    sad_os = "BSD variants";
-  }
-#elif defined(__APPLE__) || defined(__darwin__)
-  if (server && version < LE_13B) {
-    thread_unsafe = 1;
-    sad_os = "Mac OS X";
-  }
-#endif
-
-  if (thread_unsafe) {
-    log(LOG_WARN, LD_GENERAL,
-        "Libevent version %s often crashes when running a Tor server with %s. "
-        "Please use the latest version of libevent (1.3b or later)",v,sad_os);
-    badness = "BROKEN";
-  } else if (buggy) {
-    log(LOG_WARN, LD_GENERAL,
-        "There are serious bugs in using %s with libevent %s. "
-        "Please use the latest version of libevent.", m, v);
-    badness = "BROKEN";
-  } else if (iffy) {
-    log(LOG_WARN, LD_GENERAL,
-        "There are minor bugs in using %s with libevent %s. "
-        "You may want to use the latest version of libevent.", m, v);
-    badness = "BUGGY";
-  } else if (slow && server) {
-    log(LOG_WARN, LD_GENERAL,
-        "libevent %s can be very slow with %s. "
-        "When running a server, please use the latest version of libevent.",
-        v,m);
-    badness = "SLOW";
-  }
+  tor_check_libevent_version(tor_libevent_get_method(),
+                             get_options()->ORPort != 0,
+                             &badness);
   if (badness) {
+    const char *v = tor_libevent_get_version_str();
+    const char *m = tor_libevent_get_method();
     control_event_general_status(LOG_WARN,
         "BAD_LIBEVENT VERSION=%s METHOD=%s BADNESS=%s RECOVERED=NO",
                                  v, m, badness);
   }
-
 }
-#endif
 
 /** Return the persistent state struct for this Tor. */
 or_state_t *

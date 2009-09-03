@@ -36,8 +36,6 @@
 #include "log.h"
 #include "container.h"
 
-#include <event.h>
-
 #define TRUNCATED_STR "[...truncated]"
 #define TRUNCATED_STR_LEN 14
 
@@ -920,65 +918,6 @@ switch_logs_debug(void)
   _log_global_min_severity = get_min_log_level();
   UNLOCK_LOGS();
 }
-
-#ifdef HAVE_EVENT_SET_LOG_CALLBACK
-/** A string which, if it appears in a libevent log, should be ignored. */
-static const char *suppress_msg = NULL;
-/** Callback function passed to event_set_log() so we can intercept
- * log messages from libevent. */
-static void
-libevent_logging_callback(int severity, const char *msg)
-{
-  char buf[1024];
-  size_t n;
-  if (suppress_msg && strstr(msg, suppress_msg))
-    return;
-  n = strlcpy(buf, msg, sizeof(buf));
-  if (n && n < sizeof(buf) && buf[n-1] == '\n') {
-    buf[n-1] = '\0';
-  }
-  switch (severity) {
-    case _EVENT_LOG_DEBUG:
-      log(LOG_DEBUG, LD_NET, "Message from libevent: %s", buf);
-      break;
-    case _EVENT_LOG_MSG:
-      log(LOG_INFO, LD_NET, "Message from libevent: %s", buf);
-      break;
-    case _EVENT_LOG_WARN:
-      log(LOG_WARN, LD_GENERAL, "Warning from libevent: %s", buf);
-      break;
-    case _EVENT_LOG_ERR:
-      log(LOG_ERR, LD_GENERAL, "Error from libevent: %s", buf);
-      break;
-    default:
-      log(LOG_WARN, LD_GENERAL, "Message [%d] from libevent: %s",
-          severity, buf);
-      break;
-  }
-}
-/** Set hook to intercept log messages from libevent. */
-void
-configure_libevent_logging(void)
-{
-  event_set_log_callback(libevent_logging_callback);
-}
-/** Ignore any libevent log message that contains <b>msg</b>. */
-void
-suppress_libevent_log_msg(const char *msg)
-{
-  suppress_msg = msg;
-}
-#else
-void
-configure_libevent_logging(void)
-{
-}
-void
-suppress_libevent_log_msg(const char *msg)
-{
-  (void)msg;
-}
-#endif
 
 #if 0
 static void

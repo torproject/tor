@@ -1,5 +1,4 @@
 #!/bin/bash
-# $Id$
 # Copyright 2006 Michael Mohr with modifications by Roger Dingledine
 # See LICENSE for licensing information.
 

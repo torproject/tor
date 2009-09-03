@@ -1,7 +1,5 @@
 Filename: 129-reject-plaintext-ports.txt
 Title: Block Insecure Protocols by Default
-Version: $Revision$
-Last-Modified: $Date$
 Author: Kevin Bauer & Damon McCoy
 Created: 2008-01-15
 Status: Closed

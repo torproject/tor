@@ -1,7 +1,5 @@
 Filename: 108-mtbf-based-stability.txt
 Title: Base "Stable" Flag on Mean Time Between Failures
-Version: $Revision$
-Last-Modified: $Date$
 Author: Nick Mathewson
 Created: 10-Mar-2007
 Status: Closed

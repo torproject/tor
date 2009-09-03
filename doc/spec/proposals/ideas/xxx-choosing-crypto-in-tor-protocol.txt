@@ -1,0 +1,138 @@
+Filename: xxx-choosing-crypto-in-tor-protocol.txt
+Title: Picking cryptographic standards in the Tor wire protocol
+Author: Marian
+Created: 2009-05-16
+Status: Draft
+
+Motivation:
+
+  SHA-1 is horribly outdated and not suited for security critical
+  purposes. SHA-2, RIPEMD-160, Whirlpool and Tigerare good options
+  for a short-term replacement, but in the long run, we will
+  probably want to upgrade to the winner or a semi-finalist of the
+  SHA-3 competition.
+
+  For a 2006 comparison of different hash algorithms, read:
+  http://www.sane.nl/sane2006/program/final-papers/R10.pdf
+
+  Other reading about SHA-1:
+  http://www.schneier.com/blog/archives/2005/02/sha1_broken.html
+  http://www.schneier.com/blog/archives/2005/08/new_cryptanalyt.html
+  http://www.schneier.com/paper-preimages.html
+
+  Additionally, AES has been theoretically broken for years. While
+  the attack is still not efficient enough that the public sector
+  has been able to prove that it works, we should probably consider
+  the time between a theoretical attack and a practical attack as an
+  opportunity to figure out how to upgrade to a better algorithm,
+  such as Twofish.
+
+  See:
+  http://schneier.com/crypto-gram-0209.html#1
+
+Design:
+
+  I suggest that nodes should publish in directories which
+  cryptographic standards, such as hash algorithms and ciphers,
+  they support. Clients communicating with nodes will then
+  pick whichever of those cryptographic standards they prefer
+  the most. In the case that the node does not publish which
+  cryptographic standards it supports, the client should assume
+  that the server supports the older standards, such as SHA-1
+  and AES, until such time as we choose to desupport those
+  standards.
+
+  Node to node communications could work similarly. However, in
+  case they both support a set of algorithms but have different
+  preferences, the disagreement would have to be resolved
+  somehow. Two possibilities include:
+  * the node requesting communications presents which
+    cryptographic standards it supports in the request. The
+    other node picks.
+  * both nodes send each other lists of what they support and
+    what version of Tor they are using. The newer node picks,
+    based on the assumption that the newer node has the most up
+    to date information about which hash algorithm is the best.
+    Of course, the node could lie about its version, but then
+    again, it could also maliciously choose only to support older
+    algorithms.
+
+  Using this method, we could potentially add server side support
+  to hash algorithms and ciphers before we instruct clients to
+  begin preferring those hash algorithms and ciphers. In this way,
+  the clients could upgrade and the servers would already support
+  the newly preferred hash algorithms and ciphers, even if the
+  servers were still using older versions of Tor, so long as the
+  older versions of Tor were at least new enough to have server
+  side support.
+
+  This would make quickly upgrading to new hash algorithms and
+  ciphers easier. This could be very useful when new attacks
+  are published.
+
+  One concern is that client preferences could expose the client
+  to segmentation attacks. To mitigate this, we suggest hardcoding
+  preferences in the client, to prevent the client from choosing
+  to use a new hash algorithm or cipher that no one else is using
+  yet. While offering a preference might be useful in case a client
+  with an older version of Tor wants to start using the newer hash
+  algorithm or cipher that everyone else is using, if the client
+  cares enough, he or she can just upgrade Tor.
+
+  We may also have to worry about nodes which, through laziness or
+  maliciousness, refuse to start supporting new hash algorithms or
+  ciphers. This must be balanced with the need to maintain
+  backward compatibility so the client will have a large selection
+  of nodes to pick from. Adding new hash algorithms and ciphers
+  long before we suggest nodes start using them can help mitigate
+  this. However, eventually, once sufficient nodes support new
+  standards, client side support for older standards should be
+  disabled, particularly if there are practical rather than merely
+  theoretical attacks.
+
+  Server side support for older standards can be kept much longer
+  than client side support, since clients using older hashes and
+  ciphers are really only hurting theirselvse.
+
+  If server side support for a hash algorithm or cipher is added
+  but never preferred before we decide we don't really want it,
+  support can be removed without having to worry about backward
+  compatibility.
+
+Security implications:
+  Improving cryptography will improve Tor's security. However, if
+  clients pick different cryptographic standards, they could be
+  partitioned based on their cryptographic preferences. We also
+  need to worry about nodes refusing to support new standards.
+  These issues are detailed above.
+
+Specification:
+
+  Todo. Need better understanding of how Tor currently works or
+  help from someone who does.
+
+Compatibility:
+
+  This idea is intended to allow easier upgrading of cryptographic
+  hash algorithms and ciphers while maintaining backwards
+  compatibility. However, at some point, backwards compatibility
+  with very old hashes and ciphers should be dropped for security
+  reasons.
+
+Implementation:
+
+  Todo.
+
+Performance and scalability nodes:
+
+  Better hashes and cipher are someimes a little more CPU intensive
+  than weaker ones. For instance, on most computers AES is a little
+  faster than Twofish. However, in that example, I consider Twofish's
+  additional security worth the tradeoff.
+
+Acknowledgements:
+
+  Discussed this on IRC with a few people, mostly Nick Mathewson.
+  Nick was particularly helpful in explaining how Tor works,
+  explaining goals, and  providing various links to Tor
+  specifications.

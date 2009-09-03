@@ -1,7 +1,5 @@
 Filename: xxx-port-knocking.txt
 Title: Port knocking for bridge scanning resistance
-Version: $Revision$
-Last-Modified: $Date$
 Author: Jacob Appelbaum
 Created: 19-April-2009
 Status: Draft

@@ -1,4 +1,3 @@
-$Id$
 
                          Tor Protocol Specification
 

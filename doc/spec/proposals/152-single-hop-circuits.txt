@@ -1,7 +1,5 @@
 Filename: 152-single-hop-circuits.txt
 Title: Optionally allow exit from single-hop circuits 
-Version:
-Last-Modified:
 Author: Geoff Goodell
 Created: 13-Jul-2008
 Status: Closed

@@ -8,8 +8,6 @@
 # Usage: nagios-check-tor-authority-cert <authority identity fingerprint>
 # e.g.: nagios-check-tor-authority-cert A9AC67E64B200BBF2FA26DF194AC0469E2A948C6
 
-# $Id$
-
 # Copyright (c) 2008 Peter Palfrader <peter@palfrader.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining

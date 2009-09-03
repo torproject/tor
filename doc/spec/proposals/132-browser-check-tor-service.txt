@@ -1,7 +1,5 @@
 Filename: 132-browser-check-tor-service.txt
 Title: A Tor Web Service For Verifying Correct Browser Configuration
-Version: $Revision$
-Last-Modified: $Date$
 Author: Robert Hogan
 Created: 2008-03-08
 Status: Draft
