@@ -2,8 +2,9 @@ tor (0.2.2.1-alpha-1) experimental; urgency=low
 
   * New upstream version.
   * Forward port patches/03_tor_manpage_in_section_8.dpatch.
+  * Forward port patches/06_add_compile_time_defaults.dpatch.
 
- -- Peter Palfrader <weasel@debian.org>  Thu, 03 Sep 2009 15:06:58 +0200
+ -- Peter Palfrader <weasel@debian.org>  Thu, 03 Sep 2009 15:10:26 +0200
 
 tor (0.2.1.19-1) unstable; urgency=low
 
