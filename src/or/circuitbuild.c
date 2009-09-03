@@ -1504,7 +1504,7 @@ warn_if_last_router_excluded(uint8_t purpose, const extend_info_t *exit)
   if (routerset_contains_extendinfo(rs, exit))
     log_fn(severity, domain, "%s '%s' is in ExcludeNodes%s.  Using anyway.",
            description,exit->nickname,
-           rs==options->ExcludeNodes?"":" or ExcludeExitNodes.");
+           rs==options->ExcludeNodes?"":" or ExcludeExitNodes");
 
   return;
 }

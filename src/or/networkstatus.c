@@ -1910,7 +1910,8 @@ networkstatus_get_param(networkstatus_t *ns, const char *param_name,
   SMARTLIST_FOREACH_BEGIN(ns->net_params, const char *, p) {
     if (!strcmpstart(p, param_name) && p[name_len] == '=') {
       int ok=0;
-      long v = tor_parse_long(p+name_len+1, 10, INT32_MIN, INT32_MAX, &ok,NULL);
+      long v = tor_parse_long(p+name_len+1, 10, INT32_MIN,
+                              INT32_MAX, &ok, NULL);
       if (ok)
         return (int32_t) v;
     }

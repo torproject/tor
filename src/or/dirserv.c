@@ -1864,7 +1864,7 @@ version_from_platform(const char *platform)
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
  *   NS_V3_VOTE - Output a complete V3 NS vote
- *   NS_CONTROL_PORT - Output a NS docunent for the control port
+ *   NS_CONTROL_PORT - Output a NS document for the control port
  */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
