@@ -308,7 +308,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                   SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args) < 2) {
       *msg = tor_strdup("Unable to parse circuit build times: "
-                          "Too few arguments to CircuitBuildTIme");
+                        "Too few arguments to CircuitBuildTime");
       break;
     } else {
       const char *ms_str = smartlist_get(args,0);
@@ -375,7 +375,7 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   }
 
   if (n!=cbt->total_build_times) {
-    log_err(LD_CIRC, "Discrepency in build times count: %d vs %d", n,
+    log_err(LD_CIRC, "Discrepancy in build times count: %d vs %d", n,
             cbt->total_build_times);
   }
   tor_assert(n==cbt->total_build_times);
@@ -396,7 +396,8 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
  *
  * See http://en.wikipedia.org/wiki/Quantile_function,
  * http://en.wikipedia.org/wiki/Inverse_transform_sampling and
- * http://en.wikipedia.org/wiki/Pareto_distribution#Generating_a_random_sample_from_Pareto_distribution
+ * http://en.wikipedia.org/wiki/Pareto_distribution#Generating_a_
+ *     random_sample_from_Pareto_distribution
  * That's right. I'll cite wikipedia all day long.
  */
 double
@@ -551,7 +552,7 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   }
   timeout_rate /= RECENT_CIRCUITS;
 
-  /* If more then 80% of our recent circuits are timing out,
+  /* If more than 80% of our recent circuits are timing out,
    * we need to re-estimate a new initial alpha and timeout */
   if (timeout_rate < MAX_RECENT_TIMEOUT_RATE) {
     return 0;

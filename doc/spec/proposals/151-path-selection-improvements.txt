@@ -8,7 +8,7 @@ Overview
 
   The performance of paths selected can be improved by adjusting the
   CircuitBuildTimeout and avoiding failing guard nodes. This proposal
-  describes a method of tracking buildtime statistics at the client, and 
+  describes a method of tracking buildtime statistics at the client, and
   using those statistics to adjust the CircuitBuildTimeout.
 
 Motivation
@@ -30,15 +30,15 @@ Implementation
     too large, because it will make it difficult for clients to adapt to
     moving between different links.
 
-    From our observations, this value appears to be on the order of 1000, 
+    From our observations, this value appears to be on the order of 1000,
     but is configurable in a #define NCIRCUITS_TO_OBSERVE.
- 
+
   Long Term Storage
 
-    The long-term storage representation is implemented by storing a 
-    histogram with BUILDTIME_BIN_WIDTH millisecond buckets (default 50) when 
+    The long-term storage representation is implemented by storing a
+    histogram with BUILDTIME_BIN_WIDTH millisecond buckets (default 50) when
     writing out the statistics to disk. The format this takes in the
-    state file is 'CircuitBuildTime <bin-ms> <count>', with the total 
+    state file is 'CircuitBuildTime <bin-ms> <count>', with the total
     specified as 'TotalBuildTimes <total>'
     Example:
 
@@ -57,7 +57,7 @@ Implementation
   Learning the CircuitBuildTimeout
 
     Based on studies of build times, we found that the distribution of
-    circuit buildtimes appears to be a Pareto distribution. 
+    circuit buildtimes appears to be a Pareto distribution.
 
     We will calculate the parameters for a Pareto distribution
     fitting the data using the estimators at
@@ -68,7 +68,7 @@ Implementation
     BUILDTIME_PERCENT_CUTOFF (80%) of the mass of the distribution is
     below the timeout value.
 
-    Thus, we expect that the Tor client will accept the fastest 80% of 
+    Thus, we expect that the Tor client will accept the fastest 80% of
     the total number of paths on the network.
 
   Detecting Changing Network Conditions
@@ -76,65 +76,65 @@ Implementation
     We attempt to detect both network connectivty loss and drastic
     changes in the timeout characteristics. Network connectivity loss
     is detected by recording a timestamp every time Tor either completes
-    a TLS connection or receives a cell. If this timestamp is more than 
+    a TLS connection or receives a cell. If this timestamp is more than
     90 seconds in the past, circuit timeouts are no longer counted.
 
-    If more than MAX_RECENT_TIMEOUT_RATE (80%) of the past 
+    If more than MAX_RECENT_TIMEOUT_RATE (80%) of the past
     RECENT_CIRCUITS (20) time out, we assume the network connection
     has changed, and we discard all buildtimes history and compute
     a new timeout by estimating a new Pareto curve using the
     position on the Pareto Quartile function for the ratio of
-    timeouts. 
+    timeouts.
 
   Testing
 
     After circuit build times, storage, and learning are implemented,
     the resulting histogram should be checked for consistency by
-    verifying it persists across successive Tor invocations where 
+    verifying it persists across successive Tor invocations where
     no circuits are built. In addition, we can also use the existing
-    buildtime scripts to record build times, and verify that the histogram 
+    buildtime scripts to record build times, and verify that the histogram
     the python produces matches that which is output to the state file in Tor,
     and verify that the Pareto parameters and cutoff points also match.
-  
+
   Soft timeout vs Hard Timeout
-   
-    At some point, it may be desirable to change the cutoff from a 
+
+    At some point, it may be desirable to change the cutoff from a
     single hard cutoff that destroys the circuit to a soft cutoff and
     a hard cutoff, where the soft cutoff merely triggers the building
-    of a new circuit, and the hard cutoff triggers destruction of the 
+    of a new circuit, and the hard cutoff triggers destruction of the
     circuit.
 
-    Good values for hard and soft cutoffs seem to be 80% and 60% 
+    Good values for hard and soft cutoffs seem to be 80% and 60%
     respectively, but we should eventually justify this with observation.
 
   When to Begin Calculation
 
-    The number of circuits to observe (NCIRCUITS_TO_CUTOFF) before 
-    changing the CircuitBuildTimeout will be tunable via a #define. From 
-    our measurements, a good value for NCIRCUITS_TO_CUTOFF appears to be 
+    The number of circuits to observe (NCIRCUITS_TO_CUTOFF) before
+    changing the CircuitBuildTimeout will be tunable via a #define. From
+    our measurements, a good value for NCIRCUITS_TO_CUTOFF appears to be
     on the order of 100.
 
   Dealing with Timeouts
 
-    Timeouts should be counted as the expectation of the region of 
+    Timeouts should be counted as the expectation of the region of
     of the Pareto distribution beyond the cutoff. The proposal will
     be updated with this value soon.
 
-    Also, in the event of network failure, the observation mechanism 
+    Also, in the event of network failure, the observation mechanism
     should stop collecting timeout data.
 
   Client Hints
 
     Some research still needs to be done to provide initial values
     for CircuitBuildTimeout based on values learned from modem
-    users, DSL users, Cable Modem users, and dedicated links. A 
+    users, DSL users, Cable Modem users, and dedicated links. A
     radiobutton in Vidalia should eventually be provided that
-    sets CircuitBuildTimeout to one of these values and also 
+    sets CircuitBuildTimeout to one of these values and also
     provide the option of purging all learned data, should any exist.
 
     These values can either be published in the directory, or
     shipped hardcoded for a particular Tor version.
-    
+
 Issues
 
   Impact on anonymity
