@@ -229,6 +229,8 @@ circuit_build_times_mode(circuit_build_times_t *cbt)
     }
   }
 
+  tor_free(histogram);
+
   return max_bin*BUILDTIME_BIN_WIDTH;
 }
 
@@ -309,6 +311,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
     if (smartlist_len(args) < 2) {
       *msg = tor_strdup("Unable to parse circuit build times: "
                         "Too few arguments to CircuitBuildTime");
+      SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+      smartlist_free(args);
       break;
     } else {
       const char *ms_str = smartlist_get(args,0);
@@ -333,7 +337,10 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
         circuit_build_times_add_time(cbt, ms);
       }
       N++;
+      SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+      smartlist_free(args);
     }
+
   }
 
   circuit_build_times_shuffle_array(cbt);
@@ -439,9 +446,11 @@ void
 circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff)
 {
-  /* Generate 0.8-1.0... */
+  /* Generate points in [cutoff, 1.0) on the CDF... We want to
+   * stay a bit short of 1.0 though, because longtail is
+   * loooooooooooooooooooooooooooooooooooooooooooooooooooong */
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
-              quantile_cutoff, 1.0);
+              quantile_cutoff, 0.98);
 
   if (gentime < (build_time_t)cbt->timeout*1000) {
     log_warn(LD_CIRC,
