@@ -409,9 +409,9 @@ static config_var_t _state_vars[] = {
   V(LastRotatedOnionKey,              ISOTIME,  NULL),
   V(LastWritten,                      ISOTIME,  NULL),
 
-  VAR("TotalBuildTimes",         UINT,        TotalBuildTimes,     NULL),
-  VAR("CircuitBuildTimeBin",      LINELIST_S,  BuildtimeHistogram,     NULL),
-  VAR("BuildtimeHistogram",      LINELIST_V,  BuildtimeHistogram,     NULL),
+  V("TotalBuildTimes",                UINT,     NULL),
+  VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
+  VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -5068,13 +5068,10 @@ or_state_set(or_state_t *new_state)
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
     tor_free(err);
   }
-
-  if (circuit_build_times_parse_state(&circ_times, global_state, &err) < 0)   {
+  if (circuit_build_times_parse_state(&circ_times, global_state, &err) < 0) {
     log_warn(LD_GENERAL,"%s",err);
     tor_free(err);
-
   }
-
 }
 
 /** Reload the persistent state from disk, generating a new state as needed.

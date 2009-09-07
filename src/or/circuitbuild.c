@@ -20,12 +20,13 @@
  * and random segfaults due to memory corruption (and
  * not even at calls to log() either!)
  */
+ /* XXX022 somebody should rename Tor's log() function, so we can
+  * remove this wart. -RD */
 #undef log
 
 /*
- * Linux doesn't provide lround in math.h by default,
- * but mac os does... Its best just to leave math.h
- * out of the picture entirely.
+ * Linux doesn't provide lround in math.h by default, but mac os does...
+ * It's best just to leave math.h out of the picture entirely.
  */
 //#define log math_h_log
 //#include <math.h>
@@ -86,6 +87,8 @@ static smartlist_t *entry_guards = NULL;
  * and those changes need to be flushed to disk. */
 static int entry_guards_dirty = 0;
 
+/** If set, we're running the unit tests: we should avoid clobbering
+ * our state file. */
 static int unit_tests = 0;
 
 /********* END VARIABLES ************/
@@ -101,12 +104,15 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 static void entry_guards_changed(void);
 static time_t start_of_month(time_t when);
 
+/** Make a note that we're running unit tests (rather than running Tor
+ * itself), so we avoid clobbering our state file. */
 void
 circuitbuild_running_unit_tests(void)
 {
   unit_tests = 1;
 }
 
+/** DOCDOC */
 void
 circuit_build_times_reset(circuit_build_times_t *cbt)
 {
@@ -117,6 +123,7 @@ circuit_build_times_reset(circuit_build_times_t *cbt)
   cbt->computed = 0;
 }
 
+/** DOCDOC */
 void
 circuit_build_times_init(circuit_build_times_t *cbt)
 {
@@ -176,6 +183,7 @@ circuit_build_times_max(circuit_build_times_t *cbt)
   return max_build_time;
 }
 
+/** DOCDOC */
 static build_time_t
 circuit_build_times_min(circuit_build_times_t *cbt)
 {
@@ -183,7 +191,7 @@ circuit_build_times_min(circuit_build_times_t *cbt)
   build_time_t min_build_time = BUILD_TIME_MAX;
   for (i = 0; i < NCIRCUITS_TO_OBSERVE; i++) {
     if (cbt->circuit_build_times[i] && /* 0 <-> uninitialized */
-            cbt->circuit_build_times[i] < min_build_time)
+        cbt->circuit_build_times[i] < min_build_time)
       min_build_time = cbt->circuit_build_times[i];
   }
   if (min_build_time == BUILD_TIME_MAX) {
@@ -217,6 +225,7 @@ circuit_build_times_create_histogram(circuit_build_times_t *cbt,
   return histogram;
 }
 
+/** DOCDOC */
 static build_time_t
 circuit_build_times_mode(circuit_build_times_t *cbt)
 {
@@ -236,7 +245,6 @@ circuit_build_times_mode(circuit_build_times_t *cbt)
 
 /**
  * output a histogram of current circuit build times.
- *
  */
 void
 circuit_build_times_update_state(circuit_build_times_t *cbt,
@@ -283,14 +291,14 @@ circuit_build_times_shuffle_array(circuit_build_times_t *cbt)
    /* This code can only be run on a compact array */
    tor_assert(cbt->total_build_times == cbt->build_times_idx);
    while (n-- > 1) {
-     int k = crypto_rand_int(n + 1);  /* 0 <= k <= n. */
+     int k = crypto_rand_int(n + 1); /* 0 <= k <= n. */
      build_time_t tmp = cbt->circuit_build_times[k];
      cbt->circuit_build_times[k] = cbt->circuit_build_times[n];
      cbt->circuit_build_times[n] = tmp;
    }
 }
 
-/** Load histogram from state */
+/** Load histogram from <b>state</b>. DOCDOC what else? */
 int
 circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                 or_state_t *state, char **msg)
@@ -298,16 +306,17 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   int tot_values = 0, N = 0;
   config_line_t *line;
   int i;
-  msg = NULL;
+  msg = NULL; /* XXX is this a bug? should be *msg, or we'll seg fault
+               * if we try to set it */
   circuit_build_times_init(cbt);
 
   /* We don't support decreasing the table size yet */
   tor_assert(state->TotalBuildTimes <= NCIRCUITS_TO_OBSERVE);
 
   for (line = state->BuildtimeHistogram; line; line = line->next) {
-    smartlist_t * args = smartlist_create();
+    smartlist_t *args = smartlist_create();
     smartlist_split_string(args, line->value, " ",
-                                  SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
+                           SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args) < 2) {
       *msg = tor_strdup("Unable to parse circuit build times: "
                         "Too few arguments to CircuitBuildTime");
@@ -357,9 +366,10 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   tor_assert(cbt->total_build_times == state->TotalBuildTimes);
   tor_assert(tot_values == cbt->total_build_times);
   circuit_build_times_set_timeout(cbt);
-  return (msg ? -1 : 0);
+  return msg ? -1 : 0;
 }
 
+/** DOCDOC */
 void
 circuit_build_times_update_alpha(circuit_build_times_t *cbt)
 {
@@ -454,13 +464,14 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
 
   if (gentime < (build_time_t)cbt->timeout*1000) {
     log_warn(LD_CIRC,
-      "Generated a synthetic timeout LESS than the current timeout: %u vs %d",
-      gentime, cbt->timeout*1000);
+             "Generated a synthetic timeout LESS than the current timeout: "
+             "%u vs %d", gentime, cbt->timeout*1000);
     tor_assert(gentime >= (build_time_t)cbt->timeout*1000);
   } else if (gentime > BUILD_TIME_MAX) {
     gentime = BUILD_TIME_MAX;
     log_info(LD_CIRC,
-      "Generated a synthetic timeout larger than the max: %u", gentime);
+             "Generated a synthetic timeout larger than the max: %u",
+             gentime);
   } else {
     log_info(LD_CIRC, "Generated synthetic time %u for timeout", gentime);
   }
@@ -491,7 +502,7 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
     cbt->Xm = circuit_build_times_min(cbt);
     // Use current timeout to get an estimate on alpha
     circuit_build_times_initial_alpha(cbt, timeout_quantile,
-            cbt->timeout*1000);
+                                      cbt->timeout*1000);
     while (cbt->pre_timeouts-- != 0) {
       circuit_build_times_add_timeout_worker(cbt, timeout_quantile);
     }
@@ -515,7 +526,7 @@ int
 circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
 {
   return circuit_build_times_needs_circuits(cbt) &&
-      approx_time()-cbt->last_circ_at > BUILD_TIMES_TEST_FREQUENCY;
+    approx_time()-cbt->last_circ_at > BUILD_TIMES_TEST_FREQUENCY;
 }
 
 void
@@ -568,7 +579,7 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   }
 
   log_notice(LD_CIRC,
-            "Network connection type appears to have changed. "
+            "Network connection speed appears to have changed. "
             "Resetting timeouts.");
 
   if (Xm >= (build_time_t)cbt->timeout*1000) {
@@ -577,8 +588,8 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
       /* No circuits have completed */
       cbt->timeout *= 2;
       log_warn(LD_CIRC,
-              "Adjusting CircuitBuildTimeout to %d in the hopes that "
-              "some connections will succeed", cbt->timeout);
+               "Adjusting CircuitBuildTimeout to %d in the hopes that "
+               "some connections will succeed", cbt->timeout);
       goto reset;
     }
   }
@@ -593,9 +604,9 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   cbt->timeout = lround(timeout/1000.0);
 
   log_notice(LD_CIRC,
-           "Reset circuit build timeout to %d (%lf, Xm: %d, a: %lf) based on "
-           "%d recent circuit times", cbt->timeout, timeout, cbt->Xm,
-           cbt->alpha, RECENT_CIRCUITS);
+             "Reset circuit build timeout to %d (%lf, Xm: %d, a: %lf) based "
+             "on %d recent circuit times", cbt->timeout, timeout, cbt->Xm,
+             cbt->alpha, RECENT_CIRCUITS);
 
 reset:
 
@@ -638,9 +649,9 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 
   if (cbt->total_build_times < MIN_CIRCUITS_TO_OBSERVE) {
     log_info(LD_CIRC,
-            "Not enough circuits yet to calculate a new build timeout."
-            " Need %d more.",
-            MIN_CIRCUITS_TO_OBSERVE-cbt->total_build_times);
+             "Not enough circuits yet to calculate a new build timeout."
+             " Need %d more.",
+             MIN_CIRCUITS_TO_OBSERVE-cbt->total_build_times);
     return;
   }
 
@@ -653,7 +664,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
   cbt->timeout = lround(timeout/1000.0);
 
   log_info(LD_CIRC,
-          "Set circuit build timeout to %d (%lf, Xm: %d, a: %lf) based on "
+           "Set circuit build timeout to %d (%lf, Xm: %d, a: %lf) based on "
            "%d circuit times", cbt->timeout, timeout, cbt->Xm, cbt->alpha,
            cbt->total_build_times);
 

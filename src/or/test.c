@@ -3472,7 +3472,7 @@ test_circuit_timeout(void)
   log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout2, final.Xm);
 
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
-                circuit_build_times_cdf(&initial, timeout2)) < 0.05);
+                   circuit_build_times_cdf(&initial, timeout2)) < 0.05);
 
   /* Generate MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS timeouts
    * and 1-that regular values. Then check for timeout error
@@ -3491,10 +3491,10 @@ test_circuit_timeout(void)
 
   for (i = 0; i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS; i++) {
     circuit_build_times_add_timeout_worker(&estimate,
-            BUILDTIMEOUT_QUANTILE_CUTOFF);
+                                           BUILDTIMEOUT_QUANTILE_CUTOFF);
     if (i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS-1) {
       circuit_build_times_add_timeout_worker(&final,
-              BUILDTIMEOUT_QUANTILE_CUTOFF);
+                                             BUILDTIMEOUT_QUANTILE_CUTOFF);
     }
   }
 

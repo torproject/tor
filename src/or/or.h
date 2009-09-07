@@ -2871,7 +2871,7 @@ void entry_guards_free_all(void);
 typedef uint32_t build_time_t;
 #define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
 
-/* Have we recieved a cell in the last 90 seconds? */
+/* Have we received a cell in the last 90 seconds? */
 #define NETWORK_LIVE_INTERVAL 90
 
 #define BUILD_TIMEOUT_INITIAL_VALUE 60
@@ -2898,8 +2898,8 @@ typedef struct {
 extern circuit_build_times_t circ_times;
 void circuit_build_times_update_state(circuit_build_times_t *cbt,
                                       or_state_t *state);
-int  circuit_build_times_parse_state(circuit_build_times_t *cbt,
-                                     or_state_t *state, char **msg);
+int circuit_build_times_parse_state(circuit_build_times_t *cbt,
+                                    or_state_t *state, char **msg);
 void circuit_build_times_add_timeout(circuit_build_times_t *cbt);
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
