@@ -2346,7 +2346,7 @@ loop_again:
     return -1;
   }
   if (conn->linked_conn) {
-    /* The other side's handle_write will never actually get called, so
+    /* The other side's handle_write() will never actually get called, so
      * we need to invoke the appropriate callbacks ourself. */
     connection_t *linked = conn->linked_conn;
 
@@ -2363,7 +2363,7 @@ loop_again:
     if (!buf_datalen(linked->outbuf) && conn->active_on_link)
       connection_stop_reading_from_linked_conn(conn);
   }
-  /* If we hit the EOF, call connection_reached_eof. */
+  /* If we hit the EOF, call connection_reached_eof(). */
   if (!conn->marked_for_close &&
       conn->inbuf_reached_eof &&
       connection_reached_eof(conn) < 0) {
@@ -2589,7 +2589,7 @@ connection_handle_write(connection_t *conn, int force)
     return 0; /* do nothing */
 
   if (conn->in_flushed_some) {
-    log_warn(LD_BUG, "called recursively from inside conn->in_flushed_some()");
+    log_warn(LD_BUG, "called recursively from inside conn->in_flushed_some");
     return 0;
   }
 
@@ -2678,8 +2678,8 @@ connection_handle_write(connection_t *conn, int force)
         if (!connection_is_reading(conn)) {
           connection_stop_writing(conn);
           conn->write_blocked_on_bw = 1;
-          /* we'll start reading again when the next second arrives,
-           * and then also start writing again.
+          /* we'll start reading again when we get more tokens in our
+           * read bucket; then we'll start writing again too.
            */
         }
         /* else no problem, we're already reading */
@@ -3067,7 +3067,7 @@ client_check_address_changed(int sock)
     return;
   }
 
-  /* Okay.  If we've used this address previously, we're okay. */
+  /* If we've used this address previously, we're okay. */
   ip_out = ntohl(out_addr.sin_addr.s_addr);
   SMARTLIST_FOREACH(outgoing_addrs, uint32_t*, ip_ptr,
                     if (*ip_ptr == ip_out) return;
