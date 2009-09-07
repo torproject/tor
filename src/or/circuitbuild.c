@@ -306,8 +306,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   int tot_values = 0, N = 0;
   config_line_t *line;
   int i;
-  msg = NULL; /* XXX is this a bug? should be *msg, or we'll seg fault
-               * if we try to set it */
+  *msg = NULL;
   circuit_build_times_init(cbt);
 
   /* We don't support decreasing the table size yet */

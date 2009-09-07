@@ -858,10 +858,8 @@ circuit_build_failed(origin_circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
       /* at Alice, connecting to intro point */
-      circuit_increment_failure_count();
       /* Don't increment failure count, since Bob may have picked
        * the introduction point maliciously */
-      /* XXX Mike, you didn't read my comment above! :) -RD */
       /* Alice will pick a new intro point when this one dies, if
        * the stream in question still cares. No need to act here. */
       break;
@@ -873,10 +871,8 @@ circuit_build_failed(origin_circuit_t *circ)
       break;
     case CIRCUIT_PURPOSE_S_CONNECT_REND:
       /* at Bob, connecting to rend point */
-      circuit_increment_failure_count();
       /* Don't increment failure count, since Alice may have picked
        * the rendezvous point maliciously */
-      /* XXX Mike, you didn't read my comment above! :) -RD */
       log_info(LD_REND,
                "Couldn't connect to Alice's chosen rend point %s "
                "(%s hop failed).",

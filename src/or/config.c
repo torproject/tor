@@ -409,7 +409,7 @@ static config_var_t _state_vars[] = {
   V(LastRotatedOnionKey,              ISOTIME,  NULL),
   V(LastWritten,                      ISOTIME,  NULL),
 
-  V("TotalBuildTimes",                UINT,     NULL),
+  V(TotalBuildTimes,                  UINT,     NULL),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
 
