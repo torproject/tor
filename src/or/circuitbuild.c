@@ -464,8 +464,8 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
   if (gentime < (build_time_t)cbt->timeout*1000) {
     log_warn(LD_CIRC,
              "Generated a synthetic timeout LESS than the current timeout: "
-             "%u vs %d", gentime, cbt->timeout*1000);
-    tor_assert(gentime >= (build_time_t)cbt->timeout*1000);
+             "%u vs %d using Xm: %d a: %lf, q: %lf",
+             gentime, cbt->timeout*1000, cbt->Xm, cbt->alpha, quantile_cutoff);
   } else if (gentime > BUILD_TIME_MAX) {
     gentime = BUILD_TIME_MAX;
     log_info(LD_CIRC,
