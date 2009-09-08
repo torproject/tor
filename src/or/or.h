@@ -2858,29 +2858,43 @@ void bridges_retry_all(void);
 void entry_guards_free_all(void);
 
 /* Circuit Build Timeout "public" functions and structures. */
-#define RECENT_CIRCUITS 20
-#define MIN_CIRCUITS_TO_OBSERVE 500
-#define NCIRCUITS_TO_OBSERVE 5000 /* approx 1.5 weeks worth of circuits */
-#define BUILDTIME_BIN_WIDTH 50
 
+/** How many circuits count as recent when deciding if the
+ * connection has changed. */
+#define RECENT_CIRCUITS 20
+
+/** Maximum fraction of timeouts to tolerate in the past
+ * RECENT_CIRCUITS before calculating a new timeout */
 #define MAX_RECENT_TIMEOUT_RATE 0.7999999
 
-/* TODO: This should be moved to the consensus */
+/** Minimum circuits before estimating a timeout */
+#define MIN_CIRCUITS_TO_OBSERVE 500
+
+/** Total size of the circuit timeout history to accumulate.
+ * 5000 is approx 1.5 weeks worth of continual-use circuits. */
+#define NCIRCUITS_TO_OBSERVE 5000
+
+/** Width of the histogram bins in milliseconds */
+#define BUILDTIME_BIN_WIDTH 50
+
+/** Cuttof point on the CDF for our timeout estimation.
+ * TODO: This should be moved to the consensus */
 #define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
 
 typedef uint32_t build_time_t;
 #define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
 
-/* Have we received a cell in the last 90 seconds? */
+/** Have we received a cell in the last 90 seconds? */
 #define NETWORK_LIVE_INTERVAL 90
 
+/** Initial circuit build timeout */
 #define BUILD_TIMEOUT_INITIAL_VALUE 60
 
-/* How often in seconds should we build a test circuit */
+/** How often in seconds should we build a test circuit */
 #define BUILD_TIMES_TEST_FREQUENCY 60
 
-/* Save state every 5 circuits */
-#define BUILD_TIMES_SAVE_STATE_EVERY  5
+/** Save state every 10 circuits */
+#define BUILD_TIMES_SAVE_STATE_EVERY  10
 
 typedef struct {
   build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
@@ -2891,7 +2905,7 @@ typedef struct {
   int pre_timeouts;
   build_time_t Xm;
   double alpha;
-  int computed;
+  int have_computed_timeout;
   int timeout;
 } circuit_build_times_t;
 

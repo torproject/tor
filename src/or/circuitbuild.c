@@ -112,7 +112,12 @@ circuitbuild_running_unit_tests(void)
   unit_tests = 1;
 }
 
-/** DOCDOC */
+/**
+ * Reset the build time state.
+ *
+ * Leave estimated paramters, timeout, and network liveness in tact
+ * for future use.
+ */
 void
 circuit_build_times_reset(circuit_build_times_t *cbt)
 {
@@ -120,10 +125,15 @@ circuit_build_times_reset(circuit_build_times_t *cbt)
   cbt->pre_timeouts = 0;
   cbt->total_build_times = 0;
   cbt->build_times_idx = 0;
-  cbt->computed = 0;
+  cbt->have_computed_timeout = 0;
 }
 
-/** DOCDOC */
+/**
+ * Initialize the buildtimes structure for first use.
+ *
+ * Sets the initial timeout value based to either the
+ * config setting or BUILD_TIMEOUT_INITIAL_VALUE.
+ */
 void
 circuit_build_times_init(circuit_build_times_t *cbt)
 {
@@ -137,10 +147,11 @@ circuit_build_times_init(circuit_build_times_t *cbt)
 }
 
 /**
- * circuit_build_times is a circular array, so loop around when
- * array is full
+ * Add a timeoutout value to the set of build times. Time units
+ * are milliseconds
  *
- * time units are milliseconds
+ * circuit_build_times is a circular array, so loop around when
+ * array is full.
  */
 int
 circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
@@ -169,7 +180,7 @@ circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
 }
 
 /**
- * Find maximum circuit build time
+ * Return maximum circuit build time
  */
 static build_time_t
 circuit_build_times_max(circuit_build_times_t *cbt)
@@ -183,7 +194,7 @@ circuit_build_times_max(circuit_build_times_t *cbt)
   return max_build_time;
 }
 
-/** DOCDOC */
+/** Return minimum circuit build time */
 static build_time_t
 circuit_build_times_min(circuit_build_times_t *cbt)
 {
@@ -201,7 +212,13 @@ circuit_build_times_min(circuit_build_times_t *cbt)
 }
 
 /**
- * Calculate histogram
+ * Calculate and return a histogram for the set of build times.
+ *
+ * Returns an allocated array of histrogram bins representing
+ * the frequency of index*BUILDTIME_BIN_WIDTH millisecond
+ * build times. Also outputs the number of bins in nbins.
+ *
+ * The return value must be freed by the caller.
  */
 static uint32_t *
 circuit_build_times_create_histogram(circuit_build_times_t *cbt,
@@ -225,7 +242,11 @@ circuit_build_times_create_histogram(circuit_build_times_t *cbt,
   return histogram;
 }
 
-/** DOCDOC */
+/**
+ * Return the most frequent build time (rounded to BUILDTIME_BIN_WIDTH ms).
+ *
+ * Ties go in favor of the slower time.
+ */
 static build_time_t
 circuit_build_times_mode(circuit_build_times_t *cbt)
 {
@@ -244,7 +265,8 @@ circuit_build_times_mode(circuit_build_times_t *cbt)
 }
 
 /**
- * output a histogram of current circuit build times.
+ * Output a histogram of current circuit build times to
+ * the or_state_t state structure.
  */
 void
 circuit_build_times_update_state(circuit_build_times_t *cbt,
@@ -282,7 +304,11 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
   if (histogram) tor_free(histogram);
 }
 
-/* Stolen from http://en.wikipedia.org/wiki/Fisher\u2013Yates_shuffle */
+/**
+ * Shuffle the build times array.
+ *
+ * Stolen from http://en.wikipedia.org/wiki/Fisher\u2013Yates_shuffle
+ */
 static void
 circuit_build_times_shuffle_array(circuit_build_times_t *cbt)
 {
@@ -298,7 +324,13 @@ circuit_build_times_shuffle_array(circuit_build_times_t *cbt)
    }
 }
 
-/** Load histogram from <b>state</b>. DOCDOC what else? */
+/**
+ * Load histogram from <b>state</b>, shuffling the resulting array
+ * after we do so. Use this result to estimate parameters and
+ * calculate the timeout.
+ *
+ * Returns -1 and sets msg on error. Msg must be freed by the caller.
+ */
 int
 circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                 or_state_t *state, char **msg)
@@ -368,7 +400,15 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   return msg ? -1 : 0;
 }
 
-/** DOCDOC */
+/**
+ * Estimates the Xm and Alpha parameters using
+ * http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation
+ *
+ * The notable difference is that we use mode instead of min to estimate Xm.
+ * This is because our distribution is frechet-like. We claim this is
+ * an acceptable approximation because we are only concerned with the
+ * accuracy of the CDF of the tail.
+ */
 void
 circuit_build_times_update_alpha(circuit_build_times_t *cbt)
 {
@@ -407,8 +447,8 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
  * in the distribution such that F(x) = quantile (ie quantile*100%
  * of the mass of the density function is below x on the curve).
  *
- * We use it to calculate the timeout and also synthetic values of
- * time for circuits that timeout before completion.
+ * We use it to calculate the timeout and also to generate synthetic
+ * values of time for circuits that timeout before completion.
  *
  * See http://en.wikipedia.org/wiki/Quantile_function,
  * http://en.wikipedia.org/wiki/Inverse_transform_sampling and
@@ -428,7 +468,7 @@ circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
   return ret;
 }
 
-/* Pareto CDF */
+/** Pareto CDF */
 double
 circuit_build_times_cdf(circuit_build_times_t *cbt, double x)
 {
@@ -437,6 +477,12 @@ circuit_build_times_cdf(circuit_build_times_t *cbt, double x)
   return ret;
 }
 
+/**
+ * Generate a synthetic time using our distribution parameters.
+ *
+ * The return value will be between q_lo and q_hi quantile points
+ * on the CDF.
+ */
 build_time_t
 circuit_build_times_generate_sample(circuit_build_times_t *cbt,
                                     double q_lo, double q_hi)
@@ -451,12 +497,12 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
   return ret;
 }
 
+/** Generate points in [cutoff, 1.0) on the CDF. */
 void
 circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff)
 {
-  /* Generate points in [cutoff, 1.0) on the CDF... We want to
-   * stay a bit short of 1.0 though, because longtail is
+  /* We want to stay a bit short of 1.0, because longtail is
    * loooooooooooooooooooooooooooooooooooooooooooooooooooong */
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
               quantile_cutoff, 0.98);
@@ -478,6 +524,10 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
   circuit_build_times_add_time(cbt, gentime);
 }
 
+/**
+ * Estimate an initial alpha parameter by solving the quantile
+ * function with a quantile point and a specific timeout value.
+ */
 void
 circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
                                   double quantile, build_time_t timeout)
@@ -491,6 +541,10 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout));
 }
 
+/**
+ * Generate synthetic timeout values for the timeouts
+ * that have happened before we estimated our parameters.
+ */
 static void
 circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
 {
@@ -521,6 +575,10 @@ circuit_build_times_needs_circuits(circuit_build_times_t *cbt)
   return 0;
 }
 
+/**
+ * Returns true if we should build a timeout test circuit
+ * right now.
+ */
 int
 circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
 {
@@ -528,12 +586,19 @@ circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
     approx_time()-cbt->last_circ_at > BUILD_TIMES_TEST_FREQUENCY;
 }
 
+/**
+ * Called to indicate that the network showed some signs of liveness.
+ */
 void
 circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 {
   cbt->network_last_live = approx_time();
 }
 
+/**
+ * Returns true if the network showed some sign of liveness
+ * in the past NETWORK_LIVE_INTERVAL.
+ */
 int
 circuit_build_times_is_network_live(circuit_build_times_t *cbt)
 {
@@ -546,6 +611,15 @@ circuit_build_times_is_network_live(circuit_build_times_t *cbt)
   return 1;
 }
 
+/**
+ * Returns true if we have seen more than MAX_RECENT_TIMEOUT_RATE of
+ * the past RECENT_CIRCUITS time out. Used to detect if the network
+ * connection has changed significantly.
+ *
+ * Also resets the entire timeout history in this case and causes us
+ * to restart the process of building test circuits and estimating a
+ * new timeout.
+ */
 int
 circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
 {
@@ -631,7 +705,7 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt)
     return;
   }
 
-  if (!cbt->computed) {
+  if (!cbt->have_computed_timeout) {
     /* Store a timeout before we have enough data as special */
     cbt->pre_timeouts++;
     return;
@@ -641,6 +715,10 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt)
   circuit_build_times_add_timeout_worker(cbt, BUILDTIMEOUT_QUANTILE_CUTOFF);
 }
 
+/**
+ * Estimate a new timeout based on history and set our timeout
+ * variable accordingly.
+ */
 void
 circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 {
@@ -659,7 +737,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
   timeout = circuit_build_times_calculate_timeout(cbt,
                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
 
-  cbt->computed = 1;
+  cbt->have_computed_timeout = 1;
   cbt->timeout = lround(timeout/1000.0);
 
   log_info(LD_CIRC,
