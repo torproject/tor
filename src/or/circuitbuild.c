@@ -261,7 +261,7 @@ circuit_build_times_mode(circuit_build_times_t *cbt)
 
   tor_free(histogram);
 
-  return max_bin*BUILDTIME_BIN_WIDTH;
+  return max_bin*BUILDTIME_BIN_WIDTH+BUILDTIME_BIN_WIDTH/2;
 }
 
 /**
@@ -291,8 +291,8 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
     *next = line = tor_malloc_zero(sizeof(config_line_t));
     line->key = tor_strdup("CircuitBuildTimeBin");
     line->value = tor_malloc(25);
-    tor_snprintf(line->value, 25, "%d %d", i*BUILDTIME_BIN_WIDTH,
-                 histogram[i]);
+    tor_snprintf(line->value, 25, "%d %d",
+            i*BUILDTIME_BIN_WIDTH+BUILDTIME_BIN_WIDTH/2, histogram[i]);
     next = &(line->next);
   }
 
@@ -548,10 +548,12 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
 static void
 circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
 {
-  /* Store a timeout as a random position on this curve. */
+  /* Store a timeout as a random position past the current
+   * cutoff on the pareto curve */
   if (cbt->pre_timeouts) {
     double timeout_quantile = 1.0-
-          ((double)cbt->pre_timeouts)/cbt->total_build_times;
+          ((double)cbt->pre_timeouts)/
+                    (cbt->pre_timeouts+cbt->total_build_times);
     cbt->Xm = circuit_build_times_min(cbt);
     // Use current timeout to get an estimate on alpha
     circuit_build_times_initial_alpha(cbt, timeout_quantile,
@@ -628,7 +630,7 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   double timeout;
   int i;
 
-  if (cbt->total_build_times < RECENT_CIRCUITS) {
+  if ((cbt->pre_timeouts+cbt->total_build_times) < RECENT_CIRCUITS) {
     return 0;
   }
 
@@ -643,6 +645,7 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
       timeout_rate++;
     }
   }
+  timeout_rate += cbt->pre_timeouts;
   timeout_rate /= RECENT_CIRCUITS;
 
   /* If more than 80% of our recent circuits are timing out,
