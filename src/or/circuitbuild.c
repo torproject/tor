@@ -460,7 +460,12 @@ double
 circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
                                       double quantile)
 {
-  double ret = cbt->Xm/pow(1.0-quantile,1.0/cbt->alpha);
+  double ret;
+  tor_assert(quantile >= 0);
+  tor_assert(1.0-quantile > 0);
+  tor_assert(cbt->Xm > 0);
+
+  ret = cbt->Xm/pow(1.0-quantile,1.0/cbt->alpha);
   if (ret > INT32_MAX) {
     ret = INT32_MAX;
   }
@@ -472,7 +477,9 @@ circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
 double
 circuit_build_times_cdf(circuit_build_times_t *cbt, double x)
 {
-  double ret = 1.0-pow(cbt->Xm/x,cbt->alpha);
+  double ret;
+  tor_assert(cbt->Xm > 0);
+  ret = 1.0-pow(cbt->Xm/x,cbt->alpha);
   tor_assert(0 <= ret && ret <= 1.0);
   return ret;
 }
@@ -488,8 +495,13 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
                                     double q_lo, double q_hi)
 {
   uint64_t r = crypto_rand_uint64(UINT64_MAX-1);
-  double u = q_lo + ((q_hi-q_lo)*r)/(1.0*UINT64_MAX);
   build_time_t ret;
+  double u;
+
+  tor_assert(q_lo >= 0);
+  tor_assert(q_hi < 1);
+
+  u = q_lo + ((q_hi-q_lo)*r)/(1.0*UINT64_MAX);
 
   tor_assert(0 <= u && u < 1.0);
   ret = lround(circuit_build_times_calculate_timeout(cbt, u));
@@ -538,7 +550,10 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   // CircBuildTimeout = Xm*((1-0.8))^(-1/a))
   // ln(CircBuildTimeout) = ln(Xm)+ln(((1-0.8)))*(-1/a)
   // -ln(1-0.8)/(ln(CircBuildTimeout)-ln(Xm))=a
+  tor_assert(quantile > 0);
+  tor_assert(cbt->Xm > 0);
   cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout));
+  tor_assert(cbt->alpha > 0);
 }
 
 /**
@@ -555,6 +570,7 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
           ((double)cbt->pre_timeouts)/
                     (cbt->pre_timeouts+cbt->total_build_times);
     cbt->Xm = circuit_build_times_min(cbt);
+    tor_assert(cbt->Xm > 0);
     // Use current timeout to get an estimate on alpha
     circuit_build_times_initial_alpha(cbt, timeout_quantile,
                                       cbt->timeout*1000);
@@ -630,7 +646,7 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   double timeout;
   int i;
 
-  if ((cbt->pre_timeouts+cbt->total_build_times) < RECENT_CIRCUITS) {
+  if ((cbt->pre_timeouts + cbt->total_build_times) < RECENT_CIRCUITS) {
     return 0;
   }
 
@@ -656,7 +672,8 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
 
   log_notice(LD_CIRC,
             "Network connection speed appears to have changed. "
-            "Resetting timeouts.");
+            "Resetting timeouts after %d pretimouts and %d buildtimes",
+            cbt->pre_timeouts, cbt->total_build_times);
 
   if (Xm >= (build_time_t)cbt->timeout*1000) {
     Xm = circuit_build_times_min(cbt);
@@ -669,6 +686,7 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
       goto reset;
     }
   }
+  tor_assert(Xm > 0);
   cbt->Xm = Xm;
 
   circuit_build_times_initial_alpha(cbt, 1.0-timeout_rate,
