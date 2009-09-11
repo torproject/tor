@@ -33,6 +33,10 @@ Changes in version 0.2.1.20 - 2009-??-??
       controller when we want to inform the user of overall success or
       overall failure. Bugfix on 0.1.2.6-alpha. Fixes bug 1075. Reported
       by SwissTorExit.
+    - Don't warn when we're using a circuit that ends with a node
+      excluded in ExcludeExitNodes, but the circuit is not used to access
+      the outside world. This should help fix bug 1090. Bugfix on
+      0.2.1.6-alpha.
 
   o Minor features:
     - Add a "getinfo status/accepted-server-descriptor" controller
