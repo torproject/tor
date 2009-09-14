@@ -528,6 +528,7 @@ static directory_token_t *get_next_token(memarea_t *area,
 #define CST_CHECK_AUTHORITY   (1<<0)
 #define CST_NO_CHECK_OBJTYPE  (1<<1)
 static int check_signature_token(const char *digest,
+                                 ssize_t digest_len,
                                  directory_token_t *tok,
                                  crypto_pk_env_t *pkey,
                                  int flags,
@@ -802,7 +803,7 @@ router_parse_directory(const char *str)
   }
   declared_key = find_dir_signing_key(str, str+strlen(str));
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_signature_token(digest, tok, declared_key,
+  if (check_signature_token(digest, DIGEST_LEN, tok, declared_key,
                             CST_CHECK_AUTHORITY, "directory")<0)
     goto err;
 
@@ -895,7 +896,7 @@ router_parse_runningrouters(const char *str)
   }
   declared_key = find_dir_signing_key(str, eos);
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_signature_token(digest, tok, declared_key,
+  if (check_signature_token(digest, DIGEST_LEN, tok, declared_key,
                             CST_CHECK_AUTHORITY, "running-routers")
       < 0)
     goto err;
@@ -996,6 +997,7 @@ dir_signing_key_is_trusted(crypto_pk_env_t *key)
  */
 static int
 check_signature_token(const char *digest,
+                      ssize_t digest_len,
                       directory_token_t *tok,
                       crypto_pk_env_t *pkey,
                       int flags,
@@ -1026,14 +1028,14 @@ check_signature_token(const char *digest,
   signed_digest = tor_malloc(tok->object_size);
   if (crypto_pk_public_checksig(pkey, signed_digest, tok->object_body,
                                 tok->object_size)
-      != DIGEST_LEN) {
+      != digest_len) {
     log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
     tor_free(signed_digest);
     return -1;
   }
 //  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
 //            hex_str(signed_digest,4));
-  if (memcmp(digest, signed_digest, DIGEST_LEN)) {
+  if (memcmp(digest, signed_digest, digest_len)) {
     log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
     tor_free(signed_digest);
     return -1;
@@ -1489,7 +1491,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     verified_digests = digestmap_new();
   digestmap_set(verified_digests, signed_digest, (void*)(uintptr_t)1);
 #endif
-  if (check_signature_token(digest, tok, router->identity_pkey, 0,
+  if (check_signature_token(digest, DIGEST_LEN, tok, router->identity_pkey, 0,
                             "router descriptor") < 0)
     goto err;
 
@@ -1617,7 +1619,8 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 
   if (key) {
     note_crypto_pk_op(VERIFY_RTR);
-    if (check_signature_token(digest, tok, key, 0, "extra-info") < 0)
+    if (check_signature_token(digest, DIGEST_LEN, tok, key, 0,
+                              "extra-info") < 0)
       goto err;
 
     if (router)
@@ -1779,7 +1782,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     }
   }
   if (!found) {
-    if (check_signature_token(digest, tok, cert->identity_key, 0,
+    if (check_signature_token(digest, DIGEST_LEN, tok, cert->identity_key, 0,
                               "key certificate")) {
       goto err;
     }
@@ -1788,6 +1791,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
       /* XXXX Once all authorities generate cross-certified certificates,
        * make this field mandatory. */
       if (check_signature_token(cert->cache_info.identity_digest,
+                                DIGEST_LEN,
                                 tok,
                                 cert->signing_key,
                                 CST_NO_CHECK_OBJTYPE,
@@ -2236,7 +2240,7 @@ networkstatus_v2_parse_from_string(const char *s)
   }
 
   note_crypto_pk_op(VERIFY_DIR);
-  if (check_signature_token(ns_digest, tok, ns->signing_key, 0,
+  if (check_signature_token(ns_digest, DIGEST_LEN, tok, ns->signing_key, 0,
                             "network-status") < 0)
     goto err;
 
@@ -2632,7 +2636,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
 
     if (ns->type != NS_TYPE_CONSENSUS) {
-      if (check_signature_token(ns_digest, tok, ns->cert->signing_key, 0,
+      if (check_signature_token(ns_digest, DIGEST_LEN,
+                                tok, ns->cert->signing_key, 0,
                                 "network-status vote"))
         goto err;
       v->good_signature = 1;
@@ -3812,7 +3817,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   /* Parse and verify signature. */
   tok = find_by_keyword(tokens, R_SIGNATURE);
   note_crypto_pk_op(VERIFY_RTR);
-  if (check_signature_token(desc_hash, tok, result->pk, 0,
+  if (check_signature_token(desc_hash, DIGEST_LEN, tok, result->pk, 0,
                             "v2 rendezvous service descriptor") < 0)
     goto err;
   /* Verify that descriptor ID belongs to public key and secret ID part. */
