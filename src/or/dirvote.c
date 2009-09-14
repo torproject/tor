@@ -192,7 +192,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   if (router_get_networkstatus_v3_hash(status, digest)<0)
     goto err;
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(outp,endp-outp,digest,
+  if (router_append_dirobj_signature(outp,endp-outp,digest, DIGEST_LEN,
                                      private_signing_key)<0) {
     log_warn(LD_BUG, "Unable to sign networkstatus vote.");
     goto err;
@@ -1257,7 +1257,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
                  signing_key_fingerprint);
     /* And the signature. */
-    if (router_append_dirobj_signature(buf, sizeof(buf), digest,
+    if (router_append_dirobj_signature(buf, sizeof(buf), digest, DIGEST_LEN,
                                        signing_key)) {
       log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
       return NULL; /* This leaks, but it should never happen. */
@@ -1272,7 +1272,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                 signing_key_fingerprint, 0);
       tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
                    signing_key_fingerprint);
-      if (router_append_dirobj_signature(buf, sizeof(buf), digest,
+      if (router_append_dirobj_signature(buf, sizeof(buf), digest, DIGEST_LEN,
                                          legacy_signing_key)) {
         log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
         return NULL; /* This leaks, but it should never happen. */

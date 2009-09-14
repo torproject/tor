@@ -643,14 +643,15 @@ router_get_extrainfo_hash(const char *s, char *digest)
  */
 int
 router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
-                               crypto_pk_env_t *private_key)
+                               size_t digest_len, crypto_pk_env_t *private_key)
 {
   char *signature;
   size_t i;
+  int siglen;
 
   signature = tor_malloc(crypto_pk_keysize(private_key));
-  if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
-
+  siglen = crypto_pk_private_sign(private_key, signature, digest, digest_len);
+  if (siglen < 0) {
     log_warn(LD_BUG,"Couldn't sign digest.");
     goto err;
   }
@@ -658,7 +659,7 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
     goto truncated;
 
   i = strlen(buf);
-  if (base64_encode(buf+i, buf_len-i, signature, 128) < 0) {
+  if (base64_encode(buf+i, buf_len-i, signature, siglen) < 0) {
     log_warn(LD_BUG,"couldn't base64-encode signature");
     goto err;
   }

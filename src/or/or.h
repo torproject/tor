@@ -4911,6 +4911,7 @@ int router_get_networkstatus_v3_hash(const char *s, char *digest);
 int router_get_extrainfo_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
+                                   size_t digest_len,
                                    crypto_pk_env_t *private_key);
 int router_parse_list_from_string(const char **s, const char *eos,
                                   smartlist_t *dest,
