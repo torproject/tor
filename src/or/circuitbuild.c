@@ -141,6 +141,11 @@ circuit_build_times_init(circuit_build_times_t *cbt)
 
   if (!unit_tests && get_options()->CircuitBuildTimeout) {
     cbt->timeout = get_options()->CircuitBuildTimeout;
+    if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
+      log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %d",
+               BUILD_TIMEOUT_MIN_VALUE);
+      cbt->timeout = BUILD_TIMEOUT_MIN_VALUE;
+    }
   } else {
     cbt->timeout = BUILD_TIMEOUT_INITIAL_VALUE;
   }
@@ -697,6 +702,12 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
 
   cbt->timeout = lround(timeout/1000.0);
 
+  if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
+    log_warn(LD_CIRC, "Reset buildtimeout to low value %lf. Setting to %d",
+             timeout, BUILD_TIMEOUT_MIN_VALUE);
+    cbt->timeout = BUILD_TIMEOUT_MIN_VALUE;
+  }
+
   log_notice(LD_CIRC,
              "Reset circuit build timeout to %d (%lf, Xm: %d, a: %lf) based "
              "on %d recent circuit times", cbt->timeout, timeout, cbt->Xm,
@@ -760,6 +771,12 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 
   cbt->have_computed_timeout = 1;
   cbt->timeout = lround(timeout/1000.0);
+
+  if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
+    log_warn(LD_CIRC, "Set buildtimeout to low value %lf. Setting to %d",
+             timeout, BUILD_TIMEOUT_MIN_VALUE);
+    cbt->timeout = BUILD_TIMEOUT_MIN_VALUE;
+  }
 
   log_info(LD_CIRC,
            "Set circuit build timeout to %d (%lf, Xm: %d, a: %lf) based on "

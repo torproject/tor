@@ -2887,6 +2887,9 @@ typedef uint32_t build_time_t;
 /** Have we received a cell in the last 90 seconds? */
 #define NETWORK_LIVE_INTERVAL 90
 
+/** Lowest allowable value for CircuitBuildTimeout */
+#define BUILD_TIMEOUT_MIN_VALUE 3
+
 /** Initial circuit build timeout */
 #define BUILD_TIMEOUT_INITIAL_VALUE 60
 

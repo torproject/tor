@@ -2919,11 +2919,6 @@ compute_publishserverdescriptor(or_options_t *options)
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
 
-/** Lowest allowable value for CircuitBuildTimeout; values too low will
- * increase network load because of failing connections being retried, and
- * might prevent users from connecting to the network at all. */
-#define MIN_CIRCUIT_BUILD_TIMEOUT 3
-
 /** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
 #define MIN_MAX_CIRCUIT_DIRTINESS 10
@@ -3368,12 +3363,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
         MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
-  }
-
-  if (options->CircuitBuildTimeout < MIN_CIRCUIT_BUILD_TIMEOUT) {
-    log(LOG_WARN, LD_CONFIG, "CircuitBuildTimeout option is too short; "
-      "raising to %d seconds.", MIN_CIRCUIT_BUILD_TIMEOUT);
-    options->CircuitBuildTimeout = MIN_CIRCUIT_BUILD_TIMEOUT;
   }
 
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {
