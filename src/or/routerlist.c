@@ -5335,6 +5335,10 @@ routerset_contains(const routerset_t *set, const tor_addr_t *addr,
     if (country < 0 && addr)
       country = geoip_get_country_by_ip(tor_addr_to_ipv4h(addr));
 
+    /* XXXX can we safely move this into geoip_get_country_by_ip? */
+    if (country < 0)
+      country = 0;
+
     if (country >= 0 && country < set->n_countries &&
         bitarray_is_set(set->countries, country))
       return 2;

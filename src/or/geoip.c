@@ -200,6 +200,7 @@ geoip_load_file(const char *filename, or_options_t *options)
             sizeof(geoip_unresolved->countrycode));
     smartlist_add(geoip_countries, geoip_unresolved);
     country_idxplus1_by_lc_code = strmap_new();
+    strmap_set_lc(country_idxplus1_by_lc_code, "??", (void*)(1));
   }
   if (geoip_entries) {
     SMARTLIST_FOREACH(geoip_entries, geoip_entry_t *, e, tor_free(e));
