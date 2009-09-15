@@ -1,4 +1,4 @@
-.TH TOR 1 "August 2009" "TOR"
+.TH TOR 1 "September 2009" "TOR"
 .SH NAME
 tor \- The second-generation onion router
 .SH SYNOPSIS
@@ -1241,6 +1241,11 @@ directories.  If this is not set then the value of \fBRecommendedVersions\fR
 is used.
 When this is set then
 \fBVersioningAuthoritativeDirectory\fP should be set too.
+.LP
+.TP
+\fBConsensusParams \fR\fISTRING\fP
+STRING is a space-separated list of key=value pairs that Tor will
+include in the "params" line of its networkstatus vote.
 .LP
 .TP
 \fBDirAllowPrivateAddresses \fR\fB0\fR|\fB1\fR\fP

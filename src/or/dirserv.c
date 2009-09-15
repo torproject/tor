@@ -2553,6 +2553,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   }
   smartlist_sort_strings(v3_out->known_flags);
 
+  if (options->ConsensusParams) {
+    v3_out->net_params = smartlist_create();
+    smartlist_split_string(v3_out->net_params,
+                           options->ConsensusParams, NULL, 0, 0);
+    smartlist_sort_strings(v3_out->net_params);
+  }
+
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);
   memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);

@@ -2587,6 +2587,10 @@ typedef struct {
   /** Location of bandwidth measurement file */
   char *V3BandwidthsFile;
 
+  /** Authority only: key=value pairs that we add to our networkstatus
+   * consensus vote on the 'params' line. */
+  char *ConsensusParams;
+
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
