@@ -1220,6 +1220,7 @@ IMPLEMENT_ORDER_FUNC(find_nth_int, int)
 IMPLEMENT_ORDER_FUNC(find_nth_time, time_t)
 IMPLEMENT_ORDER_FUNC(find_nth_double, double)
 IMPLEMENT_ORDER_FUNC(find_nth_uint32, uint32_t)
+IMPLEMENT_ORDER_FUNC(find_nth_int32, int32_t)
 IMPLEMENT_ORDER_FUNC(find_nth_long, long)
 
 /** Return a newly allocated digestset_t, optimized to hold a total of
