@@ -1098,6 +1098,20 @@
         enough votes were counted for the consensus for an authoritative
         opinion to have been formed about their status.
 
+    "params" SP [Parameters] NL
+
+        [At most once]
+
+        Parameter ::= Keyword '=' Int32
+        Int32 ::= A decimal integer between -2147483648 and 2147483647.
+        Parameters ::= Parameter | Parameters SP Parameter
+
+        The parameters list, if present, contains a space-separated list of
+        key-value pairs, sorted in lexical order by their keyword.  Each
+        parameter has its own meaning.
+
+        (Only included when the vote is generated with consensus-method 7 or
+        later.)
 
    The authority section of a vote contains the following items, followed
    in turn by the authority's current key certificate:
@@ -1406,6 +1420,10 @@
 
      Known-flags is the union of all flags known by any voter.
 
+     Entries are given on the "params" line for every keyword on which any
+     authority voted.  The values given are the low-median of all votes on
+     that keyword.
+
     "client-versions" and "server-versions" are sorted in ascending
      order; A version is recommended in the consensus if it is recommended
      by more than half of the voting authorities that included a
@@ -1472,6 +1490,9 @@
           authorities provide a Measured= keyword in their votes for 
           a router, the authorities produce a consensus containing a 
           Bandwidth= keyword equal to the median of the Measured= votes.
+
+        * If consensus-method 7 or later is in use, the params line is
+          included in the output.
 
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.

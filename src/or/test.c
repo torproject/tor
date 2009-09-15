@@ -3355,6 +3355,54 @@ done:
   return;
 }
 
+static void
+test_dirutil_param_voting(void)
+{
+  networkstatus_t vote1, vote2, vote3, vote4;
+  smartlist_t *votes = smartlist_create();
+  char *res = NULL;
+
+  /* dirvote_compute_params only looks at the net_params field of the votes,
+     so that's all we need to set.
+   */
+  memset(&vote1, 0, sizeof(vote1));
+  memset(&vote2, 0, sizeof(vote2));
+  memset(&vote3, 0, sizeof(vote3));
+  memset(&vote4, 0, sizeof(vote4));
+  vote1.net_params = smartlist_create();
+  vote2.net_params = smartlist_create();
+  vote3.net_params = smartlist_create();
+  vote4.net_params = smartlist_create();
+  smartlist_split_string(vote1.net_params,
+                         "ab=90 abcd=20 cw=50 x-yz=-99", NULL, 0, 0);
+  smartlist_split_string(vote2.net_params,
+                         "ab=27 cw=5 x-yz=88", NULL, 0, 0);
+  smartlist_split_string(vote3.net_params,
+                         "abcd=20 c=60 cw=500 x-yz=-9 zzzzz=101", NULL, 0, 0);
+  smartlist_split_string(vote4.net_params,
+                         "ab=900 abcd=200 c=1 cw=51 x-yz=100", NULL, 0, 0);
+  smartlist_add(votes, &vote1);
+  smartlist_add(votes, &vote2);
+  smartlist_add(votes, &vote3);
+  smartlist_add(votes, &vote4);
+
+  res = dirvote_compute_params(votes);
+  test_streq(res,
+             "ab=90 abcd=20 c=1 cw=50 x-yz=-9 zzzzz=101");
+
+ done:
+  tor_free(res);
+  SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(vote2.net_params, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(vote3.net_params, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(vote4.net_params, char *, cp, tor_free(cp));
+  smartlist_free(vote1.net_params);
+  smartlist_free(vote2.net_params);
+  smartlist_free(vote3.net_params);
+  smartlist_free(vote4.net_params);
+
+}
+
 extern const char AUTHORITY_CERT_1[];
 extern const char AUTHORITY_SIGNKEY_1[];
 extern const char AUTHORITY_CERT_2[];
@@ -3512,6 +3560,9 @@ test_v3_networkstatus(void)
   crypto_pk_get_digest(cert1->identity_key, voter->identity_digest);
   smartlist_add(vote->voters, voter);
   vote->cert = authority_cert_dup(cert1);
+  vote->net_params = smartlist_create();
+  smartlist_split_string(vote->net_params, "circuitwindow=101 foo=990",
+                         NULL, 0, 0);
   vote->routerstatus_list = smartlist_create();
   /* add the first routerstatus. */
   vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
@@ -3653,6 +3704,9 @@ test_v3_networkstatus(void)
   vote->dist_seconds = 300;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert2);
+  vote->net_params = smartlist_create();
+  smartlist_split_string(vote->net_params, "bar=2000000000 circuitwindow=20",
+                         NULL, 0, 0);
   tor_free(vote->client_versions);
   tor_free(vote->server_versions);
   voter = smartlist_get(vote->voters, 0);
@@ -3691,6 +3745,9 @@ test_v3_networkstatus(void)
   vote->dist_seconds = 250;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert3);
+  vote->net_params = smartlist_create();
+  smartlist_split_string(vote->net_params, "circuitwindow=80 foo=660",
+                         NULL, 0, 0);
   smartlist_add(vote->supported_methods, tor_strdup("4"));
   vote->client_versions = tor_strdup("0.1.2.14,0.1.2.17");
   vote->server_versions = tor_strdup("0.1.2.10,0.1.2.15,0.1.2.16");
@@ -3747,6 +3804,10 @@ test_v3_networkstatus(void)
   test_streq(cp, "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
              "Running:Stable:V2Dir:Valid");
   tor_free(cp);
+  cp = smartlist_join_strings(con->net_params, ":", 0, NULL);
+  test_streq(cp, "bar=2000000000:circuitwindow=80:foo=660");
+  tor_free(cp);
+
   test_eq(4, smartlist_len(con->voters)); /*3 voters, 1 legacy key.*/
   /* The voter id digests should be in this order. */
   test_assert(memcmp(cert2->cache_info.identity_digest,
@@ -4866,6 +4927,7 @@ static struct {
   ENT(dir_format),
   ENT(dirutil),
   SUBENT(dirutil, measured_bw),
+  SUBENT(dirutil, param_voting),
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),

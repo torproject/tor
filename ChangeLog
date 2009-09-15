@@ -1,4 +1,9 @@
 Changes in version 0.2.2.2-alpha - 2009-09-??
+  o Major features:
+    - Authorities can now vote on arbitary integer values as part of the
+      consensus process.  This is designed to help set network parameters.
+      Implements proposal 167.
+
   o Minor bugfixes:
     - Fix an extremely rare infinite recursion bug that could occur if
       we tried to log a message after shutting down the log subsystem.
