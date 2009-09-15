@@ -560,7 +560,7 @@ dirvote_compute_params(smartlist_t *votes)
   cur_param = smartlist_get(param_list, 0);
   eq = strchr(cur_param, '=');
   tor_assert(eq);
-  cur_param_len = eq+1 - cur_param;
+  cur_param_len = (int)(eq+1 - cur_param);
 
   output = smartlist_create();
 
@@ -588,7 +588,7 @@ dirvote_compute_params(smartlist_t *votes)
       i = 0;
       if (next_param) {
         eq = strchr(next_param, '=');
-        cur_param_len = eq+1 - next_param;
+        cur_param_len = (int)(eq+1 - next_param);
       }
     }
   } SMARTLIST_FOREACH_END(param);
