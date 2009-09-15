@@ -2,8 +2,8 @@ Filename: 167-params-in-consensus.txt
 Title: Vote on network parameters in consensus
 Author: Roger Dingledine
 Created: 18-Aug-2009
-Status: Open
-Target: 0.2.2
+Status: Closed
+Implemented-In: 0.2.2
 
 0. History
 
