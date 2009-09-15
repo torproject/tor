@@ -91,9 +91,18 @@ Spec modifications:
 
    3. Document format: detached signatures.
 
-   In addition to the current detached signature format, we allow
-   the first line to take the form,
-      "consensus-digest" SP flavor SP 1*(Algname "=" Digest) NL
+   We amend the detached signature format to include more than one
+   consensus-digest line, and more than one set of signatures.
+
+   After the consensus-digest line, we allow more lines of the form:
+      "additional-digest" SP flavor SP algname SP digest NL
+
+   Before the directory-signature lines, we allow more entries of the form:
+      "additional-signature" SP flavor SP algname SP identity SP
+           signing-key-digest NL signature.
+
+   [We do not use "consensus-digest" or "directory-signature" for flavored
+   consensuses, since this could confuse older Tors.]
 
    The consensus-signatures URL should contain the signatures
    for _all_ flavors of consensus.
