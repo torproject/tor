@@ -1893,6 +1893,32 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   tor_free(status);
 }
 
+/** Return the value of a integer parameter from the networkstatus <b>ns</b>
+ * whose name is <b>param_name</b>.  Return <b>default_val</b> if ns is NULL,
+ * or if it has no parameter called <b>param_name</b>. */
+int32_t
+networkstatus_get_param(networkstatus_t *ns, const char *param_name,
+                        int32_t default_val)
+{
+  size_t name_len;
+
+  if (!ns || !ns->net_params)
+    return default_val;
+
+  name_len = strlen(param_name);
+
+  SMARTLIST_FOREACH_BEGIN(ns->net_params, const char *, p) {
+    if (!strcmpstart(p, param_name) && p[name_len] == '=') {
+      int ok=0;
+      long v = tor_parse_long(p+name_len+1, 10, INT32_MIN, INT32_MAX, &ok,NULL);
+      if (ok)
+        return (int32_t) v;
+    }
+  } SMARTLIST_FOREACH_END(p);
+
+  return default_val;
+}
+
 /** If <b>question</b> is a string beginning with "ns/" in a format the
  * control interface expects for a GETINFO question, set *<b>answer</b> to a
  * newly-allocated string containing networkstatus lines for the appropriate
