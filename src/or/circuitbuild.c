@@ -1833,7 +1833,7 @@ onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice)
 
   hop->extend_info = extend_info_dup(choice);
 
-  hop->package_window = CIRCWINDOW_START;
+  hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
   return 0;
