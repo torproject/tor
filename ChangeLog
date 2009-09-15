@@ -129,6 +129,9 @@ Changes in version 0.2.1.20 - 2009-??-??
       patch. Bugfix on the 54th commit on Tor -- from July 2002,
       before the release of Tor 0.0.0. This is the new winner of the
       oldest-bug prize.
+    - Fix a remotely triggerable memory leak when a consensus document
+      contains more than one signature from the same voter. Bugfix on
+      0.2.0.3-alpha.
 
   o New directory authorities:
     - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
@@ -156,6 +159,10 @@ Changes in version 0.2.1.20 - 2009-??-??
       controller when we want to inform the user of overall success or
       overall failure. Bugfix on 0.1.2.6-alpha. Fixes bug 1075. Reported
       by SwissTorExit.
+    - Don't warn when we're using a circuit that ends with a node
+      excluded in ExcludeExitNodes, but the circuit is not used to access
+      the outside world. This should help fix bug 1090. Bugfix on
+      0.2.1.6-alpha.
 
   o Minor features:
     - Add a "getinfo status/accepted-server-descriptor" controller

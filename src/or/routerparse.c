@@ -2638,6 +2638,14 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     } else {
       if (tok->object_size >= INT_MAX)
         goto err;
+      /* We already parsed a vote from this voter. Use the first one. */
+      if (v->signature) {
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "We received a networkstatus "
+                   "that contains two votes from the same voter. Ignoring "
+                   "the second vote.");
+        continue;
+      }
+
       v->signature = tor_memdup(tok->object_body, tok->object_size);
       v->signature_len = (int) tok->object_size;
     }
