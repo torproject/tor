@@ -2330,7 +2330,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
   dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0, 0);
   need_at_least = smartlist_len(want_authorities)/2+1;
-  SMARTLIST_FOREACH(want_authorities, const char *, d, {
+  SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, d) {
     char want_digest[DIGEST_LEN];
     size_t want_len = strlen(d)/2;
     if (want_len > DIGEST_LEN)
@@ -2341,18 +2341,18 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
       continue;
     };
 
-    SMARTLIST_FOREACH(v->voters, networkstatus_voter_info_t *, vi, {
-      if (vi->signature &&
+    SMARTLIST_FOREACH_BEGIN(v->voters, networkstatus_voter_info_t *, vi) {
+      if (smartlist_len(vi->sigs) &&
           !memcmp(vi->identity_digest, want_digest, want_len)) {
         have++;
         break;
       };
-    });
+    } SMARTLIST_FOREACH_END(vi);
 
     /* early exit, if we already have enough */
     if (have >= need_at_least)
       break;
-  });
+  } SMARTLIST_FOREACH_END(d);
 
   SMARTLIST_FOREACH(want_authorities, char *, d, tor_free(d));
   smartlist_free(want_authorities);

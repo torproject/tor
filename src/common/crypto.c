@@ -1448,6 +1448,39 @@ crypto_digest256(char *digest, const char *m, size_t len,
   return (SHA256((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
 }
 
+/** Set the digests_t in <b>ds_out</b> to contain every digest on the
+ * <b>len</b> bytes in <b>m</b> that we know how to compute.  Return 0 on
+ * success, -1 on failure. */
+int
+crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
+{
+  digest_algorithm_t i;
+  tor_assert(ds_out);
+  memset(ds_out, 0, sizeof(*ds_out));
+  if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)
+    return -1;
+  for (i = DIGEST_SHA256; i < N_DIGEST_ALGORITHMS; ++i) {
+    if (crypto_digest256(ds_out->d[i], m, len, i) < 0)
+      return -1;
+  }
+  return 0;
+}
+
+/** Return the name of an algorithm, as used in directory documents. */
+const char *
+crypto_digest_algorithm_get_name(digest_algorithm_t alg)
+{
+  switch (alg) {
+    case DIGEST_SHA1:
+      return "sha1";
+    case DIGEST_SHA256:
+      return "sha256";
+    default:
+      tor_fragile_assert();
+      return "??unknown_digest??";
+  }
+}
+
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_env_t {
   union {

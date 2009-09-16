@@ -251,6 +251,19 @@ get_voter(const networkstatus_t *vote)
   return smartlist_get(vote->voters, 0);
 }
 
+/** DOCDOC */
+document_signature_t *
+voter_get_sig_by_algorithm(const networkstatus_voter_info_t *voter,
+                           digest_algorithm_t alg)
+{
+  if (!voter->sigs)
+    return NULL;
+  SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+    if (sig->alg == alg)
+      return sig);
+  return NULL;
+}
+
 /** Temporary structure used in constructing a list of dir-source entries
  * for a consensus.  One of these is generated for every vote, and one more
  * for every legacy key in each vote. */
@@ -782,8 +795,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   /* Add the authority sections. */
   {
     smartlist_t *dir_sources = smartlist_create();
-    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
-    {
+    SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
       dir_src_ent_t *e = tor_malloc_zero(sizeof(dir_src_ent_t));
       e->v = v;
       e->digest = get_voter(v)->identity_digest;
@@ -797,7 +809,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         e_legacy->is_legacy = 1;
         smartlist_add(dir_sources, e_legacy);
       }
-    });
+    } SMARTLIST_FOREACH_END(v);
     smartlist_sort(dir_sources, _compare_dir_src_ents_by_authority_id);
 
     SMARTLIST_FOREACH(dir_sources, const dir_src_ent_t *, e,
@@ -1347,84 +1359,123 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
                                       const char **msg_out)
 {
   int r = 0;
+  const char *flavor;
+  smartlist_t *siglist;
   tor_assert(sigs);
   tor_assert(target);
   tor_assert(target->type == NS_TYPE_CONSENSUS);
 
+  flavor = networkstatus_get_flavor_name(target->flavor);
+
   /* Do the times seem right? */
   if (target->valid_after != sigs->valid_after) {
+    puts("A");
     *msg_out = "Valid-After times do not match "
       "when adding detached signatures to consensus";
     return -1;
   }
   if (target->fresh_until != sigs->fresh_until) {
+    puts("B");
     *msg_out = "Fresh-until times do not match "
       "when adding detached signatures to consensus";
     return -1;
   }
   if (target->valid_until != sigs->valid_until) {
+    puts("C");
     *msg_out = "Valid-until times do not match "
       "when adding detached signatures to consensus";
     return -1;
   }
-  /* Are they the same consensus? */
-  if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
-             DIGEST_LEN)) {
-    *msg_out = "Digest mismatch when adding detached signatures to consensus";
+  siglist = strmap_get(sigs->signatures, flavor);
+  if (!siglist) {
+    puts("D");
+    *msg_out = "No signatures for given consensus flavor";
     return -1;
   }
 
-  /* For each voter in src... */
-  SMARTLIST_FOREACH_BEGIN(sigs->signatures, networkstatus_voter_info_t *,
-                          src_voter) {
-      char voter_identity[HEX_DIGEST_LEN+1];
-      networkstatus_voter_info_t *target_voter =
-        networkstatus_get_voter_by_id(target, src_voter->identity_digest);
-      authority_cert_t *cert = NULL;
-
-      base16_encode(voter_identity, sizeof(voter_identity),
-                    src_voter->identity_digest, DIGEST_LEN);
-      log_info(LD_DIR, "Looking at signature from %s", voter_identity);
-      /* If the target doesn't know about this voter, then forget it. */
-      if (!target_voter) {
-        log_info(LD_DIR, "We do not know about %s", voter_identity);
-        continue;
-      }
-
-      /* If the target already has a good signature from this voter, then skip
-       * this one. */
-      if (target_voter->good_signature) {
-        log_info(LD_DIR, "We already have a good signature from %s",
-                         voter_identity);
-        continue;
-      }
-
-      /* Try checking the signature if we haven't already. */
-      if (!src_voter->good_signature && !src_voter->bad_signature) {
-        cert = authority_cert_get_by_digests(src_voter->identity_digest,
-                                             src_voter->signing_key_digest);
-        if (cert) {
-          networkstatus_check_voter_signature(target, src_voter, cert);
+  /** Make sure all the digests we know match, and at least one matches. */
+  {
+    digests_t *digests = strmap_get(sigs->digests, flavor);
+    int n_matches = 0;
+    digest_algorithm_t alg;
+    if (!digests) {
+      puts("D");
+      *msg_out = "No digests for given consensus flavor";
+      return -1;
+    }
+    for (alg = DIGEST_SHA1; alg < N_DIGEST_ALGORITHMS; ++alg) {
+      if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+        if (!memcmp(target->digests.d[alg], digests->d[alg], DIGEST256_LEN)) {
+          ++n_matches;
+        } else {
+          printf("F %d\n", alg);
+          printf("%s\n", hex_str(target->digests.d[alg], DIGEST256_LEN));
+          printf("%s\n", hex_str(digests->d[alg], DIGEST256_LEN));
+          *msg_out = "Mismatched digest.";
+          return -1;
         }
       }
+    }
+    if (!n_matches) {
+      puts("G");
+      *msg_out = "No regognized digests for given consensus flavor";
+    }
+  }
 
-      /* If this signature is good, or we don't have any signature yet,
-       * then add it. */
-      if (src_voter->good_signature || !target_voter->signature) {
-        log_info(LD_DIR, "Adding signature from %s", voter_identity);
-        ++r;
-        tor_free(target_voter->signature);
-        target_voter->signature =
-          tor_memdup(src_voter->signature, src_voter->signature_len);
-        memcpy(target_voter->signing_key_digest, src_voter->signing_key_digest,
-               DIGEST_LEN);
-        target_voter->signature_len = src_voter->signature_len;
-        target_voter->good_signature = src_voter->good_signature;
-        target_voter->bad_signature = src_voter->bad_signature;
-      } else {
-        log_info(LD_DIR, "Not adding signature from %s", voter_identity);
+  /* For each voter in src... */
+  SMARTLIST_FOREACH_BEGIN(siglist, document_signature_t *, sig) {
+    char voter_identity[HEX_DIGEST_LEN+1];
+    networkstatus_voter_info_t *target_voter =
+      networkstatus_get_voter_by_id(target, sig->identity_digest);
+    authority_cert_t *cert = NULL;
+    const char *algorithm;
+    document_signature_t *old_sig = NULL;
+
+    algorithm = crypto_digest_algorithm_get_name(sig->alg);
+
+    base16_encode(voter_identity, sizeof(voter_identity),
+                  sig->identity_digest, DIGEST_LEN);
+    log_info(LD_DIR, "Looking at signature from %s using %s", voter_identity,
+             algorithm);
+    /* If the target doesn't know about this voter, then forget it. */
+    if (!target_voter) {
+      log_info(LD_DIR, "We do not know any voter with ID %s", voter_identity);
+      continue;
+    }
+
+    old_sig = voter_get_sig_by_algorithm(target_voter, sig->alg);
+
+    /* If the target already has a good signature from this voter, then skip
+     * this one. */
+    if (old_sig && old_sig->good_signature) {
+      log_info(LD_DIR, "We already have a good signature from %s using %s",
+               voter_identity, algorithm);
+      continue;
+    }
+
+    /* Try checking the signature if we haven't already. */
+    if (!sig->good_signature && !sig->bad_signature) {
+      cert = authority_cert_get_by_digests(sig->identity_digest,
+                                           sig->signing_key_digest);
+      if (cert)
+        networkstatus_check_document_signature(target, sig, cert);
+    }
+
+    /* If this signature is good, or we don't have any signature yet,
+     * then maybe add it. */
+    if (sig->good_signature || !old_sig || old_sig->bad_signature) {
+      log_info(LD_DIR, "Adding signature from %s with %s", voter_identity,
+               algorithm);
+      ++r;
+      if (old_sig) {
+        smartlist_remove(target_voter->sigs, old_sig);
+        document_signature_free(old_sig);
       }
-  } SMARTLIST_FOREACH_END(src_voter);
+      smartlist_add(target_voter->sigs, document_signature_dup(sig));
+    } else {
+      log_info(LD_DIR, "Not adding signature from %s", voter_identity);
+    }
+  } SMARTLIST_FOREACH_END(sig);
 
   return r;
 }
@@ -1441,6 +1492,8 @@ networkstatus_get_detached_signatures(networkstatus_t *consensus)
   tor_assert(consensus);
   tor_assert(consensus->type == NS_TYPE_CONSENSUS);
 
+  tor_assert(consensus->flavor == FLAV_NS);
+
   elements = smartlist_create();
 
   {
@@ -1448,7 +1501,7 @@ networkstatus_get_detached_signatures(networkstatus_t *consensus)
       vu_buf[ISO_TIME_LEN+1];
     char d[HEX_DIGEST_LEN+1];
 
-    base16_encode(d, sizeof(d), consensus->networkstatus_digest, DIGEST_LEN);
+    base16_encode(d, sizeof(d), consensus->digests.d[DIGEST_SHA1], DIGEST_LEN);
     format_iso_time(va_buf, consensus->valid_after);
     format_iso_time(fu_buf, consensus->fresh_until);
     format_iso_time(vu_buf, consensus->valid_until);
@@ -1461,26 +1514,26 @@ networkstatus_get_detached_signatures(networkstatus_t *consensus)
     smartlist_add(elements, tor_strdup(buf));
   }
 
-  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, v,
-    {
+  SMARTLIST_FOREACH_BEGIN(consensus->voters, networkstatus_voter_info_t *, v) {
+    SMARTLIST_FOREACH_BEGIN(v->sigs, document_signature_t *, sig) {
       char sk[HEX_DIGEST_LEN+1];
       char id[HEX_DIGEST_LEN+1];
-      if (!v->signature || v->bad_signature)
+      if (!sig->signature || sig->bad_signature || sig->alg != DIGEST_SHA1)
         continue;
       ++n_sigs;
-      base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
-      base16_encode(id, sizeof(id), v->identity_digest, DIGEST_LEN);
+      base16_encode(sk, sizeof(sk), sig->signing_key_digest, DIGEST_LEN);
+      base16_encode(id, sizeof(id), sig->identity_digest, DIGEST_LEN);
       tor_snprintf(buf, sizeof(buf),
                    "directory-signature %s %s\n-----BEGIN SIGNATURE-----\n",
                    id, sk);
       smartlist_add(elements, tor_strdup(buf));
-      base64_encode(buf, sizeof(buf), v->signature, v->signature_len);
+      base64_encode(buf, sizeof(buf), sig->signature, sig->signature_len);
       strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
       smartlist_add(elements, tor_strdup(buf));
-    });
+    } SMARTLIST_FOREACH_END(sig);
+  } SMARTLIST_FOREACH_END(v);
 
   result = smartlist_join_strings(elements, "", 0, NULL);
-
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
   if (!n_sigs)
@@ -1493,13 +1546,15 @@ void
 ns_detached_signatures_free(ns_detached_signatures_t *s)
 {
   if (s->signatures) {
-    SMARTLIST_FOREACH(s->signatures, networkstatus_voter_info_t *, v,
-      {
-        tor_free(v->signature);
-        tor_free(v);
-      });
-    smartlist_free(s->signatures);
+    STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
+      SMARTLIST_FOREACH(sigs, document_signature_t *, sig,
+                        document_signature_free(sig));
+      smartlist_free(sigs);
+    } STRMAP_FOREACH_END;
+    strmap_free(s->signatures, NULL);
+    strmap_free(s->digests, _tor_free);
   }
+
   tor_free(s);
 }
 
@@ -1936,7 +1991,13 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   }
   tor_assert(smartlist_len(vote->voters) == 1);
   vi = get_voter(vote);
-  tor_assert(vi->good_signature == 1);
+  {
+    int any_sig_good = 0;
+    SMARTLIST_FOREACH(vi->sigs, document_signature_t *, sig,
+                      if (sig->good_signature)
+                        any_sig_good = 1);
+    tor_assert(any_sig_good);
+  }
   ds = trusteddirserver_get_by_v3_auth_digest(vi->identity_digest);
   if (!ds) {
     char *keys = list_v3_auth_ids();
@@ -2218,8 +2279,12 @@ dirvote_add_signatures_to_pending_consensus(
     goto err;
   }
 
-  log_info(LD_DIR, "Have %d signatures for adding to consensus.",
-                   smartlist_len(sigs->signatures));
+  {
+    smartlist_t *sig_list = strmap_get(sigs->signatures,
+                    networkstatus_get_flavor_name(pending_consensus->flavor));
+    log_info(LD_DIR, "Have %d signatures for adding to consensus.",
+             sig_list ? smartlist_len(sig_list) : 0);
+  }
   r = networkstatus_add_detached_signatures(pending_consensus,
                                             sigs, msg_out);
   log_info(LD_DIR,"Added %d signatures to consensus.", r);
@@ -2406,12 +2471,12 @@ dirvote_get_vote(const char *fp, int flags)
   } else {
     if (pending_vote_list && include_pending) {
       SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, pv,
-        if (!memcmp(pv->vote->networkstatus_digest, fp, DIGEST_LEN))
+        if (!memcmp(pv->vote->digests.d[DIGEST_SHA1], fp, DIGEST_LEN))
           return pv->vote_body);
     }
     if (previous_vote_list && include_previous) {
       SMARTLIST_FOREACH(previous_vote_list, pending_vote_t *, pv,
-        if (!memcmp(pv->vote->networkstatus_digest, fp, DIGEST_LEN))
+        if (!memcmp(pv->vote->digests.d[DIGEST_SHA1], fp, DIGEST_LEN))
           return pv->vote_body);
     }
   }

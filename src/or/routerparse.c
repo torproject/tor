@@ -516,6 +516,9 @@ static int router_get_hash_impl(const char *s, char *digest,
                                 const char *start_str, const char *end_str,
                                 char end_char,
                                 digest_algorithm_t alg);
+static int router_get_hashes_impl(const char *s, digests_t *digests,
+                                  const char *start_str, const char *end_str,
+                                  char end_char);
 static void token_free(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *_find_by_keyword(smartlist_t *s,
@@ -633,6 +636,16 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
                               DIGEST_SHA1);
 }
 
+/** DOCDOC */
+int
+router_get_networkstatus_v3_hashes(const char *s, digests_t *digests)
+{
+  return router_get_hashes_impl(s,digests,
+                                "network-status-version",
+                                "\ndirectory-signature",
+                                ' ');
+}
+
 /** Set <b>digest</b> to the SHA-1 digest of the hash of the network-status
  * string in <b>s</b>.  Return 0 on success, -1 on failure. */
 int
@@ -640,7 +653,8 @@ router_get_networkstatus_v3_hash(const char *s, char *digest,
                                  digest_algorithm_t alg)
 {
   return router_get_hash_impl(s,digest,
-                              "network-status-version","\ndirectory-signature",
+                              "network-status-version",
+                              "\ndirectory-signature",
                               ' ', alg);
 }
 
@@ -2304,7 +2318,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   smartlist_t *rs_tokens = NULL, *footer_tokens = NULL;
   networkstatus_voter_info_t *voter = NULL;
   networkstatus_t *ns = NULL;
-  char ns_digest[DIGEST_LEN];
+  digests_t ns_digests;
   const char *cert, *end_of_header, *end_of_footer, *s_dup = s;
   directory_token_t *tok;
   int ok;
@@ -2316,7 +2330,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   if (eos_out)
     *eos_out = NULL;
 
-  if (router_get_networkstatus_v3_hash(s, ns_digest, DIGEST_SHA1)) {
+  if (router_get_networkstatus_v3_hashes(s, &ns_digests)) {
     log_warn(LD_DIR, "Unable to compute digest of network-status");
     goto err;
   }
@@ -2332,7 +2346,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   }
 
   ns = tor_malloc_zero(sizeof(networkstatus_t));
-  memcpy(ns->networkstatus_digest, ns_digest, DIGEST_LEN);
+  memcpy(&ns->digests, &ns_digests, sizeof(ns_digests));
 
   if (ns_type != NS_TYPE_CONSENSUS) {
     const char *end_of_cert = NULL;
@@ -2486,8 +2500,9 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       if (voter)
         smartlist_add(ns->voters, voter);
       voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
+      voter->sigs = smartlist_create();
       if (ns->type != NS_TYPE_CONSENSUS)
-        memcpy(voter->vote_digest, ns_digest, DIGEST_LEN);
+        memcpy(voter->vote_digest, ns_digests.d[DIGEST_SHA1], DIGEST_LEN);
 
       voter->nickname = tor_strdup(tok->args[0]);
       if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
@@ -2622,10 +2637,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     goto err;
   }
 
-  SMARTLIST_FOREACH(footer_tokens, directory_token_t *, _tok,
-  {
+  SMARTLIST_FOREACH_BEGIN(footer_tokens, directory_token_t *, _tok) {
     char declared_identity[DIGEST_LEN];
     networkstatus_voter_info_t *v;
+    document_signature_t *sig;
     tok = _tok;
     if (tok->tp != K_DIRECTORY_SIGNATURE)
       continue;
@@ -2650,11 +2665,15 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                "any declared directory source.");
       goto err;
     }
+    sig = tor_malloc_zero(sizeof(document_signature_t));
+    memcpy(sig->identity_digest, v->identity_digest, DIGEST_LEN);
+    sig->alg = DIGEST_SHA1;
     if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
-        base16_decode(v->signing_key_digest, sizeof(v->signing_key_digest),
+        base16_decode(sig->signing_key_digest, sizeof(sig->signing_key_digest),
                       tok->args[1], HEX_DIGEST_LEN) < 0) {
       log_warn(LD_DIR, "Error decoding declared digest %s in "
                "network-status vote.", escaped(tok->args[1]));
+      tor_free(sig);
       goto err;
     }
 
@@ -2663,32 +2682,42 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
                  DIGEST_LEN)) {
         log_warn(LD_DIR, "Digest mismatch between declared and actual on "
                  "network-status vote.");
+        tor_free(sig);
         goto err;
       }
+    }
+
+    if (voter_get_sig_by_algorithm(v, sig->alg)) {
+      /* We already parsed a vote with this algorithm from this voter. Use the
+         first one. */
+      log_fn(LOG_PROTOCOL_WARN, LD_DIR, "We received a networkstatus "
+             "that contains two votes from the same voter with the same "
+             "algorithm. Ignoring the second vote.");
+      tor_free(sig);
+      continue;
     }
 
     if (ns->type != NS_TYPE_CONSENSUS) {
-      if (check_signature_token(ns_digest, DIGEST_LEN,
+      if (check_signature_token(ns_digests.d[DIGEST_SHA1], DIGEST_LEN,
                                 tok, ns->cert->signing_key, 0,
-                                "network-status vote"))
+                                "network-status vote")) {
+        tor_free(sig);
         goto err;
-      v->good_signature = 1;
-    } else {
-      if (tok->object_size >= INT_MAX)
-        goto err;
-      /* We already parsed a vote from this voter. Use the first one. */
-      if (v->signature) {
-        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "We received a networkstatus "
-                   "that contains two votes from the same voter. Ignoring "
-                   "the second vote.");
-        continue;
       }
+      sig->good_signature = 1;
+    } else {
+      if (tok->object_size >= INT_MAX) {
+        tor_free(sig);
+        goto err;
+      }
+      sig->signature = tor_memdup(tok->object_body, tok->object_size);
+      sig->signature_len = (int) tok->object_size;
 
-      v->signature = tor_memdup(tok->object_body, tok->object_size);
-      v->signature_len = (int) tok->object_size;
     }
+    smartlist_add(v->sigs, sig);
+
     ++n_signatures;
-  });
+  } SMARTLIST_FOREACH_END(_tok);
 
   if (! n_signatures) {
     log_warn(LD_DIR, "No signatures on networkstatus vote.");
@@ -2714,10 +2743,14 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     smartlist_free(tokens);
   }
   if (voter) {
+    if (voter->sigs) {
+      SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+                        document_signature_free(sig));
+      smartlist_free(voter->sigs);
+    }
     tor_free(voter->nickname);
     tor_free(voter->address);
     tor_free(voter->contact);
-    tor_free(voter->signature);
     tor_free(voter);
   }
   if (rs_tokens) {
@@ -2747,10 +2780,19 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
    * networkstatus_parse_vote_from_string(). */
   directory_token_t *tok;
   memarea_t *area = NULL;
+  const char *flavor = "ns";
+  digests_t *digests;
+  smartlist_t *sig_list;
 
   smartlist_t *tokens = smartlist_create();
   ns_detached_signatures_t *sigs =
     tor_malloc_zero(sizeof(ns_detached_signatures_t));
+  sigs->digests = strmap_new();
+  sigs->signatures = strmap_new();
+  digests = tor_malloc_zero(sizeof(digests_t));
+  sig_list = smartlist_create();
+  strmap_set(sigs->digests, flavor, digests);
+  strmap_set(sigs->signatures, flavor, sig_list);
 
   if (!eos)
     eos = s + strlen(s);
@@ -2768,7 +2810,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
              "networkstatus signatures");
     goto err;
   }
-  if (base16_decode(sigs->networkstatus_digest, DIGEST_LEN,
+  if (base16_decode(digests->d[DIGEST_SHA1], DIGEST_LEN,
                     tok->args[0], strlen(tok->args[0])) < 0) {
     log_warn(LD_DIR, "Bad encoding on on consensus-digest in detached "
              "networkstatus signatures");
@@ -2793,50 +2835,51 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     goto err;
   }
 
-  sigs->signatures = smartlist_create();
-  SMARTLIST_FOREACH(tokens, directory_token_t *, _tok,
-    {
-      char id_digest[DIGEST_LEN];
-      char sk_digest[DIGEST_LEN];
-      networkstatus_voter_info_t *voter;
+  SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, _tok) {
+    char id_digest[DIGEST_LEN];
+    char sk_digest[DIGEST_LEN];
+    document_signature_t *sig;
 
-      tok = _tok;
-      if (tok->tp != K_DIRECTORY_SIGNATURE)
-        continue;
-      tor_assert(tok->n_args >= 2);
+    tok = _tok;
+    if (tok->tp != K_DIRECTORY_SIGNATURE)
+      continue;
+    tor_assert(tok->n_args >= 2);
 
-      if (!tok->object_type ||
-          strcmp(tok->object_type, "SIGNATURE") ||
-          tok->object_size < 128 || tok->object_size > 512) {
-        log_warn(LD_DIR, "Bad object type or length on directory-signature");
-        goto err;
-      }
+    if (!tok->object_type ||
+        strcmp(tok->object_type, "SIGNATURE") ||
+        tok->object_size < 128 || tok->object_size > 512) {
+      log_warn(LD_DIR, "Bad object type or length on directory-signature");
+      goto err;
+    }
 
-      if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
-          base16_decode(id_digest, sizeof(id_digest),
-                        tok->args[0], HEX_DIGEST_LEN) < 0) {
-        log_warn(LD_DIR, "Error decoding declared identity %s in "
-                 "network-status vote.", escaped(tok->args[0]));
-        goto err;
-      }
-      if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
-          base16_decode(sk_digest, sizeof(sk_digest),
-                        tok->args[1], HEX_DIGEST_LEN) < 0) {
-        log_warn(LD_DIR, "Error decoding declared digest %s in "
-                 "network-status vote.", escaped(tok->args[1]));
-        goto err;
-      }
+    if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
+        base16_decode(id_digest, sizeof(id_digest),
+                      tok->args[0], HEX_DIGEST_LEN) < 0) {
+      log_warn(LD_DIR, "Error decoding declared identity %s in "
+               "network-status vote.", escaped(tok->args[0]));
+      goto err;
+    }
+    if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+        base16_decode(sk_digest, sizeof(sk_digest),
+                      tok->args[1], HEX_DIGEST_LEN) < 0) {
+      log_warn(LD_DIR, "Error decoding declared digest %s in "
+               "network-status vote.", escaped(tok->args[1]));
+      goto err;
+    }
 
-      voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
-      memcpy(voter->identity_digest, id_digest, DIGEST_LEN);
-      memcpy(voter->signing_key_digest, sk_digest, DIGEST_LEN);
-      if (tok->object_size >= INT_MAX)
-        goto err;
-      voter->signature = tor_memdup(tok->object_body, tok->object_size);
-      voter->signature_len = (int) tok->object_size;
+    sig = tor_malloc_zero(sizeof(document_signature_t));
+    sig->alg = DIGEST_SHA1;
+    memcpy(sig->identity_digest, id_digest, DIGEST_LEN);
+    memcpy(sig->signing_key_digest, sk_digest, DIGEST_LEN);
+    if (tok->object_size >= INT_MAX) {
+      tor_free(sig);
+      goto err;
+    }
+    sig->signature = tor_memdup(tok->object_body, tok->object_size);
+    sig->signature_len = (int) tok->object_size;
 
-      smartlist_add(sigs->signatures, voter);
-    });
+    smartlist_add(sig_list, sig);
+  } SMARTLIST_FOREACH_END(_tok);
 
   goto done;
  err:
@@ -3428,18 +3471,11 @@ find_all_exitpolicy(smartlist_t *s)
   return out;
 }
 
-/** Compute the digest of the substring of <b>s</b> taken from the first
- * occurrence of <b>start_str</b> through the first instance of c after the
- * first subsequent occurrence of <b>end_str</b>; store the 20-byte result in
- * <b>digest</b>; return 0 on success.
- *
- * If no such substring exists, return -1.
- */
 static int
-router_get_hash_impl(const char *s, char *digest,
-                     const char *start_str,
-                     const char *end_str, char end_c,
-                     digest_algorithm_t alg)
+router_get_hash_impl_helper(const char *s,
+                            const char *start_str,
+                            const char *end_str, char end_c,
+                            const char **start_out, const char **end_out)
 {
   char *start, *end;
   start = strstr(s, start_str);
@@ -3465,6 +3501,28 @@ router_get_hash_impl(const char *s, char *digest,
   }
   ++end;
 
+  *start_out = start;
+  *end_out = end;
+  return 0;
+}
+
+/** Compute the digest of the substring of <b>s</b> taken from the first
+ * occurrence of <b>start_str</b> through the first instance of c after the
+ * first subsequent occurrence of <b>end_str</b>; store the 20-byte result in
+ * <b>digest</b>; return 0 on success.
+ *
+ * If no such substring exists, return -1.
+ */
+static int
+router_get_hash_impl(const char *s, char *digest,
+                     const char *start_str,
+                     const char *end_str, char end_c,
+                     digest_algorithm_t alg)
+{
+  const char *start=NULL, *end=NULL;
+  if (router_get_hash_impl_helper(s,start_str,end_str,end_c,&start,&end)<0)
+    return -1;
+
   if (alg == DIGEST_SHA1) {
     if (crypto_digest(digest, start, end-start)) {
       log_warn(LD_BUG,"couldn't compute digest");
@@ -3475,6 +3533,24 @@ router_get_hash_impl(const char *s, char *digest,
       log_warn(LD_BUG,"couldn't compute digest");
       return -1;
     }
+  }
+
+  return 0;
+}
+
+/** As router_get_hash_impl, but compute all hashes. */
+static int
+router_get_hashes_impl(const char *s, digests_t *digests,
+                       const char *start_str,
+                       const char *end_str, char end_c)
+{
+  const char *start=NULL, *end=NULL;
+  if (router_get_hash_impl_helper(s,start_str,end_str,end_c,&start,&end)<0)
+    return -1;
+
+  if (crypto_digest_all(digests, start, end-start)) {
+    log_warn(LD_BUG,"couldn't compute digests");
+    return -1;
   }
 
   return 0;

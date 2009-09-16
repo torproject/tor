@@ -571,6 +571,7 @@ test_dir_v3_networkstatus(void)
 
   time_t now = time(NULL);
   networkstatus_voter_info_t *voter;
+  document_signature_t *sig;
   networkstatus_t *vote=NULL, *v1=NULL, *v2=NULL, *v3=NULL, *con=NULL;
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
@@ -946,20 +947,25 @@ test_dir_v3_networkstatus(void)
   /* Check signatures.  the first voter is a pseudo-entry with a legacy key.
    * The second one hasn't signed.  The fourth one has signed: validate it. */
   voter = smartlist_get(con->voters, 1);
-  test_assert(!voter->signature);
-  test_assert(!voter->good_signature);
-  test_assert(!voter->bad_signature);
+  test_eq(smartlist_len(voter->sigs), 0);
+#if 0
+  sig = smartlist_get(voter->sigs, 1);
+  test_assert(!sig->signature);
+  test_assert(!sig->good_signature);
+  test_assert(!sig->bad_signature);
+#endif
 
   voter = smartlist_get(con->voters, 3);
-  test_assert(voter->signature);
-  test_assert(!voter->good_signature);
-  test_assert(!voter->bad_signature);
-  test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 3),
-                                               cert3));
-  test_assert(voter->signature);
-  test_assert(voter->good_signature);
-  test_assert(!voter->bad_signature);
+  test_eq(smartlist_len(voter->sigs), 1);
+  sig = smartlist_get(voter->sigs, 0);
+  test_assert(sig->signature);
+  test_assert(!sig->good_signature);
+  test_assert(!sig->bad_signature);
+
+  test_assert(!networkstatus_check_document_signature(con, sig, cert3));
+  test_assert(sig->signature);
+  test_assert(sig->good_signature);
+  test_assert(!sig->bad_signature);
 
   {
     const char *msg=NULL;
@@ -984,10 +990,8 @@ test_dir_v3_networkstatus(void)
     test_assert(con3);
 
     /* All three should have the same digest. */
-    test_memeq(con->networkstatus_digest, con2->networkstatus_digest,
-               DIGEST_LEN);
-    test_memeq(con->networkstatus_digest, con3->networkstatus_digest,
-               DIGEST_LEN);
+    test_memeq(&con->digests, &con2->digests, sizeof(digests_t));
+    test_memeq(&con->digests, &con3->digests, sizeof(digests_t));
 
     /* Extract a detached signature from con3. */
     detached_text1 = networkstatus_get_detached_signatures(con3);
@@ -1000,12 +1004,20 @@ test_dir_v3_networkstatus(void)
     test_eq(dsig1->valid_after, con3->valid_after);
     test_eq(dsig1->fresh_until, con3->fresh_until);
     test_eq(dsig1->valid_until, con3->valid_until);
-    test_memeq(dsig1->networkstatus_digest, con3->networkstatus_digest,
-               DIGEST_LEN);
-    test_eq(1, smartlist_len(dsig1->signatures));
-    voter = smartlist_get(dsig1->signatures, 0);
-    test_memeq(voter->identity_digest, cert1->cache_info.identity_digest,
-               DIGEST_LEN);
+    {
+      digests_t *dsig_digests = strmap_get(dsig1->digests, "ns");
+      test_assert(dsig_digests);
+      test_memeq(dsig_digests->d[DIGEST_SHA1], con3->digests.d[DIGEST_SHA1],
+                 DIGEST_LEN);
+    }
+    {
+      smartlist_t *dsig_signatures = strmap_get(dsig1->signatures, "ns");
+      test_assert(dsig_signatures);
+      test_eq(1, smartlist_len(dsig_signatures));
+      sig = smartlist_get(dsig_signatures, 0);
+      test_memeq(sig->identity_digest, cert1->cache_info.identity_digest,
+                 DIGEST_LEN);
+    }
 
     /* Try adding it to con2. */
     detached_text2 = networkstatus_get_detached_signatures(con2);
@@ -1023,7 +1035,8 @@ test_dir_v3_networkstatus(void)
         printf("%s\n", hd);
       });
     */
-    test_eq(2, smartlist_len(dsig2->signatures));
+    test_eq(2,
+            smartlist_len((smartlist_t*)strmap_get(dsig2->signatures, "ns")));
 
     /* Try adding to con2 twice; verify that nothing changes. */
     test_eq(0, networkstatus_add_detached_signatures(con2, dsig1, &msg));
@@ -1031,13 +1044,14 @@ test_dir_v3_networkstatus(void)
     /* Add to con. */
     test_eq(2, networkstatus_add_detached_signatures(con, dsig2, &msg));
     /* Check signatures */
-    test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 1),
-                                               cert2));
-    test_assert(!networkstatus_check_voter_signature(con,
-                                               smartlist_get(con->voters, 2),
-                                               cert1));
-
+    voter = smartlist_get(con->voters, 1);
+    sig = smartlist_get(voter->sigs, 0);
+    test_assert(sig);
+    test_assert(!networkstatus_check_document_signature(con, sig, cert2));
+    voter = smartlist_get(con->voters, 2);
+    sig = smartlist_get(voter->sigs, 0);
+    test_assert(sig);
+    test_assert(!networkstatus_check_document_signature(con, sig, cert1));
   }
 
  done:

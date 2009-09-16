@@ -58,9 +58,22 @@
 #define HEX_DIGEST256_LEN 64
 
 typedef enum {
-  DIGEST_SHA1,
-  DIGEST_SHA256,
+  DIGEST_SHA1 = 0,
+  DIGEST_SHA256 = 1,
 } digest_algorithm_t;
+#define  N_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
+
+/** A set of all the digests we know how to compute, taken on a single
+ * string.  Any digests that are shorter than 256 bits are right-padded
+ * with 0 bits.
+ *
+ * Note that this representation wastes 12 bytes for the SHA1 case, so
+ * don't use it for anything where we need to allocate a whole bunch at
+ * once.
+ **/
+typedef struct {
+  char d[N_DIGEST_ALGORITHMS][DIGEST256_LEN];
+} digests_t;
 
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
@@ -158,10 +171,12 @@ int crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *env,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 
-/* SHA-1 */
+/* SHA-1 and other digests. */
 int crypto_digest(char *digest, const char *m, size_t len);
 int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
+int crypto_digest_all(digests_t *ds_out, const char *m, size_t len);
+const char *crypto_digest_algorithm_get_name(digest_algorithm_t alg);
 crypto_digest_env_t *crypto_new_digest_env(void);
 crypto_digest_env_t *crypto_new_digest256_env(digest_algorithm_t algorithm);
 void crypto_free_digest_env(crypto_digest_env_t *digest);

@@ -2597,12 +2597,17 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);
   memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
+  voter->sigs = smartlist_create();
+  {
+    document_signature_t *sig = tor_malloc_zero(sizeof(document_signature_t));
+    memcpy(sig->identity_digest, identity_digest, DIGEST_LEN);
+    memcpy(sig->signing_key_digest, signing_key_digest, DIGEST_LEN);
+  }
   voter->address = hostname;
   voter->addr = addr;
   voter->dir_port = options->DirPort;
   voter->or_port = options->ORPort;
   voter->contact = tor_strdup(contact);
-  memcpy(voter->signing_key_digest, signing_key_digest, DIGEST_LEN);
   if (options->V3AuthUseLegacyKey) {
     authority_cert_t *c = get_my_v3_legacy_cert();
     if (c) {

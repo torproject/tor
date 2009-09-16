@@ -279,7 +279,25 @@ networkstatus_v2_free(networkstatus_v2_t *ns)
   tor_free(ns);
 }
 
-/** Clear all storage held in <b>ns</b>. */
+/** Free all storage held in <b>sig</b> */
+void
+document_signature_free(document_signature_t *sig)
+{
+  tor_free(sig->signature);
+  tor_free(sig);
+}
+
+/** Return a newly allocated copy of <b>sig</b> */
+document_signature_t *
+document_signature_dup(const document_signature_t *sig)
+{
+  document_signature_t *r = tor_memdup(sig, sizeof(document_signature_t));
+  if (r->signature)
+    r->signature = tor_memdup(sig->signature, sig->signature_len);
+  return r;
+}
+
+/** Free all storage held in <b>ns</b>. */
 void
 networkstatus_vote_free(networkstatus_t *ns)
 {
@@ -301,14 +319,17 @@ networkstatus_vote_free(networkstatus_t *ns)
     smartlist_free(ns->supported_methods);
   }
   if (ns->voters) {
-    SMARTLIST_FOREACH(ns->voters, networkstatus_voter_info_t *, voter,
-    {
+    SMARTLIST_FOREACH_BEGIN(ns->voters, networkstatus_voter_info_t *, voter) {
       tor_free(voter->nickname);
       tor_free(voter->address);
       tor_free(voter->contact);
-      tor_free(voter->signature);
+      if (voter->sigs) {
+        SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+                          document_signature_free(sig));
+        smartlist_free(voter->sigs);
+      }
       tor_free(voter);
-    });
+    } SMARTLIST_FOREACH_END(voter);
     smartlist_free(ns->voters);
   }
   if (ns->cert)
@@ -347,34 +368,38 @@ networkstatus_get_voter_by_id(networkstatus_t *vote,
   return NULL;
 }
 
-/** Check whether the signature on <b>voter</b> is correctly signed by
- * the signing key of <b>cert</b>. Return -1 if <b>cert</b> doesn't match the
+/** Check whether the signature <b>sig</b> is correctly signed with the
+ * signing key in <b>cert</b>.  Return -1 if <b>cert</b> doesn't match the
  * signing key; otherwise set the good_signature or bad_signature flag on
  * <b>voter</b>, and return 0. */
-/* (private; exposed for testing.) */
 int
-networkstatus_check_voter_signature(networkstatus_t *consensus,
-                                    networkstatus_voter_info_t *voter,
-                                    authority_cert_t *cert)
+networkstatus_check_document_signature(const networkstatus_t *consensus,
+                                       document_signature_t *sig,
+                                       const authority_cert_t *cert)
 {
-  char d[DIGEST_LEN];
+  char key_digest[DIGEST_LEN];
+  const int dlen = sig->alg == DIGEST_SHA1 ? DIGEST_LEN : DIGEST256_LEN;
   char *signed_digest;
   size_t signed_digest_len;
-  if (crypto_pk_get_digest(cert->signing_key, d)<0)
+
+  if (crypto_pk_get_digest(cert->signing_key, key_digest)<0)
     return -1;
-  if (memcmp(voter->signing_key_digest, d, DIGEST_LEN))
+  if (memcmp(sig->signing_key_digest, key_digest, DIGEST_LEN) ||
+      memcmp(sig->identity_digest, cert->cache_info.identity_digest,
+             DIGEST_LEN))
     return -1;
+
   signed_digest_len = crypto_pk_keysize(cert->signing_key);
   signed_digest = tor_malloc(signed_digest_len);
   if (crypto_pk_public_checksig(cert->signing_key,
                                 signed_digest,
-                                voter->signature,
-                                voter->signature_len) != DIGEST_LEN ||
-      memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
+                                sig->signature,
+                                sig->signature_len) < dlen ||
+      memcmp(signed_digest, consensus->digests.d[sig->alg], dlen)) {
     log_warn(LD_DIR, "Got a bad signature on a networkstatus vote");
-    voter->bad_signature = 1;
+    sig->bad_signature = 1;
   } else {
-    voter->good_signature = 1;
+    sig->good_signature = 1;
   }
   tor_free(signed_digest);
   return 0;
@@ -407,37 +432,52 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
 
   tor_assert(consensus->type == NS_TYPE_CONSENSUS);
 
-  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, voter,
-  {
-    if (!voter->good_signature && !voter->bad_signature && voter->signature) {
-      /* we can try to check the signature. */
-      int is_v3_auth = trusteddirserver_get_by_v3_auth_digest(
-                                          voter->identity_digest) != NULL;
-      authority_cert_t *cert =
-        authority_cert_get_by_digests(voter->identity_digest,
-                                      voter->signing_key_digest);
-      if (!is_v3_auth) {
-        smartlist_add(unrecognized, voter);
-        ++n_unknown;
-        continue;
-      } else if (!cert || cert->expires < now) {
-        smartlist_add(need_certs_from, voter);
-        ++n_missing_key;
-        continue;
+  SMARTLIST_FOREACH_BEGIN(consensus->voters, networkstatus_voter_info_t *,
+                          voter) {
+    int good_here = 0;
+    int bad_here = 0;
+    int missing_key_here = 0;
+    SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
+      if (!sig->good_signature && !sig->bad_signature &&
+          sig->signature) {
+        /* we can try to check the signature. */
+        int is_v3_auth = trusteddirserver_get_by_v3_auth_digest(
+                                              sig->identity_digest) != NULL;
+        authority_cert_t *cert =
+          authority_cert_get_by_digests(sig->identity_digest,
+                                        sig->signing_key_digest);
+        tor_assert(!memcmp(sig->identity_digest, voter->identity_digest,
+                           DIGEST_LEN));
+
+        if (!is_v3_auth) {
+          smartlist_add(unrecognized, voter);
+          ++n_unknown;
+          continue;
+        } else if (!cert || cert->expires < now) {
+          smartlist_add(need_certs_from, voter);
+          ++missing_key_here;
+          continue;
+        }
+        if (networkstatus_check_document_signature(consensus, sig, cert) < 0) {
+          smartlist_add(need_certs_from, voter);
+          ++missing_key_here;
+          continue;
+        }
       }
-      if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
-        smartlist_add(need_certs_from, voter);
-        ++n_missing_key;
-        continue;
-      }
-    }
-    if (voter->good_signature)
+      if (sig->good_signature)
+        ++good_here;
+      else if (sig->bad_signature)
+        ++bad_here;
+    } SMARTLIST_FOREACH_END(sig);
+    if (good_here)
       ++n_good;
-    else if (voter->bad_signature)
+    else if (bad_here)
       ++n_bad;
+    else if (missing_key_here)
+      ++n_missing_key;
     else
       ++n_no_signature;
-  });
+  } SMARTLIST_FOREACH_END(voter);
 
   /* Now see whether we're missing any voters entirely. */
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
@@ -1434,8 +1474,7 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
   }
 
   if (current_consensus &&
-      !memcmp(c->networkstatus_digest, current_consensus->networkstatus_digest,
-              DIGEST_LEN)) {
+      !memcmp(&c->digests, &current_consensus->digests, sizeof(c->digests))) {
     /* We already have this one. That's a failure. */
     log_info(LD_DIR, "Got a consensus we already have");
     goto done;
@@ -1669,10 +1708,8 @@ download_status_map_update_from_v2_networkstatus(void)
     v2_download_status_map = digestmap_new();
 
   dl_status = digestmap_new();
-  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-  {
-    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-    {
+  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
+    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
       const char *d = rs->descriptor_digest;
       download_status_t *s;
       if (digestmap_get(dl_status, d))
@@ -1681,8 +1718,8 @@ download_status_map_update_from_v2_networkstatus(void)
         s = tor_malloc_zero(sizeof(download_status_t));
       }
       digestmap_set(dl_status, d, s);
-    });
-  });
+    } SMARTLIST_FOREACH_END(rs);
+  } SMARTLIST_FOREACH_END(ns);
   digestmap_free(v2_download_status_map, _tor_free);
   v2_download_status_map = dl_status;
   networkstatus_v2_list_has_changed = 0;
@@ -1928,6 +1965,22 @@ networkstatus_get_param(networkstatus_t *ns, const char *param_name,
   } SMARTLIST_FOREACH_END(p);
 
   return default_val;
+}
+
+/** Return the name of the consensus flavor <b>flav</b> as used to identify
+ * the flavor in directory documents. */
+const char *
+networkstatus_get_flavor_name(consensus_flavor_t flav)
+{
+  switch (flav) {
+    case FLAV_NS:
+      return "ns";
+    case FLAV_MICRODESC:
+      return "microdesc";
+    default:
+      tor_fragile_assert();
+      return "??";
+  }
 }
 
 /** If <b>question</b> is a string beginning with "ns/" in a format the

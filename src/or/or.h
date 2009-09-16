@@ -1641,29 +1641,42 @@ typedef struct vote_routerstatus_t {
   vote_microdesc_hash_t *microdesc;
 } vote_routerstatus_t;
 
+/** A signature of some document by an authority. */
+typedef struct document_signature_t {
+  /** Declared SHA-1 digest of this voter's identity key */
+  char identity_digest[DIGEST_LEN];
+  /** Declared SHA-1 digest of signing key used by this voter. */
+  char signing_key_digest[DIGEST_LEN];
+  /** Algorithm used to compute the digest of the document. */
+  digest_algorithm_t alg;
+  /** Signature of the signed thing. */
+  char *signature;
+  /** Length of <b>signature</b> */
+  int signature_len;
+  unsigned int bad_signature : 1; /**< Set to true if we've tried to verify
+                                   * the sig, and we know it's bad. */
+  unsigned int good_signature : 1; /**< Set to true if we've verified the sig
+                                     * as good. */
+} document_signature_t;
+
 /** Information about a single voter in a vote or a consensus. */
 typedef struct networkstatus_voter_info_t {
+  /** Declared SHA-1 digest of this voter's identity key */
+  char identity_digest[DIGEST_LEN];
   char *nickname; /**< Nickname of this voter */
-  char identity_digest[DIGEST_LEN]; /**< Digest of this voter's identity key */
+  /** Digest of this voter's "legacy" identity key, if any.  In vote only; for
+   * consensuses, we treat legacy keys as additional signers. */
+  char legacy_id_digest[DIGEST_LEN];
   char *address; /**< Address of this voter, in string format. */
   uint32_t addr; /**< Address of this voter, in IPv4, in host order. */
   uint16_t dir_port; /**< Directory port of this voter */
   uint16_t or_port; /**< OR port of this voter */
   char *contact; /**< Contact information for this voter. */
   char vote_digest[DIGEST_LEN]; /**< Digest of this voter's vote, as signed. */
-  /** Digest of this voter's "legacy" identity key, if any.  In vote only; for
-   * consensuses, we treat legacy keys as additional signers. */
-  char legacy_id_digest[DIGEST_LEN];
 
   /* Nothing from here on is signed. */
-  char signing_key_digest[DIGEST_LEN]; /**< Declared digest of signing key
-                                        * used by this voter. */
-  char *signature; /**< Signature from this voter. */
-  int signature_len; /**< Length of <b>signature</b> */
-  unsigned int bad_signature : 1; /**< Set to true if we've tried to verify
-                                   * the sig, and we know it's bad. */
-  unsigned int good_signature : 1; /**< Set to true if we've verified the sig
-                                     * as good. */
+  /** The signature of the document and the signature's status. */
+  smartlist_t *sigs;
 } networkstatus_voter_info_t;
 
 /** Enumerates the possible seriousness values of a networkstatus document. */
@@ -1673,10 +1686,17 @@ typedef enum {
   NS_TYPE_OPINION,
 } networkstatus_type_t;
 
+/** DOCDOC */
+typedef enum {
+  FLAV_NS,
+  FLAV_MICRODESC,
+} consensus_flavor_t;
+
 /** A common structure to hold a v3 network status vote, or a v3 network
  * status consensus. */
 typedef struct networkstatus_t {
-  networkstatus_type_t type; /**< Vote, consensus, or opinion? */
+  networkstatus_type_t type : 8; /**< Vote, consensus, or opinion? */
+  consensus_flavor_t flavor : 8; /**< If a consensus, what kind? */
   time_t published; /**< Vote only: Time when vote was written. */
   time_t valid_after; /**< Time after which this vote or consensus applies. */
   time_t fresh_until; /**< Time before which this is the most recent vote or
@@ -1715,8 +1735,8 @@ typedef struct networkstatus_t {
 
   struct authority_cert_t *cert; /**< Vote only: the voter's certificate. */
 
-  /** Digest of this document, as signed. */
-  char networkstatus_digest[DIGEST_LEN];
+  /** Digests of this document, as signed. */
+  digests_t digests;
 
   /** List of router statuses, sorted by identity digest.  For a vote,
    * the elements are vote_routerstatus_t; for a consensus, the elements
@@ -1728,14 +1748,15 @@ typedef struct networkstatus_t {
   digestmap_t *desc_digest_map;
 } networkstatus_t;
 
-/** A set of signatures for a networkstatus consensus.  All fields are as for
- * networkstatus_t. */
+/** A set of signatures for a networkstatus consensus.  Unless otherwise
+ * noted, all fields are as for networkstatus_t. */
 typedef struct ns_detached_signatures_t {
   time_t valid_after;
   time_t fresh_until;
   time_t valid_until;
-  char networkstatus_digest[DIGEST_LEN];
-  smartlist_t *signatures; /* list of networkstatus_voter_info_t */
+  strmap_t *digests; /**< Map from flavor name to digestset_t */
+  strmap_t *signatures; /**< Map from flavor name to list of
+                         * document_signature_t */
 } ns_detached_signatures_t;
 
 /** Allowable types of desc_store_t. */
@@ -3803,12 +3824,6 @@ int dirserv_read_measured_bandwidths(const char *from_file,
 
 void dirvote_free_all(void);
 
-/** DOCDOC */
-typedef enum {
-  FLAV_NS,
-  FLAV_MICRODESC,
-} consensus_flavor_t;
-
 /* vote manipulation */
 char *networkstatus_compute_consensus(smartlist_t *votes,
                                       int total_authorities,
@@ -3869,6 +3884,9 @@ int dirvote_format_microdesc_vote_line(char *out, size_t out_len,
 int vote_routerstatus_find_microdesc_hash(char *digest256_out,
                                           const vote_routerstatus_t *vrs,
                                           int method);
+document_signature_t *voter_get_sig_by_algorithm(
+                           const networkstatus_voter_info_t *voter,
+                           digest_algorithm_t alg);
 
 #ifdef DIRVOTE_PRIVATE
 char *format_networkstatus_vote(crypto_pk_env_t *private_key,
@@ -4134,9 +4152,9 @@ networkstatus_voter_info_t *networkstatus_get_voter_by_id(
                                        const char *identity);
 int networkstatus_check_consensus_signature(networkstatus_t *consensus,
                                             int warn);
-int networkstatus_check_voter_signature(networkstatus_t *consensus,
-                                        networkstatus_voter_info_t *voter,
-                                        authority_cert_t *cert);
+int networkstatus_check_document_signature(const networkstatus_t *consensus,
+                                           document_signature_t *sig,
+                                           const authority_cert_t *cert);
 char *networkstatus_get_cache_filename(const char *identity_digest);
 int router_set_networkstatus_v2(const char *s, time_t arrived_at,
                              v2_networkstatus_source_t source,
@@ -4189,6 +4207,9 @@ int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
                                 int32_t default_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
+const char *networkstatus_get_flavor_name(consensus_flavor_t flav);
+void document_signature_free(document_signature_t *sig);
+document_signature_t *document_signature_dup(const document_signature_t *sig);
 void networkstatus_free_all(void);
 
 /********************************* ntmain.c ***************************/
@@ -4975,6 +4996,7 @@ int router_get_runningrouters_hash(const char *s, char *digest);
 int router_get_networkstatus_v2_hash(const char *s, char *digest);
 int router_get_networkstatus_v3_hash(const char *s, char *digest,
                                      digest_algorithm_t algorithm);
+int router_get_networkstatus_v3_hashes(const char *s, digests_t *digests);
 int router_get_extrainfo_hash(const char *s, char *digest);
 int router_append_dirobj_signature(char *buf, size_t buf_len,
                                    const char *digest,
