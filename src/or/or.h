@@ -2916,7 +2916,7 @@ typedef struct {
   int pre_timeouts;
   /** "Minimum" value of our pareto distribution (actually mode) */
   build_time_t Xm;
-  /** alpha exponent for pareto dis */
+  /** alpha exponent for pareto dist. */
   double alpha;
   /** Have we computed a timeout? */
   int have_computed_timeout;

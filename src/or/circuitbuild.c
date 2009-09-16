@@ -170,6 +170,9 @@ circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
     return -1;
   }
 
+  // XXX: Probably want to demote this to debug for the release.
+  log_info(LD_CIRC, "Adding circuit build time %u", time);
+
   cbt->circuit_build_times[cbt->build_times_idx] = time;
   cbt->build_times_idx = (cbt->build_times_idx + 1) % NCIRCUITS_TO_OBSERVE;
   if (cbt->total_build_times < NCIRCUITS_TO_OBSERVE)
@@ -539,7 +542,8 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
              "Generated a synthetic timeout larger than the max: %u",
              gentime);
   } else {
-    log_info(LD_CIRC, "Generated synthetic time %u for timeout", gentime);
+    log_info(LD_CIRC, "Generated synthetic circuit build time %u for timeout",
+            gentime);
   }
 
   circuit_build_times_add_time(cbt, gentime);
