@@ -88,7 +88,7 @@ static smartlist_t *entry_guards = NULL;
 static int entry_guards_dirty = 0;
 
 /** If set, we're running the unit tests: we should avoid clobbering
- * our state file. */
+ * our state file or accessing get_options() or get_or_state() */
 static int unit_tests = 0;
 
 /********* END VARIABLES ************/
@@ -427,11 +427,15 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   cbt->Xm = circuit_build_times_mode(cbt);
 
   for (i=0; i< NCIRCUITS_TO_OBSERVE; i++) {
-    if (!x[i]) continue;
+    if (!x[i]) {
+      continue;
+    }
 
-    // Hrmm, should we count < Xm as Xm or just drop
-    if (x[i] < cbt->Xm) a += ln(cbt->Xm);
-    else a += ln(x[i]);
+    if (x[i] < cbt->Xm) {
+      a += ln(cbt->Xm);
+    } else {
+      a += ln(x[i]);
+    }
     n++;
   }
 

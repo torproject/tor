@@ -2875,12 +2875,13 @@ void entry_guards_free_all(void);
 #define NCIRCUITS_TO_OBSERVE 5000
 
 /** Width of the histogram bins in milliseconds */
-#define BUILDTIME_BIN_WIDTH 50
+#define BUILDTIME_BIN_WIDTH ((build_time_t)50)
 
 /** Cuttof point on the CDF for our timeout estimation.
  * TODO: This should be moved to the consensus */
 #define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
 
+/** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
 #define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
 
@@ -2900,15 +2901,26 @@ typedef uint32_t build_time_t;
 #define BUILD_TIMES_SAVE_STATE_EVERY  10
 
 typedef struct {
+  /** The circular array of recorded build times in milliseconds */
   build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
+  /** The timestamp we last completed a TLS handshake or received a cell */
   time_t network_last_live;
+  /** Last time we built a circuit. Used to decide to build new test circs */
   time_t last_circ_at;
+  /** Current index in the circuit_build_times circular array */
   int build_times_idx;
+  /** Total number of build times accumulated. Maxes at NCIRCUITS_TO_OBSERVE */
   int total_build_times;
+  /** Number of timeouts that have happened before estimating pareto
+   *  parameters */
   int pre_timeouts;
+  /** "Minimum" value of our pareto distribution (actually mode) */
   build_time_t Xm;
+  /** alpha exponent for pareto dis */
   double alpha;
+  /** Have we computed a timeout? */
   int have_computed_timeout;
+  /** The value for that timeout in seconds, not milliseconds */
   int timeout;
 } circuit_build_times_t;
 
