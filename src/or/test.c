@@ -3436,7 +3436,7 @@ test_circuit_timeout(void)
   memset(&state, 0, sizeof(or_state_t));
 
   circuitbuild_running_unit_tests();
-#define timeout0 (30*1000.0)
+#define timeout0 (build_time_t)(30*1000.0)
   initial.Xm = 750;
   circuit_build_times_initial_alpha(&initial, BUILDTIMEOUT_QUANTILE_CUTOFF,
                                     timeout0);
@@ -3444,7 +3444,7 @@ test_circuit_timeout(void)
     int n = 0;
     for (i=0; i < MIN_CIRCUITS_TO_OBSERVE; i++) {
       if (circuit_build_times_add_time(&estimate,
-              circuit_build_times_generate_sample(&initial, 0, 1)) == 0) {
+              circuit_build_times_generate_sample(&initial, 0, .98)) == 0) {
         n++;
       }
     }

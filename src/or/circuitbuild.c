@@ -368,13 +368,15 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       uint32_t count, k;
       build_time_t ms;
       int ok;
-      ms = tor_parse_ulong(ms_str, 0, 0, BUILD_TIME_MAX, &ok, NULL);
+      ms = (build_time_t)tor_parse_ulong(ms_str, 0, 0,
+                                         BUILD_TIME_MAX, &ok, NULL);
       if (!ok) {
         *msg = tor_strdup("Unable to parse circuit build times: "
                           "Unparsable bin number");
         break;
       }
-      count = tor_parse_ulong(count_str, 0, 0, UINT32_MAX, &ok, NULL);
+      count = (uint32_t)tor_parse_ulong(count_str, 0, 0,
+                                        UINT32_MAX, &ok, NULL);
       if (!ok) {
         *msg = tor_strdup("Unable to parse circuit build times: "
                           "Unparsable bin count");
@@ -405,7 +407,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   tor_assert(cbt->total_build_times == state->TotalBuildTimes);
   tor_assert(tot_values == cbt->total_build_times);
   circuit_build_times_set_timeout(cbt);
-  return msg ? -1 : 0;
+  return *msg ? -1 : 0;
 }
 
 /**
@@ -516,7 +518,8 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
   u = q_lo + ((q_hi-q_lo)*r)/(1.0*UINT64_MAX);
 
   tor_assert(0 <= u && u < 1.0);
-  ret = lround(circuit_build_times_calculate_timeout(cbt, u));
+  /* circuit_build_times_calculate_timeout returns <= INT32_MAX */
+  ret = (uint32_t)lround(circuit_build_times_calculate_timeout(cbt, u));
   tor_assert(ret > 0);
   return ret;
 }
@@ -704,12 +707,12 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   cbt->Xm = Xm;
 
   circuit_build_times_initial_alpha(cbt, 1.0-timeout_rate,
-          cbt->timeout*1000.0);
+          cbt->timeout*1000);
 
   timeout = circuit_build_times_calculate_timeout(cbt,
                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
-
-  cbt->timeout = lround(timeout/1000.0);
+  /* timeout is INT32_MAX at most */
+  cbt->timeout = (uint32_t)lround(timeout/1000.0);
 
   if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
     log_warn(LD_CIRC, "Reset buildtimeout to low value %lf. Setting to %d",
@@ -779,7 +782,8 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
 
   cbt->have_computed_timeout = 1;
-  cbt->timeout = lround(timeout/1000.0);
+  /* timeout is INT32_MAX at most */
+  cbt->timeout = (uint32_t)lround(timeout/1000.0);
 
   if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
     log_warn(LD_CIRC, "Set buildtimeout to low value %lf. Setting to %d",
@@ -1376,11 +1380,14 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) {
       struct timeval end;
+      long timediff;
       tor_gettimeofday(&end);
+      timediff = tv_mdiff(&circ->_base.highres_created, &end);
+      if (timediff > INT32_MAX)
+        timediff = INT32_MAX;
       /* done building the circuit. whew. */
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-      circuit_build_times_add_time(&circ_times,
-                  tv_mdiff(&circ->_base.highres_created, &end));
+      circuit_build_times_add_time(&circ_times, (uint32_t)timediff);
       circuit_build_times_set_timeout(&circ_times);
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
