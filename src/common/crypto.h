@@ -177,6 +177,7 @@ int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
 int crypto_digest_all(digests_t *ds_out, const char *m, size_t len);
 const char *crypto_digest_algorithm_get_name(digest_algorithm_t alg);
+int crypto_digest_algorithm_parse_name(const char *name);
 crypto_digest_env_t *crypto_new_digest_env(void);
 crypto_digest_env_t *crypto_new_digest256_env(digest_algorithm_t algorithm);
 void crypto_free_digest_env(crypto_digest_env_t *digest);

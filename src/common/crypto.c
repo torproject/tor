@@ -1481,6 +1481,18 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
   }
 }
 
+/** DOCDOC */
+int
+crypto_digest_algorithm_parse_name(const char *name)
+{
+  if (!strcmp(name, "sha1"))
+    return DIGEST_SHA1;
+  else if (!strcmp(name, "sha256"))
+    return DIGEST_SHA256;
+  else
+    return -1;
+}
+
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_env_t {
   union {

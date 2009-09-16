@@ -106,6 +106,8 @@ typedef enum {
   K_PARAMS,
   K_VOTE_DIGEST,
   K_CONSENSUS_DIGEST,
+  K_ADDITIONAL_DIGEST,
+  K_ADDITIONAL_SIGNATURE,
   K_CONSENSUS_METHODS,
   K_CONSENSUS_METHOD,
   K_LEGACY_DIR_KEY,
@@ -490,10 +492,12 @@ static token_rule_t networkstatus_vote_footer_token_table[] = {
 /** List of tokens allowable in detached networkstatus signature documents. */
 static token_rule_t networkstatus_detached_signature_token_table[] = {
   T1_START("consensus-digest", K_CONSENSUS_DIGEST, GE(1),       NO_OBJ ),
+  T("additional-digest",       K_ADDITIONAL_DIGEST,GE(3),       NO_OBJ ),
   T1("valid-after",            K_VALID_AFTER,      CONCAT_ARGS, NO_OBJ ),
   T1("fresh-until",            K_FRESH_UNTIL,      CONCAT_ARGS, NO_OBJ ),
   T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
-  T1N("directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
+  T("additional-signature",  K_ADDITIONAL_SIGNATURE, GE(4),   NEED_OBJ ),
+  T1N("directory-signature", K_DIRECTORY_SIGNATURE,  GE(2),   NEED_OBJ ),
   END_OF_TABLE
 };
 
@@ -2771,6 +2775,31 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   return ns;
 }
 
+/** DOCDOC */
+static digests_t *
+detached_get_digests(ns_detached_signatures_t *sigs, const char *flavor_name)
+{
+  digests_t *d = strmap_get(sigs->digests, flavor_name);
+  if (!d) {
+    d = tor_malloc_zero(sizeof(digests_t));
+    strmap_set(sigs->digests, flavor_name, d);
+  }
+  return d;
+}
+
+/** DOCDOC */
+static smartlist_t *
+detached_get_signatures(ns_detached_signatures_t *sigs,
+                        const char *flavor_name)
+{
+  smartlist_t *sl = strmap_get(sigs->signatures, flavor_name);
+  if (!sl) {
+    sl = smartlist_create();
+    strmap_set(sigs->signatures, flavor_name, sl);
+  }
+  return sl;
+}
+
 /** Parse a detached v3 networkstatus signature document between <b>s</b> and
  * <b>eos</b> and return the result.  Return -1 on failure. */
 ns_detached_signatures_t *
@@ -2780,19 +2809,13 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
    * networkstatus_parse_vote_from_string(). */
   directory_token_t *tok;
   memarea_t *area = NULL;
-  const char *flavor = "ns";
   digests_t *digests;
-  smartlist_t *sig_list;
 
   smartlist_t *tokens = smartlist_create();
   ns_detached_signatures_t *sigs =
     tor_malloc_zero(sizeof(ns_detached_signatures_t));
   sigs->digests = strmap_new();
   sigs->signatures = strmap_new();
-  digests = tor_malloc_zero(sizeof(digests_t));
-  sig_list = smartlist_create();
-  strmap_set(sigs->digests, flavor, digests);
-  strmap_set(sigs->signatures, flavor, sig_list);
 
   if (!eos)
     eos = s + strlen(s);
@@ -2804,18 +2827,57 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     goto err;
   }
 
-  tok = find_by_keyword(tokens, K_CONSENSUS_DIGEST);
-  if (strlen(tok->args[0]) != HEX_DIGEST_LEN) {
-    log_warn(LD_DIR, "Wrong length on consensus-digest in detached "
-             "networkstatus signatures");
-    goto err;
-  }
-  if (base16_decode(digests->d[DIGEST_SHA1], DIGEST_LEN,
-                    tok->args[0], strlen(tok->args[0])) < 0) {
-    log_warn(LD_DIR, "Bad encoding on on consensus-digest in detached "
-             "networkstatus signatures");
-    goto err;
-  }
+  /* Grab all the digest-like tokens. */
+  SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, _tok) {
+    const char *algname;
+    digest_algorithm_t alg;
+    const char *flavor;
+    const char *hexdigest;
+    size_t expected_length;
+
+    tok = _tok;
+
+    if (tok->tp == K_CONSENSUS_DIGEST) {
+      algname = "sha1";
+      alg = DIGEST_SHA1;
+      flavor = "ns";
+      hexdigest = tok->args[0];
+    } else if (tok->tp == K_ADDITIONAL_DIGEST) {
+      int a = crypto_digest_algorithm_parse_name(tok->args[1]);
+      if (a<0) {
+        log_warn(LD_DIR, "Unrecognized algorithm name %s", tok->args[0]);
+        continue;
+      }
+      alg = (digest_algorithm_t) a;
+      flavor = tok->args[0];
+      algname = tok->args[1];
+      hexdigest = tok->args[2];
+    } else {
+      continue;
+    }
+
+    expected_length =
+      (alg == DIGEST_SHA1) ? HEX_DIGEST_LEN : HEX_DIGEST256_LEN;
+
+    if (strlen(hexdigest) != expected_length) {
+      log_warn(LD_DIR, "Wrong length on consensus-digest in detached "
+               "networkstatus signatures");
+      goto err;
+    }
+    digests = detached_get_digests(sigs, flavor);
+    tor_assert(digests);
+    if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+      log_warn(LD_DIR, "Multiple digests for %s with %s on detached "
+               "signatures document", flavor, algname);
+      continue;
+    }
+    if (base16_decode(digests->d[alg], DIGEST256_LEN,
+                      hexdigest, strlen(hexdigest)) < 0) {
+      log_warn(LD_DIR, "Bad encoding on on consensus-digest in detached "
+               "networkstatus signatures");
+      goto err;
+    }
+  } SMARTLIST_FOREACH_END(_tok);
 
   tok = find_by_keyword(tokens, K_VALID_AFTER);
   if (parse_iso_time(tok->args[0], &sigs->valid_after)) {
@@ -2836,14 +2898,43 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   }
 
   SMARTLIST_FOREACH_BEGIN(tokens, directory_token_t *, _tok) {
+    const char *id_hexdigest;
+    const char *sk_hexdigest;
+    const char *algname;
+    const char *flavor;
+    digest_algorithm_t alg;
+
     char id_digest[DIGEST_LEN];
     char sk_digest[DIGEST_LEN];
+    smartlist_t *siglist;
     document_signature_t *sig;
+    int is_duplicate;
 
     tok = _tok;
-    if (tok->tp != K_DIRECTORY_SIGNATURE)
+    if (tok->tp == K_DIRECTORY_SIGNATURE) {
+      tor_assert(tok->n_args >= 2);
+      flavor = "ns";
+      algname = "sha1";
+      id_hexdigest = tok->args[0];
+      sk_hexdigest = tok->args[1];
+    } else if (tok->tp == K_ADDITIONAL_SIGNATURE) {
+      tor_assert(tok->n_args >= 4);
+      flavor = tok->args[0];
+      algname = tok->args[1];
+      id_hexdigest = tok->args[2];
+      sk_hexdigest = tok->args[3];
+    } else {
       continue;
-    tor_assert(tok->n_args >= 2);
+    }
+
+    {
+      int a = crypto_digest_algorithm_parse_name(algname);
+      if (a<0) {
+        log_warn(LD_DIR, "Unrecognized algorithm name %s", algname);
+        continue;
+      }
+      alg = (digest_algorithm_t) a;
+    }
 
     if (!tok->object_type ||
         strcmp(tok->object_type, "SIGNATURE") ||
@@ -2852,19 +2943,34 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
       goto err;
     }
 
-    if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
+    if (strlen(id_hexdigest) != HEX_DIGEST_LEN ||
         base16_decode(id_digest, sizeof(id_digest),
-                      tok->args[0], HEX_DIGEST_LEN) < 0) {
+                      id_hexdigest, HEX_DIGEST_LEN) < 0) {
       log_warn(LD_DIR, "Error decoding declared identity %s in "
-               "network-status vote.", escaped(tok->args[0]));
+               "network-status vote.", escaped(id_hexdigest));
       goto err;
     }
     if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
         base16_decode(sk_digest, sizeof(sk_digest),
-                      tok->args[1], HEX_DIGEST_LEN) < 0) {
+                      sk_hexdigest, HEX_DIGEST_LEN) < 0) {
       log_warn(LD_DIR, "Error decoding declared digest %s in "
-               "network-status vote.", escaped(tok->args[1]));
+               "network-status vote.", escaped(sk_hexdigest));
       goto err;
+    }
+
+    siglist = detached_get_signatures(sigs, flavor);
+    is_duplicate = 0;
+    SMARTLIST_FOREACH(siglist, document_signature_t *, s, {
+      if (s->alg == alg &&
+          !memcmp(id_digest, s->identity_digest, DIGEST_LEN) &&
+          !memcmp(sk_digest, s->signing_key_digest, DIGEST_LEN)) {
+        is_duplicate = 1;
+      }
+    });
+    if (is_duplicate) {
+      log_warn(LD_DIR, "Two signatures with identical keys and algorithm "
+               "found.");
+      continue;
     }
 
     sig = tor_malloc_zero(sizeof(document_signature_t));
@@ -2878,7 +2984,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     sig->signature = tor_memdup(tok->object_body, tok->object_size);
     sig->signature_len = (int) tok->object_size;
 
-    smartlist_add(sig_list, sig);
+    smartlist_add(siglist, sig);
   } SMARTLIST_FOREACH_END(_tok);
 
   goto done;
