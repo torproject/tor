@@ -828,6 +828,9 @@ tor_tls_new(int sock, int isServer)
   if (!SSL_set_cipher_list(result->ssl,
                      isServer ? SERVER_CIPHER_LIST : CLIENT_CIPHER_LIST)) {
     tls_log_errors(NULL, LOG_WARN, "setting ciphers");
+#ifdef SSL_set_tlsext_host_name
+    SSL_set_tlsext_host_name(result->ssl, NULL);
+#endif
     SSL_free(result->ssl);
     tor_free(result);
     return NULL;
@@ -838,6 +841,9 @@ tor_tls_new(int sock, int isServer)
   bio = BIO_new_socket(sock, BIO_NOCLOSE);
   if (! bio) {
     tls_log_errors(NULL, LOG_WARN, "opening BIO");
+#ifdef SSL_set_tlsext_host_name
+    SSL_set_tlsext_host_name(result->ssl, NULL);
+#endif
     SSL_free(result->ssl);
     tor_free(result);
     return NULL;
@@ -918,6 +924,9 @@ tor_tls_free(tor_tls_t *tls)
   if (!removed) {
     log_warn(LD_BUG, "Freeing a TLS that was not in the ssl->tls map.");
   }
+#ifdef SSL_set_tlsext_host_name
+  SSL_set_tlsext_host_name(tls->ssl, NULL);
+#endif
   SSL_free(tls->ssl);
   tls->ssl = NULL;
   tls->negotiated_callback = NULL;
