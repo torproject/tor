@@ -165,6 +165,8 @@ Changes in version 0.2.1.20 - 2009-??-??
       excluded in ExcludeExitNodes, but the circuit is not used to access
       the outside world. This should help fix bug 1090. Bugfix on
       0.2.1.6-alpha.
+    - Teach connection_ap_can_use_exit to respect the Exclude*Nodes config
+      options. Should fix bug 1090. Bugfix on 0.0.2-pre16.
 
   o Minor features:
     - Add a "getinfo status/accepted-server-descriptor" controller
