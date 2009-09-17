@@ -529,10 +529,8 @@ void
 circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff)
 {
-  /* We want to stay a bit short of 1.0, because longtail is
-   * loooooooooooooooooooooooooooooooooooooooooooooooooooong */
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
-              quantile_cutoff, 0.98);
+              quantile_cutoff, MAX_SYNTHETIC_QUANTILE);
 
   if (gentime < (build_time_t)cbt->timeout*1000) {
     log_warn(LD_CIRC,

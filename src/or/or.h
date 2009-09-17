@@ -2867,6 +2867,11 @@ void entry_guards_free_all(void);
  * RECENT_CIRCUITS before calculating a new timeout */
 #define MAX_RECENT_TIMEOUT_RATE 0.7999999
 
+/** Maximum quantile to use to generate synthetic timeouts.
+ *  We want to stay a bit short of 1.0, because longtail is
+ *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
+#define MAX_SYNTHETIC_QUANTILE 0.98
+
 /** Minimum circuits before estimating a timeout */
 #define MIN_CIRCUITS_TO_OBSERVE 500
 
