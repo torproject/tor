@@ -921,7 +921,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   len = r;
   if (*buf == 3) {
     /* Version 3 INTRODUCE2 cell. */
-    time_t ts = 0, now = time(NULL);
+    time_t ts = 0;
     v3_shift = 1;
     auth_type = buf[1];
     switch (auth_type) {
@@ -1100,7 +1100,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   circ_needs_uptime = rend_service_requires_uptime(service);
 
   /* help predict this next time */
-  rep_hist_note_used_internal(time(NULL), circ_needs_uptime, 1);
+  rep_hist_note_used_internal(now, circ_needs_uptime, 1);
 
   /* Launch a circuit to alice's chosen rendezvous point.
    */
@@ -1136,7 +1136,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
-  launched->build_state->expiry_time = time(NULL) + MAX_REND_TIMEOUT;
+  launched->build_state->expiry_time = now + MAX_REND_TIMEOUT;
 
   cpath->dh_handshake_state = dh;
   dh = NULL;
