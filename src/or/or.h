@@ -2885,8 +2885,8 @@ void entry_guards_free_all(void);
 typedef uint32_t build_time_t;
 #define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
 
-/** Have we received a cell in the last 90 seconds? */
-#define NETWORK_LIVE_INTERVAL 90
+/** Have we received a cell in the last N seconds? */
+#define NETWORK_LIVE_MULTIPLIER (RECENT_CIRCUITS/2.5)
 
 /** Lowest allowable value for CircuitBuildTimeout */
 #define BUILD_TIMEOUT_MIN_VALUE 3

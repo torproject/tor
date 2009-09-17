@@ -628,13 +628,14 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 
 /**
  * Returns true if the network showed some sign of liveness
- * in the past NETWORK_LIVE_INTERVAL.
+ * in the past NETWORK_LIVE_MULTIPLIER*cbt->timeout seconds.
  */
 int
 circuit_build_times_is_network_live(circuit_build_times_t *cbt)
 {
   time_t now = approx_time();
-  if (now - cbt->network_last_live > NETWORK_LIVE_INTERVAL) {
+  if (now - cbt->network_last_live >
+          (cbt->timeout*NETWORK_LIVE_MULTIPLIER)) {
     log_info(LD_CIRC, "Network is no longer live. Dead for %ld seconds.",
              now - cbt->network_last_live);
     return 0;
