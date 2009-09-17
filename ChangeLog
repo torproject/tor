@@ -45,6 +45,9 @@ Changes in version 0.2.1.20 - 2009-??-??
     - Avoid segfault in rare cases when finishing an introduction circuit
       as a client and finding out that we don't have an introduction key
       for it. Fixes bug 1073. Reported by Aaron Swartz.
+    - Work around a small memory leak in some versions of OpenSSL that
+      stopped the memory used by the hostname TLS extension from being
+      freed.
 
   o Minor features:
     - Add a "getinfo status/accepted-server-descriptor" controller
