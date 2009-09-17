@@ -2,13 +2,13 @@ Filename: 151-path-selection-improvements.txt
 Title: Improving Tor Path Selection
 Author: Fallon Chen, Mike Perry
 Created: 5-Jul-2008
-Status: Draft
+Status: Implemented
 
 Overview
 
   The performance of paths selected can be improved by adjusting the
   CircuitBuildTimeout and avoiding failing guard nodes. This proposal
-  describes a method of tracking buildtime statistics at the client, and 
+  describes a method of tracking buildtime statistics at the client, and
   using those statistics to adjust the CircuitBuildTimeout.
 
 Motivation
@@ -20,121 +20,120 @@ Motivation
 
 Implementation
 
-  Storing Build Times
+  Gathering Build Times
 
-    Circuit build times will be stored in the circular array
-    'circuit_build_times' consisting of uint16_t elements as milliseconds.
-    The total size of this array will be based on the number of circuits
+    Circuit build times are stored in the circular array
+    'circuit_build_times' consisting of uint32_t elements as milliseconds.
+    The total size of this array is based on the number of circuits
     it takes to converge on a good fit of the long term distribution of
     the circuit builds for a fixed link. We do not want this value to be
     too large, because it will make it difficult for clients to adapt to
     moving between different links.
 
-    From our initial observations, this value appears to be on the order 
-    of 1000, but will be configurable in a #define NCIRCUITS_TO_OBSERVE.
-    The exact value for this #define will be determined by performing
-    goodness of fit tests using measurments obtained from the shufflebt.py
-    script from TorFlow.
- 
+    From our observations, the minimum value for a reasonable fit appears
+    to be on the order of 500 (MIN_CIRCUITS_TO_OBSERVE). However, to keep
+    a good fit over the long term, we store 5000 most recent circuits in
+    the array (NCIRCUITS_TO_OBSERVE).
+
+    The Tor client will build test circuits at a rate of one per
+    minute (BUILD_TIMES_TEST_FREQUENCY) up to the point of
+    MIN_CIRCUITS_TO_OBSERVE. This allows a fresh Tor to have
+    a CircuitBuildTimeout estimated within 8 hours after install,
+    upgrade, or network change (see below).
+
   Long Term Storage
 
-    The long-term storage representation will be implemented by storing a 
-    histogram with BUILDTIME_BIN_WIDTH millisecond buckets (default 50) when 
-    writing out the statistics to disk. The format of this histogram on disk 
-    is yet to be finalized, but it will likely be of the format 
-    'CircuitBuildTime <bin> <count>', with the total specified as 
-    'TotalBuildTimes <total>'
+    The long-term storage representation is implemented by storing a
+    histogram with BUILDTIME_BIN_WIDTH millisecond buckets (default 50) when
+    writing out the statistics to disk. The format this takes in the
+    state file is 'CircuitBuildTime <bin-ms> <count>', with the total
+    specified as 'TotalBuildTimes <total>'
     Example:
 
     TotalBuildTimes 100
-    CircuitBuildTimeBin 1 50
-    CircuitBuildTimeBin 2 25
-    CircuitBuildTimeBin 3 13
+    CircuitBuildTimeBin 25 50
+    CircuitBuildTimeBin 75 25
+    CircuitBuildTimeBin 125 13
     ...
 
-    Reading the histogram in will entail multiplying each bin by the 
-    BUILDTIME_BIN_WIDTH and then inserting <count> values into the 
-    circuit_build_times array each with the value of
-    <bin>*BUILDTIME_BIN_WIDTH. In order to evenly distribute the 
-    values in the circular array, a form of index skipping must
-    be employed. Values from bin #N with bin count C and total T
-    will occupy indexes specified by N+((T/C)*k)-1, where k is the
-    set of integers ranging from 0 to C-1.
-
-    For example, this would mean that the values from bin 1 would
-    occupy indexes 1+(100/50)*k-1, or 0, 2, 4, 6, 8, 10 and so on.
-    The values for bin 2 would occupy positions 1, 5, 9, 13. Collisions
-    will be inserted at the first empty position in the array greater 
-    than the selected index (which may requiring looping around the 
-    array back to index 0).
+    Reading the histogram in will entail inserting <count> values
+    into the circuit_build_times array each with the value of
+    <bin-ms> milliseconds. In order to evenly distribute the values
+    in the circular array, the Fisher-Yates shuffle will be performed
+    after reading values from the bins.
 
   Learning the CircuitBuildTimeout
 
     Based on studies of build times, we found that the distribution of
-    circuit buildtimes appears to be a Pareto distribution. 
+    circuit buildtimes appears to be a Frechet distribution. However,
+    estimators and quantile functions of the Frechet distribution are
+    difficult to work with and slow to converge. So instead, since we
+    are only interested in the accuracy of the tail, we approximate
+    the tail of the distribution with a Pareto curve starting at
+    the mode of the circuit build time sample set.
 
     We will calculate the parameters for a Pareto distribution
     fitting the data using the estimators at
     http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation.
 
-    The timeout itself will be calculated by solving the CDF for the 
-    a percentile cutoff BUILDTIME_PERCENT_CUTOFF. This value
-    represents the percentage of paths the Tor client will accept out of
-    the total number of paths. We have not yet determined a good
-    cutoff for this mathematically, but 85% seems a good choice for now.
+    The timeout itself is calculated by using the Quartile function (the
+    inverted CDF) to give us the value on the CDF such that
+    BUILDTIME_PERCENT_CUTOFF (80%) of the mass of the distribution is
+    below the timeout value.
 
-    From http://en.wikipedia.org/wiki/Pareto_distribution#Definition,
-    the calculation we need is pow(BUILDTIME_PERCENT_CUTOFF/100.0, k)/Xm. 
+    Thus, we expect that the Tor client will accept the fastest 80% of
+    the total number of paths on the network.
+
+  Detecting Changing Network Conditions
+
+    We attempt to detect both network connectivity loss and drastic
+    changes in the timeout characteristics.
+
+    If more than MAX_RECENT_TIMEOUT_RATE (80%) of the past
+    RECENT_CIRCUITS (20) time out, we assume the network connection
+    has changed, and we discard all buildtimes history and compute
+    a new timeout by estimating a new Pareto curve using the
+    position on the Pareto Quartile function for the ratio of
+    timeouts.
+
+    Network connectivity loss is detected by recording a timestamp every
+    time Tor either completes a TLS connection or receives a cell. If
+    this timestamp is more than CircuitBuildTimeout*RECENT_CIRCUITS/3
+    seconds in the past, circuit timeouts are no longer counted.
 
   Testing
 
     After circuit build times, storage, and learning are implemented,
     the resulting histogram should be checked for consistency by
-    verifying it persists across successive Tor invocations where 
+    verifying it persists across successive Tor invocations where
     no circuits are built. In addition, we can also use the existing
-    buildtime scripts to record build times, and verify that the histogram 
+    buildtime scripts to record build times, and verify that the histogram
     the python produces matches that which is output to the state file in Tor,
     and verify that the Pareto parameters and cutoff points also match.
-  
-  Soft timeout vs Hard Timeout
-   
-    At some point, it may be desirable to change the cutoff from a 
-    single hard cutoff that destroys the circuit to a soft cutoff and
-    a hard cutoff, where the soft cutoff merely triggers the building
-    of a new circuit, and the hard cutoff triggers destruction of the 
-    circuit.
 
-    Good values for hard and soft cutoffs seem to be 85% and 65% 
-    respectively, but we should eventually justify this with observation.
-
-  When to Begin Calculation
-
-    The number of circuits to observe (NCIRCUITS_TO_CUTOFF) before 
-    changing the CircuitBuildTimeout will be tunable via a #define. From 
-    our measurements, a good value for NCIRCUITS_TO_CUTOFF appears to be 
-    on the order of 100.
+    We will also verify that there are no unexpected large deviations from
+    node selection, such as nodes from distant geographical locations being
+    completely excluded.
 
   Dealing with Timeouts
 
-    Timeouts should be counted as the expectation of the region of 
-    of the Pareto distribution beyond the cutoff. The proposal will
-    be updated with this value soon.
+    Timeouts should be counted as the expectation of the region of
+    of the Pareto distribution beyond the cutoff. This is done by
+    generating a random sample for each timeout at points on the
+    curve beyond the current timeout cutoff.
 
-    Also, in the event of network failure, the observation mechanism 
-    should stop collecting timeout data.
+  Future Work
 
-  Client Hints
+    At some point, it may be desirable to change the cutoff from a
+    single hard cutoff that destroys the circuit to a soft cutoff and
+    a hard cutoff, where the soft cutoff merely triggers the building
+    of a new circuit, and the hard cutoff triggers destruction of the
+    circuit.
 
-    Some research still needs to be done to provide initial values
-    for CircuitBuildTimeout based on values learned from modem
-    users, DSL users, Cable Modem users, and dedicated links. A 
-    radiobutton in Vidalia should eventually be provided that
-    sets CircuitBuildTimeout to one of these values and also 
-    provide the option of purging all learned data, should any exist.
+    It may also be beneficial to learn separate timeouts for each
+    guard node, as they will have slightly different distributions.
+    This will take longer to generate initial values though.
 
-    These values can either be published in the directory, or
-    shipped hardcoded for a particular Tor version.
-    
 Issues
 
   Impact on anonymity

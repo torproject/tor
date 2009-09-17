@@ -264,8 +264,8 @@ void
 circuit_expire_building(time_t now)
 {
   circuit_t *victim, *circ = global_circuitlist;
-  time_t general_cutoff = now - get_options()->CircuitBuildTimeout;
-  time_t begindir_cutoff = now - get_options()->CircuitBuildTimeout/2;
+  time_t general_cutoff = now - circ_times.timeout;
+  time_t begindir_cutoff = now - circ_times.timeout/2;
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 
@@ -358,6 +358,8 @@ circuit_expire_building(time_t now)
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
     circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
+    circuit_build_times_add_timeout(&circ_times);
+    circuit_build_times_set_timeout(&circ_times);
   }
 }
 
@@ -517,6 +519,16 @@ circuit_predict_and_launch_new(void)
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
     return;
   }
+
+  /* Finally, check to see if we still need more circuits to learn
+   * a good build timeout */
+  if (circuit_build_times_needs_circuits_now(&circ_times)) {
+    flags = CIRCLAUNCH_NEED_CAPACITY;
+    log_info(LD_CIRC,
+             "Have %d clean circs need another buildtime test circ.", num);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+    return;
+  }
 }
 
 /** Build a new test circuit every 5 minutes */
@@ -631,7 +643,15 @@ static void
 circuit_expire_old_circuits(time_t now)
 {
   circuit_t *circ;
-  time_t cutoff = now - get_options()->CircuitIdleTimeout;
+  time_t cutoff;
+
+  if (circuit_build_times_needs_circuits(&circ_times)) {
+    /* Circuits should be shorter lived if we need them
+     * for build time testing */
+    cutoff = now - get_options()->MaxCircuitDirtiness;
+  } else {
+    cutoff = now - get_options()->CircuitIdleTimeout;
+  }
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (circ->marked_for_close || ! CIRCUIT_IS_ORIGIN(circ))

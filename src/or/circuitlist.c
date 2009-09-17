@@ -379,6 +379,7 @@ static void
 init_circuit_base(circuit_t *circ)
 {
   circ->timestamp_created = time(NULL);
+  tor_gettimeofday(&circ->highres_created);
 
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
@@ -406,6 +407,8 @@ origin_circuit_new(void)
   circ->remaining_relay_early_cells -= crypto_rand_int(2);
 
   init_circuit_base(TO_CIRCUIT(circ));
+
+  circ_times.last_circ_at = approx_time();
 
   return circ;
 }

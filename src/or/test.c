@@ -37,6 +37,9 @@ const char tor_git_revision[] = "";
 #define GEOIP_PRIVATE
 #define MEMPOOL_PRIVATE
 #define ROUTER_PRIVATE
+#define CIRCUIT_PRIVATE
+
+#include <math.h>
 
 #include "or.h"
 #include "test.h"
@@ -3404,6 +3407,103 @@ test_dirutil_param_voting(void)
   smartlist_free(vote3.net_params);
   smartlist_free(vote4.net_params);
 
+  return;
+}
+
+static void
+test_circuit_timeout(void)
+{
+  /* Plan:
+   *  1. Generate 1000 samples
+   *  2. Estimate parameters
+   *  3. If difference, repeat
+   *  4. Save state
+   *  5. load state
+   *  6. Estimate parameters
+   *  7. compare differences
+   */
+  circuit_build_times_t initial;
+  circuit_build_times_t estimate;
+  circuit_build_times_t final;
+  or_state_t state;
+  int i;
+  char *msg;
+  double timeout1, timeout2;
+  circuit_build_times_init(&initial);
+  circuit_build_times_init(&estimate);
+  circuit_build_times_init(&final);
+
+  memset(&state, 0, sizeof(or_state_t));
+
+  circuitbuild_running_unit_tests();
+#define timeout0 (build_time_t)(30*1000.0)
+  initial.Xm = 750;
+  circuit_build_times_initial_alpha(&initial, BUILDTIMEOUT_QUANTILE_CUTOFF,
+                                    timeout0);
+  do {
+    int n = 0;
+    for (i=0; i < MIN_CIRCUITS_TO_OBSERVE; i++) {
+      if (circuit_build_times_add_time(&estimate,
+              circuit_build_times_generate_sample(&initial, 0,
+                  MAX_SYNTHETIC_QUANTILE)) == 0) {
+        n++;
+      }
+    }
+    circuit_build_times_update_alpha(&estimate);
+    timeout1 = circuit_build_times_calculate_timeout(&estimate,
+                                  BUILDTIMEOUT_QUANTILE_CUTOFF);
+    circuit_build_times_set_timeout(&estimate);
+    log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout1, estimate.Xm);
+    /* XXX: 5% distribution error may not be the right metric */
+  } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
+                circuit_build_times_cdf(&initial, timeout1)) > 0.05
+                /* 5% error */
+           && estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+
+  test_assert(estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+
+  circuit_build_times_update_state(&estimate, &state);
+  test_assert(circuit_build_times_parse_state(&final, &state, &msg) == 0);
+
+  circuit_build_times_update_alpha(&final);
+  timeout2 = circuit_build_times_calculate_timeout(&final,
+                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
+
+  circuit_build_times_set_timeout(&final);
+  log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout2, final.Xm);
+
+  test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
+                   circuit_build_times_cdf(&initial, timeout2)) < 0.05);
+
+  /* Generate MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS timeouts
+   * and 1-that regular values. Then check for timeout error
+   * Do the same for one less timeout */
+  for (i = 0; i < RECENT_CIRCUITS; i++) {
+    circuit_build_times_add_time(&estimate,
+          circuit_build_times_generate_sample(&estimate, 0,
+              BUILDTIMEOUT_QUANTILE_CUTOFF));
+    circuit_build_times_add_time(&final,
+          circuit_build_times_generate_sample(&final, 0,
+              BUILDTIMEOUT_QUANTILE_CUTOFF));
+  }
+
+  test_assert(!circuit_build_times_check_too_many_timeouts(&estimate));
+  test_assert(!circuit_build_times_check_too_many_timeouts(&final));
+
+  for (i = 0; i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS; i++) {
+    circuit_build_times_add_timeout_worker(&estimate,
+                                           BUILDTIMEOUT_QUANTILE_CUTOFF);
+    if (i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS-1) {
+      circuit_build_times_add_timeout_worker(&final,
+                                             BUILDTIMEOUT_QUANTILE_CUTOFF);
+    }
+  }
+
+  test_assert(circuit_build_times_check_too_many_timeouts(&estimate) == 1);
+  test_assert(!circuit_build_times_check_too_many_timeouts(&final));
+
+done:
+  return;
 }
 
 extern const char AUTHORITY_CERT_1[];
@@ -4931,6 +5031,7 @@ static struct {
   ENT(dirutil),
   SUBENT(dirutil, measured_bw),
   SUBENT(dirutil, param_voting),
+  ENT(circuit_timeout),
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),

@@ -1977,6 +1977,7 @@ typedef struct circuit_t {
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
                            * circuit is clean. */
+  struct timeval highres_created; /**< When exactly was the circuit created? */
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of
                               * the main loop? (If true, holds the line number
@@ -2683,6 +2684,10 @@ typedef struct {
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
 
+  /** Build time histogram */
+  config_line_t * BuildtimeHistogram;
+  uint16_t TotalBuildTimes;
+
   /** What version of Tor wrote this state file? */
   char *TorVersion;
 
@@ -2851,6 +2856,109 @@ int bridges_known_but_down(void);
 void bridges_retry_all(void);
 
 void entry_guards_free_all(void);
+
+/* Circuit Build Timeout "public" functions and structures. */
+
+/** How many circuits count as recent when deciding if the
+ * connection has changed. */
+#define RECENT_CIRCUITS 20
+
+/** Maximum fraction of timeouts to tolerate in the past
+ * RECENT_CIRCUITS before calculating a new timeout */
+#define MAX_RECENT_TIMEOUT_RATE 0.7999999
+
+/** Maximum quantile to use to generate synthetic timeouts.
+ *  We want to stay a bit short of 1.0, because longtail is
+ *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
+#define MAX_SYNTHETIC_QUANTILE 0.98
+
+/** Minimum circuits before estimating a timeout */
+#define MIN_CIRCUITS_TO_OBSERVE 500
+
+/** Total size of the circuit timeout history to accumulate.
+ * 5000 is approx 1.5 weeks worth of continual-use circuits. */
+#define NCIRCUITS_TO_OBSERVE 5000
+
+/** Width of the histogram bins in milliseconds */
+#define BUILDTIME_BIN_WIDTH ((build_time_t)50)
+
+/** Cuttof point on the CDF for our timeout estimation.
+ * TODO: This should be moved to the consensus */
+#define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
+
+/** A build_time_t is milliseconds */
+typedef uint32_t build_time_t;
+#define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
+
+/** Have we received a cell in the last N seconds? */
+#define NETWORK_LIVE_MULTIPLIER (RECENT_CIRCUITS/2.5)
+
+/** Lowest allowable value for CircuitBuildTimeout */
+#define BUILD_TIMEOUT_MIN_VALUE 3
+
+/** Initial circuit build timeout */
+#define BUILD_TIMEOUT_INITIAL_VALUE 60
+
+/** How often in seconds should we build a test circuit */
+#define BUILD_TIMES_TEST_FREQUENCY 60
+
+/** Save state every 10 circuits */
+#define BUILD_TIMES_SAVE_STATE_EVERY  10
+
+typedef struct {
+  /** The circular array of recorded build times in milliseconds */
+  build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
+  /** The timestamp we last completed a TLS handshake or received a cell */
+  time_t network_last_live;
+  /** Last time we built a circuit. Used to decide to build new test circs */
+  time_t last_circ_at;
+  /** Current index in the circuit_build_times circular array */
+  int build_times_idx;
+  /** Total number of build times accumulated. Maxes at NCIRCUITS_TO_OBSERVE */
+  int total_build_times;
+  /** Number of timeouts that have happened before estimating pareto
+   *  parameters */
+  int pre_timeouts;
+  /** "Minimum" value of our pareto distribution (actually mode) */
+  build_time_t Xm;
+  /** alpha exponent for pareto dist. */
+  double alpha;
+  /** Have we computed a timeout? */
+  int have_computed_timeout;
+  /** The value for that timeout in seconds, not milliseconds */
+  int timeout;
+} circuit_build_times_t;
+
+extern circuit_build_times_t circ_times;
+void circuit_build_times_update_state(circuit_build_times_t *cbt,
+                                      or_state_t *state);
+int circuit_build_times_parse_state(circuit_build_times_t *cbt,
+                                    or_state_t *state, char **msg);
+void circuit_build_times_add_timeout(circuit_build_times_t *cbt);
+void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
+int circuit_build_times_add_time(circuit_build_times_t *cbt,
+                                 build_time_t time);
+void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
+int circuit_build_times_is_network_live(circuit_build_times_t *cbt);
+int circuit_build_times_needs_circuits(circuit_build_times_t *cbt);
+int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
+void circuit_build_times_init(circuit_build_times_t *cbt);
+
+#ifdef CIRCUIT_PRIVATE
+double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
+                                             double quantile);
+build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
+                                                 double q_lo, double q_hi);
+void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
+                                       double quantile, build_time_t time);
+void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
+double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
+int circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt);
+void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
+                                       double quantile_cutoff);
+void circuitbuild_running_unit_tests(void);
+void circuit_build_times_reset(circuit_build_times_t *cbt);
+#endif
 
 /********************************* circuitlist.c ***********************/
 

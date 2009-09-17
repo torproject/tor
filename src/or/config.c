@@ -164,7 +164,7 @@ static config_var_t _option_vars[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
-  V(CircuitBuildTimeout,         INTERVAL, "1 minute"),
+  V(CircuitBuildTimeout,         INTERVAL, "0"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
@@ -409,6 +409,10 @@ static config_var_t _state_vars[] = {
   V(LastRotatedOnionKey,              ISOTIME,  NULL),
   V(LastWritten,                      ISOTIME,  NULL),
 
+  V(TotalBuildTimes,                  UINT,     NULL),
+  VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
+  VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
+
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
@@ -596,6 +600,10 @@ static config_var_description_t options_description[] = {
 
   /* Hidden service options: HiddenService: dir,excludenodes, nodes,
    * options, port.  PublishHidServDescriptor */
+
+  /* Circuit build time histogram options */
+  { "CircuitBuildTimeBin", "Histogram of recent circuit build times"},
+  { "TotalBuildTimes", "Total number of buildtimes in histogram"},
 
   /* Nonpersistent options: __LeaveStreamsUnattached, __AllDirActionsPrivate */
   { NULL, NULL },
@@ -2911,11 +2919,6 @@ compute_publishserverdescriptor(or_options_t *options)
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
 
-/** Lowest allowable value for CircuitBuildTimeout; values too low will
- * increase network load because of failing connections being retried, and
- * might prevent users from connecting to the network at all. */
-#define MIN_CIRCUIT_BUILD_TIMEOUT 30
-
 /** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
 #define MIN_MAX_CIRCUIT_DIRTINESS 10
@@ -3360,12 +3363,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
         MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
-  }
-
-  if (options->CircuitBuildTimeout < MIN_CIRCUIT_BUILD_TIMEOUT) {
-    log(LOG_WARN, LD_CONFIG, "CircuitBuildTimeout option is too short; "
-      "raising to %d seconds.", MIN_CIRCUIT_BUILD_TIMEOUT);
-    options->CircuitBuildTimeout = MIN_CIRCUIT_BUILD_TIMEOUT;
   }
 
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {
@@ -5060,6 +5057,10 @@ or_state_set(or_state_t *new_state)
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
     tor_free(err);
   }
+  if (circuit_build_times_parse_state(&circ_times, global_state, &err) < 0) {
+    log_warn(LD_GENERAL,"%s",err);
+    tor_free(err);
+  }
 }
 
 /** Reload the persistent state from disk, generating a new state as needed.
@@ -5192,6 +5193,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
+  circuit_build_times_update_state(&circ_times, global_state);
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 
