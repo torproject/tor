@@ -1496,6 +1496,23 @@
        should just look at ACCEPTED_SERVER_DESCRIPTOR and should ignore
        this event for now.}
 
+     SERVER_DESCRIPTOR_STATUS
+     "STATUS=" "LISTED" / "UNLISTED"
+       We just got a new networkstatus consensus, and whether we're in
+       it or not in it has changed. Specifically, status is "listed"
+       if we're listed in it but previous to this point we didn't know
+       we were listed in a consensus; and status is "unlisted" if we
+       thought we should have been listed in it (e.g. we were listed in
+       the last one), but we're not.
+
+       {Moving from listed to unlisted is not necessarily cause for
+       alarm. The relay might have failed a few reachability tests,
+       or the Internet might have had some routing problems. So this
+       feature is mainly to let relay operators know when their relay
+       has successfully been listed in the consensus.}
+
+       [Not implemented yet. We should do this in 0.2.2.x. -RD]
+
      NAMESERVER_STATUS
      "NS=addr"
      "STATUS=" "UP" / "DOWN"

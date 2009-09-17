@@ -264,7 +264,7 @@ rend_config_services(or_options_t *options, int validate_only)
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      if (service) {
+      if (service) { /* register the one we just finished parsing */
         if (validate_only)
           rend_service_free(service);
         else
@@ -1476,7 +1476,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   /* set the windows to default. these are the windows
    * that bob thinks alice has.
    */
-  hop->package_window = circuit_initial_package_window();;
+  hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
   onion_append_to_cpath(&circuit->cpath, hop);
