@@ -2655,6 +2655,10 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   if (! n_signatures) {
     log_warn(LD_DIR, "No signatures on networkstatus vote.");
     goto err;
+  } else if (ns->type == NS_TYPE_VOTE && n_signatures != 1) {
+    log_warn(LD_DIR, "Received more than one signature on a "
+             "network-status vote.");
+    goto err;
   }
 
   if (eos_out)
