@@ -2882,13 +2882,13 @@ void entry_guards_free_all(void);
 /** Width of the histogram bins in milliseconds */
 #define BUILDTIME_BIN_WIDTH ((build_time_t)50)
 
-/** Cuttof point on the CDF for our timeout estimation.
+/** Cutoff point on the CDF for our timeout estimation.
  * TODO: This should be moved to the consensus */
 #define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
 
 /** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
-#define BUILD_TIME_MAX  ((build_time_t)(INT32_MAX))
+#define BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
 
 /** Have we received a cell in the last N seconds? */
 #define NETWORK_LIVE_MULTIPLIER (RECENT_CIRCUITS/2.5)
@@ -2903,7 +2903,7 @@ typedef uint32_t build_time_t;
 #define BUILD_TIMES_TEST_FREQUENCY 60
 
 /** Save state every 10 circuits */
-#define BUILD_TIMES_SAVE_STATE_EVERY  10
+#define BUILD_TIMES_SAVE_STATE_EVERY 10
 
 typedef struct {
   /** The circular array of recorded build times in milliseconds */

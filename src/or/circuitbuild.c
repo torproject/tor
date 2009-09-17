@@ -179,7 +179,7 @@ circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
     cbt->total_build_times++;
 
   if ((cbt->total_build_times % BUILD_TIMES_SAVE_STATE_EVERY) == 0) {
-    /* Save state every 100 circuit builds */
+    /* Save state every n circuit builds */
     if (!unit_tests && !get_options()->AvoidDiskWrites)
       or_state_mark_dirty(get_or_state(), 0);
   }

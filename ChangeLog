@@ -1,5 +1,17 @@
-Changes in version 0.2.2.2-alpha - 2009-09-??
+Changes in version 0.2.2.2-alpha - 2009-09-17
   o Major features:
+    - Tor now tracks how long it takes to build client-side circuits
+      over time, and adapts its timeout to local network performance.
+      Since a circuit that takes a long time to build will also provide
+      bad performance, we get significant latency improvements by
+      discarding the slowest 20% of circuits. Specifically, Tor creates
+      circuits more aggressively than usual until it has enough data
+      points for a good timeout estimate. Implements proposal 151.
+      We are especially looking for reports (good and bad) from users with
+      both EDGE and broadband connections that can move from broadband
+      to EDGE and find out if the build-time data in the .tor/state gets
+      reset without loss of Tor usability. You should also see a notice
+      log message telling you that Tor has reset its timeout.
     - Authorities can now vote on arbitary integer values as part of the
       consensus process. This is designed to help set network parameters.
       Implements proposal 167.
