@@ -264,6 +264,8 @@ void
 circuit_expire_building(time_t now)
 {
   circuit_t *victim, *circ = global_circuitlist;
+  /* circ_times.timeout is BUILD_TIMEOUT_INITIAL_VALUE if we haven't
+   * decided on a customized one yet */
   time_t general_cutoff = now - circ_times.timeout;
   time_t begindir_cutoff = now - circ_times.timeout/2;
   time_t introcirc_cutoff = begindir_cutoff;
@@ -433,11 +435,11 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
 }
 
 /** Don't keep more than this many unused open circuits around. */
-#define MAX_UNUSED_OPEN_CIRCUITS 12
+#define MAX_UNUSED_OPEN_CIRCUITS 14
 
 /** Figure out how many circuits we have open that are clean. Make
  * sure it's enough for all the upcoming behaviors we predict we'll have.
- * But if we have too many, close the not-so-useful ones.
+ * But put an upper bound on the total number of circuits.
  */
 static void
 circuit_predict_and_launch_new(void)
@@ -521,8 +523,11 @@ circuit_predict_and_launch_new(void)
   }
 
   /* Finally, check to see if we still need more circuits to learn
-   * a good build timeout */
-  if (circuit_build_times_needs_circuits_now(&circ_times)) {
+   * a good build timeout. But if we're close to our max number we
+   * want, don't do another -- we want to leave a few slots open so
+   * we can still build circuits preemptively as needed. */
+  if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
+      circuit_build_times_needs_circuits_now(&circ_times)) {
     flags = CIRCLAUNCH_NEED_CAPACITY;
     log_info(LD_CIRC,
              "Have %d clean circs need another buildtime test circ.", num);
@@ -636,6 +641,11 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
   tor_fragile_assert();
 }
 
+/** If we haven't yet decided on a good timeout value for circuit
+ * building, we close idles circuits aggressively so we can get more
+ * data points. */
+#define IDLE_TIMEOUT_WHILE_LEARNING (10*60)
+
 /** Find each circuit that has been unused for too long, or dirty
  * for too long and has no streams on it: mark it for close.
  */
@@ -646,9 +656,9 @@ circuit_expire_old_circuits(time_t now)
   time_t cutoff;
 
   if (circuit_build_times_needs_circuits(&circ_times)) {
-    /* Circuits should be shorter lived if we need them
-     * for build time testing */
-    cutoff = now - get_options()->MaxCircuitDirtiness;
+    /* Circuits should be shorter lived if we need more of them
+     * for learning a good build timeout */
+    cutoff = now - IDLE_TIMEOUT_WHILE_LEARNING;
   } else {
     cutoff = now - get_options()->CircuitIdleTimeout;
   }
