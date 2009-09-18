@@ -2859,18 +2859,10 @@ void entry_guards_free_all(void);
 
 /* Circuit Build Timeout "public" functions and structures. */
 
-/** How many circuits count as recent when deciding if the
- * connection has changed. */
-#define RECENT_CIRCUITS 20
-
-/** Maximum fraction of timeouts to tolerate in the past
- * RECENT_CIRCUITS before calculating a new timeout */
-#define MAX_RECENT_TIMEOUT_RATE 0.7999999
-
 /** Maximum quantile to use to generate synthetic timeouts.
  *  We want to stay a bit short of 1.0, because longtail is
  *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
-#define MAX_SYNTHETIC_QUANTILE 0.98
+#define MAX_SYNTHETIC_QUANTILE 0.985
 
 /** Minimum circuits before estimating a timeout */
 #define MIN_CIRCUITS_TO_OBSERVE 500
@@ -2890,9 +2882,6 @@ void entry_guards_free_all(void);
 typedef uint32_t build_time_t;
 #define BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
 
-/** Have we received a cell in the last N seconds? */
-#define NETWORK_LIVE_MULTIPLIER (RECENT_CIRCUITS/2.5)
-
 /** Lowest allowable value for CircuitBuildTimeout in milliseconds */
 #define BUILD_TIMEOUT_MIN_VALUE (3*1000)
 
@@ -2905,17 +2894,68 @@ typedef uint32_t build_time_t;
 /** Save state every 10 circuits */
 #define BUILD_TIMES_SAVE_STATE_EVERY 10
 
+/* Circuit Build Timeout network liveness constants */
+
+/**
+ * How many circuits count as recent when considering if the
+ * connection has gone gimpy or changed.
+ */
+#define RECENT_CIRCUITS 20
+
+/**
+ * Have we received a cell in the last N circ attempts?
+ *
+ * This tells us when to temporarily switch back to
+ * BUILD_TIMEOUT_INITIAL_VALUE until we start getting cells,
+ * at which point we switch back to computing the timeout from
+ * our saved history.
+ */
+#define NETWORK_NONLIVE_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.15))
+
+/**
+ * This tells us when to toss out the last streak of N timeouts.
+ *
+ * If instead we start getting cells, we switch back to computing the timeout
+ * from our saved history.
+ */
+#define NETWORK_NONLIVE_DISCARD_COUNT (lround(NETWORK_NONLIVE_TIMEOUT_COUNT*2))
+
+/**
+ * Maximum count of timeouts that finish the first hop in the past
+ * RECENT_CIRCUITS before calculating a new timeout.
+ *
+ * This tells us to abandon timeout history and set
+ * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
+ */
+#define MAX_RECENT_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.75))
+
+/** Information about the state of our local network connection */
+typedef struct {
+  /** The timestamp we last completed a TLS handshake or received a cell */
+  time_t network_last_live;
+  /** If the network is not live, how many timeouts has this caused? */
+  int nonlive_timeouts;
+  /** If the network is not live, have we yet discarded our history? */
+  int nonlive_discarded;
+  /** Circular array of circuits that have made it past 1 hop. Slot is
+   * 1 if circuit timed out, 0 if circuit succeeded */
+  int8_t onehop_timeouts[RECENT_CIRCUITS];
+  /** Index into circular array. */
+  int onehop_idx;
+} network_liveness_t;
+
+/** Structure for circuit build times history */
 typedef struct {
   /** The circular array of recorded build times in milliseconds */
   build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
-  /** The timestamp we last completed a TLS handshake or received a cell */
-  time_t network_last_live;
-  /** Last time we built a circuit. Used to decide to build new test circs */
-  time_t last_circ_at;
   /** Current index in the circuit_build_times circular array */
   int build_times_idx;
   /** Total number of build times accumulated. Maxes at NCIRCUITS_TO_OBSERVE */
   int total_build_times;
+  /** Information about the state of our local network connection */
+  network_liveness_t liveness;
+  /** Last time we built a circuit. Used to decide to build new test circs */
+  time_t last_circ_at;
   /** Number of timeouts that have happened before estimating pareto
    *  parameters */
   int pre_timeouts;
@@ -2934,12 +2974,11 @@ void circuit_build_times_update_state(circuit_build_times_t *cbt,
                                       or_state_t *state);
 int circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                     or_state_t *state, char **msg);
-void circuit_build_times_add_timeout(circuit_build_times_t *cbt);
+int circuit_build_times_add_timeout(circuit_build_times_t *cbt,
+                                    int did_onehop, time_t start_time);
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
                                  build_time_t time);
-void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
-int circuit_build_times_is_network_live(circuit_build_times_t *cbt);
 int circuit_build_times_needs_circuits(circuit_build_times_t *cbt);
 int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
 void circuit_build_times_init(circuit_build_times_t *cbt);
@@ -2953,12 +2992,21 @@ void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
                                        double quantile, double time_ms);
 void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
 double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
-int circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt);
 void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff);
 void circuitbuild_running_unit_tests(void);
 void circuit_build_times_reset(circuit_build_times_t *cbt);
+
+/* Network liveness functions */
+int circuit_build_times_network_check_changed(circuit_build_times_t *cbt);
 #endif
+
+/* Network liveness functions */
+void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
+int circuit_build_times_network_check_live(circuit_build_times_t *cbt);
+void circuit_build_times_network_timeout(circuit_build_times_t *cbt,
+                                         int did_onehop, time_t start_time);
+void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 
 /********************************* circuitlist.c ***********************/
 

@@ -39,7 +39,13 @@ const char tor_git_revision[] = "";
 #define ROUTER_PRIVATE
 #define CIRCUIT_PRIVATE
 
-#include <math.h>
+/*
+ * Linux doesn't provide lround in math.h by default, but mac os does...
+ * It's best just to leave math.h out of the picture entirely.
+ */
+//#include <math.h>
+long int lround(double x);
+double fabs(double x);
 
 #include "or.h"
 #include "test.h"
@@ -3425,10 +3431,10 @@ test_circuit_timeout(void)
   circuit_build_times_t initial;
   circuit_build_times_t estimate;
   circuit_build_times_t final;
-  or_state_t state;
-  int i;
-  char *msg;
   double timeout1, timeout2;
+  or_state_t state;
+  char *msg;
+  int i, runs;
   circuit_build_times_init(&initial);
   circuit_build_times_init(&estimate);
   circuit_build_times_init(&final);
@@ -3474,34 +3480,96 @@ test_circuit_timeout(void)
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
                    circuit_build_times_cdf(&initial, timeout2)) < 0.05);
 
-  /* Generate MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS timeouts
-   * and 1-that regular values. Then check for timeout error
-   * Do the same for one less timeout */
-  for (i = 0; i < RECENT_CIRCUITS; i++) {
-    circuit_build_times_add_time(&estimate,
-          circuit_build_times_generate_sample(&estimate, 0,
-              BUILDTIMEOUT_QUANTILE_CUTOFF));
-    circuit_build_times_add_time(&final,
-          circuit_build_times_generate_sample(&final, 0,
-              BUILDTIMEOUT_QUANTILE_CUTOFF));
-  }
+  for (runs = 0; runs < 50; runs++) {
+    int build_times_idx = 0;
+    int total_build_times = 0;
 
-  test_assert(!circuit_build_times_check_too_many_timeouts(&estimate));
-  test_assert(!circuit_build_times_check_too_many_timeouts(&final));
+    final.timeout_ms = BUILD_TIMEOUT_INITIAL_VALUE;
+    estimate.timeout_ms = BUILD_TIMEOUT_INITIAL_VALUE;
 
-  for (i = 0; i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS; i++) {
-    circuit_build_times_add_timeout_worker(&estimate,
-                                           BUILDTIMEOUT_QUANTILE_CUTOFF);
-    if (i < MAX_RECENT_TIMEOUT_RATE*RECENT_CIRCUITS-1) {
-      circuit_build_times_add_timeout_worker(&final,
-                                             BUILDTIMEOUT_QUANTILE_CUTOFF);
+    for (i = 0; i < RECENT_CIRCUITS*2; i++) {
+      circuit_build_times_network_circ_success(&estimate);
+      circuit_build_times_add_time(&estimate,
+            circuit_build_times_generate_sample(&estimate, 0,
+                BUILDTIMEOUT_QUANTILE_CUTOFF));
+      estimate.have_computed_timeout = 1;
+      circuit_build_times_network_circ_success(&estimate);
+      circuit_build_times_add_time(&final,
+            circuit_build_times_generate_sample(&final, 0,
+                BUILDTIMEOUT_QUANTILE_CUTOFF));
+      final.have_computed_timeout = 1;
     }
-  }
 
-// Disabled 2009-09-18 since the synthetic values are not perfectly
-// accurate at falling on the right side of the line. -RD
-//  test_assert(circuit_build_times_check_too_many_timeouts(&estimate) == 1);
-//  test_assert(!circuit_build_times_check_too_many_timeouts(&final));
+    test_assert(!circuit_build_times_network_check_changed(&estimate));
+    test_assert(!circuit_build_times_network_check_changed(&final));
+
+    /* Reset liveness to be non-live */
+    final.liveness.network_last_live = 0;
+    estimate.liveness.network_last_live = 0;
+
+    build_times_idx = estimate.build_times_idx;
+    total_build_times = estimate.total_build_times;
+    for (i = 0; i < NETWORK_NONLIVE_TIMEOUT_COUNT; i++) {
+      test_assert(circuit_build_times_network_check_live(&estimate));
+      test_assert(circuit_build_times_network_check_live(&final));
+
+      if (circuit_build_times_add_timeout(&estimate, 0,
+                  approx_time()-estimate.timeout_ms/1000.0-1))
+        estimate.have_computed_timeout = 1;
+      if (circuit_build_times_add_timeout(&final, 0,
+                  approx_time()-final.timeout_ms/1000.0-1))
+        final.have_computed_timeout = 1;
+    }
+
+    test_assert(!circuit_build_times_network_check_live(&estimate));
+    test_assert(!circuit_build_times_network_check_live(&final));
+
+    for ( ; i < NETWORK_NONLIVE_DISCARD_COUNT; i++) {
+      if (circuit_build_times_add_timeout(&estimate, 0, approx_time()))
+        estimate.have_computed_timeout = 1;
+
+      if (i < NETWORK_NONLIVE_DISCARD_COUNT-1) {
+        if (circuit_build_times_add_timeout(&final, 0, approx_time()))
+          final.have_computed_timeout = 1;
+      }
+    }
+
+    test_assert(!circuit_build_times_network_check_live(&estimate));
+    test_assert(!circuit_build_times_network_check_live(&final));
+
+    log_info(LD_CIRC, "idx: %d %d, tot: %d %d",
+             build_times_idx, estimate.build_times_idx,
+             total_build_times, estimate.total_build_times);
+
+    /* Check rollback index. Should match top of loop. */
+    test_assert(build_times_idx == estimate.build_times_idx);
+    test_assert(total_build_times == estimate.total_build_times);
+
+    /* Now simulate that the network has become live and we need
+     * a change */
+    circuit_build_times_network_is_live(&estimate);
+    circuit_build_times_network_is_live(&final);
+
+    for (i = 0; i < MAX_RECENT_TIMEOUT_COUNT; i++) {
+      if (circuit_build_times_add_timeout(&estimate, 1, approx_time()-1))
+        estimate.have_computed_timeout = 1;
+
+      if (i < MAX_RECENT_TIMEOUT_COUNT-1) {
+        if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
+          final.have_computed_timeout = 1;
+      }
+    }
+
+    test_assert(estimate.liveness.onehop_idx == 0);
+    test_assert(final.liveness.onehop_idx == MAX_RECENT_TIMEOUT_COUNT-1);
+
+    test_assert(circuit_build_times_network_check_live(&estimate));
+    test_assert(circuit_build_times_network_check_live(&final));
+
+    if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
+      final.have_computed_timeout = 1;
+
+  }
 
 done:
   return;

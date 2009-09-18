@@ -362,8 +362,13 @@ circuit_expire_building(time_t now)
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
     circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
-    circuit_build_times_add_timeout(&circ_times);
-    circuit_build_times_set_timeout(&circ_times);
+
+    if (circuit_build_times_add_timeout(&circ_times,
+       TO_ORIGIN_CIRCUIT(circ)->cpath
+              && TO_ORIGIN_CIRCUIT(circ)->cpath->state == CPATH_STATE_OPEN,
+                                         circ->timestamp_created)) {
+      circuit_build_times_set_timeout(&circ_times);
+    }
   }
 }
 
@@ -838,6 +843,9 @@ circuit_build_failed(origin_circuit_t *circ)
                "(%s:%d). I'm going to try to rotate to a better connection.",
                n_conn->_base.address, n_conn->_base.port);
       n_conn->is_bad_for_new_circs = 1;
+    } else {
+      log_info(LD_OR,
+               "Our circuit died before the first hop with no connection");
     }
     if (n_conn_id) {
       entry_guard_register_connect_status(n_conn_id, 0, 1, time(NULL));

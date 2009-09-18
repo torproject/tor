@@ -89,17 +89,20 @@ Implementation
     We attempt to detect both network connectivity loss and drastic
     changes in the timeout characteristics.
 
-    If more than MAX_RECENT_TIMEOUT_RATE (80%) of the past
-    RECENT_CIRCUITS (20) time out, we assume the network connection
-    has changed, and we discard all buildtimes history and compute
-    a new timeout by estimating a new Pareto curve using the
-    position on the Pareto Quartile function for the ratio of
-    timeouts.
+    We assume that we've had network connectivity loss if 3 circuits
+    timeout and we've recieved no cells or TLS handshakes since those
+    circuits began. We then set the timeout to 60 seconds and stop
+    counting timeouts.
 
-    Network connectivity loss is detected by recording a timestamp every
-    time Tor either completes a TLS connection or receives a cell. If
-    this timestamp is more than CircuitBuildTimeout*RECENT_CIRCUITS/3
-    seconds in the past, circuit timeouts are no longer counted.
+    If 3 more circuits timeout and the network still has not been
+    live within this new 60 second timeout window, we then discard
+    the previous timeouts during this period from our history.
+
+    To detect changing network conditions, we keep a history of
+    the timeout or non-timeout status of the past RECENT_CIRCUITS (20)
+    that successfully completed more than one hop. If more than 75%
+    of these circuits timeout, we discard all buildtimes history,
+    reset the timeout to 60, and then begin recomputing the timeout.
 
   Testing
 
