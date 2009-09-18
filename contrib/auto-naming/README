@@ -9,9 +9,9 @@ This toolset allows automatic maintaining of a binding list of nicknames
 to identity keys, implementing Tor proposal 123[1].
 
 The rules are simple:
- - A router claiming to be Bob is named (i.e. added to the binding list)
+ - A router claiming to be Bob becomes named (i.e. added to the binding list)
    if there currently does not exist a different binding for that
-   nickname, the router has been around for a bit (2 weeks), no other
+   nickname, the router has been around for a bit (2 weeks), and no other
    router has used that nickname in a while (1 month).
  - A binding is removed if the server that owns it has not been seen
    in a long time (6 months).
