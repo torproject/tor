@@ -638,7 +638,7 @@ circuit_build_times_is_network_live(circuit_build_times_t *cbt)
   if (now - cbt->network_last_live >
           (cbt->timeout*NETWORK_LIVE_MULTIPLIER)) {
     log_info(LD_CIRC, "Network is no longer live. Dead for %ld seconds.",
-             now - cbt->network_last_live);
+             (long int)(now - cbt->network_last_live));
     return 0;
   }
   return 1;
