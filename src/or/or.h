@@ -2326,22 +2326,22 @@ typedef struct {
   routerset_t *EntryNodes;/**< Structure containing nicknames, digests,
                            * country codes and IP address patterns of ORs to
                            * consider as entry points. */
-  int StrictExitNodes; /**< Boolean: When none of our ExitNodes are up, do we
-                        * stop building circuits? */
-  int StrictEntryNodes; /**< Boolean: When none of our EntryNodes are up, do we
-                         * stop building circuits? */
-  int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
-                               * process for all current and future memory. */
-
+  int StrictNodes; /**< Boolean: When none of our EntryNodes or ExitNodes
+                    * are up, or we need to access a node in ExcludeNodes,
+                    * do we just fail instead? */
   routerset_t *ExcludeNodes;/**< Structure containing nicknames, digests,
                              * country codes and IP address patterns of ORs
-                             * not to use in circuits. */
+                             * not to use in circuits. But see StrictNodes
+                             * above. */
   routerset_t *ExcludeExitNodes;/**< Structure containing nicknames, digests,
                                  * country codes and IP address patterns of
                                  * ORs not to consider as exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
   struct routerset_t *_ExcludeExitNodesUnion;
+
+  int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
+                               * process for all current and future memory. */
 
   /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
   smartlist_t *AllowInvalidNodes;
@@ -4949,13 +4949,10 @@ typedef enum {
   CRN_NEED_GUARD = 1<<2,
   CRN_ALLOW_INVALID = 1<<3,
   /* XXXX not used, apparently. */
-  CRN_STRICT_PREFERRED = 1<<4,
-  /* XXXX not used, apparently. */
   CRN_WEIGHT_AS_EXIT = 1<<5
 } router_crn_flags_t;
 
-routerinfo_t *router_choose_random_node(const char *preferred,
-                                        smartlist_t *excludedsmartlist,
+routerinfo_t *router_choose_random_node(smartlist_t *excludedsmartlist,
                                         struct routerset_t *excludedset,
                                         router_crn_flags_t flags);
 

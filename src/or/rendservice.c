@@ -1825,7 +1825,7 @@ rend_services_introduce(void)
       router_crn_flags_t flags = CRN_NEED_UPTIME;
       if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
-      router = router_choose_random_node(NULL, intro_routers,
+      router = router_choose_random_node(intro_routers,
                                          options->ExcludeNodes, flags);
       if (!router) {
         log_warn(LD_REND,

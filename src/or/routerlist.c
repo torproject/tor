@@ -1827,8 +1827,7 @@ routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
  * node (that is, possibly discounting exit nodes).
  */
 routerinfo_t *
-router_choose_random_node(const char *preferred,
-                          smartlist_t *excludedsmartlist,
+router_choose_random_node(smartlist_t *excludedsmartlist,
                           routerset_t *excludedset,
                           router_crn_flags_t flags)
 {
@@ -1836,7 +1835,6 @@ router_choose_random_node(const char *preferred,
   const int need_capacity = (flags & CRN_NEED_CAPACITY) != 0;
   const int need_guard = (flags & CRN_NEED_GUARD) != 0;
   const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
-  const int strict = (flags & CRN_STRICT_PREFERRED) != 0;
   const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
 
   smartlist_t *sl, *excludednodes;
@@ -1864,22 +1862,7 @@ router_choose_random_node(const char *preferred,
     routerlist_add_family(excludednodes, r);
   }
 
-  /* Try the preferred nodes first. Ignore need_uptime and need_capacity
-   * and need_guard, since the user explicitly asked for these nodes. */
-  if (preferred) {
-    sl = smartlist_create();
-    add_nickname_list_to_smartlist(sl,preferred,1);
-    smartlist_subtract(sl,excludednodes);
-    if (excludedsmartlist)
-      smartlist_subtract(sl,excludedsmartlist);
-    if (excludedset)
-      routerset_subtract_routers(sl,excludedset);
-    choice = smartlist_choose(sl);
-    smartlist_free(sl);
-  }
-  if (!choice && !strict) {
-    /* Then give up on our preferred choices: any node
-     * will do that has the required attributes. */
+  { /* XXX021 reformat */
     sl = smartlist_create();
     router_add_running_routers_to_smartlist(sl, allow_invalid,
                                             need_uptime, need_capacity,
@@ -1906,18 +1889,13 @@ router_choose_random_node(const char *preferred,
                need_guard?", guard":"");
       flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD);
       choice = router_choose_random_node(
-                       NULL, excludedsmartlist, excludedset, flags);
+                       excludedsmartlist, excludedset, flags);
     }
   }
   smartlist_free(excludednodes);
   if (!choice) {
-    if (strict) {
-      log_warn(LD_CIRC, "All preferred nodes were down when trying to choose "
-               "node, and the Strict[...]Nodes option is set. Failing.");
-    } else {
-      log_warn(LD_CIRC,
-               "No available nodes when trying to choose node. Failing.");
-    }
+    log_warn(LD_CIRC,
+             "No available nodes when trying to choose node. Failing.");
   }
   return choice;
 }

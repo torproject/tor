@@ -66,6 +66,7 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(RendExcludeNode),
   PLURAL(StrictEntryNode),
   PLURAL(StrictExitNode),
+  PLURAL(StrictNode),
   { "l", "Log", 1, 0},
   { "AllowUnverifiedNodes", "AllowInvalidNodes", 0, 0},
   { "AutomapHostSuffixes", "AutomapHostsSuffixes", 0, 0},
@@ -83,10 +84,12 @@ static config_abbrev_t _option_abbrevs[] = {
   { "NumEntryNodes", "NumEntryGuards", 0, 0},
   { "ResolvConf", "ServerDNSResolvConfFile", 0, 1},
   { "SearchDomains", "ServerDNSSearchDomains", 0, 1},
-  { "ServerDNSAllowBrokenResolvConf", "ServerDNSAllowBrokenConfig", 0, 0 },
+  { "ServerDNSAllowBrokenResolvConf", "ServerDNSAllowBrokenConfig", 0, 0},
   { "PreferTunnelledDirConns", "PreferTunneledDirConns", 0, 0},
   { "BridgeAuthoritativeDirectory", "BridgeAuthoritativeDir", 0, 0},
   { "HashedControlPassword", "__HashedControlSessionPassword", 1, 0},
+  { "StrictEntryNodes", "StrictNodes", 0, 1},
+  { "StrictExitNodes", "StrictNodes", 0, 1},
   { NULL, NULL, 0, 0},
 };
 
@@ -320,8 +323,7 @@ static config_var_t _option_vars[] = {
   V(SocksPort,                   UINT,     "9050"),
   V(SocksTimeout,                INTERVAL, "2 minutes"),
   OBSOLETE("StatusFetchPeriod"),
-  V(StrictEntryNodes,            BOOL,     "0"),
-  V(StrictExitNodes,             BOOL,     "0"),
+  V(StrictNodes,                 BOOL,     "0"),
   OBSOLETE("SysLog"),
   V(TestSocks,                   BOOL,     "0"),
   OBSOLETE("TestVia"),
@@ -517,6 +519,9 @@ static config_var_description_t options_description[] = {
   { "ExitNodes", "A list of preferred nodes to use for the last hop in "
     "circuits, when possible." },
   { "ExcludeNodes", "A list of nodes never to use when building a circuit." },
+  { "ExcludeExitNodes", "A list of nodes never to use for the last when "
+    "building a circuit for exit. Other circuits can still end at these "
+    "nodes." },
   { "FascistFirewall", "If set, Tor will only create outgoing connections to "
     "servers running on the ports listed in FirewallPorts." },
   { "FirewallPorts", "A list of ports that we can connect to.  Only used "
@@ -545,10 +550,9 @@ static config_var_description_t options_description[] = {
   { "SOCKSPolicy", "Set an entry policy to limit which addresses can connect "
     "to the SOCKSPort." },
   /* SocksTimeout */
-  { "StrictExitNodes", "If set, Tor will fail to operate when none of the "
-    "configured ExitNodes can be used." },
-  { "StrictEntryNodes", "If set, Tor will fail to operate when none of the "
-    "configured EntryNodes can be used." },
+  { "StrictNodes", "If set, Tor will fail to operate when none of the "
+    "configured EntryNodes, ExitNodes, ExcludeNodes, or ExcludeExitNodes "
+    "can be used." },
   /* TestSocks */
   { "TrackHostsExit", "Hosts and domains which should, if possible, be "
     "accessed from the same exit node each time we connect to them." },
@@ -3194,6 +3198,15 @@ options_validate(or_options_t *old_options, or_options_t *options,
     routerset_union(options->_ExcludeExitNodesUnion,options->ExcludeNodes);
   }
 
+  if (options->ExcludeNodes && options->StrictNodes) {
+    COMPLAIN("You have asked to exclude certain relays from all positions "
+             "in your circuits. Expect hidden services and other Tor "
+             "features to be broken in unpredictable ways.");
+  }
+
+#if 0 /* for now, it's ok to set StrictNodes without setting any actual
+       * preferences. It won't hurt anything. Eventually, either figure
+       * out the logic for the right case to complain, or just delete. -RD */
   if (options->StrictExitNodes &&
       (!options->ExitNodes) &&
       (!old_options ||
@@ -3207,6 +3220,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
        (old_options->StrictEntryNodes != options->StrictEntryNodes) ||
        (!routerset_equal(old_options->EntryNodes,options->EntryNodes))))
     COMPLAIN("StrictEntryNodes set, but no EntryNodes listed.");
+#endif
 
   if (options->EntryNodes && !routerset_is_list(options->EntryNodes)) {
     /* XXXX fix this; see entry_guards_prepend_from_config(). */

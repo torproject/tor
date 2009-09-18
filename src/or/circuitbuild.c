@@ -2174,7 +2174,8 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 
     routersets_get_disjunction(use, supporting, options->ExitNodes,
                                options->_ExcludeExitNodesUnion, 1);
-    if (smartlist_len(use) == 0 && !options->StrictExitNodes) {
+    if (smartlist_len(use) == 0 && options->ExitNodes &&
+        !options->StrictNodes) { /* give up on exitnodes and try again */
       routersets_get_disjunction(use, supporting, NULL,
                                  options->_ExcludeExitNodesUnion, 1);
     }
@@ -2220,12 +2221,14 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
 
       routersets_get_disjunction(use, supporting, options->ExitNodes,
                                  options->_ExcludeExitNodesUnion, 1);
-      if (smartlist_len(use) == 0 && !options->StrictExitNodes) {
+      if (smartlist_len(use) == 0 && options->ExitNodes &&
+          !options->StrictNodes) { /* give up on exitnodes and try again */
         routersets_get_disjunction(use, supporting, NULL,
                                    options->_ExcludeExitNodesUnion, 1);
       }
-      /* XXX sometimes the above results in null, when the requested
-       * exit node is down. we should pick it anyway. */
+      /* FFF sometimes the above results in null, when the requested
+       * exit node is considered down by the consensus. we should pick
+       * it anyway, since the user asked for it. */
       router = routerlist_sl_choose_by_bandwidth(use, WEIGHT_FOR_EXIT);
       if (router)
         break;
@@ -2243,10 +2246,10 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     log_info(LD_CIRC, "Chose exit server '%s'", router->nickname);
     return router;
   }
-  if (options->StrictExitNodes) {
+  if (options->ExitNodes && options->StrictNodes) {
     log_warn(LD_CIRC,
              "No specified exit routers seem to be running, and "
-             "StrictExitNodes is set: can't choose an exit.");
+             "StrictNodes is set: can't choose an exit.");
   }
   return NULL;
 }
@@ -2277,15 +2280,13 @@ choose_good_exit_server(uint8_t purpose, routerlist_t *dir,
       if (options->_AllowInvalid & ALLOW_INVALID_MIDDLE)
         flags |= CRN_ALLOW_INVALID;
       if (is_internal) /* pick it like a middle hop */
-        return router_choose_random_node(NULL, NULL,
-                                         options->ExcludeNodes, flags);
+        return router_choose_random_node(NULL, options->ExcludeNodes, flags);
       else
         return choose_good_exit_server_general(dir,need_uptime,need_capacity);
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
       if (options->_AllowInvalid & ALLOW_INVALID_RENDEZVOUS)
         flags |= CRN_ALLOW_INVALID;
-      return router_choose_random_node(NULL, NULL,
-                                       options->ExcludeNodes, flags);
+      return router_choose_random_node(NULL, options->ExcludeNodes, flags);
   }
   log_warn(LD_BUG,"Unhandled purpose %d", purpose);
   tor_fragile_assert();
@@ -2527,8 +2528,7 @@ choose_good_middle_server(uint8_t purpose,
     flags |= CRN_NEED_CAPACITY;
   if (options->_AllowInvalid & ALLOW_INVALID_MIDDLE)
     flags |= CRN_ALLOW_INVALID;
-  choice = router_choose_random_node(NULL,
-                                     excluded, options->ExcludeNodes, flags);
+  choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
   smartlist_free(excluded);
   return choice;
 }
@@ -2593,11 +2593,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   if (options->_AllowInvalid & ALLOW_INVALID_ENTRY)
     flags |= CRN_ALLOW_INVALID;
 
-  choice = router_choose_random_node(
-           NULL,
-           excluded,
-           options->ExcludeNodes,
-           flags);
+  choice = router_choose_random_node(excluded, options->ExcludeNodes, flags);
   smartlist_free(excluded);
   return choice;
 }
@@ -3378,7 +3374,7 @@ entry_guards_prepend_from_config(void)
     add_an_entry_guard(ri, 0);
   });
   /* Finally, the remaining EntryNodes, unless we're strict */
-  if (options->StrictEntryNodes) {
+  if (options->EntryNodes && options->StrictNodes) {
     SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
                       entry_guard_free(e));
   } else {
@@ -3397,7 +3393,7 @@ entry_guards_prepend_from_config(void)
 int
 entry_list_can_grow(or_options_t *options)
 {
-  if (options->StrictEntryNodes)
+  if (options->EntryNodes && options->StrictNodes)
     return 0;
   if (options->UseBridges)
     return 0;
