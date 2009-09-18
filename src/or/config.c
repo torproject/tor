@@ -1515,7 +1515,10 @@ expand_abbrev(config_format_t *fmt, const char *option, int command_line,
                  fmt->abbrevs[i].abbreviated,
                  fmt->abbrevs[i].full);
       }
-      return fmt->abbrevs[i].full;
+      /* Keep going through the list in case we want to rewrite it more.
+       * (We could imagine recursing here, but I don't want to get the
+       * user into an infinite loop if we craft our list wrong.) */
+      option = fmt->abbrevs[i].full;
     }
   }
   return option;
