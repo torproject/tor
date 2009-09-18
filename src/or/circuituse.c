@@ -20,6 +20,8 @@ extern circuit_t *global_circuitlist; /* from circuitlist.c */
 static void circuit_expire_old_circuits(time_t now);
 static void circuit_increment_failure_count(void);
 
+long int lround(double x);
+
 /** Return 1 if <b>circ</b> could be returned by circuit_get_best().
  * Else return 0.
  */
@@ -266,8 +268,8 @@ circuit_expire_building(time_t now)
   circuit_t *victim, *circ = global_circuitlist;
   /* circ_times.timeout is BUILD_TIMEOUT_INITIAL_VALUE if we haven't
    * decided on a customized one yet */
-  time_t general_cutoff = now - circ_times.timeout;
-  time_t begindir_cutoff = now - circ_times.timeout/2;
+  time_t general_cutoff = now - lround(circ_times.timeout_ms/1000);
+  time_t begindir_cutoff = now - lround(circ_times.timeout_ms/2000);
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 

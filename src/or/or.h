@@ -2893,11 +2893,11 @@ typedef uint32_t build_time_t;
 /** Have we received a cell in the last N seconds? */
 #define NETWORK_LIVE_MULTIPLIER (RECENT_CIRCUITS/2.5)
 
-/** Lowest allowable value for CircuitBuildTimeout */
-#define BUILD_TIMEOUT_MIN_VALUE 3
+/** Lowest allowable value for CircuitBuildTimeout in milliseconds */
+#define BUILD_TIMEOUT_MIN_VALUE (3*1000)
 
-/** Initial circuit build timeout */
-#define BUILD_TIMEOUT_INITIAL_VALUE 60
+/** Initial circuit build timeout in milliseconds */
+#define BUILD_TIMEOUT_INITIAL_VALUE (60*1000)
 
 /** How often in seconds should we build a test circuit */
 #define BUILD_TIMES_TEST_FREQUENCY 60
@@ -2925,8 +2925,8 @@ typedef struct {
   double alpha;
   /** Have we computed a timeout? */
   int have_computed_timeout;
-  /** The value for that timeout in seconds, not milliseconds */
-  int timeout;
+  /** The exact value for that timeout in milliseconds */
+  double timeout_ms;
 } circuit_build_times_t;
 
 extern circuit_build_times_t circ_times;
@@ -2950,7 +2950,7 @@ double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
 build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
                                                  double q_lo, double q_hi);
 void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
-                                       double quantile, build_time_t time);
+                                       double quantile, double time_ms);
 void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
 double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
 int circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt);

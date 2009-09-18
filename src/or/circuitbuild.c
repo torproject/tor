@@ -140,14 +140,14 @@ circuit_build_times_init(circuit_build_times_t *cbt)
   memset(cbt, 0, sizeof(*cbt));
 
   if (!unit_tests && get_options()->CircuitBuildTimeout) {
-    cbt->timeout = get_options()->CircuitBuildTimeout;
-    if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
-      log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %d",
-               BUILD_TIMEOUT_MIN_VALUE);
-      cbt->timeout = BUILD_TIMEOUT_MIN_VALUE;
+    cbt->timeout_ms = get_options()->CircuitBuildTimeout*1000;
+    if (cbt->timeout_ms < BUILD_TIMEOUT_MIN_VALUE) {
+      log_warn(LD_CIRC, "Config CircuitBuildTimeout too low. Setting to %ds",
+               BUILD_TIMEOUT_MIN_VALUE/1000);
+      cbt->timeout_ms = BUILD_TIMEOUT_MIN_VALUE;
     }
   } else {
-    cbt->timeout = BUILD_TIMEOUT_INITIAL_VALUE;
+    cbt->timeout_ms = BUILD_TIMEOUT_INITIAL_VALUE;
   }
 }
 
@@ -469,6 +469,8 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
  * http://en.wikipedia.org/wiki/Pareto_distribution#Generating_a_
  *     random_sample_from_Pareto_distribution
  * That's right. I'll cite wikipedia all day long.
+ *
+ * Return value is in milliseconds.
  */
 double
 circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
@@ -501,7 +503,7 @@ circuit_build_times_cdf(circuit_build_times_t *cbt, double x)
 /**
  * Generate a synthetic time using our distribution parameters.
  *
- * The return value will be between q_lo and q_hi quantile points
+ * The return value will be within the [q_lo, q_hi) quantile points
  * on the CDF.
  */
 build_time_t
@@ -512,14 +514,18 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
   build_time_t ret;
   double u;
 
+  /* Generate between [q_lo, q_hi) */
+  q_hi -= 1.0/(INT32_MAX);
+
   tor_assert(q_lo >= 0);
   tor_assert(q_hi < 1);
+  tor_assert(q_lo < q_hi);
 
   u = q_lo + ((q_hi-q_lo)*r)/(1.0*UINT64_MAX);
 
   tor_assert(0 <= u && u < 1.0);
   /* circuit_build_times_calculate_timeout returns <= INT32_MAX */
-  ret = (uint32_t)lround(circuit_build_times_calculate_timeout(cbt, u));
+  ret = (build_time_t)lround(circuit_build_times_calculate_timeout(cbt, u));
   tor_assert(ret > 0);
   return ret;
 }
@@ -532,11 +538,11 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
               quantile_cutoff, MAX_SYNTHETIC_QUANTILE);
 
-  if (gentime < (build_time_t)cbt->timeout*1000) {
+  if (gentime < (build_time_t)lround(cbt->timeout_ms)) {
     log_warn(LD_CIRC,
              "Generated a synthetic timeout LESS than the current timeout: "
-             "%u vs %d using Xm: %d a: %lf, q: %lf",
-             gentime, cbt->timeout*1000, cbt->Xm, cbt->alpha, quantile_cutoff);
+             "%ums vs %lfms using Xm: %d a: %lf, q: %lf",
+             gentime, cbt->timeout_ms, cbt->Xm, cbt->alpha, quantile_cutoff);
   } else if (gentime > BUILD_TIME_MAX) {
     gentime = BUILD_TIME_MAX;
     log_info(LD_CIRC,
@@ -556,7 +562,7 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
  */
 void
 circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
-                                  double quantile, build_time_t timeout)
+                                  double quantile, double timeout_ms)
 {
   // Q(u) = Xm/((1-u)^(1/a))
   // Q(0.8) = Xm/((1-0.8))^(1/a)) = CircBuildTimeout
@@ -566,7 +572,7 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   // -ln(1-0.8)/(ln(CircBuildTimeout)-ln(Xm))=a
   tor_assert(quantile > 0);
   tor_assert(cbt->Xm > 0);
-  cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout));
+  cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout_ms));
   tor_assert(cbt->alpha > 0);
 }
 
@@ -585,9 +591,9 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
                     (cbt->pre_timeouts+cbt->total_build_times);
     cbt->Xm = circuit_build_times_min(cbt);
     tor_assert(cbt->Xm > 0);
-    // Use current timeout to get an estimate on alpha
+    /* Use current timeout to get an estimate on alpha */
     circuit_build_times_initial_alpha(cbt, timeout_quantile,
-                                      cbt->timeout*1000);
+                                      cbt->timeout_ms);
     while (cbt->pre_timeouts-- != 0) {
       circuit_build_times_add_timeout_worker(cbt, timeout_quantile);
     }
@@ -629,14 +635,14 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 
 /**
  * Returns true if the network showed some sign of liveness
- * in the past NETWORK_LIVE_MULTIPLIER*cbt->timeout seconds.
+ * in the past NETWORK_LIVE_MULTIPLIER*cbt->timeout_ms/1000 seconds.
  */
 int
 circuit_build_times_is_network_live(circuit_build_times_t *cbt)
 {
   time_t now = approx_time();
   if (now - cbt->network_last_live >
-          (cbt->timeout*NETWORK_LIVE_MULTIPLIER)) {
+          (cbt->timeout_ms*NETWORK_LIVE_MULTIPLIER/1000.0)) {
     log_info(LD_CIRC, "Network is no longer live. Dead for %ld seconds.",
              (long int)(now - cbt->network_last_live));
     return 0;
@@ -658,7 +664,6 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
 {
   double timeout_rate=0;
   build_time_t Xm = BUILD_TIME_MAX;
-  double timeout;
   int i;
 
   if ((cbt->pre_timeouts + cbt->total_build_times) < RECENT_CIRCUITS) {
@@ -666,13 +671,17 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   }
 
   /* Get timeout rate and Xm for recent circs */
+  /* XXX: Hrmm, if the switch is a hard switch, then 4 times
+   * will be from the previous network and will give a really low Xm
+   * and thus a really low alpha and thus a high timeout */
   for (i = (cbt->build_times_idx - RECENT_CIRCUITS) % NCIRCUITS_TO_OBSERVE;
        i != cbt->build_times_idx;
        i = (i + 1) % NCIRCUITS_TO_OBSERVE) {
     if (cbt->circuit_build_times[i] && cbt->circuit_build_times[i] < Xm) {
       Xm = cbt->circuit_build_times[i];
     }
-    if (cbt->circuit_build_times[i] > (build_time_t)cbt->timeout*1000) {
+    if (cbt->circuit_build_times[i]+1 >=
+            (build_time_t)lround(cbt->timeout_ms)) {
       timeout_rate++;
     }
   }
@@ -690,14 +699,14 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
             "Resetting timeouts after %d pretimouts and %d buildtimes",
             cbt->pre_timeouts, cbt->total_build_times);
 
-  if (Xm >= (build_time_t)cbt->timeout*1000) {
+  if (Xm >= (build_time_t)lround(cbt->timeout_ms)) {
     Xm = circuit_build_times_min(cbt);
-    if (Xm >= (build_time_t)cbt->timeout*1000) {
+    if (Xm >= (build_time_t)lround(cbt->timeout_ms)) {
       /* No circuits have completed */
-      cbt->timeout *= 2;
+      cbt->timeout_ms *= 2;
       log_warn(LD_CIRC,
-               "Adjusting CircuitBuildTimeout to %d in the hopes that "
-               "some connections will succeed", cbt->timeout);
+               "Adjusting CircuitBuildTimeout to %lds in the hopes that "
+               "some connections will succeed", lround(cbt->timeout_ms/1000));
       goto reset;
     }
   }
@@ -705,23 +714,23 @@ circuit_build_times_check_too_many_timeouts(circuit_build_times_t *cbt)
   cbt->Xm = Xm;
 
   circuit_build_times_initial_alpha(cbt, 1.0-timeout_rate,
-          cbt->timeout*1000);
+          cbt->timeout_ms);
 
-  timeout = circuit_build_times_calculate_timeout(cbt,
-                                BUILDTIMEOUT_QUANTILE_CUTOFF);
   /* timeout is INT32_MAX at most */
-  cbt->timeout = (uint32_t)lround(timeout/1000.0);
+  cbt->timeout_ms = circuit_build_times_calculate_timeout(cbt,
+                                BUILDTIMEOUT_QUANTILE_CUTOFF);
 
-  if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
-    log_warn(LD_CIRC, "Reset buildtimeout to low value %lf. Setting to %d",
-             timeout, BUILD_TIMEOUT_MIN_VALUE);
-    cbt->timeout = BUILD_TIMEOUT_MIN_VALUE;
+  if (cbt->timeout_ms < BUILD_TIMEOUT_MIN_VALUE) {
+    log_warn(LD_CIRC, "Reset buildtimeout to low value %lfms. Setting to %dms",
+             cbt->timeout_ms, BUILD_TIMEOUT_MIN_VALUE);
+    cbt->timeout_ms = BUILD_TIMEOUT_MIN_VALUE;
   }
 
   log_notice(LD_CIRC,
-             "Reset circuit build timeout to %d (%lf, Xm: %d, a: %lf) based "
-             "on %d recent circuit times", cbt->timeout, timeout, cbt->Xm,
-             cbt->alpha, RECENT_CIRCUITS);
+             "Reset circuit build timeout to %lds (%lfms, Xm: %d, a: %lf) "
+             "based on timeout rate of %lf on %d recent circuit times",
+             lround(cbt->timeout_ms/1000), cbt->timeout_ms, cbt->Xm,
+             cbt->alpha, timeout_rate, RECENT_CIRCUITS);
 
 reset:
 
@@ -764,8 +773,6 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt)
 void
 circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 {
-  double timeout;
-
   if (cbt->total_build_times < MIN_CIRCUITS_TO_OBSERVE) {
     log_info(LD_CIRC,
              "Not enough circuits yet to calculate a new build timeout."
@@ -776,23 +783,22 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 
   circuit_build_times_count_pretimeouts(cbt);
   circuit_build_times_update_alpha(cbt);
-  timeout = circuit_build_times_calculate_timeout(cbt,
+  /* timeout is INT32_MAX at most */
+  cbt->timeout_ms = circuit_build_times_calculate_timeout(cbt,
                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
 
   cbt->have_computed_timeout = 1;
-  /* timeout is INT32_MAX at most */
-  cbt->timeout = (uint32_t)lround(timeout/1000.0);
 
-  if (cbt->timeout < BUILD_TIMEOUT_MIN_VALUE) {
-    log_warn(LD_CIRC, "Set buildtimeout to low value %lf. Setting to %d",
-             timeout, BUILD_TIMEOUT_MIN_VALUE);
-    cbt->timeout = BUILD_TIMEOUT_MIN_VALUE;
+  if (cbt->timeout_ms < BUILD_TIMEOUT_MIN_VALUE) {
+    log_warn(LD_CIRC, "Set buildtimeout to low value %lfms. Setting to %dms",
+             cbt->timeout_ms, BUILD_TIMEOUT_MIN_VALUE);
+    cbt->timeout_ms = BUILD_TIMEOUT_MIN_VALUE;
   }
 
   log_info(LD_CIRC,
-           "Set circuit build timeout to %d (%lf, Xm: %d, a: %lf) based on "
-           "%d circuit times", cbt->timeout, timeout, cbt->Xm, cbt->alpha,
-           cbt->total_build_times);
+           "Set circuit build timeout to %lds (%lfms, Xm: %d, a: %lf) "
+           "based on %d circuit times", lround(cbt->timeout_ms/1000),
+           cbt->timeout_ms, cbt->Xm, cbt->alpha, cbt->total_build_times);
 
 }
 
