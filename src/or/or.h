@@ -2937,11 +2937,11 @@ typedef struct {
   int nonlive_timeouts;
   /** If the network is not live, have we yet discarded our history? */
   int nonlive_discarded;
-  /** Circular array of circuits that have made it past 1 hop. Slot is
+  /** Circular array of circuits that have made it to the first hop. Slot is
    * 1 if circuit timed out, 0 if circuit succeeded */
-  int8_t onehop_timeouts[RECENT_CIRCUITS];
+  int8_t timeouts_after_firsthop[RECENT_CIRCUITS];
   /** Index into circular array. */
-  int onehop_idx;
+  int after_firsthop_idx;
 } network_liveness_t;
 
 /** Structure for circuit build times history */
@@ -3004,8 +3004,6 @@ int circuit_build_times_network_check_changed(circuit_build_times_t *cbt);
 /* Network liveness functions */
 void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
 int circuit_build_times_network_check_live(circuit_build_times_t *cbt);
-void circuit_build_times_network_timeout(circuit_build_times_t *cbt,
-                                         int did_onehop, time_t start_time);
 void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 
 /********************************* circuitlist.c ***********************/

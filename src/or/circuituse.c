@@ -265,7 +265,7 @@ circuit_conforms_to_options(const origin_circuit_t *circ,
 void
 circuit_expire_building(time_t now)
 {
-  circuit_t *victim, *circ = global_circuitlist;
+  circuit_t *victim, *next_circ = global_circuitlist;
   /* circ_times.timeout is BUILD_TIMEOUT_INITIAL_VALUE if we haven't
    * decided on a customized one yet */
   time_t general_cutoff = now - lround(circ_times.timeout_ms/1000);
@@ -273,10 +273,10 @@ circuit_expire_building(time_t now)
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 
-  while (circ) {
+  while (next_circ) {
     time_t cutoff;
-    victim = circ;
-    circ = circ->next;
+    victim = next_circ;
+    next_circ = next_circ->next;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
         victim->marked_for_close) /* don't mess with marked circs */
       continue;
@@ -347,6 +347,12 @@ circuit_expire_building(time_t now)
             continue;
           break;
       }
+    } else { /* circuit not open, consider recording failure as timeout */
+      int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath &&
+            TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_OPEN;
+      if (circuit_build_times_add_timeout(&circ_times, first_hop_succeeded,
+                                          victim->timestamp_created))
+        circuit_build_times_set_timeout(&circ_times);
     }
 
     if (victim->n_conn)
@@ -362,13 +368,6 @@ circuit_expire_building(time_t now)
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
     circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
-
-    if (circuit_build_times_add_timeout(&circ_times,
-       TO_ORIGIN_CIRCUIT(circ)->cpath
-              && TO_ORIGIN_CIRCUIT(circ)->cpath->state == CPATH_STATE_OPEN,
-                                         circ->timestamp_created)) {
-      circuit_build_times_set_timeout(&circ_times);
-    }
   }
 }
 

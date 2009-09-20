@@ -135,7 +135,7 @@ circuit_build_times_get_initial_timeout(void)
 /**
  * Reset the build time state.
  *
- * Leave estimated parameters, timeout and network liveness in tact
+ * Leave estimated parameters, timeout and network liveness intact
  * for future use.
  */
 void
@@ -690,20 +690,25 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 }
 
 /**
- * Called to indicate that we completed a circuit
+ * Called to indicate that we completed a circuit. Because this circuit
+ * succeeded, it doesn't count as a timeout-after-the-first-hop.
  */
 void
 circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
 {
-  cbt->liveness.onehop_timeouts[cbt->liveness.onehop_idx] = 0;
-  cbt->liveness.onehop_idx++;
-  cbt->liveness.onehop_idx %= RECENT_CIRCUITS;
+  cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx] = 0;
+  cbt->liveness.after_firsthop_idx++;
+  cbt->liveness.after_firsthop_idx %= RECENT_CIRCUITS;
 }
 
 /**
- * Count a circuit that timed out with no network activity at all
+ * A circuit just timed out. If there has been no recent network activity
+ * at all, but this circuit was launched back when we thought the network
+ * was live, increment the number of "nonlive" circuit timeouts.
+ *
+ * Also distinguish between whether it failed before the first hop.
  */
-void
+static void
 circuit_build_times_network_timeout(circuit_build_times_t *cbt,
                                     int did_onehop, time_t start_time)
 {
@@ -718,9 +723,9 @@ circuit_build_times_network_timeout(circuit_build_times_t *cbt,
 
   /* Check for one-hop timeout */
   if (did_onehop) {
-    cbt->liveness.onehop_timeouts[cbt->liveness.onehop_idx] = 1;
-    cbt->liveness.onehop_idx++;
-    cbt->liveness.onehop_idx %= RECENT_CIRCUITS;
+    cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]=1;
+    cbt->liveness.after_firsthop_idx++;
+    cbt->liveness.after_firsthop_idx %= RECENT_CIRCUITS;
   }
 }
 
@@ -738,9 +743,10 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
   if (cbt->liveness.nonlive_timeouts >= NETWORK_NONLIVE_DISCARD_COUNT) {
     if (!cbt->liveness.nonlive_discarded) {
       cbt->liveness.nonlive_discarded = 1;
-      log_notice(LD_CIRC, "Network is no longer live. Dead for %ld seconds.",
-             (long int)(now - cbt->liveness.network_last_live));
-      /* Only discard NETWORK_NONLIVE_TIMEOUT_COUNT-1 because we stoped
+      log_notice(LD_CIRC, "Network is no longer live (too many recent "
+                "circuit timeouts). Dead for %ld seconds.",
+                (long int)(now - cbt->liveness.network_last_live));
+      /* Only discard NETWORK_NONLIVE_TIMEOUT_COUNT-1 because we stopped
        * counting after that */
       circuit_build_times_rewind_history(cbt, NETWORK_NONLIVE_TIMEOUT_COUNT-1);
     }
@@ -763,8 +769,8 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
 
 /**
  * Returns true if we have seen more than MAX_RECENT_TIMEOUT_COUNT of
- * the past RECENT_CIRCUITS time out. Used to detect if the network
- * connection has changed significantly.
+ * the past RECENT_CIRCUITS time out after the first hop. Used to detect
+ * if the network connection has changed significantly.
  *
  * Also resets the entire timeout history in this case and causes us
  * to restart the process of building test circuits and estimating a
@@ -777,21 +783,22 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   int timeout_count=0;
   int i;
 
+  /* how many of our recent circuits made it to the first hop but then
+   * timed out? */
   for (i = 0; i < RECENT_CIRCUITS; i++) {
-    timeout_count += cbt->liveness.onehop_timeouts[i];
+    timeout_count += cbt->liveness.timeouts_after_firsthop[i];
   }
 
-  /* If more than 80% of our recent circuits are timing out,
-   * we need to re-estimate a new initial alpha and timeout */
+  /* If 75% of our recent circuits are timing out after the first hop,
+   * we need to re-estimate a new initial alpha and timeout. */
   if (timeout_count < MAX_RECENT_TIMEOUT_COUNT) {
     return 0;
   }
 
-  /* Reset build history */
   circuit_build_times_reset(cbt);
-  memset(cbt->liveness.onehop_timeouts, 0,
-          sizeof(cbt->liveness.onehop_timeouts));
-  cbt->liveness.onehop_idx = 0;
+  memset(cbt->liveness.timeouts_after_firsthop, 0,
+          sizeof(cbt->liveness.timeouts_after_firsthop));
+  cbt->liveness.after_firsthop_idx = 0;
 
   /* Check to see if this has happened before. If so, double the timeout
    * to give people on abysmally bad network connections a shot at access */
@@ -803,7 +810,7 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
 
   log_notice(LD_CIRC,
             "Network connection speed appears to have changed. Resetting "
-            "timeout to %lds after %d one-hop timeouts and %d buildtimes",
+            "timeout to %lds after %d timeouts and %d buildtimes.",
             lround(cbt->timeout_ms/1000), timeout_count, total_build_times);
 
   return 1;

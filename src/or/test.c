@@ -3560,8 +3560,9 @@ test_circuit_timeout(void)
       }
     }
 
-    test_assert(estimate.liveness.onehop_idx == 0);
-    test_assert(final.liveness.onehop_idx == MAX_RECENT_TIMEOUT_COUNT-1);
+    test_assert(estimate.liveness.after_firsthop_idx == 0);
+    test_assert(final.liveness.after_firsthop_idx ==
+                MAX_RECENT_TIMEOUT_COUNT-1);
 
     test_assert(circuit_build_times_network_check_live(&estimate));
     test_assert(circuit_build_times_network_check_live(&final));

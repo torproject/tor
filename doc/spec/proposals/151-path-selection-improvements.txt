@@ -90,7 +90,7 @@ Implementation
     changes in the timeout characteristics.
 
     We assume that we've had network connectivity loss if 3 circuits
-    timeout and we've recieved no cells or TLS handshakes since those
+    timeout and we've received no cells or TLS handshakes since those
     circuits began. We then set the timeout to 60 seconds and stop
     counting timeouts.
 
@@ -100,7 +100,7 @@ Implementation
 
     To detect changing network conditions, we keep a history of
     the timeout or non-timeout status of the past RECENT_CIRCUITS (20)
-    that successfully completed more than one hop. If more than 75%
+    that successfully completed at least one hop. If more than 75%
     of these circuits timeout, we discard all buildtimes history,
     reset the timeout to 60, and then begin recomputing the timeout.
 
