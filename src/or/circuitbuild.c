@@ -2106,6 +2106,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       continue; /* skip routers that are known to be down or bad exits */
     }
     if (router_is_unreliable(router, need_uptime, need_capacity, 0)) {
+      /* XXX022 don't skip if it's in ExitNodes */
       n_supported[i] = -1;
       continue; /* skip routers that are not suitable */
     }
@@ -2840,35 +2841,52 @@ entry_is_time_to_retry(entry_guard_t *e, time_t now)
  * - Listed as either up or never yet contacted;
  * - Present in the routerlist;
  * - Listed as 'stable' or 'fast' by the current dirserver consensus,
- *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>;
- *   (This check is currently redundant with the Guard flag, but in
- *   the future that might change. Best to leave it in for now.)
+ *   if demanded by <b>need_uptime</b> or <b>need_capacity</b>
+ *   (unless it's a configured EntryNode);
  * - Allowed by our current ReachableORAddresses config option; and
- * - Currently thought to be reachable by us (unless assume_reachable
+ * - Currently thought to be reachable by us (unless <b>assume_reachable</b>
  *   is true).
+ *
+ * If the answer is no, set *<b>msg</b> to an explanation of why.
  */
 static INLINE routerinfo_t *
 entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
-              int assume_reachable)
+              int assume_reachable, const char **msg)
 {
   routerinfo_t *r;
-  if (e->bad_since)
+  tor_assert(msg);
+
+  if (e->bad_since) {
+    *msg = "bad";
     return NULL;
+  }
   /* no good if it's unreachable, unless assume_unreachable or can_retry. */
   if (!assume_reachable && !e->can_retry &&
-      e->unreachable_since && !entry_is_time_to_retry(e, time(NULL)))
+      e->unreachable_since && !entry_is_time_to_retry(e, time(NULL))) {
+    *msg = "unreachable";
     return NULL;
+  }
   r = router_get_by_digest(e->identity);
-  if (!r)
+  if (!r) {
+    *msg = "no descriptor";
     return NULL;
-  if (get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_BRIDGE)
+  }
+  if (get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_BRIDGE) {
+    *msg = "not a bridge";
     return NULL;
-  if (!get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_GENERAL)
+  }
+  if (!get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_GENERAL) {
+    *msg = "not general-purpose";
     return NULL;
-  if (router_is_unreliable(r, need_uptime, need_capacity, 0))
+  }
+  if (router_is_unreliable(r, need_uptime, need_capacity, 0)) {
+    *msg = "not fast/stable";
     return NULL;
-  if (!fascist_firewall_allows_or(r))
+  }
+  if (!fascist_firewall_allows_or(r)) {
+    *msg = "unreachable by config";
     return NULL;
+  }
   return r;
 }
 
@@ -2877,11 +2895,12 @@ static int
 num_live_entry_guards(void)
 {
   int n = 0;
+  const char *msg;
   if (! entry_guards)
     return 0;
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
-      if (entry_is_live(entry, 0, 1, 0))
+      if (entry_is_live(entry, 0, 1, 0, &msg))
         ++n;
     });
   return n;
@@ -2910,10 +2929,15 @@ log_entry_guards(int severity)
 
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
-      tor_snprintf(buf, sizeof(buf), "%s (%s%s)",
-                   e->nickname,
-                   entry_is_live(e, 0, 1, 0) ? "up " : "down ",
-                   e->made_contact ? "made-contact" : "never-contacted");
+      const char *msg = NULL;
+      if (entry_is_live(e, 0, 1, 0, &msg))
+        tor_snprintf(buf, sizeof(buf), "%s (up %s)",
+                     e->nickname,
+                     e->made_contact ? "made-contact" : "never-contacted");
+      else
+        tor_snprintf(buf, sizeof(buf), "%s (%s, %s)",
+                     e->nickname, msg,
+                     e->made_contact ? "made-contact" : "never-contacted");
       smartlist_add(elements, tor_strdup(buf));
     });
 
@@ -2938,12 +2962,13 @@ control_event_guard_deferred(void)
    **/
 #if 0
   int n = 0;
+  const char *msg;
   or_options_t *options = get_options();
   if (!entry_guards)
     return;
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
-      if (entry_is_live(entry, 0, 1, 0)) {
+      if (entry_is_live(entry, 0, 1, 0, &msg)) {
         if (n++ == options->NumEntryGuards) {
           control_event_guard(entry->nickname, entry->identity, "DEFERRED");
           return;
@@ -3165,13 +3190,16 @@ entry_guards_compute_status(void)
   if (changed) {
     SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
       const char *reason = digestmap_get(reasons, entry->identity);
-      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s%s%s, and %s.",
+      const char *live_msg;
+      routerinfo_t *r = entry_is_live(entry, 0, 1, 0, &live_msg);
+      log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s%s%s, and %s%s.",
                entry->nickname,
                entry->unreachable_since ? "unreachable" : "reachable",
                entry->bad_since ? "unusable" : "usable",
                reason ? ", ": "",
                reason ? reason : "",
-               entry_is_live(entry, 0, 1, 0) ? "live" : "not live");
+               r ? "live" : "not live / ",
+               r ? "" : live_msg);
     } SMARTLIST_FOREACH_END(entry);
     log_info(LD_CIRC, "    (%d/%d entry guards are usable/new)",
              num_live_entry_guards(), smartlist_len(entry_guards));
@@ -3278,7 +3306,8 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
         if (e == entry)
           break;
         if (e->made_contact) {
-          routerinfo_t *r = entry_is_live(e, 0, 1, 1);
+          const char *msg;
+          routerinfo_t *r = entry_is_live(e, 0, 1, 1, &msg);
           if (r && e->unreachable_since) {
             refuse_conn = 1;
             e->can_retry = 1;
@@ -3457,7 +3486,8 @@ choose_random_entry(cpath_build_state_t *state)
   smartlist_clear(live_entry_guards);
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
-      r = entry_is_live(entry, need_uptime, need_capacity, 0);
+      const char *msg;
+      r = entry_is_live(entry, need_uptime, need_capacity, 0, &msg);
       if (!r)
         continue; /* down, no point */
       if (consider_exit_family && smartlist_isin(exit_family, r))
