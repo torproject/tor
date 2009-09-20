@@ -2105,10 +2105,16 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       n_supported[i] = -1;
       continue; /* skip routers that are known to be down or bad exits */
     }
-    if (router_is_unreliable(router, need_uptime, need_capacity, 0)) {
-      /* XXX022 don't skip if it's in ExitNodes */
+    if (router_is_unreliable(router, need_uptime, need_capacity, 0) &&
+        (!options->ExitNodes ||
+         !routerset_contains_router(options->ExitNodes, router))) {
+      /* FFFF Someday, differentiate between a routerset that names
+       * routers, and a routerset that names countries, and only do this
+       * check if they've asked for specific exit relays. Or if the country
+       * they ask for is rare. Or something. */
       n_supported[i] = -1;
-      continue; /* skip routers that are not suitable */
+      continue; /* skip routers that are not suitable, unless we have
+                 * ExitNodes set, in which case we asked for it */
     }
     if (!(router->is_valid || options->_AllowInvalid & ALLOW_INVALID_EXIT)) {
       /* if it's invalid and we don't want it */
