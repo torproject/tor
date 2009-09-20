@@ -1418,9 +1418,16 @@ options_act(or_options_t *old_options)
 
   /* Check for transitions that need action. */
   if (old_options) {
-    if (options->UseEntryGuards && !old_options->UseEntryGuards) {
+
+    if ((options->UseEntryGuards && !old_options->UseEntryGuards) ||
+        (options->ExcludeNodes &&
+         !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)) ||
+        (options->ExcludeExitNodes &&
+         !routerset_equal(old_options->ExcludeExitNodes,
+                          options->ExcludeExitNodes))) {
       log_info(LD_CIRC,
-               "Switching to entry guards; abandoning previous circuits");
+               "Changed to using entry guards, or changed ExcludeNodes, or "
+               "changed ExcludeExitNodes. Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
     }
@@ -3203,24 +3210,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "in your circuits. Expect hidden services and other Tor "
              "features to be broken in unpredictable ways.");
   }
-
-#if 0 /* for now, it's ok to set StrictNodes without setting any actual
-       * preferences. It won't hurt anything. Eventually, either figure
-       * out the logic for the right case to complain, or just delete. -RD */
-  if (options->StrictExitNodes &&
-      (!options->ExitNodes) &&
-      (!old_options ||
-       (old_options->StrictExitNodes != options->StrictExitNodes) ||
-       (!routerset_equal(old_options->ExitNodes,options->ExitNodes))))
-    COMPLAIN("StrictExitNodes set, but no ExitNodes listed.");
-
-  if (options->StrictEntryNodes &&
-      (!options->EntryNodes) &&
-      (!old_options ||
-       (old_options->StrictEntryNodes != options->StrictEntryNodes) ||
-       (!routerset_equal(old_options->EntryNodes,options->EntryNodes))))
-    COMPLAIN("StrictEntryNodes set, but no EntryNodes listed.");
-#endif
 
   if (options->EntryNodes && !routerset_is_list(options->EntryNodes)) {
     /* XXXX fix this; see entry_guards_prepend_from_config(). */
