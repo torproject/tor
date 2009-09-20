@@ -1808,13 +1808,10 @@ routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
   return smartlist_choose_by_bandwidth(sl, NO_WEIGHTING, 1);
 }
 
-/** Return a random running router from the routerlist.  If any node
- * named in <b>preferred</b> is available, pick one of those.  Never
+/** Return a random running router from the routerlist. Never
  * pick a node whose routerinfo is in
  * <b>excludedsmartlist</b>, or whose routerinfo matches <b>excludedset</b>,
- * even if they are the only nodes
- * available.  If <b>CRN_STRICT_PREFERRED</b> is set in flags, never pick
- * any node besides those in <b>preferred</b>.
+ * even if they are the only nodes available.
  * If <b>CRN_NEED_UPTIME</b> is set in flags and any router has more than
  * a minimum uptime, return one of those.
  * If <b>CRN_NEED_CAPACITY</b> is set in flags, weight your choice by the
@@ -1837,15 +1834,14 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   const int allow_invalid = (flags & CRN_ALLOW_INVALID) != 0;
   const int weight_for_exit = (flags & CRN_WEIGHT_AS_EXIT) != 0;
 
-  smartlist_t *sl, *excludednodes;
+  smartlist_t *sl=smartlist_create(),
+              *excludednodes=smartlist_create();
   routerinfo_t *choice = NULL, *r;
   bandwidth_weight_rule_t rule;
 
   tor_assert(!(weight_for_exit && need_guard));
   rule = weight_for_exit ? WEIGHT_FOR_EXIT :
     (need_guard ? WEIGHT_FOR_GUARD : NO_WEIGHTING);
-
-  excludednodes = smartlist_create();
 
   /* Exclude relays that allow single hop exit circuits, if the user
    * wants to (such relays might be risky) */
@@ -1862,35 +1858,32 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
     routerlist_add_family(excludednodes, r);
   }
 
-  { /* XXX021 reformat */
-    sl = smartlist_create();
-    router_add_running_routers_to_smartlist(sl, allow_invalid,
-                                            need_uptime, need_capacity,
-                                            need_guard);
-    smartlist_subtract(sl,excludednodes);
-    if (excludedsmartlist)
-      smartlist_subtract(sl,excludedsmartlist);
-    if (excludedset)
-      routerset_subtract_routers(sl,excludedset);
+  router_add_running_routers_to_smartlist(sl, allow_invalid,
+                                          need_uptime, need_capacity,
+                                          need_guard);
+  smartlist_subtract(sl,excludednodes);
+  if (excludedsmartlist)
+    smartlist_subtract(sl,excludedsmartlist);
+  if (excludedset)
+    routerset_subtract_routers(sl,excludedset);
 
-    if (need_capacity || need_guard)
-      choice = routerlist_sl_choose_by_bandwidth(sl, rule);
-    else
-      choice = smartlist_choose(sl);
+  if (need_capacity || need_guard)
+    choice = routerlist_sl_choose_by_bandwidth(sl, rule);
+  else
+    choice = smartlist_choose(sl);
 
-    smartlist_free(sl);
-    if (!choice && (need_uptime || need_capacity || need_guard)) {
-      /* try once more -- recurse but with fewer restrictions. */
-      log_info(LD_CIRC,
-               "We couldn't find any live%s%s%s routers; falling back "
-               "to list of all routers.",
-               need_capacity?", fast":"",
-               need_uptime?", stable":"",
-               need_guard?", guard":"");
-      flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD);
-      choice = router_choose_random_node(
-                       excludedsmartlist, excludedset, flags);
-    }
+  smartlist_free(sl);
+  if (!choice && (need_uptime || need_capacity || need_guard)) {
+    /* try once more -- recurse but with fewer restrictions. */
+    log_info(LD_CIRC,
+             "We couldn't find any live%s%s%s routers; falling back "
+             "to list of all routers.",
+             need_capacity?", fast":"",
+             need_uptime?", stable":"",
+             need_guard?", guard":"");
+    flags &= ~ (CRN_NEED_UPTIME|CRN_NEED_CAPACITY|CRN_NEED_GUARD);
+    choice = router_choose_random_node(
+                     excludedsmartlist, excludedset, flags);
   }
   smartlist_free(excludednodes);
   if (!choice) {
@@ -5184,9 +5177,13 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
   }
 }
 
-/** Add to <b>target</b> every routerinfo_t from <b>source</b> that is in
- * <b>include</b>, but not excluded in a more specific fashion by
- * <b>exclude</b>.  If <b>running_only</b>, only include running routers.
+/** Add to <b>target</b> every routerinfo_t from <b>source</b> except:
+ *
+ * 1) Don't add it if <b>include</b> is non-empty and the relay isn't in
+ * <b>include</b>; and
+ * 2) Don't add it if <b>exclude</b> is non-empty and the relay is
+ * excluded in a more specific fashion by <b>exclude</b>.
+ * 3) If <b>running_only</b>, don't add non-running routers.
  */
 void
 routersets_get_disjunction(smartlist_t *target,
