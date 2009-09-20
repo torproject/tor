@@ -2132,7 +2132,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     {
       if (!ap_stream_wants_exit_attention(conn))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), router)) {
+      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), router, 1)) {
         ++n_supported[i];
 //        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
 //               router->nickname, i, n_supported[i]);
@@ -2200,8 +2200,9 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
         tor_free(n_supported);
         return choose_good_exit_server_general(dir, 0, 0);
       }
-      log_notice(LD_CIRC, "All routers are down or won't exit -- choosing a "
-                 "doomed exit at random.");
+      log_notice(LD_CIRC, "All routers are down or won't exit%s -- "
+                 "choosing a doomed exit at random.",
+                 options->_ExcludeExitNodesUnion ? " or are Excluded" : "");
     }
     supporting = smartlist_create();
     use = smartlist_create();

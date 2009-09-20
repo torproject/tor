@@ -1424,10 +1424,15 @@ options_act(or_options_t *old_options)
          !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)) ||
         (options->ExcludeExitNodes &&
          !routerset_equal(old_options->ExcludeExitNodes,
-                          options->ExcludeExitNodes))) {
+                          options->ExcludeExitNodes)) ||
+        (options->EntryNodes &&
+         !routerset_equal(old_options->EntryNodes, options->EntryNodes)) ||
+        (options->ExitNodes &&
+         !routerset_equal(old_options->ExitNodes, options->ExitNodes)) ||
+        options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
-               "Changed to using entry guards, or changed ExcludeNodes, or "
-               "changed ExcludeExitNodes. Abandoning previous circuits.");
+               "Changed to using entry guards, or changed preferred or "
+               "excluded node lists. Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
     }

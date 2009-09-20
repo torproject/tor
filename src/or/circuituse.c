@@ -115,7 +115,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
         return 0;
       }
     }
-    if (exitrouter && !connection_ap_can_use_exit(conn, exitrouter)) {
+    if (exitrouter && !connection_ap_can_use_exit(conn, exitrouter, 0)) {
       /* can't exit from this router */
       return 0;
     }
@@ -424,7 +424,7 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
       if (exitrouter && (!need_uptime || build_state->need_uptime)) {
         int ok;
         if (conn) {
-          ok = connection_ap_can_use_exit(conn, exitrouter);
+          ok = connection_ap_can_use_exit(conn, exitrouter, 0);
         } else {
           addr_policy_result_t r = compare_addr_to_addr_policy(
               0, port, exitrouter->exit_policy);
@@ -1111,7 +1111,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       /* XXXX022 Duplicates checks in connection_ap_handshake_attach_circuit */
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
-      if (router && !connection_ap_can_use_exit(conn, router)) {
+      if (router && !connection_ap_can_use_exit(conn, router, 0)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
@@ -1431,7 +1431,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
         }
         return -1;
       }
-      if (router && !connection_ap_can_use_exit(conn, router)) {
+      if (router && !connection_ap_can_use_exit(conn, router, 0)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
