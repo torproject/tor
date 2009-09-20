@@ -2854,6 +2854,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
               int assume_reachable, const char **msg)
 {
   routerinfo_t *r;
+  or_options_t *options = get_options();
   tor_assert(msg);
 
   if (e->bad_since) {
@@ -2878,6 +2879,11 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
   if (!get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_GENERAL) {
     *msg = "not general-purpose";
     return NULL;
+  }
+  if (options->EntryNodes &&
+      routerset_contains_router(options->EntryNodes, r)) {
+    /* they asked for it, they get it */
+    need_uptime = need_capacity = 0;
   }
   if (router_is_unreliable(r, need_uptime, need_capacity, 0)) {
     *msg = "not fast/stable";
