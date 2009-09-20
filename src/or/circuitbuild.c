@@ -3131,10 +3131,13 @@ entry_guards_compute_status(void)
   int severity = LOG_DEBUG;
   or_options_t *options;
   digestmap_t *reasons;
+
   if (! entry_guards)
     return;
 
   options = get_options();
+  if (options->EntryNodes) /* reshuffle the entry guard list if needed */
+    entry_nodes_should_be_added();
 
   now = time(NULL);
 
@@ -3305,7 +3308,8 @@ static int should_add_entry_nodes = 0;
 void
 entry_nodes_should_be_added(void)
 {
-  log_info(LD_CIRC, "New EntryNodes config option detected. Will use.");
+  log_info(LD_CIRC, "EntryNodes config option set. Putting configured "
+           "relays at the front of the entry guard list.");
   should_add_entry_nodes = 1;
 }
 
@@ -3329,7 +3333,7 @@ entry_guards_prepend_from_config(void)
     return;
   }
 
-  if (options->EntryNodes) {
+  {
     char *string = routerset_to_string(options->EntryNodes);
     log_info(LD_CIRC,"Adding configured EntryNodes '%s'.", string);
     tor_free(string);
@@ -3373,8 +3377,9 @@ entry_guards_prepend_from_config(void)
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri, {
     add_an_entry_guard(ri, 0);
   });
-  /* Finally, the remaining EntryNodes, unless we're strict */
-  if (options->EntryNodes && options->StrictNodes) {
+  /* Finally, the remaining previously configured guards that are not in
+   * EntryNodes, unless we're strict in which case we drop them */
+  if (options->StrictNodes) {
     SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
                       entry_guard_free(e));
   } else {
@@ -3388,16 +3393,30 @@ entry_guards_prepend_from_config(void)
   entry_guards_changed();
 }
 
-/** Return 1 if we're fine adding arbitrary routers out of the
- * directory to our entry guard list. Else return 0. */
+/** Return 0 if we're fine adding arbitrary routers out of the
+ * directory to our entry guard list, or return 1 if we have a
+ * list already and we'd prefer to stick to it.
+ */
 int
-entry_list_can_grow(or_options_t *options)
+entry_list_is_constrained(or_options_t *options)
+{
+  if (options->EntryNodes)
+    return 1;
+  if (options->UseBridges)
+    return 1;
+  return 0;
+}
+
+/* Are we dead set against changing our entry guard list, or would we
+ * change it if it means keeping Tor usable? */
+static int
+entry_list_is_totally_static(or_options_t *options)
 {
   if (options->EntryNodes && options->StrictNodes)
-    return 0;
+    return 1;
   if (options->UseBridges)
-    return 0;
-  return 1;
+    return 1;
+  return 0;
 }
 
 /** Pick a live (up and listed) entry guard from entry_guards. If
@@ -3415,7 +3434,7 @@ choose_random_entry(cpath_build_state_t *state)
   routerinfo_t *r = NULL;
   int need_uptime = state ? state->need_uptime : 0;
   int need_capacity = state ? state->need_capacity : 0;
-  int consider_exit_family = 0;
+  int preferred_min, consider_exit_family = 0;
 
   if (chosen_exit) {
     smartlist_add(exit_family, chosen_exit);
@@ -3429,9 +3448,8 @@ choose_random_entry(cpath_build_state_t *state)
   if (should_add_entry_nodes)
     entry_guards_prepend_from_config();
 
-  if (entry_list_can_grow(options) &&
-      (! entry_guards ||
-       smartlist_len(entry_guards) < options->NumEntryGuards))
+  if (!entry_list_is_constrained(options) &&
+      smartlist_len(entry_guards) < options->NumEntryGuards)
     pick_entry_guards();
 
  retry:
@@ -3439,26 +3457,50 @@ choose_random_entry(cpath_build_state_t *state)
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
     {
       r = entry_is_live(entry, need_uptime, need_capacity, 0);
-      if (r && (!consider_exit_family || !smartlist_isin(exit_family, r))) {
-        smartlist_add(live_entry_guards, r);
-        if (!entry->made_contact) {
-          /* Always start with the first not-yet-contacted entry
-           * guard. Otherwise we might add several new ones, pick
-           * the second new one, and now we've expanded our entry
-           * guard list without needing to. */
-          goto choose_and_finish;
+      if (!r)
+        continue; /* down, no point */
+      if (consider_exit_family && smartlist_isin(exit_family, r))
+        continue; /* avoid relays that are family members of our exit */
+      if (options->EntryNodes &&
+          !routerset_contains_router(options->EntryNodes, r)) {
+        /* We've come to the end of our preferred entry nodes. */
+        if (smartlist_len(live_entry_guards))
+          goto choose_and_finish; /* only choose from the ones we like */
+        if (options->StrictNodes) {
+          /* in theory this case should never happen, since
+           * entry_guards_prepend_from_config() drops unwanted relays */
+          tor_fragile_assert();
+        } else {
+          log_info(LD_CIRC,
+                   "No relays from EntryNodes available. Using others.");
         }
-        if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
-          break; /* we have enough */
       }
+      smartlist_add(live_entry_guards, r);
+      if (!entry->made_contact) {
+        /* Always start with the first not-yet-contacted entry
+         * guard. Otherwise we might add several new ones, pick
+         * the second new one, and now we've expanded our entry
+         * guard list without needing to. */
+        goto choose_and_finish;
+      }
+      if (smartlist_len(live_entry_guards) >= options->NumEntryGuards)
+        break; /* we have enough */
     });
 
-  /* Try to have at least 2 choices available. This way we don't
-   * get stuck with a single live-but-crummy entry and just keep
-   * using him.
-   * (We might get 2 live-but-crummy entry guards, but so be it.) */
-  if (smartlist_len(live_entry_guards) < 2) {
-    if (entry_list_can_grow(options)) {
+  if (entry_list_is_constrained(options)) {
+    /* If we prefer the entry nodes we've got, and we have at least
+     * one choice, that's great. Use it. */
+    preferred_min = 1;
+  } else {
+    /* Try to have at least 2 choices available. This way we don't
+     * get stuck with a single live-but-crummy entry and just keep
+     * using him.
+     * (We might get 2 live-but-crummy entry guards, but so be it.) */
+    preferred_min = 2;
+  }
+
+  if (smartlist_len(live_entry_guards) < preferred_min) {
+    if (!entry_list_is_totally_static(options)) {
       /* still no? try adding a new entry then */
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
@@ -3483,7 +3525,7 @@ choose_random_entry(cpath_build_state_t *state)
       need_capacity = 0;
       goto retry;
     }
-    if (!r && !entry_list_can_grow(options) && consider_exit_family) {
+    if (!r && entry_list_is_constrained(options) && consider_exit_family) {
       /* still no? if we're using bridges or have strictentrynodes
        * set, and our chosen exit is in the same family as all our
        * bridges/entry guards, then be flexible about families. */
@@ -3494,15 +3536,15 @@ choose_random_entry(cpath_build_state_t *state)
   }
 
  choose_and_finish:
-  if (entry_list_can_grow(options)) {
+  if (entry_list_is_constrained(options)) {
+    /* We need to weight by bandwidth, because our bridges or entryguards
+     * were not already selected proportional to their bandwidth. */
+    r = routerlist_sl_choose_by_bandwidth(live_entry_guards, WEIGHT_FOR_GUARD);
+  } else {
     /* We choose uniformly at random here, because choose_good_entry_server()
      * already weights its choices by bandwidth, so we don't want to
      * *double*-weight our guard selection. */
     r = smartlist_choose(live_entry_guards);
-  } else {
-    /* We need to weight by bandwidth, because our bridges or entryguards
-     * were not already selected proportional to their bandwidth. */
-    r = routerlist_sl_choose_by_bandwidth(live_entry_guards, WEIGHT_FOR_GUARD);
   }
   smartlist_free(live_entry_guards);
   smartlist_free(exit_family);

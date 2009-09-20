@@ -557,7 +557,7 @@ connection_dir_request_failed(dir_connection_t *conn)
   if (directory_conn_is_self_reachability_test(conn)) {
     return; /* this was a test fetch. don't retry. */
   }
-  if (entry_list_can_grow(get_options()))
+  if (entry_list_is_constrained(get_options()))
     router_set_status(conn->identity_digest, 0); /* don't try him again */
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_V2_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
