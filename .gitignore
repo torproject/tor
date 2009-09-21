@@ -80,6 +80,7 @@
 
 # /debian/
 /debian/files
+/debian/micro-revision.i
 /debian/patched
 /debian/tor
 /debian/tor.postinst.debhelper

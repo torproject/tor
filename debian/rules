@@ -82,6 +82,7 @@ build: build-stamp
 
 build-stamp:  config.status
 	dh_testdir
+	! [ debian/micro-revision.i ] || cp debian/micro-revision.i src/or/micro-revision.i
 
 	$(MAKE)
 	@echo
@@ -129,8 +130,15 @@ clean: unpatch
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
+	rm -f src/common/common_sha1.i src/or/or_sha1.i
+	rm -f src/or/micro-revision.i
 
 	[ ! -f Makefile ] || $(MAKE) distclean
+
+	# Normally the .deb wouldn't ship with a ../.git
+	if [ -d .git ] && which git >/dev/null; then \
+		echo "\"`git rev-parse --short=16 HEAD`\"" > "debian/micro-revision.i" ; \
+	fi
 
 	dh_clean
 
