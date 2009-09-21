@@ -112,7 +112,7 @@
  *
  * API reference:
  *
- * int evdns_nameserver_add(unsigned long int address)
+ * int evdns_nameserver_add(uint32_t address)
  *	 Add a nameserver. The address should be an IP address in
  *	 network byte order. The type of address is chosen so that
  *	 it matches in_addr.s_addr.
@@ -258,7 +258,7 @@ typedef void (*evdns_callback_type) (int result, char type, int count, int ttl, 
 int evdns_init(void);
 void evdns_shutdown(int fail_requests);
 const char *evdns_err_to_string(int err);
-int evdns_nameserver_add(unsigned long int address);
+int evdns_nameserver_add(uint32_t address);
 int evdns_count_nameservers(void);
 int evdns_clear_nameservers_and_suspend(void);
 int evdns_resume(void);

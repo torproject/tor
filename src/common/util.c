@@ -735,7 +735,18 @@ tor_parse_ulong(const char *s, int base, unsigned long min,
   CHECK_STRTOX_RESULT();
 }
 
-/** As tor_parse_log, but return a unit64_t.  Only base 10 is guaranteed to
+/** As tor_parse_long(), but return a double. */
+double
+tor_parse_double(const char *s, double min, double max, int *ok, char **next)
+{
+  char *endptr;
+  double r;
+
+  r = strtod(s, &endptr);
+  CHECK_STRTOX_RESULT();
+}
+
+/** As tor_parse_long, but return a uint64_t.  Only base 10 is guaranteed to
  * work for now. */
 uint64_t
 tor_parse_uint64(const char *s, int base, uint64_t min,
@@ -1023,6 +1034,42 @@ wrap_string(smartlist_t *out, const char *string, size_t width,
  * Time
  * ===== */
 
+/**
+ * Converts struct timeval to a double value.
+ * Preserves microsecond precision, but just barely.
+ * Error is approx +/- 0.1 usec when dealing with epoch values.
+ */
+double
+tv_to_double(const struct timeval *tv)
+{
+  double conv = tv->tv_sec;
+  conv += tv->tv_usec/1000000.0;
+  return conv;
+}
+
+/**
+ * Converts timeval to milliseconds.
+ */
+int64_t
+tv_to_msec(const struct timeval *tv)
+{
+  int64_t conv = ((int64_t)tv->tv_sec)*1000L;
+  /* Round ghetto-style */
+  conv += ((int64_t)tv->tv_usec+500)/1000L;
+  return conv;
+}
+
+/**
+ * Converts timeval to microseconds.
+ */
+int64_t
+tv_to_usec(const struct timeval *tv)
+{
+  int64_t conv = ((int64_t)tv->tv_sec)*1000000L;
+  conv += tv->tv_usec;
+  return conv;
+}
+
 /** Return the number of microseconds elapsed between *start and *end.
  */
 long
@@ -1055,7 +1102,9 @@ tv_mdiff(const struct timeval *start, const struct timeval *end)
     return LONG_MAX;
   }
 
-  mdiff = secdiff*1000L + (end->tv_usec - start->tv_usec) / 1000L;
+  /* Subtract and round */
+  mdiff = secdiff*1000L +
+      ((long)end->tv_usec - (long)start->tv_usec + 500L) / 1000L;
   return mdiff;
 }
 
@@ -1865,7 +1914,8 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
                           int open_flags)
 {
   open_file_t *file = NULL;
-  int fd, result;
+  int fd;
+  ssize_t result;
   fd = start_writing_to_file(fname, open_flags, 0600, &file);
   if (fd<0)
     return -1;
@@ -1950,7 +2000,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
   int fd; /* router file */
   struct stat statbuf;
   char *string;
-  int r;
+  ssize_t r;
   int bin = flags & RFTS_BIN;
 
   tor_assert(filename);
@@ -2009,7 +2059,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
        * match for size. */
       int save_errno = errno;
       log_warn(LD_FS,"Could read only %d of %ld bytes of file \"%s\".",
-               r, (long)statbuf.st_size,filename);
+               (int)r, (long)statbuf.st_size,filename);
       tor_free(string);
       close(fd);
       errno = save_errno;

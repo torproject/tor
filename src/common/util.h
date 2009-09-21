@@ -182,6 +182,8 @@ long tor_parse_long(const char *s, int base, long min,
                     long max, int *ok, char **next);
 unsigned long tor_parse_ulong(const char *s, int base, unsigned long min,
                               unsigned long max, int *ok, char **next);
+double tor_parse_double(const char *s, double min, double max, int *ok,
+                        char **next);
 uint64_t tor_parse_uint64(const char *s, int base, uint64_t min,
                          uint64_t max, int *ok, char **next);
 const char *hex_str(const char *from, size_t fromlen) ATTR_NONNULL((1));
@@ -210,6 +212,9 @@ void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Time helpers */
+double tv_to_double(const struct timeval *tv);
+int64_t tv_to_msec(const struct timeval *tv);
+int64_t tv_to_usec(const struct timeval *tv);
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);
 time_t tor_timegm(struct tm *tm);

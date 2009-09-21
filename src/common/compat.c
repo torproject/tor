@@ -480,8 +480,8 @@ get_uint32(const char *cp)
   return v;
 }
 /**
- * Read a 32-bit value beginning at <b>cp</b>.  Equivalent to
- * *(uint32_t*)(cp), but will not cause segfaults on platforms that forbid
+ * Read a 64-bit value beginning at <b>cp</b>.  Equivalent to
+ * *(uint64_t*)(cp), but will not cause segfaults on platforms that forbid
  * unaligned memory access.
  */
 uint64_t

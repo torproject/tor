@@ -24,7 +24,9 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 6
+#define MAX_SUPPORTED_CONSENSUS_METHOD 7
+
+#define MIN_METHOD_FOR_PARAMS 7
 
 /* =====
  * Voting
@@ -97,6 +99,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     char fu[ISO_TIME_LEN+1];
     char vu[ISO_TIME_LEN+1];
     char *flags = smartlist_join_strings(v3_ns->known_flags, " ", 0, NULL);
+    char *params;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
       make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD);
@@ -104,6 +107,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     format_iso_time(va, v3_ns->valid_after);
     format_iso_time(fu, v3_ns->fresh_until);
     format_iso_time(vu, v3_ns->valid_until);
+
+    if (v3_ns->net_params)
+      params = smartlist_join_strings(v3_ns->net_params, " ", 0, NULL);
+    else
+      params = tor_strdup("");
 
     tor_assert(cert);
     tor_snprintf(status, len,
@@ -117,6 +125,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  "voting-delay %d %d\n"
                  "%s" /* versions */
                  "known-flags %s\n"
+                 "params %s\n"
                  "dir-source %s %s %s %s %d %d\n"
                  "contact %s\n",
                  v3_ns->type == NS_TYPE_VOTE ? "vote" : "opinion",
@@ -125,9 +134,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  v3_ns->vote_seconds, v3_ns->dist_seconds,
                  version_lines,
                  flags,
+                 params,
                  voter->nickname, fingerprint, voter->address,
                    ipaddr, voter->dir_port, voter->or_port, voter->contact);
 
+    tor_free(params);
     tor_free(flags);
     tor_free(methods);
     outp = status + strlen(status);
@@ -507,6 +518,89 @@ compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
   return result;
 }
 
+/** Helper: given a list of valid networkstatus_t, return a new string
+ * containing the contents of the consensus network parameter set.
+ */
+/* private */ char *
+dirvote_compute_params(smartlist_t *votes)
+{
+  int i;
+  int32_t *vals;
+
+  int cur_param_len;
+  const char *cur_param;
+  const char *eq;
+  char *result;
+
+  const int n_votes = smartlist_len(votes);
+  smartlist_t *output;
+  smartlist_t *param_list = smartlist_create();
+
+  /* We require that the parameter lists in the votes are well-formed: that
+     is, that their keywords are unique and sorted, and that their values are
+     between INT32_MIN and INT32_MAX inclusive.  This should be guaranteed by
+     the parsing code. */
+
+  vals = tor_malloc(sizeof(int)*n_votes);
+
+  SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
+    if (!v->net_params)
+      continue;
+    smartlist_add_all(param_list, v->net_params);
+  } SMARTLIST_FOREACH_END(v);
+
+  if (smartlist_len(param_list) == 0) {
+    tor_free(vals);
+    smartlist_free(param_list);
+    return NULL;
+  }
+
+  smartlist_sort_strings(param_list);
+  i = 0;
+  cur_param = smartlist_get(param_list, 0);
+  eq = strchr(cur_param, '=');
+  tor_assert(eq);
+  cur_param_len = (int)(eq+1 - cur_param);
+
+  output = smartlist_create();
+
+  SMARTLIST_FOREACH_BEGIN(param_list, const char *, param) {
+    const char *next_param;
+    int ok=0;
+    eq = strchr(param, '=');
+    tor_assert(i<n_votes);
+    vals[i++] = (int32_t)
+      tor_parse_long(eq+1, 10, INT32_MIN, INT32_MAX, &ok, NULL);
+    tor_assert(ok);
+
+    if (param_sl_idx+1 == smartlist_len(param_list))
+      next_param = NULL;
+    else
+      next_param = smartlist_get(param_list, param_sl_idx+1);
+    if (!next_param || strncmp(next_param, param, cur_param_len)) {
+      /* We've reached the end of a series. */
+      int32_t median = median_int32(vals, i);
+      char *out_string = tor_malloc(64+cur_param_len);
+      memcpy(out_string, param, cur_param_len);
+      tor_snprintf(out_string+cur_param_len,64, "%ld", (long)median);
+      smartlist_add(output, out_string);
+
+      i = 0;
+      if (next_param) {
+        eq = strchr(next_param, '=');
+        cur_param_len = (int)(eq+1 - next_param);
+      }
+    }
+  } SMARTLIST_FOREACH_END(param);
+
+  result = smartlist_join_strings(output, " ", 0, NULL);
+  SMARTLIST_FOREACH(output, char *, cp, tor_free(cp));
+  smartlist_free(output);
+  smartlist_free(param_list);
+  tor_free(vals);
+  return result;
+}
+
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -657,6 +751,15 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_add(chunks, tor_strdup(buf));
 
     tor_free(flaglist);
+  }
+
+  if (consensus_method >= MIN_METHOD_FOR_PARAMS) {
+    char *params = dirvote_compute_params(votes);
+    if (params) {
+      smartlist_add(chunks, tor_strdup("params "));
+      smartlist_add(chunks, params);
+      smartlist_add(chunks, tor_strdup("\n"));
+    }
   }
 
   /* Sort the votes. */

@@ -1672,6 +1672,10 @@ typedef struct networkstatus_t {
    * not listed here, the voter has no opinion on what its value should be. */
   smartlist_t *known_flags;
 
+  /** List of key=value strings for the parameters in this vote or
+   * consensus, sorted by key. */
+  smartlist_t *net_params;
+
   /** List of networkstatus_voter_info_t.  For a vote, only one element
    * is included.  For a consensus, one element is included for every voter
    * whose vote contributed to the consensus. */
@@ -1866,9 +1870,9 @@ typedef struct crypt_path_t {
   struct crypt_path_t *prev; /**< Link to previous crypt_path_t in the
                               * circuit. */
 
-  int package_window; /**< How many bytes are we allowed to originate ending
+  int package_window; /**< How many cells are we allowed to originate ending
                        * at this step? */
-  int deliver_window; /**< How many bytes are we willing to deliver originating
+  int deliver_window; /**< How many cells are we willing to deliver originating
                        * at this step? */
 } crypt_path_t;
 
@@ -1973,6 +1977,7 @@ typedef struct circuit_t {
   time_t timestamp_created; /**< When was this circuit created? */
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
                            * circuit is clean. */
+  struct timeval highres_created; /**< When exactly was the circuit created? */
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of
                               * the main loop? (If true, holds the line number
@@ -2583,6 +2588,10 @@ typedef struct {
   /** Location of bandwidth measurement file */
   char *V3BandwidthsFile;
 
+  /** Authority only: key=value pairs that we add to our networkstatus
+   * consensus vote on the 'params' line. */
+  char *ConsensusParams;
+
   /** The length of time that we think an initial consensus should be fresh.
    * Only altered on testing networks. */
   int TestingV3AuthInitialVotingInterval;
@@ -2674,6 +2683,10 @@ typedef struct {
   time_t      BWHistoryWriteEnds;
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
+
+  /** Build time histogram */
+  config_line_t * BuildtimeHistogram;
+  uint16_t TotalBuildTimes;
 
   /** What version of Tor wrote this state file? */
   char *TorVersion;
@@ -2844,6 +2857,155 @@ void bridges_retry_all(void);
 
 void entry_guards_free_all(void);
 
+/* Circuit Build Timeout "public" functions and structures. */
+
+/** Maximum quantile to use to generate synthetic timeouts.
+ *  We want to stay a bit short of 1.0, because longtail is
+ *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
+#define MAX_SYNTHETIC_QUANTILE 0.985
+
+/** Minimum circuits before estimating a timeout */
+#define MIN_CIRCUITS_TO_OBSERVE 500
+
+/** Total size of the circuit timeout history to accumulate.
+ * 5000 is approx 1.5 weeks worth of continual-use circuits. */
+#define NCIRCUITS_TO_OBSERVE 5000
+
+/** Width of the histogram bins in milliseconds */
+#define BUILDTIME_BIN_WIDTH ((build_time_t)50)
+
+/** Cutoff point on the CDF for our timeout estimation.
+ * TODO: This should be moved to the consensus */
+#define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
+
+/** A build_time_t is milliseconds */
+typedef uint32_t build_time_t;
+#define BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
+
+/** Lowest allowable value for CircuitBuildTimeout in milliseconds */
+#define BUILD_TIMEOUT_MIN_VALUE (3*1000)
+
+/** Initial circuit build timeout in milliseconds */
+#define BUILD_TIMEOUT_INITIAL_VALUE (60*1000)
+
+/** How often in seconds should we build a test circuit */
+#define BUILD_TIMES_TEST_FREQUENCY 60
+
+/** Save state every 10 circuits */
+#define BUILD_TIMES_SAVE_STATE_EVERY 10
+
+/* Circuit Build Timeout network liveness constants */
+
+/**
+ * How many circuits count as recent when considering if the
+ * connection has gone gimpy or changed.
+ */
+#define RECENT_CIRCUITS 20
+
+/**
+ * Have we received a cell in the last N circ attempts?
+ *
+ * This tells us when to temporarily switch back to
+ * BUILD_TIMEOUT_INITIAL_VALUE until we start getting cells,
+ * at which point we switch back to computing the timeout from
+ * our saved history.
+ */
+#define NETWORK_NONLIVE_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.15))
+
+/**
+ * This tells us when to toss out the last streak of N timeouts.
+ *
+ * If instead we start getting cells, we switch back to computing the timeout
+ * from our saved history.
+ */
+#define NETWORK_NONLIVE_DISCARD_COUNT (lround(NETWORK_NONLIVE_TIMEOUT_COUNT*2))
+
+/**
+ * Maximum count of timeouts that finish the first hop in the past
+ * RECENT_CIRCUITS before calculating a new timeout.
+ *
+ * This tells us to abandon timeout history and set
+ * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
+ */
+#define MAX_RECENT_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.75))
+
+/** Information about the state of our local network connection */
+typedef struct {
+  /** The timestamp we last completed a TLS handshake or received a cell */
+  time_t network_last_live;
+  /** If the network is not live, how many timeouts has this caused? */
+  int nonlive_timeouts;
+  /** If the network is not live, have we yet discarded our history? */
+  int nonlive_discarded;
+  /** Circular array of circuits that have made it to the first hop. Slot is
+   * 1 if circuit timed out, 0 if circuit succeeded */
+  int8_t timeouts_after_firsthop[RECENT_CIRCUITS];
+  /** Index into circular array. */
+  int after_firsthop_idx;
+} network_liveness_t;
+
+/** Structure for circuit build times history */
+typedef struct {
+  /** The circular array of recorded build times in milliseconds */
+  build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
+  /** Current index in the circuit_build_times circular array */
+  int build_times_idx;
+  /** Total number of build times accumulated. Maxes at NCIRCUITS_TO_OBSERVE */
+  int total_build_times;
+  /** Information about the state of our local network connection */
+  network_liveness_t liveness;
+  /** Last time we built a circuit. Used to decide to build new test circs */
+  time_t last_circ_at;
+  /** Number of timeouts that have happened before estimating pareto
+   *  parameters */
+  int pre_timeouts;
+  /** "Minimum" value of our pareto distribution (actually mode) */
+  build_time_t Xm;
+  /** alpha exponent for pareto dist. */
+  double alpha;
+  /** Have we computed a timeout? */
+  int have_computed_timeout;
+  /** The exact value for that timeout in milliseconds */
+  double timeout_ms;
+} circuit_build_times_t;
+
+extern circuit_build_times_t circ_times;
+void circuit_build_times_update_state(circuit_build_times_t *cbt,
+                                      or_state_t *state);
+int circuit_build_times_parse_state(circuit_build_times_t *cbt,
+                                    or_state_t *state, char **msg);
+int circuit_build_times_add_timeout(circuit_build_times_t *cbt,
+                                    int did_onehop, time_t start_time);
+void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
+int circuit_build_times_add_time(circuit_build_times_t *cbt,
+                                 build_time_t time);
+int circuit_build_times_needs_circuits(circuit_build_times_t *cbt);
+int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
+void circuit_build_times_init(circuit_build_times_t *cbt);
+
+#ifdef CIRCUIT_PRIVATE
+double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
+                                             double quantile);
+build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
+                                                 double q_lo, double q_hi);
+void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
+                                       double quantile, double time_ms);
+void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
+double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
+void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
+                                       double quantile_cutoff);
+void circuitbuild_running_unit_tests(void);
+void circuit_build_times_reset(circuit_build_times_t *cbt);
+
+/* Network liveness functions */
+int circuit_build_times_network_check_changed(circuit_build_times_t *cbt);
+#endif
+
+/* Network liveness functions */
+void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
+int circuit_build_times_network_check_live(circuit_build_times_t *cbt);
+void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
+
 /********************************* circuitlist.c ***********************/
 
 circuit_t * _circuit_get_global_list(void);
@@ -2856,6 +3018,7 @@ void circuit_set_n_circid_orconn(circuit_t *circ, circid_t id,
                                  or_connection_t *conn);
 void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
+int32_t circuit_initial_package_window(void);
 origin_circuit_t *origin_circuit_new(void);
 or_circuit_t *or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(circid_t circ_id,
@@ -3661,9 +3824,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert);
 
 #ifdef DIRVOTE_PRIVATE
-char *
-format_networkstatus_vote(crypto_pk_env_t *private_key,
-                          networkstatus_t *v3_ns);
+char *format_networkstatus_vote(crypto_pk_env_t *private_key,
+                                 networkstatus_t *v3_ns);
+char *dirvote_compute_params(smartlist_t *votes);
 #endif
 
 /********************************* dns.c ***************************/
@@ -3956,6 +4119,8 @@ void signed_descs_update_status_from_consensus_networkstatus(
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
+int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
+                                int32_t default_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
 void networkstatus_free_all(void);

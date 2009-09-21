@@ -557,6 +557,7 @@
     "status/circuit-established"
     "status/enough-dir-info"
     "status/good-server-descriptor"
+    "status/accepted-server-descriptor"
     "status/..."
       These provide the current internal Tor values for various Tor
       states. See Section 4.1.10 for explanations. (Only a few of the
@@ -1254,20 +1255,26 @@
      CLOCK_SKEW
        SKEW="+" / "-" SECONDS
        MIN_SKEW="+" / "-" SECONDS.
-       SOURCE="DIRSERV:IP:Port" / "NETWORKSTATUS:IP:PORT" / "CONSENSUS"
+       SOURCE="DIRSERV:" IP ":" Port /
+              "NETWORKSTATUS:" IP ":" Port /
+              "OR:" IP ":" Port /
+              "CONSENSUS"
          If "SKEW" is present, it's an estimate of how far we are from the
          time declared in the source.  (In other words, if we're an hour in
          the past, the value is -3600.)  "MIN_SKEW" is present, it's a lower
          bound.  If the source is a DIRSERV, we got the current time from a
          connection to a dirserver.  If the source is a NETWORKSTATUS, we
          decided we're skewed because we got a v2 networkstatus from far in
-         the future.  If the source is CONSENSUS, we decided we're skewed
-         because we got a networkstatus consensus from the future.
+         the future.  If the source is OR, the skew comes from a NETINFO
+         cell from a connection to another relay.  If the source is
+         CONSENSUS, we decided we're skewed because we got a networkstatus
+         consensus from the future.
 
-         {Controllers may want to warn the user if the skew is high, or if
-         multiple skew messages appear at severity WARN.  Controllers
-         shouldn't blindly adjust the clock, since the more accurate source
-         of skew info (DIRSERV) is currently unauthenticated.}
+         {Tor should send this message to controllers when it thinks the
+         skew is so high that it will interfere with proper Tor operation.
+         Controllers shouldn't blindly adjust the clock, since the more
+         accurate source of skew info (DIRSERV) is currently
+         unauthenticated.}
 
      BAD_LIBEVENT
      "METHOD=" libevent method
@@ -1481,18 +1488,39 @@
        We successfully uploaded our server descriptor to at least one
        of the directory authorities, with no complaints.
 
-       {This event could affect the controller's idea of server status, but
-       the controller should not interrupt the user to tell them so.}
+       {Originally, the goal of this event was to declare "every authority
+       has accepted the descriptor, so there will be no complaints
+       about it." But since some authorities might be offline, it's
+       harder to get certainty than we had thought. As such, this event
+       is equivalent to ACCEPTED_SERVER_DESCRIPTOR below. Controllers
+       should just look at ACCEPTED_SERVER_DESCRIPTOR and should ignore
+       this event for now.}
+
+     SERVER_DESCRIPTOR_STATUS
+     "STATUS=" "LISTED" / "UNLISTED"
+       We just got a new networkstatus consensus, and whether we're in
+       it or not in it has changed. Specifically, status is "listed"
+       if we're listed in it but previous to this point we didn't know
+       we were listed in a consensus; and status is "unlisted" if we
+       thought we should have been listed in it (e.g. we were listed in
+       the last one), but we're not.
+
+       {Moving from listed to unlisted is not necessarily cause for
+       alarm. The relay might have failed a few reachability tests,
+       or the Internet might have had some routing problems. So this
+       feature is mainly to let relay operators know when their relay
+       has successfully been listed in the consensus.}
+
+       [Not implemented yet. We should do this in 0.2.2.x. -RD]
 
      NAMESERVER_STATUS
      "NS=addr"
      "STATUS=" "UP" / "DOWN"
      "ERR=" message
         One of our nameservers has changed status.
-        // actually notice
 
-       {This event could affect the controller's idea of server status, but
-       the controller should not interrupt the user to tell them so.}
+        {This event could affect the controller's idea of server status, but
+        the controller should not interrupt the user to tell them so.}
 
      NAMESERVER_ALL_DOWN
         All of our nameservers have gone down.

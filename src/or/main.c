@@ -1240,17 +1240,26 @@ second_elapsed_callback(int fd, short event, void *args)
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
     /* every 20 minutes, check and complain if necessary */
     routerinfo_t *me = router_get_my_routerinfo();
-    if (me && !check_whether_orport_reachable())
+    if (me && !check_whether_orport_reachable()) {
       log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
                "its ORPort is reachable. Please check your firewalls, ports, "
                "address, /etc/hosts file, etc.",
                me->address, me->or_port);
-    if (me && !check_whether_dirport_reachable())
+      control_event_server_status(LOG_WARN,
+                                  "REACHABILITY_FAILED ORADDRESS=%s:%d",
+                                  me->address, me->or_port);
+    }
+
+    if (me && !check_whether_dirport_reachable()) {
       log_warn(LD_CONFIG,
                "Your server (%s:%d) has not managed to confirm that its "
                "DirPort is reachable. Please check your firewalls, ports, "
                "address, /etc/hosts file, etc.",
                me->address, me->dir_port);
+      control_event_server_status(LOG_WARN,
+                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
+                                  me->address, me->dir_port);
+    }
   }
 
 /** If more than this many seconds have elapsed, probably the clock
@@ -1653,7 +1662,7 @@ dumpstats(int severity)
 {
   time_t now = time(NULL);
   time_t elapsed;
-  int rbuf_cap, wbuf_cap, rbuf_len, wbuf_len;
+  size_t rbuf_cap, wbuf_cap, rbuf_len, wbuf_len;
 
   log(severity, LD_GENERAL, "Dumping stats:");
 
@@ -1689,7 +1698,7 @@ dumpstats(int severity)
           log(severity, LD_GENERAL,
               "Conn %d: %d/%d bytes used on OpenSSL read buffer; "
               "%d/%d bytes used on write buffer.",
-              i, rbuf_len, rbuf_cap, wbuf_len, wbuf_cap);
+              i, (int)rbuf_len, (int)rbuf_cap, (int)wbuf_len, (int)wbuf_cap);
         }
       }
     }

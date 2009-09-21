@@ -51,7 +51,7 @@ static void usage(void) ATTR_NORETURN;
 /** Set *<b>out</b> to a newly allocated SOCKS4a resolve request with
  * <b>username</b> and <b>hostname</b> as provided.  Return the number
  * of bytes in the request. */
-static int
+static ssize_t
 build_socks_resolve_request(char **out,
                             const char *username,
                             const char *hostname,
@@ -184,7 +184,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
   int s;
   struct sockaddr_in socksaddr;
   char *req = NULL;
-  int len = 0;
+  ssize_t len = 0;
 
   tor_assert(hostname);
   tor_assert(result_addr);

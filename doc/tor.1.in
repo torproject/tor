@@ -1243,6 +1243,11 @@ When this is set then
 \fBVersioningAuthoritativeDirectory\fP should be set too.
 .LP
 .TP
+\fBConsensusParams \fR\fISTRING\fP
+STRING is a space-separated list of key=value pairs that Tor will
+include in the "params" line of its networkstatus vote.
+.LP
+.TP
 \fBDirAllowPrivateAddresses \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will accept router descriptors with arbitrary "Address"
 elements. Otherwise, if the address is not an IP address or is a private
@@ -1514,7 +1519,7 @@ The most recently downloaded network status document for each authority.  Each f
 .LP
 .TP
 .B \fIDataDirectory\fB/cached-descriptors\fR and \fBcached-descriptors.new\fR
-These files hold downloaded router statuses.  Some routers may appear more than once; if so, the most recently published descriptor is used.    Lines beginning with @-signs are annotations that contain more information about a given router.  The ".new" file is an append-only journal; when it gets too large, all entries are merged into a new cached-routers file.
+These files hold downloaded router statuses.  Some routers may appear more than once; if so, the most recently published descriptor is used.    Lines beginning with @-signs are annotations that contain more information about a given router.  The ".new" file is an append-only journal; when it gets too large, all entries are merged into a new cached-descriptors file.
 .LP
 .TP
 .B \fIDataDirectory\fB/cached-routers\fR and \fBcached-routers.new\fR

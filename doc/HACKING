@@ -3,10 +3,7 @@
 
 0.0 The buildbot.
 
-  http://tor-buildbot.freehaven.net:8010/
-
-  - Down because nickm isn't running services at home any more. ioerror says
-    he will resurrect it.
+  https://buildbot.vidalia-project.net/one_line_per_build
 
 0.1. Useful command-lines that are non-trivial to reproduce but can
 help with tracking bugs or leaks.

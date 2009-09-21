@@ -3,57 +3,52 @@
 # Wrapper script for use of the tsocks(8) transparent socksification library
 # See the tsocks(1) and torify(1) manpages.
 
-# Copyright (c) 2004, 2006 Peter Palfrader
+# Copyright (c) 2004, 2006, 2009 Peter Palfrader
 # Modified by Jacob Appelbaum <jacob@appelbaum.net> April 16th 2006
 # May be distributed under the same terms as Tor itself
 
-
-# Define and ensure we have tsocks
-# XXX: what if we don't have which?
-TORSOCKS="`which torsocks`"
-TSOCKS="`which tsocks`"
-PROG=""
-if [ ! -x "$TSOCKS" ]
-then
-	echo "$0: Can't find tsocks in PATH. Perhaps you haven't installed it?" >&2
-else
-	PROG=$TSOCKS
-fi
-if [ ! -x "$TORSOCKS" ]
-then
-	echo "$0: Can't find torsocks in PATH. Perhaps you haven't installed it?" >&2
-else
-	PROG=$TORSOCKS
-fi
-
-if [ ! -x "$PROG" ]
-then
-	echo "$0: Can't find the required tor helpers in our PATH. Perhaps you haven't installed them?" >&2
-	exit 1;
-fi
+# taken from Debian's Developer's Reference, 6.4
+pathfind() {
+	OLDIFS="$IFS"
+	IFS=:
+	for p in $PATH; do
+		if [ -x "$p/$*" ]; then
+			IFS="$OLDIFS"
+			return 0
+		fi
+	done
+	IFS="$OLDIFS"
+	return 1
+}
 
 # Check for any argument list
-if [ "$#" = 0 ]
-then
+if [ "$#" = 0 ]; then
 	echo "Usage: $0 [-hv] <command> [<options>...]" >&2
 	exit 1
 fi
-if [ "$#" = 1 ] && ( [ "$1" = "-h" ] || [ "$1" = "--help" ] )
-then
+
+if [ "$#" = 1 ] && ( [ "$1" = "-h" ] || [ "$1" = "--help" ] ); then
 	echo "Usage: $0 [-hv] <command> [<options>...]"
 	exit 0
 fi
 
-if [ "$1" = "-v" ] || [ "$1" = "--verbose" ]
-then
-	echo "We're armed with the following tsocks: $TSOCKS"
-	echo "We're armed with the following torsocks: $TORSOCKS"
-	echo "We're attempting to use $PROG for all tor action."
+if [ "$1" = "-v" ] || [ "$1" = "--verbose" ]; then
+	verbose=1
 	shift 1
+else
+	verbose=0
 fi
 
-if [ "$PROG" = "$TSOCKS" ]
-then
+if pathfind torsocks; then
+	! [ "$verbose" -ge 1 ] || echo "Using torsocks as socksifier." >&2
+
+	exec torsocks "$@"
+	echo "$0: Failed to exec torsocks $@" >&2
+	exit 1
+
+elif pathfind tsocks; then
+	! [ "$verbose" -ge 1 ] || echo "Using tsocks as socksifier." >&2
+
 	# Define our tsocks config file
 	TSOCKS_CONF_FILE="/etc/tor/tor-tsocks.conf"
 	export TSOCKS_CONF_FILE
@@ -61,7 +56,7 @@ then
 	# Check that we've got a tsocks config file
 	if [ -r "$TSOCKS_CONF_FILE" ]
 	then
-		echo "WARNING: tsocks is known to leak DNS and UDP data." >&2
+		echo "WARNING: tsocks is known to leak DNS and UDP data.  If you had torsocks we would use that." >&2
 		exec tsocks "$@"
 		echo "$0: Failed to exec tsocks $@" >&2
 		exit 1
@@ -69,8 +64,8 @@ then
 		echo "$0: Missing tsocks configuration file \"$TSOCKS_CONF_FILE\"." >&2
 		exit 1
 	fi
-fi
-if [ "$PROG" = "$TORSOCKS" ]
-then
-	exec torsocks "$@"
+
+else
+	echo "$0: Can't find either tsocks or torsocks in your PATH. Perhaps you haven't installed either?" >&2
+	exit 1
 fi

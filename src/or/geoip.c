@@ -340,7 +340,7 @@ geoip_determine_shares(time_t now)
         ((double) (now - last_time_determined_shares));
     v3_share_times_seconds += v3_share *
         ((double) (now - last_time_determined_shares));
-    share_seconds += now - last_time_determined_shares;
+    share_seconds += (int)(now - last_time_determined_shares);
   }
   last_time_determined_shares = now;
 }
@@ -768,7 +768,7 @@ geoip_get_dirreq_history(geoip_client_action_t action,
         time_diff = 1; /* Avoid DIV/0; "instant" answers are impossible
                         * by law of nature or something, but a milisecond
                         * is a bit greater than "instantly" */
-      bytes_per_second = 1000 * ent->response_size / time_diff;
+      bytes_per_second = (uint32_t)(1000 * ent->response_size / time_diff);
       dltimes[ent_sl_idx] = bytes_per_second;
     } SMARTLIST_FOREACH_END(ent);
     median_uint32(dltimes, complete); /* sorts as a side effect. */
