@@ -212,6 +212,9 @@ void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
 int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 /* Time helpers */
+double tv_to_double(const struct timeval *tv);
+int64_t tv_to_msec(const struct timeval *tv);
+int64_t tv_to_usec(const struct timeval *tv);
 long tv_udiff(const struct timeval *start, const struct timeval *end);
 long tv_mdiff(const struct timeval *start, const struct timeval *end);
 time_t tor_timegm(struct tm *tm);
