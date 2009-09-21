@@ -1376,50 +1376,28 @@ test_util(void)
   ;
 }
 
-/** Helper: assert that IPv6 addresses <b>a</b> and <b>b</b> are the same.  On
- * failure, reports an error, describing the addresses as <b>e1</b> and
- * <b>e2</b>, and reporting the line number as <b>line</b>. */
-static void
-_test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
-             const char *e2, int line)
-{
-  int i;
-  int ok = 1;
-  for (i = 0; i < 16; ++i) {
-    if (a->s6_addr[i] != b->s6_addr[i]) {
-      ok = 0;
-      break;
-    }
-  }
-  if (ok) {
-    printf("."); fflush(stdout);
-  } else {
-    char buf1[128], *cp1;
-    char buf2[128], *cp2;
-    have_failed = 1;
-    cp1 = buf1; cp2 = buf2;
-    for (i=0; i<16; ++i) {
-      tor_snprintf(cp1, sizeof(buf1)-(cp1-buf1), "%02x", a->s6_addr[i]);
-      tor_snprintf(cp2, sizeof(buf2)-(cp2-buf2), "%02x", b->s6_addr[i]);
-      cp1 += 2; cp2 += 2;
-      if ((i%2)==1 && i != 15) {
-        *cp1++ = ':';
-        *cp2++ = ':';
-      }
-    }
-    *cp1 = *cp2 = '\0';
-    printf("Line %d: assertion failed: (%s == %s)\n"
-           "      %s != %s\n", line, e1, e2, buf1, buf2);
-    fflush(stdout);
-  }
-}
+#define _test_op_ip6(a,op,b,e1,e2)                               \
+  STMT_BEGIN                                                     \
+  tt_assert_test_fmt_type(a,b,e1" "#op" "e2,struct in6_addr*,    \
+    (memcmp(_val1->s6_addr, _val2->s6_addr, 16) op 0),           \
+    char *, "%s",                                                \
+    { int i; char *cp;                                           \
+      cp = _print = tor_malloc(64);                              \
+      for (i=0;i<16;++i) {                                       \
+        tor_snprintf(cp, 3,"%02x", (unsigned)_value->s6_addr[i]);\
+        cp += 2;                                                 \
+        if (i != 15) *cp++ = ':';                                \
+      }                                                          \
+    }, { tor_free(_print); }                                     \
+  );                                                             \
+  STMT_END
 
 /** Helper: Assert that two strings both decode as IPv6 addresses with
  * tor_inet_pton(), and both decode to the same address. */
 #define test_pton6_same(a,b) STMT_BEGIN                \
      test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);      \
      test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);      \
-    _test_eq_ip6(&a1,&a2,#a,#b,__LINE__);              \
+     _test_op_ip6(&a1,==,&a2,#a,#b);                   \
   STMT_END
 
 /** Helper: Assert that <b>a</b> is recognized as a bad IPv6 address by
@@ -1434,7 +1412,7 @@ _test_eq_ip6(struct in6_addr *a, struct in6_addr *b, const char *e1,
     test_eq(tor_inet_pton(AF_INET6, a, &a1), 1);                        \
     test_streq(tor_inet_ntop(AF_INET6, &a1, buf, sizeof(buf)), b);      \
     test_eq(tor_inet_pton(AF_INET6, b, &a2), 1);                        \
-    _test_eq_ip6(&a1, &a2, a, b, __LINE__);                             \
+    _test_op_ip6(&a1, ==, &a2, a, b);                                   \
   STMT_END
 
 /** Helper: assert that <b>a</b> parses by tor_inet_pton() into a address that
@@ -3186,9 +3164,11 @@ test_dir_format(void)
   test_eq(VER_RELEASE, ver1.status);
   test_streq("", ver1.status_tag);
 
-#define test_eq_vs(vs1, vs2) test_eq_type(version_status_t, "%d", (vs1), (vs2))
-#define test_v_i_o(val, ver, lst) \
-  test_eq_vs(val, tor_version_is_obsolete(ver, lst))
+#define tt_versionstatus_op(vs1, op, vs2)                               \
+  tt_assert_test_type(vs1,vs2,#vs1" "#op" "#vs2,version_status_t,       \
+                      (_val1 op _val2),"%d")
+#define test_v_i_o(val, ver, lst)                                       \
+  tt_versionstatus_op(val, ==, tor_version_is_obsolete(ver, lst))
 
   /* make sure tor_version_is_obsolete() works */
   test_v_i_o(VS_OLD, "0.0.1", "Tor 0.0.2");
@@ -5045,28 +5025,40 @@ test_geoip(void)
   tor_free(s);
 }
 
-/** For test_array. Declare an CLI-invocable off-by-default function in the
- * unit tests, with function name and user-visible name <b>x</b>*/
-#define DISABLED(x) { #x, x, 0, 0, 0 }
-/** For test_array. Declare an CLI-invocable unit test function, with function
- * name test_<b>x</b>(), and user-visible name <b>x</b> */
-#define ENT(x) { #x, test_ ## x, 0, 0, 1 }
-/** For test_array. Declare an CLI-invocable unit test function, with function
- * name test_<b>x</b>_<b>y</b>(), and user-visible name
- * <b>x</b>/<b>y</b>. This function will be treated as a subentry of <b>x</b>,
- * so that invoking <b>x</b> from the CLI invokes this test too. */
-#define SUBENT(x,y) { #x "/" #y, test_ ## x ## _ ## y, 1, 0, 1 }
+static void *
+legacy_test_setup(const struct testcase_t *testcase)
+{
+  return testcase->setup_data;
+}
 
-/** An array of functions and information for all the unit tests we can run. */
-static struct {
-  const char *test_name; /**< How does the user refer to this test from the
-                          * command line? */
-  void (*test_fn)(void); /**< What function is called to run this test? */
-  int is_subent; /**< Is this a subentry of a bigger set of related tests? */
-  int selected; /**< Are we planning to run this one? */
-  int is_default; /**< If the user doesn't say what tests they want, do they
-                   * get this function by default? */
-} test_array[] = {
+static void
+legacy_test_helper(void *data)
+{
+  void (*fn)(void) = data;
+  fn();
+}
+
+static int
+legacy_test_cleanup(const struct testcase_t *testcase, void *ptr)
+{
+  (void)ptr;
+  (void)testcase;
+  return 1;
+}
+
+static const struct testcase_setup_t legacy_setup = {
+  legacy_test_setup, legacy_test_cleanup
+};
+
+#define ENT(name)                                                       \
+  { #name, legacy_test_helper, 0, &legacy_setup, test_ ## name }
+#define SUBENT(group, name)                                             \
+  { #group "_" #name, legacy_test_helper, 0, &legacy_setup,             \
+      test_ ## group ## _ ## name }
+#define DISABLED(name)                                                  \
+  { #name, legacy_test_helper, TT_SKIP, &legacy_setup, name }
+
+static struct testcase_t test_array[] = {
   ENT(buffers),
   ENT(crypto),
   SUBENT(crypto, rng),
@@ -5111,36 +5103,22 @@ static struct {
 
   DISABLED(bench_aes),
   DISABLED(bench_dmap),
-  { NULL, NULL, 0, 0, 0 },
+  END_OF_TESTCASES
 };
 
-static void syntax(void) ATTR_NORETURN;
-
-/** Print a syntax usage message, and exit.*/
-static void
-syntax(void)
-{
-  int i;
-  printf("Syntax:\n"
-         "  test [-v|--verbose] [--warn|--notice|--info|--debug]\n"
-         "       [testname...]\n"
-         "Recognized tests are:\n");
-  for (i = 0; test_array[i].test_name; ++i) {
-    printf("   %s\n", test_array[i].test_name);
-  }
-
-  exit(0);
-}
+static struct testgroup_t testgroups[] = {
+  { "", test_array },
+  END_OF_GROUPS
+};
 
 /** Main entry point for unit test code: parse the command line, and run
  * some unit tests. */
 int
-main(int c, char**v)
+main(int c, const char **v)
 {
   or_options_t *options;
   char *errmsg = NULL;
-  int i;
-  int verbose = 0, any_selected = 0;
+  int i, i_out;
   int loglevel = LOG_ERR;
 
 #ifdef USE_DMALLOC
@@ -5155,44 +5133,20 @@ main(int c, char**v)
   tor_threads_init();
   init_logging();
 
-  for (i = 1; i < c; ++i) {
-    if (!strcmp(v[i], "-v") || !strcmp(v[i], "--verbose"))
-      verbose++;
-    else if (!strcmp(v[i], "--warn"))
+  for (i_out = i = 1; i < c; ++i) {
+    if (!strcmp(v[i], "--warn")) {
       loglevel = LOG_WARN;
-    else if (!strcmp(v[i], "--notice"))
+    } else if (!strcmp(v[i], "--notice")) {
       loglevel = LOG_NOTICE;
-    else if (!strcmp(v[i], "--info"))
+    } else if (!strcmp(v[i], "--info")) {
       loglevel = LOG_INFO;
-    else if (!strcmp(v[i], "--debug"))
+    } else if (!strcmp(v[i], "--debug")) {
       loglevel = LOG_DEBUG;
-    else if (!strcmp(v[i], "--help") || !strcmp(v[i], "-h") || v[i][0] == '-')
-      syntax();
-    else {
-      int j, found=0;
-      for (j = 0; test_array[j].test_name; ++j) {
-        if (!strcmp(v[i], test_array[j].test_name) ||
-            (test_array[j].is_subent &&
-             !strcmpstart(test_array[j].test_name, v[i]) &&
-             test_array[j].test_name[strlen(v[i])] == '/') ||
-            (v[i][0] == '=' && !strcmp(v[i]+1, test_array[j].test_name))) {
-          test_array[j].selected = 1;
-          any_selected = 1;
-          found = 1;
-        }
-      }
-      if (!found) {
-        printf("Unknown test: %s\n", v[i]);
-        syntax();
-      }
+    } else {
+      v[i_out++] = v[i];
     }
   }
-
-  if (!any_selected) {
-    for (i = 0; test_array[i].test_name; ++i) {
-      test_array[i].selected = test_array[i].is_default;
-    }
-  }
+  c = i_out;
 
   {
     log_severity_list_t s;
@@ -5219,19 +5173,7 @@ main(int c, char**v)
 
   atexit(remove_directory);
 
-  printf("Running Tor unit tests on %s\n", get_uname());
-
-  for (i = 0; test_array[i].test_name; ++i) {
-    if (!test_array[i].selected)
-      continue;
-    if (!test_array[i].is_subent) {
-      printf("\n============================== %s\n",test_array[i].test_name);
-    } else if (test_array[i].is_subent && verbose) {
-      printf("\n%s", test_array[i].test_name);
-    }
-    test_array[i].test_fn();
-  }
-  puts("");
+  have_failed = (tinytest_main(c, v, testgroups) < 0);
 
   free_pregenerated_keys();
 #ifdef USE_DMALLOC

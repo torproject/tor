@@ -42,7 +42,7 @@ tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
 tor_LDADD = ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
 	-lz -lm -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
-test_SOURCES = $(COMMON_SRC) test_data.c test.c
+test_SOURCES = $(COMMON_SRC) test_data.c test.c tinytest.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
@@ -50,7 +50,10 @@ test_LDADD = ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
 	-lz -lm -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
-noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
+noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i tinytest.h \
+	tinytest_macros.h
+
+EXTRA_DIST = tinytest_demo.c
 
 config_codedigest.o: or_sha1.i
 
