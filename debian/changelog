@@ -7,8 +7,18 @@ tor (0.2.2.2-alpha-1) experimental; urgency=low
     in the debian diff.gz after building a second time in the same
     directory.  So, remove those files in clean to get both a cleaner
     diff.gz and idempotent builds.
+  * If we have a debian/micro-revision.i, replace the one in src/or
+    with our copy so that this will be the revision that ends up in
+    the binary.  This is an informational only version string, but
+    it'd be kinda nice if it was (more) accurate nonetheless.
+    .
+    Of course this won't help if people manually patch around but
+    it's still preferable to claiming we are exactly upstream's source.
+    .
+    If we are building directly out of a git tree, update
+    debian/micro-revision.i in the clean target.
 
- -- Peter Palfrader <weasel@debian.org>  Mon, 21 Sep 2009 13:37:30 +0200
+ -- Peter Palfrader <weasel@debian.org>  Mon, 21 Sep 2009 14:51:20 +0200
 
 tor (0.2.2.1-alpha-1) experimental; urgency=low
 
