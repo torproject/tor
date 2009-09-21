@@ -1,4 +1,4 @@
-Changes in version 0.2.2.2-alpha - 2009-09-2?
+Changes in version 0.2.2.2-alpha - 2009-09-21
   o Major features:
     - Tor now tracks how long it takes to build client-side circuits
       over time, and adapts its timeout to local network performance.
@@ -49,10 +49,8 @@ Changes in version 0.2.2.2-alpha - 2009-09-2?
       by SwissTorExit.
     - Don't warn when we're using a circuit that ends with a node
       excluded in ExcludeExitNodes, but the circuit is not used to access
-      the outside world. This should help fix bug 1090. Bugfix on
-      0.2.1.6-alpha.
-    - Teach connection_ap_can_use_exit to respect the Exclude*Nodes config
-      options. Should fix bug 1090. Bugfix on 0.0.2-pre16.
+      the outside world. This should help fix bug 1090, but more problems
+      remain. Bugfix on 0.2.1.6-alpha.
     - Work around a small memory leak in some versions of OpenSSL that
       stopped the memory used by the hostname TLS extension from being
       freed.
