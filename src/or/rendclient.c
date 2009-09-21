@@ -91,9 +91,9 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     }
   });
   if (!intro_key) {
-    /* XXX022 Karsten: should this turn into a log_info, a la bug 1073? */
-    log_warn(LD_BUG, "Internal error: could not find intro key; we "
-             "only have a v2 rend desc with %d intro points.",
+    log_info(LD_REND, "Our introduction point knowledge changed in "
+             "mid-connect! Could not find intro key; we only have a "
+             "v2 rend desc with %d intro points. Giving up.",
              smartlist_len(entry->parsed->intro_nodes));
     goto err;
   }
