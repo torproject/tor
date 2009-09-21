@@ -1,4 +1,4 @@
-Changes in version 0.2.2.2-alpha - 2009-09-18
+Changes in version 0.2.2.2-alpha - 2009-09-2?
   o Major features:
     - Tor now tracks how long it takes to build client-side circuits
       over time, and adapts its timeout to local network performance.
@@ -56,6 +56,9 @@ Changes in version 0.2.2.2-alpha - 2009-09-18
     - Work around a small memory leak in some versions of OpenSSL that
       stopped the memory used by the hostname TLS extension from being
       freed.
+    - Make our 'torify' script more portable; if we have only one of
+      'torsocks' or 'tsocks' installed, don't complain to the user;
+      and explain our warning about tsocks better.
 
   o Minor features:
     - Add a "getinfo status/accepted-server-descriptor" controller

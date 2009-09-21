@@ -66,6 +66,6 @@ elif pathfind tsocks; then
 	fi
 
 else
-	echo "$0: Can't find neither tsocks nor torsocks in your PATH. Perhaps you haven't installed either?" >&2
+	echo "$0: Can't find either tsocks or torsocks in your PATH. Perhaps you haven't installed either?" >&2
 	exit 1
 fi
