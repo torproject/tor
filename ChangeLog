@@ -1,3 +1,5 @@
+Changes in version 0.2.2.3-alpha - 2009-??-??
+
 Changes in version 0.2.2.2-alpha - 2009-09-21
   o Major features:
     - Tor now tracks how long it takes to build client-side circuits
