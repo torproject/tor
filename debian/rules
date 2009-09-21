@@ -129,6 +129,7 @@ clean: unpatch
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp
+	rm -f src/common/common_sha1.i src/or/or_sha1.i
 
 	[ ! -f Makefile ] || $(MAKE) distclean
 
