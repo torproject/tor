@@ -706,18 +706,24 @@ circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
  * at all, but this circuit was launched back when we thought the network
  * was live, increment the number of "nonlive" circuit timeouts.
  *
- * Also distinguish between whether it failed before the first hop.
+ * Also distinguish between whether it failed before the first hop
+ * and record that in our history for later deciding if the network has
+ * changed.
  */
 static void
 circuit_build_times_network_timeout(circuit_build_times_t *cbt,
                                     int did_onehop, time_t start_time)
 {
-  time_t now = approx_time();
-  /* Only count this as a valid attempt if it was both started before
-   * the network was dead and the network has been dead for at least
-   * a full timeout interval. */
-  if (cbt->liveness.network_last_live <= (now - cbt->timeout_ms/1000.0)
-          && cbt->liveness.network_last_live <= start_time) {
+  time_t now = time(NULL);
+  /*
+   * Check if this is a timeout that was for a circuit that spent its
+   * entire existence during a time where we have had no network activity.
+   *
+   * Also double check that it is a valid timeout after we have possibly
+   * just recently reset cbt->timeout_ms.
+   */
+  if (cbt->liveness.network_last_live <= start_time &&
+          start_time <= (now - cbt->timeout_ms/1000.0)) {
     cbt->liveness.nonlive_timeouts++;
   }
 

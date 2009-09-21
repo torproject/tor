@@ -3525,11 +3525,13 @@ test_circuit_timeout(void)
     test_assert(!circuit_build_times_network_check_live(&final));
 
     for ( ; i < NETWORK_NONLIVE_DISCARD_COUNT; i++) {
-      if (circuit_build_times_add_timeout(&estimate, 0, approx_time()))
+      if (circuit_build_times_add_timeout(&estimate, 0,
+                  approx_time()-estimate.timeout_ms/1000.0-1))
         estimate.have_computed_timeout = 1;
 
       if (i < NETWORK_NONLIVE_DISCARD_COUNT-1) {
-        if (circuit_build_times_add_timeout(&final, 0, approx_time()))
+        if (circuit_build_times_add_timeout(&final, 0,
+                  approx_time()-final.timeout_ms/1000.0-1))
           final.have_computed_timeout = 1;
       }
     }
