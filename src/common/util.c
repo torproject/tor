@@ -1055,7 +1055,7 @@ tv_to_msec(const struct timeval *tv)
 {
   int64_t conv = ((int64_t)tv->tv_sec)*1000L;
   /* Round ghetto-style */
-  conv += (tv->tv_usec+500)/1000L;
+  conv += ((int64_t)tv->tv_usec+500)/1000L;
   return conv;
 }
 
