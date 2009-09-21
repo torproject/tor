@@ -37,6 +37,15 @@ const char tor_git_revision[] = "";
 #define GEOIP_PRIVATE
 #define MEMPOOL_PRIVATE
 #define ROUTER_PRIVATE
+#define CIRCUIT_PRIVATE
+
+/*
+ * Linux doesn't provide lround in math.h by default, but mac os does...
+ * It's best just to leave math.h out of the picture entirely.
+ */
+//#include <math.h>
+long int lround(double x);
+double fabs(double x);
 
 #include "or.h"
 #include "test.h"
@@ -410,7 +419,7 @@ test_crypto_dh(void)
   char p2[DH_BYTES];
   char s1[DH_BYTES];
   char s2[DH_BYTES];
-  int s1len, s2len;
+  ssize_t s1len, s2len;
 
   test_eq(crypto_dh_get_bytes(dh1), DH_BYTES);
   test_eq(crypto_dh_get_bytes(dh2), DH_BYTES);
@@ -1113,6 +1122,24 @@ test_util(void)
   test_assert(U64_LITERAL(0) ==
               tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
   test_assert(i == 0);
+
+  {
+  /* Test tor_parse_double. */
+  double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  test_assert(DBL_TO_U64(d) == 10);
+  d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  test_assert(DBL_TO_U64(d) == 0);
+  d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 0);
+  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 0);
+  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
+  test_assert(i == 1);
+  d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  }
 
   /* Test failing snprintf cases */
   test_eq(-1, tor_snprintf(buf, 0, "Foo"));
@@ -3337,6 +3364,220 @@ done:
   return;
 }
 
+static void
+test_dirutil_param_voting(void)
+{
+  networkstatus_t vote1, vote2, vote3, vote4;
+  smartlist_t *votes = smartlist_create();
+  char *res = NULL;
+
+  /* dirvote_compute_params only looks at the net_params field of the votes,
+     so that's all we need to set.
+   */
+  memset(&vote1, 0, sizeof(vote1));
+  memset(&vote2, 0, sizeof(vote2));
+  memset(&vote3, 0, sizeof(vote3));
+  memset(&vote4, 0, sizeof(vote4));
+  vote1.net_params = smartlist_create();
+  vote2.net_params = smartlist_create();
+  vote3.net_params = smartlist_create();
+  vote4.net_params = smartlist_create();
+  smartlist_split_string(vote1.net_params,
+                         "ab=90 abcd=20 cw=50 x-yz=-99", NULL, 0, 0);
+  smartlist_split_string(vote2.net_params,
+                         "ab=27 cw=5 x-yz=88", NULL, 0, 0);
+  smartlist_split_string(vote3.net_params,
+                         "abcd=20 c=60 cw=500 x-yz=-9 zzzzz=101", NULL, 0, 0);
+  smartlist_split_string(vote4.net_params,
+                         "ab=900 abcd=200 c=1 cw=51 x-yz=100", NULL, 0, 0);
+  test_eq(100, networkstatus_get_param(&vote4, "x-yz", 50));
+  test_eq(222, networkstatus_get_param(&vote4, "foobar", 222));
+
+  smartlist_add(votes, &vote1);
+  smartlist_add(votes, &vote2);
+  smartlist_add(votes, &vote3);
+  smartlist_add(votes, &vote4);
+
+  res = dirvote_compute_params(votes);
+  test_streq(res,
+             "ab=90 abcd=20 c=1 cw=50 x-yz=-9 zzzzz=101");
+
+ done:
+  tor_free(res);
+  SMARTLIST_FOREACH(vote1.net_params, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(vote2.net_params, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(vote3.net_params, char *, cp, tor_free(cp));
+  SMARTLIST_FOREACH(vote4.net_params, char *, cp, tor_free(cp));
+  smartlist_free(vote1.net_params);
+  smartlist_free(vote2.net_params);
+  smartlist_free(vote3.net_params);
+  smartlist_free(vote4.net_params);
+
+  return;
+}
+
+static void
+test_circuit_timeout(void)
+{
+  /* Plan:
+   *  1. Generate 1000 samples
+   *  2. Estimate parameters
+   *  3. If difference, repeat
+   *  4. Save state
+   *  5. load state
+   *  6. Estimate parameters
+   *  7. compare differences
+   */
+  circuit_build_times_t initial;
+  circuit_build_times_t estimate;
+  circuit_build_times_t final;
+  double timeout1, timeout2;
+  or_state_t state;
+  char *msg;
+  int i, runs;
+  circuit_build_times_init(&initial);
+  circuit_build_times_init(&estimate);
+  circuit_build_times_init(&final);
+
+  memset(&state, 0, sizeof(or_state_t));
+
+  circuitbuild_running_unit_tests();
+#define timeout0 (build_time_t)(30*1000.0)
+  initial.Xm = 750;
+  circuit_build_times_initial_alpha(&initial, BUILDTIMEOUT_QUANTILE_CUTOFF,
+                                    timeout0);
+  do {
+    int n = 0;
+    for (i=0; i < MIN_CIRCUITS_TO_OBSERVE; i++) {
+      if (circuit_build_times_add_time(&estimate,
+              circuit_build_times_generate_sample(&initial, 0, 1)) == 0) {
+        n++;
+      }
+    }
+    circuit_build_times_update_alpha(&estimate);
+    timeout1 = circuit_build_times_calculate_timeout(&estimate,
+                                  BUILDTIMEOUT_QUANTILE_CUTOFF);
+    circuit_build_times_set_timeout(&estimate);
+    log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout1, estimate.Xm);
+    /* XXX: 5% distribution error may not be the right metric */
+  } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
+                circuit_build_times_cdf(&initial, timeout1)) > 0.05
+                /* 5% error */
+           && estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+
+  test_assert(estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+
+  circuit_build_times_update_state(&estimate, &state);
+  test_assert(circuit_build_times_parse_state(&final, &state, &msg) == 0);
+
+  circuit_build_times_update_alpha(&final);
+  timeout2 = circuit_build_times_calculate_timeout(&final,
+                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
+
+  circuit_build_times_set_timeout(&final);
+  log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout2, final.Xm);
+
+  test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
+                   circuit_build_times_cdf(&initial, timeout2)) < 0.05);
+
+  for (runs = 0; runs < 50; runs++) {
+    int build_times_idx = 0;
+    int total_build_times = 0;
+
+    final.timeout_ms = BUILD_TIMEOUT_INITIAL_VALUE;
+    estimate.timeout_ms = BUILD_TIMEOUT_INITIAL_VALUE;
+
+    for (i = 0; i < RECENT_CIRCUITS*2; i++) {
+      circuit_build_times_network_circ_success(&estimate);
+      circuit_build_times_add_time(&estimate,
+            circuit_build_times_generate_sample(&estimate, 0,
+                BUILDTIMEOUT_QUANTILE_CUTOFF));
+      estimate.have_computed_timeout = 1;
+      circuit_build_times_network_circ_success(&estimate);
+      circuit_build_times_add_time(&final,
+            circuit_build_times_generate_sample(&final, 0,
+                BUILDTIMEOUT_QUANTILE_CUTOFF));
+      final.have_computed_timeout = 1;
+    }
+
+    test_assert(!circuit_build_times_network_check_changed(&estimate));
+    test_assert(!circuit_build_times_network_check_changed(&final));
+
+    /* Reset liveness to be non-live */
+    final.liveness.network_last_live = 0;
+    estimate.liveness.network_last_live = 0;
+
+    build_times_idx = estimate.build_times_idx;
+    total_build_times = estimate.total_build_times;
+    for (i = 0; i < NETWORK_NONLIVE_TIMEOUT_COUNT; i++) {
+      test_assert(circuit_build_times_network_check_live(&estimate));
+      test_assert(circuit_build_times_network_check_live(&final));
+
+      if (circuit_build_times_add_timeout(&estimate, 0,
+                 (time_t)(approx_time()-estimate.timeout_ms/1000.0-1)))
+        estimate.have_computed_timeout = 1;
+      if (circuit_build_times_add_timeout(&final, 0,
+                 (time_t)(approx_time()-final.timeout_ms/1000.0-1)))
+        final.have_computed_timeout = 1;
+    }
+
+    test_assert(!circuit_build_times_network_check_live(&estimate));
+    test_assert(!circuit_build_times_network_check_live(&final));
+
+    for ( ; i < NETWORK_NONLIVE_DISCARD_COUNT; i++) {
+      if (circuit_build_times_add_timeout(&estimate, 0,
+                (time_t)(approx_time()-estimate.timeout_ms/1000.0-1)))
+        estimate.have_computed_timeout = 1;
+
+      if (i < NETWORK_NONLIVE_DISCARD_COUNT-1) {
+        if (circuit_build_times_add_timeout(&final, 0,
+                (time_t)(approx_time()-final.timeout_ms/1000.0-1)))
+          final.have_computed_timeout = 1;
+      }
+    }
+
+    test_assert(!circuit_build_times_network_check_live(&estimate));
+    test_assert(!circuit_build_times_network_check_live(&final));
+
+    log_info(LD_CIRC, "idx: %d %d, tot: %d %d",
+             build_times_idx, estimate.build_times_idx,
+             total_build_times, estimate.total_build_times);
+
+    /* Check rollback index. Should match top of loop. */
+    test_assert(build_times_idx == estimate.build_times_idx);
+    test_assert(total_build_times == estimate.total_build_times);
+
+    /* Now simulate that the network has become live and we need
+     * a change */
+    circuit_build_times_network_is_live(&estimate);
+    circuit_build_times_network_is_live(&final);
+
+    for (i = 0; i < MAX_RECENT_TIMEOUT_COUNT; i++) {
+      if (circuit_build_times_add_timeout(&estimate, 1, approx_time()-1))
+        estimate.have_computed_timeout = 1;
+
+      if (i < MAX_RECENT_TIMEOUT_COUNT-1) {
+        if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
+          final.have_computed_timeout = 1;
+      }
+    }
+
+    test_assert(estimate.liveness.after_firsthop_idx == 0);
+    test_assert(final.liveness.after_firsthop_idx ==
+                MAX_RECENT_TIMEOUT_COUNT-1);
+
+    test_assert(circuit_build_times_network_check_live(&estimate));
+    test_assert(circuit_build_times_network_check_live(&final));
+
+    if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
+      final.have_computed_timeout = 1;
+
+  }
+
+done:
+  return;
+}
+
 extern const char AUTHORITY_CERT_1[];
 extern const char AUTHORITY_SIGNKEY_1[];
 extern const char AUTHORITY_CERT_2[];
@@ -3494,6 +3735,9 @@ test_v3_networkstatus(void)
   crypto_pk_get_digest(cert1->identity_key, voter->identity_digest);
   smartlist_add(vote->voters, voter);
   vote->cert = authority_cert_dup(cert1);
+  vote->net_params = smartlist_create();
+  smartlist_split_string(vote->net_params, "circuitwindow=101 foo=990",
+                         NULL, 0, 0);
   vote->routerstatus_list = smartlist_create();
   /* add the first routerstatus. */
   vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
@@ -3635,6 +3879,9 @@ test_v3_networkstatus(void)
   vote->dist_seconds = 300;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert2);
+  vote->net_params = smartlist_create();
+  smartlist_split_string(vote->net_params, "bar=2000000000 circuitwindow=20",
+                         NULL, 0, 0);
   tor_free(vote->client_versions);
   tor_free(vote->server_versions);
   voter = smartlist_get(vote->voters, 0);
@@ -3673,6 +3920,9 @@ test_v3_networkstatus(void)
   vote->dist_seconds = 250;
   authority_cert_free(vote->cert);
   vote->cert = authority_cert_dup(cert3);
+  vote->net_params = smartlist_create();
+  smartlist_split_string(vote->net_params, "circuitwindow=80 foo=660",
+                         NULL, 0, 0);
   smartlist_add(vote->supported_methods, tor_strdup("4"));
   vote->client_versions = tor_strdup("0.1.2.14,0.1.2.17");
   vote->server_versions = tor_strdup("0.1.2.10,0.1.2.15,0.1.2.16");
@@ -3729,6 +3979,10 @@ test_v3_networkstatus(void)
   test_streq(cp, "Authority:Exit:Fast:Guard:MadeOfCheese:MadeOfTin:"
              "Running:Stable:V2Dir:Valid");
   tor_free(cp);
+  cp = smartlist_join_strings(con->net_params, ":", 0, NULL);
+  test_streq(cp, "bar=2000000000:circuitwindow=80:foo=660");
+  tor_free(cp);
+
   test_eq(4, smartlist_len(con->voters)); /*3 voters, 1 legacy key.*/
   /* The voter id digests should be in this order. */
   test_assert(memcmp(cert2->cache_info.identity_digest,
@@ -4848,6 +5102,8 @@ static struct {
   ENT(dir_format),
   ENT(dirutil),
   SUBENT(dirutil, measured_bw),
+  SUBENT(dirutil, param_voting),
+  ENT(circuit_timeout),
   ENT(v3_networkstatus),
   ENT(policies),
   ENT(rend_fns),

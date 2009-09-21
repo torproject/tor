@@ -91,8 +91,9 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     }
   });
   if (!intro_key) {
-    log_warn(LD_BUG, "Internal error: could not find intro key; we "
-             "only have a v2 rend desc with %d intro points.",
+    log_info(LD_REND, "Our introduction point knowledge changed in "
+             "mid-connect! Could not find intro key; we only have a "
+             "v2 rend desc with %d intro points. Giving up.",
              smartlist_len(entry->parsed->intro_nodes));
     goto err;
   }
@@ -128,7 +129,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
              REND_DESC_COOKIE_LEN);
       v3_shift += 2+REND_DESC_COOKIE_LEN;
     }
-    set_uint32(tmp+v3_shift+1, htonl(time(NULL)));
+    set_uint32(tmp+v3_shift+1, htonl((uint32_t)time(NULL)));
     v3_shift += 4;
   } /* if version 2 only write version number */
   else if (entry->parsed->protocols & (1<<2)) {
@@ -644,7 +645,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
   /* set the windows to default. these are the windows
    * that alice thinks bob has.
    */
-  hop->package_window = CIRCWINDOW_START;
+  hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
   onion_append_to_cpath(&circ->cpath, hop);

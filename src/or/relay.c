@@ -1635,7 +1635,8 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
       it_pool = mp_pool_new(sizeof(insertion_time_elem_t), 1024);
     tor_gettimeofday(&now);
 #define SECONDS_IN_A_DAY 86400L
-    added = (now.tv_sec % SECONDS_IN_A_DAY) * 100L + now.tv_usec / 10000L;
+    added = (uint32_t)(((now.tv_sec % SECONDS_IN_A_DAY) * 100L)
+            + ((uint32_t)now.tv_usec / (uint32_t)10000L));
     if (!it_queue) {
       it_queue = tor_malloc_zero(sizeof(insertion_time_queue_t));
       queue->insertion_times = it_queue;
@@ -1879,15 +1880,17 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       uint32_t cell_waiting_time;
       insertion_time_queue_t *it_queue = queue->insertion_times;
       tor_gettimeofday(&now);
-      flushed = (now.tv_sec % SECONDS_IN_A_DAY) * 100L +
-                 now.tv_usec / 10000L;
+      flushed = (uint32_t)((now.tv_sec % SECONDS_IN_A_DAY) * 100L +
+                 (uint32_t)now.tv_usec / (uint32_t)10000L);
       if (!it_queue || !it_queue->first) {
         log_warn(LD_BUG, "Cannot determine insertion time of cell.");
       } else {
         or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
         insertion_time_elem_t *elem = it_queue->first;
-        cell_waiting_time = (flushed * 10L + SECONDS_IN_A_DAY * 1000L -
-            elem->insertion_time * 10L) % (SECONDS_IN_A_DAY * 1000L);
+        cell_waiting_time =
+            (uint32_t)((flushed * 10L + SECONDS_IN_A_DAY * 1000L -
+                        elem->insertion_time * 10L) %
+                       (SECONDS_IN_A_DAY * 1000L));
 #undef SECONDS_IN_A_DAY
         elem->counter--;
         if (elem->counter < 1) {

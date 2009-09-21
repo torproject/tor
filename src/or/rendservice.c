@@ -264,7 +264,7 @@ rend_config_services(or_options_t *options, int validate_only)
 
   for (line = options->RendConfigLines; line; line = line->next) {
     if (!strcasecmp(line->key, "HiddenServiceDir")) {
-      if (service) {
+      if (service) { /* register the one we just finished parsing */
         if (validate_only)
           rend_service_free(service);
         else
@@ -921,7 +921,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   len = r;
   if (*buf == 3) {
     /* Version 3 INTRODUCE2 cell. */
-    time_t ts = 0, now = time(NULL);
+    time_t ts = 0;
     v3_shift = 1;
     auth_type = buf[1];
     switch (auth_type) {
@@ -944,13 +944,12 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     }
 
     /* Check timestamp. */
-    memcpy((char*)&ts, buf+1+v3_shift, sizeof(uint32_t));
+    ts = ntohl(get_uint32(buf+1+v3_shift));
     v3_shift += 4;
-    ts = ntohl(ts);
     if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
         (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
       log_warn(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
-          (now - ts) < 0 ? "old" : "new");
+               (now - ts) < 0 ? "old" : "new");
       return -1;
     }
   }
@@ -1101,7 +1100,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   circ_needs_uptime = rend_service_requires_uptime(service);
 
   /* help predict this next time */
-  rep_hist_note_used_internal(time(NULL), circ_needs_uptime, 1);
+  rep_hist_note_used_internal(now, circ_needs_uptime, 1);
 
   /* Launch a circuit to alice's chosen rendezvous point.
    */
@@ -1137,7 +1136,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   launched->build_state->pending_final_cpath = cpath =
     tor_malloc_zero(sizeof(crypt_path_t));
   cpath->magic = CRYPT_PATH_MAGIC;
-  launched->build_state->expiry_time = time(NULL) + MAX_REND_TIMEOUT;
+  launched->build_state->expiry_time = now + MAX_REND_TIMEOUT;
 
   cpath->dh_handshake_state = dh;
   dh = NULL;
@@ -1477,7 +1476,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   /* set the windows to default. these are the windows
    * that bob thinks alice has.
    */
-  hop->package_window = CIRCWINDOW_START;
+  hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
   onion_append_to_cpath(&circuit->cpath, hop);

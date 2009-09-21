@@ -117,6 +117,9 @@ typedef unsigned int uint32_t;
 #ifndef INT32_MAX
 #define INT32_MAX 0x7fffffffu
 #endif
+#ifndef INT32_MIN
+#define INT32_MIN (-2147483647-1)
+#endif
 #endif
 
 #if (SIZEOF_LONG == 4)

@@ -164,10 +164,11 @@ static config_var_t _option_vars[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
-  V(CircuitBuildTimeout,         INTERVAL, "1 minute"),
+  V(CircuitBuildTimeout,         INTERVAL, "0"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
+  V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
   V(ConstrainedSockets,          BOOL,     "0"),
   V(ConstrainedSockSize,         MEMUNIT,  "8192"),
@@ -408,6 +409,10 @@ static config_var_t _state_vars[] = {
   V(LastRotatedOnionKey,              ISOTIME,  NULL),
   V(LastWritten,                      ISOTIME,  NULL),
 
+  V(TotalBuildTimes,                  UINT,     NULL),
+  VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
+  VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
+
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
@@ -595,6 +600,10 @@ static config_var_description_t options_description[] = {
 
   /* Hidden service options: HiddenService: dir,excludenodes, nodes,
    * options, port.  PublishHidServDescriptor */
+
+  /* Circuit build time histogram options */
+  { "CircuitBuildTimeBin", "Histogram of recent circuit build times"},
+  { "TotalBuildTimes", "Total number of buildtimes in histogram"},
 
   /* Nonpersistent options: __LeaveStreamsUnattached, __AllDirActionsPrivate */
   { NULL, NULL },
@@ -1506,7 +1515,10 @@ expand_abbrev(config_format_t *fmt, const char *option, int command_line,
                  fmt->abbrevs[i].abbreviated,
                  fmt->abbrevs[i].full);
       }
-      return fmt->abbrevs[i].full;
+      /* Keep going through the list in case we want to rewrite it more.
+       * (We could imagine recursing here, but I don't want to get the
+       * user into an infinite loop if we craft our list wrong.) */
+      option = fmt->abbrevs[i].full;
     }
   }
   return option;
@@ -2521,7 +2533,8 @@ is_local_addr(const tor_addr_t *addr)
      * the same /24 as last_resolved_addr will be the same as checking whether
      * it was on net 0, which is already done by is_internal_IP.
      */
-    if ((last_resolved_addr & 0xffffff00ul) == (ip & 0xffffff00ul))
+    if ((last_resolved_addr & (uint32_t)0xffffff00ul)
+        == (ip & (uint32_t)0xffffff00ul))
       return 1;
   }
   return 0;
@@ -2908,11 +2921,6 @@ compute_publishserverdescriptor(or_options_t *options)
 
 /** Highest allowable value for RendPostPeriod. */
 #define MAX_DIR_PERIOD (MIN_ONION_KEY_LIFETIME/2)
-
-/** Lowest allowable value for CircuitBuildTimeout; values too low will
- * increase network load because of failing connections being retried, and
- * might prevent users from connecting to the network at all. */
-#define MIN_CIRCUIT_BUILD_TIMEOUT 30
 
 /** Lowest allowable value for MaxCircuitDirtiness; if this is too low, Tor
  * will generate too many circuits and potentially overload the network. */
@@ -3358,12 +3366,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     log(LOG_WARN, LD_CONFIG, "RendPostPeriod is too large; clipping to %ds.",
         MAX_DIR_PERIOD);
     options->RendPostPeriod = MAX_DIR_PERIOD;
-  }
-
-  if (options->CircuitBuildTimeout < MIN_CIRCUIT_BUILD_TIMEOUT) {
-    log(LOG_WARN, LD_CONFIG, "CircuitBuildTimeout option is too short; "
-      "raising to %d seconds.", MIN_CIRCUIT_BUILD_TIMEOUT);
-    options->CircuitBuildTimeout = MIN_CIRCUIT_BUILD_TIMEOUT;
   }
 
   if (options->MaxCircuitDirtiness < MIN_MAX_CIRCUIT_DIRTINESS) {
@@ -4280,7 +4282,7 @@ options_init_from_string(const char *cf,
  err:
   config_free(&options_format, newoptions);
   if (*msg) {
-    int len = strlen(*msg)+256;
+    int len = (int)strlen(*msg)+256;
     char *newmsg = tor_malloc(len);
 
     tor_snprintf(newmsg, len, "Failed to parse/validate config: %s", *msg);
@@ -4860,35 +4862,28 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
   uint64_t v = 0;
   double d = 0;
   int use_float = 0;
-
-  smartlist_t *sl;
+  char *cp;
 
   tor_assert(ok);
-  sl = smartlist_create();
-  smartlist_split_string(sl, val, NULL,
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 3);
 
-  if (smartlist_len(sl) < 1 || smartlist_len(sl) > 2) {
-    *ok = 0;
-    goto done;
-  }
-
-  v = tor_parse_uint64(smartlist_get(sl,0), 10, 0, UINT64_MAX, ok, NULL);
-  if (!*ok) {
-    int r = sscanf(smartlist_get(sl,0), "%lf", &d);
-    if (r == 0 || d < 0)
+  v = tor_parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
+  if (!*ok || (cp && *cp == '.')) {
+    d = tor_parse_double(val, 0, UINT64_MAX, ok, &cp);
+    if (!*ok)
       goto done;
     use_float = 1;
   }
 
-  if (smartlist_len(sl) == 1) {
+  if (!cp) {
     *ok = 1;
     v = use_float ? DBL_TO_U64(d) :  v;
     goto done;
   }
 
+  cp = (char*) eat_whitespace(cp);
+
   for ( ;u->unit;++u) {
-    if (!strcasecmp(u->unit, smartlist_get(sl,1))) {
+    if (!strcasecmp(u->unit, cp)) {
       if (use_float)
         v = u->multiplier * d;
       else
@@ -4897,11 +4892,9 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
       goto done;
     }
   }
-  log_warn(LD_CONFIG, "Unknown unit '%s'.", (char*)smartlist_get(sl,1));
+  log_warn(LD_CONFIG, "Unknown unit '%s'.", cp);
   *ok = 0;
  done:
-  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
-  smartlist_free(sl);
 
   if (*ok)
     return v;
@@ -4916,7 +4909,8 @@ config_parse_units(const char *val, struct unit_table_t *u, int *ok)
 static uint64_t
 config_parse_memunit(const char *s, int *ok)
 {
-  return config_parse_units(s, memory_units, ok);
+  uint64_t u = config_parse_units(s, memory_units, ok);
+  return u;
 }
 
 /** Parse a string in the format "number unit", where unit is a unit of time.
@@ -5066,6 +5060,10 @@ or_state_set(or_state_t *new_state)
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
     tor_free(err);
   }
+  if (circuit_build_times_parse_state(&circ_times, global_state, &err) < 0) {
+    log_warn(LD_GENERAL,"%s",err);
+    tor_free(err);
+  }
 }
 
 /** Reload the persistent state from disk, generating a new state as needed.
@@ -5198,6 +5196,7 @@ or_state_save(time_t now)
    * to avoid redundant writes. */
   entry_guards_update_state(global_state);
   rep_hist_update_state(global_state);
+  circuit_build_times_update_state(&circ_times, global_state);
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 

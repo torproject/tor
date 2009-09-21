@@ -1864,7 +1864,7 @@ version_from_platform(const char *platform)
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
  *   NS_V3_VOTE - Output a complete V3 NS vote
- *   NS_CONTROL_PORT - Output a NS docunent for the control port
+ *   NS_CONTROL_PORT - Output a NS document for the control port
  */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
@@ -2324,7 +2324,7 @@ measured_bw_line_apply(measured_bw_line_t *parsed_line,
 
   if (rs) {
     rs->has_measured_bw = 1;
-    rs->measured_bw = parsed_line->bw;
+    rs->measured_bw = (uint32_t)parsed_line->bw;
   } else {
     log_info(LD_DIRSERV, "Node ID %s not found in routerstatus list",
              parsed_line->node_hex);
@@ -2552,6 +2552,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
     smartlist_add(v3_out->known_flags, tor_strdup("Unnamed"));
   }
   smartlist_sort_strings(v3_out->known_flags);
+
+  if (options->ConsensusParams) {
+    v3_out->net_params = smartlist_create();
+    smartlist_split_string(v3_out->net_params,
+                           options->ConsensusParams, NULL, 0, 0);
+    smartlist_sort_strings(v3_out->net_params);
+  }
 
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);

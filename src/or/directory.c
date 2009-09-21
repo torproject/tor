@@ -554,11 +554,6 @@ void
 connection_dir_request_failed(dir_connection_t *conn)
 {
   if (directory_conn_is_self_reachability_test(conn)) {
-    routerinfo_t *me = router_get_my_routerinfo();
-    if (me)
-      control_event_server_status(LOG_WARN,
-                                  "REACHABILITY_FAILED DIRADDRESS=%s:%d",
-                                  me->address, me->dir_port);
     return; /* this was a test fetch. don't retry. */
   }
   if (entry_list_can_grow(get_options()))
@@ -886,7 +881,7 @@ static char *
 directory_get_consensus_url(int supports_conditional_consensus)
 {
   char *url;
-  int len;
+  size_t len;
 
   if (supports_conditional_consensus) {
     char *authority_id_list;
@@ -2337,7 +2332,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
   need_at_least = smartlist_len(want_authorities)/2+1;
   SMARTLIST_FOREACH(want_authorities, const char *, d, {
     char want_digest[DIGEST_LEN];
-    int want_len = strlen(d)/2;
+    size_t want_len = strlen(d)/2;
     if (want_len > DIGEST_LEN)
       want_len = DIGEST_LEN;
 

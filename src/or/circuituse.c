@@ -20,6 +20,8 @@ extern circuit_t *global_circuitlist; /* from circuitlist.c */
 static void circuit_expire_old_circuits(time_t now);
 static void circuit_increment_failure_count(void);
 
+long int lround(double x);
+
 /** Return 1 if <b>circ</b> could be returned by circuit_get_best().
  * Else return 0.
  */
@@ -263,16 +265,18 @@ circuit_conforms_to_options(const origin_circuit_t *circ,
 void
 circuit_expire_building(time_t now)
 {
-  circuit_t *victim, *circ = global_circuitlist;
-  time_t general_cutoff = now - get_options()->CircuitBuildTimeout;
-  time_t begindir_cutoff = now - get_options()->CircuitBuildTimeout/2;
+  circuit_t *victim, *next_circ = global_circuitlist;
+  /* circ_times.timeout is BUILD_TIMEOUT_INITIAL_VALUE if we haven't
+   * decided on a customized one yet */
+  time_t general_cutoff = now - lround(circ_times.timeout_ms/1000);
+  time_t begindir_cutoff = now - lround(circ_times.timeout_ms/2000);
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 
-  while (circ) {
+  while (next_circ) {
     time_t cutoff;
-    victim = circ;
-    circ = circ->next;
+    victim = next_circ;
+    next_circ = next_circ->next;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
         victim->marked_for_close) /* don't mess with marked circs */
       continue;
@@ -343,6 +347,12 @@ circuit_expire_building(time_t now)
             continue;
           break;
       }
+    } else { /* circuit not open, consider recording failure as timeout */
+      int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath &&
+            TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_OPEN;
+      if (circuit_build_times_add_timeout(&circ_times, first_hop_succeeded,
+                                          victim->timestamp_created))
+        circuit_build_times_set_timeout(&circ_times);
     }
 
     if (victim->n_conn)
@@ -431,11 +441,11 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
 }
 
 /** Don't keep more than this many unused open circuits around. */
-#define MAX_UNUSED_OPEN_CIRCUITS 12
+#define MAX_UNUSED_OPEN_CIRCUITS 14
 
 /** Figure out how many circuits we have open that are clean. Make
  * sure it's enough for all the upcoming behaviors we predict we'll have.
- * But if we have too many, close the not-so-useful ones.
+ * But put an upper bound on the total number of circuits.
  */
 static void
 circuit_predict_and_launch_new(void)
@@ -514,6 +524,19 @@ circuit_predict_and_launch_new(void)
              "Have %d clean circs (%d uptime-internal, %d internal), need"
              " another hidden service circ.",
              num, num_uptime_internal, num_internal);
+    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+    return;
+  }
+
+  /* Finally, check to see if we still need more circuits to learn
+   * a good build timeout. But if we're close to our max number we
+   * want, don't do another -- we want to leave a few slots open so
+   * we can still build circuits preemptively as needed. */
+  if (num < MAX_UNUSED_OPEN_CIRCUITS-2 &&
+      circuit_build_times_needs_circuits_now(&circ_times)) {
+    flags = CIRCLAUNCH_NEED_CAPACITY;
+    log_info(LD_CIRC,
+             "Have %d clean circs need another buildtime test circ.", num);
     circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
     return;
   }
@@ -624,6 +647,11 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
   tor_fragile_assert();
 }
 
+/** If we haven't yet decided on a good timeout value for circuit
+ * building, we close idles circuits aggressively so we can get more
+ * data points. */
+#define IDLE_TIMEOUT_WHILE_LEARNING (10*60)
+
 /** Find each circuit that has been unused for too long, or dirty
  * for too long and has no streams on it: mark it for close.
  */
@@ -631,7 +659,15 @@ static void
 circuit_expire_old_circuits(time_t now)
 {
   circuit_t *circ;
-  time_t cutoff = now - get_options()->CircuitIdleTimeout;
+  time_t cutoff;
+
+  if (circuit_build_times_needs_circuits(&circ_times)) {
+    /* Circuits should be shorter lived if we need more of them
+     * for learning a good build timeout */
+    cutoff = now - IDLE_TIMEOUT_WHILE_LEARNING;
+  } else {
+    cutoff = now - get_options()->CircuitIdleTimeout;
+  }
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (circ->marked_for_close || ! CIRCUIT_IS_ORIGIN(circ))
@@ -724,17 +760,12 @@ circuit_testing_opened(origin_circuit_t *circ)
 static void
 circuit_testing_failed(origin_circuit_t *circ, int at_last_hop)
 {
-  routerinfo_t *me = router_get_my_routerinfo();
   if (server_mode(get_options()) && check_whether_orport_reachable())
-    return;
-  if (!me)
     return;
 
   log_info(LD_GENERAL,
            "Our testing circuit (to see if your ORPort is reachable) "
            "has failed. I'll try again later.");
-  control_event_server_status(LOG_WARN, "REACHABILITY_FAILED ORADDRESS=%s:%d",
-                             me->address, me->or_port);
 
   /* These aren't used yet. */
   (void)circ;
@@ -811,6 +842,9 @@ circuit_build_failed(origin_circuit_t *circ)
                "(%s:%d). I'm going to try to rotate to a better connection.",
                n_conn->_base.address, n_conn->_base.port);
       n_conn->is_bad_for_new_circs = 1;
+    } else {
+      log_info(LD_OR,
+               "Our circuit died before the first hop with no connection");
     }
     if (n_conn_id) {
       entry_guard_register_connect_status(n_conn_id, 0, 1, time(NULL));

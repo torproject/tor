@@ -1036,6 +1036,8 @@ connection_tls_finish_handshake(or_connection_t *conn)
                                               digest_rcvd) < 0)
     return -1;
 
+  circuit_build_times_network_is_live(&circ_times);
+
   if (tor_tls_used_v1_handshake(conn->tls)) {
     conn->link_proto = 1;
     if (!started_here) {
@@ -1087,6 +1089,7 @@ connection_or_set_state_open(or_connection_t *conn)
   control_event_or_conn_status(conn, OR_CONN_EVENT_CONNECTED, 0);
 
   if (started_here) {
+    circuit_build_times_network_is_live(&circ_times);
     rep_hist_note_connect_succeeded(conn->identity_digest, now);
     if (entry_guard_register_connect_status(conn->identity_digest,
                                             1, 0, now) < 0) {
@@ -1187,6 +1190,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
     if (connection_fetch_var_cell_from_buf(conn, &var_cell)) {
       if (!var_cell)
         return 0; /* not yet. */
+      circuit_build_times_network_is_live(&circ_times);
       command_process_var_cell(var_cell, conn);
       var_cell_free(var_cell);
     } else {
@@ -1196,6 +1200,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
                                                                  available? */
         return 0; /* not yet */
 
+      circuit_build_times_network_is_live(&circ_times);
       connection_fetch_from_buf(buf, CELL_NETWORK_SIZE, TO_CONN(conn));
 
       /* retrieve cell info from buf (create the host-order struct from the

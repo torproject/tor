@@ -772,9 +772,6 @@ consider_testing_reachability(int test_or, int test_dir)
              me->address, me->or_port);
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me,
                              CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
-    control_event_server_status(LOG_NOTICE,
-                                "CHECKING_REACHABILITY ORADDRESS=%s:%d",
-                                me->address, me->or_port);
   }
 
   tor_addr_from_ipv4h(&addr, me->addr);
@@ -790,10 +787,6 @@ consider_testing_reachability(int test_or, int test_dir)
                                DIR_PURPOSE_FETCH_SERVERDESC,
                                ROUTER_PURPOSE_GENERAL,
                                1, "authority.z", NULL, 0, 0);
-
-    control_event_server_status(LOG_NOTICE,
-                                "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
-                                me->address, me->dir_port);
   }
 }
 
@@ -809,8 +802,11 @@ router_orport_found_reachable(void)
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
-    if (!me)
+    if (!me) { /* should never happen */
+      log_warn(LD_BUG, "ORPort found reachable, but I have no routerinfo "
+               "yet. Failing to inform controller of success.");
       return;
+    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
                                 me->address, me->or_port);
@@ -828,8 +824,11 @@ router_dirport_found_reachable(void)
     can_reach_dir_port = 1;
     if (!me || decide_to_advertise_dirport(get_options(), me->dir_port))
       mark_my_descriptor_dirty();
-    if (!me)
+    if (!me) { /* should never happen */
+      log_warn(LD_BUG, "DirPort found reachable, but I have no routerinfo "
+               "yet. Failing to inform controller of success.");
       return;
+    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
                                 me->address, me->dir_port);
@@ -1909,7 +1908,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write dirreq-stats to extra-info "
@@ -1921,7 +1920,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->EntryStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
                         "entry-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write entry-stats to extra-info "
@@ -1933,7 +1932,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->CellStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
                         "cell-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write buffer-stats to extra-info "
@@ -1945,7 +1944,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     if (options->ExitPortStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"exit-stats",
                         "exit-stats-end", since, &contents) > 0) {
-      int pos = strlen(s);
+      size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
         log_warn(LD_DIR, "Could not write exit-stats to extra-info "
