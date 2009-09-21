@@ -2838,13 +2838,11 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
 /** Return 1 if router <b>exit</b> is likely to allow stream <b>conn</b>
  * to exit from it, or 0 if it probably will not allow it.
  * (We might be uncertain if conn's destination address has not yet been
- * resolved.) If the router is in the list of excluded nodes, also return 0;
+ * resolved.)
  */
 int
 connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
 {
-  or_options_t *options = get_options();
-
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
@@ -2890,10 +2888,6 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
     if (!conn->chosen_exit_name && policy_is_reject_star(exit->exit_policy))
       return 0;
   }
-  if (options->_ExcludeExitNodesUnion &&
-      routerset_contains_router(options->_ExcludeExitNodesUnion, exit))
-    return 0;
-
   return 1;
 }
 
