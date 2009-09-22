@@ -59,14 +59,15 @@ doxygen:
 	doxygen && cd doc/doxygen/latex && make
 
 test:
-	./src/or/test
+	./src/test/test
 
 # Avoid strlcpy.c, strlcat.c, tree.h
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
 	        src/common/*.h                        \
 		src/common/[^asO]*.c src/common/address.c \
-		src/or/[^et]*.[ch] src/or/t[^i]*.c src/or/eventdns_tor.h
+		src/or/[^et]*.[ch] src/or/t*.c src/or/eventdns_tor.h \
+		src/test/test*.[ch]
 
 check-docs:
 	./contrib/checkOptionDocs.pl
