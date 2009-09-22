@@ -6,7 +6,7 @@ AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
         -DBINDIR="\"$(bindir)\""
 
-CFLAGS += -I../or
+AM_CFLAGS = -I../or
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on windows, but I assure you that it
