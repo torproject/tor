@@ -26,7 +26,7 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
 
   make clean
   make CFLAGS='-g -fprofile-arcs -ftest-coverage'
-  ./src/or/test
+  ./src/test/test
   cd src/common; gcov *.[ch]
   cd ../or; gcov *.[ch]
 

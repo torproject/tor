@@ -185,7 +185,7 @@ if [ ! -z $STRIP ]
 then
 ${HOST_TRIPLET}strip \
 	src/or/tor \
-	src/or/test \
+	src/test/test \
 	src/tools/tor-resolve
 fi
 
