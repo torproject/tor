@@ -10,26 +10,9 @@
 #include "or.h"
 #include "test.h"
 
-/** Run unit tests for router descriptor generation logic. */
 static void
-test_dir_formats(void)
+test_dir_nicknames(void)
 {
-  char buf[8192], buf2[8192];
-  char platform[256];
-  char fingerprint[FINGERPRINT_LEN+1];
-  char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
-  size_t pk1_str_len, pk2_str_len, pk3_str_len;
-  routerinfo_t *r1=NULL, *r2=NULL;
-  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
-  routerinfo_t *rp1 = NULL;
-  addr_policy_t *ex1, *ex2;
-  routerlist_t *dir1 = NULL, *dir2 = NULL;
-  tor_version_t ver1;
-
-  pk1 = pk_generate(0);
-  pk2 = pk_generate(1);
-  pk3 = pk_generate(2);
-
   test_assert( is_legal_nickname("a"));
   test_assert(!is_legal_nickname(""));
   test_assert(!is_legal_nickname("abcdefghijklmnopqrst")); /* 20 chars */
@@ -70,6 +53,28 @@ test_dir_formats(void)
   test_assert(is_legal_nickname_or_hexdigest("xyzzy"));
   test_assert(is_legal_nickname_or_hexdigest("abcdefghijklmnopqrs"));
   test_assert(!is_legal_nickname_or_hexdigest("abcdefghijklmnopqrst"));
+ done:
+  ;
+}
+
+/** Run unit tests for router descriptor generation logic. */
+static void
+test_dir_formats(void)
+{
+  char buf[8192], buf2[8192];
+  char platform[256];
+  char fingerprint[FINGERPRINT_LEN+1];
+  char *pk1_str = NULL, *pk2_str = NULL, *pk3_str = NULL, *cp;
+  size_t pk1_str_len, pk2_str_len, pk3_str_len;
+  routerinfo_t *r1=NULL, *r2=NULL;
+  crypto_pk_env_t *pk1 = NULL, *pk2 = NULL, *pk3 = NULL;
+  routerinfo_t *rp1 = NULL;
+  addr_policy_t *ex1, *ex2;
+  routerlist_t *dir1 = NULL, *dir2 = NULL;
+
+  pk1 = pk_generate(0);
+  pk2 = pk_generate(1);
+  pk3 = pk_generate(2);
 
   get_platform_str(platform, sizeof(platform));
   r1 = tor_malloc_zero(sizeof(routerinfo_t));
@@ -221,6 +226,28 @@ test_dir_formats(void)
 #endif
   dirserv_free_fingerprint_list();
 
+ done:
+  if (r1)
+    routerinfo_free(r1);
+  if (r2)
+    routerinfo_free(r2);
+
+  tor_free(pk1_str);
+  tor_free(pk2_str);
+  tor_free(pk3_str);
+  if (pk1) crypto_free_pk_env(pk1);
+  if (pk2) crypto_free_pk_env(pk2);
+  if (pk3) crypto_free_pk_env(pk3);
+  if (rp1) routerinfo_free(rp1);
+  tor_free(dir1); /* XXXX And more !*/
+  tor_free(dir2); /* And more !*/
+}
+
+static void
+test_dir_versions(void)
+{
+  tor_version_t ver1;
+
   /* Try out version parsing functionality */
   test_eq(0, tor_version_parse("0.3.4pre2-cvs", &ver1));
   test_eq(0, ver1.major);
@@ -328,22 +355,8 @@ test_dir_formats(void)
   test_eq(-1, tor_version_parse("0.5.6.7 (git-ff00xx)", &ver1));
   test_eq(-1, tor_version_parse("0.5.6.7 (git-ff00fff)", &ver1));
   test_eq(0, tor_version_parse("0.5.6.7 (git ff00fff)", &ver1));
-
  done:
-  if (r1)
-    routerinfo_free(r1);
-  if (r2)
-    routerinfo_free(r2);
-
-  tor_free(pk1_str);
-  tor_free(pk2_str);
-  tor_free(pk3_str);
-  if (pk1) crypto_free_pk_env(pk1);
-  if (pk2) crypto_free_pk_env(pk2);
-  if (pk3) crypto_free_pk_env(pk3);
-  if (rp1) routerinfo_free(rp1);
-  tor_free(dir1); /* XXXX And more !*/
-  tor_free(dir2); /* And more !*/
+  ;
 }
 
 /** Run unit tests for misc directory functions. */
@@ -1071,7 +1084,9 @@ test_dir_v3_networkstatus(void)
   { #name, legacy_test_helper, 0, &legacy_setup, test_dir_ ## name }
 
 struct testcase_t dir_tests[] = {
+  DIR_LEGACY(nicknames),
   DIR_LEGACY(formats),
+  DIR_LEGACY(versions),
   DIR_LEGACY(util),
   DIR_LEGACY(measured_bw),
   DIR_LEGACY(param_voting),
