@@ -12,7 +12,7 @@ AM_CFLAGS = -I../or
 # This seems to matter nowhere but on windows, but I assure you that it
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
-test_SOURCES = test_data.c test.c tinytest.c
+test_SOURCES = test_data.c test.c test_crypto.c tinytest.c
 
 test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
