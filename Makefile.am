@@ -58,7 +58,7 @@ dist: check
 doxygen:
 	doxygen && cd doc/doxygen/latex && make
 
-test:
+test: all
 	./src/test/test
 
 # Avoid strlcpy.c, strlcat.c, tree.h
