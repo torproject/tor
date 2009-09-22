@@ -7,6 +7,61 @@
 #include "or.h"
 #include "test.h"
 
+static void
+test_addr_basic(void)
+{
+  uint32_t u32;
+  uint16_t u16;
+  char *cp;
+
+  /* Test parse_addr_port */
+  cp = NULL; u32 = 3; u16 = 3;
+  test_assert(!parse_addr_port(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
+  test_streq(cp, "1.2.3.4");
+  test_eq(u32, 0x01020304u);
+  test_eq(u16, 0);
+  tor_free(cp);
+  test_assert(!parse_addr_port(LOG_WARN, "4.3.2.1:99", &cp, &u32, &u16));
+  test_streq(cp, "4.3.2.1");
+  test_eq(u32, 0x04030201u);
+  test_eq(u16, 99);
+  tor_free(cp);
+  test_assert(!parse_addr_port(LOG_WARN, "nonexistent.address:4040",
+                               &cp, NULL, &u16));
+  test_streq(cp, "nonexistent.address");
+  test_eq(u16, 4040);
+  tor_free(cp);
+  test_assert(!parse_addr_port(LOG_WARN, "localhost:9999", &cp, &u32, &u16));
+  test_streq(cp, "localhost");
+  test_eq(u32, 0x7f000001u);
+  test_eq(u16, 9999);
+  tor_free(cp);
+  u32 = 3;
+  test_assert(!parse_addr_port(LOG_WARN, "localhost", NULL, &u32, &u16));
+  test_eq(cp, NULL);
+  test_eq(u32, 0x7f000001u);
+  test_eq(u16, 0);
+  tor_free(cp);
+  test_eq(0, addr_mask_get_bits(0x0u));
+  test_eq(32, addr_mask_get_bits(0xFFFFFFFFu));
+  test_eq(16, addr_mask_get_bits(0xFFFF0000u));
+  test_eq(31, addr_mask_get_bits(0xFFFFFFFEu));
+  test_eq(1, addr_mask_get_bits(0x80000000u));
+
+  /* Test inet_ntop */
+  {
+    char tmpbuf[TOR_ADDR_BUF_LEN];
+    const char *ip = "176.192.208.224";
+    struct in_addr in;
+    tor_inet_pton(AF_INET, ip, &in);
+    tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf));
+    test_streq(tmpbuf, ip);
+  }
+
+ done:
+  ;
+}
+
 #define _test_op_ip6(a,op,b,e1,e2)                               \
   STMT_BEGIN                                                     \
   tt_assert_test_fmt_type(a,b,e1" "#op" "e2,struct in6_addr*,    \
@@ -435,6 +490,7 @@ test_addr_ip6_helpers(void)
   { #name, legacy_test_helper, 0, &legacy_setup, test_addr_ ## name }
 
 struct testcase_t addr_tests[] = {
+  ADDR_LEGACY(basic),
   ADDR_LEGACY(ip6_helpers),
   END_OF_TESTCASES
 };

@@ -11,20 +11,14 @@
 #include "mempool.h"
 #include "memarea.h"
 
-/** Test basic utility functionality. */
 static void
-test_util_misc(void)
+test_util_time(void)
 {
   struct timeval start, end;
   struct tm a_time;
   char timestr[RFC1123_TIME_LEN+1];
-  char buf[1024];
   time_t t_res;
   int i;
-  uint32_t u32;
-  uint16_t u16;
-  char *cp, *k, *v;
-  const char *str;
 
   start.tv_sec = 5;
   start.tv_usec = 5000;
@@ -79,102 +73,23 @@ test_util_misc(void)
   test_eq(i,0);
   test_eq(t_res, (time_t)1091580502UL);
   test_eq(-1, parse_rfc1123_time("Wed, zz Aug 2004 99-99x99 GMT", &t_res));
+
   tor_gettimeofday(&start);
+  /* now make sure time works. */
+  tor_gettimeofday(&end);
+  /* We might've timewarped a little. */
+  tt_int_op(tv_udiff(&start, &end), >=, -5000);
 
-  /* Tests for corner cases of strl operations */
-  test_eq(5, strlcpy(buf, "Hello", 0));
-  strlcpy(buf, "Hello", sizeof(buf));
-  test_eq(10, strlcat(buf, "Hello", 5));
+ done:
+  ;
+}
 
-  /* Test tor_strstrip() */
-  strlcpy(buf, "Testing 1 2 3", sizeof(buf));
-  tor_strstrip(buf, ",!");
-  test_streq(buf, "Testing 1 2 3");
-  strlcpy(buf, "!Testing 1 2 3?", sizeof(buf));
-  tor_strstrip(buf, "!? ");
-  test_streq(buf, "Testing123");
-
-  /* Test parse_addr_port */
-  cp = NULL; u32 = 3; u16 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "1.2.3.4", &cp, &u32, &u16));
-  test_streq(cp, "1.2.3.4");
-  test_eq(u32, 0x01020304u);
-  test_eq(u16, 0);
-  tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "4.3.2.1:99", &cp, &u32, &u16));
-  test_streq(cp, "4.3.2.1");
-  test_eq(u32, 0x04030201u);
-  test_eq(u16, 99);
-  tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "nonexistent.address:4040",
-                               &cp, NULL, &u16));
-  test_streq(cp, "nonexistent.address");
-  test_eq(u16, 4040);
-  tor_free(cp);
-  test_assert(!parse_addr_port(LOG_WARN, "localhost:9999", &cp, &u32, &u16));
-  test_streq(cp, "localhost");
-  test_eq(u32, 0x7f000001u);
-  test_eq(u16, 9999);
-  tor_free(cp);
-  u32 = 3;
-  test_assert(!parse_addr_port(LOG_WARN, "localhost", NULL, &u32, &u16));
-  test_eq(cp, NULL);
-  test_eq(u32, 0x7f000001u);
-  test_eq(u16, 0);
-  tor_free(cp);
-  test_eq(0, addr_mask_get_bits(0x0u));
-  test_eq(32, addr_mask_get_bits(0xFFFFFFFFu));
-  test_eq(16, addr_mask_get_bits(0xFFFF0000u));
-  test_eq(31, addr_mask_get_bits(0xFFFFFFFEu));
-  test_eq(1, addr_mask_get_bits(0x80000000u));
-
-  /* Test tor_parse_long. */
-  test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
-  test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
-  test_eq(-50L, tor_parse_long("-50",10,-100,100,NULL,NULL));
-
-  /* Test tor_parse_ulong */
-  test_eq(10UL, tor_parse_ulong("10",10,0,100,NULL,NULL));
-  test_eq(0UL, tor_parse_ulong("10",10,50,100,NULL,NULL));
-
-  /* Test tor_parse_uint64. */
-  test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
-  test_assert(i == 1);
-  test_streq(cp, " x");
-  test_assert(U64_LITERAL(12345678901) ==
-              tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
-  test_assert(i == 1);
-  test_streq(cp, "");
-  test_assert(U64_LITERAL(0) ==
-              tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
-  test_assert(i == 0);
-
-  {
-  /* Test tor_parse_double. */
-  double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 1);
-  test_assert(DBL_TO_U64(d) == 10);
-  d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 1);
-  test_assert(DBL_TO_U64(d) == 0);
-  d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 0);
-  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 0);
-  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
-  test_assert(i == 1);
-  d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
-  test_assert(i == 1);
-  }
-
-  /* Test failing snprintf cases */
-  test_eq(-1, tor_snprintf(buf, 0, "Foo"));
-  test_eq(-1, tor_snprintf(buf, 2, "Foo"));
-
-  /* Test printf with uint64 */
-  tor_snprintf(buf, sizeof(buf), "x!"U64_FORMAT"!x",
-               U64_PRINTF_ARG(U64_LITERAL(12345678901)));
-  test_streq(buf, "x!12345678901!x");
+static void
+test_util_config_line(void)
+{
+  char buf[1024];
+  char *k, *v;
+  const char *str;
 
   /* Test parse_config_line_from_str */
   strlcpy(buf, "k v\n" " key    value with spaces   \n" "keykey val\n"
@@ -245,6 +160,78 @@ test_util_misc(void)
   test_streq(v, "a quoted\n\"str\\ing\t\x01\x01\x01\"");
   tor_free(k); tor_free(v);
   test_streq(str, "");
+ done:
+  ;
+}
+
+/** Test basic string functionality. */
+static void
+test_util_strmisc(void)
+{
+  char buf[1024];
+  int i;
+  char *cp;
+
+  /* Tests for corner cases of strl operations */
+  test_eq(5, strlcpy(buf, "Hello", 0));
+  strlcpy(buf, "Hello", sizeof(buf));
+  test_eq(10, strlcat(buf, "Hello", 5));
+
+  /* Test tor_strstrip() */
+  strlcpy(buf, "Testing 1 2 3", sizeof(buf));
+  tor_strstrip(buf, ",!");
+  test_streq(buf, "Testing 1 2 3");
+  strlcpy(buf, "!Testing 1 2 3?", sizeof(buf));
+  tor_strstrip(buf, "!? ");
+  test_streq(buf, "Testing123");
+
+  /* Test tor_parse_long. */
+  test_eq(10L, tor_parse_long("10",10,0,100,NULL,NULL));
+  test_eq(0L, tor_parse_long("10",10,50,100,NULL,NULL));
+  test_eq(-50L, tor_parse_long("-50",10,-100,100,NULL,NULL));
+
+  /* Test tor_parse_ulong */
+  test_eq(10UL, tor_parse_ulong("10",10,0,100,NULL,NULL));
+  test_eq(0UL, tor_parse_ulong("10",10,50,100,NULL,NULL));
+
+  /* Test tor_parse_uint64. */
+  test_assert(U64_LITERAL(10) == tor_parse_uint64("10 x",10,0,100, &i, &cp));
+  test_assert(i == 1);
+  test_streq(cp, " x");
+  test_assert(U64_LITERAL(12345678901) ==
+              tor_parse_uint64("12345678901",10,0,UINT64_MAX, &i, &cp));
+  test_assert(i == 1);
+  test_streq(cp, "");
+  test_assert(U64_LITERAL(0) ==
+              tor_parse_uint64("12345678901",10,500,INT32_MAX, &i, &cp));
+  test_assert(i == 0);
+
+  {
+  /* Test tor_parse_double. */
+  double d = tor_parse_double("10", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  test_assert(DBL_TO_U64(d) == 10);
+  d = tor_parse_double("0", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  test_assert(DBL_TO_U64(d) == 0);
+  d = tor_parse_double(" ", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 0);
+  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 0);
+  d = tor_parse_double(".0a", 0, UINT64_MAX,&i,&cp);
+  test_assert(i == 1);
+  d = tor_parse_double("-.0", 0, UINT64_MAX,&i,NULL);
+  test_assert(i == 1);
+  }
+
+  /* Test failing snprintf cases */
+  test_eq(-1, tor_snprintf(buf, 0, "Foo"));
+  test_eq(-1, tor_snprintf(buf, 2, "Foo"));
+
+  /* Test printf with uint64 */
+  tor_snprintf(buf, sizeof(buf), "x!"U64_FORMAT"!x",
+               U64_PRINTF_ARG(U64_LITERAL(12345678901)));
+  test_streq(buf, "x!12345678901!x");
 
   /* Test for strcmpstart and strcmpend. */
   test_assert(strcmpstart("abcdef", "abcdef")==0);
@@ -277,16 +264,6 @@ test_util_misc(void)
   test_assert(!tor_mem_is_zero(buf, 128));
   buf[0] = (char)1;
   test_assert(!tor_mem_is_zero(buf, 10));
-
-  /* Test inet_ntop */
-  {
-    char tmpbuf[TOR_ADDR_BUF_LEN];
-    const char *ip = "176.192.208.224";
-    struct in_addr in;
-    tor_inet_pton(AF_INET, ip, &in);
-    tor_inet_ntop(AF_INET, &in, tmpbuf, sizeof(tmpbuf));
-    test_streq(tmpbuf, ip);
-  }
 
   /* Test 'escaped' */
   test_streq("\"\"", escaped(""));
@@ -372,12 +349,13 @@ test_util_misc(void)
     SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
     smartlist_free(sl);
   }
+ done:
+  ;
+}
 
-  /* now make sure time works. */
-  tor_gettimeofday(&end);
-  /* We might've timewarped a little. */
-  test_assert(tv_udiff(&start, &end) >= -5000);
-
+static void
+test_util_pow2(void)
+{
   /* Test tor_log2(). */
   test_eq(tor_log2(64), 6);
   test_eq(tor_log2(65), 6);
@@ -1048,7 +1026,10 @@ test_util_strtok(void)
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
 struct testcase_t util_tests[] = {
-  UTIL_LEGACY(misc),
+  UTIL_LEGACY(time),
+  UTIL_LEGACY(config_line),
+  UTIL_LEGACY(strmisc),
+  UTIL_LEGACY(pow2),
   UTIL_LEGACY(gzip),
   UTIL_LEGACY(datadir),
   UTIL_LEGACY(mempool),
