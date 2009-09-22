@@ -2618,7 +2618,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       const char *item;
       tor_assert(!current); /* we handle current consensus specially above,
                              * since it wants to be spooled. */
-      if ((item = dirvote_get_pending_consensus()))
+      if ((item = dirvote_get_pending_consensus(FLAV_NS)))
         smartlist_add(items, (char*)item);
     } else if (!current && !strcmp(url, "consensus-signatures")) {
       /* XXXX the spec says that we should implement
