@@ -1041,3 +1041,4 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(strtok),
   END_OF_TESTCASES
 };
+

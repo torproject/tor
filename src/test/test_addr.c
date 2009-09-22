@@ -494,3 +494,4 @@ struct testcase_t addr_tests[] = {
   ADDR_LEGACY(ip6_helpers),
   END_OF_TESTCASES
 };
+

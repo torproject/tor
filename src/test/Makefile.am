@@ -17,6 +17,7 @@ test_SOURCES = \
 	test.c \
 	test_addr.c \
 	test_crypto.c \
+	test_dir.c \
 	test_containers.c \
 	test_util.c \
 	tinytest.c
