@@ -643,6 +643,8 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
     double timeout_quantile = 1.0-
           ((double)cbt->pre_timeouts)/
                     (cbt->pre_timeouts+cbt->total_build_times);
+    /* Make sure it doesn't exceed the synthetic max */
+    timeout_quantile *= MAX_SYNTHETIC_QUANTILE;
     cbt->Xm = circuit_build_times_mode(cbt);
     tor_assert(cbt->Xm > 0);
     /* Use current timeout to get an estimate on alpha */
