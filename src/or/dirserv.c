@@ -2390,9 +2390,9 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
 
   fclose(fp);
-  log_notice(LD_DIRSERV,
-             "Bandwidth measurement file successfully read. "
-             "Applied %d measurements.", applied_lines);
+  log_info(LD_DIRSERV,
+           "Bandwidth measurement file successfully read. "
+           "Applied %d measurements.", applied_lines);
   return 0;
 }
 
