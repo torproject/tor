@@ -321,7 +321,7 @@ static token_rule_t extrainfo_token_table[] = {
  * documents. */
 static token_rule_t rtrstatus_token_table[] = {
   T01("p",                   K_P,               CONCAT_ARGS, NO_OBJ ),
-  T1( "r",                   K_R,                   GE(8),   NO_OBJ ),
+  T1( "r",                   K_R,                   GE(7),   NO_OBJ ),
   T1( "s",                   K_S,                   ARGS,    NO_OBJ ),
   T01("v",                   K_V,               CONCAT_ARGS, NO_OBJ ),
   T01("w",                   K_W,                   ARGS,    NO_OBJ ),
@@ -1900,21 +1900,28 @@ find_start_of_next_routerstatus(const char *s)
  * If <b>consensus_method</b> is nonzero, this routerstatus is part of a
  * consensus, and we should parse it according to the method used to
  * make that consensus.
+ *
+ * DOCDOC flav
  **/
 static routerstatus_t *
 routerstatus_parse_entry_from_string(memarea_t *area,
                                      const char **s, smartlist_t *tokens,
                                      networkstatus_t *vote,
                                      vote_routerstatus_t *vote_rs,
-                                     int consensus_method)
+                                     int consensus_method,
+                                     consensus_flavor_t flav)
 {
   const char *eos, *s_dup = *s;
   routerstatus_t *rs = NULL;
   directory_token_t *tok;
   char timebuf[ISO_TIME_LEN+1];
   struct in_addr in;
+  int offset = 0;
   tor_assert(tokens);
   tor_assert(bool_eq(vote, vote_rs));
+
+  if (!consensus_method)
+    flav = FLAV_NS;
 
   eos = find_start_of_next_routerstatus(*s);
 
@@ -1927,7 +1934,15 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     goto err;
   }
   tok = find_by_keyword(tokens, K_R);
-  tor_assert(tok->n_args >= 8);
+  tor_assert(tok->n_args >= 7);
+  if (flav == FLAV_NS) {
+    if (tok->n_args < 8) {
+      log_warn(LD_DIR, "Too few arguments to r");
+      goto err;
+    }
+  } else {
+    offset = -1;
+  }
   if (vote_rs) {
     rs = &vote_rs->status;
   } else {
@@ -1948,29 +1963,34 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     goto err;
   }
 
-  if (digest_from_base64(rs->descriptor_digest, tok->args[2])) {
-    log_warn(LD_DIR, "Error decoding descriptor digest %s",
-             escaped(tok->args[2]));
-    goto err;
+  if (flav == FLAV_NS) {
+    if (digest_from_base64(rs->descriptor_digest, tok->args[2])) {
+      log_warn(LD_DIR, "Error decoding descriptor digest %s",
+               escaped(tok->args[2]));
+      goto err;
+    }
   }
 
   if (tor_snprintf(timebuf, sizeof(timebuf), "%s %s",
-                   tok->args[3], tok->args[4]) < 0 ||
+                   tok->args[3+offset], tok->args[4+offset]) < 0 ||
       parse_iso_time(timebuf, &rs->published_on)<0) {
-    log_warn(LD_DIR, "Error parsing time '%s %s'",
-             tok->args[3], tok->args[4]);
+    log_warn(LD_DIR, "Error parsing time '%s %s' [%d %d]",
+             tok->args[3+offset], tok->args[4+offset],
+             offset, (int)flav);
     goto err;
   }
 
-  if (tor_inet_aton(tok->args[5], &in) == 0) {
+  if (tor_inet_aton(tok->args[5+offset], &in) == 0) {
     log_warn(LD_DIR, "Error parsing router address in network-status %s",
-             escaped(tok->args[5]));
+             escaped(tok->args[5+offset]));
     goto err;
   }
   rs->addr = ntohl(in.s_addr);
 
-  rs->or_port =(uint16_t) tor_parse_long(tok->args[6],10,0,65535,NULL,NULL);
-  rs->dir_port = (uint16_t) tor_parse_long(tok->args[7],10,0,65535,NULL,NULL);
+  rs->or_port = (uint16_t) tor_parse_long(tok->args[6+offset],
+                                         10,0,65535,NULL,NULL);
+  rs->dir_port = (uint16_t) tor_parse_long(tok->args[7+offset],
+                                           10,0,65535,NULL,NULL);
 
   tok = find_opt_by_keyword(tokens, K_S);
   if (tok && vote) {
@@ -2267,7 +2287,7 @@ networkstatus_v2_parse_from_string(const char *s)
   while (!strcmpstart(s, "r ")) {
     routerstatus_t *rs;
     if ((rs = routerstatus_parse_entry_from_string(area, &s, tokens,
-                                                   NULL, NULL, 0)))
+                                                   NULL, NULL, 0, 0)))
       smartlist_add(ns->entries, rs);
   }
   smartlist_sort(ns->entries, compare_routerstatus_entries);
@@ -2329,6 +2349,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   struct in_addr in;
   int i, inorder, n_signatures = 0;
   memarea_t *area = NULL, *rs_area = NULL;
+  consensus_flavor_t flav = FLAV_NS;
+
   tor_assert(s);
 
   if (eos_out)
@@ -2351,6 +2373,22 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
 
   ns = tor_malloc_zero(sizeof(networkstatus_t));
   memcpy(&ns->digests, &ns_digests, sizeof(ns_digests));
+
+  tok = find_by_keyword(tokens, K_NETWORK_STATUS_VERSION);
+  tor_assert(tok);
+  if (tok->n_args > 1) {
+    int flavor = networkstatus_parse_flavor_name(tok->args[1]);
+    if (flavor < 0) {
+      log_warn(LD_DIR, "Can't parse document with unknown flavor %s",
+               escaped(tok->args[2]));
+      goto err;
+    }
+    ns->flavor = flav = flavor;
+  }
+  if (flav != FLAV_NS && ns_type != NS_TYPE_CONSENSUS) {
+    log_warn(LD_DIR, "Flavor found on non-consenus networkstatus.");
+    goto err;
+  }
 
   if (ns_type != NS_TYPE_CONSENSUS) {
     const char *end_of_cert = NULL;
@@ -2598,7 +2636,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     if (ns->type != NS_TYPE_CONSENSUS) {
       vote_routerstatus_t *rs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       if (routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens, ns,
-                                               rs, 0))
+                                               rs, 0, 0))
         smartlist_add(ns->routerstatus_list, rs);
       else {
         tor_free(rs->version);
@@ -2608,7 +2646,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       routerstatus_t *rs;
       if ((rs = routerstatus_parse_entry_from_string(rs_area, &s, rs_tokens,
                                                      NULL, NULL,
-                                                     ns->consensus_method)))
+                                                     ns->consensus_method,
+                                                     flav)))
         smartlist_add(ns->routerstatus_list, rs);
     }
   }
@@ -2645,10 +2684,29 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     char declared_identity[DIGEST_LEN];
     networkstatus_voter_info_t *v;
     document_signature_t *sig;
+    const char *id_hexdigest = NULL;
+    const char *sk_hexdigest = NULL;
+    digest_algorithm_t alg = DIGEST_SHA1;
     tok = _tok;
     if (tok->tp != K_DIRECTORY_SIGNATURE)
       continue;
     tor_assert(tok->n_args >= 2);
+    if (tok->n_args == 2) {
+      id_hexdigest = tok->args[0];
+      sk_hexdigest = tok->args[1];
+    } else {
+      const char *algname = tok->args[0];
+      int a;
+      id_hexdigest = tok->args[1];
+      sk_hexdigest = tok->args[2];
+      a = crypto_digest_algorithm_parse_name(algname);
+      if (a<0) {
+        log_warn(LD_DIR, "Unknown digest algorithm %s; skipping",
+                 escaped(algname));
+        continue;
+      }
+      alg = a;
+    }
 
     if (!tok->object_type ||
         strcmp(tok->object_type, "SIGNATURE") ||
@@ -2657,11 +2715,11 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       goto err;
     }
 
-    if (strlen(tok->args[0]) != HEX_DIGEST_LEN ||
+    if (strlen(id_hexdigest) != HEX_DIGEST_LEN ||
         base16_decode(declared_identity, sizeof(declared_identity),
-                      tok->args[0], HEX_DIGEST_LEN) < 0) {
+                      id_hexdigest, HEX_DIGEST_LEN) < 0) {
       log_warn(LD_DIR, "Error decoding declared identity %s in "
-               "network-status vote.", escaped(tok->args[0]));
+               "network-status vote.", escaped(id_hexdigest));
       goto err;
     }
     if (!(v = networkstatus_get_voter_by_id(ns, declared_identity))) {
@@ -2671,12 +2729,12 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
     sig = tor_malloc_zero(sizeof(document_signature_t));
     memcpy(sig->identity_digest, v->identity_digest, DIGEST_LEN);
-    sig->alg = DIGEST_SHA1;
-    if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+    sig->alg = alg;
+    if (strlen(sk_hexdigest) != HEX_DIGEST_LEN ||
         base16_decode(sig->signing_key_digest, sizeof(sig->signing_key_digest),
-                      tok->args[1], HEX_DIGEST_LEN) < 0) {
-      log_warn(LD_DIR, "Error decoding declared digest %s in "
-               "network-status vote.", escaped(tok->args[1]));
+                      sk_hexdigest, HEX_DIGEST_LEN) < 0) {
+      log_warn(LD_DIR, "Error decoding declared signing key digest %s in "
+               "network-status vote.", escaped(sk_hexdigest));
       tor_free(sig);
       goto err;
     }
@@ -2716,7 +2774,6 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
       sig->signature = tor_memdup(tok->object_body, tok->object_size);
       sig->signature_len = (int) tok->object_size;
-
     }
     smartlist_add(v->sigs, sig);
 
@@ -2950,10 +3007,10 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
                "network-status vote.", escaped(id_hexdigest));
       goto err;
     }
-    if (strlen(tok->args[1]) != HEX_DIGEST_LEN ||
+    if (strlen(sk_hexdigest) != HEX_DIGEST_LEN ||
         base16_decode(sk_digest, sizeof(sk_digest),
                       sk_hexdigest, HEX_DIGEST_LEN) < 0) {
-      log_warn(LD_DIR, "Error decoding declared digest %s in "
+      log_warn(LD_DIR, "Error decoding declared signing key digest %s in "
                "network-status vote.", escaped(sk_hexdigest));
       goto err;
     }
@@ -2974,7 +3031,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     }
 
     sig = tor_malloc_zero(sizeof(document_signature_t));
-    sig->alg = DIGEST_SHA1;
+    sig->alg = alg;
     memcpy(sig->identity_digest, id_digest, DIGEST_LEN);
     memcpy(sig->signing_key_digest, sk_digest, DIGEST_LEN);
     if (tok->object_size >= INT_MAX) {

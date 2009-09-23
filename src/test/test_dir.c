@@ -559,16 +559,18 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
   return r;
 }
 
-/** Helper: get a detached signatures document for a single FLAV_NS
- * consensus. */
+/** Helper: get a detached signatures document for one or two
+ * consensuses. */
 static char *
-get_detached_sigs(networkstatus_t *ns)
+get_detached_sigs(networkstatus_t *ns, networkstatus_t *ns2)
 {
   char *r;
   smartlist_t *sl;
   tor_assert(ns && ns->flavor == FLAV_NS);
   sl = smartlist_create();
   smartlist_add(sl,ns);
+  if (ns2)
+    smartlist_add(sl,ns2);
   r = networkstatus_get_detached_signatures(sl);
   smartlist_free(sl);
   return r;
@@ -587,7 +589,8 @@ test_dir_v3_networkstatus(void)
   time_t now = time(NULL);
   networkstatus_voter_info_t *voter;
   document_signature_t *sig;
-  networkstatus_t *vote=NULL, *v1=NULL, *v2=NULL, *v3=NULL, *con=NULL;
+  networkstatus_t *vote=NULL, *v1=NULL, *v2=NULL, *v3=NULL, *con=NULL,
+    *con_md=NULL;
   vote_routerstatus_t *vrs;
   routerstatus_t *rs;
   char *v1_text=NULL, *v2_text=NULL, *v3_text=NULL, *consensus_text=NULL, *cp;
@@ -596,7 +599,9 @@ test_dir_v3_networkstatus(void)
   /* For generating the two other consensuses. */
   char *detached_text1=NULL, *detached_text2=NULL;
   char *consensus_text2=NULL, *consensus_text3=NULL;
-  networkstatus_t *con2=NULL, *con3=NULL;
+  char *consensus_text_md2=NULL, *consensus_text_md3=NULL;
+  char *consensus_text_md=NULL;
+  networkstatus_t *con2=NULL, *con_md2=NULL, *con3=NULL, *con_md3=NULL;
   ns_detached_signatures_t *dsig1=NULL, *dsig2=NULL;
 
   /* Parse certificates and keys. */
@@ -882,6 +887,17 @@ test_dir_v3_networkstatus(void)
   test_assert(con);
   //log_notice(LD_GENERAL, "<<%s>>\n<<%s>>\n<<%s>>\n",
   //           v1_text, v2_text, v3_text);
+  consensus_text_md = networkstatus_compute_consensus(votes, 3,
+                                                   cert3->identity_key,
+                                                   sign_skey_3,
+                                                   "AAAAAAAAAAAAAAAAAAAA",
+                                                   sign_skey_leg1,
+                                                   FLAV_MICRODESC);
+  test_assert(consensus_text_md);
+  con_md = networkstatus_parse_vote_from_string(consensus_text_md, NULL,
+                                                NS_TYPE_CONSENSUS);
+  test_assert(con_md);
+  test_eq(con_md->flavor, FLAV_MICRODESC);
 
   /* Check consensus contents. */
   test_assert(con->type == NS_TYPE_CONSENSUS);
@@ -956,19 +972,11 @@ test_dir_v3_networkstatus(void)
   test_assert(rs->is_valid);
   test_assert(!rs->is_named);
   /* XXXX check version */
-  // x231
-  // x213
 
   /* Check signatures.  the first voter is a pseudo-entry with a legacy key.
    * The second one hasn't signed.  The fourth one has signed: validate it. */
   voter = smartlist_get(con->voters, 1);
   test_eq(smartlist_len(voter->sigs), 0);
-#if 0
-  sig = smartlist_get(voter->sigs, 1);
-  test_assert(!sig->signature);
-  test_assert(!sig->good_signature);
-  test_assert(!sig->bad_signature);
-#endif
 
   voter = smartlist_get(con->voters, 3);
   test_eq(smartlist_len(voter->sigs), 1);
@@ -990,26 +998,45 @@ test_dir_v3_networkstatus(void)
                                                       cert2->identity_key,
                                                       sign_skey_2, NULL,NULL,
                                                       FLAV_NS);
+    consensus_text_md2 = networkstatus_compute_consensus(votes, 3,
+                                                      cert2->identity_key,
+                                                      sign_skey_2, NULL,NULL,
+                                                      FLAV_MICRODESC);
     smartlist_shuffle(votes);
     consensus_text3 = networkstatus_compute_consensus(votes, 3,
                                                       cert1->identity_key,
                                                       sign_skey_1, NULL,NULL,
                                                       FLAV_NS);
+    consensus_text_md3 = networkstatus_compute_consensus(votes, 3,
+                                                      cert1->identity_key,
+                                                      sign_skey_1, NULL,NULL,
+                                                      FLAV_MICRODESC);
     test_assert(consensus_text2);
     test_assert(consensus_text3);
+    test_assert(consensus_text_md2);
+    test_assert(consensus_text_md3);
     con2 = networkstatus_parse_vote_from_string(consensus_text2, NULL,
                                                 NS_TYPE_CONSENSUS);
     con3 = networkstatus_parse_vote_from_string(consensus_text3, NULL,
                                                 NS_TYPE_CONSENSUS);
+    con_md2 = networkstatus_parse_vote_from_string(consensus_text_md2, NULL,
+                                                NS_TYPE_CONSENSUS);
+    con_md3 = networkstatus_parse_vote_from_string(consensus_text_md3, NULL,
+                                                NS_TYPE_CONSENSUS);
     test_assert(con2);
     test_assert(con3);
+    test_assert(con_md2);
+    test_assert(con_md3);
 
     /* All three should have the same digest. */
     test_memeq(&con->digests, &con2->digests, sizeof(digests_t));
     test_memeq(&con->digests, &con3->digests, sizeof(digests_t));
 
+    test_memeq(&con_md->digests, &con_md2->digests, sizeof(digests_t));
+    test_memeq(&con_md->digests, &con_md3->digests, sizeof(digests_t));
+
     /* Extract a detached signature from con3. */
-    detached_text1 = get_detached_sigs(con3);
+    detached_text1 = get_detached_sigs(con3, con_md3);
     tor_assert(detached_text1);
     /* Try to parse it. */
     dsig1 = networkstatus_parse_detached_signatures(detached_text1, NULL);
@@ -1024,6 +1051,11 @@ test_dir_v3_networkstatus(void)
       test_assert(dsig_digests);
       test_memeq(dsig_digests->d[DIGEST_SHA1], con3->digests.d[DIGEST_SHA1],
                  DIGEST_LEN);
+      dsig_digests = strmap_get(dsig1->digests, "microdesc");
+      test_assert(dsig_digests);
+      test_memeq(dsig_digests->d[DIGEST_SHA256],
+                 con_md3->digests.d[DIGEST_SHA256],
+                 DIGEST256_LEN);
     }
     {
       smartlist_t *dsig_signatures = strmap_get(dsig1->signatures, "ns");
@@ -1032,13 +1064,24 @@ test_dir_v3_networkstatus(void)
       sig = smartlist_get(dsig_signatures, 0);
       test_memeq(sig->identity_digest, cert1->cache_info.identity_digest,
                  DIGEST_LEN);
+      test_eq(sig->alg, DIGEST_SHA1);
+
+      dsig_signatures = strmap_get(dsig1->signatures, "microdesc");
+      test_assert(dsig_signatures);
+      test_eq(1, smartlist_len(dsig_signatures));
+      sig = smartlist_get(dsig_signatures, 0);
+      test_memeq(sig->identity_digest, cert1->cache_info.identity_digest,
+                 DIGEST_LEN);
+      test_eq(sig->alg, DIGEST_SHA256);
     }
 
     /* Try adding it to con2. */
-    detached_text2 = get_detached_sigs(con2);
+    detached_text2 = get_detached_sigs(con2,con_md2);
     test_eq(1, networkstatus_add_detached_signatures(con2, dsig1, &msg));
     tor_free(detached_text2);
-    detached_text2 = get_detached_sigs(con2);
+    test_eq(1, networkstatus_add_detached_signatures(con_md2, dsig1, &msg));
+    tor_free(detached_text2);
+    detached_text2 = get_detached_sigs(con2,con_md2);
     //printf("\n<%s>\n", detached_text2);
     dsig2 = networkstatus_parse_detached_signatures(detached_text2, NULL);
     test_assert(dsig2);
@@ -1052,6 +1095,9 @@ test_dir_v3_networkstatus(void)
     */
     test_eq(2,
             smartlist_len((smartlist_t*)strmap_get(dsig2->signatures, "ns")));
+    test_eq(2,
+            smartlist_len((smartlist_t*)strmap_get(dsig2->signatures,
+                                                   "microdesc")));
 
     /* Try adding to con2 twice; verify that nothing changes. */
     test_eq(0, networkstatus_add_detached_signatures(con2, dsig1, &msg));
@@ -1075,6 +1121,7 @@ test_dir_v3_networkstatus(void)
   tor_free(v2_text);
   tor_free(v3_text);
   tor_free(consensus_text);
+  tor_free(consensus_text_md);
 
   if (vote)
     networkstatus_vote_free(vote);
@@ -1086,6 +1133,8 @@ test_dir_v3_networkstatus(void)
     networkstatus_vote_free(v3);
   if (con)
     networkstatus_vote_free(con);
+  if (con_md)
+    networkstatus_vote_free(con_md);
   if (sign_skey_1)
     crypto_free_pk_env(sign_skey_1);
   if (sign_skey_2)
@@ -1103,12 +1152,18 @@ test_dir_v3_networkstatus(void)
 
   tor_free(consensus_text2);
   tor_free(consensus_text3);
+  tor_free(consensus_text_md2);
+  tor_free(consensus_text_md3);
   tor_free(detached_text1);
   tor_free(detached_text2);
   if (con2)
     networkstatus_vote_free(con2);
   if (con3)
     networkstatus_vote_free(con3);
+  if (con_md2)
+    networkstatus_vote_free(con_md2);
+  if (con_md3)
+    networkstatus_vote_free(con_md3);
   if (dsig1)
     ns_detached_signatures_free(dsig1);
   if (dsig2)

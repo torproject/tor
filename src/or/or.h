@@ -4211,6 +4211,7 @@ int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
 const char *networkstatus_get_flavor_name(consensus_flavor_t flav);
+int networkstatus_parse_flavor_name(const char *flavname);
 void document_signature_free(document_signature_t *sig);
 document_signature_t *document_signature_dup(const document_signature_t *sig);
 void networkstatus_free_all(void);

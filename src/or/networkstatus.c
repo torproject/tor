@@ -1983,6 +1983,18 @@ networkstatus_get_flavor_name(consensus_flavor_t flav)
   }
 }
 
+/** DOCDOC return -1 on unknown */
+int
+networkstatus_parse_flavor_name(const char *flavname)
+{
+  if (!strcmp(flavname, "ns"))
+    return FLAV_NS;
+  else if (!strcmp(flavname, "microdesc"))
+    return FLAV_MICRODESC;
+  else
+    return -1;
+}
+
 /** If <b>question</b> is a string beginning with "ns/" in a format the
  * control interface expects for a GETINFO question, set *<b>answer</b> to a
  * newly-allocated string containing networkstatus lines for the appropriate
