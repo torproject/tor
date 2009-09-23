@@ -1,3 +1,14 @@
+Changes in version 0.2.2.3-alpha - 2009-09-23
+  o Major bugfixes:
+    - Fix an overzealous assert in our new circuit build timeout code.
+      Bugfix on 0.2.2.2-alpha; fixes bug 1103.
+
+  o Minor bugfixes:
+    - If the networkstatus consensus tells us that we should use a
+      negative circuit package window, ignore it. Otherwise we'll
+      believe it and then trigger an assert. Bugfix on 0.2.2.2-alpha.
+
+
 Changes in version 0.2.2.2-alpha - 2009-09-21
   o Major features:
     - Tor now tracks how long it takes to build client-side circuits

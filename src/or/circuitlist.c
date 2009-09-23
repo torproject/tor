@@ -367,10 +367,11 @@ circuit_purpose_to_controller_string(uint8_t purpose)
 int32_t
 circuit_initial_package_window(void)
 {
-  networkstatus_t *consensus = networkstatus_get_latest_consensus();
-  if (consensus)
-    return networkstatus_get_param(consensus, "circwindow", CIRCWINDOW_START);
-  return CIRCWINDOW_START;
+  int32_t num = networkstatus_get_param(NULL, "circwindow", CIRCWINDOW_START);
+  /* If the consensus tells us a negative number, we'd assert. */
+  if (num < 0)
+    num = CIRCWINDOW_START;
+  return num;
 }
 
 /** Initialize the common elements in a circuit_t, and add it to the global
