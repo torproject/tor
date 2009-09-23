@@ -559,6 +559,21 @@ generate_ri_from_rs(const vote_routerstatus_t *vrs)
   return r;
 }
 
+/** Helper: get a detached signatures document for a single FLAV_NS
+ * consensus. */
+static char *
+get_detached_sigs(networkstatus_t *ns)
+{
+  char *r;
+  smartlist_t *sl;
+  tor_assert(ns && ns->flavor == FLAV_NS);
+  sl = smartlist_create();
+  smartlist_add(sl,ns);
+  r = networkstatus_get_detached_signatures(sl);
+  smartlist_free(sl);
+  return r;
+}
+
 /** Run unit tests for generating and parsing V3 consensus networkstatus
  * documents. */
 static void
@@ -994,7 +1009,7 @@ test_dir_v3_networkstatus(void)
     test_memeq(&con->digests, &con3->digests, sizeof(digests_t));
 
     /* Extract a detached signature from con3. */
-    detached_text1 = networkstatus_get_detached_signatures(con3);
+    detached_text1 = get_detached_sigs(con3);
     tor_assert(detached_text1);
     /* Try to parse it. */
     dsig1 = networkstatus_parse_detached_signatures(detached_text1, NULL);
@@ -1020,10 +1035,10 @@ test_dir_v3_networkstatus(void)
     }
 
     /* Try adding it to con2. */
-    detached_text2 = networkstatus_get_detached_signatures(con2);
+    detached_text2 = get_detached_sigs(con2);
     test_eq(1, networkstatus_add_detached_signatures(con2, dsig1, &msg));
     tor_free(detached_text2);
-    detached_text2 = networkstatus_get_detached_signatures(con2);
+    detached_text2 = get_detached_sigs(con2);
     //printf("\n<%s>\n", detached_text2);
     dsig2 = networkstatus_parse_detached_signatures(detached_text2, NULL);
     test_assert(dsig2);
