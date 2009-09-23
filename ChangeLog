@@ -1,4 +1,9 @@
-Changes in version 0.2.2.3-alpha - 2009-??-??
+Changes in version 0.2.2.3-alpha - 2009-09-23
+  o Minor bugfixes:
+    - If the networkstatus consensus tells us that we should use a
+      negative circuit package window, ignore it. Otherwise we'll
+      believe it and then trigger an assert.
+
 
 Changes in version 0.2.2.2-alpha - 2009-09-21
   o Major features:
