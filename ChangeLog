@@ -1,3 +1,11 @@
+Changes in version 0.2.2.4-alpha - 2009-??-??
+  o Code simplifications and refactoring:
+    - Revise our unit tests to use the "tinytest" framework, so we
+      can run tests in their own processes, have smarter setup/teardown
+      code, and so on.  The unit test code has moved to its own
+      subdirectory, and has been split into multiple modules.
+
+
 Changes in version 0.2.2.3-alpha - 2009-09-23
   o Major bugfixes:
     - Fix an overzealous assert in our new circuit build timeout code.
