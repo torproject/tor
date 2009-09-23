@@ -148,11 +148,10 @@ Spec modifications:
     4.1. The "sha256" signature format.
 
     The 'SHA256' signature format for directory objects is defined as
-    the RSA signature of the OAEP+-padded SHA256 digest of the SHA256
-    digest of the item to be signed.  When checking signatures,
-    the signature MUST be treated as valid if the signature material
-    begins with SHA256(SHA256(document)); this allows us to add other
-    data later.
+    the RSA signature of the OAEP+-padded SHA256 digest of the item to
+    be signed.  When checking signatures, the signature MUST be treated
+    as valid if the signature material begins with SHA256(document);
+    this allows us to add other data later.
 
 Considerations:
 
