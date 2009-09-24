@@ -3867,7 +3867,7 @@ int dnsserv_launch_request(const char *name, int is_reverse);
 #define DIR_ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
 /** How long do we have to have observed per-country request history before
  * we are willing to talk about it? */
-#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (24*60*60)
+#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (12*60*60)
 
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);

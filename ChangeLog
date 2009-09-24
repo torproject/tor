@@ -14,6 +14,9 @@ Changes in version 0.2.2.4-alpha - 2009-??-??
       code, and so on.  The unit test code has moved to its own
       subdirectory, and has been split into multiple modules.
 
+  o Minor bugfixes:
+    - Fix a couple of smaller issues with gathering statistics. Bugfixes
+      on 0.2.2.1-alpha.
 
 Changes in version 0.2.2.3-alpha - 2009-09-23
   o Major bugfixes:
