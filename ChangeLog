@@ -1,4 +1,11 @@
 Changes in version 0.2.2.4-alpha - 2009-??-??
+  o Minor features:
+    - Log SSL state transitions at debug level during handshake, and
+      include SSL states in error messages.  This may help debug
+      future SSL handshake issues.
+    - Add a new "Handshake" log domain for activities that happen
+      during the TLS handshake.
+
   o Code simplifications and refactoring:
     - Revise our unit tests to use the "tinytest" framework, so we
       can run tests in their own processes, have smarter setup/teardown
