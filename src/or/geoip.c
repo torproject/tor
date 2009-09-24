@@ -370,10 +370,12 @@ static void
 rotate_request_period(void)
 {
   SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+#if REQUEST_HIST_LEN > 1
       memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
               sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
       memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
               sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
+#endif
       c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
       c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
     });
@@ -393,7 +395,7 @@ geoip_note_client_seen(geoip_client_action_t action,
   clientmap_entry_t lookup, *ent;
   if (action == GEOIP_CLIENT_CONNECT) {
     /* Only remember statistics as entry guard or as bridge. */
-    if (!options->EntryStatistics ||
+    if (!options->EntryStatistics &&
         (!(options->BridgeRelay && options->BridgeRecordUsageByCountry)))
       return;
     /* Did we recently switch from bridge to relay or back? */
@@ -1009,6 +1011,8 @@ geoip_dirreq_stats_write(time_t now)
   if (fprintf(out, "dirreq-v3-reqs %s\ndirreq-v2-reqs %s\n",
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
+  tor_free(data_v2);
+  tor_free(data_v3);
 #define RESPONSE_GRANULARITY 8
   for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
     ns_v2_responses[i] = round_uint32_to_next_multiple_of(

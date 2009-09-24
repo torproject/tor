@@ -981,7 +981,6 @@ run_scheduled_events(time_t now)
         time_to_write_stats_files = now + WRITE_STATS_INTERVAL;
       } else {
         /* Write stats to disk. */
-        time_to_write_stats_files += WRITE_STATS_INTERVAL;
         if (options->CellStatistics)
           rep_hist_buffer_stats_write(time_to_write_stats_files);
         if (options->DirReqStatistics)
@@ -990,6 +989,7 @@ run_scheduled_events(time_t now)
           geoip_entry_stats_write(time_to_write_stats_files);
         if (options->ExitPortStatistics)
           rep_hist_exit_stats_write(time_to_write_stats_files);
+        time_to_write_stats_files += WRITE_STATS_INTERVAL;
       }
     } else {
       /* Never write stats to disk */

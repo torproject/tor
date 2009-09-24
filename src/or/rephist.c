@@ -1461,9 +1461,9 @@ rep_hist_exit_stats_write(time_t now)
               comma ? "," : "", other_streams)<0)
     goto done;
   /* Reset counters */
-  memset(exit_bytes_read, 0, sizeof(exit_bytes_read));
-  memset(exit_bytes_written, 0, sizeof(exit_bytes_written));
-  memset(exit_streams, 0, sizeof(exit_streams));
+  memset(exit_bytes_read, 0, EXIT_STATS_NUM_PORTS * sizeof(uint64_t));
+  memset(exit_bytes_written, 0, EXIT_STATS_NUM_PORTS * sizeof(uint64_t));
+  memset(exit_streams, 0, EXIT_STATS_NUM_PORTS * sizeof(uint32_t));
   start_of_exit_stats_interval = now;
 
   if (open_file)
@@ -2771,6 +2771,7 @@ rep_hist_buffer_stats_write(time_t now)
     goto done;
   finish_writing_to_file(open_file);
   open_file = NULL;
+  start_of_buffer_stats_interval = now;
  done:
   if (open_file)
     abort_writing_to_file(open_file);
