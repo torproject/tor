@@ -5,6 +5,8 @@ Changes in version 0.2.2.4-alpha - 2009-??-??
       future SSL handshake issues.
     - Add a new "Handshake" log domain for activities that happen
       during the TLS handshake.
+    - Revert to the "June 3 2009" ip-to-country file. The September one
+      seems to have removed most US IP addresses.
 
   o Code simplifications and refactoring:
     - Revise our unit tests to use the "tinytest" framework, so we
