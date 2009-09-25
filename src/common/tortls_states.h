@@ -3,9 +3,30 @@
  * Copyright (c) 2007-2009, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/* Helper file: included only in tortls.c */
+
 #ifndef _TORTLS_STATES_H
 #define _TORTLS_STATES_H
 
+/* The main body of this file was mechanically generated with this
+   perl script:
+
+   my %keys = ();
+   for $fn (@ARGV) {
+       open(F, $fn);
+       while (<F>) {
+           next unless /^#define ((?:SSL|DTLS)\w*_ST_\w*)/;
+           $keys{$1} = 1;
+       }
+       close(F);
+   }
+   for $k (sort keys %keys) {
+       print "#ifdef $k\n  S($k),\n#endif\n"
+   }
+*/
+
+/** Mapping from allowed value of SSL.state to the name of C macro for that
+ * state.  Used for debugging an openssl connection. */
 static const struct { int state; const char *name; } state_map[] = {
 #define S(state) { state, #state }
 #ifdef DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A
