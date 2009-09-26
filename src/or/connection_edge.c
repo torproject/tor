@@ -2156,8 +2156,9 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
     tor_assert(payload_len <= (int)sizeof(inaddr_buf));
   }
 
-  if (payload_len > RELAY_PAYLOAD_SIZE) {
+  if (payload_len > MAX_SOCKS_ADDR_LEN) {
     /* This should be impossible: we don't accept addresses this big. */
+    /* XXX Should we log a bug here? */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
     return -1;
   }
