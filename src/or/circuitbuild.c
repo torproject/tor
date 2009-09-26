@@ -427,6 +427,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       if (!ok) {
         *msg = tor_strdup("Unable to parse circuit build times: "
                           "Unparsable bin number");
+        SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+        smartlist_free(args);
         break;
       }
       count = (uint32_t)tor_parse_ulong(count_str, 0, 0,
@@ -434,6 +436,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       if (!ok) {
         *msg = tor_strdup("Unable to parse circuit build times: "
                           "Unparsable bin count");
+        SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+        smartlist_free(args);
         break;
       }
 
