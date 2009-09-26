@@ -504,6 +504,7 @@ test_dir_param_voting(void)
   smartlist_free(vote2.net_params);
   smartlist_free(vote3.net_params);
   smartlist_free(vote4.net_params);
+  smartlist_free(votes);
 
   return;
 }

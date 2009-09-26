@@ -58,6 +58,7 @@
   tor_assert((length&1)==0);                                            \
   base16_decode(value2, length/2, hex, length);                         \
   test_mem_op(expr1, op, value2, length/2);                             \
+  tor_free(value2);                                                     \
   STMT_END
 
 #define test_memeq_hex(expr1, hex) test_mem_op_hex(expr1, ==, hex)
