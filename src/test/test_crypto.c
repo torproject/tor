@@ -96,6 +96,7 @@ test_crypto_aes(void)
   char *data1 = NULL, *data2 = NULL, *data3 = NULL;
   crypto_cipher_env_t *env1 = NULL, *env2 = NULL;
   int i, j;
+  char *mem_op_hex_tmp=NULL;
 
   data1 = tor_malloc(1024);
   data2 = tor_malloc(1024);
@@ -210,6 +211,7 @@ test_crypto_aes(void)
   test_assert(tor_mem_is_zero(data2, 64));
 
  done:
+  tor_free(mem_op_hex_tmp);
   if (env1)
     crypto_free_cipher_env(env1);
   if (env2)
@@ -229,6 +231,7 @@ test_crypto_sha(void)
   char digest[32];
   char data[50];
   char d_out1[DIGEST_LEN], d_out2[DIGEST256_LEN];
+  char *mem_op_hex_tmp=NULL;
 
   /* Test SHA-1 with a test vector from the specification. */
   i = crypto_digest(data, "abc", 3);
@@ -312,6 +315,7 @@ test_crypto_sha(void)
     crypto_free_digest_env(d1);
   if (d2)
     crypto_free_digest_env(d2);
+  tor_free(mem_op_hex_tmp);
 }
 
 /** Run unit tests for our public key crypto functions */
