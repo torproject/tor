@@ -76,6 +76,8 @@ test_dir_formats(void)
   pk2 = pk_generate(1);
   pk3 = pk_generate(2);
 
+  test_assert(pk1 && pk2 && pk3);
+
   get_platform_str(platform, sizeof(platform));
   r1 = tor_malloc_zero(sizeof(routerinfo_t));
   r1->address = tor_strdup("18.244.0.1");
