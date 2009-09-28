@@ -423,7 +423,8 @@ tor_zlib_process(tor_zlib_state_t *state,
 void
 tor_zlib_free(tor_zlib_state_t *state)
 {
-  tor_assert(state);
+  if (!state)
+    return;
 
   if (state->compress)
     deflateEnd(&state->stream);

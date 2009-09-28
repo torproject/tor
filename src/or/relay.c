@@ -1563,7 +1563,7 @@ clean_cell_pool(void)
 
 /** Release storage held by <b>cell</b>. */
 static INLINE void
-packed_cell_free(packed_cell_t *cell)
+packed_cell_free_unchecked(packed_cell_t *cell)
 {
   --total_cells_allocated;
   mp_pool_release(cell);
@@ -1667,7 +1667,7 @@ cell_queue_clear(cell_queue_t *queue)
   cell = queue->head;
   while (cell) {
     next = cell->next;
-    packed_cell_free(cell);
+    packed_cell_free_unchecked(cell);
     cell = next;
   }
   queue->head = queue->tail = NULL;
@@ -1913,7 +1913,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
 
     connection_write_to_buf(cell->body, CELL_NETWORK_SIZE, TO_CONN(conn));
 
-    packed_cell_free(cell);
+    packed_cell_free_unchecked(cell);
     ++n_flushed;
     if (circ != conn->active_circuits) {
       /* If this happens, the current circuit just got made inactive by

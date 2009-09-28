@@ -147,10 +147,13 @@ get_freelist(size_t alloc)
 
 /** Deallocate a chunk or put it on a freelist */
 static void
-chunk_free(chunk_t *chunk)
+chunk_free_unchecked(chunk_t *chunk)
 {
-  size_t alloc = CHUNK_ALLOC_SIZE(chunk->memlen);
-  chunk_freelist_t *freelist = get_freelist(alloc);
+  size_t alloc;
+  chunk_freelist_t *freelist;
+
+  alloc = CHUNK_ALLOC_SIZE(chunk->memlen);
+  freelist = get_freelist(alloc);
   if (freelist && freelist->cur_length < freelist->max_length) {
     chunk->next = freelist->head;
     freelist->head = chunk;
@@ -195,7 +198,7 @@ chunk_new_with_alloc_size(size_t alloc)
 }
 #else
 static void
-chunk_free(chunk_t *chunk)
+chunk_free_unchecked(chunk_t *chunk)
 {
   tor_free(chunk);
 }
@@ -403,7 +406,7 @@ buf_pullup(buf_t *buf, size_t bytes, int nulterminate)
       dest->next = src->next;
       if (buf->tail == src)
         buf->tail = dest;
-      chunk_free(src);
+      chunk_free_unchecked(src);
     } else {
       memcpy(CHUNK_WRITE_PTR(dest), src->data, n);
       dest->datalen += n;
@@ -449,7 +452,7 @@ buf_remove_from_front(buf_t *buf, size_t n)
       buf->head = victim->next;
       if (buf->tail == victim)
         buf->tail = NULL;
-      chunk_free(victim);
+      chunk_free_unchecked(victim);
     }
   }
   check();
@@ -483,7 +486,7 @@ buf_clear(buf_t *buf)
   buf->datalen = 0;
   for (chunk = buf->head; chunk; chunk = next) {
     next = chunk->next;
-    chunk_free(chunk);
+    chunk_free_unchecked(chunk);
   }
   buf->head = buf->tail = NULL;
 }
@@ -522,6 +525,8 @@ buf_slack(const buf_t *buf)
 void
 buf_free(buf_t *buf)
 {
+  if (!buf)
+    return;
   buf_clear(buf);
   buf->magic = 0xdeadbeef;
   tor_free(buf);

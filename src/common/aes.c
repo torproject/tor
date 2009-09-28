@@ -263,7 +263,8 @@ aes_set_key(aes_cnt_cipher_t *cipher, const char *key, int key_bits)
 void
 aes_free_cipher(aes_cnt_cipher_t *cipher)
 {
-  tor_assert(cipher);
+  if (!cipher)
+    return;
 #ifdef USE_OPENSSL_EVP
   EVP_CIPHER_CTX_cleanup(&cipher->key);
 #endif

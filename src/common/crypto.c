@@ -400,7 +400,8 @@ crypto_new_pk_env(void)
 void
 crypto_free_pk_env(crypto_pk_env_t *env)
 {
-  tor_assert(env);
+  if (!env)
+    return;
 
   if (--env->refs > 0)
     return;
@@ -463,7 +464,8 @@ crypto_new_cipher_env(void)
 void
 crypto_free_cipher_env(crypto_cipher_env_t *env)
 {
-  tor_assert(env);
+  if (!env)
+    return;
 
   tor_assert(env->cipher);
   aes_free_cipher(env->cipher);
@@ -1528,6 +1530,8 @@ crypto_new_digest256_env(digest_algorithm_t algorithm)
 void
 crypto_free_digest_env(crypto_digest_env_t *digest)
 {
+  if (!digest)
+    return;
   memset(digest, 0, sizeof(crypto_digest_env_t));
   tor_free(digest);
 }
@@ -1899,7 +1903,8 @@ crypto_expand_key_material(const char *key_in, size_t key_in_len,
 void
 crypto_dh_free(crypto_dh_env_t *dh)
 {
-  tor_assert(dh);
+  if (!dh)
+    return;
   tor_assert(dh->dh);
   DH_free(dh->dh);
   tor_free(dh);

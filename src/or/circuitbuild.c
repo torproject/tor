@@ -2744,7 +2744,8 @@ extend_info_from_router(routerinfo_t *r)
 void
 extend_info_free(extend_info_t *info)
 {
-  tor_assert(info);
+  if (!info)
+    return;
   if (info->onion_key)
     crypto_free_pk_env(info->onion_key);
   tor_free(info);
@@ -3053,7 +3054,8 @@ pick_entry_guards(void)
 static void
 entry_guard_free(entry_guard_t *e)
 {
-  tor_assert(e);
+  if (!e)
+    return;
   tor_free(e->chosen_by_version);
   tor_free(e);
 }

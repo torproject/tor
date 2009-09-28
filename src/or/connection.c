@@ -311,6 +311,9 @@ _connection_free(connection_t *conn)
 {
   void *mem;
   size_t memlen;
+  if (!conn)
+    return;
+
   switch (conn->type) {
     case CONN_TYPE_OR:
       tor_assert(conn->magic == OR_CONNECTION_MAGIC);
@@ -432,7 +435,8 @@ _connection_free(connection_t *conn)
 void
 connection_free(connection_t *conn)
 {
-  tor_assert(conn);
+  if (!conn)
+    return;
   tor_assert(!connection_is_on_closeable_list(conn));
   tor_assert(!connection_in_array(conn));
   if (conn->linked_conn) {

@@ -1697,6 +1697,8 @@ get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
 void
 ns_detached_signatures_free(ns_detached_signatures_t *s)
 {
+  if (!s)
+    return;
   if (s->signatures) {
     STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
       SMARTLIST_FOREACH(sigs, document_signature_t *, sig,

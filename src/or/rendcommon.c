@@ -22,6 +22,8 @@ rend_cmp_service_ids(const char *one, const char *two)
 void
 rend_service_descriptor_free(rend_service_descriptor_t *desc)
 {
+  if (!desc)
+    return;
   if (desc->pk)
     crypto_free_pk_env(desc->pk);
   if (desc->intro_nodes) {
@@ -414,6 +416,8 @@ void
 rend_encoded_v2_service_descriptor_free(
   rend_encoded_v2_service_descriptor_t *desc)
 {
+  if (!desc)
+    return;
   tor_free(desc->desc_str);
   tor_free(desc);
 }
@@ -422,6 +426,8 @@ rend_encoded_v2_service_descriptor_free(
 void
 rend_intro_point_free(rend_intro_point_t *intro)
 {
+  if (!intro)
+    return;
   if (intro->extend_info)
     extend_info_free(intro->extend_info);
   if (intro->intro_key)

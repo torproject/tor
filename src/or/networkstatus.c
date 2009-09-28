@@ -266,6 +266,8 @@ static void
 vote_routerstatus_free(vote_routerstatus_t *rs)
 {
   vote_microdesc_hash_t *h, *next;
+  if (!rs)
+    return;
   tor_free(rs->version);
   tor_free(rs->status.exitsummary);
   for (h = rs->microdesc; h; h = next) {
@@ -280,6 +282,8 @@ vote_routerstatus_free(vote_routerstatus_t *rs)
 void
 routerstatus_free(routerstatus_t *rs)
 {
+  if (!rs)
+    return;
   tor_free(rs->exitsummary);
   tor_free(rs);
 }
@@ -288,6 +292,8 @@ routerstatus_free(routerstatus_t *rs)
 void
 networkstatus_v2_free(networkstatus_v2_t *ns)
 {
+  if (!ns)
+    return;
   tor_free(ns->source_address);
   tor_free(ns->contact);
   if (ns->signing_key)

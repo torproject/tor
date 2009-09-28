@@ -121,7 +121,7 @@ alloc_chunk(size_t sz, int freelist_ok)
 /** Release <b>chunk</b> from a memarea, either by adding it to the freelist
  * or by freeing it if the freelist is already too big. */
 static void
-chunk_free(memarea_chunk_t *chunk)
+chunk_free_unchecked(memarea_chunk_t *chunk)
 {
   CHECK_SENTINEL(chunk);
   if (freelist_len < MAX_FREELIST_LEN) {
@@ -151,7 +151,7 @@ memarea_drop_all(memarea_t *area)
   memarea_chunk_t *chunk, *next;
   for (chunk = area->first; chunk; chunk = next) {
     next = chunk->next_chunk;
-    chunk_free(chunk);
+    chunk_free_unchecked(chunk);
   }
   area->first = NULL; /*fail fast on */
   tor_free(area);
@@ -167,7 +167,7 @@ memarea_clear(memarea_t *area)
   if (area->first->next_chunk) {
     for (chunk = area->first->next_chunk; chunk; chunk = next) {
       next = chunk->next_chunk;
-      chunk_free(chunk);
+      chunk_free_unchecked(chunk);
     }
     area->first->next_chunk = NULL;
   }

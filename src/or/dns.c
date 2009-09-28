@@ -301,6 +301,8 @@ dns_get_expiry_ttl(uint32_t ttl)
 static void
 _free_cached_resolve(cached_resolve_t *r)
 {
+  if (!r)
+    return;
   while (r->pending_connections) {
     pending_connection_t *victim = r->pending_connections;
     r->pending_connections = victim->next;

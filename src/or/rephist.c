@@ -2272,6 +2272,8 @@ static void
 hs_usage_general_period_related_observations_free(
                              hs_usage_general_period_related_observations_t *s)
 {
+  if (!s)
+    return;
   rephist_total_alloc-=sizeof(hs_usage_general_period_related_observations_t);
   tor_free(s);
 }
@@ -2281,6 +2283,8 @@ static void
 hs_usage_current_observation_period_free(
                                     hs_usage_current_observation_period_t *s)
 {
+  if (!s)
+    return;
   rephist_total_alloc -= sizeof(hs_usage_current_observation_period_t);
   tor_free(s);
 }

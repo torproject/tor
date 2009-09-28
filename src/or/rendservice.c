@@ -87,7 +87,8 @@ num_rend_services(void)
 static void
 rend_authorized_client_free(rend_authorized_client_t *client)
 {
-  if (!client) return;
+  if (!client)
+    return;
   if (client->client_key)
     crypto_free_pk_env(client->client_key);
   tor_free(client->client_name);
@@ -106,7 +107,9 @@ rend_authorized_client_strmap_item_free(void *authorized_client)
 static void
 rend_service_free(rend_service_t *service)
 {
-  if (!service) return;
+  if (!service)
+    return;
+
   tor_free(service->directory);
   SMARTLIST_FOREACH(service->ports, void*, p, tor_free(p));
   smartlist_free(service->ports);
@@ -134,9 +137,9 @@ rend_service_free(rend_service_t *service)
 void
 rend_service_free_all(void)
 {
-  if (!rend_service_list) {
+  if (!rend_service_list)
     return;
-  }
+
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, ptr,
                     rend_service_free(ptr));
   smartlist_free(rend_service_list);

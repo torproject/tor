@@ -442,7 +442,9 @@ circuit_free(circuit_t *circ)
 {
   void *mem;
   size_t memlen;
-  tor_assert(circ);
+  if (!circ)
+    return;
+
   if (CIRCUIT_IS_ORIGIN(circ)) {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     mem = ocirc;
@@ -558,6 +560,9 @@ circuit_free_all(void)
 static void
 circuit_free_cpath_node(crypt_path_t *victim)
 {
+  if (!victim)
+    return;
+
   if (victim->f_crypto)
     crypto_free_cipher_env(victim->f_crypto);
   if (victim->b_crypto)

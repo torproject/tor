@@ -688,7 +688,11 @@ addressmap_init(void)
 static void
 addressmap_ent_free(void *_ent)
 {
-  addressmap_entry_t *ent = _ent;
+  addressmap_entry_t *ent;
+  if (!_ent)
+    return;
+
+  ent = _ent;
   tor_free(ent->new_address);
   tor_free(ent);
 }
@@ -697,7 +701,11 @@ addressmap_ent_free(void *_ent)
 static void
 addressmap_virtaddress_ent_free(void *_ent)
 {
-  virtaddress_entry_t *ent = _ent;
+  virtaddress_entry_t *ent;
+  if (!_ent)
+    return;
+
+  ent = _ent;
   tor_free(ent->ipv4_address);
   tor_free(ent->hostname_address);
   tor_free(ent);

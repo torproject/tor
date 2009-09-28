@@ -151,7 +151,7 @@ typedef enum {
  * type.
  *
  * This structure is only allocated in memareas; do not allocate it on
- * the heap, or token_free() won't work.
+ * the heap, or token_clear() won't work.
  */
 typedef struct directory_token_t {
   directory_keyword tp;        /**< Type of the token. */
@@ -523,7 +523,7 @@ static int router_get_hash_impl(const char *s, char *digest,
 static int router_get_hashes_impl(const char *s, digests_t *digests,
                                   const char *start_str, const char *end_str,
                                   char end_char);
-static void token_free(directory_token_t *tok);
+static void token_clear(directory_token_t *tok);
 static smartlist_t *find_all_exitpolicy(smartlist_t *s);
 static directory_token_t *_find_by_keyword(smartlist_t *s,
                                            directory_keyword keyword,
@@ -844,7 +844,7 @@ router_parse_directory(const char *str)
                             CST_CHECK_AUTHORITY, "directory")<0)
     goto err;
 
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_clear(tokens);
   memarea_clear(area);
 
@@ -882,7 +882,7 @@ router_parse_directory(const char *str)
  done:
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
   }
   if (area) {
@@ -948,7 +948,7 @@ router_parse_runningrouters(const char *str)
   dump_desc(str_dup, "v1 running-routers");
   if (declared_key) crypto_free_pk_env(declared_key);
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
   }
   if (area) {
@@ -998,7 +998,7 @@ find_dir_signing_key(const char *str, const char *eos)
   }
 
  done:
-  if (tok) token_free(tok);
+  if (tok) token_clear(tok);
   if (area) {
     DUMP_AREA(area, "dir-signing-key token");
     memarea_drop_all(area);
@@ -1551,7 +1551,7 @@ router_parse_entry_from_string(const char *s, const char *end,
   router = NULL;
  done:
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
   }
   if (exit_policy_tokens) {
@@ -1677,7 +1677,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   extrainfo = NULL;
  done:
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
   }
   if (area) {
@@ -1848,7 +1848,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   if (end_of_string) {
     *end_of_string = eat_whitespace(eos);
   }
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);
   if (area) {
     DUMP_AREA(area, "authority cert");
@@ -1858,7 +1858,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
  err:
   dump_desc(s_dup, "authority cert");
   authority_cert_free(cert);
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);
   if (area) {
     DUMP_AREA(area, "authority cert");
@@ -2129,7 +2129,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     routerstatus_free(rs);
   rs = NULL;
  done:
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_clear(tokens);
   if (area) {
     DUMP_AREA(area, "routerstatus entry");
@@ -2280,7 +2280,7 @@ networkstatus_v2_parse_from_string(const char *s)
 
   ns->entries = smartlist_create();
   s = eos;
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_clear(tokens);
   memarea_clear(area);
   while (!strcmpstart(s, "r ")) {
@@ -2320,9 +2320,9 @@ networkstatus_v2_parse_from_string(const char *s)
     networkstatus_v2_free(ns);
   ns = NULL;
  done:
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);
-  SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(footer_tokens);
   if (area) {
     DUMP_AREA(area, "v2 networkstatus");
@@ -2799,7 +2799,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   ns = NULL;
  done:
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
   }
   if (voter) {
@@ -2814,11 +2814,11 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     tor_free(voter);
   }
   if (rs_tokens) {
-    SMARTLIST_FOREACH(rs_tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(rs_tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(rs_tokens);
   }
   if (footer_tokens) {
-    SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(footer_tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(footer_tokens);
   }
   if (area) {
@@ -3052,7 +3052,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
   ns_detached_signatures_free(sigs);
   sigs = NULL;
  done:
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);
   if (area) {
     DUMP_AREA(area, "detached signatures");
@@ -3108,7 +3108,7 @@ router_parse_addr_policy_item_from_string(const char *s, int assume_action)
  err:
   r = NULL;
  done:
-  token_free(tok);
+  token_clear(tok);
   if (area) {
     DUMP_AREA(area, "policy item");
     memarea_drop_all(area);
@@ -3231,9 +3231,8 @@ assert_addr_policy_ok(smartlist_t *lst)
 
 /** Free all resources allocated for <b>tok</b> */
 static void
-token_free(directory_token_t *tok)
+token_clear(directory_token_t *tok)
 {
-  tor_assert(tok);
   if (tok->key)
     crypto_free_pk_env(tok->key);
 }
@@ -3245,7 +3244,7 @@ token_free(directory_token_t *tok)
 
 #define RET_ERR(msg)                                               \
   STMT_BEGIN                                                       \
-    if (tok) token_free(tok);                                      \
+    if (tok) token_clear(tok);                                      \
     tok = ALLOC_ZERO(sizeof(directory_token_t));                   \
     tok->tp = _ERR;                                                \
     tok->error = STRDUP(msg);                                      \
@@ -3523,7 +3522,7 @@ tokenize_string(memarea_t *area,
     tok = get_next_token(area, s, end, table);
     if (tok->tp == _ERR) {
       log_warn(LD_DIR, "parse error: %s", tok->error);
-      token_free(tok);
+      token_clear(tok);
       return -1;
     }
     ++counts[tok->tp];
@@ -4270,7 +4269,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   result = NULL;
  done:
   if (tokens) {
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
   }
   if (area)
@@ -4428,7 +4427,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
       eos = eos+1;
     tor_assert(eos <= intro_points_encoded+intro_points_encoded_size);
     /* Free tokens and clear token list. */
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_clear(tokens);
     memarea_clear(area);
     /* Tokenize string. */
@@ -4501,7 +4500,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
 
  done:
   /* Free tokens and clear token list. */
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);
   if (area)
     memarea_drop_all(area);
@@ -4540,7 +4539,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
     else
       eos = eos + 1;
     /* Free tokens and clear token list. */
-    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+    SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_clear(tokens);
     memarea_clear(area);
     /* Tokenize string. */
@@ -4612,7 +4611,7 @@ rend_parse_client_keys(strmap_t *parsed_clients, const char *ckstr)
   result = -1;
  done:
   /* Free tokens and clear token list. */
-  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_free(t));
+  SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
   smartlist_free(tokens);
   if (area)
     memarea_drop_all(area);

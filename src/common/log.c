@@ -426,6 +426,8 @@ _log_err(log_domain_mask_t domain, const char *format, ...)
 static void
 log_free(logfile_t *victim)
 {
+  if (!victim)
+    return;
   tor_free(victim->severities);
   tor_free(victim->filename);
   tor_free(victim);

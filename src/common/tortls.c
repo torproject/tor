@@ -986,7 +986,9 @@ void
 tor_tls_free(tor_tls_t *tls)
 {
   tor_tls_t *removed;
-  tor_assert(tls && tls->ssl);
+  if (!tls)
+    return;
+  tor_assert(tls->ssl);
   removed = HT_REMOVE(tlsmap, &tlsmap_root, tls);
   if (!removed) {
     log_warn(LD_BUG, "Freeing a TLS that was not in the ssl->tls map.");

@@ -859,6 +859,9 @@ get_version(void)
 static void
 or_options_free(or_options_t *options)
 {
+  if (!options)
+    return;
+
   if (options->_ExcludeExitNodesUnion)
     routerset_free(options->_ExcludeExitNodesUnion);
   config_free(&options_format, options);
@@ -2609,7 +2612,10 @@ config_free(config_format_t *fmt, void *options)
 {
   int i;
 
-  tor_assert(options);
+  if (!options)
+    return;
+
+  tor_assert(fmt);
 
   for (i=0; fmt->vars[i].name; ++i)
     option_clear(fmt, options, &(fmt->vars[i]));

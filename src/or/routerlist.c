@@ -2378,6 +2378,9 @@ extrainfo_free(extrainfo_t *extrainfo)
 static void
 signed_descriptor_free(signed_descriptor_t *sd)
 {
+  if (!sd)
+    return;
+
   tor_free(sd->signed_descriptor_body);
 
   /* XXXX remove this once more bugs go away. */
@@ -2409,7 +2412,8 @@ _extrainfo_free(void *e)
 void
 routerlist_free(routerlist_t *rl)
 {
-  tor_assert(rl);
+  if (!rl)
+    return;
   rimap_free(rl->identity_map, NULL);
   sdmap_free(rl->desc_digest_map, NULL);
   sdmap_free(rl->desc_by_eid_map, NULL);
@@ -3779,6 +3783,9 @@ authority_cert_free(authority_cert_t *cert)
 static void
 trusted_dir_server_free(trusted_dir_server_t *ds)
 {
+  if (!ds)
+    return;
+
   tor_free(ds->nickname);
   tor_free(ds->description);
   tor_free(ds->address);
@@ -5305,6 +5312,9 @@ routerset_equal(const routerset_t *old, const routerset_t *new)
 void
 routerset_free(routerset_t *routerset)
 {
+  if (!routerset)
+    return;
+
   SMARTLIST_FOREACH(routerset->list, char *, cp, tor_free(cp));
   smartlist_free(routerset->list);
   SMARTLIST_FOREACH(routerset->policies, addr_policy_t *, p,

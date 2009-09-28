@@ -1276,7 +1276,8 @@ getinfo_helper_policies(control_connection_t *conn,
 void
 addr_policy_list_free(smartlist_t *lst)
 {
-  if (!lst) return;
+  if (!lst)
+    return;
   SMARTLIST_FOREACH(lst, addr_policy_t *, policy, addr_policy_free(policy));
   smartlist_free(lst);
 }
@@ -1285,19 +1286,20 @@ addr_policy_list_free(smartlist_t *lst)
 void
 addr_policy_free(addr_policy_t *p)
 {
-  if (p) {
-    if (--p->refcnt <= 0) {
-      if (p->is_canonical) {
-        policy_map_ent_t search, *found;
-        search.policy = p;
-        found = HT_REMOVE(policy_map, &policy_root, &search);
-        if (found) {
-          tor_assert(p == found->policy);
-          tor_free(found);
-        }
+  if (!p)
+    return;
+
+  if (--p->refcnt <= 0) {
+    if (p->is_canonical) {
+      policy_map_ent_t search, *found;
+      search.policy = p;
+      found = HT_REMOVE(policy_map, &policy_root, &search);
+      if (found) {
+        tor_assert(p == found->policy);
+        tor_free(found);
       }
-      tor_free(p);
     }
+    tor_free(p);
   }
 }
 

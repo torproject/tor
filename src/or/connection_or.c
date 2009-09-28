@@ -1075,7 +1075,8 @@ connection_init_or_handshake_state(or_connection_t *conn, int started_here)
 void
 or_handshake_state_free(or_handshake_state_t *state)
 {
-  tor_assert(state);
+  if (!state)
+    return;
   memset(state, 0xBE, sizeof(or_handshake_state_t));
   tor_free(state);
 }

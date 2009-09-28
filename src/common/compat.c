@@ -2044,6 +2044,8 @@ tor_mutex_new(void)
 void
 tor_mutex_free(tor_mutex_t *m)
 {
+  if (!m)
+    return;
   tor_mutex_uninit(m);
   tor_free(m);
 }
@@ -2071,7 +2073,8 @@ tor_cond_new(void)
 void
 tor_cond_free(tor_cond_t *cond)
 {
-  tor_assert(cond);
+  if (!cond)
+    return;
   if (pthread_cond_destroy(&cond->cond)) {
     log_warn(LD_GENERAL,"Error freeing condition: %s", strerror(errno));
     return;
@@ -2128,7 +2131,8 @@ tor_cond_new(void)
 void
 tor_cond_free(tor_cond_t *cond)
 {
-  tor_assert(cond);
+  if (!cond)
+    return;
   DeleteCriticalSection(&cond->mutex);
   /* XXXX notify? */
   smartlist_free(cond->events);
