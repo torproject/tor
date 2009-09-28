@@ -330,8 +330,8 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   tor_assert(conn->state == EXIT_CONN_STATE_CONNECTING);
 
   log_info(LD_EXIT,"Exit connection to %s:%u (%s) established.",
-           escaped_safe_str(conn->address),conn->port,
-           safe_str(fmt_addr(&conn->addr)));
+           escaped_safe_str_relay(conn->address), conn->port,
+           safe_str_relay(fmt_addr(&conn->addr)));
 
   rep_hist_note_exit_stream_opened(conn->port);
 
@@ -428,7 +428,8 @@ connection_ap_expire_beginning(void)
         log_fn(severity, LD_APP,
             "Tried for %d seconds to get a connection to %s:%d. "
             "Giving up. (%s)",
-            seconds_since_born, safe_str(conn->socks_request->address),
+            seconds_since_born,
+            safe_str(conn->socks_request->address),
             conn->socks_request->port,
             conn_state_to_string(CONN_TYPE_AP, conn->_base.state));
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TIMEOUT);
@@ -465,7 +466,8 @@ connection_ap_expire_beginning(void)
     log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
            "We tried for %d seconds to connect to '%s' using exit '%s'."
            " Retrying on a new circuit.",
-           seconds_idle, safe_str(conn->socks_request->address),
+           seconds_idle,
+           safe_str(conn->socks_request->address),
            conn->cpath_layer ?
              conn->cpath_layer->extend_info->nickname : "*unnamed*");
     /* send an end down the circuit */
@@ -917,7 +919,9 @@ addressmap_register(const char *address, char *new_address, time_t expires,
     if (expires > 1) {
       log_info(LD_APP,"Temporary addressmap ('%s' to '%s') not performed, "
                "since it's already mapped to '%s'",
-      safe_str(address), safe_str(new_address), safe_str(ent->new_address));
+      safe_str(address),
+      safe_str(new_address),
+      safe_str(ent->new_address));
       tor_free(new_address);
       return;
     }
@@ -936,7 +940,8 @@ addressmap_register(const char *address, char *new_address, time_t expires,
   ent->source = source;
 
   log_info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
-           safe_str(address), safe_str(ent->new_address));
+           safe_str(address),
+           safe_str(ent->new_address));
   control_event_address_mapped(address, ent->new_address, expires, NULL);
 }
 
@@ -956,7 +961,8 @@ client_dns_incr_failures(const char *address)
   if (ent->num_resolve_failures < SHORT_MAX)
     ++ent->num_resolve_failures; /* don't overflow */
   log_info(LD_APP, "Address %s now has %d resolve failures.",
-           safe_str(address), ent->num_resolve_failures);
+           safe_str(address),
+           ent->num_resolve_failures);
   return ent->num_resolve_failures;
 }
 
@@ -1235,7 +1241,9 @@ addressmap_register_virtual_address(int type, char *new_address)
       log_warn(LD_BUG,
                "Internal confusion: I thought that '%s' was mapped to by "
                "'%s', but '%s' really maps to '%s'. This is a harmless bug.",
-               safe_str(new_address), safe_str(*addrp), safe_str(*addrp),
+               safe_str(new_address),
+               safe_str(*addrp),
+               safe_str(*addrp),
                ent?safe_str(ent->new_address):"(nothing)");
   }
 
@@ -1257,7 +1265,8 @@ addressmap_register_virtual_address(int type, char *new_address)
                            (type == RESOLVED_TYPE_IPV4) ?
                            vent->ipv4_address : vent->hostname_address));
     log_info(LD_APP, "Map from %s to %s okay.",
-           safe_str(*addrp),safe_str(new_address));
+             safe_str(*addrp),
+             safe_str(new_address));
   }
 #endif
 
@@ -1422,7 +1431,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                               RESOLVED_TYPE_IPV4, tor_strdup(socks->address));
       tor_assert(new_addr);
       log_info(LD_APP, "Automapping %s to %s",
-               escaped_safe_str(socks->address), safe_str(new_addr));
+               escaped_safe_str(socks->address),
+               safe_str(new_addr));
       strlcpy(socks->address, new_addr, sizeof(socks->address));
     }
   }
@@ -1478,7 +1488,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
      * information.
      */
     log_warn(LD_APP,"Missing mapping for virtual address '%s'. Refusing.",
-             socks->address); /* don't safe_str() this yet. */
+             socks->address); /* don't safe_str() this yet. XXX When? -Seb */
     connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
     return -1;
   }
@@ -2178,7 +2188,8 @@ connection_ap_make_link(char *address, uint16_t port,
   edge_connection_t *conn;
 
   log_info(LD_APP,"Making internal %s tunnel to %s:%d ...",
-           want_onehop ? "direct" : "anonymized" , safe_str(address),port);
+           want_onehop ? "direct" : "anonymized",
+           safe_str(address), port);
 
   conn = edge_connection_new(CONN_TYPE_AP, AF_INET);
   conn->_base.linked = 1; /* so that we can add it safely below. */

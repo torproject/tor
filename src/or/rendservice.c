@@ -1117,14 +1117,16 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   if (!launched) { /* give up */
     log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
              "point %s for service %s.",
-             escaped_safe_str(extend_info->nickname), serviceid);
+             escaped_safe_str(extend_info->nickname),
+             serviceid);
     reason = END_CIRC_REASON_CONNECTFAILED;
     goto err;
   }
   log_info(LD_REND,
            "Accepted intro; launching circuit to %s "
            "(cookie %s) for service %s.",
-           escaped_safe_str(extend_info->nickname), hexcookie, serviceid);
+           escaped_safe_str(extend_info->nickname),
+           hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
   launched->rend_data = tor_malloc_zero(sizeof(rend_data_t));

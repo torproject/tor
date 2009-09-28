@@ -302,7 +302,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("RouterFile"),
   V(RunAsDaemon,                 BOOL,     "0"),
   V(RunTesting,                  BOOL,     "0"),
-  V(SafeLogging,                 BOOL,     "1"),
+  V(SafeLogging,                 STRING,   "1"),
   V(SafeSocks,                   BOOL,     "0"),
   V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
   V(ServerDNSAllowNonRFC953Hostnames, BOOL,"0"),
@@ -886,14 +886,28 @@ config_free_all(void)
   tor_free(global_dirfrontpagecontents);
 }
 
-/** If options->SafeLogging is on, return a not very useful string,
+/** If options->SafeLogging is "1", return a not very useful string,
  * else return address.
  */
 const char *
 safe_str(const char *address)
 {
   tor_assert(address);
-  if (get_options()->SafeLogging)
+  if (!strcmp(get_options()->SafeLogging, "1"))
+    return "[scrubbed]";
+  else
+    return address;
+}
+
+/** If options->SafeLogging is "1" or "relay", return a not very useful
+ * string, else return address.
+ */
+const char *
+safe_str_relay(const char *address)
+{
+  tor_assert(address);
+  if (!strcmp(get_options()->SafeLogging, "1") ||
+      !strcmp(get_options()->SafeLogging, "relay"))
     return "[scrubbed]";
   else
     return address;
@@ -905,7 +919,20 @@ safe_str(const char *address)
 const char *
 escaped_safe_str(const char *address)
 {
-  if (get_options()->SafeLogging)
+  if (!strcmp(get_options()->SafeLogging, "1"))
+    return "[scrubbed]";
+  else
+    return escaped(address);
+}
+
+/** Equivalent to escaped(safe_str_relay(address)).  See reentrancy note on
+ * escaped(): don't use this outside the main thread, or twice in the same
+ * log statement. */
+const char *
+escaped_safe_str_relay(const char *address)
+{
+  if (!strcasecmp(get_options()->SafeLogging, "1") ||
+      !strcasecmp(get_options()->SafeLogging, "relay"))
     return "[scrubbed]";
   else
     return escaped(address);
@@ -3353,6 +3380,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
           return -1;
         }
       });
+  }
+
+  if (options->SafeLogging &&
+      !(!strcasecmp(options->SafeLogging, "relay") ||
+        !strcasecmp(options->SafeLogging, "1") ||
+        !strcasecmp(options->SafeLogging, "0")))
+  {
+    r = tor_snprintf(buf, sizeof(buf),
+                     "Unrecognized value '%s' in SafeLogging",
+                     options->SafeLogging);
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
   }
 
   if (compute_publishserverdescriptor(options) < 0) {

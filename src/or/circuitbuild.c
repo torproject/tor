@@ -1229,7 +1229,8 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     /* not currently connected in a useful way. */
     const char *name = strlen(firsthop->extend_info->nickname) ?
       firsthop->extend_info->nickname : fmt_addr(&firsthop->extend_info->addr);
-    log_info(LD_CIRC, "Next router is %s: %s ", safe_str(name), msg?msg:"???");
+    log_info(LD_CIRC, "Next router is %s: %s ",
+             safe_str(name), msg?msg:"???");
     circ->_base.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (should_launch) {

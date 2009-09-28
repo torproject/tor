@@ -616,8 +616,8 @@ conn_close_if_marked(int i)
              "something is wrong with theirs. "
              "(fd %d, type %s, state %d, marked at %s:%d).",
              (int)buf_datalen(conn->outbuf),
-             escaped_safe_str(conn->address), conn->s,
-             conn_type_to_string(conn->type), conn->state,
+             escaped_safe_str(conn->address),
+             conn->s, conn_type_to_string(conn->type), conn->state,
              conn->marked_for_close_file,
              conn->marked_for_close);
     }
@@ -1678,7 +1678,8 @@ dumpstats(int severity)
     if (!connection_is_listener(conn)) {
       log(severity,LD_GENERAL,
           "Conn %d is to %s:%d.", i,
-          safe_str(conn->address), conn->port);
+          safe_str(conn->address),
+          conn->port);
       log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
           i,

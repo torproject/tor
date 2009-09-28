@@ -377,11 +377,16 @@ no effect on Windows; instead you should use the --service command-line
 option. (Default: 0)
 .LP
 .TP
-\fBSafeLogging \fR\fB0\fR|\fB1\fP
-If 1, Tor replaces potentially sensitive strings in the logs
-(e.g. addresses) with the string [scrubbed]. This way logs can still be
+\fBSafeLogging \fR\fB0\fR|\fB1\fR|\fBrelay\fP
+Tor can scrub potentially sensitive strings from log messages (e.g. addresses)
+by replacing them with the string [scrubbed]. This way logs can still be
 useful, but they don't leave behind personally identifying information
-about what sites a user might have visited. (Default: 1)
+about what sites a user might have visited.
+
+If this option is set to 0, Tor will not perform any scrubbing, if it is set
+to 1, all potentially sensitive strings are replaced. If it is set to
+relay, all log messages generated when acting as a relay are sanitized, but all
+messages generated when acting as a client are not. (Default: 1)
 .LP
 .TP
 \fBUser \fR\fIUID\fP

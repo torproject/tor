@@ -125,7 +125,8 @@ rend_compute_v2_desc_id(char *desc_id_out, const char *service_id,
   if (!service_id ||
       strlen(service_id) != REND_SERVICE_ID_LEN_BASE32) {
     log_warn(LD_REND, "Could not compute v2 descriptor ID: "
-                      "Illegal service ID: %s", safe_str(service_id));
+                      "Illegal service ID: %s",
+             safe_str_relay(service_id));
     return -1;
   }
   if (replica >= REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS) {
@@ -954,7 +955,7 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
   if (base32_decode(desc_id_digest, DIGEST_LEN,
                     desc_id, REND_DESC_ID_V2_LEN_BASE32) < 0) {
     log_warn(LD_REND, "Descriptor ID contains illegal characters: %s",
-             safe_str(desc_id));
+             safe_str_relay(desc_id));
     return -1;
   }
   /* Determine if we are responsible. */
@@ -1010,13 +1011,15 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   now = time(NULL);
   if (parsed->timestamp < now-REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
-           "Service descriptor %s is too old.", safe_str(query));
+           "Service descriptor %s is too old.",
+           safe_str(query));
     rend_service_descriptor_free(parsed);
     return -2;
   }
   if (parsed->timestamp > now+REND_CACHE_MAX_SKEW) {
     log_fn(LOG_PROTOCOL_WARN, LD_REND,
-           "Service descriptor %s is too far in the future.", safe_str(query));
+           "Service descriptor %s is too far in the future.",
+           safe_str(query));
     rend_service_descriptor_free(parsed);
     return -2;
   }
@@ -1036,7 +1039,8 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
   if (e && e->parsed->timestamp > parsed->timestamp) {
     log_info(LD_REND,"We already have a newer service descriptor %s with the "
-             "same ID and version.", safe_str(query));
+             "same ID and version.",
+             safe_str(query));
     rend_service_descriptor_free(parsed);
     return 0;
   }
@@ -1122,14 +1126,14 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     /* Is descriptor too old? */
     if (parsed->timestamp < now - REND_CACHE_MAX_AGE-REND_CACHE_MAX_SKEW) {
       log_info(LD_REND, "Service descriptor with desc ID %s is too old.",
-               safe_str(desc_id_base32));
+               safe_str_relay(desc_id_base32));
       goto skip;
     }
     /* Is descriptor too far in the future? */
     if (parsed->timestamp > now + REND_CACHE_MAX_SKEW) {
       log_info(LD_REND, "Service descriptor with desc ID %s is too far in the "
                         "future.",
-               safe_str(desc_id_base32));
+               safe_str_relay(desc_id_base32));
       goto skip;
     }
     /* Do we already have a newer descriptor? */
@@ -1137,13 +1141,13 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     if (e && e->parsed->timestamp > parsed->timestamp) {
       log_info(LD_REND, "We already have a newer service descriptor with the "
                         "same desc ID %s and version.",
-               safe_str(desc_id_base32));
+               safe_str_relay(desc_id_base32));
       goto skip;
     }
     /* Do we already have this descriptor? */
     if (e && !strcmp(desc, e->desc)) {
       log_info(LD_REND, "We already have this service descriptor with desc "
-                        "ID %s.", safe_str(desc_id_base32));
+                        "ID %s.", safe_str_relay(desc_id_base32));
       e->received = time(NULL);
       goto skip;
     }
@@ -1161,7 +1165,7 @@ rend_cache_store_v2_desc_as_dir(const char *desc)
     e->len = encoded_size;
     log_info(LD_REND, "Successfully stored service descriptor with desc ID "
                       "'%s' and len %d.",
-             safe_str(desc_id_base32), (int)encoded_size);
+             safe_str_relay(desc_id_base32), (int)encoded_size);
     number_stored++;
     goto advance;
   skip:
