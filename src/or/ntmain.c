@@ -6,6 +6,13 @@
 #define MAIN_PRIVATE
 #include "or.h"
 
+
+#ifdef HAVE_EVENT2_EVENT_H
+#include <event2/event.h>
+#else
+#include <event.h>
+#endif
+
 #include <tchar.h>
 #define GENSRV_SERVICENAME  TEXT("tor")
 #define GENSRV_DISPLAYNAME  TEXT("Tor Win32 Service")
@@ -218,7 +225,7 @@ nt_service_control(DWORD request)
           log_notice(LD_GENERAL,
                      "Got stop/shutdown request; shutting down cleanly.");
           service_status.dwCurrentState = SERVICE_STOP_PENDING;
-          event_loopexit(&exit_now);
+          event_base_loopexit(tor_libevent_get_base(), &exit_now);
           return;
   }
   service_fns.SetServiceStatus_fn(hStatus, &service_status);

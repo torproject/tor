@@ -2696,6 +2696,8 @@ is_listening_on_low_port(uint16_t port_option,
                          const config_line_t *listen_options)
 {
 #ifdef MS_WINDOWS
+  (void) port_option;
+  (void) listen_options;
   return 0; /* No port is too low for windows. */
 #else
   const config_line_t *l;
