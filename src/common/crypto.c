@@ -337,7 +337,8 @@ _crypto_new_pk_env_evp_pkey(EVP_PKEY *pkey)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
-/** Helper, used by tor-checkkey.c.  Return the RSA from a crypto_pk_env_t. */
+/** Helper, used by tor-checkkey.c and tor-gencert.c.  Return the RSA from a
+ * crypto_pk_env_t. */
 RSA *
 _crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
@@ -472,11 +473,11 @@ crypto_free_cipher_env(crypto_cipher_env_t *env)
 
 /* public key crypto */
 
-/** Generate a new public/private keypair in <b>env</b>.  Return 0 on
- * success, -1 on failure.
+/** Generate a <b>bits</b>-bit new public/private keypair in <b>env</b>.
+ * Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_generate_key(crypto_pk_env_t *env)
+crypto_pk_generate_key_with_bits(crypto_pk_env_t *env, int bits)
 {
   tor_assert(env);
 
@@ -484,7 +485,7 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
     RSA_free(env->key);
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
   /* In OpenSSL 0.9.7, RSA_generate_key is all we have. */
-  env->key = RSA_generate_key(PK_BYTES*8,65537, NULL, NULL);
+  env->key = RSA_generate_key(bits, 65537, NULL, NULL);
 #else
   /* In OpenSSL 0.9.8, RSA_generate_key is deprecated. */
   {
@@ -497,7 +498,7 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
     r = RSA_new();
     if (!r)
       goto done;
-    if (RSA_generate_key_ex(r, PK_BYTES*8, e, NULL) == -1)
+    if (RSA_generate_key_ex(r, bits, e, NULL) == -1)
       goto done;
 
     env->key = r;

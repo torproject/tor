@@ -86,7 +86,9 @@ crypto_cipher_env_t *crypto_new_cipher_env(void);
 void crypto_free_cipher_env(crypto_cipher_env_t *env);
 
 /* public key crypto */
-int crypto_pk_generate_key(crypto_pk_env_t *env);
+int crypto_pk_generate_key_with_bits(crypto_pk_env_t *env, int bits);
+#define crypto_pk_generate_key(env)                     \
+  crypto_pk_generate_key_with_bits((env), (PK_BYTES*8))
 
 int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
                                              const char *keyfile);
