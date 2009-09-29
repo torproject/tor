@@ -27,8 +27,8 @@
 #define CRYPTO_PRIVATE
 
 #include "compat.h"
-#include "util.h"
-#include "log.h"
+#include "../common/util.h"
+#include "../common/log.h"
 #include "crypto.h"
 #include "address.h"
 
