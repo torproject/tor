@@ -1826,9 +1826,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 /** Load the contents of <b>filename</b>, find the last line starting with
  * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
  * the past or more than 1 hour in the future with respect to <b>now</b>,
- * and write the file contents starting with that line to **<b>out</b>.
- * Return 1 for success, 0 if the file does not exist or does not contain
- * a line matching these criteria, or -1 for failure. */
+ * and write the file contents starting with that line to *<b>out</b>.
+ * Return 1 for success, 0 if the file does not exist, or -1 if the file
+ * does not contain a line matching these criteria or other failure. */
 static int
 load_stats_file(const char *filename, const char *end_line, time_t now,
                 char **out)
