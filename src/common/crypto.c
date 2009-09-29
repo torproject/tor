@@ -62,6 +62,11 @@
 
 #include <openssl/engine.h>
 
+#ifdef ANDROID
+/* Android's OpenSSL seems to have removed all of its Engine support. */
+#define DISABLE_ENGINES
+#endif
+
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
 /* On OpenSSL versions before 0.9.8, there is no working SHA256
  * implementation, so we use Tom St Denis's nice speedy one, slightly adapted
@@ -174,6 +179,7 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
+#ifndef DISABLE_ENGINES
 /** Log any OpenSSL engines we're using at NOTICE. */
 static void
 log_engine(const char *fn, ENGINE *e)
@@ -188,7 +194,9 @@ log_engine(const char *fn, ENGINE *e)
     log(LOG_INFO, LD_CRYPTO, "Using default implementation for %s", fn);
   }
 }
+#endif
 
+#ifndef DISABLE_ENGINES
 /** Try to load an engine in a shared library via fully qualified path.
  */
 static ENGINE *
@@ -206,6 +214,7 @@ try_load_engine(const char *path, const char *engine)
   }
   return e;
 }
+#endif
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
@@ -218,10 +227,17 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     _crypto_global_initialized = 1;
     setup_openssl_threading();
     if (useAccel > 0) {
+#ifdef DISABLE_ENGINES
+      (void)accelName;
+      (void)accelDir;
+      log_warn(LD_CRYPTO, "No OpenSSL hardware acceleration support enabled.");
+#else
       ENGINE *e = NULL;
+
       log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
       ENGINE_register_all_complete();
+
       if (accelName) {
         if (accelDir) {
           log_info(LD_CRYPTO, "Trying to load dynamic OpenSSL engine \"%s\""
@@ -251,6 +267,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+#endif
     } else {
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
@@ -274,7 +291,11 @@ crypto_global_cleanup(void)
   EVP_cleanup();
   ERR_remove_state(0);
   ERR_free_strings();
+
+#ifndef DISABLE_ENGINES
   ENGINE_cleanup();
+#endif
+
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
 #ifdef TOR_IS_MULTITHREADED
