@@ -372,18 +372,29 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
  * Stolen from http://en.wikipedia.org/wiki/Fisher\u2013Yates_shuffle
  */
 static void
-circuit_build_times_shuffle_array(circuit_build_times_t *cbt)
+circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
+                                            build_time_t *raw_times,
+                                            int num_times)
 {
-   int n = cbt->total_build_times;
+  int n = num_times;
+  if (num_times > NCIRCUITS_TO_OBSERVE) {
+    log_notice(LD_CIRC, "Decreasing circuit_build_times size from %d to %d",
+               num_times, NCIRCUITS_TO_OBSERVE);
+  }
 
-   /* This code can only be run on a compact array */
-   tor_assert(cbt->total_build_times == cbt->build_times_idx);
-   while (n-- > 1) {
-     int k = crypto_rand_int(n + 1); /* 0 <= k <= n. */
-     build_time_t tmp = cbt->circuit_build_times[k];
-     cbt->circuit_build_times[k] = cbt->circuit_build_times[n];
-     cbt->circuit_build_times[n] = tmp;
-   }
+  /* This code can only be run on a compact array */
+  while (n-- > 1) {
+    int k = crypto_rand_int(n + 1); /* 0 <= k <= n. */
+    build_time_t tmp = raw_times[k];
+    raw_times[k] = raw_times[n];
+    raw_times[n] = tmp;
+  }
+
+  /* Since the times are now shuffled, take a random NCIRCUITS_TO_OBSERVE
+   * subset (ie the first NCIRCUITS_TO_OBSERVE values) */
+  for (n = 0; n < MIN(num_times, NCIRCUITS_TO_OBSERVE); n++) {
+    circuit_build_times_add_time(cbt, raw_times[n]);
+  }
 }
 
 /**
@@ -397,14 +408,14 @@ int
 circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                 or_state_t *state, char **msg)
 {
-  int tot_values = 0, N = 0;
+  int tot_values = 0;
+  uint32_t loaded_cnt = 0, N = 0;
   config_line_t *line;
   int i;
-  *msg = NULL;
+  build_time_t *loaded_times = tor_malloc(sizeof(build_time_t)
+                                          * state->TotalBuildTimes);
   circuit_build_times_init(cbt);
-
-  /* We don't support decreasing the table size yet */
-  tor_assert(state->TotalBuildTimes <= NCIRCUITS_TO_OBSERVE);
+  *msg = NULL;
 
   for (line = state->BuildtimeHistogram; line; line = line->next) {
     smartlist_t *args = smartlist_create();
@@ -441,17 +452,30 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
         break;
       }
 
+      if (loaded_cnt+count > state->TotalBuildTimes) {
+        log_warn(LD_CIRC,
+                 "Too many build times in state file. "
+                 "Stopping short before %d",
+                 loaded_cnt+count);
+        break;
+      }
+
       for (k = 0; k < count; k++) {
-        circuit_build_times_add_time(cbt, ms);
+        loaded_times[loaded_cnt++] = ms;
       }
       N++;
       SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
       smartlist_free(args);
     }
-
   }
 
-  circuit_build_times_shuffle_array(cbt);
+  if (loaded_cnt != state->TotalBuildTimes) {
+    log_warn(LD_CIRC,
+            "Corrupt state file? Build times count mismatch. "
+            "Read %d, file says %d", loaded_cnt, state->TotalBuildTimes);
+  }
+
+  circuit_build_times_shuffle_and_store_array(cbt, loaded_times, loaded_cnt);
 
   /* Verify that we didn't overwrite any indexes */
   for (i=0; i < NCIRCUITS_TO_OBSERVE; i++) {
@@ -462,9 +486,10 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   log_info(LD_CIRC,
            "Loaded %d/%d values from %d lines in circuit time histogram",
            tot_values, cbt->total_build_times, N);
-  tor_assert(cbt->total_build_times == state->TotalBuildTimes);
-  tor_assert(tot_values == cbt->total_build_times);
+  tor_assert(cbt->total_build_times == tot_values);
+  tor_assert(cbt->total_build_times <= NCIRCUITS_TO_OBSERVE);
   circuit_build_times_set_timeout(cbt);
+  tor_free(loaded_times);
   return *msg ? -1 : 0;
 }
 
