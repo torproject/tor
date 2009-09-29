@@ -1903,11 +1903,11 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     char *contents = NULL;
-    time_t since = time(NULL) - (24*60*60);
+    time_t now = time(NULL);
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
-                        "dirreq-stats-end", since, &contents) > 0) {
+                        "dirreq-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1919,7 +1919,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     }
     if (options->EntryStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
-                        "entry-stats-end", since, &contents) > 0) {
+                        "entry-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1931,7 +1931,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     }
     if (options->CellStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
-                        "cell-stats-end", since, &contents) > 0) {
+                        "cell-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1943,7 +1943,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     }
     if (options->ExitPortStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"exit-stats",
-                        "exit-stats-end", since, &contents) > 0) {
+                        "exit-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
