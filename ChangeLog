@@ -4,6 +4,9 @@ Changes in version 0.2.2.4-alpha - 2009-??-??
       to fail to start once we have accumulated 5000 build times in the
       state file. Bugfix on 0.2.2.2-alpha; fixes bug 1108.
 
+  o New directory authorities:
+    - Move moria1 to a nearby IP address.
+
   o Minor features:
     - Log SSL state transitions at debug level during handshake, and
       include SSL states in error messages.  This may help debug

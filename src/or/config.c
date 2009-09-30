@@ -915,7 +915,7 @@ add_default_trusted_dir_authorities(authority_type_t type)
   int i;
   const char *dirservers[] = {
     "moria1 v1 orport=9001 v3ident=E2A2AF570166665D738736D0DD58169CC61D8A8B "
-      "128.31.0.34:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
+      "128.31.0.39:9031 FFCB 46DB 1339 DA84 674C 70D7 CB58 6434 C437 0441",
     "moria2 v1 orport=9002 128.31.0.34:9032 "
       "719B E45D E224 B607 C537 07D0 E214 3E2D 423E 74CF",
     "tor26 v1 orport=443 v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
