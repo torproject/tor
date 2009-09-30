@@ -1,8 +1,8 @@
 Changes in version 0.2.2.4-alpha - 2009-??-??
   o Major bugfixes:
     - Fix another assert in the circuit_build_times code that causes Tor
-	  to fail to start once we have accumulated 5000 build times in the
-	  state file. Bugfix on 0.2.2.2-alpha; fixes bug 1108.
+      to fail to start once we have accumulated 5000 build times in the
+      state file. Bugfix on 0.2.2.2-alpha; fixes bug 1108.
 
   o Minor features:
     - Log SSL state transitions at debug level during handshake, and
@@ -12,6 +12,9 @@ Changes in version 0.2.2.4-alpha - 2009-??-??
       during the TLS handshake.
     - Revert to the "June 3 2009" ip-to-country file. The September one
       seems to have removed most US IP addresses.
+    - Directory authorities now reject Tor relays with versions less than
+      0.1.2.14. This step cuts out four relays from the current network,
+      none of which are very big.
 
   o Code simplifications and refactoring:
     - Revise our unit tests to use the "tinytest" framework, so we

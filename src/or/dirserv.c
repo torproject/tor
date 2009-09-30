@@ -371,10 +371,10 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
-  /* 0.1.1.17-rc was the first version that claimed to be stable, doesn't
-   * crash and drop circuits all the time, and is even vaguely compatible with
-   * the current network */
-  if (platform && !tor_version_as_new_as(platform,"0.1.1.17-rc")) {
+  /* Tor 0.1.2.x is pretty old, but there are a lot of them running still,
+   * and there aren't any critical relay-side vulnerabilities. Once more
+   * of them die off, we should raise this minimum to 0.2.0.x. */
+  if (platform && !tor_version_as_new_as(platform,"0.1.2.14")) {
     if (msg)
       *msg = "Tor version is far too old to work.";
     return FP_REJECT;
