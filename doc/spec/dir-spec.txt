@@ -1342,7 +1342,7 @@
     least one /8 address space.
 
    "Fast" -- A router is 'Fast' if it is active, and its bandwidth is
-   either in the top 7/8ths for known active routers or at least 100KB/s.
+   either in the top 7/8ths for known active routers or at least 20KB/s.
 
    "Guard" -- A router is a possible 'Guard' if its Weighted Fractional
    Uptime is at least the median for "familiar" active routers, and if
