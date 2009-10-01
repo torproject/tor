@@ -1510,8 +1510,8 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         long timediff;
         tor_gettimeofday(&end);
         timediff = tv_mdiff(&circ->_base.highres_created, &end);
-        if (timediff > BUILD_TIME_MAX)
-          timediff = BUILD_TIME_MAX;
+        if (timediff > INT32_MAX)
+          timediff = INT32_MAX;
         circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
         circuit_build_times_network_circ_success(&circ_times);
         circuit_build_times_set_timeout(&circ_times);
