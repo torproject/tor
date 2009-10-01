@@ -5,7 +5,7 @@ Changes in version 0.2.2.4-alpha - 2009-??-??
       state file. Bugfix on 0.2.2.2-alpha; fixes bug 1108.
 
   o New directory authorities:
-    - Move moria1 to a nearby IP address.
+    - Move moria1 and Tonga to alternate IP addresses.
 
   o Minor features:
     - Log SSL state transitions at debug level during handshake, and
