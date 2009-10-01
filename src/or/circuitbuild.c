@@ -204,21 +204,18 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
 }
 
 /**
- * Add a timeoutout value to the set of build times. Time units
- * are milliseconds
+ * Add a new timeout value <b>time</b> to the set of build times. Time
+ * units are milliseconds.
  *
- * circuit_build_times is a circular array, so loop around when
+ * circuit_build_times <b>cbt</a> is a circular array, so loop around when
  * array is full.
  */
 int
 circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
 {
-  if (time > BUILD_TIME_MAX) {
-    log_notice(LD_CIRC,
-       "Circuit build time of %ums exceeds max. Capping at 65536ms", time);
-    time = BUILD_TIME_MAX;
-  } else if (time <= 0) {
-    log_err(LD_CIRC, "Circuit build time is %u!", time);
+  tor_assert(time <= BUILD_TIME_MAX);
+  if (time <= 0) {
+    log_warn(LD_CIRC, "Circuit build time is %u!", time);
     return -1;
   }
 
@@ -627,10 +624,10 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
              "%ums vs %lfms using Xm: %d a: %lf, q: %lf",
              gentime, cbt->timeout_ms, cbt->Xm, cbt->alpha, quantile_cutoff);
   } else if (gentime > BUILD_TIME_MAX) {
-    gentime = BUILD_TIME_MAX;
     log_info(LD_CIRC,
              "Generated a synthetic timeout larger than the max: %u",
              gentime);
+    gentime = BUILD_TIME_MAX;
   } else {
     log_info(LD_CIRC, "Generated synthetic circuit build time %u for timeout",
             gentime);
@@ -1506,17 +1503,19 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     log_debug(LD_CIRC,"starting to send subsequent skin.");
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) {
-      struct timeval end;
-      long timediff;
-      tor_gettimeofday(&end);
-      timediff = tv_mdiff(&circ->_base.highres_created, &end);
-      if (timediff > INT32_MAX)
-        timediff = INT32_MAX;
       /* done building the circuit. whew. */
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-      circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
-      circuit_build_times_network_circ_success(&circ_times);
-      circuit_build_times_set_timeout(&circ_times);
+      if (!circ->build_state->onehop_tunnel) {
+        struct timeval end;
+        long timediff;
+        tor_gettimeofday(&end);
+        timediff = tv_mdiff(&circ->_base.highres_created, &end);
+        if (timediff > BUILD_TIME_MAX)
+          timediff = BUILD_TIME_MAX;
+        circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
+        circuit_build_times_network_circ_success(&circ_times);
+        circuit_build_times_set_timeout(&circ_times);
+      }
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
       if (circ->build_state->onehop_tunnel)
