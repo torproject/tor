@@ -272,7 +272,7 @@ Future versions:
       the RPM and other startup scripts should too?
     - add a "default.action" file to the tor/vidalia bundle so we can
       fix the https thing in the default configuration:
-      http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#PrivoxyWeirdSSLPort
+      https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#PrivoxyWeirdSSLPort
 
 
 =======================================================================

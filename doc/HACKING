@@ -150,7 +150,7 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
 
 1.4. Log conventions
 
-  http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#LogLevels
+  https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#LogLevels
 
   No error or warning messages should be expected during normal OR or OP
   operation.
