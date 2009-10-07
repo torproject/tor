@@ -753,10 +753,8 @@ circuit_build_times_network_timeout(circuit_build_times_t *cbt,
   if (cbt->liveness.network_last_live <= start_time &&
           start_time <= (now - cbt->timeout_ms/1000.0)) {
     cbt->liveness.nonlive_timeouts++;
-  }
-
-  /* Check for one-hop timeout */
-  if (did_onehop) {
+  } else if (did_onehop) {
+    /* Count a one-hop timeout */
     cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]=1;
     cbt->liveness.after_firsthop_idx++;
     cbt->liveness.after_firsthop_idx %= RECENT_CIRCUITS;
@@ -823,7 +821,7 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
     timeout_count += cbt->liveness.timeouts_after_firsthop[i];
   }
 
-  /* If 75% of our recent circuits are timing out after the first hop,
+  /* If 80% of our recent circuits are timing out after the first hop,
    * we need to re-estimate a new initial alpha and timeout. */
   if (timeout_count < MAX_RECENT_TIMEOUT_COUNT) {
     return 0;

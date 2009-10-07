@@ -2927,7 +2927,7 @@ typedef uint32_t build_time_t;
  * This tells us to abandon timeout history and set
  * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
  */
-#define MAX_RECENT_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.75))
+#define MAX_RECENT_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.8))
 
 /** Information about the state of our local network connection */
 typedef struct {
