@@ -1,16 +1,17 @@
-Changes in version 0.2.2.4-alpha - 2009-??-??
+Changes in version 0.2.2.4-alpha - 2009-10-??
   o Major bugfixes:
-    - Fix another assert in the circuit_build_times code that causes Tor
-      to fail to start once we have accumulated 5000 build times in the
-      state file. Bugfix on 0.2.2.2-alpha; fixes bug 1108.
+    - Fix several more asserts in the circuit_build_times code, for
+      example one that causes Tor to fail to start once we have
+      accumulated 5000 build times in the state file. Bugfixes on
+      0.2.2.2-alpha; fixes bug 1108.
 
   o New directory authorities:
     - Move moria1 and Tonga to alternate IP addresses.
 
   o Minor features:
     - Log SSL state transitions at debug level during handshake, and
-      include SSL states in error messages.  This may help debug
-      future SSL handshake issues.
+      include SSL states in error messages. This may help debug future
+      SSL handshake issues.
     - Add a new "Handshake" log domain for activities that happen
       during the TLS handshake.
     - Revert to the "June 3 2009" ip-to-country file. The September one
@@ -19,22 +20,22 @@ Changes in version 0.2.2.4-alpha - 2009-??-??
       0.1.2.14. This step cuts out four relays from the current network,
       none of which are very big.
 
-  o Code simplifications and refactoring:
-    - Revise our unit tests to use the "tinytest" framework, so we
-      can run tests in their own processes, have smarter setup/teardown
-      code, and so on.  The unit test code has moved to its own
-      subdirectory, and has been split into multiple modules.
-
   o Minor bugfixes:
     - Fix a couple of smaller issues with gathering statistics. Bugfixes
       on 0.2.2.1-alpha.
     - Fix two memory leaks in the error case of
       circuit_build_times_parse_state. Bugfix on 0.2.2.2-alpha.
     - Make it explicit that we can't overflow in
-      connection_ap_handshake_send_resolve. Bugfix on 0.0.7.1-1.
+      connection_ap_handshake_send_resolve. Bugfix on 0.0.7.1.
     - Don't count one-hop circuits when we're estimating how long it
       takes circuits to build on average. Otherwise we'll set our circuit
       build timeout lower than we should. Bugfix on 0.2.2.2-alpha.
+
+  o Code simplifications and refactoring:
+    - Revise our unit tests to use the "tinytest" framework, so we
+      can run tests in their own processes, have smarter setup/teardown
+      code, and so on.  The unit test code has moved to its own
+      subdirectory, and has been split into multiple modules.
 
 
 Changes in version 0.2.2.3-alpha - 2009-09-23
