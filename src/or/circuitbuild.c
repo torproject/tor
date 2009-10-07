@@ -162,7 +162,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
 }
 
 /**
- * Rewind our timeout history by n positions.
+ * Rewind our timeout history by n timeout positions.
  */
 static void
 circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
@@ -170,6 +170,8 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
   int i = 0;
 
   if (cbt->pre_timeouts) {
+    /* If we have pre-timeouts, it means we're not yet storing
+     * timeouts in our normal array. Only rewind the counter. */
     if (cbt->pre_timeouts > n) {
       cbt->pre_timeouts -= n;
     } else {
@@ -180,8 +182,6 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
              "Pre-timeouts: %d", n, cbt->build_times_idx,
              cbt->total_build_times, cbt->pre_timeouts);
 
-    tor_assert(cbt->build_times_idx == 0);
-    tor_assert(cbt->total_build_times == 0);
     return;
   }
 
