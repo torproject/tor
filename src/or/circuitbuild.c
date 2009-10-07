@@ -650,7 +650,7 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   // CircBuildTimeout = Xm*((1-0.8))^(-1/a))
   // ln(CircBuildTimeout) = ln(Xm)+ln(((1-0.8)))*(-1/a)
   // -ln(1-0.8)/(ln(CircBuildTimeout)-ln(Xm))=a
-  tor_assert(quantile > 0);
+  tor_assert(quantile >= 0);
   tor_assert(cbt->Xm > 0);
   cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout_ms));
   tor_assert(cbt->alpha > 0);
