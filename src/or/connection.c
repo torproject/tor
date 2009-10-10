@@ -2352,7 +2352,7 @@ loop_again:
 
     if (n_read) {
       /* Probably a no-op, but hey. */
-      connection_buckets_decrement(linked, approx_time(), 0, n_read);
+      connection_buckets_decrement(linked, approx_time(), n_read, 0);
 
       if (connection_flushed_some(linked) < 0)
         connection_mark_for_close(linked);
