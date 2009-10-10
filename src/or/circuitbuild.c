@@ -454,6 +454,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
                  "Too many build times in state file. "
                  "Stopping short before %d",
                  loaded_cnt+count);
+        SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+        smartlist_free(args);
         break;
       }
 
