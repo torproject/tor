@@ -1,4 +1,4 @@
-Changes in version 0.2.2.4-alpha - 2009-10-??
+Changes in version 0.2.2.4-alpha - 2009-10-10
   o Major bugfixes:
     - Fix several more asserts in the circuit_build_times code, for
       example one that causes Tor to fail to start once we have
@@ -29,8 +29,9 @@ Changes in version 0.2.2.4-alpha - 2009-10-??
       takes circuits to build on average. Otherwise we'll set our circuit
       build timeout lower than we should. Bugfix on 0.2.2.2-alpha.
     - Directory authorities no longer change their opinion of, or vote on,
-      whether a router is Running, unless they have themselves been online
-      long enough to have some idea.  Fix for bug 1023.
+      whether a router is Running, unless they have themselves been
+      online long enough to have some idea. Bugfix on 0.2.0.6-alpha.
+      Fixes bug 1023.
 
   o Code simplifications and refactoring:
     - Revise our unit tests to use the "tinytest" framework, so we
