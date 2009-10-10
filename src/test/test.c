@@ -1196,7 +1196,7 @@ main(int c, const char **v)
 
   atexit(remove_directory);
 
-  have_failed = (tinytest_main(c, v, testgroups) < 0);
+  have_failed = (tinytest_main(c, v, testgroups) != 0);
 
   free_pregenerated_keys();
 #ifdef USE_DMALLOC
