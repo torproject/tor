@@ -1547,18 +1547,6 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       uint32_t answer;
       struct in_addr in;
       /* Reply to resolves immediately if we can. */
-      if (strlen(socks->address) > RELAY_PAYLOAD_SIZE) {
-        log_warn(LD_APP,"Address to be resolved is too large. Failing.");
-        control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
-                                    escaped(socks->address));
-        connection_ap_handshake_socks_resolved(conn,
-                                               RESOLVED_TYPE_ERROR_TRANSIENT,
-                                               0,NULL,-1,TIME_MAX);
-        connection_mark_unattached_ap(conn,
-                                END_STREAM_REASON_SOCKSPROTOCOL |
-                                END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
-        return -1;
-      }
       if (tor_inet_aton(socks->address, &in)) { /* see if it's an IP already */
         /* leave it in network order */
         answer = in.s_addr;
@@ -2154,13 +2142,6 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
     string_addr = inaddr_buf;
     payload_len = (int)strlen(inaddr_buf)+1;
     tor_assert(payload_len <= (int)sizeof(inaddr_buf));
-  }
-
-  if (payload_len > MAX_SOCKS_ADDR_LEN) {
-    /* This should be impossible: we don't accept addresses this big. */
-    /* XXX Should we log a bug here? */
-    connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    return -1;
   }
 
   log_debug(LD_APP,
