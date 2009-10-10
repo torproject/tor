@@ -39,6 +39,8 @@ Changes in version 0.2.2.4-alpha - 2009-10-??
 
 
 Changes in version 0.2.2.3-alpha - 2009-09-23
+  Tor 0.2.2.3-alpha fixes a few crash bugs in 0.2.2.2-alpha.
+
   o Major bugfixes:
     - Fix an overzealous assert in our new circuit build timeout code.
       Bugfix on 0.2.2.2-alpha; fixes bug 1103.
@@ -50,6 +52,12 @@ Changes in version 0.2.2.3-alpha - 2009-09-23
 
 
 Changes in version 0.2.2.2-alpha - 2009-09-21
+  Tor 0.2.2.2-alpha introduces our latest performance improvement for
+  clients: Tor tracks the average time it takes to build a circuit, and
+  avoids using circuits that take too long to build. For fast connections,
+  this feature can cut your expected latency in half. For slow or flaky
+  connections, it could ruin your Tor experience. Let us know if it does!
+
   o Major features:
     - Tor now tracks how long it takes to build client-side circuits
       over time, and adapts its timeout to local network performance.
@@ -119,6 +127,11 @@ Changes in version 0.2.2.2-alpha - 2009-09-21
 
 
 Changes in version 0.2.2.1-alpha - 2009-08-26
+  Tor 0.2.2.1-alpha disables ".exit" address notation by default, allows
+  Tor clients to bootstrap on networks where only port 80 is reachable,
+  makes it more straightforward to support hardware crypto accelerators,
+  and starts the groundwork for gathering stats safely at relays.
+
   o Security fixes:
     - Start the process of disabling ".exit" address notation, since it
       can be used for a variety of esoteric application-level attacks
