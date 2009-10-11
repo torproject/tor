@@ -1597,17 +1597,21 @@
 4.1.13. Bandwidth used on an application stream
 
   The syntax is:
-     "650" SP "STREAM_BW" SP StreamID SP BytesRead SP BytesWritten CRLF
-     BytesRead = 1*DIGIT
+     "650" SP "STREAM_BW" SP StreamID SP BytesWritten SP BytesRead CRLF
      BytesWritten = 1*DIGIT
+     BytesRead = 1*DIGIT
 
-  BytesRead and BytesWritten are the number of bytes read and written since
-  the last STREAM_BW event on this stream.  These events are generated about
-  once per second per stream; no events are generated for streams that have
-  not read or written.
+  BytesWritten and BytesRead are the number of bytes written and read
+  by the application since the last STREAM_BW event on this stream.
 
-  These events apply only to streams entering Tor (such as on a SOCKSPort,
-  TransPort, or so on).  They are not generated for exiting streams.
+  Note that from Tor's perspective, *reading* a byte on a stream means
+  that the application *wrote* the byte. That's why the order of "written"
+  vs "read" is opposite for stream_bw events compared to bw events.
+
+  These events are generated about once per second per stream; no events
+  are generated for streams that have not written or read. These events
+  apply only to streams entering Tor (such as on a SOCKSPort, TransPort,
+  or so on). They are not generated for exiting streams.
 
 4.1.14. Per-country client stats
 

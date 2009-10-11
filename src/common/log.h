@@ -90,9 +90,10 @@
 #define LD_ACCT     (1u<<17)
 /** Router history */
 #define LD_HIST     (1u<<18)
-
+/** OR handshaking */
+#define LD_HANDSHAKE (1u<<19)
 /** Number of logging domains in the code. */
-#define N_LOGGING_DOMAINS 19
+#define N_LOGGING_DOMAINS 20
 
 typedef uint32_t log_domain_mask_t;
 

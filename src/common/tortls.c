@@ -165,28 +165,49 @@ static int tls_library_is_initialized = 0;
 #define _TOR_TLS_SYSCALL    (_MIN_TOR_TLS_ERROR_VAL - 2)
 #define _TOR_TLS_ZERORETURN (_MIN_TOR_TLS_ERROR_VAL - 1)
 
+#include "tortls_states.h"
+
+/** Return the symbolic name of an OpenSSL state. */
+static const char *
+ssl_state_to_string(int ssl_state)
+{
+  static char buf[40];
+  int i;
+  for (i = 0; state_map[i].name; ++i) {
+    if (state_map[i].state == ssl_state)
+      return state_map[i].name;
+  }
+  tor_snprintf(buf, sizeof(buf), "Unknown state %d", ssl_state);
+  return buf;
+}
+
 /** Log all pending tls errors at level <b>severity</b>.  Use
  * <b>doing</b> to describe our current activities.
  */
 static void
-tls_log_errors(tor_tls_t *tls, int severity, const char *doing)
+tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
 {
+  const char *state = NULL;
+  int st;
   unsigned long err;
   const char *msg, *lib, *func, *addr;
   addr = tls ? tls->address : NULL;
+  st = (tls && tls->ssl) ? tls->ssl->state : -1;
   while ((err = ERR_get_error()) != 0) {
     msg = (const char*)ERR_reason_error_string(err);
     lib = (const char*)ERR_lib_error_string(err);
     func = (const char*)ERR_func_error_string(err);
+    if (!state)
+      state = (st>=0)?ssl_state_to_string(st):"---";
     if (!msg) msg = "(null)";
     if (doing) {
-      log(severity, LD_NET, "TLS error while %s%s%s: %s (in %s:%s)",
+      log(severity, domain, "TLS error while %s%s%s: %s (in %s:%s:%s)",
           doing, addr?" with ":"", addr?addr:"",
-          msg, lib, func);
+          msg, lib, func, state);
     } else {
-      log(severity, LD_NET, "TLS error%s%s: %s (in %s:%s)",
+      log(severity, domain, "TLS error%s%s: %s (in %s:%s:%s)",
           addr?" with ":"", addr?addr:"",
-          msg, lib, func);
+          msg, lib, func, state);
     }
   }
 }
@@ -262,7 +283,7 @@ tor_tls_err_to_string(int err)
  */
 static int
 tor_tls_get_error(tor_tls_t *tls, int r, int extra,
-                  const char *doing, int severity)
+                  const char *doing, int severity, int domain)
 {
   int err = SSL_get_error(tls->ssl, r);
   int tor_error = TOR_TLS_ERROR_MISC;
@@ -277,25 +298,28 @@ tor_tls_get_error(tor_tls_t *tls, int r, int extra,
       if (extra&CATCH_SYSCALL)
         return _TOR_TLS_SYSCALL;
       if (r == 0) {
-        log(severity, LD_NET, "TLS error: unexpected close while %s", doing);
+        log(severity, LD_NET, "TLS error: unexpected close while %s (%s)",
+            doing, ssl_state_to_string(tls->ssl->state));
         tor_error = TOR_TLS_ERROR_IO;
       } else {
         int e = tor_socket_errno(tls->socket);
         log(severity, LD_NET,
-            "TLS error: <syscall error while %s> (errno=%d: %s)",
-            doing, e, tor_socket_strerror(e));
+            "TLS error: <syscall error while %s> (errno=%d: %s; state=%s)",
+            doing, e, tor_socket_strerror(e),
+            ssl_state_to_string(tls->ssl->state));
         tor_error = tor_errno_to_tls_error(e);
       }
-      tls_log_errors(tls, severity, doing);
+      tls_log_errors(tls, severity, domain, doing);
       return tor_error;
     case SSL_ERROR_ZERO_RETURN:
       if (extra&CATCH_ZERO)
         return _TOR_TLS_ZERORETURN;
-      log(severity, LD_NET, "TLS connection closed while %s", doing);
-      tls_log_errors(tls, severity, doing);
+      log(severity, LD_NET, "TLS connection closed while %s in state %s",
+          doing, ssl_state_to_string(tls->ssl->state));
+      tls_log_errors(tls, severity, domain, doing);
       return TOR_TLS_CLOSE;
     default:
-      tls_log_errors(tls, severity, doing);
+      tls_log_errors(tls, severity, domain, doing);
       return TOR_TLS_ERROR_MISC;
   }
 }
@@ -427,7 +451,7 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
     x509 = NULL;
   }
  done:
-  tls_log_errors(NULL, LOG_WARN, "generating certificate");
+  tls_log_errors(NULL, LOG_WARN, LD_NET, "generating certificate");
   if (sign_pkey)
     EVP_PKEY_free(sign_pkey);
   if (pkey)
@@ -615,7 +639,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   return 0;
 
  error:
-  tls_log_errors(NULL, LOG_WARN, "creating TLS context");
+  tls_log_errors(NULL, LOG_WARN, LD_NET, "creating TLS context");
   tor_free(nickname);
   tor_free(nn2);
   if (pkey)
@@ -811,7 +835,7 @@ tor_tls_new(int sock, int isServer)
 
   tor_assert(global_tls_context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
-    tls_log_errors(NULL, LOG_WARN, "generating TLS context");
+    tls_log_errors(NULL, LOG_WARN, LD_NET, "generating TLS context");
     tor_free(result);
     return NULL;
   }
@@ -827,7 +851,7 @@ tor_tls_new(int sock, int isServer)
 
   if (!SSL_set_cipher_list(result->ssl,
                      isServer ? SERVER_CIPHER_LIST : CLIENT_CIPHER_LIST)) {
-    tls_log_errors(NULL, LOG_WARN, "setting ciphers");
+    tls_log_errors(NULL, LOG_WARN, LD_NET, "setting ciphers");
 #ifdef SSL_set_tlsext_host_name
     SSL_set_tlsext_host_name(result->ssl, NULL);
 #endif
@@ -840,7 +864,7 @@ tor_tls_new(int sock, int isServer)
   result->socket = sock;
   bio = BIO_new_socket(sock, BIO_NOCLOSE);
   if (! bio) {
-    tls_log_errors(NULL, LOG_WARN, "opening BIO");
+    tls_log_errors(NULL, LOG_WARN, LD_NET, "opening BIO");
 #ifdef SSL_set_tlsext_host_name
     SSL_set_tlsext_host_name(result->ssl, NULL);
 #endif
@@ -867,7 +891,7 @@ tor_tls_new(int sock, int isServer)
   }
 #endif
   /* Not expected to get called. */
-  tls_log_errors(NULL, LOG_WARN, "generating TLS context");
+  tls_log_errors(NULL, LOG_WARN, LD_NET, "generating TLS context");
   return result;
 }
 
@@ -962,7 +986,7 @@ tor_tls_read(tor_tls_t *tls, char *cp, size_t len)
 #endif
     return r;
   }
-  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG);
+  err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading", LOG_DEBUG, LD_NET);
   if (err == _TOR_TLS_ZERORETURN || err == TOR_TLS_CLOSE) {
     log_debug(LD_NET,"read returned r=%d; TLS is closed",r);
     tls->state = TOR_TLS_ST_CLOSED;
@@ -998,7 +1022,7 @@ tor_tls_write(tor_tls_t *tls, const char *cp, size_t n)
     tls->wantwrite_n = 0;
   }
   r = SSL_write(tls->ssl, cp, (int)n);
-  err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO);
+  err = tor_tls_get_error(tls, r, 0, "writing", LOG_INFO, LD_NET);
   if (err == TOR_TLS_DONE) {
     return r;
   }
@@ -1016,18 +1040,27 @@ int
 tor_tls_handshake(tor_tls_t *tls)
 {
   int r;
+  int oldstate;
   tor_assert(tls);
   tor_assert(tls->ssl);
   tor_assert(tls->state == TOR_TLS_ST_HANDSHAKE);
   check_no_tls_errors();
+  oldstate = tls->ssl->state;
   if (tls->isServer) {
+    log_debug(LD_HANDSHAKE, "About to call SSL_accept on %p (%s)", tls,
+              ssl_state_to_string(tls->ssl->state));
     r = SSL_accept(tls->ssl);
   } else {
+    log_debug(LD_HANDSHAKE, "About to call SSL_connect on %p (%s)", tls,
+              ssl_state_to_string(tls->ssl->state));
     r = SSL_connect(tls->ssl);
   }
-  r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO);
+  if (oldstate != tls->ssl->state)
+    log_debug(LD_HANDSHAKE, "After call, %p was in state %s",
+              tls, ssl_state_to_string(tls->ssl->state));
+  r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO, LD_HANDSHAKE);
   if (ERR_peek_error() != 0) {
-    tls_log_errors(tls, tls->isServer ? LOG_INFO : LOG_WARN,
+    tls_log_errors(tls, tls->isServer ? LOG_INFO : LOG_WARN, LD_HANDSHAKE,
                    "handshaking");
     return TOR_TLS_ERROR_MISC;
   }
@@ -1048,7 +1081,8 @@ tor_tls_handshake(tor_tls_t *tls)
                    " get set. Fixing that.");
         }
         tls->wasV2Handshake = 1;
-        log_debug(LD_NET, "Completed V2 TLS handshake with client; waiting "
+        log_debug(LD_HANDSHAKE,
+                  "Completed V2 TLS handshake with client; waiting "
                   "for renegotiation.");
       } else {
         tls->wasV2Handshake = 0;
@@ -1060,10 +1094,13 @@ tor_tls_handshake(tor_tls_t *tls)
       X509 *cert = SSL_get_peer_certificate(tls->ssl);
       STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
       int n_certs = sk_X509_num(chain);
-      if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0)))
+      if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0))) {
+        log_debug(LD_HANDSHAKE, "Server sent back multiple certificates; it "
+                  "looks like a v1 handshake on %p", tls);
         tls->wasV2Handshake = 0;
-      else {
-        log_debug(LD_NET, "Server sent back a single certificate; looks like "
+      } else {
+        log_debug(LD_HANDSHAKE,
+                  "Server sent back a single certificate; looks like "
                   "a v2 handshake on %p.", tls);
         tls->wasV2Handshake = 1;
       }
@@ -1071,7 +1108,7 @@ tor_tls_handshake(tor_tls_t *tls)
         X509_free(cert);
 #endif
       if (SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST) == 0) {
-        tls_log_errors(NULL, LOG_WARN, "re-setting ciphers");
+        tls_log_errors(NULL, LOG_WARN, LD_HANDSHAKE, "re-setting ciphers");
         r = TOR_TLS_ERROR_MISC;
       }
     }
@@ -1094,7 +1131,8 @@ tor_tls_renegotiate(tor_tls_t *tls)
   if (tls->state != TOR_TLS_ST_RENEGOTIATE) {
     int r = SSL_renegotiate(tls->ssl);
     if (r <= 0) {
-      return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN);
+      return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN,
+                               LD_HANDSHAKE);
     }
     tls->state = TOR_TLS_ST_RENEGOTIATE;
   }
@@ -1103,7 +1141,8 @@ tor_tls_renegotiate(tor_tls_t *tls)
     tls->state = TOR_TLS_ST_OPEN;
     return TOR_TLS_DONE;
   } else
-    return tor_tls_get_error(tls, r, 0, "renegotiating handshake", LOG_INFO);
+    return tor_tls_get_error(tls, r, 0, "renegotiating handshake", LOG_INFO,
+                             LD_HANDSHAKE);
 }
 
 /** Shut down an open tls connection <b>tls</b>.  When finished, returns
@@ -1127,7 +1166,7 @@ tor_tls_shutdown(tor_tls_t *tls)
         r = SSL_read(tls->ssl, buf, 128);
       } while (r>0);
       err = tor_tls_get_error(tls, r, CATCH_ZERO, "reading to shut down",
-                              LOG_INFO);
+                              LOG_INFO, LD_NET);
       if (err == _TOR_TLS_ZERORETURN) {
         tls->state = TOR_TLS_ST_GOTCLOSE;
         /* fall through... */
@@ -1143,7 +1182,7 @@ tor_tls_shutdown(tor_tls_t *tls)
       return TOR_TLS_DONE;
     }
     err = tor_tls_get_error(tls, r, CATCH_SYSCALL|CATCH_ZERO, "shutting down",
-                            LOG_INFO);
+                            LOG_INFO, LD_NET);
     if (err == _TOR_TLS_SYSCALL) {
       /* The underlying TCP connection closed while we were shutting down. */
       tls->state = TOR_TLS_ST_CLOSED;
@@ -1175,7 +1214,7 @@ tor_tls_peer_has_cert(tor_tls_t *tls)
 {
   X509 *cert;
   cert = SSL_get_peer_certificate(tls->ssl);
-  tls_log_errors(tls, LOG_WARN, "getting peer certificate");
+  tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE, "getting peer certificate");
   if (!cert)
     return 0;
   X509_free(cert);
@@ -1202,7 +1241,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
     log_warn(LD_GENERAL, "Couldn't allocate BIO!"); goto end;
   }
   if (!(ASN1_TIME_print(bio, X509_get_notBefore(cert)))) {
-    tls_log_errors(NULL, LOG_WARN, "printing certificate lifetime");
+    tls_log_errors(NULL, LOG_WARN, LD_NET, "printing certificate lifetime");
     goto end;
   }
   BIO_get_mem_ptr(bio, &buf);
@@ -1210,7 +1249,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
 
   (void)BIO_reset(bio);
   if (!(ASN1_TIME_print(bio, X509_get_notAfter(cert)))) {
-    tls_log_errors(NULL, LOG_WARN, "printing certificate lifetime");
+    tls_log_errors(NULL, LOG_WARN, LD_NET, "printing certificate lifetime");
     goto end;
   }
   BIO_get_mem_ptr(bio, &buf);
@@ -1224,7 +1263,7 @@ log_cert_lifetime(X509 *cert, const char *problem)
 
  end:
   /* Not expected to get invoked */
-  tls_log_errors(NULL, LOG_WARN, "getting certificate lifetime");
+  tls_log_errors(NULL, LOG_WARN, LD_NET, "getting certificate lifetime");
   if (bio)
     BIO_free(bio);
   if (s1)
@@ -1298,7 +1337,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
   if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
     log_fn(severity,LD_PROTOCOL,"X509_verify on cert and pkey returned <= 0");
-    tls_log_errors(tls, severity,"verifying certificate");
+    tls_log_errors(tls, severity, LD_HANDSHAKE, "verifying certificate");
     goto done;
   }
 
@@ -1317,7 +1356,7 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
 
   /* This should never get invoked, but let's make sure in case OpenSSL
    * acts unexpectedly. */
-  tls_log_errors(tls, LOG_WARN, "finishing tor_tls_verify");
+  tls_log_errors(tls, LOG_WARN, LD_HANDSHAKE, "finishing tor_tls_verify");
 
   return r;
 }
@@ -1356,7 +1395,7 @@ tor_tls_check_lifetime(tor_tls_t *tls, int tolerance)
   if (cert)
     X509_free(cert);
   /* Not expected to get invoked */
-  tls_log_errors(tls, LOG_WARN, "checking certificate lifetime");
+  tls_log_errors(tls, LOG_WARN, LD_NET, "checking certificate lifetime");
 
   return r;
 }
@@ -1424,7 +1463,7 @@ _check_no_tls_errors(const char *fname, int line)
     return;
   log(LOG_WARN, LD_CRYPTO, "Unhandled OpenSSL errors found at %s:%d: ",
       tor_fix_source_file(fname), line);
-  tls_log_errors(NULL, LOG_WARN, NULL);
+  tls_log_errors(NULL, LOG_WARN, LD_NET, NULL);
 }
 
 /** Return true iff the initial TLS connection at <b>tls</b> did not use a v2
