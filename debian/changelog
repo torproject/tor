@@ -1,8 +1,10 @@
 tor (0.2.2.4-alpha-1) experimental; urgency=low
 
   * New upstream version.
+  * The testsuite moved from src/or/test to src/test/test,
+    but let's call it using "make check" now.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 11 Oct 2009 10:19:03 +0200
+ -- Peter Palfrader <weasel@debian.org>  Sun, 11 Oct 2009 10:19:21 +0200
 
 tor (0.2.2.3-alpha-1) experimental; urgency=low
 

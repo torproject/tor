@@ -91,11 +91,11 @@ build-stamp:  config.status
 	@if [ "$(RUN_TEST)" != "no" ]; then \
 		if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then \
 			echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Will ignore result of testsuite.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; \
-			echo "src/or/test || true"; \
-			src/or/test || true; \
+			echo "make check || true"; \
+			make check || true; \
 		else \
-			echo "src/or/test"; \
-			src/or/test; \
+			echo "make check"; \
+			make check; \
 		fi; \
 	else \
 		echo -e "\n\nSkipping unittests\n\n"; \
