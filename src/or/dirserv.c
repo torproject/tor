@@ -371,10 +371,10 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
-  /* 0.1.1.17-rc was the first version that claimed to be stable, doesn't
-   * crash and drop circuits all the time, and is even vaguely compatible with
-   * the current network */
-  if (platform && !tor_version_as_new_as(platform,"0.1.1.17-rc")) {
+  /* Tor 0.1.2.x is pretty old, but there are a lot of them running still,
+   * and there aren't any critical relay-side vulnerabilities. Once more
+   * of them die off, we should raise this minimum to 0.2.0.x. */
+  if (platform && !tor_version_as_new_as(platform,"0.1.2.14")) {
     if (msg)
       *msg = "Tor version is far too old to work.";
     return FP_REJECT;
@@ -896,6 +896,13 @@ list_single_server_status(routerinfo_t *desc, int is_live)
   return tor_strdup(buf);
 }
 
+static INLINE int
+running_long_enough_to_decide_unreachable(void)
+{
+  return time_of_process_start
+    + get_options()->TestingAuthDirTimeToLearnReachability < approx_time();
+}
+
 /** Each server needs to have passed a reachability test no more
  * than this number of seconds ago, or he is listed as down in
  * the directory. */
@@ -907,6 +914,10 @@ list_single_server_status(routerinfo_t *desc, int is_live)
 void
 dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 {
+  /*XXXX022 This function is a mess.  Separate out the part that calculates
+    whether it's reachable and the part that tells rephist that the router was
+    unreachable.
+   */
   int answer;
 
   if (router_is_me(router) && !we_are_hibernating())
@@ -915,7 +926,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     answer = get_options()->AssumeReachable ||
              now < router->last_reachable + REACHABLE_TIMEOUT;
 
-  if (!answer) {
+  if (!answer && running_long_enough_to_decide_unreachable()) {
     /* not considered reachable. tell rephist. */
     rep_hist_note_router_unreachable(router->cache_info.identity_digest, now);
   }
@@ -2390,9 +2401,9 @@ dirserv_read_measured_bandwidths(const char *from_file,
   }
 
   fclose(fp);
-  log_notice(LD_DIRSERV,
-             "Bandwidth measurement file successfully read. "
-             "Applied %d measurements.", applied_lines);
+  log_info(LD_DIRSERV,
+           "Bandwidth measurement file successfully read. "
+           "Applied %d measurements.", applied_lines);
   return 0;
 }
 
@@ -2420,14 +2431,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   networkstatus_voter_info_t *voter = NULL;
   vote_timing_t timing;
   digestmap_t *omit_as_sybil = NULL;
-  int vote_on_reachability = 1;
+  const int vote_on_reachability = running_long_enough_to_decide_unreachable();
 
   tor_assert(private_key);
   tor_assert(cert);
-
-  if (now - time_of_process_start <
-      options->TestingAuthDirTimeToLearnReachability)
-    vote_on_reachability = 0;
 
   if (resolve_my_address(LOG_WARN, options, &addr, &hostname)<0) {
     log_warn(LD_NET, "Couldn't resolve my hostname");

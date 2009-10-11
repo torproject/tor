@@ -4,7 +4,7 @@ dnl Copyright (c) 2007-2008, The Tor Project, Inc.
 dnl See LICENSE for licensing information
 
 AC_INIT
-AM_INIT_AUTOMAKE(tor, 0.2.2.3-alpha)
+AM_INIT_AUTOMAKE(tor, 0.2.2.4-alpha)
 AM_CONFIG_HEADER(orconfig.h)
 
 AC_CANONICAL_HOST
@@ -826,7 +826,7 @@ fi
 
 CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_zlib"
 
-AC_CONFIG_FILES([Makefile tor.spec Doxyfile contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh])
+AC_CONFIG_FILES([Makefile tor.spec Doxyfile contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample doc/tor.1 src/Makefile doc/Makefile doc/design-paper/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/test/Makefile src/win32/Makefile src/tools/Makefile contrib/suse/Makefile contrib/suse/tor.sh])
 AC_OUTPUT
 
 if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then

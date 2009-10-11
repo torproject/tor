@@ -1,8 +1,5 @@
-TESTS = test
-
-noinst_PROGRAMS = test
-
 bin_PROGRAMS = tor
+noinst_LIBRARIES = libtor.a
 
 if BUILD_NT_SERVICES
 tor_platform_source=ntmain.c
@@ -18,7 +15,7 @@ else
 evdns_source=eventdns.c
 endif
 
-COMMON_SRC = buffers.c circuitbuild.c circuitlist.c \
+libtor_a_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	circuituse.c command.c config.c \
 	connection.c connection_edge.c connection_or.c control.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
@@ -28,7 +25,11 @@ COMMON_SRC = buffers.c circuitbuild.c circuitlist.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	$(evdns_source) config_codedigest.c
 
-tor_SOURCES = $(COMMON_SRC) tor_main.c
+#libtor_a_LIBADD = ../common/libor.a ../common/libor-crypto.a \
+#	../common/libor-event.a
+
+
+tor_SOURCES = tor_main.c
 
 AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
@@ -39,14 +40,7 @@ AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
 tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
-tor_LDADD = ../common/libor.a ../common/libor-crypto.a \
-	../common/libor-event.a \
-	-lz -lm -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
-test_SOURCES = $(COMMON_SRC) test_data.c test.c
-
-test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
-        @TOR_LDFLAGS_libevent@
-test_LDADD = ../common/libor.a ../common/libor-crypto.a \
+tor_LDADD = ./libtor.a ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
 	-lz -lm -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
@@ -71,17 +65,15 @@ micro-revision.i: FORCE
 	  mv micro-revision.tmp micro-revision.i;			\
 	fi; true
 
-or_sha1.i: $(tor_SOURCES) test_data.c test.c
+or_sha1.i: $(tor_SOURCES)
 	if test "@SHA1SUM@" != none; then \
-	  @SHA1SUM@ $(tor_SOURCES) test_data.c test.c | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
+	  @SHA1SUM@ $(tor_SOURCES) | @SED@ -n 's/^\(.*\)$$/"\1\\n"/p' > or_sha1.i; \
 	elif test "@OPENSSL@" != none; then \
-	  @OPENSSL@ sha1 $(tor_SOURCES) test_data.c test.c | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
+	  @OPENSSL@ sha1 $(tor_SOURCES) | @SED@ -n 's/SHA1(\(.*\))= \(.*\)/"\2  \1\\n"/p' > or_sha1.i; \
 	else \
 	  rm or_sha1.i; \
 	  touch or_sha1.i; \
 	fi
-
-
 
 #Dummy target to ensure that micro-revision.i _always_ gets built.
 FORCE:

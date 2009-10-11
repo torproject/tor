@@ -2927,7 +2927,7 @@ typedef uint32_t build_time_t;
  * This tells us to abandon timeout history and set
  * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
  */
-#define MAX_RECENT_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.75))
+#define MAX_RECENT_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.8))
 
 /** Information about the state of our local network connection */
 typedef struct {
@@ -3867,7 +3867,7 @@ int dnsserv_launch_request(const char *name, int is_reverse);
 #define DIR_ENTRY_RECORD_USAGE_RETAIN_IPS (24*60*60)
 /** How long do we have to have observed per-country request history before
  * we are willing to talk about it? */
-#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (24*60*60)
+#define DIR_RECORD_USAGE_MIN_OBSERVATION_TIME (12*60*60)
 
 #ifdef GEOIP_PRIVATE
 int geoip_parse_entry(const char *line);

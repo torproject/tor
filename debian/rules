@@ -66,6 +66,11 @@ endif
 
 configure: patch-stamp
 config.status: configure
+	# clean up test.h stuff.  XXX - expected to no longer be needed after tor-0.2.2.4-alpha
+	rm -f src/test/test.h.orig
+	! [ -e src/test/test.h ] || mv src/test/test.h src/test/test.h.orig
+	cp debian/src-test-test.h src/test/test.h
+
 	@if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then echo; echo; echo; echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Will ignore result of testsuite.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; echo; echo; echo "Note: 'getent hosts localhost' should return '127.0.0.1 localhost'"; echo; fi
 	dh_testdir
 	CFLAGS="$(CFLAGS)" ./configure \
@@ -91,11 +96,11 @@ build-stamp:  config.status
 	@if [ "$(RUN_TEST)" != "no" ]; then \
 		if [ "$(LOCALHOST_IP)" != "127.0.0.1" ]; then \
 			echo; echo; echo "######################################################################"; echo "WARNING: This system does not think localhost is 127.0.0.1.  Will ignore result of testsuite.  Please fix your system/chroot."; echo "######################################################################"; echo; echo; \
-			echo "src/or/test || true"; \
-			src/or/test || true; \
+			echo "make check || true"; \
+			make check || true; \
 		else \
-			echo "src/or/test"; \
-			src/or/test; \
+			echo "make check"; \
+			make check; \
 		fi; \
 	else \
 		echo -e "\n\nSkipping unittests\n\n"; \
@@ -134,6 +139,10 @@ clean: unpatch
 	rm -f src/or/micro-revision.i
 
 	[ ! -f Makefile ] || $(MAKE) distclean
+
+	# clean up test.h stuff.  XXX - expected to no longer be needed after tor-0.2.2.4-alpha
+	rm -f src/test/test.h
+	! [ -e src/test/test.h.orig ] || mv src/test/test.h.orig src/test/test.h
 
 	# Normally the .deb wouldn't ship with a ../.git
 	if [ -d .git ] && which git >/dev/null; then \

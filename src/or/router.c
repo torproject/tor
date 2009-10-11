@@ -1826,9 +1826,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 /** Load the contents of <b>filename</b>, find the last line starting with
  * <b>end_line</b>, ensure that its timestamp is not more than 25 hours in
  * the past or more than 1 hour in the future with respect to <b>now</b>,
- * and write the file contents starting with that line to **<b>out</b>.
- * Return 1 for success, 0 if the file does not exist or does not contain
- * a line matching these criteria, or -1 for failure. */
+ * and write the file contents starting with that line to *<b>out</b>.
+ * Return 1 for success, 0 if the file does not exist, or -1 if the file
+ * does not contain a line matching these criteria or other failure. */
 static int
 load_stats_file(const char *filename, const char *end_line, time_t now,
                 char **out)
@@ -1903,11 +1903,11 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     char *contents = NULL;
-    time_t since = time(NULL) - (24*60*60);
+    time_t now = time(NULL);
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
-                        "dirreq-stats-end", since, &contents) > 0) {
+                        "dirreq-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1919,7 +1919,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     }
     if (options->EntryStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
-                        "entry-stats-end", since, &contents) > 0) {
+                        "entry-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1931,7 +1931,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     }
     if (options->CellStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
-                        "cell-stats-end", since, &contents) > 0) {
+                        "cell-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {
@@ -1943,7 +1943,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
     }
     if (options->ExitPortStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"exit-stats",
-                        "exit-stats-end", since, &contents) > 0) {
+                        "exit-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
       if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
           strlen(contents)) {

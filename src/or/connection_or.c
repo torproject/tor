@@ -289,7 +289,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   conn = TO_CONN(or_conn);
   tor_assert(conn->state == OR_CONN_STATE_CONNECTING);
 
-  log_debug(LD_OR,"OR connect() to router at %s:%u finished.",
+  log_debug(LD_HANDSHAKE,"OR connect() to router at %s:%u finished.",
             conn->address,conn->port);
   control_event_bootstrap(BOOTSTRAP_STATUS_HANDSHAKE, 0);
 
@@ -780,7 +780,7 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
     return -1;
   }
   connection_start_reading(TO_CONN(conn));
-  log_debug(LD_OR,"starting TLS handshake on fd %d", conn->_base.s);
+  log_debug(LD_HANDSHAKE,"starting TLS handshake on fd %d", conn->_base.s);
   note_crypto_pk_op(receiving ? TLS_HANDSHAKE_S : TLS_HANDSHAKE_C);
 
   if (connection_tls_continue_handshake(conn) < 0) {
@@ -920,12 +920,12 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   check_no_tls_errors();
   has_cert = tor_tls_peer_has_cert(conn->tls);
   if (started_here && !has_cert) {
-    log_info(LD_PROTOCOL,"Tried connecting to router at %s:%d, but it didn't "
+    log_info(LD_HANDSHAKE,"Tried connecting to router at %s:%d, but it didn't "
              "send a cert! Closing.",
              safe_address, conn->_base.port);
     return -1;
   } else if (!has_cert) {
-    log_debug(LD_PROTOCOL,"Got incoming connection with no certificate. "
+    log_debug(LD_HANDSHAKE,"Got incoming connection with no certificate. "
               "That's ok.");
   }
   check_no_tls_errors();
@@ -934,15 +934,16 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     int v = tor_tls_verify(started_here?severity:LOG_INFO,
                            conn->tls, &identity_rcvd);
     if (started_here && v<0) {
-      log_fn(severity,LD_OR,"Tried connecting to router at %s:%d: It"
+      log_fn(severity,LD_HANDSHAKE,"Tried connecting to router at %s:%d: It"
              " has a cert but it's invalid. Closing.",
              safe_address, conn->_base.port);
         return -1;
     } else if (v<0) {
-      log_info(LD_PROTOCOL,"Incoming connection gave us an invalid cert "
+      log_info(LD_HANDSHAKE,"Incoming connection gave us an invalid cert "
                "chain; ignoring.");
     } else {
-      log_debug(LD_OR,"The certificate seems to be valid on %s connection "
+      log_debug(LD_HANDSHAKE,
+                "The certificate seems to be valid on %s connection "
                 "with %s:%d", conn_type, safe_address, conn->_base.port);
     }
     check_no_tls_errors();
@@ -969,7 +970,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     conn->nickname[0] = '$';
     base16_encode(conn->nickname+1, HEX_DIGEST_LEN+1,
                   conn->identity_digest, DIGEST_LEN);
-    log_info(LD_OR, "Connected to router %s at %s:%d without knowing "
+    log_info(LD_HANDSHAKE, "Connected to router %s at %s:%d without knowing "
                     "its key. Hoping for the best.",
                     conn->nickname, conn->_base.address, conn->_base.port);
   }
@@ -985,7 +986,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
       base16_encode(seen, sizeof(seen), digest_rcvd_out, DIGEST_LEN);
       base16_encode(expected, sizeof(expected), conn->identity_digest,
                     DIGEST_LEN);
-      log_fn(severity, LD_OR,
+      log_fn(severity, LD_HANDSHAKE,
              "Tried connecting to router at %s:%d, but identity key was not "
              "as expected: wanted %s but got %s.",
              conn->_base.address, conn->_base.port, expected, seen);
@@ -1027,7 +1028,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
   char digest_rcvd[DIGEST_LEN];
   int started_here = connection_or_nonopen_was_started_here(conn);
 
-  log_debug(LD_OR,"tls handshake with %s done. verifying.",
+  log_debug(LD_HANDSHAKE,"tls handshake with %s done. verifying.",
             safe_str(conn->_base.address));
 
   directory_set_dirty();

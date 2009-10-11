@@ -127,7 +127,13 @@
 /src/or/or_sha1.i
 /src/or/micro-revision.*
 /src/or/tor
-/src/or/test
+/src/or/libtor.a
+
+# /src/test
+/src/test/Makefile
+/src/test/Makefile.in
+/src/test/test
+
 
 # /src/tools/
 /src/tools/tor-checkkey

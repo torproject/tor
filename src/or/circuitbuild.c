@@ -162,7 +162,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
 }
 
 /**
- * Rewind our timeout history by n positions.
+ * Rewind our timeout history by n timeout positions.
  */
 static void
 circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
@@ -170,6 +170,8 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
   int i = 0;
 
   if (cbt->pre_timeouts) {
+    /* If we have pre-timeouts, it means we're not yet storing
+     * timeouts in our normal array. Only rewind the counter. */
     if (cbt->pre_timeouts > n) {
       cbt->pre_timeouts -= n;
     } else {
@@ -180,8 +182,6 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
              "Pre-timeouts: %d", n, cbt->build_times_idx,
              cbt->total_build_times, cbt->pre_timeouts);
 
-    tor_assert(cbt->build_times_idx == 0);
-    tor_assert(cbt->total_build_times == 0);
     return;
   }
 
@@ -204,21 +204,18 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
 }
 
 /**
- * Add a timeoutout value to the set of build times. Time units
- * are milliseconds
+ * Add a new timeout value <b>time</b> to the set of build times. Time
+ * units are milliseconds.
  *
- * circuit_build_times is a circular array, so loop around when
+ * circuit_build_times <b>cbt</a> is a circular array, so loop around when
  * array is full.
  */
 int
 circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
 {
-  if (time > BUILD_TIME_MAX) {
-    log_notice(LD_CIRC,
-       "Circuit build time of %ums exceeds max. Capping at 65536ms", time);
-    time = BUILD_TIME_MAX;
-  } else if (time <= 0) {
-    log_err(LD_CIRC, "Circuit build time is %u!", time);
+  tor_assert(time <= BUILD_TIME_MAX);
+  if (time <= 0) {
+    log_warn(LD_CIRC, "Circuit build time is %u!", time);
     return -1;
   }
 
@@ -372,18 +369,29 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
  * Stolen from http://en.wikipedia.org/wiki/Fisher\u2013Yates_shuffle
  */
 static void
-circuit_build_times_shuffle_array(circuit_build_times_t *cbt)
+circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
+                                            build_time_t *raw_times,
+                                            int num_times)
 {
-   int n = cbt->total_build_times;
+  int n = num_times;
+  if (num_times > NCIRCUITS_TO_OBSERVE) {
+    log_notice(LD_CIRC, "Decreasing circuit_build_times size from %d to %d",
+               num_times, NCIRCUITS_TO_OBSERVE);
+  }
 
-   /* This code can only be run on a compact array */
-   tor_assert(cbt->total_build_times == cbt->build_times_idx);
-   while (n-- > 1) {
-     int k = crypto_rand_int(n + 1); /* 0 <= k <= n. */
-     build_time_t tmp = cbt->circuit_build_times[k];
-     cbt->circuit_build_times[k] = cbt->circuit_build_times[n];
-     cbt->circuit_build_times[n] = tmp;
-   }
+  /* This code can only be run on a compact array */
+  while (n-- > 1) {
+    int k = crypto_rand_int(n + 1); /* 0 <= k <= n. */
+    build_time_t tmp = raw_times[k];
+    raw_times[k] = raw_times[n];
+    raw_times[n] = tmp;
+  }
+
+  /* Since the times are now shuffled, take a random NCIRCUITS_TO_OBSERVE
+   * subset (ie the first NCIRCUITS_TO_OBSERVE values) */
+  for (n = 0; n < MIN(num_times, NCIRCUITS_TO_OBSERVE); n++) {
+    circuit_build_times_add_time(cbt, raw_times[n]);
+  }
 }
 
 /**
@@ -397,14 +405,14 @@ int
 circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                 or_state_t *state, char **msg)
 {
-  int tot_values = 0, N = 0;
+  int tot_values = 0;
+  uint32_t loaded_cnt = 0, N = 0;
   config_line_t *line;
   int i;
-  *msg = NULL;
+  build_time_t *loaded_times = tor_malloc(sizeof(build_time_t)
+                                          * state->TotalBuildTimes);
   circuit_build_times_init(cbt);
-
-  /* We don't support decreasing the table size yet */
-  tor_assert(state->TotalBuildTimes <= NCIRCUITS_TO_OBSERVE);
+  *msg = NULL;
 
   for (line = state->BuildtimeHistogram; line; line = line->next) {
     smartlist_t *args = smartlist_create();
@@ -427,6 +435,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       if (!ok) {
         *msg = tor_strdup("Unable to parse circuit build times: "
                           "Unparsable bin number");
+        SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+        smartlist_free(args);
         break;
       }
       count = (uint32_t)tor_parse_ulong(count_str, 0, 0,
@@ -434,20 +444,37 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       if (!ok) {
         *msg = tor_strdup("Unable to parse circuit build times: "
                           "Unparsable bin count");
+        SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+        smartlist_free(args);
+        break;
+      }
+
+      if (loaded_cnt+count > state->TotalBuildTimes) {
+        log_warn(LD_CIRC,
+                 "Too many build times in state file. "
+                 "Stopping short before %d",
+                 loaded_cnt+count);
+        SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
+        smartlist_free(args);
         break;
       }
 
       for (k = 0; k < count; k++) {
-        circuit_build_times_add_time(cbt, ms);
+        loaded_times[loaded_cnt++] = ms;
       }
       N++;
       SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
       smartlist_free(args);
     }
-
   }
 
-  circuit_build_times_shuffle_array(cbt);
+  if (loaded_cnt != state->TotalBuildTimes) {
+    log_warn(LD_CIRC,
+            "Corrupt state file? Build times count mismatch. "
+            "Read %d, file says %d", loaded_cnt, state->TotalBuildTimes);
+  }
+
+  circuit_build_times_shuffle_and_store_array(cbt, loaded_times, loaded_cnt);
 
   /* Verify that we didn't overwrite any indexes */
   for (i=0; i < NCIRCUITS_TO_OBSERVE; i++) {
@@ -458,9 +485,10 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   log_info(LD_CIRC,
            "Loaded %d/%d values from %d lines in circuit time histogram",
            tot_values, cbt->total_build_times, N);
-  tor_assert(cbt->total_build_times == state->TotalBuildTimes);
-  tor_assert(tot_values == cbt->total_build_times);
+  tor_assert(cbt->total_build_times == tot_values);
+  tor_assert(cbt->total_build_times <= NCIRCUITS_TO_OBSERVE);
   circuit_build_times_set_timeout(cbt);
+  tor_free(loaded_times);
   return *msg ? -1 : 0;
 }
 
@@ -598,10 +626,10 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
              "%ums vs %lfms using Xm: %d a: %lf, q: %lf",
              gentime, cbt->timeout_ms, cbt->Xm, cbt->alpha, quantile_cutoff);
   } else if (gentime > BUILD_TIME_MAX) {
-    gentime = BUILD_TIME_MAX;
     log_info(LD_CIRC,
              "Generated a synthetic timeout larger than the max: %u",
              gentime);
+    gentime = BUILD_TIME_MAX;
   } else {
     log_info(LD_CIRC, "Generated synthetic circuit build time %u for timeout",
             gentime);
@@ -624,7 +652,7 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   // CircBuildTimeout = Xm*((1-0.8))^(-1/a))
   // ln(CircBuildTimeout) = ln(Xm)+ln(((1-0.8)))*(-1/a)
   // -ln(1-0.8)/(ln(CircBuildTimeout)-ln(Xm))=a
-  tor_assert(quantile > 0);
+  tor_assert(quantile >= 0);
   tor_assert(cbt->Xm > 0);
   cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout_ms));
   tor_assert(cbt->alpha > 0);
@@ -727,10 +755,8 @@ circuit_build_times_network_timeout(circuit_build_times_t *cbt,
   if (cbt->liveness.network_last_live <= start_time &&
           start_time <= (now - cbt->timeout_ms/1000.0)) {
     cbt->liveness.nonlive_timeouts++;
-  }
-
-  /* Check for one-hop timeout */
-  if (did_onehop) {
+  } else if (did_onehop) {
+    /* Count a one-hop timeout */
     cbt->liveness.timeouts_after_firsthop[cbt->liveness.after_firsthop_idx]=1;
     cbt->liveness.after_firsthop_idx++;
     cbt->liveness.after_firsthop_idx %= RECENT_CIRCUITS;
@@ -797,7 +823,7 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
     timeout_count += cbt->liveness.timeouts_after_firsthop[i];
   }
 
-  /* If 75% of our recent circuits are timing out after the first hop,
+  /* If 80% of our recent circuits are timing out after the first hop,
    * we need to re-estimate a new initial alpha and timeout. */
   if (timeout_count < MAX_RECENT_TIMEOUT_COUNT) {
     return 0;
@@ -1477,17 +1503,19 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     log_debug(LD_CIRC,"starting to send subsequent skin.");
     hop = onion_next_hop_in_cpath(circ->cpath);
     if (!hop) {
-      struct timeval end;
-      long timediff;
-      tor_gettimeofday(&end);
-      timediff = tv_mdiff(&circ->_base.highres_created, &end);
-      if (timediff > INT32_MAX)
-        timediff = INT32_MAX;
       /* done building the circuit. whew. */
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-      circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
-      circuit_build_times_network_circ_success(&circ_times);
-      circuit_build_times_set_timeout(&circ_times);
+      if (!circ->build_state->onehop_tunnel) {
+        struct timeval end;
+        long timediff;
+        tor_gettimeofday(&end);
+        timediff = tv_mdiff(&circ->_base.highres_created, &end);
+        if (timediff > INT32_MAX)
+          timediff = INT32_MAX;
+        circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
+        circuit_build_times_network_circ_success(&circ_times);
+        circuit_build_times_set_timeout(&circ_times);
+      }
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
       if (circ->build_state->onehop_tunnel)
