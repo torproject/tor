@@ -1,13 +1,15 @@
+Changes in version 0.2.2.6-alpha - 2009-10-??
+  o Code simplifications and refactorings:
+    - Numerous changes, bugfixes, and workarounds from Nathan Freitas
+      to help Tor build correctly for Android phones.
+
+
 Changes in version 0.2.2.5-alpha - 2009-10-11
   o Major bugfixes:
     - Make the tarball compile again. Oops. Bugfix on 0.2.2.4-alpha.
 
   o New directory authorities:
     - Move dizum to an alternate IP address.
-
-  o Code simplifications and refactorings
-    - Numerous changes, bugfixes, and workarounds from Nathan Freitas 
-      to help Tor build correctly for Android phones.
 
 
 Changes in version 0.2.2.4-alpha - 2009-10-10
