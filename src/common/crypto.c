@@ -50,9 +50,9 @@
 
 #define CRYPTO_PRIVATE
 #include "crypto.h"
-#include "log.h"
+#include "../common/log.h"
 #include "aes.h"
-#include "util.h"
+#include "../common/util.h"
 #include "container.h"
 #include "compat.h"
 
@@ -61,6 +61,11 @@
 #endif
 
 #include <openssl/engine.h>
+
+#ifdef ANDROID
+/* Android's OpenSSL seems to have removed all of its Engine support. */
+#define DISABLE_ENGINES
+#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
 /* On OpenSSL versions before 0.9.8, there is no working SHA256
@@ -174,6 +179,7 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
+#ifndef DISABLE_ENGINES
 /** Log any OpenSSL engines we're using at NOTICE. */
 static void
 log_engine(const char *fn, ENGINE *e)
@@ -188,7 +194,9 @@ log_engine(const char *fn, ENGINE *e)
     log(LOG_INFO, LD_CRYPTO, "Using default implementation for %s", fn);
   }
 }
+#endif
 
+#ifndef DISABLE_ENGINES
 /** Try to load an engine in a shared library via fully qualified path.
  */
 static ENGINE *
@@ -206,6 +214,7 @@ try_load_engine(const char *path, const char *engine)
   }
   return e;
 }
+#endif
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
@@ -218,10 +227,17 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     _crypto_global_initialized = 1;
     setup_openssl_threading();
     if (useAccel > 0) {
+#ifdef DISABLE_ENGINES
+      (void)accelName;
+      (void)accelDir;
+      log_warn(LD_CRYPTO, "No OpenSSL hardware acceleration support enabled.");
+#else
       ENGINE *e = NULL;
+
       log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
       ENGINE_register_all_complete();
+
       if (accelName) {
         if (accelDir) {
           log_info(LD_CRYPTO, "Trying to load dynamic OpenSSL engine \"%s\""
@@ -251,6 +267,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+#endif
     } else {
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
@@ -274,7 +291,11 @@ crypto_global_cleanup(void)
   EVP_cleanup();
   ERR_remove_state(0);
   ERR_free_strings();
+
+#ifndef DISABLE_ENGINES
   ENGINE_cleanup();
+#endif
+
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
 #ifdef TOR_IS_MULTITHREADED
@@ -316,7 +337,8 @@ _crypto_new_pk_env_evp_pkey(EVP_PKEY *pkey)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
-/** Helper, used by tor-checkkey.c.  Return the RSA from a crypto_pk_env_t. */
+/** Helper, used by tor-checkkey.c and tor-gencert.c.  Return the RSA from a
+ * crypto_pk_env_t. */
 RSA *
 _crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
@@ -451,11 +473,11 @@ crypto_free_cipher_env(crypto_cipher_env_t *env)
 
 /* public key crypto */
 
-/** Generate a new public/private keypair in <b>env</b>.  Return 0 on
- * success, -1 on failure.
+/** Generate a <b>bits</b>-bit new public/private keypair in <b>env</b>.
+ * Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_generate_key(crypto_pk_env_t *env)
+crypto_pk_generate_key_with_bits(crypto_pk_env_t *env, int bits)
 {
   tor_assert(env);
 
@@ -463,7 +485,7 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
     RSA_free(env->key);
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
   /* In OpenSSL 0.9.7, RSA_generate_key is all we have. */
-  env->key = RSA_generate_key(PK_BYTES*8,65537, NULL, NULL);
+  env->key = RSA_generate_key(bits, 65537, NULL, NULL);
 #else
   /* In OpenSSL 0.9.8, RSA_generate_key is deprecated. */
   {
@@ -476,7 +498,7 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
     r = RSA_new();
     if (!r)
       goto done;
-    if (RSA_generate_key_ex(r, PK_BYTES*8, e, NULL) == -1)
+    if (RSA_generate_key_ex(r, bits, e, NULL) == -1)
       goto done;
 
     env->key = r;

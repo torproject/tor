@@ -82,7 +82,7 @@
 
 #include "crypto.h"
 #include "tortls.h"
-#include "log.h"
+#include "../common/log.h"
 #include "compat.h"
 #include "container.h"
 #include "util.h"

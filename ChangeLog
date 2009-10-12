@@ -46,6 +46,8 @@ Changes in version 0.2.2.4-alpha - 2009-10-10
       can run tests in their own processes, have smarter setup/teardown
       code, and so on.  The unit test code has moved to its own
       subdirectory, and has been split into multiple modules.
+    - Numerous fixes from Nathan Freitas so that Tor can build correctly for
+      Android phones.
 
 
 Changes in version 0.2.2.3-alpha - 2009-09-23
