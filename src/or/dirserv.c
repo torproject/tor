@@ -41,7 +41,7 @@ static time_t the_v2_networkstatus_is_dirty = 1;
 static cached_dir_t *the_directory = NULL;
 
 /** For authoritative directories: the current (v1) network status. */
-static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
+static cached_dir_t the_runningrouters;
 
 static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
@@ -1211,14 +1211,14 @@ directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now)
 static cached_dir_t *cached_directory = NULL;
 /** The v1 runningrouters document we'll serve (as a cache or as an authority)
  * if requested. */
-static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
+static cached_dir_t cached_runningrouters;
 
 /** Used for other dirservers' v2 network statuses.  Map from hexdigest to
  * cached_dir_t. */
 static digestmap_t *cached_v2_networkstatus = NULL;
 
-/** The v3 consensus network status that we're currently serving. */
-static cached_dir_t *cached_v3_networkstatus = NULL;
+/** Map from flavor name to the v3 consensuses that we're currently serving. */
+static strmap_t *cached_consensuses = NULL;
 
 /** Possibly replace the contents of <b>d</b> with the value of
  * <b>directory</b> published on <b>when</b>, unless <b>when</b> is older than
@@ -1386,17 +1386,26 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
   }
 }
 
-/** Replace the v3 consensus networkstatus that we're serving with
- * <b>networkstatus</b>, published at <b>published</b>.  No validation is
- * performed. */
+/** Replace the v3 consensus networkstatus of type <b>flavor_name</b> that
+ * we're serving with <b>networkstatus</b>, published at <b>published</b>.  No
+ * validation is performed. */
 void
-dirserv_set_cached_networkstatus_v3(const char *networkstatus,
-                                    time_t published)
+dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
+                                           const char *flavor_name,
+                                           const digests_t *digests,
+                                           time_t published)
 {
-  if (cached_v3_networkstatus)
-    cached_dir_decref(cached_v3_networkstatus);
-  cached_v3_networkstatus = new_cached_dir(
-                                  tor_strdup(networkstatus), published);
+  cached_dir_t *new_networkstatus;
+  cached_dir_t *old_networkstatus;
+  if (!cached_consensuses)
+    cached_consensuses = strmap_new();
+
+  new_networkstatus = new_cached_dir(tor_strdup(networkstatus), published);
+  memcpy(&new_networkstatus->digests, digests, sizeof(digests_t));
+  old_networkstatus = strmap_set(cached_consensuses, flavor_name,
+                                 new_networkstatus);
+  if (old_networkstatus)
+    cached_dir_decref(old_networkstatus);
 }
 
 /** Remove any v2 networkstatus from the directory cache that was published
@@ -1579,9 +1588,9 @@ dirserv_get_runningrouters(void)
 /** Return the latest downloaded consensus networkstatus in encoded, signed,
  * optionally compressed format, suitable for sending to clients. */
 cached_dir_t *
-dirserv_get_consensus(void)
+dirserv_get_consensus(const char *flavor_name)
 {
-  return cached_v3_networkstatus;
+  return strmap_get(cached_consensuses, flavor_name);
 }
 
 /** For authoritative directories: the current (v2) network status. */
@@ -3130,8 +3139,8 @@ static cached_dir_t *
 lookup_cached_dir_by_fp(const char *fp)
 {
   cached_dir_t *d = NULL;
-  if (tor_digest_is_zero(fp) && cached_v3_networkstatus)
-    d = cached_v3_networkstatus;
+  if (tor_digest_is_zero(fp) && cached_consensuses)
+    d = strmap_get(cached_consensuses, "ns");
   else if (router_digest_is_me(fp) && the_v2_networkstatus)
     d = the_v2_networkstatus;
   else if (cached_v2_networkstatus)
@@ -3467,6 +3476,9 @@ dirserv_free_all(void)
     digestmap_free(cached_v2_networkstatus, _free_cached_dir);
     cached_v2_networkstatus = NULL;
   }
-  cached_dir_decref(cached_v3_networkstatus);
+  if (cached_consensuses) {
+    strmap_free(cached_consensuses, _free_cached_dir);
+    cached_consensuses = NULL;
+  }
 }
 

@@ -421,13 +421,13 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
       microdesc_digest256_out) {
     smartlist_t *digests = smartlist_create();
     const char *best_microdesc_digest;
-    SMARTLIST_FOREACH(votes, vote_routerstatus_t *, rs, {
+    SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
         char d[DIGEST256_LEN];
         if (compare_vote_rs(rs, most))
           continue;
         if (!vote_routerstatus_find_microdesc_hash(d, rs, consensus_method))
           smartlist_add(digests, tor_memdup(d, sizeof(d)));
-    });
+    } SMARTLIST_FOREACH_END(rs);
     smartlist_sort_digests256(digests);
     best_microdesc_digest = smartlist_get_most_frequent_digest256(digests);
     if (best_microdesc_digest)
@@ -2602,20 +2602,25 @@ dirvote_add_signatures(const char *detached_signatures_body,
 static int
 dirvote_publish_consensus(void)
 {
-  /* Can we actually publish it yet? */
-  if (!pending_consensuses[FLAV_NS].consensus ||
-      networkstatus_check_consensus_signature(
-                              pending_consensuses[FLAV_NS].consensus, 1)<0) {
-    log_warn(LD_DIR, "Not enough info to publish pending consensus");
-    return -1;
-  }
+  int i;
 
-  /* XXXXXX NMNMNM */
-  if (networkstatus_set_current_consensus(
-                              pending_consensuses[FLAV_NS].body, 0))
-    log_warn(LD_DIR, "Error publishing consensus");
-  else
-    log_notice(LD_DIR, "Consensus published.");
+  /* Now remember all the other consensuses as if we were a directory cache. */
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    pending_consensus_t *pending = &pending_consensuses[i];
+    const char *name;
+    name = networkstatus_get_flavor_name(i);
+    tor_assert(name);
+    if (!pending->consensus ||
+      networkstatus_check_consensus_signature(pending->consensus, 1)<0) {
+      log_warn(LD_DIR, "Not enough info to publish pending %s consensus",name);
+      continue;
+    }
+
+    if (networkstatus_set_current_consensus(pending->body, name, 0))
+      log_warn(LD_DIR, "Error publishing %s consensus", name);
+    else
+      log_notice(LD_DIR, "Published %s consensus", name);
+  }
 
   return 0;
 }

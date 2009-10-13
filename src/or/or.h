@@ -1282,6 +1282,7 @@ typedef struct cached_dir_t {
   size_t dir_len; /**< Length of <b>dir</b> (not counting its NUL). */
   size_t dir_z_len; /**< Length of <b>dir_z</b>. */
   time_t published; /**< When was this object published. */
+  digests_t digests; /**< Digests of this object (networkstatus only) */
   int refcnt; /**< Reference count for this cached_dir_t. */
 } cached_dir_t;
 
@@ -1691,6 +1692,9 @@ typedef enum {
   FLAV_NS = 0,
   FLAV_MICRODESC = 1,
 } consensus_flavor_t;
+
+/** DOCDOC */
+#define USABLE_CONSENSUS_FLAVOR FLAV_NS
 
 /** DOCDOC */
 #define N_CONSENSUS_FLAVORS ((int)(FLAV_MICRODESC)+1)
@@ -3758,14 +3762,16 @@ int directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now);
 void directory_set_dirty(void);
 cached_dir_t *dirserv_get_directory(void);
 cached_dir_t *dirserv_get_runningrouters(void);
-cached_dir_t *dirserv_get_consensus(void);
+cached_dir_t *dirserv_get_consensus(const char *flavor_name);
 void dirserv_set_cached_directory(const char *directory, time_t when,
                                   int is_running_routers);
 void dirserv_set_cached_networkstatus_v2(const char *directory,
                                          const char *identity,
                                          time_t published);
-void dirserv_set_cached_networkstatus_v3(const char *consensus,
-                                         time_t published);
+void dirserv_set_cached_consensus_networkstatus(const char *consensus,
+                                                const char *flavor_name,
+                                                const digests_t *digests,
+                                                time_t published);
 void dirserv_clear_old_networkstatuses(time_t cutoff);
 void dirserv_clear_old_v1_info(time_t now);
 void dirserv_get_networkstatus_v2(smartlist_t *result, const char *key);
@@ -4194,7 +4200,10 @@ networkstatus_t *networkstatus_get_reasonably_live_consensus(time_t now);
 #define NSSET_WAS_WAITING_FOR_CERTS 2
 #define NSSET_DONT_DOWNLOAD_CERTS 4
 #define NSSET_ACCEPT_OBSOLETE 8
-int networkstatus_set_current_consensus(const char *consensus, unsigned flags);
+#define NSSET_REQUIRE_FLAVOR 16
+int networkstatus_set_current_consensus(const char *consensus,
+                                        const char *flavor,
+                                        unsigned flags);
 void networkstatus_note_certs_arrived(void);
 void routers_update_all_from_networkstatus(time_t now, int dir_version);
 void routerstatus_list_update_from_consensus_networkstatus(time_t now);
