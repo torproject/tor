@@ -16,13 +16,39 @@
 #ifdef HAVE_EVENT2_DNS_H
 #include <event2/event.h>
 #include <event2/dns.h>
-#include <event2/dns_compat.h>
 #else
 #include <event.h>
 #include "eventdns.h"
 #ifndef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
 #define HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
 #endif
+#endif
+
+#ifndef HAVE_EVENT2_DNS_H
+struct evdns_base;
+struct evdns_request;
+#define evdns_base_new(x,y) tor_malloc(1)
+#define evdns_base_clear_nameservers_and_suspend(base) \
+  evdns_clear_nameservers_and_suspend()
+#define evdns_base_search_clear(base) evdns_search_clear()
+#define evdns_base_set_default_outgoing_bind_address(base, a, len)  \
+  evdns_set_default_outgoing_bind_address((a),(len))
+#define evdns_base_resolv_conf_parse(base, options, fname) \
+  evdns_resolv_conf_parse((options), (fname))
+#define evdns_base_count_nameservers(base)      \
+  evdns_count_nameservers()
+#define evdns_base_resume(base)                 \
+  evdns_resume()
+#define evdns_base_config_windows_nameservers(base)     \
+  evdns_config_windows_nameservers()
+#define evdns_base_set_option(base, opt, val, flags) \
+  evdns_set_option((opt),(val),(flags))
+#define evdns_base_resolve_ipv4(base, addr, options, cb, ptr) \
+  ((evdns_resolve_ipv4(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
+#define evdns_base_resolve_reverse(base, addr, options, cb, ptr) \
+  ((evdns_resolve_reverse(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
+#define evdns_base_resolve_reverse_ipv6(base, addr, options, cb, ptr) \
+  ((evdns_resolve_reverse_ipv6(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
 #endif
 
 /** Longest hostname we're willing to resolve. */
@@ -37,6 +63,9 @@
 #define DNS_RESOLVE_FAILED_TRANSIENT 1
 #define DNS_RESOLVE_FAILED_PERMANENT 2
 #define DNS_RESOLVE_SUCCEEDED 3
+
+/** Our evdns_base; this structure handles all our name lookups. */
+static struct evdns_base *the_evdns_base = NULL;
 
 /** Have we currently configured nameservers with eventdns? */
 static int nameservers_configured = 0;
@@ -221,8 +250,8 @@ dns_reset(void)
 {
   or_options_t *options = get_options();
   if (! server_mode(options)) {
-    evdns_clear_nameservers_and_suspend();
-    evdns_search_clear();
+    evdns_base_clear_nameservers_and_suspend(the_evdns_base);
+    evdns_base_search_clear(the_evdns_base);
     nameservers_configured = 0;
     tor_free(resolv_conf_fname);
     resolv_conf_mtime = 0;
@@ -1118,6 +1147,13 @@ configure_nameservers(int force)
     conf_fname = "/etc/resolv.conf";
 #endif
 
+  if (!the_evdns_base) {
+    if (!(the_evdns_base = evdns_base_new(tor_libevent_get_base(), 0))) {
+      log_err(LD_BUG, "Couldn't create an evdns_base");
+      return -1;
+    }
+  }
+
 #ifdef HAVE_EVDNS_SET_DEFAULT_OUTGOING_BIND_ADDRESS
   if (options->OutboundBindAddress) {
     tor_addr_t addr;
@@ -1133,17 +1169,13 @@ configure_nameservers(int force)
         log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
                  " Ignoring.");
       } else {
-        evdns_set_default_outgoing_bind_address((struct sockaddr *)&ss,
-                                                socklen);
+        evdns_base_set_default_outgoing_bind_address(the_evdns_base,
+                                                     (struct sockaddr *)&ss,
+                                                     socklen);
       }
     }
   }
 #endif
-
-  if (options->ServerDNSRandomizeCase)
-    evdns_set_option("randomize-case:", "1", DNS_OPTIONS_ALL);
-  else
-    evdns_set_option("randomize-case:", "0", DNS_OPTIONS_ALL);
 
   evdns_set_log_fn(evdns_log_cb);
   if (conf_fname) {
@@ -1158,16 +1190,17 @@ configure_nameservers(int force)
       return 0;
     }
     if (nameservers_configured) {
-      evdns_search_clear();
-      evdns_clear_nameservers_and_suspend();
+      evdns_base_search_clear(the_evdns_base);
+      evdns_base_clear_nameservers_and_suspend(the_evdns_base);
     }
     log_info(LD_EXIT, "Parsing resolver configuration in '%s'", conf_fname);
-    if ((r = evdns_resolv_conf_parse(DNS_OPTIONS_ALL, conf_fname))) {
+    if ((r = evdns_base_resolv_conf_parse(the_evdns_base,
+                                          DNS_OPTIONS_ALL, conf_fname))) {
       log_warn(LD_EXIT, "Unable to parse '%s', or no nameservers in '%s' (%d)",
                conf_fname, conf_fname, r);
       goto err;
     }
-    if (evdns_count_nameservers() == 0) {
+    if (evdns_base_count_nameservers(the_evdns_base) == 0) {
       log_warn(LD_EXIT, "Unable to find any nameservers in '%s'.", conf_fname);
       goto err;
     }
@@ -1175,37 +1208,47 @@ configure_nameservers(int force)
     resolv_conf_fname = tor_strdup(conf_fname);
     resolv_conf_mtime = st.st_mtime;
     if (nameservers_configured)
-      evdns_resume();
+      evdns_base_resume(the_evdns_base);
   }
 #ifdef MS_WINDOWS
   else {
     if (nameservers_configured) {
-      evdns_search_clear();
-      evdns_clear_nameservers_and_suspend();
+      evdns_base_search_clear(the_evdns_base);
+      evdns_base_clear_nameservers_and_suspend(the_evdns_base);
     }
-    if (evdns_config_windows_nameservers())  {
+    if (evdns_base_config_windows_nameservers(the_evdns_base))  {
       log_warn(LD_EXIT,"Could not config nameservers.");
       goto err;
     }
-    if (evdns_count_nameservers() == 0) {
+    if (evdns_base_count_nameservers(the_evdns_base) == 0) {
       log_warn(LD_EXIT, "Unable to find any platform nameservers in "
                "your Windows configuration.");
       goto err;
     }
     if (nameservers_configured)
-      evdns_resume();
+      evdns_base_resume(the_evdns_base);
     tor_free(resolv_conf_fname);
     resolv_conf_mtime = 0;
   }
 #endif
 
-  if (evdns_count_nameservers() == 1) {
-    evdns_set_option("max-timeouts:", "16", DNS_OPTIONS_ALL);
-    evdns_set_option("timeout:", "10", DNS_OPTIONS_ALL);
+#define SET(k,v) \
+  evdns_base_set_option(the_evdns_base, (k), (v), DNS_OPTIONS_ALL)
+
+  if (evdns_base_count_nameservers(the_evdns_base) == 1) {
+    SET("max-timeouts:", "16");
+    SET("timeout:", "10");
   } else {
-    evdns_set_option("max-timeouts:", "3", DNS_OPTIONS_ALL);
-    evdns_set_option("timeout:", "5", DNS_OPTIONS_ALL);
+    SET("max-timeouts:", "3");
+    SET("timeout:", "5");
   }
+
+  if (options->ServerDNSRandomizeCase)
+    SET("randomize-case:", "1");
+  else
+    SET("randomize-case:", "0");
+
+#undef SET
 
   dns_servers_relaunch_checks();
 
@@ -1304,6 +1347,7 @@ static int
 launch_resolve(edge_connection_t *exitconn)
 {
   char *addr = tor_strdup(exitconn->_base.address);
+  struct evdns_request *req = NULL;
   tor_addr_t a;
   int r;
   int options = get_options()->ServerDNSSearchDomains ? 0
@@ -1322,25 +1366,28 @@ launch_resolve(edge_connection_t *exitconn)
   if (r == 0) {
     log_info(LD_EXIT, "Launching eventdns request for %s",
              escaped_safe_str(exitconn->_base.address));
-    r = evdns_resolve_ipv4(exitconn->_base.address, options,
-                           evdns_callback, addr);
+    req = evdns_base_resolve_ipv4(the_evdns_base,
+                                exitconn->_base.address, options,
+                                evdns_callback, addr);
   } else if (r == 1) {
     log_info(LD_EXIT, "Launching eventdns reverse request for %s",
              escaped_safe_str(exitconn->_base.address));
     if (tor_addr_family(&a) == AF_INET)
-      r = evdns_resolve_reverse(tor_addr_to_in(&a), DNS_QUERY_NO_SEARCH,
+      req = evdns_base_resolve_reverse(the_evdns_base,
+                                tor_addr_to_in(&a), DNS_QUERY_NO_SEARCH,
                                 evdns_callback, addr);
     else
-      r = evdns_resolve_reverse_ipv6(tor_addr_to_in6(&a), DNS_QUERY_NO_SEARCH,
+      req = evdns_base_resolve_reverse_ipv6(the_evdns_base,
+                                     tor_addr_to_in6(&a), DNS_QUERY_NO_SEARCH,
                                      evdns_callback, addr);
   } else if (r == -1) {
     log_warn(LD_BUG, "Somehow a malformed in-addr.arpa address reached here.");
   }
 
-  if (r) {
-    log_warn(LD_EXIT, "eventdns rejected address %s: error %d.",
-             escaped_safe_str(addr), r);
-    r = evdns_err_is_transient(r) ? -2 : -1;
+  r = 0;
+  if (!req) {
+    log_warn(LD_EXIT, "eventdns rejected address %s.", escaped_safe_str(addr));
+    r = -1;
     tor_free(addr); /* There is no evdns request in progress; stop
                      * addr from getting leaked. */
   }
@@ -1478,17 +1525,19 @@ static void
 launch_wildcard_check(int min_len, int max_len, const char *suffix)
 {
   char *addr;
-  int r;
+  struct evdns_request *req;
 
   addr = crypto_random_hostname(min_len, max_len, "", suffix);
   log_info(LD_EXIT, "Testing whether our DNS server is hijacking nonexistent "
            "domains with request for bogus hostname \"%s\"", addr);
 
-  r = evdns_resolve_ipv4(/* This "addr" tells us which address to resolve */
+  req = evdns_base_resolve_ipv4(
+                         the_evdns_base,
+                         /* This "addr" tells us which address to resolve */
                          addr,
                          DNS_QUERY_NO_SEARCH, evdns_wildcard_check_callback,
                          /* This "addr" is an argument to the callback*/ addr);
-  if (r) {
+  if (!req) {
     /* There is no evdns request in progress; stop addr from getting leaked */
     tor_free(addr);
   }
@@ -1500,6 +1549,7 @@ static void
 launch_test_addresses(int fd, short event, void *args)
 {
   or_options_t *options = get_options();
+  struct evdns_request *req;
   (void)fd;
   (void)event;
   (void)args;
@@ -1511,14 +1561,18 @@ launch_test_addresses(int fd, short event, void *args)
    * be an exit server.*/
   if (!options->ServerDNSTestAddresses)
     return;
-  SMARTLIST_FOREACH(options->ServerDNSTestAddresses, const char *, address,
-    {
-      int r = evdns_resolve_ipv4(address, DNS_QUERY_NO_SEARCH, evdns_callback,
-                                 tor_strdup(address));
-      if (r)
-        log_info(LD_EXIT, "eventdns rejected test address %s: error %d",
-                 escaped_safe_str(address), r);
-    });
+  SMARTLIST_FOREACH_BEGIN(options->ServerDNSTestAddresses,
+                          const char *, address) {
+    char *a = tor_strdup(address);
+    req = evdns_base_resolve_ipv4(the_evdns_base,
+                              address, DNS_QUERY_NO_SEARCH, evdns_callback, a);
+
+    if (!req) {
+      log_info(LD_EXIT, "eventdns rejected test address %s",
+               escaped_safe_str(address));
+      tor_free(a);
+    }
+  } SMARTLIST_FOREACH_END(address);
 }
 
 #define N_WILDCARD_CHECKS 2

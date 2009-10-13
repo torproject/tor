@@ -3,6 +3,10 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
     - Numerous changes, bugfixes, and workarounds from Nathan Freitas
       to help Tor build correctly for Android phones.
 
+  o Minor bugfixes:
+    - Fix a crash bug when trying to initialize the evdns module in
+      Libevent 2.
+
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
   o Major bugfixes:
