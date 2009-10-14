@@ -1664,7 +1664,7 @@ networkstatus_set_current_consensus(const char *consensus,
     dirserv_set_cached_consensus_networkstatus(consensus,
                                                flavor,
                                                &c->digests,
-                                               current_valid_after);
+                                               c->valid_after);
   }
 
   if (flav == USABLE_CONSENSUS_FLAVOR) {

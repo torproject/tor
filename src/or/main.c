@@ -1985,6 +1985,7 @@ tor_free_all(int postfork)
   connection_free_all();
   buf_shrink_freelists(1);
   memarea_clear_freelist();
+  microdesc_free_all();
   if (!postfork) {
     config_free_all();
     router_free_all();

@@ -4123,6 +4123,7 @@ int microdesc_cache_reload(microdesc_cache_t *cache);
 void microdesc_cache_clear(microdesc_cache_t *cache);
 
 void microdesc_free(microdesc_t *md);
+void microdesc_free_all(void);
 
 /********************************* networkstatus.c *********************/
 
