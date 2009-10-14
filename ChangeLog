@@ -9,6 +9,8 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
+  Tor 0.2.2.5-alpha fixes a few compile problems in 0.2.2.4-alpha.
+
   o Major bugfixes:
     - Make the tarball compile again. Oops. Bugfix on 0.2.2.4-alpha.
 
@@ -17,6 +19,11 @@ Changes in version 0.2.2.5-alpha - 2009-10-11
 
 
 Changes in version 0.2.2.4-alpha - 2009-10-10
+  Tor 0.2.2.4-alpha fixes more crash bugs in 0.2.2.2-alpha. It also
+  introduces a new unit test framework, shifts directry authority
+  addresses around to reduce the impact from recent blocking events,
+  and fixes a few smaller bugs.
+
   o Major bugfixes:
     - Fix several more asserts in the circuit_build_times code, for
       example one that causes Tor to fail to start once we have
@@ -42,7 +49,7 @@ Changes in version 0.2.2.4-alpha - 2009-10-10
     - Fix a couple of smaller issues with gathering statistics. Bugfixes
       on 0.2.2.1-alpha.
     - Fix two memory leaks in the error case of
-      circuit_build_times_parse_state. Bugfix on 0.2.2.2-alpha.
+      circuit_build_times_parse_state(). Bugfix on 0.2.2.2-alpha.
     - Don't count one-hop circuits when we're estimating how long it
       takes circuits to build on average. Otherwise we'll set our circuit
       build timeout lower than we should. Bugfix on 0.2.2.2-alpha.
@@ -54,7 +61,7 @@ Changes in version 0.2.2.4-alpha - 2009-10-10
   o Code simplifications and refactoring:
     - Revise our unit tests to use the "tinytest" framework, so we
       can run tests in their own processes, have smarter setup/teardown
-      code, and so on.  The unit test code has moved to its own
+      code, and so on. The unit test code has moved to its own
       subdirectory, and has been split into multiple modules.
 
 
