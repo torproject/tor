@@ -1736,7 +1736,8 @@ write_str_to_file(const char *fname, const char *str, int bin)
 struct open_file_t {
   char *tempname; /**< Name of the temporary file. */
   char *filename; /**< Name of the original file. */
-  int rename_on_close; /**< Are we using the temporary file or not? */
+  unsigned rename_on_close:1; /**< Are we using the temporary file or not? */
+  unsigned binary:1; /**< Did we open in binary mode? */
   int fd; /**< fd for the open file. */
   FILE *stdio_file; /**< stdio wrapper for <b>fd</b>. */
 };
@@ -1792,6 +1793,8 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     open_flags &= ~O_EXCL;
     new_file->rename_on_close = 1;
   }
+  if (open_flags & O_BINARY)
+    new_file->binary = 1;
 
   if ((new_file->fd = open(open_name, open_flags, mode)) < 0) {
     log(LOG_WARN, LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
@@ -1830,7 +1833,8 @@ fdopen_file(open_file_t *file_data)
   if (file_data->stdio_file)
     return file_data->stdio_file;
   tor_assert(file_data->fd >= 0);
-  if (!(file_data->stdio_file = fdopen(file_data->fd, "a"))) {
+  if (!(file_data->stdio_file = fdopen(file_data->fd,
+                                       file_data->binary?"ab":"a"))) {
     log_warn(LD_FS, "Couldn't fdopen \"%s\" [%d]: %s", file_data->filename,
              file_data->fd, strerror(errno));
   }
