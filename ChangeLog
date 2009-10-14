@@ -10,6 +10,11 @@ Changes in version 0.2.1.20 - 2009-??-??
       contains more than one signature from the same voter. Bugfix on
       0.2.0.3-alpha.
 
+  o Major features:
+    - Tor now reads the "circwindow" parameter out of the consensus,
+      and uses that value for its circuit package window rather than the
+      default of 1000 cells. Begins the implementation of proposal 168.
+
   o New directory authorities:
     - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
       authority.

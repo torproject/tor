@@ -703,7 +703,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
   /* set the windows to default. these are the windows
    * that alice thinks bob has.
    */
-  hop->package_window = CIRCWINDOW_START;
+  hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
   onion_append_to_cpath(&circ->cpath, hop);

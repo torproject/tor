@@ -1853,9 +1853,9 @@ typedef struct crypt_path_t {
   struct crypt_path_t *prev; /**< Link to previous crypt_path_t in the
                               * circuit. */
 
-  int package_window; /**< How many bytes are we allowed to originate ending
+  int package_window; /**< How many cells are we allowed to originate ending
                        * at this step? */
-  int deliver_window; /**< How many bytes are we willing to deliver originating
+  int deliver_window; /**< How many cells are we willing to deliver originating
                        * at this step? */
 } crypt_path_t;
 
@@ -2789,6 +2789,7 @@ void circuit_set_n_circid_orconn(circuit_t *circ, circid_t id,
                                  or_connection_t *conn);
 void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
+int32_t circuit_initial_package_window(void);
 origin_circuit_t *origin_circuit_new(void);
 or_circuit_t *or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(circid_t circ_id,

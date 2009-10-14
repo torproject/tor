@@ -1889,13 +1889,17 @@ networkstatus_dump_bridge_status_to_file(time_t now)
 }
 
 /** Return the value of a integer parameter from the networkstatus <b>ns</b>
- * whose name is <b>param_name</b>.  Return <b>default_val</b> if ns is NULL,
- * or if it has no parameter called <b>param_name</b>. */
+ * whose name is <b>param_name</b>.  If <b>ns</b> is NULL, try loading the
+ * latest consensus ourselves. Return <b>default_val</b> if no latest
+ * consensus, or if it has no parameter called <b>param_name</b>. */
 int32_t
 networkstatus_get_param(networkstatus_t *ns, const char *param_name,
                         int32_t default_val)
 {
   size_t name_len;
+
+  if (!ns) /* if they pass in null, go find it ourselves */
+    ns = networkstatus_get_latest_consensus();
 
   if (!ns || !ns->net_params)
     return default_val;
