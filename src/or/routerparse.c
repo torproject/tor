@@ -77,6 +77,7 @@ typedef enum {
   K_VOTING_DELAY,
 
   K_KNOWN_FLAGS,
+  K_PARAMS,
   K_VOTE_DIGEST,
   K_CONSENSUS_DIGEST,
   K_CONSENSUS_METHODS,
@@ -383,6 +384,7 @@ static token_rule_t networkstatus_token_table[] = {
   T1("valid-until",            K_VALID_UNTIL,      CONCAT_ARGS, NO_OBJ ),
   T1("voting-delay",           K_VOTING_DELAY,     GE(2),       NO_OBJ ),
   T1("known-flags",            K_KNOWN_FLAGS,      ARGS,        NO_OBJ ),
+  T01("params",                K_PARAMS,           ARGS,        NO_OBJ ),
   T( "fingerprint",            K_FINGERPRINT,      CONCAT_ARGS, NO_OBJ ),
 
   CERTIFICATE_MEMBERS
@@ -420,6 +422,7 @@ static token_rule_t networkstatus_consensus_token_table[] = {
   T01("client-versions",     K_CLIENT_VERSIONS, CONCAT_ARGS, NO_OBJ ),
   T01("server-versions",     K_SERVER_VERSIONS, CONCAT_ARGS, NO_OBJ ),
   T01("consensus-method",    K_CONSENSUS_METHOD,    EQ(1),   NO_OBJ),
+  T01("params",                K_PARAMS,           ARGS,        NO_OBJ ),
 
   END_OF_TABLE
 };
@@ -2308,6 +2311,34 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   if (!inorder) {
     log_warn(LD_DIR, "known-flags not in order");
     goto err;
+  }
+
+  tok = find_opt_by_keyword(tokens, K_PARAMS);
+  if (tok) {
+    inorder = 1;
+    ns->net_params = smartlist_create();
+    for (i = 0; i < tok->n_args; ++i) {
+      int ok=0;
+      char *eq = strchr(tok->args[i], '=');
+      if (!eq) {
+        log_warn(LD_DIR, "Bad element '%s' in params", escaped(tok->args[i]));
+        goto err;
+      }
+      tor_parse_long(eq+1, 10, INT32_MIN, INT32_MAX, &ok, NULL);
+      if (!ok) {
+        log_warn(LD_DIR, "Bad element '%s' in params", escaped(tok->args[i]));
+        goto err;
+      }
+      if (i > 0 && strcmp(tok->args[i-1], tok->args[i]) >= 0) {
+        log_warn(LD_DIR, "%s >= %s", tok->args[i-1], tok->args[i]);
+        inorder = 0;
+      }
+      smartlist_add(ns->net_params, tor_strdup(tok->args[i]));
+    }
+    if (!inorder) {
+      log_warn(LD_DIR, "params not in order");
+      goto err;
+    }
   }
 
   ns->voters = smartlist_create();
