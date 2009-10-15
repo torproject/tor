@@ -1,4 +1,4 @@
-Changes in version 0.2.1.20 - 2009-??-??
+Changes in version 0.2.1.20 - 2009-10-15
   o Major bugfixes:
     - Send circuit or stream sendme cells when our window has decreased
       by 100 cells, not when it has decreased by 101 cells. Bug uncovered
@@ -9,6 +9,9 @@ Changes in version 0.2.1.20 - 2009-??-??
     - Fix a remotely triggerable memory leak when a consensus document
       contains more than one signature from the same voter. Bugfix on
       0.2.0.3-alpha.
+    - Avoid segfault in rare cases when finishing an introduction circuit
+      as a client and finding out that we don't have an introduction key
+      for it. Fixes bug 1073. Reported by Aaron Swartz.
 
   o Major features:
     - Tor now reads the "circwindow" parameter out of the consensus,
@@ -18,7 +21,7 @@ Changes in version 0.2.1.20 - 2009-??-??
   o New directory authorities:
     - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
       authority.
-    - Move moria1 and Tonga to alternate IP addresses.
+    - Move moria1 and tonga to alternate IP addresses.
 
   o Minor bugfixes:
     - Fix a signed/unsigned compile warning in 0.2.1.19.
@@ -46,9 +49,6 @@ Changes in version 0.2.1.20 - 2009-??-??
       excluded in ExcludeExitNodes, but the circuit is not used to access
       the outside world. This should help fix bug 1090. Bugfix on
       0.2.1.6-alpha.
-    - Avoid segfault in rare cases when finishing an introduction circuit
-      as a client and finding out that we don't have an introduction key
-      for it. Fixes bug 1073. Reported by Aaron Swartz.
     - Work around a small memory leak in some versions of OpenSSL that
       stopped the memory used by the hostname TLS extension from being
       freed.
