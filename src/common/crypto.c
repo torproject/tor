@@ -1481,7 +1481,8 @@ crypto_digest_algorithm_get_name(digest_algorithm_t alg)
   }
 }
 
-/** DOCDOC */
+/** Given the name of a digest algorithm, return its integer value, or -1 if
+ * the name is not recognized. */
 int
 crypto_digest_algorithm_parse_name(const char *name)
 {

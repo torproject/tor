@@ -640,7 +640,8 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
                               DIGEST_SHA1);
 }
 
-/** DOCDOC */
+/** Set <b>digests</b> to all the digests of the consensus document in
+ * <b>s</b> */
 int
 router_get_networkstatus_v3_hashes(const char *s, digests_t *digests)
 {
@@ -677,8 +678,6 @@ router_get_extrainfo_hash(const char *s, char *digest)
  * surround it with -----BEGIN/END----- pairs, and write it to the
  * <b>buf_len</b>-byte buffer at <b>buf</b>.  Return 0 on success, -1 on
  * failure.
- *
- * DOCDOC alg
  */
 int
 router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
@@ -1901,7 +1900,7 @@ find_start_of_next_routerstatus(const char *s)
  * consensus, and we should parse it according to the method used to
  * make that consensus.
  *
- * DOCDOC flav
+ * Parse according to the syntax used by the consensus flavor <b>flav</b>.
  **/
 static routerstatus_t *
 routerstatus_parse_entry_from_string(memarea_t *area,
@@ -2832,7 +2831,9 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   return ns;
 }
 
-/** DOCDOC */
+/** Return the digests_t that holds the digests of the
+ * <b>flavor_name</b>-flavored networkstatus according to the detached
+ * signatures document <b>sigs</b>, allocating a new digests_t as neeeded. */
 static digests_t *
 detached_get_digests(ns_detached_signatures_t *sigs, const char *flavor_name)
 {
@@ -2844,7 +2845,9 @@ detached_get_digests(ns_detached_signatures_t *sigs, const char *flavor_name)
   return d;
 }
 
-/** DOCDOC */
+/** Return the list of signatures of the <b>flavor_name</b>-flavored
+ * networkstatus according to the detached signatures document <b>sigs</b>,
+ * allocating a new digests_t as neeeded. */
 static smartlist_t *
 detached_get_signatures(ns_detached_signatures_t *sigs,
                         const char *flavor_name)
@@ -3719,8 +3722,8 @@ router_get_hashes_impl(const char *s, digests_t *digests,
   return 0;
 }
 
-/** DOCDOC Assuming that s starts with a microdesc, return the start of the
- * *NEXT* one. */
+/** Assuming that s starts with a microdesc, return the start of the
+ * *NEXT* one.  Return NULL on "not found." */
 static const char *
 find_start_of_next_microdesc(const char *s, const char *eos)
 {
@@ -3771,7 +3774,11 @@ find_start_of_next_microdesc(const char *s, const char *eos)
 #undef NEXT_LINE
 }
 
-/**DOCDOC*/
+/** Parse as many microdescriptors as are found from the string starting at
+ * <b>s</b> and ending at <b>eos</b>.  If allow_annotations is set, read any
+ * annotations we recognize and ignore ones we don't.  If <b>copy_body</b> is
+ * true, then strdup the bodies of the microdescriptors.  Return all newly
+ * parsed microdescriptors in a newly allocated smartlist_t. */
 smartlist_t *
 microdescs_parse_from_string(const char *s, const char *eos,
                              int allow_annotations, int copy_body)

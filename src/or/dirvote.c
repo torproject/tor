@@ -11,7 +11,9 @@
  * \brief Functions to compute directory consensus, and schedule voting.
  **/
 
-/** DOCDOC*/
+/** A consensus that we have built and are appending signatures to.  Once it's
+ * time to publish it, it will become an active consensus if it accumulates
+ * enough signatures. */
 typedef struct pending_consensus_t {
   /** The body of the consensus that we're currently building.  Once we
    * have it built, it goes into dirserv.c */
@@ -264,7 +266,8 @@ get_voter(const networkstatus_t *vote)
   return smartlist_get(vote->voters, 0);
 }
 
-/** DOCDOC */
+/** Return the signature made by <b>voter</b> using the algorithm
+ * <b>alg</b>, or NULL if none is found. */
 document_signature_t *
 voter_get_sig_by_algorithm(const networkstatus_voter_info_t *voter,
                            digest_algorithm_t alg)
@@ -425,7 +428,8 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
         char d[DIGEST256_LEN];
         if (compare_vote_rs(rs, most))
           continue;
-        if (!vote_routerstatus_find_microdesc_hash(d, rs, consensus_method))
+        if (!vote_routerstatus_find_microdesc_hash(d, rs, consensus_method,
+                                                   DIGEST_SHA256))
           smartlist_add(digests, tor_memdup(d, sizeof(d)));
     } SMARTLIST_FOREACH_END(rs);
     smartlist_sort_digests256(digests);
@@ -439,9 +443,9 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
   return most;
 }
 
-/** Given a list of strings in <b>lst</b>, set the DIGEST_LEN-byte digest at
- * <b>digest_out</b> to the hash of the concatenation of those strings. DOCDOC
- * new arguments. */
+/** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
+ * at <b>digest_out</b> to the hash of the concatenation of those strings,
+ * computed with the algorithm <b>alg</b>. */
 static void
 hash_list_members(char *digest_out, size_t len_out,
                   smartlist_t *lst, digest_algorithm_t alg)
@@ -1523,7 +1527,11 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
   return r;
 }
 
-/** DOCDOC */
+/** Return a newly allocated string containing all the signatures on
+ * <b>consensus</b> by all voters. If <b>for_detached_signatures</b> is true,
+ * then the signatures will be put in a detached signatures document, so
+ * prefix any non-NS-flavored signatures with "additional-signature" rather
+ * than "directory-signature". */
 static char *
 networkstatus_format_signatures(networkstatus_t *consensus,
                                 int for_detached_signatures)
@@ -1674,7 +1682,9 @@ networkstatus_get_detached_signatures(smartlist_t *consensuses)
   return result;
 }
 
-/** DOCDOC */
+/** Return a newly allocated string holding a detached-signatures document for
+ * all of the in-progress consensuses in the <b>n_flavors</b>-element array at
+ * <b>pending</b>. */
 static char *
 get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
                                                  int n_flavors)
@@ -2049,7 +2059,8 @@ dirvote_fetch_missing_signatures(void)
                                      0, NULL);
 }
 
-/** DOCDOC */
+/** Release all storage held by pending consensuses (those waiting for
+ * signatures). */
 static void
 dirvote_clear_pending_consensuses(void)
 {
@@ -2775,7 +2786,10 @@ dirvote_create_microdescriptor(const routerinfo_t *ri)
 /** Cached space-separated string to hold */
 static char *microdesc_consensus_methods = NULL;
 
-/** DOCDOC */
+/** Format the appropriate vote line to describe the microdescriptor <b>md</b>
+ * in a consensus vote document.  Write it into the <b>out_len</b>-byte buffer
+ * in <b>out</b>.  Return -1 on failure and the number of characters written
+ * on success. */
 int
 dirvote_format_microdesc_vote_line(char *out, size_t out_len,
                                    const microdesc_t *md)
@@ -2798,19 +2812,25 @@ dirvote_format_microdesc_vote_line(char *out, size_t out_len,
   return strlen(out);
 }
 
-/** DOCDOC */
+/** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
+ * the digest algorithm <b>alg</b>, decode it and copy it into
+ * <b>digest256_out</b> and return 0.  Otherwise return -1. */
 int
 vote_routerstatus_find_microdesc_hash(char *digest256_out,
                                       const vote_routerstatus_t *vrs,
-                                      int method)
+                                      int method,
+                                      digest_algorithm_t alg)
 {
   /* XXXX only returns the sha256 method. */
   const vote_microdesc_hash_t *h;
   char mstr[64];
   size_t mlen;
+  char dstr[64];
 
   tor_snprintf(mstr, sizeof(mstr), "%d", method);
   mlen = strlen(mstr);
+  tor_snprintf(dstr, sizeof(dstr), " %s=",
+               crypto_digest_algorithm_get_name(alg));
 
   for (h = vrs->microdesc; h; h = h->next) {
     const char *cp = h->microdesc_hash_line;
@@ -2824,10 +2844,10 @@ vote_routerstatus_find_microdesc_hash(char *digest256_out,
         char buf[BASE64_DIGEST256_LEN+1];
         /* XXXX ignores extraneous stuff if the digest is too long.  This
          * seems harmless enough, right? */
-        cp = strstr(cp, " sha256=");
+        cp = strstr(cp, dstr);
         if (!cp)
           return -1;
-        cp += strlen(" sha256=");
+        cp += strlen(dstr);
         strlcpy(buf, cp, sizeof(buf));
         return digest256_from_base64(digest256_out, buf);
       }

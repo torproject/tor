@@ -1885,7 +1885,8 @@ version_from_platform(const char *platform)
  * The format argument has three possible values:
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
- *   NS_V3_CONSENSUS_MICRODESC - DOCDOC
+ *   NS_V3_CONSENSUS_MICRODESC - Output the first portion of a V3 microdesc
+ *        consensus entry.
  *   NS_V3_VOTE - Output a complete V3 NS vote
  *   NS_CONTROL_PORT - Output a NS document for the control port
  */

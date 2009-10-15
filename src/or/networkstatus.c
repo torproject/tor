@@ -2082,7 +2082,8 @@ networkstatus_get_flavor_name(consensus_flavor_t flav)
   }
 }
 
-/** DOCDOC return -1 on unknown */
+/** Return the consensus_flavor_t value for the flavor called <b>flavname</b>,
+ * or -1 if the flavor is not recongized. */
 int
 networkstatus_parse_flavor_name(const char *flavname)
 {

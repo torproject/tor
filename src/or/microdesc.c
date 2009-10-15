@@ -3,20 +3,26 @@
 
 #include "or.h"
 
-/** DOCDOC everything here. */
-
-#define MICRODESC_IN_CONSENSUS 1
-#define MICRODESC_IN_VOTE 2
-
+/** A data structure to hold a bunch of cached microdescriptors.  There are
+ * two active files in the cache: a "cache file" that we mmap, and a "journal
+ * file" that we append to.  Periodically, we rebuild the cache file to hold
+ * only the microdescriptors that we want to keep */
 struct microdesc_cache_t {
+  /** Map from sha256-digest to microdesc_t for every microdesc_t in the
+   * cache. */
   HT_HEAD(microdesc_map, microdesc_t) map;
 
+  /** Name of the cache file. */
   char *cache_fname;
+  /** Name of the journal file. */
   char *journal_fname;
+  /** Mmap'd contents of the cache file, or NULL if there is none. */
   tor_mmap_t *cache_content;
+  /** Number of bytes used in the journal file. */
   size_t journal_len;
 };
 
+/** Helper: computes a hash of <b>md</b> to place it in a hash table. */
 static INLINE unsigned int
 _microdesc_hash(microdesc_t *md)
 {
@@ -28,6 +34,7 @@ _microdesc_hash(microdesc_t *md)
 #endif
 }
 
+/** Helper: compares <b>a</b> and </b> for equality for hash-table purposes. */
 static INLINE int
 _microdesc_eq(microdesc_t *a, microdesc_t *b)
 {
@@ -40,7 +47,10 @@ HT_GENERATE(microdesc_map, microdesc_t, node,
              _microdesc_hash, _microdesc_eq, 0.6,
              _tor_malloc, _tor_realloc, _tor_free);
 
-/* returns n bytes written */
+/** Write the body of <b>md</b> into <b>f</b>, with appropriate annotations.
+ * On success, return the total number of bytes written, and set
+ * *<b>annotation_len_out</b> to the number of bytes written as
+ * annotations. */
 static int
 dump_microdescriptor(FILE *f, microdesc_t *md, int *annotation_len_out)
 {
@@ -64,8 +74,11 @@ dump_microdescriptor(FILE *f, microdesc_t *md, int *annotation_len_out)
   return r;
 }
 
+/** Holds a pointer to the current microdesc_cache_t object, or NULL if no
+ * such object has been allocated. */
 static microdesc_cache_t *the_microdesc_cache = NULL;
 
+/** Return a pointer to the microdescriptor cache, loading it if necessary. */
 microdesc_cache_t *
 get_microdesc_cache(void)
 {
@@ -86,7 +99,12 @@ get_microdesc_cache(void)
    3) Downloaded.
 */
 
-/* Returns list of added microdesc_t. */
+/** Decode the microdescriptors from the string starting at <b>s</b> and
+ * ending at <b>eos</b>, and store them in <b>cache</b>.  If <b>no-save</b>,
+ * mark them as non-writable to disk.  If <b>where</b> is SAVED_IN_CACHE,
+ * leave their bodies as pointers to the mmap'd cache.  If where is
+ * <b>SAVED_NOWHERE</b>, do not allow annotations.  Return a list of the added
+ * microdescriptors.  */
 smartlist_t *
 microdescs_add_to_cache(microdesc_cache_t *cache,
                         const char *s, const char *eos, saved_location_t where,
@@ -107,8 +125,9 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
   return added;
 }
 
-/* Returns list of added microdesc_t. Frees any not added. Updates last_listed.
- */
+/* As microdescs_add_to_cache, but takes a list of micrdescriptors instead of
+ * a string to encode.  Frees any members of <b>descriptors</b> that it does
+ * not add. */
 smartlist_t *
 microdescs_add_list_to_cache(microdesc_cache_t *cache,
                              smartlist_t *descriptors, saved_location_t where,
@@ -174,6 +193,7 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
   return added;
 }
 
+/** Remove every microdescriptor in <b>cache</b>. */
 void
 microdesc_cache_clear(microdesc_cache_t *cache)
 {
@@ -190,6 +210,8 @@ microdesc_cache_clear(microdesc_cache_t *cache)
   }
 }
 
+/** Reload the contents of <b>cache</b> from disk.  If it is empty, load it
+ * for the first time.  Return 0 on success, -1 on failure. */
 int
 microdesc_cache_reload(microdesc_cache_t *cache)
 {
@@ -228,6 +250,9 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   return 0;
 }
 
+/** Regenerate the main cache file for <b>cache</b>, clear the journal file,
+ * and update every microdesc_t in the cache with pointers to its new
+ * location. */
 int
 microdesc_cache_rebuild(microdesc_cache_t *cache)
 {
@@ -298,6 +323,8 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
   return 0;
 }
 
+/** Deallocate a single microdescriptor.  Note: the microdescriptor MUST have
+ * previously been removed from the cache if it had ever been inserted. */
 void
 microdesc_free(microdesc_t *md)
 {
@@ -316,6 +343,7 @@ microdesc_free(microdesc_t *md)
   tor_free(md);
 }
 
+/** Free all storage held in the microdesc.c module. */
 void
 microdesc_free_all(void)
 {
