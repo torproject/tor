@@ -2387,7 +2387,7 @@ typedef struct {
                                  * ORs not to consider as exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
-  struct routerset_t *_ExcludeExitNodesUnion;
+  routerset_t *_ExcludeExitNodesUnion;
 
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
@@ -3487,7 +3487,7 @@ typedef struct trusted_dir_server_t {
 
 #define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
 
-/* Flags for pick_directory_server and pick_trusteddirserver. */
+/* Flags for pick_directory_server() and pick_trusteddirserver(). */
 /** Flag to indicate that we should not automatically be willing to use
  * ourself to answer a directory request.
  * Passed to router_pick_directory_server (et al).*/

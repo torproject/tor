@@ -2938,6 +2938,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
            description,exit->nickname,
            rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
            (int)purpose);
+    /* XXX022-1090 "using anyway" is freaking people out -RD */
     circuit_log_path(LOG_WARN, domain, circ);
   }
 
@@ -3979,7 +3980,8 @@ entry_guards_prepend_from_config(or_options_t *options)
    *  Perhaps we should do this calculation once whenever the list of routers
    *  changes or the entrynodes setting changes.
    */
-  routerset_get_all_routers(entry_routers, options->EntryNodes, 0);
+  routerset_get_all_routers(entry_routers, options->EntryNodes,
+                            options->ExcludeNodes, 0);
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri,
                     smartlist_add(entry_fps,ri->cache_info.identity_digest));
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
@@ -4155,7 +4157,7 @@ choose_random_entry(cpath_build_state_t *state)
       goto retry;
     }
     if (!r && entry_list_is_constrained(options) && consider_exit_family) {
-      /* still no? if we're using bridges or have strictentrynodes
+      /* still no? if we're using bridges or have StrictNodes
        * set, and our chosen exit is in the same family as all our
        * bridges/entry guards, then be flexible about families. */
       consider_exit_family = 0;

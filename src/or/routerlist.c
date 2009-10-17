@@ -5516,10 +5516,11 @@ routerset_contains_routerstatus(const routerset_t *set, routerstatus_t *rs)
 }
 
 /** Add every known routerinfo_t that is a member of <b>routerset</b> to
- * <b>out</b>.  If <b>running_only</b>, only add the running ones. */
+ * <b>out</b>, but never add any that are part of <b>excludeset</b>.
+ * If <b>running_only</b>, only add the running ones. */
 void
 routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
-                          int running_only)
+                          const routerset_t *excludeset, int running_only)
 {
   tor_assert(out);
   if (!routerset || !routerset->list)
@@ -5529,12 +5530,13 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
   if (routerset_is_list(routerset)) {
 
     /* No routers are specified by type; all are given by name or digest.
-     * we can do a lookup in O(len(list)). */
+     * we can do a lookup in O(len(routerset)). */
     SMARTLIST_FOREACH(routerset->list, const char *, name, {
         routerinfo_t *router = router_get_by_nickname(name, 1);
         if (router) {
           if (!running_only || router->is_running)
-            smartlist_add(out, router);
+            if (!routerset_contains_router(excludeset, router))
+              smartlist_add(out, router);
         }
     });
   } else {
@@ -5544,7 +5546,8 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
     SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
         if (running_only && !router->is_running)
           continue;
-        if (routerset_contains_router(routerset, router))
+        if (routerset_contains_router(routerset, router) &&
+            !routerset_contains_router(excludeset, router))
           smartlist_add(out, router);
     });
   }

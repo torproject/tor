@@ -1412,7 +1412,8 @@ options_act(or_options_t *old_options)
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||
-      (!routerset_equal(old_options->EntryNodes,options->EntryNodes))))
+       !routerset_equal(old_options->EntryNodes,options->EntryNodes) ||
+       !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)))
     entry_nodes_should_be_added();
 
   /* Since our options changed, we might need to regenerate and upload our

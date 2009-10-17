@@ -173,6 +173,7 @@ int routerset_contains_routerstatus(const routerset_t *set,
 int routerset_contains_extendinfo(const routerset_t *set,
                                   const extend_info_t *ei);
 void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
+                               const routerset_t *excludeset,
                                int running_only);
 void routersets_get_disjunction(smartlist_t *target, const smartlist_t *source,
                                 const routerset_t *include,
