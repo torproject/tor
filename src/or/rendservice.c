@@ -848,6 +848,7 @@ clean_accepted_intros(rend_service_t *service, time_t now)
 /** Respond to an INTRODUCE2 cell by launching a circuit to the chosen
  * rendezvous point.
  */
+ /* XXX022 this function sure could use some organizing. -RD */
 int
 rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                        size_t request_len)
@@ -875,6 +876,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   time_t now = time(NULL);
   char diffie_hellman_hash[DIGEST_LEN];
   time_t *access_time;
+  or_options_t *options = get_options();
+
   tor_assert(circuit->rend_data);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
@@ -1044,6 +1047,15 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_warn(LD_PROTOCOL, "Bad length %u for INTRODUCE2 cell.", (int)len);
     reason = END_CIRC_REASON_TORPROTOCOL;
+    goto err;
+  }
+
+  /* Check if we'd refuse to talk to this router */
+  if (options->ExcludeNodes && options->StrictNodes &&
+      routerset_contains_extendinfo(options->ExcludeNodes, extend_info)) {
+    log_warn(LD_REND, "Client asked to rendezvous at a relay that we "
+             "exclude, and StrictNodes is set. Refusing service.");
+    reason = END_CIRC_REASON_INTERNAL; /* XXX might leak why we refused */
     goto err;
   }
 
@@ -1394,7 +1406,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
 /** Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
  * live introduction point, and note that the service descriptor is
- * now out-of-date.*/
+ * now out-of-date. */
 int
 rend_service_intro_established(origin_circuit_t *circuit,
                                const uint8_t *request,
