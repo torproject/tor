@@ -20,6 +20,11 @@ struct microdesc_cache_t {
   tor_mmap_t *cache_content;
   /** Number of bytes used in the journal file. */
   size_t journal_len;
+
+  /** Total bytes of microdescriptor bodies we have added to this cache */
+  uint64_t total_len_seen;
+  /** Total number of microdescriptors we have added to this cache */
+  unsigned n_seen;
 };
 
 /** Helper: computes a hash of <b>md</b> to place it in a hash table. */
@@ -176,6 +181,8 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
 
     HT_INSERT(microdesc_map, &cache->map, md);
     smartlist_add(added, md);
+    ++cache->n_seen;
+    cache->total_len_seen += md->bodylen;
   } SMARTLIST_FOREACH_END(md);
 
   if (f)
@@ -208,6 +215,8 @@ microdesc_cache_clear(microdesc_cache_t *cache)
     tor_munmap_file(cache->cache_content);
     cache->cache_content = NULL;
   }
+  cache->total_len_seen = 0;
+  cache->n_seen = 0;
 }
 
 /** Reload the contents of <b>cache</b> from disk.  If it is empty, load it
@@ -354,3 +363,29 @@ microdesc_free_all(void)
     tor_free(the_microdesc_cache);
   }
 }
+
+/** If there is a microdescriptor in <b>cache</b> whose sha256 digest is
+ * <b>d</b>, return it.  Otherwise return NULL. */
+microdesc_t *
+microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache, const char *d)
+{
+  microdesc_t *md, search;
+  if (!cache)
+    cache = get_microdesc_cache();
+  memcpy(search.digest, d, DIGEST256_LEN);
+  md = HT_FIND(microdesc_map, &cache->map, &search);
+  return md;
+}
+
+/** Return the mean size of decriptors added to <b>cache</b> since it was last
+ * cleared.  Used to estimate the size of large downloads. */
+size_t
+microdesc_average_size(microdesc_cache_t *cache)
+{
+  if (!cache)
+    cache = get_microdesc_cache();
+  if (!cache->n_seen)
+    return 512;
+  return (size_t)(cache->total_len_seen / cache->n_seen);
+}
+

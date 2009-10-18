@@ -361,9 +361,9 @@ test_dir_versions(void)
   ;
 }
 
-/** Run unit tests for misc directory functions. */
+/** Run unit tests for directory fp_pair functions. */
 static void
-test_dir_util(void)
+test_dir_fp_pairs(void)
 {
   smartlist_t *sl = smartlist_create();
   fp_pair_t *pair;
@@ -388,6 +388,127 @@ test_dir_util(void)
  done:
   SMARTLIST_FOREACH(sl, fp_pair_t *, pair, tor_free(pair));
   smartlist_free(sl);
+}
+
+static void
+test_dir_split_fps(void *testdata)
+{
+  smartlist_t *sl = smartlist_create();
+  char *mem_op_hex_tmp = NULL;
+  (void)testdata;
+
+  /* Some example hex fingerprints and their base64 equivalents */
+#define HEX1 "Fe0daff89127389bc67558691231234551193EEE"
+#define HEX2 "Deadbeef99999991111119999911111111f00ba4"
+#define HEX3 "b33ff00db33ff00db33ff00db33ff00db33ff00d"
+#define HEX256_1 \
+    "f3f3f3f3fbbbbf3f3f3f3fbbbf3f3f3f3fbbbbf3f3f3f3fbbbf3f3f3f3fbbbbf"
+#define HEX256_2 \
+    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccCCc"
+#define HEX256_3 \
+    "0123456789ABCdef0123456789ABCdef0123456789ABCdef0123456789ABCdef"
+#define B64_1 "/g2v+JEnOJvGdVhpEjEjRVEZPu4"
+#define B64_2 "3q2+75mZmZERERmZmRERERHwC6Q"
+#define B64_3 "sz/wDbM/8A2zP/ANsz/wDbM/8A0"
+#define B64_256_1 "8/Pz8/u7vz8/Pz+7vz8/Pz+7u/Pz8/P7u/Pz8/P7u78"
+#define B64_256_2 "zMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMw"
+#define B64_256_3 "ASNFZ4mrze8BI0VniavN7wEjRWeJq83vASNFZ4mrze8"
+
+  /* no flags set */
+  dir_split_resource_into_fingerprints("A+C+B", sl, NULL, 0);
+  tt_int_op(smartlist_len(sl), ==, 3);
+  tt_str_op(smartlist_get(sl, 0), ==, "A");
+  tt_str_op(smartlist_get(sl, 1), ==, "C");
+  tt_str_op(smartlist_get(sl, 2), ==, "B");
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* uniq strings. */
+  dir_split_resource_into_fingerprints("A+C+B+A+B+B", sl, NULL, DSR_SORT_UNIQ);
+  tt_int_op(smartlist_len(sl), ==, 3);
+  tt_str_op(smartlist_get(sl, 0), ==, "A");
+  tt_str_op(smartlist_get(sl, 1), ==, "B");
+  tt_str_op(smartlist_get(sl, 2), ==, "C");
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Decode hex. */
+  dir_split_resource_into_fingerprints(HEX1"+"HEX2, sl, NULL, DSR_HEX);
+  tt_int_op(smartlist_len(sl), ==, 2);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX1);
+  test_mem_op_hex(smartlist_get(sl, 1), ==, HEX2);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* decode hex and drop weirdness. */
+  dir_split_resource_into_fingerprints(HEX1"+bogus+"HEX2"+"HEX256_1,
+                                       sl, NULL, DSR_HEX);
+  tt_int_op(smartlist_len(sl), ==, 2);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX1);
+  test_mem_op_hex(smartlist_get(sl, 1), ==, HEX2);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Decode long hex */
+  dir_split_resource_into_fingerprints(HEX256_1"+"HEX256_2"+"HEX2"+"HEX256_3,
+                                       sl, NULL, DSR_HEX|DSR_DIGEST256);
+  tt_int_op(smartlist_len(sl), ==, 3);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX256_1);
+  test_mem_op_hex(smartlist_get(sl, 1), ==, HEX256_2);
+  test_mem_op_hex(smartlist_get(sl, 2), ==, HEX256_3);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Decode hex and sort. */
+  dir_split_resource_into_fingerprints(HEX1"+"HEX2"+"HEX3"+"HEX2,
+                                       sl, NULL, DSR_HEX|DSR_SORT_UNIQ);
+  tt_int_op(smartlist_len(sl), ==, 3);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX3);
+  test_mem_op_hex(smartlist_get(sl, 1), ==, HEX2);
+  test_mem_op_hex(smartlist_get(sl, 2), ==, HEX1);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Decode long hex and sort */
+  dir_split_resource_into_fingerprints(HEX256_1"+"HEX256_2"+"HEX256_3
+                                       "+"HEX256_1,
+                                       sl, NULL,
+                                       DSR_HEX|DSR_DIGEST256|DSR_SORT_UNIQ);
+  tt_int_op(smartlist_len(sl), ==, 3);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX256_3);
+  test_mem_op_hex(smartlist_get(sl, 1), ==, HEX256_2);
+  test_mem_op_hex(smartlist_get(sl, 2), ==, HEX256_1);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Decode base64 */
+  dir_split_resource_into_fingerprints(B64_1"-"B64_2, sl, NULL, DSR_BASE64);
+  tt_int_op(smartlist_len(sl), ==, 2);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX1);
+  test_mem_op_hex(smartlist_get(sl, 1), ==, HEX2);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  /* Decode long base64 */
+  dir_split_resource_into_fingerprints(B64_256_1"-"B64_256_2,
+                                       sl, NULL, DSR_BASE64|DSR_DIGEST256);
+  tt_int_op(smartlist_len(sl), ==, 2);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX256_1);
+  test_mem_op_hex(smartlist_get(sl, 1), ==, HEX256_2);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+  dir_split_resource_into_fingerprints(B64_256_1,
+                                       sl, NULL, DSR_BASE64|DSR_DIGEST256);
+  tt_int_op(smartlist_len(sl), ==, 1);
+  test_mem_op_hex(smartlist_get(sl, 0), ==, HEX256_1);
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_clear(sl);
+
+ done:
+  SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
+  smartlist_free(sl);
+  tor_free(mem_op_hex_tmp);
 }
 
 static void
@@ -1173,11 +1294,15 @@ test_dir_v3_networkstatus(void)
 #define DIR_LEGACY(name)                                                   \
   { #name, legacy_test_helper, 0, &legacy_setup, test_dir_ ## name }
 
+#define DIR(name)                               \
+  { #name, test_dir_##name, 0, NULL, NULL }
+
 struct testcase_t dir_tests[] = {
   DIR_LEGACY(nicknames),
   DIR_LEGACY(formats),
   DIR_LEGACY(versions),
-  DIR_LEGACY(util),
+  DIR_LEGACY(fp_pairs),
+  DIR(split_fps),
   DIR_LEGACY(measured_bw),
   DIR_LEGACY(param_voting),
   DIR_LEGACY(v3_networkstatus),

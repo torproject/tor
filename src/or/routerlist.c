@@ -3832,7 +3832,7 @@ list_pending_downloads(digestmap_t *result,
       const char *resource = TO_DIR_CONN(conn)->requested_resource;
       if (!strcmpstart(resource, prefix))
         dir_split_resource_into_fingerprints(resource + p_len,
-                                             tmp, NULL, 1, 0);
+                                             tmp, NULL, DSR_HEX);
     }
   });
   SMARTLIST_FOREACH(tmp, char *, d,

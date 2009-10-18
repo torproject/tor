@@ -2870,7 +2870,8 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
       log_info(LD_DIRSERV,
                "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
-    dir_split_resource_into_fingerprints(key+3, result, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key+3, result, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
   }
 }
 
@@ -2935,10 +2936,12 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
   } else if (!strcmpstart(key, "d/")) {
     by_id = 0;
     key += strlen("d/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, fps_out, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
   } else if (!strcmpstart(key, "fp/")) {
     key += strlen("fp/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, fps_out, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
   } else {
     *msg = "Key not recognized";
     return -1;
@@ -3003,7 +3006,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/d/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          signed_descriptor_t *sd = router_get_by_descriptor_digest(d);
@@ -3016,7 +3020,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     smartlist_t *digests = smartlist_create();
     time_t cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
     key += strlen("/tor/server/fp/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          if (router_digest_is_me(d)) {
@@ -3132,17 +3137,20 @@ dirserv_test_reachability(time_t now, int try_all)
     ctr = (ctr + 1) % 128;
 }
 
-/** Given a fingerprint <b>fp</b> which is either set if we're looking
- * for a v2 status, or zeroes if we're looking for a v3 status, return
- * a pointer to the appropriate cached dir object, or NULL if there isn't
- * one available. */
+/** Given a fingerprint <b>fp</b> which is either set if we're looking for a
+ * v2 status, or zeroes if we're looking for a v3 status, or a NUL-padded
+ * flavor name if we want a flavored v3 status, return a pointer to the
+ * appropriate cached dir object, or NULL if there isn't one available. */
 static cached_dir_t *
 lookup_cached_dir_by_fp(const char *fp)
 {
   cached_dir_t *d = NULL;
   if (tor_digest_is_zero(fp) && cached_consensuses)
     d = strmap_get(cached_consensuses, "ns");
-  else if (router_digest_is_me(fp) && the_v2_networkstatus)
+  else if (memchr(fp, '\0', DIGEST_LEN) && cached_consensuses &&
+           (d = strmap_get(cached_consensuses, fp))) {
+    /* this here interface is a nasty hack XXXX022 */;
+  } else if (router_digest_is_me(fp) && the_v2_networkstatus)
     d = the_v2_networkstatus;
   else if (cached_v2_networkstatus)
     d = digestmap_get(cached_v2_networkstatus, fp);
@@ -3228,6 +3236,18 @@ dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
   return 0;
 }
 
+/** Return true iff any of the 256-bit elements in <b>fps</b> is the digest of
+ * a microdescriptor we have. */
+int
+dirserv_have_any_microdesc(const smartlist_t *fps)
+{
+  microdesc_cache_t *cache = get_microdesc_cache();
+  SMARTLIST_FOREACH(fps, const char *, fp,
+                    if (microdesc_cache_lookup_by_digest256(cache, fp))
+                      return 1);
+  return 0;
+}
+
 /** Return an approximate estimate of the number of bytes that will
  * be needed to transmit the server descriptors (if is_serverdescs --
  * they can be either d/ or fp/ queries) or networkstatus objects (if
@@ -3256,6 +3276,17 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
           result += compressed ? dir->dir_z_len : dir->dir_len;
       });
   }
+  return result;
+}
+
+/** Given a list of microdescriptor hashes, guess how many bytes will be
+ * needed to transmit them, and return the guess. */
+size_t
+dirserv_estimate_microdesc_size(const smartlist_t *fps, int compressed)
+{
+  size_t result = smartlist_len(fps) * microdesc_average_size(NULL);
+  if (compressed)
+    result /= 2;
   return result;
 }
 
@@ -3322,6 +3353,8 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 #endif
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
+      /* XXXX022 This 'last' business should actually happen on the last
+       * routerinfo, not on the last fingerprint. */
       int last = ! smartlist_len(conn->fingerprint_stack);
       connection_write_to_buf_zlib(body, sd->signed_descriptor_len, conn,
                                    last);
@@ -3338,6 +3371,44 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 
   if (!smartlist_len(conn->fingerprint_stack)) {
     /* We just wrote the last one; finish up. */
+    conn->dir_spool_src = DIR_SPOOL_NONE;
+    smartlist_free(conn->fingerprint_stack);
+    conn->fingerprint_stack = NULL;
+  }
+  return 0;
+}
+
+/** Spooling helper: called when we're sending a bunch of microdescriptors,
+ * and the outbuf has become too empty. Pulls some entries from
+ * fingerprint_stack, and writes the corresponding microdescs onto outbuf.  If
+ * we run out of entries, flushes the zlib state and sets the spool source to
+ * NONE.  Returns 0 on success, negative on failure.
+ */
+static int
+connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
+{
+  microdesc_cache_t *cache = get_microdesc_cache();
+  while (smartlist_len(conn->fingerprint_stack) &&
+         buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
+    char *fp256 = smartlist_pop_last(conn->fingerprint_stack);
+    microdesc_t *md = microdesc_cache_lookup_by_digest256(cache, fp256);
+    tor_free(fp256);
+    if (!md)
+      continue;
+    if (conn->zlib_state) {
+      /* XXXX022 This 'last' business should actually happen on the last
+       * routerinfo, not on the last fingerprint. */
+      int last = !smartlist_len(conn->fingerprint_stack);
+      connection_write_to_buf_zlib(md->body, md->bodylen, conn, last);
+      if (last) {
+        tor_zlib_free(conn->zlib_state);
+        conn->zlib_state = NULL;
+      }
+    } else {
+      connection_write_to_buf(md->body, md->bodylen, TO_CONN(conn));
+    }
+  }
+  if (!smartlist_len(conn->fingerprint_stack)) {
     conn->dir_spool_src = DIR_SPOOL_NONE;
     smartlist_free(conn->fingerprint_stack);
     conn->fingerprint_stack = NULL;
@@ -3452,6 +3523,8 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
     case DIR_SPOOL_SERVER_BY_DIGEST:
     case DIR_SPOOL_SERVER_BY_FP:
       return connection_dirserv_add_servers_to_outbuf(conn);
+    case DIR_SPOOL_MICRODESC:
+      return connection_dirserv_add_microdescs_to_outbuf(conn);
     case DIR_SPOOL_CACHED_DIR:
       return connection_dirserv_add_dir_bytes_to_outbuf(conn);
     case DIR_SPOOL_NETWORKSTATUS:

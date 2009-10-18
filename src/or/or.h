@@ -1171,7 +1171,8 @@ typedef struct dir_connection_t {
   enum {
     DIR_SPOOL_NONE=0, DIR_SPOOL_SERVER_BY_DIGEST, DIR_SPOOL_SERVER_BY_FP,
     DIR_SPOOL_EXTRA_BY_DIGEST, DIR_SPOOL_EXTRA_BY_FP,
-    DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS
+    DIR_SPOOL_CACHED_DIR, DIR_SPOOL_NETWORKSTATUS,
+    DIR_SPOOL_MICRODESC, /* NOTE: if we add another entry, add another bit. */
   } dir_spool_src : 3;
   /** If we're fetching descriptors, what router purpose shall we assign
    * to them? */
@@ -3678,9 +3679,13 @@ void directory_initiate_command(const char *address, const tor_addr_t *addr,
                                 const char *payload, size_t payload_len,
                                 time_t if_modified_since);
 
+#define DSR_HEX       (1<<0)
+#define DSR_BASE64    (1<<1)
+#define DSR_DIGEST256 (1<<2)
+#define DSR_SORT_UNIQ (1<<3)
 int dir_split_resource_into_fingerprints(const char *resource,
-                                    smartlist_t *fp_out, int *compresseed_out,
-                                    int decode_hex, int sort_uniq);
+                                     smartlist_t *fp_out, int *compressed_out,
+                                     int flags);
 /** A pair of digests created by dir_split_resource_info_fingerprint_pairs() */
 typedef struct {
   char first[DIGEST_LEN];
@@ -3816,8 +3821,11 @@ int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
 int dirserv_would_reject_router(routerstatus_t *rs);
 int dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff);
 int dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src);
+int dirserv_have_any_microdesc(const smartlist_t *fps);
 size_t dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
                                   int compressed);
+size_t dirserv_estimate_microdesc_size(const smartlist_t *fps, int compressed);
+
 typedef enum {
   NS_V2, NS_V3_CONSENSUS, NS_V3_VOTE, NS_CONTROL_PORT,
   NS_V3_CONSENSUS_MICRODESC
@@ -4145,6 +4153,11 @@ smartlist_t *microdescs_add_list_to_cache(microdesc_cache_t *cache,
 int microdesc_cache_rebuild(microdesc_cache_t *cache);
 int microdesc_cache_reload(microdesc_cache_t *cache);
 void microdesc_cache_clear(microdesc_cache_t *cache);
+
+microdesc_t *microdesc_cache_lookup_by_digest256(microdesc_cache_t *cache,
+                                                 const char *d);
+
+size_t microdesc_average_size(microdesc_cache_t *cache);
 
 void microdesc_free(microdesc_t *md);
 void microdesc_free_all(void);
