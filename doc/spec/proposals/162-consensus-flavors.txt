@@ -72,9 +72,11 @@ Spec modifications:
    design.
 
    In addition to the consensus currently served at
-   /tor/status-vote/(current|next)/consensus.z , authorities serve
-   another consensus of each flavor "F" from the location
-   /tor/status-vote/(current|next)/F/consensus.z.
+   /tor/status-vote/(current|next)/consensus.z  and
+   /tor/status-vote/(current|next)/consensus/<FP1>+<FP2>+<FP3>+....z ,
+   authorities serve another consensus of each flavor "F" from the
+   locations /tor/status-vote/(current|next)/consensus-F.z. and
+   /tor/status-vote/(current|next)/consensus-F/<FP1>+....z.
 
    When caches serve these documents, they do so from the same
    locations.
