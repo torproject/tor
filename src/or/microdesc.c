@@ -56,10 +56,10 @@ HT_GENERATE(microdesc_map, microdesc_t, node,
  * On success, return the total number of bytes written, and set
  * *<b>annotation_len_out</b> to the number of bytes written as
  * annotations. */
-static int
-dump_microdescriptor(FILE *f, microdesc_t *md, int *annotation_len_out)
+static size_t
+dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
 {
-  int r = 0;
+  size_t r = 0;
   /* XXXX drops unkown annotations. */
   if (md->last_listed) {
     char buf[ISO_TIME_LEN+1];
@@ -169,7 +169,7 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
 
     /* Okay, it's a new one. */
     if (f) {
-      int annotation_len;
+      size_t annotation_len;
       size = dump_microdescriptor(f, md, &annotation_len);
       md->saved_location = SAVED_IN_JOURNAL;
       cache->journal_len += size;
@@ -269,7 +269,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
   FILE *f;
   microdesc_t **mdp;
   smartlist_t *wrote;
-  int size;
+  size_t size;
   off_t off = 0;
   int orig_size, new_size;
 
@@ -287,7 +287,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
 
   HT_FOREACH(mdp, microdesc_map, &cache->map) {
     microdesc_t *md = *mdp;
-    int annotation_len;
+    size_t annotation_len;
     if (md->no_save)
       continue;
 

@@ -2790,7 +2790,7 @@ static char *microdesc_consensus_methods = NULL;
  * in a consensus vote document.  Write it into the <b>out_len</b>-byte buffer
  * in <b>out</b>.  Return -1 on failure and the number of characters written
  * on success. */
-int
+ssize_t
 dirvote_format_microdesc_vote_line(char *out, size_t out_len,
                                    const microdesc_t *md)
 {

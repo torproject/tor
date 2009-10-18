@@ -3919,7 +3919,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert);
 
 microdesc_t *dirvote_create_microdescriptor(const routerinfo_t *ri);
-int dirvote_format_microdesc_vote_line(char *out, size_t out_len,
+ssize_t dirvote_format_microdesc_vote_line(char *out, size_t out_len,
                                        const microdesc_t *md);
 int vote_routerstatus_find_microdesc_hash(char *digest256_out,
                                           const vote_routerstatus_t *vrs,
