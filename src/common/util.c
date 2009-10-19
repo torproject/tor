@@ -2451,7 +2451,7 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
  * long widths. %u does not consume any space.  Is locale-independent.
  * Returns -1 on malformed patterns.
  *
- * (As with other local-independent functions, we need this to parse data that
+ * (As with other locale-independent functions, we need this to parse data that
  * is in ASCII without worrying that the C library's locale-handling will make
  * miscellaneous characters look like numbers, spaces, and so on.)
  */
