@@ -2307,7 +2307,8 @@ expand_filename(const char *filename)
 
 #define MAX_SCANF_WIDTH 9999
 
-/** DOCDOC */
+/** Helper: given an ASCII-encoded decimal digit, return its numeric value.
+ * NOTE: requires that its input be in-bounds. */
 static int
 digit_to_num(char d)
 {
@@ -2316,7 +2317,10 @@ digit_to_num(char d)
   return num;
 }
 
-/** DOCDOC */
+/** Helper: Read an unsigned int from *<b>bufp</b> of up to <b>width</b>
+ * characters.  (Handle arbitrary width if <b>width</b> is less than 0.)  On
+ * success, store the result in <b>out</b>, advance bufp to the next
+ * character, and return 0.  On failure, return -1. */
 static int
 scan_unsigned(const char **bufp, unsigned *out, int width)
 {
@@ -2343,7 +2347,9 @@ scan_unsigned(const char **bufp, unsigned *out, int width)
   return 0;
 }
 
-/** DOCDOC */
+/** Helper: copy up to <b>width</b> non-space characters from <b>bufp</b> to
+ * <b>out</b>.  Make sure <b>out</b> is nul-terminated. Advance <b>bufp</b>
+ * to the next non-space character or the EOS. */
 static int
 scan_string(const char **bufp, char *out, int width)
 {
@@ -2432,7 +2438,12 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
  * and store the results in the corresponding argument fields.  Differs from
  * sscanf in that it: Only handles %u and %Ns.  Does not handle arbitrarily
  * long widths. %u does not consume any space.  Is locale-independent.
- * Returns -1 on malformed patterns. */
+ * Returns -1 on malformed patterns.
+ *
+ * (As with other local-independent functions, we need this to parse data that
+ * is in ASCII without worrying that the C library's locale-handling will make
+ * miscellaneous characters look like numbers, spaces, and so on.)
+ */
 int
 tor_sscanf(const char *buf, const char *pattern, ...)
 {

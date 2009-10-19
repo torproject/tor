@@ -5034,7 +5034,9 @@ routerset_parse(routerset_t *target, const char *s, const char *description)
   return r;
 }
 
-/** DOCDOC */
+/** Called when we change a node set, or when we reload the geoip list:
+ * recompute all country info in all configuration node sets and in the
+ * routerlist. */
 void
 refresh_all_country_info(void)
 {
