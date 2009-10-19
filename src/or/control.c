@@ -1506,7 +1506,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     }
   } else if (!strcmp(question, "dir/status-vote/current/consensus")) { /* v3 */
     if (directory_caches_dir_info(get_options())) {
-      const cached_dir_t *consensus = dirserv_get_consensus();
+      const cached_dir_t *consensus = dirserv_get_consensus("ns");
       if (consensus)
         *answer = tor_strdup(consensus->dir);
     }

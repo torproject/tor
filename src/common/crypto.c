@@ -1448,6 +1448,52 @@ crypto_digest256(char *digest, const char *m, size_t len,
   return (SHA256((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
 }
 
+/** Set the digests_t in <b>ds_out</b> to contain every digest on the
+ * <b>len</b> bytes in <b>m</b> that we know how to compute.  Return 0 on
+ * success, -1 on failure. */
+int
+crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
+{
+  digest_algorithm_t i;
+  tor_assert(ds_out);
+  memset(ds_out, 0, sizeof(*ds_out));
+  if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)
+    return -1;
+  for (i = DIGEST_SHA256; i < N_DIGEST_ALGORITHMS; ++i) {
+    if (crypto_digest256(ds_out->d[i], m, len, i) < 0)
+      return -1;
+  }
+  return 0;
+}
+
+/** Return the name of an algorithm, as used in directory documents. */
+const char *
+crypto_digest_algorithm_get_name(digest_algorithm_t alg)
+{
+  switch (alg) {
+    case DIGEST_SHA1:
+      return "sha1";
+    case DIGEST_SHA256:
+      return "sha256";
+    default:
+      tor_fragile_assert();
+      return "??unknown_digest??";
+  }
+}
+
+/** Given the name of a digest algorithm, return its integer value, or -1 if
+ * the name is not recognized. */
+int
+crypto_digest_algorithm_parse_name(const char *name)
+{
+  if (!strcmp(name, "sha1"))
+    return DIGEST_SHA1;
+  else if (!strcmp(name, "sha256"))
+    return DIGEST_SHA256;
+  else
+    return -1;
+}
+
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_env_t {
   union {
@@ -2268,6 +2314,44 @@ digest_from_base64(char *digest, const char *d64)
   return 0;
 #else
   if (base64_decode(digest, DIGEST_LEN, d64, strlen(d64)) == DIGEST_LEN)
+    return 0;
+  else
+    return -1;
+#endif
+}
+
+/** Base-64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
+ * trailing = and newline characters, and store the nul-terminated result in
+ * the first BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.  */
+int
+digest256_to_base64(char *d64, const char *digest)
+{
+  char buf[256];
+  base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN);
+  buf[BASE64_DIGEST256_LEN] = '\0';
+  memcpy(d64, buf, BASE64_DIGEST256_LEN+1);
+  return 0;
+}
+
+/** Given a base-64 encoded, nul-terminated digest in <b>d64</b> (without
+ * trailing newline or = characters), decode it and store the result in the
+ * first DIGEST256_LEN bytes at <b>digest</b>. */
+int
+digest256_from_base64(char *digest, const char *d64)
+{
+#ifdef USE_OPENSSL_BASE64
+  char buf_in[BASE64_DIGEST256_LEN+3];
+  char buf[256];
+  if (strlen(d64) != BASE64_DIGEST256_LEN)
+    return -1;
+  memcpy(buf_in, d64, BASE64_DIGEST256_LEN);
+  memcpy(buf_in+BASE64_DIGEST256_LEN, "=\n\0", 3);
+  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST256_LEN)
+    return -1;
+  memcpy(digest, buf, DIGEST256_LEN);
+  return 0;
+#else
+  if (base64_decode(digest, DIGEST256_LEN, d64, strlen(d64)) == DIGEST256_LEN)
     return 0;
   else
     return -1;

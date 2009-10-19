@@ -448,17 +448,18 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
 
   list_pending_downloads(pending, DIR_PURPOSE_FETCH_CERTIFICATE, "fp/");
   if (status) {
-    SMARTLIST_FOREACH(status->voters, networkstatus_voter_info_t *, voter,
-      {
-        if (tor_digest_is_zero(voter->signing_key_digest))
-          continue; /* This authority never signed this consensus, so don't
-                     * go looking for a cert with key digest 0000000000. */
-        if (!cache &&
-            !trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
-          continue; /* We are not a cache, and we don't know this authority.*/
-        cl = get_cert_list(voter->identity_digest);
+    SMARTLIST_FOREACH_BEGIN(status->voters, networkstatus_voter_info_t *,
+                            voter) {
+      if (!smartlist_len(voter->sigs))
+        continue; /* This authority never signed this consensus, so don't
+                   * go looking for a cert with key digest 0000000000. */
+      if (!cache &&
+          !trusteddirserver_get_by_v3_auth_digest(voter->identity_digest))
+        continue; /* We are not a cache, and we don't know this authority.*/
+      cl = get_cert_list(voter->identity_digest);
+      SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
         cert = authority_cert_get_by_digests(voter->identity_digest,
-                                             voter->signing_key_digest);
+                                             sig->signing_key_digest);
         if (cert) {
           if (now < cert->expires)
             download_status_reset(&cl->dl_status);
@@ -469,37 +470,36 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
             !digestmap_get(pending, voter->identity_digest)) {
           log_notice(LD_DIR, "We're missing a certificate from authority "
                      "with signing key %s: launching request.",
-                     hex_str(voter->signing_key_digest, DIGEST_LEN));
-          smartlist_add(missing_digests, voter->identity_digest);
+                     hex_str(sig->signing_key_digest, DIGEST_LEN));
+          smartlist_add(missing_digests, sig->identity_digest);
         }
-      });
+      } SMARTLIST_FOREACH_END(sig);
+    } SMARTLIST_FOREACH_END(voter);
   }
-  SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
-    {
-      int found = 0;
-      if (!(ds->type & V3_AUTHORITY))
-        continue;
-      if (smartlist_digest_isin(missing_digests, ds->v3_identity_digest))
-        continue;
-      cl = get_cert_list(ds->v3_identity_digest);
-      SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-        {
-          if (!ftime_definitely_after(now, cert->expires)) {
-            /* It's not expired, and we weren't looking for something to
-             * verify a consensus with.  Call it done. */
-            download_status_reset(&cl->dl_status);
-            found = 1;
-            break;
-          }
-        });
-      if (!found &&
-          download_status_is_ready(&cl->dl_status, now,MAX_CERT_DL_FAILURES) &&
-          !digestmap_get(pending, ds->v3_identity_digest)) {
-        log_notice(LD_DIR, "No current certificate known for authority %s; "
-                   "launching request.", ds->nickname);
-        smartlist_add(missing_digests, ds->v3_identity_digest);
+  SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds) {
+    int found = 0;
+    if (!(ds->type & V3_AUTHORITY))
+      continue;
+    if (smartlist_digest_isin(missing_digests, ds->v3_identity_digest))
+      continue;
+    cl = get_cert_list(ds->v3_identity_digest);
+    SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
+      if (!ftime_definitely_after(now, cert->expires)) {
+        /* It's not expired, and we weren't looking for something to
+         * verify a consensus with.  Call it done. */
+        download_status_reset(&cl->dl_status);
+        found = 1;
+        break;
       }
     });
+    if (!found &&
+        download_status_is_ready(&cl->dl_status, now,MAX_CERT_DL_FAILURES) &&
+        !digestmap_get(pending, ds->v3_identity_digest)) {
+      log_notice(LD_DIR, "No current certificate known for authority %s; "
+                 "launching request.", ds->nickname);
+        smartlist_add(missing_digests, ds->v3_identity_digest);
+    }
+  } SMARTLIST_FOREACH_END(ds);
 
   if (!smartlist_len(missing_digests)) {
     goto done;
@@ -3832,7 +3832,7 @@ list_pending_downloads(digestmap_t *result,
       const char *resource = TO_DIR_CONN(conn)->requested_resource;
       if (!strcmpstart(resource, prefix))
         dir_split_resource_into_fingerprints(resource + p_len,
-                                             tmp, NULL, 1, 0);
+                                             tmp, NULL, DSR_HEX);
     }
   });
   SMARTLIST_FOREACH(tmp, char *, d,

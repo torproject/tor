@@ -618,7 +618,8 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
     }
     if (router_append_dirobj_signature(desc_str + written,
                                        desc_len - written,
-                                       desc_digest, service_key) < 0) {
+                                       desc_digest, DIGEST_LEN,
+                                       service_key) < 0) {
       log_warn(LD_BUG, "Couldn't sign desc.");
       rend_encoded_v2_service_descriptor_free(enc);
       goto err;

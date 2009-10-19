@@ -195,6 +195,7 @@ const char *find_whitespace(const char *s) ATTR_PURE;
 const char *find_whitespace_eos(const char *s, const char *eos) ATTR_PURE;
 int tor_mem_is_zero(const char *mem, size_t len) ATTR_PURE;
 int tor_digest_is_zero(const char *digest) ATTR_PURE;
+int tor_digest256_is_zero(const char *digest) ATTR_PURE;
 char *esc_for_log(const char *string) ATTR_MALLOC;
 const char *escaped(const char *string);
 struct smartlist_t;
