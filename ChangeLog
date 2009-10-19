@@ -1,7 +1,25 @@
 Changes in version 0.2.2.6-alpha - 2009-10-??
+  o Major features:
+    - Directory authorities can now create, vote, and serve on multiple
+      parallel formats of directory data as part of their voting process.
+      This is a partial implementation of Proposal 162: "Publish the
+      consensus in multiple flavors."
+    - Directory authorities can now agree on and publish small summaries of
+      router information that clients can use in place of regular server
+      descriptors.  This will eventually allow clients to use far less
+      bandwidth for downloading information about the network.  This begins
+      the implementation of of Proposal 158: "Clients download a consensus +
+      Microdescriptors".
+    - The directory voting system is now extensible to use multiple hash
+      algorithms for signatures and resource selection.  Newer formats are
+      signed with SHA256, with a possibility for moving to a better hash
+      algorithm in the future.
+
   o Code simplifications and refactorings:
     - Numerous changes, bugfixes, and workarounds from Nathan Freitas
       to help Tor build correctly for Android phones.
+    - Begun converting Tor's signature and message digest logic to handle
+      multiple hash algorithms.
 
   o Minor bugfixes:
     - Fix a crash bug when trying to initialize the evdns module in
