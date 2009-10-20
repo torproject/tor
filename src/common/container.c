@@ -470,26 +470,26 @@ smartlist_get_most_frequent(const smartlist_t *sl,
   const void *most_frequent = NULL;
   int most_frequent_count = 0;
 
-  const void **cur = NULL;
+  const void *cur = NULL;
   int i, count=0;
 
   if (!sl->num_used)
     return NULL;
   for (i = 0; i < sl->num_used; ++i) {
     const void *item = sl->list[i];
-    if (cur && 0 == compare(cur, &item)) {
+    if (cur && 0 == compare(&cur, &item)) {
       ++count;
     } else {
       if (cur && count >= most_frequent_count) {
-        most_frequent = *cur;
+        most_frequent = cur;
         most_frequent_count = count;
       }
-      cur = &item;
+      cur = item;
       count = 1;
     }
   }
   if (cur && count >= most_frequent_count) {
-    most_frequent = *cur;
+    most_frequent = cur;
     most_frequent_count = count;
   }
   return (void*)most_frequent;

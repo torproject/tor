@@ -2794,7 +2794,7 @@ ssize_t
 dirvote_format_microdesc_vote_line(char *out, size_t out_len,
                                    const microdesc_t *md)
 {
-  char d64[BASE64_DIGEST256_LEN];
+  char d64[BASE64_DIGEST256_LEN+1];
   if (!microdesc_consensus_methods) {
     microdesc_consensus_methods =
       make_consensus_method_list(MIN_METHOD_FOR_MICRODESC,
