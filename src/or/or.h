@@ -2287,6 +2287,9 @@ typedef struct {
                         * stop building circuits? */
   int StrictEntryNodes; /**< Boolean: When none of our EntryNodes are up, do we
                          * stop building circuits? */
+  int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
+                               * process for all current and future memory. */
+
   routerset_t *ExcludeNodes;/**< Structure containing nicknames, digests,
                              * country codes and IP address patterns of ORs
                              * not to use in circuits. */

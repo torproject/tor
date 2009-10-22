@@ -14,6 +14,16 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
       algorithms for signatures and resource selection.  Newer formats are
       signed with SHA256, with a possibility for moving to a better hash
       algorithm in the future.
+    - New DisableAllSwap option. If set to 1, Tor will attempt to lock all
+      current and future memory pages. On supported platforms, this should
+      effectively disable any and all attempts to page out memory. Under the
+      hood, DisableAllSwap uses mlockall() on unix-like platforms. Windows is
+      currently unsupported. We believe that this feature works on modern
+      Gnu/Linux distributions. Mac OS X appears to be broken by design. On
+      reasonable *BSD systems it should also be supported but this is untested.
+      This option requires that you start your Tor as root. If you use
+      DisableAllSwap, please consider using the User option to properly reduce
+      the privileges of your Tor.
 
   o Code simplifications and refactorings:
     - Numerous changes, bugfixes, and workarounds from Nathan Freitas

@@ -2204,6 +2204,105 @@ tor_threads_init(void)
 }
 #endif
 
+#ifdef HAVE_SYS_MMAN_H
+/** Attempt to raise the current and max rlimit to infinity for our process.
+ * This only needs to be done once and can probably only be done when we have
+ * not already dropped privileges.
+ */
+static int
+tor_set_max_memlock(void)
+{
+  /* Future consideration for Windows is probably SetProcessWorkingSetSize
+   * This is similar to setting the memory rlimit of RLIMIT_MEMLOCK
+   * http://msdn.microsoft.com/en-us/library/ms686234(VS.85).aspx
+   */
+
+  struct rlimit limit;
+  int ret;
+
+  /* Do we want to report current limits first? This is not really needed. */
+  ret = getrlimit(RLIMIT_MEMLOCK, &limit);
+  if (ret == -1) {
+    log_warn(LD_GENERAL, "Could not get RLIMIT_MEMLOCK: %s", strerror(errno));
+    return -1;
+  }
+
+  /* RLIM_INFINITY is -1 on some platforms. */
+  limit.rlim_cur = RLIM_INFINITY;
+  limit.rlim_max = RLIM_INFINITY;
+
+  ret = setrlimit(RLIMIT_MEMLOCK, &limit);
+  if (ret == -1) {
+    if (errno == EPERM) {
+      log_warn(LD_GENERAL, "You appear to lack permissions to change memory "
+                           "limits. Are you root?");
+      log_warn(LD_GENERAL, "Unable to raise RLIMIT_MEMLOCK: %s",
+               strerror(errno));
+    } else {
+      log_warn(LD_GENERAL, "Could not raise RLIMIT_MEMLOCK: %s",
+               strerror(errno));
+    }
+    return -1;
+  }
+
+  return 0;
+}
+#endif
+
+/** Attempt to lock all current and all future memory pages.
+ * This should only be called once and while we're privileged.
+ * Like mlockall() we return 0 when we're successful and -1 when we're not.
+ * Unlike mlockall() we return 1 if we've already attempted to lock memory.
+ */
+int
+tor_mlockall(void)
+{
+  static int memory_lock_attempted = 0;
+  int ret;
+
+  if (memory_lock_attempted) {
+    return 1;
+  }
+
+  memory_lock_attempted = 1;
+
+  /*
+   * Future consideration for Windows may be VirtualLock
+   * VirtualLock appears to implement mlock() but not mlockall()
+   *
+   * http://msdn.microsoft.com/en-us/library/aa366895(VS.85).aspx
+   */
+
+#ifdef HAVE_SYS_MMAN_H
+  ret = tor_set_max_memlock();
+  if (ret == 0) {
+    /* Perhaps we only want to log this if we're in a verbose mode? */
+    log_notice(LD_GENERAL, "RLIMIT_MEMLOCK is now set to RLIM_INFINITY.");
+  }
+
+  ret = mlockall(MCL_CURRENT|MCL_FUTURE);
+  if (ret == 0) {
+    log_notice(LD_GENERAL, "Insecure OS paging is effectively disabled.");
+    return 0;
+  } else {
+    if (errno == ENOSYS) {
+      /* Apple - it's 2009! I'm looking at you. Grrr. */
+      log_notice(LD_GENERAL, "It appears that mlockall() is not available on "
+                             "your platform.");
+    } else if (errno == EPERM) {
+      log_notice(LD_GENERAL, "It appears that you lack the permissions to "
+                             "lock memory. Are you root?");
+    }
+    log_notice(LD_GENERAL, "Unable to lock all current and future memory "
+                           "pages: %s", strerror(errno));
+    return -1;
+  }
+#else
+  log_warn(LD_GENERAL, "Unable to lock memory pages. mlockall() unsupported?");
+  return -1;
+#endif
+}
+
 /** Identity of the "main" thread */
 static unsigned long main_thread_id = -1;
 

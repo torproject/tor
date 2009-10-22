@@ -195,6 +195,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("DirRecordUsageSaveInterval"),
   V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
+  V(DisableAllSwap,              BOOL,     "0"),
   V(DNSPort,                     UINT,     "0"),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
@@ -456,6 +457,8 @@ static config_var_description_t options_description[] = {
   { "DirServer", "Tor only trusts directories signed with one of these "
     "servers' keys.  Used to override the standard list of directory "
     "authorities." },
+  { "DisableAllSwap", "Tor will attempt a simple memory lock that "
+    "will prevent leaking of all information in memory to the swap file." },
   /* { "FastFirstHopPK", "" }, */
   /* FetchServerDescriptors, FetchHidServDescriptors,
    * FetchUselessDescriptors */
@@ -1114,6 +1117,15 @@ options_act_reversible(or_options_t *old_options, char **msg)
     }
   }
 #endif
+
+  /* Attempt to lock all current and future memory with mlockall() only once */
+  if (options->DisableAllSwap) {
+    if (tor_mlockall() == -1) {
+      *msg = tor_strdup("DisableAllSwap failure. Do you have proper "
+                        "permissions?");
+      goto done;
+    }
+  }
 
   /* Setuid/setgid as appropriate */
   if (options->User) {
@@ -3831,6 +3843,12 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
     *msg = tor_strdup("While Tor is running, changing either "
                       "CellStatistics, DirReqStatistics, EntryStatistics, "
                       "or ExitPortStatistics is not allowed.");
+    return -1;
+  }
+
+  if (old->DisableAllSwap != new_val->DisableAllSwap) {
+    *msg = tor_strdup("While Tor is running, changing DisableAllSwap "
+                      "is not allowed.");
     return -1;
   }
 
