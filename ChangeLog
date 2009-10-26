@@ -24,6 +24,10 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
   o Minor bugfixes:
     - Fix a crash bug when trying to initialize the evdns module in
       Libevent 2.
+    - Stop logging at severity 'warn' when some other Tor client tries
+      to establish a circuit with us using weak DH keys. It's a protocol
+      violation, but that doesn't mean ordinary users need to hear about
+      it. Fixes the bug part of bug 1114. Bugfix on 0.1.0.13.
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
