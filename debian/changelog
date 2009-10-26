@@ -1,3 +1,15 @@
+tor (0.2.2.4-alpha-1) experimental; urgency=low
+
+  * New upstream version.
+  * The testsuite moved from src/or/test to src/test/test,
+    but let's call it using "make check" now.
+  * Upstream failed to ship src/test/test.h.  Ship it in debian/ and
+    manually copy it in place during configure and clean up in clean.
+    Let's not use the patch system as this will most likely be rectified
+    by next release.
+
+ -- Peter Palfrader <weasel@debian.org>  Sun, 11 Oct 2009 10:38:55 +0200
+
 tor (0.2.2.3-alpha-1) experimental; urgency=low
 
   * New upstream version.
