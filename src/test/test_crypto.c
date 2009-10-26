@@ -33,8 +33,8 @@ test_crypto_dh(void)
 
   memset(s1, 0, DH_BYTES);
   memset(s2, 0xFF, DH_BYTES);
-  s1len = crypto_dh_compute_secret(dh1, p2, DH_BYTES, s1, 50);
-  s2len = crypto_dh_compute_secret(dh2, p1, DH_BYTES, s2, 50);
+  s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p2, DH_BYTES, s1, 50);
+  s2len = crypto_dh_compute_secret(LOG_WARN, dh2, p1, DH_BYTES, s2, 50);
   test_assert(s1len > 0);
   test_eq(s1len, s2len);
   test_memeq(s1, s2, s1len);

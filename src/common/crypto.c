@@ -122,7 +122,7 @@ struct crypto_dh_env_t {
 };
 
 static int setup_openssl_threading(void);
-static int tor_check_dh_key(BIGNUM *bn);
+static int tor_check_dh_key(int severity, BIGNUM *bn);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
@@ -1723,7 +1723,7 @@ crypto_dh_generate_public(crypto_dh_env_t *dh)
     crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
   }
-  if (tor_check_dh_key(dh->dh->pub_key)<0) {
+  if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
     log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so OpenSSL will actually try again. */
@@ -1770,7 +1770,7 @@ crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
  * See http://www.cl.cam.ac.uk/ftp/users/rja14/psandqs.ps.gz for some tips.
  */
 static int
-tor_check_dh_key(BIGNUM *bn)
+tor_check_dh_key(int severity, BIGNUM *bn)
 {
   BIGNUM *x;
   char *s;
@@ -1781,13 +1781,13 @@ tor_check_dh_key(BIGNUM *bn)
     init_dh_param();
   BN_set_word(x, 1);
   if (BN_cmp(bn,x)<=0) {
-    log_warn(LD_CRYPTO, "DH key must be at least 2.");
+    log_fn(severity, LD_CRYPTO, "DH key must be at least 2.");
     goto err;
   }
   BN_copy(x,dh_param_p);
   BN_sub_word(x, 1);
   if (BN_cmp(bn,x)>=0) {
-    log_warn(LD_CRYPTO, "DH key must be at most p-2.");
+    log_fn(severity, LD_CRYPTO, "DH key must be at most p-2.");
     goto err;
   }
   BN_free(x);
@@ -1795,7 +1795,7 @@ tor_check_dh_key(BIGNUM *bn)
  err:
   BN_free(x);
   s = BN_bn2hex(bn);
-  log_warn(LD_CRYPTO, "Rejecting insecure DH key [%s]", s);
+  log_fn(severity, LD_CRYPTO, "Rejecting insecure DH key [%s]", s);
   OPENSSL_free(s);
   return -1;
 }
@@ -1813,7 +1813,7 @@ tor_check_dh_key(BIGNUM *bn)
  * where || is concatenation.)
  */
 ssize_t
-crypto_dh_compute_secret(crypto_dh_env_t *dh,
+crypto_dh_compute_secret(int severity, crypto_dh_env_t *dh,
                          const char *pubkey, size_t pubkey_len,
                          char *secret_out, size_t secret_bytes_out)
 {
@@ -1828,9 +1828,9 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
   if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey,
                               (int)pubkey_len, NULL)))
     goto error;
-  if (tor_check_dh_key(pubkey_bn)<0) {
+  if (tor_check_dh_key(severity, pubkey_bn)<0) {
     /* Check for invalid public keys. */
-    log_warn(LD_CRYPTO,"Rejected invalid g^x");
+    log_fn(severity, LD_CRYPTO,"Rejected invalid g^x");
     goto error;
   }
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh));

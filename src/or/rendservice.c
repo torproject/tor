@@ -1090,7 +1090,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
-  if (crypto_dh_compute_secret(dh, ptr+REND_COOKIE_LEN, DH_KEY_LEN, keys,
+  if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh, ptr+REND_COOKIE_LEN,
+                               DH_KEY_LEN, keys,
                                DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't complete DH handshake");
     reason = END_CIRC_REASON_INTERNAL;

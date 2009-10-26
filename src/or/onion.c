@@ -253,8 +253,9 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
 
   key_material_len = DIGEST_LEN+key_out_len;
   key_material = tor_malloc(key_material_len);
-  len = crypto_dh_compute_secret(dh, challenge, DH_KEY_LEN,
-                                 key_material, key_material_len);
+  len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh, challenge,
+                                 DH_KEY_LEN, key_material,
+                                 key_material_len);
   if (len < 0) {
     log_info(LD_GENERAL, "crypto_dh_compute_secret failed.");
     goto err;
@@ -304,8 +305,9 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 
   key_material_len = DIGEST_LEN + key_out_len;
   key_material = tor_malloc(key_material_len);
-  len = crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
-                                 key_material, key_material_len);
+  len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, handshake_state,
+                                 handshake_reply, DH_KEY_LEN, key_material,
+                                 key_material_len);
   if (len < 0)
     goto err;
 

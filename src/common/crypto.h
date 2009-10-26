@@ -198,7 +198,7 @@ int crypto_dh_get_bytes(crypto_dh_env_t *dh);
 int crypto_dh_generate_public(crypto_dh_env_t *dh);
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out,
                          size_t pubkey_out_len);
-ssize_t crypto_dh_compute_secret(crypto_dh_env_t *dh,
+ssize_t crypto_dh_compute_secret(int severity, crypto_dh_env_t *dh,
                              const char *pubkey, size_t pubkey_len,
                              char *secret_out, size_t secret_out_len);
 void crypto_dh_free(crypto_dh_env_t *dh);
