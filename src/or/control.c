@@ -830,36 +830,36 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
 
   retval = options_init_from_string(body, CMD_RUN_TOR, NULL, &errstring);
 
-  if (retval != SETOPT_OK) {
+  if (retval != SETOPT_OK)
     log_warn(LD_CONTROL,
              "Controller gave us config file that didn't validate: %s",
              errstring);
-    switch (retval) {
-      case SETOPT_ERR_PARSE:
-        msg = "552 Invalid config file";
-        break;
-      case SETOPT_ERR_TRANSITION:
-        msg = "553 Transition not allowed";
-        break;
-      case SETOPT_ERR_SETTING:
-        msg = "553 Unable to set option";
-        break;
-      case SETOPT_ERR_MISC:
-      default:
-        msg = "550 Unable to load config";
-        break;
-      case SETOPT_OK:
-        tor_fragile_assert();
-        break;
-    }
+
+  switch (retval) {
+  case SETOPT_ERR_PARSE:
+    msg = "552 Invalid config file";
+    break;
+  case SETOPT_ERR_TRANSITION:
+    msg = "553 Transition not allowed";
+    break;
+  case SETOPT_ERR_SETTING:
+    msg = "553 Unable to set option";
+    break;
+  case SETOPT_ERR_MISC:
+  default:
+    msg = "550 Unable to load config";
+    break;
+  case SETOPT_OK:
+    break;
+  }
+  if (msg) {
     if (*errstring)
       connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     else
       connection_printf_to_buf(conn, "%s\r\n", msg);
-    tor_free(errstring);
-    return 0;
+  } else {
+    send_control_done(conn);
   }
-  send_control_done(conn);
   return 0;
 }
 
