@@ -2304,7 +2304,7 @@ static int
 dirvote_compute_consensuses(void)
 {
   /* Have we got enough votes to try? */
-  int n_votes, n_voters;
+  int n_votes, n_voters, n_vote_running = 0;
   smartlist_t *votes = NULL, *votestrings = NULL;
   char *consensus_body = NULL, *signatures = NULL, *votefile;
   networkstatus_t *consensus = NULL;
@@ -2322,6 +2322,19 @@ dirvote_compute_consensuses(void)
   if (n_votes <= n_voters/2) {
     log_warn(LD_DIR, "We don't have enough votes to generate a consensus: "
              "%d of %d", n_votes, n_voters/2);
+    goto err;
+  }
+  tor_assert(pending_vote_list);
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
+    if (smartlist_string_isin(v->vote->known_flags, "Running"))
+      n_vote_running++;
+  });
+  if (!n_vote_running) {
+    /* See task 1066. */
+    log_warn(LD_DIR, "Nobody has voted on the Running flag. Generating "
+                     "and publishing a consensus without Running nodes "
+                     "would make many clients stop working. Not "
+                     "generating a consensus!");
     goto err;
   }
 
