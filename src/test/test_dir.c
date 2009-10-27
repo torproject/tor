@@ -837,7 +837,7 @@ test_dir_v3_networkstatus(void)
   rs->published_on = now-1000;
   strlcpy(rs->nickname, "router4", sizeof(rs->nickname));
   memset(rs->identity_digest, 34, DIGEST_LEN);
-  memset(rs->descriptor_digest, 48, DIGEST_LEN);
+  memset(rs->descriptor_digest, 47, DIGEST_LEN);
   rs->addr = 0xC0000203;
   rs->or_port = 500;
   rs->dir_port = 1999;
