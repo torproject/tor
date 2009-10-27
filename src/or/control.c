@@ -929,7 +929,7 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
         tor_fragile_assert();
         break;
     }
-    if (*errstring)
+    if (errstring)
       connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     else
       connection_printf_to_buf(conn, "%s\r\n", msg);
