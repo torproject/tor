@@ -1563,7 +1563,10 @@ config_get_commandlines(int argc, char **argv, config_line_t **result)
     *new = tor_malloc_zero(sizeof(config_line_t));
     s = argv[i];
 
-    while (*s == '-')
+    /* Each keyword may be prefixed with one or two dashes. */
+    if (*s == '-')
+      s++;
+    if (*s == '-')
       s++;
 
     (*new)->key = tor_strdup(expand_abbrev(&options_format, s, 1, 1));
