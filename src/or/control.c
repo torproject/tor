@@ -853,13 +853,14 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
     break;
   }
   if (msg) {
-    if (*errstring)
+    if (errstring)
       connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     else
       connection_printf_to_buf(conn, "%s\r\n", msg);
   } else {
     send_control_done(conn);
   }
+  tor_free(errstring);
   return 0;
 }
 
