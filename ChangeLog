@@ -37,6 +37,9 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
       nobody will vote about "Running", and clients will get a consensus
       with no usable relays. Instead, authorities refuse to build a
       consensus if this happens. Bugfix on 0.2.0.10-alpha; fixes bug 1066.
+    - If your relay can't keep up with the number of incoming create
+      cells, it would log one warning per failure into your logs. Limit
+      warnings to 1 per minute. Bugfix on 0.0.2pre10; fixes bug 1042.
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
