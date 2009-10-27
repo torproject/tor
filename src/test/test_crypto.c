@@ -455,6 +455,7 @@ test_crypto_formats(void)
   strlcat(data1, " 2nd string that contains 35 chars.", 1024);
 
   i = base64_encode(data2, 1024, data1, 71);
+  test_assert(i >= 0);
   j = base64_decode(data3, 1024, data2, i);
   test_eq(j, 71);
   test_streq(data3, data1);
