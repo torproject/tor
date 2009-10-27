@@ -32,6 +32,7 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
       documents that are older than the latest consensus.  This bug might
       have degraded client bootstrapping.  Bugfix on 0.2.0.10-alpha.
       Spotted and fixed by xmux.
+    - Fix numerous small code-flaws found by Coverity Scan Rung 3.
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
