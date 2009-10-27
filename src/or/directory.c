@@ -332,7 +332,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       return;
   }
 
-  if (DIR_PURPOSE_FETCH_CONSENSUS) {
+  if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     networkstatus_t *v = networkstatus_get_latest_consensus();
     if (v)
       if_modified_since = v->valid_after + 180;
