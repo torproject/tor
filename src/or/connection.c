@@ -566,7 +566,7 @@ connection_about_to_close_connection(connection_t *conn)
         rep_hist_note_disconnect(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
                 tls_error_to_orconn_end_reason(or_conn->tls_error));
-      } else if (or_conn->identity_digest) {
+      } else if (!tor_digest_is_zero(or_conn->identity_digest)) {
         rep_hist_note_connection_died(or_conn->identity_digest, now);
         control_event_or_conn_status(or_conn, OR_CONN_EVENT_CLOSED,
                 tls_error_to_orconn_end_reason(or_conn->tls_error));

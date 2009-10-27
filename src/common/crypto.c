@@ -1260,9 +1260,6 @@ crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
   tor_assert(env);
   tor_assert(key);
 
-  if (!env->key)
-    return -1;
-
   memcpy(env->key, key, CIPHER_KEY_LEN);
   return 0;
 }

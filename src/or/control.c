@@ -2263,7 +2263,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     char* exit_digest;
     if (circ->build_state &&
         circ->build_state->chosen_exit &&
-        circ->build_state->chosen_exit->identity_digest) {
+        !tor_digest_is_zero(circ->build_state->chosen_exit->identity_digest)) {
       exit_digest = circ->build_state->chosen_exit->identity_digest;
       r = router_get_by_digest(exit_digest);
     }
