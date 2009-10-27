@@ -88,7 +88,7 @@ static void
 test_util_config_line(void)
 {
   char buf[1024];
-  char *k, *v;
+  char *k=NULL, *v=NULL;
   const char *str;
 
   /* Test parse_config_line_from_str */
@@ -161,7 +161,8 @@ test_util_config_line(void)
   tor_free(k); tor_free(v);
   test_streq(str, "");
  done:
-  ;
+  tor_free(k);
+  tor_free(v);
 }
 
 /** Test basic string functionality. */
