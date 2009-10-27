@@ -151,7 +151,7 @@ int crypto_pk_check_fingerprint_syntax(const char *s);
 
 /* symmetric crypto */
 int crypto_cipher_generate_key(crypto_cipher_env_t *env);
-int crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key);
+void crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key);
 void crypto_cipher_generate_iv(char *iv_out);
 int crypto_cipher_set_iv(crypto_cipher_env_t *env, const char *iv);
 const char *crypto_cipher_get_key(crypto_cipher_env_t *env);
