@@ -2225,6 +2225,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
       break;
     case CONFIG_TYPE_ISOTIME:
       *(time_t*)lvalue = 0;
+      break;
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
     case CONFIG_TYPE_BOOL:
@@ -2238,6 +2239,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
         routerset_free(*(routerset_t**)lvalue);
         *(routerset_t**)lvalue = NULL;
       }
+      break;
     case CONFIG_TYPE_CSV:
       if (*(smartlist_t**)lvalue) {
         SMARTLIST_FOREACH(*(smartlist_t **)lvalue, char *, cp, tor_free(cp));
