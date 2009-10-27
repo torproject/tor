@@ -28,6 +28,10 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
       to establish a circuit with us using weak DH keys. It's a protocol
       violation, but that doesn't mean ordinary users need to hear about
       it. Fixes the bug part of bug 1114. Bugfix on 0.1.0.13.
+    - Do not refuse to learn about authority certs and v2 networkstatus
+      documents that are older than the latest consensus.  This bug might
+      have degraded client bootstrapping.  Bugfix on 0.2.0.10-alpha.
+      Spotted and fixed by xmux.
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
@@ -284,6 +288,14 @@ Changes in version 0.2.2.1-alpha - 2009-08-26
     - OS X Vidalia Bundle: The multi-package installer is now replaced
       by a simple drag and drop to the /Applications folder. This change
       occurred with the upgrade to Vidalia 0.2.3.
+
+
+Changes in Version 0.2.1.21 - 20??-??-??
+  o Minor bugfixes:
+    - Do not refuse to learn about authority certs and v2 networkstatus
+      documents that are older than the latest consensus.  This bug might
+      have degraded client bootstrapping.  Bugfix on 0.2.0.10-alpha.
+      Spotted and fixed by xmux.
 
 
 Changes in version 0.2.1.20 - 2009-10-15
