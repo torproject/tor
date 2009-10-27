@@ -1456,6 +1456,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     if (res) {
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
       smartlist_free(descs);
+      tor_free(url);
       return -1;
     }
     SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
