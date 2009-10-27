@@ -33,6 +33,10 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
       have degraded client bootstrapping.  Bugfix on 0.2.0.10-alpha.
       Spotted and fixed by xmux.
     - Fix numerous small code-flaws found by Coverity Scan Rung 3.
+    - If all authorities restart at once right before a consensus vote,
+      nobody will vote about "Running", and clients will get a consensus
+      with no usable relays. Instead, authorities refuse to build a
+      consensus if this happens. Bugfix on 0.2.0.10-alpha; fixes bug 1066.
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
