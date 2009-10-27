@@ -588,6 +588,7 @@ init_keys(void)
     if (write_str_to_file(keydir, fingerprint_line, 0)) {
       log_err(LD_FS, "Error writing fingerprint line to file");
       tor_free(keydir);
+      tor_free(cp);
       return -1;
     }
   }
