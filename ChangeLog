@@ -4,6 +4,9 @@ Changes in Version 0.2.1.21 - 20??-??-??
       documents that are older than the latest consensus.  This bug might
       have degraded client bootstrapping.  Bugfix on 0.2.0.10-alpha.
       Spotted and fixed by xmux.
+    - Fix a couple of very-hard-to-trigger memory leaks, and one hard-to-
+      trigger platform-specific option misparsing case found by Coverity
+      Scan.
 
 
 Changes in version 0.2.1.20 - 2009-10-15
