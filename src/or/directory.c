@@ -2950,18 +2950,9 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         note_request("/tor/rendezvous?/", desc_len);
         /* need to send descp separately, because it may include NULs */
         connection_write_to_buf(descp, desc_len, TO_CONN(conn));
-        /* report successful fetch to statistic */
-        if (options->HSAuthorityRecordStats) {
-          hs_usage_note_fetch_total(query, time(NULL));
-          hs_usage_note_fetch_successful(query, time(NULL));
-        }
         break;
       case 0: /* well-formed but not present */
         write_http_status_line(conn, 404, "Not found");
-        /* report (unsuccessful) fetch to statistic */
-        if (options->HSAuthorityRecordStats) {
-          hs_usage_note_fetch_total(query, time(NULL));
-        }
         break;
       case -1: /* not well-formed */
         write_http_status_line(conn, 400, "Bad request");

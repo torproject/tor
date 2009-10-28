@@ -243,7 +243,7 @@ static config_var_t _option_vars[] = {
   VAR("HiddenServiceAuthorizeClient",LINELIST_S,RendConfigLines, NULL),
   V(HidServAuth,                 LINELIST, NULL),
   V(HSAuthoritativeDir,          BOOL,     "0"),
-  V(HSAuthorityRecordStats,      BOOL,     "0"),
+  OBSOLETE("HSAuthorityRecordStats"),
   V(HttpProxy,                   STRING,   NULL),
   V(HttpProxyAuthenticator,      STRING,   NULL),
   V(HttpsProxy,                  STRING,   NULL),
@@ -3252,10 +3252,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->AuthoritativeDir && options->ClientOnly)
     REJECT("Running as authoritative directory, but ClientOnly also set.");
-
-  if (options->HSAuthorityRecordStats && !options->HSAuthoritativeDir)
-    REJECT("HSAuthorityRecordStats is set but we're not running as "
-           "a hidden service authority.");
 
   if (options->FetchDirInfoExtraEarly && !options->FetchDirInfoEarly)
     REJECT("FetchDirInfoExtraEarly requires that you also set "

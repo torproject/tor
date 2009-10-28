@@ -2354,8 +2354,6 @@ typedef struct {
                            * for version 3 directories? */
   int HSAuthoritativeDir; /**< Boolean: does this an authoritative directory
                            * handle hidden service requests? */
-  int HSAuthorityRecordStats; /**< Boolean: does this HS authoritative
-                               * directory record statistics? */
   int NamingAuthoritativeDir; /**< Boolean: is this an authoritative directory
                                * that's willing to bind names? */
   int VersioningAuthoritativeDir; /**< Boolean: is this an authoritative

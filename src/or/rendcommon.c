@@ -1005,7 +1005,6 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   char query[REND_SERVICE_ID_LEN_BASE32+1];
   char key[REND_SERVICE_ID_LEN_BASE32+2]; /* 0<query>\0 */
   time_t now;
-  or_options_t *options = get_options();
   tor_assert(rend_cache);
   parsed = rend_parse_service_descriptor(desc,desc_len);
   if (!parsed) {
@@ -1040,10 +1039,6 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
     rend_service_descriptor_free(parsed);
     return -1;
   }
-  /* report novel publication to statistics */
-  if (published && options->HSAuthorityRecordStats) {
-    hs_usage_note_publish_total(query, now);
-  }
   tor_snprintf(key, sizeof(key), "0%s", query);
   e = (rend_cache_entry_t*) strmap_get_lc(rend_cache, key);
   if (e && e->parsed->timestamp > parsed->timestamp) {
@@ -1063,10 +1058,6 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
   if (!e) {
     e = tor_malloc_zero(sizeof(rend_cache_entry_t));
     strmap_set_lc(rend_cache, key, e);
-    /* report novel publication to statistics */
-    if (published && options->HSAuthorityRecordStats) {
-      hs_usage_note_publish_novel(query, now);
-    }
   } else {
     rend_service_descriptor_free(e->parsed);
     tor_free(e->desc);

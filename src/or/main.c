@@ -824,7 +824,6 @@ run_scheduled_events(time_t now)
   static time_t time_to_try_getting_descriptors = 0;
   static time_t time_to_reset_descriptor_failures = 0;
   static time_t time_to_add_entropy = 0;
-  static time_t time_to_write_hs_statistics = 0;
   static time_t time_to_write_bridge_status_file = 0;
   static time_t time_to_downrate_stability = 0;
   static time_t time_to_save_stability = 0;
@@ -1165,12 +1164,6 @@ run_scheduled_events(time_t now)
     }
   }
 
-  /** 10. write hidden service usage statistic to disk */
-  if (options->HSAuthorityRecordStats && time_to_write_hs_statistics < now) {
-    hs_usage_write_statistics_to_file(now);
-#define WRITE_HSUSAGE_INTERVAL (30*60)
-    time_to_write_hs_statistics = now+WRITE_HSUSAGE_INTERVAL;
-  }
   /** 10b. write bridge networkstatus file to disk */
   if (options->BridgeAuthoritativeDir &&
       time_to_write_bridge_status_file < now) {
@@ -1979,7 +1972,6 @@ tor_free_all(int postfork)
   rend_cache_free_all();
   rend_service_authorization_free_all();
   rep_hist_free_all();
-  hs_usage_free_all();
   dns_free_all();
   clear_pending_onions();
   circuit_free_all();
