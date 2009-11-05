@@ -65,6 +65,7 @@ int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);
 int tor_tls_renegotiate(tor_tls_t *tls);
+void tor_tls_block_renegotiation(tor_tls_t *tls);
 int tor_tls_shutdown(tor_tls_t *tls);
 int tor_tls_get_pending_bytes(tor_tls_t *tls);
 size_t tor_tls_get_forced_write_size(tor_tls_t *tls);
