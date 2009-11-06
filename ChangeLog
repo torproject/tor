@@ -311,6 +311,12 @@ Changes in version 0.2.2.1-alpha - 2009-08-26
 
 
 Changes in Version 0.2.1.21 - 20??-??-??
+  o Major bugfixes:
+    - Work around a security feature in OpenSSL 0.9.8l that prevents our
+      handshake from working unless we explicitly tell OpenSSL that we are
+      using SSL renegotiation safely.  We are, of course, but OpenSSL
+      0.9.8l won't work unless we say we are.
+
   o Minor bugfixes:
     - Do not refuse to learn about authority certs and v2 networkstatus
       documents that are older than the latest consensus.  This bug might

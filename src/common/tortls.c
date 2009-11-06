@@ -154,6 +154,7 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *cname,
                                         const char *cname_sign,
                                         unsigned int lifetime);
+static void tor_tls_unblock_renegotiation(tor_tls_t *tls);
 
 /** Global tls context. We keep it here because nobody else needs to
  * touch it. */
@@ -927,6 +928,36 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
 #endif
 }
 
+/** If this version of openssl requires it, turn on renegotiation on
+ * <b>tls</b>.  (Our protocol never requires this for security, but it's nice
+ * to use belt-and-suspenders here.)
+ */
+static void
+tor_tls_unblock_renegotiation(tor_tls_t *tls)
+{
+#ifdef SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
+  /* Yes, we know what we are doing here.  No, we do not treat a renegotiation
+   * as authenticating any earlier-received data. */
+  tls->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+#else
+  (void)tls;
+#endif
+}
+
+/** If this version of openssl supports it, turn off renegotiation on
+ * <b>tls</b>.  (Our protocol never requires this for security, but it's nice
+ * to use belt-and-suspenders here.)
+ */
+void
+tor_tls_block_renegotiation(tor_tls_t *tls)
+{
+#ifdef SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
+  tls->ssl->s3->flags &= ~SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+#else
+  (void)tls;
+#endif
+}
+
 /** Return whether this tls initiated the connect (client) or
  * received it (server). */
 int
@@ -1058,6 +1089,9 @@ tor_tls_handshake(tor_tls_t *tls)
   if (oldstate != tls->ssl->state)
     log_debug(LD_HANDSHAKE, "After call, %p was in state %s",
               tls, ssl_state_to_string(tls->ssl->state));
+  /* We need to call this here and not earlier, since OpenSSL has a penchant
+   * for clearing its flags when you say accept or connect. */
+  tor_tls_unblock_renegotiation(tls);
   r = tor_tls_get_error(tls,r,0, "handshaking", LOG_INFO, LD_HANDSHAKE);
   if (ERR_peek_error() != 0) {
     tls_log_errors(tls, tls->isServer ? LOG_INFO : LOG_WARN, LD_HANDSHAKE,
