@@ -90,6 +90,27 @@ AC_ARG_ENABLE(gcc-warnings,
 AC_ARG_ENABLE(gcc-warnings-advisory,
      AS_HELP_STRING(--enable-gcc-warnings-advisory, [enable verbose warnings, excluding -Werror]))
 
+dnl Adam shostack suggests the following for Windows:
+dnl -D_FORTIFY_SOURCE=2 -fstack-protector-all
+dnl Others suggest '/gs /safeseh /nxcompat /dynamicbase' for non-gcc on Windows
+dnl This requires that we use gcc and that we add -O2 to the CFLAGS.
+AC_ARG_ENABLE(gcc-hardening,
+     AS_HELP_STRING(--enable-gcc-hardening, enable compiler security checks),
+[if test x$enableval = xyes; then
+    CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2 -fstack-protector-all"
+    CFLAGS+=" -fwrapv -fPIE -Wstack-protector -Wformat -Wformat-security"
+    CFLAGS+=" -Wpointer-sign"
+    LDFLAGS+=" -pie"
+fi])
+
+dnl Linker hardening options
+dnl Currently these options are ELF specific - you can't use this with MacOSX
+AC_ARG_ENABLE(linker-hardening,
+        AS_HELP_STRING(--enable-linker-hardening, enable linker security fixups),
+[if test x$enableval = xyes; then
+    LDFLAGS+=" -z relro -z now"
+fi])
+
 AC_ARG_ENABLE(local-appdata,
    AS_HELP_STRING(--enable-local-appdata, default to host local application data paths on Windows))
 if test "$enable_local_appdata" = "yes"; then
