@@ -1305,6 +1305,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(versions);
     smartlist_free(exitsummaries);
     tor_free(bandwidths);
+    tor_free(measured_bws);
   }
 
   /* Add a signature. */
