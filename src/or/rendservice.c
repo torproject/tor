@@ -1011,13 +1011,12 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     }
 
     /* Check timestamp. */
-    memcpy((char*)&ts, buf+1+v3_shift, sizeof(uint32_t));
+    ts = ntohl(get_uint32(buf+1+v3_shift));
     v3_shift += 4;
-    ts = ntohl(ts);
     if ((now - ts) < -1 * REND_REPLAY_TIME_INTERVAL / 2 ||
         (now - ts) > REND_REPLAY_TIME_INTERVAL / 2) {
       log_warn(LD_REND, "INTRODUCE2 cell is too %s. Discarding.",
-          (now - ts) < 0 ? "old" : "new");
+               (now - ts) < 0 ? "old" : "new");
       return -1;
     }
   }
@@ -1557,7 +1556,7 @@ rend_service_rendezvous_has_opened(origin_circuit_t *circuit)
   /* set the windows to default. these are the windows
    * that bob thinks alice has.
    */
-  hop->package_window = CIRCWINDOW_START;
+  hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
   onion_append_to_cpath(&circuit->cpath, hop);

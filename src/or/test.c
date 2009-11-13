@@ -410,7 +410,7 @@ test_crypto_dh(void)
   char p2[DH_BYTES];
   char s1[DH_BYTES];
   char s2[DH_BYTES];
-  int s1len, s2len;
+  ssize_t s1len, s2len;
 
   test_eq(crypto_dh_get_bytes(dh1), DH_BYTES);
   test_eq(crypto_dh_get_bytes(dh2), DH_BYTES);

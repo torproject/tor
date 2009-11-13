@@ -575,7 +575,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     /* Consider all the other addresses; if any matches, this connection is
      * "canonical." */
     tor_addr_t addr;
-    const char *next = decode_address_from_payload(&addr, cp, end-cp);
+    const char *next = decode_address_from_payload(&addr, cp, (int)(end-cp));
     if (next == NULL) {
       log_fn(LOG_PROTOCOL_WARN,  LD_OR,
              "Bad address in netinfo cell; closing connection.");
@@ -610,9 +610,11 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
            conn->_base.address, (int)conn->_base.port,
            apparent_skew>0 ? "ahead" : "behind", dbuf,
            apparent_skew>0 ? "behind" : "ahead");
-    control_event_general_status(LOG_WARN,
-                        "CLOCK_SKEW SKEW=%ld SOURCE=OR:%s:%d",
-                        apparent_skew, conn->_base.address, conn->_base.port);
+    if (severity == LOG_WARN) /* only tell the controller if an authority */
+      control_event_general_status(LOG_WARN,
+                          "CLOCK_SKEW SKEW=%ld SOURCE=OR:%s:%d",
+                          apparent_skew,
+                          conn->_base.address, conn->_base.port);
   }
 
   /* XXX maybe act on my_apparent_addr, if the source is sufficiently

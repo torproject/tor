@@ -70,7 +70,7 @@ show_help(void)
 static void
 crypto_log_errors(int severity, const char *doing)
 {
-  unsigned int err;
+  unsigned long err;
   const char *msg, *lib, *func;
   while ((err = ERR_get_error()) != 0) {
     msg = (const char*)ERR_reason_error_string(err);
@@ -94,7 +94,7 @@ load_passphrase(void)
 {
   char *cp;
   char buf[1024]; /* "Ought to be enough for anybody." */
-  int n = read_all(passphrase_fd, buf, sizeof(buf), 0);
+  ssize_t n = read_all(passphrase_fd, buf, sizeof(buf), 0);
   if (n < 0) {
     log_err(LD_GENERAL, "Couldn't read from passphrase fd: %s",
             strerror(errno));
