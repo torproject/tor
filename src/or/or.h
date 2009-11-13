@@ -1655,6 +1655,10 @@ typedef struct networkstatus_t {
    * not listed here, the voter has no opinion on what its value should be. */
   smartlist_t *known_flags;
 
+  /** List of key=value strings for the parameters in this vote or
+   * consensus, sorted by key. */
+  smartlist_t *net_params;
+
   /** List of networkstatus_voter_info_t.  For a vote, only one element
    * is included.  For a consensus, one element is included for every voter
    * whose vote contributed to the consensus. */
@@ -1849,9 +1853,9 @@ typedef struct crypt_path_t {
   struct crypt_path_t *prev; /**< Link to previous crypt_path_t in the
                               * circuit. */
 
-  int package_window; /**< How many bytes are we allowed to originate ending
+  int package_window; /**< How many cells are we allowed to originate ending
                        * at this step? */
-  int deliver_window; /**< How many bytes are we willing to deliver originating
+  int deliver_window; /**< How many cells are we willing to deliver originating
                        * at this step? */
 } crypt_path_t;
 
@@ -2785,6 +2789,7 @@ void circuit_set_n_circid_orconn(circuit_t *circ, circid_t id,
                                  or_connection_t *conn);
 void circuit_set_state(circuit_t *circ, uint8_t state);
 void circuit_close_all_marked(void);
+int32_t circuit_initial_package_window(void);
 origin_circuit_t *origin_circuit_new(void);
 or_circuit_t *or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn);
 circuit_t *circuit_get_by_circid_orconn(circid_t circ_id,
@@ -2926,8 +2931,8 @@ int options_need_geoip_info(or_options_t *options, const char **reason_out);
 int getinfo_helper_config(control_connection_t *conn,
                           const char *question, char **answer);
 
-int get_effective_bwrate(or_options_t *options);
-int get_effective_bwburst(or_options_t *options);
+uint32_t get_effective_bwrate(or_options_t *options);
+uint32_t get_effective_bwburst(or_options_t *options);
 
 #ifdef CONFIG_PRIVATE
 /* Used only by config.c and test.c */
@@ -3570,9 +3575,9 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
                                         authority_cert_t *cert);
 
 #ifdef DIRVOTE_PRIVATE
-char *
-format_networkstatus_vote(crypto_pk_env_t *private_key,
-                          networkstatus_t *v3_ns);
+char *format_networkstatus_vote(crypto_pk_env_t *private_key,
+                                 networkstatus_t *v3_ns);
+char *dirvote_compute_params(smartlist_t *votes);
 #endif
 
 /********************************* dns.c ***************************/
@@ -3787,6 +3792,8 @@ void signed_descs_update_status_from_consensus_networkstatus(
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
+int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
+                                int32_t default_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
 void networkstatus_free_all(void);

@@ -1789,7 +1789,11 @@ getinfo_helper_events(control_connection_t *control_conn,
       *answer = tor_strdup(has_completed_circuit ? "1" : "0");
     } else if (!strcmp(question, "status/enough-dir-info")) {
       *answer = tor_strdup(router_have_minimum_dir_info() ? "1" : "0");
-    } else if (!strcmp(question, "status/good-server-descriptor")) {
+    } else if (!strcmp(question, "status/good-server-descriptor") ||
+               !strcmp(question, "status/accepted-server-descriptor")) {
+      /* They're equivalent for now, until we can figure out how to make
+       * good-server-descriptor be what we want. See comment in
+       * control-spec.txt. */
       *answer = tor_strdup(directories_have_accepted_server_descriptor()
                            ? "1" : "0");
     } else if (!strcmp(question, "status/reachability-succeeded/or")) {
@@ -2597,7 +2601,7 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   int is_reverse = 0;
   (void) len; /* body is nul-terminated; it's safe to ignore the length */
 
-  if (!(conn->event_mask & (1L<<EVENT_ADDRMAP))) {
+  if (!(conn->event_mask & ((uint32_t)1L<<EVENT_ADDRMAP))) {
     log_warn(LD_CONTROL, "Controller asked us to resolve an address, but "
              "isn't listening for ADDRMAP events.  It probably won't see "
              "the answer.");

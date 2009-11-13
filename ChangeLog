@@ -1,7 +1,74 @@
-Changes in version 0.2.1.19 - 2009-07-28
+Changes in version 0.2.1.20 - 2009-10-15
   o Major bugfixes:
-    - Make accessing hidden services on 0.2.1.x work right
-      again. Bugfix on 0.2.1.3-alpha; workaround for bug 1038.
+    - Send circuit or stream sendme cells when our window has decreased
+      by 100 cells, not when it has decreased by 101 cells. Bug uncovered
+      by Karsten when testing the "reduce circuit window" performance
+      patch. Bugfix on the 54th commit on Tor -- from July 2002,
+      before the release of Tor 0.0.0. This is the new winner of the
+      oldest-bug prize.
+    - Fix a remotely triggerable memory leak when a consensus document
+      contains more than one signature from the same voter. Bugfix on
+      0.2.0.3-alpha.
+    - Avoid segfault in rare cases when finishing an introduction circuit
+      as a client and finding out that we don't have an introduction key
+      for it. Fixes bug 1073. Reported by Aaron Swartz.
+
+  o Major features:
+    - Tor now reads the "circwindow" parameter out of the consensus,
+      and uses that value for its circuit package window rather than the
+      default of 1000 cells. Begins the implementation of proposal 168.
+
+  o New directory authorities:
+    - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
+      authority.
+    - Move moria1 and tonga to alternate IP addresses.
+
+  o Minor bugfixes:
+    - Fix a signed/unsigned compile warning in 0.2.1.19.
+    - Fix possible segmentation fault on directory authorities. Bugfix on
+      0.2.1.14-rc.
+    - Fix an extremely rare infinite recursion bug that could occur if
+      we tried to log a message after shutting down the log subsystem.
+      Found by Matt Edman. Bugfix on 0.2.0.16-alpha.
+    - Fix an obscure bug where hidden services on 64-bit big-endian
+      systems might mis-read the timestamp in v3 introduce cells, and
+      refuse to connect back to the client. Discovered by "rotor".
+      Bugfix on 0.2.1.6-alpha.
+    - We were triggering a CLOCK_SKEW controller status event whenever
+      we connect via the v2 connection protocol to any relay that has
+      a wrong clock. Instead, we should only inform the controller when
+      it's a trusted authority that claims our clock is wrong. Bugfix
+      on 0.2.0.20-rc; starts to fix bug 1074. Reported by SwissTorExit.
+    - We were telling the controller about CHECKING_REACHABILITY and
+      REACHABILITY_FAILED status events whenever we launch a testing
+      circuit or notice that one has failed. Instead, only tell the
+      controller when we want to inform the user of overall success or
+      overall failure. Bugfix on 0.1.2.6-alpha. Fixes bug 1075. Reported
+      by SwissTorExit.
+    - Don't warn when we're using a circuit that ends with a node
+      excluded in ExcludeExitNodes, but the circuit is not used to access
+      the outside world. This should help fix bug 1090. Bugfix on
+      0.2.1.6-alpha.
+    - Work around a small memory leak in some versions of OpenSSL that
+      stopped the memory used by the hostname TLS extension from being
+      freed.
+
+  o Minor features:
+    - Add a "getinfo status/accepted-server-descriptor" controller
+      command, which is the recommended way for controllers to learn
+      whether our server descriptor has been successfully received by at
+      least on directory authority. Un-recommend good-server-descriptor
+      getinfo and status events until we have a better design for them.
+
+
+Changes in version 0.2.1.19 - 2009-07-28
+  Tor 0.2.1.19 fixes a major bug with accessing and providing hidden
+  services on Tor 0.2.1.3-alpha through 0.2.1.18.
+
+  o Major bugfixes:
+    - Make accessing hidden services on 0.2.1.x work right again.
+      Bugfix on 0.2.1.3-alpha; workaround for bug 1038. Diagnosis and
+      part of patch provided by "optimist".
 
   o Minor features:
     - When a relay/bridge is writing out its identity key fingerprint to
@@ -20,6 +87,12 @@ Changes in version 0.2.1.19 - 2009-07-28
 
 
 Changes in version 0.2.1.18 - 2009-07-24
+  Tor 0.2.1.18 lays the foundations for performance improvements,
+  adds status events to help users diagnose bootstrap problems, adds
+  optional authentication/authorization for hidden services, fixes a
+  variety of potential anonymity problems, and includes a huge pile of
+  other features and bug fixes.
+
   o Build fixes:
     - Add LIBS=-lrt to Makefile.am so the Tor RPMs use a static libevent.
 
@@ -80,6 +153,37 @@ Changes in version 0.2.1.17-rc - 2009-07-07
     - If we're a relay and we change our IP address, be more verbose
       about the reason that made us change. Should help track down
       further bugs for relays on dynamic IP addresses.
+
+
+Changes in version 0.2.0.35 - 2009-06-24
+  o Security fix:
+    - Avoid crashing in the presence of certain malformed descriptors.
+      Found by lark, and by automated fuzzing.
+    - Fix an edge case where a malicious exit relay could convince a
+      controller that the client's DNS question resolves to an internal IP
+      address. Bug found and fixed by "optimist"; bugfix on 0.1.2.8-beta.
+
+  o Major bugfixes:
+    - Finally fix the bug where dynamic-IP relays disappear when their
+      IP address changes: directory mirrors were mistakenly telling
+      them their old address if they asked via begin_dir, so they
+      never got an accurate answer about their new address, so they
+      just vanished after a day. For belt-and-suspenders, relays that
+      don't set Address in their config now avoid using begin_dir for
+      all direct connections. Should fix bugs 827, 883, and 900.
+    - Fix a timing-dependent, allocator-dependent, DNS-related crash bug
+      that would occur on some exit nodes when DNS failures and timeouts
+      occurred in certain patterns. Fix for bug 957.
+
+  o Minor bugfixes:
+    - When starting with a cache over a few days old, do not leak
+      memory for the obsolete router descriptors in it. Bugfix on
+      0.2.0.33; fixes bug 672.
+    - Hidden service clients didn't use a cached service descriptor that
+      was older than 15 minutes, but wouldn't fetch a new one either,
+      because there was already one in the cache. Now, fetch a v2
+      descriptor unless the same descriptor was added to the cache within
+      the last 15 minutes. Fixes bug 997; reported by Marcus Griep.
 
 
 Changes in version 0.2.1.16-rc - 2009-06-20

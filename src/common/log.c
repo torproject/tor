@@ -94,7 +94,8 @@ should_log_function_name(log_domain_mask_t domain, int severity)
 }
 
 /** A mutex to guard changes to logfiles and logging. */
-static tor_mutex_t *log_mutex = NULL;
+static tor_mutex_t log_mutex;
+static int log_mutex_initialized = 0;
 
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
@@ -105,9 +106,9 @@ static int syslog_count = 0;
 #endif
 
 #define LOCK_LOGS() STMT_BEGIN                                          \
-  tor_mutex_acquire(log_mutex);                                         \
+  tor_mutex_acquire(&log_mutex);                                        \
   STMT_END
-#define UNLOCK_LOGS() STMT_BEGIN tor_mutex_release(log_mutex); STMT_END
+#define UNLOCK_LOGS() STMT_BEGIN tor_mutex_release(&log_mutex); STMT_END
 
 /** What's the lowest log level anybody cares about?  Checking this lets us
  * bail out early from log_debug if we aren't debugging.  */
@@ -148,8 +149,8 @@ _log_prefix(char *buf, size_t buf_len, int severity)
   t = (time_t)now.tv_sec;
 
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", tor_localtime_r(&t, &tm));
-  r = tor_snprintf(buf+n, buf_len-n, ".%.3ld [%s] ",
-                   (long)now.tv_usec / 1000, sev_to_string(severity));
+  r = tor_snprintf(buf+n, buf_len-n, ".%.3i [%s] ",
+                   (int)now.tv_usec / 1000, sev_to_string(severity));
   if (r<0)
     return buf_len-1;
   else
@@ -448,8 +449,9 @@ logs_free_all(void)
     log_free(victim);
   }
   tor_free(appname);
-  tor_mutex_free(log_mutex);
-  log_mutex = NULL;
+
+  /* We _could_ destroy the log mutex here, but that would screw up any logs
+   * that happened between here and the end of execution. */
 }
 
 /** Remove and free the log entry <b>victim</b> from the linked-list
@@ -545,8 +547,10 @@ add_stream_log(const log_severity_list_t *severity,
 void
 init_logging(void)
 {
-  if (!log_mutex)
-    log_mutex = tor_mutex_new();
+  if (!log_mutex_initialized) {
+    tor_mutex_init(&log_mutex);
+    log_mutex_initialized = 1;
+  }
 }
 
 /** Add a log handler to receive messages during startup (before the real

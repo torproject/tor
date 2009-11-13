@@ -119,6 +119,10 @@ typedef unsigned int uint32_t;
 #endif
 #endif
 
+#ifndef INT32_MIN
+#define INT32_MIN (-2147483647-1)
+#endif
+
 #if (SIZEOF_LONG == 4)
 #ifndef HAVE_INT32_T
 typedef signed long int32_t;

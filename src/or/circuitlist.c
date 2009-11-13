@@ -361,6 +361,19 @@ circuit_purpose_to_controller_string(uint8_t purpose)
   }
 }
 
+/** Pick a reasonable package_window to start out for our circuits.
+ * Originally this was hard-coded at 1000, but now the consensus votes
+ * on the answer. See proposal 168. */
+int32_t
+circuit_initial_package_window(void)
+{
+  int32_t num = networkstatus_get_param(NULL, "circwindow", CIRCWINDOW_START);
+  /* If the consensus tells us a negative number, we'd assert. */
+  if (num < 0)
+    num = CIRCWINDOW_START;
+  return num;
+}
+
 /** Initialize the common elements in a circuit_t, and add it to the global
  * list. */
 static void
@@ -368,7 +381,7 @@ init_circuit_base(circuit_t *circ)
 {
   circ->timestamp_created = time(NULL);
 
-  circ->package_window = CIRCWINDOW_START;
+  circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
 
   circuit_add(circ);

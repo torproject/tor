@@ -94,9 +94,14 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
       }
     });
     if (!intro_key) {
+      /** XXX This case probably means that the intro point vanished while
+       * we were building a circuit to it. In the future, we should find
+       * out how that happened and whether we should kill the circuits to
+       * removed intro points immediately. See task 1073. */
+      int num_intro_points = smartlist_len(entry->parsed->intro_nodes);
       if (rend_cache_lookup_entry(introcirc->rend_data->onion_address,
           0, &entry) > 0) {
-        log_warn(LD_BUG, "We have both a v0 and a v2 rend desc for this "
+        log_info(LD_REND, "We have both a v0 and a v2 rend desc for this "
                  "service. The v2 desc doesn't contain the introduction "
                  "point (and key) to send an INTRODUCE1/2 cell to this "
                  "introduction point. Assuming the introduction point "
@@ -107,9 +112,9 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
         /* See flyspray task 1024. */
         intro_key = entry->parsed->pk;
       } else {
-        log_warn(LD_BUG, "Internal error: could not find intro key; we "
+        log_info(LD_REND, "Internal error: could not find intro key; we "
                  "only have a v2 rend desc with %d intro points.",
-                 smartlist_len(entry->parsed->intro_nodes));
+                 num_intro_points);
         goto err;
       }
     }
@@ -146,7 +151,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
              REND_DESC_COOKIE_LEN);
       v3_shift += 2+REND_DESC_COOKIE_LEN;
     }
-    set_uint32(tmp+v3_shift+1, htonl(time(NULL)));
+    set_uint32(tmp+v3_shift+1, htonl((uint32_t)time(NULL)));
     v3_shift += 4;
   } /* if version 2 only write version number */
   else if (entry->parsed->protocols & (1<<2)) {
@@ -698,7 +703,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
   /* set the windows to default. these are the windows
    * that alice thinks bob has.
    */
-  hop->package_window = CIRCWINDOW_START;
+  hop->package_window = circuit_initial_package_window();
   hop->deliver_window = CIRCWINDOW_START;
 
   onion_append_to_cpath(&circ->cpath, hop);
