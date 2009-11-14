@@ -628,6 +628,11 @@ if test x$tcmalloc = xyes ; then
    LDFLAGS="-ltcmalloc $LDFLAGS"
 fi
 
+# By default, we're going to assume we don't have mlockall()
+# bionic and other platforms have various broken mlockall subsystems
+# some of systems don't have a working mlockall, some aren't linkable
+AC_CHECK_FUNCS(mlockall)
+
 # Allow user to specify an alternate syslog facility
 AC_ARG_WITH(syslog-facility,
 [  --with-syslog-facility=LOG syslog facility to use (default=LOG_DAEMON)],
