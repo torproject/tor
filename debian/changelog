@@ -7,8 +7,9 @@ tor (0.2.2.5-alpha-1) experimental; urgency=low
   * Therefore build-depend on libssl-dev >= 0.9.8k-6.  If we build against
     earlier versions we will not work once libssl gets upgraded to a version
     that disabled renegotiations.
+  * Change order of recommends from privoxy | polipo to polipo | privoxy.
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 15 Nov 2009 10:38:36 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun, 15 Nov 2009 10:55:46 +0100
 
 tor (0.2.2.4-alpha-1) experimental; urgency=low
 
