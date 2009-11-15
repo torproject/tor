@@ -1,3 +1,11 @@
+Changes in version 0.2.2.5-alpha - 2009-10-11
+  o Major bugfixes:
+    - Make the tarball compile again. Oops. Bugfix on 0.2.2.4-alpha.
+
+  o New directory authorities:
+    - Move dizum to an alternate IP address.
+
+
 Changes in version 0.2.2.4-alpha - 2009-10-10
   o Major bugfixes:
     - Fix several more asserts in the circuit_build_times code, for
