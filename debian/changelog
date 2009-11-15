@@ -1,8 +1,11 @@
 tor (0.2.2.5-alpha-1) experimental; urgency=low
 
   * New upstream version.
+  * Pick 0a58567ce3418f410cf1dd0143dd3e56b4a4bd1f from master git tree:
+    - work with libssl that has renegotiation disabled by default.
+    (debian/patches/0a58567c-work-with-reneg-ssl.dpatch)
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 15 Nov 2009 10:37:05 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun, 15 Nov 2009 10:38:36 +0100
 
 tor (0.2.2.4-alpha-1) experimental; urgency=low
 
