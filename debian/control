@@ -2,15 +2,15 @@ Source: tor
 Section: comm
 Priority: optional
 Maintainer: Peter Palfrader <weasel@debian.org>
-Build-Depends: debhelper (>= 5), libssl-dev, dpatch, zlib1g-dev, libevent-dev (>= 1.1), texlive-base-bin, texlive-latex-base, texlive-fonts-recommended, transfig, ghostscript, binutils (>= 2.14.90.0.7)
+Build-Depends: debhelper (>= 5), libssl-dev (>= 0.9.8k-6), dpatch, zlib1g-dev, libevent-dev (>= 1.1), texlive-base-bin, texlive-latex-base, texlive-fonts-recommended, transfig, ghostscript, binutils (>= 2.14.90.0.7)
 Standards-Version: 3.8.1
 Homepage: https://www.torproject.org/
 
 Package: tor
 Architecture: any
-Depends: ${shlibs:Depends}, adduser, tsocks
+Depends: ${shlibs:Depends}, adduser, torsocks | tsocks
 Conflicts: libssl0.9.8 (<< 0.9.8g-9)
-Recommends: privoxy | polipo (>= 1), socat, logrotate, tor-geoipdb
+Recommends: polipo (>= 1) | privoxy, socat, logrotate, tor-geoipdb
 Suggests: mixmaster, mixminion, anon-proxy
 Description: anonymizing overlay network for TCP
  Tor is a connection-based low-latency anonymous communication system which

@@ -103,7 +103,7 @@ build-stamp:  config.status
 			make check; \
 		fi; \
 	else \
-		echo -e "\n\nSkipping unittests\n\n"; \
+		echo; echo; echo "Skipping unittests"; echo; \
 	fi
 	@echo
 
