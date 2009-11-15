@@ -4,6 +4,9 @@ tor (0.2.2.5-alpha-1) experimental; urgency=low
   * Pick 0a58567ce3418f410cf1dd0143dd3e56b4a4bd1f from master git tree:
     - work with libssl that has renegotiation disabled by default.
     (debian/patches/0a58567c-work-with-reneg-ssl.dpatch)
+  * Therefore build-depend on libssl-dev >= 0.9.8k-6.  If we build against
+    earlier versions we will not work once libssl gets upgraded to a version
+    that disabled renegotiations.
 
  -- Peter Palfrader <weasel@debian.org>  Sun, 15 Nov 2009 10:38:36 +0100
 
