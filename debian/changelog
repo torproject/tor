@@ -10,8 +10,9 @@ tor (0.2.2.5-alpha-1) experimental; urgency=low
   * Change order of recommends from privoxy | polipo to polipo | privoxy.
   * Allegedly echo -e is a bashism.  Remove it from debian/rules, we don't
     need it anyways (closes: #478631).
+  * Change the dependency on tsocks to torsocks | tsocks (see: #554717).
 
- -- Peter Palfrader <weasel@debian.org>  Sun, 15 Nov 2009 11:02:46 +0100
+ -- Peter Palfrader <weasel@debian.org>  Sun, 15 Nov 2009 11:04:02 +0100
 
 tor (0.2.2.4-alpha-1) experimental; urgency=low
 
