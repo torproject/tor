@@ -14,6 +14,10 @@
 #include "or.h"
 #include "crypto.h"
 
+#ifndef MIN
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#endif
+
 /*
  * This madness is needed because if we simply #undef log
  * before including or.h or log.h, we get linker collisions
