@@ -1,52 +1,45 @@
-Changes in version 0.2.2.6-alpha - 2009-10-??
+Changes in version 0.2.2.6-alpha - 2009-11-17
   o Major features:
-    - Directory authorities can now create, vote, and serve on multiple
+    - Directory authorities can now create, vote on, and serve multiple
       parallel formats of directory data as part of their voting process.
-      This is a partial implementation of Proposal 162: "Publish the
-      consensus in multiple flavors."
-    - Directory authorities can now agree on and publish small summaries of
-      router information that clients can use in place of regular server
-      descriptors.  This will eventually allow clients to use far less
-      bandwidth for downloading information about the network.  This begins
-      the implementation of of Proposal 158: "Clients download a consensus +
-      Microdescriptors".
+      Partially implements Proposal 162: "Publish the consensus in
+      multiple flavors".
+    - Directory authorities can now agree on and publish small summaries
+      of router information that clients can use in place of regular
+      server descriptors. This transition will eventually allow clients
+      to use far less bandwidth for downloading information about the
+      network. Begins the implementation of Proposal 158: "Clients
+      download consensus + microdescriptors".
     - The directory voting system is now extensible to use multiple hash
-      algorithms for signatures and resource selection.  Newer formats are
-      signed with SHA256, with a possibility for moving to a better hash
-      algorithm in the future.
+      algorithms for signatures and resource selection. Newer formats
+      are signed with SHA256, with a possibility for moving to a better
+      hash algorithm in the future.
     - New DisableAllSwap option. If set to 1, Tor will attempt to lock all
-      current and future memory pages. On supported platforms, this should
-      effectively disable any and all attempts to page out memory. Under the
-      hood, DisableAllSwap uses mlockall() on unix-like platforms. Windows is
-      currently unsupported. We believe that this feature works on modern
-      Gnu/Linux distributions. Mac OS X appears to be broken by design. On
-      reasonable *BSD systems it should also be supported but this is untested.
-      This option requires that you start your Tor as root. If you use
-      DisableAllSwap, please consider using the User option to properly reduce
-      the privileges of your Tor.
+      current and future memory pages via mlockall(). On supported
+      platforms (modern Linux and probably BSD but not Windows or OS X),
+      this should effectively disable any and all attempts to page out
+      memory. This option requires that you start your Tor as root --
+      if you use DisableAllSwap, please consider using the User option
+      to properly reduce the privileges of your Tor.
+    - Numerous changes, bugfixes, and workarounds from Nathan Freitas
+      to help Tor build correctly for Android phones.
 
   o Major bugfixes:
     - Work around a security feature in OpenSSL 0.9.8l that prevents our
-      handshake from working unless we explicitly tell OpenSSL that we are
-      using SSL renegotiation safely.  We are, of course, but OpenSSL
-      0.9.8l won't work unless we say we are.
-
-  o Code simplifications and refactorings:
-    - Numerous changes, bugfixes, and workarounds from Nathan Freitas
-      to help Tor build correctly for Android phones.
-    - Begun converting Tor's signature and message digest logic to handle
-      multiple hash algorithms.
+      handshake from working unless we explicitly tell OpenSSL that we
+      are using SSL renegotiation safely. We are, but OpenSSL 0.9.8l
+      won't work unless we say we are.
 
   o Minor bugfixes:
     - Fix a crash bug when trying to initialize the evdns module in
-      Libevent 2.
+      Libevent 2. Bugfix on 0.2.1.16-rc.
     - Stop logging at severity 'warn' when some other Tor client tries
       to establish a circuit with us using weak DH keys. It's a protocol
       violation, but that doesn't mean ordinary users need to hear about
       it. Fixes the bug part of bug 1114. Bugfix on 0.1.0.13.
     - Do not refuse to learn about authority certs and v2 networkstatus
-      documents that are older than the latest consensus.  This bug might
-      have degraded client bootstrapping.  Bugfix on 0.2.0.10-alpha.
+      documents that are older than the latest consensus. This bug might
+      have degraded client bootstrapping. Bugfix on 0.2.0.10-alpha.
       Spotted and fixed by xmux.
     - Fix numerous small code-flaws found by Coverity Scan Rung 3.
     - If all authorities restart at once right before a consensus vote,
@@ -56,8 +49,8 @@ Changes in version 0.2.2.6-alpha - 2009-10-??
     - If your relay can't keep up with the number of incoming create
       cells, it would log one warning per failure into your logs. Limit
       warnings to 1 per minute. Bugfix on 0.0.2pre10; fixes bug 1042.
-    - Bridges do not use the default exit policy, but reject *:* by
-      default. Fixes bug 1113.
+    - Bridges now use "reject *:*" as their default exit policy. Bugfix
+      on 0.2.0.3-alpha; fixes bug 1113.
     - Fix a memory leak on directory authorities during voting that was
       introduced in 0.2.2.1-alpha. Found via valgrind.
 
