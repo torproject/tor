@@ -2568,7 +2568,7 @@ dirvote_add_signatures_to_all_pending_consensuses(
       n_added += res;
   }
 
-  if (errors) {
+  if (errors && !n_added) {
     r = -1;
     goto err;
   }
