@@ -329,6 +329,18 @@ Changes in Version 0.2.1.21 - 20??-??-??
 
 
 Changes in version 0.2.1.20 - 2009-10-15
+  Tor 0.2.1.20 fixes a crash bug when you're accessing many hidden
+  services at once, prepares for more performance improvements, and
+  fixes a bunch of smaller bugs.
+
+  The Windows and OS X bundles also include a more recent Vidalia,
+  and switch from Privoxy to Polipo.
+
+  The OS X installers are now drag and drop. It's best to un-install
+  Tor/Vidalia and then install this new bundle, rather than upgrade. If
+  you want to upgrade, you'll need to update the paths for Tor and Polipo
+  in the Vidalia Settings window.
+
   o Major bugfixes:
     - Send circuit or stream sendme cells when our window has decreased
       by 100 cells, not when it has decreased by 101 cells. Bug uncovered
