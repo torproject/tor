@@ -1417,26 +1417,22 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
 
   /* Do the times seem right? */
   if (target->valid_after != sigs->valid_after) {
-    puts("A");
     *msg_out = "Valid-After times do not match "
       "when adding detached signatures to consensus";
     return -1;
   }
   if (target->fresh_until != sigs->fresh_until) {
-    puts("B");
     *msg_out = "Fresh-until times do not match "
       "when adding detached signatures to consensus";
     return -1;
   }
   if (target->valid_until != sigs->valid_until) {
-    puts("C");
     *msg_out = "Valid-until times do not match "
       "when adding detached signatures to consensus";
     return -1;
   }
   siglist = strmap_get(sigs->signatures, flavor);
   if (!siglist) {
-    puts("D");
     *msg_out = "No signatures for given consensus flavor";
     return -1;
   }
@@ -1447,7 +1443,6 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
     int n_matches = 0;
     digest_algorithm_t alg;
     if (!digests) {
-      puts("D");
       *msg_out = "No digests for given consensus flavor";
       return -1;
     }
@@ -1456,16 +1451,12 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
         if (!memcmp(target->digests.d[alg], digests->d[alg], DIGEST256_LEN)) {
           ++n_matches;
         } else {
-          printf("F %d\n", alg);
-          printf("%s\n", hex_str(target->digests.d[alg], DIGEST256_LEN));
-          printf("%s\n", hex_str(digests->d[alg], DIGEST256_LEN));
           *msg_out = "Mismatched digest.";
           return -1;
         }
       }
     }
     if (!n_matches) {
-      puts("G");
       *msg_out = "No regognized digests for given consensus flavor";
     }
   }
