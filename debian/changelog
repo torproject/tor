@@ -62,12 +62,6 @@ tor (0.2.2.1-alpha-1) experimental; urgency=low
 
  -- Peter Palfrader <weasel@debian.org>  Thu, 03 Sep 2009 15:10:26 +0200
 
-tor (0.2.1.20-1) unstable; urgency=low
-
-  * New upstream version.
-
- -- Peter Palfrader <weasel@debian.org>  Fri, 13 Nov 2009 19:02:47 +0100
-
 tor (0.2.1.19-1) unstable; urgency=low
 
   * New upstream version.
