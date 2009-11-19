@@ -1,4 +1,4 @@
-Changes in version 0.2.2.6-alpha - 2009-11-17
+Changes in version 0.2.2.6-alpha - 2009-11-19
   o Major features:
     - Directory authorities can now create, vote on, and serve multiple
       parallel formats of directory data as part of their voting process.
