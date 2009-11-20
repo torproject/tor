@@ -2204,7 +2204,7 @@ tor_threads_init(void)
 }
 #endif
 
-#ifdef HAVE_SYS_MMAN_H
+#if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL
 /** Attempt to raise the current and max rlimit to infinity for our process.
  * This only needs to be done once and can probably only be done when we have
  * not already dropped privileges.
