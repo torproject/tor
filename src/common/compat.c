@@ -2258,7 +2258,6 @@ int
 tor_mlockall(void)
 {
   static int memory_lock_attempted = 0;
-  int ret;
 
   if (memory_lock_attempted) {
     return 1;
@@ -2273,15 +2272,13 @@ tor_mlockall(void)
    * http://msdn.microsoft.com/en-us/library/aa366895(VS.85).aspx
    */
 
-#ifdef HAVE_MLOCKALL
-  ret = tor_set_max_memlock();
-  if (ret == 0) {
+#if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL
+  if (tor_set_max_memlock() == 0) {
     /* Perhaps we only want to log this if we're in a verbose mode? */
     log_notice(LD_GENERAL, "RLIMIT_MEMLOCK is now set to RLIM_INFINITY.");
   }
 
-  ret = mlockall(MCL_CURRENT|MCL_FUTURE);
-  if (ret == 0) {
+  if (mlockall(MCL_CURRENT|MCL_FUTURE) == 0) {
     log_notice(LD_GENERAL, "Insecure OS paging is effectively disabled.");
     return 0;
   } else {
