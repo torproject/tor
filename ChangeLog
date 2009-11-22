@@ -6,6 +6,9 @@ Changes in version 0.2.2.7-alpha - 2009-??-??
       with a different memory value than we use for overwriting a freed
       internal circuit structure. Should help with debugging. Suggested
       by bug 1055.
+    - Fix an instance where a Tor directory mirror might accidentally
+      log the IP address of a misbehaving Tor client. Bugfix on
+      0.1.0.1-rc.
 
 
 Changes in version 0.2.2.6-alpha - 2009-11-19

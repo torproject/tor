@@ -3242,8 +3242,8 @@ directory_handle_command(dir_connection_t *conn)
                               &body, &body_len, MAX_DIR_UL_SIZE, 0)) {
     case -1: /* overflow */
       log_warn(LD_DIRSERV,
-               "Invalid input from address '%s'. Closing.",
-               conn->_base.address);
+               "Request too large from address '%s' to DirPort. Closing.",
+               safe_str(conn->_base.address));
       return -1;
     case 0:
       log_debug(LD_DIRSERV,"command not all here yet.");
