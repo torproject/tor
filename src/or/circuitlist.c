@@ -504,7 +504,7 @@ circuit_free(circuit_t *circ)
    * "active" checks will be violated. */
   cell_queue_clear(&circ->n_conn_cells);
 
-  memset(circ, 0xAA, memlen); /* poison memory */
+  memset(mem, 0xAA, memlen); /* poison memory */
   tor_free(mem);
 }
 
