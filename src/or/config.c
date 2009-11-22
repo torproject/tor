@@ -166,6 +166,7 @@ static config_var_t _option_vars[] = {
   V(CellStatistics,              BOOL,     "0"),
   V(CircuitBuildTimeout,         INTERVAL, "0"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
+  V(CircuitStreamTimeout,        INTERVAL, "0"),
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ConsensusParams,             STRING,   NULL),

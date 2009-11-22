@@ -2445,10 +2445,15 @@ typedef struct {
                         * connections alive? */
   int SocksTimeout; /**< How long do we let a socks connection wait
                      * unattached before we fail it? */
-  int CircuitBuildTimeout; /**< Cull non-open circuits that were born
-                            * at least this many seconds ago. */
+  int CircuitBuildTimeout; /**< If non-zero, cull non-open circuits that
+                            * were born at least this many seconds ago. If
+                            * zero, use the internal adaptive algorithm. */
   int CircuitIdleTimeout; /**< Cull open clean circuits that were born
                            * at least this many seconds ago. */
+  int CircuitStreamTimeout; /**< If non-zero, detach streams from circuits
+                             * and try a new circuit if the stream has been
+                             * waiting for this many seconds. If zero, use
+                             * our default internal timeout schedule. */
   int MaxOnionsPending; /**< How many circuit CREATE requests do we allow
                          * to wait simultaneously before we start dropping
                          * them? */

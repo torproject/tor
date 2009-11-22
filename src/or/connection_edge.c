@@ -377,13 +377,16 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
 static int
 compute_retry_timeout(edge_connection_t *conn)
 {
+  int timeout = get_options()->CircuitStreamTimeout;
+  if (timeout) /* if our config options override the default, use them */
+    return timeout;
   if (conn->num_socks_retries < 2) /* try 0 and try 1 */
     return 10;
   return 15;
 }
 
 /** Find all general-purpose AP streams waiting for a response that sent their
- * begin/resolve cell >=15 seconds ago. Detach from their current circuit, and
+ * begin/resolve cell too long ago. Detach from their current circuit, and
  * mark their current circuit as unsuitable for new streams. Then call
  * connection_ap_handshake_attach_circuit() to attach to a new circuit (if
  * available) or launch a new one.

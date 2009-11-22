@@ -1,4 +1,10 @@
 Changes in version 0.2.2.7-alpha - 2009-??-??
+  o Minor features:
+    - New config option "CircuitStreamTimeout" to override our internal
+      timeout schedule for how many seconds until we detach a stream from
+      a circuit and try a new circuit. If your network is particularly
+      slow, you might want to set this to a number like 60.
+
   o Minor bugfixes:
     - Fix compilation on OSX 10.3, which has a stub mlockall() but
       hides it. Bugfix on 0.2.2.6-alpha.
