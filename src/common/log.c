@@ -81,7 +81,7 @@ should_log_function_name(log_domain_mask_t domain, int severity)
       /* All debugging messages occur in interesting places. */
       return 1;
     case LOG_NOTICE:
-  case LOG_WARN:
+    case LOG_WARN:
     case LOG_ERR:
       /* We care about places where bugs occur. */
       return (domain == LD_BUG);

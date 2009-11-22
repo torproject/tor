@@ -1846,7 +1846,7 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
 }
 
 /** Pull as many cells as possible (but no more than <b>max</b>) from the
- * queue of the first active circuit on <b>conn</b>, and write then to
+ * queue of the first active circuit on <b>conn</b>, and write them to
  * <b>conn</b>-&gt;outbuf.  Return the number of cells written.  Advance
  * the active circuit pointer to the next active circuit in the ring. */
 int

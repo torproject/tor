@@ -466,6 +466,13 @@ circuit list.
 (Default: 1 hour.)
 .LP
 .TP
+\fBCircuitStreamTimeout \fR\fINUM\fP
+If non-zero, this option overrides our internal timeout schedule for
+how many seconds until we detach a stream from a circuit and try a new
+circuit. If your network is particularly slow, you might want to set
+this to a number like 60. (Default: 0)
+.LP
+.TP
 \fBClientOnly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will under no circumstances run as a server or serve
 directory requests. The default
