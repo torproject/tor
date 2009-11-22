@@ -423,7 +423,7 @@ _connection_free(connection_t *conn)
     connection_or_remove_from_identity_map(TO_OR_CONN(conn));
   }
 
-  memset(mem, 0xAA, memlen); /* poison memory */
+  memset(mem, 0xCC, memlen); /* poison memory */
   tor_free(mem);
 }
 
