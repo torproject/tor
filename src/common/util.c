@@ -684,6 +684,13 @@ tor_digest_is_zero(const char *digest)
   return tor_mem_is_zero(digest, DIGEST_LEN);
 }
 
+/** Return true iff the DIGEST256_LEN bytes in digest are all zero. */
+int
+tor_digest256_is_zero(const char *digest)
+{
+  return tor_mem_is_zero(digest, DIGEST256_LEN);
+}
+
 /* Helper: common code to check whether the result of a strtol or strtoul or
  * strtoll is correct. */
 #define CHECK_STRTOX_RESULT()                           \
@@ -1729,7 +1736,8 @@ write_str_to_file(const char *fname, const char *str, int bin)
 struct open_file_t {
   char *tempname; /**< Name of the temporary file. */
   char *filename; /**< Name of the original file. */
-  int rename_on_close; /**< Are we using the temporary file or not? */
+  unsigned rename_on_close:1; /**< Are we using the temporary file or not? */
+  unsigned binary:1; /**< Did we open in binary mode? */
   int fd; /**< fd for the open file. */
   FILE *stdio_file; /**< stdio wrapper for <b>fd</b>. */
 };
@@ -1785,6 +1793,8 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     open_flags &= ~O_EXCL;
     new_file->rename_on_close = 1;
   }
+  if (open_flags & O_BINARY)
+    new_file->binary = 1;
 
   if ((new_file->fd = open(open_name, open_flags, mode)) < 0) {
     log(LOG_WARN, LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
@@ -1823,7 +1833,8 @@ fdopen_file(open_file_t *file_data)
   if (file_data->stdio_file)
     return file_data->stdio_file;
   tor_assert(file_data->fd >= 0);
-  if (!(file_data->stdio_file = fdopen(file_data->fd, "a"))) {
+  if (!(file_data->stdio_file = fdopen(file_data->fd,
+                                       file_data->binary?"ab":"a"))) {
     log_warn(LD_FS, "Couldn't fdopen \"%s\" [%d]: %s", file_data->filename,
              file_data->fd, strerror(errno));
   }
@@ -2307,7 +2318,8 @@ expand_filename(const char *filename)
 
 #define MAX_SCANF_WIDTH 9999
 
-/** DOCDOC */
+/** Helper: given an ASCII-encoded decimal digit, return its numeric value.
+ * NOTE: requires that its input be in-bounds. */
 static int
 digit_to_num(char d)
 {
@@ -2316,7 +2328,10 @@ digit_to_num(char d)
   return num;
 }
 
-/** DOCDOC */
+/** Helper: Read an unsigned int from *<b>bufp</b> of up to <b>width</b>
+ * characters.  (Handle arbitrary width if <b>width</b> is less than 0.)  On
+ * success, store the result in <b>out</b>, advance bufp to the next
+ * character, and return 0.  On failure, return -1. */
 static int
 scan_unsigned(const char **bufp, unsigned *out, int width)
 {
@@ -2343,7 +2358,9 @@ scan_unsigned(const char **bufp, unsigned *out, int width)
   return 0;
 }
 
-/** DOCDOC */
+/** Helper: copy up to <b>width</b> non-space characters from <b>bufp</b> to
+ * <b>out</b>.  Make sure <b>out</b> is nul-terminated. Advance <b>bufp</b>
+ * to the next non-space character or the EOS. */
 static int
 scan_string(const char **bufp, char *out, int width)
 {
@@ -2432,7 +2449,12 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
  * and store the results in the corresponding argument fields.  Differs from
  * sscanf in that it: Only handles %u and %Ns.  Does not handle arbitrarily
  * long widths. %u does not consume any space.  Is locale-independent.
- * Returns -1 on malformed patterns. */
+ * Returns -1 on malformed patterns.
+ *
+ * (As with other local-independent functions, we need this to parse data that
+ * is in ASCII without worrying that the C library's locale-handling will make
+ * miscellaneous characters look like numbers, spaces, and so on.)
+ */
 int
 tor_sscanf(const char *buf, const char *pattern, ...)
 {

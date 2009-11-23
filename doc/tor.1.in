@@ -234,6 +234,19 @@ the default hidden service authorities, but not the directory or
 bridge authorities.
 .LP
 .TP
+\fBDisableAllSwap \fR\fB0\fR|\fB1\fR\fP
+If set to 1, Tor will attempt to lock all current and future memory pages.
+On supported platforms, this should effectively disable any and all attempts
+to page out memory. Under the hood, DisableAllSwap uses mlockall() on unix-like
+platforms. Windows is currently unsupported. We believe that this feature works
+on modern Gnu/Linux distributions. Mac OS X appears to be broken by design. On
+reasonable *BSD systems it should also be supported but this is untested. This
+option requires that you start your Tor as root. If you use DisableAllSwap,
+please consider using the User option to properly reduce the privileges of
+your Tor.
+(Default: 0)
+.LP
+.TP
 \fBFetchDirInfoEarly \fR\fB0\fR|\fB1\fR\fP
 If set to 1, Tor will always fetch directory information like other
 directory caches, even if you don't meet the normal criteria for

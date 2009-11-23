@@ -4,9 +4,8 @@ noinst_PROGRAMS = test
 
 AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \
-        -DBINDIR="\"$(bindir)\""
-
-AM_CFLAGS = -I../or
+        -DBINDIR="\"$(bindir)\""	       \
+	-I"$(top_srcdir)/src/or"
 
 # -L flags need to go in LDFLAGS. -l flags need to go in LDADD.
 # This seems to matter nowhere but on windows, but I assure you that it

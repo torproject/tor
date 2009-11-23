@@ -12,6 +12,8 @@
  **/
 #define BUFFERS_PRIVATE
 #include "or.h"
+#include "../common/util.h"
+#include "../common/log.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

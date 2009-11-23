@@ -58,9 +58,22 @@
 #define HEX_DIGEST256_LEN 64
 
 typedef enum {
-  DIGEST_SHA1,
-  DIGEST_SHA256,
+  DIGEST_SHA1 = 0,
+  DIGEST_SHA256 = 1,
 } digest_algorithm_t;
+#define  N_DIGEST_ALGORITHMS (DIGEST_SHA256+1)
+
+/** A set of all the digests we know how to compute, taken on a single
+ * string.  Any digests that are shorter than 256 bits are right-padded
+ * with 0 bits.
+ *
+ * Note that this representation wastes 12 bytes for the SHA1 case, so
+ * don't use it for anything where we need to allocate a whole bunch at
+ * once.
+ **/
+typedef struct {
+  char d[N_DIGEST_ALGORITHMS][DIGEST256_LEN];
+} digests_t;
 
 typedef struct crypto_pk_env_t crypto_pk_env_t;
 typedef struct crypto_cipher_env_t crypto_cipher_env_t;
@@ -86,7 +99,9 @@ crypto_cipher_env_t *crypto_new_cipher_env(void);
 void crypto_free_cipher_env(crypto_cipher_env_t *env);
 
 /* public key crypto */
-int crypto_pk_generate_key(crypto_pk_env_t *env);
+int crypto_pk_generate_key_with_bits(crypto_pk_env_t *env, int bits);
+#define crypto_pk_generate_key(env)                     \
+  crypto_pk_generate_key_with_bits((env), (PK_BYTES*8))
 
 int crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
                                              const char *keyfile);
@@ -156,10 +171,13 @@ int crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *env,
                                   char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 
-/* SHA-1 */
+/* SHA-1 and other digests. */
 int crypto_digest(char *digest, const char *m, size_t len);
 int crypto_digest256(char *digest, const char *m, size_t len,
                      digest_algorithm_t algorithm);
+int crypto_digest_all(digests_t *ds_out, const char *m, size_t len);
+const char *crypto_digest_algorithm_get_name(digest_algorithm_t alg);
+int crypto_digest_algorithm_parse_name(const char *name);
 crypto_digest_env_t *crypto_new_digest_env(void);
 crypto_digest_env_t *crypto_new_digest256_env(digest_algorithm_t algorithm);
 void crypto_free_digest_env(crypto_digest_env_t *digest);
@@ -180,7 +198,7 @@ int crypto_dh_get_bytes(crypto_dh_env_t *dh);
 int crypto_dh_generate_public(crypto_dh_env_t *dh);
 int crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey_out,
                          size_t pubkey_out_len);
-ssize_t crypto_dh_compute_secret(crypto_dh_env_t *dh,
+ssize_t crypto_dh_compute_secret(int severity, crypto_dh_env_t *dh,
                              const char *pubkey, size_t pubkey_len,
                              char *secret_out, size_t secret_out_len);
 void crypto_dh_free(crypto_dh_env_t *dh);
@@ -209,6 +227,8 @@ int base32_decode(char *dest, size_t destlen, const char *src, size_t srclen);
 
 int digest_to_base64(char *d64, const char *digest);
 int digest_from_base64(char *digest, const char *d64);
+int digest256_to_base64(char *d64, const char *digest);
+int digest256_from_base64(char *digest, const char *d64);
 
 /** Length of RFC2440-style S2K specifier: the first 8 bytes are a salt, the
  * 9th describes how much iteration to do. */

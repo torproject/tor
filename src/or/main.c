@@ -731,6 +731,7 @@ run_connection_housekeeping(int i, time_t now)
     return; /* we're all done here, the rest is just for OR conns */
 
   or_conn = TO_OR_CONN(conn);
+  tor_assert(conn->outbuf);
 
   if (or_conn->is_bad_for_new_circs && !or_conn->n_circuits) {
     /* It's bad for new circuits, and has no unmarked circuits on it:
@@ -1985,6 +1986,7 @@ tor_free_all(int postfork)
   connection_free_all();
   buf_shrink_freelists(1);
   memarea_clear_freelist();
+  microdesc_free_all();
   if (!postfork) {
     config_free_all();
     router_free_all();

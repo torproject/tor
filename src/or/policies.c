@@ -344,7 +344,8 @@ validate_addr_policies(or_options_t *options, char **msg)
   *msg = NULL;
 
   if (policies_parse_exit_policy(options->ExitPolicy, &addr_policy,
-                                 options->ExitPolicyRejectPrivate, NULL))
+                                 options->ExitPolicyRejectPrivate, NULL,
+                                 !options->BridgeRelay))
     REJECT("Error in ExitPolicy entry.");
 
   /* The rest of these calls *append* to addr_policy. So don't actually
@@ -829,14 +830,16 @@ exit_policy_remove_redundancies(smartlist_t *dest)
   "reject *:6346-6429,reject *:6699,reject *:6881-6999,accept *:*"
 
 /** Parse the exit policy <b>cfg</b> into the linked list *<b>dest</b>. If
- * cfg doesn't end in an absolute accept or reject, add the default exit
+ * cfg doesn't end in an absolute accept or reject and if
+ * <b>add_default_policy</b> is true, add the default exit
  * policy afterwards. If <b>rejectprivate</b> is true, prepend
  * "reject private:*" to the policy. Return -1 if we can't parse cfg,
  * else return 0.
  */
 int
 policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
-                           int rejectprivate, const char *local_address)
+                           int rejectprivate, const char *local_address,
+                           int add_default_policy)
 {
   if (rejectprivate) {
     append_exit_policy_string(dest, "reject private:*");
@@ -848,8 +851,10 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   }
   if (parse_addr_policy(cfg, dest, -1))
     return -1;
-  append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
-
+  if (add_default_policy)
+    append_exit_policy_string(dest, DEFAULT_EXIT_POLICY);
+  else
+    append_exit_policy_string(dest, "reject *:*");
   exit_policy_remove_redundancies(*dest);
 
   return 0;

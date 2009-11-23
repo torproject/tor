@@ -395,8 +395,10 @@ command_process_relay_cell(cell_t *cell, or_connection_t *conn)
    * gotten no more than MAX_RELAY_EARLY_CELLS_PER_CIRCUIT of them. */
   if (cell->command == CELL_RELAY_EARLY) {
     if (direction == CELL_DIRECTION_IN) {
-      /* XXX Allow an unlimited number of inbound relay_early cells for
-       * now, for hidden service compatibility. See bug 1038. -RD */
+      /* Allow an unlimited number of inbound relay_early cells,
+       * for hidden service compatibility. There isn't any way to make
+       * a long circuit through inbound relay_early cells anyway. See
+       * bug 1038. -RD */
     } else {
       or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
       if (or_circ->remaining_relay_early_cells == 0) {

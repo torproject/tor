@@ -830,36 +830,37 @@ handle_control_loadconf(control_connection_t *conn, uint32_t len,
 
   retval = options_init_from_string(body, CMD_RUN_TOR, NULL, &errstring);
 
-  if (retval != SETOPT_OK) {
+  if (retval != SETOPT_OK)
     log_warn(LD_CONTROL,
              "Controller gave us config file that didn't validate: %s",
              errstring);
-    switch (retval) {
-      case SETOPT_ERR_PARSE:
-        msg = "552 Invalid config file";
-        break;
-      case SETOPT_ERR_TRANSITION:
-        msg = "553 Transition not allowed";
-        break;
-      case SETOPT_ERR_SETTING:
-        msg = "553 Unable to set option";
-        break;
-      case SETOPT_ERR_MISC:
-      default:
-        msg = "550 Unable to load config";
-        break;
-      case SETOPT_OK:
-        tor_fragile_assert();
-        break;
-    }
-    if (*errstring)
+
+  switch (retval) {
+  case SETOPT_ERR_PARSE:
+    msg = "552 Invalid config file";
+    break;
+  case SETOPT_ERR_TRANSITION:
+    msg = "553 Transition not allowed";
+    break;
+  case SETOPT_ERR_SETTING:
+    msg = "553 Unable to set option";
+    break;
+  case SETOPT_ERR_MISC:
+  default:
+    msg = "550 Unable to load config";
+    break;
+  case SETOPT_OK:
+    break;
+  }
+  if (msg) {
+    if (errstring)
       connection_printf_to_buf(conn, "%s: %s\r\n", msg, errstring);
     else
       connection_printf_to_buf(conn, "%s\r\n", msg);
-    tor_free(errstring);
-    return 0;
+  } else {
+    send_control_done(conn);
   }
-  send_control_done(conn);
+  tor_free(errstring);
   return 0;
 }
 
@@ -1456,6 +1457,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     if (res) {
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
       smartlist_free(descs);
+      tor_free(url);
       return -1;
     }
     SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
@@ -1506,7 +1508,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     }
   } else if (!strcmp(question, "dir/status-vote/current/consensus")) { /* v3 */
     if (directory_caches_dir_info(get_options())) {
-      const cached_dir_t *consensus = dirserv_get_consensus();
+      const cached_dir_t *consensus = dirserv_get_consensus("ns");
       if (consensus)
         *answer = tor_strdup(consensus->dir);
     }
@@ -2262,7 +2264,7 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
     char* exit_digest;
     if (circ->build_state &&
         circ->build_state->chosen_exit &&
-        circ->build_state->chosen_exit->identity_digest) {
+        !tor_digest_is_zero(circ->build_state->chosen_exit->identity_digest)) {
       exit_digest = circ->build_state->chosen_exit->identity_digest;
       r = router_get_by_digest(exit_digest);
     }

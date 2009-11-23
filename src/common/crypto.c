@@ -50,9 +50,9 @@
 
 #define CRYPTO_PRIVATE
 #include "crypto.h"
-#include "log.h"
+#include "../common/log.h"
 #include "aes.h"
-#include "util.h"
+#include "../common/util.h"
 #include "container.h"
 #include "compat.h"
 
@@ -61,6 +61,11 @@
 #endif
 
 #include <openssl/engine.h>
+
+#ifdef ANDROID
+/* Android's OpenSSL seems to have removed all of its Engine support. */
+#define DISABLE_ENGINES
+#endif
 
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
 /* On OpenSSL versions before 0.9.8, there is no working SHA256
@@ -117,7 +122,7 @@ struct crypto_dh_env_t {
 };
 
 static int setup_openssl_threading(void);
-static int tor_check_dh_key(BIGNUM *bn);
+static int tor_check_dh_key(int severity, BIGNUM *bn);
 
 /** Return the number of bytes added by padding method <b>padding</b>.
  */
@@ -174,6 +179,7 @@ crypto_log_errors(int severity, const char *doing)
   }
 }
 
+#ifndef DISABLE_ENGINES
 /** Log any OpenSSL engines we're using at NOTICE. */
 static void
 log_engine(const char *fn, ENGINE *e)
@@ -188,7 +194,9 @@ log_engine(const char *fn, ENGINE *e)
     log(LOG_INFO, LD_CRYPTO, "Using default implementation for %s", fn);
   }
 }
+#endif
 
+#ifndef DISABLE_ENGINES
 /** Try to load an engine in a shared library via fully qualified path.
  */
 static ENGINE *
@@ -206,6 +214,7 @@ try_load_engine(const char *path, const char *engine)
   }
   return e;
 }
+#endif
 
 /** Initialize the crypto library.  Return 0 on success, -1 on failure.
  */
@@ -218,10 +227,17 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
     _crypto_global_initialized = 1;
     setup_openssl_threading();
     if (useAccel > 0) {
+#ifdef DISABLE_ENGINES
+      (void)accelName;
+      (void)accelDir;
+      log_warn(LD_CRYPTO, "No OpenSSL hardware acceleration support enabled.");
+#else
       ENGINE *e = NULL;
+
       log_info(LD_CRYPTO, "Initializing OpenSSL engine support.");
       ENGINE_load_builtin_engines();
       ENGINE_register_all_complete();
+
       if (accelName) {
         if (accelDir) {
           log_info(LD_CRYPTO, "Trying to load dynamic OpenSSL engine \"%s\""
@@ -251,6 +267,7 @@ crypto_global_init(int useAccel, const char *accelName, const char *accelDir)
       log_engine("SHA1", ENGINE_get_digest_engine(NID_sha1));
       log_engine("3DES", ENGINE_get_cipher_engine(NID_des_ede3_ecb));
       log_engine("AES", ENGINE_get_cipher_engine(NID_aes_128_ecb));
+#endif
     } else {
       log_info(LD_CRYPTO, "NOT using OpenSSL engine support.");
     }
@@ -274,7 +291,11 @@ crypto_global_cleanup(void)
   EVP_cleanup();
   ERR_remove_state(0);
   ERR_free_strings();
+
+#ifndef DISABLE_ENGINES
   ENGINE_cleanup();
+#endif
+
   CONF_modules_unload(1);
   CRYPTO_cleanup_all_ex_data();
 #ifdef TOR_IS_MULTITHREADED
@@ -316,7 +337,8 @@ _crypto_new_pk_env_evp_pkey(EVP_PKEY *pkey)
   return _crypto_new_pk_env_rsa(rsa);
 }
 
-/** Helper, used by tor-checkkey.c.  Return the RSA from a crypto_pk_env_t. */
+/** Helper, used by tor-checkkey.c and tor-gencert.c.  Return the RSA from a
+ * crypto_pk_env_t. */
 RSA *
 _crypto_pk_env_get_rsa(crypto_pk_env_t *env)
 {
@@ -451,11 +473,11 @@ crypto_free_cipher_env(crypto_cipher_env_t *env)
 
 /* public key crypto */
 
-/** Generate a new public/private keypair in <b>env</b>.  Return 0 on
- * success, -1 on failure.
+/** Generate a <b>bits</b>-bit new public/private keypair in <b>env</b>.
+ * Return 0 on success, -1 on failure.
  */
 int
-crypto_pk_generate_key(crypto_pk_env_t *env)
+crypto_pk_generate_key_with_bits(crypto_pk_env_t *env, int bits)
 {
   tor_assert(env);
 
@@ -463,7 +485,7 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
     RSA_free(env->key);
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
   /* In OpenSSL 0.9.7, RSA_generate_key is all we have. */
-  env->key = RSA_generate_key(PK_BYTES*8,65537, NULL, NULL);
+  env->key = RSA_generate_key(bits, 65537, NULL, NULL);
 #else
   /* In OpenSSL 0.9.8, RSA_generate_key is deprecated. */
   {
@@ -476,7 +498,7 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
     r = RSA_new();
     if (!r)
       goto done;
-    if (RSA_generate_key_ex(r, PK_BYTES*8, e, NULL) == -1)
+    if (RSA_generate_key_ex(r, bits, e, NULL) == -1)
       goto done;
 
     env->key = r;
@@ -1238,9 +1260,6 @@ crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
   tor_assert(env);
   tor_assert(key);
 
-  if (!env->key)
-    return -1;
-
   memcpy(env->key, key, CIPHER_KEY_LEN);
   return 0;
 }
@@ -1424,6 +1443,52 @@ crypto_digest256(char *digest, const char *m, size_t len,
   tor_assert(digest);
   tor_assert(algorithm == DIGEST_SHA256);
   return (SHA256((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
+}
+
+/** Set the digests_t in <b>ds_out</b> to contain every digest on the
+ * <b>len</b> bytes in <b>m</b> that we know how to compute.  Return 0 on
+ * success, -1 on failure. */
+int
+crypto_digest_all(digests_t *ds_out, const char *m, size_t len)
+{
+  digest_algorithm_t i;
+  tor_assert(ds_out);
+  memset(ds_out, 0, sizeof(*ds_out));
+  if (crypto_digest(ds_out->d[DIGEST_SHA1], m, len) < 0)
+    return -1;
+  for (i = DIGEST_SHA256; i < N_DIGEST_ALGORITHMS; ++i) {
+    if (crypto_digest256(ds_out->d[i], m, len, i) < 0)
+      return -1;
+  }
+  return 0;
+}
+
+/** Return the name of an algorithm, as used in directory documents. */
+const char *
+crypto_digest_algorithm_get_name(digest_algorithm_t alg)
+{
+  switch (alg) {
+    case DIGEST_SHA1:
+      return "sha1";
+    case DIGEST_SHA256:
+      return "sha256";
+    default:
+      tor_fragile_assert();
+      return "??unknown_digest??";
+  }
+}
+
+/** Given the name of a digest algorithm, return its integer value, or -1 if
+ * the name is not recognized. */
+int
+crypto_digest_algorithm_parse_name(const char *name)
+{
+  if (!strcmp(name, "sha1"))
+    return DIGEST_SHA1;
+  else if (!strcmp(name, "sha256"))
+    return DIGEST_SHA256;
+  else
+    return -1;
 }
 
 /** Intermediate information about the digest of a stream of data. */
@@ -1655,7 +1720,7 @@ crypto_dh_generate_public(crypto_dh_env_t *dh)
     crypto_log_errors(LOG_WARN, "generating DH key");
     return -1;
   }
-  if (tor_check_dh_key(dh->dh->pub_key)<0) {
+  if (tor_check_dh_key(LOG_WARN, dh->dh->pub_key)<0) {
     log_warn(LD_CRYPTO, "Weird! Our own DH key was invalid.  I guess once-in-"
              "the-universe chances really do happen.  Trying again.");
     /* Free and clear the keys, so OpenSSL will actually try again. */
@@ -1702,7 +1767,7 @@ crypto_dh_get_public(crypto_dh_env_t *dh, char *pubkey, size_t pubkey_len)
  * See http://www.cl.cam.ac.uk/ftp/users/rja14/psandqs.ps.gz for some tips.
  */
 static int
-tor_check_dh_key(BIGNUM *bn)
+tor_check_dh_key(int severity, BIGNUM *bn)
 {
   BIGNUM *x;
   char *s;
@@ -1713,13 +1778,13 @@ tor_check_dh_key(BIGNUM *bn)
     init_dh_param();
   BN_set_word(x, 1);
   if (BN_cmp(bn,x)<=0) {
-    log_warn(LD_CRYPTO, "DH key must be at least 2.");
+    log_fn(severity, LD_CRYPTO, "DH key must be at least 2.");
     goto err;
   }
   BN_copy(x,dh_param_p);
   BN_sub_word(x, 1);
   if (BN_cmp(bn,x)>=0) {
-    log_warn(LD_CRYPTO, "DH key must be at most p-2.");
+    log_fn(severity, LD_CRYPTO, "DH key must be at most p-2.");
     goto err;
   }
   BN_free(x);
@@ -1727,7 +1792,7 @@ tor_check_dh_key(BIGNUM *bn)
  err:
   BN_free(x);
   s = BN_bn2hex(bn);
-  log_warn(LD_CRYPTO, "Rejecting insecure DH key [%s]", s);
+  log_fn(severity, LD_CRYPTO, "Rejecting insecure DH key [%s]", s);
   OPENSSL_free(s);
   return -1;
 }
@@ -1745,7 +1810,7 @@ tor_check_dh_key(BIGNUM *bn)
  * where || is concatenation.)
  */
 ssize_t
-crypto_dh_compute_secret(crypto_dh_env_t *dh,
+crypto_dh_compute_secret(int severity, crypto_dh_env_t *dh,
                          const char *pubkey, size_t pubkey_len,
                          char *secret_out, size_t secret_bytes_out)
 {
@@ -1760,9 +1825,9 @@ crypto_dh_compute_secret(crypto_dh_env_t *dh,
   if (!(pubkey_bn = BN_bin2bn((const unsigned char*)pubkey,
                               (int)pubkey_len, NULL)))
     goto error;
-  if (tor_check_dh_key(pubkey_bn)<0) {
+  if (tor_check_dh_key(severity, pubkey_bn)<0) {
     /* Check for invalid public keys. */
-    log_warn(LD_CRYPTO,"Rejected invalid g^x");
+    log_fn(severity, LD_CRYPTO,"Rejected invalid g^x");
     goto error;
   }
   secret_tmp = tor_malloc(crypto_dh_get_bytes(dh));
@@ -2246,6 +2311,44 @@ digest_from_base64(char *digest, const char *d64)
   return 0;
 #else
   if (base64_decode(digest, DIGEST_LEN, d64, strlen(d64)) == DIGEST_LEN)
+    return 0;
+  else
+    return -1;
+#endif
+}
+
+/** Base-64 encode DIGEST256_LINE bytes from <b>digest</b>, remove the
+ * trailing = and newline characters, and store the nul-terminated result in
+ * the first BASE64_DIGEST256_LEN+1 bytes of <b>d64</b>.  */
+int
+digest256_to_base64(char *d64, const char *digest)
+{
+  char buf[256];
+  base64_encode(buf, sizeof(buf), digest, DIGEST256_LEN);
+  buf[BASE64_DIGEST256_LEN] = '\0';
+  memcpy(d64, buf, BASE64_DIGEST256_LEN+1);
+  return 0;
+}
+
+/** Given a base-64 encoded, nul-terminated digest in <b>d64</b> (without
+ * trailing newline or = characters), decode it and store the result in the
+ * first DIGEST256_LEN bytes at <b>digest</b>. */
+int
+digest256_from_base64(char *digest, const char *d64)
+{
+#ifdef USE_OPENSSL_BASE64
+  char buf_in[BASE64_DIGEST256_LEN+3];
+  char buf[256];
+  if (strlen(d64) != BASE64_DIGEST256_LEN)
+    return -1;
+  memcpy(buf_in, d64, BASE64_DIGEST256_LEN);
+  memcpy(buf_in+BASE64_DIGEST256_LEN, "=\n\0", 3);
+  if (base64_decode(buf, sizeof(buf), buf_in, strlen(buf_in)) != DIGEST256_LEN)
+    return -1;
+  memcpy(digest, buf, DIGEST256_LEN);
+  return 0;
+#else
+  if (base64_decode(digest, DIGEST256_LEN, d64, strlen(d64)) == DIGEST256_LEN)
     return 0;
   else
     return -1;

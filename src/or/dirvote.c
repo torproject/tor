@@ -11,26 +11,47 @@
  * \brief Functions to compute directory consensus, and schedule voting.
  **/
 
-static int dirvote_add_signatures_to_pending_consensus(
+/** A consensus that we have built and are appending signatures to.  Once it's
+ * time to publish it, it will become an active consensus if it accumulates
+ * enough signatures. */
+typedef struct pending_consensus_t {
+  /** The body of the consensus that we're currently building.  Once we
+   * have it built, it goes into dirserv.c */
+  char *body;
+  /** The parsed in-progress consensus document. */
+  networkstatus_t *consensus;
+} pending_consensus_t;
+
+static int dirvote_add_signatures_to_all_pending_consensuses(
                        const char *detached_signatures_body,
+                       const char **msg_out);
+static int dirvote_add_signatures_to_pending_consensus(
+                       pending_consensus_t *pc,
+                       ns_detached_signatures_t *sigs,
                        const char **msg_out);
 static char *list_v3_auth_ids(void);
 static void dirvote_fetch_missing_votes(void);
 static void dirvote_fetch_missing_signatures(void);
 static int dirvote_perform_vote(void);
 static void dirvote_clear_votes(int all_votes);
-static int dirvote_compute_consensus(void);
+static int dirvote_compute_consensuses(void);
 static int dirvote_publish_consensus(void);
-static char *make_consensus_method_list(int low, int high);
+static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 7
+#define MAX_SUPPORTED_CONSENSUS_METHOD 8
 
 #define MIN_METHOD_FOR_PARAMS 7
+
+/** Lowest consensus method that generates microdescriptors */
+#define MIN_METHOD_FOR_MICRODESC 8
 
 /* =====
  * Voting
  * =====*/
+
+/* Overestimated. */
+#define MICRODESC_LINE_LEN 80
 
 /** Return a new string containing the string representation of the vote in
  * <b>v3_ns</b>, signed with our v3 signing key <b>private_signing_key</b>.
@@ -89,7 +110,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
 
   len = 8192;
   len += strlen(version_lines);
-  len += (RS_ENTRY_LEN)*smartlist_len(rl->routers);
+  len += (RS_ENTRY_LEN+MICRODESC_LINE_LEN)*smartlist_len(rl->routers);
   len += v3_ns->cert->cache_info.signed_descriptor_len;
 
   status = tor_malloc(len);
@@ -102,7 +123,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     char *params;
     authority_cert_t *cert = v3_ns->cert;
     char *methods =
-      make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD);
+      make_consensus_method_list(1, MAX_SUPPORTED_CONSENSUS_METHOD, " ");
     format_iso_time(published, v3_ns->published);
     format_iso_time(va, v3_ns->valid_after);
     format_iso_time(fu, v3_ns->fresh_until);
@@ -136,7 +157,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  flags,
                  params,
                  voter->nickname, fingerprint, voter->address,
-                   ipaddr, voter->dir_port, voter->or_port, voter->contact);
+                 ipaddr, voter->dir_port, voter->or_port, voter->contact);
 
     tor_free(params);
     tor_free(flags);
@@ -158,15 +179,25 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     outp += cert->cache_info.signed_descriptor_len;
   }
 
-  SMARTLIST_FOREACH(v3_ns->routerstatus_list, vote_routerstatus_t *, vrs,
-  {
+  SMARTLIST_FOREACH_BEGIN(v3_ns->routerstatus_list, vote_routerstatus_t *,
+                          vrs) {
+    vote_microdesc_hash_t *h;
     if (routerstatus_format_entry(outp, endp-outp, &vrs->status,
                                   vrs->version, NS_V3_VOTE) < 0) {
       log_warn(LD_BUG, "Unable to print router status.");
       goto err;
     }
     outp += strlen(outp);
-  });
+
+    for (h = vrs->microdesc; h; h = h->next) {
+      size_t mlen = strlen(h->microdesc_hash_line);
+      if (outp+mlen >= endp) {
+        log_warn(LD_BUG, "Can't fit microdesc line in vote.");
+      }
+      memcpy(outp, h->microdesc_hash_line, mlen+1);
+      outp += strlen(outp);
+    }
+  } SMARTLIST_FOREACH_END(vrs);
 
   {
     char signing_key_fingerprint[FINGERPRINT_LEN+1];
@@ -189,10 +220,10 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     outp += strlen(outp);
   }
 
-  if (router_get_networkstatus_v3_hash(status, digest)<0)
+  if (router_get_networkstatus_v3_hash(status, digest, DIGEST_SHA1)<0)
     goto err;
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(outp,endp-outp,digest,
+  if (router_append_dirobj_signature(outp,endp-outp,digest, DIGEST_LEN,
                                      private_signing_key)<0) {
     log_warn(LD_BUG, "Unable to sign networkstatus vote.");
     goto err;
@@ -233,6 +264,20 @@ get_voter(const networkstatus_t *vote)
   tor_assert(vote->voters);
   tor_assert(smartlist_len(vote->voters) == 1);
   return smartlist_get(vote->voters, 0);
+}
+
+/** Return the signature made by <b>voter</b> using the algorithm
+ * <b>alg</b>, or NULL if none is found. */
+document_signature_t *
+voter_get_sig_by_algorithm(const networkstatus_voter_info_t *voter,
+                           digest_algorithm_t alg)
+{
+  if (!voter->sigs)
+    return NULL;
+  SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+    if (sig->alg == alg)
+      return sig);
+  return NULL;
 }
 
 /** Temporary structure used in constructing a list of dir-source entries
@@ -294,34 +339,8 @@ get_frequent_members(smartlist_t *out, smartlist_t *in, int min)
 
 /** Given a sorted list of strings <b>lst</b>, return the member that appears
  * most.  Break ties in favor of later-occurring members. */
-static const char *
-get_most_frequent_member(smartlist_t *lst)
-{
-  const char *most_frequent = NULL;
-  int most_frequent_count = 0;
-
-  const char *cur = NULL;
-  int count = 0;
-
-  SMARTLIST_FOREACH(lst, const char *, s,
-  {
-    if (cur && !strcmp(s, cur)) {
-      ++count;
-    } else {
-      if (count >= most_frequent_count) {
-        most_frequent = cur;
-        most_frequent_count = count;
-      }
-      cur = s;
-      count = 1;
-    }
-  });
-  if (count >= most_frequent_count) {
-    most_frequent = cur;
-    most_frequent_count = count;
-  }
-  return most_frequent;
-}
+#define get_most_frequent_member(lst)           \
+  smartlist_get_most_frequent_string(lst)
 
 /** Return 0 if and only if <b>a</b> and <b>b</b> are routerstatuses
  * that come from the same routerinfo, with the same derived elements.
@@ -363,7 +382,8 @@ _compare_vote_rs(const void **_a, const void **_b)
  * in favor of smaller descriptor digest.
  */
 static vote_routerstatus_t *
-compute_routerstatus_consensus(smartlist_t *votes)
+compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
+                               char *microdesc_digest256_out)
 {
   vote_routerstatus_t *most = NULL, *cur = NULL;
   int most_n = 0, cur_n = 0;
@@ -399,18 +419,45 @@ compute_routerstatus_consensus(smartlist_t *votes)
   }
 
   tor_assert(most);
+
+  if (consensus_method >= MIN_METHOD_FOR_MICRODESC &&
+      microdesc_digest256_out) {
+    smartlist_t *digests = smartlist_create();
+    const char *best_microdesc_digest;
+    SMARTLIST_FOREACH_BEGIN(votes, vote_routerstatus_t *, rs) {
+        char d[DIGEST256_LEN];
+        if (compare_vote_rs(rs, most))
+          continue;
+        if (!vote_routerstatus_find_microdesc_hash(d, rs, consensus_method,
+                                                   DIGEST_SHA256))
+          smartlist_add(digests, tor_memdup(d, sizeof(d)));
+    } SMARTLIST_FOREACH_END(rs);
+    smartlist_sort_digests256(digests);
+    best_microdesc_digest = smartlist_get_most_frequent_digest256(digests);
+    if (best_microdesc_digest)
+      memcpy(microdesc_digest256_out, best_microdesc_digest, DIGEST256_LEN);
+    SMARTLIST_FOREACH(digests, char *, cp, tor_free(cp));
+    smartlist_free(digests);
+  }
+
   return most;
 }
 
-/** Given a list of strings in <b>lst</b>, set the DIGEST_LEN-byte digest at
- * <b>digest_out</b> to the hash of the concatenation of those strings. */
+/** Given a list of strings in <b>lst</b>, set the <b>len_out</b>-byte digest
+ * at <b>digest_out</b> to the hash of the concatenation of those strings,
+ * computed with the algorithm <b>alg</b>. */
 static void
-hash_list_members(char *digest_out, smartlist_t *lst)
+hash_list_members(char *digest_out, size_t len_out,
+                  smartlist_t *lst, digest_algorithm_t alg)
 {
-  crypto_digest_env_t *d = crypto_new_digest_env();
+  crypto_digest_env_t *d;
+  if (alg == DIGEST_SHA1)
+    d = crypto_new_digest_env();
+  else
+    d = crypto_new_digest256_env(alg);
   SMARTLIST_FOREACH(lst, const char *, cp,
                     crypto_digest_add_bytes(d, cp, strlen(cp)));
-  crypto_digest_get_digest(d, digest_out, DIGEST_LEN);
+  crypto_digest_get_digest(d, digest_out, len_out);
   crypto_free_digest_env(d);
 }
 
@@ -480,7 +527,7 @@ consensus_method_is_supported(int method)
 /** Return a newly allocated string holding the numbers between low and high
  * (inclusive) that are supported consensus methods. */
 static char *
-make_consensus_method_list(int low, int high)
+make_consensus_method_list(int low, int high, const char *separator)
 {
   char *list;
 
@@ -494,7 +541,7 @@ make_consensus_method_list(int low, int high)
     tor_snprintf(b, sizeof(b), "%d", i);
     smartlist_add(lst, tor_strdup(b));
   }
-  list = smartlist_join_strings(lst, " ", 0, NULL);
+  list = smartlist_join_strings(lst, separator, 0, NULL);
   tor_assert(list);
   SMARTLIST_FOREACH(lst, char *, cp, tor_free(cp));
   smartlist_free(lst);
@@ -615,17 +662,24 @@ networkstatus_compute_consensus(smartlist_t *votes,
                                 crypto_pk_env_t *identity_key,
                                 crypto_pk_env_t *signing_key,
                                 const char *legacy_id_key_digest,
-                                crypto_pk_env_t *legacy_signing_key)
+                                crypto_pk_env_t *legacy_signing_key,
+                                consensus_flavor_t flavor)
 {
   smartlist_t *chunks;
   char *result = NULL;
   int consensus_method;
-
   time_t valid_after, fresh_until, valid_until;
   int vote_seconds, dist_seconds;
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
+  const char *flavor_name;
+  const routerstatus_format_type_t rs_format =
+    flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
+
+  tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
+
+  flavor_name = networkstatus_get_flavor_name(flavor);
 
   if (!smartlist_len(votes)) {
     log_warn(LD_DIR, "Can't compute a consensus from no votes.");
@@ -728,8 +782,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
     format_iso_time(vu_buf, valid_until);
     flaglist = smartlist_join_strings(flags, " ", 0, NULL);
 
-    smartlist_add(chunks, tor_strdup("network-status-version 3\n"
-                                     "vote-status consensus\n"));
+    tor_snprintf(buf, sizeof(buf), "network-status-version 3%s%s\n"
+                 "vote-status consensus\n",
+                 flavor == FLAV_NS ? "" : " ",
+                 flavor == FLAV_NS ? "" : flavor_name);
+
+    smartlist_add(chunks, tor_strdup(buf));
 
     if (consensus_method >= 2) {
       tor_snprintf(buf, sizeof(buf), "consensus-method %d\n",
@@ -767,8 +825,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   /* Add the authority sections. */
   {
     smartlist_t *dir_sources = smartlist_create();
-    SMARTLIST_FOREACH(votes, networkstatus_t *, v,
-    {
+    SMARTLIST_FOREACH_BEGIN(votes, networkstatus_t *, v) {
       dir_src_ent_t *e = tor_malloc_zero(sizeof(dir_src_ent_t));
       e->v = v;
       e->digest = get_voter(v)->identity_digest;
@@ -782,7 +839,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         e_legacy->is_legacy = 1;
         smartlist_add(dir_sources, e_legacy);
       }
-    });
+    } SMARTLIST_FOREACH_END(v);
     smartlist_sort(dir_sources, _compare_dir_src_ents_by_authority_id);
 
     SMARTLIST_FOREACH(dir_sources, const dir_src_ent_t *, e,
@@ -955,6 +1012,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int n_listing = 0;
       int i;
       char buf[256];
+      char microdesc_digest[DIGEST256_LEN];
 
       /* Of the next-to-be-considered digest in each voter, which is first? */
       SMARTLIST_FOREACH(votes, networkstatus_t *, v, {
@@ -1021,7 +1079,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
       /* Figure out the most popular opinion of what the most recent
        * routerinfo and its contents are. */
-      rs = compute_routerstatus_consensus(matching_descs);
+      memset(microdesc_digest, 0, sizeof(microdesc_digest));
+      rs = compute_routerstatus_consensus(matching_descs, consensus_method,
+                                          microdesc_digest);
       /* Copy bits of that into rs_out. */
       tor_assert(!memcmp(lowest_id, rs->status.identity_digest, DIGEST_LEN));
       memcpy(rs_out.identity_digest, lowest_id, DIGEST_LEN);
@@ -1182,9 +1242,19 @@ networkstatus_compute_consensus(smartlist_t *votes,
       /* Okay!! Now we can write the descriptor... */
       /*     First line goes into "buf". */
       routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
-                                NS_V3_CONSENSUS);
+                                rs_format);
       smartlist_add(chunks, tor_strdup(buf));
-      /*     Second line is all flags.  The "\n" is missing. */
+      /*     Now an m line, if applicable. */
+      if (flavor == FLAV_MICRODESC &&
+          !tor_digest256_is_zero(microdesc_digest)) {
+        char m[BASE64_DIGEST256_LEN+1], *cp;
+        const size_t mlen = BASE64_DIGEST256_LEN+5;
+        digest256_to_base64(m, microdesc_digest);
+        cp = tor_malloc(mlen);
+        tor_snprintf(cp, mlen, "m %s\n", m);
+        smartlist_add(chunks, cp);
+      }
+      /*     Next line is all flags.  The "\n" is missing. */
       smartlist_add(chunks,
                     smartlist_join_strings(chosen_flags, " ", 0, NULL));
       /*     Now the version line. */
@@ -1206,7 +1276,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       };
 
       /*     Now the exitpolicy summary line. */
-      if (rs_out.has_exitsummary) {
+      if (rs_out.has_exitsummary && flavor == FLAV_NS) {
         char buf[MAX_POLICY_LINE_LEN+1];
         int r = tor_snprintf(buf, sizeof(buf), "p %s\n", rs_out.exitsummary);
         if (r<0) {
@@ -1235,29 +1305,41 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(versions);
     smartlist_free(exitsummaries);
     tor_free(bandwidths);
+    tor_free(measured_bws);
   }
 
   /* Add a signature. */
   {
-    char digest[DIGEST_LEN];
+    char digest[DIGEST256_LEN];
     char fingerprint[HEX_DIGEST_LEN+1];
     char signing_key_fingerprint[HEX_DIGEST_LEN+1];
+    digest_algorithm_t digest_alg =
+      flavor == FLAV_NS ? DIGEST_SHA1 : DIGEST_SHA256;
+    size_t digest_len =
+      flavor == FLAV_NS ? DIGEST_LEN : DIGEST256_LEN;
+    const char *algname = crypto_digest_algorithm_get_name(digest_alg);
 
     char buf[4096];
     smartlist_add(chunks, tor_strdup("directory-signature "));
 
     /* Compute the hash of the chunks. */
-    hash_list_members(digest, chunks);
+    hash_list_members(digest, digest_len, chunks, digest_alg);
 
     /* Get the fingerprints */
     crypto_pk_get_fingerprint(identity_key, fingerprint, 0);
     crypto_pk_get_fingerprint(signing_key, signing_key_fingerprint, 0);
 
     /* add the junk that will go at the end of the line. */
-    tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
-                 signing_key_fingerprint);
+    if (flavor == FLAV_NS) {
+      tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
+                   signing_key_fingerprint);
+    } else {
+      tor_snprintf(buf, sizeof(buf), "%s %s %s\n",
+                   algname, fingerprint,
+                   signing_key_fingerprint);
+    }
     /* And the signature. */
-    if (router_append_dirobj_signature(buf, sizeof(buf), digest,
+    if (router_append_dirobj_signature(buf, sizeof(buf), digest, digest_len,
                                        signing_key)) {
       log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
       return NULL; /* This leaks, but it should never happen. */
@@ -1270,9 +1352,15 @@ networkstatus_compute_consensus(smartlist_t *votes,
                     legacy_id_key_digest, DIGEST_LEN);
       crypto_pk_get_fingerprint(legacy_signing_key,
                                 signing_key_fingerprint, 0);
-      tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
-                   signing_key_fingerprint);
-      if (router_append_dirobj_signature(buf, sizeof(buf), digest,
+      if (flavor == FLAV_NS) {
+        tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
+                     signing_key_fingerprint);
+      } else {
+        tor_snprintf(buf, sizeof(buf), "%s %s %s\n",
+                     algname, fingerprint,
+                     signing_key_fingerprint);
+      }
+      if (router_append_dirobj_signature(buf, sizeof(buf), digest, digest_len,
                                          legacy_signing_key)) {
         log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
         return NULL; /* This leaks, but it should never happen. */
@@ -1319,9 +1407,13 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
                                       const char **msg_out)
 {
   int r = 0;
+  const char *flavor;
+  smartlist_t *siglist;
   tor_assert(sigs);
   tor_assert(target);
   tor_assert(target->type == NS_TYPE_CONSENSUS);
+
+  flavor = networkstatus_get_flavor_name(target->flavor);
 
   /* Do the times seem right? */
   if (target->valid_after != sigs->valid_after) {
@@ -1339,79 +1431,179 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
       "when adding detached signatures to consensus";
     return -1;
   }
-  /* Are they the same consensus? */
-  if (memcmp(target->networkstatus_digest, sigs->networkstatus_digest,
-             DIGEST_LEN)) {
-    *msg_out = "Digest mismatch when adding detached signatures to consensus";
+  siglist = strmap_get(sigs->signatures, flavor);
+  if (!siglist) {
+    *msg_out = "No signatures for given consensus flavor";
     return -1;
   }
 
-  /* For each voter in src... */
-  SMARTLIST_FOREACH_BEGIN(sigs->signatures, networkstatus_voter_info_t *,
-                          src_voter) {
-      char voter_identity[HEX_DIGEST_LEN+1];
-      networkstatus_voter_info_t *target_voter =
-        networkstatus_get_voter_by_id(target, src_voter->identity_digest);
-      authority_cert_t *cert = NULL;
-
-      base16_encode(voter_identity, sizeof(voter_identity),
-                    src_voter->identity_digest, DIGEST_LEN);
-      log_info(LD_DIR, "Looking at signature from %s", voter_identity);
-      /* If the target doesn't know about this voter, then forget it. */
-      if (!target_voter) {
-        log_info(LD_DIR, "We do not know about %s", voter_identity);
-        continue;
-      }
-
-      /* If the target already has a good signature from this voter, then skip
-       * this one. */
-      if (target_voter->good_signature) {
-        log_info(LD_DIR, "We already have a good signature from %s",
-                         voter_identity);
-        continue;
-      }
-
-      /* Try checking the signature if we haven't already. */
-      if (!src_voter->good_signature && !src_voter->bad_signature) {
-        cert = authority_cert_get_by_digests(src_voter->identity_digest,
-                                             src_voter->signing_key_digest);
-        if (cert) {
-          networkstatus_check_voter_signature(target, src_voter, cert);
+  /** Make sure all the digests we know match, and at least one matches. */
+  {
+    digests_t *digests = strmap_get(sigs->digests, flavor);
+    int n_matches = 0;
+    digest_algorithm_t alg;
+    if (!digests) {
+      *msg_out = "No digests for given consensus flavor";
+      return -1;
+    }
+    for (alg = DIGEST_SHA1; alg < N_DIGEST_ALGORITHMS; ++alg) {
+      if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
+        if (!memcmp(target->digests.d[alg], digests->d[alg], DIGEST256_LEN)) {
+          ++n_matches;
+        } else {
+          *msg_out = "Mismatched digest.";
+          return -1;
         }
       }
+    }
+    if (!n_matches) {
+      *msg_out = "No regognized digests for given consensus flavor";
+    }
+  }
 
-      /* If this signature is good, or we don't have any signature yet,
-       * then add it. */
-      if (src_voter->good_signature || !target_voter->signature) {
-        log_info(LD_DIR, "Adding signature from %s", voter_identity);
-        ++r;
-        tor_free(target_voter->signature);
-        target_voter->signature =
-          tor_memdup(src_voter->signature, src_voter->signature_len);
-        memcpy(target_voter->signing_key_digest, src_voter->signing_key_digest,
-               DIGEST_LEN);
-        target_voter->signature_len = src_voter->signature_len;
-        target_voter->good_signature = src_voter->good_signature;
-        target_voter->bad_signature = src_voter->bad_signature;
-      } else {
-        log_info(LD_DIR, "Not adding signature from %s", voter_identity);
+  /* For each voter in src... */
+  SMARTLIST_FOREACH_BEGIN(siglist, document_signature_t *, sig) {
+    char voter_identity[HEX_DIGEST_LEN+1];
+    networkstatus_voter_info_t *target_voter =
+      networkstatus_get_voter_by_id(target, sig->identity_digest);
+    authority_cert_t *cert = NULL;
+    const char *algorithm;
+    document_signature_t *old_sig = NULL;
+
+    algorithm = crypto_digest_algorithm_get_name(sig->alg);
+
+    base16_encode(voter_identity, sizeof(voter_identity),
+                  sig->identity_digest, DIGEST_LEN);
+    log_info(LD_DIR, "Looking at signature from %s using %s", voter_identity,
+             algorithm);
+    /* If the target doesn't know about this voter, then forget it. */
+    if (!target_voter) {
+      log_info(LD_DIR, "We do not know any voter with ID %s", voter_identity);
+      continue;
+    }
+
+    old_sig = voter_get_sig_by_algorithm(target_voter, sig->alg);
+
+    /* If the target already has a good signature from this voter, then skip
+     * this one. */
+    if (old_sig && old_sig->good_signature) {
+      log_info(LD_DIR, "We already have a good signature from %s using %s",
+               voter_identity, algorithm);
+      continue;
+    }
+
+    /* Try checking the signature if we haven't already. */
+    if (!sig->good_signature && !sig->bad_signature) {
+      cert = authority_cert_get_by_digests(sig->identity_digest,
+                                           sig->signing_key_digest);
+      if (cert)
+        networkstatus_check_document_signature(target, sig, cert);
+    }
+
+    /* If this signature is good, or we don't have any signature yet,
+     * then maybe add it. */
+    if (sig->good_signature || !old_sig || old_sig->bad_signature) {
+      log_info(LD_DIR, "Adding signature from %s with %s", voter_identity,
+               algorithm);
+      ++r;
+      if (old_sig) {
+        smartlist_remove(target_voter->sigs, old_sig);
+        document_signature_free(old_sig);
       }
-  } SMARTLIST_FOREACH_END(src_voter);
+      smartlist_add(target_voter->sigs, document_signature_dup(sig));
+    } else {
+      log_info(LD_DIR, "Not adding signature from %s", voter_identity);
+    }
+  } SMARTLIST_FOREACH_END(sig);
 
   return r;
 }
 
-/** Return a newly allocated string holding the detached-signatures document
- * corresponding to the signatures on <b>consensus</b>. */
-char *
-networkstatus_get_detached_signatures(networkstatus_t *consensus)
+/** Return a newly allocated string containing all the signatures on
+ * <b>consensus</b> by all voters. If <b>for_detached_signatures</b> is true,
+ * then the signatures will be put in a detached signatures document, so
+ * prefix any non-NS-flavored signatures with "additional-signature" rather
+ * than "directory-signature". */
+static char *
+networkstatus_format_signatures(networkstatus_t *consensus,
+                                int for_detached_signatures)
 {
   smartlist_t *elements;
   char buf[4096];
   char *result = NULL;
   int n_sigs = 0;
-  tor_assert(consensus);
-  tor_assert(consensus->type == NS_TYPE_CONSENSUS);
+  const consensus_flavor_t flavor = consensus->flavor;
+  const char *flavor_name = networkstatus_get_flavor_name(flavor);
+  const char *keyword;
+
+  if (for_detached_signatures && flavor != FLAV_NS)
+    keyword = "additional-signature";
+  else
+    keyword = "directory-signature";
+
+  elements = smartlist_create();
+
+  SMARTLIST_FOREACH_BEGIN(consensus->voters, networkstatus_voter_info_t *, v) {
+    SMARTLIST_FOREACH_BEGIN(v->sigs, document_signature_t *, sig) {
+      char sk[HEX_DIGEST_LEN+1];
+      char id[HEX_DIGEST_LEN+1];
+      if (!sig->signature || sig->bad_signature)
+        continue;
+      ++n_sigs;
+      base16_encode(sk, sizeof(sk), sig->signing_key_digest, DIGEST_LEN);
+      base16_encode(id, sizeof(id), sig->identity_digest, DIGEST_LEN);
+      if (flavor == FLAV_NS) {
+        tor_snprintf(buf, sizeof(buf),
+                     "%s %s %s\n-----BEGIN SIGNATURE-----\n",
+                     keyword, id, sk);
+      } else {
+        const char *digest_name =
+          crypto_digest_algorithm_get_name(sig->alg);
+        tor_snprintf(buf, sizeof(buf),
+                     "%s%s%s %s %s %s\n-----BEGIN SIGNATURE-----\n",
+                     keyword,
+                     for_detached_signatures ? " " : "",
+                     for_detached_signatures ? flavor_name : "",
+                     digest_name, id, sk);
+      }
+      smartlist_add(elements, tor_strdup(buf));
+      base64_encode(buf, sizeof(buf), sig->signature, sig->signature_len);
+      strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
+      smartlist_add(elements, tor_strdup(buf));
+    } SMARTLIST_FOREACH_END(sig);
+  } SMARTLIST_FOREACH_END(v);
+
+  result = smartlist_join_strings(elements, "", 0, NULL);
+  SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
+  smartlist_free(elements);
+  if (!n_sigs)
+    tor_free(result);
+  return result;
+}
+
+/** Return a newly allocated string holding the detached-signatures document
+ * corresponding to the signatures on <b>consensuses</b>, which must contain
+ * exactly one FLAV_NS consensus, and no more than one consensus for each
+ * other flavor. */
+char *
+networkstatus_get_detached_signatures(smartlist_t *consensuses)
+{
+  smartlist_t *elements;
+  char buf[4096];
+  char *result = NULL, *sigs = NULL;
+  networkstatus_t *consensus_ns = NULL;
+  tor_assert(consensuses);
+
+  SMARTLIST_FOREACH(consensuses, networkstatus_t *, ns, {
+      tor_assert(ns);
+      tor_assert(ns->type == NS_TYPE_CONSENSUS);
+      if (ns && ns->flavor == FLAV_NS)
+        consensus_ns = ns;
+  });
+  if (!consensus_ns) {
+    log_warn(LD_BUG, "No NS consensus given.");
+    return NULL;
+  }
 
   elements = smartlist_create();
 
@@ -1420,10 +1612,11 @@ networkstatus_get_detached_signatures(networkstatus_t *consensus)
       vu_buf[ISO_TIME_LEN+1];
     char d[HEX_DIGEST_LEN+1];
 
-    base16_encode(d, sizeof(d), consensus->networkstatus_digest, DIGEST_LEN);
-    format_iso_time(va_buf, consensus->valid_after);
-    format_iso_time(fu_buf, consensus->fresh_until);
-    format_iso_time(vu_buf, consensus->valid_until);
+    base16_encode(d, sizeof(d),
+                  consensus_ns->digests.d[DIGEST_SHA1], DIGEST_LEN);
+    format_iso_time(va_buf, consensus_ns->valid_after);
+    format_iso_time(fu_buf, consensus_ns->fresh_until);
+    format_iso_time(vu_buf, consensus_ns->valid_until);
 
     tor_snprintf(buf, sizeof(buf),
                  "consensus-digest %s\n"
@@ -1433,31 +1626,71 @@ networkstatus_get_detached_signatures(networkstatus_t *consensus)
     smartlist_add(elements, tor_strdup(buf));
   }
 
-  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, v,
-    {
-      char sk[HEX_DIGEST_LEN+1];
-      char id[HEX_DIGEST_LEN+1];
-      if (!v->signature || v->bad_signature)
+  /* Get all the digests for the non-FLAV_NS consensuses */
+  SMARTLIST_FOREACH_BEGIN(consensuses, networkstatus_t *, ns) {
+    const char *flavor_name = networkstatus_get_flavor_name(ns->flavor);
+    int alg;
+    if (ns->flavor == FLAV_NS)
+      continue;
+
+    /* start with SHA256; we don't include SHA1 for anything but the basic
+     * consensus. */
+    for (alg = DIGEST_SHA256; alg < N_DIGEST_ALGORITHMS; ++alg) {
+      char d[HEX_DIGEST256_LEN+1];
+      const char *alg_name =
+        crypto_digest_algorithm_get_name(alg);
+      if (tor_mem_is_zero(ns->digests.d[alg], DIGEST256_LEN))
         continue;
-      ++n_sigs;
-      base16_encode(sk, sizeof(sk), v->signing_key_digest, DIGEST_LEN);
-      base16_encode(id, sizeof(id), v->identity_digest, DIGEST_LEN);
-      tor_snprintf(buf, sizeof(buf),
-                   "directory-signature %s %s\n-----BEGIN SIGNATURE-----\n",
-                   id, sk);
+      base16_encode(d, sizeof(d), ns->digests.d[alg], DIGEST256_LEN);
+      tor_snprintf(buf, sizeof(buf), "additional-digest %s %s %s\n",
+                   flavor_name, alg_name, d);
       smartlist_add(elements, tor_strdup(buf));
-      base64_encode(buf, sizeof(buf), v->signature, v->signature_len);
-      strlcat(buf, "-----END SIGNATURE-----\n", sizeof(buf));
-      smartlist_add(elements, tor_strdup(buf));
-    });
+    }
+  } SMARTLIST_FOREACH_END(ns);
+
+  /* Now get all the sigs for non-FLAV_NS consensuses */
+  SMARTLIST_FOREACH_BEGIN(consensuses, networkstatus_t *, ns) {
+    char *sigs;
+    if (ns->flavor == FLAV_NS)
+      continue;
+    sigs = networkstatus_format_signatures(ns, 1);
+    if (!sigs) {
+      log_warn(LD_DIR, "Couldn't format signatures");
+      goto err;
+    }
+    smartlist_add(elements, sigs);
+  } SMARTLIST_FOREACH_END(ns);
+
+  /* Now add the FLAV_NS consensus signatrures. */
+  sigs = networkstatus_format_signatures(consensus_ns, 1);
+  if (!sigs)
+    goto err;
+  smartlist_add(elements, sigs);
 
   result = smartlist_join_strings(elements, "", 0, NULL);
-
+ err:
   SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
   smartlist_free(elements);
-  if (!n_sigs)
-    tor_free(result);
   return result;
+}
+
+/** Return a newly allocated string holding a detached-signatures document for
+ * all of the in-progress consensuses in the <b>n_flavors</b>-element array at
+ * <b>pending</b>. */
+static char *
+get_detached_signatures_from_pending_consensuses(pending_consensus_t *pending,
+                                                 int n_flavors)
+{
+  int flav;
+  char *signatures;
+  smartlist_t *c = smartlist_create();
+  for (flav = 0; flav < n_flavors; ++flav) {
+    if (pending[flav].consensus)
+      smartlist_add(c, pending[flav].consensus);
+  }
+  signatures = networkstatus_get_detached_signatures(c);
+  smartlist_free(c);
+  return signatures;
 }
 
 /** Release all storage held in <b>s</b>. */
@@ -1465,13 +1698,15 @@ void
 ns_detached_signatures_free(ns_detached_signatures_t *s)
 {
   if (s->signatures) {
-    SMARTLIST_FOREACH(s->signatures, networkstatus_voter_info_t *, v,
-      {
-        tor_free(v->signature);
-        tor_free(v);
-      });
-    smartlist_free(s->signatures);
+    STRMAP_FOREACH(s->signatures, flavor, smartlist_t *, sigs) {
+      SMARTLIST_FOREACH(sigs, document_signature_t *, sig,
+                        document_signature_free(sig));
+      smartlist_free(sigs);
+    } STRMAP_FOREACH_END;
+    strmap_free(s->signatures, NULL);
+    strmap_free(s->digests, _tor_free);
   }
+
   tor_free(s);
 }
 
@@ -1661,7 +1896,7 @@ dirvote_act(or_options_t *options, time_t now)
   if (voting_schedule.voting_ends < now &&
       !voting_schedule.have_built_consensus) {
     log_notice(LD_DIR, "Time to compute a consensus.");
-    dirvote_compute_consensus();
+    dirvote_compute_consensuses();
     /* XXXX We will want to try again later if we haven't got enough
      * votes yet.  Implement this if it turns out to ever happen. */
     voting_schedule.have_built_consensus = 1;
@@ -1698,14 +1933,13 @@ static smartlist_t *pending_vote_list = NULL;
 /** List of pending_vote_t for the previous vote.  After we've used them to
  * build a consensus, the votes go here for the next period. */
 static smartlist_t *previous_vote_list = NULL;
-/** The body of the consensus that we're currently building.  Once we
- * have it built, it goes into dirserv.c */
-static char *pending_consensus_body = NULL;
+
+static pending_consensus_t pending_consensuses[N_CONSENSUS_FLAVORS];
+
 /** The detached signatures for the consensus that we're currently
  * building. */
 static char *pending_consensus_signatures = NULL;
-/** The parsed in-progress consensus document. */
-static networkstatus_t *pending_consensus = NULL;
+
 /** List of ns_detached_signatures_t: hold signatures that get posted to us
  * before we have generated the consensus on our own. */
 static smartlist_t *pending_consensus_signature_list = NULL;
@@ -1799,13 +2033,38 @@ dirvote_fetch_missing_votes(void)
 static void
 dirvote_fetch_missing_signatures(void)
 {
-  if (!pending_consensus)
+  int need_any = 0;
+  int i;
+  for (i=0; i < N_CONSENSUS_FLAVORS; ++i) {
+    networkstatus_t *consensus = pending_consensuses[i].consensus;
+    if (!consensus ||
+        networkstatus_check_consensus_signature(consensus, -1) == 1) {
+      /* We have no consensus, or we have one that's signed by everybody. */
+      continue;
+    }
+    need_any = 1;
+  }
+  if (!need_any)
     return;
-  if (networkstatus_check_consensus_signature(pending_consensus, -1) == 1)
-    return; /* we have a signature from everybody. */
 
   directory_get_from_all_authorities(DIR_PURPOSE_FETCH_DETACHED_SIGNATURES,
                                      0, NULL);
+}
+
+/** Release all storage held by pending consensuses (those waiting for
+ * signatures). */
+static void
+dirvote_clear_pending_consensuses(void)
+{
+  int i;
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    pending_consensus_t *pc = &pending_consensuses[i];
+    tor_free(pc->body);
+    if (pc->consensus) {
+      networkstatus_vote_free(pc->consensus);
+      pc->consensus = NULL;
+    }
+  }
 }
 
 /** Drop all currently pending votes, consensus, and detached signatures. */
@@ -1845,12 +2104,8 @@ dirvote_clear_votes(int all_votes)
                       tor_free(cp));
     smartlist_clear(pending_consensus_signature_list);
   }
-  tor_free(pending_consensus_body);
   tor_free(pending_consensus_signatures);
-  if (pending_consensus) {
-    networkstatus_vote_free(pending_consensus);
-    pending_consensus = NULL;
-  }
+  dirvote_clear_pending_consensuses();
 }
 
 /** Return a newly allocated string containing the hex-encoded v3 authority
@@ -1908,7 +2163,13 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
   }
   tor_assert(smartlist_len(vote->voters) == 1);
   vi = get_voter(vote);
-  tor_assert(vi->good_signature == 1);
+  {
+    int any_sig_good = 0;
+    SMARTLIST_FOREACH(vi->sigs, document_signature_t *, sig,
+                      if (sig->good_signature)
+                        any_sig_good = 1);
+    tor_assert(any_sig_good);
+  }
   ds = trusteddirserver_get_by_v3_auth_digest(vi->identity_digest);
   if (!ds) {
     char *keys = list_v3_auth_ids();
@@ -2032,14 +2293,18 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
  * pending_consensus: it won't be ready to be published until we have
  * everybody else's signatures collected too. (V3 Authority only) */
 static int
-dirvote_compute_consensus(void)
+dirvote_compute_consensuses(void)
 {
   /* Have we got enough votes to try? */
-  int n_votes, n_voters;
+  int n_votes, n_voters, n_vote_running = 0;
   smartlist_t *votes = NULL, *votestrings = NULL;
   char *consensus_body = NULL, *signatures = NULL, *votefile;
   networkstatus_t *consensus = NULL;
   authority_cert_t *my_cert;
+  pending_consensus_t pending[N_CONSENSUS_FLAVORS];
+  int flav;
+
+  memset(pending, 0, sizeof(pending));
 
   if (!pending_vote_list)
     pending_vote_list = smartlist_create();
@@ -2049,6 +2314,19 @@ dirvote_compute_consensus(void)
   if (n_votes <= n_voters/2) {
     log_warn(LD_DIR, "We don't have enough votes to generate a consensus: "
              "%d of %d", n_votes, n_voters/2);
+    goto err;
+  }
+  tor_assert(pending_vote_list);
+  SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, v, {
+    if (smartlist_string_isin(v->vote->known_flags, "Running"))
+      n_vote_running++;
+  });
+  if (!n_vote_running) {
+    /* See task 1066. */
+    log_warn(LD_DIR, "Nobody has voted on the Running flag. Generating "
+                     "and publishing a consensus without Running nodes "
+                     "would make many clients stop working. Not "
+                     "generating a consensus!");
     goto err;
   }
 
@@ -2079,6 +2357,7 @@ dirvote_compute_consensus(void)
     char legacy_dbuf[DIGEST_LEN];
     crypto_pk_env_t *legacy_sign=NULL;
     char *legacy_id_digest = NULL;
+    int n_generated = 0;
     if (get_options()->V3AuthUseLegacyKey) {
       authority_cert_t *cert = get_my_v3_legacy_cert();
       legacy_sign = get_my_v3_legacy_signing_key();
@@ -2087,38 +2366,57 @@ dirvote_compute_consensus(void)
         legacy_id_digest = legacy_dbuf;
       }
     }
-    consensus_body = networkstatus_compute_consensus(
+
+    for (flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
+      const char *flavor_name = networkstatus_get_flavor_name(flav);
+      consensus_body = networkstatus_compute_consensus(
         votes, n_voters,
         my_cert->identity_key,
-        get_my_v3_authority_signing_key(), legacy_id_digest, legacy_sign);
-  }
-  if (!consensus_body) {
-    log_warn(LD_DIR, "Couldn't generate a consensus at all!");
-    goto err;
-  }
-  consensus = networkstatus_parse_vote_from_string(consensus_body, NULL,
-                                                   NS_TYPE_CONSENSUS);
-  if (!consensus) {
-    log_warn(LD_DIR, "Couldn't parse consensus we generated!");
-    goto err;
-  }
-  /* 'Check' our own signature, to mark it valid. */
-  networkstatus_check_consensus_signature(consensus, -1);
+        get_my_v3_authority_signing_key(), legacy_id_digest, legacy_sign,
+        flav);
 
-  signatures = networkstatus_get_detached_signatures(consensus);
+      if (!consensus_body) {
+        log_warn(LD_DIR, "Couldn't generate a %s consensus at all!",
+                 flavor_name);
+        continue;
+      }
+      consensus = networkstatus_parse_vote_from_string(consensus_body, NULL,
+                                                       NS_TYPE_CONSENSUS);
+      if (!consensus) {
+        log_warn(LD_DIR, "Couldn't parse %s consensus we generated!",
+                 flavor_name);
+        tor_free(consensus_body);
+        continue;
+      }
+
+      /* 'Check' our own signature, to mark it valid. */
+      networkstatus_check_consensus_signature(consensus, -1);
+
+      pending[flav].body = consensus_body;
+      pending[flav].consensus = consensus;
+      n_generated++;
+      consensus_body = NULL;
+      consensus = NULL;
+    }
+    if (!n_generated) {
+      log_warn(LD_DIR, "Couldn't generate any consensus flavors at all.");
+      goto err;
+    }
+  }
+
+  signatures = get_detached_signatures_from_pending_consensuses(
+       pending, N_CONSENSUS_FLAVORS);
+
   if (!signatures) {
     log_warn(LD_DIR, "Couldn't extract signatures.");
     goto err;
   }
 
-  tor_free(pending_consensus_body);
-  pending_consensus_body = consensus_body;
+  dirvote_clear_pending_consensuses();
+  memcpy(pending_consensuses, pending, sizeof(pending));
+
   tor_free(pending_consensus_signatures);
   pending_consensus_signatures = signatures;
-
-  if (pending_consensus)
-    networkstatus_vote_free(pending_consensus);
-  pending_consensus = consensus;
 
   if (pending_consensus_signature_list) {
     int n_sigs = 0;
@@ -2127,7 +2425,7 @@ dirvote_compute_consensus(void)
     SMARTLIST_FOREACH(pending_consensus_signature_list, char *, sig,
       {
         const char *msg = NULL;
-        int r = dirvote_add_signatures_to_pending_consensus(sig, &msg);
+        int r = dirvote_add_signatures_to_all_pending_consensuses(sig, &msg);
         if (r >= 0)
           n_sigs += r;
         else
@@ -2163,75 +2461,60 @@ dirvote_compute_consensus(void)
 }
 
 /** Helper: we just got the <b>detached_signatures_body</b> sent to us as
- * signatures on the currently pending consensus.  Add them to the consensus
+ * signatures on the currently pending consensus.  Add them to <b>pc</b>
  * as appropriate.  Return the number of signatures added. (?) */
 static int
 dirvote_add_signatures_to_pending_consensus(
-                       const char *detached_signatures_body,
+                       pending_consensus_t *pc,
+                       ns_detached_signatures_t *sigs,
                        const char **msg_out)
 {
-  ns_detached_signatures_t *sigs = NULL;
+  const char *flavor_name;
   int r = -1;
 
-  tor_assert(detached_signatures_body);
-  tor_assert(msg_out);
-
   /* Only call if we have a pending consensus right now. */
-  tor_assert(pending_consensus);
-  tor_assert(pending_consensus_body);
+  tor_assert(pc->consensus);
+  tor_assert(pc->body);
   tor_assert(pending_consensus_signatures);
 
+  flavor_name = networkstatus_get_flavor_name(pc->consensus->flavor);
   *msg_out = NULL;
 
-  if (!(sigs = networkstatus_parse_detached_signatures(
-                               detached_signatures_body, NULL))) {
-    *msg_out = "Couldn't parse detached signatures.";
-    goto err;
+  {
+    smartlist_t *sig_list = strmap_get(sigs->signatures, flavor_name);
+    log_info(LD_DIR, "Have %d signatures for adding to %s consensus.",
+             sig_list ? smartlist_len(sig_list) : 0, flavor_name);
   }
-
-  log_info(LD_DIR, "Have %d signatures for adding to consensus.",
-                   smartlist_len(sigs->signatures));
-  r = networkstatus_add_detached_signatures(pending_consensus,
-                                            sigs, msg_out);
+  r = networkstatus_add_detached_signatures(pc->consensus, sigs, msg_out);
   log_info(LD_DIR,"Added %d signatures to consensus.", r);
 
   if (r >= 1) {
-    char *new_detached =
-      networkstatus_get_detached_signatures(pending_consensus);
-    const char *src;
+    char *new_signatures =
+      networkstatus_format_signatures(pc->consensus, 0);
     char *dst, *dst_end;
     size_t new_consensus_len;
-    if (!new_detached) {
+    if (!new_signatures) {
       *msg_out = "No signatures to add";
       goto err;
     }
     new_consensus_len =
-      strlen(pending_consensus_body) + strlen(new_detached) + 1;
-    pending_consensus_body = tor_realloc(pending_consensus_body,
-                                         new_consensus_len);
-    dst_end = pending_consensus_body + new_consensus_len;
-    dst = strstr(pending_consensus_body, "directory-signature ");
+      strlen(pc->body) + strlen(new_signatures) + 1;
+    pc->body = tor_realloc(pc->body, new_consensus_len);
+    dst_end = pc->body + new_consensus_len;
+    dst = strstr(pc->body, "directory-signature ");
     tor_assert(dst);
-    src = strstr(new_detached, "directory-signature ");
-    tor_assert(src);
-    strlcpy(dst, src, dst_end-dst);
+    strlcpy(dst, new_signatures, dst_end-dst);
 
     /* We remove this block once it has failed to crash for a while.  But
      * unless it shows up in profiles, we're probably better leaving it in,
      * just in case we break detached signature processing at some point. */
     {
-      ns_detached_signatures_t *sigs =
-        networkstatus_parse_detached_signatures(new_detached, NULL);
       networkstatus_t *v = networkstatus_parse_vote_from_string(
-                                             pending_consensus_body, NULL,
+                                             pc->body, NULL,
                                              NS_TYPE_CONSENSUS);
-      tor_assert(sigs);
-      ns_detached_signatures_free(sigs);
       tor_assert(v);
       networkstatus_vote_free(v);
     }
-    tor_free(pending_consensus_signatures);
-    pending_consensus_signatures = new_detached;
     *msg_out = "Signatures added";
   } else if (r == 0) {
     *msg_out = "Signatures ignored";
@@ -2244,8 +2527,63 @@ dirvote_add_signatures_to_pending_consensus(
   if (!*msg_out)
     *msg_out = "Unrecognized error while adding detached signatures.";
  done:
+  return r;
+}
+
+static int
+dirvote_add_signatures_to_all_pending_consensuses(
+                       const char *detached_signatures_body,
+                       const char **msg_out)
+{
+  int r=0, i, n_added = 0, errors = 0;
+  ns_detached_signatures_t *sigs;
+  tor_assert(detached_signatures_body);
+  tor_assert(msg_out);
+  tor_assert(pending_consensus_signatures);
+
+  if (!(sigs = networkstatus_parse_detached_signatures(
+                               detached_signatures_body, NULL))) {
+    *msg_out = "Couldn't parse detached signatures.";
+    goto err;
+  }
+
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    int res;
+    pending_consensus_t *pc = &pending_consensuses[i];
+    if (!pc->consensus)
+      continue;
+    res = dirvote_add_signatures_to_pending_consensus(pc, sigs, msg_out);
+    if (res < 0)
+      errors++;
+    else
+      n_added += res;
+  }
+
+  if (errors && !n_added) {
+    r = -1;
+    goto err;
+  }
+
+  if (n_added && pending_consensuses[FLAV_NS].consensus) {
+    char *new_detached =
+      get_detached_signatures_from_pending_consensuses(
+                      pending_consensuses, N_CONSENSUS_FLAVORS);
+    if (new_detached) {
+      tor_free(pending_consensus_signatures);
+      pending_consensus_signatures = new_detached;
+    }
+  }
+
+  r = n_added;
+  goto done;
+ err:
+  if (!*msg_out)
+    *msg_out = "Unrecognized error while adding detached signatures.";
+ done:
   if (sigs)
     ns_detached_signatures_free(sigs);
+  /* XXXX NM Check how return is used.  We can now have an error *and*
+     signatures added. */
   return r;
 }
 
@@ -2258,10 +2596,10 @@ dirvote_add_signatures(const char *detached_signatures_body,
                        const char *source,
                        const char **msg)
 {
-  if (pending_consensus) {
+  if (pending_consensuses[FLAV_NS].consensus) {
     log_notice(LD_DIR, "Got a signature from %s. "
                        "Adding it to the pending consensus.", source);
-    return dirvote_add_signatures_to_pending_consensus(
+    return dirvote_add_signatures_to_all_pending_consensuses(
                                      detached_signatures_body, msg);
   } else {
     log_notice(LD_DIR, "Got a signature from %s. "
@@ -2280,17 +2618,25 @@ dirvote_add_signatures(const char *detached_signatures_body,
 static int
 dirvote_publish_consensus(void)
 {
-  /* Can we actually publish it yet? */
-  if (!pending_consensus ||
-      networkstatus_check_consensus_signature(pending_consensus, 1)<0) {
-    log_warn(LD_DIR, "Not enough info to publish pending consensus");
-    return -1;
-  }
+  int i;
 
-  if (networkstatus_set_current_consensus(pending_consensus_body, 0))
-    log_warn(LD_DIR, "Error publishing consensus");
-  else
-    log_notice(LD_DIR, "Consensus published.");
+  /* Now remember all the other consensuses as if we were a directory cache. */
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    pending_consensus_t *pending = &pending_consensuses[i];
+    const char *name;
+    name = networkstatus_get_flavor_name(i);
+    tor_assert(name);
+    if (!pending->consensus ||
+      networkstatus_check_consensus_signature(pending->consensus, 1)<0) {
+      log_warn(LD_DIR, "Not enough info to publish pending %s consensus",name);
+      continue;
+    }
+
+    if (networkstatus_set_current_consensus(pending->body, name, 0))
+      log_warn(LD_DIR, "Error publishing %s consensus", name);
+    else
+      log_notice(LD_DIR, "Published %s consensus", name);
+  }
 
   return 0;
 }
@@ -2306,12 +2652,8 @@ dirvote_free_all(void)
   smartlist_free(previous_vote_list);
   previous_vote_list = NULL;
 
-  tor_free(pending_consensus_body);
+  dirvote_clear_pending_consensuses();
   tor_free(pending_consensus_signatures);
-  if (pending_consensus) {
-    networkstatus_vote_free(pending_consensus);
-    pending_consensus = NULL;
-  }
   if (pending_consensus_signature_list) {
     /* now empty as a result of clear_pending_votes. */
     smartlist_free(pending_consensus_signature_list);
@@ -2325,9 +2667,10 @@ dirvote_free_all(void)
 
 /** Return the body of the consensus that we're currently trying to build. */
 const char *
-dirvote_get_pending_consensus(void)
+dirvote_get_pending_consensus(consensus_flavor_t flav)
 {
-  return pending_consensus_body;
+  tor_assert(((int)flav) >= 0 && flav < N_CONSENSUS_FLAVORS);
+  return pending_consensuses[flav].body;
 }
 
 /** Return the signatures that we know for the consensus that we're currently
@@ -2377,15 +2720,147 @@ dirvote_get_vote(const char *fp, int flags)
   } else {
     if (pending_vote_list && include_pending) {
       SMARTLIST_FOREACH(pending_vote_list, pending_vote_t *, pv,
-        if (!memcmp(pv->vote->networkstatus_digest, fp, DIGEST_LEN))
+        if (!memcmp(pv->vote->digests.d[DIGEST_SHA1], fp, DIGEST_LEN))
           return pv->vote_body);
     }
     if (previous_vote_list && include_previous) {
       SMARTLIST_FOREACH(previous_vote_list, pending_vote_t *, pv,
-        if (!memcmp(pv->vote->networkstatus_digest, fp, DIGEST_LEN))
+        if (!memcmp(pv->vote->digests.d[DIGEST_SHA1], fp, DIGEST_LEN))
           return pv->vote_body);
     }
   }
   return NULL;
+}
+
+/** Construct and return a new microdescriptor from a routerinfo <b>ri</b>.
+ *
+ * XXX Right now, there is only one way to generate microdescriptors from
+ * router descriptors.  This may change in future consensus methods.  If so,
+ * we'll need an internal way to remember which method we used, and ask for a
+ * particular method.
+ **/
+microdesc_t *
+dirvote_create_microdescriptor(const routerinfo_t *ri)
+{
+  microdesc_t *result = NULL;
+  char *key = NULL, *summary = NULL, *family = NULL;
+  char buf[1024];
+  size_t keylen;
+  char *out = buf, *end = buf+sizeof(buf);
+
+  if (crypto_pk_write_public_key_to_string(ri->onion_pkey, &key, &keylen)<0)
+    goto done;
+  summary = policy_summarize(ri->exit_policy);
+  if (ri->declared_family)
+    family = smartlist_join_strings(ri->declared_family, " ", 0, NULL);
+
+  if (tor_snprintf(out, end-out, "onion-key\n%s", key)<0)
+    goto done;
+  out += strlen(out);
+  if (family) {
+    if (tor_snprintf(out, end-out, "family %s\n", family)<0)
+      goto done;
+    out += strlen(out);
+  }
+  if (summary && strcmp(summary, "reject 1-65535")) {
+    if (tor_snprintf(out, end-out, "p %s\n", summary)<0)
+      goto done;
+    out += strlen(out);
+  }
+  *out = '\0'; /* Make sure it's nul-terminated.  This should be a no-op */
+
+  {
+    smartlist_t *lst = microdescs_parse_from_string(buf, out, 0, 1);
+    if (smartlist_len(lst) != 1) {
+      log_warn(LD_DIR, "We generated a microdescriptor we couldn't parse.");
+      SMARTLIST_FOREACH(lst, microdesc_t *, md, microdesc_free(md));
+      smartlist_free(lst);
+      goto done;
+    }
+    result = smartlist_get(lst, 0);
+    smartlist_free(lst);
+  }
+
+ done:
+  tor_free(key);
+  tor_free(summary);
+  tor_free(family);
+  return result;
+}
+
+/** Cached space-separated string to hold */
+static char *microdesc_consensus_methods = NULL;
+
+/** Format the appropriate vote line to describe the microdescriptor <b>md</b>
+ * in a consensus vote document.  Write it into the <b>out_len</b>-byte buffer
+ * in <b>out</b>.  Return -1 on failure and the number of characters written
+ * on success. */
+ssize_t
+dirvote_format_microdesc_vote_line(char *out, size_t out_len,
+                                   const microdesc_t *md)
+{
+  char d64[BASE64_DIGEST256_LEN+1];
+  if (!microdesc_consensus_methods) {
+    microdesc_consensus_methods =
+      make_consensus_method_list(MIN_METHOD_FOR_MICRODESC,
+                                 MAX_SUPPORTED_CONSENSUS_METHOD,
+                                 ",");
+    tor_assert(microdesc_consensus_methods);
+  }
+  if (digest256_to_base64(d64, md->digest)<0)
+    return -1;
+
+  if (tor_snprintf(out, out_len, "m %s sha256=%s\n",
+                   microdesc_consensus_methods, d64)<0)
+    return -1;
+
+  return strlen(out);
+}
+
+/** If <b>vrs</b> has a hash made for the consensus method <b>method</b> with
+ * the digest algorithm <b>alg</b>, decode it and copy it into
+ * <b>digest256_out</b> and return 0.  Otherwise return -1. */
+int
+vote_routerstatus_find_microdesc_hash(char *digest256_out,
+                                      const vote_routerstatus_t *vrs,
+                                      int method,
+                                      digest_algorithm_t alg)
+{
+  /* XXXX only returns the sha256 method. */
+  const vote_microdesc_hash_t *h;
+  char mstr[64];
+  size_t mlen;
+  char dstr[64];
+
+  tor_snprintf(mstr, sizeof(mstr), "%d", method);
+  mlen = strlen(mstr);
+  tor_snprintf(dstr, sizeof(dstr), " %s=",
+               crypto_digest_algorithm_get_name(alg));
+
+  for (h = vrs->microdesc; h; h = h->next) {
+    const char *cp = h->microdesc_hash_line;
+    size_t num_len;
+    /* cp looks like \d+(,\d+)* (digesttype=val )+ .  Let's hunt for mstr in
+     * the first part. */
+    while (1) {
+      num_len = strspn(cp, "1234567890");
+      if (num_len == mlen && !memcmp(mstr, cp, mlen)) {
+        /* This is the line. */
+        char buf[BASE64_DIGEST256_LEN+1];
+        /* XXXX ignores extraneous stuff if the digest is too long.  This
+         * seems harmless enough, right? */
+        cp = strstr(cp, dstr);
+        if (!cp)
+          return -1;
+        cp += strlen(dstr);
+        strlcpy(buf, cp, sizeof(buf));
+        return digest256_from_base64(digest256_out, buf);
+      }
+      if (num_len == 0 || cp[num_len] != ',')
+        break;
+      cp += num_len + 1;
+    }
+  }
+  return -1;
 }
 

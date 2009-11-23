@@ -1015,8 +1015,7 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
         router_get_verbose_nickname(elt, ri);
       } else if ((rs = router_get_consensus_status_by_id(id))) {
         routerstatus_get_verbose_nickname(elt, rs);
-      } else if (hop->extend_info->nickname &&
-                 is_legal_nickname(hop->extend_info->nickname)) {
+      } else if (is_legal_nickname(hop->extend_info->nickname)) {
         elt[0] = '$';
         base16_encode(elt+1, HEX_DIGEST_LEN+1, id, DIGEST_LEN);
         elt[HEX_DIGEST_LEN+1]= '~';
@@ -1228,7 +1227,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
 
   if (!n_conn) {
     /* not currently connected in a useful way. */
-    const char *name = firsthop->extend_info->nickname ?
+    const char *name = strlen(firsthop->extend_info->nickname) ?
       firsthop->extend_info->nickname : fmt_addr(&firsthop->extend_info->addr);
     log_info(LD_CIRC, "Next router is %s: %s ", safe_str(name), msg?msg:"???");
     circ->_base.n_hop = extend_info_dup(firsthop->extend_info);

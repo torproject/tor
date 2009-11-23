@@ -92,6 +92,7 @@ static void directory_initiate_command_rend(const char *address,
 #define ROUTERDESC_CACHE_LIFETIME (30*60)
 #define ROUTERDESC_BY_DIGEST_CACHE_LIFETIME (48*60*60)
 #define ROBOTS_CACHE_LIFETIME (24*60*60)
+#define MICRODESC_CACHE_LIFETIME (48*60*60)
 
 /********* END VARIABLES ************/
 
@@ -332,7 +333,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       return;
   }
 
-  if (DIR_PURPOSE_FETCH_CONSENSUS) {
+  if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     networkstatus_t *v = networkstatus_get_latest_consensus();
     if (v)
       if_modified_since = v->valid_after + 180;
@@ -610,7 +611,7 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
      * failed, and possibly retry them later.*/
     smartlist_t *failed = smartlist_create();
     dir_split_resource_into_fingerprints(conn->requested_resource+3,
-                                         failed, NULL, 0, 0);
+                                         failed, NULL, 0);
     if (smartlist_len(failed)) {
       dir_networkstatus_download_failed(failed, status_code);
       SMARTLIST_FOREACH(failed, char *, cp, tor_free(cp));
@@ -647,7 +648,7 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
     return;
   failed = smartlist_create();
   dir_split_resource_into_fingerprints(conn->requested_resource+3,
-                                       failed, NULL, 1, 0);
+                                       failed, NULL, DSR_HEX);
   SMARTLIST_FOREACH(failed, char *, cp,
   {
     authority_cert_dl_failed(cp, status);
@@ -1564,7 +1565,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       source = NS_FROM_DIR_BY_FP;
       which = smartlist_create();
       dir_split_resource_into_fingerprints(conn->requested_resource+3,
-                                           which, NULL, 0, 0);
+                                           which, NULL, 0);
     } else if (conn->requested_resource &&
                !strcmpstart(conn->requested_resource, "all")) {
       source = NS_FROM_DIR_ALL;
@@ -1623,7 +1624,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     log_info(LD_DIR,"Received consensus directory (size %d) from server "
              "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
-    if ((r=networkstatus_set_current_consensus(body, 0))<0) {
+    if ((r=networkstatus_set_current_consensus(body, "ns", 0))<0) {
       log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
              "Unable to load consensus directory downloaded from "
              "server '%s:%d'. I'll try again soon.",
@@ -1688,8 +1689,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              (int) body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
-        "Received http status code %d (%s) from server "
-        "'%s:%d' while fetching \"/tor/status-vote/consensus-signatures.z\".",
+        "Received http status code %d (%s) from server '%s:%d' while fetching "
+        "\"/tor/status-vote/next/consensus-signatures.z\".",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
@@ -1717,7 +1718,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       which = smartlist_create();
       dir_split_resource_into_fingerprints(conn->requested_resource +
                                              (descriptor_digests ? 2 : 3),
-                                           which, NULL, 0, 0);
+                                           which, NULL, 0);
       n_asked_for = smartlist_len(which);
     }
     if (status_code != 200) {
@@ -2328,9 +2329,9 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
   int need_at_least;
   int have = 0;
 
-  dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0, 0);
+  dir_split_resource_into_fingerprints(want_url, want_authorities, NULL, 0);
   need_at_least = smartlist_len(want_authorities)/2+1;
-  SMARTLIST_FOREACH(want_authorities, const char *, d, {
+  SMARTLIST_FOREACH_BEGIN(want_authorities, const char *, d) {
     char want_digest[DIGEST_LEN];
     size_t want_len = strlen(d)/2;
     if (want_len > DIGEST_LEN)
@@ -2341,18 +2342,18 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
       continue;
     };
 
-    SMARTLIST_FOREACH(v->voters, networkstatus_voter_info_t *, vi, {
-      if (vi->signature &&
+    SMARTLIST_FOREACH_BEGIN(v->voters, networkstatus_voter_info_t *, vi) {
+      if (smartlist_len(vi->sigs) &&
           !memcmp(vi->identity_digest, want_digest, want_len)) {
         have++;
         break;
       };
-    });
+    } SMARTLIST_FOREACH_END(vi);
 
     /* early exit, if we already have enough */
     if (have >= need_at_least)
       break;
-  });
+  } SMARTLIST_FOREACH_END(d);
 
   SMARTLIST_FOREACH(want_authorities, char *, d, tor_free(d));
   smartlist_free(want_authorities);
@@ -2504,6 +2505,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     const char *request_type = NULL;
     const char *key = url + strlen("/tor/status/");
     long lifetime = NETWORKSTATUS_CACHE_LIFETIME;
+
     if (!is_v3) {
       dirserv_get_networkstatus_v2_fingerprints(dir_fps, key);
       if (!strcmpstart(key, "fp/"))
@@ -2518,19 +2520,44 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     } else {
       networkstatus_t *v = networkstatus_get_latest_consensus();
       time_t now = time(NULL);
+      const char *want_fps = NULL;
+      char *flavor = NULL;
       #define CONSENSUS_URL_PREFIX "/tor/status-vote/current/consensus/"
-      if (v &&
-          !strcmpstart(url, CONSENSUS_URL_PREFIX) &&
-          !client_likes_consensus(v, url + strlen(CONSENSUS_URL_PREFIX))) {
+      #define CONSENSUS_FLAVORED_PREFIX "/tor/status-vote/current/consensus-"
+      /* figure out the flavor if any, and who we wanted to sign the thing */
+      if (!strcmpstart(url, CONSENSUS_FLAVORED_PREFIX)) {
+        const char *f, *cp;
+        f = url + strlen(CONSENSUS_FLAVORED_PREFIX);
+        cp = strchr(f, '/');
+        if (cp) {
+          want_fps = cp+1;
+          flavor = tor_strndup(f, cp-f);
+        } else {
+          flavor = tor_strdup(f);
+        }
+      } else {
+        if (!strcmpstart(url, CONSENSUS_URL_PREFIX))
+          want_fps = url+strlen(CONSENSUS_URL_PREFIX);
+      }
+
+      /* XXXX MICRODESC NM NM should check document of correct flavor */
+      if (v && want_fps &&
+          !client_likes_consensus(v, want_fps)) {
         write_http_status_line(conn, 404, "Consensus not signed by sufficient "
                                           "number of requested authorities");
         smartlist_free(dir_fps);
         geoip_note_ns_response(act, GEOIP_REJECT_NOT_ENOUGH_SIGS);
+        tor_free(flavor);
         goto done;
       }
 
-      smartlist_add(dir_fps, tor_memdup("\0\0\0\0\0\0\0\0\0\0"
-                                        "\0\0\0\0\0\0\0\0\0\0", 20));
+      {
+        char *fp = tor_malloc_zero(DIGEST_LEN);
+        if (flavor)
+          strlcpy(fp, flavor, DIGEST_LEN);
+        tor_free(flavor);
+        smartlist_add(dir_fps, fp);
+      }
       request_type = compressed?"v3.z":"v3";
       lifetime = (v && v->fresh_until > now) ? v->fresh_until - now : 0;
     }
@@ -2618,7 +2645,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
       const char *item;
       tor_assert(!current); /* we handle current consensus specially above,
                              * since it wants to be spooled. */
-      if ((item = dirvote_get_pending_consensus()))
+      if ((item = dirvote_get_pending_consensus(FLAV_NS)))
         smartlist_add(items, (char*)item);
     } else if (!current && !strcmp(url, "consensus-signatures")) {
       /* XXXX the spec says that we should implement
@@ -2644,7 +2671,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
         flags = DGV_BY_ID |
           (current ? DGV_INCLUDE_PREVIOUS : DGV_INCLUDE_PENDING);
       }
-      dir_split_resource_into_fingerprints(url, fps, NULL, 1, 1);
+      dir_split_resource_into_fingerprints(url, fps, NULL,
+                                           DSR_HEX|DSR_SORT_UNIQ);
       SMARTLIST_FOREACH(fps, char *, fp, {
           if ((d = dirvote_get_vote(fp, flags)))
             smartlist_add(dir_items, (cached_dir_t*)d);
@@ -2694,6 +2722,41 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   vote_done:
     smartlist_free(items);
     smartlist_free(dir_items);
+    goto done;
+  }
+
+  if (!strcmpstart(url, "/tor/micro/d/")) {
+    smartlist_t *fps = smartlist_create();
+
+    dir_split_resource_into_fingerprints(url+strlen("/tor/micro/d/"),
+                                      fps, NULL,
+                                      DSR_DIGEST256|DSR_BASE64|DSR_SORT_UNIQ);
+
+    if (!dirserv_have_any_microdesc(fps)) {
+      write_http_status_line(conn, 404, "Not found");
+      SMARTLIST_FOREACH(fps, char *, fp, tor_free(fp));
+      smartlist_free(fps);
+      goto done;
+    }
+    dlen = dirserv_estimate_microdesc_size(fps, compressed);
+    if (global_write_bucket_low(TO_CONN(conn), dlen, 2)) {
+      log_info(LD_DIRSERV,
+               "Client asked for server descriptors, but we've been "
+               "writing too many bytes lately. Sending 503 Dir busy.");
+      write_http_status_line(conn, 503, "Directory busy, try again later");
+      SMARTLIST_FOREACH(fps, char *, fp, tor_free(fp));
+      smartlist_free(fps);
+      goto done;
+    }
+
+    write_http_response_header(conn, -1, compressed, MICRODESC_CACHE_LIFETIME);
+    conn->dir_spool_src = DIR_SPOOL_MICRODESC;
+    conn->fingerprint_stack = fps;
+
+    if (compressed)
+      conn->zlib_state = tor_zlib_new(1, ZLIB_METHOD);
+
+    connection_dirserv_flushed_some(conn);
     goto done;
   }
 
@@ -2778,7 +2841,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     } else if (!strcmpstart(url, "/tor/keys/fp/")) {
       smartlist_t *fps = smartlist_create();
       dir_split_resource_into_fingerprints(url+strlen("/tor/keys/fp/"),
-                                           fps, NULL, 1, 1);
+                                           fps, NULL,
+                                           DSR_HEX|DSR_SORT_UNIQ);
       SMARTLIST_FOREACH(fps, char *, d, {
           authority_cert_t *c = authority_cert_get_newest_by_id(d);
           if (c) smartlist_add(certs, c);
@@ -2788,7 +2852,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     } else if (!strcmpstart(url, "/tor/keys/sk/")) {
       smartlist_t *fps = smartlist_create();
       dir_split_resource_into_fingerprints(url+strlen("/tor/keys/sk/"),
-                                           fps, NULL, 1, 1);
+                                           fps, NULL,
+                                           DSR_HEX|DSR_SORT_UNIQ);
       SMARTLIST_FOREACH(fps, char *, d, {
           authority_cert_t *c = authority_cert_get_by_sk_digest(d);
           if (c) smartlist_add(certs, c);
@@ -3523,19 +3588,37 @@ dir_split_resource_into_fingerprint_pairs(const char *res,
 /** Given a directory <b>resource</b> request, containing zero
  * or more strings separated by plus signs, followed optionally by ".z", store
  * the strings, in order, into <b>fp_out</b>.  If <b>compressed_out</b> is
- * non-NULL, set it to 1 if the resource ends in ".z", else set it to 0.  If
- * decode_hex is true, then delete all elements that aren't hex digests, and
- * decode the rest.  If sort_uniq is true, then sort the list and remove
- * all duplicates.
+ * non-NULL, set it to 1 if the resource ends in ".z", else set it to 0.
+ *
+ * If (flags & DSR_HEX), then delete all elements that aren't hex digests, and
+ * decode the rest.  If (flags & DSR_BASE64), then use "-" rather than "+" as
+ * a separator, delete all the elements that aren't base64-encoded digests,
+ * and decode the rest.  If (flags & DSR_DIGEST256), these digests should be
+ * 256 bits long; else they should be 160.
+ *
+ * If (flags & DSR_SORT_UNIQ), then sort the list and remove all duplicates.
  */
 int
 dir_split_resource_into_fingerprints(const char *resource,
                                      smartlist_t *fp_out, int *compressed_out,
-                                     int decode_hex, int sort_uniq)
+                                     int flags)
 {
+  const int decode_hex = flags & DSR_HEX;
+  const int decode_base64 = flags & DSR_BASE64;
+  const int digests_are_256 = flags & DSR_DIGEST256;
+  const int sort_uniq = flags & DSR_SORT_UNIQ;
+
+  const int digest_len = digests_are_256 ? DIGEST256_LEN : DIGEST_LEN;
+  const int hex_digest_len = digests_are_256 ?
+    HEX_DIGEST256_LEN : HEX_DIGEST_LEN;
+  const int base64_digest_len = digests_are_256 ?
+    BASE64_DIGEST256_LEN : BASE64_DIGEST_LEN;
   smartlist_t *fp_tmp = smartlist_create();
+
+  tor_assert(!(decode_hex && decode_base64));
   tor_assert(fp_out);
-  smartlist_split_string(fp_tmp, resource, "+", 0, 0);
+
+  smartlist_split_string(fp_tmp, resource, decode_base64?"-":"+", 0, 0);
   if (compressed_out)
     *compressed_out = 0;
   if (smartlist_len(fp_tmp)) {
@@ -3547,22 +3630,25 @@ dir_split_resource_into_fingerprints(const char *resource,
         *compressed_out = 1;
     }
   }
-  if (decode_hex) {
+  if (decode_hex || decode_base64) {
+    const size_t encoded_len = decode_hex ? hex_digest_len : base64_digest_len;
     int i;
     char *cp, *d = NULL;
     for (i = 0; i < smartlist_len(fp_tmp); ++i) {
       cp = smartlist_get(fp_tmp, i);
-      if (strlen(cp) != HEX_DIGEST_LEN) {
+      if (strlen(cp) != encoded_len) {
         log_info(LD_DIR,
                  "Skipping digest %s with non-standard length.", escaped(cp));
         smartlist_del_keeporder(fp_tmp, i--);
         goto again;
       }
-      d = tor_malloc_zero(DIGEST_LEN);
-      if (base16_decode(d, DIGEST_LEN, cp, HEX_DIGEST_LEN)<0) {
-        log_info(LD_DIR, "Skipping non-decodable digest %s", escaped(cp));
-        smartlist_del_keeporder(fp_tmp, i--);
-        goto again;
+      d = tor_malloc_zero(digest_len);
+      if (decode_hex ?
+          (base16_decode(d, digest_len, cp, hex_digest_len)<0) :
+          (base64_decode(d, digest_len, cp, base64_digest_len)<0)) {
+          log_info(LD_DIR, "Skipping non-decodable digest %s", escaped(cp));
+          smartlist_del_keeporder(fp_tmp, i--);
+          goto again;
       }
       smartlist_set(fp_tmp, i, d);
       d = NULL;
@@ -3572,26 +3658,18 @@ dir_split_resource_into_fingerprints(const char *resource,
     }
   }
   if (sort_uniq) {
-    smartlist_t *fp_tmp2 = smartlist_create();
-    int i;
-    if (decode_hex)
-      smartlist_sort_digests(fp_tmp);
-    else
+    if (decode_hex || decode_base64) {
+      if (digests_are_256) {
+        smartlist_sort_digests256(fp_tmp);
+        smartlist_uniq_digests256(fp_tmp);
+      } else {
+        smartlist_sort_digests(fp_tmp);
+        smartlist_uniq_digests(fp_tmp);
+      }
+    } else {
       smartlist_sort_strings(fp_tmp);
-    if (smartlist_len(fp_tmp))
-      smartlist_add(fp_tmp2, smartlist_get(fp_tmp, 0));
-    for (i = 1; i < smartlist_len(fp_tmp); ++i) {
-      char *cp = smartlist_get(fp_tmp, i);
-      char *last = smartlist_get(fp_tmp2, smartlist_len(fp_tmp2)-1);
-
-      if ((decode_hex && memcmp(cp, last, DIGEST_LEN))
-          || (!decode_hex && strcasecmp(cp, last)))
-        smartlist_add(fp_tmp2, cp);
-      else
-        tor_free(cp);
+      smartlist_uniq_strings(fp_tmp);
     }
-    smartlist_free(fp_tmp);
-    fp_tmp = fp_tmp2;
   }
   smartlist_add_all(fp_out, fp_tmp);
   smartlist_free(fp_tmp);

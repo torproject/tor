@@ -35,16 +35,22 @@ static networkstatus_t *current_consensus = NULL;
 
 /** A v3 consensus networkstatus that we've received, but which we don't
  * have enough certificates to be happy about. */
-static networkstatus_t *consensus_waiting_for_certs = NULL;
-/** The encoded version of consensus_waiting_for_certs. */
-static char *consensus_waiting_for_certs_body = NULL;
-/** When did we set the current value of consensus_waiting_for_certs?  If this
- * is too recent, we shouldn't try to fetch a new consensus for a little while,
- * to give ourselves time to get certificates for this one. */
-static time_t consensus_waiting_for_certs_set_at = 0;
-/** Set to 1 if we've been holding on to consensus_waiting_for_certs so long
- * that we should treat it as maybe being bad. */
-static int consensus_waiting_for_certs_dl_failed = 0;
+typedef struct consensus_waiting_for_certs_t {
+  /** The consensus itself. */
+  networkstatus_t *consensus;
+  /** The encoded version of the consensus, nul-terminated. */
+  char *body;
+  /** When did we set the current value of consensus_waiting_for_certs?  If
+   * this is too recent, we shouldn't try to fetch a new consensus for a
+   * little while, to give ourselves time to get certificates for this one. */
+  time_t set_at;
+  /** Set to 1 if we've been holding on to it for so long we should maybe
+   * treat it as being bad. */
+  int dl_failed;
+} consensus_waiting_for_certs_t;
+
+static consensus_waiting_for_certs_t
+       consensus_waiting_for_certs[N_CONSENSUS_FLAVORS];
 
 /** The last time we tried to download a networkstatus, or 0 for "never".  We
  * use this to rate-limit download attempts for directory caches (including
@@ -56,7 +62,7 @@ static time_t last_networkstatus_download_attempted = 0;
  * before the current consensus becomes invalid. */
 static time_t time_to_download_next_consensus = 0;
 /** Download status for the current consensus networkstatus. */
-static download_status_t consensus_dl_status = { 0, 0, DL_SCHED_CONSENSUS };
+static download_status_t consensus_dl_status[N_CONSENSUS_FLAVORS];
 
 /** True iff we have logged a warning about this OR's version being older than
  * listed by the authorities. */
@@ -89,6 +95,7 @@ networkstatus_reset_warnings(void)
 void
 networkstatus_reset_download_failures(void)
 {
+  int i;
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
      SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
@@ -97,7 +104,8 @@ networkstatus_reset_download_failures(void)
            rs->need_to_mirror = 1;
        }));;
 
-  download_status_reset(&consensus_dl_status);
+  for (i=0; i < N_CONSENSUS_FLAVORS; ++i)
+    download_status_reset(&consensus_dl_status[i]);
   if (v2_download_status_map) {
     digestmap_iter_t *iter;
     digestmap_t *map = v2_download_status_map;
@@ -170,7 +178,7 @@ router_reload_v2_networkstatus(void)
   return 0;
 }
 
-/** Read the cached v3 consensus networkstatus from the disk. */
+/** Read every cached v3 consensus networkstatus from the disk. */
 int
 router_reload_consensus_networkstatus(void)
 {
@@ -179,31 +187,46 @@ router_reload_consensus_networkstatus(void)
   struct stat st;
   or_options_t *options = get_options();
   const unsigned int flags = NSSET_FROM_CACHE | NSSET_DONT_DOWNLOAD_CERTS;
+  int flav;
 
   /* FFFF Suppress warnings if cached consensus is bad? */
-
-  filename = get_datadir_fname("cached-consensus");
-  s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
-  if (s) {
-    if (networkstatus_set_current_consensus(s, flags) < -1) {
-      log_warn(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
-               filename);
+  for (flav = 0; flav < N_CONSENSUS_FLAVORS; ++flav) {
+    char buf[128];
+    const char *flavor = networkstatus_get_flavor_name(flav);
+    if (flav == FLAV_NS) {
+      filename = get_datadir_fname("cached-consensus");
+    } else {
+      tor_snprintf(buf, sizeof(buf), "cached-%s-consensus", flavor);
+      filename = get_datadir_fname(buf);
     }
-    tor_free(s);
-  }
-  tor_free(filename);
+    s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+    if (s) {
+      if (networkstatus_set_current_consensus(s, flavor, flags) < -1) {
+        log_warn(LD_FS, "Couldn't load consensus %s networkstatus from \"%s\"",
+                 flavor, filename);
+      }
+      tor_free(s);
+    }
+    tor_free(filename);
 
-  filename = get_datadir_fname("unverified-consensus");
-  s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
-  if (s) {
-    if (networkstatus_set_current_consensus(s,
+    if (flav == FLAV_NS) {
+      filename = get_datadir_fname("unverified-consensus");
+    } else {
+      tor_snprintf(buf, sizeof(buf), "unverified-%s-consensus", flavor);
+      filename = get_datadir_fname(buf);
+    }
+
+    s = read_file_to_str(filename, RFTS_IGNORE_MISSING, NULL);
+    if (s) {
+      if (networkstatus_set_current_consensus(s, flavor,
                                      flags|NSSET_WAS_WAITING_FOR_CERTS)) {
-      log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
-               filename);
+      log_info(LD_FS, "Couldn't load consensus %s networkstatus from \"%s\"",
+               flavor, filename);
     }
-    tor_free(s);
+      tor_free(s);
+    }
+    tor_free(filename);
   }
-  tor_free(filename);
 
   if (!current_consensus ||
       (stat(options->FallbackNetworkstatusFile, &st)==0 &&
@@ -211,7 +234,7 @@ router_reload_consensus_networkstatus(void)
     s = read_file_to_str(options->FallbackNetworkstatusFile,
                          RFTS_IGNORE_MISSING, NULL);
     if (s) {
-      if (networkstatus_set_current_consensus(s,
+      if (networkstatus_set_current_consensus(s, "ns",
                                               flags|NSSET_ACCEPT_OBSOLETE)) {
         log_info(LD_FS, "Couldn't load consensus networkstatus from \"%s\"",
                  options->FallbackNetworkstatusFile);
@@ -242,8 +265,14 @@ router_reload_consensus_networkstatus(void)
 static void
 vote_routerstatus_free(vote_routerstatus_t *rs)
 {
+  vote_microdesc_hash_t *h, *next;
   tor_free(rs->version);
   tor_free(rs->status.exitsummary);
+  for (h = rs->microdesc; h; h = next) {
+    tor_free(h->microdesc_hash_line);
+    next = h->next;
+    tor_free(h);
+  }
   tor_free(rs);
 }
 
@@ -273,7 +302,25 @@ networkstatus_v2_free(networkstatus_v2_t *ns)
   tor_free(ns);
 }
 
-/** Clear all storage held in <b>ns</b>. */
+/** Free all storage held in <b>sig</b> */
+void
+document_signature_free(document_signature_t *sig)
+{
+  tor_free(sig->signature);
+  tor_free(sig);
+}
+
+/** Return a newly allocated copy of <b>sig</b> */
+document_signature_t *
+document_signature_dup(const document_signature_t *sig)
+{
+  document_signature_t *r = tor_memdup(sig, sizeof(document_signature_t));
+  if (r->signature)
+    r->signature = tor_memdup(sig->signature, sig->signature_len);
+  return r;
+}
+
+/** Free all storage held in <b>ns</b>. */
 void
 networkstatus_vote_free(networkstatus_t *ns)
 {
@@ -295,14 +342,17 @@ networkstatus_vote_free(networkstatus_t *ns)
     smartlist_free(ns->supported_methods);
   }
   if (ns->voters) {
-    SMARTLIST_FOREACH(ns->voters, networkstatus_voter_info_t *, voter,
-    {
+    SMARTLIST_FOREACH_BEGIN(ns->voters, networkstatus_voter_info_t *, voter) {
       tor_free(voter->nickname);
       tor_free(voter->address);
       tor_free(voter->contact);
-      tor_free(voter->signature);
+      if (voter->sigs) {
+        SMARTLIST_FOREACH(voter->sigs, document_signature_t *, sig,
+                          document_signature_free(sig));
+        smartlist_free(voter->sigs);
+      }
       tor_free(voter);
-    });
+    } SMARTLIST_FOREACH_END(voter);
     smartlist_free(ns->voters);
   }
   if (ns->cert)
@@ -341,34 +391,38 @@ networkstatus_get_voter_by_id(networkstatus_t *vote,
   return NULL;
 }
 
-/** Check whether the signature on <b>voter</b> is correctly signed by
- * the signing key of <b>cert</b>. Return -1 if <b>cert</b> doesn't match the
+/** Check whether the signature <b>sig</b> is correctly signed with the
+ * signing key in <b>cert</b>.  Return -1 if <b>cert</b> doesn't match the
  * signing key; otherwise set the good_signature or bad_signature flag on
  * <b>voter</b>, and return 0. */
-/* (private; exposed for testing.) */
 int
-networkstatus_check_voter_signature(networkstatus_t *consensus,
-                                    networkstatus_voter_info_t *voter,
-                                    authority_cert_t *cert)
+networkstatus_check_document_signature(const networkstatus_t *consensus,
+                                       document_signature_t *sig,
+                                       const authority_cert_t *cert)
 {
-  char d[DIGEST_LEN];
+  char key_digest[DIGEST_LEN];
+  const int dlen = sig->alg == DIGEST_SHA1 ? DIGEST_LEN : DIGEST256_LEN;
   char *signed_digest;
   size_t signed_digest_len;
-  if (crypto_pk_get_digest(cert->signing_key, d)<0)
+
+  if (crypto_pk_get_digest(cert->signing_key, key_digest)<0)
     return -1;
-  if (memcmp(voter->signing_key_digest, d, DIGEST_LEN))
+  if (memcmp(sig->signing_key_digest, key_digest, DIGEST_LEN) ||
+      memcmp(sig->identity_digest, cert->cache_info.identity_digest,
+             DIGEST_LEN))
     return -1;
+
   signed_digest_len = crypto_pk_keysize(cert->signing_key);
   signed_digest = tor_malloc(signed_digest_len);
   if (crypto_pk_public_checksig(cert->signing_key,
                                 signed_digest,
-                                voter->signature,
-                                voter->signature_len) != DIGEST_LEN ||
-      memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
+                                sig->signature,
+                                sig->signature_len) < dlen ||
+      memcmp(signed_digest, consensus->digests.d[sig->alg], dlen)) {
     log_warn(LD_DIR, "Got a bad signature on a networkstatus vote");
-    voter->bad_signature = 1;
+    sig->bad_signature = 1;
   } else {
-    voter->good_signature = 1;
+    sig->good_signature = 1;
   }
   tor_free(signed_digest);
   return 0;
@@ -401,37 +455,52 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
 
   tor_assert(consensus->type == NS_TYPE_CONSENSUS);
 
-  SMARTLIST_FOREACH(consensus->voters, networkstatus_voter_info_t *, voter,
-  {
-    if (!voter->good_signature && !voter->bad_signature && voter->signature) {
-      /* we can try to check the signature. */
-      int is_v3_auth = trusteddirserver_get_by_v3_auth_digest(
-                                          voter->identity_digest) != NULL;
-      authority_cert_t *cert =
-        authority_cert_get_by_digests(voter->identity_digest,
-                                      voter->signing_key_digest);
-      if (!is_v3_auth) {
-        smartlist_add(unrecognized, voter);
-        ++n_unknown;
-        continue;
-      } else if (!cert || cert->expires < now) {
-        smartlist_add(need_certs_from, voter);
-        ++n_missing_key;
-        continue;
+  SMARTLIST_FOREACH_BEGIN(consensus->voters, networkstatus_voter_info_t *,
+                          voter) {
+    int good_here = 0;
+    int bad_here = 0;
+    int missing_key_here = 0;
+    SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
+      if (!sig->good_signature && !sig->bad_signature &&
+          sig->signature) {
+        /* we can try to check the signature. */
+        int is_v3_auth = trusteddirserver_get_by_v3_auth_digest(
+                                              sig->identity_digest) != NULL;
+        authority_cert_t *cert =
+          authority_cert_get_by_digests(sig->identity_digest,
+                                        sig->signing_key_digest);
+        tor_assert(!memcmp(sig->identity_digest, voter->identity_digest,
+                           DIGEST_LEN));
+
+        if (!is_v3_auth) {
+          smartlist_add(unrecognized, voter);
+          ++n_unknown;
+          continue;
+        } else if (!cert || cert->expires < now) {
+          smartlist_add(need_certs_from, voter);
+          ++missing_key_here;
+          continue;
+        }
+        if (networkstatus_check_document_signature(consensus, sig, cert) < 0) {
+          smartlist_add(need_certs_from, voter);
+          ++missing_key_here;
+          continue;
+        }
       }
-      if (networkstatus_check_voter_signature(consensus, voter, cert) < 0) {
-        smartlist_add(need_certs_from, voter);
-        ++n_missing_key;
-        continue;
-      }
-    }
-    if (voter->good_signature)
+      if (sig->good_signature)
+        ++good_here;
+      else if (sig->bad_signature)
+        ++bad_here;
+    } SMARTLIST_FOREACH_END(sig);
+    if (good_here)
       ++n_good;
-    else if (voter->bad_signature)
+    else if (bad_here)
       ++n_bad;
+    else if (missing_key_here)
+      ++n_missing_key;
     else
       ++n_no_signature;
-  });
+  } SMARTLIST_FOREACH_END(voter);
 
   /* Now see whether we're missing any voters entirely. */
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
@@ -1077,27 +1146,32 @@ static void
 update_consensus_networkstatus_downloads(time_t now)
 {
   or_options_t *options = get_options();
+  int i;
   if (!networkstatus_get_live_consensus(now))
     time_to_download_next_consensus = now; /* No live consensus? Get one now!*/
   if (time_to_download_next_consensus > now)
     return; /* Wait until the current consensus is older. */
   if (authdir_mode_v3(options))
     return; /* Authorities never fetch a consensus */
-  if (!download_status_is_ready(&consensus_dl_status, now,
+  /* XXXXNM Microdescs: may need to download more types. */
+  if (!download_status_is_ready(&consensus_dl_status[FLAV_NS], now,
                                 CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES))
     return; /* We failed downloading a consensus too recently. */
   if (connection_get_by_type_purpose(CONN_TYPE_DIR,
                                      DIR_PURPOSE_FETCH_CONSENSUS))
     return; /* There's an in-progress download.*/
 
-  if (consensus_waiting_for_certs) {
-    /* XXXX make sure this doesn't delay sane downloads. */
-    if (consensus_waiting_for_certs_set_at + DELAY_WHILE_FETCHING_CERTS > now)
-      return; /* We're still getting certs for this one. */
-    else {
-      if (!consensus_waiting_for_certs_dl_failed) {
-        download_status_failed(&consensus_dl_status, 0);
-        consensus_waiting_for_certs_dl_failed=1;
+  for (i=0; i < N_CONSENSUS_FLAVORS; ++i) {
+    consensus_waiting_for_certs_t *waiting = &consensus_waiting_for_certs[i];
+    if (waiting->consensus) {
+      /* XXXX make sure this doesn't delay sane downloads. */
+      if (waiting->set_at + DELAY_WHILE_FETCHING_CERTS > now)
+        return; /* We're still getting certs for this one. */
+      else {
+        if (!waiting->dl_failed) {
+          download_status_failed(&consensus_dl_status[FLAV_NS], 0);
+          waiting->dl_failed=1;
+        }
       }
     }
   }
@@ -1113,7 +1187,8 @@ update_consensus_networkstatus_downloads(time_t now)
 void
 networkstatus_consensus_download_failed(int status_code)
 {
-  download_status_failed(&consensus_dl_status, status_code);
+  /* XXXXNM Microdescs: may need to handle more types. */
+  download_status_failed(&consensus_dl_status[FLAV_NS], status_code);
   /* Retry immediately, if appropriate. */
   update_consensus_networkstatus_downloads(time(NULL));
 }
@@ -1219,10 +1294,14 @@ update_networkstatus_downloads(time_t now)
 void
 update_certificate_downloads(time_t now)
 {
-  if (consensus_waiting_for_certs)
-    authority_certs_fetch_missing(consensus_waiting_for_certs, now);
-  else
-    authority_certs_fetch_missing(current_consensus, now);
+  int i;
+  for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
+    if (consensus_waiting_for_certs[i].consensus)
+      authority_certs_fetch_missing(consensus_waiting_for_certs[i].consensus,
+                                    now);
+  }
+
+  authority_certs_fetch_missing(current_consensus, now);
 }
 
 /** Return 1 if we have a consensus but we don't have enough certificates
@@ -1230,7 +1309,8 @@ update_certificate_downloads(time_t now)
 int
 consensus_is_waiting_for_certs(void)
 {
-  return consensus_waiting_for_certs ? 1 : 0;
+  return consensus_waiting_for_certs[USABLE_CONSENSUS_FLAVOR].consensus
+    ? 1 : 0;
 }
 
 /** Return the network status with a given identity digest. */
@@ -1399,16 +1479,29 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
  * user, and -2 for more serious problems.
  */
 int
-networkstatus_set_current_consensus(const char *consensus, unsigned flags)
+networkstatus_set_current_consensus(const char *consensus,
+                                    const char *flavor,
+                                    unsigned flags)
 {
-  networkstatus_t *c;
+  networkstatus_t *c=NULL;
   int r, result = -1;
   time_t now = time(NULL);
   char *unverified_fname = NULL, *consensus_fname = NULL;
+  int flav = networkstatus_parse_flavor_name(flavor);
   const unsigned from_cache = flags & NSSET_FROM_CACHE;
   const unsigned was_waiting_for_certs = flags & NSSET_WAS_WAITING_FOR_CERTS;
   const unsigned dl_certs = !(flags & NSSET_DONT_DOWNLOAD_CERTS);
   const unsigned accept_obsolete = flags & NSSET_ACCEPT_OBSOLETE;
+  const unsigned require_flavor = flags & NSSET_REQUIRE_FLAVOR;
+  const digests_t *current_digests = NULL;
+  consensus_waiting_for_certs_t *waiting = NULL;
+  time_t current_valid_after = 0;
+
+  if (flav < 0) {
+    /* XXXX we don't handle unrecognized flavors yet. */
+    log_warn(LD_BUG, "Unrecognized consensus flavor %s", flavor);
+    return -2;
+  }
 
   /* Make sure it's parseable. */
   c = networkstatus_parse_vote_from_string(consensus, NULL, NS_TYPE_CONSENSUS);
@@ -1418,32 +1511,69 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
     goto done;
   }
 
+  if (c->flavor != flav) {
+    /* This wasn't the flavor we thought we were getting. */
+    if (require_flavor) {
+      log_warn(LD_DIR, "Got consensus with unexpected flavor %s (wanted %s)",
+               networkstatus_get_flavor_name(c->flavor), flavor);
+      goto done;
+    }
+    flav = c->flavor;
+    flavor = networkstatus_get_flavor_name(flav);
+  }
+
+  if (flav != USABLE_CONSENSUS_FLAVOR &&
+      !directory_caches_dir_info(get_options())) {
+    /* This consensus is totally boring to us: we won't use it, and we won't
+     * serve it.  Drop it. */
+    result = -1;
+    goto done;
+  }
+
   if (from_cache && !accept_obsolete &&
       c->valid_until < now-OLD_ROUTER_DESC_MAX_AGE) {
     /* XXX022 when we try to make fallbackconsensus work again, we should
      * consider taking this out. Until then, believing obsolete consensuses
      * is causing more harm than good. See also bug 887. */
-    log_info(LD_DIR, "Loaded an obsolete consensus. Discarding.");
+    log_info(LD_DIR, "Loaded an expired consensus. Discarding.");
     goto done;
   }
 
-  if (current_consensus &&
-      !memcmp(c->networkstatus_digest, current_consensus->networkstatus_digest,
-              DIGEST_LEN)) {
+  if (!strcmp(flavor, "ns")) {
+    consensus_fname = get_datadir_fname("cached-consensus");
+    unverified_fname = get_datadir_fname("unverified-consensus");
+    if (current_consensus) {
+      current_digests = &current_consensus->digests;
+      current_valid_after = current_consensus->valid_after;
+    }
+  } else {
+    cached_dir_t *cur;
+    char buf[128];
+    tor_snprintf(buf, sizeof(buf), "cached-%s-consensus", flavor);
+    consensus_fname = get_datadir_fname(buf);
+    tor_snprintf(buf, sizeof(buf), "unverified-%s-consensus", flavor);
+    unverified_fname = get_datadir_fname(buf);
+    cur = dirserv_get_consensus(flavor);
+    if (cur) {
+      current_digests = &cur->digests;
+      current_valid_after = cur->published;
+    }
+  }
+
+  if (current_digests &&
+      !memcmp(&c->digests, current_digests, sizeof(c->digests))) {
     /* We already have this one. That's a failure. */
-    log_info(LD_DIR, "Got a consensus we already have");
+    log_info(LD_DIR, "Got a %s consensus we already have", flavor);
     goto done;
   }
 
-  if (current_consensus && c->valid_after <= current_consensus->valid_after) {
+  if (current_valid_after && c->valid_after <= current_valid_after) {
     /* We have a newer one.  There's no point in accepting this one,
      * even if it's great. */
-    log_info(LD_DIR, "Got a consensus at least as old as the one we have");
+    log_info(LD_DIR, "Got a %s consensus at least as old as the one we have",
+             flavor);
     goto done;
   }
-
-  consensus_fname = get_datadir_fname("cached-consensus");
-  unverified_fname = get_datadir_fname("unverified-consensus");
 
   /* Make sure it's signed enough. */
   if ((r=networkstatus_check_consensus_signature(c, 1))<0) {
@@ -1453,16 +1583,17 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
         log_info(LD_DIR,
                  "Not enough certificates to check networkstatus consensus");
       }
-      if (!current_consensus ||
-          c->valid_after > current_consensus->valid_after) {
-        if (consensus_waiting_for_certs)
-          networkstatus_vote_free(consensus_waiting_for_certs);
-        tor_free(consensus_waiting_for_certs_body);
-        consensus_waiting_for_certs = c;
+      if (!current_valid_after ||
+          c->valid_after > current_valid_after) {
+        waiting = &consensus_waiting_for_certs[flav];
+        if (waiting->consensus)
+          networkstatus_vote_free(waiting->consensus);
+        tor_free(waiting->body);
+        waiting->consensus = c;
         c = NULL; /* Prevent free. */
-        consensus_waiting_for_certs_body = tor_strdup(consensus);
-        consensus_waiting_for_certs_set_at = now;
-        consensus_waiting_for_certs_dl_failed = 0;
+        waiting->body = tor_strdup(consensus);
+        waiting->set_at = now;
+        waiting->dl_failed = 0;
         if (!from_cache) {
           write_str_to_file(unverified_fname, consensus, 0);
         }
@@ -1491,55 +1622,64 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
     }
   }
 
-  if (!from_cache)
+  if (!from_cache && flav == USABLE_CONSENSUS_FLAVOR)
     control_event_client_status(LOG_NOTICE, "CONSENSUS_ARRIVED");
 
   /* Are we missing any certificates at all? */
   if (r != 1 && dl_certs)
     authority_certs_fetch_missing(c, now);
 
-  notify_control_networkstatus_changed(current_consensus, c);
+  if (flav == USABLE_CONSENSUS_FLAVOR) {
+    notify_control_networkstatus_changed(current_consensus, c);
 
-  if (current_consensus) {
-    networkstatus_copy_old_consensus_info(c, current_consensus);
-    networkstatus_vote_free(current_consensus);
+    if (current_consensus) {
+      networkstatus_copy_old_consensus_info(c, current_consensus);
+      networkstatus_vote_free(current_consensus);
+    }
   }
 
-  if (consensus_waiting_for_certs &&
-      consensus_waiting_for_certs->valid_after <= c->valid_after) {
-    networkstatus_vote_free(consensus_waiting_for_certs);
-    consensus_waiting_for_certs = NULL;
-    if (consensus != consensus_waiting_for_certs_body)
-      tor_free(consensus_waiting_for_certs_body);
+  waiting = &consensus_waiting_for_certs[flav];
+  if (waiting->consensus &&
+      waiting->consensus->valid_after <= c->valid_after) {
+    networkstatus_vote_free(waiting->consensus);
+    waiting->consensus = NULL;
+    if (consensus != waiting->body)
+      tor_free(waiting->body);
     else
-      consensus_waiting_for_certs_body = NULL;
-    consensus_waiting_for_certs_set_at = 0;
-    consensus_waiting_for_certs_dl_failed = 0;
+      waiting->body = NULL;
+    waiting->set_at = 0;
+    waiting->dl_failed = 0;
     unlink(unverified_fname);
   }
 
   /* Reset the failure count only if this consensus is actually valid. */
   if (c->valid_after <= now && now <= c->valid_until) {
-    download_status_reset(&consensus_dl_status);
+    download_status_reset(&consensus_dl_status[flav]);
   } else {
     if (!from_cache)
-      download_status_failed(&consensus_dl_status, 0);
+      download_status_failed(&consensus_dl_status[flav], 0);
   }
 
-  current_consensus = c;
-  c = NULL; /* Prevent free. */
+  if (directory_caches_dir_info(get_options())) {
+    dirserv_set_cached_consensus_networkstatus(consensus,
+                                               flavor,
+                                               &c->digests,
+                                               c->valid_after);
+  }
 
-  update_consensus_networkstatus_fetch_time(now);
-  dirvote_recalculate_timing(get_options(), now);
-  routerstatus_list_update_named_server_map();
+  if (flav == USABLE_CONSENSUS_FLAVOR) {
+    current_consensus = c;
+    c = NULL; /* Prevent free. */
+
+    /* XXXXNM Microdescs: needs a non-ns variant. */
+    update_consensus_networkstatus_fetch_time(now);
+    dirvote_recalculate_timing(get_options(), now);
+    routerstatus_list_update_named_server_map();
+  }
 
   if (!from_cache) {
     write_str_to_file(consensus_fname, consensus, 0);
   }
-
-  if (directory_caches_dir_info(get_options()))
-    dirserv_set_cached_networkstatus_v3(consensus,
-                                        current_consensus->valid_after);
 
   if (ftime_definitely_before(now, current_consensus->valid_after)) {
     char tbuf[ISO_TIME_LEN+1];
@@ -1571,13 +1711,17 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
 void
 networkstatus_note_certs_arrived(void)
 {
-  if (consensus_waiting_for_certs) {
-    if (networkstatus_check_consensus_signature(
-                                    consensus_waiting_for_certs, 0)>=0) {
+  int i;
+  for (i=0; i<N_CONSENSUS_FLAVORS; ++i) {
+    consensus_waiting_for_certs_t *waiting = &consensus_waiting_for_certs[i];
+    if (!waiting->consensus)
+      continue;
+    if (networkstatus_check_consensus_signature(waiting->consensus, 0)>=0) {
       if (!networkstatus_set_current_consensus(
-                                 consensus_waiting_for_certs_body,
+                                 waiting->body,
+                                 networkstatus_get_flavor_name(i),
                                  NSSET_WAS_WAITING_FOR_CERTS)) {
-        tor_free(consensus_waiting_for_certs_body);
+        tor_free(waiting->body);
       }
     }
   }
@@ -1663,10 +1807,8 @@ download_status_map_update_from_v2_networkstatus(void)
     v2_download_status_map = digestmap_new();
 
   dl_status = digestmap_new();
-  SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-  {
-    SMARTLIST_FOREACH(ns->entries, routerstatus_t *, rs,
-    {
+  SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
+    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
       const char *d = rs->descriptor_digest;
       download_status_t *s;
       if (digestmap_get(dl_status, d))
@@ -1675,8 +1817,8 @@ download_status_map_update_from_v2_networkstatus(void)
         s = tor_malloc_zero(sizeof(download_status_t));
       }
       digestmap_set(dl_status, d, s);
-    });
-  });
+    } SMARTLIST_FOREACH_END(rs);
+  } SMARTLIST_FOREACH_END(ns);
   digestmap_free(v2_download_status_map, _tor_free);
   v2_download_status_map = dl_status;
   networkstatus_v2_list_has_changed = 0;
@@ -1924,6 +2066,35 @@ networkstatus_get_param(networkstatus_t *ns, const char *param_name,
   return default_val;
 }
 
+/** Return the name of the consensus flavor <b>flav</b> as used to identify
+ * the flavor in directory documents. */
+const char *
+networkstatus_get_flavor_name(consensus_flavor_t flav)
+{
+  switch (flav) {
+    case FLAV_NS:
+      return "ns";
+    case FLAV_MICRODESC:
+      return "microdesc";
+    default:
+      tor_fragile_assert();
+      return "??";
+  }
+}
+
+/** Return the consensus_flavor_t value for the flavor called <b>flavname</b>,
+ * or -1 if the flavor is not recongized. */
+int
+networkstatus_parse_flavor_name(const char *flavname)
+{
+  if (!strcmp(flavname, "ns"))
+    return FLAV_NS;
+  else if (!strcmp(flavname, "microdesc"))
+    return FLAV_MICRODESC;
+  else
+    return -1;
+}
+
 /** If <b>question</b> is a string beginning with "ns/" in a format the
  * control interface expects for a GETINFO question, set *<b>answer</b> to a
  * newly-allocated string containing networkstatus lines for the appropriate
@@ -1975,6 +2146,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
 void
 networkstatus_free_all(void)
 {
+  int i;
   if (networkstatus_v2_list) {
     SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
                       networkstatus_v2_free(ns));
@@ -1989,11 +2161,14 @@ networkstatus_free_all(void)
     networkstatus_vote_free(current_consensus);
     current_consensus = NULL;
   }
-  if (consensus_waiting_for_certs) {
-    networkstatus_vote_free(consensus_waiting_for_certs);
-    consensus_waiting_for_certs = NULL;
+  for (i=0; i < N_CONSENSUS_FLAVORS; ++i) {
+    consensus_waiting_for_certs_t *waiting = &consensus_waiting_for_certs[i];
+    if (waiting->consensus) {
+      networkstatus_vote_free(waiting->consensus);
+      waiting->consensus = NULL;
+    }
+    tor_free(waiting->body);
   }
-  tor_free(consensus_waiting_for_certs_body);
   if (named_server_map) {
     strmap_free(named_server_map, _tor_free);
   }

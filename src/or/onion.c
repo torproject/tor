@@ -58,11 +58,17 @@ onion_pending_add(or_circuit_t *circ, char *onionskin)
   tor_assert(!ol_tail->next);
 
   if (ol_length >= get_options()->MaxOnionsPending) {
-    log_warn(LD_GENERAL,
-             "Your computer is too slow to handle this many circuit "
-             "creation requests! Please consider using the "
-             "MaxAdvertisedBandwidth config option or choosing a more "
-             "restricted exit policy.");
+#define WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL (60)
+    static time_t last_warned = 0;
+    time_t now = time(NULL);
+    if (last_warned + WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL < now) {
+      log_warn(LD_GENERAL,
+               "Your computer is too slow to handle this many circuit "
+               "creation requests! Please consider using the "
+               "MaxAdvertisedBandwidth config option or choosing a more "
+               "restricted exit policy.");
+      last_warned = now;
+    }
     tor_free(tmp);
     return -1;
   }
@@ -253,8 +259,9 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
 
   key_material_len = DIGEST_LEN+key_out_len;
   key_material = tor_malloc(key_material_len);
-  len = crypto_dh_compute_secret(dh, challenge, DH_KEY_LEN,
-                                 key_material, key_material_len);
+  len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh, challenge,
+                                 DH_KEY_LEN, key_material,
+                                 key_material_len);
   if (len < 0) {
     log_info(LD_GENERAL, "crypto_dh_compute_secret failed.");
     goto err;
@@ -304,8 +311,9 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
 
   key_material_len = DIGEST_LEN + key_out_len;
   key_material = tor_malloc(key_material_len);
-  len = crypto_dh_compute_secret(handshake_state, handshake_reply, DH_KEY_LEN,
-                                 key_material, key_material_len);
+  len = crypto_dh_compute_secret(LOG_PROTOCOL_WARN, handshake_state,
+                                 handshake_reply, DH_KEY_LEN, key_material,
+                                 key_material_len);
   if (len < 0)
     goto err;
 
