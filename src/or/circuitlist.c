@@ -1103,6 +1103,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     edge_connection_t *conn;
     for (conn=or_circ->n_streams; conn; conn=conn->next_stream)
       connection_edge_destroy(or_circ->p_circ_id, conn);
+    or_circ->n_streams = NULL;
 
     while (or_circ->resolving_streams) {
       conn = or_circ->resolving_streams;
@@ -1126,6 +1127,7 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     edge_connection_t *conn;
     for (conn=ocirc->p_streams; conn; conn=conn->next_stream)
       connection_edge_destroy(circ->n_circ_id, conn);
+    ocirc->p_streams = NULL;
   }
 
   circ->marked_for_close = line;
