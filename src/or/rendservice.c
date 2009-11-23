@@ -1090,7 +1090,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     reason = END_CIRC_REASON_INTERNAL;
     goto err;
   }
-  if (crypto_dh_compute_secret(dh, ptr+REND_COOKIE_LEN, DH_KEY_LEN, keys,
+  if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN, dh, ptr+REND_COOKIE_LEN,
+                               DH_KEY_LEN, keys,
                                DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't complete DH handshake");
     reason = END_CIRC_REASON_INTERNAL;
@@ -1552,6 +1553,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
     }
     for (j = 0; j < smartlist_len(responsible_dirs); j++) {
       char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
+      char *hs_dir_ip;
       hs_dir = smartlist_get(responsible_dirs, j);
       if (smartlist_digest_isin(renddesc->successful_uploads,
                                 hs_dir->identity_digest))
@@ -1573,15 +1575,18 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                                               strlen(desc->desc_str), 0);
       base32_encode(desc_id_base32, sizeof(desc_id_base32),
                     desc->desc_id, DIGEST_LEN);
+      hs_dir_ip = tor_dup_ip(hs_dir->addr);
       log_info(LD_REND, "Sending publish request for v2 descriptor for "
                         "service '%s' with descriptor ID '%s' with validity "
                         "of %d seconds to hidden service directory '%s' on "
-                        "port %d.",
+                        "%s:%d.",
                safe_str(service_id),
                safe_str(desc_id_base32),
                seconds_valid,
                hs_dir->nickname,
-               hs_dir->dir_port);
+               hs_dir_ip,
+               hs_dir->or_port);
+      tor_free(hs_dir_ip);
       /* Remember successful upload to this router for next time. */
       if (!smartlist_digest_isin(successful_uploads, hs_dir->identity_digest))
         smartlist_add(successful_uploads, hs_dir->identity_digest);

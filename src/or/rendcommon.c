@@ -618,7 +618,8 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
     }
     if (router_append_dirobj_signature(desc_str + written,
                                        desc_len - written,
-                                       desc_digest, service_key) < 0) {
+                                       desc_digest, DIGEST_LEN,
+                                       service_key) < 0) {
       log_warn(LD_BUG, "Couldn't sign desc.");
       rend_encoded_v2_service_descriptor_free(enc);
       goto err;
@@ -1244,7 +1245,8 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   /* Decode/decrypt introduction points. */
   if (intro_content) {
     if (rend_query->auth_type != REND_NO_AUTH &&
-        rend_query->descriptor_cookie) {
+        !tor_mem_is_zero(rend_query->descriptor_cookie,
+                         sizeof(rend_query->descriptor_cookie))) {
       char *ipos_decrypted = NULL;
       size_t ipos_decrypted_size;
       if (rend_decrypt_introduction_points(&ipos_decrypted,

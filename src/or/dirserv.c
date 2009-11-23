@@ -41,7 +41,7 @@ static time_t the_v2_networkstatus_is_dirty = 1;
 static cached_dir_t *the_directory = NULL;
 
 /** For authoritative directories: the current (v1) network status. */
-static cached_dir_t the_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
+static cached_dir_t the_runningrouters;
 
 static void directory_remove_invalid(void);
 static cached_dir_t *dirserv_regenerate_directory(void);
@@ -523,7 +523,7 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   /* Okay.  Now check whether the fingerprint is recognized. */
   uint32_t status = dirserv_router_get_status(ri, msg);
   time_t now;
-  int severity = complain ? LOG_NOTICE : LOG_INFO;
+  int severity = (complain && ri->contact_info) ? LOG_NOTICE : LOG_INFO;
   tor_assert(msg);
   if (status & FP_REJECT)
     return -1; /* msg is already set. */
@@ -1091,7 +1091,8 @@ dirserv_dump_directory_to_string(char **dir_out,
     return -1;
   }
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(buf,buf_len,digest,private_key)<0) {
+  if (router_append_dirobj_signature(buf,buf_len,digest,DIGEST_LEN,
+                                     private_key)<0) {
     tor_free(buf);
     return -1;
   }
@@ -1210,14 +1211,14 @@ directory_too_idle_to_fetch_descriptors(or_options_t *options, time_t now)
 static cached_dir_t *cached_directory = NULL;
 /** The v1 runningrouters document we'll serve (as a cache or as an authority)
  * if requested. */
-static cached_dir_t cached_runningrouters = { NULL, NULL, 0, 0, 0, -1 };
+static cached_dir_t cached_runningrouters;
 
 /** Used for other dirservers' v2 network statuses.  Map from hexdigest to
  * cached_dir_t. */
 static digestmap_t *cached_v2_networkstatus = NULL;
 
-/** The v3 consensus network status that we're currently serving. */
-static cached_dir_t *cached_v3_networkstatus = NULL;
+/** Map from flavor name to the v3 consensuses that we're currently serving. */
+static strmap_t *cached_consensuses = NULL;
 
 /** Possibly replace the contents of <b>d</b> with the value of
  * <b>directory</b> published on <b>when</b>, unless <b>when</b> is older than
@@ -1385,17 +1386,26 @@ dirserv_set_cached_networkstatus_v2(const char *networkstatus,
   }
 }
 
-/** Replace the v3 consensus networkstatus that we're serving with
- * <b>networkstatus</b>, published at <b>published</b>.  No validation is
- * performed. */
+/** Replace the v3 consensus networkstatus of type <b>flavor_name</b> that
+ * we're serving with <b>networkstatus</b>, published at <b>published</b>.  No
+ * validation is performed. */
 void
-dirserv_set_cached_networkstatus_v3(const char *networkstatus,
-                                    time_t published)
+dirserv_set_cached_consensus_networkstatus(const char *networkstatus,
+                                           const char *flavor_name,
+                                           const digests_t *digests,
+                                           time_t published)
 {
-  if (cached_v3_networkstatus)
-    cached_dir_decref(cached_v3_networkstatus);
-  cached_v3_networkstatus = new_cached_dir(
-                                  tor_strdup(networkstatus), published);
+  cached_dir_t *new_networkstatus;
+  cached_dir_t *old_networkstatus;
+  if (!cached_consensuses)
+    cached_consensuses = strmap_new();
+
+  new_networkstatus = new_cached_dir(tor_strdup(networkstatus), published);
+  memcpy(&new_networkstatus->digests, digests, sizeof(digests_t));
+  old_networkstatus = strmap_set(cached_consensuses, flavor_name,
+                                 new_networkstatus);
+  if (old_networkstatus)
+    cached_dir_decref(old_networkstatus);
 }
 
 /** Remove any v2 networkstatus from the directory cache that was published
@@ -1549,7 +1559,8 @@ generate_runningrouters(void)
     goto err;
   }
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(s, len, digest, private_key)<0)
+  if (router_append_dirobj_signature(s, len, digest, DIGEST_LEN,
+                                     private_key)<0)
     goto err;
 
   set_cached_dir(&the_runningrouters, s, time(NULL));
@@ -1577,9 +1588,9 @@ dirserv_get_runningrouters(void)
 /** Return the latest downloaded consensus networkstatus in encoded, signed,
  * optionally compressed format, suitable for sending to clients. */
 cached_dir_t *
-dirserv_get_consensus(void)
+dirserv_get_consensus(const char *flavor_name)
 {
-  return cached_v3_networkstatus;
+  return strmap_get(cached_consensuses, flavor_name);
 }
 
 /** For authoritative directories: the current (v2) network status. */
@@ -1874,6 +1885,8 @@ version_from_platform(const char *platform)
  * The format argument has three possible values:
  *   NS_V2 - Output an entry suitable for a V2 NS opinion document
  *   NS_V3_CONSENSUS - Output the first portion of a V3 NS consensus entry
+ *   NS_V3_CONSENSUS_MICRODESC - Output the first portion of a V3 microdesc
+ *        consensus entry.
  *   NS_V3_VOTE - Output a complete V3 NS vote
  *   NS_CONTROL_PORT - Output a NS document for the control port
  */
@@ -1899,10 +1912,11 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
 
   r = tor_snprintf(buf, buf_len,
-                   "r %s %s %s %s %s %d %d\n",
+                   "r %s %s %s%s%s %s %d %d\n",
                    rs->nickname,
                    identity64,
-                   digest64,
+                   (format==NS_V3_CONSENSUS_MICRODESC)?"":digest64,
+                   (format==NS_V3_CONSENSUS_MICRODESC)?"":" ",
                    published,
                    ipaddr,
                    (int)rs->or_port,
@@ -1916,7 +1930,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
    * this here, instead of in the caller. Then we could use the
    * networkstatus_type_t values, with an additional control port value
    * added -MP */
-  if (format == NS_V3_CONSENSUS)
+  if (format == NS_V3_CONSENSUS || format == NS_V3_CONSENSUS_MICRODESC)
     return 0;
 
   cp = buf + strlen(buf);
@@ -2432,6 +2446,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   vote_timing_t timing;
   digestmap_t *omit_as_sybil = NULL;
   const int vote_on_reachability = running_long_enough_to_decide_unreachable();
+  smartlist_t *microdescriptors = NULL;
 
   tor_assert(private_key);
   tor_assert(cert);
@@ -2480,11 +2495,13 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   omit_as_sybil = get_possible_sybil_list(routers);
 
   routerstatuses = smartlist_create();
+  microdescriptors = smartlist_create();
 
-  SMARTLIST_FOREACH(routers, routerinfo_t *, ri, {
+  SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
     if (ri->cache_info.published_on >= cutoff) {
       routerstatus_t *rs;
       vote_routerstatus_t *vrs;
+      microdesc_t *md;
 
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
@@ -2499,9 +2516,30 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
         rs->is_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
+      md = dirvote_create_microdescriptor(ri);
+      if (md) {
+        char buf[128];
+        vote_microdesc_hash_t *h;
+        dirvote_format_microdesc_vote_line(buf, sizeof(buf), md);
+        h = tor_malloc(sizeof(vote_microdesc_hash_t));
+        h->microdesc_hash_line = tor_strdup(buf);
+        h->next = NULL;
+        vrs->microdesc = h;
+        md->last_listed = now;
+        smartlist_add(microdescriptors, md);
+      }
+
       smartlist_add(routerstatuses, vrs);
     }
-  });
+  } SMARTLIST_FOREACH_END(ri);
+
+  {
+    smartlist_t *added =
+      microdescs_add_list_to_cache(get_microdesc_cache(),
+                                   microdescriptors, SAVED_NOWHERE, 0);
+    smartlist_free(added);
+    smartlist_free(microdescriptors);
+  }
 
   smartlist_free(routers);
   digestmap_free(omit_as_sybil, NULL);
@@ -2570,12 +2608,12 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
   voter->nickname = tor_strdup(options->Nickname);
   memcpy(voter->identity_digest, identity_digest, DIGEST_LEN);
+  voter->sigs = smartlist_create();
   voter->address = hostname;
   voter->addr = addr;
   voter->dir_port = options->DirPort;
   voter->or_port = options->ORPort;
   voter->contact = tor_strdup(contact);
-  memcpy(voter->signing_key_digest, signing_key_digest, DIGEST_LEN);
   if (options->V3AuthUseLegacyKey) {
     authority_cert_t *c = get_my_v3_legacy_cert();
     if (c) {
@@ -2743,7 +2781,8 @@ generate_v2_networkstatus_opinion(void)
   outp += strlen(outp);
 
   note_crypto_pk_op(SIGN_DIR);
-  if (router_append_dirobj_signature(outp,endp-outp,digest,private_key)<0) {
+  if (router_append_dirobj_signature(outp,endp-outp,digest,DIGEST_LEN,
+                                     private_key)<0) {
     log_warn(LD_BUG, "Unable to sign router status.");
     goto done;
   }
@@ -2826,7 +2865,8 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
       log_info(LD_DIRSERV,
                "Client requested 'all' network status objects; we have none.");
   } else if (!strcmpstart(key, "fp/")) {
-    dir_split_resource_into_fingerprints(key+3, result, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key+3, result, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
   }
 }
 
@@ -2891,10 +2931,12 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
   } else if (!strcmpstart(key, "d/")) {
     by_id = 0;
     key += strlen("d/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, fps_out, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
   } else if (!strcmpstart(key, "fp/")) {
     key += strlen("fp/");
-    dir_split_resource_into_fingerprints(key, fps_out, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, fps_out, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
   } else {
     *msg = "Key not recognized";
     return -1;
@@ -2959,7 +3001,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/d/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          signed_descriptor_t *sd = router_get_by_descriptor_digest(d);
@@ -2972,7 +3015,8 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     smartlist_t *digests = smartlist_create();
     time_t cutoff = time(NULL) - ROUTER_MAX_AGE_TO_PUBLISH;
     key += strlen("/tor/server/fp/");
-    dir_split_resource_into_fingerprints(key, digests, NULL, 1, 1);
+    dir_split_resource_into_fingerprints(key, digests, NULL,
+                                         DSR_HEX|DSR_SORT_UNIQ);
     SMARTLIST_FOREACH(digests, const char *, d,
        {
          if (router_digest_is_me(d)) {
@@ -3088,17 +3132,20 @@ dirserv_test_reachability(time_t now, int try_all)
     ctr = (ctr + 1) % 128;
 }
 
-/** Given a fingerprint <b>fp</b> which is either set if we're looking
- * for a v2 status, or zeroes if we're looking for a v3 status, return
- * a pointer to the appropriate cached dir object, or NULL if there isn't
- * one available. */
+/** Given a fingerprint <b>fp</b> which is either set if we're looking for a
+ * v2 status, or zeroes if we're looking for a v3 status, or a NUL-padded
+ * flavor name if we want a flavored v3 status, return a pointer to the
+ * appropriate cached dir object, or NULL if there isn't one available. */
 static cached_dir_t *
 lookup_cached_dir_by_fp(const char *fp)
 {
   cached_dir_t *d = NULL;
-  if (tor_digest_is_zero(fp) && cached_v3_networkstatus)
-    d = cached_v3_networkstatus;
-  else if (router_digest_is_me(fp) && the_v2_networkstatus)
+  if (tor_digest_is_zero(fp) && cached_consensuses)
+    d = strmap_get(cached_consensuses, "ns");
+  else if (memchr(fp, '\0', DIGEST_LEN) && cached_consensuses &&
+           (d = strmap_get(cached_consensuses, fp))) {
+    /* this here interface is a nasty hack XXXX022 */;
+  } else if (router_digest_is_me(fp) && the_v2_networkstatus)
     d = the_v2_networkstatus;
   else if (cached_v2_networkstatus)
     d = digestmap_get(cached_v2_networkstatus, fp);
@@ -3184,6 +3231,18 @@ dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src)
   return 0;
 }
 
+/** Return true iff any of the 256-bit elements in <b>fps</b> is the digest of
+ * a microdescriptor we have. */
+int
+dirserv_have_any_microdesc(const smartlist_t *fps)
+{
+  microdesc_cache_t *cache = get_microdesc_cache();
+  SMARTLIST_FOREACH(fps, const char *, fp,
+                    if (microdesc_cache_lookup_by_digest256(cache, fp))
+                      return 1);
+  return 0;
+}
+
 /** Return an approximate estimate of the number of bytes that will
  * be needed to transmit the server descriptors (if is_serverdescs --
  * they can be either d/ or fp/ queries) or networkstatus objects (if
@@ -3212,6 +3271,17 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
           result += compressed ? dir->dir_z_len : dir->dir_len;
       });
   }
+  return result;
+}
+
+/** Given a list of microdescriptor hashes, guess how many bytes will be
+ * needed to transmit them, and return the guess. */
+size_t
+dirserv_estimate_microdesc_size(const smartlist_t *fps, int compressed)
+{
+  size_t result = smartlist_len(fps) * microdesc_average_size(NULL);
+  if (compressed)
+    result /= 2;
   return result;
 }
 
@@ -3278,6 +3348,8 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 #endif
     body = signed_descriptor_get_body(sd);
     if (conn->zlib_state) {
+      /* XXXX022 This 'last' business should actually happen on the last
+       * routerinfo, not on the last fingerprint. */
       int last = ! smartlist_len(conn->fingerprint_stack);
       connection_write_to_buf_zlib(body, sd->signed_descriptor_len, conn,
                                    last);
@@ -3294,6 +3366,44 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
 
   if (!smartlist_len(conn->fingerprint_stack)) {
     /* We just wrote the last one; finish up. */
+    conn->dir_spool_src = DIR_SPOOL_NONE;
+    smartlist_free(conn->fingerprint_stack);
+    conn->fingerprint_stack = NULL;
+  }
+  return 0;
+}
+
+/** Spooling helper: called when we're sending a bunch of microdescriptors,
+ * and the outbuf has become too empty. Pulls some entries from
+ * fingerprint_stack, and writes the corresponding microdescs onto outbuf.  If
+ * we run out of entries, flushes the zlib state and sets the spool source to
+ * NONE.  Returns 0 on success, negative on failure.
+ */
+static int
+connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
+{
+  microdesc_cache_t *cache = get_microdesc_cache();
+  while (smartlist_len(conn->fingerprint_stack) &&
+         buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
+    char *fp256 = smartlist_pop_last(conn->fingerprint_stack);
+    microdesc_t *md = microdesc_cache_lookup_by_digest256(cache, fp256);
+    tor_free(fp256);
+    if (!md)
+      continue;
+    if (conn->zlib_state) {
+      /* XXXX022 This 'last' business should actually happen on the last
+       * routerinfo, not on the last fingerprint. */
+      int last = !smartlist_len(conn->fingerprint_stack);
+      connection_write_to_buf_zlib(md->body, md->bodylen, conn, last);
+      if (last) {
+        tor_zlib_free(conn->zlib_state);
+        conn->zlib_state = NULL;
+      }
+    } else {
+      connection_write_to_buf(md->body, md->bodylen, TO_CONN(conn));
+    }
+  }
+  if (!smartlist_len(conn->fingerprint_stack)) {
     conn->dir_spool_src = DIR_SPOOL_NONE;
     smartlist_free(conn->fingerprint_stack);
     conn->fingerprint_stack = NULL;
@@ -3408,6 +3518,8 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
     case DIR_SPOOL_SERVER_BY_DIGEST:
     case DIR_SPOOL_SERVER_BY_FP:
       return connection_dirserv_add_servers_to_outbuf(conn);
+    case DIR_SPOOL_MICRODESC:
+      return connection_dirserv_add_microdescs_to_outbuf(conn);
     case DIR_SPOOL_CACHED_DIR:
       return connection_dirserv_add_dir_bytes_to_outbuf(conn);
     case DIR_SPOOL_NETWORKSTATUS:
@@ -3433,6 +3545,9 @@ dirserv_free_all(void)
     digestmap_free(cached_v2_networkstatus, _free_cached_dir);
     cached_v2_networkstatus = NULL;
   }
-  cached_dir_decref(cached_v3_networkstatus);
+  if (cached_consensuses) {
+    strmap_free(cached_consensuses, _free_cached_dir);
+    cached_consensuses = NULL;
+  }
 }
 

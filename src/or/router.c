@@ -590,6 +590,7 @@ init_keys(void)
     if (write_str_to_file(keydir, fingerprint_line, 0)) {
       log_err(LD_FS, "Error writing fingerprint line to file");
       tor_free(keydir);
+      tor_free(cp);
       return -1;
     }
   }
@@ -1311,7 +1312,7 @@ router_rebuild_descriptor(int force)
 
   policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
                              options->ExitPolicyRejectPrivate,
-                             ri->address);
+                             ri->address, !options->BridgeRelay);
 
   if (desc_routerinfo) { /* inherit values */
     ri->is_valid = desc_routerinfo->is_valid;
@@ -1788,7 +1789,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
 
   note_crypto_pk_op(SIGN_RTR);
   if (router_append_dirobj_signature(s+written,maxlen-written,
-                                     digest,ident_key)<0) {
+                                     digest,DIGEST_LEN,ident_key)<0) {
     log_warn(LD_BUG, "Couldn't sign router descriptor");
     return -1;
   }
@@ -1980,7 +1981,8 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   len += strlen(s+len);
   if (router_get_extrainfo_hash(s, digest)<0)
     return -1;
-  if (router_append_dirobj_signature(s+len, maxlen-len, digest, ident_key)<0)
+  if (router_append_dirobj_signature(s+len, maxlen-len, digest, DIGEST_LEN,
+                                     ident_key)<0)
     return -1;
 
   {

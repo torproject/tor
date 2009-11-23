@@ -509,6 +509,8 @@ typedef struct tor_mutex_t {
 #endif
 } tor_mutex_t;
 
+int tor_mlockall(void);
+
 #ifdef TOR_IS_MULTITHREADED
 tor_mutex_t *tor_mutex_new(void);
 void tor_mutex_init(tor_mutex_t *m);

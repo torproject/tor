@@ -182,6 +182,9 @@ accounting_parse_options(or_options_t *options, int validate_only)
   case UNIT_DAY:
     d = 0;
     break;
+    /* Coverity dislikes unreachable default cases; some compilers warn on
+     * switch statements missing a case.  Tell Coverity not to worry. */
+    /* coverity[dead_error_begin] */
   default:
     tor_assert(0);
   }

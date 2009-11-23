@@ -33,8 +33,8 @@ test_crypto_dh(void)
 
   memset(s1, 0, DH_BYTES);
   memset(s2, 0xFF, DH_BYTES);
-  s1len = crypto_dh_compute_secret(dh1, p2, DH_BYTES, s1, 50);
-  s2len = crypto_dh_compute_secret(dh2, p1, DH_BYTES, s2, 50);
+  s1len = crypto_dh_compute_secret(LOG_WARN, dh1, p2, DH_BYTES, s1, 50);
+  s2len = crypto_dh_compute_secret(LOG_WARN, dh2, p1, DH_BYTES, s2, 50);
   test_assert(s1len > 0);
   test_eq(s1len, s2len);
   test_memeq(s1, s2, s1len);
@@ -455,6 +455,7 @@ test_crypto_formats(void)
   strlcat(data1, " 2nd string that contains 35 chars.", 1024);
 
   i = base64_encode(data2, 1024, data1, 71);
+  test_assert(i >= 0);
   j = base64_decode(data3, 1024, data2, i);
   test_eq(j, 71);
   test_streq(data3, data1);
@@ -471,6 +472,17 @@ test_crypto_formats(void)
   test_eq(99, data3[DIGEST_LEN+1]);
 
   test_assert(digest_from_base64(data3, "###") < 0);
+
+  /* Encoding SHA256 */
+  crypto_rand(data2, DIGEST256_LEN);
+  memset(data2, 100, 1024);
+  digest256_to_base64(data2, data1);
+  test_eq(BASE64_DIGEST256_LEN, strlen(data2));
+  test_eq(100, data2[BASE64_DIGEST256_LEN+2]);
+  memset(data3, 99, 1024);
+  test_eq(digest256_from_base64(data3, data2), 0);
+  test_memeq(data1, data3, DIGEST256_LEN);
+  test_eq(99, data3[DIGEST256_LEN+1]);
 
   /* Base32 tests */
   strlcpy(data1, "5chrs", 1024);

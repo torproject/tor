@@ -195,6 +195,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("DirRecordUsageSaveInterval"),
   V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
+  V(DisableAllSwap,              BOOL,     "0"),
   V(DNSPort,                     UINT,     "0"),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
@@ -456,6 +457,8 @@ static config_var_description_t options_description[] = {
   { "DirServer", "Tor only trusts directories signed with one of these "
     "servers' keys.  Used to override the standard list of directory "
     "authorities." },
+  { "DisableAllSwap", "Tor will attempt a simple memory lock that "
+    "will prevent leaking of all information in memory to the swap file." },
   /* { "FastFirstHopPK", "" }, */
   /* FetchServerDescriptors, FetchHidServDescriptors,
    * FetchUselessDescriptors */
@@ -921,7 +924,7 @@ add_default_trusted_dir_authorities(authority_type_t type)
     "tor26 v1 orport=443 v3ident=14C131DFC5C6F93646BE72FA1401C02A8DF2E8B4 "
       "86.59.21.38:80 847B 1F85 0344 D787 6491 A548 92F9 0493 4E4E B85D",
     "dizum orport=443 v3ident=E8A9C45EDE6D711294FADF8E7951F4DE6CA56B58 "
-      "194.109.206.214:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
+      "194.109.206.212:80 7EA6 EAD6 FD83 083C 538F 4403 8BBF A077 587D D755",
     "Tonga orport=443 bridge no-v2 82.94.251.203:80 "
       "4A0C CD2D DC79 9508 3D73 F5D6 6710 0C8A 5831 F16D",
     "ides orport=9090 no-v2 v3ident=27B6B5996C426270A5C95488AA5BCEB6BCC86956 "
@@ -1114,6 +1117,15 @@ options_act_reversible(or_options_t *old_options, char **msg)
     }
   }
 #endif
+
+  /* Attempt to lock all current and future memory with mlockall() only once */
+  if (options->DisableAllSwap) {
+    if (tor_mlockall() == -1) {
+      *msg = tor_strdup("DisableAllSwap failure. Do you have proper "
+                        "permissions?");
+      goto done;
+    }
+  }
 
   /* Setuid/setgid as appropriate */
   if (options->User) {
@@ -2254,6 +2266,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
       break;
     case CONFIG_TYPE_ISOTIME:
       *(time_t*)lvalue = 0;
+      break;
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
     case CONFIG_TYPE_BOOL:
@@ -2267,6 +2280,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
         routerset_free(*(routerset_t**)lvalue);
         *(routerset_t**)lvalue = NULL;
       }
+      break;
     case CONFIG_TYPE_CSV:
       if (*(smartlist_t**)lvalue) {
         SMARTLIST_FOREACH(*(smartlist_t **)lvalue, char *, cp, tor_free(cp));
@@ -3829,6 +3843,12 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
     *msg = tor_strdup("While Tor is running, changing either "
                       "CellStatistics, DirReqStatistics, EntryStatistics, "
                       "or ExitPortStatistics is not allowed.");
+    return -1;
+  }
+
+  if (old->DisableAllSwap != new_val->DisableAllSwap) {
+    *msg = tor_strdup("While Tor is running, changing DisableAllSwap "
+                      "is not allowed.");
     return -1;
   }
 

@@ -20,6 +20,7 @@ libtor_a_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	connection.c connection_edge.c connection_or.c control.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
 	dns.c dnsserv.c geoip.c hibernate.c main.c $(tor_platform_source) \
+	microdesc.c \
 	networkstatus.c onion.c policies.c \
 	reasons.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \

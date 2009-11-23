@@ -13,6 +13,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/pem.h>
+#include <openssl/rsa.h>
 #include <openssl/objects.h>
 #include <openssl/obj_mac.h>
 #include <openssl/err.h>
@@ -27,8 +28,8 @@
 #define CRYPTO_PRIVATE
 
 #include "compat.h"
-#include "util.h"
-#include "log.h"
+#include "../common/util.h"
+#include "../common/log.h"
 #include "crypto.h"
 #include "address.h"
 
@@ -218,6 +219,20 @@ parse_commandline(int argc, char **argv)
   return 0;
 }
 
+static RSA *
+generate_key(int bits)
+{
+  RSA *rsa = NULL;
+  crypto_pk_env_t *env = crypto_new_pk_env();
+  if (crypto_pk_generate_key_with_bits(env,bits)<0)
+    goto done;
+  rsa = _crypto_pk_env_get_rsa(env);
+  rsa = RSAPrivateKey_dup(rsa);
+ done:
+  crypto_free_pk_env(env);
+  return rsa;
+}
+
 /** Try to read the identity key from <b>identity_key_file</b>.  If no such
  * file exists and create_identity_key is set, make a new identity key and
  * store it.  Return 0 on success, nonzero on failure.
@@ -238,7 +253,7 @@ load_identity_key(void)
     }
     log_notice(LD_GENERAL, "Generating %d-bit RSA identity key.",
                IDENTITY_KEY_BITS);
-    if (!(key = RSA_generate_key(IDENTITY_KEY_BITS, 65537, NULL, NULL))) {
+    if (!(key = generate_key(IDENTITY_KEY_BITS))) {
       log_err(LD_GENERAL, "Couldn't generate identity key.");
       crypto_log_errors(LOG_ERR, "Generating identity key");
       return 1;
@@ -323,7 +338,7 @@ generate_signing_key(void)
   RSA *key;
   log_notice(LD_GENERAL, "Generating %d-bit RSA signing key.",
              SIGNING_KEY_BITS);
-  if (!(key = RSA_generate_key(SIGNING_KEY_BITS, 65537, NULL, NULL))) {
+  if (!(key = generate_key(SIGNING_KEY_BITS))) {
     log_err(LD_GENERAL, "Couldn't generate signing key.");
     crypto_log_errors(LOG_ERR, "Generating signing key");
     return 1;

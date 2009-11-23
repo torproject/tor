@@ -6,9 +6,9 @@
 #include "orconfig.h"
 
 #include "compat.h"
-#include "util.h"
+#include "../common/util.h"
 #include "address.h"
-#include "log.h"
+#include "../common/log.h"
 
 #include <stdio.h>
 #include <stdlib.h>

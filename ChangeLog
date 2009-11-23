@@ -1,4 +1,63 @@
+Changes in version 0.2.2.6-alpha - 2009-11-19
+  o Major features:
+    - Directory authorities can now create, vote on, and serve multiple
+      parallel formats of directory data as part of their voting process.
+      Partially implements Proposal 162: "Publish the consensus in
+      multiple flavors".
+    - Directory authorities can now agree on and publish small summaries
+      of router information that clients can use in place of regular
+      server descriptors. This transition will eventually allow clients
+      to use far less bandwidth for downloading information about the
+      network. Begins the implementation of Proposal 158: "Clients
+      download consensus + microdescriptors".
+    - The directory voting system is now extensible to use multiple hash
+      algorithms for signatures and resource selection. Newer formats
+      are signed with SHA256, with a possibility for moving to a better
+      hash algorithm in the future.
+    - New DisableAllSwap option. If set to 1, Tor will attempt to lock all
+      current and future memory pages via mlockall(). On supported
+      platforms (modern Linux and probably BSD but not Windows or OS X),
+      this should effectively disable any and all attempts to page out
+      memory. This option requires that you start your Tor as root --
+      if you use DisableAllSwap, please consider using the User option
+      to properly reduce the privileges of your Tor.
+    - Numerous changes, bugfixes, and workarounds from Nathan Freitas
+      to help Tor build correctly for Android phones.
+
+  o Major bugfixes:
+    - Work around a security feature in OpenSSL 0.9.8l that prevents our
+      handshake from working unless we explicitly tell OpenSSL that we
+      are using SSL renegotiation safely. We are, but OpenSSL 0.9.8l
+      won't work unless we say we are.
+
+  o Minor bugfixes:
+    - Fix a crash bug when trying to initialize the evdns module in
+      Libevent 2. Bugfix on 0.2.1.16-rc.
+    - Stop logging at severity 'warn' when some other Tor client tries
+      to establish a circuit with us using weak DH keys. It's a protocol
+      violation, but that doesn't mean ordinary users need to hear about
+      it. Fixes the bug part of bug 1114. Bugfix on 0.1.0.13.
+    - Do not refuse to learn about authority certs and v2 networkstatus
+      documents that are older than the latest consensus. This bug might
+      have degraded client bootstrapping. Bugfix on 0.2.0.10-alpha.
+      Spotted and fixed by xmux.
+    - Fix numerous small code-flaws found by Coverity Scan Rung 3.
+    - If all authorities restart at once right before a consensus vote,
+      nobody will vote about "Running", and clients will get a consensus
+      with no usable relays. Instead, authorities refuse to build a
+      consensus if this happens. Bugfix on 0.2.0.10-alpha; fixes bug 1066.
+    - If your relay can't keep up with the number of incoming create
+      cells, it would log one warning per failure into your logs. Limit
+      warnings to 1 per minute. Bugfix on 0.0.2pre10; fixes bug 1042.
+    - Bridges now use "reject *:*" as their default exit policy. Bugfix
+      on 0.2.0.3-alpha; fixes bug 1113.
+    - Fix a memory leak on directory authorities during voting that was
+      introduced in 0.2.2.1-alpha. Found via valgrind.
+
+
 Changes in version 0.2.2.5-alpha - 2009-10-11
+  Tor 0.2.2.5-alpha fixes a few compile problems in 0.2.2.4-alpha.
+
   o Major bugfixes:
     - Make the tarball compile again. Oops. Bugfix on 0.2.2.4-alpha.
 
@@ -7,6 +66,11 @@ Changes in version 0.2.2.5-alpha - 2009-10-11
 
 
 Changes in version 0.2.2.4-alpha - 2009-10-10
+  Tor 0.2.2.4-alpha fixes more crash bugs in 0.2.2.2-alpha. It also
+  introduces a new unit test framework, shifts directry authority
+  addresses around to reduce the impact from recent blocking events,
+  and fixes a few smaller bugs.
+
   o Major bugfixes:
     - Fix several more asserts in the circuit_build_times code, for
       example one that causes Tor to fail to start once we have
@@ -32,7 +96,7 @@ Changes in version 0.2.2.4-alpha - 2009-10-10
     - Fix a couple of smaller issues with gathering statistics. Bugfixes
       on 0.2.2.1-alpha.
     - Fix two memory leaks in the error case of
-      circuit_build_times_parse_state. Bugfix on 0.2.2.2-alpha.
+      circuit_build_times_parse_state(). Bugfix on 0.2.2.2-alpha.
     - Don't count one-hop circuits when we're estimating how long it
       takes circuits to build on average. Otherwise we'll set our circuit
       build timeout lower than we should. Bugfix on 0.2.2.2-alpha.
@@ -44,7 +108,7 @@ Changes in version 0.2.2.4-alpha - 2009-10-10
   o Code simplifications and refactoring:
     - Revise our unit tests to use the "tinytest" framework, so we
       can run tests in their own processes, have smarter setup/teardown
-      code, and so on.  The unit test code has moved to its own
+      code, and so on. The unit test code has moved to its own
       subdirectory, and has been split into multiple modules.
 
 
@@ -247,7 +311,36 @@ Changes in version 0.2.2.1-alpha - 2009-08-26
       occurred with the upgrade to Vidalia 0.2.3.
 
 
-Changes in version 0.2.1.20 - 2009-??-??
+Changes in Version 0.2.1.21 - 20??-??-??
+  o Major bugfixes:
+    - Work around a security feature in OpenSSL 0.9.8l that prevents our
+      handshake from working unless we explicitly tell OpenSSL that we are
+      using SSL renegotiation safely.  We are, of course, but OpenSSL
+      0.9.8l won't work unless we say we are.
+
+  o Minor bugfixes:
+    - Do not refuse to learn about authority certs and v2 networkstatus
+      documents that are older than the latest consensus.  This bug might
+      have degraded client bootstrapping.  Bugfix on 0.2.0.10-alpha.
+      Spotted and fixed by xmux.
+    - Fix a couple of very-hard-to-trigger memory leaks, and one hard-to-
+      trigger platform-specific option misparsing case found by Coverity
+      Scan.
+
+
+Changes in version 0.2.1.20 - 2009-10-15
+  Tor 0.2.1.20 fixes a crash bug when you're accessing many hidden
+  services at once, prepares for more performance improvements, and
+  fixes a bunch of smaller bugs.
+
+  The Windows and OS X bundles also include a more recent Vidalia,
+  and switch from Privoxy to Polipo.
+
+  The OS X installers are now drag and drop. It's best to un-install
+  Tor/Vidalia and then install this new bundle, rather than upgrade. If
+  you want to upgrade, you'll need to update the paths for Tor and Polipo
+  in the Vidalia Settings window.
+
   o Major bugfixes:
     - Send circuit or stream sendme cells when our window has decreased
       by 100 cells, not when it has decreased by 101 cells. Bug uncovered
@@ -258,10 +351,19 @@ Changes in version 0.2.1.20 - 2009-??-??
     - Fix a remotely triggerable memory leak when a consensus document
       contains more than one signature from the same voter. Bugfix on
       0.2.0.3-alpha.
+    - Avoid segfault in rare cases when finishing an introduction circuit
+      as a client and finding out that we don't have an introduction key
+      for it. Fixes bug 1073. Reported by Aaron Swartz.
+
+  o Major features:
+    - Tor now reads the "circwindow" parameter out of the consensus,
+      and uses that value for its circuit package window rather than the
+      default of 1000 cells. Begins the implementation of proposal 168.
 
   o New directory authorities:
     - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
       authority.
+    - Move moria1 and tonga to alternate IP addresses.
 
   o Minor bugfixes:
     - Fix a signed/unsigned compile warning in 0.2.1.19.
@@ -289,9 +391,6 @@ Changes in version 0.2.1.20 - 2009-??-??
       excluded in ExcludeExitNodes, but the circuit is not used to access
       the outside world. This should help fix bug 1090. Bugfix on
       0.2.1.6-alpha.
-    - Avoid segfault in rare cases when finishing an introduction circuit
-      as a client and finding out that we don't have an introduction key
-      for it. Fixes bug 1073. Reported by Aaron Swartz.
     - Work around a small memory leak in some versions of OpenSSL that
       stopped the memory used by the hostname TLS extension from being
       freed.
