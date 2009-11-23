@@ -1,6 +1,8 @@
 tor (0.2.2.6-alpha-1) experimental; urgency=low
 
   * New upstream version.
+    - Drop debian/patches/0a58567c-work-with-reneg-ssl.dpatch
+      (part of upstream).
 
  -- Peter Palfrader <weasel@debian.org>  Mon, 23 Nov 2009 18:52:04 +0100
 
