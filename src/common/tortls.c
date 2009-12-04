@@ -589,6 +589,18 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   SSL_CTX_set_options(result->ctx,
                       SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
 #endif
+#ifdef SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
+  /* Yes, we know what we are doing here.  No, we do not treat a renegotiation
+   * as authenticating any earlier-received data.
+   *
+   * (OpenSSL 0.9.8l introdeced SSL3_FLAGS_ALLOW_UNSAGE_LEGACY_RENEGOTIATION
+   * here.  OpenSSL 0.9.8m thoughtfully turned it into an option and (it
+   * seems) broke anything that used SSL3_FLAGS_* for the purpose.  So we need
+   * to do both.)
+   */
+  SSL_CTX_set_options(result->ctx,
+                      SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION);
+#endif
   /* Don't actually allow compression; it uses ram and time, but the data
    * we transmit is all encrypted anyway. */
   if (result->ctx->comp_methods)
