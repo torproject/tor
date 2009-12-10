@@ -118,11 +118,18 @@ int smartlist_bsearch_idx(const smartlist_t *sl, const void *key,
 
 void smartlist_pqueue_add(smartlist_t *sl,
                           int (*compare)(const void *a, const void *b),
+                          int idx_field_offset,
                           void *item);
 void *smartlist_pqueue_pop(smartlist_t *sl,
-                           int (*compare)(const void *a, const void *b));
+                           int (*compare)(const void *a, const void *b),
+                           int idx_field_offset);
+void smartlist_pqueue_remove(smartlist_t *sl,
+                             int (*compare)(const void *a, const void *b),
+                             int idx_field_offset,
+                             void *item);
 void smartlist_pqueue_assert_ok(smartlist_t *sl,
-                                int (*compare)(const void *a, const void *b));
+                                int (*compare)(const void *a, const void *b),
+                                int idx_field_offset);
 
 #define SPLIT_SKIP_SPACE   0x01
 #define SPLIT_IGNORE_BLANK 0x02

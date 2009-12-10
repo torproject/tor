@@ -605,6 +605,38 @@ smartlist_uniq_strings(smartlist_t *sl)
 /* Heap-based priority queue implementation for O(lg N) insert and remove.
  * Recall that the heap property is that, for every index I, h[I] <
  * H[LEFT_CHILD[I]] and h[I] < H[RIGHT_CHILD[I]].
+ *
+ * For us to remove items other than the topmost item, each item must store
+ * its own index within the heap.  When calling the pqueue functions, tell
+ * them about the offset of the field that stores the index within the item.
+ *
+ * Example:
+ *
+ *   typedef struct timer_t {
+ *     struct timeval tv;
+ *     int heap_index;
+ *   } timer_t;
+ *
+ *   static int compare(const void *p1, const void *p2) {
+ *     const timer_t *t1 = p1, *t2 = p2;
+ *     if (t1->tv.tv_sec < t2->tv.tv_sec) {
+ *        return -1;
+ *     } else if (t1->tv.tv_sec > t2->tv.tv_sec) {
+ *        return 1;
+ *     } else {
+ *        return t1->tv.tv_usec - t2->tv_usec;
+ *     }
+ *   }
+ *
+ *   void timer_heap_insert(smartlist_t *heap, timer_t *timer) {
+ *      smartlist_pqueue_add(heap, compare, STRUCT_OFFSET(timer_t, heap_index),
+ *         timer);
+ *   }
+ *
+ *   void timer_heap_pop(smartlist_t *heap) {
+ *      return smartlist_pqueue_pop(heap, compare,
+ *         STRUCT_OFFSET(timer_t, heap_index));
+ *   }
  */
 
 /* For a 1-indexed array, we would use LEFT_CHILD[x] = 2*x and RIGHT_CHILD[x]
@@ -616,12 +648,22 @@ smartlist_uniq_strings(smartlist_t *sl)
 #define RIGHT_CHILD(i) ( 2*(i) + 2 )
 #define PARENT(i)      ( ((i)-1) / 2 )
 
+#define IDXP(p) ((int*)STRUCT_VAR_P(p, idx_field_offset))
+
+#define UPDATE_IDX(i)  do {                            \
+    void *updated = sl->list[i];                       \
+    *IDXP(updated) = i;                                \
+  } while (0)
+
+#define IDX_OF_ITEM(p) (*IDXP(p))
+
 /** Helper. <b>sl</b> may have at most one violation of the heap property:
  * the item at <b>idx</b> may be greater than one or both of its children.
  * Restore the heap property. */
 static INLINE void
 smartlist_heapify(smartlist_t *sl,
                   int (*compare)(const void *a, const void *b),
+                  int idx_field_offset,
                   int idx)
 {
   while (1) {
@@ -644,21 +686,28 @@ smartlist_heapify(smartlist_t *sl,
       void *tmp = sl->list[idx];
       sl->list[idx] = sl->list[best_idx];
       sl->list[best_idx] = tmp;
+      UPDATE_IDX(idx);
+      UPDATE_IDX(best_idx);
 
       idx = best_idx;
     }
   }
 }
 
-/** Insert <b>item</b> into the heap stored in <b>sl</b>, where order
- * is determined by <b>compare</b>. */
+/** Insert <b>item</b> into the heap stored in <b>sl</b>, where order is
+ * determined by <b>compare</b> and the offset of the item in the heap is
+ * stored in an int-typed field at position <b>idx_field_offset</b> within
+ * item.
+ */
 void
 smartlist_pqueue_add(smartlist_t *sl,
                      int (*compare)(const void *a, const void *b),
+                     int idx_field_offset,
                      void *item)
 {
   int idx;
   smartlist_add(sl,item);
+  UPDATE_IDX(sl->num_used-1);
 
   for (idx = sl->num_used - 1; idx; ) {
     int parent = PARENT(idx);
@@ -666,6 +715,8 @@ smartlist_pqueue_add(smartlist_t *sl,
       void *tmp = sl->list[parent];
       sl->list[parent] = sl->list[idx];
       sl->list[idx] = tmp;
+      UPDATE_IDX(parent);
+      UPDATE_IDX(idx);
       idx = parent;
     } else {
       return;
@@ -674,32 +725,63 @@ smartlist_pqueue_add(smartlist_t *sl,
 }
 
 /** Remove and return the top-priority item from the heap stored in <b>sl</b>,
- * where order is determined by <b>compare</b>.  <b>sl</b> must not be
- * empty. */
+ * where order is determined by <b>compare</b> and the item's position in is
+ * stored at position <b>idx_field_offset</b> within the item.  <b>sl</b> must
+ * not be empty. */
 void *
 smartlist_pqueue_pop(smartlist_t *sl,
-                     int (*compare)(const void *a, const void *b))
+                     int (*compare)(const void *a, const void *b),
+                     int idx_field_offset)
 {
   void *top;
   tor_assert(sl->num_used);
 
   top = sl->list[0];
+  *IDXP(top)=-1;
   if (--sl->num_used) {
     sl->list[0] = sl->list[sl->num_used];
-    smartlist_heapify(sl, compare, 0);
+    UPDATE_IDX(0);
+    smartlist_heapify(sl, compare, idx_field_offset, 0);
   }
   return top;
+}
+
+/** Remove the item <b>item</b> from the heap stored in <b>sl</b>,
+ * where order is determined by <b>compare</b> and the item's position in is
+ * stored at position <b>idx_field_offset</b> within the item.  <b>sl</b> must
+ * not be empty. */
+void
+smartlist_pqueue_remove(smartlist_t *sl,
+                        int (*compare)(const void *a, const void *b),
+                        int idx_field_offset,
+                        void *item)
+{
+  int idx = IDX_OF_ITEM(item);
+  tor_assert(idx >= 0);
+  tor_assert(sl->list[idx] == item);
+  --sl->num_used;
+  *IDXP(item) = -1;
+  if (idx == sl->num_used) {
+    return;
+  } else {
+    sl->list[idx] = sl->list[sl->num_used];
+    UPDATE_IDX(idx);
+    smartlist_heapify(sl, compare, idx_field_offset, idx);
+  }
 }
 
 /** Assert that the heap property is correctly maintained by the heap stored
  * in <b>sl</b>, where order is determined by <b>compare</b>. */
 void
 smartlist_pqueue_assert_ok(smartlist_t *sl,
-                           int (*compare)(const void *a, const void *b))
+                           int (*compare)(const void *a, const void *b),
+                           int idx_field_offset)
 {
   int i;
-  for (i = sl->num_used - 1; i > 0; --i) {
-    tor_assert(compare(sl->list[PARENT(i)], sl->list[i]) <= 0);
+  for (i = sl->num_used - 1; i >= 0; --i) {
+    if (i>0)
+      tor_assert(compare(sl->list[PARENT(i)], sl->list[i]) <= 0);
+    tor_assert(IDX_OF_ITEM(sl->list[i]) == i);
   }
 }
 
