@@ -1992,6 +1992,20 @@ typedef struct {
   time_t expiry_time;
 } cpath_build_state_t;
 
+/**
+ * The cell_ewma_t structure keeps track of how many cells a circuit has
+ * transferred recently.  It keeps an EWMA (exponentially weighted
+ * moving average) of the number of cells flushed in
+ * connection_or_flush_from_first_active_circuit().
+ */
+
+typedef struct {
+    /** The last time a cell was flushed from this circuit. */
+    struct timeval last_cell_time;
+    /** The EWMA of the cell count. */
+    double cell_count;
+} cell_ewma_t;
+
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
 #define OR_CIRCUIT_MAGIC 0x98ABC04Fu
 
@@ -2081,6 +2095,10 @@ typedef struct circuit_t {
 
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
+
+  /** The EWMA count for the number of cells flushed from the
+   * n_conn_cells queue. */
+  cell_ewma_t n_cell_ewma;
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -2212,6 +2230,10 @@ typedef struct or_circuit_t {
    * exit-ward queues of this circuit; reset every time when writing
    * buffer stats to disk. */
   uint64_t total_cell_waiting_time;
+
+  /** The EWMA count for the number of cells flushed from the
+   * p_conn_cells queue. */
+  cell_ewma_t p_cell_ewma;
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t.*/
@@ -2739,6 +2761,14 @@ typedef struct {
   /** If true, SIGHUP should reload the torrc.  Sometimes controllers want
    * to make this false. */
   int ReloadTorrcOnSIGHUP;
+
+  /* The EWMA parameters for circuit selection within a connection.
+   * The most recent EWMAInterval seconds will account for an
+   * EWMASignificance (between 0 and 1) portion of the weight.
+   * If these values are negative, use the global defaults (soon to be
+   * set in the consensus). */
+  double EWMASignificance;
+  double EWMAInterval;
 
 } or_options_t;
 
@@ -5121,6 +5151,8 @@ int rend_parse_introduction_points(rend_service_descriptor_t *parsed,
                                    const char *intro_points_encoded,
                                    size_t intro_points_encoded_size);
 int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
+
+void tor_gettimeofday_cache_clear(void);
 
 #endif
 

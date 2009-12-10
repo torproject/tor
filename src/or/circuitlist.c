@@ -385,6 +385,10 @@ init_circuit_base(circuit_t *circ)
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
 
+  /* Initialize the cell_ewma_t structure */
+  circ->n_cell_ewma.last_cell_time = circ->highres_created;
+  circ->n_cell_ewma.cell_count = 0.0;
+
   circuit_add(circ);
 }
 
@@ -431,6 +435,14 @@ or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn)
   circ->remaining_relay_early_cells = MAX_RELAY_EARLY_CELLS_PER_CIRCUIT;
 
   init_circuit_base(TO_CIRCUIT(circ));
+
+  /* Initialize the cell_ewma_t structure */
+
+  /* Fetch the timeval that init_circuit_base filled in. */
+  circ->p_cell_ewma.last_cell_time = TO_CIRCUIT(circ)->highres_created;
+
+  /* Initialize the cell counts to 0 */
+  circ->p_cell_ewma.cell_count = 0.0;
 
   return circ;
 }

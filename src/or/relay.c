@@ -10,6 +10,7 @@
  *    receiving from circuits, plus queuing on circuits.
  **/
 
+#include <math.h>
 #include "or.h"
 #include "mempool.h"
 
@@ -34,6 +35,26 @@ circuit_resume_edge_reading_helper(edge_connection_t *conn,
                                    crypt_path_t *layer_hint);
 static int
 circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
+
+/** Cache the current hi-res time; the cache gets reset when libevent
+ * calls us. */
+
+static struct timeval cached_time_hires = {0, 0};
+
+static void
+tor_gettimeofday_cached(struct timeval *tv)
+{
+  if (cached_time_hires.tv_sec == 0) {
+    tor_gettimeofday(&cached_time_hires);
+  }
+  *tv = cached_time_hires;
+}
+
+void
+tor_gettimeofday_cache_clear(void)
+{
+    cached_time_hires.tv_sec = 0;
+}
 
 /** Stats: how many relay cells have originated at this hop, or have
  * been relayed onward (not recognized at this hop)?
@@ -1633,7 +1654,7 @@ cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell)
     insertion_time_queue_t *it_queue = queue->insertion_times;
     if (!it_pool)
       it_pool = mp_pool_new(sizeof(insertion_time_elem_t), 1024);
-    tor_gettimeofday(&now);
+    tor_gettimeofday_cached(&now);
 #define SECONDS_IN_A_DAY 86400L
     added = (uint32_t)(((now.tv_sec % SECONDS_IN_A_DAY) * 100L)
             + ((uint32_t)now.tv_usec / (uint32_t)10000L));
@@ -1857,9 +1878,101 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
   cell_queue_t *queue;
   circuit_t *circ;
   int streams_blocked;
+
+  /* The current (hi-res) time */
+  struct timeval now_hires;
+
+  /* The EWMA cell counter for the circuit we're flushing. */
+  cell_ewma_t *cell_ewma = NULL;
+
+  /* The global cell EWMA parameters.  The algorithm is parameterized by
+   * two values (type double):
+   *
+   * "significance" (between 0 and 1) and "interval"
+   *
+   * The cell count is weighted so that the most recent "interval"
+   * seconds will account for "significance" of the weight.
+   *
+   * If "interval" is set to 0, it disables the algorithm, and the old
+   * algorithm (round-robin) is used.
+   *
+   * These parameters should really be set by the consensus, but can be
+   * overridden by the torrc (in which case the options values will be
+   * >= 0.0).
+   */
+  static double cell_ewma_significance = 0.9;
+  static double cell_ewma_interval = 10.0;
+
+  double significance_override = get_options()->EWMASignificance;
+  double interval_override = get_options()->EWMAInterval;
+  if (significance_override >= 0.0) {
+    cell_ewma_significance = significance_override;
+  }
+  if (interval_override >= 0.0) {
+    cell_ewma_interval = interval_override;
+  }
+
   circ = conn->active_circuits;
   if (!circ) return 0;
   assert_active_circuits_ok_paranoid(conn);
+
+  /* See if we're doing the ewma circuit selection algorithm. */
+  if (cell_ewma_interval > 0.0) {
+    /* Is there another circuit we might like better? */
+    circuit_t *circ_iter, *circ_start;
+    circuit_t *circ_min_cell_count = NULL;
+    double min_cell_count = 0.0;
+    tor_gettimeofday_cached(&now_hires);
+
+    /* Start with circ, and go around the circular linked list */
+    circ_start = circ_iter = circ;
+    do {
+      double delta_t;
+
+      /* Find the appropriate EWMA cell counter to use. */
+      if (circ_iter->n_conn == conn) {
+        cell_ewma = &(circ_iter->n_cell_ewma);
+      } else {
+        cell_ewma = &(TO_OR_CIRCUIT(circ_iter)->p_cell_ewma);
+      }
+
+      /* Update the EWMA cell counter to account for the passage of time. */
+      delta_t = (double)(now_hires.tv_sec -
+			    cell_ewma->last_cell_time.tv_sec);
+      delta_t += ((double)(now_hires.tv_usec -
+			    cell_ewma->last_cell_time.tv_usec)) / 1000000.0;
+
+      if (delta_t > 0.0) {
+        cell_ewma->cell_count *=
+	    pow(cell_ewma_significance, delta_t / cell_ewma_interval);
+		//printf("cc: %f ", cell_ewma->cell_count);
+      }
+      cell_ewma->last_cell_time = now_hires;
+
+      /* Now keep track of the lowest cell count we've seen. */
+      if (circ_min_cell_count == NULL ||
+	    cell_ewma->cell_count < min_cell_count) {
+		min_cell_count = cell_ewma->cell_count;
+		circ_min_cell_count = circ_iter;
+      }
+      
+      circ_iter = *next_circ_on_conn_p(circ_iter, conn);
+    } while (circ_iter != circ_start);
+
+    /* OK, we've gone all the way around.  Let's use the circ with the
+     * lowest (recent) cell count. */
+    circ = circ_min_cell_count;
+
+    /* Now set the appropriate EWMA cell counter to use below to add the
+     * cells we actually send. */
+    if (circ_min_cell_count->n_conn == conn) {
+      cell_ewma = &(circ_min_cell_count->n_cell_ewma);
+    } else {
+      cell_ewma = &(TO_OR_CIRCUIT(circ_min_cell_count)->p_cell_ewma);
+    }
+  }
+  
+
   if (circ->n_conn == conn) {
     queue = &circ->n_conn_cells;
     streams_blocked = circ->streams_blocked_on_n_conn;
@@ -1879,7 +1992,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       uint32_t flushed;
       uint32_t cell_waiting_time;
       insertion_time_queue_t *it_queue = queue->insertion_times;
-      tor_gettimeofday(&now);
+      tor_gettimeofday_cached(&now);
       flushed = (uint32_t)((now.tv_sec % SECONDS_IN_A_DAY) * 100L +
                  (uint32_t)now.tv_usec / (uint32_t)10000L);
       if (!it_queue || !it_queue->first) {
@@ -1915,6 +2028,9 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
 
     packed_cell_free_unchecked(cell);
     ++n_flushed;
+    if (cell_ewma) {
+      cell_ewma->cell_count += 1.0;
+    }
     if (circ != conn->active_circuits) {
       /* If this happens, the current circuit just got made inactive by
        * a call in connection_write_to_buf().  That's nothing to worry about:

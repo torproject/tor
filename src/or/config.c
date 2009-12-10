@@ -355,6 +355,11 @@ static config_var_t _option_vars[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
+
+  /* Options for EWMA selection of circuit to write from */
+  VAR("EWMASignificance", DOUBLE, EWMASignificance, "-1.0"),
+  VAR("EWMAInterval", DOUBLE, EWMAInterval, "-1.0"),
+
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
