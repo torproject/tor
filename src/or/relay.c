@@ -1938,24 +1938,24 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
 
       /* Update the EWMA cell counter to account for the passage of time. */
       delta_t = (double)(now_hires.tv_sec -
-			    cell_ewma->last_cell_time.tv_sec);
+                         cell_ewma->last_cell_time.tv_sec);
       delta_t += ((double)(now_hires.tv_usec -
-			    cell_ewma->last_cell_time.tv_usec)) / 1000000.0;
+                           cell_ewma->last_cell_time.tv_usec)) / 1000000.0;
 
       if (delta_t > 0.0) {
         cell_ewma->cell_count *=
-	    pow(cell_ewma_significance, delta_t / cell_ewma_interval);
-		//printf("cc: %f ", cell_ewma->cell_count);
+          pow(cell_ewma_significance, delta_t / cell_ewma_interval);
+        //printf("cc: %f ", cell_ewma->cell_count);
       }
       cell_ewma->last_cell_time = now_hires;
 
       /* Now keep track of the lowest cell count we've seen. */
       if (circ_min_cell_count == NULL ||
-	    cell_ewma->cell_count < min_cell_count) {
-		min_cell_count = cell_ewma->cell_count;
-		circ_min_cell_count = circ_iter;
+          cell_ewma->cell_count < min_cell_count) {
+        min_cell_count = cell_ewma->cell_count;
+        circ_min_cell_count = circ_iter;
       }
-      
+
       circ_iter = *next_circ_on_conn_p(circ_iter, conn);
     } while (circ_iter != circ_start);
 
@@ -1971,7 +1971,6 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       cell_ewma = &(TO_OR_CIRCUIT(circ_min_cell_count)->p_cell_ewma);
     }
   }
-  
 
   if (circ->n_conn == conn) {
     queue = &circ->n_conn_cells;

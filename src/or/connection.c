@@ -2379,7 +2379,6 @@ connection_handle_read(connection_t *conn)
   tor_gettimeofday_cache_clear();
   res = connection_handle_read_impl(conn);
   return res;
-  
 }
 
 /** Pull in new bytes from conn-\>s or conn-\>linked_conn onto conn-\>inbuf,
