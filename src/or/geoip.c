@@ -1081,6 +1081,173 @@ geoip_dirreq_stats_write(time_t now)
   tor_free(data_v3);
 }
 
+/** Start time of bridge stats. */
+static time_t start_of_bridge_stats_interval;
+
+/** Initialize bridge stats. */
+void
+geoip_bridge_stats_init(time_t now)
+{
+  start_of_bridge_stats_interval = now;
+}
+
+/** Parse the bridge statistics as they are written to extra-info
+ * descriptors for being returned to controller clients. Return the
+ * controller string if successful, or NULL otherwise. */
+static char *
+parse_bridge_stats_controller(const char *stats_str, time_t now)
+{
+  char stats_end_str[ISO_TIME_LEN+1], stats_start_str[ISO_TIME_LEN+1],
+       *controller_str, *eos;
+  const char *stats_end_line = "bridge-stats-end",
+             *ips_line = "bridge-ips", *tmp;
+  time_t stats_end_time;
+  size_t controller_len;
+  int seconds;
+  tor_assert(stats_str);
+
+  /* Parse timestamp and number of seconds from
+    "bridge-stats-end YYYY-MM-DD HH:MM:SS (N s)" */
+  tmp = strstr(stats_str, stats_end_line);
+  if (!tmp || strlen(tmp) < strlen(stats_end_line) + 1 + ISO_TIME_LEN + 6)
+    return NULL;
+  strlcpy(stats_end_str, tmp + strlen(stats_end_line) + 1,
+          sizeof(stats_end_str));
+  if (parse_iso_time(stats_end_str, &stats_end_time) < 0)
+    return NULL;
+  if (stats_end_time < now - (25*60*60) ||
+      stats_end_time > now + (1*60*60))
+    return NULL;
+  seconds = (int)strtol(tmp + strlen(stats_end_line) + 1 +
+                        ISO_TIME_LEN + 2, &eos, 10);
+  if (!eos || seconds < 23*60*60)
+    return NULL;
+  format_iso_time(stats_start_str, stats_end_time - seconds);
+
+  /* Parse: "bridge-ips CC=N,CC=N,..." */
+  tmp = strstr(tmp, ips_line);
+  if (!tmp || strlen(tmp) < strlen(ips_line))
+    return NULL;
+  if (strlen(tmp) > strlen(ips_line) + 2)
+    tmp += strlen(ips_line) + 1;
+  else
+    tmp = "";
+  controller_len = strlen("TimeStarted=\"\" CountrySummary=") +
+                          ISO_TIME_LEN + strlen(tmp) + 1;
+  controller_str = tor_malloc(controller_len);
+  if (tor_snprintf(controller_str, controller_len,
+                   "TimeStarted=\"%s\" CountrySummary=%s",
+                   stats_start_str, tmp) < 0) {
+    tor_free(controller_str);
+    return NULL;
+  }
+  return controller_str;
+}
+
+/** Most recent bridge statistics formatted to be written to extra-info
+ * descriptors. */
+static char *bridge_stats_extrainfo = NULL;
+
+/** Most recent bridge statistics formatted to be returned to controller
+ * clients. */
+static char *bridge_stats_controller = NULL;
+
+/** Write bridge statistics to $DATADIR/stats/bridge-stats and return
+ * when we should next try to write statistics. */
+time_t
+geoip_bridge_stats_write(time_t now)
+{
+  char *statsdir = NULL, *filename = NULL, *data = NULL,
+       written[ISO_TIME_LEN+1], *out = NULL, *controller_str;
+  size_t len;
+
+  /* If we changed from relay to bridge recently, adapt starting time
+   * of current measurements. */
+  if (start_of_bridge_stats_interval < client_history_starts)
+    start_of_bridge_stats_interval = client_history_starts;
+
+  /* Check if 24 hours have passed since starting measurements. */
+  if (now < start_of_bridge_stats_interval +
+            DIR_ENTRY_RECORD_USAGE_RETAIN_IPS)
+    return start_of_bridge_stats_interval +
+           DIR_ENTRY_RECORD_USAGE_RETAIN_IPS;
+
+  /* Discard all items in the client history that are too old. */
+  geoip_remove_old_clients(start_of_bridge_stats_interval);
+
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname("stats"PATH_SEPARATOR"bridge-stats");
+  data = geoip_get_client_history_bridge(now, GEOIP_CLIENT_CONNECT);
+  format_iso_time(written, now);
+  len = strlen("bridge-stats-end  (999999 s)\nbridge-ips \n") +
+        ISO_TIME_LEN + (data ? strlen(data) : 0) + 1;
+  out = tor_malloc(len);
+  if (tor_snprintf(out, len, "bridge-stats-end %s (%u s)\nbridge-ips %s\n",
+              written, (unsigned) (now - start_of_bridge_stats_interval),
+              data ? data : "") < 0)
+    goto done;
+  write_str_to_file(filename, out, 0);
+  controller_str = parse_bridge_stats_controller(out, now);
+  if (!controller_str)
+    goto done;
+  start_of_bridge_stats_interval = now;
+  tor_free(bridge_stats_extrainfo);
+  tor_free(bridge_stats_controller);
+  bridge_stats_extrainfo = out;
+  out = NULL;
+  bridge_stats_controller = controller_str;
+  control_event_clients_seen(controller_str);
+ done:
+  tor_free(filename);
+  tor_free(statsdir);
+  tor_free(data);
+  tor_free(out);
+  return start_of_bridge_stats_interval +
+         DIR_ENTRY_RECORD_USAGE_RETAIN_IPS;
+}
+
+/** Try to load the most recent bridge statistics from disk, unless we
+ * have finished a measurement interval lately. */
+static void
+load_bridge_stats(time_t now)
+{
+  char *fname, *contents, *controller_str;
+  if (bridge_stats_extrainfo)
+    return;
+  fname = get_datadir_fname("stats"PATH_SEPARATOR"bridge-stats");
+  contents = read_file_to_str(fname, 0, NULL);
+  if (contents) {
+    controller_str = parse_bridge_stats_controller(contents, now);
+    if (controller_str) {
+      bridge_stats_extrainfo = contents;
+      bridge_stats_controller = controller_str;
+    } else {
+      tor_free(contents);
+    }
+  }
+  tor_free(fname);
+}
+
+/** Return most recent bridge statistics for inclusion in extra-info
+ * descriptors, or NULL if we don't have recent bridge statistics. */
+char *
+geoip_get_bridge_stats_extrainfo(time_t now)
+{
+  load_bridge_stats(now);
+  return bridge_stats_extrainfo;
+}
+
+/** Return most recent bridge statistics to be returned to controller
+ * clients, or NULL if we don't have recent bridge statistics. */
+char *
+geoip_get_bridge_stats_controller(time_t now)
+{
+  load_bridge_stats(now);
+  return bridge_stats_controller;
+}
+
 /** Start time of entry stats. */
 static time_t start_of_entry_stats_interval;
 
