@@ -778,12 +778,19 @@ rend_cache_init(void)
 
 /** Helper: free storage held by a single service descriptor cache entry. */
 static void
-_rend_cache_entry_free(void *p)
+rend_cache_entry_free(rend_cache_entry_t *e)
 {
-  rend_cache_entry_t *e = p;
+  if (!e)
+    return;
   rend_service_descriptor_free(e->parsed);
   tor_free(e->desc);
   tor_free(e);
+}
+
+static void
+_rend_cache_entry_free(void *p)
+{
+  rend_cache_entry_free(p);
 }
 
 /** Free all storage held by the service descriptor cache. */
@@ -814,7 +821,7 @@ rend_cache_clean(void)
     ent = (rend_cache_entry_t*)val;
     if (ent->parsed->timestamp < cutoff) {
       iter = strmap_iter_next_rmv(rend_cache, iter);
-      _rend_cache_entry_free(ent);
+      rend_cache_entry_free(ent);
     } else {
       iter = strmap_iter_next(rend_cache, iter);
     }
@@ -842,7 +849,7 @@ rend_cache_clean_v2_descs_as_dir(void)
       log_info(LD_REND, "Removing descriptor with ID '%s' from cache",
                safe_str(key_base32));
       iter = digestmap_iter_next_rmv(rend_cache_v2_dir, iter);
-      _rend_cache_entry_free(ent);
+      rend_cache_entry_free(ent);
     } else {
       iter = digestmap_iter_next(rend_cache_v2_dir, iter);
     }
