@@ -1075,6 +1075,17 @@ typedef struct or_connection_t {
    * free up on this connection's outbuf.  Every time we pull cells from a
    * circuit, we advance this pointer to the next circuit in the ring. */
   struct circuit_t *active_circuits;
+  /** Priority queue of cell_ewma_t for circuits with queued cells waiting for
+   * room to free up on this connection's outbuf.  Kept in heap order
+   * according to EWMA.
+   *
+   * This is redundant with active_circuits; if we ever decide only to use the
+   * cell_ewma algorithm for choosing circuits, we can remove active_circuits.
+   */
+  smartlist_t *active_circuit_pqueue;
+  /** The tick on which the ciell_ewma_t's in active_circuit_pqueue last had
+   * their ewma values rescaled. */
+  unsigned active_circuit_pqueue_last_recalibrated;
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
 } or_connection_t;
@@ -1994,16 +2005,25 @@ typedef struct {
 
 /**
  * The cell_ewma_t structure keeps track of how many cells a circuit has
- * transferred recently.  It keeps an EWMA (exponentially weighted
- * moving average) of the number of cells flushed in
- * connection_or_flush_from_first_active_circuit().
+ * transferred recently.  It keeps an EWMA (exponentially weighted moving
+ * average) of the number of cells flushed from the circuit queue onto a
+ * connection in connection_or_flush_from_first_active_circuit().
  */
-
 typedef struct {
-    /** The last time a cell was flushed from this circuit. */
-    struct timeval last_cell_time;
-    /** The EWMA of the cell count. */
-    double cell_count;
+  /** The last 'tick' at which we recalibrated cell_count.
+   *
+   * A cell sent at exactly the start of this tick has weight 1.0. Cells sent
+   * since the start of this tick have weight greater than 1.0; ones sent
+   * earlier have less weight. */
+  unsigned last_adjusted_tick;
+  /** The EWMA of the cell count. */
+  double cell_count;
+  /** True iff this is a the cell count for a circuit's previous
+   * connection. */
+  unsigned int is_for_p_conn : 1;
+  /** The position of the circuit within the or connection's priority
+   * queue. */
+  int heap_index;
 } cell_ewma_t;
 
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
@@ -2097,7 +2117,8 @@ typedef struct circuit_t {
   uint64_t dirreq_id;
 
   /** The EWMA count for the number of cells flushed from the
-   * n_conn_cells queue. */
+   * n_conn_cells queue.  Used to determine which circuit to flush from next.
+   */
   cell_ewma_t n_cell_ewma;
 } circuit_t;
 
@@ -4469,6 +4490,8 @@ int append_address_to_payload(char *payload_out, const tor_addr_t *addr);
 const char *decode_address_from_payload(tor_addr_t *addr_out,
                                         const char *payload,
                                         int payload_len);
+unsigned cell_ewma_get_tick(void);
+void cell_ewma_set_scale_factor(or_options_t *options);
 
 /********************************* rephist.c ***************************/
 

@@ -386,8 +386,10 @@ init_circuit_base(circuit_t *circ)
   circ->deliver_window = CIRCWINDOW_START;
 
   /* Initialize the cell_ewma_t structure */
-  circ->n_cell_ewma.last_cell_time = circ->highres_created;
+  circ->n_cell_ewma.last_adjusted_tick = cell_ewma_get_tick();
   circ->n_cell_ewma.cell_count = 0.0;
+  circ->n_cell_ewma.heap_index = -1;
+  circ->n_cell_ewma.is_for_p_conn = 0;
 
   circuit_add(circ);
 }
@@ -438,11 +440,13 @@ or_circuit_new(circid_t p_circ_id, or_connection_t *p_conn)
 
   /* Initialize the cell_ewma_t structure */
 
-  /* Fetch the timeval that init_circuit_base filled in. */
-  circ->p_cell_ewma.last_cell_time = TO_CIRCUIT(circ)->highres_created;
-
   /* Initialize the cell counts to 0 */
   circ->p_cell_ewma.cell_count = 0.0;
+  circ->p_cell_ewma.last_adjusted_tick = cell_ewma_get_tick();
+  circ->p_cell_ewma.is_for_p_conn = 1;
+
+  /* It's not in any heap yet. */
+  circ->p_cell_ewma.heap_index = -1;
 
   return circ;
 }

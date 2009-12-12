@@ -1379,6 +1379,9 @@ options_act(or_options_t *old_options)
   if (accounting_is_enabled(options))
     configure_accounting(time(NULL));
 
+  /* Change the cell EWMA settings */
+  cell_ewma_set_scale_factor(options);
+
   /* Check for transitions that need action. */
   if (old_options) {
     if (options->UseEntryGuards && !old_options->UseEntryGuards) {
