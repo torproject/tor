@@ -427,10 +427,7 @@ crypto_create_init_cipher(const char *key, int encrypt_mode)
     return NULL;
   }
 
-  if (crypto_cipher_set_key(crypto, key)) {
-    crypto_log_errors(LOG_WARN, "setting symmetric key");
-    goto error;
-  }
+  crypto_cipher_set_key(crypto, key);
 
   if (encrypt_mode)
     r = crypto_cipher_encrypt_init_cipher(crypto);
@@ -1254,16 +1251,14 @@ crypto_cipher_generate_key(crypto_cipher_env_t *env)
 
 /** Set the symmetric key for the cipher in <b>env</b> to the first
  * CIPHER_KEY_LEN bytes of <b>key</b>. Does not initialize the cipher.
- * Return 0 on success, -1 on failure.
  */
-int
+void
 crypto_cipher_set_key(crypto_cipher_env_t *env, const char *key)
 {
   tor_assert(env);
   tor_assert(key);
 
   memcpy(env->key, key, CIPHER_KEY_LEN);
-  return 0;
 }
 
 /** Generate an initialization vector for our AES-CTR cipher; store it
