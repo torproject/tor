@@ -893,7 +893,7 @@ const char *
 safe_str(const char *address)
 {
   tor_assert(address);
-  if (!strcmp(get_options()->SafeLogging, "1"))
+  if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
     return "[scrubbed]";
   else
     return address;
@@ -906,8 +906,7 @@ const char *
 safe_str_relay(const char *address)
 {
   tor_assert(address);
-  if (!strcmp(get_options()->SafeLogging, "1") ||
-      !strcmp(get_options()->SafeLogging, "relay"))
+  if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";
   else
     return address;
@@ -919,7 +918,7 @@ safe_str_relay(const char *address)
 const char *
 escaped_safe_str(const char *address)
 {
-  if (!strcmp(get_options()->SafeLogging, "1"))
+  if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
     return "[scrubbed]";
   else
     return escaped(address);
@@ -931,8 +930,7 @@ escaped_safe_str(const char *address)
 const char *
 escaped_safe_str_relay(const char *address)
 {
-  if (!strcasecmp(get_options()->SafeLogging, "1") ||
-      !strcasecmp(get_options()->SafeLogging, "relay"))
+  if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";
   else
     return escaped(address);
@@ -3382,14 +3380,17 @@ options_validate(or_options_t *old_options, or_options_t *options,
       });
   }
 
-  if (options->SafeLogging &&
-      !(!strcasecmp(options->SafeLogging, "relay") ||
-        !strcasecmp(options->SafeLogging, "1") ||
-        !strcasecmp(options->SafeLogging, "0")))
-  {
+  if (!options->SafeLogging ||
+      !strcasecmp(options->SafeLogging, "0")) {
+    options->_SafeLogging = SAFELOG_SCRUB_NONE;
+  } else if (!strcasecmp(options->SafeLogging, "relay")) {
+    options->_SafeLogging = SAFELOG_SCRUB_RELAY;
+  } else if (!strcasecmp(options->SafeLogging, "1")) {
+    options->_SafeLogging = SAFELOG_SCRUB_ALL;
+  } else {
     r = tor_snprintf(buf, sizeof(buf),
                      "Unrecognized value '%s' in SafeLogging",
-                     options->SafeLogging);
+                     escaped(options->SafeLogging));
     *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }

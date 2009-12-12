@@ -2562,6 +2562,12 @@ typedef struct {
   int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
                            * long do we wait before exiting? */
   char *SafeLogging; /**< Contains "relay", "1", "0" (meaning no scrubbing). */
+
+  /* Derived from SafeLogging */
+  enum {
+    SAFELOG_SCRUB_ALL, SAFELOG_SCRUB_RELAY, SAFELOG_SCRUB_NONE
+  } _SafeLogging;
+
   int SafeSocks; /**< Boolean: should we outright refuse application
                   * connections that use socks4 or socks5-with-local-dns? */
 #define LOG_PROTOCOL_WARN (get_options()->ProtocolWarnings ? \
