@@ -61,7 +61,8 @@ doxygen:
 test: all
 	./src/test/test
 
-# Avoid strlcpy.c, strlcat.c, tree.h
+# Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
+# eventdns.[hc], tinytest.[ch]
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
 	        src/common/*.h                        \
