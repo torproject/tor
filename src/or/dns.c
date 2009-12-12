@@ -366,8 +366,7 @@ dns_free_all(void)
     _free_cached_resolve(item);
   }
   HT_CLEAR(cache_map, &cache_root);
-  if (cached_resolve_pqueue)
-    smartlist_free(cached_resolve_pqueue);
+  smartlist_free(cached_resolve_pqueue);
   cached_resolve_pqueue = NULL;
   tor_free(resolv_conf_fname);
 }
@@ -1644,10 +1643,9 @@ dns_seems_to_be_broken(void)
 void
 dns_reset_correctness_checks(void)
 {
-  if (dns_wildcard_response_count) {
-    strmap_free(dns_wildcard_response_count, _tor_free);
-    dns_wildcard_response_count = NULL;
-  }
+  strmap_free(dns_wildcard_response_count, _tor_free);
+  dns_wildcard_response_count = NULL;
+
   n_wildcard_requests = 0;
 
   if (dns_wildcard_list) {

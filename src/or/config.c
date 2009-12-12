@@ -827,8 +827,8 @@ set_options(or_options_t *new_val, char **msg)
             "Acting on config options left us in a broken state. Dying.");
     exit(1);
   }
-  if (old_options)
-    config_free(&options_format, old_options);
+
+  config_free(&options_format, old_options);
 
   return 0;
 }
@@ -862,8 +862,7 @@ or_options_free(or_options_t *options)
   if (!options)
     return;
 
-  if (options->_ExcludeExitNodesUnion)
-    routerset_free(options->_ExcludeExitNodesUnion);
+  routerset_free(options->_ExcludeExitNodesUnion);
   config_free(&options_format, options);
 }
 
@@ -872,18 +871,15 @@ or_options_free(or_options_t *options)
 void
 config_free_all(void)
 {
-  if (global_options) {
-    or_options_free(global_options);
-    global_options = NULL;
-  }
-  if (global_state) {
-    config_free(&state_format, global_state);
-    global_state = NULL;
-  }
-  if (global_cmdline_options) {
-    config_free_lines(global_cmdline_options);
-    global_cmdline_options = NULL;
-  }
+  or_options_free(global_options);
+  global_options = NULL;
+
+  config_free(&state_format, global_state);
+  global_state = NULL;
+
+  config_free_lines(global_cmdline_options);
+  global_cmdline_options = NULL;
+
   tor_free(torrc_fname);
   tor_free(_version);
   tor_free(global_dirfrontpagecontents);
@@ -5089,8 +5085,7 @@ or_state_set(or_state_t *new_state)
 {
   char *err = NULL;
   tor_assert(new_state);
-  if (global_state)
-    config_free(&state_format, global_state);
+  config_free(&state_format, global_state);
   global_state = new_state;
   if (entry_guards_parse_state(global_state, 1, &err)<0) {
     log_warn(LD_GENERAL,"%s",err);

@@ -364,7 +364,7 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
       or_state_mark_dirty(get_or_state(), 0);
   }
 
-  if (histogram) tor_free(histogram);
+  tor_free(histogram);
 }
 
 /**
@@ -1819,10 +1819,9 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
     return -END_CIRC_REASON_TORPROTOCOL;
   }
 
-  if (hop->dh_handshake_state) {
-    crypto_dh_free(hop->dh_handshake_state); /* don't need it anymore */
-    hop->dh_handshake_state = NULL;
-  }
+  crypto_dh_free(hop->dh_handshake_state); /* don't need it anymore */
+  hop->dh_handshake_state = NULL;
+
   memset(hop->fast_handshake_state, 0, sizeof(hop->fast_handshake_state));
 
   if (circuit_init_cpath_crypto(hop, keys, 0)<0) {
@@ -2430,8 +2429,7 @@ circuit_append_new_exit(origin_circuit_t *circ, extend_info_t *exit)
 
   state = circ->build_state;
   tor_assert(state);
-  if (state->chosen_exit)
-    extend_info_free(state->chosen_exit);
+  extend_info_free(state->chosen_exit);
   state->chosen_exit = extend_info_dup(exit);
 
   ++circ->build_state->desired_path_len;
@@ -2746,8 +2744,7 @@ extend_info_free(extend_info_t *info)
 {
   if (!info)
     return;
-  if (info->onion_key)
-    crypto_free_pk_env(info->onion_key);
+  crypto_free_pk_env(info->onion_key);
   tor_free(info);
 }
 

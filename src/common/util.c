@@ -953,8 +953,7 @@ const char *
 escaped(const char *s)
 {
   static char *_escaped_val = NULL;
-  if (_escaped_val)
-    tor_free(_escaped_val);
+  tor_free(_escaped_val);
 
   if (s)
     _escaped_val = esc_for_log(s);

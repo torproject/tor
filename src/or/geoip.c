@@ -1162,8 +1162,8 @@ clear_geoip_db(void)
     SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, tor_free(c));
     smartlist_free(geoip_countries);
   }
-  if (country_idxplus1_by_lc_code)
-    strmap_free(country_idxplus1_by_lc_code, NULL);
+
+  strmap_free(country_idxplus1_by_lc_code, NULL);
   if (geoip_entries) {
     SMARTLIST_FOREACH(geoip_entries, geoip_entry_t *, ent, tor_free(ent));
     smartlist_free(geoip_entries);

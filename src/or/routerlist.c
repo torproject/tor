@@ -757,8 +757,7 @@ router_rebuild_store(int flags, desc_store_t *store)
   store->journal_len = 0;
   store->bytes_dropped = 0;
  done:
-  if (signed_descriptors)
-    smartlist_free(signed_descriptors);
+  smartlist_free(signed_descriptors);
   tor_free(fname);
   tor_free(fname_tmp);
   if (chunk_list) {
@@ -2861,8 +2860,7 @@ routerlist_reparse_old(routerlist_t *rl, signed_descriptor_t *sd)
 void
 routerlist_free_all(void)
 {
-  if (routerlist)
-    routerlist_free(routerlist);
+  routerlist_free(routerlist);
   routerlist = NULL;
   if (warned_nicknames) {
     SMARTLIST_FOREACH(warned_nicknames, char *, cp, tor_free(cp));
@@ -3771,10 +3769,8 @@ authority_cert_free(authority_cert_t *cert)
     return;
 
   tor_free(cert->cache_info.signed_descriptor_body);
-  if (cert->signing_key)
-    crypto_free_pk_env(cert->signing_key);
-  if (cert->identity_key)
-    crypto_free_pk_env(cert->identity_key);
+  crypto_free_pk_env(cert->signing_key);
+  crypto_free_pk_env(cert->identity_key);
 
   tor_free(cert);
 }
@@ -4829,8 +4825,8 @@ esc_router_info(routerinfo_t *router)
   static char *info=NULL;
   char *esc_contact, *esc_platform;
   size_t len;
-  if (info)
-    tor_free(info);
+  tor_free(info);
+
   if (!router)
     return NULL; /* we're exiting; just free the memory we use */
 
@@ -4965,9 +4961,8 @@ void
 routerset_refresh_countries(routerset_t *target)
 {
   int cc;
-  if (target->countries) {
-    bitarray_free(target->countries);
-  }
+  bitarray_free(target->countries);
+
   if (!geoip_is_loaded()) {
     target->countries = NULL;
     target->n_countries = 0;
@@ -5325,8 +5320,7 @@ routerset_free(routerset_t *routerset)
 
   strmap_free(routerset->names, NULL);
   digestmap_free(routerset->digests, NULL);
-  if (routerset->countries)
-    bitarray_free(routerset->countries);
+  bitarray_free(routerset->countries);
   tor_free(routerset);
 }
 

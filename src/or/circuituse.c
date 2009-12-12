@@ -928,8 +928,8 @@ circuit_launch_by_router(uint8_t purpose,
   if (exit)
     info = extend_info_from_router(exit);
   circ = circuit_launch_by_extend_info(purpose, info, flags);
-  if (info)
-    extend_info_free(info);
+
+  extend_info_free(info);
   return circ;
 }
 
@@ -1222,8 +1222,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
                                            flags);
     }
 
-    if (extend_info)
-      extend_info_free(extend_info);
+    extend_info_free(extend_info);
 
     if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL) {
       /* help predict this next time */

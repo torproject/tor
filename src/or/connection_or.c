@@ -80,10 +80,9 @@ connection_or_clear_identity_map(void)
     }
   });
 
-  if (orconn_identity_map) {
-    digestmap_free(orconn_identity_map, NULL);
-    orconn_identity_map = NULL;
-  }
+
+  digestmap_free(orconn_identity_map, NULL);
+  orconn_identity_map = NULL;
 }
 
 /** Change conn->identity_digest to digest, and add conn into
@@ -1118,10 +1117,10 @@ connection_or_set_state_open(or_connection_t *conn)
       }
     }
   }
-  if (conn->handshake_state) {
-    or_handshake_state_free(conn->handshake_state);
-    conn->handshake_state = NULL;
-  }
+
+  or_handshake_state_free(conn->handshake_state);
+  conn->handshake_state = NULL;
+
   connection_start_reading(TO_CONN(conn));
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
 

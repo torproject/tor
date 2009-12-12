@@ -1314,10 +1314,8 @@ log_cert_lifetime(X509 *cert, const char *problem)
   tls_log_errors(NULL, LOG_WARN, LD_NET, "getting certificate lifetime");
   if (bio)
     BIO_free(bio);
-  if (s1)
-    tor_free(s1);
-  if (s2)
-    tor_free(s2);
+  tor_free(s1);
+  tor_free(s2);
 }
 
 /** Helper function: try to extract a link certificate and an identity

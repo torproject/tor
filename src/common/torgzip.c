@@ -165,9 +165,7 @@ tor_gzip_compress(char **out, size_t *out_len,
     deflateEnd(stream);
     tor_free(stream);
   }
-  if (*out) {
-    tor_free(*out);
-  }
+  tor_free(*out);
   return -1;
 }
 

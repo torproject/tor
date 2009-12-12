@@ -371,14 +371,10 @@ _connection_free(connection_t *conn)
 
   if (connection_speaks_cells(conn)) {
     or_connection_t *or_conn = TO_OR_CONN(conn);
-    if (or_conn->tls) {
-      tor_tls_free(or_conn->tls);
-      or_conn->tls = NULL;
-    }
-    if (or_conn->handshake_state) {
-      or_handshake_state_free(or_conn->handshake_state);
-      or_conn->handshake_state = NULL;
-    }
+    tor_tls_free(or_conn->tls);
+    or_conn->tls = NULL;
+    or_handshake_state_free(or_conn->handshake_state);
+    or_conn->handshake_state = NULL;
     tor_free(or_conn->nickname);
   }
   if (CONN_IS_EDGE(conn)) {
@@ -388,8 +384,8 @@ _connection_free(connection_t *conn)
       memset(edge_conn->socks_request, 0xcc, sizeof(socks_request_t));
       tor_free(edge_conn->socks_request);
     }
-    if (edge_conn->rend_data)
-      rend_data_free(edge_conn->rend_data);
+
+    rend_data_free(edge_conn->rend_data);
   }
   if (conn->type == CONN_TYPE_CONTROL) {
     control_connection_t *control_conn = TO_CONTROL_CONN(conn);
@@ -402,16 +398,15 @@ _connection_free(connection_t *conn)
   if (conn->type == CONN_TYPE_DIR) {
     dir_connection_t *dir_conn = TO_DIR_CONN(conn);
     tor_free(dir_conn->requested_resource);
-    if (dir_conn->zlib_state)
-      tor_zlib_free(dir_conn->zlib_state);
+
+    tor_zlib_free(dir_conn->zlib_state);
     if (dir_conn->fingerprint_stack) {
       SMARTLIST_FOREACH(dir_conn->fingerprint_stack, char *, cp, tor_free(cp));
       smartlist_free(dir_conn->fingerprint_stack);
     }
-    if (dir_conn->cached_dir)
-      cached_dir_decref(dir_conn->cached_dir);
-    if (dir_conn->rend_data)
-      rend_data_free(dir_conn->rend_data);
+
+    cached_dir_decref(dir_conn->cached_dir);
+    rend_data_free(dir_conn->rend_data);
   }
 
   if (conn->s >= 0) {

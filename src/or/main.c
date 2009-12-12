@@ -1997,12 +1997,10 @@ tor_free_all(int postfork)
     tor_tls_free_all();
   }
   /* stuff in main.c */
-  if (connection_array)
-    smartlist_free(connection_array);
-  if (closeable_connection_lst)
-    smartlist_free(closeable_connection_lst);
-  if (active_linked_connection_lst)
-    smartlist_free(active_linked_connection_lst);
+
+  smartlist_free(connection_array);
+  smartlist_free(closeable_connection_lst);
+  smartlist_free(active_linked_connection_lst);
   tor_free(timeout_event);
   if (!postfork) {
     release_lockfile();

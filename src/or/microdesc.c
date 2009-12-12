@@ -337,6 +337,8 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
 void
 microdesc_free(microdesc_t *md)
 {
+  if (!md)
+    return;
   /* Must be removed from hash table! */
   if (md->onion_pkey)
     crypto_free_pk_env(md->onion_pkey);

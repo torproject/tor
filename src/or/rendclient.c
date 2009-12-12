@@ -876,8 +876,7 @@ rend_parse_service_authorization(or_options_t *options, int validate_only)
  err:
   res = -1;
  done:
-  if (auth)
-    rend_service_authorization_free(auth);
+  rend_service_authorization_free(auth);
   SMARTLIST_FOREACH(sl, char *, c, tor_free(c););
   smartlist_free(sl);
   if (!validate_only && res == 0) {

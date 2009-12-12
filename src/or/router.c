@@ -61,8 +61,7 @@ static void
 set_onion_key(crypto_pk_env_t *k)
 {
   tor_mutex_acquire(key_lock);
-  if (onionkey)
-    crypto_free_pk_env(onionkey);
+  crypto_free_pk_env(onionkey);
   onionkey = k;
   onionkey_set_at = time(NULL);
   tor_mutex_release(key_lock);
@@ -111,8 +110,7 @@ get_onion_key_set_at(void)
 void
 set_identity_key(crypto_pk_env_t *k)
 {
-  if (identitykey)
-    crypto_free_pk_env(identitykey);
+  crypto_free_pk_env(identitykey);
   identitykey = k;
   crypto_pk_get_digest(identitykey, identitykey_digest);
 }
@@ -201,8 +199,7 @@ rotate_onion_key(void)
   }
   log_info(LD_GENERAL, "Rotating onion key");
   tor_mutex_acquire(key_lock);
-  if (lastonionkey)
-    crypto_free_pk_env(lastonionkey);
+  crypto_free_pk_env(lastonionkey);
   lastonionkey = onionkey;
   onionkey = prkey;
   now = time(NULL);
@@ -331,10 +328,9 @@ load_authority_keyset(int legacy, crypto_pk_env_t **key_out,
     goto done;
   }
 
-  if (*key_out)
-    crypto_free_pk_env(*key_out);
-  if (*cert_out)
-    authority_cert_free(*cert_out);
+  crypto_free_pk_env(*key_out);
+  authority_cert_free(*cert_out);
+
   *key_out = signing_key;
   *cert_out = parsed;
   r = 0;
@@ -344,10 +340,8 @@ load_authority_keyset(int legacy, crypto_pk_env_t **key_out,
  done:
   tor_free(fname);
   tor_free(cert);
-  if (signing_key)
-    crypto_free_pk_env(signing_key);
-  if (parsed)
-    authority_cert_free(parsed);
+  crypto_free_pk_env(signing_key);
+  authority_cert_free(parsed);
   return r;
 }
 
@@ -1425,11 +1419,9 @@ router_rebuild_descriptor(int force)
 
   tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
 
-  if (desc_routerinfo)
-    routerinfo_free(desc_routerinfo);
+  routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
-  if (desc_extrainfo)
-    extrainfo_free(desc_extrainfo);
+  extrainfo_free(desc_extrainfo);
   desc_extrainfo = ei;
 
   desc_clean_since = time(NULL);
@@ -2169,26 +2161,16 @@ router_purpose_from_string(const char *s)
 void
 router_free_all(void)
 {
-  if (onionkey)
-    crypto_free_pk_env(onionkey);
-  if (lastonionkey)
-    crypto_free_pk_env(lastonionkey);
-  if (identitykey)
-    crypto_free_pk_env(identitykey);
-  if (key_lock)
-    tor_mutex_free(key_lock);
-  if (desc_routerinfo)
-    routerinfo_free(desc_routerinfo);
-  if (desc_extrainfo)
-    extrainfo_free(desc_extrainfo);
-  if (authority_signing_key)
-    crypto_free_pk_env(authority_signing_key);
-  if (authority_key_certificate)
-    authority_cert_free(authority_key_certificate);
-  if (legacy_signing_key)
-    crypto_free_pk_env(legacy_signing_key);
-  if (legacy_key_certificate)
-    authority_cert_free(legacy_key_certificate);
+  crypto_free_pk_env(onionkey);
+  crypto_free_pk_env(lastonionkey);
+  crypto_free_pk_env(identitykey);
+  tor_mutex_free(key_lock);
+  routerinfo_free(desc_routerinfo);
+  extrainfo_free(desc_extrainfo);
+  crypto_free_pk_env(authority_signing_key);
+  authority_cert_free(authority_key_certificate);
+  crypto_free_pk_env(legacy_signing_key);
+  authority_cert_free(legacy_key_certificate);
 
   if (warned_nonexistent_family) {
     SMARTLIST_FOREACH(warned_nonexistent_family, char *, cp, tor_free(cp));

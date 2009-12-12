@@ -2062,10 +2062,9 @@ dirvote_clear_pending_consensuses(void)
   for (i = 0; i < N_CONSENSUS_FLAVORS; ++i) {
     pending_consensus_t *pc = &pending_consensuses[i];
     tor_free(pc->body);
-    if (pc->consensus) {
-      networkstatus_vote_free(pc->consensus);
-      pc->consensus = NULL;
-    }
+
+    networkstatus_vote_free(pc->consensus);
+    pc->consensus = NULL;
   }
 }
 
@@ -2267,8 +2266,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
     *status_out = 400;
 
  discard:
-  if (vote)
-    networkstatus_vote_free(vote);
+  networkstatus_vote_free(vote);
 
   if (end_of_vote && !strcmpstart(end_of_vote, "network-status-version ")) {
     vote_body = end_of_vote;
@@ -2453,8 +2451,7 @@ dirvote_compute_consensuses(void)
 
   return 0;
  err:
-  if (votes)
-    smartlist_free(votes);
+  smartlist_free(votes);
   tor_free(consensus_body);
   tor_free(signatures);
   networkstatus_vote_free(consensus);
@@ -2582,8 +2579,7 @@ dirvote_add_signatures_to_all_pending_consensuses(
   if (!*msg_out)
     *msg_out = "Unrecognized error while adding detached signatures.";
  done:
-  if (sigs)
-    ns_detached_signatures_free(sigs);
+  ns_detached_signatures_free(sigs);
   /* XXXX NM Check how return is used.  We can now have an error *and*
      signatures added. */
   return r;

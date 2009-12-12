@@ -2143,8 +2143,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
  done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
-  if (routers)
-    smartlist_free(routers);
+  smartlist_free(routers);
   return 0;
 }
 

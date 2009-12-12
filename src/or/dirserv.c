@@ -2818,10 +2818,8 @@ generate_v2_networkstatus_opinion(void)
   tor_free(status);
   tor_free(hostname);
   tor_free(identity_pkey);
-  if (routers)
-    smartlist_free(routers);
-  if (omit_as_sybil)
-    digestmap_free(omit_as_sybil, NULL);
+  smartlist_free(routers);
+  digestmap_free(omit_as_sybil, NULL);
   return r;
 }
 
@@ -3497,8 +3495,7 @@ connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
       }
     } else {
       connection_dirserv_finish_spooling(conn);
-      if (conn->fingerprint_stack)
-        smartlist_free(conn->fingerprint_stack);
+      smartlist_free(conn->fingerprint_stack);
       conn->fingerprint_stack = NULL;
       return 0;
     }
@@ -3545,13 +3542,10 @@ dirserv_free_all(void)
   cached_dir_decref(the_v2_networkstatus);
   cached_dir_decref(cached_directory);
   clear_cached_dir(&cached_runningrouters);
-  if (cached_v2_networkstatus) {
-    digestmap_free(cached_v2_networkstatus, _free_cached_dir);
-    cached_v2_networkstatus = NULL;
-  }
-  if (cached_consensuses) {
-    strmap_free(cached_consensuses, _free_cached_dir);
-    cached_consensuses = NULL;
-  }
+
+  digestmap_free(cached_v2_networkstatus, _free_cached_dir);
+  cached_v2_networkstatus = NULL;
+  strmap_free(cached_consensuses, _free_cached_dir);
+  cached_consensuses = NULL;
 }
 

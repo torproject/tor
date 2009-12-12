@@ -120,15 +120,14 @@ rend_service_free(rend_service_t *service)
       rend_intro_point_free(intro););
     smartlist_free(service->intro_nodes);
   }
-  if (service->desc)
-    rend_service_descriptor_free(service->desc);
+
+  rend_service_descriptor_free(service->desc);
   if (service->clients) {
     SMARTLIST_FOREACH(service->clients, rend_authorized_client_t *, c,
       rend_authorized_client_free(c););
     smartlist_free(service->clients);
   }
-  if (service->accepted_intros)
-    digestmap_free(service->accepted_intros, _tor_free);
+  digestmap_free(service->accepted_intros, _tor_free);
   tor_free(service);
 }
 
@@ -485,10 +484,10 @@ rend_service_update_descriptor(rend_service_t *service)
   rend_service_descriptor_t *d;
   origin_circuit_t *circ;
   int i;
-  if (service->desc) {
-    rend_service_descriptor_free(service->desc);
-    service->desc = NULL;
-  }
+
+  rend_service_descriptor_free(service->desc);
+  service->desc = NULL;
+
   d = service->desc = tor_malloc_zero(sizeof(rend_service_descriptor_t));
   d->pk = crypto_pk_dup_key(service->private_key);
   d->timestamp = time(NULL);

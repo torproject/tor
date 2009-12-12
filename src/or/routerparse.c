@@ -1554,9 +1554,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
     smartlist_free(tokens);
   }
-  if (exit_policy_tokens) {
-    smartlist_free(exit_policy_tokens);
-  }
+  smartlist_free(exit_policy_tokens);
   if (area) {
     DUMP_AREA(area, "routerinfo");
     memarea_drop_all(area);
@@ -1672,8 +1670,7 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
   goto done;
  err:
   dump_desc(s_dup, "extra-info descriptor");
-  if (extrainfo)
-    extrainfo_free(extrainfo);
+  extrainfo_free(extrainfo);
   extrainfo = NULL;
  done:
   if (tokens) {
@@ -2316,8 +2313,7 @@ networkstatus_v2_parse_from_string(const char *s)
   goto done;
  err:
   dump_desc(s_dup, "v2 networkstatus");
-  if (ns)
-    networkstatus_v2_free(ns);
+  networkstatus_v2_free(ns);
   ns = NULL;
  done:
   SMARTLIST_FOREACH(tokens, directory_token_t *, t, token_clear(t));
@@ -2794,8 +2790,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   goto done;
  err:
   dump_desc(s_dup, "v3 networkstatus");
-  if (ns)
-    networkstatus_vote_free(ns);
+  networkstatus_vote_free(ns);
   ns = NULL;
  done:
   if (tokens) {
@@ -3859,8 +3854,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
 
     md = NULL;
   next:
-    if (md)
-      microdesc_free(md);
+    microdesc_free(md);
 
     memarea_clear(area);
     smartlist_clear(tokens);
@@ -4264,8 +4258,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   }
   goto done;
  err:
-  if (result)
-    rend_service_descriptor_free(result);
+  rend_service_descriptor_free(result);
   result = NULL;
  done:
   if (tokens) {

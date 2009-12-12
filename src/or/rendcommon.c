@@ -405,8 +405,7 @@ rend_desc_v2_is_parsable(rend_encoded_v2_service_descriptor_t *desc)
                                          &test_intro_size,
                                          &test_encoded_size,
                                          &test_next, desc->desc_str);
-  if (test_parsed)
-    rend_service_descriptor_free(test_parsed);
+  rend_service_descriptor_free(test_parsed);
   tor_free(test_intro_content);
   return (res >= 0);
 }
@@ -428,10 +427,9 @@ rend_intro_point_free(rend_intro_point_t *intro)
 {
   if (!intro)
     return;
-  if (intro->extend_info)
-    extend_info_free(intro->extend_info);
-  if (intro->intro_key)
-    crypto_free_pk_env(intro->intro_key);
+
+  extend_info_free(intro->extend_info);
+  crypto_free_pk_env(intro->intro_key);
   tor_free(intro);
 }
 
@@ -797,10 +795,8 @@ _rend_cache_entry_free(void *p)
 void
 rend_cache_free_all(void)
 {
-  if (rend_cache)
-    strmap_free(rend_cache, _rend_cache_entry_free);
-  if (rend_cache_v2_dir)
-    digestmap_free(rend_cache_v2_dir, _rend_cache_entry_free);
+  strmap_free(rend_cache, _rend_cache_entry_free);
+  digestmap_free(rend_cache_v2_dir, _rend_cache_entry_free);
   rend_cache = NULL;
   rend_cache_v2_dir = NULL;
 }
@@ -1348,8 +1344,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
   return 1;
 
  err:
-  if (parsed)
-    rend_service_descriptor_free(parsed);
+  rend_service_descriptor_free(parsed);
   tor_free(intro_content);
   return retval;
 }
