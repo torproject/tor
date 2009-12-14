@@ -1997,12 +1997,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                  "'%s:%d'. Malformed rendezvous descriptor?",
                  escaped(reason), conn->_base.address, conn->_base.port);
         break;
-      case 503:
-        log_info(LD_REND,"http status 503 (%s) response from dirserver "
-                 "'%s:%d'. Node is (currently) not acting as v2 hidden "
-                 "service directory.",
-                 escaped(reason), conn->_base.address, conn->_base.port);
-        break;
       default:
         log_warn(LD_REND,"http status %d (%s) response unexpected (server "
                  "'%s:%d').",
