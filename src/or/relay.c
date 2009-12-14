@@ -1817,7 +1817,7 @@ cell_ewma_to_circuit(cell_ewma_t *ewma)
 #define EWMA_DEFAULT_SCALE_FACTOR 0.9
 
 /** Given a timeval 'now', compute the cell_ewma tick in which it occurs
- * and the fraction of the tick that has elapsed before 
+ * and the fraction of the tick that has elapsed before
  *
  * These tick values are not meant to be shared between Tor instances, or used
  * for other purposes. */
@@ -1825,7 +1825,7 @@ static unsigned
 cell_ewma_tick_from_timeval(const struct timeval *now,
                             double *remainder_out)
 {
-  unsigned res = now->tv_sec / EWMA_TICK_LEN;
+  unsigned res = (unsigned) (now->tv_sec / EWMA_TICK_LEN);
   /* rem */
   double rem = (now->tv_sec % EWMA_TICK_LEN) +
     ((double)(now->tv_usec)) / 1.0e6;
