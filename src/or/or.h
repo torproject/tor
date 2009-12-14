@@ -3219,6 +3219,7 @@ int resolve_my_address(int warn_severity, or_options_t *options,
                        uint32_t *addr, char **hostname_out);
 int is_local_addr(const tor_addr_t *addr) ATTR_PURE;
 void options_init(or_options_t *options);
+char *options_dump(or_options_t *options, int minimal);
 int options_init_from_torrc(int argc, char **argv);
 setopt_err_t options_init_from_string(const char *cf,
                             int command, const char *command_arg, char **msg);

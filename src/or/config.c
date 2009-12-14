@@ -2843,7 +2843,7 @@ config_dump(config_format_t *fmt, void *options, int minimal,
  * the configuration in <b>options</b>.  If <b>minimal</b> is true, do not
  * include options that are the same as Tor's defaults.
  */
-static char *
+char *
 options_dump(or_options_t *options, int minimal)
 {
   return config_dump(&options_format, options, minimal, 0);

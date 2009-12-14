@@ -114,8 +114,6 @@ static int handle_control_setevents(control_connection_t *conn, uint32_t len,
 static int handle_control_authenticate(control_connection_t *conn,
                                        uint32_t len,
                                        const char *body);
-static int handle_control_saveconf(control_connection_t *conn, uint32_t len,
-                                   const char *body);
 static int handle_control_signal(control_connection_t *conn, uint32_t len,
                                  const char *body);
 static int handle_control_mapaddress(control_connection_t *conn, uint32_t len,
@@ -1301,6 +1299,8 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = tor_strdup(get_version());
   } else if (!strcmp(question, "config-file")) {
     *answer = tor_strdup(get_torrc_fname());
+  } else if (!strcmp(question, "config-text")) {
+    *answer = options_dump(get_options(), 1);
   } else if (!strcmp(question, "info/names")) {
     *answer = list_getinfo_options();
   } else if (!strcmp(question, "events/names")) {
@@ -1802,6 +1802,8 @@ typedef struct getinfo_item_t {
 static const getinfo_item_t getinfo_items[] = {
   ITEM("version", misc, "The current version of Tor."),
   ITEM("config-file", misc, "Current location of the \"torrc\" file."),
+  ITEM("config-text", misc,
+       "Return the string that would be written by a saveconf command."),
   ITEM("accounting/bytes", accounting,
        "Number of bytes read/written so far in the accounting interval."),
   ITEM("accounting/bytes-left", accounting,

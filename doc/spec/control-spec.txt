@@ -270,6 +270,9 @@
   returns "250 OK" if successful, or "551 Unable to write configuration
   to disk" if it can't write the file or some other error occurs.
 
+  See also the "getinfo config-text" command, if the controller wants
+  to write the torrc file itself.
+
 3.7. SIGNAL
 
   Sent from the client to the server. The syntax is:
@@ -377,6 +380,10 @@
       of the software. (example: "Tor 0.0.9.4")
 
     "config-file" -- The location of Tor's configuration file ("torrc").
+
+    "config-text" -- The contents that Tor would write if you send it
+      a SAVECONF command, so the controller can write the file to
+      disk itself. [First implemented in 0.2.2.7-alpha.]
 
     ["exit-policy/prepend" -- The default exit policy lines that Tor will
       *prepend* to the ExitPolicy config option.
