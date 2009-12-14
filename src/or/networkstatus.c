@@ -1516,7 +1516,7 @@ networkstatus_set_current_consensus(const char *consensus,
     goto done;
   }
 
-  if (c->flavor != flav) {
+  if ((int)c->flavor != flav) {
     /* This wasn't the flavor we thought we were getting. */
     if (require_flavor) {
       log_warn(LD_DIR, "Got consensus with unexpected flavor %s (wanted %s)",
