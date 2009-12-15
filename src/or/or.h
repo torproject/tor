@@ -3002,7 +3002,7 @@ typedef uint32_t build_time_t;
  * at which point we switch back to computing the timeout from
  * our saved history.
  */
-#define NETWORK_NONLIVE_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.15))
+#define NETWORK_NONLIVE_TIMEOUT_COUNT (tor_lround(RECENT_CIRCUITS*0.15))
 
 /**
  * This tells us when to toss out the last streak of N timeouts.
@@ -3010,7 +3010,8 @@ typedef uint32_t build_time_t;
  * If instead we start getting cells, we switch back to computing the timeout
  * from our saved history.
  */
-#define NETWORK_NONLIVE_DISCARD_COUNT (lround(NETWORK_NONLIVE_TIMEOUT_COUNT*2))
+#define NETWORK_NONLIVE_DISCARD_COUNT \
+  (tor_lround(NETWORK_NONLIVE_TIMEOUT_COUNT*2))
 
 /**
  * Maximum count of timeouts that finish the first hop in the past
@@ -3019,7 +3020,7 @@ typedef uint32_t build_time_t;
  * This tells us to abandon timeout history and set
  * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
  */
-#define MAX_RECENT_TIMEOUT_COUNT (lround(RECENT_CIRCUITS*0.8))
+#define MAX_RECENT_TIMEOUT_COUNT (tor_lround(RECENT_CIRCUITS*0.8))
 
 /** Information about the state of our local network connection */
 typedef struct {

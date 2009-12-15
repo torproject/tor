@@ -328,7 +328,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
 
 /** Output a message to the log. */
 void
-_log(int severity, log_domain_mask_t domain, const char *format, ...)
+tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
 {
   va_list ap;
   if (severity > _log_global_min_severity)

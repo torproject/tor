@@ -16,6 +16,7 @@
 #include "orconfig.h"
 #include "util.h"
 #include "log.h"
+#undef log
 #include "crypto.h"
 #include "torint.h"
 #include "container.h"
@@ -30,6 +31,11 @@
 #include <pwd.h>
 #endif
 
+/* math.h needs this on Linux */
+#ifndef __USE_ISOC99
+#define __USE_ISOC99 1
+#endif
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -278,7 +284,7 @@ tor_log_mallinfo(int severity)
   struct mallinfo mi;
   memset(&mi, 0, sizeof(mi));
   mi = mallinfo();
-  log(severity, LD_MM,
+  tor_log(severity, LD_MM,
       "mallinfo() said: arena=%d, ordblks=%d, smblks=%d, hblks=%d, "
       "hblkhd=%d, usmblks=%d, fsmblks=%d, uordblks=%d, fordblks=%d, "
       "keepcost=%d",
@@ -300,6 +306,25 @@ tor_log_mallinfo(int severity)
 /* =====
  * Math
  * ===== */
+
+/**
+ * Returns the natural logarithm of d base 2.  We define this wrapper here so
+ * as to make it easier not to conflict with Tor's log() macro.
+ */
+double
+tor_mathlog(double d)
+{
+  return log(d);
+}
+
+/** Return the long integer closest to d.  We define this wrapper here so
+ * that not all users of math.h need to use the right incancations to get
+ * the c99 functions. */
+long
+tor_lround(double d)
+{
+  return lround(d);
+}
 
 /** Returns floor(log2(u64)).  If u64 is 0, (incorrectly) returns 0. */
 int
@@ -1650,12 +1675,12 @@ check_private_dir(const char *dirname, cpd_check_t check)
   tor_free(f);
   if (r) {
     if (errno != ENOENT) {
-      log(LOG_WARN, LD_FS, "Directory %s cannot be read: %s", dirname,
-          strerror(errno));
+      log_warn(LD_FS, "Directory %s cannot be read: %s", dirname,
+               strerror(errno));
       return -1;
     }
     if (check == CPD_NONE) {
-      log(LOG_WARN, LD_FS, "Directory %s does not exist.", dirname);
+      log_warn(LD_FS, "Directory %s does not exist.", dirname);
       return -1;
     } else if (check == CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
@@ -1665,7 +1690,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
       r = mkdir(dirname, 0700);
 #endif
       if (r) {
-        log(LOG_WARN, LD_FS, "Error creating directory %s: %s", dirname,
+        log_warn(LD_FS, "Error creating directory %s: %s", dirname,
             strerror(errno));
         return -1;
       }
@@ -1675,7 +1700,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
     return 0;
   }
   if (!(st.st_mode & S_IFDIR)) {
-    log(LOG_WARN, LD_FS, "%s is not a directory", dirname);
+    log_warn(LD_FS, "%s is not a directory", dirname);
     return -1;
   }
 #ifndef MS_WINDOWS
@@ -1688,7 +1713,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
 
     pw = getpwuid(st.st_uid);
 
-    log(LOG_WARN, LD_FS, "%s is not owned by this user (%s, %d) but by "
+    log_warn(LD_FS, "%s is not owned by this user (%s, %d) but by "
         "%s (%d). Perhaps you are running Tor as the wrong user?",
                          dirname, process_ownername, (int)getuid(),
                          pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
@@ -1697,9 +1722,9 @@ check_private_dir(const char *dirname, cpd_check_t check)
     return -1;
   }
   if (st.st_mode & 0077) {
-    log(LOG_WARN, LD_FS, "Fixing permissions on directory %s", dirname);
+    log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
     if (chmod(dirname, 0700)) {
-      log(LOG_WARN, LD_FS, "Could not chmod directory %s: %s", dirname,
+      log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
           strerror(errno));
       return -1;
     } else {
@@ -1784,7 +1809,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   } else {
     open_name = new_file->tempname = tor_malloc(tempname_len);
     if (tor_snprintf(new_file->tempname, tempname_len, "%s.tmp", fname)<0) {
-      log(LOG_WARN, LD_GENERAL, "Failed to generate filename");
+      log_warn(LD_GENERAL, "Failed to generate filename");
       goto err;
     }
     /* We always replace an existing temporary file if there is one. */
@@ -1796,7 +1821,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
     new_file->binary = 1;
 
   if ((new_file->fd = open(open_name, open_flags, mode)) < 0) {
-    log(LOG_WARN, LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
+    log_warn(LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
         open_name, fname, strerror(errno));
     goto err;
   }
@@ -1933,7 +1958,7 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
   {
     result = write_all(fd, chunk->bytes, chunk->len, 0);
     if (result < 0) {
-      log(LOG_WARN, LD_FS, "Error writing to \"%s\": %s", fname,
+      log_warn(LD_FS, "Error writing to \"%s\": %s", fname,
           strerror(errno));
       goto err;
     }
