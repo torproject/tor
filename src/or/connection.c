@@ -1263,7 +1263,7 @@ connection_connect(connection_t *conn, const char *address,
   tor_assert(dest_addr_len > 0);
 
   log_debug(LD_NET, "Connecting to %s:%u.",
-            escaped_safe_str(address), port);
+            escaped_safe_str_client(address), port);
 
   if (connect(s, dest_addr, dest_addr_len) < 0) {
     int e = tor_socket_errno(s);
@@ -1272,7 +1272,7 @@ connection_connect(connection_t *conn, const char *address,
       *socket_error = e;
       log_info(LD_NET,
                "connect() to %s:%u failed: %s",
-               escaped_safe_str(address),
+               escaped_safe_str_client(address),
                port, tor_socket_strerror(e));
       tor_close_socket(s);
       return -1;
@@ -1287,7 +1287,7 @@ connection_connect(connection_t *conn, const char *address,
   /* it succeeded. we're connected. */
   log_fn(inprogress?LOG_DEBUG:LOG_INFO, LD_NET,
          "Connection to %s:%u %s (sock %d).",
-         escaped_safe_str(address),
+         escaped_safe_str_client(address),
          port, inprogress?"in progress":"established", s);
   conn->s = s;
   if (connection_add(conn) < 0) /* no space, forget it */

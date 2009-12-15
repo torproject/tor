@@ -3212,10 +3212,10 @@ const char *get_dirportfrontpage(void);
 or_options_t *get_options(void);
 int set_options(or_options_t *new_val, char **msg);
 void config_free_all(void);
+const char *safe_str_client(const char *address);
 const char *safe_str(const char *address);
-const char *safe_str_relay(const char *address);
+const char *escaped_safe_str_client(const char *address);
 const char *escaped_safe_str(const char *address);
-const char *escaped_safe_str_relay(const char *address);
 const char *get_version(void);
 
 int config_get_lines(const char *string, config_line_t **result);

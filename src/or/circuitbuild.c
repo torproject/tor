@@ -1230,7 +1230,7 @@ circuit_handle_first_hop(origin_circuit_t *circ)
     const char *name = strlen(firsthop->extend_info->nickname) ?
       firsthop->extend_info->nickname : fmt_addr(&firsthop->extend_info->addr);
     log_info(LD_CIRC, "Next router is %s: %s ",
-             safe_str(name), msg?msg:"???");
+             safe_str_client(name), msg?msg:"???");
     circ->_base.n_hop = extend_info_dup(firsthop->extend_info);
 
     if (should_launch) {

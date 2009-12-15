@@ -676,7 +676,7 @@ connection_ap_process_end_not_open(
       !connection_edge_is_rendezvous_stream(conn)  /* avoid retry if rend */
       ) {
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
-             safe_str_relay(conn->socks_request->address),
+             safe_str(conn->socks_request->address),
              stream_end_reason_to_string(reason));
     exitrouter =
       router_get_by_digest(circ->build_state->chosen_exit->identity_digest);
@@ -687,7 +687,7 @@ connection_ap_process_end_not_open(
           int ttl;
           if (!addr) {
             log_info(LD_APP,"Address '%s' resolved to 0.0.0.0. Closing,",
-                     safe_str_relay(conn->socks_request->address));
+                     safe_str(conn->socks_request->address));
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
           }
@@ -699,7 +699,7 @@ connection_ap_process_end_not_open(
           if (get_options()->ClientDNSRejectInternalAddresses &&
               is_internal_IP(addr, 0)) {
             log_info(LD_APP,"Address '%s' resolved to internal. Closing,",
-                     safe_str_relay(conn->socks_request->address));
+                     safe_str(conn->socks_request->address));
             connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
             return 0;
           }
@@ -768,7 +768,7 @@ connection_ap_process_end_not_open(
           log_notice(LD_APP,
                      "Have tried resolving or connecting to address '%s' "
                      "at %d different places. Giving up.",
-                     safe_str_relay(conn->socks_request->address),
+                     safe_str(conn->socks_request->address),
                      MAX_RESOLVE_FAILURES);
           /* clear the failures, so it will have a full try next time */
           client_dns_clear_failures(conn->socks_request->address);

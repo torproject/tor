@@ -886,11 +886,14 @@ config_free_all(void)
   tor_free(global_dirfrontpagecontents);
 }
 
-/** If options->SafeLogging is "1", return a not very useful string,
- * else return address.
+/** Make <b>address</b> -- a piece of information related to our operation as
+ * a client -- safe to log according to the settings in options->SafeLogging,
+ * and return it.
+ *
+ * (We return "[scrubbed]" if SafeLogging is "1", and address otherwise.)
  */
 const char *
-safe_str(const char *address)
+safe_str_client(const char *address)
 {
   tor_assert(address);
   if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
@@ -899,11 +902,15 @@ safe_str(const char *address)
     return address;
 }
 
-/** If options->SafeLogging is "1" or "relay", return a not very useful
- * string, else return address.
+/** Make <b>address</b> -- a piece of information of unspecified sensitivity
+ * -- safe to log according to the settings in options->SafeLogging, and
+ * return it.
+ *
+ * (We return "[scrubbed]" if SafeLogging is anything besides "0", and address
+ * otherwise.)
  */
 const char *
-safe_str_relay(const char *address)
+safe_str(const char *address)
 {
   tor_assert(address);
   if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
@@ -912,11 +919,11 @@ safe_str_relay(const char *address)
     return address;
 }
 
-/** Equivalent to escaped(safe_str(address)).  See reentrancy note on
+/** Equivalent to escaped(safe_str_client(address)).  See reentrancy note on
  * escaped(): don't use this outside the main thread, or twice in the same
  * log statement. */
 const char *
-escaped_safe_str(const char *address)
+escaped_safe_str_client(const char *address)
 {
   if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
     return "[scrubbed]";
@@ -924,11 +931,11 @@ escaped_safe_str(const char *address)
     return escaped(address);
 }
 
-/** Equivalent to escaped(safe_str_relay(address)).  See reentrancy note on
+/** Equivalent to escaped(safe_str(address)).  See reentrancy note on
  * escaped(): don't use this outside the main thread, or twice in the same
  * log statement. */
 const char *
-escaped_safe_str_relay(const char *address)
+escaped_safe_str(const char *address)
 {
   if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";

@@ -405,7 +405,7 @@ command_process_relay_cell(cell_t *cell, or_connection_t *conn)
         log_fn(LOG_PROTOCOL_WARN, LD_OR,
                "Received too many RELAY_EARLY cells on circ %d from %s:%d."
                "  Closing circuit.",
-               cell->circ_id, safe_str_relay(conn->_base.address),
+               cell->circ_id, safe_str(conn->_base.address),
                conn->_base.port);
         circuit_mark_for_close(circ, END_CIRC_REASON_TORPROTOCOL);
         return;
@@ -515,7 +515,7 @@ command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
 
   log_info(LD_OR, "Negotiated version %d with %s:%d; sending NETINFO.",
            highest_supported_version,
-           safe_str(conn->_base.address),
+           safe_str_client(conn->_base.address),
            conn->_base.port);
   tor_assert(conn->link_proto >= 2);
 
@@ -629,7 +629,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   else
     log_info(LD_OR, "Got good NETINFO cell from %s:%d; OR connection is now "
              "open, using protocol version %d",
-             safe_str(conn->_base.address),
+             safe_str_client(conn->_base.address),
              conn->_base.port, (int)conn->link_proto);
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }

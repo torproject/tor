@@ -1491,7 +1491,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         }
         log_debug(LD_APP,
                   "socks4: successfully read destip (%s)",
-                  safe_str(tmpbuf));
+                  safe_str_client(tmpbuf));
         socks4_prot = socks4;
       }
 

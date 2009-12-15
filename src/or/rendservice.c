@@ -458,7 +458,7 @@ rend_config_services(or_options_t *options, int validate_only)
         if (keep_it)
           continue;
         log_info(LD_REND, "Closing intro point %s for service %s.",
-                 safe_str(oc->build_state->chosen_exit->nickname),
+                 safe_str_client(oc->build_state->chosen_exit->nickname),
                  oc->rend_data->onion_address);
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         /* XXXX Is there another reason we should use here? */
@@ -1015,7 +1015,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     router = router_get_by_nickname(rp_nickname, 0);
     if (!router) {
       log_info(LD_REND, "Couldn't find router %s named in introduce2 cell.",
-               escaped_safe_str(rp_nickname));
+               escaped_safe_str_client(rp_nickname));
       /* XXXX Add a no-such-router reason? */
       reason = END_CIRC_REASON_TORPROTOCOL;
       goto err;
@@ -1117,7 +1117,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   if (!launched) { /* give up */
     log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
              "point %s for service %s.",
-             escaped_safe_str(extend_info->nickname),
+             escaped_safe_str_client(extend_info->nickname),
              serviceid);
     reason = END_CIRC_REASON_CONNECTFAILED;
     goto err;
@@ -1125,7 +1125,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   log_info(LD_REND,
            "Accepted intro; launching circuit to %s "
            "(cookie %s) for service %s.",
-           escaped_safe_str(extend_info->nickname),
+           escaped_safe_str_client(extend_info->nickname),
            hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
@@ -1221,7 +1221,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
 
   log_info(LD_REND,
            "Launching circuit to introduction point %s for service %s",
-           escaped_safe_str(intro->extend_info->nickname),
+           escaped_safe_str_client(intro->extend_info->nickname),
            service->service_id);
 
   rep_hist_note_used_internal(time(NULL), 1, 0);
@@ -1234,7 +1234,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
   if (!launched) {
     log_info(LD_REND,
              "Can't launch circuit to establish introduction at %s.",
-             escaped_safe_str(intro->extend_info->nickname));
+             escaped_safe_str_client(intro->extend_info->nickname));
     return -1;
   }
 
@@ -1582,8 +1582,8 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                         "service '%s' with descriptor ID '%s' with validity "
                         "of %d seconds to hidden service directory '%s' on "
                         "%s:%d.",
-               safe_str(service_id),
-               safe_str(desc_id_base32),
+               safe_str_client(service_id),
+               safe_str_client(desc_id_base32),
                seconds_valid,
                hs_dir->nickname,
                hs_dir_ip,
@@ -1955,7 +1955,7 @@ rend_service_dump_stats(int severity)
         service->directory);
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
-      safe_name = safe_str(intro->extend_info->nickname);
+      safe_name = safe_str_client(intro->extend_info->nickname);
 
       circ = find_intro_circuit(intro, service->pk_digest);
       if (!circ) {
