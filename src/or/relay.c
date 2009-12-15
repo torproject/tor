@@ -1828,7 +1828,7 @@ static unsigned
 cell_ewma_tick_from_timeval(const struct timeval *now,
                             double *remainder_out)
 {
-  unsigned res = now->tv_sec / EWMA_TICK_LEN;
+  unsigned res = (unsigned) (now->tv_sec / EWMA_TICK_LEN);
   /* rem */
   double rem = (now->tv_sec % EWMA_TICK_LEN) +
     ((double)(now->tv_usec)) / 1.0e6;
