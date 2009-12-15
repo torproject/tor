@@ -563,7 +563,7 @@ conn_close_if_marked(int i)
       log_info(LD_NET,
                "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
                "to flush %d bytes. (Marked at %s:%d)",
-               escaped_safe_str(conn->address),
+               escaped_safe_str_client(conn->address),
                conn->s, conn_type_to_string(conn->type), conn->state,
                (int)conn->outbuf_flushlen,
                 conn->marked_for_close_file, conn->marked_for_close);
@@ -616,8 +616,8 @@ conn_close_if_marked(int i)
              "something is wrong with theirs. "
              "(fd %d, type %s, state %d, marked at %s:%d).",
              (int)buf_datalen(conn->outbuf),
-             escaped_safe_str(conn->address), conn->s,
-             conn_type_to_string(conn->type), conn->state,
+             escaped_safe_str_client(conn->address),
+             conn->s, conn_type_to_string(conn->type), conn->state,
              conn->marked_for_close_file,
              conn->marked_for_close);
     }
@@ -646,7 +646,7 @@ directory_all_unreachable(time_t now)
     log_notice(LD_NET,
                "Is your network connection down? "
                "Failing connection to '%s:%d'.",
-               safe_str(edge_conn->socks_request->address),
+               safe_str_client(edge_conn->socks_request->address),
                edge_conn->socks_request->port);
     connection_mark_unattached_ap(edge_conn,
                                   END_STREAM_REASON_NET_UNREACHABLE);
@@ -1678,7 +1678,8 @@ dumpstats(int severity)
     if (!connection_is_listener(conn)) {
       log(severity,LD_GENERAL,
           "Conn %d is to %s:%d.", i,
-          safe_str(conn->address), conn->port);
+          safe_str_client(conn->address),
+          conn->port);
       log(severity,LD_GENERAL,
           "Conn %d: %d bytes waiting on inbuf (len %d, last read %d secs ago)",
           i,

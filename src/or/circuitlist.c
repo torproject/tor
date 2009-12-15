@@ -1080,9 +1080,9 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     tor_assert(ocirc->rend_data);
     /* treat this like getting a nack from it */
     log_info(LD_REND, "Failed intro circ %s to %s (awaiting ack). "
-             "Removing from descriptor.",
-             safe_str(ocirc->rend_data->onion_address),
-             safe_str(build_state_get_exit_nickname(ocirc->build_state)));
+           "Removing from descriptor.",
+           safe_str_client(ocirc->rend_data->onion_address),
+           safe_str_client(build_state_get_exit_nickname(ocirc->build_state)));
     rend_client_remove_intro_point(ocirc->build_state->chosen_exit,
                                    ocirc->rend_data);
   }

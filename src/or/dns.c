@@ -847,7 +847,8 @@ connection_dns_remove(edge_connection_t *conn)
     tor_free(pend);
     log_debug(LD_EXIT, "First connection (fd %d) no longer waiting "
               "for resolve of %s",
-              conn->_base.s, escaped_safe_str(conn->_base.address));
+              conn->_base.s,
+              escaped_safe_str(conn->_base.address));
     return;
   } else {
     for ( ; pend->next; pend = pend->next) {
@@ -1387,7 +1388,8 @@ launch_resolve(edge_connection_t *exitconn)
 
   r = 0;
   if (!req) {
-    log_warn(LD_EXIT, "eventdns rejected address %s.", escaped_safe_str(addr));
+    log_warn(LD_EXIT, "eventdns rejected address %s.",
+             escaped_safe_str(addr));
     r = -1;
     tor_free(addr); /* There is no evdns request in progress; stop
                      * addr from getting leaked. */

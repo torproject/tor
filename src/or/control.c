@@ -1246,7 +1246,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
           smartlist_add(reply, ans);
           log_warn(LD_CONTROL,
                    "Unable to allocate address for '%s' in MapAddress msg",
-                   safe_str(line));
+                   safe_str_client(line));
         } else {
           tor_snprintf(ans, anslen, "250-%s=%s", address, to);
           smartlist_add(reply, ans);
@@ -1263,7 +1263,8 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
                    "not of expected form 'foo=bar'.", line);
       smartlist_add(reply, ans);
       log_info(LD_CONTROL, "Skipping MapAddress '%s': wrong "
-                           "number of items.", safe_str(line));
+                           "number of items.",
+                           safe_str_client(line));
     }
     SMARTLIST_FOREACH(elts, char *, cp, tor_free(cp));
     smartlist_clear(elts);

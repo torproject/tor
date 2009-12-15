@@ -302,7 +302,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("RouterFile"),
   V(RunAsDaemon,                 BOOL,     "0"),
   V(RunTesting,                  BOOL,     "0"),
-  V(SafeLogging,                 BOOL,     "1"),
+  V(SafeLogging,                 STRING,   "1"),
   V(SafeSocks,                   BOOL,     "0"),
   V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
   V(ServerDNSAllowNonRFC953Hostnames, BOOL,"0"),
@@ -885,17 +885,49 @@ config_free_all(void)
   tor_free(global_dirfrontpagecontents);
 }
 
-/** If options->SafeLogging is on, return a not very useful string,
- * else return address.
+/** Make <b>address</b> -- a piece of information related to our operation as
+ * a client -- safe to log according to the settings in options->SafeLogging,
+ * and return it.
+ *
+ * (We return "[scrubbed]" if SafeLogging is "1", and address otherwise.)
+ */
+const char *
+safe_str_client(const char *address)
+{
+  tor_assert(address);
+  if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
+    return "[scrubbed]";
+  else
+    return address;
+}
+
+/** Make <b>address</b> -- a piece of information of unspecified sensitivity
+ * -- safe to log according to the settings in options->SafeLogging, and
+ * return it.
+ *
+ * (We return "[scrubbed]" if SafeLogging is anything besides "0", and address
+ * otherwise.)
  */
 const char *
 safe_str(const char *address)
 {
   tor_assert(address);
-  if (get_options()->SafeLogging)
+  if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";
   else
     return address;
+}
+
+/** Equivalent to escaped(safe_str_client(address)).  See reentrancy note on
+ * escaped(): don't use this outside the main thread, or twice in the same
+ * log statement. */
+const char *
+escaped_safe_str_client(const char *address)
+{
+  if (get_options()->_SafeLogging == SAFELOG_SCRUB_ALL)
+    return "[scrubbed]";
+  else
+    return escaped(address);
 }
 
 /** Equivalent to escaped(safe_str(address)).  See reentrancy note on
@@ -904,7 +936,7 @@ safe_str(const char *address)
 const char *
 escaped_safe_str(const char *address)
 {
-  if (get_options()->SafeLogging)
+  if (get_options()->_SafeLogging != SAFELOG_SCRUB_NONE)
     return "[scrubbed]";
   else
     return escaped(address);
@@ -3358,6 +3390,21 @@ options_validate(or_options_t *old_options, or_options_t *options,
           return -1;
         }
       });
+  }
+
+  if (!options->SafeLogging ||
+      !strcasecmp(options->SafeLogging, "0")) {
+    options->_SafeLogging = SAFELOG_SCRUB_NONE;
+  } else if (!strcasecmp(options->SafeLogging, "relay")) {
+    options->_SafeLogging = SAFELOG_SCRUB_RELAY;
+  } else if (!strcasecmp(options->SafeLogging, "1")) {
+    options->_SafeLogging = SAFELOG_SCRUB_ALL;
+  } else {
+    r = tor_snprintf(buf, sizeof(buf),
+                     "Unrecognized value '%s' in SafeLogging",
+                     escaped(options->SafeLogging));
+    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    return -1;
   }
 
   if (compute_publishserverdescriptor(options) < 0) {

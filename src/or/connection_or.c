@@ -773,7 +773,8 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
 {
   conn->_base.state = OR_CONN_STATE_TLS_HANDSHAKING;
   conn->tls = tor_tls_new(conn->_base.s, receiving);
-  tor_tls_set_logged_address(conn->tls, escaped_safe_str(conn->_base.address));
+  tor_tls_set_logged_address(conn->tls, // XXX client and relay?
+      escaped_safe_str(conn->_base.address));
   if (!conn->tls) {
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
@@ -913,7 +914,8 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
   or_options_t *options = get_options();
   int severity = server_mode(options) ? LOG_PROTOCOL_WARN : LOG_WARN;
   const char *safe_address =
-    started_here ? conn->_base.address : safe_str(conn->_base.address);
+    started_here ? conn->_base.address :
+                   safe_str_client(conn->_base.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
   int has_cert = 0, has_identity=0;
 
@@ -1029,7 +1031,7 @@ connection_tls_finish_handshake(or_connection_t *conn)
   int started_here = connection_or_nonopen_was_started_here(conn);
 
   log_debug(LD_HANDSHAKE,"tls handshake with %s done. verifying.",
-            safe_str(conn->_base.address));
+            safe_str_client(conn->_base.address));
 
   directory_set_dirty();
 

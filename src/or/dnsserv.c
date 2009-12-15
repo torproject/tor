@@ -138,13 +138,13 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
   * immediately if it's in the cache, or completely bogus, or automapped),
   * and then attached to a circuit. */
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
-           escaped_safe_str(q->name));
+           escaped_safe_str_client(q->name));
   q_name = tor_strdup(q->name); /* q could be freed in rewrite_and_attach */
   connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
   /* Now, the connection is marked if it was bad. */
 
   log_info(LD_APP, "Passed request for %s to rewrite_and_attach.",
-           escaped_safe_str(q_name));
+           escaped_safe_str_client(q_name));
   tor_free(q_name);
 }
 
@@ -183,13 +183,13 @@ dnsserv_launch_request(const char *name, int reverse)
   * immediately if it's in the cache, or completely bogus, or automapped),
   * and then attached to a circuit. */
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
-           escaped_safe_str(name));
+           escaped_safe_str_client(name));
   q_name = tor_strdup(name); /* q could be freed in rewrite_and_attach */
   connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
   /* Now, the connection is marked if it was bad. */
 
   log_info(LD_APP, "Passed request for %s to rewrite_and_attach.",
-           escaped_safe_str(q_name));
+           escaped_safe_str_client(q_name));
   tor_free(q_name);
   return 0;
 }

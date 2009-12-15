@@ -76,7 +76,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                               &entry) < 1) {
     log_warn(LD_REND,
              "query %s didn't have valid rend desc in cache. Failing.",
-             escaped_safe_str(introcirc->rend_data->onion_address));
+             escaped_safe_str_client(introcirc->rend_data->onion_address));
     goto err;
   }
 
@@ -269,7 +269,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
       extend_info = rend_client_get_random_intro(circ->rend_data);
       if (!extend_info) {
         log_warn(LD_REND, "No introduction points left for %s. Closing.",
-                 escaped_safe_str(circ->rend_data->onion_address));
+                 escaped_safe_str_client(circ->rend_data->onion_address));
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
         return -1;
       }
@@ -277,7 +277,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
         log_info(LD_REND,
                  "Got nack for %s from %s. Re-extending circ %d, "
                  "this time to %s.",
-                 escaped_safe_str(circ->rend_data->onion_address),
+                 escaped_safe_str_client(circ->rend_data->onion_address),
                  circ->build_state->chosen_exit->nickname,
                  circ->_base.n_circ_id, extend_info->nickname);
         result = circuit_extend_to_new_exit(circ, extend_info);
@@ -285,7 +285,7 @@ rend_client_introduction_acked(origin_circuit_t *circ,
         log_info(LD_REND,
                  "Got nack for %s from %s. Building a new introduction "
                  "circuit, this time to %s.",
-                 escaped_safe_str(circ->rend_data->onion_address),
+                 escaped_safe_str_client(circ->rend_data->onion_address),
                  circ->build_state->chosen_exit->nickname,
                  extend_info->nickname);
         circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
@@ -445,7 +445,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
            rend_query->onion_address, desc_id_base32,
            rend_query->auth_type,
            (rend_query->auth_type == REND_NO_AUTH ? "[none]" :
-           escaped_safe_str(descriptor_cookie_base64)),
+           escaped_safe_str_client(descriptor_cookie_base64)),
            hs_dir->nickname, hs_dir->dir_port);
   return 1;
 }
@@ -474,7 +474,7 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
     return;
   }
   log_debug(LD_REND, "Fetching v2 rendezvous descriptor for service %s",
-            safe_str(rend_query->onion_address));
+            safe_str_client(rend_query->onion_address));
   /* Randomly iterate over the replicas until a descriptor can be fetched
    * from one of the consecutive nodes, or no options are left. */
   tries_left = REND_NUMBER_OF_NON_CONSECUTIVE_REPLICAS;
@@ -522,12 +522,12 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
   r = rend_cache_lookup_entry(rend_query->onion_address, -1, &ent);
   if (r<0) {
     log_warn(LD_BUG, "Malformed service ID %s.",
-             escaped_safe_str(rend_query->onion_address));
+             escaped_safe_str_client(rend_query->onion_address));
     return -1;
   }
   if (r==0) {
     log_info(LD_REND, "Unknown service %s. Re-fetching descriptor.",
-             escaped_safe_str(rend_query->onion_address));
+             escaped_safe_str_client(rend_query->onion_address));
     rend_client_refetch_v2_renddesc(rend_query);
     return 0;
   }
@@ -545,7 +545,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
   if (smartlist_len(ent->parsed->intro_nodes) == 0) {
     log_info(LD_REND,
              "No more intro points remain for %s. Re-fetching descriptor.",
-             escaped_safe_str(rend_query->onion_address));
+             escaped_safe_str_client(rend_query->onion_address));
     rend_client_refetch_v2_renddesc(rend_query);
 
     /* move all pending streams back to renddesc_wait */
@@ -559,7 +559,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
   }
   log_info(LD_REND,"%d options left for %s.",
            smartlist_len(ent->parsed->intro_nodes),
-           escaped_safe_str(rend_query->onion_address));
+           escaped_safe_str_client(rend_query->onion_address));
   return 1;
 }
 
@@ -705,7 +705,8 @@ rend_client_desc_trynow(const char *query)
       }
     } else { /* 404, or fetch didn't get that far */
       log_notice(LD_REND,"Closing stream for '%s.onion': hidden service is "
-                 "unavailable (try again later).", safe_str(query));
+                 "unavailable (try again later).",
+                 safe_str_client(query));
       connection_mark_unattached_ap(conn, END_STREAM_REASON_RESOLVEFAILED);
     }
   } SMARTLIST_FOREACH_END(_conn);
@@ -726,7 +727,7 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
   if (rend_cache_lookup_entry(rend_query->onion_address, -1, &entry) < 1) {
     log_warn(LD_REND,
              "Query '%s' didn't have valid rend desc in cache. Failing.",
-             safe_str(rend_query->onion_address));
+             safe_str_client(rend_query->onion_address));
     return NULL;
   }
 
