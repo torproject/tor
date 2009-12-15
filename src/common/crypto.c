@@ -532,7 +532,6 @@ crypto_pk_write_key_to_string_impl(crypto_pk_env_t *env, char **dest,
   (void)BIO_set_close(b, BIO_NOCLOSE); /* so BIO_free doesn't free buf */
   BIO_free(b);
 
-  tor_assert(buf->length >= 0);
   *dest = tor_malloc(buf->length+1);
   memcpy(*dest, buf->data, buf->length);
   (*dest)[buf->length] = 0; /* nul terminate it */
