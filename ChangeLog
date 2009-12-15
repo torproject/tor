@@ -353,6 +353,8 @@ Changes in Version 0.2.1.21 - 20??-??-??
     - Fix a couple of very-hard-to-trigger memory leaks, and one hard-to-
       trigger platform-specific option misparsing case found by Coverity
       Scan.
+    - Fix a compilation warning on Fedora 12 by removing an impossible-to-
+      trigger assert.  Fixes bug 1173.
 
 
 Changes in version 0.2.1.20 - 2009-10-15
