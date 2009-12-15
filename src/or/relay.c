@@ -1787,9 +1787,10 @@ cell_ewma_to_circuit(cell_ewma_t *ewma)
 
    Conceptually, we take an exponentially weighted mean average of the number
    of cells a circuit has sent, and allow active circuits (those with cells to
-   relay) to send cells in order of their exponentially-weighted mean average
-   (EWMA) cell count.  [That is, a cell sent N seconds ago 'counts' F^N times
-   as much as a cell sent now, for 0<F<1.0.]
+   relay) to send cells in reverse order of their exponentially-weighted mean
+   average (EWMA) cell count.  [That is, a cell sent N seconds ago 'counts'
+   F^N times as much as a cell sent now, for 0<F<1.0, and we favor the
+   circuit that has sent the fewest cells]
 
    If 'double' had infinite precision, we could do this simply by counting a
    cell sent at startup as having weight 1.0, and a cell sent N seconds later
@@ -1816,8 +1817,10 @@ cell_ewma_to_circuit(cell_ewma_t *ewma)
  * consensus or a configuration setting. */
 #define EWMA_DEFAULT_SCALE_FACTOR 0.9
 
-/** Given a timeval 'now', compute the cell_ewma tick in which it occurs
- * and the fraction of the tick that has elapsed before 
+/** Given a timeval <b>now</b>, compute the cell_ewma tick in which it occurs
+ * and the fraction of the tick that has elapsed between the start of the tick
+ * and <b>now</b>.  Return the former and store the latter in
+ * *<b>remainder_out</b>.
  *
  * These tick values are not meant to be shared between Tor instances, or used
  * for other purposes. */
@@ -2205,7 +2208,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
   if (streams_blocked && queue->n <= CELL_QUEUE_LOWWATER_SIZE)
     set_streams_blocked_on_circ(circ, conn, 0); /* unblock streams */
 
-  /* Did we just ran out of cells on this circuit's queue? */
+  /* Did we just run out of cells on this circuit's queue? */
   if (queue->n == 0) {
     log_debug(LD_GENERAL, "Made a circuit inactive.");
     make_circuit_inactive_on_conn(circ, conn);

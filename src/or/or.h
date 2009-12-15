@@ -1083,7 +1083,7 @@ typedef struct or_connection_t {
    * cell_ewma algorithm for choosing circuits, we can remove active_circuits.
    */
   smartlist_t *active_circuit_pqueue;
-  /** The tick on which the ciell_ewma_t's in active_circuit_pqueue last had
+  /** The tick on which the cell_ewma_ts in active_circuit_pqueue last had
    * their ewma values rescaled. */
   unsigned active_circuit_pqueue_last_recalibrated;
   struct or_connection_t *next_with_same_id; /**< Next connection with same
@@ -2018,7 +2018,7 @@ typedef struct {
   unsigned last_adjusted_tick;
   /** The EWMA of the cell count. */
   double cell_count;
-  /** True iff this is a the cell count for a circuit's previous
+  /** True iff this is the cell count for a circuit's previous
    * connection. */
   unsigned int is_for_p_conn : 1;
   /** The position of the circuit within the or connection's priority
