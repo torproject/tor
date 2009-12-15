@@ -1814,8 +1814,8 @@ cell_ewma_to_circuit(cell_ewma_t *ewma)
 #define EWMA_TICK_LEN 10
 
 /** The default per-tick scale factor, if it hasn't been overridden by a
- * consensus or a configuration setting. */
-#define EWMA_DEFAULT_SCALE_FACTOR 0.9
+ * consensus or a configuration setting.  zero means "disabled". */
+#define EWMA_DEFAULT_HALFLIFE 0.0
 
 /** Given a timeval <b>now</b>, compute the cell_ewma tick in which it occurs
  * and the fraction of the tick that has elapsed between the start of the tick
@@ -1846,24 +1846,51 @@ cell_ewma_get_tick(void)
 /** The per-tick scale factor to be used when computing cell-count EWMA
  * values.  (A cell sent N ticks before the start of the current tick
  * has value ewma_scale_factor ** N.)
- *
- * If ewma_scale_factor is <= 0, the EWMA algorithm is disabled.
  */
-static double ewma_scale_factor = EWMA_DEFAULT_SCALE_FACTOR;
+static double ewma_scale_factor = 0.1;
+static int ewma_enabled = 0;
+
+#define EPSILON 0.00001
+#define LOG_ONEHALF -0.69314718055994529
 
 /** Adjust the global cell scale factor based on <b>options</b> */
 void
-cell_ewma_set_scale_factor(or_options_t *options)
+cell_ewma_set_scale_factor(or_options_t *options, networkstatus_t *consensus)
 {
-  double f;
-  if (options->EWMAInterval > 0.0001) {
-    f = pow(options->EWMASignificance,
-            EWMA_TICK_LEN / options->EWMAInterval);
+  int32_t halflife_ms;
+  double halflife;
+  const char *source;
+  if (options && options->CircuitPriorityHalflife >= -EPSILON) {
+    halflife = options->CircuitPriorityHalflife;
+    source = "CircuitPriorityHalflife in configuration";
+  } else if (consensus &&
+             (halflife_ms = networkstatus_get_param(
+                   consensus, "CircPriorityHalflifeMsec", -1) >= 0)) {
+    halflife = ((double)halflife_ms)/1000.0;
+    source = "CircPriorityHalflifeMsec in consensus";
   } else {
-    f = EWMA_DEFAULT_SCALE_FACTOR;
+    halflife = EWMA_DEFAULT_HALFLIFE;
+    source = "Default value";
   }
 
-  ewma_scale_factor = f;
+  if (halflife <= EPSILON) {
+    /* The cell EWMA algorithm is disabled. */
+    ewma_scale_factor = 0.1;
+    ewma_enabled = 0;
+    log_info(LD_OR,
+             "Disabled cell_ewma algorithm because of value in %s",
+             source);
+  } else {
+    /* convert halflife into halflife-per-tick. */
+    halflife /= EWMA_TICK_LEN;
+    /* compute per-tick scale factor. */
+    ewma_scale_factor = exp( LOG_ONEHALF / halflife );
+    ewma_enabled = 1;
+    log_info(LD_OR,
+             "Enabled cell_ewma algorithm because of value in %s; "
+             "scale factor is %lf per %d seconds",
+             source, ewma_scale_factor, EWMA_TICK_LEN);
+  }
 }
 
 /** Return the multiplier necessary to convert the value of a cell sent in
@@ -2108,7 +2135,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
   assert_active_circuits_ok_paranoid(conn);
 
   /* See if we're doing the ewma circuit selection algorithm. */
-  if (ewma_scale_factor > 0.0) {
+  if (ewma_enabled) {
     unsigned tick;
     double fractional_tick;
     tor_gettimeofday_cached(&now_hires);

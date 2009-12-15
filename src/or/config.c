@@ -167,6 +167,7 @@ static config_var_t _option_vars[] = {
   V(CircuitBuildTimeout,         INTERVAL, "0"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(CircuitStreamTimeout,        INTERVAL, "0"),
+  V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ConsensusParams,             STRING,   NULL),
@@ -212,6 +213,7 @@ static config_var_t _option_vars[] = {
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtraInfoStatistics,         BOOL,     "0"),
+
   V(FallbackNetworkstatusFile,   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
   V(FascistFirewall,             BOOL,     "0"),
@@ -355,10 +357,6 @@ static config_var_t _option_vars[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
-
-  /* Options for EWMA selection of circuit to write from */
-  VAR("EWMASignificance", DOUBLE, EWMASignificance, "-1.0"),
-  VAR("EWMAInterval", DOUBLE, EWMAInterval, "-1.0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -1380,7 +1378,7 @@ options_act(or_options_t *old_options)
     configure_accounting(time(NULL));
 
   /* Change the cell EWMA settings */
-  cell_ewma_set_scale_factor(options);
+  cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
 
   /* Check for transitions that need action. */
   if (old_options) {

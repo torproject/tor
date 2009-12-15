@@ -2783,13 +2783,20 @@ typedef struct {
    * to make this false. */
   int ReloadTorrcOnSIGHUP;
 
-  /* The EWMA parameters for circuit selection within a connection.
-   * The most recent EWMAInterval seconds will account for an
-   * EWMASignificance (between 0 and 1) portion of the weight.
-   * If these values are negative, use the global defaults (soon to be
-   * set in the consensus). */
-  double EWMASignificance;
-  double EWMAInterval;
+  /* The main parameter for picking circuits within a connection.
+   *
+   * If this value is positive, when picking a cell to relay on a connection,
+   * we always relay from the circuit whose weighted cell count is lowest.
+   * Cells are weighted exponentially such that if one cell is sent
+   * 'CircuitPriorityHalflife' seconds before another, it counts for half as
+   * much.
+   *
+   * If this value is zero, we're disabling the cell-EWMA algorithm.
+   *
+   * If this value is negative, we're using the default approach
+   * according to either Tor or a parameter set in the consensus.
+   */
+  double CircuitPriorityHalflife;
 
 } or_options_t;
 
@@ -4491,7 +4498,8 @@ const char *decode_address_from_payload(tor_addr_t *addr_out,
                                         const char *payload,
                                         int payload_len);
 unsigned cell_ewma_get_tick(void);
-void cell_ewma_set_scale_factor(or_options_t *options);
+void cell_ewma_set_scale_factor(or_options_t *options,
+                                networkstatus_t *consensus);
 
 /********************************* rephist.c ***************************/
 
