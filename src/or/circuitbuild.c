@@ -13,40 +13,12 @@
 
 #include "or.h"
 #include "crypto.h"
+#undef log
+#include <math.h>
 
 #ifndef MIN
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
-
-/*
- * This madness is needed because if we simply #undef log
- * before including or.h or log.h, we get linker collisions
- * and random segfaults due to memory corruption (and
- * not even at calls to log() either!)
- */
- /* XXX022 somebody should rename Tor's log() function, so we can
-  * remove this wart. -RD */
-#undef log
-
-/*
- * Linux doesn't provide lround in math.h by default, but mac os does...
- * It's best just to leave math.h out of the picture entirely.
- */
-//#define log math_h_log
-//#include <math.h>
-//#undef log
-long int lround(double x);
-double ln(double x);
-double log(double x);
-double pow(double x, double y);
-
-double
-ln(double x)
-{
-  return log(x);
-}
-
-#define log _log
 
 /********* START VARIABLES **********/
 /** Global list of circuit build times */
@@ -523,9 +495,9 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
     }
 
     if (x[i] < cbt->Xm) {
-      a += ln(cbt->Xm);
+      a += tor_mathlog(cbt->Xm);
     } else {
-      a += ln(x[i]);
+      a += tor_mathlog(x[i]);
     }
     n++;
   }
@@ -536,7 +508,7 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   }
   tor_assert(n==cbt->total_build_times);
 
-  a -= n*ln(cbt->Xm);
+  a -= n*tor_mathlog(cbt->Xm);
   a = n/a;
 
   cbt->alpha = a;
@@ -611,7 +583,8 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
 
   tor_assert(0 <= u && u < 1.0);
   /* circuit_build_times_calculate_timeout returns <= INT32_MAX */
-  ret = (build_time_t)lround(circuit_build_times_calculate_timeout(cbt, u));
+  ret = (build_time_t)
+    tor_lround(circuit_build_times_calculate_timeout(cbt, u));
   tor_assert(ret > 0);
   return ret;
 }
@@ -624,7 +597,7 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
               quantile_cutoff, MAX_SYNTHETIC_QUANTILE);
 
-  if (gentime < (build_time_t)lround(cbt->timeout_ms)) {
+  if (gentime < (build_time_t)tor_lround(cbt->timeout_ms)) {
     log_warn(LD_CIRC,
              "Generated a synthetic timeout LESS than the current timeout: "
              "%ums vs %lfms using Xm: %d a: %lf, q: %lf",
@@ -658,7 +631,8 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   // -ln(1-0.8)/(ln(CircBuildTimeout)-ln(Xm))=a
   tor_assert(quantile >= 0);
   tor_assert(cbt->Xm > 0);
-  cbt->alpha = ln(1.0-quantile)/(ln(cbt->Xm)-ln(timeout_ms));
+  cbt->alpha = tor_mathlog(1.0-quantile)/
+    (tor_mathlog(cbt->Xm)-tor_mathlog(timeout_ms));
   tor_assert(cbt->alpha > 0);
 }
 
@@ -795,7 +769,7 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
                 "Network is flaky. No activity for %ld seconds. "
                 "Temporarily raising timeout to %lds.",
                 (long int)(now - cbt->liveness.network_last_live),
-                lround(circuit_build_times_get_initial_timeout()/1000));
+                tor_lround(circuit_build_times_get_initial_timeout()/1000));
       cbt->timeout_ms = circuit_build_times_get_initial_timeout();
     }
 
@@ -849,7 +823,8 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   log_notice(LD_CIRC,
             "Network connection speed appears to have changed. Resetting "
             "timeout to %lds after %d timeouts and %d buildtimes.",
-            lround(cbt->timeout_ms/1000), timeout_count, total_build_times);
+            tor_lround(cbt->timeout_ms/1000), timeout_count,
+            total_build_times);
 
   return 1;
 }
@@ -921,7 +896,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 
   log_info(LD_CIRC,
            "Set circuit build timeout to %lds (%lfms, Xm: %d, a: %lf) "
-           "based on %d circuit times", lround(cbt->timeout_ms/1000),
+           "based on %d circuit times", tor_lround(cbt->timeout_ms/1000),
            cbt->timeout_ms, cbt->Xm, cbt->alpha, cbt->total_build_times);
 
 }
@@ -1083,7 +1058,7 @@ void
 circuit_log_path(int severity, unsigned int domain, origin_circuit_t *circ)
 {
   char *s = circuit_list_path(circ,1);
-  log(severity,domain,"%s",s);
+  tor_log(severity,domain,"%s",s);
   tor_free(s);
 }
 
@@ -1402,7 +1377,7 @@ inform_testing_reachability(void)
                                 "CHECKING_REACHABILITY DIRADDRESS=%s:%d",
                                 me->address, me->dir_port);
   }
-  log(LOG_NOTICE, LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... "
+  log_notice(LD_OR, "Now checking whether ORPort %s:%d%s %s reachable... "
                          "(this may take up to %d minutes -- look for log "
                          "messages indicating success)",
       me->address, me->or_port,
@@ -1527,7 +1502,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         or_options_t *options = get_options();
         has_completed_circuit=1;
         /* FFFF Log a count of known routers here */
-        log(LOG_NOTICE, LD_GENERAL,
+        log_notice(LD_GENERAL,
             "Tor has successfully opened a circuit. "
             "Looks like client functionality is working.");
         control_event_bootstrap(BOOTSTRAP_STATUS_DONE, 0);
@@ -1582,7 +1557,7 @@ void
 circuit_note_clock_jumped(int seconds_elapsed)
 {
   int severity = server_mode(get_options()) ? LOG_WARN : LOG_NOTICE;
-  log(severity, LD_GENERAL, "Your system clock just jumped %d seconds %s; "
+  tor_log(severity, LD_GENERAL, "Your system clock just jumped %d seconds %s; "
       "assuming established circuits no longer work.",
       seconds_elapsed >=0 ? seconds_elapsed : -seconds_elapsed,
       seconds_elapsed >=0 ? "forward" : "backward");
