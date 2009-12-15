@@ -725,7 +725,7 @@ smartlist_pqueue_add(smartlist_t *sl,
 }
 
 /** Remove and return the top-priority item from the heap stored in <b>sl</b>,
- * where order is determined by <b>compare</b> and the item's position in is
+ * where order is determined by <b>compare</b> and the item's position is
  * stored at position <b>idx_field_offset</b> within the item.  <b>sl</b> must
  * not be empty. */
 void *
@@ -747,7 +747,7 @@ smartlist_pqueue_pop(smartlist_t *sl,
 }
 
 /** Remove the item <b>item</b> from the heap stored in <b>sl</b>,
- * where order is determined by <b>compare</b> and the item's position in is
+ * where order is determined by <b>compare</b> and the item's position is
  * stored at position <b>idx_field_offset</b> within the item.  <b>sl</b> must
  * not be empty. */
 void
