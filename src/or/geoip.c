@@ -1099,11 +1099,10 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
 {
   char stats_end_str[ISO_TIME_LEN+1], stats_start_str[ISO_TIME_LEN+1],
        *controller_str, *eos, *eol, *summary;
-  const char *stats_end_first = "bridge-stats-end ",
-             *stats_end_middle = "\nbridge-stats-end ",
-             *ips_first = "bridge-ips",
-             *ips_middle = "\nbridge-ips",
-             *tmp;
+
+  const char *BRIDGE_STATS_END = "bridge-stats-end ";
+  const char *BRIDGE_IPS = "bridge-ips ";
+  const char *tmp;
   time_t stats_end_time;
   size_t controller_len;
   int seconds;
@@ -1111,14 +1110,11 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
 
   /* Parse timestamp and number of seconds from
     "bridge-stats-end YYYY-MM-DD HH:MM:SS (N s)" */
-  if (!strncmp(stats_str, stats_end_first, strlen(stats_end_first))) {
-    tmp = stats_str + strlen(stats_end_first);
-  } else {
-    tmp = strstr(stats_str, stats_end_middle);
-    if (!tmp)
-      return NULL;
-    tmp += strlen(stats_end_middle);
-  }
+  tmp = find_str_at_start_of_line(stats_str, BRIDGE_STATS_END);
+  if (!tmp)
+    return NULL;
+  tmp += strlen(BRIDGE_STATS_END);
+
   if (strlen(tmp) < ISO_TIME_LEN + 6)
     return NULL;
   strlcpy(stats_end_str, tmp, sizeof(stats_end_str));
@@ -1133,23 +1129,19 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
   format_iso_time(stats_start_str, stats_end_time - seconds);
 
   /* Parse: "bridge-ips CC=N,CC=N,..." */
-  if (!strncmp(stats_str, ips_first, strlen(ips_first))) {
-    tmp = stats_str + strlen(ips_first);
-  } else {
-    tmp = strstr(stats_str, ips_middle);
-    if (!tmp)
-      return NULL;
-    tmp += strlen(ips_middle);
-  }
-  if (strlen(tmp) > 2 && !strncmp(tmp, " ", 1))
-    tmp += 1;
-  else
-    tmp = "";
-  summary = tor_malloc(strlen(tmp) + 1);
-  strlcpy(summary, tmp, strlen(tmp) + 1);
-  eol = strstr(summary, "\n");
+  tmp = find_str_at_start_of_line(stats_str, BRIDGE_IPS);
+  if (!tmp)
+    return NULL;
+  tmp += strlen(BRIDGE_IPS);
+
+  tmp = eat_whitespace_no_nl(tmp);
+
+  eol = strchr(tmp, '\n');
   if (eol)
-    eol[0] = '\0';
+    summary = tor_strndup(tmp, eol-tmp);
+  else
+    summary = tor_strdup(tmp);
+
   controller_len = strlen("TimeStarted=\"\" CountrySummary=") +
                           strlen(summary) + 42;
   controller_str = tor_malloc(controller_len);

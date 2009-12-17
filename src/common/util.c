@@ -682,6 +682,29 @@ find_whitespace_eos(const char *s, const char *eos)
   return s;
 }
 
+/** Return the the first occurrence of <b>needle</b> in <b>haystack</b> that
+ * occurs at the start of a line (that is, at the beginning of <b>haystack</b>
+ * or immediately after a newline).  Return NULL if no such string is found.
+ */
+const char *
+find_str_at_start_of_line(const char *haystack, const char *needle)
+{
+  size_t needle_len = strlen(needle);
+
+  do {
+    if (!strncmp(haystack, needle, needle_len))
+      return haystack;
+
+    haystack = strchr(haystack, '\n');
+    if (!haystack)
+      return NULL;
+    else
+      ++haystack;
+  } while (*haystack);
+
+  return NULL;
+}
+
 /** Return true iff the 'len' bytes at 'mem' are all zero. */
 int
 tor_mem_is_zero(const char *mem, size_t len)
