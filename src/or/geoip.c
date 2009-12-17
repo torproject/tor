@@ -988,7 +988,7 @@ geoip_dirreq_stats_write(time_t now)
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
-  filename = get_datadir_fname("stats"PATH_SEPARATOR"dirreq-stats");
+  filename = get_datadir_fname2("stats", "dirreq-stats");
   data_v2 = geoip_get_client_history_dirreq(now,
                 GEOIP_CLIENT_NETWORKSTATUS_V2);
   data_v3 = geoip_get_client_history_dirreq(now,
@@ -1098,9 +1098,12 @@ static char *
 parse_bridge_stats_controller(const char *stats_str, time_t now)
 {
   char stats_end_str[ISO_TIME_LEN+1], stats_start_str[ISO_TIME_LEN+1],
-       *controller_str, *eos;
-  const char *stats_end_line = "bridge-stats-end",
-             *ips_line = "bridge-ips", *tmp;
+       *controller_str, *eos, *eol, *summary;
+  const char *stats_end_first = "bridge-stats-end ",
+             *stats_end_middle = "\nbridge-stats-end ",
+             *ips_first = "bridge-ips",
+             *ips_middle = "\nbridge-ips",
+             *tmp;
   time_t stats_end_time;
   size_t controller_len;
   int seconds;
@@ -1108,39 +1111,56 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
 
   /* Parse timestamp and number of seconds from
     "bridge-stats-end YYYY-MM-DD HH:MM:SS (N s)" */
-  tmp = strstr(stats_str, stats_end_line);
-  if (!tmp || strlen(tmp) < strlen(stats_end_line) + 1 + ISO_TIME_LEN + 6)
+  if (!strncmp(stats_str, stats_end_first, strlen(stats_end_first))) {
+    tmp = stats_str + strlen(stats_end_first);
+  } else {
+    tmp = strstr(stats_str, stats_end_middle);
+    if (!tmp)
+      return NULL;
+    tmp += strlen(stats_end_middle);
+  }
+  if (strlen(tmp) < ISO_TIME_LEN + 6)
     return NULL;
-  strlcpy(stats_end_str, tmp + strlen(stats_end_line) + 1,
-          sizeof(stats_end_str));
+  strlcpy(stats_end_str, tmp, sizeof(stats_end_str));
   if (parse_iso_time(stats_end_str, &stats_end_time) < 0)
     return NULL;
   if (stats_end_time < now - (25*60*60) ||
       stats_end_time > now + (1*60*60))
     return NULL;
-  seconds = (int)strtol(tmp + strlen(stats_end_line) + 1 +
-                        ISO_TIME_LEN + 2, &eos, 10);
+  seconds = (int)strtol(tmp + ISO_TIME_LEN + 2, &eos, 10);
   if (!eos || seconds < 23*60*60)
     return NULL;
   format_iso_time(stats_start_str, stats_end_time - seconds);
 
   /* Parse: "bridge-ips CC=N,CC=N,..." */
-  tmp = strstr(tmp, ips_line);
-  if (!tmp || strlen(tmp) < strlen(ips_line))
-    return NULL;
-  if (strlen(tmp) > strlen(ips_line) + 2)
-    tmp += strlen(ips_line) + 1;
+  if (!strncmp(stats_str, ips_first, strlen(ips_first))) {
+    tmp = stats_str + strlen(ips_first);
+  } else {
+    tmp = strstr(stats_str, ips_middle);
+    if (!tmp)
+      return NULL;
+    tmp += strlen(ips_middle);
+  }
+  if (strlen(tmp) > 2 && !strncmp(tmp, " ", 1))
+    tmp += 1;
   else
     tmp = "";
+  summary = tor_malloc(strlen(tmp) + 1);
+  strlcpy(summary, tmp, strlen(tmp) + 1);
+  eol = strstr(summary, "\n");
+  if (eol)
+    eol[0] = '\0';
   controller_len = strlen("TimeStarted=\"\" CountrySummary=") +
-                          ISO_TIME_LEN + strlen(tmp) + 1;
+                          strlen(summary) + 42;
   controller_str = tor_malloc(controller_len);
   if (tor_snprintf(controller_str, controller_len,
                    "TimeStarted=\"%s\" CountrySummary=%s",
-                   stats_start_str, tmp) < 0) {
+                   stats_start_str, summary) < 0) {
     tor_free(controller_str);
+    tor_free(summary);
     return NULL;
   }
+  tor_free(summary);
   return controller_str;
 }
 
@@ -1178,11 +1198,11 @@ geoip_bridge_stats_write(time_t now)
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
-  filename = get_datadir_fname("stats"PATH_SEPARATOR"bridge-stats");
+  filename = get_datadir_fname2("stats", "bridge-stats");
   data = geoip_get_client_history_bridge(now, GEOIP_CLIENT_CONNECT);
   format_iso_time(written, now);
   len = strlen("bridge-stats-end  (999999 s)\nbridge-ips \n") +
-        ISO_TIME_LEN + (data ? strlen(data) : 0) + 1;
+        ISO_TIME_LEN + (data ? strlen(data) : 0) + 42;
   out = tor_malloc(len);
   if (tor_snprintf(out, len, "bridge-stats-end %s (%u s)\nbridge-ips %s\n",
               written, (unsigned) (now - start_of_bridge_stats_interval),
@@ -1216,7 +1236,7 @@ load_bridge_stats(time_t now)
   char *fname, *contents, *controller_str;
   if (bridge_stats_extrainfo)
     return;
-  fname = get_datadir_fname("stats"PATH_SEPARATOR"bridge-stats");
+  fname = get_datadir_fname2("stats", "bridge-stats");
   contents = read_file_to_str(fname, 0, NULL);
   if (contents) {
     controller_str = parse_bridge_stats_controller(contents, now);
@@ -1277,7 +1297,7 @@ geoip_entry_stats_write(time_t now)
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
-  filename = get_datadir_fname("stats"PATH_SEPARATOR"entry-stats");
+  filename = get_datadir_fname2("stats", "entry-stats");
   data = geoip_get_client_history_dirreq(now, GEOIP_CLIENT_CONNECT);
   format_iso_time(written, now);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,

@@ -80,7 +80,6 @@ connection_or_clear_identity_map(void)
     }
   });
 
-
   digestmap_free(orconn_identity_map, NULL);
   orconn_identity_map = NULL;
 }
