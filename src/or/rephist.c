@@ -2705,9 +2705,16 @@ rep_hist_buffer_stats_write(time_t now)
   memset(circs_in_share, 0, SHARES * sizeof(int));
   memset(queued_cells, 0, SHARES * sizeof(double));
   memset(time_in_queue, 0, SHARES * sizeof(double));
+  if (!circuits_for_buffer_stats)
+    circuits_for_buffer_stats = smartlist_create();
   smartlist_sort(circuits_for_buffer_stats,
                  _buffer_stats_compare_entries);
   number_of_circuits = smartlist_len(circuits_for_buffer_stats);
+  if (number_of_circuits < 1) {
+    log_info(LD_HIST, "Attempt to write cell statistics to disk failed. "
+             "We haven't seen a single circuit to report about.");
+    goto done;
+  }
   i = 0;
   SMARTLIST_FOREACH_BEGIN(circuits_for_buffer_stats,
                           circ_buffer_stats_t *, stat)

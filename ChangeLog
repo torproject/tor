@@ -22,6 +22,9 @@ Changes in version 0.2.2.7-alpha - 2009-??-??
       0.1.0.1-rc.
     - Update our OpenSSL 0.9.8l fix so that it works with OpenSSL 0.9.8m
       too.
+    - Do not segfault when writing buffer stats when we haven't observed
+      a single circuit to report about. Found by Fabian Lanze. Bugfix on
+      0.2.2.1-alpha.
 
 
 Changes in version 0.2.2.6-alpha - 2009-11-19
