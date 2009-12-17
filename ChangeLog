@@ -26,6 +26,11 @@ Changes in version 0.2.2.7-alpha - 2009-??-??
       a single circuit to report about. Found by Fabian Lanze. Bugfix on
       0.2.2.1-alpha.
 
+  o Removed features:
+    - Remove the HSAuthorityRecordStats option that version 0 hidden
+      service authorities could have used to track statistics of overall
+      hidden service usage.
+
 
 Changes in version 0.2.2.6-alpha - 2009-11-19
   o Major features:
@@ -82,11 +87,6 @@ Changes in version 0.2.2.6-alpha - 2009-11-19
       on 0.2.0.3-alpha; fixes bug 1113.
     - Fix a memory leak on directory authorities during voting that was
       introduced in 0.2.2.1-alpha. Found via valgrind.
-
-  o Removed features:
-    - Remove the HSAuthorityRecordStats option that version 0 hidden
-      service authorities could have used to track statistics of overall
-      hidden service usage.
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
