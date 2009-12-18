@@ -279,7 +279,7 @@ connection_write_str_to_buf(const char *s, control_connection_t *conn)
 /** Given a <b>len</b>-character string in <b>data</b>, made of lines
  * terminated by CRLF, allocate a new string in *<b>out</b>, and copy the
  * contents of <b>data</b> into *<b>out</b>, adding a period before any period
- * that that appears at the start of a line, and adding a period-CRLF line at
+ * that appears at the start of a line, and adding a period-CRLF line at
  * the end. Replace all LF characters sequences with CRLF.  Return the number
  * of bytes in *<b>out</b>.
  */

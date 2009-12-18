@@ -682,7 +682,7 @@ find_whitespace_eos(const char *s, const char *eos)
   return s;
 }
 
-/** Return the the first occurrence of <b>needle</b> in <b>haystack</b> that
+/** Return the first occurrence of <b>needle</b> in <b>haystack</b> that
  * occurs at the start of a line (that is, at the beginning of <b>haystack</b>
  * or immediately after a newline).  Return NULL if no such string is found.
  */
@@ -1237,7 +1237,7 @@ format_rfc1123_time(char *buf, time_t t)
   memcpy(buf+8, MONTH_NAMES[tm.tm_mon], 3);
 }
 
-/** Parse the the RFC1123 encoding of some time (in GMT) from <b>buf</b>,
+/** Parse the RFC1123 encoding of some time (in GMT) from <b>buf</b>,
  * and store the result in *<b>t</b>.
  *
  * Return 0 on success, -1 on failure.
@@ -1778,7 +1778,7 @@ write_str_to_file(const char *fname, const char *str, int bin)
 }
 
 /** Represents a file that we're writing to, with support for atomic commit:
- * we can write into a a temporary file, and either remove the file on
+ * we can write into a temporary file, and either remove the file on
  * failure, or replace the original file on success. */
 struct open_file_t {
   char *tempname; /**< Name of the temporary file. */

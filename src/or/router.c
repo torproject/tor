@@ -1660,7 +1660,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     return -1;
   }
 
-  /* PEM-encode the identity key key */
+  /* PEM-encode the identity key */
   if (crypto_pk_write_public_key_to_string(router->identity_pkey,
                                         &identity_pkey,&identity_pkeylen)<0) {
     log_warn(LD_BUG,"write identity_pkey to string failed!");

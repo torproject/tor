@@ -1375,7 +1375,7 @@ connection_proxy_connect(connection_t *conn, int type)
       /* Send a SOCKS4 connect request with empty user id */
 
       if (tor_addr_family(&conn->addr) != AF_INET) {
-        log_warn(LD_NET, "SOCKS4 client is incompatible with with IPv6");
+        log_warn(LD_NET, "SOCKS4 client is incompatible with IPv6");
         return -1;
       }
 

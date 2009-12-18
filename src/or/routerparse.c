@@ -2928,7 +2928,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     }
     if (base16_decode(digests->d[alg], DIGEST256_LEN,
                       hexdigest, strlen(hexdigest)) < 0) {
-      log_warn(LD_DIR, "Bad encoding on on consensus-digest in detached "
+      log_warn(LD_DIR, "Bad encoding on consensus-digest in detached "
                "networkstatus signatures");
       goto err;
     }

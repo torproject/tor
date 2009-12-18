@@ -1049,7 +1049,6 @@ test_util_find_str_at_start_of_line(void *ptr)
   ;
 }
 
-
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
