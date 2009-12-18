@@ -80,7 +80,6 @@ connection_or_clear_identity_map(void)
     }
   });
 
-
   digestmap_free(orconn_identity_map, NULL);
   orconn_identity_map = NULL;
 }
@@ -887,7 +886,7 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  * return -1 if he is lying, broken, or otherwise something is wrong.
  *
  * If we initiated this connection (<b>started_here</b> is true), make sure
- * the other side sent sent a correctly formed certificate. If I initiated the
+ * the other side sent a correctly formed certificate. If I initiated the
  * connection, make sure it's the right guy.
  *
  * Otherwise (if we _didn't_ initiate this connection), it's okay for

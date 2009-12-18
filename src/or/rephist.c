@@ -1375,7 +1375,7 @@ rep_hist_exit_stats_write(time_t now)
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
-  filename = get_datadir_fname("stats"PATH_SEPARATOR"exit-stats");
+  filename = get_datadir_fname2("stats", "exit-stats");
   format_iso_time(t, now);
   log_info(LD_HIST, "Writing exit port statistics to disk for period "
            "ending at %s.", t);
@@ -2180,7 +2180,7 @@ rep_hist_buffer_stats_write(time_t now)
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
-  filename = get_datadir_fname("stats"PATH_SEPARATOR"buffer-stats");
+  filename = get_datadir_fname2("stats", "buffer-stats");
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
   if (!out)

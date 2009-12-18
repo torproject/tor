@@ -831,6 +831,8 @@ run_scheduled_events(time_t now)
   static time_t time_to_recheck_bandwidth = 0;
   static time_t time_to_check_for_expired_networkstatus = 0;
   static time_t time_to_write_stats_files = 0;
+  static time_t time_to_write_bridge_stats = 0;
+  static int should_init_bridge_stats = 1;
   static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
   int i;
@@ -965,7 +967,8 @@ run_scheduled_events(time_t now)
     if (options->CellStatistics || options->DirReqStatistics ||
         options->EntryStatistics || options->ExitPortStatistics) {
       if (!time_to_write_stats_files) {
-        /* Initialize stats. */
+        /* Initialize stats. We're doing this here and not in options_act,
+         * so that we know exactly when the 24 hours interval ends. */
         if (options->CellStatistics)
           rep_hist_buffer_stats_init(now);
         if (options->DirReqStatistics)
@@ -995,6 +998,28 @@ run_scheduled_events(time_t now)
       /* Never write stats to disk */
       time_to_write_stats_files = -1;
     }
+  }
+
+  /* 1h. Check whether we should write bridge statistics to disk.
+   */
+  if (should_record_bridge_info(options)) {
+    if (time_to_write_bridge_stats < now) {
+      if (should_init_bridge_stats) {
+        /* (Re-)initialize bridge statistics. */
+        geoip_bridge_stats_init(now);
+        time_to_write_bridge_stats = now + WRITE_STATS_INTERVAL;
+        should_init_bridge_stats = 0;
+      } else {
+        /* Possibly write bridge statistics to disk and ask when to write
+         * them next time. */
+        time_to_write_bridge_stats = geoip_bridge_stats_write(
+                                           time_to_write_bridge_stats);
+      }
+    }
+  } else if (!should_init_bridge_stats) {
+    /* Bridge mode was turned off. Ensure that stats are re-initialized
+     * next time bridge mode is turned on. */
+    should_init_bridge_stats = 1;
   }
 
   /* Remove old information from rephist and the rend cache. */

@@ -279,7 +279,7 @@ connection_write_str_to_buf(const char *s, control_connection_t *conn)
 /** Given a <b>len</b>-character string in <b>data</b>, made of lines
  * terminated by CRLF, allocate a new string in *<b>out</b>, and copy the
  * contents of <b>data</b> into *<b>out</b>, adding a period before any period
- * that that appears at the start of a line, and adding a period-CRLF line at
+ * that appears at the start of a line, and adding a period-CRLF line at
  * the end. Replace all LF characters sequences with CRLF.  Return the number
  * of bytes in *<b>out</b>.
  */
@@ -1755,21 +1755,10 @@ getinfo_helper_events(control_connection_t *control_conn,
                  "information", question);
       }
     } else if (!strcmp(question, "status/clients-seen")) {
-      char geoip_start[ISO_TIME_LEN+1];
-      size_t answer_len;
-      char *geoip_summary = extrainfo_get_client_geoip_summary(time(NULL));
-
-      if (!geoip_summary)
+      char *bridge_stats = geoip_get_bridge_stats_controller(time(NULL));
+      if (!bridge_stats)
         return -1;
-
-      answer_len = strlen("TimeStarted=\"\" CountrySummary=") +
-                   ISO_TIME_LEN + strlen(geoip_summary) + 1;
-      *answer = tor_malloc(answer_len);
-      format_iso_time(geoip_start, geoip_get_history_start());
-      tor_snprintf(*answer, answer_len,
-                   "TimeStarted=\"%s\" CountrySummary=%s",
-                   geoip_start, geoip_summary);
-      tor_free(geoip_summary);
+      *answer = bridge_stats;
     } else {
       return 0;
     }
@@ -3846,10 +3835,9 @@ control_event_bootstrap_problem(const char *warn, int reason)
  * from recently. Send a copy to the controller in case it wants to
  * display it for the user. */
 void
-control_event_clients_seen(const char *timestarted, const char *countries)
+control_event_clients_seen(const char *controller_str)
 {
   send_control_event(EVENT_CLIENTS_SEEN, 0,
-    "650 CLIENTS_SEEN TimeStarted=\"%s\" CountrySummary=%s\r\n",
-    timestarted, countries);
+    "650 CLIENTS_SEEN %s\r\n", controller_str);
 }
 

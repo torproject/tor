@@ -3937,7 +3937,7 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
  * this number per server. */
 #define MIN_DL_PER_REQUEST 4
 /** To prevent a single screwy cache from confusing us by selective reply,
- * try to split our requests into at least this this many requests. */
+ * try to split our requests into at least this many requests. */
 #define MIN_REQUESTS 3
 /** If we want fewer than this many descriptors, wait until we
  * want more, or until MAX_CLIENT_INTERVAL_WITHOUT_REQUEST has

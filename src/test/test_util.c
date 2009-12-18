@@ -1023,8 +1023,37 @@ test_util_strtok(void)
   ;
 }
 
+static void
+test_util_find_str_at_start_of_line(void *ptr)
+{
+  const char *long_string =
+    "hello world. hello world. hello hello. howdy.\n"
+    "hello hello world\n";
+
+  (void)ptr;
+
+  /* not-found case. */
+  tt_assert(! find_str_at_start_of_line(long_string, "fred"));
+
+  /* not-found case where haystack doesn't end with \n */
+  tt_assert(! find_str_at_start_of_line("foobar\nbaz", "fred"));
+
+  /* start-of-string case */
+  tt_assert(long_string ==
+            find_str_at_start_of_line(long_string, "hello world."));
+
+  /* start-of-line case */
+  tt_assert(strchr(long_string,'\n')+1 ==
+            find_str_at_start_of_line(long_string, "hello hello"));
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
+
+#define UTIL_TEST(name, flags)                          \
+  { #name, test_util_ ## name, flags, NULL, NULL }
 
 struct testcase_t util_tests[] = {
   UTIL_LEGACY(time),
@@ -1040,6 +1069,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(threads),
   UTIL_LEGACY(sscanf),
   UTIL_LEGACY(strtok),
+  UTIL_TEST(find_str_at_start_of_line, 0),
   END_OF_TESTCASES
 };
 

@@ -26,7 +26,7 @@
 /** A number representing a version of Libevent.
 
     This is a 4-byte number, with the first three bytes representing the
-    major, minor, and patchlevel respectively of the the library.  The fourth
+    major, minor, and patchlevel respectively of the library.  The fourth
     byte is unused.
 
     This is equivalent to the format of LIBEVENT_VERSION_NUMBER on Libevent

@@ -25,6 +25,9 @@ Changes in version 0.2.2.7-alpha - 2009-??-??
     - Do not segfault when writing buffer stats when we haven't observed
       a single circuit to report about. Found by Fabian Lanze. Bugfix on
       0.2.2.1-alpha.
+    - Fix statistics on client numbers by country as seen by bridges that
+      were broken in 0.2.2.1-alpha. Also switch to reporting full 24-hour
+      intervals instead of variable 12-to-48-hour intervals.
 
   o Removed features:
     - Remove the HSAuthorityRecordStats option that version 0 hidden

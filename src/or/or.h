@@ -3628,8 +3628,7 @@ typedef enum {
 void control_event_bootstrap(bootstrap_status_t status, int progress);
 void control_event_bootstrap_problem(const char *warn, int reason);
 
-void control_event_clients_seen(const char *timestarted,
-                                const char *countries);
+void control_event_clients_seen(const char *controller_str);
 
 #ifdef CONTROL_PRIVATE
 /* Used only by control.c and test.c */
@@ -4087,6 +4086,10 @@ void geoip_dirreq_stats_init(time_t now);
 void geoip_dirreq_stats_write(time_t now);
 void geoip_entry_stats_init(time_t now);
 void geoip_entry_stats_write(time_t now);
+void geoip_bridge_stats_init(time_t now);
+time_t geoip_bridge_stats_write(time_t now);
+char *geoip_get_bridge_stats_extrainfo(time_t);
+char *geoip_get_bridge_stats_controller(time_t);
 
 /********************************* hibernate.c **********************/
 
@@ -4747,7 +4750,6 @@ int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
 int extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
                              crypto_pk_env_t *ident_key);
-char *extrainfo_get_client_geoip_summary(time_t);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
 int is_legal_hexdigest(const char *s);
