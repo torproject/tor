@@ -1102,6 +1102,7 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
 
   const char *BRIDGE_STATS_END = "bridge-stats-end ";
   const char *BRIDGE_IPS = "bridge-ips ";
+  const char *BRIDGE_IPS_EMPTY_LINE = "bridge-ips\n";
   const char *tmp;
   time_t stats_end_time;
   size_t controller_len;
@@ -1130,17 +1131,21 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
 
   /* Parse: "bridge-ips CC=N,CC=N,..." */
   tmp = find_str_at_start_of_line(stats_str, BRIDGE_IPS);
-  if (!tmp)
-    return NULL;
-  tmp += strlen(BRIDGE_IPS);
-
-  tmp = eat_whitespace_no_nl(tmp);
-
-  eol = strchr(tmp, '\n');
-  if (eol)
-    summary = tor_strndup(tmp, eol-tmp);
-  else
-    summary = tor_strdup(tmp);
+  if (tmp) {
+    tmp += strlen(BRIDGE_IPS);
+    tmp = eat_whitespace_no_nl(tmp);
+    eol = strchr(tmp, '\n');
+    if (eol)
+      summary = tor_strndup(tmp, eol-tmp);
+    else
+      summary = tor_strdup(tmp);
+  } else {
+    /* Look if there is an empty "bridge-ips" line */
+    tmp = find_str_at_start_of_line(stats_str, BRIDGE_IPS_EMPTY_LINE);
+    if (!tmp)
+      return NULL;
+    summary = tor_strdup("");
+  }
 
   controller_len = strlen("TimeStarted=\"\" CountrySummary=") +
                           strlen(summary) + 42;
