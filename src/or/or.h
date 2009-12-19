@@ -2021,7 +2021,7 @@ typedef struct {
   /** True iff this is the cell count for a circuit's previous
    * connection. */
   unsigned int is_for_p_conn : 1;
-  /** The position of the circuit within the or connection's priority
+  /** The position of the circuit within the OR connection's priority
    * queue. */
   int heap_index;
 } cell_ewma_t;

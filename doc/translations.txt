@@ -31,7 +31,7 @@ The current pootle configuration is checked into subversion as well:
 
 TorCheck uses our translation portal to accept translations. Users use
 the portal to check in their changes.  To make use of the translations
-that users have commited to the translations/ subversion module, you'll
+that users have committed to the translations/ subversion module, you'll
 need to ensure that you have a current checked out copy of TorCheck:
 
     cd check/trunk/i18n/
@@ -75,7 +75,7 @@ And finally check in the changes:
 Torbutton uses our translation portal to accept translations. Users use
 the portal to check in their changes.
 
-To make use of the translations that users have commited to the translations/
+To make use of the translations that users have committed to the translations/
 subversion module, you'll need to ensure that you have a current checked out
 copy of them in your torbutton git checkout:
 
@@ -145,7 +145,7 @@ After this process is done, you then need to regenerate the mozilla
 .dtd and .properties files as specified above.
 
 
-Regardless of wether or not you had changes in the torbutton strings, if there
+Regardless of whether or not you had changes in the torbutton strings, if there
 were updated strings in pootle that you checked out from svn you now need to
 convert from .po and move the newly updated mozilla files into the current
 stable locale directory. First convert them with the 'mkmoz.sh' script and

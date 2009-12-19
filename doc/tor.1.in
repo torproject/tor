@@ -428,11 +428,11 @@ directory connections, when possible. (Default: 1)
 .TP
 \fBCircuitPriorityHalflife \fR\fBNUM\fB1\fP
 If this value is set, we override the default algorithm for choosing which
-circuit's cells to deliver or relay first.  When the value is 0, we
+circuit's cell to deliver or relay next.  When the value is 0, we
 round-robin between the active circuits on a connection, delivering one cell
 from each in turn.  When the value is positive, we prefer delivering cells
 from whichever connection has the lowest weighted cell count, where cells are
-weighted exponentially according to the supplied CircuitPrioirityHalflife
+weighted exponentially according to the supplied CircuitPriorityHalflife
 value (in seconds).  If this option is not set at all, we use the behavior
 recommended in the current consensus networkstatus.
 This is an advanced option; you generally shouldn't have mess with it.
