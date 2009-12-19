@@ -1,4 +1,14 @@
 Changes in version 0.2.2.7-alpha - 2009-??-??
+  o Major features:
+    - When choosing which cells to relay first, we can now favor circuits
+      that have been quiet recently, so as to get lower latency for
+      low-volume circuits.  By default, relays enable or disable this
+      feature based on a setting in the consensus.  Preliminary testing
+      suggests that this should make the network feel faster as more relays
+      use it.  You can override this default by using the new
+      "CircuitPriorityHalflife" config option.  Design and code by Ian
+      Goldberg, Can Tang, and Chris Alexander.
+
   o Minor features:
     - New config option "CircuitStreamTimeout" to override our internal
       timeout schedule for how many seconds until we detach a stream from
