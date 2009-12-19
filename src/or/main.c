@@ -1296,14 +1296,6 @@ second_elapsed_callback(int fd, short event, void *args)
 
   current_second = now; /* remember which second it is, for next time */
 
-#if 0
-  if (current_second % 300 == 0) {
-    rep_history_clean(current_second - options->RephistTrackTime);
-    dumpmemusage(get_min_log_level()<LOG_INFO ?
-                 get_min_log_level() : LOG_INFO);
-  }
-#endif
-
   if (event_add(timeout_event, &one_second))
     log_err(LD_NET,
             "Error from libevent when setting one-second timeout event");

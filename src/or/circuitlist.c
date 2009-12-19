@@ -1249,11 +1249,6 @@ assert_circuit_ok(const circuit_t *c)
       tor_assert(c == c2);
     }
   }
-#if 0 /* false now that rendezvous exits are attached to p_streams */
-  if (origin_circ)
-    for (conn = origin_circ->p_streams; conn; conn = conn->next_stream)
-      tor_assert(conn->_base.type == CONN_TYPE_AP);
-#endif
   if (or_circ)
     for (conn = or_circ->n_streams; conn; conn = conn->next_stream)
       tor_assert(conn->_base.type == CONN_TYPE_EXIT);

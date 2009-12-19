@@ -2422,46 +2422,6 @@ dump_routerlist_mem_usage(int severity)
       "In %d old descriptors: "U64_FORMAT" bytes.",
       smartlist_len(routerlist->routers), U64_PRINTF_ARG(livedescs),
       smartlist_len(routerlist->old_routers), U64_PRINTF_ARG(olddescs));
-
-#if 0
-  {
-    const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
-    networkstatus_t *consensus = networkstatus_get_latest_consensus();
-    log(severity, LD_DIR, "Now let's look through old_descriptors!");
-    SMARTLIST_FOREACH(routerlist->old_routers, signed_descriptor_t *, sd, {
-        int in_v2 = 0;
-        int in_v3 = 0;
-        char published[ISO_TIME_LEN+1];
-        char last_valid_until[ISO_TIME_LEN+1];
-        char last_served_at[ISO_TIME_LEN+1];
-        char id[HEX_DIGEST_LEN+1];
-        routerstatus_t *rs;
-        format_iso_time(published, sd->published_on);
-        format_iso_time(last_valid_until, sd->last_listed_as_valid_until);
-        format_iso_time(last_served_at, sd->last_served_at);
-        base16_encode(id, sizeof(id), sd->identity_digest, DIGEST_LEN);
-        SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
-          {
-            rs = networkstatus_v2_find_entry(ns, sd->identity_digest);
-            if (rs && !memcmp(rs->descriptor_digest,
-                              sd->signed_descriptor_digest, DIGEST_LEN)) {
-              in_v2 = 1; break;
-            }
-          });
-        if (consensus) {
-          rs = networkstatus_vote_find_entry(consensus, sd->identity_digest);
-          if (rs && !memcmp(rs->descriptor_digest,
-                            sd->signed_descriptor_digest, DIGEST_LEN))
-            in_v3 = 1;
-        }
-        log(severity, LD_DIR,
-            "Old descriptor for %s (published %s) %sin v2 ns, %sin v3 "
-            "consensus.  Last valid until %s; last served at %s.",
-            id, published, in_v2 ? "" : "not ", in_v3 ? "" : "not ",
-            last_valid_until, last_served_at);
-    });
-  }
-#endif
 }
 
 /** Debugging helper: If <b>idx</b> is nonnegative, assert that <b>ri</b> is
@@ -5253,29 +5213,6 @@ routerset_equal(const routerset_t *old, const routerset_t *new)
   });
 
   return 1;
-
-#if 0
-  /* XXXX: This won't work if the names/digests are identical but in a
-     different order. Checking for exact equality would be heavy going,
-     is it worth it? -RH*/
-  /* This code is totally bogus; sizeof doesn't work even remotely like this
-   * code seems to think.  Let's revert to a string-based comparison for
-   * now. -NM*/
-  if (sizeof(old->names) != sizeof(new->names))
-    return 0;
-
-  if (memcmp(old->names,new->names,sizeof(new->names)))
-    return 0;
-  if (sizeof(old->digests) != sizeof(new->digests))
-    return 0;
-  if (memcmp(old->digests,new->digests,sizeof(new->digests)))
-    return 0;
-  if (sizeof(old->countries) != sizeof(new->countries))
-    return 0;
-  if (memcmp(old->countries,new->countries,sizeof(new->countries)))
-    return 0;
-  return 1;
-#endif
 }
 
 /** Free all storage held in <b>routerset</b>. */

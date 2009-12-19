@@ -2766,19 +2766,6 @@ typedef struct {
    * the bridge authority guess which countries have blocked access to us. */
   int BridgeRecordUsageByCountry;
 
-#if 0
-  /** If true, and Tor is built with DIRREQ_STATS support, and we're a
-   * directory, record how many directory requests we get from each country. */
-  int DirRecordUsageByCountry;
-  /** Round all GeoIP results to the next multiple of this value, to avoid
-   * leaking information. */
-  int DirRecordUsageGranularity;
-  /** Time interval: purge geoip stats after this long. */
-  int DirRecordUsageRetainIPs;
-  /** Time interval: Flush geoip data to disk this often. */
-  int DirRecordUsageSaveInterval;
-#endif
-
   /** Optionally, a file with GeoIP data. */
   char *GeoIPFile;
 
