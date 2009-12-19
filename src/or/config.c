@@ -4771,7 +4771,7 @@ normalize_data_directory(or_options_t *options)
 }
 
 /** Check and normalize the value of options->DataDirectory; return 0 if it
- * sane, -1 otherwise. */
+ * is sane, -1 otherwise. */
 static int
 validate_data_directory(or_options_t *options)
 {
