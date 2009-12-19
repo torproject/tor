@@ -1075,6 +1075,17 @@ typedef struct or_connection_t {
    * free up on this connection's outbuf.  Every time we pull cells from a
    * circuit, we advance this pointer to the next circuit in the ring. */
   struct circuit_t *active_circuits;
+  /** Priority queue of cell_ewma_t for circuits with queued cells waiting for
+   * room to free up on this connection's outbuf.  Kept in heap order
+   * according to EWMA.
+   *
+   * This is redundant with active_circuits; if we ever decide only to use the
+   * cell_ewma algorithm for choosing circuits, we can remove active_circuits.
+   */
+  smartlist_t *active_circuit_pqueue;
+  /** The tick on which the cell_ewma_ts in active_circuit_pqueue last had
+   * their ewma values rescaled. */
+  unsigned active_circuit_pqueue_last_recalibrated;
   struct or_connection_t *next_with_same_id; /**< Next connection with same
                                               * identity digest as this one. */
 } or_connection_t;
@@ -1992,6 +2003,29 @@ typedef struct {
   time_t expiry_time;
 } cpath_build_state_t;
 
+/**
+ * The cell_ewma_t structure keeps track of how many cells a circuit has
+ * transferred recently.  It keeps an EWMA (exponentially weighted moving
+ * average) of the number of cells flushed from the circuit queue onto a
+ * connection in connection_or_flush_from_first_active_circuit().
+ */
+typedef struct {
+  /** The last 'tick' at which we recalibrated cell_count.
+   *
+   * A cell sent at exactly the start of this tick has weight 1.0. Cells sent
+   * since the start of this tick have weight greater than 1.0; ones sent
+   * earlier have less weight. */
+  unsigned last_adjusted_tick;
+  /** The EWMA of the cell count. */
+  double cell_count;
+  /** True iff this is the cell count for a circuit's previous
+   * connection. */
+  unsigned int is_for_p_conn : 1;
+  /** The position of the circuit within the or connection's priority
+   * queue. */
+  int heap_index;
+} cell_ewma_t;
+
 #define ORIGIN_CIRCUIT_MAGIC 0x35315243u
 #define OR_CIRCUIT_MAGIC 0x98ABC04Fu
 
@@ -2081,6 +2115,11 @@ typedef struct circuit_t {
 
   /** Unique ID for measuring tunneled network status requests. */
   uint64_t dirreq_id;
+
+  /** The EWMA count for the number of cells flushed from the
+   * n_conn_cells queue.  Used to determine which circuit to flush from next.
+   */
+  cell_ewma_t n_cell_ewma;
 } circuit_t;
 
 /** Largest number of relay_early cells that we can send on a given
@@ -2212,6 +2251,10 @@ typedef struct or_circuit_t {
    * exit-ward queues of this circuit; reset every time when writing
    * buffer stats to disk. */
   uint64_t total_cell_waiting_time;
+
+  /** The EWMA count for the number of cells flushed from the
+   * p_conn_cells queue. */
+  cell_ewma_t p_cell_ewma;
 } or_circuit_t;
 
 /** Convert a circuit subtype to a circuit_t.*/
@@ -2742,6 +2785,21 @@ typedef struct {
   /** If true, SIGHUP should reload the torrc.  Sometimes controllers want
    * to make this false. */
   int ReloadTorrcOnSIGHUP;
+
+  /* The main parameter for picking circuits within a connection.
+   *
+   * If this value is positive, when picking a cell to relay on a connection,
+   * we always relay from the circuit whose weighted cell count is lowest.
+   * Cells are weighted exponentially such that if one cell is sent
+   * 'CircuitPriorityHalflife' seconds before another, it counts for half as
+   * much.
+   *
+   * If this value is zero, we're disabling the cell-EWMA algorithm.
+   *
+   * If this value is negative, we're using the default approach
+   * according to either Tor or a parameter set in the consensus.
+   */
+  double CircuitPriorityHalflife;
 
 } or_options_t;
 
@@ -4453,6 +4511,9 @@ int append_address_to_payload(char *payload_out, const tor_addr_t *addr);
 const char *decode_address_from_payload(tor_addr_t *addr_out,
                                         const char *payload,
                                         int payload_len);
+unsigned cell_ewma_get_tick(void);
+void cell_ewma_set_scale_factor(or_options_t *options,
+                                networkstatus_t *consensus);
 
 /********************************* rephist.c ***************************/
 
@@ -5134,6 +5195,8 @@ int rend_parse_introduction_points(rend_service_descriptor_t *parsed,
                                    const char *intro_points_encoded,
                                    size_t intro_points_encoded_size);
 int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
+
+void tor_gettimeofday_cache_clear(void);
 
 #endif
 

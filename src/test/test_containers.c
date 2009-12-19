@@ -515,11 +515,17 @@ test_container_digestset(void)
   smartlist_free(included);
 }
 
-/** Helper: return a tristate based on comparing two strings. */
+typedef struct pq_entry_t {
+  const char *val;
+  int idx;
+} pq_entry_t;
+
+/** Helper: return a tristate based on comparing two pq_entry_t values. */
 static int
-_compare_strings_for_pqueue(const void *s1, const void *s2)
+_compare_strings_for_pqueue(const void *p1, const void *p2)
 {
-  return strcmp((const char*)s1, (const char*)s2);
+  const pq_entry_t *e1=p1, *e2=p2;
+  return strcmp(e1->val, e2->val);
 }
 
 /** Run unit tests for heap-based priority queue functions. */
@@ -528,50 +534,90 @@ test_container_pqueue(void)
 {
   smartlist_t *sl = smartlist_create();
   int (*cmp)(const void *, const void*);
-#define OK() smartlist_pqueue_assert_ok(sl, cmp)
+  const int offset = STRUCT_OFFSET(pq_entry_t, idx);
+#define ENTRY(s) pq_entry_t s = { #s, -1 }
+  ENTRY(cows);
+  ENTRY(zebras);
+  ENTRY(fish);
+  ENTRY(frogs);
+  ENTRY(apples);
+  ENTRY(squid);
+  ENTRY(daschunds);
+  ENTRY(eggplants);
+  ENTRY(weissbier);
+  ENTRY(lobsters);
+  ENTRY(roquefort);
+  ENTRY(chinchillas);
+  ENTRY(fireflies);
+
+#define OK() smartlist_pqueue_assert_ok(sl, cmp, offset)
 
   cmp = _compare_strings_for_pqueue;
-
-  smartlist_pqueue_add(sl, cmp, (char*)"cows");
-  smartlist_pqueue_add(sl, cmp, (char*)"zebras");
-  smartlist_pqueue_add(sl, cmp, (char*)"fish");
-  smartlist_pqueue_add(sl, cmp, (char*)"frogs");
-  smartlist_pqueue_add(sl, cmp, (char*)"apples");
-  smartlist_pqueue_add(sl, cmp, (char*)"squid");
-  smartlist_pqueue_add(sl, cmp, (char*)"daschunds");
-  smartlist_pqueue_add(sl, cmp, (char*)"eggplants");
-  smartlist_pqueue_add(sl, cmp, (char*)"weissbier");
-  smartlist_pqueue_add(sl, cmp, (char*)"lobsters");
-  smartlist_pqueue_add(sl, cmp, (char*)"roquefort");
+  smartlist_pqueue_add(sl, cmp, offset, &cows);
+  smartlist_pqueue_add(sl, cmp, offset, &zebras);
+  smartlist_pqueue_add(sl, cmp, offset, &fish);
+  smartlist_pqueue_add(sl, cmp, offset, &frogs);
+  smartlist_pqueue_add(sl, cmp, offset, &apples);
+  smartlist_pqueue_add(sl, cmp, offset, &squid);
+  smartlist_pqueue_add(sl, cmp, offset, &daschunds);
+  smartlist_pqueue_add(sl, cmp, offset, &eggplants);
+  smartlist_pqueue_add(sl, cmp, offset, &weissbier);
+  smartlist_pqueue_add(sl, cmp, offset, &lobsters);
+  smartlist_pqueue_add(sl, cmp, offset, &roquefort);
 
   OK();
 
   test_eq(smartlist_len(sl), 11);
-  test_streq(smartlist_get(sl, 0), "apples");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "apples");
+  test_eq_ptr(smartlist_get(sl, 0), &apples);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &apples);
   test_eq(smartlist_len(sl), 10);
   OK();
-  test_streq(smartlist_pqueue_pop(sl, cmp), "cows");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "daschunds");
-  smartlist_pqueue_add(sl, cmp, (char*)"chinchillas");
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &cows);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &daschunds);
+  smartlist_pqueue_add(sl, cmp, offset, &chinchillas);
   OK();
-  smartlist_pqueue_add(sl, cmp, (char*)"fireflies");
+  smartlist_pqueue_add(sl, cmp, offset, &fireflies);
   OK();
-  test_streq(smartlist_pqueue_pop(sl, cmp), "chinchillas");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "eggplants");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "fireflies");
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &chinchillas);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &eggplants);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &fireflies);
   OK();
-  test_streq(smartlist_pqueue_pop(sl, cmp), "fish");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "frogs");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "lobsters");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "roquefort");
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &fish);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &frogs);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &lobsters);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &roquefort);
   OK();
   test_eq(smartlist_len(sl), 3);
-  test_streq(smartlist_pqueue_pop(sl, cmp), "squid");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "weissbier");
-  test_streq(smartlist_pqueue_pop(sl, cmp), "zebras");
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &squid);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &weissbier);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &zebras);
   test_eq(smartlist_len(sl), 0);
   OK();
+
+  /* Now test remove. */
+  smartlist_pqueue_add(sl, cmp, offset, &cows);
+  smartlist_pqueue_add(sl, cmp, offset, &fish);
+  smartlist_pqueue_add(sl, cmp, offset, &frogs);
+  smartlist_pqueue_add(sl, cmp, offset, &apples);
+  smartlist_pqueue_add(sl, cmp, offset, &squid);
+  smartlist_pqueue_add(sl, cmp, offset, &zebras);
+  test_eq(smartlist_len(sl), 6);
+  OK();
+  smartlist_pqueue_remove(sl, cmp, offset, &zebras);
+  test_eq(smartlist_len(sl), 5);
+  OK();
+  smartlist_pqueue_remove(sl, cmp, offset, &cows);
+  test_eq(smartlist_len(sl), 4);
+  OK();
+  smartlist_pqueue_remove(sl, cmp, offset, &apples);
+  test_eq(smartlist_len(sl), 3);
+  OK();
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &fish);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &frogs);
+  test_eq_ptr(smartlist_pqueue_pop(sl, cmp, offset), &squid);
+  test_eq(smartlist_len(sl), 0);
+  OK();
+
 #undef OK
 
  done:

@@ -1679,6 +1679,7 @@ networkstatus_set_current_consensus(const char *consensus,
     update_consensus_networkstatus_fetch_time(now);
     dirvote_recalculate_timing(get_options(), now);
     routerstatus_list_update_named_server_map();
+    cell_ewma_set_scale_factor(get_options(), current_consensus);
   }
 
   if (!from_cache) {

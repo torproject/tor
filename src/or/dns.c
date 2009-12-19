@@ -128,6 +128,8 @@ typedef struct cached_resolve_t {
   uint32_t ttl; /**< What TTL did the nameserver tell us? */
   /** Connections that want to know when we get an answer for this resolve. */
   pending_connection_t *pending_connections;
+  /** Position of this element in the heap*/
+  int minheap_idx;
 } cached_resolve_t;
 
 static void purge_expired_resolves(time_t now);
@@ -344,6 +346,7 @@ set_expiry(cached_resolve_t *resolve, time_t expires)
   resolve->expire = expires;
   smartlist_pqueue_add(cached_resolve_pqueue,
                        _compare_cached_resolves_by_expiry,
+                       STRUCT_OFFSET(cached_resolve_t, minheap_idx),
                        resolve);
 }
 
@@ -389,7 +392,8 @@ purge_expired_resolves(time_t now)
     if (resolve->expire > now)
       break;
     smartlist_pqueue_pop(cached_resolve_pqueue,
-                         _compare_cached_resolves_by_expiry);
+                         _compare_cached_resolves_by_expiry,
+                         STRUCT_OFFSET(cached_resolve_t, minheap_idx));
 
     if (resolve->state == CACHE_STATE_PENDING) {
       log_debug(LD_EXIT,
@@ -751,6 +755,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   resolve = tor_malloc_zero(sizeof(cached_resolve_t));
   resolve->magic = CACHED_RESOLVE_MAGIC;
   resolve->state = CACHE_STATE_PENDING;
+  resolve->minheap_idx = -1;
   resolve->is_reverse = is_reverse;
   strlcpy(resolve->address, exitconn->_base.address, sizeof(resolve->address));
 
@@ -1736,7 +1741,8 @@ _assert_cache_ok(void)
     return;
 
   smartlist_pqueue_assert_ok(cached_resolve_pqueue,
-                             _compare_cached_resolves_by_expiry);
+                             _compare_cached_resolves_by_expiry,
+                             STRUCT_OFFSET(cached_resolve_t, minheap_idx));
 
   SMARTLIST_FOREACH(cached_resolve_pqueue, cached_resolve_t *, res,
     {

@@ -180,6 +180,9 @@ or_connection_new(int socket_family)
   or_conn->timestamp_last_added_nonpadding = time(NULL);
   or_conn->next_circ_id = crypto_rand_int(1<<15);
 
+  or_conn->active_circuit_pqueue = smartlist_create();
+  or_conn->active_circuit_pqueue_last_recalibrated = cell_ewma_get_tick();
+
   return or_conn;
 }
 
@@ -375,6 +378,7 @@ _connection_free(connection_t *conn)
     or_conn->tls = NULL;
     or_handshake_state_free(or_conn->handshake_state);
     or_conn->handshake_state = NULL;
+    smartlist_free(or_conn->active_circuit_pqueue);
     tor_free(or_conn->nickname);
   }
   if (CONN_IS_EDGE(conn)) {
@@ -2278,8 +2282,8 @@ connection_read_bucket_should_increase(or_connection_t *conn)
  * Mark the connection and return -1 if you want to close it, else
  * return 0.
  */
-int
-connection_handle_read(connection_t *conn)
+static int
+connection_handle_read_impl(connection_t *conn)
 {
   int max_to_read=-1, try_to_read;
   size_t before, n_read = 0;
@@ -2372,6 +2376,16 @@ loop_again:
     return -1;
   }
   return 0;
+}
+
+int
+connection_handle_read(connection_t *conn)
+{
+  int res;
+
+  tor_gettimeofday_cache_clear();
+  res = connection_handle_read_impl(conn);
+  return res;
 }
 
 /** Pull in new bytes from conn-\>s or conn-\>linked_conn onto conn-\>inbuf,
@@ -2575,8 +2589,8 @@ connection_outbuf_too_full(connection_t *conn)
  * Mark the connection and return -1 if you want to close it, else
  * return 0.
  */
-int
-connection_handle_write(connection_t *conn, int force)
+static int
+connection_handle_write_impl(connection_t *conn, int force)
 {
   int e;
   socklen_t len=(socklen_t)sizeof(e);
@@ -2741,6 +2755,15 @@ connection_handle_write(connection_t *conn, int force)
     connection_consider_empty_read_buckets(conn);
 
   return 0;
+}
+
+int
+connection_handle_write(connection_t *conn, int force)
+{
+    int res;
+    tor_gettimeofday_cache_clear();
+    res = connection_handle_write_impl(conn, force);
+    return res;
 }
 
 /** OpenSSL TLS record size is 16383; this is close. The goal here is to
