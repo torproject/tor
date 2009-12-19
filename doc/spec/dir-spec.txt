@@ -1140,6 +1140,18 @@
         (Only included when the vote is generated with consensus-method 7 or
         later.)
 
+        Commonly used "param" arguments at this point include:
+
+        "CircWindow" -- the default package window that circuits should
+        be established with. It started out at 1000 cells, but some
+        research indicates that a lower value would mean fewer cells in
+        transit in the network at any given time. Obeyed by Tor 0.2.1.20
+        and later.
+
+        "CircPriorityHalflifeMsec" -- the halflife parameter used when
+        weighting which circuit will send the next cell. Obeyed by Tor
+        0.2.2.7-alpha and later.
+
    The authority section of a vote contains the following items, followed
    in turn by the authority's current key certificate:
 
@@ -2144,7 +2156,6 @@
   caching them are described in dir-spec-v1.txt.
 
 A. Consensus-negotiation timeline.
-
 
    Period begins: this is the Published time.
      Everybody sends votes
