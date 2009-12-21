@@ -2341,7 +2341,7 @@ typedef struct {
   struct routerset_t *_ExcludeExitNodesUnion;
 
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
-                               * process for all current and future memory. */
+                       * process for all current and future memory. */
 
   /** List of "entry", "middle", "exit", "introduction", "rendezvous". */
   smartlist_t *AllowInvalidNodes;

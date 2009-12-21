@@ -2848,6 +2848,8 @@ int
 connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
                            int excluded_means_no)
 {
+  or_options_t *options = get_options();
+
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);
   tor_assert(conn->socks_request);
