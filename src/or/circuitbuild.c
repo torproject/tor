@@ -3202,7 +3202,7 @@ entry_guards_compute_status(void)
   if (changed) {
     SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry) {
       const char *reason = digestmap_get(reasons, entry->identity);
-      const char *live_msg;
+      const char *live_msg = "";
       routerinfo_t *r = entry_is_live(entry, 0, 1, 0, &live_msg);
       log_info(LD_CIRC, "Summary: Entry '%s' is %s, %s%s%s, and %s%s.",
                entry->nickname,
