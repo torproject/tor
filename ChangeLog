@@ -1,5 +1,5 @@
 Changes in version 0.2.2.7-alpha - 2009-??-??
-  o Major features:
+  o Major features (performance):
     - When choosing which cells to relay first, we can now favor circuits
       that have been quiet recently, so as to get lower latency for
       low-volume circuits.  By default, relays enable or disable this
@@ -8,6 +8,27 @@ Changes in version 0.2.2.7-alpha - 2009-??-??
       use it.  You can override this default by using the new
       "CircuitPriorityHalflife" config option.  Design and code by Ian
       Goldberg, Can Tang, and Chris Alexander.
+
+  o Major features (relay selection):
+    - Switch to a StrictNodes config option, rather than the previous
+      "StrictEntryNodes" / "StrictExitNodes" separation.
+    - If EntryNodes, ExitNodes, ExcludeNodes, or ExcludeExitNodes
+      change during a config reload, mark and discard all our origin
+      circuits. This fix should address edge cases where we change the
+      config options and but then choose a circuit that we created before
+      the change.
+    - If EntryNodes or ExitNodes are set, be more willing to use an
+      unsuitable (e.g. slow or unstable) circuit. The user asked for it,
+      they get it.
+    - Make EntryNodes config option much more aggressive even when
+      StrictNodes is not set. Before it would prepend your requested
+      entrynodes to your list of guard nodes, but feel free to use others
+      after that. Now it chooses only from your EntryNodes if any of
+      those are available, and only falls back to others if a) they're
+      all down and b) StrictNodes is not set.
+    - Now we refresh your entry guards from EntryNodes at each consensus
+      fetch -- rather than just at startup and then they slowly rot as
+      the network changes.
 
   o Minor features:
     - New config option "CircuitStreamTimeout" to override our internal

@@ -551,8 +551,8 @@ static config_var_description_t options_description[] = {
     "to the SOCKSPort." },
   /* SocksTimeout */
   { "StrictNodes", "If set, Tor will fail to operate when none of the "
-    "configured EntryNodes, ExitNodes, ExcludeNodes, or ExcludeExitNodes "
-    "can be used." },
+    "configured EntryNodes or ExitNodes can be used (or if the usable ones "
+    "are listed in ExcludeNodes or ExcludeExitNodes)." },
   /* TestSocks */
   { "TrackHostsExit", "Hosts and domains which should, if possible, be "
     "accessed from the same exit node each time we connect to them." },

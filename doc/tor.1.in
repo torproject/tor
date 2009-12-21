@@ -515,26 +515,25 @@ list.
 .TP
 \fBEntryNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
 A list of identity fingerprints, nicknames, country codes and address patterns
-of nodes to use for the first hop in the circuit.
-These are treated only as preferences unless StrictEntryNodes (see
+of nodes to use for the first hop in normal circuits.
+These are treated only as preferences unless StrictNodes (see
 below) is also set.
 .LP
 .TP
 \fBExitNodes \fR\fInode\fR,\fInode\fR,\fI...\fP
 A list of identity fingerprints, nicknames, country codes and address patterns
-of nodes to use for the last hop in the circuit.
-These are treated only as preferences unless StrictExitNodes (see
+of nodes to use for the last hop in normal exit circuits.
+These are treated only as preferences unless StrictNodes (see
 below) is also set.
 .LP
 .TP
-\fBStrictEntryNodes \fR\fB0\fR|\fB1\fR\fP
-If 1, Tor will never use any nodes besides those listed in "EntryNodes" for
-the first hop of a circuit.
-.LP
-.TP
-\fBStrictExitNodes \fR\fB0\fR|\fB1\fR\fP
-If 1, Tor will never use any nodes besides those listed in "ExitNodes" for
-the last hop of a circuit.
+\fBStrictNodes \fR\fB0\fR|\fB1\fR\fP
+If 1 and EntryNodes config option is set, Tor will never use any
+nodes besides those listed in EntryNodes for the first hop of a normal
+circuit. If 1 and ExitNodes config option is set, Tor will never use any
+nodes besides those listed in ExitNodes for the last hop of a normal exit
+circuit. Note that Tor might still use these nodes for non-exit circuits
+such as one-hop directory fetches or hidden service support circuits.
 .LP
 .TP
 \fBFascistFirewall \fR\fB0\fR|\fB1\fR\fP
