@@ -1,4 +1,4 @@
-Changes in version 0.2.2.7-alpha - 2009-??-??
+Changes in version 0.2.2.7-alpha - 2009-12-??
   o Major features (performance):
     - When choosing which cells to relay first, we can now favor circuits
       that have been quiet recently, so as to get lower latency for
@@ -8,10 +8,15 @@ Changes in version 0.2.2.7-alpha - 2009-??-??
       use it.  You can override this default by using the new
       "CircuitPriorityHalflife" config option.  Design and code by Ian
       Goldberg, Can Tang, and Chris Alexander.
+    - New consensus params "bwconnrate" and "bwconnburst" to let us
+      rate-limit client connections as they enter the network. It's
+      controlled in the consensus so we can turn it on and off for
+      experiments. It's starting out off. Based on proposal 163.
 
   o Major features (relay selection):
     - Switch to a StrictNodes config option, rather than the previous
-      "StrictEntryNodes" / "StrictExitNodes" separation.
+      "StrictEntryNodes" / "StrictExitNodes" separation that was missing a
+      "StrictExcludeNodes" option.
     - If EntryNodes, ExitNodes, ExcludeNodes, or ExcludeExitNodes
       change during a config reload, mark and discard all our origin
       circuits. This fix should address edge cases where we change the

@@ -320,6 +320,19 @@ connection_or_finished_connecting(or_connection_t *or_conn)
   return 0;
 }
 
+/** Return 1 if identity digest <b>id_digest</b> is known to be a
+ * currently or recently running relay. Otherwise return 0. */
+static int
+connection_or_digest_is_known_relay(const char *id_digest)
+{
+  if (router_get_consensus_status_by_id(id_digest))
+    return 1; /* It's in the consensus: "yes" */
+  if (router_get_by_digest(id_digest))
+    return 1; /* Not in the consensus, but we have a descriptor for
+               * it. Probably it was in a recent consensus. "Yes". */
+  return 0;
+}
+
 /** If we don't necessarily know the router we're connecting to, but we
  * have an addr/port/id_digest, then fill in as much as we can. Start
  * by checking to see if this describes a router we know. */
@@ -331,9 +344,23 @@ connection_or_init_conn_from_address(or_connection_t *conn,
 {
   or_options_t *options = get_options();
   routerinfo_t *r = router_get_by_digest(id_digest);
-  conn->bandwidthrate = (int)options->BandwidthRate;
-  conn->read_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
   connection_or_set_identity_digest(conn, id_digest);
+
+  if (connection_or_digest_is_known_relay(id_digest)) {
+    /* It's in the consensus, or we have a descriptor for it meaning it
+     * was probably in a recent consensus. It's a recognized relay:
+     * give it full bandwidth. */
+    conn->bandwidthrate = (int)options->BandwidthRate;
+    conn->read_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
+  } else { /* Not a recognized relay. Squeeze it down based on the
+            * suggested bandwidth parameters in the consensus. */
+    conn->bandwidthrate =
+      (int)networkstatus_get_param(NULL, "bwconnrate",
+                                   (int)options->BandwidthRate);
+    conn->read_bucket = conn->bandwidthburst =
+      (int)networkstatus_get_param(NULL, "bwconnburst",
+                                   (int)options->BandwidthBurst);
+  }
 
   conn->_base.port = port;
   tor_addr_copy(&conn->_base.addr, addr);
