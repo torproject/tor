@@ -43,7 +43,8 @@
 #define EVENT_STREAM_BANDWIDTH_USED   0x0014
 #define EVENT_CLIENTS_SEEN     0x0015
 #define EVENT_NEWCONSENSUS     0x0016
-#define _EVENT_MAX             0x0016
+#define EVENT_BUILDTIMEOUT_SET     0x0017
+#define _EVENT_MAX             0x0017
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -922,6 +923,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         event_code = EVENT_CLIENTS_SEEN;
       else if (!strcasecmp(ev, "NEWCONSENSUS"))
         event_code = EVENT_NEWCONSENSUS;
+      else if (!strcasecmp(ev, "BUILDTIMEOUT_SET"))
+        event_code = EVENT_BUILDTIMEOUT_SET;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                  ev);
@@ -3438,6 +3441,51 @@ control_event_newconsensus(const networkstatus_t *consensus)
     return 0;
   return control_event_networkstatus_changed_helper(
            consensus->routerstatus_list, EVENT_NEWCONSENSUS, "NEWCONSENSUS");
+}
+
+/** Called when we compute a new circuitbuildtimeout */
+int
+control_event_buildtimeout_set(const circuit_build_times_t *cbt,
+                        buildtimeout_set_event_t type)
+{
+  const char *type_string = NULL;
+  double qnt = BUILDTIMEOUT_QUANTILE_CUTOFF;
+
+  if (!control_event_is_interesting(EVENT_BUILDTIMEOUT_SET))
+    return 0;
+
+  switch (type) {
+    case BUILDTIMEOUT_SET_EVENT_COMPUTED: 
+      type_string = "COMPUTED";
+      break;
+    case BUILDTIMEOUT_SET_EVENT_RESET:
+      type_string = "RESET";
+      qnt = 1.0;
+      break;
+    case BUILDTIMEOUT_SET_EVENT_SUSPENDED:
+      type_string = "SUSPENDED";
+      qnt = 1.0;
+      break;
+    case BUILDTIMEOUT_SET_EVENT_DISCARD:
+      type_string = "DISCARD";
+      qnt = 1.0;
+      break;
+    case BUILDTIMEOUT_SET_EVENT_RESUME:
+      type_string = "RESUME";
+      break;
+    default:
+      type_string = "UNKNOWN";
+      break;
+  }
+
+  send_control_event(EVENT_BUILDTIMEOUT_SET, ALL_FORMATS,
+                     "650 BUILDTIMEOUT_SET %s TOTAL_TIMES=%lu "
+                     "TIMEOUT_MS=%lu XM=%lu ALPHA=%lf CUTOFF_QUANTILE=%lf\r\n",
+                     type_string, (unsigned long)cbt->total_build_times,
+                     (unsigned long)cbt->timeout_ms, 
+                     (unsigned long)cbt->Xm, cbt->alpha, qnt);
+
+  return 0;
 }
 
 /** Called when a single local_routerstatus_t has changed: Sends an NS event

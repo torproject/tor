@@ -219,7 +219,7 @@
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
          "AUTHDIR_NEWDESCS" / "DESCCHANGED" / "STATUS_GENERAL" /
          "STATUS_CLIENT" / "STATUS_SERVER" / "GUARD" / "NS" / "STREAM_BW" /
-         "CLIENTS_SEEN" / "NEWCONSENSUS"
+         "CLIENTS_SEEN" / "NEWCONSENSUS" / "BUILDTIMEOUT_SET"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -1655,6 +1655,38 @@
   relay *not* mentioned in this list is implicitly no longer recommended.
 
   [First added in 0.2.1.13-alpha]
+
+4.1.16. New circuit buildtime has been set.
+
+  The syntax is:
+     "650" SP "BUILDTIMEOUT_SET" SP Type SP "TOTAL_TIMES=" Total SP
+        "TIMEOUT_MS=" Timeout SP "XM=" Xm SP "ALPHA=" Alpha SP
+        "CUTOFF_QUANTILE=" Quantile CRLF
+     Type = "COMPUTED" / "RESET" / "SUSPENDED" / "DISCARD" / "RESUME"
+     Total = Integer count of timeouts stored
+     Timeout = Integer timeout in milliseconds
+     Xm = Estimated integer Pareto parameter Xm in milliseconds
+     Alpha = Estimated floating point Paredo paremter alpha
+     Quantile = Floating point CDF quantile cutoff point for this timeout
+
+  A new circuit build timeout time has been set. If Type is "COMPUTED",
+  Tor has computed the value based on historical data. If Type is "RESET",
+  initialization or drastic network changes have caused Tor to reset
+  the timeout back to the default, to relearn again. If Type is
+  "SUSPENDED", Tor has detected a loss of network connectivity and has
+  temporarily changed the timeout value to the default until the network
+  recovers. If type is "DISCARD", Tor has decided to discard timeout
+  values that likely happened while the network was down. If type is
+  "RESUME", Tor has decided to resume timeout calculation.
+
+  The Total value is the count of circuit build times Tor used in
+  computing this value. It is capped internally at the maximum number
+  of build times Tor stores (NCIRCUITS_TO_OBSERVE).
+
+  The Timeout itself is provided in milliseconds. Internally, Tor rounds
+  this value to the nearest second before using it.
+
+  [First added in 0.2.2.7-alpha]
 
 5. Implementation notes
 

@@ -3008,7 +3008,7 @@ void entry_guards_free_all(void);
 #define MAX_SYNTHETIC_QUANTILE 0.985
 
 /** Minimum circuits before estimating a timeout */
-#define MIN_CIRCUITS_TO_OBSERVE 500
+#define MIN_CIRCUITS_TO_OBSERVE 20
 
 /** Total size of the circuit timeout history to accumulate.
  * 5000 is approx 1.5 weeks worth of continual-use circuits. */
@@ -3035,7 +3035,7 @@ typedef uint32_t build_time_t;
 #define BUILD_TIMES_TEST_FREQUENCY 60
 
 /** Save state every 10 circuits */
-#define BUILD_TIMES_SAVE_STATE_EVERY 10
+#define BUILD_TIMES_SAVE_STATE_EVERY 1
 
 /* Circuit Build Timeout network liveness constants */
 
@@ -3090,6 +3090,8 @@ typedef struct {
   int8_t timeouts_after_firsthop[RECENT_CIRCUITS];
   /** Index into circular array. */
   int after_firsthop_idx;
+  /** The network is not live. Timeout gathering is suspended */
+  int net_suspended;
 } network_liveness_t;
 
 /** Structure for circuit build times history */
@@ -3583,6 +3585,15 @@ typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_NEW          = 4,
 } or_conn_status_event_t;
 
+/** Used to indicate the type of a buildtime event */
+typedef enum buildtimeout_set_event_t {
+  BUILDTIMEOUT_SET_EVENT_COMPUTED  = 0,
+  BUILDTIMEOUT_SET_EVENT_RESET     = 1,
+  BUILDTIMEOUT_SET_EVENT_SUSPENDED = 2,
+  BUILDTIMEOUT_SET_EVENT_DISCARD = 3,
+  BUILDTIMEOUT_SET_EVENT_RESUME = 4
+} buildtimeout_set_event_t;
+
 void control_update_global_event_mask(void);
 void control_adjust_event_log_severity(void);
 
@@ -3648,6 +3659,8 @@ int control_event_server_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
+int control_event_buildtimeout_set(const circuit_build_times_t *cbt,
+                                   buildtimeout_set_event_t type);
 
 int init_cookie_authentication(int enabled);
 smartlist_t *decode_hashed_passwords(config_line_t *passwords);

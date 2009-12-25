@@ -134,6 +134,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
 {
   memset(cbt, 0, sizeof(*cbt));
   cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+  control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 }
 
 /**
@@ -687,6 +688,9 @@ circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
 
 /**
  * Called to indicate that the network showed some signs of liveness.
+ *
+ * This function is called every time we receive a cell. Avoid
+ * syscalls, events, and other high-intensity work.
  */
 void
 circuit_build_times_network_is_live(circuit_build_times_t *cbt)
@@ -760,6 +764,7 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
       /* Only discard NETWORK_NONLIVE_TIMEOUT_COUNT-1 because we stopped
        * counting after that */
       circuit_build_times_rewind_history(cbt, NETWORK_NONLIVE_TIMEOUT_COUNT-1);
+      control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_DISCARD);
     }
     return 0;
   } else if (cbt->liveness.nonlive_timeouts >= NETWORK_NONLIVE_TIMEOUT_COUNT) {
@@ -770,9 +775,17 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
                 (long int)(now - cbt->liveness.network_last_live),
                 tor_lround(circuit_build_times_get_initial_timeout()/1000));
       cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+      cbt->liveness.net_suspended = 1;
+      control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_SUSPENDED);
     }
 
     return 0;
+  } else if (cbt->liveness.net_suspended) {
+    log_notice(LD_CIRC,
+              "Network activity has resumed. "
+              "Resuming circuit timeout calculations.");
+    cbt->liveness.net_suspended = 0;
+    control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESUME);
   }
 
   return 1;
@@ -818,6 +831,8 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   } else {
     cbt->timeout_ms = circuit_build_times_get_initial_timeout();
   }
+
+  control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 
   log_notice(LD_CIRC,
             "Network connection speed appears to have changed. Resetting "
@@ -892,6 +907,8 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
              cbt->timeout_ms, BUILD_TIMEOUT_MIN_VALUE);
     cbt->timeout_ms = BUILD_TIMEOUT_MIN_VALUE;
   }
+
+  control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_COMPUTED);
 
   log_info(LD_CIRC,
            "Set circuit build timeout to %lds (%lfms, Xm: %d, a: %lf) "
