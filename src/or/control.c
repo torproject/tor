@@ -2055,27 +2055,58 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   router_nicknames = smartlist_create();
 
-  args = getargs_helper("EXTENDCIRCUIT", conn, body, 2, -1);
+  args = getargs_helper("EXTENDCIRCUIT", conn, body, 1, -1);
   if (!args)
     goto done;
 
   zero_circ = !strcmp("0", (char*)smartlist_get(args,0));
+
+  if (zero_circ) {
+    char *purp = NULL;
+    if (smartlist_len(args) == 2) {
+      // "EXTENDCIRCUIT 0 PURPOSE=foo"
+      purp = smartlist_get(args,1);
+    } else if (smartlist_len(args) == 3) {
+      // "EXTENDCIRCUIT 0 router1,router2 PURPOSE=foo"
+      purp = smartlist_get(args,2);
+    }
+
+    if (purp && strcmpstart(purp, "purpose=") != 0)
+      purp = NULL;
+
+    if (purp) {
+      intended_purpose = circuit_purpose_from_string(purp);
+      if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
+        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
+        SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+        smartlist_free(args);
+      }
+    }
+
+    if ((smartlist_len(args) == 1) || (purp && (smartlist_len(args) == 2))) {
+        // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 PURPOSE=foo"
+        circ = circuit_launch_by_router(intended_purpose, NULL,
+                CIRCLAUNCH_NEED_CAPACITY);
+        if (!circ) {
+          connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
+        } else {
+          connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
+                    (unsigned long)circ->global_identifier);
+        }
+        goto done;
+    }
+    // "EXTENDCIRCUIT 0 router1,router2" ||
+    // "EXTENDCIRCUIT 0 router1,router2 PURPOSE=foo"
+  }
+
   if (!zero_circ && !(circ = get_circ(smartlist_get(args,0)))) {
     connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
+    goto done;
   }
+
   smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
 
-  if (zero_circ && smartlist_len(args)>2) {
-    char *purp = smartlist_get(args,2);
-    intended_purpose = circuit_purpose_from_string(purp);
-    if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
-      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
-      SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-      smartlist_free(args);
-      goto done;
-    }
-  }
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
   if (!zero_circ && !circ) {

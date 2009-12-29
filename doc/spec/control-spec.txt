@@ -606,15 +606,20 @@
 3.10. EXTENDCIRCUIT
 
   Sent from the client to the server.  The format is:
-      "EXTENDCIRCUIT" SP CircuitID SP
-                      ServerSpec *("," ServerSpec)
-                      [SP "purpose=" Purpose] CRLF
+      "EXTENDCIRCUIT" SP CircuitID
+                      [SP ServerSpec *("," ServerSpec)
+                       SP "purpose=" Purpose] CRLF
 
   This request takes one of two forms: either the CircuitID is zero, in
-  which case it is a request for the server to build a new circuit according
-  to the specified path, or the CircuitID is nonzero, in which case it is a
-  request for the server to extend an existing circuit with that ID according
-  to the specified path.
+  which case it is a request for the server to build a new circuit,
+  or the CircuitID is nonzero, in which case it is a request for the
+  server to extend an existing circuit with that ID according to the
+  specified path.
+
+  If the CircuitID is 0, the controller has the option of providing
+  a path for Tor to use to build the circuit. If it does not provide
+  a path, Tor will select one automatically from high capacity nodes
+  according to path-spec.txt.
 
   If CircuitID is 0 and "purpose=" is specified, then the circuit's
   purpose is set. Two choices are recognized: "general" and
