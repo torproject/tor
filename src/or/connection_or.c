@@ -343,6 +343,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                                      int started_here)
 {
   or_options_t *options = get_options();
+  int rate, burst; /* per-connection rate limiting params */
   routerinfo_t *r = router_get_by_digest(id_digest);
   connection_or_set_identity_digest(conn, id_digest);
 
@@ -350,18 +351,22 @@ connection_or_init_conn_from_address(or_connection_t *conn,
     /* It's in the consensus, or we have a descriptor for it meaning it
      * was probably in a recent consensus. It's a recognized relay:
      * give it full bandwidth. */
-    conn->bandwidthrate = (int)options->BandwidthRate;
-    conn->read_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
-    conn->write_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
-  } else { /* Not a recognized relay. Squeeze it down based on the
-            * suggested bandwidth parameters in the consensus. */
-    conn->bandwidthrate =
-      (int)networkstatus_get_param(NULL, "bwconnrate",
-                                   (int)options->BandwidthRate);
-    conn->read_bucket = conn->write_bucket = conn->bandwidthburst =
-      (int)networkstatus_get_param(NULL, "bwconnburst",
-                                   (int)options->BandwidthBurst);
+    rate = (int)options->BandwidthRate;
+    burst = (int)options->BandwidthBurst;
+  } else {
+    /* Not a recognized relay. Squeeze it down based on the suggested
+     * bandwidth parameters in the consensus, but allow local config
+     * options to override. */
+    rate = options->PerConnBWRate ? (int)options->PerConnBWRate :
+        (int)networkstatus_get_param(NULL, "bwconnrate",
+                                     (int)options->BandwidthRate);
+    burst = options->PerConnBWBurst ? (int)options->PerConnBWBurst :
+        (int)networkstatus_get_param(NULL, "bwconnburst",
+                                     (int)options->BandwidthBurst);
   }
+
+  conn->bandwidthrate = rate;
+  conn->read_bucket = conn->write_bucket = conn->bandwidthburst = burst;
 
   conn->_base.port = port;
   tor_addr_copy(&conn->_base.addr, addr);

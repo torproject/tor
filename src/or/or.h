@@ -2513,6 +2513,8 @@ typedef struct {
                                  * willing to use for all relayed conns? */
   uint64_t RelayBandwidthBurst; /**< How much bandwidth, at maximum, will we
                                  * use in a second for all relayed conns? */
+  uint64_t PerConnBWRate; /**< Long-term bw on a single TLS conn, if set. */
+  uint64_t PerConnBWBurst; /**< Allowed burst on a single TLS conn, if set. */
   int NumCpus; /**< How many CPUs should we try to use? */
   int RunTesting; /**< If true, create testing circuits to measure how well the
                    * other ORs are running. */

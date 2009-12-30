@@ -284,6 +284,8 @@ static config_var_t _option_vars[] = {
   V(ORPort,                      UINT,     "0"),
   V(OutboundBindAddress,         STRING,   NULL),
   OBSOLETE("PathlenCoinWeight"),
+  V(PerConnBWBurst,              MEMUNIT,  "0"),
+  V(PerConnBWRate,               MEMUNIT,  "0"),
   V(PidFile,                     STRING,   NULL),
   V(TestingTorNetwork,           BOOL,     "0"),
   V(PreferTunneledDirConns,      BOOL,     "1"),
