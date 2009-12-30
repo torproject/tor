@@ -21,7 +21,8 @@ static void connection_init(time_t now, connection_t *conn, int type,
 static int connection_init_accepted_conn(connection_t *conn,
                                          uint8_t listener_type);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
-static int connection_read_bucket_should_increase(or_connection_t *conn);
+static int connection_bucket_should_increase(int bucket,
+                                             or_connection_t *conn);
 static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
@@ -1973,6 +1974,7 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   int base = connection_speaks_cells(conn) ?
                CELL_NETWORK_SIZE : RELAY_PAYLOAD_SIZE;
   int priority = conn->type != CONN_TYPE_DIR;
+  int conn_bucket = (int)conn->outbuf_flushlen;
   int global_bucket = global_write_bucket;
 
   if (!connection_is_rate_limited(conn)) {
@@ -1980,12 +1982,22 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
     return conn->outbuf_flushlen;
   }
 
+  if (connection_speaks_cells(conn)) {
+    /* use the per-conn write limit if it's lower, but if it's less
+     * than zero just use zero */
+    or_connection_t *or_conn = TO_OR_CONN(conn);
+    if (conn->state == OR_CONN_STATE_OPEN)
+      if (or_conn->write_bucket < conn_bucket)
+        conn_bucket = or_conn->write_bucket >= 0 ?
+                        or_conn->write_bucket : 0;
+  }
+
   if (connection_counts_as_relayed_traffic(conn, now) &&
       global_relayed_write_bucket <= global_write_bucket)
     global_bucket = global_relayed_write_bucket;
 
-  return connection_bucket_round_robin(base, priority, global_bucket,
-                                       conn->outbuf_flushlen);
+  return connection_bucket_round_robin(base, priority,
+                                       global_bucket, conn_bucket);
 }
 
 /** Return 1 if the global write buckets are low enough that we
@@ -2039,8 +2051,8 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   return 0;
 }
 
-/** We just read num_read and wrote num_written onto conn.
- * Decrement buckets appropriately. */
+/** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
+ * onto <b>conn</b>. Decrement buckets appropriately. */
 static void
 connection_buckets_decrement(connection_t *conn, time_t now,
                              size_t num_read, size_t num_written)
@@ -2075,8 +2087,10 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   }
   global_read_bucket -= (int)num_read;
   global_write_bucket -= (int)num_written;
-  if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN)
+  if (connection_speaks_cells(conn) && conn->state == OR_CONN_STATE_OPEN) {
     TO_OR_CONN(conn)->read_bucket -= (int)num_read;
+    TO_OR_CONN(conn)->write_bucket -= (int)num_written;
+  }
 }
 
 /** If we have exhausted our global buckets, or the buckets for conn,
@@ -2115,12 +2129,10 @@ connection_consider_empty_write_buckets(connection_t *conn)
   } else if (connection_counts_as_relayed_traffic(conn, approx_time()) &&
              global_relayed_write_bucket <= 0) {
     reason = "global relayed write bucket exhausted. Pausing.";
-#if 0
   } else if (connection_speaks_cells(conn) &&
              conn->state == OR_CONN_STATE_OPEN &&
              TO_OR_CONN(conn)->write_bucket <= 0) {
     reason = "connection write bucket exhausted. Pausing.";
-#endif
   } else
     return; /* all good, no need to stop it */
 
@@ -2216,14 +2228,19 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
   {
     if (connection_speaks_cells(conn)) {
       or_connection_t *or_conn = TO_OR_CONN(conn);
-      if (connection_read_bucket_should_increase(or_conn)) {
+      if (connection_bucket_should_increase(or_conn->read_bucket, or_conn)) {
         connection_bucket_refill_helper(&or_conn->read_bucket,
                                         or_conn->bandwidthrate,
                                         or_conn->bandwidthburst,
                                         seconds_elapsed,
                                         "or_conn->read_bucket");
-        //log_fn(LOG_DEBUG,"Receiver bucket %d now %d.", i,
-        //       conn->read_bucket);
+      }
+      if (connection_bucket_should_increase(or_conn->write_bucket, or_conn)) {
+        connection_bucket_refill_helper(&or_conn->write_bucket,
+                                        or_conn->bandwidthrate,
+                                        or_conn->bandwidthburst,
+                                        seconds_elapsed,
+                                        "or_conn->write_bucket");
       }
     }
 
@@ -2244,8 +2261,10 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
     if (conn->write_blocked_on_bw == 1
         && global_write_bucket > 0 /* and we're allowed to write */
         && (!connection_counts_as_relayed_traffic(conn, now) ||
-            global_relayed_write_bucket > 0)) {
-            /* even if we're relayed traffic */
+            global_relayed_write_bucket > 0) /* even if we're relayed traffic */
+        && (!connection_speaks_cells(conn) ||
+            conn->state != OR_CONN_STATE_OPEN ||
+            TO_OR_CONN(conn)->write_bucket > 0)) {
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
                          "waking up conn (fd %d) for write", conn->s));
       conn->write_blocked_on_bw = 0;
@@ -2254,17 +2273,17 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
   });
 }
 
-/** Is the receiver bucket for connection <b>conn</b> low enough that we
+/** Is the <b>bucket</b> for connection <b>conn</b> low enough that we
  * should add another pile of tokens to it?
  */
 static int
-connection_read_bucket_should_increase(or_connection_t *conn)
+connection_bucket_should_increase(int bucket, or_connection_t *conn)
 {
   tor_assert(conn);
 
   if (conn->_base.state != OR_CONN_STATE_OPEN)
     return 0; /* only open connections play the rate limiting game */
-  if (conn->read_bucket >= conn->bandwidthburst)
+  if (bucket >= conn->bandwidthburst)
     return 0;
 
   return 1;

@@ -352,12 +352,13 @@ connection_or_init_conn_from_address(or_connection_t *conn,
      * give it full bandwidth. */
     conn->bandwidthrate = (int)options->BandwidthRate;
     conn->read_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
+    conn->write_bucket = conn->bandwidthburst = (int)options->BandwidthBurst;
   } else { /* Not a recognized relay. Squeeze it down based on the
             * suggested bandwidth parameters in the consensus. */
     conn->bandwidthrate =
       (int)networkstatus_get_param(NULL, "bwconnrate",
                                    (int)options->BandwidthRate);
-    conn->read_bucket = conn->bandwidthburst =
+    conn->read_bucket = conn->write_bucket = conn->bandwidthburst =
       (int)networkstatus_get_param(NULL, "bwconnburst",
                                    (int)options->BandwidthBurst);
   }

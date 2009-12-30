@@ -928,7 +928,7 @@ typedef struct connection_t {
                             * again once the bandwidth throttler allows it? */
   unsigned int write_blocked_on_bw:1; /**< Boolean: should we start writing
                              * again once the bandwidth throttler allows
-                             * reads? */
+                             * writes? */
   unsigned int hold_open_until_flushed:1; /**< Despite this connection's being
                                       * marked for close, do we flush it
                                       * before closing it? */
@@ -1062,12 +1062,13 @@ typedef struct or_connection_t {
   time_t timestamp_last_added_nonpadding; /** When did we last add a
                                            * non-padding cell to the outbuf? */
 
-  /* bandwidth* and read_bucket only used by ORs in OPEN state: */
+  /* bandwidth* and *_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
   int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
   int read_bucket; /**< When this hits 0, stop receiving. Every second we
                     * add 'bandwidthrate' to this, capping it at
                     * bandwidthburst. (OPEN ORs only) */
+  int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
 

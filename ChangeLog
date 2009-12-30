@@ -8,6 +8,9 @@ Changes in version 0.2.2.7-alpha - 2009-12-??
       use it.  You can override this default by using the new
       "CircuitPriorityHalflife" config option.  Design and code by Ian
       Goldberg, Can Tang, and Chris Alexander.
+    - Add separate per-conn write limiting to go with the per-conn read
+      limiting. We added a global write limit in Tor 0.1.2.5-alpha,
+      but never per-conn write limits.
     - New consensus params "bwconnrate" and "bwconnburst" to let us
       rate-limit client connections as they enter the network. It's
       controlled in the consensus so we can turn it on and off for
