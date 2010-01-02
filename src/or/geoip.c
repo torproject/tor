@@ -1230,9 +1230,12 @@ geoip_bridge_stats_write(time_t now)
 static void
 load_bridge_stats(time_t now)
 {
-  char *fname, *contents, *controller_str;
+  char *statsdir, *fname=NULL, *contents, *controller_str;
   if (bridge_stats_extrainfo)
     return;
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
   fname = get_datadir_fname2("stats", "bridge-stats");
   contents = read_file_to_str(fname, 0, NULL);
   if (contents) {
@@ -1244,7 +1247,9 @@ load_bridge_stats(time_t now)
       tor_free(contents);
     }
   }
+ done:
   tor_free(fname);
+  tor_free(statsdir);
 }
 
 /** Return most recent bridge statistics for inclusion in extra-info
