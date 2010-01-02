@@ -1,4 +1,4 @@
-Changes in version 0.2.2.7-alpha - 2009-12-??
+Changes in version 0.2.2.7-alpha - 2010-01-??
   o Major features (performance):
     - When choosing which cells to relay first, we can now favor circuits
       that have been quiet recently, so as to get lower latency for
@@ -67,6 +67,10 @@ Changes in version 0.2.2.7-alpha - 2009-12-??
     - Fix statistics on client numbers by country as seen by bridges that
       were broken in 0.2.2.1-alpha. Also switch to reporting full 24-hour
       intervals instead of variable 12-to-48-hour intervals.
+    - If we're in the pathological case where there's no exit bandwidth
+      but there is non-exit bandwidth, or no guard bandwidth but there
+      is non-guard bandwidth, don't crash during path selection. Bugfix
+      on 0.2.0.3-alpha.
 
   o Removed features:
     - Remove the HSAuthorityRecordStats option that version 0 hidden

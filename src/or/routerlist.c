@@ -1698,12 +1698,12 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
      * For detailed derivation of this formula, see
      *   http://archives.seul.org/or/dev/Jul-2007/msg00056.html
      */
-    if (rule == WEIGHT_FOR_EXIT)
+    if (rule == WEIGHT_FOR_EXIT || !total_exit_bw)
       exit_weight = 1.0;
     else
       exit_weight = 1.0 - all_bw/(3.0*exit_bw);
 
-    if (rule == WEIGHT_FOR_GUARD)
+    if (rule == WEIGHT_FOR_GUARD || !total_guard_bw)
       guard_weight = 1.0;
     else
       guard_weight = 1.0 - all_bw/(3.0*guard_bw);
