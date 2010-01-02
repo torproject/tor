@@ -209,6 +209,7 @@ control_connection_new(int socket_family)
     tor_malloc_zero(sizeof(control_connection_t));
   connection_init(time(NULL),
                   TO_CONN(control_conn), CONN_TYPE_CONTROL, socket_family);
+  log_notice(LD_CONTROL, "New control connection opened.");
   return control_conn;
 }
 
