@@ -594,6 +594,9 @@ void
 circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff)
 {
+  // XXX: This may be failing when the number of samples is small?
+  // Keep getting values for the largest timeout bucket over and over
+  // again... Probably because alpha is very very large in that case..
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
               quantile_cutoff, MAX_SYNTHETIC_QUANTILE);
 
@@ -3313,6 +3316,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
                "Removing from the list. %d/%d entry guards usable/new.",
                entry->nickname, buf,
                num_live_entry_guards()-1, smartlist_len(entry_guards)-1);
+      control_event_guard(entry->nickname, entry->identity, "DROPPED");
       entry_guard_free(entry);
       smartlist_del_keeporder(entry_guards, idx);
       log_entry_guards(LOG_INFO);
