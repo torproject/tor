@@ -20,7 +20,7 @@ see tor-design.pdf.
 
    PK -- a public key.
    SK -- a private key.
-   K  -- a key for a symmetric cypher.
+   K  -- a key for a symmetric cipher.
 
    a|b -- concatenation of 'a' and 'b'.
 
@@ -171,8 +171,8 @@ see tor-design.pdf.
    In "renegotiation", the connection initiator sends no certificates, and
    the responder sends a single connection certificate.  Once the TLS
    handshake is complete, the initiator renegotiates the handshake, with each
-   parties sending a two-certificate chain as in "certificates up-front".
-   The initiator's ClientHello MUST include at least once ciphersuite not in
+   party sending a two-certificate chain as in "certificates up-front".
+   The initiator's ClientHello MUST include at least one ciphersuite not in
    the list above.  The responder SHOULD NOT select any ciphersuite besides
    those in the list above.
      [The above "should not" is because some of the ciphers that
@@ -200,9 +200,9 @@ see tor-design.pdf.
    to decide which to use.
 
    In all of the above handshake variants, certificates sent in the clear
-   SHOULD NOT include any strings to identify the host as a Tor server.  In
-   the "renegotation" and "backwards-compatible renegotiation", the
-   initiator SHOULD chose a list of ciphersuites and TLS extensions chosen
+   SHOULD NOT include any strings to identify the host as a Tor server. In
+   the "renegotiation" and "backwards-compatible renegotiation" steps, the
+   initiator SHOULD choose a list of ciphersuites and TLS extensions
    to mimic one used by a popular web browser.
 
    Responders MUST NOT select any TLS ciphersuite that lacks ephemeral keys,
@@ -288,7 +288,7 @@ see tor-design.pdf.
          6 -- CREATED_FAST (Circuit created, no PK) (See Sec 5.1)
          7 -- VERSIONS    (Negotiate proto version) (See Sec 4)
          8 -- NETINFO     (Time and address info)   (See Sec 4)
-         9 -- RELAY_EARLY (End-to-end data; limited) (See sec 5.6)
+         9 -- RELAY_EARLY (End-to-end data; limited)(See Sec 5.6)
 
    The interpretation of 'Payload' depends on the type of the cell.
       PADDING: Payload is unused.
@@ -356,7 +356,7 @@ see tor-design.pdf.
 
    The address format is a type/length/value sequence as given in section
    6.4 below.  The timestamp is a big-endian unsigned integer number of
-   seconds since the unix epoch.
+   seconds since the Unix epoch.
 
    Implementations MAY use the timestamp value to help decide if their
    clocks are skewed.  Initiators MAY use "other OR's address" to help
@@ -398,7 +398,7 @@ see tor-design.pdf.
          Onion skin                    [DH_LEN+KEY_LEN+PK_PAD_LEN bytes]
          Identity fingerprint          [HASH_LEN bytes]
 
-   The port and address field denote the IPV4 address and port of the next
+   The port and address field denote the IPv4 address and port of the next
    onion router in the circuit; the public key hash is the hash of the PKCS#1
    ASN1 encoding of the next onion router's identity (signing) key.  (See 0.3
    above.)  Including this hash allows the extending OR verify that it is
@@ -885,7 +885,7 @@ see tor-design.pdf.
 6.4. Remote hostname lookup
 
    To find the address associated with a hostname, the OP sends a
-   RELAY_RESOLVE cell containing the hostname to be resolved with a nul
+   RELAY_RESOLVE cell containing the hostname to be resolved with a NUL
    terminating byte. (For a reverse lookup, the OP sends a RELAY_RESOLVE
    cell containing an in-addr.arpa address.) The OR replies with a
    RELAY_RESOLVED cell containing a status byte, and any number of

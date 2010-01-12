@@ -1285,7 +1285,7 @@
         selection. 
 
         Additionally, the Measured= keyword is present in votes by 
-        participating bandwidth measurement authorites to indicate
+        participating bandwidth measurement authorities to indicate
         a measured bandwidth currently produced by measuring stream 
         capacities. 
 
@@ -1436,7 +1436,7 @@
    by multiplying the previous published consensus bandwidth by the 
    ratio of the measured average node stream capacity to the network 
    average. If 3 or more authorities provide a Measured= keyword for 
-   a router, the authorites produce a consensus containing a "w" 
+   a router, the authorities produce a consensus containing a "w" 
    Bandwidth= keyword equal to the median of the Measured= votes.
 
    The ports listed in a "p" line should be taken as those ports for
