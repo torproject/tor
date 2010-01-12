@@ -376,12 +376,6 @@ validate_addr_policies(or_options_t *options, char **msg)
   if (parse_addr_policy(options->ReachableDirAddresses, &addr_policy,
                         ADDR_POLICY_ACCEPT))
     REJECT("Error in ReachableDirAddresses entry.");
-  if (parse_addr_policy(options->AuthDirReject, &addr_policy,
-                        ADDR_POLICY_REJECT))
-    REJECT("Error in AuthDirReject entry.");
-  if (parse_addr_policy(options->AuthDirInvalid, &addr_policy,
-                        ADDR_POLICY_REJECT))
-    REJECT("Error in AuthDirInvalid entry.");
 
 err:
   addr_policy_list_free(addr_policy);
