@@ -96,8 +96,9 @@ static void directory_initiate_command_rend(const char *address,
 
 /********* END VARIABLES ************/
 
-/** Return true iff the directory purpose 'purpose' must use an
- * anonymous connection to a directory. */
+/** Return true iff the directory purpose <b>dir_purpose</b> (and if it's
+ * fetching descriptors, it's fetching them for <b>router_purpose</b>)
+ * must use an anonymous connection to a directory. */
 static int
 purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 {
@@ -229,7 +230,7 @@ directories_have_accepted_server_descriptor(void)
 
 /** Start a connection to every suitable directory authority, using
  * connection purpose 'purpose' and uploading the payload 'payload'
- * (length 'payload_len').  The purpose should be one of
+ * (length 'payload_len').  dir_purpose should be one of
  * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
  *
  * <b>type</b> specifies what sort of dir authorities (V1, V2,
@@ -664,7 +665,7 @@ connection_dir_download_cert_failed(dir_connection_t *conn, int status)
  * 1) If or_port is 0, or it's a direct conn and or_port is firewalled
  *    or we're a dir mirror, no.
  * 2) If we prefer to avoid begindir conns, and we're not fetching or
- * publishing a bridge relay descriptor, no.
+ *    publishing a bridge relay descriptor, no.
  * 3) Else yes.
  */
 static int
@@ -919,7 +920,7 @@ directory_get_consensus_url(int supports_conditional_consensus)
 }
 
 /** Queue an appropriate HTTP command on conn-\>outbuf.  The other args
- * are as in directory_initiate_command.
+ * are as in directory_initiate_command().
  */
 static void
 directory_send_command(dir_connection_t *conn,
@@ -1147,7 +1148,7 @@ parse_http_url(const char *headers, char **url)
     if (s-tmp >= 3 && !strcmpstart(tmp,"://")) {
       tmp = strchr(tmp+3, '/');
       if (tmp && tmp < s) {
-        log_debug(LD_DIR,"Skipping over 'http[s]://hostname' string");
+        log_debug(LD_DIR,"Skipping over 'http[s]://hostname/' string");
         start = tmp;
       }
     }
@@ -1550,7 +1551,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     v2_networkstatus_source_t source;
     char *cp;
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
-             "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
+             "'%s:%d'", (int)body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
            "Received http status code %d (%s) from server "
@@ -1624,7 +1625,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       return -1;
     }
     log_info(LD_DIR,"Received consensus directory (size %d) from server "
-             "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
+             "'%s:%d'", (int)body_len, conn->_base.address, conn->_base.port);
     if ((r=networkstatus_set_current_consensus(body, "ns", 0))<0) {
       log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
              "Unable to load consensus directory downloaded from "
@@ -1652,7 +1653,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       return -1;
     }
     log_info(LD_DIR,"Received authority certificates (size %d) from server "
-             "'%s:%d'",(int) body_len, conn->_base.address, conn->_base.port);
+             "'%s:%d'", (int)body_len, conn->_base.address, conn->_base.port);
     if (trusted_dirs_load_certs_from_string(body, 0, 1)<0) {
       log_warn(LD_DIR, "Unable to parse fetched certificates");
       /* if we fetched more than one and only some failed, the successful
@@ -1667,7 +1668,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     const char *msg;
     int st;
     log_info(LD_DIR,"Got votes (size %d) from server %s:%d",
-             (int) body_len, conn->_base.address, conn->_base.port);
+             (int)body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
              "Received http status code %d (%s) from server "
@@ -1687,7 +1688,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
     const char *msg = NULL;
     log_info(LD_DIR,"Got detached signatures (size %d) from server %s:%d",
-             (int) body_len, conn->_base.address, conn->_base.port);
+             (int)body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
       log_warn(LD_DIR,
         "Received http status code %d (%s) from server '%s:%d' while fetching "
@@ -2303,7 +2304,7 @@ directory_dump_request_log(void)
 }
 #endif
 
-/** Decide whether a client would accept the consensus we have
+/** Decide whether a client would accept the consensus we have.
  *
  * Clients can say they only want a consensus if it's signed by more
  * than half the authorities in a list.  They pass this list in
