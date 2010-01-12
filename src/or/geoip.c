@@ -1237,7 +1237,7 @@ load_bridge_stats(time_t now)
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
   fname = get_datadir_fname2("stats", "bridge-stats");
-  contents = read_file_to_str(fname, 0, NULL);
+  contents = read_file_to_str(fname, RFTS_IGNORE_MISSING, NULL);
   if (contents) {
     controller_str = parse_bridge_stats_controller(contents, now);
     if (controller_str) {
