@@ -1608,7 +1608,6 @@ get_uname(void)
 #ifdef MS_WINDOWS
         OSVERSIONINFOEX info;
         int i;
-        unsigned int leftover_mask;
         const char *plat = NULL;
         const char *extra = NULL;
         static struct {
@@ -1625,25 +1624,6 @@ get_uname(void)
           { 3, 51, "Windows NT 3.51" },
           { 0, 0, NULL }
         };
-#ifdef VER_SUITE_BACKOFFICE
-        static struct {
-          unsigned int mask; const char *str;
-        } win_mask_table[] = {
-          { VER_SUITE_BACKOFFICE,         " {backoffice}" },
-          { VER_SUITE_BLADE,              " {\"blade\" (2003, web edition)}" },
-          { VER_SUITE_DATACENTER,         " {datacenter}" },
-          { VER_SUITE_ENTERPRISE,         " {enterprise}" },
-          { VER_SUITE_EMBEDDEDNT,         " {embedded}" },
-          { VER_SUITE_PERSONAL,           " {personal}" },
-          { VER_SUITE_SINGLEUSERTS,
-            " {terminal services, single user}" },
-          { VER_SUITE_SMALLBUSINESS,      " {small business}" },
-          { VER_SUITE_SMALLBUSINESS_RESTRICTED,
-            " {small business, restricted}" },
-          { VER_SUITE_TERMINAL,           " {terminal services}" },
-          { 0, NULL },
-        };
-#endif
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
         if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
@@ -1701,18 +1681,6 @@ get_uname(void)
           strlcat(uname_result, " [server]", sizeof(uname_result));
         } else if (info.wProductType == VER_NT_WORKSTATION) {
           strlcat(uname_result, " [workstation]", sizeof(uname_result));
-        }
-        leftover_mask = info.wSuiteMask;
-        for (i = 0; win_mask_table[i].mask; ++i) {
-          if (info.wSuiteMask & win_mask_table[i].mask) {
-            strlcat(uname_result, win_mask_table[i].str, sizeof(uname_result));
-            leftover_mask &= ~win_mask_table[i].mask;
-          }
-        }
-        if (leftover_mask) {
-          size_t len = strlen(uname_result);
-          tor_snprintf(uname_result+len, sizeof(uname_result)-len,
-                       " {0x%x}", info.wSuiteMask);
         }
 #endif
 #else
