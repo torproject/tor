@@ -97,6 +97,20 @@ _relayed traffic_ to the
 given number of bytes in each direction. (Default: 0)
 .LP
 .TP
+\fBPerConnBWRate \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+If set, do separate rate limiting for each connection from a non-relay.
+You should never need to change this value, since a network-wide value
+is published in the consensus and your relay will use that value.
+(Default: 0)
+.LP
+.TP
+\fBPerConnBWBurst \fR\fIN\fR \fBbytes\fR|\fBKB\fR|\fBMB\fR|\fBGB\fR|\fBTB\fP
+If set, do separate rate limiting for each connection from a non-relay.
+You should never need to change this value, since a network-wide value
+is published in the consensus and your relay will use that value.
+(Default: 0)
+.LP
+.TP
 \fBConnLimit \fR\fINUM\fP
 The minimum number of file descriptors that must be available to
 the Tor process before it will start. Tor will ask the OS for as
