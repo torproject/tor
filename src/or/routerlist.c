@@ -1752,6 +1752,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
 
   /* Almost done: choose a random value from the bandwidth weights. */
   rand_bw = crypto_rand_uint64(total_bw);
+  rand_bw++; /* crypto_rand_uint64() counts from 0, and we need to count
+              * from 1 below. See bug 1203 for details. */
 
   /* Last, count through sl until we get to the element we picked */
   tmp = 0;
