@@ -2261,7 +2261,7 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
     if (conn->write_blocked_on_bw == 1
         && global_write_bucket > 0 /* and we're allowed to write */
         && (!connection_counts_as_relayed_traffic(conn, now) ||
-            global_relayed_write_bucket > 0) /* even if we're relayed traffic */
+            global_relayed_write_bucket > 0) /* even if it's relayed traffic */
         && (!connection_speaks_cells(conn) ||
             conn->state != OR_CONN_STATE_OPEN ||
             TO_OR_CONN(conn)->write_bucket > 0)) {

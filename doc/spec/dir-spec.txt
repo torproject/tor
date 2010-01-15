@@ -1433,10 +1433,10 @@
    per second, and capped at some arbitrary value (currently 10 MB/s).
 
    The Measured= keyword on a "w" line vote is currently computed
-   by multiplying the previous published consensus bandwidth by the 
-   ratio of the measured average node stream capacity to the network 
-   average. If 3 or more authorities provide a Measured= keyword for 
-   a router, the authorities produce a consensus containing a "w" 
+   by multiplying the previous published consensus bandwidth by the
+   ratio of the measured average node stream capacity to the network
+   average. If 3 or more authorities provide a Measured= keyword for
+   a router, the authorities produce a consensus containing a "w"
    Bandwidth= keyword equal to the median of the Measured= votes.
 
    The ports listed in a "p" line should be taken as those ports for
