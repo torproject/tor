@@ -1613,7 +1613,7 @@ rep_hist_get_bandwidth_lines(int for_extrainfo)
   size_t len;
 
   /* opt (read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n,n,n... */
-  len = (60+20*NUM_TOTALS)*2;
+  len = (60+21*NUM_TOTALS)*2;
   buf = tor_malloc_zero(len);
   cp = buf;
   for (r=0;r<2;++r) {
