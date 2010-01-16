@@ -228,5 +228,3 @@
 /* Version number of package */
 #define VERSION "0.2.2.6-alpha-dev"
 
-
-
