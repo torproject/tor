@@ -158,6 +158,7 @@ Changes in version 0.2.2.7-alpha - 2010-01-19
     - Remove the HSAuthorityRecordStats option that version 0 hidden
       service authorities could have used to track statistics of overall
       hidden service usage.
+    - Stop shipping parts of the website in the tarballs.
 
 
 Changes in version 0.2.1.22 - 2010-01-19
