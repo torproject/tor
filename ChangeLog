@@ -1,3 +1,10 @@
+Changes in version 0.2.1.22 - 2010-??-??
+  o Major bugfixes:
+    - Stop bridge directory authorities from answering dbg-stability.txt
+      directory queries, which would let people fetch a list of all
+      bridge identities they track. Bugfix on 0.2.1.6-alpha.
+
+
 Changes in version 0.2.1.21 - 2009-12-21
   Tor 0.2.1.21 fixes an incompatibility with the most recent OpenSSL
   library. If you use Tor on Linux / Unix and you're getting SSL

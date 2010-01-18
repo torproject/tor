@@ -2956,7 +2956,8 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
   if (!strcmp(url,"/tor/dbg-stability.txt")) {
     const char *stability;
     size_t len;
-    if (! authdir_mode_tests_reachability(options) ||
+    if (options->BridgeAuthoritativeDir ||
+        ! authdir_mode_tests_reachability(options) ||
         ! (stability = rep_hist_get_router_stability_doc(time(NULL)))) {
       write_http_status_line(conn, 404, "Not found.");
       goto done;
