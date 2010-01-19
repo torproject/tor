@@ -2176,7 +2176,7 @@ tor_threads_init(void)
 }
 #endif
 
-#if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL
+#if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
 /** Attempt to raise the current and max rlimit to infinity for our process.
  * This only needs to be done once and can probably only be done when we have
  * not already dropped privileges.
@@ -2244,7 +2244,7 @@ tor_mlockall(void)
    * http://msdn.microsoft.com/en-us/library/aa366895(VS.85).aspx
    */
 
-#if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL
+#if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
   if (tor_set_max_memlock() == 0) {
     /* Perhaps we only want to log this if we're in a verbose mode? */
     log_notice(LD_GENERAL, "RLIMIT_MEMLOCK is now set to RLIM_INFINITY.");

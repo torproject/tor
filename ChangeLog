@@ -71,6 +71,9 @@ Changes in version 0.2.2.7-alpha - 2010-01-??
       but there is non-exit bandwidth, or no guard bandwidth but there
       is non-guard bandwidth, don't crash during path selection. Bugfix
       on 0.2.0.3-alpha.
+    - Fix compilation on Solaris by removing support for the
+      DisableAllSwap config option. Solaris doesn't have an rlimit for
+      mlockall, so we cannot use it safely. Bugfix on 0.2.2.6-alpha.
 
   o Removed features:
     - Remove the HSAuthorityRecordStats option that version 0 hidden
