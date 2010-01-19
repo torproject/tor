@@ -1,4 +1,9 @@
 Changes in version 0.2.1.22 - 2010-01-19
+  Tor 0.2.1.22 fixes a critical privacy problem in bridge directory
+  authorities -- it would tell you its whole history of bridge descriptors
+  if you make the right directory request. This stable update also
+  rotates two of the seven v3 directory authority keys and locations.
+
   o Directory authority changes:
     - Rotate keys (both v3 identity and relay identity) for moria1
       and gabelmoo.
