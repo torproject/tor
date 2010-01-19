@@ -78,7 +78,6 @@ static int count_acceptable_routers(smartlist_t *routers);
 static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
-static time_t start_of_month(time_t when);
 
 /** Make a note that we're running unit tests (rather than running Tor
  * itself), so we avoid clobbering our state file. */
@@ -2555,7 +2554,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   routerinfo_t *r, *choice;
   smartlist_t *excluded;
   or_options_t *options = get_options();
-  router_crn_flags_t flags = 0;
+  router_crn_flags_t flags = CRN_NEED_GUARD;
 
   if (state && options->UseEntryGuards &&
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
@@ -2592,7 +2591,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   }
 
   if (state) {
-    flags |= CRN_NEED_GUARD;
     if (state->need_uptime)
       flags |= CRN_NEED_UPTIME;
     if (state->need_capacity)
@@ -3022,7 +3020,12 @@ add_an_entry_guard(routerinfo_t *chosen, int reset_status)
   log_info(LD_CIRC, "Chose '%s' as new entry guard.", router->nickname);
   strlcpy(entry->nickname, router->nickname, sizeof(entry->nickname));
   memcpy(entry->identity, router->cache_info.identity_digest, DIGEST_LEN);
-  entry->chosen_on_date = start_of_month(time(NULL));
+  /* Choose expiry time smudged over the past month. The goal here
+   * is to a) spread out when Tor clients rotate their guards, so they
+   * don't all select them on the same day, and b) avoid leaving a
+   * precise timestamp in the state file about when we first picked
+   * this guard. For details, see the Jan 2010 or-dev thread. */
+  entry->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
   entry->chosen_by_version = tor_strdup(VERSION);
   if (chosen) /* prepend */
     smartlist_insert(entry_guards, 0, entry);
@@ -3074,7 +3077,7 @@ static int
 remove_obsolete_entry_guards(void)
 {
   int changed = 0, i;
-  time_t this_month = start_of_month(time(NULL));
+  time_t now = time(NULL);
 
   for (i = 0; i < smartlist_len(entry_guards); ++i) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
@@ -3088,15 +3091,26 @@ remove_obsolete_entry_guards(void)
     } else if (tor_version_parse(ver, &v)) {
       msg = "does not seem to be from any recognized version of Tor";
       version_is_bad = 1;
-    } else if ((tor_version_as_new_as(ver, "0.1.0.10-alpha") &&
-                !tor_version_as_new_as(ver, "0.1.2.16-dev")) ||
-               (tor_version_as_new_as(ver, "0.2.0.0-alpha") &&
-                !tor_version_as_new_as(ver, "0.2.0.6-alpha"))) {
-      msg = "was selected without regard for guard bandwidth";
-      version_is_bad = 1;
-    } else if (entry->chosen_on_date + 3600*24*35 < this_month) {
-      /* It's been more than a month, and probably more like two since
-       * chosen_on_date is clipped to the beginning of its month. */
+    } else {
+      size_t len = strlen(ver)+5;
+      char *tor_ver = tor_malloc(len);
+      tor_snprintf(tor_ver, len, "Tor %s", ver);
+      if ((tor_version_as_new_as(tor_ver, "0.1.0.10-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.1.2.16-dev")) ||
+          (tor_version_as_new_as(tor_ver, "0.2.0.0-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.2.0.6-alpha")) ||
+          /* above are bug 440; below are bug 1217 */
+          (tor_version_as_new_as(tor_ver, "0.2.1.3-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.2.1.23")) ||
+          (tor_version_as_new_as(tor_ver, "0.2.2.0-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.2.2.7-alpha"))) {
+        msg = "was selected without regard for guard bandwidth";
+        version_is_bad = 1;
+      }
+      tor_free(tor_ver);
+    }
+    if (!version_is_bad && entry->chosen_on_date + 3600*24*60 < now) {
+      /* It's been 2 months since the date listed in our state file. */
       msg = "was selected several months ago";
       date_is_bad = 1;
     }
@@ -3594,19 +3608,6 @@ choose_random_entry(cpath_build_state_t *state)
   return r;
 }
 
-/** Helper: Return the start of the month containing <b>time</b>. */
-static time_t
-start_of_month(time_t now)
-{
-  struct tm tm;
-  tor_gmtime_r(&now, &tm);
-  tm.tm_sec = 0;
-  tm.tm_min = 0;
-  tm.tm_hour = 0;
-  tm.tm_mday = 1;
-  return tor_timegm(&tm);
-}
-
 /** Parse <b>state</b> and learn about the entry guards it describes.
  * If <b>set</b> is true, and there are no errors, replace the global
  * entry_list with what we find.
@@ -3715,7 +3716,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
      } else {
        if (state_version) {
          e->chosen_by_version = tor_strdup(state_version);
-         e->chosen_on_date = start_of_month(time(NULL));
+         e->chosen_on_date = time(NULL) - crypto_rand_int(3600*24*30);
        }
      }
    });

@@ -1,3 +1,21 @@
+Changes in version 0.2.1.23 - 2010-0?-??
+  o Major bugfixes (performance):
+    - We were selecting our guards uniformly at random, and then weighting
+      which of our guards we'd use uniformly at random. This imbalance
+      meant that Tor clients were severely limited on throughput (and
+      probably latency too) by the first hop in their circuit. Now we
+      select guards weighted by currently advertised bandwidth. We also
+      automatically discard guards picked using the old algorithm. Fixes
+      bug 1217; bugfix on 0.2.1.3-alpha. Found by Mike Perry.
+
+  o Minor features:
+    - Avoid a mad rush at the beginning of each month when each client
+      rotates half of its guards. Instead we spread the rotation out
+      throughout the month, but we still avoid leaving a precise timestamp
+      in the state file about when we first picked the guard. Improves
+      over the behavior introduced in 0.1.2.17.
+
+
 Changes in version 0.2.2.7-alpha - 2010-01-19
   o Major features (performance):
     - When choosing which cells to relay first, relays can now favor
