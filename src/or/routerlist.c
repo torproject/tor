@@ -4083,7 +4083,7 @@ update_router_descriptor_cache_downloads_v2(time_t now)
       pds_flags |= PDS_NO_EXISTING_SERVERDESC_FETCH; /* XXXX ignored*/
 
     if (!ds) {
-      log_warn(LD_BUG, "Networkstatus with no corresponding authority!");
+      log_info(LD_DIR, "Networkstatus with no corresponding authority!");
       continue;
     }
     if (! smartlist_len(dl))

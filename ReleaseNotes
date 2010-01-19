@@ -3,8 +3,24 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.1.22 - 2010-01-19
+  Tor 0.2.1.22 fixes a critical privacy problem in bridge directory
+  authorities -- it would tell you its whole history of bridge descriptors
+  if you make the right directory request. This stable update also
+  rotates two of the seven v3 directory authority keys and locations.
+
+  o Directory authority changes:
+    - Rotate keys (both v3 identity and relay identity) for moria1
+      and gabelmoo.
+
+  o Major bugfixes:
+    - Stop bridge directory authorities from answering dbg-stability.txt
+      directory queries, which would let people fetch a list of all
+      bridge identities they track. Bugfix on 0.2.1.6-alpha.
+
+
 Changes in version 0.2.1.21 - 2009-12-21
-  Tor 0.2.0.21 fixes an incompatibility with the most recent OpenSSL
+  Tor 0.2.1.21 fixes an incompatibility with the most recent OpenSSL
   library. If you use Tor on Linux / Unix and you're getting SSL
   renegotiation errors, upgrading should help. We also recommend an
   upgrade if you're an exit relay.
