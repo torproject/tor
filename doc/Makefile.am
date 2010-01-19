@@ -1,16 +1,15 @@
-asciidoc_files = tor-gencert torify
+asciidoc_files = tor-gencert tor-resolve torify
 
 html_in = $(asciidoc_files:=.html.in)
 
 man_in = $(asciidoc_files:=.1.in)
 
 EXTRA_DIST = HACKING                                         \
-             tor-resolve.1                                   \
              $(html_in) $(man_in) $(asciidoc_files:=.1.txt)  \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
              tor-win32-mingw-creation.txt
 
-nodist_man_MANS = tor.1 tor-resolve.1 $(asciidoc_files:=.1)
+nodist_man_MANS = tor.1 $(asciidoc_files:=.1)
 
 doc_DATA = $(asciidoc_files:=.html)
 
@@ -27,6 +26,7 @@ $(html_in) :
 
 torify.html.in : torify.1.txt
 tor-gencert.html.in : tor-gencert.1.txt
+tor-resolve.html.in : tor-resolve.1.txt
 
 # Generate the manpage from asciidoc, but don't do
 # machine-specific replacements yet
@@ -35,6 +35,7 @@ $(man_in) :
 
 torify.1.in : torify.1.txt
 tor-gencert.1.in : tor-gencert.1.txt
+tor-resolve.1.in : tor-resolve.1.txt
 
 # use ../config.status to swap all machine-specific magic strings
 # in the asciidoc with their replacements.
@@ -43,5 +44,7 @@ $(asciidoc_product) :
 
 torify.1 : torify.1.in
 tor-gencert.1 : tor-gencert.1.in
+tor-resolve.1 : tor-resolve.1.in
 torify.html : torify.html.in
 tor-gencert.html : tor-gencert.html.in
+tor-resolve.html : tor-resolve.html.in
