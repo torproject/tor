@@ -164,7 +164,7 @@ Other options can be specified either on the command-line (--option
     process knows the password whose one-way hash is __hashed_password__. You
     can compute the hash of a password by running "tor --hash-password
     __password__". You can provide several acceptable passwords by using more
-    than HashedControlPassword line.
+    than one HashedControlPassword line.
 
 **CookieAuthentication** **0**|**1**::
     If this option is set to 1, don't allow any connections on the control port
@@ -221,16 +221,12 @@ Other options can be specified either on the command-line (--option
     authorities, but not the directory or bridge authorities.
 
 **DisableAllSwap** **0**|**1**::
-    If set to 1, Tor will attempt to lock all current and future memory pages.
-    On supported platforms, this should effectively disable any and all
-    attempts to page out memory. Under the hood, DisableAllSwap uses mlockall()
-    on unix-like platforms. Windows is currently unsupported. We believe that
-    this feature works on modern Gnu/Linux distributions. Mac OS X appears to
-    be broken by design. On reasonable *BSD systems it should also be
-    supported but this is untested. This option requires that you start your
-    Tor as root. If you use DisableAllSwap, please consider using the User
-    option to properly reduce the privileges of your Tor.
-    (Default: 0)
+    If set to 1, Tor will attempt to lock all current and future memory pages,
+    so that memory cannot be paged out. Windows, OS X and Solaris are currently
+    not supported. We believe that this feature works on modern Gnu/Linux
+    distributions, and that it should work on *BSD systems (untested). This
+    option requires that you start your Tor as root, and you should use the
+    **User** option to properly reduce Tor's privileges. (Default: 0)
 
 **FetchDirInfoEarly** **0**|**1**::
     If set to 1, Tor will always fetch directory information like other
@@ -382,7 +378,7 @@ Other options can be specified either on the command-line (--option
     If non-zero, we will avoid directory servers that don't support tunneled
     directory connections, when possible. (Default: 1)
 
-**CircuitPriorityHalflife** **NUM1**::
+**CircuitPriorityHalflife** __NUM1__::
     If this value is set, we override the default algorithm for choosing which
     circuit's cell to deliver or relay next. When the value is 0, we
     round-robin between the active circuits on a connection, delivering one
@@ -392,7 +388,7 @@ Other options can be specified either on the command-line (--option
     CircuitPriorityHalflife value (in seconds). If this option is not set at
     all, we use the behavior recommended in the current consensus
     networkstatus. This is an advanced option; you generally shouldn't have
-    mess with it. (Default: not set.)
+    to mess with it. (Default: not set.)
 
 CLIENT OPTIONS
 --------------
@@ -1340,11 +1336,6 @@ __DataDirectory__**/bw_accounting**::
     and ends; how much has been read and written so far this period). This file
     is obsolete, and the data is now stored in the \'state' file as well. Only
     used when bandwidth accounting is enabled.
-
-__DataDirectory__**/hsusage**::
-    Used to track hidden service usage in terms of fetch and publish requests
-    to this hidden service authoritative directory. Only used when recording of
-    statistics is enabled.
 
 __DataDirectory__**/control_auth_cookie**::
     Used for cookie authentication with the controller. Location can be
