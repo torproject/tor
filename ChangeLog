@@ -1,13 +1,12 @@
-Changes in version 0.2.2.7-alpha - 2010-01-??
+Changes in version 0.2.2.7-alpha - 2010-01-19
   o Major features (performance):
-    - When choosing which cells to relay first, we can now favor circuits
-      that have been quiet recently, so as to get lower latency for
-      low-volume circuits.  By default, relays enable or disable this
-      feature based on a setting in the consensus.  Preliminary testing
-      suggests that this should make the network feel faster as more relays
-      use it.  You can override this default by using the new
-      "CircuitPriorityHalflife" config option.  Design and code by Ian
-      Goldberg, Can Tang, and Chris Alexander.
+    - When choosing which cells to relay first, relays can now favor
+      circuits that have been quiet recently, to provide lower latency
+      for low-volume circuits. By default, relays enable or disable this
+      feature based on a setting in the consensus. You can override
+      this default by using the new "CircuitPriorityHalflife" config
+      option. Design and code by Ian Goldberg, Can Tang, and Chris
+      Alexander.
     - Add separate per-conn write limiting to go with the per-conn read
       limiting. We added a global write limit in Tor 0.1.2.5-alpha,
       but never per-conn write limits.
@@ -16,7 +15,7 @@ Changes in version 0.2.2.7-alpha - 2010-01-??
       controlled in the consensus so we can turn it on and off for
       experiments. It's starting out off. Based on proposal 163.
 
-  o Major features (relay selection):
+  o Major features (relay selection options):
     - Switch to a StrictNodes config option, rather than the previous
       "StrictEntryNodes" / "StrictExitNodes" separation that was missing a
       "StrictExcludeNodes" option.
@@ -50,8 +49,11 @@ Changes in version 0.2.2.7-alpha - 2010-01-??
       generated while acting as a relay.
 
   o Minor bugfixes:
-    - Fix compilation on OSX 10.3, which has a stub mlockall() but
+    - Fix compilation on OS X 10.3, which has a stub mlockall() but
       hides it. Bugfix on 0.2.2.6-alpha.
+    - Fix compilation on Solaris by removing support for the
+      DisableAllSwap config option. Solaris doesn't have an rlimit for
+      mlockall, so we cannot use it safely. Bugfix on 0.2.2.6-alpha.
     - After we free an internal connection structure, overwrite it
       with a different memory value than we use for overwriting a freed
       internal circuit structure. Should help with debugging. Suggested
@@ -71,9 +73,6 @@ Changes in version 0.2.2.7-alpha - 2010-01-??
       but there is non-exit bandwidth, or no guard bandwidth but there
       is non-guard bandwidth, don't crash during path selection. Bugfix
       on 0.2.0.3-alpha.
-    - Fix compilation on Solaris by removing support for the
-      DisableAllSwap config option. Solaris doesn't have an rlimit for
-      mlockall, so we cannot use it safely. Bugfix on 0.2.2.6-alpha.
 
   o Removed features:
     - Remove the HSAuthorityRecordStats option that version 0 hidden
@@ -97,7 +96,40 @@ Changes in version 0.2.1.22 - 2010-01-19
       bridge identities they track. Bugfix on 0.2.1.6-alpha.
 
 
+Changes in version 0.2.1.21 - 2009-12-21
+  Tor 0.2.1.21 fixes an incompatibility with the most recent OpenSSL
+  library. If you use Tor on Linux / Unix and you're getting SSL
+  renegotiation errors, upgrading should help. We also recommend an
+  upgrade if you're an exit relay.
+
+  o Major bugfixes:
+    - Work around a security feature in OpenSSL 0.9.8l that prevents our
+      handshake from working unless we explicitly tell OpenSSL that we
+      are using SSL renegotiation safely. We are, of course, but OpenSSL
+      0.9.8l won't work unless we say we are.
+    - Avoid crashing if the client is trying to upload many bytes and the
+      circuit gets torn down at the same time, or if the flip side
+      happens on the exit relay. Bugfix on 0.2.0.1-alpha; fixes bug 1150.
+
+  o Minor bugfixes:
+    - Do not refuse to learn about authority certs and v2 networkstatus
+      documents that are older than the latest consensus. This bug might
+      have degraded client bootstrapping. Bugfix on 0.2.0.10-alpha.
+      Spotted and fixed by xmux.
+    - Fix a couple of very-hard-to-trigger memory leaks, and one hard-to-
+      trigger platform-specific option misparsing case found by Coverity
+      Scan.
+    - Fix a compilation warning on Fedora 12 by removing an impossible-to-
+      trigger assert. Fixes bug 1173.
+
+
 Changes in version 0.2.2.6-alpha - 2009-11-19
+  Tor 0.2.2.6-alpha lays the groundwork for many upcoming features:
+  support for the new lower-footprint "microdescriptor" directory design,
+  future-proofing our consensus format against new hash functions or
+  other changes, and an Android port. It also makes Tor compatible with
+  the upcoming OpenSSL 0.9.8l release, and fixes a variety of bugs.
+
   o Major features:
     - Directory authorities can now create, vote on, and serve multiple
       parallel formats of directory data as part of their voting process.
@@ -152,6 +184,81 @@ Changes in version 0.2.2.6-alpha - 2009-11-19
       on 0.2.0.3-alpha; fixes bug 1113.
     - Fix a memory leak on directory authorities during voting that was
       introduced in 0.2.2.1-alpha. Found via valgrind.
+
+
+Changes in version 0.2.1.20 - 2009-10-15
+  Tor 0.2.1.20 fixes a crash bug when you're accessing many hidden
+  services at once, prepares for more performance improvements, and
+  fixes a bunch of smaller bugs.
+
+  The Windows and OS X bundles also include a more recent Vidalia,
+  and switch from Privoxy to Polipo.
+
+  The OS X installers are now drag and drop. It's best to un-install
+  Tor/Vidalia and then install this new bundle, rather than upgrade. If
+  you want to upgrade, you'll need to update the paths for Tor and Polipo
+  in the Vidalia Settings window.
+
+  o Major bugfixes:
+    - Send circuit or stream sendme cells when our window has decreased
+      by 100 cells, not when it has decreased by 101 cells. Bug uncovered
+      by Karsten when testing the "reduce circuit window" performance
+      patch. Bugfix on the 54th commit on Tor -- from July 2002,
+      before the release of Tor 0.0.0. This is the new winner of the
+      oldest-bug prize.
+    - Fix a remotely triggerable memory leak when a consensus document
+      contains more than one signature from the same voter. Bugfix on
+      0.2.0.3-alpha.
+    - Avoid segfault in rare cases when finishing an introduction circuit
+      as a client and finding out that we don't have an introduction key
+      for it. Fixes bug 1073. Reported by Aaron Swartz.
+
+  o Major features:
+    - Tor now reads the "circwindow" parameter out of the consensus,
+      and uses that value for its circuit package window rather than the
+      default of 1000 cells. Begins the implementation of proposal 168.
+
+  o New directory authorities:
+    - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
+      authority.
+    - Move moria1 and tonga to alternate IP addresses.
+
+  o Minor bugfixes:
+    - Fix a signed/unsigned compile warning in 0.2.1.19.
+    - Fix possible segmentation fault on directory authorities. Bugfix on
+      0.2.1.14-rc.
+    - Fix an extremely rare infinite recursion bug that could occur if
+      we tried to log a message after shutting down the log subsystem.
+      Found by Matt Edman. Bugfix on 0.2.0.16-alpha.
+    - Fix an obscure bug where hidden services on 64-bit big-endian
+      systems might mis-read the timestamp in v3 introduce cells, and
+      refuse to connect back to the client. Discovered by "rotor".
+      Bugfix on 0.2.1.6-alpha.
+    - We were triggering a CLOCK_SKEW controller status event whenever
+      we connect via the v2 connection protocol to any relay that has
+      a wrong clock. Instead, we should only inform the controller when
+      it's a trusted authority that claims our clock is wrong. Bugfix
+      on 0.2.0.20-rc; starts to fix bug 1074. Reported by SwissTorExit.
+    - We were telling the controller about CHECKING_REACHABILITY and
+      REACHABILITY_FAILED status events whenever we launch a testing
+      circuit or notice that one has failed. Instead, only tell the
+      controller when we want to inform the user of overall success or
+      overall failure. Bugfix on 0.1.2.6-alpha. Fixes bug 1075. Reported
+      by SwissTorExit.
+    - Don't warn when we're using a circuit that ends with a node
+      excluded in ExcludeExitNodes, but the circuit is not used to access
+      the outside world. This should help fix bug 1090. Bugfix on
+      0.2.1.6-alpha.
+    - Work around a small memory leak in some versions of OpenSSL that
+      stopped the memory used by the hostname TLS extension from being
+      freed.
+
+  o Minor features:
+    - Add a "getinfo status/accepted-server-descriptor" controller
+      command, which is the recommended way for controllers to learn
+      whether our server descriptor has been successfully received by at
+      least on directory authority. Un-recommend good-server-descriptor
+      getinfo and status events until we have a better design for them.
 
 
 Changes in version 0.2.2.5-alpha - 2009-10-11
@@ -408,108 +515,6 @@ Changes in version 0.2.2.1-alpha - 2009-08-26
     - OS X Vidalia Bundle: The multi-package installer is now replaced
       by a simple drag and drop to the /Applications folder. This change
       occurred with the upgrade to Vidalia 0.2.3.
-
-
-Changes in version 0.2.1.21 - 2009-12-21
-  Tor 0.2.1.21 fixes an incompatibility with the most recent OpenSSL
-  library. If you use Tor on Linux / Unix and you're getting SSL
-  renegotiation errors, upgrading should help. We also recommend an
-  upgrade if you're an exit relay.
-
-  o Major bugfixes:
-    - Work around a security feature in OpenSSL 0.9.8l that prevents our
-      handshake from working unless we explicitly tell OpenSSL that we
-      are using SSL renegotiation safely. We are, of course, but OpenSSL
-      0.9.8l won't work unless we say we are.
-    - Avoid crashing if the client is trying to upload many bytes and the
-      circuit gets torn down at the same time, or if the flip side
-      happens on the exit relay. Bugfix on 0.2.0.1-alpha; fixes bug 1150.
-
-  o Minor bugfixes:
-    - Do not refuse to learn about authority certs and v2 networkstatus
-      documents that are older than the latest consensus. This bug might
-      have degraded client bootstrapping. Bugfix on 0.2.0.10-alpha.
-      Spotted and fixed by xmux.
-    - Fix a couple of very-hard-to-trigger memory leaks, and one hard-to-
-      trigger platform-specific option misparsing case found by Coverity
-      Scan.
-    - Fix a compilation warning on Fedora 12 by removing an impossible-to-
-      trigger assert. Fixes bug 1173.
-
-
-Changes in version 0.2.1.20 - 2009-10-15
-  Tor 0.2.1.20 fixes a crash bug when you're accessing many hidden
-  services at once, prepares for more performance improvements, and
-  fixes a bunch of smaller bugs.
-
-  The Windows and OS X bundles also include a more recent Vidalia,
-  and switch from Privoxy to Polipo.
-
-  The OS X installers are now drag and drop. It's best to un-install
-  Tor/Vidalia and then install this new bundle, rather than upgrade. If
-  you want to upgrade, you'll need to update the paths for Tor and Polipo
-  in the Vidalia Settings window.
-
-  o Major bugfixes:
-    - Send circuit or stream sendme cells when our window has decreased
-      by 100 cells, not when it has decreased by 101 cells. Bug uncovered
-      by Karsten when testing the "reduce circuit window" performance
-      patch. Bugfix on the 54th commit on Tor -- from July 2002,
-      before the release of Tor 0.0.0. This is the new winner of the
-      oldest-bug prize.
-    - Fix a remotely triggerable memory leak when a consensus document
-      contains more than one signature from the same voter. Bugfix on
-      0.2.0.3-alpha.
-    - Avoid segfault in rare cases when finishing an introduction circuit
-      as a client and finding out that we don't have an introduction key
-      for it. Fixes bug 1073. Reported by Aaron Swartz.
-
-  o Major features:
-    - Tor now reads the "circwindow" parameter out of the consensus,
-      and uses that value for its circuit package window rather than the
-      default of 1000 cells. Begins the implementation of proposal 168.
-
-  o New directory authorities:
-    - Set up urras (run by Jacob Appelbaum) as the seventh v3 directory
-      authority.
-    - Move moria1 and tonga to alternate IP addresses.
-
-  o Minor bugfixes:
-    - Fix a signed/unsigned compile warning in 0.2.1.19.
-    - Fix possible segmentation fault on directory authorities. Bugfix on
-      0.2.1.14-rc.
-    - Fix an extremely rare infinite recursion bug that could occur if
-      we tried to log a message after shutting down the log subsystem.
-      Found by Matt Edman. Bugfix on 0.2.0.16-alpha.
-    - Fix an obscure bug where hidden services on 64-bit big-endian
-      systems might mis-read the timestamp in v3 introduce cells, and
-      refuse to connect back to the client. Discovered by "rotor".
-      Bugfix on 0.2.1.6-alpha.
-    - We were triggering a CLOCK_SKEW controller status event whenever
-      we connect via the v2 connection protocol to any relay that has
-      a wrong clock. Instead, we should only inform the controller when
-      it's a trusted authority that claims our clock is wrong. Bugfix
-      on 0.2.0.20-rc; starts to fix bug 1074. Reported by SwissTorExit.
-    - We were telling the controller about CHECKING_REACHABILITY and
-      REACHABILITY_FAILED status events whenever we launch a testing
-      circuit or notice that one has failed. Instead, only tell the
-      controller when we want to inform the user of overall success or
-      overall failure. Bugfix on 0.1.2.6-alpha. Fixes bug 1075. Reported
-      by SwissTorExit.
-    - Don't warn when we're using a circuit that ends with a node
-      excluded in ExcludeExitNodes, but the circuit is not used to access
-      the outside world. This should help fix bug 1090. Bugfix on
-      0.2.1.6-alpha.
-    - Work around a small memory leak in some versions of OpenSSL that
-      stopped the memory used by the hostname TLS extension from being
-      freed.
-
-  o Minor features:
-    - Add a "getinfo status/accepted-server-descriptor" controller
-      command, which is the recommended way for controllers to learn
-      whether our server descriptor has been successfully received by at
-      least on directory authority. Un-recommend good-server-descriptor
-      getinfo and status events until we have a better design for them.
 
 
 Changes in version 0.2.1.19 - 2009-07-28
