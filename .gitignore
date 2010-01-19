@@ -97,6 +97,10 @@
 /doc/tor-gencert.1.in
 /doc/tor-gencert.html
 /doc/tor-gencert.html.in
+/doc/torify.1
+/doc/torify.1.in
+/doc/torify.html
+/doc/torify.html.in
 
 # /doc/design-paper/
 /doc/design-paper/Makefile
