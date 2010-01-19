@@ -1,4 +1,8 @@
-Changes in version 0.2.1.22 - 2010-??-??
+Changes in version 0.2.1.22 - 2010-01-19
+  o Directory authority changes:
+    - Rotate keys (both v3 identity and relay identity) for moria1
+      and gabelmoo.
+
   o Major bugfixes:
     - Stop bridge directory authorities from answering dbg-stability.txt
       directory queries, which would let people fetch a list of all
