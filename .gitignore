@@ -93,6 +93,10 @@
 /doc/Makefile.in
 /doc/tor.1
 /doc/doxygen
+/doc/tor.1
+/doc/tor.1.in
+/doc/tor.html
+/doc/tor.html.in
 /doc/tor-gencert.1
 /doc/tor-gencert.1.in
 /doc/tor-gencert.html

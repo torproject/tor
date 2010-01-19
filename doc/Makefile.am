@@ -1,4 +1,4 @@
-asciidoc_files = tor-gencert tor-resolve torify
+asciidoc_files = tor tor-gencert tor-resolve torify
 
 html_in = $(asciidoc_files:=.html.in)
 
@@ -9,7 +9,7 @@ EXTRA_DIST = HACKING                                         \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
              tor-win32-mingw-creation.txt
 
-nodist_man_MANS = tor.1 $(asciidoc_files:=.1)
+nodist_man_MANS = $(asciidoc_files:=.1)
 
 doc_DATA = $(asciidoc_files:=.html)
 
@@ -24,6 +24,7 @@ DIST_SUBDIRS = design-paper spec
 $(html_in) :
 	$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ @SED@ $@
 
+tor.html.in : tor.1.txt
 torify.html.in : torify.1.txt
 tor-gencert.html.in : tor-gencert.1.txt
 tor-resolve.html.in : tor-resolve.1.txt
@@ -33,6 +34,7 @@ tor-resolve.html.in : tor-resolve.1.txt
 $(man_in) :
 	$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ @SED@ $@
 
+tor.1.in : tor.1.txt
 torify.1.in : torify.1.txt
 tor-gencert.1.in : tor-gencert.1.txt
 tor-resolve.1.in : tor-resolve.1.txt
@@ -42,9 +44,11 @@ tor-resolve.1.in : tor-resolve.1.txt
 $(asciidoc_product) :
 	../config.status --file=$@;
 
+tor.1 : tor.1.in
 torify.1 : torify.1.in
 tor-gencert.1 : tor-gencert.1.in
 tor-resolve.1 : tor-resolve.1.in
+tor.html : tor.html.in
 torify.html : torify.html.in
 tor-gencert.html : tor-gencert.html.in
 tor-resolve.html : tor-resolve.html.in
