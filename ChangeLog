@@ -38,6 +38,9 @@ Changes in version 0.2.2.7-alpha - 2010-01-19
       the network changes.
 
   o Minor features:
+    - Log a notice when we get a new control connection. Now it's easier
+      for security-conscious users to recognize when a local application
+      is knocking on their controller door. Suggested by bug 1196.
     - New config option "CircuitStreamTimeout" to override our internal
       timeout schedule for how many seconds until we detach a stream from
       a circuit and try a new circuit. If your network is particularly
@@ -47,32 +50,47 @@ Changes in version 0.2.2.7-alpha - 2010-01-19
       so the controller can write the file to disk itself.
     - New options for SafeLogging to allow scrubbing only log messages
       generated while acting as a relay.
+    - Ship the bridges spec file in the tarball too.
 
-  o Minor bugfixes:
+  o Minor bugfixes (compiling):
     - Fix compilation on OS X 10.3, which has a stub mlockall() but
       hides it. Bugfix on 0.2.2.6-alpha.
     - Fix compilation on Solaris by removing support for the
       DisableAllSwap config option. Solaris doesn't have an rlimit for
-      mlockall, so we cannot use it safely. Bugfix on 0.2.2.6-alpha.
-    - After we free an internal connection structure, overwrite it
-      with a different memory value than we use for overwriting a freed
-      internal circuit structure. Should help with debugging. Suggested
-      by bug 1055.
-    - Fix an instance where a Tor directory mirror might accidentally
-      log the IP address of a misbehaving Tor client. Bugfix on
-      0.1.0.1-rc.
-    - Update our OpenSSL 0.9.8l fix so that it works with OpenSSL 0.9.8m
-      too.
+      mlockall, so we cannot use it safely. Fixes bug 1198; bugfix on
+      0.2.2.6-alpha.
+
+  o Minor bugfixes (crashes):
     - Do not segfault when writing buffer stats when we haven't observed
       a single circuit to report about. Found by Fabian Lanze. Bugfix on
       0.2.2.1-alpha.
-    - Fix statistics on client numbers by country as seen by bridges that
-      were broken in 0.2.2.1-alpha. Also switch to reporting full 24-hour
-      intervals instead of variable 12-to-48-hour intervals.
     - If we're in the pathological case where there's no exit bandwidth
       but there is non-exit bandwidth, or no guard bandwidth but there
       is non-guard bandwidth, don't crash during path selection. Bugfix
       on 0.2.0.3-alpha.
+    - Fix an impossible-to-actually-trigger buffer overflow in relay
+      descriptor generation. Bugfix on 0.1.0.15.
+
+  o Minor bugfixes (privacy):
+    - Fix an instance where a Tor directory mirror might accidentally
+      log the IP address of a misbehaving Tor client. Bugfix on
+      0.1.0.1-rc.
+    - Don't list Windows capabilities in relay descriptors. We never made
+      use of them, and maybe it's a bad idea to publish them. Bugfix
+      on 0.1.1.8-alpha.
+
+  o Minor bugfixes (other):
+    - Resolve an edge case in path weighting that could make us misweight
+      our relay selection. Fixes bug 1203; bugfix on 0.0.8rc1.
+    - Fix statistics on client numbers by country as seen by bridges that
+      were broken in 0.2.2.1-alpha. Also switch to reporting full 24-hour
+      intervals instead of variable 12-to-48-hour intervals.
+    - After we free an internal connection structure, overwrite it
+      with a different memory value than we use for overwriting a freed
+      internal circuit structure. Should help with debugging. Suggested
+      by bug 1055.
+    - Update our OpenSSL 0.9.8l fix so that it works with OpenSSL 0.9.8m
+      too.
 
   o Removed features:
     - Remove the HSAuthorityRecordStats option that version 0 hidden
