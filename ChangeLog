@@ -1,3 +1,14 @@
+Changes in version 0.2.1.23 - 2010-0?-??
+  o Major bugfixes (performance):
+    - We were selecting our guards uniformly at random, and then weighting
+      which of our guards we'd use uniformly at random. This imbalance
+      meant that Tor clients were severely limited on throughput (and
+      probably latency too) by the first hop in their circuit. Now we
+      select guards weighted by currently advertised bandwidth. We also
+      automatically discard guards picked using the old algorithm. Fixes
+      bug 1217; bugfix on 0.2.1.3-alpha. Found by Mike Perry.
+
+
 Changes in version 0.2.1.22 - 2010-01-19
   Tor 0.2.1.22 fixes a critical privacy problem in bridge directory
   authorities -- it would tell you its whole history of bridge descriptors

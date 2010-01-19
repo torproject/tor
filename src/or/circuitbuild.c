@@ -1697,7 +1697,7 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   routerinfo_t *r, *choice;
   smartlist_t *excluded;
   or_options_t *options = get_options();
-  router_crn_flags_t flags = 0;
+  router_crn_flags_t flags = CRN_NEED_GUARD;
 
   if (state && options->UseEntryGuards &&
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
@@ -1734,7 +1734,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
   }
 
   if (state) {
-    flags |= CRN_NEED_GUARD;
     if (state->need_uptime)
       flags |= CRN_NEED_UPTIME;
     if (state->need_capacity)
@@ -2203,13 +2202,25 @@ remove_obsolete_entry_guards(void)
     } else if (tor_version_parse(ver, &v)) {
       msg = "does not seem to be from any recognized version of Tor";
       version_is_bad = 1;
-    } else if ((tor_version_as_new_as(ver, "0.1.0.10-alpha") &&
-                !tor_version_as_new_as(ver, "0.1.2.16-dev")) ||
-               (tor_version_as_new_as(ver, "0.2.0.0-alpha") &&
-                !tor_version_as_new_as(ver, "0.2.0.6-alpha"))) {
-      msg = "was selected without regard for guard bandwidth";
-      version_is_bad = 1;
-    } else if (entry->chosen_on_date + 3600*24*35 < this_month) {
+    } else {
+      size_t len = strlen(ver)+5;
+      char *tor_ver = tor_malloc(len);
+      tor_snprintf(tor_ver, len, "Tor %s", ver);
+      if ((tor_version_as_new_as(tor_ver, "0.1.0.10-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.1.2.16-dev")) ||
+          (tor_version_as_new_as(tor_ver, "0.2.0.0-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.2.0.6-alpha")) ||
+          /* above are bug 440; below are bug 1217 */
+          (tor_version_as_new_as(tor_ver, "0.2.1.3-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.2.1.23")) ||
+          (tor_version_as_new_as(tor_ver, "0.2.2.0-alpha") &&
+           !tor_version_as_new_as(tor_ver, "0.2.2.7-alpha"))) {
+        msg = "was selected without regard for guard bandwidth";
+        version_is_bad = 1;
+      }
+      tor_free(tor_ver);
+    }
+    if (!version_is_bad && entry->chosen_on_date + 3600*24*35 < this_month) {
       /* It's been more than a month, and probably more like two since
        * chosen_on_date is clipped to the beginning of its month. */
       msg = "was selected several months ago";
