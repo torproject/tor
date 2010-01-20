@@ -2239,6 +2239,21 @@ evdns_resume(void)
 }
 
 static int
+sockaddr_is_loopback(const struct sockaddr *addr)
+{
+	static const char LOOPBACK_S6[16] =
+	    "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\1";
+	if (addr->sa_family == AF_INET) {
+		struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+		return (ntohl(sin->sin_addr.s_addr) & 0xff000000) == 0x7f000000;
+	} else if (addr->sa_family == AF_INET6) {
+		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
+		return !memcmp(sin6->sin6_addr.s6_addr, LOOPBACK_S6, 16);
+	}
+	return 0;
+}
+
+static int
 _evdns_nameserver_add_impl(const struct sockaddr *address,
 						   socklen_t addrlen) {
 	/* first check to see if we already have this nameserver */
@@ -2279,7 +2294,8 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 	fcntl(ns->socket, F_SETFL, O_NONBLOCK);
 #endif
 
-	if (global_bind_addr_is_set) {
+	if (global_bind_addr_is_set &&
+	    !sockaddr_is_loopback((struct sockaddr*)&global_bind_address)) {
 		if (bind(ns->socket, (struct sockaddr *)&global_bind_address,
 				 global_bind_addrlen) < 0) {
 			log(EVDNS_LOG_DEBUG, "Couldn't bind to outgoing address.");

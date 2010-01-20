@@ -1,3 +1,11 @@
+Changes in version 0.2.2.8-alpha - 2010-??-??
+  o Minor bugfixes:
+    - Ignore OutboundBindAddress when connecting to localhost.
+      Connections to localhost need to come _from_ localhost, or else
+      local servers (like DNS and outgoing HTTP/SOCKS proxies) will often
+      refuse to listen.
+
+
 Changes in version 0.2.1.23 - 2010-0?-??
   o Major bugfixes (performance):
     - We were selecting our guards uniformly at random, and then weighting

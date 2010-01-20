@@ -1236,7 +1236,7 @@ connection_connect(connection_t *conn, const char *address,
     return -1;
   }
 
-  if (options->OutboundBindAddress) {
+  if (options->OutboundBindAddress && !tor_addr_is_loopback(addr)) {
     struct sockaddr_in ext_addr;
 
     memset(&ext_addr, 0, sizeof(ext_addr));
