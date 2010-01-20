@@ -25,6 +25,10 @@ Changes in version 0.2.1.23 - 2010-0?-??
 
 
 Changes in version 0.2.2.7-alpha - 2010-01-19
+  o Directory authority changes:
+    - Rotate keys (both v3 identity and relay identity) for moria1
+      and gabelmoo.
+
   o Major features (performance):
     - We were selecting our guards uniformly at random, and then weighting
       which of our guards we'd use uniformly at random. This imbalance
@@ -69,6 +73,11 @@ Changes in version 0.2.2.7-alpha - 2010-01-19
     - Now we refresh your entry guards from EntryNodes at each consensus
       fetch -- rather than just at startup and then they slowly rot as
       the network changes.
+
+  o Major bugfixes:
+    - Stop bridge directory authorities from answering dbg-stability.txt
+      directory queries, which would let people fetch a list of all
+      bridge identities they track. Bugfix on 0.2.1.6-alpha.
 
   o Minor features:
     - Log a notice when we get a new control connection. Now it's easier
