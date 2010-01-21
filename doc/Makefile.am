@@ -1,3 +1,18 @@
+
+# We use a two-step process to generate documentation from asciidoc files.
+#
+# First, we use asciidoc/a2x to process the asciidoc files into .1.in and
+# .html.in files (see the asciidoc-helper.sh script). These are the same as
+# the regular .1 and .html files, except that they still have some autoconf
+# variables set in them.
+#
+# Second, we use config.status to turn .1.in files into .1 files and
+# .html.in files into .html files.
+#
+# We do the steps in this order so that we can ship the .*.in files as
+# part of the source distribution, so that people without asciidoc can
+# just use the .1 and .html files.
+
 asciidoc_files = tor tor-gencert tor-resolve torify
 
 html_in = $(asciidoc_files:=.html.in)
