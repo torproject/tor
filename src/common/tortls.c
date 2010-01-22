@@ -180,6 +180,8 @@ tls_log_errors(tor_tls_t *tls, int severity, const char *doing)
     lib = (const char*)ERR_lib_error_string(err);
     func = (const char*)ERR_func_error_string(err);
     if (!msg) msg = "(null)";
+    if (!lib) lib = "(null)";
+    if (!func) func = "(null)";
     if (doing) {
       log(severity, LD_NET, "TLS error while %s%s%s: %s (in %s:%s)",
           doing, addr?" with ":"", addr?addr:"",
