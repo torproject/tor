@@ -1680,6 +1680,7 @@ networkstatus_set_current_consensus(const char *consensus,
     dirvote_recalculate_timing(get_options(), now);
     routerstatus_list_update_named_server_map();
     cell_ewma_set_scale_factor(get_options(), current_consensus);
+    circuit_build_times_new_consensus_params(&circ_times, current_consensus);
   }
 
   if (!from_cache) {

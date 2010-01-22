@@ -3480,13 +3480,13 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
                         buildtimeout_set_event_t type)
 {
   const char *type_string = NULL;
-  double qnt = BUILDTIMEOUT_QUANTILE_CUTOFF;
+  double qnt = circuit_build_times_quantile_cutoff();
 
   if (!control_event_is_interesting(EVENT_BUILDTIMEOUT_SET))
     return 0;
 
   switch (type) {
-    case BUILDTIMEOUT_SET_EVENT_COMPUTED: 
+    case BUILDTIMEOUT_SET_EVENT_COMPUTED:
       type_string = "COMPUTED";
       break;
     case BUILDTIMEOUT_SET_EVENT_RESET:
@@ -3513,7 +3513,7 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
                      "650 BUILDTIMEOUT_SET %s TOTAL_TIMES=%lu "
                      "TIMEOUT_MS=%lu XM=%lu ALPHA=%lf CUTOFF_QUANTILE=%lf\r\n",
                      type_string, (unsigned long)cbt->total_build_times,
-                     (unsigned long)cbt->timeout_ms, 
+                     (unsigned long)cbt->timeout_ms,
                      (unsigned long)cbt->Xm, cbt->alpha, qnt);
 
   return 0;

@@ -479,11 +479,12 @@ test_circuit_timeout(void)
   circuitbuild_running_unit_tests();
 #define timeout0 (build_time_t)(30*1000.0)
   initial.Xm = 750;
-  circuit_build_times_initial_alpha(&initial, BUILDTIMEOUT_QUANTILE_CUTOFF,
+  circuit_build_times_initial_alpha(&initial,
+                                    CBT_DEFAULT_QUANTILE_CUTOFF/100.0,
                                     timeout0);
   do {
     int n = 0;
-    for (i=0; i < MIN_CIRCUITS_TO_OBSERVE; i++) {
+    for (i=0; i < CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE; i++) {
       if (circuit_build_times_add_time(&estimate,
               circuit_build_times_generate_sample(&initial, 0, 1)) == 0) {
         n++;
@@ -491,23 +492,23 @@ test_circuit_timeout(void)
     }
     circuit_build_times_update_alpha(&estimate);
     timeout1 = circuit_build_times_calculate_timeout(&estimate,
-                                  BUILDTIMEOUT_QUANTILE_CUTOFF);
+                                  CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
     circuit_build_times_set_timeout(&estimate);
     log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout1, estimate.Xm);
     /* XXX: 5% distribution error may not be the right metric */
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
                 circuit_build_times_cdf(&initial, timeout1)) > 0.05
                 /* 5% error */
-           && estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+           && estimate.total_build_times < CBT_NCIRCUITS_TO_OBSERVE);
 
-  test_assert(estimate.total_build_times < NCIRCUITS_TO_OBSERVE);
+  test_assert(estimate.total_build_times < CBT_NCIRCUITS_TO_OBSERVE);
 
   circuit_build_times_update_state(&estimate, &state);
   test_assert(circuit_build_times_parse_state(&final, &state, &msg) == 0);
 
   circuit_build_times_update_alpha(&final);
   timeout2 = circuit_build_times_calculate_timeout(&final,
-                                 BUILDTIMEOUT_QUANTILE_CUTOFF);
+                                 CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
 
   circuit_build_times_set_timeout(&final);
   log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout2, final.Xm);
@@ -519,19 +520,19 @@ test_circuit_timeout(void)
     int build_times_idx = 0;
     int total_build_times = 0;
 
-    final.timeout_ms = BUILD_TIMEOUT_INITIAL_VALUE;
-    estimate.timeout_ms = BUILD_TIMEOUT_INITIAL_VALUE;
+    final.timeout_ms = CBT_DEFAULT_TIMEOUT_INITIAL_VALUE;
+    estimate.timeout_ms = CBT_DEFAULT_TIMEOUT_INITIAL_VALUE;
 
-    for (i = 0; i < RECENT_CIRCUITS*2; i++) {
+    for (i = 0; i < CBT_DEFAULT_RECENT_CIRCUITS*2; i++) {
       circuit_build_times_network_circ_success(&estimate);
       circuit_build_times_add_time(&estimate,
             circuit_build_times_generate_sample(&estimate, 0,
-                BUILDTIMEOUT_QUANTILE_CUTOFF));
+                CBT_DEFAULT_QUANTILE_CUTOFF/100.0));
       estimate.have_computed_timeout = 1;
       circuit_build_times_network_circ_success(&estimate);
       circuit_build_times_add_time(&final,
             circuit_build_times_generate_sample(&final, 0,
-                BUILDTIMEOUT_QUANTILE_CUTOFF));
+                CBT_DEFAULT_QUANTILE_CUTOFF/100.0));
       final.have_computed_timeout = 1;
     }
 
@@ -544,7 +545,7 @@ test_circuit_timeout(void)
 
     build_times_idx = estimate.build_times_idx;
     total_build_times = estimate.total_build_times;
-    for (i = 0; i < NETWORK_NONLIVE_TIMEOUT_COUNT; i++) {
+    for (i = 0; i < CBT_NETWORK_NONLIVE_TIMEOUT_COUNT; i++) {
       test_assert(circuit_build_times_network_check_live(&estimate));
       test_assert(circuit_build_times_network_check_live(&final));
 
@@ -559,12 +560,12 @@ test_circuit_timeout(void)
     test_assert(!circuit_build_times_network_check_live(&estimate));
     test_assert(!circuit_build_times_network_check_live(&final));
 
-    for ( ; i < NETWORK_NONLIVE_DISCARD_COUNT; i++) {
+    for ( ; i < CBT_NETWORK_NONLIVE_DISCARD_COUNT; i++) {
       if (circuit_build_times_add_timeout(&estimate, 0,
                 (time_t)(approx_time()-estimate.timeout_ms/1000.0-1)))
         estimate.have_computed_timeout = 1;
 
-      if (i < NETWORK_NONLIVE_DISCARD_COUNT-1) {
+      if (i < CBT_NETWORK_NONLIVE_DISCARD_COUNT-1) {
         if (circuit_build_times_add_timeout(&final, 0,
                 (time_t)(approx_time()-final.timeout_ms/1000.0-1)))
           final.have_computed_timeout = 1;
@@ -587,11 +588,11 @@ test_circuit_timeout(void)
     circuit_build_times_network_is_live(&estimate);
     circuit_build_times_network_is_live(&final);
 
-    for (i = 0; i < MAX_RECENT_TIMEOUT_COUNT; i++) {
+    for (i = 0; i < CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT; i++) {
       if (circuit_build_times_add_timeout(&estimate, 1, approx_time()-1))
         estimate.have_computed_timeout = 1;
 
-      if (i < MAX_RECENT_TIMEOUT_COUNT-1) {
+      if (i < CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT-1) {
         if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
           final.have_computed_timeout = 1;
       }
@@ -599,7 +600,7 @@ test_circuit_timeout(void)
 
     test_assert(estimate.liveness.after_firsthop_idx == 0);
     test_assert(final.liveness.after_firsthop_idx ==
-                MAX_RECENT_TIMEOUT_COUNT-1);
+                CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT-1);
 
     test_assert(circuit_build_times_network_check_live(&estimate));
     test_assert(circuit_build_times_network_check_live(&final));
