@@ -59,7 +59,7 @@ HT_GENERATE(microdesc_map, microdesc_t, node,
 static size_t
 dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
 {
-  size_t r = 0;
+  size_t r = 0, written;
   /* XXXX drops unkown annotations. */
   if (md->last_listed) {
     char buf[ISO_TIME_LEN+1];
@@ -74,7 +74,13 @@ dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
   }
 
   md->off = (off_t) ftell(f);
-  fwrite(md->body, 1, md->bodylen, f);
+  written = fwrite(md->body, 1, md->bodylen, f);
+  if (written != md->bodylen) {
+    log_warn(LD_DIR, "Couldn't dump microdescriptor (wrote %lu out of %lu): %s",
+             (unsigned long)written, (unsigned long)md->bodylen,
+             strerror(ferror(f)));
+    return(-1);
+  }
   r += md->bodylen;
   return r;
 }
@@ -171,6 +177,11 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     if (f) {
       size_t annotation_len;
       size = dump_microdescriptor(f, md, &annotation_len);
+      if (size < 0) {
+        /* XXX handle errors from dump_microdescriptor() */
+        /* log?  return -1?  die?  coredump the universe? */
+        continue;
+      }
       md->saved_location = SAVED_IN_JOURNAL;
       cache->journal_len += size;
     } else {
@@ -292,6 +303,11 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
       continue;
 
     size = dump_microdescriptor(f, md, &annotation_len);
+    if (size < 0) {
+      /* XXX handle errors from dump_microdescriptor() */
+      /* log?  return -1?  die?  coredump the universe? */
+      continue;
+    }
     md->off = off + annotation_len;
     off += size;
     if (md->saved_location != SAVED_IN_CACHE) {
