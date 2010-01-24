@@ -201,6 +201,8 @@ tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
     if (!state)
       state = (st>=0)?ssl_state_to_string(st):"---";
     if (!msg) msg = "(null)";
+    if (!lib) lib = "(null)";
+    if (!func) func = "(null)";
     if (doing) {
       log(severity, domain, "TLS error while %s%s%s: %s (in %s:%s:%s)",
           doing, addr?" with ":"", addr?addr:"",
