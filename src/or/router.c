@@ -1384,6 +1384,7 @@ router_rebuild_descriptor(int force)
   if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body, 8192,
                                ei, get_identity_key()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
+    routerinfo_free(ri);
     extrainfo_free(ei);
     return -1;
   }
@@ -1400,6 +1401,8 @@ router_rebuild_descriptor(int force)
   if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
                                    ri, get_identity_key())<0) {
     log_warn(LD_BUG, "Couldn't generate router descriptor.");
+    routerinfo_free(ri);
+    extrainfo_free(ei);
     return -1;
   }
   ri->cache_info.signed_descriptor_len =
@@ -1885,6 +1888,7 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
       log_err(LD_BUG,
               "We just generated an extrainfo descriptor we can't parse.");
       log_err(LD_BUG, "Descriptor was: <<%s>>", s);
+      tor_free(s_dup);
       return -1;
     }
     tor_free(s_dup);
