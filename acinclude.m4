@@ -26,8 +26,10 @@ AC_DEFUN([TOR_DEFINE_CODEPATH],
   else
    if test -d "$1/lib"; then
      TOR_LDFLAGS_$2="-L$1/lib"
+     TOR_LIBDIR_$2="$1/lib"
    else
      TOR_LDFLAGS_$2="-L$1"
+     TOR_LIBDIR_$2="$1"
    fi
    if test -d "$1/include"; then
      TOR_CPPFLAGS_$2="-I$1/include"

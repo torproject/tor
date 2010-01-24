@@ -25,6 +25,6 @@ test_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 test_LDADD = ../or/libtor.a ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
-	-lz -lm -levent -lssl -lcrypto @TOR_LIB_WS32@ @TOR_LIB_GDI@
+	-lz -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS = tinytest.h tinytest_macros.h test.h
