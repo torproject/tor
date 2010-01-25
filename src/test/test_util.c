@@ -420,10 +420,11 @@ _thread_test_func(void* _s)
     cp = &_thread2_name;
     count = &t2_count;
   }
-  tor_mutex_acquire(m);
 
   tor_snprintf(buf, sizeof(buf), "%lu", tor_get_thread_id());
   *cp = tor_strdup(buf);
+
+  tor_mutex_acquire(m);
 
   for (i=0; i<10000; ++i) {
     tor_mutex_acquire(_thread_test_mutex);
