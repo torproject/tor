@@ -1755,10 +1755,10 @@ getinfo_helper_events(control_connection_t *control_conn,
                  "information", question);
       }
     } else if (!strcmp(question, "status/clients-seen")) {
-      char *bridge_stats = geoip_get_bridge_stats_controller(time(NULL));
+      const char *bridge_stats = geoip_get_bridge_stats_controller(time(NULL));
       if (!bridge_stats)
         return -1;
-      *answer = bridge_stats;
+      *answer = tor_strdup(bridge_stats);
     } else {
       return 0;
     }

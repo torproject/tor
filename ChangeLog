@@ -1,4 +1,11 @@
 Changes in version 0.2.2.8-alpha - 2010-??-??
+  o Major bugfixes:
+    - Fix a memory corruption bug on bridges that occured during the
+      inclusion of stats data in extra-info descriptors. Also fix the
+      interface for geoip_get_bridge_stats* to prevent similar bugs in
+      the future. Diagnosis by Tas, patch by Karsten and Sebastian.
+      Fixes bug 1208; bugfix on 0.2.2.7-alpha.
+
   o Minor bugfixes:
     - Ignore OutboundBindAddress when connecting to localhost.
       Connections to localhost need to come _from_ localhost, or else

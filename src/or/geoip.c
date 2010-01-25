@@ -1254,7 +1254,7 @@ load_bridge_stats(time_t now)
 
 /** Return most recent bridge statistics for inclusion in extra-info
  * descriptors, or NULL if we don't have recent bridge statistics. */
-char *
+const char *
 geoip_get_bridge_stats_extrainfo(time_t now)
 {
   load_bridge_stats(now);
@@ -1263,7 +1263,7 @@ geoip_get_bridge_stats_extrainfo(time_t now)
 
 /** Return most recent bridge statistics to be returned to controller
  * clients, or NULL if we don't have recent bridge statistics. */
-char *
+const char *
 geoip_get_bridge_stats_controller(time_t now)
 {
   load_bridge_stats(now);

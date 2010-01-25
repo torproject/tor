@@ -77,7 +77,8 @@ dump_microdescriptor(FILE *f, microdesc_t *md, size_t *annotation_len_out)
   md->off = (off_t) ftell(f);
   written = fwrite(md->body, 1, md->bodylen, f);
   if (written != md->bodylen) {
-    log_warn(LD_DIR, "Couldn't dump microdescriptor (wrote %lu out of %lu): %s",
+    log_warn(LD_DIR,
+             "Couldn't dump microdescriptor (wrote %lu out of %lu): %s",
              (unsigned long)written, (unsigned long)md->bodylen,
              strerror(ferror(f)));
     return -1;

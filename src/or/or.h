@@ -4137,8 +4137,8 @@ void geoip_entry_stats_init(time_t now);
 void geoip_entry_stats_write(time_t now);
 void geoip_bridge_stats_init(time_t now);
 time_t geoip_bridge_stats_write(time_t now);
-char *geoip_get_bridge_stats_extrainfo(time_t);
-char *geoip_get_bridge_stats_controller(time_t);
+const char *geoip_get_bridge_stats_extrainfo(time_t);
+const char *geoip_get_bridge_stats_controller(time_t);
 
 /********************************* hibernate.c **********************/
 
