@@ -2334,7 +2334,8 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
       want_len = DIGEST_LEN;
 
     if (base16_decode(want_digest, DIGEST_LEN, d, want_len*2) < 0) {
-      log_warn(LD_DIR,"Failed to decode requested authority digest %s.", d);
+      log_fn(LOG_PROTOCOL_WARN, LD_DIR,
+             "Failed to decode requested authority digest %s.", d);
       continue;
     };
 
