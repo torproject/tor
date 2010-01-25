@@ -678,13 +678,11 @@ add_file_log(const log_severity_list_t *severity, const char *filename)
   logfiles->needs_close = 1;
   lf = logfiles;
   _log_global_min_severity = get_min_log_level();
-  UNLOCK_LOGS();
 
   if (log_tor_version(lf, 0) < 0) {
-    LOCK_LOGS();
     delete_log(lf);
-    UNLOCK_LOGS();
   }
+  UNLOCK_LOGS();
 
   return 0;
 }
