@@ -1,4 +1,4 @@
-Changes in version 0.2.2.8-alpha - 2010-??-??
+Changes in version 0.2.2.8-alpha - 2010-01-26
   o Major bugfixes:
     - Fix a memory corruption bug on bridges that occured during the
       inclusion of stats data in extra-info descriptors. Also fix the
@@ -32,6 +32,14 @@ Changes in version 0.2.1.23 - 2010-0?-??
 
 
 Changes in version 0.2.2.7-alpha - 2010-01-19
+  Tor 0.2.2.7-alpha fixes a huge client-side performance bug, as well
+  as laying the groundwork for further relay-side performance fixes. It
+  also starts cleaning up client behavior with respect to the EntryNodes,
+  ExitNodes, and StrictNodes config options.
+
+  This release also rotates two directory authority keys, due to a
+  security breach of some of the Torproject servers.
+
   o Directory authority changes:
     - Rotate keys (both v3 identity and relay identity) for moria1
       and gabelmoo.
