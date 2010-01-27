@@ -70,3 +70,6 @@ tor.html : tor.html.in
 torify.html : torify.html.in
 tor-gencert.html : tor-gencert.html.in
 tor-resolve.html : tor-resolve.html.in
+
+CLEANFILES = $(asciidoc_product)
+DISTCLEANFILES = $(html_in) $(man_in)
