@@ -1,31 +1,72 @@
 
-EXTRA_DIST = website img HACKING                             \
-             tor-resolve.1 tor-gencert.1                     \
+# We use a two-step process to generate documentation from asciidoc files.
+#
+# First, we use asciidoc/a2x to process the asciidoc files into .1.in and
+# .html.in files (see the asciidoc-helper.sh script). These are the same as
+# the regular .1 and .html files, except that they still have some autoconf
+# variables set in them.
+#
+# Second, we use config.status to turn .1.in files into .1 files and
+# .html.in files into .html files.
+#
+# We do the steps in this order so that we can ship the .*.in files as
+# part of the source distribution, so that people without asciidoc can
+# just use the .1 and .html files.
+
+asciidoc_files = tor tor-gencert tor-resolve torify
+
+html_in = $(asciidoc_files:=.html.in)
+
+man_in = $(asciidoc_files:=.1.in)
+
+EXTRA_DIST = HACKING                                         \
+             $(html_in) $(man_in) $(asciidoc_files:=.1.txt)  \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
              tor-win32-mingw-creation.txt
 
-man_MANS = tor.1 tor-resolve.1 tor-gencert.1
+nodist_man_MANS = $(asciidoc_files:=.1)
+
+doc_DATA = $(asciidoc_files:=.html)
+
+asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
 
 SUBDIRS = design-paper spec
 
 DIST_SUBDIRS = design-paper spec
 
-website: ../../website/docs/
-	rm -rf website
-	mkdir website
-	if test -d $(srcdir)/../../website ; then \
-		cd $(srcdir)/../../website && $(MAKE); \
-	fi
-	if test -d $(srcdir)/../../website ; then \
-		cp $(srcdir)/../../website/docs/tor-*.html.* \
-			$(srcdir)/../../website/stylesheet.css website; \
-	fi
-img: ../../website/img/
-	rm -rf img
-	mkdir img
-#	if test -d $(srcdir)/../../website/img; then \
-#		cp $(srcdir)/../../website/img/*.png \
-#			$(srcdir)/../../website/img/*.jpg img; \
-#	fi
+# Generate the html documentation from asciidoc, but don't do
+# machine-specific replacements yet
+$(html_in) :
+	$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ @SED@ $(top_srcdir)/doc/$@
 
-.PHONY: website img
+tor.html.in : tor.1.txt
+torify.html.in : torify.1.txt
+tor-gencert.html.in : tor-gencert.1.txt
+tor-resolve.html.in : tor-resolve.1.txt
+
+# Generate the manpage from asciidoc, but don't do
+# machine-specific replacements yet
+$(man_in) :
+	$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ @SED@ $(top_srcdir)/doc/$@
+
+tor.1.in : tor.1.txt
+torify.1.in : torify.1.txt
+tor-gencert.1.in : tor-gencert.1.txt
+tor-resolve.1.in : tor-resolve.1.txt
+
+# use ../config.status to swap all machine-specific magic strings
+# in the asciidoc with their replacements.
+$(asciidoc_product) :
+	if test -e $(top_srcdir)/doc/$@.in && ! test -e ./$@.in ; then \
+		cp $(top_srcdir)/doc/$@.in .; \
+	fi
+	../config.status --file=$@;
+
+tor.1 : tor.1.in
+torify.1 : torify.1.in
+tor-gencert.1 : tor-gencert.1.in
+tor-resolve.1 : tor-resolve.1.in
+tor.html : tor.html.in
+torify.html : torify.html.in
+tor-gencert.html : tor-gencert.html.in
+tor-resolve.html : tor-resolve.html.in

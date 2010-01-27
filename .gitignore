@@ -93,6 +93,22 @@
 /doc/Makefile.in
 /doc/tor.1
 /doc/doxygen
+/doc/tor.1
+/doc/tor.1.in
+/doc/tor.html
+/doc/tor.html.in
+/doc/tor-gencert.1
+/doc/tor-gencert.1.in
+/doc/tor-gencert.html
+/doc/tor-gencert.html.in
+/doc/tor-resolve.1
+/doc/tor-resolve.1.in
+/doc/tor-resolve.html
+/doc/tor-resolve.html.in
+/doc/torify.1
+/doc/torify.1.in
+/doc/torify.html
+/doc/torify.html.in
 
 # /doc/design-paper/
 /doc/design-paper/Makefile
