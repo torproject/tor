@@ -30,7 +30,7 @@ doc_DATA = $(asciidoc_files:=.html)
 
 asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
 
-SUBDIRS = design-paper spec
+SUBDIRS = spec
 
 DIST_SUBDIRS = spec
 

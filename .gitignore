@@ -110,10 +110,6 @@
 /doc/torify.html
 /doc/torify.html.in
 
-# /doc/design-paper/
-/doc/design-paper/Makefile
-/doc/design-paper/Makefile.in
-
 # /doc/spec/
 /doc/spec/Makefile
 /doc/spec/Makefile.in
