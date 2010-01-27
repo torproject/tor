@@ -71,7 +71,7 @@ Proposals by number:
 148  Stream end reasons from the client side should be uniform [CLOSED]
 149  Using data from NETINFO cells [OPEN]
 150  Exclude Exit Nodes from a circuit [CLOSED]
-151  Improving Tor Path Selection [DRAFT]
+151  Improving Tor Path Selection [FINISHED]
 152  Optionally allow exit from single-hop circuits [CLOSED]
 153  Automatic software update protocol [SUPERSEDED]
 154  Automatic Software Update Protocol [SUPERSEDED]
@@ -89,6 +89,7 @@ Proposals by number:
 166  Including Network Statistics in Extra-Info Documents [ACCEPTED]
 167  Vote on network parameters in consensus [CLOSED]
 168  Reduce default circuit window [OPEN]
+169  Eliminate TLS renegotiation for the Tor connection handshake [DRAFT]
 
 
 Proposals by status:
@@ -99,7 +100,7 @@ Proposals by status:
    133  Incorporate Unreachable ORs into the Tor Network
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the same provider
-   151  Improving Tor Path Selection
+   169  Eliminate TLS renegotiation for the Tor connection handshake [for 0.2.2]
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  OPEN:
@@ -132,6 +133,7 @@ Proposals by status:
    099  Miscellaneous proposals
  FINISHED:
    121  Hidden Service Authentication [in 0.2.1.x]
+   151  Improving Tor Path Selection
    155  Four Improvements of Hidden Service Performance [in 0.2.1.x]
  CLOSED:
    101  Voting on the Tor Directory System [in 0.2.0.x]
