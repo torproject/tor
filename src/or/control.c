@@ -1768,8 +1768,9 @@ getinfo_helper_events(control_connection_t *control_conn,
 
 /** Callback function for GETINFO: on a given control connection, try to
  * answer the question <b>q</b> and store the newly-allocated answer in
- * *<b>a</b>.  If there's no answer, or an error occurs, just don't set
- * <b>a</b>.  Return 0.
+ * *<b>a</b>. If an internal error occurs, return -1. On success, or if
+ * the key is not recognized, return 0. Do not set <b>a</b> if the key is
+ * not recognized.
  */
 typedef int (*getinfo_helper_t)(control_connection_t *,
                                 const char *q, char **a);
