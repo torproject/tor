@@ -4958,11 +4958,13 @@ uint32_t router_get_advertised_bandwidth_capped(routerinfo_t *router);
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/
 typedef enum {
-  NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_GUARD
+  NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_MID, WEIGHT_FOR_GUARD,
+  WEIGHT_FOR_DIR
 } bandwidth_weight_rule_t;
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
-routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
+routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
+                                                bandwidth_weight_rule_t rule);
 
 /** Flags to be passed to control router_choose_random_node() to indicate what
  * kind of nodes to pick according to what algorithm. */

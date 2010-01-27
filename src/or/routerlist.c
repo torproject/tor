@@ -1096,9 +1096,10 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   } SMARTLIST_FOREACH_END(status);
 
   if (smartlist_len(tunnel)) {
-    result = routerstatus_sl_choose_by_bandwidth(tunnel);
+    result = routerstatus_sl_choose_by_bandwidth(tunnel, WEIGHT_FOR_DIR);
   } else if (smartlist_len(overloaded_tunnel)) {
-    result = routerstatus_sl_choose_by_bandwidth(overloaded_tunnel);
+    result = routerstatus_sl_choose_by_bandwidth(overloaded_tunnel,
+                                                 WEIGHT_FOR_DIR);
   } else if (smartlist_len(trusted_tunnel)) {
     /* FFFF We don't distinguish between trusteds and overloaded trusteds
      * yet. Maybe one day we should. */
@@ -1106,9 +1107,10 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
      * is a feature, but it could easily be a bug. -RD */
     result = smartlist_choose(trusted_tunnel);
   } else if (smartlist_len(direct)) {
-    result = routerstatus_sl_choose_by_bandwidth(direct);
+    result = routerstatus_sl_choose_by_bandwidth(direct, WEIGHT_FOR_DIR);
   } else if (smartlist_len(overloaded_direct)) {
-    result = routerstatus_sl_choose_by_bandwidth(overloaded_direct);
+    result = routerstatus_sl_choose_by_bandwidth(overloaded_direct,
+                                                 WEIGHT_FOR_DIR);
   } else {
     result = smartlist_choose(trusted_direct);
   }
@@ -1538,6 +1540,188 @@ kb_to_bytes(uint32_t bw)
 
 /** Helper function:
  * choose a random element of smartlist <b>sl</b>, weighted by
+ * the advertised bandwidth of each element using the consensus
+ * bandwidth weights.
+ *
+ * If <b>statuses</b> is zero, then <b>sl</b> is a list of
+ * routerinfo_t's. Otherwise it's a list of routerstatus_t's.
+ *
+ * If <b>rule</b>==WEIGHT_FOR_EXIT. we're picking an exit node: consider all
+ * nodes' bandwidth equally regardless of their Exit status, since there may
+ * be some in the list because they exit to obscure ports. If
+ * <b>rule</b>==NO_WEIGHTING, we're picking a non-exit node: weight
+ * exit-node's bandwidth less depending on the smallness of the fraction of
+ * Exit-to-total bandwidth.  If <b>rule</b>==WEIGHT_FOR_GUARD, we're picking a
+ * guard node: consider all guard's bandwidth equally. Otherwise, weight
+ * guards proportionally less.
+ */
+static void *
+smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
+                                      bandwidth_weight_rule_t rule,
+                                      int statuses)
+{
+  int64_t weight_scale;
+  int64_t rand_bw;
+  double Wg = -1, Wm = -1, We = -1, Wd = -1;
+  double Wgb = -1, Wmb = -1, Web = -1, Wdb = -1;
+  double weighted_bw = 0;
+  double *bandwidths;
+  double tmp = 0;
+  unsigned int i;
+
+  /* Can't choose exit and guard at same time */
+  tor_assert(rule == NO_WEIGHTING ||
+             rule == WEIGHT_FOR_EXIT ||
+             rule == WEIGHT_FOR_GUARD ||
+             rule == WEIGHT_FOR_MID ||
+             rule == WEIGHT_FOR_DIR);
+
+  weight_scale = networkstatus_get_param(NULL, "bwweightscale",
+                                         BW_WEIGHT_SCALE);
+
+  if (rule == WEIGHT_FOR_GUARD) {
+    Wg = networkstatus_get_bw_weight(NULL, "Wgg", -1);
+    Wm = networkstatus_get_bw_weight(NULL, "Wgm", -1); /* Bridges */
+    We = 0;
+    Wd = networkstatus_get_bw_weight(NULL, "Wgd", -1);
+
+    Wgb = networkstatus_get_bw_weight(NULL, "Wgb", -1);
+    Wmb = networkstatus_get_bw_weight(NULL, "Wmb", -1);
+    Web = networkstatus_get_bw_weight(NULL, "Web", -1);
+    Wdb = networkstatus_get_bw_weight(NULL, "Wdb", -1);
+  } else if (rule == WEIGHT_FOR_MID) {
+    Wg = networkstatus_get_bw_weight(NULL, "Wmg", -1);
+    Wm = networkstatus_get_bw_weight(NULL, "Wmm", -1);
+    We = networkstatus_get_bw_weight(NULL, "Wme", -1);
+    Wd = networkstatus_get_bw_weight(NULL, "Wmd", -1);
+
+    Wgb = networkstatus_get_bw_weight(NULL, "Wgb", -1);
+    Wmb = networkstatus_get_bw_weight(NULL, "Wmb", -1);
+    Web = networkstatus_get_bw_weight(NULL, "Web", -1);
+    Wdb = networkstatus_get_bw_weight(NULL, "Wdb", -1);
+  } else if (rule == WEIGHT_FOR_EXIT) {
+    // Guards CAN be exits if they have weird exit policies
+    // They are d then I guess...
+    We = networkstatus_get_bw_weight(NULL, "Wee", -1);
+    Wm = networkstatus_get_bw_weight(NULL, "Wem", -1); /* Odd exit policies */
+    Wd = networkstatus_get_bw_weight(NULL, "Wed", -1);
+    Wg = networkstatus_get_bw_weight(NULL, "Weg", -1); /* Odd exit policies */
+
+    Wgb = networkstatus_get_bw_weight(NULL, "Wgb", -1);
+    Wmb = networkstatus_get_bw_weight(NULL, "Wmb", -1);
+    Web = networkstatus_get_bw_weight(NULL, "Web", -1);
+    Wdb = networkstatus_get_bw_weight(NULL, "Wdb", -1);
+  } else if (rule == WEIGHT_FOR_DIR) {
+    We = networkstatus_get_bw_weight(NULL, "Wbe", -1);
+    Wm = networkstatus_get_bw_weight(NULL, "Wbm", -1);
+    Wd = networkstatus_get_bw_weight(NULL, "Wbd", -1);
+    Wg = networkstatus_get_bw_weight(NULL, "Wbg", -1);
+
+    Wgb = Wmb = Web = Wdb = weight_scale;
+  } else if (rule == NO_WEIGHTING) {
+    Wg = Wm = We = Wd = weight_scale;
+    Wgb = Wmb = Web = Wdb = weight_scale;
+  }
+
+  if (Wg < 0 || Wm < 0 || We < 0 || Wd < 0 || Wgb < 0 || Wmb < 0 || Wdb < 0
+      || Web < 0) {
+    log_debug(LD_CIRC,
+              "Got negative bandwidth weights. Defaulting to old selection"
+              " algorithm.");
+    return NULL; // Use old algorithm.
+  }
+
+  Wg /= weight_scale;
+  Wm /= weight_scale;
+  We /= weight_scale;
+  Wd /= weight_scale;
+
+  Wgb /= weight_scale;
+  Wmb /= weight_scale;
+  Web /= weight_scale;
+  Wdb /= weight_scale;
+
+  bandwidths = tor_malloc_zero(sizeof(double)*smartlist_len(sl));
+
+  // Cycle through smartlist and total the bandwidth.
+  for (i = 0; i < (unsigned)smartlist_len(sl); ++i) {
+    int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0;
+    double weight = 1;
+    if (statuses) {
+      routerstatus_t *status = smartlist_get(sl, i);
+      is_exit = status->is_exit;
+      is_guard = status->is_possible_guard;
+      is_dir = (status->dir_port != 0);
+      if (!status->has_bandwidth) {
+        tor_free(bandwidths);
+        /* This should never happen, unless all the authorites downgrade
+         * to 0.2.0 or rogue routerstatuses get inserted into our consensus. */
+        log_warn(LD_BUG,
+                 "Consensus is not listing bandwidths. Defaulting back to "
+                 "old router selection algorithm.");
+        return NULL;
+      }
+      this_bw = kb_to_bytes(status->bandwidth);
+    } else {
+      routerstatus_t *rs;
+      routerinfo_t *router = smartlist_get(sl, i);
+      rs = router_get_consensus_status_by_id(
+             router->cache_info.identity_digest);
+      is_exit = router->is_exit;
+      is_guard = router->is_possible_guard;
+      is_dir = (router->dir_port != 0);
+      if (rs && rs->has_bandwidth) {
+        this_bw = kb_to_bytes(rs->bandwidth);
+      } else { /* bridge or other descriptor not in our consensus */
+        this_bw = router_get_advertised_bandwidth_capped(router);
+      }
+    }
+    if (is_guard && is_exit) {
+      weight = (is_dir ? Wdb*Wd : Wd);
+    } else if (is_guard) {
+      weight = (is_dir ? Wgb*Wg : Wg);
+    } else if (is_exit) {
+      weight = (is_dir ? Web*We : We);
+    } else { // middle
+      weight = (is_dir ? Wmb*Wm : Wm);
+    }
+
+    bandwidths[i] = weight*this_bw;
+    weighted_bw += weight*this_bw;
+  }
+
+  log_debug(LD_CIRC, "Choosing node for rule %d based on weights "
+            "Wg=%lf Wm=%lf We=%lf Wd=%lf with total bw %lf", rule,
+            Wg, Wm, We, Wd, weighted_bw);
+
+  rand_bw = crypto_rand_uint64(DBL_TO_U64(weighted_bw));
+  rand_bw++; /* crypto_rand_uint64() counts from 0, and we need to count
+              * from 1 below. See bug 1203 for details. */
+
+  /* Last, count through sl until we get to the element we picked */
+  tmp = 0.0;
+  for (i=0; i < (unsigned)smartlist_len(sl); i++) {
+    tmp += bandwidths[i];
+    if (tmp >= rand_bw)
+      break;
+  }
+
+  if (i == (unsigned)smartlist_len(sl)) {
+    /* This was once possible due to round-off error, but shouldn't be able
+     * to occur any longer. */
+    tor_fragile_assert();
+    --i;
+    log_warn(LD_BUG, "Round-off error in computing bandwidth had an effect on "
+             " which router we chose. Please tell the developers. "
+             "%lf " U64_FORMAT " %lf", tmp, U64_PRINTF_ARG(rand_bw),
+             weighted_bw);
+  }
+  tor_free(bandwidths);
+  return smartlist_get(sl, i);
+}
+
+/** Helper function:
+ * choose a random element of smartlist <b>sl</b>, weighted by
  * the advertised bandwidth of each element.
  *
  * If <b>statuses</b> is zero, then <b>sl</b> is a list of
@@ -1571,6 +1755,12 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
   bitarray_t *exit_bits;
   bitarray_t *guard_bits;
   int me_idx = -1;
+
+  // This function does not support WEIGHT_FOR_DIR
+  // or WEIGHT_FOR_MID
+  if (rule == WEIGHT_FOR_DIR || rule == WEIGHT_FOR_MID) {
+    rule = NO_WEIGHTING;
+  }
 
   /* Can't choose exit and guard at same time */
   tor_assert(rule == NO_WEIGHTING ||
@@ -1797,17 +1987,28 @@ routerinfo_t *
 routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                   bandwidth_weight_rule_t rule)
 {
-  return smartlist_choose_by_bandwidth(sl, rule, 0);
+  routerinfo_t *ret;
+  if ((ret = smartlist_choose_by_bandwidth_weights(sl, rule, 0))) {
+    return ret;
+  } else {
+    return smartlist_choose_by_bandwidth(sl, rule, 0);
+  }
 }
 
 /** Choose a random element of status list <b>sl</b>, weighted by
  * the advertised bandwidth of each status.
  */
 routerstatus_t *
-routerstatus_sl_choose_by_bandwidth(smartlist_t *sl)
+routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
+                                    bandwidth_weight_rule_t rule)
 {
   /* We are choosing neither exit nor guard here. Weight accordingly. */
-  return smartlist_choose_by_bandwidth(sl, NO_WEIGHTING, 1);
+  routerstatus_t *ret;
+  if ((ret = smartlist_choose_by_bandwidth_weights(sl, rule, 1))) {
+    return ret;
+  } else {
+    return smartlist_choose_by_bandwidth(sl, rule, 1);
+  }
 }
 
 /** Return a random running router from the routerlist. Never
@@ -1843,7 +2044,7 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
 
   tor_assert(!(weight_for_exit && need_guard));
   rule = weight_for_exit ? WEIGHT_FOR_EXIT :
-    (need_guard ? WEIGHT_FOR_GUARD : NO_WEIGHTING);
+    (need_guard ? WEIGHT_FOR_GUARD : WEIGHT_FOR_MID);
 
   /* Exclude relays that allow single hop exit circuits, if the user
    * wants to (such relays might be risky) */
