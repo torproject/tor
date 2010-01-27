@@ -5,7 +5,8 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
       nicer HTML.
 
   o Removed features:
-    - Stop shipping parts of the website in the source tarballs.
+    - Stop shipping parts of the website and the design paper in the
+      source tarballs.
 
 
 Changes in version 0.2.2.8-alpha - 2010-01-26

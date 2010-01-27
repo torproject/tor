@@ -32,7 +32,7 @@ asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
 
 SUBDIRS = design-paper spec
 
-DIST_SUBDIRS = design-paper spec
+DIST_SUBDIRS = spec
 
 # Generate the html documentation from asciidoc, but don't do
 # machine-specific replacements yet
