@@ -26,6 +26,8 @@ EXTRA_DIST = HACKING                                         \
 
 nodist_man_MANS = $(asciidoc_files:=.1)
 
+docdir = @docdir@
+
 doc_DATA = $(asciidoc_files:=.html)
 
 asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
