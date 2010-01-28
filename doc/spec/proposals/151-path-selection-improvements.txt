@@ -2,7 +2,7 @@ Filename: 151-path-selection-improvements.txt
 Title: Improving Tor Path Selection
 Author: Fallon Chen, Mike Perry
 Created: 5-Jul-2008
-Status: Implemented
+Status: Finished
 
 Overview
 
