@@ -358,13 +358,13 @@ tor_tls_init(void)
     version = SSLeay();
     if (version >= 0x009070c0L && version < 0x00908000L) {
       log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.7l or later; "
-                 "I will use SSL3_FLAGS to enable renegotation",
+                 "I will try SSL3_FLAGS and SSL3_OP to enable renegotation",
                  SSLeay_version(SSLEAY_VERSION));
       use_unsafe_renegotiation_flag = 1;
       use_unsafe_renegotiation_op = 1;
-    } else if (version >= 0x009080d0L) {
-      log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8m or later; "
-                 "I will use SSL_OP to enable renegotiation",
+    } else if (version >= 0x009080c0L) {
+      log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8l or later; "
+                 "I will try SSL3_FLAGS and SSL_OP to enable renegotiation",
                  SSLeay_version(SSLEAY_VERSION));
       use_unsafe_renegotiation_flag = 1;
       use_unsafe_renegotiation_op = 1;
