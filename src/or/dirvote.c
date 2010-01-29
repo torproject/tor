@@ -1784,8 +1784,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
       tor_free(result);
       return NULL;
     }
-    // XXX: Verify balancing parameters here
-    // networkstatus_verify_bw_weights(c);
+    // Verify balancing parameters
+    if (consensus_method >= 9) {
+      networkstatus_verify_bw_weights(c);
+    }
     networkstatus_vote_free(c);
   }
 

@@ -1771,6 +1771,10 @@ typedef struct networkstatus_t {
    * consensus, sorted by key. */
   smartlist_t *net_params;
 
+  /** List of key=value strings for the bw weight parameters in the
+   * consensus. */
+  smartlist_t *weight_params;
+
   /** List of networkstatus_voter_info_t.  For a vote, only one element
    * is included.  For a consensus, one element is included for every voter
    * whose vote contributed to the consensus. */
@@ -4354,6 +4358,8 @@ int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
                                 int32_t default_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
+int32_t networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight,
+                                    int32_t default_val);
 const char *networkstatus_get_flavor_name(consensus_flavor_t flav);
 int networkstatus_parse_flavor_name(const char *flavname);
 void document_signature_free(document_signature_t *sig);
@@ -5182,6 +5188,7 @@ void dump_distinct_digest_count(int severity);
 
 int compare_routerstatus_entries(const void **_a, const void **_b);
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
+int networkstatus_verify_bw_weights(networkstatus_t *ns);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                                  const char **eos_out,
                                                  networkstatus_type_t ns_type);

@@ -2074,6 +2074,23 @@ networkstatus_get_param(networkstatus_t *ns, const char *param_name,
   return get_net_param_from_list(ns->net_params, param_name, default_val);
 }
 
+/** Return the value of a integer bw weight parameter from the networkstatus
+ * <b>ns</b> whose name is <b>weight_name</b>.  If <b>ns</b> is NULL, try
+ * loading the latest consensus ourselves. Return <b>default_val</b> if no
+ * latest consensus, or if it has no parameter called <b>param_name</b>. */
+int32_t
+networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight_name,
+                        int32_t default_val)
+{
+  if (!ns) /* if they pass in null, go find it ourselves */
+    ns = networkstatus_get_latest_consensus();
+
+  if (!ns || !ns->weight_params)
+    return default_val;
+
+  return get_net_param_from_list(ns->weight_params, weight_name, default_val);
+}
+
 /** Return the name of the consensus flavor <b>flav</b> as used to identify
  * the flavor in directory documents. */
 const char *
