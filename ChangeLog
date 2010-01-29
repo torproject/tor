@@ -1,4 +1,10 @@
 Changes in version 0.2.2.9-alpha - 2010-??-??
+  o Minor bugfixes:
+    - When deciding whether to use strange flags to turn TLS renegotiation
+      on, detect the OpenSSL version at run-time, not compile time.  We
+      need to do this because Apple doesn't update its dev-tools headers
+      when it updates its libraries in a security patch.
+
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc.  This
       should make it easier to maintain the documentation, and produce
