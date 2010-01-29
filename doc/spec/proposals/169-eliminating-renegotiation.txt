@@ -314,10 +314,13 @@ Target: 0.2.2
                cells.
              * Send a NETINFO cell.  Wait for a CERT and a NETINFO
                cell from the server.
-             * If the CERT cell is a good cert signing the public
-               key in the x.509 certificate we got during the TLS
-               handshake, we connected to the server with that
-               identity key.  Otherwise close the connection.
+             * If the CERT cell contains a valid self-identity cert,
+               and the identity key in the cert can be used to check
+               the signature on the x.509 certificate we got during
+               the TLS handshake, then we know we connected to the
+               server with that identity.  If any of these checks
+               fail, or the identity key was not what we expected,
+               then we close the connection.
              * Once the NETINFO cell arrives, continue as before.
 
    And V3+ responder behavior now looks like this:
