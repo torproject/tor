@@ -8,6 +8,12 @@ Changes in version 0.2.1.23 - 2010-0?-??
       automatically discard guards picked using the old algorithm. Fixes
       bug 1217; bugfix on 0.2.1.3-alpha. Found by Mike Perry.
 
+  o Minor bugfixes:
+    - When deciding whether to use strange flags to turn TLS renegotiation
+      on, detect the OpenSSL version at run-time, not compile time.  We
+      need to do this because Apple doesn't update its dev-tools headers
+      when it updates its libraries in a security patch.
+
   o Minor features:
     - Avoid a mad rush at the beginning of each month when each client
       rotates half of its guards. Instead we spread the rotation out
