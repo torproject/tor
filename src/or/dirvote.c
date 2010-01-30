@@ -39,7 +39,7 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 8
+#define MAX_SUPPORTED_CONSENSUS_METHOD 9
 
 #define MIN_METHOD_FOR_PARAMS 7
 
@@ -648,6 +648,347 @@ dirvote_compute_params(smartlist_t *votes)
   return result;
 }
 
+#define RANGE_CHECK(a,b,c,d,e,f,g,mx) \
+       ((a) >= 0 && (a) <= (mx) && (b) >= 0 && (b) <= (mx) && \
+        (c) >= 0 && (c) <= (mx) && (d) >= 0 && (d) <= (mx) && \
+        (e) >= 0 && (e) <= (mx) && (f) >= 0 && (f) <= (mx) && \
+        (g) >= 0 && (g) <= (mx))
+
+#define CHECK_EQ(a, b, margin) \
+     ((a)-(b) >= 0 ? (a)-(b) <= (margin) : (b)-(a) <= (margin))
+
+typedef enum {
+ BW_WEIGHTS_NO_ERROR = 0,
+ BW_WEIGHTS_RANGE_ERROR = 1,
+ BW_WEIGHTS_SUMG_ERROR = 2,
+ BW_WEIGHTS_SUME_ERROR = 3,
+ BW_WEIGHTS_SUMD_ERROR = 4,
+ BW_WEIGHTS_BALANCE_MID_ERROR = 5,
+ BW_WEIGHTS_BALANCE_EG_ERROR = 6
+} bw_weights_error_t;
+
+/**
+ * Verify that any weightings satisfy the balanced formulas.
+ */
+static bw_weights_error_t
+networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
+                            int64_t Wme, int64_t Wmd, int64_t Wee,
+                            int64_t Wed, int64_t scale, int64_t G,
+                            int64_t M, int64_t E, int64_t D, int64_t T,
+                            int64_t margin, int do_balance) {
+  bw_weights_error_t berr = BW_WEIGHTS_NO_ERROR;
+
+  // Wed + Wmd + Wgd == 1
+  if (!CHECK_EQ(Wed + Wmd + Wgd, scale, margin)) {
+    berr = BW_WEIGHTS_SUMD_ERROR;
+    goto out;
+  }
+
+  // Wmg + Wgg == 1
+  if (!CHECK_EQ(Wmg + Wgg, scale, margin)) {
+    berr = BW_WEIGHTS_SUMG_ERROR;
+    goto out;
+  }
+
+  // Wme + Wee == 1
+  if (!CHECK_EQ(Wme + Wee, scale, margin)) {
+    berr = BW_WEIGHTS_SUME_ERROR;
+    goto out;
+  }
+
+  // Verify weights within range 0->1
+  if (!RANGE_CHECK(Wgg, Wgd, Wmg, Wme, Wmd, Wed, Wee, scale)) {
+    berr = BW_WEIGHTS_RANGE_ERROR;
+    goto out;
+  }
+
+  if (do_balance) {
+    // Wgg*G + Wgd*D == Wee*E + Wed*D, already scaled
+    if (!CHECK_EQ(Wgg*G + Wgd*D, Wee*E + Wed*D, (margin*T)/3)) {
+      berr = BW_WEIGHTS_BALANCE_EG_ERROR;
+      goto out;
+    }
+
+    // Wgg*G + Wgd*D == M*scale + Wmd*D + Wme*E + Wmg*G, already scaled
+    if (!CHECK_EQ(Wgg*G + Wgd*D, M*scale + Wmd*D + Wme*E + Wmg*G,
+                (margin*T)/3)) {
+      berr = BW_WEIGHTS_BALANCE_MID_ERROR;
+      goto out;
+    }
+  }
+
+out:
+  if (berr) {
+    log_info(LD_DIR,
+             "Bw weight mismatch %d. G="I64_FORMAT" M="I64_FORMAT
+             " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
+             berr, G, M, E, D, T);
+  }
+
+  return berr;
+}
+
+static void
+networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
+                              int64_t E, int64_t D, int64_t T,
+                              int64_t weight_scale)
+{
+  int64_t Wgg = -1, Wgd = -1;
+  int64_t Wmg = -1, Wme = -1, Wmd = -1;
+  int64_t Wed = -1, Wee = -1;
+  const char *casename;
+  char buf[512];
+  int r;
+
+  /*
+   * Computed from cases in 3.4.3 of dir-spec.txt
+   *
+   * 1. Neither are scarce
+   * 2. Both Guard and Exit are scarce
+   *    a. R+D <= S
+   *    b. R+D > S
+   * 3. One of Guard or Exit is scarce
+   *    a. S+D < T/3
+   *    b. S+D >= T/3
+   */
+  if (3*E >= T && 3*G >= T) { // E >= T/3 && G >= T/3
+    bw_weights_error_t berr = 0;
+    /* Case 1: Neither are scarce.
+     *
+     * Attempt to ensure that we have a large amount of exit bandwidth
+     * in the middle position.
+     */
+    casename = "Case 1 (Wme*E = Wmd*D)";
+    Wgg = (weight_scale*(D+E+G+M))/(3*G);
+    if (D==0) Wmd = 0;
+    else Wmd = (weight_scale*(2*D + 2*E - G - M))/(6*D);
+    Wme = (weight_scale*(2*D + 2*E - G - M))/(6*E);
+    Wee = (weight_scale*(-2*D + 4*E + G + M))/(6*E);
+    Wgd = 0;
+    Wmg = weight_scale - Wgg;
+    Wed = weight_scale - Wmd;
+
+    berr = networkstatus_check_weights(Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed,
+                                       weight_scale, G, M, E, D, T, 10, 1);
+
+    if (berr) {
+      log_warn(LD_DIR, "Bw Weights error %d for case %s. "
+                       "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
+                       " D="I64_FORMAT" T="I64_FORMAT,
+               berr, casename, G, M, E, D, T);
+    }
+  } else if (3*E < T && 3*G < T) { // E < T/3 && G < T/3
+    int64_t R = MIN(E, G);
+    int64_t S = MAX(E, G);
+    /*
+     * Case 2: Both Guards and Exits are scarce
+     * Balance D between E and G, depending upon
+     * D capacity and scarcity.
+     */
+    if (R+D < S) { // Subcase a
+      Wgg = weight_scale;
+      Wee = weight_scale;
+      Wmg = 0;
+      Wme = 0;
+      Wmd = 0;
+      if (E < G) {
+        casename = "Case 2a (E scarce)";
+        Wed = weight_scale;
+        Wgd = 0;
+      } else if (E >= G) {
+        casename = "Case 2a (G scarce)";
+        Wed = 0;
+        Wgd = weight_scale;
+      }
+    } else { // Subcase b: R+D > S
+      bw_weights_error_t berr = 0;
+      casename = "Case 2b (Wme*E == Wmd*D)";
+      if (D != 0) {
+        Wgg = weight_scale;
+        Wgd = (weight_scale*(D + E - 2*G + M))/(3*D); // T/3 >= G (Ok)
+        Wmd = (weight_scale*(D + E + G - 2*M))/(6*D); // T/3 >= M
+        Wme = (weight_scale*(D + E + G - 2*M))/(6*E);
+        Wee = (weight_scale*(-D + 5*E - G + 2*M))/(6*E); // 2E+M >= T/3
+        Wmg = 0;
+        Wed = weight_scale - Wgd - Wmd;
+
+        berr = networkstatus_check_weights(Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed,
+                                       weight_scale, G, M, E, D, T, 10, 1);
+      }
+
+      if (D == 0 || berr) { // Can happen if M > T/3
+        casename = "Case 2b (E=G)";
+        Wgg = weight_scale;
+        Wee = weight_scale;
+        Wmg = 0;
+        Wme = 0;
+        Wmd = 0;
+        if (D == 0) Wgd = 0;
+        else Wgd = (weight_scale*(D+E-G))/(2*D);
+        Wed = weight_scale - Wgd;
+        berr = networkstatus_check_weights(Wgg, Wgd, Wmg, Wme, Wmd, Wee,
+                Wed, weight_scale, G, M, E, D, T, 10, 1);
+      }
+      if (berr != BW_WEIGHTS_NO_ERROR &&
+              berr != BW_WEIGHTS_BALANCE_MID_ERROR) {
+        log_warn(LD_DIR, "Bw Weights error %d for case %s. "
+                         "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
+                         " D="I64_FORMAT" T="I64_FORMAT,
+                 berr, casename, G, M, E, D, T);
+      }
+    }
+  } else { // if (E < T/3 || G < T/3) {
+    int64_t S = MIN(E, G);
+    // Case 3: Exactly one of Guard or Exit is scarce
+    if (!(3*E < T || 3*G < T) || !(3*G >= T || 3*E >= T)) {
+      log_warn(LD_BUG,
+           "Bw-Weights Case 3 but with G="I64_FORMAT" M="
+           I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
+           G, M, E, D, T);
+    }
+
+    if (3*(S+D) < T) { // Subcase a: S+D < T/3
+      if (G < E) {
+        casename = "Case 3a (G scarce)";
+        Wgg = Wgd = weight_scale;
+        Wmd = Wed = Wmg = 0;
+        // Minor subcase, if E is more scarce than M,
+        // keep its bandwidth in place.
+        if (E < M) Wme = 0;
+        else Wme = (weight_scale*(E-M))/(2*E);
+        Wee = weight_scale-Wme;
+      } else { // G >= E
+        casename = "Case 3a (E scarce)";
+        Wee = Wed = weight_scale;
+        Wmd = Wgd = Wme = 0;
+        // Minor subcase, if G is more scarce than M,
+        // keep its bandwidth in place.
+        if (G < M) Wmg = 0;
+        else Wmg = (weight_scale*(G-M))/(2*G);
+        Wgg = weight_scale-Wmg;
+      }
+    } else { // Subcase b: S+D >= T/3
+      bw_weights_error_t berr = 0;
+      // D != 0 because S+D >= T/3
+      if (G < E) {
+        casename = "Case 3b (G scarce, Wme*E == Wmd*D)";
+        Wgd = (weight_scale*(D + E - 2*G + M))/(3*D);
+        Wmd = (weight_scale*(D + E + G - 2*M))/(6*D);
+        Wme = (weight_scale*(D + E + G - 2*M))/(6*E);
+        Wee = (weight_scale*(-D + 5*E - G + 2*M))/(6*E);
+        Wgg = weight_scale;
+        Wmg = 0;
+        Wed = weight_scale - Wgd - Wmd;
+
+        berr = networkstatus_check_weights(Wgg, Wgd, Wmg, Wme, Wmd, Wee,
+                    Wed, weight_scale, G, M, E, D, T, 10, 1);
+      } else { // G >= E
+        casename = "Case 3b (E scarce, Wme*E == Wmd*D)";
+        Wgg = (weight_scale*(D + E + G + M))/(3*G);
+        Wmd = (weight_scale*(2*D + 2*E - G - M))/(6*D);
+        Wme = (weight_scale*(2*D + 2*E - G - M))/(6*E);
+        Wee = (weight_scale*(-2*D + 4*E + G + M))/(6*E);
+        Wgd = 0;
+        Wmg = weight_scale - Wgg;
+        Wed = weight_scale - Wmd;
+
+        berr = networkstatus_check_weights(Wgg, Wgd, Wmg, Wme, Wmd, Wee,
+                      Wed, weight_scale, G, M, E, D, T, 10, 1);
+      }
+      if (berr) {
+        log_warn(LD_DIR, "Bw Weights error %d for case %s. "
+                         "G="I64_FORMAT" M="I64_FORMAT
+                         " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
+                 berr, casename, G, M, E, D, T);
+      }
+    }
+  }
+
+  if (Wgg < 0 || Wgg > weight_scale) {
+    log_warn(LD_DIR, "Bw %s: Wgg="I64_FORMAT"! G="I64_FORMAT
+            " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+            " T="I64_FORMAT,
+             casename, Wgg, G, M, E, D, T);
+    Wgg = MAX(MIN(Wgg, weight_scale), 0);
+  }
+  if (Wgd < 0 || Wgd > weight_scale) {
+    log_warn(LD_DIR, "Bw %s: Wgd="I64_FORMAT"! G="I64_FORMAT
+            " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+            " T="I64_FORMAT,
+             casename, Wgd, G, M, E, D, T);
+    Wgd = MAX(MIN(Wgd, weight_scale), 0);
+  }
+  if (Wmg < 0 || Wmg > weight_scale) {
+    log_warn(LD_DIR, "Bw %s: Wmg="I64_FORMAT"! G="I64_FORMAT
+            " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+            " T="I64_FORMAT,
+             casename, Wmg, G, M, E, D, T);
+    Wmg = MAX(MIN(Wmg, weight_scale), 0);
+  }
+  if (Wme < 0 || Wme > weight_scale) {
+    log_warn(LD_DIR, "Bw %s: Wme="I64_FORMAT"! G="I64_FORMAT
+            " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+            " T="I64_FORMAT,
+             casename, Wme, G, M, E, D, T);
+    Wme = MAX(MIN(Wme, weight_scale), 0);
+  }
+  if (Wmd < 0 || Wmd > weight_scale) {
+    log_warn(LD_DIR, "Bw %s: Wmd="I64_FORMAT"! G="I64_FORMAT
+            " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+            " T="I64_FORMAT,
+             casename, Wmd, G, M, E, D, T);
+    Wmd = MAX(MIN(Wmd, weight_scale), 0);
+  }
+  if (Wee < 0 || Wee > weight_scale) {
+    log_warn(LD_DIR, "Bw %s: Wee="I64_FORMAT"! G="I64_FORMAT
+            " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+            " T="I64_FORMAT,
+             casename, Wee, G, M, E, D, T);
+    Wee = MAX(MIN(Wee, weight_scale), 0);
+  }
+  if (Wed < 0 || Wed > weight_scale) {
+    log_warn(LD_DIR, "Bw %s: Wed="I64_FORMAT"! G="I64_FORMAT
+            " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+            " T="I64_FORMAT,
+             casename, Wed, G, M, E, D, T);
+    Wed = MAX(MIN(Wed, weight_scale), 0);
+  }
+
+  // Add consensus weight keywords
+  smartlist_add(chunks, tor_strdup("bandwidth-weights "));
+  /*
+   * Provide Wgm=Wgg, Wmm=1, Wem=Wee, Weg=Wed. May later determine
+   * that middle nodes need different bandwidth weights for dirport traffic,
+   * or that weird exit policies need special weight, or that bridges
+   * need special weight.
+   *
+   * NOTE: This list is sorted.
+   */
+  r = tor_snprintf(buf, sizeof(buf),
+     "Wbd="I64_FORMAT" Wbe="I64_FORMAT" Wbg="I64_FORMAT" Wbm="I64_FORMAT" "
+     "Wdb="I64_FORMAT" "
+     "Web="I64_FORMAT" Wed="I64_FORMAT" Wee="I64_FORMAT" Weg="I64_FORMAT
+                   " Wem="I64_FORMAT" "
+     "Wgb="I64_FORMAT" Wgd="I64_FORMAT" Wgg="I64_FORMAT" Wgm="I64_FORMAT" "
+     "Wmb="I64_FORMAT" Wmd="I64_FORMAT" Wme="I64_FORMAT" Wmg="I64_FORMAT
+                   " Wmm="I64_FORMAT"\n",
+     Wmd, Wme, Wmg, weight_scale,
+     weight_scale,
+     weight_scale, Wed, Wee, Wed, Wee,
+     weight_scale, Wgd, Wgg, Wgg,
+     weight_scale, Wmd, Wme, Wmg, weight_scale);
+  if (r<0) {
+    log_warn(LD_BUG,
+             "Not enough space in buffer for bandwidth-weights line.");
+    *buf = '\0';
+  }
+  smartlist_add(chunks, tor_strdup(buf));
+  log_notice(LD_CIRC, "Computed bandwidth weights for %s: "
+             "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
+             " T="I64_FORMAT,
+             casename, G, M, E, D, T);
+}
+
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public
  * authority <b>identity_key</b>, our private authority <b>signing_key</b>,
  * and the number of <b>total_authorities</b> that we believe exist in our
@@ -673,9 +1014,10 @@ networkstatus_compute_consensus(smartlist_t *votes,
   char *client_versions = NULL, *server_versions = NULL;
   smartlist_t *flags;
   const char *flavor_name;
+  int64_t G=0, M=0, E=0, D=0, T=0; /* For bandwidth weights */
   const routerstatus_format_type_t rs_format =
     flavor == FLAV_NS ? NS_V3_CONSENSUS : NS_V3_CONSENSUS_MICRODESC;
-
+  char *params = NULL;
   tor_assert(flavor == FLAV_NS || flavor == FLAV_MICRODESC);
   tor_assert(total_authorities >= smartlist_len(votes));
 
@@ -812,7 +1154,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   }
 
   if (consensus_method >= MIN_METHOD_FOR_PARAMS) {
-    char *params = dirvote_compute_params(votes);
+    params = dirvote_compute_params(votes);
     if (params) {
       smartlist_add(chunks, tor_strdup("params "));
       smartlist_add(chunks, params);
@@ -1008,6 +1350,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       const char *chosen_name = NULL;
       int exitsummary_disagreement = 0;
       int is_named = 0, is_unnamed = 0, is_running = 0;
+      int is_guard = 0, is_exit = 0;
       int naming_conflict = 0;
       int n_listing = 0;
       int i;
@@ -1127,7 +1470,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
         } else {
           if (flag_counts[fl_sl_idx] > n_flag_voters[fl_sl_idx]/2) {
             smartlist_add(chosen_flags, (char*)fl);
-            if (!strcmp(fl, "Running"))
+            if (!strcmp(fl, "Exit"))
+              is_exit = 1;
+            else if (!strcmp(fl, "Guard"))
+              is_guard = 1;
+            else if (!strcmp(fl, "Running"))
               is_running = 1;
           }
         }
@@ -1153,6 +1500,23 @@ networkstatus_compute_consensus(smartlist_t *votes,
       } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
+      }
+
+      if (consensus_method >= 9) {
+        if (rs_out.has_bandwidth) {
+          T += rs_out.bandwidth;
+          if (is_exit && is_guard)
+            D += rs_out.bandwidth;
+          else if (is_exit)
+            E += rs_out.bandwidth;
+          else if (is_guard)
+            G += rs_out.bandwidth;
+          else
+            M += rs_out.bandwidth;
+        } else {
+          log_warn(LD_BUG, "Missing consensus bandwidth for router %s",
+              rs_out.nickname);
+        }
       }
 
       /* Ok, we already picked a descriptor digest we want to list
@@ -1308,6 +1672,39 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(measured_bws);
   }
 
+  if (consensus_method >= 9) {
+    int64_t weight_scale = BW_WEIGHT_SCALE;
+    char *bw_weight_param = NULL;
+
+    // Parse params, extract BW_WEIGHT_SCALE if present
+    // DO NOT use consensus_param_bw_weight_scale() in this code!
+    // The consensus is not formed yet!
+    if (strcmpstart(params, "bwweightscale=") == 0)
+      bw_weight_param = params;
+    else
+      bw_weight_param = strstr(params, " bwweightscale=");
+
+    if (bw_weight_param) {
+      int ok=0;
+      char *eq = strchr(bw_weight_param, '=');
+      if (eq) {
+        weight_scale = tor_parse_long(eq+1, 10, INT32_MIN, INT32_MAX, &ok,
+                                         NULL);
+        if (!ok) {
+          log_warn(LD_DIR, "Bad element '%s' in bw weight param",
+              escaped(bw_weight_param));
+          weight_scale = BW_WEIGHT_SCALE;
+        }
+      } else {
+        log_warn(LD_DIR, "Bad element '%s' in bw weight param",
+            escaped(bw_weight_param));
+        weight_scale = BW_WEIGHT_SCALE;
+      }
+    }
+
+    networkstatus_compute_bw_weights_v9(chunks, G, M, E, D, T, weight_scale);
+  }
+
   /* Add a signature. */
   {
     char digest[DIGEST256_LEN];
@@ -1382,11 +1779,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
     networkstatus_t *c;
     if (!(c = networkstatus_parse_vote_from_string(result, NULL,
                                                    NS_TYPE_CONSENSUS))) {
-      log_err(LD_BUG,"Generated a networkstatus consensus we couldn't "
+      log_err(LD_BUG, "Generated a networkstatus consensus we couldn't "
               "parse.");
       tor_free(result);
       return NULL;
     }
+    // XXX: Verify balancing parameters here
+    // networkstatus_verify_bw_weights(c);
     networkstatus_vote_free(c);
   }
 
