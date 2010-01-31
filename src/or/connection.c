@@ -822,9 +822,9 @@ warn_too_many_conns(void)
     log_warn(LD_NET,"Failing because we have %d connections already. Please "
              "raise your ulimit -n.", n_conns);
     last_warned = now;
+    control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
+                                 n_conns);
   }
-  control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
-                               n_conns);
 }
 
 /** Bind a new non-blocking socket listening to the socket described
