@@ -1,4 +1,10 @@
 Changes in version 0.2.2.9-alpha - 2010-??-??
+  o Major bugfixes:
+    - Authorities could be tricked into giving out the Exit flag to relays
+      that didn't allow exiting to any ports. This could screw with load
+      balancing and stats. Bugfix on 0.1.1.6-alpha, fixes bug 1238. Bug
+      discovered by Martin Kowalczyk.
+
   o Minor bugfixes:
     - When deciding whether to use strange flags to turn TLS renegotiation
       on, detect the OpenSSL version at run-time, not compile time.  We
