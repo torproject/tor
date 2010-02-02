@@ -326,12 +326,11 @@ if test "$enable_static_openssl" = "yes"; then
    if test "$tor_cv_library_openssl_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-openssl-dir=x option when using --enable-static-openssl")
    else
-     TOR_OPENSSL_LIBS="$TOR_LIBDIR_openssl/libcrypto.a $TOR_LIBDIR_openssl/libssl.a"
+     TOR_OPENSSL_LIBS="$TOR_LIBDIR_openssl/libssl.a $TOR_LIBDIR_openssl/libcrypto.a"
    fi
 else
-     TOR_OPENSSL_LIBS="-lcrypto -lssl"
+     TOR_OPENSSL_LIBS="-lssl -lcrypto"
 fi
-echo "TOR_OPENSSL_LIBS=$TOR_OPENSSL_LIBS"
 AC_SUBST(TOR_OPENSSL_LIBS)
 
 dnl ------------------------------------------------------
