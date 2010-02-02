@@ -647,7 +647,7 @@ static void
 test_policies(void)
 {
   int i;
-  smartlist_t *policy = NULL, *policy2 = NULL;
+  smartlist_t *policy = NULL, *policy2 = NULL, *policy3 = NULL;
   addr_policy_t *p;
   tor_addr_t tar;
   config_line_t line;
@@ -678,9 +678,18 @@ test_policies(void)
   test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, NULL, 1));
   test_assert(policy2);
 
+  policy3 = smartlist_create();
+  p = router_parse_addr_policy_item_from_string("reject *:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy3, p);
+  p = router_parse_addr_policy_item_from_string("accept *:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy3, p);
+
   test_assert(!exit_policy_is_general_exit(policy));
   test_assert(exit_policy_is_general_exit(policy2));
   test_assert(!exit_policy_is_general_exit(NULL));
+  test_assert(!exit_policy_is_general_exit(policy3));
 
   test_assert(cmp_addr_policies(policy, policy2));
   test_assert(cmp_addr_policies(policy, NULL));
@@ -790,10 +799,9 @@ test_policies(void)
     "490,492,494,496,498,500,502,504,506,508,510,512,514,516,518,520,522");
 
  done:
-  if (policy)
-    addr_policy_list_free(policy);
-  if (policy2)
-    addr_policy_list_free(policy2);
+  addr_policy_list_free(policy);
+  addr_policy_list_free(policy2);
+  addr_policy_list_free(policy3);
   tor_free(policy_str);
   if (sm) {
     SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
