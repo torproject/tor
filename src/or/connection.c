@@ -331,13 +331,13 @@ connection_init(time_t now, connection_t *conn, int type, int socket_family)
 
   conn->type = type;
   conn->socket_family = socket_family;
+#ifndef USE_BUFFEREVENTS
   if (!connection_is_listener(conn)) {
     /* listeners never use their buf */
-    /* XXX and bufferevents don't either, but for now we leave this here
-     * so that linked connections can still work. */
     conn->inbuf = buf_new();
     conn->outbuf = buf_new();
   }
+#endif
 
   conn->timestamp_created = now;
   conn->timestamp_lastread = now;

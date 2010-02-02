@@ -925,7 +925,11 @@ run_connection_housekeeping(int i, time_t now)
      the connection or send a keepalive, depending. */
 
   or_conn = TO_OR_CONN(conn);
+#ifdef USE_BUFFEREVENTS
+  tor_assert(conn->bufev);
+#else
   tor_assert(conn->outbuf);
+#endif
 
   if (or_conn->is_bad_for_new_circs && !or_conn->n_circuits) {
     /* It's bad for new circuits, and has no unmarked circuits on it:
