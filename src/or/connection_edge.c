@@ -2935,10 +2935,12 @@ parse_extended_hostname(char *address, int allowdotexit)
       if (allowdotexit) {
         *s = 0; /* NUL-terminate it */
         return EXIT_HOSTNAME; /* .exit */
-      } /* else */
-      log_warn(LD_APP, "The \".exit\" notation is disabled in Tor due to "
-               "security risks. Set AllowDotExit in your torrc to enable it.");
-      /* FFFF send a controller event too to notify Vidalia users */
+      } else {
+        log_warn(LD_APP, "The \".exit\" notation is disabled in Tor due to "
+                 "security risks. Set AllowDotExit in your torrc to enable it.");
+        /* FFFF send a controller event too to notify Vidalia users */
+        return BAD_HOSTNAME;
+      }
     }
     if (strcmp(s+1,"onion"))
       return NORMAL_HOSTNAME; /* neither .exit nor .onion, thus normal */

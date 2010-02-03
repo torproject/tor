@@ -12,6 +12,9 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
       when it updates its libraries in a security patch.
     - Fix static compilation by listing the openssl libraries in the right
       order.  Fixes bug 1237.
+    - Actually reject .exit hostnames when we're supposed to be rejecting
+      them; do not pass them on to the exit server.  Bugfix on 0.2.2.7-alpha;
+      found and diagnosed by Scott Bennett and Downie on or-talk.
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc.  This
