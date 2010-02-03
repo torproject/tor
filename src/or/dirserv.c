@@ -1776,7 +1776,8 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
     if (router_is_active(ri, now)) {
       const char *id = ri->cache_info.identity_digest;
       uint32_t bw;
-      ri->is_exit = exit_policy_is_general_exit(ri->exit_policy);
+      ri->is_exit = (!router_exit_policy_rejects_all(ri) &&
+                    exit_policy_is_general_exit(ri->exit_policy));
       uptimes[n_active] = (uint32_t)real_uptime(ri, now);
       mtbfs[n_active] = rep_hist_get_stability(id, now);
       tks  [n_active] = rep_hist_get_weighted_time_known(id, now);
