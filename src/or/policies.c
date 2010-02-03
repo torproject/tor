@@ -866,7 +866,7 @@ policies_set_router_exitpolicy_to_reject_all(routerinfo_t *r)
 }
 
 /** Return 1 if there is at least one /8 subnet in <b>policy</b> that
- * allows exiting to <b>port</b>. */
+ * allows exiting to <b>port</b>.  Otherwise, return 0. */
 static int
 exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
 {
