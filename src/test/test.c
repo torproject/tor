@@ -648,7 +648,7 @@ test_policies(void)
 {
   int i;
   smartlist_t *policy = NULL, *policy2 = NULL, *policy3 = NULL,
-              *policy4 = NULL;
+              *policy4 = NULL, *policy5 = NULL;
   addr_policy_t *p;
   tor_addr_t tar;
   config_line_t line;
@@ -675,7 +675,6 @@ test_policies(void)
   test_assert(ADDR_POLICY_REJECTED ==
           compare_addr_to_addr_policy(0xc0a80102, 2, policy));
 
-  policy2 = NULL;
   test_assert(0 == policies_parse_exit_policy(NULL, &policy2, 1, NULL, 1));
   test_assert(policy2);
 
@@ -695,11 +694,45 @@ test_policies(void)
   test_assert(p != NULL);
   smartlist_add(policy4, p);
 
+  policy5 = smartlist_create();
+
+  p = router_parse_addr_policy_item_from_string("reject 0.0.0.0/8:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject 169.254.0.0/16:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject 127.0.0.0/8:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject 192.168.0.0/16:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject 10.0.0.0/8:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject 172.16.0.0/12:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject 80.190.250.90:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject *:1-65534",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("reject *:65535",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+  p = router_parse_addr_policy_item_from_string("accept *:1-65535",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy5, p);
+
   test_assert(!exit_policy_is_general_exit(policy));
   test_assert(exit_policy_is_general_exit(policy2));
   test_assert(!exit_policy_is_general_exit(NULL));
   test_assert(!exit_policy_is_general_exit(policy3));
   test_assert(!exit_policy_is_general_exit(policy4));
+  test_assert(!exit_policy_is_general_exit(policy5));
 
   test_assert(cmp_addr_policies(policy, policy2));
   test_assert(cmp_addr_policies(policy, NULL));
@@ -813,6 +846,7 @@ test_policies(void)
   addr_policy_list_free(policy2);
   addr_policy_list_free(policy3);
   addr_policy_list_free(policy4);
+  addr_policy_list_free(policy5);
   tor_free(policy_str);
   if (sm) {
     SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
