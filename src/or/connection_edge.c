@@ -2937,7 +2937,8 @@ parse_extended_hostname(char *address, int allowdotexit)
         return EXIT_HOSTNAME; /* .exit */
       } else {
         log_warn(LD_APP, "The \".exit\" notation is disabled in Tor due to "
-                 "security risks. Set AllowDotExit in your torrc to enable it.");
+                 "security risks. Set AllowDotExit in your torrc to enable "
+                 "it.");
         /* FFFF send a controller event too to notify Vidalia users */
         return BAD_HOSTNAME;
       }
