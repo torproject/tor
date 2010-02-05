@@ -883,7 +883,7 @@ exit_policy_is_general_exit_helper(smartlist_t *policy, int port)
       if (subnet_status[j] != 0)
         continue; /* We already reject some part of this /8 */
       tor_addr_from_ipv4h(&addr, j<<24);
-      if (tor_addr_is_internal(&addr, 1)) /* 1 because * = 0.0.0.0 */
+      if (tor_addr_is_internal(&addr, 0))
         continue; /* Local or non-routable addresses */
       if (tor_addr_compare_masked(&addr, &p->addr, p->maskbits,
                                   CMP_EXACT) == 0) {
