@@ -264,6 +264,7 @@ exit 0
 %defattr(-,root,root)
 %doc AUTHORS INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO
 %{_mandir}/man*/*
+%{_docdir}/tor/*
 %{_bindir}/tor
 %{_bindir}/torctl
 %{_bindir}/torify
