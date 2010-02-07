@@ -25,6 +25,10 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
     - Generate our manpage and HTML documentation using Asciidoc.  This
       should make it easier to maintain the documentation, and produce
       nicer HTML.
+    - Removed some unnecessary files from the source distribution. The
+      AUTHORS file had its content merged into the people page on the
+      website. The roadmaps and design doc can now be found in the
+      projects directory in svn.
 
   o Removed features:
     - Stop shipping parts of the website and the design paper in the
