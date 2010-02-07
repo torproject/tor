@@ -8,6 +8,13 @@ Changes in version 0.2.1.23 - 2010-0?-??
       automatically discard guards picked using the old algorithm. Fixes
       bug 1217; bugfix on 0.2.1.3-alpha. Found by Mike Perry.
 
+  o Major bugfixes:
+    - Fix a potential buffer overflow in lookup_last_hid_serv_request()
+     that could happen on 32-bit platforms with 64-bit time_t. Also fix
+     a memory leak when requesting a hidden service descriptor we've
+     requested before. Fixes bug 1242, bugfix on 0.2.0.18-alpha. Found
+     by aakova.
+
   o Minor bugfixes:
     - When deciding whether to use strange flags to turn TLS renegotiation
       on, detect the OpenSSL version at run-time, not compile time.  We
