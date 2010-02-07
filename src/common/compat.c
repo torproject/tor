@@ -1613,7 +1613,8 @@ get_uname(void)
         static struct {
           unsigned major; unsigned minor; const char *version;
         } win_version_table[] = {
-          { 6, 0, "Windows \"Longhorn\"" },
+          { 6, 1, "Windows 7" },
+          { 6, 0, "Windows Vista" },
           { 5, 2, "Windows Server 2003" },
           { 5, 1, "Windows XP" },
           { 5, 0, "Windows 2000" },
@@ -1663,7 +1664,7 @@ get_uname(void)
                        plat, extra);
         } else {
           if (info.dwMajorVersion > 6 ||
-              (info.dwMajorVersion==6 && info.dwMinorVersion>0))
+              (info.dwMajorVersion==6 && info.dwMinorVersion>1))
             tor_snprintf(uname_result, sizeof(uname_result),
                       "Very recent version of Windows [major=%d,minor=%d] %s",
                       (int)info.dwMajorVersion,(int)info.dwMinorVersion,
