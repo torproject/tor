@@ -2339,7 +2339,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
                    uint32_t *addr_out, char **hostname_out)
 {
   struct in_addr in;
-  struct hostent *rent;
+  uint32_t addr;
   char hostname[256];
   int explicit_ip=1;
   int explicit_hostname=1;
@@ -2369,8 +2369,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   if (tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
     explicit_ip = 0;
-    rent = (struct hostent *)gethostbyname(hostname);
-    if (!rent) {
+    if(!tor_lookup_hostname(hostname, &addr)) {
       uint32_t interface_ip;
 
       if (explicit_hostname) {
@@ -2393,8 +2392,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
              "local interface. Using that.", tmpbuf);
       strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
     } else {
-      tor_assert(rent->h_length == 4);
-      memcpy(&in.s_addr, rent->h_addr, rent->h_length);
+      in.s_addr = htonl(addr);
 
       if (!explicit_hostname &&
           is_internal_IP(ntohl(in.s_addr), 0)) {

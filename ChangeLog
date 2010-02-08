@@ -20,6 +20,9 @@ Changes in version 0.2.1.23 - 2010-0?-??
       on, detect the OpenSSL version at run-time, not compile time.  We
       need to do this because Apple doesn't update its dev-tools headers
       when it updates its libraries in a security patch.
+    - Refactor resolve_my_address() a little, to not use gethostbyname()
+      anymore. Fixes bug 1244; bugfix on 0.0.2pre25. Reported by Mike
+      Mestnik.
 
   o Minor features:
     - Avoid a mad rush at the beginning of each month when each client
