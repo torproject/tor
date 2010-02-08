@@ -332,9 +332,12 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
   tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
                hsdir_id_base32, desc_id_base32);
   if (set) {
-    last_request_ptr = tor_malloc_zero(sizeof(time_t *));
+    time_t *oldptr;
+    last_request_ptr = tor_malloc_zero(sizeof(time_t));
     *last_request_ptr = now;
-    strmap_set(last_hid_serv_requests, hsdir_desc_comb_id, last_request_ptr);
+    oldptr = strmap_set(last_hid_serv_requests, hsdir_desc_comb_id,
+                        last_request_ptr);
+    tor_free(oldptr);
   } else
     last_request_ptr = strmap_get_lc(last_hid_serv_requests,
                                      hsdir_desc_comb_id);
