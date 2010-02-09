@@ -648,7 +648,8 @@ test_policies(void)
 {
   int i;
   smartlist_t *policy = NULL, *policy2 = NULL, *policy3 = NULL,
-              *policy4 = NULL, *policy5 = NULL, *policy6 = NULL;
+              *policy4 = NULL, *policy5 = NULL, *policy6 = NULL,
+              *policy7 = NULL;
   addr_policy_t *p;
   tor_addr_t tar;
   config_line_t line;
@@ -725,11 +726,16 @@ test_policies(void)
   p = router_parse_addr_policy_item_from_string("accept *:1-65535",-1);
   test_assert(p != NULL);
   smartlist_add(policy5, p);
-  
+
   policy6 = smartlist_create();
   p = router_parse_addr_policy_item_from_string("accept 43.3.0.0/9:*",-1);
   test_assert(p != NULL);
   smartlist_add(policy6, p);
+
+  policy7 = smartlist_create();
+  p = router_parse_addr_policy_item_from_string("accept 0.0.0.0/8:*",-1);
+  test_assert(p != NULL);
+  smartlist_add(policy7, p);
 
   test_assert(!exit_policy_is_general_exit(policy));
   test_assert(exit_policy_is_general_exit(policy2));
@@ -738,6 +744,7 @@ test_policies(void)
   test_assert(!exit_policy_is_general_exit(policy4));
   test_assert(!exit_policy_is_general_exit(policy5));
   test_assert(!exit_policy_is_general_exit(policy6));
+  test_assert(!exit_policy_is_general_exit(policy7));
 
   test_assert(cmp_addr_policies(policy, policy2));
   test_assert(cmp_addr_policies(policy, NULL));
@@ -853,6 +860,7 @@ test_policies(void)
   addr_policy_list_free(policy4);
   addr_policy_list_free(policy5);
   addr_policy_list_free(policy6);
+  addr_policy_list_free(policy7);
   tor_free(policy_str);
   if (sm) {
     SMARTLIST_FOREACH(sm, char *, s, tor_free(s));
