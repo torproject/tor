@@ -129,8 +129,9 @@ SocksListenAddress 127.0.0.1 # accept connections only from localhost
 #DirListenAddress 0.0.0.0:9091
 ## Uncomment to return an arbitrary blob of html on your DirPort. Now you
 ## can explain what Tor is if anybody wonders why your IP address is
-## contacting them. See contrib/tor-exit-notice.html for a sample.
-#DirPortFrontPage /etc/tor/exit-notice.html
+## contacting them. See contrib/tor-exit-notice.html in Tor's source
+## distribution for a sample.
+#DirPortFrontPage @CONFDIR@/tor-exit-notice.html
 
 ## Uncomment this if you run more than one Tor relay, and add the identity
 ## key fingerprint of each Tor relay you control, even if they're on
