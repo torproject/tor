@@ -15,6 +15,9 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
     - Actually reject .exit hostnames when we're supposed to be rejecting
       them; do not pass them on to the exit server.  Bugfix on 0.2.2.7-alpha;
       found and diagnosed by Scott Bennett and Downie on or-talk.
+    - Don't spam the controller with log messages when we have no file
+      descriptors available. Rate-limiting for log messages was already
+      implemented in the past.
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc.  This
