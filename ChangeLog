@@ -18,6 +18,8 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
     - Don't spam the controller with log messages when we have no file
       descriptors available. Rate-limiting for log messages was already
       implemented in the past.
+    - Avoid a bogus overlapped memcpy in tor_addr_copy().  Found by
+      "memcpyfail".
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc.  This
