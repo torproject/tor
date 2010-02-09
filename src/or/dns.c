@@ -655,7 +655,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
    * know the answer. */
   if (tor_addr_from_str(&addr, exitconn->_base.address) >= 0) {
     if (tor_addr_family(&addr) == AF_INET) {
-      tor_addr_assign(&exitconn->_base.addr, &addr);
+      tor_addr_copy(&exitconn->_base.addr, &addr);
       exitconn->address_ttl = DEFAULT_DNS_TTL;
       return 1;
     } else {

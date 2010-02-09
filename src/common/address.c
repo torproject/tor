@@ -760,6 +760,8 @@ tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6)
 void
 tor_addr_copy(tor_addr_t *dest, const tor_addr_t *src)
 {
+  if (src == dest)
+    return;
   tor_assert(src);
   tor_assert(dest);
   memcpy(dest, src, sizeof(tor_addr_t));
@@ -910,13 +912,6 @@ tor_dup_addr(const tor_addr_t *addr)
   char buf[TOR_ADDR_BUF_LEN];
   tor_addr_to_str(buf, addr, sizeof(buf), 0);
   return tor_strdup(buf);
-}
-
-/** Copy the address in <b>src</b> to <b>dest</b> */
-void
-tor_addr_assign(tor_addr_t *dest, const tor_addr_t *src)
-{
-  memcpy(dest, src, sizeof(tor_addr_t));
 }
 
 /** Return a string representing the address <b>addr</b>.  This string is
