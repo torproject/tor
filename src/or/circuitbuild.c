@@ -135,6 +135,12 @@ circuit_build_times_recent_circuit_count(void)
   return num;
 }
 
+/**
+ * This function is called when we get a consensus update.
+ *
+ * It checks to see if we have changed any consensus parameters
+ * that require reallocation or discard of previous stats.
+ */
 void
 circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
                                          networkstatus_t *ns)
@@ -149,6 +155,19 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
 
     tor_assert(num > 0);
     tor_assert(cbt->liveness.timeouts_after_firsthop);
+
+    /*
+     * Technically this is a circular array that we are reallocating
+     * and memcopying. However, since it only consists of either 1s
+     * or 0s, and is only used in a statistical test to determine when
+     * we should discard our history after a sufficient number of 1's
+     * have been reached, it is fine if order is not preserved or
+     * elements are lost.
+     *
+     * cbtrecentcount should only be changing in cases of severe network
+     * distress anyway, so memory correctness here is paramount over
+     * doing acrobatics to preserve the array.
+     */
     recent_circs = tor_malloc_zero(sizeof(int8_t)*num);
     memcpy(recent_circs, cbt->liveness.timeouts_after_firsthop,
            sizeof(int8_t)*MIN(num, cbt->liveness.num_recent_circs));
