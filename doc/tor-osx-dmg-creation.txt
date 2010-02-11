@@ -56,8 +56,8 @@ http://www.monkey.org/~provos/libevent/
 3) The first step of compiling libevent is to configure it as
 follows:
 
-CFLAGS="-O -g -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386" \ 
-LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \ 
+CFLAGS="-O -g -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386" \
+LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
 ./configure --enable-static --disable-shared --disable-dependency-tracking
 
 4) Complete the "make" and "make install".  You will need to be root,
@@ -72,7 +72,7 @@ or sudo -s, to complete the "make install".
 
 "/usr/local/lib/libevent.a (for architecture i386):      current ar archive random library"
 
-6) Get your preferred version of the tor source from https://www.torproject.org/download.  
+6) Get your preferred version of the tor source from https://www.torproject.org/download.
 Extract the tarball.
 
 7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
@@ -98,7 +98,7 @@ Tor-$VERSION-i386-Bundle.dmg
 ####################################################################
 #
 # Section 3
-# 
+#
 # Universal Binaries for OSX PPC and X86
 # This method works in OSX 10.4 (Tiger) and newer OSX versions.
 #
@@ -130,7 +130,7 @@ or sudo -s, to complete the "make install".
 /usr/local/lib/libevent.a (for architecture i386):      current ar archive random library
 /usr/local/lib/libevent.a (for architecture ppc):       current ar archive
 
-6) Get your preferred version of the tor source from https://www.torproject.org/download.  
+6) Get your preferred version of the tor source from https://www.torproject.org/download.
 Extract the tarball.
 
 7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
