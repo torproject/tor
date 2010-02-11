@@ -1,3 +1,4 @@
+##
 ## Instructions for building Tor with MinGW (http://www.mingw.org/)
 ##
 
@@ -5,21 +6,19 @@ Stage One:  Download and Install MinGW.
 ---------------------------------------
 
 Download mingw:
-http://prdownloads.sf.net/mingw/MinGW-5.1.4.exe?download
+http://prdownloads.sf.net/mingw/MinGW-5.1.6.exe?download
 
 Download msys:
-http://prdownloads.sf.net/mingw/MSYS-1.0.10.exe?download
+http://prdownloads.sf.net/ming/MSYS-1.0.11.exe?download
 
-Download the mingw developer tool kit:
-http://prdownloads.sf.net/mingw/msysDTK-1.0.1.exe?download
+Install MinGW and MSYS.
 
-Download the mingw autoconf-2.59 update:
-http://prdownloads.sf.net/mingw/msys-autoconf-2.59.tar.bz2?download
+Open an MSYS window.  Extract mingw-autoconf-2.5-2.64-1-mingw32-bin.tar.gz
+to /c/MinGW/.  
 
-Install mingw, msys and mingw-dtk.  Extract msys-autoconf-2.59.tar.bz2 into
-your mingw install location.  For example, if you installed mingw into
-/c/mingw/1.0/ you want to extract msys-autoconf-2.59.tar.bz2 into this
-directory.
+Make sure your PATH includes C:\MinGW\bin.  You can verify this by right
+clicking on "My Computer", choose "Properties", choose "Advanced",
+choose "Environment Variables", select PATH.  
 
 Create a directory called "tor-mingw".
 
@@ -27,17 +26,17 @@ Stage Two:  Download, extract, compile openssl
 ----------------------------------------------
 
 Download openssl:
-http://www.openssl.org/source/openssl-0.9.8k.tar.gz
+http://www.openssl.org/source/openssl-0.9.8l.tar.gz
 
 Extract openssl:
 Copy the openssl tarball into the "tor-mingw" directory.
 Type "cd tor-mingw/"
-Type "tar zxf openssl-0.9.8k.tar.gz"
+Type "tar zxf openssl-0.9.8l.tar.gz"
 (Note:  There are many symlink errors because Windows doesn't support
 symlinks.  You can ignore these errors.)
 
 Make openssl libraries:
-Type "cd tor-mingw/openssl-0.9.8k/"
+Type "cd tor-mingw/openssl-0.9.8l/"
 Type "./Configure -no-idea -no-rc5 -no-mdc2 mingw"
 Edit Makefile and remove the "test:" and "tests:" sections.
 Type "rm -rf ./test"
@@ -51,11 +50,6 @@ Type "cp fips/fips.h include/openssl/"
 # The next steps can take up to 30 minutes to complete.
 Type "make"
 Type "make install"
-
-Alternatively:
-Download the pre-compiled openssl for win32 from 
-http://gnuwin32.sourceforge.net/packages/openssl.htm
-Install and proceed.
 
 
 Stage Three:  Download, extract, compile zlib
@@ -76,13 +70,6 @@ Type "cd tor-mingw/zlib-1.2.3/"
 Type "./configure"
 Type "make"
 Type "make install"
-
-OR 
-
-Make zlib1.dll:
-Type "cd tor-mingw/zlib-1.2.3/"
-Type "./configure"
-Type "make -f win32/Makefile.gcc"
 
 Done.
 
