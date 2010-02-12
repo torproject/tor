@@ -20,6 +20,11 @@ Changes in version 0.2.1.23 - 2010-02-12
       requested before. Fixes bug 1242, bugfix on 0.2.0.18-alpha. Found
       by aakova.
 
+  o Directory authority changes:
+    - Change IP address for dannenberg (v3 directory authority), and
+      remove moria2 (obsolete v1, v2 directory authority and v0 hidden
+      service directory authority) from the list.
+
   o Minor bugfixes:
     - Refactor resolve_my_address() to not use gethostbyname() anymore.
       Fixes bug 1244; bugfix on 0.0.2pre25. Reported by Mike Mestnik.
