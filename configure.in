@@ -19,12 +19,6 @@ fi
 # the += operator on it in src/or/Makefile.am
 CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 
-AC_ARG_ENABLE(debug,
- AS_HELP_STRING(--enable-debug, compile with debugging info),
-[if test x$enableval = xyes; then
-    CFLAGS="$CFLAGS -g"
-fi])
-
 #XXXX ideally, we should make this into a no-op, and detect whether we're
 #compiling for the iphone by using $target.
 AC_ARG_ENABLE(iphone,
