@@ -1,4 +1,8 @@
-Changes in version 0.2.1.23 - 2010-02-12
+Changes in version 0.2.1.23 - 2010-02-13
+  Tor 0.2.1.23 fixes a huge client-side performance bug, makes Tor work
+  again on the latest OS X, and updates the location of a directory
+  authority.
+
   o Major bugfixes (performance):
     - We were selecting our guards uniformly at random, and then weighting
       which of our guards we'd use uniformly at random. This imbalance
