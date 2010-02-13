@@ -19,15 +19,6 @@ fi
 # the += operator on it in src/or/Makefile.am
 CPPFLAGS="$CPPFLAGS -I\${top_srcdir}/src/common"
 
-#XXXX ideally, we should make this into a no-op, and detect whether we're
-#compiling for the iphone by using $target.
-AC_ARG_ENABLE(iphone,
- AS_HELP_STRING(--enable-iphone, compile with iPhone support),
- [if test x$enableval = xyes ; then
-   tor_cv_iphone=true
-   CFLAGS="$CFLAGS -D__DARWIN_UNIX03 -DIPHONE"
-  fi])
-
 #XXXX020 We should make these enabled or not, before 0.2.0.x-final
 AC_ARG_ENABLE(buf-freelists,
    AS_HELP_STRING(--disable-buf-freelists, disable freelists for buffer RAM))

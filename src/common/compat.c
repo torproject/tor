@@ -1009,9 +1009,6 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
 #if defined(CYGWIN) || defined(__CYGWIN__)
   const char *platform = "Cygwin";
   const unsigned long MAX_CONNECTIONS = 3200;
-#elif defined(IPHONE)
-  const char *platform = "iPhone";
-  const unsigned long MAX_CONNECTIONS = 9999;
 #elif defined(MS_WINDOWS)
   const char *platform = "Windows";
   const unsigned long MAX_CONNECTIONS = 15000;
