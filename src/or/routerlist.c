@@ -2070,10 +2070,8 @@ router_choose_random_node(smartlist_t *excludedsmartlist,
   if (excludedset)
     routerset_subtract_routers(sl,excludedset);
 
-  if (need_capacity || need_guard)
-    choice = routerlist_sl_choose_by_bandwidth(sl, rule);
-  else
-    choice = smartlist_choose(sl);
+  // Always weight by bandwidth
+  choice = routerlist_sl_choose_by_bandwidth(sl, rule);
 
   smartlist_free(sl);
   if (!choice && (need_uptime || need_capacity || need_guard)) {

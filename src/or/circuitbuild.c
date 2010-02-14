@@ -2133,6 +2133,8 @@ circuit_all_predicted_ports_handled(time_t now, int *need_uptime,
   smartlist_t *LongLivedServices = get_options()->LongLivedPorts;
   tor_assert(need_uptime);
   tor_assert(need_capacity);
+  // Always predict need_capacity
+  *need_capacity = 1;
   enough = (smartlist_len(sl) == 0);
   for (i = 0; i < smartlist_len(sl); ++i) {
     port = smartlist_get(sl, i);
