@@ -111,6 +111,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   len = 8192;
   len += strlen(version_lines);
   len += (RS_ENTRY_LEN+MICRODESC_LINE_LEN)*smartlist_len(rl->routers);
+  len += strlen("\ndirectory-footer\n");
   len += v3_ns->cert->cache_info.signed_descriptor_len;
 
   status = tor_malloc(len);
@@ -198,6 +199,9 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
       outp += strlen(outp);
     }
   } SMARTLIST_FOREACH_END(vrs);
+
+  tor_snprintf(outp, endp-outp, "directory-footer\n");
+  outp += strlen(outp);
 
   {
     char signing_key_fingerprint[FINGERPRINT_LEN+1];
@@ -1670,6 +1674,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_free(exitsummaries);
     tor_free(bandwidths);
     tor_free(measured_bws);
+  }
+
+  if (consensus_method >= 9) {
+    /* Starting with consensus method 9, we clearly mark the directory
+     * footer region */
+    smartlist_add(chunks, tor_strdup("directory-footer\n"));
   }
 
   if (consensus_method >= 9) {

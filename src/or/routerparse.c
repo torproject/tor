@@ -1870,22 +1870,30 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
 
 /** Helper: given a string <b>s</b>, return the start of the next router-status
  * object (starting with "r " at the start of a line).  If none is found,
- * return the start of the next directory signature.  If none is found, return
- * the end of the string. */
+ * return the start of the directory footer, or the next directory signature.
+ * If none is found, return the end of the string. */
 static INLINE const char *
 find_start_of_next_routerstatus(const char *s)
 {
   const char *eos = strstr(s, "\nr ");
   if (eos) {
-    const char *eos2 = tor_memstr(s, eos-s, "\ndirectory-signature");
+    const char *eos2 = tor_memstr(s, eos-s, "\ndirectory-footer\n");
+    if (eos2) eos2 += strlen("\ndirectory-footer");
+    else eos2 = tor_memstr(s, eos-s, "\ndirectory-signature");
+    /* Technically we are returning either the start of the next
+     * routerstatus AFTER the \n, or the start of the next consensus
+     * line AT the \n. This seems asymmetric, but leaving it that way
+     * for now for stability. */
     if (eos2 && eos2 < eos)
       return eos2;
     else
       return eos+1;
   } else {
+    if ((eos = strstr(s, "\ndirectory-footer\n")))
+      return eos+strlen("\ndirectory-footer\n");
     if ((eos = strstr(s, "\ndirectory-signature")))
       return eos+1;
-    return s + strlen(s);
+     return s + strlen(s);
   }
 }
 
