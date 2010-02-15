@@ -41,14 +41,22 @@ struct evdns_request;
   evdns_resume()
 #define evdns_base_config_windows_nameservers(base)     \
   evdns_config_windows_nameservers()
-#define evdns_base_set_option(base, opt, val, flags) \
-  evdns_set_option((opt),(val),(flags))
+#define evdns_base_set_option_(base, opt, val) \
+  evdns_set_option((opt),(val),DNS_OPTIONS_ALL)
 #define evdns_base_resolve_ipv4(base, addr, options, cb, ptr) \
   ((evdns_resolve_ipv4(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
 #define evdns_base_resolve_reverse(base, addr, options, cb, ptr) \
   ((evdns_resolve_reverse(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
 #define evdns_base_resolve_reverse_ipv6(base, addr, options, cb, ptr) \
   ((evdns_resolve_reverse_ipv6(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
+
+#elif defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER < 0x02000303
+#define evdns_base_set_option_(base, opt, val) \
+  evdns_base_set_option((base), (opt),(val),DNS_OPTIONS_ALL)
+
+#else
+#define evdns_base_set_option_ evdns_base_set_option
+
 #endif
 
 /** Longest hostname we're willing to resolve. */
@@ -1239,8 +1247,7 @@ configure_nameservers(int force)
   }
 #endif
 
-#define SET(k,v) \
-  evdns_base_set_option(the_evdns_base, (k), (v), DNS_OPTIONS_ALL)
+#define SET(k,v)  evdns_base_set_option_(the_evdns_base, (k), (v))
 
   if (evdns_base_count_nameservers(the_evdns_base) == 1) {
     SET("max-timeouts:", "16");
