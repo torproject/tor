@@ -17,8 +17,9 @@ if [ -x /usr/bin/sw_vers ]; then
 # the OS version
   OSVER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
     case "$OSVER" in
-    "10.5") ARCH="universal";;
-	"10.4") ARCH="universal";;
+	"10.6") ARCH="i386";;
+	"10.5") ARCH="i386";;
+	"10.4") ARCH="i386";;
 	"10.3") ARCH="ppc";;
 	"10.2") ARCH="ppc";;
 	"10.1") ARCH="ppc";;
@@ -62,7 +63,7 @@ EOF
 
 ### Assemble documentation
 
-groff polipo.man -T ps -m man | pstopdf -i -o $BUILD_DIR/polipo_packageroot/polipo.pdf
+groff polipo.man -T ps -m man | /usr/bin/pstopdf -i -o $BUILD_DIR/polipo_packageroot/polipo.pdf
 texi2html polipo.texi && cp polipo.html $BUILD_DIR/polipo_packageroot/polipo.html
 
 find $BUILD_DIR/polipo_packageroot -print0 |sudo xargs -0 chown root:wheel
@@ -77,8 +78,8 @@ $PACKAGEMAKER -build              \
 
 find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
-mv $BUILD_DIR/output "$BUILD_DIR/Polipo-$VERSION-$ARCH"
-rm -f "Polipo-$VERSION-$ARCH-Bundle.dmg"
+sudo mv $BUILD_DIR/output "$BUILD_DIR/Polipo-$VERSION-$ARCH"
+sudo rm -f "Polipo-$VERSION-$ARCH-Bundle.dmg"
 USER="`whoami`"
 sudo hdiutil create -format UDZO -srcfolder "$BUILD_DIR/Polipo-$VERSION-$ARCH" "Polipo-$VERSION-$ARCH.dmg"
 sudo chown "$USER" "Polipo-$VERSION-$ARCH.dmg"
