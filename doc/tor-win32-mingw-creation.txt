@@ -11,14 +11,16 @@ http://prdownloads.sf.net/mingw/MinGW-5.1.6.exe?download
 Download msys:
 http://prdownloads.sf.net/ming/MSYS-1.0.11.exe?download
 
-Install MinGW and MSYS.
+Download msysDTK:
+http://sourceforge.net/projects/mingw/files/MSYS%20Supplementary%20Tools/msysDTK-1.0.1/msysDTK-1.0.1.exe/download
 
-Open an MSYS window.  Extract mingw-autoconf-2.5-2.64-1-mingw32-bin.tar.gz
-to /c/MinGW/.
+Install MinGW, msysDTK, and MSYS in that order.  
 
 Make sure your PATH includes C:\MinGW\bin.  You can verify this by right
 clicking on "My Computer", choose "Properties", choose "Advanced",
 choose "Environment Variables", select PATH.
+
+Start MSYS(rxvt).
 
 Create a directory called "tor-mingw".
 
@@ -46,7 +48,7 @@ Type "cd ../ssl/"
 Type "find ./ -name "*.h" -exec cp {} ../include/openssl/ \;"
 Type "cd .."
 Type "cp *.h include/openssl/"
-Type "cp fips/fips.h include/openssl/"
+Type "find ./fips -type f -name "*.h" -exec cp {} include/openssl/ \;"
 # The next steps can take up to 30 minutes to complete.
 Type "make"
 Type "make install"
@@ -115,4 +117,3 @@ From the Tor build directory above, run:
 "./contrib/package_nsis-mingw.sh"
 
 The resulting Tor installer executable is in ./win_tmp/.
-
