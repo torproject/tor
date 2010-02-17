@@ -34,7 +34,9 @@ tarball.
 5) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
 
-CONFDIR=/Library/Tor ./configure --prefix=/Library/Tor --bindir=/Library/Tor --sysconfdir=/Library
+CPPFLAGS='-DSSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=0x0010' \
+CONFDIR=/Library/Tor ./configure --prefix=/Library/Tor \
+--bindir=/Library/Tor --sysconfdir=/Library
 
 6) In same top level dir, do a "make dist-osx".  There now exists a
 .dmg file in the same directory.  Install from this dmg.
@@ -78,6 +80,7 @@ Extract the tarball.
 7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
 
+CPPFLAGS='-DSSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=0x0010' \
 CFLAGS="-O -g -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386" \
 LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
 CONFDIR=/Library/Tor \
@@ -136,6 +139,7 @@ Extract the tarball.
 7) In the top level, this means /path/to/tor/, not tor/contrib/osx,
 do a configure with these parameters:
 
+CPPFLAGS='-DSSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION=0x0010' \
 CFLAGS="-O -g -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk -arch i386 -arch ppc" \
 LDFLAGS="-Wl,-syslibroot,/Developer/SDKs/MacOSX10.4u.sdk" \
 CONFDIR=/Library/Tor \
