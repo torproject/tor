@@ -2003,12 +2003,12 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
 static uint8_t
 circuit_purpose_from_string(const char *string)
 {
-  if (!strcmpstart(string, "purpose="))
+  if (!strcasecmpstart(string, "purpose="))
     string += strlen("purpose=");
 
-  if (!strcmp(string, "general"))
+  if (!strcasecmp(string, "general"))
     return CIRCUIT_PURPOSE_C_GENERAL;
-  else if (!strcmp(string, "controller"))
+  else if (!strcasecmp(string, "controller"))
     return CIRCUIT_PURPOSE_CONTROLLER;
   else
     return CIRCUIT_PURPOSE_UNKNOWN;
@@ -2071,7 +2071,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       purp = smartlist_get(args,2);
     }
 
-    if (purp && strcmpstart(purp, "purpose=") != 0)
+    if (purp && strcasecmpstart(purp, "purpose=") != 0)
       purp = NULL;
 
     if (purp) {
@@ -2351,9 +2351,9 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
       }
     } else if (!strcasecmpstart(option, "cache=")) {
       option += strlen("cache=");
-      if (!strcmp(option, "no"))
+      if (!strcasecmp(option, "no"))
         cache = 0;
-      else if (!strcmp(option, "yes"))
+      else if (!strcasecmp(option, "yes"))
         cache = 1;
       else {
         connection_printf_to_buf(conn, "552 Unknown cache request \"%s\"\r\n",

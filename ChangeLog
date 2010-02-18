@@ -21,6 +21,8 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
     - Avoid a bogus overlapped memcpy in tor_addr_copy().  Found by
       "memcpyfail".
     - Emit an GUARD DROPPED event for a case we missed.
+    - Make more fields in the controller protocol case-insensitive as
+      documented in control-spec.txt.
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc.  This
