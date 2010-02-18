@@ -371,7 +371,8 @@ tor_tls_init(void)
       log_notice(LD_GENERAL, "OpenSSL %s [%lx] looks like it's older than "
                  "0.9.8l, but some vendors have backported 0.9.8l's "
                  "renegotiation code to earlier versions.  I'll set "
-                 "SSL3_FLAGS just to be safe.");
+                 "SSL3_FLAGS just to be safe.",
+                 SSLeay_version(SSLEAY_VERSION), version);
       use_unsafe_renegotiation_flag = 1;
     } else {
       log_info(LD_GENERAL, "OpenSSL %s has version %lx",
