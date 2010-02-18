@@ -2040,6 +2040,31 @@ getargs_helper(const char *command, control_connection_t *conn,
   return NULL;
 }
 
+/** Helper.  Return the first element of <b>sl</b> at index <b>start_at</b> or
+ * higher that starts with <b>prefix</b>, case-insensitive.  Return NULL if no
+ * such element exists. */
+static const char *
+find_element_starting_with(smartlist_t *sl, int start_at, const char *prefix)
+{
+  int i;
+  for (i = start_at; i < smartlist_len(sl); ++i) {
+    const char *elt = smartlist_get(sl, i);
+    if (!strcasecmpstart(elt, prefix))
+      return elt;
+  }
+  return NULL;
+}
+
+/** Helper.  Return true iff s is an argument that we should treat as a
+ * key-value pair. */
+static int
+is_keyval_pair(const char *s)
+{
+  /* An argument is a key-value pair if it has an =, and it isn't of the form
+   * $fingeprint=name */
+  return strchr(s, '=') && s[0] != '$';
+}
+
 /** Called when we get an EXTENDCIRCUIT message.  Try to extend the listed
  * circuit, and report success or failure. */
 static int
@@ -2062,17 +2087,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   zero_circ = !strcmp("0", (char*)smartlist_get(args,0));
 
   if (zero_circ) {
-    char *purp = NULL;
-    if (smartlist_len(args) == 2) {
-      // "EXTENDCIRCUIT 0 PURPOSE=foo"
-      purp = smartlist_get(args,1);
-    } else if (smartlist_len(args) == 3) {
-      // "EXTENDCIRCUIT 0 router1,router2 PURPOSE=foo"
-      purp = smartlist_get(args,2);
-    }
-
-    if (purp && strcasecmpstart(purp, "purpose=") != 0)
-      purp = NULL;
+    const char *purp = find_element_starting_with(args, 1, "PURPOSE=");
 
     if (purp) {
       intended_purpose = circuit_purpose_from_string(purp);
@@ -2083,8 +2098,9 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
       }
     }
 
-    if ((smartlist_len(args) == 1) || (purp && (smartlist_len(args) == 2))) {
-        // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 PURPOSE=foo"
+    if ((smartlist_len(args) == 1) ||
+        (smartlist_len(args) >= 2 && is_keyval_pair(smartlist_get(args, 1)))) {
+        // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 foo=bar"
         circ = circuit_launch_by_router(intended_purpose, NULL,
                 CIRCLAUNCH_NEED_CAPACITY);
         if (!circ) {
@@ -2196,7 +2212,7 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
   }
 
   {
-    char *purp = smartlist_get(args,1);
+    const char *purp = find_element_starting_with(args,1,"PURPOSE=");
     new_purpose = circuit_purpose_from_string(purp);
     if (new_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
       connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
@@ -2241,9 +2257,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   } else if (!zero_circ && !(circ = get_circ(smartlist_get(args, 1)))) {
     connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                              (char*)smartlist_get(args, 1));
-  } else if (circ && smartlist_len(args) > 2) {
-    char *hopstring = smartlist_get(args, 2);
-    if (!strcasecmpstart(hopstring, "HOP=")) {
+  } else if (circ) {
+    const char *hopstring = find_element_starting_with(args,2,"HOP=");
+    if (hopstring) {
       hopstring += strlen("HOP=");
       hop = (int) tor_parse_ulong(hopstring, 10, 0, INT_MAX,
                                   &hop_line_ok, NULL);
@@ -2535,17 +2551,17 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   args = smartlist_create();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args) &&
-      !strcasecmp(smartlist_get(args, 0), "mode=reverse")) {
-    char *cp = smartlist_get(args, 0);
-    smartlist_del_keeporder(args, 0);
-    tor_free(cp);
-    is_reverse = 1;
+  {
+    const char *modearg = find_element_starting_with(args, 0, "mode=");
+    if (modearg && !strcasecmp(modearg, "mode=reverse"))
+      is_reverse = 1;
   }
   failed = smartlist_create();
   SMARTLIST_FOREACH(args, const char *, arg, {
-      if (dnsserv_launch_request(arg, is_reverse)<0)
-        smartlist_add(failed, (char*)arg);
+      if (!is_keyval_pair(arg)) {
+          if (dnsserv_launch_request(arg, is_reverse)<0)
+            smartlist_add(failed, (char*)arg);
+      }
   });
 
   send_control_done(conn);
