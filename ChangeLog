@@ -1,3 +1,9 @@
+Changes in version 0.2.1.24 - 2010-??-??
+  o Minor bugfixes:
+    - Work correctly out-of-the-box with even more vendor-patched versions
+      of OpenSSL.
+
+
 Changes in version 0.2.1.23 - 2010-02-13
   Tor 0.2.1.23 fixes a huge client-side performance bug, makes Tor work
   again on the latest OS X, and updates the location of a directory
