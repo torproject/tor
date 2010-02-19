@@ -20,6 +20,9 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
       implemented in the past.
     - Avoid a bogus overlapped memcpy in tor_addr_copy().  Found by
       "memcpyfail".
+    - Make the DNSPort option work with libevent 2.x. Don't alter the
+      behaviour for libevent 1.x. Fixes bug 1143. Found by SwissTorExit.
+
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc.  This

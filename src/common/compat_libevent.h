@@ -23,6 +23,10 @@ void suppress_libevent_log_msg(const char *msg);
 #define tor_evtimer_new   evtimer_new
 #define tor_evsignal_new  evsignal_new
 #define tor_event_free    event_free
+#define tor_evdns_add_server_port(sock, tcp, cb, data) \
+  evdns_add_server_port_with_base(tor_libevent_get_base(), \
+  (sock),(tcp),(cb),(data));
+
 #else
 struct event *tor_event_new(struct event_base * base, evutil_socket_t sock,
            short what, void (*cb)(evutil_socket_t, short, void *), void *arg);
@@ -31,6 +35,7 @@ struct event *tor_evtimer_new(struct event_base * base,
 struct event *tor_evsignal_new(struct event_base * base, int sig,
             void (*cb)(evutil_socket_t, short, void *), void *arg);
 void tor_event_free(struct event *ev);
+#define tor_evdns_add_server_port evdns_add_server_port
 #endif
 
 /* XXXX022 If we can drop support for Libevent before 1.1, we can
