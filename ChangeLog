@@ -22,7 +22,9 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
       "memcpyfail".
     - Make the DNSPort option work with libevent 2.x. Don't alter the
       behaviour for libevent 1.x. Fixes bug 1143. Found by SwissTorExit.
-
+    - Emit an GUARD DROPPED event for a case we missed.
+    - Make more fields in the controller protocol case-insensitive as
+      documented in control-spec.txt.
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc.  This
@@ -35,6 +37,20 @@ Changes in version 0.2.2.9-alpha - 2010-??-??
       AUTHORS file had its content merged into the people page on the
       website. The roadmaps and design doc can now be found in the
       projects directory in svn.
+    - Enabled various circuit build timeout constants to be controlled
+      by consensus parameters. Also set better defaults for these
+      parameters based on experimentation on broadband and simulated
+      high latency links.
+
+  o Minor features:
+    - The 'EXTENDCIRCUIT' control port command can now be used with
+      a circ id of 0 and no path. This will cause Tor to build a new
+      'fast' general purpose circuit using its own path selection
+      algorithms.
+    - Added a BUILDTIMEOUT_SET control port event to describe changes
+      to the circuit build timeout.
+    - Future-proof the controller protocol a bit by ignoring keyword
+      arguments we do not recognize.
 
   o Removed features:
     - Stop shipping parts of the website and the design paper in the

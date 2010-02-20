@@ -3002,48 +3002,26 @@ void entry_guards_free_all(void);
 
 /* Circuit Build Timeout "public" functions and structures. */
 
+/** Total size of the circuit timeout history to accumulate.
+ * 1000 is approx 2.5 days worth of continual-use circuits. */
+#define CBT_NCIRCUITS_TO_OBSERVE 1000
+
 /** Maximum quantile to use to generate synthetic timeouts.
  *  We want to stay a bit short of 1.0, because longtail is
  *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
-#define MAX_SYNTHETIC_QUANTILE 0.985
-
-/** Minimum circuits before estimating a timeout */
-#define MIN_CIRCUITS_TO_OBSERVE 500
-
-/** Total size of the circuit timeout history to accumulate.
- * 5000 is approx 1.5 weeks worth of continual-use circuits. */
-#define NCIRCUITS_TO_OBSERVE 5000
+#define CBT_MAX_SYNTHETIC_QUANTILE 0.985
 
 /** Width of the histogram bins in milliseconds */
-#define BUILDTIME_BIN_WIDTH ((build_time_t)50)
-
-/** Cutoff point on the CDF for our timeout estimation.
- * TODO: This should be moved to the consensus */
-#define BUILDTIMEOUT_QUANTILE_CUTOFF 0.8
+#define CBT_BIN_WIDTH ((build_time_t)50)
 
 /** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
-#define BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
-
-/** Lowest allowable value for CircuitBuildTimeout in milliseconds */
-#define BUILD_TIMEOUT_MIN_VALUE (3*1000)
-
-/** Initial circuit build timeout in milliseconds */
-#define BUILD_TIMEOUT_INITIAL_VALUE (60*1000)
-
-/** How often in seconds should we build a test circuit */
-#define BUILD_TIMES_TEST_FREQUENCY 60
+#define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
 
 /** Save state every 10 circuits */
-#define BUILD_TIMES_SAVE_STATE_EVERY 10
+#define CBT_SAVE_STATE_EVERY 10
 
 /* Circuit Build Timeout network liveness constants */
-
-/**
- * How many circuits count as recent when considering if the
- * connection has gone gimpy or changed.
- */
-#define RECENT_CIRCUITS 20
 
 /**
  * Have we received a cell in the last N circ attempts?
@@ -3053,7 +3031,7 @@ typedef uint32_t build_time_t;
  * at which point we switch back to computing the timeout from
  * our saved history.
  */
-#define NETWORK_NONLIVE_TIMEOUT_COUNT (RECENT_CIRCUITS*3/20)
+#define CBT_NETWORK_NONLIVE_TIMEOUT_COUNT (3)
 
 /**
  * This tells us when to toss out the last streak of N timeouts.
@@ -3061,7 +3039,15 @@ typedef uint32_t build_time_t;
  * If instead we start getting cells, we switch back to computing the timeout
  * from our saved history.
  */
-#define NETWORK_NONLIVE_DISCARD_COUNT (NETWORK_NONLIVE_TIMEOUT_COUNT*2)
+#define CBT_NETWORK_NONLIVE_DISCARD_COUNT (CBT_NETWORK_NONLIVE_TIMEOUT_COUNT*2)
+
+/* Circuit build times consensus parameters */
+
+/**
+ * How many circuits count as recent when considering if the
+ * connection has gone gimpy or changed.
+ */
+#define CBT_DEFAULT_RECENT_CIRCUITS 20
 
 /**
  * Maximum count of timeouts that finish the first hop in the past
@@ -3070,10 +3056,28 @@ typedef uint32_t build_time_t;
  * This tells us to abandon timeout history and set
  * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
  */
-#define MAX_RECENT_TIMEOUT_COUNT (RECENT_CIRCUITS*4/5)
+#define CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT (CBT_DEFAULT_RECENT_CIRCUITS*9/10)
 
-#if MAX_RECENT_TIMEOUT_COUNT < 1 || NETWORK_NONLIVE_DISCARD_COUNT < 1 || \
-  NETWORK_NONLIVE_TIMEOUT_COUNT < 1
+/** Minimum circuits before estimating a timeout */
+#define CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE 100
+
+/** Cutoff percentile on the CDF for our timeout estimation. */
+#define CBT_DEFAULT_QUANTILE_CUTOFF 80
+double circuit_build_times_quantile_cutoff(void);
+
+/** How often in seconds should we build a test circuit */
+#define CBT_DEFAULT_TEST_FREQUENCY 60
+
+/** Lowest allowable value for CircuitBuildTimeout in milliseconds */
+#define CBT_DEFAULT_TIMEOUT_MIN_VALUE (2*1000)
+
+/** Initial circuit build timeout in milliseconds */
+#define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60*1000)
+int32_t circuit_build_times_initial_timeout(void);
+
+#if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < 1 || \
+    CBT_NETWORK_NONLIVE_DISCARD_COUNT < 1 || \
+    CBT_NETWORK_NONLIVE_TIMEOUT_COUNT < 1
 #error "RECENT_CIRCUITS is set too low."
 #endif
 
@@ -3087,18 +3091,22 @@ typedef struct {
   int nonlive_discarded;
   /** Circular array of circuits that have made it to the first hop. Slot is
    * 1 if circuit timed out, 0 if circuit succeeded */
-  int8_t timeouts_after_firsthop[RECENT_CIRCUITS];
+  int8_t *timeouts_after_firsthop;
+  /** Number of elements allocated for the above array */
+  int num_recent_circs;
   /** Index into circular array. */
   int after_firsthop_idx;
+  /** The network is not live. Timeout gathering is suspended */
+  int net_suspended;
 } network_liveness_t;
 
 /** Structure for circuit build times history */
 typedef struct {
   /** The circular array of recorded build times in milliseconds */
-  build_time_t circuit_build_times[NCIRCUITS_TO_OBSERVE];
+  build_time_t circuit_build_times[CBT_NCIRCUITS_TO_OBSERVE];
   /** Current index in the circuit_build_times circular array */
   int build_times_idx;
-  /** Total number of build times accumulated. Maxes at NCIRCUITS_TO_OBSERVE */
+  /** Total number of build times accumulated. Max CBT_NCIRCUITS_TO_OBSERVE */
   int total_build_times;
   /** Information about the state of our local network connection */
   network_liveness_t liveness;
@@ -3130,6 +3138,8 @@ int circuit_build_times_add_time(circuit_build_times_t *cbt,
 int circuit_build_times_needs_circuits(circuit_build_times_t *cbt);
 int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
 void circuit_build_times_init(circuit_build_times_t *cbt);
+void circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
+                                              networkstatus_t *ns);
 
 #ifdef CIRCUIT_PRIVATE
 double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
@@ -3583,6 +3593,15 @@ typedef enum or_conn_status_event_t {
   OR_CONN_EVENT_NEW          = 4,
 } or_conn_status_event_t;
 
+/** Used to indicate the type of a buildtime event */
+typedef enum buildtimeout_set_event_t {
+  BUILDTIMEOUT_SET_EVENT_COMPUTED  = 0,
+  BUILDTIMEOUT_SET_EVENT_RESET     = 1,
+  BUILDTIMEOUT_SET_EVENT_SUSPENDED = 2,
+  BUILDTIMEOUT_SET_EVENT_DISCARD = 3,
+  BUILDTIMEOUT_SET_EVENT_RESUME = 4
+} buildtimeout_set_event_t;
+
 void control_update_global_event_mask(void);
 void control_adjust_event_log_severity(void);
 
@@ -3648,6 +3667,8 @@ int control_event_server_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_guard(const char *nickname, const char *digest,
                         const char *status);
+int control_event_buildtimeout_set(const circuit_build_times_t *cbt,
+                                   buildtimeout_set_event_t type);
 
 int init_cookie_authentication(int enabled);
 smartlist_t *decode_hashed_passwords(config_line_t *passwords);

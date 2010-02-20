@@ -43,7 +43,8 @@
 #define EVENT_STREAM_BANDWIDTH_USED   0x0014
 #define EVENT_CLIENTS_SEEN     0x0015
 #define EVENT_NEWCONSENSUS     0x0016
-#define _EVENT_MAX             0x0016
+#define EVENT_BUILDTIMEOUT_SET     0x0017
+#define _EVENT_MAX             0x0017
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -922,6 +923,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         event_code = EVENT_CLIENTS_SEEN;
       else if (!strcasecmp(ev, "NEWCONSENSUS"))
         event_code = EVENT_NEWCONSENSUS;
+      else if (!strcasecmp(ev, "BUILDTIMEOUT_SET"))
+        event_code = EVENT_BUILDTIMEOUT_SET;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                  ev);
@@ -2000,12 +2003,12 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
 static uint8_t
 circuit_purpose_from_string(const char *string)
 {
-  if (!strcmpstart(string, "purpose="))
+  if (!strcasecmpstart(string, "purpose="))
     string += strlen("purpose=");
 
-  if (!strcmp(string, "general"))
+  if (!strcasecmp(string, "general"))
     return CIRCUIT_PURPOSE_C_GENERAL;
-  else if (!strcmp(string, "controller"))
+  else if (!strcasecmp(string, "controller"))
     return CIRCUIT_PURPOSE_CONTROLLER;
   else
     return CIRCUIT_PURPOSE_UNKNOWN;
@@ -2037,6 +2040,31 @@ getargs_helper(const char *command, control_connection_t *conn,
   return NULL;
 }
 
+/** Helper.  Return the first element of <b>sl</b> at index <b>start_at</b> or
+ * higher that starts with <b>prefix</b>, case-insensitive.  Return NULL if no
+ * such element exists. */
+static const char *
+find_element_starting_with(smartlist_t *sl, int start_at, const char *prefix)
+{
+  int i;
+  for (i = start_at; i < smartlist_len(sl); ++i) {
+    const char *elt = smartlist_get(sl, i);
+    if (!strcasecmpstart(elt, prefix))
+      return elt;
+  }
+  return NULL;
+}
+
+/** Helper.  Return true iff s is an argument that we should treat as a
+ * key-value pair. */
+static int
+is_keyval_pair(const char *s)
+{
+  /* An argument is a key-value pair if it has an =, and it isn't of the form
+   * $fingeprint=name */
+  return strchr(s, '=') && s[0] != '$';
+}
+
 /** Called when we get an EXTENDCIRCUIT message.  Try to extend the listed
  * circuit, and report success or failure. */
 static int
@@ -2052,27 +2080,49 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   router_nicknames = smartlist_create();
 
-  args = getargs_helper("EXTENDCIRCUIT", conn, body, 2, -1);
+  args = getargs_helper("EXTENDCIRCUIT", conn, body, 1, -1);
   if (!args)
     goto done;
 
   zero_circ = !strcmp("0", (char*)smartlist_get(args,0));
+
+  if (zero_circ) {
+    const char *purp = find_element_starting_with(args, 1, "PURPOSE=");
+
+    if (purp) {
+      intended_purpose = circuit_purpose_from_string(purp);
+      if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
+        connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
+        SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+        smartlist_free(args);
+      }
+    }
+
+    if ((smartlist_len(args) == 1) ||
+        (smartlist_len(args) >= 2 && is_keyval_pair(smartlist_get(args, 1)))) {
+        // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 foo=bar"
+        circ = circuit_launch_by_router(intended_purpose, NULL,
+                CIRCLAUNCH_NEED_CAPACITY);
+        if (!circ) {
+          connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
+        } else {
+          connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
+                    (unsigned long)circ->global_identifier);
+        }
+        goto done;
+    }
+    // "EXTENDCIRCUIT 0 router1,router2" ||
+    // "EXTENDCIRCUIT 0 router1,router2 PURPOSE=foo"
+  }
+
   if (!zero_circ && !(circ = get_circ(smartlist_get(args,0)))) {
     connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                              (char*)smartlist_get(args, 0));
+    goto done;
   }
+
   smartlist_split_string(router_nicknames, smartlist_get(args,1), ",", 0, 0);
 
-  if (zero_circ && smartlist_len(args)>2) {
-    char *purp = smartlist_get(args,2);
-    intended_purpose = circuit_purpose_from_string(purp);
-    if (intended_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
-      connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
-      SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
-      smartlist_free(args);
-      goto done;
-    }
-  }
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
   if (!zero_circ && !circ) {
@@ -2162,7 +2212,7 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
   }
 
   {
-    char *purp = smartlist_get(args,1);
+    const char *purp = find_element_starting_with(args,1,"PURPOSE=");
     new_purpose = circuit_purpose_from_string(purp);
     if (new_purpose == CIRCUIT_PURPOSE_UNKNOWN) {
       connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
@@ -2207,9 +2257,9 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   } else if (!zero_circ && !(circ = get_circ(smartlist_get(args, 1)))) {
     connection_printf_to_buf(conn, "552 Unknown circuit \"%s\"\r\n",
                              (char*)smartlist_get(args, 1));
-  } else if (circ && smartlist_len(args) > 2) {
-    char *hopstring = smartlist_get(args, 2);
-    if (!strcasecmpstart(hopstring, "HOP=")) {
+  } else if (circ) {
+    const char *hopstring = find_element_starting_with(args,2,"HOP=");
+    if (hopstring) {
       hopstring += strlen("HOP=");
       hop = (int) tor_parse_ulong(hopstring, 10, 0, INT_MAX,
                                   &hop_line_ok, NULL);
@@ -2317,9 +2367,9 @@ handle_control_postdescriptor(control_connection_t *conn, uint32_t len,
       }
     } else if (!strcasecmpstart(option, "cache=")) {
       option += strlen("cache=");
-      if (!strcmp(option, "no"))
+      if (!strcasecmp(option, "no"))
         cache = 0;
-      else if (!strcmp(option, "yes"))
+      else if (!strcasecmp(option, "yes"))
         cache = 1;
       else {
         connection_printf_to_buf(conn, "552 Unknown cache request \"%s\"\r\n",
@@ -2501,17 +2551,17 @@ handle_control_resolve(control_connection_t *conn, uint32_t len,
   args = smartlist_create();
   smartlist_split_string(args, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  if (smartlist_len(args) &&
-      !strcasecmp(smartlist_get(args, 0), "mode=reverse")) {
-    char *cp = smartlist_get(args, 0);
-    smartlist_del_keeporder(args, 0);
-    tor_free(cp);
-    is_reverse = 1;
+  {
+    const char *modearg = find_element_starting_with(args, 0, "mode=");
+    if (modearg && !strcasecmp(modearg, "mode=reverse"))
+      is_reverse = 1;
   }
   failed = smartlist_create();
   SMARTLIST_FOREACH(args, const char *, arg, {
-      if (dnsserv_launch_request(arg, is_reverse)<0)
-        smartlist_add(failed, (char*)arg);
+      if (!is_keyval_pair(arg)) {
+          if (dnsserv_launch_request(arg, is_reverse)<0)
+            smartlist_add(failed, (char*)arg);
+      }
   });
 
   send_control_done(conn);
@@ -3438,6 +3488,51 @@ control_event_newconsensus(const networkstatus_t *consensus)
     return 0;
   return control_event_networkstatus_changed_helper(
            consensus->routerstatus_list, EVENT_NEWCONSENSUS, "NEWCONSENSUS");
+}
+
+/** Called when we compute a new circuitbuildtimeout */
+int
+control_event_buildtimeout_set(const circuit_build_times_t *cbt,
+                        buildtimeout_set_event_t type)
+{
+  const char *type_string = NULL;
+  double qnt = circuit_build_times_quantile_cutoff();
+
+  if (!control_event_is_interesting(EVENT_BUILDTIMEOUT_SET))
+    return 0;
+
+  switch (type) {
+    case BUILDTIMEOUT_SET_EVENT_COMPUTED:
+      type_string = "COMPUTED";
+      break;
+    case BUILDTIMEOUT_SET_EVENT_RESET:
+      type_string = "RESET";
+      qnt = 1.0;
+      break;
+    case BUILDTIMEOUT_SET_EVENT_SUSPENDED:
+      type_string = "SUSPENDED";
+      qnt = 1.0;
+      break;
+    case BUILDTIMEOUT_SET_EVENT_DISCARD:
+      type_string = "DISCARD";
+      qnt = 1.0;
+      break;
+    case BUILDTIMEOUT_SET_EVENT_RESUME:
+      type_string = "RESUME";
+      break;
+    default:
+      type_string = "UNKNOWN";
+      break;
+  }
+
+  send_control_event(EVENT_BUILDTIMEOUT_SET, ALL_FORMATS,
+                     "650 BUILDTIMEOUT_SET %s TOTAL_TIMES=%lu "
+                     "TIMEOUT_MS=%lu XM=%lu ALPHA=%lf CUTOFF_QUANTILE=%lf\r\n",
+                     type_string, (unsigned long)cbt->total_build_times,
+                     (unsigned long)cbt->timeout_ms,
+                     (unsigned long)cbt->Xm, cbt->alpha, qnt);
+
+  return 0;
 }
 
 /** Called when a single local_routerstatus_t has changed: Sends an NS event
