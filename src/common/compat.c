@@ -1789,7 +1789,6 @@ spawn_exit(void)
    * call _exit, not exit, from child processes. */
   _exit(0);
 #endif
-
 }
 
 /** Set *timeval to the current time of day.  On error, log and terminate.

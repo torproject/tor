@@ -1264,7 +1264,6 @@ update_consensus_networkstatus_fetch_time(time_t now)
     time_to_download_next_consensus = now;
     log_info(LD_DIR, "No live consensus; we should fetch one immediately.");
   }
-
 }
 
 /** Return 1 if there's a reason we shouldn't try any directory

@@ -607,7 +607,6 @@ test_circuit_timeout(void)
 
     if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
       final.have_computed_timeout = 1;
-
   }
 
 done:

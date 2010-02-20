@@ -1030,7 +1030,6 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
            "Set circuit build timeout to %lds (%lfms, Xm: %d, a: %lf) "
            "based on %d circuit times", tor_lround(cbt->timeout_ms/1000),
            cbt->timeout_ms, cbt->Xm, cbt->alpha, cbt->total_build_times);
-
 }
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
