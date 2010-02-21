@@ -1,7 +1,11 @@
-Changes in version 0.2.1.24 - 2010-??-??
+Changes in version 0.2.1.24 - 2010-02-21
+  Tor 0.2.1.24 makes Tor work again on the latest OS X -- this time
+  for sure!
+
   o Minor bugfixes:
     - Work correctly out-of-the-box with even more vendor-patched versions
-      of OpenSSL.
+      of OpenSSL. In particular, make it so Debian and OS X don't need
+      customized patches to run/build.
 
 
 Changes in version 0.2.1.23 - 2010-02-13
