@@ -31,7 +31,7 @@ Target: 0.2.2
    In the current Tor TLS connection handshake protocol ("V2", or
    "renegotiating"), the parties begin with a single certificate
    sent from the server (responder) to the client (initiator), and
-   then renegotiated to a two-certs-from-each-authenticating party.
+   then renegotiate to a two-certs-from-each-authenticating party.
    We made this change to make Tor's handshake look like a browser
    speaking SSL to a webserver.  (See proposal 130, and
    tor-spec.txt.)  To tell whether to use the V1 or V2 handshake,
@@ -77,12 +77,12 @@ Target: 0.2.2
            certificate and let the handshake complete.
          - Do not accept any data until the client has renegotiated.
          - When the client is renegotiating, send a certificate
-           chain, and expect (possibly multiple certificates in
-           reply).
+           chain, and expect (possibly multiple) certificates in
+           reply.
          - Check the certificates when the renegotiation is done.
            Then exchange VERSIONS cells.
 
-   Late in 2009, researchers found a flaw in most application's use
+   Late in 2009, researchers found a flaw in most applications' use
    of TLS renegotiation: Although TLS renegotiation does not
    reauthenticate any information exchanged before the renegotiation
    takes place, many applications were treating it as though it did,
@@ -118,10 +118,10 @@ Target: 0.2.2
    with Tor cells instead of with TLS.
 
    Using _yet another_ variant response from the responder (server),
-   we allow the client to learn that doesn't need to rehandshake,
-   and it can use a cell-based authentication system.  Once the
+   we allow the client to learn that it doesn't need to rehandshake
+   and can instead use a cell-based authentication system.  Once the
    TLS handshake is done, the client and server exchange VERSIONS
-   cells to determine what link protocol version (including
+   cells to determine link protocol version (including
    handshake version).  If they're using the handshake version
    specified here, the client and server arrive at link protocol
    version 3 (or higher), and use cells to exchange further
@@ -134,7 +134,7 @@ Target: 0.2.2
    handshake or later, so we can't encode more information there.
 
    We can, however, change the DN in the certificate passed by the
-   server to back the client.  Currently, all V2 certificates are
+   server back to the client.  Currently, all V2 certificates are
    generated with CN values ending with ".net".  I propose that we
    have the ".net" commonName ending reserved to indicate the V2
    protocol, and use commonName values ending with ".com" to
@@ -220,7 +220,7 @@ Target: 0.2.2
    cert for its identity.
 
    Tor instances MUST ignore any certificate with an unrecognized
-   CertType or CertPurpose.
+   CertType or CertPurpose, and MUST ignore extra bytes in the cert.
 
    The AUTHENTICATE cell proves to the server that the client with
    whom it completed the initial TLS handshake is the one possessing
