@@ -357,7 +357,7 @@ tor_tls_init(void)
 
     version = SSLeay();
 
-    /* OpenSSL 0.9.8l introdeced SSL3_FLAGS_ALLOW_UNSAGE_LEGACY_RENEGOTIATION
+    /* OpenSSL 0.9.8l introduced SSL3_FLAGS_ALLOW_UNSAGE_LEGACY_RENEGOTIATION
      * here, but without thinking too hard about it: it turns out that the
      * flag in question needed to be set at the last minute, and that it
      * conflicted with an existing flag number that had already been added
@@ -376,8 +376,8 @@ tor_tls_init(void)
      * leave their headers out of sync with their libraries.
      *
      * Yes, it _is_ almost as if the OpenSSL developers decided that no
-     * program should be allowed to use renegotiation its first passed an
-     * test of intelligence and determination.
+     * program should be allowed to use renegotiation unless it first passed
+     * a test of intelligence and determination.
      */
     if (version >= 0x009080c0L && version < 0x009080d0L) {
       log_notice(LD_GENERAL, "OpenSSL %s looks like version 0.9.8l; "
