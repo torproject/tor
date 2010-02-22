@@ -2125,9 +2125,6 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
-  if (!zero_circ && !circ) {
-    goto done;
-  }
 
   routers = smartlist_create();
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
