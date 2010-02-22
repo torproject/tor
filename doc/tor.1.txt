@@ -980,7 +980,7 @@ if DirPort is non-zero):
     good servers, signs it, and sends that to the clients. Unless the clients
     already have you listed as a trusted directory, you probably do not want
     to set this option. Please coordinate with the other admins at
-    tor-ops@freehaven.net if you think you should be a directory.
+    tor-ops@torproject.org if you think you should be a directory.
 
 **DirPortFrontPage** __FILENAME__::
     When this option is set, it takes an HTML file and publishes it as "/" on
@@ -1390,5 +1390,5 @@ Plenty, probably. Tor is still in development. Please report them.
 
 AUTHORS
 -------
-Roger Dingledine <mailto:arma@mit.edu[arma@mit.edu]>, Nick Mathewson <mailto:nickm@alum.mit.edu[nickm@alum.mit.edu]>.
+Roger Dingledine [arma at mit.edu], Nick Mathewson [nickm at alum.mit.edu].
 
