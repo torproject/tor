@@ -268,7 +268,7 @@ aes_free_cipher(aes_cnt_cipher_t *cipher)
 #ifdef USE_OPENSSL_EVP
   EVP_CIPHER_CTX_cleanup(&cipher->key);
 #endif
-  memset(cipher, 0, sizeof(cipher));
+  memset(cipher, 0, sizeof(aes_cnt_cipher_t));
   tor_free(cipher);
 }
 
