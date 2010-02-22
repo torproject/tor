@@ -45,6 +45,9 @@ Changes in version 0.2.2.9-alpha - 2010-02-22
     - Fix a spec conformance issue: the network-status-version token
       must be the first token in a v3 consensus or vote. Discovered by
       parakeep. Bugfix on 0.2.0.3-alpha.
+    - When freeing a cipher, zero it out completely. We only zeroed
+      the first ptrsize bytes. Bugfix on tor-0.0.2pre8. Discovered
+      and patched by ekir. Fixes bug 1254.
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc. This
