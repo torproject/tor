@@ -10,7 +10,7 @@ SUBDIRS = src doc contrib
 
 DIST_SUBDIRS = src doc contrib
 
-EXTRA_DIST = INSTALL README AUTHORS LICENSE ChangeLog          \
+EXTRA_DIST = INSTALL README LICENSE ChangeLog          \
              ReleaseNotes tor.spec tor.spec.in
 
 #install-data-local:
