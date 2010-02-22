@@ -1699,7 +1699,6 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
                                        state,
                                        BEV_OPT_DEFER_CALLBACKS);
 #else
-  /* Disabled: just use filter for now. */
   if (bufev_in) {
     evutil_socket_t s = bufferevent_getfd(bufev_in);
     tor_assert(s == -1 || s == socket);
@@ -1715,7 +1714,7 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
                                        tls->ssl,
                                        state,
                                        0);
-                                      //BEV_OPT_DEFER_CALLBACKS);
+                                       //BEV_OPT_DEFER_CALLBACKS);
 #endif
   return out;
 }

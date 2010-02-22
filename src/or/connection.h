@@ -144,6 +144,9 @@ void connection_handle_read_cb(struct bufferevent *bufev, void *arg);
 void connection_handle_write_cb(struct bufferevent *bufev, void *arg);
 void connection_handle_event_cb(struct bufferevent *bufev, short event,
                                  void *arg);
+void connection_get_rate_limit_totals(uint64_t *read_out,
+                                      uint64_t *written_out);
+void connection_enable_rate_limiting(connection_t *conn);
 #else
 #define connection_type_uses_bufferevent(c) (0)
 #endif

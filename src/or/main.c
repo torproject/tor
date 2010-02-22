@@ -76,6 +76,7 @@ static int connection_should_read_from_linked_conn(connection_t *conn);
 
 /********* START VARIABLES **********/
 
+#ifndef USE_BUFFEREVENTS
 int global_read_bucket; /**< Max number of bytes I can read this second. */
 int global_write_bucket; /**< Max number of bytes I can write this second. */
 
@@ -83,13 +84,17 @@ int global_write_bucket; /**< Max number of bytes I can write this second. */
 int global_relayed_read_bucket;
 /** Max number of relayed (bandwidth class 1) bytes I can write this second. */
 int global_relayed_write_bucket;
-
 /** What was the read bucket before the last second_elapsed_callback() call?
  * (used to determine how many bytes we've read). */
 static int stats_prev_global_read_bucket;
 /** What was the write bucket before the last second_elapsed_callback() call?
  * (used to determine how many bytes we've written). */
 static int stats_prev_global_write_bucket;
+#else
+static uint64_t stats_prev_n_read = 0;
+static uint64_t stats_prev_n_written = 0;
+#endif
+
 /* XXX we might want to keep stats about global_relayed_*_bucket too. Or not.*/
 /** How many bytes have we read since we started the process? */
 static uint64_t stats_n_bytes_read = 0;
@@ -1395,6 +1400,9 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   size_t bytes_written;
   size_t bytes_read;
   int seconds_elapsed;
+#ifdef USE_BUFFEREVENTS
+  uint64_t cur_read,cur_written;
+#endif
   or_options_t *options = get_options();
   (void)timer;
   (void)arg;
@@ -1406,9 +1414,15 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   update_approx_time(now);
 
   /* the second has rolled over. check more stuff. */
+  seconds_elapsed = current_second ? (int)(now - current_second) : 0;
+#ifdef USE_BUFFEREVENTS
+  connection_get_rate_limit_totals(&cur_read, &cur_written);
+  bytes_written = ((size_t)cur_written) - stats_prev_n_written;
+  bytes_read = ((size_t)cur_read) - stats_prev_n_read;
+#else
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
   bytes_read = stats_prev_global_read_bucket - global_read_bucket;
-  seconds_elapsed = current_second ? (int)(now - current_second) : 0;
+#endif
   stats_n_bytes_read += bytes_read;
   stats_n_bytes_written += bytes_written;
   if (accounting_is_enabled(options) && seconds_elapsed >= 0)
@@ -1418,8 +1432,13 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
 
   if (seconds_elapsed > 0)
     connection_bucket_refill(seconds_elapsed, now);
+#ifdef USE_BUFFEREVENTS
+  stats_prev_n_written = cur_written;
+  stats_prev_n_read = cur_read;
+#else
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
+#endif
 
   if (server_mode(options) &&
       !we_are_hibernating() &&
@@ -1620,8 +1639,10 @@ do_main_loop(void)
 
   /* Set up our buckets */
   connection_bucket_init();
+#ifndef USE_BUFFEREVENTS
   stats_prev_global_read_bucket = global_read_bucket;
   stats_prev_global_write_bucket = global_write_bucket;
+#endif
 
   /* initialize the bootstrap status events to know we're starting up */
   control_event_bootstrap(BOOTSTRAP_STATUS_STARTING, 0);

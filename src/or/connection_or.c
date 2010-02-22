@@ -388,6 +388,21 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
 
   conn->bandwidthrate = rate;
   conn->bandwidthburst = burst;
+#ifdef USE_BUFFEREVENTS
+  {
+    const struct timeval *tick = tor_libevent_get_one_tick_timeout();
+    struct ev_token_bucket_cfg *cfg, *old_cfg;
+    int rate_per_tick = rate / TOR_LIBEVENT_TICKS_PER_SECOND;
+    cfg = ev_token_bucket_cfg_new(rate_per_tick, burst, rate_per_tick,
+                                  burst, tick);
+    old_cfg = conn->bucket_cfg;
+    if (conn->_base.bufev)
+      bufferevent_set_rate_limit(conn->_base.bufev, cfg);
+    if (old_cfg)
+      ev_token_bucket_cfg_free(old_cfg);
+    conn->bucket_cfg = cfg;
+  }
+#else
   if (reset) { /* set up the token buckets to be full */
     conn->read_bucket = conn->write_bucket = burst;
     return;
@@ -398,6 +413,7 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
     conn->read_bucket = burst;
   if (conn->write_bucket > burst)
     conn->write_bucket = burst;
+#endif
 }
 
 /** Either our set of relays or our per-conn rate limits have changed.
@@ -879,6 +895,9 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
       return -1;
     }
     conn->_base.bufev = b;
+    if (conn->bucket_cfg)
+      bufferevent_set_rate_limit(conn->_base.bufev, conn->bucket_cfg);
+    connection_enable_rate_limiting(TO_CONN(conn));
     bufferevent_setcb(b, connection_handle_read_cb,
                       connection_handle_write_cb,
                       connection_or_handle_event_cb,

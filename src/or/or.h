@@ -1078,10 +1078,16 @@ typedef struct or_connection_t {
   /* bandwidth* and *_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
   int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
+#ifndef USE_BUFFEREVENTS
   int read_bucket; /**< When this hits 0, stop receiving. Every second we
                     * add 'bandwidthrate' to this, capping it at
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
+#else
+  /** DOCDOC */
+  /* XXXX we could share this among all connections. */
+  struct ev_token_bucket_cfg *bucket_cfg;
+#endif
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
 

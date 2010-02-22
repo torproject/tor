@@ -49,8 +49,10 @@ static void connection_init(time_t now, connection_t *conn, int type,
 static int connection_init_accepted_conn(connection_t *conn,
                                          uint8_t listener_type);
 static int connection_handle_listener_read(connection_t *conn, int new_type);
+#ifndef USE_BUFFEREVENTS
 static int connection_bucket_should_increase(int bucket,
                                              or_connection_t *conn);
+#endif
 static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
@@ -199,6 +201,7 @@ connection_type_uses_bufferevent(connection_t *conn)
     case CONN_TYPE_DIR:
     case CONN_TYPE_CONTROL:
     case CONN_TYPE_OR:
+    case CONN_TYPE_CPUWORKER:
       return 1;
     default:
       return 0;
@@ -452,6 +455,8 @@ _connection_free(connection_t *conn)
   tor_free(conn->read_event); /* Probably already freed by connection_free. */
   tor_free(conn->write_event); /* Probably already freed by connection_free. */
   IF_HAS_BUFFEREVENT(conn, {
+      /* XXXX this is a workaround. */
+      bufferevent_setcb(conn->bufev, NULL, NULL, NULL, NULL);
       bufferevent_free(conn->bufev);
       conn->bufev = NULL;
   });
@@ -481,6 +486,11 @@ _connection_free(connection_t *conn)
     log_warn(LD_BUG, "called on OR conn with non-zeroed identity_digest");
     connection_or_remove_from_identity_map(TO_OR_CONN(conn));
   }
+#ifdef USE_BUFFEREVENTS
+  if (conn->type == CONN_TYPE_OR && TO_OR_CONN(conn)->bucket_cfg) {
+    ev_token_bucket_cfg_free(TO_OR_CONN(conn)->bucket_cfg);
+  }
+#endif
 
   memset(mem, 0xCC, memlen); /* poison memory */
   tor_free(mem);
@@ -1945,6 +1955,9 @@ connection_is_rate_limited(connection_t *conn)
     return 1;
 }
 
+#ifdef USE_BUFFEREVENTS
+static struct bufferevent_rate_limit_group *global_rate_limit = NULL;
+#else
 extern int global_read_bucket, global_write_bucket;
 extern int global_relayed_read_bucket, global_relayed_write_bucket;
 
@@ -1952,11 +1965,13 @@ extern int global_relayed_read_bucket, global_relayed_write_bucket;
  * we are likely to run dry again this second, so be stingy with the
  * tokens we just put in. */
 static int write_buckets_empty_last_second = 0;
+#endif
 
 /** How many seconds of no active local circuits will make the
  * connection revert to the "relayed" bandwidth class? */
 #define CLIENT_IDLE_TIME_FOR_PRIORITY 30
 
+#ifndef USE_BUFFEREVENTS
 /** Return 1 if <b>conn</b> should use tokens from the "relayed"
  * bandwidth rates, else 0. Currently, only OR conns with bandwidth
  * class 1, and directory conns that are serving data out, count.
@@ -2067,6 +2082,20 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
   return connection_bucket_round_robin(base, priority,
                                        global_bucket, conn_bucket);
 }
+#else
+static ssize_t
+connection_bucket_read_limit(connection_t *conn, time_t now)
+{
+  (void) now;
+  return bufferevent_get_max_to_read(conn->bufev);
+}
+ssize_t
+connection_bucket_write_limit(connection_t *conn, time_t now)
+{
+  (void) now;
+  return bufferevent_get_max_to_write(conn->bufev);
+}
+#endif
 
 /** Return 1 if the global write buckets are low enough that we
  * shouldn't send <b>attempt</b> bytes of low-priority directory stuff
@@ -2091,8 +2120,12 @@ connection_bucket_write_limit(connection_t *conn, time_t now)
 int
 global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
 {
+#ifdef USE_BUFFEREVENTS
+  ssize_t smaller_bucket = bufferevent_get_max_to_write(conn->bufev);
+#else
   int smaller_bucket = global_write_bucket < global_relayed_write_bucket ?
                        global_write_bucket : global_relayed_write_bucket;
+#endif
   if (authdir_mode(get_options()) && priority>1)
     return 0; /* there's always room to answer v2 if we're an auth dir */
 
@@ -2102,8 +2135,10 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   if (smaller_bucket < (int)attempt)
     return 1; /* not enough space no matter the priority */
 
+#ifndef USE_BUFFEREVENTS
   if (write_buckets_empty_last_second)
     return 1; /* we're already hitting our limits, no more please */
+#endif
 
   if (priority == 1) { /* old-style v1 query */
     /* Could we handle *two* of these requests within the next two seconds? */
@@ -2119,6 +2154,7 @@ global_write_bucket_low(connection_t *conn, size_t attempt, int priority)
   return 0;
 }
 
+#ifndef USE_BUFFEREVENTS
 /** We just read <b>num_read</b> and wrote <b>num_written</b> bytes
  * onto <b>conn</b>. Decrement buckets appropriately. */
 static void
@@ -2362,6 +2398,88 @@ connection_bucket_should_increase(int bucket, or_connection_t *conn)
 
   return 1;
 }
+#else
+
+static void
+connection_buckets_decrement(connection_t *conn, time_t now,
+                             size_t num_read, size_t num_written)
+{
+  (void) conn;
+  (void) now;
+  (void) num_read;
+  (void) num_written;
+  /* Libevent does this for us. */
+}
+void
+connection_bucket_refill(int seconds_elapsed, time_t now)
+{
+  (void) seconds_elapsed;
+  (void) now;
+  /* Libevent does this for us. */
+}
+void
+connection_bucket_init(void)
+{
+  or_options_t *options = get_options();
+  const struct timeval *tick = tor_libevent_get_one_tick_timeout();
+  struct ev_token_bucket_cfg *bucket_cfg;
+
+  uint64_t rate, burst;
+  if (options->RelayBandwidthRate) {
+    rate = options->RelayBandwidthRate;
+    burst = options->RelayBandwidthBurst;
+  } else {
+    rate = options->BandwidthRate;
+    burst = options->BandwidthBurst;
+  }
+
+  rate /= TOR_LIBEVENT_TICKS_PER_SECOND;
+  bucket_cfg = ev_token_bucket_cfg_new((uint32_t)rate, (uint32_t)burst,
+                                       (uint32_t)rate, (uint32_t)burst,
+                                       tick);
+
+  if (!global_rate_limit) {
+    global_rate_limit =
+      bufferevent_rate_limit_group_new(tor_libevent_get_base(), bucket_cfg);
+  } else {
+    bufferevent_rate_limit_group_set_cfg(global_rate_limit, bucket_cfg);
+  }
+  ev_token_bucket_cfg_free(bucket_cfg);
+}
+
+void
+connection_get_rate_limit_totals(uint64_t *read_out, uint64_t *written_out)
+{
+  if (global_rate_limit == NULL) {
+    *read_out = *written_out = 0;
+  } else {
+    bufferevent_rate_limit_group_get_totals(
+      global_rate_limit, read_out, written_out);
+  }
+}
+
+/** DOCDOC */
+void
+connection_enable_rate_limiting(connection_t *conn)
+{
+  if (conn->bufev) {
+    if (!global_rate_limit)
+      connection_bucket_init();
+    bufferevent_add_to_rate_limit_group(conn->bufev, global_rate_limit);
+  }
+}
+
+static void
+connection_consider_empty_write_buckets(connection_t *conn)
+{
+  (void) conn;
+}
+static void
+connection_consider_empty_read_buckets(connection_t *conn)
+{
+  (void) conn;
+}
+#endif
 
 /** Read bytes from conn-\>s and process them.
  *
