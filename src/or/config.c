@@ -4628,15 +4628,12 @@ write_configuration_file(const char *fname, or_options_t *options)
 int
 options_save_current(void)
 {
-  if (torrc_fname) {
-    /* This fails if we can't write to our configuration file.
-     *
-     * If we try falling back to datadirectory or something, we have a better
-     * chance of saving the configuration, but a better chance of doing
-     * something the user never expected. Let's just warn instead. */
-    return write_configuration_file(torrc_fname, get_options());
-  }
-  return write_configuration_file(get_default_conf_file(), get_options());
+  /* This fails if we can't write to our configuration file.
+   *
+   * If we try falling back to datadirectory or something, we have a better
+   * chance of saving the configuration, but a better chance of doing
+   * something the user never expected. */
+  return write_configuration_file(get_torrc_fname(), get_options());
 }
 
 /** Mapping from a unit name to a multiplier for converting that unit into a
