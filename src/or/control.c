@@ -2100,16 +2100,18 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
 
     if ((smartlist_len(args) == 1) ||
         (smartlist_len(args) >= 2 && is_keyval_pair(smartlist_get(args, 1)))) {
-        // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 foo=bar"
-        circ = circuit_launch_by_router(intended_purpose, NULL,
-                CIRCLAUNCH_NEED_CAPACITY);
-        if (!circ) {
-          connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
-        } else {
-          connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
-                    (unsigned long)circ->global_identifier);
-        }
-        goto done;
+      // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 foo=bar"
+      circ = circuit_launch_by_router(intended_purpose, NULL,
+                                      CIRCLAUNCH_NEED_CAPACITY);
+      if (!circ) {
+        connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
+      } else {
+        connection_printf_to_buf(conn, "250 EXTENDED %lu\r\n",
+                  (unsigned long)circ->global_identifier);
+      }
+      SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
+      smartlist_free(args);
+      goto done;
     }
     // "EXTENDCIRCUIT 0 router1,router2" ||
     // "EXTENDCIRCUIT 0 router1,router2 PURPOSE=foo"
