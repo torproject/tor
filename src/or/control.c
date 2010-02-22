@@ -2095,6 +2095,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
         connection_printf_to_buf(conn, "552 Unknown purpose \"%s\"\r\n", purp);
         SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
         smartlist_free(args);
+        goto done;
       }
     }
 
