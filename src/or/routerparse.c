@@ -430,7 +430,7 @@ static token_rule_t client_keys_token_table[] = {
 
 /** List of tokens allowed in V3 networkstatus votes. */
 static token_rule_t networkstatus_token_table[] = {
-  T1("network-status-version", K_NETWORK_STATUS_VERSION,
+  T1_START("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
   T1("vote-status",            K_VOTE_STATUS,      GE(1),       NO_OBJ ),
   T1("published",              K_PUBLISHED,        CONCAT_ARGS, NO_OBJ ),
@@ -458,7 +458,7 @@ static token_rule_t networkstatus_token_table[] = {
 
 /** List of tokens allowed in V3 networkstatus consensuses. */
 static token_rule_t networkstatus_consensus_token_table[] = {
-  T1("network-status-version", K_NETWORK_STATUS_VERSION,
+  T1_START("network-status-version", K_NETWORK_STATUS_VERSION,
                                                    GE(1),       NO_OBJ ),
   T1("vote-status",            K_VOTE_STATUS,      GE(1),       NO_OBJ ),
   T1("valid-after",            K_VALID_AFTER,      CONCAT_ARGS, NO_OBJ ),

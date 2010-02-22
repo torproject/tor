@@ -42,6 +42,9 @@ Changes in version 0.2.2.9-alpha - 2010-02-22
       control-spec.txt said they were.
     - Refactor resolve_my_address() to not use gethostbyname() anymore.
       Fixes bug 1244; bugfix on 0.0.2pre25. Reported by Mike Mestnik.
+    - Fix a spec conformance issue: the network-status-version token
+      must be the first token in a v3 consensus or vote. Discovered by
+      parakeep. Bugfix on 0.2.0.3-alpha.
 
   o Code simplifications and refactoring:
     - Generate our manpage and HTML documentation using Asciidoc. This
