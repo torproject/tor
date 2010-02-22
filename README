@@ -4,7 +4,7 @@ is reasonably secure, but please ensure you read the instructions and
 configure it properly.
 
 To build Tor from source:
-        ./configure; make; make install
+        ./configure && make && make install
 
 Home page:
         https://www.torproject.org/
@@ -19,5 +19,6 @@ Making applications work with Tor:
         https://wiki.torproject.org/noreply/TheOnionRouter/TorifyHOWTO
 
 Frequently Asked Questions:
+        https://www.torproject.org/faq.html
         https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ
 
