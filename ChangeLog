@@ -70,25 +70,14 @@ Changes in version 0.2.2.9-alpha - 2010-02-22
       arguments we do not recognize.
 
 
-Changes in version 0.2.2.8-alpha - 2010-01-26
-  o Major bugfixes:
-    - Fix a memory corruption bug on bridges that occured during the
-      inclusion of stats data in extra-info descriptors. Also fix the
-      interface for geoip_get_bridge_stats* to prevent similar bugs in
-      the future. Diagnosis by Tas, patch by Karsten and Sebastian.
-      Fixes bug 1208; bugfix on 0.2.2.7-alpha.
+Changes in version 0.2.1.24 - 2010-02-21
+  Tor 0.2.1.24 makes Tor work again on the latest OS X -- this time
+  for sure!
 
-  o Minor bugfixes:
-    - Ignore OutboundBindAddress when connecting to localhost.
-      Connections to localhost need to come _from_ localhost, or else
-      local servers (like DNS and outgoing HTTP/SOCKS proxies) will often
-      refuse to listen.
-
-
-Changes in version 0.2.1.24 - 2010-??-??
   o Minor bugfixes:
     - Work correctly out-of-the-box with even more vendor-patched versions
-      of OpenSSL.
+      of OpenSSL. In particular, make it so Debian and OS X don't need
+      customized patches to run/build.
 
 
 Changes in version 0.2.1.23 - 2010-02-13
@@ -132,6 +121,21 @@ Changes in version 0.2.1.23 - 2010-02-13
       throughout the month, but we still avoid leaving a precise timestamp
       in the state file about when we first picked the guard. Improves
       over the behavior introduced in 0.1.2.17.
+
+
+Changes in version 0.2.2.8-alpha - 2010-01-26
+  o Major bugfixes:
+    - Fix a memory corruption bug on bridges that occured during the
+      inclusion of stats data in extra-info descriptors. Also fix the
+      interface for geoip_get_bridge_stats* to prevent similar bugs in
+      the future. Diagnosis by Tas, patch by Karsten and Sebastian.
+      Fixes bug 1208; bugfix on 0.2.2.7-alpha.
+
+  o Minor bugfixes:
+    - Ignore OutboundBindAddress when connecting to localhost.
+      Connections to localhost need to come _from_ localhost, or else
+      local servers (like DNS and outgoing HTTP/SOCKS proxies) will often
+      refuse to listen.
 
 
 Changes in version 0.2.2.7-alpha - 2010-01-19
