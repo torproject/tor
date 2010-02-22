@@ -19,6 +19,7 @@ int main(int c, char **v)
   RSA *rsa;
   int wantdigest=0;
   int fname_idx;
+  char *fname=NULL;
   init_logging();
 
   if (c < 2) {
@@ -46,7 +47,13 @@ int main(int c, char **v)
     fname_idx = 1;
   }
 
-  str = read_file_to_str(v[fname_idx], 0, NULL);
+#ifdef MS_WINDOWS
+  fname = tor_strdup(v[fname_idx]);
+#else
+  fname = expand_filename(v[fname_idx]);
+#endif
+  str = read_file_to_str(fname, 0, NULL);
+  tor_free(fname);
   if (!str) {
     fprintf(stderr, "Couldn't read %s\n", v[fname_idx]);
     return 1;

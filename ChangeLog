@@ -71,6 +71,9 @@ Changes in version 0.2.2.9-alpha - 2010-02-22
       to the circuit build timeout.
     - Future-proof the controller protocol a bit by ignoring keyword
       arguments we do not recognize.
+    - Expand homedirs passed to tor-checkkey. This should silence a
+      coverity complaint about passing a user-supplied string into
+      open() without checking it.
 
 
 Changes in version 0.2.1.24 - 2010-02-21
