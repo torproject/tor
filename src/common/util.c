@@ -2312,6 +2312,9 @@ char *
 expand_filename(const char *filename)
 {
   tor_assert(filename);
+#ifdef MS_WINDOWS
+  return tor_strdup(filename);
+#else
   if (*filename == '~') {
     size_t len;
     char *home, *result;
@@ -2361,6 +2364,7 @@ expand_filename(const char *filename)
   } else {
     return tor_strdup(filename);
   }
+#endif
 }
 
 #define MAX_SCANF_WIDTH 9999

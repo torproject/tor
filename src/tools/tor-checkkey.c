@@ -47,11 +47,7 @@ int main(int c, char **v)
     fname_idx = 1;
   }
 
-#ifdef MS_WINDOWS
-  fname = tor_strdup(v[fname_idx]);
-#else
   fname = expand_filename(v[fname_idx]);
-#endif
   str = read_file_to_str(fname, 0, NULL);
   tor_free(fname);
   if (!str) {
