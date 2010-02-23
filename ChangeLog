@@ -1,3 +1,18 @@
+Changes in version 0.2.2.10-alpha - ??
+  o Major features (performance):
+    - Alter the client path selection to use new consensus-generated
+      weightings to alter bandwidths when selecting Guard, Middle, Exit,
+      and Guard+Exit flagged nodes for entry, middle, and exit positions.
+      This should more evenly distribute the network load across these
+      different types of nodes, and give us the flexibility to globally
+      alter our node selection algorithms in the future.
+
+  o Minor features (performance):
+    - Always perform router selections using weighted node bandwidth,
+      even if we don't need a high capacity circuit at the time. Non-fast
+      circuits now only differ from fast ones in that they can use nodes
+      not marked with the Fast flag.
+
 Changes in version 0.2.2.9-alpha - 2010-02-22
   o Directory authority changes:
     - Change IP address for dannenberg (v3 directory authority), and
