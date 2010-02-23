@@ -451,16 +451,16 @@ rend_encode_v2_descriptors(smartlist_t *descs_out,
   size_t ipos_len = 0, ipos_encrypted_len = 0;
   int k;
   uint32_t seconds_valid;
-  crypto_pk_env_t *service_key = auth_type == REND_STEALTH_AUTH ?
-                                 client_key : desc->pk;
+  crypto_pk_env_t *service_key;
+  if (!desc) {
+    log_warn(LD_BUG, "Could not encode v2 descriptor: No desc given.");
+    return -1;
+  }
+  service_key = (auth_type == REND_STEALTH_AUTH) ? client_key : desc->pk;
   tor_assert(service_key);
   if (auth_type == REND_STEALTH_AUTH) {
     descriptor_cookie = smartlist_get(client_cookies, 0);
     tor_assert(descriptor_cookie);
-  }
-  if (!desc) {
-    log_warn(LD_REND, "Could not encode v2 descriptor: No desc given.");
-    return -1;
   }
   /* Obtain service_id from public key. */
   crypto_pk_get_digest(service_key, service_id);

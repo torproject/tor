@@ -3,6 +3,10 @@ Changes in version 0.2.1.25 - 2010-??-??
     - When freeing a cipher, zero it out completely. We only zeroed
       the first ptrsize bytes. Bugfix on tor-0.0.2pre8. Discovered
       and patched by ekir. Fixes bug 1254.
+  o Minor bugfixes:
+    - Fix a dereference-then-NULL-check sequence when publishing
+      descriptors. Bugfix on tor-0.2.1.5-alpha. Discovered by ekir,
+      fixes bug 1255.
 
 Changes in version 0.2.1.24 - 2010-02-21
   Tor 0.2.1.24 makes Tor work again on the latest OS X -- this time
