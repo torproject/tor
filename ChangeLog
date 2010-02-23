@@ -6,6 +6,10 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
       descriptors. Bugfix on tor-0.2.1.5-alpha. Discovered by ekir,
       fixes bug 1255.
 
+  o Code simplifications and refactoring:
+    - Fix some urls in the exit notice file and make it XHTML1.1 strict
+      compliant. Based on a patch from Christian Kujau.
+
 Changes in version 0.2.2.9-alpha - 2010-02-22
   o Directory authority changes:
     - Change IP address for dannenberg (v3 directory authority), and
