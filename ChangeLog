@@ -1,3 +1,8 @@
+Changes in version 0.2.2.10-alpha - 2010-??-??
+  o Minor bugfixes:
+    - Fix a memleak in the EXTENDCIRCUIT logic. Spotted by coverity.
+      Bugfix on 0.2.2.9-alpha.
+
 Changes in version 0.2.2.9-alpha - 2010-02-22
   o Directory authority changes:
     - Change IP address for dannenberg (v3 directory authority), and
