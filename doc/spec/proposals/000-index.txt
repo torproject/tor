@@ -80,8 +80,8 @@ Proposals by number:
 157  Make certificate downloads specific [ACCEPTED]
 158  Clients download consensus + microdescriptors [OPEN]
 159  Exit Scanning [OPEN]
-160  Authorities vote for bandwidth offsets in consensus [OPEN]
-161  Computing Bandwidth Adjustments [OPEN]
+160  Authorities vote for bandwidth offsets in consensus [FINISHED]
+161  Computing Bandwidth Adjustments [FINISHED]
 162  Publish the consensus in multiple flavors [OPEN]
 163  Detecting whether a connection comes from a client [OPEN]
 164  Reporting the status of server votes [OPEN]
@@ -111,8 +111,6 @@ Proposals by status:
    156  Tracking blocked ports on the client side [for 0.2.?]
    158  Clients download consensus + microdescriptors
    159  Exit Scanning
-   160  Authorities vote for bandwidth offsets in consensus [for 0.2.2.x]
-   161  Computing Bandwidth Adjustments [for 0.2.2.x]
    162  Publish the consensus in multiple flavors [for 0.2.2]
    163  Detecting whether a connection comes from a client [for 0.2.2]
    164  Reporting the status of server votes [for 0.2.2]
@@ -135,6 +133,8 @@ Proposals by status:
    121  Hidden Service Authentication [in 0.2.1.x]
    151  Improving Tor Path Selection
    155  Four Improvements of Hidden Service Performance [in 0.2.1.x]
+   160  Authorities vote for bandwidth offsets in consensus [for 0.2.2.x]
+   161  Computing Bandwidth Adjustments [for 0.2.2.x]
  CLOSED:
    101  Voting on the Tor Directory System [in 0.2.0.x]
    102  Dropping "opt" from the directory format [in 0.2.0.x]

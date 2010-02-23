@@ -2,7 +2,7 @@ Filename: 160-bandwidth-offset.txt
 Title: Authorities vote for bandwidth offsets in consensus
 Author: Roger Dingledine
 Created: 4-May-2009
-Status: Open
+Status: Finished
 Target: 0.2.2.x
 
 1. Motivation
