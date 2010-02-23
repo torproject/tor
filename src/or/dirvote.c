@@ -41,6 +41,13 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
 /** The highest consensus method that we currently support. */
 #define MAX_SUPPORTED_CONSENSUS_METHOD 9
 
+/** Lowest consensus method that contains a 'directory-footer' marker */
+#define MIN_METHOD_FOR_FOOTER 9
+
+/** Lowest consensus method that contains bandwidth weights */
+#define MIN_METHOD_FOR_BW_WEIGHTS 9
+
+/** Lowest consensus method that contains consensus params */
 #define MIN_METHOD_FOR_PARAMS 7
 
 /** Lowest consensus method that generates microdescriptors */
@@ -1506,7 +1513,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
       }
 
-      if (consensus_method >= 9) {
+      if (consensus_method >= MIN_METHOD_FOR_BW_WEIGHTS) {
         if (rs_out.has_bandwidth) {
           T += rs_out.bandwidth;
           if (is_exit && is_guard)
@@ -1676,13 +1683,13 @@ networkstatus_compute_consensus(smartlist_t *votes,
     tor_free(measured_bws);
   }
 
-  if (consensus_method >= 9) {
+  if (consensus_method >= MIN_METHOD_FOR_FOOTER) {
     /* Starting with consensus method 9, we clearly mark the directory
      * footer region */
     smartlist_add(chunks, tor_strdup("directory-footer\n"));
   }
 
-  if (consensus_method >= 9) {
+  if (consensus_method >= MIN_METHOD_FOR_BW_WEIGHTS) {
     int64_t weight_scale = BW_WEIGHT_SCALE;
     char *bw_weight_param = NULL;
 
@@ -1795,7 +1802,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       return NULL;
     }
     // Verify balancing parameters
-    if (consensus_method >= 9) {
+    if (consensus_method >= MIN_METHOD_FOR_BW_WEIGHTS) {
       networkstatus_verify_bw_weights(c);
     }
     networkstatus_vote_free(c);
