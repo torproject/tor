@@ -1588,6 +1588,9 @@
      "4" -- No longer list routers that are not running in the consensus
      "5" -- adds support for "w" and "p" lines.
      "6" -- Prefers measured bandwidth values rather than advertised
+     "7" -- Provides keyword=integer pairs of consensus parameters
+     "8" -- Provides microdescriptor summaries
+     "9" -- Provides weights for selecting flagged routers in paths
 
    Before generating a consensus, an authority must decide which consensus
    method to use.  To do this, it looks for the highest version number
