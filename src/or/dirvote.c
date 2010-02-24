@@ -751,6 +751,14 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
   char buf[512];
   int r;
 
+  if (G <= 0 || M <= 0 || E <= 0 || D <= 0) {
+    log_warn(LD_DIR, "Consensus with empty bandwidth: "
+                     "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
+                     " D="I64_FORMAT" T="I64_FORMAT,
+                     G, M, E, D, T);
+    return;
+  }
+
   /*
    * Computed from cases in 3.4.3 of dir-spec.txt
    *
