@@ -7,6 +7,8 @@ Changes in version 0.2.1.25 - 2010-??-??
     - Fix a dereference-then-NULL-check sequence when publishing
       descriptors. Bugfix on tor-0.2.1.5-alpha. Discovered by ekir,
       fixes bug 1255.
+    - Fix another dereference-then-NULL-check sequence. Bugfix on
+      0.2.1.14-rc. Discovered by ekir, fixes bug 1256.
 
 Changes in version 0.2.1.24 - 2010-02-21
   Tor 0.2.1.24 makes Tor work again on the latest OS X -- this time
