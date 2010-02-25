@@ -1771,6 +1771,10 @@ typedef struct networkstatus_t {
    * consensus, sorted by key. */
   smartlist_t *net_params;
 
+  /** List of key=value strings for the bw weight parameters in the
+   * consensus. */
+  smartlist_t *weight_params;
+
   /** List of networkstatus_voter_info_t.  For a vote, only one element
    * is included.  For a consensus, one element is included for every voter
    * whose vote contributed to the consensus. */
@@ -3950,6 +3954,9 @@ int dirserv_read_measured_bandwidths(const char *from_file,
 /** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
 
+/** Precision multiplier for the Bw weights */
+#define BW_WEIGHT_SCALE   10000
+
 void dirvote_free_all(void);
 
 /* vote manipulation */
@@ -4345,10 +4352,14 @@ void signed_descs_update_status_from_consensus_networkstatus(
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
+int32_t get_net_param_from_list(smartlist_t *net_params, const char *name,
+                                int default_val);
 int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
                                 int32_t default_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer);
+int32_t networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight,
+                                    int32_t default_val);
 const char *networkstatus_get_flavor_name(consensus_flavor_t flav);
 int networkstatus_parse_flavor_name(const char *flavname);
 void document_signature_free(document_signature_t *sig);
@@ -4947,11 +4958,13 @@ uint32_t router_get_advertised_bandwidth_capped(routerinfo_t *router);
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/
 typedef enum {
-  NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_GUARD
+  NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_MID, WEIGHT_FOR_GUARD,
+  WEIGHT_FOR_DIR
 } bandwidth_weight_rule_t;
 routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
-routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl);
+routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
+                                                bandwidth_weight_rule_t rule);
 
 /** Flags to be passed to control router_choose_random_node() to indicate what
  * kind of nodes to pick according to what algorithm. */
@@ -5177,6 +5190,7 @@ void dump_distinct_digest_count(int severity);
 
 int compare_routerstatus_entries(const void **_a, const void **_b);
 networkstatus_v2_t *networkstatus_v2_parse_from_string(const char *s);
+int networkstatus_verify_bw_weights(networkstatus_t *ns);
 networkstatus_t *networkstatus_parse_vote_from_string(const char *s,
                                                  const char **eos_out,
                                                  networkstatus_type_t ns_type);

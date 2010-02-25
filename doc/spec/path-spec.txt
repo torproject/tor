@@ -192,23 +192,41 @@ of their choices.
        below)
      - XXXX Choosing the length
 
-   For circuits that do not need to be "fast", when choosing among
-   multiple candidates for a path element, we choose randomly.
+   For "fast" circuits, we only choose nodes with the Fast flag. For
+   non-"fast" circuits, all nodes are eligible.
 
-   For "fast" circuits, we pick a given router as an exit with probability
-   proportional to its bandwidth.
+   For all circuits, we weight node selection according to router bandwidth.
 
-   For non-exit positions on "fast" circuits, we pick routers as above, but
-   we weight the bandwidth of Exit-flagged nodes depending
-   on the fraction of bandwidth available from non-Exit nodes.  Call the
-   total bandwidth for Exit nodes under consideration E,
-   and the total bandwidth for all nodes under
-   consideration T.  If E<T/3, we do not consider Exit-flagged nodes.
-   Otherwise, we weight their bandwidth with the factor (E-T/3)/E. This 
-   ensures that bandwidth is evenly distributed over nodes in 3-hop paths.
+   We also weight the bandwidth of Exit and Guard flagged nodes depending on
+   the fraction of total bandwidth that they make up and depending upon the
+   position they are being selected for.
 
-   Similarly, guard nodes are weighted by the factor (G-T/3)/G, and not
-   considered for non-guard positions if this value is less than 0.
+   These weights are published in the consensus, and are computed as described
+   in Section 3.4.3 of dir-spec.txt. They are:
+
+      Wgg - Weight for Guard-flagged nodes in the guard position
+      Wgm - Weight for non-flagged nodes in the guard Position
+      Wgd - Weight for Guard+Exit-flagged nodes in the guard Position
+
+      Wmg - Weight for Guard-flagged nodes in the middle Position
+      Wmm - Weight for non-flagged nodes in the middle Position
+      Wme - Weight for Exit-flagged nodes in the middle Position
+      Wmd - Weight for Guard+Exit flagged nodes in the middle Position
+
+      Weg - Weight for Guard flagged nodes in the exit Position
+      Wem - Weight for non-flagged nodes in the exit Position
+      Wee - Weight for Exit-flagged nodes in the exit Position
+      Wed - Weight for Guard+Exit-flagged nodes in the exit Position
+
+      Wgb - Weight for BEGIN_DIR-supporting Guard-flagged nodes
+      Wmb - Weight for BEGIN_DIR-supporting non-flagged nodes
+      Web - Weight for BEGIN_DIR-supporting Exit-flagged nodes
+      Wdb - Weight for BEGIN_DIR-supporting Guard+Exit-flagged nodes
+
+      Wbg - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
+      Wbm - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
+      Wbe - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
+      Wbd - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
 
    Additionally, we may be building circuits with one or more requests in
    mind.  Each kind of request puts certain constraints on paths:

@@ -28,11 +28,15 @@ for $fn (@ARGV) {
         if ($C && /\s(?:if|while|for|switch)\(/) {
             print "      KW(:$fn:$.\n";
         }
-	## Warn about #else #if instead of #elif. 
-	if (($lastline =~ /^\# *else/) and ($_ =~ /^\# *if/)) {
+        ## Warn about #else #if instead of #elif. 
+        if (($lastline =~ /^\# *else/) and ($_ =~ /^\# *if/)) {
             print " #else#if:$fn:$.\n";
-	}
-	$lastline = $_;
+        }
+        $lastline = $_;
+        ## Warn about unnecessary empty lines.
+        if ($lastnil && /^\s*}\n/) {
+            print "  UnnecNL:$fn:$.\n";
+        }
         ## Warn about multiple empty lines.
         if ($lastnil && /^$/) {
             print " DoubleNL:$fn:$.\n";

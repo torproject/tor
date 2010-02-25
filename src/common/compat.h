@@ -206,8 +206,10 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 /** The formatting string used to put a uint64_t value in a printf() or
  * scanf() function.  See also U64_PRINTF_ARG and U64_SCANF_ARG. */
 #define U64_FORMAT "%I64u"
+#define I64_FORMAT "%I64d"
 #else
 #define U64_FORMAT "%llu"
+#define I64_FORMAT "%lld"
 #endif
 
 /** Represents an mmaped file. Allocated via tor_mmap_file; freed with
