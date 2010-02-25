@@ -196,10 +196,16 @@ size_t strlcpy(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
 #define U64_SCANF_ARG(a) (a)
 /** Expands to a literal uint64_t-typed constant for the value <b>n</b>. */
 #define U64_LITERAL(n) (n ## ui64)
+#define I64_PRINTF_ARG(a) (a)
+#define I64_SCANF_ARG(a) (a)
+#define I64_LITERAL(n) (n ## i64)
 #else
 #define U64_PRINTF_ARG(a) ((long long unsigned int)(a))
 #define U64_SCANF_ARG(a) ((long long unsigned int*)(a))
 #define U64_LITERAL(n) (n ## llu)
+#define I64_PRINTF_ARG(a) ((long long signed int)(a))
+#define I64_SCANF_ARG(a) ((long long signed int*)(a))
+#define I64_LITERAL(n) (n ## ll)
 #endif
 
 #if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)

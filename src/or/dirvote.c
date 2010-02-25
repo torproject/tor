@@ -756,7 +756,9 @@ out:
     log_info(LD_DIR,
              "Bw weight mismatch %d. G="I64_FORMAT" M="I64_FORMAT
              " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
-             berr, G, M, E, D, T);
+             berr,
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
   }
 
   return berr;
@@ -778,7 +780,8 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
     log_warn(LD_DIR, "Consensus with empty bandwidth: "
                      "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
                      " D="I64_FORMAT" T="I64_FORMAT,
-                     G, M, E, D, T);
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     return;
   }
 
@@ -817,7 +820,9 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
       log_warn(LD_DIR, "Bw Weights error %d for case %s. "
                        "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
                        " D="I64_FORMAT" T="I64_FORMAT,
-               berr, casename, G, M, E, D, T);
+               berr, casename,
+               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     }
   } else if (3*E < T && 3*G < T) { // E < T/3 && G < T/3
     int64_t R = MIN(E, G);
@@ -876,7 +881,9 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
         log_warn(LD_DIR, "Bw Weights error %d for case %s. "
                          "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
                          " D="I64_FORMAT" T="I64_FORMAT,
-                 berr, casename, G, M, E, D, T);
+                 berr, casename,
+                 I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                 I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
       }
     }
   } else { // if (E < T/3 || G < T/3) {
@@ -886,7 +893,8 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
       log_warn(LD_BUG,
            "Bw-Weights Case 3 but with G="I64_FORMAT" M="
            I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
-           G, M, E, D, T);
+               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     }
 
     if (3*(S+D) < T) { // Subcase a: S+D < T/3
@@ -941,7 +949,9 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
         log_warn(LD_DIR, "Bw Weights error %d for case %s. "
                          "G="I64_FORMAT" M="I64_FORMAT
                          " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT,
-                 berr, casename, G, M, E, D, T);
+                 berr, casename,
+               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
       }
     }
   }
@@ -955,49 +965,64 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
     log_warn(LD_DIR, "Bw %s: Wgg="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
             " T="I64_FORMAT,
-             casename, Wgg, G, M, E, D, T);
+             casename, I64_PRINTF_ARG(Wgg),
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
+
     Wgg = MAX(MIN(Wgg, weight_scale), 0);
   }
   if (Wgd < 0 || Wgd > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wgd="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
             " T="I64_FORMAT,
-             casename, Wgd, G, M, E, D, T);
+             casename, I64_PRINTF_ARG(Wgd),
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     Wgd = MAX(MIN(Wgd, weight_scale), 0);
   }
   if (Wmg < 0 || Wmg > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wmg="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
             " T="I64_FORMAT,
-             casename, Wmg, G, M, E, D, T);
+             casename, I64_PRINTF_ARG(Wmg),
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     Wmg = MAX(MIN(Wmg, weight_scale), 0);
   }
   if (Wme < 0 || Wme > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wme="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
             " T="I64_FORMAT,
-             casename, Wme, G, M, E, D, T);
+             casename, I64_PRINTF_ARG(Wme),
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     Wme = MAX(MIN(Wme, weight_scale), 0);
   }
   if (Wmd < 0 || Wmd > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wmd="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
             " T="I64_FORMAT,
-             casename, Wmd, G, M, E, D, T);
+             casename, I64_PRINTF_ARG(Wmd),
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     Wmd = MAX(MIN(Wmd, weight_scale), 0);
   }
   if (Wee < 0 || Wee > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wee="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
             " T="I64_FORMAT,
-             casename, Wee, G, M, E, D, T);
+             casename, I64_PRINTF_ARG(Wee),
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     Wee = MAX(MIN(Wee, weight_scale), 0);
   }
   if (Wed < 0 || Wed > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wed="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
             " T="I64_FORMAT,
-             casename, Wed, G, M, E, D, T);
+             casename, I64_PRINTF_ARG(Wed),
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
     Wed = MAX(MIN(Wed, weight_scale), 0);
   }
 
@@ -1031,7 +1056,9 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
   log_notice(LD_CIRC, "Computed bandwidth weights for %s: "
              "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
              " T="I64_FORMAT,
-             casename, G, M, E, D, T);
+             casename,
+             I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+             I64_PRINTF_ARG(D), I64_PRINTF_ARG(T));
 }
 
 /** Given a list of vote networkstatus_t in <b>votes</b>, our public

@@ -2373,7 +2373,7 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
   // We use > 1 as the check for these because they are computed as integers.
   // Sometimes there are rounding errors.
   if (fabs(Wmm - weight_scale) > 1) {
-    log_warn(LD_BUG, "Wmm=%lf != "I64_FORMAT, Wmm, weight_scale);
+    log_warn(LD_BUG, "Wmm=%lf != "I64_FORMAT, Wmm, I64_PRINTF_ARG(weight_scale));
     valid = 0;
   }
 
@@ -2394,19 +2394,19 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
 
   if (fabs(Wgg + Wmg - weight_scale) > 0.001*weight_scale) {
     log_warn(LD_BUG, "Wgg=%lf != "I64_FORMAT" - Wmg=%lf", Wgg,
-             weight_scale, Wmg);
+             I64_PRINTF_ARG(weight_scale), Wmg);
     valid = 0;
   }
 
   if (fabs(Wee + Wme - weight_scale) > 0.001*weight_scale) {
     log_warn(LD_BUG, "Wee=%lf != "I64_FORMAT" - Wme=%lf", Wee,
-             weight_scale, Wme);
+             I64_PRINTF_ARG(weight_scale), Wme);
     valid = 0;
   }
 
   if (fabs(Wgd + Wmd + Wed - weight_scale) > 0.001*weight_scale) {
     log_warn(LD_BUG, "Wgd=%lf + Wmd=%lf + Wed=%lf != "I64_FORMAT,
-             Wgd, Wmd, Wed, weight_scale);
+             Wgd, Wmd, Wed, I64_PRINTF_ARG(weight_scale));
     valid = 0;
   }
 
@@ -2464,7 +2464,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                " T="I64_FORMAT". "
                "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-               casename, Etotal, Mtotal, G, M, E, D, T,
+               casename, Etotal, Mtotal,
+               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
       valid = 0;
     }
@@ -2474,7 +2476,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                " T="I64_FORMAT". "
                "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-               casename, Etotal, Gtotal, G, M, E, D, T,
+               casename, Etotal, Gtotal,
+               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
       valid = 0;
     }
@@ -2484,7 +2488,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                " T="I64_FORMAT". "
                "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-               casename, Mtotal, Gtotal, G, M, E, D, T,
+               casename, Mtotal, Gtotal,
+               I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+               I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
       valid = 0;
     }
@@ -2514,7 +2520,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                    " T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Rtotal, Stotal, G, M, E, D, T,
+                   casename, Rtotal, Stotal,
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -2525,7 +2533,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
                    " D="I64_FORMAT" T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Rtotal*3, T, G, M, E, D, T,
+                   casename, Rtotal*3, I64_PRINTF_ARG(T),
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -2536,7 +2546,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
                    " D="I64_FORMAT" T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Stotal*3, T, G, M, E, D, T,
+                   casename, Stotal*3, I64_PRINTF_ARG(T),
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -2548,7 +2560,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                    " T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Mtotal*3, T, G, M, E, D, T,
+                   casename, Mtotal*3, I64_PRINTF_ARG(T),
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -2564,7 +2578,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                    " T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Etotal, Mtotal, G, M, E, D, T,
+                   casename, Etotal, Mtotal,
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -2574,7 +2590,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                    " T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Etotal, Gtotal, G, M, E, D, T,
+                   casename, Etotal, Gtotal,
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -2584,7 +2602,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                    " T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Mtotal, Gtotal, G, M, E, D, T,
+                   casename, Mtotal, Gtotal,
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -2595,7 +2615,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                    " T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Etotal, Gtotal, G, M, E, D, T,
+                   casename, Etotal, Gtotal,
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -2623,7 +2645,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT
                    " D="I64_FORMAT" T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, Stotal*3, T, G, M, E, D, T,
+                   casename, Stotal*3, I64_PRINTF_ARG(T),
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -2634,7 +2658,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                    "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                    " T="I64_FORMAT". "
                    "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                   casename, NStotal, Mtotal, G, M, E, D, T,
+                   casename, NStotal, Mtotal,
+                   I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                   I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                    Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -2646,7 +2672,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                      I64_FORMAT". G="I64_FORMAT" M="I64_FORMAT
                      " E="I64_FORMAT" D="I64_FORMAT" T="I64_FORMAT". "
                      "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                     casename, NStotal*3, T, G, M, E, D, T,
+                     casename, NStotal*3, I64_PRINTF_ARG(T),
+                     I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                     I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                      Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
           valid = 0;
         }
@@ -2659,7 +2687,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                  "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                  " T="I64_FORMAT". "
                  "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                 casename, Etotal, Mtotal, G, M, E, D, T,
+                 casename, Etotal, Mtotal,
+                 I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                 I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                  Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -2669,7 +2699,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                  "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                  " T="I64_FORMAT". "
                  "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                 casename, Etotal, Gtotal, G, M, E, D, T,
+                 casename, Etotal, Gtotal,
+                 I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                 I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                  Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
@@ -2679,7 +2711,9 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
                  "G="I64_FORMAT" M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
                  " T="I64_FORMAT". "
                  "Wgg=%lf Wgd=%lf Wmg=%lf Wme=%lf Wmd=%lf Wee=%lf Wed=%lf",
-                 casename, Mtotal, Gtotal, G, M, E, D, T,
+                 casename, Mtotal, Gtotal,
+                 I64_PRINTF_ARG(G), I64_PRINTF_ARG(M), I64_PRINTF_ARG(E),
+                 I64_PRINTF_ARG(D), I64_PRINTF_ARG(T),
                  Wgg, Wgd, Wmg, Wme, Wmd, Wee, Wed);
         valid = 0;
       }
