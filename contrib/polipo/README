@@ -49,8 +49,10 @@ installation package.
 ---------------------------------------------
 OSX Universal Binary and Installation package
 ---------------------------------------------
+You'll need the contrib/polipo directory from Tor's source distribution.
 1) Copy Makefile.osx over Makefile.
 2) Run 'make'.
-3) Copy the contents of this directory into a directory named "contrib".
-4) Run './contrib/package.sh'
-5) You should have a Polipo-version.dmg ready for installation.
+3) Copy the contents of contrib/polipo into a directory named "contrib".
+4) Run 'chmod +x ./contrib/package.sh'
+5) Run './contrib/package.sh'
+6) You should have a Polipo-version.dmg ready for installation.
