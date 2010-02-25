@@ -553,6 +553,19 @@ void tor_cond_signal_all(tor_cond_t *cond);
 #endif
 #endif
 
+/** Macros for MIN/MAX.  Never use these when the arguments could have
+ * side-effects.
+ * {With GCC extensions we could probably define a safer MIN/MAX.  But
+ * depending on that safety would be dangerous, since not every platform
+ * has it.}
+ **/
+#ifndef MAX
+#define MAX(a,b) ( ((a)<(b)) ? (b) : (a) )
+#endif
+#ifndef MIN
+#define MIN(a,b) ( ((a)>(b)) ? (b) : (a) )
+#endif
+
 /* Platform-specific helpers. */
 #ifdef MS_WINDOWS
 char *format_win32_error(DWORD err);
