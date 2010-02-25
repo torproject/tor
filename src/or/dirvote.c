@@ -78,6 +78,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   uint32_t addr;
   routerlist_t *rl = router_get_routerlist();
   char *version_lines = NULL;
+  int r;
   networkstatus_voter_info_t *voter;
 
   tor_assert(private_signing_key);
@@ -104,13 +105,22 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     version_lines = tor_malloc(v_len);
     cp = version_lines;
     if (client_versions) {
-      tor_snprintf(cp, v_len-(cp-version_lines),
+      r = tor_snprintf(cp, v_len-(cp-version_lines),
                    "client-versions %s\n", client_versions);
+      if (r < 0) {
+        log_err(LD_BUG, "Insufficient memory for client-versions line");
+        tor_assert(0);
+      }
       cp += strlen(cp);
     }
-    if (server_versions)
-      tor_snprintf(cp, v_len-(cp-version_lines),
+    if (server_versions) {
+      r = tor_snprintf(cp, v_len-(cp-version_lines),
                    "server-versions %s\n", server_versions);
+      if (r < 0) {
+        log_err(LD_BUG, "Insufficient memory for server-versions line");
+        tor_assert(0);
+      }
+    }
   } else {
     version_lines = tor_strdup("");
   }
@@ -143,7 +153,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
       params = tor_strdup("");
 
     tor_assert(cert);
-    tor_snprintf(status, len,
+    r = tor_snprintf(status, len,
                  "network-status-version 3\n"
                  "vote-status %s\n"
                  "consensus-methods %s\n"
@@ -167,6 +177,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  voter->nickname, fingerprint, voter->address,
                  ipaddr, voter->dir_port, voter->or_port, voter->contact);
 
+    if (r < 0) {
+      log_err(LD_BUG, "Insufficient memory for network status line");
+      tor_assert(0);
+    }
+
     tor_free(params);
     tor_free(flags);
     tor_free(methods);
@@ -176,7 +191,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     if (!tor_digest_is_zero(voter->legacy_id_digest)) {
       char fpbuf[HEX_DIGEST_LEN+1];
       base16_encode(fpbuf, sizeof(fpbuf), voter->legacy_id_digest, DIGEST_LEN);
-      tor_snprintf(outp, endp-outp, "legacy-dir-key %s\n", fpbuf);
+      r = tor_snprintf(outp, endp-outp, "legacy-dir-key %s\n", fpbuf);
+      if (r < 0) {
+        log_err(LD_BUG, "Insufficient memory for legacy-dir-key line");
+        tor_assert(0);
+      }
       outp += strlen(outp);
     }
 
@@ -207,7 +226,11 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
     }
   } SMARTLIST_FOREACH_END(vrs);
 
-  tor_snprintf(outp, endp-outp, "directory-footer\n");
+  r = tor_snprintf(outp, endp-outp, "directory-footer\n");
+  if (r < 0) {
+    log_err(LD_BUG, "Insufficient memory for directory-footer line");
+    tor_assert(0);
+  }
   outp += strlen(outp);
 
   {
