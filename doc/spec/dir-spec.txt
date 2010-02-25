@@ -1312,12 +1312,15 @@
    It contains two subsections, a bandwidths-weights line and a
    directory-signature.
 
-   The bandwidths-weight line appears At Most Once for a consensus. It does
+   The bandwidths-weights line appears At Most Once for a consensus. It does
    not appear in votes.
 
-    "bandwidth-weights" SP "Wed=" INT SP "Wee=" INT SP "Weg=" INT SP
-       "Wem=" INT SP "Wgd=" INT SP "Wgg=" INT SP "Wgm=" INT SP
-       "Wmd=" INT SP "Wme=" INT SP "Wmg=" INT SP "Wmm=" INT SP NL
+    "bandwidth-weights" SP
+       "Wbd=" INT SP "Wbe=" INT SP "Wbg=" INT SP "Wbm=" INT SP
+       "Wdb=" INT SP
+       "Web=" INT SP "Wed=" INT SP "Wee=" INT SP "Weg=" INT SP "Wem=" INT SP
+       "Wgb=" INT SP "Wgd=" INT SP "Wgg=" INT SP "Wgm=" INT SP
+       "Wmb=" INT SP "Wmd=" INT SP "Wme=" INT SP "Wmg=" INT SP "Wmm=" INT NL
 
        These values represent the weights to apply to router bandwidths during
        path selection. They are sorted in alphabetical order in the list. The
@@ -1327,14 +1330,26 @@
          Wgg - Weight for Guard-flagged nodes in the guard position
          Wgm - Weight for non-flagged nodes in the guard Position
          Wgd - Weight for Guard+Exit-flagged nodes in the guard Position
+
          Wmg - Weight for Guard-flagged nodes in the middle Position
          Wmm - Weight for non-flagged nodes in the middle Position
          Wme - Weight for Exit-flagged nodes in the middle Position
          Wmd - Weight for Guard+Exit flagged nodes in the middle Position
+
          Weg - Weight for Guard flagged nodes in the exit Position
          Wem - Weight for non-flagged nodes in the exit Position
          Wee - Weight for Exit-flagged nodes in the exit Position
          Wed - Weight for Guard+Exit-flagged nodes in the exit Position
+
+         Wgb - Weight for BEGIN_DIR-supporting Guard-flagged nodes
+         Wmb - Weight for BEGIN_DIR-supporting non-flagged nodes
+         Web - Weight for BEGIN_DIR-supporting Exit-flagged nodes
+         Wdb - Weight for BEGIN_DIR-supporting Guard+Exit-flagged nodes
+
+         Wbg - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
+         Wbm - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
+         Wbe - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
+         Wbd - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
 
        These values are calculated as specified in Section 3.4.3.
 
@@ -1755,7 +1770,8 @@
 
   For future balancing improvements, Tor clients support 11 additional weights
   for directory requests and middle weighting. These weights are currently
-  set at 1.0, with the exception of the following groups of assignments:
+  set at weight_scale, with the exception of the following groups of
+  assignments:
 
   Directory requests use middle weights:
      Wbd=Wmd, Wbg=Wmg, Wbe=Wme, Wbm=Wmm
