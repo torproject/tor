@@ -66,40 +66,40 @@ Other options can be specified either on the command-line (--option
     Options are case-insensitive. C-style escaped characters are allowed inside
     quoted values.
 
-**BandwidthRate** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
+**BandwidthRate** __N__ **bytes**|**KB**|**MB**|**GB**::
     A token bucket limits the average incoming bandwidth usage on this node to
     the specified number of bytes per second, and the average outgoing
     bandwidth usage to that same value. (Default: 5 MB)
 
-**BandwidthBurst** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
+**BandwidthBurst** __N__ **bytes**|**KB**|**MB**|**GB**::
     Limit the maximum token bucket size (also known as the burst) to the given
     number of bytes in each direction. (Default: 10 MB)
 
-**MaxAdvertisedBandwidth** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
+**MaxAdvertisedBandwidth** __N__ **bytes**|**KB**|**MB**|**GB**::
     If set, we will not advertise more than this amount of bandwidth for our
     BandwidthRate. Server operators who want to reduce the number of clients
     who ask to build circuits through them (since this is proportional to
     advertised bandwidth rate) can thus reduce the CPU demands on their server
     without impacting network performance.
 
-**RelayBandwidthRate** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
+**RelayBandwidthRate** __N__ **bytes**|**KB**|**MB**|**GB**::
     If defined, a separate token bucket limits the average incoming bandwidth
     usage for \_relayed traffic_ on this node to the specified number of bytes
     per second, and the average outgoing bandwidth usage to that same value.
     Relayed traffic currently is calculated to include answers to directory
     requests, but that may change in future versions. (Default: 0)
 
-**RelayBandwidthBurst** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
+**RelayBandwidthBurst** __N__ **bytes**|**KB**|**MB**|**GB**::
     Limit the maximum token bucket size (also known as the burst) for
     \_relayed traffic_ to the given number of bytes in each direction.
     (Default: 0)
 
-**PerConnBWRate** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
+**PerConnBWRate** __N__ **bytes**|**KB**|**MB**|**GB**::
     If set, do separate rate limiting for each connection from a non-relay.
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
 
-**PerConnBWBurst** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
+**PerConnBWBurst** __N__ **bytes**|**KB**|**MB**|**GB**::
     If set, do separate rate limiting for each connection from a non-relay.
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
