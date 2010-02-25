@@ -142,6 +142,7 @@
 /src/or/or_sha1.i
 /src/or/micro-revision.*
 /src/or/tor
+/src/or/tor.exe
 /src/or/libtor.a
 
 # /src/test
@@ -154,6 +155,9 @@
 /src/tools/tor-checkkey
 /src/tools/tor-resolve
 /src/tools/tor-gencert
+/src/tools/tor-checkkey.exe
+/src/tools/tor-resolve.exe
+/src/tools/tor-gencert.exe
 /src/tools/Makefile
 /src/tools/Makefile.in
 
