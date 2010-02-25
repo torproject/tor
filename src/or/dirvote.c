@@ -842,7 +842,7 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
         casename = "Case 2a (E scarce)";
         Wed = weight_scale;
         Wgd = 0;
-      } else if (E >= G) {
+      } else { /* E >= G */
         casename = "Case 2a (G scarce)";
         Wed = 0;
         Wgd = weight_scale;
