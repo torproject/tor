@@ -3228,6 +3228,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (ensure_bandwidth_cap(&options->RelayBandwidthBurst,
                            "RelayBandwidthBurst", msg) < 0)
     return -1;
+  if (ensure_bandwidth_cap(&options->PerConnBWRate,
+                           "PerConnBWRate", msg) < 0)
+    return -1;
+  if (ensure_bandwidth_cap(&options->PerConnBWBurst,
+                           "PerConnBWBurst", msg) < 0)
+    return -1;
 
   if (server_mode(options)) {
     if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {

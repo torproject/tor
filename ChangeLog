@@ -5,6 +5,8 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
     - Fix a dereference-then-NULL-check sequence when publishing
       descriptors. Bugfix on tor-0.2.1.5-alpha. Discovered by ekir,
       fixes bug 1255.
+    - Disallow values larger than INT32_MAX for PerConnBWRate|Burst
+      config option. Bugfix on 0.2.2.7-alpha.
 
   o Code simplifications and refactoring:
     - Fix some urls in the exit notice file and make it XHTML1.1 strict
