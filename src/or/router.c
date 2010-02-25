@@ -1418,6 +1418,7 @@ router_rebuild_descriptor(int force)
     ei->cache_info.send_unencrypted = 1;
 
   router_get_router_hash(ri->cache_info.signed_descriptor_body,
+                         strlen(ri->cache_info.signed_descriptor_body),
                          ri->cache_info.signed_descriptor_digest);
 
   routerinfo_set_country(ri);
@@ -1784,7 +1785,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   strlcpy(s+written, "router-signature\n", maxlen-written);
   written += strlen(s+written);
   s[written] = '\0';
-  if (router_get_router_hash(s, digest) < 0) {
+  if (router_get_router_hash(s, strlen(s), digest) < 0) {
     return -1;
   }
 

@@ -577,8 +577,6 @@ signed_desc_append_to_journal(signed_descriptor_t *desc,
   const char *body = signed_descriptor_get_body_impl(desc,1);
   size_t len = desc->signed_descriptor_len + desc->annotations_len;
 
-  tor_assert(len == strlen(body));
-
   if (append_bytes_to_file(fname, body, len, 1)) {
     log_warn(LD_FS, "Unable to store router descriptor");
     tor_free(fname);

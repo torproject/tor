@@ -9,6 +9,8 @@ Changes in version 0.2.1.25 - 2010-??-??
       fixes bug 1255.
     - Fix another dereference-then-NULL-check sequence. Bugfix on
       0.2.1.14-rc. Discovered by ekir, fixes bug 1256.
+    - Make sure we treat potentially not NUL-terminated strings correctly.
+      Bugfix on 0.1.1.13-alpha. Discovered by rieo, fixes bug 1257.
 
 Changes in version 0.2.1.24 - 2010-02-21
   Tor 0.2.1.24 makes Tor work again on the latest OS X -- this time
