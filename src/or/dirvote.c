@@ -923,6 +923,11 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
     }
   }
 
+  /* We cast down the weights to 32 bit ints on the assumption that
+   * weight_scale is ~= 10000. We need to ensure a rogue authority
+   * doesn't break this assumption to rig our weights */
+  tor_assert(0 < weight_scale && weight_scale < INT32_MAX);
+
   if (Wgg < 0 || Wgg > weight_scale) {
     log_warn(LD_DIR, "Bw %s: Wgg="I64_FORMAT"! G="I64_FORMAT
             " M="I64_FORMAT" E="I64_FORMAT" D="I64_FORMAT
@@ -984,18 +989,16 @@ networkstatus_compute_bw_weights_v9(smartlist_t *chunks, int64_t G, int64_t M,
    * NOTE: This list is sorted.
    */
   r = tor_snprintf(buf, sizeof(buf),
-     "Wbd="I64_FORMAT" Wbe="I64_FORMAT" Wbg="I64_FORMAT" Wbm="I64_FORMAT" "
-     "Wdb="I64_FORMAT" "
-     "Web="I64_FORMAT" Wed="I64_FORMAT" Wee="I64_FORMAT" Weg="I64_FORMAT
-                   " Wem="I64_FORMAT" "
-     "Wgb="I64_FORMAT" Wgd="I64_FORMAT" Wgg="I64_FORMAT" Wgm="I64_FORMAT" "
-     "Wmb="I64_FORMAT" Wmd="I64_FORMAT" Wme="I64_FORMAT" Wmg="I64_FORMAT
-                   " Wmm="I64_FORMAT"\n",
-     Wmd, Wme, Wmg, weight_scale,
-     weight_scale,
-     weight_scale, Wed, Wee, Wed, Wee,
-     weight_scale, Wgd, Wgg, Wgg,
-     weight_scale, Wmd, Wme, Wmg, weight_scale);
+     "Wbd=%d Wbe=%d Wbg=%d Wbm=%d "
+     "Wdb=%d "
+     "Web=%d Wed=%d Wee=%d Weg=%d Wem=%d "
+     "Wgb=%d Wgd=%d Wgg=%d Wgm=%d "
+     "Wmb=%d Wmd=%d Wme=%d Wmg=%d Wmm=%d\n",
+     (int)Wmd, (int)Wme, (int)Wmg, (int)weight_scale,
+     (int)weight_scale,
+     (int)weight_scale, (int)Wed, (int)Wee, (int)Wed, (int)Wee,
+     (int)weight_scale, (int)Wgd, (int)Wgg, (int)Wgg,
+     (int)weight_scale, (int)Wmd, (int)Wme, (int)Wmg, (int)weight_scale);
   if (r<0) {
     log_warn(LD_BUG,
              "Not enough space in buffer for bandwidth-weights line.");
