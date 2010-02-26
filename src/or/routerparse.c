@@ -3075,6 +3075,18 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     goto err;
   }
 
+  {
+    int found_sig = 0;
+    SMARTLIST_FOREACH_BEGIN(footer_tokens, directory_token_t *, _tok) {
+      if (tok->tp == K_DIRECTORY_SIGNATURE)
+        found_sig = 1;
+      else if (found_sig) {
+        log_warn(LD_DIR, "Extraneous token after first directory-signature");
+        goto err;
+      }
+    } SMARTLIST_FOREACH_END(_tok);
+  }
+
   tok = find_opt_by_keyword(footer_tokens, K_BW_WEIGHTS);
   if (tok) {
     ns->weight_params = smartlist_create();
