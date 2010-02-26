@@ -3078,6 +3078,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
   {
     int found_sig = 0;
     SMARTLIST_FOREACH_BEGIN(footer_tokens, directory_token_t *, _tok) {
+      tok = _tok;
       if (tok->tp == K_DIRECTORY_SIGNATURE)
         found_sig = 1;
       else if (found_sig) {
