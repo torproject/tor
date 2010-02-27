@@ -520,11 +520,12 @@ static int router_add_exit_policy(routerinfo_t *router,directory_token_t *tok);
 static addr_policy_t *router_parse_addr_policy(directory_token_t *tok);
 static addr_policy_t *router_parse_addr_policy_private(directory_token_t *tok);
 
-static int router_get_hash_impl(const char *s, char *digest,
+static int router_get_hash_impl(const char *s, size_t s_len, char *digest,
                                 const char *start_str, const char *end_str,
                                 char end_char,
                                 digest_algorithm_t alg);
-static int router_get_hashes_impl(const char *s, digests_t *digests,
+static int router_get_hashes_impl(const char *s, size_t s_len,
+                                  digests_t *digests,
                                   const char *start_str, const char *end_str,
                                   char end_char);
 static void token_clear(directory_token_t *tok);
@@ -606,7 +607,7 @@ dump_desc(const char *desc, const char *type)
 int
 router_get_dir_hash(const char *s, char *digest)
 {
-  return router_get_hash_impl(s,digest,
+  return router_get_hash_impl(s, strlen(s), digest,
                               "signed-directory","\ndirectory-signature",'\n',
                               DIGEST_SHA1);
 }
@@ -615,9 +616,9 @@ router_get_dir_hash(const char *s, char *digest)
  * <b>s</b>. Return 0 on success, -1 on failure.
  */
 int
-router_get_router_hash(const char *s, char *digest)
+router_get_router_hash(const char *s, size_t s_len, char *digest)
 {
-  return router_get_hash_impl(s,digest,
+  return router_get_hash_impl(s, s_len, digest,
                               "router ","\nrouter-signature", '\n',
                               DIGEST_SHA1);
 }
@@ -628,7 +629,7 @@ router_get_router_hash(const char *s, char *digest)
 int
 router_get_runningrouters_hash(const char *s, char *digest)
 {
-  return router_get_hash_impl(s,digest,
+  return router_get_hash_impl(s, strlen(s), digest,
                               "network-status","\ndirectory-signature", '\n',
                               DIGEST_SHA1);
 }
@@ -638,7 +639,7 @@ router_get_runningrouters_hash(const char *s, char *digest)
 int
 router_get_networkstatus_v2_hash(const char *s, char *digest)
 {
-  return router_get_hash_impl(s,digest,
+  return router_get_hash_impl(s, strlen(s), digest,
                               "network-status-version","\ndirectory-signature",
                               '\n',
                               DIGEST_SHA1);
@@ -649,7 +650,7 @@ router_get_networkstatus_v2_hash(const char *s, char *digest)
 int
 router_get_networkstatus_v3_hashes(const char *s, digests_t *digests)
 {
-  return router_get_hashes_impl(s,digests,
+  return router_get_hashes_impl(s,strlen(s),digests,
                                 "network-status-version",
                                 "\ndirectory-signature",
                                 ' ');
@@ -661,7 +662,7 @@ int
 router_get_networkstatus_v3_hash(const char *s, char *digest,
                                  digest_algorithm_t alg)
 {
-  return router_get_hash_impl(s,digest,
+  return router_get_hash_impl(s, strlen(s), digest,
                               "network-status-version",
                               "\ndirectory-signature",
                               ' ', alg);
@@ -672,8 +673,8 @@ router_get_networkstatus_v3_hash(const char *s, char *digest,
 int
 router_get_extrainfo_hash(const char *s, char *digest)
 {
-  return router_get_hash_impl(s,digest,"extra-info","\nrouter-signature",'\n',
-                              DIGEST_SHA1);
+  return router_get_hash_impl(s, strlen(s), digest, "extra-info",
+                              "\nrouter-signature",'\n', DIGEST_SHA1);
 }
 
 /** Helper: used to generate signatures for routers, directories and
@@ -1242,6 +1243,8 @@ dump_distinct_digest_count(int severity)
  * s through end into the signed_descriptor_body of the resulting
  * routerinfo_t.
  *
+ * If <b>end</b> is NULL, <b>s</b> must be properly NULL-terminated.
+ *
  * If <b>allow_annotations</b>, it's okay to encounter annotations in <b>s</b>
  * before the router; if it's false, reject the router if it's annotated.  If
  * <b>prepend_annotations</b> is set, it should contain some annotations:
@@ -1304,7 +1307,7 @@ router_parse_entry_from_string(const char *s, const char *end,
     }
   }
 
-  if (router_get_router_hash(s, digest) < 0) {
+  if (router_get_router_hash(s, end - s, digest) < 0) {
     log_warn(LD_DIR, "Couldn't compute router hash.");
     goto err;
   }
@@ -1726,7 +1729,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
     log_warn(LD_DIR, "Error tokenizing key certificate");
     goto err;
   }
-  if (router_get_hash_impl(s, digest, "dir-key-certificate-version",
+  if (router_get_hash_impl(s, strlen(s), digest, "dir-key-certificate-version",
                            "\ndir-key-certification", '\n', DIGEST_SHA1) < 0)
     goto err;
   tok = smartlist_get(tokens, 0);
@@ -4065,13 +4068,13 @@ find_all_exitpolicy(smartlist_t *s)
 }
 
 static int
-router_get_hash_impl_helper(const char *s,
+router_get_hash_impl_helper(const char *s, size_t s_len,
                             const char *start_str,
                             const char *end_str, char end_c,
                             const char **start_out, const char **end_out)
 {
-  char *start, *end;
-  start = strstr(s, start_str);
+  const char *start, *end;
+  start = tor_memstr(s, s_len, start_str);
   if (!start) {
     log_warn(LD_DIR,"couldn't find start of hashed material \"%s\"",start_str);
     return -1;
@@ -4082,12 +4085,13 @@ router_get_hash_impl_helper(const char *s,
              start_str);
     return -1;
   }
-  end = strstr(start+strlen(start_str), end_str);
+  end = tor_memstr(start+strlen(start_str),
+                   s_len - (start-s) - strlen(start_str), end_str);
   if (!end) {
     log_warn(LD_DIR,"couldn't find end of hashed material \"%s\"",end_str);
     return -1;
   }
-  end = strchr(end+strlen(end_str), end_c);
+  end = memchr(end+strlen(end_str), end_c, s_len - (end-s) - strlen(end_str));
   if (!end) {
     log_warn(LD_DIR,"couldn't find EOL");
     return -1;
@@ -4107,13 +4111,13 @@ router_get_hash_impl_helper(const char *s,
  * If no such substring exists, return -1.
  */
 static int
-router_get_hash_impl(const char *s, char *digest,
+router_get_hash_impl(const char *s, size_t s_len, char *digest,
                      const char *start_str,
                      const char *end_str, char end_c,
                      digest_algorithm_t alg)
 {
   const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,start_str,end_str,end_c,&start,&end)<0)
+  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,&start,&end)<0)
     return -1;
 
   if (alg == DIGEST_SHA1) {
@@ -4133,12 +4137,12 @@ router_get_hash_impl(const char *s, char *digest,
 
 /** As router_get_hash_impl, but compute all hashes. */
 static int
-router_get_hashes_impl(const char *s, digests_t *digests,
+router_get_hashes_impl(const char *s, size_t s_len, digests_t *digests,
                        const char *start_str,
                        const char *end_str, char end_c)
 {
   const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,start_str,end_str,end_c,&start,&end)<0)
+  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,&start,&end)<0)
     return -1;
 
   if (crypto_digest_all(digests, start, end-start)) {
@@ -4556,7 +4560,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     goto err;
   }
   /* Compute descriptor hash for later validation. */
-  if (router_get_hash_impl(desc, desc_hash,
+  if (router_get_hash_impl(desc, strlen(desc), desc_hash,
                            "rendezvous-service-descriptor ",
                            "\nsignature", '\n', DIGEST_SHA1) < 0) {
     log_warn(LD_REND, "Couldn't compute descriptor hash.");

@@ -5146,7 +5146,7 @@ typedef struct tor_version_t {
   char git_tag[DIGEST_LEN];
 } tor_version_t;
 
-int router_get_router_hash(const char *s, char *digest);
+int router_get_router_hash(const char *s, size_t s_len, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
 int router_get_runningrouters_hash(const char *s, char *digest);
 int router_get_networkstatus_v2_hash(const char *s, char *digest);

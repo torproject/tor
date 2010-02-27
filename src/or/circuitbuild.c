@@ -1110,11 +1110,11 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
     const char *id;
     if (!hop)
       break;
-    id = hop->extend_info->identity_digest;
     if (!verbose && hop->state != CPATH_STATE_OPEN)
       break;
     if (!hop->extend_info)
       break;
+    id = hop->extend_info->identity_digest;
     if (verbose_names) {
       elt = tor_malloc(MAX_VERBOSE_NICKNAME_LEN+1);
       if ((ri = router_get_by_digest(id))) {
