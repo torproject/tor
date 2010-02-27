@@ -39,7 +39,7 @@ DIST_SUBDIRS = spec
 # Generate the html documentation from asciidoc, but don't do
 # machine-specific replacements yet
 $(html_in) :
-	$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ @SED@ $(top_srcdir)/doc/$@
+	$(top_srcdir)/doc/asciidoc-helper.sh html @ASCIIDOC@ $(top_srcdir)/doc/$@
 
 tor.html.in : tor.1.txt
 torify.html.in : torify.1.txt
@@ -49,7 +49,7 @@ tor-resolve.html.in : tor-resolve.1.txt
 # Generate the manpage from asciidoc, but don't do
 # machine-specific replacements yet
 $(man_in) :
-	$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ @SED@ $(top_srcdir)/doc/$@
+	$(top_srcdir)/doc/asciidoc-helper.sh man @A2X@ $(top_srcdir)/doc/$@
 
 tor.1.in : tor.1.txt
 torify.1.in : torify.1.txt

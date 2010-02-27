@@ -4,19 +4,19 @@
 # See LICENSE for licensing information
 # Run this to generate .html.in or .1.in files from asciidoc files.
 # Arguments:
-# html|man asciidocpath sedpath outputfile
+# html|man asciidocpath outputfile
 
 set -e
 
-if [ $# != 4 ]; then
+if [ $# != 3 ]; then
   exit 1;
 fi
 
-output=$4
-input=`echo $output | $3 -e 's/html\.in$/1\.txt/g' -e 's/1\.in$/1\.txt/g'`
-base=`echo $output | $3 -e 's/\.html\.in$//g' -e 's/\.1\.in$//g'`
+output=$3
 
 if [ "$1" = "html" ]; then
+    input=${output%%.html.in}.1.txt
+    base=${output%%.html.in}
     if [ "$2" != none ]; then
       "$2" -d manpage -o $output $input;
     else
@@ -29,6 +29,9 @@ if [ "$1" = "html" ]; then
       echo "==================================";
     fi
 elif [ "$1" = "man" ]; then
+    input=${output%%.1.in}.1.txt
+    base=${output%%.1.in}
+    
     if test "$2" != none; then
       if $2 -f manpage $input; then
         mv $base.1 $output;
