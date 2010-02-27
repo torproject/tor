@@ -19,7 +19,7 @@ html_in = $(asciidoc_files:=.html.in)
 
 man_in = $(asciidoc_files:=.1.in)
 
-EXTRA_DIST = HACKING                                         \
+EXTRA_DIST = HACKING asciidoc-helper.sh                      \
              $(html_in) $(man_in) $(asciidoc_files:=.1.txt)  \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
              tor-win32-mingw-creation.txt

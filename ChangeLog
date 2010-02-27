@@ -23,6 +23,9 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
       fixes bug 1255.
     - Disallow values larger than INT32_MAX for PerConnBWRate|Burst
       config option. Bugfix on 0.2.2.7-alpha.
+    - Ship the asciidoc-helper file in the tarball, so that people can
+      build from source if they want to, and touching the .1.txt files
+      doesn't break the build. Bugfix on 0.2.2.9-alpha.
 
   o Code simplifications and refactoring:
     - Fix some urls in the exit notice file and make it XHTML1.1 strict
