@@ -2376,7 +2376,8 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
   // We use > 1 as the check for these because they are computed as integers.
   // Sometimes there are rounding errors.
   if (fabs(Wmm - weight_scale) > 1) {
-    log_warn(LD_BUG, "Wmm=%lf != "I64_FORMAT, Wmm, I64_PRINTF_ARG(weight_scale));
+    log_warn(LD_BUG, "Wmm=%lf != "I64_FORMAT,
+             Wmm, I64_PRINTF_ARG(weight_scale));
     valid = 0;
   }
 
@@ -4117,7 +4118,8 @@ router_get_hash_impl(const char *s, size_t s_len, char *digest,
                      digest_algorithm_t alg)
 {
   const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,&start,&end)<0)
+  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,
+                                  &start,&end)<0)
     return -1;
 
   if (alg == DIGEST_SHA1) {
@@ -4142,7 +4144,8 @@ router_get_hashes_impl(const char *s, size_t s_len, digests_t *digests,
                        const char *end_str, char end_c)
 {
   const char *start=NULL, *end=NULL;
-  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,&start,&end)<0)
+  if (router_get_hash_impl_helper(s,s_len,start_str,end_str,end_c,
+                                  &start,&end)<0)
     return -1;
 
   if (crypto_digest_all(digests, start, end-start)) {
