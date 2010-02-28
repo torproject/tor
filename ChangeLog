@@ -5,7 +5,9 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
       and Guard+Exit flagged nodes for entry, middle, and exit positions.
       This should more evenly distribute the network load across these
       different types of nodes, and give us the flexibility to globally
-      alter our node selection algorithms in the future.
+      alter our node selection algorithms in the future.  Extra thanks
+      to "outofwords" for finding some nasty security bugs in the
+      first implementation of this.
 
   o Minor features (performance):
     - Always perform router selections using weighted node bandwidth,

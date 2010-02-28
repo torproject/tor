@@ -114,6 +114,7 @@ typedef enum {
   K_CONSENSUS_METHODS,
   K_CONSENSUS_METHOD,
   K_LEGACY_DIR_KEY,
+  K_DIRECTORY_FOOTER,
 
   A_PURPOSE,
   A_LAST_LISTED,
@@ -488,8 +489,9 @@ static token_rule_t networkstatus_consensus_token_table[] = {
 /** List of tokens allowable in the footer of v1/v2 directory/networkstatus
  * footers. */
 static token_rule_t networkstatus_vote_footer_token_table[] = {
-  T01("bandwidth-weights",   K_BW_WEIGHTS,          ARGS,        NO_OBJ ),
-  T(  "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),   NEED_OBJ ),
+  T01("directory-footer",    K_DIRECTORY_FOOTER,    NO_ARGS,   NO_OBJ ),
+  T01("bandwidth-weights",   K_BW_WEIGHTS,          ARGS,      NO_OBJ ),
+  T(  "directory-signature", K_DIRECTORY_SIGNATURE, GE(2),     NEED_OBJ ),
   END_OF_TABLE
 };
 
@@ -1878,26 +1880,23 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
 static INLINE const char *
 find_start_of_next_routerstatus(const char *s)
 {
-  const char *eos = strstr(s, "\nr ");
-  if (eos) {
-    const char *eos2 = tor_memstr(s, eos-s, "\ndirectory-footer\n");
-    if (eos2) eos2 += strlen("\ndirectory-footer");
-    else eos2 = tor_memstr(s, eos-s, "\ndirectory-signature");
-    /* Technically we are returning either the start of the next
-     * routerstatus AFTER the \n, or the start of the next consensus
-     * line AT the \n. This seems asymmetric, but leaving it that way
-     * for now for stability. */
-    if (eos2 && eos2 < eos)
-      return eos2;
-    else
-      return eos+1;
-  } else {
-    if ((eos = strstr(s, "\ndirectory-footer\n")))
-      return eos+strlen("\ndirectory-footer\n");
-    if ((eos = strstr(s, "\ndirectory-signature")))
-      return eos+1;
-     return s + strlen(s);
-  }
+  const char *eos, *footer, *sig;
+  if ((eos = strstr(s, "\nr ")))
+    ++eos;
+  else
+    eos = s + strlen(s);
+
+  footer = tor_memstr(s, eos-s, "\ndirectory-footer");
+  sig = tor_memstr(s, eos-s, "\ndirectory-signature");
+
+  if (footer && sig)
+    return MIN(footer, sig) + 1;
+  else if (footer)
+    return footer+1;
+  else if (sig)
+    return sig+1;
+  else
+    return eos;
 }
 
 /** Given a string at *<b>s</b>, containing a routerstatus object, and an
@@ -3090,6 +3089,13 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         goto err;
       }
     } SMARTLIST_FOREACH_END(_tok);
+  }
+
+  if ((tok = find_opt_by_keyword(footer_tokens, K_DIRECTORY_FOOTER))) {
+    if (tok != smartlist_get(footer_tokens, 0)) {
+      log_warn(LD_DIR, "Misplaced directory-footer token");
+      goto err;
+    }
   }
 
   tok = find_opt_by_keyword(footer_tokens, K_BW_WEIGHTS);
