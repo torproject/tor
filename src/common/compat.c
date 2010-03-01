@@ -345,11 +345,15 @@ tor_asprintf(char **strp, const char *fmt, ...)
 int
 tor_vasprintf(char **strp, const char *fmt, va_list args)
 {
+  /* use a temporary variable in case *strp is in args. */
+  char *strp_tmp=NULL;
 #ifdef HAVE_VASPRINTF
   /* If the platform gives us one, use it. */
-  int r = vasprintf(strp, fmt, args);
+  int r = vasprintf(&strp_tmp, fmt, args);
   if (r < 0)
     *strp = NULL;
+  else
+    *strp = strp_tmp;
   return r;
 #elif defined(MS_WINDOWS)
   /* On Windows, _vsnprintf won't tell us the length of the string if it
@@ -358,15 +362,17 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
   char *res;
   len = _vcsprintf(fmt, args);
   if (len < 0) {
-    strp = NULL;
+    *strp = NULL;
     return -1;
   }
-  *strp = tor_malloc(len + 1);
-  r = _vsnprintf(*strp, len+1, fmt, args);
+  strp_tmp = tor_malloc(len + 1);
+  r = _vsnprintf(strp_tmp, len+1, fmt, args);
   if (r != len) {
-    tor_free(*strp);
+    tor_free(strp_tmp);
+    *strp = NULL;
     return -1;
   }
+  *strp = strp_tmp;
   return len;
 #else
   /* Everywhere else, we have a decent vsnprintf that tells us how many
@@ -383,12 +389,14 @@ tor_vasprintf(char **strp, const char *fmt, va_list args)
     *strp = tor_strdup(buf);
     return len;
   }
-  *strp = tor_malloc(len+1);
-  r = vsnprintf(*strp, len+1, fmt, args);
+  strp_tmp = tor_malloc(len+1);
+  r = vsnprintf(strp_tmp, len+1, fmt, args);
   if (r != len) {
-    tor_free(*strp);
+    tor_free(strp_tmp);
+    *strp = NULL;
     return -1;
   }
+  *strp = strp_tmp;
   return len;
 #endif
 }
