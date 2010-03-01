@@ -1883,18 +1883,18 @@ static char *
 list_getinfo_options(void)
 {
   int i;
-  char buf[300];
+  char *buf=NULL;
   smartlist_t *lines = smartlist_create();
   char *ans;
   for (i = 0; getinfo_items[i].varname; ++i) {
     if (!getinfo_items[i].desc)
       continue;
 
-    tor_snprintf(buf, sizeof(buf), "%s%s -- %s\n",
+    tor_asprintf(&buf, "%s%s -- %s\n",
                  getinfo_items[i].varname,
                  getinfo_items[i].is_prefix ? "*" : "",
                  getinfo_items[i].desc);
-    smartlist_add(lines, tor_strdup(buf));
+    smartlist_add(lines, buf);
   }
   smartlist_sort_strings(lines);
 

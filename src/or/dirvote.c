@@ -773,7 +773,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
   chunks = smartlist_create();
 
   {
-    char buf[1024];
+    char *buf=NULL;
     char va_buf[ISO_TIME_LEN+1], fu_buf[ISO_TIME_LEN+1],
       vu_buf[ISO_TIME_LEN+1];
     char *flaglist;
@@ -782,20 +782,20 @@ networkstatus_compute_consensus(smartlist_t *votes,
     format_iso_time(vu_buf, valid_until);
     flaglist = smartlist_join_strings(flags, " ", 0, NULL);
 
-    tor_snprintf(buf, sizeof(buf), "network-status-version 3%s%s\n"
+    tor_asprintf(&buf, "network-status-version 3%s%s\n"
                  "vote-status consensus\n",
                  flavor == FLAV_NS ? "" : " ",
                  flavor == FLAV_NS ? "" : flavor_name);
 
-    smartlist_add(chunks, tor_strdup(buf));
+    smartlist_add(chunks, buf);
 
     if (consensus_method >= 2) {
-      tor_snprintf(buf, sizeof(buf), "consensus-method %d\n",
+      tor_asprintf(&buf, "consensus-method %d\n",
                    consensus_method);
-      smartlist_add(chunks, tor_strdup(buf));
+      smartlist_add(chunks, buf);
     }
 
-    tor_snprintf(buf, sizeof(buf),
+    tor_asprintf(&buf,
                  "valid-after %s\n"
                  "fresh-until %s\n"
                  "valid-until %s\n"
@@ -806,7 +806,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
                  va_buf, fu_buf, vu_buf,
                  vote_seconds, dist_seconds,
                  client_versions, server_versions, flaglist);
-    smartlist_add(chunks, tor_strdup(buf));
+    smartlist_add(chunks, buf);
 
     tor_free(flaglist);
   }
@@ -842,15 +842,14 @@ networkstatus_compute_consensus(smartlist_t *votes,
     } SMARTLIST_FOREACH_END(v);
     smartlist_sort(dir_sources, _compare_dir_src_ents_by_authority_id);
 
-    SMARTLIST_FOREACH(dir_sources, const dir_src_ent_t *, e,
-    {
-      char buf[1024];
+    SMARTLIST_FOREACH_BEGIN(dir_sources, const dir_src_ent_t *, e) {
       struct in_addr in;
       char ip[INET_NTOA_BUF_LEN];
       char fingerprint[HEX_DIGEST_LEN+1];
       char votedigest[HEX_DIGEST_LEN+1];
       networkstatus_t *v = e->v;
       networkstatus_voter_info_t *voter = get_voter(v);
+      char *buf = NULL;
 
       if (e->is_legacy)
         tor_assert(consensus_method >= 2);
@@ -861,22 +860,22 @@ networkstatus_compute_consensus(smartlist_t *votes,
       base16_encode(votedigest, sizeof(votedigest), voter->vote_digest,
                     DIGEST_LEN);
 
-      tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(&buf,
                    "dir-source %s%s %s %s %s %d %d\n",
                    voter->nickname, e->is_legacy ? "-legacy" : "",
                    fingerprint, voter->address, ip,
                    voter->dir_port,
                    voter->or_port);
-      smartlist_add(chunks, tor_strdup(buf));
+      smartlist_add(chunks, buf);
       if (! e->is_legacy) {
-        tor_snprintf(buf, sizeof(buf),
+        tor_asprintf(&buf,
                      "contact %s\n"
                      "vote-digest %s\n",
                      voter->contact,
                      votedigest);
-        smartlist_add(chunks, tor_strdup(buf));
+        smartlist_add(chunks, buf);
       }
-    });
+    } SMARTLIST_FOREACH_END(e);
     SMARTLIST_FOREACH(dir_sources, dir_src_ent_t *, e, tor_free(e));
     smartlist_free(dir_sources);
   }
@@ -1011,7 +1010,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       int naming_conflict = 0;
       int n_listing = 0;
       int i;
-      char buf[256];
+      char *buf=NULL;
       char microdesc_digest[DIGEST256_LEN];
 
       /* Of the next-to-be-considered digest in each voter, which is first? */
@@ -1239,19 +1238,20 @@ networkstatus_compute_consensus(smartlist_t *votes,
         }
       }
 
-      /* Okay!! Now we can write the descriptor... */
-      /*     First line goes into "buf". */
-      routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
-                                rs_format);
-      smartlist_add(chunks, tor_strdup(buf));
+      {
+        char buf[4096];
+        /* Okay!! Now we can write the descriptor... */
+        /*     First line goes into "buf". */
+        routerstatus_format_entry(buf, sizeof(buf), &rs_out, NULL,
+                                  rs_format);
+        smartlist_add(chunks, tor_strdup(buf));
+      }
       /*     Now an m line, if applicable. */
       if (flavor == FLAV_MICRODESC &&
           !tor_digest256_is_zero(microdesc_digest)) {
         char m[BASE64_DIGEST256_LEN+1], *cp;
-        const size_t mlen = BASE64_DIGEST256_LEN+5;
         digest256_to_base64(m, microdesc_digest);
-        cp = tor_malloc(mlen);
-        tor_snprintf(cp, mlen, "m %s\n", m);
+        tor_asprintf(&cp, "m %s\n", m);
         smartlist_add(chunks, cp);
       }
       /*     Next line is all flags.  The "\n" is missing. */
@@ -1265,26 +1265,16 @@ networkstatus_compute_consensus(smartlist_t *votes,
       smartlist_add(chunks, tor_strdup("\n"));
       /*     Now the weight line. */
       if (rs_out.has_bandwidth) {
-        int r = tor_snprintf(buf, sizeof(buf),
-                             "w Bandwidth=%d\n", rs_out.bandwidth);
-        if (r<0) {
-          log_warn(LD_BUG, "Not enough space in buffer for weight line.");
-          *buf = '\0';
-        }
-
-        smartlist_add(chunks, tor_strdup(buf));
-      };
+        char *cp=NULL;
+        tor_asprintf(&cp, "w Bandwidth=%d\n", rs_out.bandwidth);
+        smartlist_add(chunks, cp);
+      }
 
       /*     Now the exitpolicy summary line. */
       if (rs_out.has_exitsummary && flavor == FLAV_NS) {
-        char buf[MAX_POLICY_LINE_LEN+1];
-        int r = tor_snprintf(buf, sizeof(buf), "p %s\n", rs_out.exitsummary);
-        if (r<0) {
-          log_warn(LD_BUG, "Not enough space in buffer for exitpolicy line.");
-          *buf = '\0';
-        }
-        smartlist_add(chunks, tor_strdup(buf));
-      };
+        tor_asprintf(&buf, "p %s\n", rs_out.exitsummary);
+        smartlist_add(chunks, buf);
+      }
 
       /* And the loop is over and we move on to the next router */
     }
@@ -1318,8 +1308,9 @@ networkstatus_compute_consensus(smartlist_t *votes,
     size_t digest_len =
       flavor == FLAV_NS ? DIGEST_LEN : DIGEST256_LEN;
     const char *algname = crypto_digest_algorithm_get_name(digest_alg);
+    char *buf = NULL;
+    char sigbuf[4096];
 
-    char buf[4096];
     smartlist_add(chunks, tor_strdup("directory-signature "));
 
     /* Compute the hash of the chunks. */
@@ -1331,20 +1322,23 @@ networkstatus_compute_consensus(smartlist_t *votes,
 
     /* add the junk that will go at the end of the line. */
     if (flavor == FLAV_NS) {
-      tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
+      tor_asprintf(&buf, "%s %s\n", fingerprint,
                    signing_key_fingerprint);
     } else {
-      tor_snprintf(buf, sizeof(buf), "%s %s %s\n",
+      tor_asprintf(&buf, "%s %s %s\n",
                    algname, fingerprint,
                    signing_key_fingerprint);
     }
+    smartlist_add(chunks, buf);
     /* And the signature. */
-    if (router_append_dirobj_signature(buf, sizeof(buf), digest, digest_len,
+    sigbuf[0] = '\0';
+    if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
+                                       digest, digest_len,
                                        signing_key)) {
       log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
       return NULL; /* This leaks, but it should never happen. */
     }
-    smartlist_add(chunks, tor_strdup(buf));
+    smartlist_add(chunks, tor_strdup(sigbuf));
 
     if (legacy_id_key_digest && legacy_signing_key && consensus_method >= 3) {
       smartlist_add(chunks, tor_strdup("directory-signature "));
@@ -1353,19 +1347,22 @@ networkstatus_compute_consensus(smartlist_t *votes,
       crypto_pk_get_fingerprint(legacy_signing_key,
                                 signing_key_fingerprint, 0);
       if (flavor == FLAV_NS) {
-        tor_snprintf(buf, sizeof(buf), "%s %s\n", fingerprint,
+        tor_asprintf(&buf, "%s %s\n", fingerprint,
                      signing_key_fingerprint);
       } else {
-        tor_snprintf(buf, sizeof(buf), "%s %s %s\n",
+        tor_asprintf(&buf, "%s %s %s\n",
                      algname, fingerprint,
                      signing_key_fingerprint);
       }
-      if (router_append_dirobj_signature(buf, sizeof(buf), digest, digest_len,
+      smartlist_add(chunks, buf);
+      sigbuf[0] = '\0';
+      if (router_append_dirobj_signature(sigbuf, sizeof(sigbuf),
+                                         digest, digest_len,
                                          legacy_signing_key)) {
         log_warn(LD_BUG, "Couldn't sign consensus networkstatus.");
         return NULL; /* This leaks, but it should never happen. */
       }
-      smartlist_add(chunks, tor_strdup(buf));
+      smartlist_add(chunks, tor_strdup(sigbuf));
     }
   }
 

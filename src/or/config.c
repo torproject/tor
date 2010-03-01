@@ -956,11 +956,9 @@ options_act_reversible(or_options_t *old_options, char **msg)
   /* Ensure data directory is private; create if possible. */
   if (check_private_dir(options->DataDirectory,
                         running_tor ? CPD_CREATE : CPD_CHECK)<0) {
-    char buf[1024];
-    int tmp = tor_snprintf(buf, sizeof(buf),
+    tor_asprintf(msg,
               "Couldn't access/create private data directory \"%s\"",
               options->DataDirectory);
-    *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
     goto done;
     /* No need to roll back, since you can't change the value. */
   }
@@ -971,10 +969,8 @@ options_act_reversible(or_options_t *old_options, char **msg)
     tor_snprintf(fn, len, "%s"PATH_SEPARATOR"cached-status",
                  options->DataDirectory);
     if (check_private_dir(fn, running_tor ? CPD_CREATE : CPD_CHECK) < 0) {
-      char buf[1024];
-      int tmp = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
                 "Couldn't access/create private data directory \"%s\"", fn);
-      *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
       tor_free(fn);
       goto done;
     }
@@ -1545,8 +1541,7 @@ static int
 config_assign_value(config_format_t *fmt, or_options_t *options,
                     config_line_t *c, char **msg)
 {
-  int i, r, ok;
-  char buf[1024];
+  int i, ok;
   config_var_t *var;
   void *lvalue;
 
@@ -1562,10 +1557,9 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_UINT:
     i = (int)tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
     if (!ok) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
           "Int keyword '%s %s' is malformed or out of bounds.",
           c->key, c->value);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(int *)lvalue = i;
@@ -1574,10 +1568,9 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_INTERVAL: {
     i = config_parse_interval(c->value, &ok);
     if (!ok) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
           "Interval '%s %s' is malformed or out of bounds.",
           c->key, c->value);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(int *)lvalue = i;
@@ -1587,10 +1580,9 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_MEMUNIT: {
     uint64_t u64 = config_parse_memunit(c->value, &ok);
     if (!ok) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
           "Value '%s %s' is malformed or out of bounds.",
           c->key, c->value);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(uint64_t *)lvalue = u64;
@@ -1600,10 +1592,9 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
   case CONFIG_TYPE_BOOL:
     i = (int)tor_parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
           "Boolean '%s %s' expects 0 or 1.",
           c->key, c->value);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     *(int *)lvalue = i;
@@ -1621,9 +1612,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
 
   case CONFIG_TYPE_ISOTIME:
     if (parse_iso_time(c->value, (time_t *)lvalue)) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
           "Invalid time '%s' for keyword '%s'", c->value, c->key);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     break;
@@ -1634,9 +1624,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     }
     *(routerset_t**)lvalue = routerset_new();
     if (routerset_parse(*(routerset_t**)lvalue, c->value, c->key)<0) {
-      tor_snprintf(buf, sizeof(buf), "Invalid exit list '%s' for option '%s'",
+      tor_asprintf(msg, "Invalid exit list '%s' for option '%s'",
                    c->value, c->key);
-      *msg = tor_strdup(buf);
       return -1;
     }
     break;
@@ -1661,9 +1650,8 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     log_warn(LD_CONFIG, "Skipping obsolete configuration option '%s'", c->key);
     break;
   case CONFIG_TYPE_LINELIST_V:
-    r = tor_snprintf(buf, sizeof(buf),
+    tor_asprintf(msg,
         "You may not provide a value for virtual option '%s'", c->key);
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   default:
     tor_assert(0);
@@ -1699,10 +1687,8 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
       config_line_append((config_line_t**)lvalue, c->key, c->value);
       return 0;
     } else {
-      char buf[1024];
-      int tmp = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
                 "Unknown option '%s'.  Failing.", c->key);
-      *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
       return -1;
     }
   }
@@ -1828,7 +1814,6 @@ get_assigned_option(config_format_t *fmt, void *options,
 {
   config_var_t *var;
   const void *value;
-  char buf[32];
   config_line_t *result;
   tor_assert(options && key);
 
@@ -1869,19 +1854,16 @@ get_assigned_option(config_format_t *fmt, void *options,
     case CONFIG_TYPE_UINT:
       /* This means every or_options_t uint or bool element
        * needs to be an int. Not, say, a uint16_t or char. */
-      tor_snprintf(buf, sizeof(buf), "%d", *(int*)value);
-      result->value = tor_strdup(buf);
+      tor_asprintf(&result->value, "%d", *(int*)value);
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_MEMUNIT:
-      tor_snprintf(buf, sizeof(buf), U64_FORMAT,
+      tor_asprintf(&result->value, U64_FORMAT,
                    U64_PRINTF_ARG(*(uint64_t*)value));
-      result->value = tor_strdup(buf);
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_DOUBLE:
-      tor_snprintf(buf, sizeof(buf), "%f", *(double*)value);
-      result->value = tor_strdup(buf);
+      tor_asprintf(&result->value, "%f", *(double*)value);
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_BOOL:
@@ -2604,15 +2586,10 @@ config_dump(config_format_t *fmt, void *options, int minimal,
     line = assigned = get_assigned_option(fmt, options, fmt->vars[i].name, 1);
 
     for (; line; line = line->next) {
-      size_t len = strlen(line->key) + strlen(line->value) + 5;
       char *tmp;
-      tmp = tor_malloc(len);
-      if (tor_snprintf(tmp, len, "%s%s %s\n",
-                       comment_option ? "# " : "",
-                       line->key, line->value)<0) {
-        log_err(LD_BUG,"Internal error writing option value");
-        tor_assert(0);
-      }
+      tor_asprintf(&tmp, "%s%s %s\n",
+                   comment_option ? "# " : "",
+                   line->key, line->value);
       smartlist_add(elements, tmp);
     }
     config_free_lines(assigned);
@@ -2621,13 +2598,8 @@ config_dump(config_format_t *fmt, void *options, int minimal,
   if (fmt->extra) {
     line = *(config_line_t**)STRUCT_VAR_P(options, fmt->extra->var_offset);
     for (; line; line = line->next) {
-      size_t len = strlen(line->key) + strlen(line->value) + 3;
       char *tmp;
-      tmp = tor_malloc(len);
-      if (tor_snprintf(tmp, len, "%s %s\n", line->key, line->value)<0) {
-        log_err(LD_BUG,"Internal error writing option value");
-        tor_assert(0);
-      }
+      tor_asprintf(&tmp, "%s %s\n", line->key, line->value);
       smartlist_add(elements, tmp);
     }
   }
@@ -2656,7 +2628,6 @@ static int
 validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
 {
   int i;
-  char buf[1024];
   tor_assert(name);
 
   if (!sl)
@@ -2666,9 +2637,7 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
   {
     i = atoi(cp);
     if (i < 1 || i > 65535) {
-      int r = tor_snprintf(buf, sizeof(buf),
-                           "Port '%s' out of range in %s", cp, name);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
+      tor_asprintf(msg, "Port '%s' out of range in %s", cp, name);
       return -1;
     }
   });
@@ -2682,18 +2651,15 @@ validate_ports_csv(smartlist_t *sl, const char *name, char **msg)
 static int
 ensure_bandwidth_cap(uint64_t *value, const char *desc, char **msg)
 {
-  int r;
-  char buf[1024];
   if (*value > ROUTER_MAX_DECLARED_BANDWIDTH) {
     /* This handles an understandable special case where somebody says "2gb"
      * whereas our actual maximum is 2gb-1 (INT_MAX) */
     --*value;
   }
   if (*value > ROUTER_MAX_DECLARED_BANDWIDTH) {
-    r = tor_snprintf(buf, sizeof(buf), "%s ("U64_FORMAT") must be at most %d",
-                     desc, U64_PRINTF_ARG(*value),
-                     ROUTER_MAX_DECLARED_BANDWIDTH);
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    tor_asprintf(msg, "%s ("U64_FORMAT") must be at most %d",
+                 desc, U64_PRINTF_ARG(*value),
+                 ROUTER_MAX_DECLARED_BANDWIDTH);
     return -1;
   }
   return 0;
@@ -2768,10 +2734,9 @@ static int
 options_validate(or_options_t *old_options, or_options_t *options,
                  int from_setconf, char **msg)
 {
-  int i, r;
+  int i;
   config_line_t *cl;
   const char *uname = get_uname();
-  char buf[1024];
 #define REJECT(arg) \
   STMT_BEGIN *msg = tor_strdup(arg); return -1; STMT_END
 #define COMPLAIN(arg) STMT_BEGIN log(LOG_WARN, LD_CONFIG, arg); STMT_END
@@ -2866,10 +2831,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
           "Nickname '%s' is wrong length or contains illegal characters.",
           options->Nickname);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
   }
@@ -3018,10 +2982,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "FetchDirInfoEarly");
 
   if (options->ConnLimit <= 0) {
-    r = tor_snprintf(buf, sizeof(buf),
+    tor_asprintf(msg,
         "ConnLimit must be greater than 0, but was set to %d",
         options->ConnLimit);
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
 
@@ -3140,9 +3103,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
         else if (!strcasecmp(cp, "rendezvous"))
           options->_AllowInvalid |= ALLOW_INVALID_RENDEZVOUS;
         else {
-          r = tor_snprintf(buf, sizeof(buf),
+          tor_asprintf(msg,
               "Unrecognized value '%s' in AllowInvalidNodes", cp);
-          *msg = tor_strdup(r >= 0 ? buf : "internal error");
           return -1;
         }
       });
@@ -3156,17 +3118,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
   } else if (!strcasecmp(options->SafeLogging, "1")) {
     options->_SafeLogging = SAFELOG_SCRUB_ALL;
   } else {
-    r = tor_snprintf(buf, sizeof(buf),
+    tor_asprintf(msg,
                      "Unrecognized value '%s' in SafeLogging",
                      escaped(options->SafeLogging));
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
 
   if (compute_publishserverdescriptor(options) < 0) {
-    r = tor_snprintf(buf, sizeof(buf),
-                     "Unrecognized value in PublishServerDescriptor");
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
+    tor_asprintf(msg, "Unrecognized value in PublishServerDescriptor");
     return -1;
   }
 
@@ -3237,31 +3196,28 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (server_mode(options)) {
     if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
                        "BandwidthRate is set to %d bytes/second. "
                        "For servers, it must be at least %d.",
                        (int)options->BandwidthRate,
                        ROUTER_REQUIRED_MIN_BANDWIDTH);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     } else if (options->MaxAdvertisedBandwidth <
                ROUTER_REQUIRED_MIN_BANDWIDTH/2) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
                        "MaxAdvertisedBandwidth is set to %d bytes/second. "
                        "For servers, it must be at least %d.",
                        (int)options->MaxAdvertisedBandwidth,
                        ROUTER_REQUIRED_MIN_BANDWIDTH/2);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     if (options->RelayBandwidthRate &&
       options->RelayBandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
                        "RelayBandwidthRate is set to %d bytes/second. "
                        "For servers, it must be at least %d.",
                        (int)options->RelayBandwidthRate,
                        ROUTER_REQUIRED_MIN_BANDWIDTH);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
   }
@@ -3449,11 +3405,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     if (options->ConstrainedSockSize < MIN_CONSTRAINED_TCP_BUFFER ||
         options->ConstrainedSockSize > MAX_CONSTRAINED_TCP_BUFFER ||
         options->ConstrainedSockSize % 1024) {
-      r = tor_snprintf(buf, sizeof(buf),
+      tor_asprintf(msg,
           "ConstrainedSockSize is invalid.  Must be a value between %d and %d "
           "in 1024 byte increments.",
           MIN_CONSTRAINED_TCP_BUFFER, MAX_CONSTRAINED_TCP_BUFFER);
-      *msg = tor_strdup(r >= 0 ? buf : "internal error");
       return -1;
     }
     if (options->DirPort) {
@@ -3629,12 +3584,10 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
   }
 
   if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
-    char buf[1024];
-    int r = tor_snprintf(buf, sizeof(buf),
+    tor_asprintf(msg,
                "While Tor is running, changing DataDirectory "
                "(\"%s\"->\"%s\") is not allowed.",
                old->DataDirectory, new_val->DataDirectory);
-    *msg = tor_strdup(r >= 0 ? buf : "internal error");
     return -1;
   }
 
@@ -3818,10 +3771,7 @@ check_nickname_list(const char *lst, const char *name, char **msg)
   SMARTLIST_FOREACH(sl, const char *, s,
     {
       if (!is_legal_nickname_or_hexdigest(s)) {
-        char buf[1024];
-        int tmp = tor_snprintf(buf, sizeof(buf),
-                  "Invalid nickname '%s' in %s line", s, name);
-        *msg = tor_strdup(tmp >= 0 ? buf : "internal error");
+        tor_asprintf(msg, "Invalid nickname '%s' in %s line", s, name);
         r = -1;
         break;
       }
@@ -4124,12 +4074,9 @@ options_init_from_string(const char *cf,
  err:
   config_free(&options_format, newoptions);
   if (*msg) {
-    int len = (int)strlen(*msg)+256;
-    char *newmsg = tor_malloc(len);
-
-    tor_snprintf(newmsg, len, "Failed to parse/validate config: %s", *msg);
-    tor_free(*msg);
-    *msg = newmsg;
+    char *old_msg = *msg;
+    tor_asprintf(msg, "Failed to parse/validate config: %s", old_msg);
+    tor_free(old_msg);
   }
   return err;
 }
@@ -4549,7 +4496,6 @@ write_configuration_file(const char *fname, or_options_t *options)
 {
   char *old_val=NULL, *new_val=NULL, *new_conf=NULL;
   int rename_old = 0, r;
-  size_t len;
 
   tor_assert(fname);
 
@@ -4576,9 +4522,7 @@ write_configuration_file(const char *fname, or_options_t *options)
     goto err;
   }
 
-  len = strlen(new_conf)+256;
-  new_val = tor_malloc(len);
-  tor_snprintf(new_val, len, "%s\n%s\n\n%s",
+  tor_asprintf(&new_val, "%s\n%s\n\n%s",
                GENERATED_FILE_PREFIX, GENERATED_FILE_COMMENT, new_conf);
 
   if (rename_old) {
@@ -5022,7 +4966,6 @@ or_state_save(time_t now)
 {
   char *state, *contents;
   char tbuf[ISO_TIME_LEN+1];
-  size_t len;
   char *fname;
 
   tor_assert(global_state);
@@ -5040,15 +4983,11 @@ or_state_save(time_t now)
 
   global_state->LastWritten = time(NULL);
   tor_free(global_state->TorVersion);
-  len = strlen(get_version())+8;
-  global_state->TorVersion = tor_malloc(len);
-  tor_snprintf(global_state->TorVersion, len, "Tor %s", get_version());
+  tor_asprintf(&global_state->TorVersion, "Tor %s", get_version());
 
   state = config_dump(&state_format, global_state, 1, 0);
-  len = strlen(state)+256;
-  contents = tor_malloc(len);
   format_local_iso_time(tbuf, time(NULL));
-  tor_snprintf(contents, len,
+  tor_asprintf(&contents,
                "# Tor state file last generated on %s local time\n"
                "# Other times below are in GMT\n"
                "# You *do not* need to edit this file.\n\n%s",
@@ -5102,7 +5041,6 @@ getinfo_helper_config(control_connection_t *conn,
       config_var_t *var = &_option_vars[i];
       const char *type;
       char *line;
-      size_t len;
       switch (var->type) {
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
@@ -5123,9 +5061,7 @@ getinfo_helper_config(control_connection_t *conn,
       }
       if (!type)
         continue;
-      len = strlen(var->name)+strlen(type)+16;
-      line = tor_malloc(len);
-      tor_snprintf(line, len, "%s %s\n",var->name,type);
+      tor_asprintf(&line, "%s %s\n",var->name,type);
       smartlist_add(sl, line);
     }
     *answer = smartlist_join_strings(sl, "", 0, NULL);
