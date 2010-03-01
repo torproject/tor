@@ -15,6 +15,10 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
       circuits now only differ from fast ones in that they can use nodes
       not marked with the Fast flag.
 
+  o Minor features:
+    - Allow disabling building of the manpages. This speeds up the
+      build considerably.
+
   o Minor bugfixes:
     - Fix a memleak in the EXTENDCIRCUIT logic. Spotted by coverity.
       Bugfix on 0.2.2.9-alpha.
@@ -31,6 +35,8 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
     - Fix some urls in the exit notice file and make it XHTML1.1 strict
       compliant. Based on a patch from Christian Kujau.
     - Don't use sed in asciidoc-helper anymore.
+    - Make the build process fail if asciidoc cannot be found, and
+      building with asciidoc isn't disabled.
 
 Changes in version 0.2.2.9-alpha - 2010-02-22
   o Directory authority changes:

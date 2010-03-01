@@ -13,7 +13,11 @@
 # part of the source distribution, so that people without asciidoc can
 # just use the .1 and .html files.
 
+if USE_ASCIIDOC
 asciidoc_files = tor tor-gencert tor-resolve torify
+else
+asciidoc_files =
+endif
 
 html_in = $(asciidoc_files:=.html.in)
 
