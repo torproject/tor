@@ -905,6 +905,10 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   int need_capacity = (flags & CIRCLAUNCH_NEED_CAPACITY) != 0;
   int internal = (flags & CIRCLAUNCH_IS_INTERNAL) != 0;
 
+  /* Make sure we're not trying to create a onehop circ by
+   * cannibalization. */
+  tor_assert(!(flags & CIRCLAUNCH_ONEHOP_TUNNEL));
+
   log_debug(LD_CIRC,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
             "capacity %d, internal %d",
@@ -920,7 +924,8 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
       if ((!need_uptime || circ->build_state->need_uptime) &&
           (!need_capacity || circ->build_state->need_capacity) &&
           (internal == circ->build_state->is_internal) &&
-          circ->remaining_relay_early_cells) {
+          circ->remaining_relay_early_cells &&
+          !circ->build_state->onehop_tunnel) {
         if (info) {
           /* need to make sure we don't duplicate hops */
           crypt_path_t *hop = circ->cpath;
