@@ -1294,6 +1294,7 @@ test_util(void)
     smartlist_free(sl);
   }
 
+  tor_gettimeofday(&start);
   /* now make sure time works. */
   tor_gettimeofday(&end);
   /* We might've timewarped a little. */
