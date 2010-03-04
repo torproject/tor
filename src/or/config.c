@@ -2221,7 +2221,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   if (tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
     explicit_ip = 0;
-    if (!tor_lookup_hostname(hostname, &addr)) {
+    if (tor_lookup_hostname(hostname, &addr)) {
       uint32_t interface_ip;
 
       if (explicit_hostname) {

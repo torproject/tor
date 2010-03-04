@@ -115,6 +115,10 @@ Changes in version 0.2.1.25 - 2010-??-??
     - When freeing a cipher, zero it out completely. We only zeroed
       the first ptrsize bytes. Bugfix on tor-0.0.2pre8. Discovered
       and patched by ekir. Fixes bug 1254.
+    - Avoid a bug that set IPs incorrectly on relays that did't set
+      Address to an IP address, when that address fails to resolve.
+      Fixes bug 1269.
+
   o Minor bugfixes:
     - Fix a dereference-then-NULL-check sequence when publishing
       descriptors. Bugfix on tor-0.2.1.5-alpha. Discovered by ekir,
