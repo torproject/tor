@@ -1574,6 +1574,13 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
              rule == WEIGHT_FOR_MID ||
              rule == WEIGHT_FOR_DIR);
 
+  if (smartlist_len(sl) == 0) {
+    log_info(LD_CIRC,
+             "Empty routerlist passed in to consensus weight node "
+             "selection for rule %d", rule);
+    return NULL;
+  }
+
   weight_scale = networkstatus_get_param(NULL, "bwweightscale",
                                          BW_WEIGHT_SCALE);
 
@@ -1692,6 +1699,15 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
             "Wg=%lf Wm=%lf We=%lf Wd=%lf with total bw %lf", rule,
             Wg, Wm, We, Wd, weighted_bw);
 
+  /* If there is no bandwidth, choose at random */
+  if (DBL_TO_U64(weighted_bw) == 0) {
+    log_warn(LD_CIRC,
+             "Weighted bandwidth is %lf in node selection for rule %d",
+             weighted_bw, rule);
+    tor_free(bandwidths);
+    return smartlist_choose(sl);
+  }
+
   rand_bw = crypto_rand_uint64(DBL_TO_U64(weighted_bw));
   rand_bw++; /* crypto_rand_uint64() counts from 0, and we need to count
               * from 1 below. See bug 1203 for details. */
@@ -1764,6 +1780,13 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
   tor_assert(rule == NO_WEIGHTING ||
              rule == WEIGHT_FOR_EXIT ||
              rule == WEIGHT_FOR_GUARD);
+
+  if (smartlist_len(sl) == 0) {
+    log_info(LD_CIRC,
+             "Empty routerlist passed in to old node selection for rule %d",
+             rule);
+    return NULL;
+  }
 
   /* First count the total bandwidth weight, and make a list
    * of each value.  <0 means "unknown; no routerinfo."  We use the
