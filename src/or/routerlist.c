@@ -1577,7 +1577,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
              rule == WEIGHT_FOR_DIR);
 
   if (!sl || smartlist_len(sl) == 0) {
-    log_warn(LD_CIRC,
+    log_info(LD_CIRC,
              "Empty routerlist passed in to node selection for rule %d",
              rule);
     return NULL;
