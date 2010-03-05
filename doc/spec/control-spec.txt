@@ -87,6 +87,10 @@
 
 2.4. General-use tokens
 
+  ; CRLF means, "the ASCII Carriage Return character (decimal value value 13)
+  ; followed by the ASCII Linefeed character (decimal value 10)."
+  CRLF = CR LF
+
   ; Identifiers for servers.
   ServerID = Nickname / Fingerprint
 
