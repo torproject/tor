@@ -2191,7 +2191,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
                    uint32_t *addr_out, char **hostname_out)
 {
   struct in_addr in;
-  uint32_t addr;
+  uint32_t addr; /* host order */
   char hostname[256];
   int explicit_ip=1;
   int explicit_hostname=1;
@@ -2221,8 +2221,8 @@ resolve_my_address(int warn_severity, or_options_t *options,
   if (tor_inet_aton(hostname, &in) == 0) {
     /* then we have to resolve it */
     explicit_ip = 0;
-    if (tor_lookup_hostname(hostname, &addr)) {
-      uint32_t interface_ip;
+    if (tor_lookup_hostname(hostname, &addr)) { /* failed to resolve */
+      uint32_t interface_ip; /* host order */
 
       if (explicit_hostname) {
         log_fn(warn_severity, LD_CONFIG,
@@ -2243,7 +2243,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
       log_fn(notice_severity, LD_CONFIG, "Learned IP address '%s' for "
              "local interface. Using that.", tmpbuf);
       strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
-    } else {
+    } else { /* resolved hostname into addr */
       in.s_addr = htonl(addr);
 
       if (!explicit_hostname &&

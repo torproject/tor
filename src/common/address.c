@@ -726,7 +726,7 @@ tor_addr_is_loopback(const tor_addr_t *addr)
 }
 
 /** Set <b>dest</b> to equal the IPv4 address in <b>v4addr</b> (given in
- * network order. */
+ * network order). */
 void
 tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr)
 {

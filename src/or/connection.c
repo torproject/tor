@@ -3095,10 +3095,10 @@ alloc_http_authenticator(const char *authenticator)
 static void
 client_check_address_changed(int sock)
 {
-  uint32_t iface_ip, ip_out;
+  uint32_t iface_ip, ip_out; /* host order */
   struct sockaddr_in out_addr;
   socklen_t out_addr_len = (socklen_t) sizeof(out_addr);
-  uint32_t *ip;
+  uint32_t *ip; /* host order */
 
   if (!last_interface_ip)
     get_interface_address(LOG_INFO, &last_interface_ip);
