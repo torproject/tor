@@ -15,6 +15,10 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
       circuits now only differ from fast ones in that they can use nodes
       not marked with the Fast flag.
 
+  o Minor features:
+    - Allow disabling building of the manpages. This speeds up the
+      build considerably.
+
   o Minor bugfixes:
     - Fix a memleak in the EXTENDCIRCUIT logic. Spotted by coverity.
       Bugfix on 0.2.2.9-alpha.
@@ -23,11 +27,16 @@ Changes in version 0.2.2.10-alpha - 2010-??-??
       fixes bug 1255.
     - Disallow values larger than INT32_MAX for PerConnBWRate|Burst
       config option. Bugfix on 0.2.2.7-alpha.
+    - Ship the asciidoc-helper file in the tarball, so that people can
+      build from source if they want to, and touching the .1.txt files
+      doesn't break the build. Bugfix on 0.2.2.9-alpha.
 
   o Code simplifications and refactoring:
     - Fix some urls in the exit notice file and make it XHTML1.1 strict
       compliant. Based on a patch from Christian Kujau.
-
+    - Don't use sed in asciidoc-helper anymore.
+    - Make the build process fail if asciidoc cannot be found, and
+      building with asciidoc isn't disabled.
 
 Changes in version 0.2.2.9-alpha - 2010-02-22
   o Directory authority changes:
@@ -115,6 +124,10 @@ Changes in version 0.2.1.25 - 2010-??-??
     - When freeing a cipher, zero it out completely. We only zeroed
       the first ptrsize bytes. Bugfix on tor-0.0.2pre8. Discovered
       and patched by ekir. Fixes bug 1254.
+    - Avoid a bug that set IPs incorrectly on relays that did't set
+      Address to an IP address, when that address fails to resolve.
+      Fixes bug 1269.
+
   o Minor bugfixes:
     - Fix a dereference-then-NULL-check sequence when publishing
       descriptors. Bugfix on tor-0.2.1.5-alpha. Discovered by ekir,

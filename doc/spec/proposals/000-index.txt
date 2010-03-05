@@ -90,6 +90,7 @@ Proposals by number:
 167  Vote on network parameters in consensus [CLOSED]
 168  Reduce default circuit window [OPEN]
 169  Eliminate TLS renegotiation for the Tor connection handshake [DRAFT]
+170  Configuration options regarding circuit building [DRAFT]
 
 
 Proposals by status:
@@ -101,6 +102,7 @@ Proposals by status:
    141  Download server descriptors on demand
    144  Increase the diversity of circuits by detecting nodes belonging the same provider
    169  Eliminate TLS renegotiation for the Tor connection handshake [for 0.2.2]
+   170  Configuration options regarding circuit building
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  OPEN:

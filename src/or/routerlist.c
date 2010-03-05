@@ -1574,10 +1574,10 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
              rule == WEIGHT_FOR_MID ||
              rule == WEIGHT_FOR_DIR);
 
-  if (!sl || smartlist_len(sl) == 0) {
+  if (smartlist_len(sl) == 0) {
     log_info(LD_CIRC,
-             "Empty routerlist passed in to node selection for rule %d",
-             rule);
+             "Empty routerlist passed in to consensus weight node "
+             "selection for rule %d", rule);
     return NULL;
   }
 
@@ -1781,9 +1781,9 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
              rule == WEIGHT_FOR_EXIT ||
              rule == WEIGHT_FOR_GUARD);
 
-  if (!sl || smartlist_len(sl) == 0) {
-    log_warn(LD_CIRC,
-             "Empty routerlist passed in to node selection for rule %d",
+  if (smartlist_len(sl) == 0) {
+    log_info(LD_CIRC,
+             "Empty routerlist passed in to old node selection for rule %d",
              rule);
     return NULL;
   }
