@@ -49,6 +49,15 @@ AC_ARG_ENABLE(transparent,
         *) AC_MSG_ERROR(bad value for --enable-transparent) ;;
       esac], [transparent=true])
 
+AC_ARG_ENABLE(asciidoc,
+     AS_HELP_STRING(--disable-asciidoc, don't use asciidoc (disables building of manpages)),
+     [case "${enableval}" in
+        yes) asciidoc=true ;;
+        no)  asciidoc=false ;;
+        *) AC_MSG_ERROR(bad value for --disable-asciidoc) ;;
+      esac], [asciidoc=true])
+
+
 AC_ARG_ENABLE(threads,
      AS_HELP_STRING(--disable-threads, disable multi-threading support))
 
@@ -97,6 +106,20 @@ AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
 dnl check for asciidoc and a2x
 AC_PATH_PROG([ASCIIDOC], [asciidoc], none)
 AC_PATH_PROG([A2X], [a2x], none)
+AC_PATH_PROG([XSLTPROC], [xsltproc], none)
+if test x$asciidoc = xtrue ; then
+   if test x$ASCIIDOC = xnone ; then
+       AC_MSG_ERROR("Couldn't find asciidoc. reconfigure with --disable-asciidoc to build without asciidoc.")
+   fi
+   if test x$A2X = xnone ; then
+       AC_MSG_ERROR("Couldn't find a2x. reconfigure with --disable-asciidoc to build without a2x.")
+   fi
+   if test x$XSLTPROC = xnone ; then
+       AC_MSG_ERROR("Couldn't find xsltproc. reconfigure with --disable-asciidoc to build without xsltproc.")
+   fi
+fi
+
+AM_CONDITIONAL(USE_ASCIIDOC, test x$asciidoc = xtrue)
 
 AC_PATH_PROG([SHA1SUM], [sha1sum], none)
 AC_PATH_PROG([OPENSSL], [openssl], none)
