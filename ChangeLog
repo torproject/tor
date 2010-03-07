@@ -1,42 +1,56 @@
-Changes in version 0.2.2.10-alpha - 2010-??-??
+Changes in version 0.2.2.10-alpha - 2010-03-07
+  o Major bugfixes:
+    - Fix a regression from our patch for bug 1244 that caused relays
+      to guess their IP address incorrectly if they didn't set Address
+      in their torrc and/or their address fails to resolve. Bugfix on
+      0.2.2.9-alpha; fixes bug 1269.
+
   o Major features (performance):
-    - Alter the client path selection to use new consensus-generated
-      weightings to alter bandwidths when selecting Guard, Middle, Exit,
-      and Guard+Exit flagged nodes for entry, middle, and exit positions.
-      This should more evenly distribute the network load across these
-      different types of nodes, and give us the flexibility to globally
-      alter our node selection algorithms in the future.  Extra thanks
-      to "outofwords" for finding some nasty security bugs in the
-      first implementation of this.
+    - Directory authorities now compute consensus weightings that instruct
+      clients how to weight relays flagged as Guard, Exit, Guard+Exit,
+      and no flag. Clients that use these weightings will distribute
+      network load more evenly across these different relay types. The
+      weightings are in the consensus so we can change them globally in
+      the future. Extra thanks to "outofwords" for finding some nasty
+      security bugs in the first implementation of this feature.
 
   o Minor features (performance):
-    - Always perform router selections using weighted node bandwidth,
+    - Always perform router selections using weighted relay bandwidth,
       even if we don't need a high capacity circuit at the time. Non-fast
-      circuits now only differ from fast ones in that they can use nodes
-      not marked with the Fast flag.
+      circuits now only differ from fast ones in that they can use relays
+      not marked with the Fast flag. This "feature" could turn out to
+      be a horrible bug; we should investigate more before it goes into
+      a stable release.
 
   o Minor features:
-    - Allow disabling building of the manpages. This speeds up the
-      build considerably.
+    - Allow disabling building of the manpages. Skipping the manpage
+      speeds up the build considerably.
 
-  o Minor bugfixes:
+  o Minor bugfixes (on 0.2.2.x):
     - Fix a memleak in the EXTENDCIRCUIT logic. Spotted by coverity.
       Bugfix on 0.2.2.9-alpha.
-    - Fix a dereference-then-NULL-check sequence when publishing
-      descriptors. Bugfix on tor-0.2.1.5-alpha. Discovered by ekir,
-      fixes bug 1255.
     - Disallow values larger than INT32_MAX for PerConnBWRate|Burst
       config option. Bugfix on 0.2.2.7-alpha.
     - Ship the asciidoc-helper file in the tarball, so that people can
       build from source if they want to, and touching the .1.txt files
       doesn't break the build. Bugfix on 0.2.2.9-alpha.
 
+  o Minor bugfixes (on 0.2.1.x or earlier):
+    - Fix a dereference-then-NULL-check sequence when publishing
+      descriptors. Bugfix on 0.2.1.5-alpha. Discovered by ekir; fixes
+      bug 1255.
+    - Fix another dereference-then-NULL-check sequence. Bugfix on
+      0.2.1.14-rc. Discovered by ekir; fixes bug 1256.
+    - Make sure we treat potentially not NUL-terminated strings correctly.
+      Bugfix on 0.1.1.13-alpha. Discovered by rieo; fixes bug 1257.
+
   o Code simplifications and refactoring:
     - Fix some urls in the exit notice file and make it XHTML1.1 strict
       compliant. Based on a patch from Christian Kujau.
     - Don't use sed in asciidoc-helper anymore.
-    - Make the build process fail if asciidoc cannot be found, and
+    - Make the build process fail if asciidoc cannot be found and
       building with asciidoc isn't disabled.
+
 
 Changes in version 0.2.2.9-alpha - 2010-02-22
   o Directory authority changes:
@@ -59,9 +73,9 @@ Changes in version 0.2.2.9-alpha - 2010-02-22
       that didn't allow exiting to any ports. This bug could screw
       with load balancing and stats. Bugfix on 0.1.1.6-alpha; fixes bug
       1238. Bug discovered by Martin Kowalczyk.
-    - When freeing a cipher, zero it out completely. We only zeroed
-      the first ptrsize bytes. Bugfix on tor-0.0.2pre8. Discovered
-      and patched by ekir. Fixes bug 1254.
+    - When freeing a session key, zero it out completely. We only zeroed
+      the first ptrsize bytes. Bugfix on 0.0.2pre8. Discovered and
+      patched by ekir. Fixes bug 1254.
 
   o Minor bugfixes:
     - Fix static compilation by listing the openssl libraries in the right
