@@ -106,18 +106,6 @@ AC_CHECK_PROG([SED],[sed],[sed],[/bin/false])
 dnl check for asciidoc and a2x
 AC_PATH_PROG([ASCIIDOC], [asciidoc], none)
 AC_PATH_PROG([A2X], [a2x], none)
-AC_PATH_PROG([XSLTPROC], [xsltproc], none)
-if test x$asciidoc = xtrue ; then
-   if test x$ASCIIDOC = xnone ; then
-       AC_MSG_ERROR("Couldn't find asciidoc. reconfigure with --disable-asciidoc to build without asciidoc.")
-   fi
-   if test x$A2X = xnone ; then
-       AC_MSG_ERROR("Couldn't find a2x. reconfigure with --disable-asciidoc to build without a2x.")
-   fi
-   if test x$XSLTPROC = xnone ; then
-       AC_MSG_ERROR("Couldn't find xsltproc. reconfigure with --disable-asciidoc to build without xsltproc.")
-   fi
-fi
 
 AM_CONDITIONAL(USE_ASCIIDOC, test x$asciidoc = xtrue)
 

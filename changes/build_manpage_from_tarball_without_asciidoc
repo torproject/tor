@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - When building the manpage from a tarball, we required asciidoc, even
+      though the asciidoc -> roff/html conversion was already done while
+      building the tarball. We now make it so that make complains when
+      we need asciidoc (either because someone is compiling directly from git,
+      or because they altered the asciidoc manpage in their tarball). Bugfix
+      on 0.2.2.9-alpha.
+
