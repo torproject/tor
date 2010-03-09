@@ -592,7 +592,7 @@
       List of currently recommended versions.
     "status/version/current"
       Status of the current version. One of: new, old, unrecommended,
-      recommended, new in series, obsolete.
+      recommended, new in series, obsolete, unknown.
     "status/clients-seen"
       A summary of which countries we've seen clients from recently,
       formatted the same as the CLIENTS_SEEN status event described in
