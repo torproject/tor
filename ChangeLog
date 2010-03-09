@@ -5,6 +5,12 @@ Changes in version 0.2.2.11-alpha - 2010-03-??
 
 
 Changes in version 0.2.2.10-alpha - 2010-03-07
+  Tor 0.2.2.10-alpha fixes a regression introduced in 0.2.2.9-alpha that
+  could prevent relays from guessing their IP address correctly. It also
+  starts the groundwork for another client-side performance boost, since
+  currently we're not making efficient use of relays that have both the
+  Guard flag and the Exit flag.
+
   o Major bugfixes:
     - Fix a regression from our patch for bug 1244 that caused relays
       to guess their IP address incorrectly if they didn't set Address
@@ -59,6 +65,9 @@ Changes in version 0.2.2.10-alpha - 2010-03-07
 
 
 Changes in version 0.2.2.9-alpha - 2010-02-22
+  Tor 0.2.2.9-alpha makes Tor work again on the latest OS X, updates the
+  location of a directory authority, and cleans up a bunch of small bugs.
+
   o Directory authority changes:
     - Change IP address for dannenberg (v3 directory authority), and
       remove moria2 (obsolete v1, v2 directory authority and v0 hidden
@@ -214,6 +223,10 @@ Changes in version 0.2.1.23 - 2010-02-13
 
 
 Changes in version 0.2.2.8-alpha - 2010-01-26
+  Tor 0.2.2.8-alpha fixes a crash bug in 0.2.2.7-alpha that has been
+  causing bridge relays to disappear. If you're running a bridge,
+  please upgrade.
+
   o Major bugfixes:
     - Fix a memory corruption bug on bridges that occured during the
       inclusion of stats data in extra-info descriptors. Also fix the
