@@ -322,7 +322,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
 
 /** Return 1 if identity digest <b>id_digest</b> is known to be a
  * currently or recently running relay. Otherwise return 0. */
-static int
+int
 connection_or_digest_is_known_relay(const char *id_digest)
 {
   if (router_get_consensus_status_by_id(id_digest))

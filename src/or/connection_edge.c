@@ -2505,16 +2505,28 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       tor_free(address);
       return 0;
     }
-    if (or_circ && or_circ->is_first_hop &&
-        !get_options()->AllowSingleHopExits) {
+    if (or_circ && or_circ->p_conn && !get_options()->AllowSingleHopExits &&
+        (or_circ->is_first_hop ||
+         (!connection_or_digest_is_known_relay(
+                                       or_circ->p_conn->identity_digest) &&
+//        XXX022 commented out so we can test it first in 0.2.2.11 -RD
+//        networkstatus_get_param(NULL, "refuseunknownexits", 1)))) {
+          get_options()->RefuseUnknownExits))) {
       /* Don't let clients use us as a single-hop proxy, unless the user
-       * has explicitly allowed that in the config.  It attracts attackers
+       * has explicitly allowed that in the config. It attracts attackers
        * and users who'd be better off with, well, single-hop proxies.
        */
-      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Attempt to open a stream on first hop of circuit. Closing.");
+//    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
+      log_notice(LD_PROTOCOL,
+             "Attempt by %s to open a stream %s. Closing.",
+             safe_str(or_circ->p_conn->_base.address),
+             or_circ->is_first_hop ? "on first hop of circuit" :
+                                     "from unknown relay");
       relay_send_end_cell_from_edge(rh.stream_id, circ,
-                                    END_STREAM_REASON_TORPROTOCOL, NULL);
+                                    or_circ->is_first_hop ?
+                                      END_STREAM_REASON_TORPROTOCOL :
+                                      END_STREAM_REASON_MISC,
+                                    NULL);
       tor_free(address);
       return 0;
     }

@@ -2462,6 +2462,11 @@ typedef struct {
   int ConstrainedSockets; /**< Shrink xmit and recv socket buffers. */
   uint64_t ConstrainedSockSize; /**< Size of constrained buffers. */
 
+  /** Whether we should drop exit streams from Tors that we don't know
+   * are relays. XXX022 In here for 0.2.2.11 as a temporary test before
+   * we switch over to putting it in consensusparams. -RD */
+  int RefuseUnknownExits;
+
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */
   smartlist_t *LongLivedPorts;
@@ -3532,6 +3537,7 @@ int connection_or_process_inbuf(or_connection_t *conn);
 int connection_or_flushed_some(or_connection_t *conn);
 int connection_or_finished_flushing(or_connection_t *conn);
 int connection_or_finished_connecting(or_connection_t *conn);
+int connection_or_digest_is_known_relay(const char *id_digest);
 
 void connection_or_connect_failed(or_connection_t *conn,
                                   int reason, const char *msg);

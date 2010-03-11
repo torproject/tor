@@ -1,4 +1,11 @@
 Changes in version 0.2.2.11-alpha - 2010-03-??
+  o Minor features:
+    - Experiment with a more aggressive approach to preventing clients
+      from making one-hop exit streams. Exit relays who want to try it
+      out can set "RefuseUnknownExits 1" in their torrc, and then look
+      for "Attempt by %s to open a stream" log messages. Let us know
+      how it goes!
+
   o Minor bugfixes:
     - When we cleaned up the contrib/tor-exit-notice.html file, we left
       out some key text. Fixes bug 1295.
