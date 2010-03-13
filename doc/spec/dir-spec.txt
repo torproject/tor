@@ -1367,7 +1367,7 @@
         the signing authority, and "signing-key-digest" is the hex-encoded
         digest of the current authority signing key of the signing authority.
 
-3.3. Deciding how to vote.
+3.3. Assigning flags in a vote
 
    (This section describes how directory authorities choose which status
    flags to apply to routers, as of Tor 0.2.0.0-alpha-dev. Later directory
