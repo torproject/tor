@@ -1,0 +1,96 @@
+Filename: xxx-automatic-node-promotion.txt
+Title: Automatically promoting Tor clients to nodes
+Author: Steven Murdoch
+Created: 12-Mar-2010
+Status: Draft
+Target:
+
+1. Overview
+
+   This proposal describes how Tor clients could determine when they
+   have sufficient bandwidth capacity and are sufficiently reliable to
+   become either bridges are Tor servers. When they meet this
+   criteria, they will automatically promote themselves, based on user
+   preferences. The proposal also defines the new controller messages
+   and options which will control this process.
+
+2. Motivation and history
+
+   Tor has a growing user-base and one of the major impediments to the
+   quality of service offered is the lack of network capacity. This is
+   particularly the case for bridges, because these are gradually
+   being blocked, and thus no longer of use to people within some
+   countries. By automatically promoting Tor clients to bridges, and
+   perhaps also to full public servers, this proposal aims to solve
+   these problems.
+ 
+   Only Tor clients which are sufficiently useful should be promoted,
+   and the process of determining usefulness should be performed
+   without reporting the existence of the client to the central
+   authorities. The criteria used for determining usefulness will be
+   in terms of bandwidth capacity and uptime, but parameters should be
+   specified in the directory consensus. State stored at the client
+   should be in no more detail than necessary, to prevent sensitive
+   information being recorded.
+
+3. Design
+
+3.x Opt-in state model
+
+   Tor can be in one of five node-promotion states:
+
+   - off (O): Currently a client, and will stay as such
+   - auto (A): Currently a client, but will consider promotion
+   - bridge (B): Currently a bridge, and will stay as such
+   - auto-bridge (AB): Currently a bridge, but will consider promotion
+   - server (S): Currently a public server, and will stay as such
+
+   The state can be fully controlled from the configuration file or
+   controller, but the normal state transitions are as follows:
+
+   Any state -> off: User has opted out of node promotion
+   Off -> any state: Only permitted with user consent
+
+   Auto -> auto-bridge: Tor has detected that it is sufficiently
+    reliable to be a *bridge*
+   Auto -> bridge: Tor has detected that it is sufficiently reliable
+    to be a *server*, but the user has chosen to remain a *bridge*
+   Auto -> server: Tor has detected that it is sufficiently reliable
+    to be *server*, and will skip being a *bridge*
+   Auto-bridge -> server: Tor has detected that it is sufficiently
+    reliable to be a *server*
+
+   Note that this model does not support demotion. If this is
+   desirable, there should be some memory as to whether the previous
+   state was server, bridge, or auto-bridge. Otherwise the user may be
+   prompted to become a server, although he has opted to only be a
+   bridge.
+
+3.x User interaction policy
+
+   There are a variety of options in how to involve the user into the
+   decision as to whether and when to perform node promotion. The
+   choice also may be different when Tor is running from Vidalia (and
+   thus can readily prompt the user for information), and standalone
+   (where Tor can only log messages, which may or may not be read).
+
+   The option requiring minimal user interaction is to automatically
+   promote nodes according to reliability, and allow the user to opt
+   out, by changing settings in the configuration file or Vidalia user
+   interface.
+
+   Alternatively, if a user interface is available, Tor could prompt
+   the user when it detects that a transition is available, and allow
+   the user to choose which of the available options to select.
+
+   Finally, Tor could by default not make any transition, and the user
+   would need to opt in by stating the maximum level (bridge or
+   server) to which the node may automatically promote itself.
+
+3.x New options
+
+3.x New controller message
+
+4. Related proposals
+
+5. Open questions:
