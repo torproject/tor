@@ -69,6 +69,12 @@ Target:
    a HTTP <-> SPDY proxy may improve Tor performance, by some
    amount.
 
+   The consequences on caching need to be considered carefully.
+   Most of the optimizations SPDY offers have no effect because
+   the existing HTTP cache control headers are transmitted without
+   modification. Server push is more problematic, because here
+   the server may push a resource that the client already has.
+
 3. Design outline
 
    One way to implement the SPDY proxy is for Tor exit nodes to
@@ -77,9 +83,10 @@ Target:
    destined for port 80.
 
    Then, rather than sending the usual RELAY_BEGIN cell, the OP
-   would send a RELAY_SPDY_BEGIN cell, to indicate that the exit
-   node should translate between SPDY and HTTP. The rest of the
-   connection process would operate as usual.
+   would send a RELAY_BEGIN_TRANSFORMED cell, with a parameter to
+   indicate that the exit node should translate between SPDY and
+   HTTP. The rest of the connection process would operate as
+   usual.
 
    There would need to be some way of elegantly handling non-HTTP
    traffic which goes over port 80.
