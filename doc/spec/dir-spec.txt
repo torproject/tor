@@ -10,7 +10,7 @@
 
    Caches and authorities must still support older versions of the
    directory protocols, until the versions of Tor that require them are
-   finally out of commission.  See Section XXXX on backward compatibility.
+   finally out of commission.
 
    This document merges and supersedes the following proposals:
 
@@ -182,7 +182,8 @@
    All directory information is uploaded and downloaded with HTTP.
 
    [Authorities also generate and caches also cache documents produced and
-   used by earlier versions of this protocol; see section XXX for notes.]
+   used by earlier versions of this protocol; see dir-spec-v1.txt and
+   dir-spec-v2.txt for notes on those versions.]
 
 1.1. What's different from version 2?
 
@@ -1015,7 +1016,7 @@
    generate exactly the same consensus given the same set of votes.
 
    The procedure for deciding when to generate vote and consensus status
-   documents are described in section XXX below.
+   documents are described in section 1.4 on the voting timeline.
 
    Status documents contain a preamble, an authority section, a list of
    router status entries, and one or more footer signature, in that order.
