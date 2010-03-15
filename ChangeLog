@@ -1,4 +1,4 @@
-Changes in version 0.2.1.25 - 2010-03-??
+Changes in version 0.2.1.25 - 2010-03-15
   o Major bugfixes:
     - Fix a regression from our patch for bug 1244 that caused relays
       to guess their IP address incorrectly if they didn't set Address
