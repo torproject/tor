@@ -14,6 +14,11 @@ Target:
    preferences. The proposal also defines the new controller messages
    and options which will control this process.
 
+   Note that for the moment, only transitions between client and
+   bridge are being considered. Transitions to public relay will
+   be considered at a future date, but will use the same
+   infrastructure for measuring capacity and reliability.
+
 2. Motivation and history
 
    Tor has a growing user-base and one of the major impediments to the
@@ -108,3 +113,11 @@ Target:
    - Perhaps the bridge authority should tell potential bridges
      whether to enable themselves, by taking into account whether
      their IP address is blocked
+
+   - How do we explain the possible risks of running a bridge/relay
+     * Use of bandwidth/congestion
+     * Publication of IP address
+     * Blocking from IRC (even for non-exit relays)
+
+   - What feedback should we give to bridge relays, to encourage then
+     e.g. number of recent users (what about reserve bridges)?
