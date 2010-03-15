@@ -81,7 +81,10 @@ Target:
 
    Alternatively, if a user interface is available, Tor could prompt
    the user when it detects that a transition is available, and allow
-   the user to choose which of the available options to select.
+   the user to choose which of the available options to select. If
+   Vidalia is not available, it still may be possible to solicit an
+   email address on install, and contact the operator to ask whether
+   a transition to bridge or relay is permitted.
 
    Finally, Tor could by default not make any transition, and the user
    would need to opt in by stating the maximum level (bridge or
@@ -94,3 +97,14 @@ Target:
 4. Related proposals
 
 5. Open questions:
+
+   - What user interaction policy should we take?
+
+   - When (if ever) should we turn a relay into an exit relay?
+
+   - What should the rate limits be for auto-promoted bridges/relays?
+     Should we prompt the user for this?
+
+   - Perhaps the bridge authority should tell potential bridges
+     whether to enable themselves, by taking into account whether
+     their IP address is blocked
