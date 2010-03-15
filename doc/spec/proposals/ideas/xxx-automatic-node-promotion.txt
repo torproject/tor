@@ -9,7 +9,7 @@ Target:
 
    This proposal describes how Tor clients could determine when they
    have sufficient bandwidth capacity and are sufficiently reliable to
-   become either bridges are Tor servers. When they meet this
+   become either bridges or Tor relays. When they meet this
    criteria, they will automatically promote themselves, based on user
    preferences. The proposal also defines the new controller messages
    and options which will control this process.
@@ -21,7 +21,7 @@ Target:
    particularly the case for bridges, because these are gradually
    being blocked, and thus no longer of use to people within some
    countries. By automatically promoting Tor clients to bridges, and
-   perhaps also to full public servers, this proposal aims to solve
+   perhaps also to full public relays, this proposal aims to solve
    these problems.
  
    Only Tor clients which are sufficiently useful should be promoted,
@@ -43,7 +43,7 @@ Target:
    - auto (A): Currently a client, but will consider promotion
    - bridge (B): Currently a bridge, and will stay as such
    - auto-bridge (AB): Currently a bridge, but will consider promotion
-   - server (S): Currently a public server, and will stay as such
+   - relay (R): Currently a public relay, and will stay as such
 
    The state can be fully controlled from the configuration file or
    controller, but the normal state transitions are as follows:
@@ -54,16 +54,16 @@ Target:
    Auto -> auto-bridge: Tor has detected that it is sufficiently
     reliable to be a *bridge*
    Auto -> bridge: Tor has detected that it is sufficiently reliable
-    to be a *server*, but the user has chosen to remain a *bridge*
-   Auto -> server: Tor has detected that it is sufficiently reliable
-    to be *server*, and will skip being a *bridge*
-   Auto-bridge -> server: Tor has detected that it is sufficiently
-    reliable to be a *server*
+    to be a *relay*, but the user has chosen to remain a *bridge*
+   Auto -> relay: Tor has detected that it is sufficiently reliable
+    to be *relay*, and will skip being a *bridge*
+   Auto-bridge -> relay: Tor has detected that it is sufficiently
+    reliable to be a *relay*
 
    Note that this model does not support demotion. If this is
    desirable, there should be some memory as to whether the previous
-   state was server, bridge, or auto-bridge. Otherwise the user may be
-   prompted to become a server, although he has opted to only be a
+   state was relay, bridge, or auto-bridge. Otherwise the user may be
+   prompted to become a relay, although he has opted to only be a
    bridge.
 
 3.x User interaction policy
@@ -85,7 +85,7 @@ Target:
 
    Finally, Tor could by default not make any transition, and the user
    would need to opt in by stating the maximum level (bridge or
-   server) to which the node may automatically promote itself.
+   relay) to which the node may automatically promote itself.
 
 3.x New options
 
