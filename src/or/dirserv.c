@@ -1122,12 +1122,12 @@ directory_fetches_from_authorities(or_options_t *options)
     return 0;
   if (server_mode(options) && router_pick_published_address(options, &addr)<0)
     return 1; /* we don't know our IP address; ask an authority. */
-  if (options->DirPort == 0)
+  if (options->DirPort == 0 && !options->RefuseUnknownExits)
     return 0;
   if (!server_mode(options) || !advertised_server_mode())
     return 0;
   me = router_get_my_routerinfo();
-  if (!me || !me->dir_port)
+  if (!me || (!me->dir_port && !options->RefuseUnknownExits))
     return 0; /* if dirport not advertised, return 0 too */
   return 1;
 }
@@ -1167,7 +1167,11 @@ directory_caches_v2_dir_info(or_options_t *options)
 int
 directory_caches_dir_info(or_options_t *options)
 {
-  return options->BridgeRelay != 0 || options->DirPort != 0;
+  if (options->BridgeRelay || options->DirPort)
+    return 1;
+  if (!server_mode(options) || !advertised_server_mode())
+    return 0;
+  return options->RefuseUnknownExits;
 }
 
 /** Return 1 if we want to allow remote people to ask us directory
