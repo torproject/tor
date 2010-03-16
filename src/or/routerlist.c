@@ -27,7 +27,8 @@ static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static void launch_router_descriptor_downloads(smartlist_t *downloadable,
                                                time_t now);
-static void update_consensus_router_descriptor_downloads(time_t now);
+static void update_consensus_router_descriptor_downloads(time_t now,
+                                                  networkstatus_t *consensus);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void update_router_have_minimum_dir_info(void);
 static const char *signed_descriptor_get_body_impl(signed_descriptor_t *desc,
@@ -4328,18 +4329,17 @@ update_router_descriptor_cache_downloads_v2(time_t now)
   digestmap_free(map,NULL);
 }
 
-/** For any descriptor that we want that's currently listed in the live
- * consensus, download it as appropriate. */
+/** For any descriptor that we want that's currently listed in
+ * <b>consensus</b>, download it as appropriate. */
 static void
-update_consensus_router_descriptor_downloads(time_t now)
+update_consensus_router_descriptor_downloads(time_t now,
+                                             networkstatus_t *consensus)
 {
   or_options_t *options = get_options();
   digestmap_t *map = NULL;
   smartlist_t *no_longer_old = smartlist_create();
   smartlist_t *downloadable = smartlist_create();
   int authdir = authdir_mode(options);
-  networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now);
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0, n_in_oldrouters=0;
 
@@ -4444,7 +4444,8 @@ update_router_descriptor_downloads(time_t now)
   if (directory_fetches_dir_info_early(options)) {
     update_router_descriptor_cache_downloads_v2(now);
   }
-  update_consensus_router_descriptor_downloads(now);
+  update_consensus_router_descriptor_downloads(now,
+    networkstatus_get_reasonably_live_consensus(now));
 
   /* XXXX021 we could be smarter here; see notes on bug 652. */
   /* If we're a server that doesn't have a configured address, we rely on
