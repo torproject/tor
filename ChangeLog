@@ -1,4 +1,8 @@
-Changes in version 0.2.1.25 - 2010-03-15
+Changes in version 0.2.1.25 - 2010-03-16
+  Tor 0.2.1.25 fixes a regression introduced in 0.2.1.23 that could
+  prevent relays from guessing their IP address correctly. It also fixes
+  several minor potential security bugs.
+
   o Major bugfixes:
     - Fix a regression from our patch for bug 1244 that caused relays
       to guess their IP address incorrectly if they didn't set Address

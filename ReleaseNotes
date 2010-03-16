@@ -3,6 +3,30 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.1.25 - 2010-03-16
+  Tor 0.2.1.25 fixes a regression introduced in 0.2.1.23 that could
+  prevent relays from guessing their IP address correctly. It also fixes
+  several minor potential security bugs.
+
+  o Major bugfixes:
+    - Fix a regression from our patch for bug 1244 that caused relays
+      to guess their IP address incorrectly if they didn't set Address
+      in their torrc and/or their address fails to resolve. Bugfix on
+      0.2.1.23; fixes bug 1269.
+    - When freeing a session key, zero it out completely. We only zeroed
+      the first ptrsize bytes. Bugfix on 0.0.2pre8. Discovered and
+      patched by ekir. Fixes bug 1254.
+
+  o Minor bugfixes:
+    - Fix a dereference-then-NULL-check sequence when publishing
+      descriptors. Bugfix on 0.2.1.5-alpha. Discovered by ekir; fixes
+      bug 1255.
+    - Fix another dereference-then-NULL-check sequence. Bugfix on
+      0.2.1.14-rc. Discovered by ekir; fixes bug 1256.
+    - Make sure we treat potentially not NUL-terminated strings correctly.
+      Bugfix on 0.1.1.13-alpha. Discovered by rieo; fixes bug 1257.
+
+
 Changes in version 0.2.1.24 - 2010-02-21
   Tor 0.2.1.24 makes Tor work again on the latest OS X -- this time
   for sure!
