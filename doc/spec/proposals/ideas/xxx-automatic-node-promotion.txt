@@ -99,9 +99,16 @@ Target:
 
 3.x New controller message
 
-4. Related proposals
+4. Migration plan
 
-5. Open questions:
+   We should start by setting a high bandwidth and uptime requirement
+   in the consensus, so as to avoid overloading the bridge authority
+   with too many bridges. Once we are confident our systems can scale,
+   the criteria can be gradually shifted down to gain more bridges.
+
+5. Related proposals
+
+6. Open questions:
 
    - What user interaction policy should we take?
 
