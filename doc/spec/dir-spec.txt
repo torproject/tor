@@ -592,7 +592,7 @@
         with unrecognized items; the protocols line should be preceded with
         an "opt" until these Tors are obsolete.]
 
-   "allow-single-hop-exits"
+   "allow-single-hop-exits" NL
 
        [At most once.]
 
@@ -613,7 +613,7 @@
         Fingerprint is encoded in hex (using upper-case letters), with
         no spaces.
 
-    "published"
+    "published" YYYY-MM-DD HH:MM:SS NL
 
        [Exactly once.]
 
