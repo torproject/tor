@@ -1757,10 +1757,12 @@ networkstatus_compute_consensus(smartlist_t *votes,
     // Parse params, extract BW_WEIGHT_SCALE if present
     // DO NOT use consensus_param_bw_weight_scale() in this code!
     // The consensus is not formed yet!
-    if (strcmpstart(params, "bwweightscale=") == 0)
-      bw_weight_param = params;
-    else
-      bw_weight_param = strstr(params, " bwweightscale=");
+    if (params) {
+      if (strcmpstart(params, "bwweightscale=") == 0)
+        bw_weight_param = params;
+      else
+        bw_weight_param = strstr(params, " bwweightscale=");
+    }
 
     if (bw_weight_param) {
       int ok=0;

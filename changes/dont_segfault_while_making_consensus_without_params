@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - When none of the authorities vote on any params, Tor segfaults when
+      trying to make the consensus from the votes. This is currently
+      not critical, because authorities do include params in their votes.
+      Bugfix on 0.2.2.10-alpha, fixes bug 1322.
