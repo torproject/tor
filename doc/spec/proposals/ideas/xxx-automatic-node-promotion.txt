@@ -95,6 +95,82 @@ Target:
    would need to opt in by stating the maximum level (bridge or
    relay) to which the node may automatically promote itself.
 
+3.x Performance monitoring model
+
+   To prevent a large number of clients activating as relays, but
+   being too unreliable to be useful, clients should measure their
+   performance. If this performance meets a parameterized acceptance
+   criteria, a client should consider promotion. To measure
+   reliability, this proposal adopts a simple user model:
+
+    - A user decides to use Tor at times which follow a Poisson
+      distribution
+    - At each time, the user will be happy if the bridge chosen has
+      adequate bandwidth and is reachable
+    - If the chosen bridge is down or slow too many times, the user
+      will consider Tor to be bad
+
+   If we additionally assume that the recent history of relay
+   performance matches the current performance, we can measure
+   reliability by simulating this simple user.
+
+   The following parameters are distributed to clients in the
+   directory consensus:
+
+     - min_bandwidth: Minimum self-measured bandwidth for a node to be
+       considered useful, in bytes per second
+     - check_period: How long, in seconds, to wait between checking
+       reachability and bandwidth (on average)
+     - num_samples: Number of recent samples to keep
+     - num_useful: Minimum number of recent samples where the node was
+       reachable and had at least min_bandwidth capacity, for a client
+       to consider promoting to a bridge
+
+   A different set of parameters may be used for considering when to
+   promote a bridge to a full relay, but this will be the subject of a
+   future revision of the proposal.
+
+3.x Performance monitoring algorithm
+
+   The simulation described above can be implemented as follows:
+
+   Every 60 seconds:
+     1. Tor generates a random floating point number x in
+        the interval [0, 1).
+     2. If x > (1 / (check_period / 60)) GOTO end; otherwise:
+     3. Tor sets the value last_check to the current_time (in seconds)
+     4. Tor measures reachability
+     5. If the client is reachable, Tor measures its bandwidth
+     6. If the client is reachable and the bandwidth is >=
+        min_bandwidth, the test has succeeded, otherwise it has failed.
+     7. Tor adds the test result to the end of a ring-buffer containing
+        the last num_samples results: measurement_results
+     8. Tor saves last_check and measurements_results to disk
+     9. If the length of measurements_results == num_samples and
+        the number of successes >= num_useful, Tor should consider
+        promotion to a bridge
+   end.
+ 
+   When Tor starts, it must fill in the samples for which it was not
+   running. This can only happen once the consensus has downloaded,
+   because the value of check_period is needed.
+ 
+      1. Tor generates a random number y from the Poisson distribution [1]
+         with lambda = (current_time - last_check) * (1 / check_period)
+      2. Tor sets the value last_check to the current_time (in seconds)	
+      3. Add y test failures to the ring buffer measurements_results
+      4. Tor saves last_check and measurements_results to disk
+ 
+   In this way, a Tor client will measure its bandwidth and
+   reachability every check_period seconds, on average. Provided
+   check_period is sufficiently greater than a minute (say, at least an
+   hour), the times of check will follow a Poisson distribution. [2]
+ 
+   While this does require that Tor does record the state of a client
+   over time, this does not leak much information. Only a binary
+   reachable/non-reachable is stored, and the timing of samples becomes
+   increasingly fuzzy as the data becomes less recent.
+
 3.x New options
 
 3.x New controller message
@@ -128,3 +204,12 @@ Target:
 
    - What feedback should we give to bridge relays, to encourage then
      e.g. number of recent users (what about reserve bridges)?
+
+[1] For algorithms to generate random numbers from the Poisson
+    distribution, see: http://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables
+[2] "The sample size n should be equal to or larger than 20 and the
+     probability of a single success, p, should be smaller than or equal to
+     .05. If n >= 100, the approximation is excellent if np is also <= 10."
+    http://www.itl.nist.gov/div898/handbook/pmc/section3/pmc331.htm (e-Handbook of Statistical Methods)
+
+% vim: spell ai et:
