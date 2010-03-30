@@ -171,6 +171,27 @@ Target:
    reachable/non-reachable is stored, and the timing of samples becomes
    increasingly fuzzy as the data becomes less recent.
 
+   On IP address changes, Tor should clear the ring-buffer, because
+   from the perspective of users with the old IP address, this node
+   might as well be a new one with no history. This policy may change
+   once we start allowing the bridge authority to hand out new IP
+   addresses given the fingerprint.
+
+3.x Bandwidth measurement
+
+   Tor needs to measure its bandwidth to test the usefulness as a
+   bridge. A non-intrusive way to do this would be to passively measure
+   the peak data transfer rate since the last reachability test. Once
+   this exceeds min_bandwidth, Tor can set a flag that this node
+   currently has sufficient bandwidth to pass the bandwidth component
+   of the upcoming performance measurement.
+
+   For the first version we may simply skip the bandwidth test,
+   because the existing reachability test sends 500 kB over several
+   circuits, and checks whether the node can transfer at least 50
+   kB/s.  This is probably good enough for a bridge, so this test
+   might be sufficient to record a success in the ring buffer.
+
 3.x New options
 
 3.x New controller message
@@ -204,6 +225,9 @@ Target:
 
    - What feedback should we give to bridge relays, to encourage then
      e.g. number of recent users (what about reserve bridges)?
+
+   - Can clients back-off from doing these tests (yes, we should do
+     this)
 
 [1] For algorithms to generate random numbers from the Poisson
     distribution, see: http://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables
