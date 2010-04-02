@@ -1,4 +1,4 @@
-Changes in version 0.2.2.11-alpha - 2010-03-??
+Changes in version 0.2.2.11-alpha - 2010-04-??
   o Minor features:
     - Experiment with a more aggressive approach to preventing clients
       from making one-hop exit streams. Exit relays who want to try it
@@ -8,7 +8,16 @@ Changes in version 0.2.2.11-alpha - 2010-03-??
 
   o Minor bugfixes:
     - When we cleaned up the contrib/tor-exit-notice.html file, we left
-      out some key text. Fixes bug 1295.
+      out the first line. Fixes bug 1295.
+    - When building the manpage from a tarball, we required asciidoc, but
+      the asciidoc -> roff/html conversion was already done for the
+      tarball. Make 'make' complain only when we need asciidoc (either
+      because we're compiling directly from git, or because we altered
+      the asciidoc manpage in the tarball). Bugfix on 0.2.2.9-alpha.
+    - When none of the directory authorities vote on any params, Tor
+      segfaulted when trying to make the consensus from the votes. We
+      didn't trigger the bug in practice, because authorities do include
+      params in their votes. Bugfix on 0.2.2.10-alpha, fixes bug 1322.
 
 
 Changes in version 0.2.2.10-alpha - 2010-03-07
