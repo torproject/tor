@@ -243,6 +243,10 @@ int tor_snprintf(char *str, size_t size, const char *format, ...)
 int tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   ATTR_NONNULL((1,3));
 
+int tor_asprintf(char **strp, const char *fmt, ...)
+  CHECK_PRINTF(2,3);
+int tor_vasprintf(char **strp, const char *fmt, va_list args);
+
 const void *tor_memmem(const void *haystack, size_t hlen, const void *needle,
                        size_t nlen)  ATTR_PURE ATTR_NONNULL((1,3));
 static const void *tor_memstr(const void *haystack, size_t hlen,

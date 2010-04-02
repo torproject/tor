@@ -1085,21 +1085,21 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
   crypt_path_t *hop;
   smartlist_t *elements;
   const char *states[] = {"closed", "waiting for keys", "open"};
-  char buf[128];
   char *s;
 
   elements = smartlist_create();
 
   if (verbose) {
     const char *nickname = build_state_get_exit_nickname(circ->build_state);
-    tor_snprintf(buf, sizeof(buf), "%s%s circ (length %d%s%s):",
+    char *cp;
+    tor_asprintf(&cp, "%s%s circ (length %d%s%s):",
                  circ->build_state->is_internal ? "internal" : "exit",
                  circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
                  circ->_base.state == CIRCUIT_STATE_OPEN ? "" : ", exit ",
                  circ->_base.state == CIRCUIT_STATE_OPEN ? "" :
                  (nickname?nickname:"*unnamed*"));
-    smartlist_add(elements, tor_strdup(buf));
+    smartlist_add(elements, cp);
   }
 
   hop = circ->cpath;
@@ -3068,21 +3068,21 @@ static void
 log_entry_guards(int severity)
 {
   smartlist_t *elements = smartlist_create();
-  char buf[1024];
   char *s;
 
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
       const char *msg = NULL;
+      char *cp;
       if (entry_is_live(e, 0, 1, 0, &msg))
-        tor_snprintf(buf, sizeof(buf), "%s (up %s)",
+        tor_asprintf(&cp, "%s (up %s)",
                      e->nickname,
                      e->made_contact ? "made-contact" : "never-contacted");
       else
-        tor_snprintf(buf, sizeof(buf), "%s (%s, %s)",
+        tor_asprintf(&cp, "%s (%s, %s)",
                      e->nickname, msg,
                      e->made_contact ? "made-contact" : "never-contacted");
-      smartlist_add(elements, tor_strdup(buf));
+      smartlist_add(elements, cp);
     });
 
   s = smartlist_join_strings(elements, ",", 0, NULL);

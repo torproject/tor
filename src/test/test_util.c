@@ -1050,6 +1050,51 @@ test_util_find_str_at_start_of_line(void *ptr)
   ;
 }
 
+static void
+test_util_asprintf(void *ptr)
+{
+#define LOREMIPSUM                                              \
+  "Lorem ipsum dolor sit amet, consectetur adipisicing elit"
+  char *cp=NULL, *cp2=NULL;
+  int r;
+  (void)ptr;
+
+  /* empty string. */
+  r = tor_asprintf(&cp, "%s", "");
+  tt_assert(cp);
+  tt_int_op(r, ==, strlen(cp));
+  tt_str_op(cp, ==, "");
+
+  /* Short string with some printing in it. */
+  r = tor_asprintf(&cp2, "First=%d, Second=%d", 101, 202);
+  tt_assert(cp2);
+  tt_int_op(r, ==, strlen(cp2));
+  tt_str_op(cp2, ==, "First=101, Second=202");
+  tt_assert(cp != cp2);
+  tor_free(cp);
+  tor_free(cp2);
+
+  /* Glass-box test: a string exactly 128 characters long. */
+  r = tor_asprintf(&cp, "Lorem1: %sLorem2: %s", LOREMIPSUM, LOREMIPSUM);
+  tt_assert(cp);
+  tt_int_op(r, ==, 128);
+  tt_assert(cp[128] == '\0');
+  tt_str_op(cp, ==,
+            "Lorem1: "LOREMIPSUM"Lorem2: "LOREMIPSUM);
+  tor_free(cp);
+
+  /* String longer than 128 characters */
+  r = tor_asprintf(&cp, "1: %s 2: %s 3: %s",
+                   LOREMIPSUM, LOREMIPSUM, LOREMIPSUM);
+  tt_assert(cp);
+  tt_int_op(r, ==, strlen(cp));
+  tt_str_op(cp, ==, "1: "LOREMIPSUM" 2: "LOREMIPSUM" 3: "LOREMIPSUM);
+
+ done:
+  tor_free(cp);
+  tor_free(cp2);
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1071,6 +1116,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(sscanf),
   UTIL_LEGACY(strtok),
   UTIL_TEST(find_str_at_start_of_line, 0),
+  UTIL_TEST(asprintf, 0),
   END_OF_TESTCASES
 };
 

@@ -793,12 +793,12 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
 static char *
 rep_hist_format_router_status(or_history_t *hist, time_t now)
 {
-  char buf[1024];
   char sor_buf[ISO_TIME_LEN+1];
   char sod_buf[ISO_TIME_LEN+1];
   double wfu;
   double mtbf;
   int up = 0, down = 0;
+  char *cp = NULL;
 
   if (hist->start_of_run) {
     format_iso_time(sor_buf, hist->start_of_run);
@@ -811,7 +811,7 @@ rep_hist_format_router_status(or_history_t *hist, time_t now)
 
   wfu = get_weighted_fractional_uptime(hist, now);
   mtbf = get_stability(hist, now);
-  tor_snprintf(buf, sizeof(buf),
+  tor_asprintf(&cp,
                "%s%s%s"
                "%s%s%s"
                "wfu %0.3lf\n"
@@ -829,8 +829,7 @@ rep_hist_format_router_status(or_history_t *hist, time_t now)
                hist->weighted_run_length,
                hist->total_run_weights
                );
-
-  return tor_strdup(buf);
+  return cp;
 }
 
 /** The last stability analysis document that we created, or NULL if we never
@@ -2140,8 +2139,7 @@ rep_hist_buffer_stats_write(time_t now)
       number_of_circuits, i;
   double queued_cells[SHARES], time_in_queue[SHARES];
   smartlist_t *str_build = smartlist_create();
-  char *str = NULL;
-  char buf[32];
+  char *str = NULL, *buf=NULL;
   circuit_t *circ;
   /* add current circuits to stats */
   for (circ = _circuit_get_global_list(); circ; circ = circ->next)
@@ -2190,9 +2188,9 @@ rep_hist_buffer_stats_write(time_t now)
               (unsigned) (now - start_of_buffer_stats_interval)) < 0)
     goto done;
   for (i = 0; i < SHARES; i++) {
-    tor_snprintf(buf, sizeof(buf), "%d", !circs_in_share[i] ? 0 :
+    tor_asprintf(&buf,"%d", !circs_in_share[i] ? 0 :
                  processed_cells[i] / circs_in_share[i]);
-    smartlist_add(str_build, tor_strdup(buf));
+    smartlist_add(str_build, buf);
   }
   str = smartlist_join_strings(str_build, ",", 0, NULL);
   if (fprintf(out, "cell-processed-cells %s\n", str) < 0)
@@ -2201,9 +2199,9 @@ rep_hist_buffer_stats_write(time_t now)
   SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
   smartlist_clear(str_build);
   for (i = 0; i < SHARES; i++) {
-    tor_snprintf(buf, sizeof(buf), "%.2f", circs_in_share[i] == 0 ? 0.0 :
+    tor_asprintf(&buf, "%.2f", circs_in_share[i] == 0 ? 0.0 :
                  queued_cells[i] / (double) circs_in_share[i]);
-    smartlist_add(str_build, tor_strdup(buf));
+    smartlist_add(str_build, buf);
   }
   str = smartlist_join_strings(str_build, ",", 0, NULL);
   if (fprintf(out, "cell-queued-cells %s\n", str) < 0)
@@ -2212,9 +2210,9 @@ rep_hist_buffer_stats_write(time_t now)
   SMARTLIST_FOREACH(str_build, char *, c, tor_free(c));
   smartlist_clear(str_build);
   for (i = 0; i < SHARES; i++) {
-    tor_snprintf(buf, sizeof(buf), "%.0f", circs_in_share[i] == 0 ? 0.0 :
+    tor_asprintf(&buf, "%.0f", circs_in_share[i] == 0 ? 0.0 :
                  time_in_queue[i] / (double) circs_in_share[i]);
-    smartlist_add(str_build, tor_strdup(buf));
+    smartlist_add(str_build, buf);
   }
   str = smartlist_join_strings(str_build, ",", 0, NULL);
   if (fprintf(out, "cell-time-in-queue %s\n", str) < 0)

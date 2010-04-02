@@ -307,6 +307,100 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   return r;
 }
 
+/**
+ * Portable asprintf implementation.  Does a printf() into a newly malloc'd
+ * string.  Sets *<b>strp</b> to this string, and returns its length (not
+ * including the terminating NUL character).
+ *
+ * You can treat this function as if its implementation were something like
+   <pre>
+     char buf[_INFINITY_];
+     tor_snprintf(buf, sizeof(buf), fmt, args);
+     *strp = tor_strdup(buf);
+     return strlen(*strp):
+   </pre>
+ * Where _INFINITY_ is an imaginary constant so big that any string can fit
+ * into it.
+ */
+int
+tor_asprintf(char **strp, const char *fmt, ...)
+{
+  int r;
+  va_list args;
+  va_start(args, fmt);
+  r = tor_vasprintf(strp, fmt, args);
+  va_end(args);
+  if (!*strp || r < 0) {
+    log_err(LD_BUG, "Internal error in asprintf");
+    tor_assert(0);
+  }
+  return r;
+}
+
+/**
+ * Portable vasprintf implementation.  Does a printf() into a newly malloc'd
+ * string.  Differs from regular vasprintf in the same ways that
+ * tor_asprintf() differs from regular asprintf.
+ */
+int
+tor_vasprintf(char **strp, const char *fmt, va_list args)
+{
+  /* use a temporary variable in case *strp is in args. */
+  char *strp_tmp=NULL;
+#ifdef HAVE_VASPRINTF
+  /* If the platform gives us one, use it. */
+  int r = vasprintf(&strp_tmp, fmt, args);
+  if (r < 0)
+    *strp = NULL;
+  else
+    *strp = strp_tmp;
+  return r;
+#elif defined(MS_WINDOWS)
+  /* On Windows, _vsnprintf won't tell us the length of the string if it
+   * overflows, so we need to use _vcsprintf to tell how much to allocate */
+  int len, r;
+  char *res;
+  len = _vcsprintf(fmt, args);
+  if (len < 0) {
+    *strp = NULL;
+    return -1;
+  }
+  strp_tmp = tor_malloc(len + 1);
+  r = _vsnprintf(strp_tmp, len+1, fmt, args);
+  if (r != len) {
+    tor_free(strp_tmp);
+    *strp = NULL;
+    return -1;
+  }
+  *strp = strp_tmp;
+  return len;
+#else
+  /* Everywhere else, we have a decent vsnprintf that tells us how many
+   * characters we need.  We give it a try on a short buffer first, since
+   * it might be nice to avoid the second vsnprintf call.
+   */
+  char buf[128];
+  int len, r;
+  va_list tmp_args;
+  va_copy(tmp_args, args);
+  len = vsnprintf(buf, sizeof(buf), fmt, tmp_args);
+  va_end(tmp_args);
+  if (len < (int)sizeof(buf)) {
+    *strp = tor_strdup(buf);
+    return len;
+  }
+  strp_tmp = tor_malloc(len+1);
+  r = vsnprintf(strp_tmp, len+1, fmt, args);
+  if (r != len) {
+    tor_free(strp_tmp);
+    *strp = NULL;
+    return -1;
+  }
+  *strp = strp_tmp;
+  return len;
+#endif
+}
+
 /** Given <b>hlen</b> bytes at <b>haystack</b> and <b>nlen</b> bytes at
  * <b>needle</b>, return a pointer to the first occurrence of the needle
  * within the haystack, or NULL if there is no such occurrence.

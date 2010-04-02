@@ -815,7 +815,6 @@ geoip_get_client_history(time_t now, geoip_client_action_t action,
   if (!geoip_is_loaded())
     return NULL;
   if (client_history_starts < (now - min_observation_time)) {
-    char buf[32];
     smartlist_t *chunks = NULL;
     smartlist_t *entries = NULL;
     int n_countries = geoip_get_n_countries();
@@ -860,9 +859,10 @@ geoip_get_client_history(time_t now, geoip_client_action_t action,
     /* Build the result. */
     chunks = smartlist_create();
     SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
-        tor_snprintf(buf, sizeof(buf), "%s=%u", ch->country, ch->total);
-        smartlist_add(chunks, tor_strdup(buf));
-      });
+        char *buf=NULL;
+        tor_asprintf(&buf, "%s=%u", ch->country, ch->total);
+        smartlist_add(chunks, buf);
+    });
     result = smartlist_join_strings(chunks, ",", 0, NULL);
   done:
     tor_free(counts);
@@ -947,7 +947,7 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   SMARTLIST_FOREACH(entries, c_hist_t *, ent, {
       char buf[32];
       tor_snprintf(buf, sizeof(buf), "%s=%u", ent->country, ent->total);
-      smartlist_add(strings, tor_strdup(buf));
+      smartlist_add(strings, buf);
     });
   result = smartlist_join_strings(strings, ",", 0, NULL);
   SMARTLIST_FOREACH(strings, char *, cp, tor_free(cp));
@@ -1105,7 +1105,6 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
   const char *BRIDGE_IPS_EMPTY_LINE = "bridge-ips\n";
   const char *tmp;
   time_t stats_end_time;
-  size_t controller_len;
   int seconds;
   tor_assert(stats_str);
 
@@ -1147,16 +1146,9 @@ parse_bridge_stats_controller(const char *stats_str, time_t now)
     summary = tor_strdup("");
   }
 
-  controller_len = strlen("TimeStarted=\"\" CountrySummary=") +
-                          strlen(summary) + 42;
-  controller_str = tor_malloc(controller_len);
-  if (tor_snprintf(controller_str, controller_len,
-                   "TimeStarted=\"%s\" CountrySummary=%s",
-                   stats_start_str, summary) < 0) {
-    tor_free(controller_str);
-    tor_free(summary);
-    return NULL;
-  }
+  tor_asprintf(&controller_str,
+               "TimeStarted=\"%s\" CountrySummary=%s",
+               stats_start_str, summary);
   tor_free(summary);
   return controller_str;
 }
