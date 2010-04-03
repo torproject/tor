@@ -1,0 +1,3 @@
+ o Major bugfixes:
+   - Fix a segfault that happens whenever a Tor client is hup'd. Bugfix
+     on 0.2.2.5-alpha; fixes bug 1341.

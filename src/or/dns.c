@@ -260,6 +260,14 @@ dns_reset(void)
 {
   or_options_t *options = get_options();
   if (! server_mode(options)) {
+
+    if (!the_evdns_base) {
+      if (!(the_evdns_base = evdns_base_new(tor_libevent_get_base(), 0))) {
+        log_err(LD_BUG, "Couldn't create an evdns_base");
+        return -1;
+      }
+    }
+
     evdns_base_clear_nameservers_and_suspend(the_evdns_base);
     evdns_base_search_clear(the_evdns_base);
     nameservers_configured = 0;
@@ -1377,6 +1385,8 @@ launch_resolve(edge_connection_t *exitconn)
 
   r = tor_addr_parse_reverse_lookup_name(
                             &a, exitconn->_base.address, AF_UNSPEC, 0);
+
+  tor_assert(the_evdns_base);
   if (r == 0) {
     log_info(LD_EXIT, "Launching eventdns request for %s",
              escaped_safe_str(exitconn->_base.address));
@@ -1546,6 +1556,7 @@ launch_wildcard_check(int min_len, int max_len, const char *suffix)
   log_info(LD_EXIT, "Testing whether our DNS server is hijacking nonexistent "
            "domains with request for bogus hostname \"%s\"", addr);
 
+  tor_assert(the_evdns_base);
   req = evdns_base_resolve_ipv4(
                          the_evdns_base,
                          /* This "addr" tells us which address to resolve */
@@ -1576,6 +1587,7 @@ launch_test_addresses(int fd, short event, void *args)
    * be an exit server.*/
   if (!options->ServerDNSTestAddresses)
     return;
+  tor_assert(the_evdns_base);
   SMARTLIST_FOREACH_BEGIN(options->ServerDNSTestAddresses,
                           const char *, address) {
     char *a = tor_strdup(address);
