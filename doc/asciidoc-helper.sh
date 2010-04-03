@@ -49,8 +49,8 @@ elif [ "$1" = "man" ]; then
       echo "==================================";
       echo;
       echo "a2x is installed, but some required docbook support files are";
-      echo "missing. Please install docbook-xsl and docbook-xml (Debian)";
-      echo "or similar.";
+      echo "missing. Please install docbook-xsl, docbook-xml, and";
+      echo "libxml2-utils (Debian) or similar.";
       echo;
       echo "==================================";
       exit 1;
