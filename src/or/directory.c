@@ -130,6 +130,8 @@ authority_type_to_string(authority_type_t auth)
     smartlist_add(lst, (void*)"V1");
   if (auth & V2_AUTHORITY)
     smartlist_add(lst, (void*)"V2");
+  if (auth & V3_AUTHORITY)
+    smartlist_add(lst, (void*)"V3");
   if (auth & BRIDGE_AUTHORITY)
     smartlist_add(lst, (void*)"Bridge");
   if (auth & HIDSERV_AUTHORITY)
@@ -311,12 +313,14 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_EXTRAINFO:
       type = EXTRAINFO_CACHE |
              (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
-                                                        V2_AUTHORITY);
+                                                        V3_AUTHORITY);
       break;
     case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
+      type = V2_AUTHORITY;
+      break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
       type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
-                                                        V2_AUTHORITY);
+                                                        V3_AUTHORITY);
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
       type = HIDSERV_AUTHORITY;
