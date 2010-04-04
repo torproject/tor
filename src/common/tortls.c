@@ -1206,7 +1206,7 @@ tor_tls_handshake(tor_tls_t *tls)
 }
 
 /** Perform the final part of the intial TLS handshake on <b>tls</b>.  This
- * should be called for the first handshake only: it determiens whether the v1
+ * should be called for the first handshake only: it determines whether the v1
  * or the v2 handshake was used, and adjusts things for the renegotiation
  * handshake as appropriate.
  *

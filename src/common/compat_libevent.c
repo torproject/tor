@@ -554,7 +554,9 @@ periodic_timer_free(periodic_timer_t *timer)
 #ifdef USE_BUFFEREVENTS
 static const struct timeval *one_tick = NULL;
 /**
-   DOCDOC
+ * Return a special timeout to be passed whenever libevent's O(1) timeout
+ * implementation should be used. Only use this when the timer is supposed
+ * to fire after 1 / TOR_LIBEVENT_TICKS_PER_SECOND seconds have passed.
 */
 const struct timeval *tor_libevent_get_one_tick_timeout(void)
 {

@@ -1017,7 +1017,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
 
 #ifdef USE_BUFFEREVENTS
 /** Try to read <b>n</b> bytes from <b>buf</b> at <b>pos</b> (which may be
- * NULL for the start fo the buffer), copying the data only if necessary.  Set
+ * NULL for the start of the buffer), copying the data only if necessary.  Set
  * *<b>data</b> to a pointer to the desired bytes.  Set <b>free_out</b> to 1
  * if we needed to malloc *<b>data</b> because the original bytes were
  * noncontiguous; 0 otherwise.  Return the number of bytes actually available
@@ -1359,6 +1359,7 @@ fetch_from_buf_http(buf_t *buf,
 }
 
 #ifdef USE_BUFFEREVENTS
+/** As fetch_from_buf_http, buf works on an evbuffer. */
 int
 fetch_from_evbuffer_http(struct evbuffer *buf,
                     char **headers_out, size_t max_headerlen,
@@ -1564,7 +1565,7 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
  * at a buffer's contents, we look at the <b>datalen</b> bytes of data in
  * <b>data</b>. Instead of removing data from the buffer, we set
  * <b>drain_out</b> to the amount of data that should be removed (or -1 if the
- * buffer should be cleared.  Instead of pulling more data into the first
+ * buffer should be cleared).  Instead of pulling more data into the first
  * chunk of the buffer, we set *<b>want_length_out</b> to the number of bytes
  * we'd like to see in the input buffer. */
 static int

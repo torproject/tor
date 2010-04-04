@@ -2908,7 +2908,8 @@ int
 connection_fetch_from_buf(char *string, size_t len, connection_t *conn)
 {
   IF_HAS_BUFFEREVENT(conn, {
-    return bufferevent_read(conn->bufev, string, len);
+    /* XXX overflow -seb */
+    return (int)bufferevent_read(conn->bufev, string, len);
   }) ELSE_IF_NO_BUFFEREVENT {
     return fetch_from_buf(string, len, conn->inbuf);
   }
