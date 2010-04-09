@@ -1023,7 +1023,7 @@ fetch_var_cell_from_buf(buf_t *buf, var_cell_t **out, int linkproto)
  * noncontiguous; 0 otherwise.  Return the number of bytes actually available
  * at <b>data</b>.
  */
-static size_t
+static ssize_t
 inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
                  struct evbuffer_ptr *pos)
 {
@@ -1034,8 +1034,7 @@ inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
   if (n == 0)
     return 0;
   n_vecs = evbuffer_peek(buf, n, pos, NULL, 0);
-  if (n_vecs <= 0)
-    return -1;
+  tor_assert(n_vecs > 0);
   if (n_vecs == 1) {
     struct evbuffer_iovec v;
     i = evbuffer_peek(buf, n, pos, &v, 1);
@@ -1058,7 +1057,7 @@ inspect_evbuffer(struct evbuffer *buf, char **data, size_t n, int *free_out,
       memcpy(data+copied, vecs[i].iov_base, copy);
       copied += copy;
     }
-    *free_out = 0;
+    *free_out = 1;
     return copied;
   }
 }
@@ -1075,22 +1074,20 @@ fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
   uint8_t command;
   uint16_t cell_length;
   var_cell_t *cell;
-  int result;
+  int result = 0;
   if (linkproto == 1)
     return 0;
 
   *out = NULL;
   buf_len = evbuffer_get_length(buf);
-  if (buf_len < VAR_CELL_HEADER_SIZE) {
-    result = 0;
-    goto done;
-  }
+  if (buf_len < VAR_CELL_HEADER_SIZE)
+    return 0;
+
   n = inspect_evbuffer(buf, &hdr, VAR_CELL_HEADER_SIZE, &free_hdr, NULL);
   tor_assert(n >= VAR_CELL_HEADER_SIZE);
 
   command = get_uint8(hdr+2);
   if (!(CELL_COMMAND_IS_VAR_LENGTH(command))) {
-    result = 0;
     goto done;
   }
 
@@ -1369,23 +1366,30 @@ fetch_from_evbuffer_http(struct evbuffer *buf,
   struct evbuffer_ptr crlf, content_length;
   size_t headerlen, bodylen, contentlen;
 
+  /* Find the first \r\n\r\n in the buffer */
   crlf = evbuffer_search(buf, "\r\n\r\n", 4, NULL);
   if (crlf.pos < 0) {
+    /* We didn't find one. */
     if (evbuffer_get_length(buf) > max_headerlen)
       return -1; /* Headers too long. */
     return 0; /* Headers not here yet. */
-  } else if (crlf.pos > (int)max_headerlen)
+  } else if (crlf.pos > (int)max_headerlen) {
     return -1; /* Headers too long. */
+  }
 
-  headerlen = crlf.pos + 4;
+  headerlen = crlf.pos + 4;  /* Skip over the \r\n\r\n */
   bodylen = evbuffer_get_length(buf) - headerlen;
   if (bodylen > max_bodylen)
     return -1; /* body too long */
 
+  /* Look for the first occurrence of CONTENT_LENGTH insize buf before the
+   * crlfcrlf */
   content_length = evbuffer_search_range(buf, CONTENT_LENGTH,
                                          strlen(CONTENT_LENGTH), NULL, &crlf);
 
   if (content_length.pos >= 0) {
+    /* We found a content_length: parse it and figure out if the body is here
+     * yet. */
     struct evbuffer_ptr eol;
     char *data = NULL;
     int free_data = 0;
@@ -1512,6 +1516,7 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
     return 0;
 
   {
+    /* See if we can find the socks request in the first chunk of the buffer. */
     struct evbuffer_iovec v;
     int i;
     want_length = evbuffer_get_contiguous_space(buf);
@@ -1533,6 +1538,13 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
       return res;
   }
 
+  /* Okay, the first chunk of the buffer didn't have a complete socks request.
+   * That means that either we don't have a whole socks request at all, or
+   * it's gotten split up.  We're going to try passing parse_socks() bigger
+   * and bigger chunks until either it says "Okay, I got it", or it says it
+   * will need more data than we currently have. */
+
+  /* Loop while we have more data that we haven't given parse_socks() yet. */
   while (evbuffer_get_length(buf) > datalen) {
     int free_data = 0;
     n_drain = 0;
@@ -1550,11 +1562,20 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
     else if (n_drain > 0)
       evbuffer_drain(buf, n_drain);
 
-    if (res)
+    if (res) /* If res is nonzero, parse_socks() made up its mind. */
       return res;
 
+    /* If parse_socks says that we want less data than we actually tried to
+       give it, we've got some kind of weird situation; just exit the loop for
+       now.
+    */
     if (want_length <= datalen)
       break;
+    /* Otherwise, it wants more data than we gave it.  If we can provide more
+     * data than we gave it, we'll try to do so in the next iteration of the
+     * loop. If we can't, the while() condition will exit.  It's okay if it
+     * asked for more than we have total; maybe it doesn't really need so
+     * much. */
   }
 
   return res;
@@ -1567,7 +1588,7 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
  * <b>drain_out</b> to the amount of data that should be removed (or -1 if the
  * buffer should be cleared).  Instead of pulling more data into the first
  * chunk of the buffer, we set *<b>want_length_out</b> to the number of bytes
- * we'd like to see in the input buffer. */
+ * we'd like to see in the input buffer, if they're available. */
 static int
 parse_socks(const char *data, size_t datalen, socks_request_t *req,
             int log_sockstype, int safe_socks, ssize_t *drain_out,
@@ -1805,7 +1826,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       if (socks4_prot == socks4a) {
         if (next+1 == data+datalen) {
           log_debug(LD_APP,"socks4: No part of destaddr here yet.");
-          *want_length_out = datalen + 1024; /* ???? */
+          *want_length_out = datalen + 1024; /* More than we need, but safe */
           return 0;
         }
         startaddr = next+1;
@@ -1882,7 +1903,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
                "Socks version %d not recognized. (Tor is not an http proxy.)",
                *(data));
       {
-        char *tmp = tor_strndup(data, 8); /*XXXX what if longer?*/
+        /* Tell the controller the first 8 bytes. */
+        char *tmp = tor_strndup(data, datalen < 8 ? datalen : 8);
         control_event_client_status(LOG_WARN,
                                     "SOCKS_UNKNOWN_PROTOCOL DATA=\"%s\"",
                                     escaped(tmp));
@@ -1930,10 +1952,12 @@ fetch_from_evbuffer_socks_client(struct evbuffer *buf, int state,
 {
   ssize_t drain = 0;
   uint8_t *data;
-  size_t datalen = evbuffer_get_contiguous_space(buf);
+  size_t datalen;
   int r;
 
-  data = evbuffer_pullup(buf, 128);
+  data = evbuffer_pullup(buf, 128); /* Make sure we have at least 128
+                                     * contiguous bytes if possible. */
+  datalen = evbuffer_get_contiguous_space(buf);
   r = parse_socks_client(data, datalen, state, reason, &drain);
   if (drain > 0)
     evbuffer_drain(buf, drain);

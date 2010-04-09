@@ -1706,9 +1706,9 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
     tor_assert(evbuffer_get_length(bufferevent_get_output(bufev_in)) == 0);
     tor_assert(BIO_number_read(SSL_get_rbio(tls->ssl)) == 0);
     tor_assert(BIO_number_written(SSL_get_rbio(tls->ssl)) == 0);
+    bufferevent_free(bufev_in);
   }
   tls->state = TOR_TLS_ST_BUFFEREVENT;
-  bufferevent_free(bufev_in);
   out = bufferevent_openssl_socket_new(tor_libevent_get_base(),
                                        socket,
                                        tls->ssl,

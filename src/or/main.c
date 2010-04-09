@@ -1417,8 +1417,8 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
   seconds_elapsed = current_second ? (int)(now - current_second) : 0;
 #ifdef USE_BUFFEREVENTS
   connection_get_rate_limit_totals(&cur_read, &cur_written);
-  bytes_written = ((size_t)cur_written) - stats_prev_n_written;
-  bytes_read = ((size_t)cur_read) - stats_prev_n_read;
+  bytes_written = (size_t)(cur_written - stats_prev_n_written);
+  bytes_read = (size_t)(cur_read - stats_prev_n_read);
 #else
   bytes_written = stats_prev_global_write_bucket - global_write_bucket;
   bytes_read = stats_prev_global_read_bucket - global_read_bucket;

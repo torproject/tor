@@ -455,7 +455,10 @@ _connection_free(connection_t *conn)
   tor_free(conn->read_event); /* Probably already freed by connection_free. */
   tor_free(conn->write_event); /* Probably already freed by connection_free. */
   IF_HAS_BUFFEREVENT(conn, {
-      /* XXXX this is a workaround. */
+      /* This was a workaround to handle bugs in some old versions of libevent
+       * where callbacks can occur after calling bufferevent_free().  Setting
+       * the callbacks to NULL prevented this.  It shouldn't be necessary any
+       * more, but let's not tempt fate for now.  */
       bufferevent_setcb(conn->bufev, NULL, NULL, NULL, NULL);
       bufferevent_free(conn->bufev);
       conn->bufev = NULL;
@@ -2733,13 +2736,13 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
   }
 
   if (n_read > 0) { /* change *max_to_read */
-    /*XXXX021 check for overflow*/
+    /*XXXX022 check for overflow*/
     *max_to_read = (int)(at_most - n_read);
   }
 
   if (conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    /*XXXX021 check for overflow*/
+    /*XXXX022 check for overflow*/
     edge_conn->n_read += (int)n_read;
   }
 
@@ -2781,7 +2784,7 @@ evbuffer_inbuf_callback(struct evbuffer *buf,
     connection_consider_empty_read_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX021 check for overflow*/
+      /*XXXX022 check for overflow*/
       edge_conn->n_read += (int)info->n_added;
     }
   }
@@ -2802,7 +2805,7 @@ evbuffer_outbuf_callback(struct evbuffer *buf,
     connection_consider_empty_write_buckets(conn);
     if (conn->type == CONN_TYPE_AP) {
       edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-      /*XXXX021 check for overflow*/
+      /*XXXX022 check for overflow*/
       edge_conn->n_written += (int)info->n_deleted;
     }
   }
@@ -3133,7 +3136,7 @@ connection_handle_write_impl(connection_t *conn, int force)
 
   if (conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    /*XXXX021 check for overflow.*/
+    /*XXXX022 check for overflow.*/
     edge_conn->n_written += (int)n_written;
   }
 
