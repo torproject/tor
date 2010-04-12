@@ -2326,6 +2326,11 @@ test_util_threads(void)
   char *s1 = NULL, *s2 = NULL;
   int done = 0, timedout = 0;
   time_t started;
+#ifndef MS_WINDOWS
+  struct timeval tv;
+  tv.tv_sec=0;
+  tv.tv_usec=10;
+#endif
 #ifndef TOR_IS_MULTITHREADED
   /* Skip this test if we aren't threading. We should be threading most
    * everywhere by now. */
@@ -2355,6 +2360,10 @@ test_util_threads(void)
       timedout = done = 1;
     }
     tor_mutex_release(_thread_test_mutex);
+#ifndef MS_WINDOWS
+    /* Prevent the main thread from starving the worker threads. */
+    select(0, NULL, NULL, NULL, &tv);
+#endif
   }
 
   tor_mutex_acquire(_thread_test_start1);
