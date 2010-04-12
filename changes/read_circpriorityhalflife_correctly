@@ -1,0 +1,5 @@
+ o Major bugfixes:
+   - Fix a stupid parenthesization error that made every possible value
+     of CircPriorityHalflifeMsec get treated as "1 msec".  Bugfix on
+     0.2.2.7-alpha.
+
