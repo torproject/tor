@@ -2356,12 +2356,13 @@ test_util_threads(void)
     }
     tor_mutex_release(_thread_test_mutex);
   }
-  tor_mutex_free(_thread_test_mutex);
 
   tor_mutex_acquire(_thread_test_start1);
   tor_mutex_release(_thread_test_start1);
   tor_mutex_acquire(_thread_test_start2);
   tor_mutex_release(_thread_test_start2);
+
+  tor_mutex_free(_thread_test_mutex);
 
   if (timedout) {
     printf("\nTimed out: %d %d", t1_count, t2_count);

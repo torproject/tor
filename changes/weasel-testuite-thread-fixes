@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Testsuite:  In the util/threads test no longer free the test_mutex
+      before all worker threads have finished.
