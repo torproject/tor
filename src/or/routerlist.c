@@ -1577,7 +1577,8 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
   if (smartlist_len(sl) == 0) {
     log_info(LD_CIRC,
              "Empty routerlist passed in to consensus weight node "
-             "selection for rule %d", rule);
+             "selection for rule %s",
+             bandwidth_weight_rule_to_string(rule));
     return NULL;
   }
 
@@ -1695,15 +1696,16 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
     weighted_bw += weight*this_bw;
   }
 
-  log_debug(LD_CIRC, "Choosing node for rule %d based on weights "
-            "Wg=%lf Wm=%lf We=%lf Wd=%lf with total bw %lf", rule,
+  log_debug(LD_CIRC, "Choosing node for rule %s based on weights "
+            "Wg=%lf Wm=%lf We=%lf Wd=%lf with total bw %lf",
+            bandwidth_weight_rule_to_string(rule),
             Wg, Wm, We, Wd, weighted_bw);
 
   /* If there is no bandwidth, choose at random */
   if (DBL_TO_U64(weighted_bw) == 0) {
     log_warn(LD_CIRC,
-             "Weighted bandwidth is %lf in node selection for rule %d",
-             weighted_bw, rule);
+             "Weighted bandwidth is %lf in node selection for rule %s",
+             weighted_bw, bandwidth_weight_rule_to_string(rule));
     tor_free(bandwidths);
     return smartlist_choose(sl);
   }
@@ -1783,8 +1785,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
 
   if (smartlist_len(sl) == 0) {
     log_info(LD_CIRC,
-             "Empty routerlist passed in to old node selection for rule %d",
-             rule);
+             "Empty routerlist passed in to old node selection for rule %s",
+             bandwidth_weight_rule_to_string(rule));
     return NULL;
   }
 

@@ -4493,6 +4493,9 @@ const char *circuit_end_reason_to_control_string(int reason);
 const char *socks4_response_code_to_string(uint8_t code);
 const char *socks5_response_code_to_string(uint8_t code);
 
+enum bandwidth_weight_rule_t;
+const char *bandwidth_weight_rule_to_string(enum bandwidth_weight_rule_t rule);
+
 /********************************* relay.c ***************************/
 
 extern uint64_t stats_n_relay_cells_relayed;
@@ -4963,7 +4966,7 @@ uint32_t router_get_advertised_bandwidth_capped(routerinfo_t *router);
 
 /** Possible ways to weight routers when choosing one randomly.  See
  * routerlist_sl_choose_by_bandwidth() for more information.*/
-typedef enum {
+typedef enum bandwidth_weight_rule_t {
   NO_WEIGHTING, WEIGHT_FOR_EXIT, WEIGHT_FOR_MID, WEIGHT_FOR_GUARD,
   WEIGHT_FOR_DIR
 } bandwidth_weight_rule_t;

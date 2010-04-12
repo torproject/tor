@@ -372,3 +372,24 @@ socks5_response_code_to_string(uint8_t code)
   }
 }
 
+/** Return a string corresponding to a bandwidht_weight_rule_t */
+const char *
+bandwidth_weight_rule_to_string(bandwidth_weight_rule_t rule)
+{
+  switch (rule)
+    {
+    case NO_WEIGHTING:
+      return "no weighting";
+    case WEIGHT_FOR_EXIT:
+      return "weight as exit";
+    case WEIGHT_FOR_MID:
+      return "weight as middle node";
+    case WEIGHT_FOR_GUARD:
+      return "weight as guard";
+    case WEIGHT_FOR_DIR:
+      return "weight as directory";
+    default:
+      return "unknown rule";
+  }
+}
+
