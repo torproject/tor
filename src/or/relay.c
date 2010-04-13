@@ -1865,9 +1865,9 @@ cell_ewma_set_scale_factor(or_options_t *options, networkstatus_t *consensus)
     source = "CircuitPriorityHalflife in configuration";
   } else if (consensus &&
              (halflife_ms = networkstatus_get_param(
-                   consensus, "CircPriorityHalflifeMsec", -1) >= 0)) {
+                   consensus, "CircuitPriorityHalflifeMsec", -1)) >= 0) {
     halflife = ((double)halflife_ms)/1000.0;
-    source = "CircPriorityHalflifeMsec in consensus";
+    source = "CircuitPriorityHalflifeMsec in consensus";
   } else {
     halflife = EWMA_DEFAULT_HALFLIFE;
     source = "Default value";
