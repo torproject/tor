@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Fix SSL renegotiation behavior on OpenSSL versions that claim to
+      be earlier than 0.9.8m, but which have in reality backported huge
+      swaths of 0.9.8m or 0.9.8n renegotiation behavior.  Possibly fix
+      for some cases of bug 1346.
