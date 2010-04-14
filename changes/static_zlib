@@ -1,0 +1,4 @@
+  o Minor features:
+    - Support for statically linking openssl/libevent was added earlier, now
+      also allow statically linking zlib by specifying --enable-static-zlib.
+      Enhancement requested by asdsa on #tor, see bug 1358.

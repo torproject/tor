@@ -9,10 +9,10 @@ tor_gencert_SOURCES = tor-gencert.c
 tor_gencert_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 tor_gencert_LDADD = ../common/libor.a ../common/libor-crypto.a \
-        -lm -lz @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
+        -lm @TOR_ZLIB_LIBS@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 tor_checkkey_SOURCES = tor-checkkey.c
 tor_checkkey_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ \
         @TOR_LDFLAGS_libevent@
 tor_checkkey_LDADD = ../common/libor.a ../common/libor-crypto.a \
-        -lm -lz @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@
+        -lm @TOR_ZLIB_LIBS@ @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ @TOR_LIB_WS32@ @TOR_LIB_GDI@

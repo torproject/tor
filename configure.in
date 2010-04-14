@@ -30,6 +30,8 @@ AC_ARG_ENABLE(static-openssl,
    AS_HELP_STRING(--enable-static-openssl, Link against a static openssl library. Requires --with-openssl-dir))
 AC_ARG_ENABLE(static-libevent,
    AS_HELP_STRING(--enable-static-libevent, Link against a static libevent library. Requires --with-libevent-dir))
+AC_ARG_ENABLE(static-zlib,
+   AS_HELP_STRING(--enable-static-zlib, Link against a static zlib library. Requires --with-zlib-dir))
 
 if test x$enable_buf_freelists != xno; then
   AC_DEFINE(ENABLE_BUF_FREELISTS, 1,
@@ -350,6 +352,19 @@ TOR_SEARCH_LIBRARY(zlib, $tryzlibdir, [-lz],
     [const char * zlibVersion(void);],
     [zlibVersion(); exit(0);], [--with-zlib-dir],
     [/opt/zlib])
+
+if test "$enable_static_zlib" = "yes"; then
+   if test "$tor_cv_library_zlib_dir" = "(system)"; then
+     AC_MSG_ERROR("You must specify an explicit --with-zlib-dir=x option when
+ using --enable-static-zlib")
+   else
+     TOR_ZLIB_LIBS="$TOR_LIBDIR_zlib/libz.a"
+     echo "$TOR_LIBDIR_zlib/libz.a"
+   fi
+else
+     TOR_ZLIB_LIBS="-lz"
+fi
+AC_SUBST(TOR_ZLIB_LIBS)
 
 dnl Make sure to enable support for large off_t if available.
 
