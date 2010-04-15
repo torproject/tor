@@ -368,8 +368,8 @@ tor_tls_init(void)
      * OpenSSL 0.9.8l.
      *
      * No, we can't just set flag 0x0010 everywhere.  It breaks Tor with
-     * OpenSSL 1.0.0beta3 and later.  No, we can't just set option
-     * 0x00040000L everywhere: before 0.9.8m, it meant something else.
+     * OpenSSL 1.0.0beta3 and later.  On the other hand, we might be able to
+     * set option 0x00040000L everywhere.
      *
      * No, we can't simply detect whether the flag or the option is present
      * in the headers at build-time: some vendors (notably Apple) like to
@@ -393,10 +393,12 @@ tor_tls_init(void)
     } else if (version < 0x009080c0L) {
       log_notice(LD_GENERAL, "OpenSSL %s [%lx] looks like it's older than "
                  "0.9.8l, but some vendors have backported 0.9.8l's "
-                 "renegotiation code to earlier versions.  I'll set "
-                 "SSL3_FLAGS just to be safe.",
+                 "renegotiation code to earlier versions, and some have "
+                 "backported the code from 0.9.8m or 0.9.8n.  I'll set both "
+                 "SSL3_FLAGS and SSL_OP just to be safe.",
                  SSLeay_version(SSLEAY_VERSION), version);
       use_unsafe_renegotiation_flag = 1;
+      use_unsafe_renegotiation_op = 1;
     } else {
       log_info(LD_GENERAL, "OpenSSL %s has version %lx",
                SSLeay_version(SSLEAY_VERSION), version);
