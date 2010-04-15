@@ -1530,7 +1530,6 @@ networkstatus_set_current_consensus(const char *consensus,
       !directory_caches_dir_info(get_options())) {
     /* This consensus is totally boring to us: we won't use it, and we won't
      * serve it.  Drop it. */
-    result = -1;
     goto done;
   }
 
