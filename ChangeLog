@@ -1,12 +1,33 @@
-Changes in version 0.2.2.11-alpha - 2010-04-??
+Changes in version 0.2.2.11-alpha - 2010-04-15
+  o Major bugfixes:
+    - Directory mirrors were fetching relay descriptors only from v2
+      directory authorities, rather than v3 authorities like they should.
+      Only 2 v2 authorities remain (compared to 7 v3 authorities), leading
+      to a serious bottleneck. Bugfix on 0.2.0.9-alpha. Fixes bug 1324.
+    - Fix a parsing error that made every possible value of
+      CircPriorityHalflifeMsec get treated as "1 msec". Bugfix
+      on 0.2.2.7-alpha. Rename CircPriorityHalflifeMsec to
+      CircuitPriorityHalflifeMsec, so authorities can tell newer relays
+      about the option without breaking older ones.
+    - Fix SSL renegotiation behavior on OpenSSL versions that claim to
+      be earlier than 0.9.8m, but which have in reality backported huge
+      swaths of 0.9.8m or 0.9.8n renegotiation behavior. Possible fix
+      for some cases of bug 1346.
+
   o Minor features:
     - Experiment with a more aggressive approach to preventing clients
       from making one-hop exit streams. Exit relays who want to try it
       out can set "RefuseUnknownExits 1" in their torrc, and then look
       for "Attempt by %s to open a stream" log messages. Let us know
       how it goes!
+    - Add support for statically linking zlib by specifying
+      --enable-static-zlib, to go with our support for statically linking
+      openssl/libevent. Resolves bug 1358.
 
   o Minor bugfixes:
+    - Fix a segfault that happens whenever a Tor client that is using
+      libevent2's bufferevents gets a hup signal. Bugfix on 0.2.2.5-alpha;
+      fixes bug 1341.
     - When we cleaned up the contrib/tor-exit-notice.html file, we left
       out the first line. Fixes bug 1295.
     - When building the manpage from a tarball, we required asciidoc, but
@@ -17,7 +38,16 @@ Changes in version 0.2.2.11-alpha - 2010-04-??
     - When none of the directory authorities vote on any params, Tor
       segfaulted when trying to make the consensus from the votes. We
       didn't trigger the bug in practice, because authorities do include
-      params in their votes. Bugfix on 0.2.2.10-alpha, fixes bug 1322.
+      params in their votes. Bugfix on 0.2.2.10-alpha; fixes bug 1322.
+
+  o Testsuite fixes:
+    - In the util/threads test, no longer free the test_mutex before all
+      worker threads have finished. Bugfix on 0.2.1.6-alpha.
+    - The master thread could starve the worker threads quite badly on
+      certain systems, causing them to run only partially in the allowed
+      window. This resulted in test failures. Now the master thread sleeps
+      occasionally for a few microseconds while the two worker-threads
+      compete for the mutex. Bugfix on 0.2.0.1-alpha.
 
 
 Changes in version 0.2.2.10-alpha - 2010-03-07
