@@ -9,10 +9,10 @@ Changes in version 0.2.2.11-alpha - 2010-04-15
       on 0.2.2.7-alpha. Rename CircPriorityHalflifeMsec to
       CircuitPriorityHalflifeMsec, so authorities can tell newer relays
       about the option without breaking older ones.
-    - Fix SSL renegotiation behavior on OpenSSL versions that claim to
-      be earlier than 0.9.8m, but which have in reality backported huge
-      swaths of 0.9.8m or 0.9.8n renegotiation behavior. Possible fix
-      for some cases of bug 1346.
+    - Fix SSL renegotiation behavior on OpenSSL versions like on Centos
+      that claim to be earlier than 0.9.8m, but which have in reality
+      backported huge swaths of 0.9.8m or 0.9.8n renegotiation
+      behavior. Possible fix for some cases of bug 1346.
 
   o Minor features:
     - Experiment with a more aggressive approach to preventing clients
@@ -22,7 +22,7 @@ Changes in version 0.2.2.11-alpha - 2010-04-15
       how it goes!
     - Add support for statically linking zlib by specifying
       --enable-static-zlib, to go with our support for statically linking
-      openssl/libevent. Resolves bug 1358.
+      openssl and libevent. Resolves bug 1358.
 
   o Minor bugfixes:
     - Fix a segfault that happens whenever a Tor client that is using
