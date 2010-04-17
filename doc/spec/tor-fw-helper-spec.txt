@@ -1,0 +1,44 @@
+
+                          Tor's (little) Firewall Helper specification
+                                      Jacob Appelbaum
+
+0. Preface
+
+ This document describes issues faced by Tor users who are behind NAT devices
+ and wish to share their resources with the rest of the Tor network. It also
+ explains a possible solution for some NAT devices.
+
+1. Overview
+
+ Tor users often wish to relay traffic for the Tor network and their upstream
+ firewall thwarts their attempted generosity.  Automatic port forwarding
+ configuration for many consumer NAT devices is often available with two common
+ protocols NAT-PMP[0] and UPnP[1].
+
+2. Implementation
+
+ tor-fw-helper is a program that implements basic port forwarding requests; it
+ may be used alone or called from Tor itself.
+
+2.1 Output format
+
+ When tor-fw-helper has completed the requested action successfully, it will
+ report the following message to standard output:
+
+    tor-fw-helper: SUCCESS
+
+ If tor-fw-helper was unable to complete the requested action successfully, it
+ will report the following message to standard error:
+
+    tor-fw-helper: FAILURE
+
+ All informational messages are printed to standard output; all error messages
+ are printed to standard error.
+
+3. Security Concerns
+
+ It is probably best to hand configure port forwarding and in the process, we
+ suggest disabling NAT-PMP and/or UPnP.
+
+[0] http://en.wikipedia.org/wiki/NAT_Port_Mapping_Protocol
+[1] http://en.wikipedia.org/wiki/Universal_Plug_and_Play
