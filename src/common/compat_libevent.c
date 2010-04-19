@@ -11,9 +11,9 @@
  **/
 
 #include "orconfig.h"
+#include "compat.h"
 #include "compat_libevent.h"
 
-#include "compat.h"
 #include "util.h"
 #include "log.h"
 
