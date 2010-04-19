@@ -185,15 +185,15 @@ trusted_dirs_load_certs_from_string(const char *contents, int from_store,
       log_info(LD_DIR, "Skipping %s certificate for %s that we "
                "already have.",
                from_store ? "cached" : "downloaded",
-               ds ? ds->nickname : "??");
+               ds ? ds->nickname : "an old or new authority");
 
       /* a duplicate on a download should be treated as a failure, since it
        * probably means we wanted a different secret key or we are trying to
        * replace an expired cert that has not in fact been updated. */
       if (!from_store) {
-        log_warn(LD_DIR, "Got a certificate for %s that we already have. "
-                 "Maybe they haven't updated it.  Waiting for a while.",
-                 ds ? ds->nickname : "??");
+        log_warn(LD_DIR, "Got a certificate for %s, but we already have it. "
+                 "Maybe they haven't updated it. Waiting for a while.",
+                 ds ? ds->nickname : "an old or new authority");
         authority_cert_dl_failed(cert->cache_info.identity_digest, 404);
       }
 
