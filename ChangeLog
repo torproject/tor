@@ -1,3 +1,6 @@
+Changes in version 0.2.2.12-alpha - 2010-04-??
+
+
 Changes in version 0.2.2.11-alpha - 2010-04-15
   o Major bugfixes:
     - Directory mirrors were fetching relay descriptors only from v2
