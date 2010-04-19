@@ -746,11 +746,11 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   /* If we reached this point, we just got a client hello.  See if there is
    * a cipher list. */
   if (!(session = SSL_get_session((SSL *)ssl))) {
-    log_warn(LD_NET, "No session on TLS?");
+    log_info(LD_NET, "No session on TLS?");
     return 0;
   }
   if (!session->ciphers) {
-    log_warn(LD_NET, "No ciphers on session");
+    log_info(LD_NET, "No ciphers on session");
     return 0;
   }
   /* Now we need to see if there are any ciphers whose presence means we're

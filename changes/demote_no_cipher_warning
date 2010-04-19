@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Demote a warning that relay operators might get when someone is
+      trying to talk to their OrPort. It is neither the operator's fault
+      nor can they do anything about it. Bugfix on 0.2.0.14-alpha; fixes
+      bug 1364.
