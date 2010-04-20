@@ -27,8 +27,6 @@ static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static void launch_router_descriptor_downloads(smartlist_t *downloadable,
                                                time_t now);
-static void update_consensus_router_descriptor_downloads(time_t now,
-                                                  networkstatus_t *consensus);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void update_router_have_minimum_dir_info(void);
 static const char *signed_descriptor_get_body_impl(signed_descriptor_t *desc,
@@ -4332,8 +4330,8 @@ update_router_descriptor_cache_downloads_v2(time_t now)
 
 /** For any descriptor that we want that's currently listed in
  * <b>consensus</b>, download it as appropriate. */
-static void
-update_consensus_router_descriptor_downloads(time_t now,
+void
+update_consensus_router_descriptor_downloads(time_t now, int is_vote,
                                              networkstatus_t *consensus)
 {
   or_options_t *options = get_options();
@@ -4351,8 +4349,10 @@ update_consensus_router_descriptor_downloads(time_t now,
 
   map = digestmap_new();
   list_pending_descriptor_downloads(map, 0);
-  SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
+  SMARTLIST_FOREACH(consensus->routerstatus_list, void *, rsp,
     {
+      routerstatus_t *rs =
+        is_vote ? &(((vote_routerstatus_t *)rsp)->status) : rsp;
       signed_descriptor_t *sd;
       if ((sd = router_get_by_descriptor_digest(rs->descriptor_digest))) {
         routerinfo_t *ri;
@@ -4445,7 +4445,7 @@ update_router_descriptor_downloads(time_t now)
   if (directory_fetches_dir_info_early(options)) {
     update_router_descriptor_cache_downloads_v2(now);
   }
-  update_consensus_router_descriptor_downloads(now,
+  update_consensus_router_descriptor_downloads(now, 0,
     networkstatus_get_reasonably_live_consensus(now));
 
   /* XXXX021 we could be smarter here; see notes on bug 652. */

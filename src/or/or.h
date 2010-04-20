@@ -5086,6 +5086,8 @@ trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
 void authority_cert_free(authority_cert_t *cert);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);
+void update_consensus_router_descriptor_downloads(time_t now, int is_vote,
+                                                  networkstatus_t *consensus);
 void update_router_descriptor_downloads(time_t now);
 void update_extrainfo_downloads(time_t now);
 int router_have_minimum_dir_info(void);
