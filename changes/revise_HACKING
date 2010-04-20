@@ -1,0 +1,4 @@
+ o Documentation:
+   - Convert the HACKING file to asciidoc, and add a few new sections
+     to it, explaining how we use Git, how we make changelogs, and
+     what should go in a patch.
