@@ -15,6 +15,12 @@ Changes in version 0.2.2.12-alpha - 2010-04-20
       and 24 hours pass. Bug found by keb. Fixes bug 1365; bugfix on
       0.2.2.11-alpha.
 
+  o Minor bugfixes:
+    - Demote a confusing TLS warning that relay operators might get when
+      someone tries to talk to their OrPort. It is neither the operator's
+      fault nor can they do anything about it. Fixes bug 1364; bugfix
+      on 0.2.0.14-alpha.
+
 
 Changes in version 0.2.2.11-alpha - 2010-04-15
   o Major bugfixes:
