@@ -1,0 +1,4 @@
+ o Minor bugfixes:
+   - Fix a segfault when DirReqStatistics is enabled.  Bug found by keb.
+     Fixes bug 1365; bugfix on 0.2.2.11-alpha.
+
