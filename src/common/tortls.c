@@ -762,8 +762,7 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
         strcmp(ciphername, TLS1_TXT_DHE_RSA_WITH_AES_256_SHA) &&
         strcmp(ciphername, SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA) &&
         strcmp(ciphername, "(NONE)")) {
-      /* XXXX should be ld_debug */
-      log_info(LD_NET, "Got a non-version-1 cipher called '%s'", ciphername);
+      log_debug(LD_NET, "Got a non-version-1 cipher called '%s'", ciphername);
       // return 1;
       goto dump_list;
     }
@@ -779,8 +778,8 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
       smartlist_add(elts, (char*)ciphername);
     }
     s = smartlist_join_strings(elts, ":", 0, NULL);
-    log_info(LD_NET, "Got a non-version-1 cipher list from %s.  It is: '%s'",
-             address, s);
+    log_debug(LD_NET, "Got a non-version-1 cipher list from %s.  It is: '%s'",
+              address, s);
     tor_free(s);
     smartlist_free(elts);
   }

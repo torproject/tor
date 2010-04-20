@@ -2720,7 +2720,7 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
           goto err;
         }
       }
-    });
+  });
 
   pending_vote = tor_malloc_zero(sizeof(pending_vote_t));
   pending_vote->vote_body = new_cached_dir(tor_strndup(vote_body,

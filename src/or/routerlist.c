@@ -974,8 +974,9 @@ router_get_trusteddirserver_by_digest(const char *digest)
   return NULL;
 }
 
-/** Return the trusted_dir_server_t for the directory authority whose identity
- * key hashes to <b>digest</b>, or NULL if no such authority is known.
+/** Return the trusted_dir_server_t for the directory authority whose
+ * v3 identity key hashes to <b>digest</b>, or NULL if no such authority
+ * is known.
  */
 trusted_dir_server_t *
 trusteddirserver_get_by_v3_auth_digest(const char *digest)
