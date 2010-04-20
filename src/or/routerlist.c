@@ -26,6 +26,7 @@ static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static void launch_router_descriptor_downloads(smartlist_t *downloadable,
+                                               routerstatus_t *source,
                                                time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void update_router_have_minimum_dir_info(void);
@@ -4102,7 +4103,8 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
  * whether to delay fetching until we have more.  If we don't want to delay,
  * launch one or more requests to the appropriate directory authorities. */
 static void
-launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
+launch_router_descriptor_downloads(smartlist_t *downloadable,
+                                   routerstatus_t *source, time_t now)
 {
   int should_delay = 0, n_downloadable;
   or_options_t *options = get_options();
@@ -4172,7 +4174,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable, time_t now)
              req_plural, n_downloadable, rtr_plural, n_per_request);
     smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {
-      initiate_descriptor_downloads(NULL, DIR_PURPOSE_FETCH_SERVERDESC,
+      initiate_descriptor_downloads(source, DIR_PURPOSE_FETCH_SERVERDESC,
                                     downloadable, i, i+n_per_request,
                                     pds_flags);
     }
@@ -4338,6 +4340,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
   digestmap_t *map = NULL;
   smartlist_t *no_longer_old = smartlist_create();
   smartlist_t *downloadable = smartlist_create();
+  routerstatus_t *source = NULL;
   int authdir = authdir_mode(options);
   int n_delayed=0, n_have=0, n_would_reject=0, n_wouldnt_use=0,
     n_inprogress=0, n_in_oldrouters=0;
@@ -4346,6 +4349,18 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
     goto done;
   if (!consensus)
     goto done;
+
+  if (is_vote) {
+    /* where's it from, so we know whom to ask for descriptors */
+    trusted_dir_server_t *ds;
+    networkstatus_voter_info_t *voter = smartlist_get(consensus->voters, 0);
+    tor_assert(voter);
+    ds = trusteddirserver_get_by_v3_auth_digest(voter->identity_digest);
+    if (ds)
+      source = &(ds->fake_status);
+    else
+      log_warn(LD_DIR, "couldn't lookup source from vote?");
+  }
 
   map = digestmap_new();
   list_pending_descriptor_downloads(map, 0);
@@ -4387,6 +4402,14 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         ++n_wouldnt_use;
         continue; /* We would never use it ourself. */
       }
+      if (is_vote && source) {
+        char time_buf[ISO_TIME_LEN+1];
+        format_iso_time(time_buf, rs->published_on);
+        log_info(LD_DIR, "Learned about %s (%s) from %s's vote (%s)",
+                 rs->nickname, time_buf, source->nickname,
+                 router_get_by_digest(rs->identity_digest) ? "known" :
+                                                             "unknown");
+      }
       smartlist_add(downloadable, rs->descriptor_digest);
     });
 
@@ -4420,7 +4443,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
            smartlist_len(downloadable), n_delayed, n_have, n_in_oldrouters,
            n_would_reject, n_wouldnt_use, n_inprogress);
 
-  launch_router_descriptor_downloads(downloadable, now);
+  launch_router_descriptor_downloads(downloadable, source, now);
 
   digestmap_free(map, NULL);
  done:
