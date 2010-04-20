@@ -1,3 +1,0 @@
-  o Major bugfixes:
-    - Fix two typos in tor_vasprintf() that prevented compilation in
-      Windows.

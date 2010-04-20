@@ -1,9 +1,0 @@
-  o Major bugfixes:
-    - When we deprecated the v2 directory protocol, we accidentally
-      got rid of the only way that v3 authorities can hear from each
-      other about other descriptors. So many relays have been falling
-      out of the consensus lately because not enough authorities know
-      about their descriptor for them to get a majority of votes. Now
-      authorities examine every v3 vote for new descriptors, and fetch
-      them from that authority. Bugfix on 0.2.1.23.
-

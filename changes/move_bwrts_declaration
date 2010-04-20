@@ -1,2 +1,0 @@
-  o Minor bugfixes:
-    - Fix a compilation warning in or.h related to bandwidth_weight_rule_t

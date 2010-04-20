@@ -1,4 +1,19 @@
-Changes in version 0.2.2.12-alpha - 2010-04-??
+Changes in version 0.2.2.12-alpha - 2010-04-20
+  o Major bugfixes:
+    - Many relays have been falling out of the consensus lately because
+      not enough authorities know about their descriptor for them to get
+      a majority of votes. When we deprecated the v2 directory protocol,
+      we got rid of the only way that v3 authorities can hear from each
+      other about other descriptors. Now authorities examine every v3
+      vote for new descriptors, and fetch them from that authority. Bugfix
+      on 0.2.1.23.
+    - Fix two typos in tor_vasprintf() that broke the compile on Windows,
+      and a warning in or.h related to bandwidth_weight_rule_t that
+      prevented clean compile on OS X. Fixes bug 1363; bugfix on
+      0.2.2.11-alpha.
+    - Fix a segfault on relays when DirReqStatistics is enabled
+      and 24 hours pass. Bug found by keb. Fixes bug 1365; bugfix on
+      0.2.2.11-alpha.
 
 
 Changes in version 0.2.2.11-alpha - 2010-04-15
