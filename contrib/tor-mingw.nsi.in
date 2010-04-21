@@ -30,7 +30,7 @@ VIProductVersion "${VERSION}"
 VIAddVersionKey "ProductName" "The Onion Router: Tor"
 VIAddVersionKey "Comments" "${WEBSITE}"
 VIAddVersionKey "LegalTrademarks" "Three line BSD"
-VIAddVersionKey "LegalCopyright" "©2004-2008, Roger Dingledine, Nick Mathewson"
+VIAddVersionKey "LegalCopyright" "©2004-2008, Roger Dingledine, Nick Mathewson. ©2009 The Tor Project, Inc. "
 VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at ${WEBSITE}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 
@@ -171,10 +171,9 @@ FunctionEnd
 Function ExtractSpecs
 	File "..\doc\HACKING"
 	File "..\doc\spec\address-spec.txt"
+	File "..\doc\spec\bridges-spec.txt"
 	File "..\doc\spec\control-spec.txt"
-	File "..\doc\spec\control-spec-v0.txt"
 	File "..\doc\spec\dir-spec.txt"
-	File "..\doc\spec\dir-spec-v1.txt"
 	File "..\doc\spec\path-spec.txt"
 	File "..\doc\spec\rend-spec.txt"
 	File "..\doc\spec\socks-extensions.txt"
@@ -183,17 +182,14 @@ Function ExtractSpecs
 FunctionEnd
 
 Function ExtractHTML
+	File "..\doc\tor.html"
+	File "..\doc\torify.html"
 	File "..\doc\tor-resolve.html"
-	File "..\doc\tor-reference.html"
-FunctionEnd
-
-Function ExtractDesignDocs
-	File "..\doc\design-paper\tor-design.pdf"
+	File "..\doc\tor-gencert.html"
 FunctionEnd
 
 Function ExtractReleaseDocs
 	File "..\README"
-	File "..\AUTHORS"
 	File "..\ChangeLog"
 	File "..\LICENSE"
 FunctionEnd
@@ -202,7 +198,6 @@ Function ExtractDocuments
 	SetOutPath "$INSTDIR\Documents"
 	Call ExtractSpecs
 	Call ExtractHTML
-	Call ExtractDesignDocs
 	Call ExtractReleaseDocs
 FunctionEnd
 
@@ -249,9 +244,16 @@ FunctionEnd
 
 Function CreateDocLinks
 	CreateDirectory "$SMPROGRAMS\Tor\Documents"
-	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Manual.lnk" "$INSTDIR\Documents\tor-reference.html"
 	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Documentation.lnk" "$INSTDIR\Documents"
 	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Specification.lnk" "$INSTDIR\Documents\tor-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Address Specification.lnk" "$INSTDIR\Documents\address-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Bridges Specification.lnk" "$INSTDIR\Documents\bridges-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Control Specification.lnk" "$INSTDIR\Documents\control-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Directory Specification.lnk" "$INSTDIR\Documents\dir-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Path Specification.lnk" "$INSTDIR\Documents\path-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Rend Specification.lnk" "$INSTDIR\Documents\rend-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor Version Specification.lnk" "$INSTDIR\Documents\version-spec.txt"
+	CreateShortCut "$SMPROGRAMS\Tor\Documents\Tor SOCKS Extensions.lnk" "$INSTDIR\Documents\socks-extensions.txt"
 FunctionEnd
 
 Function ParseCmdLine
