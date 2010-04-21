@@ -3108,8 +3108,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
                         router->cache_info.identity_digest);
 }
 
-/** Auth dir server only: if <b>try_all</b> is 1, launch connections to
- * all known routers; else we want to load balance such that we only
+/** Auth dir server only: load balance such that we only
  * try a few connections per call.
  *
  * The load balancing is such that if we get called once every ten
@@ -3117,7 +3116,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
  * bit over 20 minutes).
  */
 void
-dirserv_test_reachability(time_t now, int try_all)
+dirserv_test_reachability(time_t now)
 {
   /* XXX decide what to do here; see or-talk thread "purging old router
    * information, revocation." -NM
@@ -3140,12 +3139,11 @@ dirserv_test_reachability(time_t now, int try_all)
       continue; /* bridge authorities only test reachability on bridges */
 //    if (router->cache_info.published_on > cutoff)
 //      continue;
-    if (try_all || (((uint8_t)id_digest[0]) % 128) == ctr) {
+    if ((((uint8_t)id_digest[0]) % 128) == ctr) {
       dirserv_single_reachability_test(now, router);
     }
   } SMARTLIST_FOREACH_END(router);
-  if (!try_all) /* increment ctr */
-    ctr = (ctr + 1) % 128;
+  ctr = (ctr + 1) % 128; /* increment ctr */
 }
 
 /** Given a fingerprint <b>fp</b> which is either set if we're looking for a

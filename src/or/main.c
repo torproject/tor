@@ -918,7 +918,7 @@ run_scheduled_events(time_t now)
   if (now % 10 == 0 && (authdir_mode_tests_reachability(options)) &&
       !we_are_hibernating()) {
     /* try to determine reachability of the other Tor relays */
-    dirserv_test_reachability(now, 0);
+    dirserv_test_reachability(now);
   }
 
   /** 1d. Periodically, we discount older stability information so that new
@@ -1478,11 +1478,6 @@ do_main_loop(void)
    */
   now = time(NULL);
   directory_info_has_arrived(now, 1);
-
-  if (authdir_mode_tests_reachability(get_options())) {
-    /* the directory is already here, run startup things */
-    dirserv_test_reachability(now, 1);
-  }
 
   if (server_mode(get_options())) {
     /* launch cpuworkers. Need to do this *after* we've read the onion key. */

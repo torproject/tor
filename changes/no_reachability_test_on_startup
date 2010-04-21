@@ -1,0 +1,6 @@
+  o Minor features:
+    - Directory authorities no longer launch a TLS connection to every
+      relay as they startup. Now that we have 2k+ descriptors cached,
+      the resulting network hiccup is becoming a burden. Besides,
+      authorities already avoid voting about Running for the first half
+      hour of their uptime.
