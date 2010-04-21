@@ -3204,7 +3204,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     if (!in_consensus && (router->cache_info.published_on <=
                           old_router->cache_info.published_on)) {
       /* Same key, but old.  This one is not listed in the consensus. */
-      log_debug(LD_DIR, "Skipping not-new descriptor for router '%s'",
+      log_debug(LD_DIR, "Not-new descriptor for router '%s'",
                 router->nickname);
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && should_cache_old_descriptors())
@@ -3247,9 +3247,15 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   /* We haven't seen a router with this identity before. Add it to the end of
    * the list. */
   routerlist_insert(routerlist, router);
-  if (!from_cache)
+  if (!from_cache) {
+    if (authdir) {
+      /* launch an immediate reachability test, so we will have an opinion
+       * soon in case we're generating a consensus soon */
+      dirserv_single_reachability_test(time(NULL), router);
+    }
     signed_desc_append_to_journal(&router->cache_info,
                                   &routerlist->desc_store);
+  }
   directory_set_dirty();
   return ROUTER_ADDED_SUCCESSFULLY;
 }

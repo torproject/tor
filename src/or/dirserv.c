@@ -3091,6 +3091,23 @@ dirserv_orconn_tls_done(const char *address,
    * skip testing. */
 }
 
+/** Helper function for dirserv_test_reachability(). Start a TLS
+ * connection to <b>router</b>, and annotate it with when we started
+ * the test. */
+void
+dirserv_single_reachability_test(time_t now, routerinfo_t *router)
+{
+  tor_addr_t router_addr;
+  log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
+            router->nickname, router->address, router->or_port);
+  /* Remember when we started trying to determine reachability */
+  if (!router->testing_since)
+    router->testing_since = now;
+  tor_addr_from_ipv4h(&router_addr, router->addr);
+  connection_or_connect(&router_addr, router->or_port,
+                        router->cache_info.identity_digest);
+}
+
 /** Auth dir server only: if <b>try_all</b> is 1, launch connections to
  * all known routers; else we want to load balance such that we only
  * try a few connections per call.
@@ -3117,7 +3134,6 @@ dirserv_test_reachability(time_t now, int try_all)
 
   SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, router) {
     const char *id_digest = router->cache_info.identity_digest;
-    tor_addr_t router_addr;
     if (router_is_me(router))
       continue;
     if (bridge_auth && router->purpose != ROUTER_PURPOSE_BRIDGE)
@@ -3125,13 +3141,7 @@ dirserv_test_reachability(time_t now, int try_all)
 //    if (router->cache_info.published_on > cutoff)
 //      continue;
     if (try_all || (((uint8_t)id_digest[0]) % 128) == ctr) {
-      log_debug(LD_OR,"Testing reachability of %s at %s:%u.",
-                router->nickname, router->address, router->or_port);
-      /* Remember when we started trying to determine reachability */
-      if (!router->testing_since)
-        router->testing_since = now;
-      tor_addr_from_ipv4h(&router_addr, router->addr);
-      connection_or_connect(&router_addr, router->or_port, id_digest);
+      dirserv_single_reachability_test(now, router);
     }
   } SMARTLIST_FOREACH_END(router);
   if (!try_all) /* increment ctr */

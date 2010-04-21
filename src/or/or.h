@@ -3913,6 +3913,7 @@ void dirserv_orconn_tls_done(const char *address,
                              uint16_t or_port,
                              const char *digest_rcvd,
                              int as_advertised);
+void dirserv_single_reachability_test(time_t now, routerinfo_t *router);
 void dirserv_test_reachability(time_t now, int try_all);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
                                    int complain);

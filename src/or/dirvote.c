@@ -2696,7 +2696,8 @@ dirvote_add_vote(const char *vote_body, const char **msg_out, int *status_out)
         networkstatus_voter_info_t *vi_old = get_voter(v->vote);
         if (!memcmp(vi_old->vote_digest, vi->vote_digest, DIGEST_LEN)) {
           /* Ah, it's the same vote. Not a problem. */
-          log_info(LD_DIR, "Discarding a vote we already have.");
+          log_info(LD_DIR, "Discarding a vote we already have (from %s).",
+                   vi->address);
           if (*status_out < 200)
             *status_out = 200;
           goto discard;
