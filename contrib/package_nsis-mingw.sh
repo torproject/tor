@@ -58,6 +58,7 @@ cp src/or/tor.exe win_tmp/bin/
 cp src/tools/tor-resolve.exe win_tmp/bin/
 cp contrib/tor.ico win_tmp/bin/
 cp src/config/geoip win_tmp/bin/
+strip win_tmp/bin/*.exe
 
 # There is no man2html in mingw.  
 # Maybe we should add this into make dist instead.
@@ -73,17 +74,15 @@ clean_localstatedir() {
     perl -pe 's/^\n$/\r\n/mg; s/([^\r])\n$/\1\r\n/mg; s{\@LOCALSTATEDIR\@/(lib|log)/tor/}{C:\\Documents and Settings\\Application Data\\Tor\\}' $1 >$2
 }
 
-for fn in address-spec.txt control-spec.txt control-spec-v0.txt dir-spec.txt dir-spec-v1.txt path-spec.txt rend-spec.txt socks-extensions.txt tor-spec.txt version-spec.txt; do
+for fn in address-spec.txt bridges-spec.txt control-spec.txt dir-spec.txt path-spec.txt rend-spec.txt socks-extensions.txt tor-spec.txt version-spec.txt; do
     clean_newlines doc/spec/$fn win_tmp/doc/spec/$fn
 done
 
-cp doc/design-paper/tor-design.pdf win_tmp/doc/design-paper/tor-design.pdf
-
-for fn in HACKING tor-reference.html tor-resolve.html; do
+for fn in HACKING tor-gencert.html tor.html torify.html tor-resolve.html; do
     clean_newlines doc/$fn win_tmp/doc/$fn
 done
 
-for fn in README AUTHORS ChangeLog LICENSE; do
+for fn in README ChangeLog LICENSE; do
     clean_newlines $fn win_tmp/$fn
 done
 
