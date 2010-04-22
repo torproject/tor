@@ -1,0 +1,4 @@
+  o Minor features:
+    - Finally get rid of the deprecated and now harmful notion of
+      "clique mode", where directory authorities maintain TLS connections
+      to every other relay.
