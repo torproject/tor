@@ -948,16 +948,6 @@ authdir_mode_bridge(or_options_t *options)
 {
   return authdir_mode(options) && options->BridgeAuthoritativeDir != 0;
 }
-/** Return true iff we once tried to stay connected to all ORs at once.
- * FFFF this function, and the notion of staying connected to ORs, is
- * nearly obsolete. One day there will be a proposal for getting rid of
- * it.
- */
-int
-clique_mode(or_options_t *options)
-{
-  return authdir_mode_tests_reachability(options);
-}
 
 /** Return true iff we are trying to be a server.
  */
@@ -1049,20 +1039,6 @@ consider_publishable_server(int force)
   } else {
     set_server_advertised(0);
   }
-}
-
-/*
- * Clique maintenance -- to be phased out.
- */
-
-/** Return true iff we believe this OR tries to keep connections open
- * to all other ORs. */
-int
-router_is_clique_mode(routerinfo_t *router)
-{
-  if (router_digest_is_trusted_dir(router->cache_info.identity_digest))
-    return 1;
-  return 0;
 }
 
 /*

@@ -751,7 +751,6 @@ run_connection_housekeeping(int i, time_t now)
   /* If we haven't written to an OR connection for a while, then either nuke
      the connection or send a keepalive, depending. */
   if (now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
-    routerinfo_t *router = router_get_by_digest(or_conn->identity_digest);
     int maxCircuitlessPeriod = options->MaxCircuitDirtiness*3/2;
     if (!connection_state_is_open(conn)) {
       /* We never managed to actually get this connection open and happy. */
@@ -767,14 +766,11 @@ run_connection_housekeeping(int i, time_t now)
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
-    } else if (!clique_mode(options) && !or_conn->n_circuits &&
+    } else if (!or_conn->n_circuits &&
                now >= or_conn->timestamp_last_added_nonpadding +
-                                           maxCircuitlessPeriod &&
-               (!router || !server_mode(options) ||
-                !router_is_clique_mode(router))) {
+                                           maxCircuitlessPeriod) {
       log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-               "[Not in clique mode].",
-               conn->s,conn->address, conn->port);
+               "[idle].", conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
       conn->hold_open_until_flushed = 1;
     } else if (
@@ -1661,7 +1657,7 @@ dumpmemusage(int severity)
   tor_log_mallinfo(severity);
 }
 
-/** Write all statistics to the log, with log level 'severity'.  Called
+/** Write all statistics to the log, with log level <b>severity</b>. Called
  * in response to a SIGUSR1. */
 static void
 dumpstats(int severity)
