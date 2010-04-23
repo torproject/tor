@@ -17,7 +17,7 @@ extern circuit_t *global_circuitlist; /* from circuitlist.c */
 
 /********* END VARIABLES ************/
 
-static void circuit_expire_old_circuits(time_t now);
+static void circuit_expire_old_circuits_clientside(time_t now);
 static void circuit_increment_failure_count(void);
 
 long int lround(double x);
@@ -567,7 +567,7 @@ circuit_build_needed_circs(time_t now)
     time_to_new_circuit = now + options->NewCircuitPeriod;
     if (proxy_mode(get_options()))
       addressmap_clean(now);
-    circuit_expire_old_circuits(now);
+    circuit_expire_old_circuits_clientside(now);
 
 #if 0 /* disable for now, until predict-and-launch-new can cull leftovers */
     circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
@@ -656,7 +656,7 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
  * for too long and has no streams on it: mark it for close.
  */
 static void
-circuit_expire_old_circuits(time_t now)
+circuit_expire_old_circuits_clientside(time_t now)
 {
   circuit_t *circ;
   time_t cutoff;
@@ -692,6 +692,53 @@ circuit_expire_old_circuits(time_t now)
                   (int)(now - circ->timestamp_created));
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
       }
+    }
+  }
+}
+
+/** How long do we wait before killing circuits with the properties
+ * described below?
+ *
+ * Probably we could choose a number here as low as 5 to 10 seconds,
+ * since these circs are used for begindir, and a) generally you either
+ * ask another begindir question right after or you don't for a long time,
+ * b) clients at least through 0.2.1.x choose from the whole set of
+ * directory mirrors at each choice, and c) re-establishing a one-hop
+ * circuit via create-fast is a light operation assuming the TLS conn is
+ * still there.
+ *
+ * I expect "b" to go away one day when we move to using directory
+ * guards, but I think "a" and "c" are good enough reasons that a low
+ * number is safe even then.
+ */
+#define IDLE_ONE_HOP_CIRC_TIMEOUT 60
+
+/** Find each non-origin circuit that has been unused for too long,
+ * has no streams on it, used a create_fast, and ends here: mark it
+ * for close.
+ */
+void
+circuit_expire_old_circuits_serverside(time_t now)
+{
+  circuit_t *circ;
+  or_circuit_t *or_circ;
+  time_t cutoff = now - IDLE_ONE_HOP_CIRC_TIMEOUT;
+
+  for (circ = global_circuitlist; circ; circ = circ->next) {
+    if (circ->marked_for_close || CIRCUIT_IS_ORIGIN(circ))
+      continue;
+    or_circ = TO_OR_CIRCUIT(circ);
+    /* If the circuit has been idle for too long, and there are no streams
+     * on it, and it ends here, and it used a create_fast, mark it for close.
+     */
+    if (or_circ->is_first_hop && !circ->n_conn &&
+        !or_circ->n_streams && !or_circ->resolving_streams &&
+        or_circ->p_conn &&
+        or_circ->p_conn->timestamp_last_added_nonpadding <= cutoff) {
+      log_info(LD_CIRC, "Closing circ_id %d (empty %d secs ago)",
+               or_circ->p_circ_id,
+               (int)(now - or_circ->p_conn->timestamp_last_added_nonpadding));
+      circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     }
   }
 }
