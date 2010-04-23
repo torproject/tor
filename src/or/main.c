@@ -1058,6 +1058,10 @@ run_scheduled_events(time_t now)
   if (have_dir_info && !we_are_hibernating())
     circuit_build_needed_circs(now);
 
+  /* every 10 seconds, but not at the same second as other such events */
+  if (now % 10 == 5)
+    circuit_expire_old_circuits_serverside(now);
+
   /** 5. We do housekeeping for each connection... */
   connection_or_set_bad_connections();
   for (i=0;i<smartlist_len(connection_array);i++) {
