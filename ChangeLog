@@ -1,4 +1,8 @@
 Changes in version 0.2.2.12-alpha - 2010-04-20
+  Tor 0.2.2.12-alpha fixes a critical bug in how directory authorities
+  handle and vote on descriptors. It was causing relays to drop out of
+  the consensus.
+
   o Major bugfixes:
     - Many relays have been falling out of the consensus lately because
       not enough authorities know about their descriptor for them to get
@@ -23,6 +27,9 @@ Changes in version 0.2.2.12-alpha - 2010-04-20
 
 
 Changes in version 0.2.2.11-alpha - 2010-04-15
+  Tor 0.2.2.11-alpha fixes yet another instance of broken OpenSSL
+  libraries that was causing some relays to drop out of the consensus.
+
   o Major bugfixes:
     - Directory mirrors were fetching relay descriptors only from v2
       directory authorities, rather than v3 authorities like they should.
