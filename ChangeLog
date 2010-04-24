@@ -1,3 +1,29 @@
+Changes in version 0.2.2.13-alpha - 2010-04-24
+  o Major bugfixes:
+    - Relays now close idle circuits early if it looks like they were
+      intended for directory fetches. Relays are also more aggressive
+      about closing TLS connections that have no circuits on them. Such
+      circuits are unlikely to be re-used, and tens of thousands of them
+      were piling up at the fast relays, causing the relays to run out
+      of sockets and memory. Bugfix on 0.2.0.22-rc (where clients started
+      tunneling their directory fetches over TLS).
+
+  o Minor features:
+    - Finally get rid of the deprecated and now harmful notion of
+      "clique mode", where directory authorities maintain TLS connections
+      to every other relay.
+    - Directory authorities now do an immediate reachability check as soon
+      as they hear about a new relay. This change should slightly reduce
+      the time between setting up a relay and getting listed as running
+      in the consensus. It should also improve the time between setting
+      up a bridge and seeing use by bridge users.
+    - Directory authorities no longer launch a TLS connection to every
+      relay as they startup. Now that we have 2k+ descriptors cached,
+      the resulting network hiccup is becoming a burden. Besides,
+      authorities already avoid voting about Running for the first half
+      hour of their uptime.
+
+
 Changes in version 0.2.2.12-alpha - 2010-04-20
   Tor 0.2.2.12-alpha fixes a critical bug in how directory authorities
   handle and vote on descriptors. It was causing relays to drop out of

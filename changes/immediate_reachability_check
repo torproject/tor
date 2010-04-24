@@ -1,7 +1,0 @@
-  o Minor features:
-    - Directory authorities now do an immediate reachability check as soon
-      as they hear about a new relay. This change should slightly reduce
-      the time between setting up a relay and getting listed as running
-      in the consensus. It should also improve the time between setting
-      up a bridge and seeing use by bridge users.
-
