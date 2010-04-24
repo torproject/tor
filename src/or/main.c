@@ -663,6 +663,15 @@ directory_info_has_arrived(time_t now, int from_cache)
     consider_testing_reachability(1, 1);
 }
 
+/** How long do we wait before killing OR connections with no circuits?
+ * In Tor versions up to 0.2.1.25 and 0.2.2.12-alpha, we waited 15 minutes
+ * before cancelling these connections, which caused fast relays to accrue
+ * many many idle connections. Hopefully 3 minutes is low enough that
+ * it kills most idle connections, without being so low that we cause
+ * clients to bounce on and off.
+ */
+#define IDLE_OR_CONN_TIMEOUT 180
+
 /** Perform regular maintenance tasks for a single connection.  This
  * function gets run once per second per connection by run_scheduled_events.
  */
@@ -673,6 +682,8 @@ run_connection_housekeeping(int i, time_t now)
   connection_t *conn = smartlist_get(connection_array, i);
   or_options_t *options = get_options();
   or_connection_t *or_conn;
+  int past_keepalive =
+    now >= conn->timestamp_lastwritten + options->KeepalivePeriod;
 
   if (conn->outbuf && !buf_datalen(conn->outbuf) && conn->type == CONN_TYPE_OR)
     TO_OR_CONN(conn)->timestamp_lastempty = now;
@@ -707,6 +718,9 @@ run_connection_housekeeping(int i, time_t now)
   if (!connection_speaks_cells(conn))
     return; /* we're all done here, the rest is just for OR conns */
 
+  /* If we haven't written to an OR connection for a while, then either nuke
+     the connection or send a keepalive, depending. */
+
   or_conn = TO_OR_CONN(conn);
 
   if (or_conn->is_bad_for_new_circs && !or_conn->n_circuits) {
@@ -721,52 +735,45 @@ run_connection_housekeeping(int i, time_t now)
                                    "Tor gave up on the connection");
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1;
-    return;
-  }
-
-  /* If we haven't written to an OR connection for a while, then either nuke
-     the connection or send a keepalive, depending. */
-  if (now >= conn->timestamp_lastwritten + options->KeepalivePeriod) {
-    int maxCircuitlessPeriod = options->MaxCircuitDirtiness*3/2;
-    if (!connection_state_is_open(conn)) {
-      /* We never managed to actually get this connection open and happy. */
-      log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
-               conn->s,conn->address, conn->port);
-      connection_mark_for_close(conn);
-      conn->hold_open_until_flushed = 1;
-    } else if (we_are_hibernating() && !or_conn->n_circuits &&
-               !buf_datalen(conn->outbuf)) {
-      /* We're hibernating, there's no circuits, and nothing to flush.*/
-      log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-               "[Hibernating or exiting].",
-               conn->s,conn->address, conn->port);
-      connection_mark_for_close(conn);
-      conn->hold_open_until_flushed = 1;
-    } else if (!or_conn->n_circuits &&
-               now >= or_conn->timestamp_last_added_nonpadding +
-                                           maxCircuitlessPeriod) {
-      log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
-               "[idle].", conn->s,conn->address, conn->port);
-      connection_mark_for_close(conn);
-      conn->hold_open_until_flushed = 1;
-    } else if (
-         now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
-         now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
-      log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
-             "Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to "
-             "flush; %d seconds since last write)",
-             conn->s, conn->address, conn->port,
-             (int)buf_datalen(conn->outbuf),
-             (int)(now-conn->timestamp_lastwritten));
-      connection_mark_for_close(conn);
-    } else if (!buf_datalen(conn->outbuf)) {
-      /* either in clique mode, or we've got a circuit. send a padding cell. */
-      log_fn(LOG_DEBUG,LD_OR,"Sending keepalive to (%s:%d)",
-             conn->address, conn->port);
-      memset(&cell,0,sizeof(cell_t));
-      cell.command = CELL_PADDING;
-      connection_or_write_cell_to_buf(&cell, or_conn);
-    }
+  } else if (past_keepalive && !connection_state_is_open(conn)) {
+    /* We never managed to actually get this connection open and happy. */
+    log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
+             conn->s,conn->address, conn->port);
+    connection_mark_for_close(conn);
+    conn->hold_open_until_flushed = 1;
+  } else if (we_are_hibernating() && !or_conn->n_circuits &&
+             !buf_datalen(conn->outbuf)) {
+    /* We're hibernating, there's no circuits, and nothing to flush.*/
+    log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
+             "[Hibernating or exiting].",
+             conn->s,conn->address, conn->port);
+    connection_mark_for_close(conn);
+    conn->hold_open_until_flushed = 1;
+  } else if (!or_conn->n_circuits &&
+             now >= or_conn->timestamp_last_added_nonpadding +
+                                         IDLE_OR_CONN_TIMEOUT) {
+    log_info(LD_OR,"Expiring non-used OR connection to fd %d (%s:%d) "
+             "[idle %d].", conn->s,conn->address, conn->port,
+             (int)(now - or_conn->timestamp_last_added_nonpadding));
+    connection_mark_for_close(conn);
+    conn->hold_open_until_flushed = 1;
+  } else if (
+      now >= or_conn->timestamp_lastempty + options->KeepalivePeriod*10 &&
+      now >= conn->timestamp_lastwritten + options->KeepalivePeriod*10) {
+    log_fn(LOG_PROTOCOL_WARN,LD_PROTOCOL,
+           "Expiring stuck OR connection to fd %d (%s:%d). (%d bytes to "
+           "flush; %d seconds since last write)",
+           conn->s, conn->address, conn->port,
+           (int)buf_datalen(conn->outbuf),
+           (int)(now-conn->timestamp_lastwritten));
+    connection_mark_for_close(conn);
+  } else if (past_keepalive && !buf_datalen(conn->outbuf)) {
+    /* send a padding cell */
+    log_fn(LOG_DEBUG,LD_OR,"Sending keepalive to (%s:%d)",
+           conn->address, conn->port);
+    memset(&cell,0,sizeof(cell_t));
+    cell.command = CELL_PADDING;
+    connection_or_write_cell_to_buf(&cell, or_conn);
   }
 }
 
