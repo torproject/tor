@@ -1,46 +1,161 @@
+Hacking Tor: An Incomplete Guide
+================================
 
-0. Useful tools.
+Getting started
+---------------
 
-0.0 The buildbot.
+For full information on how Tor is supposed to work, look at the files in
+doc/spec/ .
 
-  https://buildbot.vidalia-project.net/one_line_per_build
+For an explanation of how to change Tor's design to work differently, look at
+doc/spec/proposals/001-process.txt .
 
-0.1. Useful command-lines that are non-trivial to reproduce but can
-help with tracking bugs or leaks.
+For the latest version of the code, get a copy of git, and
 
-0.1.1. Dmalloc
+   git clone git://git.torproject.org/git/tor .
 
-dmalloc -l ~/dmalloc.log
-(run the commands it tells you)
-./configure --with-dmalloc
+We talk about Tor on the or-talk mailing list.  Design proposals and
+discussion belong on the or-dev mailing list.  We hang around on
+irc.oftc.net, with general discussion happening on #tor and development
+happening on #tor-dev.
 
-0.2.2. Valgrind
+How we use Git branches
+-----------------------
+
+Each main development series (like 0.2.1, 0.2.2, etc) has its main work
+applied to a single branch.  At most one series can be the development series
+at a time; all other series are maintenance series that get bug-fixes only.
+The development series is built in a git branch called "master"; the
+maintenance series are built in branches called "maint-0.2.0", "maint-0.2.1",
+and so on.  We regularly merge the active maint branches forward.
+
+For all series except the development series, we also have a "release" branch
+(as in "release-0.2.1").  The release series is based on the corresponding
+maintenance series, except that it deliberately lags the maint series for
+most of its patches, so that bugfix patches are not typically included in a
+maintenance release until they've been tested for a while in a development
+release.  Occasionally, we'll merge an urgent bugfix into the release branch
+before it gets merged into maint, but that's rare.
+
+If you're working on a bugfix for a bug that occurs in a particular version,
+base your bugfix branch on the "maint" branch for the first _actively
+developed_ series that has that bug.  (Right now, that's 0.2.1.)  If you're
+working on a new feature, base it on the master branch.
+
+
+How we log changes
+------------------
+
+When you do a commit that needs a ChangeLog entry, add a new file to
+the "changes" toplevel subdirectory.  It should have the format of a
+one-entry changelog section from the current ChangeLog file, as in
+
+   o Major bugfixes:
+      - Fix a potential buffer overflow.  Fixes bug 9999.  Bugfix on
+        Tor 0.3.1.4-beta.
+
+To write a changes file, first categorize the change.  Some common categories
+are: Minor bugfixes, Major bugfixes, Minor features, Major features, Code
+simplifications and refactoring.  Then say what the change does.  Then, if
+it's a bugfix, then mention what bug it fixes and when the bug was
+introduced.
+
+If at all possible, try to create this file in the same commit where
+you are making the change.  Please give it a distinctive name that no
+other branch will use for the lifetime of your change.
+
+When Roger goes to make a release, he will concatenate all the entries
+in changes to make a draft changelog, and clear the directory.  He'll
+then edit the draft changelog into a nice readable format.
+
+What needs a changes file?::
+   A not-exhaustive list: Anything that might change user-visible
+   behavior. Anything that changes internals, documentation, or the build
+   system enough that somebody could notice.  Big or interesting code
+   rewrites.  Anything about which somebody might plausibly wonder "when
+   did that happen, and/or why did we do that" 6 months down the line.
+
+Why use changes files instead of Git commit messages?::
+   Git commit messages are written for developers, not users, and they
+   are nigh-impossible to revise after the fact.
+
+Why use changes files instead of entries in the ChangeLog?::
+   Having every single commit touch the ChangeLog file tended to create
+   zillions of merge conflicts.
+
+Useful tools
+------------
+
+These aren't strictly necessary for hacking on Tor, but they can help track
+down bugs.
+
+The buildbot
+~~~~~~~~~~~~
+
+https://buildbot.vidalia-project.net/one_line_per_build
+
+Dmalloc
+~~~~~~~
+
+The dmalloc library will keep track of memory allocation, so you can find out
+if we're leaking memory, doing any double-frees, or so on.
+
+  dmalloc -l ~/dmalloc.log
+  (run the commands it tells you)
+  ./configure --with-dmalloc
+
+Valgrind
+~~~~~~~~
 
 valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
 
 (Note that if you get a zillion openssl warnings, you will also need to
- pass --undef-value-errors=no to valgrind, or rebuild your openssl
- with -DPURIFY.)
+pass --undef-value-errors=no to valgrind, or rebuild your openssl
+with -DPURIFY.)
 
-0.2. Running gcov for unit test coverage
+Running gcov for unit test coverage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+-----
   make clean
   make CFLAGS='-g -fprofile-arcs -ftest-coverage'
   ./src/test/test
   cd src/common; gcov *.[ch]
   cd ../or; gcov *.[ch]
+-----
 
-  Then, look at the .gcov files.  '-' before a line means that the
-  compiler generated  no code for that line.  '######' means that the
-  line was never reached.  Lines with numbers were called that number
-  of times.
+Then, look at the .gcov files.  '-' before a line means that the
+compiler generated  no code for that line.  '######' means that the
+line was never reached.  Lines with numbers were called that number
+of times.
 
-1. Coding conventions
+Coding conventions
+------------------
 
-1.0. Whitespace and C conformance
+Patch checklist
+~~~~~~~~~~~~~~~
 
-  Invoke "make check-spaces" from time to time, so it can tell you about
-  deviations from our C whitespace style.  Generally, we use:
+If possible, send your patch as one of these (in descending order of
+preference)
+
+   - A git branch we can pull from
+   - Patches generated by git format-patch
+   - A unified diff
+
+Did you remember...
+
+   - To build your code while configured with --enable-gcc-warnings?
+   - To run "make check-speces" on your code?
+   - To write unit tests, as possible?
+   - To base your code on the appropriate branch?
+   - To include a file in the "changes" directory as appropriate?
+
+Whitespace and C conformance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Invoke "make check-spaces" from time to time, so it can tell you about
+deviations from our C whitespace style.  Generally, we use:
+
     - Unix-style line endings
     - K&R-style indentation
     - No space before newlines
@@ -57,15 +172,17 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
       "puts (x)".
     - Function declarations at the start of the line.
 
-  We try hard to build without warnings everywhere.  In particular, if you're
-  using gcc, you should invoke the configure script with the option
-  "--enable-gcc-warnings".  This will give a bunch of extra warning flags to
-  the compiler, and help us find divergences from our preferred C style.
+We try hard to build without warnings everywhere.  In particular, if you're
+using gcc, you should invoke the configure script with the option
+"--enable-gcc-warnings".  This will give a bunch of extra warning flags to
+the compiler, and help us find divergences from our preferred C style.
 
-1.0.1. Getting emacs to edit Tor source properly.
+Getting emacs to edit Tor source properly
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  Hi, folks!  Nick here.  I like to put the following snippet in my .emacs
-  file:
+Nick likes to put the following snippet in his .emacs file:
+
+-----
     (add-hook 'c-mode-hook
           (lambda ()
             (font-lock-mode 1)
@@ -85,90 +202,99 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
                 (set-variable 'c-basic-offset 8)
                 (set-variable 'tab-width 8))
             ))))
+-----
 
-  You'll note that it defaults to showing all trailing whitespace.  The
-  "cond" test detects whether the file is one of a few C free software
-  projects that I often edit, and sets up the indentation level and tab
-  preferences to match what they want.
+You'll note that it defaults to showing all trailing whitespace.  The "cond"
+test detects whether the file is one of a few C free software projects that I
+often edit, and sets up the indentation level and tab preferences to match
+what they want.
 
-  If you want to try this out, you'll need to change the filename regex
-  patterns to match where you keep your Tor files.
+If you want to try this out, you'll need to change the filename regex
+patterns to match where you keep your Tor files.
 
-  If you *only* use emacs to edit Tor, you could always just say:
+If you use emacs for editing Tor and nothing else, you could always just say:
 
-    (add-hook 'c-mode-hook
+-----
+   (add-hook 'c-mode-hook
           (lambda ()
             (font-lock-mode 1)
             (set-variable 'show-trailing-whitespace t)
             (set-variable 'indent-tabs-mode nil)
             (set-variable 'c-basic-offset 2)))
+-----
 
-  There is probably a better way to do this.  No, we are probably not going
-  to clutter the files with emacs stuff.
+There is probably a better way to do this.  No, we are probably not going
+to clutter the files with emacs stuff.
 
-1.1. Details
 
-  Use tor_malloc, tor_free, tor_strdup, and tor_gettimeofday instead of their
-  generic equivalents.  (They always succeed or exit.)
+Functions to use
+~~~~~~~~~~~~~~~~
 
-  You can get a full list of the compatibility functions that Tor provides by
-  looking through src/common/util.h and src/common/compat.h.  You can see the
-  available containers in src/common/containers.h.  You should probably
-  familiarize yourself with these modules before you write too much code,
-  or else you'll wind up reinventing the wheel.
+We have some wrapper functions like tor_malloc, tor_free, tor_strdup, and
+tor_gettimeofday; use them instead of their generic equivalents.  (They
+always succeed or exit.)
 
-  Use 'INLINE' instead of 'inline', so that we work properly on Windows.
+You can get a full list of the compatibility functions that Tor provides by
+looking through src/common/util.h and src/common/compat.h.  You can see the
+available containers in src/common/containers.h.  You should probably
+familiarize yourself with these modules before you write too much code, or
+else you'll wind up reinventing the wheel.
 
-1.2. Calling and naming conventions
+Use 'INLINE' instead of 'inline', so that we work properly on Windows.
 
-  Whenever possible, functions should return -1 on error and 0 on success.
+Calling and naming conventions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  For multi-word identifiers, use lowercase words combined with
-  underscores. (e.g., "multi_word_identifier").  Use ALL_CAPS for macros and
-  constants.
+Whenever possible, functions should return -1 on error and 0 on success.
 
-  Typenames should end with "_t".
+For multi-word identifiers, use lowercase words combined with
+underscores. (e.g., "multi_word_identifier").  Use ALL_CAPS for macros and
+constants.
 
-  Function names should be prefixed with a module name or object name.  (In
-  general, code to manipulate an object should be a module with the same
-  name as the object, so it's hard to tell which convention is used.)
+Typenames should end with "_t".
 
-  Functions that do things should have imperative-verb names
-  (e.g. buffer_clear, buffer_resize); functions that return booleans should
-  have predicate names (e.g. buffer_is_empty, buffer_needs_resizing).
+Function names should be prefixed with a module name or object name.  (In
+general, code to manipulate an object should be a module with the same name
+as the object, so it's hard to tell which convention is used.)
 
-  If you find that you have four or more possible return code values, it's
-  probably time to create an enum.  If you find that you are passing three or
-  more flags to a function, it's probably time to create a flags argument
-  that takes a bitfield.
+Functions that do things should have imperative-verb names
+(e.g. buffer_clear, buffer_resize); functions that return booleans should
+have predicate names (e.g. buffer_is_empty, buffer_needs_resizing).
 
-1.3. What To Optimize
+If you find that you have four or more possible return code values, it's
+probably time to create an enum.  If you find that you are passing three or
+more flags to a function, it's probably time to create a flags argument that
+takes a bitfield.
 
-  Don't optimize anything if it's not in the critical path.  Right now,
-  the critical path seems to be AES, logging, and the network itself.
-  Feel free to do your own profiling to determine otherwise.
+What To Optimize
+~~~~~~~~~~~~~~~~
 
-1.4. Log conventions
+Don't optimize anything if it's not in the critical path.  Right now, the
+critical path seems to be AES, logging, and the network itself.  Feel free to
+do your own profiling to determine otherwise.
 
-  https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#LogLevels
+Log conventions
+~~~~~~~~~~~~~~~
 
-  No error or warning messages should be expected during normal OR or OP
-  operation.
+https://wiki.torproject.org/noreply/TheOnionRouter/TorFAQ#LogLevels
 
-  If a library function is currently called such that failure always
-  means ERR, then the library function should log WARN and let the caller
-  log ERR.
+No error or warning messages should be expected during normal OR or OP
+operation.
 
-  [XXX Proposed convention: every message of severity INFO or higher should
-  either (A) be intelligible to end-users who don't know the Tor source; or
-  (B) somehow inform the end-users that they aren't expected to understand
-  the message (perhaps with a string like "internal error").  Option (A) is
-  to be preferred to option (B). -NM]
+If a library function is currently called such that failure always means ERR,
+then the library function should log WARN and let the caller log ERR.
 
-1.5. Doxygen
+[XXX Proposed convention: every message of severity INFO or higher should
+either (A) be intelligible to end-users who don't know the Tor source; or (B)
+somehow inform the end-users that they aren't expected to understand the
+message (perhaps with a string like "internal error").  Option (A) is to be
+preferred to option (B). -NM]
 
-  We use the 'doxygen' utility to generate documentation from our
-  source code. Here's how to use it:
+Doxygen
+~~~~~~~~
+
+We use the 'doxygen' utility to generate documentation from our
+source code. Here's how to use it:
 
   1. Begin every file that should be documented with
          /**
@@ -219,11 +345,12 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
   6. See the Doxygen manual for more information; this summary just
      scratches the surface.
 
-1.5.1. Doxygen comment conventions
+Doxygen comment conventions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  Say what functions do as a series of one or more imperative sentences, as
-  though you were telling somebody how to be the function.  In other words,
-  DO NOT say:
+Say what functions do as a series of one or more imperative sentences, as
+though you were telling somebody how to be the function.  In other words, DO
+NOT say:
 
      /** The strtol function parses a number.
       *
@@ -235,7 +362,7 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
       */
      long strtol(const char *nptr, char **nptr, int base);
 
-  Instead, please DO say:
+Instead, please DO say:
 
      /** Parse a number in radix <b>base</b> from the string <b>nptr</b>,
       * and return the result.  Skip all leading whitespace.  If
@@ -244,66 +371,10 @@ valgrind --leak-check=yes --error-limit=no --show-reachable=yes src/or/tor
       **/
      long strtol(const char *nptr, char **nptr, int base);
 
-  Doxygen comments are the contract in our abstraction-by-contract world: if
-  the functions that call your function rely on it doing something, then your
-  function should mention that it does that something in the documentation.
-  If you rely on a function doing something beyond what is in its
-  documentation, then you should watch out, or it might do something else
-  later.
+Doxygen comments are the contract in our abstraction-by-contract world: if
+the functions that call your function rely on it doing something, then your
+function should mention that it does that something in the documentation.  If
+you rely on a function doing something beyond what is in its documentation,
+then you should watch out, or it might do something else later.
 
-2. Code notes
-
-2.1. Dataflows
-
-2.1.1. How Incoming data is handled
-
-There are two paths for data arriving at Tor over the network: regular
-TCP data, and DNS.
-
-2.1.1.1. TCP.
-
-When Tor takes information over the network, it uses the functions
-read_to_buf() and read_to_buf_tls() in buffers.c.  These read from a
-socket or an SSL* into a buffer_t, which is an mbuf-style linkedlist
-of memory chunks.
-
-read_to_buf() and read_to_buf_tls() are called only from
-connection_read_to_buf() in connection.c.  It takes a connection_t
-pointer, and reads data into it over the network, up to the
-connection's current bandwidth limits.  It places that data into the
-"inbuf" field of the connection, and then:
-  - Adjusts the connection's want-to-read/want-to-write status as
-    appropriate.
-  - Increments the read and written counts for the connection as
-    appropriate.
-  - Adjusts bandwidth buckets as appropriate.
-
-connection_read_to_buf() is called only from connection_handle_read().
-The connection_handle_read() function is called whenever libevent
-decides (based on select, poll, epoll, kqueue, etc) that there is data
-to read from a connection.  If any data is read,
-connection_handle_read() calls connection_process_inbuf() to see if
-any of the data can be processed.  If the connection was closed,
-connection_handle_read() calls connection_reached_eof().
-
-Connection_process_inbuf() and connection_reached_eof() both dispatch
-based on the connection type to determine what to do with the data
-that's just arrived on the connection's inbuf field.  Each type of
-connection has its own version of these functions.  For example,
-directory connections process incoming data in
-connection_dir_process_inbuf(), while OR connections process incoming
-data in connection_or_process_inbuf().  These
-connection_*_process_inbuf() functions extract data from the
-connection's inbuf field (a buffer_t), using functions from buffers.c.
-Some of these accessor functions are straightforward data extractors
-(like fetch_from_buf()); others do protocol-specific parsing.
-
-
-2.1.1.2. DNS
-
-Tor launches (and optionally accepts) DNS requests using the code in
-eventdns.c, which is a copy of libevent's evdns.c.  (We don't use
-libevent's version because it is not yet in the versions of libevent
-all our users have.)  DNS replies are read in nameserver_read();
-DNS queries are read in server_port_read().
 
