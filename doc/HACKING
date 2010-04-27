@@ -145,7 +145,7 @@ preference)
 Did you remember...
 
    - To build your code while configured with --enable-gcc-warnings?
-   - To run "make check-speces" on your code?
+   - To run "make check-spaces" on your code?
    - To write unit tests, as possible?
    - To base your code on the appropriate branch?
    - To include a file in the "changes" directory as appropriate?
