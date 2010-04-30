@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - Testsuite:  In the util/threads test no longer free the test_mutex
-      before all worker threads have finished.
-    - Testsuite:  The master thread could starve the worker threads quite
-      badly on certain systems, causing them to run only partially in
-      the allowed window.  This resulted in test failures.  Now the master
-      thread sleeps occasionally for a few microseconds while the two
-      worker-threads compete for the mutex.
