@@ -1,4 +1,4 @@
-Changes in version 0.2.1.26 - 2010-05-0?
+Changes in version 0.2.1.26 - 2010-05-02
   o Major bugfixes:
     - Teach relays to defend themselves from connection overload. Relays
       now close idle circuits early if it looks like they were intended
