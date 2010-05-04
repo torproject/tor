@@ -1121,7 +1121,8 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
 void
 circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 {
-  int filtered=0,timeouts=0,i=0;
+  long prev_timeout = tor_lround(cbt->timeout_ms/1000);
+  int filtered=0;
   double timeout_rate;
 
   if (!circuit_build_times_set_timeout_worker(cbt))
@@ -1141,12 +1142,34 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 
   timeout_rate = circuit_build_times_timeout_rate(cbt);
 
-  log_info(LD_CIRC,
-           "Set circuit build timeout to %lds (%lfms, Xm: %d, a: %lf, r: "
-           "%lf) based on %d circuit times", tor_lround(cbt->timeout_ms/1000),
-           cbt->timeout_ms, cbt->Xm, cbt->alpha,
-           1.0-((double)timeouts)/cbt->total_build_times,
-           cbt->total_build_times);
+  if (prev_timeout > tor_lround(cbt->timeout_ms/1000)) {
+    log_notice(LD_CIRC,
+               "Based on %d cicuit times, it looks like we don't need to "
+               "wait so long for circuits to finish. We will now assume a "
+               "circuit is too slow to use after waiting %ld seconds.",
+               cbt->total_build_times,
+               tor_lround(cbt->timeout_ms/1000));
+    log_info(LD_CIRC,
+             "Circuit timeout data: %lfms, Xm: %d, a: %lf, r: %lf",
+             cbt->timeout_ms, cbt->Xm, cbt->alpha, timeout_rate);
+  } else if (prev_timeout < tor_lround(cbt->timeout_ms/1000)) {
+    log_notice(LD_CIRC,
+               "Based on %d cicuit times, it looks like we need to wait "
+               "wait longer for circuits to finish. We will now assume a "
+               "circuit is too slow to use after waiting %ld seconds.",
+               cbt->total_build_times,
+               tor_lround(cbt->timeout_ms/1000));
+    log_info(LD_CIRC,
+             "Circuit timeout data: %lfms, Xm: %d, a: %lf, r: %lf",
+             cbt->timeout_ms, cbt->Xm, cbt->alpha, timeout_rate);
+  } else {
+    log_info(LD_CIRC,
+             "Set circuit build timeout to %lds (%lfms, Xm: %d, a: %lf, "
+             "r: %lf) based on %d circuit times",
+             tor_lround(cbt->timeout_ms/1000),
+             cbt->timeout_ms, cbt->Xm, cbt->alpha, timeout_rate,
+             cbt->total_build_times);
+  }
 }
 
 /** Iterate over values of circ_id, starting from conn-\>next_circ_id,
