@@ -20,6 +20,8 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
 
+#define CBT_BIN_TO_MS(bin) ((bin)*CBT_BIN_WIDTH + (CBT_BIN_WIDTH/2))
+
 /********* START VARIABLES **********/
 /** Global list of circuit build times */
 // FIXME: Add this as a member for entry_guard_t instead of global?
@@ -387,25 +389,53 @@ circuit_build_times_create_histogram(circuit_build_times_t *cbt,
 }
 
 /**
- * Return the most frequent build time (rounded to CBT_BIN_WIDTH ms).
+ * Return the Pareto start-of-curve parameter Xm.
  *
- * Ties go in favor of the slower time.
+ * Because we are not a true Pareto curve, we compute this as the
+ * weighted average of the N=3 most frequent build time bins.
  */
 static build_time_t
-circuit_build_times_mode(circuit_build_times_t *cbt)
+circuit_build_times_get_xm(circuit_build_times_t *cbt)
 {
-  build_time_t i, nbins, max_bin=0;
+  build_time_t i, nbins;
+  build_time_t nth_max_bin[CBT_NUM_XM_MODES];
+  int32_t bin_counts=0;
+  build_time_t ret = 0;
   uint32_t *histogram = circuit_build_times_create_histogram(cbt, &nbins);
+  int n=0;
+  int num_modes = CBT_NUM_XM_MODES;
 
+  // Only use one mode if < 1000 buildtimes. Not enough data
+  // for multiple.
+  if (cbt->total_build_times < CBT_NCIRCUITS_TO_OBSERVE)
+    num_modes = 1;
+
+  memset(nth_max_bin, 0, sizeof(nth_max_bin));
   for (i = 0; i < nbins; i++) {
-    if (histogram[i] >= histogram[max_bin]) {
-      max_bin = i;
+    if (histogram[i] >= histogram[nth_max_bin[0]]) {
+      nth_max_bin[0] = i;
+    }
+
+    for (n = 1; n < num_modes; n++) {
+      if (histogram[i] >= histogram[nth_max_bin[n]] &&
+           (!histogram[nth_max_bin[n-1]]
+               || histogram[i] < histogram[nth_max_bin[n-1]])) {
+        nth_max_bin[n] = i;
+      }
     }
   }
 
+  for (n = 0; n < num_modes; n++) {
+    bin_counts += histogram[nth_max_bin[n]];
+    ret += CBT_BIN_TO_MS(nth_max_bin[n])*histogram[nth_max_bin[n]];
+    log_info(LD_CIRC, "Xm mode #%d: %u %u", n, CBT_BIN_TO_MS(nth_max_bin[n]),
+             histogram[nth_max_bin[n]]);
+  }
+
+  ret /= bin_counts;
   tor_free(histogram);
 
-  return max_bin*CBT_BIN_WIDTH+CBT_BIN_WIDTH/2;
+  return ret;
 }
 
 /**
@@ -436,7 +466,7 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
     line->key = tor_strdup("CircuitBuildTimeBin");
     line->value = tor_malloc(25);
     tor_snprintf(line->value, 25, "%d %d",
-            i*CBT_BIN_WIDTH+CBT_BIN_WIDTH/2, histogram[i]);
+            CBT_BIN_TO_MS(i), histogram[i]);
     next = &(line->next);
   }
 
@@ -596,7 +626,7 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   /* http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation */
   /* We sort of cheat here and make our samples slightly more pareto-like
    * and less frechet-like. */
-  cbt->Xm = circuit_build_times_mode(cbt);
+  cbt->Xm = circuit_build_times_get_xm(cbt);
 
   for (i=0; i< CBT_NCIRCUITS_TO_OBSERVE; i++) {
     if (!x[i]) {
@@ -763,7 +793,7 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
                     (cbt->pre_timeouts+cbt->total_build_times);
     /* Make sure it doesn't exceed the synthetic max */
     timeout_quantile *= CBT_MAX_SYNTHETIC_QUANTILE;
-    cbt->Xm = circuit_build_times_mode(cbt);
+    cbt->Xm = circuit_build_times_get_xm(cbt);
     tor_assert(cbt->Xm > 0);
     /* Use current timeout to get an estimate on alpha */
     circuit_build_times_initial_alpha(cbt, timeout_quantile,

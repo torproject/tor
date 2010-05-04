@@ -3023,6 +3023,9 @@ void entry_guards_free_all(void);
 /** Width of the histogram bins in milliseconds */
 #define CBT_BIN_WIDTH ((build_time_t)50)
 
+/** Number of modes to use in the weighted-avg computation of Xm */
+#define CBT_NUM_XM_MODES (3)
+
 /** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
 #define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
