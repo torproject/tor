@@ -1,4 +1,9 @@
 Changes in version 0.2.2.13-alpha - 2010-04-24
+  Tor 0.2.2.13-alpha addresses the recent connection and memory overload
+  problems we've been seeing on relays, especially relays with their
+  DirPort open. If your relay has been crashing, or you turned it off
+  because it used too many resources, give this release a try.
+
   o Major bugfixes:
     - Teach relays to defend themselves from connection overload. Relays
       now close idle circuits early if it looks like they were intended
