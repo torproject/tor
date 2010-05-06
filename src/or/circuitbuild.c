@@ -105,6 +105,14 @@ circuit_build_times_quantile_cutoff(void)
   return num/100.0;
 }
 
+static double
+circuit_build_times_max_synthetic_quantile(void)
+{
+  int32_t num = networkstatus_get_param(NULL, "cbtmaxsynthquantile",
+                CBT_DEFAULT_MAX_SYNTHETIC_QUANTILE);
+  return num/100.0;
+}
+
 static int32_t
 circuit_build_times_test_frequency(void)
 {
@@ -733,7 +741,7 @@ circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff)
 {
   build_time_t gentime = circuit_build_times_generate_sample(cbt,
-              quantile_cutoff, CBT_MAX_SYNTHETIC_QUANTILE);
+              quantile_cutoff, circuit_build_times_max_synthetic_quantile());
 
   if (gentime < (build_time_t)tor_lround(cbt->timeout_ms)) {
     log_warn(LD_CIRC,
@@ -788,7 +796,7 @@ circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
           ((double)cbt->pre_timeouts)/
                     (cbt->pre_timeouts+cbt->total_build_times);
     /* Make sure it doesn't exceed the synthetic max */
-    timeout_quantile *= CBT_MAX_SYNTHETIC_QUANTILE;
+    timeout_quantile *= circuit_build_times_max_synthetic_quantile();
     cbt->Xm = circuit_build_times_get_xm(cbt);
     tor_assert(cbt->Xm > 0);
     /* Use current timeout to get an estimate on alpha */
@@ -1060,7 +1068,7 @@ circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
 
   timeout_rate = circuit_build_times_timeout_rate(cbt);
   max_timeout = tor_lround(circuit_build_times_calculate_timeout(cbt,
-                    CBT_MAX_SYNTHETIC_QUANTILE));
+                    circuit_build_times_max_synthetic_quantile()));
 
   for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
     if (cbt->circuit_build_times[i] > max_timeout) {
@@ -1069,7 +1077,7 @@ circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
       cbt->circuit_build_times[i] =
           MIN(circuit_build_times_generate_sample(cbt,
                  circuit_build_times_quantile_cutoff(),
-                 CBT_MAX_SYNTHETIC_QUANTILE),
+                 circuit_build_times_max_synthetic_quantile()),
               CBT_BUILD_TIME_MAX);
 
       log_debug(LD_CIRC, "Replaced timeout %d with %d", replaced,

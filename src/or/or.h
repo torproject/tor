@@ -3016,9 +3016,9 @@ void entry_guards_free_all(void);
 #define CBT_NCIRCUITS_TO_OBSERVE 1000
 
 /** Maximum quantile to use to generate synthetic timeouts.
- *  We want to stay a bit short of 1.0, because longtail is
+ *  We want to stay a bit short of 100, because longtail is
  *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
-#define CBT_MAX_SYNTHETIC_QUANTILE 0.90
+#define CBT_DEFAULT_MAX_SYNTHETIC_QUANTILE 90
 
 /** Width of the histogram bins in milliseconds */
 #define CBT_BIN_WIDTH ((build_time_t)50)
