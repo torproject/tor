@@ -3152,6 +3152,7 @@ int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
 void circuit_build_times_init(circuit_build_times_t *cbt);
 void circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
                                               networkstatus_t *ns);
+double circuit_build_times_timeout_rate(const circuit_build_times_t *cbt);
 
 #ifdef CIRCUIT_PRIVATE
 double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
