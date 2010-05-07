@@ -885,7 +885,7 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 Use -fstack-protector.
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1 --param ssp-buffer-size=1"
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
   fi
 
