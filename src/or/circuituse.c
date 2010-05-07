@@ -350,9 +350,20 @@ circuit_expire_building(time_t now)
     } else { /* circuit not open, consider recording failure as timeout */
       int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath &&
             TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_OPEN;
-      if (circuit_build_times_add_timeout(&circ_times, first_hop_succeeded,
-                                          victim->timestamp_created))
+      /*
+       * If the circuit build time is much greater than we would have cut
+       * it off at, we probably had a suspend event along this codepath,
+       * and we should discard the value.
+       */
+      if (now - victim->timestamp_created > (2*circ_times.timeout_ms)/1000+1) {
+        log_notice(LD_CIRC,
+                   "Extremely large value for circuit build timeout: %ld. "
+                   "Assuming clock jump.", now - victim->timestamp_created);
+      } else if (circuit_build_times_add_timeout(&circ_times,
+                                          first_hop_succeeded,
+                                          victim->timestamp_created)) {
         circuit_build_times_set_timeout(&circ_times);
+      }
     }
 
     if (victim->n_conn)

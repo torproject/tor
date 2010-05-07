@@ -308,9 +308,9 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
 int
 circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
 {
-  tor_assert(time <= CBT_BUILD_TIME_MAX);
-  if (time <= 0) {
+  if (time <= 0 || time > CBT_BUILD_TIME_MAX) {
     log_warn(LD_CIRC, "Circuit build time is %u!", time);
+    tor_fragile_assert();
     return -1;
   }
 
@@ -1760,11 +1760,19 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         long timediff;
         tor_gettimeofday(&end);
         timediff = tv_mdiff(&circ->_base.highres_created, &end);
-        if (timediff > INT32_MAX)
-          timediff = INT32_MAX;
-        circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
-        circuit_build_times_network_circ_success(&circ_times);
-        circuit_build_times_set_timeout(&circ_times);
+        /*
+         * If the circuit build time is much greater than we would have cut
+         * it off at, we probably had a suspend event along this codepath,
+         * and we should discard the value.
+         */
+        if (timediff < 0 || timediff > 2*circ_times.timeout_ms+1000) {
+          log_notice(LD_CIRC, "Strange value for circuit build time: %ld. "
+                              "Assuming clock jump.", timediff);
+        } else {
+          circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
+          circuit_build_times_network_circ_success(&circ_times);
+          circuit_build_times_set_timeout(&circ_times);
+        }
       }
       log_info(LD_CIRC,"circuit built!");
       circuit_reset_failure_count(0);
