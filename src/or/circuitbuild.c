@@ -922,17 +922,18 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
                 "Temporarily raising timeout to %lds.",
                 (long int)(now - cbt->liveness.network_last_live),
                 tor_lround(circuit_build_times_get_initial_timeout()/1000));
+      cbt->liveness.suspended_timeout = cbt->timeout_ms;
       cbt->timeout_ms = circuit_build_times_get_initial_timeout();
-      cbt->liveness.net_suspended = 1;
       control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_SUSPENDED);
     }
 
     return 0;
-  } else if (cbt->liveness.net_suspended) {
+  } else if (cbt->liveness.suspended_timeout) {
     log_notice(LD_CIRC,
               "Network activity has resumed. "
               "Resuming circuit timeout calculations.");
-    cbt->liveness.net_suspended = 0;
+    cbt->timeout_ms = cbt->liveness.suspended_timeout;
+    cbt->liveness.suspended_timeout = 0;
     control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESUME);
   }
 

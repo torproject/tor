@@ -3108,8 +3108,9 @@ typedef struct {
   int num_recent_circs;
   /** Index into circular array. */
   int after_firsthop_idx;
-  /** The network is not live. Timeout gathering is suspended */
-  int net_suspended;
+  /** Timeout gathering is suspended if non-zero. The old timeout value
+    * is stored here in that case. */
+  build_time_t suspended_timeout;
 } network_liveness_t;
 
 /** Structure for circuit build times history */
