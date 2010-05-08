@@ -81,6 +81,28 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
 
+static int
+circuit_build_times_disabled(void)
+{
+  int consensus_disabled = networkstatus_get_param(NULL, "cbtdisabled",
+                                                   0);
+  int config_disabled = !get_options()->LearnCircuitBuildTimeout;
+  int dirauth_disabled = get_options()->AuthoritativeDir;
+  int state_disabled = (get_or_state()->LastWritten == -1);
+
+  if (consensus_disabled || config_disabled || dirauth_disabled ||
+         state_disabled) {
+    log_info(LD_CIRC,
+             "CircuitBuildTime learning is disabled. "
+             "Consensus=%d, Config=%d, AuthDir=%d, StateFile=%d",
+             consensus_disabled, config_disabled, dirauth_disabled,
+             state_disabled);
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 static int32_t
 circuit_build_times_max_timeouts(void)
 {
@@ -531,10 +553,15 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   uint32_t loaded_cnt = 0, N = 0;
   config_line_t *line;
   int i;
-  build_time_t *loaded_times = tor_malloc(sizeof(build_time_t)
-                                          * state->TotalBuildTimes);
+  build_time_t *loaded_times;
   circuit_build_times_init(cbt);
   *msg = NULL;
+
+  if (circuit_build_times_disabled()) {
+    return 0;
+  }
+
+  loaded_times = tor_malloc(sizeof(build_time_t)*state->TotalBuildTimes);
 
   for (line = state->BuildtimeHistogram; line; line = line->next) {
     smartlist_t *args = smartlist_create();
@@ -1020,6 +1047,11 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt,
                                 int did_onehop,
                                 time_t start_time)
 {
+  if (circuit_build_times_disabled()) {
+    cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+    return 0;
+  }
+
   circuit_build_times_network_timeout(cbt, did_onehop, start_time);
 
   /* Only count timeouts if network is live.. */
@@ -1769,7 +1801,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         if (timediff < 0 || timediff > 2*circ_times.timeout_ms+1000) {
           log_notice(LD_CIRC, "Strange value for circuit build time: %ld. "
                               "Assuming clock jump.", timediff);
-        } else {
+        } else if (!circuit_build_times_disabled()) {
           circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
           circuit_build_times_network_circ_success(&circ_times);
           circuit_build_times_set_timeout(&circ_times);

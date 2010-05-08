@@ -382,6 +382,12 @@ of their choices.
    construction. If these parameters are not present in the consensus,
    the listed default values should be used instead.
 
+      cbtdisabled
+        Default: 0
+        Effect: If non-zero, all CircuitBuildTime learning code should be
+                disabled and history should be discarded. For use in
+                emergency situations only.
+
       cbtrecentcount
         Default: 20
         Effect: This is the number of circuit build times to keep track of

@@ -2496,9 +2496,12 @@ typedef struct {
                         * connections alive? */
   int SocksTimeout; /**< How long do we let a socks connection wait
                      * unattached before we fail it? */
-  int CircuitBuildTimeout; /**< If non-zero, cull non-open circuits that
-                            * were born at least this many seconds ago. If
-                            * zero, use the internal adaptive algorithm. */
+  int LearnCircuitBuildTimeout; /**< If non-zero, we attempt to learn a value
+                                 * for CircuitBuildTimeout based on timeout
+                                 * history */
+  int CircuitBuildTimeout; /**< Cull non-open circuits that were born at
+                            * least this many seconds ago. Used until
+                            * adaptive algorithm learns a new value. */
   int CircuitIdleTimeout; /**< Cull open clean circuits that were born
                            * at least this many seconds ago. */
   int CircuitStreamTimeout; /**< If non-zero, detach streams from circuits
