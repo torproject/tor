@@ -978,21 +978,25 @@ networkstatus_get_v2_list(void)
 }
 
 /** Return the consensus view of the status of the router whose current
- * <i>descriptor</i> digest is <b>digest</b>, or NULL if no such router is
- * known. */
+ * <i>descriptor</i> digest in <b>consensus</b> is <b>digest</b>, or NULL if
+ * no such router is known. */
 routerstatus_t *
-router_get_consensus_status_by_descriptor_digest(const char *digest)
+router_get_consensus_status_by_descriptor_digest(networkstatus_t *consensus,
+                                                 const char *digest)
 {
-  if (!current_consensus) return NULL;
-  if (!current_consensus->desc_digest_map) {
-    digestmap_t * m = current_consensus->desc_digest_map = digestmap_new();
-    SMARTLIST_FOREACH(current_consensus->routerstatus_list,
+  if (!consensus)
+    consensus = current_consensus;
+  if (!consensus)
+    return NULL;
+  if (!consensus->desc_digest_map) {
+    digestmap_t *m = consensus->desc_digest_map = digestmap_new();
+    SMARTLIST_FOREACH(consensus->routerstatus_list,
                       routerstatus_t *, rs,
      {
        digestmap_set(m, rs->descriptor_digest, rs);
      });
   }
-  return digestmap_get(current_consensus->desc_digest_map, digest);
+  return digestmap_get(consensus->desc_digest_map, digest);
 }
 
 /** Given the digest of a router descriptor, return its current download
@@ -1001,7 +1005,10 @@ download_status_t *
 router_get_dl_status_by_descriptor_digest(const char *d)
 {
   routerstatus_t *rs;
-  if ((rs = router_get_consensus_status_by_descriptor_digest(d)))
+  if (!current_ns_consensus)
+    return NULL;
+  if ((rs = router_get_consensus_status_by_descriptor_digest(
+                                                 current_ns_consensus, d)))
     return &rs->dl_status;
   if (v2_download_status_map)
     return digestmap_get(v2_download_status_map, d);
@@ -2118,7 +2125,7 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
     char dummy[DIGEST_LEN];
     /* instantiates the digest map. */
     memset(dummy, 0, sizeof(dummy));
-    router_get_consensus_status_by_descriptor_digest(dummy);
+    router_get_consensus_status_by_descriptor_digest(ns, dummy);
   }
   SMARTLIST_FOREACH(descs, signed_descriptor_t *, d,
   {

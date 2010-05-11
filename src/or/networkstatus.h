@@ -48,7 +48,8 @@ const smartlist_t *networkstatus_get_v2_list(void);
 download_status_t *router_get_dl_status_by_descriptor_digest(const char *d);
 routerstatus_t *router_get_consensus_status_by_id(const char *digest);
 routerstatus_t *router_get_consensus_status_by_descriptor_digest(
-                                                        const char *digest);
+                                   networkstatus_t *consensus,
+                                   const char *digest);
 routerstatus_t *router_get_consensus_status_by_nickname(const char *nickname,
                                                        int warn_if_unnamed);
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);

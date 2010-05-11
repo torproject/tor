@@ -391,7 +391,9 @@ typedef enum {
 /** A connection to a hidden service directory server: download a v2 rendezvous
  * descriptor. */
 #define DIR_PURPOSE_FETCH_RENDDESC_V2 18
-#define _DIR_PURPOSE_MAX 18
+/** A connection to a directory server: download a microdescriptor. */
+#define DIR_PURPOSE_FETCH_MICRODESC 19
+#define _DIR_PURPOSE_MAX 19
 
 /** True iff <b>p</b> is a purpose corresponding to uploading data to a
  * directory server. */
@@ -1191,8 +1193,13 @@ typedef struct edge_connection_t {
 typedef struct dir_connection_t {
   connection_t _base;
 
-  char *requested_resource; /**< Which 'resource' did we ask the directory
-                             * for? */
+ /** Which 'resource' did we ask the directory for? This is typically the part
+  * of the URL string that defines, relative to the directory conn purpose,
+  * what thing we want.  For example, in router descriptor downloads by
+  * descriptor digest, it contains "d/", then one ore more +-separated
+  * fingerprints.
+  **/
+  char *requested_resource;
   unsigned int dirconn_direct:1; /**< Is this dirconn direct, or via Tor? */
 
   /* Used only for server sides of some dir connections, to implement
@@ -1689,6 +1696,10 @@ typedef struct microdesc_t {
 /** How many times will we try to download a router's descriptor before giving
  * up? */
 #define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8
+
+/** How many times will we try to download a microdescriptor before giving
+ * up? */
+#define MAX_MICRODESC_DOWNLOAD_FAILURES 8
 
 /** Contents of a v2 (non-consensus, non-vote) network status object. */
 typedef struct networkstatus_v2_t {
@@ -3517,6 +3528,8 @@ typedef struct trusted_dir_server_t {
  *  fetches to _any_ single directory server.]
  */
 #define PDS_NO_EXISTING_SERVERDESC_FETCH (1<<3)
+#define PDS_NO_EXISTING_MICRODESC_FETCH (1<<4)
+
 #define _PDS_PREFER_TUNNELED_DIR_CONNS (1<<16)
 
 /** Possible ways to weight routers when choosing one randomly.  See

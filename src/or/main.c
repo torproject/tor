@@ -851,10 +851,13 @@ directory_info_has_arrived(time_t now, int from_cache)
         "I learned some more directory information, but not enough to "
         "build a circuit: %s", get_dir_info_status_string());
     update_router_descriptor_downloads(now);
+    update_microdesc_downloads(now);
     return;
   } else {
-    if (directory_fetches_from_authorities(options))
+    if (directory_fetches_from_authorities(options)) {
       update_router_descriptor_downloads(now);
+      update_microdesc_downloads(now);
+    }
 
     /* if we have enough dir info, then update our guard status with
      * whatever we just learned. */
@@ -1062,6 +1065,7 @@ run_scheduled_events(time_t now)
   if (time_to_try_getting_descriptors < now) {
     update_router_descriptor_downloads(now);
     update_extrainfo_downloads(now);
+    update_microdesc_downloads(now);
     if (options->UseBridges)
       fetch_bridge_descriptors(now);
     if (router_have_minimum_dir_info())

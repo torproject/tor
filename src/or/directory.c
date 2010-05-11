@@ -15,6 +15,7 @@
 #include "dirvote.h"
 #include "geoip.h"
 #include "main.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "policies.h"
 #include "rendclient.h"
@@ -78,6 +79,8 @@ static void dir_routerdesc_download_failed(smartlist_t *failed,
                                            int router_purpose,
                                            int was_extrainfo,
                                            int was_descriptor_digests);
+static void dir_microdesc_download_failed(smartlist_t *failed,
+                                          int status_code);
 static void note_client_request(int purpose, int compressed, size_t bytes);
 static int client_likes_consensus(networkstatus_t *v, const char *want_url);
 
@@ -137,7 +140,8 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
       dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS ||
       dir_purpose == DIR_PURPOSE_FETCH_CERTIFICATE ||
       dir_purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-      dir_purpose == DIR_PURPOSE_FETCH_EXTRAINFO)
+      dir_purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
+      dir_purpose == DIR_PURPOSE_FETCH_MICRODESC)
     return 0;
   return 1;
 }
@@ -201,6 +205,8 @@ dir_conn_purpose_to_string(int purpose)
       return "hidden-service v2 descriptor fetch";
     case DIR_PURPOSE_UPLOAD_RENDDESC_V2:
       return "hidden-service v2 descriptor upload";
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      return "microdescriptor fetch";
     }
 
   log_warn(LD_BUG, "Called with unknown purpose %d", purpose);
@@ -355,6 +361,9 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     case DIR_PURPOSE_FETCH_CERTIFICATE:
       type = V3_AUTHORITY;
       break;
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      type = V3_AUTHORITY;
+      break;
     default:
       log_warn(LD_BUG, "Unexpected purpose %d", (int)dir_purpose);
       return;
@@ -410,7 +419,8 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       if (prefer_authority || type == BRIDGE_AUTHORITY) {
         /* only ask authdirservers, and don't ask myself */
         rs = router_pick_trusteddirserver(type, pds_flags);
-        if (rs == NULL && (pds_flags & PDS_NO_EXISTING_SERVERDESC_FETCH)) {
+        if (rs == NULL && (pds_flags & (PDS_NO_EXISTING_SERVERDESC_FETCH|
+                                        PDS_NO_EXISTING_MICRODESC_FETCH))) {
           /* We don't want to fetch from any authorities that we're currently
            * fetching server descriptors from, and we got no match.  Did we
            * get no match because all the authorities have connections
@@ -418,7 +428,8 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
            * return,) or because all the authorities are down or on fire or
            * unreachable or something (in which case we should go on with
            * our fallback code)? */
-          pds_flags &= ~PDS_NO_EXISTING_SERVERDESC_FETCH;
+          pds_flags &= ~(PDS_NO_EXISTING_SERVERDESC_FETCH|
+                         PDS_NO_EXISTING_MICRODESC_FETCH);
           rs = router_pick_trusteddirserver(type, pds_flags);
           if (rs) {
             log_debug(LD_DIR, "Deferring serverdesc fetch: all authorities "
@@ -607,7 +618,8 @@ connection_dir_request_failed(dir_connection_t *conn)
     connection_dir_download_networkstatus_failed(conn, -1);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
              conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
-    log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
+    log_info(LD_DIR, "Giving up on serverdesc/extrainfo fetch from "
+             "directory server at '%s'; retrying",
              conn->_base.address);
     if (conn->router_purpose == ROUTER_PURPOSE_BRIDGE)
       connection_dir_bridge_routerdesc_failed(conn);
@@ -617,7 +629,8 @@ connection_dir_request_failed(dir_connection_t *conn)
       conn->requested_resource ? conn->requested_resource : "ns";
     networkstatus_consensus_download_failed(0, flavname);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
-    log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
+    log_info(LD_DIR, "Giving up on certificate fetch from directory server "
+             "at '%s'; retrying",
              conn->_base.address);
     connection_dir_download_cert_failed(conn, 0);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_DETACHED_SIGNATURES) {
@@ -626,6 +639,10 @@ connection_dir_request_failed(dir_connection_t *conn)
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_STATUS_VOTE) {
     log_info(LD_DIR, "Giving up downloading votes from '%s'",
              conn->_base.address);
+  } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+    log_info(LD_DIR, "Giving up on downloading microdescriptors from "
+             " directory server at '%s'; will retry", conn->_base.address);
+    connection_dir_download_routerdesc_failed(conn);
   }
 }
 
@@ -696,7 +713,8 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
   /* No need to relaunch descriptor downloads here: we already do it
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
   tor_assert(conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-             conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
+             conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
+             conn->_base.purpose == DIR_PURPOSE_FETCH_MICRODESC);
 
   (void) conn;
 }
@@ -1136,6 +1154,11 @@ directory_send_command(dir_connection_t *conn,
       url = tor_malloc(len);
       tor_snprintf(url, len, "/tor/extra/%s", resource);
       break;
+    case DIR_PURPOSE_FETCH_MICRODESC:
+      tor_assert(resource);
+      httpcommand = "GET";
+      tor_asprintf(&url, "/tor/micro/%s.z", resource);
+      break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(!resource);
       tor_assert(payload);
@@ -1411,6 +1434,9 @@ body_is_plausible(const char *body, size_t len, int purpose)
     return 1; /* empty bodies don't need decompression */
   if (len < 32)
     return 0;
+  if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+    return (!strcmpstart(body,"onion-key"));
+  }
   if (purpose != DIR_PURPOSE_FETCH_RENDDESC) {
     if (!strcmpstart(body,"router") ||
         !strcmpstart(body,"signed-directory") ||
@@ -1487,7 +1513,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   int plausible;
   int skewed=0;
   int allow_partial = (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
-                       conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
+                       conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO ||
+                       conn->_base.purpose == DIR_PURPOSE_FETCH_MICRODESC);
   int was_compressed=0;
   time_t now = time(NULL);
 
@@ -1885,6 +1912,41 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     if (directory_conn_is_self_reachability_test(conn))
       router_dirport_found_reachable();
+  }
+  if (conn->_base.purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+    smartlist_t *which = NULL;
+    log_info(LD_DIR,"Received answer to microdescriptor request (status %d, "
+             "size %d) from server '%s:%d'",
+             status_code, (int)body_len, conn->_base.address, conn->_base.port);
+    tor_assert(conn->requested_resource &&
+               !strcmpstart(conn->requested_resource, "d/"));
+    which = smartlist_create();
+    dir_split_resource_into_fingerprints(conn->requested_resource+2,
+                                         which, NULL,
+                                         DSR_DIGEST256|DSR_BASE64);
+    if (status_code != 200) {
+      log_info(LD_DIR, "Received status code %d (%s) from server "
+               "'%s:%d' while fetching \"/tor/micro/%s\".  I'll try again "
+               "soon.",
+               status_code, escaped(reason), conn->_base.address,
+               (int)conn->_base.port, conn->requested_resource);
+      dir_microdesc_download_failed(which, status_code);
+      SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
+      smartlist_free(which);
+      tor_free(body); tor_free(headers); tor_free(reason);
+      return 0;
+    } else {
+      smartlist_t *mds;
+      mds = microdescs_add_to_cache(get_microdesc_cache(),
+                                    body, body+body_len, SAVED_NOWHERE, 0,
+                                    now, which);
+      if (smartlist_len(which)) {
+        /* Mark remaining ones as failed. */
+        dir_microdesc_download_failed(which, status_code);
+      }
+      SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
+      smartlist_free(which);
+    }
   }
 
   if (conn->_base.purpose == DIR_PURPOSE_UPLOAD_DIR) {
@@ -3610,6 +3672,36 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
 
   /* No need to relaunch descriptor downloads here: we already do it
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
+}
+
+/* DOCDOC NM */
+static void
+dir_microdesc_download_failed(smartlist_t *failed,
+                              int status_code)
+{
+  networkstatus_t *consensus
+    = networkstatus_get_latest_consensus_by_flavor(FLAV_MICRODESC);
+  routerstatus_t *rs;
+  download_status_t *dls;
+  time_t now = time(NULL);
+  int server = directory_fetches_from_authorities(get_options());
+
+  if (! consensus)
+    return;
+  SMARTLIST_FOREACH_BEGIN(failed, const char *, d) {
+    rs = router_get_consensus_status_by_descriptor_digest(consensus, d);
+    if (!rs)
+      continue;
+    dls = &rs->dl_status;
+    if (dls->n_download_failures >= MAX_MICRODESC_DOWNLOAD_FAILURES)
+      continue;
+    {
+      char buf[BASE64_DIGEST256_LEN+1];
+      digest256_to_base64(buf, d);
+      download_status_increment_failure(dls, status_code, buf,
+                                        server, now);
+    }
+  } SMARTLIST_FOREACH_END(d);
 }
 
 /** Helper.  Compare two fp_pair_t objects, and return -1, 0, or 1 as

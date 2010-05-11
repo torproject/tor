@@ -3,8 +3,12 @@
 
 #include "or.h"
 #include "config.h"
+#include "directory.h"
 #include "microdesc.h"
 #include "routerparse.h"
+#include "networkstatus.h"
+#include "routerlist.h"
+#include "dirserv.h"
 
 /** A data structure to hold a bunch of cached microdescriptors.  There are
  * two active files in the cache: a "cache file" that we mmap, and a "journal
@@ -119,15 +123,19 @@ get_microdesc_cache(void)
  * ending at <b>eos</b>, and store them in <b>cache</b>.  If <b>no-save</b>,
  * mark them as non-writable to disk.  If <b>where</b> is SAVED_IN_CACHE,
  * leave their bodies as pointers to the mmap'd cache.  If where is
- * <b>SAVED_NOWHERE</b>, do not allow annotations.  Return a list of the added
- * microdescriptors.  */
+ * <b>SAVED_NOWHERE</b>, do not allow annotations.  If listed_at is positive,
+ * set the last_listed field of every microdesc to listed_at.  If
+ * requested_digests is non-null, then it contains a list of digests we mean
+ * to allow, so we should reject any non-requested microdesc with a different
+ * digest, and alter the list to contain only the digests of those microdescs we
+ * didn't find.
+ * Return a list of the added microdescriptors.  */
 smartlist_t *
 microdescs_add_to_cache(microdesc_cache_t *cache,
                         const char *s, const char *eos, saved_location_t where,
-                        int no_save)
+                        int no_save, time_t listed_at,
+                        smartlist_t *requested_digests256)
 {
-  /*XXXX need an argument that sets last_listed as appropriate. */
-
   smartlist_t *descriptors, *added;
   const int allow_annotations = (where != SAVED_NOWHERE);
   const int copy_body = (where != SAVED_IN_CACHE);
@@ -135,6 +143,33 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
   descriptors = microdescs_parse_from_string(s, eos,
                                              allow_annotations,
                                              copy_body);
+  if (listed_at > 0) {
+    SMARTLIST_FOREACH(descriptors, microdesc_t *, md,
+                      md->last_listed = listed_at);
+  }
+  if (requested_digests256) {
+    digestmap_t *requested; /* XXXX actuqlly we should just use a
+                               digest256map */
+    requested = digestmap_new();
+    SMARTLIST_FOREACH(requested_digests256, const char *, cp,
+      digestmap_set(requested, cp, (void*)1));
+    SMARTLIST_FOREACH_BEGIN(descriptors, microdesc_t *, md) {
+      if (digestmap_get(requested, md->digest)) {
+        digestmap_set(requested, md->digest, (void*)2);
+      } else {
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Received non-requested microcdesc");
+        microdesc_free(md);
+        SMARTLIST_DEL_CURRENT(descriptors, md);
+      }
+    } SMARTLIST_FOREACH_END(md);
+    SMARTLIST_FOREACH_BEGIN(requested_digests256, char *, cp) {
+      if (digestmap_get(requested, cp) == (void*)2) {
+        tor_free(cp);
+        SMARTLIST_DEL_CURRENT(requested_digests256, cp);
+      }
+    } SMARTLIST_FOREACH_END(cp);
+    digestmap_free(requested, NULL);
+  }
 
   added = microdescs_add_list_to_cache(cache, descriptors, where, no_save);
   smartlist_free(descriptors);
@@ -251,7 +286,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   mm = cache->cache_content = tor_mmap_file(cache->cache_fname);
   if (mm) {
     added = microdescs_add_to_cache(cache, mm->data, mm->data+mm->size,
-                                    SAVED_IN_CACHE, 0);
+                                    SAVED_IN_CACHE, 0, -1, NULL);
     if (added) {
       total += smartlist_len(added);
       smartlist_free(added);
@@ -263,7 +298,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   if (journal_content) {
     added = microdescs_add_to_cache(cache, journal_content,
                                     journal_content+st.st_size,
-                                    SAVED_IN_JOURNAL, 0);
+                                    SAVED_IN_JOURNAL, 0, -1, NULL);
     if (added) {
       total += smartlist_len(added);
       smartlist_free(added);
@@ -412,3 +447,69 @@ microdesc_average_size(microdesc_cache_t *cache)
   return (size_t)(cache->total_len_seen / cache->n_seen);
 }
 
+/** Return a smartlist of all the sha256 digest of the microdescriptors that
+ * are listed in <b>ns</b> but not present in <b>cache</b>. Returns pointers
+ * to internals of <b>ns</b>; you should not free the members of the resulting
+ * smartlist.  Omit all microdescriptors whose digest appear in <b>skip</b>. */
+smartlist_t *
+microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
+                                 int downloadable_only, digestmap_t *skip)
+{
+  smartlist_t *result = smartlist_create();
+  time_t now = time(NULL);
+  tor_assert(ns->flavor == FLAV_MICRODESC);
+  SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
+    if (microdesc_cache_lookup_by_digest256(cache, rs->descriptor_digest))
+      continue;
+    if (downloadable_only &&
+        !download_status_is_ready(&rs->dl_status, now,
+                                  MAX_MICRODESC_DOWNLOAD_FAILURES))
+      continue;
+    if (skip && digestmap_get(skip, rs->descriptor_digest))
+      continue;
+    /* XXXX Also skip if we're a noncache and wouldn't use this router.
+     * XXXX NM Microdesc
+     */
+    smartlist_add(result, rs->descriptor_digest);
+  } SMARTLIST_FOREACH_END(rs);
+  return result;
+}
+
+/** DOCDOC */
+void
+update_microdesc_downloads(time_t now)
+{
+  or_options_t *options = get_options();
+  networkstatus_t *consensus;
+  smartlist_t *missing;
+  digestmap_t *pending;
+
+  if (should_delay_dir_fetches(options))
+    return;
+  if (directory_too_idle_to_fetch_descriptors(options, now))
+    return;
+
+  consensus = networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC);
+  if (!consensus)
+    return;
+
+  if (!directory_caches_dir_info(options)) {
+    /* Right now, only caches fetch microdescriptors.
+     * XXXX NM Microdescs */
+    return;
+  }
+
+  pending = digestmap_new();
+  list_pending_microdesc_downloads(pending);
+
+  missing = microdesc_list_missing_digest256(consensus,
+                                             get_microdesc_cache(),
+                                             1,
+                                             pending);
+  digestmap_free(pending, NULL);
+
+  launch_descriptor_downloads(DIR_PURPOSE_FETCH_MICRODESC,
+                              missing, NULL, now);
+
+  smartlist_free(missing);
+}
