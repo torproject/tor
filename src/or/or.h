@@ -3113,7 +3113,7 @@ typedef struct {
   int after_firsthop_idx;
   /** Timeout gathering is suspended if non-zero. The old timeout value
     * is stored here in that case. */
-  build_time_t suspended_timeout;
+  double suspended_timeout;
 } network_liveness_t;
 
 /** Structure for circuit build times history */
@@ -3137,7 +3137,8 @@ typedef struct {
   double alpha;
   /** Have we computed a timeout? */
   int have_computed_timeout;
-  /** The exact value for that timeout in milliseconds */
+  /** The exact value for that timeout in milliseconds. Stored as a double
+   * to maintain precision from calculations to and from quantile value. */
   double timeout_ms;
 } circuit_build_times_t;
 

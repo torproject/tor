@@ -955,7 +955,7 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
     }
 
     return 0;
-  } else if (cbt->liveness.suspended_timeout) {
+  } else if (cbt->liveness.suspended_timeout > 0) {
     log_notice(LD_CIRC,
               "Network activity has resumed. "
               "Resuming circuit timeout calculations.");
@@ -1004,7 +1004,12 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   /* Check to see if this has happened before. If so, double the timeout
    * to give people on abysmally bad network connections a shot at access */
   if (cbt->timeout_ms >= circuit_build_times_get_initial_timeout()) {
-    cbt->timeout_ms *= 2;
+    if (cbt->timeout_ms > INT32_MAX/2) {
+      log_warn(LD_CIRC, "Insanely large circuit build timeout value: %lf",
+               cbt->timeout_ms);
+    } else {
+      cbt->timeout_ms *= 2;
+    }
   } else {
     cbt->timeout_ms = circuit_build_times_get_initial_timeout();
   }
@@ -1100,7 +1105,7 @@ circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
   }
 
   timeout_rate = circuit_build_times_timeout_rate(cbt);
-  max_timeout = tor_lround(circuit_build_times_calculate_timeout(cbt,
+  max_timeout = (build_time_t)tor_lround(circuit_build_times_calculate_timeout(cbt,
                     circuit_build_times_max_synthetic_quantile()));
 
   for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
