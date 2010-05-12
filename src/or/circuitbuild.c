@@ -84,22 +84,26 @@ static void entry_guards_changed(void);
 static int
 circuit_build_times_disabled(void)
 {
-  int consensus_disabled = networkstatus_get_param(NULL, "cbtdisabled",
-                                                   0);
-  int config_disabled = !get_options()->LearnCircuitBuildTimeout;
-  int dirauth_disabled = get_options()->AuthoritativeDir;
-  int state_disabled = (get_or_state()->LastWritten == -1);
-
-  if (consensus_disabled || config_disabled || dirauth_disabled ||
-         state_disabled) {
-    log_info(LD_CIRC,
-             "CircuitBuildTime learning is disabled. "
-             "Consensus=%d, Config=%d, AuthDir=%d, StateFile=%d",
-             consensus_disabled, config_disabled, dirauth_disabled,
-             state_disabled);
-    return 1;
-  } else {
+  if (unit_tests) {
     return 0;
+  } else {
+    int consensus_disabled = networkstatus_get_param(NULL, "cbtdisabled",
+                                                     0);
+    int config_disabled = !get_options()->LearnCircuitBuildTimeout;
+    int dirauth_disabled = get_options()->AuthoritativeDir;
+    int state_disabled = (get_or_state()->LastWritten == -1);
+
+    if (consensus_disabled || config_disabled || dirauth_disabled ||
+           state_disabled) {
+      log_info(LD_CIRC,
+               "CircuitBuildTime learning is disabled. "
+               "Consensus=%d, Config=%d, AuthDir=%d, StateFile=%d",
+               consensus_disabled, config_disabled, dirauth_disabled,
+               state_disabled);
+      return 1;
+    } else {
+      return 0;
+    }
   }
 }
 
@@ -1101,6 +1105,12 @@ circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
    * progressively worse until the timeout *is* Xm. Filtering should
    * only be done on really shallow curves anyway. */
   if (cbt->alpha > 1.5) {
+    return 0;
+  }
+
+  /* Do not filter for unit tests. They expect the distribution to be
+   * unchanged from run to run. */
+  if (unit_tests) {
     return 0;
   }
 

@@ -494,7 +494,7 @@ test_circuit_timeout(void)
     timeout1 = circuit_build_times_calculate_timeout(&estimate,
                                   CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
     circuit_build_times_set_timeout(&estimate);
-    log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout1, estimate.Xm);
+    log_warn(LD_CIRC, "Timeout1 is %lf, Xm is %d", timeout1, estimate.Xm);
     /* XXX: 5% distribution error may not be the right metric */
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
                 circuit_build_times_cdf(&initial, timeout1)) > 0.05
@@ -511,7 +511,7 @@ test_circuit_timeout(void)
                                  CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
 
   circuit_build_times_set_timeout(&final);
-  log_warn(LD_CIRC, "Timeout is %lf, Xm is %d", timeout2, final.Xm);
+  log_warn(LD_CIRC, "Timeout2 is %lf, Xm is %d", timeout2, final.Xm);
 
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
                    circuit_build_times_cdf(&initial, timeout2)) < 0.05);
