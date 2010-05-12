@@ -608,7 +608,7 @@ connection_or_group_set_badness(or_connection_t *head)
       /* We have at least one open canonical connection to this router,
        * and this one is open but not canonical.  Mark it bad. */
       log_info(LD_OR,
-               "Marking OR conn to %s:%d as too old for new circuits: "
+               "Marking OR conn to %s:%d as unsuitable for new circuits: "
                "(fd %d, %d secs old).  It is not canonical, and we have "
                "another connection to that OR that is.",
                or_conn->_base.address, or_conn->_base.port, or_conn->_base.s,
@@ -648,7 +648,7 @@ connection_or_group_set_badness(or_connection_t *head)
          even when we're being forgiving. */
       if (best->is_canonical) {
         log_info(LD_OR,
-                 "Marking OR conn to %s:%d as too old for new circuits: "
+                 "Marking OR conn to %s:%d as unsuitable for new circuits: "
                  "(fd %d, %d secs old).  We have a better canonical one "
                  "(fd %d; %d secs old).",
                  or_conn->_base.address, or_conn->_base.port, or_conn->_base.s,
@@ -658,9 +658,9 @@ connection_or_group_set_badness(or_connection_t *head)
       } else if (!tor_addr_compare(&or_conn->real_addr,
                                    &best->real_addr, CMP_EXACT)) {
         log_info(LD_OR,
-                 "Marking OR conn to %s:%d as too old for new circuits: "
-                 "(fd %d, %d secs old).  We have a better one "
-                 "(fd %d; %d secs old).",
+                 "Marking OR conn to %s:%d as unsuitable for new circuits: "
+                 "(fd %d, %d secs old).  We have a better one with the "
+                 "same address (fd %d; %d secs old).",
                  or_conn->_base.address, or_conn->_base.port, or_conn->_base.s,
                  (int)(now - or_conn->_base.timestamp_created),
                  best->_base.s, (int)(now - best->_base.timestamp_created));
