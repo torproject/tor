@@ -369,7 +369,7 @@ geoip_get_mean_shares(time_t now, double *v2_share_out,
 static void
 rotate_request_period(void)
 {
-  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+  SMARTLIST_FOREACH_BEGIN(geoip_countries, geoip_country_t *, c) {
 #if REQUEST_HIST_LEN > 1
       memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
               sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
@@ -378,7 +378,7 @@ rotate_request_period(void)
 #endif
       c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
       c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
-    });
+  } SMARTLIST_FOREACH_END(c);
   current_request_period_starts += REQUEST_HIST_PERIOD;
   if (n_old_request_periods < REQUEST_HIST_LEN-1)
     ++n_old_request_periods;
