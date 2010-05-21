@@ -2327,7 +2327,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
      * possibly support any of them.  Choose a router at random that satisfies
      * at least one predicted exit port. */
 
-    int try;
+    int attempt;
     smartlist_t *needed_ports, *supporting, *use;
 
     if (best_support == -1) {
@@ -2347,13 +2347,13 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     supporting = smartlist_create();
     use = smartlist_create();
     needed_ports = circuit_get_unhandled_ports(time(NULL));
-    for (try = 0; try < 2; try++) {
+    for (attempt = 0; attempt < 2; attempt++) {
       /* try once to pick only from routers that satisfy a needed port,
        * then if there are none, pick from any that support exiting. */
       for (i = 0; i < smartlist_len(dir->routers); i++) {
         router = smartlist_get(dir->routers, i);
         if (n_supported[i] != -1 &&
-            (try || router_handles_some_port(router, needed_ports))) {
+            (attempt || router_handles_some_port(router, needed_ports))) {
 //          log_fn(LOG_DEBUG,"Try %d: '%s' is a possibility.",
 //                 try, router->nickname);
           smartlist_add(supporting, router);
