@@ -22,7 +22,9 @@
 #ifdef MS_WINDOWS
 #include <process.h>
 #include <windows.h>
+#if !defined (WINCE)
 #include <sys/locking.h>
+#endif
 #endif
 
 #ifdef HAVE_UNAME
@@ -169,12 +171,13 @@ tor_munmap_file(tor_mmap_t *handle)
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
+  WCHAR wfilename[MAX_PATH]= {0};
   tor_mmap_t *res = tor_malloc_zero(sizeof(tor_mmap_t));
   int empty = 0;
   res->file_handle = INVALID_HANDLE_VALUE;
   res->mmap_handle = NULL;
-
-  res->file_handle = CreateFile(filename,
+  mbstowcs(wfilename,filename,MAX_PATH);
+  res->file_handle = CreateFileW(wfilename,
                                 GENERIC_READ, FILE_SHARE_READ,
                                 NULL,
                                 OPEN_EXISTING,
@@ -1697,10 +1700,15 @@ get_uname(void)
 #endif
       {
 #ifdef MS_WINDOWS
-        OSVERSIONINFOEX info;
+#if defined (WINCE)
+        OSVERSIONINFO info;
+#else
+        OSVERSIONINFOEXW info;
+#endif
         int i;
         const char *plat = NULL;
         const char *extra = NULL;
+        char acsd[MAX_PATH] = {0};
         static struct {
           unsigned major; unsigned minor; const char *version;
         } win_version_table[] = {
@@ -1718,20 +1726,21 @@ get_uname(void)
         };
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
-        if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
+        if (! GetVersionExW((LPOSVERSIONINFO)&info)) {
           strlcpy(uname_result, "Bizarre version of Windows where GetVersionEx"
                   " doesn't work.", sizeof(uname_result));
           uname_result_is_set = 1;
           return uname_result;
         }
+        wcstombs(acsd, info.szCSDVersion, MAX_PATH);
         if (info.dwMajorVersion == 4 && info.dwMinorVersion == 0) {
           if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
             plat = "Windows NT 4.0";
           else
             plat = "Windows 95";
-          if (info.szCSDVersion[1] == 'B')
+          if (acsd[1] == 'B')
             extra = "OSR2 (B)";
-          else if (info.szCSDVersion[1] == 'C')
+          else if (acsd[1] == 'C')
             extra = "OSR2 (C)";
         } else {
           for (i=0; win_version_table[i].major>0; ++i) {
@@ -1743,14 +1752,14 @@ get_uname(void)
           }
         }
         if (plat && !strcmp(plat, "Windows 98")) {
-          if (info.szCSDVersion[1] == 'A')
+          if (acsd[1] == 'A')
             extra = "SE (A)";
-          else if (info.szCSDVersion[1] == 'B')
+          else if (acsd[1] == 'B')
             extra = "SE (B)";
         }
         if (plat) {
           if (!extra)
-            extra = info.szCSDVersion;
+            extra = acsd;
           tor_snprintf(uname_result, sizeof(uname_result), "%s %s",
                        plat, extra);
         } else {
@@ -1759,13 +1768,14 @@ get_uname(void)
             tor_snprintf(uname_result, sizeof(uname_result),
                       "Very recent version of Windows [major=%d,minor=%d] %s",
                       (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                      info.szCSDVersion);
+                      acsd);
           else
             tor_snprintf(uname_result, sizeof(uname_result),
                       "Unrecognized version of Windows [major=%d,minor=%d] %s",
                       (int)info.dwMajorVersion,(int)info.dwMinorVersion,
-                      info.szCSDVersion);
+                      acsd);
         }
+#if !defined (WINCE)
 #ifdef VER_SUITE_BACKOFFICE
         if (info.wProductType == VER_NT_DOMAIN_CONTROLLER) {
           strlcat(uname_result, " [domain controller]", sizeof(uname_result));
@@ -1774,6 +1784,7 @@ get_uname(void)
         } else if (info.wProductType == VER_NT_WORKSTATION) {
           strlcat(uname_result, " [workstation]", sizeof(uname_result));
         }
+#endif
 #endif
 #else
         strlcpy(uname_result, "Unknown platform", sizeof(uname_result));
@@ -1902,8 +1913,15 @@ tor_gettimeofday(struct timeval *timeval)
     uint64_t ft_64;
     FILETIME ft_ft;
   } ft;
+#if defined (WINCE)
+  /* wince do not have GetSystemTimeAsFileTime */
+  SYSTEMTIME stime;
+  GetSystemTime(&stime);
+  SystemTimeToFileTime(&stime,&ft.ft_ft);
+#else
   /* number of 100-nsec units since Jan 1, 1601 */
   GetSystemTimeAsFileTime(&ft.ft_ft);
+#endif
   if (ft.ft_64 < EPOCH_BIAS) {
     log_err(LD_GENERAL,"System time is before 1970; failing.");
     exit(1);
@@ -2515,10 +2533,11 @@ char *
 format_win32_error(DWORD err)
 {
   LPVOID str = NULL;
+  char abuf[1024] = {0};
   char *result;
 
   /* Somebody once decided that this interface was better than strerror(). */
-  FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+  FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER |
                  FORMAT_MESSAGE_FROM_SYSTEM |
                  FORMAT_MESSAGE_IGNORE_INSERTS,
                  NULL, err,
@@ -2527,7 +2546,8 @@ format_win32_error(DWORD err)
                  0, NULL);
 
   if (str) {
-    result = tor_strdup((char*)str);
+    wcstombs(abuf,str,1024);
+    result = tor_strdup((char*)abuf);
     LocalFree(str); /* LocalFree != free() */
   } else {
     result = tor_strdup("<unformattable error>");

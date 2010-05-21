@@ -4377,7 +4377,9 @@ void networkstatus_free_all(void);
 
 /********************************* ntmain.c ***************************/
 #ifdef MS_WINDOWS
+#if !defined (WINCE)
 #define NT_SERVICE
+#endif
 #endif
 
 #ifdef NT_SERVICE

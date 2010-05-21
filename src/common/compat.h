@@ -177,8 +177,8 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
 /* Windows names string functions differently from most other platforms. */
-#define strncasecmp strnicmp
-#define strcasecmp stricmp
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
 #endif
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));
