@@ -148,7 +148,7 @@ parse_socks4a_resolve_response(const char *hostname,
 static const char *
 socks5_reason_to_string(char reason)
 {
-  switch(reason) {
+  switch (reason) {
     case SOCKS5_SUCCEEDED:
       return "succeeded";
     case SOCKS5_GENERAL_ERROR:
@@ -251,7 +251,7 @@ do_resolve(const char *hostname, uint32_t sockshost, uint16_t socksport,
     }
     if (parse_socks4a_resolve_response(hostname,
                                        reply_buf, RESPONSE_LEN_4,
-                                       result_addr)<0){
+                                       result_addr)<0) {
       return -1;
     }
   } else {

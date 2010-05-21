@@ -64,7 +64,6 @@ show_help(void)
           "[-c certificate_file]\n"
           "        [-m lifetime_in_months] [-a address:port] "
           "[--passphrase-fd <fd>]\n");
-
 }
 
 /* XXXX copied from crypto.c */
@@ -408,7 +407,6 @@ get_fingerprint(EVP_PKEY *pkey, char *out)
   return r;
 }
 
-
 /** Set <b>out</b> to the hex-encoded fingerprint of <b>pkey</b>. */
 static int
 get_digest(EVP_PKEY *pkey, char *out)
@@ -501,7 +499,6 @@ generate_certificate(void)
   fclose(f);
   return 0;
 }
-
 
 /** Entry point to tor-gencert */
 int

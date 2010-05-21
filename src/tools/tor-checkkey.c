@@ -12,7 +12,8 @@
 #include <openssl/bn.h>
 #include <openssl/rsa.h>
 
-int main(int c, char **v)
+int
+main(int c, char **v)
 {
   crypto_pk_env_t *env;
   char *str;
