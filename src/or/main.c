@@ -24,10 +24,6 @@
 #include <event.h>
 #endif
 
-#if defined (WINCE)
-#include <projects.h>
-#endif
-
 void evdns_shutdown(int);
 
 /********* PROTOTYPES **********/

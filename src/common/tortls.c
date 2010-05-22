@@ -16,6 +16,10 @@
 
 #include "orconfig.h"
 
+#if defined (WINCE)
+#include <WinSock2.h>
+#endif
+
 #include <assert.h>
 #include <openssl/ssl.h>
 #include <openssl/ssl3.h>

@@ -22,9 +22,7 @@
 #ifdef MS_WINDOWS
 #include <process.h>
 #include <windows.h>
-#if !defined (WINCE)
 #include <sys/locking.h>
-#endif
 #endif
 
 #ifdef HAVE_UNAME
