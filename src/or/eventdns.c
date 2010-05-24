@@ -3132,13 +3132,13 @@ load_nameservers_with_getnetworkparams(void)
 	GetNetworkParams_fn_t fn;
 
 	/* XXXX Possibly, we should hardcode the location of this DLL. */
-	if (!(handle = LoadLibrary("iphlpapi.dll"))) {
+	if (!(handle = LoadLibraryW(L"iphlpapi.dll"))) {
 		log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
 		/* right now status = 0, doesn't that mean "good" - mikec */
 		status = -1;
 		goto done;
 	}
-	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, "GetNetworkParams"))) {
+	if (!(fn = (GetNetworkParams_fn_t) GetProcAddress(handle, TEXT("GetNetworkParams")))) {
 		log(EVDNS_LOG_WARN, "Could not get address of function.");
 		/* same as above */
 		status = -1;
@@ -3205,32 +3205,40 @@ config_nameserver_from_reg_key(HKEY key, const char *subkey)
 {
 	char *buf;
 	DWORD bufsz = 0, type = 0;
+	WCHAR wsubkey[MAX_PATH] = {0};
+	char ansibuf[MAX_PATH] = {0};
 	int status = 0;
 
-	if (RegQueryValueEx(key, subkey, 0, &type, NULL, &bufsz)
+	mbstowcs(wsubkey,subkey,MAX_PATH);
+	if (RegQueryValueExW(key, wsubkey, 0, &type, NULL, &bufsz)
 		!= ERROR_MORE_DATA)
 		return -1;
 	if (!(buf = mm_malloc(bufsz)))
 		return -1;
 
-	if (RegQueryValueEx(key, subkey, 0, &type, (LPBYTE)buf, &bufsz)
+	if (RegQueryValueExW(key, wsubkey, 0, &type, (LPBYTE)buf, &bufsz)
 		== ERROR_SUCCESS && bufsz > 1) {
-		status = evdns_nameserver_ip_add_line(buf);
+		wcstombs(ansibuf,(wchar_t*)buf,MAX_PATH);
+		status = evdns_nameserver_ip_add_line(ansibuf);
 	}
 
 	mm_free(buf);
 	return status;
 }
 
-#define SERVICES_KEY "System\\CurrentControlSet\\Services\\"
-#define WIN_NS_9X_KEY  SERVICES_KEY "VxD\\MSTCP"
-#define WIN_NS_NT_KEY  SERVICES_KEY "Tcpip\\Parameters"
+#define SERVICES_KEY L"System\\CurrentControlSet\\Services\\"
+#define WIN_NS_9X_KEY  SERVICES_KEY L"VxD\\MSTCP"
+#define WIN_NS_NT_KEY  SERVICES_KEY L"Tcpip\\Parameters"
 
 static int
 load_nameservers_from_registry(void)
 {
 	int found = 0;
 	int r;
+	OSVERSIONINFO info = {0};
+	info.dwOSVersionInfoSize = sizeof (info);
+	GetVersionExW((LPOSVERSIONINFO)&info);
+
 #define TRY(k, name)													\
 	if (!found && config_nameserver_from_reg_key(k,name) == 0) {		\
 		log(EVDNS_LOG_DEBUG,"Found nameservers in %s/%s",#k,name);		\
@@ -3240,15 +3248,15 @@ load_nameservers_from_registry(void)
 			#k,#name);													\
 	}
 
-	if (((int)GetVersion()) > 0) { /* NT */
+	if (info.dwMajorVersion >= 5) { /* NT */
 		HKEY nt_key = 0, interfaces_key = 0;
 
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
+		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, WIN_NS_NT_KEY, 0,
 						 KEY_READ, &nt_key) != ERROR_SUCCESS) {
 			log(EVDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
 		}
-		r = RegOpenKeyEx(nt_key, "Interfaces", 0,
+		r = RegOpenKeyExW(nt_key, L"Interfaces", 0,
 						 KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 						 &interfaces_key);
 		if (r != ERROR_SUCCESS) {
@@ -3263,7 +3271,7 @@ load_nameservers_from_registry(void)
 		RegCloseKey(nt_key);
 	} else {
 		HKEY win_key = 0;
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
+		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, WIN_NS_9X_KEY, 0,
 						 KEY_READ, &win_key) != ERROR_SUCCESS) {
 			log(EVDNS_LOG_DEBUG, "Couldn't open registry key, %d", (int)GetLastError());
 			return -1;

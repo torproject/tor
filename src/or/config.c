@@ -217,8 +217,12 @@ static config_var_t _option_vars[] = {
   V(ExitPortStatistics,          BOOL,     "0"),
   V(ExtraInfoStatistics,         BOOL,     "0"),
 
+#if defined (WINCE)
+  V(FallbackNetworkstatusFile,   FILENAME, "fallback-consensus"),
+#else
   V(FallbackNetworkstatusFile,   FILENAME,
     SHARE_DATADIR PATH_SEPARATOR "tor" PATH_SEPARATOR "fallback-consensus"),
+#endif
   V(FascistFirewall,             BOOL,     "0"),
   V(FirewallPorts,               CSV,      ""),
   V(FastFirstHopPK,              BOOL,     "1"),
@@ -3697,6 +3701,7 @@ get_windows_conf_root(void)
 {
   static int is_set = 0;
   static char path[MAX_PATH+1];
+  WCHAR wpath[MAX_PATH] = {0};
 
   LPITEMIDLIST idl;
   IMalloc *m;
@@ -3714,7 +3719,7 @@ get_windows_conf_root(void)
 #define APPDATA_PATH CSIDL_APPDATA
 #endif
   if (!SUCCEEDED(SHGetSpecialFolderLocation(NULL, APPDATA_PATH, &idl))) {
-    GetCurrentDirectory(MAX_PATH, path);
+    getcwd(path,MAX_PATH);
     is_set = 1;
     log_warn(LD_CONFIG,
              "I couldn't find your application data folder: are you "
@@ -3723,7 +3728,9 @@ get_windows_conf_root(void)
     return path;
   }
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
-  result = SHGetPathFromIDList(idl, path);
+  result = SHGetPathFromIDListW(idl, wpath);
+  wcstombs(path,wpath,MAX_PATH);
+
   /* Now we need to free the */
   SHGetMalloc(&m);
   if (m) {

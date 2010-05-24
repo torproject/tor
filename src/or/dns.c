@@ -453,7 +453,7 @@ purge_expired_resolves(time_t now)
         log_err(LD_BUG, "The expired resolve we purged didn't match any in"
                 " the cache. Tried to purge %s (%p); instead got %s (%p).",
                 resolve->address, (void*)resolve,
-                removed ? removed->address : "NULL", (void*)remove);
+                removed ? removed->address : "NULL", (void*)removed);
       }
       tor_assert(removed == resolve);
     } else {

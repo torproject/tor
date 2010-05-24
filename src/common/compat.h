@@ -51,6 +51,22 @@
 #include <netinet6/in6.h>
 #endif
 
+#if defined (WINCE)
+#include <fcntl.h>
+#include <io.h>
+#include <math.h>
+#include <projects.h>
+#define snprintf _snprintf
+/* this is not exported as W .... */
+#define SHGetPathFromIDListW SHGetPathFromIDList
+/* wcecompat has vasprintf */
+#define HAVE_VASPRINTF
+/* no service here */
+#ifdef NT_SERVICE
+#undef NT_SERVICE
+#endif
+#endif // WINCE
+
 #ifndef NULL_REP_IS_ZERO_BYTES
 #error "It seems your platform does not represent NULL as zero. We can't cope."
 #endif
@@ -177,8 +193,8 @@ extern INLINE double U64_TO_DBL(uint64_t x) {
 /* ===== String compatibility */
 #ifdef MS_WINDOWS
 /* Windows names string functions differently from most other platforms. */
-#define strncasecmp strnicmp
-#define strcasecmp stricmp
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
 #endif
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz) ATTR_NONNULL((1,2));

@@ -1707,7 +1707,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
       return -1;
     } else if (check == CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
-#ifdef MS_WINDOWS
+#if defined (MS_WINDOWS) && !defined (WINCE)
       r = mkdir(dirname);
 #else
       r = mkdir(dirname, 0700);
@@ -1843,7 +1843,8 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   if (open_flags & O_BINARY)
     new_file->binary = 1;
 
-  if ((new_file->fd = open(open_name, open_flags, mode)) < 0) {
+  new_file->fd = open(open_name, open_flags, mode);
+  if (new_file->fd < 0) {
     log_warn(LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
         open_name, fname, strerror(errno));
     goto err;
@@ -2526,22 +2527,26 @@ tor_listdir(const char *dirname)
   smartlist_t *result;
 #ifdef MS_WINDOWS
   char *pattern;
+  WCHAR wpattern[MAX_PATH] = {0};
+  char name[MAX_PATH] = {0};
   HANDLE handle;
-  WIN32_FIND_DATA findData;
+  WIN32_FIND_DATAW findData;
   size_t pattern_len = strlen(dirname)+16;
   pattern = tor_malloc(pattern_len);
   tor_snprintf(pattern, pattern_len, "%s\\*", dirname);
-  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(pattern, &findData))) {
+  mbstowcs(wpattern,pattern,MAX_PATH);
+  if (INVALID_HANDLE_VALUE == (handle = FindFirstFileW(wpattern, &findData))) {
     tor_free(pattern);
     return NULL;
   }
+  wcstombs(name,findData.cFileName,MAX_PATH);
   result = smartlist_create();
   while (1) {
-    if (strcmp(findData.cFileName, ".") &&
-        strcmp(findData.cFileName, "..")) {
-      smartlist_add(result, tor_strdup(findData.cFileName));
+    if (strcmp(name, ".") &&
+        strcmp(name, "..")) {
+      smartlist_add(result, tor_strdup(name));
     }
-    if (!FindNextFile(handle, &findData)) {
+    if (!FindNextFileW(handle, &findData)) {
       DWORD err;
       if ((err = GetLastError()) != ERROR_NO_MORE_FILES) {
         char *errstr = format_win32_error(err);
