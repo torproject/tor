@@ -1724,7 +1724,7 @@ get_uname(void)
         };
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
-        if (! GetVersionExW((LPOSVERSIONINFO)&info)) {
+        if (! GetVersionExW((LPOSVERSIONINFOW)&info)) {
           strlcpy(uname_result, "Bizarre version of Windows where GetVersionEx"
                   " doesn't work.", sizeof(uname_result));
           uname_result_is_set = 1;
@@ -2540,7 +2540,7 @@ format_win32_error(DWORD err)
                  FORMAT_MESSAGE_IGNORE_INSERTS,
                  NULL, err,
                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                 (LPTSTR) &str,
+                 (LPWSTR) &str,
                  0, NULL);
 
   if (str) {
