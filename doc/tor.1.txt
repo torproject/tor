@@ -741,7 +741,8 @@ is non-zero):
 **Address** __address__::
     The IP address or fully qualified domain name of this server (e.g.
     moria.mit.edu). You can leave this unset, and Tor will guess your IP
-    address.
+    address. Note that Tor doesn't bind to this IP, use the *ListenAddress
+    and OutboundBindAddress options to specify the IP Tor should bind to.
 
 **AllowSingleHopExits** **0**|**1**::
     This option controls whether clients can use this server as a single hop
