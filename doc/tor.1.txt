@@ -741,8 +741,10 @@ is non-zero):
 **Address** __address__::
     The IP address or fully qualified domain name of this server (e.g.
     moria.mit.edu). You can leave this unset, and Tor will guess your IP
-    address. Note that Tor doesn't bind to this IP, use the *ListenAddress
-    and OutboundBindAddress options to specify the IP Tor should bind to.
+    address.  This IP address is the one used to tell clients and other
+    servers where to find your Tor server; it doesn't affect the IP that your
+    Tor client binds to.  To bind to a different address, use the
+    *ListenAddress and OutboundBindAddress options.
 
 **AllowSingleHopExits** **0**|**1**::
     This option controls whether clients can use this server as a single hop
