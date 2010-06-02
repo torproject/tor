@@ -158,7 +158,7 @@
 #define MAX_DNS_TTL (3*60*60)
 /** How small can a TTL be before we stop believing it?  Provides rudimentary
  * pinning. */
-#define MIN_DNS_TTL (60)
+#define MIN_DNS_TTL 60
 
 /** How often do we rotate onion keys? */
 #define MIN_ONION_KEY_LIFETIME (7*24*60*60)
@@ -3027,7 +3027,7 @@ void entry_guards_free_all(void);
 #define CBT_BIN_WIDTH ((build_time_t)50)
 
 /** Number of modes to use in the weighted-avg computation of Xm */
-#define CBT_NUM_XM_MODES (3)
+#define CBT_NUM_XM_MODES 3
 
 /** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
@@ -3046,7 +3046,7 @@ typedef uint32_t build_time_t;
  * at which point we switch back to computing the timeout from
  * our saved history.
  */
-#define CBT_NETWORK_NONLIVE_TIMEOUT_COUNT (3)
+#define CBT_NETWORK_NONLIVE_TIMEOUT_COUNT 3
 
 /**
  * This tells us when to toss out the last streak of N timeouts.
@@ -3838,7 +3838,7 @@ download_status_mark_impossible(download_status_t *dl)
 
 /********************************* dirserv.c ***************************/
 /** Maximum length of an exit policy summary. */
-#define MAX_EXITPOLICY_SUMMARY_LEN (1000)
+#define MAX_EXITPOLICY_SUMMARY_LEN 1000
 
 /** Maximum allowable length of a version line in a networkstatus. */
 #define MAX_V_LINE_LEN 128
@@ -4394,7 +4394,7 @@ int nt_service_parse_options(int argc, char **argv, int *should_exit);
 int nt_service_is_stopping(void);
 void nt_service_set_state(DWORD state);
 #else
-#define nt_service_is_stopping() (0)
+#define nt_service_is_stopping() 0
 #endif
 
 /********************************* onion.c ***************************/
