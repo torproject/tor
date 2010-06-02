@@ -335,7 +335,8 @@ int
 circuit_build_times_add_time(circuit_build_times_t *cbt, build_time_t time)
 {
   if (time <= 0 || time > CBT_BUILD_TIME_MAX) {
-    log_warn(LD_CIRC, "Circuit build time is %u!", time);
+    log_warn(LD_BUG, "Circuit build time is too large (%u)."
+                      "This is probably a bug.", time);
     tor_fragile_assert();
     return -1;
   }
@@ -1192,7 +1193,7 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
 
   if (prev_timeout > tor_lround(cbt->timeout_ms/1000)) {
     log_notice(LD_CIRC,
-               "Based on %d cicuit times, it looks like we don't need to "
+               "Based on %d circuit times, it looks like we don't need to "
                "wait so long for circuits to finish. We will now assume a "
                "circuit is too slow to use after waiting %ld seconds.",
                cbt->total_build_times,
@@ -1202,8 +1203,8 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
              cbt->timeout_ms, cbt->Xm, cbt->alpha, timeout_rate);
   } else if (prev_timeout < tor_lround(cbt->timeout_ms/1000)) {
     log_notice(LD_CIRC,
-               "Based on %d cicuit times, it looks like we need to wait "
-               "wait longer for circuits to finish. We will now assume a "
+               "Based on %d circuit times, it looks like we need to wait "
+               "longer for circuits to finish. We will now assume a "
                "circuit is too slow to use after waiting %ld seconds.",
                cbt->total_build_times,
                tor_lround(cbt->timeout_ms/1000));
