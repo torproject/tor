@@ -1402,19 +1402,21 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
           if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
               !addressmap_have_mapping(req->address,0) &&
               !have_warned_about_unsafe_socks) {
-            log_warn(LD_APP,
-                "Your application (using socks5 to port %d) is giving "
-                "Tor only an IP address. Applications that do DNS resolves "
-                "themselves may leak information. Consider using Socks4A "
-                "(e.g. via privoxy or socat) instead. For more information, "
-                "please see https://wiki.torproject.org/TheOnionRouter/"
-                "TorFAQ#SOCKSAndDNS.%s", req->port,
-                safe_socks ? " Rejecting." : "");
-            /*have_warned_about_unsafe_socks = 1;*/
+            if (get_options()->WarnUnsafeSocks) {
+              log_warn(LD_APP,
+                  "Your application (using socks5 to port %d) is giving "
+                  "Tor only an IP address. Applications that do DNS resolves "
+                  "themselves may leak information. Consider using Socks4A "
+                  "(e.g. via privoxy or socat) instead. For more information, "
+                  "please see https://wiki.torproject.org/TheOnionRouter/"
+                  "TorFAQ#SOCKSAndDNS.%s", req->port,
+                  safe_socks ? " Rejecting." : "");
+              /*have_warned_about_unsafe_socks = 1;*/
                                       /*(for now, warn every time)*/
             control_event_client_status(LOG_WARN,
                           "DANGEROUS_SOCKS PROTOCOL=SOCKS5 ADDRESS=%s:%d",
                           req->address, req->port);
+            }
             if (safe_socks)
               return -1;
           }
@@ -1516,7 +1518,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
       if (socks4_prot != socks4a &&
           !addressmap_have_mapping(tmpbuf,0) &&
           !have_warned_about_unsafe_socks) {
-        log_warn(LD_APP,
+        if (get_options()->WarnUnsafeSocks) {
+          log_warn(LD_APP,
                  "Your application (using socks4 to port %d) is giving Tor "
                  "only an IP address. Applications that do DNS resolves "
                  "themselves may leak information. Consider using Socks4A "
@@ -1524,10 +1527,12 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
                  "please see https://wiki.torproject.org/TheOnionRouter/"
                  "TorFAQ#SOCKSAndDNS.%s", req->port,
                  safe_socks ? " Rejecting." : "");
-        /*have_warned_about_unsafe_socks = 1;*/  /*(for now, warn every time)*/
-        control_event_client_status(LOG_WARN,
+          /*have_warned_about_unsafe_socks = 1;*/
+          /*(for now, warn every time)*/
+          control_event_client_status(LOG_WARN,
                         "DANGEROUS_SOCKS PROTOCOL=SOCKS4 ADDRESS=%s:%d",
                         tmpbuf, req->port);
+        }
         if (safe_socks)
           return -1;
       }
