@@ -3018,11 +3018,6 @@ void entry_guards_free_all(void);
  * 1000 is approx 2.5 days worth of continual-use circuits. */
 #define CBT_NCIRCUITS_TO_OBSERVE 1000
 
-/** Maximum quantile to use to generate synthetic timeouts.
- *  We want to stay a bit short of 100, because longtail is
- *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
-#define CBT_DEFAULT_MAX_SYNTHETIC_QUANTILE 90
-
 /** Width of the histogram bins in milliseconds */
 #define CBT_BIN_WIDTH ((build_time_t)50)
 
@@ -3031,6 +3026,7 @@ void entry_guards_free_all(void);
 
 /** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
+#define CBT_BUILD_TIMEOUT ((build_time_t)(INT32_MAX-1))
 #define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
 
 /** Save state every 10 circuits */
@@ -3128,9 +3124,6 @@ typedef struct {
   network_liveness_t liveness;
   /** Last time we built a circuit. Used to decide to build new test circs */
   time_t last_circ_at;
-  /** Number of timeouts that have happened before estimating pareto
-   *  parameters */
-  int pre_timeouts;
   /** "Minimum" value of our pareto distribution (actually mode) */
   build_time_t Xm;
   /** alpha exponent for pareto dist. */

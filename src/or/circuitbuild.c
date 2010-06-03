@@ -131,14 +131,6 @@ circuit_build_times_quantile_cutoff(void)
   return num/100.0;
 }
 
-static double
-circuit_build_times_max_synthetic_quantile(void)
-{
-  int32_t num = networkstatus_get_param(NULL, "cbtmaxsynthquantile",
-                CBT_DEFAULT_MAX_SYNTHETIC_QUANTILE);
-  return num/100.0;
-}
-
 static int32_t
 circuit_build_times_test_frequency(void)
 {
@@ -258,7 +250,6 @@ void
 circuit_build_times_reset(circuit_build_times_t *cbt)
 {
   memset(cbt->circuit_build_times, 0, sizeof(cbt->circuit_build_times));
-  cbt->pre_timeouts = 0;
   cbt->total_build_times = 0;
   cbt->build_times_idx = 0;
   cbt->have_computed_timeout = 0;
@@ -288,22 +279,6 @@ static void
 circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
 {
   int i = 0;
-
-  if (cbt->pre_timeouts) {
-    /* If we have pre-timeouts, it means we're not yet storing
-     * timeouts in our normal array. Only rewind the counter. */
-    if (cbt->pre_timeouts > n) {
-      cbt->pre_timeouts -= n;
-    } else {
-      cbt->pre_timeouts = 0;
-    }
-    log_info(LD_CIRC,
-             "Rewound history by %d places. Current index: %d. Total: %d. "
-             "Pre-timeouts: %d", n, cbt->build_times_idx,
-             cbt->total_build_times, cbt->pre_timeouts);
-
-    return;
-  }
 
   cbt->build_times_idx -= n;
   cbt->build_times_idx %= CBT_NCIRCUITS_TO_OBSERVE;
@@ -366,7 +341,8 @@ circuit_build_times_max(circuit_build_times_t *cbt)
   int i = 0;
   build_time_t max_build_time = 0;
   for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
-    if (cbt->circuit_build_times[i] > max_build_time)
+    if (cbt->circuit_build_times[i] > max_build_time
+            && cbt->circuit_build_times[i] != CBT_BUILD_TIMEOUT)
       max_build_time = cbt->circuit_build_times[i];
   }
   return max_build_time;
@@ -413,7 +389,9 @@ circuit_build_times_create_histogram(circuit_build_times_t *cbt,
 
   // calculate histogram
   for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
-    if (cbt->circuit_build_times[i] == 0) continue; /* 0 <-> uninitialized */
+    if (cbt->circuit_build_times[i] == 0
+            || cbt->circuit_build_times[i] == CBT_BUILD_TIMEOUT)
+      continue; /* 0 <-> uninitialized */
 
     c = (cbt->circuit_build_times[i] / CBT_BIN_WIDTH);
     histogram[c]++;
@@ -660,12 +638,15 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
 {
   build_time_t *x=cbt->circuit_build_times;
   double a = 0;
-  int n=0,i=0;
+  int n=0,i=0,timeout_count=0;
+  build_time_t max_time=0;
 
   /* http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation */
   /* We sort of cheat here and make our samples slightly more pareto-like
    * and less frechet-like. */
   cbt->Xm = circuit_build_times_get_xm(cbt);
+
+  tor_assert(cbt->Xm > 0);
 
   for (i=0; i< CBT_NCIRCUITS_TO_OBSERVE; i++) {
     if (!x[i]) {
@@ -674,8 +655,12 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
 
     if (x[i] < cbt->Xm) {
       a += tor_mathlog(cbt->Xm);
+    } else if (x[i] == CBT_BUILD_TIMEOUT) {
+      timeout_count++;
     } else {
       a += tor_mathlog(x[i]);
+      if (x[i] > max_time)
+        max_time = x[i];
     }
     n++;
   }
@@ -686,8 +671,12 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   }
   tor_assert(n==cbt->total_build_times);
 
+  tor_assert(max_time > 0);
+
+  a += timeout_count*tor_mathlog(max_time);
+
   a -= n*tor_mathlog(cbt->Xm);
-  a = n/a;
+  a = (n-timeout_count)/a;
 
   cbt->alpha = a;
 }
@@ -767,32 +756,6 @@ circuit_build_times_generate_sample(circuit_build_times_t *cbt,
   return ret;
 }
 
-/** Generate points in [cutoff, 1.0) on the CDF. */
-void
-circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
-                                       double quantile_cutoff)
-{
-  build_time_t gentime = circuit_build_times_generate_sample(cbt,
-              quantile_cutoff, circuit_build_times_max_synthetic_quantile());
-
-  if (gentime < (build_time_t)tor_lround(cbt->timeout_ms)) {
-    log_warn(LD_CIRC,
-             "Generated a synthetic timeout LESS than the current timeout: "
-             "%ums vs %lfms using Xm: %d a: %lf, q: %lf",
-             gentime, cbt->timeout_ms, cbt->Xm, cbt->alpha, quantile_cutoff);
-  } else if (gentime > CBT_BUILD_TIME_MAX) {
-    log_info(LD_CIRC,
-             "Generated a synthetic timeout larger than the max: %u",
-             gentime);
-    gentime = CBT_BUILD_TIME_MAX;
-  } else {
-    log_info(LD_CIRC, "Generated synthetic circuit build time %u for timeout",
-            gentime);
-  }
-
-  circuit_build_times_add_time(cbt, gentime);
-}
-
 /**
  * Estimate an initial alpha parameter by solving the quantile
  * function with a quantile point and a specific timeout value.
@@ -812,33 +775,6 @@ circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
   cbt->alpha = tor_mathlog(1.0-quantile)/
     (tor_mathlog(cbt->Xm)-tor_mathlog(timeout_ms));
   tor_assert(cbt->alpha > 0);
-}
-
-/**
- * Generate synthetic timeout values for the timeouts
- * that have happened before we estimated our parameters.
- */
-static void
-circuit_build_times_count_pretimeouts(circuit_build_times_t *cbt)
-{
-  /* Store a timeout as a random position past the current
-   * cutoff on the pareto curve */
-  if (cbt->pre_timeouts) {
-    double timeout_quantile = 1.0-
-          ((double)cbt->pre_timeouts)/
-                    (cbt->pre_timeouts+cbt->total_build_times);
-    /* Make sure it doesn't exceed the synthetic max */
-    timeout_quantile *= circuit_build_times_max_synthetic_quantile();
-    cbt->Xm = circuit_build_times_get_xm(cbt);
-    tor_assert(cbt->Xm > 0);
-    /* Use current timeout to get an estimate on alpha */
-    circuit_build_times_initial_alpha(cbt, timeout_quantile,
-                                      cbt->timeout_ms);
-    while (cbt->pre_timeouts-- != 0) {
-      circuit_build_times_add_timeout_worker(cbt, timeout_quantile);
-    }
-    cbt->pre_timeouts = 0;
-  }
 }
 
 /**
@@ -1075,20 +1011,7 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt,
     return 0;
   }
 
-  if (!cbt->have_computed_timeout) {
-    /* Store a timeout before we have enough data */
-    cbt->pre_timeouts++;
-    log_info(LD_CIRC,
-             "Not enough circuits yet to calculate a new build timeout."
-             " Need %d more.", circuit_build_times_min_circs_to_observe()
-                               - cbt->total_build_times);
-    return 0;
-  }
-
-  circuit_build_times_count_pretimeouts(cbt);
-  circuit_build_times_add_timeout_worker(cbt,
-               circuit_build_times_quantile_cutoff());
-
+  circuit_build_times_add_time(cbt, CBT_BUILD_TIMEOUT);
   return 1;
 }
 
@@ -1116,18 +1039,16 @@ circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
   }
 
   timeout_rate = circuit_build_times_timeout_rate(cbt);
-  max_timeout = (build_time_t)tor_lround(circuit_build_times_calculate_timeout(cbt,
-                    circuit_build_times_max_synthetic_quantile()));
+  max_timeout = /*(build_time_t)tor_lround(circuit_build_times_calculate_timeout(cbt,
+                    circuit_build_times_max_synthetic_quantile()));*/
+                (build_time_t)cbt->timeout_ms;
 
+  /* XXX: Make a special bin for timeout values */
   for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
     if (cbt->circuit_build_times[i] > max_timeout) {
       build_time_t replaced = cbt->circuit_build_times[i];
       num_filtered++;
-      cbt->circuit_build_times[i] =
-          MIN(circuit_build_times_generate_sample(cbt,
-                 circuit_build_times_quantile_cutoff(),
-                 circuit_build_times_max_synthetic_quantile()),
-              CBT_BUILD_TIME_MAX);
+      cbt->circuit_build_times[i] = CBT_BUILD_TIMEOUT;
 
       log_debug(LD_CIRC, "Replaced timeout %d with %d", replaced,
                cbt->circuit_build_times[i]);
@@ -1154,7 +1075,6 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
     return 0;
   }
 
-  circuit_build_times_count_pretimeouts(cbt);
   circuit_build_times_update_alpha(cbt);
 
   cbt->timeout_ms = circuit_build_times_calculate_timeout(cbt,
