@@ -926,16 +926,19 @@ connection_or_nonopen_was_started_here(or_connection_t *conn)
  * the certificate to be weird or absent.
  *
  * If we return 0, and the certificate is as expected, write a hash of the
- * identity key into digest_rcvd, which must have DIGEST_LEN space in it. (If
- * we return -1 this buffer is undefined.)  If the certificate is invalid
- * or missing on an incoming connection, we return 0 and set digest_rcvd to
- * DIGEST_LEN 0 bytes.
+ * identity key into <b>digest_rcvd_out</b>, which must have DIGEST_LEN
+ * space in it.
+ * If the certificate is invalid or missing on an incoming connection,
+ * we return 0 and set <b>digest_rcvd_out</b> to DIGEST_LEN NUL bytes.
+ * (If we return -1, the contents of this buffer are undefined.)
  *
  * As side effects,
  * 1) Set conn->circ_id_type according to tor-spec.txt.
  * 2) If we're an authdirserver and we initiated the connection: drop all
  *    descriptors that claim to be on that IP/port but that aren't
  *    this guy; and note that this guy is reachable.
+ * 3) If this is a bridge and we didn't configure its identity
+ *    fingerprint, remember the keyid we just learned.
  */
 static int
 connection_or_check_valid_tls_handshake(or_connection_t *conn,
@@ -1007,6 +1010,10 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     log_info(LD_HANDSHAKE, "Connected to router %s at %s:%d without knowing "
                     "its key. Hoping for the best.",
                     conn->nickname, conn->_base.address, conn->_base.port);
+    /* if it's a bridge and we didn't know its identity fingerprint, now
+     * we do -- remember it for future attempts. */
+    learned_router_identity(&conn->_base.addr, conn->_base.port,
+                            digest_rcvd_out);
   }
 
   if (started_here) {

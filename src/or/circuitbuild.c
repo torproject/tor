@@ -4053,29 +4053,56 @@ clear_bridge_list(void)
  * (either by comparing keys if possible, else by comparing addr/port).
  * Else return NULL. */
 static bridge_info_t *
-routerinfo_get_configured_bridge(routerinfo_t *ri)
+get_configured_bridge_by_addr_port_digest(tor_addr_t *addr, uint16_t port,
+                                          const char *digest)
 {
   if (!bridge_list)
     return NULL;
   SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, bridge)
     {
       if (tor_digest_is_zero(bridge->identity) &&
-          tor_addr_eq_ipv4h(&bridge->addr, ri->addr) &&
-          bridge->port == ri->or_port)
+          !tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
+          bridge->port == port)
         return bridge;
-      if (!memcmp(bridge->identity, ri->cache_info.identity_digest,
-                  DIGEST_LEN))
+      if (!memcmp(bridge->identity, digest, DIGEST_LEN))
         return bridge;
     }
   SMARTLIST_FOREACH_END(bridge);
   return NULL;
 }
 
+/** Wrapper around get_configured_bridge_by_addr_port_digest() to look
+ * it up via router descriptor <b>ri</b>. */
+static bridge_info_t *
+get_configured_bridge_by_routerinfo(routerinfo_t *ri)
+{
+  tor_addr_t addr;
+  tor_addr_from_ipv4h(&addr, ri->addr);
+  return get_configured_bridge_by_addr_port_digest(&addr,
+                              ri->or_port, ri->cache_info.identity_digest);
+}
+
 /** Return 1 if <b>ri</b> is one of our known bridges, else 0. */
 int
 routerinfo_is_a_configured_bridge(routerinfo_t *ri)
 {
-  return routerinfo_get_configured_bridge(ri) ? 1 : 0;
+  return get_configured_bridge_by_routerinfo(ri) ? 1 : 0;
+}
+
+/** We made a connection to a router at <b>addr</b>:<b>port</b>
+ * without knowing its digest. Its digest turned out to be <b>digest</b>.
+ * If it was a bridge, and we still don't know its digest, record it.
+ */
+void
+learned_router_identity(tor_addr_t *addr, uint16_t port, const char *digest)
+{
+  bridge_info_t *bridge =
+    get_configured_bridge_by_addr_port_digest(addr, port, digest);
+  if (bridge && tor_digest_is_zero(bridge->identity)) {
+    memcpy(bridge->identity, digest, DIGEST_LEN);
+    log_notice(LD_DIR, "Learned fingerprint %s for bridge %s:%d",
+               hex_str(digest, DIGEST_LEN), fmt_addr(addr), port);
+  }
 }
 
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
@@ -4215,7 +4242,7 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
   tor_assert(ri->purpose == ROUTER_PURPOSE_BRIDGE);
   if (get_options()->UseBridges) {
     int first = !any_bridge_descriptors_known();
-    bridge_info_t *bridge = routerinfo_get_configured_bridge(ri);
+    bridge_info_t *bridge = get_configured_bridge_by_routerinfo(ri);
     time_t now = time(NULL);
     ri->is_running = 1;
 
