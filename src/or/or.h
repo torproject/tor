@@ -2841,7 +2841,8 @@ typedef struct {
 
   /** Build time histogram */
   config_line_t * BuildtimeHistogram;
-  uint16_t TotalBuildTimes;
+  unsigned int TotalBuildTimes;
+  unsigned int CircuitBuildTimeoutCount;
 
   /** What version of Tor wrote this state file? */
   char *TorVersion;
