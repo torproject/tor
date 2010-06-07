@@ -2323,12 +2323,10 @@ expand_filename(const char *filename)
 
     if (filename[1] == '/' || filename[1] == '\0') {
       home = getenv("HOME");
-      if (!home) {
-        log_warn(LD_CONFIG, "Couldn't find $HOME environment variable while "
-                 "expanding \"%s\"", filename);
-        return NULL;
-      }
-      home = tor_strdup(home);
+      if (!home)
+        home = tor_strdup("");
+      else
+        home = tor_strdup(home);
       rest = strlen(filename)>=2?(filename+2):"";
     } else {
 #ifdef HAVE_PWD_H
