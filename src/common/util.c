@@ -2317,18 +2317,18 @@ expand_filename(const char *filename)
   return tor_strdup(filename);
 #else
   if (*filename == '~') {
-    size_t len;
-    char *home, *result;
+    char *home, *result=NULL;
     const char *rest;
 
     if (filename[1] == '/' || filename[1] == '\0') {
       home = getenv("HOME");
       if (!home) {
         log_warn(LD_CONFIG, "Couldn't find $HOME environment variable while "
-                 "expanding \"%s\"", filename);
-        return NULL;
+                 "expanding \"%s\"; defaulting to \"\".", filename);
+        home = tor_strdup("");
+      } else {
+        home = tor_strdup(home);
       }
-      home = tor_strdup(home);
       rest = strlen(filename)>=2?(filename+2):"";
     } else {
 #ifdef HAVE_PWD_H
@@ -2355,11 +2355,7 @@ expand_filename(const char *filename)
     if (strlen(home)>1 && !strcmpend(home,PATH_SEPARATOR)) {
       home[strlen(home)-1] = '\0';
     }
-    /* Plus one for /, plus one for NUL.
-     * Round up to 16 in case we can't do math. */
-    len = strlen(home)+strlen(rest)+16;
-    result = tor_malloc(len);
-    tor_snprintf(result,len,"%s"PATH_SEPARATOR"%s",home,rest);
+    tor_asprintf(&result,"%s"PATH_SEPARATOR"%s",home,rest);
     tor_free(home);
     return result;
   } else {
