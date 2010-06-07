@@ -1,0 +1,3 @@
+ o Minor documentation fixes
+   - When a2x fails, mention that the user could disable manpages instead
+     of trying to fix their asciidoc installation.

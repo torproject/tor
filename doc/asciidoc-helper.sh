@@ -46,13 +46,19 @@ elif [ "$1" = "man" ]; then
     if "$2" -f manpage $input; then
       mv $base.1 $output;
     else
-      echo "==================================";
-      echo;
-      echo "a2x is installed, but some required docbook support files are";
-      echo "missing. Please install docbook-xsl, docbook-xml, and";
-      echo "libxml2-utils (Debian) or similar.";
-      echo;
-      echo "==================================";
+      cat<<EOF
+==================================
+You need a working asciidoc installed to be able to build the manpage.
+
+a2x is installed, but for some reason it isn't working.  Sometimes
+This happens because required docbook support files are missing.
+Please install docbook-xsl, docbook-xml, and libxml2-utils (Debian) or
+similar.
+
+Alternatively, to build without manpages, use the --disable-asciidoc
+argument when calling configure.
+==================================
+EOF
       exit 1;
     fi
 fi
