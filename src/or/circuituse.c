@@ -270,6 +270,7 @@ circuit_expire_building(time_t now)
    * decided on a customized one yet */
   time_t general_cutoff = now - lround(circ_times.timeout_ms/1000);
   time_t begindir_cutoff = now - lround(circ_times.timeout_ms/2000);
+  time_t close_cutoff = now - lround(circ_times.close_ms/1000);
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 
@@ -286,8 +287,11 @@ circuit_expire_building(time_t now)
       cutoff = begindir_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
       cutoff = introcirc_cutoff;
+    else if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
+      cutoff = close_cutoff;
     else
       cutoff = general_cutoff;
+
     if (victim->timestamp_created > cutoff)
       continue; /* it's still young, leave it alone */
 
@@ -350,12 +354,29 @@ circuit_expire_building(time_t now)
     } else { /* circuit not open, consider recording failure as timeout */
       int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath &&
             TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_OPEN;
+
+      if (TO_ORIGIN_CIRCUIT(victim)->p_streams != NULL) {
+        log_warn(LD_BUG, "Circuit %d (purpose %d) has timed out, "
+                 "yet has attached streams!",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier,
+                 victim->purpose);
+        tor_fragile_assert();
+        continue;
+      }
+
+      /* circuits are allowed to last longer for measurement.
+       * Switch their purpose and wait. */
+      if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+        victim->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
+        continue;
+      }
+
       /*
        * If the circuit build time is much greater than we would have cut
        * it off at, we probably had a suspend event along this codepath,
        * and we should discard the value.
        */
-      if (now - victim->timestamp_created > (2*circ_times.timeout_ms)/1000+1) {
+      if (now - victim->timestamp_created > 2*circ_times.close_ms/1000+1) {
         log_notice(LD_CIRC,
                    "Extremely large value for circuit build timeout: %ld. "
                    "Assuming clock jump.", now - victim->timestamp_created);

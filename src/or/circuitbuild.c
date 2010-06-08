@@ -139,6 +139,15 @@ circuit_build_times_quantile_cutoff(void)
   return num/100.0;
 }
 
+static double
+circuit_build_times_close_quantile(void)
+{
+  int32_t num = networkstatus_get_param(NULL, "cbtclosequantile",
+          CBT_DEFAULT_CLOSE_QUANTILE);
+
+  return num/100.0;
+}
+
 static int32_t
 circuit_build_times_test_frequency(void)
 {
@@ -539,7 +548,10 @@ circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
 
 /**
  * Filter old synthetic timeouts that were created before the
- * right censored new Pareto calculation was deployed.
+ * new right-censored Pareto calculation was deployed.
+ *
+ * Once all clients before 0.2.1.13-alpha are gone, this code
+ * will be unused.
  */
 static int
 circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
@@ -549,7 +561,7 @@ circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
   build_time_t max_timeout = 0;
 
   timeout_rate = circuit_build_times_timeout_rate(cbt);
-  max_timeout = (build_time_t)cbt->timeout_ms;
+  max_timeout = (build_time_t)cbt->close_ms;
 
   for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
     if (cbt->circuit_build_times[i] > max_timeout) {
@@ -1097,6 +1109,15 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
 
   cbt->timeout_ms = circuit_build_times_calculate_timeout(cbt,
                                 circuit_build_times_quantile_cutoff());
+
+  cbt->close_ms = circuit_build_times_calculate_timeout(cbt,
+                                circuit_build_times_close_quantile());
+
+  /* Sometimes really fast guard nodes give us such a steep curve
+   * that this ends up being not that much greater than timeout_ms.
+   * Make it be at least 1 min to handle this case. */
+  cbt->close_ms = MAX(cbt->close_ms, 60*1000);
+
   cbt->have_computed_timeout = 1;
   return 1;
 }
@@ -1132,8 +1153,9 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
                cbt->total_build_times,
                tor_lround(cbt->timeout_ms/1000));
     log_info(LD_CIRC,
-             "Circuit timeout data: %lfms, Xm: %d, a: %lf, r: %lf",
-             cbt->timeout_ms, cbt->Xm, cbt->alpha, timeout_rate);
+             "Circuit timeout data: %lfms, %lfms, Xm: %d, a: %lf, r: %lf",
+             cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha,
+             timeout_rate);
   } else if (prev_timeout < tor_lround(cbt->timeout_ms/1000)) {
     log_notice(LD_CIRC,
                "Based on %d circuit times, it looks like we need to wait "
@@ -1142,14 +1164,15 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
                cbt->total_build_times,
                tor_lround(cbt->timeout_ms/1000));
     log_info(LD_CIRC,
-             "Circuit timeout data: %lfms, Xm: %d, a: %lf, r: %lf",
-             cbt->timeout_ms, cbt->Xm, cbt->alpha, timeout_rate);
+             "Circuit timeout data: %lfms, %lfms, Xm: %d, a: %lf, r: %lf",
+             cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha,
+             timeout_rate);
   } else {
     log_info(LD_CIRC,
-             "Set circuit build timeout to %lds (%lfms, Xm: %d, a: %lf, "
-             "r: %lf) based on %d circuit times",
+             "Set circuit build timeout to %lds (%lfms, %lfms, Xm: %d, a: %lf,"
+             " r: %lf) based on %d circuit times",
              tor_lround(cbt->timeout_ms/1000),
-             cbt->timeout_ms, cbt->Xm, cbt->alpha, timeout_rate,
+             cbt->timeout_ms, cbt->close_ms, cbt->Xm, cbt->alpha, timeout_rate,
              cbt->total_build_times);
   }
 }
@@ -1747,7 +1770,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
          * it off at, we probably had a suspend event along this codepath,
          * and we should discard the value.
          */
-        if (timediff < 0 || timediff > 2*circ_times.timeout_ms+1000) {
+        if (timediff < 0 || timediff > 2*circ_times.close_ms+1000) {
           log_notice(LD_CIRC, "Strange value for circuit build time: %ld. "
                               "Assuming clock jump.", timediff);
         } else if (!circuit_build_times_disabled()) {

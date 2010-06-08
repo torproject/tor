@@ -467,23 +467,23 @@ typedef enum {
 #define CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED 11
 /** Client-side circuit purpose: at Alice, rendezvous established. */
 #define CIRCUIT_PURPOSE_C_REND_JOINED 12
-
-#define _CIRCUIT_PURPOSE_C_MAX 12
-
+/** This circuit is used for build time measurement only */
+#define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 13
+#define _CIRCUIT_PURPOSE_C_MAX 13
 /** Hidden-service-side circuit purpose: at Bob, waiting for introductions. */
-#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 13
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 14
 /** Hidden-service-side circuit purpose: at Bob, successfully established
  * intro. */
-#define CIRCUIT_PURPOSE_S_INTRO 14
+#define CIRCUIT_PURPOSE_S_INTRO 15
 /** Hidden-service-side circuit purpose: at Bob, connecting to rend point. */
-#define CIRCUIT_PURPOSE_S_CONNECT_REND 15
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 16
 /** Hidden-service-side circuit purpose: at Bob, rendezvous established. */
-#define CIRCUIT_PURPOSE_S_REND_JOINED 16
+#define CIRCUIT_PURPOSE_S_REND_JOINED 17
 /** A testing circuit; not meant to be used for actual traffic. */
-#define CIRCUIT_PURPOSE_TESTING 17
+#define CIRCUIT_PURPOSE_TESTING 18
 /** A controller made this circuit and Tor should not use it. */
-#define CIRCUIT_PURPOSE_CONTROLLER 18
-#define _CIRCUIT_PURPOSE_MAX 18
+#define CIRCUIT_PURPOSE_CONTROLLER 19
+#define _CIRCUIT_PURPOSE_MAX 19
 /** A catch-all for unrecognized purposes. Currently we don't expect
  * to make or see any circuits with this purpose. */
 #define CIRCUIT_PURPOSE_UNKNOWN 255
@@ -3056,6 +3056,12 @@ typedef uint32_t build_time_t;
 /* Circuit build times consensus parameters */
 
 /**
+ * How long to wait before actually closing circuits that take too long to
+ * build in terms of CDF quantile.
+ */
+#define CBT_DEFAULT_CLOSE_QUANTILE 95
+
+/**
  * How many circuits count as recent when considering if the
  * connection has gone gimpy or changed.
  */
@@ -3134,6 +3140,8 @@ typedef struct {
   /** The exact value for that timeout in milliseconds. Stored as a double
    * to maintain precision from calculations to and from quantile value. */
   double timeout_ms;
+  /** How long we wait before actually closing the circuit. */
+  double close_ms;
 } circuit_build_times_t;
 
 extern circuit_build_times_t circ_times;
