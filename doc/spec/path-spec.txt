@@ -311,15 +311,39 @@ of their choices.
    the tail of the distribution with a Pareto curve.
 
    We calculate the parameters for a Pareto distribution fitting the data
-   using the estimators at
-   http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation.
+   using the estimators in equation 4 from:
+   http://portal.acm.org/citation.cfm?id=1647962.1648139
 
-   Because this is not a true Pareto distribution, we alter how Xm is
-   computed. The Xm parameter is computed as the midpoint of the most
+   This is:
+
+      alpha_m = s/(ln(U(X)/Xm^n))
+
+   where s is the total number of completed circuits we have seen, and
+
+      U(X) = x_max^u * Prod_s{x_i}
+
+   with x_i as our i-th completed circuit time, x_max as the longest
+   completed circuit build time we have yet observed, u as the
+   number of unobserved timeouts that have no exact value recorded,
+   and n as u+s, the total number of circuits that either timeout or
+   complete.
+
+   Using log laws, we compute this as the sum of logs to avoid
+   overflow and ln(1.0+epsilon) precision issues:
+
+       alpha_m = s/(u*ln(x_max) + Sum_s{ln(x_i)} - n*ln(Xm))
+
+   This estimator is closely related to the parameters present in:
+   http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation
+   except they are adjusted to handle the fact that our samples are
+   right-censored at the timeout cutoff.
+
+   Additionally, because this is not a true Pareto distribution, we alter
+   how Xm is computed. The Xm parameter is computed as the midpoint of the most
    frequently occurring 50ms histogram bin, until the point where 1000
    circuits are recorded. After this point, the weighted average of the top
-   3 midpoint modes is used as Xm. All times below this value are counted
-   as having the midpoint value of this weighted average bin.
+   'cbtnummodes' (default: 3) midpoint modes is used as Xm. All times below
+   this value are counted as having the midpoint value of this weighted average bin.
 
    The timeout itself is calculated by using the Pareto Quantile function (the
    inverted CDF) to give us the value on the CDF such that 80% of the mass
@@ -347,10 +371,18 @@ of their choices.
 
 2.4.3. How to record timeouts
 
-   Timeouts should be counted as the expectation of the region of
-   of the Pareto distribution beyond the cutoff. This is done by
-   generating a random sample for each timeout at points on the
-   curve beyond the current timeout cutoff up to the 90% quantile marker.
+   Circuits that pass the timeout threshold should be allowed to continue
+   building until a time corresponding to the point 'cbtclosequantile'
+   (default 95) on the Pareto curve, or 60 seconds, whichever is greater.
+
+   The actual completion times for these circuits should be recorded.
+   Implementations should completely abandon a circuit and record a value
+   as an 'unknown' timeout if the total build time exceeds this threshold.
+
+   The reason for this is that right-censored pareto estimators begin to lose
+   their accuracy if more than approximately 5% of the values are censored.
+   Since we wish to set the cutoff at 20%, we must allow circuits to continue
+   building past this cutoff point up to the 95th percentile.
 
 2.4.4. Detecting Changing Network Conditions
 
@@ -388,6 +420,14 @@ of their choices.
                 disabled and history should be discarded. For use in
                 emergency situations only.
 
+      cbtnummodes
+        Default: 3
+        Effect: This value governs how many modes to use in the weighted
+        average calculation of Pareto paramter Xm. A value of 3 introduces
+        some bias (2-5% of CDF) under ideal conditions, but allows for better
+        performance in the event that a client chooses guard nodes of radically
+        different performance characteristics.
+
       cbtrecentcount
         Default: 20
         Effect: This is the number of circuit build times to keep track of
@@ -409,11 +449,11 @@ of their choices.
         Effect: This is the position on the quantile curve to use to set the
                 timeout value. It is a percent (0-99).
 
-      cbtmaxsynthquantile
-        Default: 90
-        Effect: This is the maximum position on the quantile curve to use to
-                generate synthetic circuit build times for timeouts. It is a
-                percent (0-99).
+      cbtclosequantile
+        Default: 95
+        Effect: This is the position on the quantile curve to use to set the
+                timeout value to use to actually close circuits. It is a percent
+                (0-99).
 
       cbttestfreq
         Default: 60
