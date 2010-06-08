@@ -116,6 +116,14 @@ circuit_build_times_max_timeouts(void)
 }
 
 static int32_t
+circuit_build_times_default_num_xm_modes(void)
+{
+  int32_t num = networkstatus_get_param(NULL, "cbtnummodes",
+          CBT_DEFAULT_NUM_XM_MODES);
+  return num;
+}
+
+static int32_t
 circuit_build_times_min_circs_to_observe(void)
 {
   int32_t num = networkstatus_get_param(NULL, "cbtmincircs",
@@ -410,19 +418,20 @@ static build_time_t
 circuit_build_times_get_xm(circuit_build_times_t *cbt)
 {
   build_time_t i, nbins;
-  build_time_t nth_max_bin[CBT_NUM_XM_MODES];
+  build_time_t *nth_max_bin;
   int32_t bin_counts=0;
   build_time_t ret = 0;
   uint32_t *histogram = circuit_build_times_create_histogram(cbt, &nbins);
   int n=0;
-  int num_modes = CBT_NUM_XM_MODES;
+  int num_modes = circuit_build_times_default_num_xm_modes();
 
   // Only use one mode if < 1000 buildtimes. Not enough data
   // for multiple.
   if (cbt->total_build_times < CBT_NCIRCUITS_TO_OBSERVE)
     num_modes = 1;
 
-  memset(nth_max_bin, 0, sizeof(nth_max_bin));
+  nth_max_bin = (build_time_t*)tor_malloc_zero(num_modes*sizeof(build_time_t));
+
   for (i = 0; i < nbins; i++) {
     if (histogram[i] >= histogram[nth_max_bin[0]]) {
       nth_max_bin[0] = i;
@@ -446,6 +455,7 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
 
   ret /= bin_counts;
   tor_free(histogram);
+  tor_free(nth_max_bin);
 
   return ret;
 }
