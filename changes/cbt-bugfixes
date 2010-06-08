@@ -7,16 +7,19 @@
      Timeout learning to use the weighted average of the top N=3 modes. This
      should improve the timeout calculation in some cases, and prevent
      extremely high timeout values. Bug 1335, bugfix on 0.2.2.2-alpha.
-   - Implement a filtering step to recompute synthetic build times every time
-     the timeout changes. Additionally, place a lower cap on synthetic build
-     times, and allow this cap to be controlled by the consensus. This should
-     also improve the build time calculations, and should eliminate a case
-     where Tor was allocating an excessive amount of temporary memory during
-     timeout calculation. Bugs 1335 and 1245, bugfix on 0.2.2.2-alpha.
+   - Alter calculation of Pareto distribution parameter 'Alpha' to use a
+     right censored distribution model. This allows us to remove the synthetic
+     timeout generation and instead calculate build timeouts using truncated
+     times. Bugs 1245+1335, bugfix on 0.2.2.2-alpha.
+   - Keep circuits open (but do not use them) after the circuit timeout for
+     up until the time corresponding to the 95th percentile on the Pareto CDF
+     or 60 seconds, whichever is greater. This is done to provide better data
+     for the new Pareto model. This percentile can be controlled by the
+     consensus.
 
  o Minor bugfixes:
    - Eliminate a case where a circuit build time warning was displayed after
-     network connectivity resumed.
+     network connectivity resumed. Bugfix on 0.2.2.2-alpha.
 
  o Minor features:
    - Add a TIMEOUT_RATE keyword to the BUILDTIMEOUT_SET control port event,
