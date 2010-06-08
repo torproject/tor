@@ -495,13 +495,12 @@ test_circuit_timeout(void)
                                   CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
     circuit_build_times_set_timeout(&estimate);
     log_warn(LD_CIRC, "Timeout1 is %lf, Xm is %d", timeout1, estimate.Xm);
-    /* XXX: 5% distribution error may not be the right metric */
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
-                circuit_build_times_cdf(&initial, timeout1)) > 0.05
-                /* 5% error */
+                circuit_build_times_cdf(&initial, timeout1)) > 0.02
+                /* 2% error */
            && estimate.total_build_times < CBT_NCIRCUITS_TO_OBSERVE);
 
-  test_assert(estimate.total_build_times < CBT_NCIRCUITS_TO_OBSERVE);
+  test_assert(estimate.total_build_times <= CBT_NCIRCUITS_TO_OBSERVE);
 
   circuit_build_times_update_state(&estimate, &state);
   test_assert(circuit_build_times_parse_state(&final, &state, &msg) == 0);
@@ -513,6 +512,7 @@ test_circuit_timeout(void)
   circuit_build_times_set_timeout(&final);
   log_warn(LD_CIRC, "Timeout2 is %lf, Xm is %d", timeout2, final.Xm);
 
+  /* 5% here because some accuracy is lost due to histogram conversion */
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -
                    circuit_build_times_cdf(&initial, timeout2)) < 0.05);
 
@@ -581,7 +581,10 @@ test_circuit_timeout(void)
 
     /* Check rollback index. Should match top of loop. */
     test_assert(build_times_idx == estimate.build_times_idx);
-    test_assert(total_build_times == estimate.total_build_times);
+    // This can fail if estimate.total_build_times == 1000, because
+    // in that case, rewind actually causes us to lose timeouts
+    if (total_build_times != CBT_NCIRCUITS_TO_OBSERVE)
+      test_assert(total_build_times == estimate.total_build_times);
 
     /* Now simulate that the network has become live and we need
      * a change */
