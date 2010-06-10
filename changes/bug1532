@@ -1,0 +1,4 @@
+ o Major bugfixes
+   - Tor directory authorities no longer crash when started with a
+     cached-microdesc-consensus file in their data directory. Bugfix on
+     0.2.2.6-alpha, fixes bug 1532.
