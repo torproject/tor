@@ -280,6 +280,7 @@ static config_var_t _option_vars[] = {
   V(NatdListenAddress,           LINELIST, NULL),
   V(NatdPort,                    UINT,     "0"),
   V(Nickname,                    STRING,   NULL),
+  V(WarnUnsafeSocks,              BOOL,     "1"),
   V(NoPublish,                   BOOL,     "0"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
   V(NumCpus,                     UINT,     "1"),

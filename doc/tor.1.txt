@@ -632,6 +632,12 @@ The following options are useful only for clients (that is, if
     helps to determine whether an application using Tor is possibly leaking
     DNS requests. (Default: 0)
 
+**WarnUnsafeSocks** **0**|**1**::
+    When this option is enabled, Tor will warn whenever a request is
+    received that only contains an IP address instead of a hostname. Allowing
+    applications to do DNS resolves themselves is usually a bad idea and
+    can leak your location to attackers. (Default: 1)
+
 **VirtualAddrNetwork** __Address__/__bits__::
     When a controller asks for a virtual (unused) address with the MAPADDRESS
     command, Tor picks an unassigned address from this range. (Default:

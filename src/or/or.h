@@ -2701,6 +2701,10 @@ typedef struct {
    * selection. */
   int AllowDotExit;
 
+  /** If true, we will warn if a user gives us only an IP address
+   * instead of a hostname. */
+  int WarnUnsafeSocks;
+
   /** If true, the user wants us to collect statistics on clients
    * requesting network statuses from us as directory. */
   int DirReqStatistics;
