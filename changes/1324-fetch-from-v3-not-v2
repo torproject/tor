@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Directory mirrors were fetching relay descriptors only from v2
-      directory authorities, rather than v3 authorities like they should.
-      Only 2 v2 authorities remain (compared to 7 v3 authorities), leading
-      to a serious bottleneck. Bugfix on 0.2.0.9-alpha. Fixes bug 1324.

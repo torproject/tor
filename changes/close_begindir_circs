@@ -1,7 +1,0 @@
-  o Major bugfixes:
-    - Relays now close idle circuits early if it looks like they were
-      intended for directory fetches. Such circuits are unlikely to
-      be re-used, and tens of thousands of them were piling up at the
-      fast relays, causing the relays to run out of sockets and memory.
-      Bugfix on 0.2.0.22-rc (where clients started tunneling their
-      directory fetches over TLS).

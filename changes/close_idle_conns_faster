@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Make relays more aggressive about closing TLS connections that
-      have no circuits on them. Tens of thousands of them were piling
-      up at the fast relays, causing the relays to run out of sockets
-      and memory. Bugfix on 0.2.0.22-rc (where clients started tunneling
-      their directory fetches over TLS).
