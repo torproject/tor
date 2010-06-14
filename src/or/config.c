@@ -3735,7 +3735,7 @@ get_windows_conf_root(void)
   result = SHGetPathFromIDListW(idl, wpath);
   wcstombs(path,wpath,MAX_PATH);
 
-  /* Now we need to free the */
+  /* Now we need to free the ... XXX free the what? */
   SHGetMalloc(&m);
   if (m) {
     m->lpVtbl->Free(m, idl);
