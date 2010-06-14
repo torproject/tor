@@ -940,6 +940,9 @@ esc_for_log(const char *s)
       case '\\':
       case '\"':
       case '\'':
+      case '\r':
+      case '\n':
+      case '\t':
         len += 2;
         break;
       default:
