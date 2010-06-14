@@ -3735,7 +3735,8 @@ get_windows_conf_root(void)
   result = SHGetPathFromIDListW(idl, wpath);
   wcstombs(path,wpath,MAX_PATH);
 
-  /* Now we need to free the ... XXX free the what? */
+  /* Now we need to free the memory that the path-idl was stored in.  In
+   * typical Windows fashion, we can't just call 'free()' on it. */
   SHGetMalloc(&m);
   if (m) {
     m->lpVtbl->Free(m, idl);
