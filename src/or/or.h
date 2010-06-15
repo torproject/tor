@@ -2157,6 +2157,9 @@ typedef struct origin_circuit_t {
    * to the specification? */
   unsigned int remaining_relay_early_cells : 4;
 
+  /** Set if this circuit insanely old and if we already informed the user */
+  unsigned int is_ancient : 1;
+
   /** What commands were sent over this circuit that decremented the
    * RELAY_EARLY counter? This is for debugging task 878. */
   uint8_t relay_early_commands[MAX_RELAY_EARLY_CELLS_PER_CIRCUIT];

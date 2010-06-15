@@ -717,17 +717,27 @@ circuit_expire_old_circuits_clientside(time_t now)
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
-    // XXX: Do we ever mark non-dirty odd-purpose circuits for close?
-    // XXX: See irc backlog. Want to log for those circuits not mentioned.
-    //      But remember to add flag. this is called 1x/sec
-    } else if (!circ->timestamp_dirty &&
-               circ->state == CIRCUIT_STATE_OPEN &&
-               circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
       if (circ->timestamp_created < cutoff) {
-        log_debug(LD_CIRC,
-                  "Closing circuit that has been unused for %d seconds.",
-                  (int)(now - circ->timestamp_created));
-        circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+        if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+                circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
+                circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+                circ->purpose == CIRCUIT_PURPOSE_TESTING ||
+                (circ->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
+                circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
+                circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
+          log_debug(LD_CIRC,
+                    "Closing circuit that has been unused for %d seconds.",
+                    (int)(now - circ->timestamp_created));
+          circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+        } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
+          log_notice(LD_CIRC,
+                     "Ancient non-dirty circuit %d is still around after "
+                     "%ld seconds.",
+                     TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+                     now - circ->timestamp_created);
+          TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
+        }
       }
     }
   }
