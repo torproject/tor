@@ -3117,6 +3117,9 @@ typedef struct {
   /** Timeout gathering is suspended if non-zero. The old timeout value
     * is stored here in that case. */
   double suspended_timeout;
+  /** Timeout gathering is suspended if non-zero. The old close value
+    * is stored here in that case. */
+  double suspended_close_timeout;
 } network_liveness_t;
 
 /** Structure for circuit build times history */

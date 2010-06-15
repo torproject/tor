@@ -285,7 +285,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
   cbt->liveness.num_recent_circs = circuit_build_times_recent_circuit_count();
   cbt->liveness.timeouts_after_firsthop = tor_malloc_zero(sizeof(int8_t)*
                                       cbt->liveness.num_recent_circs);
-  cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+  cbt->close_ms = cbt->timeout_ms = circuit_build_times_get_initial_timeout();
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 }
 
@@ -606,7 +606,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
     return 0;
   }
 
-  loaded_times = tor_malloc(sizeof(build_time_t)*state->TotalBuildTimes);
+  /* build_time_t 0 means uninitialized */
+  loaded_times = tor_malloc_zero(sizeof(build_time_t)*state->TotalBuildTimes);
 
   for (line = state->BuildtimeHistogram; line; line = line->next) {
     smartlist_t *args = smartlist_create();
@@ -692,7 +693,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
 
   circuit_build_times_set_timeout(cbt);
 
-  if (!state->CircuitBuildTimeoutCount) {
+  if (!state->CircuitBuildTimeoutCount && cbt->total_build_times) {
     circuit_build_times_filter_timeouts(cbt);
   }
 
@@ -924,10 +925,20 @@ circuit_build_times_network_timeout(circuit_build_times_t *cbt,
    * entire existence during a time where we have had no network activity.
    *
    * Also double check that it is a valid timeout after we have possibly
-   * just recently reset cbt->timeout_ms.
+   * just recently reset cbt->close_ms.
+   *
+   * We use close_ms here because timeouts aren't actually counted as timeouts
+   * until close_ms elapses.
    */
   if (cbt->liveness.network_last_live <= start_time &&
-          start_time <= (now - cbt->timeout_ms/1000.0)) {
+          start_time <= (now - cbt->close_ms/1000.0)) {
+    if (did_onehop) {
+      log_warn(LD_BUG,
+               "Circuit somehow completed a hop while the network was "
+               "not live. Network was last live at %ld, but circuit launched "
+               "at %ld. It's now %ld.", cbt->liveness.network_last_live,
+               start_time, now);
+    }
     cbt->liveness.nonlive_timeouts++;
   } else if (did_onehop) {
     /* Count a one-hop timeout */
@@ -970,7 +981,9 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
                 (long int)(now - cbt->liveness.network_last_live),
                 tor_lround(circuit_build_times_get_initial_timeout()/1000));
       cbt->liveness.suspended_timeout = cbt->timeout_ms;
-      cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+      cbt->liveness.suspended_close_timeout = cbt->close_ms;
+      cbt->close_ms = cbt->timeout_ms
+                    = circuit_build_times_get_initial_timeout();
       control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_SUSPENDED);
     }
 
@@ -980,7 +993,9 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
               "Network activity has resumed. "
               "Resuming circuit timeout calculations.");
     cbt->timeout_ms = cbt->liveness.suspended_timeout;
+    cbt->close_ms = cbt->liveness.suspended_close_timeout;
     cbt->liveness.suspended_timeout = 0;
+    cbt->liveness.suspended_close_timeout = 0;
     control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESUME);
   }
 
@@ -995,6 +1010,8 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
  * Also resets the entire timeout history in this case and causes us
  * to restart the process of building test circuits and estimating a
  * new timeout.
+ *
+ * XXX: All this may have been broken by the close_ms change!
  */
 int
 circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
@@ -1024,14 +1041,17 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   /* Check to see if this has happened before. If so, double the timeout
    * to give people on abysmally bad network connections a shot at access */
   if (cbt->timeout_ms >= circuit_build_times_get_initial_timeout()) {
-    if (cbt->timeout_ms > INT32_MAX/2) {
-      log_warn(LD_CIRC, "Insanely large circuit build timeout value: %lf",
-               cbt->timeout_ms);
+    if (cbt->timeout_ms > INT32_MAX/2 || cbt->close_ms > INT32_MAX/2) {
+      log_warn(LD_CIRC, "Insanely large circuit build timeout value. "
+              "(timeout = %lfmsec, close = %lfmsec)",
+               cbt->timeout_ms, cbt->close_ms);
     } else {
       cbt->timeout_ms *= 2;
+      cbt->close_ms *= 2;
     }
   } else {
-    cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+    cbt->close_ms = cbt->timeout_ms
+                  = circuit_build_times_get_initial_timeout();
   }
 
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
@@ -1058,6 +1078,9 @@ circuit_build_times_timeout_rate(const circuit_build_times_t *cbt)
     }
   }
 
+  if (!cbt->total_build_times)
+    return 0;
+
   return ((double)timeouts)/cbt->total_build_times;
 }
 
@@ -1073,10 +1096,12 @@ circuit_build_times_add_timeout(circuit_build_times_t *cbt,
                                 time_t start_time)
 {
   if (circuit_build_times_disabled()) {
-    cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+    cbt->close_ms = cbt->timeout_ms
+                  = circuit_build_times_get_initial_timeout();
     return 0;
   }
 
+  // XXX: All this has changed due to close_ms
   circuit_build_times_network_timeout(cbt, did_onehop, start_time);
 
   /* Only count timeouts if network is live.. */
@@ -1116,7 +1141,7 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
   /* Sometimes really fast guard nodes give us such a steep curve
    * that this ends up being not that much greater than timeout_ms.
    * Make it be at least 1 min to handle this case. */
-  cbt->close_ms = MAX(cbt->close_ms, 60*1000);
+  cbt->close_ms = MAX(cbt->close_ms, circuit_build_times_initial_timeout());
 
   cbt->have_computed_timeout = 1;
   return 1;
@@ -1139,6 +1164,11 @@ circuit_build_times_set_timeout(circuit_build_times_t *cbt)
     log_warn(LD_CIRC, "Set buildtimeout to low value %lfms. Setting to %dms",
              cbt->timeout_ms, circuit_build_times_min_timeout());
     cbt->timeout_ms = circuit_build_times_min_timeout();
+    if (cbt->close_ms < cbt->timeout_ms) {
+      /* This shouldn't happen because of MAX() in timeout_worker above,
+       * but doing it just in case */
+      cbt->close_ms = circuit_build_times_initial_timeout();
+    }
   }
 
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_COMPUTED);
@@ -1771,7 +1801,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
          * and we should discard the value.
          */
         if (timediff < 0 || timediff > 2*circ_times.close_ms+1000) {
-          log_notice(LD_CIRC, "Strange value for circuit build time: %ld. "
+          log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
                               "Assuming clock jump.", timediff);
         } else if (!circuit_build_times_disabled()) {
           circuit_build_times_add_time(&circ_times, (build_time_t)timediff);

@@ -378,7 +378,7 @@ circuit_expire_building(time_t now)
        */
       if (now - victim->timestamp_created > 2*circ_times.close_ms/1000+1) {
         log_notice(LD_CIRC,
-                   "Extremely large value for circuit build timeout: %ld. "
+                   "Extremely large value for circuit build timeout: %lds. "
                    "Assuming clock jump.", now - victim->timestamp_created);
       } else if (circuit_build_times_add_timeout(&circ_times,
                                           first_hop_succeeded,
@@ -715,6 +715,9 @@ circuit_expire_old_circuits_clientside(time_t now)
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+    // XXX: Do we ever mark non-dirty odd-purpose circuits for close?
+    // XXX: See irc backlog. Want to log for those circuits not mentioned.
+    //      But remember to add flag. this is called 1x/sec
     } else if (!circ->timestamp_dirty &&
                circ->state == CIRCUIT_STATE_OPEN &&
                circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
