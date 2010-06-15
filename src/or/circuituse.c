@@ -368,6 +368,8 @@ circuit_expire_building(time_t now)
        * Switch their purpose and wait. */
       if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
         victim->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
+        circuit_build_times_count_timeout(&circ_times,
+                                          first_hop_succeeded);
         continue;
       }
 
@@ -380,7 +382,7 @@ circuit_expire_building(time_t now)
         log_notice(LD_CIRC,
                    "Extremely large value for circuit build timeout: %lds. "
                    "Assuming clock jump.", now - victim->timestamp_created);
-      } else if (circuit_build_times_add_timeout(&circ_times,
+      } else if (circuit_build_times_count_close(&circ_times,
                                           first_hop_succeeded,
                                           victim->timestamp_created)) {
         circuit_build_times_set_timeout(&circ_times);

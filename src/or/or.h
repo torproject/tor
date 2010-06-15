@@ -2842,7 +2842,7 @@ typedef struct {
   /** Build time histogram */
   config_line_t * BuildtimeHistogram;
   unsigned int TotalBuildTimes;
-  unsigned int CircuitBuildTimeoutCount;
+  unsigned int CircuitBuildAbandonedCount;
 
   /** What version of Tor wrote this state file? */
   char *TorVersion;
@@ -3027,7 +3027,12 @@ void entry_guards_free_all(void);
 
 /** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
-#define CBT_BUILD_TIMEOUT ((build_time_t)(INT32_MAX-1))
+
+/**
+ * CBT_BUILD_ABANDONED is our flag value to represent a force-closed
+ * circuit (Aka a 'right-censored' pareto value).
+ */
+#define CBT_BUILD_ABANDONED ((build_time_t)(INT32_MAX-1))
 #define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
 
 /** Save state every 10 circuits */
@@ -3152,7 +3157,9 @@ void circuit_build_times_update_state(circuit_build_times_t *cbt,
                                       or_state_t *state);
 int circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                     or_state_t *state, char **msg);
-int circuit_build_times_add_timeout(circuit_build_times_t *cbt,
+void circuit_build_times_count_timeout(circuit_build_times_t *cbt,
+                                       int did_onehop);
+int circuit_build_times_count_close(circuit_build_times_t *cbt,
                                     int did_onehop, time_t start_time);
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,

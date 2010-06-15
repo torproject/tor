@@ -520,20 +520,20 @@ test_circuit_timeout(void)
     int build_times_idx = 0;
     int total_build_times = 0;
 
-    final.timeout_ms = CBT_DEFAULT_TIMEOUT_INITIAL_VALUE;
-    estimate.timeout_ms = CBT_DEFAULT_TIMEOUT_INITIAL_VALUE;
+    final.close_ms = final.timeout_ms = CBT_DEFAULT_TIMEOUT_INITIAL_VALUE;
+    estimate.close_ms = estimate.timeout_ms
+                      = CBT_DEFAULT_TIMEOUT_INITIAL_VALUE;
 
     for (i = 0; i < CBT_DEFAULT_RECENT_CIRCUITS*2; i++) {
       circuit_build_times_network_circ_success(&estimate);
       circuit_build_times_add_time(&estimate,
             circuit_build_times_generate_sample(&estimate, 0,
                 CBT_DEFAULT_QUANTILE_CUTOFF/100.0));
-      estimate.have_computed_timeout = 1;
+
       circuit_build_times_network_circ_success(&estimate);
       circuit_build_times_add_time(&final,
             circuit_build_times_generate_sample(&final, 0,
                 CBT_DEFAULT_QUANTILE_CUTOFF/100.0));
-      final.have_computed_timeout = 1;
     }
 
     test_assert(!circuit_build_times_network_check_changed(&estimate));
@@ -549,26 +549,22 @@ test_circuit_timeout(void)
       test_assert(circuit_build_times_network_check_live(&estimate));
       test_assert(circuit_build_times_network_check_live(&final));
 
-      if (circuit_build_times_add_timeout(&estimate, 0,
-                 (time_t)(approx_time()-estimate.timeout_ms/1000.0-1)))
-        estimate.have_computed_timeout = 1;
-      if (circuit_build_times_add_timeout(&final, 0,
-                 (time_t)(approx_time()-final.timeout_ms/1000.0-1)))
-        final.have_computed_timeout = 1;
+      circuit_build_times_count_close(&estimate, 0,
+                 (time_t)(approx_time()-estimate.close_ms/1000.0-1));
+      circuit_build_times_count_close(&final, 0,
+                 (time_t)(approx_time()-final.close_ms/1000.0-1));
     }
 
     test_assert(!circuit_build_times_network_check_live(&estimate));
     test_assert(!circuit_build_times_network_check_live(&final));
 
     for ( ; i < CBT_NETWORK_NONLIVE_DISCARD_COUNT; i++) {
-      if (circuit_build_times_add_timeout(&estimate, 0,
-                (time_t)(approx_time()-estimate.timeout_ms/1000.0-1)))
-        estimate.have_computed_timeout = 1;
+      circuit_build_times_count_close(&estimate, 0,
+                (time_t)(approx_time()-estimate.close_ms/1000.0-1));
 
       if (i < CBT_NETWORK_NONLIVE_DISCARD_COUNT-1) {
-        if (circuit_build_times_add_timeout(&final, 0,
-                (time_t)(approx_time()-final.timeout_ms/1000.0-1)))
-          final.have_computed_timeout = 1;
+        circuit_build_times_count_close(&final, 0,
+                (time_t)(approx_time()-final.close_ms/1000.0-1));
       }
     }
 
@@ -592,12 +588,10 @@ test_circuit_timeout(void)
     circuit_build_times_network_is_live(&final);
 
     for (i = 0; i < CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT; i++) {
-      if (circuit_build_times_add_timeout(&estimate, 1, approx_time()-1))
-        estimate.have_computed_timeout = 1;
+      circuit_build_times_count_timeout(&estimate, 1);
 
       if (i < CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT-1) {
-        if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
-          final.have_computed_timeout = 1;
+        circuit_build_times_count_timeout(&final, 1);
       }
     }
 
@@ -608,8 +602,7 @@ test_circuit_timeout(void)
     test_assert(circuit_build_times_network_check_live(&estimate));
     test_assert(circuit_build_times_network_check_live(&final));
 
-    if (circuit_build_times_add_timeout(&final, 1, approx_time()-1))
-      final.have_computed_timeout = 1;
+    circuit_build_times_count_timeout(&final, 1);
   }
 
 done:
