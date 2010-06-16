@@ -1089,6 +1089,25 @@ circuit_build_times_timeout_rate(const circuit_build_times_t *cbt)
 }
 
 /**
+ * Count the number of closed circuits in a set of cbt data.
+ */
+double
+circuit_build_times_close_rate(const circuit_build_times_t *cbt)
+{
+  int i=0,closed=0;
+  for (i = 0; i < CBT_NCIRCUITS_TO_OBSERVE; i++) {
+    if (cbt->circuit_build_times[i] == CBT_BUILD_ABANDONED) {
+       closed++;
+    }
+  }
+
+  if (!cbt->total_build_times)
+    return 0;
+
+  return ((double)closed)/cbt->total_build_times;
+}
+
+/**
  * Store a timeout as a synthetic value.
  *
  * Returns true if the store was successful and we should possibly
