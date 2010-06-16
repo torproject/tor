@@ -115,7 +115,7 @@ log_commandline_options(int argc, char **argv)
   logfile = fopen("tor-fw-helper.log", "a");
   if (NULL == logfile)
     return -1;
- 
+
   /* Send all commandline arguments to the file */
   now = time(NULL);
   retval = fprintf(logfile, "START: %s\n", ctime(&now));

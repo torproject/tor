@@ -340,8 +340,23 @@ void start_daemon(void);
 void finish_daemon(const char *desired_cwd);
 void write_pidfile(char *filename);
 
+/* Port forwarding */
+void tor_check_port_forwarding(const char *filename,
+                               int dir_port, int or_port, time_t now);
+
 #ifdef MS_WINDOWS
 HANDLE load_windows_system_library(const TCHAR *library_name);
+#endif
+
+#ifdef UTIL_PRIVATE
+/* Prototypes for private functions only used by util.c (and unit tests) */
+void format_helper_exit_status(unsigned char child_state,
+                               int saved_errno, char *hex_errno);
+
+/* Space for hex values of child state, a slash, saved_errno (with
+   leading minus) and newline (no null) */
+#define HEX_ERRNO_SIZE (sizeof(char) * 2 + 1 + \
+                        1 + sizeof(int) * 2 + 1)
 #endif
 
 const char *libor_get_digests(void);
