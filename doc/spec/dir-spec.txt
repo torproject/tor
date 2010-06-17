@@ -1351,9 +1351,9 @@
          Web - Weight for BEGIN_DIR-supporting Exit-flagged nodes
          Wdb - Weight for BEGIN_DIR-supporting Guard+Exit-flagged nodes
 
-         Wbg - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
-         Wbm - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
-         Wbe - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
+         Wbg - Weight for Guard flagged nodes for BEGIN_DIR requests
+         Wbm - Weight for non-flagged nodes for BEGIN_DIR requests
+         Wbe - Weight for Exit-flagged nodes for BEGIN_DIR requests
          Wbd - Weight for Guard+Exit-flagged nodes for BEGIN_DIR requests
 
        These values are calculated as specified in Section 3.4.3.
