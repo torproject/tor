@@ -733,9 +733,10 @@ circuit_expire_old_circuits_clientside(time_t now)
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
           log_notice(LD_CIRC,
                      "Ancient non-dirty circuit %d is still around after "
-                     "%ld seconds.",
+                     "%ld seconds. Purpose: %d",
                      TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                     now - circ->timestamp_created);
+                     now - circ->timestamp_created,
+                     circ->purpose);
           TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
         }
       }
