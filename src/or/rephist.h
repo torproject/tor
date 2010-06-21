@@ -27,7 +27,8 @@ void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes);
 void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes);
 void rep_hist_note_exit_stream_opened(uint16_t port);
 void rep_hist_exit_stats_init(time_t now);
-void rep_hist_exit_stats_write(time_t now);
+time_t rep_hist_exit_stats_write(time_t now);
+void rep_hist_exit_stats_term(void);
 int rep_hist_bandwidth_assess(void);
 char *rep_hist_get_bandwidth_lines(int for_extrainfo);
 void rep_hist_update_state(or_state_t *state);
@@ -73,7 +74,8 @@ void hs_usage_free_all(void);
 void rep_hist_buffer_stats_init(time_t now);
 void rep_hist_buffer_stats_add_circ(circuit_t *circ,
                                     time_t end_of_interval);
-void rep_hist_buffer_stats_write(time_t now);
+time_t rep_hist_buffer_stats_write(time_t now);
+void rep_hist_buffer_stats_term(void);
 
 #endif
 

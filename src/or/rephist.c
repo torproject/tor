@@ -6,7 +6,8 @@
  * \file rephist.c
  * \brief Basic history and "reputation" functionality to remember
  *    which servers have worked in the past, how much bandwidth we've
- *    been using, which ports we tend to want, and so on.
+ *    been using, which ports we tend to want, and so on; further,
+ *    exit port statistics and cell statistics.
  **/
 
 #include "or.h"
@@ -1345,7 +1346,7 @@ static uint64_t *exit_bytes_written = NULL;
 /** Number of streams opened in current period by exit port */
 static uint32_t *exit_streams = NULL;
 
-/** When does the current exit stats period end? */
+/** Start time of exit stats or 0 if we're not collecting exit stats. */
 static time_t start_of_exit_stats_interval;
 
 /** Initialize exit port stats. */
@@ -1361,8 +1362,20 @@ rep_hist_exit_stats_init(time_t now)
                                  sizeof(uint32_t));
 }
 
-/** Write exit stats to $DATADIR/stats/exit-stats and reset counters. */
+/** Stop collecting exit port stats in a way that we can re-start doing
+ * so in rep_hist_exit_stats_init(). */
 void
+rep_hist_exit_stats_term(void)
+{
+  start_of_exit_stats_interval = 0;
+  tor_free(exit_bytes_read);
+  tor_free(exit_bytes_written);
+  tor_free(exit_streams);
+}
+
+/** Write exit stats to $DATADIR/stats/exit-stats, reset counters, and
+ * return when we would next want to write exit stats. */
+time_t
 rep_hist_exit_stats_write(time_t now)
 {
   char t[ISO_TIME_LEN+1];
@@ -1374,8 +1387,10 @@ rep_hist_exit_stats_write(time_t now)
   open_file_t *open_file = NULL;
   FILE *out = NULL;
 
-  if (!exit_streams)
-    return; /* Not initialized */
+  if (!start_of_exit_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_exit_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write. */
 
   statsdir = get_datadir_fname("stats");
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
@@ -1477,6 +1492,7 @@ rep_hist_exit_stats_write(time_t now)
     abort_writing_to_file(open_file);
   tor_free(filename);
   tor_free(statsdir);
+  return start_of_exit_stats_interval + WRITE_STATS_INTERVAL;
 }
 
 /** Note that we wrote <b>num_bytes</b> to an exit connection to
@@ -2062,7 +2078,8 @@ rep_hist_free_all(void)
 
 /*** cell statistics ***/
 
-/** Start of the current buffer stats interval. */
+/** Start of the current buffer stats interval or 0 if we're not
+ * collecting buffer statistics. */
 static time_t start_of_buffer_stats_interval;
 
 /** Initialize buffer stats. */
@@ -2132,8 +2149,22 @@ _buffer_stats_compare_entries(const void **_a, const void **_b)
     return 0;
 }
 
-/** Write buffer statistics to $DATADIR/stats/buffer-stats. */
+/** Stop collecting cell stats in a way that we can re-start doing so in
+ * rep_hist_buffer_stats_init(). */
 void
+rep_hist_buffer_stats_term(void)
+{
+  start_of_buffer_stats_interval = 0;
+  if (!circuits_for_buffer_stats)
+    circuits_for_buffer_stats = smartlist_create();
+  SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *,
+      stat, tor_free(stat));
+  smartlist_clear(circuits_for_buffer_stats);
+}
+
+/** Write buffer statistics to $DATADIR/stats/buffer-stats and return when
+ * we would next want to write exit stats. */
+time_t
 rep_hist_buffer_stats_write(time_t now)
 {
   char *statsdir = NULL, *filename = NULL;
@@ -2147,6 +2178,12 @@ rep_hist_buffer_stats_write(time_t now)
   smartlist_t *str_build = smartlist_create();
   char *str = NULL, *buf=NULL;
   circuit_t *circ;
+
+  if (!start_of_buffer_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_buffer_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write */
+
   /* add current circuits to stats */
   for (circ = _circuit_get_global_list(); circ; circ = circ->next)
     rep_hist_buffer_stats_add_circ(circ, now);
@@ -2244,5 +2281,6 @@ rep_hist_buffer_stats_write(time_t now)
   }
   tor_free(str);
 #undef SHARES
+  return start_of_buffer_stats_interval + WRITE_STATS_INTERVAL;
 }
 

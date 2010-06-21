@@ -997,42 +997,32 @@ run_scheduled_events(time_t now)
 
   /* 1g. Check whether we should write statistics to disk.
    */
-  if (time_to_write_stats_files >= 0 && time_to_write_stats_files < now) {
-#define WRITE_STATS_INTERVAL (24*60*60)
-    if (options->CellStatistics || options->DirReqStatistics ||
-        options->EntryStatistics || options->ExitPortStatistics) {
-      if (!time_to_write_stats_files) {
-        /* Initialize stats. We're doing this here and not in options_act,
-         * so that we know exactly when the 24 hours interval ends. */
-        if (options->CellStatistics)
-          rep_hist_buffer_stats_init(now);
-        if (options->DirReqStatistics)
-          geoip_dirreq_stats_init(now);
-        if (options->EntryStatistics)
-          geoip_entry_stats_init(now);
-        if (options->ExitPortStatistics)
-          rep_hist_exit_stats_init(now);
-        log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
-                   "the *-stats files that will first be written to the "
-                   "data directory in %d hours from now.",
-                   WRITE_STATS_INTERVAL / (60 * 60));
-        time_to_write_stats_files = now + WRITE_STATS_INTERVAL;
-      } else {
-        /* Write stats to disk. */
-        if (options->CellStatistics)
+  if (time_to_write_stats_files < now) {
+#define CHECK_WRITE_STATS_INTERVAL (60*60)
+    time_t next_time_to_write_stats_files = (time_to_write_stats_files > 0 ?
+           time_to_write_stats_files : now) + CHECK_WRITE_STATS_INTERVAL;
+    if (options->CellStatistics) {
+      time_t next_write =
           rep_hist_buffer_stats_write(time_to_write_stats_files);
-        if (options->DirReqStatistics)
-          geoip_dirreq_stats_write(time_to_write_stats_files);
-        if (options->EntryStatistics)
-          geoip_entry_stats_write(time_to_write_stats_files);
-        if (options->ExitPortStatistics)
-          rep_hist_exit_stats_write(time_to_write_stats_files);
-        time_to_write_stats_files += WRITE_STATS_INTERVAL;
-      }
-    } else {
-      /* Never write stats to disk */
-      time_to_write_stats_files = -1;
+      if (next_write && next_write < next_time_to_write_stats_files)
+        next_time_to_write_stats_files = next_write;
     }
+    if (options->DirReqStatistics) {
+      time_t next_write = geoip_dirreq_stats_write(time_to_write_stats_files);
+      if (next_write && next_write < next_time_to_write_stats_files)
+        next_time_to_write_stats_files = next_write;
+    }
+    if (options->EntryStatistics) {
+      time_t next_write = geoip_entry_stats_write(time_to_write_stats_files);
+      if (next_write && next_write < next_time_to_write_stats_files)
+        next_time_to_write_stats_files = next_write;
+    }
+    if (options->ExitPortStatistics) {
+      time_t next_write = rep_hist_exit_stats_write(time_to_write_stats_files);
+      if (next_write && next_write < next_time_to_write_stats_files)
+        next_time_to_write_stats_files = next_write;
+    }
+    time_to_write_stats_files = next_time_to_write_stats_files;
   }
 
   /* 1h. Check whether we should write bridge statistics to disk.

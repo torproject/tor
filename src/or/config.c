@@ -1246,8 +1246,15 @@ options_act(or_options_t *old_options)
     }
 
     if (! bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
-      log_info(LD_GENERAL, "Bridge status changed.  Forgetting GeoIP stats.");
-      geoip_remove_old_clients(time(NULL)+(2*60*60));
+      if (options->BridgeRelay) {
+        geoip_bridge_stats_init(time(NULL) + (2 * 60 * 60));
+        log_info(LD_CONFIG, "We are acting as a bridge now.  Starting new "
+                 "GeoIP stats interval in 2 hours from now.");
+      } else {
+        geoip_bridge_stats_term();
+        log_info(LD_GENERAL, "We are no longer acting as a bridge.  "
+                 "Forgetting GeoIP stats.");
+      }
     }
 
     if (options_transition_affects_workers(old_options, options)) {
@@ -1316,6 +1323,40 @@ options_act(or_options_t *old_options)
       return -1;
     }
   }
+
+  if (options->CellStatistics || options->DirReqStatistics ||
+      options->EntryStatistics || options->ExitPortStatistics) {
+    time_t now = time(NULL);
+    if ((!old_options || !old_options->CellStatistics) &&
+        options->CellStatistics)
+      rep_hist_buffer_stats_init(now);
+    if ((!old_options || !old_options->DirReqStatistics) &&
+        options->DirReqStatistics)
+      geoip_dirreq_stats_init(now);
+    if ((!old_options || !old_options->EntryStatistics) &&
+        options->EntryStatistics)
+      geoip_entry_stats_init(now);
+    if ((!old_options || !old_options->ExitPortStatistics) &&
+        options->ExitPortStatistics)
+      rep_hist_exit_stats_init(now);
+    if (!old_options)
+      log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
+                 "the *-stats files that will first be written to the "
+                 "data directory in 24 hours from now.");
+  }
+
+  if (old_options && old_options->CellStatistics &&
+      !options->CellStatistics)
+    rep_hist_buffer_stats_term();
+  if (old_options && old_options->DirReqStatistics &&
+      !options->DirReqStatistics)
+    geoip_dirreq_stats_term();
+  if (old_options && old_options->EntryStatistics &&
+      !options->EntryStatistics)
+    geoip_entry_stats_term();
+  if (old_options && old_options->ExitPortStatistics &&
+      !options->ExitPortStatistics)
+    rep_hist_exit_stats_term();
 
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
@@ -3685,16 +3726,6 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
   if (old->TestingTorNetwork != new_val->TestingTorNetwork) {
     *msg = tor_strdup("While Tor is running, changing TestingTorNetwork "
                       "is not allowed.");
-    return -1;
-  }
-
-  if (old->CellStatistics != new_val->CellStatistics ||
-      old->DirReqStatistics != new_val->DirReqStatistics ||
-      old->EntryStatistics != new_val->EntryStatistics ||
-      old->ExitPortStatistics != new_val->ExitPortStatistics) {
-    *msg = tor_strdup("While Tor is running, changing either "
-                      "CellStatistics, DirReqStatistics, EntryStatistics, "
-                      "or ExitPortStatistics is not allowed.");
     return -1;
   }
 

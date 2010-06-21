@@ -4,7 +4,8 @@
 /**
  * \file geoip.c
  * \brief Functions related to maintaining an IP-to-country database and to
- *    summarizing client connections by country.
+ *    summarizing client connections by country to entry guards, bridges, and
+ *    directories as well as statistics on answering network status requests.
  */
 
 #define GEOIP_PRIVATE
@@ -26,16 +27,11 @@ typedef struct geoip_entry_t {
   intptr_t country; /**< An index into geoip_countries */
 } geoip_entry_t;
 
-/** For how many periods should we remember per-country request history? */
-#define REQUEST_HIST_LEN 1
-/** How long are the periods for which we should remember request history? */
-#define REQUEST_HIST_PERIOD (24*60*60)
-
 /** A per-country record for GeoIP request history. */
 typedef struct geoip_country_t {
   char countrycode[3];
-  uint32_t n_v2_ns_requests[REQUEST_HIST_LEN];
-  uint32_t n_v3_ns_requests[REQUEST_HIST_LEN];
+  uint32_t n_v2_ns_requests;
+  uint32_t n_v3_ns_requests;
 } geoip_country_t;
 
 /** A list of geoip_country_t */
@@ -293,14 +289,6 @@ typedef struct clientmap_entry_t {
 /** Map from client IP address to last time seen. */
 static HT_HEAD(clientmap, clientmap_entry_t) client_history =
      HT_INITIALIZER();
-/** Time at which we started tracking client IP history. */
-static time_t client_history_starts = 0;
-
-/** When did the current period of checking per-country request history
- * start? */
-static time_t current_request_period_starts = 0;
-/** How many older request periods are we remembering? */
-static int n_old_request_periods = 0;
 
 /** Hashtable helper: compute a hash of a clientmap_entry_t. */
 static INLINE unsigned
@@ -319,6 +307,23 @@ HT_PROTOTYPE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
              clientmap_entries_eq);
 HT_GENERATE(clientmap, clientmap_entry_t, node, clientmap_entry_hash,
             clientmap_entries_eq, 0.6, malloc, realloc, free);
+
+/** Clear history of connecting clients used by entry and bridge stats. */
+static void
+client_history_clear(void)
+{
+  clientmap_entry_t **ent, **next, *this;
+  for (ent = HT_START(clientmap, &client_history); ent != NULL;
+       ent = next) {
+    if ((*ent)->action == GEOIP_CLIENT_CONNECT) {
+      this = *ent;
+      next = HT_NEXT_RMV(clientmap, &client_history, ent);
+      tor_free(this);
+    } else {
+      next = HT_NEXT(clientmap, &client_history, ent);
+    }
+  }
+}
 
 /** How often do we update our estimate which share of v2 and v3 directory
  * requests is sent to us? We could as well trigger updates of shares from
@@ -381,25 +386,6 @@ geoip_get_mean_shares(time_t now, double *v2_share_out,
   return 0;
 }
 
-/* Rotate period of v2 and v3 network status requests. */
-static void
-rotate_request_period(void)
-{
-  SMARTLIST_FOREACH_BEGIN(geoip_countries, geoip_country_t *, c) {
-#if REQUEST_HIST_LEN > 1
-      memmove(&c->n_v2_ns_requests[0], &c->n_v2_ns_requests[1],
-              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-      memmove(&c->n_v3_ns_requests[0], &c->n_v3_ns_requests[1],
-              sizeof(uint32_t)*(REQUEST_HIST_LEN-1));
-#endif
-      c->n_v2_ns_requests[REQUEST_HIST_LEN-1] = 0;
-      c->n_v3_ns_requests[REQUEST_HIST_LEN-1] = 0;
-  } SMARTLIST_FOREACH_END(c);
-  current_request_period_starts += REQUEST_HIST_PERIOD;
-  if (n_old_request_periods < REQUEST_HIST_LEN-1)
-    ++n_old_request_periods;
-}
-
 /** Note that we've seen a client connect from the IP <b>addr</b> (host order)
  * at time <b>now</b>. Ignored by all but bridges and directories if
  * configured accordingly. */
@@ -414,33 +400,10 @@ geoip_note_client_seen(geoip_client_action_t action,
     if (!options->EntryStatistics &&
         (!(options->BridgeRelay && options->BridgeRecordUsageByCountry)))
       return;
-    /* Did we recently switch from bridge to relay or back? */
-    if (client_history_starts > now)
-      return;
   } else {
     if (options->BridgeRelay || options->BridgeAuthoritativeDir ||
         !options->DirReqStatistics)
       return;
-  }
-
-  /* As a bridge that doesn't rotate request periods every 24 hours,
-   * possibly rotate now. */
-  if (options->BridgeRelay) {
-    while (current_request_period_starts + REQUEST_HIST_PERIOD < now) {
-      if (!geoip_countries)
-        init_geoip_countries();
-      if (!current_request_period_starts) {
-        current_request_period_starts = now;
-        break;
-      }
-      /* Also discard all items in the client history that are too old.
-       * (This only works here because bridge and directory stats are
-       * independent. Otherwise, we'd only want to discard those items
-       * with action GEOIP_CLIENT_NETWORKSTATUS{_V2}.) */
-      geoip_remove_old_clients(current_request_period_starts);
-      /* Now rotate request period */
-      rotate_request_period();
-    }
   }
 
   lookup.ipaddr = addr;
@@ -464,19 +427,14 @@ geoip_note_client_seen(geoip_client_action_t action,
     if (country_idx >= 0 && country_idx < smartlist_len(geoip_countries)) {
       geoip_country_t *country = smartlist_get(geoip_countries, country_idx);
       if (action == GEOIP_CLIENT_NETWORKSTATUS)
-        ++country->n_v3_ns_requests[REQUEST_HIST_LEN-1];
+        ++country->n_v3_ns_requests;
       else
-        ++country->n_v2_ns_requests[REQUEST_HIST_LEN-1];
+        ++country->n_v2_ns_requests;
     }
 
     /* Periodically determine share of requests that we should see */
     if (last_time_determined_shares + REQUEST_SHARE_INTERVAL < now)
       geoip_determine_shares(now);
-  }
-
-  if (!client_history_starts) {
-    client_history_starts = now;
-    current_request_period_starts = now;
   }
 }
 
@@ -494,18 +452,13 @@ _remove_old_client_helper(struct clientmap_entry_t *ent, void *_cutoff)
   }
 }
 
-/** Forget about all clients that haven't connected since <b>cutoff</b>.
- * If <b>cutoff</b> is in the future, clients won't be added to the history
- * until this time is reached. This is useful to prevent relays that switch
- * to bridges from reporting unbelievable numbers of clients. */
+/** Forget about all clients that haven't connected since <b>cutoff</b>. */
 void
 geoip_remove_old_clients(time_t cutoff)
 {
   clientmap_HT_FOREACH_FN(&client_history,
                           _remove_old_client_helper,
                           &cutoff);
-  if (client_history_starts < cutoff)
-    client_history_starts = cutoff;
 }
 
 /** How many responses are we giving to clients requesting v2 network
@@ -550,13 +503,6 @@ geoip_note_ns_response(geoip_client_action_t action,
 /** When reporting geoip data about countries, round up to the nearest
  * multiple of this value. */
 #define IP_GRANULARITY 8
-
-/** Return the time at which we started recording geoip data. */
-time_t
-geoip_get_history_start(void)
-{
-  return client_history_starts;
-}
 
 /** Helper type: used to sort per-country totals by value. */
 typedef struct c_hist_t {
@@ -633,7 +579,7 @@ HT_GENERATE(dirreqmap, dirreq_map_entry_t, node, dirreq_map_ent_hash,
             dirreq_map_ent_eq, 0.6, malloc, realloc, free);
 
 /** Helper: Put <b>entry</b> into map of directory requests using
- * <b>tunneled</b> and <b>dirreq_id</b> as key parts. If there is
+ * <b>type</b> and <b>dirreq_id</b> as key parts. If there is
  * already an entry for that key, print out a BUG warning and return. */
 static void
 _dirreq_map_put(dirreq_map_entry_t *entry, dirreq_type_t type,
@@ -654,7 +600,7 @@ _dirreq_map_put(dirreq_map_entry_t *entry, dirreq_type_t type,
 }
 
 /** Helper: Look up and return an entry in the map of directory requests
- * using <b>tunneled</b> and <b>dirreq_id</b> as key parts. If there
+ * using <b>type</b> and <b>dirreq_id</b> as key parts. If there
  * is no such entry, return NULL. */
 static dirreq_map_entry_t *
 _dirreq_map_get(dirreq_type_t type, uint64_t dirreq_id)
@@ -817,124 +763,94 @@ geoip_get_dirreq_history(geoip_client_action_t action,
   return result;
 }
 
-/** How long do we have to have observed per-country request history before we
- * are willing to talk about it? */
-#define GEOIP_MIN_OBSERVATION_TIME (12*60*60)
-
-/** Helper for geoip_get_client_history_dirreq() and
- * geoip_get_client_history_bridge(). */
-static char *
-geoip_get_client_history(time_t now, geoip_client_action_t action,
-                         int min_observation_time, unsigned granularity)
+/** Return a newly allocated comma-separated string containing entries for
+ * all the countries from which we've seen enough clients connect as a
+ * bridge, directory, or entry guard. The entry format is cc=num where num
+ * is the number of IPs we've seen connecting from that country, and cc is
+ * a lowercased country code. Returns NULL if we don't want to export
+ * geoip data yet. */
+char *
+geoip_get_client_history(geoip_client_action_t action)
 {
   char *result = NULL;
+  unsigned granularity = IP_GRANULARITY;
+  smartlist_t *chunks = NULL;
+  smartlist_t *entries = NULL;
+  int n_countries = geoip_get_n_countries();
+  int i;
+  clientmap_entry_t **ent;
+  unsigned *counts = NULL;
+  unsigned total = 0;
+
   if (!geoip_is_loaded())
     return NULL;
-  if (client_history_starts < (now - min_observation_time)) {
-    smartlist_t *chunks = NULL;
-    smartlist_t *entries = NULL;
-    int n_countries = geoip_get_n_countries();
-    int i;
-    clientmap_entry_t **ent;
-    unsigned *counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
-    unsigned total = 0;
-    HT_FOREACH(ent, clientmap, &client_history) {
-      int country;
-      if ((*ent)->action != (int)action)
-        continue;
-      country = geoip_get_country_by_ip((*ent)->ipaddr);
-      if (country < 0)
-        country = 0; /** unresolved requests are stored at index 0. */
-      tor_assert(0 <= country && country < n_countries);
-      ++counts[country];
-      ++total;
-    }
-    /* Don't record anything if we haven't seen enough IPs. */
-    if (total < MIN_IPS_TO_NOTE_ANYTHING)
-      goto done;
-    /* Make a list of c_hist_t */
-    entries = smartlist_create();
-    for (i = 0; i < n_countries; ++i) {
-      unsigned c = counts[i];
-      const char *countrycode;
-      c_hist_t *ent;
-      /* Only report a country if it has a minimum number of IPs. */
-      if (c >= MIN_IPS_TO_NOTE_COUNTRY) {
-        c = round_to_next_multiple_of(c, granularity);
-        countrycode = geoip_get_country_name(i);
-        ent = tor_malloc(sizeof(c_hist_t));
-        strlcpy(ent->country, countrycode, sizeof(ent->country));
-        ent->total = c;
-        smartlist_add(entries, ent);
-      }
-    }
-    /* Sort entries. Note that we must do this _AFTER_ rounding, or else
-     * the sort order could leak info. */
-    smartlist_sort(entries, _c_hist_compare);
 
-    /* Build the result. */
-    chunks = smartlist_create();
-    SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
-        char *buf=NULL;
-        tor_asprintf(&buf, "%s=%u", ch->country, ch->total);
-        smartlist_add(chunks, buf);
-    });
-    result = smartlist_join_strings(chunks, ",", 0, NULL);
-  done:
-    tor_free(counts);
-    if (chunks) {
-      SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));
-      smartlist_free(chunks);
-    }
-    if (entries) {
-      SMARTLIST_FOREACH(entries, c_hist_t *, c, tor_free(c));
-      smartlist_free(entries);
+  counts = tor_malloc_zero(sizeof(unsigned)*n_countries);
+  HT_FOREACH(ent, clientmap, &client_history) {
+    int country;
+    if ((*ent)->action != (int)action)
+      continue;
+    country = geoip_get_country_by_ip((*ent)->ipaddr);
+    if (country < 0)
+      country = 0; /** unresolved requests are stored at index 0. */
+    tor_assert(0 <= country && country < n_countries);
+    ++counts[country];
+    ++total;
+  }
+  /* Don't record anything if we haven't seen enough IPs. */
+  if (total < MIN_IPS_TO_NOTE_ANYTHING)
+    goto done;
+  /* Make a list of c_hist_t */
+  entries = smartlist_create();
+  for (i = 0; i < n_countries; ++i) {
+    unsigned c = counts[i];
+    const char *countrycode;
+    c_hist_t *ent;
+    /* Only report a country if it has a minimum number of IPs. */
+    if (c >= MIN_IPS_TO_NOTE_COUNTRY) {
+      c = round_to_next_multiple_of(c, granularity);
+      countrycode = geoip_get_country_name(i);
+      ent = tor_malloc(sizeof(c_hist_t));
+      strlcpy(ent->country, countrycode, sizeof(ent->country));
+      ent->total = c;
+      smartlist_add(entries, ent);
     }
   }
+  /* Sort entries. Note that we must do this _AFTER_ rounding, or else
+   * the sort order could leak info. */
+  smartlist_sort(entries, _c_hist_compare);
+
+  /* Build the result. */
+  chunks = smartlist_create();
+  SMARTLIST_FOREACH(entries, c_hist_t *, ch, {
+      char *buf=NULL;
+      tor_asprintf(&buf, "%s=%u", ch->country, ch->total);
+      smartlist_add(chunks, buf);
+  });
+  result = smartlist_join_strings(chunks, ",", 0, NULL);
+done:
+  tor_free(counts);
+  if (chunks) {
+    SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));
+    smartlist_free(chunks);
+  }
+  if (entries) {
+    SMARTLIST_FOREACH(entries, c_hist_t *, c, tor_free(c));
+    smartlist_free(entries);
+  }
   return result;
-}
-
-/** Return a newly allocated comma-separated string containing entries for
- * all the countries from which we've seen enough clients connect as a
- * directory. The entry format is cc=num where num is the number of IPs
- * we've seen connecting from that country, and cc is a lowercased country
- * code. Returns NULL if we don't want to export geoip data yet. */
-char *
-geoip_get_client_history_dirreq(time_t now,
-                                geoip_client_action_t action)
-{
-  return geoip_get_client_history(now, action,
-                                  DIR_RECORD_USAGE_MIN_OBSERVATION_TIME,
-                                  DIR_RECORD_USAGE_GRANULARITY);
-}
-
-/** Return a newly allocated comma-separated string containing entries for
- * all the countries from which we've seen enough clients connect as a
- * bridge. The entry format is cc=num where num is the number of IPs
- * we've seen connecting from that country, and cc is a lowercased country
- * code. Returns NULL if we don't want to export geoip data yet. */
-char *
-geoip_get_client_history_bridge(time_t now,
-                                geoip_client_action_t action)
-{
-  return geoip_get_client_history(now, action,
-                                  GEOIP_MIN_OBSERVATION_TIME,
-                                  IP_GRANULARITY);
 }
 
 /** Return a newly allocated string holding the per-country request history
  * for <b>action</b> in a format suitable for an extra-info document, or NULL
  * on failure. */
 char *
-geoip_get_request_history(time_t now, geoip_client_action_t action)
+geoip_get_request_history(geoip_client_action_t action)
 {
   smartlist_t *entries, *strings;
   char *result;
   unsigned granularity = IP_GRANULARITY;
-  int min_observation_time = GEOIP_MIN_OBSERVATION_TIME;
 
-  if (client_history_starts >= (now - min_observation_time))
-    return NULL;
   if (action != GEOIP_CLIENT_NETWORKSTATUS &&
       action != GEOIP_CLIENT_NETWORKSTATUS_V2)
     return NULL;
@@ -943,13 +859,10 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
 
   entries = smartlist_create();
   SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
-      uint32_t *n = (action == GEOIP_CLIENT_NETWORKSTATUS)
-        ? c->n_v3_ns_requests : c->n_v2_ns_requests;
       uint32_t tot = 0;
-      int i;
       c_hist_t *ent;
-      for (i=0; i < REQUEST_HIST_LEN; ++i)
-        tot += n[i];
+      tot = (action == GEOIP_CLIENT_NETWORKSTATUS) ?
+            c->n_v3_ns_requests : c->n_v2_ns_requests;
       if (!tot)
         continue;
       ent = tor_malloc_zero(sizeof(c_hist_t));
@@ -973,7 +886,8 @@ geoip_get_request_history(time_t now, geoip_client_action_t action)
   return result;
 }
 
-/** Start time of directory request stats. */
+/** Start time of directory request stats or 0 if we're not collecting
+ * directory request statistics. */
 static time_t start_of_dirreq_stats_interval;
 
 /** Initialize directory request stats. */
@@ -983,8 +897,47 @@ geoip_dirreq_stats_init(time_t now)
   start_of_dirreq_stats_interval = now;
 }
 
-/** Write dirreq statistics to $DATADIR/stats/dirreq-stats. */
+/** Stop collecting directory request stats in a way that we can re-start
+ * doing so in geoip_dirreq_stats_init(). */
 void
+geoip_dirreq_stats_term(void)
+{
+  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+      c->n_v2_ns_requests = c->n_v3_ns_requests = 0;
+  });
+  {
+    clientmap_entry_t **ent, **next, *this;
+    for (ent = HT_START(clientmap, &client_history); ent != NULL;
+         ent = next) {
+      if ((*ent)->action == GEOIP_CLIENT_NETWORKSTATUS ||
+          (*ent)->action == GEOIP_CLIENT_NETWORKSTATUS_V2) {
+        this = *ent;
+        next = HT_NEXT_RMV(clientmap, &client_history, ent);
+        tor_free(this);
+      } else {
+        next = HT_NEXT(clientmap, &client_history, ent);
+      }
+    }
+  }
+  v2_share_times_seconds = v3_share_times_seconds = 0.0;
+  last_time_determined_shares = 0;
+  share_seconds = 0;
+  memset(ns_v2_responses, 0, sizeof(ns_v2_responses));
+  memset(ns_v3_responses, 0, sizeof(ns_v3_responses));
+  {
+    dirreq_map_entry_t **ent, **next, *this;
+    for (ent = HT_START(dirreqmap, &dirreq_map); ent != NULL; ent = next) {
+      this = *ent;
+      next = HT_NEXT_RMV(dirreqmap, &dirreq_map, ent);
+      tor_free(this);
+    }
+  }
+  start_of_dirreq_stats_interval = 0;
+}
+
+/** Write dirreq statistics to $DATADIR/stats/dirreq-stats and return when
+ * we would next want to write. */
+time_t
 geoip_dirreq_stats_write(time_t now)
 {
   char *statsdir = NULL, *filename = NULL;
@@ -995,8 +948,10 @@ geoip_dirreq_stats_write(time_t now)
   FILE *out;
   int i;
 
-  if (!get_options()->DirReqStatistics)
-    goto done;
+  if (!start_of_dirreq_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_dirreq_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write. */
 
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_dirreq_stats_interval);
@@ -1005,10 +960,8 @@ geoip_dirreq_stats_write(time_t now)
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "dirreq-stats");
-  data_v2 = geoip_get_client_history_dirreq(now,
-                GEOIP_CLIENT_NETWORKSTATUS_V2);
-  data_v3 = geoip_get_client_history_dirreq(now,
-                GEOIP_CLIENT_NETWORKSTATUS);
+  data_v2 = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
+  data_v3 = geoip_get_client_history(GEOIP_CLIENT_NETWORKSTATUS);
   format_iso_time(written, now);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
@@ -1022,13 +975,16 @@ geoip_dirreq_stats_write(time_t now)
   tor_free(data_v2);
   tor_free(data_v3);
 
-  data_v2 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS_V2);
-  data_v3 = geoip_get_request_history(now, GEOIP_CLIENT_NETWORKSTATUS);
+  data_v2 = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS_V2);
+  data_v3 = geoip_get_request_history(GEOIP_CLIENT_NETWORKSTATUS);
   if (fprintf(out, "dirreq-v3-reqs %s\ndirreq-v2-reqs %s\n",
               data_v3 ? data_v3 : "", data_v2 ? data_v2 : "") < 0)
     goto done;
   tor_free(data_v2);
   tor_free(data_v3);
+  SMARTLIST_FOREACH(geoip_countries, geoip_country_t *, c, {
+      c->n_v2_ns_requests = c->n_v3_ns_requests = 0;
+  });
 #define RESPONSE_GRANULARITY 8
   for (i = 0; i < GEOIP_NS_RESPONSE_NUM; i++) {
     ns_v2_responses[i] = round_uint32_to_next_multiple_of(
@@ -1083,9 +1039,6 @@ geoip_dirreq_stats_write(time_t now)
   finish_writing_to_file(open_file);
   open_file = NULL;
 
-  /* Rotate request period */
-  rotate_request_period();
-
   start_of_dirreq_stats_interval = now;
 
  done:
@@ -1095,9 +1048,11 @@ geoip_dirreq_stats_write(time_t now)
   tor_free(statsdir);
   tor_free(data_v2);
   tor_free(data_v3);
+  return start_of_dirreq_stats_interval + WRITE_STATS_INTERVAL;
 }
 
-/** Start time of bridge stats. */
+/** Start time of bridge stats or 0 if we're not collecting bridge
+ * statistics. */
 static time_t start_of_bridge_stats_interval;
 
 /** Initialize bridge stats. */
@@ -1105,6 +1060,15 @@ void
 geoip_bridge_stats_init(time_t now)
 {
   start_of_bridge_stats_interval = now;
+}
+
+/** Stop collecting bridge stats in a way that we can re-start doing so in
+ * geoip_bridge_stats_init(). */
+void
+geoip_bridge_stats_term(void)
+{
+  client_history_clear();
+  start_of_bridge_stats_interval = 0;
 }
 
 /** Parse the bridge statistics as they are written to extra-info
@@ -1186,16 +1150,9 @@ geoip_bridge_stats_write(time_t now)
        written[ISO_TIME_LEN+1], *out = NULL, *controller_str;
   size_t len;
 
-  /* If we changed from relay to bridge recently, adapt starting time
-   * of current measurements. */
-  if (start_of_bridge_stats_interval < client_history_starts)
-    start_of_bridge_stats_interval = client_history_starts;
-
   /* Check if 24 hours have passed since starting measurements. */
-  if (now < start_of_bridge_stats_interval +
-            DIR_ENTRY_RECORD_USAGE_RETAIN_IPS)
-    return start_of_bridge_stats_interval +
-           DIR_ENTRY_RECORD_USAGE_RETAIN_IPS;
+  if (now < start_of_bridge_stats_interval + WRITE_STATS_INTERVAL)
+    return start_of_bridge_stats_interval + WRITE_STATS_INTERVAL;
 
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_bridge_stats_interval);
@@ -1204,7 +1161,7 @@ geoip_bridge_stats_write(time_t now)
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "bridge-stats");
-  data = geoip_get_client_history_bridge(now, GEOIP_CLIENT_CONNECT);
+  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
   format_iso_time(written, now);
   len = strlen("bridge-stats-end  (999999 s)\nbridge-ips \n") +
         ISO_TIME_LEN + (data ? strlen(data) : 0) + 42;
@@ -1230,7 +1187,7 @@ geoip_bridge_stats_write(time_t now)
   tor_free(data);
   tor_free(out);
   return start_of_bridge_stats_interval +
-         DIR_ENTRY_RECORD_USAGE_RETAIN_IPS;
+         WRITE_STATS_INTERVAL;
 }
 
 /** Try to load the most recent bridge statistics from disk, unless we
@@ -1278,7 +1235,8 @@ geoip_get_bridge_stats_controller(time_t now)
   return bridge_stats_controller;
 }
 
-/** Start time of entry stats. */
+/** Start time of entry stats or 0 if we're not collecting entry
+ * statistics. */
 static time_t start_of_entry_stats_interval;
 
 /** Initialize entry stats. */
@@ -1288,8 +1246,18 @@ geoip_entry_stats_init(time_t now)
   start_of_entry_stats_interval = now;
 }
 
-/** Write entry statistics to $DATADIR/stats/entry-stats. */
+/** Stop collecting entry stats in a way that we can re-start doing so in
+ * geoip_entry_stats_init(). */
 void
+geoip_entry_stats_term(void)
+{
+  client_history_clear();
+  start_of_entry_stats_interval = 0;
+}
+
+/** Write entry statistics to $DATADIR/stats/entry-stats and return time
+ * when we would next want to write. */
+time_t
 geoip_entry_stats_write(time_t now)
 {
   char *statsdir = NULL, *filename = NULL;
@@ -1298,8 +1266,10 @@ geoip_entry_stats_write(time_t now)
   open_file_t *open_file = NULL;
   FILE *out;
 
-  if (!get_options()->EntryStatistics)
-    goto done;
+  if (!start_of_entry_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_entry_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write. */
 
   /* Discard all items in the client history that are too old. */
   geoip_remove_old_clients(start_of_entry_stats_interval);
@@ -1308,7 +1278,7 @@ geoip_entry_stats_write(time_t now)
   if (check_private_dir(statsdir, CPD_CREATE) < 0)
     goto done;
   filename = get_datadir_fname2("stats", "entry-stats");
-  data = geoip_get_client_history_dirreq(now, GEOIP_CLIENT_CONNECT);
+  data = geoip_get_client_history(GEOIP_CLIENT_CONNECT);
   format_iso_time(written, now);
   out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
                                     0600, &open_file);
@@ -1329,6 +1299,7 @@ geoip_entry_stats_write(time_t now)
   tor_free(filename);
   tor_free(statsdir);
   tor_free(data);
+  return start_of_entry_stats_interval + WRITE_STATS_INTERVAL;
 }
 
 /** Helper used to implement GETINFO ip-to-country/... controller command. */
