@@ -1652,7 +1652,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
 
   // Cycle through smartlist and total the bandwidth.
   for (i = 0; i < (unsigned)smartlist_len(sl); ++i) {
-    int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0;
+    int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0, is_me = 0;
     double weight = 1;
     if (statuses) {
       routerstatus_t *status = smartlist_get(sl, i);
@@ -1669,6 +1669,8 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
         return NULL;
       }
       this_bw = kb_to_bytes(status->bandwidth);
+      if (router_digest_is_me(status->identity_digest))
+        is_me = 1;
     } else {
       routerstatus_t *rs;
       routerinfo_t *router = smartlist_get(sl, i);
@@ -1682,6 +1684,8 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
       } else { /* bridge or other descriptor not in our consensus */
         this_bw = router_get_advertised_bandwidth_capped(router);
       }
+      if (router_digest_is_me(router->cache_info.identity_digest))
+        is_me = 1;
     }
     if (is_guard && is_exit) {
       weight = (is_dir ? Wdb*Wd : Wd);
@@ -1695,7 +1699,12 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
 
     bandwidths[i] = weight*this_bw;
     weighted_bw += weight*this_bw;
+    if (is_me)
+      sl_last_weighted_bw_of_me = weight*this_bw;
   }
+
+  /* XXXX022 this is a kludge to expose these values. */
+  sl_last_total_weighted_bw = weighted_bw;
 
   log_debug(LD_CIRC, "Choosing node for rule %s based on weights "
             "Wg=%lf Wm=%lf We=%lf Wd=%lf with total bw %lf",
