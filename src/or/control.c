@@ -3058,26 +3058,26 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
     char *r = NULL;
     if (!reason_str) {
       r = tor_malloc(16);
-      tor_snprintf(r, 16, "UNKNOWN_%d", reason_code);
+      tor_snprintf(r, 16, " UNKNOWN_%d", reason_code);
       reason_str = r;
     }
     if (reason_code & END_STREAM_REASON_FLAG_REMOTE)
       tor_snprintf(reason_buf, sizeof(reason_buf),
-                   "REASON=END REMOTE_REASON=%s", reason_str);
+                   " REASON=END REMOTE_REASON=%s", reason_str);
     else
       tor_snprintf(reason_buf, sizeof(reason_buf),
-                   "REASON=%s", reason_str);
+                   " REASON=%s", reason_str);
     tor_free(r);
   } else if (reason_code && tp == STREAM_EVENT_REMAP) {
     switch (reason_code) {
     case REMAP_STREAM_SOURCE_CACHE:
-      strlcpy(reason_buf, "SOURCE=CACHE", sizeof(reason_buf));
+      strlcpy(reason_buf, " SOURCE=CACHE", sizeof(reason_buf));
       break;
     case REMAP_STREAM_SOURCE_EXIT:
-      strlcpy(reason_buf, "SOURCE=EXIT", sizeof(reason_buf));
+      strlcpy(reason_buf, " SOURCE=EXIT", sizeof(reason_buf));
       break;
     default:
-      tor_snprintf(reason_buf, sizeof(reason_buf), "REASON=UNKNOWN_%d",
+      tor_snprintf(reason_buf, sizeof(reason_buf), " REASON=UNKNOWN_%d",
                    reason_code);
       /* XXX do we want SOURCE=UNKNOWN_%d above instead? -RD */
       break;
@@ -3085,8 +3085,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   }
 
   if (tp == STREAM_EVENT_NEW) {
-    tor_snprintf(addrport_buf,sizeof(addrport_buf), "%sSOURCE_ADDR=%s:%d",
-                 strlen(reason_buf) ? " " : "",
+    tor_snprintf(addrport_buf,sizeof(addrport_buf), " SOURCE_ADDR=%s:%d",
                  TO_CONN(conn)->address, TO_CONN(conn)->port );
   } else {
     addrport_buf[0] = '\0';
@@ -3116,7 +3115,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
   if (circ && CIRCUIT_IS_ORIGIN(circ))
     origin_circ = TO_ORIGIN_CIRCUIT(circ);
   send_control_event(EVENT_STREAM_STATUS, ALL_FORMATS,
-                        "650 STREAM "U64_FORMAT" %s %lu %s %s%s%s\r\n",
+                        "650 STREAM "U64_FORMAT" %s %lu %s%s%s%s\r\n",
                         U64_PRINTF_ARG(conn->_base.global_identifier), status,
                         origin_circ?
                            (unsigned long)origin_circ->global_identifier : 0ul,
