@@ -2056,6 +2056,21 @@ crypto_rand_uint64(uint64_t max)
   }
 }
 
+/** Return a pseudorandom double d, chosen uniformly from the range
+ * 0.0 <= d < 1.0.
+ */
+double
+crypto_rand_double(void)
+{
+  /* We just use an unsigned int here; we don't really care about getting
+   * more than 32 bits of resolution */
+  unsigned int uint;
+  do {
+    crypto_rand((char*)&uint, sizeof(uint));
+  } while (uint == UINT_MAX);
+  return ((double)uint) / (double)UINT_MAX;
+}
+
 /** Generate and return a new random hostname starting with <b>prefix</b>,
  * ending with <b>suffix</b>, and containing no less than
  * <b>min_rand_len</b> and no more than <b>max_rand_len</b> random base32
