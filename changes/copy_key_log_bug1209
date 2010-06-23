@@ -1,0 +1,4 @@
+ o Minor bugfixes
+   - If OpenSSL fails to make a duplicate of a private or public key, log
+     an error message and try to exit cleanly.  May help with debugging
+     if bug 1209 ever remanifests.
