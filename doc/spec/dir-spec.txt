@@ -18,12 +18,14 @@
        103  Splitting identity key from regularly used signing key
        104  Long and Short Router Descriptors
 
-   AS OF 14 JUNE 2007, THIS SPECIFICATION HAS NOT YET BEEN COMPLETELY
-   IMPLEMENTED, OR COMPLETELY COMPLETED.
-
    XXX when to download certificates.
    XXX timeline
    XXX fill in XXXXs
+
+      The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+      NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and
+      "OPTIONAL" in this document are to be interpreted as described in
+      RFC 2119.
 
 0.1. History
 

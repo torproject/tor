@@ -15,6 +15,11 @@
   versions 0.1.0.x; the protocol in this document only works with Tor
   versions in the 0.1.1.x series and later.)
 
+      The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+      NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and
+      "OPTIONAL" in this document are to be interpreted as described in
+      RFC 2119.
+
 1. Protocol outline
 
   TC is a bidirectional message-based protocol.  It assumes an underlying
