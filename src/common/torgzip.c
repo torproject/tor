@@ -13,19 +13,41 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#ifdef _MSC_VER
-#include "..\..\contrib\zlib\zlib.h"
-#else
-#include <zlib.h>
-#endif
 #include <string.h>
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 
+#include "torint.h"
 #include "util.h"
 #include "log.h"
 #include "torgzip.h"
+
+/* zlib 1.2.4 and 1.2.5 do some "clever" things with macros.  Instead of
+   saying "(defined(FOO) ? FOO : 0)" they like to say "FOO-0", on the theory
+   that nobody will care if the compile outputs a no-such-identifier warning.
+
+   Sorry, but we like -Werror over here, so I guess we need to define these.
+   I hope that zlib 1.2.6 doesn't break these too.
+*/
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE 0
+#endif
+#ifndef _LFS64_LARGEFILE
+#define _LFS64_LARGEFILE 0
+#endif
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 0
+#endif
+#ifndef off64_t
+#define off64_t int64_t
+#endif
+
+#ifdef _MSC_VER
+#include "..\..\contrib\zlib\zlib.h"
+#else
+#include <zlib.h>
+#endif
 
 /** Set to 1 if zlib is a version that supports gzip; set to 0 if it doesn't;
  * set to -1 if we haven't checked yet. */
