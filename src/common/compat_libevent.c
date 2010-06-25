@@ -535,7 +535,7 @@ periodic_timer_new(struct event_base *base,
 #ifndef HAVE_PERIODIC
   memcpy(&timer->tv, tv, sizeof(struct timeval));
 #endif
-  event_add(timer->ev, tv);
+  event_add(timer->ev, (struct timeval *)tv); /*drop const for old libevent*/
   return timer;
 }
 
