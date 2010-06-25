@@ -86,7 +86,7 @@ test_strcmp(void *data)
 
 /* Now let's mess with setup and teardown functions!  These are handy if
    you have a bunch of tests that all need a similar environment, and you
-   wnat to reconstruct that environment freshly for each one. */
+   want to reconstruct that environment freshly for each one. */
 
 /* First you declare a type to hold the environment info, and functions to
    set it up and tear it down. */
