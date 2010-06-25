@@ -38,8 +38,14 @@ void tor_event_free(struct event *ev);
 #define tor_evdns_add_server_port evdns_add_server_port
 #endif
 
-/* XXXX022 If we can drop support for Libevent before 1.1, we can
- * do without this wrapper. */
+typedef struct periodic_timer_t periodic_timer_t;
+
+periodic_timer_t *periodic_timer_new(struct event_base *base,
+             const struct timeval *tv,
+             void (*cb)(periodic_timer_t *timer, void *data),
+             void *data);
+void periodic_timer_free(periodic_timer_t *);
+
 #ifdef HAVE_EVENT_BASE_LOOPEXIT
 #define tor_event_base_loopexit event_base_loopexit
 #else

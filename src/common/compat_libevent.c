@@ -469,3 +469,82 @@ tor_check_libevent_header_compatibility(void)
 #endif
 }
 
+/*
+  If possible, we're going to try to use Libevent's periodic timer support,
+  since it does a pretty good job of making sure that periodic events get
+  called exactly M seconds apart, rather than starting each one exactly M
+  seconds after the time that the last one was run.
+ */
+#ifdef HAVE_EVENT2_EVENT_H
+#define HAVE_PERIODIC
+#define PERIODIC_FLAGS EV_PERSIST
+#else
+#define PERIODIC_FLAGS 0
+#endif
+
+/** Represents a timer that's run every N microseconds by Libevent. */
+struct periodic_timer_t {
+  /** Underlying event used to implement this periodic event. */
+  struct event *ev;
+  /** The callback we'll be invoking whenever the event triggers */
+  void (*cb)(struct periodic_timer_t *, void *);
+  /** User-supplied data for the callback */
+  void *data;
+#ifndef HAVE_PERIODIC
+  /** If Libevent doesn't know how to invoke events every N microseconds,
+   * we'll need to remember the timeout interval here. */
+  struct timeval tv;
+#endif
+};
+
+/** Libevent callback to implement a periodic event. */
+static void
+periodic_timer_cb(evutil_socket_t fd, short what, void *arg)
+{
+  periodic_timer_t *timer = arg;
+  (void) what;
+  (void) fd;
+#ifndef HAVE_PERIODIC
+  /** reschedule the event as needed. */
+  event_add(timer->ev, &timer->tv);
+#endif
+  timer->cb(timer, timer->data);
+}
+
+/** Create and schedule a new timer that will run every <b>tv</b> in
+ * the event loop of <b>base</b>.  When the timer fires, it will
+ * run the timer in <b>cb</b> with the user-supplied data in <b>data</b>. */
+periodic_timer_t *
+periodic_timer_new(struct event_base *base,
+                   const struct timeval *tv,
+                   void (*cb)(periodic_timer_t *timer, void *data),
+                   void *data)
+{
+  periodic_timer_t *timer;
+  tor_assert(base);
+  tor_assert(tv);
+  tor_assert(cb);
+  timer = tor_malloc_zero(sizeof(periodic_timer_t));
+  if (!(timer->ev = tor_event_new(base, -1, PERIODIC_FLAGS,
+                                  periodic_timer_cb, timer))) {
+    tor_free(timer);
+    return NULL;
+  }
+  timer->cb = cb;
+  timer->data = data;
+#ifndef HAVE_PERIODIC
+  memcpy(&timer->tv, tv, sizeof(struct timeval));
+#endif
+  event_add(timer->ev, tv);
+  return timer;
+}
+
+/** Stop and free a periodic timer */
+void
+periodic_timer_free(periodic_timer_t *timer)
+{
+  if (!timer)
+    return;
+  tor_event_free(timer->ev);
+  tor_free(timer);
+}
