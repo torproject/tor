@@ -3605,11 +3605,6 @@ options_transition_allowed(or_options_t *old, or_options_t *new_val,
     return -1;
   }
 
-  if (!opt_streq(old->Group, new_val->Group)) {
-    *msg = tor_strdup("While Tor is running, changing Group is not allowed.");
-    return -1;
-  }
-
   if ((old->HardwareAccel != new_val->HardwareAccel)
       || !opt_streq(old->AccelName, new_val->AccelName)
       || !opt_streq(old->AccelDir, new_val->AccelDir)) {
