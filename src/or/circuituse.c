@@ -381,7 +381,8 @@ circuit_expire_building(time_t now)
       if (now - victim->timestamp_created > 2*circ_times.close_ms/1000+1) {
         log_notice(LD_CIRC,
                    "Extremely large value for circuit build timeout: %lds. "
-                   "Assuming clock jump.", now - victim->timestamp_created);
+                   "Assuming clock jump.",
+                   (long)(now - victim->timestamp_created));
       } else if (circuit_build_times_count_close(&circ_times,
                                           first_hop_succeeded,
                                           victim->timestamp_created)) {
@@ -727,15 +728,15 @@ circuit_expire_old_circuits_clientside(time_t now)
                 circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
                 circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
           log_debug(LD_CIRC,
-                    "Closing circuit that has been unused for %d seconds.",
-                    (int)(now - circ->timestamp_created));
+                    "Closing circuit that has been unused for %ld seconds.",
+                    (long)(now - circ->timestamp_created));
           circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
           log_notice(LD_CIRC,
                      "Ancient non-dirty circuit %d is still around after "
                      "%ld seconds. Purpose: %d",
                      TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                     now - circ->timestamp_created,
+                     (long)(now - circ->timestamp_created),
                      circ->purpose);
           TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
         }

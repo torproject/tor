@@ -946,11 +946,17 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
   if (cbt->liveness.network_last_live <= start_time &&
           start_time <= (now - cbt->close_ms/1000.0)) {
     if (did_onehop) {
+      char last_live_buf[ISO_TIME_LEN+1];
+      char start_time_buf[ISO_TIME_LEN+1];
+      char now_buf[ISO_TIME_LEN+1];
+      format_local_iso_time(last_live_buf, cbt->liveness.network_last_live);
+      format_local_iso_time(start_time_buf, start_time);
+      format_local_iso_time(now_buf, now);
       log_warn(LD_BUG,
                "Circuit somehow completed a hop while the network was "
-               "not live. Network was last live at %ld, but circuit launched "
-               "at %ld. It's now %ld.", cbt->liveness.network_last_live,
-               start_time, now);
+               "not live. Network was last live at %s, but circuit launched "
+               "at %s. It's now %s.", last_live_buf, start_time_buf,
+               now_buf);
     }
     cbt->liveness.nonlive_timeouts++;
   }
