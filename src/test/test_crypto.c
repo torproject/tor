@@ -57,6 +57,7 @@ test_crypto_rng(void)
 {
   int i, j, allok;
   char data1[100], data2[100];
+  double d;
 
   /* Try out RNG. */
   test_assert(! crypto_seed_rng(0));
@@ -76,6 +77,9 @@ test_crypto_rng(void)
     big = crypto_rand_uint64(U64_LITERAL(5));
     if (big >= 5)
       allok = 0;
+    d = crypto_rand_double();
+    test_assert(d >= 0);
+    test_assert(d < 1.0);
     host = crypto_random_hostname(3,8,"www.",".onion");
     if (strcmpstart(host,"www.") ||
         strcmpend(host,".onion") ||

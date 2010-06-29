@@ -210,6 +210,7 @@ int crypto_seed_rng(int startup);
 int crypto_rand(char *to, size_t n);
 int crypto_rand_int(unsigned int max);
 uint64_t crypto_rand_uint64(uint64_t max);
+double crypto_rand_double(void);
 
 char *crypto_random_hostname(int min_rand_len, int max_rand_len,
                              const char *prefix, const char *suffix);

@@ -815,18 +815,20 @@ build_time_t
 circuit_build_times_generate_sample(circuit_build_times_t *cbt,
                                     double q_lo, double q_hi)
 {
-  uint64_t r = crypto_rand_uint64(UINT64_MAX-1);
+  double randval = crypto_rand_double();
   build_time_t ret;
   double u;
 
   /* Generate between [q_lo, q_hi) */
+  /*XXXX This is what nextafter is supposed to be for; we should use it on the
+   * platforms that support it. */
   q_hi -= 1.0/(INT32_MAX);
 
   tor_assert(q_lo >= 0);
   tor_assert(q_hi < 1);
   tor_assert(q_lo < q_hi);
 
-  u = q_lo + ((q_hi-q_lo)*r)/(1.0*UINT64_MAX);
+  u = q_lo + (q_hi-q_lo)*randval;
 
   tor_assert(0 <= u && u < 1.0);
   /* circuit_build_times_calculate_timeout returns <= INT32_MAX */
