@@ -1,0 +1,33 @@
+ o Major bugfixes:
+   - Ignore negative and large timeout values that can happen during a
+     suspend or hibernate. These values caused various asserts to fire
+     in the circuit build times code, crashing Tor. Bug 1245, bugfix on
+     0.2.2.2-alpha.
+   - Alter calculation of Pareto distribution parameter 'Xm' for Circuit Build
+     Timeout learning to use the weighted average of the top N=3 modes. This
+     should improve the timeout calculation in some cases, and prevent
+     extremely high timeout values. Bug 1335, bugfix on 0.2.2.2-alpha.
+   - Alter calculation of Pareto distribution parameter 'Alpha' to use a
+     right censored distribution model. This allows us to remove the synthetic
+     timeout generation and instead calculate build timeouts using truncated
+     times. Bugs 1245+1335, bugfix on 0.2.2.2-alpha.
+   - Keep circuits open (but do not use them) after the circuit timeout for
+     up until the time corresponding to the 95th percentile on the Pareto CDF
+     or 60 seconds, whichever is greater. This is done to provide better data
+     for the new Pareto model. This percentile can be controlled by the
+     consensus.
+
+ o Minor bugfixes:
+   - Eliminate a case where a circuit build time warning was displayed after
+     network connectivity resumed. Bugfix on 0.2.2.2-alpha.
+
+ o Minor features:
+   - Add a TIMEOUT_RATE keyword to the BUILDTIMEOUT_SET control port event,
+     to give information on the current rate of circuit timeouts over our
+     stored history.
+   - Add ability to disable circuit build time learning via consensus
+     parameter and via a LearnCircuitBuildTimeout config option. Also
+     automatically disable circuit build time calculation if we are either
+     a AuthoritativeDirectory, or if we fail to write our state file. Bug 1296.
+
+

@@ -3,6 +3,7 @@ Title: Improving Tor Path Selection
 Author: Fallon Chen, Mike Perry
 Created: 5-Jul-2008
 Status: Finished
+In-Spec: path-spec.txt
 
 Overview
 

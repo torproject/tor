@@ -158,7 +158,7 @@
 #define MAX_DNS_TTL (3*60*60)
 /** How small can a TTL be before we stop believing it?  Provides rudimentary
  * pinning. */
-#define MIN_DNS_TTL (60)
+#define MIN_DNS_TTL 60
 
 /** How often do we rotate onion keys? */
 #define MIN_ONION_KEY_LIFETIME (7*24*60*60)
@@ -467,23 +467,23 @@ typedef enum {
 #define CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED 11
 /** Client-side circuit purpose: at Alice, rendezvous established. */
 #define CIRCUIT_PURPOSE_C_REND_JOINED 12
-
-#define _CIRCUIT_PURPOSE_C_MAX 12
-
+/** This circuit is used for build time measurement only */
+#define CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT 13
+#define _CIRCUIT_PURPOSE_C_MAX 13
 /** Hidden-service-side circuit purpose: at Bob, waiting for introductions. */
-#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 13
+#define CIRCUIT_PURPOSE_S_ESTABLISH_INTRO 14
 /** Hidden-service-side circuit purpose: at Bob, successfully established
  * intro. */
-#define CIRCUIT_PURPOSE_S_INTRO 14
+#define CIRCUIT_PURPOSE_S_INTRO 15
 /** Hidden-service-side circuit purpose: at Bob, connecting to rend point. */
-#define CIRCUIT_PURPOSE_S_CONNECT_REND 15
+#define CIRCUIT_PURPOSE_S_CONNECT_REND 16
 /** Hidden-service-side circuit purpose: at Bob, rendezvous established. */
-#define CIRCUIT_PURPOSE_S_REND_JOINED 16
+#define CIRCUIT_PURPOSE_S_REND_JOINED 17
 /** A testing circuit; not meant to be used for actual traffic. */
-#define CIRCUIT_PURPOSE_TESTING 17
+#define CIRCUIT_PURPOSE_TESTING 18
 /** A controller made this circuit and Tor should not use it. */
-#define CIRCUIT_PURPOSE_CONTROLLER 18
-#define _CIRCUIT_PURPOSE_MAX 18
+#define CIRCUIT_PURPOSE_CONTROLLER 19
+#define _CIRCUIT_PURPOSE_MAX 19
 /** A catch-all for unrecognized purposes. Currently we don't expect
  * to make or see any circuits with this purpose. */
 #define CIRCUIT_PURPOSE_UNKNOWN 255
@@ -2157,6 +2157,9 @@ typedef struct origin_circuit_t {
    * to the specification? */
   unsigned int remaining_relay_early_cells : 4;
 
+  /** Set if this circuit insanely old and if we already informed the user */
+  unsigned int is_ancient : 1;
+
   /** What commands were sent over this circuit that decremented the
    * RELAY_EARLY counter? This is for debugging task 878. */
   uint8_t relay_early_commands[MAX_RELAY_EARLY_CELLS_PER_CIRCUIT];
@@ -2496,9 +2499,12 @@ typedef struct {
                         * connections alive? */
   int SocksTimeout; /**< How long do we let a socks connection wait
                      * unattached before we fail it? */
-  int CircuitBuildTimeout; /**< If non-zero, cull non-open circuits that
-                            * were born at least this many seconds ago. If
-                            * zero, use the internal adaptive algorithm. */
+  int LearnCircuitBuildTimeout; /**< If non-zero, we attempt to learn a value
+                                 * for CircuitBuildTimeout based on timeout
+                                 * history */
+  int CircuitBuildTimeout; /**< Cull non-open circuits that were born at
+                            * least this many seconds ago. Used until
+                            * adaptive algorithm learns a new value. */
   int CircuitIdleTimeout; /**< Cull open clean circuits that were born
                            * at least this many seconds ago. */
   int CircuitStreamTimeout; /**< If non-zero, detach streams from circuits
@@ -2842,7 +2848,8 @@ typedef struct {
 
   /** Build time histogram */
   config_line_t * BuildtimeHistogram;
-  uint16_t TotalBuildTimes;
+  unsigned int TotalBuildTimes;
+  unsigned int CircuitBuildAbandonedCount;
 
   /** What version of Tor wrote this state file? */
   char *TorVersion;
@@ -3021,16 +3028,20 @@ void entry_guards_free_all(void);
  * 1000 is approx 2.5 days worth of continual-use circuits. */
 #define CBT_NCIRCUITS_TO_OBSERVE 1000
 
-/** Maximum quantile to use to generate synthetic timeouts.
- *  We want to stay a bit short of 1.0, because longtail is
- *  loooooooooooooooooooooooooooooooooooooooooooooooooooong. */
-#define CBT_MAX_SYNTHETIC_QUANTILE 0.985
-
 /** Width of the histogram bins in milliseconds */
 #define CBT_BIN_WIDTH ((build_time_t)50)
 
+/** Number of modes to use in the weighted-avg computation of Xm */
+#define CBT_DEFAULT_NUM_XM_MODES 3
+
 /** A build_time_t is milliseconds */
 typedef uint32_t build_time_t;
+
+/**
+ * CBT_BUILD_ABANDONED is our flag value to represent a force-closed
+ * circuit (Aka a 'right-censored' pareto value).
+ */
+#define CBT_BUILD_ABANDONED ((build_time_t)(INT32_MAX-1))
 #define CBT_BUILD_TIME_MAX ((build_time_t)(INT32_MAX))
 
 /** Save state every 10 circuits */
@@ -3046,7 +3057,7 @@ typedef uint32_t build_time_t;
  * at which point we switch back to computing the timeout from
  * our saved history.
  */
-#define CBT_NETWORK_NONLIVE_TIMEOUT_COUNT (3)
+#define CBT_NETWORK_NONLIVE_TIMEOUT_COUNT 3
 
 /**
  * This tells us when to toss out the last streak of N timeouts.
@@ -3057,6 +3068,12 @@ typedef uint32_t build_time_t;
 #define CBT_NETWORK_NONLIVE_DISCARD_COUNT (CBT_NETWORK_NONLIVE_TIMEOUT_COUNT*2)
 
 /* Circuit build times consensus parameters */
+
+/**
+ * How long to wait before actually closing circuits that take too long to
+ * build in terms of CDF quantile.
+ */
+#define CBT_DEFAULT_CLOSE_QUANTILE 95
 
 /**
  * How many circuits count as recent when considering if the
@@ -3111,8 +3128,12 @@ typedef struct {
   int num_recent_circs;
   /** Index into circular array. */
   int after_firsthop_idx;
-  /** The network is not live. Timeout gathering is suspended */
-  int net_suspended;
+  /** Timeout gathering is suspended if non-zero. The old timeout value
+    * is stored here in that case. */
+  double suspended_timeout;
+  /** Timeout gathering is suspended if non-zero. The old close value
+    * is stored here in that case. */
+  double suspended_close_timeout;
 } network_liveness_t;
 
 /** Structure for circuit build times history */
@@ -3127,17 +3148,17 @@ typedef struct {
   network_liveness_t liveness;
   /** Last time we built a circuit. Used to decide to build new test circs */
   time_t last_circ_at;
-  /** Number of timeouts that have happened before estimating pareto
-   *  parameters */
-  int pre_timeouts;
   /** "Minimum" value of our pareto distribution (actually mode) */
   build_time_t Xm;
   /** alpha exponent for pareto dist. */
   double alpha;
   /** Have we computed a timeout? */
   int have_computed_timeout;
-  /** The exact value for that timeout in milliseconds */
+  /** The exact value for that timeout in milliseconds. Stored as a double
+   * to maintain precision from calculations to and from quantile value. */
   double timeout_ms;
+  /** How long we wait before actually closing the circuit. */
+  double close_ms;
 } circuit_build_times_t;
 
 extern circuit_build_times_t circ_times;
@@ -3145,7 +3166,9 @@ void circuit_build_times_update_state(circuit_build_times_t *cbt,
                                       or_state_t *state);
 int circuit_build_times_parse_state(circuit_build_times_t *cbt,
                                     or_state_t *state, char **msg);
-int circuit_build_times_add_timeout(circuit_build_times_t *cbt,
+void circuit_build_times_count_timeout(circuit_build_times_t *cbt,
+                                       int did_onehop);
+int circuit_build_times_count_close(circuit_build_times_t *cbt,
                                     int did_onehop, time_t start_time);
 void circuit_build_times_set_timeout(circuit_build_times_t *cbt);
 int circuit_build_times_add_time(circuit_build_times_t *cbt,
@@ -3155,6 +3178,8 @@ int circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt);
 void circuit_build_times_init(circuit_build_times_t *cbt);
 void circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
                                               networkstatus_t *ns);
+double circuit_build_times_timeout_rate(const circuit_build_times_t *cbt);
+double circuit_build_times_close_rate(const circuit_build_times_t *cbt);
 
 #ifdef CIRCUIT_PRIVATE
 double circuit_build_times_calculate_timeout(circuit_build_times_t *cbt,
@@ -3835,7 +3860,7 @@ download_status_mark_impossible(download_status_t *dl)
 
 /********************************* dirserv.c ***************************/
 /** Maximum length of an exit policy summary. */
-#define MAX_EXITPOLICY_SUMMARY_LEN (1000)
+#define MAX_EXITPOLICY_SUMMARY_LEN 1000
 
 /** Maximum allowable length of a version line in a networkstatus. */
 #define MAX_V_LINE_LEN 128
@@ -4393,7 +4418,7 @@ int nt_service_parse_options(int argc, char **argv, int *should_exit);
 int nt_service_is_stopping(void);
 void nt_service_set_state(DWORD state);
 #else
-#define nt_service_is_stopping() (0)
+#define nt_service_is_stopping() 0
 #endif
 
 /********************************* onion.c ***************************/

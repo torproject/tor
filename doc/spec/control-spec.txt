@@ -1675,13 +1675,18 @@
   The syntax is:
      "650" SP "BUILDTIMEOUT_SET" SP Type SP "TOTAL_TIMES=" Total SP
         "TIMEOUT_MS=" Timeout SP "XM=" Xm SP "ALPHA=" Alpha SP
-        "CUTOFF_QUANTILE=" Quantile CRLF
+        "CUTOFF_QUANTILE=" Quantile SP "TIMEOUT_RATE=" TimeoutRate SP
+        "CLOSE_MS=" CloseTimeout SP "CLOSE_RATE=" CloseRate
+        CRLF
      Type = "COMPUTED" / "RESET" / "SUSPENDED" / "DISCARD" / "RESUME"
      Total = Integer count of timeouts stored
      Timeout = Integer timeout in milliseconds
      Xm = Estimated integer Pareto parameter Xm in milliseconds
      Alpha = Estimated floating point Paredo paremter alpha
      Quantile = Floating point CDF quantile cutoff point for this timeout
+     TimeoutRate = Floating point ratio of circuits that timeout
+     CloseTimeout = How long to keep measurement circs in milliseconds
+     CloseRate = Floating point ratio of measurement circuits that are closed
 
   A new circuit build timeout time has been set. If Type is "COMPUTED",
   Tor has computed the value based on historical data. If Type is "RESET",

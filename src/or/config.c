@@ -167,6 +167,7 @@ static config_var_t _option_vars[] = {
   V(BridgeRecordUsageByCountry,  BOOL,     "1"),
   V(BridgeRelay,                 BOOL,     "0"),
   V(CellStatistics,              BOOL,     "0"),
+  V(LearnCircuitBuildTimeout,    BOOL,     "1"),
   V(CircuitBuildTimeout,         INTERVAL, "0"),
   V(CircuitIdleTimeout,          INTERVAL, "1 hour"),
   V(CircuitStreamTimeout,        INTERVAL, "0"),
@@ -425,6 +426,7 @@ static config_var_t _state_vars[] = {
   V(LastWritten,                      ISOTIME,  NULL),
 
   V(TotalBuildTimes,                  UINT,     NULL),
+  V(CircuitBuildAbandonedCount,         UINT,     "0"),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
 
@@ -4989,7 +4991,6 @@ or_state_save(time_t now)
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 
-  global_state->LastWritten = time(NULL);
   tor_free(global_state->TorVersion);
   tor_asprintf(&global_state->TorVersion, "Tor %s", get_version());
 
@@ -5004,10 +5005,13 @@ or_state_save(time_t now)
   fname = get_datadir_fname("state");
   if (write_str_to_file(fname, contents, 0)<0) {
     log_warn(LD_FS, "Unable to write state to file \"%s\"", fname);
+    global_state->LastWritten = -1;
     tor_free(fname);
     tor_free(contents);
     return -1;
   }
+
+  global_state->LastWritten = time(NULL);
   log_info(LD_GENERAL, "Saved state to \"%s\"", fname);
   tor_free(fname);
   tor_free(contents);

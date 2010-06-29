@@ -180,6 +180,7 @@ of their choices.
 
    XXXX
 
+
 2.2. Path selection and constraints
 
    We choose the path for each new circuit before we build it.  We choose the
@@ -300,8 +301,182 @@ of their choices.
    at a given node -- either via the ".exit" notation or because the
    destination is running at the same location as an exit node.
 
+2.4. Learning when to give up ("timeout") on circuit construction
 
-2.4. Handling failure
+   Since version 0.2.2.8-alpha, Tor attempts to learn when to give up on
+   circuits based on network conditions.
+
+2.4.1 Distribution choice and parameter estimation
+
+   Based on studies of build times, we found that the distribution of
+   circuit build times appears to be a Frechet distribution. However,
+   estimators and quantile functions of the Frechet distribution are
+   difficult to work with and slow to converge. So instead, since we
+   are only interested in the accuracy of the tail, we approximate
+   the tail of the distribution with a Pareto curve.
+
+   We calculate the parameters for a Pareto distribution fitting the data
+   using the estimators in equation 4 from:
+   http://portal.acm.org/citation.cfm?id=1647962.1648139
+
+   This is:
+
+      alpha_m = s/(ln(U(X)/Xm^n))
+
+   where s is the total number of completed circuits we have seen, and
+
+      U(X) = x_max^u * Prod_s{x_i}
+
+   with x_i as our i-th completed circuit time, x_max as the longest
+   completed circuit build time we have yet observed, u as the
+   number of unobserved timeouts that have no exact value recorded,
+   and n as u+s, the total number of circuits that either timeout or
+   complete.
+
+   Using log laws, we compute this as the sum of logs to avoid
+   overflow and ln(1.0+epsilon) precision issues:
+
+       alpha_m = s/(u*ln(x_max) + Sum_s{ln(x_i)} - n*ln(Xm))
+
+   This estimator is closely related to the parameters present in:
+   http://en.wikipedia.org/wiki/Pareto_distribution#Parameter_estimation
+   except they are adjusted to handle the fact that our samples are
+   right-censored at the timeout cutoff.
+
+   Additionally, because this is not a true Pareto distribution, we alter
+   how Xm is computed. The Xm parameter is computed as the midpoint of the most
+   frequently occurring 50ms histogram bin, until the point where 1000
+   circuits are recorded. After this point, the weighted average of the top
+   'cbtnummodes' (default: 3) midpoint modes is used as Xm. All times below
+   this value are counted as having the midpoint value of this weighted average bin.
+
+   The timeout itself is calculated by using the Pareto Quantile function (the
+   inverted CDF) to give us the value on the CDF such that 80% of the mass
+   of the distribution is below the timeout value.
+
+   Thus, we expect that the Tor client will accept the fastest 80% of
+   the total number of paths on the network.
+
+2.4.2. How much data to record
+
+   From our observations, the minimum number of circuit build times for a
+   reasonable fit appears to be on the order of 100. However, to keep a
+   good fit over the long term, we store 1000 most recent circuit build times
+   in a circular array.
+
+   The Tor client should build test circuits at a rate of one per
+   minute up until 100 circuits are built. This allows a fresh Tor to have
+   a CircuitBuildTimeout estimated within 1.5 hours after install,
+   upgrade, or network change (see below).
+
+   Timeouts are stored on disk in a histogram of 50ms bin width, the same
+   width used to calculate the Xm value above. This histogram must be shuffled
+   after being read from disk, to preserve a proper expiration of old values
+   after restart.
+
+2.4.3. How to record timeouts
+
+   Circuits that pass the timeout threshold should be allowed to continue
+   building until a time corresponding to the point 'cbtclosequantile'
+   (default 95) on the Pareto curve, or 60 seconds, whichever is greater.
+
+   The actual completion times for these circuits should be recorded.
+   Implementations should completely abandon a circuit and record a value
+   as an 'unknown' timeout if the total build time exceeds this threshold.
+
+   The reason for this is that right-censored pareto estimators begin to lose
+   their accuracy if more than approximately 5% of the values are censored.
+   Since we wish to set the cutoff at 20%, we must allow circuits to continue
+   building past this cutoff point up to the 95th percentile.
+
+2.4.4. Detecting Changing Network Conditions
+
+   We attempt to detect both network connectivity loss and drastic
+   changes in the timeout characteristics.
+
+   We assume that we've had network connectivity loss if 3 circuits
+   timeout and we've received no cells or TLS handshakes since those
+   circuits began. We then temporarily set the timeout to 60 seconds
+   and stop counting timeouts.
+
+   If 3 more circuits timeout and the network still has not been
+   live within this new 60 second timeout window, we then discard
+   the previous timeouts during this period from our history.
+
+   To detect changing network conditions, we keep a history of
+   the timeout or non-timeout status of the past 20 circuits that
+   successfully completed at least one hop. If more than 90% of
+   these circuits timeout, we discard all buildtimes history, reset
+   the timeout to 60, and then begin recomputing the timeout.
+
+   If the timeout was already 60 or higher, we double the timeout.
+
+2.4.5. Consensus parameters governing behavior
+
+   Clients that implement circuit build timeout learning should obey the
+   following consensus parameters that govern behavior, in order to allow
+   us to handle bugs or other emergent behaviors due to client circuit
+   construction. If these parameters are not present in the consensus,
+   the listed default values should be used instead.
+
+      cbtdisabled
+        Default: 0
+        Effect: If non-zero, all CircuitBuildTime learning code should be
+                disabled and history should be discarded. For use in
+                emergency situations only.
+
+      cbtnummodes
+        Default: 3
+        Effect: This value governs how many modes to use in the weighted
+        average calculation of Pareto paramter Xm. A value of 3 introduces
+        some bias (2-5% of CDF) under ideal conditions, but allows for better
+        performance in the event that a client chooses guard nodes of radically
+        different performance characteristics.
+
+      cbtrecentcount
+        Default: 20
+        Effect: This is the number of circuit build times to keep track of
+                for the following option.
+
+      cbtmaxtimeouts
+        Default: 18
+        Effect: When this many timeouts happen in the last 'cbtrecentcount'
+                circuit attempts, the client should discard all of its
+                history and begin learning a fresh timeout value.
+
+      cbtmincircs
+        Default: 100
+        Effect: This is the minimum number of circuits to build before
+                computing a timeout.
+
+      cbtquantile
+        Default: 80
+        Effect: This is the position on the quantile curve to use to set the
+                timeout value. It is a percent (0-99).
+
+      cbtclosequantile
+        Default: 95
+        Effect: This is the position on the quantile curve to use to set the
+                timeout value to use to actually close circuits. It is a percent
+                (0-99).
+
+      cbttestfreq
+        Default: 60
+        Effect: Describes how often in seconds to build a test circuit to
+                gather timeout values. Only applies if less than 'cbtmincircs'
+                have been recorded.
+
+      cbtmintimeout
+        Default: 2000
+        Effect: This is the minimum allowed timeout value in milliseconds.
+
+      cbtinitialtimeout
+        Default: 60000
+        Effect: This is the timeout value to use before computing a timeout,
+                in milliseconds.
+
+
+2.5. Handling failure
 
    If an attempt to extend a circuit fails (either because the first create
    failed or a subsequent extend failed) then the circuit is torn down and is

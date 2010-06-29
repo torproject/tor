@@ -270,6 +270,7 @@ circuit_expire_building(time_t now)
    * decided on a customized one yet */
   time_t general_cutoff = now - lround(circ_times.timeout_ms/1000);
   time_t begindir_cutoff = now - lround(circ_times.timeout_ms/2000);
+  time_t close_cutoff = now - lround(circ_times.close_ms/1000);
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 
@@ -286,8 +287,11 @@ circuit_expire_building(time_t now)
       cutoff = begindir_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
       cutoff = introcirc_cutoff;
+    else if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
+      cutoff = close_cutoff;
     else
       cutoff = general_cutoff;
+
     if (victim->timestamp_created > cutoff)
       continue; /* it's still young, leave it alone */
 
@@ -350,9 +354,39 @@ circuit_expire_building(time_t now)
     } else { /* circuit not open, consider recording failure as timeout */
       int first_hop_succeeded = TO_ORIGIN_CIRCUIT(victim)->cpath &&
             TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_OPEN;
-      if (circuit_build_times_add_timeout(&circ_times, first_hop_succeeded,
-                                          victim->timestamp_created))
+
+      if (TO_ORIGIN_CIRCUIT(victim)->p_streams != NULL) {
+        log_warn(LD_BUG, "Circuit %d (purpose %d) has timed out, "
+                 "yet has attached streams!",
+                 TO_ORIGIN_CIRCUIT(victim)->global_identifier,
+                 victim->purpose);
+        tor_fragile_assert();
+        continue;
+      }
+
+      /* circuits are allowed to last longer for measurement.
+       * Switch their purpose and wait. */
+      if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+        victim->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
+        circuit_build_times_count_timeout(&circ_times,
+                                          first_hop_succeeded);
+        continue;
+      }
+
+      /*
+       * If the circuit build time is much greater than we would have cut
+       * it off at, we probably had a suspend event along this codepath,
+       * and we should discard the value.
+       */
+      if (now - victim->timestamp_created > 2*circ_times.close_ms/1000+1) {
+        log_notice(LD_CIRC,
+                   "Extremely large value for circuit build timeout: %lds. "
+                   "Assuming clock jump.", now - victim->timestamp_created);
+      } else if (circuit_build_times_count_close(&circ_times,
+                                          first_hop_succeeded,
+                                          victim->timestamp_created)) {
         circuit_build_times_set_timeout(&circ_times);
+      }
     }
 
     if (victim->n_conn)
@@ -683,14 +717,28 @@ circuit_expire_old_circuits_clientside(time_t now)
                 circ->n_circ_id, (int)(now - circ->timestamp_dirty),
                 circ->purpose);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
-    } else if (!circ->timestamp_dirty &&
-               circ->state == CIRCUIT_STATE_OPEN &&
-               circ->purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+    } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
       if (circ->timestamp_created < cutoff) {
-        log_debug(LD_CIRC,
-                  "Closing circuit that has been unused for %d seconds.",
-                  (int)(now - circ->timestamp_created));
-        circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+        if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
+                circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
+                circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
+                circ->purpose == CIRCUIT_PURPOSE_TESTING ||
+                (circ->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
+                circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
+                circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
+          log_debug(LD_CIRC,
+                    "Closing circuit that has been unused for %d seconds.",
+                    (int)(now - circ->timestamp_created));
+          circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
+        } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
+          log_notice(LD_CIRC,
+                     "Ancient non-dirty circuit %d is still around after "
+                     "%ld seconds. Purpose: %d",
+                     TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+                     now - circ->timestamp_created,
+                     circ->purpose);
+          TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
+        }
       }
     }
   }
