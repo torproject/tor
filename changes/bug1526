@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Build correctly on OSX with zlib 1.2.4 and higher with all warnings
-      enabled.

@@ -1,6 +1,0 @@
- o Refactorings:
-   - Make it explicit that we don't cannibalize one-hop circuits. This happens
-     in the wild, but doesn't turn out to be a problem because we fortunately
-     don't use those circuits. Many thanks to outofwords for the initial
-     analysis and to swissknife who confirmed that two-hop circuits are
-     actually created.

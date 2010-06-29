@@ -1,3 +1,0 @@
- o Minor bugfixes
-   - Save a couple bytes in memory allocation every time we escape
-     certain characters in a string.  Patch from Florian Zumbiehl.

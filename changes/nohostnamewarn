@@ -1,5 +1,0 @@
-  o Minor features:
-    - Allow disabling the warning that occurs whenever Tor receives only
-      an IP address instead of a hostname. Setups that do DNS locally over
-      Tor are fine, and we shouldn't spam the logs in that case.
-

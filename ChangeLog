@@ -1,3 +1,69 @@
+Changes in version 0.2.2.14-alpha - 2010-06-30
+  o Major bugfixes:
+    - Tor directory authorities no longer crash when started with a
+      cached-microdesc-consensus file in their data directory. Bugfix on
+      0.2.2.6-alpha, fixes bug 1532.
+    - Treat an unset $HOME like an empty $HOME rather than triggering an
+      assert. Fixes bug 1522; bugfix on tor-0.0.8pre1.
+
+  o Major features:
+    - Move to the June 2010 Maxmind GeoLite country db (rather than the
+      June 2009 ip-to-country GeoIP db) for our statistics that count
+      how many users relays are seeing from each country. Now we have
+      more accurate data for many African countries.
+    - Port Tor to build and run correctly on Windows CE systems, using
+      the wcecompat library. Contributed by Valerio Lupi.
+    - New "--enable-gcc-hardening" ./configure flag to turn on gcc
+      compile time hardening options. It ensures that signed ints have
+      defined behavior (-fwrapv), -D_FORTIFY_SOURCE=2 is enabled
+      (requiring -O2), stack smashing protection with canaries
+      (-fstack-protector-all), ASLR protection if supported by the
+      kernel (-fPIE, -pie). Additional security related warnings are
+      enabled. Verified to work on Mac OS X and Debian Lenny.
+    - New "--enable-linker-hardening" ./configure flag to turn on ELF
+      specific hardening features (relro, now). This does not work with
+      Mac OS X or any other non-ELF binary format.
+
+  o New directory authorities:
+    - Set up maatuska (run by Linus Nordberg) as the eighth v3 directory
+      authority.
+
+  o Minor features:
+    - New config option "WarnUnsafeSocks 0" disables the warning that
+      occurs whenever Tor receives only an IP address instead of a
+      hostname. Setups that do DNS locally over Tor are fine, and we
+      shouldn't spam the logs in that case.
+    - Convert the HACKING file to asciidoc, and add a few new sections
+      to it, explaining how we use Git, how we make changelogs, and
+      what should go in a patch.
+
+  o Minor bugfixes:
+    - Build correctly on OSX with zlib 1.2.4 and higher with all warnings
+      enabled.
+    - When a2x fails, mention that the user could disable manpages instead
+      of trying to fix their asciidoc installation.
+    - Where available, use Libevent 2.0's periodic timers so that our
+      once-per-second cleanup code gets called even more closely to
+      once per second than it would otherwise. Fixes bug 943.
+    - If you run a bridge that listens on multiple IP addresses, and
+      some user configures a bridge address that uses a different IP
+      address than your bridge writes in its router descriptor, and the
+      user doesn't specify an identity key, their Tor would discard the
+      descriptor because "it isn't one of our configured bridges", and
+      fail to bootstrap. Now believe the descriptor and bootstrap anyway.
+      Bugfix on 0.2.0.3-alpha.
+    - If OpenSSL fails to make a duplicate of a private or public key, log
+      an error message and try to exit cleanly. May help with debugging
+      if bug 1209 ever remanifests.
+    - Save a couple bytes in memory allocation every time we escape
+      certain characters in a string. Patch from Florian Zumbiehl.
+    - Make it explicit that we don't cannibalize one-hop circuits. This
+      happens in the wild, but doesn't turn out to be a problem because
+      we fortunately don't use those circuits. Many thanks to outofwords
+      for the initial analysis and to swissknife who confirmed that
+      two-hop circuits are actually created.
+
+
 Changes in version 0.2.1.26 - 2010-05-02
   Tor 0.2.1.26 addresses the recent connection and memory overload
   problems we've been seeing on relays, especially relays with their

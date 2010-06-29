@@ -1,4 +1,0 @@
- o Minor features
-   - Where available, use Libevent 2.0's periodic timers so that our
-     once-per-second cleanup code gets called even more closely to
-     once per second than it would otherwise.  Fix for bug 943.

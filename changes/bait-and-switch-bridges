@@ -1,8 +1,0 @@
-  o Minor bugfixes:
-    - If you run a bridge that listens on multiple IP addresses, and
-      some user configures a bridge address that uses a different IP
-      address than your bridge writes in its router descriptor, and the
-      user doesn't specify an identity key, their Tor would discard the
-      descriptor because "it isn't one of our configured bridges", and
-      fail to bootstrap. Now believe the descriptor and bootstrap anyway.
-      Bugfix on 0.2.0.3-alpha.

@@ -1,4 +1,0 @@
-  o Major features:
-    - Tor has now been ported to build and run correctly on Windows CE
-      systems, using the wcecompat library.  (Valerio Lupi)
-
