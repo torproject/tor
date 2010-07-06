@@ -470,6 +470,7 @@ test_circuit_timeout(void)
   or_state_t state;
   char *msg;
   int i, runs;
+  double close_ms;
   circuit_build_times_init(&initial);
   circuit_build_times_init(&estimate);
   circuit_build_times_init(&final);
@@ -478,27 +479,31 @@ test_circuit_timeout(void)
 
   circuitbuild_running_unit_tests();
 #define timeout0 (build_time_t)(30*1000.0)
-  initial.Xm = 750;
+  initial.Xm = 3000;
   circuit_build_times_initial_alpha(&initial,
                                     CBT_DEFAULT_QUANTILE_CUTOFF/100.0,
                                     timeout0);
+  close_ms = MAX(circuit_build_times_calculate_timeout(&initial,
+                             CBT_DEFAULT_CLOSE_QUANTILE/100.0),
+                 CBT_DEFAULT_TIMEOUT_INITIAL_VALUE);
   do {
-    int n = 0;
     for (i=0; i < CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE; i++) {
-      if (circuit_build_times_add_time(&estimate,
-              circuit_build_times_generate_sample(&initial, 0, 1)) == 0) {
-        n++;
+      build_time_t sample = circuit_build_times_generate_sample(&initial,0,1);
+
+      if (sample > close_ms) {
+        circuit_build_times_add_time(&estimate, CBT_BUILD_ABANDONED);
+      } else {
+        circuit_build_times_add_time(&estimate, sample);
       }
     }
     circuit_build_times_update_alpha(&estimate);
     timeout1 = circuit_build_times_calculate_timeout(&estimate,
                                   CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
     circuit_build_times_set_timeout(&estimate);
-    log_warn(LD_CIRC, "Timeout1 is %lf, Xm is %d", timeout1, estimate.Xm);
+    log_notice(LD_CIRC, "Timeout1 is %lf, Xm is %d", timeout1, estimate.Xm);
+           /* 2% error */
   } while (fabs(circuit_build_times_cdf(&initial, timeout0) -
-                circuit_build_times_cdf(&initial, timeout1)) > 0.02
-                /* 2% error */
-           && estimate.total_build_times < CBT_NCIRCUITS_TO_OBSERVE);
+                circuit_build_times_cdf(&initial, timeout1)) > 0.02);
 
   test_assert(estimate.total_build_times <= CBT_NCIRCUITS_TO_OBSERVE);
 
@@ -510,7 +515,7 @@ test_circuit_timeout(void)
                                  CBT_DEFAULT_QUANTILE_CUTOFF/100.0);
 
   circuit_build_times_set_timeout(&final);
-  log_warn(LD_CIRC, "Timeout2 is %lf, Xm is %d", timeout2, final.Xm);
+  log_notice(LD_CIRC, "Timeout2 is %lf, Xm is %d", timeout2, final.Xm);
 
   /* 5% here because some accuracy is lost due to histogram conversion */
   test_assert(fabs(circuit_build_times_cdf(&initial, timeout0) -

@@ -3188,7 +3188,7 @@ build_time_t circuit_build_times_generate_sample(circuit_build_times_t *cbt,
                                                  double q_lo, double q_hi);
 void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
                                        double quantile, double time_ms);
-void circuit_build_times_update_alpha(circuit_build_times_t *cbt);
+int circuit_build_times_update_alpha(circuit_build_times_t *cbt);
 double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
 void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
                                        double quantile_cutoff);

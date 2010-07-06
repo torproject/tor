@@ -710,7 +710,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
  * an acceptable approximation because we are only concerned with the
  * accuracy of the CDF of the tail.
  */
-void
+int
 circuit_build_times_update_alpha(circuit_build_times_t *cbt)
 {
   build_time_t *x=cbt->circuit_build_times;
@@ -748,7 +748,16 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   }
   tor_assert(n==cbt->total_build_times);
 
-  tor_assert(max_time > 0);
+  if (max_time <= 0) {
+    /* This can happen if Xm is actually the *maximum* value in the set.
+     * It can also happen if we've abandoned every single circuit somehow.
+     * In either case, tell the caller not to compute a new build timeout. */
+    log_warn(LD_BUG,
+             "Could not determine largest build time (%d). "
+             "Xm is %dms and we've abandoned %d out of %d circuits.", max_time,
+             cbt->Xm, abandoned_count, n);
+    return 0;
+  }
 
   a += abandoned_count*tor_mathlog(max_time);
 
@@ -759,6 +768,8 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
   a = (n-abandoned_count)/a;
 
   cbt->alpha = a;
+
+  return 1;
 }
 
 /**
@@ -1177,7 +1188,8 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
     return 0;
   }
 
-  circuit_build_times_update_alpha(cbt);
+  if (!circuit_build_times_update_alpha(cbt))
+    return 0;
 
   cbt->timeout_ms = circuit_build_times_calculate_timeout(cbt,
                                 circuit_build_times_quantile_cutoff());
