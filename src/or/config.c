@@ -4837,25 +4837,63 @@ or_state_validate(or_state_t *old_state, or_state_t *state,
 }
 
 /** Replace the current persistent state with <b>new_state</b> */
-static void
+static int
 or_state_set(or_state_t *new_state)
 {
   char *err = NULL;
+  int ret = 0;
   tor_assert(new_state);
   config_free(&state_format, global_state);
   global_state = new_state;
   if (entry_guards_parse_state(global_state, 1, &err)<0) {
     log_warn(LD_GENERAL,"%s",err);
     tor_free(err);
+    ret = -1;
   }
   if (rep_hist_load_state(global_state, &err)<0) {
     log_warn(LD_GENERAL,"Unparseable bandwidth history state: %s",err);
     tor_free(err);
+    ret = -1;
   }
   if (circuit_build_times_parse_state(&circ_times, global_state, &err) < 0) {
     log_warn(LD_GENERAL,"%s",err);
     tor_free(err);
+    ret = -1;
   }
+  return ret;
+}
+
+/**
+ * Save a broken state file to a backup location.
+ */
+static void
+or_state_save_broken(char *fname)
+{
+  int i;
+  file_status_t status;
+  size_t len = strlen(fname)+16;
+  char *fname2 = tor_malloc(len);
+  for (i = 0; i < 100; ++i) {
+    tor_snprintf(fname2, len, "%s.%d", fname, i);
+    status = file_status(fname2);
+    if (status == FN_NOENT)
+      break;
+  }
+  if (i == 100) {
+    log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "
+             "state files to move aside. Discarding the old state file.",
+             fname);
+    unlink(fname);
+  } else {
+    log_warn(LD_BUG, "Unable to parse state in \"%s\". Moving it aside "
+             "to \"%s\".  This could be a bug in Tor; please tell "
+             "the developers.", fname, fname2);
+    if (rename(fname, fname2) < 0) {
+      log_warn(LD_BUG, "Weirdly, I couldn't even move the state aside. The "
+               "OS gave an error of %s", strerror(errno));
+    }
+  }
+  tor_free(fname2);
 }
 
 /** Reload the persistent state from disk, generating a new state as needed.
@@ -4917,31 +4955,8 @@ or_state_load(void)
              " This is a bug in Tor.");
     goto done;
   } else if (badstate && contents) {
-    int i;
-    file_status_t status;
-    size_t len = strlen(fname)+16;
-    char *fname2 = tor_malloc(len);
-    for (i = 0; i < 100; ++i) {
-      tor_snprintf(fname2, len, "%s.%d", fname, i);
-      status = file_status(fname2);
-      if (status == FN_NOENT)
-        break;
-    }
-    if (i == 100) {
-      log_warn(LD_BUG, "Unable to parse state in \"%s\"; too many saved bad "
-               "state files to move aside. Discarding the old state file.",
-               fname);
-      unlink(fname);
-    } else {
-      log_warn(LD_BUG, "Unable to parse state in \"%s\". Moving it aside "
-               "to \"%s\".  This could be a bug in Tor; please tell "
-               "the developers.", fname, fname2);
-      if (rename(fname, fname2) < 0) {
-        log_warn(LD_BUG, "Weirdly, I couldn't even move the state aside. The "
-                 "OS gave an error of %s", strerror(errno));
-      }
-    }
-    tor_free(fname2);
+    or_state_save_broken(fname);
+
     tor_free(contents);
     config_free(&state_format, new_state);
 
@@ -4953,7 +4968,9 @@ or_state_load(void)
   } else {
     log_info(LD_GENERAL, "Initialized state");
   }
-  or_state_set(new_state);
+  if (or_state_set(new_state) == -1) {
+    or_state_save_broken(fname);
+  }
   new_state = NULL;
   if (!contents) {
     global_state->next_write = 0;

@@ -29,5 +29,7 @@
      parameter and via a LearnCircuitBuildTimeout config option. Also
      automatically disable circuit build time calculation if we are either
      a AuthoritativeDirectory, or if we fail to write our state file. Bug 1296.
+   - More gracefully handle corrupt state files, removing asserts in favor
+     of saving a backup and resetting state.
 
 

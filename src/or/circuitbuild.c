@@ -193,12 +193,11 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
   int32_t num = networkstatus_get_param(ns, "cbtrecentcount",
                    CBT_DEFAULT_RECENT_CIRCUITS);
 
-  if (num != cbt->liveness.num_recent_circs) {
+  if (num > 0 && num != cbt->liveness.num_recent_circs) {
     int8_t *recent_circs;
     log_notice(LD_CIRC, "Changing recent timeout size from %d to %d",
                cbt->liveness.num_recent_circs, num);
 
-    tor_assert(num > 0);
     tor_assert(cbt->liveness.timeouts_after_firsthop);
 
     /*
@@ -675,6 +674,10 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
             "Corrupt state file? Build times count mismatch. "
             "Read %d times, but file says %d", loaded_cnt,
             state->TotalBuildTimes);
+    *msg = tor_strdup("Build times count mismatch.");
+    circuit_build_times_reset(cbt);
+    tor_free(loaded_times);
+    return -1;
   }
 
   circuit_build_times_shuffle_and_store_array(cbt, loaded_times, loaded_cnt);
@@ -688,8 +691,18 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   log_info(LD_CIRC,
            "Loaded %d/%d values from %d lines in circuit time histogram",
            tot_values, cbt->total_build_times, N);
-  tor_assert(cbt->total_build_times == tot_values);
-  tor_assert(cbt->total_build_times <= CBT_NCIRCUITS_TO_OBSERVE);
+
+  if (cbt->total_build_times != tot_values
+        || cbt->total_build_times > CBT_NCIRCUITS_TO_OBSERVE) {
+    log_warn(LD_CIRC,
+            "Corrupt state file? Shuffled build times mismatch. "
+            "Read %d times, but file says %d", tot_values,
+            state->TotalBuildTimes);
+    *msg = tor_strdup("Build times count mismatch.");
+    circuit_build_times_reset(cbt);
+    tor_free(loaded_times);
+    return -1;
+  }
 
   circuit_build_times_set_timeout(cbt);
 
@@ -742,6 +755,12 @@ circuit_build_times_update_alpha(circuit_build_times_t *cbt)
     n++;
   }
 
+  /*
+   * We are erring and asserting here because this can only happen
+   * in codepaths other than startup. The startup state parsing code
+   * performs this same check, and resets state if it hits it. If we
+   * hit it at runtime, something serious has gone wrong.
+   */
   if (n!=cbt->total_build_times) {
     log_err(LD_CIRC, "Discrepancy in build times count: %d vs %d", n,
             cbt->total_build_times);
