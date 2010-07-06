@@ -22,7 +22,6 @@ K       - Karsten claims
 =======================================================================
 
 Later, unless people want to implement them now:
-  - tor as a socks proxy should accept (and ignore) password auth
   - Actually use SSL_shutdown to close our TLS connections.
   - Include "v" line in networkstatus getinfo values.
     [Nick: bridge authorities output a networkstatus that is missing
@@ -30,10 +29,6 @@ Later, unless people want to implement them now:
      bridgedb gives out bridges with certain characteristics. -RD]
     [Okay. Is this a separate item, or is it the same issue as the lack of
      a "v" line in response to the controller GETINFO command? -NM]
-  - Let tor dir mirrors proxy connections to the tor download site, so
-    if you know a bridge you can fetch the tor software.
-  - when somebody uses the controlport as an http proxy, give them
-    a "tor isn't an http proxy" error too like we do for the socks port.
   - MAYBE kill stalled circuits rather than stalled connections.  This is
     possible thanks to cell queues, but we need to consider the anonymity
     implications.
@@ -45,8 +40,6 @@ Later, unless people want to implement them now:
     online config documentation from a single source.
   - It would be potentially helpful to respond to https requests on
     the OR port by acting like an HTTPS server.
-  - Make the timestamp granularity on logs configurable, with default
-    of "1 second".  This might make some kinds of after-the-fact attack harder.
 
   - We should get smarter about handling address resolve failures, or
     addresses that resolve to local IPs.  It would be neat to retry
