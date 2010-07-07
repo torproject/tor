@@ -2842,6 +2842,12 @@ typedef struct {
   time_t      BWHistoryWriteEnds;
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
+  time_t      BWHistoryDirReadEnds;
+  int         BWHistoryDirReadInterval;
+  smartlist_t *BWHistoryDirReadValues;
+  time_t      BWHistoryDirWriteEnds;
+  int         BWHistoryDirWriteInterval;
+  smartlist_t *BWHistoryDirWriteValues;
 
   /** Build time histogram */
   config_line_t * BuildtimeHistogram;

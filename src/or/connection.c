@@ -2082,8 +2082,6 @@ static void
 connection_buckets_decrement(connection_t *conn, time_t now,
                              size_t num_read, size_t num_written)
 {
-  if (!connection_is_rate_limited(conn))
-    return; /* local IPs are free */
   if (num_written >= INT_MAX || num_read >= INT_MAX) {
     log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
              "connection type=%s, state=%s",
@@ -2095,6 +2093,16 @@ connection_buckets_decrement(connection_t *conn, time_t now,
     tor_fragile_assert();
   }
 
+  /* Count bytes of answering direct and tunneled directory requests */
+  if (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER) {
+    if (num_read > 0)
+      rep_hist_note_dir_bytes_read(num_read, now);
+    if (num_written > 0)
+      rep_hist_note_dir_bytes_written(num_written, now);
+  }
+
+  if (!connection_is_rate_limited(conn))
+    return; /* local IPs are free */
   if (num_read > 0) {
     if (conn->type == CONN_TYPE_EXIT)
       rep_hist_note_exit_bytes_read(conn->port, num_read);

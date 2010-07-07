@@ -23,6 +23,8 @@ void rep_hist_note_extend_failed(const char *from_name, const char *to_name);
 void rep_hist_dump_stats(time_t now, int severity);
 void rep_hist_note_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_bytes_written(size_t num_bytes, time_t when);
+void rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when);
+void rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when);
 void rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes);
 void rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes);
 void rep_hist_note_exit_stream_opened(uint16_t port);

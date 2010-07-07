@@ -779,6 +779,17 @@
            had a smaller bandwidth than md, the other half had a larger
            bandwidth than md.
 
+    "dirreq-read-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM... NL
+        [At most once]
+    "dirreq-write-history" YYYY-MM-DD HH:MM:SS (NSEC s) NUM,NUM,NUM... NL
+        [At most once]
+
+        Declare how much bandwidth the OR has spent on answering directory
+        requests.  Usage is divided into intervals of NSEC seconds.  The
+        YYYY-MM-DD HH:MM:SS field defines the end of the most recent
+        interval.  The numbers are the number of bytes used in the most
+        recent intervals, ordered from oldest to newest.
+
     "entry-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
         [At most once.]
 
