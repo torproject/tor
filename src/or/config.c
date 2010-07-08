@@ -1245,11 +1245,24 @@ options_act(or_options_t *old_options)
       circuit_expire_all_dirty_circs();
     }
 
+/* How long should we delay counting bridge stats after becoming a bridge?
+ * We use this so we don't count people who used our bridge thinking it is
+ * a relay. If you change this, don't forget to change the log message
+ * below. */
+#define RELAY_BRIDGE_STATS_DELAY (2 * 60 * 60)
+
     if (! bool_eq(options->BridgeRelay, old_options->BridgeRelay)) {
+      int was_relay = 0;
       if (options->BridgeRelay) {
-        geoip_bridge_stats_init(time(NULL) + (2 * 60 * 60));
+        time_t int_start = time(NULL);
+        if (old_options->ORPort == options->ORPort) {
+          int_start += RELAY_BRIDGE_STATS_DELAY;
+          was_relay = 1;
+        }
+        geoip_bridge_stats_init(int_start);
         log_info(LD_CONFIG, "We are acting as a bridge now.  Starting new "
-                 "GeoIP stats interval in 2 hours from now.");
+                 "GeoIP stats interval%s.", was_relay ? " in 2 "
+                 "hours from now" : "");
       } else {
         geoip_bridge_stats_term();
         log_info(LD_GENERAL, "We are no longer acting as a bridge.  "
