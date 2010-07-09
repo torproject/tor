@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Make directory mirrors report non-zero dirreq-v[23]-shares again.
-      Fixes bug 1564; bugfix on 0.2.2.9-alpha.
-

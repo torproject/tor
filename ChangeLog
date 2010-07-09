@@ -1,10 +1,28 @@
-Changes in version 0.2.2.14-alpha - 2010-06-30
+Changes in version 0.2.2.14-alpha - 2010-07-1?
   o Major bugfixes:
     - Tor directory authorities no longer crash when started with a
-      cached-microdesc-consensus file in their data directory. Bugfix on
-      0.2.2.6-alpha, fixes bug 1532.
+      cached-microdesc-consensus file in their data directory. Bugfix
+      on 0.2.2.6-alpha; fixes bug 1532.
     - Treat an unset $HOME like an empty $HOME rather than triggering an
-      assert. Fixes bug 1522; bugfix on tor-0.0.8pre1.
+      assert. Bugfix on 0.0.8pre1; fixes bug 1522.
+    - Ignore negative and large circuit build timeout values that can
+      happen during a suspend or hibernate. These values caused various
+      asserts to fire. Bugfix on 0.2.2.2-alpha; fixes bug 1245.
+    - Alter calculation of Pareto distribution parameter 'Xm' for
+      Circuit Build Timeout learning to use the weighted average of
+      the top N=3 modes, because we have three entry guards. This should
+      improve the timeout calculation in some cases, and prevent extremely
+      high timeout values. Bugfix on 0.2.2.2-alpha; fixes bug 1335.
+    - Alter calculation of Pareto distribution parameter 'Alpha' to use a
+      right censored distribution model. This allows us to remove
+      the synthetic timeout generation and instead calculate build
+      timeouts using truncated times. Bugfix on 0.2.2.2-alpha; fixes
+      bugs 1245+1335.
+    - Keep circuits open (but do not use them) after the circuit
+      timeout for up until the time corresponding to the 95th percentile
+      on the Pareto CDF or 60 seconds, whichever is greater. This is done
+      to provide better data for the new Pareto model. This percentile
+      can be controlled by the consensus.
 
   o Major features:
     - Move to the June 2010 Maxmind GeoLite country db (rather than the
@@ -36,6 +54,16 @@ Changes in version 0.2.2.14-alpha - 2010-06-30
     - Convert the HACKING file to asciidoc, and add a few new sections
       to it, explaining how we use Git, how we make changelogs, and
       what should go in a patch.
+    - Add a TIMEOUT_RATE keyword to the BUILDTIMEOUT_SET control port
+      event, to give information on the current rate of circuit timeouts
+      over our stored history.
+    - Add ability to disable circuit build time learning via consensus
+      parameter and via a LearnCircuitBuildTimeout config option. Also
+      automatically disable circuit build time calculation if we are
+      either a AuthoritativeDirectory, or if we fail to write our state
+      file. Fixes bug 1296.
+    - More gracefully handle corrupt state files, removing asserts
+      in favor of saving a backup and resetting state.
 
   o Minor bugfixes:
     - Build correctly on OSX with zlib 1.2.4 and higher with all warnings
@@ -62,6 +90,10 @@ Changes in version 0.2.2.14-alpha - 2010-06-30
       we fortunately don't use those circuits. Many thanks to outofwords
       for the initial analysis and to swissknife who confirmed that
       two-hop circuits are actually created.
+    - Make directory mirrors report non-zero dirreq-v[23]-shares again.
+      Fixes bug 1564; bugfix on 0.2.2.9-alpha.
+    - Eliminate a case where a circuit build time warning was displayed
+      after network connectivity resumed. Bugfix on 0.2.2.2-alpha.
 
 
 Changes in version 0.2.1.26 - 2010-05-02
