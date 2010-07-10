@@ -29,7 +29,7 @@
 
 #include "compat.h"
 #include "../common/util.h"
-#include "../common/log.h"
+#include "../common/torlog.h"
 #include "crypto.h"
 #include "address.h"
 

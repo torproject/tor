@@ -88,7 +88,7 @@
 #include <sys/prctl.h>
 #endif
 
-#include "log.h"
+#include "torlog.h"
 #include "util.h"
 #include "container.h"
 #include "address.h"

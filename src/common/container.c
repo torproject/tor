@@ -13,7 +13,7 @@
 
 #include "compat.h"
 #include "util.h"
-#include "log.h"
+#include "torlog.h"
 #include "container.h"
 #include "crypto.h"
 

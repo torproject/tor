@@ -20,7 +20,7 @@
 
 #include "torint.h"
 #include "util.h"
-#include "log.h"
+#include "torlog.h"
 #include "torgzip.h"
 
 /* zlib 1.2.4 and 1.2.5 do some "clever" things with macros.  Instead of

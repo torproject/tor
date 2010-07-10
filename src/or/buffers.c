@@ -13,7 +13,7 @@
 #define BUFFERS_PRIVATE
 #include "or.h"
 #include "../common/util.h"
-#include "../common/log.h"
+#include "../common/torlog.h"
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif

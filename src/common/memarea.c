@@ -11,7 +11,7 @@
 #include "memarea.h"
 #include "util.h"
 #include "compat.h"
-#include "log.h"
+#include "torlog.h"
 
 /** If true, we try to detect any attempts to write beyond the length of a
  * memarea. */

@@ -8,7 +8,7 @@
 #include "compat.h"
 #include "../common/util.h"
 #include "address.h"
-#include "../common/log.h"
+#include "../common/torlog.h"
 
 #include <stdio.h>
 #include <stdlib.h>

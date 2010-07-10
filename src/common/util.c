@@ -15,7 +15,7 @@
 
 #include "orconfig.h"
 #include "util.h"
-#include "log.h"
+#include "torlog.h"
 #undef log
 #include "crypto.h"
 #include "torint.h"

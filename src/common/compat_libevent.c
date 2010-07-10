@@ -15,7 +15,7 @@
 #include "compat_libevent.h"
 
 #include "util.h"
-#include "log.h"
+#include "torlog.h"
 
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>

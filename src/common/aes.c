@@ -21,7 +21,7 @@
 #include "compat.h"
 #include "aes.h"
 #include "util.h"
-#include "log.h"
+#include "torlog.h"
 
 /* We have 3 strategies for getting AES: Via OpenSSL's AES_encrypt function,
  * via OpenSSL's EVP_EncryptUpdate function, or via the built-in AES

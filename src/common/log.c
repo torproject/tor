@@ -33,7 +33,7 @@
 #include "compat.h"
 #include "util.h"
 #define LOG_PRIVATE
-#include "log.h"
+#include "torlog.h"
 #include "container.h"
 
 #define TRUNCATED_STR "[...truncated]"

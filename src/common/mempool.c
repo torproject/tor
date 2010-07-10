@@ -65,7 +65,7 @@
 #include "orconfig.h"
 #include "util.h"
 #include "compat.h"
-#include "log.h"
+#include "torlog.h"
 #define ALLOC(x) tor_malloc(x)
 #define FREE(x) tor_free(x)
 #define ASSERT(x) tor_assert(x)

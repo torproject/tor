@@ -38,7 +38,7 @@
 #include "crypto.h"
 #include "tortls.h"
 #include "util.h"
-#include "log.h"
+#include "torlog.h"
 #include "container.h"
 #include "ht.h"
 #include <string.h>

@@ -50,7 +50,7 @@
 
 #define CRYPTO_PRIVATE
 #include "crypto.h"
-#include "../common/log.h"
+#include "../common/torlog.h"
 #include "aes.h"
 #include "../common/util.h"
 #include "container.h"

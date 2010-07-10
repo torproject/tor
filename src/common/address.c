@@ -12,7 +12,7 @@
 #include "compat.h"
 #include "util.h"
 #include "address.h"
-#include "log.h"
+#include "torlog.h"
 
 #ifdef MS_WINDOWS
 #include <process.h>
