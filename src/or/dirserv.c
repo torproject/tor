@@ -1637,7 +1637,7 @@ should_generate_v2_networkstatus(void)
 #define TIME_KNOWN_TO_GUARANTEE_FAMILIAR (8*24*60*60)
 /** Similarly, every node with sufficient WFU is around enough to be a guard.
  */
-#define WFU_TO_GUARANTEE_GUARD (0.995)
+#define WFU_TO_GUARANTEE_GUARD (0.98)
 
 /* Thresholds for server performance: set by
  * dirserv_compute_performance_thresholds, and used by
@@ -2164,9 +2164,7 @@ get_possible_sybil_list(const smartlist_t *routers)
 
 /** Extract status information from <b>ri</b> and from other authority
  * functions and store it in <b>rs</b>>.  If <b>naming</b>, consider setting
- * the named flag in <b>rs</b>. If not <b>exits_can_be_guards</b>, never mark
- * an exit as a guard.  If <b>listbadexits</b>, consider setting the badexit
- * flag.
+ * the named flag in <b>rs</b>.
  *
  * We assume that ri-\>is_running has already been set, e.g. by
  *   dirserv_set_router_is_running(ri, now);
@@ -2174,8 +2172,8 @@ get_possible_sybil_list(const smartlist_t *routers)
 void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
                                  routerinfo_t *ri, time_t now,
-                                 int naming, int exits_can_be_guards,
-                                 int listbadexits, int listbaddirs)
+                                 int naming, int listbadexits,
+                                 int listbaddirs)
 {
   int unstable_version =
     !tor_version_as_new_as(ri->platform,"0.1.1.16-rc-cvs");
@@ -2204,11 +2202,10 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_valid = ri->is_valid;
 
   if (rs->is_fast &&
-      (!rs->is_exit || exits_can_be_guards) &&
-      (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
+       (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
        router_get_advertised_bandwidth(ri) >=
-       (exits_can_be_guards ? guard_bandwidth_including_exits :
-        guard_bandwidth_excluding_exits))) {
+                              MIN(guard_bandwidth_including_exits,
+                                  guard_bandwidth_excluding_exits))) {
     long tk = rep_hist_get_weighted_time_known(
                                       ri->cache_info.identity_digest, now);
     double wfu = rep_hist_get_weighted_fractional_uptime(
@@ -2452,7 +2449,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   int naming = options->NamingAuthoritativeDir;
   int listbadexits = options->AuthDirListBadExits;
   int listbaddirs = options->AuthDirListBadDirs;
-  int exits_can_be_guards;
   routerlist_t *rl = router_get_routerlist();
   time_t now = time(NULL);
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
@@ -2499,10 +2495,6 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
 
   dirserv_compute_performance_thresholds(rl);
 
-  /* XXXX We should take steps to keep this from oscillating if
-   * total_exit_bandwidth is close to total_bandwidth/3. */
-  exits_can_be_guards = total_exit_bandwidth >= (total_bandwidth / 3);
-
   routers = smartlist_create();
   smartlist_add_all(routers, rl->routers);
   routers_sort_by_identity(routers);
@@ -2520,8 +2512,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
       set_routerstatus_from_routerinfo(rs, ri, now,
-                                       naming, exits_can_be_guards,
-                                       listbadexits, listbaddirs);
+                                       naming, listbadexits, listbaddirs);
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(rs);
@@ -2671,7 +2662,6 @@ generate_v2_networkstatus_opinion(void)
   int versioning = options->VersioningAuthoritativeDir;
   int listbaddirs = options->AuthDirListBadDirs;
   int listbadexits = options->AuthDirListBadExits;
-  int exits_can_be_guards;
   const char *contact;
   char *version_lines = NULL;
   smartlist_t *routers = NULL;
@@ -2751,10 +2741,6 @@ generate_v2_networkstatus_opinion(void)
 
   dirserv_compute_performance_thresholds(rl);
 
-  /* XXXX We should take steps to keep this from oscillating if
-   * total_exit_bandwidth is close to total_bandwidth/3. */
-  exits_can_be_guards = total_exit_bandwidth >= (total_bandwidth / 3);
-
   routers = smartlist_create();
   smartlist_add_all(routers, rl->routers);
   routers_sort_by_identity(routers);
@@ -2767,8 +2753,7 @@ generate_v2_networkstatus_opinion(void)
       char *version = version_from_platform(ri->platform);
 
       set_routerstatus_from_routerinfo(&rs, ri, now,
-                                       naming, exits_can_be_guards,
-                                       listbadexits, listbaddirs);
+                                       naming, listbadexits, listbaddirs);
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(&rs);

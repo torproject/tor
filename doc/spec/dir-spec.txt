@@ -1440,9 +1440,6 @@
    "Guard" -- A router is a possible 'Guard' if its Weighted Fractional
    Uptime is at least the median for "familiar" active routers, and if
    its bandwidth is at least median or at least 250KB/s.
-   If the total bandwidth of active non-BadExit Exit servers is less
-   than one third of the total bandwidth of all active servers, no Exit is
-   listed as a Guard.
 
         To calculate weighted fractional uptime, compute the fraction
         of time that the router is up in any given day, weighting so that

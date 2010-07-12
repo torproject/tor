@@ -1,0 +1,9 @@
+  o Minor bugfixes
+    - Alter directory authorities to always consider Exit-flagged nodes
+      as potential Guard nodes in their votes. The actual decision to
+      use Exits as Guards is done in the consensus bandwidth weights.
+      Fixes bug 1294; bugfix on 0.2.2.10-alpha.
+
+ o Minor features:
+    - Lower the maximum weighted-fractional-uptime cutoff to 98%. This
+      should give us approximately 40-50% more Guard-flagged nodes.
