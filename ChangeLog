@@ -1,4 +1,4 @@
-Changes in version 0.2.2.14-alpha - 2010-07-1?
+Changes in version 0.2.2.14-alpha - 2010-07-12
   o Major bugfixes:
     - Tor directory authorities no longer crash when started with a
       cached-microdesc-consensus file in their data directory. Bugfix
@@ -9,17 +9,19 @@ Changes in version 0.2.2.14-alpha - 2010-07-1?
       happen during a suspend or hibernate. These values caused various
       asserts to fire. Bugfix on 0.2.2.2-alpha; fixes bug 1245.
     - Alter calculation of Pareto distribution parameter 'Xm' for
-      Circuit Build Timeout learning to use the weighted average of
-      the top N=3 modes, because we have three entry guards. This should
-      improve the timeout calculation in some cases, and prevent extremely
-      high timeout values. Bugfix on 0.2.2.2-alpha; fixes bug 1335.
+      Circuit Build Timeout learning to use the weighted average of the
+      top N=3 modes (because we have three entry guards). Considering
+      multiple modes should improve the timeout calculation in some cases,
+      and prevent extremely high timeout values. Bugfix on 0.2.2.2-alpha;
+      fixes bug 1335.
     - Alter calculation of Pareto distribution parameter 'Alpha' to use a
-      right censored distribution model. This allows us to remove
-      the synthetic timeout generation and instead calculate build
-      timeouts using truncated times. Bugfix on 0.2.2.2-alpha; fixes
-      bugs 1245+1335.
-    - Keep circuits open (but do not use them) after the circuit
-      timeout for up until the time corresponding to the 95th percentile
+      right censored distribution model. This approach improves over the
+      synthetic timeout generation approach that was producing insanely
+      high timeout values. Now we calculate build timeouts using truncated
+      times. Bugfix on 0.2.2.2-alpha; fixes bugs 1245 and 1335.
+    - Do not close circuits that are under construction when they reach
+      the circuit build timeout. Instead, leave them building (but do not
+      use them) for up until the time corresponding to the 95th percentile
       on the Pareto CDF or 60 seconds, whichever is greater. This is done
       to provide better data for the new Pareto model. This percentile
       can be controlled by the consensus.
@@ -31,16 +33,16 @@ Changes in version 0.2.2.14-alpha - 2010-07-1?
       more accurate data for many African countries.
     - Port Tor to build and run correctly on Windows CE systems, using
       the wcecompat library. Contributed by Valerio Lupi.
-    - New "--enable-gcc-hardening" ./configure flag to turn on gcc
-      compile time hardening options. It ensures that signed ints have
-      defined behavior (-fwrapv), -D_FORTIFY_SOURCE=2 is enabled
-      (requiring -O2), stack smashing protection with canaries
-      (-fstack-protector-all), ASLR protection if supported by the
-      kernel (-fPIE, -pie). Additional security related warnings are
-      enabled. Verified to work on Mac OS X and Debian Lenny.
-    - New "--enable-linker-hardening" ./configure flag to turn on ELF
-      specific hardening features (relro, now). This does not work with
-      Mac OS X or any other non-ELF binary format.
+    - New "--enable-gcc-hardening" ./configure flag (off by default)
+      to turn on gcc compile time hardening options. It ensures
+      that signed ints have defined behavior (-fwrapv), enables
+      -D_FORTIFY_SOURCE=2 (requiring -O2), adds stack smashing protection
+      with canaries (-fstack-protector-all), turns on ASLR protection if
+      supported by the kernel (-fPIE, -pie), and adds additional security
+      related warnings. Verified to work on Mac OS X and Debian Lenny.
+    - New "--enable-linker-hardening" ./configure flag (off by default)
+      to turn on ELF specific hardening features (relro, now). This does
+      not work with Mac OS X or any other non-ELF binary format.
 
   o New directory authorities:
     - Set up maatuska (run by Linus Nordberg) as the eighth v3 directory
@@ -64,6 +66,8 @@ Changes in version 0.2.2.14-alpha - 2010-07-1?
       file. Fixes bug 1296.
     - More gracefully handle corrupt state files, removing asserts
       in favor of saving a backup and resetting state.
+    - Rename the "log.h" header to "torlog.h" so as to conflict with fewer
+      system headers.
 
   o Minor bugfixes:
     - Build correctly on OSX with zlib 1.2.4 and higher with all warnings
