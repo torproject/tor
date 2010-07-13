@@ -2,6 +2,13 @@ Changes in version 0.2.2.15-alpha - 2010-07-??
 
 
 Changes in version 0.2.2.14-alpha - 2010-07-12
+  Tor 0.2.2.14-alpha greatly improves client-side handling of
+  circuit build timeouts, which are used to estimate speed and improve
+  performance. We also move to a much better GeoIP database, port Tor to
+  Windows CE, introduce new compile flags that improve code security,
+  add an eighth v3 directory authority, and address a lot of more
+  minor issues.
+
   o Major bugfixes:
     - Tor directory authorities no longer crash when started with a
       cached-microdesc-consensus file in their data directory. Bugfix
