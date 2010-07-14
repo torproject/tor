@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - Stop assigning the HSDir flag to relays that disable their
+      DirPort (and thus will refuse to answer directory requests). This
+      fix should dramatically improve the reachability of hidden services:
+      hidden services and hidden service clients pick three HSDir relays
+      to store and retrieve the hidden service descriptor, and currently
+      about half of the HSDir relays will refuse to work. Bugfix on
+      0.2.0.10-alpha; fixes part of bug 1693.

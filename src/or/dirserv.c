@@ -1717,7 +1717,7 @@ dirserv_thinks_router_is_unreliable(time_t now,
 
 /** Return true iff <b>router</b> should be assigned the "HSDir" flag.
  * Right now this means it advertises support for it, it has a high
- * uptime, and it's currently considered Running.
+ * uptime, it has a DirPort open, and it's currently considered Running.
  *
  * This function needs to be called after router-\>is_running has
  * been set.
@@ -1727,7 +1727,11 @@ dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
 {
   long uptime = real_uptime(router, now);
 
-  return (router->wants_to_be_hs_dir &&
+  /* XXX We shouldn't need to check dir_port, but we do because of
+   * bug 1693. In the future, once relays set wants_to_be_hs_dir
+   * correctly, we can revert to only checking dir_port if router's
+   * version is too old. */
+  return (router->wants_to_be_hs_dir && router->dir_port &&
           uptime > get_options()->MinUptimeHidServDirectoryV2 &&
           router->is_running);
 }
