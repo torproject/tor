@@ -352,6 +352,8 @@ circuit_purpose_to_controller_string(uint8_t purpose)
 
     case CIRCUIT_PURPOSE_TESTING:
       return "TESTING";
+    case CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT:
+      return "EXPIRED";
     case CIRCUIT_PURPOSE_CONTROLLER:
       return "CONTROLLER";
 

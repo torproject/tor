@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When the controller is reporting the purpose of circuits that
+      didn't finish building before the circuit build timeout, it was
+      printing UNKNOWN_13. Now print EXPIRED. Bugfix on 0.2.2.14-alpha.
