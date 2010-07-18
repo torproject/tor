@@ -1318,10 +1318,15 @@ geoip_entry_stats_write(time_t now)
 /** Helper used to implement GETINFO ip-to-country/... controller command. */
 int
 getinfo_helper_geoip(control_connection_t *control_conn,
-                     const char *question, char **answer)
+                     const char *question, char **answer,
+                     const char **errmsg)
 {
   (void)control_conn;
-  if (geoip_is_loaded() && !strcmpstart(question, "ip-to-country/")) {
+  if (!geoip_is_loaded()) {
+    *errmsg = "GeoIP data not loaded";
+    return -1;
+  }
+  if (!strcmpstart(question, "ip-to-country/")) {
     int c;
     uint32_t ip;
     struct in_addr in;

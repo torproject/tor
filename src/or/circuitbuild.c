@@ -4240,9 +4240,12 @@ entry_guards_update_state(or_state_t *state)
  * */
 int
 getinfo_helper_entry_guards(control_connection_t *conn,
-                            const char *question, char **answer)
+                            const char *question, char **answer,
+                            const char **errmsg)
 {
   (void) conn;
+  (void) errmsg;
+
   if (!strcmp(question,"entry-guards") ||
       !strcmp(question,"helper-nodes")) {
     smartlist_t *sl = smartlist_create();

@@ -5060,9 +5060,11 @@ remove_file_if_very_old(const char *fname, time_t now)
  * types. */
 int
 getinfo_helper_config(control_connection_t *conn,
-                      const char *question, char **answer)
+                      const char *question, char **answer,
+                      const char **errmsg)
 {
   (void) conn;
+  (void) errmsg;
   if (!strcmp(question, "config/names")) {
     smartlist_t *sl = smartlist_create();
     int i;

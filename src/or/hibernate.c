@@ -863,9 +863,11 @@ consider_hibernation(time_t now)
  * NULL. */
 int
 getinfo_helper_accounting(control_connection_t *conn,
-                          const char *question, char **answer)
+                          const char *question, char **answer,
+                          const char **errmsg)
 {
   (void) conn;
+  (void) errmsg;
   if (!strcmp(question, "accounting/enabled")) {
     *answer = tor_strdup(accounting_is_enabled(get_options()) ? "1" : "0");
   } else if (!strcmp(question, "accounting/hibernating")) {

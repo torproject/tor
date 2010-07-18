@@ -1296,7 +1296,7 @@ handle_control_mapaddress(control_connection_t *conn, uint32_t len,
  * trivial-to-implement questions. */
 static int
 getinfo_helper_misc(control_connection_t *conn, const char *question,
-                    char **answer)
+                    char **answer, const char **errmsg)
 {
   (void) conn;
   if (!strcmp(question, "version")) {
@@ -1316,15 +1316,19 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
     *answer = tor_strdup("VERBOSE_NAMES EXTENDED_EVENTS");
   } else if (!strcmp(question, "address")) {
     uint32_t addr;
-    if (router_pick_published_address(get_options(), &addr) < 0)
+    if (router_pick_published_address(get_options(), &addr) < 0) {
+      *errmsg = "Address unknown";
       return -1;
+    }
     *answer = tor_dup_ip(addr);
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
     routerinfo_t *me = router_get_my_routerinfo();
-    if (!me)
+    if (!me) {
+      *errmsg = "No routerdesc known; am I really a server?";
       return -1;
+    }
     *answer = tor_malloc(HEX_DIGEST_LEN+1);
     base16_encode(*answer, HEX_DIGEST_LEN+1, me->cache_info.identity_digest,
                   DIGEST_LEN);
@@ -1385,7 +1389,8 @@ munge_extrainfo_into_routerinfo(const char *ri_body, signed_descriptor_t *ri,
  * directory information. */
 static int
 getinfo_helper_dir(control_connection_t *control_conn,
-                   const char *question, char **answer)
+                   const char *question, char **answer,
+                   const char **errmsg)
 {
   (void) control_conn;
   if (!strcmpstart(question, "desc/id/")) {
@@ -1462,6 +1467,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
       log_warn(LD_CONTROL, "getinfo '%s': %s", question, msg);
       smartlist_free(descs);
       tor_free(url);
+      *errmsg = msg;
       return -1;
     }
     SMARTLIST_FOREACH(descs, signed_descriptor_t *, sd,
@@ -1558,7 +1564,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
  * current states of things we send events about. */
 static int
 getinfo_helper_events(control_connection_t *control_conn,
-                      const char *question, char **answer)
+                      const char *question, char **answer,
+                      const char **errmsg)
 {
   (void) control_conn;
   if (!strcmp(question, "circuit-status")) {
@@ -1759,8 +1766,10 @@ getinfo_helper_events(control_connection_t *control_conn,
       }
     } else if (!strcmp(question, "status/clients-seen")) {
       const char *bridge_stats = geoip_get_bridge_stats_controller(time(NULL));
-      if (!bridge_stats)
+      if (!bridge_stats) {
+        *errmsg = "No bridge-client stats available";
         return -1;
+      }
       *answer = tor_strdup(bridge_stats);
     } else {
       return 0;
@@ -1771,12 +1780,14 @@ getinfo_helper_events(control_connection_t *control_conn,
 
 /** Callback function for GETINFO: on a given control connection, try to
  * answer the question <b>q</b> and store the newly-allocated answer in
- * *<b>a</b>. If an internal error occurs, return -1. On success, or if
- * the key is not recognized, return 0. Do not set <b>a</b> if the key is
- * not recognized.
+ * *<b>a</b>. If an internal error occurs, return -1 and optionally set
+ * *<b>error_out</b> to point to an error message to be delivered to the
+ * controller. On success, _or if the key is not recognized_, return 0. Do not
+ * set <b>a</b> if the key is not recognized.
  */
 typedef int (*getinfo_helper_t)(control_connection_t *,
-                                const char *q, char **a);
+                                const char *q, char **a,
+                                const char **error_out);
 
 /** A single item for the GETINFO question-to-answer-function table. */
 typedef struct getinfo_item_t {
@@ -1911,7 +1922,8 @@ list_getinfo_options(void)
  * internal error. */
 static int
 handle_getinfo_helper(control_connection_t *control_conn,
-                      const char *question, char **answer)
+                      const char *question, char **answer,
+                      const char **err_out)
 {
   int i;
   *answer = NULL; /* unrecognized key by default */
@@ -1924,7 +1936,7 @@ handle_getinfo_helper(control_connection_t *control_conn,
       match = !strcmp(question, getinfo_items[i].varname);
     if (match) {
       tor_assert(getinfo_items[i].fn);
-      return getinfo_items[i].fn(control_conn, question, answer);
+      return getinfo_items[i].fn(control_conn, question, answer, err_out);
     }
   }
 
@@ -1946,10 +1958,12 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
 
   smartlist_split_string(questions, body, " ",
                          SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-  SMARTLIST_FOREACH(questions, const char *, q,
-  {
-    if (handle_getinfo_helper(conn, q, &ans) < 0) {
-      connection_write_str_to_buf("551 Internal error\r\n", conn);
+  SMARTLIST_FOREACH_BEGIN(questions, const char *, q) {
+    const char *errmsg = NULL;
+    if (handle_getinfo_helper(conn, q, &ans, &errmsg) < 0) {
+      if (!errmsg)
+        errmsg = "Internal error";
+      connection_printf_to_buf(conn, "551 %s\r\n", errmsg);
       goto done;
     }
     if (!ans) {
@@ -1958,7 +1972,7 @@ handle_control_getinfo(control_connection_t *conn, uint32_t len,
       smartlist_add(answers, tor_strdup(q));
       smartlist_add(answers, ans);
     }
-  });
+  } SMARTLIST_FOREACH_END(q);
   if (smartlist_len(unrecognized)) {
     for (i=0; i < smartlist_len(unrecognized)-1; ++i)
       connection_printf_to_buf(conn,
