@@ -2160,7 +2160,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     *answer = networkstatus_getinfo_by_purpose(question+11, time(NULL));
     return *answer ? 0 : -1;
   } else {
-    return -1;
+    return 0;
   }
 
   if (status)
