@@ -2124,7 +2124,8 @@ networkstatus_parse_flavor_name(const char *flavname)
  * ORs.  Return 0 on success, -1 on unrecognized question format. */
 int
 getinfo_helper_networkstatus(control_connection_t *conn,
-                             const char *question, char **answer)
+                             const char *question, char **answer,
+                             const char **errmsg)
 {
   routerstatus_t *status;
   (void) conn;
@@ -2148,8 +2149,10 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   } else if (!strcmpstart(question, "ns/id/")) {
     char d[DIGEST_LEN];
 
-    if (base16_decode(d, DIGEST_LEN, question+6, strlen(question+6)))
+    if (base16_decode(d, DIGEST_LEN, question+6, strlen(question+6))) {
+      *errmsg = "Data not decodeable as hex";
       return -1;
+    }
     status = router_get_consensus_status_by_id(d);
   } else if (!strcmpstart(question, "ns/name/")) {
     status = router_get_consensus_status_by_nickname(question+8, 0);
@@ -2157,7 +2160,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
     *answer = networkstatus_getinfo_by_purpose(question+11, time(NULL));
     return *answer ? 0 : -1;
   } else {
-    return -1;
+    return 0;
   }
 
   if (status)

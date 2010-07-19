@@ -3004,7 +3004,8 @@ routerinfo_t *choose_random_entry(cpath_build_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 void entry_guards_update_state(or_state_t *state);
 int getinfo_helper_entry_guards(control_connection_t *conn,
-                                const char *question, char **answer);
+                                const char *question, char **answer,
+                                const char **errmsg);
 
 void clear_bridge_list(void);
 int routerinfo_is_a_configured_bridge(routerinfo_t *ri);
@@ -3361,7 +3362,8 @@ int or_state_save(time_t now);
 
 int options_need_geoip_info(or_options_t *options, const char **reason_out);
 int getinfo_helper_config(control_connection_t *conn,
-                          const char *question, char **answer);
+                          const char *question, char **answer,
+                          const char **errmsg);
 
 const char *tor_get_digests(void);
 uint32_t get_effective_bwrate(or_options_t *options);
@@ -4162,7 +4164,8 @@ char *geoip_get_client_history_bridge(time_t now,
                                       geoip_client_action_t action);
 char *geoip_get_request_history(time_t now, geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
-                         const char *question, char **answer);
+                         const char *question, char **answer,
+                         const char **errmsg);
 void geoip_free_all(void);
 
 /** Directory requests that we are measuring can be either direct or
@@ -4220,7 +4223,8 @@ void hibernate_begin_shutdown(void);
 int we_are_hibernating(void);
 void consider_hibernation(time_t now);
 int getinfo_helper_accounting(control_connection_t *conn,
-                              const char *question, char **answer);
+                              const char *question, char **answer,
+                              const char **errmsg);
 void accounting_set_bandwidth_usage_from_state(or_state_t *state);
 
 /********************************* main.c ***************************/
@@ -4397,7 +4401,8 @@ int32_t get_net_param_from_list(smartlist_t *net_params, const char *name,
 int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
                                 int32_t default_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
-                                 const char *question, char **answer);
+                                 const char *question, char **answer,
+                                 const char **errmsg);
 int32_t networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight,
                                     int32_t default_val);
 const char *networkstatus_get_flavor_name(consensus_flavor_t flav);
@@ -4504,7 +4509,8 @@ void policies_set_router_exitpolicy_to_reject_all(routerinfo_t *exitrouter);
 int exit_policy_is_general_exit(smartlist_t *policy);
 int policy_is_reject_star(const smartlist_t *policy);
 int getinfo_helper_policies(control_connection_t *conn,
-                            const char *question, char **answer);
+                            const char *question, char **answer,
+                            const char **errmsg);
 int policy_write_item(char *buf, size_t buflen, addr_policy_t *item,
                       int format_for_desc);
 
