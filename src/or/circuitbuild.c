@@ -2323,6 +2323,9 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
   return 0;
 }
 
+/** How many hops does a general-purpose circuit have by default? */
+#define DEFAULT_ROUTE_LEN 3
+
 /** Choose a length for a circuit of purpose <b>purpose</b>.
  * Default length is 3 + the number of endpoints that would give something
  * away. If the routerlist <b>routers</b> doesn't have enough routers
@@ -2338,7 +2341,7 @@ new_route_len(uint8_t purpose, extend_info_t *exit,
 
   tor_assert(routers);
 
-  routelen = 3;
+  routelen = DEFAULT_ROUTE_LEN;
   if (exit &&
       purpose != CIRCUIT_PURPOSE_TESTING &&
       purpose != CIRCUIT_PURPOSE_S_ESTABLISH_INTRO)
