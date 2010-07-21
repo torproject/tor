@@ -12,6 +12,7 @@
 #define CONFIG_PRIVATE
 
 #include "or.h"
+#include "geoip.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif

@@ -12,6 +12,7 @@
 
 #include <math.h>
 #include "or.h"
+#include "geoip.h"
 #include "mempool.h"
 
 static int relay_crypt(circuit_t *circ, cell_t *cell,

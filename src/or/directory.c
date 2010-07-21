@@ -4,6 +4,8 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "geoip.h"
+
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #ifndef OPENBSD
 #include <malloc.h>

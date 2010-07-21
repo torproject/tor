@@ -12,6 +12,7 @@
  **/
 
 #include "or.h"
+#include "geoip.h"
 
 // #define DEBUG_ROUTERLIST
 

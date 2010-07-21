@@ -11,6 +11,7 @@
  **/
 
 #include "or.h"
+#include "geoip.h"
 
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);

@@ -7,6 +7,7 @@
 #define ROUTER_PRIVATE
 
 #include "or.h"
+#include "geoip.h"
 
 /**
  * \file router.c

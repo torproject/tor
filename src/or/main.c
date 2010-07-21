@@ -13,6 +13,7 @@
 #define MAIN_PRIVATE
 #include "or.h"
 #include "dnsserv.h"
+#include "geoip.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include <openssl/crypto.h>
