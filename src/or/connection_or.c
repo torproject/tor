@@ -11,6 +11,7 @@
  **/
 
 #include "or.h"
+#include "buffers.h"
 #include "geoip.h"
 #include "router.h"
 #include "routerlist.h"

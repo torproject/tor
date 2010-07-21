@@ -11,6 +11,7 @@
  **/
 
 #include "or.h"
+#include "buffers.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "rendclient.h"

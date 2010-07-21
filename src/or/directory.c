@@ -4,6 +4,7 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "buffers.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendcommon.h"

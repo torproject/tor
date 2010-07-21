@@ -5,6 +5,7 @@
 
 #define DIRSERV_PRIVATE
 #include "or.h"
+#include "buffers.h"
 #include "router.h"
 #include "routerlist.h"
 

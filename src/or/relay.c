@@ -12,6 +12,7 @@
 
 #include <math.h>
 #include "or.h"
+#include "buffers.h"
 #include "geoip.h"
 #include "mempool.h"
 #include "rendcommon.h"

@@ -11,6 +11,7 @@
 #define CONTROL_PRIVATE
 
 #include "or.h"
+#include "buffers.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "router.h"

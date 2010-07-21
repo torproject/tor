@@ -10,6 +10,7 @@
  **/
 
 #include "or.h"
+#include "buffers.h"
 #include "dnsserv.h"
 #include "rendclient.h"
 #include "rendcommon.h"

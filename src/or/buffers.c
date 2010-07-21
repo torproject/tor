@@ -12,6 +12,7 @@
  **/
 #define BUFFERS_PRIVATE
 #include "or.h"
+#include "buffers.h"
 #include "../common/util.h"
 #include "../common/torlog.h"
 #ifdef HAVE_UNISTD_H
