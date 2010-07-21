@@ -4661,30 +4661,6 @@ typedef struct rend_cache_entry_t {
   rend_service_descriptor_t *parsed; /**< Parsed value of 'desc' */
 } rend_cache_entry_t;
 
-/********************************* rendservice.c ***************************/
-
-int num_rend_services(void);
-int rend_config_services(or_options_t *options, int validate_only);
-int rend_service_load_keys(void);
-void rend_services_init(void);
-void rend_services_introduce(void);
-void rend_consider_services_upload(time_t now);
-void rend_hsdir_routers_changed(void);
-void rend_consider_descriptor_republication(void);
-
-void rend_service_intro_has_opened(origin_circuit_t *circuit);
-int rend_service_intro_established(origin_circuit_t *circuit,
-                                   const char *request,
-                                   size_t request_len);
-void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
-int rend_service_introduce(origin_circuit_t *circuit, const char *request,
-                           size_t request_len);
-void rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc);
-int rend_service_set_connection_addr_port(edge_connection_t *conn,
-                                          origin_circuit_t *circ);
-void rend_service_dump_stats(int severity);
-void rend_service_free_all(void);
-
 /********************************* rendmid.c *******************************/
 int rend_mid_establish_intro(or_circuit_t *circ, const char *request,
                              size_t request_len);

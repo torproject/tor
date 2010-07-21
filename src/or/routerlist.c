@@ -14,6 +14,7 @@
 #include "or.h"
 #include "geoip.h"
 #include "rendcommon.h"
+#include "rendservice.h"
 #include "router.h"
 #include "routerlist.h"
 
