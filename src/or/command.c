@@ -16,6 +16,7 @@
  */
 
 #include "or.h"
+#include "router.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;

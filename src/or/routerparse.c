@@ -10,6 +10,7 @@
  **/
 
 #include "or.h"
+#include "router.h"
 #include "memarea.h"
 #undef log
 #include <math.h>

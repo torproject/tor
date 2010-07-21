@@ -8,6 +8,7 @@
  **/
 
 #include "or.h"
+#include "router.h"
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);

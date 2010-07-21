@@ -13,6 +13,7 @@
  **/
 
 #include "or.h"
+#include "router.h"
 
 /** The maximum number of cpuworker processes we will keep around. */
 #define MAX_CPUWORKERS 16

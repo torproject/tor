@@ -10,6 +10,7 @@
  **/
 
 #include "or.h"
+#include "router.h"
 #include "ht.h"
 
 static void bw_arrays_init(void);

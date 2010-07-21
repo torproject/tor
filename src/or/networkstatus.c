@@ -11,6 +11,7 @@
  */
 
 #include "or.h"
+#include "router.h"
 
 /* For tracking v2 networkstatus documents.  Only caches do this now. */
 

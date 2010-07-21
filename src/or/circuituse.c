@@ -10,6 +10,7 @@
  **/
 
 #include "or.h"
+#include "router.h"
 
 /********* START VARIABLES **********/
 

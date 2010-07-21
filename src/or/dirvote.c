@@ -5,6 +5,7 @@
 
 #define DIRVOTE_PRIVATE
 #include "or.h"
+#include "router.h"
 
 /**
  * \file dirvote.c

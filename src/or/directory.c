@@ -5,6 +5,7 @@
 
 #include "or.h"
 #include "geoip.h"
+#include "router.h"
 
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #ifndef OPENBSD

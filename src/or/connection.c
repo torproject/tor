@@ -13,6 +13,7 @@
 #include "or.h"
 #include "dnsserv.h"
 #include "geoip.h"
+#include "router.h"
 
 static connection_t *connection_create_listener(
                                struct sockaddr *listensockaddr,

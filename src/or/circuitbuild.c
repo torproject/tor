@@ -12,6 +12,7 @@
 #define CIRCUIT_PRIVATE
 
 #include "or.h"
+#include "router.h"
 #include "crypto.h"
 #undef log
 #include <math.h>

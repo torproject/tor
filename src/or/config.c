@@ -13,6 +13,7 @@
 
 #include "or.h"
 #include "geoip.h"
+#include "router.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif

@@ -12,6 +12,7 @@
  **/
 
 #include "or.h"
+#include "router.h"
 #include "ht.h"
 #ifdef HAVE_EVENT2_DNS_H
 #include <event2/event.h>
