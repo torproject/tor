@@ -11,6 +11,7 @@
 
 #include "or.h"
 #include "dnsserv.h"
+#include "rendclient.h"
 #include "rendcommon.h"
 #include "router.h"
 #include "routerlist.h"

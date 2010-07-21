@@ -10,6 +10,7 @@
  **/
 
 #include "or.h"
+#include "rendclient.h"
 #include "rendcommon.h"
 #include "routerlist.h"
 #include "ht.h"

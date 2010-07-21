@@ -13,6 +13,7 @@
 
 #include "or.h"
 #include "geoip.h"
+#include "rendclient.h"
 #include "router.h"
 #include "routerlist.h"
 #ifdef MS_WINDOWS
