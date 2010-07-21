@@ -2202,7 +2202,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_valid = ri->is_valid;
 
   if (rs->is_fast &&
-       (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
+      (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
        router_get_advertised_bandwidth(ri) >=
                               MIN(guard_bandwidth_including_exits,
                                   guard_bandwidth_excluding_exits))) {
