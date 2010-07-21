@@ -14,6 +14,7 @@
 #include "or.h"
 #include "geoip.h"
 #include "mempool.h"
+#include "rendcommon.h"
 #include "routerlist.h"
 
 static int relay_crypt(circuit_t *circ, cell_t *cell,

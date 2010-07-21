@@ -8,6 +8,7 @@
  **/
 
 #include "or.h"
+#include "rendcommon.h"
 #include "router.h"
 #include "routerlist.h"
 

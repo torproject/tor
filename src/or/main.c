@@ -14,6 +14,7 @@
 #include "or.h"
 #include "dnsserv.h"
 #include "geoip.h"
+#include "rendcommon.h"
 #include "router.h"
 #include "routerlist.h"
 #ifdef USE_DMALLOC

@@ -8,6 +8,7 @@
  **/
 
 #include "or.h"
+#include "rendcommon.h"
 #include "routerlist.h"
 
 /** Called when we've established a circuit to an introduction point:
