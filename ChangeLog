@@ -1,4 +1,35 @@
-Changes in version 0.2.2.15-alpha - 2010-07-??
+Changes in version 0.2.2.15-alpha - 2010-07-2?
+  o Major bugfixes:
+    - Stop assigning the HSDir flag to relays that disable their
+      DirPort (and thus will refuse to answer directory requests). This
+      fix should dramatically improve the reachability of hidden services:
+      hidden services and hidden service clients pick three HSDir relays
+      to store and retrieve the hidden service descriptor, and currently
+      about half of the HSDir relays will refuse to work. Bugfix on
+      0.2.0.10-alpha; fixes part of bug 1693.
+
+  o Major features:
+    - Lower the maximum weighted-fractional-uptime cutoff to 98%. This
+      should give us approximately 40-50% more Guard-flagged nodes,
+      improving the anonymity the Tor network can provide and also
+      decreasing the dropoff in throughput that relays experience when
+      they first get the Guard flag.
+
+  o Minor features:
+    - Have the controller interface give a more useful message than
+      "Internal Error" in response to failed GETINFO requests.
+
+  o Minor bugfixes:
+    - Alter directory authorities to always consider Exit-flagged nodes
+      as potential Guard nodes in their votes. The actual decision to
+      use Exits as Guards is done in the consensus bandwidth weights.
+      Fixes bug 1294; bugfix on 0.2.2.10-alpha.
+    - When the controller is reporting the purpose of circuits that
+      didn't finish building before the circuit build timeout, it was
+      printing UNKNOWN_13. Now print EXPIRED. Bugfix on 0.2.2.14-alpha.
+    - Fix a bug in the controller interface where "GETINFO ns/asdaskljkl"
+      would return "551 Internal error" rather than "552 Unrecognized key
+      ns/asdaskljkl".
 
 
 Changes in version 0.2.2.14-alpha - 2010-07-12

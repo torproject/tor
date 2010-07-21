@@ -1,5 +1,0 @@
- o Minor bugfixes:
-   - Fix a bug in the controller interface where "GETINFO ns/asdaskljkl"
-     would return "551 Internal error" rather than "552 Unrecognized key
-     "ns/asdaskljkl".
-

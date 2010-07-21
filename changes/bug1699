@@ -1,4 +1,0 @@
- o Minor features:
-    - Have the controller interface give a more useful message than
-      "Internal Error" in response to failed GETINFO requests.
-
