@@ -4092,18 +4092,6 @@ int dns_seems_to_be_broken(void);
 void dns_reset_correctness_checks(void);
 void dump_dns_mem_usage(int severity);
 
-/********************************* dnsserv.c ************************/
-
-void dnsserv_configure_listener(connection_t *conn);
-void dnsserv_close_listener(connection_t *conn);
-void dnsserv_resolved(edge_connection_t *conn,
-                      int answer_type,
-                      size_t answer_len,
-                      const char *answer,
-                      int ttl);
-void dnsserv_reject_request(edge_connection_t *conn);
-int dnsserv_launch_request(const char *name, int is_reverse);
-
 /********************************* geoip.c **************************/
 
 /** Round all GeoIP results to the next multiple of this value, to avoid

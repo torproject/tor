@@ -10,6 +10,7 @@
 #define GEOIP_PRIVATE
 #include "or.h"
 #include "ht.h"
+#include "dnsserv.h"
 
 static void clear_geoip_db(void);
 

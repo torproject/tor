@@ -9,6 +9,7 @@
  **/
 
 #include "or.h"
+#include "dnsserv.h"
 #ifdef HAVE_EVENT2_DNS_H
 #include <event2/dns.h>
 #include <event2/dns_compat.h>

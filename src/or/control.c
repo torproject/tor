@@ -11,6 +11,7 @@
 #define CONTROL_PRIVATE
 
 #include "or.h"
+#include "dnsserv.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
