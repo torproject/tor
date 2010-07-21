@@ -8,6 +8,7 @@
  **/
 
 #include "or.h"
+#include "routerlist.h"
 
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */

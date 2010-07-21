@@ -12,6 +12,7 @@
 #include "or.h"
 #include "dnsserv.h"
 #include "router.h"
+#include "routerlist.h"
 
 #ifdef HAVE_LINUX_TYPES_H
 #include <linux/types.h>

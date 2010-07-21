@@ -9,6 +9,7 @@
 #define ROUTER_PRIVATE
 #include "or.h"
 #include "router.h"
+#include "routerlist.h"
 #include "test.h"
 
 static void

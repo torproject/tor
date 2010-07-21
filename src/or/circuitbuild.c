@@ -13,6 +13,7 @@
 
 #include "or.h"
 #include "router.h"
+#include "routerlist.h"
 #include "crypto.h"
 #undef log
 #include <math.h>

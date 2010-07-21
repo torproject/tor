@@ -9,6 +9,7 @@
 #include "or.h"
 #include "geoip.h"
 #include "router.h"
+#include "routerlist.h"
 
 /**
  * \file router.c

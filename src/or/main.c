@@ -15,6 +15,7 @@
 #include "dnsserv.h"
 #include "geoip.h"
 #include "router.h"
+#include "routerlist.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include <openssl/crypto.h>

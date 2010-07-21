@@ -11,6 +11,7 @@
 
 #include "or.h"
 #include "router.h"
+#include "routerlist.h"
 #include "ht.h"
 
 static void bw_arrays_init(void);

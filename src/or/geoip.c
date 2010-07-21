@@ -12,6 +12,7 @@
 #include "ht.h"
 #include "dnsserv.h"
 #include "geoip.h"
+#include "routerlist.h"
 
 static void clear_geoip_db(void);
 

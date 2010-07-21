@@ -14,6 +14,7 @@
 #include "or.h"
 #include "geoip.h"
 #include "router.h"
+#include "routerlist.h"
 
 // #define DEBUG_ROUTERLIST
 

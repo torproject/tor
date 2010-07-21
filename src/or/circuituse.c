@@ -11,6 +11,7 @@
 
 #include "or.h"
 #include "router.h"
+#include "routerlist.h"
 
 /********* START VARIABLES **********/
 
