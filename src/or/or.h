@@ -2958,6 +2958,9 @@ int buf_find_string_offset(const buf_t *buf, const char *s, size_t n);
 
 /********************************* circuitbuild.c **********************/
 
+/** How many hops does a general-purpose circuit have by default? */
+#define DEFAULT_ROUTE_LEN 3
+
 char *circuit_list_path(origin_circuit_t *circ, int verbose);
 char *circuit_list_path_for_controller(origin_circuit_t *circ);
 void circuit_log_path(int severity, unsigned int domain,
