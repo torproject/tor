@@ -12,6 +12,7 @@
 #define CONFIG_PRIVATE
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendservice.h"

@@ -12,6 +12,7 @@
  **/
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "geoip.h"
 #include "rendcommon.h"
 #include "rendservice.h"

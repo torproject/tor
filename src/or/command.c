@@ -16,6 +16,7 @@
  */
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "router.h"
 #include "routerlist.h"
 

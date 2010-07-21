@@ -43,7 +43,8 @@ long int lround(double x);
 double fabs(double x);
 
 #include "or.h"
-#include "buffers.c"
+#include "buffers.h"
+#include "circuitbuild.h"
 #include "geoip.h"
 #include "rendcommon.h"
 #include "test.h"

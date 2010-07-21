@@ -13,6 +13,7 @@
 #define MAIN_PRIVATE
 #include "or.h"
 #include "buffers.h"
+#include "circuitbuild.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "rendclient.h"
