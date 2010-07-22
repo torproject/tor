@@ -91,6 +91,7 @@ Proposals by number:
 168  Reduce default circuit window [OPEN]
 169  Eliminate TLS renegotiation for the Tor connection handshake [DRAFT]
 170  Configuration options regarding circuit building [DRAFT]
+171  Separate streams across circuits by destination port or destination host [DRAFT]
 
 
 Proposals by status:
@@ -103,6 +104,7 @@ Proposals by status:
    144  Increase the diversity of circuits by detecting nodes belonging the same provider
    169  Eliminate TLS renegotiation for the Tor connection handshake [for 0.2.2]
    170  Configuration options regarding circuit building
+   171  Separate streams across circuits by destination port or destination host
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  OPEN:

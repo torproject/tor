@@ -1,0 +1,99 @@
+Filename: 171-separate-streams-by-port-or-host.txt
+Title: Separate streams across circuits by destination port or destination host
+Author: Robert Hogan, Jacob Appelbaum, Damon McCoy
+Created: 21-Oct-2008
+Modified: 30-Aug-2010
+Status: Draft
+
+Motivation:
+
+Streams are currently attached to circuits without regard to their content,
+destination host, or destination port. We propose three options,
+IsolateBySOCKSUser, IsolateStreamsByPort and IsolateStreamsByHost to change the
+default behavior.
+
+The contents of some streams will always have revealing plain text information;
+these streams should be treated differently than other streams that may or may
+not have unencrypted PII content. DNS, with the exception of DNSCurve, is
+always unencrypted. It is reasonable to assume that other protocols may exist
+that have a similar issue and may cause user concern. It is also the case that
+we must balance network load issues and stream privacy. The Tor network will not
+currently scale to one circuit per application connection nor should it anytime
+soon.
+
+Circuits are currently created with a few constraints and are rotated within
+a reasonable time window. This allows a rogue exit node to correlate all
+streams on a given circuit.
+
+Design:
+
+We propose two options for isolation of streams that lessen the observability
+and linkability of the Tor client's traffic.
+
+IsolateStreamsByPort will take a list of ports or optionally the keyword 'All'
+in place of a port list. The use of the keyword 'All' will ensure that all
+application connections attached to streams will be isolated to separate
+circuits by port number.
+
+IsolateStreamsByHost will take a boolean value. When enabled, all application
+connections, regardless of port number will be isolated with separate circuits
+per host. If this option is enabled, we should ensure that the client has a
+reasonable number of pre-built circuits to ensure perceived performance. This
+should also intentionally limit the total number of circuits a client will
+build to ten circuits to prevent abuse and load on the network. This is a
+trade-off of performance for anonymity. Tor will issue a warning if a client
+encounters this limit.
+
+IsolateBySOCKSUser will take a boolean value. When enabled, all application
+connections, regardless of port number will be isolated with separate circuits
+per SOCKS username. This options ensures that any two streams that were created
+with different SOCKS usernames will be sent over different circuits.  The empty
+username will be treated as its own username different from all other usernames.
+
+Security implications:
+
+It is believed that the proposed changes will improve the anonymity for end
+user stream privacy.  The end user will no longer link all streams at a single
+exit node during a given time window.
+
+There is a possible attack where a hostile web page possibly in collusion with
+an exit node contains image links for images at (say) "evil.example.com:53" and
+"evil.example.com:31337", and thereby (if they're lucky) correlate port-80
+circuits with port-53 and port-31337 circuits.
+
+Specification:
+
+The Tor client circuit selection process is not entirely specified. Any client
+circuit specification must take these changes into account.
+
+Compatibility:
+
+The proposed changes should not create any compatibility issues. New Tor clients
+will be able to take advantage of this without any modification to the network.
+
+Implementation:
+
+It is further proposed that IsolateStreamsByPort will be enabled by default
+for port 22, 53, and port 80.
+
+It is further proposed that IsolateStreamsByHost will be disabled by default.
+
+Implementation notes:
+
+The implementation of this option may want to consider cases where the same
+exit node is shared by two or more circuits and IsolateStreamsByPort is in
+force. Since the purpose of the option is to reduce the opportunity of Exit
+Nodes to attack traffic from the same source on multiple ports, the
+implementation may need to ensure that circuits reserved for the exclusive use
+of given ports do not share the same exit node.
+
+Circuits should not be shared by unique clients. Tor should check to ensure
+that peer IP addresses are identical when they connect to the SOCKS listener or
+the TransPort listener before sharing a circuit. If the addresses are not
+identical, Tor should ensure that the circuits are not shared.
+
+Performance and scalability notes:
+
+It is further proposed that IsolateStreamsByPort will be enabled by default for
+all ports after a reasonable assessment is performed. Specifically, we should
+determine the impact this option has on Tor clients and the Tor network.

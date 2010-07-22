@@ -75,7 +75,7 @@ How new proposals get added:
 
   To get your proposal in, send it to or-dev.
 
-  The current proposal editor is Nick Mathewson.
+  The current proposal editors are Nick Mathewson and Jacob Appelbaum.
 
 What should go in a proposal:
 
