@@ -21,6 +21,7 @@
 #include "cpuworker.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "dns.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendservice.h"

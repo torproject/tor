@@ -18,6 +18,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "dns.h"
 #include "dnsserv.h"
 #include "dirserv.h"
 #include "rendclient.h"

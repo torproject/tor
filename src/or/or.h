@@ -3197,23 +3197,6 @@ typedef struct vote_timing_t {
   int dist_delay;
 } vote_timing_t;
 
-/********************************* dns.c ***************************/
-
-int dns_init(void);
-int has_dns_init_failed(void);
-void dns_free_all(void);
-uint32_t dns_clip_ttl(uint32_t ttl);
-int dns_reset(void);
-void connection_dns_remove(edge_connection_t *conn);
-void assert_connection_edge_not_dns_pending(edge_connection_t *conn);
-void assert_all_pending_dns_resolves_ok(void);
-void dns_cancel_pending_resolve(const char *question);
-int dns_resolve(edge_connection_t *exitconn);
-void dns_launch_correctness_checks(void);
-int dns_seems_to_be_broken(void);
-void dns_reset_correctness_checks(void);
-void dump_dns_mem_usage(int severity);
-
 /********************************* geoip.c **************************/
 
 /** Round all GeoIP results to the next multiple of this value, to avoid
