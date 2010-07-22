@@ -13,6 +13,7 @@
 #include "circuituse.h"
 #include "config.h"
 #include "connection.h"
+#include "connection_edge.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "routerlist.h"

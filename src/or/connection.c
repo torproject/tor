@@ -17,6 +17,7 @@
 #include "circuituse.h"
 #include "config.h"
 #include "connection.h"
+#include "connection_edge.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "rendclient.h"

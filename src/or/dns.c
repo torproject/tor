@@ -16,6 +16,7 @@
 #include "circuituse.h"
 #include "config.h"
 #include "connection.h"
+#include "connection_edge.h"
 #include "router.h"
 #include "ht.h"
 #ifdef HAVE_EVENT2_DNS_H
