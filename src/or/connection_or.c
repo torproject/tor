@@ -13,6 +13,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
+#include "command.h"
 #include "geoip.h"
 #include "router.h"
 #include "routerlist.h"

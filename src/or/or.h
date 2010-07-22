@@ -3055,17 +3055,6 @@ typedef struct {
   double close_ms;
 } circuit_build_times_t;
 
-/********************************* command.c ***************************/
-
-void command_process_cell(cell_t *cell, or_connection_t *conn);
-void command_process_var_cell(var_cell_t *cell, or_connection_t *conn);
-
-extern uint64_t stats_n_padding_cells_processed;
-extern uint64_t stats_n_create_cells_processed;
-extern uint64_t stats_n_created_cells_processed;
-extern uint64_t stats_n_relay_cells_processed;
-extern uint64_t stats_n_destroy_cells_processed;
-
 /********************************* config.c ***************************/
 
 /** An error from options_trial_assign() or options_init_from_string(). */
