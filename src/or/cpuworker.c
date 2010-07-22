@@ -15,6 +15,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "router.h"
 
 /** The maximum number of cpuworker processes we will keep around. */

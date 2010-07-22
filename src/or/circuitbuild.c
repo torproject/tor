@@ -13,6 +13,7 @@
 
 #include "or.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

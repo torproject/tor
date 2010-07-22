@@ -7,6 +7,7 @@
 #define ROUTER_PRIVATE
 
 #include "or.h"
+#include "circuitlist.h"
 #include "geoip.h"
 #include "router.h"
 #include "routerlist.h"

@@ -14,6 +14,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "geoip.h"
 #include "mempool.h"
 #include "rendcommon.h"

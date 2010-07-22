@@ -13,6 +13,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "router.h"

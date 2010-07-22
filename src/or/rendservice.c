@@ -9,6 +9,7 @@
 
 #include "or.h"
 #include "circuitbuild.h"
+#include "circuitlist.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"

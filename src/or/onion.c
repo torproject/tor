@@ -11,6 +11,7 @@
  **/
 
 #include "or.h"
+#include "circuitlist.h"
 
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */
