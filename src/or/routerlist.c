@@ -20,6 +20,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "geoip.h"
+#include "hibernate.h"
 #include "rendcommon.h"
 #include "rendservice.h"
 #include "router.h"

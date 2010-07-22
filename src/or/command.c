@@ -24,6 +24,7 @@
 #include "config.h"
 #include "control.h"
 #include "cpuworker.h"
+#include "hibernate.h"
 #include "router.h"
 #include "routerlist.h"
 

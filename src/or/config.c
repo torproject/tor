@@ -23,6 +23,7 @@
 #include "dirvote.h"
 #include "dns.h"
 #include "geoip.h"
+#include "hibernate.h"
 #include "rendclient.h"
 #include "rendservice.h"
 #include "router.h"

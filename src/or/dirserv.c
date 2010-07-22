@@ -13,6 +13,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "hibernate.h"
 #include "router.h"
 #include "routerlist.h"
 

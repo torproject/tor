@@ -25,6 +25,7 @@ hibernating, phase 2:
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "hibernate.h"
 #include "router.h"
 
 /** Possible values of hibernate_state */

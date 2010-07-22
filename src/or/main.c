@@ -29,6 +29,7 @@
 #include "dns.h"
 #include "dnsserv.h"
 #include "geoip.h"
+#include "hibernate.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"

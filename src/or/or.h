@@ -3268,22 +3268,6 @@ typedef enum {
   DIRREQ_OR_CONN_BUFFER_FLUSHED = 4
 } dirreq_state_t;
 
-/********************************* hibernate.c **********************/
-
-int accounting_parse_options(or_options_t *options, int validate_only);
-int accounting_is_enabled(or_options_t *options);
-void configure_accounting(time_t now);
-void accounting_run_housekeeping(time_t now);
-void accounting_add_bytes(size_t n_read, size_t n_written, int seconds);
-int accounting_record_bandwidth_usage(time_t now, or_state_t *state);
-void hibernate_begin_shutdown(void);
-int we_are_hibernating(void);
-void consider_hibernation(time_t now);
-int getinfo_helper_accounting(control_connection_t *conn,
-                              const char *question, char **answer,
-                              const char **errmsg);
-void accounting_set_bandwidth_usage_from_state(or_state_t *state);
-
 /********************************* main.c ***************************/
 
 extern int has_completed_circuit;

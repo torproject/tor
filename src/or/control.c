@@ -23,6 +23,7 @@
 #include "dirserv.h"
 #include "dnsserv.h"
 #include "geoip.h"
+#include "hibernate.h"
 #include "router.h"
 #include "routerlist.h"
 
