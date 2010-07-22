@@ -9,6 +9,7 @@
  **/
 
 #include "or.h"
+#include "config.h"
 
 /***************************** Edge (stream) reasons **********************/
 

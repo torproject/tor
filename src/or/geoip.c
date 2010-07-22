@@ -10,6 +10,7 @@
 #define GEOIP_PRIVATE
 #include "or.h"
 #include "ht.h"
+#include "config.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "routerlist.h"

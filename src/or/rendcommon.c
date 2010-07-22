@@ -10,6 +10,7 @@
 
 #include "or.h"
 #include "circuitbuild.h"
+#include "config.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"

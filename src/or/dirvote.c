@@ -5,6 +5,7 @@
 
 #define DIRVOTE_PRIVATE
 #include "or.h"
+#include "config.h"
 #include "router.h"
 #include "routerlist.h"
 

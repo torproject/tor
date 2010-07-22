@@ -9,6 +9,7 @@
 #include "or.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "config.h"
 #include "geoip.h"
 #include "router.h"
 #include "routerlist.h"

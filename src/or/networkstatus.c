@@ -12,6 +12,7 @@
 
 #include "or.h"
 #include "circuitbuild.h"
+#include "config.h"
 #include "router.h"
 #include "routerlist.h"
 

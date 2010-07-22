@@ -13,6 +13,7 @@
 #include "buffers.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "config.h"
 #include "dnsserv.h"
 #include "rendclient.h"
 #include "rendcommon.h"

@@ -22,6 +22,7 @@ hibernating, phase 2:
 */
 
 #include "or.h"
+#include "config.h"
 #include "router.h"
 
 /** Possible values of hibernate_state */

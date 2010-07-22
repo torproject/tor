@@ -6,6 +6,7 @@
 #include "or.h"
 #include "buffers.h"
 #include "circuitbuild.h"
+#include "config.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendcommon.h"

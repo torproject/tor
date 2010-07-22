@@ -14,6 +14,7 @@
 #include "or.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "config.h"
 #include "router.h"
 #include "ht.h"
 #ifdef HAVE_EVENT2_DNS_H

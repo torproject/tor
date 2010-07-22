@@ -19,6 +19,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "command.h"
+#include "config.h"
 #include "router.h"
 #include "routerlist.h"
 

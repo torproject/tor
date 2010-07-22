@@ -9,6 +9,7 @@
  **/
 
 #include "or.h"
+#include "config.h"
 #include "ht.h"
 
 /** Policy that addresses for incoming SOCKS connections must match. */

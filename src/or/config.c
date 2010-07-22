@@ -14,6 +14,7 @@
 #include "or.h"
 #include "circuitbuild.h"
 #include "circuitlist.h"
+#include "config.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendservice.h"

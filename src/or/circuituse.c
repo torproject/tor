@@ -13,6 +13,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
+#include "config.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"
