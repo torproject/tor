@@ -10,6 +10,7 @@
 #include "or.h"
 #include "directory.h"
 #include "dirserv.h"
+#include "dirvote.h"
 #include "router.h"
 #include "routerlist.h"
 #include "test.h"

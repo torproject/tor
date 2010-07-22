@@ -20,6 +20,7 @@
 #include "control.h"
 #include "cpuworker.h"
 #include "dirserv.h"
+#include "dirvote.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendservice.h"
