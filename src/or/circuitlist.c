@@ -17,6 +17,7 @@
 #include "config.h"
 #include "connection_edge.h"
 #include "connection_or.h"
+#include "control.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "routerlist.h"

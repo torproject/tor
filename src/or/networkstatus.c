@@ -14,6 +14,7 @@
 #include "circuitbuild.h"
 #include "config.h"
 #include "connection.h"
+#include "control.h"
 #include "router.h"
 #include "routerlist.h"
 

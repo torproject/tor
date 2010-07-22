@@ -22,6 +22,7 @@
 #include "connection.h"
 #include "connection_or.h"
 #include "config.h"
+#include "control.h"
 #include "router.h"
 #include "routerlist.h"
 

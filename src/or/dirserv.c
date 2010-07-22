@@ -9,6 +9,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_or.h"
+#include "control.h"
 #include "router.h"
 #include "routerlist.h"
 

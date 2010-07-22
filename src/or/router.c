@@ -11,6 +11,7 @@
 #include "circuituse.h"
 #include "config.h"
 #include "connection.h"
+#include "control.h"
 #include "geoip.h"
 #include "router.h"
 #include "routerlist.h"

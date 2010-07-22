@@ -8,6 +8,7 @@
 #define MEMPOOL_PRIVATE
 #include "or.h"
 #include "config.h"
+#include "control.h"
 #include "test.h"
 #include "mempool.h"
 #include "memarea.h"

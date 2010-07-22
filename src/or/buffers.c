@@ -16,6 +16,7 @@
 #include "config.h"
 #include "connection_edge.h"
 #include "connection_or.h"
+#include "control.h"
 #include "../common/util.h"
 #include "../common/torlog.h"
 #ifdef HAVE_UNISTD_H

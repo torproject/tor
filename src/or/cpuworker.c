@@ -18,6 +18,7 @@
 #include "circuitlist.h"
 #include "config.h"
 #include "connection.h"
+#include "cpuworker.h"
 #include "router.h"
 
 /** The maximum number of cpuworker processes we will keep around. */

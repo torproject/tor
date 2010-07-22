@@ -19,6 +19,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "connection_or.h"
+#include "control.h"
 #include "geoip.h"
 #include "mempool.h"
 #include "rendcommon.h"
