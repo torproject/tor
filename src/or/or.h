@@ -3164,17 +3164,6 @@ typedef enum {
   BOOTSTRAP_STATUS_DONE=100
 } bootstrap_status_t;
 
-/********************************* cpuworker.c *****************************/
-
-void cpu_init(void);
-void cpuworkers_rotate(void);
-int connection_cpu_finished_flushing(connection_t *conn);
-int connection_cpu_reached_eof(connection_t *conn);
-int connection_cpu_process_inbuf(connection_t *conn);
-int assign_onionskin_to_cpuworker(connection_t *cpuworker,
-                                  or_circuit_t *circ,
-                                  char *onionskin);
-
 /********************************* directory.c ***************************/
 
 int directories_have_accepted_server_descriptor(void);
