@@ -19,6 +19,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "directory.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "router.h"

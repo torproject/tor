@@ -23,6 +23,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "cpuworker.h"
+#include "directory.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "rendclient.h"

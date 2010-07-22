@@ -20,6 +20,7 @@
 #include "connection_edge.h"
 #include "connection_or.h"
 #include "control.h"
+#include "directory.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

@@ -8,6 +8,7 @@
 #define DIRVOTE_PRIVATE
 #define ROUTER_PRIVATE
 #include "or.h"
+#include "directory.h"
 #include "router.h"
 #include "routerlist.h"
 #include "test.h"

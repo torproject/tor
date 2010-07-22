@@ -16,6 +16,7 @@
 #include "config.h"
 #include "connection.h"
 #include "control.h"
+#include "directory.h"
 #include "geoip.h"
 #include "rendcommon.h"
 #include "rendservice.h"

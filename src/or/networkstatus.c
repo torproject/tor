@@ -15,6 +15,7 @@
 #include "config.h"
 #include "connection.h"
 #include "control.h"
+#include "directory.h"
 #include "router.h"
 #include "routerlist.h"
 
