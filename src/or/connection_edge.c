@@ -19,6 +19,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "dnsserv.h"
+#include "dirserv.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"

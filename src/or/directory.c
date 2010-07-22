@@ -11,6 +11,7 @@
 #include "connection_edge.h"
 #include "control.h"
 #include "directory.h"
+#include "dirserv.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendcommon.h"

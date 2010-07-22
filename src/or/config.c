@@ -19,6 +19,7 @@
 #include "connection_edge.h"
 #include "control.h"
 #include "cpuworker.h"
+#include "dirserv.h"
 #include "geoip.h"
 #include "rendclient.h"
 #include "rendservice.h"

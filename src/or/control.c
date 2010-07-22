@@ -20,6 +20,7 @@
 #include "connection_edge.h"
 #include "control.h"
 #include "directory.h"
+#include "dirserv.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "router.h"

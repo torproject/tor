@@ -11,6 +11,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "dirserv.h"
 #include "rendcommon.h"
 #include "router.h"
 #include "routerlist.h"

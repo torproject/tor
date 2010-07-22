@@ -18,6 +18,7 @@
 #include "connection.h"
 #include "connection_or.h"
 #include "control.h"
+#include "dirserv.h"
 #include "geoip.h"
 #include "router.h"
 #include "routerlist.h"

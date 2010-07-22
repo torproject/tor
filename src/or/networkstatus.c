@@ -16,6 +16,7 @@
 #include "connection.h"
 #include "control.h"
 #include "directory.h"
+#include "dirserv.h"
 #include "router.h"
 #include "routerlist.h"
 
