@@ -16,6 +16,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "connection.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "router.h"

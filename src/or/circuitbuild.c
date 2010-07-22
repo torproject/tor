@@ -16,6 +16,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "connection.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

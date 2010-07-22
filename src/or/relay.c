@@ -16,6 +16,7 @@
 #include "circuitbuild.h"
 #include "circuitlist.h"
 #include "config.h"
+#include "connection.h"
 #include "geoip.h"
 #include "mempool.h"
 #include "rendcommon.h"
