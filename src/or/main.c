@@ -20,6 +20,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "connection_or.h"
 #include "dnsserv.h"
 #include "geoip.h"
 #include "rendclient.h"

@@ -18,6 +18,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "connection_or.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

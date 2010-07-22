@@ -8,6 +8,7 @@
 #include "buffers.h"
 #include "config.h"
 #include "connection.h"
+#include "connection_or.h"
 #include "router.h"
 #include "routerlist.h"
 

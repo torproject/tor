@@ -20,6 +20,7 @@
 #include "circuitlist.h"
 #include "command.h"
 #include "connection.h"
+#include "connection_or.h"
 #include "config.h"
 #include "router.h"
 #include "routerlist.h"
