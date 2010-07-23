@@ -20,6 +20,7 @@
 #include "control.h"
 #include "networkstatus.h"
 #include "onion.h"
+#include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "routerlist.h"

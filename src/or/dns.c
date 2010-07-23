@@ -21,6 +21,7 @@
 #include "dns.h"
 #include "main.h"
 #include "policies.h"
+#include "relay.h"
 #include "router.h"
 #include "ht.h"
 #ifdef HAVE_EVENT2_DNS_H

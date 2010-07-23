@@ -25,6 +25,7 @@
 #include "networkstatus.h"
 #include "onion.h"
 #include "policies.h"
+#include "relay.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

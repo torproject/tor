@@ -26,6 +26,7 @@
 #include "networkstatus.h"
 #include "policies.h"
 #include "reasons.h"
+#include "relay.h"
 #include "rendcommon.h"
 #include "routerlist.h"
 

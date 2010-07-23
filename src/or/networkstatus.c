@@ -19,6 +19,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "networkstatus.h"
+#include "relay.h"
 #include "router.h"
 #include "routerlist.h"
 

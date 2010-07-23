@@ -18,6 +18,7 @@
 #include "rendcommon.h"
 #include "rendservice.h"
 #include "router.h"
+#include "relay.h"
 #include "routerlist.h"
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,

@@ -26,6 +26,7 @@
 #include "cpuworker.h"
 #include "hibernate.h"
 #include "onion.h"
+#include "relay.h"
 #include "router.h"
 #include "routerlist.h"
 
