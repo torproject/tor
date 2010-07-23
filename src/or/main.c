@@ -40,6 +40,7 @@
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #ifdef USE_DMALLOC

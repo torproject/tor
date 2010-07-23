@@ -24,6 +24,7 @@
 #include "networkstatus.h"
 #include "reasons.h"
 #include "relay.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 

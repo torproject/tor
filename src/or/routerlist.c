@@ -26,6 +26,7 @@
 #include "policies.h"
 #include "rendcommon.h"
 #include "rendservice.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 

@@ -13,6 +13,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "ht.h"

@@ -26,6 +26,7 @@
 #include "onion.h"
 #include "policies.h"
 #include "relay.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

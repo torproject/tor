@@ -19,6 +19,7 @@
 #include "policies.h"
 #include "rendclient.h"
 #include "rendcommon.h"
+#include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
 

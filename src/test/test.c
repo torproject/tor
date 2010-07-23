@@ -55,6 +55,7 @@ double fabs(double x);
 #include "memarea.h"
 #include "onion.h"
 #include "policies.h"
+#include "rephist.h"
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>

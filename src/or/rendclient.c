@@ -19,6 +19,7 @@
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
+#include "rephist.h"
 #include "routerlist.h"
 
 /** Called when we've established a circuit to an introduction point:

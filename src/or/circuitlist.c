@@ -23,6 +23,7 @@
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
+#include "rephist.h"
 #include "routerlist.h"
 #include "ht.h"
 

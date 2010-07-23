@@ -32,6 +32,7 @@
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
+#include "rephist.h"
 #include "router.h"
 
 static connection_t *connection_create_listener(

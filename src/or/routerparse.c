@@ -20,6 +20,7 @@
 #include "memarea.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "rephist.h"
 #undef log
 #include <math.h>
 

@@ -15,6 +15,7 @@
 #include "rendcommon.h"
 #include "rendmid.h"
 #include "rendservice.h"
+#include "rephist.h"
 #include "routerlist.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
