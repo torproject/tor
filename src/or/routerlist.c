@@ -22,6 +22,7 @@
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"
+#include "networkstatus.h"
 #include "rendcommon.h"
 #include "rendservice.h"
 #include "router.h"

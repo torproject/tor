@@ -11,6 +11,7 @@
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "networkstatus.h"
 #include "router.h"
 #include "routerlist.h"
 #include "test.h"

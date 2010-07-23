@@ -10,6 +10,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "microdesc.h"
+#include "networkstatus.h"
 #include "router.h"
 #include "routerlist.h"
 

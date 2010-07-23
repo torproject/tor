@@ -21,6 +21,7 @@
 #include "dirserv.h"
 #include "geoip.h"
 #include "main.h"
+#include "networkstatus.h"
 #include "router.h"
 #include "routerlist.h"
 

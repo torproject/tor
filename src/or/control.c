@@ -25,6 +25,7 @@
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"
+#include "networkstatus.h"
 #include "router.h"
 #include "routerlist.h"
 

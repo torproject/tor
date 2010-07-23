@@ -18,6 +18,7 @@
 #include "routerlist.h"
 #include "memarea.h"
 #include "microdesc.h"
+#include "networkstatus.h"
 #undef log
 #include <math.h>
 

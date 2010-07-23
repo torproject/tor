@@ -15,6 +15,7 @@
 #include "dirvote.h"
 #include "hibernate.h"
 #include "microdesc.h"
+#include "networkstatus.h"
 #include "router.h"
 #include "routerlist.h"
 

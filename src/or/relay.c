@@ -23,6 +23,7 @@
 #include "geoip.h"
 #include "main.h"
 #include "mempool.h"
+#include "networkstatus.h"
 #include "rendcommon.h"
 #include "routerlist.h"
 
