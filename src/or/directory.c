@@ -14,6 +14,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "geoip.h"
+#include "main.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "router.h"

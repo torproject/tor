@@ -19,6 +19,7 @@
 #include "connection_edge.h"
 #include "control.h"
 #include "dns.h"
+#include "main.h"
 #include "router.h"
 #include "ht.h"
 #ifdef HAVE_EVENT2_DNS_H

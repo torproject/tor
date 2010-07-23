@@ -26,6 +26,7 @@
 #include "dns.h"
 #include "dnsserv.h"
 #include "geoip.h"
+#include "main.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "router.h"

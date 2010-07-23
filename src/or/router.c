@@ -17,6 +17,7 @@
 #include "dns.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "main.h"
 #include "router.h"
 #include "routerlist.h"
 

@@ -21,6 +21,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "geoip.h"
+#include "main.h"
 #include "mempool.h"
 #include "rendcommon.h"
 #include "routerlist.h"

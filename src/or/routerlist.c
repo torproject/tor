@@ -21,6 +21,7 @@
 #include "dirvote.h"
 #include "geoip.h"
 #include "hibernate.h"
+#include "main.h"
 #include "rendcommon.h"
 #include "rendservice.h"
 #include "router.h"

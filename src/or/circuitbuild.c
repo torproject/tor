@@ -21,6 +21,7 @@
 #include "connection_or.h"
 #include "control.h"
 #include "directory.h"
+#include "main.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

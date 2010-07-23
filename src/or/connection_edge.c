@@ -22,6 +22,7 @@
 #include "dnsserv.h"
 #include "dirserv.h"
 #include "hibernate.h"
+#include "main.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"
