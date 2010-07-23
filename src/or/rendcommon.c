@@ -13,6 +13,7 @@
 #include "config.h"
 #include "rendclient.h"
 #include "rendcommon.h"
+#include "rendmid.h"
 #include "rendservice.h"
 #include "routerlist.h"
 

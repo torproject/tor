@@ -3432,16 +3432,6 @@ typedef struct rend_cache_entry_t {
   rend_service_descriptor_t *parsed; /**< Parsed value of 'desc' */
 } rend_cache_entry_t;
 
-/********************************* rendmid.c *******************************/
-int rend_mid_establish_intro(or_circuit_t *circ, const char *request,
-                             size_t request_len);
-int rend_mid_introduce(or_circuit_t *circ, const char *request,
-                       size_t request_len);
-int rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
-                                  size_t request_len);
-int rend_mid_rendezvous(or_circuit_t *circ, const char *request,
-                        size_t request_len);
-
 /********************************* routerlist.c ***************************/
 
 /** Represents information about a single trusted directory server. */
