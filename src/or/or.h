@@ -3293,21 +3293,6 @@ typedef enum version_status_t {
   VS_UNKNOWN, /**< We have no idea. */
 } version_status_t;
 
-/********************************* ntmain.c ***************************/
-#ifdef MS_WINDOWS
-#if !defined (WINCE)
-#define NT_SERVICE
-#endif
-#endif
-
-#ifdef NT_SERVICE
-int nt_service_parse_options(int argc, char **argv, int *should_exit);
-int nt_service_is_stopping(void);
-void nt_service_set_state(DWORD state);
-#else
-#define nt_service_is_stopping() 0
-#endif
-
 /********************************* onion.c ***************************/
 
 int onion_pending_add(or_circuit_t *circ, char *onionskin);

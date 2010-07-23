@@ -33,6 +33,7 @@
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "ntmain.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"
