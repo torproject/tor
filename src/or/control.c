@@ -26,6 +26,7 @@
 #include "hibernate.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "policies.h"
 #include "router.h"
 #include "routerlist.h"
 

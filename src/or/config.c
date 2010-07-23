@@ -26,6 +26,7 @@
 #include "hibernate.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "policies.h"
 #include "rendclient.h"
 #include "rendservice.h"
 #include "router.h"

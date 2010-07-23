@@ -15,6 +15,7 @@
 #include "connection_edge.h"
 #include "control.h"
 #include "main.h"
+#include "policies.h"
 #ifdef HAVE_EVENT2_DNS_H
 #include <event2/dns.h>
 #include <event2/dns_compat.h>

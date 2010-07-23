@@ -35,6 +35,7 @@
 #include "networkstatus.h"
 #include "ntmain.h"
 #include "onion.h"
+#include "policies.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"

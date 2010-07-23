@@ -16,6 +16,7 @@
 #include "hibernate.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "policies.h"
 #include "router.h"
 #include "routerlist.h"
 

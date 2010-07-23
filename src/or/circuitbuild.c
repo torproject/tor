@@ -24,6 +24,7 @@
 #include "main.h"
 #include "networkstatus.h"
 #include "onion.h"
+#include "policies.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"

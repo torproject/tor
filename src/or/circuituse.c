@@ -17,6 +17,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "policies.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"
