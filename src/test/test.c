@@ -53,6 +53,7 @@ double fabs(double x);
 #include "torgzip.h"
 #include "mempool.h"
 #include "memarea.h"
+#include "onion.h"
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>

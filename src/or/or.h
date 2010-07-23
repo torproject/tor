@@ -3293,40 +3293,6 @@ typedef enum version_status_t {
   VS_UNKNOWN, /**< We have no idea. */
 } version_status_t;
 
-/********************************* onion.c ***************************/
-
-int onion_pending_add(or_circuit_t *circ, char *onionskin);
-or_circuit_t *onion_next_task(char **onionskin_out);
-void onion_pending_remove(or_circuit_t *circ);
-
-int onion_skin_create(crypto_pk_env_t *router_key,
-                      crypto_dh_env_t **handshake_state_out,
-                      char *onion_skin_out);
-
-int onion_skin_server_handshake(const char *onion_skin,
-                                crypto_pk_env_t *private_key,
-                                crypto_pk_env_t *prev_private_key,
-                                char *handshake_reply_out,
-                                char *key_out,
-                                size_t key_out_len);
-
-int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
-                                const char *handshake_reply,
-                                char *key_out,
-                                size_t key_out_len);
-
-int fast_server_handshake(const char *key_in,
-                          char *handshake_reply_out,
-                          char *key_out,
-                          size_t key_out_len);
-
-int fast_client_handshake(const char *handshake_state,
-                          const char *handshake_reply_out,
-                          char *key_out,
-                          size_t key_out_len);
-
-void clear_pending_onions(void);
-
 /********************************* policies.c ************************/
 
 /* (length of "accept 255.255.255.255/255.255.255.255:65535-65535\n" plus a

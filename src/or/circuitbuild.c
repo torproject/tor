@@ -23,6 +23,7 @@
 #include "directory.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "onion.h"
 #include "router.h"
 #include "routerlist.h"
 #include "crypto.h"
