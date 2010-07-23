@@ -31,6 +31,7 @@
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"
+#include "microdesc.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"

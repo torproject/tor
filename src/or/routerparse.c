@@ -17,6 +17,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "memarea.h"
+#include "microdesc.h"
 #undef log
 #include <math.h>
 
