@@ -43,6 +43,7 @@
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerparse.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include <openssl/crypto.h>

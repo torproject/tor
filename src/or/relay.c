@@ -29,6 +29,7 @@
 #include "relay.h"
 #include "rendcommon.h"
 #include "routerlist.h"
+#include "routerparse.h"
 
 static int relay_crypt(circuit_t *circ, cell_t *cell,
                        cell_direction_t cell_direction,

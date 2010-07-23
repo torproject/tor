@@ -56,6 +56,7 @@ double fabs(double x);
 #include "onion.h"
 #include "policies.h"
 #include "rephist.h"
+#include "routerparse.h"
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>

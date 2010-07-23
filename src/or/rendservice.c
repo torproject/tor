@@ -21,6 +21,7 @@
 #include "relay.h"
 #include "rephist.h"
 #include "routerlist.h"
+#include "routerparse.h"
 
 static origin_circuit_t *find_intro_circuit(rend_intro_point_t *intro,
                                             const char *pk_digest);

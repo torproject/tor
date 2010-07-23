@@ -15,6 +15,7 @@
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerparse.h"
 
 /**
  * \file dirvote.c

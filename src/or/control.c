@@ -30,6 +30,7 @@
 #include "reasons.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerparse.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */

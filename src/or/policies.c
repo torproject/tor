@@ -12,6 +12,7 @@
 #include "config.h"
 #include "dirserv.h"
 #include "policies.h"
+#include "routerparse.h"
 #include "ht.h"
 
 /** Policy that addresses for incoming SOCKS connections must match. */

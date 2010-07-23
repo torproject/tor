@@ -22,6 +22,7 @@
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerparse.h"
 
 /* For tracking v2 networkstatus documents.  Only caches do this now. */
 

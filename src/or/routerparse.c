@@ -21,6 +21,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "rephist.h"
+#include "routerparse.h"
 #undef log
 #include <math.h>
 

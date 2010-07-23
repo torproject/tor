@@ -14,6 +14,7 @@
 #include "networkstatus.h"
 #include "router.h"
 #include "routerlist.h"
+#include "routerparse.h"
 #include "test.h"
 
 static void

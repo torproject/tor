@@ -5,14 +5,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file geoip.h
- * \brief Header file for geoip functions
+ * \file routerpase.h
+ * \brief Header file for router information parsing.
  **/
 
-#ifndef _TOR_GEOIP_H
-#define _TOR_GEOIP_H
-
-#define MAX_STATUS_TAG_LEN 32
+#ifndef _TOR_ROUTERPARSE_H
+#define _TOR_ROUTERPARSE_H
 
 int router_get_router_hash(const char *s, size_t s_len, char *digest);
 int router_get_dir_hash(const char *s, char *digest);
@@ -91,3 +89,4 @@ int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
 void tor_gettimeofday_cache_clear(void);
 
 #endif
+

@@ -34,6 +34,7 @@
 #include "rendcommon.h"
 #include "rephist.h"
 #include "router.h"
+#include "routerparse.h"
 
 static connection_t *connection_create_listener(
                                struct sockaddr *listensockaddr,
