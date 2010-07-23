@@ -24,6 +24,7 @@
 #include "hibernate.h"
 #include "main.h"
 #include "policies.h"
+#include "reasons.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"

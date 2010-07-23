@@ -3309,21 +3309,6 @@ typedef enum {
   ADDR_POLICY_PROBABLY_REJECTED=2
 } addr_policy_result_t;
 
-/********************************* reasons.c ***************************/
-
-const char *stream_end_reason_to_control_string(int reason);
-const char *stream_end_reason_to_string(int reason);
-socks5_reply_status_t stream_end_reason_to_socks5_response(int reason);
-uint8_t errno_to_stream_end_reason(int e);
-
-const char *orconn_end_reason_to_control_string(int r);
-int tls_error_to_orconn_end_reason(int e);
-int errno_to_orconn_end_reason(int e);
-
-const char *circuit_end_reason_to_control_string(int reason);
-const char *socks4_response_code_to_string(uint8_t code);
-const char *socks5_response_code_to_string(uint8_t code);
-
 /********************************* relay.c ***************************/
 
 extern uint64_t stats_n_relay_cells_relayed;

@@ -22,6 +22,7 @@
 #include "geoip.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "reasons.h"
 #include "router.h"
 #include "routerlist.h"
 

@@ -25,6 +25,7 @@
 #include "mempool.h"
 #include "networkstatus.h"
 #include "policies.h"
+#include "reasons.h"
 #include "rendcommon.h"
 #include "routerlist.h"
 
