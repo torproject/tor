@@ -389,6 +389,9 @@ circuit_expire_building(time_t now)
         /* Circuits are allowed to last longer for measurement.
          * Switch their purpose and wait. */
         if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+          control_event_circuit_status(TO_ORIGIN_CIRCUIT(victim),
+                                       CIRC_EVENT_FAILED,
+                                       END_CIRC_REASON_TIMEOUT);
           victim->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
           /* Record this failure to check for too many timeouts
            * in a row. This function does not record a time value yet
@@ -430,7 +433,10 @@ circuit_expire_building(time_t now)
                circuit_state_to_string(victim->state), victim->purpose);
 
     circuit_log_path(LOG_INFO,LD_CIRC,TO_ORIGIN_CIRCUIT(victim));
-    circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
+    if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
+      circuit_mark_for_close(victim, END_CIRC_REASON_MEASUREMENT_EXPIRED);
+    else
+      circuit_mark_for_close(victim, END_CIRC_REASON_TIMEOUT);
   }
 }
 

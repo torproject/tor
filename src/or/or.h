@@ -614,6 +614,10 @@ typedef enum {
 
 /* Negative reasons are internal: we never send them in a DESTROY or TRUNCATE
  * call; they only go to the controller for tracking  */
+/** Our post-timeout circuit time measurement period expired.
+ * We must give up now */
+#define END_CIRC_REASON_MEASUREMENT_EXPIRED -3
+
 /** We couldn't build a path for this circuit. */
 #define END_CIRC_REASON_NOPATH          -2
 /** Catch-all "other" reason for closing origin circuits. */
