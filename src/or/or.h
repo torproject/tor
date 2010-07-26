@@ -3443,9 +3443,6 @@ typedef enum bandwidth_weight_rule_t {
   WEIGHT_FOR_DIR
 } bandwidth_weight_rule_t;
 
-/* XXXX actually declared in reasons.c */
-const char *bandwidth_weight_rule_to_string(enum bandwidth_weight_rule_t rule);
-
 /** Flags to be passed to control router_choose_random_node() to indicate what
  * kind of nodes to pick according to what algorithm. */
 typedef enum {
