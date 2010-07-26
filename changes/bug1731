@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Our libevent version parsing code couldn't handle versions like
+      1.4.14b-stable and warned the user about using an old and broken
+      version of libevent. Treat 1.4.14b-stable like 1.4.14-stable when
+      parsing the version. Fixes bug 1731; bugfix on 0.2.2.1-alpha.

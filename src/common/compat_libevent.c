@@ -229,13 +229,15 @@ static le_version_t
 tor_decode_libevent_version(const char *v)
 {
   unsigned major, minor, patchlevel;
-  char c, extra;
+  char c, e, extra;
   int fields;
 
-  /* Try the new preferred "1.4.11-stable" format. */
-  fields = sscanf(v, "%u.%u.%u%c", &major, &minor, &patchlevel, &c);
+  /* Try the new preferred "1.4.11-stable" format.
+   * Also accept "1.4.14b-stable". */
+  fields = sscanf(v, "%u.%u.%u%c%c", &major, &minor, &patchlevel, &c, &e);
   if (fields == 3 ||
-      (fields == 4 && (c == '-' || c == '_'))) {
+      ((fields == 4 || fields == 5 ) && (c == '-' || c == '_')) ||
+      (fields == 5 && TOR_ISALPHA(c) && (e == '-' || e == '_'))) {
     return V(major,minor,patchlevel);
   }
 
