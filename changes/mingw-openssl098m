@@ -1,0 +1,3 @@
+ o Minor features
+   - Build correctly on mingw with more recent version of OpenSSL 0.9.8.
+     Patch from mingw-san.
