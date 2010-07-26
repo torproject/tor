@@ -80,12 +80,9 @@
 #define snprintf _snprintf
 #endif
 
-#include "crypto.h"
 #include "tortls.h"
 #include "../common/torlog.h"
-#include "compat.h"
 #include "container.h"
-#include "util.h"
 #include "torgzip.h"
 #include "address.h"
 #include "compat_libevent.h"
