@@ -746,13 +746,18 @@ circuit_expire_old_circuits_clientside(time_t now)
                     (long)(now - circ->timestamp_created));
           circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
-          log_notice(LD_CIRC,
-                     "Ancient non-dirty circuit %d is still around after "
-                     "%ld seconds. Purpose: %d",
-                     TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                     (long)(now - circ->timestamp_created),
-                     circ->purpose);
-          TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
+          /* Server side rend joined circuits can end up really old, because
+           * they are reused by clients for longer than normal. The client
+           * controls their lifespan. */
+          if (circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
+            log_notice(LD_CIRC,
+                       "Ancient non-dirty circuit %d is still around after "
+                       "%ld seconds. Purpose: %d",
+                       TO_ORIGIN_CIRCUIT(circ)->global_identifier,
+                       (long)(now - circ->timestamp_created),
+                       circ->purpose);
+            TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
+          }
         }
       }
     }
