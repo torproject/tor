@@ -92,7 +92,7 @@
 
 2.4. General-use tokens
 
-  ; CRLF means, "the ASCII Carriage Return character (decimal value value 13)
+  ; CRLF means, "the ASCII Carriage Return character (decimal value 13)
   ; followed by the ASCII Linefeed character (decimal value 10)."
   CRLF = CR LF
 
