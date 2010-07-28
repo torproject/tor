@@ -6,7 +6,7 @@
 
 /**
  * \file routerpase.h
- * \brief Header file for router information parsing.
+ * \brief Header file for routerparse.c.
  **/
 
 #ifndef _TOR_ROUTERPARSE_H

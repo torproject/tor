@@ -6,7 +6,7 @@
 
 /**
  * \file rendcommon.h
- * \brief Header file for common rend functions
+ * \brief Header file for rendcommon.c.
  **/
 
 #ifndef _TOR_RENDCOMMON_H

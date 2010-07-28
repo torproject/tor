@@ -6,7 +6,7 @@
 
 /**
  * \file rendservice.h
- * \brief Header file for rendservice functions
+ * \brief Header file for rendservice.c.
  **/
 
 #ifndef _TOR_RENDSERVICE_H

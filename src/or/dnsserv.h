@@ -6,7 +6,7 @@
 
 /**
  * \file dnsserv.h
- * \brief Header file for dnsserv functions
+ * \brief Header file for dnsserv.c.
  **/
 
 #ifndef _TOR_DNSSERV_H

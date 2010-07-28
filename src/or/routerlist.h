@@ -5,7 +5,7 @@
 
 /**
  * \file routerlist.h
- * \brief Header file for routerlist functions
+ * \brief Header file for routerlist.c.
  **/
 
 #ifndef _TOR_ROUTERLIST_H

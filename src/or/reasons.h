@@ -6,7 +6,7 @@
 
 /**
  * \file reasons.h
- * \brief Header file for reasons.c
+ * \brief Header file for reasons.c.
  **/
 
 #ifndef _TOR_REASONS_H

@@ -6,7 +6,7 @@
 
 /**
  * \file rephist.h
- * \brief Header file for rephist functions
+ * \brief Header file for rephist.c.
  **/
 
 #ifndef _TOR_REPHIST_H

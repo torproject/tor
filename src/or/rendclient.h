@@ -6,7 +6,7 @@
 
 /**
  * \file rendclient.h
- * \brief Header file for client rend functions
+ * \brief Header file for rendclient.c.
  **/
 
 #ifndef _TOR_RENDCLIENT_H

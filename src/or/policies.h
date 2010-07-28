@@ -6,7 +6,7 @@
 
 /**
  * \file policies.h
- * \brief Header file for policy.c.
+ * \brief Header file for policies.c.
  **/
 
 #ifndef _TOR_POLICIES_H

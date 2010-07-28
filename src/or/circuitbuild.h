@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file geoip.h
+ * \file circuitbuild.h
  * \brief Header file for circuitbuild.c.
  **/
 

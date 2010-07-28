@@ -6,7 +6,7 @@
 
 /**
  * \file router.h
- * \brief Header file for router functions
+ * \brief Header file for router.c.
  **/
 
 #ifndef _TOR_ROUTER_H

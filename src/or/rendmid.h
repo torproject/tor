@@ -5,12 +5,12 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file geoip.h
- * \brief Header file for geoip functions
+ * \file rendmid.h
+ * \brief Header file for rendmid.c.
  **/
 
-#ifndef _TOR_GEOIP_H
-#define _TOR_GEOIP_H
+#ifndef _TOR_RENDMID_H
+#define _TOR_RENDMID_H
 
 int rend_mid_establish_intro(or_circuit_t *circ, const char *request,
                              size_t request_len);
