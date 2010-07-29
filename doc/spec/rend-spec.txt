@@ -20,11 +20,10 @@
    Bob does this by anonymously advertising a public key for his
    service, along with a list of onion routers to act as "Introduction
    Points" for his service.  He creates forward circuits to those
-   introduction points, and tells them about his public key.  To
+   introduction points, and tells them about his service.  To
    connect to Bob, Alice first builds a circuit to an OR to act as
    her "Rendezvous Point." She then connects to one of Bob's chosen
-   introduction points, optionally provides authentication or
-   authorization information, and asks it to tell him about her Rendezvous
+   introduction points, and asks it to tell him about her Rendezvous
    Point (RP).  If Bob chooses to answer, he builds a circuit to her
    RP, and tells it to connect him to Alice.  The RP joins their
    circuits together, and begins relaying cells.  Alice's 'BEGIN'
@@ -64,23 +63,21 @@
 
 0.2. Protocol outline
 
-   1. Bob->Bob's OP: "Offer IP:Port as
-      public-key-name:Port". [configuration]
+   1. Bob->Bob's OP: "Offer IP:Port as public-key-name:Port". [configuration]
       (We do not specify this step; it is left to the implementor of
       Bob's OP.)
 
-   2. Bob's OP generates keypair and rendezvous service descriptor:
-        "Meet public-key X at introduction point A, B, or C." (signed)
+   2. Bob's OP generates a long-term keypair.
 
    3. Bob's OP->Introduction point via Tor: [introduction setup]
-        "This pk is me."
+        "This public key is (currently) associated to me."
 
-   4. Bob's OP->directory service via Tor: publishes Bob's service
-      descriptor [advertisement]
+   4. Bob's OP->directory service via Tor: publishes Bob's service descriptor
+      [advertisement]
+        "Meet public-key X at introduction point A, B, or C." (signed)
 
-   5. Out of band, Alice receives a [x.y.]z.onion:port address.
-      She opens a SOCKS connection to her OP, and requests
-      x.y.z.onion:port.
+   5. Out of band, Alice receives a z.onion:port address.
+      She opens a SOCKS connection to her OP, and requests z.onion:port.
 
    6. Alice's OP retrieves Bob's descriptor via Tor. [descriptor lookup.]
 
@@ -89,17 +86,19 @@
       setup.]
 
    8. Alice connects to the Introduction point via Tor, and tells it about
-      her rendezvous point and optional authentication/authorization
-      information.  (Encrypted to Bob.)  [Introduction 1]
+      her rendezvous point.  (Encrypted to Bob.)  [Introduction 1]
 
    9. The Introduction point passes this on to Bob's OP via Tor, along the
       introduction circuit. [Introduction 2]
 
   10. Bob's OP decides whether to connect to Alice, and if so, creates a
       circuit to Alice's RP via Tor.  Establishes a shared circuit.
-      [Rendezvous.]
+      [Rendezvous 1]
 
-  11. Alice's OP sends begin cells to Bob's OP.  [Connection]
+  11. The Rendezvous point forwards Bob's confirmation to Alice's OP.
+      [Rendezvous 2]
+
+  12. Alice's OP sends begin cells to Bob's OP.  [Connection]
 
 0.3. Constants and new cell types
 
@@ -121,14 +120,14 @@
    other parts remained the same. The following list of potentially
    versioned protocol parts should help reduce some confusion:
 
-   - Hidden service descriptor: the binary-based v0 was the default for
-     a long time, and an ascii-based v2 has been added by proposal
-     114. See 1.3.
+   - Hidden service descriptor: the binary-based v0 was the default for a
+     long time, and an ASCII-based v2 has been added by proposal 114. The
+     v0 descriptor format has been deprecated in 0.2.2.1-alpha. See 1.3.
 
    - Hidden service descriptor propagation mechanism: currently related to
      the hidden service descriptor version -- v0 publishes to the original
      hs directory authorities, whereas v2 publishes to a rotating subset
-     of relays with the "hsdir" flag; see 1.4 and 1.6.
+     of relays with the "HSDir" flag; see 1.4 and 1.6.
 
    - Introduction protocol for how to generate an introduction cell:
      v0 specified a nickname for the rendezvous point and assumed the
@@ -148,17 +147,21 @@
 
 1.2. Bob's OP establishes his introduction points.
 
+   The first time the OP provides an advertised service, it generates
+   a public/private keypair (stored locally).
+
+   The OP choses a small number of Tor servers as introduction points.
    The OP establishes a new introduction circuit to each introduction
    point.  These circuits MUST NOT be used for anything but hidden service
    introduction.  To establish the introduction, Bob sends a
    RELAY_COMMAND_ESTABLISH_INTRO cell, containing:
 
         KL   Key length                             [2 octets]
-        PK   Bob's public key                       [KL octets]
+        PK   Bob's public key or service key        [KL octets]
         HS   Hash of session info                   [20 octets]
         SIG  Signature of above information         [variable]
 
-   [XXX011, need to add auth information here. -RD]
+   KL is the length of PK, in octets.
 
    To prevent replay attacks, the HS field contains a SHA-1 hash based on the
    shared secret KH between Bob's OP and the introduction point, as
@@ -176,24 +179,46 @@
    currently associated with PK.  On success, the OR sends Bob a
    RELAY_COMMAND_INTRO_ESTABLISHED cell with an empty payload.
 
-   If a hidden service is configured to publish only v2 hidden service
-   descriptors, Bob's OP does not include its own public key in the
-   RELAY_COMMAND_ESTABLISH_INTRO cell, but the public key of a freshly
-   generated key pair. The OP also includes these fresh public keys in the v2
-   hidden service descriptor together with the other introduction point
-   information. The reason is that the introduction point does not need to
-   and therefore should not know for which hidden service it works, so as
-   to prevent it from tracking the hidden service's activity. If the hidden
-   service is configured to publish both, v0 and v2 descriptors, two
-   separate sets of introduction points are established.
+   Bob's OP uses either Bob's public key or a freshly generated, single-use
+   service key in the RELAY_COMMAND_ESTABLISH_INTRO cell, depending on the
+   configured hidden service descriptor version.  The public key is used for
+   v0 descriptors, the service key for v2 descriptors.  In the latter case, the
+   service keys of all introduction points are included in the v2 hidden
+   service descriptor together with the other introduction point information.
+   The reason is that the introduction point does not need to and therefore
+   should not know for which hidden service it works, so as to prevent it from
+   tracking the hidden service's activity.  If the hidden service is configured
+   to publish both v0 and v2 descriptors, two separate sets of introduction
+   points are established.
 
 1.3. Bob's OP generates service descriptors.
 
-   The first time the OP provides an advertised service, it generates
-   a public/private keypair (stored locally).
+   For versions before 0.2.2.1-alpha, Bob's OP periodically generates and
+   publishes a descriptor of type "V0".
 
-   Beginning with 0.2.0.10-alpha, Bob's OP encodes "V2" descriptors. The
-   format of a "V2" descriptor is as follows:
+   The "V0" descriptor contains:
+
+         KL    Key length                            [2 octets]
+         PK    Bob's public key                      [KL octets]
+         TS    A timestamp                           [4 octets]
+         NI    Number of introduction points         [2 octets]
+         Ipt   A list of NUL-terminated ORs          [variable]
+         SIG   Signature of above fields             [variable]
+
+   TS is the number of seconds elapsed since Jan 1, 1970.
+
+   The members of Ipt may be either (a) nicknames, or (b) identity key
+   digests, encoded in hex, and prefixed with a '$'.  Clients must
+   accept both forms. Services must only generate the second form.
+   Once 0.0.9.x is obsoleted, we can drop the first form.
+
+   [It's ok for Bob to advertise 0 introduction points. He might want
+    to do that if he previously advertised some introduction points,
+    and now he doesn't have any. -RD]
+
+   Beginning with 0.2.0.10-alpha, Bob's OP encodes "V2" descriptors in
+   addition to (or instead of) "V0" descriptors. The format of a "V2"
+   descriptor is as follows:
 
      "rendezvous-service-descriptor" descriptor-id NL
 
@@ -201,11 +226,7 @@
 
        Indicates the beginning of the descriptor. "descriptor-id" is a
        periodically changing identifier of 160 bits formatted as 32 base32
-       chars that is calculated by the hidden service and its clients. If
-       the optional "descriptor-cookie" is used, this "descriptor-id"
-       cannot be computed by anyone else. (Everyone can verify that this
-       "descriptor-id" belongs to the rest of the descriptor, even without
-       knowing the optional "descriptor-cookie", as described below.) The
+       chars that is calculated by the hidden service and its clients. The
        "descriptor-id" is calculated by performing the following operation:
 
          descriptor-id =
@@ -218,28 +239,16 @@
          permanent-id = H(public-key)[:10]
 
        "H(time-period | descriptor-cookie | replica)" is the (possibly
-       secret) id part that is
-       necessary to verify that the hidden service is the true originator
-       of this descriptor. It can only be created by the hidden service
-       and its clients, but the "signature" below can only be created by
-       the service.
+       secret) id part that is necessary to verify that the hidden service is
+       the true originator of this descriptor and that is therefore contained
+       in the descriptor, too. The descriptor ID can only be created by the
+       hidden service and its clients, but the "signature" below can only be
+       created by the service.
 
-       "descriptor-cookie" is an optional secret password of 128 bits that
-       is shared between the hidden service provider and its clients.
+       "time-period" changes periodically as a function of time and
 
-       "replica" denotes the number of the non-consecutive replica.
-
-        (Each descriptor is replicated on a number of _consecutive_ nodes
-         in the identifier ring by making every storing node responsible
-         for the identifier intervals starting from its 3rd predecessor's
-         ID to its own ID. In addition to that, every service publishes
-         multiple descriptors with different descriptor IDs in order to
-         distribute them to different places on the ring. Therefore,
-         "replica" chooses one of the _non-consecutive_ replicas. -KL)
-
-       The "time-period" changes periodically depending on the global time and
-       as a function of "permanent-id". The current value for "time-period" can
-       be calculated using the following formula:
+       "permanent-id". The current value for "time-period" can be calculated
+       using the following formula:
 
          time-period = (current-time + permanent-id-byte * 86400 / 256)
                          / 86400
@@ -252,6 +261,15 @@
        changing for all descriptors at the same time of the day. The result
        of the overall operation is a (network-ordered) 32-bit integer, e.g.
        13753 or 0x000035B9 with the example values given above.
+
+       "descriptor-cookie" is an optional secret password of 128 bits that
+       is shared between the hidden service provider and its clients. If the
+       descriptor-cookie is left out, the input to the hash function is 128
+       bits shorter.
+
+       "replica" denotes the number of the replica. A service publishes
+       multiple descriptors with different descriptor IDs in order to
+       distribute them to different places on the ring.
 
      "version" version-number NL
 
@@ -306,13 +324,16 @@
 
        The unencrypted string may begin with:
 
-        ["service-authentication" auth-type NL auth-data ... reserved]
+         "service-authentication" auth-type auth-data NL
 
-           [At start, any number]
+           [Any number]
 
            The service-specific authentication data can be used to perform
            client authentication. This data is independent of the selected
-           introduction point as opposed to "intro-authentication" below.
+           introduction point as opposed to "intro-authentication" below. The
+           format of auth-data (base64-encoded or PEM format) depends on
+           auth-type. See section 2 of this document for details on auth
+           mechanisms.
 
        Subsequently, an arbitrary number of introduction point entries may
        follow, each containing the following data:
@@ -351,14 +372,16 @@
            The public key that can be used to encrypt messages to the hidden
            service.
 
-        ["intro-authentication" auth-type NL auth-data ... reserved]
+         "intro-authentication" auth-type auth-data NL
 
            [Any number]
 
            The introduction-point-specific authentication data can be used
            to perform client authentication. This data depends on the
            selected introduction point as opposed to "service-authentication"
-           above.
+           above. The format of auth-data (base64-encoded or PEM format)
+           depends on auth-type. See section 2 of this document for details
+           on auth mechanisms.
 
         (This ends the fields in the encrypted portion of the descriptor.)
 
@@ -444,13 +467,15 @@
 
 1.4. Bob's OP advertises his service descriptor(s).
 
-   Bob's OP opens a stream to each directory server's directory port via Tor.
-   (He may re-use old circuits for this.)  Over this stream, Bob's OP makes
-   an HTTP 'POST' request, to a URL "/tor/rendezvous/publish" relative to the
-   directory server's root, containing as its body Bob's service descriptor.
+   Bob's OP advertises his service descriptor to a fixed set of v0 hidden
+   service directory servers and/or a changing subset of all v2 hidden service
+   directories.
 
-   Bob should upload a service descriptor for each version format that
-   is supported in the current Tor network.
+   For versions before 0.2.2.1-alpha, Bob's OP opens a stream to each v0
+   directory server's directory port via Tor.  (He may re-use old circuits for
+   this.)  Over this stream, Bob's OP makes an HTTP 'POST' request, to a URL
+   "/tor/rendezvous/publish" relative to the directory server's root,
+   containing as its body Bob's service descriptor.
 
    Upon receiving a descriptor, the directory server checks the signature,
    and discards the descriptor if the signature does not match the enclosed
@@ -464,11 +489,12 @@
    after its timestamp.  At least every 18 hours, Bob's OP uploads a
    fresh descriptor.
 
-   Bob's OP publishes v2 descriptors to a changing subset of all v2 hidden
-   service directories. Therefore, Bob's OP opens a stream via Tor to each
-   responsible hidden service directory. (He may re-use old circuits
-   for this.) Over this stream, Bob's OP makes an HTTP 'POST' request to a
-   URL "/tor/rendezvous2/publish" relative to the hidden service
+   If Bob's OP is configured to publish v2 descriptors, it does so to a
+   changing subset of all v2 hidden service directories instead of the
+   authoritative directory servers. Therefore, Bob's OP opens a stream via
+   Tor to each responsible hidden service directory. (He may re-use old
+   circuits for this.) Over this stream, Bob's OP makes an HTTP 'POST'
+   request to a URL "/tor/rendezvous2/publish" relative to the hidden service
    directory's root, containing as its body Bob's service descriptor.
 
    At any time, there are 6 hidden service directories responsible for
@@ -490,49 +516,36 @@
    and the client 30 minutes ahead), Bob's OP publishes the descriptor
    under the ID of both, the current and the next publication period.
 
-1.5. Alice receives a x.y.z.onion address.
+1.5. Alice receives a z.onion address.
 
    When Alice receives a pointer to a location-hidden service, it is as a
-   hostname of the form "z.onion" or "y.z.onion" or "x.y.z.onion", where
-   z is a base-32 encoding of a 10-octet hash of Bob's service's public
-   key, computed as follows:
+   hostname of the form "z.onion", where z is a base-32 encoding of a
+   10-octet hash of Bob's service's public key, computed as follows:
 
          1. Let H = H(PK).
          2. Let H' = the first 80 bits of H, considering each octet from
             most significant bit to least significant bit.
-         2. Generate a 16-character encoding of H', using base32 as defined
+         3. Generate a 16-character encoding of H', using base32 as defined
             in RFC 3548.
 
    (We only use 80 bits instead of the 160 bits from SHA1 because we
    don't need to worry about arbitrary collisions, and because it will
    make handling the url's more convenient.)
 
-   The string "x", if present, is the base-32 encoding of the
-   authentication/authorization required by the introduction point.
-   The string "y", if present, is the base-32 encoding of the
-   authentication/authorization required by the hidden service.
-   Omitting a string is taken to mean auth type [00 00].
-   See section 2 of this document for details on auth mechanisms.
-
    [Yes, numbers are allowed at the beginning.  See RFC 1123. -NM]
 
 1.6. Alice's OP retrieves a service descriptor.
 
-   Similarly to the description in section 1.4, Alice's OP fetches a v2
-   descriptor from a randomly chosen hidden service directory out of the
-   changing subset of 6 nodes. If the request is unsuccessful, Alice retries
-   the other remaining responsible hidden service directories in a random
-   order. Alice relies on Bob to care about a potential clock skew between
-   the two by possibly storing two sets of descriptors (see end of section
-   1.4).
+   Alice's OP fetches the service descriptor from the fixed set of v0 hidden
+   service directory servers and/or a changing subset of all v2 hidden service
+   directories.
 
-   Alice's OP opens a stream via Tor to the chosen v2 hidden service
-   directory. (She may re-use old circuits for this.) Over this stream,
-   Alice's OP makes an HTTP 'GET' request for the document
-   "/tor/rendezvous2/<z>", where z is replaced with the encoding of the
-   descriptor ID. The directory replies with a 404 HTTP response if it does
-   not recognize <z>, and otherwise returns Bob's most recently uploaded
-   service descriptor.
+   For versions before 0.2.2.1-alpha, Alice's OP opens a stream to a directory
+   server via Tor, and makes an HTTP GET request for the document
+   '/tor/rendezvous/<z>', where '<z>' is replaced with the encoding of Bob's
+   public key as described above. (She may re-use old circuits for this.) The
+   directory replies with a 404 HTTP response if it does not recognize <z>,
+   and otherwise returns Bob's most recently uploaded service descriptor.
 
    If Alice's OP receives a 404 response, it tries the other directory
    servers, and only fails the lookup if none recognize the public key hash.
@@ -548,6 +561,24 @@
    [Caching may make her partitionable, but she fetched it anonymously,
     and we can't very well *not* cache it. -RD]
 
+   If Alice's OP is running 0.2.1.10-alpha or higher, it fetches v2 hidden
+   service descriptors. Versions before 0.2.2.1-alpha are fetching both v0 and
+   v2 descriptors in parallel. Similar to the description in section 1.4,
+   Alice's OP fetches a v2 descriptor from a randomly chosen hidden service
+   directory out of the changing subset of 6 nodes. If the request is
+   unsuccessful, Alice retries the other remaining responsible hidden service
+   directories in a random order. Alice relies on Bob to care about a potential
+   clock skew between the two by possibly storing two sets of descriptors (see
+   end of section 1.4).
+
+   Alice's OP opens a stream via Tor to the chosen v2 hidden service
+   directory. (She may re-use old circuits for this.) Over this stream,
+   Alice's OP makes an HTTP 'GET' request for the document
+   "/tor/rendezvous2/<z>", where z is replaced with the encoding of the
+   descriptor ID. The directory replies with a 404 HTTP response if it does
+   not recognize <z>, and otherwise returns Bob's most recently uploaded
+   service descriptor.
+
 1.7. Alice's OP establishes a rendezvous point.
 
    When Alice requests a connection to a given location-hidden service,
@@ -558,8 +589,6 @@
    contains:
 
         RC   Rendezvous cookie    [20 octets]
-
-   [XXX011 this looks like an auth mechanism. should we generalize here? -RD]
 
    The rendezvous cookie is an arbitrary 20-byte value, chosen randomly by
    Alice's OP.
@@ -596,11 +625,28 @@
           KEY    Rendezvous point onion key [KLEN octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
+        OR (in the v3 intro protocol)
+          VER    Version byte: set to 3.        [1 octet]
+          AUTHT  Auth type                      [1 octet]
+          AUTHL  Length of auth data           [2 octets]
+          AUTHD  Auth data                     [variable]
+          TS     A timestamp                   [4 octets]
+          IP     Rendezvous point's address    [4 octets]
+          PORT   Rendezvous point's OR port    [2 octets]
+          ID     Rendezvous point identity ID [20 octets]
+          KLEN  Length of onion key            [2 octets]
+          KEY    Rendezvous point onion key [KLEN octets]
+          RC     Rendezvous cookie            [20 octets]
+          g^x    Diffie-Hellman data, part 1 [128 octets]
 
-   PK_ID is the hash of Bob's public key.  RP is NUL-padded and
-   terminated. In version 0, it must contain a nickname. In version 1,
-   it must contain EITHER a nickname or an identity key digest that is
-   encoded in hex and prefixed with a '$'.
+   PK_ID is the hash of Bob's public key or the service key, depending on the
+   hidden service descriptor version. In case of a v0 descriptor, Alice's OP
+   uses Bob's public key. If Alice has downloaded a v2 descriptor, she uses
+   the contained public key ("service-key").
+
+   RP is NUL-padded and terminated. In version 0 of the intro protocol, RP
+   must contain a nickname. In version 1, it must contain EITHER a nickname or
+   an identity key digest that is encoded in hex and prefixed with a '$'.
 
    The hybrid encryption to Bob's PK works just like the hybrid
    encryption in CREATE cells (see tor-spec). Thus the payload of the
@@ -612,29 +658,6 @@
    format, whereas hidden services have understood and accepted v0,
    v1, and v2 since 0.1.1.x. As of Tor 0.2.0.7-alpha and 0.1.2.18,
    clients switched to using the v2 intro format.
-
-   If Alice has downloaded a v2 descriptor, she uses the contained public
-   key ("service-key") instead of Bob's public key to create the
-   RELAY_COMMAND_INTRODUCE1 cell as described above.
-
-1.8.1. Other introduction formats we don't use.
-
-    We briefly speculated about using the following format for the
-    "encrypted to Bob's PK" part of the introduction, but no Tors have
-    ever generated these.
-
-          VER    Version byte: set to 3.           [1 octet]
-          ATYPE  An address type (typically 4)     [1 octet]
-          ADDR   Rendezvous point's IP address     [4 or 16 octets]
-          PORT   Rendezvous point's OR port        [2 octets]
-          AUTHT  The auth type that is supported   [2 octets]
-          AUTHL  Length of auth data               [1 octet]
-          AUTHD  Auth data                        [variable]
-          ID     Rendezvous point identity ID    [20 octets]
-          KLEN  Length of onion key               [2 octets]
-          KEY    Rendezvous point onion key    [KLEN octets]
-          RC     Rendezvous cookie               [20 octets]
-          g^x    Diffie-Hellman data, part 1    [128 octets]
 
 1.9. Introduction: From the Introduction Point to Bob's OP
 
