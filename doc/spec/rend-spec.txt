@@ -627,14 +627,14 @@
           g^x    Diffie-Hellman data, part 1 [128 octets]
         OR (in the v3 intro protocol)
           VER    Version byte: set to 3.        [1 octet]
-          AUTHT  Auth type                      [1 octet]
+          AUTHT  The auth type that is used     [1 octet]
           AUTHL  Length of auth data           [2 octets]
           AUTHD  Auth data                     [variable]
           TS     A timestamp                   [4 octets]
           IP     Rendezvous point's address    [4 octets]
           PORT   Rendezvous point's OR port    [2 octets]
           ID     Rendezvous point identity ID [20 octets]
-          KLEN  Length of onion key            [2 octets]
+          KLEN   Length of onion key           [2 octets]
           KEY    Rendezvous point onion key [KLEN octets]
           RC     Rendezvous cookie            [20 octets]
           g^x    Diffie-Hellman data, part 1 [128 octets]
@@ -736,7 +736,181 @@
 
 2. Authentication and authorization.
 
-Foo.
+   The rendezvous protocol as described in Section 1 provides a few options
+   for implementing client-side authorization. There are two steps in the
+   rendezvous protocol that can be used for performing client authorization:
+   when downloading and decrypting parts of the hidden service descriptor and
+   at Bob's Tor client before contacting the rendezvous point. A service
+   provider can restrict access to his service at these two points to
+   authorized clients only.
+
+   There are currently two authorization protocols specified that are
+   described in more detail below:
+
+    1. The first protocol allows a service provider to restrict access
+       to clients with a previously received secret key only, but does not
+       attempt to hide service activity from others.
+
+    2. The second protocol, albeit being feasible for a limited set of about
+       16 clients, performs client authorization and hides service activity
+       from everyone but the authorized clients.
+
+2.1. Service with large-scale client authorization
+
+   The first client authorization protocol aims at performing access control
+   while consuming as few additional resources as possible. A service
+   provider should be able to permit access to a large number of clients
+   while denying access for everyone else. However, the price for
+   scalability is that the service won't be able to hide its activity from
+   unauthorized or formerly authorized clients.
+
+   The main idea of this protocol is to encrypt the introduction-point part
+   in hidden service descriptors to authorized clients using symmetric keys.
+   This ensures that nobody else but authorized clients can learn which
+   introduction points a service currently uses, nor can someone send a
+   valid INTRODUCE1 message without knowing the introduction key. Therefore,
+   a subsequent authorization at the introduction point is not required.
+
+   A service provider generates symmetric "descriptor cookies" for his
+   clients and distributes them outside of Tor. The suggested key size is
+   128 bits, so that descriptor cookies can be encoded in 22 base64 chars
+   (which can hold up to 22 * 5 = 132 bits, leaving 4 bits to encode the
+   authorization type (here: "0") and allow a client to distinguish this
+   authorization protocol from others like the one proposed below).
+   Typically, the contact information for a hidden service using this
+   authorization protocol looks like this:
+
+     v2cbb2l4lsnpio4q.onion Ll3X7Xgz9eHGKCCnlFH0uz
+
+   When generating a hidden service descriptor, the service encrypts the
+   introduction-point part with a single randomly generated symmetric
+   128-bit session key using AES-CTR as described for v2 hidden service
+   descriptors in rend-spec. Afterwards, the service encrypts the session
+   key to all descriptor cookies using AES. Authorized client should be able
+   to efficiently find the session key that is encrypted for him/her, so
+   that 4 octet long client ID are generated consisting of descriptor cookie
+   and initialization vector. Descriptors always contain a number of
+   encrypted session keys that is a multiple of 16 by adding fake entries.
+   Encrypted session keys are ordered by client IDs in order to conceal
+   addition or removal of authorized clients by the service provider.
+
+     ATYPE  Authorization type: set to 1.                      [1 octet]
+     ALEN   Number of clients := 1 + ((clients - 1) div 16)    [1 octet]
+   for each symmetric descriptor cookie:
+     ID     Client ID: H(descriptor cookie | IV)[:4]          [4 octets]
+     SKEY   Session key encrypted with descriptor cookie     [16 octets]
+   (end of client-specific part)
+     RND    Random data      [(15 - ((clients - 1) mod 16)) * 20 octets]
+     IV     AES initialization vector                        [16 octets]
+     IPOS   Intro points, encrypted with session key  [remaining octets]
+
+   An authorized client needs to configure Tor to use the descriptor cookie
+   when accessing the hidden service. Therefore, a user adds the contact
+   information that she received from the service provider to her torrc
+   file. Upon downloading a hidden service descriptor, Tor finds the
+   encrypted introduction-point part and attempts to decrypt it using the
+   configured descriptor cookie. (In the rare event of two or more client
+   IDs being equal a client tries to decrypt all of them.)
+
+   Upon sending the introduction, the client includes her descriptor cookie
+   as auth type "1" in the INTRODUCE2 cell that she sends to the service.
+   The hidden service checks whether the included descriptor cookie is
+   authorized to access the service and either responds to the introduction
+   request, or not.
+
+2.2. Authorization for limited number of clients
+
+   A second, more sophisticated client authorization protocol goes the extra
+   mile of hiding service activity from unauthorized clients. With all else
+   being equal to the preceding authorization protocol, the second protocol
+   publishes hidden service descriptors for each user separately and gets
+   along with encrypting the introduction-point part of descriptors to a
+   single client. This allows the service to stop publishing descriptors for
+   removed clients. As long as a removed client cannot link descriptors
+   issued for other clients to the service, it cannot derive service
+   activity any more. The downside of this approach is limited scalability.
+   Even though the distributed storage of descriptors (cf. proposal 114)
+   tackles the problem of limited scalability to a certain extent, this
+   protocol should not be used for services with more than 16 clients. (In
+   fact, Tor should refuse to advertise services for more than this number
+   of clients.)
+
+   A hidden service generates an asymmetric "client key" and a symmetric
+   "descriptor cookie" for each client. The client key is used as
+   replacement for the service's permanent key, so that the service uses a
+   different identity for each of his clients. The descriptor cookie is used
+   to store descriptors at changing directory nodes that are unpredictable
+   for anyone but service and client, to encrypt the introduction-point
+   part, and to be included in INTRODUCE2 cells. Once the service has
+   created client key and descriptor cookie, he tells them to the client
+   outside of Tor. The contact information string looks similar to the one
+   used by the preceding authorization protocol (with the only difference
+   that it has "1" encoded as auth-type in the remaining 4 of 132 bits
+   instead of "0" as before).
+
+   When creating a hidden service descriptor for an authorized client, the
+   hidden service uses the client key and descriptor cookie to compute
+   secret ID part and descriptor ID:
+
+     secret-id-part = H(time-period | descriptor-cookie | replica)
+
+     descriptor-id = H(client-key[:10] | secret-id-part)
+
+   The hidden service also replaces permanent-key in the descriptor with
+   client-key and encrypts introduction-points with the descriptor cookie.
+
+     ATYPE  Authorization type: set to 2.                         [1 octet]
+     IV     AES initialization vector                           [16 octets]
+     IPOS   Intro points, encr. with descriptor cookie   [remaining octets]
+
+   When uploading descriptors, the hidden service needs to make sure that
+   descriptors for different clients are not uploaded at the same time (cf.
+   Section 1.1) which is also a limiting factor for the number of clients.
+
+   When a client is requested to establish a connection to a hidden service
+   it looks up whether it has any authorization data configured for that
+   service. If the user has configured authorization data for authorization
+   protocol "2", the descriptor ID is determined as described in the last
+   paragraph. Upon receiving a descriptor, the client decrypts the
+   introduction-point part using its descriptor cookie. Further, the client
+   includes its descriptor cookie as auth-type "2" in INTRODUCE2 cells that
+   it sends to the service.
+
+2.3. Hidden service configuration
+
+   A hidden service that is meant to perform client authorization adds a
+   new option HiddenServiceAuthorizeClient to its hidden service
+   configuration. This option contains the authorization type which is
+   either "1" for the protocol described in 2.1 or "2" for the protocol in
+   2.2 and a comma-separated list of human-readable client names, so that
+   Tor can create authorization data for these clients:
+
+     HiddenServiceAuthorizeClient auth-type client-name,client-name,...
+
+   If this option is configured, HiddenServiceVersion is automatically
+   reconfigured to contain only version numbers of 2 or higher.
+
+   Tor stores all generated authorization data for the authorization
+   protocols described in Sections 2.1 and 2.2 in a new file using the
+   following file format:
+
+     "client-name" human-readable client identifier NL
+     "descriptor-cookie" 128-bit key ^= 22 base64 chars NL
+
+   If the authorization protocol of Section 2.2 is used, Tor also generates
+   and stores the following data:
+
+     "client-key" NL a public key in PEM format
+
+2.4. Client configuration
+
+   Clients need to make their authorization data known to Tor using another
+   configuration option that contains a service name (mainly for the sake of
+   convenience), the service address, and the descriptor cookie that is
+   required to access a hidden service (the authorization protocol number is
+   encoded in the descriptor cookie):
+
+     HidServAuth service-name service-address descriptor-cookie
 
 3. Hidden service directory operation
 
