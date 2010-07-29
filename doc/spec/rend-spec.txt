@@ -123,7 +123,7 @@
 
    - Hidden service descriptor: the binary-based v0 was the default for
      a long time, and an ascii-based v2 has been added by proposal
-     114. See 1.2.
+     114. See 1.3.
 
    - Hidden service descriptor propagation mechanism: currently related to
      the hidden service descriptor version -- v0 publishes to the original
@@ -146,7 +146,48 @@
    service.  Bob provides a mapping from each of these virtual ports
    to a local IP:Port pair.
 
-1.2. Bob's OP generates service descriptors.
+1.2. Bob's OP establishes his introduction points.
+
+   The OP establishes a new introduction circuit to each introduction
+   point.  These circuits MUST NOT be used for anything but hidden service
+   introduction.  To establish the introduction, Bob sends a
+   RELAY_COMMAND_ESTABLISH_INTRO cell, containing:
+
+        KL   Key length                             [2 octets]
+        PK   Bob's public key                       [KL octets]
+        HS   Hash of session info                   [20 octets]
+        SIG  Signature of above information         [variable]
+
+   [XXX011, need to add auth information here. -RD]
+
+   To prevent replay attacks, the HS field contains a SHA-1 hash based on the
+   shared secret KH between Bob's OP and the introduction point, as
+   follows:
+       HS = H(KH | "INTRODUCE")
+   That is:
+       HS = H(KH | [49 4E 54 52 4F 44 55 43 45])
+   (KH, as specified in tor-spec.txt, is H(g^xy | [00]) .)
+
+   Upon receiving such a cell, the OR first checks that the signature is
+   correct with the included public key.  If so, it checks whether HS is
+   correct given the shared state between Bob's OP and the OR.  If either
+   check fails, the OP discards the cell; otherwise, it associates the
+   circuit with Bob's public key, and dissociates any other circuits
+   currently associated with PK.  On success, the OR sends Bob a
+   RELAY_COMMAND_INTRO_ESTABLISHED cell with an empty payload.
+
+   If a hidden service is configured to publish only v2 hidden service
+   descriptors, Bob's OP does not include its own public key in the
+   RELAY_COMMAND_ESTABLISH_INTRO cell, but the public key of a freshly
+   generated key pair. The OP also includes these fresh public keys in the v2
+   hidden service descriptor together with the other introduction point
+   information. The reason is that the introduction point does not need to
+   and therefore should not know for which hidden service it works, so as
+   to prevent it from tracking the hidden service's activity. If the hidden
+   service is configured to publish both, v0 and v2 descriptors, two
+   separate sets of introduction points are established.
+
+1.3. Bob's OP generates service descriptors.
 
    The first time the OP provides an advertised service, it generates
    a public/private keypair (stored locally).
@@ -332,7 +373,7 @@
        A signature of all fields above with the private key of the hidden
        service.
 
-1.2.1. Other descriptor formats we don't use.
+1.3.1. Other descriptor formats we don't use.
 
    Support for the V0 descriptor format was dropped in 0.2.2.0-alpha-dev:
 
@@ -401,48 +442,6 @@
    Currently only AUTHT of [00 00] is supported, with an AUTHL of 0.
    See section 2 of this document for details on auth mechanisms.
 
-1.3. Bob's OP establishes his introduction points.
-
-   The OP establishes a new introduction circuit to each introduction
-   point.  These circuits MUST NOT be used for anything but hidden service
-   introduction.  To establish the introduction, Bob sends a
-   RELAY_COMMAND_ESTABLISH_INTRO cell, containing:
-
-        KL   Key length                             [2 octets]
-        PK   Introduction public key                [KL octets]
-        HS   Hash of session info                   [20 octets]
-        SIG  Signature of above information         [variable]
-
-   [XXX011, need to add auth information here. -RD]
-
-   To prevent replay attacks, the HS field contains a SHA-1 hash based on the
-   shared secret KH between Bob's OP and the introduction point, as
-   follows:
-       HS = H(KH | "INTRODUCE")
-   That is:
-       HS = H(KH | [49 4E 54 52 4F 44 55 43 45])
-   (KH, as specified in tor-spec.txt, is H(g^xy | [00]) .)
-
-   Upon receiving such a cell, the OR first checks that the signature is
-   correct with the included public key.  If so, it checks whether HS is
-   correct given the shared state between Bob's OP and the OR.  If either
-   check fails, the OP discards the cell; otherwise, it associates the
-   circuit with Bob's public key, and dissociates any other circuits
-   currently associated with PK.  On success, the OR sends Bob a
-   RELAY_COMMAND_INTRO_ESTABLISHED cell with an empty payload.
-
-   Bob's OP uses either Bob's public key or a freshly generated, single-use
-   service key in the RELAY_COMMAND_ESTABLISH_INTRO cell, depending on the
-   configured hidden service descriptor version.  The public key is used for
-   v0 descriptors, the service key for v2 descriptors.  In the latter case, the
-   service keys of all introduction points are included in the v2 hidden
-   service descriptor together with the other introduction point information.
-   The reason is that the introduction point does not need to and therefore
-   should not know for which hidden service it works, so as to prevent it from
-   tracking the hidden service's activity.  If the hidden service is configured
-   to publish both v0 and v2 descriptors, two separate sets of introduction
-   points are established.
-
 1.4. Bob's OP advertises his service descriptor(s).
 
    Bob's OP opens a stream to each directory server's directory port via Tor.
@@ -486,7 +485,7 @@
    Bob's OP publishes a new v2 descriptor once an hour or whenever its
    content changes. V2 descriptors can be found by clients within a given
    time period of 24 hours, after which they change their ID as described
-   under 1.2. If a published descriptor would be valid for less than 60
+   under 1.3. If a published descriptor would be valid for less than 60
    minutes (= 2 x 30 minutes to allow the server to be 30 minutes behind
    and the client 30 minutes ahead), Bob's OP publishes the descriptor
    under the ID of both, the current and the next publication period.
@@ -640,7 +639,7 @@
 1.9. Introduction: From the Introduction Point to Bob's OP
 
    If the Introduction Point recognizes PK_ID as a public key which has
-   established a circuit for introductions as in 1.3 above, it sends the body
+   established a circuit for introductions as in 1.2 above, it sends the body
    of the cell in a new RELAY_COMMAND_INTRODUCE2 cell down the corresponding
    circuit. (If the PK_ID is unrecognized, the RELAY_COMMAND_INTRODUCE1 cell is
    discarded.)
