@@ -1124,8 +1124,10 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
     rend_client_remove_intro_point(ocirc->build_state->chosen_exit,
                                    ocirc->rend_data);
   }
-  if (circ->n_conn)
+  if (circ->n_conn) {
+    circuit_clear_cell_queue(circ, circ->n_conn);
     connection_or_send_destroy(circ->n_circ_id, circ->n_conn, reason);
+  }
 
   if (! CIRCUIT_IS_ORIGIN(circ)) {
     or_circuit_t *or_circ = TO_OR_CIRCUIT(circ);
@@ -1149,8 +1151,10 @@ _circuit_mark_for_close(circuit_t *circ, int reason, int line,
       conn->on_circuit = NULL;
     }
 
-    if (or_circ->p_conn)
+    if (or_circ->p_conn) {
+      circuit_clear_cell_queue(circ, or_circ->p_conn);
       connection_or_send_destroy(or_circ->p_circ_id, or_circ->p_conn, reason);
+    }
   } else {
     origin_circuit_t *ocirc = TO_ORIGIN_CIRCUIT(circ);
     edge_connection_t *conn;

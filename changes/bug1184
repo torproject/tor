@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - Never relay a cell for a circuit we have already destroyed.
+      Between marking a circuit as closeable and finally closing it,
+      it may have been possible for a few queued cells to get relayed,
+      even though they would have been immediately dropped by the next
+      OR in the circuit.  Fix 1184; bugfix on 0.2.0.1-alpha.
+

@@ -595,7 +595,9 @@ see tor-design.pdf.
    To tear down part of a circuit, the OP may send a RELAY_TRUNCATE cell
    signaling a given OR (Stream ID zero).  That OR sends a DESTROY
    cell to the next node in the circuit, and replies to the OP with a
-   RELAY_TRUNCATED cell.
+   RELAY_TRUNCATED cell.  If the OR has any RELAY cells queued on the
+   circuit for the next node in that it had not yet sent, it MAY
+   drop them without sending them.
 
    When an unrecoverable error occurs along one connection in a
    circuit, the nodes on either side of the connection should, if they

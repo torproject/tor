@@ -60,6 +60,7 @@ const char *decode_address_from_payload(tor_addr_t *addr_out,
 unsigned cell_ewma_get_tick(void);
 void cell_ewma_set_scale_factor(or_options_t *options,
                                 networkstatus_t *consensus);
+void circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn);
 
 #endif
 

@@ -1291,10 +1291,6 @@ connection_or_send_destroy(circid_t circ_id, or_connection_t *conn, int reason)
   cell.payload[0] = (uint8_t) reason;
   log_debug(LD_OR,"Sending destroy (circID %d).", circ_id);
 
-  /* XXXX It's possible that under some circumstances, we want the destroy
-   * to take precedence over other data waiting on the circuit's cell queue.
-   */
-
   connection_or_write_cell_to_buf(&cell, conn);
   return 0;
 }
