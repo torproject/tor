@@ -1,0 +1,8 @@
+  o Minor bugfixes:
+    - Change $(VAR:MOD) to ${VAR:MOD} -- make(1) on
+      NetBSD substitutes '$(:x)' to 'x' rather than the empty string.  This
+      bites us in doc/ when configured with `--disable-asciidoc'.  Curly
+      braces should work in all implementations of make(1) but this patch
+      changes only the places where we use the VAR:MOD expansion.
+
+
