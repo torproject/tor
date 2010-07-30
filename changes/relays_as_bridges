@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Allow the use of regular relays as bridges. To achieve this, replace
+      routers with a purpose other than bridge with bridge descriptors when
+      fetching them. Bugfix on 0.1.1.9-alpha; fixes bug 1776.
+
