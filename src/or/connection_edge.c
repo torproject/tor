@@ -10,6 +10,28 @@
  **/
 
 #include "or.h"
+#include "buffers.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "connection_or.h"
+#include "control.h"
+#include "dns.h"
+#include "dnsserv.h"
+#include "dirserv.h"
+#include "hibernate.h"
+#include "main.h"
+#include "policies.h"
+#include "reasons.h"
+#include "relay.h"
+#include "rendclient.h"
+#include "rendcommon.h"
+#include "rendservice.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
 
 #ifdef HAVE_LINUX_TYPES_H
 #include <linux/types.h>

@@ -5,6 +5,17 @@
 
 #define DIRVOTE_PRIVATE
 #include "or.h"
+#include "config.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "microdesc.h"
+#include "networkstatus.h"
+#include "policies.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 /**
  * \file dirvote.c

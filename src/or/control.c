@@ -11,6 +11,26 @@
 #define CONTROL_PRIVATE
 
 #include "or.h"
+#include "buffers.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "control.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dnsserv.h"
+#include "geoip.h"
+#include "hibernate.h"
+#include "main.h"
+#include "networkstatus.h"
+#include "policies.h"
+#include "reasons.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */

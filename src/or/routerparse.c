@@ -10,7 +10,18 @@
  **/
 
 #include "or.h"
+#include "config.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "policies.h"
+#include "rendcommon.h"
+#include "router.h"
+#include "routerlist.h"
 #include "memarea.h"
+#include "microdesc.h"
+#include "networkstatus.h"
+#include "rephist.h"
+#include "routerparse.h"
 #undef log
 #include <math.h>
 

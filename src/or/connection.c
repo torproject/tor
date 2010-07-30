@@ -11,6 +11,30 @@
  **/
 
 #include "or.h"
+#include "buffers.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "connection_or.h"
+#include "control.h"
+#include "cpuworker.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dns.h"
+#include "dnsserv.h"
+#include "geoip.h"
+#include "main.h"
+#include "policies.h"
+#include "reasons.h"
+#include "relay.h"
+#include "rendclient.h"
+#include "rendcommon.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerparse.h"
 
 static connection_t *connection_create_listener(
                                struct sockaddr *listensockaddr,

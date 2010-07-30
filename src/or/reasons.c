@@ -9,6 +9,8 @@
  **/
 
 #include "or.h"
+#include "config.h"
+#include "reasons.h"
 
 /***************************** Edge (stream) reasons **********************/
 

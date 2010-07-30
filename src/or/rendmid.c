@@ -8,6 +8,11 @@
  **/
 
 #include "or.h"
+#include "circuitlist.h"
+#include "config.h"
+#include "relay.h"
+#include "rendmid.h"
+#include "rephist.h"
 
 /** Respond to an ESTABLISH_INTRO cell by checking the signed data and
  * setting the circuit's purpose and service pk digest.

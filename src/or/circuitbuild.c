@@ -12,6 +12,24 @@
 #define CIRCUIT_PRIVATE
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "connection_or.h"
+#include "control.h"
+#include "directory.h"
+#include "main.h"
+#include "networkstatus.h"
+#include "onion.h"
+#include "policies.h"
+#include "relay.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 #include "crypto.h"
 #undef log
 #include <math.h>

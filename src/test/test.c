@@ -43,10 +43,20 @@ long int lround(double x);
 double fabs(double x);
 
 #include "or.h"
+#include "buffers.h"
+#include "circuitbuild.h"
+#include "config.h"
+#include "connection_edge.h"
+#include "geoip.h"
+#include "rendcommon.h"
 #include "test.h"
 #include "torgzip.h"
 #include "mempool.h"
 #include "memarea.h"
+#include "onion.h"
+#include "policies.h"
+#include "rephist.h"
+#include "routerparse.h"
 
 #ifdef USE_DMALLOC
 #include <dmalloc.h>

@@ -12,7 +12,24 @@
 
 #include <math.h>
 #include "or.h"
+#include "buffers.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "connection_or.h"
+#include "control.h"
+#include "geoip.h"
+#include "main.h"
 #include "mempool.h"
+#include "networkstatus.h"
+#include "policies.h"
+#include "reasons.h"
+#include "relay.h"
+#include "rendcommon.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 static int relay_crypt(circuit_t *circ, cell_t *cell,
                        cell_direction_t cell_direction,

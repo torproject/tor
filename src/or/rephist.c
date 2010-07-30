@@ -10,6 +10,12 @@
  **/
 
 #include "or.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
 #include "ht.h"
 
 static void bw_arrays_init(void);

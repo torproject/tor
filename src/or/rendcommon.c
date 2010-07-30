@@ -9,6 +9,15 @@
  **/
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "config.h"
+#include "rendclient.h"
+#include "rendcommon.h"
+#include "rendmid.h"
+#include "rendservice.h"
+#include "rephist.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 /** Return 0 if one and two are the same service ids, else -1 or 1 */
 int

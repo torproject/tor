@@ -10,6 +10,21 @@
  **/
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "connection.h"
+#include "config.h"
+#include "connection_edge.h"
+#include "connection_or.h"
+#include "control.h"
+#include "networkstatus.h"
+#include "onion.h"
+#include "relay.h"
+#include "rendclient.h"
+#include "rendcommon.h"
+#include "rephist.h"
+#include "routerlist.h"
 #include "ht.h"
 
 /********* START VARIABLES **********/

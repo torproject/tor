@@ -62,12 +62,12 @@ test: all
 	./src/test/test
 
 # Avoid strlcpy.c, strlcat.c, aes.c, OpenBSD_malloc_Linux.c, sha256.c,
-# eventdns.[hc], tinytest.[ch]
+# eventdns.[hc], tinytest*.[ch]
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
 	        src/common/*.h                        \
 		src/common/[^asO]*.c src/common/address.c \
-		src/or/[^et]*.[ch] src/or/t*.c src/or/eventdns_tor.h \
+		src/or/[^e]*.[ch] src/or/eventdns_tor.h \
 		src/test/test*.[ch] src/tools/*.[ch]
 
 check-docs:

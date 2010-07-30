@@ -7,6 +7,23 @@
 #define ROUTER_PRIVATE
 
 #include "or.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "connection.h"
+#include "control.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dns.h"
+#include "geoip.h"
+#include "hibernate.h"
+#include "main.h"
+#include "policies.h"
+#include "relay.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 /**
  * \file router.c

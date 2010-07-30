@@ -12,6 +12,25 @@
  **/
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "config.h"
+#include "connection.h"
+#include "control.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "geoip.h"
+#include "hibernate.h"
+#include "main.h"
+#include "networkstatus.h"
+#include "policies.h"
+#include "reasons.h"
+#include "rendcommon.h"
+#include "rendservice.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 // #define DEBUG_ROUTERLIST
 

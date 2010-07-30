@@ -8,6 +8,13 @@
 #define DIRVOTE_PRIVATE
 #define ROUTER_PRIVATE
 #include "or.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "networkstatus.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 #include "test.h"
 
 static void

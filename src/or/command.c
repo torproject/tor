@@ -16,6 +16,19 @@
  */
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "command.h"
+#include "connection.h"
+#include "connection_or.h"
+#include "config.h"
+#include "control.h"
+#include "cpuworker.h"
+#include "hibernate.h"
+#include "onion.h"
+#include "relay.h"
+#include "router.h"
+#include "routerlist.h"
 
 /** How many CELL_PADDING cells have we received, ever? */
 uint64_t stats_n_padding_cells_processed = 0;

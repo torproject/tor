@@ -11,6 +11,18 @@
  */
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "config.h"
+#include "connection.h"
+#include "control.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "networkstatus.h"
+#include "relay.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 /* For tracking v2 networkstatus documents.  Only caches do this now. */
 

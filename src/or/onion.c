@@ -11,6 +11,10 @@
  **/
 
 #include "or.h"
+#include "circuitlist.h"
+#include "config.h"
+#include "onion.h"
+#include "rephist.h"
 
 /** Type for a linked list of circuits that are waiting for a free CPU worker
  * to process a waiting onion handshake. */

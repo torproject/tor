@@ -22,6 +22,12 @@ hibernating, phase 2:
 */
 
 #include "or.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "hibernate.h"
+#include "main.h"
+#include "router.h"
 
 /** Possible values of hibernate_state */
 typedef enum {

@@ -12,6 +12,27 @@
 #define CONFIG_PRIVATE
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "control.h"
+#include "cpuworker.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "dns.h"
+#include "geoip.h"
+#include "hibernate.h"
+#include "main.h"
+#include "networkstatus.h"
+#include "policies.h"
+#include "relay.h"
+#include "rendclient.h"
+#include "rendservice.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
 #ifdef MS_WINDOWS
 #include <shlobj.h>
 #endif

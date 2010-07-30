@@ -8,6 +8,19 @@
  **/
 
 #include "or.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "circuituse.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "directory.h"
+#include "main.h"
+#include "relay.h"
+#include "rendclient.h"
+#include "rendcommon.h"
+#include "rephist.h"
+#include "routerlist.h"
 
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */

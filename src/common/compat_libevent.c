@@ -550,3 +550,4 @@ periodic_timer_free(periodic_timer_t *timer)
   tor_event_free(timer->ev);
   tor_free(timer);
 }
+

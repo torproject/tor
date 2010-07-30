@@ -5,6 +5,22 @@
 
 #define DIRSERV_PRIVATE
 #include "or.h"
+#include "buffers.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_or.h"
+#include "control.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "hibernate.h"
+#include "microdesc.h"
+#include "networkstatus.h"
+#include "policies.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 /**
  * \file dirserv.c

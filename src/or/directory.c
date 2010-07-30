@@ -4,6 +4,26 @@
 /* See LICENSE for licensing information */
 
 #include "or.h"
+#include "buffers.h"
+#include "circuitbuild.h"
+#include "config.h"
+#include "connection.h"
+#include "connection_edge.h"
+#include "control.h"
+#include "directory.h"
+#include "dirserv.h"
+#include "dirvote.h"
+#include "geoip.h"
+#include "main.h"
+#include "networkstatus.h"
+#include "policies.h"
+#include "rendclient.h"
+#include "rendcommon.h"
+#include "rephist.h"
+#include "router.h"
+#include "routerlist.h"
+#include "routerparse.h"
+
 #if defined(EXPORTMALLINFO) && defined(HAVE_MALLOC_H) && defined(HAVE_MALLINFO)
 #ifndef OPENBSD
 #include <malloc.h>

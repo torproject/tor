@@ -13,6 +13,15 @@
  **/
 
 #include "or.h"
+#include "buffers.h"
+#include "circuitbuild.h"
+#include "circuitlist.h"
+#include "config.h"
+#include "connection.h"
+#include "cpuworker.h"
+#include "main.h"
+#include "onion.h"
+#include "router.h"
 
 /** The maximum number of cpuworker processes we will keep around. */
 #define MAX_CPUWORKERS 16
