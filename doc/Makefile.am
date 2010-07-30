@@ -19,20 +19,20 @@ else
 asciidoc_files =
 endif
 
-html_in = $(asciidoc_files:=.html.in)
+html_in = ${asciidoc_files:=.html.in}
 
-man_in = $(asciidoc_files:=.1.in)
+man_in = ${asciidoc_files:=.1.in}
 
 EXTRA_DIST = HACKING asciidoc-helper.sh                      \
-             $(html_in) $(man_in) $(asciidoc_files:=.1.txt)  \
+             $(html_in) $(man_in) ${asciidoc_files:=.1.txt}  \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
              tor-win32-mingw-creation.txt
 
-nodist_man_MANS = $(asciidoc_files:=.1)
+nodist_man_MANS = ${asciidoc_files:=.1}
 
 docdir = @docdir@
 
-doc_DATA = $(asciidoc_files:=.html)
+doc_DATA = ${asciidoc_files:=.html}
 
 asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
 
