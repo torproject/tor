@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Complain if PublishServerDescriptor is given multiple arguments that
+      include 0 or 1. This configuration will be rejected in future.
+      Bugfix in 0.2.0.1-alpha, closes bug 1107.
+

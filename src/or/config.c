@@ -3578,6 +3578,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->AccelDir && !options->AccelName)
     REJECT("Can't use hardware crypto accelerator dir without engine name.");
 
+  if (options->PublishServerDescriptor)
+    SMARTLIST_FOREACH(options->PublishServerDescriptor, const char *, pubdes, {
+      if (!strcmp(pubdes, "1") || !strcmp(pubdes, "0"))
+        if (smartlist_len(options->PublishServerDescriptor) > 1) {
+          COMPLAIN("You have passed a list of multiple arguments to the "
+                   "PublishServerDescriptor option that includes 0 or 1. "
+                   "0 or 1 should only be used as the sole argument. "
+                   "This configuration will be rejected in a future release.");
+          break;
+        }
+    });
+
   return 0;
 #undef REJECT
 #undef COMPLAIN
