@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - #1222: Change "Application request when we're believed to be
+      offline." notice to "Application request when we haven't used
+      client functionality lately.", to clarify that it's not an error.
+
