@@ -64,7 +64,8 @@ OPTIONS
 Other options can be specified either on the command-line (--option
     value), or in the configuration file (option value or option "value").
     Options are case-insensitive. C-style escaped characters are allowed inside
-    quoted values.
+    quoted values.   Options on the command line take precedence over
+    options found in the configuration file.
 
 **BandwidthRate** __N__ **bytes**|**KB**|**MB**|**GB**::
     A token bucket limits the average incoming bandwidth usage on this node to
