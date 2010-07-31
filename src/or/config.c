@@ -3590,6 +3590,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
         }
     });
 
+  if (options->BridgeRelay == 1 && options->ORPort == 0)
+      REJECT("BridgeRelay is 1, ORPort is 0. This is an invalid combination.");
+
   return 0;
 #undef REJECT
 #undef COMPLAIN
