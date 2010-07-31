@@ -228,9 +228,10 @@ geoip_load_file(const char *filename, or_options_t *options)
 }
 
 /** Given an IP address in host order, return a number representing the
- * country to which that address belongs, or -1 for unknown.  The return value
- * will always be less than geoip_get_n_countries().  To decode it,
- * call geoip_get_country_name().
+ * country to which that address belongs, -1 for "No geoip information
+ * available", or 0 for the 'unknown country'.  The return value will always
+ * be less than geoip_get_n_countries().  To decode it, call
+ * geoip_get_country_name().
  */
 int
 geoip_get_country_by_ip(uint32_t ipaddr)
@@ -239,7 +240,7 @@ geoip_get_country_by_ip(uint32_t ipaddr)
   if (!geoip_entries)
     return -1;
   ent = smartlist_bsearch(geoip_entries, &ipaddr, _geoip_compare_key_to_entry);
-  return ent ? (int)ent->country : -1;
+  return ent ? (int)ent->country : 0;
 }
 
 /** Return the number of countries recognized by the GeoIP database. */
