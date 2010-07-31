@@ -58,7 +58,8 @@ To write a changes file, first categorize the change.  Some common categories
 are: Minor bugfixes, Major bugfixes, Minor features, Major features, Code
 simplifications and refactoring.  Then say what the change does.  Then, if
 it's a bugfix, then mention what bug it fixes and when the bug was
-introduced.
+introduced.  To find out which Git tag the change was introduced in,
+you can use "git describe --contains <sha1 of commit>".
 
 If at all possible, try to create this file in the same commit where
 you are making the change.  Please give it a distinctive name that no
