@@ -17,6 +17,7 @@
 #include "routerlist.h"
 
 static void clear_geoip_db(void);
+static void init_geoip_countries(void);
 
 /** An entry from the GeoIP file: maps an IP range to a country. */
 typedef struct geoip_entry_t {
@@ -106,11 +107,11 @@ geoip_parse_entry(const char *line)
 {
   unsigned int low, high;
   char b[3];
-  if (!geoip_countries) {
-    geoip_countries = smartlist_create();
+  if (!geoip_countries)
+    init_geoip_countries();
+  if (!geoip_entries)
     geoip_entries = smartlist_create();
-    country_idxplus1_by_lc_code = strmap_new();
-  }
+
   while (TOR_ISSPACE(*line))
     ++line;
   if (*line == '#')
@@ -165,6 +166,24 @@ should_record_bridge_info(or_options_t *options)
   return options->BridgeRelay && options->BridgeRecordUsageByCountry;
 }
 
+/** Set up a new list of geoip countries with no countries (yet) set in it,
+ * except for the unknown country.
+ */
+static void
+init_geoip_countries(void)
+{
+  geoip_country_t *geoip_unresolved;
+  geoip_countries = smartlist_create();
+  /* Add a geoip_country_t for requests that could not be resolved to a
+   * country as first element (index 0) to geoip_countries. */
+  geoip_unresolved = tor_malloc_zero(sizeof(geoip_country_t));
+  strlcpy(geoip_unresolved->countrycode, "??",
+          sizeof(geoip_unresolved->countrycode));
+  smartlist_add(geoip_countries, geoip_unresolved);
+  country_idxplus1_by_lc_code = strmap_new();
+  strmap_set_lc(country_idxplus1_by_lc_code, "??", (void*)(1));
+}
+
 /** Clear the GeoIP database and reload it from the file
  * <b>filename</b>. Return 0 on success, -1 on failure.
  *
@@ -190,18 +209,8 @@ geoip_load_file(const char *filename, or_options_t *options)
            filename, msg);
     return -1;
   }
-  if (!geoip_countries) {
-    geoip_country_t *geoip_unresolved;
-    geoip_countries = smartlist_create();
-    /* Add a geoip_country_t for requests that could not be resolved to a
-     * country as first element (index 0) to geoip_countries. */
-    geoip_unresolved = tor_malloc_zero(sizeof(geoip_country_t));
-    strlcpy(geoip_unresolved->countrycode, "??",
-            sizeof(geoip_unresolved->countrycode));
-    smartlist_add(geoip_countries, geoip_unresolved);
-    country_idxplus1_by_lc_code = strmap_new();
-    strmap_set_lc(country_idxplus1_by_lc_code, "??", (void*)(1));
-  }
+  if (!geoip_countries)
+    init_geoip_countries();
   if (geoip_entries) {
     SMARTLIST_FOREACH(geoip_entries, geoip_entry_t *, e, tor_free(e));
     smartlist_free(geoip_entries);
@@ -419,7 +428,7 @@ geoip_note_client_seen(geoip_client_action_t action,
   if (options->BridgeRelay) {
     while (current_request_period_starts + REQUEST_HIST_PERIOD < now) {
       if (!geoip_countries)
-        geoip_countries = smartlist_create();
+        init_geoip_countries();
       if (!current_request_period_starts) {
         current_request_period_starts = now;
         break;
