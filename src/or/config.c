@@ -1560,6 +1560,16 @@ config_find_option(config_format_t *fmt, const char *key)
   return NULL;
 }
 
+/** Return the number of option entries in <b>fmt</b>. */
+static int
+config_count_options(config_format_t *fmt)
+{
+  int i;
+  for (i=0; fmt->vars[i].name; ++i)
+    ;
+  return i;
+}
+
 /*
  * Functions to assign config options.
  */
@@ -1704,7 +1714,7 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
 static int
 config_assign_line(config_format_t *fmt, or_options_t *options,
                    config_line_t *c, int use_defaults,
-                   int clear_first, char **msg)
+                   int clear_first, bitarray_t *options_seen, char **msg)
 {
   config_var_t *var;
 
@@ -1724,6 +1734,7 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
       return -1;
     }
   }
+
   /* Put keyword into canonical case. */
   if (strcmp(var->name, c->key)) {
     tor_free(c->key);
@@ -1744,6 +1755,18 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
       }
     }
     return 0;
+  }
+
+  if (options_seen && (var->type != CONFIG_TYPE_LINELIST &&
+                       var->type != CONFIG_TYPE_LINELIST_S)) {
+    /* We're tracking which options we've seen, and this option is not
+     * supposed to occur more than once. */
+    int var_index = var - fmt->vars;
+    if (bitarray_is_set(options_seen, var_index)) {
+      log_warn(LD_CONFIG, "Option '%s' used more than once; all but the last "
+               "value will be ignored.", var->name);
+    }
+    bitarray_set(options_seen, var_index);
   }
 
   if (config_assign_value(fmt, options, c, msg) < 0)
@@ -2014,6 +2037,8 @@ config_assign(config_format_t *fmt, void *options, config_line_t *list,
               int use_defaults, int clear_first, char **msg)
 {
   config_line_t *p;
+  bitarray_t *options_seen;
+  const int n_options = config_count_options(fmt);
 
   CHECK(fmt, options);
 
@@ -2033,14 +2058,18 @@ config_assign(config_format_t *fmt, void *options, config_line_t *list,
       config_reset_line(fmt, options, p->key, use_defaults);
   }
 
+  options_seen = bitarray_init_zero(n_options);
   /* pass 3: assign. */
   while (list) {
     int r;
     if ((r=config_assign_line(fmt, options, list, use_defaults,
-                              clear_first, msg)))
+                              clear_first, options_seen, msg))) {
+      bitarray_free(options_seen);
       return r;
+    }
     list = list->next;
   }
+  bitarray_free(options_seen);
   return 0;
 }
 
