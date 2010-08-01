@@ -950,10 +950,12 @@ options_act_reversible(or_options_t *old_options, char **msg)
     }
 
     /* Launch the listeners.  (We do this before we setuid, so we can bind to
-     * ports under 1024.) */
-    if (retry_all_listeners(replaced_listeners, new_listeners) < 0) {
-      *msg = tor_strdup("Failed to bind one of the listener ports.");
-      goto rollback;
+     * ports under 1024.)  We don't want to rebind if we're hibernating. */
+    if (!we_are_hibernating()) {
+      if (retry_all_listeners(replaced_listeners, new_listeners) < 0) {
+        *msg = tor_strdup("Failed to bind one of the listener ports.");
+        goto rollback;
+      }
     }
   }
 

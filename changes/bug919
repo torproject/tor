@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a regression that caused Tor to rebind its ports if it receives
+      SIGHUP while hibernating.  Bugfix in 0.1.1.6-alpha, closes bug 919.
+
