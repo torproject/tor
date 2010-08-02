@@ -1037,6 +1037,29 @@ addressmap_free_all(void)
   virtaddress_reversemap = NULL;
 }
 
+/** Try to find a match for AddressMap directives that use
+ *  domain notation such as '.torproject.org .exitnode.exit'.
+ */
+static addressmap_entry_t *
+addressmap_match_superdomains(char *address)
+{
+  strmap_iter_t *iter;
+  const char *key;
+  void *_val;
+  addressmap_entry_t *val;
+
+  for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter); ) {
+    strmap_iter_get(iter, &key, &_val);
+    val = _val;
+    if (key[0] == '.') { /* match end */
+      if (!strcasecmpend(address, key) || !strcasecmp(address, &key[1]))
+        return val;
+    }
+    iter = strmap_iter_next(addressmap,iter);
+  }
+  return 0;
+}
+
 /** Look at address, and rewrite it until it doesn't want any
  * more rewrites; but don't get into an infinite loop.
  * Don't write more than maxlen chars into address.  Return true if the
@@ -1050,10 +1073,14 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
   addressmap_entry_t *ent;
   int rewrites;
   char *cp;
+  char *s;
   time_t expires = TIME_MAX;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
     ent = strmap_get(addressmap, address);
+
+    if (!ent || !ent->new_address)
+      ent = addressmap_match_superdomains(address);
 
     if (!ent || !ent->new_address) {
       if (expires_out)
@@ -1061,13 +1088,21 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
       return (rewrites > 0); /* done, no rewrite needed */
     }
 
-    cp = tor_strdup(escaped_safe_str_client(ent->new_address));
+    cp = tor_strdup(escaped_safe_str_client(address));
+    /* If the address to rewrite to is in the form '.exitnode.exit'
+       then append it to the given address */
+    s = strrchr(ent->new_address,'.');
+    if (ent->new_address[0] == '.' && !strcmp(s+1,"exit"))
+      strlcpy(address + strlen(address), ent->new_address,
+              (maxlen - strlen(address)));
+    else
+      strlcpy(address, ent->new_address, maxlen);
+
     log_info(LD_APP, "Addressmap: rewriting %s to %s",
-             escaped_safe_str_client(address), cp);
+             cp, escaped_safe_str_client(address));
     if (ent->expires > 1 && ent->expires < expires)
       expires = ent->expires;
     tor_free(cp);
-    strlcpy(address, ent->new_address, maxlen);
   }
   log_warn(LD_CONFIG,
            "Loop detected: we've rewritten %s 16 times! Using it as-is.",

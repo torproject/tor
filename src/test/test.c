@@ -1941,6 +1941,7 @@ extern struct testcase_t container_tests[];
 extern struct testcase_t util_tests[];
 extern struct testcase_t dir_tests[];
 extern struct testcase_t microdesc_tests[];
+extern struct testcase_t config_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1951,6 +1952,7 @@ static struct testgroup_t testgroups[] = {
   { "util/", util_tests },
   { "dir/", dir_tests },
   { "dir/md/", microdesc_tests },
+  { "config/", config_tests },
   END_OF_GROUPS
 };
 

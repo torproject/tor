@@ -659,7 +659,12 @@ The following options are useful only for clients (that is, if
     before processing it. For example, if you always want connections to
     www.indymedia.org to exit via __torserver__ (where __torserver__ is the
     nickname of the server), use "MapAddress www.indymedia.org
-    www.indymedia.org.torserver.exit".
+    www.indymedia.org.torserver.exit". If the value is prepended with a \'.\',
+    it is treated as matching an entire domain.For example, if you always
+    want connections to  any sub-domain of indymedia.org to exit via
+    __torserver__ (where __torserver__ is the nickname of the server), use
+    "MapAddress .indymedia.org .torserver.exit". (Note the leading '.' in
+    each part of the directive.)
 
 **NewCircuitPeriod** __NUM__::
     Every NUM seconds consider whether to build a new circuit. (Default: 30
