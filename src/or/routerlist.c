@@ -3151,15 +3151,23 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
 
   id_digest = router->cache_info.identity_digest;
 
+  old_router = router_get_by_digest(id_digest);
+
   /* Make sure that we haven't already got this exact descriptor. */
   if (sdmap_get(routerlist->desc_digest_map,
                 router->cache_info.signed_descriptor_digest)) {
-    log_info(LD_DIR,
-             "Dropping descriptor that we already have for router '%s'",
-             router->nickname);
-    *msg = "Router descriptor was not new.";
-    routerinfo_free(router);
-    return ROUTER_WAS_NOT_NEW;
+    /* If we have this descriptor already and the new descriptor is a bridge
+     * descriptor, replace it. If we had a bridge descriptor before and the
+     * new one is not a bridge descriptor, don't replace it. */
+    if (old_router && (!routerinfo_is_a_configured_bridge(router) ||
+                routerinfo_is_a_configured_bridge(old_router))) {
+      log_info(LD_DIR,
+               "Dropping descriptor that we already have for router '%s'",
+               router->nickname);
+      *msg = "Router descriptor was not new.";
+      routerinfo_free(router);
+      return ROUTER_WAS_NOT_NEW;
+    }
   }
 
   if (authdir) {
@@ -3196,15 +3204,14 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
   {
     routerstatus_t *rs =
-      networkstatus_v2_find_entry(ns, router->cache_info.identity_digest);
+      networkstatus_v2_find_entry(ns, id_digest);
     if (rs && !memcmp(rs->descriptor_digest,
                       router->cache_info.signed_descriptor_digest,
                       DIGEST_LEN))
       rs->need_to_mirror = 0;
   });
   if (consensus) {
-    routerstatus_t *rs = networkstatus_vote_find_entry(consensus,
-                                        router->cache_info.identity_digest);
+    routerstatus_t *rs = networkstatus_vote_find_entry(consensus, id_digest);
     if (rs && !memcmp(rs->descriptor_digest,
                       router->cache_info.signed_descriptor_digest,
                       DIGEST_LEN)) {
@@ -3226,8 +3233,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   }
 
   /* If we have a router with the same identity key, choose the newer one. */
-  old_router = rimap_get(routerlist->identity_map,
-                         router->cache_info.identity_digest);
   if (old_router) {
     if (!in_consensus && (router->cache_info.published_on <=
                           old_router->cache_info.published_on)) {
