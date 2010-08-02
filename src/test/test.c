@@ -1108,10 +1108,12 @@ test_geoip(void)
   test_eq(0, geoip_parse_entry("\"150\",\"190\",\"XY\""));
   test_eq(0, geoip_parse_entry("\"200\",\"250\",\"AB\""));
 
-  /* We should have 3 countries: ab, xy, zz. */
-  test_eq(3, geoip_get_n_countries());
+  /* We should have 4 countries: ??, ab, xy, zz. */
+  test_eq(4, geoip_get_n_countries());
   /* Make sure that country ID actually works. */
 #define NAMEFOR(x) geoip_get_country_name(geoip_get_country_by_ip(x))
+  test_streq("??", NAMEFOR(3));
+  test_eq(0, geoip_get_country_by_ip(3));
   test_streq("ab", NAMEFOR(32));
   test_streq("??", NAMEFOR(5));
   test_streq("??", NAMEFOR(51));
