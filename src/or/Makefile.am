@@ -82,5 +82,7 @@ or_sha1.i: $(tor_SOURCES)
 	  touch or_sha1.i; \
 	fi
 
+CLEANFILES = micro-revision.i
+
 #Dummy target to ensure that micro-revision.i _always_ gets built.
 FORCE:

@@ -77,5 +77,5 @@ torify.html : torify.html.in
 tor-gencert.html : tor-gencert.html.in
 tor-resolve.html : tor-resolve.html.in
 
-CLEANFILES = $(asciidoc_product)
+CLEANFILES = $(asciidoc_product) config.log
 DISTCLEANFILES = $(html_in) $(man_in)
