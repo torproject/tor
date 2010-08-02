@@ -2185,6 +2185,11 @@ connection_buckets_decrement(connection_t *conn, time_t now,
 
   if (!connection_is_rate_limited(conn))
     return; /* local IPs are free */
+
+  if (conn->type == CONN_TYPE_OR)
+    rep_hist_note_or_conn_bytes(conn->global_identifier, num_read,
+                                num_written, now);
+
   if (num_read > 0) {
     rep_hist_note_bytes_read(num_read, now);
   }

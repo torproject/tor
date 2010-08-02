@@ -2051,6 +2051,19 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                         "exit-stats-end", now, &contents) > 0) {
       smartlist_add(chunks, contents);
     }
+    if (options->ConnStatistics &&
+        load_stats_file("stats"PATH_SEPARATOR"conn-stats",
+                        "conn-stats-end", now, &contents) > 0) {
+      size_t pos = strlen(s);
+      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
+          strlen(contents)) {
+        log_warn(LD_DIR, "Could not write conn-stats to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+        write_stats_to_extrainfo = 0;
+      }
+      tor_free(contents);
+    }
   }
 
   if (should_record_bridge_info(options) && write_stats_to_extrainfo) {

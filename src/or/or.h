@@ -2894,6 +2894,9 @@ typedef struct {
   /** If true, the user wants us to collect statistics on port usage. */
   int ExitPortStatistics;
 
+  /** If true, the user wants us to collect connection statistics. */
+  int ConnStatistics;
+
   /** If true, the user wants us to collect cell statistics. */
   int CellStatistics;
 

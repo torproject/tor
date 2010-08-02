@@ -7,7 +7,7 @@
  * \brief Basic history and "reputation" functionality to remember
  *    which servers have worked in the past, how much bandwidth we've
  *    been using, which ports we tend to want, and so on; further,
- *    exit port statistics and cell statistics.
+ *    exit port statistics, cell statistics, and connection statistics.
  **/
 
 #include "or.h"
@@ -2418,6 +2418,201 @@ rep_hist_buffer_stats_write(time_t now)
   return start_of_buffer_stats_interval + WRITE_STATS_INTERVAL;
 }
 
+/*** Connection statistics ***/
+
+/** Start of the current connection stats interval or 0 if we're not
+ * collecting connection statistics. */
+static time_t start_of_conn_stats_interval;
+
+/** Initialize connection stats. */
+void
+rep_hist_conn_stats_init(time_t now)
+{
+  start_of_conn_stats_interval = now;
+}
+
+#define BIDI_THRESHOLD 20480
+
+#define BIDI_FACTOR 10
+
+#define BIDI_INTERVAL 10
+
+/* Start of next BIDI_INTERVAL second interval. */
+static time_t bidi_next_interval = 0;
+
+/* Number of connections that we read and wrote less than BIDI_THRESHOLD
+ * bytes from/to in BIDI_INTERVAL seconds. */
+static uint32_t below_threshold = 0;
+
+/* Number of connections that we read at least BIDI_FACTOR times more
+ * bytes from than we wrote to in BIDI_INTERVAL seconds. */
+static uint32_t mostly_read = 0;
+
+/* Number of connections that we wrote at least BIDI_FACTOR times more
+ * bytes to than we read from in BIDI_INTERVAL seconds. */
+static uint32_t mostly_written = 0;
+
+/* Number of connections that we read and wrote at least BIDI_THRESHOLD
+ * bytes from/to, but not BIDI_FACTOR times more in either direction in
+ * BIDI_INTERVAL seconds. */
+static uint32_t both_read_and_written = 0;
+
+/* Entry in a map from connection ID to the number of read and written
+ * bytes on this connection in a BIDI_INTERVAL second interval. */
+typedef struct bidi_map_entry_t {
+  HT_ENTRY(bidi_map_entry_t) node;
+  uint64_t conn_id; /**< Connection ID */
+  size_t read; /**< Number of read bytes */
+  size_t written; /**< Number of written bytes */
+} bidi_map_entry_t;
+
+/** Map of OR connections together with the number of read and written
+ * bytes in the current BIDI_INTERVAL second interval. */
+static HT_HEAD(bidimap, bidi_map_entry_t) bidi_map =
+     HT_INITIALIZER();
+
+static int
+bidi_map_ent_eq(const bidi_map_entry_t *a, const bidi_map_entry_t *b)
+{
+  return a->conn_id == b->conn_id;
+}
+
+static unsigned
+bidi_map_ent_hash(const bidi_map_entry_t *entry)
+{
+  return (unsigned) entry->conn_id;
+}
+
+HT_PROTOTYPE(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
+             bidi_map_ent_eq);
+HT_GENERATE(bidimap, bidi_map_entry_t, node, bidi_map_ent_hash,
+            bidi_map_ent_eq, 0.6, malloc, realloc, free);
+
+static void
+bidi_map_free(void)
+{
+  bidi_map_entry_t **ptr, **next, *ent;
+  for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
+    ent = *ptr;
+    next = HT_NEXT_RMV(bidimap, &bidi_map, ptr);
+    tor_free(ent);
+  }
+  HT_CLEAR(bidimap, &bidi_map);
+}
+
+/** Stop collecting connection stats in a way that we can re-start doing
+ * so in rep_hist_conn_stats_init(). */
+void
+rep_hist_conn_stats_term(void)
+{
+  below_threshold = 0;
+  mostly_read = 0;
+  mostly_written = 0;
+  both_read_and_written = 0;
+  start_of_conn_stats_interval = 0;
+  bidi_map_free();
+}
+
+
+/** We read <b>num_read</b> bytes and wrote <b>num_written</b> from/to OR
+ * connection <b>conn_id</b> in second <b>when</b>. If this is the first
+ * observation in a new interval, sum up the last observations. Add bytes
+ * for this connection. */
+void
+rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
+                            size_t num_written, time_t when)
+{
+  if (!start_of_conn_stats_interval)
+    return;
+  /* Initialize */
+  if (bidi_next_interval == 0)
+    bidi_next_interval = when + BIDI_INTERVAL;
+  /* Sum up last period's statistics */
+  if (when >= bidi_next_interval) {
+    bidi_map_entry_t **ptr, **next, *ent;
+    for (ptr = HT_START(bidimap, &bidi_map); ptr; ptr = next) {
+      ent = *ptr;
+      if (ent->read + ent->written < BIDI_THRESHOLD)
+        below_threshold++;
+      else if (ent->read >= ent->written * BIDI_FACTOR)
+        mostly_read++;
+      else if (ent->written >= ent->read * BIDI_FACTOR)
+        mostly_written++;
+      else
+        both_read_and_written++;
+      next = HT_NEXT_RMV(bidimap, &bidi_map, ptr);
+      tor_free(ent);
+    }
+    while (when >= bidi_next_interval)
+      bidi_next_interval += BIDI_INTERVAL;
+    log_info(LD_GENERAL, "%d below threshold, %d mostly read, "
+             "%d mostly written, %d both read and written.",
+             below_threshold, mostly_read, mostly_written,
+             both_read_and_written);
+  }
+  /* Add this connection's bytes. */
+  if (num_read > 0 || num_written > 0) {
+    bidi_map_entry_t *entry, lookup;
+    lookup.conn_id = conn_id;
+    entry = HT_FIND(bidimap, &bidi_map, &lookup);
+    if (entry) {
+      entry->written += num_written;
+      entry->read += num_read;
+    } else {
+      entry = tor_malloc_zero(sizeof(bidi_map_entry_t));
+      entry->conn_id = conn_id;
+      entry->written = num_written;
+      entry->read = num_read;
+      HT_INSERT(bidimap, &bidi_map, entry);
+    }
+  }
+}
+
+/** Write conn statistics to $DATADIR/stats/conn-stats and return when
+ * we would next want to write conn stats. */
+time_t
+rep_hist_conn_stats_write(time_t now)
+{
+  char *statsdir = NULL, *filename = NULL;
+  char written[ISO_TIME_LEN+1];
+  open_file_t *open_file = NULL;
+  FILE *out;
+
+  if (!start_of_conn_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_conn_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write */
+
+  /* write to file */
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname2("stats", "conn-stats");
+  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
+                                    0600, &open_file);
+  if (!out)
+    goto done;
+  format_iso_time(written, now);
+  if (fprintf(out, "conn-stats-end %s (%d s)\n", written,
+              (unsigned) (now - start_of_conn_stats_interval)) < 0)
+    goto done;
+
+  if (fprintf(out, "conn-bi-direct %d,%d,%d,%d\n",
+              below_threshold, mostly_read, mostly_written,
+              both_read_and_written) < 0)
+    goto done;
+
+  finish_writing_to_file(open_file);
+  open_file = NULL;
+  start_of_conn_stats_interval = now;
+ done:
+  if (open_file)
+    abort_writing_to_file(open_file);
+  tor_free(filename);
+  tor_free(statsdir);
+  return start_of_conn_stats_interval + WRITE_STATS_INTERVAL;
+}
+
 /** Free all storage held by the OR/link history caches, by the
  * bandwidth history arrays, by the port history, or by statistics . */
 void
@@ -2432,5 +2627,6 @@ rep_hist_free_all(void)
   tor_free(exit_streams);
   built_last_stability_doc_at = 0;
   predicted_ports_free();
+  bidi_map_free();
 }
 
