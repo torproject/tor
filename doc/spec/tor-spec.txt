@@ -595,9 +595,15 @@ see tor-design.pdf.
    To tear down part of a circuit, the OP may send a RELAY_TRUNCATE cell
    signaling a given OR (Stream ID zero).  That OR sends a DESTROY
    cell to the next node in the circuit, and replies to the OP with a
-   RELAY_TRUNCATED cell.  If the OR has any RELAY cells queued on the
-   circuit for the next node in that it had not yet sent, it MAY
-   drop them without sending them.
+   RELAY_TRUNCATED cell.
+
+   [Note: If an OR receives a TRUNCATE cell and it any RELAY cells queued on
+   the circuit for the next node in that it had not yet sent, it will drop
+   them without sending them.  This is not considered conformant behavior,
+   but it probably won't get fixed till a later versions of Tor.  Thus,
+   clients SHOULD NOT send a TRUNCATE cell to a node running any current
+   version of Tor if they have sent relay cells through that node, and they
+   aren't sure whether those cells have been sent on.]
 
    When an unrecoverable error occurs along one connection in a
    circuit, the nodes on either side of the connection should, if they
