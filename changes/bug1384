@@ -1,5 +1,5 @@
   o Minor features:
     - Warn when the same option is provided more then once in a torrc file,
       on the command line, or in a single SETCONF statement, and option
-      is one that only accepts a single value.
+      is one that only accepts a single value. Closes bug 1384.
 

@@ -1761,7 +1761,7 @@ config_assign_line(config_format_t *fmt, or_options_t *options,
                        var->type != CONFIG_TYPE_LINELIST_S)) {
     /* We're tracking which options we've seen, and this option is not
      * supposed to occur more than once. */
-    int var_index = var - fmt->vars;
+    int var_index = (int)(var - fmt->vars);
     if (bitarray_is_set(options_seen, var_index)) {
       log_warn(LD_CONFIG, "Option '%s' used more than once; all but the last "
                "value will be ignored.", var->name);
