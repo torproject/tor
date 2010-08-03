@@ -542,7 +542,6 @@ static int options_transition_affects_workers(or_options_t *old_options,
 static int options_transition_affects_descriptor(or_options_t *old_options,
                                                  or_options_t *new_options);
 static int check_nickname_list(const char *lst, const char *name, char **msg);
-static void config_register_addressmaps(or_options_t *options);
 
 static int parse_bridge_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
@@ -4314,7 +4313,7 @@ get_torrc_fname(void)
 /** Adjust the address map based on the MapAddress elements in the
  * configuration <b>options</b>
  */
-static void
+void
 config_register_addressmaps(or_options_t *options)
 {
   smartlist_t *elts;

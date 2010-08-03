@@ -1633,40 +1633,74 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
   uint8_t socksver;
   enum {socks4, socks4a} socks4_prot = socks4a;
   char *next, *startaddr;
+  unsigned char usernamelen, passlen;
   struct in_addr in;
 
   socksver = *data;
 
   switch (socksver) { /* which version of socks? */
 
+    case 1: /* socks5: username/password authentication request */
+
+      usernamelen = (unsigned char)*(buf->head->data + 1);
+      if (buf->datalen < 2u + usernamelen)
+        return 0;
+      buf_pullup(buf, 2u + usernamelen + 1, 0);
+      passlen = (unsigned char)*(buf->head->data + 2u + usernamelen);
+      if (buf->datalen < 2u + usernamelen + 1u + passlen)
+        return 0;
+      if (buf->datalen > 2u + usernamelen + 1u + passlen) {
+        log_warn(LD_APP,
+                 "socks5: Malformed username/password. Rejecting.");
+        return -1;
+      }
+      req->replylen = 2; /* 2 bytes of response */
+      req->reply[0] = 5;
+      req->reply[1] = 0; /* authentication successful */
+      buf_clear(buf);
+      log_debug(LD_APP,
+               "socks5: Accepted username/password without checking.");
+      return 0;
+
     case 5: /* socks5 */
 
       if (req->socks_version != 5) { /* we need to negotiate a method */
         unsigned char nummethods = (unsigned char)*(data+1);
+        int r=0;
         tor_assert(!req->socks_version);
         if (datalen < 2u+nummethods) {
           *want_length_out = 2u+nummethods;
           return 0;
         }
-        if (!nummethods || !memchr(data+2, 0, nummethods)) {
-          log_warn(LD_APP,
-                   "socks5: offered methods don't include 'no auth'. "
-                   "Rejecting.");
-          req->replylen = 2; /* 2 bytes of response */
-          req->reply[0] = 5;
-          req->reply[1] = '\xFF'; /* reject all methods */
+        buf_pullup(buf, 2u+nummethods, 0);
+        if (!nummethods)
           return -1;
+        req->replylen = 2; /* 2 bytes of response */
+        req->reply[0] = 5; /* socks5 reply */
+        if (memchr(buf->head->data+2, SOCKS_NO_AUTH, nummethods)) {
+          req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
+                                            method */
+          req->socks_version = 5; /* remember we've already negotiated auth */
+          log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
+          r=0;
+        }else if (memchr(buf->head->data+2, SOCKS_USER_PASS,nummethods)) {
+          req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
+                                              auth method */
+          req->socks_version = 5; /* remember we've already negotiated auth */
+          log_debug(LD_APP,"socks5: accepted method 2 (username/password)");
+          r=0;
+        } else {
+          log_warn(LD_APP,
+                    "socks5: offered methods don't include 'no auth' or "
+                    "username/password. Rejecting.");
+          req->reply[1] = '\xFF'; /* reject all methods */
+          r=-1;
         }
         /* remove packet from buf. also remove any other extraneous
          * bytes, to support broken socks clients. */
         *drain_out = -1;
 
-        req->replylen = 2; /* 2 bytes of response */
-        req->reply[0] = 5; /* socks5 reply */
-        req->reply[1] = 0; /* tell client to use "none" auth method */
-        req->socks_version = 5; /* remember we've already negotiated auth */
-        log_debug(LD_APP,"socks5: accepted method 0");
-        return 0;
+        return r;
       }
       /* we know the method; read in the request */
       log_debug(LD_APP,"socks5: checking request");
@@ -1761,8 +1795,8 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       }
       tor_assert(0);
     case 4: /* socks4 */
-      /* http://archive.socks.permeo.com/protocol/socks4.protocol */
-      /* http://archive.socks.permeo.com/protocol/socks4a.protocol */
+      /* http://ss5.sourceforge.net/socks4.protocol.txt */
+      /* http://ss5.sourceforge.net/socks4A.protocol.txt */
 
       req->socks_version = 4;
       if (datalen < SOCKS4_NETWORK_LEN) {/* basic info available? */

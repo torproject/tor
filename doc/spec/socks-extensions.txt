@@ -31,8 +31,9 @@ Tor's extensions to the SOCKS protocol
   SOCKS5:
   - The (SOCKS5) "UDP ASSOCIATE" command is not supported.
   - IPv6 is not supported in CONNECT commands.
-  - Only the "NO AUTHENTICATION" (SOCKS5) authentication method [00] is
-    supported.
+  - The "NO AUTHENTICATION" (SOCKS5) authentication method [00] and the
+    "USERNAME/PASSWORD" (SOCKS5) authentication method [02] are both
+    supported. Any credentials passed in the latter are ignored.
 
 2. Name lookup
 

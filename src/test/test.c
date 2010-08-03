@@ -197,6 +197,207 @@ free_pregenerated_keys(void)
   }
 }
 
+/** Helper: Perform supported SOCKS 5 commands */
+static void
+test_buffers_socks4_unsupported_commands_helper(const char *cp, buf_t *buf,
+                                                socks_request_t *socks)
+{
+  /* SOCKS 4 Send BIND [02] to IP address 2.2.2.2:4369 */
+  cp = "\x04\x02\x11\x11\x02\x02\x02\x02\x00";
+  write_to_buf(cp, 9, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == -1);
+  test_eq(4, socks->socks_version);
+  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
+
+done:
+  ;
+}
+
+/** Helper: Perform supported SOCKS 5 commands */
+static void
+test_buffers_socks4_supported_commands_helper(const char *cp, buf_t *buf,
+                                              socks_request_t *socks)
+{
+  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 */
+  cp = "\x04\x01\x11\x11\x02\x02\x02\x02\x00";
+  write_to_buf(cp, 9, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 1);
+  test_eq(4, socks->socks_version);
+  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
+  test_streq("2.2.2.2", socks->address);
+  test_eq(4369, socks->port);
+
+  /* SOCKS 4 Send CONNECT [01] to IP address 2.2.2.2:4369 with userid*/
+  cp = "\x04\x01\x11\x11\x02\x02\x02\x02\x02me\x00";
+  write_to_buf(cp, 12, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 1);
+  test_eq(4, socks->socks_version);
+  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
+  test_streq("2.2.2.2", socks->address);
+  test_eq(4369, socks->port);
+
+  /* SOCKS 4a Send RESOLVE [F0] request for torproject.org:4369 */
+  cp = "\x04\xF0\x01\x01\x00\x00\x00\x02\x02me\x00tor.org\x00";
+  write_to_buf(cp, 20, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  test_eq(4, socks->socks_version);
+  test_eq(0, socks->replylen); /* XXX: shouldn't tor reply? */
+  test_streq("tor.org", socks->address);
+
+done:
+  ;
+}
+
+/** Helper: Perform supported SOCKS 5 commands */
+static void
+test_buffers_socks5_unsupported_commands_helper(const char *cp, buf_t *buf,
+                                                socks_request_t *socks)
+{
+  /* SOCKS 5 Send unsupported BIND [02] command */
+  cp = "\x05\x02\x00\x01\x02\x02\x02\x02\x01\x01";
+  write_to_buf(cp, 10, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == -1);
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]); /* XXX: shouldn't tor reply 'command
+                                  not supported' [07]? */
+
+  /* SOCKS 5 Send unsupported UDP_ASSOCIATE [03] command */
+  cp = "\x05\x03\x00\x01\x02\x02\x02\x02\x01\x01";
+  write_to_buf(cp, 10, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == -1);
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]); /* XXX: shouldn't tor reply 'command
+                                  not supported' [07]? */
+
+done:
+  ;
+}
+
+/** Helper: Perform supported SOCKS 5 commands */
+static void
+test_buffers_socks5_supported_commands_helper(const char *cp, buf_t *buf,
+                                        socks_request_t *socks)
+{
+  /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
+  cp = "\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11";
+  write_to_buf(cp, 10, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 1);
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+  test_streq("2.2.2.2", socks->address);
+  test_eq(4369, socks->port);
+
+  /* SOCKS 5 Send CONNECT [01] to FQDN torproject.org:4369 */
+  cp = "\x05\x01\x00\x03\x07tor.org\x11\x11";
+  write_to_buf(cp, 14, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+  test_streq("tor.org", socks->address);
+  test_eq(4369, socks->port);
+
+  /* SOCKS 5 Send RESOLVE [F0] request for torproject.org:4369 */
+  cp = "\x05\xF0\x00\x03\x07tor.org";
+  write_to_buf(cp, 14, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+  test_streq("tor.org", socks->address);
+
+  /* SOCKS 5 Send RESOLVE_PTR [F1] for IP address 2.2.2.2 */
+  cp = "\x05\xF1\x00\x01\x02\x02\x02\x02";
+  write_to_buf(cp, 10, buf);
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 1);
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+  test_streq("2.2.2.2", socks->address);
+
+done:
+  ;
+}
+
+/** Helper: Perform SOCKS 5 authentication */
+static void
+test_buffers_socks5_no_authenticate_helper(const char *cp, buf_t *buf,
+                                        socks_request_t *socks)
+{
+  /*SOCKS 5 No Authentication */
+  cp = "\x05\x01\x00";
+  write_to_buf(cp, 3, buf);
+  test_assert(!fetch_from_buf_socks(buf, socks,
+                                    get_options()->TestSocks,
+                                    get_options()->SafeSocks));
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(SOCKS_NO_AUTH, socks->reply[1]);
+
+  /*SOCKS 5 Send username/password anyway - pretend to be broken */
+  cp = "\x01\x02\x01\x01\x02\x01\x01";
+  write_to_buf(cp, 7, buf);
+  test_assert(!fetch_from_buf_socks(buf, socks,
+                                    get_options()->TestSocks,
+                                    get_options()->SafeSocks));
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+
+done:
+  ;
+}
+
+/** Helper: Perform SOCKS 5 authentication */
+static void
+test_buffers_socks5_authenticate_helper(const char *cp, buf_t *buf,
+                                        socks_request_t *socks)
+{
+  /* SOCKS 5 Negotiate username/password authentication */
+  cp = "\x05\x01\x02";
+  write_to_buf(cp, 3, buf);
+  test_assert(!fetch_from_buf_socks(buf, socks,
+                                   get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(SOCKS_USER_PASS, socks->reply[1]);
+  test_eq(5, socks->socks_version);
+
+  /* SOCKS 5 Send username/password */
+  cp = "\x01\x02me\x02me";
+  write_to_buf(cp, 7, buf);
+  test_assert(!fetch_from_buf_socks(buf, socks,
+                                   get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+done:
+  ;
+}
+
 /** Run unit tests for buffers.c */
 static void
 test_buffers(void)
@@ -206,6 +407,7 @@ test_buffers(void)
 
   buf_t *buf = NULL, *buf2 = NULL;
   const char *cp;
+  socks_request_t *socks;
 
   int j;
   size_t r;
@@ -360,6 +562,41 @@ test_buffers(void)
   test_eq(-1, buf_find_string_offset(buf, "shrdlu", 6));
   test_eq(-1, buf_find_string_offset(buf, "Testing thing", 13));
   test_eq(-1, buf_find_string_offset(buf, "ngx", 3));
+  buf_free(buf);
+  buf = NULL;
+
+  /* Test fetch_from_buf_socks() */
+  buf = buf_new_with_capacity(256);
+  socks = tor_malloc_zero(sizeof(socks_request_t));;
+  config_register_addressmaps(get_options());
+
+  /* A SOCKS 5 client that only supports authentication  */
+  test_buffers_socks5_authenticate_helper(cp, buf, socks);
+  test_buffers_socks5_supported_commands_helper(cp, buf, socks);
+  test_buffers_socks5_unsupported_commands_helper(cp, buf, socks);
+
+  tor_free(socks);
+  buf_free(buf);
+  buf = NULL;
+  buf = buf_new_with_capacity(256);
+  socks = tor_malloc_zero(sizeof(socks_request_t));;
+
+  /* A SOCKS 5 client that doesn't want authentication  */
+  test_buffers_socks5_no_authenticate_helper(cp, buf, socks);
+  test_buffers_socks5_supported_commands_helper(cp, buf, socks);
+  test_buffers_socks5_unsupported_commands_helper(cp, buf, socks);
+
+  tor_free(socks);
+  buf_free(buf);
+  buf = NULL;
+  buf = buf_new_with_capacity(256);
+  socks = tor_malloc_zero(sizeof(socks_request_t));;
+
+  /* A SOCKS 4(a) client  */
+  test_buffers_socks4_supported_commands_helper(cp, buf, socks);
+  test_buffers_socks4_unsupported_commands_helper(cp, buf, socks);
+
+  tor_free(socks);
   buf_free(buf);
   buf = NULL;
 

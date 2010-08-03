@@ -3067,6 +3067,8 @@ static INLINE void or_state_mark_dirty(or_state_t *state, time_t when)
 
 #define MAX_SOCKS_REPLY_LEN 1024
 #define MAX_SOCKS_ADDR_LEN 256
+#define SOCKS_NO_AUTH 0x00
+#define SOCKS_USER_PASS 0x02
 
 /** Please open a TCP connection to this addr:port. */
 #define SOCKS_COMMAND_CONNECT       0x01
