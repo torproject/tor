@@ -106,7 +106,7 @@ Group: System Environment/Daemons
 
 License: 3-clause BSD
 Vendor: The Tor Project (https://torproject.org)
-Packager: Andrew Lewman <andrew@torproject.org>
+Packager: Erinn Clark <erinn@torproject.org>
 
 %if %{is_suse}
 Requires: openssl >= 0.9.7
@@ -262,7 +262,7 @@ exit 0
 
 %files
 %defattr(-,root,root)
-%doc AUTHORS INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO
+%doc INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO
 %{_mandir}/man*/*
 %{_docdir}/tor/*
 %{_bindir}/tor
@@ -280,6 +280,9 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+* Mon Feb 22 2010 Erinn Clark <erinn@torproject.org>
+- remove AUTHORS from %doc line since it no longer exists upstream
+- switch maintainers
 
 * Fri May 01 2009 Andrew Lewman <andrew@torproject.org>
 - clean up distro detection and remove dead comment blocks
