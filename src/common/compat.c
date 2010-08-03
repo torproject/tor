@@ -2297,30 +2297,18 @@ tor_set_max_memlock(void)
    */
 
   struct rlimit limit;
-  int ret;
-
-  /* Do we want to report current limits first? This is not really needed. */
-  ret = getrlimit(RLIMIT_MEMLOCK, &limit);
-  if (ret == -1) {
-    log_warn(LD_GENERAL, "Could not get RLIMIT_MEMLOCK: %s", strerror(errno));
-    return -1;
-  }
 
   /* RLIM_INFINITY is -1 on some platforms. */
   limit.rlim_cur = RLIM_INFINITY;
   limit.rlim_max = RLIM_INFINITY;
 
-  ret = setrlimit(RLIMIT_MEMLOCK, &limit);
-  if (ret == -1) {
+  if (setrlimit(RLIMIT_MEMLOCK, &limit) == -1) {
     if (errno == EPERM) {
       log_warn(LD_GENERAL, "You appear to lack permissions to change memory "
                            "limits. Are you root?");
-      log_warn(LD_GENERAL, "Unable to raise RLIMIT_MEMLOCK: %s",
-               strerror(errno));
-    } else {
-      log_warn(LD_GENERAL, "Could not raise RLIMIT_MEMLOCK: %s",
-               strerror(errno));
     }
+    log_warn(LD_GENERAL, "Unable to raise RLIMIT_MEMLOCK: %s",
+             strerror(errno));
     return -1;
   }
 
@@ -2353,12 +2341,11 @@ tor_mlockall(void)
 
 #if defined(HAVE_MLOCKALL) && HAVE_DECL_MLOCKALL && defined(RLIMIT_MEMLOCK)
   if (tor_set_max_memlock() == 0) {
-    /* Perhaps we only want to log this if we're in a verbose mode? */
-    log_notice(LD_GENERAL, "RLIMIT_MEMLOCK is now set to RLIM_INFINITY.");
+    log_debug(LD_GENERAL, "RLIMIT_MEMLOCK is now set to RLIM_INFINITY.");
   }
 
   if (mlockall(MCL_CURRENT|MCL_FUTURE) == 0) {
-    log_notice(LD_GENERAL, "Insecure OS paging is effectively disabled.");
+    log_info(LD_GENERAL, "Insecure OS paging is effectively disabled.");
     return 0;
   } else {
     if (errno == ENOSYS) {
