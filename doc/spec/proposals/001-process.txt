@@ -127,7 +127,8 @@ What should go in a proposal:
 
       Implementation: If the proposal will be tricky to implement in Tor's
         current architecture, the document can contain some discussion of how
-        to go about making it work.
+        to go about making it work.  Actual patches should go on public git
+        branches, or be uploaded to trac.
 
       Performance and scalability notes: If the feature will have an effect
         on performance (in RAM, CPU, bandwidth) or scalability, there should
