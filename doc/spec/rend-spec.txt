@@ -591,7 +591,8 @@
         RC   Rendezvous cookie    [20 octets]
 
    The rendezvous cookie is an arbitrary 20-byte value, chosen randomly by
-   Alice's OP.
+   Alice's OP. Alice SHOULD choose a new rendezvous cookie for each new
+   connection attempt.
 
    Upon receiving a RELAY_COMMAND_ESTABLISH_RENDEZVOUS cell, the OR associates
    the RC with the circuit that sent it.  It replies to Alice with an empty
