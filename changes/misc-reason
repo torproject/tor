@@ -1,0 +1,3 @@
+  o Minor features:
+    - Have clients begin understanding the new END_STREAM_REASON_NOROUTE
+      error code.
