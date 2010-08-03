@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Exit nodes didn't recognize EHOSTUNREACH as a stream ending reason
+      and sent back misc. Bugfix on 0.1.0.1-rc; fixes bug 1793.

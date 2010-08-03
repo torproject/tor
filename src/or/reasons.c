@@ -161,6 +161,7 @@ errno_to_stream_end_reason(int e)
     E_CASE(EACCES):
     S_CASE(ENOTCONN):
     S_CASE(ENETUNREACH):
+    E_CASE(EHOSTUNREACH):
       return END_STREAM_REASON_INTERNAL;
     S_CASE(ECONNREFUSED):
       return END_STREAM_REASON_CONNECTREFUSED;
