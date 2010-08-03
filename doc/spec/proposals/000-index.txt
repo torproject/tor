@@ -93,6 +93,7 @@ Proposals by number:
 170  Configuration options regarding circuit building [DRAFT]
 172  GETINFO controller option for circuit information [ACCEPTED]
 173  GETINFO Option Expansion [ACCEPTED]
+174  Optimistic Data for Tor: Server Side [OPEN]
 
 
 Proposals by status:
@@ -120,6 +121,7 @@ Proposals by status:
    164  Reporting the status of server votes [for 0.2.2]
    165  Easy migration for voting authority sets
    168  Reduce default circuit window [for 0.2.2]
+   174  Optimistic Data for Tor: Server Side
  ACCEPTED:
    110  Avoiding infinite length circuits [for 0.2.1.x] [in 0.2.1.3-alpha]
    117  IPv6 exits [for 0.2.1.x]
