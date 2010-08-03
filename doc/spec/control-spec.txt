@@ -1029,7 +1029,7 @@ $Id$
 
       Reason = "MISC" / "RESOLVEFAILED" / "CONNECTREFUSED" /
                "EXITPOLICY" / "DESTROY" / "DONE" / "TIMEOUT" /
-               "HIBERNATING" / "INTERNAL"/ "RESOURCELIMIT" /
+               "NOROUTE" / "HIBERNATING" / "INTERNAL"/ "RESOURCELIMIT" /
                "CONNRESET" / "TORPROTOCOL" / "NOTDIRECTORY" / "END"
 
    The "REASON" field is provided only for FAILED, CLOSED, and DETACHED
