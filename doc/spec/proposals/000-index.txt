@@ -91,6 +91,8 @@ Proposals by number:
 168  Reduce default circuit window [OPEN]
 169  Eliminate TLS renegotiation for the Tor connection handshake [DRAFT]
 170  Configuration options regarding circuit building [DRAFT]
+172  GETINFO controller option for circuit information [ACCEPTED]
+173  GETINFO Option Expansion [ACCEPTED]
 
 
 Proposals by status:
@@ -126,6 +128,8 @@ Proposals by status:
    147  Eliminate the need for v2 directories in generating v3 directories [for 0.2.1.x]
    157  Make certificate downloads specific [for 0.2.1.x]
    166  Including Network Statistics in Extra-Info Documents [for 0.2.2]
+   172  GETINFO controller option for circuit information
+   173  GETINFO Option Expansion
  META:
    000  Index of Tor Proposals
    001  The Tor Proposal Process
