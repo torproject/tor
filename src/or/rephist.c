@@ -1324,217 +1324,6 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
   add_obs(read_array, when, num_bytes);
 }
 
-/* Some constants */
-/** To what multiple should byte numbers be rounded up? */
-#define EXIT_STATS_ROUND_UP_BYTES 1024
-/** To what multiple should stream counts be rounded up? */
-#define EXIT_STATS_ROUND_UP_STREAMS 4
-/** Number of TCP ports */
-#define EXIT_STATS_NUM_PORTS 65536
-/** Reciprocal of threshold (= 0.01%) of total bytes that a port needs to
- * see in order to be included in exit stats. */
-#define EXIT_STATS_THRESHOLD_RECIPROCAL 10000
-
-/* The following data structures are arrays and no fancy smartlists or maps,
- * so that all write operations can be done in constant time. This comes at
- * the price of some memory (1.25 MB) and linear complexity when writing
- * stats for measuring relays. */
-/** Number of bytes read in current period by exit port */
-static uint64_t *exit_bytes_read = NULL;
-/** Number of bytes written in current period by exit port */
-static uint64_t *exit_bytes_written = NULL;
-/** Number of streams opened in current period by exit port */
-static uint32_t *exit_streams = NULL;
-
-/** Start time of exit stats or 0 if we're not collecting exit stats. */
-static time_t start_of_exit_stats_interval;
-
-/** Initialize exit port stats. */
-void
-rep_hist_exit_stats_init(time_t now)
-{
-  start_of_exit_stats_interval = now;
-  exit_bytes_read = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
-                                    sizeof(uint64_t));
-  exit_bytes_written = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
-                                       sizeof(uint64_t));
-  exit_streams = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
-                                 sizeof(uint32_t));
-}
-
-/** Stop collecting exit port stats in a way that we can re-start doing
- * so in rep_hist_exit_stats_init(). */
-void
-rep_hist_exit_stats_term(void)
-{
-  start_of_exit_stats_interval = 0;
-  tor_free(exit_bytes_read);
-  tor_free(exit_bytes_written);
-  tor_free(exit_streams);
-}
-
-/** Write exit stats to $DATADIR/stats/exit-stats, reset counters, and
- * return when we would next want to write exit stats. */
-time_t
-rep_hist_exit_stats_write(time_t now)
-{
-  char t[ISO_TIME_LEN+1];
-  int r, i, comma;
-  uint64_t *b, total_bytes, threshold_bytes, other_bytes;
-  uint32_t other_streams;
-
-  char *statsdir = NULL, *filename = NULL;
-  open_file_t *open_file = NULL;
-  FILE *out = NULL;
-
-  if (!start_of_exit_stats_interval)
-    return 0; /* Not initialized. */
-  if (start_of_exit_stats_interval + WRITE_STATS_INTERVAL > now)
-    goto done; /* Not ready to write. */
-
-  statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0)
-    goto done;
-  filename = get_datadir_fname2("stats", "exit-stats");
-  format_iso_time(t, now);
-  log_info(LD_HIST, "Writing exit port statistics to disk for period "
-           "ending at %s.", t);
-
-  if (!open_file) {
-    out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
-                                      0600, &open_file);
-    if (!out) {
-      log_warn(LD_HIST, "Couldn't open '%s'.", filename);
-      goto done;
-    }
-  }
-
-  /* written yyyy-mm-dd HH:MM:SS (n s) */
-  if (fprintf(out, "exit-stats-end %s (%d s)\n", t,
-              (unsigned) (now - start_of_exit_stats_interval)) < 0)
-    goto done;
-
-  /* Count the total number of bytes, so that we can attribute all
-   * observations below a threshold of 1 / EXIT_STATS_THRESHOLD_RECIPROCAL
-   * of all bytes to a special port 'other'. */
-  total_bytes = 0;
-  for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
-    total_bytes += exit_bytes_read[i];
-    total_bytes += exit_bytes_written[i];
-  }
-  threshold_bytes = total_bytes / EXIT_STATS_THRESHOLD_RECIPROCAL;
-
-  /* exit-kibibytes-(read|written) port=kibibytes,.. */
-  for (r = 0; r < 2; r++) {
-    b = r ? exit_bytes_read : exit_bytes_written;
-    tor_assert(b);
-    if (fprintf(out, "%s ",
-                r ? "exit-kibibytes-read"
-                  : "exit-kibibytes-written") < 0)
-      goto done;
-
-    comma = 0;
-    other_bytes = 0;
-    for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
-      if (b[i] > 0) {
-        if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
-          uint64_t num = round_uint64_to_next_multiple_of(b[i],
-                                              EXIT_STATS_ROUND_UP_BYTES);
-          num /= 1024;
-          if (fprintf(out, "%s%d="U64_FORMAT,
-                      comma++ ? "," : "", i,
-                      U64_PRINTF_ARG(num)) < 0)
-            goto done;
-        } else
-          other_bytes += b[i];
-      }
-    }
-    other_bytes = round_uint64_to_next_multiple_of(other_bytes,
-                                       EXIT_STATS_ROUND_UP_BYTES);
-    other_bytes /= 1024;
-    if (fprintf(out, "%sother="U64_FORMAT"\n",
-                comma ? "," : "", U64_PRINTF_ARG(other_bytes))<0)
-      goto done;
-  }
-  /* exit-streams-opened port=num,.. */
-  if (fprintf(out, "exit-streams-opened ") < 0)
-    goto done;
-  comma = 0;
-  other_streams = 0;
-  for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
-    if (exit_streams[i] > 0) {
-      if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
-        uint32_t num = round_uint32_to_next_multiple_of(exit_streams[i],
-                                            EXIT_STATS_ROUND_UP_STREAMS);
-        if (fprintf(out, "%s%d=%u",
-                    comma++ ? "," : "", i, num)<0)
-          goto done;
-      } else
-        other_streams += exit_streams[i];
-    }
-  }
-  other_streams = round_uint32_to_next_multiple_of(other_streams,
-                                       EXIT_STATS_ROUND_UP_STREAMS);
-  if (fprintf(out, "%sother=%u\n",
-              comma ? "," : "", other_streams)<0)
-    goto done;
-  /* Reset counters */
-  memset(exit_bytes_read, 0, EXIT_STATS_NUM_PORTS * sizeof(uint64_t));
-  memset(exit_bytes_written, 0, EXIT_STATS_NUM_PORTS * sizeof(uint64_t));
-  memset(exit_streams, 0, EXIT_STATS_NUM_PORTS * sizeof(uint32_t));
-  start_of_exit_stats_interval = now;
-
-  if (open_file)
-    finish_writing_to_file(open_file);
-  open_file = NULL;
- done:
-  if (open_file)
-    abort_writing_to_file(open_file);
-  tor_free(filename);
-  tor_free(statsdir);
-  return start_of_exit_stats_interval + WRITE_STATS_INTERVAL;
-}
-
-/** Note that we wrote <b>num_bytes</b> to an exit connection to
- * <b>port</b>. */
-void
-rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes)
-{
-  if (!get_options()->ExitPortStatistics)
-    return;
-  if (!exit_bytes_written)
-    return; /* Not initialized */
-  exit_bytes_written[port] += num_bytes;
-  log_debug(LD_HIST, "Written %lu bytes to exit connection to port %d.",
-            (unsigned long)num_bytes, port);
-}
-
-/** Note that we read <b>num_bytes</b> from an exit connection to
- * <b>port</b>. */
-void
-rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes)
-{
-  if (!get_options()->ExitPortStatistics)
-    return;
-  if (!exit_bytes_read)
-    return; /* Not initialized */
-  exit_bytes_read[port] += num_bytes;
-  log_debug(LD_HIST, "Read %lu bytes from exit connection to port %d.",
-            (unsigned long)num_bytes, port);
-}
-
-/** Note that we opened an exit stream to <b>port</b>. */
-void
-rep_hist_note_exit_stream_opened(uint16_t port)
-{
-  if (!get_options()->ExitPortStatistics)
-    return;
-  if (!exit_streams)
-    return; /* Not initialized */
-  exit_streams[port]++;
-  log_debug(LD_HIST, "Opened exit stream to port %d", port);
-}
-
 /** Helper: Return the largest value in b->maxima.  (This is equal to the
  * most bandwidth used in any NUM_SECS_ROLLING_MEASURE period for the last
  * NUM_SECS_BW_SUM_IS_VALID seconds.)
@@ -2060,20 +1849,217 @@ dump_pk_ops(int severity)
       pk_op_counts.n_rend_server_ops);
 }
 
-/** Free all storage held by the OR/link history caches, by the
- * bandwidth history arrays, or by the port history. */
+/*** Exit port statistics ***/
+
+/* Some constants */
+/** To what multiple should byte numbers be rounded up? */
+#define EXIT_STATS_ROUND_UP_BYTES 1024
+/** To what multiple should stream counts be rounded up? */
+#define EXIT_STATS_ROUND_UP_STREAMS 4
+/** Number of TCP ports */
+#define EXIT_STATS_NUM_PORTS 65536
+/** Reciprocal of threshold (= 0.01%) of total bytes that a port needs to
+ * see in order to be included in exit stats. */
+#define EXIT_STATS_THRESHOLD_RECIPROCAL 10000
+
+/* The following data structures are arrays and no fancy smartlists or maps,
+ * so that all write operations can be done in constant time. This comes at
+ * the price of some memory (1.25 MB) and linear complexity when writing
+ * stats for measuring relays. */
+/** Number of bytes read in current period by exit port */
+static uint64_t *exit_bytes_read = NULL;
+/** Number of bytes written in current period by exit port */
+static uint64_t *exit_bytes_written = NULL;
+/** Number of streams opened in current period by exit port */
+static uint32_t *exit_streams = NULL;
+
+/** Start time of exit stats or 0 if we're not collecting exit stats. */
+static time_t start_of_exit_stats_interval;
+
+/** Initialize exit port stats. */
 void
-rep_hist_free_all(void)
+rep_hist_exit_stats_init(time_t now)
 {
-  digestmap_free(history_map, free_or_history);
-  tor_free(read_array);
-  tor_free(write_array);
-  tor_free(last_stability_doc);
+  start_of_exit_stats_interval = now;
+  exit_bytes_read = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                    sizeof(uint64_t));
+  exit_bytes_written = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                       sizeof(uint64_t));
+  exit_streams = tor_malloc_zero(EXIT_STATS_NUM_PORTS *
+                                 sizeof(uint32_t));
+}
+
+/** Stop collecting exit port stats in a way that we can re-start doing
+ * so in rep_hist_exit_stats_init(). */
+void
+rep_hist_exit_stats_term(void)
+{
+  start_of_exit_stats_interval = 0;
   tor_free(exit_bytes_read);
   tor_free(exit_bytes_written);
   tor_free(exit_streams);
-  built_last_stability_doc_at = 0;
-  predicted_ports_free();
+}
+
+/** Write exit stats to $DATADIR/stats/exit-stats, reset counters, and
+ * return when we would next want to write exit stats. */
+time_t
+rep_hist_exit_stats_write(time_t now)
+{
+  char t[ISO_TIME_LEN+1];
+  int r, i, comma;
+  uint64_t *b, total_bytes, threshold_bytes, other_bytes;
+  uint32_t other_streams;
+
+  char *statsdir = NULL, *filename = NULL;
+  open_file_t *open_file = NULL;
+  FILE *out = NULL;
+
+  if (!start_of_exit_stats_interval)
+    return 0; /* Not initialized. */
+  if (start_of_exit_stats_interval + WRITE_STATS_INTERVAL > now)
+    goto done; /* Not ready to write. */
+
+  statsdir = get_datadir_fname("stats");
+  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+    goto done;
+  filename = get_datadir_fname2("stats", "exit-stats");
+  format_iso_time(t, now);
+  log_info(LD_HIST, "Writing exit port statistics to disk for period "
+           "ending at %s.", t);
+
+  if (!open_file) {
+    out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
+                                      0600, &open_file);
+    if (!out) {
+      log_warn(LD_HIST, "Couldn't open '%s'.", filename);
+      goto done;
+    }
+  }
+
+  /* written yyyy-mm-dd HH:MM:SS (n s) */
+  if (fprintf(out, "exit-stats-end %s (%d s)\n", t,
+              (unsigned) (now - start_of_exit_stats_interval)) < 0)
+    goto done;
+
+  /* Count the total number of bytes, so that we can attribute all
+   * observations below a threshold of 1 / EXIT_STATS_THRESHOLD_RECIPROCAL
+   * of all bytes to a special port 'other'. */
+  total_bytes = 0;
+  for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+    total_bytes += exit_bytes_read[i];
+    total_bytes += exit_bytes_written[i];
+  }
+  threshold_bytes = total_bytes / EXIT_STATS_THRESHOLD_RECIPROCAL;
+
+  /* exit-kibibytes-(read|written) port=kibibytes,.. */
+  for (r = 0; r < 2; r++) {
+    b = r ? exit_bytes_read : exit_bytes_written;
+    tor_assert(b);
+    if (fprintf(out, "%s ",
+                r ? "exit-kibibytes-read"
+                  : "exit-kibibytes-written") < 0)
+      goto done;
+
+    comma = 0;
+    other_bytes = 0;
+    for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+      if (b[i] > 0) {
+        if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
+          uint64_t num = round_uint64_to_next_multiple_of(b[i],
+                                              EXIT_STATS_ROUND_UP_BYTES);
+          num /= 1024;
+          if (fprintf(out, "%s%d="U64_FORMAT,
+                      comma++ ? "," : "", i,
+                      U64_PRINTF_ARG(num)) < 0)
+            goto done;
+        } else
+          other_bytes += b[i];
+      }
+    }
+    other_bytes = round_uint64_to_next_multiple_of(other_bytes,
+                                       EXIT_STATS_ROUND_UP_BYTES);
+    other_bytes /= 1024;
+    if (fprintf(out, "%sother="U64_FORMAT"\n",
+                comma ? "," : "", U64_PRINTF_ARG(other_bytes))<0)
+      goto done;
+  }
+  /* exit-streams-opened port=num,.. */
+  if (fprintf(out, "exit-streams-opened ") < 0)
+    goto done;
+  comma = 0;
+  other_streams = 0;
+  for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
+    if (exit_streams[i] > 0) {
+      if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
+        uint32_t num = round_uint32_to_next_multiple_of(exit_streams[i],
+                                            EXIT_STATS_ROUND_UP_STREAMS);
+        if (fprintf(out, "%s%d=%u",
+                    comma++ ? "," : "", i, num)<0)
+          goto done;
+      } else
+        other_streams += exit_streams[i];
+    }
+  }
+  other_streams = round_uint32_to_next_multiple_of(other_streams,
+                                       EXIT_STATS_ROUND_UP_STREAMS);
+  if (fprintf(out, "%sother=%u\n",
+              comma ? "," : "", other_streams)<0)
+    goto done;
+  /* Reset counters */
+  memset(exit_bytes_read, 0, EXIT_STATS_NUM_PORTS * sizeof(uint64_t));
+  memset(exit_bytes_written, 0, EXIT_STATS_NUM_PORTS * sizeof(uint64_t));
+  memset(exit_streams, 0, EXIT_STATS_NUM_PORTS * sizeof(uint32_t));
+  start_of_exit_stats_interval = now;
+
+  if (open_file)
+    finish_writing_to_file(open_file);
+  open_file = NULL;
+ done:
+  if (open_file)
+    abort_writing_to_file(open_file);
+  tor_free(filename);
+  tor_free(statsdir);
+  return start_of_exit_stats_interval + WRITE_STATS_INTERVAL;
+}
+
+/** Note that we wrote <b>num_bytes</b> to an exit connection to
+ * <b>port</b>. */
+void
+rep_hist_note_exit_bytes_written(uint16_t port, size_t num_bytes)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  if (!exit_bytes_written)
+    return; /* Not initialized */
+  exit_bytes_written[port] += num_bytes;
+  log_debug(LD_HIST, "Written %lu bytes to exit connection to port %d.",
+            (unsigned long)num_bytes, port);
+}
+
+/** Note that we read <b>num_bytes</b> from an exit connection to
+ * <b>port</b>. */
+void
+rep_hist_note_exit_bytes_read(uint16_t port, size_t num_bytes)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  if (!exit_bytes_read)
+    return; /* Not initialized */
+  exit_bytes_read[port] += num_bytes;
+  log_debug(LD_HIST, "Read %lu bytes from exit connection to port %d.",
+            (unsigned long)num_bytes, port);
+}
+
+/** Note that we opened an exit stream to <b>port</b>. */
+void
+rep_hist_note_exit_stream_opened(uint16_t port)
+{
+  if (!get_options()->ExitPortStatistics)
+    return;
+  if (!exit_streams)
+    return; /* Not initialized */
+  exit_streams[port]++;
+  log_debug(LD_HIST, "Opened exit stream to port %d", port);
 }
 
 /*** cell statistics ***/
@@ -2282,5 +2268,21 @@ rep_hist_buffer_stats_write(time_t now)
   tor_free(str);
 #undef SHARES
   return start_of_buffer_stats_interval + WRITE_STATS_INTERVAL;
+}
+
+/** Free all storage held by the OR/link history caches, by the
+ * bandwidth history arrays, by the port history, or by statistics . */
+void
+rep_hist_free_all(void)
+{
+  digestmap_free(history_map, free_or_history);
+  tor_free(read_array);
+  tor_free(write_array);
+  tor_free(last_stability_doc);
+  tor_free(exit_bytes_read);
+  tor_free(exit_bytes_written);
+  tor_free(exit_streams);
+  built_last_stability_doc_at = 0;
+  predicted_ports_free();
 }
 
