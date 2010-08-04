@@ -1,6 +1,0 @@
-etc/tor
-var/lib/tor
-var/log/tor
-usr/share/lintian/overrides
-usr/bin
-usr/sbin

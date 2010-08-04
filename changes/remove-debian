@@ -1,0 +1,5 @@
+  o Removed files:
+    -  Remove the old debian/ directory from the main Tor distribution.
+       The official Tor-for-debian git repository lives at the URL
+       https://git.torproject.org/debian/tor.git .
+
