@@ -3265,6 +3265,8 @@ typedef enum {
   DIRREQ_OR_CONN_BUFFER_FLUSHED = 4
 } dirreq_state_t;
 
+#define WRITE_STATS_INTERVAL (24*60*60)
+
 /********************************* microdesc.c *************************/
 
 typedef struct microdesc_cache_t microdesc_cache_t;

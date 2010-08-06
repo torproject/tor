@@ -29,12 +29,8 @@ void geoip_remove_old_clients(time_t cutoff);
 
 void geoip_note_ns_response(geoip_client_action_t action,
                             geoip_ns_response_t response);
-time_t geoip_get_history_start(void);
-char *geoip_get_client_history_dirreq(time_t now,
-                                      geoip_client_action_t action);
-char *geoip_get_client_history_bridge(time_t now,
-                                      geoip_client_action_t action);
-char *geoip_get_request_history(time_t now, geoip_client_action_t action);
+char *geoip_get_client_history(geoip_client_action_t action);
+char *geoip_get_request_history(geoip_client_action_t action);
 int getinfo_helper_geoip(control_connection_t *control_conn,
                          const char *question, char **answer,
                          const char **errmsg);
@@ -46,11 +42,14 @@ void geoip_change_dirreq_state(uint64_t dirreq_id, dirreq_type_t type,
                                dirreq_state_t new_state);
 
 void geoip_dirreq_stats_init(time_t now);
-void geoip_dirreq_stats_write(time_t now);
+time_t geoip_dirreq_stats_write(time_t now);
+void geoip_dirreq_stats_term(void);
 void geoip_entry_stats_init(time_t now);
-void geoip_entry_stats_write(time_t now);
+time_t geoip_entry_stats_write(time_t now);
+void geoip_entry_stats_term(void);
 void geoip_bridge_stats_init(time_t now);
 time_t geoip_bridge_stats_write(time_t now);
+void geoip_bridge_stats_term(void);
 const char *geoip_get_bridge_stats_extrainfo(time_t);
 const char *geoip_get_bridge_stats_controller(time_t);
 
