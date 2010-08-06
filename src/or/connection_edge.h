@@ -79,6 +79,9 @@ void client_dns_set_addressmap(const char *address, uint32_t val,
 const char *addressmap_register_virtual_address(int type, char *new_address);
 void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
                              time_t max_expires, int want_expiry);
+int connection_ap_rewrite_and_attach_if_allowed(edge_connection_t *conn,
+                                                origin_circuit_t *circ,
+                                                crypt_path_t *cpath);
 int connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                                origin_circuit_t *circ,
                                                crypt_path_t *cpath);

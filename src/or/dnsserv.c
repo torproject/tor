@@ -141,16 +141,17 @@ evdns_server_callback(struct evdns_server_request *req, void *_data)
 
   control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
-  /* Now, throw the connection over to get rewritten (which will answer it
-  * immediately if it's in the cache, or completely bogus, or automapped),
-  * and then attached to a circuit. */
+  /* Now, unless a controller asked us to leave streams unattached,
+  * throw the connection over to get rewritten (which will
+  * answer it immediately if it's in the cache, or completely bogus, or
+  * automapped), and then attached to a circuit. */
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
            escaped_safe_str_client(q->name));
   q_name = tor_strdup(q->name); /* q could be freed in rewrite_and_attach */
-  connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
+  connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
   /* Now, the connection is marked if it was bad. */
 
-  log_info(LD_APP, "Passed request for %s to rewrite_and_attach.",
+  log_info(LD_APP, "Passed request for %s to rewrite_and_attach_if_allowed.",
            escaped_safe_str_client(q_name));
   tor_free(q_name);
 }
@@ -186,16 +187,17 @@ dnsserv_launch_request(const char *name, int reverse)
     return -1;
   }
 
-  /* Now, throw the connection over to get rewritten (which will answer it
-  * immediately if it's in the cache, or completely bogus, or automapped),
-  * and then attached to a circuit. */
+  /* Now, unless a controller asked us to leave streams unattached,
+  * throw the connection over to get rewritten (which will
+  * answer it immediately if it's in the cache, or completely bogus, or
+  * automapped), and then attached to a circuit. */
   log_info(LD_APP, "Passing request for %s to rewrite_and_attach.",
            escaped_safe_str_client(name));
   q_name = tor_strdup(name); /* q could be freed in rewrite_and_attach */
-  connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
+  connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
   /* Now, the connection is marked if it was bad. */
 
-  log_info(LD_APP, "Passed request for %s to rewrite_and_attach.",
+  log_info(LD_APP, "Passed request for %s to rewrite_and_attach_if_allowed.",
            escaped_safe_str_client(q_name));
   tor_free(q_name);
   return 0;
