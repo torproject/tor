@@ -1029,7 +1029,7 @@ test_rend_fns(void)
                   intro->extend_info->identity_digest, DIGEST_LEN);
     /* Does not cover all IP addresses. */
     tor_addr_from_ipv4h(&intro->extend_info->addr, crypto_rand_int(65536));
-    intro->extend_info->port = crypto_rand_int(65536);
+    intro->extend_info->port = 1 + crypto_rand_int(65535);
     intro->intro_key = crypto_pk_dup_key(pk2);
     smartlist_add(generated->intro_nodes, intro);
   }
