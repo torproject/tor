@@ -1409,7 +1409,10 @@ consider_plaintext_ports(edge_connection_t *conn, uint16_t port)
 #define TRACKHOSTEXITS_RETRIES 5
 
 /** Call connection_ap_handshake_rewrite_and_attach() unless a controller
- *  asked us to leave streams unattached.
+ *  asked us to leave streams unattached. Return 0 in that case.
+ *
+ *  See connection_ap_handshake_rewrite_and_attach()'s
+ *  documentation for arguments and return value.
  */
 int
 connection_ap_rewrite_and_attach_if_allowed(edge_connection_t *conn,

@@ -1,4 +1,4 @@
   o Minor bugfixes:
     - Ensure DNS requests launched by "RESOLVE" commands from the controller
-      respect __LeaveStreamsUnattached. Bugfix on 0.2.2.14-alpha;
+      respect __LeaveStreamsUnattached. Bugfix on 0.2.0.1-alpha;
       fixes bug 1525.
