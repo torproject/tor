@@ -719,7 +719,7 @@ circuit_expire_old_circuits_clientside(time_t now)
   }
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
-    if (circ->marked_for_close || ! CIRCUIT_IS_ORIGIN(circ))
+    if (circ->marked_for_close || !CIRCUIT_IS_ORIGIN(circ))
       continue;
     /* If the circuit has been dirty for too long, and there are no streams
      * on it, mark it for close.

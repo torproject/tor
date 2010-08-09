@@ -2614,7 +2614,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     log_debug(LD_REND,"Finished assigning addr/port");
     n_stream->cpath_layer = origin_circ->cpath->prev; /* link it */
 
-    /* add it into the linked list of n_streams on this circuit */
+    /* add it into the linked list of p_streams on this circuit */
     n_stream->next_stream = origin_circ->p_streams;
     n_stream->on_circuit = circ;
     origin_circ->p_streams = n_stream;
