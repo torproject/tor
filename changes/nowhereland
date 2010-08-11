@@ -1,6 +1,0 @@
-  o Minor features:
-    - Add support for the country code "{??}" in torrc options like
-      ExcludeNodes, to indicate all routers of unknown country.  Fixes bug
-      1094.
-
-
