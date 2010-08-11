@@ -447,7 +447,7 @@ static config_var_t _state_vars[] = {
   V(LastWritten,                      ISOTIME,  NULL),
 
   V(TotalBuildTimes,                  UINT,     NULL),
-  V(CircuitBuildAbandonedCount,         UINT,     "0"),
+  V(CircuitBuildAbandonedCount,       UINT,     "0"),
   VAR("CircuitBuildTimeBin",          LINELIST_S, BuildtimeHistogram, NULL),
   VAR("BuildtimeHistogram",           LINELIST_V, BuildtimeHistogram, NULL),
 
