@@ -57,6 +57,9 @@ Changes in version 0.2.2.15-alpha - 2010-08-??
       descriptor had changed. Now we replace routers with a purpose other
       than bridge with bridge descriptors when fetching them. Bugfix on
       0.1.1.9-alpha; fixes bug 1776.
+    - Fix a rare bug in rend_fn unit tests: we would fail a test when
+      a randomly generated port is 0. Diagnosed by Matt Edman. Bugfix
+      on 0.2.0.10-alpha; fixes bug 1808.
 
   o Minor bugfixes (on 0.2.2.x):
     - Alter directory authorities to always consider Exit-flagged nodes
