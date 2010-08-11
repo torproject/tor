@@ -15,24 +15,26 @@
 
 if USE_ASCIIDOC
 asciidoc_files = tor tor-gencert tor-resolve torify
+html_in = $(asciidoc_files:=.html.in)
+man_in = $(asciidoc_files:=.1.in)
+txt_in = $(asciidoc_files:=.1.txt)
+nodist_man_MANS = $(asciidoc_files:=.1)
+doc_DATA = $(asciidoc_files:=.html)
 else
 asciidoc_files =
+html_in =
+man_in =
+txt_in =
+nodist_man_MANS =
+doc_DATA =
 endif
 
-html_in = ${asciidoc_files:=.html.in}
-
-man_in = ${asciidoc_files:=.1.in}
-
 EXTRA_DIST = HACKING asciidoc-helper.sh                      \
-             $(html_in) $(man_in) ${asciidoc_files:=.1.txt}  \
+             $(html_in) $(man_in) $(txt_in)		     \
              tor-osx-dmg-creation.txt tor-rpm-creation.txt   \
              tor-win32-mingw-creation.txt
 
-nodist_man_MANS = ${asciidoc_files:=.1}
-
 docdir = @docdir@
-
-doc_DATA = ${asciidoc_files:=.html}
 
 asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
 
