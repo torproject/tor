@@ -9,7 +9,7 @@
       RFC 2119.
 
    Read
-   https://www.torproject.org/doc/design-paper/tor-design.html#sec:rendezvous
+   https://svn.torproject.org/svn/projects/design-paper/tor-design.html#sec:rendezvous
    before you read this specification. It will make more sense.
 
    Rendezvous points provide location-hidden services (server
