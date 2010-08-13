@@ -3,9 +3,10 @@
 
 /**
  * \file geoip.c
- * \brief Functions related to maintaining an IP-to-country database and to
- *    summarizing client connections by country to entry guards, bridges, and
- *    directories as well as statistics on answering network status requests.
+ * \brief Functions related to maintaining an IP-to-country database;
+ * to summarizing client connections by country to entry guards, bridges,
+ * and directory servers; and for statistics on answering network status
+ * requests.
  */
 
 #define GEOIP_PRIVATE
@@ -765,10 +766,10 @@ geoip_get_dirreq_history(geoip_client_action_t action,
 
 /** Return a newly allocated comma-separated string containing entries for
  * all the countries from which we've seen enough clients connect as a
- * bridge, directory, or entry guard. The entry format is cc=num where num
- * is the number of IPs we've seen connecting from that country, and cc is
- * a lowercased country code. Returns NULL if we don't want to export
- * geoip data yet. */
+ * bridge, directory server, or entry guard. The entry format is cc=num
+ * where num is the number of IPs we've seen connecting from that country,
+ * and cc is a lowercased country code. Returns NULL if we don't want
+ * to export geoip data yet. */
 char *
 geoip_get_client_history(geoip_client_action_t action)
 {
