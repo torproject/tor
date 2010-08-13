@@ -74,6 +74,11 @@ Changes in version 0.2.2.15-alpha - 2010-08-??
       old and broken version of libevent. Treat 1.4.14b-stable like
       1.4.14-stable when parsing the version. Fixes bug 1731; bugfix
       on 0.2.2.1-alpha.
+    - Don't use substitution references like $(VAR:MOD) when
+      $(asciidoc_files) is empty -- make(1) on NetBSD transforms
+      '$(:x)' to 'x' rather than the empty string. This bites us in
+      doc/ when configured with --disable-asciidoc. Bugfix on
+      0.2.2.9-alpha; fixes bug 1773.
 
 
 Changes in version 0.2.2.14-alpha - 2010-07-12

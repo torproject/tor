@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Don't use substitution references ($(VAR:MOD)) when
-      $(asciidoc_files) is empty -- make(1) on NetBSD transforms
-      '$(:x)' to 'x' rather than the empty string. This bites us in
-      doc/ when configured with --disable-asciidoc.  Fixes bug 1773.
