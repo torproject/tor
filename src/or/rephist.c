@@ -2431,10 +2431,17 @@ rep_hist_conn_stats_init(time_t now)
   start_of_conn_stats_interval = now;
 }
 
+/* Count connections that we read and wrote less than these many bytes
+ * from/to as below threshold. */
 #define BIDI_THRESHOLD 20480
 
+/* Count connections that we read or wrote at least this factor as many
+ * bytes from/to than we wrote or read to/from as mostly reading or
+ * writing. */
 #define BIDI_FACTOR 10
 
+/* Interval length in seconds for considering read and written bytes for
+ * connection stats. */
 #define BIDI_INTERVAL 10
 
 /* Start of next BIDI_INTERVAL second interval. */
