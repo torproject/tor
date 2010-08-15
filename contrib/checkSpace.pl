@@ -20,6 +20,10 @@ for $fn (@ARGV) {
         if (/\t/) {
             print "      TAB:$fn:$.\n";
         }
+        ## Warn about markers that don't have a space in front of them
+        if (/^[a-zA-Z_][a-zA-Z_0-9]*:/) {
+            print "nosplabel:$fn:$.\n";
+        }
         ## Warn about trailing whitespace.
         if (/ +$/) {
             print "Space\@EOL:$fn:$.\n";
