@@ -200,7 +200,7 @@ static config_var_t _option_vars[] = {
   V(ClientOnly,                  BOOL,     "0"),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
-  V(ConnStatistics,              BOOL,     "0"),
+  V(ConnDirectionStatistics,     BOOL,     "0"),
   V(ConstrainedSockets,          BOOL,     "0"),
   V(ConstrainedSockSize,         MEMUNIT,  "8192"),
   V(ContactInfo,                 STRING,   NULL),
@@ -1393,7 +1393,7 @@ options_act(or_options_t *old_options)
 
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
-      options->ConnStatistics) {
+      options->ConnDirectionStatistics) {
     time_t now = time(NULL);
     if ((!old_options || !old_options->CellStatistics) &&
         options->CellStatistics)
@@ -1407,8 +1407,8 @@ options_act(or_options_t *old_options)
     if ((!old_options || !old_options->ExitPortStatistics) &&
         options->ExitPortStatistics)
       rep_hist_exit_stats_init(now);
-    if ((!old_options || !old_options->ConnStatistics) &&
-        options->ConnStatistics)
+    if ((!old_options || !old_options->ConnDirectionStatistics) &&
+        options->ConnDirectionStatistics)
       rep_hist_conn_stats_init(now);
     if (!old_options)
       log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
@@ -1428,8 +1428,8 @@ options_act(or_options_t *old_options)
   if (old_options && old_options->ExitPortStatistics &&
       !options->ExitPortStatistics)
     rep_hist_exit_stats_term();
-  if (old_options && old_options->ConnStatistics &&
-      !options->ConnStatistics)
+  if (old_options && old_options->ConnDirectionStatistics &&
+      !options->ConnDirectionStatistics)
     rep_hist_conn_stats_term();
 
   /* Check if we need to parse and add the EntryNodes config option. */

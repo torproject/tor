@@ -2051,7 +2051,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                         "exit-stats-end", now, &contents) > 0) {
       smartlist_add(chunks, contents);
     }
-    if (options->ConnStatistics &&
+    if (options->ConnDirectionStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"conn-stats",
                         "conn-stats-end", now, &contents) > 0) {
       size_t pos = strlen(s);
