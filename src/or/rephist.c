@@ -2011,6 +2011,9 @@ rep_hist_exit_stats_history(time_t now)
                written_string,
                read_string,
                streams_string);
+  tor_free(written_string);
+  tor_free(read_string);
+  tor_free(streams_string);
   return result;
 }
 
