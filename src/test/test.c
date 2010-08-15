@@ -1233,6 +1233,8 @@ const struct testcase_setup_t legacy_setup = {
       test_ ## group ## _ ## name }
 #define DISABLED(name)                                                  \
   { #name, legacy_test_helper, TT_SKIP, &legacy_setup, name }
+#define FORK(name)                                                      \
+  { #name, legacy_test_helper, TT_FORK, &legacy_setup, test_ ## name }
 
 static struct testcase_t test_array[] = {
   ENT(buffers),
@@ -1241,7 +1243,7 @@ static struct testcase_t test_array[] = {
   ENT(policies),
   ENT(rend_fns),
   ENT(geoip),
-  ENT(stats),
+  FORK(stats),
 
   DISABLED(bench_aes),
   DISABLED(bench_dmap),
