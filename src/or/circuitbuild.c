@@ -692,7 +692,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
             "Corrupt state file? Build times count mismatch. "
             "Read %d times, but file says %d", loaded_cnt,
             state->TotalBuildTimes);
-    *msg = tor_strdup("Build times count mismatch.");
+    if (!*msg)
+      *msg = tor_strdup("Build times count mismatch.");
     circuit_build_times_reset(cbt);
     tor_free(loaded_times);
     return -1;
@@ -716,7 +717,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
             "Corrupt state file? Shuffled build times mismatch. "
             "Read %d times, but file says %d", tot_values,
             state->TotalBuildTimes);
-    *msg = tor_strdup("Build times count mismatch.");
+    if (!*msg)
+      *msg = tor_strdup("Build times count mismatch.");
     circuit_build_times_reset(cbt);
     tor_free(loaded_times);
     return -1;

@@ -1,0 +1,3 @@
+  o Minor bugfixes
+    - Fix a memory leak in the error case of circuit_build_times_parse_state().
+      Bugfix on 0.2.2.14-alpha; fixes bug 1831 partially.
