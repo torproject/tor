@@ -3008,6 +3008,7 @@ dirvote_add_signatures_to_pending_consensus(
       networkstatus_vote_free(v);
     }
     *msg_out = "Signatures added";
+    tor_free(new_signatures);
   } else if (r == 0) {
     *msg_out = "Signatures ignored";
   } else {
