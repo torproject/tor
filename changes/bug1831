@@ -3,3 +3,6 @@
       Bugfix on 0.2.2.14-alpha; fixes bug 1831 partially.
     - Fix a memory leak in dirvote_add_signatures_to_pending_consensus(). 
       Bugfix on 0.2.2.6-alpha; fixes bug 1831 partially.
+    - Fix a memory leak in dirvote_compute_consensuses().
+      Bugfix on 0.2.0.3-alpha; fixes bug 1831 partially.
+

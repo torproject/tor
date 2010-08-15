@@ -2942,6 +2942,7 @@ dirvote_compute_consensuses(void)
                                strlen(pending_consensus_signatures), 0);
   log_notice(LD_DIR, "Signature(s) posted.");
 
+  smartlist_free(votes);
   return 0;
  err:
   smartlist_free(votes);
@@ -3138,7 +3139,7 @@ void
 dirvote_free_all(void)
 {
   dirvote_clear_votes(1);
-  /* now empty as a result of clear_pending_votes. */
+  /* now empty as a result of dirvote_clear_votes(). */
   smartlist_free(pending_vote_list);
   pending_vote_list = NULL;
   smartlist_free(previous_vote_list);
@@ -3147,7 +3148,7 @@ dirvote_free_all(void)
   dirvote_clear_pending_consensuses();
   tor_free(pending_consensus_signatures);
   if (pending_consensus_signature_list) {
-    /* now empty as a result of clear_pending_votes. */
+    /* now empty as a result of dirvote_clear_votes(). */
     smartlist_free(pending_consensus_signature_list);
     pending_consensus_signature_list = NULL;
   }
