@@ -68,7 +68,7 @@ void hs_usage_free_all(void);
 void rep_hist_exit_stats_init(time_t now);
 void rep_hist_reset_exit_stats(time_t now);
 void rep_hist_exit_stats_term(void);
-char *rep_hist_exit_stats_history(time_t now);
+char *rep_hist_format_exit_stats(time_t now);
 time_t rep_hist_exit_stats_write(time_t now);
 void rep_hist_note_exit_bytes(uint16_t port, size_t num_written,
                               size_t num_read);

@@ -1913,7 +1913,7 @@ rep_hist_exit_stats_term(void)
 /** Return a newly allocated string containing the exit port statistics
  * until <b>now</b>, or NULL if we're not collecting exit stats. */
 char *
-rep_hist_exit_stats_history(time_t now)
+rep_hist_format_exit_stats(time_t now)
 {
   int i;
   uint64_t total_bytes = 0, threshold_bytes, other_read = 0,
@@ -2034,7 +2034,7 @@ rep_hist_exit_stats_write(time_t now)
   log_info(LD_HIST, "Writing exit port statistics to disk.");
 
   /* Generate history string. */
-  str = rep_hist_exit_stats_history(now);
+  str = rep_hist_format_exit_stats(now);
 
   /* Reset counters. */
   rep_hist_reset_exit_stats(now);
