@@ -762,7 +762,7 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
     }
   }
 
-out:
+ out:
   if (berr) {
     log_info(LD_DIR,
              "Bw weight mismatch %d. G="I64_FORMAT" M="I64_FORMAT

@@ -619,7 +619,7 @@ test_circuit_timeout(void)
     circuit_build_times_count_timeout(&final, 1);
   }
 
-done:
+ done:
   return;
 }
 

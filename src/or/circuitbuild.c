@@ -729,7 +729,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
     circuit_build_times_filter_timeouts(cbt);
   }
 
-done:
+ done:
   tor_free(loaded_times);
   return err ? -1 : 0;
 }
@@ -1514,7 +1514,7 @@ static int
 onion_populate_cpath(origin_circuit_t *circ)
 {
   int r;
-again:
+ again:
   r = onion_extend_cpath(circ);
   if (r < 0) {
     log_info(LD_CIRC,"Generating cpath hop failed.");

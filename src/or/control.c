@@ -2259,7 +2259,7 @@ handle_control_setcircuitpurpose(control_connection_t *conn,
   circ->_base.purpose = new_purpose;
   connection_write_str_to_buf("250 OK\r\n", conn);
 
-done:
+ done:
   if (args) {
     SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
     smartlist_free(args);

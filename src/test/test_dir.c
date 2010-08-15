@@ -580,7 +580,7 @@ test_dir_measured_bw(void)
                 "557365204145532d32353620696e73746561642e") == 0);
   }
 
-done:
+ done:
   return;
 }
 

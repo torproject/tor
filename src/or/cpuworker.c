@@ -192,7 +192,7 @@ connection_cpu_process_inbuf(connection_t *conn)
     tor_assert(0); /* don't ask me to do handshakes yet */
   }
 
-done_processing:
+ done_processing:
   conn->state = CPUWORKER_STATE_IDLE;
   num_cpuworkers_busy--;
   if (conn->timestamp_created < last_rotation_time) {

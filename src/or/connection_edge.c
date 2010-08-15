@@ -2050,7 +2050,7 @@ get_unique_stream_id_by_circ(origin_circuit_t *circ)
   streamid_t test_stream_id;
   uint32_t attempts=0;
 
-again:
+ again:
   test_stream_id = circ->next_stream_id++;
   if (++attempts > 1<<16) {
     /* Make sure we don't loop forever if all stream_id's are used. */
@@ -2988,7 +2988,7 @@ parse_extended_hostname(char *address, int allowdotexit)
     if (rend_valid_service_id(query)) {
       return ONION_HOSTNAME; /* success */
     }
-failed:
+ failed:
     /* otherwise, return to previous state and return 0 */
     *s = '.';
     return BAD_HOSTNAME;
