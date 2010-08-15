@@ -355,8 +355,9 @@ connection_or_digest_is_known_relay(const char *id_digest)
  * not a known relay, first check if we set PerConnBwRate/Burst, then
  * check if the consensus sets them, else default to 'big enough'.
  */
-static void connection_or_set_rate_burst(or_connection_t *conn,
-                                         or_options_t *options)
+static void
+connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
+                                          or_options_t *options)
 {
   int rate, burst; /* per-connection rate limiting params */
   if (connection_or_digest_is_known_relay(conn->identity_digest)) {
@@ -378,7 +379,29 @@ static void connection_or_set_rate_burst(or_connection_t *conn,
   }
 
   conn->bandwidthrate = rate;
-  conn->read_bucket = conn->write_bucket = conn->bandwidthburst = burst;
+  conn->bandwidthburst = burst;
+  if (reset) { /* set up the token buckets to be full */
+    conn->read_bucket = conn->write_bucket = burst;
+    return;
+  }
+  /* If the new token bucket is smaller, take out the extra tokens.
+   * (If it's larger, don't -- the buckets can grow to reach the cap.) */
+  if (conn->read_bucket > burst)
+    conn->read_bucket = burst;
+  if (conn->write_bucket > burst)
+    conn->write_bucket = burst;
+}
+
+/** Either our set of relays or our per-conn rate limits have changed.
+ * Go through all the OR connections and update their token buckets. */
+void
+connection_or_update_token_buckets(smartlist_t *conns, or_options_t *options)
+{
+  SMARTLIST_FOREACH(conns, connection_t *, conn,
+  {
+    if (connection_speaks_cells(conn))
+      connection_or_update_token_buckets_helper(TO_OR_CONN(conn), 0, options);
+  });
 }
 
 /** If we don't necessarily know the router we're connecting to, but we
@@ -392,7 +415,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
 {
   routerinfo_t *r = router_get_by_digest(id_digest);
   connection_or_set_identity_digest(conn, id_digest);
-  connection_or_set_rate_burst(conn, get_options());
+  connection_or_update_token_buckets_helper(conn, 1, get_options());
 
   conn->_base.port = port;
   tor_addr_copy(&conn->_base.addr, addr);

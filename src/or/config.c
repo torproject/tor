@@ -17,6 +17,7 @@
 #include "config.h"
 #include "connection.h"
 #include "connection_edge.h"
+#include "connection_or.h"
 #include "control.h"
 #include "cpuworker.h"
 #include "dirserv.h"
@@ -1292,6 +1293,10 @@ options_act(or_options_t *old_options)
 
     if (options->V3AuthoritativeDir && !old_options->V3AuthoritativeDir)
       init_keys();
+
+    if (options->PerConnBWRate != old_options->PerConnBWRate ||
+        options->PerConnBWBurst != old_options->PerConnBWBurst)
+      connection_or_update_token_buckets(get_connection_array(), options);
   }
 
   /* Maybe load geoip file */

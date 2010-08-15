@@ -14,10 +14,12 @@
 #include "circuitbuild.h"
 #include "config.h"
 #include "connection.h"
+#include "connection_or.h"
 #include "control.h"
 #include "directory.h"
 #include "dirserv.h"
 #include "dirvote.h"
+#include "main.h"
 #include "networkstatus.h"
 #include "relay.h"
 #include "router.h"
@@ -1506,6 +1508,7 @@ networkstatus_set_current_consensus(const char *consensus,
   networkstatus_t *c=NULL;
   int r, result = -1;
   time_t now = time(NULL);
+  or_options_t *options = get_options();
   char *unverified_fname = NULL, *consensus_fname = NULL;
   int flav = networkstatus_parse_flavor_name(flavor);
   const unsigned from_cache = flags & NSSET_FROM_CACHE;
@@ -1543,7 +1546,7 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (flav != USABLE_CONSENSUS_FLAVOR &&
-      !directory_caches_dir_info(get_options())) {
+      !directory_caches_dir_info(options)) {
     /* This consensus is totally boring to us: we won't use it, and we won't
      * serve it.  Drop it. */
     goto done;
@@ -1678,7 +1681,7 @@ networkstatus_set_current_consensus(const char *consensus,
       download_status_failed(&consensus_dl_status[flav], 0);
   }
 
-  if (directory_caches_dir_info(get_options())) {
+  if (directory_caches_dir_info(options)) {
     dirserv_set_cached_consensus_networkstatus(consensus,
                                                flavor,
                                                &c->digests,
@@ -1691,9 +1694,13 @@ networkstatus_set_current_consensus(const char *consensus,
 
     /* XXXXNM Microdescs: needs a non-ns variant. */
     update_consensus_networkstatus_fetch_time(now);
-    dirvote_recalculate_timing(get_options(), now);
+    dirvote_recalculate_timing(options, now);
     routerstatus_list_update_named_server_map();
-    cell_ewma_set_scale_factor(get_options(), current_consensus);
+    cell_ewma_set_scale_factor(options, current_consensus);
+
+    /* XXX022 where is the right place to put this call? */
+    connection_or_update_token_buckets(get_connection_array(), options);
+
     circuit_build_times_new_consensus_params(&circ_times, current_consensus);
   }
 
