@@ -605,11 +605,11 @@ circuit_build_times_filter_timeouts(circuit_build_times_t *cbt)
  * after we do so. Use this result to estimate parameters and
  * calculate the timeout.
  *
- * Returns -1 and sets msg on error. Msg must be freed by the caller.
+ * Return -1 on error.
  */
 int
 circuit_build_times_parse_state(circuit_build_times_t *cbt,
-                                or_state_t *state, char **msg)
+                                or_state_t *state)
 {
   int tot_values = 0;
   uint32_t loaded_cnt = 0, N = 0;
@@ -617,7 +617,7 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   unsigned int i;
   build_time_t *loaded_times;
   circuit_build_times_init(cbt);
-  *msg = NULL;
+  int err = 0;
 
   if (circuit_build_times_disabled()) {
     return 0;
@@ -631,8 +631,9 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
     smartlist_split_string(args, line->value, " ",
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
     if (smartlist_len(args) < 2) {
-      *msg = tor_strdup("Unable to parse circuit build times: "
-                        "Too few arguments to CircuitBuildTime");
+      log_warn(LD_GENERAL, "Unable to parse circuit build times: "
+                           "Too few arguments to CircuitBuildTime");
+      err = 1;
       SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
       smartlist_free(args);
       break;
@@ -645,8 +646,9 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       ms = (build_time_t)tor_parse_ulong(ms_str, 0, 0,
                                          CBT_BUILD_TIME_MAX, &ok, NULL);
       if (!ok) {
-        *msg = tor_strdup("Unable to parse circuit build times: "
-                          "Unparsable bin number");
+        log_warn(LD_GENERAL, "Unable to parse circuit build times: "
+                             "Unparsable bin number");
+        err = 1;
         SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
         smartlist_free(args);
         break;
@@ -654,8 +656,9 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
       count = (uint32_t)tor_parse_ulong(count_str, 0, 0,
                                         UINT32_MAX, &ok, NULL);
       if (!ok) {
-        *msg = tor_strdup("Unable to parse circuit build times: "
-                          "Unparsable bin count");
+        log_warn(LD_GENERAL, "Unable to parse circuit build times: "
+                             "Unparsable bin count");
+        err = 1;
         SMARTLIST_FOREACH(args, char*, cp, tor_free(cp));
         smartlist_free(args);
         break;
@@ -692,11 +695,9 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
             "Corrupt state file? Build times count mismatch. "
             "Read %d times, but file says %d", loaded_cnt,
             state->TotalBuildTimes);
-    if (!*msg)
-      *msg = tor_strdup("Build times count mismatch.");
+    err = 1;
     circuit_build_times_reset(cbt);
-    tor_free(loaded_times);
-    return -1;
+    goto done;
   }
 
   circuit_build_times_shuffle_and_store_array(cbt, loaded_times, loaded_cnt);
@@ -717,11 +718,9 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
             "Corrupt state file? Shuffled build times mismatch. "
             "Read %d times, but file says %d", tot_values,
             state->TotalBuildTimes);
-    if (!*msg)
-      *msg = tor_strdup("Build times count mismatch.");
+    err = 1;
     circuit_build_times_reset(cbt);
-    tor_free(loaded_times);
-    return -1;
+    goto done;
   }
 
   circuit_build_times_set_timeout(cbt);
@@ -730,8 +729,9 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
     circuit_build_times_filter_timeouts(cbt);
   }
 
+done:
   tor_free(loaded_times);
-  return *msg ? -1 : 0;
+  return err ? -1 : 0;
 }
 
 /**

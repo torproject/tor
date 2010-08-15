@@ -4971,9 +4971,7 @@ or_state_set(or_state_t *new_state)
     tor_free(err);
     ret = -1;
   }
-  if (circuit_build_times_parse_state(&circ_times, global_state, &err) < 0) {
-    log_warn(LD_GENERAL,"%s",err);
-    tor_free(err);
+  if (circuit_build_times_parse_state(&circ_times, global_state) < 0) {
     ret = -1;
   }
   return ret;

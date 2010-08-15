@@ -81,7 +81,7 @@ extern circuit_build_times_t circ_times;
 void circuit_build_times_update_state(circuit_build_times_t *cbt,
                                       or_state_t *state);
 int circuit_build_times_parse_state(circuit_build_times_t *cbt,
-                                    or_state_t *state, char **msg);
+                                    or_state_t *state);
 void circuit_build_times_count_timeout(circuit_build_times_t *cbt,
                                        int did_onehop);
 int circuit_build_times_count_close(circuit_build_times_t *cbt,
