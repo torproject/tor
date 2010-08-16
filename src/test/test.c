@@ -1160,7 +1160,7 @@ test_stats(void)
   /* We shouldn't collect exit stats without initializing them. */
   rep_hist_note_exit_stream_opened(80);
   rep_hist_note_exit_bytes(80, 100, 10000);
-  s = rep_hist_exit_stats_history(now + 86400);
+  s = rep_hist_format_exit_stats(now + 86400);
   test_assert(!s);
 
   /* Initialize stats, note some streams and bytes, and generate history
@@ -1171,7 +1171,7 @@ test_stats(void)
   rep_hist_note_exit_stream_opened(443);
   rep_hist_note_exit_bytes(443, 100, 10000);
   rep_hist_note_exit_bytes(443, 100, 10000);
-  s = rep_hist_exit_stats_history(now + 86400);
+  s = rep_hist_format_exit_stats(now + 86400);
   test_streq("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
              "exit-kibibytes-written 80=1,443=1,other=0\n"
              "exit-kibibytes-read 80=10,443=20,other=0\n"
@@ -1182,7 +1182,7 @@ test_stats(void)
    * a history string. */
   rep_hist_exit_stats_term();
   rep_hist_note_exit_bytes(80, 100, 10000);
-  s = rep_hist_exit_stats_history(now + 86400);
+  s = rep_hist_format_exit_stats(now + 86400);
   test_assert(!s);
 
   /* Re-start stats, add some bytes, reset stats, and see what history we
@@ -1191,7 +1191,7 @@ test_stats(void)
   rep_hist_note_exit_stream_opened(80);
   rep_hist_note_exit_bytes(80, 100, 10000);
   rep_hist_reset_exit_stats(now);
-  s = rep_hist_exit_stats_history(now + 86400);
+  s = rep_hist_format_exit_stats(now + 86400);
   test_streq("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
              "exit-kibibytes-written other=0\n"
              "exit-kibibytes-read other=0\n"
