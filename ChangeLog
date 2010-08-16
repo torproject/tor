@@ -1,12 +1,22 @@
-Changes in version 0.2.2.15-alpha - 2010-08-??
+Changes in version 0.2.2.15-alpha - 2010-08-1?
   o Major bugfixes:
     - Stop assigning the HSDir flag to relays that disable their
       DirPort (and thus will refuse to answer directory requests). This
       fix should dramatically improve the reachability of hidden services:
-      hidden services and hidden service clients pick three HSDir relays
+      hidden services and hidden service clients pick six HSDir relays
       to store and retrieve the hidden service descriptor, and currently
       about half of the HSDir relays will refuse to work. Bugfix on
       0.2.0.10-alpha; fixes part of bug 1693.
+    - The PerConnBWRate and Burst config options, along with the
+      bwconnrate and bwconnburst consensus params, initialized each conn's
+      token bucket values only when the connection is established. Now we
+      update them if the config options change, and update them every time
+      we get a new consensus. Otherwise we can encounter an ugly edge
+      case where we initialize an OR conn to client-level bandwidth,
+      but then later the relay joins the consensus and we leave it
+      throttled. Bugfix on 0.2.2.7-alpha; fixes bug 1830.
+    - Fix a regression that caused Tor to rebind its ports if it receives
+      SIGHUP while hibernating. Bugfix in 0.1.1.6-alpha; closes bug 919.
 
   o Major features:
     - Lower the maximum weighted-fractional-uptime cutoff to 98%. This
@@ -35,19 +45,19 @@ Changes in version 0.2.2.15-alpha - 2010-08-??
     - Take a first step towards making or.h smaller by splitting out
       function definitions for all source files in src/or/. Leave
       structures and defines in or.h for now.
+    - New unit tests for exit-port history statistics; refactored exit
+      statistics code to be more easily tested.
 
   o Minor bugfixes (on 0.2.1.x and earlier):
     - Complain if PublishServerDescriptor is given multiple arguments that
-      include 0 or 1. This configuration will be rejected in future.
+      include 0 or 1. This configuration will be rejected in the future.
       Bugfix on 0.2.0.1-alpha; closes bug 1107.
+    - Disallow BridgeRelay 1 and ORPort 0 at once in the configuration.
+      Bugfix on 0.2.0.13-alpha; closes bug 928.
     - Change "Application request when we're believed to be offline."
       notice to "Application request when we haven't used client
       functionality lately.", to clarify that it's not an error. Bugfix
       on 0.0.9.3; fixes bug 1222.
-    - Fix a regression that caused Tor to rebind its ports if it receives
-      SIGHUP while hibernating. Bugfix in 0.1.1.6-alpha; closes bug 919.
-    - Disallow BridgeRelay 1 and ORPort 0 at once in the configuration.
-      Bugfix on 0.2.0.13-alpha; closes bug 928.
     - Fix a bug in the controller interface where "GETINFO ns/asdaskljkl"
       would return "551 Internal error" rather than "552 Unrecognized key
       ns/asdaskljkl". Bugfix on 0.1.2.3-alpha.
@@ -60,6 +70,13 @@ Changes in version 0.2.2.15-alpha - 2010-08-??
     - Fix a rare bug in rend_fn unit tests: we would fail a test when
       a randomly generated port is 0. Diagnosed by Matt Edman. Bugfix
       on 0.2.0.10-alpha; fixes bug 1808.
+    - Exit nodes didn't recognize EHOSTUNREACH as a plausible error code,
+      and so sent back END_STREAM_REASON_MISC. They now send a new stream
+      ending reason: END_STREAM_REASON_NOROUTE. Also update the spec to
+      reflect this new reason. Bugfix on 0.1.0.1-rc; fixes bug 1793.
+    - Instead of giving an assertion failure on an internal mismatch
+      on estimated freelist size, just log a BUG warning and try later.
+      Mitigates but does not fix bug 1125.
 
   o Minor bugfixes (on 0.2.2.x):
     - Alter directory authorities to always consider Exit-flagged nodes
@@ -79,6 +96,15 @@ Changes in version 0.2.2.15-alpha - 2010-08-??
       '$(:x)' to 'x' rather than the empty string. This bites us in
       doc/ when configured with --disable-asciidoc. Bugfix on
       0.2.2.9-alpha; fixes bug 1773.
+    - Fix to remove a spurious hidden service server-side log notice about
+      "Ancient non-dirty circuits". Bugfix on 0.2.2.14-alpha; fixes
+      bug 1741.
+    - Fix compilation with --with-dmalloc set. Bugfix on 0.2.2.6-alpha;
+      fixes bug 1832.
+    - Fix three memory leaks: one in circuit_build_times_parse_state(),
+      one in dirvote_add_signatures_to_pending_consensus(), and one every
+      time we parse a v3 network consensus. Bugfixes on 0.2.2.14-alpha,
+      0.2.2.6-alpha, and 0.2.2.10-alpha respectively; fixes bug 1831.
 
 
 Changes in version 0.2.2.14-alpha - 2010-07-12

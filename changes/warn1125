@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Instead of giving an assertion failure on an internal mismatch
-      on estimated freelist size, just log a BUG warning and try later.
-      Mitigates but does not fix bug 1125.
-

@@ -1,9 +1,0 @@
-  o Major bugfixes:
-    - The PerConnBWRate and Burst config options, along with the
-      bwconnrate and bwconnburst consensus params, initialized each conn's
-      token bucket values only when the connection is established. Now
-      update them if the config options change, and update them every time
-      we get a new consensus. Otherwise we can encounter an ugly edge
-      case where we initialize an OR conn to client-level bandwidth,
-      but then later the relay joins the consensus and we leave it
-      throttled. Bugfix on 0.2.2.7-alpha; fixes bug 1830.
