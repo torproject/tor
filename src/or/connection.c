@@ -2096,15 +2096,13 @@ connection_buckets_decrement(connection_t *conn, time_t now,
   }
 
   if (num_read > 0) {
-    if (conn->type == CONN_TYPE_EXIT)
-      rep_hist_note_exit_bytes_read(conn->port, num_read);
     rep_hist_note_bytes_read(num_read, now);
   }
   if (num_written > 0) {
-    if (conn->type == CONN_TYPE_EXIT)
-      rep_hist_note_exit_bytes_written(conn->port, num_written);
     rep_hist_note_bytes_written(num_written, now);
   }
+  if (conn->type == CONN_TYPE_EXIT)
+    rep_hist_note_exit_bytes(conn->port, num_written, num_read);
 
   if (connection_counts_as_relayed_traffic(conn, now)) {
     global_relayed_read_bucket -= (int)num_read;
