@@ -692,7 +692,8 @@ edge_reason_is_retriable(int reason)
          reason == END_STREAM_REASON_RESOURCELIMIT ||
          reason == END_STREAM_REASON_EXITPOLICY ||
          reason == END_STREAM_REASON_RESOLVEFAILED ||
-         reason == END_STREAM_REASON_MISC;
+         reason == END_STREAM_REASON_MISC ||
+         reason == END_STREAM_REASON_NOROUTE;
 }
 
 /** Called when we receive an END cell on a stream that isn't open yet,
