@@ -1,0 +1,4 @@
+  o Minor bugfixes
+    - Fix compilation with --with-dmalloc set.  Bugfix on 0.2.2.6-alpha;
+      fixes bug 1832.
+

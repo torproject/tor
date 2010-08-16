@@ -61,6 +61,7 @@ double fabs(double x);
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include <openssl/crypto.h>
+#include "main.h"
 #endif
 
 /** Set to true if any unit test has failed.  Mostly, this is set by the macros
