@@ -28,7 +28,7 @@ stream_end_reason_to_control_string(int reason)
     case END_STREAM_REASON_DESTROY: return "DESTROY";
     case END_STREAM_REASON_DONE: return "DONE";
     case END_STREAM_REASON_TIMEOUT: return "TIMEOUT";
-    case END_STREAM_REASON_NOROUTE: "return "NOROUTE";
+    case END_STREAM_REASON_NOROUTE: return "NOROUTE";
     case END_STREAM_REASON_HIBERNATING: return "HIBERNATING";
     case END_STREAM_REASON_INTERNAL: return "INTERNAL";
     case END_STREAM_REASON_RESOURCELIMIT: return "RESOURCELIMIT";
