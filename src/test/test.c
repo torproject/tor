@@ -70,6 +70,7 @@ int have_failed = 0;
 /** Temporary directory (set up by setup_directory) under which we store all
  * our files during testing. */
 static char temp_dir[256];
+static pid_t temp_dir_setup_in_pid = 0;
 
 /** Select and create the temporary directory we'll use to run our unit tests.
  * Store it in <b>temp_dir</b>.  Exit immediately if we can't create it.
@@ -96,6 +97,7 @@ setup_directory(void)
     exit(1);
   }
   is_setup = 1;
+  temp_dir_setup_in_pid = getpid();
 }
 
 /** Return a filename relative to our testing temporary directory */
@@ -109,11 +111,16 @@ get_fname(const char *name)
 }
 
 /** Remove all files stored under the temporary directory, and the directory
- * itself. */
+ * itself.  Called by atexit(). */
 static void
 remove_directory(void)
 {
-  smartlist_t *elements = tor_listdir(temp_dir);
+  smartlist_t *elements;
+  if (getpid() != temp_dir_setup_in_pid) {
+    /* Only clean out the tempdir when the main process is exiting. */
+    return;
+  }
+  elements = tor_listdir(temp_dir);
   if (elements) {
     SMARTLIST_FOREACH(elements, const char *, cp,
        {
