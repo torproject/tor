@@ -835,7 +835,8 @@ see tor-design.pdf.
        6 -- REASON_DONE           (Anonymized TCP connection was closed)
        7 -- REASON_TIMEOUT        (Connection timed out, or OR timed out
                                    while connecting)
-       8 -- (unallocated) [**]
+       8 -- REASON_NOROUTE        (Routing error while attempting to
+                                   contact destination)
        9 -- REASON_HIBERNATING    (OR is temporarily hibernating)
       10 -- REASON_INTERNAL       (Internal error at the OR)
       11 -- REASON_RESOURCELIMIT  (OR has no resources to fulfill request)
@@ -857,8 +858,6 @@ see tor-design.pdf.
 
    [*] Older versions of Tor also send this reason when connections are
        reset.
-   [**] Due to a bug in versions of Tor through 0095, error reason 8 must
-        remain allocated until that version is obsolete.
 
    --- [The rest of this section describes unimplemented functionality.]
 

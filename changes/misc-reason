@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Exit nodes didn't recognize EHOSTUNREACH as a stream ending reason
+      and sent back END_STREAM_REASON_NOROUTE. Also update the spec to
+      reflect this new reason. Bugfix on 0.1.0.1-rc; fixes bug 1793.
