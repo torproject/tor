@@ -616,8 +616,8 @@ circuit_build_times_parse_state(circuit_build_times_t *cbt,
   config_line_t *line;
   unsigned int i;
   build_time_t *loaded_times;
-  circuit_build_times_init(cbt);
   int err = 0;
+  circuit_build_times_init(cbt);
 
   if (circuit_build_times_disabled()) {
     return 0;
