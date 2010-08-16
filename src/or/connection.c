@@ -2353,7 +2353,7 @@ connection_handle_read_impl(connection_t *conn)
       return 0;
   }
 
-loop_again:
+ loop_again:
   try_to_read = max_to_read;
   tor_assert(!conn->marked_for_close);
 

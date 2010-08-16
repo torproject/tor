@@ -1327,7 +1327,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial)
     return 0;
   }
 
-repeat_connection_edge_package_raw_inbuf:
+ repeat_connection_edge_package_raw_inbuf:
 
   circ = circuit_get_by_edge_conn(conn);
   if (!circ) {

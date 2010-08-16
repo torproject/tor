@@ -829,7 +829,7 @@ geoip_get_client_history(geoip_client_action_t action)
       smartlist_add(chunks, buf);
   });
   result = smartlist_join_strings(chunks, ",", 0, NULL);
-done:
+ done:
   tor_free(counts);
   if (chunks) {
     SMARTLIST_FOREACH(chunks, char *, c, tor_free(c));

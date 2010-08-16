@@ -381,7 +381,7 @@ validate_addr_policies(or_options_t *options, char **msg)
                         ADDR_POLICY_ACCEPT))
     REJECT("Error in ReachableDirAddresses entry.");
 
-err:
+ err:
   addr_policy_list_free(addr_policy);
   return *msg ? -1 : 0;
 #undef REJECT
@@ -1272,7 +1272,7 @@ policy_summarize(smartlist_t *policy)
   result = tor_malloc(final_size);
   tor_snprintf(result, final_size, "%s %s", prefix, shorter_str);
 
-cleanup:
+ cleanup:
   /* cleanup */
   SMARTLIST_FOREACH(summary, policy_summary_item_t *, s, tor_free(s));
   smartlist_free(summary);

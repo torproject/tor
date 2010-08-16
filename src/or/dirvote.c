@@ -762,7 +762,7 @@ networkstatus_check_weights(int64_t Wgg, int64_t Wgd, int64_t Wmg,
     }
   }
 
-out:
+ out:
   if (berr) {
     log_info(LD_DIR,
              "Bw weight mismatch %d. G="I64_FORMAT" M="I64_FORMAT
@@ -2942,6 +2942,7 @@ dirvote_compute_consensuses(void)
                                strlen(pending_consensus_signatures), 0);
   log_notice(LD_DIR, "Signature(s) posted.");
 
+  smartlist_free(votes);
   return 0;
  err:
   smartlist_free(votes);
@@ -3008,6 +3009,7 @@ dirvote_add_signatures_to_pending_consensus(
       networkstatus_vote_free(v);
     }
     *msg_out = "Signatures added";
+    tor_free(new_signatures);
   } else if (r == 0) {
     *msg_out = "Signatures ignored";
   } else {
@@ -3137,7 +3139,7 @@ void
 dirvote_free_all(void)
 {
   dirvote_clear_votes(1);
-  /* now empty as a result of clear_pending_votes. */
+  /* now empty as a result of dirvote_clear_votes(). */
   smartlist_free(pending_vote_list);
   pending_vote_list = NULL;
   smartlist_free(previous_vote_list);
@@ -3146,7 +3148,7 @@ dirvote_free_all(void)
   dirvote_clear_pending_consensuses();
   tor_free(pending_consensus_signatures);
   if (pending_consensus_signature_list) {
-    /* now empty as a result of clear_pending_votes. */
+    /* now empty as a result of dirvote_clear_votes(). */
     smartlist_free(pending_consensus_signature_list);
     pending_consensus_signature_list = NULL;
   }

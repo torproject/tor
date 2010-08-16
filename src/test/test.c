@@ -485,7 +485,6 @@ test_circuit_timeout(void)
   circuit_build_times_t final;
   double timeout1, timeout2;
   or_state_t state;
-  char *msg;
   int i, runs;
   double close_ms;
   circuit_build_times_init(&initial);
@@ -525,7 +524,7 @@ test_circuit_timeout(void)
   test_assert(estimate.total_build_times <= CBT_NCIRCUITS_TO_OBSERVE);
 
   circuit_build_times_update_state(&estimate, &state);
-  test_assert(circuit_build_times_parse_state(&final, &state, &msg) == 0);
+  test_assert(circuit_build_times_parse_state(&final, &state) == 0);
 
   circuit_build_times_update_alpha(&final);
   timeout2 = circuit_build_times_calculate_timeout(&final,
@@ -627,7 +626,7 @@ test_circuit_timeout(void)
     circuit_build_times_count_timeout(&final, 1);
   }
 
-done:
+ done:
   return;
 }
 
