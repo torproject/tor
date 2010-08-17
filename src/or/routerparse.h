@@ -30,11 +30,6 @@ int router_parse_list_from_string(const char **s, const char *eos,
                                   int is_extrainfo,
                                   int allow_annotations,
                                   const char *prepend_annotations);
-int router_parse_routerlist_from_directory(const char *s,
-                                           routerlist_t **dest,
-                                           crypto_pk_env_t *pkey,
-                                           int check_version,
-                                           int write_to_cache);
 int router_parse_runningrouters(const char *str);
 int router_parse_directory(const char *str);
 

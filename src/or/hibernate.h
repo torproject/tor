@@ -24,7 +24,6 @@ void consider_hibernation(time_t now);
 int getinfo_helper_accounting(control_connection_t *conn,
                               const char *question, char **answer,
                               const char **errmsg);
-void accounting_set_bandwidth_usage_from_state(or_state_t *state);
 
 #endif
 

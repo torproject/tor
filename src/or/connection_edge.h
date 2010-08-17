@@ -82,7 +82,6 @@ void addressmap_get_mappings(smartlist_t *sl, time_t min_expires,
 int connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
                                                origin_circuit_t *circ,
                                                crypt_path_t *cpath);
-int hostname_is_noconnect_address(const char *address);
 
 /** Possible return values for parse_extended_hostname. */
 typedef enum hostname_type_t {

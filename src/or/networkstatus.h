@@ -73,7 +73,6 @@ int networkstatus_set_current_consensus(const char *consensus,
                                         unsigned flags);
 void networkstatus_note_certs_arrived(void);
 void routers_update_all_from_networkstatus(time_t now, int dir_version);
-void routerstatus_list_update_from_consensus_networkstatus(time_t now);
 void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                                                         int reset_failures);
 void signed_descs_update_status_from_consensus_networkstatus(

@@ -107,8 +107,6 @@ void circuit_build_times_initial_alpha(circuit_build_times_t *cbt,
                                        double quantile, double time_ms);
 int circuit_build_times_update_alpha(circuit_build_times_t *cbt);
 double circuit_build_times_cdf(circuit_build_times_t *cbt, double x);
-void circuit_build_times_add_timeout_worker(circuit_build_times_t *cbt,
-                                       double quantile_cutoff);
 void circuitbuild_running_unit_tests(void);
 void circuit_build_times_reset(circuit_build_times_t *cbt);
 

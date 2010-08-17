@@ -46,10 +46,6 @@ void connection_or_write_var_cell_to_buf(const var_cell_t *cell,
 int connection_or_send_destroy(circid_t circ_id, or_connection_t *conn,
                                int reason);
 int connection_or_send_netinfo(or_connection_t *conn);
-int connection_or_send_cert(or_connection_t *conn);
-int connection_or_send_link_auth(or_connection_t *conn);
-int connection_or_compute_link_auth_hmac(or_connection_t *conn,
-                                         char *hmac_out);
 int is_or_protocol_version_known(uint16_t version);
 
 void cell_pack(packed_cell_t *dest, const cell_t *src);

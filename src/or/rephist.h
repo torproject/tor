@@ -57,14 +57,6 @@ void dump_pk_ops(int severity);
 
 void rep_hist_free_all(void);
 
-/* for hidden service usage statistics */
-void hs_usage_note_publish_total(const char *service_id, time_t now);
-void hs_usage_note_publish_novel(const char *service_id, time_t now);
-void hs_usage_note_fetch_total(const char *service_id, time_t now);
-void hs_usage_note_fetch_successful(const char *service_id, time_t now);
-void hs_usage_write_statistics_to_file(time_t now);
-void hs_usage_free_all(void);
-
 void rep_hist_exit_stats_init(time_t now);
 void rep_hist_reset_exit_stats(time_t now);
 void rep_hist_exit_stats_term(void);
