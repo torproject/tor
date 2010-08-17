@@ -1132,11 +1132,21 @@ update_consensus_networkstatus_fetch_time(time_t now)
   if (c) {
     long dl_interval;
     long interval = c->fresh_until - c->valid_after;
+    long min_sec_before_caching = CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
     time_t start;
+
+    if (min_sec_before_caching > interval/16) {
+      /* Usually we allow 2-minutes slop factor in case clocks get
+         desynchronized a little.  If we're on a private network with
+         a crazy-fast voting interval, though, 2 minutes may be too
+         much. */
+      min_sec_before_caching = interval/16;
+    }
+
     if (directory_fetches_dir_info_early(options)) {
       /* We want to cache the next one at some point after this one
        * is no longer fresh... */
-      start = c->fresh_until + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
+      start = c->fresh_until + min_sec_before_caching;
       /* But only in the first half-interval after that. */
       dl_interval = interval/2;
     } else {
@@ -1150,10 +1160,9 @@ update_consensus_networkstatus_fetch_time(time_t now)
        * to choose the rest of the interval *after* them. */
       if (directory_fetches_dir_info_later(options)) {
         /* Give all the *clients* enough time to download the consensus. */
-        start = start + dl_interval + CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
+        start = start + dl_interval + min_sec_before_caching;
         /* But try to get it before ours actually expires. */
-        dl_interval = (c->valid_until - start) -
-                      CONSENSUS_MIN_SECONDS_BEFORE_CACHING;
+        dl_interval = (c->valid_until - start) - min_sec_before_caching;
       }
     }
     if (dl_interval < 1)
