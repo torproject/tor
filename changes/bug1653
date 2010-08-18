@@ -4,5 +4,5 @@
       circuit queue already, so our circuit queue just grew and grew
       in some cases.  We fix this by not re-enabling reading on SENDME
       while the cell queue is blocked.  Fixes bug 1653.  Bugfix on
-      0.2.0.1-alpha.  Detected by Mashael ??.  Original patch by
+      0.2.0.1-alpha.  Detected by Mashael AlSabah.  Original patch by
       "yetonetime".
