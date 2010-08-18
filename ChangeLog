@@ -39,14 +39,6 @@ Changes in version 0.2.2.15-alpha - 2010-08-18
     - Add support for the country code "{??}" in torrc options like
       ExcludeNodes, to indicate all routers of unknown country. Closes
       bug 1094.
-    - Remove the old debian/ directory from the main Tor distribution.
-      The official Tor-for-debian git repository lives at the URL
-      https://git.torproject.org/debian/tor.git
-    - Take a first step towards making or.h smaller by splitting out
-      function definitions for all source files in src/or/. Leave
-      structures and defines in or.h for now.
-    - New unit tests for exit-port history statistics; refactored exit
-      statistics code to be more easily tested.
     - Relays report the number of bytes spent on answering directory
       requests in extra-info descriptors similar to {read,write}-history.
       Implements enhancement 1790.
@@ -80,7 +72,7 @@ Changes in version 0.2.2.15-alpha - 2010-08-18
       stream ending reason for this case: END_STREAM_REASON_NOROUTE.
       Servers can start sending this code when enough clients recognize
       it. Also update the spec to reflect this new reason. Bugfix on
-      0.1.0.1-rc; fixes bug 1793.
+      0.1.0.1-rc; fixes part of bug 1793.
     - Delay geoip stats collection by bridges for 6 hours, not 2 hours,
       when we switch from being a public relay to a bridge. Otherwise
       there will still be clients that see the relay in their consensus,
@@ -111,7 +103,7 @@ Changes in version 0.2.2.15-alpha - 2010-08-18
       '$(:x)' to 'x' rather than the empty string. This bites us in
       doc/ when configured with --disable-asciidoc. Bugfix on
       0.2.2.9-alpha; fixes bug 1773.
-    - Fix to remove a spurious hidden service server-side log notice about
+    - Remove a spurious hidden service server-side log notice about
       "Ancient non-dirty circuits". Bugfix on 0.2.2.14-alpha; fixes
       bug 1741.
     - Fix compilation with --with-dmalloc set. Bugfix on 0.2.2.6-alpha;
@@ -124,8 +116,16 @@ Changes in version 0.2.2.15-alpha - 2010-08-18
       0.2.2.6-alpha, and 0.2.2.10-alpha respectively; fixes bug 1831.
 
   o Code simplifications and refactoring:
+    - Take a first step towards making or.h smaller by splitting out
+      function definitions for all source files in src/or/. Leave
+      structures and defines in or.h for now.
     - Remove a bunch of unused function declarations as well as a block of
       #if 0'd code from the unit tests. Closes bug 1824.
+    - New unit tests for exit-port history statistics; refactored exit
+      statistics code to be more easily tested.
+    - Remove the old debian/ directory from the main Tor distribution.
+      The official Tor-for-debian git repository lives at the URL
+      https://git.torproject.org/debian/tor.git
 
 
 Changes in version 0.2.2.14-alpha - 2010-07-12
