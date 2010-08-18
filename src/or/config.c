@@ -441,6 +441,12 @@ static config_var_t _state_vars[] = {
   V(BWHistoryWriteEnds,               ISOTIME,  NULL),
   V(BWHistoryWriteInterval,           UINT,     "900"),
   V(BWHistoryWriteValues,             CSV,      ""),
+  V(BWHistoryDirReadEnds,             ISOTIME,  NULL),
+  V(BWHistoryDirReadInterval,         UINT,     "900"),
+  V(BWHistoryDirReadValues,           CSV,      ""),
+  V(BWHistoryDirWriteEnds,            ISOTIME,  NULL),
+  V(BWHistoryDirWriteInterval,        UINT,     "900"),
+  V(BWHistoryDirWriteValues,          CSV,      ""),
 
   V(TorVersion,                       STRING,   NULL),
 

@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Correctly report written bytes on linked connections. Found while
+      implementing 1790. Bugfix on 0.2.2.4-alpha.
+

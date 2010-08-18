@@ -2082,8 +2082,6 @@ static void
 connection_buckets_decrement(connection_t *conn, time_t now,
                              size_t num_read, size_t num_written)
 {
-  if (!connection_is_rate_limited(conn))
-    return; /* local IPs are free */
   if (num_written >= INT_MAX || num_read >= INT_MAX) {
     log_err(LD_BUG, "Value out of range. num_read=%lu, num_written=%lu, "
              "connection type=%s, state=%s",
@@ -2095,6 +2093,16 @@ connection_buckets_decrement(connection_t *conn, time_t now,
     tor_fragile_assert();
   }
 
+  /* Count bytes of answering direct and tunneled directory requests */
+  if (conn->type == CONN_TYPE_DIR && conn->purpose == DIR_PURPOSE_SERVER) {
+    if (num_read > 0)
+      rep_hist_note_dir_bytes_read(num_read, now);
+    if (num_written > 0)
+      rep_hist_note_dir_bytes_written(num_written, now);
+  }
+
+  if (!connection_is_rate_limited(conn))
+    return; /* local IPs are free */
   if (num_read > 0) {
     rep_hist_note_bytes_read(num_read, now);
   }
@@ -2399,8 +2407,12 @@ connection_handle_read_impl(connection_t *conn)
     connection_t *linked = conn->linked_conn;
 
     if (n_read) {
-      /* Probably a no-op, but hey. */
-      connection_buckets_decrement(linked, approx_time(), n_read, 0);
+      /* Probably a no-op, since linked conns typically don't count for
+       * bandwidth rate limiting. But do it anyway so we can keep stats
+       * accurately. Note that since we read the bytes from conn, and
+       * we're writing the bytes onto the linked connection, we count
+       * these as <i>written</i> bytes. */
+      connection_buckets_decrement(linked, approx_time(), 0, n_read);
 
       if (connection_flushed_some(linked) < 0)
         connection_mark_for_close(linked);

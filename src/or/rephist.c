@@ -1284,13 +1284,21 @@ bw_array_new(void)
 static bw_array_t *read_array = NULL;
 /** Recent history of bandwidth observations for write operations. */
 static bw_array_t *write_array = NULL;
+/** Recent history of bandwidth observations for read operations for the
+    directory protocol. */
+static bw_array_t *dir_read_array = NULL;
+/** Recent history of bandwidth observations for write operations for the
+    directory protocol. */
+static bw_array_t *dir_write_array = NULL;
 
-/** Set up read_array and write_array. */
+/** Set up [dir-]read_array and [dir-]write_array. */
 static void
 bw_arrays_init(void)
 {
   read_array = bw_array_new();
   write_array = bw_array_new();
+  dir_read_array = bw_array_new();
+  dir_write_array = bw_array_new();
 }
 
 /** We read <b>num_bytes</b> more bytes in second <b>when</b>.
@@ -1322,6 +1330,24 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
 {
 /* if we're smart, we can make this func and the one above share code */
   add_obs(read_array, when, num_bytes);
+}
+
+/** We wrote <b>num_bytes</b> more directory bytes in second <b>when</b>.
+ * (like rep_hist_note_bytes_written() above)
+ */
+void
+rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
+{
+  add_obs(dir_write_array, when, num_bytes);
+}
+
+/** We read <b>num_bytes</b> more directory bytes in second <b>when</b>.
+ * (like rep_hist_note_bytes_written() above)
+ */
+void
+rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
+{
+  add_obs(dir_read_array, when, num_bytes);
 }
 
 /** Helper: Return the largest value in b->maxima.  (This is equal to the
@@ -1359,9 +1385,9 @@ rep_hist_bandwidth_assess(void)
     return (int)(U64_TO_DBL(r)/NUM_SECS_ROLLING_MEASURE);
 }
 
-/** Print the bandwidth history of b (either read_array or write_array)
- * into the buffer pointed to by buf.  The format is simply comma
- * separated numbers, from oldest to newest.
+/** Print the bandwidth history of b (either [dir-]read_array or
+ * [dir-]write_array) into the buffer pointed to by buf.  The format is
+ * simply comma separated numbers, from oldest to newest.
  *
  * It returns the number of bytes written.
  */
@@ -1419,20 +1445,37 @@ rep_hist_get_bandwidth_lines(int for_extrainfo)
   char *buf, *cp;
   char t[ISO_TIME_LEN+1];
   int r;
-  bw_array_t *b;
+  bw_array_t *b = NULL;
+  const char *desc = NULL;
   size_t len;
 
-  /* opt (read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n,n,n... */
-  len = (60+21*NUM_TOTALS)*2;
+  /* opt [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
+  len = (67+21*NUM_TOTALS)*4;
   buf = tor_malloc_zero(len);
   cp = buf;
-  for (r=0;r<2;++r) {
-    b = r?read_array:write_array;
+  for (r=0;r<4;++r) {
+    switch (r) {
+      case 0:
+        b = write_array;
+        desc = "write-history";
+        break;
+      case 1:
+        b = read_array;
+        desc = "read-history";
+        break;
+      case 2:
+        b = dir_write_array;
+        desc = "dirreq-write-history";
+        break;
+      case 3:
+        b = dir_read_array;
+        desc = "dirreq-read-history";
+        break;
+    }
     tor_assert(b);
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
     tor_snprintf(cp, len-(cp-buf), "%s%s %s (%d s) ",
-                 for_extrainfo ? "" : "opt ",
-                 r ? "read-history" : "write-history", t,
+                 for_extrainfo ? "" : "opt ", desc, t,
                  NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
     cp += rep_hist_fill_bandwidth_history(cp, len-(cp-buf), b);
@@ -1448,20 +1491,41 @@ rep_hist_update_state(or_state_t *state)
 {
   int len, r;
   char *buf, *cp;
-  smartlist_t **s_values;
-  time_t *s_begins;
-  int *s_interval;
-  bw_array_t *b;
+  smartlist_t **s_values = NULL;
+  time_t *s_begins = NULL;
+  int *s_interval = NULL;
+  bw_array_t *b = NULL;
 
   len = 20*NUM_TOTALS+1;
   buf = tor_malloc_zero(len);
 
-  for (r=0;r<2;++r) {
-    b = r?read_array:write_array;
-    s_begins  = r?&state->BWHistoryReadEnds    :&state->BWHistoryWriteEnds;
-    s_interval= r?&state->BWHistoryReadInterval:&state->BWHistoryWriteInterval;
-    s_values  = r?&state->BWHistoryReadValues  :&state->BWHistoryWriteValues;
-
+  for (r=0;r<4;++r) {
+    switch (r) {
+      case 0:
+        b = write_array;
+        s_begins = &state->BWHistoryWriteEnds;
+        s_interval = &state->BWHistoryWriteInterval;
+        s_values = &state->BWHistoryWriteValues;
+        break;
+      case 1:
+        b = read_array;
+        s_begins = &state->BWHistoryReadEnds;
+        s_interval = &state->BWHistoryReadInterval;
+        s_values = &state->BWHistoryReadValues;
+        break;
+      case 2:
+        b = dir_write_array;
+        s_begins = &state->BWHistoryDirWriteEnds;
+        s_interval = &state->BWHistoryDirWriteInterval;
+        s_values = &state->BWHistoryDirWriteValues;
+        break;
+      case 3:
+        b = dir_read_array;
+        s_begins = &state->BWHistoryDirReadEnds;
+        s_interval = &state->BWHistoryDirReadInterval;
+        s_values = &state->BWHistoryDirReadValues;
+        break;
+    }
     if (*s_values) {
       SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
       smartlist_free(*s_values);
@@ -1501,23 +1565,45 @@ rep_hist_update_state(or_state_t *state)
 int
 rep_hist_load_state(or_state_t *state, char **err)
 {
-  time_t s_begins, start;
+  time_t s_begins = 0, start;
   time_t now = time(NULL);
   uint64_t v;
   int r,i,ok;
   int all_ok = 1;
-  int s_interval;
-  smartlist_t *s_values;
-  bw_array_t *b;
+  int s_interval = 0;
+  smartlist_t *s_values = NULL;
+  bw_array_t *b = NULL;
 
   /* Assert they already have been malloced */
   tor_assert(read_array && write_array);
 
-  for (r=0;r<2;++r) {
-    b = r?read_array:write_array;
-    s_begins = r?state->BWHistoryReadEnds:state->BWHistoryWriteEnds;
-    s_interval =  r?state->BWHistoryReadInterval:state->BWHistoryWriteInterval;
-    s_values =  r?state->BWHistoryReadValues:state->BWHistoryWriteValues;
+  for (r=0;r<4;++r) {
+    switch (r) {
+      case 0:
+        b = write_array;
+        s_begins = state->BWHistoryWriteEnds;
+        s_interval = state->BWHistoryWriteInterval;
+        s_values = state->BWHistoryWriteValues;
+        break;
+      case 1:
+        b = read_array;
+        s_begins = state->BWHistoryReadEnds;
+        s_interval = state->BWHistoryReadInterval;
+        s_values = state->BWHistoryReadValues;
+        break;
+      case 2:
+        b = dir_write_array;
+        s_begins = state->BWHistoryDirWriteEnds;
+        s_interval = state->BWHistoryDirWriteInterval;
+        s_values = state->BWHistoryDirWriteValues;
+        break;
+      case 3:
+        b = dir_read_array;
+        s_begins = state->BWHistoryDirReadEnds;
+        s_interval = state->BWHistoryDirReadInterval;
+        s_values = state->BWHistoryDirReadValues;
+        break;
+    }
     if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
       start = s_begins - s_interval*(smartlist_len(s_values));
       if (start > now)
