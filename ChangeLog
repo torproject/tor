@@ -71,9 +71,11 @@ Changes in version 0.2.2.15-alpha - 2010-08-1?
       a randomly generated port is 0. Diagnosed by Matt Edman. Bugfix
       on 0.2.0.10-alpha; fixes bug 1808.
     - Exit nodes didn't recognize EHOSTUNREACH as a plausible error code,
-      and so sent back END_STREAM_REASON_MISC. They now send a new stream
-      ending reason: END_STREAM_REASON_NOROUTE. Also update the spec to
-      reflect this new reason. Bugfix on 0.1.0.1-rc; fixes bug 1793.
+      and so sent back END_STREAM_REASON_MISC. Clients now recognize a new
+      stream ending reason for this case: END_STREAM_REASON_NOROUTE.
+      Servers can start sending this code when enough clients recognize
+      it. Also update the spec to reflect this new reason. Bugfix on
+      0.1.0.1-rc; fixes bug 1793.
     - Instead of giving an assertion failure on an internal mismatch
       on estimated freelist size, just log a BUG warning and try later.
       Mitigates but does not fix bug 1125.
