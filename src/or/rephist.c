@@ -2507,19 +2507,25 @@ bidi_map_free(void)
   HT_CLEAR(bidimap, &bidi_map);
 }
 
+/** Reset counters for conn statistics. */
+void
+rep_hist_reset_conn_stats(time_t now)
+{
+  start_of_conn_stats_interval = now;
+  below_threshold = 0;
+  mostly_read = 0;
+  mostly_written = 0;
+  both_read_and_written = 0;
+  bidi_map_free();
+}
+
 /** Stop collecting connection stats in a way that we can re-start doing
  * so in rep_hist_conn_stats_init(). */
 void
 rep_hist_conn_stats_term(void)
 {
-  below_threshold = 0;
-  mostly_read = 0;
-  mostly_written = 0;
-  both_read_and_written = 0;
-  start_of_conn_stats_interval = 0;
-  bidi_map_free();
+  rep_hist_reset_conn_stats(0);
 }
-
 
 /** We read <b>num_read</b> bytes and wrote <b>num_written</b> from/to OR
  * connection <b>conn_id</b> in second <b>when</b>. If this is the first
@@ -2575,46 +2581,60 @@ rep_hist_note_or_conn_bytes(uint64_t conn_id, size_t num_read,
   }
 }
 
-/** Write conn statistics to $DATADIR/stats/conn-stats and return when
- * we would next want to write conn stats. */
+/** Return a newly allocated string containing the connection statistics
+ * until <b>now</b>, or NULL if we're not collecting conn stats. */
+char *
+rep_hist_format_conn_stats(time_t now)
+{
+  char *result, written[ISO_TIME_LEN+1];
+
+  if (!start_of_conn_stats_interval)
+    return NULL; /* Not initialized. */
+
+  format_iso_time(written, now);
+  tor_asprintf(&result, "conn-stats-end %s (%d s)\n"
+               "conn-bi-direct %d,%d,%d,%d\n",
+               written,
+               (unsigned) (now - start_of_conn_stats_interval),
+               below_threshold,
+               mostly_read,
+               mostly_written,
+               both_read_and_written);
+  return result;
+}
+
+/** If 24 hours have passed since the beginning of the current conn stats
+ * period, write conn stats to $DATADIR/stats/conn-stats (possibly
+ * overwriting an existing file) and reset counters.  Return when we would
+ * next want to write conn stats or 0 if we never want to write. */
 time_t
 rep_hist_conn_stats_write(time_t now)
 {
-  char *statsdir = NULL, *filename = NULL;
-  char written[ISO_TIME_LEN+1];
-  open_file_t *open_file = NULL;
-  FILE *out;
+  char *statsdir = NULL, *filename = NULL, *str = NULL;
 
   if (!start_of_conn_stats_interval)
     return 0; /* Not initialized. */
   if (start_of_conn_stats_interval + WRITE_STATS_INTERVAL > now)
     goto done; /* Not ready to write */
 
-  /* write to file */
+  /* Generate history string. */
+  str = rep_hist_format_conn_stats(now);
+
+  /* Reset counters. */
+  rep_hist_reset_conn_stats(now);
+
+  /* Try to write to disk. */
   statsdir = get_datadir_fname("stats");
-  if (check_private_dir(statsdir, CPD_CREATE) < 0)
+  if (check_private_dir(statsdir, CPD_CREATE) < 0) {
+    log_warn(LD_HIST, "Unable to create stats/ directory!");
     goto done;
+  }
   filename = get_datadir_fname2("stats", "conn-stats");
-  out = start_writing_to_stdio_file(filename, OPEN_FLAGS_APPEND,
-                                    0600, &open_file);
-  if (!out)
-    goto done;
-  format_iso_time(written, now);
-  if (fprintf(out, "conn-stats-end %s (%d s)\n", written,
-              (unsigned) (now - start_of_conn_stats_interval)) < 0)
-    goto done;
+  if (write_str_to_file(filename, str, 0) < 0)
+    log_warn(LD_HIST, "Unable to write conn stats to disk!");
 
-  if (fprintf(out, "conn-bi-direct %d,%d,%d,%d\n",
-              below_threshold, mostly_read, mostly_written,
-              both_read_and_written) < 0)
-    goto done;
-
-  finish_writing_to_file(open_file);
-  open_file = NULL;
-  start_of_conn_stats_interval = now;
  done:
-  if (open_file)
-    abort_writing_to_file(open_file);
+  tor_free(str);
   tor_free(filename);
   tor_free(statsdir);
   return start_of_conn_stats_interval + WRITE_STATS_INTERVAL;

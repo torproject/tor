@@ -1104,7 +1104,8 @@ test_stats(void)
   char *s = NULL;
   int i;
 
-  /* We shouldn't collect exit stats without initializing them. */
+  /* Start with testing exit port statistics; we shouldn't collect exit
+   * stats without initializing them. */
   rep_hist_note_exit_stream_opened(80);
   rep_hist_note_exit_bytes(80, 100, 10000);
   s = rep_hist_format_exit_stats(now + 86400);
@@ -1149,7 +1150,7 @@ test_stats(void)
   test_assert(!s);
 
   /* Re-start stats, add some bytes, reset stats, and see what history we
-   *  get when observing no streams or bytes at all. */
+   * get when observing no streams or bytes at all. */
   rep_hist_exit_stats_init(now);
   rep_hist_note_exit_stream_opened(80);
   rep_hist_note_exit_bytes(80, 100, 10000);
@@ -1159,6 +1160,43 @@ test_stats(void)
              "exit-kibibytes-written other=0\n"
              "exit-kibibytes-read other=0\n"
              "exit-streams-opened other=0\n", s);
+  tor_free(s);
+
+  /* Continue with testing connection statistics; we shouldn't collect
+   * conn stats without initializing them. */
+  rep_hist_note_or_conn_bytes(1, 20, 400, now);
+  s = rep_hist_format_conn_stats(now + 86400);
+  test_assert(!s);
+
+  /* Initialize stats, note bytes, and generate history string. */
+  rep_hist_conn_stats_init(now);
+  rep_hist_note_or_conn_bytes(1, 30000, 400000, now);
+  rep_hist_note_or_conn_bytes(1, 30000, 400000, now + 5);
+  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
+  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
+  s = rep_hist_format_conn_stats(now + 86400);
+  test_streq("conn-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+             "conn-bi-direct 0,0,1,0\n", s);
+  tor_free(s);
+
+  /* Stop collecting stats, add some bytes, and ensure we don't generate
+   * a history string. */
+  rep_hist_conn_stats_term();
+  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
+  s = rep_hist_format_conn_stats(now + 86400);
+  test_assert(!s);
+
+  /* Re-start stats, add some bytes, reset stats, and see what history we
+   * get when observing no streams or bytes at all. */
+  rep_hist_conn_stats_init(now);
+  rep_hist_note_or_conn_bytes(1, 30000, 400000, now);
+  rep_hist_note_or_conn_bytes(1, 30000, 400000, now + 5);
+  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
+  rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
+  rep_hist_reset_conn_stats(now);
+  s = rep_hist_format_conn_stats(now + 86400);
+  test_streq("conn-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+             "conn-bi-direct 0,0,0,0\n", s);
 
  done:
   tor_free(s);
