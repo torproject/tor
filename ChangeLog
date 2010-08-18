@@ -1,4 +1,4 @@
-Changes in version 0.2.2.15-alpha - 2010-08-1?
+Changes in version 0.2.2.15-alpha - 2010-08-18
   o Major bugfixes:
     - Stop assigning the HSDir flag to relays that disable their
       DirPort (and thus will refuse to answer directory requests). This
@@ -47,6 +47,9 @@ Changes in version 0.2.2.15-alpha - 2010-08-1?
       structures and defines in or.h for now.
     - New unit tests for exit-port history statistics; refactored exit
       statistics code to be more easily tested.
+    - Relays report the number of bytes spent on answering directory
+      requests in extra-info descriptors similar to {read,write}-history.
+      Implements enhancement 1790.
 
   o Minor bugfixes (on 0.2.1.x and earlier):
     - Complain if PublishServerDescriptor is given multiple arguments that
@@ -78,9 +81,17 @@ Changes in version 0.2.2.15-alpha - 2010-08-1?
       Servers can start sending this code when enough clients recognize
       it. Also update the spec to reflect this new reason. Bugfix on
       0.1.0.1-rc; fixes bug 1793.
+    - Delay geoip stats collection by bridges for 6 hours, not 2 hours,
+      when we switch from being a public relay to a bridge. Otherwise
+      there will still be clients that see the relay in their consensus,
+      and the stats will end up wrong. Bugfix on 0.2.1.15-rc; fixes bug
+      932 even more.
     - Instead of giving an assertion failure on an internal mismatch
       on estimated freelist size, just log a BUG warning and try later.
       Mitigates but does not fix bug 1125.
+    - Fix an assertion failure that could occur in caches or bridge users
+      when using a very short voting interval on a testing network.
+      Diagnosed by Robert Hogan. Fixes bug 1141; bugfix on 0.2.0.8-alpha.
 
   o Minor bugfixes (on 0.2.2.x):
     - Alter directory authorities to always consider Exit-flagged nodes
@@ -105,10 +116,16 @@ Changes in version 0.2.2.15-alpha - 2010-08-1?
       bug 1741.
     - Fix compilation with --with-dmalloc set. Bugfix on 0.2.2.6-alpha;
       fixes bug 1832.
+    - Correctly report written bytes on linked connections. Found while
+      implementing 1790. Bugfix on 0.2.2.4-alpha.
     - Fix three memory leaks: one in circuit_build_times_parse_state(),
       one in dirvote_add_signatures_to_pending_consensus(), and one every
       time we parse a v3 network consensus. Bugfixes on 0.2.2.14-alpha,
       0.2.2.6-alpha, and 0.2.2.10-alpha respectively; fixes bug 1831.
+
+  o Code simplifications and refactoring:
+    - Remove a bunch of unused function declarations as well as a block of
+      #if 0'd code from the unit tests. Closes bug 1824.
 
 
 Changes in version 0.2.2.14-alpha - 2010-07-12

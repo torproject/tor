@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Delay geoip stats collection by bridges for 6 hours, not 2 hours,
-      when we switch from being a public relay to a bridge. Otherwise
-      there will still be clients that see the relay in their consensus,
-      and the stats will end up wrong. Bugfix on 0.2.1.15-rc; fixes bug
-      932 even more.

@@ -1,5 +1,0 @@
-  o Minor features:
-    - Relays report the number of bytes spent on answering directory
-      requests in extra-info descriptors similar to {read,write}-history.
-      Implements enhancement 1790.
-
