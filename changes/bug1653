@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - When the exit relay gets a circuit-level sendme cell, it started
+      reading on the exit streams, even if had 500 cells queued in our
+      circuit queue already, so our circuit queue just grew and grew
+      in some cases.  We fix this by not re-enabling reading on SENDME
+      while the cell queue is blocked.  Fixes bug 1653.  Bugfix on
+      0.2.0.1-alpha.  Detected by Mashael ??.  Original patch by
+      "yetonetime".
