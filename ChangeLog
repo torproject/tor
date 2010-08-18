@@ -61,6 +61,14 @@ Changes in version 0.2.2.15-alpha - 2010-08-1?
     - Fix a bug in the controller interface where "GETINFO ns/asdaskljkl"
       would return "551 Internal error" rather than "552 Unrecognized key
       ns/asdaskljkl". Bugfix on 0.1.2.3-alpha.
+    - Users can't configure a regular relay to be their bridge. It didn't
+      work because when Tor fetched the bridge descriptor, it found
+      that it already had it, and didn't realize that the purpose of the
+      descriptor had changed. Now we replace routers with a purpose other
+      than bridge with bridge descriptors when fetching them. Bugfix on
+      0.1.1.9-alpha. Bug 1776 not yet fixed because now we immediately
+      refetch the descriptor with router purpose 'general', disabling
+      it as a bridge.
     - Fix a rare bug in rend_fn unit tests: we would fail a test when
       a randomly generated port is 0. Diagnosed by Matt Edman. Bugfix
       on 0.2.0.10-alpha; fixes bug 1808.
