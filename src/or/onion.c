@@ -63,15 +63,16 @@ onion_pending_add(or_circuit_t *circ, char *onionskin)
 
   if (ol_length >= get_options()->MaxOnionsPending) {
 #define WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL (60)
-    static time_t last_warned = 0;
-    time_t now = time(NULL);
-    if (last_warned + WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL < now) {
+    static ratelim_t last_warned =
+      RATELIM_INIT(WARN_TOO_MANY_CIRC_CREATIONS_INTERVAL);
+    char *m;
+    if ((m = rate_limit_log(&last_warned, approx_time()))) {
       log_warn(LD_GENERAL,
                "Your computer is too slow to handle this many circuit "
                "creation requests! Please consider using the "
                "MaxAdvertisedBandwidth config option or choosing a more "
-               "restricted exit policy.");
-      last_warned = now;
+               "restricted exit policy.%s",m);
+      tor_free(m);
     }
     tor_free(tmp);
     return -1;

@@ -288,7 +288,12 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
 
     /* hand it off to the cpuworkers, and then return. */
     if (assign_onionskin_to_cpuworker(NULL, circ, onionskin) < 0) {
-      log_warn(LD_GENERAL,"Failed to hand off onionskin. Closing.");
+      static ratelim_t handoff_warning = RATELIM_INIT(3600);
+      char *m;
+      if ((m = rate_limit_log(&handoff_warning, approx_time()))) {
+        log_warn(LD_GENERAL,"Failed to hand off onionskin. Closing.%s",m);
+        tor_free(m);
+      }
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
     }
