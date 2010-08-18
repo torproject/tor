@@ -52,6 +52,8 @@ circuit_resume_edge_reading_helper(edge_connection_t *conn,
                                    crypt_path_t *layer_hint);
 static int
 circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
+static int
+circuit_queue_high(circuit_t *circ);
 
 /** Cache the current hi-res time; the cache gets reset when libevent
  * calls us. */
@@ -1236,6 +1238,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       conn->package_window += STREAMWINDOW_INCREMENT;
       log_debug(domain,"stream-level sendme, packagewindow now %d.",
                 conn->package_window);
+      if (circuit_queue_high(circ)) { /* Too high, don't touch conn */
+        return 0;
+      }
       connection_start_reading(TO_CONN(conn));
       /* handle whatever might still be on the inbuf */
       if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
@@ -1437,6 +1442,10 @@ static void
 circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint)
 {
 
+  if (circuit_queue_high(circ)) {
+    log_debug(layer_hint?LD_APP:LD_EXIT,"Too big queue, no resuming");
+    return;
+  }
   log_debug(layer_hint?LD_APP:LD_EXIT,"resuming");
 
   if (CIRCUIT_IS_ORIGIN(circ))
@@ -2405,3 +2414,24 @@ assert_active_circuits_ok(or_connection_t *orconn)
   tor_assert(n == smartlist_len(orconn->active_circuit_pqueue));
 }
 
+/** Return 1 if the number of cells waiting on the queue
+ *  more than a watermark or equal it. Else return 0.
+ *  XXXY: Only for edges: origin and exit. Middles out of luck for such,
+ *  need the proposal. 
+*/
+static int
+circuit_queue_high(circuit_t *circ)
+{
+  cell_queue_t *queue;
+
+  if (CIRCUIT_IS_ORIGIN(circ)) {
+    queue = &circ->n_conn_cells;
+  } else {
+    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    queue = &orcirc->p_conn_cells;
+  }
+
+  if (queue->n >= CELL_QUEUE_HIGHWATER_SIZE)
+    return 1;
+  return 0;
+}
