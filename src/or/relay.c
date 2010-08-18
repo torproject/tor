@@ -2100,12 +2100,16 @@ connection_or_unlink_all_active_circs(or_connection_t *orconn)
 
 /** Block (if <b>block</b> is true) or unblock (if <b>block</b> is false)
  * every edge connection that is using <b>circ</b> to write to <b>orconn</b>,
- * and start or stop reading as appropriate. */
-static void
+ * and start or stop reading as appropriate.
+ *
+ * Returns the number of streams whose status we changed.
+ */
+static int
 set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
                             int block)
 {
   edge_connection_t *edge = NULL;
+  int n = 0;
   if (circ->n_conn == orconn) {
     circ->streams_blocked_on_n_conn = block;
     if (CIRCUIT_IS_ORIGIN(circ))
@@ -2118,7 +2122,10 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
 
   for (; edge; edge = edge->next_stream) {
     connection_t *conn = TO_CONN(edge);
-    edge->edge_blocked_on_circ = block;
+    if (edge->edge_blocked_on_circ != block) {
+      ++n;
+      edge->edge_blocked_on_circ = block;
+    }
 
     if (!conn->read_event) {
       /* This connection is a placeholder for something; probably a DNS
@@ -2135,6 +2142,8 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
         connection_start_reading(conn);
     }
   }
+
+  return n;
 }
 
 /** Pull as many cells as possible (but no more than <b>max</b>) from the
@@ -2300,6 +2309,18 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
    * the edge streams for a while. */
   if (!streams_blocked && queue->n >= CELL_QUEUE_HIGHWATER_SIZE)
     set_streams_blocked_on_circ(circ, orconn, 1); /* block streams */
+
+  if (streams_blocked) {
+    /* We must have missed a connection! */
+    int n = set_streams_blocked_on_circ(circ, orconn, 1);
+    if (n) {
+      log_info(LD_BUG, "Got a cell added to a cell queue when streams were "
+               "supposed to be blocked; found that %d streams weren't.", n);
+    } else {
+      log_info(LD_BUG, "Got a cell added to a cell queue when streams were "
+               "all blocked. We should figure out why.");
+    }
+  }
 
   if (queue->n == 1) {
     /* This was the first cell added to the queue.  We need to make this
