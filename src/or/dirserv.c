@@ -944,7 +944,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
      * since it declared itself to be hibernating. */
     answer = 0;
   } else if (get_options()->AssumeReachable) {
-    /* If AssumeReachable, everybody is up! */
+    /* If AssumeReachable, everybody is up unless they say they are down! */
     answer = 1;
   } else {
     /* Otherwise, a router counts as up if we found it reachable in the last
