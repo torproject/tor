@@ -923,6 +923,11 @@ running_long_enough_to_decide_unreachable(void)
  * the directory. */
 #define REACHABLE_TIMEOUT (45*60)
 
+/** If we tested a router and found it reachable _at least this long_ after it
+ * declared itself hibernating, it is probably done hibernating and we just
+ * missed a descriptor from it. */
+#define ALLOW_REACHABILITY_PUBLICATION_SKEW (60*60)
+
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
  * or - We've found it reachable recently. */
@@ -939,7 +944,8 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     /* We always know if we are down ourselves. */
     answer = ! we_are_hibernating();
   } else if (router->is_hibernating &&
-             router->cache_info.published_on > router->last_reachable) {
+             (router->cache_info.published_on +
+              ALLOW_REACHABILITY_PUBLICATION_SKEW) > router->last_reachable) {
     /* A hibernating router is down unless we (somehow) had contact with it
      * since it declared itself to be hibernating. */
     answer = 0;
