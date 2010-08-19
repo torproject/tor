@@ -15,12 +15,6 @@ while (<F>) {
     if (m!^([A-Za-z0-9_]+)!) {
         $mostRecentOption = lc $1;
         $options{$mostRecentOption} = 1;
-    } elsif (m!^    !) {
-        $descOptions{$mostRecentOption} = 1;
-        if (m!\{DEPRECATED\}!) {
-            delete $descOptions{$mostRecentOption};
-            delete $options{$mostRecentOption};
-        }
     } else {
         print "Unrecognized output> ";
         print;
@@ -49,18 +43,10 @@ loadTorrc("./src/config/torrc.complete.in", \%torrcCompleteOptions);
 # Try to figure out what's in the man page.
 
 my $considerNextLine = 0;
-open(F, "./doc/tor.1.in") or die;
+open(F, "./doc/tor.1.txt") or die;
 while (<F>) {
-    if ($considerNextLine and
-        m!^\\fB([A-Za-z0-9_]+)!) {
+    if (m!^\*\*([A-Za-z0-9_]+)\*\*!) {
         $manPageOptions{lc $1} = 1;
-	next;
-    }
-
-    if (m!^\.(?:SH|TP|PP)!) {
-        $considerNextLine = 1; next;
-    } else {
-        $considerNextLine = 0;
     }
 }
 close F;
@@ -77,7 +63,7 @@ sub subtractHashes {
     0;
 }
 
-subtractHashes("No online docs", \%options, \%descOptions);
+# subtractHashes("No online docs", \%options, \%descOptions);
 # subtractHashes("Orphaned online docs", \%descOptions, \%options);
 
 subtractHashes("Not in torrc.complete.in", \%options, \%torrcCompleteOptions);
