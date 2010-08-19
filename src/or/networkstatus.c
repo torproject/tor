@@ -542,31 +542,61 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   if (warn >= 0) {
     SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
       {
-        log_info(LD_DIR, "Consensus includes unrecognized authority '%s' "
-                 "at %s:%d (contact %s; identity %s)",
+        log(severity, LD_DIR, "Consensus includes unrecognized authority "
+                 "'%s' at %s:%d (contact %s; identity %s)",
                  voter->nickname, voter->address, (int)voter->dir_port,
                  voter->contact?voter->contact:"n/a",
                  hex_str(voter->identity_digest, DIGEST_LEN));
       });
     SMARTLIST_FOREACH(need_certs_from, networkstatus_voter_info_t *, voter,
       {
-        log_info(LD_DIR, "Looks like we need to download a new certificate "
-                 "from authority '%s' at %s:%d (contact %s; identity %s)",
+        log(severity, LD_DIR, "Looks like we need to download a new "
+                 "certificate from authority '%s' at %s:%d (contact %s; "
+                 "identity %s)",
                  voter->nickname, voter->address, (int)voter->dir_port,
                  voter->contact?voter->contact:"n/a",
                  hex_str(voter->identity_digest, DIGEST_LEN));
       });
     SMARTLIST_FOREACH(missing_authorities, trusted_dir_server_t *, ds,
       {
-        log_info(LD_DIR, "Consensus does not include configured "
+        log(severity, LD_DIR, "Consensus does not include configured "
                  "authority '%s' at %s:%d (identity %s)",
                  ds->nickname, ds->address, (int)ds->dir_port,
                  hex_str(ds->v3_identity_digest, DIGEST_LEN));
       });
-    log(severity, LD_DIR,
-        "%d unknown, %d missing key, %d good, %d bad, %d no signature, "
-        "%d required", n_unknown, n_missing_key, n_good, n_bad,
-        n_no_signature, n_required);
+    {
+      smartlist_t *sl = smartlist_create();
+      char *cp;
+      tor_asprintf(&cp, "A consensus needs %d good signatures from recognized "
+                   "authorities for us to accept it. This one has %d.",
+                   n_required, n_good);
+      smartlist_add(sl,cp);
+      if (n_no_signature) {
+        tor_asprintf(&cp, "%d of the authorities we know didn't sign it.",
+                     n_no_signature);
+        smartlist_add(sl,cp);
+      }
+      if (n_unknown) {
+        tor_asprintf(&cp, "It has %d signatures from authorities we don't "
+                      "recognize.", n_unknown);
+        smartlist_add(sl,cp);
+      }
+      if (n_bad) {
+        tor_asprintf(&cp, "%d of the signatures on it didn't verify "
+                      "correctly.", n_bad);
+        smartlist_add(sl,cp);
+      }
+      if (n_missing_key) {
+        tor_asprintf(&cp, "We were unable to check %d of the signatures, "
+                      "because we were missing the keys.", n_missing_key);
+        smartlist_add(sl,cp);
+      }
+      cp = smartlist_join_strings(sl, " ", 0, NULL);
+      log(severity, LD_DIR, "%s", cp);
+      tor_free(cp);
+      SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
+      smartlist_free(sl);
+    }
   }
 
   smartlist_free(unrecognized);
