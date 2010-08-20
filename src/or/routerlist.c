@@ -3159,8 +3159,10 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     /* If we have this descriptor already and the new descriptor is a bridge
      * descriptor, replace it. If we had a bridge descriptor before and the
      * new one is not a bridge descriptor, don't replace it. */
-    if (old_router && (!routerinfo_is_a_configured_bridge(router) ||
-                routerinfo_is_a_configured_bridge(old_router))) {
+    tor_assert(old_router);
+    if (! (routerinfo_is_a_configured_bridge(router) &&
+            (router->purpose == ROUTER_PURPOSE_BRIDGE ||
+             old_router->purpose != ROUTER_PURPOSE_BRIDGE))) {
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router '%s'",
                router->nickname);
