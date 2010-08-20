@@ -107,6 +107,8 @@ get_fname(const char *name)
 {
   static char buf[1024];
   setup_directory();
+  if (!name)
+    return temp_dir;
   tor_snprintf(buf,sizeof(buf),"%s/%s",temp_dir,name);
   return buf;
 }

@@ -1106,6 +1106,39 @@ test_util_asprintf(void *ptr)
   tor_free(cp2);
 }
 
+static void
+test_util_listdir(void *ptr)
+{
+  smartlist_t *dir_contents = NULL;
+  char *fname1=NULL, *fname2=NULL, *dirname=NULL;
+  (void)ptr;
+
+  fname1 = tor_strdup(get_fname("hopscotch"));
+  fname2 = tor_strdup(get_fname("mumblety-peg"));
+  dirname = tor_strdup(get_fname(NULL));
+
+  tt_int_op(write_str_to_file(fname1, "X\n", 0), ==, 0);
+  tt_int_op(write_str_to_file(fname2, "Y\n", 0), ==, 0);
+
+  dir_contents = tor_listdir(dirname);
+  tt_assert(dir_contents);
+  /* make sure that each filename is listed. */
+  tt_assert(smartlist_string_isin_case(dir_contents, "hopscotch"));
+  tt_assert(smartlist_string_isin_case(dir_contents, "mumblety-peg"));
+
+  tt_assert(!smartlist_string_isin(dir_contents, "."));
+  tt_assert(!smartlist_string_isin(dir_contents, ".."));
+
+ done:
+  tor_free(fname1);
+  tor_free(fname2);
+  tor_free(dirname);
+  if (dir_contents) {
+    SMARTLIST_FOREACH(dir_contents, char *, cp, tor_free(cp));
+    smartlist_free(dir_contents);
+  }
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1128,6 +1161,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(strtok),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(asprintf, 0),
+  UTIL_TEST(listdir, 0),
   END_OF_TESTCASES
 };
 
