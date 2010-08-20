@@ -15,12 +15,12 @@
 #include <event.h>
 #endif
 
-#include <tchar.h>
-#define GENSRV_SERVICENAME  TEXT("tor")
-#define GENSRV_DISPLAYNAME  TEXT("Tor Win32 Service")
+#include <windows.h>
+#define GENSRV_SERVICENAME  "tor"
+#define GENSRV_DISPLAYNAME  "Tor Win32 Service"
 #define GENSRV_DESCRIPTION  \
-  TEXT("Provides an anonymous Internet communication system")
-#define GENSRV_USERACCT TEXT("NT AUTHORITY\\LocalService")
+  "Provides an anonymous Internet communication system"
+#define GENSRV_USERACCT "NT AUTHORITY\\LocalService"
 
 // Cheating: using the pre-defined error codes, tricks Windows into displaying
 //           a semi-related human-readable error message if startup fails as
@@ -36,7 +36,6 @@ static SERVICE_STATUS_HANDLE hStatus;
  * to the NT service functions. */
 static char **backup_argv;
 static int backup_argc;
-static char* nt_strerror(uint32_t errnum);
 
 static void nt_service_control(DWORD request);
 static void nt_service_body(int argc, char **argv);
@@ -70,30 +69,30 @@ struct service_fns {
 
   SC_HANDLE (WINAPI *CreateServiceA_fn)(
                              SC_HANDLE hSCManager,
-                             LPCTSTR lpServiceName,
-                             LPCTSTR lpDisplayName,
+                             LPCSTR lpServiceName,
+                             LPCSTR lpDisplayName,
                              DWORD dwDesiredAccess,
                              DWORD dwServiceType,
                              DWORD dwStartType,
                              DWORD dwErrorControl,
-                             LPCTSTR lpBinaryPathName,
-                             LPCTSTR lpLoadOrderGroup,
+                             LPCSTR lpBinaryPathName,
+                             LPCSTR lpLoadOrderGroup,
                              LPDWORD lpdwTagId,
-                             LPCTSTR lpDependencies,
-                             LPCTSTR lpServiceStartName,
-                             LPCTSTR lpPassword);
+                             LPCSTR lpDependencies,
+                             LPCSTR lpServiceStartName,
+                             LPCSTR lpPassword);
 
   BOOL (WINAPI *DeleteService_fn)(
                              SC_HANDLE hService);
 
   SC_HANDLE (WINAPI *OpenSCManagerA_fn)(
-                             LPCTSTR lpMachineName,
-                             LPCTSTR lpDatabaseName,
+                             LPCSTR lpMachineName,
+                             LPCSTR lpDatabaseName,
                              DWORD dwDesiredAccess);
 
   SC_HANDLE (WINAPI *OpenServiceA_fn)(
                              SC_HANDLE hSCManager,
-                             LPCTSTR lpServiceName,
+                             LPCSTR lpServiceName,
                              DWORD dwDesiredAccess);
 
   BOOL (WINAPI *QueryServiceStatus_fn)(
@@ -101,23 +100,23 @@ struct service_fns {
                              LPSERVICE_STATUS lpServiceStatus);
 
   SERVICE_STATUS_HANDLE (WINAPI *RegisterServiceCtrlHandlerA_fn)(
-                             LPCTSTR lpServiceName,
+                             LPCSTR lpServiceName,
                              LPHANDLER_FUNCTION lpHandlerProc);
 
   BOOL (WINAPI *SetServiceStatus_fn)(SERVICE_STATUS_HANDLE,
                              LPSERVICE_STATUS);
 
   BOOL (WINAPI *StartServiceCtrlDispatcherA_fn)(
-                             const SERVICE_TABLE_ENTRY* lpServiceTable);
+                             const SERVICE_TABLE_ENTRYA* lpServiceTable);
 
   BOOL (WINAPI *StartServiceA_fn)(
                              SC_HANDLE hService,
                              DWORD dwNumServiceArgs,
-                             LPCTSTR* lpServiceArgVectors);
+                             LPCSTR* lpServiceArgVectors);
 
   BOOL (WINAPI *LookupAccountNameA_fn)(
-                             LPCTSTR lpSystemName,
-                             LPCTSTR lpAccountName,
+                             LPCSTR lpSystemName,
+                             LPCSTR lpAccountName,
                              PSID Sid,
                              LPDWORD cbSid,
                              LPTSTR ReferencedDomainName,
@@ -140,7 +139,7 @@ nt_service_loadlibrary(void)
     return;
 
   /* XXXX Possibly, we should hardcode the location of this DLL. */
-  if (!(library = LoadLibrary("advapi32.dll"))) {
+  if (!(library = LoadLibrary(TEXT("advapi32.dll")))) {
     log_err(LD_GENERAL, "Couldn't open advapi32.dll.  Are you trying to use "
             "NT services on Windows 98? That doesn't work.");
     goto err;
@@ -284,20 +283,20 @@ nt_service_body(int argc, char **argv)
 static void
 nt_service_main(void)
 {
-  SERVICE_TABLE_ENTRY table[2];
+  SERVICE_TABLE_ENTRYA table[2];
   DWORD result = 0;
   char *errmsg;
   nt_service_loadlibrary();
   table[0].lpServiceName = (char*)GENSRV_SERVICENAME;
-  table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION)nt_service_body;
+  table[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTIONA)nt_service_body;
   table[1].lpServiceName = NULL;
   table[1].lpServiceProc = NULL;
 
   if (!service_fns.StartServiceCtrlDispatcherA_fn(table)) {
     result = GetLastError();
-    errmsg = nt_strerror(result);
+    errmsg = format_win32_error(result);
     printf("Service error %d : %s\n", (int) result, errmsg);
-    LocalFree(errmsg);
+    tor_free(errmsg);
     if (result == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {
       if (tor_init(backup_argc, backup_argv) < 0)
         return;
@@ -332,9 +331,9 @@ nt_service_open_scm(void)
   nt_service_loadlibrary();
   if ((hSCManager = service_fns.OpenSCManagerA_fn(
                             NULL, NULL, SC_MANAGER_CREATE_SERVICE)) == NULL) {
-    errmsg = nt_strerror(GetLastError());
+    errmsg = format_win32_error(GetLastError());
     printf("OpenSCManager() failed : %s\n", errmsg);
-    LocalFree(errmsg);
+    tor_free(errmsg);
   }
   return hSCManager;
 }
@@ -349,9 +348,9 @@ nt_service_open(SC_HANDLE hSCManager)
   nt_service_loadlibrary();
   if ((hService = service_fns.OpenServiceA_fn(hSCManager, GENSRV_SERVICENAME,
                               SERVICE_ALL_ACCESS)) == NULL) {
-    errmsg = nt_strerror(GetLastError());
+    errmsg = format_win32_error(GetLastError());
     printf("OpenService() failed : %s\n", errmsg);
-    LocalFree(errmsg);
+    tor_free(errmsg);
   }
   return hService;
 }
@@ -383,14 +382,14 @@ nt_service_start(SC_HANDLE hService)
       printf("Service started successfully\n");
       return 0;
     } else {
-      errmsg = nt_strerror(service_status.dwWin32ExitCode);
+      errmsg = format_win32_error(service_status.dwWin32ExitCode);
       printf("Service failed to start : %s\n", errmsg);
-      LocalFree(errmsg);
+      tor_free(errmsg);
     }
   } else {
-    errmsg = nt_strerror(GetLastError());
+    errmsg = format_win32_error(GetLastError());
     printf("StartService() failed : %s\n", errmsg);
-    LocalFree(errmsg);
+    tor_free(errmsg);
   }
   return -1;
 }
@@ -427,14 +426,14 @@ nt_service_stop(SC_HANDLE hService)
     } else if (wait_time == MAX_SERVICE_WAIT_TIME) {
       printf("Service did not stop within %d seconds.\n", wait_time);
     } else {
-      errmsg = nt_strerror(GetLastError());
+      errmsg = format_win32_error(GetLastError());
       printf("QueryServiceStatus() failed : %s\n",errmsg);
-      LocalFree(errmsg);
+      tor_free(errmsg);
     }
   } else {
-    errmsg = nt_strerror(GetLastError());
+    errmsg = format_win32_error(GetLastError());
     printf("ControlService() failed : %s\n", errmsg);
-    LocalFree(errmsg);
+    tor_free(errmsg);
   }
   return -1;
 }
@@ -448,6 +447,7 @@ static char *
 nt_service_command_line(int *using_default_torrc)
 {
   TCHAR tor_exe[MAX_PATH+1];
+  char tor_exe_ascii[MAX_PATH+1];
   char *command, *options=NULL;
   smartlist_t *sl;
   int i, cmdlen;
@@ -473,18 +473,25 @@ nt_service_command_line(int *using_default_torrc)
     options = smartlist_join_strings(sl,"\" \"",0,NULL);
   smartlist_free(sl);
 
+#ifdef UNICODE
+  wcstombs(tor_exe_ascii, tor_exe, sizeof(tor_exe_ascii));
+#else
+  strlcpy(tor_exe_ascii, tor_exe, sizeof(tor_exe_ascii));
+#endif
+
   /* Allocate a string for the NT service command line */
-  cmdlen = strlen(tor_exe) + (options?strlen(options):0) + 32;
+  cmdlen = strlen(tor_exe_ascii) + (options?strlen(options):0) + 32;
   command = tor_malloc(cmdlen);
 
   /* Format the service command */
   if (options) {
     if (tor_snprintf(command, cmdlen, "\"%s\" --nt-service \"%s\"",
-                     tor_exe, options)<0) {
+                     tor_exe_ascii, options)<0) {
       tor_free(command); /* sets command to NULL. */
     }
   } else { /* ! options */
-    if (tor_snprintf(command, cmdlen, "\"%s\" --nt-service", tor_exe)<0) {
+    if (tor_snprintf(command, cmdlen, "\"%s\" --nt-service",
+                     tor_exe_ascii)<0) {
       tor_free(command); /* sets command to NULL. */
     }
   }
@@ -509,7 +516,7 @@ nt_service_install(int argc, char **argv)
 
   SC_HANDLE hSCManager = NULL;
   SC_HANDLE hService = NULL;
-  SERVICE_DESCRIPTION sdBuff;
+  SERVICE_DESCRIPTIONA sdBuff;
   char *command;
   char *errmsg;
   const char *user_acct = GENSRV_USERACCT;
@@ -599,10 +606,10 @@ nt_service_install(int argc, char **argv)
                                 SERVICE_AUTO_START, SERVICE_ERROR_IGNORE,
                                 command, NULL, NULL, NULL,
                                 user_acct, password)) == NULL) {
-    errmsg = nt_strerror(GetLastError());
+    errmsg = format_win32_error(GetLastError());
     printf("CreateService() failed : %s\n", errmsg);
     service_fns.CloseServiceHandle_fn(hSCManager);
-    LocalFree(errmsg);
+    tor_free(errmsg);
     tor_free(command);
     return -1;
   }
@@ -643,9 +650,9 @@ nt_service_remove(void)
 
   nt_service_stop(hService);
   if (service_fns.DeleteService_fn(hService) == FALSE) {
-    errmsg = nt_strerror(GetLastError());
+    errmsg = format_win32_error(GetLastError());
     printf("DeleteService() failed : %s\n", errmsg);
-    LocalFree(errmsg);
+    tor_free(errmsg);
     service_fns.CloseServiceHandle_fn(hService);
     service_fns.CloseServiceHandle_fn(hSCManager);
     return -1;
@@ -700,20 +707,6 @@ nt_service_cmd_stop(void)
   service_fns.CloseServiceHandle_fn(hSCManager);
 
   return stop;
-}
-
-/** Given a Win32 error code, this attempts to make Windows
- * return a human-readable error message. The char* returned
- * is allocated by Windows, but should be freed with LocalFree()
- * when finished with it. */
-static char*
-nt_strerror(uint32_t errnum)
-{
-   char *msgbuf;
-   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                 NULL, errnum, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                 (LPSTR)&msgbuf, 0, NULL);
-   return msgbuf;
 }
 
 int

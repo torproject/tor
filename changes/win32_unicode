@@ -1,0 +1,11 @@
+  o Minor bugfixes
+    - On Windows, build correctly either with or without Unicode support.
+      This is necessary so that Tor can support fringe platforms like
+      Windows 98 (which has no Unicode), or Windows CE (which has no
+      non-Unicode). Bugfix on 0.2.2.14-alpha. Fixes bug 1797.
+    - Fix the Windows directory-listing code.  A bug introduced in
+      0.2.2.14-alpha could make Windows directory servers forget to
+      load some of their cached v2 networkstatus files.
+
+  o Testing
+    - Add a unit test for cross-platform directory-listing code.
