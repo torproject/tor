@@ -1175,8 +1175,7 @@ test_stats(void)
   rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 10);
   rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
   s = rep_hist_format_conn_stats(now + 86400);
-  test_streq("conn-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "conn-bi-direct 0,0,1,0\n", s);
+  test_streq("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,1,0\n", s);
   tor_free(s);
 
   /* Stop collecting stats, add some bytes, and ensure we don't generate
@@ -1187,7 +1186,7 @@ test_stats(void)
   test_assert(!s);
 
   /* Re-start stats, add some bytes, reset stats, and see what history we
-   * get when observing no streams or bytes at all. */
+   * get when observing no bytes at all. */
   rep_hist_conn_stats_init(now);
   rep_hist_note_or_conn_bytes(1, 30000, 400000, now);
   rep_hist_note_or_conn_bytes(1, 30000, 400000, now + 5);
@@ -1195,8 +1194,7 @@ test_stats(void)
   rep_hist_note_or_conn_bytes(2, 400000, 30000, now + 15);
   rep_hist_reset_conn_stats(now);
   s = rep_hist_format_conn_stats(now + 86400);
-  test_streq("conn-stats-end 2010-08-12 13:27:30 (86400 s)\n"
-             "conn-bi-direct 0,0,0,0\n", s);
+  test_streq("conn-bi-direct 2010-08-12 13:27:30 (86400 s) 0,0,0,0\n", s);
 
  done:
   tor_free(s);

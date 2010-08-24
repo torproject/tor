@@ -2592,8 +2592,7 @@ rep_hist_format_conn_stats(time_t now)
     return NULL; /* Not initialized. */
 
   format_iso_time(written, now);
-  tor_asprintf(&result, "conn-stats-end %s (%d s)\n"
-               "conn-bi-direct %d,%d,%d,%d\n",
+  tor_asprintf(&result, "conn-bi-direct %s (%d s) %d,%d,%d,%d\n",
                written,
                (unsigned) (now - start_of_conn_stats_interval),
                below_threshold,

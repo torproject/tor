@@ -1027,7 +1027,7 @@ is non-zero):
     When this option is enabled, Tor writes statistics on the number of relayed
     bytes and opened stream per exit port to disk every 24 hours. (Default: 0)
 
-**ConnDirectionStats** **0**|**1**::
+**ConnDirectionStatistics** **0**|**1**::
     When this option is enabled, Tor writes statistics on the bidirectional use
     of connections to disk every 24 hours. (Default: 0)
 

@@ -848,27 +848,17 @@
         Mean number of circuits that are included in any of the deciles,
         rounded up to the next integer.
 
-    "conn-stats-end" YYYY-MM-DD HH:MM:SS (NSEC s) NL
-        [At most once]
-
-        YYYY-MM-DD HH:MM:SS defines the end of the included connection
-        statistics measurement interval of length NSEC seconds (86400
-        seconds by default).
-
-        A "conn-stats-end" line, as well as any other "conn-*" line,
-        is first added after the relay has been running for at least 24
-        hours.
-
-    "conn-bi-direct" BELOW,READ,WRITE,BOTH NL
+    "conn-bi-direct" YYYY-MM-DD HH:MM:SS (NSEC s) BELOW,READ,WRITE,BOTH NL
         [At most once]
 
         Number of connections, split into 10-second intervals, that are
-        used uni-directionally or bi-directionally.  Every 10 seconds,
-        we determine for every connection whether we read and wrote less
-        than a threshold of 20 KiB (BELOW), read at least 10 times more
-        than we wrote (READ), wrote at least 10 times more than we read
-        (WRITE), or read and wrote more than the threshold, but not 10
-        times more in either direction (BOTH).  After classifying a
+        used uni-directionally or bi-directionally as observed in the NSEC
+        seconds (usually 86400 seconds) before YYYY-MM-DD HH:MM:SS.  Every
+        10 seconds, we determine for every connection whether we read and
+        wrote less than a threshold of 20 KiB (BELOW), read at least 10
+        times more than we wrote (READ), wrote at least 10 times more than
+        we read (WRITE), or read and wrote more than the threshold, but
+        not 10 times more in either direction (BOTH).  After classifying a
         connection, read and write counters are reset for the next
         10-second interval.
 
