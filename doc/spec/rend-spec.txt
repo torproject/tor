@@ -150,7 +150,7 @@
    The first time the OP provides an advertised service, it generates
    a public/private keypair (stored locally).
 
-   The OP choses a small number of Tor servers as introduction points.
+   The OP chooses a small number of Tor servers as introduction points.
    The OP establishes a new introduction circuit to each introduction
    point.  These circuits MUST NOT be used for anything but hidden service
    introduction.  To establish the introduction, Bob sends a
@@ -237,6 +237,9 @@
        of the public hidden service key and truncating after the first 80 bits:
 
          permanent-id = H(public-key)[:10]
+
+       Note: If Bob's OP has "stealth" authorization enabled (see Section 2.2),
+       it uses the client key in place of the public hidden service key.
 
        "H(time-period | descriptor-cookie | replica)" is the (possibly
        secret) id part that is necessary to verify that the hidden service is
@@ -668,8 +671,8 @@
    circuit. (If the PK_ID is unrecognized, the RELAY_COMMAND_INTRODUCE1 cell is
    discarded.)
 
-   After sending the RELAY_COMMAND_INTRODUCE2 cell, the OR replies to Alice
-   with an empty RELAY_COMMAND_INTRODUCE_ACK cell.  If no
+   After sending the RELAY_COMMAND_INTRODUCE2 cell to Bob, the OR replies to
+   Alice with an empty RELAY_COMMAND_INTRODUCE_ACK cell.  If no
    RELAY_COMMAND_INTRODUCE2 cell can be sent, the OR replies to Alice with a
    non-empty cell to indicate an error.  (The semantics of the cell body may be
    determined later; the current implementation sends a single '1' byte on
@@ -759,11 +762,11 @@
 2.1. Service with large-scale client authorization
 
    The first client authorization protocol aims at performing access control
-   while consuming as few additional resources as possible. A service
-   provider should be able to permit access to a large number of clients
-   while denying access for everyone else. However, the price for
-   scalability is that the service won't be able to hide its activity from
-   unauthorized or formerly authorized clients.
+   while consuming as few additional resources as possible. This is the "basic"
+   authorization protocol. A service provider should be able to permit access
+   to a large number of clients while denying access for everyone else.
+   However, the price for scalability is that the service won't be able to hide
+   its activity from unauthorized or formerly authorized clients.
 
    The main idea of this protocol is to encrypt the introduction-point part
    in hidden service descriptors to authorized clients using symmetric keys.
@@ -822,19 +825,19 @@
 2.2. Authorization for limited number of clients
 
    A second, more sophisticated client authorization protocol goes the extra
-   mile of hiding service activity from unauthorized clients. With all else
-   being equal to the preceding authorization protocol, the second protocol
-   publishes hidden service descriptors for each user separately and gets
-   along with encrypting the introduction-point part of descriptors to a
-   single client. This allows the service to stop publishing descriptors for
-   removed clients. As long as a removed client cannot link descriptors
-   issued for other clients to the service, it cannot derive service
-   activity any more. The downside of this approach is limited scalability.
-   Even though the distributed storage of descriptors (cf. proposal 114)
-   tackles the problem of limited scalability to a certain extent, this
-   protocol should not be used for services with more than 16 clients. (In
-   fact, Tor should refuse to advertise services for more than this number
-   of clients.)
+   mile of hiding service activity from unauthorized clients. This is the
+   "stealth" authorization protocol. With all else being equal to the preceding
+   authorization protocol, the second protocol publishes hidden service
+   descriptors for each user separately and gets along with encrypting the
+   introduction-point part of descriptors to a single client. This allows the
+   service to stop publishing descriptors for removed clients. As long as a
+   removed client cannot link descriptors issued for other clients to the
+   service, it cannot derive service activity any more. The downside of this
+   approach is limited scalability. Even though the distributed storage of
+   descriptors (cf. proposal 114) tackles the problem of limited scalability to
+   a certain extent, this protocol should not be used for services with more
+   than 16 clients. (In fact, Tor should refuse to advertise services for more
+   than this number of clients.)
 
    A hidden service generates an asymmetric "client key" and a symmetric
    "descriptor cookie" for each client. The client key is used as
@@ -882,14 +885,16 @@
    A hidden service that is meant to perform client authorization adds a
    new option HiddenServiceAuthorizeClient to its hidden service
    configuration. This option contains the authorization type which is
-   either "1" for the protocol described in 2.1 or "2" for the protocol in
-   2.2 and a comma-separated list of human-readable client names, so that
-   Tor can create authorization data for these clients:
+   either "basic" for the protocol described in 2.1 or "stealth" for the
+   protocol in 2.2 and a comma-separated list of human-readable client
+   names, so that Tor can create authorization data for these clients:
 
      HiddenServiceAuthorizeClient auth-type client-name,client-name,...
 
    If this option is configured, HiddenServiceVersion is automatically
-   reconfigured to contain only version numbers of 2 or higher.
+   reconfigured to contain only version numbers of 2 or higher. There is
+   a maximum of 512 client names for basic auth and a maximum of 16 for
+   stealth auth.
 
    Tor stores all generated authorization data for the authorization
    protocols described in Sections 2.1 and 2.2 in a new file using the
