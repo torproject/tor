@@ -44,6 +44,8 @@ typedef enum config_type_t {
   CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
   CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
   CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
+  CONFIG_TYPE_MSEC_INTERVAL,/**< A number of milliseconds, with optional
+                              * units */
   CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
   CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
   CONFIG_TYPE_BOOL,         /**< A boolean value, expressed as 0 or 1. */
@@ -291,6 +293,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("LinkPadding"),
   OBSOLETE("LogLevel"),
   OBSOLETE("LogFile"),
+  V(LogTimeGranularity,          MSEC_INTERVAL, "1 second"),
   V(LongLivedPorts,              CSV,
                          "21,22,706,1863,5050,5190,5222,5223,6667,6697,8300"),
   VAR("MapAddress",              LINELIST, AddressMap,           NULL),
@@ -556,6 +559,7 @@ static int is_listening_on_low_port(uint16_t port_option,
                                     const config_line_t *listen_options);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
+static int config_parse_msec_interval(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
 static void init_libevent(const or_options_t *options);
 static int opt_streq(const char *s1, const char *s2);
@@ -1716,6 +1720,18 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
     break;
   }
 
+  case CONFIG_TYPE_MSEC_INTERVAL: {
+    i = config_parse_msec_interval(c->value, &ok);
+    if (!ok) {
+      tor_asprintf(msg,
+          "Msec interval '%s %s' is malformed or out of bounds.",
+          c->key, c->value);
+      return -1;
+    }
+    *(int *)lvalue = i;
+    break;
+  }
+
   case CONFIG_TYPE_MEMUNIT: {
     uint64_t u64 = config_parse_memunit(c->value, &ok);
     if (!ok) {
@@ -2003,6 +2019,7 @@ get_assigned_option(config_format_t *fmt, void *options,
       escape_val = 0; /* Can't need escape. */
       break;
     case CONFIG_TYPE_INTERVAL:
+    case CONFIG_TYPE_MSEC_INTERVAL:
     case CONFIG_TYPE_UINT:
       /* This means every or_options_t uint or bool element
        * needs to be an int. Not, say, a uint16_t or char. */
@@ -2230,6 +2247,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
       *(time_t*)lvalue = 0;
       break;
     case CONFIG_TYPE_INTERVAL:
+    case CONFIG_TYPE_MSEC_INTERVAL:
     case CONFIG_TYPE_UINT:
     case CONFIG_TYPE_BOOL:
       *(int*)lvalue = 0;
@@ -4324,6 +4342,17 @@ options_init_logs(or_options_t *options, int validate_only)
                options->RunAsDaemon;
 #endif
 
+  if (options->LogTimeGranularity > 0 &&
+      (1000 % options->LogTimeGranularity == 0 ||
+       options->LogTimeGranularity % 1000 == 0)) {
+    set_log_time_granularity(options->LogTimeGranularity);
+  } else {
+    log_warn(LD_CONFIG, "Log time granularity '%d' has to be positive "
+             "and either a divisor or a multiple of 1 second.",
+             options->LogTimeGranularity);
+    return -1;
+  }
+
   ok = 1;
   elts = smartlist_create();
 
@@ -4812,6 +4841,26 @@ static struct unit_table_t time_units[] = {
   { NULL, 0 },
 };
 
+/** Table to map the names of time units to the number of milliseconds
+ * they contain. */
+static struct unit_table_t time_msec_units[] = {
+  { "",         1 },
+  { "msec",     1 },
+  { "millisecond", 1 },
+  { "milliseconds", 1 },
+  { "second",   1000 },
+  { "seconds",  1000 },
+  { "minute",   60*1000 },
+  { "minutes",  60*1000 },
+  { "hour",     60*60*1000 },
+  { "hours",    60*60*1000 },
+  { "day",      24*60*60*1000 },
+  { "days",     24*60*60*1000 },
+  { "week",     7*24*60*60*1000 },
+  { "weeks",    7*24*60*60*1000 },
+  { NULL, 0 },
+};
+
 /** Parse a string <b>val</b> containing a number, zero or more
  * spaces, and an optional unit string.  If the unit appears in the
  * table <b>u</b>, then multiply the number by the unit multiplier.
@@ -4873,6 +4922,25 @@ config_parse_memunit(const char *s, int *ok)
 {
   uint64_t u = config_parse_units(s, memory_units, ok);
   return u;
+}
+
+/** Parse a string in the format "number unit", where unit is a unit of
+ * time in milliseconds.  On success, set *<b>ok</b> to true and return
+ * the number of milliseconds in the provided interval.  Otherwise, set
+ * *<b>ok</b> to 0 and return -1. */
+static int
+config_parse_msec_interval(const char *s, int *ok)
+{
+  uint64_t r;
+  r = config_parse_units(s, time_msec_units, ok);
+  if (!ok)
+    return -1;
+  if (r > INT_MAX) {
+    log_warn(LD_CONFIG, "Msec interval '%s' is too long", s);
+    *ok = 0;
+    return -1;
+  }
+  return (int)r;
 }
 
 /** Parse a string in the format "number unit", where unit is a unit of time.
@@ -5264,6 +5332,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
         case CONFIG_TYPE_UINT: type = "Integer"; break;
         case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
+        case CONFIG_TYPE_MSEC_INTERVAL: type = "TimeMsecInterval"; break;
         case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;
         case CONFIG_TYPE_DOUBLE: type = "Float"; break;
         case CONFIG_TYPE_BOOL: type = "Boolean"; break;

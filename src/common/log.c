@@ -131,6 +131,17 @@ log_set_application_name(const char *name)
   appname = name ? tor_strdup(name) : NULL;
 }
 
+/** Log time granularity in milliseconds. */
+static int log_time_granularity = 1;
+
+/** Define log time granularity for all logs to be <b>granularity_msec</b>
+ * milliseconds. */
+void
+set_log_time_granularity(int granularity_msec)
+{
+  log_time_granularity = granularity_msec;
+}
+
 /** Helper: Write the standard prefix for log lines to a
  * <b>buf_len</b> character buffer in <b>buf</b>.
  */
@@ -141,14 +152,22 @@ _log_prefix(char *buf, size_t buf_len, int severity)
   struct timeval now;
   struct tm tm;
   size_t n;
-  int r;
+  int r, ms;
 
   tor_gettimeofday(&now);
   t = (time_t)now.tv_sec;
+  ms = (int)now.tv_usec / 1000;
+  if (log_time_granularity >= 1000) {
+    t -= t % (log_time_granularity / 1000);
+    ms = 0;
+  } else {
+    ms -= ((int)now.tv_usec / 1000) % log_time_granularity;
+  }
 
   n = strftime(buf, buf_len, "%b %d %H:%M:%S", tor_localtime_r(&t, &tm));
-  r = tor_snprintf(buf+n, buf_len-n, ".%.3i [%s] ",
-                   (int)now.tv_usec / 1000, sev_to_string(severity));
+  r = tor_snprintf(buf+n, buf_len-n, ".%.3i [%s] ", ms,
+                   sev_to_string(severity));
+
   if (r<0)
     return buf_len-1;
   else

@@ -343,6 +343,10 @@ Other options can be specified either on the command-line (--option
     on Windows; instead you should use the --service command-line option.
     (Default: 0)
 
+**LogTimeGranularity** __NUM__::
+    Set the resolution of timestamps in Tor's logs to NUM milliseconds.
+    NUM must be positive and either a divisor or a multiple of 1 second.
+    (Default: 1 second)
 
 **SafeLogging** **0**|**1**|**relay**::
     Tor can scrub potentially sensitive strings from log messages (e.g.

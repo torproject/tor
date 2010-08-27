@@ -525,9 +525,9 @@
       of the form:
          OptionName SP OptionType [ SP Documentation ] CRLF
          OptionName = Keyword
-         OptionType = "Integer" / "TimeInterval" / "DataSize" / "Float" /
-           "Boolean" / "Time" / "CommaList" / "Dependant" / "Virtual" /
-           "String" / "LineList"
+         OptionType = "Integer" / "TimeInterval" / "TimeMsecInterval" /
+           "DataSize" / "Float" / "Boolean" / "Time" / "CommaList" /
+           "Dependant" / "Virtual" / "String" / "LineList"
          Documentation = Text
 
     "info/names"
