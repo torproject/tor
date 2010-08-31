@@ -1584,10 +1584,10 @@ ftime_definitely_before(time_t now, time_t when)
 /** If the rate-limiter <b>lim</b> is ready at <b>now</b>, return the number
  * of calls to rate_limit_is_ready (including this one!) since the last time
  * rate_limit_is_ready returned nonzero.  Otherwise return 0. */
-int
+static int
 rate_limit_is_ready(ratelim_t *lim, time_t now)
 {
-  if (lim->rate + lim->last_allowed >= now) {
+  if (lim->rate + lim->last_allowed <= now) {
     int res = lim->n_calls_since_last_time + 1;
     lim->last_allowed = now;
     lim->n_calls_since_last_time = 0;

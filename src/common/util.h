@@ -277,7 +277,6 @@ typedef struct ratelim_t {
 
 #define RATELIM_INIT(r) { (r), 0, 0 }
 
-int rate_limit_is_ready(ratelim_t *lim, time_t now);
 char *rate_limit_log(ratelim_t *lim, time_t now);
 
 /* File helpers */
