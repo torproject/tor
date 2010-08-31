@@ -1,0 +1,7 @@
+  o Minor bugfixes
+    - Rate-limit "Failed to hand off onionskin" warnings.
+
+  o Minor features
+    - When logging a rate-limited warning, we now mention how many messages
+      got suppressed since the last warning.
+

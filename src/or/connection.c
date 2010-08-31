@@ -839,13 +839,13 @@ static void
 warn_too_many_conns(void)
 {
 #define WARN_TOO_MANY_CONNS_INTERVAL (6*60*60)
-  static time_t last_warned = 0;
-  time_t now = time(NULL);
-  int n_conns = get_n_open_sockets();
-  if (last_warned + WARN_TOO_MANY_CONNS_INTERVAL < now) {
+  static ratelim_t last_warned = RATELIM_INIT(WARN_TOO_MANY_CONNS_INTERVAL);
+  char *m;
+  if ((m = rate_limit_log(&last_warned, approx_time()))) {
+    int n_conns = get_n_open_sockets();
     log_warn(LD_NET,"Failing because we have %d connections already. Please "
-             "raise your ulimit -n.", n_conns);
-    last_warned = now;
+             "raise your ulimit -n.%s", n_conns, m);
+    tor_free(m);
     control_event_general_status(LOG_WARN, "TOO_MANY_CONNECTIONS CURRENT=%d",
                                  n_conns);
   }
