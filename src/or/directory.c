@@ -70,7 +70,7 @@ static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_bridge_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_download_cert_failed(
                                dir_connection_t *conn, int status_code);
-static void connection_dir_retry_bridges(smartlist_t* failed, int was_ei);
+static void connection_dir_retry_bridges(smartlist_t* descs);
 static void dir_networkstatus_download_failed(smartlist_t *failed,
                                               int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
@@ -653,11 +653,10 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
  * listed in <b>failed</b>.
  */
 static void
-connection_dir_retry_bridges(smartlist_t* failed, int was_ei)
+connection_dir_retry_bridges(smartlist_t* descs)
 {
   char digest[DIGEST_LEN];
-  tor_assert(!was_ei); /* not supported yet */
-  SMARTLIST_FOREACH(failed, const char *, cp,
+  SMARTLIST_FOREACH(descs, const char *, cp,
   {
     if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp))<0) {
       log_warn(LD_BUG, "Malformed fingerprint in list: %s",
@@ -692,21 +691,22 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
 static void
 connection_dir_bridge_routerdesc_failed(dir_connection_t *conn)
 {
-  int was_ei;
   smartlist_t *which = NULL;
 
+  tor_assert(conn->requested_resource);
   /* Requests for bridge descriptors are in the form 'fp/', so ignore
      anything else. */
   if (conn->requested_resource && strcmpstart(conn->requested_resource,"fp/"))
     return;
 
   which = smartlist_create();
-  dir_split_resource_into_fingerprints(conn->requested_resource + 3,
-                                        which, NULL, 0);
+  dir_split_resource_into_fingerprints(conn->requested_resource
+                                        + strlen("fp/"),
+                                       which, NULL, 0);
 
-  was_ei =  conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO;
+  tor_assert(!conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
   if (smartlist_len(which)) {
-    connection_dir_retry_bridges(which, was_ei);
+    connection_dir_retry_bridges(which);
     SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
   }
   smartlist_free(which);
@@ -3548,8 +3548,10 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
   time_t now = time(NULL);
   int server = directory_fetches_from_authorities(get_options());
   if (!was_descriptor_digests) {
-    if (router_purpose == ROUTER_PURPOSE_BRIDGE)
-      connection_dir_retry_bridges(failed, was_extrainfo);
+    if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
+      tor_assert(!was_extrainfo);
+      connection_dir_retry_bridges(failed);
+    }
     return; /* FFFF should implement for other-than-router-purpose someday */
   }
   SMARTLIST_FOREACH(failed, const char *, cp,
