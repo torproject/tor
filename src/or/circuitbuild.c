@@ -1752,7 +1752,7 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
   cell.circ_id = circ->n_circ_id;
 
   memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
-  append_cell_to_circuit_queue(circ, circ->n_conn, &cell, CELL_DIRECTION_OUT);
+  append_cell_to_circuit_queue(circ, circ->n_conn, &cell, CELL_DIRECTION_OUT, 0);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     /* mark it so it gets better rate limiting treatment. */
@@ -2329,7 +2329,7 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
   circ->is_first_hop = (cell_type == CELL_CREATED_FAST);
 
   append_cell_to_circuit_queue(TO_CIRCUIT(circ),
-                               circ->p_conn, &cell, CELL_DIRECTION_IN);
+                               circ->p_conn, &cell, CELL_DIRECTION_IN, 0);
   log_debug(LD_CIRC,"Finished sending 'created' cell.");
 
   if (!is_local_addr(&circ->p_conn->_base.addr) &&

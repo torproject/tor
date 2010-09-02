@@ -269,7 +269,7 @@ circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                   * we might kill the circ before we relay
                                   * the cells. */
 
-  append_cell_to_circuit_queue(circ, or_conn, cell, cell_direction);
+  append_cell_to_circuit_queue(circ, or_conn, cell, cell_direction, 0);
   return 0;
 }
 
@@ -366,7 +366,7 @@ relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
 static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                            cell_direction_t cell_direction,
-                           crypt_path_t *layer_hint)
+                           crypt_path_t *layer_hint, uint16_t on_stream)
 {
   or_connection_t *conn; /* where to send the cell */
 
@@ -410,7 +410,7 @@ circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
   }
   ++stats_n_relay_cells_relayed;
 
-  append_cell_to_circuit_queue(circ, conn, cell, cell_direction);
+  append_cell_to_circuit_queue(circ, conn, cell, cell_direction, on_stream);
   return 0;
 }
 
@@ -625,7 +625,7 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
     }
   }
 
-  if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer)
+  if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer, 0)
       < 0) {
     log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
@@ -2102,11 +2102,14 @@ connection_or_unlink_all_active_circs(or_connection_t *orconn)
  * every edge connection that is using <b>circ</b> to write to <b>orconn</b>,
  * and start or stop reading as appropriate.
  *
+ * If <b>stream_id</b> is nonzero, block only the edge connection whose
+ * stream_id matches it.
+ *
  * Returns the number of streams whose status we changed.
  */
 static int
 set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
-                            int block)
+                            int block, uint16_t stream_id)
 {
   edge_connection_t *edge = NULL;
   int n = 0;
@@ -2122,6 +2125,9 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
 
   for (; edge; edge = edge->next_stream) {
     connection_t *conn = TO_CONN(edge);
+    if (stream_id && edge->stream_id != stream_id)
+      continue;
+
     if (edge->edge_blocked_on_circ != block) {
       ++n;
       edge->edge_blocked_on_circ = block;
@@ -2269,7 +2275,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
   /* Is the cell queue low enough to unblock all the streams that are waiting
    * to write to this circuit? */
   if (streams_blocked && queue->n <= CELL_QUEUE_LOWWATER_SIZE)
-    set_streams_blocked_on_circ(circ, conn, 0); /* unblock streams */
+    set_streams_blocked_on_circ(circ, conn, 0, 0); /* unblock streams */
 
   /* Did we just run out of cells on this circuit's queue? */
   if (queue->n == 0) {
@@ -2286,7 +2292,8 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
  * transmitting in <b>direction</b>. */
 void
 append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
-                             cell_t *cell, cell_direction_t direction)
+                             cell_t *cell, cell_direction_t direction,
+                             uint16_t fromstream)
 {
   cell_queue_t *queue;
   int streams_blocked;
@@ -2308,18 +2315,11 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
   /* If we have too many cells on the circuit, we should stop reading from
    * the edge streams for a while. */
   if (!streams_blocked && queue->n >= CELL_QUEUE_HIGHWATER_SIZE)
-    set_streams_blocked_on_circ(circ, orconn, 1); /* block streams */
+    set_streams_blocked_on_circ(circ, orconn, 1, 0); /* block streams */
 
-  if (streams_blocked) {
-    /* We must have missed a connection! */
-    int n = set_streams_blocked_on_circ(circ, orconn, 1);
-    if (n) {
-      log_info(LD_BUG, "Got a cell added to a cell queue when streams were "
-               "supposed to be blocked; found that %d streams weren't.", n);
-    } else {
-      log_info(LD_BUG, "Got a cell added to a cell queue when streams were "
-               "all blocked. We should figure out why.");
-    }
+  if (streams_blocked && fromstream) {
+    /* This edge connection is apparently not blocked; block it. */
+    set_streams_blocked_on_circ(circ, orconn, 1, fromstream);
   }
 
   if (queue->n == 1) {

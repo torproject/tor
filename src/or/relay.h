@@ -45,7 +45,8 @@ void cell_queue_append(cell_queue_t *queue, packed_cell_t *cell);
 void cell_queue_append_packed_copy(cell_queue_t *queue, const cell_t *cell);
 
 void append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
-                                  cell_t *cell, cell_direction_t direction);
+                                  cell_t *cell, cell_direction_t direction,
+                                  uint16_t fromstream);
 void connection_or_unlink_all_active_circs(or_connection_t *conn);
 int connection_or_flush_from_first_active_circuit(or_connection_t *conn,
                                                   int max, time_t now);
