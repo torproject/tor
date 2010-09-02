@@ -2,4 +2,8 @@
     - Make the formerly ugly "2 unknown, 7 missing key, 0 good, 0 bad,
       2 no signature, 4 required" messages easier to read, and make sure
       they get logged at the same severity as the messages explaining
-      which keys are which.
+      which keys are which.  Fixes bug 1290.
+    - Don't warn when we have a consensus that we can't verify because
+      of missing certificates, unless those certificates are ones
+      that we have been trying and failing to download.  Fixes bug 1145.
+

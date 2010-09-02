@@ -440,6 +440,23 @@ authority_cert_dl_failed(const char *id_digest, int status)
   download_status_failed(&cl->dl_status, status);
 }
 
+/** Return true iff when we've been getting enough failures when trying to
+ * download the certificate with ID digest <b>id_digest</b> that we're willing
+ * to start bugging the user about it. */
+int
+authority_cert_dl_looks_uncertain(const char *id_digest)
+{
+#define N_AUTH_CERT_DL_FAILURES_TO_BUG_USER 2
+  cert_list_t *cl;
+  int n_failures;
+  if (!trusted_dir_certs ||
+      !(cl = digestmap_get(trusted_dir_certs, id_digest)))
+    return 0;
+
+  n_failures = download_status_get_n_failures(&cl->dl_status);
+  return n_failures >= N_AUTH_CERT_DL_FAILURES_TO_BUG_USER;
+}
+
 /** How many times will we try to fetch a certificate before giving up? */
 #define MAX_CERT_DL_FAILURES 8
 

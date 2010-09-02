@@ -464,7 +464,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
                                         int warn)
 {
   int n_good = 0;
-  int n_missing_key = 0;
+  int n_missing_key = 0, n_dl_failed_key = 0;
   int n_bad = 0;
   int n_unknown = 0;
   int n_no_signature = 0;
@@ -482,7 +482,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
                           voter) {
     int good_here = 0;
     int bad_here = 0;
-    int missing_key_here = 0;
+    int missing_key_here = 0, dl_failed_key_here = 0;
     SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
       if (!sig->good_signature && !sig->bad_signature &&
           sig->signature) {
@@ -502,11 +502,15 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
         } else if (!cert || cert->expires < now) {
           smartlist_add(need_certs_from, voter);
           ++missing_key_here;
+          if (authority_cert_dl_looks_uncertain(sig->identity_digest))
+            ++dl_failed_key_here;
           continue;
         }
         if (networkstatus_check_document_signature(consensus, sig, cert) < 0) {
           smartlist_add(need_certs_from, voter);
           ++missing_key_here;
+          if (authority_cert_dl_looks_uncertain(sig->identity_digest))
+            ++dl_failed_key_here;
           continue;
         }
       }
@@ -519,9 +523,11 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       ++n_good;
     else if (bad_here)
       ++n_bad;
-    else if (missing_key_here)
+    else if (missing_key_here) {
       ++n_missing_key;
-    else
+      if (dl_failed_key_here)
+        ++n_dl_failed_key;
+    } else
       ++n_no_signature;
   } SMARTLIST_FOREACH_END(voter);
 
@@ -534,10 +540,12 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
         smartlist_add(missing_authorities, ds);
     });
 
-  if (warn > 1 || (warn >= 0 && n_good < n_required))
+  if (warn > 1 || (warn >= 0 &&
+                   (n_good + n_missing_key - n_dl_failed_key < n_required))) {
     severity = LOG_WARN;
-  else
+  } else {
     severity = LOG_INFO;
+  }
 
   if (warn >= 0) {
     SMARTLIST_FOREACH(unrecognized, networkstatus_voter_info_t *, voter,
