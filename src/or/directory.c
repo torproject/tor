@@ -704,7 +704,7 @@ connection_dir_bridge_routerdesc_failed(dir_connection_t *conn)
                                         + strlen("fp/"),
                                        which, NULL, 0);
 
-  tor_assert(!conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
+  tor_assert(conn->_base.purpose != DIR_PURPOSE_FETCH_EXTRAINFO);
   if (smartlist_len(which)) {
     connection_dir_retry_bridges(which);
     SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
