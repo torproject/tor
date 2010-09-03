@@ -341,6 +341,15 @@ start_of_accounting_period_after(time_t now)
   return edge_of_accounting_period_containing(now, 1);
 }
 
+/** Return the length of the accounting period containing the time
+ * <b>now</b>. */
+static long
+length_of_accounting_period_containing(time_t now)
+{
+  return edge_of_accounting_period_containing(now, 1) -
+    edge_of_accounting_period_containing(now, 0);
+}
+
 /** Initialize the accounting subsystem. */
 void
 configure_accounting(time_t now)
@@ -356,14 +365,26 @@ configure_accounting(time_t now)
     log_info(LD_ACCT, "Starting new accounting interval.");
     reset_accounting(now);
   } else if (interval_start_time ==
-        start_of_accounting_period_containing(interval_start_time)) {
+             start_of_accounting_period_containing(interval_start_time)) {
     log_info(LD_ACCT, "Continuing accounting interval.");
     /* We are in the interval we thought we were in. Do nothing.*/
     interval_end_time = start_of_accounting_period_after(interval_start_time);
   } else {
-    log_warn(LD_ACCT,
-             "Mismatched accounting interval; starting a fresh one.");
-    reset_accounting(now);
+    time_t s_now = start_of_accounting_period_containing(interval_start_time);
+    long duration = length_of_accounting_period_containing(interval_start_time);
+    double delta = ((double)(s_now - interval_start_time)) / duration;
+    if (-0.50 <= delta && delta <= 0.50) {
+      /* The start of the period is now a little later than we remembered.
+       * That's fine; we might lose a little time, but that's ok.  */
+      log_info(LD_ACCT, "Accounting interval moved by %.02f%%; "
+               "that's fine.", delta*100);
+      interval_end_time = start_of_accounting_period_after(interval_start_time);
+    } else {
+      log_warn(LD_ACCT,
+               "Mismatched accounting interval: moved by %.02f%%. "
+               "Starting a fresh one.", delta*100);
+      reset_accounting(now);
+    }
   }
   accounting_set_wakeup_time();
 }
