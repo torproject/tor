@@ -1,0 +1,7 @@
+  o Minor bugfixes:
+    - Allow handshaking OR connections to take a full KeepalivePeriod
+      seconds to handshake.  Previously, we would close them after
+      IDLE_OR_CONN_TIMEOUT seconds, as if they were open.  This is a
+      bugfix on 0.2.1.26.  Thanks to mingw-san for analysis help.  Fixes
+      bug 1840.
+
