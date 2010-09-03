@@ -95,6 +95,13 @@ static uint64_t n_bytes_read_in_interval = 0;
 static uint64_t n_bytes_written_in_interval = 0;
 /** How many seconds have we been running this interval? */
 static uint32_t n_seconds_active_in_interval = 0;
+/** How many seconds were we active in this interval before we hit our soft
+ * limit? */
+static int n_seconds_to_hit_soft_limit = 0;
+/** When in this interval was the soft limit hit. */
+static time_t soft_limit_hit_at = 0;
+/** How many bytes had we read/written when we hit the soft limit? */
+static uint64_t n_bytes_at_soft_limit = 0;
 /** When did this accounting interval start? */
 static time_t interval_start_time = 0;
 /** When will this accounting interval end? */
@@ -377,20 +384,34 @@ update_expected_bandwidth(void)
   uint64_t used, expected;
   uint64_t max_configured = (get_options()->BandwidthRate * 60);
 
-  if (n_seconds_active_in_interval < 1800) {
+#define MIN_TIME_FOR_MEASUREMENT (1800)
+
+  if (soft_limit_hit_at > interval_start_time && n_bytes_at_soft_limit &&
+      (soft_limit_hit_at - interval_start_time) > MIN_TIME_FOR_MEASUREMENT) {
+    /* If we hit our soft limit last time, only count the bytes up to that
+     * time. This is a better predictor of our actual bandwidth than
+     * considering the entirety of the last interval, since we likely started
+     * using bytes very slowly once we hit our soft limit. */
+    expected = n_bytes_at_soft_limit /
+      (soft_limit_hit_at - interval_start_time);
+    expected /= 60;
+  } else if (n_seconds_active_in_interval >= MIN_TIME_FOR_MEASUREMENT) {
+    /* Otherwise, we either measured enough time in the last interval but
+     * never hit our soft limit, or we're using a state file from a Tor that
+     * doesn't know to store soft-limit info.  Just take the 
+     */
+    used = MAX(n_bytes_written_in_interval, n_bytes_read_in_interval);
+    expected = used / (n_seconds_active_in_interval / 60);
+  } else {
     /* If we haven't gotten enough data last interval, set 'expected'
      * to 0.  This will set our wakeup to the start of the interval.
      * Next interval, we'll choose our starting time based on how much
      * we sent this interval.
      */
     expected = 0;
-  } else {
-    used = n_bytes_written_in_interval < n_bytes_read_in_interval ?
-      n_bytes_read_in_interval : n_bytes_written_in_interval;
-    expected = used / (n_seconds_active_in_interval / 60);
-    if (expected > max_configured)
-      expected = max_configured;
   }
+  if (expected > max_configured)
+    expected = max_configured;
   expected_bandwidth_usage = expected;
 }
 
@@ -408,6 +429,9 @@ reset_accounting(time_t now)
   n_bytes_read_in_interval = 0;
   n_bytes_written_in_interval = 0;
   n_seconds_active_in_interval = 0;
+  n_bytes_at_soft_limit = 0;
+  soft_limit_hit_at = 0;
+  n_seconds_to_hit_soft_limit = 0;
 }
 
 /** Return true iff we should save our bandwidth usage to disk. */
@@ -568,6 +592,10 @@ accounting_record_bandwidth_usage(time_t now, or_state_t *state)
   state->AccountingSecondsActive = n_seconds_active_in_interval;
   state->AccountingExpectedUsage = expected_bandwidth_usage;
 
+  state->AccountingSecondsToReachSoftLimit = n_seconds_to_hit_soft_limit;
+  state->AccountingSoftLimitHitAt = soft_limit_hit_at;
+  state->AccountingBytesAtSoftLimit = n_bytes_at_soft_limit;
+
   or_state_mark_dirty(state,
                       now+(get_options()->AvoidDiskWrites ? 7200 : 60));
 
@@ -597,6 +625,21 @@ read_bandwidth_usage(void)
   n_seconds_active_in_interval = state->AccountingSecondsActive;
   interval_start_time = state->AccountingIntervalStart;
   expected_bandwidth_usage = state->AccountingExpectedUsage;
+
+  /* Older versions of Tor (before 0.2.2.16-alpha) didn't generate these
+   * fields. If you switch back and forth, you might get an
+   * AccountingSoftLimitHitAt value from long before the most recent
+   * interval_start_time.  If that's so, then ignore the softlimit-related
+   * values. */
+  if (state->AccountingSoftLimitHitAt > interval_start_time) {
+    soft_limit_hit_at =  state->AccountingSoftLimitHitAt;
+    n_bytes_at_soft_limit = state->AccountingBytesAtSoftLimit;
+    n_seconds_to_hit_soft_limit = state->AccountingSoftLimitHitAt;
+  } else {
+    soft_limit_hit_at = 0;
+    n_bytes_at_soft_limit = 0;
+    n_seconds_to_hit_soft_limit = 0;
+  }
 
   {
     char tbuf1[ISO_TIME_LEN+1];
@@ -680,6 +723,14 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
                "a second time" : "while hibernating");
     tor_cleanup();
     exit(0);
+  }
+
+  if (new_state == HIBERNATE_STATE_LOWBANDWIDTH &&
+      hibernate_state == HIBERNATE_STATE_LIVE) {
+    soft_limit_hit_at = now;
+    n_seconds_to_hit_soft_limit = n_seconds_active_in_interval;
+    n_bytes_at_soft_limit = MAX(n_bytes_read_in_interval,
+                               n_bytes_written_in_interval);
   }
 
   /* close listeners. leave control listener(s). */

@@ -6,3 +6,11 @@
       no more than 500MB/3 hours of traffic remaining before we enter
       soft hibernation.
 
+  o Minor bugfixes:
+    - For bandwidth accounting, calculate our expected bandwidth rate
+      based on the time during which we were active and not in
+      soft-hibernation during the last interval.  Previously, we were
+      also considering the time spent in soft-hibernation.  If this
+      was a long time, we would wind up underestimating our bandwidth
+      by a lot, and skewing our wakeup time towards the start of the
+      accounting interval.  Fixes bug 1789.  Bugfix on 0.0.9pre5.

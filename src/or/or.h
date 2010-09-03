@@ -2828,6 +2828,9 @@ typedef struct {
   uint64_t AccountingBytesReadInInterval;
   uint64_t AccountingBytesWrittenInInterval;
   int AccountingSecondsActive;
+  int AccountingSecondsToReachSoftLimit;
+  time_t AccountingSoftLimitHitAt;
+  uint64_t AccountingBytesAtSoftLimit;
   uint64_t AccountingExpectedUsage;
 
   /** A list of Entry Guard-related configuration lines. */
