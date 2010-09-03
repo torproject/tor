@@ -625,8 +625,8 @@ relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
     }
   }
 
-  if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer, 0)
-      < 0) {
+  if (circuit_package_relay_cell(&cell, circ, cell_direction, cpath_layer,
+                                 stream_id) < 0) {
     log_warn(LD_BUG,"circuit_package_relay_cell failed. Closing.");
     circuit_mark_for_close(circ, END_CIRC_REASON_INTERNAL);
     return -1;
