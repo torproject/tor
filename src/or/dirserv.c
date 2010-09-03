@@ -3136,6 +3136,10 @@ dirserv_should_launch_reachability_test(routerinfo_t *ri, routerinfo_t *ri_old)
     /* It just came out of hibernation; launch a reachability test */
     return 1;
   }
+  if (ri_old->addr != ri->addr || ri_old->or_port != ri->or_port) {
+    /* Address or port changed; launch a reachability test */
+    return 1;
+  }
   return 0;
 }
 
