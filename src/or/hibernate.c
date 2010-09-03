@@ -637,8 +637,27 @@ hibernate_hard_limit_reached(void)
 static int
 hibernate_soft_limit_reached(void)
 {
-  uint64_t soft_limit = DBL_TO_U64(U64_TO_DBL(get_options()->AccountingMax)
-                                   * .95);
+  const uint64_t acct_max = get_options()->AccountingMax;
+#define SOFT_LIM_PCT (.95)
+#define SOFT_LIM_BYTES (500*1024*1024)
+#define SOFT_LIM_MINUTES (3*60)
+  /* The 'soft limit' is a fair bit more complicated now than once it was.
+   * We want to stop accepting connections when ALL of the following are true:
+   *   - We expect to use up the remaining bytes in under 3 hours
+   *   - We have used up 95% of our bytes.
+   *   - We have less than 500MB of bytes left.
+   */
+  uint64_t soft_limit = DBL_TO_U64(U64_TO_DBL(acct_max) * SOFT_LIM_PCT);
+  if (acct_max > SOFT_LIM_BYTES && acct_max - SOFT_LIM_BYTES > soft_limit) {
+    soft_limit = acct_max - SOFT_LIM_BYTES;
+  }
+  if (expected_bandwidth_usage) {
+    const uint64_t expected_usage =
+      expected_bandwidth_usage * SOFT_LIM_MINUTES;
+    if (acct_max > expected_usage && acct_max - expected_usage > soft_limit)
+      soft_limit = acct_max - expected_usage;
+  }
+
   if (!soft_limit)
     return 0;
   return n_bytes_read_in_interval >= soft_limit
