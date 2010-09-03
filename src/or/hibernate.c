@@ -591,10 +591,6 @@ read_bandwidth_usage(void)
   if (!state)
     return -1;
 
-  /* Okay; it looks like the state file is more up-to-date than the
-   * bw_accounting file, or the bw_accounting file is nonexistent,
-   * or the bw_accounting file is corrupt.
-   */
   log_info(LD_ACCT, "Reading bandwidth accounting data from state file");
   n_bytes_read_in_interval = state->AccountingBytesReadInInterval;
   n_bytes_written_in_interval = state->AccountingBytesWrittenInInterval;
