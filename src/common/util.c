@@ -2569,26 +2569,34 @@ tor_listdir(const char *dirname)
   smartlist_t *result;
 #ifdef MS_WINDOWS
   char *pattern;
-  WCHAR wpattern[MAX_PATH] = {0};
+  TCHAR tpattern[MAX_PATH] = {0};
   char name[MAX_PATH] = {0};
   HANDLE handle;
-  WIN32_FIND_DATAW findData;
+  WIN32_FIND_DATA findData;
   size_t pattern_len = strlen(dirname)+16;
   pattern = tor_malloc(pattern_len);
   tor_snprintf(pattern, pattern_len, "%s\\*", dirname);
-  mbstowcs(wpattern,pattern,MAX_PATH);
-  if (INVALID_HANDLE_VALUE == (handle = FindFirstFileW(wpattern, &findData))) {
+#ifdef UNICODE
+  mbstowcs(tpattern,pattern,MAX_PATH);
+#else
+  strlcpy(tpattern, pattern, MAX_PATH);
+#endif
+  if (INVALID_HANDLE_VALUE == (handle = FindFirstFile(tpattern, &findData))) {
     tor_free(pattern);
     return NULL;
   }
-  wcstombs(name,findData.cFileName,MAX_PATH);
   result = smartlist_create();
   while (1) {
+#ifdef UNICODE
+    wcstombs(name,findData.cFileName,MAX_PATH);
+#else
+    strlcpy(name,findData.cFileName,sizeof(name));
+#endif
     if (strcmp(name, ".") &&
         strcmp(name, "..")) {
       smartlist_add(result, tor_strdup(name));
     }
-    if (!FindNextFileW(handle, &findData)) {
+    if (!FindNextFile(handle, &findData)) {
       DWORD err;
       if ((err = GetLastError()) != ERROR_NO_MORE_FILES) {
         char *errstr = format_win32_error(err);

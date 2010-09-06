@@ -169,13 +169,17 @@ tor_munmap_file(tor_mmap_t *handle)
 tor_mmap_t *
 tor_mmap_file(const char *filename)
 {
-  WCHAR wfilename[MAX_PATH]= {0};
+  TCHAR tfilename[MAX_PATH]= {0};
   tor_mmap_t *res = tor_malloc_zero(sizeof(tor_mmap_t));
   int empty = 0;
   res->file_handle = INVALID_HANDLE_VALUE;
   res->mmap_handle = NULL;
-  mbstowcs(wfilename,filename,MAX_PATH);
-  res->file_handle = CreateFileW(wfilename,
+#ifdef UNICODE
+  mbstowcs(tfilename,filename,MAX_PATH);
+#else
+  strlcpy(tfilename,filename,MAX_PATH);
+#endif
+  res->file_handle = CreateFile(tfilename,
                                 GENERIC_READ, FILE_SHARE_READ,
                                 NULL,
                                 OPEN_EXISTING,
@@ -1698,11 +1702,7 @@ get_uname(void)
 #endif
       {
 #ifdef MS_WINDOWS
-#if defined (WINCE)
-        OSVERSIONINFO info;
-#else
-        OSVERSIONINFOEXW info;
-#endif
+        OSVERSIONINFOEX info;
         int i;
         const char *plat = NULL;
         const char *extra = NULL;
@@ -1724,13 +1724,17 @@ get_uname(void)
         };
         memset(&info, 0, sizeof(info));
         info.dwOSVersionInfoSize = sizeof(info);
-        if (! GetVersionExW((LPOSVERSIONINFOW)&info)) {
+        if (! GetVersionEx((LPOSVERSIONINFO)&info)) {
           strlcpy(uname_result, "Bizarre version of Windows where GetVersionEx"
                   " doesn't work.", sizeof(uname_result));
           uname_result_is_set = 1;
           return uname_result;
         }
+#ifdef UNICODE
         wcstombs(acsd, info.szCSDVersion, MAX_PATH);
+#else
+        strlcpy(acsd, info.szCSDVersion, sizeof(acsd));
+#endif
         if (info.dwMajorVersion == 4 && info.dwMinorVersion == 0) {
           if (info.dwPlatformId == VER_PLATFORM_WIN32_NT)
             plat = "Windows NT 4.0";
@@ -2517,22 +2521,26 @@ network_init(void)
 char *
 format_win32_error(DWORD err)
 {
-  LPVOID str = NULL;
-  char abuf[1024] = {0};
+  TCHAR *str = NULL;
   char *result;
 
   /* Somebody once decided that this interface was better than strerror(). */
-  FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
                  FORMAT_MESSAGE_FROM_SYSTEM |
                  FORMAT_MESSAGE_IGNORE_INSERTS,
                  NULL, err,
                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                 (LPWSTR) &str,
+                (LPVOID)&str,
                  0, NULL);
 
   if (str) {
+#ifdef UNICODE
+    char abuf[1024] = {0};
     wcstombs(abuf,str,1024);
-    result = tor_strdup((char*)abuf);
+    result = tor_strdup(abuf);
+#else
+    result = tor_strdup(str);
+#endif
     LocalFree(str); /* LocalFree != free() */
   } else {
     result = tor_strdup("<unformattable error>");

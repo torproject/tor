@@ -3832,7 +3832,7 @@ get_windows_conf_root(void)
 {
   static int is_set = 0;
   static char path[MAX_PATH+1];
-  WCHAR wpath[MAX_PATH] = {0};
+  TCHAR tpath[MAX_PATH] = {0};
 
   LPITEMIDLIST idl;
   IMalloc *m;
@@ -3859,8 +3859,12 @@ get_windows_conf_root(void)
     return path;
   }
   /* Convert the path from an "ID List" (whatever that is!) to a path. */
-  result = SHGetPathFromIDListW(idl, wpath);
-  wcstombs(path,wpath,MAX_PATH);
+  result = SHGetPathFromIDList(idl, tpath);
+#ifdef UNICODE
+  wcstombs(path,tpath,MAX_PATH);
+#else
+  strlcpy(path,tpath,sizeof(path));
+#endif
 
   /* Now we need to free the memory that the path-idl was stored in.  In
    * typical Windows fashion, we can't just call 'free()' on it. */
