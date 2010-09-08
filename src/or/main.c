@@ -741,8 +741,6 @@ run_connection_housekeeping(int i, time_t now)
       log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
                conn->s,conn->address, conn->port);
       connection_mark_for_close(conn);
-      conn->hold_open_until_flushed = 1; /* XXXX why? I think we can remove
-                                          * this. -NM */
     }
   } else if (we_are_hibernating() && !or_conn->n_circuits &&
              !buf_datalen(conn->outbuf)) {
