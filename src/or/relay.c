@@ -366,7 +366,7 @@ relay_crypt(circuit_t *circ, cell_t *cell, cell_direction_t cell_direction,
 static int
 circuit_package_relay_cell(cell_t *cell, circuit_t *circ,
                            cell_direction_t cell_direction,
-                           crypt_path_t *layer_hint, uint16_t on_stream)
+                           crypt_path_t *layer_hint, streamid_t on_stream)
 {
   or_connection_t *conn; /* where to send the cell */
 
@@ -537,7 +537,7 @@ relay_command_to_string(uint8_t command)
  * return 0.
  */
 int
-relay_send_command_from_edge(uint16_t stream_id, circuit_t *circ,
+relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
                              uint8_t relay_command, const char *payload,
                              size_t payload_len, crypt_path_t *cpath_layer)
 {
@@ -2109,7 +2109,7 @@ connection_or_unlink_all_active_circs(or_connection_t *orconn)
  */
 static int
 set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
-                            int block, uint16_t stream_id)
+                            int block, streamid_t stream_id)
 {
   edge_connection_t *edge = NULL;
   int n = 0;
@@ -2293,7 +2293,7 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
 void
 append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
                              cell_t *cell, cell_direction_t direction,
-                             uint16_t fromstream)
+                             streamid_t fromstream)
 {
   cell_queue_t *queue;
   int streams_blocked;
