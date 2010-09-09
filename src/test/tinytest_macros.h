@@ -1,4 +1,4 @@
-/* tinytest_macros.h -- Copyright 2009 Nick Mathewson
+/* tinytest_macros.h -- Copyright 2009-2010 Nick Mathewson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 
 /* Helpers for defining statement-like macros */
 #define TT_STMT_BEGIN do {
-#define TT_STMT_END } while(0)
+#define TT_STMT_END } while (0)
 
 /* Redefine this if your test functions want to abort with something besides
  * "goto end;" */
@@ -45,7 +45,7 @@
 	TT_STMT_END
 #endif
 
-/* Announce a failure.  Args are parenthesized printf args. */
+/* Announce a failure. Args are parenthesized printf args. */
 #define TT_GRIPE(args) TT_DECLARE("FAIL", args)
 
 /* Announce a non-failure if we're verbose. */
@@ -80,7 +80,7 @@
 #define tt_fail() TT_FAIL(("%s", "(Failed.)"))
 
 /* End the current test, and indicate we are skipping it. */
-#define tt_skip()                               \
+#define tt_skip()						\
 	TT_STMT_BEGIN						\
 	_tinytest_set_test_skipped();				\
 	TT_EXIT_TEST_FUNCTION;					\
@@ -111,7 +111,7 @@
 #define tt_assert(b) tt_assert_msg((b), "assert("#b")")
 
 #define tt_assert_test_fmt_type(a,b,str_test,type,test,printf_type,printf_fmt, \
-                                setup_block,cleanup_block)              \
+				setup_block,cleanup_block)		\
 	TT_STMT_BEGIN							\
 	type _val1 = (type)(a);						\
 	type _val2 = (type)(b);						\
@@ -126,7 +126,7 @@
 		_value = _val2;						\
 		setup_block;						\
 		_print2 = _print;					\
-		TT_DECLARE(_tt_status?"  OK":"FAIL",			\
+		TT_DECLARE(_tt_status?"	 OK":"FAIL",			\
 			   ("assert(%s): "printf_fmt" vs "printf_fmt,	\
 			    str_test, _print1, _print2));		\
 		_print = _print1;					\

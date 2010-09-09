@@ -1,4 +1,4 @@
-/* tinytest.c -- Copyright 2009 Nick Mathewson
+/* tinytest.c -- Copyright 2009-2010 Nick Mathewson
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,9 @@
 #define __attribute__(x)
 #endif
 
+#ifdef TINYTEST_LOCAL
+#include "tinytest_local.h"
+#endif
 #include "tinytest.h"
 #include "tinytest_macros.h"
 
@@ -58,7 +61,7 @@ const char *verbosity_flag = "";
 enum outcome { SKIP=2, OK=1, FAIL=0 };
 static enum outcome cur_test_outcome = 0;
 const char *cur_test_prefix = NULL; /**< prefix of the current test group */
-/** Name of the  current test, if we haven't logged is yet. Used for --quiet */
+/** Name of the current test, if we haven't logged is yet. Used for --quiet */
 const char *cur_test_name = NULL;
 
 #ifdef WIN32
@@ -76,7 +79,7 @@ _testcase_run_bare(const struct testcase_t *testcase)
 	int outcome;
 	if (testcase->setup) {
 		env = testcase->setup->setup_fn(testcase);
-                if (!env)
+		if (!env)
 			return FAIL;
 		else if (env == (void*)TT_SKIP)
 			return SKIP;
@@ -149,7 +152,7 @@ _testcase_run_forked(const struct testgroup_t *group,
 #else
 	int outcome_pipe[2];
 	pid_t pid;
-        (void)group;
+	(void)group;
 
 	if (pipe(outcome_pipe))
 		perror("opening pipe");
@@ -165,7 +168,7 @@ _testcase_run_forked(const struct testgroup_t *group,
 		test_r = _testcase_run_bare(testcase);
 		assert(0<=(int)test_r && (int)test_r<=2);
 		b[0] = "NYS"[test_r];
-	        write_r = (int)write(outcome_pipe[1], b, 1);
+		write_r = (int)write(outcome_pipe[1], b, 1);
 		if (write_r != 1) {
 			perror("write outcome to pipe");
 			exit(1);
@@ -217,7 +220,7 @@ testcase_run_one(const struct testgroup_t *group,
 	if ((testcase->flags & TT_FORK) && !(opt_forked||opt_nofork)) {
 		outcome = _testcase_run_forked(group, testcase);
 	} else {
-		outcome  = _testcase_run_bare(testcase);
+		outcome = _testcase_run_bare(testcase);
 	}
 
 	if (outcome == OK) {
@@ -270,6 +273,7 @@ usage(struct testgroup_t *groups, int list_groups)
 {
 	puts("Options are: [--verbose|--quiet|--terse] [--no-fork]");
 	puts("  Specify tests by name, or using a prefix ending with '..'");
+	puts("  To skip a test, list give its name prefixed with a colon.");
 	puts("  Use --list-tests for a list of tests.");
 	if (list_groups) {
 		puts("Known tests are:");
@@ -310,8 +314,15 @@ tinytest_main(int c, const char **v, struct testgroup_t *groups)
 				return -1;
 			}
 		} else {
-			++n;
-			if (!_tinytest_set_flag(groups, v[i], _TT_ENABLED)) {
+			const char *test = v[i];
+			int flag = _TT_ENABLED;
+			if (test[0] == ':') {
+				++test;
+				flag = TT_SKIP;
+			} else {
+				++n;
+			}
+			if (!_tinytest_set_flag(groups, test, flag)) {
 				printf("No such test as %s!\n", v[i]);
 				return -1;
 			}
