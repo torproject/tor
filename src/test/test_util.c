@@ -100,6 +100,9 @@ test_util_config_line(void)
           "k4#a\n" "k5#abc\n" "k6 val #with comment\n"
           "kseven   \"a quoted 'string\"\n"
           "k8 \"a \\x71uoted\\n\\\"str\\\\ing\\t\\001\\01\\1\\\"\"\n"
+          "k9 a line that\\\n spans two lines.\n\n"
+          "k10 more than\\\n one contin\\\nuation\n"
+          "k11  \\\ncontinuation at the start\n"
           , sizeof(buf));
   str = buf;
 
@@ -161,7 +164,24 @@ test_util_config_line(void)
   test_streq(k, "k8");
   test_streq(v, "a quoted\n\"str\\ing\t\x01\x01\x01\"");
   tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k9");
+  test_streq(v, "a line that spans two lines.");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k10");
+  test_streq(v, "more than one continuation");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k11");
+  test_streq(v, "continuation at the start");
+  tor_free(k); tor_free(v);
+
   test_streq(str, "");
+
  done:
   tor_free(k);
   tor_free(v);

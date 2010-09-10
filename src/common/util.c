@@ -2285,6 +2285,7 @@ const char *
 parse_config_line_from_str(const char *line, char **key_out, char **value_out)
 {
   const char *key, *val, *cp;
+  int continuation = 0;
 
   tor_assert(key_out);
   tor_assert(value_out);
@@ -2329,8 +2330,13 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
     if (*line && *line != '#' && *line != '\n')
       return NULL;
   } else {
-    while (*line && *line != '\n' && *line != '#')
+    while (*line && *line != '\n' && *line != '#') {
+      if (*line == '\\' && line[1] == '\n') {
+        continuation = 1;
+        ++line;
+      }
       ++line;
+    }
     if (*line == '\n') {
       cp = line++;
     } else {
@@ -2340,7 +2346,21 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
       --cp;
 
     tor_assert(cp >= val);
+
     *value_out = tor_strndup(val, cp-val);
+    if (continuation) {
+      char *v_out, *v_in;
+      v_out = v_in = *value_out;
+      while (*v_in) {
+        if (v_in[0] == '\\' && v_in[1] == '\n') {
+          v_in += 2;
+        } else {
+          *v_out++ = *v_in++;
+        }
+      }
+      *v_out = '\0';
+    }
+
   }
 
   if (*line == '#') {
