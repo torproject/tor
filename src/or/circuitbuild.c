@@ -1752,7 +1752,8 @@ circuit_deliver_create_cell(circuit_t *circ, uint8_t cell_type,
   cell.circ_id = circ->n_circ_id;
 
   memcpy(cell.payload, payload, ONIONSKIN_CHALLENGE_LEN);
-  append_cell_to_circuit_queue(circ, circ->n_conn, &cell, CELL_DIRECTION_OUT, 0);
+  append_cell_to_circuit_queue(circ, circ->n_conn, &cell,
+                               CELL_DIRECTION_OUT, 0);
 
   if (CIRCUIT_IS_ORIGIN(circ)) {
     /* mark it so it gets better rate limiting treatment. */

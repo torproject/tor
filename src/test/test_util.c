@@ -103,6 +103,8 @@ test_util_config_line(void)
           "k9 a line that\\\n spans two lines.\n\n"
           "k10 more than\\\n one contin\\\nuation\n"
           "k11  \\\ncontinuation at the start\n"
+          "k12 line with a\\\n#comment\n embedded\n"
+          "k13\\\ncontinuation at the very start\n"
           , sizeof(buf));
   str = buf;
 
@@ -178,6 +180,16 @@ test_util_config_line(void)
   str = parse_config_line_from_str(str, &k, &v);
   test_streq(k, "k11");
   test_streq(v, "continuation at the start");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k12");
+  test_streq(v, "line with a embedded");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k13");
+  test_streq(v, "continuation at the very start");
   tor_free(k); tor_free(v);
 
   test_streq(str, "");

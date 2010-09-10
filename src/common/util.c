@@ -2309,9 +2309,10 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
     return line;
   }
 
-  /* Skip until the next space. */
+  /* Skip until the next space or \ followed by newline. */
   key = line;
-  while (*line && !TOR_ISSPACE(*line) && *line != '#')
+  while (*line && !TOR_ISSPACE(*line) && *line != '#' &&
+         ! (line[0] == '\\' && line[1] == '\n'))
     ++line;
   *key_out = tor_strndup(key, line-key);
 
@@ -2322,7 +2323,7 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
   val = line;
 
   /* Find the end of the line. */
-  if (*line == '\"') {
+  if (*line == '\"') { // XXX No continuation here
     if (!(line = unescape_string(line, value_out, NULL)))
        return NULL;
     while (*line == ' ' || *line == '\t')
@@ -2330,10 +2331,14 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
     if (*line && *line != '#' && *line != '\n')
       return NULL;
   } else {
-    while (*line && *line != '\n' && *line != '#') {
+    while (*line && *line != '\n' && (*line != '#' || continuation)) {
       if (*line == '\\' && line[1] == '\n') {
         continuation = 1;
         ++line;
+      } else if (*line == '#') {
+        do {
+          ++line;
+        } while (*line && *line != '\n');
       }
       ++line;
     }
@@ -2352,7 +2357,12 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
       char *v_out, *v_in;
       v_out = v_in = *value_out;
       while (*v_in) {
-        if (v_in[0] == '\\' && v_in[1] == '\n') {
+        if (*v_in == '#') {
+          do {
+            ++v_in;
+          } while (*v_in && *v_in != '\n');
+          ++v_in;
+        } else if (v_in[0] == '\\' && v_in[1] == '\n') {
           v_in += 2;
         } else {
           *v_out++ = *v_in++;
@@ -2360,7 +2370,6 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
       }
       *v_out = '\0';
     }
-
   }
 
   if (*line == '#') {
