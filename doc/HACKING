@@ -130,6 +130,33 @@ compiler generated  no code for that line.  '######' means that the
 line was never reached.  Lines with numbers were called that number
 of times.
 
+Profiling Tor with oprofile
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The oprofile tool runs (on Linux only!) to tell you what functions Tor is
+spending its CPU time in, so we can identify berformance pottlenecks.
+
+Here are some basic instructions
+
+ - Build tor with debugging symbols (you probably already have, unless
+   you messed with CFLAGS during the build process).
+ - Build all the libraries you care about with debugging symbols
+   (probably you only care about libssl, maybe zlib and Libevent).
+ - Copy this tor to a new directory
+ - Copy all the libraries it uses to that dir too (ldd ./tor will
+   tell you)
+ - Set LD_LIBRARY_PATH to include that dir.  ldd ./tor should now
+   show you it's using the libs in that dir
+ - Run that tor
+ - Reset oprofiles counters/start it
+   * "opcontrol --reset; opcontrol --start", if Nick remembers right.
+ - After a while, have it dump the stats on tor and all the libs
+   in that dir you created.
+   * "opcontrol --dump;"
+   * "opreport -l that_dir/*"
+ - Profit
+
+
 Coding conventions
 ------------------
 
