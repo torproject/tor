@@ -696,7 +696,7 @@ connection_dir_bridge_routerdesc_failed(dir_connection_t *conn)
   tor_assert(conn->requested_resource);
   /* Requests for bridge descriptors are in the form 'fp/', so ignore
      anything else. */
-  if (conn->requested_resource && strcmpstart(conn->requested_resource,"fp/"))
+  if (!conn->requested_resource || strcmpstart(conn->requested_resource,"fp/"))
     return;
 
   which = smartlist_create();
