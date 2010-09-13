@@ -1408,6 +1408,26 @@ consider_plaintext_ports(edge_connection_t *conn, uint16_t port)
  * different one? */
 #define TRACKHOSTEXITS_RETRIES 5
 
+/** Call connection_ap_handshake_rewrite_and_attach() unless a controller
+ *  asked us to leave streams unattached. Return 0 in that case.
+ *
+ *  See connection_ap_handshake_rewrite_and_attach()'s
+ *  documentation for arguments and return value.
+ */
+int
+connection_ap_rewrite_and_attach_if_allowed(edge_connection_t *conn,
+                                            origin_circuit_t *circ,
+                                            crypt_path_t *cpath)
+{
+  or_options_t *options = get_options();
+
+  if (options->LeaveStreamsUnattached) {
+    conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
+    return 0;
+  }
+  return connection_ap_handshake_rewrite_and_attach(conn, circ, cpath);
+}
+
 /** Connection <b>conn</b> just finished its socks handshake, or the
  * controller asked us to take care of it. If <b>circ</b> is defined,
  * then that's where we'll want to attach it. Otherwise we have to
@@ -1908,11 +1928,7 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
   else
     control_event_stream_status(conn, STREAM_EVENT_NEW_RESOLVE, 0);
 
-  if (options->LeaveStreamsUnattached) {
-    conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
-    return 0;
-  }
-  return connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
+  return connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
 }
 
 /** connection_init_accepted_conn() found a new trans AP conn.
@@ -1926,7 +1942,6 @@ int
 connection_ap_process_transparent(edge_connection_t *conn)
 {
   socks_request_t *socks;
-  or_options_t *options = get_options();
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);
@@ -1950,11 +1965,7 @@ connection_ap_process_transparent(edge_connection_t *conn)
 
   control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
-  if (options->LeaveStreamsUnattached) {
-    conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
-    return 0;
-  }
-  return connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
+  return connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
 }
 
 /** connection_edge_process_inbuf() found a conn in state natd_wait. See if
@@ -1975,7 +1986,6 @@ connection_ap_process_natd(edge_connection_t *conn)
   size_t tlen = 30;
   int err, port_ok;
   socks_request_t *socks;
-  or_options_t *options = get_options();
 
   tor_assert(conn);
   tor_assert(conn->_base.type == CONN_TYPE_AP);
@@ -2031,13 +2041,9 @@ connection_ap_process_natd(edge_connection_t *conn)
 
   control_event_stream_status(conn, STREAM_EVENT_NEW, 0);
 
-  if (options->LeaveStreamsUnattached) {
-    conn->_base.state = AP_CONN_STATE_CONTROLLER_WAIT;
-    return 0;
-  }
   conn->_base.state = AP_CONN_STATE_CIRCUIT_WAIT;
 
-  return connection_ap_handshake_rewrite_and_attach(conn, NULL, NULL);
+  return connection_ap_rewrite_and_attach_if_allowed(conn, NULL, NULL);
 }
 
 /** Iterate over the two bytes of stream_id until we get one that is not
