@@ -3533,6 +3533,14 @@ download_status_reset(download_status_t *dls)
   dls->next_attempt_at = time(NULL) + schedule[0];
 }
 
+/** Return the number of failures on <b>dls</b> since the last success (if
+ * any). */
+int
+download_status_get_n_failures(const download_status_t *dls)
+{
+  return dls->n_download_failures;
+}
+
 /** Called when one or more routerdesc (or extrainfo, if <b>was_extrainfo</b>)
  * fetches have failed (with uppercase fingerprints listed in <b>failed</b>,
  * either as descriptor digests or as identity digests based on

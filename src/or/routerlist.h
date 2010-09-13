@@ -24,6 +24,7 @@ void authority_cert_get_all(smartlist_t *certs_out);
 void authority_cert_dl_failed(const char *id_digest, int status);
 void authority_certs_fetch_missing(networkstatus_t *status, time_t now);
 int router_reload_router_list(void);
+int authority_cert_dl_looks_uncertain(const char *id_digest);
 smartlist_t *router_get_trusted_dir_servers(void);
 
 routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);

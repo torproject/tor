@@ -104,5 +104,7 @@ download_status_mark_impossible(download_status_t *dl)
   dl->n_download_failures = IMPOSSIBLE_TO_DOWNLOAD;
 }
 
+int download_status_get_n_failures(const download_status_t *dls);
+
 #endif
 
