@@ -67,8 +67,10 @@ static void http_set_address_origin(const char *headers, connection_t *conn);
 static void connection_dir_download_networkstatus_failed(
                                dir_connection_t *conn, int status_code);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
+static void connection_dir_bridge_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_download_cert_failed(
                                dir_connection_t *conn, int status_code);
+static void connection_dir_retry_bridges(smartlist_t *descs);
 static void dir_networkstatus_download_failed(smartlist_t *failed,
                                               int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
@@ -592,6 +594,8 @@ connection_dir_request_failed(dir_connection_t *conn)
              conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
+    if (conn->router_purpose == ROUTER_PURPOSE_BRIDGE)
+      connection_dir_bridge_routerdesc_failed(conn);
     connection_dir_download_routerdesc_failed(conn);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     networkstatus_consensus_download_failed(0);
@@ -645,6 +649,24 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
   }
 }
 
+/** Helper: Attempt to fetch directly the descriptors of each bridge
+ * listed in <b>failed</b>.
+ */
+static void
+connection_dir_retry_bridges(smartlist_t *descs)
+{
+  char digest[DIGEST_LEN];
+  SMARTLIST_FOREACH(descs, const char *, cp,
+  {
+    if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp))<0) {
+      log_warn(LD_BUG, "Malformed fingerprint in list: %s",
+              escaped(cp));
+      continue;
+    }
+    retry_bridge_descriptor_fetch_directly(digest);
+  });
+}
+
 /** Called when an attempt to download one or more router descriptors
  * or extra-info documents on connection <b>conn</b> failed.
  */
@@ -660,6 +682,33 @@ connection_dir_download_routerdesc_failed(dir_connection_t *conn)
              conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO);
 
   (void) conn;
+}
+
+/** Called when an attempt to download a bridge's routerdesc from
+ * one of the authorities failed due to a network error. If
+ * possible attempt to download descriptors from the bridge directly.
+ */
+static void
+connection_dir_bridge_routerdesc_failed(dir_connection_t *conn)
+{
+  smartlist_t *which = NULL;
+
+  /* Requests for bridge descriptors are in the form 'fp/', so ignore
+     anything else. */
+  if (!conn->requested_resource || strcmpstart(conn->requested_resource,"fp/"))
+    return;
+
+  which = smartlist_create();
+  dir_split_resource_into_fingerprints(conn->requested_resource
+                                        + strlen("fp/"),
+                                       which, NULL, 0);
+
+  tor_assert(conn->_base.purpose != DIR_PURPOSE_FETCH_EXTRAINFO);
+  if (smartlist_len(which)) {
+    connection_dir_retry_bridges(which);
+    SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
+  }
+  smartlist_free(which);
 }
 
 /** Called when an attempt to fetch a certificate fails. */
@@ -3499,16 +3548,8 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
   int server = directory_fetches_from_authorities(get_options());
   if (!was_descriptor_digests) {
     if (router_purpose == ROUTER_PURPOSE_BRIDGE) {
-      tor_assert(!was_extrainfo); /* not supported yet */
-      SMARTLIST_FOREACH(failed, const char *, cp,
-      {
-        if (base16_decode(digest, DIGEST_LEN, cp, strlen(cp))<0) {
-          log_warn(LD_BUG, "Malformed fingerprint in list: %s",
-                   escaped(cp));
-          continue;
-        }
-        retry_bridge_descriptor_fetch_directly(digest);
-      });
+      tor_assert(!was_extrainfo);
+      connection_dir_retry_bridges(failed);
     }
     return; /* FFFF should implement for other-than-router-purpose someday */
   }

@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Fall back to direct descriptor request to bridges when
+      requests to authorities fail due to a network error.
+      Bugfix in 0.2.1.19, closes bug 1138.
+
