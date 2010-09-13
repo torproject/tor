@@ -1,3 +1,76 @@
+Changes in version 0.2.2.16-alpha - 2010-09-1?
+  o Major features:
+    - If you configure your bridge with a known identity fingerprint,
+      and the bridge authority is unreachable (as it is in at least
+      one country now), fall back to directly requesting the descriptor
+      from the bridge. Finishes the feature started in 0.2.0.10-alpha;
+      closes bug 1138.
+
+  o Major bugfixes (stream-level fairness):
+    - When the exit relay got a circuit-level sendme cell, it started
+      reading on the exit streams, even if had 500 cells queued in the
+      circuit queue already, so the circuit queue just grew and grew in
+      some cases. We fix this by not re-enabling reading on receipt of a
+      sendme cell when the cell queue is blocked. Fixes bug 1653. Bugfix
+      on 0.2.0.1-alpha. Detected by Mashael AlSabah. Original patch by
+      "yetonetime".
+    - Newly created streams were allowed to read cells onto circuits,
+      even if the circuit's cell queue was blocked and waiting to drain.
+      This created potential unfairness, as older streams would be
+      blocked, but newer streams would gladly fill the queue completely.
+      We add code to detect this situation and prevent any stream from
+      getting more than one free cell. Bugfix on 0.2.0.1-alpha. Partially
+      fixes bug 1298.
+
+  o Minor features:
+    - Update to the September 1 2010 Maxmind GeoLite Country database.
+    - Warn when CookieAuthFileGroupReadable is set but CookieAuthFile is
+      not. This would lead to a cookie that is still not group readable.
+      Closes bug 1843. Suggested by katmagic.
+    - When logging a rate-limited warning, we now mention how many messages
+      got suppressed since the last warning.
+
+  o Minor bugfixes:
+    - Fix a regression introduced in 0.2.2.7-alpha that marked relays
+      down if a directory fetch fails and you've configured either
+      bridges or EntryNodes. The intent was to mark the relay as down
+      _unless_ you're using bridges or EntryNodes, since if you are
+      then you could quickly run out of entry points.
+    - Authorities will now attempt to download consensuses if their
+      own efforts to make a live consensus have failed. This change
+      means authorities that restart will fetch a valid consensus, and
+      it means authorities that didn't agree with the current consensus
+      will still fetch and serve it if it has enough signatures. Bugfix
+      on 0.2.0.9-alpha; fixes bug 1300.
+    - Ensure DNS requests launched by "RESOLVE" commands from the
+      controller respect the __LeaveStreamsUnattached setconf options. The
+      same goes for requests launched via DNSPort or transparent
+      proxying. Bugfix on 0.2.0.1-alpha; fixes bug 1525.
+    - Allow handshaking OR connections to take a full KeepalivePeriod
+      seconds to handshake. Previously, we would close them after
+      IDLE_OR_CONN_TIMEOUT (180) seconds, the same timeout as if they
+      were open. Bugfix on 0.2.1.26; fixes bug 1840. Thanks to mingw-san
+      for analysis help.
+    - Rate-limit "Failed to hand off onionskin" warnings.
+    - Fix the Windows directory-listing code. A bug introduced in
+      0.2.2.14-alpha could make Windows directory servers forget to load
+      some of their cached v2 networkstatus files.
+
+  o Minor bugfixes (compile fixes):
+    - Squash a compile warning on OpenBSD. Reported by Tas; fixes
+      bug 1848.
+    - When building with --enable-gcc-warnings on OpenBSD, disable
+      warnings in system headers. This makes --enable-gcc-warnings
+      pass on OpenBSD 4.8.
+    - On Windows, build correctly either with or without Unicode support.
+      This is necessary so that Tor can support fringe platforms like
+      Windows 98 (which has no Unicode), or Windows CE (which has no
+      non-Unicode). Bugfix on 0.2.2.14-alpha. Fixes bug 1797.
+
+  o Testing
+    - Add a unit test for cross-platform directory-listing code.
+
+
 Changes in version 0.2.2.15-alpha - 2010-08-18
   o Major bugfixes:
     - Stop assigning the HSDir flag to relays that disable their

@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Authorities will now attempt to download consensuses when they
-      are sure that their own efforts to get a live consensus have
-      failed.  Bugfix on 0.2.0.9-alpha.  Fixes bug 1300.

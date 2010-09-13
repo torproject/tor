@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Squash a compile warning on OpenBSD. Reported by Tas, fixes bug 1848.
-

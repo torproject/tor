@@ -1,4 +1,0 @@
-  o Minor features:
-    - Warn when CookieAuthFileGroupReadable is set but CookieAuthFile is
-      not. This would lead to a cookie that is still not group readable.
-      Closes bug 1843. Suggested by katmagic.

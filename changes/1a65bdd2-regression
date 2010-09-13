@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Fix a regression introduced in 0.2.2.7-alpha that marked relays
-      down if a directory fetch fails and you've configured either
-      bridges or EntryNodes. The intent was to mark the relay as down
-      _unless_ you're using bridges or EntryNodes, since if you are
-      then you could quickly run out of entry points.

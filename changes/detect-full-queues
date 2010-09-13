@@ -1,8 +1,0 @@
-  o Major bugfixes:
-    - Newly created streams were allowed to read cells onto circuits,
-      even if the circuit's cell queue was blocked and waiting to drain.
-      This created potential unfairness, as older streams would be
-      blocked, but newer streams would gladly fill the queue completely.
-      We add code to detect this situation and prevent any stream from
-      getting more than one free cell.  Bugfix on 0.2.0.1-alpha.
-      Possible partial fix for bug 1298.
