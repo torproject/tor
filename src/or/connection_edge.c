@@ -147,7 +147,7 @@ connection_edge_process_inbuf(edge_connection_t *conn, int package_partial)
       return 0;
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      if (connection_edge_package_raw_inbuf(conn, package_partial) < 0) {
+      if (connection_edge_package_raw_inbuf(conn, package_partial, NULL) < 0) {
         /* (We already sent an end cell if possible) */
         connection_mark_for_close(TO_CONN(conn));
         return -1;

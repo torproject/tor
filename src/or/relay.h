@@ -27,7 +27,8 @@ int connection_edge_send_command(edge_connection_t *fromconn,
                                  uint8_t relay_command, const char *payload,
                                  size_t payload_len);
 int connection_edge_package_raw_inbuf(edge_connection_t *conn,
-                                      int package_partial);
+                                      int package_partial,
+                                      int *max_cells);
 void connection_edge_consider_sending_sendme(edge_connection_t *conn);
 
 extern uint64_t stats_n_data_cells_packaged;

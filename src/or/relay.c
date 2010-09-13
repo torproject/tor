@@ -946,7 +946,7 @@ connection_edge_process_relay_cell_not_open(
     }
 
     /* handle anything that might have queued */
-    if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
+    if (connection_edge_package_raw_inbuf(conn, 1, NULL) < 0) {
       /* (We already sent an end cell if possible) */
       connection_mark_for_close(TO_CONN(conn));
       return 0;
@@ -1241,7 +1241,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       connection_start_reading(TO_CONN(conn));
       /* handle whatever might still be on the inbuf */
-      if (connection_edge_package_raw_inbuf(conn, 1) < 0) {
+      if (connection_edge_package_raw_inbuf(conn, 1, NULL) < 0) {
         /* (We already sent an end cell if possible) */
         connection_mark_for_close(TO_CONN(conn));
         return 0;
@@ -1307,15 +1307,19 @@ uint64_t stats_n_data_cells_received = 0;
  * ever received were completely full of data. */
 uint64_t stats_n_data_bytes_received = 0;
 
-/** While conn->inbuf has an entire relay payload of bytes on it,
- * and the appropriate package windows aren't empty, grab a cell
- * and send it down the circuit.
+/** If <b>conn</b> has an entire relay payload of bytes on its inbuf (or
+ * <b>package_partial</b> is true), and the appropriate package windows aren't
+ * empty, grab a cell and send it down the circuit.
+ *
+ * If *<b>max_cells</b> is given, package no more than max_cells.  Decrement
+ * *<b>max_cells</b> by the number of cells packaged.
  *
  * Return -1 (and send a RELAY_COMMAND_END cell if necessary) if conn should
  * be marked for close, else return 0.
  */
 int
-connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial)
+connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
+                                  int *max_cells)
 {
   size_t amount_to_process, length;
   char payload[CELL_PAYLOAD_SIZE];
@@ -1330,6 +1334,9 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial)
              conn->_base.marked_for_close_file, conn->_base.marked_for_close);
     return 0;
   }
+
+  if (max_cells && *max_cells <= 0)
+    return 0;
 
  repeat_connection_edge_package_raw_inbuf:
 
@@ -1391,6 +1398,12 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial)
     return 0; /* don't process the inbuf any more */
   }
   log_debug(domain,"conn->package_window is now %d",conn->package_window);
+
+  if (max_cells) {
+    *max_cells -= 1;
+    if (*max_cells <= 0)
+      return 0;
+  }
 
   /* handle more if there's more, or return 0 if there isn't */
   goto repeat_connection_edge_package_raw_inbuf;
@@ -1470,7 +1483,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *conn,
          conn->cpath_layer == layer_hint)) {
       connection_start_reading(TO_CONN(conn));
       /* handle whatever might still be on the inbuf */
-      if (connection_edge_package_raw_inbuf(conn, 1)<0) {
+      if (connection_edge_package_raw_inbuf(conn, 1, NULL)<0) {
         /* (We already sent an end cell if possible) */
         connection_mark_for_close(TO_CONN(conn));
         continue;
