@@ -38,20 +38,18 @@ static edge_connection_t *relay_lookup_conn(circuit_t *circ, cell_t *cell,
                                             cell_direction_t cell_direction,
                                             crypt_path_t *layer_hint);
 
-static int
-connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
-                                   edge_connection_t *conn,
-                                   crypt_path_t *layer_hint);
-static void
-circuit_consider_sending_sendme(circuit_t *circ, crypt_path_t *layer_hint);
-static void
-circuit_resume_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
-static int
-circuit_resume_edge_reading_helper(edge_connection_t *conn,
-                                   circuit_t *circ,
-                                   crypt_path_t *layer_hint);
-static int
-circuit_consider_stop_edge_reading(circuit_t *circ, crypt_path_t *layer_hint);
+static int connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
+                                              edge_connection_t *conn,
+                                              crypt_path_t *layer_hint);
+static void circuit_consider_sending_sendme(circuit_t *circ,
+                                            crypt_path_t *layer_hint);
+static void circuit_resume_edge_reading(circuit_t *circ,
+                                        crypt_path_t *layer_hint);
+static int circuit_resume_edge_reading_helper(edge_connection_t *conn,
+                                              circuit_t *circ,
+                                              crypt_path_t *layer_hint);
+static int circuit_consider_stop_edge_reading(circuit_t *circ,
+                                              crypt_path_t *layer_hint);
 static int circuit_queue_streams_are_blocked(circuit_t *circ);
 
 /** Cache the current hi-res time; the cache gets reset when libevent
