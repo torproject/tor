@@ -70,7 +70,7 @@ static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_bridge_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_download_cert_failed(
                                dir_connection_t *conn, int status_code);
-static void connection_dir_retry_bridges(smartlist_t* descs);
+static void connection_dir_retry_bridges(smartlist_t *descs);
 static void dir_networkstatus_download_failed(smartlist_t *failed,
                                               int status_code);
 static void dir_routerdesc_download_failed(smartlist_t *failed,
@@ -653,7 +653,7 @@ connection_dir_download_networkstatus_failed(dir_connection_t *conn,
  * listed in <b>failed</b>.
  */
 static void
-connection_dir_retry_bridges(smartlist_t* descs)
+connection_dir_retry_bridges(smartlist_t *descs)
 {
   char digest[DIGEST_LEN];
   SMARTLIST_FOREACH(descs, const char *, cp,
@@ -693,7 +693,6 @@ connection_dir_bridge_routerdesc_failed(dir_connection_t *conn)
 {
   smartlist_t *which = NULL;
 
-  tor_assert(conn->requested_resource);
   /* Requests for bridge descriptors are in the form 'fp/', so ignore
      anything else. */
   if (!conn->requested_resource || strcmpstart(conn->requested_resource,"fp/"))
