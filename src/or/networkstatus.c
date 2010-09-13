@@ -1168,14 +1168,11 @@ update_v2_networkstatus_cache_downloads(time_t now)
 static void
 update_consensus_networkstatus_downloads(time_t now)
 {
-  or_options_t *options = get_options();
   int i;
   if (!networkstatus_get_live_consensus(now))
     time_to_download_next_consensus = now; /* No live consensus? Get one now!*/
   if (time_to_download_next_consensus > now)
     return; /* Wait until the current consensus is older. */
-  if (authdir_mode_v3(options))
-    return; /* Authorities never fetch a consensus */
   /* XXXXNM Microdescs: may need to download more types. */
   if (!download_status_is_ready(&consensus_dl_status[FLAV_NS], now,
                                 CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES))
@@ -1246,7 +1243,7 @@ update_consensus_networkstatus_fetch_time(time_t now)
        * is no longer fresh... */
       start = c->fresh_until + min_sec_before_caching;
       /* Some clients may need the consensus sooner than others. */
-      if (options->FetchDirInfoExtraEarly) {
+      if (options->FetchDirInfoExtraEarly || authdir_mode_v3(options)) {
         dl_interval = 60;
         if (min_sec_before_caching + dl_interval > interval)
           dl_interval = interval/2;
