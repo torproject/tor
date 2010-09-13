@@ -1,0 +1,10 @@
+  o Major bugfixes
+    - When receiving a circuit-level SENDME for a blocked circuit, try
+      to package cells fairly from all the streams that had previously
+      been blocked on that circuit.  Previously, we had started with
+      the oldest stream, and allowed each stream to potentially
+      exhaust the circuit's package window.  This gave older streams
+      on any given circuit priority over newer ones.  Fixes bug 1937.
+      Detected by Camilo Viecco.  This bug was introduced before the
+      first Tor release, in svn commit r152: it is the new winner of
+      the longest-lived bug prize.
