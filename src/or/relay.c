@@ -2297,7 +2297,9 @@ connection_or_flush_from_first_active_circuit(or_connection_t *conn, int max,
       flushed = (uint32_t)((now.tv_sec % SECONDS_IN_A_DAY) * 100L +
                  (uint32_t)now.tv_usec / (uint32_t)10000L);
       if (!it_queue || !it_queue->first) {
-        log_warn(LD_BUG, "Cannot determine insertion time of cell.");
+        log_info(LD_GENERAL, "Cannot determine insertion time of cell. "
+                             "Looks like the CellStatistics option was "
+                             "recently enabled.");
       } else {
         or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
         insertion_time_elem_t *elem = it_queue->first;
