@@ -1194,6 +1194,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
       if (circ->n_conn) {
         uint8_t trunc_reason = *(uint8_t*)(cell->payload + RELAY_HEADER_SIZE);
+        circuit_clear_cell_queue(circ, circ->n_conn);
         connection_or_send_destroy(circ->n_circ_id, circ->n_conn,
                                    trunc_reason);
         circuit_set_n_circid_orconn(circ, 0, NULL);
@@ -2377,6 +2378,9 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
 {
   cell_queue_t *queue;
   int streams_blocked;
+  if (circ->marked_for_close)
+    return;
+
   if (direction == CELL_DIRECTION_OUT) {
     queue = &circ->n_conn_cells;
     streams_blocked = circ->streams_blocked_on_n_conn;
@@ -2477,6 +2481,25 @@ decode_address_from_payload(tor_addr_t *addr_out, const char *payload,
     break;
   }
   return payload + 2 + (uint8_t)payload[1];
+}
+
+/** Remove all the cells queued on <b>circ</b> for <b>orconn</b>. */
+void
+circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn)
+{
+  cell_queue_t *queue;
+  if (circ->n_conn == orconn) {
+    queue = &circ->n_conn_cells;
+  } else {
+    or_circuit_t *orcirc = TO_OR_CIRCUIT(circ);
+    tor_assert(orcirc->p_conn == orconn);
+    queue = &orcirc->p_conn_cells;
+  }
+
+  if (queue->n)
+    make_circuit_inactive_on_conn(circ,orconn);
+
+  cell_queue_clear(queue);
 }
 
 /** Fail with an assert if the active circuits ring on <b>orconn</b> is
