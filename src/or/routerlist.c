@@ -1257,6 +1257,13 @@ mark_all_trusteddirservers_up(void)
   router_dir_info_changed();
 }
 
+/** Return true iff r1 and r2 have the same address and OR port. */
+int
+routers_have_same_or_addr(const routerinfo_t *r1, const routerinfo_t *r2)
+{
+  return r1->addr == r2->addr && r1->or_port == r2->or_port;
+}
+
 /** Reset all internal variables used to count failed downloads of network
  * status objects. */
 void
@@ -3246,8 +3253,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       log_debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
                 router->nickname, old_router->nickname,
                 hex_str(id_digest,DIGEST_LEN));
-      if (router->addr == old_router->addr &&
-          router->or_port == old_router->or_port) {
+      if (routers_have_same_or_addr(router, old_router)) {
         /* these carry over when the address and orport are unchanged. */
         router->last_reachable = old_router->last_reachable;
         router->testing_since = old_router->testing_since;
