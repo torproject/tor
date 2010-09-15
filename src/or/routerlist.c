@@ -4220,7 +4220,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable,
       pds_flags |= PDS_NO_EXISTING_SERVERDESC_FETCH;
     }
 
-    n_per_request = (n_downloadable+MIN_REQUESTS-1) / MIN_REQUESTS;
+    n_per_request = CEIL_DIV(n_downloadable, MIN_REQUESTS);
     if (n_per_request > MAX_DL_PER_REQUEST)
       n_per_request = MAX_DL_PER_REQUEST;
     if (n_per_request < MIN_DL_PER_REQUEST)
@@ -4233,7 +4233,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable,
 
     log_info(LD_DIR,
              "Launching %d request%s for %d router%s, %d at a time",
-             (n_downloadable+n_per_request-1)/n_per_request,
+             CEIL_DIV(n_downloadable, n_per_request),
              req_plural, n_downloadable, rtr_plural, n_per_request);
     smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {

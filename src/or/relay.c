@@ -1520,8 +1520,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
 
  again:
 
-  /* ??? turn this into a ceildiv function? */
-  cells_per_conn = (max_to_package + n_streams - 1 ) / n_streams;
+  cells_per_conn = CEIL_DIV(max_to_package, n_streams);
 
   packaged_this_round = 0;
   n_streams_left = 0;

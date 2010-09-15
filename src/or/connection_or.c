@@ -252,8 +252,7 @@ connection_or_flushed_some(or_connection_t *conn)
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   if (datalen < OR_CONN_LOWWATER) {
-    ssize_t n = (OR_CONN_HIGHWATER - datalen + CELL_NETWORK_SIZE-1)
-      / CELL_NETWORK_SIZE;
+    ssize_t n = CEIL_DIV(OR_CONN_HIGHWATER - datalen, CELL_NETWORK_SIZE);
     time_t now = approx_time();
     while (conn->active_circuits && n > 0) {
       int flushed;
