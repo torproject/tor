@@ -634,7 +634,7 @@ read_bandwidth_usage(void)
   if (state->AccountingSoftLimitHitAt > interval_start_time) {
     soft_limit_hit_at =  state->AccountingSoftLimitHitAt;
     n_bytes_at_soft_limit = state->AccountingBytesAtSoftLimit;
-    n_seconds_to_hit_soft_limit = state->AccountingSoftLimitHitAt;
+    n_seconds_to_hit_soft_limit = state->AccountingSecondsToReachSoftLimit;
   } else {
     soft_limit_hit_at = 0;
     n_bytes_at_soft_limit = 0;
