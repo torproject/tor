@@ -36,6 +36,7 @@ int router_get_my_share_of_directory_requests(double *v2_share_out,
 void router_reset_status_download_failures(void);
 void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
 int routers_in_same_family(routerinfo_t *r1, routerinfo_t *r2);
+int routers_have_same_or_addr(const routerinfo_t *r1, const routerinfo_t *r2);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running);
 int router_nickname_is_in_list(routerinfo_t *router, const char *list);
