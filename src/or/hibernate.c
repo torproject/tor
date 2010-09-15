@@ -381,7 +381,7 @@ configure_accounting(time_t now)
 static void
 update_expected_bandwidth(void)
 {
-  uint64_t used, expected;
+  uint64_t expected;
   uint64_t max_configured = (get_options()->BandwidthRate * 60);
 
 #define MIN_TIME_FOR_MEASUREMENT (1800)
@@ -398,9 +398,11 @@ update_expected_bandwidth(void)
   } else if (n_seconds_active_in_interval >= MIN_TIME_FOR_MEASUREMENT) {
     /* Otherwise, we either measured enough time in the last interval but
      * never hit our soft limit, or we're using a state file from a Tor that
-     * doesn't know to store soft-limit info.  Just take the 
+     * doesn't know to store soft-limit info.  Just take rate at which
+     * we were reading/writing in the last interval as our expected rate.
      */
-    used = MAX(n_bytes_written_in_interval, n_bytes_read_in_interval);
+    uint64_t used = MAX(n_bytes_written_in_interval,
+                        n_bytes_read_in_interval);
     expected = used / (n_seconds_active_in_interval / 60);
   } else {
     /* If we haven't gotten enough data last interval, set 'expected'
