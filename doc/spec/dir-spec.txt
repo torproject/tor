@@ -1148,15 +1148,15 @@
         Parameters ::= Parameter | Parameters SP Parameter
 
         The parameters list, if present, contains a space-separated list of
-        key-value pairs, sorted in lexical order by their keyword.  Each
-        parameter has its own meaning.
+        case-sensitive key-value pairs, sorted in lexical order by
+        their keyword. Each parameter has its own meaning.
 
         (Only included when the vote is generated with consensus-method 7 or
         later.)
 
         Commonly used "param" arguments at this point include:
 
-        "CircWindow" -- the default package window that circuits should
+        "circwindow" -- the default package window that circuits should
         be established with. It started out at 1000 cells, but some
         research indicates that a lower value would mean fewer cells in
         transit in the network at any given time. Obeyed by Tor 0.2.1.20
@@ -1167,6 +1167,10 @@
         0.2.2.10-alpha and later.  (Versions of Tor between 0.2.2.7-alpha
         and 0.2.2.10-alpha recognized a "CircPriorityHalflifeMsec" parameter,
         but mishandled it badly.)
+
+        See also "2.4.5. Consensus parameters governing behavior"
+        in path-spec.txt for a series of circuit build time related
+        consensus params.
 
    The authority section of a vote contains the following items, followed
    in turn by the authority's current key certificate:
