@@ -3300,11 +3300,6 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
    * the list. */
   routerlist_insert(routerlist, router);
   if (!from_cache) {
-    if (authdir) {
-      /* launch an immediate reachability test, so we will have an opinion
-       * soon in case we're generating a consensus soon */
-      dirserv_single_reachability_test(time(NULL), router);
-    }
     signed_desc_append_to_journal(&router->cache_info,
                                   &routerlist->desc_store);
   }
@@ -3624,15 +3619,19 @@ routerlist_remove_old_routers(void)
 
 /** We just added a new set of descriptors. Take whatever extra steps
  * we need. */
-static void
+void
 routerlist_descriptors_added(smartlist_t *sl, int from_cache)
 {
   tor_assert(sl);
   control_event_descriptors_changed(sl);
-  SMARTLIST_FOREACH(sl, routerinfo_t *, ri,
+  SMARTLIST_FOREACH_BEGIN(sl, routerinfo_t *, ri) {
     if (ri->purpose == ROUTER_PURPOSE_BRIDGE)
       learned_bridge_descriptor(ri, from_cache);
-  );
+    if (ri->needs_retest_if_added) {
+      ri->needs_retest_if_added = 0;
+      dirserv_single_reachability_test(approx_time(), ri);
+    }
+  } SMARTLIST_FOREACH_END(ri);
 }
 
 /**

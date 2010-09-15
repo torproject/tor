@@ -730,6 +730,10 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
   desc = tor_strndup(ri->cache_info.signed_descriptor_body, desclen);
   nickname = tor_strdup(ri->nickname);
 
+  /* Tell if we're about to need to launch a test if we add this. */
+  ri->needs_retest_if_added =
+    dirserv_should_launch_reachability_test(ri, ri_old);
+
   r = router_add_to_routerlist(ri, msg, 0, 0);
   if (!WRA_WAS_ADDED(r)) {
     /* unless the routerinfo was fine, just out-of-date */
@@ -744,7 +748,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 
     changed = smartlist_create();
     smartlist_add(changed, ri);
-    control_event_descriptors_changed(changed);
+    routerlist_descriptors_added(changed, 0);
     smartlist_free(changed);
     if (!*msg) {
       *msg =  ri->is_valid ? "Descriptor for valid server accepted" :
@@ -923,6 +927,11 @@ running_long_enough_to_decide_unreachable(void)
  * the directory. */
 #define REACHABLE_TIMEOUT (45*60)
 
+/** If we tested a router and found it reachable _at least this long_ after it
+ * declared itself hibernating, it is probably done hibernating and we just
+ * missed a descriptor from it. */
+#define HIBERNATION_PUBLICATION_SKEW (60*60)
+
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
  * or - We've found it reachable recently. */
@@ -935,11 +944,23 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
    */
   int answer;
 
-  if (router_is_me(router) && !we_are_hibernating())
+  if (router_is_me(router)) {
+    /* We always know if we are down ourselves. */
+    answer = ! we_are_hibernating();
+  } else if (router->is_hibernating &&
+             (router->cache_info.published_on +
+              HIBERNATION_PUBLICATION_SKEW) > router->last_reachable) {
+    /* A hibernating router is down unless we (somehow) had contact with it
+     * since it declared itself to be hibernating. */
+    answer = 0;
+  } else if (get_options()->AssumeReachable) {
+    /* If AssumeReachable, everybody is up unless they say they are down! */
     answer = 1;
-  else
-    answer = get_options()->AssumeReachable ||
-             now < router->last_reachable + REACHABLE_TIMEOUT;
+  } else {
+    /* Otherwise, a router counts as up if we found it reachable in the last
+       REACHABLE_TIMEOUT seconds. */
+    answer = (now < router->last_reachable + REACHABLE_TIMEOUT);
+  }
 
   if (!answer && running_long_enough_to_decide_unreachable()) {
     /* not considered reachable. tell rephist. */
@@ -3096,6 +3117,26 @@ dirserv_orconn_tls_done(const char *address,
   /* FFFF Maybe we should reinstate the code that dumps routers with the same
    * addr/port but with nonmatching keys, but instead of dumping, we should
    * skip testing. */
+}
+
+/** Called when we, as an authority, receive a new router descriptor either as
+ * an upload or a download.  Used to decide whether to relaunch reachability
+ * testing for the server. */
+int
+dirserv_should_launch_reachability_test(routerinfo_t *ri, routerinfo_t *ri_old)
+{
+  if (!authdir_mode_handles_descs(get_options(), ri->purpose))
+    return 0;
+  if (!ri_old) {
+    /* New router: Launch an immediate reachability test, so we will have an
+     * opinion soon in case we're generating a consensus soon */
+    return 1;
+  }
+  if (ri_old->is_hibernating && !ri->is_hibernating) {
+    /* It just came out of hibernation; launch a reachability test */
+    return 1;
+  }
+  return 0;
 }
 
 /** Helper function for dirserv_test_reachability(). Start a TLS

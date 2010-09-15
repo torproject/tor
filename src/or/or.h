@@ -1456,6 +1456,9 @@ typedef struct {
                              * directory according to the authorities. */
   unsigned int policy_is_reject_star:1; /**< True iff the exit policy for this
                                          * router rejects everything. */
+  /** True if, after we have added this router, we should re-launch
+   * tests for it. */
+  unsigned int needs_retest_if_added:1;
 
 /** Tor can use this router for general positions in circuits. */
 #define ROUTER_PURPOSE_GENERAL 0
