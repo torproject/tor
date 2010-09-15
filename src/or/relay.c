@@ -2272,6 +2272,9 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
 {
   cell_queue_t *queue;
   int streams_blocked;
+  if (circ->marked_for_close)
+    return;
+
   if (direction == CELL_DIRECTION_OUT) {
     queue = &circ->n_conn_cells;
     streams_blocked = circ->streams_blocked_on_n_conn;
