@@ -930,7 +930,7 @@ running_long_enough_to_decide_unreachable(void)
 /** If we tested a router and found it reachable _at least this long_ after it
  * declared itself hibernating, it is probably done hibernating and we just
  * missed a descriptor from it. */
-#define ALLOW_REACHABILITY_PUBLICATION_SKEW (60*60)
+#define HIBERNATION_PUBLICATION_SKEW (60*60)
 
 /** Treat a router as alive if
  *    - It's me, and I'm not hibernating.
@@ -949,7 +949,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     answer = ! we_are_hibernating();
   } else if (router->is_hibernating &&
              (router->cache_info.published_on +
-              ALLOW_REACHABILITY_PUBLICATION_SKEW) > router->last_reachable) {
+              HIBERNATION_PUBLICATION_SKEW) > router->last_reachable) {
     /* A hibernating router is down unless we (somehow) had contact with it
      * since it declared itself to be hibernating. */
     answer = 0;
@@ -3126,7 +3126,7 @@ int
 dirserv_should_launch_reachability_test(routerinfo_t *ri, routerinfo_t *ri_old)
 {
   if (!authdir_mode_handles_descs(get_options(), ri->purpose))
-      return 0;
+    return 0;
   if (!ri_old) {
     /* New router: Launch an immediate reachability test, so we will have an
      * opinion soon in case we're generating a consensus soon */

@@ -1925,7 +1925,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       router->is_bad_exit = rs->is_bad_exit;
       router->is_hs_dir = rs->is_hs_dir;
     } else {
-      /* If we _are_ an authority, we should check wither this router
+      /* If we _are_ an authority, we should check whether this router
        * is one that will cause us to need a reachability test. */
       routerinfo_t *old_router =
         router_get_by_digest(router->cache_info.identity_digest);
