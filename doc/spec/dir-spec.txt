@@ -1168,6 +1168,15 @@
         and 0.2.2.10-alpha recognized a "CircPriorityHalflifeMsec" parameter,
         but mishandled it badly.)
 
+        "perconnbwrate" and "perconnbwburst" -- if set, each relay sets
+        up a separate token bucket for every client OR connection,
+        and rate limits that connection indepedently. Typically left
+        unset, except when used for performance experiments around trac
+        entry 1750. Only honored by relays running Tor 0.2.2.16-alpha
+        and later. (Note that relays running 0.2.2.7-alpha through
+        0.2.2.14-alpha looked for bwconnrate and bwconnburst, but then
+        did the wrong thing with them; see bug 1830 for details.)
+
         See also "2.4.5. Consensus parameters governing behavior"
         in path-spec.txt for a series of circuit build time related
         consensus params.

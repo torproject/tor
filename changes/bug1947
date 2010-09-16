@@ -1,0 +1,7 @@
+  o Minor features:
+    - Add new "perconnbwrate" and "perconnbwburst" consensus params to
+      do individual connection-level rate limiting of clients. The torrc
+      config options with the same names trump the consensus params, if
+      both are present. Replaces the old "bwconnrate" and "bwconnburst"
+      consensus params which were broken from 0.2.2.7-alpha through
+      0.2.2.14-alpha. Closes bug 1947.
