@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Demote a warn to info that happens when the CellStatistics option
-      was just enabled. Fixes bug 1921; bugfix on 0.2.2.15-alpha. Reported
-      by Moritz Bartl.

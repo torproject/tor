@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Never vote for a server as "Running" if we have a descriptor for it
-      claiming to be hibernating, and that descriptor was published more
-      recently than our last contact with the server.  Bugfix on
-      0.2.0.3-alpha; fixes bug 911.
-

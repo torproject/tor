@@ -1,3 +1,0 @@
-  o Minor bugfixes:
-    - Really allow clients to use relays as bridges. Fixes bug 1776;
-      bugfix on 0.2.2.15-alpha.

@@ -1,4 +1,0 @@
-  o Minor features
-    - When a router changes IP or port, authorities now launch a new
-      reachability test for it.  (Implements ticket 1899)
-
