@@ -1943,6 +1943,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
 
   if (!consensus_method)
     flav = FLAV_NS;
+  tor_assert(flav == FLAV_NS || flav == FLAV_MICRODESC);
 
   eos = find_start_of_next_routerstatus(*s);
 
@@ -1955,15 +1956,16 @@ routerstatus_parse_entry_from_string(memarea_t *area,
     goto err;
   }
   tok = find_by_keyword(tokens, K_R);
-  tor_assert(tok->n_args >= 7);
+  tor_assert(tok->n_args >= 7); /* guaranteed by GE(7) in K_R setup */
   if (flav == FLAV_NS) {
     if (tok->n_args < 8) {
       log_warn(LD_DIR, "Too few arguments to r");
       goto err;
     }
-  } else {
-    offset = -1;
+  } else if (flav == FLAV_MICRODESC) {
+    offset = -1; /* There is no identity digest */
   }
+
   if (vote_rs) {
     rs = &vote_rs->status;
   } else {
@@ -2139,6 +2141,16 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         vote_rs->microdesc = line;
       }
     } SMARTLIST_FOREACH_END(t);
+  } else if (flav == FLAV_MICRODESC) {
+    tok = find_opt_by_keyword(tokens, K_M);
+    if (tok) {
+      tor_assert(tok->n_args);
+      if (digest256_from_base64(rs->descriptor_digest, tok->args[0])) {
+        log_warn(LD_DIR, "Error decoding microdescriptor digest %s",
+                 escaped(tok->args[0]));
+        goto err;
+      }
+    }
   }
 
   if (!strcasecmp(rs->nickname, UNNAMED_ROUTER_NICKNAME))

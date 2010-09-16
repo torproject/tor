@@ -1569,8 +1569,9 @@ typedef struct routerstatus_t {
                                       * has. */
   char identity_digest[DIGEST_LEN]; /**< Digest of the router's identity
                                      * key. */
-  char descriptor_digest[DIGEST_LEN]; /**< Digest of the router's most recent
-                                       * descriptor. */
+  /** Digest of the router's most recent descriptor or microdescriptor.
+   * If it's a descriptor, we only use the first DIGEST_LEN bytes. */
+  char descriptor_digest[DIGEST256_LEN];
   uint32_t addr; /**< IPv4 address for this router. */
   uint16_t or_port; /**< OR port for this router. */
   uint16_t dir_port; /**< Directory port for this router. */
