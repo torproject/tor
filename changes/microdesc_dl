@@ -1,0 +1,4 @@
+  o Major features:
+    - Caches now download and cache all the consensus flavors that
+      they know about.  This allows them to assess which microdescriptors
+      they need to fetch.

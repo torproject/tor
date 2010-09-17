@@ -1263,7 +1263,8 @@ static cached_dir_t cached_runningrouters;
  * cached_dir_t. */
 static digestmap_t *cached_v2_networkstatus = NULL;
 
-/** Map from flavor name to the v3 consensuses that we're currently serving. */
+/** Map from flavor name to the cached_dir_t for the v3 consensuses that we're
+ * currently serving. */
 static strmap_t *cached_consensuses = NULL;
 
 /** Possibly replace the contents of <b>d</b> with the value of

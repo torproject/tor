@@ -361,9 +361,24 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   }
 
   if (dir_purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
-    networkstatus_t *v = networkstatus_get_latest_consensus();
-    if (v)
-      if_modified_since = v->valid_after + 180;
+    int flav = FLAV_NS;
+    networkstatus_t *v;
+    if (resource)
+      flav = networkstatus_parse_flavor_name(resource);
+
+    if (flav != -1) {
+      /* IF we have a parsed consensus of this type, we can do an
+       * if-modified-time based on it. */
+      v = networkstatus_get_latest_consensus_by_flavor(flav);
+      if (v)
+        if_modified_since = v->valid_after + 180;
+    } else {
+      /* Otherwise it might be a consensus we don't parse, but which we
+       * do cache.  Look at the cached copy, perhaps. */
+      cached_dir_t *cd = dirserv_get_consensus(resource ? resource : "ns");
+      if (cd)
+        if_modified_since = cd->published + 180;
+    }
   }
 
   if (!options->FetchServerDescriptors && type != HIDSERV_AUTHORITY)
@@ -598,7 +613,9 @@ connection_dir_request_failed(dir_connection_t *conn)
       connection_dir_bridge_routerdesc_failed(conn);
     connection_dir_download_routerdesc_failed(conn);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
-    networkstatus_consensus_download_failed(0);
+    const char *flavname =
+      conn->requested_resource ? conn->requested_resource : "ns";
+    networkstatus_consensus_download_failed(0, flavname);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
@@ -955,12 +972,16 @@ _compare_strs(const void **a, const void **b)
  * This url depends on whether or not the server we go to
  * is sufficiently new to support conditional consensus downloading,
  * i.e. GET .../consensus/<b>fpr</b>+<b>fpr</b>+<b>fpr</b>
+ *
+ * If 'resource' is provided, it is the name of a consensus flavor to request.
  */
 static char *
-directory_get_consensus_url(int supports_conditional_consensus)
+directory_get_consensus_url(int supports_conditional_consensus,
+                            const char *resource)
 {
-  char *url;
-  size_t len;
+  char *url = NULL;
+  const char *hyphen = resource ? "-" : "";
+  const char *flavor = resource ? resource : "";
 
   if (supports_conditional_consensus) {
     char *authority_id_list;
@@ -982,16 +1003,15 @@ directory_get_consensus_url(int supports_conditional_consensus)
     authority_id_list = smartlist_join_strings(authority_digests,
                                                "+", 0, NULL);
 
-    len = strlen(authority_id_list)+64;
-    url = tor_malloc(len);
-    tor_snprintf(url, len, "/tor/status-vote/current/consensus/%s.z",
-                 authority_id_list);
+    tor_asprintf(&url, "/tor/status-vote/current/consensus%s%s/%s.z",
+                 hyphen, flavor, authority_id_list);
 
     SMARTLIST_FOREACH(authority_digests, char *, cp, tor_free(cp));
     smartlist_free(authority_digests);
     tor_free(authority_id_list);
   } else {
-    url = tor_strdup("/tor/status-vote/current/consensus.z");
+    tor_asprintf(&url, "/tor/status-vote/current/consensus%s%s.z",
+                 hyphen, flavor);
   }
   return url;
 }
@@ -1072,10 +1092,11 @@ directory_send_command(dir_connection_t *conn,
       tor_snprintf(url, len, "/tor/status/%s", resource);
       break;
     case DIR_PURPOSE_FETCH_CONSENSUS:
-      tor_assert(!resource);
+      /* resource is optional.  If present, it's a flavor name */
       tor_assert(!payload);
       httpcommand = "GET";
-      url = directory_get_consensus_url(supports_conditional_consensus);
+      url = directory_get_consensus_url(supports_conditional_consensus,
+                                        resource);
       log_info(LD_DIR, "Downloading consensus from %s using %s",
                hoststring, url);
       break;
@@ -1690,6 +1711,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     int r;
+    const char *flavname =
+      conn->requested_resource ? conn->requested_resource : "ns";
     if (status_code != 200) {
       int severity = (status_code == 304) ? LOG_INFO : LOG_WARN;
       log(severity, LD_DIR,
@@ -1698,18 +1721,18 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
            status_code, escaped(reason), conn->_base.address,
            conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
-      networkstatus_consensus_download_failed(status_code);
+      networkstatus_consensus_download_failed(status_code, flavname);
       return -1;
     }
     log_info(LD_DIR,"Received consensus directory (size %d) from server "
              "'%s:%d'", (int)body_len, conn->_base.address, conn->_base.port);
-    if ((r=networkstatus_set_current_consensus(body, "ns", 0))<0) {
+    if ((r=networkstatus_set_current_consensus(body, flavname, 0))<0) {
       log_fn(r<-1?LOG_WARN:LOG_INFO, LD_DIR,
-             "Unable to load consensus directory downloaded from "
+             "Unable to load %s consensus directory downloaded from "
              "server '%s:%d'. I'll try again soon.",
-             conn->_base.address, conn->_base.port);
+             flavname, conn->_base.address, conn->_base.port);
       tor_free(body); tor_free(headers); tor_free(reason);
-      networkstatus_consensus_download_failed(0);
+      networkstatus_consensus_download_failed(0, flavname);
       return -1;
     }
     /* launches router downloads as needed */
