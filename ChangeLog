@@ -1,3 +1,6 @@
+Changes in version 0.2.2.17-alpha - 2010-09-2?
+
+
 Changes in version 0.2.2.16-alpha - 2010-09-17
   o Major bugfixes (stream-level fairness):
     - When receiving a circuit-level SENDME for a blocked circuit, try
