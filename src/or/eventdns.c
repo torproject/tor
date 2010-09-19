@@ -3132,7 +3132,7 @@ load_nameservers_with_getnetworkparams(void)
 	GetNetworkParams_fn_t fn;
 
 	/* XXXX Possibly, we should hardcode the location of this DLL. */
-	if (!(handle = LoadLibrary(TEXT("iphlpapi.dll"))) {
+	if (!(handle = LoadLibrary(TEXT("iphlpapi.dll")))) {
 		log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
 		/* right now status = 0, doesn't that mean "good" - mikec */
 		status = -1;
@@ -3204,6 +3204,7 @@ static int
 config_nameserver_from_reg_key(HKEY key, const TCHAR *subkey)
 {
 	char *buf;
+  char ansibuf[MAX_PATH] = {0};
 	DWORD bufsz = 0, type = 0;
 	int status = 0;
 
@@ -3216,7 +3217,7 @@ config_nameserver_from_reg_key(HKEY key, const TCHAR *subkey)
 	if (RegQueryValueEx(key, subkey, 0, &type, (LPBYTE)buf, &bufsz)
 		== ERROR_SUCCESS && bufsz > 1) {
 		wcstombs(ansibuf,(wchar_t*)buf,MAX_PATH);/*XXXX UNICODE */
-		status = evdns_nameserver_ip_add_line(buf);
+		status = evdns_nameserver_ip_add_line(ansibuf);
 	}
 
 	mm_free(buf);
@@ -3254,7 +3255,7 @@ load_nameservers_from_registry(void)
 			log(EVDNS_LOG_DEBUG,"Couldn't open nt key, %d",(int)GetLastError());
 			return -1;
 		}
-		r = RegOpenKeyEx(nt_key, Text("Interfaces"), 0,
+		r = RegOpenKeyEx(nt_key, TEXT("Interfaces"), 0,
 						 KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS,
 						 &interfaces_key);
 		if (r != ERROR_SUCCESS) {
