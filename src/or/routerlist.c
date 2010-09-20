@@ -4539,10 +4539,13 @@ update_router_descriptor_downloads(time_t now)
   if (directory_fetches_dir_info_early(options)) {
     update_router_descriptor_cache_downloads_v2(now);
   }
+
   update_consensus_router_descriptor_downloads(now, 0,
-    networkstatus_get_reasonably_live_consensus(now));
+                  networkstatus_get_reasonably_live_consensus(now, FLAV_NS));
 
   /* XXXX021 we could be smarter here; see notes on bug 652. */
+  /* XXXX NM Microdescs: if we're not fetching microdescriptors, we need
+   * to make something else invoke this. */
   /* If we're a server that doesn't have a configured address, we rely on
    * directory fetches to learn when our address changes.  So if we haven't
    * tried to get any routerdescs in a long time, try a dummy fetch now. */
@@ -4713,7 +4716,7 @@ count_loading_descriptors_progress(void)
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now);
+    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
   double fraction;
 
   if (!consensus)
@@ -4743,7 +4746,7 @@ update_router_have_minimum_dir_info(void)
   int res;
   or_options_t *options = get_options();
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now);
+    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())

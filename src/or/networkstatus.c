@@ -1210,6 +1210,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
   }
 }
 
+/** DOCDOC */
 static int
 we_want_to_fetch_flavor(or_options_t *options, int flavor)
 {
@@ -1485,13 +1486,15 @@ networkstatus_get_live_consensus(time_t now)
 /** As networkstatus_get_live_consensus(), but is way more tolerant of expired
  * consensuses. */
 networkstatus_t *
-networkstatus_get_reasonably_live_consensus(time_t now)
+networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 {
 #define REASONABLY_LIVE_TIME (24*60*60)
-  if (current_consensus &&
-      current_consensus->valid_after <= now &&
-      now <= current_consensus->valid_until+REASONABLY_LIVE_TIME)
-    return current_consensus;
+  networkstatus_t *consensus =
+    networkstatus_get_latest_consensus_by_flavor(flavor);
+  if (consensus &&
+      consensus->valid_after <= now &&
+      now <= consensus->valid_until+REASONABLY_LIVE_TIME)
+    return consensus;
   else
     return NULL;
 }
@@ -1890,7 +1893,8 @@ void
 routers_update_all_from_networkstatus(time_t now, int dir_version)
 {
   routerlist_t *rl = router_get_routerlist();
-  networkstatus_t *consensus = networkstatus_get_live_consensus(now);
+  networkstatus_t *consensus = networkstatus_get_reasonably_live_consensus(now,
+                                                                     FLAV_NS);
 
   if (networkstatus_v2_list_has_changed)
     download_status_map_update_from_v2_networkstatus();
