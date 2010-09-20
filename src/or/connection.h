@@ -124,6 +124,8 @@ connection_t *connection_get_by_type_addr_port_purpose(int type,
 connection_t *connection_get_by_type_state(int type, int state);
 connection_t *connection_get_by_type_state_rendquery(int type, int state,
                                                      const char *rendquery);
+dir_connection_t *connection_dir_get_by_purpose_and_resource(
+                                           int state, const char *resource);
 
 #define connection_speaks_cells(conn) ((conn)->type == CONN_TYPE_OR)
 int connection_is_listener(connection_t *conn);

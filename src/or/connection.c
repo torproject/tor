@@ -3397,6 +3397,33 @@ connection_get_by_type_state_rendquery(int type, int state,
   return NULL;
 }
 
+/** Return a directory connection (if any one exists) that is fetching
+ * the item described by <b>state</b>/<b>resource</b> */
+dir_connection_t *
+connection_dir_get_by_purpose_and_resource(int purpose,
+                                           const char *resource)
+{
+  smartlist_t *conns = get_connection_array();
+
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
+    dir_connection_t *dirconn;
+    if (conn->type != CONN_TYPE_DIR || conn->marked_for_close ||
+        conn->purpose != purpose)
+      continue;
+    dirconn = TO_DIR_CONN(conn);
+    if (dirconn->requested_resource == NULL) {
+      if (resource == NULL)
+        return dirconn;
+    } else if (resource) {
+      if (0 == strcmp(resource, dirconn->requested_resource))
+        return dirconn;
+    }
+  } SMARTLIST_FOREACH_END(conn);
+
+  return NULL;
+}
+
+
 /** Return an open, non-marked connection of a given type and purpose, or NULL
  * if no such connection exists. */
 connection_t *
