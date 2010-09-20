@@ -482,6 +482,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
                           voter) {
     int good_here = 0;
     int bad_here = 0;
+    int unknown_here = 0;
     int missing_key_here = 0, dl_failed_key_here = 0;
     SMARTLIST_FOREACH_BEGIN(voter->sigs, document_signature_t *, sig) {
       if (!sig->good_signature && !sig->bad_signature &&
@@ -497,7 +498,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
 
         if (!is_v3_auth) {
           smartlist_add(unrecognized, voter);
-          ++n_unknown;
+          ++unknown_here;
           continue;
         } else if (!cert || cert->expires < now) {
           smartlist_add(need_certs_from, voter);
@@ -527,8 +528,11 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
       ++n_missing_key;
       if (dl_failed_key_here)
         ++n_dl_failed_key;
-    } else
+    } else if (unknown_here) {
+      ++n_unknown;
+    } else {
       ++n_no_signature;
+    }
   } SMARTLIST_FOREACH_END(voter);
 
   /* Now see whether we're missing any voters entirely. */
