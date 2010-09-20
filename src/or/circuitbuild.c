@@ -2308,8 +2308,8 @@ onionskin_answer(or_circuit_t *circ, uint8_t cell_type, const char *payload,
          cell_type == CELL_CREATED ? ONIONSKIN_REPLY_LEN : DIGEST_LEN*2);
 
   log_debug(LD_CIRC,"init digest forward 0x%.8x, backward 0x%.8x.",
-            (unsigned int)*(uint32_t*)(keys),
-            (unsigned int)*(uint32_t*)(keys+20));
+            (unsigned int)get_uint32(keys),
+            (unsigned int)get_uint32(keys+20));
   if (circuit_init_cpath_crypto(tmp_cpath, keys, 0)<0) {
     log_warn(LD_BUG,"Circuit initialization failed");
     tor_free(tmp_cpath);
@@ -2448,6 +2448,8 @@ router_handles_some_port(routerinfo_t *router, smartlist_t *needed_ports)
 
   for (i = 0; i < smartlist_len(needed_ports); ++i) {
     addr_policy_result_t r;
+    /* alignment issues aren't a worry for this dereference, since
+       needed_ports is explicitly a smartlist of uint16_t's */
     port = *(uint16_t *)smartlist_get(needed_ports, i);
     tor_assert(port);
     r = compare_addr_to_addr_policy(0, port, router->exit_policy);

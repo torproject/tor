@@ -1498,8 +1498,8 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
         return -1;
       }
 
-      req->port = ntohs(*(uint16_t*)(buf->head->data+2));
-      destip = ntohl(*(uint32_t*)(buf->head->data+4));
+      req->port = ntohs(get_uint16(buf->head->data+2));
+      destip = ntohl(get_uint32(buf->head->data+4));
       if ((!req->port && req->command!=SOCKS_COMMAND_RESOLVE) || !destip) {
         log_warn(LD_APP,"socks4: Port or DestIP is zero. Rejecting.");
         return -1;
