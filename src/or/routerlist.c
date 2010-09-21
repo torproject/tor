@@ -4673,16 +4673,21 @@ get_dir_info_status_string(void)
 /** Iterate over the servers listed in <b>consensus</b>, and count how many of
  * them seem like ones we'd use, and how many of <em>those</em> we have
  * descriptors for.  Store the former in *<b>num_usable</b> and the latter in
- * *<b>num_present</b>.  */
+ * *<b>num_present</b>.  If <b>in_set</b> is non-NULL, only consider those
+ * routers in <b>in_set</b>.
+ */
 static void
 count_usable_descriptors(int *num_present, int *num_usable,
                          const networkstatus_t *consensus,
-                         or_options_t *options, time_t now)
+                         or_options_t *options, time_t now,
+                         routerset_t *in_set)
 {
   *num_present = 0, *num_usable=0;
 
   SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
      {
+       if (in_set && ! routerset_contains_routerstatus(in_set, rs))
+         continue;
        if (client_would_use_router(rs, now, options)) {
          ++*num_usable; /* the consensus says we want it. */
          if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
@@ -4711,7 +4716,7 @@ count_loading_descriptors_progress(void)
     return 0; /* can't count descriptors if we have no list of them */
 
   count_usable_descriptors(&num_present, &num_usable,
-                           consensus, get_options(), now);
+                           consensus, get_options(), now, NULL);
 
   if (num_usable == 0)
     return 0; /* don't div by 0 */
@@ -4755,21 +4760,38 @@ update_router_have_minimum_dir_info(void)
     goto done;
   }
 
-  count_usable_descriptors(&num_present, &num_usable, consensus, options, now);
+  count_usable_descriptors(&num_present, &num_usable, consensus, options, now,
+                           NULL);
 
   if (num_present < num_usable/4) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
             "We have only %d/%d usable descriptors.", num_present, num_usable);
     res = 0;
     control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_DESCRIPTORS, 0);
+    goto done;
   } else if (num_present < 2) {
     tor_snprintf(dir_info_status, sizeof(dir_info_status),
                  "Only %d descriptor%s here and believed reachable!",
                  num_present, num_present ? "" : "s");
     res = 0;
-  } else {
-    res = 1;
+    goto done;
   }
+
+  /* Check for entry nodes. */
+  if (options->EntryNodes) {
+    count_usable_descriptors(&num_present, &num_usable, consensus, options, now,
+                             options->EntryNodes);
+
+    if (num_usable && (num_present==0 || num_present < num_usable / 4)) {
+      tor_snprintf(dir_info_status, sizeof(dir_info_status),
+                   "We have only %d/%d usable entry node descriptors.",
+                   num_present, num_usable);
+      res = 0;
+      goto done;
+    }
+  }
+
+  res = 1;
 
  done:
   if (res && !have_min_dir_info) {
