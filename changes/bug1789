@@ -1,0 +1,16 @@
+  o Minor features:
+    - Be more generous with how much bandwidth we'd use up (with
+      accounting enabled) before entering "soft hibernation".
+      Previously, we'd hibernate once we'd used up 95% of our
+      allotment.  Now, we use up 95% of our allotment, AND make sure
+      that we have no more than 500MB (or 3 hours of expected traffic,
+      whichever is lower) remaining before we enter soft hibernation.
+
+  o Minor bugfixes:
+    - For bandwidth accounting, calculate our expected bandwidth rate
+      based on the time during which we were active and not in
+      soft-hibernation during the last interval.  Previously, we were
+      also considering the time spent in soft-hibernation.  If this
+      was a long time, we would wind up underestimating our bandwidth
+      by a lot, and skewing our wakeup time towards the start of the
+      accounting interval.  Fixes bug 1789.  Bugfix on 0.0.9pre5.

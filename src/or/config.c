@@ -428,6 +428,9 @@ static config_var_t _state_vars[] = {
   V(AccountingExpectedUsage,          MEMUNIT,  NULL),
   V(AccountingIntervalStart,          ISOTIME,  NULL),
   V(AccountingSecondsActive,          INTERVAL, NULL),
+  V(AccountingSecondsToReachSoftLimit,INTERVAL, NULL),
+  V(AccountingSoftLimitHitAt,         ISOTIME,  NULL),
+  V(AccountingBytesAtSoftLimit,       MEMUNIT,  NULL),
 
   VAR("EntryGuard",              LINELIST_S,  EntryGuards,             NULL),
   VAR("EntryGuardDownSince",     LINELIST_S,  EntryGuards,             NULL),
