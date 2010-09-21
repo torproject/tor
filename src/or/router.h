@@ -51,6 +51,7 @@ int server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);
 void consider_publishable_server(int force);
+int should_refuse_unknown_exits(or_options_t *options);
 
 void router_upload_dir_desc_to_dirservers(int force);
 void mark_my_descriptor_dirty_if_older_than(time_t when);
@@ -60,6 +61,7 @@ void check_descriptor_ipaddress_changed(time_t now);
 void router_new_address_suggestion(const char *suggestion,
                                    const dir_connection_t *d_conn);
 int router_compare_to_my_exit_policy(edge_connection_t *conn);
+int router_my_exit_policy_is_reject_star(void);
 routerinfo_t *router_get_my_routerinfo(void);
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
