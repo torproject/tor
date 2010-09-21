@@ -27,6 +27,8 @@ struct microdesc_cache_t {
   tor_mmap_t *cache_content;
   /** Number of bytes used in the journal file. */
   size_t journal_len;
+  /** Number of bytes in descriptors removed as too old. */
+  size_t bytes_dropped;
 
   /** Total bytes of microdescriptor bodies we have added to this cache */
   uint64_t total_len_seen;
@@ -242,10 +244,9 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
   {
     size_t old_content_len =
       cache->cache_content ? cache->cache_content->size : 0;
-    if (cache->journal_len > 16384 + old_content_len &&
-        cache->journal_len > old_content_len * 2) {
+    if ((cache->journal_len > 16384 + old_content_len &&
+         cache->journal_len > old_content_len / 2))
       microdesc_cache_rebuild(cache);
-    }
   }
 
   return added;
@@ -310,6 +311,47 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   return 0;
 }
 
+/** DOCDOC */
+#define TOLERATE_MICRODESC_AGE (7*24*60*60)
+
+/** DOCDOC */
+void
+microdesc_cache_clean(microdesc_cache_t *cache)
+{
+  networkstatus_t *consensus;
+  time_t cutoff;
+  microdesc_t **mdp, *victim;
+  int dropped=0, kept=0;
+  size_t bytes_dropped = 0;
+  time_t now = time(NULL);
+
+  /* If we don't know a consensus, never believe last_listed values */
+  consensus = networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC);
+  if (consensus == NULL)
+    return;
+
+  cutoff = now - TOLERATE_MICRODESC_AGE;
+
+  for (mdp = HT_START(microdesc_map, &cache->map); mdp != NULL; ) {
+    if ((*mdp)->last_listed < cutoff) {
+      ++dropped;
+      victim = *mdp;
+      mdp = HT_NEXT_RMV(microdesc_map, &cache->map, mdp);
+      bytes_dropped += victim->bodylen;
+      microdesc_free(victim);
+    } else {
+      ++kept;
+      mdp = HT_NEXT(microdesc_map, &cache->map, mdp);
+    }
+  }
+
+  if (dropped) {
+    log_notice(LD_DIR, "Removed %d/%d microdescriptors as old.",
+               dropped,dropped+kept);
+    cache->bytes_dropped += bytes_dropped;
+  }
+}
+
 /** Regenerate the main cache file for <b>cache</b>, clear the journal file,
  * and update every microdesc_t in the cache with pointers to its new
  * location. */
@@ -325,6 +367,9 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
   int orig_size, new_size;
 
   log_info(LD_DIR, "Rebuilding the microdescriptor cache...");
+
+  microdesc_cache_clean(cache);
+
   orig_size = (int)(cache->cache_content ? cache->cache_content->size : 0);
   orig_size += (int)cache->journal_len;
 
@@ -379,6 +424,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
 
   write_str_to_file(cache->journal_fname, "", 1);
   cache->journal_len = 0;
+  cache->bytes_dropped = 0;
 
   new_size = (int)cache->cache_content->size;
   log_info(LD_DIR, "Done rebuilding microdesc cache. "
@@ -512,4 +558,25 @@ update_microdesc_downloads(time_t now)
                               missing, NULL, now);
 
   smartlist_free(missing);
+}
+
+/** DOCDOC */
+void
+update_microdescs_from_networkstatus(time_t now)
+{
+  microdesc_cache_t *cache = get_microdesc_cache();
+  microdesc_t *md;
+  networkstatus_t *ns =
+    networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC);
+
+  if (! ns)
+    return;
+
+  tor_assert(ns->flavor == FLAV_MICRODESC);
+
+  SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
+    md = microdesc_cache_lookup_by_digest256(cache, rs->descriptor_digest);
+    if (md && ns->valid_after > md->last_listed)
+      md->last_listed = ns->valid_after;
+  } SMARTLIST_FOREACH_END(rs);
 }

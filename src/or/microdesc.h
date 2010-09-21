@@ -22,6 +22,7 @@ smartlist_t *microdescs_add_list_to_cache(microdesc_cache_t *cache,
                         smartlist_t *descriptors, saved_location_t where,
                         int no_save);
 
+void microdesc_cache_clean(microdesc_cache_t *cache);
 int microdesc_cache_rebuild(microdesc_cache_t *cache);
 int microdesc_cache_reload(microdesc_cache_t *cache);
 void microdesc_cache_clear(microdesc_cache_t *cache);
@@ -40,7 +41,7 @@ void microdesc_free(microdesc_t *md);
 void microdesc_free_all(void);
 
 void update_microdesc_downloads(time_t now);
-
+void update_microdescs_from_networkstatus(time_t now);
 
 #endif
 

@@ -20,6 +20,7 @@
 #include "dirserv.h"
 #include "dirvote.h"
 #include "main.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "relay.h"
 #include "router.h"
@@ -282,6 +283,7 @@ router_reload_consensus_networkstatus(void)
   update_certificate_downloads(time(NULL));
 
   routers_update_all_from_networkstatus(time(NULL), 3);
+  update_microdescs_from_networkstatus(time(NULL));
 
   return 0;
 }

@@ -1764,6 +1764,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     }
     /* launches router downloads as needed */
     routers_update_all_from_networkstatus(now, 3);
+    update_microdescs_from_networkstatus(now);
+    update_microdesc_downloads(now);
     directory_info_has_arrived(now, 0);
     log_info(LD_DIR, "Successfully loaded consensus.");
   }
