@@ -3132,7 +3132,7 @@ load_nameservers_with_getnetworkparams(void)
 	GetNetworkParams_fn_t fn;
 
 	/* XXXX Possibly, we should hardcode the location of this DLL. */
-	if (!(handle = LoadLibrary(TEXT("iphlpapi.dll")))) {
+	if (!(handle = load_windows_system_library(TEXT("iphlpapi.dll")))) {
 		log(EVDNS_LOG_WARN, "Could not open iphlpapi.dll");
 		/* right now status = 0, doesn't that mean "good" - mikec */
 		status = -1;
