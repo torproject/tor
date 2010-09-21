@@ -382,7 +382,10 @@ static void
 update_expected_bandwidth(void)
 {
   uint64_t expected;
-  uint64_t max_configured = (get_options()->BandwidthRate * 60);
+  or_options_t *options= get_options();
+  uint64_t max_configured = (options->RelayBandwidthRate > 0 ?
+                             options->RelayBandwidthRate :
+                             options->BandwidthRate) * 60;
 
 #define MIN_TIME_FOR_MEASUREMENT (1800)
 
@@ -628,7 +631,7 @@ read_bandwidth_usage(void)
   interval_start_time = state->AccountingIntervalStart;
   expected_bandwidth_usage = state->AccountingExpectedUsage;
 
-  /* Older versions of Tor (before 0.2.2.16-alpha) didn't generate these
+  /* Older versions of Tor (before 0.2.2.17-alpha or so) didn't generate these
    * fields. If you switch back and forth, you might get an
    * AccountingSoftLimitHitAt value from long before the most recent
    * interval_start_time.  If that's so, then ignore the softlimit-related
@@ -732,7 +735,7 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
     soft_limit_hit_at = now;
     n_seconds_to_hit_soft_limit = n_seconds_active_in_interval;
     n_bytes_at_soft_limit = MAX(n_bytes_read_in_interval,
-                               n_bytes_written_in_interval);
+                                n_bytes_written_in_interval);
   }
 
   /* close listeners. leave control listener(s). */
