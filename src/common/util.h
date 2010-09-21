@@ -340,6 +340,10 @@ void start_daemon(void);
 void finish_daemon(const char *desired_cwd);
 void write_pidfile(char *filename);
 
+#ifdef MS_WINDOWS
+HANDLE load_windows_system_library(const TCHAR *library_name);
+#endif
+
 const char *libor_get_digests(void);
 
 #endif

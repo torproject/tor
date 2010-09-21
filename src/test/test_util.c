@@ -1139,6 +1139,19 @@ test_util_listdir(void *ptr)
   }
 }
 
+#ifdef MS_WINDOWS
+static void
+test_util_load_win_lib(void *ptr)
+{
+  HANDLE h = load_windows_system_library("advapi32.dll");
+
+  tt_assert(h);
+ done:
+  if (h)
+    CloseHandle(h);
+}
+#endif
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1162,6 +1175,9 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(asprintf, 0),
   UTIL_TEST(listdir, 0),
+#ifdef MS_WINDOWS
+  UTIL_TEST(load_win_lib, 0),
+#endif
   END_OF_TESTCASES
 };
 
