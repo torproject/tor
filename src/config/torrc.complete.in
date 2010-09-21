@@ -529,6 +529,6 @@
 ## Every time the specified period elapses, Tor uploads any ren-
 ## dezvous service descriptors to the directory servers.  This
 ## information is also uploaded whenever it changes. 
-## (Default: 20 minutes)
+## (Default: 1 hour)
 #RendPostPeriod N seconds|minutes|hours|days|weeks
 #

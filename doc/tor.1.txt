@@ -1222,7 +1222,7 @@ The following options are used to configure a hidden service.
 **RendPostPeriod** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Every time the specified period elapses, Tor uploads any rendezvous 
     service descriptors to the directory servers. This information  is also
-    uploaded whenever it changes. (Default: 20 minutes)
+    uploaded whenever it changes. (Default: 1 hour)
 
 TESTING NETWORK OPTIONS
 -----------------------
