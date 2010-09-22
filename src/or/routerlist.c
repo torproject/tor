@@ -4779,10 +4779,10 @@ update_router_have_minimum_dir_info(void)
 
   /* Check for entry nodes. */
   if (options->EntryNodes) {
-    count_usable_descriptors(&num_present, &num_usable, consensus, options, now,
-                             options->EntryNodes);
+    count_usable_descriptors(&num_present, &num_usable, consensus, options,
+                             now, options->EntryNodes);
 
-    if (num_usable && (num_present==0 || num_present < num_usable / 4)) {
+    if (num_usable && (num_present == 0)) {
       tor_snprintf(dir_info_status, sizeof(dir_info_status),
                    "We have only %d/%d usable entry node descriptors.",
                    num_present, num_usable);
