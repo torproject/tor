@@ -4805,6 +4805,13 @@ update_router_have_minimum_dir_info(void)
     log(quiet ? LOG_INFO : LOG_NOTICE, LD_DIR,
         "Our directory information is no longer up-to-date "
         "enough to build circuits: %s", dir_info_status);
+
+    /* a) make us log when we next complete a circuit, so we know when Tor
+     * is back up and usable, and b) disable some activities that Tor
+     * should only do while circuits are working, like reachability tests
+     * and fetching bridge descriptors only over circuits. */
+    has_completed_circuit = 0;
+
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }
   have_min_dir_info = res;
