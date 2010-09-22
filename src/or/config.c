@@ -1290,7 +1290,7 @@ options_act(or_options_t *old_options)
           return -1;
         }
         ip_address_changed(0);
-        if (has_completed_circuit || !any_predicted_circuits(time(NULL)))
+        if (can_complete_circuit || !any_predicted_circuits(time(NULL)))
           inform_testing_reachability();
       }
       cpuworkers_rotate();

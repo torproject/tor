@@ -126,7 +126,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 {
   if (get_options()->AllDirActionsPrivate)
     return 1;
-  if (router_purpose == ROUTER_PURPOSE_BRIDGE && has_completed_circuit)
+  if (router_purpose == ROUTER_PURPOSE_BRIDGE && can_complete_circuit)
     return 1; /* if no circuits yet, we may need this info to bootstrap. */
   if (dir_purpose == DIR_PURPOSE_UPLOAD_DIR ||
       dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||

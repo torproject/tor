@@ -1918,9 +1918,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
       circuit_reset_failure_count(0);
       if (circ->build_state->onehop_tunnel)
         control_event_bootstrap(BOOTSTRAP_STATUS_REQUESTING_STATUS, 0);
-      if (!has_completed_circuit && !circ->build_state->onehop_tunnel) {
+      if (!can_complete_circuit && !circ->build_state->onehop_tunnel) {
         or_options_t *options = get_options();
-        has_completed_circuit=1;
+        can_complete_circuit=1;
         /* FFFF Log a count of known routers here */
         log_notice(LD_GENERAL,
             "Tor has successfully opened a circuit. "
@@ -1987,7 +1987,7 @@ circuit_note_clock_jumped(int seconds_elapsed)
       seconds_elapsed >=0 ? "forward" : "backward");
   control_event_general_status(LOG_WARN, "CLOCK_JUMPED TIME=%d",
                                seconds_elapsed);
-  has_completed_circuit=0; /* so it'll log when it works again */
+  can_complete_circuit=0; /* so it'll log when it works again */
   control_event_client_status(severity, "CIRCUIT_NOT_ESTABLISHED REASON=%s",
                               "CLOCK_JUMPED");
   circuit_mark_all_unused_circs();

@@ -4810,7 +4810,7 @@ update_router_have_minimum_dir_info(void)
      * is back up and usable, and b) disable some activities that Tor
      * should only do while circuits are working, like reachability tests
      * and fetching bridge descriptors only over circuits. */
-    has_completed_circuit = 0;
+    can_complete_circuit = 0;
 
     control_event_client_status(LOG_NOTICE, "NOT_ENOUGH_DIR_INFO");
   }

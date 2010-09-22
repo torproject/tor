@@ -12,7 +12,7 @@
 #ifndef _TOR_MAIN_H
 #define _TOR_MAIN_H
 
-extern int has_completed_circuit;
+extern int can_complete_circuit;
 
 int connection_add(connection_t *conn);
 int connection_remove(connection_t *conn);
