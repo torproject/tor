@@ -2,5 +2,5 @@
     - Support line continuations in torrc.  If a line ends with a
       single backslash character, the newline is ignored, and the
       configuration value is treated as continuing on the next line.
-      Implements bug 1929.
+      Resolves bug 1929.
 

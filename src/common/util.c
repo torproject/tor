@@ -2284,6 +2284,36 @@ unescape_string(const char *s, char **result, size_t *size_out)
 const char *
 parse_config_line_from_str(const char *line, char **key_out, char **value_out)
 {
+  /* I believe the file format here is supposed to be:
+     FILE = (EMPTYLINE | LINE)*
+
+     EMPTYLINE = SPACE* NL | COMMENT NL
+     SPACE = ' ' | '\r' | '\t'
+     COMMENT = '#' NOT-NL*
+     NOT-NL = Any character except '\n'
+     NL = '\n'
+
+     LINE = SPACE* KEY SPACE* VALUES NL
+     KEY = KEYCHAR+
+     KEYCHAR = Any character except ' ', '\r', '\n', '\t', '#', "\"
+
+     VALUES = QUOTEDVALUE | NORMALVALUE
+     QUOTEDVALUE = QUOTE QVITEM* QUOTE EOLSPACE?
+     QUOTE = '"'
+     QVCHAR = KEYCHAR | ESC ('n' | 't' | 'r' | '"' | ESC |'\'' | OCTAL | HEX)
+     ESC = "\\"
+     OCTAL = ODIGIT (ODIGIT ODIGIT?)?
+     HEX = ('x' | 'X') HEXDIGIT HEXDIGIT
+     ODIGIT = '0' .. '7'
+     HEXDIGIT = '0'..'9' | 'a' .. 'f' | 'A' .. 'F'
+     EOLSPACE = SPACE* COMMENT?
+
+     NORMALVALUE = (VALCHAR | ESC ESC_IGNORE | CONTINUATION)* EOLSPACE?
+     VALCHAR = Any character except ESC, '#', and '\n'
+     ESC_IGNORE = Any character except '#' or '\n'
+     CONTINUATION = ESC NL ( COMMENT NL )*
+   */
+
   const char *key, *val, *cp;
   int continuation = 0;
 
@@ -2323,7 +2353,7 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
   val = line;
 
   /* Find the end of the line. */
-  if (*line == '\"') { // XXX No continuation here
+  if (*line == '\"') { // XXX No continuation handling is done here
     if (!(line = unescape_string(line, value_out, NULL)))
        return NULL;
     while (*line == ' ' || *line == '\t')
@@ -2331,27 +2361,34 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
     if (*line && *line != '#' && *line != '\n')
       return NULL;
   } else {
+    /* Look for the end of the line. */
     while (*line && *line != '\n' && (*line != '#' || continuation)) {
       if (*line == '\\' && line[1] == '\n') {
         continuation = 1;
-        ++line;
+        line += 2;
       } else if (*line == '#') {
         do {
           ++line;
         } while (*line && *line != '\n');
+        if (*line == '\n')
+          ++line;
+      } else {
+        ++line;
       }
-      ++line;
     }
+
     if (*line == '\n') {
       cp = line++;
     } else {
       cp = line;
     }
+    /* Now back cp up to be the last nonspace character */
     while (cp>val && TOR_ISSPACE(*(cp-1)))
       --cp;
 
     tor_assert(cp >= val);
 
+    /* Now copy out and decode the value. */
     *value_out = tor_strndup(val, cp-val);
     if (continuation) {
       char *v_out, *v_in;
@@ -2361,7 +2398,8 @@ parse_config_line_from_str(const char *line, char **key_out, char **value_out)
           do {
             ++v_in;
           } while (*v_in && *v_in != '\n');
-          ++v_in;
+          if (*v_in == '\n')
+            ++v_in;
         } else if (v_in[0] == '\\' && v_in[1] == '\n') {
           v_in += 2;
         } else {
