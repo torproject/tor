@@ -1,0 +1,6 @@
+  o Minor features:
+    - Support line continuations in torrc.  If a line ends with a
+      single backslash character, the newline is ignored, and the
+      configuration value is treated as continuing on the next line.
+      Resolves bug 1929.
+

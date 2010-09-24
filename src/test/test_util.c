@@ -100,6 +100,15 @@ test_util_config_line(void)
           "k4#a\n" "k5#abc\n" "k6 val #with comment\n"
           "kseven   \"a quoted 'string\"\n"
           "k8 \"a \\x71uoted\\n\\\"str\\\\ing\\t\\001\\01\\1\\\"\"\n"
+          "k9 a line that\\\n spans two lines.\n\n"
+          "k10 more than\\\n one contin\\\nuation\n"
+          "k11  \\\ncontinuation at the start\n"
+          "k12 line with a\\\n#comment\n embedded\n"
+          "k13\\\ncontinuation at the very start\n"
+          "k14 a line that has a comment and # ends with a slash \\\n"
+          "k15 this should be the next new line\n"
+          "k16 a line that has a comment and # ends without a slash \n"
+          "k17 this should be the next new line\n"
           , sizeof(buf));
   str = buf;
 
@@ -161,7 +170,54 @@ test_util_config_line(void)
   test_streq(k, "k8");
   test_streq(v, "a quoted\n\"str\\ing\t\x01\x01\x01\"");
   tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k9");
+  test_streq(v, "a line that spans two lines.");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k10");
+  test_streq(v, "more than one continuation");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k11");
+  test_streq(v, "continuation at the start");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k12");
+  test_streq(v, "line with a embedded");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k13");
+  test_streq(v, "continuation at the very start");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k14");
+  test_streq(v, "a line that has a comment and" );
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k15");
+  test_streq(v, "this should be the next new line");
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k16");
+  test_streq(v, "a line that has a comment and" );
+  tor_free(k); tor_free(v);
+
+  str = parse_config_line_from_str(str, &k, &v);
+  test_streq(k, "k17");
+  test_streq(v, "this should be the next new line");
+  tor_free(k); tor_free(v);
+
   test_streq(str, "");
+
  done:
   tor_free(k);
   tor_free(v);
