@@ -2,6 +2,11 @@
  * Copyright (c) 2010, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+ * \file tor-fw-helper.c
+ * \brief The main wrapper around our firewall helper logic.
+ **/
+
 /*
  * tor-fw-helper is a tool for opening firewalls with NAT-PMP and UPnP; this
  * tool is designed to be called by hand or by Tor by way of a exec() at a
@@ -13,12 +18,76 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <time.h>
+#include <string.h>
 
 #include "orconfig.h"
 #include "tor-fw-helper.h"
+#ifdef NAT_PMP
 #include "tor-fw-helper-natpmp.h"
+#endif
+#ifdef MINIUPNPC
 #include "tor-fw-helper-upnp.h"
+#endif
 
+/** This is our meta storage type - it holds information about each helper
+  including the total number of helper backends, function pointers, and helper
+  state. */
+typedef struct backends_t {
+    /** The total number of backends */
+    int n_backends;
+    /** The backend functions as an array */
+    tor_fw_backend_t backend_ops[MAX_BACKENDS];
+    /** The internal backend state */
+    void *backend_state[MAX_BACKENDS];
+} backends_t;
+
+int
+init_backends(tor_fw_options_t *options, backends_t *backends);
+
+/** Initalize each backend helper with the user input stored in <b>options</b>
+ * and put the results in the <b>backends</b> struct. */
+int
+init_backends(tor_fw_options_t *options, backends_t *backends)
+{
+    int n_available = 0;
+    int i, r, n;
+    tor_fw_backend_t *backend_ops_list[MAX_BACKENDS];
+    void *data = NULL;
+    /* First, build a list of the working backends. */
+    n = 0;
+#ifdef MINIUPNPC
+    backend_ops_list[n++] = (tor_fw_backend_t *) tor_fw_get_miniupnp_backend();
+#endif
+#ifdef NAT_PMP
+    backend_ops_list[n++] = (tor_fw_backend_t *) tor_fw_get_natpmp_backend();
+#endif
+    n_available = n;
+
+    /* Now, for each backend that might work, try to initialize it.
+     * That's how we roll, initialized.
+     */
+    n = 0;
+    for (i=0; i<n_available; ++i) {
+        data = calloc(1, backend_ops_list[i]->state_len);
+        if (!data) {
+            perror("calloc");
+            exit(1);
+        }
+        r = backend_ops_list[i]->init(options, data);
+        if (r == 0) {
+            backends->backend_ops[n] = *backend_ops_list[i];
+            backends->backend_state[n] = data;
+            n++;
+        } else {
+            free(data);
+        }
+    }
+    backends->n_backends = n;
+
+    return n;
+}
+
+/** Return the proper commandline switches when the user needs information. */
 static void
 usage(void)
 {
@@ -33,9 +102,10 @@ usage(void)
            " [-p|--external-dir-port [TCP port]]]\n");
 }
 
-/* Log commandline options */
+/** Log commandline options to a hardcoded file <b>tor-fw-helper.log</b> in the
+ * current working directory. */
 static int
-test_commandline_options(int argc, char **argv)
+log_commandline_options(int argc, char **argv)
 {
   int i, retval;
   FILE *logfile;
@@ -71,71 +141,88 @@ test_commandline_options(int argc, char **argv)
     return -1;
 }
 
+/** Iterate over over each of the supported <b>backends</b> and attempt to
+ * fetch the public ip. */
 static void
 tor_fw_fetch_public_ip(tor_fw_options_t *tor_fw_options,
-                       miniupnpc_state_t *miniupnpc_state)
+                       backends_t *backends)
 {
+    int i;
     int r = 0;
-    r = tor_natpmp_fetch_public_ip(tor_fw_options);
+
     if (tor_fw_options->verbose)
-        fprintf(stdout, "V: Attempts to fetch public ip (natpmp) resulted in: "
-                "%d\n", r);
+        fprintf(stdout, "V: tor_fw_fetch_public_ip\n");
 
-    if (r == 0)
-        tor_fw_options->public_ip_status = 1;
-
-    r = tor_upnp_fetch_public_ip(miniupnpc_state);
-    if (tor_fw_options->verbose)
-        fprintf(stdout, "V: Attempts to fetch public ip (upnp) resulted in: "
-                "%d\n", r);
-
-    if (r == 0)
-        tor_fw_options->public_ip_status = 1;
+    for (i=0; i<backends->n_backends; ++i) {
+        if (tor_fw_options->verbose)
+        {
+            fprintf(stdout, "V: running backend_state now: %i\n", i);
+            fprintf(stdout, "V: size of backend state: %u\n",
+                   (int)(backends->backend_ops)[i].state_len);
+            fprintf(stdout, "V: backend state name: %s\n",
+                   (char *)(backends->backend_ops)[i].name);
+        }
+        r = ((backends->backend_ops)[i].fetch_public_ip(tor_fw_options,
+                                        (backends->backend_state)[i]));
+        fprintf(stdout, "tor-fw-helper: tor_fw_fetch_public_ip backend %s "
+                " returned: %i\n", (char *)(backends->backend_ops)[i].name, r);
+    }
 }
 
+/** Iterate over each of the supported <b>backends</b> and attempt to add a
+ * port forward for the OR port stored in <b>tor_fw_options</b>. */
 static void
-tor_fw_add_or_port(tor_fw_options_t *tor_fw_options, miniupnpc_state_t
-                   *miniupnpc_state)
+tor_fw_add_or_port(tor_fw_options_t *tor_fw_options,
+                       backends_t *backends)
 {
+    int i;
     int r = 0;
-    tor_fw_options->internal_port = tor_fw_options->private_or_port;
-    tor_fw_options->external_port = tor_fw_options->public_or_port;
 
-    r = tor_natpmp_add_tcp_mapping(tor_fw_options);
-    fprintf(stdout, "tor-fw-helper: Attempts to add ORPort mapping (natpmp)"
-            "resulted in: %d\n", r);
+    if (tor_fw_options->verbose)
+        fprintf(stdout, "V: tor_fw_add_or_port\n");
 
-    if (r == 0)
-        tor_fw_options->nat_pmp_status = 1;
-
-    r = tor_upnp_add_tcp_mapping(miniupnpc_state,
-                                 tor_fw_options->private_or_port,
-                                 tor_fw_options->public_or_port);
-    fprintf(stdout, "tor-fw-helper: Attempts to add ORPort mapping (upnp)"
-            "resulted in: %d\n", r);
-
-    if (r == 0)
-        tor_fw_options->upnp_status = 1;
+    for (i=0; i<backends->n_backends; ++i) {
+        if (tor_fw_options->verbose)
+        {
+            fprintf(stdout, "V: running backend_state now: %i\n", i);
+            fprintf(stdout, "V: size of backend state: %u\n",
+                    (int)(backends->backend_ops)[i].state_len);
+            fprintf(stdout, "V: backend state name: %s\n",
+                    (char *)(backends->backend_ops)[i].name);
+        }
+        r = ((backends->backend_ops)[i].add_tcp_mapping(tor_fw_options,
+                                        (backends->backend_state)[i]));
+        fprintf(stdout, "tor-fw-helper: tor_fw_add_or_port backend %s "
+                "returned: %i\n", (char *)(backends->backend_ops)[i].name, r);
+    }
 }
 
+/** Iterate over each of the supported <b>backends</b> and attempt to add a
+ * port forward for the Dir port stored in <b>tor_fw_options</b>. */
 static void
-tor_fw_add_dir_port(tor_fw_options_t *tor_fw_options, miniupnpc_state_t
-                    *miniupnpc_state)
+tor_fw_add_dir_port(tor_fw_options_t *tor_fw_options,
+                       backends_t *backends)
 {
+    int i;
     int r = 0;
-    tor_fw_options->internal_port = tor_fw_options->private_dir_port;
-    tor_fw_options->external_port = tor_fw_options->public_dir_port;
 
-    r = tor_natpmp_add_tcp_mapping(tor_fw_options);
-    fprintf(stdout, "V: Attempts to add DirPort mapping (natpmp) resulted in: "
-            "%d\n", r);
+    if (tor_fw_options->verbose)
+        fprintf(stdout, "V: tor_fw_add_dir_port\n");
 
-    r = tor_upnp_add_tcp_mapping(miniupnpc_state,
-                                 tor_fw_options->private_or_port,
-                                 tor_fw_options->public_or_port);
-    fprintf(stdout, "V: Attempts to add DirPort mapping (upnp) resulted in: "
-            "%d\n",
-           r);
+    for (i=0; i<backends->n_backends; ++i) {
+        if (tor_fw_options->verbose)
+        {
+            fprintf(stdout, "V: running backend_state now: %i\n", i);
+            fprintf(stdout, "V: size of backend state: %u\n",
+                    (int)(backends->backend_ops)[i].state_len);
+            fprintf(stdout, "V: backend state name: %s\n",
+                    (char *)(backends->backend_ops)[i].name);
+        }
+        r=((backends->backend_ops)[i].add_tcp_mapping(tor_fw_options,
+                                      (backends->backend_state)[i]));
+        fprintf(stdout, "tor-fw-helper: tor_fw_add_dir_port backend %s "
+                "returned: %i\n", (char *)(backends->backend_ops)[i].name, r);
+    }
 }
 
 int
@@ -145,9 +232,7 @@ main(int argc, char **argv)
    int c = 0;
 
    tor_fw_options_t tor_fw_options = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-   miniupnpc_state_t miniupnpc_state;
-
-   miniupnpc_state.init = 0;
+   backends_t backend_state;
 
    while (1)
    {
@@ -204,7 +289,7 @@ main(int argc, char **argv)
    }
 
    if (tor_fw_options.test_commandline) {
-     return test_commandline_options(argc, argv);
+     return log_commandline_options(argc, argv);
    }
 
    /* At the very least, we require an ORPort;
@@ -256,19 +341,28 @@ main(int argc, char **argv)
                tor_fw_options.public_dir_port);
    }
 
+   // Initalize the various fw-helper backend helpers
+   r = init_backends(&tor_fw_options, &backend_state);
+   if (r)
+          printf("tor-fw-helper: %i NAT traversal helper(s) loaded\n", r);
+
    if (tor_fw_options.fetch_public_ip)
    {
-       tor_fw_fetch_public_ip(&tor_fw_options, &miniupnpc_state);
+       tor_fw_fetch_public_ip(&tor_fw_options, &backend_state);
    }
 
    if (tor_fw_options.private_or_port)
    {
-       tor_fw_add_or_port(&tor_fw_options, &miniupnpc_state);
+       tor_fw_options.internal_port = tor_fw_options.private_or_port;
+       tor_fw_options.external_port = tor_fw_options.private_or_port;
+       tor_fw_add_or_port(&tor_fw_options, &backend_state);
    }
 
    if (tor_fw_options.private_dir_port)
    {
-       tor_fw_add_dir_port(&tor_fw_options, &miniupnpc_state);
+       tor_fw_options.internal_port = tor_fw_options.private_dir_port;
+       tor_fw_options.external_port = tor_fw_options.private_dir_port;
+       tor_fw_add_dir_port(&tor_fw_options, &backend_state);
    }
 
    r = (((tor_fw_options.nat_pmp_status | tor_fw_options.upnp_status)

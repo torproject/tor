@@ -2,51 +2,123 @@
  * Copyright (c) 2010, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
+/**
+  * \file tor-fw-helper-natpmp.c
+  * \brief The implementation of our NAT-PMP firewall helper.
+  **/
+
+#include "orconfig.h"
+#ifdef NAT_PMP
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <arpa/inet.h>
 
+// debugging stuff
+#include <assert.h>
+
 #include "tor-fw-helper.h"
 #include "tor-fw-helper-natpmp.h"
 
-int
-tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options)
+/** This hooks NAT-PMP into our multi-backend API. */
+static tor_fw_backend_t tor_natpmp_backend = {
+    "natpmp",
+    sizeof(struct natpmp_state_t),
+    tor_natpmp_init,
+    tor_natpmp_cleanup,
+    tor_natpmp_fetch_public_ip,
+    tor_natpmp_add_tcp_mapping
+};
+
+/** Return the backend for NAT-PMP. */
+const tor_fw_backend_t *
+tor_fw_get_natpmp_backend(void)
 {
+    return &tor_natpmp_backend;
+}
+
+/** Initialize the NAT-PMP backend and store the results in
+ * <b>backend_state</b>.*/
+int
+tor_natpmp_init(tor_fw_options_t *tor_fw_options, void *backend_state)
+{
+    natpmp_state_t *state = (natpmp_state_t *) backend_state;
+    int r = 0;
+
+    memset(&(state->natpmp), 0, sizeof(natpmp_t));
+    memset(&(state->response), 0, sizeof(natpmpresp_t));
+    state->init = 0;
+    state->protocol = NATPMP_PROTOCOL_TCP;
+    state->lease = NATPMP_DEFAULT_LEASE;
+
+    if (tor_fw_options->verbose)
+        fprintf(stdout, "V: natpmp init...\n");
+
+    r = initnatpmp(&(state->natpmp));
+    if (r == 0) {
+        state->init = 1;
+        fprintf(stdout, "tor-fw-helper: natpmp initialized...\n");
+        return r;
+    } else {
+        fprintf(stderr, "tor-fw-helper: natpmp failed to initialize...\n");
+        return r;
+    }
+}
+
+/** Tear down the NAT-PMP connection stored in <b>backend_state</b>.*/
+int
+tor_natpmp_cleanup(tor_fw_options_t *tor_fw_options, void *backend_state)
+{
+    natpmp_state_t *state = (natpmp_state_t *) backend_state;
+    int r = 0;
+    if (tor_fw_options->verbose)
+        fprintf(stdout, "V: natpmp cleanup...\n");
+    r = closenatpmp(&(state->natpmp));
+    if (tor_fw_options->verbose)
+        fprintf(stdout, "V: closing natpmp socket: %d\n", r);
+    return r;
+}
+
+/** Add a TCP port mapping for a single port stored in <b>tor_fw_options</b>
+ * using the <b>natpmp_t</b> stored in <b>backend_state</b>. */
+int
+tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options,
+                           void *backend_state)
+{
+    natpmp_state_t *state = (natpmp_state_t *) backend_state;
     int r = 0;
     int x = 0;
     int sav_errno;
-    int protocol = NATPMP_PROTOCOL_TCP;
-    int lease = NATPMP_DEFAULT_LEASE;
-    natpmp_t natpmp;
-    natpmpresp_t response;
 
     fd_set fds;
     struct timeval timeout;
 
     if (tor_fw_options->verbose)
-        fprintf(stdout, "V: natpmp init...\n");
-    initnatpmp(&natpmp);
-
-    if (tor_fw_options->verbose)
         fprintf(stdout, "V: sending natpmp portmapping request...\n");
-    r = sendnewportmappingrequest(&natpmp, protocol,
+    r = sendnewportmappingrequest(&(state->natpmp), state->protocol,
                                   tor_fw_options->internal_port,
                                   tor_fw_options->external_port,
-                                  lease);
-    fprintf(stdout, "tor-fw-helper: NAT-PMP sendnewportmappingrequest returned"
-            " %d (%s)\n", r, r==12?"SUCCESS":"FAILED");
+                                  state->lease);
+    if (tor_fw_options->verbose)
+        fprintf(stdout, "tor-fw-helper: NAT-PMP sendnewportmappingrequest "
+                "returned %d (%s)\n", r, r==12?"SUCCESS":"FAILED");
 
     do {
         FD_ZERO(&fds);
-        FD_SET(natpmp.s, &fds);
-        getnatpmprequesttimeout(&natpmp, &timeout);
-        select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
+        FD_SET(state->natpmp.s, &fds);
+        getnatpmprequesttimeout(&(state->natpmp), &timeout);
+        x = select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
+        if (x == -1)
+        {
+            fprintf(stdout, "V: select failed in "
+                    "tor_natpmp_fetch_public_ip.\n");
+            return -1;
+        }
 
         if (tor_fw_options->verbose)
             fprintf(stdout, "V: attempting to readnatpmpreponseorretry...\n");
-        r = readnatpmpresponseorretry(&natpmp, &response);
+        r = readnatpmpresponseorretry(&(state->natpmp), &(state->response));
         sav_errno = errno;
 
         if (r<0 && r!=NATPMP_TRYAGAIN)
@@ -58,48 +130,70 @@ tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options)
 
     } while ( r == NATPMP_TRYAGAIN );
 
+    if (r != 0)
+    {
+        /* XXX TODO: NATPMP_* should be formatted into useful error strings */
+        fprintf(stderr, "E: NAT-PMP It appears that something went wrong:"
+                " %d\n", r);
+        if (r == -51)
+            fprintf(stderr, "E: NAT-PMP It appears that the request was "
+                    "unauthorized\n");
+        return r;
+    }
+
     if (r == NATPMP_SUCCESS) {
         fprintf(stdout, "tor-fw-helper: NAT-PMP mapped public port %hu to"
                 " localport %hu liftime %u\n",
-                response.pnu.newportmapping.mappedpublicport,
-                response.pnu.newportmapping.privateport,
-                response.pnu.newportmapping.lifetime);
+                (state->response).pnu.newportmapping.mappedpublicport,
+                (state->response).pnu.newportmapping.privateport,
+                (state->response).pnu.newportmapping.lifetime);
     }
 
-    x = closenatpmp(&natpmp);
-    if (tor_fw_options->verbose)
-        fprintf(stdout, "V: closing natpmp socket: %d\n", x);
+    tor_fw_options->nat_pmp_status = 1;
+
     return r;
 }
 
+/** Fetch our likely public IP from our upstream NAT-PMP enabled NAT device.
+ * Use the connection context stored in <b>backend_state</b>. */
 int
-tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options)
+tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
+                           void *backend_state)
 {
     int r = 0;
     int x = 0;
     int sav_errno;
-    natpmp_t natpmp;
-    natpmpresp_t response;
+    natpmp_state_t *state = (natpmp_state_t *) backend_state;
+
     struct timeval timeout;
     fd_set fds;
 
-    r = initnatpmp(&natpmp);
-    if (tor_fw_options->verbose)
-        fprintf(stdout, "V: NAT-PMP init: %d\n", r);
-
-    r = sendpublicaddressrequest(&natpmp);
+    r = sendpublicaddressrequest(&(state->natpmp));
     fprintf(stdout, "tor-fw-helper: NAT-PMP sendpublicaddressrequest returned"
             " %d (%s)\n", r, r==2?"SUCCESS":"FAILED");
 
     do {
+
+        if (state->natpmp.s >= FD_SETSIZE)
+        {
+            fprintf(stderr, "E: NAT-PMP FD_SETSIZE error %d\n",
+                    state->natpmp.s);
+            return -1;
+        }
         FD_ZERO(&fds);
-        FD_SET(natpmp.s, &fds);
-        getnatpmprequesttimeout(&natpmp, &timeout);
-        select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
+        FD_SET(state->natpmp.s, &fds);
+        getnatpmprequesttimeout(&(state->natpmp), &timeout);
+        x = select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
+        if (x == -1)
+        {
+            fprintf(stdout, "V: select failed in "
+                    "tor_natpmp_fetch_public_ip.\n");
+            return -1;
+        }
 
         if (tor_fw_options->verbose)
             fprintf(stdout, "V: NAT-PMP attempting to read reponse...\n");
-        r = readnatpmpresponseorretry(&natpmp, &response);
+        r = readnatpmpresponseorretry(&(state->natpmp), &(state->response));
         sav_errno = errno;
 
         if (tor_fw_options->verbose)
@@ -124,19 +218,18 @@ tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options)
     }
 
     fprintf(stdout, "tor-fw-helper: ExternalIPAddress = %s\n",
-           inet_ntoa(response.pnu.publicaddress.addr));
-
-    x = closenatpmp(&natpmp);
+           inet_ntoa((state->response).pnu.publicaddress.addr));
+    tor_fw_options->public_ip_status = 1;
 
     if (tor_fw_options->verbose)
     {
         fprintf(stdout, "V: result = %u\n", r);
-        fprintf(stdout, "V: type = %u\n", response.type);
-        fprintf(stdout, "V: resultcode = %u\n", response.resultcode);
-        fprintf(stdout, "V: epoch = %u\n", response.epoch);
-        fprintf(stdout, "V: closing natpmp result: %d\n", r);
+        fprintf(stdout, "V: type = %u\n", (state->response).type);
+        fprintf(stdout, "V: resultcode = %u\n", (state->response).resultcode);
+        fprintf(stdout, "V: epoch = %u\n", (state->response).epoch);
     }
 
     return r;
 }
+#endif
 

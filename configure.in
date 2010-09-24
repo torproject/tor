@@ -153,7 +153,10 @@ AC_PATH_PROG([A2X], [a2x], none)
 
 AM_CONDITIONAL(USE_ASCIIDOC, test x$asciidoc = xtrue)
 
-AM_CONDITIONAL(USE_FW_HELPER, test x$natpmp = xtrue || x$upnp = xtrue)
+AM_CONDITIONAL(USE_FW_HELPER, test x$natpmp = xtrue || test x$upnp = xtrue)
+AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
+AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
+AM_PROG_CC_C_O
 
 AC_PATH_PROG([SHA1SUM], [sha1sum], none)
 AC_PATH_PROG([OPENSSL], [openssl], none)
@@ -486,7 +489,7 @@ dnl Where do you live, libminiupnpc?  And how do we call you?
 dnl There are no packages for Debian or Redhat as of this patch
 
 if test "$upnp" = "true"; then
-    AC_DEFINE(UPNP, 1, [Define to 1 if we are building with UPnP.])
+    AC_DEFINE(MINIUPNPC, 1, [Define to 1 if we are building with UPnP.])
     TOR_SEARCH_LIBRARY(libminiupnpc, $trylibminiupnpcdir, [-lminiupnpc],
         [#include <miniupnpc/miniwget.h>
          #include <miniupnpc/miniupnpc.h>
