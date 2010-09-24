@@ -4583,24 +4583,27 @@ any_pending_bridge_descriptor_fetches(void)
   return 0;
 }
 
-/** Return 1 if we have at least one descriptor for a bridge and
- * all descriptors we know are down. Else return 0. If <b>act</b> is
- * 1, then mark the down bridges up; else just observe and report. */
+/** Return 1 if we have at least one descriptor for an entry guard
+ * (bridge or member of EntryNodes) and all descriptors we know are
+ * down. Else return 0. If <b>act</b> is 1, then mark the down guards
+ * up; else just observe and report. */
 static int
-bridges_retry_helper(int act)
+entries_retry_helper(or_options_t *options, int act)
 {
   routerinfo_t *ri;
   int any_known = 0;
   int any_running = 0;
+  int purpose = options->UseBridges ?
+                  ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
   if (!entry_guards)
     entry_guards = smartlist_create();
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
       ri = router_get_by_digest(e->identity);
-      if (ri && ri->purpose == ROUTER_PURPOSE_BRIDGE) {
+      if (ri && ri->purpose == purpose) {
         any_known = 1;
         if (ri->is_running)
-          any_running = 1; /* some bridge is both known and running */
+          any_running = 1; /* some entry is both known and running */
         else if (act) { /* mark it for retry */
           ri->is_running = 1;
           e->can_retry = 1;
@@ -4613,19 +4616,21 @@ bridges_retry_helper(int act)
   return any_known && !any_running;
 }
 
-/** Do we know any descriptors for our bridges, and are they all
- * down? */
+/** Do we know any descriptors for our bridges / entrynodes, and are
+ * all the ones we have descriptors for down? */
 int
-bridges_known_but_down(void)
+entries_known_but_down(or_options_t *options)
 {
-  return bridges_retry_helper(0);
+  tor_assert(entry_list_is_constrained(options));
+  return entries_retry_helper(options, 0);
 }
 
 /** Mark all down known bridges up. */
 void
-bridges_retry_all(void)
+entries_retry_all(or_options_t *options)
 {
-  bridges_retry_helper(1);
+  tor_assert(entry_list_is_constrained(options));
+  entries_retry_helper(options, 1);
 }
 
 /** Release all storage held by the list of entry guards and related

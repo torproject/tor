@@ -1192,11 +1192,13 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       int severity = LOG_NOTICE;
       /* FFFF if this is a tunneled directory fetch, don't yell
        * as loudly. the user doesn't even know it's happening. */
-      if (options->UseBridges && bridges_known_but_down()) {
+      if (entry_list_is_constrained(options) &&
+          entries_known_but_down(options)) {
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't used client functionality "
-               "lately. Optimistically trying known bridges again.");
-        bridges_retry_all();
+               "lately. Optimistically trying known %s again.",
+               options->UseBridges ? "bridges" : "entrynodes");
+        entries_retry_all(options);
       } else if (!options->UseBridges || any_bridge_descriptors_known()) {
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't used client functionality "

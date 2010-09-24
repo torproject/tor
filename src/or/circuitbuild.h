@@ -72,8 +72,8 @@ void fetch_bridge_descriptors(or_options_t *options, time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);
 int any_bridge_descriptors_known(void);
 int any_pending_bridge_descriptor_fetches(void);
-int bridges_known_but_down(void);
-void bridges_retry_all(void);
+int entries_known_but_down(or_options_t *options);
+void entries_retry_all(or_options_t *options);
 
 void entry_guards_free_all(void);
 
