@@ -348,29 +348,57 @@ start_of_accounting_period_after(time_t now)
   return edge_of_accounting_period_containing(now, 1);
 }
 
+/** Return the length of the accounting period containing the time
+ * <b>now</b>. */
+static long
+length_of_accounting_period_containing(time_t now)
+{
+  return edge_of_accounting_period_containing(now, 1) -
+    edge_of_accounting_period_containing(now, 0);
+}
+
 /** Initialize the accounting subsystem. */
 void
 configure_accounting(time_t now)
 {
+  time_t s_now;
   /* Try to remember our recorded usage. */
   if (!interval_start_time)
     read_bandwidth_usage(); /* If we fail, we'll leave values at zero, and
                              * reset below.*/
-  if (!interval_start_time ||
-      start_of_accounting_period_after(interval_start_time) <= now) {
-    /* We didn't have recorded usage, or we don't have recorded usage
-     * for this interval. Start a new interval. */
+
+  s_now = start_of_accounting_period_containing(now);
+
+  if (!interval_start_time) {
+    /* We didn't have recorded usage; Start a new interval. */
     log_info(LD_ACCT, "Starting new accounting interval.");
     reset_accounting(now);
-  } else if (interval_start_time ==
-        start_of_accounting_period_containing(interval_start_time)) {
+  } else if (s_now == interval_start_time) {
     log_info(LD_ACCT, "Continuing accounting interval.");
     /* We are in the interval we thought we were in. Do nothing.*/
     interval_end_time = start_of_accounting_period_after(interval_start_time);
   } else {
-    log_warn(LD_ACCT,
-             "Mismatched accounting interval; starting a fresh one.");
-    reset_accounting(now);
+    long duration = length_of_accounting_period_containing(now);
+    double delta = ((double)(s_now - interval_start_time)) / duration;
+    if (-0.50 <= delta && delta <= 0.50) {
+      /* The start of the period is now a little later or earlier than we
+       * remembered.  That's fine; we might lose some bytes we could otherwise
+       * have written, but better to err on the side of obeying people's
+       * accounting settings. */
+      log_info(LD_ACCT, "Accounting interval moved by %.02f%%; "
+               "that's fine.", delta*100);
+      interval_end_time = start_of_accounting_period_after(now);
+    } else if (delta >= 0.99) {
+      /* This is the regular time-moved-forward case; don't be too noisy
+       * about it or people will complain */
+      log_info(LD_ACCT, "Accounting interval elapsed; starting a new one");
+      reset_accounting(now);
+    } else {
+      log_warn(LD_ACCT,
+               "Mismatched accounting interval: moved by %.02f%%. "
+               "Starting a fresh one.", delta*100);
+      reset_accounting(now);
+    }
   }
   accounting_set_wakeup_time();
 }
