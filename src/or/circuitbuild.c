@@ -3209,8 +3209,6 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   char buf[HEX_DIGEST_LEN+1];
   int changed = 0;
 
-  tor_assert(options); /* dead code */
-
   *reason = NULL;
 
   /* Do we want to mark this guard as bad? */
