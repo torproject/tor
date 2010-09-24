@@ -2285,15 +2285,17 @@ const char *
 parse_config_line_from_str(const char *line, char **key_out, char **value_out)
 {
   /* I believe the file format here is supposed to be:
-     FILE = (EMPTYLINE | LINE)*
+     FILE = (EMPTYLINE | LINE)* (EMPTYLASTLINE | LASTLINE)?
 
-     EMPTYLINE = SPACE* NL | COMMENT NL
+     EMPTYLASTLINE = SPACE* | COMMENT
+     EMPTYLINE = EMPTYLASTLINE NL
      SPACE = ' ' | '\r' | '\t'
      COMMENT = '#' NOT-NL*
      NOT-NL = Any character except '\n'
      NL = '\n'
 
-     LINE = SPACE* KEY SPACE* VALUES NL
+     LASTLINE = SPACE* KEY SPACE* VALUES
+     LINE = LASTLINE NL
      KEY = KEYCHAR+
      KEYCHAR = Any character except ' ', '\r', '\n', '\t', '#', "\"
 
