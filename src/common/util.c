@@ -2800,7 +2800,7 @@ load_windows_system_library(const TCHAR *library_name)
 {
   TCHAR path[MAX_PATH];
   unsigned n;
-  n = GetSystemDirectory(path, 1024);
+  n = GetSystemDirectory(path, MAX_PATH);
   if (n == 0 || n + _tcslen(library_name) + 2 >= MAX_PATH)
     return 0;
   _tcscat(path, TEXT("\\"));
