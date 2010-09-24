@@ -710,7 +710,7 @@ directory_info_has_arrived(time_t now, int from_cache)
 
     /* if we have enough dir info, then update our guard status with
      * whatever we just learned. */
-    entry_guards_compute_status();
+    entry_guards_compute_status(options, now);
     /* Don't even bother trying to get extrainfo until the rest of our
      * directory info is up-to-date */
     if (options->DownloadExtraInfo)
@@ -912,7 +912,7 @@ run_scheduled_events(time_t now)
     update_router_descriptor_downloads(now);
     update_extrainfo_downloads(now);
     if (options->UseBridges)
-      fetch_bridge_descriptors(now);
+      fetch_bridge_descriptors(options, now);
     if (router_have_minimum_dir_info())
       time_to_try_getting_descriptors = now + LAZY_DESCRIPTOR_RETRY_INTERVAL;
     else

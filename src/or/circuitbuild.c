@@ -3209,7 +3209,7 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   char buf[HEX_DIGEST_LEN+1];
   int changed = 0;
 
-  tor_assert(options);
+  tor_assert(options); /* dead code */
 
   *reason = NULL;
 
@@ -3468,9 +3468,8 @@ add_an_entry_guard(routerinfo_t *chosen, int reset_status)
 /** If the use of entry guards is configured, choose more entry guards
  * until we have enough in the list. */
 static void
-pick_entry_guards(void)
+pick_entry_guards(or_options_t *options)
 {
-  or_options_t *options = get_options();
   int changed = 0;
 
   tor_assert(entry_guards);
@@ -3502,10 +3501,9 @@ entry_guard_free(entry_guard_t *e)
  * or which was selected by a version of Tor that's known to select
  * entry guards badly. */
 static int
-remove_obsolete_entry_guards(void)
+remove_obsolete_entry_guards(time_t now)
 {
   int changed = 0, i;
-  time_t now = time(NULL);
 
   for (i = 0; i < smartlist_len(entry_guards); ++i) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
@@ -3565,11 +3563,10 @@ remove_obsolete_entry_guards(void)
  * long that we don't think they'll come up again. Return 1 if we
  * removed any, or 0 if we did nothing. */
 static int
-remove_dead_entry_guards(void)
+remove_dead_entry_guards(time_t now)
 {
   char dbuf[HEX_DIGEST_LEN+1];
   char tbuf[ISO_TIME_LEN+1];
-  time_t now = time(NULL);
   int i;
   int changed = 0;
 
@@ -3604,22 +3601,17 @@ remove_dead_entry_guards(void)
  * think that things are unlisted.
  */
 void
-entry_guards_compute_status(void)
+entry_guards_compute_status(or_options_t *options, time_t now)
 {
-  time_t now;
   int changed = 0;
   int severity = LOG_DEBUG;
-  or_options_t *options;
   digestmap_t *reasons;
 
   if (! entry_guards)
     return;
 
-  options = get_options();
   if (options->EntryNodes) /* reshuffle the entry guard list if needed */
     entry_nodes_should_be_added();
-
-  now = time(NULL);
 
   reasons = digestmap_new();
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry)
@@ -3636,7 +3628,7 @@ entry_guards_compute_status(void)
     }
   SMARTLIST_FOREACH_END(entry);
 
-  if (remove_dead_entry_guards())
+  if (remove_dead_entry_guards(now))
     changed = 1;
 
   severity = changed ? LOG_DEBUG : LOG_INFO;
@@ -3801,9 +3793,8 @@ entry_nodes_should_be_added(void)
 /** Add all nodes in EntryNodes that aren't currently guard nodes to the list
  * of guard nodes, at the front. */
 static void
-entry_guards_prepend_from_config(void)
+entry_guards_prepend_from_config(or_options_t *options)
 {
-  or_options_t *options = get_options();
   smartlist_t *entry_routers, *entry_fps;
   smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
   tor_assert(entry_guards);
@@ -3931,11 +3922,11 @@ choose_random_entry(cpath_build_state_t *state)
     entry_guards = smartlist_create();
 
   if (should_add_entry_nodes)
-    entry_guards_prepend_from_config();
+    entry_guards_prepend_from_config(options);
 
   if (!entry_list_is_constrained(options) &&
       smartlist_len(entry_guards) < options->NumEntryGuards)
-    pick_entry_guards();
+    pick_entry_guards(options);
 
  retry:
   smartlist_clear(live_entry_guards);
@@ -4164,7 +4155,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
     entry_guards_dirty = 0;
     /* XXX022 hand new_entry_guards to this func, and move it up a
      * few lines, so we don't have to re-dirty it */
-    if (remove_obsolete_entry_guards())
+    if (remove_obsolete_entry_guards(now))
       entry_guards_dirty = 1;
   }
   digestmap_free(added_by, _tor_free);
@@ -4469,9 +4460,8 @@ retry_bridge_descriptor_fetch_directly(const char *digest)
  * descriptor, fetch a new copy of its descriptor -- either directly
  * from the bridge or via a bridge authority. */
 void
-fetch_bridge_descriptors(time_t now)
+fetch_bridge_descriptors(or_options_t *options, time_t now)
 {
-  or_options_t *options = get_options();
   int num_bridge_auths = get_n_authorities(BRIDGE_AUTHORITY);
   int ask_bridge_directly;
   int can_use_bridge_authority;
