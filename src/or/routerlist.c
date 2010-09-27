@@ -1586,7 +1586,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
   double *bandwidths;
   double tmp = 0;
   unsigned int i;
-  int have_unknown = 0; /**< sl contains element not in consensus. */
+  int have_unknown = 0; /* true iff sl contains element not in consensus. */
 
   /* Can't choose exit and guard at same time */
   tor_assert(rule == NO_WEIGHTING ||
@@ -1734,7 +1734,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
 
   /* If there is no bandwidth, choose at random */
   if (DBL_TO_U64(weighted_bw) == 0) {
-    /* Dont't warn when using bridges/relays not in the consensus */
+    /* Don't warn when using bridges/relays not in the consensus */
     if (!have_unknown)
       log_warn(LD_CIRC,
                "Weighted bandwidth is %lf in node selection for rule %s",
