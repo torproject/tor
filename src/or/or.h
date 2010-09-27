@@ -2532,10 +2532,13 @@ typedef struct {
   int ConstrainedSockets; /**< Shrink xmit and recv socket buffers. */
   uint64_t ConstrainedSockSize; /**< Size of constrained buffers. */
 
-  /** Whether we should drop exit streams from Tors that we don't know
-   * are relays. XXX022 In here for 0.2.2.11 as a temporary test before
-   * we switch over to putting it in consensusparams. -RD */
-  int RefuseUnknownExits;
+  /** Whether we should drop exit streams from Tors that we don't know are
+   * relays.  One of "0" (never refuse), "1" (always refuse), or "auto" (do
+   * what the consensus says, defaulting to 'refuse' if the consensus says
+   * nothing). */
+  char *RefuseUnknownExits;
+  /** Parsed version of RefuseUnknownExits. -1 for auto. */
+  int RefuseUnknownExits_;
 
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */

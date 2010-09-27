@@ -2500,6 +2500,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
   char *address=NULL;
   uint16_t port;
   or_circuit_t *or_circ = NULL;
+  or_options_t *options = get_options();
 
   assert_circuit_ok(circ);
   if (!CIRCUIT_IS_ORIGIN(circ))
@@ -2512,7 +2513,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
    * that we have a stream connected to a circuit, and we don't connect to a
    * circuit until we have a pending/successful resolve. */
 
-  if (!server_mode(get_options()) &&
+  if (!server_mode(options) &&
       circ->purpose != CIRCUIT_PURPOSE_S_REND_JOINED) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Relay begin cell at non-server. Closing.");
@@ -2545,13 +2546,11 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       tor_free(address);
       return 0;
     }
-    if (or_circ && or_circ->p_conn && !get_options()->AllowSingleHopExits &&
+    if (or_circ && or_circ->p_conn && !options->AllowSingleHopExits &&
         (or_circ->is_first_hop ||
          (!connection_or_digest_is_known_relay(
                                        or_circ->p_conn->identity_digest) &&
-//        XXX022 commented out so we can test it first in 0.2.2.11 -RD
-//        networkstatus_get_param(NULL, "refuseunknownexits", 1)))) {
-          get_options()->RefuseUnknownExits))) {
+          should_refuse_unknown_exits(options)))) {
       /* Don't let clients use us as a single-hop proxy, unless the user
        * has explicitly allowed that in the config. It attracts attackers
        * and users who'd be better off with, well, single-hop proxies.
@@ -2571,7 +2570,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
       return 0;
     }
   } else if (rh.command == RELAY_COMMAND_BEGIN_DIR) {
-    if (!directory_permits_begindir_requests(get_options()) ||
+    if (!directory_permits_begindir_requests(options) ||
         circ->purpose != CIRCUIT_PURPOSE_OR) {
       relay_send_end_cell_from_edge(rh.stream_id, circ,
                                     END_STREAM_REASON_NOTDIRECTORY, NULL);

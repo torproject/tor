@@ -254,6 +254,8 @@ geoip_get_country_by_ip(uint32_t ipaddr)
 int
 geoip_get_n_countries(void)
 {
+  if (!geoip_countries)
+    init_geoip_countries();
   return (int) smartlist_len(geoip_countries);
 }
 

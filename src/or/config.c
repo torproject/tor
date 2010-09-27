@@ -327,7 +327,7 @@ static config_var_t _option_vars[] = {
   V(RecommendedClientVersions,   LINELIST, NULL),
   V(RecommendedServerVersions,   LINELIST, NULL),
   OBSOLETE("RedirectExit"),
-  V(RefuseUnknownExits,          BOOL,     "0"),
+  V(RefuseUnknownExits,          STRING,   "auto"),
   V(RejectPlaintextPorts,        CSV,      ""),
   V(RelayBandwidthBurst,         MEMUNIT,  "0"),
   V(RelayBandwidthRate,          MEMUNIT,  "0"),
@@ -1241,6 +1241,18 @@ options_act(or_options_t *old_options)
       old_options->RelayBandwidthBurst != options->RelayBandwidthBurst)
     connection_bucket_init();
 #endif
+
+  /* parse RefuseUnknownExits tristate */
+  if (!strcmp(options->RefuseUnknownExits, "0"))
+    options->RefuseUnknownExits_ = 0;
+  else if (!strcmp(options->RefuseUnknownExits, "1"))
+    options->RefuseUnknownExits_ = 1;
+  else if (!strcmp(options->RefuseUnknownExits, "auto"))
+    options->RefuseUnknownExits_ = -1;
+  else {
+    /* Should have caught this in options_validate */
+    return -1;
+  }
 
   /* Change the cell EWMA settings */
   cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
@@ -3006,6 +3018,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     uint32_t tmp;
     if (resolve_my_address(LOG_WARN, options, &tmp, NULL) < 0)
       REJECT("Failed to resolve/guess local address. See logs for details.");
+  }
+
+  if (strcmp(options->RefuseUnknownExits, "0") &&
+      strcmp(options->RefuseUnknownExits, "1") &&
+      strcmp(options->RefuseUnknownExits, "auto")) {
+    REJECT("RefuseUnknownExits must be 0, 1, or auto");
   }
 
 #ifndef MS_WINDOWS

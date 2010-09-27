@@ -1,0 +1,5 @@
+  o Major features:
+    - Exit relays now try harder to block exit attempts from unknown
+      relays, to make it harder for people to use them as one-hop proxies.
+      Controlled by the refuseunknownexits consensus parameter, or you
+      can override it with the RefuseUnknownExits torrc option.

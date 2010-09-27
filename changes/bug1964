@@ -1,0 +1,3 @@
+  o Major bugfixes:
+    - Fix a segfault that can happen when using bridges. Fixes bug 1964;
+      bugfix on 0.2.2.15-alpha.
