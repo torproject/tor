@@ -401,6 +401,7 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
     if (old_cfg)
       ev_token_bucket_cfg_free(old_cfg);
     conn->bucket_cfg = cfg;
+    (void) reset; /* No way to do this with libevent yet. */
   }
 #else
   if (reset) { /* set up the token buckets to be full */
