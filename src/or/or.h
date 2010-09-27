@@ -2470,8 +2470,9 @@ typedef struct {
 
   /** Whether we should drop exit streams from Tors that we don't know are
    * relays.  One of "0" (never refuse), "1" (always refuse), or "auto" (do
-   * what the consensus says). -RD */
-  const char *RefuseUnknownExits;
+   * what the consensus says, defaulting to 'refuse' if the consensus says
+   * nothing). */
+  char *RefuseUnknownExits;
   /** Parsed version of RefuseUnknownExits. -1 for auto. */
   int RefuseUnknownExits_;
 

@@ -982,13 +982,10 @@ server_mode(or_options_t *options)
 int
 should_refuse_unknown_exits(or_options_t *options)
 {
-  networkstatus_t *consensus;
   if (options->RefuseUnknownExits_ != -1) {
     return options->RefuseUnknownExits_;
-  } else if ((consensus = networkstatus_get_latest_consensus()) != NULL) {
-    return networkstatus_get_param(consensus, "refuseunknownexits", 1);
   } else {
-    return 1;
+    return networkstatus_get_param(NULL, "refuseunknownexits", 1);
   }
 }
 

@@ -1240,7 +1240,6 @@ options_act(or_options_t *old_options)
     return -1;
   }
 
-
   /* Change the cell EWMA settings */
   cell_ewma_set_scale_factor(options, networkstatus_get_latest_consensus());
 
