@@ -908,6 +908,12 @@ is non-zero):
     the next day. All times are local, and given in 24-hour time. (Defaults to
     "month 1 0:00".)
 
+**RefuseUnknownExits** **0**|**1**|**auto**::
+    Prevent nodes that don't appear in the consensus from exiting using this
+    relay.  If the option is 1, we always block exit attempts from such
+    nodes; if it's 0, we never do, and if the option is "auto", then we do
+    whatever the authorities suggest in the consensus. (Defaults to auto.)
+
 **ServerDNSResolvConfFile** __filename__::
     Overrides the default DNS configuration with the configuration in
     __filename__. The file format is the same as the standard Unix
