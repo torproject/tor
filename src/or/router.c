@@ -18,6 +18,7 @@
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"
+#include "networkstatus.h"
 #include "policies.h"
 #include "relay.h"
 #include "rephist.h"
@@ -975,6 +976,19 @@ server_mode(or_options_t *options)
   return (options->ORPort != 0 || options->ORListenAddress);
 }
 
+/** Return true iff the combination of options in <b>options</b> and parameters
+ * in <b>consensus</b> mean that we don't want to allow exits from circuits
+ * we got from addresses not known to be servers. */
+int
+should_refuse_unknown_exits(or_options_t *options)
+{
+  if (options->RefuseUnknownExits_ != -1) {
+    return options->RefuseUnknownExits_;
+  } else {
+    return networkstatus_get_param(NULL, "refuseunknownexits", 1);
+  }
+}
+
 /** Remember if we've advertised ourselves to the dirservers. */
 static int server_is_advertised=0;
 
@@ -1135,6 +1149,17 @@ router_compare_to_my_exit_policy(edge_connection_t *conn)
 
   return compare_tor_addr_to_addr_policy(&conn->_base.addr, conn->_base.port,
                    desc_routerinfo->exit_policy) != ADDR_POLICY_ACCEPTED;
+}
+
+/** Return true iff my exit policy is reject *:*.  Return -1 if we don't
+ * have a descriptor */
+int
+router_my_exit_policy_is_reject_star(void)
+{
+  if (!router_get_my_routerinfo()) /* make sure desc_routerinfo exists */
+    return -1;
+
+  return desc_routerinfo->policy_is_reject_star;
 }
 
 /** Return true iff I'm a server and <b>digest</b> is equal to
@@ -1300,6 +1325,8 @@ router_rebuild_descriptor(int force)
   policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
                              options->ExitPolicyRejectPrivate,
                              ri->address, !options->BridgeRelay);
+  ri->policy_is_reject_star =
+    policy_is_reject_star(ri->exit_policy);
 
   if (desc_routerinfo) { /* inherit values */
     ri->is_valid = desc_routerinfo->is_valid;
