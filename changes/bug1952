@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Alter how consensus bandwidth-weights are computed using new constraints
+      that should succeed in all cases. Also alter directory authorities to not
+      include the bandwidth-weights line if they fail to produce valid values.
+      Fixes bug 1952; bugfix on 0.2.2.10-alpha.
