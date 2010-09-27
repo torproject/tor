@@ -195,7 +195,6 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *cname,
                                         const char *cname_sign,
                                         unsigned int lifetime);
-static void tor_tls_unblock_renegotiation(tor_tls_t *tls);
 
 /** Global tls context. We keep it here because nobody else needs to
  * touch it. */
@@ -1032,7 +1031,7 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
 /** If this version of openssl requires it, turn on renegotiation on
  * <b>tls</b>.
  */
-static void
+void
 tor_tls_unblock_renegotiation(tor_tls_t *tls)
 {
   /* Yes, we know what we are doing here.  No, we do not treat a renegotiation

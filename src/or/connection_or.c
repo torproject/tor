@@ -1019,10 +1019,12 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
       if (!tor_tls_is_server(conn->tls)) {
         if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
           conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
+          tor_tls_unblock_renegotiation(conn->tls);
           if (bufferevent_ssl_renegotiate(conn->_base.bufev)<0) {
             log_warn(LD_OR, "Start_renegotiating went badly.");
             connection_mark_for_close(TO_CONN(conn));
           }
+          tor_tls_unblock_renegotiation(conn->tls);
           return; /* ???? */
         }
       } else {
