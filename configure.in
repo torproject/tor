@@ -325,12 +325,49 @@ else
 fi
 AC_SUBST(TOR_LIBEVENT_LIBS)
 
-
 dnl This isn't the best test for Libevent 2.0.3-alpha.  Once it's released,
 dnl we can do much better.
-if test "$enable_bufferevents" = "yes" && test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes" ; then
-  AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.3-alpha or later.  If it isn't released yet, use Libevent from SVN, and talk to Nick.])
+if test "$enable_bufferevents" = "yes" ; then
+  if test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes" ; then
+    AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.7-rc or later, and you don't seem to even have Libevent 2.0.3-alpha.])
+  else
+
+    CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent"
+
+    # Check for the right version.  First see if version detection works.
+    AC_MSG_CHECKING([whether we can detect the Libevent version])
+    AC_COMPILE_IFELSE([
+#include <event2/event.h>
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 10
+#error
+int x = y(zz);
+#else
+int x = 1;
+#endif
+  ], [event_version_number_works=yes; AC_MSG_RESULT([yes]) ],
+     [event_version_number_works=no;  AC_MSG_RESULT([no])])
+    if test "$event_version_number_works" != 'yes'; then
+      AC_MSG_WARN([Version detection on Libevent seems broken.  Your Libevent installation is probably screwed up or very old.])
+    else
+      AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
+      AC_COMPILE_IFELSE([
+#include <event2/event.h>
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000700
+#error
+int x = y(zz);
+#else
+int x = 1;
+#endif
+   ], [ AC_MSG_RESULT([yes]) ],
+      [ AC_MSG_RESULT([no])
+        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.7-rc or later]) ] )
+    fi
+  fi
 fi
+
+LIBS="$save_LIBS"
+LDFLAGS="$save_LDFLAGS"
+CPPFLAGS="$save_CPPFLAGS"
 
 AM_CONDITIONAL(USE_BUFFEREVENTS, test "$enable_bufferevents" = "yes")
 if test "$enable_bufferevents" = "yes"; then
