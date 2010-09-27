@@ -3389,7 +3389,7 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
   time_t publish_cutoff = time(NULL)-ROUTER_MAX_AGE_TO_PUBLISH;
 
   while (smartlist_len(conn->fingerprint_stack) &&
-         buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
+         connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
     const char *body;
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
     signed_descriptor_t *sd = NULL;
@@ -3489,7 +3489,7 @@ connection_dirserv_add_dir_bytes_to_outbuf(dir_connection_t *conn)
   ssize_t bytes;
   int64_t remaining;
 
-  bytes = DIRSERV_BUFFER_MIN - buf_datalen(conn->_base.outbuf);
+  bytes = DIRSERV_BUFFER_MIN - connection_get_outbuf_len(TO_CONN(conn));
   tor_assert(bytes > 0);
   tor_assert(conn->cached_dir);
   if (bytes < 8192)
@@ -3528,7 +3528,7 @@ static int
 connection_dirserv_add_networkstatus_bytes_to_outbuf(dir_connection_t *conn)
 {
 
-  while (buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
+  while (connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
     if (conn->cached_dir) {
       int uncompressing = (conn->zlib_state != NULL);
       int r = connection_dirserv_add_dir_bytes_to_outbuf(conn);
@@ -3574,7 +3574,7 @@ connection_dirserv_flushed_some(dir_connection_t *conn)
 {
   tor_assert(conn->_base.state == DIR_CONN_STATE_SERVER_WRITING);
 
-  if (buf_datalen(conn->_base.outbuf) >= DIRSERV_BUFFER_MIN)
+  if (connection_get_outbuf_len(TO_CONN(conn)) >= DIRSERV_BUFFER_MIN)
     return 0;
 
   switch (conn->dir_spool_src) {

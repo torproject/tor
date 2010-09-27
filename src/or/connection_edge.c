@@ -92,6 +92,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
 
   _connection_mark_for_close(TO_CONN(conn), line, file);
   conn->_base.hold_open_until_flushed = 1;
+  IF_HAS_BUFFEREVENT(TO_CONN(conn), connection_start_writing(TO_CONN(conn)));
   conn->end_reason = endreason;
 }
 
@@ -100,7 +101,7 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
 int
 connection_edge_reached_eof(edge_connection_t *conn)
 {
-  if (buf_datalen(conn->_base.inbuf) &&
+  if (connection_get_inbuf_len(TO_CONN(conn)) &&
       connection_state_is_open(TO_CONN(conn))) {
     /* it still has stuff to process. don't let it die yet. */
     return 0;
@@ -191,8 +192,7 @@ connection_edge_destroy(circid_t circ_id, edge_connection_t *conn)
       conn->edge_has_sent_end = 1;
       conn->end_reason = END_STREAM_REASON_DESTROY;
       conn->end_reason |= END_STREAM_REASON_FLAG_ALREADY_SENT_CLOSED;
-      connection_mark_for_close(TO_CONN(conn));
-      conn->_base.hold_open_until_flushed = 1;
+      connection_mark_and_flush(TO_CONN(conn));
     }
   }
   conn->cpath_layer = NULL;
@@ -319,7 +319,6 @@ connection_edge_finished_flushing(edge_connection_t *conn)
   switch (conn->_base.state) {
     case AP_CONN_STATE_OPEN:
     case EXIT_CONN_STATE_OPEN:
-      connection_stop_writing(TO_CONN(conn));
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case AP_CONN_STATE_SOCKS_WAIT:
@@ -328,7 +327,7 @@ connection_edge_finished_flushing(edge_connection_t *conn)
     case AP_CONN_STATE_CIRCUIT_WAIT:
     case AP_CONN_STATE_CONNECT_WAIT:
     case AP_CONN_STATE_CONTROLLER_WAIT:
-      connection_stop_writing(TO_CONN(conn));
+    case AP_CONN_STATE_RESOLVE_WAIT:
       return 0;
     default:
       log_warn(LD_BUG, "Called in unexpected state %d.",conn->_base.state);
@@ -358,8 +357,9 @@ connection_edge_finished_connecting(edge_connection_t *edge_conn)
   rep_hist_note_exit_stream_opened(conn->port);
 
   conn->state = EXIT_CONN_STATE_OPEN;
-  connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
-  if (connection_wants_to_flush(conn)) /* in case there are any queued relay
+  IF_HAS_NO_BUFFEREVENT(conn)
+    connection_watch_events(conn, READ_EVENT); /* stop writing, keep reading */
+  if (connection_get_outbuf_len(conn)) /* in case there are any queued relay
                                         * cells */
     connection_start_writing(conn);
   /* deliver a 'connected' relay cell back through the circuit. */
@@ -1895,8 +1895,14 @@ connection_ap_handshake_process_socks(edge_connection_t *conn)
 
   log_debug(LD_APP,"entered.");
 
-  sockshere = fetch_from_buf_socks(conn->_base.inbuf, socks,
-                                   options->TestSocks, options->SafeSocks);
+  IF_HAS_BUFFEREVENT(TO_CONN(conn), {
+    struct evbuffer *input = bufferevent_get_input(conn->_base.bufev);
+    sockshere = fetch_from_evbuffer_socks(input, socks,
+                                     options->TestSocks, options->SafeSocks);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    sockshere = fetch_from_buf_socks(conn->_base.inbuf, socks,
+                                     options->TestSocks, options->SafeSocks);
+  };
   if (sockshere == 0) {
     if (socks->replylen) {
       connection_write_to_buf(socks->reply, socks->replylen, TO_CONN(conn));
@@ -1997,7 +2003,7 @@ connection_ap_process_natd(edge_connection_t *conn)
 
   /* look for LF-terminated "[DEST ip_addr port]"
    * where ip_addr is a dotted-quad and port is in string form */
-  err = fetch_from_buf_line(conn->_base.inbuf, tmp_buf, &tlen);
+  err = connection_fetch_from_buf_line(TO_CONN(conn), tmp_buf, &tlen);
   if (err == 0)
     return 0;
   if (err < 0) {
@@ -2104,8 +2110,10 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
                ap_conn->socks_request->port);
   payload_len = (int)strlen(payload)+1;
 
-  log_debug(LD_APP,
-            "Sending relay cell to begin stream %d.", ap_conn->stream_id);
+  log_info(LD_APP,
+           "Sending relay cell %d to begin stream %d.",
+           (int)ap_conn->use_begindir,
+           ap_conn->stream_id);
 
   begin_type = ap_conn->use_begindir ?
                  RELAY_COMMAND_BEGIN_DIR : RELAY_COMMAND_BEGIN;
@@ -2213,9 +2221,11 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
  * and call connection_ap_handshake_attach_circuit(conn) on it.
  *
  * Return the other end of the linked connection pair, or -1 if error.
+ * DOCDOC partner.
  */
 edge_connection_t *
-connection_ap_make_link(char *address, uint16_t port,
+connection_ap_make_link(connection_t *partner,
+                        char *address, uint16_t port,
                         const char *digest, int use_begindir, int want_onehop)
 {
   edge_connection_t *conn;
@@ -2249,6 +2259,8 @@ connection_ap_make_link(char *address, uint16_t port,
   conn->_base.address = tor_strdup("(Tor_internal)");
   tor_addr_make_unspec(&conn->_base.addr);
   conn->_base.port = 0;
+
+  connection_link_connections(partner, TO_CONN(conn));
 
   if (connection_add(TO_CONN(conn)) < 0) { /* no space, forget it */
     connection_free(TO_CONN(conn));
@@ -2767,12 +2779,13 @@ connection_exit_connect(edge_connection_t *edge_conn)
   }
 
   conn->state = EXIT_CONN_STATE_OPEN;
-  if (connection_wants_to_flush(conn)) {
+  if (connection_get_outbuf_len(conn)) {
     /* in case there are any queued data cells */
     log_warn(LD_BUG,"newly connected conn had data waiting!");
 //    connection_start_writing(conn);
   }
-  connection_watch_events(conn, READ_EVENT);
+  IF_HAS_NO_BUFFEREVENT(conn)
+    connection_watch_events(conn, READ_EVENT);
 
   /* also, deliver a 'connected' cell back through the circuit. */
   if (connection_edge_is_rendezvous_stream(edge_conn)) {

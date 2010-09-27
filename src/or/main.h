@@ -14,7 +14,9 @@
 
 extern int can_complete_circuit;
 
-int connection_add(connection_t *conn);
+int connection_add_impl(connection_t *conn, int is_connecting);
+#define connection_add(conn) connection_add_impl((conn), 0)
+#define connection_add_connecting(conn) connection_add_impl((conn), 1)
 int connection_remove(connection_t *conn);
 void connection_unregister_events(connection_t *conn);
 int connection_in_array(connection_t *conn);
@@ -24,6 +26,7 @@ int connection_is_on_closeable_list(connection_t *conn);
 smartlist_t *get_connection_array(void);
 
 typedef enum watchable_events {
+  /* Yes, it is intentional that these match Libevent's EV_READ and EV_WRITE */
   READ_EVENT=0x02,
   WRITE_EVENT=0x04
 } watchable_events_t;

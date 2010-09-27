@@ -1,0 +1,9 @@
+ o Major features
+   - Tor can now optionally build with the "bufferevents" buffered IO
+     backend provided by Libevent, when building with Libevent 2.0.7-rc
+     or later.  To use this feature, make sure you have the latest possible
+     version of Libevent, and run autoconf with the --enable-bufferevents
+     flag.  Using this feature will make our networking code more flexible,
+     lets us stack layers on each other, and let us use more efficient
+     zero-copy transports where available.
+

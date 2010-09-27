@@ -29,7 +29,8 @@ int connection_edge_finished_connecting(edge_connection_t *conn);
 int connection_ap_handshake_send_begin(edge_connection_t *ap_conn);
 int connection_ap_handshake_send_resolve(edge_connection_t *ap_conn);
 
-edge_connection_t  *connection_ap_make_link(char *address, uint16_t port,
+edge_connection_t  *connection_ap_make_link(connection_t *partner,
+                                            char *address, uint16_t port,
                                             const char *digest,
                                             int use_begindir, int want_onehop);
 void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,

@@ -118,6 +118,9 @@ if test "$enable_local_appdata" = "yes"; then
             [Defined if we default to host local appdata paths on Windows])
 fi
 
+AC_ARG_ENABLE(bufferevents,
+     AS_HELP_STRING(--enable-bufferevents, use Libevent's buffered IO.))
+
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
@@ -223,7 +226,7 @@ dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull getaddrinfo localtime_r gmtime_r memmem strtok_r writev readv flock prctl vasprintf)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull getaddrinfo localtime_r gmtime_r memmem strtok_r flock prctl vasprintf)
 
 using_custom_malloc=no
 if test x$enable_openbsd_malloc = xyes ; then
@@ -302,7 +305,7 @@ AC_CHECK_MEMBERS([struct event.min_heap_idx], , ,
 [#include <event.h>
 ])
 
-AC_CHECK_HEADERS(event2/event.h event2/dns.h)
+AC_CHECK_HEADERS(event2/event.h event2/dns.h event2/bufferevent_ssl.h)
 
 LIBS="$save_LIBS"
 LDFLAGS="$save_LDFLAGS"
@@ -322,6 +325,54 @@ else
 fi
 AC_SUBST(TOR_LIBEVENT_LIBS)
 
+dnl This isn't the best test for Libevent 2.0.3-alpha.  Once it's released,
+dnl we can do much better.
+if test "$enable_bufferevents" = "yes" ; then
+  if test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes" ; then
+    AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.7-rc or later, and you don't seem to even have Libevent 2.0.3-alpha.])
+  else
+
+    CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent"
+
+    # Check for the right version.  First see if version detection works.
+    AC_MSG_CHECKING([whether we can detect the Libevent version])
+    AC_COMPILE_IFELSE([
+#include <event2/event.h>
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 10
+#error
+int x = y(zz);
+#else
+int x = 1;
+#endif
+  ], [event_version_number_works=yes; AC_MSG_RESULT([yes]) ],
+     [event_version_number_works=no;  AC_MSG_RESULT([no])])
+    if test "$event_version_number_works" != 'yes'; then
+      AC_MSG_WARN([Version detection on Libevent seems broken.  Your Libevent installation is probably screwed up or very old.])
+    else
+      AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
+      AC_COMPILE_IFELSE([
+#include <event2/event.h>
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000700
+#error
+int x = y(zz);
+#else
+int x = 1;
+#endif
+   ], [ AC_MSG_RESULT([yes]) ],
+      [ AC_MSG_RESULT([no])
+        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.7-rc or later]) ] )
+    fi
+  fi
+fi
+
+LIBS="$save_LIBS"
+LDFLAGS="$save_LDFLAGS"
+CPPFLAGS="$save_CPPFLAGS"
+
+AM_CONDITIONAL(USE_BUFFEREVENTS, test "$enable_bufferevents" = "yes")
+if test "$enable_bufferevents" = "yes"; then
+   AC_DEFINE(USE_BUFFEREVENTS, 1, [Defined if we're going to use Libevent's buffered IO API])
+fi
 
 dnl ------------------------------------------------------
 dnl Where do you live, openssl?  And how do we call you?
@@ -393,7 +444,7 @@ AC_SYS_LARGEFILE
 
 AC_CHECK_HEADERS(unistd.h string.h signal.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(Some headers were not found, compilation may fail.  If compilation succeeds, please send your orconfig.h to the developers so we can fix this warning.))
 
-AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h sys/un.h sys/uio.h)
+AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h sys/un.h)
 
 dnl These headers are not essential
 

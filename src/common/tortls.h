@@ -64,7 +64,9 @@ int tor_tls_check_lifetime(tor_tls_t *tls, int tolerance);
 int tor_tls_read(tor_tls_t *tls, char *cp, size_t len);
 int tor_tls_write(tor_tls_t *tls, const char *cp, size_t n);
 int tor_tls_handshake(tor_tls_t *tls);
+int tor_tls_finish_handshake(tor_tls_t *tls);
 int tor_tls_renegotiate(tor_tls_t *tls);
+void tor_tls_unblock_renegotiation(tor_tls_t *tls);
 void tor_tls_block_renegotiation(tor_tls_t *tls);
 int tor_tls_shutdown(tor_tls_t *tls);
 int tor_tls_get_pending_bytes(tor_tls_t *tls);
@@ -84,6 +86,13 @@ int tor_tls_used_v1_handshake(tor_tls_t *tls);
 #define check_no_tls_errors() _check_no_tls_errors(__FILE__,__LINE__)
 
 void _check_no_tls_errors(const char *fname, int line);
+
+#ifdef USE_BUFFEREVENTS
+int tor_tls_start_renegotiating(tor_tls_t *tls);
+struct bufferevent *tor_tls_init_bufferevent(tor_tls_t *tls,
+                                     struct bufferevent *bufev_in,
+                                     evutil_socket_t socket, int receiving);
+#endif
 
 #endif
 

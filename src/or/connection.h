@@ -12,6 +12,9 @@
 #ifndef _TOR_CONNECTION_H
 #define _TOR_CONNECTION_H
 
+/* XXXX For buf_datalen in inline function */
+#include "buffers.h"
+
 const char *conn_type_to_string(int type);
 const char *conn_state_to_string(int type, int state);
 
@@ -30,6 +33,15 @@ void _connection_mark_for_close(connection_t *conn,int line, const char *file);
 
 #define connection_mark_for_close(c) \
   _connection_mark_for_close((c), __LINE__, _SHORT_FILE_)
+
+#define connection_mark_and_flush(c)                                    \
+  do {                                                                  \
+    connection_t *tmp_conn_ = (c);                                      \
+    _connection_mark_for_close(tmp_conn_, __LINE__, _SHORT_FILE_);      \
+    tmp_conn_->hold_open_until_flushed = 1;                             \
+    IF_HAS_BUFFEREVENT(tmp_conn_,                                       \
+                       connection_start_writing(tmp_conn_));            \
+  } while (0)
 
 void connection_expire_held_open(void);
 
@@ -51,6 +63,12 @@ void connection_bucket_refill(int seconds_elapsed, time_t now);
 int connection_handle_read(connection_t *conn);
 
 int connection_fetch_from_buf(char *string, size_t len, connection_t *conn);
+int connection_fetch_from_buf_line(connection_t *conn, char *data,
+                                   size_t *data_len);
+int connection_fetch_from_buf_http(connection_t *conn,
+                               char **headers_out, size_t max_headerlen,
+                               char **body_out, size_t *body_used,
+                               size_t max_bodylen, int force_complete);
 
 int connection_wants_to_flush(connection_t *conn);
 int connection_outbuf_too_full(connection_t *conn);
@@ -71,6 +89,29 @@ connection_write_to_buf_zlib(const char *string, size_t len,
                              dir_connection_t *conn, int done)
 {
   _connection_write_to_buf_impl(string, len, TO_CONN(conn), done ? -1 : 1);
+}
+
+static size_t connection_get_inbuf_len(connection_t *conn);
+static size_t connection_get_outbuf_len(connection_t *conn);
+
+static INLINE size_t
+connection_get_inbuf_len(connection_t *conn)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    return evbuffer_get_length(bufferevent_get_input(conn->bufev));
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return conn->inbuf ? buf_datalen(conn->inbuf) : 0;
+  }
+}
+
+static INLINE size_t
+connection_get_outbuf_len(connection_t *conn)
+{
+  IF_HAS_BUFFEREVENT(conn, {
+    return evbuffer_get_length(bufferevent_get_output(conn->bufev));
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return conn->outbuf ? buf_datalen(conn->outbuf) : 0;
+  }
 }
 
 connection_t *connection_get_by_global_id(uint64_t id);
@@ -95,6 +136,20 @@ void assert_connection_ok(connection_t *conn, time_t now);
 int connection_or_nonopen_was_started_here(or_connection_t *conn);
 void connection_dump_buffer_mem_stats(int severity);
 void remove_file_if_very_old(const char *fname, time_t now);
+
+#ifdef USE_BUFFEREVENTS
+int connection_type_uses_bufferevent(connection_t *conn);
+void connection_configure_bufferevent_callbacks(connection_t *conn);
+void connection_handle_read_cb(struct bufferevent *bufev, void *arg);
+void connection_handle_write_cb(struct bufferevent *bufev, void *arg);
+void connection_handle_event_cb(struct bufferevent *bufev, short event,
+                                 void *arg);
+void connection_get_rate_limit_totals(uint64_t *read_out,
+                                      uint64_t *written_out);
+void connection_enable_rate_limiting(connection_t *conn);
+#else
+#define connection_type_uses_bufferevent(c) (0)
+#endif
 
 #endif
 

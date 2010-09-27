@@ -238,7 +238,8 @@ void secret_to_key(char *key_out, size_t key_out_len, const char *secret,
                    size_t secret_len, const char *s2k_specifier);
 
 #ifdef CRYPTO_PRIVATE
-/* Prototypes for private functions only used by tortls.c and crypto.c */
+/* Prototypes for private functions only used by tortls.c, crypto.c, and the
+ * unit tests. */
 struct rsa_st;
 struct evp_pkey_st;
 struct dh_st;

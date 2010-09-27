@@ -28,6 +28,10 @@
 #include "router.h"
 #include "routerlist.h"
 
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent_ssl.h>
+#endif
+
 static int connection_tls_finish_handshake(or_connection_t *conn);
 static int connection_or_process_cells_from_inbuf(or_connection_t *conn);
 static int connection_or_send_versions(or_connection_t *conn);
@@ -36,6 +40,12 @@ static int connection_init_or_handshake_state(or_connection_t *conn,
 static int connection_or_check_valid_tls_handshake(or_connection_t *conn,
                                                    int started_here,
                                                    char *digest_rcvd_out);
+
+#ifdef USE_BUFFEREVENTS
+static void connection_or_handle_event_cb(struct bufferevent *bufev,
+                                          short event, void *arg);
+#include <event2/buffer.h>/*XXXX REMOVE */
+#endif
 
 /**************************************************************/
 
@@ -248,7 +258,7 @@ connection_or_process_inbuf(or_connection_t *conn)
 int
 connection_or_flushed_some(or_connection_t *conn)
 {
-  size_t datalen = buf_datalen(conn->_base.outbuf);
+  size_t datalen = connection_get_outbuf_len(TO_CONN(conn));
   /* If we're under the low water mark, add cells until we're just over the
    * high water mark. */
   if (datalen < OR_CONN_LOWWATER) {
@@ -281,7 +291,6 @@ connection_or_finished_flushing(or_connection_t *conn)
     case OR_CONN_STATE_PROXY_HANDSHAKING:
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING:
-      connection_stop_writing(TO_CONN(conn));
       break;
     default:
       log_err(LD_BUG,"Called in unexpected state %d.", conn->_base.state);
@@ -379,6 +388,22 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
 
   conn->bandwidthrate = rate;
   conn->bandwidthburst = burst;
+#ifdef USE_BUFFEREVENTS
+  {
+    const struct timeval *tick = tor_libevent_get_one_tick_timeout();
+    struct ev_token_bucket_cfg *cfg, *old_cfg;
+    int rate_per_tick = rate / TOR_LIBEVENT_TICKS_PER_SECOND;
+    cfg = ev_token_bucket_cfg_new(rate_per_tick, burst, rate_per_tick,
+                                  burst, tick);
+    old_cfg = conn->bucket_cfg;
+    if (conn->_base.bufev)
+      bufferevent_set_rate_limit(conn->_base.bufev, cfg);
+    if (old_cfg)
+      ev_token_bucket_cfg_free(old_cfg);
+    conn->bucket_cfg = cfg;
+    (void) reset; /* No way to do this with libevent yet. */
+  }
+#else
   if (reset) { /* set up the token buckets to be full */
     conn->read_bucket = conn->write_bucket = burst;
     return;
@@ -389,6 +414,7 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
     conn->read_bucket = burst;
   if (conn->write_bucket > burst)
     conn->write_bucket = burst;
+#endif
 }
 
 /** Either our set of relays or our per-conn rate limits have changed.
@@ -852,6 +878,7 @@ int
 connection_tls_start_handshake(or_connection_t *conn, int receiving)
 {
   conn->_base.state = OR_CONN_STATE_TLS_HANDSHAKING;
+  tor_assert(!conn->tls);
   conn->tls = tor_tls_new(conn->_base.s, receiving);
   tor_tls_set_logged_address(conn->tls, // XXX client and relay?
       escaped_safe_str(conn->_base.address));
@@ -859,12 +886,34 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
     log_warn(LD_BUG,"tor_tls_new failed. Closing.");
     return -1;
   }
+#ifdef USE_BUFFEREVENTS
+  if (connection_type_uses_bufferevent(TO_CONN(conn))) {
+    struct bufferevent *b =
+      tor_tls_init_bufferevent(conn->tls, conn->_base.bufev, conn->_base.s,
+                               receiving);
+    if (!b) {
+      log_warn(LD_BUG,"tor_tls_init_bufferevent failed. Closing.");
+      return -1;
+    }
+    conn->_base.bufev = b;
+    if (conn->bucket_cfg)
+      bufferevent_set_rate_limit(conn->_base.bufev, conn->bucket_cfg);
+    connection_enable_rate_limiting(TO_CONN(conn));
+    bufferevent_setcb(b, connection_handle_read_cb,
+                      connection_handle_write_cb,
+                      connection_or_handle_event_cb,
+                      TO_CONN(conn));
+  }
+#endif
   connection_start_reading(TO_CONN(conn));
   log_debug(LD_HANDSHAKE,"starting TLS handshake on fd %d", conn->_base.s);
   note_crypto_pk_op(receiving ? TLS_HANDSHAKE_S : TLS_HANDSHAKE_C);
 
-  if (connection_tls_continue_handshake(conn) < 0) {
-    return -1;
+  IF_HAS_BUFFEREVENT(TO_CONN(conn), {
+    /* ???? */;
+  }) ELSE_IF_NO_BUFFEREVENT {
+    if (connection_tls_continue_handshake(conn) < 0)
+      return -1;
   }
   return 0;
 }
@@ -948,6 +997,55 @@ connection_tls_continue_handshake(or_connection_t *conn)
   }
   return 0;
 }
+
+#ifdef USE_BUFFEREVENTS
+static void
+connection_or_handle_event_cb(struct bufferevent *bufev, short event,
+                              void *arg)
+{
+  struct or_connection_t *conn = TO_OR_CONN(arg);
+
+  /* XXXX cut-and-paste code; should become a function. */
+  if (event & BEV_EVENT_CONNECTED) {
+    if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+      if (tor_tls_finish_handshake(conn->tls) < 0) {
+        log_warn(LD_OR, "Problem finishing handshake");
+        connection_mark_for_close(TO_CONN(conn));
+        return;
+      }
+    }
+
+    if (! tor_tls_used_v1_handshake(conn->tls)) {
+      if (!tor_tls_is_server(conn->tls)) {
+        if (conn->_base.state == OR_CONN_STATE_TLS_HANDSHAKING) {
+          conn->_base.state = OR_CONN_STATE_TLS_CLIENT_RENEGOTIATING;
+          tor_tls_unblock_renegotiation(conn->tls);
+          if (bufferevent_ssl_renegotiate(conn->_base.bufev)<0) {
+            log_warn(LD_OR, "Start_renegotiating went badly.");
+            connection_mark_for_close(TO_CONN(conn));
+          }
+          tor_tls_unblock_renegotiation(conn->tls);
+          return; /* ???? */
+        }
+      } else {
+        /* improved handshake, but not a client. */
+        tor_tls_set_renegotiate_callback(conn->tls,
+                                         connection_or_tls_renegotiated_cb,
+                                         conn);
+        conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
+        /* return 0; */
+        return; /* ???? */
+      }
+    }
+    connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
+    if (connection_tls_finish_handshake(conn) < 0)
+      connection_mark_for_close(TO_CONN(conn)); /* ???? */
+    return;
+  }
+
+  connection_handle_event_cb(bufev, event, arg);
+}
+#endif
 
 /** Return 1 if we initiated this connection, or 0 if it started
  * out as an incoming connection.
@@ -1209,8 +1307,12 @@ connection_or_set_state_open(or_connection_t *conn)
 
   or_handshake_state_free(conn->handshake_state);
   conn->handshake_state = NULL;
+  IF_HAS_BUFFEREVENT(TO_CONN(conn), {
+    connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    connection_start_reading(TO_CONN(conn));
+  }
 
-  connection_start_reading(TO_CONN(conn));
   circuit_n_conn_done(conn, 1); /* send the pending creates, if any. */
 
   return 0;
@@ -1254,12 +1356,18 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
     conn->timestamp_last_added_nonpadding = approx_time();
 }
 
-/** See whether there's a variable-length cell waiting on <b>conn</b>'s
+/** See whether there's a variable-length cell waiting on <b>or_conn</b>'s
  * inbuf.  Return values as for fetch_var_cell_from_buf(). */
 static int
-connection_fetch_var_cell_from_buf(or_connection_t *conn, var_cell_t **out)
+connection_fetch_var_cell_from_buf(or_connection_t *or_conn, var_cell_t **out)
 {
-  return fetch_var_cell_from_buf(conn->_base.inbuf, out, conn->link_proto);
+  connection_t *conn = TO_CONN(or_conn);
+  IF_HAS_BUFFEREVENT(conn, {
+    struct evbuffer *input = bufferevent_get_input(conn->bufev);
+    return fetch_var_cell_from_evbuffer(input, out, or_conn->link_proto);
+  }) ELSE_IF_NO_BUFFEREVENT {
+    return fetch_var_cell_from_buf(conn->inbuf, out, or_conn->link_proto);
+  }
 }
 
 /** Process cells from <b>conn</b>'s inbuf.
@@ -1277,7 +1385,7 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
   while (1) {
     log_debug(LD_OR,
               "%d: starting, inbuf_datalen %d (%d pending in tls object).",
-              conn->_base.s,(int)buf_datalen(conn->_base.inbuf),
+              conn->_base.s,(int)connection_get_inbuf_len(TO_CONN(conn)),
               tor_tls_get_pending_bytes(conn->tls));
     if (connection_fetch_var_cell_from_buf(conn, &var_cell)) {
       if (!var_cell)
@@ -1288,8 +1396,8 @@ connection_or_process_cells_from_inbuf(or_connection_t *conn)
     } else {
       char buf[CELL_NETWORK_SIZE];
       cell_t cell;
-      if (buf_datalen(conn->_base.inbuf) < CELL_NETWORK_SIZE) /* whole response
-                                                                 available? */
+      if (connection_get_inbuf_len(TO_CONN(conn))
+          < CELL_NETWORK_SIZE) /* whole response available? */
         return 0; /* not yet */
 
       circuit_build_times_network_is_live(&circ_times);

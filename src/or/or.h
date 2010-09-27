@@ -83,6 +83,13 @@
 #define snprintf _snprintf
 #endif
 
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent.h>
+#include <event2/buffer.h>
+#include <event2/util.h>
+#endif
+
+#include "crypto.h"
 #include "tortls.h"
 #include "../common/torlog.h"
 #include "container.h"
@@ -959,6 +966,7 @@ typedef struct connection_t {
   /** Our socket; -1 if this connection is closed, or has no socket. */
   evutil_socket_t s;
   int conn_array_index; /**< Index into the global connection array. */
+
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
   buf_t *inbuf; /**< Buffer holding data read over this connection. */
@@ -969,6 +977,11 @@ typedef struct connection_t {
                               * read? */
   time_t timestamp_lastwritten; /**< When was the last time libevent said we
                                  * could write? */
+
+#ifdef USE_BUFFEREVENTS
+  struct bufferevent *bufev; /**< A Libevent buffered IO structure. */
+#endif
+
   time_t timestamp_created; /**< When was this connection_t created? */
 
   /* XXXX_IP6 make this IPv6-capable */
@@ -1065,10 +1078,16 @@ typedef struct or_connection_t {
   /* bandwidth* and *_bucket only used by ORs in OPEN state: */
   int bandwidthrate; /**< Bytes/s added to the bucket. (OPEN ORs only.) */
   int bandwidthburst; /**< Max bucket size for this conn. (OPEN ORs only.) */
+#ifndef USE_BUFFEREVENTS
   int read_bucket; /**< When this hits 0, stop receiving. Every second we
                     * add 'bandwidthrate' to this, capping it at
                     * bandwidthburst. (OPEN ORs only) */
   int write_bucket; /**< When this hits 0, stop writing. Like read_bucket. */
+#else
+  /** DOCDOC */
+  /* XXXX we could share this among all connections. */
+  struct ev_token_bucket_cfg *bucket_cfg;
+#endif
   int n_circuits; /**< How many circuits use this connection as p_conn or
                    * n_conn ? */
 
@@ -1263,6 +1282,51 @@ static INLINE control_connection_t *TO_CONTROL_CONN(connection_t *c)
   tor_assert(c->magic == CONTROL_CONNECTION_MAGIC);
   return DOWNCAST(control_connection_t, c);
 }
+
+/* Conditional macros to help write code that works whether bufferevents are
+   disabled or not.
+
+   We can't just write:
+      if (conn->bufev) {
+        do bufferevent stuff;
+      } else {
+        do other stuff;
+      }
+   because the bufferevent stuff won't even compile unless we have a fairly
+   new version of Libevent.  Instead, we say:
+      IF_HAS_BUFFEREVENT(conn, { do_bufferevent_stuff } );
+   or:
+      IF_HAS_BUFFEREVENT(conn, {
+        do bufferevent stuff;
+      }) ELSE_IF_NO_BUFFEREVENT {
+        do non-bufferevent stuff;
+      }
+   If we're compiling with bufferevent support, then the macros expand more or
+   less to:
+      if (conn->bufev) {
+        do_bufferevent_stuff;
+      } else {
+        do non-bufferevent stuff;
+      }
+   and if we aren't using bufferevents, they expand more or less to:
+      { do non-bufferevent stuff; }
+*/
+#ifdef USE_BUFFEREVENTS
+#define HAS_BUFFEREVENT(c) (((c)->bufev) != NULL)
+#define IF_HAS_BUFFEREVENT(c, stmt)                \
+  if ((c)->bufev) do {                             \
+      stmt ;                                       \
+  } while (0)
+#define ELSE_IF_NO_BUFFEREVENT ; else
+#define IF_HAS_NO_BUFFEREVENT(c)                   \
+  if (NULL == (c)->bufev)
+#else
+#define HAS_BUFFEREVENT(c) (0)
+#define IF_HAS_BUFFEREVENT(c, stmt) (void)0
+#define ELSE_IF_NO_BUFFEREVENT ;
+#define IF_HAS_NO_BUFFEREVENT(c)                \
+  if (1)
+#endif
 
 /** What action type does an address policy indicate: accept or reject? */
 typedef enum {
@@ -2920,8 +2984,6 @@ struct socks_request_t {
                               * make sure we send back a socks reply for
                               * every connection. */
 };
-
-/* all the function prototypes go here */
 
 /********************************* circuitbuild.c **********************/
 

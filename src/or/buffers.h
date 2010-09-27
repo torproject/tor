@@ -48,6 +48,23 @@ int fetch_from_buf_line(buf_t *buf, char *data_out, size_t *data_len);
 
 int peek_buf_has_control0_command(buf_t *buf);
 
+#ifdef USE_BUFFEREVENTS
+int fetch_var_cell_from_evbuffer(struct evbuffer *buf, var_cell_t **out,
+                                 int linkproto);
+int fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
+                              int log_sockstype, int safe_socks);
+int fetch_from_evbuffer_socks_client(struct evbuffer *buf, int state,
+                                     char **reason);
+int fetch_from_evbuffer_http(struct evbuffer *buf,
+                        char **headers_out, size_t max_headerlen,
+                        char **body_out, size_t *body_used, size_t max_bodylen,
+                        int force_complete);
+int peek_evbuffer_has_control0_command(struct evbuffer *buf);
+int write_to_evbuffer_zlib(struct evbuffer *buf, tor_zlib_state_t *state,
+                           const char *data, size_t data_len,
+                           int done);
+#endif
+
 void assert_buf_ok(buf_t *buf);
 
 #ifdef BUFFERS_PRIVATE

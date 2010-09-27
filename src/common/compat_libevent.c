@@ -551,3 +551,29 @@ periodic_timer_free(periodic_timer_t *timer)
   tor_free(timer);
 }
 
+#ifdef USE_BUFFEREVENTS
+static const struct timeval *one_tick = NULL;
+/**
+ * Return a special timeout to be passed whenever libevent's O(1) timeout
+ * implementation should be used. Only use this when the timer is supposed
+ * to fire after 1 / TOR_LIBEVENT_TICKS_PER_SECOND seconds have passed.
+*/
+const struct timeval *
+tor_libevent_get_one_tick_timeout(void)
+{
+  if (PREDICT_UNLIKELY(one_tick == NULL)) {
+    struct event_base *base = tor_libevent_get_base();
+    struct timeval tv;
+    if (TOR_LIBEVENT_TICKS_PER_SECOND == 1) {
+      tv.tv_sec = 1;
+      tv.tv_usec = 0;
+    } else {
+      tv.tv_sec = 0;
+      tv.tv_usec = 1000000 / TOR_LIBEVENT_TICKS_PER_SECOND;
+    }
+    one_tick = event_base_init_common_timeout(base, &tv);
+  }
+  return one_tick;
+}
+#endif
+

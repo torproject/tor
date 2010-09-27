@@ -44,7 +44,14 @@
 #error "We require OpenSSL >= 0.9.7"
 #endif
 
+#ifdef USE_BUFFEREVENTS
+#include <event2/bufferevent_ssl.h>
+#include <event2/buffer.h>
+#include "compat_libevent.h"
+#endif
+
 #define CRYPTO_PRIVATE /* to import prototypes from crypto.h */
+#define TORTLS_PRIVATE
 
 #include "crypto.h"
 #include "tortls.h"
@@ -107,6 +114,7 @@ struct tor_tls_t {
   enum {
     TOR_TLS_ST_HANDSHAKE, TOR_TLS_ST_OPEN, TOR_TLS_ST_GOTCLOSE,
     TOR_TLS_ST_SENTCLOSE, TOR_TLS_ST_CLOSED, TOR_TLS_ST_RENEGOTIATE,
+    TOR_TLS_ST_BUFFEREVENT
   } state : 3; /**< The current SSL state, depending on which operations have
                 * completed successfully. */
   unsigned int isServer:1; /**< True iff this is a server-side connection */
@@ -187,7 +195,6 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *cname,
                                         const char *cname_sign,
                                         unsigned int lifetime);
-static void tor_tls_unblock_renegotiation(tor_tls_t *tls);
 
 /** Global tls context. We keep it here because nobody else needs to
  * touch it. */
@@ -1024,7 +1031,7 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
 /** If this version of openssl requires it, turn on renegotiation on
  * <b>tls</b>.
  */
-static void
+void
 tor_tls_unblock_renegotiation(tor_tls_t *tls)
 {
   /* Yes, we know what we are doing here.  No, we do not treat a renegotiation
@@ -1192,55 +1199,85 @@ tor_tls_handshake(tor_tls_t *tls)
   }
   if (r == TOR_TLS_DONE) {
     tls->state = TOR_TLS_ST_OPEN;
-    if (tls->isServer) {
-      SSL_set_info_callback(tls->ssl, NULL);
-      SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
-      /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
-      tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
+    return tor_tls_finish_handshake(tls);
+  }
+  return r;
+}
+
+/** Perform the final part of the intial TLS handshake on <b>tls</b>.  This
+ * should be called for the first handshake only: it determines whether the v1
+ * or the v2 handshake was used, and adjusts things for the renegotiation
+ * handshake as appropriate.
+ *
+ * tor_tls_handshake() calls this on its own; you only need to call this if
+ * bufferevent is doing the handshake for you.
+ */
+int
+tor_tls_finish_handshake(tor_tls_t *tls)
+{
+  int r = TOR_TLS_DONE;
+  if (tls->isServer) {
+    SSL_set_info_callback(tls->ssl, NULL);
+    SSL_set_verify(tls->ssl, SSL_VERIFY_PEER, always_accept_verify_cb);
+    /* There doesn't seem to be a clear OpenSSL API to clear mode flags. */
+    tls->ssl->mode &= ~SSL_MODE_NO_AUTO_CHAIN;
 #ifdef V2_HANDSHAKE_SERVER
-      if (tor_tls_client_is_using_v2_ciphers(tls->ssl, ADDR(tls))) {
-        /* This check is redundant, but back when we did it in the callback,
-         * we might have not been able to look up the tor_tls_t if the code
-         * was buggy.  Fixing that. */
-        if (!tls->wasV2Handshake) {
-          log_warn(LD_BUG, "For some reason, wasV2Handshake didn't"
-                   " get set. Fixing that.");
-        }
-        tls->wasV2Handshake = 1;
-        log_debug(LD_HANDSHAKE,
-                  "Completed V2 TLS handshake with client; waiting "
-                  "for renegotiation.");
-      } else {
-        tls->wasV2Handshake = 0;
+    if (tor_tls_client_is_using_v2_ciphers(tls->ssl, ADDR(tls))) {
+      /* This check is redundant, but back when we did it in the callback,
+       * we might have not been able to look up the tor_tls_t if the code
+       * was buggy.  Fixing that. */
+      if (!tls->wasV2Handshake) {
+        log_warn(LD_BUG, "For some reason, wasV2Handshake didn't"
+                 " get set. Fixing that.");
       }
-#endif
+      tls->wasV2Handshake = 1;
+      log_debug(LD_HANDSHAKE, "Completed V2 TLS handshake with client; waiting"
+                " for renegotiation.");
     } else {
-#ifdef V2_HANDSHAKE_CLIENT
-      /* If we got no ID cert, we're a v2 handshake. */
-      X509 *cert = SSL_get_peer_certificate(tls->ssl);
-      STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
-      int n_certs = sk_X509_num(chain);
-      if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0))) {
-        log_debug(LD_HANDSHAKE, "Server sent back multiple certificates; it "
-                  "looks like a v1 handshake on %p", tls);
-        tls->wasV2Handshake = 0;
-      } else {
-        log_debug(LD_HANDSHAKE,
-                  "Server sent back a single certificate; looks like "
-                  "a v2 handshake on %p.", tls);
-        tls->wasV2Handshake = 1;
-      }
-      if (cert)
-        X509_free(cert);
+      tls->wasV2Handshake = 0;
+    }
 #endif
-      if (SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST) == 0) {
-        tls_log_errors(NULL, LOG_WARN, LD_HANDSHAKE, "re-setting ciphers");
-        r = TOR_TLS_ERROR_MISC;
-      }
+  } else {
+#ifdef V2_HANDSHAKE_CLIENT
+    /* If we got no ID cert, we're a v2 handshake. */
+    X509 *cert = SSL_get_peer_certificate(tls->ssl);
+    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(tls->ssl);
+    int n_certs = sk_X509_num(chain);
+    if (n_certs > 1 || (n_certs == 1 && cert != sk_X509_value(chain, 0))) {
+      log_debug(LD_HANDSHAKE, "Server sent back multiple certificates; it "
+                "looks like a v1 handshake on %p", tls);
+      tls->wasV2Handshake = 0;
+    } else {
+      log_debug(LD_HANDSHAKE,
+                "Server sent back a single certificate; looks like "
+                "a v2 handshake on %p.", tls);
+      tls->wasV2Handshake = 1;
+    }
+    if (cert)
+      X509_free(cert);
+#endif
+    if (SSL_set_cipher_list(tls->ssl, SERVER_CIPHER_LIST) == 0) {
+      tls_log_errors(NULL, LOG_WARN, LD_HANDSHAKE, "re-setting ciphers");
+      r = TOR_TLS_ERROR_MISC;
     }
   }
   return r;
 }
+
+#ifdef USE_BUFFEREVENTS
+/** Put <b>tls</b>, which must be a client connection, into renegotiation
+ * mode. */
+int
+tor_tls_start_renegotiating(tor_tls_t *tls)
+{
+  int r = SSL_renegotiate(tls->ssl);
+  if (r <= 0) {
+    return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN,
+                             LD_HANDSHAKE);
+  }
+  return 0;
+}
+#endif
 
 /** Client only: Renegotiate a TLS session.  When finished, returns
  * TOR_TLS_DONE.  On failure, returns TOR_TLS_ERROR, TOR_TLS_WANTREAD, or
@@ -1458,6 +1495,8 @@ tor_tls_verify(int severity, tor_tls_t *tls, crypto_pk_env_t **identity_key)
     log_fn(severity,LD_PROTOCOL,"No distinct identity certificate found");
     goto done;
   }
+  tls_log_errors(tls, severity, LD_HANDSHAKE, "before verifying certificate");
+
   if (!(id_pkey = X509_get_pubkey(id_cert)) ||
       X509_verify(cert, id_pkey) <= 0) {
     log_fn(severity,LD_PROTOCOL,"X509_verify on cert and pkey returned <= 0");
@@ -1628,4 +1667,60 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
   *rbuf_bytes = tls->ssl->s3->rbuf.left;
   *wbuf_bytes = tls->ssl->s3->wbuf.left;
 }
+
+#ifdef USE_BUFFEREVENTS
+/** Construct and return an TLS-encrypting bufferevent to send data over
+ * <b>socket</b>, which must match the socket of the underlying bufferevent
+ * <b>bufev_in</b>.  The TLS object <b>tls</b> is used for encryption.
+ *
+ * This function will either create a filtering bufferevent that wraps around
+ * <b>bufev_in</b>, or it will free bufev_in and return a new bufferevent that
+ * uses the <b>tls</b> to talk to the network directly.  Do not use
+ * <b>bufev_in</b> after calling this function.
+ *
+ * The connection will start out doing a server handshake if <b>receiving</b>
+ * is strue, and a client handshake otherwise.
+ *
+ * Returns NULL on failure.
+ */
+struct bufferevent *
+tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
+                         evutil_socket_t socket, int receiving)
+{
+  struct bufferevent *out;
+  const enum bufferevent_ssl_state state = receiving ?
+    BUFFEREVENT_SSL_ACCEPTING : BUFFEREVENT_SSL_CONNECTING;
+
+#if 0
+  (void) socket;
+  out = bufferevent_openssl_filter_new(tor_libevent_get_base(),
+                                       bufev_in,
+                                       tls->ssl,
+                                       state,
+                                       BEV_OPT_DEFER_CALLBACKS);
+#else
+  if (bufev_in) {
+    evutil_socket_t s = bufferevent_getfd(bufev_in);
+    tor_assert(s == -1 || s == socket);
+    tor_assert(evbuffer_get_length(bufferevent_get_input(bufev_in)) == 0);
+    tor_assert(evbuffer_get_length(bufferevent_get_output(bufev_in)) == 0);
+    tor_assert(BIO_number_read(SSL_get_rbio(tls->ssl)) == 0);
+    tor_assert(BIO_number_written(SSL_get_rbio(tls->ssl)) == 0);
+    bufferevent_free(bufev_in);
+  }
+  tls->state = TOR_TLS_ST_BUFFEREVENT;
+
+  /* Current versions (as of 2.0.7-rc) of Libevent need to defer
+   * bufferevent_openssl callbacks, or else our callback functions will
+   * get called reentrantly, which is bad for us.
+   */
+  out = bufferevent_openssl_socket_new(tor_libevent_get_base(),
+                                       socket,
+                                       tls->ssl,
+                                       state,
+                                       BEV_OPT_DEFER_CALLBACKS);
+#endif
+  return out;
+}
+#endif
 

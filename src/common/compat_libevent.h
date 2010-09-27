@@ -8,6 +8,9 @@
 
 struct event;
 struct event_base;
+#ifdef USE_BUFFEREVENTS
+struct bufferevent;
+#endif
 
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/util.h>
@@ -60,6 +63,11 @@ void tor_check_libevent_version(const char *m, int server,
                                 const char **badness_out);
 void tor_check_libevent_header_compatibility(void);
 const char *tor_libevent_get_version_str(void);
+
+#ifdef USE_BUFFEREVENTS
+#define TOR_LIBEVENT_TICKS_PER_SECOND 3
+const struct timeval *tor_libevent_get_one_tick_timeout(void);
+#endif
 
 #endif
 

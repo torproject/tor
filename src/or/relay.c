@@ -1157,8 +1157,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       if (!conn->_base.marked_for_close) {
         /* only mark it if not already marked. it's possible to
          * get the 'end' right around when the client hangs up on us. */
-        connection_mark_for_close(TO_CONN(conn));
-        conn->_base.hold_open_until_flushed = 1;
+        connection_mark_and_flush(TO_CONN(conn));
       }
       return 0;
     case RELAY_COMMAND_EXTEND:
@@ -1365,7 +1364,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
     return 0;
   }
 
-  amount_to_process = buf_datalen(conn->_base.inbuf);
+  amount_to_process = connection_get_inbuf_len(TO_CONN(conn));
 
   if (!amount_to_process)
     return 0;
@@ -1384,7 +1383,7 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   connection_fetch_from_buf(payload, length, TO_CONN(conn));
 
   log_debug(domain,"(%d) Packaging %d bytes (%d waiting).", conn->_base.s,
-            (int)length, (int)buf_datalen(conn->_base.inbuf));
+            (int)length, (int)connection_get_inbuf_len(TO_CONN(conn)));
 
   if (connection_edge_send_command(conn, RELAY_COMMAND_DATA,
                                    payload, length) < 0 )
@@ -2214,7 +2213,7 @@ set_streams_blocked_on_circ(circuit_t *circ, or_connection_t *orconn,
       edge->edge_blocked_on_circ = block;
     }
 
-    if (!conn->read_event) {
+    if (!conn->read_event && !HAS_BUFFEREVENT(conn)) {
       /* This connection is a placeholder for something; probably a DNS
        * request.  It can't actually stop or start reading.*/
       continue;
@@ -2415,7 +2414,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
     make_circuit_active_on_conn(circ, orconn);
   }
 
-  if (! buf_datalen(orconn->_base.outbuf)) {
+  if (! connection_get_outbuf_len(TO_CONN(orconn))) {
     /* There is no data at all waiting to be sent on the outbuf.  Add a
      * cell, so that we can notice when it gets flushed, flushed_some can
      * get called, and we can start putting more data onto the buffer then.
