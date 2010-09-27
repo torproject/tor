@@ -2555,8 +2555,7 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
        * has explicitly allowed that in the config. It attracts attackers
        * and users who'd be better off with, well, single-hop proxies.
        */
-//    log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-      log_notice(LD_PROTOCOL,
+      log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Attempt by %s to open a stream %s. Closing.",
              safe_str(or_circ->p_conn->_base.address),
              or_circ->is_first_hop ? "on first hop of circuit" :

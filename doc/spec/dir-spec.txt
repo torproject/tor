@@ -1177,6 +1177,12 @@
         0.2.2.14-alpha looked for bwconnrate and bwconnburst, but then
         did the wrong thing with them; see bug 1830 for details.)
 
+        "refuseunknownexits" -- if set and non-zero, exit relays look at
+        the previous hop of circuits that ask to open an exit stream,
+        and refuse to exit if they don't recognize it as a relay. The
+        goal is to make it harder for people to use them as one-hop
+        proxies. See trac entry 1751 for details.
+
         See also "2.4.5. Consensus parameters governing behavior"
         in path-spec.txt for a series of circuit build time related
         consensus params.
