@@ -977,7 +977,7 @@ server_mode(or_options_t *options)
 }
 
 /** Return true iff the combination of options in <b>options</b> and parameters
- * in <b>consensus</b> mean that we don't want to allow exits from circuits
+ * in the consensus mean that we don't want to allow exits from circuits
  * we got from addresses not known to be servers. */
 int
 should_refuse_unknown_exits(or_options_t *options)
