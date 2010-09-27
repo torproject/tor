@@ -1610,6 +1610,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
   double *bandwidths;
   double tmp = 0;
   unsigned int i;
+  int have_unknown = 0; /* true iff sl contains element not in consensus. */
 
   /* Can't choose exit and guard at same time */
   tor_assert(rule == NO_WEIGHTING ||
@@ -1726,6 +1727,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
         this_bw = kb_to_bytes(rs->bandwidth);
       } else { /* bridge or other descriptor not in our consensus */
         this_bw = router_get_advertised_bandwidth_capped(router);
+        have_unknown = 1;
       }
       if (router_digest_is_me(router->cache_info.identity_digest))
         is_me = 1;
@@ -1756,9 +1758,11 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
 
   /* If there is no bandwidth, choose at random */
   if (DBL_TO_U64(weighted_bw) == 0) {
-    log_warn(LD_CIRC,
-             "Weighted bandwidth is %lf in node selection for rule %s",
-             weighted_bw, bandwidth_weight_rule_to_string(rule));
+    /* Don't warn when using bridges/relays not in the consensus */
+    if (!have_unknown)
+      log_warn(LD_CIRC,
+               "Weighted bandwidth is %lf in node selection for rule %s",
+               weighted_bw, bandwidth_weight_rule_to_string(rule));
     tor_free(bandwidths);
     return smartlist_choose(sl);
   }

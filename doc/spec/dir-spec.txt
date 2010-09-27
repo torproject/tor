@@ -1632,6 +1632,7 @@
      "7" -- Provides keyword=integer pairs of consensus parameters
      "8" -- Provides microdescriptor summaries
      "9" -- Provides weights for selecting flagged routers in paths
+     "10" -- Fixes edge case bugs in router flag selection weights
 
    Before generating a consensus, an authority must decide which consensus
    method to use.  To do this, it looks for the highest version number
@@ -1694,22 +1695,25 @@
       Wme*E + Wee*E == E                          (aka: Wee = 1-Wme)
 
   We are short 2 constraints with the above set. The remaining constraints
-  come from examining different cases of network load.
+  come from examining different cases of network load. The following
+  constraints are used in consensus method 10 and above. There are another
+  incorrect and obsolete set of constraints used for these same cases in
+  consensus method 9. For those, see dir-spec.txt in Tor 0.2.2.10-alpha
+  to 0.2.2.16-alpha.
 
   Case 1: E >= T/3 && G >= T/3 (Neither Exit nor Guard Scarce)
 
-    In this case, the additional two constraints are: Wme*E == Wmd*D and
-    Wgd == 0, which maximizes Exit-flagged bandwidth in the middle position.
+    In this case, the additional two constraints are: Wmg == Wmd,
+    Wed == 1/3.
 
     This leads to the solution:
-
-       Wgg = (weight_scale*(D+E+G+M))/(3*G)
-       Wmd = (weight_scale*(2*D + 2*E - G - M))/(6*D)
-       Wme = (weight_scale*(2*D + 2*E - G - M))/(6*E)
-       Wee = (weight_scale*(-2*D + 4*E + G + M))/(6*E)
-       Wmg = weight_scale - Wgg
-       Wed = weight_scale - Wmd
-       Wgd = 0
+        Wgd = weight_scale/3
+        Wed = weight_scale/3
+        Wmd = weight_scale/3
+        Wee = (weight_scale*(E+G+M))/(3*E)
+        Wme = weight_scale - Wee
+        Wmg = (weight_scale*(2*G-E-M))/(3*G)
+        Wgg = weight_scale - Wmg
 
   Case 2: E < T/3 && G < T/3 (Both are scarce)
 
@@ -1733,25 +1737,35 @@
     Subcase b: R+D >= S
 
       In this case, if M <= T/3, we have enough bandwidth to try to achieve
-      a balancing condition, and add the constraints Wgg == 1 and
-      Wme*E == Wmd*D:
+      a balancing condition.
 
-         Wgg = weight_scale
-         Wgd = (weight_scale*(D + E - 2*G + M))/(3*D)      (T/3 >= G (Ok))
-         Wmd = (weight_scale*(D + E + G - 2*M))/(6*D)      (T/3 >= M)
-         Wme = (weight_scale*(D + E + G - 2*M))/(6*E)
-         Wee = (weight_scale*(-D + 5*E - G + 2*M))/(6*E)   (2E+M >= T/3)
-         Wmg = 0;
-         Wed = weight_scale - Wgd - Wmd
+      Add constraints Wgg = 1, Wmd == Wgd to maximize bandwidth in the guard
+      position while still allowing exits to be used as middle nodes:
 
-      If M >= T/3, the above solution will not be valid (one of the weights
-      will be < 0 or > 1). In this case, we use:
+        Wee = (weight_scale*(E - G + M))/E
+        Wed = (weight_scale*(D - 2*E + 4*G - 2*M))/(3*D)
+        Wme = (weight_scale*(G-M))/E
+        Wmg = 0
+        Wgg = weight_scale
+        Wmd = (weight_scale - Wed)/2
+        Wgd = (weight_scale - Wed)/2
+
+      If this system ends up with any values out of range (ie negative, or
+      above weight_scale), use the constraints Wgg == 1 and Wee == 1, since
+      both those positions are scarce:
 
          Wgg = weight_scale
          Wee = weight_scale
-         Wmg = Wme = Wmd = 0
-         Wgd = (weight_scale*(D+E-G))/(2*D)
-         Wed = weight_scale - Wgd
+         Wed = (weight_scale*(D - 2*E + G + M))/(3*D)
+         Wmd = (weight_Scale*(D - 2*M + G + E))/(3*D)
+         Wme = 0
+         Wmg = 0
+         Wgd = weight_scale - Wed - Wmd
+
+      If M > T/3, then the Wmd weight above will become negative. Set it to 0
+      in this case:
+         Wmd = 0
+         Wgd = weight_scale - Wed
 
   Case 3: One of E < T/3 or G < T/3
 
@@ -1759,36 +1773,44 @@
 
     Subcase a: (S+D) < T/3:
       if G=S:
-          Wgg = Wgd = weight_scale;
-          Wmd = Wed = Wmg = 0;
-          Wme = (weight_scale*(E-M))/(2*E);
-          Wee = weight_scale-Wme;
+        Wgg = Wgd = weight_scale;
+        Wmd = Wed = Wmg = 0;
+        // Minor subcase, if E is more scarce than M,
+        // keep its bandwidth in place.
+        if (E < M) Wme = 0;
+        else Wme = (weight_scale*(E-M))/(2*E);
+        Wee = weight_scale-Wme;
       if E=S:
-          Wee = Wed = weight_scale;
-          Wmd = Wgd = Wmg = 0;
-          Wmg = (weight_scale*(G-M))/(2*G);
-          Wgg = weight_scale-Wmg;
+        Wee = Wed = weight_scale;
+        Wmd = Wgd = Wme = 0;
+        // Minor subcase, if G is more scarce than M,
+        // keep its bandwidth in place.
+        if (G < M) Wmg = 0;
+        else Wmg = (weight_scale*(G-M))/(2*G);
+        Wgg = weight_scale-Wmg;
 
     Subcase b: (S+D) >= T/3
       if G=S:
-        Add constraints Wmg = 0, Wme*E == Wmd*D to maximize exit bandwidth
-        in the middle position:
-          Wgd = (weight_scale*(D + E - 2*G + M))/(3*D);
-          Wmd = (weight_scale*(D + E + G - 2*M))/(6*D);
-          Wme = (weight_scale*(D + E + G - 2*M))/(6*E);
-          Wee = (weight_scale*(-D + 5*E - G + 2*M))/(6*E);
-          Wgg = weight_scale;
-          Wmg = 0;
-          Wed = weight_scale - Wgd - Wmd;
+        Add constraints Wgg = 1, Wmd == Wed to maximize bandwidth
+        in the guard position, while still allowing exits to be
+        used as middle nodes:
+          Wgg = weight_scale
+          Wgd = (weight_scale*(D - 2*G + E + M))/(3*D)
+          Wmg = 0
+          Wee = (weight_scale*(E+M))/(2*E)
+          Wme = weight_scale - Wee
+          Wmd = (weight_scale - Wgd)/2
+          Wed = (weight_scale - Wgd)/2
       if E=S:
-        Add constraints Wgd = 0, Wme*E == Wmd*D:
-          Wgg = (weight_scale*(D + E + G + M))/(3*G);
-          Wmd = (weight_scale*(2*D + 2*E - G - M))/(6*D);
-          Wme = (weight_scale*(2*D + 2*E - G - M))/(6*E);
-          Wee = (weight_scale*(-2*D + 4*E + G + M))/(6*E);
-          Wgd = 0;
+        Add constraints Wee == 1, Wmd == Wgd to maximize bandwidth
+        in the exit position:
+          Wee = weight_scale;
+          Wed = (weight_scale*(D - 2*E + G + M))/(3*D);
+          Wme = 0;
+          Wgg = (weight_scale*(G+M))/(2*G);
           Wmg = weight_scale - Wgg;
-          Wed = weight_scale - Wmd;
+          Wmd = (weight_scale - Wed)/2;
+          Wgd = (weight_scale - Wed)/2;
 
   To ensure consensus, all calculations are performed using integer math
   with a fixed precision determined by the bwweightscale consensus
