@@ -558,9 +558,9 @@ static const struct timeval *one_tick = NULL;
  * implementation should be used. Only use this when the timer is supposed
  * to fire after 1 / TOR_LIBEVENT_TICKS_PER_SECOND seconds have passed.
 */
-const struct timeval *tor_libevent_get_one_tick_timeout(void)
+const struct timeval *
+tor_libevent_get_one_tick_timeout(void)
 {
-
   if (PREDICT_UNLIKELY(one_tick == NULL)) {
     struct event_base *base = tor_libevent_get_base();
     struct timeval tv;

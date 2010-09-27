@@ -1516,7 +1516,8 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
     return 0;
 
   {
-    /* See if we can find the socks request in the first chunk of the buffer. */
+    /* See if we can find the socks request in the first chunk of the buffer.
+     */
     struct evbuffer_iovec v;
     int i;
     want_length = evbuffer_get_contiguous_space(buf);
@@ -1573,9 +1574,8 @@ fetch_from_evbuffer_socks(struct evbuffer *buf, socks_request_t *req,
       break;
     /* Otherwise, it wants more data than we gave it.  If we can provide more
      * data than we gave it, we'll try to do so in the next iteration of the
-     * loop. If we can't, the while() condition will exit.  It's okay if it
-     * asked for more than we have total; maybe it doesn't really need so
-     * much. */
+     * loop. If we can't, the while loop will exit.  It's okay if it asked for
+     * more than we have total; maybe it doesn't really need so much. */
   }
 
   return res;

@@ -1232,8 +1232,8 @@ tor_tls_finish_handshake(tor_tls_t *tls)
                  " get set. Fixing that.");
       }
       tls->wasV2Handshake = 1;
-      log_debug(LD_HANDSHAKE, "Completed V2 TLS handshake with client; waiting "
-                "for renegotiation.");
+      log_debug(LD_HANDSHAKE, "Completed V2 TLS handshake with client; waiting"
+                " for renegotiation.");
     } else {
       tls->wasV2Handshake = 0;
     }
@@ -1273,7 +1273,8 @@ tor_tls_start_renegotiating(tor_tls_t *tls)
 {
   int r = SSL_renegotiate(tls->ssl);
   if (r <= 0) {
-    return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN, LD_HANDSHAKE);
+    return tor_tls_get_error(tls, r, 0, "renegotiating", LOG_WARN,
+                             LD_HANDSHAKE);
   }
   return 0;
 }
