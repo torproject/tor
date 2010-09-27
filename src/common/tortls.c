@@ -1710,12 +1710,16 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
     bufferevent_free(bufev_in);
   }
   tls->state = TOR_TLS_ST_BUFFEREVENT;
+
+  /* Current versions (as of 2.0.7-rc) of Libevent need to defer
+   * bufferevent_openssl callbacks, or else our callback functions will
+   * get called reentrantly, which is bad for us.
+   */
   out = bufferevent_openssl_socket_new(tor_libevent_get_base(),
                                        socket,
                                        tls->ssl,
                                        state,
-                                       0);
-                                       //BEV_OPT_DEFER_CALLBACKS);
+                                       BEV_OPT_DEFER_CALLBACKS);
 #endif
   return out;
 }
