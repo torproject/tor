@@ -1898,6 +1898,52 @@ spawn_exit(void)
 #endif
 }
 
+/** Implementation logic for compute_num_cpus(). */
+static int
+compute_num_cpus_impl(void)
+{
+#ifdef MS_WINDOWS
+  SYSTEM_INFO info;
+  memset(&info, 0, sizeof(info));
+  GetSystemInfo(&info);
+  if (info.dwNumberOfProcessors >= 1 && info.dwNumberOfProcessors < INT_MAX)
+    return (int)info.dwNumberOfProcessors;
+  else
+    return -1;
+#elif defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)
+  long cpus = sysconf(_SC_NPROCESSORS_CONF);
+  if (cpus >= 1 && cpus < INT_MAX)
+    return (int)cpus;
+  else
+    return -1;
+#else
+  return -1;
+#endif
+}
+
+#define MAX_DETECTABLE_CPUS 16
+
+/** Return how many CPUs we are running with.  We assume that nobody is
+ * using hot-swappable CPUs, so we don't recompute this after the first
+ * time.  Return -1 if we don't know how to tell the number of CPUs on this
+ * system.
+ */
+int
+compute_num_cpus(void)
+{
+  static int num_cpus = -2;
+  if (num_cpus == -2) {
+    num_cpus = compute_num_cpus_impl();
+    tor_assert(num_cpus != -2);
+    if (num_cpus > MAX_DETECTABLE_CPUS)
+      log_notice(LD_GENERAL, "Wow!  I detected that you have %d CPUs. I "
+                 "will not autodetect any more than %d, though.  If you "
+                 "want to configure more, set NumCPUs in your torrc",
+                 num_cpus, MAX_DETECTABLE_CPUS);
+  }
+  return num_cpus;
+}
+
 /** Set *timeval to the current time of day.  On error, log and terminate.
  * (Same as gettimeofday(timeval,NULL), but never returns -1.)
  */

@@ -522,6 +522,8 @@ void spawn_exit(void) ATTR_NORETURN;
 #undef TOR_IS_MULTITHREADED
 #endif
 
+int compute_num_cpus(void);
+
 /* Because we use threads instead of processes on most platforms (Windows,
  * Linux, etc), we need locking for them.  On platforms with poor thread
  * support or broken gethostbyname_r, these functions are no-ops. */

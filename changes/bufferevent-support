@@ -6,4 +6,7 @@
      flag.  Using this feature will make our networking code more flexible,
      lets us stack layers on each other, and let us use more efficient
      zero-copy transports where available.
+   - As an experimental feature, when using the "bufferevents" buffered
+     IO backend, Tor can try to use Windows's IOCP networking API.  This
+     is off by default.  To turn it on, add "DisableIOCP 0" to your torrc.
 

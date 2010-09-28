@@ -226,7 +226,7 @@ dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull getaddrinfo localtime_r gmtime_r memmem strtok_r flock prctl vasprintf)
+AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull getaddrinfo localtime_r gmtime_r memmem strtok_r flock prctl vasprintf sysconf)
 
 using_custom_malloc=no
 if test x$enable_openbsd_malloc = xyes ; then
