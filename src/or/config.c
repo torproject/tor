@@ -224,6 +224,7 @@ static config_var_t _option_vars[] = {
   V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DisableAllSwap,              BOOL,     "0"),
+  V(DisableIOCP,                 BOOL,     "1"),
   V(DNSPort,                     UINT,     "0"),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
@@ -554,7 +555,7 @@ static int is_listening_on_low_port(uint16_t port_option,
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
 static int config_parse_interval(const char *s, int *ok);
-static void init_libevent(void);
+static void init_libevent(const or_options_t *options);
 static int opt_streq(const char *s1, const char *s2);
 
 /** Magic value for or_options_t. */
@@ -955,7 +956,7 @@ options_act_reversible(or_options_t *old_options, char **msg)
     /* Set up libevent.  (We need to do this before we can register the
      * listeners as listeners.) */
     if (running_tor && !libevent_initialized) {
-      init_libevent();
+      init_libevent(options);
       libevent_initialized = 1;
     }
 
@@ -4895,9 +4896,12 @@ config_parse_interval(const char *s, int *ok)
  * Initialize the libevent library.
  */
 static void
-init_libevent(void)
+init_libevent(const or_options_t *options)
 {
   const char *badness=NULL;
+  tor_libevent_cfg cfg;
+
+  tor_assert(options);
 
   configure_libevent_logging();
   /* If the kernel complains that some method (say, epoll) doesn't
@@ -4907,7 +4911,11 @@ init_libevent(void)
 
   tor_check_libevent_header_compatibility();
 
-  tor_libevent_initialize();
+  memset(&cfg, 0, sizeof(cfg));
+  cfg.disable_iocp = options->DisableIOCP;
+  cfg.num_cpus = options->NumCpus;
+
+  tor_libevent_initialize(&cfg);
 
   suppress_libevent_log_msg(NULL);
 

@@ -56,7 +56,12 @@ struct timeval;
 int tor_event_base_loopexit(struct event_base *base, struct timeval *tv);
 #endif
 
-void tor_libevent_initialize(void);
+typedef struct tor_libevent_cfg {
+  int disable_iocp;
+  int num_cpus;
+} tor_libevent_cfg;
+
+void tor_libevent_initialize(tor_libevent_cfg *cfg);
 struct event_base *tor_libevent_get_base(void);
 const char *tor_libevent_get_method(void);
 void tor_check_libevent_version(const char *m, int server,

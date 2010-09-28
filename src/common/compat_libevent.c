@@ -159,7 +159,7 @@ struct event_base *the_event_base = NULL;
 
 /** Initialize the Libevent library and set up the event base. */
 void
-tor_libevent_initialize(void)
+tor_libevent_initialize(tor_libevent_cfg *torcfg)
 {
   tor_assert(the_event_base == NULL);
 
@@ -171,7 +171,21 @@ tor_libevent_initialize(void)
 #endif
 
 #ifdef HAVE_EVENT2_EVENT_H
-  the_event_base = event_base_new();
+  {
+    struct event_config *cfg = event_config_new();
+
+#if defined(MS_WINDOWS) && defined(USE_BUFFEREVENTS)
+    if (! torcfg->disable_iocp)
+      event_config_set_flag(cfg, EVENT_BASE_FLAG_STARTUP_IOCP);
+#endif
+
+#if defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER >= V(2,0,7)
+    if (torcfg->num_cpus > 0)
+      event_config_set_num_cpus_hint(cfg, torcfg->num_cpus);
+#endif
+
+    the_event_base = event_base_new_with_config(cfg);
+  }
 #else
   the_event_base = event_init();
 #endif
