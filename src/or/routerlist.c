@@ -22,6 +22,7 @@
 #include "geoip.h"
 #include "hibernate.h"
 #include "main.h"
+#include "microdesc.h"
 #include "networkstatus.h"
 #include "policies.h"
 #include "reasons.h"
@@ -44,9 +45,6 @@ static routerstatus_t *router_pick_trusteddirserver_impl(
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(routerinfo_t *router, const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
-static void launch_router_descriptor_downloads(smartlist_t *downloadable,
-                                               routerstatus_t *source,
-                                               time_t now);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void update_router_have_minimum_dir_info(void);
 static const char *signed_descriptor_get_body_impl(signed_descriptor_t *desc,
@@ -1047,7 +1045,8 @@ router_pick_trusteddirserver(authority_type_t type, int flags)
     /* If the reason that we got no server is that servers are "busy",
      * we must be excluding good servers because we already have serverdesc
      * fetches with them.  Do not mark down servers up because of this. */
-    tor_assert((flags & PDS_NO_EXISTING_SERVERDESC_FETCH));
+    tor_assert((flags & (PDS_NO_EXISTING_SERVERDESC_FETCH|
+                         PDS_NO_EXISTING_MICRODESC_FETCH)));
     return NULL;
   }
 
@@ -1174,6 +1173,7 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
   const int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
+  const int no_microdesc_fetching =(flags & PDS_NO_EXISTING_MICRODESC_FETCH);
   int n_busy = 0;
 
   if (!trusted_dir_servers)
@@ -1208,6 +1208,13 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
              CONN_TYPE_DIR, &addr, d->dir_port, DIR_PURPOSE_FETCH_EXTRAINFO)) {
           //log_debug(LD_DIR, "We have an existing connection to fetch "
           //           "descriptor from %s; delaying",d->description);
+          ++n_busy;
+          continue;
+        }
+      }
+      if (no_microdesc_fetching) {
+        if (connection_get_by_type_addr_port_purpose(
+             CONN_TYPE_DIR, &addr, d->dir_port, DIR_PURPOSE_FETCH_MICRODESC)) {
           ++n_busy;
           continue;
         }
@@ -3874,6 +3881,7 @@ routerlist_retry_directory_downloads(time_t now)
   router_reset_descriptor_download_failures();
   update_networkstatus_downloads(now);
   update_router_descriptor_downloads(now);
+  update_microdesc_downloads(now);
 }
 
 /** Return 1 if all running sufficiently-stable routers will reject
@@ -4035,7 +4043,9 @@ any_trusted_dir_is_v1_authority(void)
 /** For every current directory connection whose purpose is <b>purpose</b>,
  * and where the resource being downloaded begins with <b>prefix</b>, split
  * rest of the resource into base16 fingerprints, decode them, and set the
- * corresponding elements of <b>result</b> to a nonzero value. */
+ * corresponding elements of <b>result</b> to a nonzero value.
+ * DOCDOC purpose==microdesc
+ */
 static void
 list_pending_downloads(digestmap_t *result,
                        int purpose, const char *prefix)
@@ -4043,20 +4053,23 @@ list_pending_downloads(digestmap_t *result,
   const size_t p_len = strlen(prefix);
   smartlist_t *tmp = smartlist_create();
   smartlist_t *conns = get_connection_array();
+  int flags = DSR_HEX;
+  if (purpose == DIR_PURPOSE_FETCH_MICRODESC)
+    flags = DSR_DIGEST256|DSR_BASE64;
 
   tor_assert(result);
 
-  SMARTLIST_FOREACH(conns, connection_t *, conn,
-  {
+  SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
     if (conn->type == CONN_TYPE_DIR &&
         conn->purpose == purpose &&
         !conn->marked_for_close) {
       const char *resource = TO_DIR_CONN(conn)->requested_resource;
       if (!strcmpstart(resource, prefix))
         dir_split_resource_into_fingerprints(resource + p_len,
-                                             tmp, NULL, DSR_HEX);
+                                             tmp, NULL, flags);
     }
-  });
+  } SMARTLIST_FOREACH_END(conn);
+
   SMARTLIST_FOREACH(tmp, char *, d,
                     {
                       digestmap_set(result, d, (void*)1);
@@ -4076,10 +4089,18 @@ list_pending_descriptor_downloads(digestmap_t *result, int extrainfo)
   list_pending_downloads(result, purpose, "d/");
 }
 
-/** Launch downloads for all the descriptors whose digests are listed
- * as digests[i] for lo <= i < hi.  (Lo and hi may be out of range.)
- * If <b>source</b> is given, download from <b>source</b>; otherwise,
- * download from an appropriate random directory server.
+/** DOCDOC */
+/*XXXX NM should use digest256, if one comes into being. */
+void
+list_pending_microdesc_downloads(digestmap_t *result)
+{
+  list_pending_downloads(result, DIR_PURPOSE_FETCH_MICRODESC, "d/");
+}
+
+/** Launch downloads for all the descriptors whose digests or digests256
+ * are listed as digests[i] for lo <= i < hi.  (Lo and hi may be out of
+ * range.)  If <b>source</b> is given, download from <b>source</b>;
+ * otherwise, download from an appropriate random directory server.
  */
 static void
 initiate_descriptor_downloads(routerstatus_t *source,
@@ -4090,6 +4111,20 @@ initiate_descriptor_downloads(routerstatus_t *source,
   int i, n = hi-lo;
   char *resource, *cp;
   size_t r_len;
+
+  int digest_len = DIGEST_LEN, enc_digest_len = HEX_DIGEST_LEN;
+  char sep = '+';
+  int b64_256 = 0;
+
+  if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+    /* Microdescriptors are downloaded by "-"-separated base64-encoded
+     * 256-bit digests. */
+    digest_len = DIGEST256_LEN;
+    enc_digest_len = BASE64_DIGEST256_LEN;
+    sep = '-';
+    b64_256 = 1;
+  }
+
   if (n <= 0)
     return;
   if (lo < 0)
@@ -4097,15 +4132,19 @@ initiate_descriptor_downloads(routerstatus_t *source,
   if (hi > smartlist_len(digests))
     hi = smartlist_len(digests);
 
-  r_len = 8 + (HEX_DIGEST_LEN+1)*n;
+  r_len = 8 + (enc_digest_len+1)*n;
   cp = resource = tor_malloc(r_len);
   memcpy(cp, "d/", 2);
   cp += 2;
   for (i = lo; i < hi; ++i) {
-    base16_encode(cp, r_len-(cp-resource),
-                  smartlist_get(digests,i), DIGEST_LEN);
-    cp += HEX_DIGEST_LEN;
-    *cp++ = '+';
+    if (b64_256) {
+      digest256_to_base64(cp, smartlist_get(digests, i));
+    } else {
+      base16_encode(cp, r_len-(cp-resource),
+                    smartlist_get(digests,i), digest_len);
+    }
+    cp += enc_digest_len;
+    *cp++ = sep;
   }
   memcpy(cp-1, ".z", 3);
 
@@ -4152,6 +4191,7 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
  *   So use 96 because it's a nice number.
  */
 #define MAX_DL_PER_REQUEST 96
+#define MAX_MICRODESC_DL_PER_REQUEST 92
 /** Don't split our requests so finely that we are requesting fewer than
  * this number per server. */
 #define MIN_DL_PER_REQUEST 4
@@ -4166,21 +4206,33 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
  * them until they have more, or until this amount of time has passed. */
 #define MAX_CLIENT_INTERVAL_WITHOUT_REQUEST (10*60)
 
-/** Given a list of router descriptor digests in <b>downloadable</b>, decide
- * whether to delay fetching until we have more.  If we don't want to delay,
- * launch one or more requests to the appropriate directory authorities. */
-static void
-launch_router_descriptor_downloads(smartlist_t *downloadable,
-                                   routerstatus_t *source, time_t now)
+/** Given a <b>purpose</b> (FETCH_MICRODESC or FETCH_SERVERDESC) and a list of
+ * router descriptor digests or microdescriptor digest256s in
+ * <b>downloadable</b>, decide whether to delay fetching until we have more.
+ * If we don't want to delay, launch one or more requests to the appropriate
+ * directory authorities.
+ */
+void
+launch_descriptor_downloads(int purpose,
+                            smartlist_t *downloadable,
+                            routerstatus_t *source, time_t now)
 {
   int should_delay = 0, n_downloadable;
   or_options_t *options = get_options();
+  const char *descname;
+
+  tor_assert(purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
+             purpose == DIR_PURPOSE_FETCH_MICRODESC);
+
+  descname = (purpose == DIR_PURPOSE_FETCH_SERVERDESC) ?
+    "routerdesc" : "microdesc";
 
   n_downloadable = smartlist_len(downloadable);
   if (!directory_fetches_dir_info_early(options)) {
     if (n_downloadable >= MAX_DL_TO_DELAY) {
       log_debug(LD_DIR,
-             "There are enough downloadable routerdescs to launch requests.");
+                "There are enough downloadable %ss to launch requests.",
+                descname);
       should_delay = 0;
     } else {
       should_delay = (last_routerdesc_download_attempted +
@@ -4188,13 +4240,15 @@ launch_router_descriptor_downloads(smartlist_t *downloadable,
       if (!should_delay && n_downloadable) {
         if (last_routerdesc_download_attempted) {
           log_info(LD_DIR,
-                   "There are not many downloadable routerdescs, but we've "
+                   "There are not many downloadable %ss, but we've "
                    "been waiting long enough (%d seconds). Downloading.",
+                   descname,
                    (int)(now-last_routerdesc_download_attempted));
         } else {
           log_info(LD_DIR,
-                 "There are not many downloadable routerdescs, but we haven't "
-                 "tried downloading descriptors recently. Downloading.");
+                   "There are not many downloadable %ss, but we haven't "
+                   "tried downloading descriptors recently. Downloading.",
+                   descname);
         }
       }
     }
@@ -4221,12 +4275,20 @@ launch_router_descriptor_downloads(smartlist_t *downloadable,
        * update_router_descriptor_downloads() later on, once the connections
        * have succeeded or failed.
        */
-      pds_flags |= PDS_NO_EXISTING_SERVERDESC_FETCH;
+      pds_flags |= (purpose == DIR_PURPOSE_FETCH_MICRODESC) ?
+        PDS_NO_EXISTING_MICRODESC_FETCH :
+        PDS_NO_EXISTING_SERVERDESC_FETCH;
+
     }
 
     n_per_request = CEIL_DIV(n_downloadable, MIN_REQUESTS);
-    if (n_per_request > MAX_DL_PER_REQUEST)
-      n_per_request = MAX_DL_PER_REQUEST;
+    if (purpose == DIR_PURPOSE_FETCH_MICRODESC) {
+      if (n_per_request > MAX_MICRODESC_DL_PER_REQUEST)
+        n_per_request = MAX_MICRODESC_DL_PER_REQUEST;
+    } else {
+      if (n_per_request > MAX_DL_PER_REQUEST)
+        n_per_request = MAX_DL_PER_REQUEST;
+    }
     if (n_per_request < MIN_DL_PER_REQUEST)
       n_per_request = MIN_DL_PER_REQUEST;
 
@@ -4241,7 +4303,7 @@ launch_router_descriptor_downloads(smartlist_t *downloadable,
              req_plural, n_downloadable, rtr_plural, n_per_request);
     smartlist_sort_digests(downloadable);
     for (i=0; i < n_downloadable; i += n_per_request) {
-      initiate_descriptor_downloads(source, DIR_PURPOSE_FETCH_SERVERDESC,
+      initiate_descriptor_downloads(source, purpose,
                                     downloadable, i, i+n_per_request,
                                     pds_flags);
     }
@@ -4514,7 +4576,8 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
            smartlist_len(downloadable), n_delayed, n_have, n_in_oldrouters,
            n_would_reject, n_wouldnt_use, n_inprogress);
 
-  launch_router_descriptor_downloads(downloadable, source, now);
+  launch_descriptor_downloads(DIR_PURPOSE_FETCH_SERVERDESC,
+                              downloadable, source, now);
 
   digestmap_free(map, NULL);
  done:
@@ -4539,10 +4602,13 @@ update_router_descriptor_downloads(time_t now)
   if (directory_fetches_dir_info_early(options)) {
     update_router_descriptor_cache_downloads_v2(now);
   }
+
   update_consensus_router_descriptor_downloads(now, 0,
-    networkstatus_get_reasonably_live_consensus(now));
+                  networkstatus_get_reasonably_live_consensus(now, FLAV_NS));
 
   /* XXXX021 we could be smarter here; see notes on bug 652. */
+  /* XXXX NM Microdescs: if we're not fetching microdescriptors, we need
+   * to make something else invoke this. */
   /* If we're a server that doesn't have a configured address, we rely on
    * directory fetches to learn when our address changes.  So if we haven't
    * tried to get any routerdescs in a long time, try a dummy fetch now. */
@@ -4713,7 +4779,7 @@ count_loading_descriptors_progress(void)
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now);
+    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
   double fraction;
 
   if (!consensus)
@@ -4743,7 +4809,7 @@ update_router_have_minimum_dir_info(void)
   int res;
   or_options_t *options = get_options();
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now);
+    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())

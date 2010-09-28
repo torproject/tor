@@ -48,12 +48,14 @@ const smartlist_t *networkstatus_get_v2_list(void);
 download_status_t *router_get_dl_status_by_descriptor_digest(const char *d);
 routerstatus_t *router_get_consensus_status_by_id(const char *digest);
 routerstatus_t *router_get_consensus_status_by_descriptor_digest(
-                                                        const char *digest);
+                                   networkstatus_t *consensus,
+                                   const char *digest);
 routerstatus_t *router_get_consensus_status_by_nickname(const char *nickname,
                                                        int warn_if_unnamed);
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
 int networkstatus_nickname_is_unnamed(const char *nickname);
-void networkstatus_consensus_download_failed(int status_code);
+void networkstatus_consensus_download_failed(int status_code,
+                                             const char *flavname);
 void update_consensus_networkstatus_fetch_time(time_t now);
 int should_delay_dir_fetches(or_options_t *options);
 void update_networkstatus_downloads(time_t now);
@@ -61,8 +63,11 @@ void update_certificate_downloads(time_t now);
 int consensus_is_waiting_for_certs(void);
 networkstatus_v2_t *networkstatus_v2_get_by_digest(const char *digest);
 networkstatus_t *networkstatus_get_latest_consensus(void);
+networkstatus_t *networkstatus_get_latest_consensus_by_flavor(
+                                                  consensus_flavor_t f);
 networkstatus_t *networkstatus_get_live_consensus(time_t now);
-networkstatus_t *networkstatus_get_reasonably_live_consensus(time_t now);
+networkstatus_t *networkstatus_get_reasonably_live_consensus(time_t now,
+                                                             int flavor);
 #define NSSET_FROM_CACHE 1
 #define NSSET_WAS_WAITING_FOR_CERTS 2
 #define NSSET_DONT_DOWNLOAD_CERTS 4
