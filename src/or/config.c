@@ -307,7 +307,7 @@ static config_var_t _option_vars[] = {
   V(WarnUnsafeSocks,              BOOL,     "1"),
   V(NoPublish,                   BOOL,     "0"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
-  V(NumCpus,                     UINT,     "1"),
+  V(NumCpus,                     UINT,     "0"),
   V(NumEntryGuards,              UINT,     "3"),
   V(ORListenAddress,             LINELIST, NULL),
   V(ORPort,                      UINT,     "0"),
@@ -4892,6 +4892,19 @@ config_parse_interval(const char *s, int *ok)
   return (int)r;
 }
 
+/** Return the number of cpus configured in <b>options</b>.  If we are
+ * told to auto-detect the number of cpus, return the auto-detected number. */
+int
+get_num_cpus(const or_options_t *options)
+{
+  if (options->NumCpus == 0) {
+    int n = compute_num_cpus();
+    return (n >= 1) ? n : 1;
+  } else {
+    return options->NumCpus;
+  }
+}
+
 /**
  * Initialize the libevent library.
  */
@@ -4913,7 +4926,7 @@ init_libevent(const or_options_t *options)
 
   memset(&cfg, 0, sizeof(cfg));
   cfg.disable_iocp = options->DisableIOCP;
-  cfg.num_cpus = options->NumCpus;
+  cfg.num_cpus = get_num_cpus(options);
 
   tor_libevent_initialize(&cfg);
 

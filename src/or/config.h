@@ -57,6 +57,8 @@ char *options_get_datadir_fname2_suffix(or_options_t *options,
 #define get_datadir_fname_suffix(sub1, suffix) \
   get_datadir_fname2_suffix((sub1), NULL, (suffix))
 
+int get_num_cpus(const or_options_t *options);
+
 or_state_t *get_or_state(void);
 int or_state_save(time_t now);
 
