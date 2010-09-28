@@ -24,6 +24,7 @@
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
 #include "rendcommon.h"
@@ -2783,6 +2784,7 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
               &ri->cache_info);
   smartlist_add(rl->routers, ri);
   ri->cache_info.routerlist_index = smartlist_len(rl->routers) - 1;
+  nodelist_add_routerinfo(ri);
   router_dir_info_changed();
 #ifdef DEBUG_ROUTERLIST
   routerlist_assert_ok(rl);
@@ -2889,6 +2891,8 @@ routerlist_remove(routerlist_t *rl, routerinfo_t *ri, int make_old, time_t now)
   int idx = ri->cache_info.routerlist_index;
   tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
   tor_assert(smartlist_get(rl->routers, idx) == ri);
+
+  nodelist_remove_routerinfo(ri);
 
   /* make sure the rephist module knows that it's not running */
   rep_hist_note_router_unreachable(ri->cache_info.identity_digest, now);
@@ -3010,6 +3014,9 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   idx = ri_old->cache_info.routerlist_index;
   tor_assert(0 <= idx && idx < smartlist_len(rl->routers));
   tor_assert(smartlist_get(rl->routers, idx) == ri_old);
+
+  nodelist_remove_routerinfo(ri_old);
+  nodelist_add_routerinfo(ri_new);
 
   router_dir_info_changed();
   if (idx >= 0) {

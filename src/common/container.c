@@ -268,7 +268,6 @@ smartlist_subtract(smartlist_t *sl1, const smartlist_t *sl2)
 
 /** Remove the <b>idx</b>th element of sl; if idx is not the last
  * element, swap the last element of sl into the <b>idx</b>th space.
- * Return the old value of the <b>idx</b>th element.
  */
 void
 smartlist_del(smartlist_t *sl, int idx)

@@ -1698,6 +1698,19 @@ typedef struct microdesc_t {
                       * XXX this probably should not stay a string. */
 } microdesc_t;
 
+/** DOCDOC */
+typedef struct node_t {
+  /** Used to look up the node_t by its identity digest. */
+  HT_ENTRY(node_t) ht_ent;
+  /** Position of the node within the list of nodes */
+  int nodelist_idx;
+
+  char identity[DIGEST_LEN];
+  microdesc_t *md;
+  routerinfo_t *ri;
+  routerstatus_t *rs;
+} node_t;
+
 /** How many times will we try to download a router's descriptor before giving
  * up? */
 #define MAX_ROUTERDESC_DOWNLOAD_FAILURES 8

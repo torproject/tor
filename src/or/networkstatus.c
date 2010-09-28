@@ -22,6 +22,7 @@
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "relay.h"
 #include "router.h"
 #include "routerlist.h"
@@ -1832,6 +1833,8 @@ networkstatus_set_current_consensus(const char *consensus,
   if (flav == USABLE_CONSENSUS_FLAVOR) {
     /* XXXXNM Microdescs: needs a non-ns variant. */
     update_consensus_networkstatus_fetch_time(now);
+
+    nodelist_set_consensus(current_consensus);
 
     dirvote_recalculate_timing(options, now);
     routerstatus_list_update_named_server_map();

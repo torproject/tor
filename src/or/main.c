@@ -33,6 +33,7 @@
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "ntmain.h"
 #include "onion.h"
 #include "policies.h"
@@ -1038,6 +1039,15 @@ run_scheduled_events(time_t now)
    * should hibernate; or if it's time to wake up from hibernation.
    */
   consider_hibernation(now);
+
+  /* XXXX NM REMOVE THIS. XXXX NM XXXX NM XXXX NM*/
+  {
+    static time_t nl_check_time = 0;
+    if (nl_check_time <= now) {
+      nodelist_assert_ok();
+      nl_check_time = now + 30;
+    }
+  }
 
   /* 0b. If we've deferred a signewnym, make sure it gets handled
    * eventually. */
@@ -2205,6 +2215,7 @@ tor_free_all(int postfork)
   connection_free_all();
   buf_shrink_freelists(1);
   memarea_clear_freelist();
+  nodelist_free_all();
   microdesc_free_all();
   if (!postfork) {
     config_free_all();
