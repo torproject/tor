@@ -27,10 +27,10 @@ int router_reload_router_list(void);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
 smartlist_t *router_get_trusted_dir_servers(void);
 
-routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);
+const routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
-routerstatus_t *router_pick_trusteddirserver(authority_type_t type, int flags);
+const routerstatus_t *router_pick_trusteddirserver(authority_type_t type, int flags);
 int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
 void router_reset_status_download_failures(void);
@@ -50,7 +50,7 @@ uint32_t router_get_advertised_bandwidth_capped(const routerinfo_t *router);
 
 const routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
-routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
+const routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
 
 const routerinfo_t *router_choose_random_node(smartlist_t *excludedsmartlist,
@@ -172,7 +172,7 @@ int routerset_is_list(const routerset_t *set);
 int routerset_needs_geoip(const routerset_t *set);
 int routerset_contains_router(const routerset_t *set, const routerinfo_t *ri);
 int routerset_contains_routerstatus(const routerset_t *set,
-                                    routerstatus_t *rs);
+                                    const routerstatus_t *rs);
 int routerset_contains_extendinfo(const routerset_t *set,
                                   const extend_info_t *ei);
 void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
@@ -198,7 +198,7 @@ int hid_serv_responsible_for_desc_id(const char *id);
 void list_pending_microdesc_downloads(digestmap_t *result);
 void launch_descriptor_downloads(int purpose,
                                  smartlist_t *downloadable,
-                                 routerstatus_t *source,
+                                 const routerstatus_t *source,
                                  time_t now);
 
 #endif

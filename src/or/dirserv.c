@@ -326,7 +326,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 /** Return true if there is no point in downloading the router described by
  * <b>rs</b> because this directory would reject it. */
 int
-dirserv_would_reject_router(routerstatus_t *rs)
+dirserv_would_reject_router(const routerstatus_t *rs)
 {
   uint32_t res;
 
@@ -1951,7 +1951,7 @@ version_from_platform(const char *platform)
  */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
-                          routerstatus_t *rs, const char *version,
+                          const routerstatus_t *rs, const char *version,
                           routerstatus_format_type_t format)
 {
   int r;

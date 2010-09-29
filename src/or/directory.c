@@ -229,7 +229,8 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
       return 1;
   }
   if (is_authority) {
-    routerstatus_t *rs = router_get_consensus_status_by_id(identity_digest);
+    const routerstatus_t *rs =
+      router_get_consensus_status_by_id(identity_digest);
     if (rs && rs->version_supports_extrainfo_upload)
       return 1;
   }
@@ -328,7 +329,7 @@ void
 directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                              const char *resource, int pds_flags)
 {
-  routerstatus_t *rs = NULL;
+  const routerstatus_t *rs = NULL;
   or_options_t *options = get_options();
   int prefer_authority = directory_fetches_from_authorities(options);
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
@@ -512,7 +513,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
 /** Same as directory_initiate_command_routerstatus(), but accepts
  * rendezvous data to fetch a hidden service descriptor. */
 void
-directory_initiate_command_routerstatus_rend(routerstatus_t *status,
+directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                              uint8_t dir_purpose,
                                              uint8_t router_purpose,
                                              int anonymized_connection,
@@ -566,7 +567,7 @@ directory_initiate_command_routerstatus_rend(routerstatus_t *status,
  * want to fetch.
  */
 void
-directory_initiate_command_routerstatus(routerstatus_t *status,
+directory_initiate_command_routerstatus(const routerstatus_t *status,
                                         uint8_t dir_purpose,
                                         uint8_t router_purpose,
                                         int anonymized_connection,
@@ -1597,7 +1598,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                "'%s:%d'. I'll try again soon.",
                status_code, escaped(reason), conn->_base.address,
                conn->_base.port);
-      if ((rs = router_get_consensus_status_by_id(conn->identity_digest)))
+      rs = router_get_mutable_consensus_status_by_id(conn->identity_digest);
+      if (rs)
         rs->last_dir_503_at = now;
       if ((ds = router_get_trusteddirserver_by_digest(conn->identity_digest)))
         ds->fake_status.last_dir_503_at = now;
@@ -3692,7 +3694,7 @@ dir_microdesc_download_failed(smartlist_t *failed,
   if (! consensus)
     return;
   SMARTLIST_FOREACH_BEGIN(failed, const char *, d) {
-    rs = router_get_consensus_status_by_descriptor_digest(consensus, d);
+    rs = router_get_mutable_consensus_status_by_descriptor_digest(consensus, d);
     if (!rs)
       continue;
     dls = &rs->dl_status;

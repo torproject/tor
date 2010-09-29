@@ -53,7 +53,7 @@ int control_event_my_descriptor_changed(void);
 int control_event_networkstatus_changed(smartlist_t *statuses);
 
 int control_event_newconsensus(const networkstatus_t *consensus);
-int control_event_networkstatus_changed_single(routerstatus_t *rs);
+int control_event_networkstatus_changed_single(const routerstatus_t *rs);
 int control_event_general_status(int severity, const char *format, ...)
   CHECK_PRINTF(2,3);
 int control_event_client_status(int severity, const char *format, ...)

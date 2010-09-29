@@ -39,9 +39,9 @@
 /****************************************************************************/
 
 /* static function prototypes */
-static routerstatus_t *router_pick_directory_server_impl(
+static const routerstatus_t *router_pick_directory_server_impl(
                                            authority_type_t auth, int flags);
-static routerstatus_t *router_pick_trusteddirserver_impl(
+static const routerstatus_t *router_pick_trusteddirserver_impl(
                           authority_type_t auth, int flags, int *n_busy_out);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(const routerinfo_t *router,
@@ -927,10 +927,10 @@ router_get_trusted_dir_servers(void)
  * Don't pick an authority if any non-authority is viable; try to avoid using
  * servers that have returned 503 recently.
  */
-routerstatus_t *
+const routerstatus_t *
 router_pick_directory_server(authority_type_t type, int flags)
 {
-  routerstatus_t *choice;
+  const routerstatus_t *choice;
   if (get_options()->PreferTunneledDirConns)
     flags |= _PDS_PREFER_TUNNELED_DIR_CONNS;
 
@@ -960,7 +960,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
                                           double *v3_share_out)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
-  routerstatus_t *rs;
+  const routerstatus_t *rs;
   const int pds_flags = PDS_ALLOW_SELF|PDS_IGNORE_FASCISTFIREWALL;
   *v2_share_out = *v3_share_out = 0.0;
   if (!me)
@@ -1033,10 +1033,10 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
 /** Try to find a running trusted dirserver.  Flags are as for
  * router_pick_directory_server.
  */
-routerstatus_t *
+const routerstatus_t *
 router_pick_trusteddirserver(authority_type_t type, int flags)
 {
-  routerstatus_t *choice;
+  const routerstatus_t *choice;
   int busy = 0;
   if (get_options()->PreferTunneledDirConns)
     flags |= _PDS_PREFER_TUNNELED_DIR_CONNS;
@@ -1069,10 +1069,10 @@ router_pick_trusteddirserver(authority_type_t type, int flags)
  * If the _PDS_PREFER_TUNNELED_DIR_CONNS flag is set, prefer directory servers
  * that we can use with BEGINDIR.
  */
-static routerstatus_t *
+static const routerstatus_t *
 router_pick_directory_server_impl(authority_type_t type, int flags)
 {
-  routerstatus_t *result;
+  const routerstatus_t *result;
   smartlist_t *direct, *tunnel;
   smartlist_t *trusted_direct, *trusted_tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
@@ -1163,14 +1163,14 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
 /** Choose randomly from among the trusted dirservers that are up.  Flags
  * are as for router_pick_directory_server_impl().
  */
-static routerstatus_t *
+static const routerstatus_t *
 router_pick_trusteddirserver_impl(authority_type_t type, int flags,
                                   int *n_busy_out)
 {
   smartlist_t *direct, *tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   const routerinfo_t *me = router_get_my_routerinfo();
-  routerstatus_t *result;
+  const routerstatus_t *result;
   time_t now = time(NULL);
   const int requireother = ! (flags & PDS_ALLOW_SELF);
   const int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
@@ -1273,7 +1273,7 @@ mark_all_trusteddirservers_up(void)
       routerstatus_t *rs;
       dir->is_running = 1;
       download_status_reset(&dir->v2_ns_dl_status);
-      rs = router_get_consensus_status_by_id(dir->digest);
+      rs = router_get_mutable_consensus_status_by_id(dir->digest);
       if (rs && !rs->is_running) {
         rs->is_running = 1;
         rs->last_dir_503_at = 0;
@@ -1748,7 +1748,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
       if (router_digest_is_me(status->identity_digest))
         is_me = 1;
     } else {
-      routerstatus_t *rs;
+      const routerstatus_t *rs;
       routerinfo_t *router = smartlist_get(sl, i);
       rs = router_get_consensus_status_by_id(
              router->cache_info.identity_digest);
@@ -1911,7 +1911,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
         flags |= is_guard ? 4 : 0;
       }
     } else {
-      routerstatus_t *rs;
+      const routerstatus_t *rs;
       router = smartlist_get(sl, i);
       rs = router_get_consensus_status_by_id(
              router->cache_info.identity_digest);
@@ -2112,7 +2112,7 @@ routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
 /** Choose a random element of status list <b>sl</b>, weighted by
  * the advertised bandwidth of each status.
  */
-routerstatus_t *
+const routerstatus_t *
 routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
                                     bandwidth_weight_rule_t rule)
 {
@@ -2317,15 +2317,14 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
     if (warn_if_unnamed && n_matches > 1) {
       smartlist_t *fps = smartlist_create();
       int any_unwarned = 0;
-      SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, router,
-        {
+      SMARTLIST_FOREACH_BEGIN(routerlist->routers, routerinfo_t *, router) {
           routerstatus_t *rs;
           char *desc;
           size_t dlen;
           char fp[HEX_DIGEST_LEN+1];
           if (strcasecmp(router->nickname, nickname))
             continue;
-          rs = router_get_consensus_status_by_id(
+          rs = router_get_mutable_consensus_status_by_id(
                                           router->cache_info.identity_digest);
           if (rs && !rs->name_lookup_warned) {
             rs->name_lookup_warned = 1;
@@ -2338,7 +2337,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
           tor_snprintf(desc, dlen, "\"$%s\" for the one at %s:%d",
                        fp, router->address, router->or_port);
           smartlist_add(fps, desc);
-        });
+      } SMARTLIST_FOREACH_END(router);
       if (any_unwarned) {
         char *alternatives = smartlist_join_strings(fps, "; ",0,NULL);
         log_warn(LD_CONFIG,
@@ -2351,7 +2350,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       SMARTLIST_FOREACH(fps, char *, cp, tor_free(cp));
       smartlist_free(fps);
     } else if (warn_if_unnamed) {
-      routerstatus_t *rs = router_get_consensus_status_by_id(
+      routerstatus_t *rs = router_get_mutable_consensus_status_by_id(
           best_match->cache_info.identity_digest);
       if (rs && !rs->name_lookup_warned) {
         char fp[HEX_DIGEST_LEN+1];
@@ -3180,7 +3179,7 @@ router_set_status(const char *digest, int up)
                "addresses reachable?");
     router->is_running = up;
   }
-  status = router_get_consensus_status_by_id(digest);
+  status = router_get_mutable_consensus_status_by_id(digest);
   if (status && status->is_running != up) {
     status->is_running = up;
     control_event_networkstatus_changed_single(status);
@@ -3282,14 +3281,15 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
   {
     routerstatus_t *rs =
-      networkstatus_v2_find_entry(ns, id_digest);
+      networkstatus_v2_find_mutable_entry(ns, id_digest);
     if (rs && !memcmp(rs->descriptor_digest,
                       router->cache_info.signed_descriptor_digest,
                       DIGEST_LEN))
       rs->need_to_mirror = 0;
   });
   if (consensus) {
-    routerstatus_t *rs = networkstatus_vote_find_entry(consensus, id_digest);
+    routerstatus_t *rs = networkstatus_vote_find_mutable_entry(
+                                                     consensus, id_digest);
     if (rs && !memcmp(rs->descriptor_digest,
                       router->cache_info.signed_descriptor_digest,
                       DIGEST_LEN)) {
@@ -3889,7 +3889,7 @@ router_load_extrainfo_from_string(const char *s, const char *eos,
 static int
 signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 {
-  routerstatus_t *rs;
+  const routerstatus_t *rs;
   networkstatus_t *consensus = networkstatus_get_latest_consensus();
   int caches = directory_caches_dir_info(get_options());
   const smartlist_t *networkstatus_v2_list = networkstatus_get_v2_list();
@@ -4144,7 +4144,7 @@ list_pending_microdesc_downloads(digestmap_t *result)
  * otherwise, download from an appropriate random directory server.
  */
 static void
-initiate_descriptor_downloads(routerstatus_t *source,
+initiate_descriptor_downloads(const routerstatus_t *source,
                               int purpose,
                               smartlist_t *digests,
                               int lo, int hi, int pds_flags)
@@ -4256,7 +4256,7 @@ client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
 void
 launch_descriptor_downloads(int purpose,
                             smartlist_t *downloadable,
-                            routerstatus_t *source, time_t now)
+                            const routerstatus_t *source, time_t now)
 {
   int should_delay = 0, n_downloadable;
   or_options_t *options = get_options();
@@ -5540,7 +5540,7 @@ routerset_contains_router(const routerset_t *set, const routerinfo_t *ri)
 
 /** Return true iff <b>rs</b> is in <b>set</b>. */
 int
-routerset_contains_routerstatus(const routerset_t *set, routerstatus_t *rs)
+routerset_contains_routerstatus(const routerset_t *set, const routerstatus_t *rs)
 {
   tor_addr_t addr;
   tor_addr_from_ipv4h(&addr, rs->addr);
@@ -5752,7 +5752,7 @@ hid_serv_acting_as_directory(void)
 {
   const routerinfo_t *me = router_get_my_routerinfo();
   networkstatus_t *c;
-  routerstatus_t *rs;
+  const routerstatus_t *rs;
   if (!me)
     return 0;
   if (!get_options()->HidServDirectoryV2) {

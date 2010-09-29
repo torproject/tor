@@ -3497,7 +3497,7 @@ control_event_networkstatus_changed_helper(smartlist_t *statuses,
   smartlist_add(strs, tor_strdup("650+"));
   smartlist_add(strs, tor_strdup(event_string));
   smartlist_add(strs, tor_strdup("\r\n"));
-  SMARTLIST_FOREACH(statuses, routerstatus_t *, rs,
+  SMARTLIST_FOREACH(statuses, const routerstatus_t *, rs,
     {
       s = networkstatus_getinfo_helper_single(rs);
       if (!s) continue;
@@ -3588,7 +3588,7 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
 /** Called when a single local_routerstatus_t has changed: Sends an NS event
  * to any controller that cares. */
 int
-control_event_networkstatus_changed_single(routerstatus_t *rs)
+control_event_networkstatus_changed_single(const routerstatus_t *rs)
 {
   smartlist_t *statuses;
   int r;
@@ -3597,7 +3597,7 @@ control_event_networkstatus_changed_single(routerstatus_t *rs)
     return 0;
 
   statuses = smartlist_create();
-  smartlist_add(statuses, rs);
+  smartlist_add(statuses, (void*)rs);
   r = control_event_networkstatus_changed(statuses);
   smartlist_free(statuses);
   return r;

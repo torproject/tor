@@ -940,10 +940,9 @@ compare_digest_to_routerstatus_entry(const void *_key, const void **_member)
   return memcmp(key, rs->identity_digest, DIGEST_LEN);
 }
 
-/** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
- * NULL if none was found. */
+/** As networkstatus_v2_find_entry, but do not return a const pointer */
 routerstatus_t *
-networkstatus_v2_find_entry(networkstatus_v2_t *ns, const char *digest)
+networkstatus_v2_find_mutable_entry(networkstatus_v2_t *ns, const char *digest)
 {
   return smartlist_bsearch(ns->entries, digest,
                            compare_digest_to_routerstatus_entry);
@@ -951,11 +950,26 @@ networkstatus_v2_find_entry(networkstatus_v2_t *ns, const char *digest)
 
 /** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
  * NULL if none was found. */
+const routerstatus_t *
+networkstatus_v2_find_entry(networkstatus_v2_t *ns, const char *digest)
+{
+  return networkstatus_v2_find_mutable_entry(ns, digest);
+}
+
+/** As networkstatus_find_entry, but do not return a const pointer */
 routerstatus_t *
-networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
+networkstatus_vote_find_mutable_entry(networkstatus_t *ns, const char *digest)
 {
   return smartlist_bsearch(ns->routerstatus_list, digest,
                            compare_digest_to_routerstatus_entry);
+}
+
+/** Return the entry in <b>ns</b> for the identity digest <b>digest</b>, or
+ * NULL if none was found. */
+const routerstatus_t *
+networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
+{
+  return networkstatus_vote_find_mutable_entry(ns, digest);
 }
 
 /*XXXX make this static once functions are moved into this file. */
@@ -980,11 +994,11 @@ networkstatus_get_v2_list(void)
   return networkstatus_v2_list;
 }
 
-/** Return the consensus view of the status of the router whose current
- * <i>descriptor</i> digest in <b>consensus</b> is <b>digest</b>, or NULL if
- * no such router is known. */
+/* As router_get_consensus_status_by_descriptor_digest, but does not return
+ * a const pointer */
 routerstatus_t *
-router_get_consensus_status_by_descriptor_digest(networkstatus_t *consensus,
+router_get_mutable_consensus_status_by_descriptor_digest(
+                                                 networkstatus_t *consensus,
                                                  const char *digest)
 {
   if (!consensus)
@@ -1002,6 +1016,17 @@ router_get_consensus_status_by_descriptor_digest(networkstatus_t *consensus,
   return digestmap_get(consensus->desc_digest_map, digest);
 }
 
+/** Return the consensus view of the status of the router whose current
+ * <i>descriptor</i> digest in <b>consensus</b> is <b>digest</b>, or NULL if
+ * no such router is known. */
+const routerstatus_t *
+router_get_consensus_status_by_descriptor_digest(networkstatus_t *consensus,
+                                                 const char *digest)
+{
+  return router_get_mutable_consensus_status_by_descriptor_digest(
+                                                          consensus, digest);
+}
+
 /** Given the digest of a router descriptor, return its current download
  * status, or NULL if the digest is unrecognized. */
 download_status_t *
@@ -1010,8 +1035,8 @@ router_get_dl_status_by_descriptor_digest(const char *d)
   routerstatus_t *rs;
   if (!current_ns_consensus)
     return NULL;
-  if ((rs = router_get_consensus_status_by_descriptor_digest(
-                                                 current_ns_consensus, d)))
+  if ((rs = router_get_mutable_consensus_status_by_descriptor_digest(
+                                              current_ns_consensus, d)))
     return &rs->dl_status;
   if (v2_download_status_map)
     return digestmap_get(v2_download_status_map, d);
@@ -1019,10 +1044,9 @@ router_get_dl_status_by_descriptor_digest(const char *d)
   return NULL;
 }
 
-/** Return the consensus view of the status of the router whose identity
- * digest is <b>digest</b>, or NULL if we don't know about any such router. */
+/** As router_get_consensus_status_by_id, but do not return a const pointer */
 routerstatus_t *
-router_get_consensus_status_by_id(const char *digest)
+router_get_mutable_consensus_status_by_id(const char *digest)
 {
   if (!current_consensus)
     return NULL;
@@ -1030,11 +1054,19 @@ router_get_consensus_status_by_id(const char *digest)
                            compare_digest_to_routerstatus_entry);
 }
 
+/** Return the consensus view of the status of the router whose identity
+ * digest is <b>digest</b>, or NULL if we don't know about any such router. */
+const routerstatus_t *
+router_get_consensus_status_by_id(const char *digest)
+{
+  return router_get_mutable_consensus_status_by_id(digest);
+}
+
 /** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
  * the corresponding routerstatus_t, or NULL if none exists.  Warn the
  * user if <b>warn_if_unnamed</b> is set, and they have specified a router by
  * nickname, but the Named flag isn't set for that router. */
-routerstatus_t *
+const routerstatus_t *
 router_get_consensus_status_by_nickname(const char *nickname,
                                         int warn_if_unnamed)
 {
@@ -1566,13 +1598,14 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   }
   changed = smartlist_create();
 
-  SMARTLIST_FOREACH_JOIN(old_c->routerstatus_list, routerstatus_t *, rs_old,
-                         new_c->routerstatus_list, routerstatus_t *, rs_new,
-                         memcmp(rs_old->identity_digest,
-                                rs_new->identity_digest, DIGEST_LEN),
-                         smartlist_add(changed, rs_new)) {
+  SMARTLIST_FOREACH_JOIN(
+                     old_c->routerstatus_list, const routerstatus_t *, rs_old,
+                     new_c->routerstatus_list, const routerstatus_t *, rs_new,
+                     memcmp(rs_old->identity_digest,
+                            rs_new->identity_digest, DIGEST_LEN),
+                     smartlist_add(changed, (void*) rs_new)) {
     if (routerstatus_has_changed(rs_old, rs_new))
-      smartlist_add(changed, rs_new);
+      smartlist_add(changed, (void*)rs_new);
   } SMARTLIST_FOREACH_JOIN_END(rs_old, rs_new);
 
   control_event_networkstatus_changed(changed);
@@ -1978,7 +2011,7 @@ download_status_map_update_from_v2_networkstatus(void)
 
   dl_status = digestmap_new();
   SMARTLIST_FOREACH_BEGIN(networkstatus_v2_list, networkstatus_v2_t *, ns) {
-    SMARTLIST_FOREACH_BEGIN(ns->entries, routerstatus_t *, rs) {
+    SMARTLIST_FOREACH_BEGIN(ns->entries, const routerstatus_t *, rs) {
       const char *d = rs->descriptor_digest;
       download_status_t *s;
       if (digestmap_get(dl_status, d))
@@ -2006,7 +2039,8 @@ routerstatus_list_update_named_server_map(void)
   named_server_map = strmap_new();
   strmap_free(unnamed_server_map, NULL);
   unnamed_server_map = strmap_new();
-  SMARTLIST_FOREACH(current_consensus->routerstatus_list, routerstatus_t *, rs,
+  SMARTLIST_FOREACH(current_consensus->routerstatus_list,
+                                                   const routerstatus_t *, rs,
     {
       if (rs->is_named) {
         strmap_set_lc(named_server_map, rs->nickname,
@@ -2101,7 +2135,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   /* XXXX If this is slow, we need to rethink the code. */
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns, {
     time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
-    SMARTLIST_FOREACH_JOIN(ns->entries, routerstatus_t *, rs,
+    SMARTLIST_FOREACH_JOIN(ns->entries, const routerstatus_t *, rs,
                          routers, routerinfo_t *, ri,
                          memcmp(rs->identity_digest,
                                 ri->cache_info.identity_digest, DIGEST_LEN),
@@ -2134,7 +2168,7 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
   }
   SMARTLIST_FOREACH(descs, signed_descriptor_t *, d,
   {
-    routerstatus_t *rs = digestmap_get(ns->desc_digest_map,
+    const routerstatus_t *rs = digestmap_get(ns->desc_digest_map,
                                        d->signed_descriptor_digest);
     if (rs) {
       if (ns->valid_until > d->last_listed_as_valid_until)
@@ -2147,7 +2181,7 @@ signed_descs_update_status_from_consensus_networkstatus(smartlist_t *descs)
  * return the result in a newly allocated string.  Used only by controller
  * interface (for now.) */
 char *
-networkstatus_getinfo_helper_single(routerstatus_t *rs)
+networkstatus_getinfo_helper_single(const routerstatus_t *rs)
 {
   char buf[RS_ENTRY_LEN+1];
   routerstatus_format_entry(buf, sizeof(buf), rs, NULL, NS_CONTROL_PORT);
@@ -2303,7 +2337,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
                              const char *question, char **answer,
                              const char **errmsg)
 {
-  routerstatus_t *status;
+  const routerstatus_t *status;
   (void) conn;
 
   if (!current_consensus) {
@@ -2314,7 +2348,7 @@ getinfo_helper_networkstatus(control_connection_t *conn,
   if (!strcmp(question, "ns/all")) {
     smartlist_t *statuses = smartlist_create();
     SMARTLIST_FOREACH(current_consensus->routerstatus_list,
-                      routerstatus_t *, rs,
+                      const routerstatus_t *, rs,
       {
         smartlist_add(statuses, networkstatus_getinfo_helper_single(rs));
       });

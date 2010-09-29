@@ -122,7 +122,7 @@ nodelist_add_microdesc(microdesc_t *md)
 {
   networkstatus_t *ns =
     networkstatus_get_latest_consensus_by_flavor(FLAV_MICRODESC);
-  routerstatus_t *rs;
+  const routerstatus_t *rs;
   node_t *node;
   if (ns == NULL)
     return NULL;

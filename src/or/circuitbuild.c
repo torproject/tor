@@ -1402,7 +1402,7 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
   hop = circ->cpath;
   do {
     const routerinfo_t *ri;
-    routerstatus_t *rs;
+    const routerstatus_t *rs;
     char *elt;
     const char *id;
     if (!hop)
