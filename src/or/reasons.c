@@ -334,6 +334,8 @@ circuit_end_reason_to_control_string(int reason)
       return "NOPATH";
     case END_CIRC_REASON_NOSUCHSERVICE:
       return "NOSUCHSERVICE";
+    case END_CIRC_REASON_MEASUREMENT_EXPIRED:
+      return "MEASUREMENT_EXPIRED";
     default:
       log_warn(LD_BUG, "Unrecognized reason code %d", (int)reason);
       return NULL;

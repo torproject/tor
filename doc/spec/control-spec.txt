@@ -1005,7 +1005,8 @@
       Reason = "NONE" / "TORPROTOCOL" / "INTERNAL" / "REQUESTED" /
                "HIBERNATING" / "RESOURCELIMIT" / "CONNECTFAILED" /
                "OR_IDENTITY" / "OR_CONN_CLOSED" / "TIMEOUT" /
-               "FINISHED" / "DESTROYED" / "NOPATH" / "NOSUCHSERVICE"
+               "FINISHED" / "DESTROYED" / "NOPATH" / "NOSUCHSERVICE" /
+               "MEASUREMENT_EXPIRED"
 
    The path is provided only when the circuit has been extended at least one
    hop.
