@@ -59,8 +59,9 @@ const routerstatus_t *router_get_consensus_status_by_descriptor_digest(
 routerstatus_t *router_get_mutable_consensus_status_by_descriptor_digest(
                                    networkstatus_t *consensus,
                                    const char *digest);
-const routerstatus_t *router_get_consensus_status_by_nickname(const char *nickname,
-                                                       int warn_if_unnamed);
+const routerstatus_t *router_get_consensus_status_by_nickname(
+                                   const char *nickname,
+                                   int warn_if_unnamed);
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
 int networkstatus_nickname_is_unnamed(const char *nickname);
 void networkstatus_consensus_download_failed(int status_code,

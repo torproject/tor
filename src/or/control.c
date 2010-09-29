@@ -26,6 +26,7 @@
 #include "hibernate.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
 #include "router.h"
@@ -2107,7 +2108,7 @@ static int
 handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
                              const char *body)
 {
-  smartlist_t *router_nicknames=NULL, *routers=NULL;
+  smartlist_t *router_nicknames=NULL, *nodes=NULL;
   origin_circuit_t *circ = NULL;
   int zero_circ;
   uint8_t intended_purpose = CIRCUIT_PURPOSE_C_GENERAL;
@@ -2138,8 +2139,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
     if ((smartlist_len(args) == 1) ||
         (smartlist_len(args) >= 2 && is_keyval_pair(smartlist_get(args, 1)))) {
       // "EXTENDCIRCUIT 0" || EXTENDCIRCUIT 0 foo=bar"
-      circ = circuit_launch_by_router(intended_purpose, NULL,
-                                      CIRCLAUNCH_NEED_CAPACITY);
+      circ = circuit_launch(intended_purpose, CIRCLAUNCH_NEED_CAPACITY);
       if (!circ) {
         connection_write_str_to_buf("551 Couldn't start circuit\r\n", conn);
       } else {
@@ -2167,17 +2167,21 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   SMARTLIST_FOREACH(args, char *, cp, tor_free(cp));
   smartlist_free(args);
 
-  routers = smartlist_create();
+  nodes = smartlist_create();
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
   {
-    const routerinfo_t *r = router_get_by_nickname(n, 1);
-    if (!r) {
+    const node_t *node = node_get_by_nickname(n, 1);
+    if (!node) {
       connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
       goto done;
     }
-    smartlist_add(routers, (void*) r);
+    if (!node_has_descriptor(node)) {
+      connection_printf_to_buf(conn, "552 descriptor for \"%s\"\r\n", n);
+      goto done;
+    }
+    smartlist_add(nodes, (void*)node);
   });
-  if (!smartlist_len(routers)) {
+  if (!smartlist_len(nodes)) {
     connection_write_str_to_buf("512 No router names provided\r\n", conn);
     goto done;
   }
@@ -2188,9 +2192,10 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   }
 
   /* now circ refers to something that is ready to be extended */
-  SMARTLIST_FOREACH(routers, const routerinfo_t *, r,
+  SMARTLIST_FOREACH(nodes, const node_t *, node,
   {
-    extend_info_t *info = extend_info_from_router(r);
+    extend_info_t *info = extend_info_from_node(node);
+    tor_assert(info); /* True, since node_has_descriptor(node) == true */
     circuit_append_new_exit(circ, info);
     extend_info_free(info);
   });
@@ -2224,7 +2229,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
  done:
   SMARTLIST_FOREACH(router_nicknames, char *, n, tor_free(n));
   smartlist_free(router_nicknames);
-  smartlist_free(routers);
+  smartlist_free(nodes);
   return 0;
 }
 
@@ -2340,16 +2345,17 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   }
   /* Is this a single hop circuit? */
   if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
-    const routerinfo_t *r = NULL;
+    const node_t *node = NULL;
     char *exit_digest;
     if (circ->build_state &&
         circ->build_state->chosen_exit &&
         !tor_digest_is_zero(circ->build_state->chosen_exit->identity_digest)) {
       exit_digest = circ->build_state->chosen_exit->identity_digest;
-      r = router_get_by_digest(exit_digest);
+      node = node_get_by_id(exit_digest);
     }
     /* Do both the client and relay allow one-hop exit circuits? */
-    if (!r || !r->allow_single_hop_exits ||
+    if (!node ||
+        !node_allows_single_hop_exits(node) ||
         !get_options()->AllowSingleHopCircuits) {
       connection_write_str_to_buf(
       "551 Can't attach stream to this one-hop circuit.\r\n", conn);
@@ -3177,10 +3183,10 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
 static void
 orconn_target_get_name(char *name, size_t len, or_connection_t *conn)
 {
-  const routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
-  if (ri) {
+  const node_t *node = node_get_by_id(conn->identity_digest);
+  if (node) {
     tor_assert(len > MAX_VERBOSE_NICKNAME_LEN);
-    router_get_verbose_nickname(name, ri);
+    node_get_verbose_nickname(node, name);
   } else if (! tor_digest_is_zero(conn->identity_digest)) {
     name[0] = '$';
     base16_encode(name+1, len-1, conn->identity_digest,
@@ -3722,9 +3728,9 @@ control_event_guard(const char *nickname, const char *digest,
 
   {
     char buf[MAX_VERBOSE_NICKNAME_LEN+1];
-    const routerinfo_t *ri = router_get_by_digest(digest);
-    if (ri) {
-      router_get_verbose_nickname(buf, ri);
+    const node_t *node = node_get_by_id(digest);
+    if (node) {
+      node_get_verbose_nickname(node, buf);
     } else {
       tor_snprintf(buf, sizeof(buf), "$%s~%s", hbuf, nickname);
     }

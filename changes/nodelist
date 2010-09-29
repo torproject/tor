@@ -1,0 +1,10 @@
+  o Code refactorings
+    - Unified our node-listing and selecting logic.  We had at least
+      two major ways to look at the question of "which Tor servers do
+      we know about": our list of router descriptors, and the current
+      consensus.  We're adding a third in microdescriptors.  Having
+      so many systems without an abstraction layer over them was
+      hurting the codebase.  Now, we have a new "node_t" abstraction
+      that presents a consistent interface to a client's view of
+      a Tor node, and holds (nearly) all of the mutable state
+      formerly in routerinfo_t and routerstatus_t.

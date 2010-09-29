@@ -40,8 +40,6 @@
    MAX_V_LINE_LEN                                                       \
    )
 
-#define UNNAMED_ROUTER_NICKNAME "Unnamed"
-
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 
 int dirserv_add_own_fingerprint(const char *nickname, crypto_pk_env_t *pk);
@@ -104,7 +102,13 @@ int dirserv_should_launch_reachability_test(const routerinfo_t *ri,
 void dirserv_single_reachability_test(time_t now, routerinfo_t *router);
 void dirserv_test_reachability(time_t now);
 int authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
-                                   int complain);
+                                   int complain,
+                                   int *valid_out);
+uint32_t dirserv_router_get_status(const routerinfo_t *router,
+                                   const char **msg);
+void dirserv_set_node_flags_from_authoritative_status(node_t *node,
+                                                      uint32_t authstatus);
+
 int dirserv_would_reject_router(const routerstatus_t *rs);
 int dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff);
 int dirserv_have_any_serverdesc(smartlist_t *fps, int spool_src);

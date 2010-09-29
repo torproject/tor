@@ -809,6 +809,9 @@ typedef enum {
  * Tor 0.1.2.x is obsolete, we can remove this. */
 #define DEFAULT_CLIENT_NICKNAME "client"
 
+/** Name chosen by routers that don't configure nicknames */
+#define UNNAMED_ROUTER_NICKNAME "Unnamed"
+
 /** Number of bytes in a SOCKS4 header. */
 #define SOCKS4_NETWORK_LEN 8
 
@@ -1510,52 +1513,44 @@ typedef struct {
   unsigned int allow_single_hop_exits:1;  /**< Whether the router says
                                            * it allows single hop exits. */
 
-  /* local info */
-  unsigned int is_running:1; /**< As far as we know, is this OR currently
-                              * running? */
-  unsigned int is_valid:1; /**< Has a trusted dirserver validated this OR?
-                               *  (For Authdir: Have we validated this OR?)
-                               */
-  unsigned int is_named:1; /**< Do we believe the nickname that this OR gives
-                            * us? */
-  unsigned int is_fast:1; /** Do we think this is a fast OR? */
-  unsigned int is_stable:1; /** Do we think this is a stable OR? */
-  unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
-  unsigned int is_exit:1; /**< Do we think this is an OK exit? */
-  unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
-                               * or otherwise nasty? */
-  unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
-                                    * underpowered, or otherwise useless? */
   unsigned int wants_to_be_hs_dir:1; /**< True iff this router claims to be
                                       * a hidden service directory. */
-  unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
-                             * directory according to the authorities. */
   unsigned int policy_is_reject_star:1; /**< True iff the exit policy for this
                                          * router rejects everything. */
   /** True if, after we have added this router, we should re-launch
    * tests for it. */
   unsigned int needs_retest_if_added:1;
 
-/** Tor can use this router for general positions in circuits. */
+/** Tor can use this router for general positions in circuits; we got it
+ * from a directory server as usual, or we're an authority and a server
+ * uploaded it. */
 #define ROUTER_PURPOSE_GENERAL 0
-/** Tor should avoid using this router for circuit-building. */
+/** Tor should avoid using this router for circuit-building: we got it
+ * from a crontroller.  If the controller wants to use it, it'll have to
+ * ask for it by identity. */
 #define ROUTER_PURPOSE_CONTROLLER 1
-/** Tor should use this router only for bridge positions in circuits. */
+/** Tor should use this router only for bridge positions in circuits: we got
+ * it via a directory request from the bridge itself, or a bridge
+ * authority. x*/
 #define ROUTER_PURPOSE_BRIDGE 2
 /** Tor should not use this router; it was marked in cached-descriptors with
  * a purpose we didn't recognize. */
 #define ROUTER_PURPOSE_UNKNOWN 255
 
-  uint8_t purpose; /** What positions in a circuit is this router good for? */
+  /* In what way did we find out about this router?  One of ROUTER_PURPOSE_*.
+   * Routers of different purposes are kept segregated and used for different
+   * things; see notes on ROUTER_PURPOSE_* macros above.
+   */
+  uint8_t purpose;
 
   /* The below items are used only by authdirservers for
    * reachability testing. */
+
   /** When was the last time we could reach this OR? */
   time_t last_reachable;
   /** When did we start testing reachability for this OR? */
   time_t testing_since;
-  /** According to the geoip db what country is this router in? */
-  country_t country;
+
 } routerinfo_t;
 
 /** Information needed to keep and cache a signed extra-info document. */
@@ -1643,9 +1638,6 @@ typedef struct routerstatus_t {
    * from this authority.)  Applies in v2 networkstatus document only.
    */
   unsigned int need_to_mirror:1;
-  unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
-                                      * to this (unnamed) router by nickname?
-                                      */
   time_t last_dir_503_at; /**< When did this router last tell us that it
                            * was too busy to serve directory info? */
   download_status_t dl_status;
@@ -1698,17 +1690,66 @@ typedef struct microdesc_t {
                       * XXX this probably should not stay a string. */
 } microdesc_t;
 
-/** DOCDOC */
+/** A node_t represents a Tor router.
+ *
+ * Specifically, a node_t is a Tor router as we are using it: a router that
+ * we are considering for circuits, connections, and so on.  A node_t is a
+ * thin wrapper around the routerstatus, routerinfo, and microdesc for a
+ * single wrapper, and provides a consistent interface for all of them.
+ *
+ * Also, a node_t has mutable state.  While a routerinfo, a routerstatus,
+ * and a microdesc have[*] only the information read from a router
+ * descriptor, a consensus entry, and a microdescriptor (respectively)...
+ * a node_t has flags based on *our own current opinion* of the node.
+ *
+ * [*] Actually, there is some leftover information in each that is mutable.
+ *  We should try to excise that.
+ */
 typedef struct node_t {
+  /* Indexing information */
+
   /** Used to look up the node_t by its identity digest. */
   HT_ENTRY(node_t) ht_ent;
   /** Position of the node within the list of nodes */
   int nodelist_idx;
 
+  /** The identity digest of this node_t.  No more than one node_t per
+   * identity may exist at a time. */
   char identity[DIGEST_LEN];
+
   microdesc_t *md;
   routerinfo_t *ri;
   routerstatus_t *rs;
+
+  /* local info: copied from routerstatus, then possibly frobbed based
+   * on experience.  Authorities set this stuff directly. */
+
+  unsigned int is_running:1; /**< As far as we know, is this OR currently
+                              * running? */
+  unsigned int is_valid:1; /**< Has a trusted dirserver validated this OR?
+                               *  (For Authdir: Have we validated this OR?)
+                               */
+  unsigned int is_fast:1; /** Do we think this is a fast OR? */
+  unsigned int is_stable:1; /** Do we think this is a stable OR? */
+  unsigned int is_possible_guard:1; /**< Do we think this is an OK guard? */
+  unsigned int is_exit:1; /**< Do we think this is an OK exit? */
+  unsigned int is_bad_exit:1; /**< Do we think this exit is censored, borked,
+                               * or otherwise nasty? */
+  unsigned int is_bad_directory:1; /**< Do we think this directory is junky,
+                                    * underpowered, or otherwise useless? */
+  unsigned int is_hs_dir:1; /**< True iff this router is a hidden service
+                             * directory according to the authorities. */
+
+  /* Local info: warning state. */
+
+  unsigned int name_lookup_warned:1; /**< Have we warned the user for referring
+                                      * to this (unnamed) router by nickname?
+                                      */
+
+  /* Local info: derived. */
+
+  /** According to the geoip db what country is this router in? */
+  country_t country;
 } node_t;
 
 /** How many times will we try to download a router's descriptor before giving
@@ -3548,7 +3589,8 @@ typedef enum {
   CRN_NEED_GUARD = 1<<2,
   CRN_ALLOW_INVALID = 1<<3,
   /* XXXX not used, apparently. */
-  CRN_WEIGHT_AS_EXIT = 1<<5
+  CRN_WEIGHT_AS_EXIT = 1<<5,
+  CRN_NEED_DESC = 1<<6
 } router_crn_flags_t;
 
 /** Return value for router_add_to_routerlist() and dirserv_add_descriptor() */

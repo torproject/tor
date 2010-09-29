@@ -24,6 +24,7 @@
 #include "main.h"
 #include "mempool.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
 #include "relay.h"
@@ -712,7 +713,7 @@ connection_ap_process_end_not_open(
     edge_connection_t *conn, crypt_path_t *layer_hint)
 {
   struct in_addr in;
-  routerinfo_t *exitrouter;
+  node_t *exitrouter;
   int reason = *(cell->payload+RELAY_HEADER_SIZE);
   int control_reason = reason | END_STREAM_REASON_FLAG_REMOTE;
   (void) layer_hint; /* unused */
@@ -725,7 +726,7 @@ connection_ap_process_end_not_open(
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
              safe_str(conn->socks_request->address),
              stream_end_reason_to_string(reason));
-    exitrouter = router_get_mutable_by_digest(chosen_exit_digest);
+    exitrouter = node_get_mutable_by_id(chosen_exit_digest);
     switch (reason) {
       case END_STREAM_REASON_EXITPOLICY:
         if (rh->length >= 5) {
@@ -760,8 +761,8 @@ connection_ap_process_end_not_open(
           log_info(LD_APP,
                  "Exitrouter '%s' seems to be more restrictive than its exit "
                  "policy. Not using this router as exit for now.",
-                 exitrouter->nickname);
-          policies_set_router_exitpolicy_to_reject_all(exitrouter);
+                 node_get_nickname(exitrouter));
+          policies_set_node_exitpolicy_to_reject_all(exitrouter);
         }
         /* rewrite it to an IP if we learned one. */
         if (addressmap_rewrite(conn->socks_request->address,
@@ -824,7 +825,7 @@ connection_ap_process_end_not_open(
       case END_STREAM_REASON_HIBERNATING:
       case END_STREAM_REASON_RESOURCELIMIT:
         if (exitrouter) {
-          policies_set_router_exitpolicy_to_reject_all(exitrouter);
+          policies_set_node_exitpolicy_to_reject_all(exitrouter);
         }
         if (conn->chosen_exit_optional) {
           /* stop wanting a specific exit */

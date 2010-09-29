@@ -17,6 +17,7 @@
 #include "connection.h"
 #include "connection_edge.h"
 #include "control.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "rendclient.h"
 #include "rendcommon.h"
@@ -43,7 +44,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
                       int need_uptime, int need_internal,
                       time_t now)
 {
-  const routerinfo_t *exitrouter;
+  const node_t *exitnode;
   cpath_build_state_t *build_state;
   tor_assert(circ);
   tor_assert(conn);
@@ -85,7 +86,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
    * of the one we meant to finish at.
    */
   build_state = TO_ORIGIN_CIRCUIT(circ)->build_state;
-  exitrouter = build_state_get_exit_router(build_state);
+  exitnode = build_state_get_exit_node(build_state);
 
   if (need_uptime && !build_state->need_uptime)
     return 0;
@@ -93,7 +94,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
     return 0;
 
   if (purpose == CIRCUIT_PURPOSE_C_GENERAL) {
-    if (!exitrouter && !build_state->onehop_tunnel) {
+    if (!exitnode && !build_state->onehop_tunnel) {
       log_debug(LD_CIRC,"Not considering circuit with unknown router.");
       return 0; /* this circuit is screwed and doesn't know it yet,
                  * or is a rendezvous circuit. */
@@ -127,7 +128,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
         return 0;
       }
     }
-    if (exitrouter && !connection_ap_can_use_exit(conn, exitrouter, 0)) {
+    if (exitnode && !connection_ap_can_use_exit(conn, exitnode, 0)) {
       /* can't exit from this router */
       return 0;
     }
@@ -473,7 +474,7 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
                                 uint16_t port, int min)
 {
   circuit_t *circ;
-  const routerinfo_t *exitrouter;
+  const node_t *exitnode;
   int num=0;
   time_t now = time(NULL);
   int need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
@@ -489,14 +490,14 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
       if (build_state->is_internal || build_state->onehop_tunnel)
         continue;
 
-      exitrouter = build_state_get_exit_router(build_state);
-      if (exitrouter && (!need_uptime || build_state->need_uptime)) {
+      exitnode = build_state_get_exit_node(build_state);
+      if (exitnode && (!need_uptime || build_state->need_uptime)) {
         int ok;
         if (conn) {
-          ok = connection_ap_can_use_exit(conn, exitrouter, 0);
+          ok = connection_ap_can_use_exit(conn, exitnode, 0);
         } else {
-          addr_policy_result_t r = compare_addr_to_addr_policy(
-              0, port, exitrouter->exit_policy);
+          addr_policy_result_t r;
+          r = compare_addr_to_node_policy(0, port, exitnode);
           ok = r != ADDR_POLICY_REJECTED && r != ADDR_POLICY_PROBABLY_REJECTED;
         }
         if (ok) {
@@ -563,7 +564,7 @@ circuit_predict_and_launch_new(void)
     log_info(LD_CIRC,
              "Have %d clean circs (%d internal), need another exit circ.",
              num, num_internal);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+    circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
     return;
   }
 
@@ -575,7 +576,7 @@ circuit_predict_and_launch_new(void)
              "Have %d clean circs (%d internal), need another internal "
              "circ for my hidden service.",
              num, num_internal);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+    circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
     return;
   }
 
@@ -593,7 +594,7 @@ circuit_predict_and_launch_new(void)
              "Have %d clean circs (%d uptime-internal, %d internal), need"
              " another hidden service circ.",
              num, num_uptime_internal, num_internal);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+    circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
     return;
   }
 
@@ -606,7 +607,7 @@ circuit_predict_and_launch_new(void)
     flags = CIRCLAUNCH_NEED_CAPACITY;
     log_info(LD_CIRC,
              "Have %d clean circs need another buildtime test circ.", num);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, flags);
+    circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, flags);
     return;
   }
 }
@@ -644,7 +645,7 @@ circuit_build_needed_circs(time_t now)
         circ &&
         circ->timestamp_created + TESTING_CIRCUIT_INTERVAL < now) {
       log_fn(LOG_INFO,"Creating a new testing circuit.");
-      circuit_launch_by_router(CIRCUIT_PURPOSE_C_GENERAL, NULL, 0);
+      circuit_launch(CIRCUIT_PURPOSE_C_GENERAL, 0);
     }
 #endif
   }
@@ -1076,17 +1077,9 @@ static int did_circs_fail_last_period = 0;
 /** Launch a new circuit; see circuit_launch_by_extend_info() for
  * details on arguments. */
 origin_circuit_t *
-circuit_launch_by_router(uint8_t purpose,
-                         const routerinfo_t *exit, int flags)
+circuit_launch(uint8_t purpose, int flags)
 {
-  origin_circuit_t *circ;
-  extend_info_t *info = NULL;
-  if (exit)
-    info = extend_info_from_router(exit);
-  circ = circuit_launch_by_extend_info(purpose, info, flags);
-
-  extend_info_free(info);
-  return circ;
+  return circuit_launch_by_extend_info(purpose, NULL, flags);
 }
 
 /** Launch a new circuit with purpose <b>purpose</b> and exit node
@@ -1256,9 +1249,9 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       uint32_t addr = 0;
       if (tor_inet_aton(conn->socks_request->address, &in))
         addr = ntohl(in.s_addr);
-      if (router_exit_policy_all_routers_reject(addr,
-                                                conn->socks_request->port,
-                                                need_uptime)) {
+      if (router_exit_policy_all_nodes_reject(addr,
+                                              conn->socks_request->port,
+                                              need_uptime)) {
         log_notice(LD_APP,
                    "No Tor server allows exit to %s:%d. Rejecting.",
                    safe_str_client(conn->socks_request->address),
@@ -1267,10 +1260,9 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       }
     } else {
       /* XXXX022 Duplicates checks in connection_ap_handshake_attach_circuit */
-      const routerinfo_t *router =
-        router_get_by_nickname(conn->chosen_exit_name, 1);
+      const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
-      if (router && !connection_ap_can_use_exit(conn, router, 0)) {
+      if (node && !connection_ap_can_use_exit(conn, node, 0)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
@@ -1318,11 +1310,11 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
      */
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (conn->chosen_exit_name) {
-        const routerinfo_t *r;
+        const node_t *r;
         int opt = conn->chosen_exit_optional;
-        r = router_get_by_nickname(conn->chosen_exit_name, 1);
+        r = node_get_by_nickname(conn->chosen_exit_name, 1);
         if (r) {
-          extend_info = extend_info_from_router(r);
+          extend_info = extend_info_from_node(r);
         } else {
           log_debug(LD_DIR, "considering %d, %s",
                     want_onehop, conn->chosen_exit_name);
@@ -1572,9 +1564,9 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
     origin_circuit_t *circ=NULL;
 
     if (conn->chosen_exit_name) {
-      const routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
+      const node_t *node = node_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
-      if (!router && !want_onehop) {
+      if (!node && !want_onehop) {
         /* We ran into this warning when trying to extend a circuit to a
          * hidden service directory for which we didn't have a router
          * descriptor. See flyspray task 767 for more details. We should
@@ -1590,7 +1582,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
         }
         return -1;
       }
-      if (router && !connection_ap_can_use_exit(conn, router, 0)) {
+      if (node && !connection_ap_can_use_exit(conn, node, 0)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
                "Requested exit point '%s' would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");

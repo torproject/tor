@@ -63,6 +63,7 @@ const char *dirvote_get_pending_detached_signatures(void);
 #define DGV_INCLUDE_PREVIOUS 4
 const cached_dir_t *dirvote_get_vote(const char *fp, int flags);
 void set_routerstatus_from_routerinfo(routerstatus_t *rs,
+                                      node_t *node,
                                       routerinfo_t *ri, time_t now,
                                       int naming, int listbadexits,
                                       int listbaddirs);

@@ -587,3 +587,4 @@ update_microdescs_from_networkstatus(time_t now)
       md->last_listed = ns->valid_after;
   } SMARTLIST_FOREACH_END(rs);
 }
+

@@ -41,8 +41,7 @@ void circuit_build_failed(origin_circuit_t *circ);
 origin_circuit_t *circuit_launch_by_extend_info(uint8_t purpose,
                                                 extend_info_t *info,
                                                 int flags);
-origin_circuit_t *circuit_launch_by_router(uint8_t purpose,
-                                           const routerinfo_t *exit, int flags);
+origin_circuit_t *circuit_launch(uint8_t purpose, int flags);
 void circuit_reset_failure_count(int timeout);
 int connection_ap_handshake_attach_chosen_circuit(edge_connection_t *conn,
                                                   origin_circuit_t *circ,

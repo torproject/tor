@@ -107,9 +107,8 @@ void
 networkstatus_reset_warnings(void)
 {
   if (current_consensus) {
-    SMARTLIST_FOREACH(current_consensus->routerstatus_list,
-                      routerstatus_t *, rs,
-                      rs->name_lookup_warned = 0);
+    SMARTLIST_FOREACH(nodelist_get_list(), node_t *, node,
+                      node->name_lookup_warned = 0);
   }
 
   have_warned_about_old_version = 0;
@@ -1070,92 +1069,11 @@ const routerstatus_t *
 router_get_consensus_status_by_nickname(const char *nickname,
                                         int warn_if_unnamed)
 {
-  char digest[DIGEST_LEN];
-  routerstatus_t *best=NULL;
-  smartlist_t *matches=NULL;
-  const char *named_id=NULL;
-
-  if (!current_consensus || !nickname)
+  const node_t *node = node_get_by_nickname(nickname, warn_if_unnamed);
+  if (node)
+    return node->rs;
+  else
     return NULL;
-
-  /* Is this name really a hexadecimal identity digest? */
-  if (nickname[0] == '$') {
-    if (base16_decode(digest, DIGEST_LEN, nickname+1, strlen(nickname+1))<0)
-      return NULL;
-    return networkstatus_vote_find_entry(current_consensus, digest);
-  } else if (strlen(nickname) == HEX_DIGEST_LEN &&
-       (base16_decode(digest, DIGEST_LEN, nickname, strlen(nickname))==0)) {
-    return networkstatus_vote_find_entry(current_consensus, digest);
-  }
-
-  /* Is there a server that is Named with this name? */
-  if (named_server_map)
-    named_id = strmap_get_lc(named_server_map, nickname);
-  if (named_id)
-    return networkstatus_vote_find_entry(current_consensus, named_id);
-
-  /* Okay; is this name listed as Unnamed? */
-  if (unnamed_server_map &&
-      strmap_get_lc(unnamed_server_map, nickname)) {
-    log_info(LD_GENERAL, "The name %s is listed as Unnamed; it is not the "
-             "canonical name of any server we know.", escaped(nickname));
-    return NULL;
-  }
-
-  /* This name is not canonical for any server; go through the list and
-   * see who it matches. */
-  /*XXXX This is inefficient; optimize it if it matters. */
-  matches = smartlist_create();
-  SMARTLIST_FOREACH(current_consensus->routerstatus_list,
-                    routerstatus_t *, lrs,
-    {
-      if (!strcasecmp(lrs->nickname, nickname)) {
-        if (lrs->is_named) {
-          tor_fragile_assert() /* This should never happen. */
-          smartlist_free(matches);
-          return lrs;
-        } else {
-          if (lrs->is_unnamed) {
-            tor_fragile_assert(); /* nor should this. */
-            smartlist_clear(matches);
-            best=NULL;
-            break;
-          }
-          smartlist_add(matches, lrs);
-          best = lrs;
-        }
-      }
-    });
-
-  if (smartlist_len(matches)>1 && warn_if_unnamed) {
-    int any_unwarned=0;
-    SMARTLIST_FOREACH(matches, routerstatus_t *, lrs,
-      {
-        if (! lrs->name_lookup_warned) {
-          lrs->name_lookup_warned=1;
-          any_unwarned=1;
-        }
-      });
-    if (any_unwarned) {
-      log_warn(LD_CONFIG,"There are multiple matches for the nickname \"%s\","
-               " but none is listed as named by the directory authorities. "
-               "Choosing one arbitrarily.", nickname);
-    }
-  } else if (warn_if_unnamed && best && !best->name_lookup_warned) {
-    char fp[HEX_DIGEST_LEN+1];
-    base16_encode(fp, sizeof(fp),
-                  best->identity_digest, DIGEST_LEN);
-    log_warn(LD_CONFIG,
-         "When looking up a status, you specified a server \"%s\" by name, "
-         "but the directory authorities do not have any key registered for "
-         "this nickname -- so it could be used by any server, "
-         "not just the one you meant. "
-         "To make sure you get the same server in the future, refer to "
-         "it by key, as \"$%s\".", nickname, fp);
-    best->name_lookup_warned = 1;
-  }
-  smartlist_free(matches);
-  return best;
 }
 
 /** Return the identity digest that's mapped to officially by
@@ -1629,7 +1547,6 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
                                 rs_new->identity_digest, DIGEST_LEN),
                          STMT_NIL) {
     /* Okay, so we're looking at the same identity. */
-    rs_new->name_lookup_warned = rs_old->name_lookup_warned;
     rs_new->last_dir_503_at = rs_old->last_dir_503_at;
 
     if (!memcmp(rs_old->descriptor_digest, rs_new->descriptor_digest,
@@ -2062,7 +1979,6 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   trusted_dir_server_t *ds;
   or_options_t *options = get_options();
   int authdir = authdir_mode_v2(options) || authdir_mode_v3(options);
-  int namingdir = authdir && options->NamingAuthoritativeDir;
   networkstatus_t *ns = current_consensus;
   if (!ns || !smartlist_len(ns->routerstatus_list))
     return;
@@ -2076,25 +1992,19 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
                          memcmp(rs->identity_digest,
                                router->cache_info.identity_digest, DIGEST_LEN),
   {
+#if 0
     /* We have no routerstatus for this router. Clear flags and skip it. */
-    if (!namingdir)
-      router->is_named = 0;
     if (!authdir) {
       if (router->purpose == ROUTER_PURPOSE_GENERAL)
         router_clear_status_flags(router);
     }
+#endif
   }) {
     /* We have a routerstatus for this router. */
     const char *digest = router->cache_info.identity_digest;
 
     ds = router_get_trusteddirserver_by_digest(digest);
 
-    if (!namingdir) {
-      if (rs->is_named && !strcasecmp(router->nickname, rs->nickname))
-        router->is_named = 1;
-      else
-        router->is_named = 0;
-    }
     /* Is it the same descriptor, or only the same identity? */
     if (!memcmp(router->cache_info.signed_descriptor_digest,
                 rs->descriptor_digest, DIGEST_LEN)) {
@@ -2102,18 +2012,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
         router->cache_info.last_listed_as_valid_until = ns->valid_until;
     }
 
-    if (!authdir) {
-      /* If we're not an authdir, believe others. */
-      router->is_valid = rs->is_valid;
-      router->is_running = rs->is_running;
-      router->is_fast = rs->is_fast;
-      router->is_stable = rs->is_stable;
-      router->is_possible_guard = rs->is_possible_guard;
-      router->is_exit = rs->is_exit;
-      router->is_bad_directory = rs->is_bad_directory;
-      router->is_bad_exit = rs->is_bad_exit;
-      router->is_hs_dir = rs->is_hs_dir;
-    } else {
+    if (authdir) {
       /* If we _are_ an authority, we should check whether this router
        * is one that will cause us to need a reachability test. */
       routerinfo_t *old_router =
@@ -2123,7 +2022,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
           dirserv_should_launch_reachability_test(router, old_router);
       }
     }
-    if (router->is_running && ds) {
+    if (rs->is_running && ds) {
       download_status_reset(&ds->v2_ns_dl_status);
     }
     if (reset_failures) {
@@ -2214,6 +2113,9 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
 
   statuses = smartlist_create();
   SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
+    node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
+    if (!node)
+      continue;
     if (ri->cache_info.published_on < cutoff)
       continue;
     if (ri->purpose != purpose)
@@ -2221,7 +2123,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
     if (bridge_auth && ri->purpose == ROUTER_PURPOSE_BRIDGE)
       dirserv_set_router_is_running(ri, now);
     /* then generate and write out status lines for each of them */
-    set_routerstatus_from_routerinfo(&rs, ri, now, 0, 0, 0);
+    set_routerstatus_from_routerinfo(&rs, node, ri, now, 0, 0, 0);
     smartlist_add(statuses, networkstatus_getinfo_helper_single(&rs));
   });
 

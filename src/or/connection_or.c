@@ -22,6 +22,7 @@
 #include "geoip.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "reasons.h"
 #include "relay.h"
 #include "rephist.h"
@@ -438,7 +439,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                                      const char *id_digest,
                                      int started_here)
 {
-  const routerinfo_t *r = router_get_by_digest(id_digest);
+  const node_t *r = node_get_by_id(id_digest);
   connection_or_set_identity_digest(conn, id_digest);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
 
@@ -446,8 +447,10 @@ connection_or_init_conn_from_address(or_connection_t *conn,
   tor_addr_copy(&conn->_base.addr, addr);
   tor_addr_copy(&conn->real_addr, addr);
   if (r) {
+    tor_addr_t node_addr;
+    node_get_addr(r, &node_addr);
     /* XXXX proposal 118 will make this more complex. */
-    if (tor_addr_eq_ipv4h(&conn->_base.addr, r->addr))
+    if (tor_addr_eq(&conn->_base.addr, &node_addr))
       conn->is_canonical = 1;
     if (!started_here) {
       /* Override the addr/port, so our log messages will make sense.
@@ -460,12 +463,12 @@ connection_or_init_conn_from_address(or_connection_t *conn,
        * right IP address and port 56244, that wouldn't be as helpful. now we
        * log the "right" port too, so we know if it's moria1 or moria2.
        */
-      tor_addr_from_ipv4h(&conn->_base.addr, r->addr);
-      conn->_base.port = r->or_port;
+      tor_addr_copy(&conn->_base.addr, &node_addr);
+      conn->_base.port = node_get_orport(r);
     }
-    conn->nickname = tor_strdup(r->nickname);
+    conn->nickname = tor_strdup(node_get_nickname(r));
     tor_free(conn->_base.address);
-    conn->_base.address = tor_strdup(r->address);
+    conn->_base.address = tor_dup_addr(&node_addr);
   } else {
     const char *n;
     /* If we're an authoritative directory server, we may know a

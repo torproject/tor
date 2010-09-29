@@ -27,33 +27,30 @@ int router_reload_router_list(void);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
 smartlist_t *router_get_trusted_dir_servers(void);
 
-const routerstatus_t *router_pick_directory_server(authority_type_t type, int flags);
+const routerstatus_t *router_pick_directory_server(authority_type_t type,
+                                                   int flags);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
-const routerstatus_t *router_pick_trusteddirserver(authority_type_t type, int flags);
+const routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
+                                                   int flags);
 int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
 void router_reset_status_download_failures(void);
 void routerlist_add_family(smartlist_t *sl, const routerinfo_t *router);
-int routers_in_same_family(const routerinfo_t *r1, const routerinfo_t *r2);
 int routers_have_same_or_addr(const routerinfo_t *r1, const routerinfo_t *r2);
-void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
-                                    int must_be_running);
 int router_nickname_is_in_list(const routerinfo_t *router, const char *list);
 const routerinfo_t *routerlist_find_my_routerinfo(void);
-const routerinfo_t *router_find_exact_exit_enclave(const char *address,
+const node_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);
-int router_is_unreliable(const routerinfo_t *router, int need_uptime,
+int node_is_unreliable(const node_t *router, int need_uptime,
                          int need_capacity, int need_guard);
 uint32_t router_get_advertised_bandwidth(const routerinfo_t *router);
 uint32_t router_get_advertised_bandwidth_capped(const routerinfo_t *router);
 
-const routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
-                                                bandwidth_weight_rule_t rule);
-const routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
-                                                bandwidth_weight_rule_t rule);
+const node_t *node_sl_choose_by_bandwidth(smartlist_t *sl,
+                                          bandwidth_weight_rule_t rule);
 
-const routerinfo_t *router_choose_random_node(smartlist_t *excludedsmartlist,
+const node_t *router_choose_random_node(smartlist_t *excludedsmartlist,
                                         struct routerset_t *excludedset,
                                         router_crn_flags_t flags);
 
@@ -133,8 +130,9 @@ void router_load_extrainfo_from_string(const char *s, const char *eos,
                                        int descriptor_digests);
 
 void routerlist_retry_directory_downloads(time_t now);
-int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
-                                          int need_uptime);
+int router_exit_policy_all_nodes_reject(uint32_t addr, uint16_t port,
+                                        int need_uptime);
+
 int router_exit_policy_rejects_all(const routerinfo_t *router);
 trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
                            const char *address,
@@ -165,29 +163,31 @@ const char *esc_router_info(const routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
 routerset_t *routerset_new(void);
+void routerset_refresh_countries(routerset_t *rs);
 int routerset_parse(routerset_t *target, const char *s,
                     const char *description);
 void routerset_union(routerset_t *target, const routerset_t *source);
 int routerset_is_list(const routerset_t *set);
 int routerset_needs_geoip(const routerset_t *set);
-int routerset_contains_router(const routerset_t *set, const routerinfo_t *ri);
+int routerset_contains_router(const routerset_t *set, const routerinfo_t *ri,
+                              country_t country);
 int routerset_contains_routerstatus(const routerset_t *set,
-                                    const routerstatus_t *rs);
+                                    const routerstatus_t *rs,
+                                    country_t country);
 int routerset_contains_extendinfo(const routerset_t *set,
                                   const extend_info_t *ei);
-void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
-                               int running_only);
-void routersets_get_disjunction(smartlist_t *target, const smartlist_t *source,
+int routerset_contains_node(const routerset_t *set, const node_t *node);
+void routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
+                             int running_only);
+void routersets_get_node_disjunction(smartlist_t *target,
+                                const smartlist_t *source,
                                 const routerset_t *include,
                                 const routerset_t *exclude, int running_only);
-void routerset_subtract_routers(smartlist_t *out,
-                                const routerset_t *routerset);
+void routerset_subtract_nodes(smartlist_t *out,
+                              const routerset_t *routerset);
 char *routerset_to_string(const routerset_t *routerset);
-void routerset_refresh_countries(routerset_t *target);
 int routerset_equal(const routerset_t *old, const routerset_t *new);
 void routerset_free(routerset_t *routerset);
-void routerinfo_set_country(routerinfo_t *ri);
-void routerlist_refresh_countries(void);
 void refresh_all_country_info(void);
 
 int hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
@@ -200,6 +200,11 @@ void launch_descriptor_downloads(int purpose,
                                  smartlist_t *downloadable,
                                  const routerstatus_t *source,
                                  time_t now);
+
+int hex_digest_nickname_decode(const char *hexdigest,
+                               char *digest_out,
+                               char *nickname_qualifier_out,
+                               char *nickname_out);
 
 #endif
 

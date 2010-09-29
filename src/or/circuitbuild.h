@@ -45,9 +45,10 @@ extend_info_t *extend_info_alloc(const char *nickname, const char *digest,
                                  crypto_pk_env_t *onion_key,
                                  const tor_addr_t *addr, uint16_t port);
 extend_info_t *extend_info_from_router(const routerinfo_t *r);
+extend_info_t *extend_info_from_node(const node_t *node);
 extend_info_t *extend_info_dup(extend_info_t *info);
 void extend_info_free(extend_info_t *info);
-const routerinfo_t *build_state_get_exit_router(cpath_build_state_t *state);
+const node_t *build_state_get_exit_node(cpath_build_state_t *state);
 const char *build_state_get_exit_nickname(cpath_build_state_t *state);
 
 void entry_guards_compute_status(or_options_t *options, time_t now);
@@ -55,7 +56,7 @@ int entry_guard_register_connect_status(const char *digest, int succeeded,
                                         int mark_relay_status, time_t now);
 void entry_nodes_should_be_added(void);
 int entry_list_is_constrained(or_options_t *options);
-const routerinfo_t *choose_random_entry(cpath_build_state_t *state);
+const node_t *choose_random_entry(cpath_build_state_t *state);
 int entry_guards_parse_state(or_state_t *state, int set, char **msg);
 void entry_guards_update_state(or_state_t *state);
 int getinfo_helper_entry_guards(control_connection_t *conn,

@@ -11,6 +11,7 @@
 #include "or.h"
 #include "config.h"
 #include "dirserv.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "routerparse.h"
 #include "ht.h"
@@ -267,6 +268,22 @@ fascist_firewall_allows_or(const routerinfo_t *ri)
   tor_addr_t addr;
   tor_addr_from_ipv4h(&addr, ri->addr);
   return fascist_firewall_allows_address_or(&addr, ri->or_port);
+}
+
+/** Return true iff we think our firewall will let us make an OR connection to
+ * <b>node</b>. */
+int
+fascist_firewall_allows_node(const node_t *node)
+{
+  if (node->ri) {
+    return fascist_firewall_allows_or(node->ri);
+  } else if (node->rs) {
+    tor_addr_t addr;
+    tor_addr_from_ipv4h(&addr, node->rs->addr);
+    return fascist_firewall_allows_address_or(&addr, node->rs->or_port);
+  } else {
+    return 1;
+  }
 }
 
 /** Return true iff we think our firewall will let us make a directory
@@ -858,6 +875,7 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   return 0;
 }
 
+#if 0
 /** Replace the exit policy of <b>r</b> with reject *:*. */
 void
 policies_set_router_exitpolicy_to_reject_all(routerinfo_t *r)
@@ -867,6 +885,15 @@ policies_set_router_exitpolicy_to_reject_all(routerinfo_t *r)
   r->exit_policy = smartlist_create();
   item = router_parse_addr_policy_item_from_string("reject *:*", -1);
   smartlist_add(r->exit_policy, item);
+}
+#endif
+
+/** Replace the exit policy of <b>node</b> with reject *:* */
+void
+policies_set_node_exitpolicy_to_reject_all(node_t *node)
+{
+  (void)node;
+  UNIMPLEMENTED_NODELIST();
 }
 
 /** Return 1 if there is at least one /8 subnet in <b>policy</b> that
@@ -1286,6 +1313,31 @@ policy_summarize(smartlist_t *policy)
   smartlist_free(rejects);
 
   return result;
+}
+
+/** Decides whether addr:port is probably or definitely accepted or rejcted by
+ * <b>node</b>.  See compare_tor_addr_to_addr_policy for details on addr/port
+ * interpretation. */
+addr_policy_result_t
+compare_addr_to_node_policy(uint32_t addr, uint16_t port, const node_t *node)
+{
+  tor_addr_t a;
+  tor_addr_from_ipv4h(&a, addr);
+  return compare_tor_addr_to_node_policy(&a, port, node);
+}
+
+/** Decides whether addr:port is probably or definitely accepted or rejcted by
+ * <b>node</b>.  See compare_tor_addr_to_addr_policy for details on addr/port
+ * interpretation. */
+addr_policy_result_t
+compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
+                                const node_t *node)
+{
+  (void)addr;
+  (void)port;
+  (void)node;
+  UNIMPLEMENTED_NODELIST();
+  return 0;
 }
 
 /** Implementation for GETINFO control command: knows the answer for questions
