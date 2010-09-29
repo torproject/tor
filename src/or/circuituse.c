@@ -384,7 +384,8 @@ circuit_expire_building(time_t now)
         continue;
       }
 
-      if (circuit_timeout_want_to_count_circ(TO_ORIGIN_CIRCUIT(victim))) {
+      if (circuit_timeout_want_to_count_circ(TO_ORIGIN_CIRCUIT(victim)) &&
+          circuit_build_times_enough_to_compute(&circ_times)) {
         /* Circuits are allowed to last longer for measurement.
          * Switch their purpose and wait. */
         if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
