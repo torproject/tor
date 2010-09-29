@@ -1,0 +1,4 @@
+  o Minor features:
+    - If we've configured EntryNodes and our network goes away and/or all
+      our entrynodes get marked down, optimistically retry them all when
+      a new socks application request appears. Fixes bug 1882.
