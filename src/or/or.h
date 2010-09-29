@@ -1047,7 +1047,10 @@ typedef struct or_connection_t {
    * NETINFO cell listed the address we're connected to as recognized. */
   unsigned int is_canonical:1;
   /** True iff this connection shouldn't get any new circs attached to it,
-   * because the connection is too old, or because there's a better one, etc.
+   * because the connection is too old, or because there's a better one.
+   * More generally, this flag is used to note an unhealthy connection;
+   * for example, if a bad connection fails we shouldn't assume that the
+   * router itself has a problem.
    */
   unsigned int is_bad_for_new_circs:1;
   uint8_t link_proto; /**< What protocol version are we using? 0 for
