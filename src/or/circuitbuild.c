@@ -306,6 +306,7 @@ circuit_build_times_init(circuit_build_times_t *cbt)
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 }
 
+#if 0
 /**
  * Rewind our build time history by n positions.
  */
@@ -332,6 +333,7 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
           "Rewound history by %d places. Current index: %d. "
           "Total: %d", n, cbt->build_times_idx, cbt->total_build_times);
 }
+#endif
 
 /**
  * Add a new build time value <b>time</b> to the set of build times. Time
@@ -941,8 +943,16 @@ circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
 void
 circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 {
-  cbt->liveness.network_last_live = approx_time();
-  cbt->liveness.nonlive_discarded = 0;
+  time_t now = approx_time();
+  if (cbt->liveness.nonlive_timeouts > 0) {
+    log_notice(LD_CIRC,
+               "Tor now sees network activity. Restoring circuit build "
+               "timeout recording. Network was down for %ld seconds "
+               "during %d circuit attempts.",
+               (long int)now - cbt->liveness.network_last_live,
+               cbt->liveness.nonlive_timeouts);
+  }
+  cbt->liveness.network_last_live = now;
   cbt->liveness.nonlive_timeouts = 0;
 }
 
@@ -1002,9 +1012,16 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
                now_buf);
     }
     cbt->liveness.nonlive_timeouts++;
-    log_info(LD_CIRC,
+    if (cbt->liveness.nonlive_timeouts == 1) {
+      log_notice(LD_CIRC,
+                 "Tor has not observed any network activity for the past %ld "
+                 "seconds. Disabling circuit build timeout code.",
+                 (long int)now - cbt->liveness.network_last_live);
+    } else {
+      log_info(LD_CIRC,
              "Got non-live timeout. Current count is: %d",
              cbt->liveness.nonlive_timeouts);
+    }
   }
 }
 
@@ -1018,54 +1035,8 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
 int
 circuit_build_times_network_check_live(circuit_build_times_t *cbt)
 {
-  time_t now = approx_time();
-  if (cbt->liveness.nonlive_timeouts >= CBT_NETWORK_NONLIVE_DISCARD_COUNT) {
-    if (!cbt->liveness.nonlive_discarded) {
-      cbt->liveness.nonlive_discarded = 1;
-      log_notice(LD_CIRC, "Network is no longer live (too many recent "
-                "circuit timeouts). Dead for %ld seconds.",
-                (long int)(now - cbt->liveness.network_last_live));
-      /* Only discard NETWORK_NONLIVE_TIMEOUT_COUNT-1 because we stopped
-       * counting after that */
-      circuit_build_times_rewind_history(cbt,
-                     CBT_NETWORK_NONLIVE_TIMEOUT_COUNT-1);
-      control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_DISCARD);
-    }
+  if (cbt->liveness.nonlive_timeouts > 0) {
     return 0;
-  } else if (cbt->liveness.nonlive_timeouts >=
-                CBT_NETWORK_NONLIVE_TIMEOUT_COUNT) {
-    if (cbt->liveness.suspended_timeout <= 0) {
-      cbt->liveness.suspended_timeout = cbt->timeout_ms;
-      cbt->liveness.suspended_close_timeout = cbt->close_ms;
-
-      if (cbt->timeout_ms < circuit_build_times_get_initial_timeout())
-        cbt->timeout_ms = circuit_build_times_get_initial_timeout();
-      else
-        cbt->timeout_ms *= 2;
-
-      if (cbt->close_ms < circuit_build_times_get_initial_timeout())
-        cbt->close_ms = circuit_build_times_get_initial_timeout();
-      else
-        cbt->close_ms *= 2;
-
-      log_notice(LD_CIRC,
-                "Network is flaky. No activity for %ld seconds. "
-                "Temporarily raising timeout to %lds.",
-                (long int)(now - cbt->liveness.network_last_live),
-                tor_lround(cbt->timeout_ms/1000));
-      control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_SUSPENDED);
-    }
-
-    return 0;
-  } else if (cbt->liveness.suspended_timeout > 0) {
-    log_notice(LD_CIRC,
-              "Network activity has resumed. "
-              "Resuming circuit timeout calculations.");
-    cbt->timeout_ms = cbt->liveness.suspended_timeout;
-    cbt->close_ms = cbt->liveness.suspended_close_timeout;
-    cbt->liveness.suspended_timeout = 0;
-    cbt->liveness.suspended_close_timeout = 0;
-    control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESUME);
   }
 
   return 1;
