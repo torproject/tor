@@ -162,6 +162,8 @@ void
 tor_libevent_initialize(tor_libevent_cfg *torcfg)
 {
   tor_assert(the_event_base == NULL);
+  /* some paths below don't use torcfg, so avoid unused variable warnings */
+  (void)torcfg;
 
 #ifdef __APPLE__
   if (MACOSX_KQUEUE_IS_BROKEN ||
