@@ -79,6 +79,7 @@ void bridges_retry_all(void);
 void entry_guards_free_all(void);
 
 extern circuit_build_times_t circ_times;
+int circuit_build_times_enough_to_compute(circuit_build_times_t *cbt);
 void circuit_build_times_update_state(circuit_build_times_t *cbt,
                                       or_state_t *state);
 int circuit_build_times_parse_state(circuit_build_times_t *cbt,

@@ -2979,8 +2979,9 @@ typedef uint32_t build_time_t;
  * Maximum count of timeouts that finish the first hop in the past
  * RECENT_CIRCUITS before calculating a new timeout.
  *
- * This tells us to abandon timeout history and set
- * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
+ * This tells us whether to abandon timeout history and set
+ * the timeout back to whatever circuit_build_times_get_initial_timeout()
+ * gives us.
  */
 #define CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT (CBT_DEFAULT_RECENT_CIRCUITS*9/10)
 

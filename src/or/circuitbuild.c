@@ -149,6 +149,14 @@ circuit_build_times_min_circs_to_observe(void)
   return num;
 }
 
+/** Return true iff <b>cbt</b> has recorded enough build times that we
+ * want to start acting on the timeout it implies. */
+int
+circuit_build_times_enough_to_compute(circuit_build_times_t *cbt)
+{
+  return cbt->total_build_times >= circuit_build_times_min_circs_to_observe();
+}
+
 double
 circuit_build_times_quantile_cutoff(void)
 {
@@ -292,8 +300,8 @@ circuit_build_times_reset(circuit_build_times_t *cbt)
 /**
  * Initialize the buildtimes structure for first use.
  *
- * Sets the initial timeout value based to either the
- * config setting or BUILD_TIMEOUT_INITIAL_VALUE.
+ * Sets the initial timeout values based on either the config setting,
+ * the consensus param, or the default (CBT_DEFAULT_TIMEOUT_INITIAL_VALUE).
  */
 void
 circuit_build_times_init(circuit_build_times_t *cbt)
@@ -918,9 +926,7 @@ int
 circuit_build_times_needs_circuits(circuit_build_times_t *cbt)
 {
   /* Return true if < MIN_CIRCUITS_TO_OBSERVE */
-  if (cbt->total_build_times < circuit_build_times_min_circs_to_observe())
-    return 1;
-  return 0;
+  return !circuit_build_times_enough_to_compute(cbt);
 }
 
 /**
@@ -1205,9 +1211,8 @@ static int
 circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
 {
   build_time_t max_time;
-  if (cbt->total_build_times < circuit_build_times_min_circs_to_observe()) {
+  if (!circuit_build_times_enough_to_compute(cbt))
     return 0;
-  }
 
   if (!circuit_build_times_update_alpha(cbt))
     return 0;

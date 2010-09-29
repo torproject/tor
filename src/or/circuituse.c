@@ -278,8 +278,9 @@ void
 circuit_expire_building(time_t now)
 {
   circuit_t *victim, *next_circ = global_circuitlist;
-  /* circ_times.timeout is BUILD_TIMEOUT_INITIAL_VALUE if we haven't
-   * decided on a customized one yet */
+  /* circ_times.timeout_ms and circ_times.close_ms are from
+   * circuit_build_times_get_initial_timeout() if we haven't computed
+   * custom timeouts yet */
   time_t general_cutoff = now - tor_lround(circ_times.timeout_ms/1000);
   time_t begindir_cutoff = now - tor_lround(circ_times.timeout_ms/2000);
   time_t fourhop_cutoff = now - tor_lround(4*circ_times.timeout_ms/3000);
