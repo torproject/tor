@@ -18,7 +18,7 @@ or_connection_t *connection_or_get_for_extend(const char *digest,
                                               const tor_addr_t *target_addr,
                                               const char **msg_out,
                                               int *launch_out);
-void connection_or_set_bad_connections(void);
+void connection_or_set_bad_connections(const char *digest, int force);
 
 int connection_or_reached_eof(or_connection_t *conn);
 int connection_or_process_inbuf(or_connection_t *conn);

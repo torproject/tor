@@ -3209,8 +3209,6 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
   char buf[HEX_DIGEST_LEN+1];
   int changed = 0;
 
-  tor_assert(options);
-
   *reason = NULL;
 
   /* Do we want to mark this guard as bad? */
@@ -3468,9 +3466,8 @@ add_an_entry_guard(routerinfo_t *chosen, int reset_status)
 /** If the use of entry guards is configured, choose more entry guards
  * until we have enough in the list. */
 static void
-pick_entry_guards(void)
+pick_entry_guards(or_options_t *options)
 {
-  or_options_t *options = get_options();
   int changed = 0;
 
   tor_assert(entry_guards);
@@ -3502,10 +3499,9 @@ entry_guard_free(entry_guard_t *e)
  * or which was selected by a version of Tor that's known to select
  * entry guards badly. */
 static int
-remove_obsolete_entry_guards(void)
+remove_obsolete_entry_guards(time_t now)
 {
   int changed = 0, i;
-  time_t now = time(NULL);
 
   for (i = 0; i < smartlist_len(entry_guards); ++i) {
     entry_guard_t *entry = smartlist_get(entry_guards, i);
@@ -3565,11 +3561,10 @@ remove_obsolete_entry_guards(void)
  * long that we don't think they'll come up again. Return 1 if we
  * removed any, or 0 if we did nothing. */
 static int
-remove_dead_entry_guards(void)
+remove_dead_entry_guards(time_t now)
 {
   char dbuf[HEX_DIGEST_LEN+1];
   char tbuf[ISO_TIME_LEN+1];
-  time_t now = time(NULL);
   int i;
   int changed = 0;
 
@@ -3604,22 +3599,17 @@ remove_dead_entry_guards(void)
  * think that things are unlisted.
  */
 void
-entry_guards_compute_status(void)
+entry_guards_compute_status(or_options_t *options, time_t now)
 {
-  time_t now;
   int changed = 0;
   int severity = LOG_DEBUG;
-  or_options_t *options;
   digestmap_t *reasons;
 
   if (! entry_guards)
     return;
 
-  options = get_options();
   if (options->EntryNodes) /* reshuffle the entry guard list if needed */
     entry_nodes_should_be_added();
-
-  now = time(NULL);
 
   reasons = digestmap_new();
   SMARTLIST_FOREACH_BEGIN(entry_guards, entry_guard_t *, entry)
@@ -3636,7 +3626,7 @@ entry_guards_compute_status(void)
     }
   SMARTLIST_FOREACH_END(entry);
 
-  if (remove_dead_entry_guards())
+  if (remove_dead_entry_guards(now))
     changed = 1;
 
   severity = changed ? LOG_DEBUG : LOG_INFO;
@@ -3801,9 +3791,8 @@ entry_nodes_should_be_added(void)
 /** Add all nodes in EntryNodes that aren't currently guard nodes to the list
  * of guard nodes, at the front. */
 static void
-entry_guards_prepend_from_config(void)
+entry_guards_prepend_from_config(or_options_t *options)
 {
-  or_options_t *options = get_options();
   smartlist_t *entry_routers, *entry_fps;
   smartlist_t *old_entry_guards_on_list, *old_entry_guards_not_on_list;
   tor_assert(entry_guards);
@@ -3931,11 +3920,11 @@ choose_random_entry(cpath_build_state_t *state)
     entry_guards = smartlist_create();
 
   if (should_add_entry_nodes)
-    entry_guards_prepend_from_config();
+    entry_guards_prepend_from_config(options);
 
   if (!entry_list_is_constrained(options) &&
       smartlist_len(entry_guards) < options->NumEntryGuards)
-    pick_entry_guards();
+    pick_entry_guards(options);
 
  retry:
   smartlist_clear(live_entry_guards);
@@ -4164,7 +4153,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
     entry_guards_dirty = 0;
     /* XXX022 hand new_entry_guards to this func, and move it up a
      * few lines, so we don't have to re-dirty it */
-    if (remove_obsolete_entry_guards())
+    if (remove_obsolete_entry_guards(now))
       entry_guards_dirty = 1;
   }
   digestmap_free(added_by, _tor_free);
@@ -4469,9 +4458,8 @@ retry_bridge_descriptor_fetch_directly(const char *digest)
  * descriptor, fetch a new copy of its descriptor -- either directly
  * from the bridge or via a bridge authority. */
 void
-fetch_bridge_descriptors(time_t now)
+fetch_bridge_descriptors(or_options_t *options, time_t now)
 {
-  or_options_t *options = get_options();
   int num_bridge_auths = get_n_authorities(BRIDGE_AUTHORITY);
   int ask_bridge_directly;
   int can_use_bridge_authority;
@@ -4595,26 +4583,38 @@ any_pending_bridge_descriptor_fetches(void)
   return 0;
 }
 
-/** Return 1 if we have at least one descriptor for a bridge and
- * all descriptors we know are down. Else return 0. If <b>act</b> is
- * 1, then mark the down bridges up; else just observe and report. */
+/** Return 1 if we have at least one descriptor for an entry guard
+ * (bridge or member of EntryNodes) and all descriptors we know are
+ * down. Else return 0. If <b>act</b> is 1, then mark the down guards
+ * up; else just observe and report. */
 static int
-bridges_retry_helper(int act)
+entries_retry_helper(or_options_t *options, int act)
 {
   routerinfo_t *ri;
   int any_known = 0;
   int any_running = 0;
+  int purpose = options->UseBridges ?
+                  ROUTER_PURPOSE_BRIDGE : ROUTER_PURPOSE_GENERAL;
   if (!entry_guards)
     entry_guards = smartlist_create();
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
       ri = router_get_by_digest(e->identity);
-      if (ri && ri->purpose == ROUTER_PURPOSE_BRIDGE) {
+      if (ri && ri->purpose == purpose) {
         any_known = 1;
         if (ri->is_running)
-          any_running = 1; /* some bridge is both known and running */
-        else if (act) { /* mark it for retry */
-          ri->is_running = 1;
+          any_running = 1; /* some entry is both known and running */
+        else if (act) {
+          /* Mark all current connections to this OR as unhealthy, since
+           * otherwise there could be one that started 30 seconds
+           * ago, and in 30 seconds it will time out, causing us to mark
+           * the node down and undermine the retry attempt. We mark even
+           * the established conns, since if the network just came back
+           * we'll want to attach circuits to fresh conns. */
+          connection_or_set_bad_connections(ri->cache_info.identity_digest, 1);
+
+          /* mark this entry node for retry */
+          router_set_status(ri->cache_info.identity_digest, 1);
           e->can_retry = 1;
           e->bad_since = 0;
         }
@@ -4625,19 +4625,21 @@ bridges_retry_helper(int act)
   return any_known && !any_running;
 }
 
-/** Do we know any descriptors for our bridges, and are they all
- * down? */
+/** Do we know any descriptors for our bridges / entrynodes, and are
+ * all the ones we have descriptors for down? */
 int
-bridges_known_but_down(void)
+entries_known_but_down(or_options_t *options)
 {
-  return bridges_retry_helper(0);
+  tor_assert(entry_list_is_constrained(options));
+  return entries_retry_helper(options, 0);
 }
 
-/** Mark all down known bridges up. */
+/** Mark all down known bridges / entrynodes up. */
 void
-bridges_retry_all(void)
+entries_retry_all(or_options_t *options)
 {
-  bridges_retry_helper(1);
+  tor_assert(entry_list_is_constrained(options));
+  entries_retry_helper(options, 1);
 }
 
 /** Release all storage held by the list of entry guards and related

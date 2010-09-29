@@ -955,8 +955,19 @@ circuit_build_failed(origin_circuit_t *circ)
      * to blame, blame it. Also, avoid this relay for a while, and
      * fail any one-hop directory fetches destined for it. */
     const char *n_conn_id = circ->cpath->extend_info->identity_digest;
+    int already_marked = 0;
     if (circ->_base.n_conn) {
       or_connection_t *n_conn = circ->_base.n_conn;
+      if (n_conn->is_bad_for_new_circs) {
+        /* We only want to blame this router when a fresh healthy
+         * connection fails. So don't mark this router as newly failed,
+         * since maybe this was just an old circuit attempt that's
+         * finally timing out now. Also, there's no need to blow away
+         * circuits/streams/etc, since the failure of an unhealthy conn
+         * doesn't tell us much about whether a healthy conn would
+         * succeed. */
+        already_marked = 1;
+      }
       log_info(LD_OR,
                "Our circuit failed to get a response from the first hop "
                "(%s:%d). I'm going to try to rotate to a better connection.",
@@ -966,7 +977,7 @@ circuit_build_failed(origin_circuit_t *circ)
       log_info(LD_OR,
                "Our circuit died before the first hop with no connection");
     }
-    if (n_conn_id) {
+    if (n_conn_id && !already_marked) {
       entry_guard_register_connect_status(n_conn_id, 0, 1, time(NULL));
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
@@ -1192,11 +1203,13 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       int severity = LOG_NOTICE;
       /* FFFF if this is a tunneled directory fetch, don't yell
        * as loudly. the user doesn't even know it's happening. */
-      if (options->UseBridges && bridges_known_but_down()) {
+      if (entry_list_is_constrained(options) &&
+          entries_known_but_down(options)) {
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't used client functionality "
-               "lately. Optimistically trying known bridges again.");
-        bridges_retry_all();
+               "lately. Optimistically trying known %s again.",
+               options->UseBridges ? "bridges" : "entrynodes");
+        entries_retry_all(options);
       } else if (!options->UseBridges || any_bridge_descriptors_known()) {
         log_fn(severity, LD_APP|LD_DIR,
                "Application request when we haven't used client functionality "
