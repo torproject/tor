@@ -1,0 +1,4 @@
+  o Minor feature removals
+    - Removed old code to work around versions of Tor so old that they
+      used multiple forked processes to handle DNS requests.  Such
+      versions of Tor are no longer in use as servers.

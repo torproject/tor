@@ -2937,11 +2937,6 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
                  * addresses with this port. Since the user didn't ask for
                  * this node, err on the side of caution. */
   } else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
-    /* Can't support reverse lookups without eventdns. */
-    if (conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR &&
-        exit->has_old_dnsworkers)
-      return 0;
-
     /* Don't send DNS requests to non-exit servers by default. */
     if (!conn->chosen_exit_name && policy_is_reject_star(exit->exit_policy))
       return 0;

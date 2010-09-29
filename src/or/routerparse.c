@@ -69,7 +69,6 @@ typedef enum {
   K_V,
   K_W,
   K_M,
-  K_EVENTDNS,
   K_EXTRA_INFO,
   K_EXTRA_INFO_DIGEST,
   K_CACHES_EXTRA_INFO,
@@ -286,7 +285,6 @@ static token_rule_t routerdesc_token_table[] = {
 
   T01("family",              K_FAMILY,              ARGS,    NO_OBJ ),
   T01("caches-extra-info",   K_CACHES_EXTRA_INFO,   NO_ARGS, NO_OBJ ),
-  T01("eventdns",            K_EVENTDNS,            ARGS,    NO_OBJ ),
 
   T0N("opt",                 K_OPT,             CONCAT_ARGS, OBJ_OK ),
   T1( "bandwidth",           K_BANDWIDTH,           GE(3),   NO_OBJ ),
@@ -1485,13 +1483,6 @@ router_parse_entry_from_string(const char *s, const char *end,
 
   if ((tok = find_opt_by_keyword(tokens, K_CONTACT))) {
     router->contact_info = tor_strdup(tok->args[0]);
-  }
-
-  if ((tok = find_opt_by_keyword(tokens, K_EVENTDNS))) {
-    router->has_old_dnsworkers = tok->n_args && !strcmp(tok->args[0], "0");
-  } else if (router->platform) {
-    if (! tor_version_as_new_as(router->platform, "0.1.2.2-alpha"))
-      router->has_old_dnsworkers = 1;
   }
 
   exit_policy_tokens = find_all_exitpolicy(tokens);

@@ -1498,12 +1498,10 @@ typedef struct {
   char *contact_info; /**< Declared contact info for this router. */
   unsigned int is_hibernating:1; /**< Whether the router claims to be
                                   * hibernating */
-  unsigned int has_old_dnsworkers:1; /**< Whether the router is using
-                                      * dnsworker code. */
-  unsigned int caches_extra_info:1; /**< Whether the router caches and serves
-                                     * extrainfo documents. */
-  unsigned int allow_single_hop_exits:1;  /**< Whether the router allows
-                                     * single hop exits. */
+  unsigned int caches_extra_info:1; /**< Whether the router says it caches and
+                                     * serves extrainfo documents. */
+  unsigned int allow_single_hop_exits:1;  /**< Whether the router says
+                                           * it allows single hop exits. */
 
   /* local info */
   unsigned int is_running:1; /**< As far as we know, is this OR currently
