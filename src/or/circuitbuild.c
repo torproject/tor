@@ -1197,6 +1197,11 @@ circuit_build_times_count_close(circuit_build_times_t *cbt,
 /**
  * Update timeout counts to determine if we need to expire
  * our build time history due to excessive timeouts.
+ *
+ * We do not record any actual time values at this stage;
+ * we are only interested in recording the fact that a timeout
+ * happened. We record the time values via
+ * circuit_build_times_count_close() and circuit_build_times_add_time().
  */
 void
 circuit_build_times_count_timeout(circuit_build_times_t *cbt,
@@ -1208,11 +1213,11 @@ circuit_build_times_count_timeout(circuit_build_times_t *cbt,
     return;
   }
 
+  /* Register the fact that a timeout just occurred. */
   circuit_build_times_network_timeout(cbt, did_onehop);
 
   /* If there are a ton of timeouts, we should reset
-   * the circuit build timeout.
-   */
+   * the circuit build timeout. */
   circuit_build_times_network_check_changed(cbt);
 }
 
@@ -1816,6 +1821,18 @@ should_use_create_fast_for_circuit(origin_circuit_t *circ)
   return 1;
 }
 
+/** Return true if <b>circ</b> is the type of circuit we want to count
+ * timeouts from. In particular, we want it to have not completed yet
+ * (already completing indicates we cannibalized it), and we want it to
+ * have exactly three hops.
+ */
+int
+circuit_timeout_want_to_count_circ(origin_circuit_t *circ)
+{
+  return !circ->has_opened
+          && circ->build_state->desired_path_len == DEFAULT_ROUTE_LEN;
+}
+
 /** This is the backbone function for building circuits.
  *
  * If circ's first hop is closed, then we need to build a create
@@ -1889,11 +1906,12 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
     if (!hop) {
       /* done building the circuit. whew. */
       circuit_set_state(TO_CIRCUIT(circ), CIRCUIT_STATE_OPEN);
-      if (!circ->build_state->onehop_tunnel) {
+      if (circuit_timeout_want_to_count_circ(circ)) {
         struct timeval end;
         long timediff;
         tor_gettimeofday(&end);
         timediff = tv_mdiff(&circ->_base.highres_created, &end);
+
         /*
          * If the circuit build time is much greater than we would have cut
          * it off at, we probably had a suspend event along this codepath,
@@ -1901,9 +1919,10 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
          */
         if (timediff < 0 || timediff > 2*circ_times.close_ms+1000) {
           log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
-                              "Assuming clock jump.", timediff);
+                              "Assuming clock jump. Purpose %d", timediff,
+                              circ->_base.purpose);
         } else if (!circuit_build_times_disabled()) {
-          /* Don't count circuit times if the network was not live */
+          /* Only count circuit times if the network is live */
           if (circuit_build_times_network_check_live(&circ_times)) {
             circuit_build_times_add_time(&circ_times, (build_time_t)timediff);
             circuit_build_times_set_timeout(&circ_times);

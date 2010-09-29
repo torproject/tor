@@ -284,6 +284,8 @@ circuit_expire_building(time_t now)
    * decided on a customized one yet */
   time_t general_cutoff = now - lround(circ_times.timeout_ms/1000);
   time_t begindir_cutoff = now - lround(circ_times.timeout_ms/2000);
+  time_t fourhop_cutoff = now - lround(4*circ_times.timeout_ms/3000);
+  time_t cannibalize_cutoff = now - lround(circ_times.timeout_ms/2000);
   time_t close_cutoff = now - lround(circ_times.close_ms/1000);
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
@@ -299,6 +301,11 @@ circuit_expire_building(time_t now)
     build_state = TO_ORIGIN_CIRCUIT(victim)->build_state;
     if (build_state && build_state->onehop_tunnel)
       cutoff = begindir_cutoff;
+    else if (build_state && build_state->desired_path_len == 4
+             && !TO_ORIGIN_CIRCUIT(victim)->has_opened)
+      cutoff = fourhop_cutoff;
+    else if (TO_ORIGIN_CIRCUIT(victim)->has_opened)
+      cutoff = cannibalize_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
       cutoff = introcirc_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
@@ -378,29 +385,36 @@ circuit_expire_building(time_t now)
         continue;
       }
 
-      /* circuits are allowed to last longer for measurement.
-       * Switch their purpose and wait. */
-      if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
-        victim->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
-        circuit_build_times_count_timeout(&circ_times,
-                                          first_hop_succeeded);
-        continue;
-      }
+      if (circuit_timeout_want_to_count_circ(TO_ORIGIN_CIRCUIT(victim))) {
+        /* Circuits are allowed to last longer for measurement.
+         * Switch their purpose and wait. */
+        if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
+          victim->purpose = CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT;
+          /* Record this failure to check for too many timeouts
+           * in a row. This function does not record a time value yet
+           * (we do that later); it only counts the fact that we did
+           * have a timeout. */
+          circuit_build_times_count_timeout(&circ_times,
+                                            first_hop_succeeded);
+          continue;
+        }
 
-      /*
-       * If the circuit build time is much greater than we would have cut
-       * it off at, we probably had a suspend event along this codepath,
-       * and we should discard the value.
-       */
-      if (now - victim->timestamp_created > 2*circ_times.close_ms/1000+1) {
-        log_notice(LD_CIRC,
-                   "Extremely large value for circuit build timeout: %lds. "
-                   "Assuming clock jump.",
-                   (long)(now - victim->timestamp_created));
-      } else if (circuit_build_times_count_close(&circ_times,
-                                          first_hop_succeeded,
-                                          victim->timestamp_created)) {
-        circuit_build_times_set_timeout(&circ_times);
+        /*
+         * If the circuit build time is much greater than we would have cut
+         * it off at, we probably had a suspend event along this codepath,
+         * and we should discard the value.
+         */
+        if (now - victim->timestamp_created > 2*circ_times.close_ms/1000+1) {
+          log_notice(LD_CIRC,
+                     "Extremely large value for circuit build timeout: %lds. "
+                     "Assuming clock jump. Purpose %d",
+                     (long)(now - victim->timestamp_created),
+                      victim->purpose);
+        } else if (circuit_build_times_count_close(&circ_times,
+                                            first_hop_succeeded,
+                                            victim->timestamp_created)) {
+          circuit_build_times_set_timeout(&circ_times);
+        }
       }
     }
 
@@ -902,6 +916,11 @@ void
 circuit_has_opened(origin_circuit_t *circ)
 {
   control_event_circuit_status(circ, CIRC_EVENT_BUILT, 0);
+
+  /* Remember that this circuit has finished building. Now if we start
+   * it building again later (e.g. by extending it), we will know not
+   * to consider its build time. */
+  circ->has_opened = 1;
 
   switch (TO_CIRCUIT(circ)->purpose) {
     case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
