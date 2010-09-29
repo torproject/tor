@@ -986,15 +986,8 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
   /*
    * Check if this is a timeout that was for a circuit that spent its
    * entire existence during a time where we have had no network activity.
-   *
-   * Also double check that it is a valid timeout after we have possibly
-   * just recently reset cbt->close_ms.
-   *
-   * We use close_ms here because timeouts aren't actually counted as timeouts
-   * until close_ms elapses.
    */
-  if (cbt->liveness.network_last_live <= start_time &&
-          start_time <= (now - cbt->close_ms/1000.0)) {
+  if (cbt->liveness.network_last_live < start_time) {
     if (did_onehop) {
       char last_live_buf[ISO_TIME_LEN+1];
       char start_time_buf[ISO_TIME_LEN+1];
@@ -1009,6 +1002,9 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
                now_buf);
     }
     cbt->liveness.nonlive_timeouts++;
+    log_info(LD_CIRC,
+             "Got non-live timeout. Current count is: %d",
+             cbt->liveness.nonlive_timeouts);
   }
 }
 
@@ -1038,6 +1034,7 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
     return 0;
   } else if (cbt->liveness.nonlive_timeouts >=
                 CBT_NETWORK_NONLIVE_TIMEOUT_COUNT) {
+    // XXX: We won't ever conclude the network is flaky here for poor arma...
     if (cbt->timeout_ms < circuit_build_times_get_initial_timeout()) {
       log_notice(LD_CIRC,
                 "Network is flaky. No activity for %ld seconds. "
