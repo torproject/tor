@@ -4605,7 +4605,7 @@ entries_retry_helper(or_options_t *options, int act)
         if (ri->is_running)
           any_running = 1; /* some entry is both known and running */
         else if (act) { /* mark it for retry */
-          ri->is_running = 1;
+          router_set_status(ri->cache_info.identity_digest, 1);
           e->can_retry = 1;
           e->bad_since = 0;
         }
@@ -4625,7 +4625,7 @@ entries_known_but_down(or_options_t *options)
   return entries_retry_helper(options, 0);
 }
 
-/** Mark all down known bridges up. */
+/** Mark all down known bridges / entrynodes up. */
 void
 entries_retry_all(or_options_t *options)
 {

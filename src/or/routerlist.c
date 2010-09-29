@@ -4786,7 +4786,7 @@ update_router_have_minimum_dir_info(void)
     count_usable_descriptors(&num_present, &num_usable, consensus, options,
                              now, options->EntryNodes);
 
-    if (num_usable && (num_present == 0)) {
+    if (!num_usable || !num_present) {
       tor_snprintf(dir_info_status, sizeof(dir_info_status),
                    "We have only %d/%d usable entry node descriptors.",
                    num_present, num_usable);
