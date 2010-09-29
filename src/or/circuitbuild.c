@@ -1034,17 +1034,25 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
     return 0;
   } else if (cbt->liveness.nonlive_timeouts >=
                 CBT_NETWORK_NONLIVE_TIMEOUT_COUNT) {
-    // XXX: We won't ever conclude the network is flaky here for poor arma...
-    if (cbt->timeout_ms < circuit_build_times_get_initial_timeout()) {
+    if (cbt->liveness.suspended_timeout <= 0) {
+      cbt->liveness.suspended_timeout = cbt->timeout_ms;
+      cbt->liveness.suspended_close_timeout = cbt->close_ms;
+
+      if (cbt->timeout_ms < circuit_build_times_get_initial_timeout())
+        cbt->timeout_ms = circuit_build_times_get_initial_timeout();
+      else
+        cbt->timeout_ms *= 2;
+
+      if (cbt->close_ms < circuit_build_times_get_initial_timeout())
+        cbt->close_ms = circuit_build_times_get_initial_timeout();
+      else
+        cbt->close_ms *= 2;
+
       log_notice(LD_CIRC,
                 "Network is flaky. No activity for %ld seconds. "
                 "Temporarily raising timeout to %lds.",
                 (long int)(now - cbt->liveness.network_last_live),
-                tor_lround(circuit_build_times_get_initial_timeout()/1000));
-      cbt->liveness.suspended_timeout = cbt->timeout_ms;
-      cbt->liveness.suspended_close_timeout = cbt->close_ms;
-      cbt->close_ms = cbt->timeout_ms
-                    = circuit_build_times_get_initial_timeout();
+                tor_lround(cbt->timeout_ms/1000));
       control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_SUSPENDED);
     }
 
