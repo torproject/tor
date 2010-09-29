@@ -3088,11 +3088,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "features to be broken in unpredictable ways.");
   }
 
-  if (options->EntryNodes && !routerset_is_list(options->EntryNodes)) {
-    /* XXXX fix this; see entry_guards_prepend_from_config(). */
-    REJECT("IPs or countries are not yet supported in EntryNodes.");
-  }
-
   if (options->AuthoritativeDir) {
     if (!options->ContactInfo && !options->TestingTorNetwork)
       REJECT("Authoritative directory servers must set ContactInfo");
