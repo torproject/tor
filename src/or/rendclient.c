@@ -738,7 +738,7 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
   int i;
   rend_cache_entry_t *entry;
   rend_intro_point_t *intro;
-  routerinfo_t *router;
+  const routerinfo_t *router;
 
   if (rend_cache_lookup_entry(rend_query->onion_address, -1, &entry) < 1) {
     log_warn(LD_REND,

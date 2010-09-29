@@ -1344,7 +1344,7 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     if (!me) {
       *errmsg = "No routerdesc known; am I really a server?";
       return -1;
@@ -1366,8 +1366,9 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
  * NOTE: <b>ri_body</b> is as returned by signed_descriptor_get_body: it might
  * not be NUL-terminated. */
 static char *
-munge_extrainfo_into_routerinfo(const char *ri_body, signed_descriptor_t *ri,
-                                signed_descriptor_t *ei)
+munge_extrainfo_into_routerinfo(const char *ri_body,
+                                const signed_descriptor_t *ri,
+                                const signed_descriptor_t *ei)
 {
   char *out = NULL, *outp;
   int i;
@@ -1412,16 +1413,17 @@ getinfo_helper_dir(control_connection_t *control_conn,
                    const char *question, char **answer,
                    const char **errmsg)
 {
+  const routerinfo_t *ri;
   (void) control_conn;
   if (!strcmpstart(question, "desc/id/")) {
-    routerinfo_t *ri = router_get_by_hexdigest(question+strlen("desc/id/"));
+    ri = router_get_by_hexdigest(question+strlen("desc/id/"));
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
         *answer = tor_strndup(body, ri->cache_info.signed_descriptor_len);
     }
   } else if (!strcmpstart(question, "desc/name/")) {
-    routerinfo_t *ri = router_get_by_nickname(question+strlen("desc/name/"),1);
+    ri = router_get_by_nickname(question+strlen("desc/name/"),1);
     if (ri) {
       const char *body = signed_descriptor_get_body(&ri->cache_info);
       if (body)
@@ -1431,7 +1433,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     routerlist_t *routerlist = router_get_routerlist();
     smartlist_t *sl = smartlist_create();
     if (routerlist && routerlist->routers) {
-      SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+      SMARTLIST_FOREACH(routerlist->routers, const routerinfo_t *, ri,
       {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         if (body)
@@ -1447,7 +1449,7 @@ getinfo_helper_dir(control_connection_t *control_conn,
     routerlist_t *routerlist = router_get_routerlist();
     smartlist_t *sl = smartlist_create();
     if (routerlist && routerlist->routers) {
-      SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
+      SMARTLIST_FOREACH(routerlist->routers, const routerinfo_t *, ri,
       {
         const char *body = signed_descriptor_get_body(&ri->cache_info);
         signed_descriptor_t *ei = extrainfo_get_by_descriptor_digest(
@@ -1465,8 +1467,8 @@ getinfo_helper_dir(control_connection_t *control_conn,
     SMARTLIST_FOREACH(sl, char *, c, tor_free(c));
     smartlist_free(sl);
   } else if (!strcmpstart(question, "desc-annotations/id/")) {
-    routerinfo_t *ri = router_get_by_hexdigest(question+
-                                               strlen("desc-annotations/id/"));
+    ri = router_get_by_hexdigest(question+
+                                 strlen("desc-annotations/id/"));
     if (ri) {
       const char *annotations =
         signed_descriptor_get_annotations(&ri->cache_info);
@@ -2168,12 +2170,12 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   routers = smartlist_create();
   SMARTLIST_FOREACH(router_nicknames, const char *, n,
   {
-    routerinfo_t *r = router_get_by_nickname(n, 1);
+    const routerinfo_t *r = router_get_by_nickname(n, 1);
     if (!r) {
       connection_printf_to_buf(conn, "552 No such router \"%s\"\r\n", n);
       goto done;
     }
-    smartlist_add(routers, r);
+    smartlist_add(routers, (void*) r);
   });
   if (!smartlist_len(routers)) {
     connection_write_str_to_buf("512 No router names provided\r\n", conn);
@@ -2186,7 +2188,7 @@ handle_control_extendcircuit(control_connection_t *conn, uint32_t len,
   }
 
   /* now circ refers to something that is ready to be extended */
-  SMARTLIST_FOREACH(routers, routerinfo_t *, r,
+  SMARTLIST_FOREACH(routers, const routerinfo_t *, r,
   {
     extend_info_t *info = extend_info_from_router(r);
     circuit_append_new_exit(circ, info);
@@ -2338,8 +2340,8 @@ handle_control_attachstream(control_connection_t *conn, uint32_t len,
   }
   /* Is this a single hop circuit? */
   if (circ && (circuit_get_cpath_len(circ)<2 || hop==1)) {
-    routerinfo_t *r = NULL;
-    char* exit_digest;
+    const routerinfo_t *r = NULL;
+    char *exit_digest;
     if (circ->build_state &&
         circ->build_state->chosen_exit &&
         !tor_digest_is_zero(circ->build_state->chosen_exit->identity_digest)) {
@@ -3175,7 +3177,7 @@ control_event_stream_status(edge_connection_t *conn, stream_status_event_t tp,
 static void
 orconn_target_get_name(char *name, size_t len, or_connection_t *conn)
 {
-  routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
+  const routerinfo_t *ri = router_get_by_digest(conn->identity_digest);
   if (ri) {
     tor_assert(len > MAX_VERBOSE_NICKNAME_LEN);
     router_get_verbose_nickname(name, ri);
@@ -3720,7 +3722,7 @@ control_event_guard(const char *nickname, const char *digest,
 
   {
     char buf[MAX_VERBOSE_NICKNAME_LEN+1];
-    routerinfo_t *ri = router_get_by_digest(digest);
+    const routerinfo_t *ri = router_get_by_digest(digest);
     if (ri) {
       router_get_verbose_nickname(buf, ri);
     } else {

@@ -74,7 +74,8 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         const char *platform, const char *contact,
                         const char **msg, int should_log);
 static void clear_cached_dir(cached_dir_t *d);
-static signed_descriptor_t *get_signed_descriptor_by_fp(const char *fp,
+static const signed_descriptor_t *get_signed_descriptor_by_fp(
+                                                        const char *fp,
                                                         int extrainfo,
                                                         time_t publish_cutoff);
 static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
@@ -707,7 +708,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
    * from this server.  (We do this here and not in router_add_to_routerlist
    * because we want to be able to accept the newest router descriptor that
    * another authority has, so we all converge on the same one.) */
-  ri_old = router_get_by_digest(ri->cache_info.identity_digest);
+  ri_old = router_get_mutable_by_digest(ri->cache_info.identity_digest);
   if (ri_old && ri_old->cache_info.published_on < ri->cache_info.published_on
       && router_differences_are_cosmetic(ri_old, ri)
       && !router_is_me(ri)) {
@@ -767,7 +768,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 static was_router_added_t
 dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 {
-  routerinfo_t *ri;
+  const routerinfo_t *ri;
   int r;
   tor_assert(msg);
   *msg = NULL;
@@ -1151,7 +1152,7 @@ dirserv_dump_directory_to_string(char **dir_out,
 int
 directory_fetches_from_authorities(or_options_t *options)
 {
-  routerinfo_t *me;
+  const routerinfo_t *me;
   uint32_t addr;
   int refuseunknown;
   if (options->FetchDirInfoEarly)
@@ -2026,7 +2027,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   }
 
   if (format != NS_V2) {
-    routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
+    const routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
     uint32_t bw;
 
     if (format != NS_CONTROL_PORT) {
@@ -2879,7 +2880,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
 
   if (!strcmp(key,"authority")) {
     if (authdir_mode_v2(get_options())) {
-      routerinfo_t *me = router_get_my_routerinfo();
+      const routerinfo_t *me = router_get_my_routerinfo();
       if (me)
         smartlist_add(result,
                       tor_memdup(me->cache_info.identity_digest, DIGEST_LEN));
@@ -2965,7 +2966,7 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
                       smartlist_add(fps_out,
                       tor_memdup(r->cache_info.identity_digest, DIGEST_LEN)));
   } else if (!strcmp(key, "authority")) {
-    routerinfo_t *ri = router_get_my_routerinfo();
+    const routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
       smartlist_add(fps_out,
                     tor_memdup(ri->cache_info.identity_digest, DIGEST_LEN));
@@ -2985,8 +2986,8 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
 
   if (for_unencrypted_conn) {
     /* Remove anything that insists it not be sent unencrypted. */
-    SMARTLIST_FOREACH(fps_out, char *, cp, {
-        signed_descriptor_t *sd;
+    SMARTLIST_FOREACH_BEGIN(fps_out, char *, cp) {
+        const signed_descriptor_t *sd;
         if (by_id)
           sd = get_signed_descriptor_by_fp(cp,is_extrainfo,0);
         else if (is_extrainfo)
@@ -2997,7 +2998,7 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
           tor_free(cp);
           SMARTLIST_DEL_CURRENT(fps_out, cp);
         }
-      });
+    } SMARTLIST_FOREACH_END(cp);
   }
 
   if (!smartlist_len(fps_out)) {
@@ -3036,9 +3037,9 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                       smartlist_add(descs_out, &(r->cache_info)));
   } else if (!strcmp(key, "/tor/server/authority")) {
-    routerinfo_t *ri = router_get_my_routerinfo();
+    const routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
-      smartlist_add(descs_out, &(ri->cache_info));
+      smartlist_add(descs_out, (void*) &(ri->cache_info));
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/d/");
@@ -3062,17 +3063,17 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
        {
          if (router_digest_is_me(d)) {
            /* make sure desc_routerinfo exists */
-           routerinfo_t *ri = router_get_my_routerinfo();
+           const routerinfo_t *ri = router_get_my_routerinfo();
            if (ri)
-             smartlist_add(descs_out, &(ri->cache_info));
+             smartlist_add(descs_out, (void*) &(ri->cache_info));
          } else {
-           routerinfo_t *ri = router_get_by_digest(d);
+           const routerinfo_t *ri = router_get_by_digest(d);
            /* Don't actually serve a descriptor that everyone will think is
             * expired.  This is an (ugly) workaround to keep buggy 0.1.1.10
             * Tors from downloading descriptors that they will throw away.
             */
            if (ri && ri->cache_info.published_on > cutoff)
-             smartlist_add(descs_out, &(ri->cache_info));
+             smartlist_add(descs_out, (void*) &(ri->cache_info));
          }
        });
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
@@ -3130,7 +3131,8 @@ dirserv_orconn_tls_done(const char *address,
  * an upload or a download.  Used to decide whether to relaunch reachability
  * testing for the server. */
 int
-dirserv_should_launch_reachability_test(routerinfo_t *ri, routerinfo_t *ri_old)
+dirserv_should_launch_reachability_test(const routerinfo_t *ri,
+                                        const routerinfo_t *ri_old)
 {
   if (!authdir_mode_handles_descs(get_options(), ri->purpose))
     return 0;
@@ -3254,7 +3256,7 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
  * its extra-info document if <b>extrainfo</b> is true. Return
  * NULL if not found or if the descriptor is older than
  * <b>publish_cutoff</b>. */
-static signed_descriptor_t *
+static const signed_descriptor_t *
 get_signed_descriptor_by_fp(const char *fp, int extrainfo,
                             time_t publish_cutoff)
 {
@@ -3264,7 +3266,7 @@ get_signed_descriptor_by_fp(const char *fp, int extrainfo,
     else
       return &(router_get_my_routerinfo()->cache_info);
   } else {
-    routerinfo_t *ri = router_get_by_digest(fp);
+    const routerinfo_t *ri = router_get_by_digest(fp);
     if (ri &&
         ri->cache_info.published_on > publish_cutoff) {
       if (extrainfo)
@@ -3332,7 +3334,7 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
   tor_assert(fps);
   if (is_serverdescs) {
     int n = smartlist_len(fps);
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     result = (me?me->cache_info.signed_descriptor_len:2048) * n;
     if (compressed)
       result /= 2; /* observed compressibility is between 35 and 55%. */
@@ -3399,7 +3401,7 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
          connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
     const char *body;
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
-    signed_descriptor_t *sd = NULL;
+    const signed_descriptor_t *sd = NULL;
     if (by_fp) {
       sd = get_signed_descriptor_by_fp(fp, extra, publish_cutoff);
     } else {

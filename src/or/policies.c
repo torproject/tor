@@ -261,7 +261,7 @@ fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port)
 /** Return true iff we think our firewall will let us make an OR connection to
  * <b>ri</b>. */
 int
-fascist_firewall_allows_or(routerinfo_t *ri)
+fascist_firewall_allows_or(const routerinfo_t *ri)
 {
   /* XXXX proposal 118 */
   tor_addr_t addr;

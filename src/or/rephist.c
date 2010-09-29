@@ -579,7 +579,7 @@ rep_hist_dump_stats(time_t now, int severity)
   size_t len;
   int ret;
   unsigned long upt, downt;
-  routerinfo_t *r;
+  const routerinfo_t *r;
 
   rep_history_clean(now - get_options()->RephistTrackTime);
 
@@ -871,7 +871,7 @@ rep_hist_get_router_stability_doc(time_t now)
   }
 
   DIGESTMAP_FOREACH(history_map, id, or_history_t *, hist) {
-    routerinfo_t *ri;
+    const routerinfo_t *ri;
     char dbuf[BASE64_DIGEST_LEN+1];
     char header_buf[512];
     char *info;

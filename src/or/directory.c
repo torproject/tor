@@ -219,7 +219,7 @@ dir_conn_purpose_to_string(int purpose)
 int
 router_supports_extrainfo(const char *identity_digest, int is_authority)
 {
-  routerinfo_t *ri = router_get_by_digest(identity_digest);
+  const routerinfo_t *ri = router_get_by_digest(identity_digest);
 
   if (ri) {
     if (ri->caches_extra_info)
@@ -400,7 +400,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
        * possible directory question. This won't be true forever. -RD */
       /* It certainly is not true with conditional consensus downloading,
        * so, for now, never assume the server supports that. */
-      routerinfo_t *ri = choose_random_entry(NULL);
+      const routerinfo_t *ri = choose_random_entry(NULL);
       if (ri) {
         tor_addr_t addr;
         tor_addr_from_ipv4h(&addr, ri->addr);
@@ -522,7 +522,7 @@ directory_initiate_command_routerstatus_rend(routerstatus_t *status,
                                              time_t if_modified_since,
                                              const rend_data_t *rend_query)
 {
-  routerinfo_t *router;
+  const routerinfo_t *router;
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
   const char *address;
@@ -590,7 +590,7 @@ directory_conn_is_self_reachability_test(dir_connection_t *conn)
 {
   if (conn->requested_resource &&
       !strcmpstart(conn->requested_resource,"authority")) {
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     if (me &&
         router_digest_is_me(conn->identity_digest) &&
         tor_addr_eq_ipv4h(&conn->_base.addr, me->addr) && /*XXXX prop 118*/

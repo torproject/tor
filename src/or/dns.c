@@ -668,7 +668,7 @@ dns_resolve_impl(edge_connection_t *exitconn, int is_resolve,
   cached_resolve_t *resolve;
   cached_resolve_t search;
   pending_connection_t *pending_connection;
-  routerinfo_t *me;
+  const routerinfo_t *me;
   tor_addr_t addr;
   time_t now = time(NULL);
   uint8_t is_reverse = 0;

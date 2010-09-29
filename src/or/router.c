@@ -773,7 +773,7 @@ decide_to_advertise_dirport(or_options_t *options, uint16_t dir_port)
 void
 consider_testing_reachability(int test_or, int test_dir)
 {
-  routerinfo_t *me = router_get_my_routerinfo();
+  const routerinfo_t *me = router_get_my_routerinfo();
   int orport_reachable = check_whether_orport_reachable();
   tor_addr_t addr;
   if (!me)
@@ -808,7 +808,7 @@ void
 router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                get_options()->_PublishServerDescriptor != NO_AUTHORITY ?
@@ -831,7 +831,7 @@ void
 router_dirport_found_reachable(void)
 {
   if (!can_reach_dir_port) {
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
@@ -1093,7 +1093,7 @@ static int desc_needs_upload = 0;
 void
 router_upload_dir_desc_to_dirservers(int force)
 {
-  routerinfo_t *ri;
+  const routerinfo_t *ri;
   extrainfo_t *ei;
   char *msg;
   size_t desc_len, extra_len = 0, total_len;
@@ -1186,7 +1186,7 @@ router_extrainfo_digest_is_me(const char *digest)
 
 /** A wrapper around router_digest_is_me(). */
 int
-router_is_me(routerinfo_t *router)
+router_is_me(const routerinfo_t *router)
 {
   return router_digest_is_me(router->cache_info.identity_digest);
 }
@@ -1205,7 +1205,7 @@ router_fingerprint_is_me(const char *fp)
 
 /** Return a routerinfo for this OR, rebuilding a fresh one if
  * necessary.  Return NULL on error, or if called on an OP. */
-routerinfo_t *
+const routerinfo_t *
 router_get_my_routerinfo(void)
 {
   if (!server_mode(get_options()))
@@ -1348,9 +1348,8 @@ router_rebuild_descriptor(int force)
     ri->declared_family = smartlist_create();
     smartlist_split_string(family, options->MyFamily, ",",
       SPLIT_SKIP_SPACE|SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    SMARTLIST_FOREACH(family, char *, name,
-     {
-       routerinfo_t *member;
+    SMARTLIST_FOREACH_BEGIN(family, char *, name) {
+        const routerinfo_t *member;
        if (!strcasecmp(name, options->Nickname))
          member = ri;
        else
@@ -1386,7 +1385,7 @@ router_rebuild_descriptor(int force)
            smartlist_string_remove(warned_nonexistent_family, name);
        }
        tor_free(name);
-     });
+    } SMARTLIST_FOREACH_END(name);
 
     /* remove duplicates from the list */
     smartlist_sort_strings(ri->declared_family);

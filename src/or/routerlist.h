@@ -34,30 +34,30 @@ routerstatus_t *router_pick_trusteddirserver(authority_type_t type, int flags);
 int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
 void router_reset_status_download_failures(void);
-void routerlist_add_family(smartlist_t *sl, routerinfo_t *router);
-int routers_in_same_family(routerinfo_t *r1, routerinfo_t *r2);
+void routerlist_add_family(smartlist_t *sl, const routerinfo_t *router);
+int routers_in_same_family(const routerinfo_t *r1, const routerinfo_t *r2);
 int routers_have_same_or_addr(const routerinfo_t *r1, const routerinfo_t *r2);
 void add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                     int must_be_running);
-int router_nickname_is_in_list(routerinfo_t *router, const char *list);
-routerinfo_t *routerlist_find_my_routerinfo(void);
-routerinfo_t *router_find_exact_exit_enclave(const char *address,
+int router_nickname_is_in_list(const routerinfo_t *router, const char *list);
+const routerinfo_t *routerlist_find_my_routerinfo(void);
+const routerinfo_t *router_find_exact_exit_enclave(const char *address,
                                              uint16_t port);
-int router_is_unreliable(routerinfo_t *router, int need_uptime,
+int router_is_unreliable(const routerinfo_t *router, int need_uptime,
                          int need_capacity, int need_guard);
-uint32_t router_get_advertised_bandwidth(routerinfo_t *router);
-uint32_t router_get_advertised_bandwidth_capped(routerinfo_t *router);
+uint32_t router_get_advertised_bandwidth(const routerinfo_t *router);
+uint32_t router_get_advertised_bandwidth_capped(const routerinfo_t *router);
 
-routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
+const routerinfo_t *routerlist_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
 routerstatus_t *routerstatus_sl_choose_by_bandwidth(smartlist_t *sl,
                                                 bandwidth_weight_rule_t rule);
 
-routerinfo_t *router_choose_random_node(smartlist_t *excludedsmartlist,
+const routerinfo_t *router_choose_random_node(smartlist_t *excludedsmartlist,
                                         struct routerset_t *excludedset,
                                         router_crn_flags_t flags);
 
-routerinfo_t *router_get_by_nickname(const char *nickname,
+const routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
 int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir_type(const char *digest,
@@ -67,13 +67,14 @@ int router_digest_is_trusted_dir_type(const char *digest,
 
 int router_addr_is_trusted_dir(uint32_t addr);
 int hexdigest_to_digest(const char *hexdigest, char *digest);
-routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
-routerinfo_t *router_get_by_digest(const char *digest);
+const routerinfo_t *router_get_by_hexdigest(const char *hexdigest);
+const routerinfo_t *router_get_by_digest(const char *digest);
+routerinfo_t *router_get_mutable_by_digest(const char *digest);
 signed_descriptor_t *router_get_by_descriptor_digest(const char *digest);
 signed_descriptor_t *router_get_by_extrainfo_digest(const char *digest);
 signed_descriptor_t *extrainfo_get_by_descriptor_digest(const char *digest);
-const char *signed_descriptor_get_body(signed_descriptor_t *desc);
-const char *signed_descriptor_get_annotations(signed_descriptor_t *desc);
+const char *signed_descriptor_get_body(const signed_descriptor_t *desc);
+const char *signed_descriptor_get_annotations(const signed_descriptor_t *desc);
 routerlist_t *router_get_routerlist(void);
 void routerinfo_free(routerinfo_t *router);
 void extrainfo_free(extrainfo_t *extrainfo);
@@ -134,7 +135,7 @@ void router_load_extrainfo_from_string(const char *s, const char *eos,
 void routerlist_retry_directory_downloads(time_t now);
 int router_exit_policy_all_routers_reject(uint32_t addr, uint16_t port,
                                           int need_uptime);
-int router_exit_policy_rejects_all(routerinfo_t *router);
+int router_exit_policy_rejects_all(const routerinfo_t *router);
 trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
                            const char *address,
                            uint16_t dir_port, uint16_t or_port,
@@ -152,13 +153,15 @@ void router_dir_info_changed(void);
 const char *get_dir_info_status_string(void);
 int count_loading_descriptors_progress(void);
 void router_reset_descriptor_download_failures(void);
-int router_differences_are_cosmetic(routerinfo_t *r1, routerinfo_t *r2);
-int routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
+int router_differences_are_cosmetic(const routerinfo_t *r1,
+                                    const routerinfo_t *r2);
+int routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
+                                           extrainfo_t *ei,
                                            signed_descriptor_t *sd,
                                            const char **msg);
 
-void routerlist_assert_ok(routerlist_t *rl);
-const char *esc_router_info(routerinfo_t *router);
+void routerlist_assert_ok(const routerlist_t *rl);
+const char *esc_router_info(const routerinfo_t *router);
 void routers_sort_by_identity(smartlist_t *routers);
 
 routerset_t *routerset_new(void);
@@ -167,7 +170,7 @@ int routerset_parse(routerset_t *target, const char *s,
 void routerset_union(routerset_t *target, const routerset_t *source);
 int routerset_is_list(const routerset_t *set);
 int routerset_needs_geoip(const routerset_t *set);
-int routerset_contains_router(const routerset_t *set, routerinfo_t *ri);
+int routerset_contains_router(const routerset_t *set, const routerinfo_t *ri);
 int routerset_contains_routerstatus(const routerset_t *set,
                                     routerstatus_t *rs);
 int routerset_contains_extendinfo(const routerset_t *set,

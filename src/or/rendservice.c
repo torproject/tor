@@ -1001,7 +1001,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   } else {
     char *rp_nickname;
     size_t nickname_field_len;
-    routerinfo_t *router;
+    const routerinfo_t *router;
     int version;
     if (*buf == 1) {
       rp_nickname = buf+1;
@@ -1754,7 +1754,7 @@ void
 rend_services_introduce(void)
 {
   int i,j,r;
-  routerinfo_t *router;
+  const routerinfo_t *router;
   rend_service_t *service;
   rend_intro_point_t *intro;
   int changed, prev_intro_nodes;
@@ -1807,7 +1807,7 @@ rend_services_introduce(void)
         changed = 1;
       }
       if (router)
-        smartlist_add(intro_routers, router);
+        smartlist_add(intro_routers, (void*)router);
     }
 
     /* We have enough intro points, and the intro points we thought we had were
@@ -1848,7 +1848,7 @@ rend_services_introduce(void)
         break;
       }
       changed = 1;
-      smartlist_add(intro_routers, router);
+      smartlist_add(intro_routers, (void*)router);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
       intro->extend_info = extend_info_from_router(router);
       intro->intro_key = crypto_new_pk_env();

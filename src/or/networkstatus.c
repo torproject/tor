@@ -2083,7 +2083,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
       /* If we _are_ an authority, we should check whether this router
        * is one that will cause us to need a reachability test. */
       routerinfo_t *old_router =
-        router_get_by_digest(router->cache_info.identity_digest);
+        router_get_mutable_by_digest(router->cache_info.identity_digest);
       if (old_router != router) {
         router->needs_retest_if_added =
           dirserv_should_launch_reachability_test(router, old_router);

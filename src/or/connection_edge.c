@@ -587,7 +587,7 @@ void
 circuit_discard_optional_exit_enclaves(extend_info_t *info)
 {
   edge_connection_t *edge_conn;
-  routerinfo_t *r1, *r2;
+  const routerinfo_t *r1, *r2;
 
   smartlist_t *conns = get_connection_array();
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
@@ -1575,7 +1575,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return -1;
       }
     } else {
-      routerinfo_t *r;
+      const routerinfo_t *r;
       conn->chosen_exit_name = tor_strdup(socks->address);
       r = router_get_by_nickname(conn->chosen_exit_name, 1);
       *socks->address = 0;
@@ -1631,7 +1631,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
-        routerinfo_t *r =
+        const routerinfo_t *r =
           router_find_exact_exit_enclave(socks->address, socks->port);
         if (r) {
           log_info(LD_APP,
@@ -2896,7 +2896,7 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
  * this relay, return 0.
  */
 int
-connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
+connection_ap_can_use_exit(edge_connection_t *conn, const routerinfo_t *exit,
                            int excluded_means_no)
 {
   or_options_t *options = get_options();
@@ -2910,7 +2910,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
    * make sure the exit node of the existing circuit matches exactly.
    */
   if (conn->chosen_exit_name) {
-    routerinfo_t *chosen_exit =
+    const routerinfo_t *chosen_exit =
       router_get_by_nickname(conn->chosen_exit_name, 1);
     if (!chosen_exit || memcmp(chosen_exit->cache_info.identity_digest,
                                exit->cache_info.identity_digest, DIGEST_LEN)) {

@@ -267,7 +267,7 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
   }
 
   if (circuit_id_in_use_on_orconn(cell->circ_id, conn)) {
-    routerinfo_t *router = router_get_by_digest(conn->identity_digest);
+    const routerinfo_t *router = router_get_by_digest(conn->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received CREATE cell (circID %d) for known circ. "
            "Dropping (age %d).",

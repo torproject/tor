@@ -19,7 +19,7 @@
 
 int firewall_is_fascist_or(void);
 int fascist_firewall_allows_address_or(const tor_addr_t *addr, uint16_t port);
-int fascist_firewall_allows_or(routerinfo_t *ri);
+int fascist_firewall_allows_or(const routerinfo_t *ri);
 int fascist_firewall_allows_address_dir(const tor_addr_t *addr, uint16_t port);
 int dir_policy_permits_address(const tor_addr_t *addr);
 int socks_policy_permits_address(const tor_addr_t *addr);

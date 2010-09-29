@@ -946,9 +946,9 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
         if (info) {
           /* need to make sure we don't duplicate hops */
           crypt_path_t *hop = circ->cpath;
-          routerinfo_t *ri1 = router_get_by_digest(info->identity_digest);
+          const routerinfo_t *ri1 = router_get_by_digest(info->identity_digest);
           do {
-            routerinfo_t *ri2;
+            const routerinfo_t *ri2;
             if (!memcmp(hop->extend_info->identity_digest,
                         info->identity_digest, DIGEST_LEN))
               goto next;

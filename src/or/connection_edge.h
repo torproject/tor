@@ -47,7 +47,8 @@ int connection_exit_begin_conn(cell_t *cell, circuit_t *circ);
 int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);
 void connection_exit_connect(edge_connection_t *conn);
 int connection_edge_is_rendezvous_stream(edge_connection_t *conn);
-int connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
+int connection_ap_can_use_exit(edge_connection_t *conn,
+                               const routerinfo_t *exit,
                                int excluded_means_no);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);

@@ -720,11 +720,12 @@ connection_ap_process_end_not_open(
   if (rh->length > 0 && edge_reason_is_retriable(reason) &&
       !connection_edge_is_rendezvous_stream(conn)  /* avoid retry if rend */
       ) {
+    const char *chosen_exit_digest =
+      circ->build_state->chosen_exit->identity_digest;
     log_info(LD_APP,"Address '%s' refused due to '%s'. Considering retrying.",
              safe_str(conn->socks_request->address),
              stream_end_reason_to_string(reason));
-    exitrouter =
-      router_get_by_digest(circ->build_state->chosen_exit->identity_digest);
+    exitrouter = router_get_mutable_by_digest(chosen_exit_digest);
     switch (reason) {
       case END_STREAM_REASON_EXITPOLICY:
         if (rh->length >= 5) {

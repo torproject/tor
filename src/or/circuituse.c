@@ -43,7 +43,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
                       int need_uptime, int need_internal,
                       time_t now)
 {
-  routerinfo_t *exitrouter;
+  const routerinfo_t *exitrouter;
   cpath_build_state_t *build_state;
   tor_assert(circ);
   tor_assert(conn);
@@ -473,7 +473,7 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
                                 uint16_t port, int min)
 {
   circuit_t *circ;
-  routerinfo_t *exitrouter;
+  const routerinfo_t *exitrouter;
   int num=0;
   time_t now = time(NULL);
   int need_uptime = smartlist_string_num_isin(get_options()->LongLivedPorts,
@@ -1077,7 +1077,7 @@ static int did_circs_fail_last_period = 0;
  * details on arguments. */
 origin_circuit_t *
 circuit_launch_by_router(uint8_t purpose,
-                         routerinfo_t *exit, int flags)
+                         const routerinfo_t *exit, int flags)
 {
   origin_circuit_t *circ;
   extend_info_t *info = NULL;
@@ -1267,7 +1267,8 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
       }
     } else {
       /* XXXX022 Duplicates checks in connection_ap_handshake_attach_circuit */
-      routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
+      const routerinfo_t *router =
+        router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
       if (router && !connection_ap_can_use_exit(conn, router, 0)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
@@ -1317,7 +1318,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
      */
     if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
       if (conn->chosen_exit_name) {
-        routerinfo_t *r;
+        const routerinfo_t *r;
         int opt = conn->chosen_exit_optional;
         r = router_get_by_nickname(conn->chosen_exit_name, 1);
         if (r) {
@@ -1571,7 +1572,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
     origin_circuit_t *circ=NULL;
 
     if (conn->chosen_exit_name) {
-      routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
+      const routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
       if (!router && !want_onehop) {
         /* We ran into this warning when trying to extend a circuit to a

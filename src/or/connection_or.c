@@ -438,7 +438,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
                                      const char *id_digest,
                                      int started_here)
 {
-  routerinfo_t *r = router_get_by_digest(id_digest);
+  const routerinfo_t *r = router_get_by_digest(id_digest);
   connection_or_set_identity_digest(conn, id_digest);
   connection_or_update_token_buckets_helper(conn, 1, get_options());
 
@@ -1491,7 +1491,7 @@ connection_or_send_netinfo(or_connection_t *conn)
 {
   cell_t cell;
   time_t now = time(NULL);
-  routerinfo_t *me;
+  const routerinfo_t *me;
   int len;
   char *out;
 
