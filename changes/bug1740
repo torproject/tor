@@ -1,0 +1,5 @@
+ o Minor bugfixes:
+   - Fix to ignore cannibalized circuits when recording circuit build times.
+     This should provide for a minor performance improvement for hidden
+     service users using 0.2.2.14-alpha, and should remove two spurious
+     notice log messages. Bugfix on 0.2.2.14-alpha; fixes bug #1740.
