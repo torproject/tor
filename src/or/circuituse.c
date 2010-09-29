@@ -959,9 +959,13 @@ circuit_build_failed(origin_circuit_t *circ)
     if (circ->_base.n_conn) {
       or_connection_t *n_conn = circ->_base.n_conn;
       if (n_conn->is_bad_for_new_circs) {
-        /* no need to blow away circuits/streams/etc. Also, don't mark this
-         * router as newly down, since maybe this was just an old circuit
-         * attempt that's finally timing out now. */
+        /* We only want to blame this router when a fresh healthy
+         * connection fails. So don't mark this router as newly failed,
+         * since maybe this was just an old circuit attempt that's
+         * finally timing out now. Also, there's no need to blow away
+         * circuits/streams/etc, since the failure of an unhealthy conn
+         * doesn't tell us much about whether a healthy conn would
+         * succeed. */
         already_marked = 1;
       }
       log_info(LD_OR,

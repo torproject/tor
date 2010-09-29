@@ -606,8 +606,21 @@ connection_or_get_for_extend(const char *digest,
 #define TIME_BEFORE_OR_CONN_IS_TOO_OLD (60*60*24*7)
 
 /** Given the head of the linked list for all the or_connections with a given
- * identity, set elements of that list as is_bad_for_new_circs() as
- * appropriate.  Helper for connection_or_set_bad_connections().
+ * identity, set elements of that list as is_bad_for_new_circs as
+ * appropriate. Helper for connection_or_set_bad_connections().
+ *
+ * Specifically, we set the is_bad_for_new_circs flag on:
+ *    - all connections if <b>force</b> is true.
+ *    - all connections that are too old.
+ *    - all open non-canonical connections for which a canonical connection
+ *      exists to the same router.
+ *    - all open canonical connections for which a 'better' canonical
+ *      connection exists to the same router.
+ *    - all open non-canonical connections for which a 'better' non-canonical
+ *      connection exists to the same router at the same address.
+ *
+ * See connection_or_is_better() for our idea of what makes one OR connection
+ * better than another.
  */
 static void
 connection_or_group_set_badness(or_connection_t *head, int force)
@@ -721,18 +734,8 @@ connection_or_group_set_badness(or_connection_t *head, int force)
 
 /** Go through all the OR connections (or if <b>digest</b> is non-NULL, just
  * the OR connections with that digest), and set the is_bad_for_new_circs
- * flag on:
- *    - all connections if <b>force</b> is true.
- *    - all connections that are too old.
- *    - all open non-canonical connections for which a canonical connection
- *      exists to the same router.
- *    - all open canonical connections for which a 'better' canonical
- *      connection exists to the same router.
- *    - all open non-canonical connections for which a 'better' non-canonical
- *      connection exists to the same router at the same address.
- *
- * See connection_or_is_better() for our idea of what makes one OR connection
- * better than another.
+ * flag based on the rules in connection_or_group_set_badness() (or just
+ * always set it if <b>force</b> is true).
  */
 void
 connection_or_set_bad_connections(const char *digest, int force)

@@ -4605,7 +4605,7 @@ entries_retry_helper(or_options_t *options, int act)
         if (ri->is_running)
           any_running = 1; /* some entry is both known and running */
         else if (act) {
-          /* Mark-for-close all TLS connections to this node, since
+          /* Mark all current connections to this OR as unhealthy, since
            * otherwise there could be one that started 30 seconds
            * ago, and in 30 seconds it will time out, causing us to mark
            * the node down and undermine the retry attempt. We mark even
@@ -4613,7 +4613,7 @@ entries_retry_helper(or_options_t *options, int act)
            * we'll want to attach circuits to fresh conns. */
           connection_or_set_bad_connections(ri->cache_info.identity_digest, 1);
 
-          /* mark it for retry */
+          /* mark this entry node for retry */
           router_set_status(ri->cache_info.identity_digest, 1);
           e->can_retry = 1;
           e->bad_since = 0;
