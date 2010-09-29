@@ -1173,7 +1173,7 @@ run_scheduled_events(time_t now)
     circuit_expire_old_circuits_serverside(now);
 
   /** 5. We do housekeeping for each connection... */
-  connection_or_set_bad_connections();
+  connection_or_set_bad_connections(NULL, 0);
   for (i=0;i<smartlist_len(connection_array);i++) {
     run_connection_housekeeping(i, now);
   }

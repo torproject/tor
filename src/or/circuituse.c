@@ -955,8 +955,15 @@ circuit_build_failed(origin_circuit_t *circ)
      * to blame, blame it. Also, avoid this relay for a while, and
      * fail any one-hop directory fetches destined for it. */
     const char *n_conn_id = circ->cpath->extend_info->identity_digest;
+    int already_marked = 0;
     if (circ->_base.n_conn) {
       or_connection_t *n_conn = circ->_base.n_conn;
+      if (n_conn->is_bad_for_new_circs) {
+        /* no need to blow away circuits/streams/etc. Also, don't mark this
+         * router as newly down, since maybe this was just an old circuit
+         * attempt that's finally timing out now. */
+        already_marked = 1;
+      }
       log_info(LD_OR,
                "Our circuit failed to get a response from the first hop "
                "(%s:%d). I'm going to try to rotate to a better connection.",
@@ -966,7 +973,7 @@ circuit_build_failed(origin_circuit_t *circ)
       log_info(LD_OR,
                "Our circuit died before the first hop with no connection");
     }
-    if (n_conn_id) {
+    if (n_conn_id && !already_marked) {
       entry_guard_register_connect_status(n_conn_id, 0, 1, time(NULL));
       /* if there are any one-hop streams waiting on this circuit, fail
        * them now so they can retry elsewhere. */
