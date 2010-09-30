@@ -3002,7 +3002,7 @@ double circuit_build_times_quantile_cutoff(void);
 #define CBT_DEFAULT_TEST_FREQUENCY 60
 
 /** Lowest allowable value for CircuitBuildTimeout in milliseconds */
-#define CBT_DEFAULT_TIMEOUT_MIN_VALUE (2*1000)
+#define CBT_DEFAULT_TIMEOUT_MIN_VALUE (1500)
 
 /** Initial circuit build timeout in milliseconds */
 #define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60*1000)
