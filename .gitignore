@@ -29,6 +29,7 @@
 /aclocal.m4
 /autom4te.cache
 /build-stamp
+/compile
 /configure
 /Doxyfile
 /orconfig.h
