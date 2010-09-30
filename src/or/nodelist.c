@@ -698,6 +698,19 @@ node_is_me(const node_t *node)
   return router_digest_is_me(node->identity);
 }
 
+/** Return <b>node</b> declared family (as a list of names), or NULL if
+ * the node didn't declare a family. */
+const smartlist_t *
+node_get_declared_family(const node_t *node)
+{
+  if (node->ri && node->ri->declared_family)
+    return node->ri->declared_family;
+  else if (node->md && node->md->family)
+    return node->md->family;
+  else
+    return NULL;
+}
+
 /* KILLTHIS XXXX NM -- it's a dummy to keep UNIMPLEMENTED_NODELIST()
  * working */
 int unimplemented_nodelist_truth = 1;

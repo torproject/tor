@@ -2725,7 +2725,8 @@ typedef struct {
 
   char *MyFamily; /**< Declared family for this OR. */
   config_line_t *NodeFamilies; /**< List of config lines for
-                                       * node families */
+                                * node families */
+  smartlist_t *NodeFamilySets; /**< List of parsed NodeFamilies values. */
   config_line_t *AuthDirBadDir; /**< Address policy for descriptors to
                                  * mark as bad dir mirrors. */
   config_line_t *AuthDirBadExit; /**< Address policy for descriptors to

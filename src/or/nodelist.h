@@ -45,6 +45,7 @@ const char *node_get_platform(const node_t *node);
 void node_get_address_string(const node_t *node, char *cp, size_t len);
 long node_get_declared_uptime(const node_t *node);
 time_t node_get_published_on(const node_t *node);
+const smartlist_t *node_get_declared_family(const node_t *node);
 
 smartlist_t *nodelist_get_list(void);
 

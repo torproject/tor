@@ -571,7 +571,8 @@ The following options are useful only for clients (that is, if
     constitute a "family" of similar or co-administered servers, so never use
     any two of them in the same circuit. Defining a NodeFamily is only needed
     when a server doesn't list the family itself (with MyFamily). This option
-    can be used multiple times.
+    can be used multiple times.  In addition to nodes, you can also list
+    IP address and ranges and country codes in {curly braces}.
 
 **EnforceDistinctSubnets** **0**|**1**::
     If 1, Tor will not put two servers whose IP addresses are "too close" on

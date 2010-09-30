@@ -1,0 +1,4 @@
+  o Minor features
+    - The NodeFamily option -- which let you declare that you want to
+      consider nodes to be part of a family whether they list themselves
+      that way or not -- now allows IP address ranges and country codes.

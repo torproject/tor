@@ -46,6 +46,8 @@ static const routerstatus_t *router_pick_trusteddirserver_impl(
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(const routerinfo_t *router,
                                    const char *nickname);
+static int node_nickname_matches(const node_t *router,
+                                 const char *nickname);
 static void trusted_dir_server_free(trusted_dir_server_t *ds);
 static int signed_desc_digest_is_recognized(signed_descriptor_t *desc);
 static void update_router_have_minimum_dir_info(void);
@@ -1300,72 +1302,70 @@ router_reset_status_download_failures(void)
   mark_all_trusteddirservers_up();
 }
 
-/** Return true iff router1 and router2 have the same /16 network. */
+/** Return true iff router1 and router2 have similar enough network addresses
+ * that we should treat them as being in the same family */
 static INLINE int
-routers_in_same_network_family(const routerinfo_t *r1, const routerinfo_t *r2)
+addrs_in_same_network_family(const tor_addr_t *a1,
+                             const tor_addr_t *a2)
 {
-  return (r1->addr & 0xffff0000) == (r2->addr & 0xffff0000);
+  /* XXXX MOVE ? */
+  return 0 == tor_addr_compare_masked(a1, a2, 16, CMP_SEMANTIC);
 }
-
-#if 0
-/** Look through the routerlist and identify routers that
- * advertise the same /16 network address as <b>router</b>.
- * Add each of them to <b>sl</b>.
- */
-static void
-routerlist_add_network_family(smartlist_t *sl, const routerinfo_t *router)
-{
-  SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, r,
-  {
-    if (router != r && routers_in_same_network_family(router, r))
-      smartlist_add(sl, r);
-  });
-}
-#endif
 
 /** Add all the family of <b>router</b> to the smartlist <b>sl</b>.
  * This is used to make sure we don't pick siblings in a single path,
  * or pick more than one relay from a family for our entry guard list.
  */
 void
-nodelist_add_node_family(smartlist_t *sl, const node_t *router)
+nodelist_add_node_family(smartlist_t *sl, const node_t *node)
 {
   /* XXXX MOVE */
-#if 0
-  const routerinfo_t *r;
-  config_line_t *cl;
+  const smartlist_t *all_nodes = nodelist_get_list();
+  const smartlist_t *declared_family = node_get_declared_family(node);
   or_options_t *options = get_options();
 
-  /* First, add any routers with similar network addresses. */
-  if (options->EnforceDistinctSubnets)
-    routerlist_add_network_family(sl, router);
+  /* First, add any nodes with similar network addresses. */
+  if (options->EnforceDistinctSubnets) {
+    tor_addr_t node_addr;
+    node_get_addr(node, &node_addr);
 
-  if (router->declared_family) {
-    /* Add every r such that router declares familyness with r, and r
+    SMARTLIST_FOREACH_BEGIN(all_nodes, const node_t *, node2) {
+      tor_addr_t a;
+      node_get_addr(node2, &a);
+      if (addrs_in_same_network_family(&a, &node_addr))
+        smartlist_add(sl, (void*)node2);
+    } SMARTLIST_FOREACH_END(node);
+  }
+
+  /* Now, add all nodes in the declared_family of this node, if they
+   * also declare this node to be in their family. */
+  if (declared_family) {
+    /* Add every r such that router declares familyness with node, and node
      * declares familyhood with router. */
-    SMARTLIST_FOREACH_BEGIN(router->declared_family, const char *, n) {
-        if (!(r = router_get_by_nickname(n, 0)))
-          continue;
-        if (!r->declared_family)
-          continue;
-        SMARTLIST_FOREACH(r->declared_family, const char *, n2,
-          {
-            if (router_nickname_matches(router, n2))
-              smartlist_add(sl, (void*)r);
-          });
-    } SMARTLIST_FOREACH_END(n);
+    SMARTLIST_FOREACH_BEGIN(declared_family, const char *, name) {
+      const node_t *node2;
+      const smartlist_t *family2;
+      if (!(node2 = node_get_by_nickname(name, 0)))
+        continue;
+      if (!(family2 = node_get_declared_family(node2)))
+        continue;
+      SMARTLIST_FOREACH(family2, const char *, name2, {
+          if (node_nickname_matches(node, name2)) {
+            smartlist_add(sl, (void*)node2);
+            break;
+          }
+        });
+    } SMARTLIST_FOREACH_END(name);
   }
 
   /* If the user declared any families locally, honor those too. */
-  for (cl = options->NodeFamilies; cl; cl = cl->next) {
-    if (router_nickname_is_in_list(router, cl->value)) {
-      add_nickname_list_to_smartlist(sl, cl->value, 0);
-    }
+  if (options->NodeFamilySets) {
+    SMARTLIST_FOREACH(options->NodeFamilySets, const routerset_t *, rs, {
+      if (routerset_contains_node(rs, node)) {
+        routerset_get_all_nodes(sl, rs, 0);
+      }
+    });
   }
-#endif
-  (void)sl;
-  (void)router;
-  UNIMPLEMENTED_NODELIST();
 }
 
 /** Given a <b>router</b>, add every node_t in its family to <b>sl</b>.
@@ -1376,19 +1376,28 @@ nodelist_add_node_family(smartlist_t *sl, const node_t *router)
 static void
 routerlist_add_nodes_in_family(smartlist_t *sl, const routerinfo_t *router)
 {
-  (void)router;
-  (void)sl;
-  UNIMPLEMENTED_NODELIST();
+  /* XXXX MOVE ? */
+  node_t fake_node;
+  const node_t *node = node_get_by_id(router->cache_info.identity_digest);;
+  if (node == NULL) {
+    memset(&fake_node, 0, sizeof(fake_node));
+    fake_node.ri = (routerinfo_t *)router;
+    memcpy(fake_node.identity, router->cache_info.identity_digest, DIGEST_LEN);
+    node = &fake_node;
+  }
+  nodelist_add_node_family(sl, &fake_node);
 }
 
-/** Return true iff r is named by some nickname in <b>lst</b>. */
+/** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
 static INLINE int
-router_in_nickname_smartlist(smartlist_t *lst, const routerinfo_t *r)
+node_in_nickname_smartlist(const smartlist_t *lst, const node_t *node)
 {
+  /* XXXX MOVE */
   if (!lst) return 0;
-  SMARTLIST_FOREACH(lst, const char *, name,
-    if (router_nickname_matches(r, name))
-      return 1;);
+  SMARTLIST_FOREACH(lst, const char *, name, {
+    if (node_nickname_matches(node, name))
+      return 1;
+  });
   return 0;
 }
 
@@ -1397,27 +1406,38 @@ router_in_nickname_smartlist(smartlist_t *lst, const routerinfo_t *r)
 int
 nodes_in_same_family(const node_t *node1, const node_t *node2)
 {
-#if 0
+  /* XXXX MOVE */
   or_options_t *options = get_options();
-  config_line_t *cl;
 
-  if (options->EnforceDistinctSubnets &&
-      nodes_in_same_network_family(node1,node2))
-    return 1;
-
-  if (router_in_nickname_smartlist(r1->declared_family, r2) &&
-      router_in_nickname_smartlist(r2->declared_family, r1))
-    return 1;
-
-  for (cl = options->NodeFamilies; cl; cl = cl->next) {
-    if (router_nickname_is_in_list(r1, cl->value) &&
-        router_nickname_is_in_list(r2, cl->value))
+  /* Are they in the same family because of their addresses? */
+  if (options->EnforceDistinctSubnets) {
+    tor_addr_t a1, a2;
+    node_get_addr(node1, &a1);
+    node_get_addr(node2, &a2);
+    if (addrs_in_same_network_family(&a1, &a2))
       return 1;
   }
-#endif
-  (void)node1;
-  (void)node2;
-  UNIMPLEMENTED_NODELIST();
+
+  /* Are they in the same family because the agree they are? */
+  {
+    const smartlist_t *f1, *f2;
+    f1 = node_get_declared_family(node1);
+    f2 = node_get_declared_family(node2);
+    if (f1 && f2 &&
+        node_in_nickname_smartlist(f1, node2) &&
+        node_in_nickname_smartlist(f2, node1))
+      return 1;
+  }
+
+  /* Are they in the same option because the user says they are? */
+  if (options->NodeFamilySets) {
+    SMARTLIST_FOREACH(options->NodeFamilySets, const routerset_t *, rs, {
+        if (routerset_contains_node(rs, node1) &&
+            routerset_contains_node(rs, node2))
+          return 1;
+      });
+  }
+
   return 0;
 }
 
@@ -1431,7 +1451,7 @@ nodes_in_same_family(const node_t *node1, const node_t *node2)
 static void
 add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
                                int must_be_running)
-{ /*XXXX MOVE */
+{ /*XXXX MOVE or Kill. */
   /*XXXX this is only used in one place. Can we kill it?*/
   const node_t *node;
   const routerinfo_t *router;
@@ -2299,6 +2319,22 @@ router_nickname_matches(const routerinfo_t *router, const char *nickname)
   if (nickname[0]!='$' && !strcasecmp(router->nickname, nickname))
     return 1;
   return router_hex_digest_matches(router, nickname);
+}
+
+/** Return true if <b>node</b>'s nickname matches <b>nickname</b>
+ * (case-insensitive), or if <b>node's</b> identity key digest
+ * matches a hexadecimal value stored in <b>nickname</b>.  Return
+ * false otherwise. */
+static int
+node_nickname_matches(const node_t *node, const char *nickname)
+{
+  const char *n = node_get_nickname(node);
+  if (n && nickname[0]!='$' && !strcasecmp(n, nickname))
+    return 1;
+  return hex_digest_nickname_matches(nickname,
+                                     node->identity,
+                                     n,
+                                     node_is_named(node));
 }
 
 /** Return the router in our routerlist whose (case-insensitive)
