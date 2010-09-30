@@ -80,6 +80,29 @@ tor_natpmp_cleanup(tor_fw_options_t *tor_fw_options, void *backend_state)
     return r;
 }
 
+/** Use select() to wait until we can read on fd. */
+static int
+wait_until_fd_readable(int fd, struct timeval *timeout)
+{
+  int r;
+  fd_set fds;
+  if (fd >= FD_SETSIZE) {
+    fprintf(stderr, "E: NAT-PMP FD_SETSIZE error %d\n", fd);
+    return -1;
+  }
+  FD_ZERO(&fds);
+  FD_SET(fd, &fds);
+  r = select(fd+1, &fds, NULL, NULL, timeout);
+  if (r == -1) {
+    fprintf(stdout, "V: select failed in wait_until_fd_readable: %s\n",
+            strerror(errno));
+    return -1;
+  }
+  /* XXXX we should really check to see whether fd was readable, or we timed
+     out. */
+  return 0;
+}
+
 /** Add a TCP port mapping for a single port stored in <b>tor_fw_options</b>
  * using the <b>natpmp_t</b> stored in <b>backend_state</b>. */
 int
@@ -91,7 +114,6 @@ tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options,
     int x = 0;
     int sav_errno;
 
-    fd_set fds;
     struct timeval timeout;
 
     if (tor_fw_options->verbose)
@@ -105,16 +127,10 @@ tor_natpmp_add_tcp_mapping(tor_fw_options_t *tor_fw_options,
                 "returned %d (%s)\n", r, r==12?"SUCCESS":"FAILED");
 
     do {
-        FD_ZERO(&fds);
-        FD_SET(state->natpmp.s, &fds);
         getnatpmprequesttimeout(&(state->natpmp), &timeout);
-        x = select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
+        x = wait_until_fd_readable(state->natpmp.s, &timeout);
         if (x == -1)
-        {
-            fprintf(stdout, "V: select failed in "
-                    "tor_natpmp_fetch_public_ip.\n");
-            return -1;
-        }
+          return -1;
 
         if (tor_fw_options->verbose)
             fprintf(stdout, "V: attempting to readnatpmpreponseorretry...\n");
@@ -166,30 +182,17 @@ tor_natpmp_fetch_public_ip(tor_fw_options_t *tor_fw_options,
     natpmp_state_t *state = (natpmp_state_t *) backend_state;
 
     struct timeval timeout;
-    fd_set fds;
 
     r = sendpublicaddressrequest(&(state->natpmp));
     fprintf(stdout, "tor-fw-helper: NAT-PMP sendpublicaddressrequest returned"
             " %d (%s)\n", r, r==2?"SUCCESS":"FAILED");
 
     do {
-
-        if (state->natpmp.s >= FD_SETSIZE)
-        {
-            fprintf(stderr, "E: NAT-PMP FD_SETSIZE error %d\n",
-                    state->natpmp.s);
-            return -1;
-        }
-        FD_ZERO(&fds);
-        FD_SET(state->natpmp.s, &fds);
         getnatpmprequesttimeout(&(state->natpmp), &timeout);
-        x = select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
+
+        x = wait_until_fd_readable(state->natpmp.s, &timeout);
         if (x == -1)
-        {
-            fprintf(stdout, "V: select failed in "
-                    "tor_natpmp_fetch_public_ip.\n");
-            return -1;
-        }
+          return -1;
 
         if (tor_fw_options->verbose)
             fprintf(stdout, "V: NAT-PMP attempting to read reponse...\n");
