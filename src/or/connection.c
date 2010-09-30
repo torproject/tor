@@ -3423,7 +3423,6 @@ connection_dir_get_by_purpose_and_resource(int purpose,
   return NULL;
 }
 
-
 /** Return an open, non-marked connection of a given type and purpose, or NULL
  * if no such connection exists. */
 connection_t *

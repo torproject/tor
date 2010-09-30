@@ -4278,7 +4278,6 @@ launch_descriptor_downloads(int purpose,
       pds_flags |= (purpose == DIR_PURPOSE_FETCH_MICRODESC) ?
         PDS_NO_EXISTING_MICRODESC_FETCH :
         PDS_NO_EXISTING_SERVERDESC_FETCH;
-
     }
 
     n_per_request = CEIL_DIV(n_downloadable, MIN_REQUESTS);

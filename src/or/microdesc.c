@@ -129,8 +129,8 @@ get_microdesc_cache(void)
  * set the last_listed field of every microdesc to listed_at.  If
  * requested_digests is non-null, then it contains a list of digests we mean
  * to allow, so we should reject any non-requested microdesc with a different
- * digest, and alter the list to contain only the digests of those microdescs we
- * didn't find.
+ * digest, and alter the list to contain only the digests of those microdescs
+ * we didn't find.
  * Return a list of the added microdescriptors.  */
 smartlist_t *
 microdescs_add_to_cache(microdesc_cache_t *cache,

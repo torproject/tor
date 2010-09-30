@@ -1919,7 +1919,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     smartlist_t *which = NULL;
     log_info(LD_DIR,"Received answer to microdescriptor request (status %d, "
              "size %d) from server '%s:%d'",
-             status_code, (int)body_len, conn->_base.address, conn->_base.port);
+             status_code, (int)body_len, conn->_base.address,
+             conn->_base.port);
     tor_assert(conn->requested_resource &&
                !strcmpstart(conn->requested_resource, "d/"));
     which = smartlist_create();
