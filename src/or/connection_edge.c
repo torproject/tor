@@ -600,7 +600,7 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
         !edge_conn->chosen_exit_retries)
       continue;
     r1 = router_get_by_nickname(edge_conn->chosen_exit_name, 0);
-    r2 = router_get_by_nickname(info->nickname, 0);
+    r2 = router_get_by_hexdigest(info->identity_digest);
     if (!r1 || !r2 || r1 != r2)
       continue;
     tor_assert(edge_conn->socks_request);
