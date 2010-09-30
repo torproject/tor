@@ -94,6 +94,7 @@ Proposals by number:
 172  GETINFO controller option for circuit information [ACCEPTED]
 173  GETINFO Option Expansion [ACCEPTED]
 174  Optimistic Data for Tor: Server Side [OPEN]
+175  Automatically promoting Tor clients to nodes [DRAFT]
 
 
 Proposals by status:
@@ -106,6 +107,7 @@ Proposals by status:
    144  Increase the diversity of circuits by detecting nodes belonging the same provider
    169  Eliminate TLS renegotiation for the Tor connection handshake [for 0.2.2]
    170  Configuration options regarding circuit building
+   175  Automatically promoting Tor clients to nodes [for ]
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  OPEN:

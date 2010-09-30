@@ -1,9 +1,8 @@
-Filename: xxx-automatic-node-promotion.txt
+Filename: 175-automatic-node-promotion.txt
 Title: Automatically promoting Tor clients to nodes
 Author: Steven Murdoch
 Created: 12-Mar-2010
 Status: Draft
-Target:
 
 1. Overview
 
@@ -28,7 +27,7 @@ Target:
    countries. By automatically promoting Tor clients to bridges, and
    perhaps also to full public relays, this proposal aims to solve
    these problems.
- 
+
    Only Tor clients which are sufficiently useful should be promoted,
    and the process of determining usefulness should be performed
    without reporting the existence of the client to the central
@@ -150,22 +149,22 @@ Target:
         the number of successes >= num_useful, Tor should consider
         promotion to a bridge
    end.
- 
+
    When Tor starts, it must fill in the samples for which it was not
    running. This can only happen once the consensus has downloaded,
    because the value of check_period is needed.
- 
+
       1. Tor generates a random number y from the Poisson distribution [1]
          with lambda = (current_time - last_check) * (1 / check_period)
-      2. Tor sets the value last_check to the current_time (in seconds)	
+      2. Tor sets the value last_check to the current_time (in seconds)
       3. Add y test failures to the ring buffer measurements_results
       4. Tor saves last_check and measurements_results to disk
- 
+
    In this way, a Tor client will measure its bandwidth and
    reachability every check_period seconds, on average. Provided
    check_period is sufficiently greater than a minute (say, at least an
    hour), the times of check will follow a Poisson distribution. [2]
- 
+
    While this does require that Tor does record the state of a client
    over time, this does not leak much information. Only a binary
    reachable/non-reachable is stored, and the timing of samples becomes
