@@ -273,10 +273,13 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
            "Received CREATE cell (circID %d) for known circ. "
            "Dropping (age %d).",
            cell->circ_id, (int)(time(NULL) - conn->_base.timestamp_created));
-    if (node)
+    if (node) {
+      char *p = esc_for_log(node_get_platform(node));
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Details: nickname \"%s\", platform %s.",
-             node_get_nickname(node), escaped(node_get_platform(node)));
+             node_get_nickname(node), p);
+      tor_free(p);
+    }
     return;
   }
 

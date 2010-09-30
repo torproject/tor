@@ -934,7 +934,7 @@ esc_for_log(const char *s)
   char *result, *outp;
   size_t len = 3;
   if (!s) {
-    return tor_strdup("");
+    return tor_strdup("(null)");
   }
 
   for (cp = s; *cp; ++cp) {

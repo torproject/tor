@@ -881,8 +881,12 @@ rep_hist_get_router_stability_doc(time_t now)
     if (node) {
       char ip[INET_NTOA_BUF_LEN+1];
       char tbuf[ISO_TIME_LEN+1];
+      time_t published = node_get_published_on(node);
       node_get_address_string(node,ip,sizeof(ip));
-      format_iso_time(tbuf, node_get_published_on(node));
+      if (published > 0)
+        format_iso_time(tbuf, published);
+      else
+        strlcpy(tbuf, "???", sizeof(tbuf));
       tor_snprintf(header_buf, sizeof(header_buf),
                    "router %s %s %s\n"
                    "published %s\n"

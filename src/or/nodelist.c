@@ -656,9 +656,10 @@ node_get_address_string(const node_t *node, char *buf, size_t len)
 long
 node_get_declared_uptime(const node_t *node)
 {
-  (void)node;
-  UNIMPLEMENTED_NODELIST();
-  return 0;
+  if (node->ri)
+    return node->ri->uptime;
+  else
+    return -1;
 }
 
 /** Return <b>node</b>'s declared or_port */
@@ -673,22 +674,27 @@ node_get_orport(const node_t *node)
     return 0;
 }
 
-/** Return <b>node</b>'s platform string */
+/** Return <b>node</b>'s platform string, or NULL if we don't know it. */
 const char *
 node_get_platform(const node_t *node)
 {
-  (void)node;
-  UNIMPLEMENTED_NODELIST();
-  return NULL;
+  /* If we wanted, we could record the version in the routerstatus_t, since
+   * the consensus lists it.  We don't, though, so this function just won't
+   * work with microdescriptors. */
+  if (node->ri)
+    return node->ri->platform;
+  else
+    return NULL;
 }
 
-/** Return <b>node</b>'s time of publication. */
+/** Return <b>node</b>'s time of publication, or 0 if we don't have one. */
 time_t
 node_get_published_on(const node_t *node)
 {
-  (void)node;
-  UNIMPLEMENTED_NODELIST();
-  return 0;
+  if (node->ri)
+    return node->ri->cache_info.published_on;
+  else
+    return 0;
 }
 
 /** Return true iff <b>node</b> is one representing this router. */
