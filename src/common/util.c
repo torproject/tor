@@ -2944,6 +2944,11 @@ static int
 tor_spawn_background(const char *const filename, int *stdout_read,
                      int *stderr_read, const char **argv)
 {
+#ifdef MS_WINDOWS
+  (void) filename; (void) stdout_read; (void) stderr_read; (void) argv;
+  log_warn(LD_BUG, "not yet implemented on Windows.");
+  return -1;
+#else
   pid_t pid;
   int stdout_pipe[2];
   int stderr_pipe[2];
@@ -3098,6 +3103,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
   }
 
   return pid;
+#endif
 }
 
 /** Read from stream, and send lines to log at the specified log level.
@@ -3179,7 +3185,13 @@ void
 tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
                           time_t now)
 {
-
+#ifdef MS_WINDOWS
+  (void) filename; (void) dir_port; (void) or_port; (void) now;
+  (void) tor_spawn_background;
+  (void) log_from_pipe;
+  log_warn(LD_GENERAL, "Sorry, port forwarding is not yet supported "
+           "on windows.");
+#else
 /* When fw-helper succeeds, how long do we wait until running it again */
 #define TIME_TO_EXEC_FWHELPER_SUCCESS 300
 /* When fw-helper fails, how long do we wait until running it again */
@@ -3272,6 +3284,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
       child_pid = -1;
     }
   }
+#endif
 }
 
 
