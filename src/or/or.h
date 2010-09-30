@@ -2967,26 +2967,6 @@ typedef uint32_t build_time_t;
 /** Save state every 10 circuits */
 #define CBT_SAVE_STATE_EVERY 10
 
-/* Circuit Build Timeout network liveness constants */
-
-/**
- * Have we received a cell in the last N circ attempts?
- *
- * This tells us when to temporarily switch back to
- * BUILD_TIMEOUT_INITIAL_VALUE until we start getting cells,
- * at which point we switch back to computing the timeout from
- * our saved history.
- */
-#define CBT_NETWORK_NONLIVE_TIMEOUT_COUNT 3
-
-/**
- * This tells us when to toss out the last streak of N timeouts.
- *
- * If instead we start getting cells, we switch back to computing the timeout
- * from our saved history.
- */
-#define CBT_NETWORK_NONLIVE_DISCARD_COUNT (CBT_NETWORK_NONLIVE_TIMEOUT_COUNT*2)
-
 /* Circuit build times consensus parameters */
 
 /**
@@ -3005,8 +2985,9 @@ typedef uint32_t build_time_t;
  * Maximum count of timeouts that finish the first hop in the past
  * RECENT_CIRCUITS before calculating a new timeout.
  *
- * This tells us to abandon timeout history and set
- * the timeout back to BUILD_TIMEOUT_INITIAL_VALUE.
+ * This tells us whether to abandon timeout history and set
+ * the timeout back to whatever circuit_build_times_get_initial_timeout()
+ * gives us.
  */
 #define CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT (CBT_DEFAULT_RECENT_CIRCUITS*9/10)
 
@@ -3027,9 +3008,7 @@ double circuit_build_times_quantile_cutoff(void);
 #define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60*1000)
 int32_t circuit_build_times_initial_timeout(void);
 
-#if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < 1 || \
-    CBT_NETWORK_NONLIVE_DISCARD_COUNT < 1 || \
-    CBT_NETWORK_NONLIVE_TIMEOUT_COUNT < 1
+#if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < 1
 #error "RECENT_CIRCUITS is set too low."
 #endif
 
@@ -3039,8 +3018,6 @@ typedef struct {
   time_t network_last_live;
   /** If the network is not live, how many timeouts has this caused? */
   int nonlive_timeouts;
-  /** If the network is not live, have we yet discarded our history? */
-  int nonlive_discarded;
   /** Circular array of circuits that have made it to the first hop. Slot is
    * 1 if circuit timed out, 0 if circuit succeeded */
   int8_t *timeouts_after_firsthop;
@@ -3048,12 +3025,6 @@ typedef struct {
   int num_recent_circs;
   /** Index into circular array. */
   int after_firsthop_idx;
-  /** Timeout gathering is suspended if non-zero. The old timeout value
-    * is stored here in that case. */
-  double suspended_timeout;
-  /** Timeout gathering is suspended if non-zero. The old close value
-    * is stored here in that case. */
-  double suspended_close_timeout;
 } network_liveness_t;
 
 /** Structure for circuit build times history */

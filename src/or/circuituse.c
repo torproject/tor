@@ -34,8 +34,6 @@ extern circuit_t *global_circuitlist; /* from circuitlist.c */
 static void circuit_expire_old_circuits_clientside(time_t now);
 static void circuit_increment_failure_count(void);
 
-long int lround(double x);
-
 /** Return 1 if <b>circ</b> could be returned by circuit_get_best().
  * Else return 0.
  */
@@ -280,13 +278,14 @@ void
 circuit_expire_building(time_t now)
 {
   circuit_t *victim, *next_circ = global_circuitlist;
-  /* circ_times.timeout is BUILD_TIMEOUT_INITIAL_VALUE if we haven't
-   * decided on a customized one yet */
-  time_t general_cutoff = now - lround(circ_times.timeout_ms/1000);
-  time_t begindir_cutoff = now - lround(circ_times.timeout_ms/2000);
-  time_t fourhop_cutoff = now - lround(4*circ_times.timeout_ms/3000);
-  time_t cannibalize_cutoff = now - lround(circ_times.timeout_ms/2000);
-  time_t close_cutoff = now - lround(circ_times.close_ms/1000);
+  /* circ_times.timeout_ms and circ_times.close_ms are from
+   * circuit_build_times_get_initial_timeout() if we haven't computed
+   * custom timeouts yet */
+  time_t general_cutoff = now - tor_lround(circ_times.timeout_ms/1000);
+  time_t begindir_cutoff = now - tor_lround(circ_times.timeout_ms/2000);
+  time_t fourhop_cutoff = now - tor_lround(4*circ_times.timeout_ms/3000);
+  time_t cannibalize_cutoff = now - tor_lround(circ_times.timeout_ms/2000);
+  time_t close_cutoff = now - tor_lround(circ_times.close_ms/1000);
   time_t introcirc_cutoff = begindir_cutoff;
   cpath_build_state_t *build_state;
 
@@ -385,7 +384,8 @@ circuit_expire_building(time_t now)
         continue;
       }
 
-      if (circuit_timeout_want_to_count_circ(TO_ORIGIN_CIRCUIT(victim))) {
+      if (circuit_timeout_want_to_count_circ(TO_ORIGIN_CIRCUIT(victim)) &&
+          circuit_build_times_enough_to_compute(&circ_times)) {
         /* Circuits are allowed to last longer for measurement.
          * Switch their purpose and wait. */
         if (victim->purpose != CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT) {
