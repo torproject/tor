@@ -1,9 +1,0 @@
-  o Major bugfixes:
-    - When weighting bridges, we used to trust the bandwidths they provided
-      in their descriptor, only capping them at 10MB/s. This turned out to be
-      problematic for two reasons: Bridges could claim to handle a lot more
-      traffic then they actually would, thus making more clients pick them and
-      have a pretty effective DoS attack. The other issue is that new bridges
-      that might not have a good estimate for their bw capacity yet would not
-      get used at all unless no other bridges are available to a client.
-      This fixes bug 1912; bugfix on 0.2.2.7-alpha.

@@ -1,4 +1,0 @@
-  o Major bugfixes
-    - Always search the windows system directory for system DLLs, and
-      nowhere else.  Fixes bug 1954.
-

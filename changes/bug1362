@@ -1,5 +1,0 @@
-  o Minor features:
-    - When we run out of directory information such that we can't build
-      circuits, but then get enough that we can build circuits, log when
-      we actually construct a circuit, so the user has a better chance of
-      knowing what's going on. Fixes bug 1362.

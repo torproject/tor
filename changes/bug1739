@@ -1,4 +1,0 @@
- o Minor bugfixes:
-   - Fix to resume generating CIRC FAILED REASON=TIMEOUT control port
-     messages, which were disabled by the circuit build timeout changes
-     in 0.2.2.14-alpha. Bugfix on 0.2.2.14-alpha; fixes bug #1739.

@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - Tolerate skew in stored vs computed interval starts for bandwidth
-      accounting.  Now, if we change our configuration so that the start
-      of the period changes by no more than 50% of the period's duration,
-      we remember bytes that we transferred in the old one.  The upshot
-      of this is that daylight savings time should no longer mess up
-      bandwidth accounting and make each period potentially happen
-      twice.  Fixes bug 1511; bugfix on 0.0.9pre5.
-
