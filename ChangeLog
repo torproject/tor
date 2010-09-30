@@ -4,7 +4,7 @@ Changes in version 0.2.2.17-alpha - 2010-09-30
       relays, to make it harder for people to use them as one-hop proxies
       a la tortunnel. Controlled by the refuseunknownexits consensus
       parameter (currently enabled), or you can override it on your
-      relay with the RefuseUnknownExits torrc option.
+      relay with the RefuseUnknownExits torrc option. Resolves bug 1751.
 
   o Major bugfixes (0.2.1.x and earlier):
     - Fix a bug in bandwidth accounting that could make us use twice
