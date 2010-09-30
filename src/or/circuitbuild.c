@@ -942,7 +942,7 @@ circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
 
 /**
  * Called to indicate that the network showed some signs of liveness,
- * which means that we recieved a cell.
+ * i.e. we received a cell.
  *
  * This is used by circuit_build_times_network_check_live() to decide
  * if we should record the circuit build timeout or not.
@@ -957,9 +957,9 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
   if (cbt->liveness.nonlive_timeouts > 0) {
     log_notice(LD_CIRC,
                "Tor now sees network activity. Restoring circuit build "
-               "timeout recording. Network was down for %ld seconds "
+               "timeout recording. Network was down for %d seconds "
                "during %d circuit attempts.",
-               (long int)now - cbt->liveness.network_last_live,
+               (int)(now - cbt->liveness.network_last_live),
                cbt->liveness.nonlive_timeouts);
   }
   cbt->liveness.network_last_live = now;
@@ -1035,9 +1035,9 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
     cbt->liveness.nonlive_timeouts++;
     if (cbt->liveness.nonlive_timeouts == 1) {
       log_notice(LD_CIRC,
-                 "Tor has not observed any network activity for the past %ld "
+                 "Tor has not observed any network activity for the past %d "
                  "seconds. Disabling circuit build timeout code.",
-                 (long int)now - cbt->liveness.network_last_live);
+                 (int)(now - cbt->liveness.network_last_live));
     } else {
       log_info(LD_CIRC,
              "Got non-live timeout. Current count is: %d",
@@ -1051,7 +1051,7 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
  *
  * The network is considered not live if there has been at least one
  * circuit build that began and ended (had its close_ms measurement
- * period expire) since we last recieved a cell.
+ * period expire) since we last received a cell.
  *
  * Also has the side effect of rewinding the circuit time history
  * in the case of recent liveness changes.
