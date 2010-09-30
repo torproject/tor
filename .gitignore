@@ -98,6 +98,11 @@
 /doc/tor.html
 /doc/tor.html.in
 /doc/tor.1.xml
+/doc/tor-fw-helper.1
+/doc/tor-fw-helper.1.in
+/doc/tor-fw-helper.html
+/doc/tor-fw-helper.html.in
+/doc/tor-fw-helper.1.xml
 /doc/tor-gencert.1
 /doc/tor-gencert.1.in
 /doc/tor-gencert.html
