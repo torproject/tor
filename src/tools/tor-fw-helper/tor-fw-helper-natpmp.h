@@ -21,13 +21,13 @@
  * various NAT-PMP parameters, and of course the status of the motion in the
  * NAT-PMP ocean. */
 typedef struct natpmp_state_t {
-    natpmp_t natpmp;
-    natpmpresp_t response;
-    int fetch_public_ip;
-    int status;
-    int init; /**< Have we been initialized? */
-    int protocol; /**< This will only be TCP. */
-    int lease;
+  natpmp_t natpmp;
+  natpmpresp_t response;
+  int fetch_public_ip;
+  int status;
+  int init; /**< Have we been initialized? */
+  int protocol; /**< This will only be TCP. */
+  int lease;
 } natpmp_state_t;
 
 const tor_fw_backend_t *tor_fw_get_natpmp_backend(void);

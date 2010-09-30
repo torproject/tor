@@ -3259,7 +3259,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
       /* There was a problem in the child process */
       time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_FAIL;
     }
-  
+
     /* Combine the two statuses in order of severity */
     if (-1 == stdout_status || -1 == stderr_status)
       /* There was a failure */
@@ -3270,7 +3270,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     else
       /* Both are fine */
       retval = 0;
-  
+
     /* If either pipe indicates a failure, act on it */
     if (0 != retval) {
       if (1 == retval) {
@@ -3278,7 +3278,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
       } else {
         log_err(LD_GENERAL, "Failed to read from port forwarding helper");
       }
-  
+
       /* TODO: The child might not actually be finished (maybe it failed or
          closed stdout/stderr), so maybe we shouldn't start another? */
       child_pid = -1;

@@ -40,19 +40,19 @@
 
 /** This hooks miniupnpc into our multi-backend API. */
 static tor_fw_backend_t tor_miniupnp_backend = {
-    "miniupnp",
-    sizeof(struct miniupnpc_state_t),
-    tor_upnp_init,
-    tor_upnp_cleanup,
-    tor_upnp_fetch_public_ip,
-    tor_upnp_add_tcp_mapping
+  "miniupnp",
+  sizeof(struct miniupnpc_state_t),
+  tor_upnp_init,
+  tor_upnp_cleanup,
+  tor_upnp_fetch_public_ip,
+  tor_upnp_add_tcp_mapping
 };
 
 /** Return the backend for miniupnp. */
 const tor_fw_backend_t *
 tor_fw_get_miniupnp_backend(void)
 {
-    return &tor_miniupnp_backend;
+  return &tor_miniupnp_backend;
 }
 
 /** Initialize the UPnP backend and store the results in
@@ -64,7 +64,7 @@ tor_upnp_init(tor_fw_options_t *options, void *backend_state)
     This leaks the user agent from the client to the router - perhaps we don't
     want to do that? eg:
 
-        User-Agent: Ubuntu/10.04, UPnP/1.0, MiniUPnPc/1.4
+    User-Agent: Ubuntu/10.04, UPnP/1.0, MiniUPnPc/1.4
 
   */
   miniupnpc_state_t *state = (miniupnpc_state_t *) backend_state;
@@ -112,7 +112,7 @@ tor_upnp_cleanup(tor_fw_options_t *options, void *backend_state)
 }
 
 /** Fetch our likely public IP from our upstream UPnP IGD enabled NAT device.
-* Use the connection context stored in <b>backend_state</b>. */
+ * Use the connection context stored in <b>backend_state</b>. */
 int
 tor_upnp_fetch_public_ip(tor_fw_options_t *options, void *backend_state)
 {
@@ -138,12 +138,13 @@ tor_upnp_fetch_public_ip(tor_fw_options_t *options, void *backend_state)
             externalIPAddress); tor_upnp_cleanup(options, state);
     options->public_ip_status = 1;
     return UPNP_ERR_SUCCESS;
-  } else
+  } else {
     goto err;
+  }
 
-  err:
-    tor_upnp_cleanup(options, state);
-    return UPNP_ERR_GETEXTERNALIP;
+ err:
+  tor_upnp_cleanup(options, state);
+  return UPNP_ERR_GETEXTERNALIP;
 }
 
 /** Add a TCP port mapping for a single port stored in <b>tor_fw_options</b>
@@ -163,13 +164,13 @@ tor_upnp_add_tcp_mapping(tor_fw_options_t *options, void *backend_state)
   }
 
   if (options->verbose)
-      fprintf(stdout, "V: internal port: %d, external port: %d\n",
-              (int)options->internal_port, (int)options->external_port);
+    fprintf(stdout, "V: internal port: %d, external port: %d\n",
+            (int)options->internal_port, (int)options->external_port);
 
   tor_snprintf(internal_port_str, sizeof(internal_port_str),
-           "%d", (int)options->internal_port);
+               "%d", (int)options->internal_port);
   tor_snprintf(external_port_str, sizeof(external_port_str),
-           "%d", (int)options->external_port);
+               "%d", (int)options->external_port);
 
   r = UPNP_AddPortMapping(state->urls.controlURL,
                           state->data.first.servicetype,
