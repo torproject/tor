@@ -499,28 +499,14 @@ test_circuit_timeout(void)
 
     build_times_idx = estimate.build_times_idx;
     total_build_times = estimate.total_build_times;
-    for (i = 0; i < CBT_NETWORK_NONLIVE_TIMEOUT_COUNT; i++) {
-      test_assert(circuit_build_times_network_check_live(&estimate));
-      test_assert(circuit_build_times_network_check_live(&final));
 
-      circuit_build_times_count_close(&estimate, 0,
-                 (time_t)(approx_time()-estimate.close_ms/1000.0-1));
-      circuit_build_times_count_close(&final, 0,
-                 (time_t)(approx_time()-final.close_ms/1000.0-1));
-    }
+    test_assert(circuit_build_times_network_check_live(&estimate));
+    test_assert(circuit_build_times_network_check_live(&final));
 
-    test_assert(!circuit_build_times_network_check_live(&estimate));
-    test_assert(!circuit_build_times_network_check_live(&final));
-
-    for ( ; i < CBT_NETWORK_NONLIVE_DISCARD_COUNT; i++) {
-      circuit_build_times_count_close(&estimate, 0,
-                (time_t)(approx_time()-estimate.close_ms/1000.0-1));
-
-      if (i < CBT_NETWORK_NONLIVE_DISCARD_COUNT-1) {
-        circuit_build_times_count_close(&final, 0,
-                (time_t)(approx_time()-final.close_ms/1000.0-1));
-      }
-    }
+    circuit_build_times_count_close(&estimate, 0,
+            (time_t)(approx_time()-estimate.close_ms/1000.0-1));
+    circuit_build_times_count_close(&final, 0,
+            (time_t)(approx_time()-final.close_ms/1000.0-1));
 
     test_assert(!circuit_build_times_network_check_live(&estimate));
     test_assert(!circuit_build_times_network_check_live(&final));
