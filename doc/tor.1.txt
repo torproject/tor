@@ -873,6 +873,18 @@ is non-zero):
     specified in ORPort. (Default: 0.0.0.0) This directive can be specified
     multiple times to bind to multiple addresses/ports.
 
+**PortForwarding** **0**|**1**::
+    Attempt to automatically forward the DirPort and ORPort on a NAT router
+    connecting this Tor server to the Internet. If set, Tor will try both
+    NAT-PMP (common on Apple routers) and UPnP (common on routers from other
+    manufacturers). (Default: 0)
+
+**PortForwardingHelper** __filename__|__pathname__::
+    If PortForwarding is set, use this executable to configure the forwarding.
+    If set to a filename, the system path will be searched for the executable.
+    If set to a path, only the specified path will be executed.
+    (Default: tor-fw-helper)
+
 **PublishServerDescriptor** **0**|**1**|**v1**|**v2**|**v3**|**bridge**|**hidserv**,**...**::
     This option is only considered if you have an ORPort defined. You can
     choose multiple arguments, separated by commas.

@@ -6,6 +6,7 @@
 #include "orconfig.h"
 #define CONTROL_PRIVATE
 #define MEMPOOL_PRIVATE
+#define UTIL_PRIVATE
 #include "or.h"
 #include "config.h"
 #include "control.h"
@@ -1208,6 +1209,45 @@ test_util_load_win_lib(void *ptr)
 }
 #endif
 
+static void
+clear_hex_errno(char *hex_errno)
+{
+  memset(hex_errno, ' ', HEX_ERRNO_SIZE - 2);
+  hex_errno[HEX_ERRNO_SIZE - 1] = '\n';
+  hex_errno[HEX_ERRNO_SIZE] = '\0';
+}
+
+static void
+test_util_exit_status(void *ptr)
+{
+  char hex_errno[HEX_ERRNO_SIZE + 1];
+
+  (void)ptr;
+
+  clear_hex_errno(hex_errno);
+  format_helper_exit_status(0, 0, hex_errno);
+  tt_str_op(hex_errno, ==, "         0/0\n");
+
+  clear_hex_errno(hex_errno);
+  format_helper_exit_status(0, 0x7FFFFFFF, hex_errno);
+  tt_str_op(hex_errno, ==, "  0/7FFFFFFF\n");
+
+  clear_hex_errno(hex_errno);
+  format_helper_exit_status(0xFF, -0x80000000, hex_errno);
+  tt_str_op(hex_errno, ==, "FF/-80000000\n");
+
+  clear_hex_errno(hex_errno);
+  format_helper_exit_status(0x7F, 0, hex_errno);
+  tt_str_op(hex_errno, ==, "        7F/0\n");
+
+  clear_hex_errno(hex_errno);
+  format_helper_exit_status(0x08, -0x242, hex_errno);
+  tt_str_op(hex_errno, ==, "      8/-242\n");
+
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1234,6 +1274,7 @@ struct testcase_t util_tests[] = {
 #ifdef MS_WINDOWS
   UTIL_TEST(load_win_lib, 0),
 #endif
+  UTIL_TEST(exit_status, 0),
   END_OF_TESTCASES
 };
 

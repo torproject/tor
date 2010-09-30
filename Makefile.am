@@ -68,7 +68,8 @@ check-spaces:
 	        src/common/*.h                        \
 		src/common/[^asO]*.c src/common/address.c \
 		src/or/[^e]*.[ch] src/or/eventdns_tor.h \
-		src/test/test*.[ch] src/tools/*.[ch]
+		src/test/test*.[ch] src/tools/*.[ch] \
+		src/tools/tor-fw-helper/*.[ch]
 
 check-docs:
 	./contrib/checkOptionDocs.pl

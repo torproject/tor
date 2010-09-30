@@ -1026,6 +1026,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_for_expired_networkstatus = 0;
   static time_t time_to_write_stats_files = 0;
   static time_t time_to_write_bridge_stats = 0;
+  static time_t time_to_check_port_forwarding = 0;
   static int should_init_bridge_stats = 1;
   static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
@@ -1384,6 +1385,17 @@ run_scheduled_events(time_t now)
     networkstatus_dump_bridge_status_to_file(now);
 #define BRIDGE_STATUSFILE_INTERVAL (30*60)
     time_to_write_bridge_status_file = now+BRIDGE_STATUSFILE_INTERVAL;
+  }
+
+  if (time_to_check_port_forwarding < now &&
+      options->PortForwarding &&
+      server_mode(options)) {
+#define PORT_FORWARDING_CHECK_INTERVAL 5
+    tor_check_port_forwarding(options->PortForwardingHelper,
+                              options->DirPort,
+                              options->ORPort,
+                              now);
+    time_to_check_port_forwarding = now+PORT_FORWARDING_CHECK_INTERVAL;
   }
 }
 

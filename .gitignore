@@ -161,6 +161,12 @@
 /src/tools/Makefile
 /src/tools/Makefile.in
 
+# /src/tools/tor-fw-helper/
+/src/tools/tor-fw-helper/tor-fw-helper
+/src/tools/tor-fw-helper/tor-fw-helper.exe
+/src/tools/tor-fw-helper/Makefile
+/src/tools/tor-fw-helper/Makefile.in
+
 # /src/win32/
 /src/win32/Makefile
 /src/win32/Makefile.in
