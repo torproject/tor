@@ -941,7 +941,11 @@ circuit_build_times_needs_circuits_now(circuit_build_times_t *cbt)
 }
 
 /**
- * Called to indicate that the network showed some signs of liveness.
+ * Called to indicate that the network showed some signs of liveness,
+ * which means that we recieved a cell.
+ *
+ * This is used by circuit_build_times_network_check_live() to decide
+ * if we should record the circuit build timeout or not.
  *
  * This function is called every time we receive a cell. Avoid
  * syscalls, events, and other high-intensity work.
@@ -965,6 +969,10 @@ circuit_build_times_network_is_live(circuit_build_times_t *cbt)
 /**
  * Called to indicate that we completed a circuit. Because this circuit
  * succeeded, it doesn't count as a timeout-after-the-first-hop.
+ *
+ * This is used by circuit_build_times_network_check_changed() to determine
+ * if we had too many recent timeouts and need to reset our learned timeout
+ * to something higher.
  */
 void
 circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
@@ -977,6 +985,10 @@ circuit_build_times_network_circ_success(circuit_build_times_t *cbt)
 /**
  * A circuit just timed out. If it failed after the first hop, record it
  * in our history for later deciding if the network speed has changed.
+ *
+ * This is used by circuit_build_times_network_check_changed() to determine
+ * if we had too many recent timeouts and need to reset our learned timeout
+ * to something higher.
  */
 static void
 circuit_build_times_network_timeout(circuit_build_times_t *cbt,
@@ -993,6 +1005,9 @@ circuit_build_times_network_timeout(circuit_build_times_t *cbt,
  * A circuit was just forcibly closed. If there has been no recent network
  * activity at all, but this circuit was launched back when we thought the
  * network was live, increment the number of "nonlive" circuit timeouts.
+ *
+ * This is used by circuit_build_times_network_check_live() to decide
+ * if we should record the circuit build timeout or not.
  */
 static void
 circuit_build_times_network_close(circuit_build_times_t *cbt,
@@ -1032,8 +1047,11 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
 }
 
 /**
- * Returns false if the network has not received a cell or tls handshake
- * in the past NETWORK_NOTLIVE_TIMEOUT_COUNT circuits.
+ * When the network is not live, we do not record circuit build times.
+ *
+ * The network is considered not live if there has been at least one
+ * circuit build that began and ended (had its close_ms measurement
+ * period expire) since we last recieved a cell.
  *
  * Also has the side effect of rewinding the circuit time history
  * in the case of recent liveness changes.
@@ -1051,7 +1069,8 @@ circuit_build_times_network_check_live(circuit_build_times_t *cbt)
 /**
  * Returns true if we have seen more than MAX_RECENT_TIMEOUT_COUNT of
  * the past RECENT_CIRCUITS time out after the first hop. Used to detect
- * if the network connection has changed significantly.
+ * if the network connection has changed significantly, and if so,
+ * resets our circuit build timeout to the default.
  *
  * Also resets the entire timeout history in this case and causes us
  * to restart the process of building test circuits and estimating a
