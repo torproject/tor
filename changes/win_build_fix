@@ -1,2 +1,0 @@
-  o Major bugfixes:
-    - Fix compilation on Windows. Bugfix on 0.2.2.16-alpha, related to bug 1797.

@@ -1,4 +1,108 @@
-Changes in version 0.2.2.17-alpha - 2010-09-2?
+Changes in version 0.2.2.17-alpha - 2010-09-30
+  o Major features:
+    - Exit relays now try harder to block exit attempts from unknown
+      relays, to make it harder for people to use them as one-hop proxies
+      a la tortunnel. Controlled by the refuseunknownexits consensus
+      parameter (currently enabled), or you can override it on your
+      relay with the RefuseUnknownExits torrc option.
+
+  o Major bugfixes (0.2.1.x and earlier):
+    - Fix a bug in bandwidth accounting that could make us use twice
+      the intended bandwidth when our interval start changes due to
+      daylight saving time. Now we tolerate skew in stored vs computed
+      interval starts: if the start of the period changes by no more than
+      50% of the period's duration, we remember bytes that we transferred
+      in the old period. Fixes bug 1511; bugfix on 0.0.9pre5.
+    - Always search the Windows system directory for system DLLs, and
+      nowhere else. Bugfix on 0.1.1.23; fixes bug 1954.
+    - When you're using bridges and your network goes away and your
+      bridges get marked as down, recover when you attempt a new socks
+      connection (if the network is back), rather than waiting up to an
+      hour to try fetching new descriptors for your bridges. Bugfix on
+      0.2.0.3-alpha; fixes bug 1981.
+
+  o Major bugfixes (on 0.2.2.x):
+    - Fix compilation on Windows. Bugfix on 0.2.2.16-alpha; related to
+      bug 1797.
+    - Fix a segfault that could happen when operating a bridge relay with
+      no GeoIP database set. Fixes bug 1964; bugfix on 0.2.2.15-alpha.
+    - The consensus bandwidth-weights (used by clients to choose fast
+      relays) entered an unexpected edge case in September where
+      Exits were much scarcer than Guards, resulting in bad weight
+      recommendations. Now we compute them using new constraints that
+      should succeed in all cases. Also alter directory authorities to
+      not include the bandwidth-weights line if they fail to produce
+      valid values. Fixes bug 1952; bugfix on 0.2.2.10-alpha.
+    - When weighting bridges during path selection, we used to trust
+      the bandwidths they provided in their descriptor, only capping them
+      at 10MB/s. This turned out to be problematic for two reasons:
+      Bridges could claim to handle a lot more traffic then they
+      actually would, thus making more clients pick them and have a
+      pretty effective DoS attack. The other issue is that new bridges
+      that might not have a good estimate for their bw capacity yet
+      would not get used at all unless no other bridges are available
+      to a client. Fixes bug 1912; bugfix on 0.2.2.7-alpha.
+
+  o Minor features:
+    - When we run out of directory information such that we can't build
+      circuits, but then get enough that we can build circuits, log when
+      we actually construct a circuit, so the user has a better chance of
+      knowing what's going on. Fixes bug 1362.
+    - Be more generous with how much bandwidth we'd use up (with
+      accounting enabled) before entering "soft hibernation". Previously,
+      we'd refuse new connections and circuits once we'd used up 95% of
+      our allotment. Now, we use up 95% of our allotment, AND make sure
+      that we have no more than 500MB (or 3 hours of expected traffic,
+      whichever is lower) remaining before we enter soft hibernation.
+    - If we've configured EntryNodes and our network goes away and/or all
+      our entrynodes get marked down, optimistically retry them all when
+      a new socks application request appears. Fixes bug 1882.
+    - Add some more defensive programming for architectures that can't
+      handle unaligned integer accesses. We don't know of any actual bugs
+      right now, but that's the best time to fix them. Fixes bug 1943.
+    - Support line continuations in the torrc config file. If a line
+      ends with a single backslash character, the newline is ignored, and
+      the configuration value is treated as continuing on the next line.
+      Resolves bug 1929.
+
+  o Minor bugfixes (on 0.2.1.x and earlier):
+    - For bandwidth accounting, calculate our expected bandwidth rate
+      based on the time during which we were active and not in
+      soft-hibernation during the last interval. Previously, we were
+      also considering the time spent in soft-hibernation. If this
+      was a long time, we would wind up underestimating our bandwidth
+      by a lot, and skewing our wakeup time towards the start of the
+      accounting interval. Fixes bug 1789. Bugfix on 0.0.9pre5.
+
+  o Minor bugfixes (on the circuit build timeout feature, 0.2.2.x):
+    - Ignore cannibalized circuits when recording circuit build times.
+      This should provide for a minor performance improvement for hidden
+      service users using 0.2.2.14-alpha, and should remove two spurious
+      notice log messages. Bugfix on 0.2.2.14-alpha; fixes bug 1740.
+    - Simplify the logic that causes us to decide if the network is
+      unavailable for purposes of recording circuit build times. If we
+      receive no cells whatsoever for the entire duration of a circuit's
+      full measured lifetime, the network is probably down. Also ignore
+      one-hop directory fetching circuit timeouts when calculating our
+      circuit build times. These changes should hopefully reduce the
+      cases where we see ridiculous circuit build timeouts for people
+      with spotty wireless connections. Fixes part of bug 1772; bugfix
+      on 0.2.2.2-alpha.
+    - Prevent the circuit build timeout from becoming larger than
+      the maximum build time we have ever seen. Also, prevent the time
+      period for measurement circuits from becoming larger than twice that
+      value. Fixes the other part of bug 1772; bugfix on 0.2.2.2-alpha.
+
+  o Minor bugfixes (other, 0.2.2.x):
+    - Resume generating CIRC FAILED REASON=TIMEOUT control port messages,
+      which were disabled by the circuit build timeout changes in
+      0.2.2.14-alpha. Bugfix on 0.2.2.14-alpha; fixes bug 1739.
+    - Make sure we don't warn about missing bandwidth weights when
+      choosing bridges or other relays not in the consensus. Bugfix on
+      0.2.2.10-alpha; fixes bug 1805.
+    - In our logs, do not double-report signatures from unrecognized
+      authorities both as "from unknown authority" and "not
+      present". Fixes bug 1956, bugfix on 0.2.2.16-alpha.
 
 
 Changes in version 0.2.2.16-alpha - 2010-09-17

@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Make sure we don't warn about not having bandwidth weights when
-      choosing bridges or other relays not in the consensus. Bugfix
-      on 0.2.2.10-alpha; fixes bug 1805.

@@ -1,5 +1,0 @@
-  o Minor bugfixes
-    - Do not double-report signatures from unrecognized authorities both
-      as "from unknown authority" and "not present".  Fixes bug 1956,
-      bugfix on 0.2.2.16-alpha.
-

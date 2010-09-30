@@ -1,4 +1,0 @@
-  o Minor features:
-    - Add some more defensive programming for architectures that can't
-      handle unaligned integer accesses. We don't know of any actual
-      bugs right now, but that's the best time to fix them.
