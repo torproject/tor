@@ -2027,7 +2027,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       else if (!strcmp(tok->args[i], "Fast"))
         rs->is_fast = 1;
       else if (!strcmp(tok->args[i], "Running"))
-        rs->is_running = 1;
+        rs->is_flagged_running = 1;
       else if (!strcmp(tok->args[i], "Named"))
         rs->is_named = 1;
       else if (!strcmp(tok->args[i], "Valid"))

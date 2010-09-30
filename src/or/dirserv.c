@@ -2035,7 +2035,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    rs->is_possible_guard?" Guard":"",
                    rs->is_hs_dir?" HSDir":"",
                    rs->is_named?" Named":"",
-                   rs->is_running?" Running":"",
+                   rs->is_flagged_running?" Running":"",
                    rs->is_stable?" Stable":"",
                    rs->is_unnamed?" Unnamed":"",
                    rs->is_v2_dir?" V2Dir":"",
@@ -2275,7 +2275,7 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
   rs->is_fast = node->is_fast =
     router_is_active(ri, node, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
-  rs->is_running = node->is_running; /* computed above */
+  rs->is_flagged_running = node->is_running; /* computed above */
 
   if (naming) {
     uint32_t name_status = dirserv_get_name_status(
@@ -2323,7 +2323,7 @@ static void
 clear_status_flags_on_sybil(routerstatus_t *rs)
 {
   rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-    rs->is_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
+    rs->is_flagged_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
     rs->is_hs_dir = rs->is_possible_guard = rs->is_bad_exit =
     rs->is_bad_directory = 0;
   /* FFFF we might want some mechanism to check later on if we
@@ -2591,7 +2591,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
         clear_status_flags_on_sybil(rs);
 
       if (!vote_on_reachability)
-        rs->is_running = 0;
+        rs->is_flagged_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
       md = dirvote_create_microdescriptor(ri);

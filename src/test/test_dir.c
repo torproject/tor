@@ -801,7 +801,7 @@ test_dir_v3_networkstatus(void)
   rs->or_port = 443;
   rs->dir_port = 8000;
   /* all flags but running cleared */
-  rs->is_running = 1;
+  rs->is_flagged_running = 1;
   smartlist_add(vote->routerstatus_list, vrs);
   test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
@@ -816,7 +816,7 @@ test_dir_v3_networkstatus(void)
   rs->addr = 0x99009901;
   rs->or_port = 443;
   rs->dir_port = 0;
-  rs->is_exit = rs->is_stable = rs->is_fast = rs->is_running =
+  rs->is_exit = rs->is_stable = rs->is_fast = rs->is_flagged_running =
     rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
   smartlist_add(vote->routerstatus_list, vrs);
   test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
@@ -833,7 +833,8 @@ test_dir_v3_networkstatus(void)
   rs->or_port = 400;
   rs->dir_port = 9999;
   rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-    rs->is_running = rs->is_valid = rs->is_v2_dir = rs->is_possible_guard = 1;
+    rs->is_flagged_running = rs->is_valid = rs->is_v2_dir =
+    rs->is_possible_guard = 1;
   smartlist_add(vote->routerstatus_list, vrs);
   test_assert(router_add_to_routerlist(generate_ri_from_rs(vrs), &msg,0,0)>=0);
 
@@ -1073,7 +1074,8 @@ test_dir_v3_networkstatus(void)
   test_assert(!rs->is_fast);
   test_assert(!rs->is_possible_guard);
   test_assert(!rs->is_stable);
-  test_assert(rs->is_running); /* If it wasn't running it wouldn't be here */
+  /* (If it wasn't running it wouldn't be here) */
+  test_assert(rs->is_flagged_running);
   test_assert(!rs->is_v2_dir);
   test_assert(!rs->is_valid);
   test_assert(!rs->is_named);
@@ -1095,7 +1097,7 @@ test_dir_v3_networkstatus(void)
   test_assert(rs->is_fast);
   test_assert(rs->is_possible_guard);
   test_assert(rs->is_stable);
-  test_assert(rs->is_running);
+  test_assert(rs->is_flagged_running);
   test_assert(rs->is_v2_dir);
   test_assert(rs->is_valid);
   test_assert(!rs->is_named);

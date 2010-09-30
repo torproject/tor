@@ -193,7 +193,7 @@ nodelist_set_consensus(networkstatus_t *ns)
     /* If we're not an authdir, believe others. */
     if (!authdir) {
       node->is_valid = rs->is_valid;
-      node->is_running = rs->is_running;
+      node->is_running = rs->is_flagged_running;
       node->is_fast = rs->is_fast;
       node->is_stable = rs->is_stable;
       node->is_possible_guard = rs->is_possible_guard;

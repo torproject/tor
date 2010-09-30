@@ -1276,8 +1276,7 @@ mark_all_trusteddirservers_up(void)
       dir->is_running = 1;
       download_status_reset(&dir->v2_ns_dl_status);
       rs = router_get_mutable_consensus_status_by_id(dir->digest);
-      if (rs && !rs->is_running) {
-        rs->is_running = 1;
+      if (rs) {
         rs->last_dir_503_at = 0;
         control_event_networkstatus_changed_single(rs);
       }
@@ -3186,7 +3185,6 @@ void
 router_set_status(const char *digest, int up)
 {
   node_t *node;
-  routerstatus_t *status;
   tor_assert(digest);
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
@@ -3207,12 +3205,15 @@ router_set_status(const char *digest, int up)
     node->is_running = up;
   }
 
-  /*XXXX NM don't change routerstatus's is_running. */
+#if 0
+  /* No, don't change routerstatus's is_running.  I have confirmed that
+   * nothing uses it to ask "is the node running? */
   status = router_get_mutable_consensus_status_by_id(digest);
   if (status && status->is_running != up) {
     status->is_running = up;
     control_event_networkstatus_changed_single(status);
   }
+#endif
   router_dir_info_changed();
 }
 
@@ -4237,7 +4238,7 @@ initiate_descriptor_downloads(const routerstatus_t *source,
 static INLINE int
 client_would_use_router(routerstatus_t *rs, time_t now, or_options_t *options)
 {
-  if (!rs->is_running && !options->FetchUselessDescriptors) {
+  if (!rs->is_flagged_running && !options->FetchUselessDescriptors) {
     /* If we had this router descriptor, we wouldn't even bother using it.
      * But, if we want to have a complete list, fetch it anyway. */
     return 0;

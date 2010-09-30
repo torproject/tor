@@ -1475,7 +1475,7 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
          a->is_exit != b->is_exit ||
          a->is_stable != b->is_stable ||
          a->is_fast != b->is_fast ||
-         a->is_running != b->is_running ||
+         a->is_flagged_running != b->is_flagged_running ||
          a->is_named != b->is_named ||
          a->is_unnamed != b->is_unnamed ||
          a->is_valid != b->is_valid ||
@@ -2022,7 +2022,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
           dirserv_should_launch_reachability_test(router, old_router);
       }
     }
-    if (rs->is_running && ds) {
+    if (rs->is_flagged_running && ds) {
       download_status_reset(&ds->v2_ns_dl_status);
     }
     if (reset_failures) {

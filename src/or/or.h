@@ -1586,7 +1586,11 @@ typedef struct routerstatus_t {
   unsigned int is_exit:1; /**< True iff this router is a good exit. */
   unsigned int is_stable:1; /**< True iff this router stays up a long time. */
   unsigned int is_fast:1; /**< True iff this router has good bandwidth. */
-  unsigned int is_running:1; /**< True iff this router is up. */
+  /** True iff this router is called 'running' in the consensus. We give it
+   * this funny name so that we don't accidentally use this bit as a view of
+   * whether we think the router is *currently* running.  If that's what you
+   * want to know, look at is_running in node_t. */
+  unsigned int is_flagged_running:1;
   unsigned int is_named:1; /**< True iff "nickname" belongs to this router. */
   unsigned int is_unnamed:1; /**< True iff "nickname" belongs to another
                               * router. */
