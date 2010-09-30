@@ -1579,6 +1579,29 @@ router_get_advertised_bandwidth_capped(routerinfo_t *router)
   return result;
 }
 
+/** When weighting bridges, enforce these values as lower and upper
+ * bound for believable bandwidth, because there is no way for us
+ * to verify a bridge's bandwidth currently. */
+#define BRIDGE_MIN_BELIEVABLE_BANDWIDTH 20000  /* 20 kB/sec */
+#define BRIDGE_MAX_BELIEVABLE_BANDWIDTH 100000 /* 100 kB/sec */
+
+/** Return the smaller of the router's configured BandwidthRate
+ * and its advertised capacity, making sure to stay within the
+ * interval between bridge-min-believe-bw and
+ * bridge-max-believe-bw. */
+static uint32_t
+bridge_get_advertised_bandwidth_bounded(routerinfo_t *router)
+{
+  uint32_t result = router->bandwidthcapacity;
+  if (result > router->bandwidthrate)
+    result = router->bandwidthrate;
+  if (result > BRIDGE_MAX_BELIEVABLE_BANDWIDTH)
+    result = BRIDGE_MAX_BELIEVABLE_BANDWIDTH;
+  else if (result < BRIDGE_MIN_BELIEVABLE_BANDWIDTH)
+    result = BRIDGE_MIN_BELIEVABLE_BANDWIDTH;
+  return result;
+}
+
 /** Return bw*1000, unless bw*1000 would overflow, in which case return
  * INT32_MAX. */
 static INLINE int32_t
@@ -1733,7 +1756,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
       if (rs && rs->has_bandwidth) {
         this_bw = kb_to_bytes(rs->bandwidth);
       } else { /* bridge or other descriptor not in our consensus */
-        this_bw = router_get_advertised_bandwidth_capped(router);
+        this_bw = bridge_get_advertised_bandwidth_bounded(router);
         have_unknown = 1;
       }
       if (router_digest_is_me(router->cache_info.identity_digest))
@@ -1904,7 +1927,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
         flags |= is_exit ? 2 : 0;
         flags |= is_guard ? 4 : 0;
       } else /* bridge or other descriptor not in our consensus */
-        this_bw = router_get_advertised_bandwidth_capped(router);
+        this_bw = bridge_get_advertised_bandwidth_bounded(router);
     }
     if (is_exit)
       bitarray_set(exit_bits, i);
@@ -1912,6 +1935,8 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
       bitarray_set(guard_bits, i);
     if (is_known) {
       bandwidths[i] = (int32_t) this_bw; // safe since MAX_BELIEVABLE<INT32_MAX
+      // XXX this is no longer true! We don't always cap the bw anymore. Can
+      // a consensus make us overflow?-sh
       tor_assert(bandwidths[i] >= 0);
       if (is_guard)
         total_guard_bw += this_bw;
