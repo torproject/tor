@@ -4239,6 +4239,7 @@ int authdir_mode_tests_reachability(or_options_t *options);
 int authdir_mode_bridge(or_options_t *options);
 
 int server_mode(or_options_t *options);
+int public_server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);
 void consider_publishable_server(int force);

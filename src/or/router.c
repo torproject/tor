@@ -954,6 +954,15 @@ server_mode(or_options_t *options)
   return (options->ORPort != 0 || options->ORListenAddress);
 }
 
+/** Return true iff we are trying to be a non-bridge server.
+ */
+int
+public_server_mode(or_options_t *options)
+{
+  if (!server_mode(options)) return 0;
+  return (!options->BridgeRelay);
+}
+
 /** Remember if we've advertised ourselves to the dirservers. */
 static int server_is_advertised=0;
 
