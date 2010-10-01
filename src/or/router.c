@@ -1294,7 +1294,7 @@ router_rebuild_descriptor(int force)
 
   if (router_pick_published_address(options, &addr) < 0) {
     /* Stop trying to rebuild our descriptor every second. We'll
-     * learn that it's time to try again when server_has_changed_ip()
+     * learn that it's time to try again when ip_address_changed()
      * marks it dirty. */
     desc_clean_since = time(NULL);
     return -1;
