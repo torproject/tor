@@ -3226,7 +3226,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
   /* Start the child, if it is not already running */
   if (-1 == child_pid &&
       time_to_run_helper < now) {
-    int fd_out, fd_err;
+    int fd_out=-1, fd_err=-1;
 
     /* Assume tor-fw-helper will succeed, start it later*/
     time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_SUCCESS;
