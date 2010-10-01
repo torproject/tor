@@ -1257,6 +1257,8 @@ static int router_guess_address_from_dir_headers(uint32_t *guess);
 int
 router_pick_published_address(or_options_t *options, uint32_t *addr)
 {
+  char buf[INET_NTOA_BUF_LEN];
+  struct in_addr a;
   if (resolve_my_address(LOG_INFO, options, addr, NULL) < 0) {
     log_info(LD_CONFIG, "Could not determine our address locally. "
              "Checking if directory headers provide any hints.");
@@ -1266,6 +1268,9 @@ router_pick_published_address(or_options_t *options, uint32_t *addr)
       return -1;
     }
   }
+  a.s_addr = htonl(*addr);
+  tor_inet_ntoa(&a, buf, sizeof(buf));
+  log_info(LD_CONFIG,"Success: chose address '%s'.", buf);
   return 0;
 }
 
@@ -1289,7 +1294,7 @@ router_rebuild_descriptor(int force)
 
   if (router_pick_published_address(options, &addr) < 0) {
     /* Stop trying to rebuild our descriptor every second. We'll
-     * learn that it's time to try again when server_has_changed_ip()
+     * learn that it's time to try again when ip_address_changed()
      * marks it dirty. */
     desc_clean_since = time(NULL);
     return -1;

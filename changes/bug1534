@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - When we're trying to guess whether we know our IP address as
+      a relay, we would log various ways that we failed to guess
+      our address, but never log that we ended up guessing it
+      successfully. Now add a log line to help confused and anxious
+      relay operators. Bugfix on 0.1.2.1-alpha; fixes bug 1534.
