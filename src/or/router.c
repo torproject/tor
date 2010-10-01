@@ -976,6 +976,15 @@ server_mode(or_options_t *options)
   return (options->ORPort != 0 || options->ORListenAddress);
 }
 
+/** Return true iff we are trying to be a non-bridge server.
+ */
+int
+public_server_mode(or_options_t *options)
+{
+  if (!server_mode(options)) return 0;
+  return (!options->BridgeRelay);
+}
+
 /** Return true iff the combination of options in <b>options</b> and parameters
  * in the consensus mean that we don't want to allow exits from circuits
  * we got from addresses not known to be servers. */
