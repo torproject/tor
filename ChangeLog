@@ -1,4 +1,13 @@
 Changes in version 0.2.2.17-alpha - 2010-09-30
+  Tor 0.2.2.17-alpha introduces a feature to make it harder for clients
+  to use one-hop circuits (which can put the exit relays at higher risk,
+  plus unbalance the network); fixes a big bug in bandwidth accounting
+  for relays that want to limit their monthly bandwidth use; fixes a
+  big pile of bugs in how clients tolerate temporary network failure;
+  and makes our adaptive circuit build timeout feature (which improves
+  client performance if your network is fast while not breaking things
+  if your network is slow) better handle bad networks.
+
   o Major features:
     - Exit relays now try harder to block exit attempts from unknown
       relays, to make it harder for people to use them as one-hop proxies
@@ -43,6 +52,25 @@ Changes in version 0.2.2.17-alpha - 2010-09-30
       would not get used at all unless no other bridges are available
       to a client. Fixes bug 1912; bugfix on 0.2.2.7-alpha.
 
+  o Major bugfixes (on the circuit build timeout feature, 0.2.2.x):
+    - Ignore cannibalized circuits when recording circuit build times.
+      This should provide for a minor performance improvement for hidden
+      service users using 0.2.2.14-alpha, and should remove two spurious
+      notice log messages. Bugfix on 0.2.2.14-alpha; fixes bug 1740.
+    - Simplify the logic that causes us to decide if the network is
+      unavailable for purposes of recording circuit build times. If we
+      receive no cells whatsoever for the entire duration of a circuit's
+      full measured lifetime, the network is probably down. Also ignore
+      one-hop directory fetching circuit timeouts when calculating our
+      circuit build times. These changes should hopefully reduce the
+      cases where we see ridiculous circuit build timeouts for people
+      with spotty wireless connections. Fixes part of bug 1772; bugfix
+      on 0.2.2.2-alpha.
+    - Prevent the circuit build timeout from becoming larger than
+      the maximum build time we have ever seen. Also, prevent the time
+      period for measurement circuits from becoming larger than twice that
+      value. Fixes the other part of bug 1772; bugfix on 0.2.2.2-alpha.
+
   o Minor features:
     - When we run out of directory information such that we can't build
       circuits, but then get enough that we can build circuits, log when
@@ -74,26 +102,7 @@ Changes in version 0.2.2.17-alpha - 2010-09-30
       by a lot, and skewing our wakeup time towards the start of the
       accounting interval. Fixes bug 1789. Bugfix on 0.0.9pre5.
 
-  o Minor bugfixes (on the circuit build timeout feature, 0.2.2.x):
-    - Ignore cannibalized circuits when recording circuit build times.
-      This should provide for a minor performance improvement for hidden
-      service users using 0.2.2.14-alpha, and should remove two spurious
-      notice log messages. Bugfix on 0.2.2.14-alpha; fixes bug 1740.
-    - Simplify the logic that causes us to decide if the network is
-      unavailable for purposes of recording circuit build times. If we
-      receive no cells whatsoever for the entire duration of a circuit's
-      full measured lifetime, the network is probably down. Also ignore
-      one-hop directory fetching circuit timeouts when calculating our
-      circuit build times. These changes should hopefully reduce the
-      cases where we see ridiculous circuit build timeouts for people
-      with spotty wireless connections. Fixes part of bug 1772; bugfix
-      on 0.2.2.2-alpha.
-    - Prevent the circuit build timeout from becoming larger than
-      the maximum build time we have ever seen. Also, prevent the time
-      period for measurement circuits from becoming larger than twice that
-      value. Fixes the other part of bug 1772; bugfix on 0.2.2.2-alpha.
-
-  o Minor bugfixes (other, 0.2.2.x):
+  o Minor bugfixes (on 0.2.2.x):
     - Resume generating CIRC FAILED REASON=TIMEOUT control port messages,
       which were disabled by the circuit build timeout changes in
       0.2.2.14-alpha. Bugfix on 0.2.2.14-alpha; fixes bug 1739.
@@ -106,6 +115,10 @@ Changes in version 0.2.2.17-alpha - 2010-09-30
 
 
 Changes in version 0.2.2.16-alpha - 2010-09-17
+  Tor 0.2.2.16-alpha fixes a variety of old stream fairness bugs (most
+  evident at exit relays), and also continues to resolve all the little
+  bugs that have been filling up trac lately.
+
   o Major bugfixes (stream-level fairness):
     - When receiving a circuit-level SENDME for a blocked circuit, try
       to package cells fairly from all the streams that had previously
@@ -217,6 +230,12 @@ Changes in version 0.2.2.16-alpha - 2010-09-17
 
 
 Changes in version 0.2.2.15-alpha - 2010-08-18
+  Tor 0.2.2.15-alpha fixes a big bug in hidden service availability,
+  fixes a variety of other bugs that were preventing performance
+  experiments from moving forward, fixes several bothersome memory leaks,
+  and generally closes a lot of smaller bugs that have been filling up
+  trac lately.
+
   o Major bugfixes:
     - Stop assigning the HSDir flag to relays that disable their
       DirPort (and thus will refuse to answer directory requests). This
