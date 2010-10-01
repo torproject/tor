@@ -1878,7 +1878,7 @@ static const node_t *
 smartlist_choose_node_by_bandwidth(smartlist_t *sl,
                                    bandwidth_weight_rule_t rule)
 {
-  unsigned int i;
+  unsigned i;
   const routerstatus_t *status=NULL;
   int32_t *bandwidths;
   int is_exit;
@@ -1925,6 +1925,7 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     int is_known = 1;
     int32_t flags = 0;
     uint32_t this_bw = 0;
+    i = node_sl_idx;
 
     if (router_digest_is_me(node->identity))
       me_idx = node_sl_idx;
