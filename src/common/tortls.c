@@ -190,6 +190,8 @@ static X509* tor_tls_create_certificate(crypto_pk_env_t *rsa,
                                         const char *cname_sign,
                                         unsigned int lifetime);
 static void tor_tls_unblock_renegotiation(tor_tls_t *tls);
+static tor_tls_context_t *tor_tls_context_new(crypto_pk_env_t *identity,
+                                              unsigned int key_lifetime);
 
 /** Global tls context. We keep it here because nobody else needs to
  * touch it. */
@@ -618,15 +620,38 @@ tor_tls_context_incref(tor_tls_context_t *ctx)
   ++ctx->refcnt;
 }
 
-/** Create a new TLS context for use with Tor TLS handshakes.
- * <b>identity</b> should be set to the identity key used to sign the
- * certificate.
+/** Create a new global TLS context.
  *
  * You can call this function multiple times.  Each time you call it,
  * it generates new certificates; all new connections will use
  * the new SSL context.
  */
 int
+tor_tls_context_init(crypto_pk_env_t *identity, unsigned int key_lifetime)
+{
+  tor_tls_context_t *new_ctx = tor_tls_context_new(identity,
+                                                   key_lifetime);
+  tor_tls_context_t *old_ctx = global_tls_context;
+
+  if (new_ctx != NULL) {
+    global_tls_context = new_ctx;
+
+    /* Free the old context if one existed. */
+    if (old_ctx != NULL) {
+      /* This is safe even if there are open connections: we reference-
+       * count tor_tls_context_t objects. */
+      tor_tls_context_decref(old_ctx);
+    }
+  }
+
+  return ((new_ctx != NULL) ? 0 : -1);
+}
+
+/** Create a new TLS context for use with Tor TLS handshakes.
+ * <b>identity</b> should be set to the identity key used to sign the
+ * certificate.
+ */
+static tor_tls_context_t *
 tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
 {
   crypto_pk_env_t *rsa = NULL;
@@ -721,18 +746,12 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
                      always_accept_verify_cb);
   /* let us realloc bufs that we're writing from */
   SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
-  /* Free the old context if one exists. */
-  if (global_tls_context) {
-    /* This is safe even if there are open connections: we reference-
-     * count tor_tls_context_t objects. */
-    tor_tls_context_decref(global_tls_context);
-  }
-  global_tls_context = result;
+
   if (rsa)
     crypto_free_pk_env(rsa);
   tor_free(nickname);
   tor_free(nn2);
-  return 0;
+  return result;
 
  error:
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating TLS context");
@@ -748,7 +767,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
     X509_free(cert);
   if (idcert)
     X509_free(idcert);
-  return -1;
+  return NULL;
 }
 
 #ifdef V2_HANDSHAKE_SERVER
