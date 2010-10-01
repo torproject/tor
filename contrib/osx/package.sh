@@ -89,7 +89,6 @@ EOF
 DOC=$BUILD_DIR/tor_resources/documents
 mkdir $DOC
 mkdir $DOC/howto
-cp AUTHORS $DOC/AUTHORS.txt
 groff doc/tor.1.in -T ps -m man | pstopdf -i -o $DOC/tor-reference.pdf
 groff doc/tor-resolve.1 -T ps -m man | pstopdf -i -o $DOC/tor-resolve.pdf
 mkdir $DOC/Advanced
@@ -145,7 +144,7 @@ cp LICENSE $BUILD_DIR/output/Tor\ License.txt
 
 find $BUILD_DIR/output -print0 | sudo xargs -0 chown root:wheel
 
-mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle"
+sudo mv $BUILD_DIR/output "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle"
 rm -f "Tor-$VERSION-$ARCH-Bundle.dmg"
 USER="`whoami`"
 sudo hdiutil create -format UDZO -imagekey zlib-level=9 -srcfolder "$BUILD_DIR/Tor-$VERSION-$ARCH-Bundle" "Tor-$VERSION-$ARCH-Bundle.dmg"

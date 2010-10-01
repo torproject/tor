@@ -117,6 +117,7 @@ BuildRequires: openssl-devel >= 0.9.7
 %endif
 %if %{is_fc}
 BuildRequires: rpm-build >= 4.0
+Conflicts: tor-core, tor-lsb, tor-upstart
 %endif
 Requires(pre): /usr/bin/id, /bin/date, /bin/sh
 Requires(pre): %{_sbindir}/useradd, %{_sbindir}/groupadd
@@ -153,7 +154,7 @@ for high-stakes anonymity.
 
 %build
 %if %{is_suse}
-%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup}
+%configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} --docdir=%{_docdir}/%{name}
 %else
 %configure --with-tor-user=%{toruser} --with-tor-group=%{torgroup} 
 %endif
@@ -262,14 +263,20 @@ exit 0
 
 %files
 %defattr(-,root,root)
+%if %{is_suse}
+%doc INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO doc/*html
+%endif
 %doc INSTALL LICENSE README ChangeLog doc/HACKING doc/TODO
 %{_mandir}/man*/*
-%{_docdir}/tor/*
 %{_bindir}/tor
 %{_bindir}/torctl
 %{_bindir}/torify
 %{_bindir}/tor-resolve
 %{_bindir}/tor-gencert
+%if %{is_suse}
+%else
+%{_docdir}/*
+%endif
 %{_datadir}/tor/geoip
 %config %{_initrddir}/%{name}
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/logrotate.d/%{name}
@@ -280,6 +287,10 @@ exit 0
 %attr(0750,%{toruser},%{torgroup}) %dir %{_localstatedir}/log/%{name}
 
 %changelog
+* Fri Aug 20 2010 Erinn Clark <erinn@torproject.org>
+- add conflicts for Fedora packages
+- add logic for SuSE since it requires special doc handling
+
 * Mon Feb 22 2010 Erinn Clark <erinn@torproject.org>
 - remove AUTHORS from %doc line since it no longer exists upstream
 - switch maintainers
