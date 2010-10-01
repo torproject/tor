@@ -86,7 +86,9 @@ static int use_unsafe_renegotiation_op = 0;
  * SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION? */
 static int use_unsafe_renegotiation_flag = 0;
 
-/** Structure holding the TLS state for a single connection. */
+/** Holds a SSL_CTX object and related state used to configure TLS
+ * connections.
+ */
 typedef struct tor_tls_context_t {
   int refcnt;
   SSL_CTX *ctx;
@@ -372,7 +374,7 @@ tor_tls_init(void)
 
     version = SSLeay();
 
-    /* OpenSSL 0.9.8l introduced SSL3_FLAGS_ALLOW_UNSAGE_LEGACY_RENEGOTIATION
+    /* OpenSSL 0.9.8l introduced SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
      * here, but without thinking too hard about it: it turns out that the
      * flag in question needed to be set at the last minute, and that it
      * conflicted with an existing flag number that had already been added
@@ -555,9 +557,9 @@ tor_tls_create_certificate(crypto_pk_env_t *rsa,
   (TLS1_TXT_DHE_RSA_WITH_AES_256_SHA ":"           \
    TLS1_TXT_DHE_RSA_WITH_AES_128_SHA ":"           \
    SSL3_TXT_EDH_RSA_DES_192_CBC3_SHA)
-/* Note: for setting up your own private testing network with link crypto
- * disabled, set the cipher lists to your cipher list to
- * SSL3_TXT_RSA_NULL_SHA.  If you do this, you won't be able to communicate
+/* Note: to set up your own private testing network with link crypto
+ * disabled, set your Tors' cipher list to
+ * (SSL3_TXT_RSA_NULL_SHA).  If you do this, you won't be able to communicate
  * with any of the "real" Tors, though. */
 
 #ifdef V2_HANDSHAKE_CLIENT
@@ -618,7 +620,7 @@ tor_tls_context_incref(tor_tls_context_t *ctx)
 
 /** Create a new TLS context for use with Tor TLS handshakes.
  * <b>identity</b> should be set to the identity key used to sign the
- * certificate, and <b>nickname</b> set to the nickname to use.
+ * certificate.
  *
  * You can call this function multiple times.  Each time you call it,
  * it generates new certificates; all new connections will use
