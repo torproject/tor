@@ -3,7 +3,7 @@
 // This is an asciidoc file used to generate the manpage/html reference.
 // Learn asciidoc on http://www.methods.co.nz/asciidoc/userguide.html
 tor-fw-helper(1)
-==============
+================
 Jacob Appelbaum
 
 NAME
@@ -13,8 +13,8 @@ tor-fw-helper - Manage upstream firewall/NAT devices
 SYNOPSIS
 --------
 **tor-fw-helper** [-h|--help] [-T|--test] [-v|--verbose] [-g|--fetch-public-ip]
--i|--internal-or-port __TCP port__ [-e|--external-or-port _TCP port_]
-[-d|--internal-dir-port _TCP port_] [-p|--external-dir-port _TCP port_]
+ -i|--internal-or-port __TCP port__ [-e|--external-or-port _TCP port_]
+ [-d|--internal-dir-port _TCP port_] [-p|--external-dir-port _TCP port_]
 
 DESCRIPTION
 -----------

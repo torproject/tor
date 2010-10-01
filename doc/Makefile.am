@@ -14,7 +14,11 @@
 # just use the .1 and .html files.
 
 if USE_ASCIIDOC
+if USE_FW_HELPER
+asciidoc_files = tor tor-gencert tor-resolve torify tor-fw-helper
+else
 asciidoc_files = tor tor-gencert tor-resolve torify
+endif
 html_in = $(asciidoc_files:=.html.in)
 man_in = $(asciidoc_files:=.1.in)
 txt_in = $(asciidoc_files:=.1.txt)
@@ -51,6 +55,7 @@ tor.html.in : tor.1.txt
 torify.html.in : torify.1.txt
 tor-gencert.html.in : tor-gencert.1.txt
 tor-resolve.html.in : tor-resolve.1.txt
+tor-fw-helper.html.in : tor-fw-helper.1.txt
 
 # Generate the manpage from asciidoc, but don't do
 # machine-specific replacements yet
@@ -61,6 +66,7 @@ tor.1.in : tor.1.txt
 torify.1.in : torify.1.txt
 tor-gencert.1.in : tor-gencert.1.txt
 tor-resolve.1.in : tor-resolve.1.txt
+tor-fw-helper.1.in : tor-fw-helper.1.txt
 
 # use ../config.status to swap all machine-specific magic strings
 # in the asciidoc with their replacements.
@@ -74,10 +80,12 @@ tor.1 : tor.1.in
 torify.1 : torify.1.in
 tor-gencert.1 : tor-gencert.1.in
 tor-resolve.1 : tor-resolve.1.in
+tor-fw-helper.1 : tor-fw-helper.1.in
 tor.html : tor.html.in
 torify.html : torify.html.in
 tor-gencert.html : tor-gencert.html.in
 tor-resolve.html : tor-resolve.html.in
+tor-fw-helper.html : tor-fw-helper.html.in
 
 CLEANFILES = $(asciidoc_product) config.log
 DISTCLEANFILES = $(html_in) $(man_in)

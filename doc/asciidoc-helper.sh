@@ -17,6 +17,7 @@ output=$3
 if [ "$1" = "html" ]; then
     input=${output%%.html.in}.1.txt
     base=${output%%.html.in}
+
     if [ "$2" != none ]; then
       "$2" -d manpage -o $output $input;
     else
@@ -32,7 +33,7 @@ if [ "$1" = "html" ]; then
 elif [ "$1" = "man" ]; then
     input=${output%%.1.in}.1.txt
     base=${output%%.1.in}
-    
+
     if test "$2" = none; then
       echo "==================================";
       echo;
