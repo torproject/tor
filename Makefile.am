@@ -3,8 +3,9 @@
 # Copyright (c) 2007-2010, The Tor Project, Inc.
 # See LICENSE for licensing information
 
-AUTOMAKE_OPTIONS = foreign
- # else it keeps trying to put COPYING back in
+# "foreign" means we don't follow GNU package layout standards
+# 1.6 means we require automake vesion 1.6
+AUTOMAKE_OPTIONS = foreign 1.6
 
 SUBDIRS = src doc contrib
 
