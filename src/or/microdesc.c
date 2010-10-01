@@ -4,12 +4,13 @@
 #include "or.h"
 #include "config.h"
 #include "directory.h"
-#include "microdesc.h"
-#include "nodelist.h"
-#include "routerparse.h"
-#include "networkstatus.h"
-#include "routerlist.h"
 #include "dirserv.h"
+#include "microdesc.h"
+#include "networkstatus.h"
+#include "nodelist.h"
+#include "policies.h"
+#include "routerlist.h"
+#include "routerparse.h"
 
 /** A data structure to hold a bunch of cached microdescriptors.  There are
  * two active files in the cache: a "cache file" that we mmap, and a "journal
@@ -458,7 +459,7 @@ microdesc_free(microdesc_t *md)
     SMARTLIST_FOREACH(md->family, char *, cp, tor_free(cp));
     smartlist_free(md->family);
   }
-  tor_free(md->exitsummary);
+  short_policy_free(md->exit_policy);
 
   tor_free(md);
 }

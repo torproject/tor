@@ -4302,7 +4302,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
 
     if ((tok = find_opt_by_keyword(tokens, K_P))) {
-      md->exitsummary = tor_strdup(tok->args[0]);
+      md->exit_policy = parse_short_policy(tok->args[0]);
     }
 
     crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);

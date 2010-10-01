@@ -10,6 +10,7 @@
 #include "microdesc.h"
 #include "networkstatus.h"
 #include "nodelist.h"
+#include "policies.h"
 #include "router.h"
 #include "routerlist.h"
 
@@ -597,14 +598,18 @@ node_allows_single_hop_exits(const node_t *node)
   return 0;
 }
 
-/** Return true iff it seems that <b>node</b> has an exit policy that
- * doesn't actually permit anything to exit. */
+/** Return true iff it seems that <b>node</b> has an exit policy that doesn't
+ * actually permit anything to exit, or we don't know its exit policy */
 int
 node_exit_policy_rejects_all(const node_t *node)
 {
-  (void)node;
-  UNIMPLEMENTED_NODELIST();
-  return 0;
+  if (node->ri)
+    return node->ri->policy_is_reject_star;
+  else if (node->md)
+    return node->md->exit_policy == NULL ||
+      short_policy_is_reject_star(node->md->exit_policy);
+  else
+    return 1;
 }
 
 /** Copy the address for <b>node</b> into *<b>addr_out</b>. */

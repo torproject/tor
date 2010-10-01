@@ -1315,6 +1315,157 @@ policy_summarize(smartlist_t *policy)
   return result;
 }
 
+/** DOCDOC */
+short_policy_t *
+parse_short_policy(const char *summary)
+{
+  const char *orig_summary = summary;
+  short_policy_t *result;
+  int is_accept;
+  int n_entries;
+  short_policy_entry_t entries[MAX_EXITPOLICY_SUMMARY_LEN]; /* overkill */
+  const char *next;
+
+  if (!strcmpstart(summary, "accept ")) {
+    is_accept = 1;
+    summary += strlen("accept ");
+  } else if (!strcmpstart(summary, "reject ")) {
+    is_accept = 0;
+    summary += strlen("reject ");
+  } else {
+    log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Unrecognized policy summary keyword");
+    return NULL;
+  }
+
+  n_entries = 0;
+  for ( ; *summary; summary = next) {
+    const char *comma = strchr(summary, ',');
+    unsigned low, high;
+    char dummy;
+    char ent_buf[32];
+
+    next = comma ? comma+1 : strchr(summary, '\0');
+
+    if (n_entries == MAX_EXITPOLICY_SUMMARY_LEN) {
+      log_fn(LOG_PROTOCOL_WARN, LD_DIR, "Impossibly long policy summary %s",
+             escaped(orig_summary));
+      return NULL;
+    }
+
+    if (! TOR_ISDIGIT(*summary) || next-summary > (int)(sizeof(ent_buf)-1)) {
+      /* unrecognized entry format. skip it. */
+      continue;
+    }
+    if (next-summary < 2) {
+      /* empty; skip it. */
+      continue;
+    }
+
+    memcpy(ent_buf, summary, next-summary-1);
+    ent_buf[next-summary-1] = '\0';
+
+    if (tor_sscanf(ent_buf, "%u-%u%c", &low, &high, &dummy) == 2) {
+      if (low<1 || low>65535 || high<1 || high>65535) {
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR,"Found bad entry in policy summary %s",
+              escaped(orig_summary));
+        return NULL;
+      }
+    } else if (tor_sscanf(ent_buf, "%u%c", &low, &dummy) == 1) {
+      if (low<1 || low>65535) {
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR,"Found bad entry in policy summary %s",
+               escaped(orig_summary));
+        return NULL;
+      }
+      high = low;
+    } else {
+      log_fn(LOG_PROTOCOL_WARN, LD_DIR,"Found bad entry in policy summary %s",
+             escaped(orig_summary));
+      return NULL;
+    }
+
+    entries[n_entries].min_port = low;
+    entries[n_entries].max_port = high;
+    n_entries++;
+  }
+
+  if (n_entries == 0) {
+    log_fn(LOG_PROTOCOL_WARN, LD_DIR,
+           "Found no port-range entries in summary %s", escaped(orig_summary));
+    return NULL;
+  }
+
+  {
+    size_t size = sizeof(short_policy_t) +
+      sizeof(short_policy_entry_t)*(n_entries-1);
+    result = tor_malloc_zero(size);
+
+    tor_assert( (char*)&result->entries[n_entries-1] < ((char*)result)+size);
+  }
+
+  result->is_accept = is_accept;
+  result->n_entries = n_entries;
+  memcpy(result->entries, entries, sizeof(short_policy_entry_t)*n_entries);
+  return result;
+}
+
+/** DOCDOC */
+void
+short_policy_free(short_policy_t *policy)
+{
+  tor_free(policy);
+}
+
+/** DOCDOC */
+addr_policy_result_t
+compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
+                                 const short_policy_t *policy)
+{
+  int i;
+  int found_match = 0;
+  int accept;
+  (void)addr;
+
+  tor_assert(port != 0);
+
+  if (addr && (tor_addr_is_internal(addr, 0) ||
+               tor_addr_is_null(addr) ||
+               tor_addr_is_loopback(addr)))
+    return ADDR_POLICY_REJECTED;
+
+  for (i=0; i < policy->n_entries; ++i) {
+    const short_policy_entry_t *e = &policy->entries[i];
+    if (e->min_port <= port && port <= e->max_port) {
+      found_match = 1;
+      break;
+    }
+  }
+
+  if (found_match)
+    accept = policy->is_accept;
+  else
+    accept = ! policy->is_accept;
+
+  /* ???? are these right? */
+  if (accept)
+    return ADDR_POLICY_PROBABLY_ACCEPTED;
+  else
+    return ADDR_POLICY_REJECTED;
+}
+
+/* DOCDOC */
+int
+short_policy_is_reject_star(const short_policy_t *policy)
+{
+  /* This doesn't need to be as much on the lookout as policy_is_reject_star,
+   * since policy summaries are from the consensus or from consensus microdescs.
+   */
+  tor_assert(policy);
+  /* Check for an exact match of "reject 1-65535". */
+  return (policy->is_accept == 0 && policy->n_entries == 1 &&
+          policy->entries[0].min_port == 1 &&
+          policy->entries[0].max_port == 65535);
+}
+
 /** Decides whether addr:port is probably or definitely accepted or rejcted by
  * <b>node</b>.  See compare_tor_addr_to_addr_policy for details on addr/port
  * interpretation. */
@@ -1333,11 +1484,16 @@ addr_policy_result_t
 compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
                                 const node_t *node)
 {
-  (void)addr;
-  (void)port;
-  (void)node;
-  UNIMPLEMENTED_NODELIST();
-  return 0;
+  if (node->ri)
+    return compare_tor_addr_to_addr_policy(addr, port, node->ri->exit_policy);
+  else if (node->md && node->md) {
+    if (node->md->exit_policy == NULL)
+      return ADDR_POLICY_REJECTED;
+    else
+      return compare_tor_addr_to_short_policy(addr, port,
+                                              node->md->exit_policy);
+  } else
+    return ADDR_POLICY_PROBABLY_REJECTED;
 }
 
 /** Implementation for GETINFO control command: knows the answer for questions
