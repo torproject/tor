@@ -872,8 +872,7 @@ run_scheduled_events(time_t now)
     last_rotated_x509_certificate = now;
   if (last_rotated_x509_certificate+MAX_SSL_KEY_LIFETIME_INTERNAL < now) {
     log_info(LD_GENERAL,"Rotating tls context.");
-    if (tor_tls_context_new(get_identity_key(),
-                            MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
+    if (tor_tls_context_init(get_identity_key(), MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
       log_warn(LD_BUG, "Error reinitializing TLS context");
       /* XXX is it a bug here, that we just keep going? -RD */
     }
