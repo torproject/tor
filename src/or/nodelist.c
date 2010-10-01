@@ -593,9 +593,10 @@ node_get_verbose_nickname(const node_t *node,
 int
 node_allows_single_hop_exits(const node_t *node)
 {
-  (void)node;
-  UNIMPLEMENTED_NODELIST();
-  return 0;
+  if (node && node->ri)
+    return node->ri->allow_single_hop_exits;
+  else
+    return 0;
 }
 
 /** Return true iff it seems that <b>node</b> has an exit policy that doesn't

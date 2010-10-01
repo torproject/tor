@@ -2564,7 +2564,7 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
        */
       continue;
     }
-    if (!node->ri && !(node->rs && node->md))
+    if (!node_has_descriptor(node))
       continue;
     if (!node->is_running || node->is_bad_exit) {
       n_supported[i] = -1;
@@ -2684,6 +2684,8 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
       /* try once to pick only from routers that satisfy a needed port,
        * then if there are none, pick from any that support exiting. */
       SMARTLIST_FOREACH_BEGIN(the_nodes, const node_t *, node) {
+        if (!node_has_descriptor(node))
+          continue;
         if (n_supported[node_sl_idx] != -1 &&
             (attempt || node_handles_some_port(node, needed_ports))) {
 //          log_fn(LOG_DEBUG,"Try %d: '%s' is a possibility.",
@@ -2860,6 +2862,7 @@ onion_pick_cpath_exit(origin_circuit_t *circ, extend_info_t *exit)
       return -1;
     }
     exit = extend_info_from_node(node);
+    tor_assert(exit);
   }
   state->chosen_exit = exit;
   return 0;
@@ -3100,13 +3103,17 @@ onion_extend_cpath(origin_circuit_t *circ)
     info = extend_info_dup(state->chosen_exit);
   } else if (cur_len == 0) { /* picking first node */
     const node_t *r = choose_good_entry_server(purpose, state);
-    if (r)
+    if (r) {
       info = extend_info_from_node(r);
+      tor_assert(info);
+    }
   } else {
     const node_t *r =
       choose_good_middle_server(purpose, state, circ->cpath, cur_len);
-    if (r)
+    if (r) {
       info = extend_info_from_node(r);
+      tor_assert(info);
+    }
   }
 
   if (!info) {
