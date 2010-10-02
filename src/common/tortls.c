@@ -930,7 +930,7 @@ tor_tls_new(int sock, int isServer)
 
   tor_assert(global_tls_context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(global_tls_context->ctx))) {
-    tls_log_errors(NULL, LOG_WARN, LD_NET, "generating TLS context");
+    tls_log_errors(NULL, LOG_WARN, LD_NET, "creating SSL object");
     tor_free(result);
     return NULL;
   }
@@ -987,7 +987,7 @@ tor_tls_new(int sock, int isServer)
 #endif
 
   /* Not expected to get called. */
-  tls_log_errors(NULL, LOG_WARN, LD_NET, "generating TLS context");
+  tls_log_errors(NULL, LOG_WARN, LD_NET, "creating tor_tls_t object");
   return result;
 }
 
