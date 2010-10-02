@@ -723,8 +723,8 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
   SSL_CTX_set_mode(result->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
   /* Free the old context if one exists. */
   if (global_tls_context) {
-    /* This is safe even if there are open connections: OpenSSL does
-     * reference counting with SSL and SSL_CTX objects. */
+    /* This is safe even if there are open connections: we reference-
+     * count tor_tls_context_t objects. */
     tor_tls_context_decref(global_tls_context);
   }
   global_tls_context = result;
