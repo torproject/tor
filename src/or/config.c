@@ -2336,7 +2336,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   int explicit_ip=1;
   int explicit_hostname=1;
   int from_interface=0;
-  char tmpbuf[INET_NTOA_BUF_LEN];
+  char *tmpbuf;
   const char *address = options->Address;
   int notice_severity = warn_severity <= LOG_NOTICE ?
                           LOG_NOTICE : warn_severity;
@@ -2378,49 +2378,40 @@ resolve_my_address(int warn_severity, or_options_t *options,
         return -1;
       }
       from_interface = 1;
-      in.s_addr = htonl(interface_ip);
-      tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
+      addr = interface_ip;
       log_fn(notice_severity, LD_CONFIG, "Learned IP address '%s' for "
-             "local interface. Using that.", tmpbuf);
+             "local interface. Using that.", fmt_addr32(addr));
       strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
     } else { /* resolved hostname into addr */
-      in.s_addr = htonl(addr);
-
       if (!explicit_hostname &&
-          is_internal_IP(ntohl(in.s_addr), 0)) {
+          is_internal_IP(addr, 0)) {
         uint32_t interface_ip;
 
-        tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
         log_fn(notice_severity, LD_CONFIG, "Guessed local hostname '%s' "
-               "resolves to a private IP address (%s).  Trying something "
-               "else.", hostname, tmpbuf);
+               "resolves to a private IP address (%s). Trying something "
+               "else.", hostname, fmt_addr32(addr));
 
         if (get_interface_address(warn_severity, &interface_ip)) {
           log_fn(warn_severity, LD_CONFIG,
                  "Could not get local interface IP address. Too bad.");
         } else if (is_internal_IP(interface_ip, 0)) {
-          struct in_addr in2;
-          in2.s_addr = htonl(interface_ip);
-          tor_inet_ntoa(&in2,tmpbuf,sizeof(tmpbuf));
           log_fn(notice_severity, LD_CONFIG,
                  "Interface IP address '%s' is a private address too. "
-                 "Ignoring.", tmpbuf);
+                 "Ignoring.", fmt_addr32(interface_ip));
         } else {
           from_interface = 1;
-          in.s_addr = htonl(interface_ip);
-          tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
+          addr = interface_ip;
           log_fn(notice_severity, LD_CONFIG,
                  "Learned IP address '%s' for local interface."
-                 " Using that.", tmpbuf);
+                 " Using that.", fmt_addr32(addr));
           strlcpy(hostname, "<guessed from interfaces>", sizeof(hostname));
         }
       }
     }
   }
 
-  tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-  if (is_internal_IP(ntohl(in.s_addr), 0) &&
-      options->_PublishServerDescriptor) {
+  tmpbuf = tor_dup_ip(addr);
+  if (is_internal_IP(addr, 0) && options->_PublishServerDescriptor) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers && !options->AlternateDirAuthority) {
       /* if they are using the default dirservers, disallow internal IPs
@@ -2441,8 +2432,8 @@ resolve_my_address(int warn_severity, or_options_t *options,
     }
   }
 
-  log_debug(LD_CONFIG, "Resolved Address to '%s'.", tmpbuf);
-  *addr_out = ntohl(in.s_addr);
+  log_debug(LD_CONFIG, "Resolved Address to '%s'.", fmt_addr32(addr));
+  *addr_out = addr;
   if (last_resolved_addr && last_resolved_addr != *addr_out) {
     /* Leave this as a notice, regardless of the requested severity,
      * at least until dynamic IP address support becomes bulletproof. */
@@ -2472,6 +2463,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   last_resolved_addr = *addr_out;
   if (hostname_out)
     *hostname_out = tor_strdup(hostname);
+  tor_free(tmpbuf);
   return 0;
 }
 

@@ -108,6 +108,7 @@ tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
 int tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out);
 char *tor_dup_addr(const tor_addr_t *addr) ATTR_MALLOC;
 const char *fmt_addr(const tor_addr_t *addr);
+const char * fmt_addr32(uint32_t addr);
 int get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr);
 
 /** Flag to specify how to do a comparison between addresses.  In an "exact"

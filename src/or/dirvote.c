@@ -83,9 +83,7 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   const char *client_versions = NULL, *server_versions = NULL;
   char *outp, *endp;
   char fingerprint[FINGERPRINT_LEN+1];
-  char ipaddr[INET_NTOA_BUF_LEN];
   char digest[DIGEST_LEN];
-  struct in_addr in;
   uint32_t addr;
   routerlist_t *rl = router_get_routerlist();
   char *version_lines = NULL;
@@ -98,8 +96,6 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
   voter = smartlist_get(v3_ns->voters, 0);
 
   addr = voter->addr;
-  in.s_addr = htonl(addr);
-  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
 
   base16_encode(fingerprint, sizeof(fingerprint),
                 v3_ns->cert->cache_info.identity_digest, DIGEST_LEN);
@@ -186,7 +182,8 @@ format_networkstatus_vote(crypto_pk_env_t *private_signing_key,
                  flags,
                  params,
                  voter->nickname, fingerprint, voter->address,
-                 ipaddr, voter->dir_port, voter->or_port, voter->contact);
+                 fmt_addr32(addr), voter->dir_port, voter->or_port,
+                 voter->contact);
 
     if (r < 0) {
       log_err(LD_BUG, "Insufficient memory for network status line");
@@ -1529,8 +1526,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
     smartlist_sort(dir_sources, _compare_dir_src_ents_by_authority_id);
 
     SMARTLIST_FOREACH_BEGIN(dir_sources, const dir_src_ent_t *, e) {
-      struct in_addr in;
-      char ip[INET_NTOA_BUF_LEN];
       char fingerprint[HEX_DIGEST_LEN+1];
       char votedigest[HEX_DIGEST_LEN+1];
       networkstatus_t *v = e->v;
@@ -1540,8 +1535,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
       if (e->is_legacy)
         tor_assert(consensus_method >= 2);
 
-      in.s_addr = htonl(voter->addr);
-      tor_inet_ntoa(&in, ip, sizeof(ip));
       base16_encode(fingerprint, sizeof(fingerprint), e->digest, DIGEST_LEN);
       base16_encode(votedigest, sizeof(votedigest), voter->vote_digest,
                     DIGEST_LEN);
@@ -1549,7 +1542,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       tor_asprintf(&buf,
                    "dir-source %s%s %s %s %s %d %d\n",
                    voter->nickname, e->is_legacy ? "-legacy" : "",
-                   fingerprint, voter->address, ip,
+                   fingerprint, voter->address, fmt_addr32(voter->addr),
                    voter->dir_port,
                    voter->or_port);
       smartlist_add(chunks, buf);
