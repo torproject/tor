@@ -50,7 +50,9 @@ typedef struct tor_tls_t tor_tls_t;
 const char *tor_tls_err_to_string(int err);
 
 void tor_tls_free_all(void);
-int tor_tls_context_init(crypto_pk_env_t *identity,
+int tor_tls_context_init(int is_public_server,
+                         crypto_pk_env_t *client_identity,
+                         crypto_pk_env_t *server_identity,
                          unsigned int key_lifetime);
 tor_tls_t *tor_tls_new(int sock, int is_server);
 void tor_tls_set_logged_address(tor_tls_t *tls, const char *address);
