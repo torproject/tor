@@ -784,9 +784,9 @@ is non-zero):
 
 **BridgeRelay** **0**|**1**::
     Sets the relay to act as a "bridge" with respect to relaying connections
-    from bridge users to the Tor network. Mainly it influences how the relay
-    will cache and serve directory information. Usually used in combination
-    with PublishServerDescriptor.
+    from bridge users to the Tor network. It mainly causes Tor to publish a
+    server descriptor to the bridge database, rather than publishing a relay
+    descriptor to the public directory authorities.
 
 **ContactInfo** __email_address__::
     Administrative contact information for server. This line might get picked
@@ -886,15 +886,17 @@ is non-zero):
     (Default: tor-fw-helper)
 
 **PublishServerDescriptor** **0**|**1**|**v1**|**v2**|**v3**|**bridge**|**hidserv**,**...**::
-    This option is only considered if you have an ORPort defined. You can
+    This option specifies which descriptors Tor will publish when acting as
+    a relay or hidden service. You can
     choose multiple arguments, separated by commas.
  +
-    If set to 0, Tor will act as a server but it will not publish its
-    descriptor to the directory authorities. (This is useful if you're testing
+    If this option is set to 0, Tor will not publish its
+    descriptors to any directories. (This is useful if you're testing
     out your server, or if you're using a Tor controller that handles directory
-    publishing for you.) Otherwise, Tor will publish its descriptor to all
-    directory authorities of the type(s) specified. The value "1" is the
-    default, which means "publish to the appropriate authorities".
+    publishing for you.) Otherwise, Tor will publish its descriptors of all
+    type(s) specified. The default is "1",
+    which means "if running as a server or a hidden service, publish the
+    appropriate descriptors to the authorities".
 
 **ShutdownWaitLength** __NUM__::
     When we get a SIGINT and we're a server, we begin shutting down:
