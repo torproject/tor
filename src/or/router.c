@@ -471,8 +471,11 @@ init_keys(void)
       return -1;
     }
     set_identity_key(prkey);
-    /* Create a TLS context; default the client nickname to "client". */
-    if (tor_tls_context_init(get_identity_key(), MAX_SSL_KEY_LIFETIME) < 0) {
+    /* Create a TLS context. */
+    if (tor_tls_context_init(0,
+                             get_identity_key(),
+                             NULL,
+                             MAX_SSL_KEY_LIFETIME) < 0) {
       log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
       return -1;
     }
@@ -550,7 +553,10 @@ init_keys(void)
   tor_free(keydir);
 
   /* 3. Initialize link key and TLS context. */
-  if (tor_tls_context_init(get_identity_key(), MAX_SSL_KEY_LIFETIME) < 0) {
+  if (tor_tls_context_init(public_server_mode(options),
+                           get_identity_key(),
+                           get_identity_key(),
+                           MAX_SSL_KEY_LIFETIME) < 0) {
     log_err(LD_GENERAL,"Error initializing TLS context");
     return -1;
   }
