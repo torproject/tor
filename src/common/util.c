@@ -2879,17 +2879,34 @@ load_windows_system_library(const TCHAR *library_name)
 }
 #endif
 
-/** Format child_state and saved_errno as a hex string placed in hex_errno.
- * Called between fork and _exit, so must be signal-handler safe */
+/** Format <b>child_state</b> and <b>saved_errno</b> as a hex string placed in
+ * <b>hex_errno</b>.  Called between fork and _exit, so must be signal-handler
+ * safe.
+ *
+ * <b>hex_errno</b> must have at least HEX_ERRNO_SIZE bytes available.
+ *
+ * The format of <b>hex_errno</b> is: "CHILD_STATE/ERRNO\n", left-padded
+ * with spaces. Note that there is no trailing \0. CHILD_STATE indicates where
+ * in the processs of starting the child process did the failure occur (see
+ * CHILD_STATE_* macros for definition), and SAVED_ERRNO is the value of
+ * errno when the failure occurred.
+ */
+
 void
 format_helper_exit_status(unsigned char child_state, int saved_errno,
                           char *hex_errno)
 {
-  /* Convert errno to be unsigned for hex conversion */
   unsigned int unsigned_errno;
   char *cur;
+  size_t i;
 
-  /* If errno is negative, negate it */
+  /* Fill hex_errno with spaces, and a trailing newline (memset may
+     not be signal handler safe, so we can't use it) */
+  for (i = 0; i < (HEX_ERRNO_SIZE - 1); i++)
+    hex_errno[i] = ' ';
+  hex_errno[HEX_ERRNO_SIZE - 1] = '\n';
+
+  /* Convert errno to be unsigned for hex conversion */
   if (saved_errno < 0) {
     unsigned_errno = (unsigned int) -saved_errno;
   } else {
@@ -2899,17 +2916,26 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
   /* Convert errno to hex (start before \n) */
   cur = hex_errno + HEX_ERRNO_SIZE - 2;
 
+  /* Check for overflow on first iteration of the loop */
+  if (cur < hex_errno)
+    return;
+
   do {
     *cur-- = "0123456789ABCDEF"[unsigned_errno % 16];
     unsigned_errno /= 16;
   } while (unsigned_errno != 0 && cur >= hex_errno);
 
-  /* Add on the minus side if errno was negative */
-  if (saved_errno < 0)
+  /* Prepend the minus sign if errno was negative */
+  if (saved_errno < 0 && cur >= hex_errno)
     *cur-- = '-';
 
   /* Leave a gap */
-  *cur-- = '/';
+  if (cur >= hex_errno)
+    *cur-- = '/';
+
+  /* Check for overflow on first iteration of the loop */
+  if (cur < hex_errno)
+    return;
 
   /* Convert child_state to hex */
   do {
@@ -2969,10 +2995,6 @@ tor_spawn_background(const char *const filename, int *stdout_read,
   /* We do the strlen here because strlen() is not signal handler safe,
      and we are not allowed to use unsafe functions between fork and exec */
   error_message_length = strlen(error_message);
-
-  /* Fill hex_errno with spaces, and a trailing newline */
-  memset(hex_errno, ' ', sizeof(hex_errno) - 1);
-  hex_errno[sizeof(hex_errno) - 1] = '\n';
 
   child_state = CHILD_STATE_PIPE;
 

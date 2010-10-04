@@ -1212,14 +1212,13 @@ test_util_load_win_lib(void *ptr)
 static void
 clear_hex_errno(char *hex_errno)
 {
-  memset(hex_errno, ' ', HEX_ERRNO_SIZE - 2);
-  hex_errno[HEX_ERRNO_SIZE - 1] = '\n';
-  hex_errno[HEX_ERRNO_SIZE] = '\0';
+  memset(hex_errno, '\0', HEX_ERRNO_SIZE + 1);
 }
 
 static void
 test_util_exit_status(void *ptr)
 {
+  /* Leave an extra byte for a \0 so we can do string comparison */
   char hex_errno[HEX_ERRNO_SIZE + 1];
 
   (void)ptr;
