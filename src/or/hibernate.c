@@ -456,7 +456,7 @@ accounting_set_wakeup_time(void)
   uint64_t time_to_exhaust_bw;
   int time_to_consider;
 
-  if (! identity_key_is_set()) {
+  if (! server_identity_key_is_set()) {
     if (init_keys() < 0) {
       log_err(LD_BUG, "Error initializing keys");
       tor_assert(0);
@@ -464,7 +464,7 @@ accounting_set_wakeup_time(void)
   }
 
   format_iso_time(buf, interval_start_time);
-  crypto_pk_get_digest(get_identity_key(), digest);
+  crypto_pk_get_digest(get_server_identity_key(), digest);
 
   d_env = crypto_new_digest_env();
   crypto_digest_add_bytes(d_env, buf, ISO_TIME_LEN);

@@ -4205,9 +4205,12 @@ int rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
 
 crypto_pk_env_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);
-void set_identity_key(crypto_pk_env_t *k);
-crypto_pk_env_t *get_identity_key(void);
-int identity_key_is_set(void);
+void set_client_identity_key(crypto_pk_env_t *k);
+void set_server_identity_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_client_identity_key(void);
+crypto_pk_env_t *get_server_identity_key(void);
+int client_identity_key_is_set(void);
+int server_identity_key_is_set(void);
 authority_cert_t *get_my_v3_authority_cert(void);
 crypto_pk_env_t *get_my_v3_authority_signing_key(void);
 authority_cert_t *get_my_v3_legacy_cert(void);
