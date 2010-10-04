@@ -3001,7 +3001,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
   /* Set up pipe for redirecting stdout and stderr of child */
   retval = pipe(stdout_pipe);
   if (-1 == retval) {
-    log_err(LD_GENERAL,
+    log_warn(LD_GENERAL,
       "Failed to set up pipe for stdout communication with child process: %s",
        strerror(errno));
     return -1;
@@ -3009,7 +3009,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
 
   retval = pipe(stderr_pipe);
   if (-1 == retval) {
-    log_err(LD_GENERAL,
+    log_warn(LD_GENERAL,
       "Failed to set up pipe for stderr communication with child process: %s",
       strerror(errno));
     return -1;
@@ -3094,7 +3094,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
   /* In parent */
 
   if (-1 == pid) {
-    log_err(LD_GENERAL, "Failed to fork child process: %s", strerror(errno));
+    log_warn(LD_GENERAL, "Failed to fork child process: %s", strerror(errno));
     close(stdout_pipe[0]);
     close(stdout_pipe[1]);
     close(stderr_pipe[0]);
@@ -3107,7 +3107,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
   retval = close(stdout_pipe[1]);
 
   if (-1 == retval) {
-    log_err(LD_GENERAL,
+    log_warn(LD_GENERAL,
             "Failed to close write end of stdout pipe in parent process: %s",
             strerror(errno));
     /* Do not return -1, because the child is running, so the parent
@@ -3118,7 +3118,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
   retval = close(stderr_pipe[1]);
 
   if (-1 == retval) {
-    log_err(LD_GENERAL,
+    log_warn(LD_GENERAL,
             "Failed to close write end of stderr pipe in parent process: %s",
             strerror(errno));
     /* Do not return -1, because the child is running, so the parent
@@ -3171,7 +3171,7 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
       } else {
         /* No newline; check whether we overflowed the buffer */
         if (!feof(stream))
-          log_err(LD_GENERAL,
+          log_warn(LD_GENERAL,
                   "Line from port forwarding helper was truncated: %s", buf);
           /* TODO: What to do with this error? */
       }
@@ -3183,14 +3183,15 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
           retval = sscanf(buf, SPAWN_ERROR_MESSAGE "%d/%d",
                           &child_state, &saved_errno);
           if (retval == 2) {
-              log_err(LD_GENERAL,
+              log_warn(LD_GENERAL,
                 "Failed to start child process \"%s\" in state %d: %s",
                 executable, child_state, strerror(saved_errno));
               if (child_status)
                   *child_status = 1;
           } else {
-              /* Failed to parse message from child process, log it as error */
-              log_err(LD_GENERAL,
+              /* Failed to parse message from child process, log it as a
+                 warning */
+              log_warn(LD_GENERAL,
                 "Unexpected message from port forwarding helper \"%s\": %s",
                 executable, buf);
           }
@@ -3256,7 +3257,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
 
     child_pid = tor_spawn_background(filename, &fd_out, &fd_err, argv);
     if (child_pid < 0) {
-      log_err(LD_GENERAL, "Failed to start port forwarding helper %s",
+      log_warn(LD_GENERAL, "Failed to start port forwarding helper %s",
               filename);
       child_pid = -1;
       return;
@@ -3277,7 +3278,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
     /* Read from stdout/stderr and log result */
     retval = 0;
     stdout_status = log_from_pipe(stdout_read, LOG_INFO, filename, &retval);
-    stderr_status = log_from_pipe(stderr_read, LOG_ERR, filename, &retval);
+    stderr_status = log_from_pipe(stderr_read, LOG_WARN, filename, &retval);
     if (retval) {
       /* There was a problem in the child process */
       time_to_run_helper = now + TIME_TO_EXEC_FWHELPER_FAIL;
@@ -3299,7 +3300,7 @@ tor_check_port_forwarding(const char *filename, int dir_port, int or_port,
       if (1 == retval) {
         log_info(LD_GENERAL, "Port forwarding helper terminated");
       } else {
-        log_err(LD_GENERAL, "Failed to read from port forwarding helper");
+        log_warn(LD_GENERAL, "Failed to read from port forwarding helper");
       }
 
       /* TODO: The child might not actually be finished (maybe it failed or
