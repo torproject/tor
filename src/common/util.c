@@ -3061,7 +3061,8 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     child_state = CHILD_STATE_CLOSEFD;
 
     /* Close all other fds, including the read end of the pipe */
-    /* TODO: use closefrom if available */
+    /* XXX: use closefrom if available, or better still set FD_CLOEXEC
+       on all of Tor's open files */
     for (fd = STDERR_FILENO + 1; fd < max_fd; fd++)
       close(fd);
 
@@ -3077,7 +3078,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     child_state = CHILD_STATE_FAILEXEC;
 
   error:
-    /* TODO: are we leaking fds from the pipe? */
+    /* XXX: are we leaking fds from the pipe? */
 
     format_helper_exit_status(child_state, errno, hex_errno);
 
