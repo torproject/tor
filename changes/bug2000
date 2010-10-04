@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Rate-limit the "your application is giving Tor only an IP address"
+      warning. Fixes bug 2000; bugfix on 0.0.8pre2.
