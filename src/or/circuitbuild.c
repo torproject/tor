@@ -3358,7 +3358,7 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
     return NULL;
   }
   node = node_get_by_id(e->identity);
-  if (!node && !node_has_descriptor(node)) {
+  if (!node || !node_has_descriptor(node)) {
     *msg = "no descriptor";
     return NULL;
   }
