@@ -1321,8 +1321,12 @@ nodelist_add_node_family(smartlist_t *sl, const node_t *node)
 {
   /* XXXX MOVE */
   const smartlist_t *all_nodes = nodelist_get_list();
-  const smartlist_t *declared_family = node_get_declared_family(node);
+  const smartlist_t *declared_family;
   or_options_t *options = get_options();
+
+  tor_assert(node);
+
+  declared_family = node_get_declared_family(node);
 
   /* First, add any nodes with similar network addresses. */
   if (options->EnforceDistinctSubnets) {
@@ -1334,7 +1338,7 @@ nodelist_add_node_family(smartlist_t *sl, const node_t *node)
       node_get_addr(node2, &a);
       if (addrs_in_same_network_family(&a, &node_addr))
         smartlist_add(sl, (void*)node2);
-    } SMARTLIST_FOREACH_END(node);
+    } SMARTLIST_FOREACH_END(node2);
   }
 
   /* Now, add all nodes in the declared_family of this node, if they
@@ -1349,12 +1353,12 @@ nodelist_add_node_family(smartlist_t *sl, const node_t *node)
         continue;
       if (!(family2 = node_get_declared_family(node2)))
         continue;
-      SMARTLIST_FOREACH(family2, const char *, name2, {
+      SMARTLIST_FOREACH_BEGIN(family2, const char *, name2) {
           if (node_nickname_matches(node, name2)) {
             smartlist_add(sl, (void*)node2);
             break;
           }
-        });
+      } SMARTLIST_FOREACH_END(name2);
     } SMARTLIST_FOREACH_END(name);
   }
 

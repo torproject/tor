@@ -514,6 +514,7 @@ node_get_by_nickname(const char *nickname, int warn_if_unnamed)
 const char *
 node_get_nickname(const node_t *node)
 {
+  tor_assert(node);
   if (node->rs)
     return node->rs->nickname;
   else if (node->ri)

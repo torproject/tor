@@ -1313,7 +1313,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         const node_t *r;
         int opt = conn->chosen_exit_optional;
         r = node_get_by_nickname(conn->chosen_exit_name, 1);
-        if (r) {
+        if (r && node_has_descriptor(r)) {
           extend_info = extend_info_from_node(r);
         } else {
           log_debug(LD_DIR, "considering %d, %s",
