@@ -222,7 +222,7 @@ router_supports_extrainfo(const char *identity_digest, int is_authority)
 {
   const node_t *node = node_get_by_id(identity_digest);
 
-  if (node->ri) {
+  if (node && node->ri) {
     if (node->ri->caches_extra_info)
       return 1;
     if (is_authority && node->ri->platform &&
