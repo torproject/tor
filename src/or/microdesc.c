@@ -416,7 +416,21 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
   SMARTLIST_FOREACH_BEGIN(wrote, microdesc_t *, md) {
     tor_assert(md->saved_location == SAVED_IN_CACHE);
     md->body = (char*)cache->cache_content->data + md->off;
-    tor_assert(!memcmp(md->body, "onion-key", 9));
+    if (PREDICT_UNLIKELY(
+                 md->bodylen < 9 || memcmp(md->body, "onion-key", 9) != 0)) {
+      /* XXXX023 once bug 2022 is solved, we can kill this block and turn it
+       * into just the tor_assert(!memcmp) */
+      off_t avail = cache->cache_content->size - md->off;
+      char *bad_str;
+      tor_assert(avail >= 0);
+      bad_str = tor_strndup(md->body, MIN(128, (size_t)avail));
+      log_err(LD_BUG, "After rebuilding microdesc cache, offsets seem wrong. "
+              " At offset %d, I expected to find a microdescriptor starting "
+              " with \"onion-key\".  Instead I got %s.",
+              (int)md->off, escaped(bad_str));
+      tor_free(bad_str);
+      tor_assert(!memcmp(md->body, "onion-key", 9));
+    }
   } SMARTLIST_FOREACH_END(md);
 
   smartlist_free(wrote);
