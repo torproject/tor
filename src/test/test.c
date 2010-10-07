@@ -113,30 +113,46 @@ get_fname(const char *name)
   return buf;
 }
 
-/** Remove all files stored under the temporary directory, and the directory
- * itself.  Called by atexit(). */
+/* Remove a directory and all of its subdirectories */
 static void
-remove_directory(void)
+rm_rf(const char *dir)
 {
+  struct stat st;
   smartlist_t *elements;
-  if (getpid() != temp_dir_setup_in_pid) {
-    /* Only clean out the tempdir when the main process is exiting. */
-    return;
-  }
-  elements = tor_listdir(temp_dir);
+
+  elements = tor_listdir(dir);
   if (elements) {
     SMARTLIST_FOREACH(elements, const char *, cp,
        {
-         size_t len = strlen(cp)+strlen(temp_dir)+16;
-         char *tmp = tor_malloc(len);
-         tor_snprintf(tmp, len, "%s"PATH_SEPARATOR"%s", temp_dir, cp);
-         unlink(tmp);
+         char *tmp = NULL;
+         tor_asprintf(&tmp, "%s"PATH_SEPARATOR"%s", dir, cp);
+         if (0 == stat(tmp,&st) && (st.st_mode & S_IFDIR)) {
+           rm_rf(tmp);
+         } else {
+           if (unlink(tmp)) {
+             fprintf(stderr, "Error removing %s: %s\n", tmp, strerror(errno));
+           }
+         }
          tor_free(tmp);
        });
     SMARTLIST_FOREACH(elements, char *, cp, tor_free(cp));
     smartlist_free(elements);
   }
-  rmdir(temp_dir);
+  if (rmdir(dir))
+    fprintf(stderr, "Error removing directory %s: %s\n", dir, strerror(errno));
+}
+
+/** Remove all files stored under the temporary directory, and the directory
+ * itself.  Called by atexit(). */
+static void
+remove_directory(void)
+{
+  if (getpid() != temp_dir_setup_in_pid) {
+    /* Only clean out the tempdir when the main process is exiting. */
+    return;
+  }
+
+  rm_rf(temp_dir);
 }
 
 /** Define this if unit tests spend too much time generating public keys*/
@@ -1180,6 +1196,7 @@ extern struct testcase_t crypto_tests[];
 extern struct testcase_t container_tests[];
 extern struct testcase_t util_tests[];
 extern struct testcase_t dir_tests[];
+extern struct testcase_t microdesc_tests[];
 
 static struct testgroup_t testgroups[] = {
   { "", test_array },
@@ -1188,6 +1205,7 @@ static struct testgroup_t testgroups[] = {
   { "container/", container_tests },
   { "util/", util_tests },
   { "dir/", dir_tests },
+  { "dir/md/", microdesc_tests },
   END_OF_GROUPS
 };
 

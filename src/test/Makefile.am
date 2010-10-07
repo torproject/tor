@@ -19,6 +19,7 @@ test_SOURCES = \
 	test_dir.c \
 	test_containers.c \
 	test_util.c \
+	test_microdesc.c \
 	tinytest.c
 
 if USE_BUFFEREVENTS

@@ -316,21 +316,20 @@ microdesc_cache_reload(microdesc_cache_t *cache)
 
 /** DOCDOC */
 void
-microdesc_cache_clean(microdesc_cache_t *cache)
+microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
 {
-  networkstatus_t *consensus;
-  time_t cutoff;
   microdesc_t **mdp, *victim;
   int dropped=0, kept=0;
   size_t bytes_dropped = 0;
   time_t now = time(NULL);
 
   /* If we don't know a consensus, never believe last_listed values */
-  consensus = networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC);
-  if (consensus == NULL)
-    return;
+  if (! force &&
+      ! networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC))
+      return;
 
-  cutoff = now - TOLERATE_MICRODESC_AGE;
+  if (cutoff <= 0)
+    cutoff = now - TOLERATE_MICRODESC_AGE;
 
   for (mdp = HT_START(microdesc_map, &cache->map); mdp != NULL; ) {
     if ((*mdp)->last_listed < cutoff) {
@@ -368,7 +367,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
 
   log_info(LD_DIR, "Rebuilding the microdescriptor cache...");
 
-  microdesc_cache_clean(cache);
+  microdesc_cache_clean(cache, 0/*cutoff*/, 0/*force*/);
 
   orig_size = (int)(cache->cache_content ? cache->cache_content->size : 0);
   orig_size += (int)cache->journal_len;
