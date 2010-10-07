@@ -1315,7 +1315,8 @@ policy_summarize(smartlist_t *policy)
   return result;
 }
 
-/** DOCDOC */
+/** Convert a summarized policy string into a short_policy_t.  Return NULL
+ * if the string is not well-formed. */
 short_policy_t *
 parse_short_policy(const char *summary)
 {
@@ -1408,14 +1409,17 @@ parse_short_policy(const char *summary)
   return result;
 }
 
-/** DOCDOC */
+/** Release all storage held in <b>policy</b>. */
 void
 short_policy_free(short_policy_t *policy)
 {
   tor_free(policy);
 }
 
-/** DOCDOC */
+/** See whether the <b>addr</b>:<b>port</b> address is likely to be accepted
+ * or rejected by the summarized policy <b>policy</b>.  Return values are as
+ * for compare_tor_addr_to_addr_policy.  Unlike the regular addr_policy
+ * functions, requires the <b>port</b> be specified. */
 addr_policy_result_t
 compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
                                  const short_policy_t *policy)
@@ -1452,7 +1456,7 @@ compare_tor_addr_to_short_policy(const tor_addr_t *addr, uint16_t port,
     return ADDR_POLICY_REJECTED;
 }
 
-/* DOCDOC */
+/** Return true iff <b>policy</b> seems reject all ports */
 int
 short_policy_is_reject_star(const short_policy_t *policy)
 {

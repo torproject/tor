@@ -1648,15 +1648,22 @@ typedef struct routerstatus_t {
 
 } routerstatus_t;
 
-/** DOCDOC */
+/** A single entry in a parsed policy summary, describing a range of ports. */
 typedef struct short_policy_entry_t {
   uint16_t min_port, max_port;
 } short_policy_entry_t;
 
-/** DOCDOC */
+/** A short_poliy_t is the parsed version of a policy summary. */
 typedef struct short_policy_t {
+  /** True if the members of 'entries' are port ranges to accept; false if
+   * they are port ranges to reject */
   unsigned int is_accept : 1;
+  /** The actual number of values in 'entries'. */
   unsigned int n_entries : 31;
+  /** An array of (probably more than 1!) short_policy_entry_t values,
+   * each descriping a range of ports that this policy accepts or rejects
+   * (depending on the value of is_accept).
+   */
   short_policy_entry_t entries[1];
 } short_policy_t;
 
