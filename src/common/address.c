@@ -311,7 +311,7 @@ tor_addr_is_internal(const tor_addr_t *addr, int for_listening)
  *  brackets.
  */
 const char *
-tor_addr_to_str(char *dest, const tor_addr_t *addr, int len, int decorate)
+tor_addr_to_str(char *dest, const tor_addr_t *addr, size_t len, int decorate)
 {
   const char *ptr;
   tor_assert(addr && dest);
