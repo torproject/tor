@@ -3177,11 +3177,11 @@ log_from_pipe(FILE *stream, int severity, const char *executable,
       }
 
       /* Check if buf starts with SPAWN_ERROR_MESSAGE */
-      if (strstr(buf, SPAWN_ERROR_MESSAGE) == buf) {
+      if (strcmpstart(buf, SPAWN_ERROR_MESSAGE) == 0) {
           /* Parse error message */
           int retval, child_state, saved_errno;
-          retval = sscanf(buf, SPAWN_ERROR_MESSAGE "%d/%d",
-                          &child_state, &saved_errno);
+          retval = tor_sscanf(buf, SPAWN_ERROR_MESSAGE "%x/%x",
+                              &child_state, &saved_errno);
           if (retval == 2) {
               log_warn(LD_GENERAL,
                 "Failed to start child process \"%s\" in state %d: %s",
