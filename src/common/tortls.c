@@ -899,6 +899,13 @@ tor_tls_client_is_using_v2_ciphers(const SSL *ssl, const char *address)
   return 1;
 }
 
+static void
+tor_tls_debug_state_callback(const SSL *ssl, int type, int val)
+{
+  log_debug(LD_HANDSHAKE, "SSL %p is now in state %s [type=%d,val=%d].",
+            ssl, ssl_state_to_string(ssl->state), type, val);
+}
+
 /** Invoked when we're accepting a connection on <b>ssl</b>, and the connection
  * changes state. We use this:
  * <ul><li>To alter the state of the handshake partway through, so we
@@ -910,6 +917,9 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 {
   tor_tls_t *tls;
   (void) val;
+
+  tor_tls_debug_state_callback(ssl, type, val);
+
   if (type != SSL_CB_ACCEPT_LOOP)
     return;
   if (ssl->state != SSL3_ST_SW_SRVR_HELLO_A)
@@ -1096,8 +1106,11 @@ tor_tls_new(int sock, int isServer)
 #ifdef V2_HANDSHAKE_SERVER
   if (isServer) {
     SSL_set_info_callback(result->ssl, tor_tls_server_info_callback);
-  }
+  } else
 #endif
+  {
+    SSL_set_info_callback(result->ssl, tor_tls_debug_state_callback);
+  }
 
   /* Not expected to get called. */
   tls_log_errors(NULL, LOG_WARN, LD_NET, "creating tor_tls_t object");
@@ -1131,7 +1144,7 @@ tor_tls_set_renegotiate_callback(tor_tls_t *tls,
   if (cb) {
     SSL_set_info_callback(tls->ssl, tor_tls_server_info_callback);
   } else {
-    SSL_set_info_callback(tls->ssl, NULL);
+    SSL_set_info_callback(tls->ssl, tor_tls_debug_state_callback);
   }
 #endif
 }

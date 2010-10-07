@@ -1,0 +1,4 @@
+  o Minor features:
+    - Log SSL state transitions at log level DEBUG, log domain
+      HANDSHAKE.  This can be useful for debugging censorship events.
+      Implements ticket 3264.
