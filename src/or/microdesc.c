@@ -311,10 +311,16 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   return 0;
 }
 
-/** DOCDOC */
+/** By default, we remove any microdescriptors that have gone at least this
+ * long without appearing in a current consensus. */
 #define TOLERATE_MICRODESC_AGE (7*24*60*60)
 
-/** DOCDOC */
+/** Remove all microdescriptors from <b>cache</b> that haven't been listed for
+ * a long time.  Does not rebuild the cache on disk.  If <b>cutoff</b> is
+ * positive, specifically remove microdescriptors that have been unlisted
+ * since <b>cutoff</b>.  If <b>force</b> is true, remove microdescriptors even
+ * if we have no current live microdescriptor consensus.
+ */
 void
 microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
 {
@@ -323,7 +329,8 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
   size_t bytes_dropped = 0;
   time_t now = time(NULL);
 
-  /* If we don't know a consensus, never believe last_listed values */
+  /* If we don't know a live consensus, don't believe last_listed values: we
+   * might be starting up after being down for a while. */
   if (! force &&
       ! networkstatus_get_reasonably_live_consensus(now, FLAV_MICRODESC))
       return;
@@ -367,8 +374,10 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
 
   log_info(LD_DIR, "Rebuilding the microdescriptor cache...");
 
+  /* Remove dead descriptors */
   microdesc_cache_clean(cache, 0/*cutoff*/, 0/*force*/);
 
+  /* Calculate starting disk usage */
   orig_size = (int)(cache->cache_content ? cache->cache_content->size : 0);
   orig_size += (int)cache->journal_len;
 
@@ -392,6 +401,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
       /* log?  return -1?  die?  coredump the universe? */
       continue;
     }
+    tor_assert(((size_t)size) == annotation_len + md->bodylen);
     md->off = off + annotation_len;
     off += size;
     if (md->saved_location != SAVED_IN_CACHE) {
@@ -534,7 +544,13 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
   return result;
 }
 
-/** DOCDOC */
+/** Launch download requests for mircodescriptors as appropriate.
+ *
+ * Specifically, we should launch download requests if we are configured to
+ * download mirodescriptors, and there are some microdescriptors listed the
+ * current microdesc consensus that we don't have, and either we never asked
+ * for them, or we failed to download them but we're willing to retry.
+ */
 void
 update_microdesc_downloads(time_t now)
 {
@@ -573,7 +589,10 @@ update_microdesc_downloads(time_t now)
   smartlist_free(missing);
 }
 
-/** DOCDOC */
+/** For every microdescriptor listed in the current microdecriptor consensus,
+ * update its last_listed field to be at least as recent as the publication
+ * time of the current microdescriptor consensus.
+ */
 void
 update_microdescs_from_networkstatus(time_t now)
 {
