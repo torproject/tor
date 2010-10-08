@@ -1157,7 +1157,7 @@ directory_send_command(dir_connection_t *conn,
     case DIR_PURPOSE_FETCH_MICRODESC:
       tor_assert(resource);
       httpcommand = "GET";
-      tor_asprintf(&url, "/tor/micro/%s.z", resource);
+      tor_asprintf(&url, "/tor/micro/%s", resource);
       break;
     case DIR_PURPOSE_UPLOAD_DIR:
       tor_assert(!resource);
