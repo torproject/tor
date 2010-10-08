@@ -1247,6 +1247,93 @@ test_util_exit_status(void *ptr)
   ;
 }
 
+#ifndef MS_WINDOWS
+/** Check that fgets waits until a full line, and not return a partial line, on
+ * a EAGAIN with a non-blocking pipe */
+static void
+test_util_fgets_eagain(void *ptr)
+{
+  int test_pipe[2] = {-1, -1};
+  int retval;
+  ssize_t retlen;
+  char *retptr;
+  FILE *test_stream = NULL;
+  char buf[10];
+
+  (void)ptr;
+
+  /* Set up a pipe to test on */
+  retval = pipe(test_pipe);
+  tt_int_op(retval, >=, 0);
+
+  /* Set up the read-end to be non-blocking */
+  retval = fcntl(test_pipe[0], F_SETFL, O_NONBLOCK);
+  tt_int_op(retval, >=, 0);
+
+  /* Open it as a stdio stream */
+  test_stream = fdopen(test_pipe[0], "r");
+  tt_ptr_op(test_stream, !=, NULL);
+
+  /* Send in a partial line */
+  retlen = write(test_pipe[1], "A", 1);
+  tt_int_op(retlen, ==, 1);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_want(retptr == NULL);
+  tt_int_op(errno, ==, EAGAIN);
+
+  /* Send in the rest */
+  retlen = write(test_pipe[1], "B\n", 2);
+  tt_int_op(retlen, ==, 2);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "AB\n");
+
+  /* Send in a full line */
+  retlen = write(test_pipe[1], "CD\n", 3);
+  tt_int_op(retlen, ==, 3);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "CD\n");
+
+  /* Send in a partial line */
+  retlen = write(test_pipe[1], "E", 1);
+  tt_int_op(retlen, ==, 1);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, NULL);
+  tt_int_op(errno, ==, EAGAIN);
+
+  /* Send in the rest */
+  retlen = write(test_pipe[1], "F\n", 2);
+  tt_int_op(retlen, ==, 2);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "EF\n");
+
+  /* Send in a full line and close */
+  retlen = write(test_pipe[1], "GH", 2);
+  tt_int_op(retlen, ==, 2);
+  retval = close(test_pipe[1]);
+  test_pipe[1] = -1;
+  tt_int_op(retval, ==, 0);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "GH");
+
+  /* Check for EOF */
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, NULL);
+  tt_int_op(feof(test_stream), >, 0);
+
+ done:
+  if (test_stream != NULL)
+    fclose(test_stream);
+  if (test_pipe[0] != -1)
+    close(test_pipe[0]);
+  if (test_pipe[1] != -1)
+    close(test_pipe[1]);
+}
+#endif
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1274,6 +1361,9 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(load_win_lib, 0),
 #endif
   UTIL_TEST(exit_status, 0),
+#ifndef MS_WINDOWS
+  UTIL_TEST(fgets_eagain, 0),
+#endif
   END_OF_TESTCASES
 };
 
