@@ -3457,7 +3457,7 @@ connection_dirserv_add_microdescs_to_outbuf(dir_connection_t *conn)
 {
   microdesc_cache_t *cache = get_microdesc_cache();
   while (smartlist_len(conn->fingerprint_stack) &&
-         buf_datalen(conn->_base.outbuf) < DIRSERV_BUFFER_MIN) {
+         connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
     char *fp256 = smartlist_pop_last(conn->fingerprint_stack);
     microdesc_t *md = microdesc_cache_lookup_by_digest256(cache, fp256);
     tor_free(fp256);
