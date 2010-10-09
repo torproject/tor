@@ -2960,11 +2960,18 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
 
 #define SPAWN_ERROR_MESSAGE "ERR: Failed to spawn background process - code "
 
-/** Start a program in the background. If <b>filename</b> contains a '/', then
- * it will be treated as an absolute or relative path.  Otherwise the system
- * path will be searched for <b>filename</b>. Returns pid on success, otherwise
- * returns -1.
- * Some parts of this code are based on the POSIX subprocess module from Python
+/** Start a program in the background. If <b>filename</b> contains a '/',
+ * then it will be treated as an absolute or relative path.  Otherwise the
+ * system path will be searched for <b>filename</b>. The strings in
+ * <b>argv</b> will be passed as the command line arguments of the child
+ * program (following convention, argv[0] should normally be the filename of
+ * the executable). The last element of argv must be NULL. If the child
+ * program is launched, the PID will be returned and <b>stdout_read</b> and
+ * <b>stdout_err</b> will be set to file descriptors from which the stdout
+ * and stderr, respectively, output of the child program can be read, and the
+ * stdin of the child process shall be set to /dev/null.  Otherwise returns
+ * -1.  Some parts of this code are based on the POSIX subprocess module from
+ * Python.
  */
 static int
 tor_spawn_background(const char *const filename, int *stdout_read,
