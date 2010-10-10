@@ -1334,6 +1334,77 @@ test_util_fgets_eagain(void *ptr)
 }
 #endif
 
+#ifndef MS_WINDOWS
+/** Helper function for testing tor_spawn_background */
+static void
+run_util_spawn_background(const char *argv[], const char *expected_out,
+                          const char *expected_err, int expected_exit)
+{
+  int stdout_pipe=-1, stderr_pipe=-1;
+  int retval, stat_loc;
+  pid_t pid;
+  ssize_t pos;
+  char stdout_buf[100], stderr_buf[100];
+
+  /* Start the program */
+  retval = tor_spawn_background(argv[0], &stdout_pipe, &stderr_pipe, argv);
+  tt_int_op(retval, >, 0);
+  tt_int_op(stdout_pipe, >, 0);
+  tt_int_op(stderr_pipe, >, 0);
+  pid = retval;
+
+  /* Check stdout */
+  pos = read(stdout_pipe, stdout_buf, sizeof(stdout_buf) - 1);
+  stdout_buf[pos] = '\0';
+  tt_int_op(pos, ==, strlen(expected_out));
+  tt_str_op(stdout_buf, ==, expected_out);
+
+  /* Check it terminated correctly */
+  retval = waitpid(pid, &stat_loc, 0);
+  tt_int_op(retval, ==, pid);
+  tt_assert(WIFEXITED(stat_loc));
+  tt_int_op(WEXITSTATUS(stat_loc), ==, expected_exit);
+  tt_assert(!WIFSIGNALED(stat_loc));
+  tt_assert(!WIFSTOPPED(stat_loc));
+
+  /* Check stderr */
+  pos = read(stderr_pipe, stderr_buf, sizeof(stderr_buf) - 1);
+  stderr_buf[pos] = '\0';
+  tt_int_op(pos, ==, strlen(expected_err));
+  tt_str_op(stderr_buf, ==, expected_err);
+
+ done:
+  ;
+}
+
+/** Check that we can launch a process and read the output */
+static void
+test_util_spawn_background_ok(void *ptr)
+{
+  const char *argv[] = {"src/test/test-child", "--test", NULL};
+  const char *expected_out = "OUT\nsrc/test/test-child\n--test\nDONE\n";
+  const char *expected_err = "ERR\n";
+
+  (void)ptr;
+
+  run_util_spawn_background(argv, expected_out, expected_err, 0);
+}
+
+/** Check that failing to find the executable works as expected */
+static void
+test_util_spawn_background_fail(void *ptr)
+{
+  const char *argv[] = {"src/test/no-such-file", "--test", NULL};
+  const char *expected_out = "ERR: Failed to spawn background process "
+                             "- code          9/2\n";
+  const char *expected_err = "";
+
+  (void)ptr;
+
+  run_util_spawn_background(argv, expected_out, expected_err, 255);
+}
+#endif
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1363,6 +1434,8 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(exit_status, 0),
 #ifndef MS_WINDOWS
   UTIL_TEST(fgets_eagain, 0),
+  UTIL_TEST(spawn_background_ok, 0),
+  UTIL_TEST(spawn_background_fail, 0),
 #endif
   END_OF_TESTCASES
 };

@@ -1,6 +1,6 @@
 TESTS = test
 
-noinst_PROGRAMS = test
+noinst_PROGRAMS = test test-child
 
 AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
         -DLOCALSTATEDIR="\"$(localstatedir)\"" \

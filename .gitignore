@@ -155,6 +155,7 @@
 /src/test/Makefile
 /src/test/Makefile.in
 /src/test/test
+/src/test/test-child
 
 
 # /src/tools/

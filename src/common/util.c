@@ -2973,7 +2973,7 @@ format_helper_exit_status(unsigned char child_state, int saved_errno,
  * -1.  Some parts of this code are based on the POSIX subprocess module from
  * Python.
  */
-static int
+int
 tor_spawn_background(const char *const filename, int *stdout_read,
                      int *stderr_read, const char **argv)
 {
