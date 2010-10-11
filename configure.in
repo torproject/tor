@@ -931,6 +931,13 @@ if test "x$exec_prefix" = "xNONE"; then
   exec_prefix=$prefix
 fi
 
+if test "x$BUILDDIR" = "x"; then
+  BUILDDIR=`pwd`
+fi
+AC_SUBST(BUILDDIR)
+AH_TEMPLATE([BUILDDIR],[tor's build directory])
+AC_DEFINE_UNQUOTED(BUILDDIR,"$BUILDDIR")
+
 if test "x$CONFDIR" = "x"; then
   CONFDIR=`eval echo $sysconfdir/tor`
 fi

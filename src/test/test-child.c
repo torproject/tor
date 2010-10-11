@@ -9,7 +9,7 @@ main(int argc, char **argv)
 
   fprintf(stdout, "OUT\n");
   fprintf(stderr, "ERR\n");
-  for (i = 0; i < argc; i++)
+  for (i = 1; i < argc; i++)
     fprintf(stdout, "%s\n", argv[i]);
   fprintf(stdout, "DONE\n");
 

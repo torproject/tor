@@ -1393,8 +1393,8 @@ run_util_spawn_background(const char *argv[], const char *expected_out,
 static void
 test_util_spawn_background_ok(void *ptr)
 {
-  const char *argv[] = {"src/test/test-child", "--test", NULL};
-  const char *expected_out = "OUT\nsrc/test/test-child\n--test\nDONE\n";
+  const char *argv[] = {BUILDDIR "/src/test/test-child", "--test", NULL};
+  const char *expected_out = "OUT\n--test\nDONE\n";
   const char *expected_err = "ERR\n";
 
   (void)ptr;
@@ -1406,7 +1406,7 @@ test_util_spawn_background_ok(void *ptr)
 static void
 test_util_spawn_background_fail(void *ptr)
 {
-  const char *argv[] = {"src/test/no-such-file", "--test", NULL};
+  const char *argv[] = {BUILDDIR "/src/test/no-such-file", "--test", NULL};
   const char *expected_out = "ERR: Failed to spawn background process "
                              "- code          9/2\n";
   const char *expected_err = "";
