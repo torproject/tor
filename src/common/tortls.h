@@ -86,6 +86,8 @@ int tor_tls_used_v1_handshake(tor_tls_t *tls);
 #define check_no_tls_errors() _check_no_tls_errors(__FILE__,__LINE__)
 
 void _check_no_tls_errors(const char *fname, int line);
+void tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
+                           int severity, int domain, const char *doing);
 
 #ifdef USE_BUFFEREVENTS
 int tor_tls_start_renegotiating(tor_tls_t *tls);
