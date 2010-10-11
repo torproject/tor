@@ -199,9 +199,9 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM(, [
 #error
   return x(y);
 #endif
-]),
+])],
 bmipspro=false; AC_MSG_RESULT(no),
-bmipspro=true; AC_MSG_RESULT(yes)])
+bmipspro=true; AC_MSG_RESULT(yes))
 
 if test "$bmipspro" = true; then
   CFLAGS="$CFLAGS -c99"
@@ -575,8 +575,8 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([
 #ifdef HAVE_TIME_H
 #include <time.h>
 #endif
-int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }]),
-  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes, tor_cv_time_t_signed=cross])
+int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }])],
+  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes, tor_cv_time_t_signed=cross)
 ])
 
 if test "$tor_cv_time_t_signed" = cross; then
