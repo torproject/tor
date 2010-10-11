@@ -1224,14 +1224,13 @@ test_util_load_win_lib(void *ptr)
 static void
 clear_hex_errno(char *hex_errno)
 {
-  memset(hex_errno, ' ', HEX_ERRNO_SIZE - 2);
-  hex_errno[HEX_ERRNO_SIZE - 1] = '\n';
-  hex_errno[HEX_ERRNO_SIZE] = '\0';
+  memset(hex_errno, '\0', HEX_ERRNO_SIZE + 1);
 }
 
 static void
 test_util_exit_status(void *ptr)
 {
+  /* Leave an extra byte for a \0 so we can do string comparison */
   char hex_errno[HEX_ERRNO_SIZE + 1];
 
   (void)ptr;
@@ -1260,6 +1259,164 @@ test_util_exit_status(void *ptr)
   ;
 }
 
+#ifndef MS_WINDOWS
+/** Check that fgets waits until a full line, and not return a partial line, on
+ * a EAGAIN with a non-blocking pipe */
+static void
+test_util_fgets_eagain(void *ptr)
+{
+  int test_pipe[2] = {-1, -1};
+  int retval;
+  ssize_t retlen;
+  char *retptr;
+  FILE *test_stream = NULL;
+  char buf[10];
+
+  (void)ptr;
+
+  /* Set up a pipe to test on */
+  retval = pipe(test_pipe);
+  tt_int_op(retval, >=, 0);
+
+  /* Set up the read-end to be non-blocking */
+  retval = fcntl(test_pipe[0], F_SETFL, O_NONBLOCK);
+  tt_int_op(retval, >=, 0);
+
+  /* Open it as a stdio stream */
+  test_stream = fdopen(test_pipe[0], "r");
+  tt_ptr_op(test_stream, !=, NULL);
+
+  /* Send in a partial line */
+  retlen = write(test_pipe[1], "A", 1);
+  tt_int_op(retlen, ==, 1);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_want(retptr == NULL);
+  tt_int_op(errno, ==, EAGAIN);
+
+  /* Send in the rest */
+  retlen = write(test_pipe[1], "B\n", 2);
+  tt_int_op(retlen, ==, 2);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "AB\n");
+
+  /* Send in a full line */
+  retlen = write(test_pipe[1], "CD\n", 3);
+  tt_int_op(retlen, ==, 3);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "CD\n");
+
+  /* Send in a partial line */
+  retlen = write(test_pipe[1], "E", 1);
+  tt_int_op(retlen, ==, 1);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, NULL);
+  tt_int_op(errno, ==, EAGAIN);
+
+  /* Send in the rest */
+  retlen = write(test_pipe[1], "F\n", 2);
+  tt_int_op(retlen, ==, 2);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "EF\n");
+
+  /* Send in a full line and close */
+  retlen = write(test_pipe[1], "GH", 2);
+  tt_int_op(retlen, ==, 2);
+  retval = close(test_pipe[1]);
+  test_pipe[1] = -1;
+  tt_int_op(retval, ==, 0);
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, buf);
+  tt_str_op(buf, ==, "GH");
+
+  /* Check for EOF */
+  retptr = fgets(buf, sizeof(buf), test_stream);
+  tt_ptr_op(retptr, ==, NULL);
+  tt_int_op(feof(test_stream), >, 0);
+
+ done:
+  if (test_stream != NULL)
+    fclose(test_stream);
+  if (test_pipe[0] != -1)
+    close(test_pipe[0]);
+  if (test_pipe[1] != -1)
+    close(test_pipe[1]);
+}
+#endif
+
+#ifndef MS_WINDOWS
+/** Helper function for testing tor_spawn_background */
+static void
+run_util_spawn_background(const char *argv[], const char *expected_out,
+                          const char *expected_err, int expected_exit)
+{
+  int stdout_pipe=-1, stderr_pipe=-1;
+  int retval, stat_loc;
+  pid_t pid;
+  ssize_t pos;
+  char stdout_buf[100], stderr_buf[100];
+
+  /* Start the program */
+  retval = tor_spawn_background(argv[0], &stdout_pipe, &stderr_pipe, argv);
+  tt_int_op(retval, >, 0);
+  tt_int_op(stdout_pipe, >, 0);
+  tt_int_op(stderr_pipe, >, 0);
+  pid = retval;
+
+  /* Check stdout */
+  pos = read(stdout_pipe, stdout_buf, sizeof(stdout_buf) - 1);
+  stdout_buf[pos] = '\0';
+  tt_int_op(pos, ==, strlen(expected_out));
+  tt_str_op(stdout_buf, ==, expected_out);
+
+  /* Check it terminated correctly */
+  retval = waitpid(pid, &stat_loc, 0);
+  tt_int_op(retval, ==, pid);
+  tt_assert(WIFEXITED(stat_loc));
+  tt_int_op(WEXITSTATUS(stat_loc), ==, expected_exit);
+  tt_assert(!WIFSIGNALED(stat_loc));
+  tt_assert(!WIFSTOPPED(stat_loc));
+
+  /* Check stderr */
+  pos = read(stderr_pipe, stderr_buf, sizeof(stderr_buf) - 1);
+  stderr_buf[pos] = '\0';
+  tt_int_op(pos, ==, strlen(expected_err));
+  tt_str_op(stderr_buf, ==, expected_err);
+
+ done:
+  ;
+}
+
+/** Check that we can launch a process and read the output */
+static void
+test_util_spawn_background_ok(void *ptr)
+{
+  const char *argv[] = {"src/test/test-child", "--test", NULL};
+  const char *expected_out = "OUT\nsrc/test/test-child\n--test\nDONE\n";
+  const char *expected_err = "ERR\n";
+
+  (void)ptr;
+
+  run_util_spawn_background(argv, expected_out, expected_err, 0);
+}
+
+/** Check that failing to find the executable works as expected */
+static void
+test_util_spawn_background_fail(void *ptr)
+{
+  const char *argv[] = {"src/test/no-such-file", "--test", NULL};
+  const char *expected_out = "ERR: Failed to spawn background process "
+                             "- code          9/2\n";
+  const char *expected_err = "";
+
+  (void)ptr;
+
+  run_util_spawn_background(argv, expected_out, expected_err, 255);
+}
+#endif
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1287,6 +1444,11 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(load_win_lib, 0),
 #endif
   UTIL_TEST(exit_status, 0),
+#ifndef MS_WINDOWS
+  UTIL_TEST(fgets_eagain, TT_SKIP),
+  UTIL_TEST(spawn_background_ok, 0),
+  UTIL_TEST(spawn_background_fail, 0),
+#endif
   END_OF_TESTCASES
 };
 

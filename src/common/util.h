@@ -350,6 +350,8 @@ HANDLE load_windows_system_library(const TCHAR *library_name);
 
 #ifdef UTIL_PRIVATE
 /* Prototypes for private functions only used by util.c (and unit tests) */
+int tor_spawn_background(const char *const filename, int *stdout_read,
+                         int *stderr_read, const char **argv);
 void format_helper_exit_status(unsigned char child_state,
                                int saved_errno, char *hex_errno);
 
