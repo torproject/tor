@@ -121,13 +121,13 @@ AC_CACHE_CHECK([for $1 directory], tor_cv_library_$1_dir, [
 
     # Can we link against (but not necessarily run, or find the headers for)
     # the binary?
-    AC_LINK_IFELSE(AC_LANG_PROGRAM([$5], [$6]),
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([$5], [$6])],
                    [linkable=yes], [linkable=no])
 
     if test "$linkable" = yes; then
       tor_$1_any_linkable=yes
       # Okay, we can link against it.  Can we find the headers?
-      AC_COMPILE_IFELSE(AC_LANG_PROGRAM([$4], [$6]),
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([$4], [$6])],
                         [buildable=yes], [buildable=no])
       if test "$buildable" = yes; then
          tor_cv_library_$1_dir=$tor_trydir
@@ -179,7 +179,7 @@ if test "$cross_compiling" != yes; then
      else
        LDFLAGS="$tor_tryextra $orig_LDFLAGS"
      fi
-     AC_RUN_IFELSE(AC_LANG_PROGRAM([$5], [$6]),
+     AC_RUN_IFELSE([AC_LANG_PROGRAM([$5], [$6])],
                    [runnable=yes], [runnable=no])
      if test "$runnable" = yes; then
         tor_cv_library_$1_linker_option=$tor_tryextra
@@ -211,7 +211,7 @@ dnl
 dnl TOR_CHECK_PROTYPE(1:functionname, 2:macroname, 2: includes)
 AC_DEFUN([TOR_CHECK_PROTOTYPE], [
  AC_CACHE_CHECK([for declaration of $1], tor_cv_$1_declared, [
-   AC_COMPILE_IFELSE(AC_LANG_PROGRAM([$3],[void *ptr= $1 ;]),
+   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([$3],[void *ptr= $1 ;])],
                      tor_cv_$1_declared=yes,tor_cv_$1_declared=no)])
 if test x$tor_cv_$1_declared != xno ; then
   AC_DEFINE($2, 1,
