@@ -224,36 +224,46 @@ ssl_state_to_string(int ssl_state)
   return buf;
 }
 
+void
+tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
+                  int severity, int domain, const char *doing)
+{
+  const char *state = NULL, *addr;
+  const char *msg, *lib, *func;
+  int st;
+
+  st = (tls && tls->ssl) ? tls->ssl->state : -1;
+  state = (st>=0)?ssl_state_to_string(st):"---";
+
+  addr = tls ? tls->address : NULL;
+
+  msg = (const char*)ERR_reason_error_string(err);
+  lib = (const char*)ERR_lib_error_string(err);
+  func = (const char*)ERR_func_error_string(err);
+  if (!msg) msg = "(null)";
+  if (!lib) lib = "(null)";
+  if (!func) func = "(null)";
+  if (doing) {
+    log(severity, domain, "TLS error while %s%s%s: %s (in %s:%s:%s)",
+        doing, addr?" with ":"", addr?addr:"",
+        msg, lib, func, state);
+  } else {
+    log(severity, domain, "TLS error%s%s: %s (in %s:%s:%s)",
+        addr?" with ":"", addr?addr:"",
+        msg, lib, func, state);
+  }
+}
+
 /** Log all pending tls errors at level <b>severity</b>.  Use
  * <b>doing</b> to describe our current activities.
  */
 static void
 tls_log_errors(tor_tls_t *tls, int severity, int domain, const char *doing)
 {
-  const char *state = NULL;
-  int st;
   unsigned long err;
-  const char *msg, *lib, *func, *addr;
-  addr = tls ? tls->address : NULL;
-  st = (tls && tls->ssl) ? tls->ssl->state : -1;
+
   while ((err = ERR_get_error()) != 0) {
-    msg = (const char*)ERR_reason_error_string(err);
-    lib = (const char*)ERR_lib_error_string(err);
-    func = (const char*)ERR_func_error_string(err);
-    if (!state)
-      state = (st>=0)?ssl_state_to_string(st):"---";
-    if (!msg) msg = "(null)";
-    if (!lib) lib = "(null)";
-    if (!func) func = "(null)";
-    if (doing) {
-      log(severity, domain, "TLS error while %s%s%s: %s (in %s:%s:%s)",
-          doing, addr?" with ":"", addr?addr:"",
-          msg, lib, func, state);
-    } else {
-      log(severity, domain, "TLS error%s%s: %s (in %s:%s:%s)",
-          addr?" with ":"", addr?addr:"",
-          msg, lib, func, state);
-    }
+    tor_tls_log_one_error(tls, err, severity, domain, doing);
   }
 }
 

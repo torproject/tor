@@ -1050,6 +1050,14 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
     return;
   }
 
+  if (event & BEV_EVENT_ERROR) {
+    unsigned long err;
+    while ((err = bufferevent_get_openssl_error(bufev))) {
+      tor_tls_log_one_error(conn->tls, err, LOG_WARN, LD_OR,
+                            "handshaking (with bufferevent)");
+    }
+  }
+
   connection_handle_event_cb(bufev, event, arg);
 }
 #endif
