@@ -833,6 +833,18 @@ test_util_sscanf(void)
   test_eq(u2, 3u);
   test_eq(u3, 99u);
 
+  /* %x should work. */
+  r = tor_sscanf("1234 02aBcdEf", "%x %x", &u1, &u2);
+  test_eq(r, 2);
+  test_eq(u1, 0x1234);
+  test_eq(u2, 0x2ABCDEF);
+  /* Width works on %x */
+  r = tor_sscanf("f00dcafe444", "%4x%4x%u", &u1, &u2, &u3);
+  test_eq(r, 3);
+  test_eq(u1, 0xf00d);
+  test_eq(u2, 0xcafe);
+  test_eq(u3, 444);
+
   r = tor_sscanf("99% fresh", "%3u%% fresh", &u1); /* percents are scannable.*/
   test_eq(r, 1);
   test_eq(u1, 99);

@@ -2498,18 +2498,21 @@ digit_to_num(char d)
  * success, store the result in <b>out</b>, advance bufp to the next
  * character, and return 0.  On failure, return -1. */
 static int
-scan_unsigned(const char **bufp, unsigned *out, int width)
+scan_unsigned(const char **bufp, unsigned *out, int width, int base)
 {
   unsigned result = 0;
   int scanned_so_far = 0;
+  const int hex = base==16;
+  tor_assert(base == 10 || base == 16);
   if (!bufp || !*bufp || !out)
     return -1;
   if (width<0)
     width=MAX_SCANF_WIDTH;
 
-  while (**bufp && TOR_ISDIGIT(**bufp) && scanned_so_far < width) {
-    int digit = digit_to_num(*(*bufp)++);
-    unsigned new_result = result * 10 + digit;
+  while (**bufp && (hex?TOR_ISXDIGIT(**bufp):TOR_ISDIGIT(**bufp))
+         && scanned_so_far < width) {
+    int digit = hex?hex_decode_digit(*(*bufp)++):digit_to_num(*(*bufp)++);
+    unsigned new_result = result * base + digit;
     if (new_result > UINT32_MAX || new_result < result)
       return -1; /* over/underflow. */
     result = new_result;
@@ -2571,11 +2574,12 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
         if (!width) /* No zero-width things. */
           return -1;
       }
-      if (*pattern == 'u') {
+      if (*pattern == 'u' || *pattern == 'x') {
         unsigned *u = va_arg(ap, unsigned *);
+        const int base = (*pattern == 'u') ? 10 : 16;
         if (!*buf)
           return n_matched;
-        if (scan_unsigned(&buf, u, width)<0)
+        if (scan_unsigned(&buf, u, width, base)<0)
           return n_matched;
         ++pattern;
         ++n_matched;
@@ -2612,9 +2616,9 @@ tor_vsscanf(const char *buf, const char *pattern, va_list ap)
 
 /** Minimal sscanf replacement: parse <b>buf</b> according to <b>pattern</b>
  * and store the results in the corresponding argument fields.  Differs from
- * sscanf in that it: Only handles %u and %Ns.  Does not handle arbitrarily
- * long widths. %u does not consume any space.  Is locale-independent.
- * Returns -1 on malformed patterns.
+ * sscanf in that it: Only handles %u and %x and %Ns.  Does not handle
+ * arbitrarily long widths. %u and %x do not consume any space.  Is
+ * locale-independent.  Returns -1 on malformed patterns.
  *
  * (As with other locale-independent functions, we need this to parse data that
  * is in ASCII without worrying that the C library's locale-handling will make
