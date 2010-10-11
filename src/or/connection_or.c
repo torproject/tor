@@ -41,6 +41,8 @@ static int connection_or_check_valid_tls_handshake(or_connection_t *conn,
                                                    int started_here,
                                                    char *digest_rcvd_out);
 
+static void connection_or_tls_renegotiated_cb(tor_tls_t *tls, void *_conn);
+
 #ifdef USE_BUFFEREVENTS
 static void connection_or_handle_event_cb(struct bufferevent *bufev,
                                           short event, void *arg);
@@ -237,6 +239,12 @@ connection_or_process_inbuf(or_connection_t *conn)
       }
 
       return ret;
+    case OR_CONN_STATE_TLS_SERVER_RENEGOTIATING:
+      if (tor_tls_server_got_renegotiate(conn->tls))
+        connection_or_tls_renegotiated_cb(conn->tls, conn);
+      if (conn->_base.marked_for_close)
+        return 0;
+      /* fall through. */
     case OR_CONN_STATE_OPEN:
     case OR_CONN_STATE_OR_HANDSHAKING:
       return connection_or_process_cells_from_inbuf(conn);
@@ -1034,14 +1042,29 @@ connection_or_handle_event_cb(struct bufferevent *bufev, short event,
           tor_tls_unblock_renegotiation(conn->tls);
           return; /* ???? */
         }
-      } else {
-        /* improved handshake, but not a client. */
+      } else if (tor_tls_get_num_server_handshakes(conn->tls) == 1) {
+        /* improved handshake, as a server. Only got one handshake, so
+         * wait for the next one. */
         tor_tls_set_renegotiate_callback(conn->tls,
                                          connection_or_tls_renegotiated_cb,
                                          conn);
         conn->_base.state = OR_CONN_STATE_TLS_SERVER_RENEGOTIATING;
         /* return 0; */
         return; /* ???? */
+      } else {
+        const int handshakes = tor_tls_get_num_server_handshakes(conn->tls);
+        tor_assert(handshakes >= 2);
+        if (handshakes == 2) {
+          /* improved handshake, as a server.  Two handshakes happened already,
+           * so we treat renegotiation as done.
+           */
+          connection_or_tls_renegotiated_cb(conn->tls, conn);
+        } else {
+          log_warn(LD_OR, "More than two handshakes done on connection. "
+                   "Closing.");
+          connection_mark_for_close(TO_CONN(conn));
+        }
+        return;
       }
     }
     connection_watch_events(TO_CONN(conn), READ_EVENT|WRITE_EVENT);
@@ -1230,7 +1253,9 @@ connection_tls_finish_handshake(or_connection_t *conn)
   char digest_rcvd[DIGEST_LEN];
   int started_here = connection_or_nonopen_was_started_here(conn);
 
-  log_debug(LD_HANDSHAKE,"tls handshake with %s done. verifying.",
+  log_debug(LD_HANDSHAKE,"%s tls handshake on %p with %s done. verifying.",
+            started_here?"outgoing":"incoming",
+            conn,
             safe_str_client(conn->_base.address));
 
   directory_set_dirty();
