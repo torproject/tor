@@ -6,14 +6,14 @@ General Comments
 ----------------
 
 These are some hacks for making polipo work and install a package native
-to OSX or Windows.
+to Windows.
 
 They need some work before they can be committed upstream:
-  - Merge the three makefiles into one with specific builds such as "make
-    dist-osx" or "make dist-win32"
+  - Change the Makefile so it has a specific build such as "make
+    dist-win32"
   - Configure the options for tor in polipo config, just leave them
     commented out for easy activation.
-  - Work out better polipo config options for Tor.  
+  - Work out better polipo config options for Tor.
 
 As always, I'm happy to accept patches.
 
@@ -45,14 +45,3 @@ choose Compile NSIS Script.  You'll then create a polipo installer.
 The Polipo NSI installer assumes libgnurx-0.dll is in the same directory as polipo.exe.
 You'll need to copy libgnurx-0.dll into "./" in order to make the
 installation package.
-
----------------------------------------------
-OSX Universal Binary and Installation package
----------------------------------------------
-You'll need the contrib/polipo directory from Tor's source distribution.
-1) Copy Makefile.osx over Makefile.
-2) Run 'make'.
-3) Copy the contents of contrib/polipo into a directory named "contrib".
-4) Run 'chmod +x ./contrib/package.sh'
-5) Run './contrib/package.sh'
-6) You should have a Polipo-version.dmg ready for installation.
