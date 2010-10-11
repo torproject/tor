@@ -156,7 +156,7 @@ AC_SUBST(TORGROUP)
 
 dnl If WIN32 is defined and non-zero, we are building for win32
 AC_MSG_CHECKING([for win32])
-AC_RUN_IFELSE([
+AC_RUN_IFELSE([AC_LANG_SOURCE([
 int main(int c, char **v) {
 #ifdef WIN32
 #if WIN32
@@ -167,7 +167,7 @@ int main(int c, char **v) {
 #else
   return 2;
 #endif
-}],
+}])],
 bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]),
 bwin32=cross; AC_MSG_RESULT([cross])
@@ -175,14 +175,14 @@ bwin32=cross; AC_MSG_RESULT([cross])
 
 if test "$bwin32" = cross; then
 AC_MSG_CHECKING([for win32 (cross)])
-AC_COMPILE_IFELSE([
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #ifdef WIN32
 int main(int c, char **v) {return 0;}
 #else
 #error
 int main(int c, char **v) {return x(y);}
 #endif
-],
+])],
 bwin32=true; AC_MSG_RESULT([yes]),
 bwin32=false; AC_MSG_RESULT([no]))
 fi
@@ -194,14 +194,14 @@ AM_CONDITIONAL(BUILD_NT_SERVICES, test x$bwin32 = xtrue)
 
 dnl Enable C99 when compiling with MIPSpro
 AC_MSG_CHECKING([for MIPSpro compiler])
-AC_COMPILE_IFELSE(AC_LANG_PROGRAM(, [
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM(, [
 #if (defined(__sgi) && defined(_COMPILER_VERSION))
 #error
   return x(y);
 #endif
 ]),
 bmipspro=false; AC_MSG_RESULT(no),
-bmipspro=true; AC_MSG_RESULT(yes))
+bmipspro=true; AC_MSG_RESULT(yes)])
 
 if test "$bmipspro" = true; then
   CFLAGS="$CFLAGS -c99"
@@ -565,7 +565,7 @@ AC_CHECK_TYPES([rlim_t], , ,
 ])
 
 AC_CACHE_CHECK([whether time_t is signed], tor_cv_time_t_signed, [
-AC_RUN_IFELSE(AC_LANG_SOURCE([
+AC_RUN_IFELSE([AC_LANG_SOURCE([
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -576,7 +576,7 @@ AC_RUN_IFELSE(AC_LANG_SOURCE([
 #include <time.h>
 #endif
 int main(int c, char**v) { if (((time_t)-1)<0) return 1; else return 0; }]),
-  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes, tor_cv_time_t_signed=cross)
+  tor_cv_time_t_signed=no, tor_cv_time_t_signed=yes, tor_cv_time_t_signed=cross])
 ])
 
 if test "$tor_cv_time_t_signed" = cross; then
@@ -724,14 +724,14 @@ AC_CHECK_FUNC(gethostbyname_r, [
   AC_MSG_CHECKING([how many arguments gethostbyname_r() wants])
   OLD_CFLAGS=$CFLAGS
   CFLAGS="$CFLAGS $MY_CPPFLAGS $MY_THREAD_CPPFLAGS $MY_CFLAGS"
-  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 #include <netdb.h>
   ], [[
     char *cp1, *cp2;
     struct hostent *h1, *h2;
     int i1, i2;
     (void)gethostbyname_r(cp1,h1,cp2,i1,&h2,&i2);
-  ]]),[
+  ]])],[
     AC_DEFINE(HAVE_GETHOSTBYNAME_R)
     AC_DEFINE(HAVE_GETHOSTBYNAME_R_6_ARG, 1,
      [Define this if gethostbyname_r takes 6 arguments])
@@ -772,25 +772,25 @@ AC_CHECK_FUNC(gethostbyname_r, [
 
 AC_CACHE_CHECK([whether the C compiler supports __func__],
   tor_cv_have_func_macro,
-  AC_COMPILE_IFELSE([
+  AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <stdio.h>
-int main(int c, char **v) { puts(__func__); }],
+int main(int c, char **v) { puts(__func__); }])],
   tor_cv_have_func_macro=yes,
   tor_cv_have_func_macro=no))
 
 AC_CACHE_CHECK([whether the C compiler supports __FUNC__],
   tor_cv_have_FUNC_macro,
-  AC_COMPILE_IFELSE([
+  AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <stdio.h>
-int main(int c, char **v) { puts(__FUNC__); }],
+int main(int c, char **v) { puts(__FUNC__); }])],
   tor_cv_have_FUNC_macro=yes,
   tor_cv_have_FUNC_macro=no))
 
 AC_CACHE_CHECK([whether the C compiler supports __FUNCTION__],
   tor_cv_have_FUNCTION_macro,
-  AC_COMPILE_IFELSE([
+  AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <stdio.h>
-int main(int c, char **v) { puts(__FUNCTION__); }],
+int main(int c, char **v) { puts(__FUNCTION__); }])],
   tor_cv_have_FUNCTION_macro=yes,
   tor_cv_have_FUNCTION_macro=no))
 
@@ -848,24 +848,24 @@ fi
 # released versions.  (Some relevant gcc versions can't handle these.)
 if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xyes; then
 
-  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__GNUC__) || (__GNUC__ < 4)
 #error
-#endif]), have_gcc4=yes, have_gcc4=no)
+#endif])], have_gcc4=yes, have_gcc4=no)
 
-  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 2)
 #error
-#endif]), have_gcc42=yes, have_gcc42=no)
+#endif])], have_gcc42=yes, have_gcc42=no)
 
-  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], [
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
 #if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
 #error
-#endif]), have_gcc43=yes, have_gcc43=no)
+#endif])], have_gcc43=yes, have_gcc43=no)
 
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
-  AC_COMPILE_IFELSE(AC_LANG_PROGRAM([], []), have_shorten64_flag=yes,
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])], have_shorten64_flag=yes,
                     have_shorten64_flag=no)
   CFLAGS="$save_CFLAGS"
 
