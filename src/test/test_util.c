@@ -1433,7 +1433,7 @@ struct testcase_t util_tests[] = {
 #endif
   UTIL_TEST(exit_status, 0),
 #ifndef MS_WINDOWS
-  UTIL_TEST(fgets_eagain, 0),
+  UTIL_TEST(fgets_eagain, TT_SKIP),
   UTIL_TEST(spawn_background_ok, 0),
   UTIL_TEST(spawn_background_fail, 0),
 #endif
