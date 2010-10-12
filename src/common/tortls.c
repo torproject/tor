@@ -863,6 +863,10 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
 
     if (tls) {
       tls->wasV2Handshake = 1;
+#ifdef USE_BUFFEREVENTS
+      if (use_unsafe_renegotiation_flag)
+        tls->ssl->s3->flags |= SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+#endif
     } else {
       log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
     }
@@ -1069,6 +1073,18 @@ void
 tor_tls_block_renegotiation(tor_tls_t *tls)
 {
   tls->ssl->s3->flags &= ~SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
+}
+
+void
+tor_tls_assert_renegotiation_unblocked(tor_tls_t *tls)
+{
+  if (use_unsafe_renegotiation_flag) {
+    tor_assert(0 != (tls->ssl->s3->flags & SSL3_FLAGS_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
+  }
+  if (use_unsafe_renegotiation_op) {
+    long options = SSL_get_options(tls->ssl);
+    tor_assert(0 != (options & SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION));
+  }
 }
 
 /** Return whether this tls initiated the connect (client) or
@@ -1752,6 +1768,10 @@ tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
                                        state,
                                        BEV_OPT_DEFER_CALLBACKS);
 #endif
+  /* Unblock _after_ creating the bufferevent, since accept/connect tend to
+   * clear flags. */
+  tor_tls_unblock_renegotiation(tls);
+
   return out;
 }
 #endif
