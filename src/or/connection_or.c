@@ -914,9 +914,12 @@ connection_tls_start_handshake(or_connection_t *conn, int receiving)
     if (conn->bucket_cfg)
       bufferevent_set_rate_limit(conn->_base.bufev, conn->bucket_cfg);
     connection_enable_rate_limiting(TO_CONN(conn));
-    bufferevent_setcb(b, connection_handle_read_cb,
+
+    connection_configure_bufferevent_callbacks(TO_CONN(conn));
+    bufferevent_setcb(b,
+                      connection_handle_read_cb,
                       connection_handle_write_cb,
-                      connection_or_handle_event_cb,
+                      connection_or_handle_event_cb,/* overriding this one*/
                       TO_CONN(conn));
   }
 #endif
