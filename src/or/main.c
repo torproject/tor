@@ -231,6 +231,8 @@ connection_add_impl(connection_t *conn, int is_connecting)
         conn->linked_conn->bufev = pair[1];
       } /* else the other side already was added, and got a bufferevent_pair */
       connection_configure_bufferevent_callbacks(conn);
+    } else {
+      tor_assert(!conn->linked);
     }
 
     if (conn->bufev && conn->inbuf) {
@@ -722,14 +724,17 @@ conn_close_if_marked(int i)
   /* assert_all_pending_dns_resolves_ok(); */
 
 #ifdef USE_BUFFEREVENTS
-  if (conn->bufev && conn->hold_open_until_flushed) {
-    if (conn->linked) {
+  if (conn->bufev) {
+    if (conn->hold_open_until_flushed &&
+        evbuffer_get_length(bufferevent_get_output(conn->bufev))) {
+      /* don't close yet. */
+      return 0;
+    }
+    if (conn->linked_conn && ! conn->linked_conn->marked_for_close) {
       /* We need to do this explicitly so that the linked connection
        * notices that there was an EOF. */
       bufferevent_flush(conn->bufev, EV_WRITE, BEV_FINISHED);
     }
-    if (evbuffer_get_length(bufferevent_get_output(conn->bufev)))
-      return 0;
   }
 #endif
 
