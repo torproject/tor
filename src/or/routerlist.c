@@ -3216,13 +3216,13 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   /* Make sure that we haven't already got this exact descriptor. */
   if (sdmap_get(routerlist->desc_digest_map,
                 router->cache_info.signed_descriptor_digest)) {
-    /* If we have this descriptor already and the new descriptor is a bridge
+    /* If we have this descriptor already but the new descriptor is a bridge
      * descriptor, replace it. If we had a bridge descriptor before and the
      * new one is not a bridge descriptor, don't replace it. */
-    tor_assert(old_router);
-    if (! (routerinfo_is_a_configured_bridge(router) &&
-            (router->purpose == ROUTER_PURPOSE_BRIDGE ||
-             old_router->purpose != ROUTER_PURPOSE_BRIDGE))) {
+    const int had_as_bridge = old_router &&
+      old_router->purpose == ROUTER_PURPOSE_BRIDGE;
+    if (! routerinfo_is_a_configured_bridge(router) ||
+        (router->purpose != ROUTER_PURPOSE_BRIDGE && had_as_bridge)) {
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router '%s'",
                router->nickname);

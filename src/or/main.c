@@ -949,8 +949,7 @@ run_connection_housekeeping(int i, time_t now)
       connection_or_connect_failed(TO_OR_CONN(conn),
                                    END_OR_CONN_REASON_TIMEOUT,
                                    "Tor gave up on the connection");
-    connection_mark_for_close(conn);
-    conn->hold_open_until_flushed = 1;
+    connection_mark_and_flush(conn);
   } else if (!connection_state_is_open(conn)) {
     if (past_keepalive) {
       /* We never managed to actually get this connection open and happy. */

@@ -2798,8 +2798,8 @@ connection_control_process_inbuf(control_connection_t *conn)
     body_len = 2+strlen(buf+6)+2; /* code, msg, nul. */
     set_uint16(buf+0, htons(body_len));
     connection_write_to_buf(buf, 4+body_len, TO_CONN(conn));
-    connection_mark_for_close(TO_CONN(conn));
-    conn->_base.hold_open_until_flushed = 1;
+
+    connection_mark_and_flush(TO_CONN(conn));
     return 0;
   }
 
@@ -2820,8 +2820,7 @@ connection_control_process_inbuf(control_connection_t *conn)
         if (data_len + conn->incoming_cmd_cur_len > MAX_COMMAND_LINE_LENGTH) {
           connection_write_str_to_buf("500 Line too long.\r\n", conn);
           connection_stop_reading(TO_CONN(conn));
-          connection_mark_for_close(TO_CONN(conn));
-          conn->_base.hold_open_until_flushed = 1;
+          connection_mark_and_flush(TO_CONN(conn));
         }
         while (conn->incoming_cmd_len < data_len+conn->incoming_cmd_cur_len)
           conn->incoming_cmd_len *= 2;
@@ -2880,8 +2879,7 @@ connection_control_process_inbuf(control_connection_t *conn)
   /* Otherwise, Quit is always valid. */
   if (!strcasecmp(conn->incoming_cmd, "QUIT")) {
     connection_write_str_to_buf("250 closing connection\r\n", conn);
-    connection_mark_for_close(TO_CONN(conn));
-    conn->_base.hold_open_until_flushed = 1;
+    connection_mark_and_flush(TO_CONN(conn));
     return 0;
   }
 

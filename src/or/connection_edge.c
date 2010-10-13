@@ -90,9 +90,8 @@ _connection_mark_unattached_ap(edge_connection_t *conn, int endreason,
       conn->socks_request->has_finished = 1;
   }
 
-  _connection_mark_for_close(TO_CONN(conn), line, file);
-  conn->_base.hold_open_until_flushed = 1;
-  IF_HAS_BUFFEREVENT(TO_CONN(conn), connection_start_writing(TO_CONN(conn)));
+  _connection_mark_and_flush(TO_CONN(conn), line, file);
+
   conn->end_reason = endreason;
 }
 
