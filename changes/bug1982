@@ -1,0 +1,5 @@
+  o Major features:
+    - Allow EntryNodes to include country codes like {de} or IP addresses
+      or network masks. Previously we had disallowed these options
+      because we didn't have an efficient way to keep the list up to
+      date. Resolves bug 1982.

@@ -3884,15 +3884,15 @@ entry_guards_prepend_from_config(or_options_t *options)
 
   /* Split entry guards into those on the list and those not. */
 
-  /* XXXX022 Now that we allow countries and IP ranges in EntryNodes, this is
-   *  potentially an enormous list. For now, we disable such values for
-   *  EntryNodes in options_validate(); really, this wants a better solution.
-   *  Perhaps we should do this calculation once whenever the list of routers
-   *  changes or the entrynodes setting changes.
-   */
+  /* Now that we allow countries and IP ranges in EntryNodes, this is
+   * potentially an enormous list. It's not so bad though because we
+   * only call this function when a) we're making a new circuit, and b)
+   * we've called directory_info_has_arrived() or changed our EntryNodes
+   * since the last time we made a circuit. */
   routerset_get_all_nodes(entry_nodes, options->EntryNodes, 0);
   SMARTLIST_FOREACH(entry_nodes, const node_t *,node,
                     smartlist_add(entry_fps, (void*)node->identity));
+
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
     if (smartlist_digest_isin(entry_fps, e->identity))
       smartlist_add(old_entry_guards_on_list, e);
