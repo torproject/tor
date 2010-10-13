@@ -33,6 +33,7 @@
 #include "main.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "ntmain.h"
 #include "onion.h"
 #include "policies.h"
@@ -1043,6 +1044,15 @@ run_scheduled_events(time_t now)
    */
   consider_hibernation(now);
 
+  /* XXXX NM REMOVE THIS. XXXX NM XXXX NM XXXX NM*/
+  {
+    static time_t nl_check_time = 0;
+    if (nl_check_time <= now) {
+      nodelist_assert_ok();
+      nl_check_time = now + 30;
+    }
+  }
+
   /* 0b. If we've deferred a signewnym, make sure it gets handled
    * eventually. */
   if (signewnym_is_pending &&
@@ -1267,7 +1277,7 @@ run_scheduled_events(time_t now)
         /* If we haven't checked for 12 hours and our bandwidth estimate is
          * low, do another bandwidth test. This is especially important for
          * bridges, since they might go long periods without much use. */
-        routerinfo_t *me = router_get_my_routerinfo();
+        const routerinfo_t *me = router_get_my_routerinfo();
         if (time_to_recheck_bandwidth && me &&
             me->bandwidthcapacity < me->bandwidthrate &&
             me->bandwidthcapacity < 51200) {
@@ -1468,7 +1478,7 @@ second_elapsed_callback(periodic_timer_t *timer, void *arg)
       (stats_n_seconds_working+seconds_elapsed) /
         TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
     /* every 20 minutes, check and complain if necessary */
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     if (me && !check_whether_orport_reachable()) {
       log_warn(LD_CONFIG,"Your server (%s:%d) has not managed to confirm that "
                "its ORPort is reachable. Please check your firewalls, ports, "
@@ -2209,6 +2219,7 @@ tor_free_all(int postfork)
   connection_free_all();
   buf_shrink_freelists(1);
   memarea_clear_freelist();
+  nodelist_free_all();
   microdesc_free_all();
   if (!postfork) {
     config_free_all();

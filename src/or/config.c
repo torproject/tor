@@ -691,6 +691,11 @@ or_options_free(or_options_t *options)
     return;
 
   routerset_free(options->_ExcludeExitNodesUnion);
+  if (options->NodeFamilySets) {
+    SMARTLIST_FOREACH(options->NodeFamilySets, routerset_t *,
+                      rs, routerset_free(rs));
+    smartlist_free(options->NodeFamilySets);
+  }
   config_free(&options_format, options);
 }
 
@@ -3084,6 +3089,18 @@ options_validate(or_options_t *old_options, or_options_t *options,
     routerset_union(options->_ExcludeExitNodesUnion,options->ExcludeNodes);
   }
 
+  if (options->NodeFamilies) {
+    options->NodeFamilySets = smartlist_create();
+    for (cl = options->NodeFamilies; cl; cl = cl->next) {
+      routerset_t *rs = routerset_new();
+      if (routerset_parse(rs, cl->value, cl->key) == 0) {
+        smartlist_add(options->NodeFamilySets, rs);
+      } else {
+        routerset_free(rs);
+      }
+    }
+  }
+
   if (options->ExcludeNodes && options->StrictNodes) {
     COMPLAIN("You have asked to exclude certain relays from all positions "
              "in your circuits. Expect hidden services and other Tor "
@@ -3549,8 +3566,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (check_nickname_list(options->MyFamily, "MyFamily", msg))
     return -1;
   for (cl = options->NodeFamilies; cl; cl = cl->next) {
-    if (check_nickname_list(cl->value, "NodeFamily", msg))
+    routerset_t *rs = routerset_new();
+    if (routerset_parse(rs, cl->value, cl->key)) {
+      routerset_free(rs);
       return -1;
+    }
+    routerset_free(rs);
   }
 
   if (validate_addr_policies(options, msg) < 0)

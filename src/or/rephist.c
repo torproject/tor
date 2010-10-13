@@ -14,6 +14,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "nodelist.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -579,7 +580,7 @@ rep_hist_dump_stats(time_t now, int severity)
   size_t len;
   int ret;
   unsigned long upt, downt;
-  routerinfo_t *r;
+  const node_t *node;
 
   rep_history_clean(now - get_options()->RephistTrackTime);
 
@@ -593,8 +594,8 @@ rep_hist_dump_stats(time_t now, int severity)
     digestmap_iter_get(orhist_it, &digest1, &or_history_p);
     or_history = (or_history_t*) or_history_p;
 
-    if ((r = router_get_by_digest(digest1)))
-      name1 = r->nickname;
+    if ((node = node_get_by_id(digest1)) && node_get_nickname(node))
+      name1 = node_get_nickname(node);
     else
       name1 = "(unknown)";
     base16_encode(hexdigest1, sizeof(hexdigest1), digest1, DIGEST_LEN);
@@ -624,8 +625,8 @@ rep_hist_dump_stats(time_t now, int severity)
            lhist_it = digestmap_iter_next(or_history->link_history_map,
                                           lhist_it)) {
         digestmap_iter_get(lhist_it, &digest2, &link_history_p);
-        if ((r = router_get_by_digest(digest2)))
-          name2 = r->nickname;
+        if ((node = node_get_by_id(digest2)) && node_get_nickname(node))
+          name2 = node_get_nickname(node);
         else
           name2 = "(unknown)";
 
@@ -871,28 +872,32 @@ rep_hist_get_router_stability_doc(time_t now)
   }
 
   DIGESTMAP_FOREACH(history_map, id, or_history_t *, hist) {
-    routerinfo_t *ri;
+    const node_t *node;
     char dbuf[BASE64_DIGEST_LEN+1];
     char header_buf[512];
     char *info;
     digest_to_base64(dbuf, id);
-    ri = router_get_by_digest(id);
-    if (ri) {
-      char *ip = tor_dup_ip(ri->addr);
+    node = node_get_by_id(id);
+    if (node) {
+      char ip[INET_NTOA_BUF_LEN+1];
       char tbuf[ISO_TIME_LEN+1];
-      format_iso_time(tbuf, ri->cache_info.published_on);
+      time_t published = node_get_published_on(node);
+      node_get_address_string(node,ip,sizeof(ip));
+      if (published > 0)
+        format_iso_time(tbuf, published);
+      else
+        strlcpy(tbuf, "???", sizeof(tbuf));
       tor_snprintf(header_buf, sizeof(header_buf),
                    "router %s %s %s\n"
                    "published %s\n"
                    "relevant-flags %s%s%s\n"
                    "declared-uptime %ld\n",
-                   dbuf, ri->nickname, ip,
+                   dbuf, node_get_nickname(node), ip,
                    tbuf,
-                   ri->is_running ? "Running " : "",
-                   ri->is_valid ? "Valid " : "",
-                   ri->is_hibernating ? "Hibernating " : "",
-                   ri->uptime);
-      tor_free(ip);
+                   node->is_running ? "Running " : "",
+                   node->is_valid ? "Valid " : "",
+                   node->ri && node->ri->is_hibernating ? "Hibernating " : "",
+                   node_get_declared_uptime(node));
     } else {
       tor_snprintf(header_buf, sizeof(header_buf),
                    "router %s {no descriptor}\n", dbuf);

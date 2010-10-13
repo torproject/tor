@@ -576,6 +576,7 @@ test_policy_summary_helper(const char *policy_str,
   smartlist_t *policy = smartlist_create();
   char *summary = NULL;
   int r;
+  short_policy_t *short_policy = NULL;
 
   line.key = (char*)"foo";
   line.value = (char *)policy_str;
@@ -588,10 +589,14 @@ test_policy_summary_helper(const char *policy_str,
   test_assert(summary != NULL);
   test_streq(summary, expected_summary);
 
+  short_policy = parse_short_policy(summary);
+  tt_assert(short_policy);
+
  done:
   tor_free(summary);
   if (policy)
     addr_policy_list_free(policy);
+  short_policy_free(short_policy);
 }
 
 /** Run unit tests for generating summary lines of exit policies */

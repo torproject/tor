@@ -38,20 +38,30 @@ int router_set_networkstatus_v2(const char *s, time_t arrived_at,
 void networkstatus_v2_list_clean(time_t now);
 int compare_digest_to_routerstatus_entry(const void *_key,
                                          const void **_member);
-routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
+const routerstatus_t *networkstatus_v2_find_entry(networkstatus_v2_t *ns,
                                          const char *digest);
-routerstatus_t *networkstatus_vote_find_entry(networkstatus_t *ns,
+const routerstatus_t *networkstatus_vote_find_entry(networkstatus_t *ns,
+                                              const char *digest);
+routerstatus_t *networkstatus_v2_find_mutable_entry(networkstatus_v2_t *ns,
+                                        const char *digest);
+routerstatus_t *networkstatus_vote_find_mutable_entry(networkstatus_t *ns,
                                               const char *digest);
 int networkstatus_vote_find_entry_idx(networkstatus_t *ns,
                                       const char *digest, int *found_out);
 const smartlist_t *networkstatus_get_v2_list(void);
 download_status_t *router_get_dl_status_by_descriptor_digest(const char *d);
-routerstatus_t *router_get_consensus_status_by_id(const char *digest);
-routerstatus_t *router_get_consensus_status_by_descriptor_digest(
+const routerstatus_t *router_get_consensus_status_by_id(const char *digest);
+routerstatus_t *router_get_mutable_consensus_status_by_id(
+                                   const char *digest);
+const routerstatus_t *router_get_consensus_status_by_descriptor_digest(
                                    networkstatus_t *consensus,
                                    const char *digest);
-routerstatus_t *router_get_consensus_status_by_nickname(const char *nickname,
-                                                       int warn_if_unnamed);
+routerstatus_t *router_get_mutable_consensus_status_by_descriptor_digest(
+                                   networkstatus_t *consensus,
+                                   const char *digest);
+const routerstatus_t *router_get_consensus_status_by_nickname(
+                                   const char *nickname,
+                                   int warn_if_unnamed);
 const char *networkstatus_get_router_digest_by_nickname(const char *nickname);
 int networkstatus_nickname_is_unnamed(const char *nickname);
 void networkstatus_consensus_download_failed(int status_code,
@@ -83,7 +93,7 @@ void routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
 void signed_descs_update_status_from_consensus_networkstatus(
                                                          smartlist_t *descs);
 
-char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
+char *networkstatus_getinfo_helper_single(const routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
 int32_t get_net_param_from_list(smartlist_t *net_params, const char *name,

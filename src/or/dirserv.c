@@ -16,6 +16,7 @@
 #include "hibernate.h"
 #include "microdesc.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "rephist.h"
 #include "router.h"
@@ -65,8 +66,6 @@ static char *format_versions_list(config_line_t *ln);
 struct authdir_config_t;
 static int add_fingerprint_to_dir(const char *nickname, const char *fp,
                                   struct authdir_config_t *list);
-static uint32_t dirserv_router_get_status(const routerinfo_t *router,
-                                          const char **msg);
 static uint32_t
 dirserv_get_status_impl(const char *fp, const char *nickname,
                         const char *address,
@@ -74,7 +73,8 @@ dirserv_get_status_impl(const char *fp, const char *nickname,
                         const char *platform, const char *contact,
                         const char **msg, int should_log);
 static void clear_cached_dir(cached_dir_t *d);
-static signed_descriptor_t *get_signed_descriptor_by_fp(const char *fp,
+static const signed_descriptor_t *get_signed_descriptor_by_fp(
+                                                        const char *fp,
                                                         int extrainfo,
                                                         time_t publish_cutoff);
 static int dirserv_add_extrainfo(extrainfo_t *ei, const char **msg);
@@ -303,7 +303,7 @@ dirserv_load_fingerprint_file(void)
  *
  * If the status is 'FP_REJECT' and <b>msg</b> is provided, set
  * *<b>msg</b> to an explanation of why. */
-static uint32_t
+uint32_t
 dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 {
   char d[DIGEST_LEN];
@@ -325,7 +325,7 @@ dirserv_router_get_status(const routerinfo_t *router, const char **msg)
 /** Return true if there is no point in downloading the router described by
  * <b>rs</b> because this directory would reject it. */
 int
-dirserv_would_reject_router(routerstatus_t *rs)
+dirserv_would_reject_router(const routerstatus_t *rs)
 {
   uint32_t res;
 
@@ -360,7 +360,7 @@ dirserv_get_name_status(const char *id_digest, const char *nickname)
   return 0;
 }
 
-/** Helper: As dirserv_get_router_status, but takes the router fingerprint
+/** Helper: As dirserv_router_get_status, but takes the router fingerprint
  * (hex, no spaces), nickname, address (used for logging only), IP address, OR
  * port, platform (logging only) and contact info (logging only) as arguments.
  *
@@ -375,7 +375,7 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
                         const char **msg, int should_log)
 {
   int reject_unlisted = get_options()->AuthDirRejectUnlisted;
-  uint32_t result = 0;
+  uint32_t result;
   router_status_t *status_by_digest;
 
   if (!fingerprint_list)
@@ -533,7 +533,7 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
  */
 int
 authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
-                               int complain)
+                               int complain, int *valid_out)
 {
   /* Okay.  Now check whether the fingerprint is recognized. */
   uint32_t status = dirserv_router_get_status(ri, msg);
@@ -574,13 +574,22 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
     *msg = "Rejected: Address is not an IP, or IP is a private address.";
     return -1;
   }
-  /* Okay, looks like we're willing to accept this one. */
-  ri->is_named = (status & FP_NAMED) ? 1 : 0;
-  ri->is_valid = (status & FP_INVALID) ? 0 : 1;
-  ri->is_bad_directory = (status & FP_BADDIR) ? 1 : 0;
-  ri->is_bad_exit = (status & FP_BADEXIT) ? 1 : 0;
+
+  *valid_out = ! (status & FP_INVALID);
 
   return 0;
+}
+
+/** Update the relevant flags of <b>node</b> based on our opinion as a
+ * directory authority in <b>authstatus</b>, as returned by
+ * dirserv_router_get_status or equivalent.  */
+void
+dirserv_set_node_flags_from_authoritative_status(node_t *node,
+                                                 uint32_t authstatus)
+{
+  node->is_valid = (authstatus & FP_INVALID) ? 0 : 1;
+  node->is_bad_directory = (authstatus & FP_BADDIR) ? 1 : 0;
+  node->is_bad_exit = (authstatus & FP_BADEXIT) ? 1 : 0;
 }
 
 /** True iff <b>a</b> is more severe than <b>b</b>. */
@@ -707,7 +716,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
    * from this server.  (We do this here and not in router_add_to_routerlist
    * because we want to be able to accept the newest router descriptor that
    * another authority has, so we all converge on the same one.) */
-  ri_old = router_get_by_digest(ri->cache_info.identity_digest);
+  ri_old = router_get_mutable_by_digest(ri->cache_info.identity_digest);
   if (ri_old && ri_old->cache_info.published_on < ri->cache_info.published_on
       && router_differences_are_cosmetic(ri_old, ri)
       && !router_is_me(ri)) {
@@ -751,8 +760,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
     routerlist_descriptors_added(changed, 0);
     smartlist_free(changed);
     if (!*msg) {
-      *msg =  ri->is_valid ? "Descriptor for valid server accepted" :
-        "Descriptor for invalid server accepted";
+      *msg =  "Descriptor accepted";
     }
     log_info(LD_DIRSERV,
              "Added descriptor from '%s' (source: %s): %s.",
@@ -767,7 +775,7 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
 static was_router_added_t
 dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 {
-  routerinfo_t *ri;
+  const routerinfo_t *ri;
   int r;
   tor_assert(msg);
   *msg = NULL;
@@ -807,50 +815,60 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
 static void
 directory_remove_invalid(void)
 {
-  int i;
   int changed = 0;
   routerlist_t *rl = router_get_routerlist();
+  smartlist_t *nodes = smartlist_create();
+  smartlist_add_all(nodes, nodelist_get_list());
 
-  routerlist_assert_ok(rl);
-
-  for (i = 0; i < smartlist_len(rl->routers); ++i) {
+  SMARTLIST_FOREACH_BEGIN(nodes, node_t *, node) {
     const char *msg;
-    routerinfo_t *ent = smartlist_get(rl->routers, i);
-    uint32_t r = dirserv_router_get_status(ent, &msg);
+    routerinfo_t *ent = node->ri;
+    uint32_t r;
+    if (!ent)
+      continue;
+    r = dirserv_router_get_status(ent, &msg);
     if (r & FP_REJECT) {
       log_info(LD_DIRSERV, "Router '%s' is now rejected: %s",
                ent->nickname, msg?msg:"");
       routerlist_remove(rl, ent, 0, time(NULL));
-      i--;
       changed = 1;
       continue;
     }
-    if (bool_neq((r & FP_NAMED), ent->is_named)) {
+#if 0
+    if (bool_neq((r & FP_NAMED), ent->auth_says_is_named)) {
       log_info(LD_DIRSERV,
                "Router '%s' is now %snamed.", ent->nickname,
                (r&FP_NAMED)?"":"un");
       ent->is_named = (r&FP_NAMED)?1:0;
       changed = 1;
     }
-    if (bool_neq((r & FP_INVALID), !ent->is_valid)) {
+    if (bool_neq((r & FP_UNNAMED), ent->auth_says_is_unnamed)) {
+      log_info(LD_DIRSERV,
+               "Router '%s' is now %snamed. (FP_UNNAMED)", ent->nickname,
+               (r&FP_NAMED)?"":"un");
+      ent->is_named = (r&FP_NUNAMED)?0:1;
+      changed = 1;
+    }
+#endif
+    if (bool_neq((r & FP_INVALID), !node->is_valid)) {
       log_info(LD_DIRSERV, "Router '%s' is now %svalid.", ent->nickname,
                (r&FP_INVALID) ? "in" : "");
-      ent->is_valid = (r&FP_INVALID)?0:1;
+      node->is_valid = (r&FP_INVALID)?0:1;
       changed = 1;
     }
-    if (bool_neq((r & FP_BADDIR), ent->is_bad_directory)) {
+    if (bool_neq((r & FP_BADDIR), node->is_bad_directory)) {
       log_info(LD_DIRSERV, "Router '%s' is now a %s directory", ent->nickname,
                (r & FP_BADDIR) ? "bad" : "good");
-      ent->is_bad_directory = (r&FP_BADDIR) ? 1: 0;
+      node->is_bad_directory = (r&FP_BADDIR) ? 1: 0;
       changed = 1;
     }
-    if (bool_neq((r & FP_BADEXIT), ent->is_bad_exit)) {
+    if (bool_neq((r & FP_BADEXIT), node->is_bad_exit)) {
       log_info(LD_DIRSERV, "Router '%s' is now a %s exit", ent->nickname,
                (r & FP_BADEXIT) ? "bad" : "good");
-      ent->is_bad_exit = (r&FP_BADEXIT) ? 1: 0;
+      node->is_bad_exit = (r&FP_BADEXIT) ? 1: 0;
       changed = 1;
     }
-  }
+  } SMARTLIST_FOREACH_END(node);
   if (changed)
     directory_set_dirty();
 
@@ -893,10 +911,11 @@ directory_set_dirty(void)
  * as running iff <b>is_live</b> is true.
  */
 static char *
-list_single_server_status(routerinfo_t *desc, int is_live)
+list_single_server_status(const routerinfo_t *desc, int is_live)
 {
   char buf[MAX_NICKNAME_LEN+HEX_DIGEST_LEN+4]; /* !nickname=$hexdigest\0 */
   char *cp;
+  const node_t *node;
 
   tor_assert(desc);
 
@@ -904,7 +923,8 @@ list_single_server_status(routerinfo_t *desc, int is_live)
   if (!is_live) {
     *cp++ = '!';
   }
-  if (desc->is_valid) {
+  node = node_get_by_id(desc->cache_info.identity_digest);
+  if (node && node->is_valid) {
     strlcpy(cp, desc->nickname, sizeof(buf)-(cp-buf));
     cp += strlen(cp);
     *cp++ = '=';
@@ -943,6 +963,8 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     unreachable.
    */
   int answer;
+  node_t *node = node_get_mutable_by_id(router->cache_info.identity_digest);
+  tor_assert(node);
 
   if (router_is_me(router)) {
     /* We always know if we are down ourselves. */
@@ -967,7 +989,7 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
     rep_hist_note_router_unreachable(router->cache_info.identity_digest, now);
   }
 
-  router->is_running = answer;
+  node->is_running = answer;
 }
 
 /** Based on the routerinfo_ts in <b>routers</b>, allocate the
@@ -995,6 +1017,8 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
   rs_entries = smartlist_create();
 
   SMARTLIST_FOREACH_BEGIN(routers, routerinfo_t *, ri) {
+    const node_t *node = node_get_by_id(ri->cache_info.identity_digest);
+    tor_assert(node);
     if (authdir) {
       /* Update router status in routerinfo_t. */
       dirserv_set_router_is_running(ri, now);
@@ -1002,12 +1026,13 @@ list_server_status_v1(smartlist_t *routers, char **router_status_out,
     if (for_controller) {
       char name_buf[MAX_VERBOSE_NICKNAME_LEN+2];
       char *cp = name_buf;
-      if (!ri->is_running)
+      if (!node->is_running)
         *cp++ = '!';
       router_get_verbose_nickname(cp, ri);
       smartlist_add(rs_entries, tor_strdup(name_buf));
     } else if (ri->cache_info.published_on >= cutoff) {
-      smartlist_add(rs_entries, list_single_server_status(ri, ri->is_running));
+      smartlist_add(rs_entries, list_single_server_status(ri,
+                                                          node->is_running));
     }
   } SMARTLIST_FOREACH_END(ri);
 
@@ -1045,12 +1070,12 @@ format_versions_list(config_line_t *ln)
  * not hibernating, and not too old. Else return 0.
  */
 static int
-router_is_active(routerinfo_t *ri, time_t now)
+router_is_active(const routerinfo_t *ri, const node_t *node, time_t now)
 {
   time_t cutoff = now - ROUTER_MAX_AGE_TO_PUBLISH;
   if (ri->cache_info.published_on < cutoff)
     return 0;
-  if (!ri->is_running || !ri->is_valid || ri->is_hibernating)
+  if (!node->is_running || !node->is_valid || ri->is_hibernating)
     return 0;
   return 1;
 }
@@ -1151,7 +1176,7 @@ dirserv_dump_directory_to_string(char **dir_out,
 int
 directory_fetches_from_authorities(or_options_t *options)
 {
-  routerinfo_t *me;
+  const routerinfo_t *me;
   uint32_t addr;
   int refuseunknown;
   if (options->FetchDirInfoEarly)
@@ -1716,7 +1741,7 @@ static uint64_t total_exit_bandwidth = 0;
 /** Helper: estimate the uptime of a router given its stated uptime and the
  * amount of time since it last stated its stated uptime. */
 static INLINE long
-real_uptime(routerinfo_t *router, time_t now)
+real_uptime(const routerinfo_t *router, time_t now)
 {
   if (now < router->cache_info.published_on)
     return router->uptime;
@@ -1767,7 +1792,8 @@ dirserv_thinks_router_is_unreliable(time_t now,
  * been set.
  */
 static int
-dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
+dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
+                                const node_t *node, time_t now)
 {
   long uptime = real_uptime(router, now);
 
@@ -1777,7 +1803,7 @@ dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
    * version is too old. */
   return (router->wants_to_be_hs_dir && router->dir_port &&
           uptime > get_options()->MinUptimeHidServDirectoryV2 &&
-          router->is_running);
+          node->is_running);
 }
 
 /** Look through the routerlist, the Mean Time Between Failure history, and
@@ -1825,19 +1851,22 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   /* Weighted fractional uptime for each active router. */
   wfus = tor_malloc(sizeof(double)*smartlist_len(rl->routers));
 
+  nodelist_assert_ok();
+
   /* Now, fill in the arrays. */
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-    if (router_is_active(ri, now)) {
+  SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
+    routerinfo_t *ri = node->ri;
+    if (ri && router_is_active(ri, node, now)) {
       const char *id = ri->cache_info.identity_digest;
       uint32_t bw;
-      ri->is_exit = (!router_exit_policy_rejects_all(ri) &&
-                    exit_policy_is_general_exit(ri->exit_policy));
+      node->is_exit = (!router_exit_policy_rejects_all(ri) &&
+                       exit_policy_is_general_exit(ri->exit_policy));
       uptimes[n_active] = (uint32_t)real_uptime(ri, now);
       mtbfs[n_active] = rep_hist_get_stability(id, now);
       tks  [n_active] = rep_hist_get_weighted_time_known(id, now);
       bandwidths[n_active] = bw = router_get_advertised_bandwidth(ri);
       total_bandwidth += bw;
-      if (ri->is_exit && !ri->is_bad_exit) {
+      if (node->is_exit && !node->is_bad_exit) {
         total_exit_bandwidth += bw;
       } else {
         bandwidths_excluding_exits[n_active_nonexit] = bw;
@@ -1845,7 +1874,7 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
       }
       ++n_active;
     }
-  });
+  } SMARTLIST_FOREACH_END(node);
 
   /* Now, compute thresholds. */
   if (n_active) {
@@ -1871,15 +1900,17 @@ dirserv_compute_performance_thresholds(routerlist_t *rl)
   /* Now that we have a time-known that 7/8 routers are known longer than,
    * fill wfus with the wfu of every such "familiar" router. */
   n_familiar = 0;
-  SMARTLIST_FOREACH(rl->routers, routerinfo_t *, ri, {
-      if (router_is_active(ri, now)) {
+
+  SMARTLIST_FOREACH_BEGIN(nodelist_get_list(), node_t *, node) {
+      routerinfo_t *ri = node->ri;
+      if (ri && router_is_active(ri, node, now)) {
         const char *id = ri->cache_info.identity_digest;
         long tk = rep_hist_get_weighted_time_known(id, now);
         if (tk < guard_tk)
           continue;
         wfus[n_familiar++] = rep_hist_get_weighted_fractional_uptime(id, now);
       }
-    });
+  } SMARTLIST_FOREACH_END(node);
   if (n_familiar)
     guard_wfu = median_double(wfus, n_familiar);
   if (guard_wfu > WFU_TO_GUARANTEE_GUARD)
@@ -1950,7 +1981,7 @@ version_from_platform(const char *platform)
  */
 int
 routerstatus_format_entry(char *buf, size_t buf_len,
-                          routerstatus_t *rs, const char *version,
+                          const routerstatus_t *rs, const char *version,
                           routerstatus_format_type_t format)
 {
   int r;
@@ -2004,7 +2035,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    rs->is_possible_guard?" Guard":"",
                    rs->is_hs_dir?" HSDir":"",
                    rs->is_named?" Named":"",
-                   rs->is_running?" Running":"",
+                   rs->is_flagged_running?" Running":"",
                    rs->is_stable?" Stable":"",
                    rs->is_unnamed?" Unnamed":"",
                    rs->is_v2_dir?" V2Dir":"",
@@ -2026,7 +2057,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   }
 
   if (format != NS_V2) {
-    routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
+    const routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
     uint32_t bw;
 
     if (format != NS_CONTROL_PORT) {
@@ -2122,6 +2153,8 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
   int first_is_auth, second_is_auth;
   uint32_t bw_first, bw_second;
+  const node_t *node_first, *node_second;
+  int first_is_running, second_is_running;
 
   /* we return -1 if first should appear before second... that is,
    * if first is a better router. */
@@ -2144,9 +2177,14 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
   else if (!first_is_auth && second_is_auth)
     return 1;
 
-  else if (first->is_running && !second->is_running)
+  node_first = node_get_by_id(first->cache_info.identity_digest);
+  node_second = node_get_by_id(second->cache_info.identity_digest);
+  first_is_running = node_first && node_first->is_running;
+  second_is_running = node_second && node_second->is_running;
+
+  if (first_is_running && !second_is_running)
     return -1;
-  else if (!first->is_running && second->is_running)
+  else if (!first_is_running && second_is_running)
     return 1;
 
   bw_first = router_get_advertised_bandwidth(first);
@@ -2215,7 +2253,9 @@ get_possible_sybil_list(const smartlist_t *routers)
  */
 void
 set_routerstatus_from_routerinfo(routerstatus_t *rs,
-                                 routerinfo_t *ri, time_t now,
+                                 node_t *node,
+                                 routerinfo_t *ri,
+                                 time_t now,
                                  int naming, int listbadexits,
                                  int listbaddirs)
 {
@@ -2227,48 +2267,46 @@ set_routerstatus_from_routerinfo(routerstatus_t *rs,
     router_digest_is_trusted_dir(ri->cache_info.identity_digest);
 
   /* Already set by compute_performance_thresholds. */
-  rs->is_exit = ri->is_exit;
-  rs->is_stable = ri->is_stable =
-    router_is_active(ri, now) &&
+  rs->is_exit = node->is_exit;
+  rs->is_stable = node->is_stable =
+    router_is_active(ri, node, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 1, 0) &&
     !unstable_version;
-  rs->is_fast = ri->is_fast =
-    router_is_active(ri, now) &&
+  rs->is_fast = node->is_fast =
+    router_is_active(ri, node, now) &&
     !dirserv_thinks_router_is_unreliable(now, ri, 0, 1);
-  rs->is_running = ri->is_running; /* computed above */
+  rs->is_flagged_running = node->is_running; /* computed above */
 
   if (naming) {
     uint32_t name_status = dirserv_get_name_status(
-                         ri->cache_info.identity_digest, ri->nickname);
+                                              node->identity, ri->nickname);
     rs->is_named = (naming && (name_status & FP_NAMED)) ? 1 : 0;
     rs->is_unnamed = (naming && (name_status & FP_UNNAMED)) ? 1 : 0;
   }
-  rs->is_valid = ri->is_valid;
+  rs->is_valid = node->is_valid;
 
-  if (rs->is_fast &&
+  if (node->is_fast &&
       (router_get_advertised_bandwidth(ri) >= BANDWIDTH_TO_GUARANTEE_GUARD ||
        router_get_advertised_bandwidth(ri) >=
                               MIN(guard_bandwidth_including_exits,
                                   guard_bandwidth_excluding_exits))) {
-    long tk = rep_hist_get_weighted_time_known(
-                                      ri->cache_info.identity_digest, now);
-    double wfu = rep_hist_get_weighted_fractional_uptime(
-                                      ri->cache_info.identity_digest, now);
+    long tk = rep_hist_get_weighted_time_known(node->identity, now);
+    double wfu = rep_hist_get_weighted_fractional_uptime(node->identity, now);
     rs->is_possible_guard = (wfu >= guard_wfu && tk >= guard_tk) ? 1 : 0;
   } else {
     rs->is_possible_guard = 0;
   }
-  rs->is_bad_directory = listbaddirs && ri->is_bad_directory;
-  rs->is_bad_exit = listbadexits && ri->is_bad_exit;
-  ri->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, now);
-  rs->is_hs_dir = ri->is_hs_dir;
+  rs->is_bad_directory = listbaddirs && node->is_bad_directory;
+  rs->is_bad_exit = listbadexits && node->is_bad_exit;
+  node->is_hs_dir = dirserv_thinks_router_is_hs_dir(ri, node, now);
+  rs->is_hs_dir = node->is_hs_dir;
   rs->is_v2_dir = ri->dir_port != 0;
 
   if (!strcasecmp(ri->nickname, UNNAMED_ROUTER_NICKNAME))
     rs->is_named = rs->is_unnamed = 0;
 
   rs->published_on = ri->cache_info.published_on;
-  memcpy(rs->identity_digest, ri->cache_info.identity_digest, DIGEST_LEN);
+  memcpy(rs->identity_digest, node->identity, DIGEST_LEN);
   memcpy(rs->descriptor_digest, ri->cache_info.signed_descriptor_digest,
          DIGEST_LEN);
   rs->addr = ri->addr;
@@ -2285,24 +2323,12 @@ static void
 clear_status_flags_on_sybil(routerstatus_t *rs)
 {
   rs->is_authority = rs->is_exit = rs->is_stable = rs->is_fast =
-    rs->is_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
+    rs->is_flagged_running = rs->is_named = rs->is_valid = rs->is_v2_dir =
     rs->is_hs_dir = rs->is_possible_guard = rs->is_bad_exit =
     rs->is_bad_directory = 0;
   /* FFFF we might want some mechanism to check later on if we
    * missed zeroing any flags: it's easy to add a new flag but
    * forget to add it to this clause. */
-}
-
-/** Clear all the status flags in routerinfo <b>router</b>. We put this
- * function here because it's eerily similar to
- * clear_status_flags_on_sybil() above. One day we should merge them. */
-void
-router_clear_status_flags(routerinfo_t *router)
-{
-  router->is_valid = router->is_running = router->is_hs_dir =
-    router->is_fast = router->is_stable =
-    router->is_possible_guard = router->is_exit =
-    router->is_bad_exit = router->is_bad_directory = 0;
 }
 
 /**
@@ -2552,17 +2578,20 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
       routerstatus_t *rs;
       vote_routerstatus_t *vrs;
       microdesc_t *md;
+      node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
+      if (!node)
+        continue;
 
       vrs = tor_malloc_zero(sizeof(vote_routerstatus_t));
       rs = &vrs->status;
-      set_routerstatus_from_routerinfo(rs, ri, now,
+      set_routerstatus_from_routerinfo(rs, node, ri, now,
                                        naming, listbadexits, listbaddirs);
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
         clear_status_flags_on_sybil(rs);
 
       if (!vote_on_reachability)
-        rs->is_running = 0;
+        rs->is_flagged_running = 0;
 
       vrs->version = version_from_platform(ri->platform);
       md = dirvote_create_microdescriptor(ri);
@@ -2795,8 +2824,12 @@ generate_v2_networkstatus_opinion(void)
     if (ri->cache_info.published_on >= cutoff) {
       routerstatus_t rs;
       char *version = version_from_platform(ri->platform);
-
-      set_routerstatus_from_routerinfo(&rs, ri, now,
+      node_t *node = node_get_mutable_by_id(ri->cache_info.identity_digest);
+      if (!node) {
+        tor_free(version);
+        continue;
+      }
+      set_routerstatus_from_routerinfo(&rs, node, ri, now,
                                        naming, listbadexits, listbaddirs);
 
       if (digestmap_get(omit_as_sybil, ri->cache_info.identity_digest))
@@ -2879,7 +2912,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
 
   if (!strcmp(key,"authority")) {
     if (authdir_mode_v2(get_options())) {
-      routerinfo_t *me = router_get_my_routerinfo();
+      const routerinfo_t *me = router_get_my_routerinfo();
       if (me)
         smartlist_add(result,
                       tor_memdup(me->cache_info.identity_digest, DIGEST_LEN));
@@ -2965,7 +2998,7 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
                       smartlist_add(fps_out,
                       tor_memdup(r->cache_info.identity_digest, DIGEST_LEN)));
   } else if (!strcmp(key, "authority")) {
-    routerinfo_t *ri = router_get_my_routerinfo();
+    const routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
       smartlist_add(fps_out,
                     tor_memdup(ri->cache_info.identity_digest, DIGEST_LEN));
@@ -2985,8 +3018,8 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
 
   if (for_unencrypted_conn) {
     /* Remove anything that insists it not be sent unencrypted. */
-    SMARTLIST_FOREACH(fps_out, char *, cp, {
-        signed_descriptor_t *sd;
+    SMARTLIST_FOREACH_BEGIN(fps_out, char *, cp) {
+        const signed_descriptor_t *sd;
         if (by_id)
           sd = get_signed_descriptor_by_fp(cp,is_extrainfo,0);
         else if (is_extrainfo)
@@ -2997,7 +3030,7 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
           tor_free(cp);
           SMARTLIST_DEL_CURRENT(fps_out, cp);
         }
-      });
+    } SMARTLIST_FOREACH_END(cp);
   }
 
   if (!smartlist_len(fps_out)) {
@@ -3036,9 +3069,9 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
     SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                       smartlist_add(descs_out, &(r->cache_info)));
   } else if (!strcmp(key, "/tor/server/authority")) {
-    routerinfo_t *ri = router_get_my_routerinfo();
+    const routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
-      smartlist_add(descs_out, &(ri->cache_info));
+      smartlist_add(descs_out, (void*) &(ri->cache_info));
   } else if (!strcmpstart(key, "/tor/server/d/")) {
     smartlist_t *digests = smartlist_create();
     key += strlen("/tor/server/d/");
@@ -3062,17 +3095,17 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
        {
          if (router_digest_is_me(d)) {
            /* make sure desc_routerinfo exists */
-           routerinfo_t *ri = router_get_my_routerinfo();
+           const routerinfo_t *ri = router_get_my_routerinfo();
            if (ri)
-             smartlist_add(descs_out, &(ri->cache_info));
+             smartlist_add(descs_out, (void*) &(ri->cache_info));
          } else {
-           routerinfo_t *ri = router_get_by_digest(d);
+           const routerinfo_t *ri = router_get_by_digest(d);
            /* Don't actually serve a descriptor that everyone will think is
             * expired.  This is an (ugly) workaround to keep buggy 0.1.1.10
             * Tors from downloading descriptors that they will throw away.
             */
            if (ri && ri->cache_info.published_on > cutoff)
-             smartlist_add(descs_out, &(ri->cache_info));
+             smartlist_add(descs_out, (void*) &(ri->cache_info));
          }
        });
     SMARTLIST_FOREACH(digests, char *, d, tor_free(d));
@@ -3121,6 +3154,7 @@ dirserv_orconn_tls_done(const char *address,
       }
     }
   });
+
   /* FFFF Maybe we should reinstate the code that dumps routers with the same
    * addr/port but with nonmatching keys, but instead of dumping, we should
    * skip testing. */
@@ -3130,7 +3164,8 @@ dirserv_orconn_tls_done(const char *address,
  * an upload or a download.  Used to decide whether to relaunch reachability
  * testing for the server. */
 int
-dirserv_should_launch_reachability_test(routerinfo_t *ri, routerinfo_t *ri_old)
+dirserv_should_launch_reachability_test(const routerinfo_t *ri,
+                                        const routerinfo_t *ri_old)
 {
   if (!authdir_mode_handles_descs(get_options(), ri->purpose))
     return 0;
@@ -3254,7 +3289,7 @@ dirserv_remove_old_statuses(smartlist_t *fps, time_t cutoff)
  * its extra-info document if <b>extrainfo</b> is true. Return
  * NULL if not found or if the descriptor is older than
  * <b>publish_cutoff</b>. */
-static signed_descriptor_t *
+static const signed_descriptor_t *
 get_signed_descriptor_by_fp(const char *fp, int extrainfo,
                             time_t publish_cutoff)
 {
@@ -3264,7 +3299,7 @@ get_signed_descriptor_by_fp(const char *fp, int extrainfo,
     else
       return &(router_get_my_routerinfo()->cache_info);
   } else {
-    routerinfo_t *ri = router_get_by_digest(fp);
+    const routerinfo_t *ri = router_get_by_digest(fp);
     if (ri &&
         ri->cache_info.published_on > publish_cutoff) {
       if (extrainfo)
@@ -3332,7 +3367,7 @@ dirserv_estimate_data_size(smartlist_t *fps, int is_serverdescs,
   tor_assert(fps);
   if (is_serverdescs) {
     int n = smartlist_len(fps);
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     result = (me?me->cache_info.signed_descriptor_len:2048) * n;
     if (compressed)
       result /= 2; /* observed compressibility is between 35 and 55%. */
@@ -3399,7 +3434,7 @@ connection_dirserv_add_servers_to_outbuf(dir_connection_t *conn)
          connection_get_outbuf_len(TO_CONN(conn)) < DIRSERV_BUFFER_MIN) {
     const char *body;
     char *fp = smartlist_pop_last(conn->fingerprint_stack);
-    signed_descriptor_t *sd = NULL;
+    const signed_descriptor_t *sd = NULL;
     if (by_fp) {
       sd = get_signed_descriptor_by_fp(fp, extra, publish_cutoff);
     } else {

@@ -14,6 +14,7 @@
 #include "config.h"
 #include "directory.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rendservice.h"
@@ -1001,7 +1002,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   } else {
     char *rp_nickname;
     size_t nickname_field_len;
-    routerinfo_t *router;
+    const node_t *node;
     int version;
     if (*buf == 1) {
       rp_nickname = buf+1;
@@ -1028,8 +1029,8 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
     len -= nickname_field_len;
     len -= rp_nickname - buf; /* also remove header space used by version, if
                                * any */
-    router = router_get_by_nickname(rp_nickname, 0);
-    if (!router) {
+    node = node_get_by_nickname(rp_nickname, 0);
+    if (!node) {
       log_info(LD_REND, "Couldn't find router %s named in introduce2 cell.",
                escaped_safe_str_client(rp_nickname));
       /* XXXX Add a no-such-router reason? */
@@ -1037,7 +1038,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
       goto err;
     }
 
-    extend_info = extend_info_from_router(router);
+    extend_info = extend_info_from_node(node);
   }
 
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
@@ -1754,19 +1755,19 @@ void
 rend_services_introduce(void)
 {
   int i,j,r;
-  routerinfo_t *router;
+  const node_t *node;
   rend_service_t *service;
   rend_intro_point_t *intro;
   int changed, prev_intro_nodes;
-  smartlist_t *intro_routers;
+  smartlist_t *intro_nodes;
   time_t now;
   or_options_t *options = get_options();
 
-  intro_routers = smartlist_create();
+  intro_nodes = smartlist_create();
   now = time(NULL);
 
   for (i=0; i < smartlist_len(rend_service_list); ++i) {
-    smartlist_clear(intro_routers);
+    smartlist_clear(intro_nodes);
     service = smartlist_get(rend_service_list, i);
 
     tor_assert(service);
@@ -1786,8 +1787,8 @@ rend_services_introduce(void)
        service. */
     for (j=0; j < smartlist_len(service->intro_nodes); ++j) {
       intro = smartlist_get(service->intro_nodes, j);
-      router = router_get_by_digest(intro->extend_info->identity_digest);
-      if (!router || !find_intro_circuit(intro, service->pk_digest)) {
+      node = node_get_by_id(intro->extend_info->identity_digest);
+      if (!node || !find_intro_circuit(intro, service->pk_digest)) {
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
                  intro->extend_info->nickname, service->service_id);
         if (service->desc) {
@@ -1806,8 +1807,8 @@ rend_services_introduce(void)
         smartlist_del(service->intro_nodes,j--);
         changed = 1;
       }
-      if (router)
-        smartlist_add(intro_routers, router);
+      if (node)
+        smartlist_add(intro_nodes, (void*)node);
     }
 
     /* We have enough intro points, and the intro points we thought we had were
@@ -1836,26 +1837,26 @@ rend_services_introduce(void)
 #define NUM_INTRO_POINTS_INIT (NUM_INTRO_POINTS + 2)
     for (j=prev_intro_nodes; j < (prev_intro_nodes == 0 ?
              NUM_INTRO_POINTS_INIT : NUM_INTRO_POINTS); ++j) {
-      router_crn_flags_t flags = CRN_NEED_UPTIME;
+      router_crn_flags_t flags = CRN_NEED_UPTIME|CRN_NEED_DESC;
       if (get_options()->_AllowInvalid & ALLOW_INVALID_INTRODUCTION)
         flags |= CRN_ALLOW_INVALID;
-      router = router_choose_random_node(intro_routers,
-                                         options->ExcludeNodes, flags);
-      if (!router) {
+      node = router_choose_random_node(intro_nodes,
+                                       options->ExcludeNodes, flags);
+      if (!node) {
         log_warn(LD_REND,
                  "Could only establish %d introduction points for %s.",
                  smartlist_len(service->intro_nodes), service->service_id);
         break;
       }
       changed = 1;
-      smartlist_add(intro_routers, router);
+      smartlist_add(intro_nodes, (void*)node);
       intro = tor_malloc_zero(sizeof(rend_intro_point_t));
-      intro->extend_info = extend_info_from_router(router);
+      intro->extend_info = extend_info_from_node(node);
       intro->intro_key = crypto_new_pk_env();
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
-               router->nickname, service->service_id);
+               node_get_nickname(node), service->service_id);
     }
 
     /* If there's no need to launch new circuits, stop here. */
@@ -1872,7 +1873,7 @@ rend_services_introduce(void)
       }
     }
   }
-  smartlist_free(intro_routers);
+  smartlist_free(intro_nodes);
 }
 
 /** Regenerate and upload rendezvous service descriptors for all

@@ -21,7 +21,7 @@ libtor_a_SOURCES = buffers.c circuitbuild.c circuitlist.c \
 	cpuworker.c directory.c dirserv.c dirvote.c \
 	dns.c dnsserv.c geoip.c hibernate.c main.c $(tor_platform_source) \
 	microdesc.c \
-	networkstatus.c onion.c policies.c \
+	networkstatus.c nodelist.c onion.c policies.c \
 	reasons.c relay.c rendcommon.c rendclient.c rendmid.c \
 	rendservice.c rephist.c router.c routerlist.c routerparse.c \
 	$(evdns_source) config_codedigest.c
@@ -56,6 +56,7 @@ noinst_HEADERS = buffers.h circuitbuild.h circuitlist.h circuituse.h \
 	command.h config.h connection_edge.h connection.h connection_or.h \
 	control.h cpuworker.h directory.h dirserv.h dirvote.h dns.h \
 	dnsserv.h geoip.h hibernate.h main.h microdesc.h networkstatus.h \
+	nodelist.h \
 	ntmain.h onion.h policies.h reasons.h relay.h rendclient.h \
 	rendcommon.h rendmid.h rendservice.h rephist.h router.h routerlist.h \
 	routerparse.h or.h eventdns.h eventdns_tor.h micro-revision.i

@@ -16,6 +16,7 @@
 #include "connection_edge.h"
 #include "directory.h"
 #include "main.h"
+#include "nodelist.h"
 #include "relay.h"
 #include "rendclient.h"
 #include "rendcommon.h"
@@ -738,7 +739,6 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
   int i;
   rend_cache_entry_t *entry;
   rend_intro_point_t *intro;
-  routerinfo_t *router;
 
   if (rend_cache_lookup_entry(rend_query->onion_address, -1, &entry) < 1) {
     log_warn(LD_REND,
@@ -755,8 +755,8 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
   intro = smartlist_get(entry->parsed->intro_nodes, i);
   /* Do we need to look up the router or is the extend info complete? */
   if (!intro->extend_info->onion_key) {
-    router = router_get_by_nickname(intro->extend_info->nickname, 0);
-    if (!router) {
+    const node_t *node = node_get_by_nickname(intro->extend_info->nickname, 0);
+    if (!node) {
       log_info(LD_REND, "Unknown router with nickname '%s'; trying another.",
                intro->extend_info->nickname);
       rend_intro_point_free(intro);
@@ -764,7 +764,7 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
       goto again;
     }
     extend_info_free(intro->extend_info);
-    intro->extend_info = extend_info_from_router(router);
+    intro->extend_info = extend_info_from_node(node);
   }
   return extend_info_dup(intro->extend_info);
 }

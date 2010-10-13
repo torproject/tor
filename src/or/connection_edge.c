@@ -23,6 +23,7 @@
 #include "dirserv.h"
 #include "hibernate.h"
 #include "main.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "reasons.h"
 #include "relay.h"
@@ -586,7 +587,7 @@ void
 circuit_discard_optional_exit_enclaves(extend_info_t *info)
 {
   edge_connection_t *edge_conn;
-  routerinfo_t *r1, *r2;
+  const node_t *r1, *r2;
 
   smartlist_t *conns = get_connection_array();
   SMARTLIST_FOREACH_BEGIN(conns, connection_t *, conn) {
@@ -598,8 +599,8 @@ circuit_discard_optional_exit_enclaves(extend_info_t *info)
     if (!edge_conn->chosen_exit_optional &&
         !edge_conn->chosen_exit_retries)
       continue;
-    r1 = router_get_by_nickname(edge_conn->chosen_exit_name, 0);
-    r2 = router_get_by_nickname(info->nickname, 0);
+    r1 = node_get_by_nickname(edge_conn->chosen_exit_name, 0);
+    r2 = node_get_by_nickname(info->nickname, 0);
     if (!r1 || !r2 || r1 != r2)
       continue;
     tor_assert(edge_conn->socks_request);
@@ -1574,12 +1575,12 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return -1;
       }
     } else {
-      routerinfo_t *r;
+      const node_t *r;
       conn->chosen_exit_name = tor_strdup(socks->address);
-      r = router_get_by_nickname(conn->chosen_exit_name, 1);
+      r = node_get_by_nickname(conn->chosen_exit_name, 1);
       *socks->address = 0;
       if (r) {
-        strlcpy(socks->address, r->address, sizeof(socks->address));
+        node_get_address_string(r, socks->address, sizeof(socks->address));
       } else {
         log_warn(LD_APP,
                  "Unrecognized server in exit address '%s.exit'. Refusing.",
@@ -1630,16 +1631,16 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
 
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */
-        routerinfo_t *r =
+        const node_t *r =
           router_find_exact_exit_enclave(socks->address, socks->port);
         if (r) {
           log_info(LD_APP,
                    "Redirecting address %s to exit at enclave router %s",
-                   safe_str_client(socks->address), r->nickname);
+                   safe_str_client(socks->address), node_get_nickname(r));
           /* use the hex digest, not nickname, in case there are two
              routers with this nickname */
           conn->chosen_exit_name =
-            tor_strdup(hex_str(r->cache_info.identity_digest, DIGEST_LEN));
+            tor_strdup(hex_str(r->identity, DIGEST_LEN));
           conn->chosen_exit_optional = 1;
         }
       }
@@ -2895,7 +2896,7 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
  * this relay, return 0.
  */
 int
-connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
+connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit,
                            int excluded_means_no)
 {
   or_options_t *options = get_options();
@@ -2909,10 +2910,10 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
    * make sure the exit node of the existing circuit matches exactly.
    */
   if (conn->chosen_exit_name) {
-    routerinfo_t *chosen_exit =
-      router_get_by_nickname(conn->chosen_exit_name, 1);
-    if (!chosen_exit || memcmp(chosen_exit->cache_info.identity_digest,
-                               exit->cache_info.identity_digest, DIGEST_LEN)) {
+    const node_t *chosen_exit =
+      node_get_by_nickname(conn->chosen_exit_name, 1);
+    if (!chosen_exit || memcmp(chosen_exit->identity,
+                               exit->identity, DIGEST_LEN)) {
       /* doesn't match */
 //      log_debug(LD_APP,"Requested node '%s', considering node '%s'. No.",
 //                conn->chosen_exit_name, exit->nickname);
@@ -2927,8 +2928,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
     addr_policy_result_t r;
     if (tor_inet_aton(conn->socks_request->address, &in))
       addr = ntohl(in.s_addr);
-    r = compare_addr_to_addr_policy(addr, conn->socks_request->port,
-                                    exit->exit_policy);
+    r = compare_addr_to_node_policy(addr, conn->socks_request->port, exit);
     if (r == ADDR_POLICY_REJECTED)
       return 0; /* We know the address, and the exit policy rejects it. */
     if (r == ADDR_POLICY_PROBABLY_REJECTED && !conn->chosen_exit_name)
@@ -2937,12 +2937,12 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
                  * this node, err on the side of caution. */
   } else if (SOCKS_COMMAND_IS_RESOLVE(conn->socks_request->command)) {
     /* Don't send DNS requests to non-exit servers by default. */
-    if (!conn->chosen_exit_name && policy_is_reject_star(exit->exit_policy))
+    if (!conn->chosen_exit_name && node_exit_policy_rejects_all(exit))
       return 0;
   }
   if (options->_ExcludeExitNodesUnion &&
       (options->StrictNodes || excluded_means_no) &&
-      routerset_contains_router(options->_ExcludeExitNodesUnion, exit)) {
+      routerset_contains_node(options->_ExcludeExitNodesUnion, exit)) {
     /* If we are trying to avoid this node as exit, and we have StrictNodes
      * set, then this is not a suitable exit. Refuse it.
      *

@@ -1344,7 +1344,6 @@ router_parse_entry_from_string(const char *s, const char *end,
   tor_assert(tok->n_args >= 5);
 
   router = tor_malloc_zero(sizeof(routerinfo_t));
-  router->country = -1;
   router->cache_info.routerlist_index = -1;
   router->cache_info.annotations_len = s-start_of_annotations + prepend_len;
   router->cache_info.signed_descriptor_len = end-s;
@@ -1542,8 +1541,6 @@ router_parse_entry_from_string(const char *s, const char *end,
   if (check_signature_token(digest, DIGEST_LEN, tok, router->identity_pkey, 0,
                             "router descriptor") < 0)
     goto err;
-
-  routerinfo_set_country(router);
 
   if (!router->or_port) {
     log_warn(LD_DIR,"or_port unreadable or 0. Failing.");
@@ -2030,7 +2027,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       else if (!strcmp(tok->args[i], "Fast"))
         rs->is_fast = 1;
       else if (!strcmp(tok->args[i], "Running"))
-        rs->is_running = 1;
+        rs->is_flagged_running = 1;
       else if (!strcmp(tok->args[i], "Named"))
         rs->is_named = 1;
       else if (!strcmp(tok->args[i], "Valid"))
@@ -4305,7 +4302,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
 
     if ((tok = find_opt_by_keyword(tokens, K_P))) {
-      md->exitsummary = tor_strdup(tok->args[0]);
+      md->exit_policy = parse_short_policy(tok->args[0]);
     }
 
     crypto_digest256(md->digest, md->body, md->bodylen, DIGEST_SHA256);

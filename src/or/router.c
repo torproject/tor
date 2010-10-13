@@ -7,6 +7,7 @@
 #define ROUTER_PRIVATE
 
 #include "or.h"
+#include "circuitbuild.h"
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
@@ -19,6 +20,7 @@
 #include "hibernate.h"
 #include "main.h"
 #include "networkstatus.h"
+#include "nodelist.h"
 #include "policies.h"
 #include "relay.h"
 #include "rephist.h"
@@ -773,18 +775,21 @@ decide_to_advertise_dirport(or_options_t *options, uint16_t dir_port)
 void
 consider_testing_reachability(int test_or, int test_dir)
 {
-  routerinfo_t *me = router_get_my_routerinfo();
+  const routerinfo_t *me = router_get_my_routerinfo();
   int orport_reachable = check_whether_orport_reachable();
   tor_addr_t addr;
   if (!me)
     return;
 
   if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
+    extend_info_t *ei;
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
-    circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me,
-                             CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+    ei = extend_info_from_router(me);
+    circuit_launch_by_extend_info(CIRCUIT_PURPOSE_TESTING, ei,
+                            CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
+    extend_info_free(ei);
   }
 
   tor_addr_from_ipv4h(&addr, me->addr);
@@ -808,7 +813,7 @@ void
 router_orport_found_reachable(void)
 {
   if (!can_reach_or_port) {
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                get_options()->_PublishServerDescriptor != NO_AUTHORITY ?
@@ -831,7 +836,7 @@ void
 router_dirport_found_reachable(void)
 {
   if (!can_reach_dir_port) {
-    routerinfo_t *me = router_get_my_routerinfo();
+    const routerinfo_t *me = router_get_my_routerinfo();
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
@@ -1093,7 +1098,7 @@ static int desc_needs_upload = 0;
 void
 router_upload_dir_desc_to_dirservers(int force)
 {
-  routerinfo_t *ri;
+  const routerinfo_t *ri;
   extrainfo_t *ei;
   char *msg;
   size_t desc_len, extra_len = 0, total_len;
@@ -1186,7 +1191,7 @@ router_extrainfo_digest_is_me(const char *digest)
 
 /** A wrapper around router_digest_is_me(). */
 int
-router_is_me(routerinfo_t *router)
+router_is_me(const routerinfo_t *router)
 {
   return router_digest_is_me(router->cache_info.identity_digest);
 }
@@ -1205,7 +1210,7 @@ router_fingerprint_is_me(const char *fp)
 
 /** Return a routerinfo for this OR, rebuilding a fresh one if
  * necessary.  Return NULL on error, or if called on an OP. */
-routerinfo_t *
+const routerinfo_t *
 router_get_my_routerinfo(void)
 {
   if (!server_mode(get_options()))
@@ -1333,13 +1338,12 @@ router_rebuild_descriptor(int force)
   ri->policy_is_reject_star =
     policy_is_reject_star(ri->exit_policy);
 
-  if (desc_routerinfo) { /* inherit values */
-    ri->is_valid = desc_routerinfo->is_valid;
-    ri->is_running = desc_routerinfo->is_running;
-    ri->is_named = desc_routerinfo->is_named;
-  }
+#if 0
+  /* XXXX NM NM I belive this is safe to remove */
   if (authdir_mode(options))
     ri->is_valid = ri->is_named = 1; /* believe in yourself */
+#endif
+
   if (options->MyFamily) {
     smartlist_t *family;
     if (!warned_nonexistent_family)
@@ -1348,13 +1352,12 @@ router_rebuild_descriptor(int force)
     ri->declared_family = smartlist_create();
     smartlist_split_string(family, options->MyFamily, ",",
       SPLIT_SKIP_SPACE|SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-    SMARTLIST_FOREACH(family, char *, name,
-     {
-       routerinfo_t *member;
+    SMARTLIST_FOREACH_BEGIN(family, char *, name) {
+       const node_t *member;
        if (!strcasecmp(name, options->Nickname))
-         member = ri;
+         goto skip; /* Don't list ourself, that's redundant */
        else
-         member = router_get_by_nickname(name, 1);
+         member = node_get_by_nickname(name, 1);
        if (!member) {
          int is_legal = is_legal_nickname_or_hexdigest(name);
          if (!smartlist_string_isin(warned_nonexistent_family, name) &&
@@ -1374,19 +1377,21 @@ router_rebuild_descriptor(int force)
            smartlist_add(ri->declared_family, name);
            name = NULL;
          }
-       } else if (router_is_me(member)) {
+       } else if (router_digest_is_me(member->identity)) {
          /* Don't list ourself in our own family; that's redundant */
+         /* XXX shouldn't be possible */
        } else {
          char *fp = tor_malloc(HEX_DIGEST_LEN+2);
          fp[0] = '$';
          base16_encode(fp+1,HEX_DIGEST_LEN+1,
-                       member->cache_info.identity_digest, DIGEST_LEN);
+                       member->identity, DIGEST_LEN);
          smartlist_add(ri->declared_family, fp);
          if (smartlist_string_isin(warned_nonexistent_family, name))
            smartlist_string_remove(warned_nonexistent_family, name);
        }
+    skip:
        tor_free(name);
-     });
+    } SMARTLIST_FOREACH_END(name);
 
     /* remove duplicates from the list */
     smartlist_sort_strings(ri->declared_family);
@@ -1443,8 +1448,6 @@ router_rebuild_descriptor(int force)
   router_get_router_hash(ri->cache_info.signed_descriptor_body,
                          strlen(ri->cache_info.signed_descriptor_body),
                          ri->cache_info.signed_descriptor_digest);
-
-  routerinfo_set_country(ri);
 
   tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
 
@@ -2099,10 +2102,15 @@ is_legal_hexdigest(const char *s)
 void
 router_get_verbose_nickname(char *buf, const routerinfo_t *router)
 {
+  const char *good_digest = networkstatus_get_router_digest_by_nickname(
+                                                         router->nickname);
+  int is_named = good_digest && !memcmp(good_digest,
+                                        router->cache_info.identity_digest,
+                                        DIGEST_LEN);
   buf[0] = '$';
   base16_encode(buf+1, HEX_DIGEST_LEN+1, router->cache_info.identity_digest,
                 DIGEST_LEN);
-  buf[1+HEX_DIGEST_LEN] = router->is_named ? '=' : '~';
+  buf[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
   strlcpy(buf+1+HEX_DIGEST_LEN+1, router->nickname, MAX_NICKNAME_LEN+1);
 }
 

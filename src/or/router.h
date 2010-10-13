@@ -62,12 +62,12 @@ void router_new_address_suggestion(const char *suggestion,
                                    const dir_connection_t *d_conn);
 int router_compare_to_my_exit_policy(edge_connection_t *conn);
 int router_my_exit_policy_is_reject_star(void);
-routerinfo_t *router_get_my_routerinfo(void);
+const routerinfo_t *router_get_my_routerinfo(void);
 extrainfo_t *router_get_my_extrainfo(void);
 const char *router_get_my_descriptor(void);
 int router_digest_is_me(const char *digest);
 int router_extrainfo_digest_is_me(const char *digest);
-int router_is_me(routerinfo_t *router);
+int router_is_me(const routerinfo_t *router);
 int router_fingerprint_is_me(const char *fp);
 int router_pick_published_address(or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);

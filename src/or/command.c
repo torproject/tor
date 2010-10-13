@@ -25,6 +25,7 @@
 #include "control.h"
 #include "cpuworker.h"
 #include "hibernate.h"
+#include "nodelist.h"
 #include "onion.h"
 #include "relay.h"
 #include "router.h"
@@ -267,15 +268,18 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
   }
 
   if (circuit_id_in_use_on_orconn(cell->circ_id, conn)) {
-    routerinfo_t *router = router_get_by_digest(conn->identity_digest);
+    const node_t *node = node_get_by_id(conn->identity_digest);
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Received CREATE cell (circID %d) for known circ. "
            "Dropping (age %d).",
            cell->circ_id, (int)(time(NULL) - conn->_base.timestamp_created));
-    if (router)
+    if (node) {
+      char *p = esc_for_log(node_get_platform(node));
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Details: nickname \"%s\", platform %s.",
-             router->nickname, escaped(router->platform));
+             node_get_nickname(node), p);
+      tor_free(p);
+    }
     return;
   }
 
