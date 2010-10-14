@@ -780,7 +780,7 @@ dirserv_add_extrainfo(extrainfo_t *ei, const char **msg)
   tor_assert(msg);
   *msg = NULL;
 
-  ri = router_get_by_digest(ei->cache_info.identity_digest);
+  ri = router_get_by_id_digest(ei->cache_info.identity_digest);
   if (!ri) {
     *msg = "No corresponding router descriptor for extra-info descriptor";
     extrainfo_free(ei);
@@ -2057,7 +2057,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
   }
 
   if (format != NS_V2) {
-    const routerinfo_t* desc = router_get_by_digest(rs->identity_digest);
+    const routerinfo_t* desc = router_get_by_id_digest(rs->identity_digest);
     uint32_t bw;
 
     if (format != NS_CONTROL_PORT) {
@@ -3099,7 +3099,7 @@ dirserv_get_routerdescs(smartlist_t *descs_out, const char *key,
            if (ri)
              smartlist_add(descs_out, (void*) &(ri->cache_info));
          } else {
-           const routerinfo_t *ri = router_get_by_digest(d);
+           const routerinfo_t *ri = router_get_by_id_digest(d);
            /* Don't actually serve a descriptor that everyone will think is
             * expired.  This is an (ugly) workaround to keep buggy 0.1.1.10
             * Tors from downloading descriptors that they will throw away.
@@ -3299,7 +3299,7 @@ get_signed_descriptor_by_fp(const char *fp, int extrainfo,
     else
       return &(router_get_my_routerinfo()->cache_info);
   } else {
-    const routerinfo_t *ri = router_get_by_digest(fp);
+    const routerinfo_t *ri = router_get_by_id_digest(fp);
     if (ri &&
         ri->cache_info.published_on > publish_cutoff) {
       if (extrainfo)

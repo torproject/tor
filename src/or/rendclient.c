@@ -415,7 +415,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
     if (lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0) +
             REND_HID_SERV_DIR_REQUERY_PERIOD >= now ||
-        !router_get_by_digest(dir->identity_digest))
+        !router_get_by_id_digest(dir->identity_digest))
       SMARTLIST_DEL_CURRENT(responsible_dirs, dir);
   });
 

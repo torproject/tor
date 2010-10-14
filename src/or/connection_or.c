@@ -360,7 +360,7 @@ connection_or_digest_is_known_relay(const char *id_digest)
 {
   if (router_get_consensus_status_by_id(id_digest))
     return 1; /* It's in the consensus: "yes" */
-  if (router_get_by_digest(id_digest))
+  if (router_get_by_id_digest(id_digest))
     return 1; /* Not in the consensus, but we have a descriptor for
                * it. Probably it was in a recent consensus. "Yes". */
   return 0;
@@ -1342,7 +1342,7 @@ connection_or_set_state_open(or_connection_t *conn)
     router_set_status(conn->identity_digest, 1);
   } else {
     /* only report it to the geoip module if it's not a known router */
-    if (!router_get_by_digest(conn->identity_digest)) {
+    if (!router_get_by_id_digest(conn->identity_digest)) {
       if (tor_addr_family(&TO_CONN(conn)->addr) == AF_INET) {
         /*XXXX IP6 support ipv6 geoip.*/
         uint32_t a = tor_addr_to_ipv4h(&TO_CONN(conn)->addr);

@@ -2462,7 +2462,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
 int
 router_digest_version_as_new_as(const char *digest, const char *cutoff)
 {
-  const routerinfo_t *router = router_get_by_digest(digest);
+  const routerinfo_t *router = router_get_by_id_digest(digest);
   if (!router)
     return 1;
   return tor_version_as_new_as(router->platform, cutoff);
@@ -2526,7 +2526,7 @@ router_get_by_hexdigest(const char *hexdigest)
   return router_get_by_nickname(hexdigest, 1);
 }
 
-/** As router_get_by_digest,but return a pointer that you're allowed to
+/** As router_get_by_id_digest,but return a pointer that you're allowed to
  * modify */
 routerinfo_t *
 router_get_mutable_by_digest(const char *digest)
@@ -2543,7 +2543,7 @@ router_get_mutable_by_digest(const char *digest)
 /** Return the router in our routerlist whose 20-byte key digest
  * is <b>digest</b>.  Return NULL if no such router is known. */
 const routerinfo_t *
-router_get_by_digest(const char *digest)
+router_get_by_id_digest(const char *digest)
 {
   return router_get_mutable_by_digest(digest);
 }
@@ -4610,7 +4610,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
       if ((sd = router_get_by_descriptor_digest(rs->descriptor_digest))) {
         const routerinfo_t *ri;
         ++n_have;
-        if (!(ri = router_get_by_digest(rs->identity_digest)) ||
+        if (!(ri = router_get_by_id_digest(rs->identity_digest)) ||
             memcmp(ri->cache_info.signed_descriptor_digest,
                    sd->signed_descriptor_digest, DIGEST_LEN)) {
           /* We have a descriptor with this digest, but either there is no
@@ -4644,7 +4644,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         char time_bufnew[ISO_TIME_LEN+1];
         char time_bufold[ISO_TIME_LEN+1];
         const routerinfo_t *oldrouter;
-        oldrouter = router_get_by_digest(rs->identity_digest);
+        oldrouter = router_get_by_id_digest(rs->identity_digest);
         format_iso_time(time_bufnew, rs->published_on);
         if (oldrouter)
           format_iso_time(time_bufold, oldrouter->cache_info.published_on);
@@ -4765,7 +4765,7 @@ update_extrainfo_downloads(time_t now)
         sd = &((routerinfo_t*)smartlist_get(lst, i))->cache_info;
       if (sd->is_extrainfo)
         continue; /* This should never happen. */
-      if (old_routers && !router_get_by_digest(sd->identity_digest))
+      if (old_routers && !router_get_by_id_digest(sd->identity_digest))
         continue; /* Couldn't check the signature if we got it. */
       if (sd->extrainfo_is_bogus)
         continue;

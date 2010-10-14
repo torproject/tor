@@ -757,7 +757,7 @@ rep_hist_record_mtbf_data(time_t now, int missing_means_down)
     base16_encode(dbuf, sizeof(dbuf), digest, DIGEST_LEN);
 
     if (missing_means_down && hist->start_of_run &&
-        !router_get_by_digest(digest)) {
+        !router_get_by_id_digest(digest)) {
       /* We think this relay is running, but it's not listed in our
        * routerlist. Somehow it fell out without telling us it went
        * down. Complain and also correct it. */

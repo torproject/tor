@@ -622,7 +622,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   /** Warn when we get a netinfo skew with at least this value. */
 #define NETINFO_NOTICE_SKEW 3600
   if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
-      router_get_by_digest(conn->identity_digest)) {
+      router_get_by_id_digest(conn->identity_digest)) {
     char dbuf[64];
     int severity;
     /*XXXX be smarter about when everybody says we are skewed. */

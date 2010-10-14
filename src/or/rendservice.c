@@ -1578,7 +1578,7 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
                                 hs_dir->identity_digest))
         /* Don't upload descriptor if we succeeded in doing so last time. */
         continue;
-      if (!router_get_by_digest(hs_dir->identity_digest)) {
+      if (!router_get_by_id_digest(hs_dir->identity_digest)) {
         log_info(LD_REND, "Not sending publish request for v2 descriptor to "
                           "hidden service directory '%s'; we don't have its "
                           "router descriptor. Queuing for later upload.",
