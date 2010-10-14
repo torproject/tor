@@ -161,7 +161,7 @@ int can_complete_circuit=0;
 *
 ****************************************************************************/
 
-#ifdef USE_BUFFEREVENTS
+#if 0 && defined(USE_BUFFEREVENTS)
 static void
 free_old_inbuf(connection_t *conn)
 {
@@ -211,7 +211,12 @@ connection_add_impl(connection_t *conn, int is_connecting)
                          tor_libevent_get_base(),
                          conn->s,
                          BEV_OPT_DEFER_CALLBACKS);
-      /* XXXX CHECK FOR NULL RETURN! */
+      if (!conn->bufev) {
+        log_warn(LD_BUG, "Unable to create socket bufferevent");
+        smartlist_del(connection_array, conn->conn_array_index);
+        conn->conn_array_index = -1;
+        return -1;
+      }
       if (is_connecting) {
         /* Put the bufferevent into a "connecting" state so that we'll get
          * a "connected" event callback on successful write. */
@@ -223,10 +228,14 @@ connection_add_impl(connection_t *conn, int is_connecting)
       tor_assert(conn->s < 0);
       if (!conn->bufev) {
         struct bufferevent *pair[2] = { NULL, NULL };
-        /* XXXX CHECK FOR ERROR RETURN! */
-        bufferevent_pair_new(tor_libevent_get_base(),
-                             BEV_OPT_DEFER_CALLBACKS,
-                             pair);
+        if (bufferevent_pair_new(tor_libevent_get_base(),
+                                 BEV_OPT_DEFER_CALLBACKS,
+                                 pair) < 0) {
+          log_warn(LD_BUG, "Unable to create bufferevent pair");
+          smartlist_del(connection_array, conn->conn_array_index);
+          conn->conn_array_index = -1;
+          return -1;
+        }
         tor_assert(pair[0]);
         conn->bufev = pair[0];
         conn->linked_conn->bufev = pair[1];
@@ -236,18 +245,11 @@ connection_add_impl(connection_t *conn, int is_connecting)
       tor_assert(!conn->linked);
     }
 
-    if (conn->bufev && conn->inbuf) {
-      /* XXX Instead we should assert that there is no inbuf, once we
-       * have linked connections using bufferevents. */
-      free_old_inbuf(conn);
-    }
+    if (conn->bufev)
+      tor_assert(conn->inbuf == NULL);
 
-    if (conn->linked_conn && conn->linked_conn->bufev &&
-        conn->linked_conn->inbuf) {
-      /* XXX Instead we should assert that there is no inbuf, once we
-       * have linked connections using bufferevents. */
-      free_old_inbuf(conn->linked_conn);
-    }
+    if (conn->linked_conn && conn->linked_conn->bufev)
+      tor_assert(conn->linked_conn->inbuf == NULL);
   }
 #else
   (void) is_connecting;
