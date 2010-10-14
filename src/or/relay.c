@@ -1512,7 +1512,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
     if (!layer_hint || conn->cpath_layer == layer_hint) {
       connection_start_reading(TO_CONN(conn));
 
-      if (buf_datalen(conn->_base.inbuf) > 0)
+      if (connection_get_inbuf_len(TO_CONN(conn)) > 0)
         ++n_streams;
     }
   }
@@ -1551,7 +1551,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
       }
 
       /* If there's still data to read, we'll be coming back to this stream. */
-      if (buf_datalen(conn->_base.inbuf))
+      if (connection_get_inbuf_len(TO_CONN(conn)))
           ++n_streams_left;
 
       /* If the circuit won't accept any more data, return without looking
