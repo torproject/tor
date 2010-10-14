@@ -551,7 +551,6 @@ node_is_dir(const node_t *node)
     return 0;
 }
 
-
 /** Return true iff <b>node</b> has either kind of usable descriptor -- that
  * is, a routerdecriptor or a microdescriptor. */
 int
@@ -726,3 +725,4 @@ node_get_declared_family(const node_t *node)
   else
     return NULL;
 }
+

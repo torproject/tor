@@ -2289,7 +2289,8 @@ hex_digest_nickname_matches(const char *hexdigest, const char *identity_digest,
   return !memcmp(digest, identity_digest, DIGEST_LEN);
 }
 
-/* Return true iff <b>router</b> is listed as named in the current consensus. */
+/* Return true iff <b>router</b> is listed as named in the current
+ * consensus. */
 static int
 router_is_named(const routerinfo_t *router)
 {

@@ -1353,14 +1353,14 @@ parse_short_policy(const char *summary)
 
     if (tor_sscanf(ent_buf, "%u-%u%c", &low, &high, &dummy) == 2) {
       if (low<1 || low>65535 || high<1 || high>65535) {
-        log_fn(LOG_PROTOCOL_WARN, LD_DIR,"Found bad entry in policy summary %s",
-              escaped(orig_summary));
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR,
+               "Found bad entry in policy summary %s", escaped(orig_summary));
         return NULL;
       }
     } else if (tor_sscanf(ent_buf, "%u%c", &low, &dummy) == 1) {
       if (low<1 || low>65535) {
-        log_fn(LOG_PROTOCOL_WARN, LD_DIR,"Found bad entry in policy summary %s",
-               escaped(orig_summary));
+        log_fn(LOG_PROTOCOL_WARN, LD_DIR,
+               "Found bad entry in policy summary %s", escaped(orig_summary));
         return NULL;
       }
       high = low;
@@ -1447,7 +1447,8 @@ int
 short_policy_is_reject_star(const short_policy_t *policy)
 {
   /* This doesn't need to be as much on the lookout as policy_is_reject_star,
-   * since policy summaries are from the consensus or from consensus microdescs.
+   * since policy summaries are from the consensus or from consensus
+   * microdescs.
    */
   tor_assert(policy);
   /* Check for an exact match of "reject 1-65535". */

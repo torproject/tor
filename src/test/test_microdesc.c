@@ -226,7 +226,6 @@ test_md_cache(void *data)
   tor_free(fn);
 }
 
-
 struct testcase_t microdesc_tests[] = {
   { "cache", test_md_cache, TT_FORK, NULL, NULL },
   END_OF_TESTCASES
