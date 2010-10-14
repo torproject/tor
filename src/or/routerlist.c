@@ -1164,7 +1164,7 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   smartlist_free(trusted_tunnel);
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
-  return result->rs;
+  return result ? result->rs : NULL;
 }
 
 /** Choose randomly from among the trusted dirservers that are up.  Flags
@@ -1389,7 +1389,7 @@ routerlist_add_nodes_in_family(smartlist_t *sl, const routerinfo_t *router)
     memcpy(fake_node.identity, router->cache_info.identity_digest, DIGEST_LEN);
     node = &fake_node;
   }
-  nodelist_add_node_family(sl, &fake_node);
+  nodelist_add_node_family(sl, node);
 }
 
 /** Return true iff <b>node</b> is named by some nickname in <b>lst</b>. */
@@ -1883,7 +1883,6 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
                                    bandwidth_weight_rule_t rule)
 {
   unsigned i;
-  const routerstatus_t *status=NULL;
   int32_t *bandwidths;
   int is_exit;
   int is_guard;
@@ -1938,12 +1937,12 @@ smartlist_choose_node_by_bandwidth(smartlist_t *sl,
     is_guard = node->is_possible_guard;
     if (node->rs) {
       if (node->rs->has_bandwidth) {
-        this_bw = kb_to_bytes(status->bandwidth);
+        this_bw = kb_to_bytes(node->rs->bandwidth);
       } else { /* guess */
         /* XXX022 once consensuses always list bandwidths, we can take
          * this guessing business out. -RD */
         is_known = 0;
-        flags = status->is_fast ? 1 : 0;
+        flags = node->rs->is_fast ? 1 : 0;
         flags |= is_exit ? 2 : 0;
         flags |= is_guard ? 4 : 0;
       }
