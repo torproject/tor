@@ -55,12 +55,5 @@ void node_set_country(node_t *node);
 void nodelist_add_node_family(smartlist_t *nodes, const node_t *node);
 int nodes_in_same_family(const node_t *node1, const node_t *node2);
 
-/* This means: implement this code or function or thing, nick! */
-#define UNIMPLEMENTED_NODELIST()                        \
-  while (unimplemented_nodelist_truth) {                \
-    tor_assert(0);                                      \
-  }
-extern int unimplemented_nodelist_truth;
-
 #endif
 

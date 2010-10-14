@@ -605,6 +605,9 @@ node_allows_single_hop_exits(const node_t *node)
 int
 node_exit_policy_rejects_all(const node_t *node)
 {
+  if (node->rejects_all)
+    return 1;
+
   if (node->ri)
     return node->ri->policy_is_reject_star;
   else if (node->md)
@@ -723,8 +726,3 @@ node_get_declared_family(const node_t *node)
   else
     return NULL;
 }
-
-/* KILLTHIS XXXX NM -- it's a dummy to keep UNIMPLEMENTED_NODELIST()
- * working */
-int unimplemented_nodelist_truth = 1;
-

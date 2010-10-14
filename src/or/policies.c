@@ -875,25 +875,11 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   return 0;
 }
 
-#if 0
-/** Replace the exit policy of <b>r</b> with reject *:*. */
-void
-policies_set_router_exitpolicy_to_reject_all(routerinfo_t *r)
-{
-  addr_policy_t *item;
-  addr_policy_list_free(r->exit_policy);
-  r->exit_policy = smartlist_create();
-  item = router_parse_addr_policy_item_from_string("reject *:*", -1);
-  smartlist_add(r->exit_policy, item);
-}
-#endif
-
 /** Replace the exit policy of <b>node</b> with reject *:* */
 void
 policies_set_node_exitpolicy_to_reject_all(node_t *node)
 {
-  (void)node;
-  UNIMPLEMENTED_NODELIST();
+  node->rejects_all = 1;
 }
 
 /** Return 1 if there is at least one /8 subnet in <b>policy</b> that
@@ -1488,6 +1474,9 @@ addr_policy_result_t
 compare_tor_addr_to_node_policy(const tor_addr_t *addr, uint16_t port,
                                 const node_t *node)
 {
+  if (node->rejects_all)
+    return ADDR_POLICY_REJECTED;
+
   if (node->ri)
     return compare_tor_addr_to_addr_policy(addr, port, node->ri->exit_policy);
   else if (node->md && node->md) {

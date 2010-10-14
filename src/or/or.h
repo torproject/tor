@@ -1768,6 +1768,9 @@ typedef struct node_t {
                                       * to this (unnamed) router by nickname?
                                       */
 
+  /** Local info: we treat this node as if it rejects everything */
+  unsigned int rejects_all:1;
+
   /* Local info: derived. */
 
   /** According to the geoip db what country is this router in? */

@@ -1044,7 +1044,7 @@ run_scheduled_events(time_t now)
    */
   consider_hibernation(now);
 
-  /* XXXX NM REMOVE THIS. XXXX NM XXXX NM XXXX NM*/
+#if 0
   {
     static time_t nl_check_time = 0;
     if (nl_check_time <= now) {
@@ -1052,6 +1052,7 @@ run_scheduled_events(time_t now)
       nl_check_time = now + 30;
     }
   }
+#endif
 
   /* 0b. If we've deferred a signewnym, make sure it gets handled
    * eventually. */
