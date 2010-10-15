@@ -288,11 +288,20 @@ void
 aes_crypt(aes_cnt_cipher_t *cipher, const char *input, size_t len,
           char *output)
 {
-
-  /* XXXX This function is up to 5% of our runtime in some profiles;
-   * we should look into unrolling some of the loops; taking advantage
-   * of alignment, using a bigger buffer, and so on. Not till after 0.1.2.x,
-   * though. */
+  /* This function alone is up to 5% of our runtime in some profiles; anything
+   * we could do to make it faster would be great.
+   *
+   * Experimenting suggests that unrolling the inner loop into a switch
+   * statement doesn't help.  What does seem to help is making the input and
+   * output buffers word aligned, and never crypting anything besides an
+   * integer number of words at a time -- it shaves maybe 4-5% of the per-byte
+   * encryption time measured by bench_aes. We can't do that with the current
+   * Tor protocol, though: Tor really likes to crypt things in 509-byte
+   * chunks.
+   *
+   * If we were really ambitous, we'd force len to be a multiple of the block
+   * size, and shave maybe another 4-5% off.
+   */
   int c = cipher->pos;
   if (PREDICT_UNLIKELY(!len)) return;
 
