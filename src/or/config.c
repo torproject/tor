@@ -2336,7 +2336,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   int explicit_ip=1;
   int explicit_hostname=1;
   int from_interface=0;
-  char *tmpbuf;
+  char *addr_string = NULL;
   const char *address = options->Address;
   int notice_severity = warn_severity <= LOG_NOTICE ?
                           LOG_NOTICE : warn_severity;
@@ -2410,7 +2410,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
     }
   }
 
-  tmpbuf = tor_dup_ip(addr);
+  addr_string = tor_dup_ip(addr);
   if (is_internal_IP(addr, 0) && options->_PublishServerDescriptor) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers && !options->AlternateDirAuthority) {
@@ -2419,7 +2419,8 @@ resolve_my_address(int warn_severity, or_options_t *options,
       log_fn(warn_severity, LD_CONFIG,
              "Address '%s' resolves to private IP address '%s'. "
              "Tor servers that use the default DirServers must have public "
-             "IP addresses.", hostname, tmpbuf);
+             "IP addresses.", hostname, addr_string);
+      tor_free(addr_string);
       return -1;
     }
     if (!explicit_ip) {
@@ -2427,7 +2428,8 @@ resolve_my_address(int warn_severity, or_options_t *options,
        * they're using an internal address. */
       log_fn(warn_severity, LD_CONFIG, "Address '%s' resolves to private "
              "IP address '%s'. Please set the Address config option to be "
-             "the IP address you want to use.", hostname, tmpbuf);
+             "the IP address you want to use.", hostname, addr_string);
+      tor_free(addr_string);
       return -1;
     }
   }
@@ -2439,7 +2441,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
      * at least until dynamic IP address support becomes bulletproof. */
     log_notice(LD_NET,
                "Your IP address seems to have changed to %s. Updating.",
-               tmpbuf);
+               addr_string);
     ip_address_changed(0);
   }
   if (last_resolved_addr != *addr_out) {
@@ -2458,12 +2460,12 @@ resolve_my_address(int warn_severity, or_options_t *options,
     }
     control_event_server_status(LOG_NOTICE,
                                 "EXTERNAL_ADDRESS ADDRESS=%s METHOD=%s %s%s",
-                                tmpbuf, method, h?"HOSTNAME=":"", h);
+                                addr_string, method, h?"HOSTNAME=":"", h);
   }
   last_resolved_addr = *addr_out;
   if (hostname_out)
     *hostname_out = tor_strdup(hostname);
-  tor_free(tmpbuf);
+  tor_free(addr_string);
   return 0;
 }
 
