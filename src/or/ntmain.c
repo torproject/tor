@@ -183,7 +183,6 @@ nt_service_loadlibrary(void)
  */
 int
 nt_service_is_stopping(void)
-/* XXXX this function would probably _love_ to be inline, in 0.2.0. */
 {
   /* If we haven't loaded the function pointers, we can't possibly be an NT
    * service trying to shut down. */
