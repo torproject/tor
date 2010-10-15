@@ -248,14 +248,22 @@ void update_approx_time(time_t now);
 #endif
 
 /* Fuzzy time. */
-void ftime_set_maximum_sloppiness(int seconds);
-void ftime_set_estimated_skew(int seconds);
-/* typedef struct ftime_t { time_t earliest; time_t latest; } ftime_t; */
-/* void ftime_get_window(time_t now, ftime_t *ft_out); */
-int ftime_maybe_after(time_t now, time_t when);
-int ftime_maybe_before(time_t now, time_t when);
-int ftime_definitely_after(time_t now, time_t when);
-int ftime_definitely_before(time_t now, time_t when);
+
+/** Return true iff <a>a</b> is definitely after <b>b</b>, even if there
+ * could be up to <b>allow_seconds</b> of skew in one of them. */
+static INLINE int
+time_definitely_after(time_t a, time_t b, int allow_skew)
+{
+  return a-allow_skew > b;
+}
+
+/** Return true iff <a>a</b> is definitely before <b>b</b>, even if there
+ * could be up to <b>allow_seconds</b> of skew in one of them. */
+static INLINE int
+time_definitely_before(time_t a, time_t b, int allow_skew)
+{
+  return a+allow_skew < b;
+}
 
 /* Rate-limiter */
 

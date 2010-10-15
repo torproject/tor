@@ -315,6 +315,7 @@ trusted_dirs_remove_old_certs(void)
   time_t now = time(NULL);
 #define DEAD_CERT_LIFETIME (2*24*60*60)
 #define OLD_CERT_LIFETIME (7*24*60*60)
+#define CERT_EXPIRY_SKEW (60*60)
   if (!trusted_dir_certs)
     return;
 
@@ -331,7 +332,7 @@ trusted_dirs_remove_old_certs(void)
         time_t cert_published;
         if (newest == cert)
           continue;
-        expired = ftime_definitely_after(now, cert->expires);
+        expired = time_definitely_after(now, cert->expires, CERT_EXPIRY_SKEW);
         cert_published = cert->cache_info.published_on;
         /* Store expired certs for 48 hours after a newer arrives;
          */
@@ -523,7 +524,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       continue;
     cl = get_cert_list(ds->v3_identity_digest);
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
-      if (!ftime_definitely_after(now, cert->expires)) {
+      if (! time_definitely_after(now, cert->expires, CERT_EXPIRY_SKEW)) {
         /* It's not expired, and we weren't looking for something to
          * verify a consensus with.  Call it done. */
         download_status_reset(&cl->dl_status);
@@ -1444,60 +1445,6 @@ nodes_in_same_family(const node_t *node1, const node_t *node2)
 
   return 0;
 }
-
-#if 0
-/** Given a (possibly NULL) comma-and-whitespace separated list of nicknames,
- * see which nicknames in <b>list</b> name nodes we know about, and add
- * the nodes for those routers to <b>sl</b>.  If <b>must_be_running</b>,
- * only include routers that we think are running.
- * Warn if any non-Named routers are specified by nickname.
- */
-static void
-add_nickname_list_to_smartlist(smartlist_t *sl, const char *list,
-                               int must_be_running)
-{ /*XXXX MOVE or Kill. */
-  /*XXXX this is only used in one place. Can we kill it?*/
-  const node_t *node;
-  const routerinfo_t *router;
-  smartlist_t *nickname_list;
-  int have_dir_info = router_have_minimum_dir_info();
-
-  if (!list)
-    return; /* nothing to do */
-  tor_assert(sl);
-
-  nickname_list = smartlist_create();
-  if (!warned_nicknames)
-    warned_nicknames = smartlist_create();
-
-  smartlist_split_string(nickname_list, list, ",",
-                         SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 0);
-
-  SMARTLIST_FOREACH_BEGIN(nickname_list, const char *, nick) {
-    int warned;
-    if (!is_legal_nickname_or_hexdigest(nick)) {
-      log_warn(LD_CONFIG, "Nickname '%s' is misformed; skipping", nick);
-      continue;
-    }
-    node = node_get_by_nickname(nick, 1);
-    router = node->ri;
-    warned = smartlist_string_isin(warned_nicknames, nick);
-    if (node) {
-      if (!must_be_running || node->is_running) {
-        smartlist_add(sl,(void*)node);
-      }
-    } else if (!router_get_consensus_status_by_nickname(nick,1)) {
-      if (!warned) {
-        log_fn(have_dir_info ? LOG_WARN : LOG_INFO, LD_CONFIG,
-               "Nickname list includes '%s' which isn't a known router.",nick);
-        smartlist_add(warned_nicknames, tor_strdup(nick));
-      }
-    }
-  } SMARTLIST_FOREACH_END(nick);
-  SMARTLIST_FOREACH(nickname_list, char *, nick, tor_free(nick));
-  smartlist_free(nickname_list);
-}
-#endif
 
 /** Return 1 iff any member of the (possibly NULL) comma-separated list
  * <b>list</b> is an acceptable nickname or hexdigest for <b>router</b>.  Else

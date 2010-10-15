@@ -1800,7 +1800,7 @@ networkstatus_set_current_consensus(const char *consensus,
     write_str_to_file(consensus_fname, consensus, 0);
   }
 
-  if (ftime_definitely_before(now, c->valid_after)) {
+  if (time_definitely_before(now, c->valid_after, 60)) {
     char tbuf[ISO_TIME_LEN+1];
     char dbuf[64];
     long delta = now - c->valid_after;
