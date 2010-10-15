@@ -2189,7 +2189,6 @@ typedef struct circ_buffer_stats_t {
   uint32_t processed_cells;
   double mean_num_cells_in_queue;
   double mean_time_cells_in_queue;
-  uint32_t local_circ_id;
 } circ_buffer_stats_t;
 
 /** Holds stats. */
