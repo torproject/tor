@@ -332,6 +332,13 @@ struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
 struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 #endif
 
+/** Return true iff the tvp is related to uvp according to the relational
+ * operator cmp.  Recognized values for cmp are ==, <=, <, >=, and >. */
+#define tor_timercmp(tvp, uvp, cmp)                                     \
+  (((tvp)->tv_sec == (uvp)->tv_sec) ?                                   \
+   ((tvp)->tv_usec cmp  (uvp)->tv_usec) :                               \
+   ((tvp)->tv_sec cmp  (uvp)->tv_sec))
+
 /* ===== File compatibility */
 int replace_file(const char *from, const char *to);
 int touch_file(const char *fname);
