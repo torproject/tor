@@ -1281,7 +1281,7 @@ connection_connect(connection_t *conn, const char *address,
   int s, inprogress = 0;
   char addrbuf[256];
   struct sockaddr *dest_addr = (struct sockaddr*) addrbuf;
-  socklen_t dest_addr_len;
+  int dest_addr_len;
   or_options_t *options = get_options();
   int protocol_family;
 
@@ -1337,7 +1337,7 @@ connection_connect(connection_t *conn, const char *address,
   log_debug(LD_NET, "Connecting to %s:%u.",
             escaped_safe_str_client(address), port);
 
-  if (connect(s, dest_addr, dest_addr_len) < 0) {
+  if (connect(s, dest_addr, (socklen_t)dest_addr_len) < 0) {
     int e = tor_socket_errno(s);
     if (!ERRNO_IS_CONN_EINPROGRESS(e)) {
       /* yuck. kill it. */
