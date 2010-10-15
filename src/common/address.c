@@ -925,8 +925,9 @@ fmt_addr(const tor_addr_t *addr)
   return buf;
 }
 
-/** Like fmt_addr(), but for IPv4 addresses. Also not thread-safe, also
- * clobbers its return buffer on repeated calls. */
+/** Like fmt_addr(), but takes <b>addr</b> as a host-order IPv4
+ * addresses. Also not thread-safe, also clobbers its return buffer on
+ * repeated calls. */
 const char *
 fmt_addr32(uint32_t addr)
 {
