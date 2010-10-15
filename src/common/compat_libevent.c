@@ -187,6 +187,8 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
 #endif
 
     the_event_base = event_base_new_with_config(cfg);
+
+    event_config_free(cfg);
   }
 #else
   the_event_base = event_init();
