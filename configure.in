@@ -352,7 +352,7 @@ dnl This isn't the best test for Libevent 2.0.3-alpha.  Once it's released,
 dnl we can do much better.
 if test "$enable_bufferevents" = "yes" ; then
   if test "$ac_cv_header_event2_bufferevent_ssl_h" != "yes" ; then
-    AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.7-rc or later, and you don't seem to even have Libevent 2.0.3-alpha.])
+    AC_MSG_ERROR([You've asked for bufferevent support, but you're using a version of Libevent without SSL support.  This won't work.  We need Libevent 2.0.8-rc or later, and you don't seem to even have Libevent 2.0.3-alpha.])
   else
 
     CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent"
@@ -375,7 +375,7 @@ int x = 1;
       AC_MSG_CHECKING([whether Libevent is new enough for bufferevents])
       AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 #include <event2/event.h>
-#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000700
+#if !defined(LIBEVENT_VERSION_NUMBER) || LIBEVENT_VERSION_NUMBER < 0x02000800
 #error
 int x = y(zz);
 #else
@@ -383,7 +383,7 @@ int x = 1;
 #endif
    ])], [ AC_MSG_RESULT([yes]) ],
       [ AC_MSG_RESULT([no])
-        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.7-rc or later]) ] )
+        AC_MSG_ERROR([Libevent does not seem new enough to support bufferevents.  We require 2.0.8-rc or later]) ] )
     fi
   fi
 fi
