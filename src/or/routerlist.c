@@ -3186,15 +3186,6 @@ router_set_status(const char *digest, int up)
     node->is_running = up;
   }
 
-#if 0
-  /* No, don't change routerstatus's is_running.  I have confirmed that
-   * nothing uses it to ask "is the node running? */
-  status = router_get_mutable_consensus_status_by_id(digest);
-  if (status && status->is_running != up) {
-    status->is_running = up;
-    control_event_networkstatus_changed_single(status);
-  }
-#endif
   router_dir_info_changed();
 }
 
@@ -5314,38 +5305,6 @@ routerset_get_countryname(const char *c)
   tor_strlower(country);
   return country;
 }
-
-#if 0
-/** Add the GeoIP database's integer index (+1) of a valid two-character
- * country code to the routerset's <b>countries</b> bitarray. Return the
- * integer index if the country code is valid, -1 otherwise.*/
-static int
-routerset_add_country(const char *c)
-{
-  char country[3];
-  country_t cc;
-
-  /* XXXX: Country codes must be of the form \{[a-z\?]{2}\} but this accepts
-     \{[.]{2}\}. Do we need to be strict? -RH */
-  /* Nope; if the country code is bad, we'll get 0 when we look it up. */
-
-  if (!geoip_is_loaded()) {
-    log(LOG_WARN, LD_CONFIG, "GeoIP database not loaded: Cannot add country"
-                             "entry %s, ignoring.", c);
-    return -1;
-  }
-
-  memcpy(country, c+1, 2);
-  country[2] = '\0';
-  tor_strlower(country);
-
-  if ((cc=geoip_get_country(country))==-1) {
-    log(LOG_WARN, LD_CONFIG, "Country code '%s' is not valid, ignoring.",
-        country);
-  }
-  return cc;
-}
-#endif
 
 /** Update the routerset's <b>countries</b> bitarray_t. Called whenever
  * the GeoIP database is reloaded.
