@@ -87,10 +87,7 @@ orconn_circid_circuit_map_t *_last_circid_orconn_ent = NULL;
 /** Implementation helper for circuit_set_{p,n}_circid_orconn: A circuit ID
  * and/or or_connection for circ has just changed from <b>old_conn, old_id</b>
  * to <b>conn, id</b>.  Adjust the conn,circid map as appropriate, removing
- * the old entry (if any) and adding a new one.  If <b>active</b> is true,
- * remove the circuit from the list of active circuits on old_conn and add it
- * to the list of active circuits on conn.
- * XXX "active" isn't an arg anymore */
+ * the old entry (if any) and adding a new one. */
 static void
 circuit_set_circid_orconn_helper(circuit_t *circ, int direction,
                                  circid_t id,
