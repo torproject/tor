@@ -1985,20 +1985,16 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                           routerstatus_format_type_t format)
 {
   int r;
-  struct in_addr in;
   char *cp;
   char *summary;
 
   char published[ISO_TIME_LEN+1];
-  char ipaddr[INET_NTOA_BUF_LEN];
   char identity64[BASE64_DIGEST_LEN+1];
   char digest64[BASE64_DIGEST_LEN+1];
 
   format_iso_time(published, rs->published_on);
   digest_to_base64(identity64, rs->identity_digest);
   digest_to_base64(digest64, rs->descriptor_digest);
-  in.s_addr = htonl(rs->addr);
-  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
 
   r = tor_snprintf(buf, buf_len,
                    "r %s %s %s%s%s %s %d %d\n",
@@ -2007,7 +2003,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
                    (format==NS_V3_CONSENSUS_MICRODESC)?"":digest64,
                    (format==NS_V3_CONSENSUS_MICRODESC)?"":" ",
                    published,
-                   ipaddr,
+                   fmt_addr32(rs->addr),
                    (int)rs->or_port,
                    (int)rs->dir_port);
   if (r<0) {
@@ -2722,10 +2718,8 @@ generate_v2_networkstatus_opinion(void)
   char *outp, *endp;
   or_options_t *options = get_options();
   char fingerprint[FINGERPRINT_LEN+1];
-  char ipaddr[INET_NTOA_BUF_LEN];
   char published[ISO_TIME_LEN+1];
   char digest[DIGEST_LEN];
-  struct in_addr in;
   uint32_t addr;
   crypto_pk_env_t *private_key;
   routerlist_t *rl = router_get_routerlist();
@@ -2746,8 +2740,6 @@ generate_v2_networkstatus_opinion(void)
     log_warn(LD_NET, "Couldn't resolve my hostname");
     goto done;
   }
-  in.s_addr = htonl(addr);
-  tor_inet_ntoa(&in, ipaddr, sizeof(ipaddr));
 
   format_iso_time(published, now);
 
@@ -2793,7 +2785,7 @@ generate_v2_networkstatus_opinion(void)
                "dir-options%s%s%s%s\n"
                "%s" /* client version line, server version line. */
                "dir-signing-key\n%s",
-               hostname, ipaddr, (int)options->DirPort,
+               hostname, fmt_addr32(addr), (int)options->DirPort,
                fingerprint,
                contact,
                published,

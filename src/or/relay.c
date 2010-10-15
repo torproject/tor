@@ -908,12 +908,8 @@ connection_edge_process_relay_cell_not_open(
       int ttl;
       if (!addr || (get_options()->ClientDNSRejectInternalAddresses &&
                     is_internal_IP(addr, 0))) {
-        char buf[INET_NTOA_BUF_LEN];
-        struct in_addr a;
-        a.s_addr = htonl(addr);
-        tor_inet_ntoa(&a, buf, sizeof(buf));
-        log_info(LD_APP,
-                 "...but it claims the IP address was %s. Closing.", buf);
+        log_info(LD_APP, "...but it claims the IP address was %s. Closing.",
+                 fmt_addr32(addr));
         connection_edge_end(conn, END_STREAM_REASON_TORPROTOCOL);
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return 0;
@@ -990,11 +986,8 @@ connection_edge_process_relay_cell_not_open(
       uint32_t addr = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE+2));
       if (get_options()->ClientDNSRejectInternalAddresses &&
           is_internal_IP(addr, 0)) {
-        char buf[INET_NTOA_BUF_LEN];
-        struct in_addr a;
-        a.s_addr = htonl(addr);
-        tor_inet_ntoa(&a, buf, sizeof(buf));
-        log_info(LD_APP,"Got a resolve with answer %s.  Rejecting.", buf);
+        log_info(LD_APP,"Got a resolve with answer %s. Rejecting.",
+                 fmt_addr32(addr));
         connection_ap_handshake_socks_resolved(conn,
                                                RESOLVED_TYPE_ERROR_TRANSIENT,
                                                0, NULL, 0, TIME_MAX);

@@ -925,6 +925,18 @@ fmt_addr(const tor_addr_t *addr)
   return buf;
 }
 
+/** Like fmt_addr(), but for IPv4 addresses. Also not thread-safe, also
+ * clobbers its return buffer on repeated calls. */
+const char *
+fmt_addr32(uint32_t addr)
+{
+  static char buf[INET_NTOA_BUF_LEN];
+  struct in_addr in;
+  in.s_addr = htonl(addr);
+  tor_inet_ntoa(&in, buf, sizeof(buf));
+  return buf;
+}
+
 /** Convert the string in <b>src</b> to a tor_addr_t <b>addr</b>.  The string
  * may be an IPv4 address, an IPv6 address, or an IPv6 address surrounded by
  * square brackets.

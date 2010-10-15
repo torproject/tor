@@ -1185,7 +1185,6 @@ static char *
 addressmap_get_virtual_address(int type)
 {
   char buf[64];
-  struct in_addr in;
   tor_assert(addressmap);
 
   if (type == RESOLVED_TYPE_HOSTNAME) {
@@ -1206,9 +1205,7 @@ addressmap_get_virtual_address(int type)
              (next_virtual_addr & 0xff) == 0xff) {
         ++next_virtual_addr;
       }
-      in.s_addr = htonl(next_virtual_addr);
-      tor_inet_ntoa(&in, buf, sizeof(buf));
-      if (!strmap_get(addressmap, buf)) {
+      if (!strmap_get(addressmap, fmt_addr32(next_virtual_addr))) {
         ++next_virtual_addr;
         break;
       }
@@ -2298,13 +2295,11 @@ tell_controller_about_resolved_result(edge_connection_t *conn,
                    answer_type == RESOLVED_TYPE_HOSTNAME)) {
     return; /* we already told the controller. */
   } else if (answer_type == RESOLVED_TYPE_IPV4 && answer_len >= 4) {
-    struct in_addr in;
-    char buf[INET_NTOA_BUF_LEN];
-    in.s_addr = get_uint32(answer);
-    tor_inet_ntoa(&in, buf, sizeof(buf));
+    char *cp = tor_dup_ip(get_uint32(answer));
     control_event_address_mapped(conn->socks_request->address,
-                                 buf, expires, NULL);
-  } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len <256) {
+                                 cp, expires, NULL);
+    tor_free(cp);
+  } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256) {
     char *cp = tor_strndup(answer, answer_len);
     control_event_address_mapped(conn->socks_request->address,
                                  cp, expires, NULL);
