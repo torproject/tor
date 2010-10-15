@@ -1088,7 +1088,7 @@ policy_summary_split(smartlist_t *summary,
   int start_at_index;
 
   int i = 0;
-  /* XXXX Do a binary search if run time matters */
+
   while (AT(i)->prt_max < prt_min)
     i++;
   if (AT(i)->prt_min != prt_min) {

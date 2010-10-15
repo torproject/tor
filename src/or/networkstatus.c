@@ -971,7 +971,7 @@ networkstatus_vote_find_entry(networkstatus_t *ns, const char *digest)
   return networkstatus_vote_find_mutable_entry(ns, digest);
 }
 
-/*XXXX make this static once functions are moved into this file. */
+/*XXXX MOVE make this static once functions are moved into this file. */
 /** Search the routerstatuses in <b>ns</b> for one whose identity digest is
  * <b>digest</b>.  Return value and set *<b>found_out</b> as for
  * smartlist_bsearch_idx(). */
@@ -2031,7 +2031,6 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
   } SMARTLIST_FOREACH_JOIN_END(rs, router);
 
   /* Now update last_listed_as_valid_until from v2 networkstatuses. */
-  /* XXXX If this is slow, we need to rethink the code. */
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns, {
     time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
     SMARTLIST_FOREACH_JOIN(ns->entries, const routerstatus_t *, rs,

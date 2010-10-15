@@ -2656,7 +2656,6 @@ routerinfo_free(routerinfo_t *router)
   }
   addr_policy_list_free(router->exit_policy);
 
-  /* XXXX Remove if this turns out to affect performance. */
   memset(router, 77, sizeof(routerinfo_t));
 
   tor_free(router);
@@ -2671,7 +2670,6 @@ extrainfo_free(extrainfo_t *extrainfo)
   tor_free(extrainfo->cache_info.signed_descriptor_body);
   tor_free(extrainfo->pending_sig);
 
-  /* XXXX remove this if it turns out to slow us down. */
   memset(extrainfo, 88, sizeof(extrainfo_t)); /* debug bad memory usage */
   tor_free(extrainfo);
 }
@@ -2685,7 +2683,6 @@ signed_descriptor_free(signed_descriptor_t *sd)
 
   tor_free(sd->signed_descriptor_body);
 
-  /* XXXX remove this once more bugs go away. */
   memset(sd, 99, sizeof(signed_descriptor_t)); /* Debug bad mem usage */
   tor_free(sd);
 }
@@ -2787,7 +2784,6 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
   routerinfo_t *ri_old;
   {
-    /* XXXX Remove if this slows us down. */
     const routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri);
   }
@@ -2823,7 +2819,6 @@ extrainfo_insert(routerlist_t *rl, extrainfo_t *ei)
   extrainfo_t *ei_tmp;
 
   {
-    /* XXXX remove this code if it slows us down. */
     extrainfo_t *ei_generated = router_get_my_extrainfo();
     tor_assert(ei_generated != ei);
   }
@@ -2869,7 +2864,6 @@ static void
 routerlist_insert_old(routerlist_t *rl, routerinfo_t *ri)
 {
   {
-    /* XXXX remove this code if it slows us down. */
     const routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri);
   }
@@ -3022,7 +3016,6 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
   {
-    /* XXXX Remove this if it turns out to slow us down. */
     const routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri_new);
   }

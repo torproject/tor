@@ -3032,8 +3032,6 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
     nodelist_add_node_family(excluded, node);
   }
   if (firewall_is_fascist_or()) {
-    /*XXXX This could slow things down a lot; use a smarter implementation */
-    /* exclude all ORs that listen on the wrong port, if anybody notices. */
     smartlist_t *nodes = nodelist_get_list();
     SMARTLIST_FOREACH(nodes, const node_t *,node, {
       if (!fascist_firewall_allows_node(node))
