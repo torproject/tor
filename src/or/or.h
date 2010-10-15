@@ -2261,7 +2261,7 @@ typedef struct circuit_t {
   char *n_conn_onionskin;
 
   /** When was this circuit created?  We keep this timestamp with a higher
-   * resolution tham most so that the circuit-build-time tracking code can
+   * resolution than most so that the circuit-build-time tracking code can
    * get millisecond resolution. */
   struct timeval timestamp_created;
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
