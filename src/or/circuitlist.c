@@ -397,8 +397,7 @@ circuit_initial_package_window(void)
 static void
 init_circuit_base(circuit_t *circ)
 {
-  circ->timestamp_created = time(NULL);
-  tor_gettimeofday(&circ->highres_created);
+  tor_gettimeofday(&circ->timestamp_created);
 
   circ->package_window = circuit_initial_package_window();
   circ->deliver_window = CIRCWINDOW_START;
@@ -610,7 +609,8 @@ circuit_dump_details(int severity, circuit_t *circ, int conn_array_index,
   log(severity, LD_CIRC, "Conn %d has %s circuit: circID %d (other side %d), "
       "state %d (%s), born %d:",
       conn_array_index, type, this_circid, other_circid, circ->state,
-      circuit_state_to_string(circ->state), (int)circ->timestamp_created);
+      circuit_state_to_string(circ->state),
+      (int)circ->timestamp_created.tv_sec);
   if (CIRCUIT_IS_ORIGIN(circ)) { /* circ starts at this node */
     circuit_log_path(severity, LD_CIRC, TO_ORIGIN_CIRCUIT(circ));
   }

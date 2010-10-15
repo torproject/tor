@@ -2212,9 +2212,9 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
     return;
   if (!circuits_for_buffer_stats)
     circuits_for_buffer_stats = smartlist_create();
-  start_of_interval = circ->timestamp_created >
-      start_of_buffer_stats_interval ?
-        circ->timestamp_created :
+  start_of_interval = (circ->timestamp_created.tv_sec >
+                       start_of_buffer_stats_interval) ?
+        circ->timestamp_created.tv_sec :
         start_of_buffer_stats_interval;
   interval_length = (int) (end_of_interval - start_of_interval);
   stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));

@@ -2260,10 +2260,12 @@ typedef struct circuit_t {
     * length ONIONSKIN_CHALLENGE_LEN. */
   char *n_conn_onionskin;
 
-  time_t timestamp_created; /**< When was this circuit created? */
+  /** When was this circuit created?  We keep this timestamp with a higher
+   * resolution tham most so that the circuit-build-time tracking code can
+   * get millisecond resolution. */
+  struct timeval timestamp_created;
   time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
                            * circuit is clean. */
-  struct timeval highres_created; /**< When exactly was the circuit created? */
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of
                               * the main loop? (If true, holds the line number
