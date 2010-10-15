@@ -341,7 +341,7 @@ tor_check_libevent_version(const char *m, int server,
   version = tor_get_libevent_version(&v);
 
   /* It would be better to disable known-buggy methods than to simply
-     warn about them.  However, it's not trivial to get libevent to change it's
+     warn about them.  However, it's not trivial to get libevent to change its
      method once it's initialized, and it's not trivial to tell what method it
      will use without initializing it.
 
