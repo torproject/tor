@@ -2419,24 +2419,12 @@ new_route_len(uint8_t purpose, extend_info_t *exit,
   return routelen;
 }
 
-/** Fetch the list of predicted ports, dup it into a smartlist of
- * uint16_t's, remove the ones that are already handled by an
- * existing circuit, and return it.
- */
+/** Return a newly allocated list of uint16_t * for each predicted port not
+ * handled by a current circuit. */
 static smartlist_t *
 circuit_get_unhandled_ports(time_t now)
 {
-  smartlist_t *source = rep_hist_get_predicted_ports(now);
-  smartlist_t *dest = smartlist_create();
-  uint16_t *tmp;
-  int i;
-
-  for (i = 0; i < smartlist_len(source); ++i) {
-    tmp = tor_malloc(sizeof(uint16_t));
-    memcpy(tmp, smartlist_get(source, i), sizeof(uint16_t));
-    smartlist_add(dest, tmp);
-  }
-
+  smartlist_t *dest = rep_hist_get_predicted_ports(now);
   circuit_remove_handled_ports(dest);
   return dest;
 }
