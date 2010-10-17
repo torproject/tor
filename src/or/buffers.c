@@ -1642,14 +1642,23 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
 
     case 1: /* socks5: username/password authentication request */
 
-      usernamelen = (unsigned char)*(buf->head->data + 1);
-      if (buf->datalen < 2u + usernamelen)
+      if (req->socks_version != 5) {
+        log_warn(LD_APP,
+                 "socks5: Received authentication attempt before "
+                 "authentication negotiated. Rejecting.");
+        return -1;
+      }
+      usernamelen = (unsigned char)*(data + 1);
+      if (datalen < 2u + usernamelen) {
+        *want_length_out = 2u+usernamelen;
         return 0;
-      buf_pullup(buf, 2u + usernamelen + 1, 0);
-      passlen = (unsigned char)*(buf->head->data + 2u + usernamelen);
-      if (buf->datalen < 2u + usernamelen + 1u + passlen)
+      }
+      passlen = (unsigned char)*(data + 2u + usernamelen);
+      if (datalen < 2u + usernamelen + 1u + passlen) {
+        *want_length_out = 2u+usernamelen;
         return 0;
-      if (buf->datalen > 2u + usernamelen + 1u + passlen) {
+      }
+      if (datalen > 2u + usernamelen + 1u + passlen) {
         log_warn(LD_APP,
                  "socks5: Malformed username/password. Rejecting.");
         return -1;
@@ -1657,9 +1666,9 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       req->replylen = 2; /* 2 bytes of response */
       req->reply[0] = 5;
       req->reply[1] = 0; /* authentication successful */
-      buf_clear(buf);
       log_debug(LD_APP,
                "socks5: Accepted username/password without checking.");
+      *drain_out = 2u + usernamelen + 1u + passlen;
       return 0;
 
     case 5: /* socks5 */
@@ -1672,18 +1681,17 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           *want_length_out = 2u+nummethods;
           return 0;
         }
-        buf_pullup(buf, 2u+nummethods, 0);
         if (!nummethods)
           return -1;
         req->replylen = 2; /* 2 bytes of response */
         req->reply[0] = 5; /* socks5 reply */
-        if (memchr(buf->head->data+2, SOCKS_NO_AUTH, nummethods)) {
+        if (memchr(data+2, SOCKS_NO_AUTH, nummethods)) {
           req->reply[1] = SOCKS_NO_AUTH; /* tell client to use "none" auth
                                             method */
           req->socks_version = 5; /* remember we've already negotiated auth */
           log_debug(LD_APP,"socks5: accepted method 0 (no authentication)");
           r=0;
-        }else if (memchr(buf->head->data+2, SOCKS_USER_PASS,nummethods)) {
+        }else if (memchr(data+2, SOCKS_USER_PASS,nummethods)) {
           req->reply[1] = SOCKS_USER_PASS; /* tell client to use "user/pass"
                                               auth method */
           req->socks_version = 5; /* remember we've already negotiated auth */

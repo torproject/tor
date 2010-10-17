@@ -197,7 +197,7 @@ free_pregenerated_keys(void)
   }
 }
 
-/** Helper: Perform supported SOCKS 5 commands */
+/** Helper: Perform supported SOCKS 4 commands */
 static void
 test_buffers_socks4_unsupported_commands_helper(const char *cp, buf_t *buf,
                                                 socks_request_t *socks)
@@ -214,7 +214,7 @@ done:
   ;
 }
 
-/** Helper: Perform supported SOCKS 5 commands */
+/** Helper: Perform supported SOCKS 4 commands */
 static void
 test_buffers_socks4_supported_commands_helper(const char *cp, buf_t *buf,
                                               socks_request_t *socks)
@@ -398,6 +398,26 @@ done:
   ;
 }
 
+/** Helper: Perform SOCKS 5 authentication before method negotiated */
+static void
+test_buffers_socks5_auth_before_negotiation_helper(const char *cp, buf_t *buf,
+                                        socks_request_t *socks)
+{
+  /* SOCKS 5 Send username/password */
+  cp = "\x01\x02me\x02me";
+  write_to_buf(cp, 7, buf);
+  test_assert(fetch_from_buf_socks(buf, socks,
+                                   get_options()->TestSocks,
+                                   get_options()->SafeSocks) == -1);
+  test_eq(0, socks->socks_version);
+  test_eq(0, socks->replylen);
+  test_eq(0, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+
+done:
+  ;
+}
+
 /** Run unit tests for buffers.c */
 static void
 test_buffers(void)
@@ -569,6 +589,15 @@ test_buffers(void)
   buf = buf_new_with_capacity(256);
   socks = tor_malloc_zero(sizeof(socks_request_t));;
   config_register_addressmaps(get_options());
+
+  /* Sending auth credentials before we've negotiated a method */
+  test_buffers_socks5_auth_before_negotiation_helper(cp, buf, socks);
+
+  tor_free(socks);
+  buf_free(buf);
+  buf = NULL;
+  buf = buf_new_with_capacity(256);
+  socks = tor_malloc_zero(sizeof(socks_request_t));;
 
   /* A SOCKS 5 client that only supports authentication  */
   test_buffers_socks5_authenticate_helper(cp, buf, socks);
