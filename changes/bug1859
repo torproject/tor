@@ -1,0 +1,9 @@
+  o Minor bugfixes:
+    - Bring the logic that gathers routerinfos and assesses the
+      acceptability of circuits into line. This prevents a Tor OP from getting
+      locked in a cycle of choosing its local OR as an exit for a path (due to
+      a .exit request) and then rejecting the circuit because its OR is not
+      listed yet. Also prevent Tor clients from using an OR running in the same
+      instance as an exit (due to a .exit request) if the OR does not meet the
+      same requirements expected of an OR running elsewhere.
+      Fixes bug 1859; bugfix on 0.2.0-alpha.
