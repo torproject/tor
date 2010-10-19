@@ -99,7 +99,7 @@ AC_ARG_ENABLE(gcc-hardening,
 [if test x$enableval = xyes; then
     CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2 -fstack-protector-all"
     CFLAGS="$CFLAGS -fwrapv -fPIE -Wstack-protector -Wformat -Wformat-security"
-    CFLAGS="$CFLAGS -Wpointer-sign"
+    CFLAGS="$CFLAGS -Wpointer-sign --param ssp-buffer-size=1"
     LDFLAGS="$LDFLAGS -pie"
 fi])
 
@@ -892,9 +892,8 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 
   if test x$have_gcc42 = xyes ; then 
     # These warnings break gcc 4.0.2 and work on gcc 4.2
-    # XXXX020 Use -fstack-protector.
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1 --param ssp-buffer-size=1"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1"
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
   fi
 
