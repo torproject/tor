@@ -1706,6 +1706,10 @@ networkstatus_set_current_consensus(const char *consensus,
     if (current_consensus) {
       networkstatus_copy_old_consensus_info(c, current_consensus);
       networkstatus_vote_free(current_consensus);
+      /* Defensive programming : we should set current_consensus very soon,
+       * but we're about to call some stuff in the meantime, and leaving this
+       * dangling pointer around has proven to be trouble. */
+       current_consensus = NULL;
     }
   }
 
@@ -1731,13 +1735,6 @@ networkstatus_set_current_consensus(const char *consensus,
       download_status_failed(&consensus_dl_status[flav], 0);
   }
 
-  if (directory_caches_dir_info(options)) {
-    dirserv_set_cached_consensus_networkstatus(consensus,
-                                               flavor,
-                                               &c->digests,
-                                               c->valid_after);
-  }
-
   if (flav == USABLE_CONSENSUS_FLAVOR) {
     current_consensus = c;
     c = NULL; /* Prevent free. */
@@ -1752,6 +1749,13 @@ networkstatus_set_current_consensus(const char *consensus,
     connection_or_update_token_buckets(get_connection_array(), options);
 
     circuit_build_times_new_consensus_params(&circ_times, current_consensus);
+  }
+
+  if (directory_caches_dir_info(options)) {
+    dirserv_set_cached_consensus_networkstatus(consensus,
+                                               flavor,
+                                               &c->digests,
+                                               c->valid_after);
   }
 
   if (!from_cache) {
