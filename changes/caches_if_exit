@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix a logic error where servers that _didn't_ act as exits would
+      try to keep their server lists more aggressively up to date than
+      exits, when it was supposed to be the other way around. Bugfix
+      on 0.2.2.17-alpha.
