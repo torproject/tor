@@ -1569,6 +1569,7 @@ networkstatus_set_current_consensus(const char *consensus,
   const digests_t *current_digests = NULL;
   consensus_waiting_for_certs_t *waiting = NULL;
   time_t current_valid_after = 0;
+  int free_consensus = 1; /* Free 'c' at the end of the function */
 
   if (flav < 0) {
     /* XXXX we don't handle unrecognized flavors yet. */
@@ -1661,7 +1662,7 @@ networkstatus_set_current_consensus(const char *consensus,
         networkstatus_vote_free(waiting->consensus);
         tor_free(waiting->body);
         waiting->consensus = c;
-        c = NULL; /* Prevent free. */
+        free_consensus = 0;
         waiting->body = tor_strdup(consensus);
         waiting->set_at = now;
         waiting->dl_failed = 0;
@@ -1737,7 +1738,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (flav == USABLE_CONSENSUS_FLAVOR) {
     current_consensus = c;
-    c = NULL; /* Prevent free. */
+    free_consensus = 0; /* Prevent free. */
 
     /* XXXXNM Microdescs: needs a non-ns variant. */
     update_consensus_networkstatus_fetch_time(now);
@@ -1780,7 +1781,8 @@ networkstatus_set_current_consensus(const char *consensus,
 
   result = 0;
  done:
-  networkstatus_vote_free(c);
+  if (free_consensus)
+    networkstatus_vote_free(c);
   tor_free(consensus_fname);
   tor_free(unverified_fname);
   return result;
