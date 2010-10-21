@@ -1593,7 +1593,7 @@ networkstatus_set_current_consensus(const char *consensus,
   const digests_t *current_digests = NULL;
   consensus_waiting_for_certs_t *waiting = NULL;
   time_t current_valid_after = 0;
-  int free_consensus = 1;
+  int free_consensus = 1; /* Free 'c' at the end of the function */
 
   if (flav < 0) {
     /* XXXX we don't handle unrecognized flavors yet. */
@@ -1693,7 +1693,7 @@ networkstatus_set_current_consensus(const char *consensus,
         networkstatus_vote_free(waiting->consensus);
         tor_free(waiting->body);
         waiting->consensus = c;
-        c = NULL; /* Prevent free. */
+        free_consensus = 0;
         waiting->body = tor_strdup(consensus);
         waiting->set_at = now;
         waiting->dl_failed = 0;
