@@ -443,15 +443,6 @@ node_get_by_nickname(const char *nickname, int warn_if_unnamed)
   if (!the_nodelist)
     return NULL;
 
-  /* ???? NM Naming authorities had an additional weird behavior here where
-     they would treat their own namings as slightly authoritative in a
-     strange and inconsistent way.  I think that this way is better, but we
-     could get the old behavior back if we wanted to by adding a function
-     to look in the fp_by_name table in fingerprint_list, and using this
-     function to override the name-to-digest lookup below if we are a
-     naming server.  -NM
-   */
-
   /* Handle these cases: DIGEST, $DIGEST, $DIGEST=name, $DIGEST~name. */
   if ((node = node_get_by_hex_id(nickname)) != NULL)
       return node;
