@@ -4207,7 +4207,7 @@ crypto_pk_env_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);
 void set_client_identity_key(crypto_pk_env_t *k);
 void set_server_identity_key(crypto_pk_env_t *k);
-crypto_pk_env_t *get_client_identity_key(void);
+crypto_pk_env_t *get_tlsclient_identity_key(void);
 crypto_pk_env_t *get_server_identity_key(void);
 int client_identity_key_is_set(void);
 int server_identity_key_is_set(void);

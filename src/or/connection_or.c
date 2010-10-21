@@ -962,7 +962,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     started_here ? conn->_base.address : safe_str(conn->_base.address);
   const char *conn_type = started_here ? "outgoing" : "incoming";
   crypto_pk_env_t *our_identity =
-    started_here ? get_client_identity_key() :
+    started_here ? get_tlsclient_identity_key() :
                    get_server_identity_key();
   int has_cert = 0, has_identity=0;
 

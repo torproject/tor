@@ -148,11 +148,11 @@ set_client_identity_key(crypto_pk_env_t *k)
   client_identitykey = k;
 }
 
-/** Returns the current client identity key; requires that the key has
- * been set.
+/** Returns the current client identity key for use on outgoing TLS
+ * connections; requires that the key has been set.
  */
 crypto_pk_env_t *
-get_client_identity_key(void)
+get_tlsclient_identity_key(void)
 {
   tor_assert(client_identitykey);
   return client_identitykey;
@@ -490,7 +490,7 @@ init_keys(void)
     set_client_identity_key(prkey);
     /* Create a TLS context. */
     if (tor_tls_context_init(0,
-                             get_client_identity_key(),
+                             get_tlsclient_identity_key(),
                              NULL,
                              MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
       log_err(LD_GENERAL,"Error creating TLS context for Tor client.");
@@ -586,7 +586,7 @@ init_keys(void)
 
   /* 3. Initialize link key and TLS context. */
   if (tor_tls_context_init(public_server_mode(options),
-                           get_client_identity_key(),
+                           get_tlsclient_identity_key(),
                            get_server_identity_key(),
                            MAX_SSL_KEY_LIFETIME_ADVERTISED) < 0) {
     log_err(LD_GENERAL,"Error initializing TLS context");
