@@ -150,7 +150,8 @@ assert_identity_keys_ok(void)
   } else {
     /* assert that we have set the client and server keys to be unequal */
     if (server_identitykey)
-      tor_assert(0!=crypto_pk_cmp_keys(client_identitykey, server_identitykey));
+       tor_assert(0!=crypto_pk_cmp_keys(client_identitykey,
+                                        server_identitykey));
   }
 }
 
