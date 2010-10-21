@@ -14,9 +14,12 @@
 
 crypto_pk_env_t *get_onion_key(void);
 time_t get_onion_key_set_at(void);
-void set_identity_key(crypto_pk_env_t *k);
-crypto_pk_env_t *get_identity_key(void);
-int identity_key_is_set(void);
+void set_server_identity_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_server_identity_key(void);
+int server_identity_key_is_set(void);
+void set_client_identity_key(crypto_pk_env_t *k);
+crypto_pk_env_t *get_tlsclient_identity_key(void);
+int client_identity_key_is_set(void);
 authority_cert_t *get_my_v3_authority_cert(void);
 crypto_pk_env_t *get_my_v3_authority_signing_key(void);
 authority_cert_t *get_my_v3_legacy_cert(void);
@@ -48,6 +51,7 @@ int authdir_mode_tests_reachability(or_options_t *options);
 int authdir_mode_bridge(or_options_t *options);
 
 int server_mode(or_options_t *options);
+int public_server_mode(or_options_t *options);
 int advertised_server_mode(void);
 int proxy_mode(or_options_t *options);
 void consider_publishable_server(int force);
