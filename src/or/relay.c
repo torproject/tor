@@ -592,17 +592,11 @@ relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
     origin_circuit_t *origin_circ = TO_ORIGIN_CIRCUIT(circ);
     if (origin_circ->remaining_relay_early_cells > 0 &&
         (relay_command == RELAY_COMMAND_EXTEND ||
-         (cpath_layer != origin_circ->cpath &&
-          !CIRCUIT_PURPOSE_IS_ESTABLISHED_REND(circ->purpose)))) {
-      /* If we've got any relay_early cells left, and we're sending
-       * an extend cell or (we're not talking to the first hop and we're
-       * not talking to a rendezvous circuit), use one of them.
-       * Don't worry about the conn protocol version:
+         cpath_layer != origin_circ->cpath)) {
+      /* If we've got any relay_early cells left and (we're sending
+       * an extend cell or we're not talking to the first hop), use
+       * one of them.  Don't worry about the conn protocol version:
        * append_cell_to_circuit_queue will fix it up. */
-      /* XXX For now, clients don't use RELAY_EARLY cells when sending
-       * relay cells on rendezvous circuits. See bug 1038. Once no relays
-       * (and thus no rendezvous points) are running 0.2.1.3-alpha through
-       * 0.2.1.18, we can take out that exception. -RD */
       cell.command = CELL_RELAY_EARLY;
       --origin_circ->remaining_relay_early_cells;
       log_debug(LD_OR, "Sending a RELAY_EARLY cell; %d remaining.",
