@@ -14,6 +14,7 @@
 
 node_t *node_get_mutable_by_id(const char *identity_digest);
 const node_t *node_get_by_id(const char *identity_digest);
+const node_t *node_get_by_hex_id(const char *identity_digest);
 node_t *nodelist_add_routerinfo(routerinfo_t *ri);
 node_t *nodelist_add_microdesc(microdesc_t *md);
 void nodelist_set_consensus(networkstatus_t *ns);

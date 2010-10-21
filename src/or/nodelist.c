@@ -400,31 +400,18 @@ nodelist_get_list(void)
   return the_nodelist->nodes;
 }
 
-/** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
- * the corresponding node_t, or NULL if none exists.  Warn the user if
- * <b>warn_if_unnamed</b> is set, and they have specified a router by
- * nickname, but the Named flag isn't set for that router. */
+/** Given a hex-encoded nickname of the format DIGEST, $DIGEST, $DIGEST=name,
+ * or $DIGEST~name, return the node with the matching identity digest and
+ * nickname (if any).  Return NULL if no such node exists, or if <b>hex_id</b>
+ * is not well-formed. */
 const node_t *
-node_get_by_nickname(const char *nickname, int warn_if_unnamed)
+node_get_by_hex_id(const char *hex_id)
 {
   char digest_buf[DIGEST_LEN];
   char nn_buf[MAX_NICKNAME_LEN+1];
   char nn_char='\0';
 
-  if (!the_nodelist)
-    return NULL;
-
-  /* ???? NM Naming authorities had an additional weird behavior here where
-     they would treat their own namings as slightly authoritative in a
-     strange and inconsistent way.  I think that this way is better, but we
-     could get the old behavior back if we wanted to by adding a function
-     to look in the fp_by_name table in fingerprint_list, and using this
-     function to override the name-to-digest lookup below if we are a
-     naming server.  -NM
-   */
-
-  /* Handle these cases: DIGEST, $DIGEST, $DIGEST=name, $DIGEST~name. */
-  if (hex_digest_nickname_decode(nickname, digest_buf, &nn_char, nn_buf)==0) {
+  if (hex_digest_nickname_decode(hex_id, digest_buf, &nn_char, nn_buf)==0) {
     const node_t *node = node_get_by_id(digest_buf);
     if (!node)
       return NULL;
@@ -441,6 +428,33 @@ node_get_by_nickname(const char *nickname, int warn_if_unnamed)
     }
     return node;
   }
+
+  return NULL;
+}
+
+/** Given a nickname (possibly verbose, possibly a hexadecimal digest), return
+ * the corresponding node_t, or NULL if none exists.  Warn the user if
+ * <b>warn_if_unnamed</b> is set, and they have specified a router by
+ * nickname, but the Named flag isn't set for that router. */
+const node_t *
+node_get_by_nickname(const char *nickname, int warn_if_unnamed)
+{
+  const node_t *node;
+  if (!the_nodelist)
+    return NULL;
+
+  /* ???? NM Naming authorities had an additional weird behavior here where
+     they would treat their own namings as slightly authoritative in a
+     strange and inconsistent way.  I think that this way is better, but we
+     could get the old behavior back if we wanted to by adding a function
+     to look in the fp_by_name table in fingerprint_list, and using this
+     function to override the name-to-digest lookup below if we are a
+     naming server.  -NM
+   */
+
+  /* Handle these cases: DIGEST, $DIGEST, $DIGEST=name, $DIGEST~name. */
+  if ((node = node_get_by_hex_id(nickname)) != NULL)
+      return node;
 
   if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME))
     return NULL;
