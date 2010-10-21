@@ -755,7 +755,11 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
   intro = smartlist_get(entry->parsed->intro_nodes, i);
   /* Do we need to look up the router or is the extend info complete? */
   if (!intro->extend_info->onion_key) {
-    const node_t *node = node_get_by_nickname(intro->extend_info->nickname, 0);
+    const node_t *node;
+    if (tor_digest_is_zero(intro->extend_info->identity_digest))
+      node = node_get_by_hex_id(intro->extend_info->nickname);
+    else
+      node = node_get_by_id(intro->extend_info->identity_digest);
     if (!node) {
       log_info(LD_REND, "Unknown router with nickname '%s'; trying another.",
                intro->extend_info->nickname);
