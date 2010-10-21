@@ -137,13 +137,32 @@ set_server_identity_key(crypto_pk_env_t *k)
   crypto_pk_get_digest(server_identitykey, server_identitykey_digest);
 }
 
+/** Make sure that we have set up our identity keys to match or not match as
+ * appropriate, and die with an assertion if we have not. */
+static void
+assert_identity_keys_ok(void)
+{
+  tor_assert(client_identitykey);
+  if (public_server_mode(get_options())) {
+    /* assert that we have set the client and server keys to be equal */
+    tor_assert(server_identitykey);
+    tor_assert(0==crypto_pk_cmp_keys(client_identitykey, server_identitykey));
+  } else {
+    /* assert that we have set the client and server keys to be unequal */
+    if (server_identitykey)
+      tor_assert(0!=crypto_pk_cmp_keys(client_identitykey, server_identitykey));
+  }
+}
+
 /** Returns the current server identity key; requires that the key has
- * been set.
+ * been set, and that we are running as a Tor server.
  */
 crypto_pk_env_t *
 get_server_identity_key(void)
 {
   tor_assert(server_identitykey);
+  tor_assert(server_mode(get_options()));
+  assert_identity_keys_ok();
   return server_identitykey;
 }
 
@@ -170,6 +189,7 @@ crypto_pk_env_t *
 get_tlsclient_identity_key(void)
 {
   tor_assert(client_identitykey);
+  assert_identity_keys_ok();
   return client_identitykey;
 }
 
