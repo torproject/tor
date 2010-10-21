@@ -2273,9 +2273,6 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
     return router_get_by_hexdigest(nickname);
   if (!strcasecmp(nickname, UNNAMED_ROUTER_NICKNAME))
     return NULL;
-  if (server_mode(get_options()) &&
-      !strcasecmp(nickname, get_options()->Nickname))
-    return router_get_my_routerinfo();
 
   maybedigest = (strlen(nickname) >= HEX_DIGEST_LEN) &&
     (base16_decode(digest,DIGEST_LEN,nickname,HEX_DIGEST_LEN) == 0);
