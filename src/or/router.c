@@ -575,7 +575,7 @@ init_keys(void)
    * otherwise, set the server identity key as our client identity
    * key. */
   if (public_server_mode(options)) {
-    set_client_identity_key(prkey); /* set above */
+    set_client_identity_key(crypto_pk_dup_key(prkey)); /* set above */
   } else {
     if (!(prkey = crypto_new_pk_env()))
       return -1;
