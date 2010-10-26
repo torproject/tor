@@ -405,6 +405,7 @@ crypto_free_pk_env(crypto_pk_env_t *env)
 
   if (--env->refs > 0)
     return;
+  tor_assert(env->refs == 0);
 
   if (env->key)
     RSA_free(env->key);
