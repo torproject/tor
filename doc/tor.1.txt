@@ -110,7 +110,7 @@ Other options can be specified either on the command-line (--option
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
 
-**ConLimit** __NUM__::
+**ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file
     descriptors as the OS will allow (you can find this by "ulimit -H -n").
