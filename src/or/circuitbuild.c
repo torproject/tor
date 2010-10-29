@@ -3022,23 +3022,28 @@ choose_good_entry_server(uint8_t purpose, cpath_build_state_t *state)
 
   if (state && options->UseEntryGuards &&
       (purpose != CIRCUIT_PURPOSE_TESTING || options->BridgeRelay)) {
+    /* This is request for an entry server to use for a regular circuit,
+     * and we use entry guard nodes.  Just return one of the guard nodes.  */
     return choose_random_entry(state);
   }
 
   excluded = smartlist_create();
 
   if (state && (node = build_state_get_exit_node(state))) {
+    /* Exclude the exit node from the state, if we have one.  Also exclude its
+     * family. */
     smartlist_add(excluded, (void*)node);
     nodelist_add_node_family(excluded, node);
   }
   if (firewall_is_fascist_or()) {
+    /* Exclude all ORs that we can't reach through our firewall */
     smartlist_t *nodes = nodelist_get_list();
-    SMARTLIST_FOREACH(nodes, const node_t *,node, {
+    SMARTLIST_FOREACH(nodes, const node_t *, node, {
       if (!fascist_firewall_allows_node(node))
         smartlist_add(excluded, (void*)node);
     });
   }
-  /* and exclude current entry guards, if applicable */
+  /* and exclude current entry guards and their families, if applicable */
   if (options->UseEntryGuards && entry_guards) {
     SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
       {
