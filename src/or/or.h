@@ -2548,8 +2548,8 @@ typedef struct {
   uint64_t PerConnBWRate; /**< Long-term bw on a single TLS conn, if set. */
   uint64_t PerConnBWBurst; /**< Allowed burst on a single TLS conn, if set. */
   int NumCpus; /**< How many CPUs should we try to use? */
-  int RunTesting; /**< If true, create testing circuits to measure how well the
-                   * other ORs are running. */
+//int RunTesting; /**< If true, create testing circuits to measure how well the
+//                 * other ORs are running. */
   config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   config_line_t *HidServAuth; /**< List of configuration lines for client-side

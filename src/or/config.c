@@ -337,7 +337,8 @@ static config_var_t _option_vars[] = {
   V(RephistTrackTime,            INTERVAL, "24 hours"),
   OBSOLETE("RouterFile"),
   V(RunAsDaemon,                 BOOL,     "0"),
-  V(RunTesting,                  BOOL,     "0"),
+//  V(RunTesting,                  BOOL,     "0"),
+  OBSOLETE("RunTesting"), // currently unused
   V(SafeLogging,                 STRING,   "1"),
   V(SafeSocks,                   BOOL,     "0"),
   V(ServerDNSAllowBrokenConfig,  BOOL,     "1"),
