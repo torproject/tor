@@ -8,13 +8,11 @@ my %torrcCompleteOptions = ();
 my %manPageOptions = ();
 
 # Load the canonical list as actually accepted by Tor.
-my $mostRecentOption;
 open(F, "./src/or/tor --list-torrc-options |") or die;
 while (<F>) {
     next if m!\[notice\] Tor v0\.!;
     if (m!^([A-Za-z0-9_]+)!) {
-        $mostRecentOption = lc $1;
-        $options{$mostRecentOption} = 1;
+        $options{$1} = 1;
     } else {
         print "Unrecognized output> ";
         print;
@@ -30,7 +28,7 @@ sub loadTorrc {
     while (<F>) {
         next if (m!##+!);
         if (m!#([A-Za-z0-9_]+)!) {
-            $options->{lc $1} = 1;
+            $options->{$1} = 1;
         }
     }
     close F;
@@ -46,7 +44,7 @@ my $considerNextLine = 0;
 open(F, "./doc/tor.1.txt") or die;
 while (<F>) {
     if (m!^\*\*([A-Za-z0-9_]+)\*\*!) {
-        $manPageOptions{lc $1} = 1;
+        $manPageOptions{$1} = 1;
     }
 }
 close F;
