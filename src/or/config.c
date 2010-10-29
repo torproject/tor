@@ -83,7 +83,7 @@ static config_abbrev_t _option_abbrevs[] = {
   PLURAL(LongLivedPort),
   PLURAL(HiddenServiceNode),
   PLURAL(HiddenServiceExcludeNode),
-  PLURAL(NumCpu),
+  PLURAL(NumCPU),
   PLURAL(RendNode),
   PLURAL(RendExcludeNode),
   PLURAL(StrictEntryNode),
@@ -276,10 +276,10 @@ static config_var_t _option_vars[] = {
   V(HidServAuth,                 LINELIST, NULL),
   V(HSAuthoritativeDir,          BOOL,     "0"),
   OBSOLETE("HSAuthorityRecordStats"),
-  V(HttpProxy,                   STRING,   NULL),
-  V(HttpProxyAuthenticator,      STRING,   NULL),
-  V(HttpsProxy,                  STRING,   NULL),
-  V(HttpsProxyAuthenticator,     STRING,   NULL),
+  V(HTTPProxy,                   STRING,   NULL),
+  V(HTTPProxyAuthenticator,      STRING,   NULL),
+  V(HTTPSProxy,                  STRING,   NULL),
+  V(HTTPSProxyAuthenticator,     STRING,   NULL),
   V(Socks4Proxy,                 STRING,   NULL),
   V(Socks5Proxy,                 STRING,   NULL),
   V(Socks5ProxyUsername,         STRING,   NULL),
@@ -306,7 +306,7 @@ static config_var_t _option_vars[] = {
   V(WarnUnsafeSocks,              BOOL,     "1"),
   V(NoPublish,                   BOOL,     "0"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
-  V(NumCpus,                     UINT,     "1"),
+  V(NumCPUs,                     UINT,     "1"),
   V(NumEntryGuards,              UINT,     "3"),
   V(ORListenAddress,             LINELIST, NULL),
   V(ORPort,                      UINT,     "0"),
@@ -3394,32 +3394,32 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (accounting_parse_options(options, 1)<0)
     REJECT("Failed to parse accounting options. See logs for details.");
 
-  if (options->HttpProxy) { /* parse it now */
-    if (tor_addr_port_parse(options->HttpProxy,
-                        &options->HttpProxyAddr, &options->HttpProxyPort) < 0)
-      REJECT("HttpProxy failed to parse or resolve. Please fix.");
-    if (options->HttpProxyPort == 0) { /* give it a default */
-      options->HttpProxyPort = 80;
+  if (options->HTTPProxy) { /* parse it now */
+    if (tor_addr_port_parse(options->HTTPProxy,
+                        &options->HTTPProxyAddr, &options->HTTPProxyPort) < 0)
+      REJECT("HTTPProxy failed to parse or resolve. Please fix.");
+    if (options->HTTPProxyPort == 0) { /* give it a default */
+      options->HTTPProxyPort = 80;
     }
   }
 
-  if (options->HttpProxyAuthenticator) {
-    if (strlen(options->HttpProxyAuthenticator) >= 48)
-      REJECT("HttpProxyAuthenticator is too long (>= 48 chars).");
+  if (options->HTTPProxyAuthenticator) {
+    if (strlen(options->HTTPProxyAuthenticator) >= 48)
+      REJECT("HTTPProxyAuthenticator is too long (>= 48 chars).");
   }
 
-  if (options->HttpsProxy) { /* parse it now */
-    if (tor_addr_port_parse(options->HttpsProxy,
-                        &options->HttpsProxyAddr, &options->HttpsProxyPort) <0)
-      REJECT("HttpsProxy failed to parse or resolve. Please fix.");
-    if (options->HttpsProxyPort == 0) { /* give it a default */
-      options->HttpsProxyPort = 443;
+  if (options->HTTPSProxy) { /* parse it now */
+    if (tor_addr_port_parse(options->HTTPSProxy,
+                        &options->HTTPSProxyAddr, &options->HTTPSProxyPort) <0)
+      REJECT("HTTPSProxy failed to parse or resolve. Please fix.");
+    if (options->HTTPSProxyPort == 0) { /* give it a default */
+      options->HTTPSProxyPort = 443;
     }
   }
 
-  if (options->HttpsProxyAuthenticator) {
-    if (strlen(options->HttpsProxyAuthenticator) >= 48)
-      REJECT("HttpsProxyAuthenticator is too long (>= 48 chars).");
+  if (options->HTTPSProxyAuthenticator) {
+    if (strlen(options->HTTPSProxyAuthenticator) >= 48)
+      REJECT("HTTPSProxyAuthenticator is too long (>= 48 chars).");
   }
 
   if (options->Socks4Proxy) { /* parse it now */
@@ -3616,10 +3616,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Must set TunnelDirConns if PreferTunneledDirConns is set.");
 
   if ((options->Socks4Proxy || options->Socks5Proxy) &&
-      !options->HttpProxy && !options->PreferTunneledDirConns)
+      !options->HTTPProxy && !options->PreferTunneledDirConns)
     REJECT("When Socks4Proxy or Socks5Proxy is configured, "
            "PreferTunneledDirConns and TunnelDirConns must both be "
-           "set to 1, or HttpProxy must be configured.");
+           "set to 1, or HTTPProxy must be configured.");
 
   if (options->AutomapHostsSuffixes) {
     SMARTLIST_FOREACH(options->AutomapHostsSuffixes, char *, suf,
@@ -3800,7 +3800,7 @@ options_transition_affects_workers(or_options_t *old_options,
                                    or_options_t *new_options)
 {
   if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
-      old_options->NumCpus != new_options->NumCpus ||
+      old_options->NumCPUs != new_options->NumCPUs ||
       old_options->ORPort != new_options->ORPort ||
       old_options->ServerDNSSearchDomains !=
                                        new_options->ServerDNSSearchDomains ||

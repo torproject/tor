@@ -2547,7 +2547,7 @@ typedef struct {
                                  * use in a second for all relayed conns? */
   uint64_t PerConnBWRate; /**< Long-term bw on a single TLS conn, if set. */
   uint64_t PerConnBWBurst; /**< Allowed burst on a single TLS conn, if set. */
-  int NumCpus; /**< How many CPUs should we try to use? */
+  int NumCPUs; /**< How many CPUs should we try to use? */
 //int RunTesting; /**< If true, create testing circuits to measure how well the
 //                 * other ORs are running. */
   config_line_t *RendConfigLines; /**< List of configuration lines
@@ -2556,15 +2556,15 @@ typedef struct {
                                * authorizations for hidden services */
   char *ContactInfo; /**< Contact info to be published in the directory. */
 
-  char *HttpProxy; /**< hostname[:port] to use as http proxy, if any. */
-  tor_addr_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
-  uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any. */
-  char *HttpProxyAuthenticator; /**< username:password string, if any. */
+  char *HTTPProxy; /**< hostname[:port] to use as http proxy, if any. */
+  tor_addr_t HTTPProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
+  uint16_t HTTPProxyPort; /**< Parsed port for http proxy, if any. */
+  char *HTTPProxyAuthenticator; /**< username:password string, if any. */
 
-  char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any. */
-  tor_addr_t HttpsProxyAddr; /**< Parsed addr for https proxy, if any. */
-  uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any. */
-  char *HttpsProxyAuthenticator; /**< username:password string, if any. */
+  char *HTTPSProxy; /**< hostname[:port] to use as https proxy, if any. */
+  tor_addr_t HTTPSProxyAddr; /**< Parsed addr for https proxy, if any. */
+  uint16_t HTTPSProxyPort; /**< Parsed port for https proxy, if any. */
+  char *HTTPSProxyAuthenticator; /**< username:password string, if any. */
 
   char *Socks4Proxy; /**< hostname:port to use as a SOCKS4 proxy, if any. */
   tor_addr_t Socks4ProxyAddr; /**< Derived from Socks4Proxy. */

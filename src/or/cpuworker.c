@@ -367,7 +367,7 @@ spawn_cpuworker(void)
 static void
 spawn_enough_cpuworkers(void)
 {
-  int num_cpuworkers_needed = get_options()->NumCpus;
+  int num_cpuworkers_needed = get_options()->NumCPUs;
 
   if (num_cpuworkers_needed < MIN_CPUWORKERS)
     num_cpuworkers_needed = MIN_CPUWORKERS;
