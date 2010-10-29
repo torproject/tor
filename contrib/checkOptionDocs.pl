@@ -4,7 +4,6 @@ use strict;
 my %options = ();
 my %descOptions = ();
 my %torrcSampleOptions = ();
-my %torrcCompleteOptions = ();
 my %manPageOptions = ();
 
 # Load the canonical list as actually accepted by Tor.
@@ -20,7 +19,7 @@ while (<F>) {
 }
 close F;
 
-# Load the contents of torrc.sample and torrc.complete
+# Load the contents of torrc.sample
 sub loadTorrc {
     my ($fname, $options) = @_;
     local *F;
@@ -36,7 +35,6 @@ sub loadTorrc {
 }
 
 loadTorrc("./src/config/torrc.sample.in", \%torrcSampleOptions);
-loadTorrc("./src/config/torrc.complete.in", \%torrcCompleteOptions);
 
 # Try to figure out what's in the man page.
 
@@ -64,8 +62,6 @@ sub subtractHashes {
 # subtractHashes("No online docs", \%options, \%descOptions);
 # subtractHashes("Orphaned online docs", \%descOptions, \%options);
 
-subtractHashes("Not in torrc.complete.in", \%options, \%torrcCompleteOptions);
-subtractHashes("Orphaned in torrc.complete.in", \%torrcCompleteOptions, \%options);
 subtractHashes("Orphaned in torrc.sample.in", \%torrcSampleOptions, \%options);
 
 subtractHashes("Not in man page", \%options, \%manPageOptions);
