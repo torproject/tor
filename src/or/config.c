@@ -304,7 +304,7 @@ static config_var_t _option_vars[] = {
   V(NATDPort,                    UINT,     "0"),
   V(Nickname,                    STRING,   NULL),
   V(WarnUnsafeSocks,              BOOL,     "1"),
-  V(NoPublish,                   BOOL,     "0"),
+  OBSOLETE("NoPublish"),
   VAR("NodeFamily",              LINELIST, NodeFamilies,         NULL),
   V(NumCPUs,                     UINT,     "1"),
   V(NumEntryGuards,              UINT,     "3"),
@@ -2996,14 +2996,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options_init_logs(options, 1)<0) /* Validate the log(s) */
     REJECT("Failed to validate Log options. See logs for details.");
 
-  if (options->NoPublish) {
-    log(LOG_WARN, LD_CONFIG,
-        "NoPublish is obsolete. Use PublishServerDescriptor instead.");
-    SMARTLIST_FOREACH(options->PublishServerDescriptor, char *, s,
-                      tor_free(s));
-    smartlist_clear(options->PublishServerDescriptor);
-  }
-
   if (authdir_mode(options)) {
     /* confirm that our address isn't broken, so we can complain now */
     uint32_t tmp;
@@ -3832,7 +3824,6 @@ options_transition_affects_descriptor(or_options_t *old_options,
       old_options->ORPort != new_options->ORPort ||
       old_options->DirPort != new_options->DirPort ||
       old_options->ClientOnly != new_options->ClientOnly ||
-      old_options->NoPublish != new_options->NoPublish ||
       old_options->_PublishServerDescriptor !=
         new_options->_PublishServerDescriptor ||
       get_effective_bwrate(old_options) != get_effective_bwrate(new_options) ||
