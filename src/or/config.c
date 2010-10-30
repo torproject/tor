@@ -300,8 +300,8 @@ static config_var_t _option_vars[] = {
   V(MyFamily,                    STRING,   NULL),
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
-  V(NatdListenAddress,           LINELIST, NULL),
-  V(NatdPort,                    UINT,     "0"),
+  V(NATDListenAddress,           LINELIST, NULL),
+  V(NATDPort,                    UINT,     "0"),
   V(Nickname,                    STRING,   NULL),
   V(WarnUnsafeSocks,              BOOL,     "1"),
   V(NoPublish,                   BOOL,     "0"),
@@ -2918,8 +2918,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->TransPort == 0 && options->TransListenAddress != NULL)
     REJECT("TransPort must be defined if TransListenAddress is defined.");
 
-  if (options->NatdPort == 0 && options->NatdListenAddress != NULL)
-    REJECT("NatdPort must be defined if NatdListenAddress is defined.");
+  if (options->NATDPort == 0 && options->NATDListenAddress != NULL)
+    REJECT("NATDPort must be defined if NATDListenAddress is defined.");
 
   /* Don't gripe about SocksPort 0 with SocksListenAddress set; a standard
    * configuration does this. */
@@ -2938,8 +2938,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
       old = old_options ? old_options->TransListenAddress : NULL;
       tp = "transparent proxy";
     } else {
-      opt = options->NatdListenAddress;
-      old = old_options ? old_options->NatdListenAddress : NULL;
+      opt = options->NATDListenAddress;
+      old = old_options ? old_options->NATDListenAddress : NULL;
       tp = "natd proxy";
     }
 
@@ -3031,14 +3031,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (options->TransPort < 0 || options->TransPort > 65535)
     REJECT("TransPort option out of bounds.");
 
-  if (options->NatdPort < 0 || options->NatdPort > 65535)
-    REJECT("NatdPort option out of bounds.");
+  if (options->NATDPort < 0 || options->NATDPort > 65535)
+    REJECT("NATDPort option out of bounds.");
 
   if (options->SocksPort == 0 && options->TransPort == 0 &&
-      options->NatdPort == 0 && options->ORPort == 0 &&
+      options->NATDPort == 0 && options->ORPort == 0 &&
       options->DNSPort == 0 && !options->RendConfigLines)
     log(LOG_WARN, LD_CONFIG,
-        "SocksPort, TransPort, NatdPort, DNSPort, and ORPort are all "
+        "SocksPort, TransPort, NATDPort, DNSPort, and ORPort are all "
         "undefined, and there aren't any hidden services configured.  "
         "Tor will still run, but probably won't do anything.");
 

@@ -1862,8 +1862,8 @@ retry_all_listeners(smartlist_t *replaced_conns,
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
     return -1;
-  if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NatdListenAddress,
-                      options->NatdPort, "127.0.0.1",
+  if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NATDListenAddress,
+                      options->NATDPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
     return -1;

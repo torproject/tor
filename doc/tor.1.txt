@@ -670,7 +670,7 @@ The following options are useful only for clients (that is, if
 
 **AllowDotExit** **0**|**1**::
     If enabled, we convert "www.google.com.foo.exit" addresses on the
-    SocksPort/TransPort/NatdPort into "www.google.com" addresses that exit from
+    SocksPort/TransPort/NATDPort into "www.google.com" addresses that exit from
     the node "foo". Disabled by default since attacking websites and exit
     relays can use it to manipulate your path selection. (Default: 0)
 

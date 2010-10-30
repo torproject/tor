@@ -2379,7 +2379,7 @@ typedef struct {
    * connections. */
   config_line_t *TransListenAddress;
   /** Addresses to bind for listening for transparent natd connections */
-  config_line_t *NatdListenAddress;
+  config_line_t *NATDListenAddress;
   /** Addresses to bind for listening for SOCKS connections. */
   config_line_t *DNSListenAddress;
   /** Addresses to bind for listening for OR connections. */
@@ -2403,7 +2403,7 @@ typedef struct {
   int SocksPort; /**< Port to listen on for SOCKS connections. */
   /** Port to listen on for transparent pf/netfilter connections. */
   int TransPort;
-  int NatdPort; /**< Port to listen on for transparent natd connections. */
+  int NATDPort; /**< Port to listen on for transparent natd connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
