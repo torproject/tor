@@ -1189,6 +1189,11 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     server's preferred number, but the consensus of all preferences. Must be at
     least 2. (Default: 3.)
 
+**V3BandwidthsFile** __FILENAME__::
+    V3 authoritative directories only. Configures the location of the
+    bandiwdth-authority generated file storing information on relays' measured
+    bandwidth capacities. (Default: unset.)
+
 HIDDEN SERVICE OPTIONS
 ----------------------
 
