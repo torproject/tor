@@ -2413,6 +2413,9 @@ resolve_my_address(int warn_severity, or_options_t *options,
         }
       }
     }
+  } else {
+    addr = ntohl(in.s_addr); /* set addr so that addr_string is not
+                              * illformed */
   }
 
   addr_string = tor_dup_ip(addr);
