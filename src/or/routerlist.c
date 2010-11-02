@@ -2661,12 +2661,15 @@ signed_descriptor_free(signed_descriptor_t *sd)
   tor_free(sd);
 }
 
-/** Extract a signed_descriptor_t from a routerinfo, and free the routerinfo.
+/** Extract a signed_descriptor_t from a general routerinfo, and free the
+ * routerinfo.
  */
 static signed_descriptor_t *
 signed_descriptor_from_routerinfo(routerinfo_t *ri)
 {
-  signed_descriptor_t *sd = tor_malloc_zero(sizeof(signed_descriptor_t));
+  signed_descriptor_t *sd;
+  tor_assert(ri->purpose == ROUTER_PURPOSE_GENERAL);
+  sd = tor_malloc_zero(sizeof(signed_descriptor_t));
   memcpy(sd, &(ri->cache_info), sizeof(signed_descriptor_t));
   sd->routerlist_index = -1;
   ri->cache_info.signed_descriptor_body = NULL;
@@ -3209,10 +3212,14 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     /* If we have this descriptor already and the new descriptor is a bridge
      * descriptor, replace it. If we had a bridge descriptor before and the
      * new one is not a bridge descriptor, don't replace it. */
-    tor_assert(old_router);
+
+    /* Only members of routerlist->identity_map can be bridges; we don't
+     * put bridges in old_routers. */
+    const int was_bridge = old_router &&
+      old_router->purpose == ROUTER_PURPOSE_BRIDGE;
+
     if (! (routerinfo_is_a_configured_bridge(router) &&
-            (router->purpose == ROUTER_PURPOSE_BRIDGE ||
-             old_router->purpose != ROUTER_PURPOSE_BRIDGE))) {
+           (router->purpose == ROUTER_PURPOSE_BRIDGE || !was_bridge))) {
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router '%s'",
                router->nickname);
