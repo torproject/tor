@@ -4,5 +4,7 @@
       Previously we would ignore such annotations at first, but cache
       them to disk anyway.  Bugfix on 0.2.0.8-alpha. Found by piebeer.
 
-
+  o Minor bugfixes
+    - Enforce multiplicity rules when parsing annotations.  Bugfix on
+      0.2.0.8-alpha. Found by piebeer.
 

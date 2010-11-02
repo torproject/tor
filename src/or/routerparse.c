@@ -3181,6 +3181,9 @@ tokenize_string(memarea_t *area,
     end = start+strlen(start);
   for (i = 0; i < _NIL; ++i)
     counts[i] = 0;
+
+  SMARTLIST_FOREACH(out, const directory_token_t *, t, ++counts[t->tp]);
+
   while (*s < end && (!tok || tok->tp != _EOF)) {
     tok = get_next_token(area, s, end, table);
     if (tok->tp == _ERR) {
