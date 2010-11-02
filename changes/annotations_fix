@@ -1,0 +1,8 @@
+  o Major bugfixes
+    - Do even more to reject (and not just ignore) annotations on
+      router descriptors received anywhere but from the cache.
+      Previously we would ignore such annotations at first, but cache
+      them to disk anyway.  Bugfix on 0.2.0.8-alpha. Found by piebeer.
+
+
+
