@@ -416,6 +416,7 @@ static config_var_t testing_tor_network_defaults[] = {
   V(TestingV3AuthInitialDistDelay, INTERVAL, "20 seconds"),
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
+  V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
