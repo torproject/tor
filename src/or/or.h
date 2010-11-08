@@ -2090,23 +2090,24 @@ typedef struct authority_cert_t {
   uint8_t is_cross_certified;
 } authority_cert_t;
 
-/** Bitfield enum type listing types of directory authority/directory
- * server.  */
+/** Bitfield enum type listing types of information that directory authorities
+ * can be authoritative about, and that directory caches may or may not cache.
+ */
 typedef enum {
-  NO_AUTHORITY      = 0,
+  NO_DIRINFO      = 0,
   /** Serves/signs v1 directory information: Big lists of routers, and short
    * routerstatus documents. */
-  V1_AUTHORITY      = 1 << 0,
+  V1_DIRINFO      = 1 << 0,
   /** Serves/signs v2 directory information: i.e. v2 networkstatus documents */
-  V2_AUTHORITY      = 1 << 1,
+  V2_DIRINFO      = 1 << 1,
   /** Serves/signs v3 directory information: votes, consensuses, certs */
-  V3_AUTHORITY      = 1 << 2,
+  V3_DIRINFO      = 1 << 2,
   /** Serves hidden service descriptors. */
-  HIDSERV_AUTHORITY = 1 << 3,
+  HIDSERV_DIRINFO = 1 << 3,
   /** Serves bridge descriptors. */
-  BRIDGE_AUTHORITY  = 1 << 4,
-  /** Serves extrainfo documents. (XXX Not precisely an authority type)*/
-  EXTRAINFO_CACHE   = 1 << 5,
+  BRIDGE_DIRINFO  = 1 << 4,
+  /** Serves extrainfo documents. */
+  EXTRAINFO_DIRINFO   = 1 << 5,
 } dirinfo_type_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u

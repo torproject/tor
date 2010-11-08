@@ -60,7 +60,7 @@ int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir_type(const char *digest,
                                       dirinfo_type_t type);
 #define router_digest_is_trusted_dir(d) \
-  router_digest_is_trusted_dir_type((d), NO_AUTHORITY)
+  router_digest_is_trusted_dir_type((d), NO_DIRINFO)
 
 int router_addr_is_trusted_dir(uint32_t addr);
 int hexdigest_to_digest(const char *hexdigest, char *digest);

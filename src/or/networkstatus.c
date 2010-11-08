@@ -482,7 +482,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   int n_bad = 0;
   int n_unknown = 0;
   int n_no_signature = 0;
-  int n_v3_authorities = get_n_authorities(V3_AUTHORITY);
+  int n_v3_authorities = get_n_authorities(V3_DIRINFO);
   int n_required = n_v3_authorities/2 + 1;
   smartlist_t *need_certs_from = smartlist_create();
   smartlist_t *unrecognized = smartlist_create();
@@ -553,7 +553,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                     trusted_dir_server_t *, ds,
     {
-      if ((ds->type & V3_AUTHORITY) &&
+      if ((ds->type & V3_DIRINFO) &&
           !networkstatus_get_voter_by_id(consensus, ds->v3_identity_digest))
         smartlist_add(missing_authorities, ds);
     });
@@ -736,7 +736,7 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   base16_encode(fp, HEX_DIGEST_LEN+1, ns->identity_digest, DIGEST_LEN);
   if (!(trusted_dir =
         router_get_trusteddirserver_by_digest(ns->identity_digest)) ||
-      !(trusted_dir->type & V2_AUTHORITY)) {
+      !(trusted_dir->type & V2_DIRINFO)) {
     log_info(LD_DIR, "Network status was signed, but not by an authoritative "
              "directory we recognize.");
     source_desc = fp;
@@ -1130,7 +1130,7 @@ update_v2_networkstatus_cache_downloads(time_t now)
       {
          char resource[HEX_DIGEST_LEN+6]; /* fp/hexdigit.z\0 */
          tor_addr_t addr;
-         if (!(ds->type & V2_AUTHORITY))
+         if (!(ds->type & V2_DIRINFO))
            continue;
          if (router_digest_is_me(ds->digest))
            continue;

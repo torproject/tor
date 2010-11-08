@@ -875,16 +875,16 @@ validate_dir_authorities(or_options_t *options, or_options_t *old_options)
   /* Now go through the four ways you can configure an alternate
    * set of directory authorities, and make sure none are broken. */
   for (cl = options->DirServers; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 1)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 1)<0)
       return -1;
   return 0;
 }
@@ -915,27 +915,27 @@ consider_adding_dir_authorities(or_options_t *options,
 
   if (!options->DirServers) {
     /* then we may want some of the defaults */
-    dirinfo_type_t type = NO_AUTHORITY;
+    dirinfo_type_t type = NO_DIRINFO;
     if (!options->AlternateBridgeAuthority)
-      type |= BRIDGE_AUTHORITY;
+      type |= BRIDGE_DIRINFO;
     if (!options->AlternateDirAuthority)
-      type |= V1_AUTHORITY | V2_AUTHORITY | V3_AUTHORITY;
+      type |= V1_DIRINFO | V2_DIRINFO | V3_DIRINFO;
     if (!options->AlternateHSAuthority)
-      type |= HIDSERV_AUTHORITY;
+      type |= HIDSERV_DIRINFO;
     add_default_trusted_dir_authorities(type);
   }
 
   for (cl = options->DirServers; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateBridgeAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateDirAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   for (cl = options->AlternateHSAuthority; cl; cl = cl->next)
-    if (parse_dir_server_line(cl->value, NO_AUTHORITY, 0)<0)
+    if (parse_dir_server_line(cl->value, NO_DIRINFO, 0)<0)
       return -1;
   return 0;
 }
@@ -2849,23 +2849,23 @@ compute_publishserverdescriptor(or_options_t *options)
 {
   smartlist_t *list = options->PublishServerDescriptor;
   dirinfo_type_t *auth = &options->_PublishServerDescriptor;
-  *auth = NO_AUTHORITY;
+  *auth = NO_DIRINFO;
   if (!list) /* empty list, answer is none */
     return 0;
   SMARTLIST_FOREACH(list, const char *, string, {
     if (!strcasecmp(string, "v1"))
-      *auth |= V1_AUTHORITY;
+      *auth |= V1_DIRINFO;
     else if (!strcmp(string, "1"))
       if (options->BridgeRelay)
-        *auth |= BRIDGE_AUTHORITY;
+        *auth |= BRIDGE_DIRINFO;
       else
-        *auth |= V2_AUTHORITY | V3_AUTHORITY;
+        *auth |= V2_DIRINFO | V3_DIRINFO;
     else if (!strcasecmp(string, "v2"))
-      *auth |= V2_AUTHORITY;
+      *auth |= V2_DIRINFO;
     else if (!strcasecmp(string, "v3"))
-      *auth |= V3_AUTHORITY;
+      *auth |= V3_DIRINFO;
     else if (!strcasecmp(string, "bridge"))
-      *auth |= BRIDGE_AUTHORITY;
+      *auth |= BRIDGE_DIRINFO;
     else if (!strcasecmp(string, "hidserv"))
       log_warn(LD_CONFIG,
                "PublishServerDescriptor hidserv is invalid. See "
@@ -3311,9 +3311,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if ((options->BridgeRelay
-        || options->_PublishServerDescriptor & BRIDGE_AUTHORITY)
+        || options->_PublishServerDescriptor & BRIDGE_DIRINFO)
       && (options->_PublishServerDescriptor
-          & (V1_AUTHORITY|V2_AUTHORITY|V3_AUTHORITY))) {
+          & (V1_DIRINFO|V2_DIRINFO|V3_DIRINFO))) {
     REJECT("Bridges are not supposed to publish router descriptors to the "
            "directory authorities. Please correct your "
            "PublishServerDescriptor line.");
@@ -4561,7 +4561,7 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
   uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
   char v3_digest[DIGEST_LEN];
-  dirinfo_type_t type = V2_AUTHORITY;
+  dirinfo_type_t type = V2_DIRINFO;
   int is_not_hidserv_authority = 0, is_not_v2_authority = 0;
 
   items = smartlist_create();
@@ -4582,13 +4582,13 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
     if (TOR_ISDIGIT(flag[0]))
       break;
     if (!strcasecmp(flag, "v1")) {
-      type |= (V1_AUTHORITY | HIDSERV_AUTHORITY);
+      type |= (V1_DIRINFO | HIDSERV_DIRINFO);
     } else if (!strcasecmp(flag, "hs")) {
-      type |= HIDSERV_AUTHORITY;
+      type |= HIDSERV_DIRINFO;
     } else if (!strcasecmp(flag, "no-hs")) {
       is_not_hidserv_authority = 1;
     } else if (!strcasecmp(flag, "bridge")) {
-      type |= BRIDGE_AUTHORITY;
+      type |= BRIDGE_DIRINFO;
     } else if (!strcasecmp(flag, "no-v2")) {
       is_not_v2_authority = 1;
     } else if (!strcasecmpstart(flag, "orport=")) {
@@ -4605,7 +4605,7 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
         log_warn(LD_CONFIG, "Bad v3 identity digest '%s' on DirServer line",
                  flag);
       } else {
-        type |= V3_AUTHORITY;
+        type |= V3_DIRINFO;
       }
     } else {
       log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirServer line",
@@ -4615,9 +4615,9 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
     smartlist_del_keeporder(items, 0);
   }
   if (is_not_hidserv_authority)
-    type &= ~HIDSERV_AUTHORITY;
+    type &= ~HIDSERV_DIRINFO;
   if (is_not_v2_authority)
-    type &= ~V2_AUTHORITY;
+    type &= ~V2_DIRINFO;
 
   if (smartlist_len(items) < 2) {
     log_warn(LD_CONFIG, "Too few arguments to DirServer line.");

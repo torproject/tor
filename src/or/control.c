@@ -1847,7 +1847,7 @@ getinfo_helper_events(control_connection_t *control_conn,
       } else if (!strcmp(question, "status/version/num-versioning") ||
                  !strcmp(question, "status/version/num-concurring")) {
         char s[33];
-        tor_snprintf(s, sizeof(s), "%d", get_n_authorities(V3_AUTHORITY));
+        tor_snprintf(s, sizeof(s), "%d", get_n_authorities(V3_DIRINFO));
         *answer = tor_strdup(s);
         log_warn(LD_GENERAL, "%s is deprecated; it no longer gives useful "
                  "information", question);

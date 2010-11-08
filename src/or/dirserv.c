@@ -1555,8 +1555,8 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             dirinfo_type_t auth_type)
 {
   or_options_t *options = get_options();
-  int authority = (auth_type == V1_AUTHORITY && authdir_mode_v1(options)) ||
-                  (auth_type == V2_AUTHORITY && authdir_mode_v2(options));
+  int authority = (auth_type == V1_DIRINFO && authdir_mode_v1(options)) ||
+                  (auth_type == V2_DIRINFO && authdir_mode_v2(options));
 
   if (!authority || authdir_mode_bridge(options)) {
     return cache_src;
@@ -1585,7 +1585,7 @@ dirserv_get_directory(void)
   return dirserv_pick_cached_dir_obj(cached_directory, the_directory,
                                      the_directory_is_dirty,
                                      dirserv_regenerate_directory,
-                                     "v1 server directory", V1_AUTHORITY);
+                                     "v1 server directory", V1_DIRINFO);
 }
 
 /** Only called by v1 auth dirservers.
@@ -1678,7 +1678,7 @@ dirserv_get_runningrouters(void)
                          &cached_runningrouters, &the_runningrouters,
                          runningrouters_is_dirty,
                          generate_runningrouters,
-                         "v1 network status list", V1_AUTHORITY);
+                         "v1 network status list", V1_DIRINFO);
 }
 
 /** Return the latest downloaded consensus networkstatus in encoded, signed,
@@ -2967,7 +2967,7 @@ dirserv_get_networkstatus_v2_fingerprints(smartlist_t *result,
     } else {
       SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                   trusted_dir_server_t *, ds,
-                  if (ds->type & V2_AUTHORITY)
+                  if (ds->type & V2_DIRINFO)
                     smartlist_add(result, tor_memdup(ds->digest, DIGEST_LEN)));
     }
     smartlist_sort_digests(result);

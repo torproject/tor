@@ -153,15 +153,15 @@ dirinfo_type_to_string(dirinfo_type_t auth)
 {
   char *result;
   smartlist_t *lst = smartlist_create();
-  if (auth & V1_AUTHORITY)
+  if (auth & V1_DIRINFO)
     smartlist_add(lst, (void*)"V1");
-  if (auth & V2_AUTHORITY)
+  if (auth & V2_DIRINFO)
     smartlist_add(lst, (void*)"V2");
-  if (auth & V3_AUTHORITY)
+  if (auth & V3_DIRINFO)
     smartlist_add(lst, (void*)"V3");
-  if (auth & BRIDGE_AUTHORITY)
+  if (auth & BRIDGE_DIRINFO)
     smartlist_add(lst, (void*)"Bridge");
-  if (auth & HIDSERV_AUTHORITY)
+  if (auth & HIDSERV_DIRINFO)
     smartlist_add(lst, (void*)"Hidden service");
   if (smartlist_len(lst)) {
     result = smartlist_join_strings(lst, ", ", 0, NULL);
@@ -356,30 +356,30 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
    * it elsewhere in directory.c. -RD */
   switch (dir_purpose) {
     case DIR_PURPOSE_FETCH_EXTRAINFO:
-      type = EXTRAINFO_CACHE |
-             (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
-                                                        V3_AUTHORITY);
+      type = EXTRAINFO_DIRINFO |
+             (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_DIRINFO :
+                                                        V3_DIRINFO);
       break;
     case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
-      type = V2_AUTHORITY;
+      type = V2_DIRINFO;
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
-      type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
-                                                        V3_AUTHORITY);
+      type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_DIRINFO :
+                                                        V3_DIRINFO);
       break;
     case DIR_PURPOSE_FETCH_RENDDESC:
-      type = HIDSERV_AUTHORITY;
+      type = HIDSERV_DIRINFO;
       break;
     case DIR_PURPOSE_FETCH_STATUS_VOTE:
     case DIR_PURPOSE_FETCH_DETACHED_SIGNATURES:
-      type = V3_AUTHORITY;
+      type = V3_DIRINFO;
       break;
     case DIR_PURPOSE_FETCH_CONSENSUS:
     case DIR_PURPOSE_FETCH_CERTIFICATE:
-      type = V3_AUTHORITY;
+      type = V3_DIRINFO;
       break;
     case DIR_PURPOSE_FETCH_MICRODESC:
-      type = V3_AUTHORITY;
+      type = V3_DIRINFO;
       break;
     default:
       log_warn(LD_BUG, "Unexpected purpose %d", (int)dir_purpose);
@@ -407,11 +407,11 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     }
   }
 
-  if (!options->FetchServerDescriptors && type != HIDSERV_AUTHORITY)
+  if (!options->FetchServerDescriptors && type != HIDSERV_DIRINFO)
     return;
 
   if (!get_via_tor) {
-    if (options->UseBridges && type != BRIDGE_AUTHORITY) {
+    if (options->UseBridges && type != BRIDGE_DIRINFO) {
       /* want to ask a running bridge for which we have a descriptor. */
       /* XXX023 we assume that all of our bridges can answer any
        * possible directory question. This won't be true forever. -RD */
@@ -435,7 +435,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
                            "nodes are available yet.");
       return;
     } else {
-      if (prefer_authority || type == BRIDGE_AUTHORITY) {
+      if (prefer_authority || type == BRIDGE_DIRINFO) {
         /* only ask authdirservers, and don't ask myself */
         rs = router_pick_trusteddirserver(type, pds_flags);
         if (rs == NULL && (pds_flags & (PDS_NO_EXISTING_SERVERDESC_FETCH|
@@ -457,7 +457,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
           }
         }
       }
-      if (!rs && type != BRIDGE_AUTHORITY) {
+      if (!rs && type != BRIDGE_DIRINFO) {
         /* anybody with a non-zero dirport will do */
         rs = router_pick_directory_server(type, pds_flags);
         if (!rs) {
@@ -474,7 +474,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
     if (dir_purpose == DIR_PURPOSE_FETCH_RENDDESC) {
       /* only ask hidserv authorities, any of them will do */
       pds_flags |= PDS_IGNORE_FASCISTFIREWALL|PDS_ALLOW_SELF;
-      rs = router_pick_trusteddirserver(HIDSERV_AUTHORITY, pds_flags);
+      rs = router_pick_trusteddirserver(HIDSERV_DIRINFO, pds_flags);
     } else {
       /* anybody with a non-zero dirport will do. Disregard firewalls. */
       pds_flags |= PDS_IGNORE_FASCISTFIREWALL;
@@ -520,7 +520,7 @@ directory_get_from_all_authorities(uint8_t dir_purpose,
       routerstatus_t *rs;
       if (router_digest_is_me(ds->digest))
         continue;
-      if (!(ds->type & V3_AUTHORITY))
+      if (!(ds->type & V3_DIRINFO))
         continue;
       rs = &ds->fake_status;
       directory_initiate_command_routerstatus(rs, dir_purpose, router_purpose,
@@ -1047,7 +1047,7 @@ directory_get_consensus_url(int supports_conditional_consensus,
                       trusted_dir_server_t *, ds,
       {
         char *hex;
-        if (!(ds->type & V3_AUTHORITY))
+        if (!(ds->type & V3_DIRINFO))
           continue;
 
         hex = tor_malloc(2*CONDITIONAL_CONSENSUS_FPR_LEN+1);

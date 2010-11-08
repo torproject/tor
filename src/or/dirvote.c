@@ -2742,7 +2742,7 @@ dirvote_perform_vote(void)
 
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_VOTE,
                                ROUTER_PURPOSE_GENERAL,
-                               V3_AUTHORITY,
+                               V3_DIRINFO,
                                pending_vote->vote_body->dir,
                                pending_vote->vote_body->dir_len, 0);
   log_notice(LD_DIR, "Vote posted.");
@@ -2761,7 +2761,7 @@ dirvote_fetch_missing_votes(void)
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                     trusted_dir_server_t *, ds,
     {
-      if (!(ds->type & V3_AUTHORITY))
+      if (!(ds->type & V3_DIRINFO))
         continue;
       if (!dirvote_get_vote(ds->v3_identity_digest,
                             DGV_BY_ID|DGV_INCLUDE_PENDING)) {
@@ -2874,7 +2874,7 @@ list_v3_auth_ids(void)
   char *keys;
   SMARTLIST_FOREACH(router_get_trusted_dir_servers(),
                     trusted_dir_server_t *, ds,
-    if ((ds->type & V3_AUTHORITY) &&
+    if ((ds->type & V3_DIRINFO) &&
         !tor_digest_is_zero(ds->v3_identity_digest))
       smartlist_add(known_v3_keys,
                     tor_strdup(hex_str(ds->v3_identity_digest, DIGEST_LEN))));
@@ -3069,7 +3069,7 @@ dirvote_compute_consensuses(void)
   if (!pending_vote_list)
     pending_vote_list = smartlist_create();
 
-  n_voters = get_n_authorities(V3_AUTHORITY);
+  n_voters = get_n_authorities(V3_DIRINFO);
   n_votes = smartlist_len(pending_vote_list);
   if (n_votes <= n_voters/2) {
     log_warn(LD_DIR, "We don't have enough votes to generate a consensus: "
@@ -3208,7 +3208,7 @@ dirvote_compute_consensuses(void)
 
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_SIGNATURES,
                                ROUTER_PURPOSE_GENERAL,
-                               V3_AUTHORITY,
+                               V3_DIRINFO,
                                pending_consensus_signatures,
                                strlen(pending_consensus_signatures), 0);
   log_notice(LD_DIR, "Signature(s) posted.");

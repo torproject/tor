@@ -120,7 +120,7 @@ get_n_authorities(dirinfo_type_t type)
   return n;
 }
 
-#define get_n_v2_authorities() get_n_authorities(V2_AUTHORITY)
+#define get_n_v2_authorities() get_n_authorities(V2_DIRINFO)
 
 /** Helper: Return the cert_list_t for an authority whose authority ID is
  * <b>id_digest</b>, allocating a new list if necessary. */
@@ -518,7 +518,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
   }
   SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds) {
     int found = 0;
-    if (!(ds->type & V3_AUTHORITY))
+    if (!(ds->type & V3_DIRINFO))
       continue;
     if (smartlist_digest_isin(missing_digests, ds->v3_identity_digest))
       continue;
@@ -976,7 +976,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
   /* XXXX This is a bit of a kludge */
   if (rs->is_v2_dir) {
     sl_last_total_weighted_bw = 0;
-    router_pick_directory_server(V2_AUTHORITY, pds_flags);
+    router_pick_directory_server(V2_DIRINFO, pds_flags);
     if (sl_last_total_weighted_bw != 0) {
       *v2_share_out = U64_TO_DBL(sl_last_weighted_bw_of_me) /
         U64_TO_DBL(sl_last_total_weighted_bw);
@@ -985,7 +985,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
 
   if (rs->version_supports_v3_dir) {
     sl_last_total_weighted_bw = 0;
-    router_pick_directory_server(V3_AUTHORITY, pds_flags);
+    router_pick_directory_server(V3_DIRINFO, pds_flags);
     if (sl_last_total_weighted_bw != 0) {
       *v3_share_out = U64_TO_DBL(sl_last_weighted_bw_of_me) /
         U64_TO_DBL(sl_last_total_weighted_bw);
@@ -1026,7 +1026,7 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        if (!memcmp(ds->v3_identity_digest, digest, DIGEST_LEN) &&
-           (ds->type & V3_AUTHORITY))
+           (ds->type & V3_DIRINFO))
          return ds;
      });
 
@@ -1115,16 +1115,16 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
-    if (type & V3_AUTHORITY) {
+    if (type & V3_DIRINFO) {
       if (!(status->version_supports_v3_dir ||
             router_digest_is_trusted_dir_type(node->identity,
-                                              V3_AUTHORITY)))
+                                              V3_DIRINFO)))
         continue;
     }
     is_trusted = router_digest_is_trusted_dir(node->identity);
-    if ((type & V2_AUTHORITY) && !(node->rs->is_v2_dir || is_trusted))
+    if ((type & V2_DIRINFO) && !(node->rs->is_v2_dir || is_trusted))
       continue;
-    if ((type & EXTRAINFO_CACHE) &&
+    if ((type & EXTRAINFO_DIRINFO) &&
         !router_supports_extrainfo(node->identity, 0))
       continue;
     if (try_excluding && options->ExcludeNodes &&
@@ -1227,7 +1227,7 @@ router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
       if (!d->is_running) continue;
       if ((type & d->type) == 0)
         continue;
-      if ((type & EXTRAINFO_CACHE) &&
+      if ((type & EXTRAINFO_DIRINFO) &&
           !router_supports_extrainfo(d->digest, 1))
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
@@ -4084,7 +4084,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->is_running = 1;
   ent->type = type;
   memcpy(ent->digest, digest, DIGEST_LEN);
-  if (v3_auth_digest && (type & V3_AUTHORITY))
+  if (v3_auth_digest && (type & V3_DIRINFO))
     memcpy(ent->v3_identity_digest, v3_auth_digest, DIGEST_LEN);
 
   dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
@@ -4163,7 +4163,7 @@ int
 any_trusted_dir_is_v1_authority(void)
 {
   if (trusted_dir_servers)
-    return get_n_authorities(V1_AUTHORITY) > 0;
+    return get_n_authorities(V1_DIRINFO) > 0;
 
   return 0;
 }

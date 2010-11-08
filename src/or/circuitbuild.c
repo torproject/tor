@@ -4649,7 +4649,7 @@ retry_bridge_descriptor_fetch_directly(const char *digest)
 void
 fetch_bridge_descriptors(or_options_t *options, time_t now)
 {
-  int num_bridge_auths = get_n_authorities(BRIDGE_AUTHORITY);
+  int num_bridge_auths = get_n_authorities(BRIDGE_DIRINFO);
   int ask_bridge_directly;
   int can_use_bridge_authority;
 
