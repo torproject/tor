@@ -2085,6 +2085,7 @@ routerstatus_parse_entry_from_string(memarea_t *area,
       rs->version_supports_begindir = 1;
       rs->version_supports_extrainfo_upload = 1;
       rs->version_supports_conditional_consensus = 1;
+      rs->version_supports_microdesc_cache = 1;
     } else {
       rs->version_supports_begindir =
         tor_version_as_new_as(tok->args[0], "0.2.0.1-alpha");
@@ -2094,6 +2095,8 @@ routerstatus_parse_entry_from_string(memarea_t *area,
         tor_version_as_new_as(tok->args[0], "0.2.0.8-alpha");
       rs->version_supports_conditional_consensus =
         tor_version_as_new_as(tok->args[0], "0.2.1.1-alpha");
+      rs->version_supports_microdesc_cache =
+        tor_version_as_new_as(tok->args[0], "0.2.3.0-alpha");
     }
     if (vote_rs) {
       vote_rs->version = tor_strdup(tok->args[0]);

@@ -13,7 +13,6 @@
 #define _TOR_DIRECTORY_H
 
 int directories_have_accepted_server_descriptor(void);
-char *dirinfo_type_to_string(dirinfo_type_t auth);
 void directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                   dirinfo_type_t type, const char *payload,
                                   size_t payload_len, size_t extrainfo_len);

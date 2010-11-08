@@ -147,9 +147,10 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
   return 1;
 }
 
-/** Return a newly allocated string describing <b>auth</b>. */
-char *
-dirinfo_type_to_string(dirinfo_type_t auth)
+/** Return a newly allocated string describing <b>auth</b>. Only describes
+ * authority features. */
+static char *
+authdir_type_to_string(dirinfo_type_t auth)
 {
   char *result;
   smartlist_t *lst = smartlist_create();
@@ -328,7 +329,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                               NULL, payload, upload_len, 0);
   } SMARTLIST_FOREACH_END(ds);
   if (!found) {
-    char *s = dirinfo_type_to_string(type);
+    char *s = authdir_type_to_string(type);
     log_warn(LD_DIR, "Publishing server descriptor to directory authorities "
              "of type '%s', but no authorities of that type listed!", s);
     tor_free(s);
@@ -379,7 +380,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       type = V3_DIRINFO;
       break;
     case DIR_PURPOSE_FETCH_MICRODESC:
-      type = V3_DIRINFO;
+      type = MICRODESC_DIRINFO;
       break;
     default:
       log_warn(LD_BUG, "Unexpected purpose %d", (int)dir_purpose);

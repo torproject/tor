@@ -381,6 +381,7 @@ static config_var_t _option_vars[] = {
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
   V(UseEntryGuards,              BOOL,     "1"),
+  V(UseMicrodescriptors,         AUTOBOOL, "0"),
   V(User,                        STRING,   NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
   VAR("V2AuthoritativeDirectory",BOOL, V2AuthoritativeDir,   "0"),
@@ -919,7 +920,8 @@ consider_adding_dir_authorities(or_options_t *options,
     if (!options->AlternateBridgeAuthority)
       type |= BRIDGE_DIRINFO;
     if (!options->AlternateDirAuthority)
-      type |= V1_DIRINFO | V2_DIRINFO | V3_DIRINFO;
+      type |= V1_DIRINFO | V2_DIRINFO | V3_DIRINFO | EXTRAINFO_DIRINFO |
+        MICRODESC_DIRINFO;
     if (!options->AlternateHSAuthority)
       type |= HIDSERV_DIRINFO;
     add_default_trusted_dir_authorities(type);
@@ -4605,7 +4607,7 @@ parse_dir_server_line(const char *line, dirinfo_type_t required_type,
         log_warn(LD_CONFIG, "Bad v3 identity digest '%s' on DirServer line",
                  flag);
       } else {
-        type |= V3_DIRINFO;
+        type |= V3_DIRINFO|EXTRAINFO_DIRINFO|MICRODESC_DIRINFO;
       }
     } else {
       log_warn(LD_CONFIG, "Unrecognized flag '%s' on DirServer line",

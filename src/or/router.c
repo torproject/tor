@@ -699,7 +699,8 @@ init_keys(void)
   crypto_pk_get_digest(get_server_identity_key(), digest);
   type = ((options->V1AuthoritativeDir ? V1_DIRINFO : NO_DIRINFO) |
           (options->V2AuthoritativeDir ? V2_DIRINFO : NO_DIRINFO) |
-          (options->V3AuthoritativeDir ? V3_DIRINFO : NO_DIRINFO) |
+          (options->V3AuthoritativeDir ?
+               (V3_DIRINFO|MICRODESC_DIRINFO|EXTRAINFO_DIRINFO) : NO_DIRINFO) |
           (options->BridgeAuthoritativeDir ? BRIDGE_DIRINFO : NO_DIRINFO) |
           (options->HSAuthoritativeDir ? HIDSERV_DIRINFO : NO_DIRINFO));
 

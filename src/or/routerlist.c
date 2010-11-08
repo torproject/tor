@@ -1127,6 +1127,9 @@ router_pick_directory_server_impl(dirinfo_type_t type, int flags)
     if ((type & EXTRAINFO_DIRINFO) &&
         !router_supports_extrainfo(node->identity, 0))
       continue;
+    if ((type & MICRODESC_DIRINFO) && !is_trusted &&
+        !node->rs->version_supports_microdesc_cache)
+      continue;
     if (try_excluding && options->ExcludeNodes &&
         routerset_contains_routerstatus(options->ExcludeNodes, status,
                                         country)) {
@@ -2441,18 +2444,6 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
   }
   return NULL;
 #endif
-}
-
-/** Try to find a routerinfo for <b>digest</b>. If we don't have one,
- * return 1. If we do, ask tor_version_as_new_as() for the answer.
- */
-int
-router_digest_version_as_new_as(const char *digest, const char *cutoff)
-{
-  const routerinfo_t *router = router_get_by_id_digest(digest);
-  if (!router)
-    return 1;
-  return tor_version_as_new_as(router->platform, cutoff);
 }
 
 /** Return true iff <b>digest</b> is the digest of the identity key of a
@@ -4726,6 +4717,8 @@ update_router_descriptor_downloads(time_t now)
   static time_t last_dummy_download = 0;
   if (should_delay_dir_fetches(options))
     return;
+  if (!we_fetch_router_descriptors(options))
+    return;
   if (directory_fetches_dir_info_early(options)) {
     update_router_descriptor_cache_downloads_v2(now);
   }
@@ -4879,20 +4872,28 @@ count_usable_descriptors(int *num_present, int *num_usable,
                          or_options_t *options, time_t now,
                          routerset_t *in_set)
 {
+  const int md = (consensus->flavor == FLAV_MICRODESC);
   *num_present = 0, *num_usable=0;
 
-  SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
-     {
+  SMARTLIST_FOREACH_BEGIN(consensus->routerstatus_list, routerstatus_t *, rs)
+    {
        if (in_set && ! routerset_contains_routerstatus(in_set, rs, -1))
          continue;
        if (client_would_use_router(rs, now, options)) {
+         const char * const digest = rs->descriptor_digest;
+         int present;
          ++*num_usable; /* the consensus says we want it. */
-         if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
+         if (md)
+           present = NULL != (microdesc_cache_lookup_by_digest256(NULL, digest));
+         else
+           present = NULL != router_get_by_descriptor_digest(digest);
+         if (present) {
            /* we have the descriptor listed in the consensus. */
            ++*num_present;
          }
        }
-     });
+     }
+  SMARTLIST_FOREACH_END(rs);
 
   log_debug(LD_DIR, "%d usable, %d present.", *num_usable, *num_present);
 }
@@ -4906,7 +4907,7 @@ count_loading_descriptors_progress(void)
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
+    networkstatus_get_reasonably_live_consensus(now, usable_consensus_flavor());
   double fraction;
 
   if (!consensus)
@@ -4936,14 +4937,14 @@ update_router_have_minimum_dir_info(void)
   int res;
   or_options_t *options = get_options();
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
+    networkstatus_get_reasonably_live_consensus(now, usable_consensus_flavor());
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())
-      strlcpy(dir_info_status, "We have no network-status consensus.",
+      strlcpy(dir_info_status, "We have no usable consensus.",
               sizeof(dir_info_status));
     else
-      strlcpy(dir_info_status, "We have no recent network-status consensus.",
+      strlcpy(dir_info_status, "We have no recent usable consensus.",
               sizeof(dir_info_status));
     res = 0;
     goto done;

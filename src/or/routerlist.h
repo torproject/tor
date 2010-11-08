@@ -56,7 +56,6 @@ const node_t *router_choose_random_node(smartlist_t *excludedsmartlist,
 
 const routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
-int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir_type(const char *digest,
                                       dirinfo_type_t type);
 #define router_digest_is_trusted_dir(d) \

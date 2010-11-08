@@ -50,7 +50,9 @@ static strmap_t *unnamed_server_map = NULL;
  * of whichever type we are using for our own circuits.  This will be the same
  * as one of current_ns_consensus or current_md_consensus.
  */
-#define current_consensus current_ns_consensus
+#define current_consensus                                       \
+  (we_use_microdescriptors_for_circuits(get_options()) ?        \
+   current_md_consensus : current_ns_consensus)
 
 /** Most recently received and validated v3 "ns"-flavored consensus network
  * status. */
@@ -1187,7 +1189,7 @@ we_want_to_fetch_flavor(or_options_t *options, int flavor)
   }
   /* Otherwise, we want the flavor only if we want to use it to build
    * circuits. */
-  return (flavor == USABLE_CONSENSUS_FLAVOR);
+  return flavor == usable_consensus_flavor();
 }
 
 /** How many times will we try to fetch a consensus before we give up? */
@@ -1392,7 +1394,7 @@ update_certificate_downloads(time_t now)
 int
 consensus_is_waiting_for_certs(void)
 {
-  return consensus_waiting_for_certs[USABLE_CONSENSUS_FLAVOR].consensus
+  return consensus_waiting_for_certs[usable_consensus_flavor()].consensus
     ? 1 : 0;
 }
 
@@ -1621,7 +1623,7 @@ networkstatus_set_current_consensus(const char *consensus,
     flavor = networkstatus_get_flavor_name(flav);
   }
 
-  if (flav != USABLE_CONSENSUS_FLAVOR &&
+  if (flav != usable_consensus_flavor() &&
       !directory_caches_dir_info(options)) {
     /* This consensus is totally boring to us: we won't use it, and we won't
      * serve it.  Drop it. */
@@ -1726,14 +1728,14 @@ networkstatus_set_current_consensus(const char *consensus,
     }
   }
 
-  if (!from_cache && flav == USABLE_CONSENSUS_FLAVOR)
+  if (!from_cache && flav == usable_consensus_flavor())
     control_event_client_status(LOG_NOTICE, "CONSENSUS_ARRIVED");
 
   /* Are we missing any certificates at all? */
   if (r != 1 && dl_certs)
     authority_certs_fetch_missing(c, now);
 
-  if (flav == USABLE_CONSENSUS_FLAVOR) {
+  if (flav == usable_consensus_flavor()) {
     notify_control_networkstatus_changed(current_consensus, c);
   }
   if (flav == FLAV_NS) {
@@ -1780,8 +1782,8 @@ networkstatus_set_current_consensus(const char *consensus,
       download_status_failed(&consensus_dl_status[flav], 0);
   }
 
-  if (flav == USABLE_CONSENSUS_FLAVOR) {
-    /* XXXXNM Microdescs: needs a non-ns variant. */
+  if (flav == usable_consensus_flavor()) {
+    /* XXXXNM Microdescs: needs a non-ns variant. ???? NM*/
     update_consensus_networkstatus_fetch_time(now);
 
     nodelist_set_consensus(current_consensus);

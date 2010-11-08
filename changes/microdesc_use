@@ -1,0 +1,10 @@
+  o Major features
+    - Clients can now use microdescriptors instead of regular descriptors
+      to build circuits.  Microdescriptors are authority-generated and
+      -authenticated summaries of regular descriptors' contents, designed
+      to change very rarely.  This feature is designed to save bandwidth,
+      especially for clients on slow internet connections.  It's off
+      by default for now, since nearly no caches support it, but it will
+      be on-by-default for clients in a future version.  You can use the
+      UseMicrodescriptors option to turn it on.
+

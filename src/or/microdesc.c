@@ -9,6 +9,7 @@
 #include "networkstatus.h"
 #include "nodelist.h"
 #include "policies.h"
+#include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
 
@@ -250,6 +251,9 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     if (ns && ns->flavor == FLAV_MICRODESC)
       SMARTLIST_FOREACH(added, microdesc_t *, md, nodelist_add_microdesc(md));
   }
+
+  if (smartlist_len(added))
+    router_dir_info_changed();
 
   return added;
 }
@@ -570,6 +574,8 @@ microdesc_list_missing_digest256(networkstatus_t *ns, microdesc_cache_t *cache,
       continue;
     if (skip && digestmap_get(skip, rs->descriptor_digest))
       continue;
+    if (tor_mem_is_zero(rs->descriptor_digest, DIGEST256_LEN))
+      continue; /* This indicates a bug somewhere XXXX023*/
     /* XXXX Also skip if we're a noncache and wouldn't use this router.
      * XXXX NM Microdesc
      */
@@ -602,11 +608,8 @@ update_microdesc_downloads(time_t now)
   if (!consensus)
     return;
 
-  if (!directory_caches_dir_info(options)) {
-    /* Right now, only caches fetch microdescriptors.
-     * XXXX NM Microdescs */
+  if (!we_fetch_microdescriptors(options))
     return;
-  }
 
   pending = digestmap_new();
   list_pending_microdesc_downloads(pending);
@@ -647,3 +650,45 @@ update_microdescs_from_networkstatus(time_t now)
   } SMARTLIST_FOREACH_END(rs);
 }
 
+/** Return true iff we should prefer to use microdescriptors rather than
+ * routerdescs for building circuits. */
+int
+we_use_microdescriptors_for_circuits(or_options_t *options)
+{
+  int ret = options->UseMicrodescriptors;
+  if (ret == -1) {
+    /* UseMicrodescriptors is "auto"; we need to decide: */
+    /* So we decide that we'll use microdescriptors iff we are not a server */
+    ret = ! server_mode(options);
+  }
+  return ret;
+}
+
+/** Return true iff we should try to download microdescriptors at all. */
+int
+we_fetch_microdescriptors(or_options_t *options)
+{
+  if (directory_caches_dir_info(options))
+    return 1;
+  return we_use_microdescriptors_for_circuits(options);
+}
+
+/** Return true iff we should try to download router descriptors at all. */
+int
+we_fetch_router_descriptors(or_options_t *options)
+{
+  if (directory_caches_dir_info(options))
+    return 1;
+  return ! we_use_microdescriptors_for_circuits(options);
+}
+
+/** Return the consensus flavor we actually want to use to build circuits. */
+int
+usable_consensus_flavor(void)
+{
+  if (we_use_microdescriptors_for_circuits(get_options())) {
+    return FLAV_MICRODESC;
+  } else {
+    return FLAV_NS;
+  }
+}
