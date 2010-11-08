@@ -1267,6 +1267,7 @@ The following options are used for running a testing Tor network.
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
        V3AuthDistDelay 20 seconds
+       MinUptimeHidServDirectoryV2 0 seconds
        TestingV3AuthInitialVotingInterval 5 minutes
        TestingV3AuthInitialVoteDelay 20 seconds
        TestingV3AuthInitialDistDelay 20 seconds
