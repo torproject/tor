@@ -1080,8 +1080,8 @@ public_server_mode(or_options_t *options)
 int
 should_refuse_unknown_exits(or_options_t *options)
 {
-  if (options->RefuseUnknownExits_ != -1) {
-    return options->RefuseUnknownExits_;
+  if (options->RefuseUnknownExits != -1) {
+    return options->RefuseUnknownExits;
   } else {
     return networkstatus_get_param(NULL, "refuseunknownexits", 1, 0, 1);
   }

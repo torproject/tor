@@ -2669,12 +2669,10 @@ typedef struct {
   uint64_t ConstrainedSockSize; /**< Size of constrained buffers. */
 
   /** Whether we should drop exit streams from Tors that we don't know are
-   * relays.  One of "0" (never refuse), "1" (always refuse), or "auto" (do
+   * relays.  One of "0" (never refuse), "1" (always refuse), or "-1" (do
    * what the consensus says, defaulting to 'refuse' if the consensus says
    * nothing). */
-  char *RefuseUnknownExits;
-  /** Parsed version of RefuseUnknownExits. -1 for auto. */
-  int RefuseUnknownExits_;
+  int RefuseUnknownExits;
 
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */
