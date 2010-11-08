@@ -1552,7 +1552,7 @@ dirserv_pick_cached_dir_obj(cached_dir_t *cache_src,
                             cached_dir_t *auth_src,
                             time_t dirty, cached_dir_t *(*regenerate)(void),
                             const char *name,
-                            authority_type_t auth_type)
+                            dirinfo_type_t auth_type)
 {
   or_options_t *options = get_options();
   int authority = (auth_type == V1_AUTHORITY && authdir_mode_v1(options)) ||

@@ -40,9 +40,9 @@
 
 /* static function prototypes */
 static const routerstatus_t *router_pick_directory_server_impl(
-                                           authority_type_t auth, int flags);
+                                           dirinfo_type_t auth, int flags);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
-                          authority_type_t auth, int flags, int *n_busy_out);
+                          dirinfo_type_t auth, int flags, int *n_busy_out);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(const routerinfo_t *router,
                                    const char *nickname);
@@ -109,7 +109,7 @@ static uint64_t sl_last_total_weighted_bw = 0,
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
 int
-get_n_authorities(authority_type_t type)
+get_n_authorities(dirinfo_type_t type)
 {
   int n = 0;
   if (!trusted_dir_servers)
@@ -931,7 +931,7 @@ router_get_trusted_dir_servers(void)
  * servers that have returned 503 recently.
  */
 const routerstatus_t *
-router_pick_directory_server(authority_type_t type, int flags)
+router_pick_directory_server(dirinfo_type_t type, int flags)
 {
   const routerstatus_t *choice;
   if (get_options()->PreferTunneledDirConns)
@@ -1037,7 +1037,7 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
  * router_pick_directory_server.
  */
 const routerstatus_t *
-router_pick_trusteddirserver(authority_type_t type, int flags)
+router_pick_trusteddirserver(dirinfo_type_t type, int flags)
 {
   const routerstatus_t *choice;
   int busy = 0;
@@ -1073,7 +1073,7 @@ router_pick_trusteddirserver(authority_type_t type, int flags)
  * that we can use with BEGINDIR.
  */
 static const routerstatus_t *
-router_pick_directory_server_impl(authority_type_t type, int flags)
+router_pick_directory_server_impl(dirinfo_type_t type, int flags)
 {
   or_options_t *options = get_options();
   const node_t *result;
@@ -1192,7 +1192,7 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
  * are as for router_pick_directory_server_impl().
  */
 static const routerstatus_t *
-router_pick_trusteddirserver_impl(authority_type_t type, int flags,
+router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
                                   int *n_busy_out)
 {
   or_options_t *options = get_options();
@@ -2459,7 +2459,7 @@ router_digest_version_as_new_as(const char *digest, const char *cutoff)
  * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
  * is zero, any authority is okay. */
 int
-router_digest_is_trusted_dir_type(const char *digest, authority_type_t type)
+router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
 {
   if (!trusted_dir_servers)
     return 0;
@@ -4049,7 +4049,7 @@ trusted_dir_server_t *
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const char *digest, const char *v3_auth_digest,
-                       authority_type_t type)
+                       dirinfo_type_t type)
 {
   trusted_dir_server_t *ent;
   uint32_t a;

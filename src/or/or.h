@@ -2107,7 +2107,7 @@ typedef enum {
   BRIDGE_AUTHORITY  = 1 << 4,
   /** Serves extrainfo documents. (XXX Not precisely an authority type)*/
   EXTRAINFO_CACHE   = 1 << 5,
-} authority_type_t;
+} dirinfo_type_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u
 
@@ -2642,7 +2642,7 @@ typedef struct {
    * "v1", "v2", "v3", "bridge", or "". */
   smartlist_t *PublishServerDescriptor;
   /** An authority type, derived from PublishServerDescriptor. */
-  authority_type_t _PublishServerDescriptor;
+  dirinfo_type_t _PublishServerDescriptor;
   /** Boolean: do we publish hidden service descriptors to the HS auths? */
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
@@ -3648,7 +3648,7 @@ typedef struct trusted_dir_server_t {
   unsigned int has_accepted_serverdesc:1;
 
   /** What kind of authority is this? (Bitfield.) */
-  authority_type_t type;
+  dirinfo_type_t type;
 
   download_status_t v2_ns_dl_status; /**< Status of downloading this server's
                                * v2 network status. */

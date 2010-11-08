@@ -11,7 +11,7 @@
 #ifndef _TOR_ROUTERLIST_H
 #define _TOR_ROUTERLIST_H
 
-int get_n_authorities(authority_type_t type);
+int get_n_authorities(dirinfo_type_t type);
 int trusted_dirs_reload_certs(void);
 int trusted_dirs_load_certs_from_string(const char *contents, int from_store,
                                         int flush);
@@ -27,11 +27,11 @@ int router_reload_router_list(void);
 int authority_cert_dl_looks_uncertain(const char *id_digest);
 smartlist_t *router_get_trusted_dir_servers(void);
 
-const routerstatus_t *router_pick_directory_server(authority_type_t type,
+const routerstatus_t *router_pick_directory_server(dirinfo_type_t type,
                                                    int flags);
 trusted_dir_server_t *router_get_trusteddirserver_by_digest(const char *d);
 trusted_dir_server_t *trusteddirserver_get_by_v3_auth_digest(const char *d);
-const routerstatus_t *router_pick_trusteddirserver(authority_type_t type,
+const routerstatus_t *router_pick_trusteddirserver(dirinfo_type_t type,
                                                    int flags);
 int router_get_my_share_of_directory_requests(double *v2_share_out,
                                               double *v3_share_out);
@@ -58,7 +58,7 @@ const routerinfo_t *router_get_by_nickname(const char *nickname,
                                      int warn_if_unnamed);
 int router_digest_version_as_new_as(const char *digest, const char *cutoff);
 int router_digest_is_trusted_dir_type(const char *digest,
-                                      authority_type_t type);
+                                      dirinfo_type_t type);
 #define router_digest_is_trusted_dir(d) \
   router_digest_is_trusted_dir_type((d), NO_AUTHORITY)
 
@@ -138,7 +138,7 @@ trusted_dir_server_t *add_trusted_dir_server(const char *nickname,
                            const char *address,
                            uint16_t dir_port, uint16_t or_port,
                            const char *digest, const char *v3_auth_digest,
-                           authority_type_t type);
+                           dirinfo_type_t type);
 void authority_cert_free(authority_cert_t *cert);
 void clear_trusted_dir_servers(void);
 int any_trusted_dir_is_v1_authority(void);

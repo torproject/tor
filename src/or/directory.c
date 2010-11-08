@@ -149,7 +149,7 @@ purpose_needs_anonymity(uint8_t dir_purpose, uint8_t router_purpose)
 
 /** Return a newly allocated string describing <b>auth</b>. */
 char *
-authority_type_to_string(authority_type_t auth)
+dirinfo_type_to_string(dirinfo_type_t auth)
 {
   char *result;
   smartlist_t *lst = smartlist_create();
@@ -280,7 +280,7 @@ directories_have_accepted_server_descriptor(void)
  */
 void
 directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
-                             authority_type_t type,
+                             dirinfo_type_t type,
                              const char *payload,
                              size_t payload_len, size_t extrainfo_len)
 {
@@ -328,7 +328,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                                               NULL, payload, upload_len, 0);
   } SMARTLIST_FOREACH_END(ds);
   if (!found) {
-    char *s = authority_type_to_string(type);
+    char *s = dirinfo_type_to_string(type);
     log_warn(LD_DIR, "Publishing server descriptor to directory authorities "
              "of type '%s', but no authorities of that type listed!", s);
     tor_free(s);
@@ -349,7 +349,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   or_options_t *options = get_options();
   int prefer_authority = directory_fetches_from_authorities(options);
   int get_via_tor = purpose_needs_anonymity(dir_purpose, router_purpose);
-  authority_type_t type;
+  dirinfo_type_t type;
   time_t if_modified_since = 0;
 
   /* FFFF we could break this switch into its own function, and call

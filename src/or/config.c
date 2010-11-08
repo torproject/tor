@@ -561,7 +561,7 @@ static void config_register_addressmaps(or_options_t *options);
 
 static int parse_bridge_line(const char *line, int validate_only);
 static int parse_dir_server_line(const char *line,
-                                 authority_type_t required_type,
+                                 dirinfo_type_t required_type,
                                  int validate_only);
 static int validate_data_directory(or_options_t *options);
 static int write_configuration_file(const char *fname, or_options_t *options);
@@ -801,7 +801,7 @@ escaped_safe_str(const char *address)
 /** Add the default directory authorities directly into the trusted dir list,
  * but only add them insofar as they share bits with <b>type</b>. */
 static void
-add_default_trusted_dir_authorities(authority_type_t type)
+add_default_trusted_dir_authorities(dirinfo_type_t type)
 {
   int i;
   const char *dirservers[] = {
@@ -915,7 +915,7 @@ consider_adding_dir_authorities(or_options_t *options,
 
   if (!options->DirServers) {
     /* then we may want some of the defaults */
-    authority_type_t type = NO_AUTHORITY;
+    dirinfo_type_t type = NO_AUTHORITY;
     if (!options->AlternateBridgeAuthority)
       type |= BRIDGE_AUTHORITY;
     if (!options->AlternateDirAuthority)
@@ -2848,7 +2848,7 @@ static int
 compute_publishserverdescriptor(or_options_t *options)
 {
   smartlist_t *list = options->PublishServerDescriptor;
-  authority_type_t *auth = &options->_PublishServerDescriptor;
+  dirinfo_type_t *auth = &options->_PublishServerDescriptor;
   *auth = NO_AUTHORITY;
   if (!list) /* empty list, answer is none */
     return 0;
@@ -4552,7 +4552,7 @@ parse_bridge_line(const char *line, int validate_only)
  * bits it's missing) as a valid authority. Return 0 on success,
  * or -1 if the line isn't well-formed or if we can't add it. */
 static int
-parse_dir_server_line(const char *line, authority_type_t required_type,
+parse_dir_server_line(const char *line, dirinfo_type_t required_type,
                       int validate_only)
 {
   smartlist_t *items = NULL;
@@ -4561,7 +4561,7 @@ parse_dir_server_line(const char *line, authority_type_t required_type,
   uint16_t dir_port = 0, or_port = 0;
   char digest[DIGEST_LEN];
   char v3_digest[DIGEST_LEN];
-  authority_type_t type = V2_AUTHORITY;
+  dirinfo_type_t type = V2_AUTHORITY;
   int is_not_hidserv_authority = 0, is_not_v2_authority = 0;
 
   items = smartlist_create();

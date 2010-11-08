@@ -497,7 +497,7 @@ init_keys(void)
   char v3_digest[20];
   char *cp;
   or_options_t *options = get_options();
-  authority_type_t type;
+  dirinfo_type_t type;
   time_t now = time(NULL);
   trusted_dir_server_t *ds;
   int v3_digest_set = 0;
@@ -1195,7 +1195,7 @@ router_upload_dir_desc_to_dirservers(int force)
   extrainfo_t *ei;
   char *msg;
   size_t desc_len, extra_len = 0, total_len;
-  authority_type_t auth = get_options()->_PublishServerDescriptor;
+  dirinfo_type_t auth = get_options()->_PublishServerDescriptor;
 
   ri = router_get_my_routerinfo();
   if (!ri) {
