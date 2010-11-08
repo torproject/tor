@@ -4342,15 +4342,31 @@ options_init_logs(or_options_t *options, int validate_only)
                options->RunAsDaemon;
 #endif
 
-  if (options->LogTimeGranularity > 0 &&
-      (1000 % options->LogTimeGranularity == 0 ||
-       options->LogTimeGranularity % 1000 == 0)) {
-    set_log_time_granularity(options->LogTimeGranularity);
-  } else {
-    log_warn(LD_CONFIG, "Log time granularity '%d' has to be positive "
-             "and either a divisor or a multiple of 1 second.",
+  if (options->LogTimeGranularity <= 0) {
+    log_warn(LD_CONFIG, "Log time granularity '%d' has to be positive.",
              options->LogTimeGranularity);
     return -1;
+  } else if (1000 % options->LogTimeGranularity != 0 &&
+             options->LogTimeGranularity % 1000 != 0) {
+    int granularity = options->LogTimeGranularity;
+    if (granularity < 40) {
+      do granularity++;
+      while (1000 % granularity != 0);
+    } else if (granularity < 1000) {
+      granularity = 1000 / granularity;
+      while (1000 % granularity != 0)
+        granularity--;
+      granularity = 1000 / granularity;
+    } else {
+      granularity = 1000 * ((granularity / 1000) + 1);
+    }
+    log_warn(LD_CONFIG, "Log time granularity '%d' has to be either a "
+                        "divisor or a multiple of 1 second. Changing to "
+                        "'%d'.",
+             options->LogTimeGranularity, granularity);
+    set_log_time_granularity(granularity);
+  } else {
+    set_log_time_granularity(options->LogTimeGranularity);
   }
 
   ok = 1;
