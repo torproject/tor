@@ -4364,9 +4364,11 @@ options_init_logs(or_options_t *options, int validate_only)
                         "divisor or a multiple of 1 second. Changing to "
                         "'%d'.",
              options->LogTimeGranularity, granularity);
-    set_log_time_granularity(granularity);
+    if (!validate_only)
+      set_log_time_granularity(granularity);
   } else {
-    set_log_time_granularity(options->LogTimeGranularity);
+    if (!validate_only)
+      set_log_time_granularity(options->LogTimeGranularity);
   }
 
   ok = 1;
