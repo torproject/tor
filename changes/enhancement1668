@@ -1,0 +1,4 @@
+  o Minor features:
+    - Make logging resolution configurable and change default from 1
+      millisecond to 1 second. Implements enhancement 1668.
+

@@ -2490,6 +2490,7 @@ typedef struct {
 
   config_line_t *Logs; /**< New-style list of configuration lines
                         * for logs */
+  int LogTimeGranularity; /**< Log resolution in milliseconds. */
 
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory; /**< OR only: where to store long-term data. */

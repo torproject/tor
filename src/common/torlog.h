@@ -138,6 +138,7 @@ void mark_logs_temp(void);
 void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
 void log_set_application_name(const char *name);
+void set_log_time_granularity(int granularity_msec);
 
 /* Outputs a message to stdout */
 void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
