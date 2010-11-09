@@ -1,0 +1,4 @@
+  o Minor features:
+    - Add GeoIP file digest to extra-info descriptor. Implements
+      enhancement 1883.
+

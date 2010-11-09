@@ -21,6 +21,7 @@ int geoip_get_country_by_ip(uint32_t ipaddr);
 int geoip_get_n_countries(void);
 const char *geoip_get_country_name(country_t num);
 int geoip_is_loaded(void);
+const char *geoip_db_digest(void);
 country_t geoip_get_country(const char *countrycode);
 
 void geoip_note_client_seen(geoip_client_action_t action,

@@ -2015,6 +2015,17 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     char *contents = NULL;
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
+    if (geoip_is_loaded()) {
+      size_t pos = strlen(s);
+      if (tor_snprintf(s + pos, maxlen - strlen(s),
+                       "geoip-db-digest %s\n",
+                       geoip_db_digest()) < 0) {
+        log_warn(LD_DIR, "Could not write geoip-db-digest to extra-info "
+                 "descriptor.");
+        s[pos] = '\0';
+        write_stats_to_extrainfo = 0;
+      }
+    }
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", now, &contents) > 0) {
