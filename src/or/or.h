@@ -2991,6 +2991,8 @@ typedef struct {
   /** If true, do not enable IOCP on windows with bufferevents, even if
    * we think we could. */
   int DisableIOCP;
+  /** For testing only: will go away in 0.2.3.x. */
+  int _UseFilteringSSLBufferevents;
 
 } or_options_t;
 

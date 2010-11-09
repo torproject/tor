@@ -99,7 +99,8 @@ void tor_tls_log_one_error(tor_tls_t *tls, unsigned long err,
 int tor_tls_start_renegotiating(tor_tls_t *tls);
 struct bufferevent *tor_tls_init_bufferevent(tor_tls_t *tls,
                                      struct bufferevent *bufev_in,
-                                     evutil_socket_t socket, int receiving);
+                                      evutil_socket_t socket, int receiving,
+                                     int filter);
 #endif
 
 #endif

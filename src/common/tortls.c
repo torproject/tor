@@ -1826,41 +1826,49 @@ tor_tls_get_buffer_sizes(tor_tls_t *tls,
  */
 struct bufferevent *
 tor_tls_init_bufferevent(tor_tls_t *tls, struct bufferevent *bufev_in,
-                         evutil_socket_t socket, int receiving)
+                         evutil_socket_t socket, int receiving,
+                         int filter)
 {
   struct bufferevent *out;
   const enum bufferevent_ssl_state state = receiving ?
     BUFFEREVENT_SSL_ACCEPTING : BUFFEREVENT_SSL_CONNECTING;
 
-#if 0
-  (void) socket;
-  out = bufferevent_openssl_filter_new(tor_libevent_get_base(),
-                                       bufev_in,
-                                       tls->ssl,
-                                       state,
-                                       BEV_OPT_DEFER_CALLBACKS);
-#else
-  if (bufev_in) {
-    evutil_socket_t s = bufferevent_getfd(bufev_in);
-    tor_assert(s == -1 || s == socket);
-    tor_assert(evbuffer_get_length(bufferevent_get_input(bufev_in)) == 0);
-    tor_assert(evbuffer_get_length(bufferevent_get_output(bufev_in)) == 0);
-    tor_assert(BIO_number_read(SSL_get_rbio(tls->ssl)) == 0);
-    tor_assert(BIO_number_written(SSL_get_rbio(tls->ssl)) == 0);
-    bufferevent_free(bufev_in);
+  if (filter) {
+    /* Grab an extra reference to the SSL, since BEV_OPT_CLOSE_ON_FREE
+       means that the SSL will get freed too.
+
+       This increment makes our SSL usage not-threadsafe, BTW.  We should
+       see if we're allowed to use CRYPTO_add from outside openssl. */
+    tls->ssl->references += 1;
+    out = bufferevent_openssl_filter_new(tor_libevent_get_base(),
+                                         bufev_in,
+                                         tls->ssl,
+                                         state,
+                                         BEV_OPT_DEFER_CALLBACKS|
+                                         BEV_OPT_CLOSE_ON_FREE);
+  } else {
+    if (bufev_in) {
+      evutil_socket_t s = bufferevent_getfd(bufev_in);
+      tor_assert(s == -1 || s == socket);
+      tor_assert(evbuffer_get_length(bufferevent_get_input(bufev_in)) == 0);
+      tor_assert(evbuffer_get_length(bufferevent_get_output(bufev_in)) == 0);
+      tor_assert(BIO_number_read(SSL_get_rbio(tls->ssl)) == 0);
+      tor_assert(BIO_number_written(SSL_get_rbio(tls->ssl)) == 0);
+      bufferevent_free(bufev_in);
+    }
+
+    /* Current versions (as of 2.0.x) of Libevent need to defer
+     * bufferevent_openssl callbacks, or else our callback functions will
+     * get called reentrantly, which is bad for us.
+     */
+    out = bufferevent_openssl_socket_new(tor_libevent_get_base(),
+                                         socket,
+                                         tls->ssl,
+                                         state,
+                                         BEV_OPT_DEFER_CALLBACKS);
   }
   tls->state = TOR_TLS_ST_BUFFEREVENT;
 
-  /* Current versions (as of 2.0.7-rc) of Libevent need to defer
-   * bufferevent_openssl callbacks, or else our callback functions will
-   * get called reentrantly, which is bad for us.
-   */
-  out = bufferevent_openssl_socket_new(tor_libevent_get_base(),
-                                       socket,
-                                       tls->ssl,
-                                       state,
-                                       BEV_OPT_DEFER_CALLBACKS);
-#endif
   /* Unblock _after_ creating the bufferevent, since accept/connect tend to
    * clear flags. */
   tor_tls_unblock_renegotiation(tls);
