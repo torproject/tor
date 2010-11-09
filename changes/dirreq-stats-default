@@ -1,0 +1,4 @@
+  o Minor features:
+    - Turn on directory request statistics by default and include them in
+      extra-info descriptors. Don't break if we have no GeoIP database.
+
