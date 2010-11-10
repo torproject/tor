@@ -1312,10 +1312,16 @@ router_parse_entry_from_string(const char *s, const char *end,
     s = cp+1;
   }
 
-  if (allow_annotations && start_of_annotations != s) {
-    if (tokenize_string(area,start_of_annotations,s,tokens,
-                        routerdesc_token_table,TS_NOCHECK)) {
-      log_warn(LD_DIR, "Error tokenizing router descriptor (annotations).");
+  if (start_of_annotations != s) { /* We have annotations */
+    if (allow_annotations) {
+      if (tokenize_string(area,start_of_annotations,s,tokens,
+                          routerdesc_token_table,TS_NOCHECK)) {
+        log_warn(LD_DIR, "Error tokenizing router descriptor (annotations).");
+        goto err;
+      }
+    } else {
+      log_warn(LD_DIR, "Found unexpected annotations on router descriptor not "
+               "loaded from disk.  Dropping it.");
       goto err;
     }
   }
@@ -3967,6 +3973,9 @@ tokenize_string(memarea_t *area,
     end = start+strlen(start);
   for (i = 0; i < _NIL; ++i)
     counts[i] = 0;
+
+  SMARTLIST_FOREACH(out, const directory_token_t *, t, ++counts[t->tp]);
+
   while (*s < end && (!tok || tok->tp != _EOF)) {
     tok = get_next_token(area, s, end, table);
     if (tok->tp == _ERR) {
