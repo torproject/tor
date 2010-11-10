@@ -1,6 +1,0 @@
-  o Code simplifications and refactorting:
-    - When we fixed bug 1038 we had to put in a restriction not to send
-      RELAY_EARLY cells for relay cells on rend circuits. This was necessary
-      as long as relays using Tor 0.2.1.3-alpha through 0.2.1.18-alpha were
-      active. Since this isn't the case anymore, we unify our behaviour here.
-      Implements bug 2081.

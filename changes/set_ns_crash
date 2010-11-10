@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Avoid a crash bug triggered by looking at a dangling pointer while
-      setting the network status consensus. Found by Robert Ransom.
-      Bugfix on 0.2.2.17-alpha.  Fixes bug 2097.
