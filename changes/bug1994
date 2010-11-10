@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Correctly describe errors that occur when generating a TLS object
-      when logging them.  Previously we would attribtue them to a failure
-      while generating a TLS context.  Bugfix by Robert Ransom.  Bugfix 
-      on 0.1.0.4-rc.
-

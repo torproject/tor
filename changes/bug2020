@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix warnings that newer versions of autoconf produced during
-      ./autogen.sh. From what I can tell these were harmless in our case,
-      but they were extremely verbose.  Fixes bug 2020.
-

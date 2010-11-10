@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Enable protection of small arrays whenever we build with gcc hardening
-      features, not only when also building with warnings enabled. Fixes bug
-      2031; bugfix on 0.2.2.14-alpha. Reported by keb.
-
