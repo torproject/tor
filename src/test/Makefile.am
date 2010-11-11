@@ -12,14 +12,14 @@ AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
 test_SOURCES = \
-	test_data.c \
 	test.c \
 	test_addr.c \
-	test_crypto.c \
-	test_dir.c \
 	test_containers.c \
-	test_util.c \
+	test_crypto.c \
+	test_data.c \
+	test_dir.c \
 	test_microdesc.c \
+	test_util.c \
 	tinytest.c
 
 if USE_BUFFEREVENTS
@@ -35,6 +35,9 @@ test_LDADD = ../or/libtor.a ../common/libor.a ../common/libor-crypto.a \
 	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@ $(levent_openssl_lib)
 
-noinst_HEADERS = tinytest.h tinytest_macros.h test.h
+noinst_HEADERS = \
+	tinytest.h \
+	tinytest_macros.h \
+	test.h
 
 

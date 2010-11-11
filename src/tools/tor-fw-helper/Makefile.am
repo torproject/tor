@@ -4,9 +4,14 @@ else
 bin_PROGRAMS =
 endif
 
-tor_fw_helper_SOURCES = tor-fw-helper.c \
-	tor-fw-helper-natpmp.c tor-fw-helper-upnp.c
-tor_fw_helper_INCLUDES = tor-fw-helper.h tor-fw-helper-natpmp.h tor-fw-helper-upnp.h
+tor_fw_helper_SOURCES = \
+	tor-fw-helper.c \
+	tor-fw-helper-natpmp.c \
+	tor-fw-helper-upnp.c
+tor_fw_helper_INCLUDES = \
+	tor-fw-helper.h \
+	tor-fw-helper-natpmp.h \
+	tor-fw-helper-upnp.h
 
 if NAT_PMP
 nat_pmp_ldflags = @TOR_LDFLAGS_libnatpmp@

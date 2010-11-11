@@ -1,5 +1,12 @@
 
-EXTRA_DIST = tor-spec.txt rend-spec.txt control-spec.txt     \
-             dir-spec.txt socks-extensions.txt path-spec.txt \
-             version-spec.txt address-spec.txt bridges-spec.txt
+EXTRA_DIST = \
+	address-spec.txt			\
+	bridges-spec.txt			\
+	control-spec.txt			\
+	dir-spec.txt				\
+	path-spec.txt				\
+	rend-spec.txt				\
+	socks-extensions.txt			\
+	tor-spec.txt				\
+	version-spec.txt
 

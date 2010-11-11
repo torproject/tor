@@ -249,7 +249,27 @@ dnl -------------------------------------------------------------------
 dnl Check for functions before libevent, since libevent-1.2 apparently
 dnl exports strlcpy without defining it in a header.
 
-AC_CHECK_FUNCS(gettimeofday ftime socketpair uname inet_aton strptime getrlimit strlcat strlcpy strtoull getaddrinfo localtime_r gmtime_r memmem strtok_r flock prctl vasprintf sysconf)
+AC_CHECK_FUNCS(
+        flock \
+        ftime \
+        getaddrinfo \
+        getrlimit \
+        gettimeofday \
+        gmtime_r \
+        inet_aton \
+        localtime_r \
+        memmem \
+        prctl \
+        socketpair \
+        strlcat \
+        strlcpy \
+        strptime \
+        strtok_r \
+        strtoull \
+        sysconf \
+        uname \
+        vasprintf \
+)
 
 using_custom_malloc=no
 if test x$enable_openbsd_malloc = xyes ; then
@@ -503,13 +523,54 @@ fi
 
 AC_SYS_LARGEFILE
 
-AC_CHECK_HEADERS(unistd.h string.h signal.h sys/stat.h sys/types.h fcntl.h sys/fcntl.h sys/time.h errno.h assert.h time.h, , AC_MSG_WARN(Some headers were not found, compilation may fail.  If compilation succeeds, please send your orconfig.h to the developers so we can fix this warning.))
-
-AC_CHECK_HEADERS(netdb.h sys/ioctl.h sys/socket.h arpa/inet.h netinet/in.h pwd.h grp.h sys/un.h)
+AC_CHECK_HEADERS(
+        assert.h \
+        errno.h \
+        fcntl.h \
+        signal.h \
+        string.h \
+        sys/fcntl.h \
+        sys/stat.h \
+        sys/time.h \
+        sys/types.h \
+        time.h \
+        unistd.h
+ , , AC_MSG_WARN(Some headers were not found, compilation may fail.  If compilation succeeds, please send your orconfig.h to the developers so we can fix this warning.))
 
 dnl These headers are not essential
 
-AC_CHECK_HEADERS(stdint.h sys/types.h inttypes.h sys/param.h sys/wait.h limits.h sys/limits.h netinet/in.h arpa/inet.h machine/limits.h syslog.h sys/time.h sys/resource.h inttypes.h utime.h sys/utime.h sys/mman.h netinet/in6.h malloc.h sys/syslimits.h malloc/malloc.h linux/types.h sys/file.h malloc_np.h sys/prctl.h)
+AC_CHECK_HEADERS(
+        arpa/inet.h \
+        grp.h \
+        inttypes.h \
+        limits.h \
+        linux/types.h \
+        machine/limits.h \
+        malloc.h \
+        malloc/malloc.h \
+        malloc_np.h \
+        netdb.h \
+        netinet/in.h \
+        netinet/in6.h \
+        pwd.h \
+        stdint.h \
+        sys/file.h \
+        sys/ioctl.h \
+        sys/limits.h \
+        sys/mman.h \
+        sys/param.h \
+        sys/prctl.h \
+        sys/resource.h \
+        sys/socket.h \
+        sys/syslimits.h \
+        sys/time.h \
+        sys/types.h \
+        sys/un.h \
+        sys/utime.h \
+        sys/wait.h \
+        syslog.h \
+        utime.h
+)
 
 TOR_CHECK_PROTOTYPE(malloc_good_size, HAVE_MALLOC_GOOD_SIZE_PROTOTYPE,
 [#ifdef HAVE_MALLOC_H
@@ -997,7 +1058,12 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
       CFLAGS="$CFLAGS -Wno-system-headers" ;;
   esac
 
-  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2 -Wwrite-strings -Wmissing-declarations -Wredundant-decls -Wnested-externs -Wbad-function-cast -Wswitch-enum"
+  CFLAGS="$CFLAGS -W -Wfloat-equal -Wundef -Wpointer-arith"
+  CFLAGS="$CFLAGS -Wstrict-prototypes -Wmissing-prototypes -Wwrite-strings"
+  CFLAGS="$CFLAGS -Wredundant-decls -Wchar-subscripts -Wcomment -Wformat=2"
+  CFLAGS="$CFLAGS -Wwrite-strings -Wmissing-declarations -Wredundant-decls"
+  CFLAGS="$CFLAGS -Wnested-externs -Wbad-function-cast -Wswitch-enum"
+
   if test x$enable_gcc_warnings = xyes; then
     CFLAGS="$CFLAGS -Werror"
   fi
@@ -1009,14 +1075,14 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
     CFLAGS="$CFLAGS -Winit-self -Wmissing-field-initializers -Wdeclaration-after-statement -Wold-style-definition"
   fi
 
-  if test x$have_gcc42 = xyes ; then 
+  if test x$have_gcc42 = xyes ; then
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1"
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
   fi
 
-  if test x$have_gcc43 = xyes ; then 
+  if test x$have_gcc43 = xyes ; then
     # These warnings break gcc 4.2 and work on gcc 4.3
     # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Wextra -Warray-bounds"
@@ -1034,7 +1100,29 @@ fi
 
 CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_zlib"
 
-AC_CONFIG_FILES([Makefile tor.spec Doxyfile contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile src/config/torrc.sample src/Makefile doc/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/test/Makefile src/win32/Makefile src/tools/Makefile src/tools/tor-fw-helper/Makefile contrib/suse/Makefile contrib/suse/tor.sh])
+AC_CONFIG_FILES([
+        Doxyfile
+        Makefile
+        contrib/Makefile
+        contrib/suse/Makefile
+        contrib/suse/tor.sh
+        contrib/tor.logrotate
+        contrib/tor.sh
+        contrib/torctl
+        contrib/torify
+        doc/Makefile
+        doc/spec/Makefile
+        src/Makefile
+        src/common/Makefile
+        src/config/Makefile
+        src/config/torrc.sample
+        src/or/Makefile
+        src/test/Makefile
+        src/tools/Makefile
+        src/tools/tor-fw-helper/Makefile
+        src/win32/Makefile
+        tor.spec
+])
 
 AC_OUTPUT
 

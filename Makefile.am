@@ -11,8 +11,14 @@ SUBDIRS = src doc contrib
 
 DIST_SUBDIRS = src doc contrib
 
-EXTRA_DIST = INSTALL README LICENSE ChangeLog          \
-             ReleaseNotes tor.spec tor.spec.in
+EXTRA_DIST = \
+	ChangeLog					\
+	INSTALL						\
+	LICENSE						\
+	README						\
+	ReleaseNotes					\
+	tor.spec					\
+	tor.spec.in
 
 #install-data-local:
 #	$(INSTALL) -m 755 -d $(LOCALSTATEDIR)/lib/tor
@@ -48,9 +54,12 @@ test: all
 check-spaces:
 	./contrib/checkSpace.pl -C                    \
 	        src/common/*.h                        \
-		src/common/[^asO]*.c src/common/address.c \
-		src/or/[^e]*.[ch] src/or/eventdns_tor.h \
-		src/test/test*.[ch] src/tools/*.[ch] \
+		src/common/[^asO]*.c                  \
+                src/common/address.c                  \
+		src/or/[^e]*.[ch]                     \
+                src/or/eventdns_tor.h                 \
+		src/test/test*.[ch]                   \
+                src/tools/*.[ch]                      \
 		src/tools/tor-fw-helper/*.[ch]
 
 check-docs:

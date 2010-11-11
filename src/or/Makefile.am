@@ -15,16 +15,44 @@ else
 evdns_source=eventdns.c
 endif
 
-libtor_a_SOURCES = buffers.c circuitbuild.c circuitlist.c \
-	circuituse.c command.c config.c \
-	connection.c connection_edge.c connection_or.c control.c \
-	cpuworker.c directory.c dirserv.c dirvote.c \
-	dns.c dnsserv.c geoip.c hibernate.c main.c $(tor_platform_source) \
-	microdesc.c \
-	networkstatus.c nodelist.c onion.c policies.c \
-	reasons.c relay.c rendcommon.c rendclient.c rendmid.c \
-	rendservice.c rephist.c router.c routerlist.c routerparse.c \
-	$(evdns_source) config_codedigest.c
+libtor_a_SOURCES = \
+	buffers.c				\
+	circuitbuild.c				\
+	circuitlist.c				\
+	circuituse.c				\
+	command.c				\
+	config.c				\
+	connection.c				\
+	connection_edge.c			\
+	connection_or.c				\
+	control.c				\
+	cpuworker.c				\
+	directory.c				\
+	dirserv.c				\
+	dirvote.c				\
+	dns.c					\
+	dnsserv.c				\
+	geoip.c					\
+	hibernate.c				\
+	main.c					\
+	microdesc.c				\
+	networkstatus.c				\
+	nodelist.c				\
+	onion.c					\
+	policies.c				\
+	reasons.c				\
+	relay.c					\
+	rendclient.c				\
+	rendcommon.c				\
+	rendmid.c				\
+	rendservice.c				\
+	rephist.c				\
+	router.c				\
+	routerlist.c				\
+	routerparse.c				\
+	$(evdns_source)				\
+	$(tor_platform_source)			\
+	config_codedigest.c
 
 #libtor_a_LIBADD = ../common/libor.a ../common/libor-crypto.a \
 #	../common/libor-event.a
@@ -52,14 +80,46 @@ tor_LDADD = ./libtor.a ../common/libor.a ../common/libor-crypto.a \
 	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
 	@TOR_LIB_WS32@ @TOR_LIB_GDI@ $(levent_openssl_lib)
 
-noinst_HEADERS = buffers.h circuitbuild.h circuitlist.h circuituse.h \
-	command.h config.h connection_edge.h connection.h connection_or.h \
-	control.h cpuworker.h directory.h dirserv.h dirvote.h dns.h \
-	dnsserv.h geoip.h hibernate.h main.h microdesc.h networkstatus.h \
-	nodelist.h \
-	ntmain.h onion.h policies.h reasons.h relay.h rendclient.h \
-	rendcommon.h rendmid.h rendservice.h rephist.h router.h routerlist.h \
-	routerparse.h or.h eventdns.h eventdns_tor.h micro-revision.i
+noinst_HEADERS = \
+	buffers.h				\
+	circuitbuild.h				\
+	circuitlist.h				\
+	circuituse.h				\
+	command.h				\
+	config.h				\
+	connection.h				\
+	connection_edge.h			\
+	connection_or.h				\
+	control.h				\
+	cpuworker.h				\
+	directory.h				\
+	dirserv.h				\
+	dirvote.h				\
+	dns.h					\
+	dnsserv.h				\
+	eventdns.h				\
+	eventdns_tor.h				\
+	geoip.h					\
+	hibernate.h				\
+	main.h					\
+	microdesc.h				\
+	networkstatus.h				\
+	nodelist.h				\
+	ntmain.h				\
+	onion.h					\
+	or.h					\
+	policies.h				\
+	reasons.h				\
+	relay.h					\
+	rendclient.h				\
+	rendcommon.h				\
+	rendmid.h				\
+	rendservice.h				\
+	rephist.h				\
+	router.h				\
+	routerlist.h				\
+	routerparse.h				\
+	micro-revision.i
 
 config_codedigest.o: or_sha1.i
 
