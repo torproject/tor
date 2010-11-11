@@ -8,7 +8,7 @@ tor_fw_helper_SOURCES = \
 	tor-fw-helper.c \
 	tor-fw-helper-natpmp.c \
 	tor-fw-helper-upnp.c
-tor_fw_helper_INCLUDES = \
+noinst_HEADERS = \
 	tor-fw-helper.h \
 	tor-fw-helper-natpmp.h \
 	tor-fw-helper-upnp.h
