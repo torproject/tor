@@ -2439,7 +2439,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   }
 
   addr_string = tor_dup_ip(addr);
-  if (is_internal_IP(addr, 0) && options->_PublishServerDescriptor) {
+  if (is_internal_IP(addr, 0)) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers && !options->AlternateDirAuthority) {
       /* if they are using the default dirservers, disallow internal IPs
