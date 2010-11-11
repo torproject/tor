@@ -64,16 +64,6 @@
 /contrib/tor.logrotate
 /contrib/tor.wxs
 
-# /contrib/osx/
-/contrib/osx/Makefile
-/contrib/osx/Makefile.in
-/contrib/osx/TorBundleDesc.plist
-/contrib/osx/TorBundleInfo.plist
-/contrib/osx/TorDesc.plist
-/contrib/osx/TorInfo.plist
-/contrib/osx/TorStartupDesc.plist
-/contrib/osx/net.freehaven.tor.plist
-
 # /contrib/suse/
 /contrib/suse/tor.sh
 /contrib/suse/Makefile.in

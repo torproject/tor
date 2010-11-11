@@ -1034,7 +1034,8 @@ fi
 
 CPPFLAGS="$CPPFLAGS $TOR_CPPFLAGS_libevent $TOR_CPPFLAGS_openssl $TOR_CPPFLAGS_zlib"
 
-AC_CONFIG_FILES([Makefile tor.spec Doxyfile contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile contrib/osx/Makefile contrib/osx/TorBundleDesc.plist contrib/osx/TorBundleInfo.plist contrib/osx/TorDesc.plist contrib/osx/TorInfo.plist contrib/osx/TorStartupDesc.plist src/config/torrc.sample src/Makefile doc/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/test/Makefile src/win32/Makefile src/tools/Makefile src/tools/tor-fw-helper/Makefile contrib/suse/Makefile contrib/suse/tor.sh])
+AC_CONFIG_FILES([Makefile tor.spec Doxyfile contrib/tor.sh contrib/torctl contrib/torify contrib/tor.logrotate contrib/Makefile src/config/torrc.sample src/Makefile doc/Makefile doc/spec/Makefile src/config/Makefile src/common/Makefile src/or/Makefile src/test/Makefile src/win32/Makefile src/tools/Makefile src/tools/tor-fw-helper/Makefile contrib/suse/Makefile contrib/suse/tor.sh])
+
 AC_OUTPUT
 
 if test -x /usr/bin/perl && test -x ./contrib/updateVersions.pl ; then
