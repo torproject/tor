@@ -34,25 +34,6 @@ dist-rpm:
 	mv $$RPM_BUILD_DIR/RPMS/* .;                            \
 	rm -rf $$RPM_BUILD_DIR
 
-dist-osx:
-	@if [ "x$(prefix)" != 'x/Library/Tor' ]; then \
-	  echo "Configure with --prefix=/Library/Tor, please"; \
-	  exit 1; \
-	fi; \
-	if [ "x$(bindir)" != 'x/Library/Tor' ]; then \
-	  echo "Configure with --bindir=/Library/Tor, please"; \
-	  exit 1; \
-	fi; \
-	if [ "x$(sysconfdir)" != 'x/Library' ]; then \
-	  echo "Configure with --sysconfdir=/Library, please"; \
-	  exit 1; \
-	fi; \
-	if [ "x$(CONFDIR)" != 'x/Library/Tor' ]; then \
-	  echo "Configure with CONFDIR=/Library/Tor, please"; \
-	fi
-	$(MAKE) all
-	VERSION=$(VERSION) sh ./contrib/osx/package.sh
-
 dist: check
 
 doxygen:

@@ -1,2 +1,0 @@
-Tor
-torstartup
