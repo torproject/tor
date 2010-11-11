@@ -2406,8 +2406,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   }
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-  if (is_internal_IP(ntohl(in.s_addr), 0) &&
-      options->_PublishServerDescriptor) {
+  if (is_internal_IP(ntohl(in.s_addr), 0)) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers && !options->AlternateDirAuthority) {
       /* if they are using the default dirservers, disallow internal IPs
