@@ -266,6 +266,7 @@ buf_shrink_freelists(int free_all)
 {
 #ifdef ENABLE_BUF_FREELISTS
   int i;
+  disable_control_logging();
   for (i = 0; freelists[i].alloc_size; ++i) {
     int slack = freelists[i].slack;
     assert_freelist_ok(&freelists[i]);
@@ -273,16 +274,12 @@ buf_shrink_freelists(int free_all)
       int n_to_free = free_all ? freelists[i].cur_length :
         (freelists[i].lowest_length - slack);
       int n_to_skip = freelists[i].cur_length - n_to_free;
+      int orig_length = freelists[i].cur_length;
       int orig_n_to_free = n_to_free, n_freed=0;
       int orig_n_to_skip = n_to_skip;
       int new_length = n_to_skip;
       chunk_t **chp = &freelists[i].head;
       chunk_t *chunk;
-      log_info(LD_MM, "Cleaning freelist for %d-byte chunks: length %d, "
-               "keeping %d, dropping %d.",
-               (int)freelists[i].alloc_size, freelists[i].cur_length,
-               n_to_skip, n_to_free);
-      tor_assert(n_to_skip + n_to_free == freelists[i].cur_length);
       while (n_to_skip) {
         if (! (*chp)->next) {
           log_warn(LD_BUG, "I wanted to skip %d chunks in the freelist for "
@@ -290,7 +287,7 @@ buf_shrink_freelists(int free_all)
                    orig_n_to_skip, (int)freelists[i].alloc_size,
                    orig_n_to_skip-n_to_skip, freelists[i].cur_length);
           assert_freelist_ok(&freelists[i]);
-          return;
+          goto done;
         }
         // tor_assert((*chp)->next);
         chp = &(*chp)->next;
@@ -317,10 +314,16 @@ buf_shrink_freelists(int free_all)
       }
       // tor_assert(!n_to_free);
       freelists[i].cur_length = new_length;
+      log_info(LD_MM, "Cleaned freelist for %d-byte chunks: original "
+               "length %d, kept %d, dropped %d.",
+               (int)freelists[i].alloc_size, orig_length,
+               orig_n_to_skip, orig_n_to_free);
     }
     freelists[i].lowest_length = freelists[i].cur_length;
     assert_freelist_ok(&freelists[i]);
   }
+ done:
+  enable_control_logging();
 #else
   (void) free_all;
 #endif
