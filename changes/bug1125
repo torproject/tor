@@ -1,0 +1,8 @@
+  o Major bugfixes
+    - Do not log messages to the controller while shrinking buffer
+      freelists.  Doing so would sometimes make the controller
+      connection try to allocate a buffer chunk, which would mess
+      up the internals of the freelist and cause an assertion
+      failure. Fixes bug 1125; fixed by Robert Ransom. Bugfix on
+      Tor 0.2.0.16-alpha.
+
