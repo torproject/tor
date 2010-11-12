@@ -283,7 +283,7 @@ buf_shrink_freelists(int free_all)
                    orig_n_to_skip, (int)freelists[i].alloc_size,
                    orig_n_to_skip-n_to_skip, freelists[i].cur_length);
           assert_freelist_ok(&freelists[i]);
-          return;
+          goto done;
         }
         // tor_assert((*chp)->next);
         chp = &(*chp)->next;
@@ -318,6 +318,7 @@ buf_shrink_freelists(int free_all)
     freelists[i].lowest_length = freelists[i].cur_length;
     assert_freelist_ok(&freelists[i]);
   }
+ done:
   enable_control_logging();
 #else
   (void) free_all;
