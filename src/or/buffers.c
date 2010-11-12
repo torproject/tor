@@ -251,6 +251,7 @@ buf_shrink_freelists(int free_all)
 {
 #ifdef ENABLE_BUF_FREELISTS
   int i;
+  disable_control_logging();
   for (i = 0; freelists[i].alloc_size; ++i) {
     int slack = freelists[i].slack;
     assert_freelist_ok(&freelists[i]);
@@ -296,6 +297,7 @@ buf_shrink_freelists(int free_all)
     freelists[i].lowest_length = freelists[i].cur_length;
     assert_freelist_ok(&freelists[i]);
   }
+  enable_control_logging();
 #else
   (void) free_all;
 #endif
