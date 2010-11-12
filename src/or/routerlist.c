@@ -56,6 +56,8 @@ static const char *signed_descriptor_get_body_impl(
                                               int with_annotations);
 static void list_pending_downloads(digestmap_t *result,
                                    int purpose, const char *prefix);
+static void launch_dummy_descriptor_download_as_needed(time_t now,
+                                                       or_options_t *options);
 
 DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
 DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
@@ -97,7 +99,7 @@ static smartlist_t *warned_nicknames = NULL;
 /** The last time we tried to download any routerdesc, or 0 for "never".  We
  * use this to rate-limit download attempts when the number of routerdescs to
  * download is low. */
-static time_t last_routerdesc_download_attempted = 0;
+static time_t last_descriptor_download_attempted = 0;
 
 /** When we last computed the weights to use for bandwidths on directory
  * requests, what were the total weighted bandwidth, and our share of that
@@ -3991,6 +3993,16 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
   return 0;
 }
 
+/** Update downloads for router descriptors and/or microdescriptors as
+ * appropriate. */
+void
+update_all_descriptor_downloads(time_t now)
+{
+  update_router_descriptor_downloads(now);
+  update_microdesc_downloads(now);
+  launch_dummy_descriptor_download_as_needed(now, get_options());
+}
+
 /** Clear all our timeouts for fetching v2 and v3 directory stuff, and then
  * give it all a try again. */
 void
@@ -3999,8 +4011,7 @@ routerlist_retry_directory_downloads(time_t now)
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
   update_networkstatus_downloads(now);
-  update_router_descriptor_downloads(now);
-  update_microdesc_downloads(now);
+  update_all_descriptor_downloads(now);
 }
 
 /** Return 1 if all running sufficiently-stable routers we can use will reject
@@ -4354,15 +4365,15 @@ launch_descriptor_downloads(int purpose,
                 descname);
       should_delay = 0;
     } else {
-      should_delay = (last_routerdesc_download_attempted +
+      should_delay = (last_descriptor_download_attempted +
                       MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
       if (!should_delay && n_downloadable) {
-        if (last_routerdesc_download_attempted) {
+        if (last_descriptor_download_attempted) {
           log_info(LD_DIR,
                    "There are not many downloadable %ss, but we've "
                    "been waiting long enough (%d seconds). Downloading.",
                    descname,
-                   (int)(now-last_routerdesc_download_attempted));
+                   (int)(now-last_descriptor_download_attempted));
         } else {
           log_info(LD_DIR,
                    "There are not many downloadable %ss, but we haven't "
@@ -4425,7 +4436,7 @@ launch_descriptor_downloads(int purpose,
                                     downloadable, i, i+n_per_request,
                                     pds_flags);
     }
-    last_routerdesc_download_attempted = now;
+    last_descriptor_download_attempted = now;
   }
 }
 
@@ -4709,12 +4720,32 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
  * do this only when we aren't seeing incoming data. see bug 652. */
 #define DUMMY_DOWNLOAD_INTERVAL (20*60)
 
+/** As needed, launch a dummy router descriptor fetch to see if our
+ * address has changed. */
+static void
+launch_dummy_descriptor_download_as_needed(time_t now, or_options_t *options)
+{
+  static time_t last_dummy_download = 0;
+  /* XXXX023 we could be smarter here; see notes on bug 652. */
+  /* If we're a server that doesn't have a configured address, we rely on
+   * directory fetches to learn when our address changes.  So if we haven't
+   * tried to get any routerdescs in a long time, try a dummy fetch now. */
+  if (!options->Address &&
+      server_mode(options) &&
+      last_descriptor_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
+      last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
+    last_dummy_download = now;
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
+                                 ROUTER_PURPOSE_GENERAL, "authority.z",
+                                 PDS_RETRY_IF_NO_SERVERS);
+  }
+}
+
 /** Launch downloads for router status as needed. */
 void
 update_router_descriptor_downloads(time_t now)
 {
   or_options_t *options = get_options();
-  static time_t last_dummy_download = 0;
   if (should_delay_dir_fetches(options))
     return;
   if (!we_fetch_router_descriptors(options))
@@ -4725,22 +4756,6 @@ update_router_descriptor_downloads(time_t now)
 
   update_consensus_router_descriptor_downloads(now, 0,
                   networkstatus_get_reasonably_live_consensus(now, FLAV_NS));
-
-  /* XXXX023 we could be smarter here; see notes on bug 652. */
-  /* XXXX NM Microdescs: if we're not fetching microdescriptors, we need
-   * to make something else invoke this. */
-  /* If we're a server that doesn't have a configured address, we rely on
-   * directory fetches to learn when our address changes.  So if we haven't
-   * tried to get any routerdescs in a long time, try a dummy fetch now. */
-  if (!options->Address &&
-      server_mode(options) &&
-      last_routerdesc_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
-      last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
-    last_dummy_download = now;
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                                 ROUTER_PURPOSE_GENERAL, "authority.z",
-                                 PDS_RETRY_IF_NO_SERVERS);
-  }
 }
 
 /** Launch extrainfo downloads as needed. */
@@ -5023,7 +5038,7 @@ void
 router_reset_descriptor_download_failures(void)
 {
   networkstatus_reset_download_failures();
-  last_routerdesc_download_attempted = 0;
+  last_descriptor_download_attempted = 0;
   if (!routerlist)
     return;
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,
