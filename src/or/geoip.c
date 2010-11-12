@@ -289,7 +289,9 @@ geoip_is_loaded(void)
   return geoip_countries != NULL && geoip_entries != NULL;
 }
 
-/** Return the hex-encoded SHA1 digest of the loaded GeoIP file. */
+/** Return the hex-encoded SHA1 digest of the loaded GeoIP file. The
+ * result does not need to be deallocated, but will be overwritten by the
+ * next call of hex_str(). */
 const char *
 geoip_db_digest(void)
 {
