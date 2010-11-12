@@ -2012,6 +2012,16 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   if (result<0)
     return -1;
 
+  if (geoip_is_loaded()) {
+    if (tor_snprintf(s + strlen(s), maxlen - strlen(s),
+                     "geoip-db-digest %s\n",
+                     geoip_db_digest()) < 0) {
+      log_warn(LD_DIR, "Could not write geoip-db-digest to extra-info "
+               "descriptor.");
+      return -1;
+    }
+  }
+
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
     char *contents = NULL;
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");

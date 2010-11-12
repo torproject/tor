@@ -44,6 +44,9 @@ static strmap_t *country_idxplus1_by_lc_code = NULL;
 /** A list of all known geoip_entry_t, sorted by ip_low. */
 static smartlist_t *geoip_entries = NULL;
 
+/** SHA1 digest of the GeoIP file to include in extra-info descriptors. */
+static char geoip_digest[DIGEST_LEN];
+
 /** Return the index of the <b>country</b>'s entry in the GeoIP DB
  * if it is a valid 2-letter country code, otherwise return -1.
  */
@@ -201,6 +204,7 @@ geoip_load_file(const char *filename, or_options_t *options)
   FILE *f;
   const char *msg = "";
   int severity = options_need_geoip_info(options, &msg) ? LOG_WARN : LOG_INFO;
+  crypto_digest_env_t *geoip_digest_env = NULL;
   clear_geoip_db();
   if (!(f = fopen(filename, "r"))) {
     log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.  %s",
@@ -214,11 +218,13 @@ geoip_load_file(const char *filename, or_options_t *options)
     smartlist_free(geoip_entries);
   }
   geoip_entries = smartlist_create();
+  geoip_digest_env = crypto_new_digest_env();
   log_notice(LD_GENERAL, "Parsing GEOIP file.");
   while (!feof(f)) {
     char buf[512];
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
       break;
+    crypto_digest_add_bytes(geoip_digest_env, buf, strlen(buf));
     /* FFFF track full country name. */
     geoip_parse_entry(buf);
   }
@@ -230,6 +236,11 @@ geoip_load_file(const char *filename, or_options_t *options)
   /* Okay, now we need to maybe change our mind about what is in which
    * country. */
   refresh_all_country_info();
+
+  /* Remember file digest so that we can include it in our extra-info
+   * descriptors. */
+  crypto_digest_get_digest(geoip_digest_env, geoip_digest, DIGEST_LEN);
+  crypto_free_digest_env(geoip_digest_env);
 
   return 0;
 }
@@ -276,6 +287,15 @@ int
 geoip_is_loaded(void)
 {
   return geoip_countries != NULL && geoip_entries != NULL;
+}
+
+/** Return the hex-encoded SHA1 digest of the loaded GeoIP file. The
+ * result does not need to be deallocated, but will be overwritten by the
+ * next call of hex_str(). */
+const char *
+geoip_db_digest(void)
+{
+  return hex_str(geoip_digest, DIGEST_LEN);
 }
 
 /** Entry in a map from IP address to the last time we've seen an incoming

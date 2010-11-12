@@ -622,6 +622,12 @@
 
         As documented in 2.1 above.  See migration notes in section 2.2.1.
 
+    "geoip-db-digest" Digest NL
+        [At most once.]
+
+        SHA1 digest of the GeoIP database file that is used to resolve IP
+        addresses to country codes.
+
     ("geoip-start" YYYY-MM-DD HH:MM:SS NL)
     ("geoip-client-origins" CC=N,CC=N,... NL)
 
