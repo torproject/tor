@@ -1654,10 +1654,13 @@ rep_hist_load_state(or_state_t *state, char **err)
 
 /*********************************************************************/
 
+typedef struct predicted_port_t {
+  uint16_t port;
+  time_t time;
+} predicted_port_t;
+
 /** A list of port numbers that have been used recently. */
 static smartlist_t *predicted_ports_list=NULL;
-/** The corresponding most recently used time for each port. */
-static smartlist_t *predicted_ports_times=NULL;
 
 /** We just got an application request for a connection with
  * port <b>port</b>. Remember it for the future, so we can keep
@@ -1666,14 +1669,11 @@ static smartlist_t *predicted_ports_times=NULL;
 static void
 add_predicted_port(time_t now, uint16_t port)
 {
-  /* XXXX we could just use uintptr_t here, I think. */
-  uint16_t *tmp_port = tor_malloc(sizeof(uint16_t));
-  time_t *tmp_time = tor_malloc(sizeof(time_t));
-  *tmp_port = port;
-  *tmp_time = now;
-  rephist_total_alloc += sizeof(uint16_t) + sizeof(time_t);
-  smartlist_add(predicted_ports_list, tmp_port);
-  smartlist_add(predicted_ports_times, tmp_time);
+  predicted_port_t *pp = tor_malloc(sizeof(predicted_port_t));
+  pp->port = port;
+  pp->time = now;
+  rephist_total_alloc += sizeof(*pp);
+  smartlist_add(predicted_ports_list, pp);
 }
 
 /** Initialize whatever memory and structs are needed for predicting
@@ -1684,7 +1684,6 @@ static void
 predicted_ports_init(void)
 {
   predicted_ports_list = smartlist_create();
-  predicted_ports_times = smartlist_create();
   add_predicted_port(time(NULL), 80); /* add one to kickstart us */
 }
 
@@ -1694,12 +1693,10 @@ predicted_ports_init(void)
 static void
 predicted_ports_free(void)
 {
-  rephist_total_alloc -= smartlist_len(predicted_ports_list)*sizeof(uint16_t);
-  SMARTLIST_FOREACH(predicted_ports_list, char *, cp, tor_free(cp));
+  rephist_total_alloc -=
+    smartlist_len(predicted_ports_list)*sizeof(predicted_port_t);
+  SMARTLIST_FOREACH(predicted_ports_list, predicted_port_t *, pp, tor_free(pp));
   smartlist_free(predicted_ports_list);
-  rephist_total_alloc -= smartlist_len(predicted_ports_times)*sizeof(time_t);
-  SMARTLIST_FOREACH(predicted_ports_times, char *, cp, tor_free(cp));
-  smartlist_free(predicted_ports_times);
 }
 
 /** Remember that <b>port</b> has been asked for as of time <b>now</b>.
@@ -1709,24 +1706,17 @@ predicted_ports_free(void)
 void
 rep_hist_note_used_port(time_t now, uint16_t port)
 {
-  int i;
-  uint16_t *tmp_port;
-  time_t *tmp_time;
-
   tor_assert(predicted_ports_list);
-  tor_assert(predicted_ports_times);
 
   if (!port) /* record nothing */
     return;
 
-  for (i = 0; i < smartlist_len(predicted_ports_list); ++i) {
-    tmp_port = smartlist_get(predicted_ports_list, i);
-    tmp_time = smartlist_get(predicted_ports_times, i);
-    if (*tmp_port == port) {
-      *tmp_time = now;
+  SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
+    if (pp->port == port) {
+      pp->time = now;
       return;
     }
-  }
+  } SMARTLIST_FOREACH_END(pp);
   /* it's not there yet; we need to add it */
   add_predicted_port(now, port);
 }
@@ -1735,36 +1725,28 @@ rep_hist_note_used_port(time_t now, uint16_t port)
  * we'll want to make connections to the same port in the future.  */
 #define PREDICTED_CIRCS_RELEVANCE_TIME (60*60)
 
-/** Return a pointer to the list of port numbers that
+/** Return a newly allocated pointer to a list of uint16_t * for ports that
  * are likely to be asked for in the near future.
- *
- * The caller promises not to mess with it.
  */
 smartlist_t *
 rep_hist_get_predicted_ports(time_t now)
 {
-  int i;
-  uint16_t *tmp_port;
-  time_t *tmp_time;
-
+  smartlist_t *out = smartlist_create();
   tor_assert(predicted_ports_list);
-  tor_assert(predicted_ports_times);
 
   /* clean out obsolete entries */
-  for (i = 0; i < smartlist_len(predicted_ports_list); ++i) {
-    tmp_time = smartlist_get(predicted_ports_times, i);
-    if (*tmp_time + PREDICTED_CIRCS_RELEVANCE_TIME < now) {
-      tmp_port = smartlist_get(predicted_ports_list, i);
-      log_debug(LD_CIRC, "Expiring predicted port %d", *tmp_port);
-      smartlist_del(predicted_ports_list, i);
-      smartlist_del(predicted_ports_times, i);
-      rephist_total_alloc -= sizeof(uint16_t)+sizeof(time_t);
-      tor_free(tmp_port);
-      tor_free(tmp_time);
-      i--;
+  SMARTLIST_FOREACH_BEGIN(predicted_ports_list, predicted_port_t *, pp) {
+    if (pp->time + PREDICTED_CIRCS_RELEVANCE_TIME < now) {
+      log_debug(LD_CIRC, "Expiring predicted port %d", pp->port);
+
+      rephist_total_alloc -= sizeof(predicted_port_t);
+      tor_free(pp);
+      SMARTLIST_DEL_CURRENT(predicted_ports_list, pp);
+    } else {
+      smartlist_add(out, tor_memdup(&pp->port, sizeof(uint16_t)));
     }
-  }
-  return predicted_ports_list;
+  } SMARTLIST_FOREACH_END(pp);
+  return out;
 }
 
 /** The user asked us to do a resolve. Rather than keeping track of
