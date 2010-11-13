@@ -28,7 +28,7 @@ void rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when);
 void rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when);
 
 int rep_hist_bandwidth_assess(void);
-char *rep_hist_get_bandwidth_lines(int for_extrainfo);
+char *rep_hist_get_bandwidth_lines(void);
 void rep_hist_update_state(or_state_t *state);
 int rep_hist_load_state(or_state_t *state, char **err);
 void rep_history_clean(time_t before);
