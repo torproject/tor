@@ -228,7 +228,7 @@
          "INFO" / "NOTICE" / "WARN" / "ERR" / "NEWDESC" / "ADDRMAP" /
          "AUTHDIR_NEWDESCS" / "DESCCHANGED" / "STATUS_GENERAL" /
          "STATUS_CLIENT" / "STATUS_SERVER" / "GUARD" / "NS" / "STREAM_BW" /
-         "CLIENTS_SEEN" / "NEWCONSENSUS" / "BUILDTIMEOUT_SET"
+         "CLIENTS_SEEN" / "NEWCONSENSUS" / "BUILDTIMEOUT_SET" / "SIGNAL"
 
   Any events *not* listed in the SETEVENTS line are turned off; thus, sending
   SETEVENTS with an empty body turns off all event reporting.
@@ -1707,6 +1707,23 @@
   this value to the nearest second before using it.
 
   [First added in 0.2.2.7-alpha]
+
+4.1.17. Signal received
+
+  The syntax is:
+     "650" SP "SIGNAL" SP Signal CRLF
+
+     Signal = "RELOAD" / "DUMP" / "DEBUG" / "NEWNYM" / "CLEARDNSCACHE"
+
+  A signal has been received and actions taken by Tor. The meaning of each
+  signal, and the mapping to Unix signals, is as defined in section 3.7.
+  If Tor chose to ignore a signal (such as NEWNYM), this event will not be
+  sent.
+
+  Note that the HALT (SIGTERM) and SHUTDOWN (SIGINT) signals do not currently
+  generate any event.
+
+  [First added in X.X.X.X-alpha]
 
 5. Implementation notes
 

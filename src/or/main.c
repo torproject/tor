@@ -1840,11 +1840,13 @@ signal_callback(int fd, short events, void *arg)
     case SIGUSR1:
       /* prefer to log it at INFO, but make sure we always see it */
       dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
+      control_event_signal(sig);
       break;
     case SIGUSR2:
       switch_logs_debug();
       log_debug(LD_GENERAL,"Caught USR2, going to loglevel debug. "
                 "Send HUP to change back.");
+      control_event_signal(sig);
       break;
     case SIGHUP:
       if (do_hup() < 0) {
@@ -1852,6 +1854,7 @@ signal_callback(int fd, short events, void *arg)
         tor_cleanup();
         exit(1);
       }
+      control_event_signal(sig);
       break;
 #ifdef SIGCHLD
     case SIGCHLD:
@@ -1868,11 +1871,13 @@ signal_callback(int fd, short events, void *arg)
             (int)(MAX_SIGNEWNYM_RATE+time_of_last_signewnym-now));
       } else {
         signewnym_impl(now);
+        control_event_signal(sig);
       }
       break;
     }
     case SIGCLEARDNSCACHE:
       addressmap_clear_transient();
+      control_event_signal(sig);
       break;
   }
 }

@@ -65,7 +65,8 @@
 #define EVENT_CLIENTS_SEEN     0x0015
 #define EVENT_NEWCONSENSUS     0x0016
 #define EVENT_BUILDTIMEOUT_SET     0x0017
-#define _EVENT_MAX             0x0017
+#define EVENT_SIGNAL           0x0018
+#define _EVENT_MAX             0x0018
 /* If _EVENT_MAX ever hits 0x0020, we need to make the mask wider. */
 
 /** Bitfield: The bit 1&lt;&lt;e is set if <b>any</b> open control
@@ -946,6 +947,8 @@ handle_control_setevents(control_connection_t *conn, uint32_t len,
         event_code = EVENT_NEWCONSENSUS;
       else if (!strcasecmp(ev, "BUILDTIMEOUT_SET"))
         event_code = EVENT_BUILDTIMEOUT_SET;
+      else if (!strcasecmp(ev, "SIGNAL"))
+        event_code = EVENT_SIGNAL;
       else {
         connection_printf_to_buf(conn, "552 Unrecognized event \"%s\"\r\n",
                                  ev);
@@ -3586,6 +3589,40 @@ control_event_buildtimeout_set(const circuit_build_times_t *cbt,
                      (unsigned long)cbt->close_ms,
                      circuit_build_times_close_rate(cbt));
 
+  return 0;
+}
+
+/** Called when a signal has been processed from signal_callback */
+int
+control_event_signal(uintptr_t signal)
+{
+  const char *signal_string = NULL;
+
+  if (!control_event_is_interesting(EVENT_SIGNAL))
+    return 0;
+
+  switch (signal) {
+    case SIGHUP:
+      signal_string = "RELOAD";
+      break;
+    case SIGUSR1:
+      signal_string = "DUMP";
+      break;
+    case SIGUSR2:
+      signal_string = "DEBUG";
+      break;
+    case SIGNEWNYM:
+      signal_string = "NEWNYM";
+      break;
+    case SIGCLEARDNSCACHE:
+      signal_string = "CLEARDNSCACHE";
+      break;
+    default:
+      log_warn(LD_BUG, "Unrecognized signal %lu in control_event_signal", signal);
+      return -1;
+  }
+
+  send_control_event(EVENT_SIGNAL, ALL_FORMATS, "650 SIGNAL %s\r\n", signal_string);
   return 0;
 }
 
