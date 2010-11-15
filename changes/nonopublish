@@ -1,0 +1,3 @@
+  o Removed features
+    - Removed the obsolete "NoPublished" option; it has been flagged
+      as obsolete and has produced a warning since 0.1.1.18-rc.
