@@ -1492,19 +1492,24 @@ router_rebuild_descriptor(int force)
                                ei_size, ei,
                                get_server_identity_key()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
-    routerinfo_free(ri);
     extrainfo_free(ei);
-    return -1;
+    ei = NULL;
+  } else {
+    ei->cache_info.signed_descriptor_len =
+      strlen(ei->cache_info.signed_descriptor_body);
+    router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
+                              ei->cache_info.signed_descriptor_digest);
   }
-  ei->cache_info.signed_descriptor_len =
-    strlen(ei->cache_info.signed_descriptor_body);
-  router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
-                            ei->cache_info.signed_descriptor_digest);
 
   /* Now finish the router descriptor. */
-  memcpy(ri->cache_info.extra_info_digest,
-         ei->cache_info.signed_descriptor_digest,
-         DIGEST_LEN);
+  if (ei) {
+    memcpy(ri->cache_info.extra_info_digest,
+           ei->cache_info.signed_descriptor_digest,
+           DIGEST_LEN);
+  } else {
+    /* ri was allocated with tor_malloc_zero, so there is no need to
+     * zero ri->cache_info.extra_info_digest here. */
+  }
   ri->cache_info.signed_descriptor_body = tor_malloc(8192);
   if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
                                    ri, get_server_identity_key()) < 0) {
@@ -1531,7 +1536,9 @@ router_rebuild_descriptor(int force)
 
   routerinfo_set_country(ri);
 
-  tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
+  if (ei) {
+    tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
+  }
 
   routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
