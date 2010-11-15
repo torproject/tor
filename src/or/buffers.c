@@ -1447,7 +1447,8 @@ fetch_from_evbuffer_http(struct evbuffer *buf,
  * protocol <b>socks_protocol</b> on port <b>port</b>.  Don't warn more than
  * once per SOCKS_WARN_INTERVAL, unless <b>safe_socks</b> is set. */
 static void
-log_unsafe_socks_warning(int socks_protocol, uint16_t port, int safe_socks)
+log_unsafe_socks_warning(int socks_protocol, const char *address,
+                         uint16_t port, int safe_socks)
 {
   static ratelim_t socks_ratelim = RATELIM_INIT(SOCKS_WARN_INTERVAL);
 
@@ -1469,6 +1470,9 @@ log_unsafe_socks_warning(int socks_protocol, uint16_t port, int safe_socks)
              m ? m : "");
     tor_free(m);
   }
+  control_event_client_status(LOG_WARN,
+                              "DANGEROUS_SOCKS PROTOCOL=SOCKS%d ADDRESS=%s:%d",
+                              socks_protocol, address, (int)port);
 }
 
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
@@ -1709,10 +1713,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
           *drain_out = 6+addrlen;
           if (req->command != SOCKS_COMMAND_RESOLVE_PTR &&
               !addressmap_have_mapping(req->address,0)) {
-            log_unsafe_socks_warning(5, req->port, safe_socks);
-            control_event_client_status(LOG_WARN,
-                          "DANGEROUS_SOCKS PROTOCOL=SOCKS5 ADDRESS=%s:%d",
-                          req->address, req->port);
+            log_unsafe_socks_warning(5, req->address, req->port, safe_socks);
             if (safe_socks)
               return -1;
           }
@@ -1816,7 +1817,7 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
       startaddr = NULL;
       if (socks4_prot != socks4a &&
           !addressmap_have_mapping(tmpbuf,0)) {
-        log_unsafe_socks_warning(4, req->port, safe_socks);
+        log_unsafe_socks_warning(4, tmpbuf, req->port, safe_socks);
 
         if (safe_socks)
           return -1;
