@@ -12,7 +12,7 @@
 
   These hostnames can be passed to Tor as the address part of a SOCKS4a or
   SOCKS5 request.  If the application is connected to Tor using an IP-only
-  method (such as SOCKS4, TransPort, or NatdPort), these hostnames can be
+  method (such as SOCKS4, TransPort, or NATDPort), these hostnames can be
   substituted for certain IP addresses using the MapAddress configuration
   option or the MAPADDRESS control command.
 

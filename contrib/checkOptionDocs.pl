@@ -4,17 +4,14 @@ use strict;
 my %options = ();
 my %descOptions = ();
 my %torrcSampleOptions = ();
-my %torrcCompleteOptions = ();
 my %manPageOptions = ();
 
 # Load the canonical list as actually accepted by Tor.
-my $mostRecentOption;
 open(F, "./src/or/tor --list-torrc-options |") or die;
 while (<F>) {
     next if m!\[notice\] Tor v0\.!;
     if (m!^([A-Za-z0-9_]+)!) {
-        $mostRecentOption = lc $1;
-        $options{$mostRecentOption} = 1;
+        $options{$1} = 1;
     } else {
         print "Unrecognized output> ";
         print;
@@ -22,7 +19,7 @@ while (<F>) {
 }
 close F;
 
-# Load the contents of torrc.sample and torrc.complete
+# Load the contents of torrc.sample
 sub loadTorrc {
     my ($fname, $options) = @_;
     local *F;
@@ -30,7 +27,7 @@ sub loadTorrc {
     while (<F>) {
         next if (m!##+!);
         if (m!#([A-Za-z0-9_]+)!) {
-            $options->{lc $1} = 1;
+            $options->{$1} = 1;
         }
     }
     close F;
@@ -38,7 +35,6 @@ sub loadTorrc {
 }
 
 loadTorrc("./src/config/torrc.sample.in", \%torrcSampleOptions);
-loadTorrc("./src/config/torrc.complete.in", \%torrcCompleteOptions);
 
 # Try to figure out what's in the man page.
 
@@ -46,7 +42,7 @@ my $considerNextLine = 0;
 open(F, "./doc/tor.1.txt") or die;
 while (<F>) {
     if (m!^\*\*([A-Za-z0-9_]+)\*\*!) {
-        $manPageOptions{lc $1} = 1;
+        $manPageOptions{$1} = 1;
     }
 }
 close F;
@@ -66,8 +62,6 @@ sub subtractHashes {
 # subtractHashes("No online docs", \%options, \%descOptions);
 # subtractHashes("Orphaned online docs", \%descOptions, \%options);
 
-subtractHashes("Not in torrc.complete.in", \%options, \%torrcCompleteOptions);
-subtractHashes("Orphaned in torrc.complete.in", \%torrcCompleteOptions, \%options);
 subtractHashes("Orphaned in torrc.sample.in", \%torrcSampleOptions, \%options);
 
 subtractHashes("Not in man page", \%options, \%manPageOptions);

@@ -89,14 +89,14 @@ Other options can be specified either on the command-line (--option
     without impacting network performance.
 
 **RelayBandwidthRate** __N__ **bytes**|**KB**|**MB**|**GB**::
-    If defined, a separate token bucket limits the average incoming bandwidth
+    If not 0, a separate token bucket limits the average incoming bandwidth
     usage for \_relayed traffic_ on this node to the specified number of bytes
     per second, and the average outgoing bandwidth usage to that same value.
     Relayed traffic currently is calculated to include answers to directory
     requests, but that may change in future versions. (Default: 0)
 
 **RelayBandwidthBurst** __N__ **bytes**|**KB**|**MB**|**GB**::
-    Limit the maximum token bucket size (also known as the burst) for
+    If not 0, limit the maximum token bucket size (also known as the burst) for
     \_relayed traffic_ to the given number of bytes in each direction.
     (Default: 0)
 
@@ -110,7 +110,7 @@ Other options can be specified either on the command-line (--option
     You should never need to change this value, since a network-wide value is
     published in the consensus and your relay will use that value. (Default: 0)
 
-**ConLimit** __NUM__::
+**ConnLimit** __NUM__::
     The minimum number of file descriptors that must be available to the Tor
     process before it will start. Tor will ask the OS for as many file
     descriptors as the OS will allow (you can find this by "ulimit -H -n").
@@ -670,7 +670,7 @@ The following options are useful only for clients (that is, if
 
 **AllowDotExit** **0**|**1**::
     If enabled, we convert "www.google.com.foo.exit" addresses on the
-    SocksPort/TransPort/NatdPort into "www.google.com" addresses that exit from
+    SocksPort/TransPort/NATDPort into "www.google.com" addresses that exit from
     the node "foo". Disabled by default since attacking websites and exit
     relays can use it to manipulate your path selection. (Default: 0)
 
@@ -750,6 +750,11 @@ The following options are useful only for clients (that is, if
 **RejectPlaintextPorts** __port__,__port__,__...__::
     Like WarnPlaintextPorts, but instead of warning about risky port uses, Tor
     will instead refuse to make the connection. (Default: None).
+
+**AllowSingleHopCircuits** **0**|**1**::
+    When this option is set, the attached Tor controller Tor can use relays
+    that have the **AllowSingleHopExits** option turned on to build
+    one-hop Tor connections.
 
 SERVER OPTIONS
 --------------
@@ -1189,6 +1194,11 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     server's preferred number, but the consensus of all preferences. Must be at
     least 2. (Default: 3.)
 
+**V3BandwidthsFile** __FILENAME__::
+    V3 authoritative directories only. Configures the location of the
+    bandiwdth-authority generated file storing information on relays' measured
+    bandwidth capacities. (Default: unset.)
+
 HIDDEN SERVICE OPTIONS
 ----------------------
 
@@ -1257,6 +1267,7 @@ The following options are used for running a testing Tor network.
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
        V3AuthDistDelay 20 seconds
+       MinUptimeHidServDirectoryV2 0 seconds
        TestingV3AuthInitialVotingInterval 5 minutes
        TestingV3AuthInitialVoteDelay 20 seconds
        TestingV3AuthInitialDistDelay 20 seconds
