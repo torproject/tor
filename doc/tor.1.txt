@@ -414,7 +414,9 @@ The following options are useful only for clients (that is, if
     This option controls whether circuits built by Tor will include relays with
     the AllowSingleHopExits flag set to true. If ExcludeSingleHopRelays is set
     to 0, these relays will be included. Note that these relays might be at
-    higher risk of being seized or observed, so they are not normally included.
+    higher risk of being seized or observed, so they are not normally
+    included.  Also note that relatively few clients turn off this option,
+    so using these relays might make your client stand out.
     (Default: 1)
 
 **Bridge** __IP__:__ORPort__ [fingerprint]::
@@ -752,9 +754,9 @@ The following options are useful only for clients (that is, if
     will instead refuse to make the connection. (Default: None).
 
 **AllowSingleHopCircuits** **0**|**1**::
-    When this option is set, the attached Tor controller Tor can use relays
+    When this option is set, the attached Tor controller can use relays
     that have the **AllowSingleHopExits** option turned on to build
-    one-hop Tor connections.
+    one-hop Tor connections.  (Default: 0)
 
 SERVER OPTIONS
 --------------
@@ -773,7 +775,9 @@ is non-zero):
 **AllowSingleHopExits** **0**|**1**::
     This option controls whether clients can use this server as a single hop
     proxy. If set to 1, clients can use this server as an exit even if it is
-    the only hop in the circuit. (Default: 0)
+    the only hop in the circuit.  Note that most clients will refuse to use
+    servers that set this option, since most clients have
+    ExcludeSingleHopRelays set.  (Default: 0)
 
 **AssumeReachable** **0**|**1**::
     This option is used when bootstrapping a new Tor network. If set to 1,
