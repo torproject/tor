@@ -860,7 +860,7 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
 
   /* ensure that we don't make direct connections when a SOCKS server is
    * configured. */
-  if (!anonymized_connection && !use_begindir && !options->HttpProxy &&
+  if (!anonymized_connection && !use_begindir && !options->HTTPProxy &&
       (options->Socks4Proxy || options->Socks5Proxy)) {
     log_warn(LD_DIR, "Cannot connect to a directory server through a "
                      "SOCKS proxy!");
@@ -891,9 +891,9 @@ directory_initiate_command_rend(const char *address, const tor_addr_t *_addr,
   if (!anonymized_connection && !use_begindir) {
     /* then we want to connect to dirport directly */
 
-    if (options->HttpProxy) {
-      tor_addr_copy(&addr, &options->HttpProxyAddr);
-      dir_port = options->HttpProxyPort;
+    if (options->HTTPProxy) {
+      tor_addr_copy(&addr, &options->HTTPProxyAddr);
+      dir_port = options->HTTPProxyPort;
     }
 
     switch (connection_connect(TO_CONN(conn), conn->_base.address, &addr,
@@ -1084,9 +1084,9 @@ directory_send_command(dir_connection_t *conn,
   }
 
   /* come up with some proxy lines, if we're using one. */
-  if (direct && get_options()->HttpProxy) {
+  if (direct && get_options()->HTTPProxy) {
     char *base64_authenticator=NULL;
-    const char *authenticator = get_options()->HttpProxyAuthenticator;
+    const char *authenticator = get_options()->HTTPProxyAuthenticator;
 
     tor_snprintf(proxystring, sizeof(proxystring),"http://%s", hoststring);
     if (authenticator) {

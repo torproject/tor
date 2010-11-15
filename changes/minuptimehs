@@ -1,0 +1,3 @@
+  o Minor features:
+    - Make hidden services work better in private networks by not requiring
+      any uptime to join the dht. Implements ticket 2088.

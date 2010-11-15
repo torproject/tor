@@ -2535,7 +2535,7 @@ typedef struct {
    * connections. */
   config_line_t *TransListenAddress;
   /** Addresses to bind for listening for transparent natd connections */
-  config_line_t *NatdListenAddress;
+  config_line_t *NATDListenAddress;
   /** Addresses to bind for listening for SOCKS connections. */
   config_line_t *DNSListenAddress;
   /** Addresses to bind for listening for OR connections. */
@@ -2559,7 +2559,7 @@ typedef struct {
   int SocksPort; /**< Port to listen on for SOCKS connections. */
   /** Port to listen on for transparent pf/netfilter connections. */
   int TransPort;
-  int NatdPort; /**< Port to listen on for transparent natd connections. */
+  int NATDPort; /**< Port to listen on for transparent natd connections. */
   int ControlPort; /**< Port to listen on for control connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
@@ -2603,8 +2603,6 @@ typedef struct {
   int AvoidDiskWrites; /**< Boolean: should we never cache things to disk?
                         * Not used yet. */
   int ClientOnly; /**< Boolean: should we never evolve into a server role? */
-  /** Boolean: should we never publish a descriptor? Deprecated. */
-  int NoPublish;
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "v3", "bridge", or "". */
   smartlist_t *PublishServerDescriptor;
@@ -2703,24 +2701,24 @@ typedef struct {
                                  * use in a second for all relayed conns? */
   uint64_t PerConnBWRate; /**< Long-term bw on a single TLS conn, if set. */
   uint64_t PerConnBWBurst; /**< Allowed burst on a single TLS conn, if set. */
-  int NumCpus; /**< How many CPUs should we try to use? */
-  int RunTesting; /**< If true, create testing circuits to measure how well the
-                   * other ORs are running. */
+  int NumCPUs; /**< How many CPUs should we try to use? */
+//int RunTesting; /**< If true, create testing circuits to measure how well the
+//                 * other ORs are running. */
   config_line_t *RendConfigLines; /**< List of configuration lines
                                           * for rendezvous services. */
   config_line_t *HidServAuth; /**< List of configuration lines for client-side
                                * authorizations for hidden services */
   char *ContactInfo; /**< Contact info to be published in the directory. */
 
-  char *HttpProxy; /**< hostname[:port] to use as http proxy, if any. */
-  tor_addr_t HttpProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
-  uint16_t HttpProxyPort; /**< Parsed port for http proxy, if any. */
-  char *HttpProxyAuthenticator; /**< username:password string, if any. */
+  char *HTTPProxy; /**< hostname[:port] to use as http proxy, if any. */
+  tor_addr_t HTTPProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */
+  uint16_t HTTPProxyPort; /**< Parsed port for http proxy, if any. */
+  char *HTTPProxyAuthenticator; /**< username:password string, if any. */
 
-  char *HttpsProxy; /**< hostname[:port] to use as https proxy, if any. */
-  tor_addr_t HttpsProxyAddr; /**< Parsed addr for https proxy, if any. */
-  uint16_t HttpsProxyPort; /**< Parsed port for https proxy, if any. */
-  char *HttpsProxyAuthenticator; /**< username:password string, if any. */
+  char *HTTPSProxy; /**< hostname[:port] to use as https proxy, if any. */
+  tor_addr_t HTTPSProxyAddr; /**< Parsed addr for https proxy, if any. */
+  uint16_t HTTPSProxyPort; /**< Parsed port for https proxy, if any. */
+  char *HTTPSProxyAuthenticator; /**< username:password string, if any. */
 
   char *Socks4Proxy; /**< hostname:port to use as a SOCKS4 proxy, if any. */
   tor_addr_t Socks4ProxyAddr; /**< Derived from Socks4Proxy. */

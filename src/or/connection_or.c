@@ -326,7 +326,7 @@ connection_or_finished_connecting(or_connection_t *or_conn)
 
   proxy_type = PROXY_NONE;
 
-  if (get_options()->HttpsProxy)
+  if (get_options()->HTTPSProxy)
     proxy_type = PROXY_CONNECT;
   else if (get_options()->Socks4Proxy)
     proxy_type = PROXY_SOCKS4;
@@ -842,10 +842,10 @@ connection_or_connect(const tor_addr_t *_addr, uint16_t port,
   control_event_or_conn_status(conn, OR_CONN_EVENT_LAUNCHED, 0);
 
   /* use a proxy server if available */
-  if (options->HttpsProxy) {
+  if (options->HTTPSProxy) {
     using_proxy = 1;
-    tor_addr_copy(&addr, &options->HttpsProxyAddr);
-    port = options->HttpsProxyPort;
+    tor_addr_copy(&addr, &options->HTTPSProxyAddr);
+    port = options->HTTPSProxyPort;
   } else if (options->Socks4Proxy) {
     using_proxy = 1;
     tor_addr_copy(&addr, &options->Socks4ProxyAddr);

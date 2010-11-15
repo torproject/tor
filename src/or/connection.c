@@ -623,7 +623,7 @@ connection_about_to_close_connection(connection_t *conn)
           or_options_t *options = get_options();
           rep_hist_note_connect_failed(or_conn->identity_digest, now);
           entry_guard_register_connect_status(or_conn->identity_digest,0,
-                                              !options->HttpsProxy, now);
+                                              !options->HTTPSProxy, now);
           if (conn->state >= OR_CONN_STATE_TLS_HANDSHAKING) {
             int reason = tls_error_to_orconn_end_reason(or_conn->tls_error);
             control_event_or_conn_status(or_conn, OR_CONN_EVENT_FAILED,
@@ -1413,7 +1413,7 @@ connection_proxy_connect(connection_t *conn, int type)
     case PROXY_CONNECT: {
       char buf[1024];
       char *base64_authenticator=NULL;
-      const char *authenticator = options->HttpsProxyAuthenticator;
+      const char *authenticator = options->HTTPSProxyAuthenticator;
 
       /* Send HTTP CONNECT and authentication (if available) in
        * one request */
@@ -1918,8 +1918,8 @@ retry_all_listeners(smartlist_t *replaced_conns,
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
     return -1;
-  if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NatdListenAddress,
-                      options->NatdPort, "127.0.0.1",
+  if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NATDListenAddress,
+                      options->NATDPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
     return -1;
