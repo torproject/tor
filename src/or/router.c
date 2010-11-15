@@ -1746,6 +1746,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
+  int has_extra_info_digest;
   char extra_info_digest[HEX_DIGEST_LEN+1];
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
@@ -1796,8 +1797,13 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     family_line = tor_strdup("");
   }
 
-  base16_encode(extra_info_digest, sizeof(extra_info_digest),
-                router->cache_info.extra_info_digest, DIGEST_LEN);
+  has_extra_info_digest =
+    tor_digest_is_zero(router->cache_info.extra_info_digest);
+
+  if (has_extra_info_digest) {
+    base16_encode(extra_info_digest, sizeof(extra_info_digest),
+                  router->cache_info.extra_info_digest, DIGEST_LEN);
+  }
 
   /* Generate the easy portion of the router descriptor. */
   result = tor_snprintf(s, maxlen,
@@ -1808,7 +1814,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt fingerprint %s\n"
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
-                    "opt extra-info-digest %s\n%s"
+                    "%s%s%s%s"
                     "onion-key\n%s"
                     "signing-key\n%s"
                     "%s%s%s%s",
@@ -1823,7 +1829,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
-    extra_info_digest,
+    has_extra_info_digest ? "opt extra-info-digest " : "",
+    has_extra_info_digest ? extra_info_digest : "",
+    has_extra_info_digest ? "\n" : "",
     options->DownloadExtraInfo ? "opt caches-extra-info\n" : "",
     onion_pkey, identity_pkey,
     family_line,
