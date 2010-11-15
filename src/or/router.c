@@ -2053,9 +2053,9 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                            "Descriptor was: <<%s>>", s);
       goto nostats;
     } else {
-      log_err(LD_BUG, "We just generated an extra-info descriptors that "
-                      "exceeds the 50 KB upload limit. Descriptor was: "
-                      "<<%s>>", s);
+      log_warn(LD_BUG, "We just generated an extra-info descriptors that "
+                       "exceeds the 50 KB upload limit. Descriptor was: "
+                       "<<%s>>", s);
       goto err;
     }
   }
@@ -2065,8 +2065,8 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   if (router_get_extrainfo_hash(s, digest) < 0 ||
       router_append_dirobj_signature(sig, sizeof(sig), digest, DIGEST_LEN,
                                      ident_key) < 0) {
-    log_err(LD_BUG, "Could not append signature to extra-info "
-                    "descriptor. Descriptor was: <<%s>>", s);
+    log_warn(LD_BUG, "Could not append signature to extra-info descriptor. "
+                     "Descriptor was: <<%s>>", s);
     goto err;
   }
   smartlist_add(chunks, tor_strdup(sig));
@@ -2084,8 +2084,8 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                            "<<%s>>", s);
       goto nostats;
     } else {
-      log_err(LD_BUG, "We just generated an extrainfo descriptor we "
-                      "can't parse. Descriptor was: <<%s>>", s);
+      log_warn(LD_BUG, "We just generated an extrainfo descriptor we can't "
+                       "parse. Descriptor was: <<%s>>", s);
       goto err;
     }
   }
