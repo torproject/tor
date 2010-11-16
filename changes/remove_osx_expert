@@ -1,5 +1,0 @@
-  o Removed features:
-    - Remove everything related to building the expert bundle for OS X. It
-      has confused many users, doesn't work right on OS X 10.6, and is hard
-      to get rid of once installed. Resolves bug 1274.
-

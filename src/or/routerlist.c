@@ -2684,12 +2684,15 @@ signed_descriptor_free(signed_descriptor_t *sd)
   tor_free(sd);
 }
 
-/** Extract a signed_descriptor_t from a routerinfo, and free the routerinfo.
+/** Extract a signed_descriptor_t from a general routerinfo, and free the
+ * routerinfo.
  */
 static signed_descriptor_t *
 signed_descriptor_from_routerinfo(routerinfo_t *ri)
 {
-  signed_descriptor_t *sd = tor_malloc_zero(sizeof(signed_descriptor_t));
+  signed_descriptor_t *sd;
+  tor_assert(ri->purpose == ROUTER_PURPOSE_GENERAL);
+  sd = tor_malloc_zero(sizeof(signed_descriptor_t));
   memcpy(sd, &(ri->cache_info), sizeof(signed_descriptor_t));
   sd->routerlist_index = -1;
   ri->cache_info.signed_descriptor_body = NULL;
@@ -2780,6 +2783,7 @@ static void
 routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 {
   routerinfo_t *ri_old;
+  signed_descriptor_t *sd_old;
   {
     const routerinfo_t *ri_generated = router_get_my_routerinfo();
     tor_assert(ri_generated != ri);
@@ -2788,8 +2792,16 @@ routerlist_insert(routerlist_t *rl, routerinfo_t *ri)
 
   ri_old = rimap_set(rl->identity_map, ri->cache_info.identity_digest, ri);
   tor_assert(!ri_old);
-  sdmap_set(rl->desc_digest_map, ri->cache_info.signed_descriptor_digest,
-            &(ri->cache_info));
+
+  sd_old = sdmap_set(rl->desc_digest_map,
+                     ri->cache_info.signed_descriptor_digest,
+                     &(ri->cache_info));
+  if (sd_old) {
+    rl->desc_store.bytes_dropped += sd_old->signed_descriptor_len;
+    sdmap_remove(rl->desc_by_eid_map, sd_old->extra_info_digest);
+    signed_descriptor_free(sd_old);
+  }
+
   if (!tor_digest_is_zero(ri->cache_info.extra_info_digest))
     sdmap_set(rl->desc_by_eid_map, ri->cache_info.extra_info_digest,
               &ri->cache_info);
@@ -3009,6 +3021,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
                    routerinfo_t *ri_new)
 {
   int idx;
+  int same_descriptors;
 
   routerinfo_t *ri_tmp;
   extrainfo_t *ei_tmp;
@@ -3055,8 +3068,15 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
               &ri_new->cache_info);
   }
 
+  same_descriptors = ! memcmp(ri_old->cache_info.signed_descriptor_digest,
+                              ri_new->cache_info.signed_descriptor_digest,
+                              DIGEST_LEN);
+
   if (should_cache_old_descriptors() &&
-      ri_old->purpose == ROUTER_PURPOSE_GENERAL) {
+      ri_old->purpose == ROUTER_PURPOSE_GENERAL &&
+      !same_descriptors) {
+    /* ri_old is going to become a signed_descriptor_t and go into
+     * old_routers */
     signed_descriptor_t *sd = signed_descriptor_from_routerinfo(ri_old);
     smartlist_add(rl->old_routers, sd);
     sd->routerlist_index = smartlist_len(rl->old_routers)-1;
@@ -3064,24 +3084,27 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     if (!tor_digest_is_zero(sd->extra_info_digest))
       sdmap_set(rl->desc_by_eid_map, sd->extra_info_digest, sd);
   } else {
-    if (memcmp(ri_old->cache_info.signed_descriptor_digest,
-               ri_new->cache_info.signed_descriptor_digest,
-               DIGEST_LEN)) {
-      /* digests don't match; digestmap_set didn't replace */
+    /* We're dropping ri_old. */
+    if (!same_descriptors) {
+      /* digests don't match; The sdmap_set above didn't replace */
       sdmap_remove(rl->desc_digest_map,
                    ri_old->cache_info.signed_descriptor_digest);
-    }
 
-    ei_tmp = eimap_remove(rl->extra_info_map,
-                          ri_old->cache_info.extra_info_digest);
-    if (ei_tmp) {
-      rl->extrainfo_store.bytes_dropped +=
-        ei_tmp->cache_info.signed_descriptor_len;
-      extrainfo_free(ei_tmp);
-    }
-    if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest)) {
-      sdmap_remove(rl->desc_by_eid_map,
-                   ri_old->cache_info.extra_info_digest);
+      if (memcmp(ri_old->cache_info.extra_info_digest,
+                 ri_new->cache_info.extra_info_digest, DIGEST_LEN)) {
+        ei_tmp = eimap_remove(rl->extra_info_map,
+                              ri_old->cache_info.extra_info_digest);
+        if (ei_tmp) {
+          rl->extrainfo_store.bytes_dropped +=
+            ei_tmp->cache_info.signed_descriptor_len;
+          extrainfo_free(ei_tmp);
+        }
+      }
+
+      if (!tor_digest_is_zero(ri_old->cache_info.extra_info_digest)) {
+        sdmap_remove(rl->desc_by_eid_map,
+                     ri_old->cache_info.extra_info_digest);
+      }
     }
     rl->desc_store.bytes_dropped += ri_old->cache_info.signed_descriptor_len;
     routerinfo_free(ri_old);
@@ -3233,10 +3256,18 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     /* If we have this descriptor already and the new descriptor is a bridge
      * descriptor, replace it. If we had a bridge descriptor before and the
      * new one is not a bridge descriptor, don't replace it. */
-    tor_assert(old_router);
-    if (! (routerinfo_is_a_configured_bridge(router) &&
-            (router->purpose == ROUTER_PURPOSE_BRIDGE ||
-             old_router->purpose != ROUTER_PURPOSE_BRIDGE))) {
+
+    /* Only members of routerlist->identity_map can be bridges; we don't
+     * put bridges in old_routers. */
+    const int was_bridge = old_router &&
+      old_router->purpose == ROUTER_PURPOSE_BRIDGE;
+
+    if (routerinfo_is_a_configured_bridge(router) &&
+        router->purpose == ROUTER_PURPOSE_BRIDGE &&
+        !was_bridge) {
+      log_info(LD_DIR, "Replacing non-bridge descriptor with bridge "
+               "descriptor for router '%s'", router->nickname);
+    } else {
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router '%s'",
                router->nickname);
