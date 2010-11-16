@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Learn our external IP address when we're a relay or bridge, even if
-      we set PublishServerDescriptor to 0. Bugfix on 0.2.0.3-alpha,
-      where we introduced bridge relays that don't need to publish to
-      be useful. Fixes bug 2050.

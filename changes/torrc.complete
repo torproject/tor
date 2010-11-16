@@ -1,4 +1,0 @@
-  o Code simplifications and refactorings:
-    - Remove the torrc.complete file. It hasn't been kept up to date
-      and users will have better luck checking out the manpage.
-

@@ -1,5 +1,30 @@
-Changes in version 0.2.2.18-rc - 2010-11-1?
+Changes in version 0.2.2.18-alpha - 2010-11-16
   o Major bugfixes:
+    - Do even more to reject (and not just ignore) annotations on
+      router descriptors received anywhere but from the cache. Previously
+      we would ignore such annotations at first, but cache them to disk
+      anyway. Bugfix on 0.2.0.8-alpha. Found by piebeer.
+    - Do not log messages to the controller while shrinking buffer
+      freelists. Doing so would sometimes make the controller connection
+      try to allocate a buffer chunk, which would mess up the internals
+      of the freelist and cause an assertion failure. Fixes bug 1125;
+      fixed by Robert Ransom. Bugfix on 0.2.0.16-alpha.
+    - Learn our external IP address when we're a relay or bridge, even if
+      we set PublishServerDescriptor to 0. Bugfix on 0.2.0.3-alpha,
+      where we introduced bridge relays that don't need to publish to
+      be useful. Fixes bug 2050.
+    - Maintain separate TLS contexts and certificates for incoming and
+      outgoing connections in bridge relays. Previously we would use the
+      same TLS contexts and certs for incoming and outgoing connections.
+      Bugfix on 0.2.0.3-alpha; addresses bug 988.
+    - Maintain separate identity keys for incoming and outgoing TLS
+      contexts in bridge relays. Previously we would use the same
+      identity keys for incoming and outgoing TLS contexts. Bugfix on
+      0.2.0.3-alpha; addresses a bug described in ticket 988.
+    - Avoid an assertion failure when we as an authority receive a
+      duplicate upload of a router descriptor that we already have,
+      but which we previously considered an obsolete descriptor.
+      Fixes another case of bug 1776. Bugfix on 0.2.2.16-alpha.
     - Avoid a crash bug triggered by looking at a dangling pointer while
       setting the network status consensus. Found by Robert Ransom.
       Bugfix on 0.2.2.17-alpha. Fixes bug 2097.
@@ -22,6 +47,8 @@ Changes in version 0.2.2.18-rc - 2010-11-1?
       when logging them. Previously we would attribute them to a failure
       while generating a TLS context. Patch by Robert Ransom. Bugfix on
       0.1.0.4-rc; fixes bug 1994.
+    - Enforce multiplicity rules when parsing annotations. Bugfix on
+      0.2.0.8-alpha. Found by piebeer.
     - Fix warnings that newer versions of autoconf produced during
       ./autogen.sh. These warnings appear to be harmless in our case,
       but they were extremely verbose. Fixes bug 2020.
@@ -36,6 +63,11 @@ Changes in version 0.2.2.18-rc - 2010-11-1?
       on 0.2.2.17-alpha.
 
   o Minor features:
+    - Make hidden services work better in private Tor networks by not
+      requiring any uptime to join the hidden service descriptor
+      DHT. Implements ticket 2088.
+    - Rate-limit the "your application is giving Tor only an IP address"
+      warning. Addresses bug 2000; bugfix on 0.0.8pre2.
     - Update to the November 1 2010 Maxmind GeoLite Country database.
 
   o Code simplifications and refactoring:
@@ -44,6 +76,16 @@ Changes in version 0.2.2.18-rc - 2010-11-1?
       necessary as long as relays using Tor 0.2.1.3-alpha through
       0.2.1.18-alpha were active. Since this isn't the case anymore,
       we unify our behaviour here. Resolves bug 2081.
+    - Some options used different conventions for uppercasing of acronyms
+      when comparing manpage and source. Fix those in favor of the
+      manpage, as it makes sense to capitalize acronyms.
+    - Remove the torrc.complete file. It hasn't been kept up to date
+      and users will have better luck checking out the manpage.
+    - Removed the obsolete "NoPublish" option; it has been flagged
+      as obsolete and has produced a warning since 0.1.1.18-rc.
+    - Remove everything related to building the expert bundle for OS X.
+      It has confused many users, doesn't work right on OS X 10.6,
+      and is hard to get rid of once installed. Resolves bug 1274.
 
 
 Changes in version 0.2.2.17-alpha - 2010-09-30

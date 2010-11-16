@@ -1,4 +1,0 @@
-  o Code simplifications and refactoring:
-    - Some options used different conventions for uppercasing of acronyms
-      when comparing manpage and source. Fix those in favor of the
-      manpage, as it makes sense to capitalize acronyms.

@@ -1,5 +1,0 @@
-  o Major bugfixes
-    - Avoid an assertion failure when we as an authority receive a
-      duplicate upload of a router descriptor that we already have,
-      but which we previously considered an obsolete descriptor.
-      Fixes another case of bug 1776.  Bugfix on 0.2.2.16-alpha.
