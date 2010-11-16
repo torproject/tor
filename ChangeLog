@@ -68,6 +68,8 @@ Changes in version 0.2.2.18-alpha - 2010-11-16
       DHT. Implements ticket 2088.
     - Rate-limit the "your application is giving Tor only an IP address"
       warning. Addresses bug 2000; bugfix on 0.0.8pre2.
+    - When you set AllowSingleHopExits, print a warning to explain why
+      most clients are avoiding your relay.
     - Update to the November 1 2010 Maxmind GeoLite Country database.
 
   o Code simplifications and refactoring:

@@ -3626,6 +3626,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "a non-default set of DirServers.");
   }
 
+  if (options->AllowSingleHopExits && !options->DirServers) {
+    COMPLAIN("You have set AllowSingleHopExits; now your relay will allow "
+             "others to make one-hop exits. However, since by default most "
+             "clients avoid relays that set this option, most clients will "
+             "ignore you.");
+  }
+
   /*XXXX022 checking for defaults manually like this is a bit fragile.*/
 
   /* Keep changes to hard-coded values synchronous to man page and default
