@@ -3238,8 +3238,12 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     const int was_bridge = old_router &&
       old_router->purpose == ROUTER_PURPOSE_BRIDGE;
 
-    if (! (routerinfo_is_a_configured_bridge(router) &&
-           (router->purpose == ROUTER_PURPOSE_BRIDGE || !was_bridge))) {
+    if (routerinfo_is_a_configured_bridge(router) &&
+        router->purpose == ROUTER_PURPOSE_BRIDGE &&
+        !was_bridge) {
+      log_info(LD_DIR, "Replacing non-bridge descriptor with bridge "
+               "descriptor for router '%s'", router->nickname);
+    } else {
       log_info(LD_DIR,
                "Dropping descriptor that we already have for router '%s'",
                router->nickname);
