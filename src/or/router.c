@@ -1876,7 +1876,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     }
   }
 
-  if (written+256 > maxlen) { /* Not enough room for signature. */
+  if (written + DIROBJ_MAX_SIG_LEN > maxlen) {
+    /* Not enough room for signature. */
     log_warn(LD_BUG,"not enough room left in descriptor for signature!");
     return -1;
   }
@@ -1991,11 +1992,9 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   char *bandwidth_usage;
   int result;
   static int write_stats_to_extrainfo = 1;
-#define SIG_LEN 250
-  char sig[SIG_LEN+1];
+  char sig[DIROBJ_MAX_SIG_LEN+1];
   char *s, *pre, *contents, *cp, *s_dup = NULL;
   time_t now = time(NULL);
-  const char *bridge_stats = NULL;
   smartlist_t *chunks = smartlist_create();
   extrainfo_t *ei_tmp = NULL;
 
@@ -2035,7 +2034,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   }
 
   if (should_record_bridge_info(options) && write_stats_to_extrainfo) {
-    bridge_stats = geoip_get_bridge_stats_extrainfo(now);
+    const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
     if (bridge_stats) {
       smartlist_add(chunks, tor_strdup(bridge_stats));
     }
@@ -2044,29 +2043,31 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   smartlist_add(chunks, tor_strdup("router-signature\n"));
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
-  if (strlen(s) > MAX_EXTRAINFO_UPLOAD_SIZE - SIG_LEN) {
-    if (write_stats_to_extrainfo) {
+  while (strlen(s) > MAX_EXTRAINFO_UPLOAD_SIZE - DIROBJ_MAX_SIG_LEN) {
+    if (smartlist_len(chunks) > 2) {
+      int idx = smartlist_len(chunks) - 2;
+      char *e = smartlist_get(chunks, idx);
+      smartlist_del_keeporder(chunks, idx);
       log_warn(LD_GENERAL, "We just generated an extra-info descriptor "
                            "with statistics that exceeds the 50 KB "
-                           "upload limit. Not adding statistics to this "
-                           "or any future extra-info descriptors. "
-                           "Descriptor was: <<%s>>", s);
-      goto nostats;
+                           "upload limit. Removing last added "
+                           "statistics.");
+      tor_free(e);
+      tor_free(s);
+      s = smartlist_join_strings(chunks, "", 0, NULL);
     } else {
       log_warn(LD_BUG, "We just generated an extra-info descriptors that "
-                       "exceeds the 50 KB upload limit. Descriptor was: "
-                       "<<%s>>", s);
+                       "exceeds the 50 KB upload limit.");
       goto err;
     }
   }
-#undef SIG_LEN
 
   memset(sig, 0, sizeof(sig));
   if (router_get_extrainfo_hash(s, digest) < 0 ||
       router_append_dirobj_signature(sig, sizeof(sig), digest, DIGEST_LEN,
                                      ident_key) < 0) {
-    log_warn(LD_BUG, "Could not append signature to extra-info descriptor. "
-                     "Descriptor was: <<%s>>", s);
+    log_warn(LD_BUG, "Could not append signature to extra-info "
+                     "descriptor.");
     goto err;
   }
   smartlist_add(chunks, tor_strdup(sig));
@@ -2080,12 +2081,13 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
       log_warn(LD_GENERAL, "We just generated an extra-info descriptor "
                            "with statistics that we can't parse. Not "
                            "adding statistics to this or any future "
-                           "extra-info descriptors. Descriptor was: "
-                           "<<%s>>", s);
-      goto nostats;
+                           "extra-info descriptors.");
+      write_stats_to_extrainfo = 0;
+      result = extrainfo_dump_to_string(s_out, extrainfo, ident_key);
+      goto done;
     } else {
-      log_warn(LD_BUG, "We just generated an extrainfo descriptor we can't "
-                       "parse. Descriptor was: <<%s>>", s);
+      log_warn(LD_BUG, "We just generated an extrainfo descriptor we "
+                       "can't parse.");
       goto err;
     }
   }
@@ -2093,11 +2095,6 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   *s_out = s;
   s = NULL; /* prevent free */
   result = 0;
-  goto done;
-
- nostats:
-  write_stats_to_extrainfo = 0;
-  result = extrainfo_dump_to_string(s_out, extrainfo, ident_key);
   goto done;
 
  err:
