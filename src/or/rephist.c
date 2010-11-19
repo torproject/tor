@@ -1445,7 +1445,7 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
  * history in its descriptor.
  */
 char *
-rep_hist_get_bandwidth_lines(int for_extrainfo)
+rep_hist_get_bandwidth_lines(void)
 {
   char *buf, *cp;
   char t[ISO_TIME_LEN+1];
@@ -1479,9 +1479,8 @@ rep_hist_get_bandwidth_lines(int for_extrainfo)
     }
     tor_assert(b);
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
-    tor_snprintf(cp, len-(cp-buf), "%s%s %s (%d s) ",
-                 for_extrainfo ? "" : "opt ", desc, t,
-                 NUM_SECS_BW_SUM_INTERVAL);
+    tor_snprintf(cp, len-(cp-buf), "%s %s (%d s) ",
+                 desc, t, NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
     cp += rep_hist_fill_bandwidth_history(cp, len-(cp-buf), b);
     strlcat(cp, "\n", len-(cp-buf));
