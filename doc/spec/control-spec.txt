@@ -1717,13 +1717,17 @@
 
   A signal has been received and actions taken by Tor. The meaning of each
   signal, and the mapping to Unix signals, is as defined in section 3.7.
+  Future versions of Tor MAY generate signals other than those listed here;
+  controllers MUST be able to accept them.
+
   If Tor chose to ignore a signal (such as NEWNYM), this event will not be
-  sent.
+  sent.  Note that some options (like ReloadTorrcOnSIGHUP) may affect the
+  semantics of the signals here.
 
   Note that the HALT (SIGTERM) and SHUTDOWN (SIGINT) signals do not currently
   generate any event.
 
-  [First added in X.X.X.X-alpha]
+  [First added in 0.2.3.1-alpha]
 
 5. Implementation notes
 
