@@ -2044,7 +2044,12 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
   s = smartlist_join_strings(chunks, "", 0, NULL);
 
   while (strlen(s) > MAX_EXTRAINFO_UPLOAD_SIZE - DIROBJ_MAX_SIG_LEN) {
+    /* So long as there are at least two chunks (one for the initial
+     * extra-info line and one for the router-signature), we can keep removing
+     * things. */
     if (smartlist_len(chunks) > 2) {
+      /* We remove the next-to-last element (remember, len-1 is the last
+         element), since we need to keep the router-signature element. */
       int idx = smartlist_len(chunks) - 2;
       char *e = smartlist_get(chunks, idx);
       smartlist_del_keeporder(chunks, idx);
