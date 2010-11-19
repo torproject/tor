@@ -1370,7 +1370,6 @@ router_rebuild_descriptor(int force)
   uint32_t addr;
   char platform[256];
   int hibernating = we_are_hibernating();
-  size_t ei_size;
   or_options_t *options = get_options();
 
   if (desc_clean_since && !force)
@@ -1486,25 +1485,27 @@ router_rebuild_descriptor(int force)
   ei->cache_info.published_on = ri->cache_info.published_on;
   memcpy(ei->cache_info.identity_digest, ri->cache_info.identity_digest,
          DIGEST_LEN);
-  ei_size = options->ExtraInfoStatistics ? MAX_EXTRAINFO_UPLOAD_SIZE : 8192;
-  ei->cache_info.signed_descriptor_body = tor_malloc(ei_size);
-  if (extrainfo_dump_to_string(ei->cache_info.signed_descriptor_body,
-                               ei_size, ei,
-                               get_server_identity_key()) < 0) {
+  if (extrainfo_dump_to_string(&ei->cache_info.signed_descriptor_body,
+                               ei, get_server_identity_key()) < 0) {
     log_warn(LD_BUG, "Couldn't generate extra-info descriptor.");
-    routerinfo_free(ri);
     extrainfo_free(ei);
-    return -1;
+    ei = NULL;
+  } else {
+    ei->cache_info.signed_descriptor_len =
+      strlen(ei->cache_info.signed_descriptor_body);
+    router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
+                              ei->cache_info.signed_descriptor_digest);
   }
-  ei->cache_info.signed_descriptor_len =
-    strlen(ei->cache_info.signed_descriptor_body);
-  router_get_extrainfo_hash(ei->cache_info.signed_descriptor_body,
-                            ei->cache_info.signed_descriptor_digest);
 
   /* Now finish the router descriptor. */
-  memcpy(ri->cache_info.extra_info_digest,
-         ei->cache_info.signed_descriptor_digest,
-         DIGEST_LEN);
+  if (ei) {
+    memcpy(ri->cache_info.extra_info_digest,
+           ei->cache_info.signed_descriptor_digest,
+           DIGEST_LEN);
+  } else {
+    /* ri was allocated with tor_malloc_zero, so there is no need to
+     * zero ri->cache_info.extra_info_digest here. */
+  }
   ri->cache_info.signed_descriptor_body = tor_malloc(8192);
   if (router_dump_router_to_string(ri->cache_info.signed_descriptor_body, 8192,
                                    ri, get_server_identity_key()) < 0) {
@@ -1531,7 +1532,9 @@ router_rebuild_descriptor(int force)
 
   routerinfo_set_country(ri);
 
-  tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
+  if (ei) {
+    tor_assert(! routerinfo_incompatible_with_extrainfo(ri, ei, NULL, NULL));
+  }
 
   routerinfo_free(desc_routerinfo);
   desc_routerinfo = ri;
@@ -1746,6 +1749,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   char digest[DIGEST_LEN];
   char published[ISO_TIME_LEN+1];
   char fingerprint[FINGERPRINT_LEN+1];
+  int has_extra_info_digest;
   char extra_info_digest[HEX_DIGEST_LEN+1];
   size_t onion_pkeylen, identity_pkeylen;
   size_t written;
@@ -1796,8 +1800,13 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     family_line = tor_strdup("");
   }
 
-  base16_encode(extra_info_digest, sizeof(extra_info_digest),
-                router->cache_info.extra_info_digest, DIGEST_LEN);
+  has_extra_info_digest =
+    ! tor_digest_is_zero(router->cache_info.extra_info_digest);
+
+  if (has_extra_info_digest) {
+    base16_encode(extra_info_digest, sizeof(extra_info_digest),
+                  router->cache_info.extra_info_digest, DIGEST_LEN);
+  }
 
   /* Generate the easy portion of the router descriptor. */
   result = tor_snprintf(s, maxlen,
@@ -1808,7 +1817,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                     "opt fingerprint %s\n"
                     "uptime %ld\n"
                     "bandwidth %d %d %d\n"
-                    "opt extra-info-digest %s\n%s"
+                    "%s%s%s%s"
                     "onion-key\n%s"
                     "signing-key\n%s"
                     "%s%s%s%s",
@@ -1823,7 +1832,9 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     (int) router->bandwidthrate,
     (int) router->bandwidthburst,
     (int) router->bandwidthcapacity,
-    extra_info_digest,
+    has_extra_info_digest ? "opt extra-info-digest " : "",
+    has_extra_info_digest ? extra_info_digest : "",
+    has_extra_info_digest ? "\n" : "",
     options->DownloadExtraInfo ? "opt caches-extra-info\n" : "",
     onion_pkey, identity_pkey,
     family_line,
@@ -1880,7 +1891,8 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
     }
   }
 
-  if (written+256 > maxlen) { /* Not enough room for signature. */
+  if (written + DIROBJ_MAX_SIG_LEN > maxlen) {
+    /* Not enough room for signature. */
     log_warn(LD_BUG,"not enough room left in descriptor for signature!");
     return -1;
   }
@@ -1981,11 +1993,11 @@ load_stats_file(const char *filename, const char *end_line, time_t now,
   return r;
 }
 
-/** Write the contents of <b>extrainfo</b> to the <b>maxlen</b>-byte string
- * <b>s</b>, signing them with <b>ident_key</b>.  Return 0 on success,
- * negative on failure. */
+/** Write the contents of <b>extrainfo</b> and aggregated statistics to
+ * *<b>s_out</b>, signing them with <b>ident_key</b>. Return 0 on
+ * success, negative on failure. */
 int
-extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
+extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
                          crypto_pk_env_t *ident_key)
 {
   or_options_t *options = get_options();
@@ -1994,140 +2006,128 @@ extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
   char digest[DIGEST_LEN];
   char *bandwidth_usage;
   int result;
-  size_t len;
   static int write_stats_to_extrainfo = 1;
+  char sig[DIROBJ_MAX_SIG_LEN+1];
+  char *s, *pre, *contents, *cp, *s_dup = NULL;
   time_t now = time(NULL);
+  smartlist_t *chunks = smartlist_create();
+  extrainfo_t *ei_tmp = NULL;
 
   base16_encode(identity, sizeof(identity),
                 extrainfo->cache_info.identity_digest, DIGEST_LEN);
   format_iso_time(published, extrainfo->cache_info.published_on);
-  bandwidth_usage = rep_hist_get_bandwidth_lines(1);
+  bandwidth_usage = rep_hist_get_bandwidth_lines();
 
-  result = tor_snprintf(s, maxlen,
-                        "extra-info %s %s\n"
-                        "published %s\n%s",
-                        extrainfo->nickname, identity,
-                        published, bandwidth_usage);
-
+  tor_asprintf(&pre, "extra-info %s %s\npublished %s\n%s",
+               extrainfo->nickname, identity,
+               published, bandwidth_usage);
   tor_free(bandwidth_usage);
-  if (result<0)
-    return -1;
+  smartlist_add(chunks, pre);
 
   if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
-    char *contents = NULL;
     log_info(LD_GENERAL, "Adding stats to extra-info descriptor.");
     if (options->DirReqStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"dirreq-stats",
                         "dirreq-stats-end", now, &contents) > 0) {
-      size_t pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
-        log_warn(LD_DIR, "Could not write dirreq-stats to extra-info "
-                 "descriptor.");
-        s[pos] = '\0';
-        write_stats_to_extrainfo = 0;
-      }
-      tor_free(contents);
+      smartlist_add(chunks, contents);
     }
     if (options->EntryStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"entry-stats",
                         "entry-stats-end", now, &contents) > 0) {
-      size_t pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
-        log_warn(LD_DIR, "Could not write entry-stats to extra-info "
-                 "descriptor.");
-        s[pos] = '\0';
-        write_stats_to_extrainfo = 0;
-      }
-      tor_free(contents);
+      smartlist_add(chunks, contents);
     }
     if (options->CellStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"buffer-stats",
                         "cell-stats-end", now, &contents) > 0) {
-      size_t pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
-        log_warn(LD_DIR, "Could not write buffer-stats to extra-info "
-                 "descriptor.");
-        s[pos] = '\0';
-        write_stats_to_extrainfo = 0;
-      }
-      tor_free(contents);
+      smartlist_add(chunks, contents);
     }
     if (options->ExitPortStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"exit-stats",
                         "exit-stats-end", now, &contents) > 0) {
-      size_t pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
-        log_warn(LD_DIR, "Could not write exit-stats to extra-info "
-                 "descriptor.");
-        s[pos] = '\0';
-        write_stats_to_extrainfo = 0;
-      }
-      tor_free(contents);
+      smartlist_add(chunks, contents);
     }
   }
 
   if (should_record_bridge_info(options) && write_stats_to_extrainfo) {
     const char *bridge_stats = geoip_get_bridge_stats_extrainfo(now);
     if (bridge_stats) {
-      size_t pos = strlen(s);
-      if (strlcpy(s + pos, bridge_stats, maxlen - strlen(s)) !=
-          strlen(bridge_stats)) {
-        log_warn(LD_DIR, "Could not write bridge-stats to extra-info "
-                 "descriptor.");
-        s[pos] = '\0';
-        write_stats_to_extrainfo = 0;
-      }
+      smartlist_add(chunks, tor_strdup(bridge_stats));
     }
   }
 
-  len = strlen(s);
-  strlcat(s+len, "router-signature\n", maxlen-len);
-  len += strlen(s+len);
-  if (router_get_extrainfo_hash(s, digest)<0)
-    return -1;
-  if (router_append_dirobj_signature(s+len, maxlen-len, digest, DIGEST_LEN,
-                                     ident_key)<0)
-    return -1;
+  smartlist_add(chunks, tor_strdup("router-signature\n"));
+  s = smartlist_join_strings(chunks, "", 0, NULL);
 
-  {
-    char *cp, *s_dup;
-    extrainfo_t *ei_tmp;
-    cp = s_dup = tor_strdup(s);
-    ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
-    if (!ei_tmp) {
-      log_err(LD_BUG,
-              "We just generated an extrainfo descriptor we can't parse.");
-      log_err(LD_BUG, "Descriptor was: <<%s>>", s);
-      tor_free(s_dup);
-      return -1;
+  while (strlen(s) > MAX_EXTRAINFO_UPLOAD_SIZE - DIROBJ_MAX_SIG_LEN) {
+    /* So long as there are at least two chunks (one for the initial
+     * extra-info line and one for the router-signature), we can keep removing
+     * things. */
+    if (smartlist_len(chunks) > 2) {
+      /* We remove the next-to-last element (remember, len-1 is the last
+         element), since we need to keep the router-signature element. */
+      int idx = smartlist_len(chunks) - 2;
+      char *e = smartlist_get(chunks, idx);
+      smartlist_del_keeporder(chunks, idx);
+      log_warn(LD_GENERAL, "We just generated an extra-info descriptor "
+                           "with statistics that exceeds the 50 KB "
+                           "upload limit. Removing last added "
+                           "statistics.");
+      tor_free(e);
+      tor_free(s);
+      s = smartlist_join_strings(chunks, "", 0, NULL);
+    } else {
+      log_warn(LD_BUG, "We just generated an extra-info descriptors that "
+                       "exceeds the 50 KB upload limit.");
+      goto err;
     }
-    tor_free(s_dup);
-    extrainfo_free(ei_tmp);
   }
 
-  if (options->ExtraInfoStatistics && write_stats_to_extrainfo) {
-    char *cp, *s_dup;
-    extrainfo_t *ei_tmp;
-    cp = s_dup = tor_strdup(s);
-    ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
-    if (!ei_tmp) {
-      log_warn(LD_GENERAL,
-               "We just generated an extra-info descriptor with "
-               "statistics that we can't parse. Not adding statistics to "
-               "this or any future extra-info descriptors. Descriptor "
-               "was:\n%s", s);
+  memset(sig, 0, sizeof(sig));
+  if (router_get_extrainfo_hash(s, digest) < 0 ||
+      router_append_dirobj_signature(sig, sizeof(sig), digest, DIGEST_LEN,
+                                     ident_key) < 0) {
+    log_warn(LD_BUG, "Could not append signature to extra-info "
+                     "descriptor.");
+    goto err;
+  }
+  smartlist_add(chunks, tor_strdup(sig));
+  tor_free(s);
+  s = smartlist_join_strings(chunks, "", 0, NULL);
+
+  cp = s_dup = tor_strdup(s);
+  ei_tmp = extrainfo_parse_entry_from_string(cp, NULL, 1, NULL);
+  if (!ei_tmp) {
+    if (write_stats_to_extrainfo) {
+      log_warn(LD_GENERAL, "We just generated an extra-info descriptor "
+                           "with statistics that we can't parse. Not "
+                           "adding statistics to this or any future "
+                           "extra-info descriptors.");
       write_stats_to_extrainfo = 0;
-      extrainfo_dump_to_string(s, maxlen, extrainfo, ident_key);
+      result = extrainfo_dump_to_string(s_out, extrainfo, ident_key);
+      goto done;
+    } else {
+      log_warn(LD_BUG, "We just generated an extrainfo descriptor we "
+                       "can't parse.");
+      goto err;
     }
-    tor_free(s_dup);
-    extrainfo_free(ei_tmp);
   }
 
-  return (int)strlen(s)+1;
+  *s_out = s;
+  s = NULL; /* prevent free */
+  result = 0;
+  goto done;
+
+ err:
+  result = -1;
+
+ done:
+  tor_free(s);
+  SMARTLIST_FOREACH(chunks, char *, cp, tor_free(cp));
+  smartlist_free(chunks);
+  tor_free(s_dup);
+  extrainfo_free(ei_tmp);
+
+  return result;
 }
 
 /** Return true iff <b>s</b> is a legally valid server nickname. */

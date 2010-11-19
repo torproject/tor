@@ -77,7 +77,7 @@ int router_pick_published_address(or_options_t *options, uint32_t *addr);
 int router_rebuild_descriptor(int force);
 int router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
                                  crypto_pk_env_t *ident_key);
-int extrainfo_dump_to_string(char *s, size_t maxlen, extrainfo_t *extrainfo,
+int extrainfo_dump_to_string(char **s, extrainfo_t *extrainfo,
                              crypto_pk_env_t *ident_key);
 int is_legal_nickname(const char *s);
 int is_legal_nickname_or_hexdigest(const char *s);
