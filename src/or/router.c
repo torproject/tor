@@ -1805,7 +1805,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   has_extra_info_digest =
-    tor_digest_is_zero(router->cache_info.extra_info_digest);
+    ! tor_digest_is_zero(router->cache_info.extra_info_digest);
 
   if (has_extra_info_digest) {
     base16_encode(extra_info_digest, sizeof(extra_info_digest),
