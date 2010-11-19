@@ -20,7 +20,7 @@ Changes in version 0.2.2.18-alpha - 2010-11-16
     - Maintain separate identity keys for incoming and outgoing TLS
       contexts in bridge relays. Previously we would use the same
       identity keys for incoming and outgoing TLS contexts. Bugfix on
-      0.2.0.3-alpha; addresses a bug described in ticket 988.
+      0.2.0.3-alpha; addresses the other half of bug 988.
     - Avoid an assertion failure when we as an authority receive a
       duplicate upload of a router descriptor that we already have,
       but which we previously considered an obsolete descriptor.
@@ -28,6 +28,10 @@ Changes in version 0.2.2.18-alpha - 2010-11-16
     - Avoid a crash bug triggered by looking at a dangling pointer while
       setting the network status consensus. Found by Robert Ransom.
       Bugfix on 0.2.2.17-alpha. Fixes bug 2097.
+    - Fix a logic error where servers that _didn't_ act as exits would
+      try to keep their server lists more aggressively up to date than
+      exits, when it was supposed to be the other way around. Bugfix
+      on 0.2.2.17-alpha.
 
   o Minor bugfixes (on Tor 0.2.1.x and earlier):
     - When we're trying to guess whether we know our IP address as
@@ -39,14 +43,14 @@ Changes in version 0.2.2.18-alpha - 2010-11-16
       acceptability of circuits into line. This prevents a Tor OP from
       getting locked in a cycle of choosing its local OR as an exit for a
       path (due to a .exit request) and then rejecting the circuit because
-      its OR is not listed yet. Also prevent Tor clients from using an OR
-      running in the same instance as an exit (due to a .exit request)
+      its OR is not listed yet. It also prevents Tor clients from using an
+      OR running in the same instance as an exit (due to a .exit request)
       if the OR does not meet the same requirements expected of an OR
       running elsewhere. Fixes bug 1859; bugfix on 0.1.0.1-rc.
-    - Correctly describe errors that occur when generating a TLS object
-      when logging them. Previously we would attribute them to a failure
-      while generating a TLS context. Patch by Robert Ransom. Bugfix on
-      0.1.0.4-rc; fixes bug 1994.
+    - Correctly describe errors that occur when generating a TLS object.
+      Previously we would attribute them to a failure while generating a
+      TLS context. Patch by Robert Ransom. Bugfix on 0.1.0.4-rc; fixes
+      bug 1994.
     - Enforce multiplicity rules when parsing annotations. Bugfix on
       0.2.0.8-alpha. Found by piebeer.
     - Fix warnings that newer versions of autoconf produced during
@@ -57,10 +61,6 @@ Changes in version 0.2.2.18-alpha - 2010-11-16
     - Enable protection of small arrays whenever we build with gcc
       hardening features, not only when also building with warnings
       enabled. Fixes bug 2031; bugfix on 0.2.2.14-alpha. Reported by keb.
-    - Fix a logic error where servers that _didn't_ act as exits would
-      try to keep their server lists more aggressively up to date than
-      exits, when it was supposed to be the other way around. Bugfix
-      on 0.2.2.17-alpha.
 
   o Minor features:
     - Make hidden services work better in private Tor networks by not
@@ -68,22 +68,21 @@ Changes in version 0.2.2.18-alpha - 2010-11-16
       DHT. Implements ticket 2088.
     - Rate-limit the "your application is giving Tor only an IP address"
       warning. Addresses bug 2000; bugfix on 0.0.8pre2.
-    - When you set AllowSingleHopExits, print a warning to explain why
-      most clients are avoiding your relay.
+    - When AllowSingleHopExits is set, print a warning to explain to the
+      relay operator why most clients are avoiding her relay.
     - Update to the November 1 2010 Maxmind GeoLite Country database.
 
   o Code simplifications and refactoring:
     - When we fixed bug 1038 we had to put in a restriction not to send
-      RELAY_EARLY cells for relay cells on rend circuits. This was
-      necessary as long as relays using Tor 0.2.1.3-alpha through
-      0.2.1.18-alpha were active. Since this isn't the case anymore,
-      we unify our behaviour here. Resolves bug 2081.
+      RELAY_EARLY cells on rend circuits. This was necessary as long
+      as relays using Tor 0.2.1.3-alpha through 0.2.1.18-alpha were
+      active. Now remove this obsolete check. Resolves bug 2081.
     - Some options used different conventions for uppercasing of acronyms
       when comparing manpage and source. Fix those in favor of the
       manpage, as it makes sense to capitalize acronyms.
     - Remove the torrc.complete file. It hasn't been kept up to date
       and users will have better luck checking out the manpage.
-    - Removed the obsolete "NoPublish" option; it has been flagged
+    - Remove the obsolete "NoPublish" option; it has been flagged
       as obsolete and has produced a warning since 0.1.1.18-rc.
     - Remove everything related to building the expert bundle for OS X.
       It has confused many users, doesn't work right on OS X 10.6,
