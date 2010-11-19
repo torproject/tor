@@ -1,0 +1,4 @@
+  o Minor features (controller)
+    - Add a new SIGNAL event to the controller interface so that
+      controllers can be notified when Tor handles a signal.  Resolves
+      issue 1955. Patch by John Brooks.
