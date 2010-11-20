@@ -95,6 +95,10 @@
 /** Number of logging domains in the code. */
 #define N_LOGGING_DOMAINS 20
 
+/** This log message is not safe to send to a callback-based logger.
+ * Used as a flag, not a log domain. */
+#define LD_NOCB (1u<<31)
+
 typedef uint32_t log_domain_mask_t;
 
 /** Configures which severities are logged for each logging domain for a given

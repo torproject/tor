@@ -278,6 +278,10 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
       lf = lf->next;
       continue;
     }
+    if (lf->callback && (domain & LD_NOCB)) {
+      lf = lf->next;
+      continue;
+    }
     if (lf->seems_dead) {
       lf = lf->next;
       continue;
