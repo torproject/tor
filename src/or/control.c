@@ -3619,7 +3619,7 @@ control_event_signal(uintptr_t signal)
       break;
     default:
       log_warn(LD_BUG, "Unrecognized signal %lu in control_event_signal",
-               signal);
+               (unsigned long)signal);
       return -1;
   }
 
