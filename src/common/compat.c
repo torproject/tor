@@ -118,6 +118,18 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
 #endif
 }
 
+/** DOCDOC */
+FILE *
+tor_fopen_cloexec(const char *path, const char *mode)
+{
+  FILE *result = fopen(path, mode);
+#ifdef FD_CLOEXEC
+  if (result != NULL)
+    fcntl(fileno(result), F_SETFD, FD_CLOEXEC);
+#endif
+  return result;
+}
+
 #ifdef HAVE_SYS_MMAN_H
 /** Try to create a memory mapping for <b>filename</b> and return it.  On
  * failure, return NULL.  Sets errno properly, using ERANGE to mean
@@ -1008,8 +1020,17 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 //don't use win32 socketpairs (they are always bad)
 #if defined(HAVE_SOCKETPAIR) && !defined(MS_WINDOWS)
   int r;
+#ifdef SOCK_CLOEXEC
+  type |= SOCK_CLOEXEC;
+#endif
   r = socketpair(family, type, protocol, fd);
   if (r == 0) {
+#ifndef SOCK_CLOEXEC
+    if (fd[0] >= 0)
+      fcntl(fd[0], F_SETFD, FD_CLOEXEC);
+    if (fd[1] >= 0)
+      fcntl(fd[1], F_SETFD, FD_CLOEXEC);
+#endif
     socket_accounting_lock();
     if (fd[0] >= 0) {
       ++n_sockets_open;
