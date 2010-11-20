@@ -4,3 +4,8 @@
       running Libevent with debug logging enabled, and running Tor
       with a controller watching for low-severity log messages.
       Bugfix on 0.1.0.2-rc.  Fixes bug 2190.
+    - Make Libevent log messages get delievered to controllers later,
+      and not from inside the Libevent log handler.  This prevents
+      unsafe reentrant Libevent calls while still letting the log
+      messages get through.
+

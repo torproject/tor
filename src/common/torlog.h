@@ -95,8 +95,8 @@
 /** Number of logging domains in the code. */
 #define N_LOGGING_DOMAINS 20
 
-/** This log message is not safe to send to a callback-based logger.
- * Used as a flag, not a log domain. */
+/** This log message is not safe to send to a callback-based logger
+ * immediately.  Used as a flag, not a log domain. */
 #define LD_NOCB (1u<<31)
 
 typedef uint32_t log_domain_mask_t;
@@ -141,6 +141,7 @@ void rollback_log_changes(void);
 void mark_logs_temp(void);
 void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
+void flush_pending_log_callbacks(void);
 void log_set_application_name(const char *name);
 
 /* Outputs a message to stdout */

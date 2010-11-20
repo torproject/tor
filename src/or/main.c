@@ -893,6 +893,9 @@ run_scheduled_events(time_t now)
     signewnym_impl(now);
   }
 
+  /* 0c. If we've deferred log messages for the controller, handle them now */
+  flush_pending_log_callbacks();
+
   /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if
    *  necessary.

@@ -103,6 +103,17 @@ static logfile_t *logfiles = NULL;
 static int syslog_count = 0;
 #endif
 
+/** Represents a log message that we are going to send to callback-driven
+ * loggers once we can do so in a non-reentrant way. */
+typedef struct pending_cb_message_t {
+  int severity;
+  log_domain_mask_t domain;
+  char *msg;
+} pending_cb_message_t;
+
+/** Log messages waiting to be replayed onto callback-based logs */
+static smartlist_t *pending_cb_messages = NULL;
+
 #define LOCK_LOGS() STMT_BEGIN                                          \
   tor_mutex_acquire(&log_mutex);                                        \
   STMT_END
@@ -268,6 +279,10 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
    * interesting and hard to diagnose effects */
   assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
   LOCK_LOGS();
+
+  if (smartlist_len(pending_cb_messages))
+    flush_pending_log_callbacks();
+
   lf = logfiles;
   while (lf) {
     if (! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
@@ -275,10 +290,6 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
       continue;
     }
     if (! (lf->fd >= 0 || lf->is_syslog || lf->callback)) {
-      lf = lf->next;
-      continue;
-    }
-    if (lf->callback && (domain & LD_NOCB)) {
       lf = lf->next;
       continue;
     }
@@ -316,7 +327,15 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
       lf = lf->next;
       continue;
     } else if (lf->callback) {
-      lf->callback(severity, domain, end_of_prefix);
+      if (domain & LD_NOCB) {
+        pending_cb_message_t *msg = tor_malloc(sizeof(pending_cb_message_t));
+        msg->severity = severity;
+        msg->domain = domain;
+        msg->msg = tor_strdup(end_of_prefix);
+        smartlist_add(pending_cb_messages, msg);
+      } else {
+        lf->callback(severity, domain, end_of_prefix);
+      }
       lf = lf->next;
       continue;
     }
@@ -555,6 +574,8 @@ init_logging(void)
     tor_mutex_init(&log_mutex);
     log_mutex_initialized = 1;
   }
+  if (pending_cb_messages == NULL)
+    pending_cb_messages = smartlist_create();
 }
 
 /** Add a log handler to receive messages during startup (before the real
@@ -610,6 +631,48 @@ change_callback_log_severity(int loglevelMin, int loglevelMax,
     }
   }
   _log_global_min_severity = get_min_log_level();
+  UNLOCK_LOGS();
+}
+
+/** If there are any log messages that were genered with LD_NOCB waiting to
+ * be sent to callback-based loggers, send them now. */
+void
+flush_pending_log_callbacks(void)
+{
+  logfile_t *lf;
+  smartlist_t *messages, *messages_tmp;
+
+  LOCK_LOGS();
+  if (0 == smartlist_len(pending_cb_messages)) {
+    UNLOCK_LOGS();
+    return;
+  }
+
+  messages = pending_cb_messages;
+  pending_cb_messages = smartlist_create();
+  do {
+    SMARTLIST_FOREACH_BEGIN(messages, pending_cb_message_t *, msg) {
+      const int severity = msg->severity;
+      const int domain = msg->domain;
+      for (lf = logfiles; lf; lf = lf->next) {
+        if (! lf->callback || lf->seems_dead ||
+            ! (lf->severities->masks[SEVERITY_MASK_IDX(severity)] & domain)) {
+          continue;
+        }
+        lf->callback(severity, domain, msg->msg);
+      }
+      tor_free(msg->msg);
+      tor_free(msg);
+    } SMARTLIST_FOREACH_END(msg);
+    smartlist_clear(messages);
+
+    messages_tmp = pending_cb_messages;
+    pending_cb_messages = messages;
+    messages = messages_tmp;
+  } while (smartlist_len(messages));
+
+  smartlist_free(messages);
+
   UNLOCK_LOGS();
 }
 
