@@ -2986,7 +2986,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     child_state = CHILD_STATE_REDIRECT;
 
     /* Link stdin to /dev/null */
-    fd = open("/dev/null", O_RDONLY);
+    fd = open("/dev/null", O_RDONLY); /* NOT cloexec, obviously. */
     if (fd != -1)
       dup2(STDIN_FILENO, fd);
     else
@@ -2994,11 +2994,18 @@ tor_spawn_background(const char *const filename, int *stdout_read,
 
     child_state = CHILD_STATE_CLOSEFD;
 
+    close(stderr_pipe[0]);
+    close(stderr_pipe[1]);
+    close(stdout_pipe[0]);
+    close(stdout_pipe[1]);
+    close(fd);
+
     /* Close all other fds, including the read end of the pipe */
-    /* XXX: use closefrom if available, or better still set FD_CLOEXEC
-       on all of Tor's open files */
-    for (fd = STDERR_FILENO + 1; fd < max_fd; fd++)
+    /* XXX: We should now be doing enough FD_CLOEXEC setting to make
+     * this needless. */
+    for (fd = STDERR_FILENO + 1; fd < max_fd; fd++) {
       close(fd);
+    }
 
     child_state = CHILD_STATE_EXEC;
 
