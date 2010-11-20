@@ -112,7 +112,7 @@ tor_open_cloexec(const char *path, int flags, unsigned mode)
   int fd = open(path, flags, mode);
 #ifdef FD_CLOEXEC
   if (fd >= 0)
-        fcntl(s, F_SETFD, FD_CLOEXEC);
+        fcntl(fd, F_SETFD, FD_CLOEXEC);
 #endif
   return fd;
 #endif
