@@ -1752,10 +1752,10 @@ get_pf_socket(void)
 
 #ifdef OPENBSD
   /* only works on OpenBSD */
-  pf = open("/dev/pf", O_RDONLY);
+  pf = tor_open_cloexec("/dev/pf", O_RDONLY, 0);
 #else
   /* works on NetBSD and FreeBSD */
-  pf = open("/dev/pf", O_RDWR);
+  pf = tor_open_cloexec("/dev/pf", O_RDWR, 0);
 #endif
 
   if (pf < 0) {

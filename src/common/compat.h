@@ -340,6 +340,9 @@ struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
    ((tvp)->tv_sec cmp  (uvp)->tv_sec))
 
 /* ===== File compatibility */
+
+int tor_open_cloexec(const char *path, int flags, unsigned mode);
+
 int replace_file(const char *from, const char *to);
 int touch_file(const char *fname);
 

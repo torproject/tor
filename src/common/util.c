@@ -1814,7 +1814,7 @@ start_writing_to_file(const char *fname, int open_flags, int mode,
   if (open_flags & O_BINARY)
     new_file->binary = 1;
 
-  new_file->fd = open(open_name, open_flags, mode);
+  new_file->fd = tor_open_cloexec(open_name, open_flags, mode);
   if (new_file->fd < 0) {
     log_warn(LD_FS, "Couldn't open \"%s\" (%s) for writing: %s",
         open_name, fname, strerror(errno));
@@ -2035,7 +2035,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
 
   tor_assert(filename);
 
-  fd = open(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
+  fd = tor_open_cloexec(filename,O_RDONLY|(bin?O_BINARY:O_TEXT),0);
   if (fd<0) {
     int severity = LOG_WARN;
     int save_errno = errno;
@@ -2735,7 +2735,7 @@ finish_daemon(const char *desired_cwd)
     exit(1);
   }
 
-  nullfd = open("/dev/null", O_RDWR);
+  nullfd = tor_open_cloexec("/dev/null", O_RDWR, 0);
   if (nullfd < 0) {
     log_err(LD_GENERAL,"/dev/null can't be opened. Exiting.");
     exit(1);

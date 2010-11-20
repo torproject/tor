@@ -3035,7 +3035,7 @@ evdns_resolv_conf_parse(int flags, const char *const filename) {
 
 	log(EVDNS_LOG_DEBUG, "Parsing resolv.conf file %s", filename);
 
-	fd = open(filename, O_RDONLY);
+	fd = tor_open_cloexec(filename, O_RDONLY, 0);
 	if (fd < 0) {
 		evdns_resolv_set_defaults(flags);
 		return 1;
