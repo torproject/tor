@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - When you use bridges and your network goes away and your bridges
-      get marked as down, recover when you attempt a new socks connection
-      (if the network is back) rather than waiting up to an hour to try
-      fetching new descriptors for your bridges. Bugfix on 0.2.0.3-alpha;
-      fixes bug 1981.
