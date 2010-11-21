@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - When building with --enable-gcc-warnings on OpenBSD, disable
+      warnings in system headers.  This makes --enable-gcc-warnings
+      pass on OpenBSD 4.8.

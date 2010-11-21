@@ -3162,6 +3162,10 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       add_an_entry_guard(ri, 1);
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,
                  from_cache ? "cached" : "fresh");
+      /* set entry->made_contact so if it goes down we don't drop it from
+       * our entry node list */
+      entry_guard_register_connect_status(ri->cache_info.identity_digest,
+                                          1, 0, now);
       if (first)
         routerlist_retry_directory_downloads(now);
     }
@@ -3227,7 +3231,8 @@ bridges_retry_helper(int act)
         }
       }
     });
-  log_debug(LD_DIR, "any_known %d, any_running %d", any_known, any_running);
+  log_debug(LD_DIR, "%d: any_known %d, any_running %d",
+            act, any_known, any_running);
   return any_known && !any_running;
 }
 

@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix an assertion failure that could occur in caches or bridge users
+      when using a very short voting interval on a testing network.
+      Diagnosed by Robert Hogan.  Fixes bug 1141; bugfix on 0.2.0.8-alpha.
+

@@ -735,12 +735,13 @@ run_connection_housekeeping(int i, time_t now)
                                    "Tor gave up on the connection");
     connection_mark_for_close(conn);
     conn->hold_open_until_flushed = 1;
-  } else if (past_keepalive && !connection_state_is_open(conn)) {
-    /* We never managed to actually get this connection open and happy. */
-    log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
-             conn->s,conn->address, conn->port);
-    connection_mark_for_close(conn);
-    conn->hold_open_until_flushed = 1;
+  } else if (!connection_state_is_open(conn)) {
+    if (past_keepalive) {
+      /* We never managed to actually get this connection open and happy. */
+      log_info(LD_OR,"Expiring non-open OR connection to fd %d (%s:%d).",
+               conn->s,conn->address, conn->port);
+      connection_mark_for_close(conn);
+    }
   } else if (we_are_hibernating() && !or_conn->n_circuits &&
              !buf_datalen(conn->outbuf)) {
     /* We're hibernating, there's no circuits, and nothing to flush.*/

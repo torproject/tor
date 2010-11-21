@@ -922,6 +922,9 @@ add_default_trusted_dir_authorities(authority_type_t type)
       "193.23.244.244:80 7BE6 83E6 5D48 1413 21C5 ED92 F075 C553 64AC 7123",
     "urras orport=80 no-v2 v3ident=80550987E1D626E3EBA5E5E75A458DE0626D088C "
       "208.83.223.34:443 0AD3 FA88 4D18 F89E EA2D 89C0 1937 9E0E 7FD9 4417",
+    "maatuska orport=80 no-v2 "
+      "v3ident=49015F787433103580E3B66A1707A00E60F2D15B "
+      "213.115.239.118:443 BD6A 8292 55CB 08E6 6FBE 7D37 4836 3586 E46B 3810",
     NULL
   };
   for (i=0; dirservers[i]; i++) {
@@ -2425,8 +2428,7 @@ resolve_my_address(int warn_severity, or_options_t *options,
   }
 
   tor_inet_ntoa(&in,tmpbuf,sizeof(tmpbuf));
-  if (is_internal_IP(ntohl(in.s_addr), 0) &&
-      options->_PublishServerDescriptor) {
+  if (is_internal_IP(ntohl(in.s_addr), 0)) {
     /* make sure we're ok with publishing an internal IP */
     if (!options->DirServers && !options->AlternateDirAuthority) {
       /* if they are using the default dirservers, disallow internal IPs

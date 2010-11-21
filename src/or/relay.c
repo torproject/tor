@@ -648,7 +648,8 @@ edge_reason_is_retriable(int reason)
          reason == END_STREAM_REASON_RESOURCELIMIT ||
          reason == END_STREAM_REASON_EXITPOLICY ||
          reason == END_STREAM_REASON_RESOLVEFAILED ||
-         reason == END_STREAM_REASON_MISC;
+         reason == END_STREAM_REASON_MISC ||
+         reason == END_STREAM_REASON_NOROUTE;
 }
 
 /** Called when we receive an END cell on a stream that isn't open yet,
@@ -743,6 +744,7 @@ connection_ap_process_end_not_open(
       case END_STREAM_REASON_RESOLVEFAILED:
       case END_STREAM_REASON_TIMEOUT:
       case END_STREAM_REASON_MISC:
+      case END_STREAM_REASON_NOROUTE:
         if (client_dns_incr_failures(conn->socks_request->address)
             < MAX_RESOLVE_FAILURES) {
           /* We haven't retried too many times; reattach the connection. */

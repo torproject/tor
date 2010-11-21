@@ -26,6 +26,7 @@ stream_end_reason_to_control_string(int reason)
     case END_STREAM_REASON_DESTROY: return "DESTROY";
     case END_STREAM_REASON_DONE: return "DONE";
     case END_STREAM_REASON_TIMEOUT: return "TIMEOUT";
+    case END_STREAM_REASON_NOROUTE: return "NOROUTE";
     case END_STREAM_REASON_HIBERNATING: return "HIBERNATING";
     case END_STREAM_REASON_INTERNAL: return "INTERNAL";
     case END_STREAM_REASON_RESOURCELIMIT: return "RESOURCELIMIT";
@@ -60,6 +61,7 @@ stream_end_reason_to_string(int reason)
     case END_STREAM_REASON_DESTROY:        return "destroyed";
     case END_STREAM_REASON_DONE:           return "closed normally";
     case END_STREAM_REASON_TIMEOUT:        return "gave up (timeout)";
+    case END_STREAM_REASON_NOROUTE:        return "no route to host";
     case END_STREAM_REASON_HIBERNATING:    return "server is hibernating";
     case END_STREAM_REASON_INTERNAL:       return "internal error at server";
     case END_STREAM_REASON_RESOURCELIMIT:  return "server out of resources";
@@ -102,6 +104,8 @@ stream_end_reason_to_socks5_response(int reason)
       return SOCKS5_SUCCEEDED;
     case END_STREAM_REASON_TIMEOUT:
       return SOCKS5_TTL_EXPIRED;
+    case END_STREAM_REASON_NOROUTE:
+      return SOCKS5_HOST_UNREACHABLE;
     case END_STREAM_REASON_RESOURCELIMIT:
       return SOCKS5_GENERAL_ERROR;
     case END_STREAM_REASON_HIBERNATING:
@@ -162,6 +166,14 @@ errno_to_stream_end_reason(int e)
     S_CASE(ENOTCONN):
     S_CASE(ENETUNREACH):
       return END_STREAM_REASON_INTERNAL;
+    E_CASE(EHOSTUNREACH):
+      /* XXXX022
+       * The correct behavior is END_STREAM_REASON_NOROUTE, but older
+       * clients don't recognize it.  So we're going to continue sending
+       * "MISC" until 0.2.1.27 or later is "well established".
+       */
+      /* return END_STREAM_REASON_NOROUTE; */
+      return END_STREAM_REASON_MISC;
     S_CASE(ECONNREFUSED):
       return END_STREAM_REASON_CONNECTREFUSED;
     S_CASE(ECONNRESET):
