@@ -935,11 +935,12 @@ tor_open_socket(int domain, int type, int protocol)
 {
   int s;
 #ifdef SOCK_CLOEXEC
+#define LINUX_CLOEXEC_OPEN_SOCKET
   type |= SOCK_CLOEXEC;
 #endif
   s = socket(domain, type, protocol);
   if (s >= 0) {
-#ifdef FD_CLOEXEC
+#if !defined(LINUX_CLOEXEC_OPEN_SOCKET) && defined(FD_CLOEXEC)
     fcntl(s, F_SETFD, FD_CLOEXEC);
 #endif
     socket_accounting_lock();
