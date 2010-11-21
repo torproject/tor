@@ -1054,7 +1054,7 @@ tor_tls_new(int sock, int isServer)
 
 #ifdef SSL_set_tlsext_host_name
   /* Browsers use the TLS hostname extension, so we should too. */
-  {
+  if (!isServer) {
     char *fake_hostname = crypto_random_hostname(4,25, "www.",".com");
     SSL_set_tlsext_host_name(result->ssl, fake_hostname);
     tor_free(fake_hostname);
