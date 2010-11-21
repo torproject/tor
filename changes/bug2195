@@ -1,7 +1,0 @@
-  o Minor bugfixes
-    - Publish a router descriptor even if generating an extra-info
-      descriptor fails.  Previously we would not publish a router
-      descriptor without an extra-info descriptor; this can cause fast
-      exit relays collecting exit-port statistics to drop from the
-      consensus.  Bugfix on 0.1.2.9-rc; fixes bug 2195.
-

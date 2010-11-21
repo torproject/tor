@@ -1,7 +1,0 @@
-  o Major bugfixes
-    - Do not set the tlsext_host_name extension on server SSL objects;
-      only on client SSL objects.  We set it to immitate a browser, not a
-      vhosting server. This resolves an incompatibility with openssl 0.9.8p
-      and openssl 1.0.0b.  Fixes bug 2204; bugfix on 0.2.1.1-alpha.
-
-
