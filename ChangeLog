@@ -1,6 +1,11 @@
-Changes in version 0.2.1.27 - 2010-11-21
+Changes in version 0.2.1.27 - 2010-11-22
+  Yet another OpenSSL security patch broke its compatibility with Tor:
+  Tor 0.2.1.27 makes relays work with openssl 0.9.8p and 1.0.0.b. We
+  also took this opportunity to fix several crash bugs, integrate a new
+  directory authority, and update the bundled GeoIP database.
+
   o Major bugfixes:
-    - Resolve an incompatibility with openssl 0.9.8p and openssl 1.0.0b:
+    - Resolve an incompatibility with OpenSSL 0.9.8p and OpenSSL 1.0.0b:
       No longer set the tlsext_host_name extension on server SSL objects;
       but continue to set it on client SSL objects. Our goal in setting
       it was to imitate a browser, not a vhosting server. Fixes bug 2204;
@@ -28,17 +33,18 @@ Changes in version 0.2.1.27 - 2010-11-21
 XXX cherry-pick the november geoip commit
     - Move to the November 2010 Maxmind GeoLite country db (rather
       than the June 2009 ip-to-country GeoIP db) for our statistics that
-      count how many users relays are seeing from each country. Now we
-      have more accurate data for many African countries.
+      count how many users relays are seeing from each country. Now we'll
+      have more accurate data, especially for many African countries.
 
   o New directory authorities:
     - Set up maatuska (run by Linus Nordberg) as the eighth v3 directory
       authority.
 
   o Minor bugfixes:
-    - Fix an assertion failure that could occur in caches or bridge users
-      when using a very short voting interval on a testing network.
-      Diagnosed by Robert Hogan. Fixes bug 1141; bugfix on 0.2.0.8-alpha.
+    - Fix an assertion failure that could occur in directory caches or
+      bridge users when using a very short voting interval on a testing
+      network. Diagnosed by Robert Hogan. Fixes bug 1141; bugfix on
+      0.2.0.8-alpha.
     - Enforce multiplicity rules when parsing annotations. Bugfix on
       0.2.0.8-alpha. Found by piebeer.
     - Allow handshaking OR connections to take a full KeepalivePeriod
@@ -55,8 +61,7 @@ XXX cherry-pick the november geoip commit
       and so sent back END_STREAM_REASON_MISC. Clients now recognize a new
       stream ending reason for this case: END_STREAM_REASON_NOROUTE.
       Servers can start sending this code when enough clients recognize
-      it. Also update the spec to reflect this new reason. Bugfix on
-      0.1.0.1-rc; fixes part of bug 1793.
+      it. Bugfix on 0.1.0.1-rc; fixes part of bug 1793.
 
   o Removed files:
     - Remove the old debian/ directory from the main Tor distribution.
@@ -65,6 +70,14 @@ XXX cherry-pick the november geoip commit
 
 
 Changes in version 0.2.1.26 - 2010-05-02
+  Tor 0.2.1.26 addresses the recent connection and memory overload
+  problems we've been seeing on relays, especially relays with their
+  DirPort open. If your relay has been crashing, or you turned it off
+  because it used too many resources, give this release a try.
+
+  This release also fixes yet another instance of broken OpenSSL libraries
+  that was causing some relays to drop out of the consensus.
+
   o Major bugfixes:
     - Teach relays to defend themselves from connection overload. Relays
       now close idle circuits early if it looks like they were intended
