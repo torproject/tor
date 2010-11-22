@@ -1,0 +1,7 @@
+  o Minor features (authorities)
+    - Take altered router IPs into account when determining router stability.
+      Previously, if a router changed its IP, the authorities would not
+      treat it as having any downtime for the purposes of stability
+      calculation, whereas clients would experience downtime since the
+      IP could take a while to propagate to them.  Resolves issue 1035.
+
