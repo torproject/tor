@@ -380,12 +380,20 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
     long run_length = when - hist->start_of_run;
     format_local_iso_time(tbuf, hist->start_of_run);
 
-    hist->weighted_run_length += run_length;
     hist->total_run_weights += 1.0;
     hist->start_of_run = 0;
-    hist->weighted_uptime += run_length;
-    hist->total_weighted_time += run_length;
+    if (run_length < 0) {
+      unsigned long penalty = -run_length;
+#define SUBTRACT_CLAMPED(var, penalty) \
+      do { (var) = (var) < (penalty) ? 0 : (var) - (penalty); } while (0)
 
+      SUBTRACT_CLAMPED(hist->weighted_run_length, penalty);
+      SUBTRACT_CLAMPED(hist->weighted_uptime, penalty);
+    } else {
+      hist->weighted_run_length += run_length;
+      hist->weighted_uptime += run_length;
+      hist->total_weighted_time += run_length;
+    }
     was_running = 1;
     log_info(LD_HIST, "Router %s is now non-Running: it had previously been "
              "Running since %s.  Its total weighted uptime is %lu/%lu.",
@@ -458,7 +466,7 @@ rep_hist_downrate_old_runs(time_t now)
 static double
 get_stability(or_history_t *hist, time_t when)
 {
-  unsigned long total = hist->weighted_run_length;
+  long total = hist->weighted_run_length;
   double total_weights = hist->total_run_weights;
 
   if (hist->start_of_run) {
@@ -494,8 +502,8 @@ get_total_weighted_time(or_history_t *hist, time_t when)
 static double
 get_weighted_fractional_uptime(or_history_t *hist, time_t when)
 {
-  unsigned long total = hist->total_weighted_time;
-  unsigned long up = hist->weighted_uptime;
+  long total = hist->total_weighted_time;
+  long up = hist->weighted_uptime;
 
   if (hist->start_of_run) {
     long run_length = (when - hist->start_of_run);
