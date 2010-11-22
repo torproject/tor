@@ -393,6 +393,11 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
     if (msg)
       *msg = "Tor version is far too old to work.";
     return FP_REJECT;
+  } else if (platform && tor_version_as_new_as(platform,"0.2.1.3-alpha")
+                      && !tor_version_as_new_as(platform, "0.2.1.19")) {
+    if (msg)
+      *msg = "Tor version is too buggy to work.";
+    return FP_REJECT;
   }
 
   result = dirserv_get_name_status(id_digest, nickname);

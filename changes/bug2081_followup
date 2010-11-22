@@ -1,0 +1,6 @@
+  o Minor features (authorities)
+    - Directory authorities now reject server running any version of
+      Tor between 0.2.1.3-alpha and 0.2.1.18 inclusive; they have
+      known bugs that keep RELAY_EARY cells from working on rendezvous
+      circuits.  Followup to fix for bug 2081.
+
