@@ -1,6 +1,9 @@
-Changes in version 0.2.2.19-alpha - 2010-11-21
+Changes in version 0.2.2.19-alpha - 2010-11-22
+  Yet another OpenSSL security patch broke its compatibility with Tor:
+  Tor 0.2.2.19-alpha makes relays work with OpenSSL 0.9.8p and 1.0.0.b.
+
   o Major bugfixes:
-    - Resolve an incompatibility with openssl 0.9.8p and openssl 1.0.0b:
+    - Resolve an incompatibility with OpenSSL 0.9.8p and OpenSSL 1.0.0b:
       No longer set the tlsext_host_name extension on server SSL objects;
       but continue to set it on client SSL objects. Our goal in setting
       it was to imitate a browser, not a vhosting server. Fixes bug 2204;
@@ -19,6 +22,11 @@ Changes in version 0.2.2.19-alpha - 2010-11-21
 
 
 Changes in version 0.2.2.18-alpha - 2010-11-16
+  Tor 0.2.2.18-alpha fixes several crash bugs that have been nagging
+  us lately, makes unpublished bridge relays able to detect their IP
+  address, and fixes a wide variety of other bugs to get us much closer
+  to a stable release.
+
   o Major bugfixes:
     - Do even more to reject (and not just ignore) annotations on
       router descriptors received anywhere but from the cache. Previously
