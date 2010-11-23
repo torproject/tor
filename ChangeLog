@@ -66,6 +66,9 @@ Changes in version 0.2.1.27 - 2010-11-23
     - Remove the old debian/ directory from the main Tor distribution.
       The official Tor-for-debian git repository lives at the URL
       https://git.torproject.org/debian/tor.git
+    - Stop shipping the old doc/website/ directory in the tarball. We
+      changed the website format in late 2010, and what we shipped in
+      0.2.1.26 really wasn't that useful anyway.
 
 
 Changes in version 0.2.1.26 - 2010-05-02
