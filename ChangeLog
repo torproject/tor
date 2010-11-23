@@ -1,4 +1,4 @@
-Changes in version 0.2.1.27 - 2010-11-22
+Changes in version 0.2.1.27 - 2010-11-23
   Yet another OpenSSL security patch broke its compatibility with Tor:
   Tor 0.2.1.27 makes relays work with openssl 0.9.8p and 1.0.0.b. We
   also took this opportunity to fix several crash bugs, integrate a new
@@ -30,7 +30,6 @@ Changes in version 0.2.1.27 - 2010-11-22
       0.2.0.3-alpha; fixes bug 1981.
 
   o Major features:
-XXX cherry-pick the november geoip commit
     - Move to the November 2010 Maxmind GeoLite country db (rather
       than the June 2009 ip-to-country GeoIP db) for our statistics that
       count how many users relays are seeing from each country. Now we'll
