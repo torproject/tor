@@ -1,0 +1,5 @@
+  o Removed files:
+    - Stop shipping the old doc/website/ directory in the tarball. We
+      changed the website format in late 2010, and what we shipped in
+      0.2.1.26 really wasn't that useful anyway.
+
