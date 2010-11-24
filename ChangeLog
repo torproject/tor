@@ -61,6 +61,8 @@ Changes in version 0.2.1.27 - 2010-11-23
       stream ending reason for this case: END_STREAM_REASON_NOROUTE.
       Servers can start sending this code when enough clients recognize
       it. Bugfix on 0.1.0.1-rc; fixes part of bug 1793.
+    - Build correctly on mingw with more recent versions of OpenSSL 0.9.8.
+      Patch from mingw-san.
 
   o Removed files:
     - Remove the old debian/ directory from the main Tor distribution.
