@@ -1524,7 +1524,7 @@ router_rebuild_descriptor(int force)
   /* Let bridges serve their own descriptors unencrypted, so they can
    * pass reachability testing. (If they want to be harder to notice,
    * they can always leave the DirPort off). */
-  if (!options->BridgeRelay)
+  if (ei && !options->BridgeRelay)
     ei->cache_info.send_unencrypted = 1;
 
   router_get_router_hash(ri->cache_info.signed_descriptor_body,

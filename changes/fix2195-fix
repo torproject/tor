@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Do not dereference NULL if a bridge fails to build its
+      extra-info descriptor. Previously, we would have dereferenced
+      NULL. Found by an anonymous commenter on Trac. Bugfix on
+      0.2.2.19-alpha.
+

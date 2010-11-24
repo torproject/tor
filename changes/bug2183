@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Try harder not to exceed the maximum length of 50 KB when writing
-      statistics to extra-info descriptors. This bug was triggered by very
-      fast relays reporting exit-port, entry, and dirreq statistics.
-      Reported by Olaf Selke. Bugfix on 0.2.2.1-alpha. Fixes bug 2183.
-
