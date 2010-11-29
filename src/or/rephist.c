@@ -1994,7 +1994,7 @@ rep_hist_exit_stats_term(void)
   tor_free(exit_streams);
 }
 
-/** Helper: compare two ints. */
+/** Helper for qsort: compare two ints. */
 static int
 _compare_int(const void *x, const void *y) {
   return (*(int*)x - *(int*)y);
@@ -2021,7 +2021,31 @@ rep_hist_format_exit_stats(time_t now)
     return NULL; /* Not initialized. */
 
   /* Go through all ports to find the n ports that saw most written and
-   * read bytes. */
+   * read bytes.
+   *
+   * Invariant: at the end of the loop for iteration i,
+   *    total_read is the sum of all exit_bytes_read[0..i]
+   *    total_written is the sum of all exit_bytes_written[0..i]
+   *    total_stream is the sum of all exit_streams[0..i]
+   *
+   *    top_elements = MAX(EXIT_STATS_TOP_N_PORTS,
+   *                  #{j | 0 <= j <= i && volume(i) > 0})
+   *
+   *    For all 0 <= j < top_elements,
+   *        top_bytes[j] > 0
+   *        0 <= top_ports[j] <= 65535
+   *        top_bytes[j] = volume(top_ports[j])
+   *
+   *    There is no j in 0..i and k in 0..top_elements such that:
+   *        volume(j) > top_bytes[k] AND j is not in top_ports[0..top_elements]
+   *
+   *    There is no j!=cur_min_idx in 0..top_elements such that:
+   *        top_bytes[j] < top_bytes[cur_min_idx]
+   *
+   * where volume(x) == exit_bytes_read[x]+exit_bytes_written[x]
+   *
+   * Worst case: O(EXIT_STATS_NUM_PORTS * EXIT_STATS_TOP_N_PORTS)
+   */
   for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
     total_read += exit_bytes_read[i];
     total_written += exit_bytes_written[i];
@@ -2054,6 +2078,8 @@ rep_hist_format_exit_stats(time_t now)
   other_read = total_read;
   other_written = total_written;
   other_streams = total_streams;
+  /* Sort the ports; this puts them out of sync with top_bytes, but we
+   * won't be using top_bytes again anyway */
   qsort(top_ports, top_elements, sizeof(int), _compare_int);
   for (j = 0; j < top_elements; j++) {
     cur_port = top_ports[j];
