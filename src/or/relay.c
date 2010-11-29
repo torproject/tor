@@ -1478,11 +1478,10 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
                                    crypt_path_t *layer_hint)
 {
   edge_connection_t *conn;
-  int n_streams, n_streams_left;
+  int n_packaging_streams, n_streams_left;
   int packaged_this_round;
   int cells_on_queue;
   int cells_per_conn;
-  int num_streams = 0;
   edge_connection_t *chosen_stream = NULL;
 
   /* How many cells do we have space for?  It will be the minimum of
@@ -1498,30 +1497,31 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   if (CELL_QUEUE_HIGHWATER_SIZE - cells_on_queue < max_to_package)
     max_to_package = CELL_QUEUE_HIGHWATER_SIZE - cells_on_queue;
 
-  /* Count how many non-marked streams there are that have anything on
-   * their inbuf, and enable reading on all of the connections. */
-  n_streams = 0;
-  /* This used to start listening on the streams in the order they
-   * appeared in the linked list.  That leads to starvation in the
-   * event that, for example, our circuit window is almost full, and
-   * there are lots of streams.  Then the first few streams will have
-   * data read from them, and then the window will close again.  When
-   * it reopens, we would enable reading from the beginning of the list
-   * again.  Instead, we just pick a random stream on the list, and
-   * enable reading for streams starting at that point (and wrapping
-   * around as if the list were circular).  It would probably be better
-   * to actually remember which streams we've serviced in the past, but
-   * this is simple and effective. */
+  /* Once we used to start listening on the streams in the order they
+   * appeared in the linked list.  That leads to starvation on the
+   * streams that appeared later on the list, since the first streams
+   * would always get to read first.  Instead, we just pick a random
+   * stream on the list, and enable reading for streams starting at that
+   * point (and wrapping around as if the list were circular).  It would
+   * probably be better to actually remember which streams we've
+   * serviced in the past, but this is simple and effective. */
 
   /* Select a stream uniformly at random from the linked list.  We
    * don't need cryptographic randomness here. */
-  for (conn = first_conn; conn; conn = conn->next_stream) {
-    num_streams++;
-    if ((tor_weak_random() % num_streams)==0)
-      chosen_stream = conn;
-    /* Invariant: chosen_stream has been chosen uniformly at random from among
-     * the first num_streams streams on first_conn. */
+  {
+    int num_streams = 0;
+    for (conn = first_conn; conn; conn = conn->next_stream) {
+      num_streams++;
+      if ((tor_weak_random() % num_streams)==0)
+        chosen_stream = conn;
+      /* Invariant: chosen_stream has been chosen uniformly at random from
+       * among the first num_streams streams on first_conn. */
+    }
   }
+
+  /* Count how many non-marked streams there are that have anything on
+   * their inbuf, and enable reading on all of the connections. */
+  n_packaging_streams = 0;
   /* Activate reading starting from the chosen stream */
   for (conn=chosen_stream; conn; conn = conn->next_stream) {
     /* Start reading for the streams starting from here */
@@ -1531,7 +1531,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
       connection_start_reading(TO_CONN(conn));
 
       if (buf_datalen(conn->_base.inbuf) > 0)
-        ++n_streams;
+        ++n_packaging_streams;
     }
   }
   /* Go back and do the ones we skipped, circular-style */
@@ -1542,16 +1542,16 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
       connection_start_reading(TO_CONN(conn));
 
       if (buf_datalen(conn->_base.inbuf) > 0)
-        ++n_streams;
+        ++n_packaging_streams;
     }
   }
 
-  if (n_streams == 0) /* avoid divide-by-zero */
+  if (n_packaging_streams == 0) /* avoid divide-by-zero */
     return 0;
 
  again:
 
-  cells_per_conn = CEIL_DIV(max_to_package, n_streams);
+  cells_per_conn = CEIL_DIV(max_to_package, n_packaging_streams);
 
   packaged_this_round = 0;
   n_streams_left = 0;
@@ -1599,7 +1599,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
   if (packaged_this_round && packaged_this_round < max_to_package &&
       n_streams_left) {
     max_to_package -= packaged_this_round;
-    n_streams = n_streams_left;
+    n_packaging_streams = n_streams_left;
     goto again;
   }
 
