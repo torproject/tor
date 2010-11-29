@@ -1515,9 +1515,12 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
 
   /* Select a stream uniformly at random from the linked list.  We
    * don't need cryptographic randomness here. */
-  for(conn = first_conn; conn; conn = conn->next_stream) {
+  for (conn = first_conn; conn; conn = conn->next_stream) {
     num_streams++;
-    if((random() % num_streams)==0) chosen_stream = conn;
+    if ((random() % num_streams)==0)
+      chosen_stream = conn;
+    /* Invariant: chosen_stream has been chosen uniformly at random from among
+     * the first num_streams streams on first_conn. */
   }
   /* Activate reading starting from the chosen stream */
   for (conn=chosen_stream; conn; conn = conn->next_stream) {
@@ -1525,14 +1528,14 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
     if (conn->_base.marked_for_close || conn->package_window <= 0)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
-      connection_start_reading(TO_CONN(conn));    
+      connection_start_reading(TO_CONN(conn));
 
-      if (connection_get_inbuf_len(TO_CONN(conn)) > 0)
+      if (buf_datalen(conn->_base.inbuf) > 0)
         ++n_streams;
     }
   }
   /* Go back and do the ones we skipped, circular-style */
-  for(conn = first_conn; conn != chosen_stream; conn = conn->next_stream) {
+  for (conn = first_conn; conn != chosen_stream; conn = conn->next_stream) {
     if (conn->_base.marked_for_close || conn->package_window <= 0)
       continue;
     if (!layer_hint || conn->cpath_layer == layer_hint) {
