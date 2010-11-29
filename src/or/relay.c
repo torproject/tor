@@ -1517,7 +1517,7 @@ circuit_resume_edge_reading_helper(edge_connection_t *first_conn,
    * don't need cryptographic randomness here. */
   for (conn = first_conn; conn; conn = conn->next_stream) {
     num_streams++;
-    if ((random() % num_streams)==0)
+    if ((tor_weak_random() % num_streams)==0)
       chosen_stream = conn;
     /* Invariant: chosen_stream has been chosen uniformly at random from among
      * the first num_streams streams on first_conn. */
