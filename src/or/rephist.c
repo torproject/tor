@@ -1943,9 +1943,8 @@ dump_pk_ops(int severity)
 #define EXIT_STATS_ROUND_UP_STREAMS 4
 /** Number of TCP ports */
 #define EXIT_STATS_NUM_PORTS 65536
-/** Reciprocal of threshold (= 0.01%) of total bytes that a port needs to
- * see in order to be included in exit stats. */
-#define EXIT_STATS_THRESHOLD_RECIPROCAL 10000
+/** Top n ports that will be included in exit stats. */
+#define EXIT_STATS_TOP_N_PORTS 10
 
 /* The following data structures are arrays and no fancy smartlists or maps,
  * so that all write operations can be done in constant time. This comes at
@@ -1995,15 +1994,23 @@ rep_hist_exit_stats_term(void)
   tor_free(exit_streams);
 }
 
+/** Helper for qsort: compare two ints. */
+static int
+_compare_int(const void *x, const void *y) {
+  return (*(int*)x - *(int*)y);
+}
+
 /** Return a newly allocated string containing the exit port statistics
  * until <b>now</b>, or NULL if we're not collecting exit stats. */
 char *
 rep_hist_format_exit_stats(time_t now)
 {
-  int i;
-  uint64_t total_bytes = 0, threshold_bytes, other_read = 0,
-           other_written = 0;
-  uint32_t other_streams = 0;
+  int i, j, top_elements = 0, cur_min_idx = 0, cur_port;
+  uint64_t top_bytes[EXIT_STATS_TOP_N_PORTS];
+  int top_ports[EXIT_STATS_TOP_N_PORTS];
+  uint64_t cur_bytes = 0, other_read = 0, other_written = 0,
+           total_read = 0, total_written = 0;
+  uint32_t total_streams = 0, other_streams = 0;
   char *buf;
   smartlist_t *written_strings, *read_strings, *streams_strings;
   char *written_string, *read_string, *streams_string;
@@ -2013,52 +2020,101 @@ rep_hist_format_exit_stats(time_t now)
   if (!start_of_exit_stats_interval)
     return NULL; /* Not initialized. */
 
-  /* Count total number of bytes, so that we can attribute observations
-   * below or equal to a threshold of 1 / EXIT_STATS_THRESHOLD_RECIPROCAL
-   * of all bytes to a special port 'other'. */
+  /* Go through all ports to find the n ports that saw most written and
+   * read bytes.
+   *
+   * Invariant: at the end of the loop for iteration i,
+   *    total_read is the sum of all exit_bytes_read[0..i]
+   *    total_written is the sum of all exit_bytes_written[0..i]
+   *    total_stream is the sum of all exit_streams[0..i]
+   *
+   *    top_elements = MAX(EXIT_STATS_TOP_N_PORTS,
+   *                  #{j | 0 <= j <= i && volume(i) > 0})
+   *
+   *    For all 0 <= j < top_elements,
+   *        top_bytes[j] > 0
+   *        0 <= top_ports[j] <= 65535
+   *        top_bytes[j] = volume(top_ports[j])
+   *
+   *    There is no j in 0..i and k in 0..top_elements such that:
+   *        volume(j) > top_bytes[k] AND j is not in top_ports[0..top_elements]
+   *
+   *    There is no j!=cur_min_idx in 0..top_elements such that:
+   *        top_bytes[j] < top_bytes[cur_min_idx]
+   *
+   * where volume(x) == exit_bytes_read[x]+exit_bytes_written[x]
+   *
+   * Worst case: O(EXIT_STATS_NUM_PORTS * EXIT_STATS_TOP_N_PORTS)
+   */
   for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
-    total_bytes += exit_bytes_read[i];
-    total_bytes += exit_bytes_written[i];
+    total_read += exit_bytes_read[i];
+    total_written += exit_bytes_written[i];
+    total_streams += exit_streams[i];
+    cur_bytes = exit_bytes_read[i] + exit_bytes_written[i];
+    if (cur_bytes == 0) {
+      continue;
+    }
+    if (top_elements < EXIT_STATS_TOP_N_PORTS) {
+      top_bytes[top_elements] = cur_bytes;
+      top_ports[top_elements++] = i;
+    } else if (cur_bytes > top_bytes[cur_min_idx]) {
+      top_bytes[cur_min_idx] = cur_bytes;
+      top_ports[cur_min_idx] = i;
+    } else {
+      continue;
+    }
+    cur_min_idx = 0;
+    for (j = 1; j < top_elements; j++) {
+      if (top_bytes[j] < top_bytes[cur_min_idx]) {
+        cur_min_idx = j;
+      }
+    }
   }
-  threshold_bytes = total_bytes / EXIT_STATS_THRESHOLD_RECIPROCAL;
 
-  /* Add observations of all ports above the threshold to smartlists and
-   * join them to single strings. Also count bytes and streams of ports
-   * below or equal to the threshold. */
+  /* Add observations of top ports to smartlists. */
   written_strings = smartlist_create();
   read_strings = smartlist_create();
   streams_strings = smartlist_create();
-  for (i = 1; i < EXIT_STATS_NUM_PORTS; i++) {
-    if (exit_bytes_read[i] + exit_bytes_written[i] > threshold_bytes) {
-      if (exit_bytes_written[i] > 0) {
-        uint64_t num = round_uint64_to_next_multiple_of(
-                       exit_bytes_written[i], EXIT_STATS_ROUND_UP_BYTES);
-        num /= 1024;
-        buf = NULL;
-        tor_asprintf(&buf, "%d="U64_FORMAT, i, U64_PRINTF_ARG(num));
-        smartlist_add(written_strings, buf);
-      }
-      if (exit_bytes_read[i] > 0) {
-        uint64_t num = round_uint64_to_next_multiple_of(
-                       exit_bytes_read[i], EXIT_STATS_ROUND_UP_BYTES);
-        num /= 1024;
-        buf = NULL;
-        tor_asprintf(&buf, "%d="U64_FORMAT, i, U64_PRINTF_ARG(num));
-        smartlist_add(read_strings, buf);
-      }
-      if (exit_streams[i] > 0) {
-        uint32_t num = round_uint32_to_next_multiple_of(exit_streams[i],
-                       EXIT_STATS_ROUND_UP_STREAMS);
-        buf = NULL;
-        tor_asprintf(&buf, "%d=%u", i, num);
-        smartlist_add(streams_strings, buf);
-      }
-    } else {
-      other_read += exit_bytes_read[i];
-      other_written += exit_bytes_written[i];
-      other_streams += exit_streams[i];
+  other_read = total_read;
+  other_written = total_written;
+  other_streams = total_streams;
+  /* Sort the ports; this puts them out of sync with top_bytes, but we
+   * won't be using top_bytes again anyway */
+  qsort(top_ports, top_elements, sizeof(int), _compare_int);
+  for (j = 0; j < top_elements; j++) {
+    cur_port = top_ports[j];
+    if (exit_bytes_written[cur_port] > 0) {
+      uint64_t num = round_uint64_to_next_multiple_of(
+                     exit_bytes_written[cur_port],
+                     EXIT_STATS_ROUND_UP_BYTES);
+      num /= 1024;
+      buf = NULL;
+      tor_asprintf(&buf, "%d="U64_FORMAT, cur_port, U64_PRINTF_ARG(num));
+      smartlist_add(written_strings, buf);
+      other_written -= exit_bytes_written[cur_port];
+    }
+    if (exit_bytes_read[cur_port] > 0) {
+      uint64_t num = round_uint64_to_next_multiple_of(
+                     exit_bytes_read[cur_port],
+                     EXIT_STATS_ROUND_UP_BYTES);
+      num /= 1024;
+      buf = NULL;
+      tor_asprintf(&buf, "%d="U64_FORMAT, cur_port, U64_PRINTF_ARG(num));
+      smartlist_add(read_strings, buf);
+      other_read -= exit_bytes_read[cur_port];
+    }
+    if (exit_streams[cur_port] > 0) {
+      uint32_t num = round_uint32_to_next_multiple_of(
+                     exit_streams[cur_port],
+                     EXIT_STATS_ROUND_UP_STREAMS);
+      buf = NULL;
+      tor_asprintf(&buf, "%d=%u", cur_port, num);
+      smartlist_add(streams_strings, buf);
+      other_streams -= exit_streams[cur_port];
     }
   }
+
+  /* Add observations of other ports in a single element. */
   other_written = round_uint64_to_next_multiple_of(other_written,
                   EXIT_STATS_ROUND_UP_BYTES);
   other_written /= 1024;
@@ -2076,6 +2132,8 @@ rep_hist_format_exit_stats(time_t now)
   buf = NULL;
   tor_asprintf(&buf, "other=%u", other_streams);
   smartlist_add(streams_strings, buf);
+
+  /* Join all observations in single strings. */
   written_string = smartlist_join_strings(written_strings, ",", 0, NULL);
   read_string = smartlist_join_strings(read_strings, ",", 0, NULL);
   streams_string = smartlist_join_strings(streams_strings, ",", 0, NULL);

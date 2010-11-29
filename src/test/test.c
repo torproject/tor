@@ -1081,6 +1081,7 @@ test_stats(void)
 {
   time_t now = 1281533250; /* 2010-08-11 13:27:30 UTC */
   char *s = NULL;
+  int i;
 
   /* We shouldn't collect exit stats without initializing them. */
   rep_hist_note_exit_stream_opened(80);
@@ -1101,6 +1102,22 @@ test_stats(void)
              "exit-kibibytes-written 80=1,443=1,other=0\n"
              "exit-kibibytes-read 80=10,443=20,other=0\n"
              "exit-streams-opened 80=4,443=4,other=0\n", s);
+  tor_free(s);
+
+  /* Add a few bytes on 10 more ports and ensure that only the top 10
+   * ports are contained in the history string. */
+  for (i = 50; i < 60; i++) {
+    rep_hist_note_exit_bytes(i, i, i);
+    rep_hist_note_exit_stream_opened(i);
+  }
+  s = rep_hist_format_exit_stats(now + 86400);
+  test_streq("exit-stats-end 2010-08-12 13:27:30 (86400 s)\n"
+             "exit-kibibytes-written 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
+             "59=1,80=1,443=1,other=1\n"
+             "exit-kibibytes-read 52=1,53=1,54=1,55=1,56=1,57=1,58=1,"
+             "59=1,80=10,443=20,other=1\n"
+             "exit-streams-opened 52=4,53=4,54=4,55=4,56=4,57=4,58=4,"
+             "59=4,80=4,443=4,other=4\n", s);
   tor_free(s);
 
   /* Stop collecting stats, add some bytes, and ensure we don't generate
