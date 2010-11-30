@@ -873,6 +873,7 @@ directory_remove_invalid(void)
     directory_set_dirty();
 
   routerlist_assert_ok(rl);
+  smartlist_free(nodes);
 }
 
 /** Mark the directory as <b>dirty</b> -- when we're next asked for a
