@@ -206,7 +206,7 @@ geoip_load_file(const char *filename, or_options_t *options)
   int severity = options_need_geoip_info(options, &msg) ? LOG_WARN : LOG_INFO;
   crypto_digest_env_t *geoip_digest_env = NULL;
   clear_geoip_db();
-  if (!(f = fopen(filename, "r"))) {
+  if (!(f = tor_fopen_cloexec(filename, "r"))) {
     log_fn(severity, LD_GENERAL, "Failed to open GEOIP file %s.  %s",
            filename, msg);
     return -1;
