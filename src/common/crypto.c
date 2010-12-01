@@ -1935,6 +1935,14 @@ crypto_dh_free(crypto_dh_env_t *dh)
     OPENSSL_VERSION_NUMBER <= 0x00907fffl) ||   \
    (OPENSSL_VERSION_NUMBER >= 0x0090803fl))
 
+static void
+seed_weak_rng(void)
+{
+  unsigned seed;
+  crypto_rand((void*)&seed, sizeof(seed));
+  tor_init_weak_random(seed);
+}
+
 /** Seed OpenSSL's random number generator with bytes from the operating
  * system.  <b>startup</b> should be true iff we have just started Tor and
  * have not yet allocated a bunch of fds.  Return 0 on success, -1 on failure.
@@ -1985,6 +1993,7 @@ crypto_seed_rng(int startup)
   }
   RAND_seed(buf, sizeof(buf));
   memset(buf, 0, sizeof(buf));
+  seed_weak_rng();
   return 0;
 #else
   for (i = 0; filenames[i]; ++i) {
@@ -2001,6 +2010,7 @@ crypto_seed_rng(int startup)
     }
     RAND_seed(buf, (int)sizeof(buf));
     memset(buf, 0, sizeof(buf));
+    seed_weak_rng();
     return 0;
   }
 
