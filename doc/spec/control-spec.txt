@@ -96,32 +96,35 @@
   ; followed by the ASCII Linefeed character (decimal value 10)."
   CRLF = CR LF
 
-  ; Identifiers for servers.
-  ServerID = Nickname / Fingerprint
-
-  Nickname = 1*19 NicknameChar
-  NicknameChar = "a"-"z" / "A"-"Z" / "0" - "9"
-  Fingerprint = "$" 40*HEXDIG
-
-  ; A "=" indicates that the given nickname is canonical; a "~" indicates
-  ; that the given nickname is not canonical.  If no nickname is given at
-  ; all, Tor does not even have a guess for what this router calls itself.
-  LongName = Fingerprint [ ( "=" / "~" ) Nickname ]
-
   ; How a controller tells Tor about a particular OR.  There are four
   ; possible formats:
-  ;    $Digest -- The router whose identity key hashes to the given digest.
+  ;    $Fingerprint -- The router whose identity key hashes to the fingerprint.
   ;        This is the preferred way to refer to an OR.
-  ;    $Digest~Name -- The router whose identity key hashes to the given
-  ;        digest, but only if the router has the given nickname.
-  ;    $Digest=Name -- The router whose identity key hashes to the given
-  ;        digest, but only if the router is Named and has the given
+  ;    $Fingerprint~Nickname -- The router whose identity key hashes to the
+  ;        given fingerprint, but only if the router has the given nickname.
+  ;    $Fingerprint=Nickname -- The router whose identity key hashes to the
+  ;        given fingerprint, but only if the router is Named and has the given
   ;        nickname.
-  ;    Name -- The Named router with the given nickname, or, if no such
+  ;    Nickname -- The Named router with the given nickname, or, if no such
   ;        router exists, any router whose nickname matches the one given.
   ;        This is not a safe way to refer to routers, since Named status
   ;        could under some circumstances change over time.
+  ;
+  ; The tokens that implement the above follow:
+
   ServerSpec = LongName / Nickname
+  LongName   = Fingerprint [ ( "=" / "~" ) Nickname ]
+
+  Fingerprint = "$" 40*HEXDIG
+  NicknameChar = "a"-"z" / "A"-"Z" / "0" - "9"
+  Nickname = 1*19 NicknameChar
+
+  ; What follows is an outdated way to refer to ORs.
+  ; Feature VERBOSE_NAMES replaces ServerID with LongName in events and
+  ; GETINFO results. VERBOSE_NAMES can be enabled starting in Tor version
+  ; 0.1.2.2-alpha and it is always-on in 0.2.2.1-alpha and later.
+  ServerID = Nickname / Fingerprint
+
 
   ; Unique identifiers for streams or circuits.  Currently, Tor only
   ; uses digits, but this may change
