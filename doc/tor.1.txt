@@ -931,7 +931,8 @@ is non-zero):
 **HeartbeatPeriod**  __N__ **minutes**|**hours**|**days**|**weeks**::
     Log a heartbeat message every **HeartbeatPeriod** seconds. This is
     a log level __info__ message, designed to let you know your Tor
-    instance is still alive and doing useful things. (Default: 6 hours)
+    server is still alive and doing useful things. Settings this
+    to 0 will disable the heartbeat. (Default: 6 hours)
 
 **AccountingMax** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
     Never send more than the specified number of bytes in a given accounting

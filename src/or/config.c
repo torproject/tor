@@ -3381,14 +3381,13 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "raising to %d seconds.", MIN_CIRCUIT_STREAM_TIMEOUT);
     options->CircuitStreamTimeout = MIN_CIRCUIT_STREAM_TIMEOUT;
   }
-  
+
   if (options->HeartbeatPeriod &&
       options->HeartbeatPeriod < MIN_HEARTBEAT_PERIOD) {
     log_warn(LD_CONFIG, "HeartbeatPeriod option is too short; "
              "raising to %d seconds.", MIN_HEARTBEAT_PERIOD);
     options->HeartbeatPeriod = MIN_HEARTBEAT_PERIOD;
   }
-
 
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");

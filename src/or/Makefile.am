@@ -50,10 +50,10 @@ libtor_a_SOURCES = \
 	router.c				\
 	routerlist.c				\
 	routerparse.c				\
+	status.c				\
 	$(evdns_source)				\
 	$(tor_platform_source)			\
-	config_codedigest.c             \
-	status.c
+	config_codedigest.c			
 
 #libtor_a_LIBADD = ../common/libor.a ../common/libor-crypto.a \
 #	../common/libor-event.a
@@ -120,7 +120,8 @@ noinst_HEADERS = \
 	router.h				\
 	routerlist.h				\
 	routerparse.h				\
-	micro-revision.i
+	status.h				\
+	micro-revision.i			
 
 config_codedigest.o: or_sha1.i
 

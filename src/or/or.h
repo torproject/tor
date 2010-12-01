@@ -2718,7 +2718,7 @@ typedef struct {
   config_line_t *HidServAuth; /**< List of configuration lines for client-side
                                * authorizations for hidden services */
   char *ContactInfo; /**< Contact info to be published in the directory. */
-  
+
   int HeartbeatPeriod; /**< Log heartbeat messages after this many seconds
                         * have passed. */
 

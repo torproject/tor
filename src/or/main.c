@@ -45,6 +45,7 @@
 #include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
+#include "status.h"
 #ifdef USE_DMALLOC
 #include <dmalloc.h>
 #include <openssl/crypto.h>
@@ -1050,7 +1051,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_port_forwarding = 0;
   static int should_init_bridge_stats = 1;
   static time_t time_to_retry_dns_init = 0;
-  static time_t time_last_written_heartbeat = 0;
+  static time_t time_to_next_heartbeat = 0;
   or_options_t *options = get_options();
   int is_server = server_mode(options);
   int i;
@@ -1265,7 +1266,7 @@ run_scheduled_events(time_t now)
   /* If we're a server and initializing dns failed, retry periodically. */
   if (time_to_retry_dns_init < now) {
     time_to_retry_dns_init = now + RETRY_DNS_INTERVAL;
-    if (server_mode(options) && has_dns_init_failed())
+    if (is_server && has_dns_init_failed())
       dns_init();
   }
 
@@ -1296,7 +1297,7 @@ run_scheduled_events(time_t now)
     consider_publishable_server(0);
     /* also, check religiously for reachability, if it's within the first
      * 20 minutes of our uptime. */
-    if (server_mode(options) &&
+    if (is_server &&
         (can_complete_circuit || !any_predicted_circuits(now)) &&
         !we_are_hibernating()) {
       if (stats_n_seconds_working < TIMEOUT_UNTIL_UNREACHABILITY_COMPLAINT) {
@@ -1433,7 +1434,7 @@ run_scheduled_events(time_t now)
 
   if (time_to_check_port_forwarding < now &&
       options->PortForwarding &&
-      server_mode(options)) {
+      is_server) {
 #define PORT_FORWARDING_CHECK_INTERVAL 5
     tor_check_port_forwarding(options->PortForwardingHelper,
                               options->DirPort,
@@ -1441,12 +1442,13 @@ run_scheduled_events(time_t now)
                               now);
     time_to_check_port_forwarding = now+PORT_FORWARDING_CHECK_INTERVAL;
   }
-  
+
   /** 11. write the heartbeat message */
   if (options->HeartbeatPeriod &&
-      time_last_written_heartbeat + options->HeartbeatPeriod < now)
+      time_to_next_heartbeat < now) {
     log_heartbeat(now);
-    time_last_written_heartbeat = now;
+    time_to_next_heartbeat = now+options->HeartbeatPeriod;
+  }
 }
 
 /** Timer: used to invoke second_elapsed_callback() once per second. */
@@ -1909,6 +1911,22 @@ signal_callback(int fd, short events, void *arg)
       control_event_signal(sig);
       break;
   }
+}
+
+/** Returns Tor's uptime. */
+long
+get_uptime(void)
+{
+  return stats_n_seconds_working;
+}
+
+/** Fills <b>n_read_in</b> with total bytes read and <b>n_written_out</b>
+    with total bytes written */
+void
+get_traffic_stats(uint64_t *n_read_in, uint64_t *n_written_out)
+{
+  *n_read_in = stats_n_bytes_read;
+  *n_written_out = stats_n_bytes_written;
 }
 
 extern uint64_t rephist_total_alloc;
