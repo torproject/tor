@@ -2286,7 +2286,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 
-	ns->socket = socket(PF_INET, SOCK_DGRAM, 0);
+	ns->socket = tor_open_socket(PF_INET, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
 #ifdef WIN32
 	{
@@ -3455,7 +3455,7 @@ main(int c, char **v) {
 	if (servertest) {
 		int sock;
 		struct sockaddr_in my_addr;
-		sock = socket(PF_INET, SOCK_DGRAM, 0);
+		sock = tor_open_socket(PF_INET, SOCK_DGRAM, 0);
 		fcntl(sock, F_SETFL, O_NONBLOCK);
 		my_addr.sin_family = AF_INET;
 		my_addr.sin_port = htons(10053);
