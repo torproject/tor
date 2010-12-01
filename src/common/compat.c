@@ -1026,7 +1026,7 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #endif
   r = socketpair(family, type, protocol, fd);
   if (r == 0) {
-#ifndef SOCK_CLOEXEC
+#if !defined(SOCK_CLOEXEC) && defined(FD_CLOEXEC)
     if (fd[0] >= 0)
       fcntl(fd[0], F_SETFD, FD_CLOEXEC);
     if (fd[1] >= 0)
