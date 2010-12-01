@@ -3,6 +3,81 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.1.27 - 2010-11-23
+  Yet another OpenSSL security patch broke its compatibility with Tor:
+  Tor 0.2.1.27 makes relays work with openssl 0.9.8p and 1.0.0.b. We
+  also took this opportunity to fix several crash bugs, integrate a new
+  directory authority, and update the bundled GeoIP database.
+
+  o Major bugfixes:
+    - Resolve an incompatibility with OpenSSL 0.9.8p and OpenSSL 1.0.0b:
+      No longer set the tlsext_host_name extension on server SSL objects;
+      but continue to set it on client SSL objects. Our goal in setting
+      it was to imitate a browser, not a vhosting server. Fixes bug 2204;
+      bugfix on 0.2.1.1-alpha.
+    - Do not log messages to the controller while shrinking buffer
+      freelists. Doing so would sometimes make the controller connection
+      try to allocate a buffer chunk, which would mess up the internals
+      of the freelist and cause an assertion failure. Fixes bug 1125;
+      fixed by Robert Ransom. Bugfix on 0.2.0.16-alpha.
+    - Learn our external IP address when we're a relay or bridge, even if
+      we set PublishServerDescriptor to 0. Bugfix on 0.2.0.3-alpha,
+      where we introduced bridge relays that don't need to publish to
+      be useful. Fixes bug 2050.
+    - Do even more to reject (and not just ignore) annotations on
+      router descriptors received anywhere but from the cache. Previously
+      we would ignore such annotations at first, but cache them to disk
+      anyway. Bugfix on 0.2.0.8-alpha. Found by piebeer.
+    - When you're using bridges and your network goes away and your
+      bridges get marked as down, recover when you attempt a new socks
+      connection (if the network is back), rather than waiting up to an
+      hour to try fetching new descriptors for your bridges. Bugfix on
+      0.2.0.3-alpha; fixes bug 1981.
+
+  o Major features:
+    - Move to the November 2010 Maxmind GeoLite country db (rather
+      than the June 2009 ip-to-country GeoIP db) for our statistics that
+      count how many users relays are seeing from each country. Now we'll
+      have more accurate data, especially for many African countries.
+
+  o New directory authorities:
+    - Set up maatuska (run by Linus Nordberg) as the eighth v3 directory
+      authority.
+
+  o Minor bugfixes:
+    - Fix an assertion failure that could occur in directory caches or
+      bridge users when using a very short voting interval on a testing
+      network. Diagnosed by Robert Hogan. Fixes bug 1141; bugfix on
+      0.2.0.8-alpha.
+    - Enforce multiplicity rules when parsing annotations. Bugfix on
+      0.2.0.8-alpha. Found by piebeer.
+    - Allow handshaking OR connections to take a full KeepalivePeriod
+      seconds to handshake. Previously, we would close them after
+      IDLE_OR_CONN_TIMEOUT (180) seconds, the same timeout as if they
+      were open. Bugfix on 0.2.1.26; fixes bug 1840. Thanks to mingw-san
+      for analysis help.
+    - When building with --enable-gcc-warnings on OpenBSD, disable
+      warnings in system headers. This makes --enable-gcc-warnings
+      pass on OpenBSD 4.8.
+
+  o Minor features:
+    - Exit nodes didn't recognize EHOSTUNREACH as a plausible error code,
+      and so sent back END_STREAM_REASON_MISC. Clients now recognize a new
+      stream ending reason for this case: END_STREAM_REASON_NOROUTE.
+      Servers can start sending this code when enough clients recognize
+      it. Bugfix on 0.1.0.1-rc; fixes part of bug 1793.
+    - Build correctly on mingw with more recent versions of OpenSSL 0.9.8.
+      Patch from mingw-san.
+
+  o Removed files:
+    - Remove the old debian/ directory from the main Tor distribution.
+      The official Tor-for-debian git repository lives at the URL
+      https://git.torproject.org/debian/tor.git
+    - Stop shipping the old doc/website/ directory in the tarball. We
+      changed the website format in late 2010, and what we shipped in
+      0.2.1.26 really wasn't that useful anyway.
+
+
 Changes in version 0.2.1.26 - 2010-05-02
   Tor 0.2.1.26 addresses the recent connection and memory overload
   problems we've been seeing on relays, especially relays with their
