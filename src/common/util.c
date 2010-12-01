@@ -2988,7 +2988,7 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     /* Link stdin to /dev/null */
     fd = open("/dev/null", O_RDONLY); /* NOT cloexec, obviously. */
     if (fd != -1)
-      dup2(STDIN_FILENO, fd);
+      dup2(fd, STDIN_FILENO);
     else
       goto error;
 
