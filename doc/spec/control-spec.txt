@@ -770,46 +770,47 @@
 
 3.19. USEFEATURE
 
+  Adding additional features to the control protocol sometimes will break
+  backwards compatibility. Initially such features are added into Tor and
+  disabled by default. USEFEATURE can enable these additional features.
+
   The syntax is:
 
     "USEFEATURE" *(SP FeatureName) CRLF
     FeatureName = 1*(ALPHA / DIGIT / "_" / "-")
 
-  Sometimes extensions to the controller protocol break compatibility with
-  older controllers.  In this case, whenever possible, the extensions are
-  first included in Tor disabled by default, and only enabled on a given
-  controller connection when the "USEFEATURE" command is given.  Once a
-  "USEFEATURE" command is given, it applies to all subsequent interactions on
-  the same connection; to disable an enabled feature, a new controller
-  connection must be opened.
-
-  This is a forward-compatibility mechanism; each feature will eventually
-  become a regular part of the control protocol in some future version of Tor.
-  Tor will ignore a request to use any feature that is already on by default.
-  Tor will give a "552" error if any requested feature is not recognized.
-
   Feature names are case-insensitive.
+
+  Once enabled, a feature stays enabled for the duration of the connection
+  to the controller. A new connection to the controller must be opened to
+  disable an enabled feature.
+
+  Features are a forward-compatibility mechanism; each feature will eventually
+  become a standard part of the control protocol. Once a feature becomes part
+  of the protocol, it is always-on. Each feature documents the version it was
+  introduced as a feature and the version in which it became part of the
+  protocol.
+
+  Tor will ignore a request to use any feature that is always-on. Tor will give
+  a 552 error in response to an unrecognized feature.
 
   EXTENDED_EVENTS
 
      Same as passing 'EXTENDED' to SETEVENTS; this is the preferred way to
      request the extended event syntax.
 
-    This feature was first used in 0.1.2.3-alpha.  It is always-on in
-    Tor 0.2.2.1-alpha and later.
+     This feature was first introduced in 0.1.2.3-alpha.  It is always-on
+     and part of the protocol in Tor 0.2.2.1-alpha and later.
 
   VERBOSE_NAMES
 
-     Instead of ServerID as specified above, the controller should
-     identify ORs by LongName in events and GETINFO results.  This format is
-     strictly more informative: rather than including Nickname for
-     known Named routers and Fingerprint for unknown or unNamed routers, the
-     LongName format includes a Fingerprint, an indication of Named status,
-     and a Nickname (if one is known).
+     Replaces ServerID with LongName in events and GETINFO results. LongName
+     provides a Fingerprint for all routers, an indication of Named status,
+     and a Nickname if one is known. LongName is strictly more informative
+     than ServerID, which only provides either a Fingerprint or a Nickname.
 
-     This will not be always-enabled until at least two stable
-     releases after 0.1.2.2-alpha, the release where it was first
-     available.  It is always-on in Tor 0.2.2.1-alpha and later.
+     This feature was first introduced in 0.1.2.2-alpha. It is always-on and
+     part of the protocol in Tor 0.2.2.1-alpha and later.
 
 3.20. RESOLVE
 
