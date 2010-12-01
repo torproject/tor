@@ -480,20 +480,27 @@
          StreamID SP StreamStatus SP CircID SP Target CRLF
 
     "orconn-status"
-      A series of lines as for an OR connection status event.  Each is of the
-      form:
+      A series of lines as for an OR connection status event.  In Tor
+      0.1.2.2-alpha with feature VERBOSE_NAMES enabled and in Tor
+      0.2.2.1-alpha and later by default, each line is of the form:
+         LongName SP ORStatus CRLF
+
+     Before 0.1.2.2-alpha, each line is of the form:
          ServerID SP ORStatus CRLF
 
     "entry-guards"
       A series of lines listing the currently chosen entry guards, if any.
-      Each is of the form:
+      In Tor 0.1.2.2-alpha with feature VERBOSE_NAMES enabled and in Tor
+      0.2.2.1-alpha and later by default, each line is of the form:
+         LongName SP Status [SP ISOTime] CRLF
+
+      Before 0.1.2.2-alpha, each line is of the form:
          ServerID2 SP Status [SP ISOTime] CRLF
-
-         Status-with-time = ("unlisted") SP ISOTime
-         Status = ("up" / "never-connected" / "down" /
-                      "unusable" / "unlisted" )
-
          ServerID2 = Nickname / 40*HEXDIG
+
+      The definition of Status is the same for both:
+         Status = "up" / "never-connected" / "down" /
+                  "unusable" / "unlisted"
 
       [From 0.1.1.4-alpha to 0.1.1.10-alpha, this was called "helper-nodes".
        Tor still supports calling it that for now, but support will be
@@ -1004,7 +1011,11 @@
                "FAILED"   / ; circuit closed (was not built)
                "CLOSED"     ; circuit closed (was built)
 
-      Path = ServerID *("," ServerID)
+      Path = LongName *("," LongName)
+        ; In Tor versions 0.1.2.2-alpha through 0.2.2.1-alpha with feature
+        ; VERBOSE_NAMES turned off and before version 0.1.2.2-alpha, Path
+        ; is as follows:
+        Path = ServerID *("," ServerID)
 
       Reason = "NONE" / "TORPROTOCOL" / "INTERNAL" / "REQUESTED" /
                "HIBERNATING" / "RESOURCELIMIT" / "CONNECTFAILED" /
@@ -1093,10 +1104,17 @@
 4.1.3. OR Connection status changed
 
   The syntax is:
-    "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus [ SP "REASON="
+
+    "650" SP "ORCONN" SP (LongName / Target) SP ORStatus [ SP "REASON="
              Reason ] [ SP "NCIRCS=" NumCircuits ] CRLF
 
     ORStatus = "NEW" / "LAUNCHED" / "CONNECTED" / "FAILED" / "CLOSED"
+
+        ; In Tor versions 0.1.2.2-alpha through 0.2.2.1-alpha with feature
+        ; VERBOSE_NAMES turned off and before version 0.1.2.2-alpha, OR
+        ; Connection is as follows:
+        "650" SP "ORCONN" SP (ServerID / Target) SP ORStatus [ SP "REASON="
+                 Reason ] [ SP "NCIRCS=" NumCircuits ] CRLF
 
   NEW is for incoming connections, and LAUNCHED is for outgoing
   connections. CONNECTED means the TLS handshake has finished (in
@@ -1104,8 +1122,8 @@
   hasn't finished its handshake, and CLOSED is for connections that
   have handshaked.
 
-  A ServerID is specified unless it's a NEW connection, in which
-  case we don't know what server it is yet, so we use Address:Port.
+  A LongName or ServerID is specified unless it's a NEW connection, in
+  which case we don't know what server it is yet, so we use Address:Port.
 
   If extended events are enabled (see 3.19), optional reason and
   circuit counting information is provided for CLOSED and FAILED
@@ -1142,7 +1160,11 @@
 4.1.6. New descriptors available
 
   Syntax:
-     "650" SP "NEWDESC" 1*(SP ServerID) CRLF
+     "650" SP "NEWDESC" 1*(SP LongName) CRLF
+        ; In Tor versions 0.1.2.2-alpha through 0.2.2.1-alpha with feature
+        ; VERBOSE_NAMES turned off and before version 0.1.2.2-alpha, it
+        ; is as follows:
+        "650" SP "NEWDESC" 1*(SP ServerID) CRLF
 
 4.1.7. New Address mapping
 
