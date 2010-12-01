@@ -52,7 +52,8 @@ libtor_a_SOURCES = \
 	routerparse.c				\
 	$(evdns_source)				\
 	$(tor_platform_source)			\
-	config_codedigest.c
+	config_codedigest.c             \
+	status.c
 
 #libtor_a_LIBADD = ../common/libor.a ../common/libor-crypto.a \
 #	../common/libor-event.a

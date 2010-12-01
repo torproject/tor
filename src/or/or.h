@@ -2718,6 +2718,9 @@ typedef struct {
   config_line_t *HidServAuth; /**< List of configuration lines for client-side
                                * authorizations for hidden services */
   char *ContactInfo; /**< Contact info to be published in the directory. */
+  
+  int HeartbeatPeriod; /**< Log heartbeat messages after this many seconds
+                        * have passed. */
 
   char *HTTPProxy; /**< hostname[:port] to use as http proxy, if any. */
   tor_addr_t HTTPProxyAddr; /**< Parsed IPv4 addr for http proxy, if any. */

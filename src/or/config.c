@@ -267,6 +267,7 @@ static config_var_t _option_vars[] = {
 #endif
   OBSOLETE("Group"),
   V(HardwareAccel,               BOOL,     "0"),
+  V(HeartbeatPeriod,             INTERVAL, "6 hours"),
   V(AccelName,                   STRING,   NULL),
   V(AccelDir,                    FILENAME, NULL),
   V(HashedControlPassword,       LINELIST, NULL),
@@ -2915,6 +2916,10 @@ compute_publishserverdescriptor(or_options_t *options)
  * will generate too many circuits and potentially overload the network. */
 #define MIN_CIRCUIT_STREAM_TIMEOUT 10
 
+/** Lowest allowable value for HeartbeatPeriod; if this is too low, we might
+ * expose more information than we're comfortable with. */
+#define MIN_HEARTBEAT_PERIOD (30*60)
+
 /** Return 0 if every setting in <b>options</b> is reasonable, and a
  * permissible transition from <b>old_options</b>. Else return -1.
  * Should have no side effects, except for normalizing the contents of
@@ -3376,6 +3381,14 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "raising to %d seconds.", MIN_CIRCUIT_STREAM_TIMEOUT);
     options->CircuitStreamTimeout = MIN_CIRCUIT_STREAM_TIMEOUT;
   }
+  
+  if (options->HeartbeatPeriod &&
+      options->HeartbeatPeriod < MIN_HEARTBEAT_PERIOD) {
+    log_warn(LD_CONFIG, "HeartbeatPeriod option is too short; "
+             "raising to %d seconds.", MIN_HEARTBEAT_PERIOD);
+    options->HeartbeatPeriod = MIN_HEARTBEAT_PERIOD;
+  }
+
 
   if (options->KeepalivePeriod < 1)
     REJECT("KeepalivePeriod option must be positive.");

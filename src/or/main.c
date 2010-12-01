@@ -1050,6 +1050,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_port_forwarding = 0;
   static int should_init_bridge_stats = 1;
   static time_t time_to_retry_dns_init = 0;
+  static time_t time_last_written_heartbeat = 0;
   or_options_t *options = get_options();
   int is_server = server_mode(options);
   int i;
@@ -1440,6 +1441,12 @@ run_scheduled_events(time_t now)
                               now);
     time_to_check_port_forwarding = now+PORT_FORWARDING_CHECK_INTERVAL;
   }
+  
+  /** 11. write the heartbeat message */
+  if (options->HeartbeatPeriod &&
+      time_last_written_heartbeat + options->HeartbeatPeriod < now)
+    log_heartbeat(now);
+    time_last_written_heartbeat = now;
 }
 
 /** Timer: used to invoke second_elapsed_callback() once per second. */

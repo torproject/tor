@@ -928,6 +928,10 @@ is non-zero):
     seconds, we exit. If we get a second SIGINT, we exit immedi-
     ately. (Default: 30 seconds)
 
+**HeartbeatPeriod**  __N__ **minutes**|**hours**|**days**|**weeks**::
+    Log a heartbeat message every **HeartbeatPeriod** seconds. This is
+    a log level __info__ message, designed to let you know your Tor
+    instance is still alive and doing useful things. (Default: 6 hours)
 
 **AccountingMax** __N__ **bytes**|**KB**|**MB**|**GB**|**TB**::
     Never send more than the specified number of bytes in a given accounting
