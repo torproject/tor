@@ -502,10 +502,10 @@
          Status = "up" / "never-connected" / "down" /
                   "unusable" / "unlisted"
 
-      [From 0.1.1.4-alpha to 0.1.1.10-alpha, this was called "helper-nodes".
-       Tor still supports calling it that for now, but support will be
-       removed in 0.1.3.x.]
-
+      [From 0.1.1.4-alpha to 0.1.1.10-alpha, entry-guards was called
+       "helper-nodes". Tor still supports calling "helper-nodes", but it
+        is deprecated and should not be used.]
+      
       [Older versions of Tor (before 0.1.2.x-final) generated 'down' instead
        of unlisted/unusable.  Current Tors never generate 'down'.]
 
