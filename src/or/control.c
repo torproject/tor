@@ -2855,9 +2855,10 @@ connection_control_process_inbuf(control_connection_t *conn)
          && !TOR_ISSPACE(conn->incoming_cmd[cmd_len]))
     ++cmd_len;
 
-  data_len -= cmd_len;
   conn->incoming_cmd[cmd_len]='\0';
   args = conn->incoming_cmd+cmd_len+1;
+  tor_assert(data_len>(size_t)cmd_len);
+  data_len -= (cmd_len+1); /* skip the command and NUL we added after it */
   while (*args == ' ' || *args == '\t') {
     ++args;
     --data_len;
