@@ -2054,15 +2054,7 @@ extrainfo_dump_to_string(char **s_out, extrainfo_t *extrainfo,
     if (options->ConnDirectionStatistics &&
         load_stats_file("stats"PATH_SEPARATOR"conn-stats",
                         "conn-bi-direct", now, &contents) > 0) {
-      size_t pos = strlen(s);
-      if (strlcpy(s + pos, contents, maxlen - strlen(s)) !=
-          strlen(contents)) {
-        log_warn(LD_DIR, "Could not write conn-stats to extra-info "
-                 "descriptor.");
-        s[pos] = '\0';
-        write_stats_to_extrainfo = 0;
-      }
-      tor_free(contents);
+      smartlist_add(chunks, contents);
     }
   }
 
