@@ -529,14 +529,19 @@ accounting_set_wakeup_time(void)
     }
   }
 
-  format_iso_time(buf, interval_start_time);
-  crypto_pk_get_digest(get_server_identity_key(), digest);
+  if (server_identity_key_is_set()) {
+    format_iso_time(buf, interval_start_time);
 
-  d_env = crypto_new_digest_env();
-  crypto_digest_add_bytes(d_env, buf, ISO_TIME_LEN);
-  crypto_digest_add_bytes(d_env, digest, DIGEST_LEN);
-  crypto_digest_get_digest(d_env, digest, DIGEST_LEN);
-  crypto_free_digest_env(d_env);
+    crypto_pk_get_digest(get_server_identity_key(), digest);
+
+    d_env = crypto_new_digest_env();
+    crypto_digest_add_bytes(d_env, buf, ISO_TIME_LEN);
+    crypto_digest_add_bytes(d_env, digest, DIGEST_LEN);
+    crypto_digest_get_digest(d_env, digest, DIGEST_LEN);
+    crypto_free_digest_env(d_env);
+  } else {
+    crypto_rand(digest, DIGEST_LEN);
+  }
 
   if (!expected_bandwidth_usage) {
     char buf1[ISO_TIME_LEN+1];
