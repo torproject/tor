@@ -1,0 +1,3 @@
+  o Minor bugfixes
+    - Avoid crashes when AccountingMax is set on clients.  Fixes bug 2235;
+      Bugfix on 0.2.2.18-alpha.  Diagnosed by boboper.
