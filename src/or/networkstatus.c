@@ -1382,7 +1382,7 @@ update_certificate_downloads(time_t now)
 
   if (current_ns_consensus)
     authority_certs_fetch_missing(current_ns_consensus, now);
-  if (current_ns_consensus)
+  if (current_md_consensus)
     authority_certs_fetch_missing(current_md_consensus, now);
 }
 
