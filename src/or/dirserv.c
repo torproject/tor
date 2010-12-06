@@ -1160,7 +1160,7 @@ directory_fetches_from_authorities(or_options_t *options)
     return 0;
   if (server_mode(options) && router_pick_published_address(options, &addr)<0)
     return 1; /* we don't know our IP address; ask an authority. */
-  refuseunknown = router_my_exit_policy_is_reject_star() &&
+  refuseunknown = ! router_my_exit_policy_is_reject_star() &&
     should_refuse_unknown_exits(options);
   if (options->DirPort == 0 && !refuseunknown)
     return 0;

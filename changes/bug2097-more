@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Fix a logic error in directory_fetches_from_authorities that
+      would cause all _non_-exits refusing single-hop-like circuits to
+      fetch from authorities, when we wanted to have _exits_ fetch
+      from authorities.  Fix by boboper; fixes more of 2097; bugfix on
+      0.2.2.16-alpha.
