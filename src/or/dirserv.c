@@ -386,15 +386,16 @@ dirserv_get_status_impl(const char *id_digest, const char *nickname,
               strmap_size(fingerprint_list->fp_by_name),
               digestmap_size(fingerprint_list->status_by_digest));
 
-  /* Tor 0.1.2.x is pretty old, but there are a lot of them running still,
-   * and there aren't any critical relay-side vulnerabilities. Once more
-   * of them die off, we should raise this minimum to 0.2.0.x. */
-  if (platform && !tor_version_as_new_as(platform,"0.1.2.14")) {
+  /* Tor 0.2.0.26-rc is the oldest version that currently caches the right
+   * directory information.  Once more of them die off, we should raise this
+   * minimum. */
+  if (platform && !tor_version_as_new_as(platform,"0.2.0.26-rc")) {
     if (msg)
       *msg = "Tor version is far too old to work.";
     return FP_REJECT;
   } else if (platform && tor_version_as_new_as(platform,"0.2.1.3-alpha")
                       && !tor_version_as_new_as(platform, "0.2.1.19")) {
+    /* These versions mishandled RELAY_EARLY cells on rend circuits. */
     if (msg)
       *msg = "Tor version is too buggy to work.";
     return FP_REJECT;
