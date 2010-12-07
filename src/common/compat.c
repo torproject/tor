@@ -1996,14 +1996,88 @@ tor_gettimeofday(struct timeval *timeval)
 #define TIME_FNS_NEED_LOCKS
 #endif
 
+static struct tm *
+correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
+           struct tm *r)
+{
+  const char *outcome;
+
+  if (PREDICT_LIKELY(r)) {
+    if (r->tm_year > 8099) { /* We can't strftime dates after 9999 CE. */
+      r->tm_year = 8099;
+      r->tm_mon = 11;
+      r->tm_mday = 31;
+      r->tm_yday = 365;
+      r->tm_hour = 23;
+      r->tm_min = 59;
+      r->tm_sec = 59;
+    }
+    return r;
+  }
+
+  /* If we get here, gmtime or localtime returned NULL. It might have done
+   * this because of overrun or underrun, or it might have done it because of
+   * some other weird issue. */
+  if (timep) {
+    if (*timep < 0) {
+      r = resultbuf;
+      r->tm_year = 70; /* 1970 CE */
+      r->tm_mon = 0;
+      r->tm_mday = 1;
+      r->tm_yday = 1;
+      r->tm_hour = 0;
+      r->tm_min = 0 ;
+      r->tm_sec = 0;
+      outcome = "Rounding up to 1970";
+      goto done;
+    } else if (*timep >= INT32_MAX) {
+      /* Rounding down to INT32_MAX isn't so great, but keep in mind that we
+       * only do it if gmtime/localtime tells us NULL. */
+      r = resultbuf;
+      r->tm_year = 137; /* 2037 CE */
+      r->tm_mon = 11;
+      r->tm_mday = 31;
+      r->tm_yday = 365;
+      r->tm_hour = 23;
+      r->tm_min = 59;
+      r->tm_sec = 59;
+      outcome = "Rounding down to 2037";
+      goto done;
+    }
+  }
+
+  /* If we get here, then gmtime/localtime failed without getting an extreme
+   * value for *timep */
+
+  tor_fragile_assert();
+  r = resultbuf;
+  memset(resultbuf, 0, sizeof(struct tm));
+  outcome="can't recover";
+ done:
+  log_warn(LD_BUG, "%s("I64_FORMAT") failed with error %s: %s",
+           islocal?"localtime":"gmtime",
+           timep?I64_PRINTF_ARG(*timep):0,
+           strerror(errno),
+           outcome);
+  return r;
+}
+
+
 /** @{ */
 /** As localtime_r, but defined for platforms that don't have it:
  *
  * Convert *<b>timep</b> to a struct tm in local time, and store the value in
  * *<b>result</b>.  Return the result on success, or NULL on failure.
  */
-#ifndef HAVE_LOCALTIME_R
-#ifdef TIME_FNS_NEED_LOCKS
+#ifdef HAVE_LOCALTIME_R
+struct tm *
+tor_localtime_r(const time_t *timep, struct tm *result)
+{
+  struct tm *r;
+  r = localtime_r(timep, result);
+  return correct_tm(1, timep, result, r);
+}
+#elif defined(TIME_FNS_NEED_LOCKS)
 struct tm *
 tor_localtime_r(const time_t *timep, struct tm *result)
 {
@@ -2013,9 +2087,10 @@ tor_localtime_r(const time_t *timep, struct tm *result)
   tor_assert(result);
   tor_mutex_acquire(m);
   r = localtime(timep);
-  memcpy(result, r, sizeof(struct tm));
+  if (r)
+    memcpy(result, r, sizeof(struct tm));
   tor_mutex_release(m);
-  return result;
+  return correct_tm(1, timep, result, r);
 }
 #else
 struct tm *
@@ -2024,10 +2099,10 @@ tor_localtime_r(const time_t *timep, struct tm *result)
   struct tm *r;
   tor_assert(result);
   r = localtime(timep);
-  memcpy(result, r, sizeof(struct tm));
-  return result;
+  if (r)
+    memcpy(result, r, sizeof(struct tm));
+  return correct_tm(1, timep, result, r);
 }
-#endif
 #endif
 /** @} */
 
@@ -2038,7 +2113,14 @@ tor_localtime_r(const time_t *timep, struct tm *result)
  * *<b>result</b>.  Return the result on success, or NULL on failure.
  */
 #ifndef HAVE_GMTIME_R
-#ifdef TIME_FNS_NEED_LOCKS
+struct tm *
+tor_gmtime_r(const time_t *timep, struct tm *result)
+{
+  struct tm *r;
+  r = gmtime_r(timep, result);
+  return correct_tm(0, timep, result, r);
+}
+#elif defined(TIME_FNS_NEED_LOCKS)
 struct tm *
 tor_gmtime_r(const time_t *timep, struct tm *result)
 {
@@ -2050,7 +2132,7 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
   r = gmtime(timep);
   memcpy(result, r, sizeof(struct tm));
   tor_mutex_release(m);
-  return result;
+  return correct_tm(0, timep, result, r);
 }
 #else
 struct tm *
@@ -2060,11 +2142,9 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
   tor_assert(result);
   r = gmtime(timep);
   memcpy(result, r, sizeof(struct tm));
-  return result;
+  return correct_tm(0, timep, result, r);
 }
 #endif
-#endif
-/** @} */
 
 #if defined(USE_WIN32_THREADS)
 void
