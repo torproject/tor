@@ -6,142 +6,21 @@ Status: Draft
 
 Overview
 
+  This proposal describes a way to decouple protocol-level obfuscation
+  from the core Tor protocol in order to better resist client-bridge
+  censorship.  Our approach is to specify a means to add pluggable
+  transport implementations to Tor clients and bridges so that they can
+  negotiate a superencipherment for the Tor protocol.
+
+Scope
+
   This is a document about transport plugins; it does not cover
-  discovery, or bridgedb improvements. Each transport plugin
-  specification should make clear any external requirements but those
-  are generally out of scope if they fall into discovery or
-  infrastructure components.
+  discovery improvements, or bridgedb improvements.  While these
+  requirements might be solved by a program that also functions as a
+  transport plugin, this proposal only covers the requirements and
+  operation of transport plugins.
 
-  We should include a description of how to write a good set of plugins,
-  how to evaluate and how to classify a plugin. For example, if a plugin
-  is said to be hard to detect on the wire if you know what it is and
-  how it works, it should say so. If it's easy, it's still possibly
-  functional for a given network but perhaps it is not well hidden or
-  automatically filtered. Detection and blocking are not always the same
-  thing right off. In both cases, a plugin should be quite clear about
-  its security claims.
-
-Target use-cases[a][b]
-
-  Here's some stuff we want to be able to support.  We're listing these
-  in the draft to try to define the problem space.  We won't put this
-  section in the final version.
-
-  1. The 'obfuscated SSH' superencipherment:
-   http://github.com/brl/obfuscated-openssh/blob/master/README.obfuscation
-
-  2. Big P2P-network style transports where instead of connecting to a
-   bridge at a known IP, you connect to a bridge by a username, a public
-   key, or whatever.
-
-     1. We need the ability to have two kinds of proxies - one for
-       incoming connections and one for outgoing connections. [Sure, but
-       that's about how we implement stuff arg arg dumb touchpad -NM]
-
-        1. Probably we want to have the ability to  get connections
-           anyway we'll take them
-
-       2. So, bridges use the incoming kind, and clients use the ougoing
-          kind? Sounds  right.-N
-           1. Probably also we're a multi-plexed incoming kind of Tor
-           relay - so we should take connections from say localhost's
-           little helper and also, we should take connections from
-           external ips. This would be useful to identify though. I think
-           this is how we would already work as of today.
-
-            1. You mean, regular non-bridge relays should support this
-            too?  I hadn't considered that.  it has seemed pointless
-            because of IP blocking, but if we have a p2p transport, it
-            would be useful for regular relays  to allow it.  Yes -io
-
-              1. Also it would be nice for stats purposes to ensure that
-              we know what kinds of connections we're handling, even if
-              we basically treat them exactly the same. Perhaps Karsten
-              wants to weigh in on how we should have Tor handle these
-              things? I guess we'll really fuck up his stats collection
-              if all of sudden he's getting lots of connections from
-              127.0.0.1...
-
-   1. Various protocol-impersonation tools
-      1. NSTX, iodyne, Ozymandns or such, for the lulz.
-          1. DNS tunneling of many types - eg: TXT records or the NULL
-             protocol trick
-      1. HTTP -- many kinds are possible, some may even be right
-         1. HTTP POST requests are implemented in Firepass
-      1. FTP
-         1. Perhaps some kind of anonymous ftp login with sending and
-           receiving of  data would be useful?
-            1. Lots to think about before designing off the cuff crappy
-               protocol covert channels
-      1. NTP
-        1. Hardly anyone knows about NTP these days - it's almost always
-           outbound allowed and it's usually not well inspected
-           1. That makes it good for short-term circumvention, but bad
-              for long-term hiding.
-      1. Triangle-boy
-      2. IPSec look-alike
-      3. UDP
-      4. IPv6
-    1. A forged-RST-ignoring tool
-       1. A forged-RST-ignoring tool that pretends that it is getting all
-         of its connections closed and retrying all the time, when really
-         it is just carrying on with business as usual.  Hooray for
-         crypto.
-         1. Perhaps it's a good idea to mention CCTT?
-    1. What else goes here?
-      1. We should ask Nextgens about protocol filters from Freenet
-      2. http://gray-world.net/papers.shtml
-      3. http://gray-world.net/pr_cook_cc.shtml
-      4. http://gray-world.net/pr_firepass.shtml
-      5. We should ensure we cover the topics and lessons learned from
-        "FIREWALL RESISTANCE TO METAFEROGRAPHY IN NETWORK COMMUNICATIONS"
-      - see
-      https://ritdml.rit.edu/bitstream/handle/1850/12272/RSavacoolThesis5-21-2010.pdf
-
-  Here's some stuff that seems out-of-scope:
-
-   1. A generic firewall-breaker that works with all Tor nodes and
-    bridges.  Like, if you're using a VPN to get through your firewall,
-    and it lets you connect to any Tor node, you can just use it without
-    any special plug-in support.  I think this spec is just for stuff
-    that requires buy-in from the server side of the connection.  Agreed?
-
-  1. Yeah - I think we should simply codify the proxy stuff to ensure
-    that we plan to remain pluggable for incoming and outgoing connections
-    in some formal way.
-
-  I'm uncertain if we want to support stuff like:
-
-  1. An ssh tunnel that uses openssh to tunnel raw tor packets, with no
-  actual TLS going on underneath.  Promising, but risky. -NM
-
-  1. I think there isn't much to gain by doing this but perhaps so - we
-  are too dependent on TLS and our certs are trivial to fingerprint -io
-
-  1. Also, Tor-over-TLS-tunneled-over-SSH looks even weirder than
-   Tor-over-SSH. -N
-
-  2. It might be nice to allow certs [cn] fields  to be configurable by
-  bridge nodes? -io
-
-   1. If we allowed "raw traffic" transports, a transport could get this
-   trivially by implementing TLS with the right certs. -NM
-
-   1. perhaps we just want a "raw traffic port" where we connect to pass
-   around cells? thoughts?
-
-  1. A bridge-discovery-and-round-robin p2p tool that connects you to a
-   randomly chosen one of an unknown number of bridges.
-
-  1. Stackable plugins
-     1. Tor over DNS over HTTP Post over Obfuscated Tor to reach the Tor
-       network to read a copy of uncensored Google News.
-        1. Christ, what the fuck world are we building? Or even more,
-        what kind of world are we resisting?
-     1. More like RST-drop plus sshobfs over HTTP over VPN.
-
-
-Goals & Motivation
+Motivation
 
   Frequently, people want to try a novel circumvention method to help
   users connect to Tor bridges.  Some of these methods are already
@@ -153,8 +32,8 @@ Goals & Motivation
   might want to support:
 
   1. A protocol obfuscation tool that transforms the output of a TLS
-     connection into something that looks like HTTP as it leaves the client,
-     and back to TLS as it arrives at the bridge.
+     connection into something that looks like HTTP as it leaves the
+     client, and back to TLS as it arrives at the bridge.
   2. An additional authentication step that a client would need to
      perform for a given bridge before being allowed to connect.
   3. An information passing system that uses a side-channel in some
@@ -186,8 +65,20 @@ Goals & Motivation
      that there are too many connections from 127.0.0.1, and start
      paring them down to avoid a DoS.
 
-  3.
-  4. (what else?)
+  3. Censorship and anticensorship techniques often evolve faster than
+     the typical Tor release cycle.  As such, it's a good idea to
+     provide ways to test out new anticensorship mechanisms on a more
+     rapid basis.
+
+  4. Transport obfuscation is a relatively distinct problem
+     from the other privacy problems that Tor tries to solve, and it
+     requires a fairly distinct skill-set from hacking the rest of Tor.
+     By decoupling transport obfuscation from the Tor core, we hope to
+     encourage people working on transport obfuscation who would
+     otherwise not be interested in hacking Tor.
+
+  5. Finally, we hope that defining a generic transport obfuscation plugin
+     mechanism will be useful to other anticensorship projects.
 
 Non-Goals
 
@@ -202,7 +93,8 @@ Non-Goals
   discovery extensions.
 
   This proposal is not about what transport plugins are the best ones
-  for people to write.
+  for people to write.  We do, however, make some general
+  recommendations for plugin authors in an appendix.
 
   We've considered issues involved with completely replacing Tor's TLS
   with another encryption layer, rather than layering it inside the
@@ -210,42 +102,38 @@ Non-Goals
   current proposal, though we are not currently sure whether it's a good
   idea to implement.
 
+  We deliberately reject any design that would involve linking more code
+  into Tor's process space.
+
 Design overview
 
-  Clients run one or more "Transport client" programs that act like
-  SOCKS proxies.  They accept connections on localhost on different
-  ports. Each one implements one or more transport methods.  Parameters
-  are passed from Tor inside the regular username/password parts of the
-  SOCKS protocol.
+  To write a new transport protocol, an implementer must provide two
+  pieces: a "Client Proxy" to run at the initiator side, and a "Server
+  Proxy" to run a the server side.  These two pieces may or may not be
+  implemented by the same program.
 
-  Bridges (and maybe relays) run one or more programs that act like
-  stunnel-server (or whatever the option is): they get connections from
-  the network (typically by listening for connections on the network)
-  and relay them to the Bridge's real ORPort.
+  Each client may run any number of Client Proxies.  Each one acts like
+  a SOCKS proxy that accepts accept connections on localhost.  Each one
+  runs on a different port, and implements one or more transport
+  methods.  If the protocol has any parameters, they passed from Tor
+  inside the regular username/password parts of the SOCKS protocol.
 
-  1. The bridge needs to know which methods these servers support
+  Bridges (and maybe relays) may run any number of Server Proxies: these
+  programs provide an interface like stunnel-server (or whatever the
+  option is): they get connections from the network (typically by
+  listening for connections on the network) and relay them to the
+  Bridge's real ORPort.
 
-  1. The bridge needs to advertise this fact some way that the clients
-  will find out about it--probably by sticking it in its bridge
-  descriptor so that the bridgedb can find out and see that the clients
-  get informed.
+  To configure one of these programs, it should be sufficient simply to
+  list it in your torrc.  The program tells Tor which transports it
+  provides.
 
-  2. Somebody needs to launch these programs
-
-  3. The bridge may want to just not have a public ORPort at all.
-
-  4. The bridge may not want to advertise a real IP at all
-
-  5. The bridge will want to find out from the program any client
-  identification information it can get (IP, etc) to implement rules
-  about max clients at once
+  Bridges (and maybe relays) report in their descriptors which transport
+  protocols they support.  This information can be copied into bridge
+  lines.  Bridges using a transport protocol may have multiple bridge
+  lines.
 
   Any methods that are wildly successful, we can bake into Tor.
-
-Proposed terminology:
-
-  Transport protocol:
-  Transport proxy:
 
 Specifications: Client behavior
 
@@ -261,43 +149,38 @@ Specifications: Client behavior
   splitting them across the fields as necessary.  The "id-fingerprint"
   field is always provided in a field named "keyid", if it was given.
 
-
-  example: if the bridge line is "bridge trebuchet www.example.com:3333
-  rocks=20 height=5.6m" then, if the Tor client knows that the
-  ‘trebuchet' method is provided by a SOCKS5 proxy on 127.0.0.1:19999,
-  it should connect to that proxy, ask it to connect to www.example.com,
-  and provide the string "rocks=20\0height=5.6m" as the username, the
-  password, or split across the username and password.
-
+  Example: if the bridge line is "bridge trebuchet www.example.com:3333
+     rocks=20 height=5.6m" AND if the Tor client knows that the
+     'trebuchet' method is provided by a SOCKS5 proxy on
+     127.0.0.1:19999, the client should connect to that proxy, ask it to
+     connect to www.example.com, and provide the string
+     "rocks=20\0height=5.6m" as the username, the password, or split
+     across the username and password.
 
   There are two ways to tell Tor clients about protocol proxies:
   external proxies and managed proxies.  An external proxy is configured
-  with "Transport trebuchet socks5 127.0.0.1:9999".  This tells Tor that
-  another program is already running to handle ‘trubuchet' connections,
-  and Tor doesn't need to worry about it.  A managed proxy is configured
-  with "Transport trebuchet /usr/libexec/tor-proxies/trebuchet
-  [options]", and tells Tor to launch an external program on-demand to
-  provide a socks proxy for ‘trebuchet' connections. The Tor client only
-  launches one instance of each external program, even if the same
-  executable is listed for more than one method.
+  with "ClientTransportPlugin trebuchet socks5 127.0.0.1:9999".  This
+  tells Tor that another program is already running to handle
+  'trubuchet' connections, and Tor doesn't need to worry about it.  A
+  managed proxy is configured with "ClientTransportPlugin trebuchet
+  /usr/libexec/tor-proxies/trebuchet [options]", and tells Tor to launch
+  an external program on-demand to provide a socks proxy for 'trebuchet'
+  connections. The Tor client only launches one instance of each
+  external program, even if the same executable is listed for more than
+  one method.
 
   The same program can implement a managed or an external proxy: it just
   needs to take an argument saying which one to be.
-
-  [I don't like the terminology here. We should pick better words before
-  this "external/managed" stuff catches on.  Also, to most users a
-  "proxy" is a computer that relays stuff for them, not a local program
-  on their computer. -NM I think we should go with Helper of some kind
-  as it's less technically overloaded and more friendly feeling - io
-  "Helper" is too overloaded already. -NM]
 
 Client proxy behavior
 
    When launched from the command-line by a Tor client, a transport
    proxy needs to tell Tor which methods and ports it supports.  It does
-   this by printing one or more METHOD: lines to its stdout.  These look
-   like CMETHOD: trebuchet SOCKS5 127.0.0.1:19999 ARGS:rocks,height
-   OPT-ARGS:tensile-strength
+   this by printing one or more CMETHOD: lines to its stdout.  These look
+   like
+
+   CMETHOD: trebuchet SOCKS5 127.0.0.1:19999 ARGS:rocks,height \
+              OPT-ARGS:tensile-strength
 
    The ARGS field lists mandatory parameters that must appear in every
    bridge line for this method. The OPT-ARGS field lists optional
@@ -306,9 +189,6 @@ Client proxy behavior
 
    The proxy should print a single "METHODS:DONE" line after it is
    finished telling Tor about the methods it provides.
-
-   [Should methods be versionable? Can they be? -nm I think probably?
-   -io Then how? -nm]
 
    The transport proxy MUST exit cleanly when it receives a SIGTERM from
    Tor.
@@ -319,14 +199,26 @@ Client proxy behavior
    In the future, if we need a control mechanism, we can use the
    stdin/stdout from Tor to the transport proxy.
 
-Transport proxy requirements
-
    A transport proxy MUST handle SOCKS connect requests using the SOCKS
    version it advertises.
 
+   Tor clients SHOULD NOT use any method from a client proxy unless it
+   is both listed as a possible method for that proxy in torrc, and it
+   is listed by the proxy as a method it supports.
+
+   [XXXX say something about versioning.]
+
+Server behavior
+
+   Server proxies are configured similarly to client proxies.
+
+   
+
 Server proxy behavior
 
-   [So, we can have this work like client proxies, where the bridge
+
+
+   [so, we can have this work like client proxies, where the bridge
    launches some programs, and they tell the bridge, "I am giving you
    method X with parameters Y"?  Do you have to take all the methods? If
    not, which do you specify?]
@@ -348,17 +240,9 @@ Bridge authority behavior
 
 Implementation plan
 
-   Finish the design work here.
-   Clean up all the inline conversations to just get summarized by the
-   conclusions they arrived at.
-
    Turn this into a draft proposal
 
-   Circulate and discuss on or-dev
-
-   (Use Cinderblock Of Loving Correction to reeducate anybody who tries
-   to divert discussion of how pluggable transports should work into
-   discussion of what is the best possible transport, or whatever.)
+   Circulate and discuss on or-dev.
 
    We should ship a couple of null plugin implementations in one or two
    popular, portable languages so that people get an idea of how to
@@ -419,12 +303,4 @@ Appendix: recommendations for transports
 Appendix: Raw-traffic transports
 
   This section describes an optional extension to the proposal above.
-
-
-[a]I agree that we should remove this section - perhaps we should also save the links and move them to the possible plugin examples? - ioerror
-
-[b]This whole section should get removed from the final thing. I tried to summarize broad themes in the Motivations section below. - NM
-
-[c]That doesn't really help - does it? Or do you mean that the Tor should set the CN to be say, the IP or hostname of the relay? - ioerror
-
-The "Address" field when we have it. After that, the hostname if we know it.  After that, do a PTR lookup on our IP.  After that, use our IP. -NM
+  We  are not sure whether it is a good idea.
