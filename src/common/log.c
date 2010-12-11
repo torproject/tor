@@ -272,6 +272,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
   int formatted = 0;
   logfile_t *lf;
   char *end_of_prefix=NULL;
+  int callbacks_deferred = 0;
 
   /* Call assert, not tor_assert, since tor_assert calls log on failure. */
   assert(format);
@@ -328,11 +329,15 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
       continue;
     } else if (lf->callback) {
       if (domain & LD_NOCB) {
-        pending_cb_message_t *msg = tor_malloc(sizeof(pending_cb_message_t));
-        msg->severity = severity;
-        msg->domain = domain;
-        msg->msg = tor_strdup(end_of_prefix);
-        smartlist_add(pending_cb_messages, msg);
+        if (!callbacks_deferred) {
+          pending_cb_message_t *msg = tor_malloc(sizeof(pending_cb_message_t));
+          msg->severity = severity;
+          msg->domain = domain;
+          msg->msg = tor_strdup(end_of_prefix);
+          smartlist_add(pending_cb_messages, msg);
+
+          callbacks_deferred = 1;
+        }
       } else {
         lf->callback(severity, domain, end_of_prefix);
       }
