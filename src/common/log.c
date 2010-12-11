@@ -280,7 +280,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
   assert(severity >= LOG_ERR && severity <= LOG_DEBUG);
   LOCK_LOGS();
 
-  if (smartlist_len(pending_cb_messages))
+  if ((! (domain & LD_NOCB)) && smartlist_len(pending_cb_messages))
     flush_pending_log_callbacks();
 
   lf = logfiles;
