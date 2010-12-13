@@ -4464,7 +4464,18 @@ config_register_addressmaps(const or_options_t *options)
     if (smartlist_len(elts) >= 2) {
       from = smartlist_get(elts,0);
       to = smartlist_get(elts,1);
-      if (address_is_invalid_destination(to, 1)) {
+
+      /* Remove leading asterisk in expressions of type: '*.example.com' */
+      if (from[0] == '*' && strlen(from) > 1)
+        from++;
+      if (to[0] == '*' && strlen(to) > 1)
+        to++;
+      if (to[0] == '.' && from[0] != '.') {
+        log_warn(LD_CONFIG,
+                 "Skipping invalid argument '%s' to MapAddress: "
+                 "can only use wildcard (i.e. '.' or '*.') if 'from' address "
+                 "uses wildcard also", to);
+      } else if (address_is_invalid_destination(to, 1)) {
         log_warn(LD_CONFIG,
                  "Skipping invalid argument '%s' to MapAddress", to);
       } else {

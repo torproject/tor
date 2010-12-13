@@ -16,6 +16,11 @@ test_config_addressmap(void)
   char address[256];
   time_t expires = TIME_MAX;
   strlcpy(buf, "MapAddress .google.com .torserver.exit\n"
+          "MapAddress *.yahoo.com *.google.com.torserver.exit\n"
+          "MapAddress .cn.com www.cnn.com\n"
+          "MapAddress *.cnn.com www.cnn.com\n"
+          "MapAddress ex.com www.cnn.com\n"
+          "MapAddress ey.com *.cnn.com\n"
           "MapAddress www.torproject.org 1.1.1.1\n"
           "MapAddress other.torproject.org "
             "this.torproject.org.otherserver.exit\n"
@@ -31,9 +36,33 @@ test_config_addressmap(void)
   config_register_addressmaps(get_options());
 
   /* Where no mapping for FQDN match on top-level domain */
+  /* MapAddress .google.com .torserver.exit */
   strlcpy(address, "reader.google.com", sizeof(address));
   test_assert(addressmap_rewrite(address, sizeof(address), &expires));
+  test_streq(address, "reader.torserver.exit");
+
+  /* MapAddress *.yahoo.com *.google.com.torserver.exit */
+  strlcpy(address, "reader.yahoo.com", sizeof(address));
+  test_assert(addressmap_rewrite(address, sizeof(address), &expires));
   test_streq(address, "reader.google.com.torserver.exit");
+
+  /*MapAddress *.cnn.com www.cnn.com */
+  strlcpy(address, "cnn.com", sizeof(address));
+  test_assert(addressmap_rewrite(address, sizeof(address), &expires));
+  test_streq(address, "www.cnn.com");
+
+  /* MapAddress .cn.com www.cnn.com */
+  strlcpy(address, "www.cn.com", sizeof(address));
+  test_assert(addressmap_rewrite(address, sizeof(address), &expires));
+  test_streq(address, "www.cnn.com");
+
+  /* MapAddress ex.com www.cnn.com  - no match */
+  strlcpy(address, "www.ex.com", sizeof(address));
+  test_assert(!addressmap_rewrite(address, sizeof(address), &expires));
+
+  /* MapAddress ey.com *.cnn.com - invalid expression */
+  strlcpy(address, "ey.com", sizeof(address));
+  test_assert(!addressmap_rewrite(address, sizeof(address), &expires));
 
   /* Where mapping for FQDN match on FQDN */
   strlcpy(address, "www.google.com", sizeof(address));
@@ -77,11 +106,11 @@ test_config_addressmap(void)
 
   strlcpy(address, "www.abc.com", sizeof(address));
   test_assert(addressmap_rewrite(address, sizeof(address), &expires));
-  test_streq(address, "www.abc.com.torserver.exit");
+  test_streq(address, "www.abc.torserver.exit");
 
   strlcpy(address, "www.def.com", sizeof(address));
   test_assert(addressmap_rewrite(address, sizeof(address), &expires));
-  test_streq(address, "www.def.com.torserver.exit");
+  test_streq(address, "www.def.torserver.exit");
 
   strlcpy(address, "www.torproject.org", sizeof(address));
   test_assert(addressmap_rewrite(address, sizeof(address), &expires));

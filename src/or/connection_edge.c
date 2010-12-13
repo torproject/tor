@@ -794,6 +794,7 @@ typedef struct {
   char *new_address;
   time_t expires;
   addressmap_entry_source_t source:3;
+  int is_wildcard:1;
   short num_resolve_failures;
 } addressmap_entry_t;
 
@@ -1037,8 +1038,12 @@ addressmap_free_all(void)
   virtaddress_reversemap = NULL;
 }
 
-/** Try to find a match for AddressMap directives that use
- *  domain notation such as '.torproject.org .exitnode.exit'.
+/** Try to find a match for AddressMap expressions that use
+ *  wildcard notation such as '*.c.d *.e.f' (so 'a.c.d' will map to 'a.e.f') or
+ *  '*.c.d a.b.c' (so 'a.c.d' will map to a.b.c).
+ *  Returns the matching entry in AddressMap or 0 if no match is found.
+ *  For expressions such as '*.c.d *.e.f' the <b>address</b> 'a.c.d' will
+ *  get truncated to 'a' before we return the matching AddressMap entry.
  */
 static addressmap_entry_t *
 addressmap_match_superdomains(char *address)
@@ -1047,13 +1052,18 @@ addressmap_match_superdomains(char *address)
   const char *key;
   void *_val;
   addressmap_entry_t *val;
+  char *matched_domains = 0;
 
   for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter); ) {
     strmap_iter_get(iter, &key, &_val);
     val = _val;
-    if (key[0] == '.') { /* match end */
-      if (!strcasecmpend(address, key) || !strcasecmp(address, &key[1]))
+    if (key[0] == '.') {
+      if (!strcasecmpend(address, key) || !strcasecmp(address, &key[1])) {
+        matched_domains = strstr(address, key);
+        if (val->is_wildcard && matched_domains)
+            *matched_domains = '\0';
         return val;
+      }
     }
     iter = strmap_iter_next(addressmap,iter);
   }
@@ -1073,7 +1083,6 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
   addressmap_entry_t *ent;
   int rewrites;
   char *cp;
-  char *s;
   time_t expires = TIME_MAX;
 
   for (rewrites = 0; rewrites < 16; rewrites++) {
@@ -1089,10 +1098,7 @@ addressmap_rewrite(char *address, size_t maxlen, time_t *expires_out)
     }
 
     cp = tor_strdup(escaped_safe_str_client(address));
-    /* If the address to rewrite to is in the form '.exitnode.exit'
-       then append it to the given address */
-    s = strrchr(ent->new_address,'.');
-    if (ent->new_address[0] == '.' && !strcmp(s+1,"exit"))
+    if (ent->is_wildcard)
       strlcpy(address + strlen(address), ent->new_address,
               (maxlen - strlen(address)));
     else
@@ -1211,6 +1217,7 @@ addressmap_register(const char *address, char *new_address, time_t expires,
   ent->expires = expires==2 ? 1 : expires;
   ent->num_resolve_failures = 0;
   ent->source = source;
+  ent->is_wildcard = (new_address[0] == '.') ? 1 : 0;
 
   log_info(LD_CONFIG, "Addressmap: (re)mapped '%s' to '%s'",
            safe_str_client(address),
