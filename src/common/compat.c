@@ -126,6 +126,7 @@ tor_mmap_file(const char *filename)
     return NULL;
   }
 
+  /* XXXX why not just do fstat here? */
   size = filesize = (size_t) lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
   /* ensure page alignment */
@@ -294,7 +295,7 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
   int r;
   if (size == 0)
     return -1; /* no place for the NUL */
-  if (size > SSIZE_T_MAX-16)
+  if (size > SIZE_T_CEILING)
     return -1;
 #ifdef MS_WINDOWS
   r = _vsnprintf(str, size, format, args);
