@@ -283,6 +283,8 @@ Created: 12 December 2010
   algorithm.  The identity key itself is used:
     - To sign the router descriptors
     - To sign link-key certificates
+    - To determine the least significant bits of circuit IDs used on a
+      Tor instance's links (see tor-spec §5.1)
 
   The fingerprint is used:
     - To identify a router identity key in EXTEND cells
