@@ -431,7 +431,7 @@ tor_fix_source_file(const char *fname)
  * unaligned memory access.
  */
 uint16_t
-get_uint16(const char *cp)
+get_uint16(const void *cp)
 {
   uint16_t v;
   memcpy(&v,cp,2);
@@ -443,7 +443,7 @@ get_uint16(const char *cp)
  * unaligned memory access.
  */
 uint32_t
-get_uint32(const char *cp)
+get_uint32(const void *cp)
 {
   uint32_t v;
   memcpy(&v,cp,4);
@@ -455,7 +455,7 @@ get_uint32(const char *cp)
  * unaligned memory access.
  */
 uint64_t
-get_uint64(const char *cp)
+get_uint64(const void *cp)
 {
   uint64_t v;
   memcpy(&v,cp,8);
@@ -467,7 +467,7 @@ get_uint64(const char *cp)
  * *(uint16_t*)(cp) = v, but will not cause segfaults on platforms that forbid
  * unaligned memory access. */
 void
-set_uint16(char *cp, uint16_t v)
+set_uint16(void *cp, uint16_t v)
 {
   memcpy(cp,&v,2);
 }
@@ -476,7 +476,7 @@ set_uint16(char *cp, uint16_t v)
  * *(uint32_t*)(cp) = v, but will not cause segfaults on platforms that forbid
  * unaligned memory access. */
 void
-set_uint32(char *cp, uint32_t v)
+set_uint32(void *cp, uint32_t v)
 {
   memcpy(cp,&v,4);
 }
@@ -485,7 +485,7 @@ set_uint32(char *cp, uint32_t v)
  * *(uint64_t*)(cp) = v, but will not cause segfaults on platforms that forbid
  * unaligned memory access. */
 void
-set_uint64(char *cp, uint64_t v)
+set_uint64(void *cp, uint64_t v)
 {
   memcpy(cp,&v,8);
 }
