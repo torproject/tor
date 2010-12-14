@@ -1658,11 +1658,6 @@ parse_socks(const char *data, size_t datalen, socks_request_t *req,
         *want_length_out = 2u+usernamelen;
         return 0;
       }
-      if (datalen > 2u + usernamelen + 1u + passlen) {
-        log_warn(LD_APP,
-                 "socks5: Malformed username/password. Rejecting.");
-        return -1;
-      }
       req->replylen = 2; /* 2 bytes of response */
       req->reply[0] = 5;
       req->reply[1] = 0; /* authentication successful */

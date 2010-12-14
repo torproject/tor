@@ -398,6 +398,46 @@ done:
   ;
 }
 
+/** Helper: Perform SOCKS 5 authentication and send data all in one go */
+static void
+test_buffers_socks5_authenticate_with_data_helper(const char *cp, buf_t *buf,
+                                                  socks_request_t *socks)
+{
+  /* SOCKS 5 Negotiate username/password authentication */
+  cp = "\x05\x01\x02";
+  write_to_buf(cp, 3, buf);
+  test_assert(!fetch_from_buf_socks(buf, socks,
+                                   get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(SOCKS_USER_PASS, socks->reply[1]);
+  test_eq(5, socks->socks_version);
+
+  /* SOCKS 5 Send username/password */
+  /* SOCKS 5 Send CONNECT [01] to IP address 2.2.2.2:4369 */
+  cp = "\x01\x02me\x02me\x05\x01\x00\x01\x02\x02\x02\x02\x11\x11";
+  write_to_buf(cp, 17, buf);
+  test_assert(!fetch_from_buf_socks(buf, socks,
+                                   get_options()->TestSocks,
+                                   get_options()->SafeSocks));
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+
+  test_assert(fetch_from_buf_socks(buf, socks, get_options()->TestSocks,
+                                   get_options()->SafeSocks) == 1);
+  test_eq(5, socks->socks_version);
+  test_eq(2, socks->replylen);
+  test_eq(5, socks->reply[0]);
+  test_eq(0, socks->reply[1]);
+  test_streq("2.2.2.2", socks->address);
+  test_eq(4369, socks->port);
+done:
+  ;
+}
+
 /** Helper: Perform SOCKS 5 authentication before method negotiated */
 static void
 test_buffers_socks5_auth_before_negotiation_helper(const char *cp, buf_t *buf,
@@ -603,6 +643,15 @@ test_buffers(void)
   test_buffers_socks5_authenticate_helper(cp, buf, socks);
   test_buffers_socks5_supported_commands_helper(cp, buf, socks);
   test_buffers_socks5_unsupported_commands_helper(cp, buf, socks);
+
+  tor_free(socks);
+  buf_free(buf);
+  buf = NULL;
+  buf = buf_new_with_capacity(256);
+  socks = tor_malloc_zero(sizeof(socks_request_t));;
+
+  /* A SOCKS 5 client that sends credentials and data in one go  */
+  test_buffers_socks5_authenticate_with_data_helper(cp, buf, socks);
 
   tor_free(socks);
   buf_free(buf);
