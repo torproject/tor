@@ -176,7 +176,7 @@ Created: 12 December 2010
     - anything we would have to implement from scratch
     - anything without a nice BSD-licensed C implementation
 
-  Some times we'll have the choice of a more efficient algorithm or a
+  Sometimes we'll have the choice of a more efficient algorithm or a
   more boring & well-analyzed one.  We should not even consider trading
   conservative design for efficiency unless we are firmly in the
   critical path.
@@ -211,7 +211,7 @@ Created: 12 December 2010
   really improves matters or not.
 
   Recall also that for anti-fingerprinting reasons, we're thinking of
-  revising the protocol handshake some time in the 0.2.3.x timeframe.
+  revising the protocol handshake sometime in the 0.2.3.x timeframe.
   If we do that, that might be a good time to make sure that we aren't
   limited by the old identity key size.
 
@@ -256,10 +256,10 @@ Created: 12 December 2010
 
 3.3. Relay crypto
 
-  Upon receiving relay cells, a router transform the payload portion of
+  Upon receiving relay cells, a router transforms the payload portion of
   the cell with the appropriate key appropriate key, sees if it
-  recognized the cell (the recognized field is zero, the digest field is
-  correct, the cell is outbound), and pass them on if not.  It is
+  recognizes the cell (the recognized field is zero, the digest field is
+  correct, the cell is outbound), and passes them on if not.  It is
   possible for each hop in the circuit to handle the relay crypto
   differently; nobody but the client and the hop in question need to
   coordinate their operations.
@@ -295,7 +295,7 @@ Created: 12 December 2010
     - To identify servers in the logs
     - Probably other places too
 
-  To begin to allow other key types, key-lengths, and hash functions, we
+  To begin to allow other key types, key lengths, and hash functions, we
   would either need to wait till all current Tors are obsolete, or allow
   routers to have more than one identity for a while.
 
@@ -345,7 +345,7 @@ Created: 12 December 2010
   Router descriptors and extra-info documents cross-certify one another
   using SHA1.
 
-  Mirodescriptors are currently specified to contain exactly one
+  Microdescriptors are currently specified to contain exactly one
   onion key, of length 1024 bits.
 
 3.6. The directory protocol
@@ -356,7 +356,7 @@ Created: 12 December 2010
 
 3.7. The hidden service protocol
 
-  Hidden services self-identify by a 1024-bit RSA key.  Other keys
+  Hidden services self-identify by a 1024-bit RSA key.  Other key
   lengths are not supported.  This key is turned into an 80 bit half
   SHA-1 hash for hidden service names.
 
@@ -373,7 +373,7 @@ Created: 12 December 2010
   service.
 
   The parsing code for hidden service descriptors currently enforce a
-  1024-byte identity key, though this does not seem to be described in
+  1024-bit identity key, though this does not seem to be described in
   the specification.  Changing that would be at least as hard as doing
   it for regular identity keys.
 
