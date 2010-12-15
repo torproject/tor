@@ -1,0 +1,72 @@
+Title: Requirements for Tor's circuit cryptography
+Author: Robert Ransom
+Created: 12 December 2010
+
+Overview
+
+  This draft is intended to specify the meaning of 'secure' for a Tor
+  circuit protocol, hopefully in enough detail that
+  mathematically-inclined cryptographers can use this definition to
+  prove that a Tor circuit protocol (or component thereof) is secure
+  under reasonably well-accepted assumptions.
+
+  Tor's current circuit protocol consists of the CREATE, CREATED, RELAY,
+  DESTROY, CREATE_FAST, CREATED_FAST, and RELAY_EARLY cells (including
+  all subtypes of RELAY and RELAY_EARLY cells).  Tor currently has two
+  circuit-extension handshake protocols: one consists of the CREATE and
+  CREATED cells; the other, used only over the TLS connection to the
+  first node in a circuit, consists of the CREATE_FAST and CREATED_FAST
+  cells.
+
+Requirements
+
+  1. Every circuit-extension handshake protocol must provide forward
+  secrecy -- the protocol must allow both the client and the relay to
+  destroy, immediately after a circuit is closed, enough key material
+  that no attacker who can eavesdrop on all handshake and circuit cells
+  and who can seize and inspect the client and relay after the circuit
+  is closed will be able to decrypt any non-handshake data sent along
+  the circuit.
+
+  In particular, the protocol must not require that a key which can be
+  used to decrypt non-handshake data be stored for a predetermined
+  period of time, as such a key must be written to persistent storage.
+
+  2. Every circuit-extension handshake protocol must specify what key
+  material must be used only once in order to allow unlinkability of
+  circuit-extension handshakes.
+
+  3. Every circuit-extension handshake protocol must authenticate the relay
+  to the client -- an attacker who can eavesdrop on all handshake and
+  circuit cells and who can participate in handshakes with the client
+  must not be able to determine a symmetric session key that a circuit
+  will use without either knowing a secret key corresponding to a
+  handshake-authentication public key published by the relay or breaking
+  a cryptosystem for which the relay published a
+  handshake-authentication public key.
+
+  4. Every circuit-extension handshake protocol must ensure that neither
+  the client nor the relay can cause the handshake to result in a
+  predetermined symmetric session key.
+
+  5. Every circuit-extension handshake protocol should ensure that an
+  attacker who can predict the relay's ephemeral secret input to the
+  handshake and can eavesdrop on all handshake and circuit cells, but
+  does not know a secret key corresponding to the
+  handshake-authentication public key used in the handshake, cannot
+  break the handshake-authentication public key's cryptosystem, and
+  cannot predict the client's ephemeral secret input to the handshake,
+  cannot predict the symmetric session keys used for the resulting
+  circuit.
+
+  6. The circuit protocol must specify an end-to-end flow-control
+  mechanism, and must allow for the addition of new mechanisms.
+
+  7. The circuit protocol should specify the statistics to be exchanged
+  between circuit endpoints in order to support end-to-end flow control,
+  and should specify how such statistics can be verified.
+
+
+  8. The circuit protocol should allow an endpoint to verify that the other
+  endpoint is participating in an end-to-end flow-control protocol
+  honestly.
