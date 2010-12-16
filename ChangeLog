@@ -1,3 +1,11 @@
+Changes in version 0.2.1.28 - 2010-12-16
+  o Directory authority changes:
+    - Change IP address and ports for gabelmoo (v3 directory authority).
+
+  o Minor features:
+    - Update to the December 1 2010 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.1.27 - 2010-11-23
   Yet another OpenSSL security patch broke its compatibility with Tor:
   Tor 0.2.1.27 makes relays work with openssl 0.9.8p and 1.0.0.b. We
