@@ -1394,7 +1394,7 @@ rend_cache_store_v2_desc_as_client(const char *desc,
 void
 rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
                         int command, size_t length,
-                        const char *payload)
+                        const uint8_t *payload)
 {
   or_circuit_t *or_circ = NULL;
   origin_circuit_t *origin_circ = NULL;

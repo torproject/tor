@@ -286,7 +286,8 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
     char keys[CPATH_KEY_MATERIAL_LEN];
     char reply[DIGEST_LEN*2];
     tor_assert(cell->command == CELL_CREATE_FAST);
-    if (fast_server_handshake(cell->payload, reply, keys, sizeof(keys))<0) {
+    if (fast_server_handshake(cell->payload, (uint8_t*)reply,
+                              (uint8_t*)keys, sizeof(keys))<0) {
       log_warn(LD_OR,"Failed to generate key material. Closing.");
       circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
       return;
@@ -333,7 +334,7 @@ command_process_created_cell(cell_t *cell, or_connection_t *conn)
     int err_reason = 0;
     log_debug(LD_OR,"at OP. Finishing handshake.");
     if ((err_reason = circuit_finish_handshake(origin_circ, cell->command,
-                                 cell->payload)) < 0) {
+                                               cell->payload)) < 0) {
       log_warn(LD_OR,"circuit_finish_handshake failed.");
       circuit_mark_for_close(circ, -err_reason);
       return;
@@ -349,7 +350,7 @@ command_process_created_cell(cell_t *cell, or_connection_t *conn)
     log_debug(LD_OR,
               "Converting created cell to extended relay cell, sending.");
     relay_send_command_from_edge(0, circ, RELAY_COMMAND_EXTENDED,
-                                 cell->payload, ONIONSKIN_REPLY_LEN,
+                                 (char*)cell->payload, ONIONSKIN_REPLY_LEN,
                                  NULL);
   }
 }
@@ -476,7 +477,7 @@ static void
 command_process_versions_cell(var_cell_t *cell, or_connection_t *conn)
 {
   int highest_supported_version = 0;
-  const char *cp, *end;
+  const uint8_t *cp, *end;
   if (conn->link_proto != 0 ||
       conn->_base.state != OR_CONN_STATE_OR_HANDSHAKING ||
       (conn->handshake_state && conn->handshake_state->received_versions)) {
@@ -529,8 +530,8 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   time_t timestamp;
   uint8_t my_addr_type;
   uint8_t my_addr_len;
-  const char *my_addr_ptr;
-  const char *cp, *end;
+  const uint8_t *my_addr_ptr;
+  const uint8_t *cp, *end;
   uint8_t n_other_addrs;
   time_t now = time(NULL);
 
@@ -558,7 +559,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
 
   my_addr_type = (uint8_t) cell->payload[4];
   my_addr_len = (uint8_t) cell->payload[5];
-  my_addr_ptr = cell->payload + 6;
+  my_addr_ptr = (uint8_t*) cell->payload + 6;
   end = cell->payload + CELL_PAYLOAD_SIZE;
   cp = cell->payload + 6 + my_addr_len;
   if (cp >= end) {
@@ -575,7 +576,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     /* Consider all the other addresses; if any matches, this connection is
      * "canonical." */
     tor_addr_t addr;
-    const char *next = decode_address_from_payload(&addr, cp, (int)(end-cp));
+    const uint8_t *next = decode_address_from_payload(&addr, cp, (int)(end-cp));
     if (next == NULL) {
       log_fn(LOG_PROTOCOL_WARN,  LD_OR,
              "Bad address in netinfo cell; closing connection.");
