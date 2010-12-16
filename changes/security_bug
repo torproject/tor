@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - Fix a remotely exploitable bug that could be used to crash instances
+      of Tor remotely by overflowing on the heap.  Remove-code execution
+      hasn't been confirmed, but can't be ruled out.  Obviously, everyone
+      should upgrade.  Bugfix on the 0.1.1 series and later.
