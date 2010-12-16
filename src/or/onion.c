@@ -336,9 +336,9 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
  * Return 0 on success, &lt;0 on failure.
  **/
 int
-fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
-                      char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
-                      char *key_out,
+fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
+                      uint8_t *handshake_reply_out, /* DIGEST_LEN*2 bytes */
+                      uint8_t *key_out,
                       size_t key_out_len)
 {
   char tmp[DIGEST_LEN+DIGEST_LEN];
@@ -346,7 +346,7 @@ fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
   size_t out_len;
   int r = -1;
 
-  if (crypto_rand(handshake_reply_out, DIGEST_LEN)<0)
+  if (crypto_rand((char*)handshake_reply_out, DIGEST_LEN)<0)
     return -1;
 
   memcpy(tmp, key_in, DIGEST_LEN);
@@ -379,9 +379,9 @@ fast_server_handshake(const char *key_in, /* DIGEST_LEN bytes */
  * and protected by TLS).
  */
 int
-fast_client_handshake(const char *handshake_state, /* DIGEST_LEN bytes */
-                      const char *handshake_reply_out, /* DIGEST_LEN*2 bytes */
-                      char *key_out,
+fast_client_handshake(const uint8_t *handshake_state, /* DIGEST_LEN bytes */
+                      const uint8_t *handshake_reply_out, /* DIGEST_LEN*2 bytes */
+                      uint8_t *key_out,
                       size_t key_out_len)
 {
   char tmp[DIGEST_LEN+DIGEST_LEN];

@@ -834,7 +834,7 @@ typedef struct cell_t {
   circid_t circ_id; /**< Circuit which received the cell. */
   uint8_t command; /**< Type of the cell: one of CELL_PADDING, CELL_CREATE,
                     * CELL_DESTROY, etc */
-  char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
+  uint8_t payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 } cell_t;
 
 /** Parsed variable-length onion routing cell. */
@@ -842,7 +842,7 @@ typedef struct var_cell_t {
   uint8_t command;
   circid_t circ_id;
   uint16_t payload_len;
-  char payload[1];
+  uint8_t payload[1];
 } var_cell_t;
 
 /** A cell as packed for writing to the network. */
@@ -1831,7 +1831,7 @@ typedef struct crypt_path_t {
    * authentication, secrecy, and integrity we need, and we're already
    * distinguishable from an OR.
    */
-  char fast_handshake_state[DIGEST_LEN];
+  uint8_t fast_handshake_state[DIGEST_LEN];
   /** Negotiated key material shared with the OR at this step. */
   char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
 
@@ -2733,7 +2733,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
                               int reverse);
 int circuit_finish_handshake(origin_circuit_t *circ, uint8_t cell_type,
-                             const char *reply);
+                             const uint8_t *reply);
 int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer);
 int onionskin_answer(or_circuit_t *circ, uint8_t cell_type,
                      const char *payload, const char *keys);
@@ -3053,7 +3053,7 @@ void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
 void connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
-                                            const char *answer,
+                                            const uint8_t *answer,
                                             int ttl,
                                             time_t expires);
 
@@ -3835,14 +3835,14 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                                 char *key_out,
                                 size_t key_out_len);
 
-int fast_server_handshake(const char *key_in,
-                          char *handshake_reply_out,
-                          char *key_out,
+int fast_server_handshake(const uint8_t *key_in,
+                          uint8_t *handshake_reply_out,
+                          uint8_t *key_out,
                           size_t key_out_len);
 
-int fast_client_handshake(const char *handshake_state,
-                          const char *handshake_reply_out,
-                          char *key_out,
+int fast_client_handshake(const uint8_t *handshake_state,
+                          const uint8_t *handshake_reply_out,
+                          uint8_t *key_out,
                           size_t key_out_len);
 
 void clear_pending_onions(void);
@@ -3926,8 +3926,8 @@ extern uint64_t stats_n_relay_cells_delivered;
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                cell_direction_t cell_direction);
 
-void relay_header_pack(char *dest, const relay_header_t *src);
-void relay_header_unpack(relay_header_t *dest, const char *src);
+void relay_header_pack(uint8_t *dest, const relay_header_t *src);
+void relay_header_unpack(relay_header_t *dest, const uint8_t *src);
 int relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
                                uint8_t relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer);
@@ -3961,9 +3961,9 @@ void assert_active_circuits_ok(or_connection_t *orconn);
 void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
 void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
 
-int append_address_to_payload(char *payload_out, const tor_addr_t *addr);
-const char *decode_address_from_payload(tor_addr_t *addr_out,
-                                        const char *payload,
+int append_address_to_payload(uint8_t *payload_out, const tor_addr_t *addr);
+const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,
+                                        const uint8_t *payload,
                                         int payload_len);
 
 /********************************* rephist.c ***************************/
@@ -4034,15 +4034,18 @@ void hs_usage_free_all(void);
 
 void rend_client_introcirc_has_opened(origin_circuit_t *circ);
 void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
-int rend_client_introduction_acked(origin_circuit_t *circ, const char *request,
+int rend_client_introduction_acked(origin_circuit_t *circ,
+                                   const uint8_t *request,
                                    size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
 void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
                                    const rend_data_t *rend_query);
-int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
+int rend_client_rendezvous_acked(origin_circuit_t *circ,
+                                 const uint8_t *request,
                                  size_t request_len);
-int rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
+int rend_client_receive_rendezvous(origin_circuit_t *circ,
+                                   const uint8_t *request,
                                    size_t request_len);
 void rend_client_desc_trynow(const char *query, int rend_version);
 
@@ -4108,7 +4111,8 @@ rend_data_free(rend_data_t *data)
 int rend_cmp_service_ids(const char *one, const char *two);
 
 void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
-                             int command, size_t length, const char *payload);
+                             int command, size_t length,
+                             const uint8_t *payload);
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
 int rend_encode_service_descriptor(rend_service_descriptor_t *desc,
@@ -4171,10 +4175,10 @@ void rend_consider_descriptor_republication(void);
 
 void rend_service_intro_has_opened(origin_circuit_t *circuit);
 int rend_service_intro_established(origin_circuit_t *circuit,
-                                   const char *request,
+                                   const uint8_t *request,
                                    size_t request_len);
 void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
-int rend_service_introduce(origin_circuit_t *circuit, const char *request,
+int rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                            size_t request_len);
 void rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc);
 int rend_service_set_connection_addr_port(edge_connection_t *conn,
@@ -4183,13 +4187,13 @@ void rend_service_dump_stats(int severity);
 void rend_service_free_all(void);
 
 /********************************* rendmid.c *******************************/
-int rend_mid_establish_intro(or_circuit_t *circ, const char *request,
+int rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
                              size_t request_len);
-int rend_mid_introduce(or_circuit_t *circ, const char *request,
+int rend_mid_introduce(or_circuit_t *circ, const uint8_t *request,
                        size_t request_len);
-int rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
+int rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
                                   size_t request_len);
-int rend_mid_rendezvous(or_circuit_t *circ, const char *request,
+int rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
                         size_t request_len);
 
 /********************************* router.c ***************************/

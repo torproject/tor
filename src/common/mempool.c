@@ -357,6 +357,10 @@ mp_pool_new(size_t item_size, size_t chunk_capacity)
   mp_pool_t *pool;
   size_t alloc_size, new_chunk_cap;
 
+  tor_assert(item_size < SIZE_T_CEILING);
+  tor_assert(chunk_capacity < SIZE_T_CEILING);
+  tor_assert(SIZE_T_CEILING / item_size > chunk_capacity);
+
   pool = ALLOC(sizeof(mp_pool_t));
   CHECK_ALLOC(pool);
   memset(pool, 0, sizeof(mp_pool_t));
