@@ -1,4 +1,10 @@
 Changes in version 0.2.1.28 - 2010-12-16
+  o Major bugfixes:
+    - Fix a remotely exploitable bug that could be used to crash instances
+      of Tor remotely by overflowing on the heap. Remote-code execution
+      hasn't been confirmed, but can't be ruled out. Everyone should
+      upgrade. Bugfix on the 0.1.1 series and later.
+
   o Directory authority changes:
     - Change IP address and ports for gabelmoo (v3 directory authority).
 
