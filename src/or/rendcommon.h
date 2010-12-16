@@ -22,7 +22,8 @@ rend_data_free(rend_data_t *data)
 int rend_cmp_service_ids(const char *one, const char *two);
 
 void rend_process_relay_cell(circuit_t *circ, const crypt_path_t *layer_hint,
-                             int command, size_t length, const char *payload);
+                             int command, size_t length,
+                             const uint8_t *payload);
 
 void rend_service_descriptor_free(rend_service_descriptor_t *desc);
 rend_service_descriptor_t *rend_parse_service_descriptor(const char *str,

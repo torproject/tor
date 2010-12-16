@@ -31,7 +31,7 @@ int circuit_extend(cell_t *cell, circuit_t *circ);
 int circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
                               int reverse);
 int circuit_finish_handshake(origin_circuit_t *circ, uint8_t cell_type,
-                             const char *reply);
+                             const uint8_t *reply);
 int circuit_truncated(origin_circuit_t *circ, crypt_path_t *layer);
 int onionskin_answer(or_circuit_t *circ, uint8_t cell_type,
                      const char *payload, const char *keys);

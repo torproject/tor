@@ -22,10 +22,10 @@ void rend_consider_descriptor_republication(void);
 
 void rend_service_intro_has_opened(origin_circuit_t *circuit);
 int rend_service_intro_established(origin_circuit_t *circuit,
-                                   const char *request,
+                                   const uint8_t *request,
                                    size_t request_len);
 void rend_service_rendezvous_has_opened(origin_circuit_t *circuit);
-int rend_service_introduce(origin_circuit_t *circuit, const char *request,
+int rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                            size_t request_len);
 void rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc);
 int rend_service_set_connection_addr_port(edge_connection_t *conn,

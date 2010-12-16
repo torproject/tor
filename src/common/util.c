@@ -122,6 +122,8 @@ _tor_malloc(size_t size DMALLOC_PARAMS)
 {
   void *result;
 
+  tor_assert(size < SIZE_T_CEILING);
+
 #ifndef MALLOC_ZERO_WORKS
   /* Some libc mallocs don't work when size==0. Override them. */
   if (size==0) {
@@ -218,6 +220,7 @@ _tor_strndup(const char *s, size_t n DMALLOC_PARAMS)
 {
   char *dup;
   tor_assert(s);
+  tor_assert(n < SIZE_T_CEILING);
   dup = _tor_malloc((n+1) DMALLOC_FN_ARGS);
   /* Performance note: Ordinarily we prefer strlcpy to strncpy.  But
    * this function gets called a whole lot, and platform strncpy is
@@ -234,6 +237,7 @@ void *
 _tor_memdup(const void *mem, size_t len DMALLOC_PARAMS)
 {
   char *dup;
+  tor_assert(len < SIZE_T_CEILING);
   tor_assert(mem);
   dup = _tor_malloc(len DMALLOC_FN_ARGS);
   memcpy(dup, mem, len);
@@ -263,12 +267,15 @@ void *
 _tor_malloc_roundup(size_t *sizep DMALLOC_PARAMS)
 {
 #ifdef HAVE_MALLOC_GOOD_SIZE
+  tor_assert(*sizep < SIZE_T_CEILING);
   *sizep = malloc_good_size(*sizep);
   return _tor_malloc(*sizep DMALLOC_FN_ARGS);
 #elif 0 && defined(HAVE_MALLOC_USABLE_SIZE) && !defined(USE_DMALLOC)
   /* Never use malloc_usable_size(); it makes valgrind really unhappy,
    * and doesn't win much in terms of usable space where it exists. */
-  void *result = _tor_malloc(*sizep DMALLOC_FN_ARGS);
+  void *result;
+  tor_assert(*sizep < SIZE_T_CEILING);
+  result = _tor_malloc(*sizep DMALLOC_FN_ARGS);
   *sizep = malloc_usable_size(result);
   return result;
 #else
@@ -2131,7 +2138,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
     return NULL;
   }
 
-  if ((uint64_t)(statbuf.st_size)+1 > SIZE_T_MAX)
+  if ((uint64_t)(statbuf.st_size)+1 > SIZE_T_CEILING)
     return NULL;
 
   string = tor_malloc((size_t)(statbuf.st_size+1));

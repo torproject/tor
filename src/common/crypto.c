@@ -901,6 +901,8 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
   tor_assert(env);
   tor_assert(data);
   tor_assert(sig);
+  tor_assert(datalen < SIZE_T_CEILING);
+  tor_assert(siglen < SIZE_T_CEILING);
 
   if (crypto_digest(digest,data,datalen)<0) {
     log_warn(LD_BUG, "couldn't compute digest");
@@ -1001,6 +1003,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   tor_assert(env);
   tor_assert(from);
   tor_assert(to);
+  tor_assert(fromlen < SIZE_T_CEILING);
 
   overhead = crypto_get_rsa_padding_overhead(crypto_get_rsa_padding(padding));
   pkeylen = crypto_pk_keysize(env);
@@ -1068,6 +1071,7 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   crypto_cipher_env_t *cipher = NULL;
   char *buf = NULL;
 
+  tor_assert(fromlen < SIZE_T_CEILING);
   pkeylen = crypto_pk_keysize(env);
 
   if (fromlen <= pkeylen) {
@@ -1117,7 +1121,7 @@ crypto_pk_asn1_encode(crypto_pk_env_t *pk, char *dest, size_t dest_len)
   int len;
   unsigned char *buf, *cp;
   len = i2d_RSAPublicKey(pk->key, NULL);
-  if (len < 0 || (size_t)len > dest_len)
+  if (len < 0 || (size_t)len > dest_len || dest_len > SIZE_T_CEILING)
     return -1;
   cp = buf = tor_malloc(len+1);
   len = i2d_RSAPublicKey(pk->key, &cp);
@@ -1192,6 +1196,8 @@ add_spaces_to_fp(char *out, size_t outlen, const char *in)
 {
   int n = 0;
   char *end = out+outlen;
+  tor_assert(outlen < SIZE_T_CEILING);
+
   while (*in && out<end) {
     *out++ = *in++;
     if (++n == 4 && *in && out<end) {
@@ -1337,6 +1343,7 @@ crypto_cipher_encrypt(crypto_cipher_env_t *env, char *to,
   tor_assert(from);
   tor_assert(fromlen);
   tor_assert(to);
+  tor_assert(fromlen < SIZE_T_CEILING);
 
   aes_crypt(env->cipher, from, fromlen, to);
   return 0;
@@ -1353,6 +1360,7 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
   tor_assert(env);
   tor_assert(from);
   tor_assert(to);
+  tor_assert(fromlen < SIZE_T_CEILING);
 
   aes_crypt(env->cipher, from, fromlen, to);
   return 0;
@@ -1364,6 +1372,7 @@ crypto_cipher_decrypt(crypto_cipher_env_t *env, char *to,
 int
 crypto_cipher_crypt_inplace(crypto_cipher_env_t *env, char *buf, size_t len)
 {
+  tor_assert(len < SIZE_T_CEILING);
   aes_crypt_inplace(env->cipher, buf, len);
   return 0;
 }

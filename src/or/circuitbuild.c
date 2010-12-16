@@ -1902,7 +1902,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
        * and a DH operation. */
       cell_type = CELL_CREATE_FAST;
       memset(payload, 0, sizeof(payload));
-      crypto_rand(circ->cpath->fast_handshake_state,
+      crypto_rand((char*) circ->cpath->fast_handshake_state,
                   sizeof(circ->cpath->fast_handshake_state));
       memcpy(payload, circ->cpath->fast_handshake_state,
              sizeof(circ->cpath->fast_handshake_state));
@@ -2081,8 +2081,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
 
   n_addr32 = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
   n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
-  onionskin = cell->payload+RELAY_HEADER_SIZE+4+2;
-  id_digest = cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
+  onionskin = (char*) cell->payload+RELAY_HEADER_SIZE+4+2;
+  id_digest = (char*) cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
   tor_addr_from_ipv4h(&n_addr, n_addr32);
 
   if (!n_port || !n_addr32) {
@@ -2220,7 +2220,7 @@ circuit_init_cpath_crypto(crypt_path_t *cpath, const char *key_data,
  */
 int
 circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
-                         const char *reply)
+                         const uint8_t *reply)
 {
   char keys[CPATH_KEY_MATERIAL_LEN];
   crypt_path_t *hop;
@@ -2237,7 +2237,7 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
   if (reply_type == CELL_CREATED && hop->dh_handshake_state) {
-    if (onion_skin_client_handshake(hop->dh_handshake_state, reply, keys,
+    if (onion_skin_client_handshake(hop->dh_handshake_state, (char*)reply, keys,
                                     DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
       log_warn(LD_CIRC,"onion_skin_client_handshake failed.");
       return -END_CIRC_REASON_TORPROTOCOL;
@@ -2245,7 +2245,8 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
     /* Remember hash of g^xy */
     memcpy(hop->handshake_digest, reply+DH_KEY_LEN, DIGEST_LEN);
   } else if (reply_type == CELL_CREATED_FAST && !hop->dh_handshake_state) {
-    if (fast_client_handshake(hop->fast_handshake_state, reply, keys,
+    if (fast_client_handshake(hop->fast_handshake_state, reply,
+                              (uint8_t*)keys,
                               DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
       log_warn(LD_CIRC,"fast_client_handshake failed.");
       return -END_CIRC_REASON_TORPROTOCOL;

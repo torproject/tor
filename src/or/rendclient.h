@@ -14,14 +14,17 @@
 
 void rend_client_introcirc_has_opened(origin_circuit_t *circ);
 void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
-int rend_client_introduction_acked(origin_circuit_t *circ, const char *request,
+int rend_client_introduction_acked(origin_circuit_t *circ,
+                                   const uint8_t *request,
                                    size_t request_len);
 void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
                                    const rend_data_t *rend_query);
-int rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
+int rend_client_rendezvous_acked(origin_circuit_t *circ,
+                                 const uint8_t *request,
                                  size_t request_len);
-int rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
+int rend_client_receive_rendezvous(origin_circuit_t *circ,
+                                   const uint8_t *request,
                                    size_t request_len);
 void rend_client_desc_trynow(const char *query);
 
