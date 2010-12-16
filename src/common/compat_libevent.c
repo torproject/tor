@@ -186,6 +186,12 @@ tor_libevent_initialize(tor_libevent_cfg *torcfg)
       event_config_set_num_cpus_hint(cfg, torcfg->num_cpus);
 #endif
 
+#if LIBEVENT_VERSION_NUMBER >= V(2,0,9)
+    /* We can enable changelist support with epoll, since we don't give
+     * Libevent any dup'd fds.  This lets us avoid some syscalls. */
+    event_config_set_flag(cfg, EVENT_BASE_FLAG_EPOLL_USE_CHANGELIST);
+#endif
+
     the_event_base = event_base_new_with_config(cfg);
 
     event_config_free(cfg);
