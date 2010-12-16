@@ -32,14 +32,14 @@ int onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
                                 char *key_out,
                                 size_t key_out_len);
 
-int fast_server_handshake(const char *key_in,
-                          char *handshake_reply_out,
-                          char *key_out,
+int fast_server_handshake(const uint8_t *key_in,
+                          uint8_t *handshake_reply_out,
+                          uint8_t *key_out,
                           size_t key_out_len);
 
-int fast_client_handshake(const char *handshake_state,
-                          const char *handshake_reply_out,
-                          char *key_out,
+int fast_client_handshake(const uint8_t *handshake_state,
+                          const uint8_t *handshake_reply_out,
+                          uint8_t *key_out,
                           size_t key_out_len);
 
 void clear_pending_onions(void);

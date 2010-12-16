@@ -18,7 +18,7 @@
  * setting the circuit's purpose and service pk digest.
  */
 int
-rend_mid_establish_intro(or_circuit_t *circ, const char *request,
+rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
                          size_t request_len)
 {
   crypto_pk_env_t *pk = NULL;
@@ -48,7 +48,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
   /* Next asn1len bytes: asn1-encoded key. */
   if (request_len < 2+DIGEST_LEN+asn1len)
     goto truncated;
-  pk = crypto_pk_asn1_decode(request+2, asn1len);
+  pk = crypto_pk_asn1_decode((char*)(request+2), asn1len);
   if (!pk) {
     reason = END_CIRC_REASON_TORPROTOCOL;
     log_warn(LD_PROTOCOL, "Couldn't decode public key.");
@@ -69,8 +69,8 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
   }
   /* Rest of body: signature of previous data */
   note_crypto_pk_op(REND_MID);
-  if (crypto_pk_public_checksig_digest(pk, request, 2+asn1len+DIGEST_LEN,
-                                       request+2+DIGEST_LEN+asn1len,
+  if (crypto_pk_public_checksig_digest(pk, (char*)request, 2+asn1len+DIGEST_LEN,
+                                       (char*)(request+2+DIGEST_LEN+asn1len),
                                        request_len-(2+DIGEST_LEN+asn1len))<0) {
     log_warn(LD_PROTOCOL,
              "Incorrect signature on ESTABLISH_INTRO cell; rejecting.");
@@ -130,7 +130,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const char *request,
  * INTRODUCE2 cell.
  */
 int
-rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
+rend_mid_introduce(or_circuit_t *circ, const uint8_t *request, size_t request_len)
 {
   or_circuit_t *intro_circ;
   char serviceid[REND_SERVICE_ID_LEN_BASE32+1];
@@ -159,10 +159,10 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
   }
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                request, REND_SERVICE_ID_LEN);
+                (char*)request, REND_SERVICE_ID_LEN);
 
   /* The first 20 bytes are all we look at: they have a hash of Bob's PK. */
-  intro_circ = circuit_get_intro_point(request);
+  intro_circ = circuit_get_intro_point((char*)request);
   if (!intro_circ) {
     log_info(LD_REND,
              "No intro circ found for INTRODUCE1 cell (%s) from circuit %d; "
@@ -180,7 +180,7 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
   /* Great.  Now we just relay the cell down the circuit. */
   if (relay_send_command_from_edge(0, TO_CIRCUIT(intro_circ),
                                    RELAY_COMMAND_INTRODUCE2,
-                                   request, request_len, NULL)) {
+                                   (char*)request, request_len, NULL)) {
     log_warn(LD_GENERAL,
              "Unable to send INTRODUCE2 cell to Tor client.");
     goto err;
@@ -212,7 +212,7 @@ rend_mid_introduce(or_circuit_t *circ, const char *request, size_t request_len)
  * rendezvous cookie.
  */
 int
-rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
+rend_mid_establish_rendezvous(or_circuit_t *circ, const uint8_t *request,
                               size_t request_len)
 {
   char hexid[9];
@@ -232,7 +232,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
     goto err;
   }
 
-  if (circuit_get_rendezvous(request)) {
+  if (circuit_get_rendezvous((char*)request)) {
     log_warn(LD_PROTOCOL,
              "Duplicate rendezvous cookie in ESTABLISH_RENDEZVOUS.");
     goto err;
@@ -250,7 +250,7 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
   circ->_base.purpose = CIRCUIT_PURPOSE_REND_POINT_WAITING;
   memcpy(circ->rend_token, request, REND_COOKIE_LEN);
 
-  base16_encode(hexid,9,request,4);
+  base16_encode(hexid,9,(char*)request,4);
 
   log_info(LD_REND,
            "Established rendezvous point on circuit %d for cookie %s",
@@ -267,13 +267,13 @@ rend_mid_establish_rendezvous(or_circuit_t *circ, const char *request,
  * connecting the two circuits.
  */
 int
-rend_mid_rendezvous(or_circuit_t *circ, const char *request,
+rend_mid_rendezvous(or_circuit_t *circ, const uint8_t *request,
                     size_t request_len)
 {
   or_circuit_t *rend_circ;
   char hexid[9];
   int reason = END_CIRC_REASON_INTERNAL;
-  base16_encode(hexid,9,request,request_len<4?request_len:4);
+  base16_encode(hexid,9,(char*)request,request_len<4?request_len:4);
 
   if (request_len>=4) {
     log_info(LD_REND,
@@ -297,7 +297,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const char *request,
     goto err;
   }
 
-  rend_circ = circuit_get_rendezvous(request);
+  rend_circ = circuit_get_rendezvous((char*)request);
   if (!rend_circ) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
          "Rejecting RENDEZVOUS1 cell with unrecognized rendezvous cookie %s.",
@@ -309,7 +309,7 @@ rend_mid_rendezvous(or_circuit_t *circ, const char *request,
   /* Send the RENDEZVOUS2 cell to Alice. */
   if (relay_send_command_from_edge(0, TO_CIRCUIT(rend_circ),
                                    RELAY_COMMAND_RENDEZVOUS2,
-                                   request+REND_COOKIE_LEN,
+                                   (char*)(request+REND_COOKIE_LEN),
                                    request_len-REND_COOKIE_LEN, NULL)) {
     log_warn(LD_GENERAL,
              "Unable to send RENDEZVOUS2 cell to client on circuit %d.",

@@ -234,7 +234,7 @@ rend_client_rendcirc_has_opened(origin_circuit_t *circ)
  */
 int
 rend_client_introduction_acked(origin_circuit_t *circ,
-                               const char *request, size_t request_len)
+                               const uint8_t *request, size_t request_len)
 {
   origin_circuit_t *rendcirc;
   (void) request; // XXXX Use this.
@@ -583,7 +583,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
  * the circuit to C_REND_READY.
  */
 int
-rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
+rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
                              size_t request_len)
 {
   (void) request;
@@ -609,7 +609,7 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const char *request,
 
 /** Bob sent us a rendezvous cell; join the circuits. */
 int
-rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
+rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
                                size_t request_len)
 {
   crypt_path_t *hop;
@@ -637,9 +637,10 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const char *request,
   tor_assert(circ->build_state->pending_final_cpath);
   hop = circ->build_state->pending_final_cpath;
   tor_assert(hop->dh_handshake_state);
-  if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN, hop->dh_handshake_state,
-                               request, DH_KEY_LEN, keys,
-                               DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
+  if (crypto_dh_compute_secret(LOG_PROTOCOL_WARN,
+                               hop->dh_handshake_state, (char*)request,
+                               DH_KEY_LEN,
+                               keys, DIGEST_LEN+CPATH_KEY_MATERIAL_LEN)<0) {
     log_warn(LD_GENERAL, "Couldn't complete DH handshake.");
     goto err;
   }
