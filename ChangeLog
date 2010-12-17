@@ -1,4 +1,9 @@
-Changes in version 0.2.1.28 - 2010-12-16
+Changes in version 0.2.1.28 - 2010-12-17
+  Tor 0.2.1.28 does some code cleanup to reduce the risk of remotely
+  exploitable bugs. We also took this opportunity to change the IP address
+  for one of our directory authorities, and to update the geoip database
+  we ship.
+
   o Major bugfixes:
     - Fix a remotely exploitable bug that could be used to crash instances
       of Tor remotely by overflowing on the heap. Remote-code execution
