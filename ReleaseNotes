@@ -3,6 +3,25 @@ This document summarizes new features and bugfixes in each stable release
 of Tor. If you want to see more detailed descriptions of the changes in
 each development snapshot, see the ChangeLog file.
 
+Changes in version 0.2.1.28 - 2010-12-17
+  Tor 0.2.1.28 does some code cleanup to reduce the risk of remotely
+  exploitable bugs. We also took this opportunity to change the IP address
+  for one of our directory authorities, and to update the geoip database
+  we ship.
+
+  o Major bugfixes:
+    - Fix a remotely exploitable bug that could be used to crash instances
+      of Tor remotely by overflowing on the heap. Remote-code execution
+      hasn't been confirmed, but can't be ruled out. Everyone should
+      upgrade. Bugfix on the 0.1.1 series and later.
+
+  o Directory authority changes:
+    - Change IP address and ports for gabelmoo (v3 directory authority).
+
+  o Minor features:
+    - Update to the December 1 2010 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.1.27 - 2010-11-23
   Yet another OpenSSL security patch broke its compatibility with Tor:
   Tor 0.2.1.27 makes relays work with openssl 0.9.8p and 1.0.0.b. We
