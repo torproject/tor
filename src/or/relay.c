@@ -98,7 +98,7 @@ relay_set_digest(crypto_digest_env_t *digest, cell_t *cell)
   char integrity[4];
   relay_header_t rh;
 
-  crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
+  crypto_digest_add_bytes(digest, (char*)cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, integrity, 4);
 //  log_fn(LOG_DEBUG,"Putting digest of %u %u %u %u into relay cell.",
 //    integrity[0], integrity[1], integrity[2], integrity[3]);
@@ -131,7 +131,7 @@ relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell)
 //    received_integrity[0], received_integrity[1],
 //    received_integrity[2], received_integrity[3]);
 
-  crypto_digest_add_bytes(digest, cell->payload, CELL_PAYLOAD_SIZE);
+  crypto_digest_add_bytes(digest, (char*) cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, calculated_integrity, 4);
 
   if (memcmp(received_integrity, calculated_integrity, 4)) {
@@ -157,12 +157,12 @@ relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell)
  * Return -1 if the crypto fails, else return 0.
  */
 static int
-relay_crypt_one_payload(crypto_cipher_env_t *cipher, char *in,
+relay_crypt_one_payload(crypto_cipher_env_t *cipher, uint8_t *in,
                         int encrypt_mode)
 {
   int r;
   (void)encrypt_mode;
-  r = crypto_cipher_crypt_inplace(cipher, in, CELL_PAYLOAD_SIZE);
+  r = crypto_cipher_crypt_inplace(cipher, (char*) in, CELL_PAYLOAD_SIZE);
 
   if (r) {
     log_warn(LD_BUG,"Error during relay encryption");
@@ -477,10 +477,9 @@ relay_lookup_conn(circuit_t *circ, cell_t *cell,
  * about the wire format.
  */
 void
-relay_header_pack(char *dest, const relay_header_t *src)
+relay_header_pack(uint8_t *dest, const relay_header_t *src)
 {
-  *(uint8_t*)(dest) = src->command;
-
+  set_uint8(dest, src->command);
   set_uint16(dest+1, htons(src->recognized));
   set_uint16(dest+3, htons(src->stream_id));
   memcpy(dest+5, src->integrity, 4);
@@ -491,10 +490,9 @@ relay_header_pack(char *dest, const relay_header_t *src)
  * relay_header_t structure <b>dest</b>.
  */
 void
-relay_header_unpack(relay_header_t *dest, const char *src)
+relay_header_unpack(relay_header_t *dest, const uint8_t *src)
 {
-  dest->command = *(uint8_t*)(src);
-
+  dest->command = get_uint8(src);
   dest->recognized = ntohs(get_uint16(src+1));
   dest->stream_id = ntohs(get_uint16(src+3));
   memcpy(dest->integrity, src+5, 4);
@@ -1119,13 +1117,13 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       }
 
       stats_n_data_bytes_received += rh.length;
-      connection_write_to_buf(cell->payload + RELAY_HEADER_SIZE,
+      connection_write_to_buf((char*)(cell->payload + RELAY_HEADER_SIZE),
                               rh.length, TO_CONN(conn));
       connection_edge_consider_sending_sendme(conn);
       return 0;
     case RELAY_COMMAND_END:
       reason = rh.length > 0 ?
-        *(uint8_t *)(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
+        get_uint8(cell->payload+RELAY_HEADER_SIZE) : END_STREAM_REASON_MISC;
       if (!conn) {
         log_info(domain,"end cell (%s) dropped, unknown stream.",
                  stream_end_reason_to_string(reason));
@@ -2457,7 +2455,7 @@ append_cell_to_circuit_queue(circuit_t *circ, or_connection_t *orconn,
  *   ADDRESS                                   [length bytes]
  * Return the number of bytes added, or -1 on error */
 int
-append_address_to_payload(char *payload_out, const tor_addr_t *addr)
+append_address_to_payload(uint8_t *payload_out, const tor_addr_t *addr)
 {
   uint32_t a;
   switch (tor_addr_family(addr)) {
@@ -2482,13 +2480,13 @@ append_address_to_payload(char *payload_out, const tor_addr_t *addr)
  * encoded as by append_address_to_payload(), try to decode the address into
  * *<b>addr_out</b>.  Return the next byte in the payload after the address on
  * success, or NULL on failure. */
-const char *
-decode_address_from_payload(tor_addr_t *addr_out, const char *payload,
+const uint8_t *
+decode_address_from_payload(tor_addr_t *addr_out, const uint8_t *payload,
                             int payload_len)
 {
   if (payload_len < 2)
     return NULL;
-  if (payload_len < 2+(uint8_t)payload[1])
+  if (payload_len < 2+payload[1])
     return NULL;
 
   switch (payload[0]) {
@@ -2500,13 +2498,13 @@ decode_address_from_payload(tor_addr_t *addr_out, const char *payload,
   case RESOLVED_TYPE_IPV6:
     if (payload[1] != 16)
       return NULL;
-    tor_addr_from_ipv6_bytes(addr_out, payload+2);
+    tor_addr_from_ipv6_bytes(addr_out, (char*)(payload+2));
     break;
   default:
     tor_addr_make_unspec(addr_out);
     break;
   }
-  return payload + 2 + (uint8_t)payload[1];
+  return payload + 2 + payload[1];
 }
 
 /** Remove all the cells queued on <b>circ</b> for <b>orconn</b>. */

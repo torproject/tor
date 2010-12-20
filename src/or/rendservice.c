@@ -850,7 +850,7 @@ clean_accepted_intros(rend_service_t *service, time_t now)
  * rendezvous point.
  */
 int
-rend_service_introduce(origin_circuit_t *circuit, const char *request,
+rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                        size_t request_len)
 {
   char *ptr, *r_cookie;
@@ -914,7 +914,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   crypto_pk_get_digest(intro_key, intro_key_digest);
   if (memcmp(intro_key_digest, request, DIGEST_LEN)) {
     base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
-                  request, REND_SERVICE_ID_LEN);
+                  (char*)request, REND_SERVICE_ID_LEN);
     log_warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
              escaped(serviceid));
     return -1;
@@ -929,7 +929,7 @@ rend_service_introduce(origin_circuit_t *circuit, const char *request,
   /* Next N bytes is encrypted with service key */
   note_crypto_pk_op(REND_SERVER);
   r = crypto_pk_private_hybrid_decrypt(
-       intro_key,buf,request+DIGEST_LEN,request_len-DIGEST_LEN,
+       intro_key,buf,(char*)(request+DIGEST_LEN),request_len-DIGEST_LEN,
        PK_PKCS1_OAEP_PADDING,1);
   if (r<0) {
     log_warn(LD_PROTOCOL, "Couldn't decrypt INTRODUCE2 cell.");
@@ -1393,7 +1393,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
  * live introduction point, and note that the service descriptor is
  * now out-of-date.*/
 int
-rend_service_intro_established(origin_circuit_t *circuit, const char *request,
+rend_service_intro_established(origin_circuit_t *circuit,
+                               const uint8_t *request,
                                size_t request_len)
 {
   rend_service_t *service;

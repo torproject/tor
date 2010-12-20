@@ -1489,7 +1489,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       tor_snprintf(socks->address, sizeof(socks->address), "REVERSE[%s]",
                   orig_address);
       connection_ap_handshake_socks_resolved(conn, RESOLVED_TYPE_HOSTNAME,
-                                             strlen(result), result, -1,
+                                             strlen(result), (uint8_t*)result,
+                                             -1,
                                              map_expires);
       connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_DONE |
@@ -1610,7 +1611,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         /* remember _what_ is supposed to have been resolved. */
         strlcpy(socks->address, orig_address, sizeof(socks->address));
         connection_ap_handshake_socks_resolved(conn,RESOLVED_TYPE_IPV4,4,
-                                               (char*)&answer,-1,map_expires);
+                                               (uint8_t*)&answer,
+                                               -1,map_expires);
         connection_mark_unattached_ap(conn,
                                 END_STREAM_REASON_DONE |
                                 END_STREAM_REASON_FLAG_ALREADY_SOCKS_REPLIED);
@@ -2325,7 +2327,7 @@ void
 connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                        int answer_type,
                                        size_t answer_len,
-                                       const char *answer,
+                                       const uint8_t *answer,
                                        int ttl,
                                        time_t expires)
 {
@@ -2339,7 +2341,7 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
         client_dns_set_addressmap(conn->socks_request->address, a,
                                   conn->chosen_exit_name, ttl);
     } else if (answer_type == RESOLVED_TYPE_HOSTNAME && answer_len < 256) {
-      char *cp = tor_strndup(answer, answer_len);
+      char *cp = tor_strndup((char*)answer, answer_len);
       client_dns_set_reverse_addressmap(conn->socks_request->address,
                                         cp,
                                         conn->chosen_exit_name, ttl);
@@ -2350,14 +2352,14 @@ connection_ap_handshake_socks_resolved(edge_connection_t *conn,
   if (conn->is_dns_request) {
     if (conn->dns_server_request) {
       /* We had a request on our DNS port: answer it. */
-      dnsserv_resolved(conn, answer_type, answer_len, answer, ttl);
+      dnsserv_resolved(conn, answer_type, answer_len, (char*)answer, ttl);
       conn->socks_request->has_finished = 1;
       return;
     } else {
       /* This must be a request from the controller. We already sent
        * a mapaddress if there's a ttl. */
       tell_controller_about_resolved_result(conn, answer_type, answer_len,
-                                            answer, ttl, expires);
+                                            (char*)answer, ttl, expires);
       conn->socks_request->has_finished = 1;
       return;
     }
@@ -2502,6 +2504,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
     or_circ = TO_OR_CIRCUIT(circ);
 
   relay_header_unpack(&rh, cell->payload);
+  if (rh.length > RELAY_PAYLOAD_SIZE)
+    return -1;
 
   /* Note: we have to use relay_send_command_from_edge here, not
    * connection_edge_end or connection_edge_send_command, since those require
@@ -2525,7 +2529,8 @@ connection_exit_begin_conn(cell_t *cell, circuit_t *circ)
                                     END_STREAM_REASON_TORPROTOCOL, NULL);
       return 0;
     }
-    if (parse_addr_port(LOG_PROTOCOL_WARN, cell->payload+RELAY_HEADER_SIZE,
+    if (parse_addr_port(LOG_PROTOCOL_WARN,
+                        (char*)(cell->payload+RELAY_HEADER_SIZE),
                         &address,NULL,&port)<0) {
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Unable to parse addr:port in relay begin cell. Closing.");
@@ -2690,6 +2695,8 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
 
   assert_circuit_ok(TO_CIRCUIT(circ));
   relay_header_unpack(&rh, cell->payload);
+  if (rh.length > RELAY_PAYLOAD_SIZE)
+    return -1;
 
   /* This 'dummy_conn' only exists to remember the stream ID
    * associated with the resolve request; and to make the
@@ -2700,8 +2707,9 @@ connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ)
    */
   dummy_conn = edge_connection_new(CONN_TYPE_EXIT, AF_INET);
   dummy_conn->stream_id = rh.stream_id;
-  dummy_conn->_base.address = tor_strndup(cell->payload+RELAY_HEADER_SIZE,
-                                          rh.length);
+  dummy_conn->_base.address = tor_strndup(
+                                       (char*)cell->payload+RELAY_HEADER_SIZE,
+                                       rh.length);
   dummy_conn->_base.port = 0;
   dummy_conn->_base.state = EXIT_CONN_STATE_RESOLVEFAILED;
   dummy_conn->_base.purpose = EXIT_PURPOSE_RESOLVE;

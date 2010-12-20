@@ -95,6 +95,7 @@ static memarea_chunk_t *freelist = NULL;
 static memarea_chunk_t *
 alloc_chunk(size_t sz, int freelist_ok)
 {
+  tor_assert(sz < SIZE_T_CEILING);
   if (freelist && freelist_ok) {
     memarea_chunk_t *res = freelist;
     freelist = res->next_chunk;
@@ -211,6 +212,7 @@ memarea_alloc(memarea_t *area, size_t sz)
   char *result;
   tor_assert(chunk);
   CHECK_SENTINEL(chunk);
+  tor_assert(sz < SIZE_T_CEILING);
   if (sz == 0)
     sz = 1;
   if (chunk->next_mem+sz > chunk->u.mem+chunk->mem_size) {
@@ -270,6 +272,7 @@ memarea_strndup(memarea_t *area, const char *s, size_t n)
   size_t ln;
   char *result;
   const char *cp, *end = s+n;
+  tor_assert(n < SIZE_T_CEILING);
   for (cp = s; cp < end && *cp; ++cp)
     ;
   /* cp now points to s+n, or to the 0 in the string. */

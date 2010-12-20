@@ -500,18 +500,18 @@ long tor_weak_random(void);
 /* ===== OS compatibility */
 const char *get_uname(void);
 
-uint16_t get_uint16(const char *cp) ATTR_PURE ATTR_NONNULL((1));
-uint32_t get_uint32(const char *cp) ATTR_PURE ATTR_NONNULL((1));
-uint64_t get_uint64(const char *cp) ATTR_PURE ATTR_NONNULL((1));
-void set_uint16(char *cp, uint16_t v) ATTR_NONNULL((1));
-void set_uint32(char *cp, uint32_t v) ATTR_NONNULL((1));
-void set_uint64(char *cp, uint64_t v) ATTR_NONNULL((1));
+uint16_t get_uint16(const void *cp) ATTR_PURE ATTR_NONNULL((1));
+uint32_t get_uint32(const void *cp) ATTR_PURE ATTR_NONNULL((1));
+uint64_t get_uint64(const void *cp) ATTR_PURE ATTR_NONNULL((1));
+void set_uint16(void *cp, uint16_t v) ATTR_NONNULL((1));
+void set_uint32(void *cp, uint32_t v) ATTR_NONNULL((1));
+void set_uint64(void *cp, uint64_t v) ATTR_NONNULL((1));
 
 /* These uint8 variants are defined to make the code more uniform. */
 #define get_uint8(cp) (*(const uint8_t*)(cp))
-static void set_uint8(char *cp, uint8_t v);
+static void set_uint8(void *cp, uint8_t v);
 static INLINE void
-set_uint8(char *cp, uint8_t v)
+set_uint8(void *cp, uint8_t v)
 {
   *(uint8_t*)cp = v;
 }

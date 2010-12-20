@@ -18,8 +18,8 @@ extern uint64_t stats_n_relay_cells_delivered;
 int circuit_receive_relay_cell(cell_t *cell, circuit_t *circ,
                                cell_direction_t cell_direction);
 
-void relay_header_pack(char *dest, const relay_header_t *src);
-void relay_header_unpack(relay_header_t *dest, const char *src);
+void relay_header_pack(uint8_t *dest, const relay_header_t *src);
+void relay_header_unpack(relay_header_t *dest, const uint8_t *src);
 int relay_send_command_from_edge(streamid_t stream_id, circuit_t *circ,
                                uint8_t relay_command, const char *payload,
                                size_t payload_len, crypt_path_t *cpath_layer);
@@ -55,9 +55,9 @@ void assert_active_circuits_ok(or_connection_t *orconn);
 void make_circuit_inactive_on_conn(circuit_t *circ, or_connection_t *conn);
 void make_circuit_active_on_conn(circuit_t *circ, or_connection_t *conn);
 
-int append_address_to_payload(char *payload_out, const tor_addr_t *addr);
-const char *decode_address_from_payload(tor_addr_t *addr_out,
-                                        const char *payload,
+int append_address_to_payload(uint8_t *payload_out, const tor_addr_t *addr);
+const uint8_t *decode_address_from_payload(tor_addr_t *addr_out,
+                                        const uint8_t *payload,
                                         int payload_len);
 unsigned cell_ewma_get_tick(void);
 void cell_ewma_set_scale_factor(or_options_t *options,

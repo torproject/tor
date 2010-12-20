@@ -850,7 +850,7 @@ typedef struct cell_t {
   circid_t circ_id; /**< Circuit which received the cell. */
   uint8_t command; /**< Type of the cell: one of CELL_PADDING, CELL_CREATE,
                     * CELL_DESTROY, etc */
-  char payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
+  uint8_t payload[CELL_PAYLOAD_SIZE]; /**< Cell body. */
 } cell_t;
 
 /** Parsed variable-length onion routing cell. */
@@ -858,7 +858,7 @@ typedef struct var_cell_t {
   uint8_t command;
   circid_t circ_id;
   uint16_t payload_len;
-  char payload[1];
+  uint8_t payload[1];
 } var_cell_t;
 
 /** A cell as packed for writing to the network. */
@@ -2111,7 +2111,7 @@ typedef struct crypt_path_t {
    * authentication, secrecy, and integrity we need, and we're already
    * distinguishable from an OR.
    */
-  char fast_handshake_state[DIGEST_LEN];
+  uint8_t fast_handshake_state[DIGEST_LEN];
   /** Negotiated key material shared with the OR at this step. */
   char handshake_digest[DIGEST_LEN];/* KH in tor-spec.txt */
 

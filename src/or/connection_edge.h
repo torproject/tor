@@ -39,7 +39,7 @@ void connection_ap_handshake_socks_reply(edge_connection_t *conn, char *reply,
 void connection_ap_handshake_socks_resolved(edge_connection_t *conn,
                                             int answer_type,
                                             size_t answer_len,
-                                            const char *answer,
+                                            const uint8_t *answer,
                                             int ttl,
                                             time_t expires);
 

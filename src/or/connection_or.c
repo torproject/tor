@@ -1403,7 +1403,8 @@ connection_or_write_var_cell_to_buf(const var_cell_t *cell,
   tor_assert(conn);
   var_cell_pack_header(cell, hdr);
   connection_write_to_buf(hdr, sizeof(hdr), TO_CONN(conn));
-  connection_write_to_buf(cell->payload, cell->payload_len, TO_CONN(conn));
+  connection_write_to_buf((char*)cell->payload,
+                          cell->payload_len, TO_CONN(conn));
   if (cell->command != CELL_PADDING)
     conn->timestamp_last_added_nonpadding = approx_time();
 }
@@ -1538,7 +1539,7 @@ connection_or_send_netinfo(or_connection_t *conn)
   time_t now = time(NULL);
   const routerinfo_t *me;
   int len;
-  char *out;
+  uint8_t *out;
 
   memset(&cell, 0, sizeof(cell_t));
   cell.command = CELL_NETINFO;
