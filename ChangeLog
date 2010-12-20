@@ -48,8 +48,6 @@ Changes in version 0.2.2.20-alpha - 2010-12-17
     - Report only the top 10 ports in exit-port stats in order not to
       exceed the maximum extra-info descriptor length of 50 KB. Implements
       task 2196.
-    - Build correctly on mingw with more recent version of OpenSSL 0.9.8.
-      Patch from mingw-san.
 
 
 Changes in version 0.2.1.28 - 2010-12-17
