@@ -224,7 +224,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("DirRecordUsageGranularity"),
   OBSOLETE("DirRecordUsageRetainIPs"),
   OBSOLETE("DirRecordUsageSaveInterval"),
-  V(DirReqStatistics,            BOOL,     "0"),
+  V(DirReqStatistics,            BOOL,     "1"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DisableAllSwap,              BOOL,     "0"),
   V(DisableIOCP,                 BOOL,     "1"),
@@ -242,7 +242,7 @@ static config_var_t _option_vars[] = {
   V(ExitPolicy,                  LINELIST, NULL),
   V(ExitPolicyRejectPrivate,     BOOL,     "1"),
   V(ExitPortStatistics,          BOOL,     "0"),
-  V(ExtraInfoStatistics,         BOOL,     "0"),
+  V(ExtraInfoStatistics,         BOOL,     "1"),
 
 #if defined (WINCE)
   V(FallbackNetworkstatusFile,   FILENAME, "fallback-consensus"),
@@ -1369,48 +1369,50 @@ options_act(or_options_t *old_options)
     tor_free(actual_fname);
   }
 
-  if (options->DirReqStatistics && !geoip_is_loaded()) {
-    /* Check if GeoIP database could be loaded. */
-    log_warn(LD_CONFIG, "Configured to measure directory request "
-             "statistics, but no GeoIP database found!");
-    return -1;
-  }
-
-  if (options->EntryStatistics) {
-    if (should_record_bridge_info(options)) {
-      /* Don't allow measuring statistics on entry guards when configured
-       * as bridge. */
-      log_warn(LD_CONFIG, "Bridges cannot be configured to measure "
-               "additional GeoIP statistics as entry guards.");
-      return -1;
-    } else if (!geoip_is_loaded()) {
-      /* Check if GeoIP database could be loaded. */
-      log_warn(LD_CONFIG, "Configured to measure entry node statistics, "
-               "but no GeoIP database found!");
-      return -1;
-    }
-  }
-
   if (options->CellStatistics || options->DirReqStatistics ||
       options->EntryStatistics || options->ExitPortStatistics ||
       options->ConnDirectionStatistics) {
     time_t now = time(NULL);
+    int print_notice = 0;
     if ((!old_options || !old_options->CellStatistics) &&
-        options->CellStatistics)
+        options->CellStatistics) {
       rep_hist_buffer_stats_init(now);
+      print_notice = 1;
+    }
     if ((!old_options || !old_options->DirReqStatistics) &&
-        options->DirReqStatistics)
-      geoip_dirreq_stats_init(now);
+        options->DirReqStatistics) {
+      if (geoip_is_loaded()) {
+        geoip_dirreq_stats_init(now);
+        print_notice = 1;
+      } else {
+        log_notice(LD_CONFIG, "Configured to measure directory request "
+                              "statistics, but no GeoIP database found! "
+                              "Please specify a GeoIP database using the "
+                              "GeoIPFile option!");
+      }
+    }
     if ((!old_options || !old_options->EntryStatistics) &&
-        options->EntryStatistics)
-      geoip_entry_stats_init(now);
+        options->EntryStatistics && !should_record_bridge_info(options)) {
+      if (geoip_is_loaded()) {
+        geoip_entry_stats_init(now);
+        print_notice = 1;
+      } else {
+        log_notice(LD_CONFIG, "Configured to measure entry node "
+                              "statistics, but no GeoIP database found! "
+                              "Please specify a GeoIP database using the "
+                              "GeoIPFile option!");
+      }
+    }
     if ((!old_options || !old_options->ExitPortStatistics) &&
-        options->ExitPortStatistics)
+        options->ExitPortStatistics) {
       rep_hist_exit_stats_init(now);
+      print_notice = 1;
+    }
     if ((!old_options || !old_options->ConnDirectionStatistics) &&
-        options->ConnDirectionStatistics)
+        options->ConnDirectionStatistics) {
       rep_hist_conn_stats_init(now);
-    if (!old_options)
+    }
+    if (print_notice)
       log_notice(LD_CONFIG, "Configured to measure statistics. Look for "
                  "the *-stats files that will first be written to the "
                  "data directory in 24 hours from now.");
