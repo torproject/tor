@@ -1,0 +1,4 @@
+  o Minor features
+    - Make sure to disable DirPort if running as a bridge.  DirPorts aren't
+      used on bridges, and it makes bridge scanning way too easy.
+
