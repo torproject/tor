@@ -3332,6 +3332,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "PublishServerDescriptor line.");
   }
 
+  if (options->BridgeRelay && options->DirPort) {
+    log_warn(LD_CONFIG, "Can't set a DirPort on a bridge relay; disabling "
+             "DirPort");
+    options->DirPort = 0;
+  }
+
   if (options->MinUptimeHidServDirectoryV2 < 0) {
     log_warn(LD_CONFIG, "MinUptimeHidServDirectoryV2 option must be at "
                         "least 0 seconds. Changing to 0.");
