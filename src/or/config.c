@@ -1425,6 +1425,7 @@ options_act(or_options_t *old_options)
         geoip_dirreq_stats_init(now);
         print_notice = 1;
       } else {
+        options->DirReqStatistics = 0;
         log_notice(LD_CONFIG, "Configured to measure directory request "
                               "statistics, but no GeoIP database found! "
                               "Please specify a GeoIP database using the "
@@ -1437,6 +1438,7 @@ options_act(or_options_t *old_options)
         geoip_entry_stats_init(now);
         print_notice = 1;
       } else {
+        options->EntryStatistics = 0;
         log_notice(LD_CONFIG, "Configured to measure entry node "
                               "statistics, but no GeoIP database found! "
                               "Please specify a GeoIP database using the "
