@@ -566,6 +566,15 @@
     "next-circuit/IP:port"
       XXX todo.
 
+    "process/pid" -- Process id belonging to the main tor process.
+    "process/uid" -- User id running the tor process, -1 if unknown (this is
+     unimplemented on Windows, returning -1).
+    "process/user" -- Username under which the tor process is running,
+     providing an empty string if none exists (this is unimplemented on
+     Windows, returning an empty string).
+    "process/descriptor-limit" -- Upper bound on the file descriptor limit, -1
+     if unknown.
+
     "dir/status-vote/current/consensus" [added in Tor 0.2.1.6-alpha]
     "dir/status/authority"
     "dir/status/fp/<F>"

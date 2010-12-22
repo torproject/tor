@@ -33,6 +33,11 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
+#ifndef MS_WINDOWS
+#include <pwd.h>
+#include <sys/resource.h>
+#endif
+
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN)
@@ -1345,6 +1350,55 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       return -1;
     }
     *answer = tor_dup_ip(addr);
+  } else if (!strcmp(question, "process/pid")) {
+    int myPid = -1;
+
+    #ifdef MS_WINDOWS
+      myPid = _getpid();
+    #else
+      myPid = getpid();
+    #endif
+
+    tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(myPid));
+  } else if (!strcmp(question, "process/uid")) {
+    #ifdef MS_WINDOWS
+      *answer = tor_strdup("-1");
+    #else
+      int myUid = geteuid();
+      tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(myUid));
+    #endif
+  } else if (!strcmp(question, "process/user")) {
+    #ifdef MS_WINDOWS
+      *answer = tor_strdup("");
+    #else
+      int myUid = geteuid();
+      struct passwd *myPwEntry = getpwuid(myUid);
+
+      if (myPwEntry) {
+        *answer = tor_strdup(myPwEntry->pw_name);
+      } else {
+        *answer = tor_strdup("");
+      }
+    #endif
+  } else if (!strcmp(question, "process/descriptor-limit")) {
+    /** platform specifc limits are from the set_max_file_descriptors function
+      * of src/common/compat.c */
+    #ifdef HAVE_GETRLIMIT
+      struct rlimit descriptorLimit;
+
+      if (getrlimit(RLIMIT_NOFILE, &descriptorLimit) == 0) {
+        tor_asprintf(answer, U64_FORMAT,
+        U64_PRINTF_ARG(descriptorLimit.rlim_max));
+      } else {
+        *answer = tor_strdup("-1");
+      }
+    #elif defined(CYGWIN) || defined(__CYGWIN__)
+      *answer = tor_strdup("3200");
+    #elif defined(MS_WINDOWS)
+      *answer = tor_strdup("15000");
+    #else
+      *answer = tor_strdup("15000");
+    #endif
   } else if (!strcmp(question, "dir-usage")) {
     *answer = directory_dump_request_log();
   } else if (!strcmp(question, "fingerprint")) {
@@ -1902,6 +1956,10 @@ static const getinfo_item_t getinfo_items[] = {
       "Number of versioning authorities agreeing on the status of the "
       "current version"),
   ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
+  ITEM("process/pid", misc, "Process id belonging to the main tor process."),
+  ITEM("process/uid", misc, "User id running the tor process."),
+  ITEM("process/user", misc,"Username under which the tor process is running."),
+  ITEM("process/descriptor-limit", misc, "File descriptor limit."),
   ITEM("dir-usage", misc, "Breakdown of bytes transferred over DirPort."),
   PREFIX("desc-annotations/id/", dir, "Router annotations by hexdigest."),
   PREFIX("dir/server/", dir,"Router descriptors as retrieved from a DirPort."),
