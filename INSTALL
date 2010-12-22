@@ -3,7 +3,7 @@ Most users who realize that INSTALL files still exist should simply
 follow the directions at
 https://www.torproject.org/docs/tor-doc-unix
 
-If you got the source from Subversion, run "./autogen.sh", which will
+If you got the source from git, run "./autogen.sh", which will
 run the various auto* programs. Then you can run ./configure, and
 refer to the above instructions.
 
@@ -21,5 +21,5 @@ If it doesn't build for you:
   For example, "setenv LD_LIBRARY_PATH /usr/athena/lib".
 
   Lastly, check out
-  http://wiki.noreply.org/noreply/TheOnionRouter/TorFAQ#ItDoesntWork
+  https://www.torproject.org/docs/faq#DoesntWork
 
