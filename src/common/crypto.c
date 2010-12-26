@@ -1959,14 +1959,15 @@ seed_weak_rng(void)
 int
 crypto_seed_rng(int startup)
 {
-  char buf[ADD_ENTROPY];
   int rand_poll_status = 0;
 
   /* local variables */
 #ifdef MS_WINDOWS
+  unsigned char buf[ADD_ENTROPY];
   static int provider_set = 0;
   static HCRYPTPROV provider;
 #else
+  char buf[ADD_ENTROPY];
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
