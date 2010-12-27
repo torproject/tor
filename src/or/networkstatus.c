@@ -2125,7 +2125,7 @@ networkstatus_dump_bridge_status_to_file(time_t now)
   tor_free(status);
 }
 
-int32_t
+static int32_t
 get_net_param_from_list(smartlist_t *net_params, const char *param_name,
                         int default_val)
 {

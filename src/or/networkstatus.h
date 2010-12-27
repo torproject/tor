@@ -81,8 +81,6 @@ void signed_descs_update_status_from_consensus_networkstatus(
 char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
-int32_t get_net_param_from_list(smartlist_t *net_params, const char *name,
-                                int default_val);
 int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
                                 int32_t default_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
