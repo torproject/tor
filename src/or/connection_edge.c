@@ -1052,7 +1052,7 @@ addressmap_match_superdomains(char *address)
   const char *key;
   void *_val;
   addressmap_entry_t *val;
-  char *matched_domains = 0;
+  char *matched_domains = NULL;
 
   for (iter = strmap_iter_init(addressmap); !strmap_iter_done(iter); ) {
     strmap_iter_get(iter, &key, &_val);

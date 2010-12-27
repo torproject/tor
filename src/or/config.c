@@ -4461,33 +4461,47 @@ config_register_addressmaps(const or_options_t *options)
   for (opt = options->AddressMap; opt; opt = opt->next) {
     smartlist_split_string(elts, opt->value, NULL,
                            SPLIT_SKIP_SPACE|SPLIT_IGNORE_BLANK, 2);
-    if (smartlist_len(elts) >= 2) {
-      from = smartlist_get(elts,0);
-      to = smartlist_get(elts,1);
-
-      /* Remove leading asterisk in expressions of type: '*.example.com' */
-      if (from[0] == '*' && strlen(from) > 1)
-        from++;
-      if (to[0] == '*' && strlen(to) > 1)
-        to++;
-      if (to[0] == '.' && from[0] != '.') {
-        log_warn(LD_CONFIG,
-                 "Skipping invalid argument '%s' to MapAddress: "
-                 "can only use wildcard (i.e. '.' or '*.') if 'from' address "
-                 "uses wildcard also", to);
-      } else if (address_is_invalid_destination(to, 1)) {
-        log_warn(LD_CONFIG,
-                 "Skipping invalid argument '%s' to MapAddress", to);
-      } else {
-        addressmap_register(from, tor_strdup(to), 0, ADDRMAPSRC_TORRC);
-        if (smartlist_len(elts)>2) {
-          log_warn(LD_CONFIG,"Ignoring extra arguments to MapAddress.");
-        }
-      }
-    } else {
+    if (smartlist_len(elts) < 2) {
       log_warn(LD_CONFIG,"MapAddress '%s' has too few arguments. Ignoring.",
                opt->value);
+      goto cleanup;
     }
+
+    from = smartlist_get(elts,0);
+    to = smartlist_get(elts,1);
+
+    if (to[0] == '.' || from[0] == '.') {
+      log_warn(LD_CONFIG,"MapAddress '%s' is ambiguous - address starts with a"
+              "'.'. Ignoring.",opt->value);
+      goto cleanup;
+    }
+
+    /* Remove leading asterisk in expressions of type: '*.example.com' */
+    if (!strncmp(from,"*.",2))
+      from++;
+    if (!strncmp(to,"*.",2))
+      to++;
+
+    if (to[0] == '.' && from[0] != '.') {
+      log_warn(LD_CONFIG,
+                "Skipping invalid argument '%s' to MapAddress: "
+                "can only use wildcard (i.e. '*.') if 'from' address "
+                "uses wildcard also", to);
+      goto cleanup;
+    }
+
+    if (address_is_invalid_destination(to, 1)) {
+      log_warn(LD_CONFIG,
+                "Skipping invalid argument '%s' to MapAddress", to);
+      goto cleanup;
+    }
+
+    addressmap_register(from, tor_strdup(to), 0, ADDRMAPSRC_TORRC);
+
+    if (smartlist_len(elts) > 2)
+      log_warn(LD_CONFIG,"Ignoring extra arguments to MapAddress.");
+
+  cleanup:
     SMARTLIST_FOREACH(elts, char*, cp, tor_free(cp));
     smartlist_clear(elts);
   }

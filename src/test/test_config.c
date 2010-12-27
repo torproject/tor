@@ -15,9 +15,11 @@ test_config_addressmap(void)
   char buf[1024];
   char address[256];
   time_t expires = TIME_MAX;
-  strlcpy(buf, "MapAddress .google.com .torserver.exit\n"
+  strlcpy(buf, "MapAddress .invalidwildcard.com *.torserver.exit\n" // invalid
+          "MapAddress *invalidasterisk.com *.torserver.exit\n" // invalid
+          "MapAddress *.google.com *.torserver.exit\n"
           "MapAddress *.yahoo.com *.google.com.torserver.exit\n"
-          "MapAddress .cn.com www.cnn.com\n"
+          "MapAddress *.cn.com www.cnn.com\n"
           "MapAddress *.cnn.com www.cnn.com\n"
           "MapAddress ex.com www.cnn.com\n"
           "MapAddress ey.com *.cnn.com\n"
@@ -27,6 +29,7 @@ test_config_addressmap(void)
           "MapAddress test.torproject.org 2.2.2.2\n"
           "MapAddress www.google.com 3.3.3.3\n"
           "MapAddress www.example.org 4.4.4.4\n"
+          "MapAddress 4.4.4.4 7.7.7.7\n"
           "MapAddress 4.4.4.4 5.5.5.5\n"
           "MapAddress www.infiniteloop.org 6.6.6.6\n"
           "MapAddress 6.6.6.6 www.infiniteloop.org\n"
@@ -34,6 +37,14 @@ test_config_addressmap(void)
 
   config_get_lines(buf, &(get_options()->AddressMap));
   config_register_addressmaps(get_options());
+
+  /* MapAddress .invalidwildcard.com .torserver.exit  - no match */
+  strlcpy(address, "www.invalidwildcard.com", sizeof(address));
+  test_assert(!addressmap_rewrite(address, sizeof(address), &expires));
+
+  /* MapAddress *invalidasterisk.com .torserver.exit  - no match */
+  strlcpy(address, "www.invalidasterisk.com", sizeof(address));
+  test_assert(!addressmap_rewrite(address, sizeof(address), &expires));
 
   /* Where no mapping for FQDN match on top-level domain */
   /* MapAddress .google.com .torserver.exit */
@@ -81,7 +92,11 @@ test_config_addressmap(void)
   test_assert(addressmap_rewrite(address, sizeof(address), &expires));
   test_streq(address, "2.2.2.2");
 
-  /* Test a chain of address mappings */
+  /* Test a chain of address mappings and the order in which they were added:
+          "MapAddress www.example.org 4.4.4.4"
+          "MapAddress 4.4.4.4 7.7.7.7"
+          "MapAddress 4.4.4.4 5.5.5.5"
+  */
   strlcpy(address, "www.example.org", sizeof(address));
   test_assert(addressmap_rewrite(address, sizeof(address), &expires));
   test_streq(address, "5.5.5.5");
@@ -97,9 +112,9 @@ test_config_addressmap(void)
 
   /* Test top-level-domain matching a bit harder */
   addressmap_clear_configured();
-  strlcpy(buf, "MapAddress .com .torserver.exit\n"
-          "MapAddress .torproject.org 1.1.1.1\n"
-          "MapAddress .net 2.2.2.2\n"
+  strlcpy(buf, "MapAddress *.com *.torserver.exit\n"
+          "MapAddress *.torproject.org 1.1.1.1\n"
+          "MapAddress *.net 2.2.2.2\n"
           , sizeof(buf));
   config_get_lines(buf, &(get_options()->AddressMap));
   config_register_addressmaps(get_options());
@@ -124,9 +139,9 @@ test_config_addressmap(void)
   test_assert(addressmap_rewrite(address, sizeof(address), &expires));
   test_streq(address, "2.2.2.2");
 
-  /* We don't support '.' as a mapping directive */
+  /* We don't support '*' as a mapping directive */
   addressmap_clear_configured();
-  strlcpy(buf, "MapAddress . .torserver.exit\n", sizeof(buf));
+  strlcpy(buf, "MapAddress * *.torserver.exit\n", sizeof(buf));
   config_get_lines(buf, &(get_options()->AddressMap));
   config_register_addressmaps(get_options());
 

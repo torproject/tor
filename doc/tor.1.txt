@@ -658,15 +658,42 @@ The following options are useful only for clients (that is, if
     When a request for address arrives to Tor, it will rewrite it to newaddress
     before processing it. For example, if you always want connections to
     www.indymedia.org to exit via __torserver__ (where __torserver__ is the
-    nickname of the server), use "MapAddress www.indymedia.org
-    www.indymedia.org.torserver.exit". If the value is prepended with a \'*.\',
-    it is treated as matching an entire domain. For example, if you always
-    want connections to  any sub-domain of indymedia.org to exit via
+    nickname of the server), use MapAddress www.indymedia.org
+    www.indymedia.org.torserver.exit. If the value is prepended with a
+    '*.', it is treated as matching an entire domain. For example, if you
+    always want connections to  any sub-domain of indymedia.org to exit via
     __torserver__ (where __torserver__ is the nickname of the server), use
-    "MapAddress *.indymedia.org *.indymedia.org.torserver.exit". (Note the
+    MapAddress *.indymedia.org *.indymedia.org.torserver.exit. (Note the
     leading '*.' in each part of the directive.) You can also redirect all
-    subdomains of a domain to a single address. For example, "MapAddress
-    *.indymedia.org www.indymedia.org".
+    subdomains of a domain to a single address. For example, MapAddress
+    *.indymedia.org www.indymedia.org. +
+ +
+    NOTES:
+
+    1. When evaluating MapAddress expressions Tor stops when it hits the most
+    recently added expression that matches the requested address. So if you
+    have the following in your torrc, www.torproject.org will map to 1.1.1.1:
+
+     MapAddress www.torproject.org 2.2.2.2
+     MapAddress www.torproject.org 1.1.1.1
+
+    2. Tor evaluates the MapAddress configuration until it finds no matches. So
+    if you have the following in your torrc, www.torproject.org will map to
+    2.2.2.2:
+
+      MapAddress www.torproject.org 3.3.3.3
+      MapAddress 1.1.1.1 4.4.4.4
+      MapAddress 1.1.1.1 2.2.2.2
+      MapAddress www.torproject.org 1.1.1.1
+
+    3. The following MapAddress expression is invalid (and will be
+    ignored) because you cannot map from a specific address to a wildcarded
+    address:
+
+      MapAddress www.torproject.org *.torproject.org.torserver.exit
+
+    4. Using a wildcard as a regular expression (e.g. *ample.com) is
+    also invalid.
 
 **NewCircuitPeriod** __NUM__::
     Every NUM seconds consider whether to build a new circuit. (Default: 30
