@@ -335,12 +335,12 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
     tor_assert(at_addr);
 
     if ((ns = networkstatus_get_latest_consensus())) {
-      int fresh_interval = ns->fresh_until - ns->valid_after;
-      int live_interval = ns->valid_until - ns->valid_after;
+      int fresh_interval = (int)(ns->fresh_until - ns->valid_after);
+      int live_interval = (int)(ns->valid_until - ns->valid_after);
       /* on average, a descriptor addr change takes .5 intervals to make it
        * into a consensus, and half a liveness period to make it to
        * clients. */
-      penalty = (fresh_interval + live_interval) / 2;
+      penalty = (int)(fresh_interval + live_interval) / 2;
     }
     format_local_iso_time(tbuf, hist->start_of_run);
     log_info(LD_HIST,"Router %s still seems Running, but its address appears "
