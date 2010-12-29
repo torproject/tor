@@ -1954,9 +1954,13 @@ fetch_from_evbuffer_socks_client(struct evbuffer *buf, int state,
   size_t datalen;
   int r;
 
-  data = evbuffer_pullup(buf, 128); /* Make sure we have at least 128
-                                     * contiguous bytes if possible. */
-  datalen = evbuffer_get_contiguous_space(buf);
+  /* Linearize the SOCKS response in the buffer, up to 128 bytes.
+   * (parse_socks_client shouldn't need to see anything beyond that.) */
+  datalen = evbuffer_get_length(buf);
+  if (datalen > 128)
+    datalen = 128;
+  data = evbuffer_pullup(buf, datalen);
+
   r = parse_socks_client(data, datalen, state, reason, &drain);
   if (drain > 0)
     evbuffer_drain(buf, drain);
