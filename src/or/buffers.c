@@ -1964,7 +1964,7 @@ fetch_from_evbuffer_socks_client(struct evbuffer *buf, int state,
   r = parse_socks_client(data, datalen, state, reason, &drain);
   if (drain > 0)
     evbuffer_drain(buf, drain);
-  else
+  else if (drain < 0)
     evbuffer_drain(buf, evbuffer_get_length(buf));
 
   return r;
