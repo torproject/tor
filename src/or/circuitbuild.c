@@ -106,7 +106,7 @@ circuit_build_times_disabled(void)
     return 0;
   } else {
     int consensus_disabled = networkstatus_get_param(NULL, "cbtdisabled",
-                                                     0);
+                                                     0, 0, 1);
     int config_disabled = !get_options()->LearnCircuitBuildTimeout;
     int dirauth_disabled = get_options()->AuthoritativeDir;
     int state_disabled = (get_or_state()->LastWritten == -1);
@@ -128,16 +128,19 @@ circuit_build_times_disabled(void)
 static int32_t
 circuit_build_times_max_timeouts(void)
 {
-  int32_t num = networkstatus_get_param(NULL, "cbtmaxtimeouts",
-          CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT);
-  return num;
+  return networkstatus_get_param(NULL, "cbtmaxtimeouts",
+                                 CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT,
+                                 CBT_MIN_MAX_RECENT_TIMEOUT_COUNT,
+                                 CBT_MAX_MAX_RECENT_TIMEOUT_COUNT);
 }
 
 static int32_t
 circuit_build_times_default_num_xm_modes(void)
 {
   int32_t num = networkstatus_get_param(NULL, "cbtnummodes",
-          CBT_DEFAULT_NUM_XM_MODES);
+                                        CBT_DEFAULT_NUM_XM_MODES,
+                                        CBT_MIN_NUM_XM_MODES,
+                                        CBT_MAX_NUM_XM_MODES);
   return num;
 }
 
@@ -145,7 +148,9 @@ static int32_t
 circuit_build_times_min_circs_to_observe(void)
 {
   int32_t num = networkstatus_get_param(NULL, "cbtmincircs",
-                CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE);
+                                        CBT_DEFAULT_MIN_CIRCUITS_TO_OBSERVE,
+                                        CBT_MIN_MIN_CIRCUITS_TO_OBSERVE,
+                                        CBT_MAX_MIN_CIRCUITS_TO_OBSERVE);
   return num;
 }
 
@@ -161,24 +166,39 @@ double
 circuit_build_times_quantile_cutoff(void)
 {
   int32_t num = networkstatus_get_param(NULL, "cbtquantile",
-                CBT_DEFAULT_QUANTILE_CUTOFF);
+                                        CBT_DEFAULT_QUANTILE_CUTOFF,
+                                        CBT_MIN_QUANTILE_CUTOFF,
+                                        CBT_MAX_QUANTILE_CUTOFF);
   return num/100.0;
+}
+
+int
+circuit_build_times_get_bw_scale(networkstatus_t *ns)
+{
+  return networkstatus_get_param(ns, "bwweightscale",
+                                 BW_WEIGHT_SCALE,
+                                 BW_MIN_WEIGHT_SCALE,
+                                 BW_MAX_WEIGHT_SCALE);
 }
 
 static double
 circuit_build_times_close_quantile(void)
 {
-  int32_t num = networkstatus_get_param(NULL, "cbtclosequantile",
-          CBT_DEFAULT_CLOSE_QUANTILE);
-
-  return num/100.0;
+  return networkstatus_get_param(NULL, "cbtclosequantile",
+             CBT_DEFAULT_CLOSE_QUANTILE,
+             /* Cast is safe, cbtquantile is capped at
+             * CBT_MAX_QUANTILE_CUTOFF. */
+             (int)tor_lround(100*circuit_build_times_quantile_cutoff()),
+             CBT_MAX_CLOSE_QUANTILE) / 100.0;
 }
 
 static int32_t
 circuit_build_times_test_frequency(void)
 {
   int32_t num = networkstatus_get_param(NULL, "cbttestfreq",
-                CBT_DEFAULT_TEST_FREQUENCY);
+                                        CBT_DEFAULT_TEST_FREQUENCY,
+                                        CBT_MIN_TEST_FREQUENCY,
+                                        CBT_MAX_TEST_FREQUENCY);
   return num;
 }
 
@@ -186,7 +206,9 @@ static int32_t
 circuit_build_times_min_timeout(void)
 {
   int32_t num = networkstatus_get_param(NULL, "cbtmintimeout",
-                CBT_DEFAULT_TIMEOUT_MIN_VALUE);
+                                        CBT_DEFAULT_TIMEOUT_MIN_VALUE,
+                                        CBT_MIN_TIMEOUT_MIN_VALUE,
+                                        CBT_MAX_TIMEOUT_MIN_VALUE);
   return num;
 }
 
@@ -194,16 +216,19 @@ int32_t
 circuit_build_times_initial_timeout(void)
 {
   int32_t num = networkstatus_get_param(NULL, "cbtinitialtimeout",
-                CBT_DEFAULT_TIMEOUT_INITIAL_VALUE);
+                                        CBT_DEFAULT_TIMEOUT_INITIAL_VALUE,
+                                        circuit_build_times_min_timeout(),
+                                        CBT_MAX_TIMEOUT_INITIAL_VALUE);
   return num;
 }
 
 static int32_t
-circuit_build_times_recent_circuit_count(void)
+circuit_build_times_recent_circuit_count(networkstatus_t *ns)
 {
-  int32_t num = networkstatus_get_param(NULL, "cbtrecentcount",
-                CBT_DEFAULT_RECENT_CIRCUITS);
-  return num;
+  return networkstatus_get_param(ns, "cbtrecentcount",
+                                 CBT_DEFAULT_RECENT_CIRCUITS,
+                                 CBT_MIN_RECENT_CIRCUITS,
+                                 CBT_MAX_RECENT_CIRCUITS);
 }
 
 /**
@@ -216,8 +241,7 @@ void
 circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
                                          networkstatus_t *ns)
 {
-  int32_t num = networkstatus_get_param(ns, "cbtrecentcount",
-                   CBT_DEFAULT_RECENT_CIRCUITS);
+  int32_t num = circuit_build_times_recent_circuit_count(ns);
 
   if (num > 0 && num != cbt->liveness.num_recent_circs) {
     int8_t *recent_circs;
@@ -307,7 +331,8 @@ void
 circuit_build_times_init(circuit_build_times_t *cbt)
 {
   memset(cbt, 0, sizeof(*cbt));
-  cbt->liveness.num_recent_circs = circuit_build_times_recent_circuit_count();
+  cbt->liveness.num_recent_circs =
+      circuit_build_times_recent_circuit_count(NULL);
   cbt->liveness.timeouts_after_firsthop = tor_malloc_zero(sizeof(int8_t)*
                                       cbt->liveness.num_recent_circs);
   cbt->close_ms = cbt->timeout_ms = circuit_build_times_get_initial_timeout();

@@ -1,0 +1,9 @@
+  o Major features:
+    - Introduce minimum/maximum values that a client is going to believe
+      in a consensus. This helps to avoid crashes or worse when a param
+      has a weird value.
+
+  o Major bugfixes:
+    - Prevent crash/heap corruption when cbtnumnodes consensus parameter is
+      set to 0 or large values. Fixes bug 2317.
+

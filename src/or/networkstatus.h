@@ -82,7 +82,8 @@ char *networkstatus_getinfo_helper_single(routerstatus_t *rs);
 char *networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now);
 void networkstatus_dump_bridge_status_to_file(time_t now);
 int32_t networkstatus_get_param(networkstatus_t *ns, const char *param_name,
-                                int32_t default_val);
+                                int32_t default_val, int32_t min_val,
+                                int32_t max_val);
 int getinfo_helper_networkstatus(control_connection_t *conn,
                                  const char *question, char **answer,
                                  const char **errmsg);

@@ -2127,30 +2127,50 @@ networkstatus_dump_bridge_status_to_file(time_t now)
 
 static int32_t
 get_net_param_from_list(smartlist_t *net_params, const char *param_name,
-                        int default_val)
+                        int32_t default_val, int32_t min_val, int32_t max_val)
 {
+  int32_t res = default_val;
   size_t name_len = strlen(param_name);
+
+  tor_assert(max_val > min_val);
+  tor_assert(min_val <= default_val);
+  tor_assert(max_val >= default_val);
 
   SMARTLIST_FOREACH_BEGIN(net_params, const char *, p) {
     if (!strcmpstart(p, param_name) && p[name_len] == '=') {
       int ok=0;
       long v = tor_parse_long(p+name_len+1, 10, INT32_MIN,
                               INT32_MAX, &ok, NULL);
-      if (ok)
-        return (int32_t) v;
+      if (ok) {
+        res = (int32_t) v;
+        break;
+      }
     }
   } SMARTLIST_FOREACH_END(p);
 
-  return default_val;
+  if (res < min_val) {
+    log_warn(LD_DIR, "Consensus parameter %s is too small. Got %d, raising to "
+             "%d.", param_name, res, min_val);
+    res = min_val;
+  } else if (res > max_val) {
+    log_warn(LD_DIR, "Consensus parameter %s is too large. Got %d, capping to "
+             "%d.", param_name, res, max_val);
+    res = max_val;
+  }
+
+  return res;
 }
 
 /** Return the value of a integer parameter from the networkstatus <b>ns</b>
  * whose name is <b>param_name</b>.  If <b>ns</b> is NULL, try loading the
  * latest consensus ourselves. Return <b>default_val</b> if no latest
- * consensus, or if it has no parameter called <b>param_name</b>. */
+ * consensus, or if it has no parameter called <b>param_name</b>.
+ * Make sure the value parsed from the consensus is at least
+ * <b>min_val</b> and at most <b>max_val</b> and raise/cap the parsed value
+ * if necessary. */
 int32_t
 networkstatus_get_param(networkstatus_t *ns, const char *param_name,
-                        int32_t default_val)
+                        int32_t default_val, int32_t min_val, int32_t max_val)
 {
   if (!ns) /* if they pass in null, go find it ourselves */
     ns = networkstatus_get_latest_consensus();
@@ -2158,16 +2178,17 @@ networkstatus_get_param(networkstatus_t *ns, const char *param_name,
   if (!ns || !ns->net_params)
     return default_val;
 
-  return get_net_param_from_list(ns->net_params, param_name, default_val);
+  return get_net_param_from_list(ns->net_params, param_name,
+                                 default_val, min_val, max_val);
 }
 
 /** Return the value of a integer bw weight parameter from the networkstatus
  * <b>ns</b> whose name is <b>weight_name</b>.  If <b>ns</b> is NULL, try
  * loading the latest consensus ourselves. Return <b>default_val</b> if no
- * latest consensus, or if it has no parameter called <b>param_name</b>. */
+ * latest consensus, or if it has no parameter called <b>weight_name</b>. */
 int32_t
 networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight_name,
-                        int32_t default_val)
+                            int32_t default_val)
 {
   if (!ns) /* if they pass in null, go find it ourselves */
     ns = networkstatus_get_latest_consensus();
@@ -2175,7 +2196,9 @@ networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight_name,
   if (!ns || !ns->weight_params)
     return default_val;
 
-  return get_net_param_from_list(ns->weight_params, weight_name, default_val);
+  return get_net_param_from_list(ns->weight_params, weight_name,
+                                 default_val, -1,
+                                 circuit_build_times_get_bw_scale(ns));
 }
 
 /** Return the name of the consensus flavor <b>flav</b> as used to identify

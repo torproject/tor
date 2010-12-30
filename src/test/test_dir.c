@@ -609,8 +609,11 @@ test_dir_param_voting(void)
                          "abcd=20 c=60 cw=500 x-yz=-9 zzzzz=101", NULL, 0, 0);
   smartlist_split_string(vote4.net_params,
                          "ab=900 abcd=200 c=1 cw=51 x-yz=100", NULL, 0, 0);
-  test_eq(100, networkstatus_get_param(&vote4, "x-yz", 50));
-  test_eq(222, networkstatus_get_param(&vote4, "foobar", 222));
+  test_eq(100, networkstatus_get_param(&vote4, "x-yz", 50, 0, 300));
+  test_eq(222, networkstatus_get_param(&vote4, "foobar", 222, 0, 300));
+  test_eq(80, networkstatus_get_param(&vote4, "ab", 12, 0, 80));
+  test_eq(-8, networkstatus_get_param(&vote4, "ab", -12, -100, -8));
+  test_eq(0, networkstatus_get_param(&vote4, "foobar", 0, -100, 8));
 
   smartlist_add(votes, &vote1);
   smartlist_add(votes, &vote2);

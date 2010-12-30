@@ -384,7 +384,9 @@ circuit_purpose_to_controller_string(uint8_t purpose)
 int32_t
 circuit_initial_package_window(void)
 {
-  int32_t num = networkstatus_get_param(NULL, "circwindow", CIRCWINDOW_START);
+  int32_t num = networkstatus_get_param(NULL, "circwindow", CIRCWINDOW_START,
+                                        CIRCWINDOW_START_MIN,
+                                        CIRCWINDOW_START_MAX);
   /* If the consensus tells us a negative number, we'd assert. */
   if (num < 0)
     num = CIRCWINDOW_START;
