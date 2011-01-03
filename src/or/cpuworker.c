@@ -250,7 +250,7 @@ cpuworker_main(void *data)
   for (;;) {
     ssize_t r;
 
-    if ((r = recv(fd, &question_type, 1, 0)) != 1) {
+    if ((r = recv(fd, (void *)&question_type, 1, 0)) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
       if (r == 0) {
         log_info(LD_OR,

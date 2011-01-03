@@ -1245,7 +1245,8 @@ nameserver_read(struct nameserver *ns) {
 
 	for (;;) {
 		const int r =
-            (int)recvfrom(ns->socket, packet, (socklen_t)sizeof(packet), 0,
+            (int)recvfrom(ns->socket, (void*)packet,
+						  (socklen_t)sizeof(packet), 0,
 						  sa, &addrlen);
 		if (r < 0) {
 			int err = last_error(ns->socket);
@@ -1276,7 +1277,7 @@ server_port_read(struct evdns_server_port *s) {
 
 	for (;;) {
 		addrlen = (socklen_t)sizeof(struct sockaddr_storage);
-		r = recvfrom(s->socket, packet, sizeof(packet), 0,
+		r = recvfrom(s->socket, (void*)packet, sizeof(packet), 0,
 					 (struct sockaddr*) &addr, &addrlen);
 		if (r < 0) {
 			int err = last_error(s->socket);
@@ -2012,7 +2013,8 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 /* 2 other failure */
 static int
 evdns_request_transmit_to(struct evdns_request *req, struct nameserver *server) {
-	const ssize_t r = send(server->socket, req->request, req->request_len, 0);
+	const ssize_t r = send(server->socket, (void*)req->request,
+                         req->request_len, 0);
 	if (r < 0) {
 		int err = last_error(server->socket);
 		if (error_is_eagain(err)) return 1;
