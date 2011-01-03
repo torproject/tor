@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Add assertions to check for overflow in arguments to
+      base32_encode and base32_decode; fix a signed-unsigned
+      comparison there too.  These bugs are actually reachable in Tor,
+      but it's good to prevent future errors too.  Found by doorss.
+

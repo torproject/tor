@@ -2412,9 +2412,10 @@ digest256_from_base64(char *digest, const char *d64)
 void
 base32_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
-  unsigned int i, bit, v, u;
-  size_t nbits = srclen * 8;
+  unsigned int i, v, u;
+  size_t nbits = srclen * 8, bit;
 
+  tor_assert(srclen < SIZE_T_CEILING/8);
   tor_assert((nbits%5) == 0); /* We need an even multiple of 5 bits. */
   tor_assert((nbits/5)+1 <= destlen); /* We need enough space. */
   tor_assert(destlen < SIZE_T_CEILING);
@@ -2438,11 +2439,12 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   /* XXXX we might want to rewrite this along the lines of base64_decode, if
    * it ever shows up in the profile. */
-  unsigned int i, j, bit;
-  size_t nbits;
+  unsigned int i, bit;
+  size_t nbits, j;
   char *tmp;
   nbits = srclen * 5;
 
+  tor_assert(srclen < SIZE_T_CEILING / 5);
   tor_assert((nbits%8) == 0); /* We need an even multiple of 8 bits. */
   tor_assert((nbits/8) <= destlen); /* We need enough space. */
   tor_assert(destlen < SIZE_T_CEILING);
