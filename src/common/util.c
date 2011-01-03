@@ -167,6 +167,8 @@ _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
 {
   void *result;
 
+  tor_assert(size < SIZE_T_CEILING);
+
 #ifdef USE_DMALLOC
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
 #else
