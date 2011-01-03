@@ -1694,7 +1694,8 @@ predicted_ports_free(void)
 {
   rephist_total_alloc -=
     smartlist_len(predicted_ports_list)*sizeof(predicted_port_t);
-  SMARTLIST_FOREACH(predicted_ports_list, predicted_port_t *, pp, tor_free(pp));
+  SMARTLIST_FOREACH(predicted_ports_list, predicted_port_t *,
+                    pp, tor_free(pp));
   smartlist_free(predicted_ports_list);
 }
 
