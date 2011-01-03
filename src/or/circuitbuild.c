@@ -2077,7 +2077,8 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   n_addr32 = ntohl(get_uint32(cell->payload+RELAY_HEADER_SIZE));
   n_port = ntohs(get_uint16(cell->payload+RELAY_HEADER_SIZE+4));
   onionskin = (char*) cell->payload+RELAY_HEADER_SIZE+4+2;
-  id_digest = (char*) cell->payload+RELAY_HEADER_SIZE+4+2+ONIONSKIN_CHALLENGE_LEN;
+  id_digest = (char*) cell->payload+RELAY_HEADER_SIZE+4+2+
+    ONIONSKIN_CHALLENGE_LEN;
   tor_addr_from_ipv4h(&n_addr, n_addr32);
 
   if (!n_port || !n_addr32) {
@@ -2232,7 +2233,7 @@ circuit_finish_handshake(origin_circuit_t *circ, uint8_t reply_type,
   tor_assert(hop->state == CPATH_STATE_AWAITING_KEYS);
 
   if (reply_type == CELL_CREATED && hop->dh_handshake_state) {
-    if (onion_skin_client_handshake(hop->dh_handshake_state, (char*)reply, keys,
+    if (onion_skin_client_handshake(hop->dh_handshake_state, (char*)reply,keys,
                                     DIGEST_LEN*2+CIPHER_KEY_LEN*2) < 0) {
       log_warn(LD_CIRC,"onion_skin_client_handshake failed.");
       return -END_CIRC_REASON_TORPROTOCOL;
