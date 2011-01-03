@@ -4,7 +4,7 @@
 # Copyright (c) 2007-2011, The Tor Project, Inc.
 # See LICENSE for licensing information
 
-AUTOMAKE_OPTIONS = foreign
+AUTOMAKE_OPTIONS = foreign 1.7
  # else it keeps trying to put COPYING back in
 
 SUBDIRS = src doc contrib
