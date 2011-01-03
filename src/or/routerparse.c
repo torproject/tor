@@ -2170,7 +2170,6 @@ networkstatus_v2_parse_from_string(const char *s)
   return ns;
 }
 
-
 /** Parse a v3 networkstatus vote, opinion, or consensus (depending on
  * ns_type), from <b>s</b>, and return the result.  Return NULL on failure. */
 networkstatus_t *

@@ -379,8 +379,8 @@ fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
  * and protected by TLS).
  */
 int
-fast_client_handshake(const uint8_t *handshake_state, /* DIGEST_LEN bytes */
-                      const uint8_t *handshake_reply_out, /* DIGEST_LEN*2 bytes */
+fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
+                      const uint8_t *handshake_reply_out,/*DIGEST_LEN*2 bytes*/
                       uint8_t *key_out,
                       size_t key_out_len)
 {
