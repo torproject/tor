@@ -1213,6 +1213,7 @@ static void
 test_util_load_win_lib(void *ptr)
 {
   HANDLE h = load_windows_system_library("advapi32.dll");
+  (void) ptr;
 
   tt_assert(h);
  done:
