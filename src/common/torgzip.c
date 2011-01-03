@@ -57,6 +57,24 @@ method_bits(compress_method_t method)
   return method == GZIP_METHOD ? 15+16 : 15;
 }
 
+/* These macros define the maximum allowable compression factor.  Anything of
+ * size greater than <b>check_for_compression_bomb_after</b> is not allowed to
+ * have an uncompression factor (uncompressed size:compressed size ratio) of
+ * any greater than MAX_UNCOMPRESSION_FACTOR. */
+#define MAX_UNCOMPRESSION_FACTOR 25
+#define CHECK_FOR_COMPRESSION_BOMB_AFTER (1024*64)
+
+/** Return true if uncompressing an input of size <b>in_size</b> to an input
+ * of size at least <b>size_out</b> looks like a compression bomb. */
+static int
+is_compression_bomb(size_t size_in, size_t size_out)
+{
+  if (size_in == 0 || size_out < CHECK_FOR_COMPRESSION_BOMB_AFTER)
+    return 0;
+
+  return (size_out / size_in > MAX_UNCOMPRESSION_FACTOR);
+}
+
 /** Given <b>in_len</b> bytes at <b>in</b>, compress them into a newly
  * allocated buffer, using the method described in <b>method</b>.  Store the
  * compressed string in *<b>out</b>, and its length in *<b>out_len</b>.
@@ -159,6 +177,12 @@ tor_gzip_compress(char **out, size_t *out_len,
   }
   tor_free(stream);
 
+  if (is_compression_bomb(*out_len, in_len)) {
+    log_warn(LD_BUG, "We compressed something and got an insanely high "
+          "compression factor; other Tors would think this was a zlib bomb.");
+    goto err;
+  }
+
   return 0;
  err:
   if (stream) {
@@ -223,7 +247,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
   out_size = in_len * 2;  /* guess 50% compression. */
   if (out_size < 1024) out_size = 1024;
-  if (out_size > UINT_MAX)
+  if (out_size > SIZE_T_CEILING || out_size > UINT_MAX)
     goto err;
 
   *out = tor_malloc(out_size);
@@ -263,7 +287,16 @@ tor_gzip_uncompress(char **out, size_t *out_len,
         old_size = out_size;
         out_size *= 2;
         if (out_size < old_size) {
-          log_warn(LD_GENERAL, "Size overflow in compression.");
+          log_warn(LD_GENERAL, "Size overflow in uncompression.");
+          goto err;
+        }
+        if (is_compression_bomb(in_len, out_size)) {
+          log_warn(LD_GENERAL, "Input looks look a possible zlib bomb; "
+                   "not proceeding.");
+          goto err;
+        }
+        if (out_size >= SIZE_T_CEILING) {
+          log_warn(LD_BUG, "Hit SIZE_T_CEILING limit while uncompressing.");
           goto err;
         }
         *out = tor_realloc(*out, out_size);
@@ -329,6 +362,11 @@ detect_compression_method(const char *in, size_t in_len)
 struct tor_zlib_state_t {
   struct z_stream_s stream;
   int compress;
+
+  /* Number of bytes read so far.  Used to detect zlib bombs. */
+  size_t input_so_far;
+  /* Number of bytes written so far.  Used to detect zlib bombs. */
+  size_t output_so_far;
 };
 
 /** Construct and return a tor_zlib_state_t object using <b>method</b>.  If
@@ -395,10 +433,19 @@ tor_zlib_process(tor_zlib_state_t *state,
     err = inflate(&state->stream, finish ? Z_FINISH : Z_SYNC_FLUSH);
   }
 
+  state->input_so_far += state->stream.next_in - ((unsigned char*)*in);
+  state->output_so_far += state->stream.next_out - ((unsigned char*)*out);
+
   *out = (char*) state->stream.next_out;
   *out_len = state->stream.avail_out;
   *in = (const char *) state->stream.next_in;
   *in_len = state->stream.avail_in;
+
+  if (! state->compress &&
+      is_compression_bomb(state->input_so_far, state->output_so_far)) {
+    log_warn(LD_DIR, "Possible zlib bomb; abandoning stream.");
+    return TOR_ZLIB_ERR;
+  }
 
   switch (err)
     {
