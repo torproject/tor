@@ -1359,13 +1359,13 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       myPid = getpid();
     #endif
 
-    tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(myPid));
+    tor_asprintf(answer, "%d", myPid);
   } else if (!strcmp(question, "process/uid")) {
     #ifdef MS_WINDOWS
       *answer = tor_strdup("-1");
     #else
       int myUid = geteuid();
-      tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(myUid));
+      tor_asprintf(answer, "%d", myUid);
     #endif
   } else if (!strcmp(question, "process/user")) {
     #ifdef MS_WINDOWS
@@ -1383,12 +1383,14 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
   } else if (!strcmp(question, "process/descriptor-limit")) {
     /** platform specifc limits are from the set_max_file_descriptors function
       * of src/common/compat.c */
+    /* XXXX023 This is duplicated code from compat.c; it should turn into a
+     * function.  */
     #ifdef HAVE_GETRLIMIT
       struct rlimit descriptorLimit;
 
       if (getrlimit(RLIMIT_NOFILE, &descriptorLimit) == 0) {
         tor_asprintf(answer, U64_FORMAT,
-        U64_PRINTF_ARG(descriptorLimit.rlim_max));
+                     U64_PRINTF_ARG(descriptorLimit.rlim_max));
       } else {
         *answer = tor_strdup("-1");
       }
