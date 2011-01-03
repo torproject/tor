@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2010 The Tor Project, Inc. */
+/* Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
