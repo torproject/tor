@@ -1996,7 +1996,8 @@ rep_hist_exit_stats_term(void)
 
 /** Helper for qsort: compare two ints. */
 static int
-_compare_int(const void *x, const void *y) {
+_compare_int(const void *x, const void *y)
+{
   return (*(int*)x - *(int*)y);
 }
 
