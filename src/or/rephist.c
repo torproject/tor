@@ -1982,7 +1982,9 @@ rep_hist_exit_stats_term(void)
   tor_free(exit_streams);
 }
 
-/** Helper for qsort: compare two ints. */
+/** Helper for qsort: compare two ints.  Does not handle overflow properly,
+ * but works fine for sorting an array of port numbers, which is what we use
+ * it for. */
 static int
 _compare_int(const void *x, const void *y)
 {
