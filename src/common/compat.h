@@ -31,7 +31,7 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
-#ifdef HAVE_PTHREAD_H
+#if defined(HAVE_PTHREAD_H) && !defined(MS_WINDOWS)
 #include <pthread.h>
 #endif
 #include <stdarg.h>
