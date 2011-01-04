@@ -2112,7 +2112,7 @@ tor_localtime_r(const time_t *timep, struct tm *result)
  * Convert *<b>timep</b> to a struct tm in UTC, and store the value in
  * *<b>result</b>.  Return the result on success, or NULL on failure.
  */
-#ifndef HAVE_GMTIME_R
+#ifdef HAVE_GMTIME_R
 struct tm *
 tor_gmtime_r(const time_t *timep, struct tm *result)
 {
@@ -2130,7 +2130,8 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
   tor_assert(result);
   tor_mutex_acquire(m);
   r = gmtime(timep);
-  memcpy(result, r, sizeof(struct tm));
+  if (r)
+    memcpy(result, r, sizeof(struct tm));
   tor_mutex_release(m);
   return correct_tm(0, timep, result, r);
 }
@@ -2141,7 +2142,8 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
   struct tm *r;
   tor_assert(result);
   r = gmtime(timep);
-  memcpy(result, r, sizeof(struct tm));
+  if (r)
+    memcpy(result, r, sizeof(struct tm));
   return correct_tm(0, timep, result, r);
 }
 #endif
