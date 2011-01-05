@@ -1,0 +1,4 @@
+  o Minor bugfixes
+    - Fix a bug where we would declare that we had run out of virtual
+      addresses when the address space was only half-exhausted.  Bugfix
+      on 0.1.1.19-rc.
