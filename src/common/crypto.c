@@ -2439,8 +2439,8 @@ base32_decode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   /* XXXX we might want to rewrite this along the lines of base64_decode, if
    * it ever shows up in the profile. */
-  unsigned int i, bit;
-  size_t nbits, j;
+  unsigned int i;
+  size_t nbits, j, bit;
   char *tmp;
   nbits = srclen * 5;
 
