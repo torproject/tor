@@ -247,7 +247,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
 
   out_size = in_len * 2;  /* guess 50% compression. */
   if (out_size < 1024) out_size = 1024;
-  if (out_size > SIZE_T_CEILING || out_size > UINT_MAX)
+  if (out_size >= SIZE_T_CEILING || out_size > UINT_MAX)
     goto err;
 
   *out = tor_malloc(out_size);
