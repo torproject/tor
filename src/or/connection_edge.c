@@ -1169,6 +1169,10 @@ addressmap_get_virtual_address(int type)
       while ((next_virtual_addr & 0xff) == 0 ||
              (next_virtual_addr & 0xff) == 0xff) {
         ++next_virtual_addr;
+        if (! --available) {
+          log_warn(LD_CONFIG, "Ran out of virtual addresses!");
+          return NULL;
+        }
       }
       in.s_addr = htonl(next_virtual_addr);
       tor_inet_ntoa(&in, buf, sizeof(buf));
