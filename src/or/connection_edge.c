@@ -1200,6 +1200,7 @@ addressmap_get_virtual_address(int type)
   } else if (type == RESOLVED_TYPE_IPV4) {
     // This is an imperfect estimate of how many addresses are available, but
     // that's ok.
+    struct in_addr in;
     uint32_t available = 1u << (32-virtual_addr_netmask_bits);
     while (available) {
       /* Don't hand out any .0 or .255 address. */
@@ -1211,7 +1212,9 @@ addressmap_get_virtual_address(int type)
           return NULL;
         }
       }
-      if (!strmap_get(addressmap, fmt_addr32(next_virtual_addr))) {
+      in.s_addr = htonl(next_virtual_addr);
+      tor_inet_ntoa(&in, buf, sizeof(buf));
+      if (!strmap_get(addressmap, buf)) {
         ++next_virtual_addr;
         break;
       }
