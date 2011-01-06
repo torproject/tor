@@ -1382,8 +1382,8 @@ parse_short_policy(const char *summary)
   }
 
   {
-    size_t size = sizeof(short_policy_t) +
-      sizeof(short_policy_entry_t)*(n_entries-1);
+    size_t size = STRUCT_OFFSET(short_policy_t, entries) +
+      sizeof(short_policy_entry_t)*(n_entries);
     result = tor_malloc_zero(size);
 
     tor_assert( (char*)&result->entries[n_entries-1] < ((char*)result)+size);

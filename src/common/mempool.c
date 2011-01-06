@@ -137,7 +137,8 @@ struct mp_chunk_t {
   int capacity; /**< Number of items that can be fit into this chunk. */
   size_t mem_size; /**< Number of usable bytes in mem. */
   char *next_mem; /**< Pointer into part of <b>mem</b> not yet carved up. */
-  char mem[1]; /**< Storage for this chunk. (Not actual size.) */
+  /** Storage for this chunk */
+  char mem[FLEXIBLE_ARRAY_MEMBER];
 };
 
 /** Number of extra bytes needed beyond mem_size to allocate a chunk. */

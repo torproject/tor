@@ -158,6 +158,28 @@ AM_CONDITIONAL(NAT_PMP, test x$natpmp = xtrue)
 AM_CONDITIONAL(MINIUPNPC, test x$upnp = xtrue)
 AM_PROG_CC_C_O
 
+ifdef([AC_C_FLEXIBLE_ARRAY_MEMBER], [
+AC_C_FLEXIBLE_ARRAY_MEMBER
+], [
+ dnl Maybe we've got an old autoconf...
+ AC_CACHE_CHECK([for flexible array members],
+     tor_cv_c_flexarray,
+     [AC_COMPILE_IFELSE(
+       AC_LANG_PROGRAM([
+ struct abc { int a; char b[]; };
+], [
+ struct abc *def = malloc(sizeof(struct abc)+sizeof(char));
+ def->b[0] = 33;
+]),
+  [tor_cv_c_flexarray=yes],
+  [tor_cv_c_flexarray=no])])
+ if test $tor_cv_flexarray = yes ; then
+   AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [])
+ else
+   AC_DEFINE([FLEXIBLE_ARRAY_MEMBER], [1])
+ fi
+])
+
 AC_PATH_PROG([SHA1SUM], [sha1sum], none)
 AC_PATH_PROG([OPENSSL], [openssl], none)
 
