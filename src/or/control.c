@@ -1350,6 +1350,10 @@ getinfo_helper_misc(control_connection_t *conn, const char *question,
       return -1;
     }
     *answer = tor_dup_ip(addr);
+  } else if (!strcmp(question, "traffic/read")) {
+    tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(get_bytes_read()));
+  } else if (!strcmp(question, "traffic/written")) {
+    tor_asprintf(answer, U64_FORMAT, U64_PRINTF_ARG(get_bytes_written()));
   } else if (!strcmp(question, "process/pid")) {
     int myPid = -1;
 
@@ -1958,6 +1962,8 @@ static const getinfo_item_t getinfo_items[] = {
       "Number of versioning authorities agreeing on the status of the "
       "current version"),
   ITEM("address", misc, "IP address of this Tor host, if we can guess it."),
+  ITEM("traffic/read", misc, "Bytes read since the process was started."),
+  ITEM("traffic/written", misc, "Bytes written since the process was started."),
   ITEM("process/pid", misc, "Process id belonging to the main tor process."),
   ITEM("process/uid", misc, "User id running the tor process."),
   ITEM("process/user", misc,"Username under which the tor process is running."),

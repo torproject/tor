@@ -517,6 +517,10 @@
        with a $.  This is an implementation error.  It would be nice to add
        the $ back in if we can do so without breaking compatibility.]
 
+    "traffic/read" -- Total bytes read (downloaded).
+
+    "traffic/written" -- Total bytes written (uploaded).
+
     "accounting/enabled"
     "accounting/hibernating"
     "accounting/bytes"

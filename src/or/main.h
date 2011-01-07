@@ -24,6 +24,8 @@ void add_connection_to_closeable_list(connection_t *conn);
 int connection_is_on_closeable_list(connection_t *conn);
 
 smartlist_t *get_connection_array(void);
+uint64_t get_bytes_read(void);
+uint64_t get_bytes_written(void);
 
 typedef enum watchable_events {
   /* Yes, it is intentional that these match Libevent's EV_READ and EV_WRITE */

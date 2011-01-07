@@ -398,6 +398,20 @@ get_connection_array(void)
   return connection_array;
 }
 
+/** Provides the traffic read and written over the life of the process. */
+
+uint64_t
+get_bytes_read(void)
+{
+  return stats_n_bytes_read;
+}
+
+uint64_t
+get_bytes_written(void)
+{
+  return stats_n_bytes_written;
+}
+
 /** Set the event mask on <b>conn</b> to <b>events</b>.  (The event
  * mask is a bitmask whose bits are READ_EVENT and WRITE_EVENT)
  */

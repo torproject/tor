@@ -1,0 +1,4 @@
+  o Minor features (controller)
+    - Add GETINFO options to get total bytes read and written. Patch
+      from pipe, revised by atagar.  Resolves ticket 2345.
+
