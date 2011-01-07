@@ -1139,6 +1139,18 @@ address_is_in_virtual_range(const char *address)
   return 0;
 }
 
+/** Increment the value of next_virtual_addr; reset it to the start of the
+ * virtual address range if it wraps around.
+ */
+static INLINE void
+increment_virtual_addr(void)
+{
+  ++next_virtual_addr;
+  if (addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
+                         virtual_addr_netmask_bits))
+    next_virtual_addr = virtual_addr_network;
+}
+
 /** Return a newly allocated string holding an address of <b>type</b>
  * (one of RESOLVED_TYPE_{IPV4|HOSTNAME}) that has not yet been mapped,
  * and that is very unlikely to be the address of any real host.
@@ -1168,7 +1180,7 @@ addressmap_get_virtual_address(int type)
       /* Don't hand out any .0 or .255 address. */
       while ((next_virtual_addr & 0xff) == 0 ||
              (next_virtual_addr & 0xff) == 0xff) {
-        ++next_virtual_addr;
+        increment_virtual_addr();
         if (! --available) {
           log_warn(LD_CONFIG, "Ran out of virtual addresses!");
           return NULL;
@@ -1177,20 +1189,17 @@ addressmap_get_virtual_address(int type)
       in.s_addr = htonl(next_virtual_addr);
       tor_inet_ntoa(&in, buf, sizeof(buf));
       if (!strmap_get(addressmap, buf)) {
-        ++next_virtual_addr;
+        increment_virtual_addr();
         break;
       }
 
-      ++next_virtual_addr;
+      increment_virtual_addr();
       --available;
       log_info(LD_CONFIG, "%d addrs available", (int)available);
       if (! available) {
         log_warn(LD_CONFIG, "Ran out of virtual addresses!");
         return NULL;
       }
-      if (addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
-                             virtual_addr_netmask_bits))
-        next_virtual_addr = virtual_addr_network;
     }
     return tor_strdup(buf);
   } else {
