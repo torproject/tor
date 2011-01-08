@@ -1195,7 +1195,7 @@ addressmap_get_virtual_address(int type)
 
       increment_virtual_addr();
       --available;
-      log_info(LD_CONFIG, "%d addrs available", (int)available);
+      // log_info(LD_CONFIG, "%d addrs available", (int)available);
       if (! available) {
         log_warn(LD_CONFIG, "Ran out of virtual addresses!");
         return NULL;
