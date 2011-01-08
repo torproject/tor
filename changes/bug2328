@@ -5,4 +5,5 @@
     - Correctly handle the case where AutomapHostsOnResolve is set but no
       virtual addresses are available.  Fixes bug2328, bugfix on
       0.1.2.1-alpha.  Bug found by doorss.
-
+    - Correctly handle wrapping around to when we run out of virtual address
+      space.  Found by cypherpunks, bugfix on 0.2.0.5-alpha.
