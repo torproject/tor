@@ -54,12 +54,16 @@ struct evdns_request;
   evdns_config_windows_nameservers()
 #define evdns_base_set_option_(base, opt, val) \
   evdns_set_option((opt),(val),DNS_OPTIONS_ALL)
+/* Note: our internal eventdns.c, plus libevent 1.4, used a 1 return to
+ * signify failure to launch a resolve. Libevent 2.0 uses a -1 return to
+ * signify a failure on a resolve, though if we're on libevent 2.0, we should
+ * have event2/dns.h and never hit these macros.  Regardless, 0 is success. */
 #define evdns_base_resolve_ipv4(base, addr, options, cb, ptr) \
-  ((evdns_resolve_ipv4(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
+  ((evdns_resolve_ipv4(addr, options, cb, ptr)!=0) ? NULL : ((void*)1))
 #define evdns_base_resolve_reverse(base, addr, options, cb, ptr) \
-  ((evdns_resolve_reverse(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
+  ((evdns_resolve_reverse(addr, options, cb, ptr)!=0) ? NULL : ((void*)1))
 #define evdns_base_resolve_reverse_ipv6(base, addr, options, cb, ptr) \
-  ((evdns_resolve_reverse_ipv6(addr, options, cb, ptr)<0) ? NULL : ((void*)1))
+  ((evdns_resolve_reverse_ipv6(addr, options, cb, ptr)!=0) ? NULL : ((void*)1))
 
 #elif defined(LIBEVENT_VERSION_NUMBER) && LIBEVENT_VERSION_NUMBER < 0x02000303
 #define evdns_base_set_option_(base, opt, val) \

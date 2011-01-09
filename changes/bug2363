@@ -1,0 +1,6 @@
+  o Minor bugfixes
+    - Correctly detect failures to create DNS requests when using Libevent
+      versions before v2.  (Before Libevent 2, we used our own evdns
+      implementation.  Its return values for Libevent's evdns_resolve_*()
+      functions are not consistent with those from Libevent.) Found by
+      Lodger; fixes bug 2363; bugfix on 0.2.2.6-alpha.
