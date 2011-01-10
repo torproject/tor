@@ -3361,11 +3361,11 @@ test_v3_networkstatus(void)
   sign_skey_leg1 = pk_generate(4);
 
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
-                                                      AUTHORITY_SIGNKEY_1));
+                                                      AUTHORITY_SIGNKEY_1,-1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,
-                                                      AUTHORITY_SIGNKEY_2));
+                                                      AUTHORITY_SIGNKEY_2,-1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_3,
-                                                      AUTHORITY_SIGNKEY_3));
+                                                      AUTHORITY_SIGNKEY_3,-1));
 
   test_assert(!crypto_pk_cmp_keys(sign_skey_1, cert1->signing_key));
   test_assert(!crypto_pk_cmp_keys(sign_skey_2, cert2->signing_key));

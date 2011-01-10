@@ -3132,7 +3132,7 @@ get_next_token(memarea_t *area,
       RET_ERR("Couldn't parse public key.");
   } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
     tok->key = crypto_new_pk_env();
-    if (crypto_pk_read_private_key_from_string(tok->key, obstart))
+    if (crypto_pk_read_private_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse private key.");
   } else { /* If it's something else, try to base64-decode it */
     int r;

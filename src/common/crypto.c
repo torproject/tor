@@ -439,21 +439,23 @@ crypto_pk_generate_key(crypto_pk_env_t *env)
   return 0;
 }
 
-/** Read a PEM-encoded private key from the string <b>s</b> into <b>env</b>.
- * Return 0 on success, -1 on failure.
+/** Read a PEM-encoded private key from the <b>len</b>-byte string <b>s</b>
+ * into <b>env</b>.  Return 0 on success, -1 on failure.  If len is -1,
+ * the string is nul-terminated.
  */
 /* Used here, and used for testing. */
 int
 crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
-                                       const char *s)
+                                       const char *s, ssize_t len)
 {
   BIO *b;
 
   tor_assert(env);
   tor_assert(s);
+  tor_assert(len < INT_MAX && len < SIZE_T_CEILING);
 
-  /* Create a read-only memory BIO, backed by the NUL-terminated string 's' */
-  b = BIO_new_mem_buf((char*)s, -1);
+  /* Create a read-only memory BIO, backed by the string 's' */
+  b = BIO_new_mem_buf((char*)s, (int)len);
 
   if (env->key)
     RSA_free(env->key);
@@ -487,7 +489,7 @@ crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
   }
 
   /* Try to parse it. */
-  r = crypto_pk_read_private_key_from_string(env, contents);
+  r = crypto_pk_read_private_key_from_string(env, contents, -1);
   tor_free(contents);
   if (r)
     return -1; /* read_private_key_from_string already warned, so we don't.*/
