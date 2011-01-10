@@ -3,3 +3,8 @@
       triggered if a future version of Tor ever changed the timing
       granularity at which bandwidth history is measured.  Bugfix on
       Tor 0.1.1.11-alpha.
+    - Correctly clear out dir_read/dir_write history when there is an
+      error parsing any bw history value from the state file. Bugfix on
+      Tor 0.2.2.15-alpha.
+
+

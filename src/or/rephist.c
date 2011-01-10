@@ -1293,10 +1293,15 @@ static bw_array_t *dir_read_array = NULL;
     directory protocol. */
 static bw_array_t *dir_write_array = NULL;
 
-/** Set up [dir-]read_array and [dir-]write_array. */
+/** Set up [dir-]read_array and [dir-]write_array, freeing them if they alrady
+ * exist. */
 static void
 bw_arrays_init(void)
 {
+  tor_free(read_array);
+  tor_free(write_array);
+  tor_free(dir_read_array);
+  tor_free(dir_write_array);
   read_array = bw_array_new();
   write_array = bw_array_new();
   dir_read_array = bw_array_new();
@@ -1627,11 +1632,7 @@ rep_hist_load_state(or_state_t *state, char **err)
   if (!all_ok) {
     *err = tor_strdup("Parsing of bandwidth history values failed");
     /* and create fresh arrays */
-    tor_free(read_array);
-    tor_free(write_array);
-
-    read_array = bw_array_new();
-    write_array = bw_array_new();
+    bw_arrays_init();
     return -1;
   }
   return 0;
