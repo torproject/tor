@@ -1261,8 +1261,12 @@ add_obs(bw_array_t *b, time_t when, uint64_t n)
   /* If we're currently adding observations for an earlier second than
    * 'when', advance b->cur_obs_time and b->cur_obs_idx by an
    * appropriate number of seconds, and do all the other housekeeping */
-  while (when>b->cur_obs_time)
+  while (when>b->cur_obs_time) {
+    /* Doing this one second at a time is potentially inefficient, if we start
+       with a state file that is very old.  Fortunately, it doesn't seem to
+       show up in profiles, so we can just ignore it for now.  */
     advance_obs(b);
+  }
 
   b->obs[b->cur_obs_idx] += n;
   b->total_in_period += n;
@@ -1497,14 +1501,20 @@ static void
 rep_hist_update_bwhist_state_section(or_state_t *state,
                                      const bw_array_t *b,
                                      smartlist_t **s_values,
+                                     smartlist_t **s_maxima,
                                      time_t *s_begins,
                                      int *s_interval)
 {
-  char buf[20*NUM_TOTALS + 1], *cp;
+  char *cp;
+  int i,j;
 
   if (*s_values) {
     SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
     smartlist_free(*s_values);
+  }
+  if (*s_maxima) {
+    SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
+    smartlist_free(*s_maxima);
   }
   if (! server_mode(get_options())) {
     /* Clients don't need to store bandwidth history persistently;
@@ -1519,18 +1529,30 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
     *s_begins = 0;
     *s_interval = 900;
     *s_values = smartlist_create();
+    *s_maxima = smartlist_create();
     return;
   }
   *s_begins = b->next_period;
   *s_interval = NUM_SECS_BW_SUM_INTERVAL;
-  cp = buf;
-  cp += rep_hist_fill_bandwidth_history(cp, sizeof(buf), b);
-  tor_snprintf(cp, sizeof(buf)-(cp-buf),
-               cp == buf ? U64_FORMAT : ","U64_FORMAT,
-               U64_PRINTF_ARG(b->total_in_period));
+
   *s_values = smartlist_create();
-  if (server_mode(get_options()))
-    smartlist_split_string(*s_values, buf, ",", SPLIT_SKIP_SPACE, 0);
+  *s_maxima = smartlist_create();
+  /* Set i to first position in circular array */
+  i = (b->num_maxes_set <= b->next_max_idx) ? 0 : b->next_max_idx;
+  for (j=0; j < b->num_maxes_set; ++j,++i) {
+    uint64_t maxval;
+    if (i > NUM_TOTALS)
+      i = 0;
+    tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->totals[i] & ~0x3ff));
+    smartlist_add(*s_values, cp);
+    maxval = b->maxima[i] / NUM_SECS_ROLLING_MEASURE;
+    tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(maxval & ~0x3ff));
+    smartlist_add(*s_maxima, cp);
+  }
+  tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->total_in_period & ~0x3ff));
+  smartlist_add(*s_values, cp);
+  tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->max_total & ~0x3ff));
+  smartlist_add(*s_maxima, cp);
 }
 
 /** Update <b>state</b> with the newest bandwidth history. */
@@ -1541,6 +1563,7 @@ rep_hist_update_state(or_state_t *state)
   rep_hist_update_bwhist_state_section(state,\
                                        (arrname),\
                                        &state->BWHistory ## st ## Values, \
+                                       &state->BWHistory ## st ## Maxima, \
                                        &state->BWHistory ## st ## Ends, \
                                        &state->BWHistory ## st ## Interval)
 
@@ -1560,6 +1583,7 @@ rep_hist_update_state(or_state_t *state)
 static int
 rep_hist_load_bwhist_state_section(bw_array_t *b,
                                    const smartlist_t *s_values,
+                                   const smartlist_t *s_maxima,
                                    const time_t s_begins,
                                    const int s_interval)
 {
@@ -1567,8 +1591,9 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
   int retval = 0;
   time_t start;
 
-  uint64_t v;
-  int i,ok;
+  uint64_t v, mv;
+  int i,ok,ok_m;
+  int have_maxima = (smartlist_len(s_values) == smartlist_len(s_maxima));
 
   if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
     start = s_begins - s_interval*(smartlist_len(s_values));
@@ -1578,12 +1603,22 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
     b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
     SMARTLIST_FOREACH_BEGIN(s_values, const char *, cp) {
         v = tor_parse_uint64(cp, 10, 0, UINT64_MAX, &ok, NULL);
-        if (!ok) {
+        if (have_maxima) {
+          const char *maxstr = smartlist_get(s_maxima, cp_sl_idx);
+          mv = tor_parse_uint64(maxstr, 10, 0, UINT64_MAX, &ok_m, NULL);
+          mv *= NUM_SECS_ROLLING_MEASURE;
+        } else {
+          /* No maxima known; guess average rate to be conservative. */
+          mv = v / s_interval;
+        }
+        if (!ok || !ok_m) {
           retval = -1;
           log_notice(LD_HIST, "Could not parse '%s' into a number.'", cp);
         }
+
         if (start < now) {
           add_obs(b, start, v);
+          b->max_total = mv;
           /* This will result in some fairly choppy history if s_interval
            * is notthe same as NUM_SECS_BW_SUM_INTERVAL. XXXX */
           start += s_interval;
@@ -1592,15 +1627,10 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
   }
 
   /* Clean up maxima and observed */
-  /* Do we really want to zero this for the purpose of max capacity? */
   for (i=0; i<NUM_SECS_ROLLING_MEASURE; ++i) {
     b->obs[i] = 0;
   }
   b->total_obs = 0;
-  for (i=0; i<NUM_TOTALS; ++i) {
-    b->maxima[i] = 0;
-  }
-  b->max_total = 0;
 
   return retval;
 }
@@ -1619,6 +1649,7 @@ rep_hist_load_state(or_state_t *state, char **err)
   if (rep_hist_load_bwhist_state_section(                               \
                                 (arrname),                              \
                                 state->BWHistory ## st ## Values,       \
+                                state->BWHistory ## st ## Maxima,       \
                                 state->BWHistory ## st ## Ends,         \
                                 state->BWHistory ## st ## Interval)<0)  \
     all_ok = 0
