@@ -280,7 +280,7 @@ dnsserv_resolved(edge_connection_t *conn,
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE) {
     evdns_server_request_add_a_reply(req,
                                      name,
-                                     1, (char*)answer, ttl);
+                                     1, answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_HOSTNAME &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
     char *ans = tor_strndup(answer, answer_len);

@@ -1668,7 +1668,7 @@ evdns_server_request_add_reply(struct evdns_server_request *_req, int section, c
 
 /* exported function */
 int
-evdns_server_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
+evdns_server_request_add_a_reply(struct evdns_server_request *req, const char *name, int n, const void *addrs, int ttl)
 {
 	return evdns_server_request_add_reply(
 		  req, EVDNS_ANSWER_SECTION, name, TYPE_A, CLASS_INET,
@@ -1677,7 +1677,7 @@ evdns_server_request_add_a_reply(struct evdns_server_request *req, const char *n
 
 /* exported function */
 int
-evdns_server_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, void *addrs, int ttl)
+evdns_server_request_add_aaaa_reply(struct evdns_server_request *req, const char *name, int n, const void *addrs, int ttl)
 {
 	return evdns_server_request_add_reply(
 		  req, EVDNS_ANSWER_SECTION, name, TYPE_AAAA, CLASS_INET,
