@@ -1297,8 +1297,8 @@ static bw_array_t *dir_read_array = NULL;
     directory protocol. */
 static bw_array_t *dir_write_array = NULL;
 
-/** Set up [dir-]read_array and [dir-]write_array, freeing them if they alrady
- * exist. */
+/** Set up [dir-]read_array and [dir-]write_array, freeing them if they
+ * already exist. */
 static void
 bw_arrays_init(void)
 {
@@ -1495,8 +1495,8 @@ rep_hist_get_bandwidth_lines(void)
   return buf;
 }
 
-/** Write a single bw_warray_t from its Values, Ends, and Interval entries
- * from a state.  */
+/** Write a single bw_array_t into the Values, Ends, Interval, and Maximum
+ * entries of an or_state_t. */
 static void
 rep_hist_update_bwhist_state_section(or_state_t *state,
                                      const bw_array_t *b,
@@ -1578,8 +1578,8 @@ rep_hist_update_state(or_state_t *state)
 #undef UPDATE
 }
 
-/** Load a single bw_warray_t from its Values, Ends, and Interval entries from
- * a state.  */
+/** Load a single bw_array_t from its Values, Ends, Maxima, and Interval
+ * entries in an or_state_t.  */
 static int
 rep_hist_load_bwhist_state_section(bw_array_t *b,
                                    const smartlist_t *s_values,
