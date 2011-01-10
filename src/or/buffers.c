@@ -1475,6 +1475,10 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
                               socks_protocol, address, (int)port);
 }
 
+/** Do not attempt to parse socks messages longer than this.  This value is
+ * actually significantly higher than the longest possible socks message. */
+#define MAX_SOCKS_MESSAGE_LEN 512
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -1930,7 +1934,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
   if (buf->datalen < 2)
     return 0;
 
-  buf_pullup(buf, 128, 0);
+  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN, 0);
   tor_assert(buf->head && buf->head->datalen >= 2);
 
   r = parse_socks_client((uint8_t*)buf->head->data, buf->head->datalen,
@@ -1957,8 +1961,8 @@ fetch_from_evbuffer_socks_client(struct evbuffer *buf, int state,
   /* Linearize the SOCKS response in the buffer, up to 128 bytes.
    * (parse_socks_client shouldn't need to see anything beyond that.) */
   datalen = evbuffer_get_length(buf);
-  if (datalen > 128)
-    datalen = 128;
+  if (datalen > MAX_SOCKS_MESSAGE_LEN)
+    datalen = MAX_SOCKS_MESSAGE_LEN;
   data = evbuffer_pullup(buf, datalen);
 
   r = parse_socks_client(data, datalen, state, reason, &drain);
