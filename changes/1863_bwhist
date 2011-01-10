@@ -1,0 +1,5 @@
+  o Minor bugfixes
+    - Fix a bug in banwidth history state parsing that could have been
+      triggered if a future version of Tor ever changed the timing
+      granularity at which bandwidth history is measured.  Bugfix on
+      Tor 0.1.1.11-alpha.
