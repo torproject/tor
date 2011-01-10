@@ -275,7 +275,7 @@ dnsserv_resolved(edge_connection_t *conn,
     char *ans = tor_strndup(answer, answer_len);
     evdns_server_request_add_ptr_reply(req, NULL,
                                        name,
-                                       (char*)answer, ttl);
+                                       ans, ttl);
     tor_free(ans);
   } else if (answer_type == RESOLVED_TYPE_ERROR) {
     err = DNS_ERR_NOTEXIST;
