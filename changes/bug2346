@@ -1,0 +1,5 @@
+  o Minor features
+    - If writing the state file to disk fails, wait an hour before
+      retrying again.  Fixes bug 2346.  Bugfix on Tor 0.1.1.3-alpha.
+
+
