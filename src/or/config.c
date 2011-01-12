@@ -5292,6 +5292,9 @@ or_state_load(void)
   return r;
 }
 
+/** If writing the state to disk fails, try again after this many seconds. */
+#define STATE_WRITE_RETRY_INTERVAL 3600
+
 /** Write the persistent state to disk. Return 0 for success, <0 on failure. */
 int
 or_state_save(time_t now)
@@ -5326,10 +5329,14 @@ or_state_save(time_t now)
   tor_free(state);
   fname = get_datadir_fname("state");
   if (write_str_to_file(fname, contents, 0)<0) {
-    log_warn(LD_FS, "Unable to write state to file \"%s\"", fname);
+    log_warn(LD_FS, "Unable to write state to file \"%s\"; will try later",
+             fname);
     global_state->LastWritten = -1;
     tor_free(fname);
     tor_free(contents);
+    /* Try again after STATE_WRITE_RETRY_INTERVAL (or sooner, if the state
+     * changes sooner). */
+    global_state->next_write = now + STATE_WRITE_RETRY_INTERVAL;
     return -1;
   }
 
