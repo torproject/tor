@@ -68,8 +68,8 @@ typedef struct chunk_t {
   size_t datalen; /**< The number of bytes stored in this chunk */
   size_t memlen; /**< The number of usable bytes of storage in <b>mem</b>. */
   char *data; /**< A pointer to the first byte of data stored in <b>mem</b>. */
-  char mem[1]; /**< The actual memory used for storage in this chunk. May be
-                * more than one byte long. */
+  char mem[FLEXIBLE_ARRAY_MEMBER]; /**< The actual memory used for storage in
+                * this chunk. */
 } chunk_t;
 
 #define CHUNK_HEADER_LEN STRUCT_OFFSET(chunk_t, mem[0])

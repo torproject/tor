@@ -857,8 +857,8 @@ typedef struct cell_t {
 typedef struct var_cell_t {
   uint8_t command;
   circid_t circ_id;
-  uint16_t payload_len;
-  uint8_t payload[1];
+  uint16_t payload_len; /**< The actual length of <b>payload</b>. */
+  uint8_t payload[FLEXIBLE_ARRAY_MEMBER];
 } var_cell_t;
 
 /** A cell as packed for writing to the network. */
@@ -1660,11 +1660,11 @@ typedef struct short_policy_t {
   unsigned int is_accept : 1;
   /** The actual number of values in 'entries'. */
   unsigned int n_entries : 31;
-  /** An array of (probably more than 1!) short_policy_entry_t values,
-   * each descriping a range of ports that this policy accepts or rejects
-   * (depending on the value of is_accept).
+  /** An array of 0 or more short_policy_entry_t values, each descriping a
+   * range of ports that this policy accepts or rejects (depending on the
+   * value of is_accept).
    */
-  short_policy_entry_t entries[1];
+  short_policy_entry_t entries[FLEXIBLE_ARRAY_MEMBER];
 } short_policy_t;
 
 /** A microdescriptor is the smallest amount of information needed to build a

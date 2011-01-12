@@ -191,7 +191,8 @@ var_cell_pack_header(const var_cell_t *cell, char *hdr_out)
 var_cell_t *
 var_cell_new(uint16_t payload_len)
 {
-  var_cell_t *cell = tor_malloc(sizeof(var_cell_t)+payload_len-1);
+  size_t size = STRUCT_OFFSET(var_cell_t, payload) + payload_len;
+  var_cell_t *cell = tor_malloc(size);
   cell->payload_len = payload_len;
   cell->command = 0;
   cell->circ_id = 0;
