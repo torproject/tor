@@ -1660,7 +1660,7 @@ typedef struct short_policy_t {
   unsigned int is_accept : 1;
   /** The actual number of values in 'entries'. */
   unsigned int n_entries : 31;
-  /** An array of 0 or more short_policy_entry_t values, each descriping a
+  /** An array of 0 or more short_policy_entry_t values, each describing a
    * range of ports that this policy accepts or rejects (depending on the
    * value of is_accept).
    */
