@@ -5187,7 +5187,8 @@ or_state_save(time_t now)
     global_state->LastWritten = -1;
     tor_free(fname);
     tor_free(contents);
-    /* Try again in after STATE_WRITE_RETRY_INTERVAL */
+    /* Try again after STATE_WRITE_RETRY_INTERVAL (or sooner, if the state
+     * changes sooner). */
     global_state->next_write = now + STATE_WRITE_RETRY_INTERVAL;
     return -1;
   }
