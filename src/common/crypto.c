@@ -717,9 +717,12 @@ crypto_pk_copy_full(crypto_pk_env_t *env)
  * in <b>env</b>, using the padding method <b>padding</b>.  On success,
  * write the result to <b>to</b>, and return the number of bytes
  * written.  On failure, return -1.
+ *
+ * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
+ * at least the length of the modulus of <b>env</b>.
  */
 int
-crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
+crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to, size_t tolen,
                          const char *from, size_t fromlen, int padding)
 {
   int r;
@@ -727,6 +730,7 @@ crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
   tor_assert(from);
   tor_assert(to);
   tor_assert(fromlen<INT_MAX);
+  tor_assert(tolen >= crypto_pk_keysize(env));
 
   r = RSA_public_encrypt((int)fromlen,
                          (unsigned char*)from, (unsigned char*)to,
@@ -742,9 +746,13 @@ crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
  * in <b>env</b>, using the padding method <b>padding</b>.  On success,
  * write the result to <b>to</b>, and return the number of bytes
  * written.  On failure, return -1.
+ *
+ * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
+ * at least the length of the modulus of <b>env</b>.
  */
 int
 crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
+                          size_t tolen,
                           const char *from, size_t fromlen,
                           int padding, int warnOnFailure)
 {
@@ -754,6 +762,7 @@ crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
   tor_assert(to);
   tor_assert(env->key);
   tor_assert(fromlen<INT_MAX);
+  tor_assert(tolen >= crypto_pk_keysize(env));
   if (!env->key->p)
     /* Not a private key */
     return -1;
@@ -774,9 +783,13 @@ crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
  * public key in <b>env</b>, using PKCS1 padding.  On success, write the
  * signed data to <b>to</b>, and return the number of bytes written.
  * On failure, return -1.
+ *
+ * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
+ * at least the length of the modulus of <b>env</b>.
  */
 int
 crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
+                          size_t tolen,
                           const char *from, size_t fromlen)
 {
   int r;
@@ -784,6 +797,7 @@ crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
   tor_assert(from);
   tor_assert(to);
   tor_assert(fromlen < INT_MAX);
+  tor_assert(tolen >= crypto_pk_keysize(env));
   r = RSA_public_decrypt((int)fromlen,
                          (unsigned char*)from, (unsigned char*)to,
                          env->key, RSA_PKCS1_PADDING);
@@ -806,6 +820,7 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
 {
   char digest[DIGEST_LEN];
   char *buf;
+  size_t buflen;
   int r;
 
   tor_assert(env);
@@ -818,8 +833,9 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
     log_warn(LD_BUG, "couldn't compute digest");
     return -1;
   }
-  buf = tor_malloc(crypto_pk_keysize(env)+1);
-  r = crypto_pk_public_checksig(env,buf,sig,siglen);
+  buflen = crypto_pk_keysize(env)+1;
+  buf = tor_malloc(buflen);
+  r = crypto_pk_public_checksig(env,buf,buflen,sig,siglen);
   if (r != DIGEST_LEN) {
     log_warn(LD_CRYPTO, "Invalid signature");
     tor_free(buf);
@@ -839,9 +855,12 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
  * <b>env</b>, using PKCS1 padding.  On success, write the signature to
  * <b>to</b>, and return the number of bytes written.  On failure, return
  * -1.
+ *
+ * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
+ * at least the length of the modulus of <b>env</b>.
  */
 int
-crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
+crypto_pk_private_sign(crypto_pk_env_t *env, char *to, size_t tolen,
                        const char *from, size_t fromlen)
 {
   int r;
@@ -849,6 +868,7 @@ crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
   tor_assert(from);
   tor_assert(to);
   tor_assert(fromlen < INT_MAX);
+  tor_assert(tolen >= crypto_pk_keysize(env));
   if (!env->key->p)
     /* Not a private key */
     return -1;
@@ -867,16 +887,19 @@ crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
  * <b>from</b>; sign the data with the private key in <b>env</b>, and
  * store it in <b>to</b>.  Return the number of bytes written on
  * success, and -1 on failure.
+ *
+ * <b>tolen</b> is the number of writable bytes in <b>to</b>, and must be
+ * at least the length of the modulus of <b>env</b>.
  */
 int
-crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
+crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen)
 {
   int r;
   char digest[DIGEST_LEN];
   if (crypto_digest(digest,from,fromlen)<0)
     return -1;
-  r = crypto_pk_private_sign(env,to,digest,DIGEST_LEN);
+  r = crypto_pk_private_sign(env,to,tolen,digest,DIGEST_LEN);
   memset(digest, 0, sizeof(digest));
   return r;
 }
@@ -900,7 +923,7 @@ crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
  */
 int
 crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
-                                char *to,
+                                char *to, size_t tolen,
                                 const char *from,
                                 size_t fromlen,
                                 int padding, int force)
@@ -923,8 +946,13 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
 
   if (!force && fromlen+overhead <= pkeylen) {
     /* It all fits in a single encrypt. */
-    return crypto_pk_public_encrypt(env,to,from,fromlen,padding);
+    return crypto_pk_public_encrypt(env,to,
+                                    tolen,
+                                    from,fromlen,padding);
   }
+  tor_assert(tolen >= fromlen + overhead + CIPHER_KEY_LEN);
+  tor_assert(tolen >= pkeylen);
+
   cipher = crypto_new_cipher_env();
   if (!cipher) return -1;
   if (crypto_cipher_generate_key(cipher)<0)
@@ -946,7 +974,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
   /* Length of symmetrically encrypted data. */
   symlen = fromlen-(pkeylen-overhead-CIPHER_KEY_LEN);
 
-  outlen = crypto_pk_public_encrypt(env,to,buf,pkeylen-overhead,padding);
+  outlen = crypto_pk_public_encrypt(env,to,tolen,buf,pkeylen-overhead,padding);
   if (outlen!=(int)pkeylen) {
     goto err;
   }
@@ -972,6 +1000,7 @@ crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env,
 int
 crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
                                  char *to,
+                                 size_t tolen,
                                  const char *from,
                                  size_t fromlen,
                                  int padding, int warnOnFailure)
@@ -985,11 +1014,12 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   pkeylen = crypto_pk_keysize(env);
 
   if (fromlen <= pkeylen) {
-    return crypto_pk_private_decrypt(env,to,from,fromlen,padding,
+    return crypto_pk_private_decrypt(env,to,tolen,from,fromlen,padding,
                                      warnOnFailure);
   }
+
   buf = tor_malloc(pkeylen+1);
-  outlen = crypto_pk_private_decrypt(env,buf,from,pkeylen,padding,
+  outlen = crypto_pk_private_decrypt(env,buf,pkeylen+1,from,pkeylen,padding,
                                      warnOnFailure);
   if (outlen<0) {
     log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, LD_CRYPTO,
@@ -1007,6 +1037,7 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
   }
   memcpy(to,buf+CIPHER_KEY_LEN,outlen-CIPHER_KEY_LEN);
   outlen -= CIPHER_KEY_LEN;
+  tor_assert(tolen - outlen >= fromlen - pkeylen);
   r = crypto_cipher_decrypt(cipher, to+outlen, from+pkeylen, fromlen-pkeylen);
   if (r<0)
     goto err;

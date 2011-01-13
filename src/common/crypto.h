@@ -93,23 +93,25 @@ crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *orig);
 crypto_pk_env_t *crypto_pk_copy_full(crypto_pk_env_t *orig);
 int crypto_pk_key_is_private(const crypto_pk_env_t *key);
 
-int crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
+int crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to, size_t tolen,
                              const char *from, size_t fromlen, int padding);
-int crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
+int crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen,
                               int padding, int warnOnFailure);
-int crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
+int crypto_pk_public_checksig(crypto_pk_env_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen);
 int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
                                size_t datalen, const char *sig, size_t siglen);
-int crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
+int crypto_pk_private_sign(crypto_pk_env_t *env, char *to, size_t tolen,
                            const char *from, size_t fromlen);
-int crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
+int crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env, char *to,
+                                    size_t tolen,
                                     const char *from, size_t fromlen,
                                     int padding, int force);
 int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, char *to,
+                                     size_t tolen,
                                      const char *from, size_t fromlen,
                                      int padding, int warnOnFailure);
 

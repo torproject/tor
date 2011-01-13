@@ -1,0 +1,9 @@
+  o Major bugfixes (security)
+    - Fix a heap overflow bug where an adversary could cause heap
+      corruption.  Since the contents of the corruption would need to be
+      the output of an RSA decryption, we do not think this is easy to
+      turn in to a remote code execution attack, but everybody should
+      upgrade anyway.  Found by debuger.  Bugfix on 0.1.2.10-rc.
+  o Defensive programming
+    - Introduce output size checks on all of our decryption functions.
+
