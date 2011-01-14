@@ -923,7 +923,7 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
     log_warn(LD_BUG, "couldn't compute digest");
     return -1;
   }
-  buflen = crypto_pk_keysize(env)+1;
+  buflen = crypto_pk_keysize(env);
   buf = tor_malloc(buflen);
   r = crypto_pk_public_checksig(env,buf,buflen,sig,siglen);
   if (r != DIGEST_LEN) {
@@ -1108,8 +1108,8 @@ crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env,
                                      warnOnFailure);
   }
 
-  buf = tor_malloc(pkeylen+1);
-  outlen = crypto_pk_private_decrypt(env,buf,pkeylen+1,from,pkeylen,padding,
+  buf = tor_malloc(pkeylen);
+  outlen = crypto_pk_private_decrypt(env,buf,pkeylen,from,pkeylen,padding,
                                      warnOnFailure);
   if (outlen<0) {
     log_fn(warnOnFailure?LOG_WARN:LOG_DEBUG, LD_CRYPTO,
@@ -2659,4 +2659,3 @@ setup_openssl_threading(void)
   return 0;
 }
 #endif
-
