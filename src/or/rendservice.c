@@ -1214,8 +1214,10 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
   if (extend_info) extend_info_free(extend_info);
 
+  memset(keys, 0, sizeof(keys));
   return 0;
  err:
+  memset(keys, 0, sizeof(keys));
   if (dh) crypto_dh_free(dh);
   if (launched)
     circuit_mark_for_close(TO_CIRCUIT(launched), reason);
