@@ -1,4 +1,4 @@
-/* Copyright (c) 2007-2010, The Tor Project, Inc. */
+/* Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -271,11 +271,12 @@ dnsserv_resolved(edge_connection_t *conn,
                                      name,
                                      1, (char*)answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_HOSTNAME &&
+             answer_len < 256 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
     char *ans = tor_strndup(answer, answer_len);
     evdns_server_request_add_ptr_reply(req, NULL,
                                        name,
-                                       (char*)answer, ttl);
+                                       ans, ttl);
     tor_free(ans);
   } else if (answer_type == RESOLVED_TYPE_ERROR) {
     err = DNS_ERR_NOTEXIST;

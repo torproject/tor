@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /* Ordinarily defined in tor_main.c; this bit is just here to provide one
@@ -701,25 +701,27 @@ test_crypto_pk(void)
   test_eq(128, crypto_pk_keysize(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
 
-  test_eq(128, crypto_pk_public_encrypt(pk2, data1, "Hello whirled.", 15,
+  test_eq(128, crypto_pk_public_encrypt(pk2, data1, sizeof(data1),
+                                        "Hello whirled.", 15,
                                         PK_PKCS1_OAEP_PADDING));
-  test_eq(128, crypto_pk_public_encrypt(pk1, data2, "Hello whirled.", 15,
+  test_eq(128, crypto_pk_public_encrypt(pk1, data2, sizeof(data2),
+                                        "Hello whirled.", 15,
                                         PK_PKCS1_OAEP_PADDING));
   /* oaep padding should make encryption not match */
   test_memneq(data1, data2, 128);
-  test_eq(15, crypto_pk_private_decrypt(pk1, data3, data1, 128,
+  test_eq(15, crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   test_streq(data3, "Hello whirled.");
   memset(data3, 0, 1024);
-  test_eq(15, crypto_pk_private_decrypt(pk1, data3, data2, 128,
+  test_eq(15, crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   test_streq(data3, "Hello whirled.");
   /* Can't decrypt with public key. */
-  test_eq(-1, crypto_pk_private_decrypt(pk2, data3, data2, 128,
+  test_eq(-1, crypto_pk_private_decrypt(pk2, data3, sizeof(data3), data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
   /* Try again with bad padding */
   memcpy(data2+1, "XYZZY", 5);  /* This has fails ~ once-in-2^40 */
-  test_eq(-1, crypto_pk_private_decrypt(pk1, data3, data2, 128,
+  test_eq(-1, crypto_pk_private_decrypt(pk1, data3, sizeof(data3), data2, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
 
   /* File operations: save and load private key */
@@ -734,19 +736,22 @@ test_crypto_pk(void)
                                                    get_fname("xyzzy")) < 0);
   test_assert(! crypto_pk_read_private_key_from_filename(pk2,
                                                          get_fname("pkey1")));
-  test_eq(15, crypto_pk_private_decrypt(pk2, data3, data1, 128,
+  test_eq(15, crypto_pk_private_decrypt(pk2, data3, sizeof(data3), data1, 128,
                                         PK_PKCS1_OAEP_PADDING,1));
 
   /* Now try signing. */
   strlcpy(data1, "Ossifrage", 1024);
-  test_eq(128, crypto_pk_private_sign(pk1, data2, data1, 10));
-  test_eq(10, crypto_pk_public_checksig(pk1, data3, data2, 128));
+  test_eq(128, crypto_pk_private_sign(pk1, data2, sizeof(data2), data1, 10));
+  test_eq(10, crypto_pk_public_checksig(pk1, data3, sizeof(data3), data2, 128));
   test_streq(data3, "Ossifrage");
   /* Try signing digests. */
-  test_eq(128, crypto_pk_private_sign_digest(pk1, data2, data1, 10));
-  test_eq(20, crypto_pk_public_checksig(pk1, data3, data2, 128));
-  test_eq(0, crypto_pk_public_checksig_digest(pk1, data1, 10, data2, 128));
-  test_eq(-1, crypto_pk_public_checksig_digest(pk1, data1, 11, data2, 128));
+  test_eq(128, crypto_pk_private_sign_digest(pk1, data2, sizeof(data2),
+                                             data1, 10));
+  test_eq(20, crypto_pk_public_checksig(pk1, data3, sizeof(data1), data2, 128));
+  test_eq(0, crypto_pk_public_checksig_digest(pk1, data1,
+                                              10, data2, 128));
+  test_eq(-1, crypto_pk_public_checksig_digest(pk1, data1,
+                                               11, data2, 128));
   /*XXXX test failed signing*/
 
   /* Try encoding */
@@ -767,9 +772,11 @@ test_crypto_pk(void)
         continue;
       p = (i==0)?PK_NO_PADDING:
         (i==1)?PK_PKCS1_PADDING:PK_PKCS1_OAEP_PADDING;
-      len = crypto_pk_public_hybrid_encrypt(pk1,data2,data1,j,p,0);
+      len = crypto_pk_public_hybrid_encrypt(pk1,data2,sizeof(data2),
+                                            data1,j,p,0);
       test_assert(len>=0);
-      len = crypto_pk_private_hybrid_decrypt(pk1,data3,data2,len,p,1);
+      len = crypto_pk_private_hybrid_decrypt(pk1,data3,sizeof(data3),
+                                             data2,len,p,1);
       test_eq(len,j);
       test_memeq(data1,data3,j);
     }
@@ -3361,11 +3368,11 @@ test_v3_networkstatus(void)
   sign_skey_leg1 = pk_generate(4);
 
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_1,
-                                                      AUTHORITY_SIGNKEY_1));
+                                                      AUTHORITY_SIGNKEY_1,-1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_2,
-                                                      AUTHORITY_SIGNKEY_2));
+                                                      AUTHORITY_SIGNKEY_2,-1));
   test_assert(!crypto_pk_read_private_key_from_string(sign_skey_3,
-                                                      AUTHORITY_SIGNKEY_3));
+                                                      AUTHORITY_SIGNKEY_3,-1));
 
   test_assert(!crypto_pk_cmp_keys(sign_skey_1, cert1->signing_key));
   test_assert(!crypto_pk_cmp_keys(sign_skey_2, cert2->signing_key));

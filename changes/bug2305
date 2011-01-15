@@ -1,0 +1,5 @@
+  o Build changes
+    - Tor does not build packages correctly with Automake 1.6 and earlier;
+      added a check to Makefile.am to make sure that we're building with
+      Automake 1.7 or later.
+

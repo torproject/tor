@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -93,6 +93,10 @@
 
 /** Number of logging domains in the code. */
 #define N_LOGGING_DOMAINS 19
+
+/** This log message is not safe to send to a callback-based logger.
+ * Used as a flag, not a log domain. */
+#define LD_NOCB (1u<<31)
 
 typedef uint32_t log_domain_mask_t;
 

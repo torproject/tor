@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #ifndef _TOR_COMPAT_H
@@ -31,7 +31,7 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
-#ifdef HAVE_PTHREAD_H
+#if defined(HAVE_PTHREAD_H) && !defined(MS_WINDOWS)
 #include <pthread.h>
 #endif
 #include <stdarg.h>

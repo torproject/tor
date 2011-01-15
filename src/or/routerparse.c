@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -571,10 +571,12 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
                                crypto_pk_env_t *private_key)
 {
   char *signature;
-  size_t i;
+  size_t i, keysize;
 
-  signature = tor_malloc(crypto_pk_keysize(private_key));
-  if (crypto_pk_private_sign(private_key, signature, digest, DIGEST_LEN) < 0) {
+  keysize = crypto_pk_keysize(private_key);
+  signature = tor_malloc(keysize);
+  if (crypto_pk_private_sign(private_key, signature, keysize,
+                             digest, DIGEST_LEN) < 0) {
 
     log_warn(LD_BUG,"Couldn't sign digest.");
     goto err;
@@ -924,6 +926,7 @@ check_signature_token(const char *digest,
                       const char *doctype)
 {
   char *signed_digest;
+  size_t keysize;
   const int check_authority = (flags & CST_CHECK_AUTHORITY);
   const int check_objtype = ! (flags & CST_NO_CHECK_OBJTYPE);
 
@@ -945,9 +948,10 @@ check_signature_token(const char *digest,
     }
   }
 
-  signed_digest = tor_malloc(tok->object_size);
-  if (crypto_pk_public_checksig(pkey, signed_digest, tok->object_body,
-                                tok->object_size)
+  keysize = crypto_pk_keysize(pkey);
+  signed_digest = tor_malloc(keysize);
+  if (crypto_pk_public_checksig(pkey, signed_digest, keysize,
+                                tok->object_body, tok->object_size)
       != DIGEST_LEN) {
     log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
     tor_free(signed_digest);
@@ -2170,7 +2174,6 @@ networkstatus_v2_parse_from_string(const char *s)
   return ns;
 }
 
-
 /** Parse a v3 networkstatus vote, opinion, or consensus (depending on
  * ns_type), from <b>s</b>, and return the result.  Return NULL on failure. */
 networkstatus_t *
@@ -2550,7 +2553,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         goto err;
       v->good_signature = 1;
     } else {
-      if (tok->object_size >= INT_MAX)
+      if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING)
         goto err;
       /* We already parsed a vote from this voter. Use the first one. */
       if (v->signature) {
@@ -2701,7 +2704,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
       voter = tor_malloc_zero(sizeof(networkstatus_voter_info_t));
       memcpy(voter->identity_digest, id_digest, DIGEST_LEN);
       memcpy(voter->signing_key_digest, sk_digest, DIGEST_LEN);
-      if (tok->object_size >= INT_MAX)
+      if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING)
         goto err;
       voter->signature = tor_memdup(tok->object_body, tok->object_size);
       voter->signature_len = (int) tok->object_size;
@@ -3018,6 +3021,10 @@ static directory_token_t *
 get_next_token(memarea_t *area,
                const char **s, const char *eos, token_rule_t *table)
 {
+  /** Reject any object at least this big; it is probably an overflow, an
+   * attack, a bug, or some other nonsense. */
+#define MAX_UNPARSED_OBJECT_SIZE (128*1024)
+
   const char *next, *eol, *obstart;
   size_t obname_len;
   int i;
@@ -3102,7 +3109,8 @@ get_next_token(memarea_t *area,
 
   obstart = *s; /* Set obstart to start of object spec */
   if (*s+16 >= eol || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
-      strcmp_len(eol-5, "-----", 5)) {          /* nuls or invalid endings */
+      strcmp_len(eol-5, "-----", 5) ||           /* nuls or invalid endings */
+      (eol-*s) > MAX_UNPARSED_OBJECT_SIZE) {     /* name too long */
     RET_ERR("Malformed object: bad begin line");
   }
   tok->object_type = STRNDUP(*s+11, eol-*s-16);
@@ -3127,13 +3135,16 @@ get_next_token(memarea_t *area,
     ebuf[sizeof(ebuf)-1] = '\0';
     RET_ERR(ebuf);
   }
+  if (next - *s > MAX_UNPARSED_OBJECT_SIZE)
+    RET_ERR("Couldn't parse object: missing footer or object much too big.");
+
   if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
     tok->key = crypto_new_pk_env();
     if (crypto_pk_read_public_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse public key.");
   } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
     tok->key = crypto_new_pk_env();
-    if (crypto_pk_read_private_key_from_string(tok->key, obstart))
+    if (crypto_pk_read_private_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse private key.");
   } else { /* If it's something else, try to base64-decode it */
     int r;

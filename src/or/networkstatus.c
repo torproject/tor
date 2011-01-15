@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -362,6 +362,7 @@ networkstatus_check_voter_signature(networkstatus_t *consensus,
   signed_digest = tor_malloc(signed_digest_len);
   if (crypto_pk_public_checksig(cert->signing_key,
                                 signed_digest,
+                                signed_digest_len,
                                 voter->signature,
                                 voter->signature_len) != DIGEST_LEN ||
       memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {

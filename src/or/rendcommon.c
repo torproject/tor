@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -700,7 +700,9 @@ rend_encode_service_descriptor(rend_service_descriptor_t *desc,
     cp += ipoint_len+1;
   }
   note_crypto_pk_op(REND_SERVER);
-  r = crypto_pk_private_sign_digest(key, cp, *str_out, cp-*str_out);
+  r = crypto_pk_private_sign_digest(key,
+                                    cp, buflen - (cp - *str_out),
+                                    *str_out, cp-*str_out);
   if (r<0) {
     tor_free(*str_out);
     return -1;

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -2294,7 +2294,7 @@ print_usage(void)
   printf(
 "Copyright (c) 2001-2004, Roger Dingledine\n"
 "Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson\n"
-"Copyright (c) 2007-2010, The Tor Project, Inc.\n\n"
+"Copyright (c) 2007-2011, The Tor Project, Inc.\n\n"
 "tor -f <torrc> [args]\n"
 "See man page for options, or https://www.torproject.org/ for "
 "documentation.\n");
@@ -5321,7 +5321,8 @@ or_state_save(time_t now)
   tor_free(state);
   fname = get_datadir_fname("state");
   if (write_str_to_file(fname, contents, 0)<0) {
-    log_warn(LD_FS, "Unable to write state to file \"%s\"", fname);
+    log_warn(LD_FS, "Unable to write state to file \"%s\"; "
+             "will try again later", fname);
     tor_free(fname);
     tor_free(contents);
     return -1;

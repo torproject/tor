@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -115,7 +115,7 @@ typedef unsigned int uint32_t;
 #define UINT32_MAX 0xffffffffu
 #endif
 #ifndef INT32_MAX
-#define INT32_MAX 0x7fffffffu
+#define INT32_MAX 0x7fffffff
 #endif
 #endif
 
