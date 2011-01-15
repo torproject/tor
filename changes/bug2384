@@ -1,0 +1,6 @@
+  o Minor bugfixes
+    - Zero out a few more keys in memory before freeing them.  Fixes bug
+      2384 and part of bug 2385.  These key instances found by
+      "cypherpunks".  Bugfix on 0.0.2pre9.
+
+

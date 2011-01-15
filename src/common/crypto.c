@@ -569,6 +569,7 @@ crypto_pk_read_private_key_from_filename(crypto_pk_env_t *env,
 
   /* Try to parse it. */
   r = crypto_pk_read_private_key_from_string(env, contents, -1);
+  memset(contents, 0, strlen(contents));
   tor_free(contents);
   if (r)
     return -1; /* read_private_key_from_string already warned, so we don't.*/
@@ -706,6 +707,7 @@ crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
   s[len]='\0';
   r = write_str_to_file(fname, s, 0);
   BIO_free(bio);
+  memset(s, 0, strlen(s));
   tor_free(s);
   return r;
 }
@@ -1868,7 +1870,7 @@ crypto_dh_compute_secret(int severity, crypto_dh_env_t *dh,
 {
   char *secret_tmp = NULL;
   BIGNUM *pubkey_bn = NULL;
-  size_t secret_len=0;
+  size_t secret_len=0, secret_tmp_len=0;
   int result=0;
   tor_assert(dh);
   tor_assert(secret_bytes_out/DIGEST_LEN <= 255);
@@ -1882,7 +1884,8 @@ crypto_dh_compute_secret(int severity, crypto_dh_env_t *dh,
     log_fn(severity, LD_CRYPTO,"Rejected invalid g^x");
     goto error;
   }
-  secret_tmp = tor_malloc(crypto_dh_get_bytes(dh));
+  secret_tmp_len = crypto_dh_get_bytes(dh);
+  secret_tmp = tor_malloc(secret_tmp_len);
   result = DH_compute_key((unsigned char*)secret_tmp, pubkey_bn, dh->dh);
   if (result < 0) {
     log_warn(LD_CRYPTO,"DH_compute_key() failed.");
@@ -1901,7 +1904,10 @@ crypto_dh_compute_secret(int severity, crypto_dh_env_t *dh,
   crypto_log_errors(LOG_WARN, "completing DH handshake");
   if (pubkey_bn)
     BN_free(pubkey_bn);
-  tor_free(secret_tmp);
+  if (secret_tmp) {
+    memset(secret_tmp, 0, secret_tmp_len);
+    tor_free(secret_tmp);
+  }
   if (result < 0)
     return result;
   else
