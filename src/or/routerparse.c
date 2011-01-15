@@ -3227,7 +3227,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       }
       sig->good_signature = 1;
     } else {
-      if (tok->object_size >= INT_MAX) {
+      if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING) {
         tor_free(sig);
         goto err;
       }
@@ -3496,7 +3496,7 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     sig->alg = alg;
     memcpy(sig->identity_digest, id_digest, DIGEST_LEN);
     memcpy(sig->signing_key_digest, sk_digest, DIGEST_LEN);
-    if (tok->object_size >= INT_MAX) {
+    if (tok->object_size >= INT_MAX || tok->object_size >= SIZE_T_CEILING) {
       tor_free(sig);
       goto err;
     }
@@ -3814,6 +3814,10 @@ static directory_token_t *
 get_next_token(memarea_t *area,
                const char **s, const char *eos, token_rule_t *table)
 {
+  /** Reject any object at least this big; it is probably an overflow, an
+   * attack, a bug, or some other nonsense. */
+#define MAX_UNPARSED_OBJECT_SIZE (128*1024)
+
   const char *next, *eol, *obstart;
   size_t obname_len;
   int i;
@@ -3898,7 +3902,8 @@ get_next_token(memarea_t *area,
 
   obstart = *s; /* Set obstart to start of object spec */
   if (*s+16 >= eol || memchr(*s+11,'\0',eol-*s-16) || /* no short lines, */
-      strcmp_len(eol-5, "-----", 5)) {          /* nuls or invalid endings */
+      strcmp_len(eol-5, "-----", 5) ||           /* nuls or invalid endings */
+      (eol-*s) > MAX_UNPARSED_OBJECT_SIZE) {     /* name too long */
     RET_ERR("Malformed object: bad begin line");
   }
   tok->object_type = STRNDUP(*s+11, eol-*s-16);
@@ -3923,13 +3928,16 @@ get_next_token(memarea_t *area,
     ebuf[sizeof(ebuf)-1] = '\0';
     RET_ERR(ebuf);
   }
+  if (next - *s > MAX_UNPARSED_OBJECT_SIZE)
+    RET_ERR("Couldn't parse object: missing footer or object much too big.");
+
   if (!strcmp(tok->object_type, "RSA PUBLIC KEY")) { /* If it's a public key */
     tok->key = crypto_new_pk_env();
     if (crypto_pk_read_public_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse public key.");
   } else if (!strcmp(tok->object_type, "RSA PRIVATE KEY")) { /* private key */
     tok->key = crypto_new_pk_env();
-    if (crypto_pk_read_private_key_from_string(tok->key, obstart))
+    if (crypto_pk_read_private_key_from_string(tok->key, obstart, eol-obstart))
       RET_ERR("Couldn't parse private key.");
   } else { /* If it's something else, try to base64-decode it */
     int r;
