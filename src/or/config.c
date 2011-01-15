@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -2283,7 +2283,7 @@ print_usage(void)
   printf(
 "Copyright (c) 2001-2004, Roger Dingledine\n"
 "Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson\n"
-"Copyright (c) 2007-2010, The Tor Project, Inc.\n\n"
+"Copyright (c) 2007-2011, The Tor Project, Inc.\n\n"
 "tor -f <torrc> [args]\n"
 "See man page for options, or https://www.torproject.org/ for "
 "documentation.\n");
@@ -3279,6 +3279,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Bridges are not supposed to publish router descriptors to the "
            "directory authorities. Please correct your "
            "PublishServerDescriptor line.");
+  }
+
+  if (options->BridgeRelay && options->DirPort) {
+    log_warn(LD_CONFIG, "Can't set a DirPort on a bridge relay; disabling "
+             "DirPort");
+    options->DirPort = 0;
   }
 
   if (options->MinUptimeHidServDirectoryV2 < 0) {
@@ -5139,6 +5145,9 @@ or_state_load(void)
   return r;
 }
 
+/** If writing the state to disk fails, try again after this many seconds. */
+#define STATE_WRITE_RETRY_INTERVAL 3600
+
 /** Write the persistent state to disk. Return 0 for success, <0 on failure. */
 int
 or_state_save(time_t now)
@@ -5173,10 +5182,14 @@ or_state_save(time_t now)
   tor_free(state);
   fname = get_datadir_fname("state");
   if (write_str_to_file(fname, contents, 0)<0) {
-    log_warn(LD_FS, "Unable to write state to file \"%s\"", fname);
+    log_warn(LD_FS, "Unable to write state to file \"%s\"; "
+             "will try again later", fname);
     global_state->LastWritten = -1;
     tor_free(fname);
     tor_free(contents);
+    /* Try again after STATE_WRITE_RETRY_INTERVAL (or sooner, if the state
+     * changes sooner). */
+    global_state->next_write = now + STATE_WRITE_RETRY_INTERVAL;
     return -1;
   }
 

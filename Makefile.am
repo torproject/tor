@@ -1,9 +1,9 @@
 # Copyright (c) 2001-2004, Roger Dingledine
 # Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson
-# Copyright (c) 2007-2010, The Tor Project, Inc.
+# Copyright (c) 2007-2011, The Tor Project, Inc.
 # See LICENSE for licensing information
 
-AUTOMAKE_OPTIONS = foreign
+AUTOMAKE_OPTIONS = foreign 1.7
  # else it keeps trying to put COPYING back in
 
 SUBDIRS = src doc contrib

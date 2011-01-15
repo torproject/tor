@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -199,6 +199,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
 
   /* set meeting point, meeting cookie, etc here. Leave zero for now. */
   if (crypto_pk_public_hybrid_encrypt(dest_router_key, onion_skin_out,
+                                      ONIONSKIN_CHALLENGE_LEN,
                                       challenge, DH_KEY_LEN,
                                       PK_PKCS1_OAEP_PADDING, 1)<0)
     goto err;
@@ -241,6 +242,7 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
       break;
     note_crypto_pk_op(DEC_ONIONSKIN);
     len = crypto_pk_private_hybrid_decrypt(k, challenge,
+                                           ONIONSKIN_CHALLENGE_LEN,
                                            onion_skin, ONIONSKIN_CHALLENGE_LEN,
                                            PK_PKCS1_OAEP_PADDING,0);
     if (len>0)
@@ -392,8 +394,8 @@ fast_server_handshake(const uint8_t *key_in, /* DIGEST_LEN bytes */
  * and protected by TLS).
  */
 int
-fast_client_handshake(const uint8_t *handshake_state, /* DIGEST_LEN bytes */
-                      const uint8_t *handshake_reply_out, /* DIGEST_LEN*2 bytes */
+fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
+                      const uint8_t *handshake_reply_out,/*DIGEST_LEN*2 bytes*/
                       uint8_t *key_out,
                       size_t key_out_len)
 {

@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -928,7 +928,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   /* Next N bytes is encrypted with service key */
   note_crypto_pk_op(REND_SERVER);
   r = crypto_pk_private_hybrid_decrypt(
-       intro_key,buf,(char*)(request+DIGEST_LEN),request_len-DIGEST_LEN,
+       intro_key,buf,sizeof(buf),
+       (char*)(request+DIGEST_LEN),request_len-DIGEST_LEN,
        PK_PKCS1_OAEP_PADDING,1);
   if (r<0) {
     log_warn(LD_PROTOCOL, "Couldn't decrypt INTRODUCE2 cell.");
@@ -1164,8 +1165,10 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   memcpy(cpath->handshake_digest, keys, DIGEST_LEN);
   if (extend_info) extend_info_free(extend_info);
 
+  memset(keys, 0, sizeof(keys));
   return 0;
  err:
+  memset(keys, 0, sizeof(keys));
   if (dh) crypto_dh_free(dh);
   if (launched)
     circuit_mark_for_close(TO_CIRCUIT(launched), reason);
@@ -1365,7 +1368,8 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     goto err;
   len += 20;
   note_crypto_pk_op(REND_SERVER);
-  r = crypto_pk_private_sign_digest(intro_key, buf+len, buf, len);
+  r = crypto_pk_private_sign_digest(intro_key, buf+len, sizeof(buf)-len,
+                                    buf, len);
   if (r<0) {
     log_warn(LD_BUG, "Internal error: couldn't sign introduction request.");
     reason = END_CIRC_REASON_INTERNAL;

@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1177,9 +1177,23 @@ address_is_in_virtual_range(const char *address)
   return 0;
 }
 
+/** Increment the value of next_virtual_addr; reset it to the start of the
+ * virtual address range if it wraps around.
+ */
+static INLINE void
+increment_virtual_addr(void)
+{
+  ++next_virtual_addr;
+  if (addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
+                         virtual_addr_netmask_bits))
+    next_virtual_addr = virtual_addr_network;
+}
+
 /** Return a newly allocated string holding an address of <b>type</b>
  * (one of RESOLVED_TYPE_{IPV4|HOSTNAME}) that has not yet been mapped,
  * and that is very unlikely to be the address of any real host.
+ *
+ * May return NULL if we have run out of virtual addresses.
  */
 static char *
 addressmap_get_virtual_address(int type)
@@ -1204,25 +1218,26 @@ addressmap_get_virtual_address(int type)
       /* Don't hand out any .0 or .255 address. */
       while ((next_virtual_addr & 0xff) == 0 ||
              (next_virtual_addr & 0xff) == 0xff) {
-        ++next_virtual_addr;
+        increment_virtual_addr();
+        if (! --available) {
+          log_warn(LD_CONFIG, "Ran out of virtual addresses!");
+          return NULL;
+        }
       }
       in.s_addr = htonl(next_virtual_addr);
       tor_inet_ntoa(&in, buf, sizeof(buf));
       if (!strmap_get(addressmap, buf)) {
-        ++next_virtual_addr;
+        increment_virtual_addr();
         break;
       }
 
-      ++next_virtual_addr;
+      increment_virtual_addr();
       --available;
-      log_info(LD_CONFIG, "%d addrs available", (int)available);
-      if (! --available) {
+      // log_info(LD_CONFIG, "%d addrs available", (int)available);
+      if (! available) {
         log_warn(LD_CONFIG, "Ran out of virtual addresses!");
         return NULL;
       }
-      if (addr_mask_cmp_bits(next_virtual_addr, virtual_addr_network,
-                             virtual_addr_netmask_bits))
-        next_virtual_addr = virtual_addr_network;
     }
     return tor_strdup(buf);
   } else {
@@ -1237,14 +1252,15 @@ addressmap_get_virtual_address(int type)
  * allocated string.  If another address of the same type is already
  * mapped to <b>new_address</b>, try to return a copy of that address.
  *
- * The string in <b>new_address</b> may be freed, or inserted into a map
- * as appropriate.
+ * The string in <b>new_address</b> may be freed or inserted into a map
+ * as appropriate.  May return NULL if are out of virtual addresses.
  **/
 const char *
 addressmap_register_virtual_address(int type, char *new_address)
 {
   char **addrp;
   virtaddress_entry_t *vent;
+  int vent_needs_to_be_added = 0;
 
   tor_assert(new_address);
   tor_assert(addressmap);
@@ -1253,7 +1269,7 @@ addressmap_register_virtual_address(int type, char *new_address)
   vent = strmap_get(virtaddress_reversemap, new_address);
   if (!vent) {
     vent = tor_malloc_zero(sizeof(virtaddress_entry_t));
-    strmap_set(virtaddress_reversemap, new_address, vent);
+    vent_needs_to_be_added = 1;
   }
 
   addrp = (type == RESOLVED_TYPE_IPV4) ?
@@ -1263,6 +1279,7 @@ addressmap_register_virtual_address(int type, char *new_address)
     if (ent && ent->new_address &&
         !strcasecmp(new_address, ent->new_address)) {
       tor_free(new_address);
+      tor_assert(!vent_needs_to_be_added);
       return tor_strdup(*addrp);
     } else
       log_warn(LD_BUG,
@@ -1276,7 +1293,14 @@ addressmap_register_virtual_address(int type, char *new_address)
 
   tor_free(*addrp);
   *addrp = addressmap_get_virtual_address(type);
+  if (!*addrp) {
+    tor_free(vent);
+    tor_free(new_address);
+    return NULL;
+  }
   log_info(LD_APP, "Registering map from %s to %s", *addrp, new_address);
+  if (vent_needs_to_be_added)
+    strmap_set(virtaddress_reversemap, new_address, vent);
   addressmap_register(*addrp, new_address, 2, ADDRMAPSRC_CONTROLLER);
 
 #if 0
@@ -1476,7 +1500,12 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       const char *new_addr;
       new_addr = addressmap_register_virtual_address(
                               RESOLVED_TYPE_IPV4, tor_strdup(socks->address));
-      tor_assert(new_addr);
+      if (! new_addr) {
+        log_warn(LD_APP, "Unable to automap address %s",
+                 escaped_safe_str(socks->address));
+        connection_mark_unattached_ap(conn, END_STREAM_REASON_INTERNAL);
+        return -1;
+      }
       log_info(LD_APP, "Automapping %s to %s",
                escaped_safe_str_client(socks->address),
                safe_str_client(new_addr));

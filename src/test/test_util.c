@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #include "orconfig.h"
@@ -1200,6 +1200,7 @@ static void
 test_util_load_win_lib(void *ptr)
 {
   HANDLE h = load_windows_system_library("advapi32.dll");
+  (void) ptr;
 
   tt_assert(h);
  done:

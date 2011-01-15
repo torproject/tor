@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Fix a bunch of compile warnings revealed by mingw with gcc 4.5. Fixes
+      bug 2314.
+

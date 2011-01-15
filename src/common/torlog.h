@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -95,6 +95,10 @@
 /** Number of logging domains in the code. */
 #define N_LOGGING_DOMAINS 20
 
+/** This log message is not safe to send to a callback-based logger
+ * immediately.  Used as a flag, not a log domain. */
+#define LD_NOCB (1u<<31)
+
 typedef uint32_t log_domain_mask_t;
 
 /** Configures which severities are logged for each logging domain for a given
@@ -137,6 +141,7 @@ void rollback_log_changes(void);
 void mark_logs_temp(void);
 void change_callback_log_severity(int loglevelMin, int loglevelMax,
                                   log_callback cb);
+void flush_pending_log_callbacks(void);
 void log_set_application_name(const char *name);
 
 /* Outputs a message to stdout */

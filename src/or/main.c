@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -892,6 +892,9 @@ run_scheduled_events(time_t now)
     log(LOG_INFO, LD_CONTROL, "Honoring delayed NEWNYM request");
     signewnym_impl(now);
   }
+
+  /* 0c. If we've deferred log messages for the controller, handle them now */
+  flush_pending_log_callbacks();
 
   /** 1a. Every MIN_ONION_KEY_LIFETIME seconds, rotate the onion keys,
    *  shut down and restart all cpuworkers, and update the directory if

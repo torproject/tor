@@ -1,6 +1,6 @@
 /* Copyright (c) 2003, Roger Dingledine
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -173,6 +173,8 @@ void *
 _tor_realloc(void *ptr, size_t size DMALLOC_PARAMS)
 {
   void *result;
+
+  tor_assert(size < SIZE_T_CEILING);
 
 #ifdef USE_DMALLOC
   result = dmalloc_realloc(file, line, ptr, size, DMALLOC_FUNC_REALLOC, 0);
@@ -2138,7 +2140,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
     return NULL;
   }
 
-  if ((uint64_t)(statbuf.st_size)+1 > SIZE_T_CEILING)
+  if ((uint64_t)(statbuf.st_size)+1 >= SIZE_T_CEILING)
     return NULL;
 
   string = tor_malloc((size_t)(statbuf.st_size+1));

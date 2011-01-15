@@ -1,6 +1,6 @@
 /* Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 #define MAIN_PRIVATE
@@ -518,7 +518,7 @@ nt_service_install(int argc, char **argv)
   SERVICE_DESCRIPTIONA sdBuff;
   char *command;
   char *errmsg;
-  const char *user_acct = GENSRV_USERACCT;
+  const char *user_acct = NULL;
   const char *password = "";
   int i;
   OSVERSIONINFOEX info;
@@ -562,13 +562,12 @@ nt_service_install(int argc, char **argv)
       is_win2k_or_worse = 1;
   }
 
-  if (user_acct == GENSRV_USERACCT) {
+  if (!user_acct) {
     if (is_win2k_or_worse) {
       /* On Win2k, there is no LocalService account, so we actually need to
        * fall back on NULL (the system account). */
       printf("Running on Win2K or earlier, so the LocalService account "
              "doesn't exist.  Falling back to SYSTEM account.\n");
-      user_acct = NULL;
     } else {
       /* Genericity is apparently _so_ last year in Redmond, where some
        * accounts are accounts that you can look up, and some accounts
@@ -577,6 +576,7 @@ nt_service_install(int argc, char **argv)
        */
       printf("Running on a Post-Win2K OS, so we'll assume that the "
              "LocalService account exists.\n");
+      user_acct = GENSRV_USERACCT;
     }
   } else if (0 && service_fns.LookupAccountNameA_fn(NULL, // On this system
                             user_acct,

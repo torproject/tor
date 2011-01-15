@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -184,6 +184,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   /*XXX maybe give crypto_pk_public_hybrid_encrypt a max_len arg,
    * to avoid buffer overflows? */
   r = crypto_pk_public_hybrid_encrypt(intro_key, payload+DIGEST_LEN,
+                                      sizeof(payload)-DIGEST_LEN,
                                       tmp,
                                       (int)(dh_offset+DH_KEY_LEN),
                                       PK_PKCS1_OAEP_PADDING, 0);
@@ -672,8 +673,10 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
    * attach only the connections that are waiting on this circuit, rather
    * than trying to attach them all. See comments bug 743. */
   connection_ap_attach_pending();
+  memset(keys, 0, sizeof(keys));
   return 0;
  err:
+  memset(keys, 0, sizeof(keys));
   circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_TORPROTOCOL);
   return -1;
 }

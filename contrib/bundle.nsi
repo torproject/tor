@@ -22,7 +22,7 @@ VIProductVersion "${VERSION}"
 VIAddVersionKey "ProductName" "Tor"
 VIAddVersionKey "Comments" "${WEBSITE}"
 VIAddVersionKey "LegalTrademarks" "Three line BSD"
-VIAddVersionKey "LegalCopyright" "©2004-2010, Roger Dingledine, Nick Mathewson, The Tor Project, Inc."
+VIAddVersionKey "LegalCopyright" "©2004-2011, Roger Dingledine, Nick Mathewson, The Tor Project, Inc."
 VIAddVersionKey "FileDescription" "Tor is an implementation of Onion Routing. You can read more at ${WEBSITE}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 

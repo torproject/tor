@@ -1,6 +1,6 @@
 /* Copyright (c) 2003-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -250,7 +250,7 @@ cpuworker_main(void *data)
   for (;;) {
     ssize_t r;
 
-    if ((r = recv(fd, &question_type, 1, 0)) != 1) {
+    if ((r = recv(fd, (void *)&question_type, 1, 0)) != 1) {
 //      log_fn(LOG_ERR,"read type failed. Exiting.");
       if (r == 0) {
         log_info(LD_OR,

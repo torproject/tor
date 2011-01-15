@@ -1,0 +1,7 @@
+  o Minor bugfixes
+    - Handle SOCKS messages longer than 128 bytes long correctly, rather
+      than waiting forever for them to finish.  Fixes bug 2330.  Bugfix on
+      0.2.0.16-alpha.  Found by doorss.
+
+
+

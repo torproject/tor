@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1996,7 +1996,8 @@ rep_hist_exit_stats_term(void)
 
 /** Helper for qsort: compare two ints. */
 static int
-_compare_int(const void *x, const void *y) {
+_compare_int(const void *x, const void *y)
+{
   return (*(int*)x - *(int*)y);
 }
 

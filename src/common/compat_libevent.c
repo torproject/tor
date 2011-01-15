@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2010, The Tor Project, Inc. */
+/* Copyright (c) 2009-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -65,19 +65,19 @@ libevent_logging_callback(int severity, const char *msg)
   }
   switch (severity) {
     case _EVENT_LOG_DEBUG:
-      log(LOG_DEBUG, LD_NET, "Message from libevent: %s", buf);
+      log(LOG_DEBUG, LD_NOCB|LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_MSG:
-      log(LOG_INFO, LD_NET, "Message from libevent: %s", buf);
+      log(LOG_INFO, LD_NOCB|LD_NET, "Message from libevent: %s", buf);
       break;
     case _EVENT_LOG_WARN:
-      log(LOG_WARN, LD_GENERAL, "Warning from libevent: %s", buf);
+      log(LOG_WARN, LD_NOCB|LD_GENERAL, "Warning from libevent: %s", buf);
       break;
     case _EVENT_LOG_ERR:
-      log(LOG_ERR, LD_GENERAL, "Error from libevent: %s", buf);
+      log(LOG_ERR, LD_NOCB|LD_GENERAL, "Error from libevent: %s", buf);
       break;
     default:
-      log(LOG_WARN, LD_GENERAL, "Message [%d] from libevent: %s",
+      log(LOG_WARN, LD_NOCB|LD_GENERAL, "Message [%d] from libevent: %s",
           severity, buf);
       break;
   }

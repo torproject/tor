@@ -1,7 +1,7 @@
 /* Copyright (c) 2001, Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -112,7 +112,7 @@ int crypto_pk_write_private_key_to_string(crypto_pk_env_t *env,
 int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env,
                                           const char *src, size_t len);
 int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
-                                           const char *s);
+                                           const char *s, ssize_t len);
 int crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
                                             const char *fname);
 
@@ -123,23 +123,25 @@ crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *orig);
 crypto_pk_env_t *crypto_pk_copy_full(crypto_pk_env_t *orig);
 int crypto_pk_key_is_private(const crypto_pk_env_t *key);
 
-int crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to,
+int crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to, size_t tolen,
                              const char *from, size_t fromlen, int padding);
-int crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to,
+int crypto_pk_private_decrypt(crypto_pk_env_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen,
                               int padding, int warnOnFailure);
-int crypto_pk_public_checksig(crypto_pk_env_t *env, char *to,
+int crypto_pk_public_checksig(crypto_pk_env_t *env, char *to, size_t tolen,
                               const char *from, size_t fromlen);
 int crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
                                size_t datalen, const char *sig, size_t siglen);
-int crypto_pk_private_sign(crypto_pk_env_t *env, char *to,
+int crypto_pk_private_sign(crypto_pk_env_t *env, char *to, size_t tolen,
                            const char *from, size_t fromlen);
-int crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to,
+int crypto_pk_private_sign_digest(crypto_pk_env_t *env, char *to, size_t tolen,
                                   const char *from, size_t fromlen);
 int crypto_pk_public_hybrid_encrypt(crypto_pk_env_t *env, char *to,
+                                    size_t tolen,
                                     const char *from, size_t fromlen,
                                     int padding, int force);
 int crypto_pk_private_hybrid_decrypt(crypto_pk_env_t *env, char *to,
+                                     size_t tolen,
                                      const char *from, size_t fromlen,
                                      int padding, int warnOnFailure);
 

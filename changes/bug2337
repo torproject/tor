@@ -1,0 +1,3 @@
+  o Minor bugfixes
+    - Detect broken platforms with a signed size_t, and refuse to
+      build there.  Found and analyzed by doorss and rransom.

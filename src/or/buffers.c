@@ -1,7 +1,7 @@
 /* Copyright (c) 2001 Matej Pfajfar.
  * Copyright (c) 2001-2004, Roger Dingledine.
  * Copyright (c) 2004-2006, Roger Dingledine, Nick Mathewson.
- * Copyright (c) 2007-2010, The Tor Project, Inc. */
+ * Copyright (c) 2007-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -1336,6 +1336,10 @@ log_unsafe_socks_warning(int socks_protocol, const char *address,
                               socks_protocol, address, (int)port);
 }
 
+/** Do not attempt to parse socks messages longer than this.  This value is
+ * actually significantly higher than the longest possible socks message. */
+#define MAX_SOCKS_MESSAGE_LEN 512
+
 /** There is a (possibly incomplete) socks handshake on <b>buf</b>, of one
  * of the forms
  *  - socks4: "socksheader username\\0"
@@ -1377,7 +1381,7 @@ fetch_from_buf_socks(buf_t *buf, socks_request_t *req,
   if (buf->datalen < 2) /* version and another byte */
     return 0;
 
-  buf_pullup(buf, 128, 0);
+  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN, 0);
   tor_assert(buf->head && buf->head->datalen >= 2);
 
   socksver = *buf->head->data;
@@ -1666,7 +1670,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
   if (buf->datalen < 2)
     return 0;
 
-  buf_pullup(buf, 128, 0);
+  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN, 0);
   tor_assert(buf->head && buf->head->datalen >= 2);
 
   data = (unsigned char *) buf->head->data;
