@@ -5329,8 +5329,8 @@ or_state_save(time_t now)
   tor_free(state);
   fname = get_datadir_fname("state");
   if (write_str_to_file(fname, contents, 0)<0) {
-    log_warn(LD_FS, "Unable to write state to file \"%s\"; will try later",
-             fname);
+    log_warn(LD_FS, "Unable to write state to file \"%s\"; "
+             "will try again later", fname);
     global_state->LastWritten = -1;
     tor_free(fname);
     tor_free(contents);

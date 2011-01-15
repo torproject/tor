@@ -5099,7 +5099,8 @@ routerinfo_incompatible_with_extrainfo(const routerinfo_t *ri,
 
   if (ei->pending_sig) {
     char signed_digest[128];
-    if (crypto_pk_public_checksig(ri->identity_pkey, signed_digest,
+    if (crypto_pk_public_checksig(ri->identity_pkey,
+                       signed_digest, sizeof(signed_digest),
                        ei->pending_sig, ei->pending_sig_len) != DIGEST_LEN ||
         memcmp(signed_digest, ei->cache_info.signed_descriptor_digest,
                DIGEST_LEN)) {

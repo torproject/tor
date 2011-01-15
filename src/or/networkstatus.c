@@ -452,6 +452,7 @@ networkstatus_check_document_signature(const networkstatus_t *consensus,
   signed_digest = tor_malloc(signed_digest_len);
   if (crypto_pk_public_checksig(cert->signing_key,
                                 signed_digest,
+                                signed_digest_len,
                                 sig->signature,
                                 sig->signature_len) < dlen ||
       memcmp(signed_digest, consensus->digests.d[sig->alg], dlen)) {

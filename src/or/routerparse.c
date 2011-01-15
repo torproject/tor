@@ -700,11 +700,13 @@ router_append_dirobj_signature(char *buf, size_t buf_len, const char *digest,
                                size_t digest_len, crypto_pk_env_t *private_key)
 {
   char *signature;
-  size_t i;
+  size_t i, keysize;
   int siglen;
 
-  signature = tor_malloc(crypto_pk_keysize(private_key));
-  siglen = crypto_pk_private_sign(private_key, signature, digest, digest_len);
+  keysize = crypto_pk_keysize(private_key);
+  signature = tor_malloc(keysize);
+  siglen = crypto_pk_private_sign(private_key, signature, keysize,
+                                  digest, digest_len);
   if (siglen < 0) {
     log_warn(LD_BUG,"Couldn't sign digest.");
     goto err;
@@ -1057,6 +1059,7 @@ check_signature_token(const char *digest,
                       const char *doctype)
 {
   char *signed_digest;
+  size_t keysize;
   const int check_authority = (flags & CST_CHECK_AUTHORITY);
   const int check_objtype = ! (flags & CST_NO_CHECK_OBJTYPE);
 
@@ -1078,10 +1081,11 @@ check_signature_token(const char *digest,
     }
   }
 
-  signed_digest = tor_malloc(tok->object_size);
-  if (crypto_pk_public_checksig(pkey, signed_digest, tok->object_body,
-                                tok->object_size)
-      < digest_len) {
+  keysize = crypto_pk_keysize(pkey);
+  signed_digest = tor_malloc(keysize);
+  if (crypto_pk_public_checksig(pkey, signed_digest, keysize,
+                                tok->object_body, tok->object_size)
+      < DIGEST_LEN) {
     log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
     tor_free(signed_digest);
     return -1;
