@@ -58,9 +58,18 @@ method_bits(compress_method_t method)
 }
 
 /* These macros define the maximum allowable compression factor.  Anything of
- * size greater than <b>check_for_compression_bomb_after</b> is not allowed to
+ * size greater than CHECK_FOR_COMPRESSION_BOMB_AFTER is not allowed to
  * have an uncompression factor (uncompressed size:compressed size ratio) of
- * any greater than MAX_UNCOMPRESSION_FACTOR. */
+ * any greater than MAX_UNCOMPRESSION_FACTOR.
+ *
+ * Picking a value for MAX_UNCOMPRESSION_FACTOR is a trade-off: we want it to
+ * be small to limit the attack multiplier, but we also want it to be large
+ * enough so that no legitimate document --even ones we might invent in the
+ * future -- ever compresses by a factor of greater than
+ * MAX_UNCOMPRESSION_FACTOR. Within those parameters, there's a reasonably
+ * large range of possible values. IMO, anything over 8 is probably safe; IMO
+ * anything under 50 is probably sufficient.
+ */
 #define MAX_UNCOMPRESSION_FACTOR 25
 #define CHECK_FOR_COMPRESSION_BOMB_AFTER (1024*64)
 
@@ -291,7 +300,7 @@ tor_gzip_uncompress(char **out, size_t *out_len,
           goto err;
         }
         if (is_compression_bomb(in_len, out_size)) {
-          log_warn(LD_GENERAL, "Input looks look a possible zlib bomb; "
+          log_warn(LD_GENERAL, "Input looks like a possible zlib bomb; "
                    "not proceeding.");
           goto err;
         }
