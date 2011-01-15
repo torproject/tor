@@ -1161,14 +1161,14 @@
         research indicates that a lower value would mean fewer cells in
         transit in the network at any given time. Obeyed by Tor 0.2.1.20
         and later.
-        Min: 1, Max: 100000 XXX are these sane
+        Min: 100, Max: 1000
 
         "CircuitPriorityHalflifeMsec" -- the halflife parameter used when
         weighting which circuit will send the next cell. Obeyed by Tor
         0.2.2.10-alpha and later.  (Versions of Tor between 0.2.2.7-alpha
         and 0.2.2.10-alpha recognized a "CircPriorityHalflifeMsec" parameter,
         but mishandled it badly.)
-        Min: -1, Max: 2147483647 (INT32_MAX) XXX are these sane?
+        Min: -1, Max: 2147483647 (INT32_MAX)
 
         "perconnbwrate" and "perconnbwburst" -- if set, each relay sets
         up a separate token bucket for every client OR connection,
