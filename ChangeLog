@@ -47,6 +47,10 @@ Changes in version 0.2.1.29 - 2011-01-15
       0.1.2.1-alpha. Bug found by doorss.
     - Correctly handle wrapping around to when we run out of virtual
       address space. Found by cypherpunks, bugfix on 0.2.0.5-alpha.
+    - The 0.2.1.28 tarball was missing src/common/OpenBSD_malloc_Linux.c
+      because we built it with a too-old version of automake. Thus that
+      release broke ./configure --enable-openbsd-malloc, which is popular
+      among really fast exit relays on Linux.
 
   o Minor features:
     - Update to the January 1 2011 Maxmind GeoLite Country database.
