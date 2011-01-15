@@ -112,7 +112,7 @@ int crypto_pk_write_private_key_to_string(crypto_pk_env_t *env,
 int crypto_pk_read_public_key_from_string(crypto_pk_env_t *env,
                                           const char *src, size_t len);
 int crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
-                                           const char *s);
+                                           const char *s, ssize_t len);
 int crypto_pk_write_private_key_to_filename(crypto_pk_env_t *env,
                                             const char *fname);
 
