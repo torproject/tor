@@ -1,8 +1,0 @@
-  o Major bugfixes (security)
-    - Fix a heap overflow bug where an adversary could cause heap
-      corruption.  This bug potentially allows remote code execution
-      attacks.  Found by debuger.  Fixes CVE-2011-0427.  Bugfix on
-      0.1.2.10-rc.
-  o Defensive programming
-    - Introduce output size checks on all of our decryption functions.
-

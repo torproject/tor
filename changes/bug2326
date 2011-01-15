@@ -1,6 +1,0 @@
-  o Minor bugfixes
-    - Fix a bug where we would assert if we ever had a
-      cached-descriptors.new file (or another file read directly into
-      memory) of exactly SIZE_T_CEILING bytes.  Found by doors; fixes
-      bug 2326; bugfix on 0.2.1.25.
-

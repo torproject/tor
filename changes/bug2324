@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Add a check for SIZE_T_MAX to tor_realloc to try to avoid
-      underflow errors there too.  Fixes bug 2324.
-
