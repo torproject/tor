@@ -765,8 +765,8 @@ typedef enum {
 /** Initial value for both sides of a circuit transmission window when the
  * circuit is initialized.  Measured in cells. */
 #define CIRCWINDOW_START 1000
-#define CIRCWINDOW_START_MIN 1
-#define CIRCWINDOW_START_MAX 100000
+#define CIRCWINDOW_START_MIN 100
+#define CIRCWINDOW_START_MAX 1000
 /** Amount to increment a circuit window when we get a circuit SENDME. */
 #define CIRCWINDOW_INCREMENT 100
 /** Initial value on both sides of a stream transmission window when the
