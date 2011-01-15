@@ -1670,7 +1670,7 @@ fetch_from_buf_socks_client(buf_t *buf, int state, char **reason)
   if (buf->datalen < 2)
     return 0;
 
-  buf_pullup(buf, 128, 0);
+  buf_pullup(buf, MAX_SOCKS_MESSAGE_LEN, 0);
   tor_assert(buf->head && buf->head->datalen >= 2);
 
   data = (unsigned char *) buf->head->data;
