@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Fix compilation on mingw when a pthreads compatibility library
-      has been installed.  (We don't want to use it, so we shouldn't
-      be including pthread.h.)  Fixes bug 2313; bugfix on 0.1.0.1-rc.
