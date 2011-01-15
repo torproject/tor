@@ -282,6 +282,7 @@ dnsserv_resolved(edge_connection_t *conn,
                                      name,
                                      1, (char*)answer, ttl);
   } else if (answer_type == RESOLVED_TYPE_HOSTNAME &&
+             answer_len < 256 &&
              conn->socks_request->command == SOCKS_COMMAND_RESOLVE_PTR) {
     char *ans = tor_strndup(answer, answer_len);
     evdns_server_request_add_ptr_reply(req, NULL,
