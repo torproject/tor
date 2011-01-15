@@ -184,12 +184,19 @@ circuit_build_times_get_bw_scale(networkstatus_t *ns)
 static double
 circuit_build_times_close_quantile(void)
 {
-  return networkstatus_get_param(NULL, "cbtclosequantile",
+  int32_t param;
+  /* Cast is safe - circuit_build_times_quantile_cutoff() is capped */
+  int32_t min = (int)tor_lround(100*circuit_build_times_quantile_cutoff());
+  param = networkstatus_get_param(NULL, "cbtclosequantile",
              CBT_DEFAULT_CLOSE_QUANTILE,
-             /* Cast is safe, cbtquantile is capped at
-             * CBT_MAX_QUANTILE_CUTOFF. */
-             (int)tor_lround(100*circuit_build_times_quantile_cutoff()),
-             CBT_MAX_CLOSE_QUANTILE) / 100.0;
+             CBT_MIN_CLOSE_QUANTILE,
+             CBT_MAX_CLOSE_QUANTILE);
+  if (param < min) {
+    log_warn(LD_DIR, "Consensus parameter cbtclosequantile is "
+             "too small, raising to %d", min);
+    param = min;
+  }
+  return param / 100.0;
 }
 
 static int32_t
@@ -215,11 +222,17 @@ circuit_build_times_min_timeout(void)
 int32_t
 circuit_build_times_initial_timeout(void)
 {
-  int32_t num = networkstatus_get_param(NULL, "cbtinitialtimeout",
-                                        CBT_DEFAULT_TIMEOUT_INITIAL_VALUE,
-                                        circuit_build_times_min_timeout(),
-                                        CBT_MAX_TIMEOUT_INITIAL_VALUE);
-  return num;
+  int32_t min = circuit_build_times_min_timeout();
+  int32_t param = networkstatus_get_param(NULL, "cbtinitialtimeout",
+                                          CBT_DEFAULT_TIMEOUT_INITIAL_VALUE,
+                                          CBT_MIN_TIMEOUT_INITIAL_VALUE,
+                                          CBT_MAX_TIMEOUT_INITIAL_VALUE);
+  if (param < min) {
+    log_warn(LD_DIR, "Consensus parameter cbtinitialtimeout is too small, "
+             "raising to %d", min);
+    param = min;
+  }
+  return param;
 }
 
 static int32_t

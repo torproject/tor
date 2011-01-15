@@ -2190,15 +2190,24 @@ int32_t
 networkstatus_get_bw_weight(networkstatus_t *ns, const char *weight_name,
                             int32_t default_val)
 {
+  int32_t param;
+  int max;
   if (!ns) /* if they pass in null, go find it ourselves */
     ns = networkstatus_get_latest_consensus();
 
   if (!ns || !ns->weight_params)
     return default_val;
 
-  return get_net_param_from_list(ns->weight_params, weight_name,
-                                 default_val, -1,
-                                 circuit_build_times_get_bw_scale(ns));
+  max = circuit_build_times_get_bw_scale(ns);
+  param = get_net_param_from_list(ns->weight_params, weight_name,
+                                  default_val, -1,
+                                  BW_MAX_WEIGHT_SCALE);
+  if (param > max) {
+    log_warn(LD_DIR, "Value of consensus weight %s was too large, capping "
+             "to %d", weight_name, max);
+    param = max;
+  }
+  return param;
 }
 
 /** Return the name of the consensus flavor <b>flav</b> as used to identify

@@ -2981,8 +2981,8 @@ typedef uint32_t build_time_t;
  * build in terms of CDF quantile.
  */
 #define CBT_DEFAULT_CLOSE_QUANTILE 95
-/* Minimum value derived from cbtquantile parameter. */
-#define CBT_MAX_CLOSE_QUANTILE 99
+#define CBT_MIN_CLOSE_QUANTILE CBT_MIN_QUANTILE_CUTOFF
+#define CBT_MAX_CLOSE_QUANTILE CBT_MAX_QUANTILE_CUTOFF
 
 /**
  * How many circuits count as recent when considering if the
@@ -3027,9 +3027,8 @@ double circuit_build_times_quantile_cutoff(void);
 
 /** Initial circuit build timeout in milliseconds */
 #define CBT_DEFAULT_TIMEOUT_INITIAL_VALUE (60*1000)
+#define CBT_MIN_TIMEOUT_INITIAL_VALUE CBT_MIN_TIMEOUT_MIN_VALUE
 #define CBT_MAX_TIMEOUT_INITIAL_VALUE INT32_MAX
-/* CBT_MIN_TIMEOUT_INITIAL_VALUE dependent on
- * circuit_build_times_min_timeout() */
 int32_t circuit_build_times_initial_timeout(void);
 
 #if CBT_DEFAULT_MAX_RECENT_TIMEOUT_COUNT < CBT_MIN_MAX_RECENT_TIMEOUT_COUNT
