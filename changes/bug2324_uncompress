@@ -1,0 +1,5 @@
+  o Major bugfixes (security):
+    - Prevent a DoS attack by disallowing any zlib-compressed data
+      whose compression factor is implausibly high.  Fixes the
+      second part of bug2324; found by doors.
+
