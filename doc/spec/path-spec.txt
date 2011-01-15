@@ -432,7 +432,7 @@ of their choices.
         Min: 1
         Max: 20
         Effect: This value governs how many modes to use in the weighted
-        average calculation of Pareto paramter Xm. A value of 3 introduces
+        average calculation of Pareto parameter Xm. A value of 3 introduces
         some bias (2-5% of CDF) under ideal conditions, but allows for better
         performance in the event that a client chooses guard nodes of radically
         different performance characteristics.
