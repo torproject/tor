@@ -1,3 +1,169 @@
+Changes in version 0.2.2.21-alpha - 2011-01-15
+  Tor 0.2.2.21-alpha includes all the patches from Tor 0.2.1.29, which
+  continues our recent code security audit work. The main fix resolves
+  a remote heap overflow vulnerability that can allow remote code
+  execution (CVE-2011-0427). Other fixes address a variety of assert
+  and crash bugs, most of which we think are hard to exploit remotely.
+
+  o Major bugfixes (security), also included in 0.2.1.29:
+    - Fix a heap overflow bug where an adversary could cause heap
+      corruption. This bug probably allows remote code execution
+      attacks. Reported by "debuger". Fixes CVE-2011-0427. Bugfix on
+      0.1.2.10-rc.
+    - Prevent a denial-of-service attack by disallowing any
+      zlib-compressed data whose compression factor is implausibly
+      high. Fixes part of bug 2324; reported by "doorss".
+    - Zero out a few more keys in memory before freeing them. Fixes
+      bug 2384 and part of bug 2385. These key instances found by
+      "cypherpunks", based on Andrew Case's report about being able
+      to find sensitive data in Tor's memory space if you have enough
+      permissions. Bugfix on 0.0.2pre9.
+
+  o Major bugfixes (crashes), also included in 0.2.1.29:
+    - Prevent calls to Libevent from inside Libevent log handlers.
+      This had potential to cause a nasty set of crashes, especially
+      if running Libevent with debug logging enabled, and running
+      Tor with a controller watching for low-severity log messages.
+      Bugfix on 0.1.0.2-rc. Fixes bug 2190.
+    - Add a check for SIZE_T_MAX to tor_realloc() to try to avoid
+      underflow errors there too. Fixes the other part of bug 2324.
+    - Fix a bug where we would assert if we ever had a
+      cached-descriptors.new file (or another file read directly into
+      memory) of exactly SIZE_T_CEILING bytes. Fixes bug 2326; bugfix
+      on 0.2.1.25. Found by doorss.
+    - Fix some potential asserts and parsing issues with grossly
+      malformed router caches. Fixes bug 2352; bugfix on Tor 0.2.1.27.
+      Found by doorss.
+
+  o Minor bugfixes (other), also included in 0.2.1.29:
+    - Fix a bug with handling misformed replies to reverse DNS lookup
+      requests in DNSPort. Bugfix on Tor 0.2.0.1-alpha. Related to a
+      bug reported by doorss.
+    - Fix compilation on mingw when a pthreads compatibility library
+      has been installed. (We don't want to use it, so we shouldn't
+      be including pthread.h.) Fixes bug 2313; bugfix on 0.1.0.1-rc.
+    - Fix a bug where we would declare that we had run out of virtual
+      addresses when the address space was only half-exhausted. Bugfix
+      on 0.1.2.1-alpha.
+    - Correctly handle the case where AutomapHostsOnResolve is set but
+      no virtual addresses are available. Fixes bug 2328; bugfix on
+      0.1.2.1-alpha. Bug found by doorss.
+    - Correctly handle wrapping around to when we run out of virtual
+      address space. Found by cypherpunks, bugfix on 0.2.0.5-alpha.
+    - The 0.2.1.28 tarball was missing src/common/OpenBSD_malloc_Linux.c
+      because we built it with a too-old version of automake. Thus that
+      release broke ./configure --enable-openbsd-malloc, which is popular
+      among really fast exit relays on Linux.
+
+  o Minor features, also included in 0.2.1.29:
+    - Update to the January 1 2011 Maxmind GeoLite Country database.
+    - Introduce output size checks on all of our decryption functions.
+
+  o Build changes, also included in 0.2.1.29:
+    - Tor does not build packages correctly with Automake 1.6 and earlier;
+      added a check to Makefile.am to make sure that we're building with
+      Automake 1.7 or later.
+
+  o Minor features, new in 0.2.2.21-alpha:
+    - Make sure to disable DirPort if running as a bridge. DirPorts aren't
+      used on bridges, and it makes bridge scanning somewhat easier.
+    - If writing the state file to disk fails, wait up to an hour before
+      retrying again, rather than trying again each second. Fixes bug
+      2346; bugfix on Tor 0.1.1.3-alpha.
+    - Make Libevent log messages get delivered to controllers later,
+      and not from inside the Libevent log handler. This prevents unsafe
+      reentrant Libevent calls while still letting the log messages
+      get through.
+    - Detect platforms that brokenly use a signed size_t, and refuse to
+      build there. Found and analyzed by doorss and rransom.
+    - Fix a bunch of compile warnings revealed by mingw with gcc 4.5.
+      Resolves bug 2314.
+
+  o Minor bugfixes, new in 0.2.2.21-alpha:
+    - Handle SOCKS messages longer than 128 bytes long correctly, rather
+      than waiting forever for them to finish. Fixes bug 2330; bugfix
+      on 0.2.0.16-alpha. Found by doorss.
+    - Add assertions to check for overflow in arguments to
+      base32_encode() and base32_decode(); fix a signed-unsigned
+      comparison there too. These bugs are not actually reachable in Tor,
+      but it's good to prevent future errors too. Found by doorss.
+    - Correctly detect failures to create DNS requests when using Libevent
+      versions before v2. (Before Libevent 2, we used our own evdns
+      implementation. Its return values for Libevent's evdns_resolve_*()
+      functions are not consistent with those from Libevent.) Fixes bug
+      2363; bugfix on 0.2.2.6-alpha. Found by "lodger".
+
+  o Documentation, new in 0.2.2.21-alpha:
+    - Document the default socks host and port (127.0.0.1:9050) for
+      tor-resolve.
+
+
+Changes in version 0.2.1.29 - 2011-01-15
+  Tor 0.2.1.29 continues our recent code security audit work. The main
+  fix resolves a remote heap overflow vulnerability that can allow remote
+  code execution. Other fixes address a variety of assert and crash bugs,
+  most of which we think are hard to exploit remotely.
+
+  o Major bugfixes (security):
+    - Fix a heap overflow bug where an adversary could cause heap
+      corruption. This bug probably allows remote code execution
+      attacks. Reported by "debuger". Fixes CVE-2011-0427. Bugfix on
+      0.1.2.10-rc.
+    - Prevent a denial-of-service attack by disallowing any
+      zlib-compressed data whose compression factor is implausibly
+      high. Fixes part of bug 2324; reported by "doorss".
+    - Zero out a few more keys in memory before freeing them. Fixes
+      bug 2384 and part of bug 2385. These key instances found by
+      "cypherpunks", based on Andrew Case's report about being able
+      to find sensitive data in Tor's memory space if you have enough
+      permissions. Bugfix on 0.0.2pre9.
+
+  o Major bugfixes (crashes):
+    - Prevent calls to Libevent from inside Libevent log handlers.
+      This had potential to cause a nasty set of crashes, especially
+      if running Libevent with debug logging enabled, and running
+      Tor with a controller watching for low-severity log messages.
+      Bugfix on 0.1.0.2-rc. Fixes bug 2190.
+    - Add a check for SIZE_T_MAX to tor_realloc() to try to avoid
+      underflow errors there too. Fixes the other part of bug 2324.
+    - Fix a bug where we would assert if we ever had a
+      cached-descriptors.new file (or another file read directly into
+      memory) of exactly SIZE_T_CEILING bytes. Fixes bug 2326; bugfix
+      on 0.2.1.25. Found by doorss.
+    - Fix some potential asserts and parsing issues with grossly
+      malformed router caches. Fixes bug 2352; bugfix on Tor 0.2.1.27.
+      Found by doorss.
+
+  o Minor bugfixes (other):
+    - Fix a bug with handling misformed replies to reverse DNS lookup
+      requests in DNSPort. Bugfix on Tor 0.2.0.1-alpha. Related to a
+      bug reported by doorss.
+    - Fix compilation on mingw when a pthreads compatibility library
+      has been installed. (We don't want to use it, so we shouldn't
+      be including pthread.h.) Fixes bug 2313; bugfix on 0.1.0.1-rc.
+    - Fix a bug where we would declare that we had run out of virtual
+      addresses when the address space was only half-exhausted. Bugfix
+      on 0.1.2.1-alpha.
+    - Correctly handle the case where AutomapHostsOnResolve is set but
+      no virtual addresses are available. Fixes bug 2328; bugfix on
+      0.1.2.1-alpha. Bug found by doorss.
+    - Correctly handle wrapping around to when we run out of virtual
+      address space. Found by cypherpunks, bugfix on 0.2.0.5-alpha.
+    - The 0.2.1.28 tarball was missing src/common/OpenBSD_malloc_Linux.c
+      because we built it with a too-old version of automake. Thus that
+      release broke ./configure --enable-openbsd-malloc, which is popular
+      among really fast exit relays on Linux.
+
+  o Minor features:
+    - Update to the January 1 2011 Maxmind GeoLite Country database.
+    - Introduce output size checks on all of our decryption functions.
+
+  o Build changes:
+    - Tor does not build packages correctly with Automake 1.6 and earlier;
+      added a check to Makefile.am to make sure that we're building with
+      Automake 1.7 or later.
+
+
 Changes in version 0.2.2.20-alpha - 2010-12-17
   Tor 0.2.2.20-alpha does some code cleanup to reduce the risk of remotely
   exploitable bugs. We also fix a variety of other significant bugs,
@@ -67,6 +233,81 @@ Changes in version 0.2.1.28 - 2010-12-17
 
   o Minor features:
     - Update to the December 1 2010 Maxmind GeoLite Country database.
+
+
+Changes in version 0.2.1.27 - 2010-11-23
+  Yet another OpenSSL security patch broke its compatibility with Tor:
+  Tor 0.2.1.27 makes relays work with openssl 0.9.8p and 1.0.0.b. We
+  also took this opportunity to fix several crash bugs, integrate a new
+  directory authority, and update the bundled GeoIP database.
+
+  o Major bugfixes:
+    - Resolve an incompatibility with OpenSSL 0.9.8p and OpenSSL 1.0.0b:
+      No longer set the tlsext_host_name extension on server SSL objects;
+      but continue to set it on client SSL objects. Our goal in setting
+      it was to imitate a browser, not a vhosting server. Fixes bug 2204;
+      bugfix on 0.2.1.1-alpha.
+    - Do not log messages to the controller while shrinking buffer
+      freelists. Doing so would sometimes make the controller connection
+      try to allocate a buffer chunk, which would mess up the internals
+      of the freelist and cause an assertion failure. Fixes bug 1125;
+      fixed by Robert Ransom. Bugfix on 0.2.0.16-alpha.
+    - Learn our external IP address when we're a relay or bridge, even if
+      we set PublishServerDescriptor to 0. Bugfix on 0.2.0.3-alpha,
+      where we introduced bridge relays that don't need to publish to
+      be useful. Fixes bug 2050.
+    - Do even more to reject (and not just ignore) annotations on
+      router descriptors received anywhere but from the cache. Previously
+      we would ignore such annotations at first, but cache them to disk
+      anyway. Bugfix on 0.2.0.8-alpha. Found by piebeer.
+    - When you're using bridges and your network goes away and your
+      bridges get marked as down, recover when you attempt a new socks
+      connection (if the network is back), rather than waiting up to an
+      hour to try fetching new descriptors for your bridges. Bugfix on
+      0.2.0.3-alpha; fixes bug 1981.
+
+  o Major features:
+    - Move to the November 2010 Maxmind GeoLite country db (rather
+      than the June 2009 ip-to-country GeoIP db) for our statistics that
+      count how many users relays are seeing from each country. Now we'll
+      have more accurate data, especially for many African countries.
+
+  o New directory authorities:
+    - Set up maatuska (run by Linus Nordberg) as the eighth v3 directory
+      authority.
+
+  o Minor bugfixes:
+    - Fix an assertion failure that could occur in directory caches or
+      bridge users when using a very short voting interval on a testing
+      network. Diagnosed by Robert Hogan. Fixes bug 1141; bugfix on
+      0.2.0.8-alpha.
+    - Enforce multiplicity rules when parsing annotations. Bugfix on
+      0.2.0.8-alpha. Found by piebeer.
+    - Allow handshaking OR connections to take a full KeepalivePeriod
+      seconds to handshake. Previously, we would close them after
+      IDLE_OR_CONN_TIMEOUT (180) seconds, the same timeout as if they
+      were open. Bugfix on 0.2.1.26; fixes bug 1840. Thanks to mingw-san
+      for analysis help.
+    - When building with --enable-gcc-warnings on OpenBSD, disable
+      warnings in system headers. This makes --enable-gcc-warnings
+      pass on OpenBSD 4.8.
+
+  o Minor features:
+    - Exit nodes didn't recognize EHOSTUNREACH as a plausible error code,
+      and so sent back END_STREAM_REASON_MISC. Clients now recognize a new
+      stream ending reason for this case: END_STREAM_REASON_NOROUTE.
+      Servers can start sending this code when enough clients recognize
+      it. Bugfix on 0.1.0.1-rc; fixes part of bug 1793.
+    - Build correctly on mingw with more recent versions of OpenSSL 0.9.8.
+      Patch from mingw-san.
+
+  o Removed files:
+    - Remove the old debian/ directory from the main Tor distribution.
+      The official Tor-for-debian git repository lives at the URL
+      https://git.torproject.org/debian/tor.git
+    - Stop shipping the old doc/website/ directory in the tarball. We
+      changed the website format in late 2010, and what we shipped in
+      0.2.1.26 really wasn't that useful anyway.
 
 
 Changes in version 0.2.2.19-alpha - 2010-11-22
