@@ -370,11 +370,11 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
      * bandwidth parameters in the consensus, but allow local config
      * options to override. */
     rate = options->PerConnBWRate ? (int)options->PerConnBWRate :
-        (int)networkstatus_get_param(NULL, "perconnbwrate",
-                                     (int)options->BandwidthRate);
+        networkstatus_get_param(NULL, "perconnbwrate",
+                                (int)options->BandwidthRate, 1, INT32_MAX);
     burst = options->PerConnBWBurst ? (int)options->PerConnBWBurst :
-        (int)networkstatus_get_param(NULL, "perconnbwburst",
-                                     (int)options->BandwidthBurst);
+        networkstatus_get_param(NULL, "perconnbwburst",
+                                (int)options->BandwidthBurst, 1, INT32_MAX);
   }
 
   conn->bandwidthrate = rate;

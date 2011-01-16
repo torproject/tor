@@ -1068,7 +1068,7 @@ should_refuse_unknown_exits(or_options_t *options)
   if (options->RefuseUnknownExits_ != -1) {
     return options->RefuseUnknownExits_;
   } else {
-    return networkstatus_get_param(NULL, "refuseunknownexits", 1);
+    return networkstatus_get_param(NULL, "refuseunknownexits", 1, 0, 1);
   }
 }
 

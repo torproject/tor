@@ -1999,9 +1999,9 @@ cell_ewma_set_scale_factor(or_options_t *options, networkstatus_t *consensus)
   if (options && options->CircuitPriorityHalflife >= -EPSILON) {
     halflife = options->CircuitPriorityHalflife;
     source = "CircuitPriorityHalflife in configuration";
-  } else if (consensus &&
-             (halflife_ms = networkstatus_get_param(
-                   consensus, "CircuitPriorityHalflifeMsec", -1)) >= 0) {
+  } else if (consensus && (halflife_ms = networkstatus_get_param(
+                 consensus, "CircuitPriorityHalflifeMsec",
+                 -1, -1, INT32_MAX)) >= 0) {
     halflife = ((double)halflife_ms)/1000.0;
     source = "CircuitPriorityHalflifeMsec in consensus";
   } else {

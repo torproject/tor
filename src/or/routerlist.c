@@ -1650,8 +1650,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
     return NULL;
   }
 
-  weight_scale = networkstatus_get_param(NULL, "bwweightscale",
-                                         BW_WEIGHT_SCALE);
+  weight_scale = circuit_build_times_get_bw_scale(NULL);
 
   if (rule == WEIGHT_FOR_GUARD) {
     Wg = networkstatus_get_bw_weight(NULL, "Wgg", -1);

@@ -421,57 +421,79 @@ of their choices.
 
       cbtdisabled
         Default: 0
-        Effect: If non-zero, all CircuitBuildTime learning code should be
+        Min: 0
+        Max: 1
+        Effect: If 1, all CircuitBuildTime learning code should be
                 disabled and history should be discarded. For use in
                 emergency situations only.
 
       cbtnummodes
         Default: 3
+        Min: 1
+        Max: 20
         Effect: This value governs how many modes to use in the weighted
-        average calculation of Pareto paramter Xm. A value of 3 introduces
+        average calculation of Pareto parameter Xm. A value of 3 introduces
         some bias (2-5% of CDF) under ideal conditions, but allows for better
         performance in the event that a client chooses guard nodes of radically
         different performance characteristics.
 
       cbtrecentcount
         Default: 20
+        Min: 3
+        Max: 1000
         Effect: This is the number of circuit build times to keep track of
                 for the following option.
 
       cbtmaxtimeouts
         Default: 18
+        Min: 3
+        Max: 10000
         Effect: When this many timeouts happen in the last 'cbtrecentcount'
                 circuit attempts, the client should discard all of its
                 history and begin learning a fresh timeout value.
 
       cbtmincircs
         Default: 100
+        Min: 1
+        Max: 10000
         Effect: This is the minimum number of circuits to build before
                 computing a timeout.
 
       cbtquantile
         Default: 80
+        Min: 10
+        Max: 99
         Effect: This is the position on the quantile curve to use to set the
-                timeout value. It is a percent (0-99).
+                timeout value. It is a percent (10-99).
 
       cbtclosequantile
         Default: 95
+        Min: Value of cbtquantile parameter
+        Max: 99
         Effect: This is the position on the quantile curve to use to set the
                 timeout value to use to actually close circuits. It is a percent
                 (0-99).
 
       cbttestfreq
         Default: 60
+        Min: 1
+        Max: 2147483647 (INT32_MAX)
         Effect: Describes how often in seconds to build a test circuit to
                 gather timeout values. Only applies if less than 'cbtmincircs'
                 have been recorded.
 
       cbtmintimeout
         Default: 2000
+        Min: 500
+        Max: 2147483647 (INT32_MAX)
         Effect: This is the minimum allowed timeout value in milliseconds.
+                The minimum is to prevent rounding to 0 (we only check once
+                per second).
 
       cbtinitialtimeout
         Default: 60000
+        Min: Value of cbtmintimeout
+        Max: 2147483647 (INT32_MAX)
         Effect: This is the timeout value to use before computing a timeout,
                 in milliseconds.
 
