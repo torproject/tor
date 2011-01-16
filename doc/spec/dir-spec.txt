@@ -1173,12 +1173,14 @@
         research indicates that a lower value would mean fewer cells in
         transit in the network at any given time. Obeyed by Tor 0.2.1.20
         and later.
+        Min: 100, Max: 1000
 
         "CircuitPriorityHalflifeMsec" -- the halflife parameter used when
         weighting which circuit will send the next cell. Obeyed by Tor
         0.2.2.10-alpha and later.  (Versions of Tor between 0.2.2.7-alpha
         and 0.2.2.10-alpha recognized a "CircPriorityHalflifeMsec" parameter,
         but mishandled it badly.)
+        Min: -1, Max: 2147483647 (INT32_MAX)
 
         "perconnbwrate" and "perconnbwburst" -- if set, each relay sets
         up a separate token bucket for every client OR connection,
@@ -1188,12 +1190,14 @@
         and later. (Note that relays running 0.2.2.7-alpha through
         0.2.2.14-alpha looked for bwconnrate and bwconnburst, but then
         did the wrong thing with them; see bug 1830 for details.)
+        Min: 1, Max: 2147483647 (INT32_MAX)
 
-        "refuseunknownexits" -- if set and non-zero, exit relays look at
+        "refuseunknownexits" -- if set to one, exit relays look at
         the previous hop of circuits that ask to open an exit stream,
         and refuse to exit if they don't recognize it as a relay. The
         goal is to make it harder for people to use them as one-hop
         proxies. See trac entry 1751 for details.
+        Min: 0, Max: 1
 
         See also "2.4.5. Consensus parameters governing behavior"
         in path-spec.txt for a series of circuit build time related
@@ -1832,7 +1836,7 @@
 
   To ensure consensus, all calculations are performed using integer math
   with a fixed precision determined by the bwweightscale consensus
-  parameter (defaults at 10000).
+  parameter (defaults at 10000, Min: 1, Max: INT32_MAX).
 
   For future balancing improvements, Tor clients support 11 additional weights
   for directory requests and middle weighting. These weights are currently

@@ -122,5 +122,7 @@ void circuit_build_times_network_is_live(circuit_build_times_t *cbt);
 int circuit_build_times_network_check_live(circuit_build_times_t *cbt);
 void circuit_build_times_network_circ_success(circuit_build_times_t *cbt);
 
+int circuit_build_times_get_bw_scale(networkstatus_t *ns);
+
 #endif
 

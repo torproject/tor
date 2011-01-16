@@ -19,9 +19,6 @@
 /** Smallest allowable voting interval. */
 #define MIN_VOTE_INTERVAL 300
 
-/** Precision multiplier for the Bw weights */
-#define BW_WEIGHT_SCALE   10000
-
 void dirvote_free_all(void);
 
 /* vote manipulation */
