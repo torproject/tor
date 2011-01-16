@@ -258,8 +258,9 @@ circuit_build_times_new_consensus_params(circuit_build_times_t *cbt,
 
   if (num > 0 && num != cbt->liveness.num_recent_circs) {
     int8_t *recent_circs;
-    log_notice(LD_CIRC, "Changing recent timeout size from %d to %d",
-               cbt->liveness.num_recent_circs, num);
+    log_notice(LD_CIRC, "The Tor Directory Consensus has changed how many "
+               "circuits we must track to detect network failures from %d "
+               "to %d.", cbt->liveness.num_recent_circs, num);
 
     tor_assert(cbt->liveness.timeouts_after_firsthop);
 
@@ -592,8 +593,10 @@ circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
 {
   int n = num_times;
   if (num_times > CBT_NCIRCUITS_TO_OBSERVE) {
-    log_notice(LD_CIRC, "Decreasing circuit_build_times size from %d to %d",
-               num_times, CBT_NCIRCUITS_TO_OBSERVE);
+    log_notice(LD_CIRC, "The number of circuit times that this Tor version "
+               "uses to calculate build times is less than the number stored "
+               "in your state file. Decreasing the circuit time history from "
+               "%d to %d.", num_times, CBT_NCIRCUITS_TO_OBSERVE);
   }
 
   /* This code can only be run on a compact array */
@@ -1074,7 +1077,7 @@ circuit_build_times_network_close(circuit_build_times_t *cbt,
     if (cbt->liveness.nonlive_timeouts == 1) {
       log_notice(LD_CIRC,
                  "Tor has not observed any network activity for the past %d "
-                 "seconds. Disabling circuit build timeout code.",
+                 "seconds. Disabling circuit build timeout recording.",
                  (int)(now - cbt->liveness.network_last_live));
     } else {
       log_info(LD_CIRC,
@@ -1158,7 +1161,7 @@ circuit_build_times_network_check_changed(circuit_build_times_t *cbt)
   control_event_buildtimeout_set(cbt, BUILDTIMEOUT_SET_EVENT_RESET);
 
   log_notice(LD_CIRC,
-            "Network connection speed appears to have changed. Resetting "
+            "Your network connection speed appears to have changed. Resetting "
             "timeout to %lds after %d timeouts and %d buildtimes.",
             tor_lround(cbt->timeout_ms/1000), timeout_count,
             total_build_times);
@@ -1296,7 +1299,7 @@ circuit_build_times_set_timeout_worker(circuit_build_times_t *cbt)
   }
 
   if (max_time < INT32_MAX/2 && cbt->close_ms > 2*max_time) {
-    log_notice(LD_CIRC,
+    log_info(LD_CIRC,
                "Circuit build measurement period of %dms is more than twice "
                "the maximum build time we have ever observed. Capping it to "
                "%dms.", (int)cbt->close_ms, 2*max_time);
