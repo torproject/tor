@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eu
+
 if test "$1" = "" ; then
     echo "I need a package as an argument."
     exit 1
@@ -59,7 +61,7 @@ $DIGESTOUTPUT
    first few characters.  If the digest does not match, you do not have
    the right package file.  It could even be a forgery.
 
-Frequentlty asked questions:
+Frequently asked questions:
 
 Q: Why not just sign the package file, like you used to do?
 A: GPG signatures authenticate file contents, but not file names.  If
