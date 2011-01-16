@@ -64,6 +64,16 @@ Changes in version 0.2.2.21-alpha - 2011-01-15
       added a check to Makefile.am to make sure that we're building with
       Automake 1.7 or later.
 
+  o Major bugfixes, new in 0.2.2.21-alpha:
+    - Prevent crash/heap corruption when the cbtnummodes consensus
+      parameter is set to 0 or large values. Fixes bug 2317; bugfix
+      on 0.2.2.14-alpha.
+
+  o Major features, new in 0.2.2.21-alpha:
+    - Introduce minimum/maximum values that clients will believe
+      from the consensus. Now we'll have a better chance to avoid crashes
+      or worse when a consensus param has a weird value.
+
   o Minor features, new in 0.2.2.21-alpha:
     - Make sure to disable DirPort if running as a bridge. DirPorts aren't
       used on bridges, and it makes bridge scanning somewhat easier.
