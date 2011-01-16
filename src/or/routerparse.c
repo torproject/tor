@@ -11,6 +11,7 @@
 
 #include "or.h"
 #include "config.h"
+#include "circuitbuild.h"
 #include "dirserv.h"
 #include "dirvote.h"
 #include "policies.h"
@@ -2373,7 +2374,7 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
   const char *casename = NULL;
   int valid = 1;
 
-  weight_scale = networkstatus_get_param(ns, "bwweightscale", BW_WEIGHT_SCALE);
+  weight_scale = circuit_build_times_get_bw_scale(ns);
   Wgg = networkstatus_get_bw_weight(ns, "Wgg", -1);
   Wgm = networkstatus_get_bw_weight(ns, "Wgm", -1);
   Wgd = networkstatus_get_bw_weight(ns, "Wgd", -1);
