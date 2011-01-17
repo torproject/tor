@@ -99,6 +99,15 @@ static int onion_append_hop(crypt_path_t **head_ptr, extend_info_t *choice);
 
 static void entry_guards_changed(void);
 
+/**
+ * This function decides if CBT learning should be disabled. It returns
+ * true if one or more of the following four conditions are met:
+ *
+ *  1. If the cbtdisabled consensus parameter is set.
+ *  2. If the torrc option LearnCircuitBuildTimeout is false.
+ *  3. If we are a directory authority
+ *  4. If we fail to write circuit build time history to our state file.
+ */
 static int
 circuit_build_times_disabled(void)
 {
@@ -125,6 +134,13 @@ circuit_build_times_disabled(void)
   }
 }
 
+/**
+ * Retrieve and bounds-check the cbtmaxtimeouts consensus paramter.
+ *
+ * Effect: When this many timeouts happen in the last 'cbtrecentcount'
+ * circuit attempts, the client should discard all of its history and
+ * begin learning a fresh timeout value.
+ */
 static int32_t
 circuit_build_times_max_timeouts(void)
 {
@@ -134,6 +150,15 @@ circuit_build_times_max_timeouts(void)
                                  CBT_MAX_MAX_RECENT_TIMEOUT_COUNT);
 }
 
+/**
+ * Retrieve and bounds-check the cbtnummodes consensus paramter.
+ *
+ * Effect: This value governs how many modes to use in the weighted
+ * average calculation of Pareto parameter Xm. A value of 3 introduces
+ * some bias (2-5% of CDF) under ideal conditions, but allows for better
+ * performance in the event that a client chooses guard nodes of radically
+ * different performance characteristics.
+ */
 static int32_t
 circuit_build_times_default_num_xm_modes(void)
 {
@@ -144,6 +169,12 @@ circuit_build_times_default_num_xm_modes(void)
   return num;
 }
 
+/**
+ * Retrieve and bounds-check the cbtmincircs consensus paramter.
+ *
+ * Effect: This is the minimum number of circuits to build before
+ * computing a timeout.
+ */
 static int32_t
 circuit_build_times_min_circs_to_observe(void)
 {
@@ -162,6 +193,12 @@ circuit_build_times_enough_to_compute(circuit_build_times_t *cbt)
   return cbt->total_build_times >= circuit_build_times_min_circs_to_observe();
 }
 
+/**
+ * Retrieve and bounds-check the cbtquantile consensus paramter.
+ *
+ * Effect: This is the position on the quantile curve to use to set the
+ * timeout value. It is a percent (10-99).
+ */
 double
 circuit_build_times_quantile_cutoff(void)
 {
@@ -181,6 +218,13 @@ circuit_build_times_get_bw_scale(networkstatus_t *ns)
                                  BW_MAX_WEIGHT_SCALE);
 }
 
+/**
+ * Retrieve and bounds-check the cbtclosequantile consensus paramter.
+ *
+ * Effect: This is the position on the quantile curve to use to set the
+ * timeout value to use to actually close circuits. It is a percent
+ * (0-99).
+ */
 static double
 circuit_build_times_close_quantile(void)
 {
@@ -199,6 +243,13 @@ circuit_build_times_close_quantile(void)
   return param / 100.0;
 }
 
+/**
+ * Retrieve and bounds-check the cbttestfreq consensus paramter.
+ *
+ * Effect: Describes how often in seconds to build a test circuit to
+ * gather timeout values. Only applies if less than 'cbtmincircs'
+ * have been recorded.
+ */
 static int32_t
 circuit_build_times_test_frequency(void)
 {
@@ -209,6 +260,13 @@ circuit_build_times_test_frequency(void)
   return num;
 }
 
+/**
+ * Retrieve and bounds-check the cbtmintimeout consensus paramter.
+ *
+ * Effect: This is the minimum allowed timeout value in milliseconds.
+ * The minimum is to prevent rounding to 0 (we only check once
+ * per second).
+ */
 static int32_t
 circuit_build_times_min_timeout(void)
 {
@@ -219,6 +277,12 @@ circuit_build_times_min_timeout(void)
   return num;
 }
 
+/**
+ * Retrieve and bounds-check the cbtinitialtimeout consensus paramter.
+ *
+ * Effect: This is the timeout value to use before computing a timeout,
+ * in milliseconds.
+ */
 int32_t
 circuit_build_times_initial_timeout(void)
 {
@@ -235,6 +299,13 @@ circuit_build_times_initial_timeout(void)
   return param;
 }
 
+/**
+ * Retrieve and bounds-check the cbtrecentcount consensus paramter.
+ *
+ * Effect: This is the number of circuit build times to keep track of
+ * for deciding if we hit cbtmaxtimeouts and need to reset our state
+ * and learn a new timeout.
+ */
 static int32_t
 circuit_build_times_recent_circuit_count(networkstatus_t *ns)
 {
