@@ -48,12 +48,8 @@ Changes in version 0.2.2.21-alpha - 2011-01-15
     - Correctly handle the case where AutomapHostsOnResolve is set but
       no virtual addresses are available. Fixes bug 2328; bugfix on
       0.1.2.1-alpha. Bug found by doorss.
-    - Correctly handle wrapping around to when we run out of virtual
-      address space. Found by cypherpunks, bugfix on 0.2.0.5-alpha.
-    - The 0.2.1.28 tarball was missing src/common/OpenBSD_malloc_Linux.c
-      because we built it with a too-old version of automake. Thus that
-      release broke ./configure --enable-openbsd-malloc, which is popular
-      among really fast exit relays on Linux.
+    - Correctly handle wrapping around when we run out of virtual
+      address space. Found by cypherpunks; bugfix on 0.2.0.5-alpha.
 
   o Minor features, also included in 0.2.1.29:
     - Update to the January 1 2011 Maxmind GeoLite Country database.
@@ -63,6 +59,10 @@ Changes in version 0.2.2.21-alpha - 2011-01-15
     - Tor does not build packages correctly with Automake 1.6 and earlier;
       added a check to Makefile.am to make sure that we're building with
       Automake 1.7 or later.
+    - The 0.2.1.28 tarball was missing src/common/OpenBSD_malloc_Linux.c
+      because we built it with a too-old version of automake. Thus that
+      release broke ./configure --enable-openbsd-malloc, which is popular
+      among really fast exit relays on Linux.
 
   o Major bugfixes, new in 0.2.2.21-alpha:
     - Prevent crash/heap corruption when the cbtnummodes consensus
