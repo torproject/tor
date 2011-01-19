@@ -1583,6 +1583,10 @@ extrainfo_parse_entry_from_string(const char *s, const char *end,
 authority_cert_t *
 authority_cert_parse_from_string(const char *s, const char **end_of_string)
 {
+  /** Reject any certificate at least this big; it is probably an overflow, an
+   * attack, a bug, or some other nonsense. */
+#define MAX_CERT_SIZE (128*1024)
+
   authority_cert_t *cert = NULL, *old_cert;
   smartlist_t *tokens = NULL;
   char digest[DIGEST_LEN];
@@ -1608,6 +1612,12 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
   tor_assert(eos);
   ++eos;
   len = eos - s;
+
+  if (len > MAX_CERT_SIZE) {
+    log_warn(LD_DIR, "Certificate is far too big (at %lu bytes long); "
+             "rejecting", (unsigned long)len);
+    return NULL;
+  }
 
   tokens = smartlist_create();
   area = memarea_new();
@@ -3024,6 +3034,9 @@ get_next_token(memarea_t *area,
   /** Reject any object at least this big; it is probably an overflow, an
    * attack, a bug, or some other nonsense. */
 #define MAX_UNPARSED_OBJECT_SIZE (128*1024)
+  /** Reject any line at least this big; it is probably an overflow, an
+   * attack, a bug, or some other nonsense. */
+#define MAX_LINE_LENGTH (128*1024)
 
   const char *next, *eol, *obstart;
   size_t obname_len;
@@ -3043,6 +3056,10 @@ get_next_token(memarea_t *area,
   eol = memchr(*s, '\n', eos-*s);
   if (!eol)
     eol = eos;
+  if (eol - *s > MAX_LINE_LENGTH) {
+    RET_ERR("Line far too long");
+  }
+
   next = find_whitespace_eos(*s, eol);
 
   if (!strcmp_len(*s, "opt", next-*s)) {
