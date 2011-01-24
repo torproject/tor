@@ -1243,8 +1243,8 @@ policy_summarize(smartlist_t *policy)
   accepts_str = smartlist_join_strings(accepts, ",", 0, &accepts_len);
   rejects_str = smartlist_join_strings(rejects, ",", 0, &rejects_len);
 
-  if (rejects_len > MAX_EXITPOLICY_SUMMARY_LEN &&
-      accepts_len > MAX_EXITPOLICY_SUMMARY_LEN) {
+  if (rejects_len > MAX_EXITPOLICY_SUMMARY_LEN-strlen("reject")-1 &&
+      accepts_len > MAX_EXITPOLICY_SUMMARY_LEN-strlen("accept")-1) {
     char *c;
     shorter_str = accepts_str;
     prefix = "accept";
