@@ -1,0 +1,3 @@
+  o Minor features
+    - Adjust our TLS Diffie-Hellman parameters to match those used by
+      Apache's mod_ssl.

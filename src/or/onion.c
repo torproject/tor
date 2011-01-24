@@ -184,7 +184,7 @@ onion_skin_create(crypto_pk_env_t *dest_router_key,
   *handshake_state_out = NULL;
   memset(onion_skin_out, 0, ONIONSKIN_CHALLENGE_LEN);
 
-  if (!(dh = crypto_dh_new()))
+  if (!(dh = crypto_dh_new(DH_TYPE_CIRCUIT)))
     goto err;
 
   dhbytes = crypto_dh_get_bytes(dh);
@@ -258,7 +258,7 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
     goto err;
   }
 
-  dh = crypto_dh_new();
+  dh = crypto_dh_new(DH_TYPE_CIRCUIT);
   if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN)) {
     log_info(LD_GENERAL, "crypto_dh_get_public failed.");
     goto err;
