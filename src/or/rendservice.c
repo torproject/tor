@@ -1100,7 +1100,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   }
 
   /* Try DH handshake... */
-  dh = crypto_dh_new();
+  dh = crypto_dh_new(DH_TYPE_REND);
   if (!dh || crypto_dh_generate_public(dh)<0) {
     log_warn(LD_BUG,"Internal error: couldn't build DH state "
              "or generate public key.");
