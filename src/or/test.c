@@ -404,8 +404,8 @@ test_buffers(void)
 static void
 test_crypto_dh(void)
 {
-  crypto_dh_env_t *dh1 = crypto_dh_new();
-  crypto_dh_env_t *dh2 = crypto_dh_new();
+  crypto_dh_env_t *dh1 = crypto_dh_new(DH_TYPE_CIRCUIT);
+  crypto_dh_env_t *dh2 = crypto_dh_new(DH_TYPE_CIRCUIT);
   char p1[DH_BYTES];
   char p2[DH_BYTES];
   char s1[DH_BYTES];
