@@ -919,7 +919,10 @@ parse_log_severity_config(const char **cfg_ptr,
       smartlist_free(domains_list);
       if (err)
         return -1;
-      domains &= ~neg_domains;
+      if (domains == 0 && neg_domains)
+        domains = ~neg_domains;
+      else
+        domains &= ~neg_domains;
       cfg = eat_whitespace(closebracket+1);
     } else {
       ++got_an_unqualified_range;

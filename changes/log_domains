@@ -1,5 +1,9 @@
-  o Documentation
+  o Minor features
+    - Make it simpler to specify "All log domains except for A and B".
+      Previously you needed to say "[*,~A,~B]".  Now you can just say
+      "[~A,~B]".
 
+  o Documentation
     - Add documentation for configuring logging at different severities in
       different log domains.  We've had this feature since 0.2.1.1-alpha, but
       for some reason it never made it into the manpage.  Fixes bug 2215.

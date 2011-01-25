@@ -341,7 +341,7 @@ Other options can be specified either on the command-line (--option
     protocol, mm, http, app, control, circ, rend, bug, dir, dirserv, or, edge,
     acct, hist, and handshake.  Domain names are case-insensitive. +
  +
-    For example, "`Log [handshake]debug [*,~net,~mm]info notice stdout`" sends
+    For example, "`Log [handshake]debug [~net,~mm]info notice stdout`" sends
     to stdout: all handshake messages of any severity, all info-and-higher
     messages from domains other than networking and memory management, and all
     messages of severity notice or higher.
