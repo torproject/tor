@@ -1618,6 +1618,11 @@
         * If consensus-method 7 or later is in use, the params line is
           included in the output.
 
+        * If the conesensus method is under 11, bad exits are considered as
+          possible exits when computing bandwidth weights.  Otherwise, if
+          method 11 or later is in use, any router that is determined to get
+          the BadExit flag doesn't count when we're calculating weights.
+
      The signatures at the end of a consensus document are sorted in
      ascending order by identity digest.
 
