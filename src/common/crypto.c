@@ -379,7 +379,7 @@ crypto_new_pk_env(void)
   RSA *rsa;
 
   rsa = RSA_new();
-  if (!rsa) return NULL;
+  tor_assert(rsa);
   return _crypto_new_pk_env_rsa(rsa);
 }
 

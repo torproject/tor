@@ -1,0 +1,3 @@
+  o Minor code simplifications and refactorings
+    - Always treat failure to allocate an RSA key as an unrecoverable
+      allocation error.
