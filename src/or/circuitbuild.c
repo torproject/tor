@@ -588,9 +588,9 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
 static void
 circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,
                                             build_time_t *raw_times,
-                                            int num_times)
+                                            uint32_t num_times)
 {
-  int n = num_times;
+  uint32_t n = num_times;
   if (num_times > CBT_NCIRCUITS_TO_OBSERVE) {
     log_notice(LD_CIRC, "Decreasing circuit_build_times size from %d to %d",
                num_times, CBT_NCIRCUITS_TO_OBSERVE);
