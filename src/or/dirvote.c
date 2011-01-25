@@ -50,7 +50,7 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 10
+#define MAX_SUPPORTED_CONSENSUS_METHOD 11
 
 /** Lowest consensus method that contains a 'directory-footer' marker */
 #define MIN_METHOD_FOR_FOOTER 9
@@ -1693,7 +1693,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
       const char *chosen_name = NULL;
       int exitsummary_disagreement = 0;
       int is_named = 0, is_unnamed = 0, is_running = 0;
-      int is_guard = 0, is_exit = 0;
+      int is_guard = 0, is_exit = 0, is_bad_exit = 0;
       int naming_conflict = 0;
       int n_listing = 0;
       int i;
@@ -1819,6 +1819,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
               is_guard = 1;
             else if (!strcmp(fl, "Running"))
               is_running = 1;
+            else if (!strcmp(fl, "BadExit"))
+              is_bad_exit = 1;
           }
         }
       });
@@ -1843,6 +1845,11 @@ networkstatus_compute_consensus(smartlist_t *votes,
       } else if (consensus_method >= 5 && num_bandwidths > 0) {
         rs_out.has_bandwidth = 1;
         rs_out.bandwidth = median_uint32(bandwidths, num_bandwidths);
+      }
+
+      /* Fix bug 2203: Do not count BadExit nodes as Exits for bw weights */
+      if (consensus_method >= 11) {
+        is_exit = is_exit && !is_bad_exit;
       }
 
       if (consensus_method >= MIN_METHOD_FOR_BW_WEIGHTS) {
