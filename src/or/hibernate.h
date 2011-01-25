@@ -14,6 +14,7 @@
 
 int accounting_parse_options(const or_options_t *options, int validate_only);
 int accounting_is_enabled(const or_options_t *options);
+int accounting_get_interval_length(void);
 void configure_accounting(time_t now);
 void accounting_run_housekeeping(time_t now);
 void accounting_add_bytes(size_t n_read, size_t n_written, int seconds);

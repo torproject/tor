@@ -242,6 +242,14 @@ accounting_is_enabled(const or_options_t *options)
   return 0;
 }
 
+/** If accounting is enabled, return how long (in seconds) this
+ * interval lasts. */
+int
+accounting_get_interval_length(void)
+{
+  return (int)(interval_end_time - interval_start_time);
+}
+
 /** Called from main.c to tell us that <b>seconds</b> seconds have
  * passed, <b>n_read</b> bytes have been read, and <b>n_written</b>
  * bytes have been written. */
@@ -504,7 +512,6 @@ accounting_set_wakeup_time(void)
 {
   char digest[DIGEST_LEN];
   crypto_digest_env_t *d_env;
-  int time_in_interval;
   uint64_t time_to_exhaust_bw;
   int time_to_consider;
 
@@ -538,14 +545,12 @@ accounting_set_wakeup_time(void)
     interval_wakeup_time = interval_start_time;
 
     log_notice(LD_ACCT,
-           "Configured hibernation.  This interval begins at %s "
-           "and ends at %s.  We have no prior estimate for bandwidth, so "
+           "Configured hibernation. This interval begins at %s "
+           "and ends at %s. We have no prior estimate for bandwidth, so "
            "we will start out awake and hibernate when we exhaust our quota.",
            buf1, buf2);
     return;
   }
-
-  time_in_interval = (int)(interval_end_time - interval_start_time);
 
   time_to_exhaust_bw =
     (get_options()->AccountingMax/expected_bandwidth_usage)*60;
@@ -553,7 +558,8 @@ accounting_set_wakeup_time(void)
     time_to_exhaust_bw = INT_MAX;
     time_to_consider = 0;
   } else {
-    time_to_consider = time_in_interval - (int)time_to_exhaust_bw;
+    time_to_consider = accounting_get_interval_length() -
+                       (int)time_to_exhaust_bw;
   }
 
   if (time_to_consider<=0) {

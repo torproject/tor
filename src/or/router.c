@@ -823,9 +823,26 @@ decide_to_advertise_dirport(const or_options_t *options, uint16_t dir_port)
    * make us choose not to publish. */
 
   if (accounting_is_enabled(options)) {
-    /* if we might potentially hibernate */
-    new_choice = 0;
-    reason = "AccountingMax enabled";
+    /* Don't spend bytes for directory traffic if we could end up hibernating,
+     * but allow DirPort otherwise. Some people set AccountingMax because
+     * they're confused or to get statistics. */
+    int interval_length = accounting_get_interval_length();
+    uint32_t effective_bw = get_effective_bwrate(options);
+    if (!interval_length) {
+      log_warn(LD_BUG, "An accounting interval is not allowed to be zero "
+                       "seconds long. Raising to 1.");
+      interval_length = 1;
+    }
+    log_info(LD_GENERAL, "Calculating whether to disable dirport: effective "
+                         "bwrate: %u, AccountingMax: "U64_FORMAT", "
+                         "accounting interval length %d", effective_bw,
+                         U64_PRINTF_ARG(options->AccountingMax),
+                         interval_length);
+    if (effective_bw >=
+        options->AccountingMax / interval_length) {
+      new_choice = 0;
+      reason = "AccountingMax enabled";
+    }
 #define MIN_BW_TO_ADVERTISE_DIRPORT 51200
   } else if (options->BandwidthRate < MIN_BW_TO_ADVERTISE_DIRPORT ||
              (options->RelayBandwidthRate > 0 &&
