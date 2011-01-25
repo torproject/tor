@@ -524,6 +524,8 @@ crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
 
   /* Create a read-only memory BIO, backed by the string 's' */
   b = BIO_new_mem_buf((char*)s, (int)len);
+  if (!b)
+    return -1;
 
   if (env->key)
     RSA_free(env->key);
@@ -584,6 +586,8 @@ crypto_pk_write_key_to_string_impl(crypto_pk_env_t *env, char **dest,
   tor_assert(dest);
 
   b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
+  if (!b)
+    return -1;
 
   /* Now you can treat b as if it were a file.  Just use the
    * PEM_*_bio_* functions instead of the non-bio variants.
@@ -651,6 +655,8 @@ crypto_pk_read_public_key_from_string(crypto_pk_env_t *env, const char *src,
   tor_assert(len<INT_MAX);
 
   b = BIO_new(BIO_s_mem()); /* Create a memory BIO */
+  if (!b)
+    return -1;
 
   BIO_write(b, src, (int)len);
 
