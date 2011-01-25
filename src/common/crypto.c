@@ -326,17 +326,6 @@ _crypto_new_pk_env_rsa(RSA *rsa)
   return env;
 }
 
-/** used by tortls.c: wrap the RSA from an evp_pkey in a crypto_pk_env_t.
- * returns NULL if this isn't an RSA key. */
-crypto_pk_env_t *
-_crypto_new_pk_env_evp_pkey(EVP_PKEY *pkey)
-{
-  RSA *rsa;
-  if (!(rsa = EVP_PKEY_get1_RSA(pkey)))
-    return NULL;
-  return _crypto_new_pk_env_rsa(rsa);
-}
-
 /** Helper, used by tor-checkkey.c and tor-gencert.c.  Return the RSA from a
  * crypto_pk_env_t. */
 RSA *
