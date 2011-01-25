@@ -214,7 +214,7 @@ geoip_load_file(const char *filename, or_options_t *options)
     smartlist_free(geoip_entries);
   }
   geoip_entries = smartlist_create();
-  log_notice(LD_GENERAL, "Parsing GEOIP file.");
+  log_notice(LD_GENERAL, "Parsing GEOIP file %s.", filename);
   while (!feof(f)) {
     char buf[512];
     if (fgets(buf, (int)sizeof(buf), f) == NULL)
