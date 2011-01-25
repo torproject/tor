@@ -287,6 +287,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("IgnoreVersion"),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   VAR("Log",                     LINELIST, Logs,             NULL),
+  V(LogMessageDomains,           BOOL,     "0"),
   OBSOLETE("LinkPadding"),
   OBSOLETE("LogLevel"),
   OBSOLETE("LogFile"),
@@ -3811,7 +3812,8 @@ options_transition_affects_workers(or_options_t *old_options,
       old_options->SafeLogging != new_options->SafeLogging ||
       old_options->ClientOnly != new_options->ClientOnly ||
       public_server_mode(old_options) != public_server_mode(new_options) ||
-      !config_lines_eq(old_options->Logs, new_options->Logs))
+      !config_lines_eq(old_options->Logs, new_options->Logs) ||
+      old_options->LogMessageDomains != new_options->LogMessageDomains)
     return 1;
 
   /* Check whether log options match. */
@@ -4386,6 +4388,9 @@ options_init_logs(or_options_t *options, int validate_only)
     tor_free(severity);
   }
   smartlist_free(elts);
+
+  if (ok && !validate_only)
+    logs_set_domain_logging(options->LogMessageDomains);
 
   return ok?0:-1;
 }

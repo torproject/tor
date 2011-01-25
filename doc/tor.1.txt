@@ -346,6 +346,11 @@ Other options can be specified either on the command-line (--option
     messages from domains other than networking and memory management, and all
     messages of severity notice or higher.
 
+**LogMessageDomains** **0**|**1**::
+    If 1, Tor includes message domains with each log message.  Every log
+    message currently has at least one domain; most currently have exactly
+    one.  This doesn't affect controller log messages. (Default: 0)
+
 **OutboundBindAddress** __IP__::
     Make all outbound connections originate from the IP address specified. This
     is only useful when you have multiple network interfaces, and you want all
