@@ -829,9 +829,9 @@ get_version(void)
 {
   if (_version == NULL) {
     if (strlen(tor_svn_revision)) {
-      size_t len = strlen(VERSION)+strlen(tor_svn_revision)+8;
+      size_t len = strlen(VERSION)+strlen(tor_svn_revision)+16;
       _version = tor_malloc(len);
-      tor_snprintf(_version, len, "%s (r%s)", VERSION, tor_svn_revision);
+      tor_snprintf(_version, len, "%s (git-%s)", VERSION, tor_svn_revision);
     } else {
       _version = tor_strdup(VERSION);
     }
