@@ -1371,11 +1371,12 @@ options_act(or_options_t *old_options)
     if (options_transition_affects_workers(old_options, options)) {
       log_info(LD_GENERAL,
                "Worker-related options changed. Rotating workers.");
+
+      if (init_keys() < 0) {
+        log_warn(LD_BUG,"Error initializing keys; exiting");
+        return -1;
+      }
       if (server_mode(options) && !server_mode(old_options)) {
-        if (init_keys() < 0) {
-          log_warn(LD_BUG,"Error initializing keys; exiting");
-          return -1;
-        }
         ip_address_changed(0);
         if (has_completed_circuit || !any_predicted_circuits(time(NULL)))
           inform_testing_reachability();
@@ -3763,6 +3764,7 @@ options_transition_affects_workers(or_options_t *old_options,
                                        new_options->ServerDNSSearchDomains ||
       old_options->SafeLogging != new_options->SafeLogging ||
       old_options->ClientOnly != new_options->ClientOnly ||
+      public_server_mode(old_options) != public_server_mode(new_options) ||
       !config_lines_eq(old_options->Logs, new_options->Logs))
     return 1;
 
