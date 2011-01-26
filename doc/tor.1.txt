@@ -927,7 +927,9 @@ is non-zero):
     period, or receive more than that number in the period. For example, with
     AccountingMax set to 1 GB, a server could send 900 MB and receive 800 MB
     and continue running. It will only hibernate once one of the two reaches 1
-    GB. When the number of bytes is exhausted, Tor will hibernate until some
+    GB. When the number of bytes gets low, Tor will stop accepting new
+    connections and circuits.  When the number of bytes
+    is exhausted, Tor will hibernate until some
     time in the next accounting period. To prevent all servers from waking at
     the same time, Tor will also wait until a random point in each period
     before waking up. If you have bandwidth cost issues, enabling hibernation
