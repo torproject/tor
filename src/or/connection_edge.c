@@ -1659,7 +1659,8 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
-      if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
+      if (options->ClientRejectInternalAddresses &&
+          !conn->use_begindir && !conn->chosen_exit_name && !circ) {
         tor_addr_t addr;
         if (tor_addr_from_str(&addr, socks->address) >= 0 &&
             tor_addr_is_internal(&addr, 0)) {

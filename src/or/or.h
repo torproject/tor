@@ -2756,6 +2756,10 @@ typedef struct {
    * Helps avoid some cross-site attacks. */
   int ClientDNSRejectInternalAddresses;
 
+  /** If true, do not accept any requests to connect to internal addresses
+   * over randomly chosen exits. */
+  int ClientRejectInternalAddresses;
+
   /** The length of time that we think a consensus should be fresh. */
   int V3AuthVotingInterval;
   /** The length of time we think it will take to distribute votes. */
