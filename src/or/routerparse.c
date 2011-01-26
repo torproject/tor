@@ -1088,7 +1088,7 @@ check_signature_token(const char *digest,
   signed_digest = tor_malloc(keysize);
   if (crypto_pk_public_checksig(pkey, signed_digest, keysize,
                                 tok->object_body, tok->object_size)
-      < DIGEST_LEN) {
+      < digest_len) {
     log_warn(LD_DIR, "Error reading %s: invalid signature.", doctype);
     tor_free(signed_digest);
     return -1;
