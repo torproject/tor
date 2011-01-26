@@ -1659,6 +1659,27 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
       }
+      if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
+        tor_addr_t addr;
+        if (tor_addr_from_str(&addr, socks->address) >= 0 &&
+            tor_addr_is_internal(&addr, 0)) {
+          /* If this is an explicit private address with no chosen exit node,
+           * then we really don't want to try to connect to it.  That's
+           * probably an error. */
+          if (conn->is_transparent_ap) {
+            log_warn(LD_NET,
+                     "Rejecting request for anonymous connection to private "
+                     "address %s on a TransPort or NatdPort.  Possible loop "
+                     "in your NAT rules?", safe_str_client(socks->address));
+          } else {
+            log_warn(LD_NET,
+                     "Rejecting SOCKS request for anonymous connection to "
+                     "private address %s", safe_str_client(socks->address));
+          }
+          connection_mark_unattached_ap(conn, END_STREAM_REASON_PRIVATE_ADDR);
+          return -1;
+        }
+      }
 
       if (!conn->use_begindir && !conn->chosen_exit_name && !circ) {
         /* see if we can find a suitable enclave exit */

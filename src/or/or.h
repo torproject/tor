@@ -583,6 +583,9 @@ typedef enum {
 /** This is a connection on the NATD port, and the destination IP:Port was
  * either ill-formed or out-of-range. */
 #define END_STREAM_REASON_INVALID_NATD_DEST 261
+/** The target address is in a private network (like 127.0.0.1 or 10.0.0.1);
+ * you don't want to do that over a randomly chosen exit */
+#define END_STREAM_REASON_PRIVATE_ADDR 262
 
 /** Bitwise-and this value with endreason to mask out all flags. */
 #define END_STREAM_REASON_MASK 511
@@ -1169,6 +1172,10 @@ typedef struct edge_connection_t {
    * we fail to complete a circuit to our chosen exit -- if it reaches
    * zero, abandon the associated mapaddress. */
   unsigned int chosen_exit_retries:3;
+
+  /** True iff this is an AP connection that came from a transparent or
+   * NATd connection */
+  unsigned int is_transparent_ap:1;
 
   /** If this is a DNSPort connection, this field holds the pending DNS
    * request that we're going to try to answer.  */

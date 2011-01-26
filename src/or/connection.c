@@ -1205,9 +1205,11 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
+          TO_EDGE_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
           return connection_ap_process_transparent(TO_EDGE_CONN(conn));
         case CONN_TYPE_AP_NATD_LISTENER:
+          TO_EDGE_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_NATD_WAIT;
           break;
       }
