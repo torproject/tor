@@ -731,6 +731,12 @@ The following options are useful only for clients (that is, if
     192.168.0.1). This option prevents certain browser-based attacks; don't
     turn it off unless you know what you're doing. (Default: 1).
 
+**ClientRejectInternalAddresses** **0**|**1**::
+    If true, Tor does not try to fulfil requests to connect to an internal
+    address (like 127.0.0.1 or 192.168.0.1) __unless a exit node is
+    specifically requested__ (for example, via a .exit hostname, a controller
+    request).   (Default: 1).
+
 **DownloadExtraInfo** **0**|**1**::
     If true, Tor downloads and caches "extra-info" documents. These documents
     contain information about servers other than the information in their
@@ -1267,6 +1273,7 @@ The following options are used for running a testing Tor network.
        AuthDirMaxServersPerAddr 0
        AuthDirMaxServersPerAuthAddr 0
        ClientDNSRejectInternalAddresses 0
+       ClientRejectInternalAddresses 0
        ExitPolicyRejectPrivate 0
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
