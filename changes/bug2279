@@ -1,0 +1,5 @@
+  o Minor bugfixes
+    - Avoid a double mark-for-free warning when failing to attach a
+      transparent proxy connection.  Fixes bug 2279.  Bugfix on
+      Tor 0.1.2.1 alpha.
+
