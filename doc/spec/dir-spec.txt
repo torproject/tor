@@ -1199,9 +1199,11 @@
         proxies. See trac entry 1751 for details.
         Min: 0, Max: 1
 
-        See also "2.4.5. Consensus parameters governing behavior"
-        in path-spec.txt for a series of circuit build time related
-        consensus params.
+        "cbtdisabled", "cbtnummodes", "cbtrecentcount", "cbtmaxtimeouts",
+        "cbtmincircs", "cbtquantile", "cbtclosequantile", "cbttestfreq",
+        "cbtmintimeout", and "cbtinitialtimeout" -- see "2.4.5. Consensus
+        parameters governing behavior" in path-spec.txt for a series of
+        circuit build time related consensus params.
 
    The authority section of a vote contains the following items, followed
    in turn by the authority's current key certificate:
