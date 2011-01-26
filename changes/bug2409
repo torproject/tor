@@ -1,0 +1,4 @@
+  o Minor bugfixes
+    - Resolve a bug in verifying signatures of directory objects
+      with digests longer than SHA1.  Bugfix on 0.2.2.20-alpha;
+      fixes bug 2409; found by "piebeer".
