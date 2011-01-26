@@ -783,7 +783,8 @@ hibernate_begin(hibernate_state_t new_state, time_t now)
   /* XXX upload rendezvous service descriptors with no intro points */
 
   if (new_state == HIBERNATE_STATE_EXITING) {
-    log_notice(LD_GENERAL,"Interrupt: will shut down in %d seconds. Interrupt "
+    log_notice(LD_GENERAL,"Interrupt: we have stopped accepting new "
+               "connections, and will shut down in %d seconds. Interrupt "
                "again to exit now.", options->ShutdownWaitLength);
     shutdown_time = time(NULL) + options->ShutdownWaitLength;
   } else { /* soft limit reached */
@@ -940,7 +941,8 @@ consider_hibernation(time_t now)
   if (hibernate_state == HIBERNATE_STATE_LIVE) {
     if (hibernate_soft_limit_reached()) {
       log_notice(LD_ACCT,
-                 "Bandwidth soft limit reached; commencing hibernation.");
+                 "Bandwidth soft limit reached; commencing hibernation. "
+                 "No new conncetions will be accepted");
       hibernate_begin(HIBERNATE_STATE_LOWBANDWIDTH, now);
     } else if (accounting_enabled && now < interval_wakeup_time) {
       format_local_iso_time(buf,interval_wakeup_time);
