@@ -4028,6 +4028,8 @@ load_torrc_from_disk(int argc, char **argv)
           "Unable to open configuration file \"%s\".", fname);
       goto err;
     }
+  } else {
+    log(LOG_NOTICE, LD_CONFIG, "Read configuration file \"%s\".", fname);
   }
 
   return cf;

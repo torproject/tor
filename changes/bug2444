@@ -1,0 +1,4 @@
+  o Minor features:
+    - If we did find a configuration file, log a message saying where we found
+      it during startup. Implements ticket 2444.
+
