@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Country codes aren't supported in EntryNodes until 0.2.3.x.
+      Don't mention them in the manpage. Fixes bug 2450, issue
+      spotted by keb and G-Lo.
+
