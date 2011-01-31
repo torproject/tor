@@ -343,6 +343,13 @@ Alternative designs:
   send traffic to one of these ports use a separate SOCKSPort, and
   then setting IsolateDestPorts on that SOCKSPort.
 
+Future work:
+
+  Nikita Borisov suggests that different session profiles -- so long as
+  there aren't too many of them -- could well get different guard node
+  allocations in order to prevent guard profiling.  This can be done
+  orthogonally to the rest of this proposal.
+
 Lingering questions:
 
   I suspect there are issues remaining with DNS and TransPort users, and
