@@ -1,0 +1,621 @@
+Filename: 176-revising-handshake.txt
+Title: Proposed version-3 link handshake for Tor
+Author: Nick Mathewson
+Created: 31-Jan-2011
+Status: Draft
+Target: 0.2.3
+Supersedes: 169
+
+1. Overview
+
+   I propose a (mostly) backward-compatible change to the Tor
+   connection establishment protocol to avoid the use of TLS
+   renegotiation, to avoid certain protocol fingerprinting attacks,
+   and to make it easier to write Tor clients and servers.
+
+   Rather than doing a TLS renegotiation to exchange certificates
+   and authenticate the original handshake, this proposal takes an
+   approach similar to Steven Murdoch's proposal 124 and my old
+   proposal 169, and uses Tor cells to finish authenticating the
+   parties' identities once the initial TLS handshake is finished.
+
+   I discuss some alternative design choices and why I didn't make
+   them in section 7; please have a quick look there before
+   telling me that something is pointless or makes no sense.
+
+   Terminological note: I use "client" below to mean the Tor
+   instance (a client or a bridge or a relay) that initiates a TLS
+   connection, and "server" to mean the Tor instance (a bridge or a
+   relay) that accepts it.
+
+2. History and Motivation
+
+   The _goals_ of the Tor link handshake have remained basically uniform
+   since our earliest versions.  They are:
+
+      * Provide data confidentiality, data integrity
+      * Provide forward secrecy
+      * Allow responder authentication or bidirectional authentication.
+      * Try to look like some popular too-important-to-block-at-whim
+        encryption protocol, to avoid fingerprinting and censorship.
+      * Try to be implementatble -- on the client side at least! --
+        by as many TLS implementations as possible.
+
+   When we added the v2 handshake, we added another goal:
+
+      * Remain compatible with older versions of the handshake
+        protocol.
+
+   In the original Tor TLS connection handshake protocol ("V1", or
+   "two-cert"), parties that wanted to authenticate provided a
+   two-cert chain of X.509 certificates during the handshake setup
+   phase.  Every party that wanted to authenticate sent these
+   certificates.  The security properties of this protocol are just
+   fine; the problem was that our behavior of sending
+   two-certificate chains made Tor easy to identify.
+
+   In the current Tor TLS connection handshake protocol ("V2", or
+   "renegotiating"), the parties begin with a single certificate
+   sent from the server (responder) to the client (initiator), and
+   then renegotiate to a two-certs-from-each-authenticating party.
+   We made this change to make Tor's handshake look like a browser
+   speaking SSL to a webserver.  (See proposal 130, and
+   tor-spec.txt.)  So from an observer's point of view, two parties
+   performing the V2 handshake begin by making a regular TLS
+   handshake with a single certificate, then renegotiate
+   immediately.
+
+   To tell whether to use the V1 or V2 handshake, the servers look
+   at the list of ciphers sent by the client.  (This is ugly, but
+   there's not much else in the ClientHello that they can look at.)
+   If the list contains any cipher not used by the V1 protocol, the
+   server sends back a single cert and expects a renegotiation.  If
+   the client gets back a single cert, then it withholds its own
+   certificates until the TLS renegotiation phase.
+
+   In other words, V2-supporting initiator behavior currently looks
+   like this:
+
+      - Begin TLS negotiation with V2 cipher list; wait for
+        certificate(s).
+      - If we get a certificate chain:
+         - Then we are using the V1 handshake.  Send our own
+           certificate chain as part of this initial TLS handshake
+           if we want to authenticate; otherwise, send no
+           certificates.  When the handshake completes, check
+           certificates.  We are now mutually authenticated.
+
+        Otherwise, if we get just a single certificate:
+         - Then we are using the V2 handshake.  Do not send any
+           certificates during this handshake.
+         - When the handshake is done, immediately start a TLS
+           renegotiation.  During the renegotiation, expect
+           a certificate chain from the server; send a certificate
+           chain of our own if we want to authenticate ourselves.
+         - After the renegotiation, check the certificates. Then
+           send (and expect) a VERSIONS cell from the other side to
+           establish the link protocol version.
+
+   And V2-supporting responder behavior now looks like this:
+
+      - When we get a TLS ClientHello request, look at the cipher
+        list.
+      - If the cipher list contains only the V1 ciphersuites:
+         - Then we're doing a V1 handshake.  Send a certificate
+           chain.  Expect a possible client certificate chain in
+           response.
+        Otherwise, if we get other ciphersuites:
+         - We're using the V2 handshake.  Send back a single
+           certificate and let the handshake complete.
+         - Do not accept any data until the client has renegotiated.
+         - When the client is renegotiating, send a certificate
+           chain, and expect (possibly multiple) certificates in
+           reply.
+         - Check the certificates when the renegotiation is done.
+           Then exchange VERSIONS cells.
+
+   Late in 2009, researchers found a flaw in most applications' use
+   of TLS renegotiation: Although TLS renegotiation does not
+   reauthenticate any information exchanged before the renegotiation
+   takes place, many applications were treating it as though it did,
+   and assuming that data sent _before_ the renegotiation was
+   authenticated with the credentials negotiated _during_ the
+   renegotiation.  This problem was exacerbated by the fact that
+   most TLS libraries don't actually give you an obvious good way to
+   tell where the renegotiation occurred relative to the datastream.
+   Tor wasn't directly affected by this vulnerability, but the
+   aftermath hurts us in a few ways:
+
+      1) OpenSSL has disabled renegotiation by default, and created
+         a "yes we know what we're doing" option we need to set to
+         turn it back on.  (Two options, actually: one for openssl
+         0.9.8l and one for 0.9.8m and later.)
+
+      2) Some vendors have removed all renegotiation support from
+         their versions of OpenSSL entirely, forcing us to tell
+         users to either replace their versions of OpenSSL or to
+         link Tor against a hand-built one.
+
+      3) Because of 1 and 2, I'd expect TLS renegotiation to become
+         rarer and rarer in the wild, making our own use stand out
+         more.
+
+   Furthermore, there are other issues related to TLS and
+   fingerprinting that we want to fix in any revised handshake:
+
+      1) We should make it easier to use self-signed certs, or maybe
+         even existing HTTPS certificates, for the server side
+         handshake, since most non-Tor SSL handshakes use either
+         self-signed certificates or
+
+      2) We should make it harder to probe for a Tor server.  Right
+         now, you can just do a handshake with a server,
+         renegotiate, then see if it gives you a VERSIONS cell.
+         That's no good.
+
+      3) We should allow other changes in our use of TLS and in our
+         certificates so as to resist fingerprinting based on how
+         our certificates look.
+
+3. Design
+
+3.1. The view in the large
+
+   Taking a cue from Steven Murdoch's proposal 124 and my old
+   proposal 169, I propose that we move the work currently done by
+   the TLS renegotiation step (that is, authenticating the parties
+   to one another) and do it with Tor cells instead of with TLS
+   alone.
+
+   This section outlines the protocol; we go into more detail below.
+
+   To tell the client that it can use the new cell-based
+   authentication system, the server sends a "V3 certificate" during
+   the initial TLS handshake.  (More on what makes a certificate
+   "v3" below.)  If the client recognizes the format of the
+   certificate and decides to pursue the V3 handshake, then instead
+   of renegotiating immediately on completion of the initial TLS
+   handshake, the client instead sends a VERSIONS cell (and the
+   negotiation begins).
+
+   So the flowchart on the server side is:
+
+      Wait for a ClientHello.
+      IF the client sends a ClientHello that indicates V1:
+          - Send a certificate chain.
+          - When the TLS handshake is done, if the client sent us a
+            certificate chain, then check it.
+      If the client sends a ClientHello that indicates V2 or V3:
+          - Send a  self-signed certificate or a CA-signed certificate
+          - When the TLS handshake is done, wait for renegotiation or data.
+            - If renegotiation occurs, the client is V2: send a
+              certificate chain and maybe receive one.  Check the
+              certificate chain as in V1.
+            - If the client sends data without renegotiating, it is
+              starting the V3 handshake.  Proceed with the V3
+              handshake as below.
+
+   And the client-side flowchart is:
+
+      - Send a ClientHello with a set of ciphers that indicates V2/V3.
+      - After the handshake is done:
+        - If the server sent us a certificate chain, check it: we
+          are using the V1 handshake.
+        - If the server sent us a single "V2 certificate", we are
+          using the v2 handshake: the client begins to renegotiate
+          and proceeds as before.
+        - Finally, if the server sent us a "v3 certificate", we are
+          doing the V3 handshake below.
+
+   And the cell-based part of the V3 handshake, in summary, is:
+
+    C<->S: TLS handshake where S sends a "v3 certificate"
+
+    In TLS:
+
+       C->S: VERSIONS cell
+       S->C: VERSIONS cell, CERT cell, AUTH_CHALLENGE cell, NETINFO cell
+
+       C->S: Optionally: CERT cell, AUTHENTICATE cell
+
+   A "CERTS" cell contains a set of certificates; an "AUTHENTICATE"
+   cell authenticates the client to the server.  More on these
+   later.
+
+3.2. Distinguishing V2 and V3 certificates
+
+   In the protocol outline above, we require that the client can
+   distinguish between v2 certificates (that is, those sent by
+   current servers) and a v3 certificates.  We further require that
+   existing clients will accept v3 certificates as they currently
+   accept v2 certificates.
+
+   Fortunately, current certificates have a few characteristics that
+   make them fairly mannered as it is.  We say that a certificate
+   indicates a V2-only server if ALL of the following hold:
+      * The certificate is not self-signed.
+      * There is no DN field set in the certificate's issuer or
+        subject other than "commonName".
+      * The commonNames of the issuer and subject both end with
+        ".net"
+      * The public modulus is at most 1024 bits long.
+
+   Otherwise, the client should assume that the server supports the
+   V3 handshake.
+
+   To the best of my knowledge, current clients will behave properly
+   on receiving non-v2 certs during the initial TLS handshake so
+   long as they eventually get the correct V2 cert chain during the
+   renegotiation.
+
+   The v3 requirements are easy to meet: any certificate designed to
+   resist fingerprinting will likely be self-signed, or if it's
+   signed by a CA, then the issuer will surely have more DN fields
+   set.  Certificates that aren't trying to resist fingerprinting
+   can trivially become v3 by using a CN that doesn't end with .net,
+   or using a 1024-bit key.
+
+
+3.3. Authenticating via Tor cells: server authentication
+
+   Once the TLS handshake is finished, if the client renegotiates,
+   then the server should go on as it does currently.
+
+   If the client implements this proposal, however, and the server
+   has shown it can understand the V3+ handshake protocol, the
+   client immediately sends a VERSIONS cell to the server
+   and waits to receive a VERSIONS cell in return.  We negotiate
+   the Tor link protocol version _before_ we proceed with the
+   negotiation, in case we need to change the authentication
+   protocol in the future.
+
+   Once either party has seen the VERSIONS cell from the other, it
+   knows which version they will pick (that is, the highest version
+   shared by both parties' VERSIONS cells).  All Tor instances using
+   the handshake protocol described in 3.2 MUST support at least
+   link protocol version 3 as described here.  If a version lower
+   than 3 is negotiated with the V3 handshake in place, a Tor
+   instance MUST close the connection.
+
+   On learning the link protocol, the server then sends the client a
+   CERT cell and a NETINFO cell.  If the client wants to
+   authenticate to the server, it sends a CERT cell, an AUTHENTICATE
+   cell, and a NETINFO cell, or it may simply send a NETINFO cell if
+   it does not want to authenticate.
+
+   The CERT cell describes the keys that a Tor instance is claiming
+   to have.  It is a variable-length cell.  Its payload format is:
+
+        N: Number of certs in cell            [1 octet]
+        N times:
+           CertType                           [1 octet]
+           CLEN                               [2 octets]
+           Certificate                        [CLEN octets]
+
+   Any extra octets at the end of a CERT cell MUST be ignored.
+
+     CertType values are:
+        1: Link key certificate from RSA1024 identity
+        2: RSA1024 Identity certificate
+        3: RSA1024 AUTHENTICATE cell link certificate
+
+   The certificate format is X509.
+
+   To authenticate the server, the client MUST check the following:
+     * The CERTS cell contains exactly one CertType 1 "Link" certificate.
+     * The CERTS cell contains exactly one CertType 2 "ID"
+       certificate.
+     * Both certificates have validAfter and validUntil dates that
+       are not expired.
+     * The certified key in the Link certificate matches the
+       link key that was used to negotiate the TLS connection.
+     * The certified key in the ID certificate is a 1024-bit RSA key.
+     * The certified key in the ID certificate was used to sign both
+       certificates.
+     * The link certificate is correctly signed with the key in the
+       ID certificate
+     * The ID certificate is correctly self-signed.
+
+   If all of these conditions hold, then the client knows that it is
+   connected to the server whose identity key is certified in the ID
+   certificate.  If any condition does not hold, the client closes
+   the connection.  If the client wanted to connect to a server with
+   a different identity key, the client closes the connection.
+
+
+   An AUTH_CHALLENGE cell is a variable-length cell with the following
+   fields:
+       Challenge [32 octets]
+   It is sent from the server to the client.  Clients MUST ignore
+   unexpected bytes at the end of the cell.  Servers MUST generate
+   every challenge using a strong RNG or PRNG.
+
+3.4. Authenticating via Tor cells: Client authentication
+
+   A client does not need to authenticate to the server.  If it
+   does not wish to, it responds to the server's valid CERT cell by
+   sending NETINFO cell: once it has gotten a valid NETINFO cell
+   back, the client should consider the connection open, and the
+   server should consider the connection as opened by an
+   unauthenticated client.
+
+   If a client wants to authenticate, it responds to the
+   AUTH_CHALLENGE cell with a CERT cell and an AUTHENTICATE cell.
+   The CERT cell is as a server would send, except that instead of
+   sending a CertType 1 cert for an arbitrary link certificate, the
+   client sends a CertType 3 cert for an RSA AUTHENTICATE key.
+   (This difference is because we allow any link key type on a TLS
+   link, but the protocol described here will only work for 1024-bit
+   RSA keys.  A later protocol version should extend the protocol
+   here to work with non-1024-bit, non-RSA keys.)
+
+        AuthType                              [2 octets]
+        AuthLen                               [2 octets]
+        Authentication                        [AuthLen octets]
+
+
+   Servers MUST ignore extra bytes at the end of an AUTHENTICATE
+   cell.  If AuthType is 1 (meaning "RSA-SHA256-TLSSecret"), then the
+   Authentication contains the following:
+
+       CID: A SHA256 hash of the client's RSA1024 identity key [32 octets]
+       SID: A SHA256 hash of the server's RSA1024 identity key [32 octets]
+       SLOG: A SHA256 hash of all bytes sent from the server to the client
+         as part of the negotiation up to and including the
+         AUTH_CHALLENGE cell; that is, the VERSIONS cell,
+         the CERT cell, and the AUTH_CHALLENGE cell. [32 octets]
+       CLOG: A SHA256 hash of all byte sent from the client to the
+         server as part of the negotiation so far; that is, the
+         VERSIONS cell and the CERT cell. [32 octets]
+       SCERT: A SHA256 hash of the server's TLS link
+         certificate. [32 octets]
+       TLSSECRETS: Either 32 zero octets, or a SHA256 HMAC, using
+         the TLS master secret as the secret key, of the following:
+           - client_random, as sent in the TLS Client Hello
+           - server_random, as sent in the TLS Server Hello
+           - the NUL terminated ASCII string:
+             "Tor V3 handshake TLS cross-certification"
+          [32 octets]
+       TIME: The time of day in seconds since the POSIX epoch. [8 octets]
+       SIG: A signature of a SHA256 hash of all the previous fields
+         using the client's "Authenticate" key as presented.  (As
+         always in Tor, we use OAEP-MGF1 padding; see tor-spec.txt
+         section 0.3.)
+          [variable length]
+
+   To check the AUTHENTICATE cell, a server checks that all fields
+   containing a hash contain the correct value, then verifies the
+   signature.  The server MUST ignore any extra bytes after
+   the SHA256 hash.
+
+   When possible (that is, when implemented using C TLS API),
+   implementations SHOULD include and verify the TLSSECRETS field.
+
+3.5. Responding to extra cells, and other security checks.
+
+   If the handshake is a V3+ TLS handshake, both parties MUST reject
+   any negotiated link version less than 3.  Both parties MUST check
+   this and close the connection if it is violated.
+
+   If the handshake is not a V3+ TLS handshake, both parties MUST
+   still advertise all link protocols they support in their versions
+   cell.  Both parties MUST close the link if it turns out they both
+   would have supported version 3 or higher, but they somehow wound
+   up using a v2 or v1 handshake.  (More on this in section 6.4.)
+
+   A server SHOULD NOT send any sequence of cells when starting a v3
+   negotiation other than "VERSIONS, CERT, AUTH_CHALLENGE,
+   NETINFO".  A client SHOULD drop a CERT, AUTH_CHALLENGE, or
+   NETINFO cell that appears at any other time or out of sequence.
+
+   A client should not begin a v3 negotiation with any sequence
+   other than "VERSIONS, NETINFO" or "VERSIONS, CERT, AUTHENTICATE,
+   NETINFO".   A server SHOULD drop a CERT, AUTH_CHALLENGE, or
+   NETINFO cell that appears at any other time or out of sequence.
+
+4. Numbers to assign
+
+   We need a version number for this link protocol.  I've been
+   calling it "3".
+
+   We need to reserve command numbers for CERT, AUTH_CHALLENGE, and
+   AUTHENTICATE.  I suggest that in link protocol 3 and higher, we
+   reserve a separate range of commands for variable-length cells.
+
+5. Efficiency
+
+   This protocol adds a round-trip step when the client sends a
+   VERSIONS cell to the server, and waits for the {VERSIONS, CERT,
+   NETINFO} response in turn.  (The server then waits for the
+   client's {NETINFO} or {CERT, AUTHENTICATE, NETINFO} reply,
+   but it would have already been waiting for the client's NETINFO,
+   so that's not an additional wait.)
+
+   This is actually fewer round-trip steps than required before for
+   TLS renegotiation, so that's a win over v2.
+
+6. Security argument
+
+   These aren't crypto proofs, since I don't write those.  They are
+   meant be reasonably convincing.
+
+6.1. The server is authenticated
+
+   TLS guarantees that if the TLS handshake completes successfully,
+   the client knows that it is speaking to somebody who knows the
+   private key corresponding to the public link key that was used in
+   the TLS handshake.
+
+   Because this public link key is signed by the server's identity
+   key in the CERT cell, the client knows that somebody who holds
+   the server's private identity key says that the server's public
+   link key corresponds to the server's public identity key.
+
+   Therefore, if the crypto works, and if TLS works, and if the keys
+   aren't compromised, then the client is talking to somebody who
+   holds the server's private identity key.
+
+6.2. The client is authenticated
+
+   Once the server has checked the client's certificates, the server
+   knows that somebody who knows the client's private identity key
+   says that he is the one holding the private key corresponding to
+   the client's presented link-authentication public key.
+
+   Once the server has checked the signature in the AUTHENTICATE
+   cell, the server knows that somebody holding the client's
+   link-authentication private key signed the data in question.  By
+   the standard certification argument above, the server knows that
+   somebody holding the client's private identity key signed the
+   data in question.
+
+   So the server's remaining question is: am I really talking to
+   somebody holding the client's identity key, or am I getting a
+   replayed or MITM'd AUTHENTICATE cell that was previously sent by
+   the client?
+
+   If the client included a non-zero TLSSECRET component, and the
+   server is able to verify it, then the answer is easy: the server
+   knows for certain that it is talking to the party with whom it
+   did the TLS handshake, since if somebody else generated a correct
+   TLSSECRET, they would have to know the master secret of the TLS
+   connection, which would require them to have broken TLS.
+
+   If the client was not able to include a non-zero TLSSECRET
+   component, or the server can't check it, the answer is a little
+   trickier.  The server knows that it is not getting a replayed
+   AUTHENTICATE cell, since the cell authenticates (among other
+   stuff) the server's AUTH_CHALLENGE cell, which it has never used
+   before.  The server knows that it is not getting a MITM'd
+   AUTHENTICATE cell, since the cell includes a hash of the server's
+   link certificate, which nobody else should have been able to use
+   in a successful TLS negotiation.
+
+6.3. MITM attacks won't work any better than they do against TLS
+
+   TLS guarantees that a man-in-the-middle attacker can't read the
+   content of a successfully negotiated encrypted connection, nor
+   alter the content in any way other than truncating it, unless he
+   compromises the session keys or one of the key-exchange secret
+   keys used to establish that connection.  Let's make sure we do at
+   least that well.
+
+   Suppose that a client Alice connects to an MITM attacker Mallory,
+   thinking that he is connecting to some server Bob.  Let's assume
+   that the TLS handshake between Alice and Mallory finishes
+   successfully and the v3 protocol is chosen.  [If the v1 or v2
+   protocol is chosen, those already resist MITM.  If the TLS
+   handshake doesn't complete, then Alice isn't connected to anybody.]
+
+   During the v3 handshake, Mallory can't convince Alice that she is
+   talking to Bob, since she should not be able to produce a CERT
+   cell containing a certificate chain signed by Bob's identity key
+   and used to authenticate the link key that Mallory used during
+   TLS.  (If Mallory used her own link key for the TLS handshake, it
+   won't match anything Bob signed unless Bob is compromised.
+   Mallory can't use any key that Bob _did_ produce a certificate
+   for, since she doesn't know the private key.)
+
+   Even if Alice fails to check the certificates from Bob, Mallory
+   still can't convince Bob that she is really Alice.  Assuming that
+   Alice's keys aren't compromised, Mallory can't sent a CERT cell
+   with a cert chain from Alice's identity key to a key that Mallory
+   controls, so if Mallory wants to impersonate Alice's identity
+   key, she can only do so by sending an AUTHENTICATE cell really
+   generated by Alice.  Because Bob will check that the random bytes
+   in the AUTH_CHALLENGE cell will influence the SLOG hash, Mallory
+   needs to send Bob's challenge to Alice, and can't use any other
+   AUTHENTICATE cell that Alice generated before.  But because the
+   AUTHENTICATE cell Alice will generate will include in the SCERT
+   field a hash of the link certificate used by Mallory, Bob will
+   reject it as not being valid to connect to him.
+
+6.4. Protocol downgrade attacks won't work.
+
+   Assuming that Alice checks the certificates from Bob, she knows
+   that Bob really sent her the VERSION cell that she received.
+
+   Because the AUTHENTICATE cell from Alice includes signed hashes
+   of the VERSIONS cells from Alice and Bob, Bob knows that Alice
+   got the VERSIONS cell he sent and sent the VERSIONS cell that he
+   received.
+
+   But what about attempts to downgrade the protocol earlier in the
+   handshake?  Here TLS comes to the rescue: because the TLS
+   Finished handshake message includes an authenticated digest of
+   everything previously said during the handshake, an attacker
+   can't replace the client's ciphersuite list (to trigger a
+   downgrade to the v1 protocol) or the server's certificate [chain]
+   (to trigger a downgrade to the v1 or v2 protocol).
+
+7. Design considerations
+
+   I previously considered adding our own certificate format in
+   order to avoid the pain associated with X509, but decided instead
+   to simply use X509 since a correct Tor implementation will
+   already need to have X509 code to handle the other handshake
+   versions and to use TLS.
+
+   The trickiest part of the design here is deciding what to stick
+   in the AUTHENTICATE cell.  Some of it is strictly necessary, and
+   some of it is left there for security margin in case my other
+   security arguments fail.  Because of the CID and SID elements
+   you can't use an AUTHENTICATE cell for anything other than
+   authenticating a client ID to a server with an appropriate
+   server ID.  The SLOG and CLOG elements are there mostly to
+   authenticate the VERSIONS cells and resist downgrade attacks
+   once there are two versions of this.  The presence of the
+   AUTH_CHALLENGE field in the stuff authenticated in SLOG
+   prevents replays and ensures that the AUTHENTICATE cell was
+   really generated by somebody who is reading what the server is
+   sending over the TLS connection.  The SCERT element is meant to
+   prevent MITM attacks.  When the TLSSECRET field is
+   used, it should prevent the use of the AUTHENTICATE cell for
+   anything other than the TLS connection the client had in mind.
+
+   A signature of the TLSSECRET element on its own should be
+   sufficient to prevent the attacks we care about, but because we
+   don't necessarily have access to the TLS master secret when using
+   a non-C TLS library, we can't depend on it.  I added it anyway
+   so that, if there is some problem with the rest of the protocol,
+   clients and servers that _are_ written in C (that is, the official
+   Tor implementation) can still be secure.
+
+   If the client checks the server's certificates and matches them
+   to the TLS connection link key before proceding with the
+   handshake, then signing the contents of the AUTH_CHALLENGE cell
+   would be sufficient to authenticate the client.  But implementers
+   of allegedly compatible Tor clients have in the past skipped
+   certificate verification steps, and I didn't want a client's
+   failure to verify certificates to mean that a server couldn't
+   trust that he was really talking to the client.  To prevent this,
+   I added the TLS link certificate to the authenticated data: even
+   if the Tor client code doesn't check any certificates, the TLS
+   library code will still check that the certificate used in the
+   handshake contains a link key that matches the one used in the
+   handshake.
+
+8. Open questions:
+
+  - May we cache which certificates we've already verified?  It
+    might leak in timing whether we've connected with a given server
+    before, and how recently.
+
+  - With which TLS libraries is it feasible to yoink client_random,
+    server_random, and the master secret?  If the answer is "All
+    free C TLS libraries", great.  If the answer is "OpenSSL only",
+    not so great.
+
+  - Should we do anything to check the timestamp in the AUTHENTICATE
+    cell?
+
+  - Can we give some way for clients to signal "I want to use the
+    V3 protocol if possible, but I can't renegotiate, so don't give
+    me the V2"?  Clients currently have a fair idea of server
+    versions, so they could potentially do the V3+ handshake with
+    servers that support it, and fall back to V1 otherwise.
+
+  - What should servers that don't have TLS renegotiation do?  For
+    now, I think they should just stick with V1.  Eventually we can
+    deprecate the V2 handshake as we did with the V1 handshake.
+    When that happens, servers can be V3-only.
