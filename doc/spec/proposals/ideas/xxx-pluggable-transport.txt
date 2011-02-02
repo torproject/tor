@@ -145,16 +145,20 @@ Specifications: Client behavior
   on the TLS connection to match the digest provided in
   [id-fingerprint].  If any [k=v] items are provided, they are
   configuration parameters for the proxy: Tor should separate them with
-  NUL bytes and put them user and password fields of the request,
-  splitting them across the fields as necessary.  The "id-fingerprint"
-  field is always provided in a field named "keyid", if it was given.
+  semicolons and put them user and password fields of the request,
+  splitting them across the fields as necessary.  If a key or value
+  value must contain a semicolon or a backslash, it is escaped with a
+  backslash.
+
+  The "id-fingerprint" field is always provided in a field named
+  "keyid", if it was given.  Method names must be C identifiers.
 
   Example: if the bridge line is "bridge trebuchet www.example.com:3333
      rocks=20 height=5.6m" AND if the Tor client knows that the
      'trebuchet' method is provided by a SOCKS5 proxy on
      127.0.0.1:19999, the client should connect to that proxy, ask it to
      connect to www.example.com, and provide the string
-     "rocks=20\0height=5.6m" as the username, the password, or split
+     "rocks=20;height=5.6m" as the username, the password, or split
      across the username and password.
 
   There are two ways to tell Tor clients about protocol proxies:
@@ -163,7 +167,7 @@ Specifications: Client behavior
   tells Tor that another program is already running to handle
   'trubuchet' connections, and Tor doesn't need to worry about it.  A
   managed proxy is configured with "ClientTransportPlugin trebuchet
-  /usr/libexec/tor-proxies/trebuchet [options]", and tells Tor to launch
+  exec /usr/libexec/tor-proxies/trebuchet [options]", and tells Tor to launch
   an external program on-demand to provide a socks proxy for 'trebuchet'
   connections. The Tor client only launches one instance of each
   external program, even if the same executable is listed for more than
@@ -187,7 +191,7 @@ Client proxy behavior
    parameters.  If no ARGS or OPT-ARGS field is provided, Tor should not
    check the parameters in bridge lines for this method.
 
-   The proxy should print a single "METHODS:DONE" line after it is
+   The proxy should print a single "METHODS: DONE" line after it is
    finished telling Tor about the methods it provides.
 
    The transport proxy MUST exit cleanly when it receives a SIGTERM from
