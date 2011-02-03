@@ -829,6 +829,7 @@ tor_tls_context_new(crypto_pk_env_t *identity, unsigned int key_lifetime)
     goto error;
   {
     crypto_dh_env_t *dh = crypto_dh_new(DH_TYPE_TLS);
+    tor_assert(dh);
     SSL_CTX_set_tmp_dh(result->ctx, _crypto_dh_env_get_dh(dh));
     crypto_dh_free(dh);
   }

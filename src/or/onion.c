@@ -259,6 +259,10 @@ onion_skin_server_handshake(const char *onion_skin, /*ONIONSKIN_CHALLENGE_LEN*/
   }
 
   dh = crypto_dh_new(DH_TYPE_CIRCUIT);
+  if (!dh) {
+    log_warn(LD_BUG, "Couldn't allocate DH key");
+    goto err;
+  }
   if (crypto_dh_get_public(dh, handshake_reply_out, DH_KEY_LEN)) {
     log_info(LD_GENERAL, "crypto_dh_get_public failed.");
     goto err;

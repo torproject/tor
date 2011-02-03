@@ -250,7 +250,6 @@ struct evp_pkey_st;
 struct dh_st;
 struct rsa_st *_crypto_pk_env_get_rsa(crypto_pk_env_t *env);
 crypto_pk_env_t *_crypto_new_pk_env_rsa(struct rsa_st *rsa);
-crypto_pk_env_t *_crypto_new_pk_env_evp_pkey(struct evp_pkey_st *pkey);
 struct evp_pkey_st *_crypto_pk_env_get_evp_pkey(crypto_pk_env_t *env,
                                                 int private);
 struct dh_st *_crypto_dh_env_get_dh(crypto_dh_env_t *dh);
