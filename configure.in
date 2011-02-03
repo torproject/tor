@@ -1051,6 +1051,20 @@ AC_SUBST(BINDIR)
 LOCALSTATEDIR=`eval echo $localstatedir`
 AC_SUBST(LOCALSTATEDIR)
 
+if test "$bwin32" = true; then
+  # Test if the linker supports the --nxcompat and --dynamicbase options
+  # for Windows
+  save_LDFLAGS="$LDFLAGS"
+  LDFLAGS="-Wl,--nxcompat -Wl,--dynamicbase"
+  AC_MSG_CHECKING([whether the linker supports DllCharacteristics])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [save_LDFLAGS="$save_LDFLAGS $LDFLAGS"],
+    [AC_MSG_RESULT([no])]
+  )
+  LDFLAGS="$save_LDFLAGS"
+fi
+
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
 if test "$GCC" = yes; then
