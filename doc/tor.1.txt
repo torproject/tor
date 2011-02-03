@@ -471,7 +471,7 @@ The following options are useful only for clients (that is, if
     list.
 
 **EntryNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and address
+    A list of identity fingerprints, nicknames and address
     patterns of nodes to use for the first hop in normal circuits. These are
     treated only as preferences unless StrictNodes (see below) is also set.
 
