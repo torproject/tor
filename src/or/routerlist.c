@@ -1726,7 +1726,7 @@ smartlist_choose_node_by_bandwidth_weights(smartlist_t *sl,
   SMARTLIST_FOREACH_BEGIN(sl, const node_t *, node) {
     int is_exit = 0, is_guard = 0, is_dir = 0, this_bw = 0, is_me = 0;
     double weight = 1;
-    is_exit = node->is_exit;
+    is_exit = node->is_exit && ! node->is_bad_exit;
     is_guard = node->is_possible_guard;
     is_dir = node_is_dir(node);
     if (node->rs) {

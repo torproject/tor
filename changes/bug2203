@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Clients should not weight BadExit nodes as Exits in their node
+      selection. Similarly, directory authorities should not count
+      BadExit bandwidth as Exit bandwidth when computing bandwidth-weights.
+      Bugfix on 0.2.2.10-alpha; fixes bug 2203.
+
