@@ -223,21 +223,31 @@ format_msg(char *buf, size_t buf_len,
   size_t n;
   int r;
   char *end_of_prefix;
+  char *buf_end;
 
   assert(buf_len >= 16); /* prevent integer underflow and general stupidity */
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
+  buf_end = buf+buf_len; /* point *after* the last char we can write to */
 
   n = _log_prefix(buf, buf_len, severity);
   end_of_prefix = buf+n;
 
   if (log_domains_are_logged) {
     char *cp = buf+n;
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
     *cp++ = '{';
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
     cp = domain_to_string(domain, cp, (buf+buf_len-cp));
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
     *cp++ = '}';
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
     *cp++ = ' ';
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
     end_of_prefix = cp;
     n = cp-buf;
+  format_msg_no_room_for_domains:
+    /* This will leave end_of_prefix and n unchanged, and thus cause
+     * whatever log domain string we had written to be clobbered. */
   }
 
   if (funcname && should_log_function_name(domain, severity)) {
