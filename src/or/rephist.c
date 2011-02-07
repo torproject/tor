@@ -75,7 +75,7 @@ typedef struct or_history_t {
   time_t down_since;
 
   /** The address at which we most recently connected to this OR
-   * sucessfully. */
+   * successfully. */
   tor_addr_t last_reached_addr;
 
   /* === For MTBF tracking: */
@@ -329,7 +329,6 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
   } else if (addr_changed) {
     /* If we're reachable, but the address changed, treat this as some
      * downtime. */
-#define MIN_DOWNTIME_FOR_ADDR_CHANGE 600
     int penalty = get_options()->TestingTorNetwork ? 240 : 3600;
     networkstatus_t *ns;
     tor_assert(at_addr);
