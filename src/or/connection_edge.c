@@ -1670,7 +1670,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
           if (conn->is_transparent_ap) {
             log_warn(LD_NET,
                      "Rejecting request for anonymous connection to private "
-                     "address %s on a TransPort or NatdPort.  Possible loop "
+                     "address %s on a TransPort or NATDPort.  Possible loop "
                      "in your NAT rules?", safe_str_client(socks->address));
           } else {
             log_warn(LD_NET,
