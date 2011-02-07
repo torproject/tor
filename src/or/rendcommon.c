@@ -814,14 +814,13 @@ rend_cache_free_all(void)
 /** Removes all old entries from the service descriptor cache.
  */
 void
-rend_cache_clean(void)
+rend_cache_clean(time_t now)
 {
   strmap_iter_t *iter;
   const char *key;
   void *val;
   rend_cache_entry_t *ent;
-  time_t cutoff;
-  cutoff = time(NULL) - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
+  time_t cutoff = now - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
   for (iter = strmap_iter_init(rend_cache); !strmap_iter_done(iter); ) {
     strmap_iter_get(iter, &key, &val);
     ent = (rend_cache_entry_t*)val;
@@ -837,10 +836,10 @@ rend_cache_clean(void)
 /** Remove all old v2 descriptors and those for which this hidden service
  * directory is not responsible for any more. */
 void
-rend_cache_clean_v2_descs_as_dir(void)
+rend_cache_clean_v2_descs_as_dir(time_t now)
 {
   digestmap_iter_t *iter;
-  time_t cutoff = time(NULL) - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
+  time_t cutoff = now - REND_CACHE_MAX_AGE - REND_CACHE_MAX_SKEW;
   for (iter = digestmap_iter_init(rend_cache_v2_dir);
        !digestmap_iter_done(iter); ) {
     const char *key;
