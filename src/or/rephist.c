@@ -78,6 +78,9 @@ typedef struct or_history_t {
    * successfully. */
   tor_addr_t last_reached_addr;
 
+  /** The port at which we most recently connected to this OR successfully */
+  uint16_t last_reached_port;
+
   /* === For MTBF tracking: */
   /** Weighted sum total of all times that this router has been online.
    */
@@ -296,17 +299,18 @@ rep_hist_note_connection_died(const char* id, time_t when)
  * reachable, meaning we will give it a "Running" flag for the next while. */
 void
 rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
-                               time_t when)
+                               const uint16_t at_port, time_t when)
 {
   or_history_t *hist = get_or_history(id);
   int was_in_run = 1;
   char tbuf[ISO_TIME_LEN+1];
-  int addr_changed;
+  int addr_changed, port_changed;
 
   tor_assert(hist);
 
   addr_changed = at_addr &&
     tor_addr_compare(at_addr, &hist->last_reached_addr, CMP_EXACT) != 0;
+  port_changed = at_port && at_port != hist->last_reached_port;
 
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
@@ -326,7 +330,7 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
     down_length = when - hist->start_of_downtime;
     hist->total_weighted_time += down_length;
     hist->start_of_downtime = 0;
-  } else if (addr_changed) {
+  } else if (addr_changed || port_changed) {
     /* If we're reachable, but the address changed, treat this as some
      * downtime. */
     int penalty = get_options()->TestingTorNetwork ? 240 : 3600;
@@ -342,12 +346,13 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
       penalty = (int)(fresh_interval + live_interval) / 2;
     }
     format_local_iso_time(tbuf, hist->start_of_run);
-    log_info(LD_HIST,"Router %s still seems Running, but its address appears "
-             "to have changed since the last time it was reachable.  I'm "
-             "going to treat it as having been down for %d seconds",
-             hex_str(id, DIGEST_LEN), penalty);
+    if (!authdir_mode_bridge(get_options()))
+      log_info(LD_HIST,"Router %s still seems Running, but its address appears "
+               "to have changed since the last time it was reachable.  I'm "
+               "going to treat it as having been down for %d seconds",
+               hex_str(id, DIGEST_LEN), penalty);
     rep_hist_note_router_unreachable(id, when-penalty);
-    rep_hist_note_router_reachable(id, NULL, when);
+    rep_hist_note_router_reachable(id, NULL, 0, when);
   } else {
     format_local_iso_time(tbuf, hist->start_of_run);
     if (was_in_run)
@@ -359,6 +364,8 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
   }
   if (at_addr)
     tor_addr_copy(&hist->last_reached_addr, at_addr);
+  if (at_port)
+    hist->last_reached_port = at_port;
 }
 
 /** We have just decided that this router is unreachable, meaning

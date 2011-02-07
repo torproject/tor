@@ -3118,11 +3118,13 @@ dirserv_orconn_tls_done(const char *address,
       /* correct digest. mark this router reachable! */
       if (!bridge_auth || ri->purpose == ROUTER_PURPOSE_BRIDGE) {
         tor_addr_t addr, *addrp=NULL;
-        log_info(LD_DIRSERV, "Found router %s to be reachable at %s. Yay.",
-                 ri->nickname, address);
+        log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
+                 ri->nickname, address, ri->or_port );
         if (tor_addr_from_str(&addr, ri->address) != -1)
           addrp = &addr;
-        rep_hist_note_router_reachable(digest_rcvd, addrp, now);
+        else
+          log_warn(LD_BUG, "Couldn't parse IP address \"%s\"", ri->address);
+        rep_hist_note_router_reachable(digest_rcvd, addrp, or_port, now);
         ri->last_reachable = now;
       }
     }
