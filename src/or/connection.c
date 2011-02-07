@@ -1221,7 +1221,8 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   }
 
   if (connection_init_accepted_conn(newconn, conn->type) < 0) {
-    connection_mark_for_close(newconn);
+    if (! conn->marked_for_close)
+      connection_mark_for_close(newconn);
     return 0;
   }
   return 0;
@@ -1247,9 +1248,11 @@ connection_init_accepted_conn(connection_t *conn, uint8_t listener_type)
           conn->state = AP_CONN_STATE_SOCKS_WAIT;
           break;
         case CONN_TYPE_AP_TRANS_LISTENER:
+          TO_EDGE_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
           return connection_ap_process_transparent(TO_EDGE_CONN(conn));
         case CONN_TYPE_AP_NATD_LISTENER:
+          TO_EDGE_CONN(conn)->is_transparent_ap = 1;
           conn->state = AP_CONN_STATE_NATD_WAIT;
           break;
       }

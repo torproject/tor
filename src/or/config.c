@@ -197,6 +197,7 @@ static config_var_t _option_vars[] = {
   V(CircuitStreamTimeout,        INTERVAL, "0"),
   V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
+  V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
@@ -413,6 +414,7 @@ static config_var_t testing_tor_network_defaults[] = {
   V(AuthDirMaxServersPerAddr,    UINT,     "0"),
   V(AuthDirMaxServersPerAuthAddr,UINT,     "0"),
   V(ClientDNSRejectInternalAddresses, BOOL,"0"),
+  V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(ExitPolicyRejectPrivate,     BOOL,     "0"),
   V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
   V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),

@@ -1083,7 +1083,8 @@
       Reason = "MISC" / "RESOLVEFAILED" / "CONNECTREFUSED" /
                "EXITPOLICY" / "DESTROY" / "DONE" / "TIMEOUT" /
                "NOROUTE" / "HIBERNATING" / "INTERNAL"/ "RESOURCELIMIT" /
-               "CONNRESET" / "TORPROTOCOL" / "NOTDIRECTORY" / "END"
+               "CONNRESET" / "TORPROTOCOL" / "NOTDIRECTORY" / "END" /
+               "PRIVATE_ADDR"
 
    The "REASON" field is provided only for FAILED, CLOSED, and DETACHED
    events, and only if extended events are enabled (see 3.19).  Clients MUST
@@ -1092,7 +1093,10 @@
 
       END          (We received a RELAY_END cell from the other side of this
                     stream.)
+      PRIVATE_ADDR (The client tried to connect to a private address like
+                    127.0.0.1 or 10.0.0.1 over Tor.)
       [XXXX document more. -NM]
+      
 
    The "REMOTE_REASON" field is provided only when we receive a RELAY_END
    cell, and only if extended events are enabled.  It contains the actual
