@@ -363,10 +363,10 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
  * it does not contain requests older than REND_HID_SERV_DIR_REQUERY_PERIOD
  * seconds any more. */
 static void
-directory_clean_last_hid_serv_requests(void)
+directory_clean_last_hid_serv_requests(time_t now)
 {
   strmap_iter_t *iter;
-  time_t cutoff = time(NULL) - REND_HID_SERV_DIR_REQUERY_PERIOD;
+  time_t cutoff = now - REND_HID_SERV_DIR_REQUERY_PERIOD;
   if (!last_hid_serv_requests)
     last_hid_serv_requests = strmap_new();
   for (iter = strmap_iter_init(last_hid_serv_requests);
@@ -411,7 +411,9 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
 
   /* Only select those hidden service directories to which we did not send
    * a request recently and for which we have a router descriptor here. */
-  directory_clean_last_hid_serv_requests(); /* Clean request history first. */
+
+  /* Clean request history first. */
+  directory_clean_last_hid_serv_requests(now);
 
   SMARTLIST_FOREACH(responsible_dirs, routerstatus_t *, dir, {
     if (lookup_last_hid_serv_request(dir, desc_id_base32, 0, 0) +
