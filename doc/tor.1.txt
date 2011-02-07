@@ -668,7 +668,7 @@ The following options are useful only for clients (that is, if
 
 **VirtualAddrNetwork** __Address__/__bits__::
     When Tor needs to assign a virtual (unused) address because of a MAPADDRESS
-    command from the controller or the AutpmapHostsOnResolve feature, Tor
+    command from the controller or the AutomapHostsOnResolve feature, Tor
     picks an unassigned address from this range. (Default:
     127.192.0.0/10) +
  +
