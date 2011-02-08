@@ -1,3 +1,32 @@
+Changes in version 0.2.2.22-alpha - 2011-01-25
+  Tor 0.2.2.22-alpha fixes a few more less-critical security issues. The
+  main other change is a slight tweak to Tor's TLS handshake that makes
+  relays and bridges that run this new version reachable from Iran again.
+  We don't expect this tweak will win the arms race long-term, but it
+  will buy us a bit more time until we roll out a better solution.
+
+  o Major bugfixes:
+    - Fix a bounds-checking error that could allow an attacker to
+      remotely crash a directory authority. Bugfix on 0.2.1.5-alpha.
+      Found by "piebeer".
+    - Don't assert when changing from bridge to relay or vice versa
+      via the controller. The assert happened because we didn't properly
+      initialize our keys in this case. Bugfix on 0.2.2.18-alpha; fixes
+      bug 2433. Reported by bastik.
+
+  o Minor features:
+    - Adjust our TLS Diffie-Hellman parameters to match those used by
+      Apache's mod_ssl.
+    - Provide a log message stating which geoip file we're parsing
+      instead of just stating that we're parsing the geoip file.
+      Implements ticket 2432.
+
+  o Minor bugfixes:
+    - Check for and reject overly long directory certificates and
+      directory tokens before they have a chance to hit any assertions.
+      Bugfix on 0.2.1.28 / 0.2.2.20-alpha. Found by "doorss".
+
+
 Changes in version 0.2.2.21-alpha - 2011-01-15
   Tor 0.2.2.21-alpha includes all the patches from Tor 0.2.1.29, which
   continues our recent code security audit work. The main fix resolves
