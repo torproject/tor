@@ -3401,6 +3401,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->RelayBandwidthRate && !options->RelayBandwidthBurst)
     options->RelayBandwidthBurst = options->RelayBandwidthRate;
+  if (options->RelayBandwidthBurst && !options->RelayBandwidthRate)
+    options->RelayBandwidthRate = options->RelayBandwidthBurst;
 
   if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
     REJECT("RelayBandwidthBurst must be at least equal "
