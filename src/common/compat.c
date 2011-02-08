@@ -705,7 +705,10 @@ struct tor_lockfile_t {
  *
  * (Implementation note: because we need to fall back to fcntl on some
  *  platforms, these locks are per-process, not per-thread.  If you want
- *  to do in-process locking, use tor_mutex_t like a normal person.)
+ *  to do in-process locking, use tor_mutex_t like a normal person.
+ *  On Windows, when <b>blocking</b> is true, the maximum time that
+ *  is actually waited is 10 seconds, after which NULL is returned
+ *  and <b>locked_out</b> is set to 1.)
  */
 tor_lockfile_t *
 tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
@@ -725,7 +728,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
 #ifdef WIN32
   _lseek(fd, 0, SEEK_SET);
   if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLCK, 1) < 0) {
-    if (errno != EDEADLOCK)
+    if (errno != EACCESS && errno != EDEADLOCK)
       log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
     else
       *locked_out = 1;
