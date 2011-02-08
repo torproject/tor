@@ -1,4 +1,10 @@
 Changes in version 0.2.2.22-alpha - 2011-01-25
+  Tor 0.2.2.22-alpha fixes a few more less-critical security issues. The
+  main other change is a slight tweak to Tor's TLS handshake that makes
+  relays and bridges that run this new version reachable from Iran again.
+  We don't expect this tweak will win the arms race long-term, but it
+  will buy us a bit more time until we roll out a better solution.
+
   o Major bugfixes:
     - Fix a bounds-checking error that could allow an attacker to
       remotely crash a directory authority. Bugfix on 0.2.1.5-alpha.
