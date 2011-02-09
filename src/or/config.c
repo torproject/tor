@@ -2841,7 +2841,9 @@ compute_publishserverdescriptor(or_options_t *options)
     else if (!strcasecmp(string, "bridge"))
       *auth |= BRIDGE_AUTHORITY;
     else if (!strcasecmp(string, "hidserv"))
-      *auth |= HIDSERV_AUTHORITY;
+      log_warn(LD_CONFIG,
+               "PublishServerDescriptor hidserv is invalid. See "
+               "PublishHidServDescriptors.");
     else if (!strcasecmp(string, "") || !strcmp(string, "0"))
       /* no authority */;
     else
