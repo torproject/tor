@@ -1100,7 +1100,8 @@ if DirPort is non-zero):
 
 **HSAuthoritativeDir** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor also
-    accepts and serves hidden service descriptors. (Default: 0)
+    accepts and serves v0 hidden service descriptors,
+    which are produced and used by Tor 0.2.1.x and older. (Default: 0)
 
 **HidServDirectoryV2** **0**|**1**::
     When this option is set, Tor accepts and serves v2 hidden service
