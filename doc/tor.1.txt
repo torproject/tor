@@ -909,9 +909,9 @@ is non-zero):
     If set to a path, only the specified path will be executed.
     (Default: tor-fw-helper)
 
-**PublishServerDescriptor** **0**|**1**|**v1**|**v2**|**v3**|**bridge**|**hidserv**,**...**::
+**PublishServerDescriptor** **0**|**1**|**v1**|**v2**|**v3**|**bridge**,**...**::
     This option specifies which descriptors Tor will publish when acting as
-    a relay or hidden service. You can
+    a relay. You can
     choose multiple arguments, separated by commas.
  +
     If this option is set to 0, Tor will not publish its
@@ -919,7 +919,7 @@ is non-zero):
     out your server, or if you're using a Tor controller that handles directory
     publishing for you.) Otherwise, Tor will publish its descriptors of all
     type(s) specified. The default is "1",
-    which means "if running as a server or a hidden service, publish the
+    which means "if running as a server, publish the
     appropriate descriptors to the authorities".
 
 **ShutdownWaitLength** __NUM__::
