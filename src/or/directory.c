@@ -1585,9 +1585,10 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              delta>0 ? "ahead" : "behind", dbuf,
              delta>0 ? "behind" : "ahead");
       skewed = 1; /* don't check the recommended-versions line */
-      control_event_general_status(trusted ? LOG_WARN : LOG_NOTICE,
-                               "CLOCK_SKEW SKEW=%ld SOURCE=DIRSERV:%s:%d",
-                               delta, conn->_base.address, conn->_base.port);
+      if (trusted)
+        control_event_general_status(LOG_WARN,
+                                 "CLOCK_SKEW SKEW=%ld SOURCE=DIRSERV:%s:%d",
+                                 delta, conn->_base.address, conn->_base.port);
     } else {
       log_debug(LD_HTTP, "Time on received directory is within tolerance; "
                 "we are %ld seconds skewed.  (That's okay.)", delta);
