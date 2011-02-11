@@ -1,3 +1,27 @@
+Changes in version 0.2.1.30 - 2011-02-??
+  o Major bugfixes:
+    - Fix a bounds-checking error that could allow an attacker to
+      remotely crash a directory authority. Bugfix on 0.2.1.5-alpha.
+      Found by "piebeer".
+    - If relays set RelayBandwidthBurst but not RelayBandwidthRate,
+      Tor would ignore their RelayBandwidthBurst setting,
+      potentially using more bandwidth than expected. Bugfix on
+      0.2.0.1-alpha. Reported by Paul Wouters. Fixes bug 2470.
+    - Ignore and warn if the user mistakenly sets "PublishServerDescriptor
+      hidserv" in her torrc. The 'hidserv' argument never controlled
+      publication of hidden service descriptors. Bugfix on 0.2.0.1-alpha.
+
+  o Minor features:
+    - Adjust our TLS Diffie-Hellman parameters to match those used by
+      Apache's mod_ssl.
+    - Update to the February 1 2011 Maxmind GeoLite Country database.
+
+  o Minor bugfixes:
+    - Check for and reject overly long directory certificates and
+      directory tokens before they have a chance to hit any assertions.
+      Bugfix on 0.2.1.28. Found by "doorss".
+
+
 Changes in version 0.2.1.29 - 2011-01-15
   Tor 0.2.1.29 continues our recent code security audit work. The main
   fix resolves a remote heap overflow vulnerability that can allow remote
