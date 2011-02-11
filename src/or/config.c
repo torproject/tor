@@ -2878,7 +2878,9 @@ compute_publishserverdescriptor(or_options_t *options)
     else if (!strcasecmp(string, "bridge"))
       *auth |= BRIDGE_AUTHORITY;
     else if (!strcasecmp(string, "hidserv"))
-      *auth |= HIDSERV_AUTHORITY;
+      log_warn(LD_CONFIG,
+               "PublishServerDescriptor hidserv is invalid. See "
+               "PublishHidServDescriptors.");
     else if (!strcasecmp(string, "") || !strcmp(string, "0"))
       /* no authority */;
     else
@@ -3368,6 +3370,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
                            "RelayBandwidthBurst", msg) < 0)
     return -1;
 
+  if (options->RelayBandwidthRate && !options->RelayBandwidthBurst)
+    options->RelayBandwidthBurst = options->RelayBandwidthRate;
+  if (options->RelayBandwidthBurst && !options->RelayBandwidthRate)
+    options->RelayBandwidthRate = options->RelayBandwidthBurst;
+
   if (server_mode(options)) {
     if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
       r = tor_snprintf(buf, sizeof(buf),
@@ -3398,9 +3405,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
       return -1;
     }
   }
-
-  if (options->RelayBandwidthRate && !options->RelayBandwidthBurst)
-    options->RelayBandwidthBurst = options->RelayBandwidthRate;
 
   if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
     REJECT("RelayBandwidthBurst must be at least equal "

@@ -907,7 +907,7 @@ This directive can be specified multiple times to bind to multiple
 addresses/ports.
 .LP
 .TP
-\fBPublishServerDescriptor \fR\fB0\fR|\fB1\fR|\fBv1\fR|\fBv2\fR|\fBv3\fR|\fBbridge\fR|\fBhidserv\fR, ...\fP
+\fBPublishServerDescriptor \fR\fB0\fR|\fB1\fR|\fBv1\fR|\fBv2\fR|\fBv3\fR|\fBbridge\fR, ...\fP
 This option is only considered if you have an ORPort defined. You can
 choose multiple arguments, separated by commas.
 

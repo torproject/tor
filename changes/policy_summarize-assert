@@ -1,0 +1,6 @@
+  o Major bugfixes (security)
+    - Fix a bounds-checking error that could allow an attacker to
+      remotely crash a directory authority.  Found by piebeer.
+      Bugfix on 0.2.1.5-alpha.
+
+

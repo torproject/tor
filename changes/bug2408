@@ -1,0 +1,6 @@
+  o Major bugfixes
+    - Ignore and warn about "PublishServerDescriptor hidserv" torrc
+      options.  The 'hidserv' argument never controlled publication
+      of hidden service descriptors.  Bugfix on 0.2.0.1-alpha.
+
+
