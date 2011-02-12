@@ -40,6 +40,8 @@ stream_end_reason_to_control_string(int reason)
     case END_STREAM_REASON_NET_UNREACHABLE: return "NET_UNREACHABLE";
     case END_STREAM_REASON_SOCKSPROTOCOL: return "SOCKS_PROTOCOL";
 
+    case END_STREAM_REASON_PRIVATE_ADDR: return "PRIVATE_ADDR";
+
     default: return NULL;
   }
 }
@@ -125,6 +127,9 @@ stream_end_reason_to_socks5_response(int reason)
       return SOCKS5_NET_UNREACHABLE;
     case END_STREAM_REASON_SOCKSPROTOCOL:
       return SOCKS5_GENERAL_ERROR;
+    case END_STREAM_REASON_PRIVATE_ADDR:
+      return SOCKS5_GENERAL_ERROR;
+
     default:
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
              "Reason for ending (%d) not recognized; "

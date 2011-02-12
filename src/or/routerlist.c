@@ -1722,7 +1722,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
     double weight = 1;
     if (statuses) {
       routerstatus_t *status = smartlist_get(sl, i);
-      is_exit = status->is_exit;
+      is_exit = status->is_exit && !status->is_bad_exit;
       is_guard = status->is_possible_guard;
       is_dir = (status->dir_port != 0);
       if (!status->has_bandwidth) {
@@ -1742,7 +1742,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
       routerinfo_t *router = smartlist_get(sl, i);
       rs = router_get_consensus_status_by_id(
              router->cache_info.identity_digest);
-      is_exit = router->is_exit;
+      is_exit = router->is_exit && !router->is_bad_exit;
       is_guard = router->is_possible_guard;
       is_dir = (router->dir_port != 0);
       if (rs && rs->has_bandwidth) {

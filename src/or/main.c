@@ -2194,6 +2194,19 @@ tor_main(int argc, char *argv[])
   }
 #endif
 
+#ifdef MS_WINDOWS
+  /* Call SetProcessDEPPolicy to permanently enable DEP.
+     The function will not resolve on earlier versions of Windows,
+     and failure is not dangerous. */
+  HMODULE hMod = GetModuleHandleA("Kernel32.dll");
+  if (hMod) {
+    typedef BOOL (WINAPI *PSETDEP)(DWORD);
+    PSETDEP setdeppolicy = (PSETDEP)GetProcAddress(hMod,
+                           "SetProcessDEPPolicy");
+    if (setdeppolicy) setdeppolicy(1); /* PROCESS_DEP_ENABLE */
+  }
+#endif
+
   update_approx_time(time(NULL));
   tor_threads_init();
   init_logging();

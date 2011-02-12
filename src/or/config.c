@@ -195,6 +195,7 @@ static config_var_t _option_vars[] = {
   V(CircuitStreamTimeout,        INTERVAL, "0"),
   V(CircuitPriorityHalflife,     DOUBLE,  "-100.0"), /*negative:'Use default'*/
   V(ClientDNSRejectInternalAddresses, BOOL,"1"),
+  V(ClientRejectInternalAddresses, BOOL,   "1"),
   V(ClientOnly,                  BOOL,     "0"),
   V(ConsensusParams,             STRING,   NULL),
   V(ConnLimit,                   UINT,     "1000"),
@@ -405,6 +406,7 @@ static config_var_t testing_tor_network_defaults[] = {
   V(AuthDirMaxServersPerAddr,    UINT,     "0"),
   V(AuthDirMaxServersPerAuthAddr,UINT,     "0"),
   V(ClientDNSRejectInternalAddresses, BOOL,"0"),
+  V(ClientRejectInternalAddresses, BOOL,   "0"),
   V(ExitPolicyRejectPrivate,     BOOL,     "0"),
   V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
   V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
@@ -2839,7 +2841,9 @@ compute_publishserverdescriptor(or_options_t *options)
     else if (!strcasecmp(string, "bridge"))
       *auth |= BRIDGE_AUTHORITY;
     else if (!strcasecmp(string, "hidserv"))
-      *auth |= HIDSERV_AUTHORITY;
+      log_warn(LD_CONFIG,
+               "PublishServerDescriptor hidserv is invalid. See "
+               "PublishHidServDescriptors.");
     else if (!strcasecmp(string, "") || !strcmp(string, "0"))
       /* no authority */;
     else
@@ -3343,6 +3347,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
                            "PerConnBWBurst", msg) < 0)
     return -1;
 
+  if (options->RelayBandwidthRate && !options->RelayBandwidthBurst)
+    options->RelayBandwidthBurst = options->RelayBandwidthRate;
+  if (options->RelayBandwidthBurst && !options->RelayBandwidthRate)
+    options->RelayBandwidthRate = options->RelayBandwidthBurst;
+
   if (server_mode(options)) {
     if (options->BandwidthRate < ROUTER_REQUIRED_MIN_BANDWIDTH) {
       tor_asprintf(msg,
@@ -3370,9 +3379,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
       return -1;
     }
   }
-
-  if (options->RelayBandwidthRate && !options->RelayBandwidthBurst)
-    options->RelayBandwidthBurst = options->RelayBandwidthRate;
 
   if (options->RelayBandwidthRate > options->RelayBandwidthBurst)
     REJECT("RelayBandwidthBurst must be at least equal "

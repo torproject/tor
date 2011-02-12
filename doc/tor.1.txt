@@ -471,7 +471,7 @@ The following options are useful only for clients (that is, if
     list.
 
 **EntryNodes** __node__,__node__,__...__::
-    A list of identity fingerprints, nicknames, country codes and address
+    A list of identity fingerprints, nicknames and address
     patterns of nodes to use for the first hop in normal circuits. These are
     treated only as preferences unless StrictNodes (see below) is also set.
 
@@ -654,8 +654,9 @@ The following options are useful only for clients (that is, if
     can leak your location to attackers. (Default: 1)
 
 **VirtualAddrNetwork** __Address__/__bits__::
-    When a controller asks for a virtual (unused) address with the MAPADDRESS
-    command, Tor picks an unassigned address from this range. (Default:
+    When Tor needs to assign a virtual (unused) address because of a MAPADDRESS
+    command from the controller or the AutomapHostsOnResolve feature, Tor
+    picks an unassigned address from this range. (Default:
     127.192.0.0/10) +
  +
     When providing proxy server service to a network of computers using a tool
@@ -730,6 +731,12 @@ The following options are useful only for clients (that is, if
     tells it that an address resolves to an internal address (like 127.0.0.1 or
     192.168.0.1). This option prevents certain browser-based attacks; don't
     turn it off unless you know what you're doing. (Default: 1).
+
+**ClientRejectInternalAddresses** **0**|**1**::
+    If true, Tor does not try to fulfill requests to connect to an internal
+    address (like 127.0.0.1 or 192.168.0.1) __unless a exit node is
+    specifically requested__ (for example, via a .exit hostname, or a
+    controller request).  (Default: 1).
 
 **DownloadExtraInfo** **0**|**1**::
     If true, Tor downloads and caches "extra-info" documents. These documents
@@ -875,9 +882,9 @@ is non-zero):
     specified in ORPort. (Default: 0.0.0.0) This directive can be specified
     multiple times to bind to multiple addresses/ports.
 
-**PublishServerDescriptor** **0**|**1**|**v1**|**v2**|**v3**|**bridge**|**hidserv**,**...**::
+**PublishServerDescriptor** **0**|**1**|**v1**|**v2**|**v3**|**bridge**,**...**::
     This option specifies which descriptors Tor will publish when acting as
-    a relay or hidden service. You can
+    a relay. You can
     choose multiple arguments, separated by commas.
  +
     If this option is set to 0, Tor will not publish its
@@ -885,7 +892,7 @@ is non-zero):
     out your server, or if you're using a Tor controller that handles directory
     publishing for you.) Otherwise, Tor will publish its descriptors of all
     type(s) specified. The default is "1",
-    which means "if running as a server or a hidden service, publish the
+    which means "if running as a server, publish the
     appropriate descriptors to the authorities".
 
 **ShutdownWaitLength** __NUM__::
@@ -900,7 +907,9 @@ is non-zero):
     period, or receive more than that number in the period. For example, with
     AccountingMax set to 1 GB, a server could send 900 MB and receive 800 MB
     and continue running. It will only hibernate once one of the two reaches 1
-    GB. When the number of bytes is exhausted, Tor will hibernate until some
+    GB. When the number of bytes gets low, Tor will stop accepting new
+    connections and circuits.  When the number of bytes
+    is exhausted, Tor will hibernate until some
     time in the next accounting period. To prevent all servers from waking at
     the same time, Tor will also wait until a random point in each period
     before waking up. If you have bandwidth cost issues, enabling hibernation
@@ -1060,7 +1069,8 @@ if DirPort is non-zero):
 
 **HSAuthoritativeDir** **0**|**1**::
     When this option is set in addition to **AuthoritativeDirectory**, Tor also
-    accepts and serves hidden service descriptors. (Default: 0)
+    accepts and serves v0 hidden service descriptors,
+    which are produced and used by Tor 0.2.1.x and older. (Default: 0)
 
 **HidServDirectoryV2** **0**|**1**::
     When this option is set, Tor accepts and serves v2 hidden service
@@ -1267,6 +1277,7 @@ The following options are used for running a testing Tor network.
        AuthDirMaxServersPerAddr 0
        AuthDirMaxServersPerAuthAddr 0
        ClientDNSRejectInternalAddresses 0
+       ClientRejectInternalAddresses 0
        ExitPolicyRejectPrivate 0
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds
