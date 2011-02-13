@@ -1,4 +1,0 @@
-  o Minor features
-    - Log less aggressively about circuit timeout changes, and improve some
-      other circuit timeout messages.  Resolves bug 2004.
-

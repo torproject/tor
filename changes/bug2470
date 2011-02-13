@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - If relays set RelayBandwidthBurst but not RelayBandwidthRate,
-      Tor would ignore their RelayBandwidthBurst setting,
-      potentially using more bandwidth than expected. Bugfix on
-      0.2.0.1-alpha. Reported by Paul Wouters. Fixes bug 2470.

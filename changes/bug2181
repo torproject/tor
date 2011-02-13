@@ -1,4 +1,0 @@
-  o Minor features
-    - Log a little more clearly about the times at which we're no longer
-      accepting new connections.  Resolves bug 2181.
-

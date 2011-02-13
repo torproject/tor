@@ -1,8 +1,0 @@
-  o Minor bugfixes
-    - Correctly detect failure to allocate an OpenSSL BIO.  Fixes bug 2378;
-      found by "cypherpunks".   This bug was introduced before the
-      first Tor release, in svn commit r110.
-
-  o Minor code simplifications and refactorings
-    - Always treat failure to allocate an RSA key as an unrecoverable
-      allocation error.

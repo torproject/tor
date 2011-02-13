@@ -1,5 +1,0 @@
-  o Minor features
-    - Enable Address Space Layout Randomization (ASLR) and Data Execution
-      Prevention (DEP) by default on Windows to make it harder for
-      attackers to exploit vulnerabilities.  Patch from John Brooks.
- 
