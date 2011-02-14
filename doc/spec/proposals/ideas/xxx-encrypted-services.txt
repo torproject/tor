@@ -1,18 +1,66 @@
+Filename: xxx-encrypted-services.txt
+Title: Encrypted services as a replacement to exit enclaving
+Author: Roger Dingledine
+Created: 2011-01-12
+Status: Draft
 
-the basic idea might be to generate a keypair, and sign little statements
-like "this key corresponds to this relay id", and publish them on karsten's
-hs dht.
+We should offer a way to run a Tor hidden service where the server-side
+rendezvous circuits are just one hop.
 
-so if you want to talk to it, you look it up, then go to that exit.
-and by 'go to' i mean 'build a tor circuit like normal except you're sure
-where to exit'
+1. Motivation
 
-connecting to it is slower than usual, but once you're connected, it's no
-slower than normal tor.
-and you get what wikileaks wants from its hidden service, which is really
-just the UI piece.
-indymedia also wants this.
+  There are three Tor use cases that this idea addresses:
 
-might be interesting to let an encrypted service list more than one relay,
-too.
+  1) Indymedia wants to run an exit enclave that provides end-to-end
+  authentication and encryption. They tried running an exit relay that
+  just exits to themselves:
+  https://trac.torproject.org/projects/tor/ticket/800
+  but a) it handles lots of other traffic too since it's a relay, and
+  b) exit enclaves don't actually work consistently, because the first
+  connection from the user doesn't realize it should use the exit enclave.
+
+  2) Wikileaks uses Tor hidden services not to hide their service,
+  but because the hidden service address provides a type of usability
+  we didn't think much about: unlike a more normal address, a Tor
+  hidden service address either works (meaning you get your end-to-end
+  authentication and encryption) or it fails hard. With a hidden service
+  address there's no way a user could accidentally submit their documents
+  to Wikileaks without using Tor, but with normal Tor it's possible.
+
+  3) The Freenode IRC network wants to provide end-to-end encryption and
+  authentication to its users, a) to handle the fact that the IRC protocol
+  doesn't really provide much of that by default, and b) to funnel all
+  their Tor users into a single location so they can handle the anonymous
+  users better. They don't mind the fact that their service is hidden, but
+  they'd rather have better performance for their users given the choice.
+
+2. Design
+
+  It seems that the main changes required would be to a) make
+  circuit_launch_by_extend_info() know to use 1 hop rather than the
+  default, and know not to try to cannibalize a general 3-hop circ for
+  these circuits, and b) add a way in the torrc file to specify that this
+  service wants to be an encrypted service rather than a hidden service.
+
+  I had originally pondered some sort of even more efficient "signed
+  document saying this service is running at this Tor relay", which
+  would be more efficient because it would cut out the rendezvous step.
+  But by reusing the hidden service rendezvous infrastructure, we a)
+  blend in with hidden services (and hidden service descriptors) and
+  don't need to teach users (or their Tor clients) a new interface,
+  and b) can offer the encrypted service on a non-relay.
+
+  One design question to ponder: should we continue to use three-hop
+  circuits for our introduction points, and for publishing our encrypted
+  service descriptor? Probably.
+
+3. Security implications
+
+  There's a possible second-order effect here since both encrypted
+  services and hidden services will have foo.onion addresses and it's
+  not clear based on the address whether the service will be hidden --
+  if *some* .onion addresses are easy to track down, are we encouraging
+  adversaries to attack all rendezvous points just in case?
+
+...
 
