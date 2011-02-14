@@ -1,0 +1,104 @@
+Filename: 177-flag-abstention.txt
+Title: Abstaining from votes on individual flags
+Author: Nick Mathewson
+Created: 14 Feb 2011
+Status: Draft
+
+Overview:
+
+   We should have a way for authorities to vote on flags in
+   particular instances, without having to vote on that flag for all
+   servers.
+
+Motivation:
+
+   Suppose that the status of some router becomes controversial, and
+   an authority wants to vote for or against the BadExit status of
+   that router.  Suppose also that the authority is not currently
+   voting on the BadExit flag.  If the authority wants to say that
+   the router is or is not "BadExit", it cannot currently do so
+   without voting yea or nay on the BadExit status of all other
+   routers.
+
+   Suppose that an authority wants to vote "Valid" or "Invalid" on a
+   large number of routers, but does not have an opinion on some of
+   them.  Currently, it cannot do so: if it votes for the Valid flag
+   anywhere, it votes for it everywhere.
+
+Design:
+
+   We add a new line "extra-flags" in directory votes, to appear
+   after "known-flags".  It lists zero or more flags that an
+   authority has occasional opinions on, but for which the authority
+   will usually abstain.  No flag may appear in both extra-flags and
+   known-flags.
+
+   In the router-status section for each directory vote, we allow an
+   optional "s2" line to appear after the "s" line.  It contains
+   zero or more flag votes.  A flag vote is of the form of one of
+   "+", "-", or "/" followed by the name of a flag.  "+" denotes a
+   yea vote, and "-" denotes a nay vote, and "/" notes an
+   abstention.  Authorities may omit most abstentions, except as
+   noted below.  No flag may appear in an s2 line unless it appears
+   in the known-flags or extra-flags line.We retain the rule that no
+   flag may appear in an s line unless it appears in the known-flags
+   line.
+
+   When using an appropriate consensus method to vote, we use these
+   new rules to determine flags:
+
+   A flag is listed in the consensus if it is in the known-flags
+   section of at least one voter, and in the known-flags or
+   extra-flags section of at least three voters (or half the
+   authorities, whichever set is smaller).
+
+   A single authority's vote for a given flag on a given router is
+   interpreted as follows:
+
+      - If the authority votes +Flag or -Flag or /Flag in the s2 line for
+        that router, the vote is "yea" or "nay" or "abstain" respectively.
+      - Otherwise, if the flag is listed on the "s" line for the
+        router, then the vote is "yea".
+      - Otherwise, if the flag is listed in the known-flags line,
+        then the vote is "nay".
+      - Otherwise, the vote is "abstain".
+
+   A router is assigned a flag in the consensus iff the total "yeas"
+   outnumber the total "nays".
+
+   As an exception, this proposal does not affect the behavior of
+   the "Named" and "Unnamed" flags; these are still treated as
+   before.  (An authority can already abstain from a single naming
+   decision by not voting Named on any router with a given name.)
+
+Examples:
+
+   Suppose that it becomes important to know which Tor servers are
+   operated by burrowing marsupials.  Some authority operators
+   diligently research this question; others want to vote about
+   individual routers on an ad hoc basis when they learn about a
+   particular router's being e.g. located underground in New South
+   Wales.
+
+   If an authority usually has no opinions on the RunByWombats flag,
+   it should list it in the "extra-flags" of its votes.  If it
+   occasionally wants to vote that a router is (or is not) run by
+   wombats, it should list "s2 +RunByWombats" or "s2 -RunByWombats"
+   for the routers in question.  Otherwise it can omit the flag from
+   its s and s2 lines entirely.
+
+   If an authority usually has an opinion on the RunByWombats flag,
+   but wants to abstain in some cases, it should list "RunByWombats"
+   in the "known-flags" part of its votes, and include
+   "RunByWombats" in the s line for every router that it believes is
+   run by wombats. When it wants to vote that a router is not run
+   by wombats, it should list the RunByWombats flag in neither the s
+   nor the s2 line.  When it wants to abstain, it should list "s2
+   /RunByWombats".
+
+   In both cases, when the new consensus method is used, a router
+   will get listed as "RunByWombats" if there are more authorities
+   that say it is run by wombats than there are authorities saying
+   it is not run by wombats.  (As now, "no" votes win ties.)
+
+

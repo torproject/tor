@@ -97,6 +97,7 @@ Proposals by number:
 174  Optimistic Data for Tor: Server Side [OPEN]
 175  Automatically promoting Tor clients to nodes [DRAFT]
 176  Proposed version-3 link handshake for Tor [DRAFT]
+177  Abstaining from votes on individual flags [DRAFT]
 
 
 Proposals by status:
@@ -111,6 +112,7 @@ Proposals by status:
    170  Configuration options regarding circuit building
    175  Automatically promoting Tor clients to nodes
    176  Proposed version-3 link handshake for Tor [for 0.2.3]
+   177  Abstaining from votes on individual flags
  NEEDS-REVISION:
    131  Help users to verify they are using Tor
  OPEN:
