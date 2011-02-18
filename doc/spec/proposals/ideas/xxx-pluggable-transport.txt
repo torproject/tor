@@ -126,7 +126,9 @@ Design overview
 
   To configure one of these programs, it should be sufficient simply to
   list it in your torrc.  The program tells Tor which transports it
-  provides.
+  provides.  The Tor consensus should carry a new approved version number that
+  is specific for pluggable transport; this will allow Tor to know when a
+  particular transport is known to be unsafe safe or non-functional.
 
   Bridges (and maybe relays) report in their descriptors which transport
   protocols they support.  This information can be copied into bridge
