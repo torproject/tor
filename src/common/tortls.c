@@ -58,7 +58,6 @@
 #include "util.h"
 #include "torlog.h"
 #include "container.h"
-#include "ht.h"
 #include <string.h>
 
 /* Enable the "v2" TLS handshake.
@@ -108,7 +107,6 @@ typedef struct tor_tls_context_t {
  * accessed from within tortls.c.
  */
 struct tor_tls_t {
-  HT_ENTRY(tor_tls_t) node;
   tor_tls_context_t *context; /** A link to the context object for this tls. */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
@@ -171,25 +169,12 @@ tor_tls_entry_hash(const tor_tls_t *a)
 #endif
 }
 
-/** Map from SSL* pointers to tor_tls_t objects using those pointers.
- */
-static HT_HEAD(tlsmap, tor_tls_t) tlsmap_root = HT_INITIALIZER();
-
-HT_PROTOTYPE(tlsmap, tor_tls_t, node, tor_tls_entry_hash,
-             tor_tls_entries_eq)
-HT_GENERATE(tlsmap, tor_tls_t, node, tor_tls_entry_hash,
-            tor_tls_entries_eq, 0.6, malloc, realloc, free)
-
 /** Helper: given a SSL* pointer, return the tor_tls_t object using that
  * pointer. */
 static INLINE tor_tls_t *
 tor_tls_get_by_ssl(const SSL *ssl)
 {
-  tor_tls_t search, *result;
-  memset(&search, 0, sizeof(search));
-  search.ssl = (SSL*)ssl;
-  result = HT_FIND(tlsmap, &tlsmap_root, &search);
-  return result;
+  return SSL_get_app_data(ssl);
 }
 
 static void tor_tls_context_decref(tor_tls_context_t *ctx);
@@ -466,10 +451,6 @@ tor_tls_free_all(void)
     client_tls_context = NULL;
     tor_tls_context_decref(ctx);
   }
-  if (!HT_EMPTY(&tlsmap_root)) {
-    log_warn(LD_MM, "Still have entries in the tlsmap at shutdown.");
-  }
-  HT_CLEAR(tlsmap, &tlsmap_root);
 #ifdef V2_HANDSHAKE_CLIENT
   if (CLIENT_CIPHER_DUMMIES)
     tor_free(CLIENT_CIPHER_DUMMIES);
@@ -1085,7 +1066,7 @@ tor_tls_new(int sock, int isServer)
     tor_free(result);
     return NULL;
   }
-  HT_INSERT(tlsmap, &tlsmap_root, result);
+  SSL_set_app_data(result->ssl, result);
   SSL_set_bio(result->ssl, bio, bio);
   tor_tls_context_incref(context);
   result->context = context;
@@ -1196,14 +1177,9 @@ tor_tls_is_server(tor_tls_t *tls)
 void
 tor_tls_free(tor_tls_t *tls)
 {
-  tor_tls_t *removed;
   if (!tls)
     return;
   tor_assert(tls->ssl);
-  removed = HT_REMOVE(tlsmap, &tlsmap_root, tls);
-  if (!removed) {
-    log_warn(LD_BUG, "Freeing a TLS that was not in the ssl->tls map.");
-  }
 #ifdef SSL_set_tlsext_host_name
   SSL_set_tlsext_host_name(tls->ssl, NULL);
 #endif
