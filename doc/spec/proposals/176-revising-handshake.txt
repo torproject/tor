@@ -358,13 +358,14 @@ Supersedes: 169
    cell.  If AuthType is 1 (meaning "RSA-SHA256-TLSSecret"), then the
    Authentication contains the following:
 
+       Type: The characters "AUTH0001" [8 octets]
        CID: A SHA256 hash of the client's RSA1024 identity key [32 octets]
        SID: A SHA256 hash of the server's RSA1024 identity key [32 octets]
        SLOG: A SHA256 hash of all bytes sent from the server to the client
          as part of the negotiation up to and including the
          AUTH_CHALLENGE cell; that is, the VERSIONS cell,
          the CERT cell, and the AUTH_CHALLENGE cell. [32 octets]
-       CLOG: A SHA256 hash of all byte sent from the client to the
+       CLOG: A SHA256 hash of all bytes sent from the client to the
          server as part of the negotiation so far; that is, the
          VERSIONS cell and the CERT cell. [32 octets]
        SCERT: A SHA256 hash of the server's TLS link
@@ -377,6 +378,7 @@ Supersedes: 169
              "Tor V3 handshake TLS cross-certification"
           [32 octets]
        TIME: The time of day in seconds since the POSIX epoch. [8 octets]
+       NONCE: A 16 byte value, randomly chosen by the client [16 octets]
        SIG: A signature of a SHA256 hash of all the previous fields
          using the client's "Authenticate" key as presented.  (As
          always in Tor, we use OAEP-MGF1 padding; see tor-spec.txt
