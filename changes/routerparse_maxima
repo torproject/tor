@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Check for and reject overly long directory certificates and
-      directory tokens before they have a chance to hit any
-      assertions. Bugfix on 0.2.1.28. Found by doorss.

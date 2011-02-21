@@ -1,5 +1,0 @@
-  o Minor bugfixes
-    - Fix a off-by-one error in calculating some controller command argument
-      lengths.  Fortunately, this is harmless, the controller code does
-      redundant NUL termination too.  Found by boboper.  Bugfix on
-      0.1.1.1-alpha.

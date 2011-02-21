@@ -1,5 +1,0 @@
-  o Minor features:
-    - Report only the top 10 ports in exit-port stats in order not to
-      exceed the maximum extra-info descriptor length of 50 KB. Implements
-      task 2196.
-
