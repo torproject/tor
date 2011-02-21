@@ -50,7 +50,7 @@ static int dirvote_publish_consensus(void);
 static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** The highest consensus method that we currently support. */
-#define MAX_SUPPORTED_CONSENSUS_METHOD 11
+#define MAX_SUPPORTED_CONSENSUS_METHOD 12
 
 /** Lowest consensus method that contains a 'directory-footer' marker */
 #define MIN_METHOD_FOR_FOOTER 9
@@ -63,6 +63,10 @@ static char *make_consensus_method_list(int low, int high, const char *sep);
 
 /** Lowest consensus method that generates microdescriptors */
 #define MIN_METHOD_FOR_MICRODESC 8
+
+/** Lowest consensus method that ensures a majority of authorities voted
+  * for a param. */
+#define MIN_METHOD_FOR_MAJORITY_PARAMS 12
 
 /* =====
  * Voting
@@ -608,11 +612,16 @@ compute_consensus_versions_list(smartlist_t *lst, int n_versioning)
   return result;
 }
 
+/** Minimum number of directory authorities voting for a parameter to
+ * include it in the consensus, if consensus method 12 or later is to be
+ * used. See proposal 178 for details. */
+#define MIN_VOTES_FOR_PARAM 3
+
 /** Helper: given a list of valid networkstatus_t, return a new string
  * containing the contents of the consensus network parameter set.
  */
 /* private */ char *
-dirvote_compute_params(smartlist_t *votes)
+dirvote_compute_params(smartlist_t *votes, int method, int total_authorities)
 {
   int i;
   int32_t *vals;
@@ -669,11 +678,17 @@ dirvote_compute_params(smartlist_t *votes)
       next_param = smartlist_get(param_list, param_sl_idx+1);
     if (!next_param || strncmp(next_param, param, cur_param_len)) {
       /* We've reached the end of a series. */
-      int32_t median = median_int32(vals, i);
-      char *out_string = tor_malloc(64+cur_param_len);
-      memcpy(out_string, param, cur_param_len);
-      tor_snprintf(out_string+cur_param_len,64, "%ld", (long)median);
-      smartlist_add(output, out_string);
+      /* Make sure enough authorities voted on this param, unless the
+       * the consensus method we use is too old for that. */
+      if (method < MIN_METHOD_FOR_MAJORITY_PARAMS ||
+          i > total_authorities/2 ||
+          i >= MIN_VOTES_FOR_PARAM) {
+        int32_t median = median_int32(vals, i);
+        char *out_string = tor_malloc(64+cur_param_len);
+        memcpy(out_string, param, cur_param_len);
+        tor_snprintf(out_string+cur_param_len,64, "%ld", (long)median);
+        smartlist_add(output, out_string);
+      }
 
       i = 0;
       if (next_param) {
@@ -1496,7 +1511,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
   }
 
   if (consensus_method >= MIN_METHOD_FOR_PARAMS) {
-    params = dirvote_compute_params(votes);
+    params = dirvote_compute_params(votes, consensus_method,
+                                    total_authorities);
     if (params) {
       smartlist_add(chunks, tor_strdup("params "));
       smartlist_add(chunks, params);

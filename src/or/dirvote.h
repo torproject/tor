@@ -84,7 +84,8 @@ document_signature_t *voter_get_sig_by_algorithm(
 #ifdef DIRVOTE_PRIVATE
 char *format_networkstatus_vote(crypto_pk_env_t *private_key,
                                  networkstatus_t *v3_ns);
-char *dirvote_compute_params(smartlist_t *votes);
+char *dirvote_compute_params(smartlist_t *votes, int method,
+                             int total_authorities);
 #endif
 
 #endif
