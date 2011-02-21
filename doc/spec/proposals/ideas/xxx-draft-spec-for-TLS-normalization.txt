@@ -1,6 +1,6 @@
 Filename: xxx-draft-spec-for-TLS-normalization.txt
 Title: Draft spec for TLS certificate and handshake normalization
-Author: Jacob Appelbaum
+Author: Jacob Appelbaum, Gladys Shufflebottom
 Created: 16-Feb-2011
 Status: Draft
 
@@ -94,32 +94,9 @@ An example of OpenSSL’s asn1parse over a typical Tor certificate:
   308:d=2  hl=2 l=   0 prim: NULL
   310:d=1  hl=3 l= 129 prim: BIT STRING
 
-I propose that the commonName field be generated to match a specific property
-of the server in question. It is reasonable to set the commonName element to
-match either the hostname of the relay, the detected IP address of the relay,
-or for the relay operator to override certificate generation entirely by
-loading a custom certificate. For custom certificates, see the Custom
-Certificates section.
-
-I propose that the value for the commonName field be populated with the
-fully qualified host name as detected by reverse and forward resolution of the
-IP address of the relay. If the host name is in the DNS, this host name should
-be set as the common name. When forward and reverse DNS is not available, I
-propose that the IP address alone be used.
-
-The commonName field for the issuer should be set to known issuer names,
-random words or omitted entirely.
-
-Since some host names may themselves trigger censorship keyword filters,
-it may be reasonable to provide an option to override the defaults and
-force certain values in the commonName field.
-
-Considerations for commonName normalization
-
-Any host name supplied for the commonName field should resolve - even if it
-does not resolve to the IP address of the relay[0]. If the commonName field
-does include an IP address, it should be the current IP address of the relay as
-seen by other Internet hosts.
+I propose that we match OpenSSL's default self-signed certificates. I hypothesise
+that they are the most common self-signed certificates. If this turns out not
+to be the case, then we should use whatever the most common turns out to be.
 
 Certificate serial numbers
 
@@ -127,25 +104,35 @@ Currently our generated certificate serial number is set to the number of
 seconds since the epoch at the time of the certificate's creation. I propose
 that we should ensure that our serial numbers are unrelated to the epoch,
 since the generation methods are potentially recognizable as Tor-related.
-Instead, I propose that we use a randomly generated number that is
-subsequently hashed with SHA-512 and then truncated to a length chosen at
-random within a finite set of bounds. The length of the serial number should be
-chosen randomly at certificate generation time; it should be bound between the
-most commonly found bit lengths[1] in the wild. Random sixteen byte values
-appear to be the high bound for serial number as issued by Verisign and
-DigiCert.  RapidSSL appears to be three bytes in length. Others common byte
-lengths appear to be between one and four bytes. I propose that we choose a
-byte length that is either 3, 4, or 16 bytes at certificate generation time.
 
-This randomly generated field may now serve as a covert channel that signals to
-the client that the OR will not support TLS renegotiation; this means that the
-client can expect to perform a V3 TLS handshake setup. Otherwise, if the serial
-number is a reasonable time since the epoch, we should assume the OR is
-using an earlier protocol version and hence that it expects renegotiation.
+Instead, I propose that we use a randomly generated number that is
+subsequently hashed with SHA-512 and then truncate the data to eight bytes[1].
+
+Random sixteen byte values appear to be the high bound for serial number as
+issued by Verisign and DigiCert.  RapidSSL appears to be three bytes in length.
+Others common byte lengths appear to be between one and four bytes. The default
+OpenSSL certificates are eight bytes and we should use this length with our
+self-signed certificates.
+
+This randomly generated serial number field may now serve as a covert channel
+that signals to the client that the OR will not support TLS renegotiation; this
+means that the client can expect to perform a V3 TLS handshake setup.
+Otherwise, if the serial number is a reasonable time since the epoch, we should
+assume the OR is using an earlier protocol version and hence that it expects
+renegotiation.
+
+We also have a need to signal properties with our certificates for a possible
+v3 handshake in the future. Therefore I propose that we match OpenSSL default
+self-signed certificates (a 64-bit random number), but reserve the two least-
+significant bits for signaling. For the moment, these two bits will be zero.
+
+This means that an attacker may be able to identify Tor certificates from default
+OpenSSL certificates with a 75% probability.
 
 As a security note, care must be taken to ensure that supporting this
 covert channel will not lead to an attacker having a method to downgrade client
-behavior.
+behavior. This shouldn't be a risk because the TLS Finished message hashes over
+all the bytes of the handshake, including the certificates.
 
 Certificate fingerprinting issues expressed as base64 encoding
 
@@ -190,16 +177,6 @@ query.  I propose that we ensure that we test our certificates to ensure that
 they do not have these kinds of statistical similarities without ensuring
 overlap with a very large cross section of the internet's certificates.
 
-Other certificate fields
-
-It may be advantageous to also generate values for the O, L, ST, C, and OU
-certificate fields. The C and ST fields may be populated from GeoIP information
-that is already available to Tor to reflect a plausible geographic location
-for the OR. The other fields should contain some semblance of a word or
-grouping of words. It has been suggested[2] that we should look to guides for
-certificate generation that use OpenSSL as a reasonable baseline for
-understanding these fields, as well as other certificate properties.
-
 Certificate dating and validity issues
 
 TLS certificates found in the wild are generally found to be long-lived;
@@ -230,6 +207,58 @@ time is enforced by the client and confirmed by keys rotating in the consensus.
 The expiration time should not be a fixed time that is simple to calculate by
 any Deep Packet Inspection device or it will become a new Tor TLS setup
 fingerprint.
+
+Proposed certificate form
+
+The following output from openssl asn1parse results from the proposed
+certificate generation algorithm. It matches the results of generating a
+default self-signed certificate:
+
+    0:d=0  hl=4 l= 513 cons: SEQUENCE          
+    4:d=1  hl=4 l= 362 cons: SEQUENCE          
+    8:d=2  hl=2 l=   9 prim: INTEGER           :DBF6B3B864FF7478
+   19:d=2  hl=2 l=  13 cons: SEQUENCE          
+   21:d=3  hl=2 l=   9 prim: OBJECT            :sha1WithRSAEncryption
+   32:d=3  hl=2 l=   0 prim: NULL              
+   34:d=2  hl=2 l=  69 cons: SEQUENCE          
+   36:d=3  hl=2 l=  11 cons: SET               
+   38:d=4  hl=2 l=   9 cons: SEQUENCE          
+   40:d=5  hl=2 l=   3 prim: OBJECT            :countryName
+   45:d=5  hl=2 l=   2 prim: PRINTABLESTRING   :AU
+   49:d=3  hl=2 l=  19 cons: SET               
+   51:d=4  hl=2 l=  17 cons: SEQUENCE          
+   53:d=5  hl=2 l=   3 prim: OBJECT            :stateOrProvinceName
+   58:d=5  hl=2 l=  10 prim: PRINTABLESTRING   :Some-State
+   70:d=3  hl=2 l=  33 cons: SET               
+   72:d=4  hl=2 l=  31 cons: SEQUENCE          
+   74:d=5  hl=2 l=   3 prim: OBJECT            :organizationName
+   79:d=5  hl=2 l=  24 prim: PRINTABLESTRING   :Internet Widgits Pty Ltd
+  105:d=2  hl=2 l=  30 cons: SEQUENCE          
+  107:d=3  hl=2 l=  13 prim: UTCTIME           :110217011237Z
+  122:d=3  hl=2 l=  13 prim: UTCTIME           :120217011237Z
+  137:d=2  hl=2 l=  69 cons: SEQUENCE          
+  139:d=3  hl=2 l=  11 cons: SET               
+  141:d=4  hl=2 l=   9 cons: SEQUENCE          
+  143:d=5  hl=2 l=   3 prim: OBJECT            :countryName
+  148:d=5  hl=2 l=   2 prim: PRINTABLESTRING   :AU
+  152:d=3  hl=2 l=  19 cons: SET               
+  154:d=4  hl=2 l=  17 cons: SEQUENCE          
+  156:d=5  hl=2 l=   3 prim: OBJECT            :stateOrProvinceName
+  161:d=5  hl=2 l=  10 prim: PRINTABLESTRING   :Some-State
+  173:d=3  hl=2 l=  33 cons: SET               
+  175:d=4  hl=2 l=  31 cons: SEQUENCE          
+  177:d=5  hl=2 l=   3 prim: OBJECT            :organizationName
+  182:d=5  hl=2 l=  24 prim: PRINTABLESTRING   :Internet Widgits Pty Ltd
+  208:d=2  hl=3 l= 159 cons: SEQUENCE          
+  211:d=3  hl=2 l=  13 cons: SEQUENCE          
+  213:d=4  hl=2 l=   9 prim: OBJECT            :rsaEncryption
+  224:d=4  hl=2 l=   0 prim: NULL              
+  226:d=3  hl=3 l= 141 prim: BIT STRING        
+  370:d=1  hl=2 l=  13 cons: SEQUENCE          
+  372:d=2  hl=2 l=   9 prim: OBJECT            :sha1WithRSAEncryption
+  383:d=2  hl=2 l=   0 prim: NULL              
+  385:d=1  hl=3 l= 129 prim: BIT STRING        
+
 
 Custom Certificates
 
@@ -307,6 +336,7 @@ simply avoided by the censors.
 
 The Rakshasa prime approach may cause censors to specifically allow only
 certain known and accepted DH parameters.
+
 
 Appendix: Other issues
 
