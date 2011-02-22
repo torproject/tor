@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, The Tor Project, Inc. */
+/* Copyright (c) 2010-2011, The Tor Project, Inc. */
 /* See LICENSE for licensing information */
 
 /**
@@ -14,7 +14,7 @@
 #include "circuitlist.h"
 #include "main.h"
 
-/** Returns the number of open circuits. */
+/** Return the total number of circuits. */
 static int
 count_circuits(void)
 {
@@ -27,7 +27,8 @@ count_circuits(void)
   return nr;
 }
 
-/* Takes seconds <b>secs</b> and returns a human-readable uptime string */
+/** Take seconds <b>secs</b> and return a newly allocated human-readable
+ * uptime string */
 static char *
 secs_to_uptime(long secs)
 {
@@ -51,18 +52,19 @@ secs_to_uptime(long secs)
   return uptime_string;
 }
 
-/* Takes <b>bytes</b> and returns a human-readable bandwidth string. */
+/** Take <b>bytes</b> and returns a newly allocated human-readable usage
+ * string. */
 static char *
-bytes_to_bandwidth(uint64_t bytes)
+bytes_to_usage(uint64_t bytes)
 {
   char *bw_string = NULL;
 
-  if (bytes < (1<<20)) /* Less than a megabyte. */
+  if (bytes < (1<<20)) { /* Less than a megabyte. */
     tor_asprintf(&bw_string, U64_FORMAT" kB", U64_PRINTF_ARG(bytes>>10));
-  else if (bytes < (1<<30)) { /* Megabytes. Let's add some precision. */
+  } else if (bytes < (1<<30)) { /* Megabytes. Let's add some precision. */
     double bw = U64_TO_DBL(bytes);
     tor_asprintf(&bw_string, "%.2f MB", bw/(1<<20));
-  }  else { /* Gigabytes. */
+  } else { /* Gigabytes. */
     double bw = U64_TO_DBL(bytes);
     tor_asprintf(&bw_string, "%.2f GB", bw/(1<<30));
   }
@@ -70,7 +72,9 @@ bytes_to_bandwidth(uint64_t bytes)
   return bw_string;
 }
 
-/* This function provides the heartbeat log message */
+/** Log a "heartbeat" message describing Tor's status and history so that the
+ * user can know that there is indeed a running Tor.  Return 0 on success and
+ * -1 on failure. */
 int
 log_heartbeat(time_t now)
 {
@@ -83,6 +87,7 @@ log_heartbeat(time_t now)
 
   or_options_t *options = get_options();
   int is_server = server_mode(options);
+  (void)now;
 
   if (is_server) {
     /* Let's check if we are in the current cached consensus. */
@@ -96,11 +101,11 @@ log_heartbeat(time_t now)
 
   get_traffic_stats(&in, &out);
   uptime = secs_to_uptime(get_uptime());
-  bw_sent = bytes_to_bandwidth(out);
-  bw_rcvd = bytes_to_bandwidth(in);
+  bw_sent = bytes_to_usage(out);
+  bw_rcvd = bytes_to_usage(in);
 
   log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
-         "circuits open, I've pushed %s and received %s.",
+         "circuits open. I've pushed %s and received %s.",
          uptime, count_circuits(),bw_sent,bw_rcvd);
 
   tor_free(uptime);
