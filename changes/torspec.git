@@ -1,0 +1,5 @@
+  o Packaging changes:
+    - Stop shipping the Tor specs files and development proposal documents
+      in the tarball. They are now in a separate git repository at
+      git://git.torproject.org/torspec.git
+
