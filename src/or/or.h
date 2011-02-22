@@ -2345,6 +2345,9 @@ typedef struct {
   config_line_t *Logs; /**< New-style list of configuration lines
                         * for logs */
 
+  int LogMessageDomains; /**< Boolean: Should we log the domain(s) in which
+                          * each log message occurs? */
+
   char *DebugLogFile; /**< Where to send verbose log messages. */
   char *DataDirectory; /**< OR only: where to store long-term data. */
   char *Nickname; /**< OR only: nickname of this onion router. */
