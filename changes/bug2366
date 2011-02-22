@@ -1,0 +1,8 @@
+  o Minor bugfixes
+    - When a relay decides that its DNS is too broken for it to serve
+      as an exit server, it advertised itself as a non-exit, but
+      continued to act as an exit.  This could create accidental
+      partitioning opportunities for users.  Instead, if a relay is
+      going to advertise reject *:* as its exit policy, it should
+      really act with exit policy "reject *:*". Fixes bug 2366.
+      Bugfix on Tor 0.1.2.5-alpha.  Bugfix by user "postman" on trac.

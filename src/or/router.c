@@ -1411,9 +1411,14 @@ router_rebuild_descriptor(int force)
 
   ri->bandwidthcapacity = hibernating ? 0 : rep_hist_bandwidth_assess();
 
-  policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
-                             options->ExitPolicyRejectPrivate,
-                             ri->address, !options->BridgeRelay);
+  if (dns_seems_to_be_broken() || has_dns_init_failed()) {
+    /* DNS is screwed up; don't claim to be an exit. */
+    policies_exit_policy_append_reject_star(&ri->exit_policy);
+  } else {
+    policies_parse_exit_policy(options->ExitPolicy, &ri->exit_policy,
+                               options->ExitPolicyRejectPrivate,
+                               ri->address, !options->BridgeRelay);
+  }
   ri->policy_is_reject_star =
     policy_is_reject_star(ri->exit_policy);
 
@@ -1865,9 +1870,7 @@ router_dump_router_to_string(char *s, size_t maxlen, routerinfo_t *router,
   }
 
   /* Write the exit policy to the end of 's'. */
-  if (dns_seems_to_be_broken() || has_dns_init_failed() ||
-      !router->exit_policy || !smartlist_len(router->exit_policy)) {
-    /* DNS is screwed up; don't claim to be an exit. */
+  if (!router->exit_policy || !smartlist_len(router->exit_policy)) {
     strlcat(s+written, "reject *:*\n", maxlen-written);
     written += strlen("reject *:*\n");
     tmpe = NULL;
