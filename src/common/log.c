@@ -248,6 +248,7 @@ format_msg(char *buf, size_t buf_len,
   format_msg_no_room_for_domains:
     /* This will leave end_of_prefix and n unchanged, and thus cause
      * whatever log domain string we had written to be clobbered. */
+    ;
   }
 
   if (funcname && should_log_function_name(domain, severity)) {
