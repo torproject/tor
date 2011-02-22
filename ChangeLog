@@ -1,5 +1,10 @@
 Changes in version 0.2.1.30 - 2011-02-??
   o Major bugfixes:
+    - Stop sending a CLOCK_SKEW controller status event whenever
+      we fetch directory information from a relay that has a wrong clock.
+      Instead, only inform the controller when it's a trusted authority
+      that claims our clock is wrong. Bugfix on 0.1.2.6-alpha; fixes
+      the rest of bug 1074.
     - Fix a bounds-checking error that could allow an attacker to
       remotely crash a directory authority. Bugfix on 0.2.1.5-alpha.
       Found by "piebeer".
@@ -20,6 +25,11 @@ Changes in version 0.2.1.30 - 2011-02-??
     - Check for and reject overly long directory certificates and
       directory tokens before they have a chance to hit any assertions.
       Bugfix on 0.2.1.28. Found by "doorss".
+
+  o Packaging changes:
+    - Stop shipping the Tor specs files and development proposal documents
+      in the tarball. They are now in a separate git repository at
+      git://git.torproject.org/torspec.git
 
 
 Changes in version 0.2.1.29 - 2011-01-15
