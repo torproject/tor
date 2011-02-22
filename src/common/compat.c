@@ -728,7 +728,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
 #ifdef WIN32
   _lseek(fd, 0, SEEK_SET);
   if (_locking(fd, blocking ? _LK_LOCK : _LK_NBLCK, 1) < 0) {
-    if (errno != EACCESS && errno != EDEADLOCK)
+    if (errno != EACCES && errno != EDEADLOCK)
       log_warn(LD_FS,"Couldn't lock \"%s\": %s", filename, strerror(errno));
     else
       *locked_out = 1;
