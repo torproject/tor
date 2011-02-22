@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - In the special case where you configure a public exit relay as your
+      bridge, Tor would be willing to use that exit relay as the last
+      hop in your circuit as well. Now we fail that circuit instead.
+      Bugfix on 0.2.0.12-alpha. Fixes bug 2403. Reported by "piebeer".
+
