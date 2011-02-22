@@ -1165,7 +1165,6 @@ AC_CONFIG_FILES([
         contrib/torctl
         contrib/torify
         doc/Makefile
-        doc/spec/Makefile
         src/Makefile
         src/common/Makefile
         src/config/Makefile
