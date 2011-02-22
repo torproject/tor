@@ -1390,10 +1390,12 @@ options_act(or_options_t *old_options)
         print_notice = 1;
       } else {
         options->DirReqStatistics = 0;
-        log_notice(LD_CONFIG, "Configured to measure directory request "
-                              "statistics, but no GeoIP database found! "
-                              "Please specify a GeoIP database using the "
-                              "GeoIPFile option!");
+        /* Don't warn Tor clients, they don't use statistics */
+        if (options->ORPort)
+          log_notice(LD_CONFIG, "Configured to measure directory request "
+                                "statistics, but no GeoIP database found. "
+                                "Please specify a GeoIP database using the "
+                                "GeoIPFile option.");
       }
     }
     if ((!old_options || !old_options->EntryStatistics) &&
@@ -1404,9 +1406,9 @@ options_act(or_options_t *old_options)
       } else {
         options->EntryStatistics = 0;
         log_notice(LD_CONFIG, "Configured to measure entry node "
-                              "statistics, but no GeoIP database found! "
+                              "statistics, but no GeoIP database found. "
                               "Please specify a GeoIP database using the "
-                              "GeoIPFile option!");
+                              "GeoIPFile option.");
       }
     }
     if ((!old_options || !old_options->ExitPortStatistics) &&
