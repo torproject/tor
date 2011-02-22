@@ -330,7 +330,7 @@ Other options can be specified either on the command-line (--option
     set of "logging domains".  Each logging domain corresponds to an area of
     functionality inside Tor.  You can specify any number of severity ranges
     for a single log statement, each of them prefixed by a comma-separated
-    list of logging domains.  You can prefix a domain with ~ to indicate
+    list of logging domains.  You can prefix a domain with $$~$$ to indicate
     negation, and use * to indicate "all domains".  If you specify a severity
     range without a list of domains, it matches all domains. +
  +
