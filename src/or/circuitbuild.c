@@ -4081,7 +4081,6 @@ choose_random_entry(cpath_build_state_t *state)
   int preferred_min, consider_exit_family = 0;
 
   if (chosen_exit) {
-    smartlist_add(exit_family, (void*) chosen_exit);
     nodelist_add_node_family(exit_family, chosen_exit);
     consider_exit_family = 1;
   }
@@ -4103,6 +4102,8 @@ choose_random_entry(cpath_build_state_t *state)
       node = entry_is_live(entry, need_uptime, need_capacity, 0, &msg);
       if (!node)
         continue; /* down, no point */
+      if (node == chosen_exit)
+        continue; /* don't pick the same node for entry and exit */
       if (consider_exit_family && smartlist_isin(exit_family, node))
         continue; /* avoid relays that are family members of our exit */
       if (options->EntryNodes &&
