@@ -97,6 +97,9 @@ static int log_mutex_initialized = 0;
 
 /** Linked list of logfile_t. */
 static logfile_t *logfiles = NULL;
+/** Boolean: do we report logging domains? */
+static int log_domains_are_logged = 0;
+
 #ifdef HAVE_SYSLOG_H
 /** The number of open syslog log handlers that we have.  When this reaches 0,
  * we can close our connection to the syslog facility. */
@@ -125,6 +128,9 @@ int _log_global_min_severity = LOG_NOTICE;
 
 static void delete_log(logfile_t *victim);
 static void close_log(logfile_t *victim);
+
+static char *domain_to_string(log_domain_mask_t domain,
+                             char *buf, size_t buflen);
 
 /** Name of the application: used to generate the message we write at the
  * start of each new log. */
@@ -236,12 +242,33 @@ format_msg(char *buf, size_t buf_len,
   size_t n;
   int r;
   char *end_of_prefix;
+  char *buf_end;
 
-  assert(buf_len >= 2); /* prevent integer underflow */
+  assert(buf_len >= 16); /* prevent integer underflow and general stupidity */
   buf_len -= 2; /* subtract 2 characters so we have room for \n\0 */
+  buf_end = buf+buf_len; /* point *after* the last char we can write to */
 
   n = _log_prefix(buf, buf_len, severity);
   end_of_prefix = buf+n;
+
+  if (log_domains_are_logged) {
+    char *cp = buf+n;
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
+    *cp++ = '{';
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
+    cp = domain_to_string(domain, cp, (buf+buf_len-cp));
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
+    *cp++ = '}';
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
+    *cp++ = ' ';
+    if (cp == buf_end) goto format_msg_no_room_for_domains;
+    end_of_prefix = cp;
+    n = cp-buf;
+  format_msg_no_room_for_domains:
+    /* This will leave end_of_prefix and n unchanged, and thus cause
+     * whatever log domain string we had written to be clobbered. */
+    ;
+  }
 
   if (funcname && should_log_function_name(domain, severity)) {
     r = tor_snprintf(buf+n, buf_len-n, "%s(): ", funcname);
@@ -324,6 +351,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
                    &msg_len);
       formatted = 1;
     }
+
     if (lf->is_syslog) {
 #ifdef HAVE_SYSLOG_H
       char *m = end_of_prefix;
@@ -582,8 +610,7 @@ add_stream_log_impl(const log_severity_list_t *severity,
  * to <b>fd</b>. Steals a reference to <b>severity</b>; the caller must
  * not use it after calling this function. */
 void
-add_stream_log(const log_severity_list_t *severity,
-               const char *name, int fd)
+add_stream_log(const log_severity_list_t *severity, const char *name, int fd)
 {
   LOCK_LOGS();
   add_stream_log_impl(severity, name, fd);
@@ -600,6 +627,16 @@ init_logging(void)
   }
   if (pending_cb_messages == NULL)
     pending_cb_messages = smartlist_create();
+}
+
+/** Set whether we report logging domains as a part of our log messages.
+ */
+void
+logs_set_domain_logging(int enabled)
+{
+  LOCK_LOGS();
+  log_domains_are_logged = enabled;
+  UNLOCK_LOGS();
 }
 
 /** Add a log handler to receive messages during startup (before the real
@@ -794,7 +831,6 @@ add_syslog_log(const log_severity_list_t *severity)
   lf->fd = -1;
   lf->severities = tor_memdup(severity, sizeof(log_severity_list_t));
   lf->filename = tor_strdup("<syslog>");
-
   lf->is_syslog = 1;
 
   LOCK_LOGS();
@@ -851,18 +887,41 @@ parse_log_domain(const char *domain)
   }
   return 0;
 }
-#if 0
-/** Translate a bitmask of log domains to a string, or NULL if the bitmask
- * is undecodable. */
-static const char *
-domain_to_string(log_domain_mask_t domain)
+
+/** Translate a bitmask of log domains to a string. */
+static char *
+domain_to_string(log_domain_mask_t domain, char *buf, size_t buflen)
 {
-  int bit = tor_log2(domain);
-  if ((bit == 0 && domain == 0) || bit >= N_LOGGING_DOMAINS)
-    return NULL;
-  return domain_list[bit];
+  char *cp = buf;
+  char *eos = buf+buflen;
+
+  buf[0] = '\0';
+  if (! domain)
+    return buf;
+  while (1) {
+    const char *d;
+    int bit = tor_log2(domain);
+    size_t n;
+    if (bit >= N_LOGGING_DOMAINS) {
+      tor_snprintf(buf, buflen, "<BUG:Unknown domain %lx>", (long)domain);
+      return buf+strlen(buf);
+    }
+    d = domain_list[bit];
+    n = strlcpy(cp, d, eos-cp);
+    if (n >= buflen) {
+      tor_snprintf(buf, buflen, "<BUG:Truncating domain %lx>", (long)domain);
+      return buf+strlen(buf);
+    }
+    cp += n;
+    domain &= ~(1<<bit);
+
+    if (domain == 0 || (eos-cp) < 2)
+      return cp;
+
+    memcpy(cp, ",", 2); /*Nul-terminated ,"*/
+    cp++;
+  }
 }
-#endif
 
 /** Parse a log severity pattern in *<b>cfg_ptr</b>.  Advance cfg_ptr after
  * the end of the severityPattern.  Set the value of <b>severity_out</b> to
@@ -938,7 +997,10 @@ parse_log_severity_config(const char **cfg_ptr,
       smartlist_free(domains_list);
       if (err)
         return -1;
-      domains &= ~neg_domains;
+      if (domains == 0 && neg_domains)
+        domains = ~neg_domains;
+      else
+        domains &= ~neg_domains;
       cfg = eat_whitespace(closebracket+1);
     } else {
       ++got_an_unqualified_range;

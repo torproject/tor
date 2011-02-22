@@ -134,6 +134,7 @@ int add_file_log(const log_severity_list_t *severity, const char *filename);
 int add_syslog_log(const log_severity_list_t *severity);
 #endif
 int add_callback_log(const log_severity_list_t *severity, log_callback cb);
+void logs_set_domain_logging(int enabled);
 int get_min_log_level(void);
 void switch_logs_debug(void);
 void logs_free_all(void);
