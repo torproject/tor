@@ -9,7 +9,7 @@
 !include "FileFunc.nsh"
 !insertmacro GetParameters
   
-!define VERSION "0.2.1.29"
+!define VERSION "0.2.1.30"
 !define INSTALLER "tor-${VERSION}-win32.exe"
 !define WEBSITE "https://www.torproject.org/"
 !define LICENSE "LICENSE"
