@@ -1,4 +1,10 @@
 Changes in version 0.2.1.30 - 2011-02-23
+  Tor 0.2.1.30 fixes a variety of less critical bugs. The main other
+  change is a slight tweak to Tor's TLS handshake that makes relays
+  and bridges that run this new version reachable from Iran again.
+  We don't expect this tweak will win the arms race long-term, but it
+  buys us time until we roll out a better solution.
+
   o Major bugfixes:
     - Stop sending a CLOCK_SKEW controller status event whenever
       we fetch directory information from a relay that has a wrong clock.
