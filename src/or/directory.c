@@ -631,9 +631,8 @@ connection_dir_request_failed(dir_connection_t *conn)
       connection_dir_bridge_routerdesc_failed(conn);
     connection_dir_download_routerdesc_failed(conn);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
-    const char *flavname =
-      conn->requested_resource ? conn->requested_resource : "ns";
-    networkstatus_consensus_download_failed(0, flavname);
+    if (conn->requested_resource)
+      networkstatus_consensus_download_failed(0, conn->requested_resource);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_CERTIFICATE) {
     log_info(LD_DIR, "Giving up on certificate fetch from directory server "
              "at '%s'; retrying",
@@ -1004,8 +1003,14 @@ directory_get_consensus_url(int supports_conditional_consensus,
                             const char *resource)
 {
   char *url = NULL;
-  const char *hyphen = resource ? "-" : "";
-  const char *flavor = resource ? resource : "";
+  const char *hyphen, *flavor;
+  if (resource==NULL || strcmp(resource, "ns")==0) {
+    flavor = ""; /* Request ns consensuses as "", so older servers will work*/
+    hyphen = "";
+  } else {
+    flavor = resource;
+    hyphen = "-";
+  }
 
   if (supports_conditional_consensus) {
     char *authority_id_list;
@@ -1746,8 +1751,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
 
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_CONSENSUS) {
     int r;
-    const char *flavname =
-      conn->requested_resource ? conn->requested_resource : "ns";
+    const char *flavname = conn->requested_resource;
     if (status_code != 200) {
       int severity = (status_code == 304) ? LOG_INFO : LOG_WARN;
       log(severity, LD_DIR,
