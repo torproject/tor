@@ -133,7 +133,7 @@ get_microdesc_cache(void)
  * to allow, so we should reject any non-requested microdesc with a different
  * digest, and alter the list to contain only the digests of those microdescs
  * we didn't find.
- * Return a list of the added microdescriptors.  */
+ * Return a newly allocated list of the added microdescriptors, or NULL  */
 smartlist_t *
 microdescs_add_to_cache(microdesc_cache_t *cache,
                         const char *s, const char *eos, saved_location_t where,
@@ -181,7 +181,7 @@ microdescs_add_to_cache(microdesc_cache_t *cache,
 }
 
 /* As microdescs_add_to_cache, but takes a list of micrdescriptors instead of
- * a string to encode.  Frees any members of <b>descriptors</b> that it does
+ * a string to decode.  Frees any members of <b>descriptors</b> that it does
  * not add. */
 smartlist_t *
 microdescs_add_list_to_cache(microdesc_cache_t *cache,

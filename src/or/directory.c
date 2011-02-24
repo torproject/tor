@@ -1957,6 +1957,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
       }
       SMARTLIST_FOREACH(which, char *, cp, tor_free(cp));
       smartlist_free(which);
+      smartlist_free(mds);
     }
   }
 
