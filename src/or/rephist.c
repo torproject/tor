@@ -1513,7 +1513,7 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
     smartlist_free(*s_values);
   }
   if (*s_maxima) {
-    SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
+    SMARTLIST_FOREACH(*s_maxima, char *, val, tor_free(val));
     smartlist_free(*s_maxima);
   }
   if (! server_mode(get_options())) {
@@ -1541,7 +1541,7 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
   i = (b->num_maxes_set <= b->next_max_idx) ? 0 : b->next_max_idx;
   for (j=0; j < b->num_maxes_set; ++j,++i) {
     uint64_t maxval;
-    if (i > NUM_TOTALS)
+    if (i >= NUM_TOTALS)
       i = 0;
     tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->totals[i] & ~0x3ff));
     smartlist_add(*s_values, cp);
