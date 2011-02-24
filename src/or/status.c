@@ -33,8 +33,8 @@ static char *
 secs_to_uptime(long secs)
 {
   long int days = secs / 86400;
-  int hours = (secs - (days * 86400)) / 3600;
-  int minutes = (secs - (days * 86400) - (hours * 3600)) / 60;
+  int hours = (int)((secs - (days * 86400)) / 3600);
+  int minutes = (int)((secs - (days * 86400) - (hours * 3600)) / 60);
   char *uptime_string = NULL;
 
   switch (days) {
