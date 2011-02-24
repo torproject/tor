@@ -654,10 +654,10 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
       routerstatus_t *any_trusted_dir =
         router_pick_trusteddirserver(NO_AUTHORITY, 0);
       tor_addr_t trusted_dir_addr;
-      tor_addr_from_ipv4n(&trusted_dir_addr, any_trusted_dir->addr);
+      tor_addr_from_ipv4h(&trusted_dir_addr, any_trusted_dir->addr);
       connection_or_connect(&trusted_dir_addr,
         any_trusted_dir->or_port,
-        any_trusted_dir->descriptor_digest);
+        any_trusted_dir->identity_digest);
       received_netinfo_from_trusted_dir = 1;
     }
   }
