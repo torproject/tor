@@ -650,7 +650,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
       received_netinfo_from_trusted_dir = 2;
     /* Connect to a trusted dir to trigger a NETINFO cell
      * only if we haven't already */
-    } else if(received_netinfo_from_trusted_dir == 0) {
+    } else if (received_netinfo_from_trusted_dir == 0) {
       routerstatus_t *any_trusted_dir =
         router_pick_trusteddirserver(NO_AUTHORITY, 0);
       tor_addr_t trusted_dir_addr;
@@ -679,3 +679,4 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
              conn->_base.port, (int)conn->link_proto);
   assert_connection_ok(TO_CONN(conn),time(NULL));
 }
+
