@@ -1,4 +1,3 @@
-
 # We use a two-step process to generate documentation from asciidoc files.
 #
 # First, we use asciidoc/a2x to process the asciidoc files into .1.in and
@@ -32,15 +31,11 @@ endif
 EXTRA_DIST = HACKING asciidoc-helper.sh                      \
              $(html_in) $(man_in) $(txt_in)                  \
              tor-rpm-creation.txt                            \
-             tor-win32-mingw-creation.txt
+             tor-win32-mingw-creation.txt spec/README
 
 docdir = @docdir@
 
 asciidoc_product = $(nodist_man_MANS) $(doc_DATA)
-
-SUBDIRS = spec
-
-DIST_SUBDIRS = spec
 
 # Generate the html documentation from asciidoc, but don't do
 # machine-specific replacements yet

@@ -288,6 +288,7 @@ static config_var_t _option_vars[] = {
   OBSOLETE("IgnoreVersion"),
   V(KeepalivePeriod,             INTERVAL, "5 minutes"),
   VAR("Log",                     LINELIST, Logs,             NULL),
+  V(LogMessageDomains,           BOOL,     "0"),
   OBSOLETE("LinkPadding"),
   OBSOLETE("LogLevel"),
   OBSOLETE("LogFile"),
@@ -445,15 +446,19 @@ static config_var_t _state_vars[] = {
   V(BWHistoryReadEnds,                ISOTIME,  NULL),
   V(BWHistoryReadInterval,            UINT,     "900"),
   V(BWHistoryReadValues,              CSV,      ""),
+  V(BWHistoryReadMaxima,              CSV,      ""),
   V(BWHistoryWriteEnds,               ISOTIME,  NULL),
   V(BWHistoryWriteInterval,           UINT,     "900"),
   V(BWHistoryWriteValues,             CSV,      ""),
+  V(BWHistoryWriteMaxima,             CSV,      ""),
   V(BWHistoryDirReadEnds,             ISOTIME,  NULL),
   V(BWHistoryDirReadInterval,         UINT,     "900"),
   V(BWHistoryDirReadValues,           CSV,      ""),
+  V(BWHistoryDirReadMaxima,           CSV,      ""),
   V(BWHistoryDirWriteEnds,            ISOTIME,  NULL),
   V(BWHistoryDirWriteInterval,        UINT,     "900"),
   V(BWHistoryDirWriteValues,          CSV,      ""),
+  V(BWHistoryDirWriteMaxima,          CSV,      ""),
 
   V(TorVersion,                       STRING,   NULL),
 
@@ -3817,7 +3822,8 @@ options_transition_affects_workers(or_options_t *old_options,
       old_options->SafeLogging != new_options->SafeLogging ||
       old_options->ClientOnly != new_options->ClientOnly ||
       public_server_mode(old_options) != public_server_mode(new_options) ||
-      !config_lines_eq(old_options->Logs, new_options->Logs))
+      !config_lines_eq(old_options->Logs, new_options->Logs) ||
+      old_options->LogMessageDomains != new_options->LogMessageDomains)
     return 1;
 
   /* Check whether log options match. */
@@ -4392,6 +4398,9 @@ options_init_logs(or_options_t *options, int validate_only)
     tor_free(severity);
   }
   smartlist_free(elts);
+
+  if (ok && !validate_only)
+    logs_set_domain_logging(options->LogMessageDomains);
 
   return ok?0:-1;
 }

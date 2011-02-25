@@ -41,6 +41,7 @@ addr_policy_result_t compare_addr_to_addr_policy(uint32_t addr,
 int policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
                                int rejectprivate, const char *local_address,
                                int add_default_policy);
+void policies_exit_policy_append_reject_star(smartlist_t **dest);
 void policies_set_router_exitpolicy_to_reject_all(routerinfo_t *exitrouter);
 int exit_policy_is_general_exit(smartlist_t *policy);
 int policy_is_reject_star(const smartlist_t *policy);

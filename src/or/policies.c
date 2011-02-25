@@ -858,6 +858,14 @@ policies_parse_exit_policy(config_line_t *cfg, smartlist_t **dest,
   return 0;
 }
 
+/** Add "reject *:*" to the end of the policy in *<b>dest</b>, allocating
+ * *<b>dest</b> as needed. */
+void
+policies_exit_policy_append_reject_star(smartlist_t **dest)
+{
+  append_exit_policy_string(dest, "reject *:*");
+}
+
 /** Replace the exit policy of <b>r</b> with reject *:*. */
 void
 policies_set_router_exitpolicy_to_reject_all(routerinfo_t *r)

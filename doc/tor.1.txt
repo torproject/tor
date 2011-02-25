@@ -323,6 +323,34 @@ Other options can be specified either on the command-line (--option
     Messages are sent to all the logs that match their severity
     level.
 
+**Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **file** __FILENAME__ +
+
+**Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **stderr**|**stdout**|**syslog** ::
+    As above, but select messages by range of log severity __and__ by a
+    set of "logging domains".  Each logging domain corresponds to an area of
+    functionality inside Tor.  You can specify any number of severity ranges
+    for a single log statement, each of them prefixed by a comma-separated
+    list of logging domains.  You can prefix a domain with $$~$$ to indicate
+    negation, and use * to indicate "all domains".  If you specify a severity
+    range without a list of domains, it matches all domains. +
+ +
+    This is an advanced feature which is most useful for debugging one or two
+    of Tor's subsystems at a time. +
+ +
+    The currently recognized domains are: general, crypto, net, config, fs,
+    protocol, mm, http, app, control, circ, rend, bug, dir, dirserv, or, edge,
+    acct, hist, and handshake.  Domain names are case-insensitive. +
+ +
+    For example, "`Log [handshake]debug [~net,~mm]info notice stdout`" sends
+    to stdout: all handshake messages of any severity, all info-and-higher
+    messages from domains other than networking and memory management, and all
+    messages of severity notice or higher.
+
+**LogMessageDomains** **0**|**1**::
+    If 1, Tor includes message domains with each log message.  Every log
+    message currently has at least one domain; most currently have exactly
+    one.  This doesn't affect controller log messages. (Default: 0)
+
 **OutboundBindAddress** __IP__::
     Make all outbound connections originate from the IP address specified. This
     is only useful when you have multiple network interfaces, and you want all

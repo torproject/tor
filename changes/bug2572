@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Don't crash a bridge authority on SIGHUP if it can't force itself
+      into its routerlist.  Fixes bug 2572.
+
+
