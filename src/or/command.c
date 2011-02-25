@@ -655,7 +655,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
     /* Connect to a trusted dir to trigger a NETINFO cell
      * only if we haven't already */
     } else if (received_netinfo_from_trusted_dir == 0) {
-      routerstatus_t *any_trusted_dir =
+      const routerstatus_t *any_trusted_dir =
         router_pick_trusteddirserver(NO_AUTHORITY, 0);
       tor_addr_t trusted_dir_addr;
       tor_addr_from_ipv4h(&trusted_dir_addr, any_trusted_dir->addr);
