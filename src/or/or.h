@@ -3045,19 +3045,25 @@ typedef struct {
    * bandwidth usage. The "Interval" fields hold the granularity, in seconds,
    * of the entries of Values.  The "Values" lists hold decimal string
    * representations of the number of bytes read or written in each
-   * interval. */
+   * interval. The "Maxima" list holds decimal strings describing the highest
+   * rate achieved during the interval.
+   */
   time_t      BWHistoryReadEnds;
   int         BWHistoryReadInterval;
   smartlist_t *BWHistoryReadValues;
+  smartlist_t *BWHistoryReadMaxima;
   time_t      BWHistoryWriteEnds;
   int         BWHistoryWriteInterval;
   smartlist_t *BWHistoryWriteValues;
+  smartlist_t *BWHistoryWriteMaxima;
   time_t      BWHistoryDirReadEnds;
   int         BWHistoryDirReadInterval;
   smartlist_t *BWHistoryDirReadValues;
+  smartlist_t *BWHistoryDirReadMaxima;
   time_t      BWHistoryDirWriteEnds;
   int         BWHistoryDirWriteInterval;
   smartlist_t *BWHistoryDirWriteValues;
+  smartlist_t *BWHistoryDirWriteMaxima;
 
   /** Build time histogram */
   config_line_t * BuildtimeHistogram;

@@ -1170,6 +1170,8 @@ rep_hist_load_mtbf_data(time_t now)
  * totals? */
 #define NUM_SECS_ROLLING_MEASURE 10
 /** How large are the intervals for which we track and report bandwidth use? */
+/* XXXX Watch out! Before Tor 0.2.2.21-alpha, using any other value here would
+ * generate an unparseable state file. */
 #define NUM_SECS_BW_SUM_INTERVAL (15*60)
 /** How far in the past do we remember and publish bandwidth use? */
 #define NUM_SECS_BW_SUM_IS_VALID (24*60*60)
@@ -1264,8 +1266,12 @@ add_obs(bw_array_t *b, time_t when, uint64_t n)
   /* If we're currently adding observations for an earlier second than
    * 'when', advance b->cur_obs_time and b->cur_obs_idx by an
    * appropriate number of seconds, and do all the other housekeeping */
-  while (when>b->cur_obs_time)
+  while (when>b->cur_obs_time) {
+    /* Doing this one second at a time is potentially inefficient, if we start
+       with a state file that is very old.  Fortunately, it doesn't seem to
+       show up in profiles, so we can just ignore it for now.  */
     advance_obs(b);
+  }
 
   b->obs[b->cur_obs_idx] += n;
   b->total_in_period += n;
@@ -1296,10 +1302,15 @@ static bw_array_t *dir_read_array = NULL;
     directory protocol. */
 static bw_array_t *dir_write_array = NULL;
 
-/** Set up [dir-]read_array and [dir-]write_array. */
+/** Set up [dir-]read_array and [dir-]write_array, freeing them if they
+ * already exist. */
 static void
 bw_arrays_init(void)
 {
+  tor_free(read_array);
+  tor_free(write_array);
+  tor_free(dir_read_array);
+  tor_free(dir_write_array);
   read_array = bw_array_new();
   write_array = bw_array_new();
   dir_read_array = bw_array_new();
@@ -1397,7 +1408,7 @@ rep_hist_bandwidth_assess(void)
  * It returns the number of bytes written.
  */
 static size_t
-rep_hist_fill_bandwidth_history(char *buf, size_t len, bw_array_t *b)
+rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
 {
   char *cp = buf;
   int i, n;
@@ -1489,163 +1500,175 @@ rep_hist_get_bandwidth_lines(void)
   return buf;
 }
 
+/** Write a single bw_array_t into the Values, Ends, Interval, and Maximum
+ * entries of an or_state_t. */
+static void
+rep_hist_update_bwhist_state_section(or_state_t *state,
+                                     const bw_array_t *b,
+                                     smartlist_t **s_values,
+                                     smartlist_t **s_maxima,
+                                     time_t *s_begins,
+                                     int *s_interval)
+{
+  char *cp;
+  int i,j;
+
+  if (*s_values) {
+    SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
+    smartlist_free(*s_values);
+  }
+  if (*s_maxima) {
+    SMARTLIST_FOREACH(*s_maxima, char *, val, tor_free(val));
+    smartlist_free(*s_maxima);
+  }
+  if (! server_mode(get_options())) {
+    /* Clients don't need to store bandwidth history persistently;
+     * force these values to the defaults. */
+    /* FFFF we should pull the default out of config.c's state table,
+     * so we don't have two defaults. */
+    if (*s_begins != 0 || *s_interval != 900) {
+      time_t now = time(NULL);
+      time_t save_at = get_options()->AvoidDiskWrites ? now+3600 : now+600;
+      or_state_mark_dirty(state, save_at);
+    }
+    *s_begins = 0;
+    *s_interval = 900;
+    *s_values = smartlist_create();
+    *s_maxima = smartlist_create();
+    return;
+  }
+  *s_begins = b->next_period;
+  *s_interval = NUM_SECS_BW_SUM_INTERVAL;
+
+  *s_values = smartlist_create();
+  *s_maxima = smartlist_create();
+  /* Set i to first position in circular array */
+  i = (b->num_maxes_set <= b->next_max_idx) ? 0 : b->next_max_idx;
+  for (j=0; j < b->num_maxes_set; ++j,++i) {
+    uint64_t maxval;
+    if (i >= NUM_TOTALS)
+      i = 0;
+    tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->totals[i] & ~0x3ff));
+    smartlist_add(*s_values, cp);
+    maxval = b->maxima[i] / NUM_SECS_ROLLING_MEASURE;
+    tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(maxval & ~0x3ff));
+    smartlist_add(*s_maxima, cp);
+  }
+  tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->total_in_period & ~0x3ff));
+  smartlist_add(*s_values, cp);
+  tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->max_total & ~0x3ff));
+  smartlist_add(*s_maxima, cp);
+}
+
 /** Update <b>state</b> with the newest bandwidth history. */
 void
 rep_hist_update_state(or_state_t *state)
 {
-  int len, r;
-  char *buf, *cp;
-  smartlist_t **s_values = NULL;
-  time_t *s_begins = NULL;
-  int *s_interval = NULL;
-  bw_array_t *b = NULL;
+#define UPDATE(arrname,st) \
+  rep_hist_update_bwhist_state_section(state,\
+                                       (arrname),\
+                                       &state->BWHistory ## st ## Values, \
+                                       &state->BWHistory ## st ## Maxima, \
+                                       &state->BWHistory ## st ## Ends, \
+                                       &state->BWHistory ## st ## Interval)
 
-  len = 20*NUM_TOTALS+1;
-  buf = tor_malloc_zero(len);
+  UPDATE(write_array, Write);
+  UPDATE(read_array, Read);
+  UPDATE(dir_write_array, DirWrite);
+  UPDATE(dir_read_array, DirRead);
 
-  for (r=0;r<4;++r) {
-    switch (r) {
-      case 0:
-        b = write_array;
-        s_begins = &state->BWHistoryWriteEnds;
-        s_interval = &state->BWHistoryWriteInterval;
-        s_values = &state->BWHistoryWriteValues;
-        break;
-      case 1:
-        b = read_array;
-        s_begins = &state->BWHistoryReadEnds;
-        s_interval = &state->BWHistoryReadInterval;
-        s_values = &state->BWHistoryReadValues;
-        break;
-      case 2:
-        b = dir_write_array;
-        s_begins = &state->BWHistoryDirWriteEnds;
-        s_interval = &state->BWHistoryDirWriteInterval;
-        s_values = &state->BWHistoryDirWriteValues;
-        break;
-      case 3:
-        b = dir_read_array;
-        s_begins = &state->BWHistoryDirReadEnds;
-        s_interval = &state->BWHistoryDirReadInterval;
-        s_values = &state->BWHistoryDirReadValues;
-        break;
-    }
-    if (*s_values) {
-      SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
-      smartlist_free(*s_values);
-    }
-    if (! server_mode(get_options())) {
-      /* Clients don't need to store bandwidth history persistently;
-       * force these values to the defaults. */
-      /* FFFF we should pull the default out of config.c's state table,
-       * so we don't have two defaults. */
-      if (*s_begins != 0 || *s_interval != 900) {
-        time_t now = time(NULL);
-        time_t save_at = get_options()->AvoidDiskWrites ? now+3600 : now+600;
-        or_state_mark_dirty(state, save_at);
-      }
-      *s_begins = 0;
-      *s_interval = 900;
-      *s_values = smartlist_create();
-      continue;
-    }
-    *s_begins = b->next_period;
-    *s_interval = NUM_SECS_BW_SUM_INTERVAL;
-    cp = buf;
-    cp += rep_hist_fill_bandwidth_history(cp, len, b);
-    tor_snprintf(cp, len-(cp-buf), cp == buf ? U64_FORMAT : ","U64_FORMAT,
-                 U64_PRINTF_ARG(b->total_in_period));
-    *s_values = smartlist_create();
-    if (server_mode(get_options()))
-      smartlist_split_string(*s_values, buf, ",", SPLIT_SKIP_SPACE, 0);
-  }
-  tor_free(buf);
   if (server_mode(get_options())) {
-    or_state_mark_dirty(get_or_state(), time(NULL)+(2*3600));
+    or_state_mark_dirty(state, time(NULL)+(2*3600));
   }
+#undef UPDATE
+}
+
+/** Load a single bw_array_t from its Values, Ends, Maxima, and Interval
+ * entries in an or_state_t.  */
+static int
+rep_hist_load_bwhist_state_section(bw_array_t *b,
+                                   const smartlist_t *s_values,
+                                   const smartlist_t *s_maxima,
+                                   const time_t s_begins,
+                                   const int s_interval)
+{
+  time_t now = time(NULL);
+  int retval = 0;
+  time_t start;
+
+  uint64_t v, mv;
+  int i,ok,ok_m;
+  int have_maxima = (smartlist_len(s_values) == smartlist_len(s_maxima));
+
+  if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
+    start = s_begins - s_interval*(smartlist_len(s_values));
+    if (start > now)
+      return 0;
+    b->cur_obs_time = start;
+    b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
+    SMARTLIST_FOREACH_BEGIN(s_values, const char *, cp) {
+        v = tor_parse_uint64(cp, 10, 0, UINT64_MAX, &ok, NULL);
+        if (have_maxima) {
+          const char *maxstr = smartlist_get(s_maxima, cp_sl_idx);
+          mv = tor_parse_uint64(maxstr, 10, 0, UINT64_MAX, &ok_m, NULL);
+          mv *= NUM_SECS_ROLLING_MEASURE;
+        } else {
+          /* No maxima known; guess average rate to be conservative. */
+          mv = v / s_interval;
+        }
+        if (!ok || !ok_m) {
+          retval = -1;
+          log_notice(LD_HIST, "Could not parse '%s' into a number.'", cp);
+        }
+
+        if (start < now) {
+          add_obs(b, start, v);
+          b->max_total = mv;
+          /* This will result in some fairly choppy history if s_interval
+           * is notthe same as NUM_SECS_BW_SUM_INTERVAL. XXXX */
+          start += s_interval;
+        }
+    } SMARTLIST_FOREACH_END(cp);
+  }
+
+  /* Clean up maxima and observed */
+  for (i=0; i<NUM_SECS_ROLLING_MEASURE; ++i) {
+    b->obs[i] = 0;
+  }
+  b->total_obs = 0;
+
+  return retval;
 }
 
 /** Set bandwidth history from our saved state. */
 int
 rep_hist_load_state(or_state_t *state, char **err)
 {
-  time_t s_begins = 0, start;
-  time_t now = time(NULL);
-  uint64_t v;
-  int r,i,ok;
   int all_ok = 1;
-  int s_interval = 0;
-  smartlist_t *s_values = NULL;
-  bw_array_t *b = NULL;
 
   /* Assert they already have been malloced */
   tor_assert(read_array && write_array);
+  tor_assert(dir_read_array && dir_write_array);
 
-  for (r=0;r<4;++r) {
-    switch (r) {
-      case 0:
-        b = write_array;
-        s_begins = state->BWHistoryWriteEnds;
-        s_interval = state->BWHistoryWriteInterval;
-        s_values = state->BWHistoryWriteValues;
-        break;
-      case 1:
-        b = read_array;
-        s_begins = state->BWHistoryReadEnds;
-        s_interval = state->BWHistoryReadInterval;
-        s_values = state->BWHistoryReadValues;
-        break;
-      case 2:
-        b = dir_write_array;
-        s_begins = state->BWHistoryDirWriteEnds;
-        s_interval = state->BWHistoryDirWriteInterval;
-        s_values = state->BWHistoryDirWriteValues;
-        break;
-      case 3:
-        b = dir_read_array;
-        s_begins = state->BWHistoryDirReadEnds;
-        s_interval = state->BWHistoryDirReadInterval;
-        s_values = state->BWHistoryDirReadValues;
-        break;
-    }
-    if (s_values && s_begins >= now - NUM_SECS_BW_SUM_INTERVAL*NUM_TOTALS) {
-      start = s_begins - s_interval*(smartlist_len(s_values));
-      if (start > now)
-        continue;
-      b->cur_obs_time = start;
-      b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
-      SMARTLIST_FOREACH(s_values, char *, cp, {
-        v = tor_parse_uint64(cp, 10, 0, UINT64_MAX, &ok, NULL);
-        if (!ok) {
-          all_ok=0;
-          log_notice(LD_HIST, "Could not parse '%s' into a number.'", cp);
-        }
-        if (start < now) {
-          add_obs(b, start, v);
-          start += NUM_SECS_BW_SUM_INTERVAL;
-        }
-      });
-    }
+#define LOAD(arrname,st)                                                \
+  if (rep_hist_load_bwhist_state_section(                               \
+                                (arrname),                              \
+                                state->BWHistory ## st ## Values,       \
+                                state->BWHistory ## st ## Maxima,       \
+                                state->BWHistory ## st ## Ends,         \
+                                state->BWHistory ## st ## Interval)<0)  \
+    all_ok = 0
 
-    /* Clean up maxima and observed */
-    /* Do we really want to zero this for the purpose of max capacity? */
-    for (i=0; i<NUM_SECS_ROLLING_MEASURE; ++i) {
-      b->obs[i] = 0;
-    }
-    b->total_obs = 0;
-    for (i=0; i<NUM_TOTALS; ++i) {
-      b->maxima[i] = 0;
-    }
-    b->max_total = 0;
-  }
+  LOAD(write_array, Write);
+  LOAD(read_array, Read);
+  LOAD(dir_write_array, DirWrite);
+  LOAD(dir_read_array, DirRead);
 
+#undef LOAD
   if (!all_ok) {
     *err = tor_strdup("Parsing of bandwidth history values failed");
     /* and create fresh arrays */
-    tor_free(read_array);
-    tor_free(write_array);
-    read_array = bw_array_new();
-    write_array = bw_array_new();
+    bw_arrays_init();
     return -1;
   }
   return 0;
