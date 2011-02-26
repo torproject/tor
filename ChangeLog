@@ -14,34 +14,65 @@ Changes in version 0.2.2.23-alpha - 2011-02-??
       publication of hidden service descriptors. Bugfix on 0.2.0.1-alpha.
 
   o Major features:
+    - Relays now save observed peak bandwidth throughput rates to their
+      state file (along with total usage, which was already saved)
+      so that they can determine their correct estimated bandwidth on
+      restart. Resolves bug 1863, where Tor relays would reset their
+      estimated bandwidth to 0 after restarting.
     - Enable Address Space Layout Randomization (ASLR) and Data Execution
       Prevention (DEP) by default on Windows to make it harder for
       attackers to exploit vulnerabilities. Patch from John Brooks.
 
-  o Minor bugfixes:
-    - Clients should not weight BadExit nodes as Exits in their node
-      selection. Similarly, directory authorities should not count BadExit
-      bandwidth as Exit bandwidth when computing bandwidth-weights.
-      Bugfix on 0.2.2.10-alpha; fixes bug 2203.
+  o Minor bugfixes (on 0.2.1.x and earlier):
     - Avoid a double mark-for-free warning when failing to attach a
       transparent proxy connection. Bugfix on 0.1.2.1-alpha. Fixes
       bug 2279.
     - Correctly detect failure to allocate an OpenSSL BIO. Fixes bug 2378;
       found by "cypherpunks". This bug was introduced before the first
       Tor release, in svn commit r110.
-    - Resolve a bug in verifying signatures of directory objects
-      with digests longer than SHA1. Bugfix on 0.2.2.20-alpha.
-      Fixes bug 2409. Found by "piebeer".
     - Country codes aren't supported in EntryNodes until 0.2.3.x, so
       don't mention them in the manpage. Fixes bug 2450; issue
       spotted by keb and G-Lo.
+    - Fix a bug in bandwidth history state parsing that could have been
+      triggered if a future version of Tor ever changed the timing
+      granularity at which bandwidth history is measured. Bugfix on
+      Tor 0.1.1.11-alpha.
+    - When a relay decides that its DNS is too broken for it to serve
+      as an exit server, it advertised itself as a non-exit, but
+      continued to act as an exit. This could create accidental
+      partitioning opportunities for users. Instead, if a relay is
+      going to advertise reject *:* as its exit policy, it should
+      really act with exit policy "reject *:*". Fixes bug 2366.
+      Bugfix on Tor 0.1.2.5-alpha. Bugfix by user "postman" on trac.
+    - In the special case where you configure a public exit relay as your
+      bridge, Tor would be willing to use that exit relay as the last
+      hop in your circuit as well. Now we fail that circuit instead.
+      Bugfix on 0.2.0.12-alpha. Fixes bug 2403. Reported by "piebeer".
+    - Fix a bug with our locking implementation on Windows that couldn't
+      correctly detect when a file was already locked. Fixes bug 2504,
+      bugfix on 0.2.1.6-alpha.
+
+  o Minor bugfixes (on 0.2.2.x):
+    - Clients should not weight BadExit nodes as Exits in their node
+      selection. Similarly, directory authorities should not count BadExit
+      bandwidth as Exit bandwidth when computing bandwidth-weights.
+      Bugfix on 0.2.2.10-alpha; fixes bug 2203.
+    - Correctly clear our dir_read/dir_write history when there is an
+      error parsing any bw history value from the state file. Bugfix on
+      Tor 0.2.2.15-alpha.
+    - Resolve a bug in verifying signatures of directory objects
+      with digests longer than SHA1. Bugfix on 0.2.2.20-alpha.
+      Fixes bug 2409. Found by "piebeer".
+    - Bridge authorities no longer crash on SIGHUP when they try to
+      publish their relay descriptor to themselves. Fixes bug 2572. Bugfix
+      on 0.2.2.22-alpha.
 
   o Minor features:
     - Log less aggressively about circuit timeout changes, and improve
       some other circuit timeout messages. Resolves bug 2004.
     - Log a little more clearly about the times at which we're no longer
       accepting new connections. Resolves bug 2181.
-    - Detect attempts at the client side to open connections to private
+    - Reject attempts at the client side to open connections to private
       IP addresses (like 127.0.0.1, 10.0.0.1, and so on) with
       a randomly chosen exit node. Attempts to do so are always
       ill-defined, generally prevented by exit policies, and usually
@@ -51,6 +82,24 @@ Changes in version 0.2.2.23-alpha - 2011-02-??
     - Always treat failure to allocate an RSA key as an unrecoverable
       allocation error.
     - Update to the February 1 2011 Maxmind GeoLite Country database.
+
+  o Minor features (log subsystem):
+    - Add documentation for configuring logging at different severities in
+      different log domains. We've had this feature since 0.2.1.1-alpha,
+      but for some reason it never made it into the manpage. Fixes
+      bug 2215.
+    - Make it simpler to specify "All log domains except for A and B".
+      Previously you needed to say "[*,~A,~B]". Now you can just say
+      "[~A,~B]".
+    - Add a "LogMessageDomains 1" option to include the domains of log
+      messages along with the messages. Without this, there's no way
+      to use log domains without reading the source or doing a lot
+      of guessing.
+
+  o Packaging changes:
+    - Stop shipping the Tor specs files and development proposal documents
+      in the tarball. They are now in a separate git repository at
+      git://git.torproject.org/torspec.git
 
 
 Changes in version 0.2.2.22-alpha - 2011-01-25
