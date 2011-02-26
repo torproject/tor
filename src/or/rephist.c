@@ -307,6 +307,7 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
   int addr_changed, port_changed;
 
   tor_assert(hist);
+  tor_assert((!at_addr && !at_port) || (at_addr && at_port));
 
   addr_changed = at_addr &&
     tor_addr_compare(at_addr, &hist->last_reached_addr, CMP_EXACT) != 0;
@@ -335,7 +336,6 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
      * downtime. */
     int penalty = get_options()->TestingTorNetwork ? 240 : 3600;
     networkstatus_t *ns;
-    tor_assert(at_addr);
 
     if ((ns = networkstatus_get_latest_consensus())) {
       int fresh_interval = (int)(ns->fresh_until - ns->valid_after);
@@ -346,11 +346,10 @@ rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
       penalty = (int)(fresh_interval + live_interval) / 2;
     }
     format_local_iso_time(tbuf, hist->start_of_run);
-    if (!authdir_mode_bridge(get_options()))
-      log_info(LD_HIST,"Router %s still seems Running, but its address appears "
-               "to have changed since the last time it was reachable.  I'm "
-               "going to treat it as having been down for %d seconds",
-               hex_str(id, DIGEST_LEN), penalty);
+    log_info(LD_HIST,"Router %s still seems Running, but its address appears "
+             "to have changed since the last time it was reachable.  I'm "
+             "going to treat it as having been down for %d seconds",
+             hex_str(id, DIGEST_LEN), penalty);
     rep_hist_note_router_unreachable(id, when-penalty);
     rep_hist_note_router_reachable(id, NULL, 0, when);
   } else {
