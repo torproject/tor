@@ -45,13 +45,6 @@ uint64_t stats_n_destroy_cells_processed = 0;
 uint64_t stats_n_versions_cells_processed = 0;
 /** How many CELL_NETINFO cells have we received, ever? */
 uint64_t stats_n_netinfo_cells_processed = 0;
-/** Have we received a NETINFO cell from a trusted dir, ever? Used
- * to decide what to do about time skew.
- * 0 == No, and and we haven't tried asking an authority yet
- * 1 == No, we've launched a query but haven't heard back yet
- * 2 == Yes
- **/
-static int received_netinfo_from_trusted_dir = 0;
 
 /* These are the main functions for processing cells */
 static void command_process_create_cell(cell_t *cell, or_connection_t *conn);
@@ -628,16 +621,17 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
   }
 
   /* Act on apparent skew. */
-  /** Warn when we get a netinfo skew with at least this value.
-      Ignore if we've already received skew info from a trusted dir */
+  /** Warn when we get a netinfo skew with at least this value. */
 #define NETINFO_NOTICE_SKEW 3600
   if (labs(apparent_skew) > NETINFO_NOTICE_SKEW &&
-      router_get_by_id_digest(conn->identity_digest) &&
-      received_netinfo_from_trusted_dir != 2) {
+      router_get_by_id_digest(conn->identity_digest)) {
     char dbuf[64];
-
-    int severity = router_digest_is_trusted_dir(conn->identity_digest) ?
-                   LOG_WARN : LOG_INFO;
+    int severity;
+    /*XXXX be smarter about when everybody says we are skewed. */
+    if (router_digest_is_trusted_dir(conn->identity_digest))
+      severity = LOG_WARN;
+    else
+      severity = LOG_INFO;
     format_time_interval(dbuf, sizeof(dbuf), apparent_skew);
     log_fn(severity, LD_GENERAL, "Received NETINFO cell with skewed time from "
            "server at %s:%d.  It seems that our clock is %s by %s, or "
@@ -646,30 +640,12 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
            conn->_base.address, (int)conn->_base.port,
            apparent_skew>0 ? "ahead" : "behind", dbuf,
            apparent_skew>0 ? "behind" : "ahead");
-    if (severity == LOG_WARN) { /* only tell the controller if an authority */
+    if (severity == LOG_WARN) /* only tell the controller if an authority */
       control_event_general_status(LOG_WARN,
                           "CLOCK_SKEW SKEW=%ld SOURCE=OR:%s:%d",
                           apparent_skew,
                           conn->_base.address, conn->_base.port);
-      received_netinfo_from_trusted_dir = 2;
-    /* Connect to a trusted dir to trigger a NETINFO cell
-     * only if we haven't already */
-    } else if (received_netinfo_from_trusted_dir == 0) {
-      const routerstatus_t *any_trusted_dir =
-        router_pick_trusteddirserver(NO_AUTHORITY, 0);
-      tor_addr_t trusted_dir_addr;
-      tor_addr_from_ipv4h(&trusted_dir_addr, any_trusted_dir->addr);
-      connection_or_connect(&trusted_dir_addr,
-        any_trusted_dir->or_port,
-        any_trusted_dir->identity_digest);
-      received_netinfo_from_trusted_dir = 1;
-    }
   }
-
-  /* Note that we received a good netinfo cell from a trusted directory */
-  if (router_digest_is_trusted_dir(conn->identity_digest) &&
-      labs(apparent_skew) <= NETINFO_NOTICE_SKEW)
-    received_netinfo_from_trusted_dir = 2;
 
   /* XXX maybe act on my_apparent_addr, if the source is sufficiently
    * trustworthy. */

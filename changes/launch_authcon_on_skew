@@ -1,7 +1,0 @@
-  o Minor features
-    - When we get a connection from a non-authority that tells us our
-      clock is skewed, and we haven't heard about clock skew (or lack
-      thereof) from an authority, launch a connection to an authority
-      so we can find out whether we're really skewed.  Related to
-      bug 1074.  Patch from "AltF4".
-
