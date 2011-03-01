@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix an assert that got triggered when using the TestingTorNetwork
+      configuration option and then issuing a GETINFO config-text control
+      command. Fixes bug 2250; bugfix on 0.2.1.2-alpha.
+
