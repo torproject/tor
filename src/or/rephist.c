@@ -1607,18 +1607,24 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
     b->cur_obs_time = start;
     b->next_period = start + NUM_SECS_BW_SUM_INTERVAL;
     SMARTLIST_FOREACH_BEGIN(s_values, const char *, cp) {
+        const char *maxstr = NULL;
         v = tor_parse_uint64(cp, 10, 0, UINT64_MAX, &ok, NULL);
         if (have_maxima) {
-          const char *maxstr = smartlist_get(s_maxima, cp_sl_idx);
+          maxstr = smartlist_get(s_maxima, cp_sl_idx);
           mv = tor_parse_uint64(maxstr, 10, 0, UINT64_MAX, &ok_m, NULL);
           mv *= NUM_SECS_ROLLING_MEASURE;
         } else {
           /* No maxima known; guess average rate to be conservative. */
           mv = v / s_interval;
         }
-        if (!ok || !ok_m) {
+        if (!ok) {
           retval = -1;
-          log_notice(LD_HIST, "Could not parse '%s' into a number.'", cp);
+          log_notice(LD_HIST, "Could not parse value '%s' into a number.'",cp);
+        }
+        if (maxstr && !ok_m) {
+          retval = -1;
+          log_notice(LD_HIST, "Could not parse maximum '%s' into a number.'",
+                     maxstr);
         }
 
         if (start < now) {
