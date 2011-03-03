@@ -151,12 +151,27 @@ static SSL_CIPHER *CLIENT_CIPHER_DUMMIES = NULL;
 static STACK_OF(SSL_CIPHER) *CLIENT_CIPHER_STACK = NULL;
 #endif
 
+/** The ex_data index in which we store a pointer to an SSL object's
+ * corresponding tor_tls_t object. */
+static int tor_tls_object_ex_data_index = -1;
+
+/** Helper: Allocate tor_tls_object_ex_data_index. */
+static void
+tor_tls_allocate_tor_tls_object_ex_data_index()
+{
+  if (tor_tls_object_ex_data_index == -1) {
+    tor_tls_object_ex_data_index =
+      SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    tor_assert(tor_tls_object_ex_data_index != -1);
+  }
+}
+
 /** Helper: given a SSL* pointer, return the tor_tls_t object using that
  * pointer. */
 static INLINE tor_tls_t *
 tor_tls_get_by_ssl(const SSL *ssl)
 {
-  return SSL_get_app_data(ssl);
+  return SSL_get_ex_data(ssl, tor_tls_object_ex_data_index);
 }
 
 static void tor_tls_context_decref(tor_tls_context_t *ctx);
@@ -414,6 +429,8 @@ tor_tls_init(void)
       log_info(LD_GENERAL, "OpenSSL %s has version %lx",
                SSLeay_version(SSLEAY_VERSION), version);
     }
+
+    tor_tls_allocate_tor_tls_object_ex_data_index();
 
     tls_library_is_initialized = 1;
   }
@@ -1048,7 +1065,7 @@ tor_tls_new(int sock, int isServer)
     tor_free(result);
     return NULL;
   }
-  SSL_set_app_data(result->ssl, result);
+  SSL_set_ex_data(result->ssl, tor_tls_object_ex_data_index, result);
   SSL_set_bio(result->ssl, bio, bio);
   tor_tls_context_incref(context);
   result->context = context;
