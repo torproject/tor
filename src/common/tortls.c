@@ -151,24 +151,6 @@ static SSL_CIPHER *CLIENT_CIPHER_DUMMIES = NULL;
 static STACK_OF(SSL_CIPHER) *CLIENT_CIPHER_STACK = NULL;
 #endif
 
-/** Helper: compare tor_tls_t objects by its SSL. */
-static INLINE int
-tor_tls_entries_eq(const tor_tls_t *a, const tor_tls_t *b)
-{
-  return a->ssl == b->ssl;
-}
-
-/** Helper: return a hash value for a tor_tls_t by its SSL. */
-static INLINE unsigned int
-tor_tls_entry_hash(const tor_tls_t *a)
-{
-#if SIZEOF_INT == SIZEOF_VOID_P
-  return ((unsigned int)(uintptr_t)a->ssl);
-#else
-  return (unsigned int) ((((uint64_t)a->ssl)>>2) & UINT_MAX);
-#endif
-}
-
 /** Helper: given a SSL* pointer, return the tor_tls_t object using that
  * pointer. */
 static INLINE tor_tls_t *
