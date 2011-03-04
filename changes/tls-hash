@@ -1,3 +1,5 @@
   o Code simplifications and refactoring:
-    - Use SSL_get_app_data to map SSL objects to tortls_t objects: there's
+    - Use SSL_get_ex_data to map SSL objects to tor_tls_t objects: there's
       no need for a hash table.
+
+
