@@ -1065,7 +1065,14 @@ tor_tls_new(int sock, int isServer)
     tor_free(result);
     return NULL;
   }
-  SSL_set_ex_data(result->ssl, tor_tls_object_ex_data_index, result);
+  {
+    int set_worked =
+      SSL_set_ex_data(result->ssl, tor_tls_object_ex_data_index, result);
+    if (!set_worked) {
+      log_warn(LD_BUG,
+               "Couldn't set the tls for an SSL*; connection will fail");
+    }
+  }
   SSL_set_bio(result->ssl, bio, bio);
   tor_tls_context_incref(context);
   result->context = context;
