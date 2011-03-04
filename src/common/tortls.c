@@ -160,7 +160,7 @@ static int tor_tls_object_ex_data_index = -1;
 
 /** Helper: Allocate tor_tls_object_ex_data_index. */
 static void
-tor_tls_allocate_tor_tls_object_ex_data_index()
+tor_tls_allocate_tor_tls_object_ex_data_index(void)
 {
   if (tor_tls_object_ex_data_index == -1) {
     tor_tls_object_ex_data_index =
