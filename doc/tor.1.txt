@@ -34,7 +34,7 @@ OPTIONS
     Display a short help message and exit.
 
 **-f** __FILE__::
-    FILE contains further "option value" paris. (Default: @CONFDIR@/torrc)
+    FILE contains further "option value" pairs. (Default: @CONFDIR@/torrc)
 
 **--hash-password**::
     Generates a hashed password for control port access.
