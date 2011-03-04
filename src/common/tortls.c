@@ -103,10 +103,13 @@ typedef struct tor_tls_context_t {
   crypto_pk_env_t *key;
 } tor_tls_context_t;
 
+#define TOR_TLS_MAGIC 0x71571571
+
 /** Holds a SSL object and its associated data.  Members are only
  * accessed from within tortls.c.
  */
 struct tor_tls_t {
+  uint32_t magic;
   tor_tls_context_t *context; /** A link to the context object for this tls. */
   SSL *ssl; /**< An OpenSSL SSL object. */
   int socket; /**< The underlying file descriptor for this TLS connection. */
@@ -171,7 +174,10 @@ tor_tls_allocate_tor_tls_object_ex_data_index()
 static INLINE tor_tls_t *
 tor_tls_get_by_ssl(const SSL *ssl)
 {
-  return SSL_get_ex_data(ssl, tor_tls_object_ex_data_index);
+  tor_tls_t *result = SSL_get_ex_data(ssl, tor_tls_object_ex_data_index);
+  if (result)
+    tor_assert(result->magic == TOR_TLS_MAGIC);
+  return result;
 }
 
 static void tor_tls_context_decref(tor_tls_context_t *ctx);
@@ -918,6 +924,7 @@ tor_tls_server_info_callback(const SSL *ssl, int type, int val)
       ++tls->server_handshake_count;
   } else {
     log_warn(LD_BUG, "Couldn't look up the tls for an SSL*. How odd!");
+    return;
   }
 
   /* Now check the cipher list. */
@@ -1025,6 +1032,7 @@ tor_tls_new(int sock, int isServer)
   tor_tls_t *result = tor_malloc_zero(sizeof(tor_tls_t));
   tor_tls_context_t *context = isServer ? server_tls_context :
     client_tls_context;
+  result->magic = TOR_TLS_MAGIC;
 
   tor_assert(context); /* make sure somebody made it first */
   if (!(result->ssl = SSL_new(context->ctx))) {
@@ -1195,6 +1203,7 @@ tor_tls_free(tor_tls_t *tls)
   if (tls->context)
     tor_tls_context_decref(tls->context);
   tor_free(tls->address);
+  tls->magic = 0x99999999;
   tor_free(tls);
 }
 
