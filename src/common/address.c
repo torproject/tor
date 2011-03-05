@@ -1031,18 +1031,20 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
 
   memset(addr, 0, sizeof(tor_addr_t));
   memset(&target_addr, 0, sizeof(target_addr));
-  /* Use the "discard" service port */
-  ((struct sockaddr_in*)&target_addr)->sin_port = 9;
   /* Don't worry: no packets are sent. We just need to use a real address
    * on the actual Internet. */
   if (family == AF_INET6) {
     struct sockaddr_in6 *sin6 = (struct sockaddr_in6*)&target_addr;
+    /* Use the "discard" service port */
+    sin6->sin6_port = htons(9);
     sock = tor_open_socket(PF_INET6,SOCK_DGRAM,IPPROTO_UDP);
     addr_len = (socklen_t)sizeof(struct sockaddr_in6);
     sin6->sin6_family = AF_INET6;
     S6_ADDR16(sin6->sin6_addr)[0] = htons(0x2002); /* 2002:: */
   } else if (family == AF_INET) {
     struct sockaddr_in *sin = (struct sockaddr_in*)&target_addr;
+    /* Use the "discard" service port */
+    sin->sin_port = htons(9);
     sock = tor_open_socket(PF_INET,SOCK_DGRAM,IPPROTO_UDP);
     addr_len = (socklen_t)sizeof(struct sockaddr_in);
     sin->sin_family = AF_INET;
