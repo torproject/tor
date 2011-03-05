@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix connect() failures on some platforms (BSD, OS X). Bugfix on
+      0.2.0.3-alpha; fixes bug 2660. Patch by piebeer.
