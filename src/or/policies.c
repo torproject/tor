@@ -880,6 +880,8 @@ exit_policy_is_general_exit(smartlist_t *policy)
 
   for (i = 0; i < 3; ++i) {
     SMARTLIST_FOREACH(policy, addr_policy_t *, p, {
+      if (tor_addr_family(&p->addr) != AF_INET)
+        continue; /* IPv4 only for now */
       if (p->prt_min > ports[i] || p->prt_max < ports[i])
         continue; /* Doesn't cover our port. */
       if (p->maskbits > 8)
