@@ -222,6 +222,8 @@ typedef struct token_rule_t {
 static token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
+  T0N("reject6",             K_REJECT6,             ARGS,    NO_OBJ ),
+  T0N("accept6",             K_ACCEPT6,             ARGS,    NO_OBJ ),
   T1_START( "router",        K_ROUTER,              GE(5),   NO_OBJ ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
@@ -1367,6 +1369,12 @@ router_parse_entry_from_string(const char *s, const char *end,
       router->has_old_dnsworkers = 1;
   }
 
+  if (find_opt_by_keyword(tokens, K_REJECT6) ||
+      find_opt_by_keyword(tokens, K_ACCEPT6)) {
+    log_warn(LD_DIR, "Rejecting router with reject6/accept6 line: they crash "
+             "older Tors.");
+    goto err;
+  }
   exit_policy_tokens = find_all_exitpolicy(tokens);
   if (!smartlist_len(exit_policy_tokens)) {
     log_warn(LD_DIR, "No exit policy tokens in descriptor.");
