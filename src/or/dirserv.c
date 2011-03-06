@@ -2997,6 +2997,8 @@ dirserv_get_routerdesc_fingerprints(smartlist_t *fps_out, const char *key,
     SMARTLIST_FOREACH(rl->routers, routerinfo_t *, r,
                       smartlist_add(fps_out,
                       tor_memdup(r->cache_info.identity_digest, DIGEST_LEN)));
+    /* Treat "all" requests as if they were unencrypted */
+    for_unencrypted_conn = 1;
   } else if (!strcmp(key, "authority")) {
     const routerinfo_t *ri = router_get_my_routerinfo();
     if (ri)
