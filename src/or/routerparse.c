@@ -267,8 +267,6 @@ typedef struct token_rule_t {
 static token_rule_t routerdesc_token_table[] = {
   T0N("reject",              K_REJECT,              ARGS,    NO_OBJ ),
   T0N("accept",              K_ACCEPT,              ARGS,    NO_OBJ ),
-  T0N("reject6",             K_REJECT6,             ARGS,    NO_OBJ ),
-  T0N("accept6",             K_ACCEPT6,             ARGS,    NO_OBJ ),
   T1_START( "router",        K_ROUTER,              GE(5),   NO_OBJ ),
   T1( "signing-key",         K_SIGNING_KEY,         NO_ARGS, NEED_KEY_1024 ),
   T1( "onion-key",           K_ONION_KEY,           NO_ARGS, NEED_KEY_1024 ),
