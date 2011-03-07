@@ -1,0 +1,4 @@
+  o Major bugfixes (bridge authority)
+    - Do not allow encrypte requests for "all" bridges to return all
+      bridges.
+
