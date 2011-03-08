@@ -4728,7 +4728,8 @@ any_pending_bridge_descriptor_fetches(void)
         conn->purpose == DIR_PURPOSE_FETCH_SERVERDESC &&
         TO_DIR_CONN(conn)->router_purpose == ROUTER_PURPOSE_BRIDGE &&
         !conn->marked_for_close &&
-        conn->linked && !conn->linked_conn->marked_for_close) {
+        conn->linked &&
+        conn->linked_conn && !conn->linked_conn->marked_for_close) {
       log_debug(LD_DIR, "found one: %s", conn->address);
       return 1;
     }
