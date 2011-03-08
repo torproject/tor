@@ -5,6 +5,13 @@ Changes in version 0.2.2.23-alpha - 2011-02-??
       Instead, only inform the controller when it's a trusted authority
       that claims our clock is wrong. Bugfix on 0.1.2.6-alpha; fixes
       the rest of bug 1074.
+    - Fix an assert in parsing router descriptors containing IPv6
+      addresses. This one took down the directory authorities when
+      somebody tried some experimental code. Bugfix on 0.2.1.3-alpha.
+    - Make the bridge directory authority refuse to answer directory
+      requests for "all" descriptors. It used to include bridge
+      descriptors in its answer, which was a major information leak.
+      Found by "piebeer". Bugfix on 0.2.0.3-alpha.
     - If relays set RelayBandwidthBurst but not RelayBandwidthRate,
       Tor would ignore their RelayBandwidthBurst setting,
       potentially using more bandwidth than expected. Bugfix on
@@ -19,11 +26,20 @@ Changes in version 0.2.2.23-alpha - 2011-02-??
       so that they can determine their correct estimated bandwidth on
       restart. Resolves bug 1863, where Tor relays would reset their
       estimated bandwidth to 0 after restarting.
+    - Directory authorities now take changes in router IP address and
+      ORPort into account when determining router stability. Previously,
+      if a router changed its IP or ORPort, the authorities would not
+      treat it as having any downtime for the purposes of stability
+      calculation, whereas clients would experience downtime since the
+      change could take a while to propagate to them. Resolves issue 1035.
     - Enable Address Space Layout Randomization (ASLR) and Data Execution
       Prevention (DEP) by default on Windows to make it harder for
       attackers to exploit vulnerabilities. Patch from John Brooks.
 
   o Minor bugfixes (on 0.2.1.x and earlier):
+    - Fix a rare crash bug that could occur when a client was configured
+      with a large number of bridges. Fixes bug 2629; bugfix on
+      0.2.1.2-alpha. Bugfix by trac user "shitlei".
     - Avoid a double mark-for-free warning when failing to attach a
       transparent proxy connection. Bugfix on 0.1.2.1-alpha. Fixes
       bug 2279.
@@ -51,6 +67,16 @@ Changes in version 0.2.2.23-alpha - 2011-02-??
     - Fix a bug with our locking implementation on Windows that couldn't
       correctly detect when a file was already locked. Fixes bug 2504,
       bugfix on 0.2.1.6-alpha.
+    - Fix IPv6-related connect() failures on some platforms (BSD, OS X).
+      Bugfix on 0.2.0.3-alpha; fixes first part of bug 2660. Patch by
+      "piebeer".
+    - Set target port in get_interface_address6() correctly. Bugfix
+      on 0.1.1.4-alpha and 0.2.0.3-alpha; fixes second part of bug 2660.
+    - Directory authorities are now more robust to hops back in time
+      when calculating router stability. Previously, if a run of uptime
+      or downtime appeared to be negative, the calculation could give
+      incorrect results. Bugfix on 0.2.0.6-alpha; noticed when fixing
+      bug 1035.
 
   o Minor bugfixes (on 0.2.2.x):
     - Clients should not weight BadExit nodes as Exits in their node
