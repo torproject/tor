@@ -1,0 +1,13 @@
+  o Minor features (authorities)
+    - Take altered router IP addresses and ORPorts into account when
+      determining router stability.  Previously, if a router changed
+      its IP or ORPort, the authorities would not treat it as having
+      any downtime for the purposes of stability calculation, whereas
+      clients would experience downtime since the change could take a
+      while to propagate to them.  Resolves issue 1035.
+  o Minor bugfixes (authorities)
+    - Try to be more robust to hops back in time when calculating
+      router stability.  Previously, if a run of uptime or downtime
+      appeared to be negative, the calculation could give incorrect
+      results.  Bugfix on 0.2.0.6-alpha.
+
