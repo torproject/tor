@@ -77,6 +77,9 @@ Changes in version 0.2.2.23-alpha - 2011-02-??
       or downtime appeared to be negative, the calculation could give
       incorrect results. Bugfix on 0.2.0.6-alpha; noticed when fixing
       bug 1035.
+    - Fix an assert that got triggered when using the TestingTorNetwork
+      configuration option and then issuing a GETINFO config-text control
+      command. Fixes bug 2250; bugfix on 0.2.1.2-alpha.
 
   o Minor bugfixes (on 0.2.2.x):
     - Clients should not weight BadExit nodes as Exits in their node
@@ -107,7 +110,7 @@ Changes in version 0.2.2.23-alpha - 2011-02-??
       "ClientRejectInternalAddresses 0" in your torrc.
     - Always treat failure to allocate an RSA key as an unrecoverable
       allocation error.
-    - Update to the February 1 2011 Maxmind GeoLite Country database.
+    - Update to the March 1 2011 Maxmind GeoLite Country database.
 
   o Minor features (log subsystem):
     - Add documentation for configuring logging at different severities in
