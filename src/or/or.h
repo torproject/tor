@@ -2841,6 +2841,11 @@ typedef struct {
    */
   double CircuitPriorityHalflife;
 
+  /** Set to true if the TestingTorNetwork configuration option is set.
+   * This is used so that options_validate() has a chance to realize that
+   * the defaults have changed. */
+  int _UsingTestNetworkDefaults;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
