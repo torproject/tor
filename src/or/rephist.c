@@ -14,6 +14,7 @@
 #include "circuitlist.h"
 #include "circuituse.h"
 #include "config.h"
+#include "networkstatus.h"
 #include "rephist.h"
 #include "router.h"
 #include "routerlist.h"
@@ -73,6 +74,13 @@ typedef struct or_history_t {
   /** If nonzero, we have been unable to connect since this time. */
   time_t down_since;
 
+  /** The address at which we most recently connected to this OR
+   * successfully. */
+  tor_addr_t last_reached_addr;
+
+  /** The port at which we most recently connected to this OR successfully */
+  uint16_t last_reached_port;
+
   /* === For MTBF tracking: */
   /** Weighted sum total of all times that this router has been online.
    */
@@ -119,6 +127,7 @@ get_or_history(const char* id)
     rephist_total_num++;
     hist->link_history_map = digestmap_new();
     hist->since = hist->changed = time(NULL);
+    tor_addr_make_unspec(&hist->last_reached_addr);
     digestmap_set(history_map, id, hist);
   }
   return hist;
@@ -289,13 +298,20 @@ rep_hist_note_connection_died(const char* id, time_t when)
 /** We have just decided that this router with identity digest <b>id</b> is
  * reachable, meaning we will give it a "Running" flag for the next while. */
 void
-rep_hist_note_router_reachable(const char *id, time_t when)
+rep_hist_note_router_reachable(const char *id, const tor_addr_t *at_addr,
+                               const uint16_t at_port, time_t when)
 {
   or_history_t *hist = get_or_history(id);
   int was_in_run = 1;
   char tbuf[ISO_TIME_LEN+1];
+  int addr_changed, port_changed;
 
   tor_assert(hist);
+  tor_assert((!at_addr && !at_port) || (at_addr && at_port));
+
+  addr_changed = at_addr &&
+    tor_addr_compare(at_addr, &hist->last_reached_addr, CMP_EXACT) != 0;
+  port_changed = at_port && at_port != hist->last_reached_port;
 
   if (!started_tracking_stability)
     started_tracking_stability = time(NULL);
@@ -315,6 +331,27 @@ rep_hist_note_router_reachable(const char *id, time_t when)
     down_length = when - hist->start_of_downtime;
     hist->total_weighted_time += down_length;
     hist->start_of_downtime = 0;
+  } else if (addr_changed || port_changed) {
+    /* If we're reachable, but the address changed, treat this as some
+     * downtime. */
+    int penalty = get_options()->TestingTorNetwork ? 240 : 3600;
+    networkstatus_t *ns;
+
+    if ((ns = networkstatus_get_latest_consensus())) {
+      int fresh_interval = (int)(ns->fresh_until - ns->valid_after);
+      int live_interval = (int)(ns->valid_until - ns->valid_after);
+      /* on average, a descriptor addr change takes .5 intervals to make it
+       * into a consensus, and half a liveness period to make it to
+       * clients. */
+      penalty = (int)(fresh_interval + live_interval) / 2;
+    }
+    format_local_iso_time(tbuf, hist->start_of_run);
+    log_info(LD_HIST,"Router %s still seems Running, but its address appears "
+             "to have changed since the last time it was reachable.  I'm "
+             "going to treat it as having been down for %d seconds",
+             hex_str(id, DIGEST_LEN), penalty);
+    rep_hist_note_router_unreachable(id, when-penalty);
+    rep_hist_note_router_reachable(id, NULL, 0, when);
   } else {
     format_local_iso_time(tbuf, hist->start_of_run);
     if (was_in_run)
@@ -324,6 +361,10 @@ rep_hist_note_router_reachable(const char *id, time_t when)
       log_info(LD_HIST,"Router %s is now Running; it was previously untracked",
                hex_str(id, DIGEST_LEN));
   }
+  if (at_addr)
+    tor_addr_copy(&hist->last_reached_addr, at_addr);
+  if (at_port)
+    hist->last_reached_port = at_port;
 }
 
 /** We have just decided that this router is unreachable, meaning
@@ -344,12 +385,20 @@ rep_hist_note_router_unreachable(const char *id, time_t when)
     long run_length = when - hist->start_of_run;
     format_local_iso_time(tbuf, hist->start_of_run);
 
-    hist->weighted_run_length += run_length;
     hist->total_run_weights += 1.0;
     hist->start_of_run = 0;
-    hist->weighted_uptime += run_length;
-    hist->total_weighted_time += run_length;
+    if (run_length < 0) {
+      unsigned long penalty = -run_length;
+#define SUBTRACT_CLAMPED(var, penalty) \
+      do { (var) = (var) < (penalty) ? 0 : (var) - (penalty); } while (0)
 
+      SUBTRACT_CLAMPED(hist->weighted_run_length, penalty);
+      SUBTRACT_CLAMPED(hist->weighted_uptime, penalty);
+    } else {
+      hist->weighted_run_length += run_length;
+      hist->weighted_uptime += run_length;
+      hist->total_weighted_time += run_length;
+    }
     was_running = 1;
     log_info(LD_HIST, "Router %s is now non-Running: it had previously been "
              "Running since %s.  Its total weighted uptime is %lu/%lu.",
@@ -422,7 +471,7 @@ rep_hist_downrate_old_runs(time_t now)
 static double
 get_stability(or_history_t *hist, time_t when)
 {
-  unsigned long total = hist->weighted_run_length;
+  long total = hist->weighted_run_length;
   double total_weights = hist->total_run_weights;
 
   if (hist->start_of_run) {
@@ -458,8 +507,8 @@ get_total_weighted_time(or_history_t *hist, time_t when)
 static double
 get_weighted_fractional_uptime(or_history_t *hist, time_t when)
 {
-  unsigned long total = hist->total_weighted_time;
-  unsigned long up = hist->weighted_uptime;
+  long total = hist->total_weighted_time;
+  long up = hist->weighted_uptime;
 
   if (hist->start_of_run) {
     long run_length = (when - hist->start_of_run);
