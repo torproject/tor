@@ -393,6 +393,7 @@ static config_var_t _option_vars[] = {
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
+  V(_UsingTestNetworkDefaults,   BOOL,     "0"),
 
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -418,6 +419,7 @@ static config_var_t testing_tor_network_defaults[] = {
   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "0 minutes"),
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
+  V(_UsingTestNetworkDefaults,   BOOL,     "1"),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
@@ -3655,7 +3657,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   /* Keep changes to hard-coded values synchronous to man page and default
    * values table. */
   if (options->TestingV3AuthInitialVotingInterval != 30*60 &&
-      !options->TestingTorNetwork) {
+      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
     REJECT("TestingV3AuthInitialVotingInterval may only be changed in testing "
            "Tor networks!");
   } else if (options->TestingV3AuthInitialVotingInterval < MIN_VOTE_INTERVAL) {
@@ -3666,7 +3668,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingV3AuthInitialVoteDelay != 5*60 &&
-      !options->TestingTorNetwork) {
+      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
+
     REJECT("TestingV3AuthInitialVoteDelay may only be changed in testing "
            "Tor networks!");
   } else if (options->TestingV3AuthInitialVoteDelay < MIN_VOTE_SECONDS) {
@@ -3674,7 +3677,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingV3AuthInitialDistDelay != 5*60 &&
-      !options->TestingTorNetwork) {
+      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
     REJECT("TestingV3AuthInitialDistDelay may only be changed in testing "
            "Tor networks!");
   } else if (options->TestingV3AuthInitialDistDelay < MIN_DIST_SECONDS) {
@@ -3689,7 +3692,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingAuthDirTimeToLearnReachability != 30*60 &&
-      !options->TestingTorNetwork) {
+      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
     REJECT("TestingAuthDirTimeToLearnReachability may only be changed in "
            "testing Tor networks!");
   } else if (options->TestingAuthDirTimeToLearnReachability < 0) {
@@ -3699,7 +3702,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->TestingEstimatedDescriptorPropagationTime != 10*60 &&
-      !options->TestingTorNetwork) {
+      !options->TestingTorNetwork && !options->_UsingTestNetworkDefaults) {
     REJECT("TestingEstimatedDescriptorPropagationTime may only be changed in "
            "testing Tor networks!");
   } else if (options->TestingEstimatedDescriptorPropagationTime < 0) {
