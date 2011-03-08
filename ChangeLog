@@ -1,4 +1,10 @@
-Changes in version 0.2.2.23-alpha - 2011-02-??
+Changes in version 0.2.2.23-alpha - 2011-03-08
+  Tor 0.2.2.23-alpha lets relays record their bandwidth history so when
+  they restart they don't lose their bandwidth capacity estimate. This
+  release also fixes a diverse set of user-facing bugs, ranging from
+  relays overrunning their rate limiting to clients falsely warning about
+  clock skew to bridge descriptor leaks by our bridge directory authority.
+
   o Major bugfixes:
     - Stop sending a CLOCK_SKEW controller status event whenever
       we fetch directory information from a relay that has a wrong clock.
