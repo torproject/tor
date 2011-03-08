@@ -1237,9 +1237,6 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
       as_advertised = 0;
     }
     if (authdir_mode_tests_reachability(options)) {
-      /* We initiated this connection to address:port.  Drop all routers
-       * with the same address:port and a different key.
-       */
       dirserv_orconn_tls_done(conn->_base.address, conn->_base.port,
                               digest_rcvd_out, as_advertised);
     }
