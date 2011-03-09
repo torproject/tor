@@ -1,0 +1,7 @@
+  o Security fixes:
+    - Directory authorities now use data collected from rephist when
+      choosing whether to assign the HSDir flag to relays, instead of
+      trusting the uptime value the relay reports in its descriptor.
+      This helps prevent an attack where relatively few malaicious
+      nodes can blackhole any given hidden service. Bugfix on
+      0.2.0.10-alpha; fixes bug 2709.
