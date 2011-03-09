@@ -51,6 +51,8 @@ export TORUSER
 TORGROUP=@TORGROUP@
 export TORGROUP
 
+TOR_DAEMON_PID_DIR="@LOCALSTATEDIR@/run/tor"
+
 if [ -x /bin/su ] ; then
     SUPROG=/bin/su
 elif [ -x /sbin/su ] ; then
@@ -67,6 +69,12 @@ case "$1" in
 
     start)
     echo "Starting tor daemon"
+
+    if [ ! -d $TOR_DAEMON_PID_DIR ] ; then
+        mkdir -p $TOR_DAEMON_PID_DIR
+        chown $TORUSER:$TORGROUP $TOR_DAEMON_PID_DIR
+    fi
+
     ## Start daemon with startproc(8). If this fails
     ## the echo return value is set appropriate.
 
