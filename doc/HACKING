@@ -442,7 +442,14 @@ the website.
 9) Email Erinn and weasel (cc'ing tor-assistants) that a new tarball
 is up. This step should probably change to mailing more packagers.
 
-10) Wait up to a day or two (for a development release), or until most
+10) Add the version number to Trac.  To do this, go to Trac, log in,
+select "Admin" near the top of the screen, then select "Versions" from
+the menu on the left.  At the right, there will be an "Add version"
+box.  By convention, we enter the version in the form "Tor:
+0.2.2.23-alpha" (or whatever the version is), and we select the date as
+the date in the ChangeLog.
+
+11) Wait up to a day or two (for a development release), or until most
 packages are up (for a stable release), and mail the release blurb and
 changelog to tor-talk or tor-announce.
 
