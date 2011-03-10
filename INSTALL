@@ -23,3 +23,42 @@ If it doesn't build for you:
   Lastly, check out
   https://www.torproject.org/docs/faq#DoesntWork
 
+An example of how to build a mostly static Tor:
+
+Libevent should be built with:
+% ./configure --disable-shared --enable-static --with-pic
+
+An example of how to build a mostly static Tor:
+./configure --enable-static-libevent \
+            --enable-static-openssl  \
+            --enable-static-zlib     \
+            --with-libevent-dir=/tmp/static-tor/libevent-1.4.14b-stable \
+            --with-openssl-dir=/tmp/static-tor/openssl-0.9.8r/ \
+            --with-zlib-dir=/tmp/static-tor/zlib-1.2.5
+
+An example of how to build an entirely static Tor (no Mac OS X support, sorry):
+./configure --enable-static-tor \
+            --enable-static-libevent \
+            --enable-static-openssl  \
+            --enable-static-zlib     \
+            --with-libevent-dir=/tmp/static-tor/libevent-1.4.14b-stable \
+            --with-openssl-dir=/tmp/static-tor/openssl-0.9.8r/ \
+            --with-zlib-dir=/tmp/static-tor/zlib-1.2.5
+
+This currently does not work with --enable-gcc-hardening because of libevent issues:
+
+configure:6176: gcc -o conftest  -D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIE -Wstack-protector
+--param ssp-buffer-size=1 -I/tmp/static-tor/libevent-1.4.14b-stable  -I${top_srcdir}/src/common -
+L/tmp/static-tor/libevent-1.4.14b-stable  -pie conftest.c -lpthread -ldl  -levent -lrt  >&5
+/usr/bin/ld: /tmp/static-tor/libevent-1.4.14b-stable/libevent.a(event.o): relocation R_X86_64_32 against `.rodata.str1.1' can not be used when making a shared object; recompile with -fPIC
+/tmp/static-tor/libevent-1.4.14b-stable/libevent.a: could not read symbols: Bad value
+    collect2: ld returned 1 exit status
+    configure:6176: $? = 1
+
+This produces the following Tor binaries on Gnu/Linux x86-64:
+
+% file src/or/tor
+src/or/tor: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.15, not stripped
+
+% ldd src/or/tor
+    not a dynamic executable

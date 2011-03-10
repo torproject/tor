@@ -1,0 +1,5 @@
+  o Minor enhancement
+    - Implements --enable-static-tor for configure time. Closes bug 2702.
+      Idea, general hackery and thoughts from Alexei Czeskis, John Gilmore,
+      Jacob Appelbaum.
+
