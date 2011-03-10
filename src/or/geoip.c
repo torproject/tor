@@ -278,6 +278,8 @@ geoip_is_loaded(void)
   return geoip_countries != NULL && geoip_entries != NULL;
 }
 
+#define MAX_LAST_SEEN_IN_MINUTES 0x3FFFFFFFu
+
 /** Entry in a map from IP address to the last time we've seen an incoming
  * connection from that IP address. Used by bridges only, to track which
  * countries have them blocked. */
@@ -413,12 +415,13 @@ geoip_note_client_seen(geoip_client_action_t action,
   lookup.ipaddr = addr;
   lookup.action = (int)action;
   ent = HT_FIND(clientmap, &client_history, &lookup);
+  tor_assert(now / 60 <= MAX_LAST_SEEN_IN_MINUTES);
   if (ent) {
-    ent->last_seen_in_minutes = now / 60;
+    ent->last_seen_in_minutes = (unsigned)(now/60);
   } else {
     ent = tor_malloc_zero(sizeof(clientmap_entry_t));
     ent->ipaddr = addr;
-    ent->last_seen_in_minutes = now / 60;
+    ent->last_seen_in_minutes = (unsigned)(now/60);
     ent->action = (int)action;
     HT_INSERT(clientmap, &client_history, ent);
   }
