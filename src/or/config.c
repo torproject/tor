@@ -3189,6 +3189,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Servers must be able to freely connect to the rest "
            "of the Internet, so they must not set UseBridges.");
 
+  /* If both of these are set, we'll end up with funny behavior where we
+   * demand enough entrynodes be up and running else we won't build
+   * circuits, yet we never actually use them. */
+  if (options->UseBridges && options->EntryNodes)
+    REJECT("You cannot set both UseBridges and EntryNodes.");
+
   options->_AllowInvalid = 0;
   if (options->AllowInvalidNodes) {
     SMARTLIST_FOREACH(options->AllowInvalidNodes, const char *, cp, {
