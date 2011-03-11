@@ -242,33 +242,34 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
   return best ? TO_ORIGIN_CIRCUIT(best) : NULL;
 }
 
+#if 0
 /** Check whether, according to the policies in <b>options</b>, the
  * circuit <b>circ</b> makes sense. */
-/* XXXX currently only checks Exclude{Exit}Nodes. It should check more. */
+/* XXXX currently only checks Exclude{Exit}Nodes; it should check more.
+ * Also, it doesn't have the right definition of an exit circuit. Also,
+ * it's never called. */
 int
 circuit_conforms_to_options(const origin_circuit_t *circ,
                             const or_options_t *options)
 {
   const crypt_path_t *cpath, *cpath_next = NULL;
 
-  for (cpath = circ->cpath; cpath && cpath_next != circ->cpath;
-       cpath = cpath_next) {
+  /* first check if it includes any excluded nodes */
+  for (cpath = circ->cpath; cpath_next != circ->cpath; cpath = cpath_next) {
     cpath_next = cpath->next;
-
     if (routerset_contains_extendinfo(options->ExcludeNodes,
                                       cpath->extend_info))
       return 0;
-
-    if (cpath->next == circ->cpath) {
-      /* This is apparently the exit node. */
-
-      if (routerset_contains_extendinfo(options->ExcludeExitNodes,
-                                        cpath->extend_info))
-        return 0;
-    }
   }
+
+  /* then consider the final hop */
+  if (routerset_contains_extendinfo(options->ExcludeExitNodes,
+                                    circ->cpath->prev->extend_info))
+    return 0;
+
   return 1;
 }
+#endif
 
 /** Close all circuits that start at us, aren't open, and were born
  * at least CircuitBuildTimeout seconds ago.
