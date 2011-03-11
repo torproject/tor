@@ -1610,6 +1610,10 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     tor_assert(!automap);
     if (s) {
       if (s[1] != '\0') {
+        /* XXX022-1090 we should look this up as a relay and see if it's
+         * in our excluded set, and refuse it here if so. But first,
+         * figure out what's up with this 'remapped_to_exit' business
+         * and whether that needs careful treatment. -RD */
         conn->chosen_exit_name = tor_strdup(s+1);
         if (remapped_to_exit) /* 5 tries before it expires the addressmap */
           conn->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
@@ -1627,11 +1631,14 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
       conn->chosen_exit_name = tor_strdup(socks->address);
       r = router_get_by_nickname(conn->chosen_exit_name, 1);
       *socks->address = 0;
-      if (r) {
+      if (r && (!options->_ExcludeExitNodesUnion ||
+                !routerset_contains_router(options->_ExcludeExitNodesUnion,
+                                           r))) {
         strlcpy(socks->address, r->address, sizeof(socks->address));
       } else {
         log_warn(LD_APP,
-                 "Unrecognized server in exit address '%s.exit'. Refusing.",
+                 "%s relay in exit address '%s.exit'. Refusing.",
+                 r ? "Excluded" : "Unrecognized",
                  safe_str_client(socks->address));
         connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
         return -1;
