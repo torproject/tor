@@ -2685,13 +2685,29 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       n_supported[i] = -1;
       continue; /* skip routers that are known to be down or bad exits */
     }
+
+    if (options->_ExcludeExitNodesUnion &&
+        routerset_contains_router(options->_ExcludeExitNodesUnion, router)) {
+      n_supported[i] = -1;
+      continue; /* user asked us not to use it, no matter what */
+    }
+    if (options->ExitNodes &&
+        !routerset_contains_router(options->ExitNodes, router)) {
+      n_supported[i] = -1;
+      continue; /* not one of our chosen exit nodes */
+    }
+
     if (router_is_unreliable(router, need_uptime, need_capacity, 0) &&
-        (!options->ExitNodes ||
-         !routerset_contains_router(options->ExitNodes, router))) {
+        !options->ExitNodes) {
       /* FFFF Someday, differentiate between a routerset that names
        * routers, and a routerset that names countries, and only do this
        * check if they've asked for specific exit relays. Or if the country
        * they ask for is rare. Or something. */
+      /* XXX022-1090 We need to pick a tradeoff here: if we throw it out because
+       * it's unreliable, users might end up with no exit options even
+       * though some options are up. If we don't throw it out, users who
+       * set ExitNodes will have partitioning problems because they'll be
+       * the only folks willing to use this node. */
       n_supported[i] = -1;
       continue; /* skip routers that are not suitable, unless we have
                  * ExitNodes set, in which case we asked for it */
@@ -2753,21 +2769,13 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   /* If any routers definitely support any pending connections, choose one
    * at random. */
   if (best_support > 0) {
-    smartlist_t *supporting = smartlist_create(), *use = smartlist_create();
+    smartlist_t *supporting = smartlist_create();
 
     for (i = 0; i < smartlist_len(dir->routers); i++)
       if (n_supported[i] == best_support)
         smartlist_add(supporting, smartlist_get(dir->routers, i));
 
-    routersets_get_disjunction(use, supporting, options->ExitNodes,
-                               options->_ExcludeExitNodesUnion, 1);
-    if (smartlist_len(use) == 0 && options->ExitNodes &&
-        !options->StrictNodes) { /* give up on exitnodes and try again */
-      routersets_get_disjunction(use, supporting, NULL,
-                                 options->_ExcludeExitNodesUnion, 1);
-    }
-    router = routerlist_sl_choose_by_bandwidth(use, WEIGHT_FOR_EXIT);
-    smartlist_free(use);
+    router = routerlist_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
     smartlist_free(supporting);
   } else {
     /* Either there are no pending connections, or no routers even seem to
@@ -2775,7 +2783,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
      * at least one predicted exit port. */
 
     int attempt;
-    smartlist_t *needed_ports, *supporting, *use;
+    smartlist_t *needed_ports, *supporting;
 
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
@@ -2792,7 +2800,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
                  options->_ExcludeExitNodesUnion ? " or are Excluded" : "");
     }
     supporting = smartlist_create();
-    use = smartlist_create();
     needed_ports = circuit_get_unhandled_ports(time(NULL));
     for (attempt = 0; attempt < 2; attempt++) {
       /* try once to pick only from routers that satisfy a needed port,
@@ -2807,25 +2814,13 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
         }
       }
 
-      routersets_get_disjunction(use, supporting, options->ExitNodes,
-                                 options->_ExcludeExitNodesUnion, 1);
-      if (smartlist_len(use) == 0 && options->ExitNodes &&
-          !options->StrictNodes) { /* give up on exitnodes and try again */
-        routersets_get_disjunction(use, supporting, NULL,
-                                   options->_ExcludeExitNodesUnion, 1);
-      }
-      /* FFF sometimes the above results in null, when the requested
-       * exit node is considered down by the consensus. we should pick
-       * it anyway, since the user asked for it. */
-      router = routerlist_sl_choose_by_bandwidth(use, WEIGHT_FOR_EXIT);
+      router = routerlist_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
       if (router)
         break;
       smartlist_clear(supporting);
-      smartlist_clear(use);
     }
     SMARTLIST_FOREACH(needed_ports, uint16_t *, cp, tor_free(cp));
     smartlist_free(needed_ports);
-    smartlist_free(use);
     smartlist_free(supporting);
   }
 
@@ -2834,10 +2829,11 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     log_info(LD_CIRC, "Chose exit server '%s'", router->nickname);
     return router;
   }
-  if (options->ExitNodes && options->StrictNodes) {
+  if (options->ExitNodes) {
     log_warn(LD_CIRC,
-             "No specified exit routers seem to be running, and "
-             "StrictNodes is set: can't choose an exit.");
+             "No specified %sexit routers seem to be running: "
+             "can't choose an exit.",
+             options->_ExcludeExitNodesUnion ? "non-excluded " : "");
   }
   return NULL;
 }

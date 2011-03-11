@@ -175,9 +175,11 @@ int routerset_contains_extendinfo(const routerset_t *set,
 void routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
                                const routerset_t *excludeset,
                                int running_only);
+#if 0
 void routersets_get_disjunction(smartlist_t *target, const smartlist_t *source,
                                 const routerset_t *include,
                                 const routerset_t *exclude, int running_only);
+#endif
 void routerset_subtract_routers(smartlist_t *out,
                                 const routerset_t *routerset);
 char *routerset_to_string(const routerset_t *routerset);

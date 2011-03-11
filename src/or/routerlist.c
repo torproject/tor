@@ -5473,12 +5473,14 @@ routerset_needs_geoip(const routerset_t *set)
   return set && smartlist_len(set->country_names);
 }
 
+#if 0
 /** Return true iff there are no entries in <b>set</b>. */
 static int
 routerset_is_empty(const routerset_t *set)
 {
   return !set || smartlist_len(set->list) == 0;
 }
+#endif
 
 /** Helper.  Return true iff <b>set</b> contains a router based on the other
  * provided fields.  Return higher values for more specific subentries: a
@@ -5594,6 +5596,7 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
   }
 }
 
+#if 0
 /** Add to <b>target</b> every routerinfo_t from <b>source</b> except:
  *
  * 1) Don't add it if <b>include</b> is non-empty and the relay isn't in
@@ -5624,6 +5627,7 @@ routersets_get_disjunction(smartlist_t *target,
     }
   });
 }
+#endif
 
 /** Remove every routerinfo_t from <b>lst</b> that is in <b>routerset</b>. */
 void
