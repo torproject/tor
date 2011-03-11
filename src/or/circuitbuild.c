@@ -4570,6 +4570,7 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return; /* it's already on the way */
 
   address = tor_dup_addr(&bridge->addr);
+  /* XXX022-1090 if we ExcludeNodes this bridge, should this step fail? -RD */
   directory_initiate_command(address, &bridge->addr,
                              bridge->port, 0,
                              0, /* does not matter */

@@ -857,6 +857,7 @@ consider_testing_reachability(int test_or, int test_dir)
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
+    /* XXX022-1090 If we ExcludeNodes ourself, should this fail? -RD */
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me,
                              CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
   }
@@ -867,6 +868,7 @@ consider_testing_reachability(int test_or, int test_dir)
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
+    /* XXX022-1090 If we ExcludeNodes ourself, should this fail? -RD */
     directory_initiate_command(me->address, &addr,
                                me->or_port, me->dir_port,
                                0, /* does not matter */
