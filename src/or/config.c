@@ -827,7 +827,16 @@ static char *_version = NULL;
 const char *
 get_version(void)
 {
-  return VERSION;
+  if (_version == NULL) {
+    if (strlen(tor_svn_revision)) {
+      size_t len = strlen(VERSION)+strlen(tor_svn_revision)+8;
+      _version = tor_malloc(len);
+      tor_snprintf(_version, len, "%s (r%s)", VERSION, tor_svn_revision);
+    } else {
+      _version = tor_strdup(VERSION);
+    }
+  }
+  return _version;
 }
 
 /** Release additional memory allocated in options
