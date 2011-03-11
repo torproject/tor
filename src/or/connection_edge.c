@@ -2969,6 +2969,8 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
  *
  * If <b>excluded_means_no</b> is 1 and Exclude*Nodes is set and excludes
  * this relay, return 0.
+ * XXX022-1090 This StrictNodes business needs more work, a la bug 1090. See
+ * also git commit ef81649d.
  */
 int
 connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
