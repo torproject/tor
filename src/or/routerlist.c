@@ -1070,6 +1070,7 @@ router_pick_trusteddirserver(authority_type_t type, int flags)
 static routerstatus_t *
 router_pick_directory_server_impl(authority_type_t type, int flags)
 {
+  or_options_t *options = get_options();
   routerstatus_t *result;
   smartlist_t *direct, *tunnel;
   smartlist_t *trusted_direct, *trusted_tunnel;
@@ -1079,9 +1080,12 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   int requireother = ! (flags & PDS_ALLOW_SELF);
   int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
   int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
+  int try_excluding = 1, n_excluded = 0;
 
   if (!consensus)
     return NULL;
+
+ retry_without_exclude:
 
   direct = smartlist_create();
   tunnel = smartlist_create();
@@ -1114,6 +1118,11 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
     if ((type & EXTRAINFO_CACHE) &&
         !router_supports_extrainfo(status->identity_digest, 0))
       continue;
+    if (try_excluding && options->ExcludeNodes &&
+        routerset_contains_routerstatus(options->ExcludeNodes, status)) {
+      ++n_excluded;
+      continue;
+    }
 
     /* XXXX IP6 proposal 118 */
     tor_addr_from_ipv4h(&addr, status->addr);
@@ -1155,6 +1164,15 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   smartlist_free(trusted_tunnel);
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
+
+  if (result == NULL && try_excluding && !options->StrictNodes && n_excluded) {
+    /* If we got no result, and we are excluding nodes, and StrictNodes is
+     * not set, try again without excluding nodes. */
+    try_excluding = 0;
+    n_excluded = 0;
+    goto retry_without_exclude;
+  }
+
   return result;
 }
 
@@ -1165,6 +1183,7 @@ static routerstatus_t *
 router_pick_trusteddirserver_impl(authority_type_t type, int flags,
                                   int *n_busy_out)
 {
+  or_options_t *options = get_options();
   smartlist_t *direct, *tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   routerinfo_t *me = router_get_my_routerinfo();
@@ -1175,9 +1194,12 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
   const int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   int n_busy = 0;
+  int try_excluding = 1, n_excluded = 0;
 
   if (!trusted_dir_servers)
     return NULL;
+
+ retry_without_exclude:
 
   direct = smartlist_create();
   tunnel = smartlist_create();
@@ -1197,6 +1219,12 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
+      if (try_excluding && options->ExcludeNodes &&
+          routerset_contains_routerstatus(options->ExcludeNodes,
+                                          &d->fake_status)) {
+        ++n_excluded;
+        continue;
+      }
 
       /* XXXX IP6 proposal 118 */
       tor_addr_from_ipv4h(&addr, d->addr);
@@ -1243,6 +1271,15 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
   smartlist_free(tunnel);
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
+
+  if (result == NULL && try_excluding && !options->StrictNodes && n_excluded) {
+    /* If we got no result, and we are excluding nodes, and StrictNodes is
+     * not set, try again without excluding nodes. */
+    try_excluding = 0;
+    n_excluded = 0;
+    goto retry_without_exclude;
+  }
+
   return result;
 }
 
