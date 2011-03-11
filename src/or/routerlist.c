@@ -1538,6 +1538,8 @@ routerlist_find_my_routerinfo(void)
 /** Find a router that's up, that has this IP address, and
  * that allows exit to this address:port, or return NULL if there
  * isn't a good one.
+ * Don't exit enclave to excluded relays -- it wouldn't actually
+ * hurt anything, but this way there are fewer confused users.
  */
 routerinfo_t *
 router_find_exact_exit_enclave(const char *address, uint16_t port)
@@ -1545,6 +1547,7 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
   uint32_t addr;
   struct in_addr in;
   tor_addr_t a;
+  or_options_t *options = get_options();
 
   if (!tor_inet_aton(address, &in))
     return NULL; /* it's not an IP already */
@@ -1557,7 +1560,8 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
     if (router->addr == addr &&
         router->is_running &&
         compare_tor_addr_to_addr_policy(&a, port, router->exit_policy) ==
-          ADDR_POLICY_ACCEPTED)
+          ADDR_POLICY_ACCEPTED &&
+        !routerset_contains_router(options->_ExcludeExitNodesUnion, router))
       return router;
   });
   return NULL;
