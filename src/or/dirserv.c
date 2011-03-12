@@ -969,11 +969,17 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
   }
 
   if (!answer && running_long_enough_to_decide_unreachable()) {
-    /* not considered reachable. tell rephist. */
+    /* Not considered reachable. tell rephist about that.
+
+       Because we launch a reachability test for each router every
+       REACHABILITY_TEST_CYCLE_PERIOD seconds, then the router has probably
+       been down since at least that time after we last successfully reached
+       it.
+     */
     time_t when = now;
     if (router->last_reachable &&
-        router->last_reachable + REACHABILITY_TEST_PERIOD < now)
-      when = router->last_reachable + REACHABILITY_TEST_PERIOD;
+        router->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD < now)
+      when = router->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD;
     rep_hist_note_router_unreachable(router->cache_info.identity_digest, when);
   }
 

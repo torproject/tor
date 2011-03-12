@@ -872,6 +872,7 @@ run_scheduled_events(time_t now)
   static time_t time_to_check_for_expired_networkstatus = 0;
   static time_t time_to_write_stats_files = 0;
   static time_t time_to_write_bridge_stats = 0;
+  static time_t time_to_launch_reachability_tests = 0;
   static int should_init_bridge_stats = 1;
   static time_t time_to_retry_dns_init = 0;
   or_options_t *options = get_options();
@@ -962,9 +963,10 @@ run_scheduled_events(time_t now)
   if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
 
-  if (now % REACHABILITY_TEST_PERIOD/REACHABILITY_MODULO_PER_TEST == 0 &&
+  if (time_to_launch_reachability_tests < now &&
       (authdir_mode_tests_reachability(options)) &&
        !we_are_hibernating()) {
+    time_to_launch_reachability_tests = now + REACHABILITY_TEST_INTERVAL;
     /* try to determine reachability of the other Tor relays */
     dirserv_test_reachability(now);
   }
