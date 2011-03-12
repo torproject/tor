@@ -529,6 +529,20 @@ get_weighted_fractional_uptime(or_history_t *hist, time_t when)
   return ((double) up) / total;
 }
 
+/** Return how long the router whose identity digest is <b>id</b> has
+ *  been reachable. Return 0 if the router is unknown or currently deemed
+ *  unreachable. */
+long
+rep_hist_get_uptime(const char *id, time_t when)
+{
+  or_history_t *hist = get_or_history(id);
+  if (!hist)
+    return 0;
+  if (!hist->start_of_run || when < hist->start_of_run)
+    return 0;
+  return when - hist->start_of_run;
+}
+
 /** Return an estimated MTBF for the router whose identity digest is
  * <b>id</b>. Return 0 if the router is unknown. */
 double

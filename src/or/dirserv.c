@@ -44,6 +44,8 @@
 
 extern time_t time_of_process_start; /* from main.c */
 
+extern long stats_n_seconds_working; /* from main.c */
+
 /** Do we need to regenerate the v1 directory when someone asks for it? */
 static time_t the_directory_is_dirty = 1;
 /** Do we need to regenerate the v1 runningrouters document when somebody
@@ -1803,7 +1805,22 @@ static int
 dirserv_thinks_router_is_hs_dir(const routerinfo_t *router,
                                 const node_t *node, time_t now)
 {
-  long uptime = real_uptime(router, now);
+
+  long uptime;
+
+  /* If we haven't been running for at least
+   * get_options()->MinUptimeHidServDirectoryV2 seconds, we can't
+   * have accurate data telling us a relay has been up for at least
+   * that long. We also want to allow a bit of slack: Reachability
+   * tests aren't instant. If we haven't been running long enough,
+   * trust the relay. */
+
+  if (stats_n_seconds_working >
+      get_options()->MinUptimeHidServDirectoryV2 * 1.1)
+    uptime = MIN(rep_hist_get_uptime(router->cache_info.identity_digest, now),
+                 real_uptime(router, now));
+  else
+    uptime = real_uptime(router, now);
 
   /* XXX We shouldn't need to check dir_port, but we do because of
    * bug 1693. In the future, once relays set wants_to_be_hs_dir
