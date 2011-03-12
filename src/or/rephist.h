@@ -40,6 +40,7 @@ int rep_hist_record_mtbf_data(time_t now, int missing_means_down);
 int rep_hist_load_mtbf_data(time_t now);
 
 time_t rep_hist_downrate_old_runs(time_t now);
+long rep_hist_get_uptime(const char *id, time_t when);
 double rep_hist_get_stability(const char *id, time_t when);
 double rep_hist_get_weighted_fractional_uptime(const char *id, time_t when);
 long rep_hist_get_weighted_time_known(const char *id, time_t when);
