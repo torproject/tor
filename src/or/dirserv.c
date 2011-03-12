@@ -970,7 +970,11 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
 
   if (!answer && running_long_enough_to_decide_unreachable()) {
     /* not considered reachable. tell rephist. */
-    rep_hist_note_router_unreachable(router->cache_info.identity_digest, now);
+    time_t when = now;
+    if (router->last_reachable &&
+        router->last_reachable + REACHABILITY_TEST_PERIOD < now)
+      when = router->last_reachable + REACHABILITY_TEST_PERIOD;
+    rep_hist_note_router_unreachable(router->cache_info.identity_digest, when);
   }
 
   router->is_running = answer;
@@ -3187,7 +3191,8 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
  * try a few connections per call.
  *
  * The load balancing is such that if we get called once every ten
- * seconds, we will cycle through all the tests in 1280 seconds (a
+ * seconds, we will cycle through all the tests in
+ * 10*REACHABILITY_MASK_PER_TEST seconds (a
  * bit over 20 minutes).
  */
 void
@@ -3214,11 +3219,11 @@ dirserv_test_reachability(time_t now)
       continue; /* bridge authorities only test reachability on bridges */
 //    if (router->cache_info.published_on > cutoff)
 //      continue;
-    if ((((uint8_t)id_digest[0]) % 128) == ctr) {
+    if ((((uint8_t)id_digest[0]) % REACHABILITY_MODULO_PER_TEST) == ctr) {
       dirserv_single_reachability_test(now, router);
     }
   } SMARTLIST_FOREACH_END(router);
-  ctr = (ctr + 1) % 128; /* increment ctr */
+  ctr = (ctr + 1) % REACHABILITY_MODULO_PER_TEST; /* increment ctr */
 }
 
 /** Given a fingerprint <b>fp</b> which is either set if we're looking for a

@@ -12,6 +12,14 @@
 #ifndef _TOR_DIRSERV_H
 #define _TOR_DIRSERV_H
 
+/** What fraction (1 over this number) of the relay ID space do we
+ * (as a directory authority) launch connections to at each reachability
+ * test? */
+#define REACHABILITY_MODULO_PER_TEST 128
+
+/** How many seconds apart are the reachability tests for a given relay? */
+#define REACHABILITY_TEST_PERIOD (10*REACHABILITY_MODULO_PER_TEST)
+
 /** Maximum length of an exit policy summary. */
 #define MAX_EXITPOLICY_SUMMARY_LEN 1000
 

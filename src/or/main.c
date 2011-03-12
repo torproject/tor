@@ -962,8 +962,9 @@ run_scheduled_events(time_t now)
   if (accounting_is_enabled(options))
     accounting_run_housekeeping(now);
 
-  if (now % 10 == 0 && (authdir_mode_tests_reachability(options)) &&
-      !we_are_hibernating()) {
+  if (now % REACHABILITY_TEST_PERIOD/REACHABILITY_MODULO_PER_TEST == 0 &&
+      (authdir_mode_tests_reachability(options)) &&
+       !we_are_hibernating()) {
     /* try to determine reachability of the other Tor relays */
     dirserv_test_reachability(now);
   }
