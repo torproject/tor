@@ -3080,7 +3080,7 @@ dirvote_compute_consensuses(void)
   n_votes = smartlist_len(pending_vote_list);
   if (n_votes <= n_voters/2) {
     log_warn(LD_DIR, "We don't have enough votes to generate a consensus: "
-             "%d of %d", n_votes, n_voters/2);
+             "%d of %d", n_votes, n_voters/2+1);
     goto err;
   }
   tor_assert(pending_vote_list);
