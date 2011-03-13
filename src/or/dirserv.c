@@ -3198,8 +3198,7 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
  *
  * The load balancing is such that if we get called once every ten
  * seconds, we will cycle through all the tests in
- * 10*REACHABILITY_MASK_PER_TEST seconds (a
- * bit over 20 minutes).
+ * REACHABILITY_TEST_CYCLE_PERIOD seconds (a bit over 20 minutes).
  */
 void
 dirserv_test_reachability(time_t now)
