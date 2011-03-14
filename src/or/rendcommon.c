@@ -1008,13 +1008,6 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
              safe_str(desc_id));
     return -1;
   }
-  /* Determine if we are responsible. */
-  if (hid_serv_responsible_for_desc_id(desc_id_digest) < 0) {
-    log_info(LD_REND, "Could not answer fetch request for v2 descriptor; "
-                      "either we are no hidden service directory, or we are "
-                      "not responsible for the requested ID.");
-    return -1;
-  }
   /* Lookup descriptor and return. */
   e = digestmap_get(rend_cache_v2_dir, desc_id_digest);
   if (e) {

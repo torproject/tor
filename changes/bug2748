@@ -1,0 +1,5 @@
+  o Minor bugfixes
+    - Remove dead code from rend_cache_lookup_v2_desc_as_dir.  Fixes
+      part of bug 2748; bugfix on 0.2.0.10-alpha.
+
+
