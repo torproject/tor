@@ -3209,7 +3209,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
                          int from_cache, int from_fetch)
 {
   const char *id_digest;
-  int authdir = authdir_mode_handles_descs(get_options(), router->purpose);
+  or_options_t *options = get_options();
+  int authdir = authdir_mode_handles_descs(options, router->purpose);
   int authdir_believes_valid = 0;
   routerinfo_t *old_router;
   networkstatus_t *consensus = networkstatus_get_latest_consensus();
@@ -3312,6 +3313,20 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     routerlist_insert_old(routerlist, router);
     *msg = "Skipping router descriptor: not in consensus.";
     return ROUTER_NOT_IN_CONSENSUS;
+  }
+
+  /* If we're reading a bridge descriptor from our cache, and we don't
+   * recognize it as one of our currently configured bridges, drop the
+   * descriptor. Otherwise we could end up using it as one of our entry
+   * guards even if it isn't in our Bridge config lines. */
+  if (router->purpose == ROUTER_PURPOSE_BRIDGE && from_cache &&
+      !authdir_mode_bridge(options) &&
+      !routerinfo_is_a_configured_bridge(router)) {
+    log_info(LD_DIR, "Dropping bridge descriptor for '%s' because we have "
+             "no bridge configured at that address.", router->nickname);
+    *msg = "Router descriptor was not a configured bridge.";
+    routerinfo_free(router);
+    return ROUTER_WAS_NOT_WANTED;
   }
 
   /* If we have a router with the same identity key, choose the newer one. */
