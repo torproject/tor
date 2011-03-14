@@ -1116,9 +1116,7 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       log_debug(domain,"circ deliver_window now %d.", layer_hint ?
                 layer_hint->deliver_window : circ->deliver_window);
 
-      if (!optimistic_data) {
-	  circuit_consider_sending_sendme(circ, layer_hint);
-      }
+      circuit_consider_sending_sendme(circ, layer_hint);
 
       if (!conn) {
         log_info(domain,"data cell dropped, unknown stream (streamid %d).",
@@ -1135,9 +1133,14 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       stats_n_data_bytes_received += rh.length;
       connection_write_to_buf((char*)(cell->payload + RELAY_HEADER_SIZE),
                               rh.length, TO_CONN(conn));
+
       if (!optimistic_data) {
-	  connection_edge_consider_sending_sendme(conn);
+        /* Only send a SENDME if we're not getting optimistic data; otherwise
+         * a SENDME could arrive before the CONNECTED.
+         */
+        connection_edge_consider_sending_sendme(conn);
       }
+
       return 0;
     case RELAY_COMMAND_END:
       reason = rh.length > 0 ?
