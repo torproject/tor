@@ -1004,8 +1004,10 @@ rend_cache_lookup_v2_desc_as_dir(const char *desc_id, const char **desc)
   tor_assert(rend_cache_v2_dir);
   if (base32_decode(desc_id_digest, DIGEST_LEN,
                     desc_id, REND_DESC_ID_V2_LEN_BASE32) < 0) {
-    log_warn(LD_REND, "Descriptor ID contains illegal characters: %s",
-             safe_str(desc_id));
+    log_fn(LOG_PROTOCOL_WARN, LD_REND,
+           "Rejecting v2 rendezvous descriptor request -- descriptor ID "
+           "contains illegal characters: %s",
+           safe_str(desc_id));
     return -1;
   }
   /* Lookup descriptor and return. */
