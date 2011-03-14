@@ -886,19 +886,14 @@ consider_testing_reachability(int test_or, int test_dir)
 void
 router_orport_found_reachable(void)
 {
-  if (!can_reach_or_port) {
-    const routerinfo_t *me = router_get_my_routerinfo();
+  const routerinfo_t *me = router_get_my_routerinfo();
+  if (!can_reach_or_port && me) {
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
                get_options()->_PublishServerDescriptor != NO_AUTHORITY ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
-    if (!me) { /* should never happen */
-      log_warn(LD_BUG, "ORPort found reachable, but I have no routerinfo "
-               "yet. Failing to inform controller of success.");
-      return;
-    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
                                 me->address, me->or_port);
@@ -909,18 +904,13 @@ router_orport_found_reachable(void)
 void
 router_dirport_found_reachable(void)
 {
-  if (!can_reach_dir_port) {
-    const routerinfo_t *me = router_get_my_routerinfo();
+  const routerinfo_t *me = router_get_my_routerinfo();
+  if (!can_reach_dir_port && me) {
     log_notice(LD_DIRSERV,"Self-testing indicates your DirPort is reachable "
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
-    if (!me || decide_to_advertise_dirport(get_options(), me->dir_port))
+    if (decide_to_advertise_dirport(get_options(), me->dir_port))
       mark_my_descriptor_dirty();
-    if (!me) { /* should never happen */
-      log_warn(LD_BUG, "DirPort found reachable, but I have no routerinfo "
-               "yet. Failing to inform controller of success.");
-      return;
-    }
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
                                 me->address, me->dir_port);
