@@ -1,0 +1,5 @@
+  o Minor features:
+    - When a relay has failed several reachability tests, be more accurate
+      at recording when it became unreachable, so we can in turn provide
+      more accuracy at assigning Stable, Guard, HSDir, etc flags. Bugfix
+      on 0.2.0.6-alpha. Resolves bug 2716.
