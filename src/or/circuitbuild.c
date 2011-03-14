@@ -4699,7 +4699,8 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
   /* XXXX move this function. */
   /* XXXX overridden addresses should really live in the node_t, so that the
    *   routerinfo_t and the microdesc_t can be immutable.  But we can only
-   *   do that safely if
+   *   do that safely if we know that no function that connects to an OR
+   *   does so through an address from any source other than node_get_addr().
    */
   tor_addr_t addr;
 
