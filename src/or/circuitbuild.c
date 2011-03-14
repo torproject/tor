@@ -4688,6 +4688,55 @@ fetch_bridge_descriptors(or_options_t *options, time_t now)
   SMARTLIST_FOREACH_END(bridge);
 }
 
+/** If our <b>bridge</b> is configured to be a different address than
+ * the bridge gives in <b>node</b>, rewrite the routerinfo
+ * we received to use the address we meant to use. Now we handle
+ * multihomed bridges better.
+ */
+static void
+rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
+{
+  /* XXXX move this function. */
+  /* XXXX overridden addresses should really live in the node_t, so that the
+   *   routerinfo_t and the microdesc_t can be immutable.  But we can only
+   *   do that safely if
+   */
+  tor_addr_t addr;
+
+  if (node->ri) {
+    routerinfo_t *ri = node->ri;
+    tor_addr_from_ipv4h(&addr, ri->addr);
+
+    if (!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+        bridge->port == ri->or_port) {
+      /* they match, so no need to do anything */
+    } else {
+      ri->addr = tor_addr_to_ipv4h(&bridge->addr);
+      tor_free(ri->address);
+      ri->address = tor_dup_ip(ri->addr);
+      ri->or_port = bridge->port;
+      log_info(LD_DIR,
+               "Adjusted bridge '%s' to match configured address %s:%d.",
+               ri->nickname, ri->address, ri->or_port);
+    }
+  }
+  if (node->rs) {
+    routerstatus_t *rs = node->rs;
+    tor_addr_from_ipv4h(&addr, rs->addr);
+
+    if (!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+        bridge->port == rs->or_port) {
+      /* they match, so no need to do anything */
+    } else {
+      rs->addr = tor_addr_to_ipv4h(&bridge->addr);
+      rs->or_port = bridge->port;
+      log_info(LD_DIR,
+               "Adjusted bridge '%s' to match configured address %s:%d.",
+               rs->nickname, fmt_addr(&bridge->addr), rs->or_port);
+    }
+  }
+}
+
 /** We just learned a descriptor for a bridge. See if that
  * digest is in our entry guard list, and add it if not. */
 void
@@ -4702,14 +4751,16 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
     router_set_status(ri->cache_info.identity_digest, 1);
 
     if (bridge) { /* if we actually want to use this one */
-      const node_t *node;
+      node_t *node;
       /* it's here; schedule its re-fetch for a long time from now. */
       if (!from_cache)
         download_status_reset(&bridge->fetch_status);
 
-      node = node_get_by_id(ri->cache_info.identity_digest);
+      node = node_get_mutable_by_id(ri->cache_info.identity_digest);
       tor_assert(node);
+      rewrite_node_address_for_bridge(bridge, node);
       add_an_entry_guard(node, 1);
+
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,
                  from_cache ? "cached" : "fresh");
       /* set entry->made_contact so if it goes down we don't drop it from

@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - Fix a bug where bridge users who configure the non-canonical
+      address of a bridge automatically switch to its canonical
+      address. If a bridge listens at more than one address, it should be
+      able to advertise those addresses independently and any non-blocked
+      addresses should continue to work. Bugfix on Tor 0.2.0.x. Fixes
+      bug 2510.
+
