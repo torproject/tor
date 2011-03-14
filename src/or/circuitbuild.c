@@ -4717,7 +4717,8 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       ri->address = tor_dup_ip(ri->addr);
       ri->or_port = bridge->port;
       log_info(LD_DIR,
-               "Adjusted bridge '%s' to match configured address %s:%d.",
+               "Adjusted bridge routerinfo for '%s' to match configured "
+               "address %s:%d.",
                ri->nickname, ri->address, ri->or_port);
     }
   }
@@ -4732,7 +4733,8 @@ rewrite_node_address_for_bridge(const bridge_info_t *bridge, node_t *node)
       rs->addr = tor_addr_to_ipv4h(&bridge->addr);
       rs->or_port = bridge->port;
       log_info(LD_DIR,
-               "Adjusted bridge '%s' to match configured address %s:%d.",
+               "Adjusted bridge routerstatus for '%s' to match "
+               "configured address %s:%d.",
                rs->nickname, fmt_addr(&bridge->addr), rs->or_port);
     }
   }
