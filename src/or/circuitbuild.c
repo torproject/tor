@@ -4671,6 +4671,29 @@ fetch_bridge_descriptors(or_options_t *options, time_t now)
   SMARTLIST_FOREACH_END(bridge);
 }
 
+/** If our <b>bridge</b> is configured to be a different address than
+ * the bridge gives in its routerinfo <b>ri</b>, rewrite the routerinfo
+ * we received to use the address we meant to use. Now we handle
+ * multihomed bridges better.
+ */
+static void
+rewrite_routerinfo_address_for_bridge(bridge_info_t *bridge, routerinfo_t *ri)
+{
+  tor_addr_t addr;
+  tor_addr_from_ipv4h(&addr, ri->addr);
+
+  if (!tor_addr_compare(&bridge->addr, &addr, CMP_EXACT) &&
+      bridge->port == ri->or_port)
+    return; /* they match, so no need to do anything */
+
+  ri->addr = tor_addr_to_ipv4h(&bridge->addr);
+  tor_free(ri->address);
+  ri->address = tor_dup_ip(ri->addr);
+  ri->or_port = bridge->port;
+  log_info(LD_DIR, "Adjusted bridge '%s' to match configured address %s:%d.",
+           ri->nickname, ri->address, ri->or_port);
+}
+
 /** We just learned a descriptor for a bridge. See if that
  * digest is in our entry guard list, and add it if not. */
 void
@@ -4688,6 +4711,8 @@ learned_bridge_descriptor(routerinfo_t *ri, int from_cache)
       /* it's here; schedule its re-fetch for a long time from now. */
       if (!from_cache)
         download_status_reset(&bridge->fetch_status);
+
+      rewrite_routerinfo_address_for_bridge(bridge, ri);
 
       add_an_entry_guard(ri, 1);
       log_notice(LD_DIR, "new bridge descriptor '%s' (%s)", ri->nickname,

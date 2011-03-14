@@ -43,6 +43,8 @@
 
 extern time_t time_of_process_start; /* from main.c */
 
+extern long stats_n_seconds_working; /* from main.c */
+
 /** Do we need to regenerate the v1 directory when someone asks for it? */
 static time_t the_directory_is_dirty = 1;
 /** Do we need to regenerate the v1 runningrouters document when somebody
@@ -969,8 +971,18 @@ dirserv_set_router_is_running(routerinfo_t *router, time_t now)
   }
 
   if (!answer && running_long_enough_to_decide_unreachable()) {
-    /* not considered reachable. tell rephist. */
-    rep_hist_note_router_unreachable(router->cache_info.identity_digest, now);
+    /* Not considered reachable. tell rephist about that.
+
+       Because we launch a reachability test for each router every
+       REACHABILITY_TEST_CYCLE_PERIOD seconds, then the router has probably
+       been down since at least that time after we last successfully reached
+       it.
+     */
+    time_t when = now;
+    if (router->last_reachable &&
+        router->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD < now)
+      when = router->last_reachable + REACHABILITY_TEST_CYCLE_PERIOD;
+    rep_hist_note_router_unreachable(router->cache_info.identity_digest, when);
   }
 
   router->is_running = answer;
@@ -1775,7 +1787,22 @@ dirserv_thinks_router_is_unreliable(time_t now,
 static int
 dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
 {
-  long uptime = real_uptime(router, now);
+
+  long uptime;
+
+  /* If we haven't been running for at least
+   * get_options()->MinUptimeHidServDirectoryV2 seconds, we can't
+   * have accurate data telling us a relay has been up for at least
+   * that long. We also want to allow a bit of slack: Reachability
+   * tests aren't instant. If we haven't been running long enough,
+   * trust the relay. */
+
+  if (stats_n_seconds_working >
+      get_options()->MinUptimeHidServDirectoryV2 * 1.1)
+    uptime = MIN(rep_hist_get_uptime(router->cache_info.identity_digest, now),
+                 real_uptime(router, now));
+  else
+    uptime = real_uptime(router, now);
 
   /* XXX We shouldn't need to check dir_port, but we do because of
    * bug 1693. In the future, once relays set wants_to_be_hs_dir
@@ -3187,8 +3214,8 @@ dirserv_single_reachability_test(time_t now, routerinfo_t *router)
  * try a few connections per call.
  *
  * The load balancing is such that if we get called once every ten
- * seconds, we will cycle through all the tests in 1280 seconds (a
- * bit over 20 minutes).
+ * seconds, we will cycle through all the tests in
+ * REACHABILITY_TEST_CYCLE_PERIOD seconds (a bit over 20 minutes).
  */
 void
 dirserv_test_reachability(time_t now)
@@ -3214,11 +3241,11 @@ dirserv_test_reachability(time_t now)
       continue; /* bridge authorities only test reachability on bridges */
 //    if (router->cache_info.published_on > cutoff)
 //      continue;
-    if ((((uint8_t)id_digest[0]) % 128) == ctr) {
+    if ((((uint8_t)id_digest[0]) % REACHABILITY_MODULO_PER_TEST) == ctr) {
       dirserv_single_reachability_test(now, router);
     }
   } SMARTLIST_FOREACH_END(router);
-  ctr = (ctr + 1) % 128; /* increment ctr */
+  ctr = (ctr + 1) % REACHABILITY_MODULO_PER_TEST; /* increment ctr */
 }
 
 /** Given a fingerprint <b>fp</b> which is either set if we're looking for a

@@ -1,0 +1,9 @@
+  o Minor bugfixes:
+    - When we restart our relay, we might get a successful connection
+      from the outside before we've started our reachability tests,
+      triggering a warning: "ORPort found reachable, but I have no
+      routerinfo yet. Failing to inform controller of success." This
+      bug was harmless unless Tor is running under a controller
+      like Vidalia, in which case the controller would never get a
+      REACHABILITY_SUCCEEDED status event. Bugfix on 0.1.2.6-alpha;
+      fixes bug 1172.
