@@ -1031,6 +1031,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   relay_header_t rh;
   unsigned domain = layer_hint?LD_APP:LD_EXIT;
   int reason;
+  int optimistic_data = 0;  /* Set to 1 if we receive data on a stream
+			       that's in the EXIT_CONN_STATE_RESOLVING
+			       or EXIT_CONN_STATE_CONNECTING states.*/
 
   tor_assert(cell);
   tor_assert(circ);
@@ -1050,9 +1053,20 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
   /* either conn is NULL, in which case we've got a control cell, or else
    * conn points to the recognized stream. */
 
-  if (conn && !connection_state_is_open(TO_CONN(conn)))
-    return connection_edge_process_relay_cell_not_open(
-             &rh, cell, circ, conn, layer_hint);
+  if (conn && !connection_state_is_open(TO_CONN(conn))) {
+    if (conn->_base.type == CONN_TYPE_EXIT &&
+	    (conn->_base.state == EXIT_CONN_STATE_CONNECTING ||
+		conn->_base.state == EXIT_CONN_STATE_RESOLVING) &&
+	rh.command == RELAY_COMMAND_DATA) {
+	/* We're going to allow DATA cells to be delivered to an exit
+	 * node in state EXIT_CONN_STATE_CONNECTING or
+	 * EXIT_CONN_STATE_RESOLVING.  This speeds up HTTP, for example. */
+	optimistic_data = 1;
+    } else {
+	return connection_edge_process_relay_cell_not_open(
+		 &rh, cell, circ, conn, layer_hint);
+    }
+  }
 
   switch (rh.command) {
     case RELAY_COMMAND_DROP:
@@ -1102,7 +1116,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       log_debug(domain,"circ deliver_window now %d.", layer_hint ?
                 layer_hint->deliver_window : circ->deliver_window);
 
-      circuit_consider_sending_sendme(circ, layer_hint);
+      if (!optimistic_data) {
+	  circuit_consider_sending_sendme(circ, layer_hint);
+      }
 
       if (!conn) {
         log_info(domain,"data cell dropped, unknown stream (streamid %d).",
@@ -1119,7 +1135,9 @@ connection_edge_process_relay_cell(cell_t *cell, circuit_t *circ,
       stats_n_data_bytes_received += rh.length;
       connection_write_to_buf((char*)(cell->payload + RELAY_HEADER_SIZE),
                               rh.length, TO_CONN(conn));
-      connection_edge_consider_sending_sendme(conn);
+      if (!optimistic_data) {
+	  connection_edge_consider_sending_sendme(conn);
+      }
       return 0;
     case RELAY_COMMAND_END:
       reason = rh.length > 0 ?
