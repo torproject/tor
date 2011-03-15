@@ -301,6 +301,23 @@ connection_edge_end_errno(edge_connection_t *conn)
   return connection_edge_end(conn, reason);
 }
 
+/** We just wrote some data to <b>conn</b>; act appropriately.
+ *
+ * (That is, if it's open, consider sending a stream-level sendme cell if we
+ * have just flushed enough.)
+ */
+int
+connection_edge_flushed_some(edge_connection_t *conn)
+{
+  switch (conn->_base.state) {
+    case AP_CONN_STATE_OPEN:
+    case EXIT_CONN_STATE_OPEN:
+      connection_edge_consider_sending_sendme(conn);
+      break;
+  }
+  return 0;
+}
+
 /** Connection <b>conn</b> has finished writing and has no bytes left on
  * its outbuf.
  *
