@@ -1403,8 +1403,9 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
-/** Called when we've just received a relay data cell, or when
- * we've just finished flushing all bytes to stream <b>conn</b>.
+/** Called when we've just received a relay data cell, when
+ * we've just finished flushing all bytes to stream <b>conn</b>,
+ * or when we've flushed *some* bytes to the stream <b>conn</b>.
  *
  * If conn->outbuf is not too full, and our deliver window is
  * low, send back a suitable number of stream-level sendme cells.
