@@ -3259,7 +3259,13 @@ _connection_write_to_buf_impl(const char *string, size_t len,
     return;
   }
 
-  connection_start_writing(conn);
+  /* If we receive optimistic data in the EXIT_CONN_STATE_RESOLVING
+   * state, we don't want to try to write it right away, since
+   * conn->write_event won't be set yet.  Otherwise, write data from
+   * this conn as the socket is available. */
+  if (conn->write_event) {
+    connection_start_writing(conn);
+  }
   if (zlib) {
     conn->outbuf_flushlen += buf_datalen(conn->outbuf) - old_datalen;
   } else {
@@ -3837,8 +3843,15 @@ assert_connection_ok(connection_t *conn, time_t now)
     tor_assert(conn->s < 0);
 
   if (conn->outbuf_flushlen > 0) {
-    tor_assert(connection_is_writing(conn) || conn->write_blocked_on_bw ||
-            (CONN_IS_EDGE(conn) && TO_EDGE_CONN(conn)->edge_blocked_on_circ));
+    /* With optimistic data, we may have queued data in
+     * EXIT_CONN_STATE_RESOLVING while the conn is not yet marked to writing.
+     * */
+    tor_assert((conn->type == CONN_TYPE_EXIT &&
+                conn->state == EXIT_CONN_STATE_RESOLVING) ||
+               connection_is_writing(conn) ||
+               conn->write_blocked_on_bw ||
+               (CONN_IS_EDGE(conn) &&
+                TO_EDGE_CONN(conn)->edge_blocked_on_circ));
   }
 
   if (conn->hold_open_until_flushed)
