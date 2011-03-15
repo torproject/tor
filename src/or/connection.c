@@ -1221,7 +1221,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   }
 
   if (connection_init_accepted_conn(newconn, conn->type) < 0) {
-    if (! conn->marked_for_close)
+    if (! newconn->marked_for_close)
       connection_mark_for_close(newconn);
     return 0;
   }
