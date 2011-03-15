@@ -3359,6 +3359,8 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       write_http_status_line(conn, status, "Vote stored");
     } else {
       tor_assert(msg);
+      log_warn(LD_DIRSERV, "Rejected vote from %s (\"%s\").",
+               conn->_base.address, msg);
       write_http_status_line(conn, status, msg);
     }
     goto done;

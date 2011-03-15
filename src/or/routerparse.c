@@ -2822,7 +2822,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     ns->flavor = flav = flavor;
   }
   if (flav != FLAV_NS && ns_type != NS_TYPE_CONSENSUS) {
-    log_warn(LD_DIR, "Flavor found on non-consenus networkstatus.");
+    log_warn(LD_DIR, "Flavor found on non-consensus networkstatus.");
     goto err;
   }
 
