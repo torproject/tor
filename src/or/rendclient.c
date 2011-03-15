@@ -404,7 +404,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   tor_assert(rend_query);
   /* Determine responsible dirs. Even if we can't get all we want,
    * work with the ones we have. If it's empty, we'll notice below. */
-  (int) hid_serv_get_responsible_directories(responsible_dirs, desc_id);
+  hid_serv_get_responsible_directories(responsible_dirs, desc_id);
 
   base32_encode(desc_id_base32, sizeof(desc_id_base32),
                 desc_id, DIGEST_LEN);
