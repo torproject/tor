@@ -507,7 +507,7 @@ connection_or_init_conn_from_address(or_connection_t *conn,
  * Requires that both input connections are open; not is_bad_for_new_circs,
  * and not impossibly non-canonical.
  *
- * If </b>forgive_new_connections</b> is true, then we do not call
+ * If <b>forgive_new_connections</b> is true, then we do not call
  * <b>a</b>better than <b>b</b> simply because b has no circuits,
  * unless b is also relatively old.
  */

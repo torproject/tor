@@ -15,6 +15,8 @@
 /* This is required on rh7 to make strptime not complain.
  * We also need it to make memmem get defined (where available)
  */
+/* XXXX023 We should just use AC_USE_SYSTEM_EXTENSIONS in our autoconf,
+ * and get this (and other important stuff!) automatically */
 #define _GNU_SOURCE
 
 #include "compat.h"
@@ -689,7 +691,9 @@ touch_file(const char *fname)
 
 /** Represents a lockfile on which we hold the lock. */
 struct tor_lockfile_t {
+  /** Name of the file */
   char *filename;
+  /** File descriptor used to hold the file open */
   int fd;
 };
 
@@ -795,7 +799,8 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
   tor_free(lockfile);
 }
 
-/* Some old versions of Unix didn't define constants for these values,
+/** @{ */
+/** Some old versions of Unix didn't define constants for these values,
  * and instead expect you to say 0, 1, or 2. */
 #ifndef SEEK_CUR
 #define SEEK_CUR 1
@@ -803,6 +808,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
 #ifndef SEEK_END
 #define SEEK_END 2
 #endif
+/** @} */
 
 /** Return the position of <b>fd</b> with respect to the start of the file. */
 off_t
@@ -842,6 +848,7 @@ static int n_sockets_open = 0;
 /** Mutex to protect open_sockets, max_socket, and n_sockets_open. */
 static tor_mutex_t *socket_accounting_mutex = NULL;
 
+/** Helper: acquire the socket accounting lock. */
 static INLINE void
 socket_accounting_lock(void)
 {
@@ -850,6 +857,7 @@ socket_accounting_lock(void)
   tor_mutex_acquire(socket_accounting_mutex);
 }
 
+/** Helper: release the socket accounting lock. */
 static INLINE void
 socket_accounting_unlock(void)
 {
@@ -908,6 +916,7 @@ tor_close_socket(int s)
   return r;
 }
 
+/** @{ */
 #ifdef DEBUG_SOCKET_COUNTING
 /** Helper: if DEBUG_SOCKET_COUNTING is enabled, remember that <b>s</b> is
  * now an open socket. */
@@ -932,6 +941,7 @@ mark_socket_open(int s)
 #else
 #define mark_socket_open(s) STMT_NIL
 #endif
+/** @} */
 
 /** As socket(), but counts the number of open sockets. */
 int
@@ -1145,6 +1155,8 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
 #endif
 }
 
+/** Number of extra file descriptors to keep in reserve beyond those that we
+ * tell Tor it's allowed to use. */
 #define ULIMIT_BUFFER 32 /* keep 32 extra fd's beyond _ConnLimit */
 
 /** Learn the maximum allowed number of file descriptors. (Some systems
@@ -1257,6 +1269,7 @@ set_max_file_descriptors(rlim_t limit, int *max_out)
 static int
 log_credential_status(void)
 {
+/** Log level to use when describing non-error UID/GID status. */
 #define CREDENTIAL_LOG_LEVEL LOG_INFO
   /* Real, effective and saved UIDs */
   uid_t ruid, euid, suid;
@@ -2084,6 +2097,12 @@ tor_gettimeofday(struct timeval *timeval)
 #define TIME_FNS_NEED_LOCKS
 #endif
 
+/** @{ */
+/** As localtime_r, but defined for platforms that don't have it:
+ *
+ * Convert *<b>timep</b> to a struct tm in local time, and store the value in
+ * *<b>result</b>.  Return the result on success, or NULL on failure.
+ */
 #ifndef HAVE_LOCALTIME_R
 #ifdef TIME_FNS_NEED_LOCKS
 struct tm *
@@ -2111,7 +2130,14 @@ tor_localtime_r(const time_t *timep, struct tm *result)
 }
 #endif
 #endif
+/** @} */
 
+/** @{ */
+/** As gmtimee_r, but defined for platforms that don't have it:
+ *
+ * Convert *<b>timep</b> to a struct tm in UTC, and store the value in
+ * *<b>result</b>.  Return the result on success, or NULL on failure.
+ */
 #ifndef HAVE_GMTIME_R
 #ifdef TIME_FNS_NEED_LOCKS
 struct tm *
@@ -2139,6 +2165,7 @@ tor_gmtime_r(const time_t *timep, struct tm *result)
 }
 #endif
 #endif
+/** @} */
 
 #if defined(USE_WIN32_THREADS)
 void

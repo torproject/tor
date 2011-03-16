@@ -638,15 +638,27 @@ smartlist_uniq_strings(smartlist_t *sl)
  *   }
  */
 
-/* For a 1-indexed array, we would use LEFT_CHILD[x] = 2*x and RIGHT_CHILD[x]
- * = 2*x + 1.  But this is C, so we have to adjust a little. */
+/** @{ */
+/** Functions to manipulate heap indices to find a node's parent and children.
+ *
+ * For a 1-indexed array, we would use LEFT_CHILD[x] = 2*x and RIGHT_CHILD[x]
+ *   = 2*x + 1.  But this is C, so we have to adjust a little. */
 //#define LEFT_CHILD(i)  ( ((i)+1)*2 - 1)
 //#define RIGHT_CHILD(i) ( ((i)+1)*2 )
 //#define PARENT(i)      ( ((i)+1)/2 - 1)
 #define LEFT_CHILD(i)  ( 2*(i) + 1 )
 #define RIGHT_CHILD(i) ( 2*(i) + 2 )
 #define PARENT(i)      ( ((i)-1) / 2 )
+/** }@ */
 
+/** @{ */
+/** Helper macros for heaps: Given a local variable <b>idx_field_offset</b>
+ * set to the offset of an integer index within the heap element structure,
+ * IDX_OF_ITEM(p) gives you the index of p, and IDXP(p) gives you a pointer to
+ * where p's index is stored.  Given additionally a local smartlist <b>sl</b>,
+ * UPDATE_IDX(i) sets the index of the element at <b>i</b> to the correct
+ * value (that is, to <b>i</b>).
+ */
 #define IDXP(p) ((int*)STRUCT_VAR_P(p, idx_field_offset))
 
 #define UPDATE_IDX(i)  do {                            \
@@ -655,6 +667,7 @@ smartlist_uniq_strings(smartlist_t *sl)
   } while (0)
 
 #define IDX_OF_ITEM(p) (*IDXP(p))
+/** @} */
 
 /** Helper. <b>sl</b> may have at most one violation of the heap property:
  * the item at <b>idx</b> may be greater than one or both of its children.

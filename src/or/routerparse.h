@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file routerpase.h
+ * \file routerparse.h
  * \brief Header file for routerparse.c.
  **/
 

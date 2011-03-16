@@ -458,7 +458,7 @@ circuit_build_times_rewind_history(circuit_build_times_t *cbt, int n)
  * Add a new build time value <b>time</b> to the set of build times. Time
  * units are milliseconds.
  *
- * circuit_build_times <b>cbt</a> is a circular array, so loop around when
+ * circuit_build_times <b>cbt</b> is a circular array, so loop around when
  * array is full.
  */
 int
@@ -656,7 +656,7 @@ circuit_build_times_update_state(circuit_build_times_t *cbt,
 /**
  * Shuffle the build times array.
  *
- * Stolen from http://en.wikipedia.org/wiki/Fisher\u2013Yates_shuffle
+ * Adapted from http://en.wikipedia.org/wiki/Fisher-Yates_shuffle
  */
 static void
 circuit_build_times_shuffle_and_store_array(circuit_build_times_t *cbt,

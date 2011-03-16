@@ -79,6 +79,7 @@ method_bits(compress_method_t method)
   return method == GZIP_METHOD ? 15+16 : 15;
 }
 
+/** @{ */
 /* These macros define the maximum allowable compression factor.  Anything of
  * size greater than CHECK_FOR_COMPRESSION_BOMB_AFTER is not allowed to
  * have an uncompression factor (uncompressed size:compressed size ratio) of
@@ -94,6 +95,7 @@ method_bits(compress_method_t method)
  */
 #define MAX_UNCOMPRESSION_FACTOR 25
 #define CHECK_FOR_COMPRESSION_BOMB_AFTER (1024*64)
+/** @} */
 
 /** Return true if uncompressing an input of size <b>in_size</b> to an input
  * of size at least <b>size_out</b> looks like a compression bomb. */
@@ -389,12 +391,12 @@ detect_compression_method(const char *in, size_t in_len)
 /** Internal state for an incremental zlib compression/decompression.  The
  * body of this struct is not exposed. */
 struct tor_zlib_state_t {
-  struct z_stream_s stream;
-  int compress;
+  struct z_stream_s stream; /**< The zlib stream */
+  int compress; /**< True if we are compressing; false if we are inflating */
 
-  /* Number of bytes read so far.  Used to detect zlib bombs. */
+  /** Number of bytes read so far.  Used to detect zlib bombs. */
   size_t input_so_far;
-  /* Number of bytes written so far.  Used to detect zlib bombs. */
+  /** Number of bytes written so far.  Used to detect zlib bombs. */
   size_t output_so_far;
 };
 
