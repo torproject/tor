@@ -788,7 +788,7 @@ tor_addr_compare(const tor_addr_t *addr1, const tor_addr_t *addr2,
  * Reduce over-specific masks (>128 for ipv6, >32 for ipv4) to 128 or 32.
  *
  * The mask is interpreted relative to <b>addr1</b>, so that if a is
- * ::ffff:1.2.3.4, and b is 3.4.5.6,
+ * \::ffff:1.2.3.4, and b is 3.4.5.6,
  * tor_addr_compare_masked(a,b,100,CMP_SEMANTIC) is the same as
  * -tor_addr_compare_masked(b,a,4,CMP_SEMANTIC).
  *
