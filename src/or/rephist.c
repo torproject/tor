@@ -2337,7 +2337,6 @@ typedef struct circ_buffer_stats_t {
   uint32_t local_circ_id;
 } circ_buffer_stats_t;
 
-/** Holds stats. */
 smartlist_t *circuits_for_buffer_stats = NULL;
 
 /** Remember cell statistics for circuit <b>circ</b> at time
