@@ -390,7 +390,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
 
 /** Output a message to the log.  It gets logged to all logfiles that
  * care about messages with <b>severity</b> in <b>domain</b>. The content
- * if formatted printf style 
+ * is formatted printf style basedc on <b>format</b> and extra arguments.
  * */
 void
 tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
@@ -406,8 +406,8 @@ tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
 #ifdef __GNUC__
 /** GCC-based implementation of the log_fn backend, used when we have
- * variadic macros. All arguments are as for log_fn, except for <b>fn</b>, which
- * is the name of the calling functions. */
+ * variadic macros. All arguments are as for log_fn, except for
+ * <b>fn</b>, which is the name of the calling functions. */
 void
 _log_fn(int severity, log_domain_mask_t domain, const char *fn,
         const char *format, ...)

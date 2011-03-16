@@ -384,12 +384,14 @@ test_crypto_pk(void)
   /* Now try signing. */
   strlcpy(data1, "Ossifrage", 1024);
   test_eq(128, crypto_pk_private_sign(pk1, data2, sizeof(data2), data1, 10));
-  test_eq(10, crypto_pk_public_checksig(pk1, data3, sizeof(data3), data2, 128));
+  test_eq(10,
+          crypto_pk_public_checksig(pk1, data3, sizeof(data3), data2, 128));
   test_streq(data3, "Ossifrage");
   /* Try signing digests. */
   test_eq(128, crypto_pk_private_sign_digest(pk1, data2, sizeof(data2),
                                              data1, 10));
-  test_eq(20, crypto_pk_public_checksig(pk1, data3, sizeof(data3), data2, 128));
+  test_eq(20,
+          crypto_pk_public_checksig(pk1, data3, sizeof(data3), data2, 128));
   test_eq(0, crypto_pk_public_checksig_digest(pk1, data1, 10, data2, 128));
   test_eq(-1, crypto_pk_public_checksig_digest(pk1, data1, 11, data2, 128));
 
