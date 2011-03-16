@@ -36,8 +36,12 @@
 #include "torlog.h"
 #include "container.h"
 
+/** @{ */
+/** The string we stick at the end of a log message when it is too long,
+ * and its length. */
 #define TRUNCATED_STR "[...truncated]"
 #define TRUNCATED_STR_LEN 14
+/** @} */
 
 /** Information for a single logfile; only used in log.c */
 typedef struct logfile_t {
@@ -109,17 +113,19 @@ static int syslog_count = 0;
 /** Represents a log message that we are going to send to callback-driven
  * loggers once we can do so in a non-reentrant way. */
 typedef struct pending_cb_message_t {
-  int severity;
-  log_domain_mask_t domain;
-  char *msg;
+  int severity; /**< The severity of the message */
+  log_domain_mask_t domain; /**< The domain of the message */
+  char *msg; /**< The content of the message */
 } pending_cb_message_t;
 
 /** Log messages waiting to be replayed onto callback-based logs */
 static smartlist_t *pending_cb_messages = NULL;
 
+/** Lock the log_mutex to prevent others from changing the logfile_t list */
 #define LOCK_LOGS() STMT_BEGIN                                          \
   tor_mutex_acquire(&log_mutex);                                        \
   STMT_END
+/** Unlock the log_mutex */
 #define UNLOCK_LOGS() STMT_BEGIN tor_mutex_release(&log_mutex); STMT_END
 
 /** What's the lowest log level anybody cares about?  Checking this lets us
@@ -382,7 +388,10 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
   UNLOCK_LOGS();
 }
 
-/** Output a message to the log. */
+/** Output a message to the log.  It gets logged to all logfiles that
+ * care about messages with <b>severity</b> in <b>domain</b>. The content
+ * if formatted printf style 
+ * */
 void
 tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
 {
@@ -396,6 +405,9 @@ tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
 
 /** Output a message to the log, prefixed with a function name <b>fn</b>. */
 #ifdef __GNUC__
+/** GCC-based implementation of the log_fn backend, used when we have
+ * variadic macros. All arguments are as for log_fn, except for <b>fn</b>, which
+ * is the name of the calling functions. */
 void
 _log_fn(int severity, log_domain_mask_t domain, const char *fn,
         const char *format, ...)
@@ -408,6 +420,11 @@ _log_fn(int severity, log_domain_mask_t domain, const char *fn,
   va_end(ap);
 }
 #else
+/** @{ */
+/** Variant implementation of log_fn, log_debug, log_info,... for C compilers
+ * without variadic macros.  In this case, the calling function sets
+ * _log_fn_function_name to the name of the function, then invokes the
+ * appropriate _log_fn, _log_debug, etc. */
 const char *_log_fn_function_name=NULL;
 void
 _log_fn(int severity, log_domain_mask_t domain, const char *format, ...)
@@ -476,6 +493,7 @@ _log_err(log_domain_mask_t domain, const char *format, ...)
   va_end(ap);
   _log_fn_function_name = NULL;
 }
+/** @} */
 #endif
 
 /** Free all storage held by <b>victim</b>. */

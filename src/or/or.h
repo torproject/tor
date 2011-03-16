@@ -848,9 +848,13 @@ typedef struct cell_t {
 
 /** Parsed variable-length onion routing cell. */
 typedef struct var_cell_t {
+  /** Type of the cell: CELL_VERSIONS, etc. */
   uint8_t command;
+  /** Circuit thich received the cell */
   circid_t circ_id;
+  /** Number of bytes actually stored in <b>payload</b> */
   uint16_t payload_len;
+  /** Payload of this cell */
   uint8_t payload[1];
 } var_cell_t;
 
@@ -1679,8 +1683,13 @@ typedef struct networkstatus_v2_t {
                          * sorted by identity_digest. */
 } networkstatus_v2_t;
 
+/** Linked list of microdesc hash lines for a single router in a directory
+ * vote.
+ */
 typedef struct vote_microdesc_hash_t {
+  /** Next element in the list, or NULL. */
   struct vote_microdesc_hash_t *next;
+  /** The raw contents of the microdesc hash line, excluding the "m". */
   char *microdesc_hash_line;
 } vote_microdesc_hash_t;
 
@@ -1692,6 +1701,7 @@ typedef struct vote_routerstatus_t {
                    * networkstatus_t.known_flags. */
   char *version; /**< The version that the authority says this router is
                   * running. */
+  /** The hash or hashes that the authority claims this microdesc has. */
   vote_microdesc_hash_t *microdesc;
 } vote_routerstatus_t;
 
@@ -3218,8 +3228,19 @@ typedef struct {
 } fp_pair_t;
 
 /********************************* dirserv.c ***************************/
+
+/** An enum to describe what format we're generating a routerstatus line in.
+ */
 typedef enum {
-  NS_V2, NS_V3_CONSENSUS, NS_V3_VOTE, NS_CONTROL_PORT,
+  /** For use in a v2 opinion */
+  NS_V2,
+  /** For use in a consensus networkstatus document (ns flavor) */
+  NS_V3_CONSENSUS,
+  /** For use in a vote networkstatus document */
+  NS_V3_VOTE,
+  /** For passing to the controlport in response to a GETINFO request */
+  NS_CONTROL_PORT,
+  /** For use in a consensus networkstatus document (microdesc flavor) */
   NS_V3_CONSENSUS_MICRODESC
 } routerstatus_format_type_t;
 
@@ -3236,9 +3257,14 @@ typedef struct measured_bw_line_t {
 
 /** Describes the schedule by which votes should be generated. */
 typedef struct vote_timing_t {
+  /** Length in seconds between one consensus becoming valid and the next
+   * becoming valid. */
   int vote_interval;
+  /** For how many intervals is a consensus valid? */
   int n_intervals_valid;
+  /** Time in seconds allowed to propagate votes */
   int vote_delay;
+  /** Time in seconds allowed to propagate signatures */
   int dist_delay;
 } vote_timing_t;
 

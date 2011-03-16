@@ -36,13 +36,19 @@
 */
 typedef uint32_t le_version_t;
 
-/* Macros: returns the number of a libevent version. */
+/** @{ */
+/** Macros: returns the number of a libevent version as a le_version_t */
 #define V(major, minor, patch) \
   (((major) << 24) | ((minor) << 16) | ((patch) << 8))
 #define V_OLD(major, minor, patch) \
   V((major), (minor), (patch)-'a'+1)
+/** @} */
 
+/** Represetns a version of libevent so old we can't figure out what version
+ * it is. */
 #define LE_OLD V(0,0,0)
+/** Represents a version of libevent so weird we can't figure out what version
+ * it it. */
 #define LE_OTHER V(0,0,99)
 
 static le_version_t tor_get_libevent_version(const char **v_out);
@@ -199,8 +205,8 @@ tor_libevent_get_base(void)
 }
 
 #ifndef HAVE_EVENT_BASE_LOOPEXIT
-/* Replacement for event_base_loopexit on some very old versions of Libevent
-   that we are not yet brave enough to deprecate. */
+/** Replacement for event_base_loopexit on some very old versions of Libevent
+ * that we are not yet brave enough to deprecate. */
 int
 tor_event_base_loopexit(struct event_base *base, struct timeval *tv)
 {

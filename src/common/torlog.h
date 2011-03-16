@@ -99,6 +99,7 @@
  * immediately.  Used as a flag, not a log domain. */
 #define LD_NOCB (1u<<31)
 
+/** Mask of zero or more log domains, OR'd together. */
 typedef uint32_t log_domain_mask_t;
 
 /** Configures which severities are logged for each logging domain for a given

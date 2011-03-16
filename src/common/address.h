@@ -53,8 +53,20 @@ tor_addr_to_in6(const tor_addr_t *a)
   return a->family == AF_INET6 ? &a->addr.in6_addr : NULL;
 }
 
+/** Given an IPv6 address <b>x</b>, yield it as an array of uint8_t.
+ *
+ * Requires that <b>x</b> is actually an IPv6 address.
+ */
 #define tor_addr_to_in6_addr8(x) tor_addr_to_in6(x)->s6_addr
+/** Given an IPv6 address <b>x</b>, yield it as an array of uint16_t.
+ *
+ * Requires that <b>x</b> is actually an IPv6 address.
+ */
 #define tor_addr_to_in6_addr16(x) S6_ADDR16(*tor_addr_to_in6(x))
+/** Given an IPv6 address <b>x</b>, yield it as an array of uint32_t.
+ *
+ * Requires that <b>x</b> is actually an IPv6 address.
+ */
 #define tor_addr_to_in6_addr32(x) S6_ADDR32(*tor_addr_to_in6(x))
 
 /** Return an IPv4 address in network order for <b>a</b>, or 0 if
@@ -71,7 +83,7 @@ tor_addr_to_ipv4h(const tor_addr_t *a)
 {
   return ntohl(tor_addr_to_ipv4n(a));
 }
-/* Given an IPv6 address, return its mapped IPv4 address in host order, or
+/** Given an IPv6 address, return its mapped IPv4 address in host order, or
  * 0 if <b>a</b> is not an IPv6 address.
  *
  * (Does not check whether the address is really a mapped address */
@@ -102,8 +114,14 @@ tor_addr_eq_ipv4h(const tor_addr_t *a, uint32_t u)
   return a->family == AF_INET ? (tor_addr_to_ipv4h(a) == u) : 0;
 }
 
-#define TOR_ADDR_BUF_LEN 48 /* [ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]
-                             */
+/** Length of a buffer that you need to allocate to be sure you can encode
+ * any tor_addr_t.
+ *
+ * This allows enough space for
+ *   "[ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255]",
+ * plus a terminating NUL.
+ */
+#define TOR_ADDR_BUF_LEN 48
 
 int tor_addr_lookup(const char *name, uint16_t family, tor_addr_t *addr_out);
 char *tor_dup_addr(const tor_addr_t *addr) ATTR_MALLOC;
@@ -154,6 +172,7 @@ void tor_addr_from_ipv4n(tor_addr_t *dest, uint32_t v4addr);
 #define tor_addr_from_ipv4h(dest, v4addr)       \
   tor_addr_from_ipv4n((dest), htonl(v4addr))
 void tor_addr_from_ipv6_bytes(tor_addr_t *dest, const char *bytes);
+/** Set <b>dest</b> to the IPv4 address incoded in <b>in</b>. */
 #define tor_addr_from_in(dest, in) \
   tor_addr_from_ipv4n((dest), (in)->s_addr);
 void tor_addr_from_in6(tor_addr_t *dest, const struct in6_addr *in6);

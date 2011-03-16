@@ -15,6 +15,7 @@
  * and macros defined here.
  **/
 typedef struct smartlist_t {
+  /** @{ */
   /** <b>list</b> has enough capacity to store exactly <b>capacity</b> elements
    * before it needs to be resized.  Only the first <b>num_used</b> (\<=
    * capacity) elements point to valid data.
@@ -22,6 +23,7 @@ typedef struct smartlist_t {
   void **list;
   int num_used;
   int capacity;
+  /** @} */
 } smartlist_t;
 
 smartlist_t *smartlist_create(void);
@@ -595,9 +597,9 @@ bitarray_is_set(bitarray_t *b, int bit)
 
 /** A set of digests, implemented as a Bloom filter. */
 typedef struct {
-  int mask; /* One less than the number of bits in <b>ba</b>; always one less
+  int mask; /**< One less than the number of bits in <b>ba</b>; always one less
              * than a power of two. */
-  bitarray_t *ba; /* A bit array to implement the Bloom filter. */
+  bitarray_t *ba; /**< A bit array to implement the Bloom filter. */
 } digestset_t;
 
 #define BIT(n) ((n) & set->mask)

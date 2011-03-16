@@ -508,7 +508,8 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
   tor_assert(s);
   tor_assert(addr_out);
 
-  /* IP, [], /mask, ports */
+  /** Longest possible length for an address, mask, and port-range combination.
+   * Includes IP, [], /mask, :, ports */
 #define MAX_ADDRESS_LENGTH (TOR_ADDR_BUF_LEN+2+(1+INET_NTOA_BUF_LEN)+12+1)
 
   if (strlen(s) > MAX_ADDRESS_LENGTH) {
@@ -800,6 +801,8 @@ int
 tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
                         maskbits_t mbits, tor_addr_comparison_t how)
 {
+  /** Helper: Evaluates to -1 if a is less than b, 0 if a equals b, or 1 if a
+   * is greater than b.  May evaluate a and b more than once.  */
 #define TRISTATE(a,b) (((a)<(b))?-1: (((a)==(b))?0:1))
   sa_family_t family1, family2, v_family1, v_family2;
 
