@@ -252,9 +252,9 @@ tor_libevent_get_method(void)
 #endif
 }
 
-/** Return the le_version_t for the current version of libevent.  If the
- * version is very new, return LE_OTHER.  If the version is so old that it
- * doesn't support event_get_version(), return LE_OLD. DOCDOC */
+/** Return the le_version_t for the version of libevent specified in the
+ * string <b>v</b>.  If the version is very new or uses an unrecognized
+ * version, format, return LE_OTHER. */
 static le_version_t
 tor_decode_libevent_version(const char *v)
 {
@@ -304,7 +304,7 @@ le_versions_compatibility(le_version_t v)
 }
 
 /** Return the version number of the currently running version of Libevent.
-    See le_version_t for info on the format.
+ * See le_version_t for info on the format.
  */
 static le_version_t
 tor_get_libevent_version(const char **v_out)

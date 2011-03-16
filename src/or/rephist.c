@@ -2326,7 +2326,6 @@ typedef struct circ_buffer_stats_t {
   double mean_time_cells_in_queue;
 } circ_buffer_stats_t;
 
-/** Holds stats. */
 smartlist_t *circuits_for_buffer_stats = NULL;
 
 /** Remember cell statistics for circuit <b>circ</b> at time

@@ -4874,10 +4874,10 @@ options_save_current(void)
 }
 
 /** Mapping from a unit name to a multiplier for converting that unit into a
- * base unit. */
+ * base unit.  Used by config_parse_unit. */
 struct unit_table_t {
-  const char *unit;
-  uint64_t multiplier;
+  const char *unit; /**< The name of the unit */
+  uint64_t multiplier; /**< How many of the base unit appear in this unit */
 };
 
 /** Table to map the names of memory units to the number of bytes they

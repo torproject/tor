@@ -64,5 +64,7 @@ void cell_ewma_set_scale_factor(or_options_t *options,
                                 networkstatus_t *consensus);
 void circuit_clear_cell_queue(circuit_t *circ, or_connection_t *orconn);
 
+void tor_gettimeofday_cache_clear(void);
+
 #endif
 
