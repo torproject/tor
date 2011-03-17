@@ -1,0 +1,3 @@
+  o Minor build issues
+    - We incorrectly linked libevent when configured with
+      --enable-static-libevent.  Fixes bug 2698.
