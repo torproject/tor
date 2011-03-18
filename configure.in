@@ -865,12 +865,13 @@ fi
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
 if test "$GCC" = yes; then
-  CFLAGS="$CFLAGS -Wall -g -O2"
   # Disable GCC's strict aliasing checks.  They are an hours-to-debug
   # accident waiting to happen.
-  CFLAGS="$CFLAGS -fno-strict-aliasing"
+  CFLAGS="$CFLAGS -Wall -fno-strict-aliasing"
 else
-  CFLAGS="$CFLAGS -g -O"
+  # Autoconf sets -g -O2 by default. Override optimization level
+  # for non-gcc compilers
+  CFLAGS="$CFLAGS -O"
   enable_gcc_warnings=no
   enable_gcc_warnings_advisory=no
 fi
