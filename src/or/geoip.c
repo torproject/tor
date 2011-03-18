@@ -426,7 +426,7 @@ geoip_note_client_seen(geoip_client_action_t action,
     ent->action = (int)action;
     HT_INSERT(clientmap, &client_history, ent);
   }
-  if (now / 60 <= MAX_LAST_SEEN_IN_MINUTES && now >= 0)
+  if (now / 60 <= (int)MAX_LAST_SEEN_IN_MINUTES && now >= 0)
     ent->last_seen_in_minutes = (unsigned)(now/60);
   else
     ent->last_seen_in_minutes = 0;
