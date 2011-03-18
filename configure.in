@@ -865,12 +865,13 @@ fi
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
 if test "$GCC" = yes; then
-  CFLAGS="$CFLAGS -Wall -g -O2"
   # Disable GCC's strict aliasing checks.  They are an hours-to-debug
   # accident waiting to happen.
-  CFLAGS="$CFLAGS -fno-strict-aliasing"
+  CFLAGS="$CFLAGS -Wall -fno-strict-aliasing"
 else
-  CFLAGS="$CFLAGS -g -O"
+  # Autoconf sets -g -O2 by default. Override optimization level
+  # for non-gcc compilers
+  CFLAGS="$CFLAGS -O"
   enable_gcc_warnings=no
   enable_gcc_warnings_advisory=no
 fi
@@ -893,6 +894,11 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 #if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
 #error
 #endif])], have_gcc43=yes, have_gcc43=no)
+
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__clang__) || (__clang_major__ > 2) || (__clang_major__ == 2 && __clang_minor__ > 9)
+#error
+#endif])], have_clang29orlower=yes, have_clang29orlower=no)
 
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
@@ -924,11 +930,19 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
   if test x$have_gcc42 = xyes ; then 
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wstrict-overflow=1"
+
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
   fi
 
-  if test x$have_gcc43 = xyes ; then 
+  if test x$have_gcc42 = xyes && test x$have_clang29orlower = xno; then
+    # These warnings break gcc 4.0.2 and clang, but work on gcc 4.2
+    # We only disable these for clang 2.9 and lower, in case they are
+    # supported in later versions.
+    CFLAGS="$CFLAGS -Wnormalized=id -Woverride-init"
+  fi
+
+  if test x$have_gcc43 = xyes ; then
     # These warnings break gcc 4.2 and work on gcc 4.3
     # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Wextra -Warray-bounds"

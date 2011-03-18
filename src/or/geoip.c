@@ -284,11 +284,18 @@ geoip_is_loaded(void)
 typedef struct clientmap_entry_t {
   HT_ENTRY(clientmap_entry_t) node;
   uint32_t ipaddr;
+  /** Time when we last saw this IP address, in MINUTES since the epoch.
+   *
+   * (This will run out of space around 4011 CE.  If Tor is still in use around
+   * 4000 CE, please remember to add more bits to last_seen_in_minutes.) */
   unsigned int last_seen_in_minutes:30;
   unsigned int action:2;
 } clientmap_entry_t;
 
-#define ACTION_MASK 3
+/** Largest allowable value for last_seen_in_minutes.  (It's a 30-bit field,
+ * so it can hold up to (1u<<30)-1, or 0x3fffffffu.
+ */
+#define MAX_LAST_SEEN_IN_MINUTES 0X3FFFFFFFu
 
 /** Map from client IP address to last time seen. */
 static HT_HEAD(clientmap, clientmap_entry_t) client_history =
@@ -413,15 +420,16 @@ geoip_note_client_seen(geoip_client_action_t action,
   lookup.ipaddr = addr;
   lookup.action = (int)action;
   ent = HT_FIND(clientmap, &client_history, &lookup);
-  if (ent) {
-    ent->last_seen_in_minutes = now / 60;
-  } else {
+  if (! ent) {
     ent = tor_malloc_zero(sizeof(clientmap_entry_t));
     ent->ipaddr = addr;
-    ent->last_seen_in_minutes = now / 60;
     ent->action = (int)action;
     HT_INSERT(clientmap, &client_history, ent);
   }
+  if (now / 60 <= MAX_LAST_SEEN_IN_MINUTES && now >= 0)
+    ent->last_seen_in_minutes = (unsigned)(now/60);
+  else
+    ent->last_seen_in_minutes = 0;
 
   if (action == GEOIP_CLIENT_NETWORKSTATUS ||
       action == GEOIP_CLIENT_NETWORKSTATUS_V2) {
