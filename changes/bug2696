@@ -1,0 +1,5 @@
+  o Minor features:
+    - Make compilation with clang possible when using
+      --enable-gcc-warnings by removing two warnings that clang hasn't
+      implemented yet and by fixing a few warnings. Implements ticket
+      2696.
