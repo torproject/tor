@@ -328,7 +328,7 @@ trusted_dirs_remove_old_certs(void)
         time_t cert_published;
         if (newest == cert)
           continue;
-        expired = ftime_definitely_after(now, cert->expires);
+        expired = now > cert->expires;
         cert_published = cert->cache_info.published_on;
         /* Store expired certs for 48 hours after a newer arrives;
          */
@@ -520,7 +520,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       continue;
     cl = get_cert_list(ds->v3_identity_digest);
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
-      if (!ftime_definitely_after(now, cert->expires)) {
+      if (now < cert->expires) {
         /* It's not expired, and we weren't looking for something to
          * verify a consensus with.  Call it done. */
         download_status_reset(&cl->dl_status);

@@ -1764,7 +1764,11 @@ networkstatus_set_current_consensus(const char *consensus,
     write_str_to_file(consensus_fname, consensus, 0);
   }
 
-  if (ftime_definitely_before(now, current_consensus->valid_after)) {
+/** If a consensus appears more than this many seconds before its declared
+ * valid-after time, declare that our clock is skewed. */
+#define EARLY_CONSENSUS_NOTICE_SKEW 60
+
+  if (now < current_consensus->valid_after - EARLY_CONSENSUS_NOTICE_SKEW) {
     char tbuf[ISO_TIME_LEN+1];
     char dbuf[64];
     long delta = now - current_consensus->valid_after;
