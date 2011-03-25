@@ -4142,6 +4142,8 @@ choose_random_entry(cpath_build_state_t *state)
       /* still no? if we're using bridges,
        * and our chosen exit is in the same family as all our
        * bridges, then be flexible about families. */
+      /* XXXX022-1090 This is probably not what people want. Better to choose
+       * a new exit. */
       consider_exit_family = 0;
       goto retry;
     }
