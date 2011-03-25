@@ -2823,13 +2823,13 @@ connection_exit_connect(edge_connection_t *edge_conn)
 
   log_debug(LD_EXIT,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port, &socket_error)) {
-    case -1:
-      /* XXX022 use socket_error below rather than trying to piece things
-       * together from the current errno, which may have been clobbered. */
-      connection_edge_end_errno(edge_conn);
+    case -1: {
+      int reason = errno_to_stream_end_reason(socket_error);
+      connection_edge_end(edge_conn, reason);
       circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
       connection_free(conn);
       return;
+    }
     case 0:
       conn->state = EXIT_CONN_STATE_CONNECTING;
 
