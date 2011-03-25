@@ -601,8 +601,9 @@ _dirreq_map_put(dirreq_map_entry_t *entry, dirreq_type_t type,
   tor_assert(entry->type == type);
   tor_assert(entry->dirreq_id == dirreq_id);
 
-  /* XXXX022 once we're sure the bug case never happens, we can switch
-   * to HT_INSERT */
+  /* XXXX we could switch this to HT_INSERT some time, since it seems that
+   * this bug doesn't happen. But since this function doesn't seem to be
+   * critical-path, it's sane to leave it alone. */
   old_ent = HT_REPLACE(dirreqmap, &dirreq_map, entry);
   if (old_ent && old_ent != entry) {
     log_warn(LD_BUG, "Error when putting directory request into local "

@@ -2575,13 +2575,13 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
   }
 
   if (n_read > 0) { /* change *max_to_read */
-    /*XXXX021 check for overflow*/
+    /*XXXX022 check for overflow*/
     *max_to_read = (int)(at_most - n_read);
   }
 
   if (conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    /*XXXX021 check for overflow*/
+    /*XXXX022 check for overflow*/
     edge_conn->n_read += (int)n_read;
   }
 
@@ -2783,7 +2783,7 @@ connection_handle_write_impl(connection_t *conn, int force)
 
   if (conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    /*XXXX021 check for overflow.*/
+    /*XXXX022 check for overflow.*/
     edge_conn->n_written += (int)n_written;
   }
 

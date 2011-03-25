@@ -1606,7 +1606,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (from_cache && !accept_obsolete &&
       c->valid_until < now-OLD_ROUTER_DESC_MAX_AGE) {
-    /* XXX022 when we try to make fallbackconsensus work again, we should
+    /* XXXX If we try to make fallbackconsensus work again, we should
      * consider taking this out. Until then, believing obsolete consensuses
      * is causing more harm than good. See also bug 887. */
     log_info(LD_DIR, "Loaded an expired consensus. Discarding.");

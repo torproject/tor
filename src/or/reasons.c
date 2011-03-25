@@ -174,7 +174,7 @@ errno_to_stream_end_reason(int e)
     S_CASE(ENETUNREACH):
       return END_STREAM_REASON_INTERNAL;
     S_CASE(EHOSTUNREACH):
-      /* XXXX022
+      /* XXXX023
        * The correct behavior is END_STREAM_REASON_NOROUTE, but older
        * clients don't recognize it.  So we're going to continue sending
        * "MISC" until 0.2.1.27 or later is "well established".

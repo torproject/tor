@@ -372,7 +372,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
   if (!get_via_tor) {
     if (options->UseBridges && type != BRIDGE_AUTHORITY) {
       /* want to ask a running bridge for which we have a descriptor. */
-      /* XXX022 we assume that all of our bridges can answer any
+      /* XXX023 we assume that all of our bridges can answer any
        * possible directory question. This won't be true forever. -RD */
       /* It certainly is not true with conditional consensus downloading,
        * so, for now, never assume the server supports that. */
@@ -1876,7 +1876,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                        ds->nickname);
               /* XXXX use this information; be sure to upload next one
                * sooner. -NM */
-              /* XXXX021 On further thought, the task above implies that we're
+              /* XXXX023 On further thought, the task above implies that we're
                * basing our regenerate-descriptor time on when we uploaded the
                * last descriptor, not on the published time of the last
                * descriptor.  If those are different, that's a bad thing to
@@ -2706,7 +2706,7 @@ directory_handle_command_get(dir_connection_t *conn, const char *headers,
     ssize_t estimated_len = 0;
     smartlist_t *items = smartlist_create();
     smartlist_t *dir_items = smartlist_create();
-    int lifetime = 60; /* XXXX022 should actually use vote intervals. */
+    int lifetime = 60; /* XXXX023 should actually use vote intervals. */
     url += strlen("/tor/status-vote/");
     current = !strcmpstart(url, "current/");
     url = strchr(url, '/');
