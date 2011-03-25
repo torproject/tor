@@ -2164,9 +2164,14 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
+    /* XXXX023 Instead of closing this stream, we should make it get
+     * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    /*XXXX022 _close_ the circuit because it's full?  That sounds dumb. */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
+
+    /* Mark this circuit "unusable for new streams". */
+    /* XXXX023 this is a kludgy way to do this. */
+    tor_assert(circ->_base.timestamp_dirty);
+    circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
   }
 
@@ -2224,9 +2229,14 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
+    /* XXXX023 Instead of closing this stream, we should make it get
+     * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    /*XXXX022 _close_ the circuit because it's full?  That sounds dumb. */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
+
+    /* Mark this circuit "unusable for new streams". */
+    /* XXXX023 this is a kludgy way to do this. */
+    tor_assert(circ->_base.timestamp_dirty);
+    circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
   }
 
