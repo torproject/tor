@@ -1747,7 +1747,8 @@ networkstatus_set_current_consensus(const char *consensus,
     routerstatus_list_update_named_server_map();
     cell_ewma_set_scale_factor(options, current_consensus);
 
-    /* XXX022 where is the right place to put this call? */
+    /* XXXX023 this call might be unnecessary here: can changing the
+     * current consensus really alter our view of any OR's rate limits? */
     connection_or_update_token_buckets(get_connection_array(), options);
 
     circuit_build_times_new_consensus_params(&circ_times, current_consensus);
