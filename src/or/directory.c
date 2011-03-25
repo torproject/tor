@@ -1539,26 +1539,19 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   (void) skewed; /* skewed isn't used yet. */
 
   if (status_code == 503) {
-    if (body_len < 16) {
-      routerstatus_t *rs;
-      trusted_dir_server_t *ds;
-      log_info(LD_DIR,"Received http status code %d (%s) from server "
-               "'%s:%d'. I'll try again soon.",
-               status_code, escaped(reason), conn->_base.address,
-               conn->_base.port);
-      if ((rs = router_get_consensus_status_by_id(conn->identity_digest)))
-        rs->last_dir_503_at = now;
-      if ((ds = router_get_trusteddirserver_by_digest(conn->identity_digest)))
-        ds->fake_status.last_dir_503_at = now;
+    routerstatus_t *rs;
+    trusted_dir_server_t *ds;
+    log_info(LD_DIR,"Received http status code %d (%s) from server "
+             "'%s:%d'. I'll try again soon.",
+             status_code, escaped(reason), conn->_base.address,
+             conn->_base.port);
+    if ((rs = router_get_consensus_status_by_id(conn->identity_digest)))
+      rs->last_dir_503_at = now;
+    if ((ds = router_get_trusteddirserver_by_digest(conn->identity_digest)))
+      ds->fake_status.last_dir_503_at = now;
 
-      tor_free(body); tor_free(headers); tor_free(reason);
-      return -1;
-    }
-    /* XXXX022 Remove this once every server with bug 539 is obsolete. */
-    log_info(LD_DIR, "Server at '%s:%d' sent us a 503 response, but included "
-             "a body anyway.  We'll pretend it gave us a 200.",
-             conn->_base.address, conn->_base.port);
-    status_code = 200;
+    tor_free(body); tor_free(headers); tor_free(reason);
+    return -1;
   }
 
   plausible = body_is_plausible(body, body_len, conn->_base.purpose);
