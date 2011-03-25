@@ -2127,8 +2127,14 @@ typedef struct circuit_t {
   char *n_conn_onionskin;
 
   time_t timestamp_created; /**< When was this circuit created? */
-  time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
-                           * circuit is clean. */
+  /** When the circuit was first used, or 0 if the circuit is clean.
+   *
+   * XXXX023 Note that some code will artifically adjust this value backward
+   * in time in order to indicate that a circuit shouldn't be used for new
+   * streams, but that it can stay alive as long as it has streams on it.
+   * That's a kludge we should fix.
+   */
+  time_t timestamp_dirty;
   struct timeval highres_created; /**< When exactly was the circuit created? */
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of

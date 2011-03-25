@@ -517,6 +517,7 @@ connection_ap_expire_beginning(void)
     /* kludge to make us not try this circuit again, yet to allow
      * current streams on it to survive if they can: make it
      * unattractive to use for new streams */
+    /* XXXX023 this is a kludgy way to do this. */
     tor_assert(circ->timestamp_dirty);
     circ->timestamp_dirty -= options->MaxCircuitDirtiness;
     /* give our stream another 'cutoff' seconds to try */
@@ -2164,6 +2165,7 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
+    /*XXXX022 _close_ the circuit because it's full?  That sounds dumb. */
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
     return -1;
   }
