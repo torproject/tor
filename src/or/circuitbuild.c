@@ -2041,7 +2041,7 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
         struct timeval end;
         long timediff;
         tor_gettimeofday(&end);
-        timediff = tv_mdiff(&circ->_base.highres_created, &end);
+        timediff = tv_mdiff(&circ->_base.timestamp_created, &end);
 
         /*
          * If the circuit build time is much greater than we would have cut

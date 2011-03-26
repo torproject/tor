@@ -31,7 +31,7 @@ extern circuit_t *global_circuitlist; /* from circuitlist.c */
 
 /********* END VARIABLES ************/
 
-static void circuit_expire_old_circuits_clientside(time_t now);
+static void circuit_expire_old_circuits_clientside(void);
 static void circuit_increment_failure_count(void);
 
 /** Return 1 if <b>circ</b> could be returned by circuit_get_best().
@@ -162,7 +162,7 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
           return 1;
       } else {
         if (a->timestamp_dirty ||
-            a->timestamp_created > b->timestamp_created)
+            timercmp(&a->timestamp_created, &b->timestamp_created, >))
           return 1;
         if (CIRCUIT_IS_ORIGIN(b) &&
             TO_ORIGIN_CIRCUIT(b)->build_state->is_internal)
@@ -223,7 +223,7 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
 #define REND_PARALLEL_INTRO_DELAY 15
     if (purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
              !must_be_open && circ->state != CIRCUIT_STATE_OPEN &&
-             circ->timestamp_created + REND_PARALLEL_INTRO_DELAY < now) {
+             circ->timestamp_created.tv_sec + REND_PARALLEL_INTRO_DELAY < now) {
       intro_going_on_but_too_old = 1;
       continue;
     }
@@ -275,22 +275,38 @@ circuit_conforms_to_options(const origin_circuit_t *circ,
  * at least CircuitBuildTimeout seconds ago.
  */
 void
-circuit_expire_building(time_t now)
+circuit_expire_building(void)
 {
   circuit_t *victim, *next_circ = global_circuitlist;
   /* circ_times.timeout_ms and circ_times.close_ms are from
    * circuit_build_times_get_initial_timeout() if we haven't computed
    * custom timeouts yet */
-  time_t general_cutoff = now - tor_lround(circ_times.timeout_ms/1000);
-  time_t begindir_cutoff = now - tor_lround(circ_times.timeout_ms/2000);
-  time_t fourhop_cutoff = now - tor_lround(4*circ_times.timeout_ms/3000);
-  time_t cannibalize_cutoff = now - tor_lround(circ_times.timeout_ms/2000);
-  time_t close_cutoff = now - tor_lround(circ_times.close_ms/1000);
-  time_t introcirc_cutoff = begindir_cutoff;
+  struct timeval general_cutoff, begindir_cutoff, fourhop_cutoff,
+    cannibalize_cutoff, close_cutoff, extremely_old_cutoff;
+  struct timeval now;
+  struct timeval introcirc_cutoff;
   cpath_build_state_t *build_state;
 
+  tor_gettimeofday(&now);
+#define SET_CUTOFF(target, msec) do {                       \
+    long ms = tor_lround(msec);                             \
+    struct timeval diff;                                    \
+    diff.tv_sec = ms / 1000;                                \
+    diff.tv_usec = (ms % 1000) * 1000;                      \
+    timersub(&now, &diff, &target);                         \
+  } while (0)
+
+  SET_CUTOFF(general_cutoff, circ_times.timeout_ms);
+  SET_CUTOFF(begindir_cutoff, circ_times.timeout_ms / 2.0);
+  SET_CUTOFF(fourhop_cutoff, circ_times.timeout_ms * (4/3.0));
+  SET_CUTOFF(cannibalize_cutoff, circ_times.timeout_ms / 2.0);
+  SET_CUTOFF(close_cutoff, circ_times.close_ms);
+  SET_CUTOFF(extremely_old_cutoff, circ_times.close_ms*2 + 1000);
+
+  introcirc_cutoff = begindir_cutoff;
+
   while (next_circ) {
-    time_t cutoff;
+    struct timeval cutoff;
     victim = next_circ;
     next_circ = next_circ->next;
     if (!CIRCUIT_IS_ORIGIN(victim) || /* didn't originate here */
@@ -312,7 +328,7 @@ circuit_expire_building(time_t now)
     else
       cutoff = general_cutoff;
 
-    if (victim->timestamp_created > cutoff)
+    if (timercmp(&victim->timestamp_created, &cutoff, >))
       continue; /* it's still young, leave it alone */
 
 #if 0
@@ -358,7 +374,7 @@ circuit_expire_building(time_t now)
            * because that's set when they switch purposes
            */
           if (TO_ORIGIN_CIRCUIT(victim)->rend_data ||
-              victim->timestamp_dirty > cutoff)
+              victim->timestamp_dirty > cutoff.tv_sec)
             continue;
           break;
         case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
@@ -367,7 +383,7 @@ circuit_expire_building(time_t now)
            * make an introduction attempt. so timestamp_dirty
            * will reflect the time since the last attempt.
            */
-          if (victim->timestamp_dirty > cutoff)
+          if (victim->timestamp_dirty > cutoff.tv_sec)
             continue;
           break;
       }
@@ -407,15 +423,15 @@ circuit_expire_building(time_t now)
          * it off at, we probably had a suspend event along this codepath,
          * and we should discard the value.
          */
-        if (now - victim->timestamp_created > 2*circ_times.close_ms/1000+1) {
+        if (timercmp(&victim->timestamp_created, &extremely_old_cutoff, <)) {
           log_notice(LD_CIRC,
                      "Extremely large value for circuit build timeout: %lds. "
                      "Assuming clock jump. Purpose %d",
-                     (long)(now - victim->timestamp_created),
+                     (long)(now.tv_sec - victim->timestamp_created.tv_sec),
                       victim->purpose);
         } else if (circuit_build_times_count_close(&circ_times,
                                             first_hop_succeeded,
-                                            victim->timestamp_created)) {
+                                            victim->timestamp_created.tv_sec)) {
           circuit_build_times_set_timeout(&circ_times);
         }
       }
@@ -636,7 +652,7 @@ circuit_build_needed_circs(time_t now)
     time_to_new_circuit = now + options->NewCircuitPeriod;
     if (proxy_mode(get_options()))
       addressmap_clean(now);
-    circuit_expire_old_circuits_clientside(now);
+    circuit_expire_old_circuits_clientside();
 
 #if 0 /* disable for now, until predict-and-launch-new can cull leftovers */
     circ = circuit_get_youngest_clean_open(CIRCUIT_PURPOSE_C_GENERAL);
@@ -725,17 +741,20 @@ circuit_detach_stream(circuit_t *circ, edge_connection_t *conn)
  * for too long and has no streams on it: mark it for close.
  */
 static void
-circuit_expire_old_circuits_clientside(time_t now)
+circuit_expire_old_circuits_clientside(void)
 {
   circuit_t *circ;
-  time_t cutoff;
+  struct timeval cutoff, now;
+
+  tor_gettimeofday(&now);
+  cutoff = now;
 
   if (circuit_build_times_needs_circuits(&circ_times)) {
     /* Circuits should be shorter lived if we need more of them
      * for learning a good build timeout */
-    cutoff = now - IDLE_TIMEOUT_WHILE_LEARNING;
+    cutoff.tv_sec -= IDLE_TIMEOUT_WHILE_LEARNING;
   } else {
-    cutoff = now - get_options()->CircuitIdleTimeout;
+    cutoff.tv_sec -= get_options()->CircuitIdleTimeout;
   }
 
   for (circ = global_circuitlist; circ; circ = circ->next) {
@@ -745,15 +764,15 @@ circuit_expire_old_circuits_clientside(time_t now)
      * on it, mark it for close.
      */
     if (circ->timestamp_dirty &&
-        circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now &&
+        circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now.tv_sec &&
         !TO_ORIGIN_CIRCUIT(circ)->p_streams /* nothing attached */ ) {
-      log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %d secs ago, "
+      log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %ld sec ago, "
                 "purpose %d)",
-                circ->n_circ_id, (int)(now - circ->timestamp_dirty),
+                circ->n_circ_id, (long)(now.tv_sec - circ->timestamp_dirty),
                 circ->purpose);
       circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
     } else if (!circ->timestamp_dirty && circ->state == CIRCUIT_STATE_OPEN) {
-      if (circ->timestamp_created < cutoff) {
+      if (timercmp(&circ->timestamp_created, &cutoff, <)) {
         if (circ->purpose == CIRCUIT_PURPOSE_C_GENERAL ||
                 circ->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT ||
                 circ->purpose == CIRCUIT_PURPOSE_S_ESTABLISH_INTRO ||
@@ -762,8 +781,8 @@ circuit_expire_old_circuits_clientside(time_t now)
                 circ->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) ||
                 circ->purpose == CIRCUIT_PURPOSE_S_CONNECT_REND) {
           log_debug(LD_CIRC,
-                    "Closing circuit that has been unused for %ld seconds.",
-                    (long)(now - circ->timestamp_created));
+                    "Closing circuit that has been unused for %ld msec.",
+                    tv_mdiff(&circ->timestamp_created, &now));
           circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         } else if (!TO_ORIGIN_CIRCUIT(circ)->is_ancient) {
           /* Server-side rend joined circuits can end up really old, because
@@ -775,9 +794,9 @@ circuit_expire_old_circuits_clientside(time_t now)
               circ->purpose != CIRCUIT_PURPOSE_S_INTRO) {
             log_notice(LD_CIRC,
                        "Ancient non-dirty circuit %d is still around after "
-                       "%ld seconds. Purpose: %d",
+                       "%ld milliseconds. Purpose: %d",
                        TO_ORIGIN_CIRCUIT(circ)->global_identifier,
-                       (long)(now - circ->timestamp_created),
+                       tv_mdiff(&circ->timestamp_created, &now),
                        circ->purpose);
             /* FFFF implement a new circuit_purpose_to_string() so we don't
              * just print out a number for circ->purpose */
@@ -1123,7 +1142,7 @@ circuit_launch_by_extend_info(uint8_t purpose,
       /* reset the birth date of this circ, else expire_building
        * will see it and think it's been trying to build since it
        * began. */
-      circ->_base.timestamp_created = time(NULL);
+      tor_gettimeofday(&circ->_base.timestamp_created);
       switch (purpose) {
         case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
         case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:

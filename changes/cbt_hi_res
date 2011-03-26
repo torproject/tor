@@ -1,0 +1,7 @@
+  o Minor features
+    - When expiring circuits, use microsecond timers rather than one-second
+      timers.  This can avoid an unpleasant situation where a circuit is
+      launched near the end of one second and expired right near the
+      beginning of the next, and prevent fluctuations in circuit timeout
+      values.
+
