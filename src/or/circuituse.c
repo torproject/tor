@@ -204,7 +204,7 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
                  int need_uptime, int need_internal)
 {
   circuit_t *circ, *best=NULL;
-  time_t now = time(NULL);
+  struct timeval now;
   int intro_going_on_but_too_old = 0;
 
   tor_assert(conn);
@@ -213,17 +213,16 @@ circuit_get_best(edge_connection_t *conn, int must_be_open, uint8_t purpose,
              purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT ||
              purpose == CIRCUIT_PURPOSE_C_REND_JOINED);
 
+  tor_gettimeofday(&now);
+
   for (circ=global_circuitlist;circ;circ = circ->next) {
     if (!circuit_is_acceptable(circ,conn,must_be_open,purpose,
-                               need_uptime,need_internal,now))
+                               need_uptime,need_internal,now.tv_sec))
       continue;
 
-/* XXX022 make this 15 be a function of circuit finishing times we've
- * seen lately, a la Fallon Chen's GSoC work -RD */
-#define REND_PARALLEL_INTRO_DELAY 15
     if (purpose == CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT &&
-             !must_be_open && circ->state != CIRCUIT_STATE_OPEN &&
-             circ->timestamp_created.tv_sec + REND_PARALLEL_INTRO_DELAY < now) {
+        !must_be_open && circ->state != CIRCUIT_STATE_OPEN &&
+        tv_mdiff(&now, &circ->timestamp_created) > circ_times.timeout_ms) {
       intro_going_on_but_too_old = 1;
       continue;
     }
