@@ -33,14 +33,12 @@ AC_ARG_ENABLE(static-libevent,
 AC_ARG_ENABLE(static-zlib,
    AS_HELP_STRING(--enable-static-zlib, Link against a static zlib library. Requires --with-zlib-dir))
 AC_ARG_ENABLE(static-tor,
-   AS_HELP_STRING(--enable-static-tor, Create an entirely static Tor binary. Requires --static-openssl
-                                       --static-libevent and --static-zlib))
+   AS_HELP_STRING(--enable-static-tor, Create an entirely static Tor binary. Requires --with-openssl-dir and --with-libevent-dir and --with-zlib-dir))
 
 if test "$enable_static_tor" = "yes"; then
   enable_static_libevent="yes";
   enable_static_openssl="yes";
   enable_static_zlib="yes";
-  AC_MSG_NOTICE("We're attempting to build a static Tor.")
   CFLAGS="$CFLAGS -static"
 fi
 
@@ -526,20 +524,6 @@ else
      TOR_ZLIB_LIBS="-lz"
 fi
 AC_SUBST(TOR_ZLIB_LIBS)
-
-if test "$enable_static_tor" = "yes"; then
-  if test "$enable_static_libevent" = "no"; then
-     AC_MSG_ERROR("You must configure with --enable-static-libevent")
-  fi
-  if test "$enable_static_openssl" = "no"; then
-     AC_MSG_ERROR("You must configure with --enable-static-openssl")
-  fi
-  if test "$enable_static_zlib" = "no"; then
-     AC_MSG_ERROR("You must configure with --enable-static-zlib")
-  fi
-  AC_MSG_NOTICE("We're attempting to build a static Tor.")
-  CFLAGS="$CFLAGS -static"
-fi
 
 dnl Make sure to enable support for large off_t if available.
 
