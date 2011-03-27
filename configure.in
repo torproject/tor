@@ -280,8 +280,6 @@ if test "$enable_static_libevent" = "yes"; then
         [have_rt=yes])
     if test "$have_rt" = yes; then
       STATIC_LIBEVENT_FLAGS=" -lrt "
-    else
-      STATIC_LIBEVENT_FLAGS=""
     fi
 fi
 
