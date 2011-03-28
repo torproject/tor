@@ -2697,20 +2697,12 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       continue; /* not one of our chosen exit nodes */
     }
 
-    if (router_is_unreliable(router, need_uptime, need_capacity, 0) &&
-        !options->ExitNodes) {
-      /* FFFF Someday, differentiate between a routerset that names
-       * routers, and a routerset that names countries, and only do this
-       * check if they've asked for specific exit relays. Or if the country
-       * they ask for is rare. Or something. */
-      /* XXX022-1090 We need to pick a tradeoff here: if we throw it out because
-       * it's unreliable, users might end up with no exit options even
-       * though some options are up. If we don't throw it out, users who
-       * set ExitNodes will have partitioning problems because they'll be
-       * the only folks willing to use this node. */
+    if (router_is_unreliable(router, need_uptime, need_capacity, 0)) {
       n_supported[i] = -1;
-      continue; /* skip routers that are not suitable, unless we have
-                 * ExitNodes set, in which case we asked for it */
+      continue; /* skip routers that are not suitable.  Don't worry if
+                 * this makes us reject all the possible routers: if so,
+                 * we'll retry later in this function with need_update and
+                 * need_capacity set to 0. */
     }
     if (!(router->is_valid || options->_AllowInvalid & ALLOW_INVALID_EXIT)) {
       /* if it's invalid and we don't want it */
