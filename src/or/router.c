@@ -850,14 +850,33 @@ consider_testing_reachability(int test_or, int test_dir)
   routerinfo_t *me = router_get_my_routerinfo();
   int orport_reachable = check_whether_orport_reachable();
   tor_addr_t addr;
+  or_options_t *options = get_options();
   if (!me)
     return;
+
+  if (routerset_contains_router(options->ExcludeNodes, me) &&
+      options->StrictNodes) {
+    /* If we've excluded ourself, and StrictNodes is set, we can't test
+     * ourself. */
+    if (test_or || test_dir) {
+#define SELF_EXCLUDED_WARN_INTERVAL 3600
+      static ratelim_t warning_limit=RATELIM_INIT(SELF_EXCLUDED_WARN_INTERVAL);
+      char *msg;
+      if ((msg = rate_limit_log(&warning_limit, approx_time()))) {
+        log_warn(LD_CIRC, "Can't peform self-tests for this relay: we have "
+                 "listed ourself in ExcludeNodes, and StrictNodes is set. "
+                 "We will cannot learn whether we are usable, and will not "
+                 "be able to advertise ourself.%s", msg);
+        tor_free(msg);
+      }
+    }
+    return;
+  }
 
   if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",
              !orport_reachable ? "reachability" : "bandwidth",
              me->address, me->or_port);
-    /* XXX022-1090 If we ExcludeNodes ourself, should this fail? -RD */
     circuit_launch_by_router(CIRCUIT_PURPOSE_TESTING, me,
                              CIRCLAUNCH_NEED_CAPACITY|CIRCLAUNCH_IS_INTERNAL);
   }
@@ -868,7 +887,6 @@ consider_testing_reachability(int test_or, int test_dir)
                 CONN_TYPE_DIR, &addr, me->dir_port,
                 DIR_PURPOSE_FETCH_SERVERDESC)) {
     /* ask myself, via tor, for my server descriptor. */
-    /* XXX022-1090 If we ExcludeNodes ourself, should this fail? -RD */
     directory_initiate_command(me->address, &addr,
                                me->or_port, me->dir_port,
                                0, /* does not matter */
