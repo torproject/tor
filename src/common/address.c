@@ -51,11 +51,11 @@
 
 /** Convert the tor_addr_t in <b>a</b>, with port in <b>port</b>, into a
  * sockaddr object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
- * room is available in sa_out, or on error, return 0  On success, return
+ * room is available in sa_out, or on error, return 0.  On success, return
  * the length of the sockaddr.
  *
- * Interface note: ordinarly, we return -1 for error.  We can't do that here,
- * since socklen is unsigned on some platforms.
+ * Interface note: ordinarily, we return -1 for error.  We can't do that here,
+ * since socklen_t is unsigned on some platforms.
  **/
 socklen_t
 tor_addr_to_sockaddr(const tor_addr_t *a,
