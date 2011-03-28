@@ -340,7 +340,19 @@ tor_libevent_pkg_debian="libevent-dev"
 tor_libevent_devpkg_redhat="libevent-devel"
 tor_libevent_devpkg_debian="libevent-dev"
 
-TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $TOR_LIB_WS32], [
+dnl On Gnu/Linux or any place we require it, we'll add librt to the Libevent
+dnl linking for static builds.
+STATIC_LIBEVENT_FLAGS=""
+if test "$enable_static_libevent" = "yes"; then
+    dnl Determine if we have clock_gettime in librt
+    AC_SEARCH_LIBS([clock_gettime], [rt],
+        [have_rt=yes])
+    if test "$have_rt" = yes; then
+      STATIC_LIBEVENT_FLAGS=" -lrt "
+    fi
+fi
+
+TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32], [
 #ifdef WIN32
 #include <winsock2.h>
 #endif
@@ -363,7 +375,7 @@ dnl Now check for particular libevent functions.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
 save_CPPFLAGS="$CPPFLAGS"
-LIBS="-levent $TOR_LIB_WS32 $LIBS"
+LIBS="-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
 AC_CHECK_FUNCS(event_get_version event_get_version_number event_get_method event_set_log_callback evdns_set_outgoing_bind_address event_base_loopexit)
@@ -384,7 +396,7 @@ if test "$enable_static_libevent" = "yes"; then
    if test "$tor_cv_library_libevent_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-libevent-dir=x option when using --enable-static-libevent")
    else
-     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a"
+     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $STATIC_LIBEVENT_FLAGS"
    fi
 else
      TOR_LIBEVENT_LIBS="-levent"
