@@ -933,6 +933,11 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
             "capacity %d, internal %d",
             purpose, need_uptime, need_capacity, internal);
 
+  /* XXX022-1090 We should make sure that when we cannibalize a circuit, it
+   * contains no excluded nodes.  (This is possible if StrictNodes is 0, and
+   * we thought we needed to use an excluded exit node for, say, a directory
+   * operation.) -NM */
+
   for (_circ=global_circuitlist; _circ; _circ = _circ->next) {
     if (CIRCUIT_IS_ORIGIN(_circ) &&
         _circ->state == CIRCUIT_STATE_OPEN &&
