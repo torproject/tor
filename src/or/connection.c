@@ -2790,7 +2790,7 @@ connection_handle_write_impl(connection_t *conn, int force)
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
     /* Check for overflow: */
     if (PREDICT_LIKELY(UINT32_MAX - edge_conn->n_written > n_written))
-      edge_conn->n_written += n_written;
+      edge_conn->n_written += (int)n_written;
     else
       edge_conn->n_written = UINT32_MAX;
   }
