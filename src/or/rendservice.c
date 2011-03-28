@@ -1352,6 +1352,9 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
     log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
              "circuit, but we already have enough. Redefining purpose to "
              "general.");
+    /* XXX022-1090: This can wind up violating ExcludeNodes/
+     * ExitNodes/ExcludeExitNodes restrictions.
+     */
     TO_CIRCUIT(circuit)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
     circuit_has_opened(circuit);
     return;
