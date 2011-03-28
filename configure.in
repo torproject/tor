@@ -375,10 +375,10 @@ AC_SUBST(TOR_OPENSSL_LIBS)
 dnl ------------------------------------------------------
 dnl Where do you live, zlib?  And how do we call you?
 
-tor_openssl_pkg_redhat="zlib"
-tor_openssl_pkg_debian="zlib1g"
-tor_openssl_devpkg_redhat="zlib-devel"
-tor_openssl_devpkg_debian="zlib1g-dev"
+tor_zlib_pkg_redhat="zlib"
+tor_zlib_pkg_debian="zlib1g"
+tor_zlib_devpkg_redhat="zlib-devel"
+tor_zlib_devpkg_debian="zlib1g-dev"
 
 TOR_SEARCH_LIBRARY(zlib, $tryzlibdir, [-lz],
     [#include <zlib.h>],
