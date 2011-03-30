@@ -333,6 +333,48 @@ struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
 struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
 #endif
 
+#ifndef timeradd
+/** Replacement for timeradd on platforms that do not have it: sets tvout to
+ * the sum of tv1 and tv2. */
+#define timeradd(tv1,tv2,tvout) \
+  do {                                                  \
+    (tvout)->tv_sec = (tv1)->tv_sec + (tv2)->tv_sec;    \
+    (tvout)->tv_usec = (tv2)->tv_usec + (tv2)->tv_usec; \
+    if ((tvout)->tv_usec >= 1000000) {                  \
+      (tvout)->tv_usec -= 1000000;                      \
+      (tvout)->tv_sec++;                                \
+    }                                                   \
+  } while (0)
+#endif
+
+#ifndef timersub
+/** Replacement for timersub on platforms that do not have it: sets tvout to
+ * tv1 minus tv2. */
+#define timersub(tv1,tv2,tvout) \
+  do {                                                  \
+    (tvout)->tv_sec = (tv1)->tv_sec - (tv2)->tv_sec;    \
+    (tvout)->tv_usec = (tv2)->tv_usec - (tv2)->tv_usec; \
+    if ((tvout)->tv_usec < 0) {                         \
+      (tvout)->tv_usec += 1000000;                      \
+      (tvout)->tv_sec--;                                \
+    }                                                   \
+  } while (0)
+#endif
+
+#ifndef timercmp
+/** Replacement for timersub on platforms that do not have it: returns true
+ * iff the relational operator "op" makes the expression tv1 op tv2 true.
+ *
+ * Note that while this definition should work for all boolean opeators, some
+ * platforms' native timercmp definitions do not support >=, <=, or ==.  So
+ * don't use those.
+ */
+#define timercmp(tv1,tv2,op)                    \
+  (((tv1)->tv_sec == (tv2)->tv_sec) ?           \
+   ((tv1)->tv_usec op (tv2)->tv_usec) :         \
+   ((tv1)->tv_sec op (tv2)->tv_sec))
+#endif
+
 /* ===== File compatibility */
 int replace_file(const char *from, const char *to);
 int touch_file(const char *fname);
