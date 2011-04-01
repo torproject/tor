@@ -1178,7 +1178,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   }
 
   if (connection_init_accepted_conn(newconn, conn->type) < 0) {
-    if (! conn->marked_for_close)
+    if (! newconn->marked_for_close)
       connection_mark_for_close(newconn);
     return 0;
   }
@@ -3245,6 +3245,8 @@ connection_flushed_some(connection_t *conn)
     r = connection_dirserv_flushed_some(TO_DIR_CONN(conn));
   } else if (conn->type == CONN_TYPE_OR) {
     r = connection_or_flushed_some(TO_OR_CONN(conn));
+  } else if (CONN_IS_EDGE(conn)) {
+    r = connection_edge_flushed_some(TO_EDGE_CONN(conn));
   }
   conn->in_flushed_some = 0;
   return r;

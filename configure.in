@@ -271,7 +271,19 @@ tor_libevent_pkg_debian="libevent-dev"
 tor_libevent_devpkg_redhat="libevent-devel"
 tor_libevent_devpkg_debian="libevent-dev"
 
-TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $TOR_LIB_WS32], [
+dnl On Gnu/Linux or any place we require it, we'll add librt to the Libevent
+dnl linking for static builds.
+STATIC_LIBEVENT_FLAGS=""
+if test "$enable_static_libevent" = "yes"; then
+    dnl Determine if we have clock_gettime in librt
+    AC_SEARCH_LIBS([clock_gettime], [rt],
+        [have_rt=yes])
+    if test "$have_rt" = yes; then
+      STATIC_LIBEVENT_FLAGS=" -lrt "
+    fi
+fi
+
+TOR_SEARCH_LIBRARY(libevent, $trylibeventdir, [-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32], [
 #ifdef WIN32
 #include <winsock2.h>
 #endif
@@ -294,7 +306,7 @@ dnl Now check for particular libevent functions.
 save_LIBS="$LIBS"
 save_LDFLAGS="$LDFLAGS"
 save_CPPFLAGS="$CPPFLAGS"
-LIBS="-levent $TOR_LIB_WS32 $LIBS"
+LIBS="-levent $STATIC_LIBEVENT_FLAGS $TOR_LIB_WS32 $LIBS"
 LDFLAGS="$TOR_LDFLAGS_libevent $LDFLAGS"
 CPPFLAGS="$TOR_CPPFLAGS_libevent $CPPFLAGS"
 AC_CHECK_FUNCS(event_get_version event_get_version_number event_get_method event_set_log_callback evdns_set_outgoing_bind_address event_base_loopexit)
@@ -315,7 +327,7 @@ if test "$enable_static_libevent" = "yes"; then
    if test "$tor_cv_library_libevent_dir" = "(system)"; then
      AC_MSG_ERROR("You must specify an explicit --with-libevent-dir=x option when using --enable-static-libevent")
    else
-     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a"
+     TOR_LIBEVENT_LIBS="$TOR_LIBDIR_libevent/libevent.a $STATIC_LIBEVENT_FLAGS"
    fi
 else
      TOR_LIBEVENT_LIBS="-levent"
@@ -363,10 +375,10 @@ AC_SUBST(TOR_OPENSSL_LIBS)
 dnl ------------------------------------------------------
 dnl Where do you live, zlib?  And how do we call you?
 
-tor_openssl_pkg_redhat="zlib"
-tor_openssl_pkg_debian="zlib1g"
-tor_openssl_devpkg_redhat="zlib-devel"
-tor_openssl_devpkg_debian="zlib1g-dev"
+tor_zlib_pkg_redhat="zlib"
+tor_zlib_pkg_debian="zlib1g"
+tor_zlib_devpkg_redhat="zlib-devel"
+tor_zlib_devpkg_debian="zlib1g-dev"
 
 TOR_SEARCH_LIBRARY(zlib, $tryzlibdir, [-lz],
     [#include <zlib.h>],
@@ -865,12 +877,13 @@ fi
 # Set CFLAGS _after_ all the above checks, since our warnings are stricter
 # than autoconf's macros like.
 if test "$GCC" = yes; then
-  CFLAGS="$CFLAGS -Wall -g -O2"
   # Disable GCC's strict aliasing checks.  They are an hours-to-debug
   # accident waiting to happen.
-  CFLAGS="$CFLAGS -fno-strict-aliasing"
+  CFLAGS="$CFLAGS -Wall -fno-strict-aliasing"
 else
-  CFLAGS="$CFLAGS -g -O"
+  # Autoconf sets -g -O2 by default. Override optimization level
+  # for non-gcc compilers
+  CFLAGS="$CFLAGS -O"
   enable_gcc_warnings=no
   enable_gcc_warnings_advisory=no
 fi
@@ -893,6 +906,11 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
 #if !defined(__GNUC__) || (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 3)
 #error
 #endif])], have_gcc43=yes, have_gcc43=no)
+
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+#if !defined(__clang__) || (__clang_major__ > 2) || (__clang_major__ == 2 && __clang_minor__ > 9)
+#error
+#endif])], have_clang29orlower=yes, have_clang29orlower=no)
 
   save_CFLAGS="$CFLAGS"
   CFLAGS="$CFLAGS -Wshorten-64-to-32"
@@ -924,11 +942,19 @@ if test x$enable_gcc_warnings = xyes || test x$enable_gcc_warnings_advisory = xy
   if test x$have_gcc42 = xyes ; then 
     # These warnings break gcc 4.0.2 and work on gcc 4.2
     # XXXX020 See if any of these work with earlier versions.
-    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wnormalized=id -Woverride-init -Wstrict-overflow=1"
+    CFLAGS="$CFLAGS -Waddress -Wmissing-noreturn -Wstrict-overflow=1"
+
     # We used to use -Wstrict-overflow=5, but that breaks us heavily under 4.3.
   fi
 
-  if test x$have_gcc43 = xyes ; then 
+  if test x$have_gcc42 = xyes && test x$have_clang29orlower = xno; then
+    # These warnings break gcc 4.0.2 and clang, but work on gcc 4.2
+    # We only disable these for clang 2.9 and lower, in case they are
+    # supported in later versions.
+    CFLAGS="$CFLAGS -Wnormalized=id -Woverride-init"
+  fi
+
+  if test x$have_gcc43 = xyes ; then
     # These warnings break gcc 4.2 and work on gcc 4.3
     # XXXX020 See if any of these work with earlier versions.
     CFLAGS="$CFLAGS -Wextra -Warray-bounds"

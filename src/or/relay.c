@@ -52,9 +52,9 @@ static int circuit_consider_stop_edge_reading(circuit_t *circ,
                                               crypt_path_t *layer_hint);
 static int circuit_queue_streams_are_blocked(circuit_t *circ);
 
+/* XXXX023 move this all to compat_libevent */
 /** Cache the current hi-res time; the cache gets reset when libevent
  * calls us. */
-
 static struct timeval cached_time_hires = {0, 0};
 
 /** Stop reading on edge connections when we have this many cells
@@ -76,7 +76,7 @@ tor_gettimeofday_cached(struct timeval *tv)
 void
 tor_gettimeofday_cache_clear(void)
 {
-    cached_time_hires.tv_sec = 0;
+  cached_time_hires.tv_sec = 0;
 }
 
 /** Stats: how many relay cells have originated at this hop, or have
@@ -1409,8 +1409,9 @@ connection_edge_package_raw_inbuf(edge_connection_t *conn, int package_partial,
   goto repeat_connection_edge_package_raw_inbuf;
 }
 
-/** Called when we've just received a relay data cell, or when
- * we've just finished flushing all bytes to stream <b>conn</b>.
+/** Called when we've just received a relay data cell, when
+ * we've just finished flushing all bytes to stream <b>conn</b>,
+ * or when we've flushed *some* bytes to the stream <b>conn</b>.
  *
  * If conn->outbuf is not too full, and our deliver window is
  * low, send back a suitable number of stream-level sendme cells.

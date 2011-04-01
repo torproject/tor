@@ -312,6 +312,7 @@ const char *tor_fix_source_file(const char *fname);
 
 /* ===== Time compatibility */
 #if !defined(HAVE_GETTIMEOFDAY) && !defined(HAVE_STRUCT_TIMEVAL_TV_SEC)
+/** Implementation of timeval for platforms that don't have it. */
 struct timeval {
   time_t tv_sec;
   unsigned int tv_usec;
@@ -330,6 +331,48 @@ struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
 #define tor_gmtime_r gmtime_r
 #else
 struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
+#endif
+
+#ifndef timeradd
+/** Replacement for timeradd on platforms that do not have it: sets tvout to
+ * the sum of tv1 and tv2. */
+#define timeradd(tv1,tv2,tvout) \
+  do {                                                  \
+    (tvout)->tv_sec = (tv1)->tv_sec + (tv2)->tv_sec;    \
+    (tvout)->tv_usec = (tv2)->tv_usec + (tv2)->tv_usec; \
+    if ((tvout)->tv_usec >= 1000000) {                  \
+      (tvout)->tv_usec -= 1000000;                      \
+      (tvout)->tv_sec++;                                \
+    }                                                   \
+  } while (0)
+#endif
+
+#ifndef timersub
+/** Replacement for timersub on platforms that do not have it: sets tvout to
+ * tv1 minus tv2. */
+#define timersub(tv1,tv2,tvout) \
+  do {                                                  \
+    (tvout)->tv_sec = (tv1)->tv_sec - (tv2)->tv_sec;    \
+    (tvout)->tv_usec = (tv2)->tv_usec - (tv2)->tv_usec; \
+    if ((tvout)->tv_usec < 0) {                         \
+      (tvout)->tv_usec += 1000000;                      \
+      (tvout)->tv_sec--;                                \
+    }                                                   \
+  } while (0)
+#endif
+
+#ifndef timercmp
+/** Replacement for timersub on platforms that do not have it: returns true
+ * iff the relational operator "op" makes the expression tv1 op tv2 true.
+ *
+ * Note that while this definition should work for all boolean opeators, some
+ * platforms' native timercmp definitions do not support >=, <=, or ==.  So
+ * don't use those.
+ */
+#define timercmp(tv1,tv2,op)                    \
+  (((tv1)->tv_sec == (tv2)->tv_sec) ?           \
+   ((tv1)->tv_usec op (tv2)->tv_usec) :         \
+   ((tv1)->tv_sec op (tv2)->tv_sec))
 #endif
 
 /* ===== File compatibility */
@@ -364,9 +407,9 @@ int get_n_open_sockets(void);
 #define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
 #define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)
 
-/* Define struct in6_addr on platforms that do not have it.  Generally,
- * these platforms are ones without IPv6 support, but we want to have
- * a working in6_addr there anyway, so we can use it to parse IPv6
+/** Implementatino of struct in6_addr for platforms that do not have it.
+ * Generally, these platforms are ones without IPv6 support, but we want to
+ * have a working in6_addr there anyway, so we can use it to parse IPv6
  * addresses. */
 #if !defined(HAVE_STRUCT_IN6_ADDR)
 struct in6_addr
@@ -382,9 +425,10 @@ struct in6_addr
 };
 #endif
 
+/** @{ */
+/** Many BSD variants seem not to define these. */
 #if defined(__APPLE__) || defined(__darwin__) || defined(__FreeBSD__) \
     || defined(__NetBSD__) || defined(__OpenBSD__)
-/* Many BSD variants seem not to define these. */
 #ifndef s6_addr16
 #define s6_addr16 __u6_addr.__u6_addr16
 #endif
@@ -392,12 +436,15 @@ struct in6_addr
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif
 #endif
+/** @} */
 
 #ifndef HAVE_SA_FAMILY_T
 typedef uint16_t sa_family_t;
 #endif
 
-/* Apparently, MS and Solaris don't define s6_addr16 or s6_addr32. */
+/** @{ */
+/** Apparently, MS and Solaris don't define s6_addr16 or s6_addr32; these
+ * macros get you a pointer to s6_addr32 or local equivalent. */
 #ifdef HAVE_STRUCT_IN6_ADDR_S6_ADDR32
 #define S6_ADDR32(x) ((uint32_t*)(x).s6_addr32)
 #else
@@ -408,9 +455,10 @@ typedef uint16_t sa_family_t;
 #else
 #define S6_ADDR16(x) ((uint16_t*)((char*)&(x).s6_addr))
 #endif
+/** @} */
 
-/* Define struct sockaddr_in6 on platforms that do not have it. See notes
- * on struct in6_addr. */
+/** Implementation of struct sockaddr_in6 on platforms that do not have
+ * it. See notes on struct in6_addr. */
 #if !defined(HAVE_STRUCT_SOCKADDR_IN6)
 struct sockaddr_in6 {
   sa_family_t sin6_family;
@@ -534,10 +582,14 @@ void spawn_exit(void) ATTR_NORETURN;
 /** A generic lock structure for multithreaded builds. */
 typedef struct tor_mutex_t {
 #if defined(USE_WIN32_THREADS)
+  /** Windows-only: on windows, we implement locks with CRITICAL_SECTIONS. */
   CRITICAL_SECTION mutex;
 #elif defined(USE_PTHREADS)
+  /** Pthreads-only: with pthreads, we implement locks with
+   * pthread_mutex_t. */
   pthread_mutex_t mutex;
 #else
+  /** No-threads only: Dummy variable so that tor_mutex_t takes up space. */
   int _unused;
 #endif
 } tor_mutex_t;

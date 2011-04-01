@@ -23,9 +23,11 @@ int connection_is_on_closeable_list(connection_t *conn);
 
 smartlist_t *get_connection_array(void);
 
+/** Bitmask for events that we can turn on and off with
+ * connection_watch_events. */
 typedef enum watchable_events {
-  READ_EVENT=0x02,
-  WRITE_EVENT=0x04
+  READ_EVENT=0x02, /**< We want to know when a connection is readable */
+  WRITE_EVENT=0x04 /**< We want to know when a connection is writable */
 } watchable_events_t;
 void connection_watch_events(connection_t *conn, watchable_events_t events);
 int connection_is_reading(connection_t *conn);

@@ -100,6 +100,9 @@
 
 /* Figure out which AES optimizations to use. */
 #ifdef USE_BUILTIN_AES
+/** If this is defined, we take advantage of the fact that AES treats its
+ * input as a set of 4 32-bit words, so that there is no need to encode and
+ * decode the 128-bit counter before every block encryption  */
 # define USE_RIJNDAEL_COUNTER_OPTIMIZATION
 # if 0 && (defined(__powerpc__) || defined(__powerpc64__))
 /* XXXX do more experimentation before concluding this is actually

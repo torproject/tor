@@ -68,13 +68,15 @@
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x00908000l
-/* On OpenSSL versions before 0.9.8, there is no working SHA256
+/** @{ */
+/** On OpenSSL versions before 0.9.8, there is no working SHA256
  * implementation, so we use Tom St Denis's nice speedy one, slightly adapted
- * to our needs */
+ * to our needs.  These macros make it usable by us. */
 #define SHA256_CTX sha256_state
 #define SHA256_Init sha256_init
 #define SHA256_Update sha256_process
 #define LTC_ARGCHK(x) tor_assert(x)
+/** @} */
 #include "sha256.c"
 #define SHA256_Final(a,b) sha256_done(b,a)
 
@@ -104,21 +106,22 @@ static int _n_openssl_mutexes = 0;
 /** A public key, or a public/private key-pair. */
 struct crypto_pk_env_t
 {
-  int refs; /* reference counting so we don't have to copy keys */
-  RSA *key;
+  int refs; /**< reference count, so we don't have to copy keys */
+  RSA *key; /**< The key itself */
 };
 
 /** Key and stream information for a stream cipher. */
 struct crypto_cipher_env_t
 {
-  char key[CIPHER_KEY_LEN];
-  aes_cnt_cipher_t *cipher;
+  char key[CIPHER_KEY_LEN]; /**< The raw key. */
+  aes_cnt_cipher_t *cipher; /**< The key in format usable for counter-mode AES
+                             * encryption */
 };
 
 /** A structure to hold the first half (x, g^x) of a Diffie-Hellman handshake
  * while we're waiting for the second.*/
 struct crypto_dh_env_t {
-  DH *dh;
+  DH *dh; /**< The openssl DH object */
 };
 
 static int setup_openssl_threading(void);
@@ -1470,7 +1473,7 @@ crypto_cipher_decrypt_with_iv(crypto_cipher_env_t *cipher,
 
 /* SHA-1 */
 
-/** Compute the SHA1 digest of <b>len</b> bytes in data stored in
+/** Compute the SHA1 digest of the <b>len</b> bytes on data stored in
  * <b>m</b>.  Write the DIGEST_LEN byte result into <b>digest</b>.
  * Return 0 on success, -1 on failure.
  */
@@ -1482,6 +1485,9 @@ crypto_digest(char *digest, const char *m, size_t len)
   return (SHA1((const unsigned char*)m,len,(unsigned char*)digest) == NULL);
 }
 
+/** Compute a 256-bit digest of <b>len</b> bytes in data stored in <b>m</b>,
+ * using the algorithm <b>algorithm</b>.  Write the DIGEST_LEN256-byte result
+ * into <b>digest</b>.  Return 0 on success, -1 on failure. */
 int
 crypto_digest256(char *digest, const char *m, size_t len,
                  digest_algorithm_t algorithm)
@@ -1541,13 +1547,14 @@ crypto_digest_algorithm_parse_name(const char *name)
 /** Intermediate information about the digest of a stream of data. */
 struct crypto_digest_env_t {
   union {
-    SHA_CTX sha1;
-    SHA256_CTX sha2;
-  } d;
-  digest_algorithm_t algorithm : 8;
+    SHA_CTX sha1; /**< state for SHA1 */
+    SHA256_CTX sha2; /**< state for SHA256 */
+  } d; /**< State for the digest we're using.  Only one member of the
+        * union is usable, depending on the value of <b>algorithm</b>. */
+  digest_algorithm_t algorithm : 8; /**< Which algorithm is in use? */
 };
 
-/** Allocate and return a new digest object.
+/** Allocate and return a new digest object to compute SHA1 digests.
  */
 crypto_digest_env_t *
 crypto_new_digest_env(void)
@@ -1559,6 +1566,8 @@ crypto_new_digest_env(void)
   return r;
 }
 
+/** Allocate and return a new digest object to compute 256-bit digests
+ * using <b>algorithm</b>. */
 crypto_digest_env_t *
 crypto_new_digest256_env(digest_algorithm_t algorithm)
 {
@@ -1732,6 +1741,10 @@ init_dh_param(void)
   dh_param_g = g;
 }
 
+/** Number of bits to use when choosing the x or y value in a Diffie-Hellman
+ * handshake.  Since we exponentiate by this value, choosing a smaller one
+ * lets our handhake go faster.
+ */
 #define DH_PRIVATE_KEY_BITS 320
 
 /** Allocate and return a new DH object for a key exchange.
@@ -1983,15 +1996,22 @@ crypto_dh_free(crypto_dh_env_t *dh)
 
 /* random numbers */
 
-/* This is how much entropy OpenSSL likes to add right now, so maybe it will
+/** How many bytes of entropy we add at once.
+ *
+ * This is how much entropy OpenSSL likes to add right now, so maybe it will
  * work for us too. */
 #define ADD_ENTROPY 32
 
-/* Use RAND_poll if OpenSSL is 0.9.6 release or later.  (The "f" means
-   "release".)  */
+/** True iff we should use OpenSSL's RAND_poll function to add entropy to its
+ * pool.
+ *
+ * Use RAND_poll if OpenSSL is 0.9.6 release or later.  (The "f" means
+ *"release".)  */
 #define HAVE_RAND_POLL (OPENSSL_VERSION_NUMBER >= 0x0090600fl)
 
-/* Versions of OpenSSL prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
+/** True iff it's safe to use RAND_poll after setup.
+ *
+ * Versions of OpenSSL prior to 0.9.7k and 0.9.8c had a bug where RAND_poll
  * would allocate an fd_set on the stack, open a new file, and try to FD_SET
  * that fd without checking whether it fit in the fd_set.  Thus, if the
  * system has not just been started up, it is unsafe to call */
@@ -2000,6 +2020,7 @@ crypto_dh_free(crypto_dh_env_t *dh)
     OPENSSL_VERSION_NUMBER <= 0x00907fffl) ||   \
    (OPENSSL_VERSION_NUMBER >= 0x0090803fl))
 
+/** Set the seed of the weak RNG to a random value. */
 static void
 seed_weak_rng(void)
 {
@@ -2253,9 +2274,12 @@ base64_encode(char *dest, size_t destlen, const char *src, size_t srclen)
   return ret;
 }
 
+/** @{ */
+/** Special values used for the base64_decode_table */
 #define X 255
 #define SP 64
 #define PAD 65
+/** @} */
 /** Internal table mapping byte values to what they represent in base64.
  * Numbers 0..63 are 6-bit integers.  SPs are spaces, and should be
  * skipped.  Xs are invalid and must not appear in base64. PAD indicates
@@ -2659,6 +2683,7 @@ _openssl_dynlock_destroy_cb(struct CRYPTO_dynlock_value *v,
   tor_free(v);
 }
 
+/** @{ */
 /** Helper: Construct mutexes, and set callbacks to help OpenSSL handle being
  * multithreaded. */
 static int
@@ -2684,4 +2709,5 @@ setup_openssl_threading(void)
   return 0;
 }
 #endif
+/** @} */
 

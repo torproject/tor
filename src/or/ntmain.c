@@ -54,6 +54,11 @@ static int nt_service_cmd_stop(void);
 struct service_fns {
   int loaded;
 
+  /** @{ */
+  /** Function pointers for Windows API functions related to service
+   * management.  These are NULL, or they point to the .  They're set by
+   * calling the LOAD macro below.  */
+
   BOOL (WINAPI *ChangeServiceConfig2A_fn)(
                              SC_HANDLE hService,
                              DWORD dwInfoLevel,
@@ -122,6 +127,7 @@ struct service_fns {
                              LPTSTR ReferencedDomainName,
                              LPDWORD cchReferencedDomainName,
                              PSID_NAME_USE peUse);
+  /** @} */
 } service_fns = { 0,
                   NULL, NULL, NULL, NULL, NULL, NULL,
                   NULL, NULL, NULL, NULL, NULL, NULL,
@@ -144,6 +150,10 @@ nt_service_loadlibrary(void)
     goto err;
   }
 
+/* Helper macro: try to load a function named <b>f</b> from "library" into
+ * service_functions.<b>f</b>_fn.  On failure, log an error message, and goto
+ * err.
+ */
 #define LOAD(f) STMT_BEGIN                                              \
     if (!(fn = GetProcAddress(library, #f))) {                          \
       log_err(LD_BUG,                                                   \

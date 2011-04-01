@@ -5,7 +5,7 @@
 /* See LICENSE for licensing information */
 
 /**
- * \file routerpase.h
+ * \file routerparse.h
  * \brief Header file for routerparse.c.
  **/
 
@@ -81,8 +81,6 @@ int rend_parse_introduction_points(rend_service_descriptor_t *parsed,
                                    const char *intro_points_encoded,
                                    size_t intro_points_encoded_size);
 int rend_parse_client_keys(strmap_t *parsed_clients, const char *str);
-
-void tor_gettimeofday_cache_clear(void);
 
 #endif
 

@@ -2337,7 +2337,6 @@ typedef struct circ_buffer_stats_t {
   uint32_t local_circ_id;
 } circ_buffer_stats_t;
 
-/** Holds stats. */
 smartlist_t *circuits_for_buffer_stats = NULL;
 
 /** Remember cell statistics for circuit <b>circ</b> at time
@@ -2357,9 +2356,9 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
     return;
   if (!circuits_for_buffer_stats)
     circuits_for_buffer_stats = smartlist_create();
-  start_of_interval = circ->timestamp_created >
+  start_of_interval = circ->timestamp_created.tv_sec >
       start_of_buffer_stats_interval ?
-        circ->timestamp_created :
+        circ->timestamp_created.tv_sec :
         start_of_buffer_stats_interval;
   interval_length = (int) (end_of_interval - start_of_interval);
   stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));

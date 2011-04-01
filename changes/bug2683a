@@ -1,0 +1,3 @@
+  o Minor features
+    - Log the source of a rejected POSTed v3 networkstatus vote.
+
