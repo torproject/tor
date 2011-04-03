@@ -1497,9 +1497,13 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   hostname_type_t addresstype;
   or_options_t *options = get_options();
   struct in_addr addr_tmp;
+  /* We set this to true if this is an address we should automatically
+   * remap to a local address in VirtualAddrNetwork */
   int automap = 0;
   char orig_address[MAX_SOCKS_ADDR_LEN];
   time_t map_expires = TIME_MAX;
+  /* This will be set to true iff the address starts out as a non-.exit
+     address, and we remap it to one because of an entry in the addressmap. */
   int remapped_to_exit = 0;
   time_t now = time(NULL);
 
@@ -1610,18 +1614,24 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     /* foo.exit -- modify conn->chosen_exit_node to specify the exit
      * node, and conn->address to hold only the address portion. */
     char *s = strrchr(socks->address,'.');
+
+    /* If StrictNodes is not set, then .exit overrides ExcludeNodes. */
+    routerset_t *excludeset = options->StrictNodes ?
+      options->_ExcludeExitNodesUnion : options->ExcludeExitNodes;
+    /*XXX023 make this a node_t. */
+    routerinfo_t *router;
+
     tor_assert(!automap);
     if (s) {
+      /* The address was of the form "(stuff).(name).exit */
       if (s[1] != '\0') {
-        /* XXX022-1090 we should look this up as a relay and see if it's
-         * in our excluded set, and refuse it here if so. But first,
-         * figure out what's up with this 'remapped_to_exit' business
-         * and whether that needs careful treatment. -RD */
         conn->chosen_exit_name = tor_strdup(s+1);
+        router = router_get_by_nickname(conn->chosen_exit_name, 1);
         if (remapped_to_exit) /* 5 tries before it expires the addressmap */
           conn->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
         *s = 0;
       } else {
+        /* Oops, the address was (stuff)..exit.  That's not okay. */
         log_warn(LD_APP,"Malformed exit address '%s.exit'. Refusing.",
                  safe_str_client(socks->address));
         control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
@@ -1630,23 +1640,33 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return -1;
       }
     } else {
-      routerinfo_t *r;
+      /* It looks like they just asked for "foo.exit". */
       conn->chosen_exit_name = tor_strdup(socks->address);
-      r = router_get_by_nickname(conn->chosen_exit_name, 1);
-      *socks->address = 0;
-      if (r && (!options->_ExcludeExitNodesUnion ||
-                !routerset_contains_router(options->_ExcludeExitNodesUnion,
-                                           r))) {
-        strlcpy(socks->address, r->address, sizeof(socks->address));
-      } else {
-        log_warn(LD_APP,
-                 "%s relay in exit address '%s.exit'. Refusing.",
-                 r ? "Excluded" : "Unrecognized",
-                 safe_str_client(socks->address));
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
-        return -1;
+      router = router_get_by_nickname(conn->chosen_exit_name, 1);
+      if (router) {
+        *socks->address = 0;
+        strlcpy(socks->address, router->address, sizeof(socks->address));
       }
     }
+    /* Now make sure that the chosen exit exists... */
+    if (!router) {
+      log_warn(LD_APP,
+               "Unrecognized relay in exit address '%s.exit'. Refusing.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      return -1;
+    }
+    /* ...and make sure that it isn't excluded. */
+    if (routerset_contains_router(excludeset, router)) {
+      log_warn(LD_APP,
+               "Excluded relay in exit address '%s.exit'. Refusing.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      return -1;
+    }
+    /* XXXX022-1090 Should we also allow foo.bar.exit if ExitNodes is set and
+       Bar is not listed in it?  I say yes, but our revised manpage branch
+       implies no. */
   }
 
   if (addresstype != ONION_HOSTNAME) {
