@@ -4130,15 +4130,18 @@ choose_random_entry(cpath_build_state_t *state)
       need_capacity = 0;
       goto retry;
     }
+#if 0
+    /* Removing this retry logic: if we only allow one exit, and it is in the
+       same family as all our entries, then we are just plain not going to win
+       here. */
     if (!r && entry_list_is_constrained(options) && consider_exit_family) {
       /* still no? if we're using bridges,
        * and our chosen exit is in the same family as all our
        * bridges, then be flexible about families. */
-      /* XXXX022-1090 This is probably not what people want. Better to choose
-       * a new exit. */
       consider_exit_family = 0;
       goto retry;
     }
+#endif
     /* live_entry_guards may be empty below. Oh well, we tried. */
   }
 
