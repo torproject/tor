@@ -5474,7 +5474,7 @@ routerset_needs_geoip(const routerset_t *set)
 }
 
 /** Return true iff there are no entries in <b>set</b>. */
-static int
+int
 routerset_is_empty(const routerset_t *set)
 {
   return !set || smartlist_len(set->list) == 0;

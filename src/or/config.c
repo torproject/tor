@@ -1271,6 +1271,7 @@ options_act(or_options_t *old_options)
                "excluded node lists. Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
+      addressmap_clear_excluded_trackexithosts(options);
     }
 
 /* How long should we delay counting bridge stats after becoming a bridge?

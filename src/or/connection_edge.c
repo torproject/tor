@@ -789,9 +789,6 @@ addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 static void
 clear_trackexithost_mappings(const char *exitname)
 {
-  /* XXXX022-1090 We need a variant of this that clears all mappings no longer
-     permitted because of changes to the ExcludeNodes, ExitNodes, or
-     ExcludeExitNodes settings. */
   char *suffix;
   size_t suffix_len;
   if (!addressmap || !exitname)
@@ -802,6 +799,7 @@ clear_trackexithost_mappings(const char *exitname)
   tor_strlower(suffix);
 
   STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
+    /* XXXX022 HEY!  Shouldn't this look at ent->new_address? */
     if (ent->source == ADDRMAPSRC_TRACKEXIT && !strcmpend(address, suffix)) {
       addressmap_ent_remove(address, ent);
       MAP_DEL_CURRENT(address);
@@ -809,6 +807,56 @@ clear_trackexithost_mappings(const char *exitname)
   } STRMAP_FOREACH_END;
 
   tor_free(suffix);
+}
+
+/** Remove all TRACKEXIT mappings from the addressmap for which the target
+ * host is unknown or no longer allowed. */
+void
+addressmap_clear_excluded_trackexithosts(or_options_t *options)
+{
+  const routerset_t *allow_nodes = options->ExitNodes;
+  const routerset_t *exclude_nodes = options->_ExcludeExitNodesUnion;
+
+  if (!addressmap)
+    return;
+  if (routerset_is_empty(allow_nodes))
+    allow_nodes = NULL;
+  if (allow_nodes == NULL && routerset_is_empty(exclude_nodes))
+    return;
+
+  STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
+    size_t len;
+    const char *target = ent->new_address, *dot;
+    char *nodename;
+    routerinfo_t *ri; /* XXX023 Use node_t. */
+
+    if (strcmpend(target, ".exit")) {
+      /* Not a .exit mapping */
+      continue;
+    } else if (ent->source != ADDRMAPSRC_TRACKEXIT) {
+      /* Not a trackexit mapping. */
+      continue;
+    }
+    len = strlen(target);
+    if (len < 6)
+      continue; /* malformed. */
+    dot = target + len - 6; /* dot now points to just before .exit */
+    dot = strrchr(dot, '.'); /* dot now points to the . before .exit, or NULL */
+    if (!dot) {
+      nodename = tor_strndup(target, len-5);
+    } else {
+      nodename = tor_strndup(dot+1, strlen(dot+1)-5);
+    }
+    ri = router_get_by_nickname(nodename, 0);
+    tor_free(nodename);
+    if (!ri ||
+        (allow_nodes && !routerset_contains_router(allow_nodes, ri)) ||
+        routerset_contains_router(exclude_nodes, ri)) {
+      /* We don't know this one, or we want to be rid of it. */
+      addressmap_ent_remove(address, ent);
+      MAP_DEL_CURRENT(address);
+    }
+  } STRMAP_FOREACH_END;
 }
 
 /** Remove all entries from the addressmap that were set via the

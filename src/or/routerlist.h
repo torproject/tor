@@ -167,6 +167,7 @@ int routerset_parse(routerset_t *target, const char *s,
 void routerset_union(routerset_t *target, const routerset_t *source);
 int routerset_is_list(const routerset_t *set);
 int routerset_needs_geoip(const routerset_t *set);
+int routerset_is_empty(const routerset_t *set);
 int routerset_contains_router(const routerset_t *set, routerinfo_t *ri);
 int routerset_contains_routerstatus(const routerset_t *set,
                                     routerstatus_t *rs);
