@@ -1260,15 +1260,11 @@ options_act(or_options_t *old_options)
   /* Check for transitions that need action. */
   if (old_options) {
     if ((options->UseEntryGuards && !old_options->UseEntryGuards) ||
-        (options->ExcludeNodes &&
-         !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)) ||
-        (options->ExcludeExitNodes &&
-         !routerset_equal(old_options->ExcludeExitNodes,
-                          options->ExcludeExitNodes)) ||
-        (options->EntryNodes &&
-         !routerset_equal(old_options->EntryNodes, options->EntryNodes)) ||
-        (options->ExitNodes &&
-         !routerset_equal(old_options->ExitNodes, options->ExitNodes)) ||
+        !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes) ||
+        !routerset_equal(old_options->ExcludeExitNodes,
+                         options->ExcludeExitNodes) ||
+        !routerset_equal(old_options->EntryNodes, options->EntryNodes) ||
+        !routerset_equal(old_options->ExitNodes, options->ExitNodes) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
                "Changed to using entry guards, or changed preferred or "

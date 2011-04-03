@@ -5473,14 +5473,12 @@ routerset_needs_geoip(const routerset_t *set)
   return set && smartlist_len(set->country_names);
 }
 
-#if 0
 /** Return true iff there are no entries in <b>set</b>. */
 static int
 routerset_is_empty(const routerset_t *set)
 {
   return !set || smartlist_len(set->list) == 0;
 }
-#endif
 
 /** Helper.  Return true iff <b>set</b> contains a router based on the other
  * provided fields.  Return higher values for more specific subentries: a
@@ -5659,10 +5657,15 @@ routerset_to_string(const routerset_t *set)
 int
 routerset_equal(const routerset_t *old, const routerset_t *new)
 {
-  if (old == NULL && new == NULL)
+  if (routerset_is_empty(old) && routerset_is_empty(new)) {
+    /* Two empty sets are equal */
     return 1;
-  else if (old == NULL || new == NULL)
+  } else if (routerset_is_empty(old) || routerset_is_empty(new)) {
+    /* An empty set is equal to nothing else. */
     return 0;
+  }
+  tor_assert(old != NULL);
+  tor_assert(new != NULL);
 
   if (smartlist_len(old->list) != smartlist_len(new->list))
     return 0;
