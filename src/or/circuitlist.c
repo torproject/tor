@@ -923,6 +923,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
   int need_uptime = (flags & CIRCLAUNCH_NEED_UPTIME) != 0;
   int need_capacity = (flags & CIRCLAUNCH_NEED_CAPACITY) != 0;
   int internal = (flags & CIRCLAUNCH_IS_INTERNAL) != 0;
+  or_options_t *options = get_options();
 
   /* Make sure we're not trying to create a onehop circ by
    * cannibalization. */
@@ -932,11 +933,6 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
             "Hunting for a circ to cannibalize: purpose %d, uptime %d, "
             "capacity %d, internal %d",
             purpose, need_uptime, need_capacity, internal);
-
-  /* XXX022-1090 We should make sure that when we cannibalize a circuit, it
-   * contains no excluded nodes.  (This is possible if StrictNodes is 0, and
-   * we thought we needed to use an excluded exit node for, say, a directory
-   * operation.) -NM */
 
   for (_circ=global_circuitlist; _circ; _circ = _circ->next) {
     if (CIRCUIT_IS_ORIGIN(_circ) &&
@@ -965,6 +961,19 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
               goto next;
             hop=hop->next;
           } while (hop!=circ->cpath);
+        }
+        if (options->ExcludeNodes) {
+          /* Make sure no existing nodes in the circuit are excluded for
+           * general use.  (This may be possible if StrictNodes is 0, and we
+           * thought we needed to use an otherwise excluded node for, say, a
+           * directory operation.) */
+          crypt_path_t *hop = circ->cpath;
+          do {
+            if (routerset_contains_extendinfo(options->ExcludeNodes,
+                                              hop->extend_info))
+              goto next;
+            hop = hop->next;
+          } while (hop != circ->cpath);
         }
         if (!best || (best->build_state->need_uptime && !need_uptime))
           best = circ;
