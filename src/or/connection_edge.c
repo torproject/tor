@@ -789,6 +789,9 @@ addressmap_ent_remove(const char *address, addressmap_entry_t *ent)
 static void
 clear_trackexithost_mappings(const char *exitname)
 {
+  /* XXXX022-1090 We need a variant of this that clears all mappings no longer
+     permitted because of changes to the ExcludeNodes, ExitNodes, or
+     ExcludeExitNodes settings. */
   char *suffix;
   size_t suffix_len;
   if (!addressmap || !exitname)
