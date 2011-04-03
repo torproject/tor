@@ -4539,6 +4539,24 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port, char *digest)
   smartlist_add(bridge_list, b);
 }
 
+/** Return true iff <b>routerset</b> contains the bridge <b>bridge</b>. */
+static int
+routerset_contains_bridge(const routerset_t *routerset,
+                          const bridge_info_t *bridge)
+{
+  int result;
+  extend_info_t *extinfo;
+  tor_assert(bridge);
+  if (!routerset)
+    return 0;
+
+  extinfo = extend_info_alloc(
+         NULL, bridge->identity, NULL, &bridge->addr, bridge->port);
+  result = routerset_contains_extendinfo(routerset, extinfo);
+  extend_info_free(extinfo);
+  return result;
+}
+
 /** If <b>digest</b> is one of our known bridges, return it. */
 static bridge_info_t *
 find_bridge_by_digest(const char *digest)
@@ -4557,6 +4575,7 @@ static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
   char *address;
+  or_options_t *options = get_options();
 
   if (connection_get_by_type_addr_port_purpose(
       CONN_TYPE_DIR, &bridge->addr, bridge->port,
@@ -4564,7 +4583,13 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return; /* it's already on the way */
 
   address = tor_dup_addr(&bridge->addr);
-  /* XXX022-1090 if we ExcludeNodes this bridge, should this step fail? -RD */
+  if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
+    download_status_mark_impossible(&bridge->fetch_status);
+    log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
+             safe_str_client(fmt_addr(&bridge->addr)));
+    return;
+  }
+
   directory_initiate_command(address, &bridge->addr,
                              bridge->port, 0,
                              0, /* does not matter */
@@ -4605,6 +4630,12 @@ fetch_bridge_descriptors(or_options_t *options, time_t now)
       if (!download_status_is_ready(&bridge->fetch_status, now,
                                     IMPOSSIBLE_TO_DOWNLOAD))
         continue; /* don't bother, no need to retry yet */
+      if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
+        download_status_mark_impossible(&bridge->fetch_status);
+        log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
+                 safe_str_client(fmt_addr(&bridge->addr)));
+        continue;
+      }
 
       /* schedule another fetch as if this one will fail, in case it does */
       download_status_failed(&bridge->fetch_status, 0);
