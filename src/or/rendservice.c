@@ -1347,17 +1347,26 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   }
 
   /* If we already have enough introduction circuits for this service,
-   * redefine this one as a general circuit. */
+   * redefine this one as a general circuit or close it, depending. */
   if (count_established_intro_points(serviceid) > NUM_INTRO_POINTS) {
-    log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
-             "circuit, but we already have enough. Redefining purpose to "
-             "general.");
-    /* XXX022-1090: This can wind up violating ExcludeNodes/
-     * ExitNodes/ExcludeExitNodes restrictions.
-     */
-    TO_CIRCUIT(circuit)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
-    circuit_has_opened(circuit);
-    return;
+    or_options_t *options = get_options();
+    if (options->ExcludeNodes) {
+      /* XXXX in some future version, we can test whether the transition is
+         allowed or not given the actual nodes in the circuit.  But for now,
+         this case, we might as well close the thing. */
+      log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
+               "circuit, but we already have enough.  Closing it.");
+      circuit_mark_for_close(TO_CIRCUIT(circuit), END_CIRC_REASON_NONE);
+      return;
+    } else {
+      tor_assert(circuit->build_state->is_internal);
+      log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
+               "circuit, but we already have enough. Redefining purpose to "
+               "general; leaving as internal.");
+      TO_CIRCUIT(circuit)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+      circuit_has_opened(circuit);
+      return;
+    }
   }
 
   log_info(LD_REND,
