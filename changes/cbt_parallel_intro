@@ -1,4 +1,0 @@
-  o Minor features
-    - Use computed circuit-build timeouts to decide when to launch
-      parallel introdution circuits.  (Previously, we would retry
-      after 15 seconds.)

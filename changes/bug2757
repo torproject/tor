@@ -1,6 +1,0 @@
-  - Minor bugfixes
-    o Avoid a double-mark-for-free warning when failing to attach a
-      transparent proxy connection.  (We thought we had fixed this in
-      0.2.2.23-alpha, but it turns out our fix was checking the wrong
-      connection.)  Fixes bug 2757; bugfix on 0.1.2.1-alpha (the original
-      bug) and 0.2.2.23-alpha (the incorrect fix).
