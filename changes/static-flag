@@ -1,4 +1,0 @@
-  o Minor features
-    - New "--enable-static-tor" configuration flag to try to build Tor
-      to link statically against as much as possible.  Doesn't work on
-      all platforms.
