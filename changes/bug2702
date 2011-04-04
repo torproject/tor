@@ -1,0 +1,5 @@
+  o Minor features:
+    - Implements --enable-static-tor for configure time. Implements ticket
+      2702. Idea, general hackery and thoughts from Alexei Czeskis, John
+      Gilmore, Jacob Appelbaum.
+
