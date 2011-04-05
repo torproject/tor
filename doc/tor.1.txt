@@ -437,6 +437,12 @@ Other options can be specified either on the command-line (--option
     and you're running on Windows, setting this option to 1 will tell Libevent
     not to use the Windows IOCP networking API.  (Default: 1)
 
+**CountPrivateBandwidth** **0**|**1**::
+    If this option is set, then Tor's rate-limiting applies not only to
+    remote connections, but also to connections to private addresses like
+    127.0.0.1 or 10.0.0.1.  This is mostly useful for debugging
+    rate-limiting.  (Default: 0)
+
 CLIENT OPTIONS
 --------------
 
@@ -1342,6 +1348,7 @@ The following options are used for running a testing Tor network.
        AuthDirMaxServersPerAuthAddr 0
        ClientDNSRejectInternalAddresses 0
        ClientRejectInternalAddresses 0
+       CountPrivateBandwidth 1
        ExitPolicyRejectPrivate 0
        V3AuthVotingInterval 5 minutes
        V3AuthVoteDelay 20 seconds

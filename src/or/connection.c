@@ -1954,10 +1954,12 @@ static int
 connection_is_rate_limited(connection_t *conn)
 {
   or_options_t *options = get_options();
-  if (conn->linked || /* internal connection */
-      (options->CountPrivateBandwidth==1 && ( tor_addr_family(&conn->addr) == AF_UNSPEC || /* no address */
-      tor_addr_is_internal(&conn->addr, 0)))) /* internal address */
-    return 0;
+  if (conn->linked)
+    return 0; /* Internal connection */
+  else if (options->CountPrivateBandwidth &&
+           (tor_addr_family(&conn->addr) == AF_UNSPEC || /* no address */
+            tor_addr_is_internal(&conn->addr, 0)))
+    return 0; /* Internal address */
   else
     return 1;
 }

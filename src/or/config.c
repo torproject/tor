@@ -2958,11 +2958,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   tor_assert(msg);
   *msg = NULL;
 
-  // Cagara: Tell us if we use the private network fix!
-  if(options->CountPrivateBandwidth == 1) {
-      log_notice(LD_CONFIG, "Private bandwidth will be treated as normal traffic.");
-  }
-
   if (options->ORPort < 0 || options->ORPort > 65535)
     REJECT("ORPort option out of bounds.");
 

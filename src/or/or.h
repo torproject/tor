@@ -2868,8 +2868,9 @@ typedef struct {
   /** Boolean: if set, we start even if our resolv.conf file is missing
    * or broken. */
   int ServerDNSAllowBrokenConfig;
-  int CountPrivateBandwidth; // Cagara: Flag to allow private addresses counting to bucket size
-
+  /** Boolean: if set, then even connections to private addresses will get
+   * rate-limited. */
+  int CountPrivateBandwidth;
   smartlist_t *ServerDNSTestAddresses; /**< A list of addresses that definitely
                                         * should be resolvable. Used for
                                         * testing our DNS server. */
