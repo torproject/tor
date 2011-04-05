@@ -211,6 +211,7 @@ static config_var_t _option_vars[] = {
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
+  V(CountPrivateBandwidth,       BOOL,     "0"),
   V(DataDirectory,               FILENAME, NULL),
   OBSOLETE("DebugLogFile"),
   V(DirAllowPrivateAddresses,    BOOL,     NULL),
@@ -418,6 +419,7 @@ static config_var_t testing_tor_network_defaults[] = {
   V(AuthDirMaxServersPerAuthAddr,UINT,     "0"),
   V(ClientDNSRejectInternalAddresses, BOOL,"0"),
   V(ClientRejectInternalAddresses, BOOL,   "0"),
+  V(CountPrivateBandwidth,       BOOL,     "1"),
   V(ExitPolicyRejectPrivate,     BOOL,     "0"),
   V(V3AuthVotingInterval,        INTERVAL, "5 minutes"),
   V(V3AuthVoteDelay,             INTERVAL, "20 seconds"),
@@ -429,6 +431,7 @@ static config_var_t testing_tor_network_defaults[] = {
   V(TestingEstimatedDescriptorPropagationTime, INTERVAL, "0 minutes"),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "0 minutes"),
   V(_UsingTestNetworkDefaults,   BOOL,     "1"),
+
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 #undef VAR
@@ -2954,6 +2957,11 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   tor_assert(msg);
   *msg = NULL;
+
+  // Cagara: Tell us if we use the private network fix!
+  if(options->CountPrivateBandwidth == 1) {
+      log_notice(LD_CONFIG, "Private bandwidth will be treated as normal traffic.");
+  }
 
   if (options->ORPort < 0 || options->ORPort > 65535)
     REJECT("ORPort option out of bounds.");
