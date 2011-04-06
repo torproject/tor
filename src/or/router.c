@@ -1576,8 +1576,6 @@ router_guess_address_from_dir_headers(uint32_t *guess)
   return -1;
 }
 
-extern const char tor_svn_revision[]; /* from tor_main.c */
-
 /** Set <b>platform</b> (max length <b>len</b>) to a NUL-terminated short
  * string describing the version of Tor and the operating system we're
  * currently running on.
