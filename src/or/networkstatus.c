@@ -1217,7 +1217,7 @@ update_consensus_networkstatus_downloads(time_t now)
     if (! we_want_to_fetch_flavor(options, i))
       continue;
 
-    resource = i==FLAV_NS ? NULL : networkstatus_get_flavor_name(i);
+    resource = networkstatus_get_flavor_name(i);
 
     if (!download_status_is_ready(&consensus_dl_status[i], now,
                                   CONSENSUS_NETWORKSTATUS_MAX_DL_TRIES))
