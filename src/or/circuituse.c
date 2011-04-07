@@ -291,7 +291,7 @@ circuit_expire_building(void)
     long ms = tor_lround(msec);                             \
     struct timeval diff;                                    \
     diff.tv_sec = ms / 1000;                                \
-    diff.tv_usec = (ms % 1000) * 1000;                      \
+    diff.tv_usec = (int)((ms % 1000) * 1000);               \
     timersub(&now, &diff, &target);                         \
   } while (0)
 
