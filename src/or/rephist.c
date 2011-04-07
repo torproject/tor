@@ -2545,5 +2545,11 @@ rep_hist_free_all(void)
   tor_free(exit_streams);
   built_last_stability_doc_at = 0;
   predicted_ports_free();
+  if (circuits_for_buffer_stats) {
+    SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *, s,
+                      tor_free(s));
+    smartlist_free(circuits_for_buffer_stats);
+    circuits_for_buffer_stats = NULL;
+  }
 }
 
