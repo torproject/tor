@@ -50,10 +50,14 @@
 #include <assert.h>
 
 /** Convert the tor_addr_t in <b>a</b>, with port in <b>port</b>, into a
- * socklen object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
- * room is free, or on error, return -1.  Else return the length of the
- * sockaddr. */
-int
+ * sockaddr object in *<b>sa_out</b> of object size <b>len</b>.  If not enough
+ * room is available in sa_out, or on error, return 0.  On success, return
+ * the length of the sockaddr.
+ *
+ * Interface note: ordinarily, we return -1 for error.  We can't do that here,
+ * since socklen_t is unsigned on some platforms.
+ **/
+socklen_t
 tor_addr_to_sockaddr(const tor_addr_t *a,
                      uint16_t port,
                      struct sockaddr *sa_out,
@@ -63,7 +67,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
   if (family == AF_INET) {
     struct sockaddr_in *sin;
     if (len < (int)sizeof(struct sockaddr_in))
-      return -1;
+      return 0;
     sin = (struct sockaddr_in *)sa_out;
     memset(sin, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -76,7 +80,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
   } else if (family == AF_INET6) {
     struct sockaddr_in6 *sin6;
     if (len < (int)sizeof(struct sockaddr_in6))
-      return -1;
+      return 0;
     sin6 = (struct sockaddr_in6 *)sa_out;
     memset(sin6, 0, sizeof(struct sockaddr_in6));
 #ifdef HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
@@ -87,7 +91,7 @@ tor_addr_to_sockaddr(const tor_addr_t *a,
     memcpy(&sin6->sin6_addr, tor_addr_to_in6(a), sizeof(struct in6_addr));
     return sizeof(struct sockaddr_in6);
   } else {
-    return -1;
+    return 0;
   }
 }
 
@@ -1096,7 +1100,7 @@ get_interface_address6(int severity, sa_family_t family, tor_addr_t *addr)
 
 /* ======
  * IPv4 helpers
- * XXXX022 IPv6 deprecate some of these.
+ * XXXX023 IPv6 deprecate some of these.
  */
 
 /** Return true iff <b>ip</b> (in host order) is an IP reserved to localhost,

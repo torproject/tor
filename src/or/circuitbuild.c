@@ -43,11 +43,12 @@
 
 /********* START VARIABLES **********/
 /** Global list of circuit build times */
-// FIXME: Add this as a member for entry_guard_t instead of global?
+// XXXX023: Add this as a member for entry_guard_t instead of global?
 // Then we could do per-guard statistics, as guards are likely to
 // vary in their own latency. The downside of this is that guards
 // can change frequently, so we'd be building a lot more circuits
 // most likely.
+/* XXXX023 Make this static; add accessor functions. */
 circuit_build_times_t circ_times;
 
 /** A global list of all circuits at this hop. */
@@ -3831,7 +3832,7 @@ entry_guards_compute_status(or_options_t *options, time_t now)
  * If <b>mark_relay_status</b>, also call router_set_status() on this
  * relay.
  *
- * XXX022 change succeeded and mark_relay_status into 'int flags'.
+ * XXX023 change succeeded and mark_relay_status into 'int flags'.
  */
 int
 entry_guard_register_connect_status(const char *digest, int succeeded,
@@ -4321,7 +4322,7 @@ entry_guards_parse_state(or_state_t *state, int set, char **msg)
     }
     entry_guards = new_entry_guards;
     entry_guards_dirty = 0;
-    /* XXX022 hand new_entry_guards to this func, and move it up a
+    /* XXX023 hand new_entry_guards to this func, and move it up a
      * few lines, so we don't have to re-dirty it */
     if (remove_obsolete_entry_guards(now))
       entry_guards_dirty = 1;

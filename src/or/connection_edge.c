@@ -517,6 +517,7 @@ connection_ap_expire_beginning(void)
     /* kludge to make us not try this circuit again, yet to allow
      * current streams on it to survive if they can: make it
      * unattractive to use for new streams */
+    /* XXXX023 this is a kludgy way to do this. */
     tor_assert(circ->timestamp_dirty);
     circ->timestamp_dirty -= options->MaxCircuitDirtiness;
     /* give our stream another 'cutoff' seconds to try */
@@ -557,7 +558,7 @@ connection_ap_attach_pending(void)
 
 /** Tell any AP streams that are waiting for a one-hop tunnel to
  * <b>failed_digest</b> that they are going to fail. */
-/* XXX022 We should get rid of this function, and instead attach
+/* XXX023 We should get rid of this function, and instead attach
  * one-hop streams to circ->p_streams so they get marked in
  * circuit_mark_for_close like normal p_streams. */
 void
@@ -2169,8 +2170,14 @@ connection_ap_handshake_send_begin(edge_connection_t *ap_conn)
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
+    /* XXXX023 Instead of closing this stream, we should make it get
+     * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
+
+    /* Mark this circuit "unusable for new streams". */
+    /* XXXX023 this is a kludgy way to do this. */
+    tor_assert(circ->_base.timestamp_dirty);
+    circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
   }
 
@@ -2230,9 +2237,14 @@ connection_ap_handshake_send_resolve(edge_connection_t *ap_conn)
 
   ap_conn->stream_id = get_unique_stream_id_by_circ(circ);
   if (ap_conn->stream_id==0) {
+    /* XXXX023 Instead of closing this stream, we should make it get
+     * retried on another circuit. */
     connection_mark_unattached_ap(ap_conn, END_STREAM_REASON_INTERNAL);
-    /*XXXX022 _close_ the circuit because it's full?  That sounds dumb. */
-    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_RESOURCELIMIT);
+
+    /* Mark this circuit "unusable for new streams". */
+    /* XXXX023 this is a kludgy way to do this. */
+    tor_assert(circ->_base.timestamp_dirty);
+    circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
     return -1;
   }
 
@@ -2392,7 +2404,7 @@ tell_controller_about_resolved_result(edge_connection_t *conn,
  * certain errors or for values that didn't come via DNS.  <b>expires</b> is
  * a time when the answer expires, or -1 or TIME_MAX if there's a good TTL.
  **/
-/* XXXX022 the use of the ttl and expires fields is nutty.  Let's make this
+/* XXXX023 the use of the ttl and expires fields is nutty.  Let's make this
  * interface and those that use it less ugly. */
 void
 connection_ap_handshake_socks_resolved(edge_connection_t *conn,
@@ -2833,13 +2845,13 @@ connection_exit_connect(edge_connection_t *edge_conn)
 
   log_debug(LD_EXIT,"about to try connecting");
   switch (connection_connect(conn, conn->address, addr, port, &socket_error)) {
-    case -1:
-      /* XXX021 use socket_error below rather than trying to piece things
-       * together from the current errno, which may have been clobbered. */
-      connection_edge_end_errno(edge_conn);
+    case -1: {
+      int reason = errno_to_stream_end_reason(socket_error);
+      connection_edge_end(edge_conn, reason);
       circuit_detach_stream(circuit_get_by_edge_conn(edge_conn), edge_conn);
       connection_free(conn);
       return;
+    }
     case 0:
       conn->state = EXIT_CONN_STATE_CONNECTING;
 

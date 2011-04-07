@@ -354,21 +354,12 @@ tor_check_libevent_version(const char *m, int server,
 
   version = tor_get_libevent_version(&v);
 
-  /* It would be better to disable known-buggy methods than to simply
-     warn about them.  However, it's not trivial to get libevent to change its
-     method once it's initialized, and it's not trivial to tell what method it
-     will use without initializing it.
-
-     If we saw that the version was definitely bad, we could disable all the
-     methods that were bad for that version.  But the issue with that is that
-     if you've found a libevent before 1.1, you are not at all guaranteed to
-     have _any_ good method to use.
-
-     As of Libevent 2, we can do better, and have more control over what
-     methods get used.  But the problem here is that there are no versions of
-     Libevent 2 that have buggy event cores, so there's no point in writing
-     disable code yet.
-  */
+  /* It would be better to disable known-buggy methods rather than warning
+   * about them.  But the problem is that with older versions of Libevent,
+   * it's not trivial to get them to change their methods once they're
+   * initialized... and with newer versions of Libevent, they aren't actually
+   * broken.  But we should revisit this if we ever find a post-1.4 version
+   * of Libevent where we need to disable a given method. */
   if (!strcmp(m, "kqueue")) {
     if (version < V_OLD(1,1,'b'))
       buggy = 1;

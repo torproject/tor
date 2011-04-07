@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Correctly handle an "impossible" overflow cases in connection
+      byte counting, where we write or read more than 4GB on an edge
+      connection in single second.  Bugfix on 0.1.2.8-beta.
+

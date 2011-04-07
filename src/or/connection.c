@@ -57,7 +57,7 @@ static int connection_finished_flushing(connection_t *conn);
 static int connection_flushed_some(connection_t *conn);
 static int connection_finished_connecting(connection_t *conn);
 static int connection_reached_eof(connection_t *conn);
-static int connection_read_to_buf(connection_t *conn, int *max_to_read,
+static int connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
                                   int *socket_error);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
 static void client_check_address_changed(int sock);
@@ -2510,7 +2510,7 @@ connection_consider_empty_read_buckets(connection_t *conn)
 static int
 connection_handle_read_impl(connection_t *conn)
 {
-  int max_to_read=-1, try_to_read;
+  ssize_t max_to_read=-1, try_to_read;
   size_t before, n_read = 0;
   int socket_error = 0;
 
@@ -2628,7 +2628,8 @@ connection_handle_read(connection_t *conn)
  * Return -1 if we want to break conn, else return 0.
  */
 static int
-connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
+connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
+                       int *socket_error)
 {
   int result;
   ssize_t at_most = *max_to_read;
@@ -2746,15 +2747,19 @@ connection_read_to_buf(connection_t *conn, int *max_to_read, int *socket_error)
     n_read = (size_t) result;
   }
 
-  if (n_read > 0) { /* change *max_to_read */
-    /*XXXX022 check for overflow*/
-    *max_to_read = (int)(at_most - n_read);
-  }
+  if (n_read > 0) {
+     /* change *max_to_read */
+    *max_to_read = at_most - n_read;
 
-  if (conn->type == CONN_TYPE_AP) {
-    edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    /*XXXX022 check for overflow*/
-    edge_conn->n_read += (int)n_read;
+    /* Update edge_conn->n_read */
+    if (conn->type == CONN_TYPE_AP) {
+      edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
+      /* Check for overflow: */
+      if (PREDICT_LIKELY(UINT32_MAX - edge_conn->n_read > n_read))
+        edge_conn->n_read += (int)n_read;
+      else
+        edge_conn->n_read = UINT32_MAX;
+    }
   }
 
   connection_buckets_decrement(conn, approx_time(), n_read, n_written);
@@ -3145,10 +3150,14 @@ connection_handle_write_impl(connection_t *conn, int force)
     n_written = (size_t) result;
   }
 
-  if (conn->type == CONN_TYPE_AP) {
+  if (n_written && conn->type == CONN_TYPE_AP) {
     edge_connection_t *edge_conn = TO_EDGE_CONN(conn);
-    /*XXXX022 check for overflow.*/
-    edge_conn->n_written += (int)n_written;
+
+    /* Check for overflow: */
+    if (PREDICT_LIKELY(UINT32_MAX - edge_conn->n_written > n_written))
+      edge_conn->n_written += (int)n_written;
+    else
+      edge_conn->n_written = UINT32_MAX;
   }
 
   connection_buckets_decrement(conn, approx_time(), n_read, n_written);

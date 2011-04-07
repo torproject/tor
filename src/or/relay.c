@@ -793,6 +793,8 @@ connection_ap_process_end_not_open(
             < MAX_RESOLVE_FAILURES) {
           /* We haven't retried too many times; reattach the connection. */
           circuit_log_path(LOG_INFO,LD_APP,circ);
+          /* Mark this circuit "unusable for new streams". */
+          /* XXXX023 this is a kludgy way to do this. */
           tor_assert(circ->_base.timestamp_dirty);
           circ->_base.timestamp_dirty -= get_options()->MaxCircuitDirtiness;
 

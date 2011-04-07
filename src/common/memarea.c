@@ -59,7 +59,9 @@ realign_pointer(void *ptr)
 {
   uintptr_t x = (uintptr_t)ptr;
   x = (x+MEMAREA_ALIGN_MASK) & ~MEMAREA_ALIGN_MASK;
+  /* Reinstate this if bug 930 ever reappears
   tor_assert(((void*)x) >= ptr);
+  */
   return (void*)x;
 }
 
@@ -241,10 +243,10 @@ memarea_alloc(memarea_t *area, size_t sz)
   }
   result = chunk->next_mem;
   chunk->next_mem = chunk->next_mem + sz;
-
+  /* Reinstate these if bug 930 ever comes back
   tor_assert(chunk->next_mem >= chunk->u.mem);
   tor_assert(chunk->next_mem <= chunk->u.mem+chunk->mem_size);
-
+  */
   chunk->next_mem = realign_pointer(chunk->next_mem);
   return result;
 }

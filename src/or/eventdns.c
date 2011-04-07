@@ -1999,7 +1999,7 @@ evdns_request_timeout_callback(int fd, short events, void *arg) {
 		/* retransmit it */
 		/* Stop waiting for the timeout.  No need to do this in
 		 * request_finished; that one already deletes the timeout event.
-		 * XXXX021 port this change to libevent. */
+		 * XXXX023 port this change to libevent. */
 		del_timeout_event(req);
 		evdns_request_transmit(req);
 	}

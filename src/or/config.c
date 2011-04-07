@@ -1367,7 +1367,7 @@ options_act(or_options_t *old_options)
        || !geoip_is_loaded())) {
     /* XXXX Don't use this "<default>" junk; make our filename options
      * understand prefixes somehow. -NM */
-    /* XXXX021 Reload GeoIPFile on SIGHUP. -NM */
+    /* XXXX023 Reload GeoIPFile on SIGHUP. -NM */
     char *actual_fname = tor_strdup(options->GeoIPFile);
 #ifdef WIN32
     if (!strcmp(actual_fname, "<default>")) {
@@ -2537,7 +2537,7 @@ is_local_addr(const tor_addr_t *addr)
   if (get_options()->EnforceDistinctSubnets == 0)
     return 0;
   if (tor_addr_family(addr) == AF_INET) {
-    /*XXXX022 IP6 what corresponds to an /24? */
+    /*XXXX023 IP6 what corresponds to an /24? */
     uint32_t ip = tor_addr_to_ipv4h(addr);
 
     /* It's possible that this next check will hit before the first time
@@ -3728,7 +3728,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
              "ignore you.");
   }
 
-  /*XXXX022 checking for defaults manually like this is a bit fragile.*/
+  /*XXXX023 checking for defaults manually like this is a bit fragile.*/
 
   /* Keep changes to hard-coded values synchronous to man page and default
    * values table. */

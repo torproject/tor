@@ -374,6 +374,9 @@ connection_or_digest_is_known_relay(const char *id_digest)
  * per-conn limits that are big enough they'll never matter. But if it's
  * not a known relay, first check if we set PerConnBwRate/Burst, then
  * check if the consensus sets them, else default to 'big enough'.
+ *
+ * If <b>reset</b> is true, set the bucket to be full.  Otherwise, just
+ * clip the bucket if it happens to be <em>too</em> full.
  */
 static void
 connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
@@ -430,7 +433,8 @@ connection_or_update_token_buckets_helper(or_connection_t *conn, int reset,
 }
 
 /** Either our set of relays or our per-conn rate limits have changed.
- * Go through all the OR connections and update their token buckets. */
+ * Go through all the OR connections and update their token buckets to make
+ * sure they don't exceed their maximum values. */
 void
 connection_or_update_token_buckets(smartlist_t *conns, or_options_t *options)
 {

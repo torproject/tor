@@ -247,24 +247,6 @@ time_t approx_time(void);
 void update_approx_time(time_t now);
 #endif
 
-/* Fuzzy time. */
-
-/** Return true iff <a>a</b> is definitely after <b>b</b>, even if there
- * could be up to <b>allow_seconds</b> of skew in one of them. */
-static INLINE int
-time_definitely_after(time_t a, time_t b, int allow_skew)
-{
-  return a-allow_skew > b;
-}
-
-/** Return true iff <a>a</b> is definitely before <b>b</b>, even if there
- * could be up to <b>allow_seconds</b> of skew in one of them. */
-static INLINE int
-time_definitely_before(time_t a, time_t b, int allow_skew)
-{
-  return a+allow_skew < b;
-}
-
 /* Rate-limiter */
 
 /** A ratelim_t remembers how often an event is occurring, and how often

@@ -1206,7 +1206,7 @@ configure_nameservers(int force)
       struct sockaddr_storage ss;
       socklen = tor_addr_to_sockaddr(&addr, 0,
                                      (struct sockaddr *)&ss, sizeof(ss));
-      if (socklen < 0) {
+      if (socklen <= 0) {
         log_warn(LD_BUG, "Couldn't convert outbound bind address to sockaddr."
                  " Ignoring.");
       } else {
