@@ -1606,7 +1606,7 @@ networkstatus_set_current_consensus(const char *consensus,
 
   if (from_cache && !accept_obsolete &&
       c->valid_until < now-OLD_ROUTER_DESC_MAX_AGE) {
-    /* XXX022 when we try to make fallbackconsensus work again, we should
+    /* XXXX If we try to make fallbackconsensus work again, we should
      * consider taking this out. Until then, believing obsolete consensuses
      * is causing more harm than good. See also bug 887. */
     log_info(LD_DIR, "Loaded an expired consensus. Discarding.");
@@ -1747,7 +1747,8 @@ networkstatus_set_current_consensus(const char *consensus,
     routerstatus_list_update_named_server_map();
     cell_ewma_set_scale_factor(options, current_consensus);
 
-    /* XXX022 where is the right place to put this call? */
+    /* XXXX023 this call might be unnecessary here: can changing the
+     * current consensus really alter our view of any OR's rate limits? */
     connection_or_update_token_buckets(get_connection_array(), options);
 
     circuit_build_times_new_consensus_params(&circ_times, current_consensus);
@@ -1764,7 +1765,11 @@ networkstatus_set_current_consensus(const char *consensus,
     write_str_to_file(consensus_fname, consensus, 0);
   }
 
-  if (ftime_definitely_before(now, current_consensus->valid_after)) {
+/** If a consensus appears more than this many seconds before its declared
+ * valid-after time, declare that our clock is skewed. */
+#define EARLY_CONSENSUS_NOTICE_SKEW 60
+
+  if (now < current_consensus->valid_after - EARLY_CONSENSUS_NOTICE_SKEW) {
     char tbuf[ISO_TIME_LEN+1];
     char dbuf[64];
     long delta = now - current_consensus->valid_after;

@@ -1,0 +1,7 @@
+  o Code simplification and refactoring
+    - Remove the old 'fuzzy time' logic.  It was supposed to be used
+      for handling calculations where we have a known amount of clock
+      skew and an allowed amount of unknown skew.  But we only used it
+      in three places, and we never adjusted the known/unknown skew
+      values.  This is still something we might want to do someday,
+      but if we do, we'll want to do it differently.

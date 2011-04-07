@@ -1006,7 +1006,7 @@ typedef struct connection_t {
   /** Unique identifier for this connection on this Tor instance. */
   uint64_t global_identifier;
 
-  /* XXXX022 move this field, and all the listener-only fields (just
+  /* XXXX023 move this field, and all the listener-only fields (just
      socket_family, I think), into a new listener_connection_t subtype. */
   /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
    * to the evdns_server_port is uses to listen to and answer connections. */
@@ -2127,8 +2127,14 @@ typedef struct circuit_t {
   char *n_conn_onionskin;
 
   struct timeval timestamp_created; /**< When was the circuit created? */
-  time_t timestamp_dirty; /**< When the circuit was first used, or 0 if the
-                           * circuit is clean. */
+  /** When the circuit was first used, or 0 if the circuit is clean.
+   *
+   * XXXX023 Note that some code will artifically adjust this value backward
+   * in time in order to indicate that a circuit shouldn't be used for new
+   * streams, but that it can stay alive as long as it has streams on it.
+   * That's a kludge we should fix.
+   */
+  time_t timestamp_dirty;
 
   uint16_t marked_for_close; /**< Should we close this circuit at the end of
                               * the main loop? (If true, holds the line number
