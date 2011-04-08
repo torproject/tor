@@ -841,7 +841,7 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
     if (len < 6)
       continue; /* malformed. */
     dot = target + len - 6; /* dot now points to just before .exit */
-    dot = strrchr(dot, '.'); /* dot now points to the . before .exit, or NULL */
+    dot = strrchr(dot, '.'); /* dot now points to the . before .exit or NULL */
     if (!dot) {
       nodename = tor_strndup(target, len-5);
     } else {
