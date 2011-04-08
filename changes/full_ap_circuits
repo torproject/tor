@@ -1,6 +1,0 @@
-  o Minor bugfixes
-    - When a client finds that an origin circuit has run out of 16-bit
-      stream IDs, we now mark it as unusable for new streams.
-      Previously, we would try to close the entire circuit.  Bugfix on
-      Tor version 0.0.6.
-

@@ -1,3 +1,39 @@
+Changes in version 0.2.2.25-alpha - 2011-04-??
+  o Major features:
+    - Export GeoIP information on usage to bridge controller even if
+      we have not yet been running for 24 hours.
+
+  o Minor bugfixes:
+    - Be more careful about reporting the correct error from a failed
+      connect() system call. Under some circumstances, it was possible to
+      look at an incorrect value for errno when sending the end reason.
+      Bugfix on 0.1.0.1-rc.
+    - Correctly handle an "impossible" overflow cases in connection
+      byte counting, where we write or read more than 4GB on an edge
+      connection in single second. Bugfix on 0.1.2.8-beta.
+    - When a client finds that an origin circuit has run out of 16-bit
+      stream IDs, we now mark it as unusable for new streams. Previously,
+      we would try to close the entire circuit. Bugfix on Tor 0.0.6.
+
+  o Minor features:
+    - Send END_STREAM_REASON_NOROUTE in response to EHOSTUNREACH errors.
+      Clients before 0.2.1.27 didn't handle NOROUTE correctly, but such
+      clients are already deprecated because of security bugs.
+
+  o Code simplification and refactoring:
+    - Removed workaround code to handle directory responses from
+      servers that had bug 539 (they would send HTTP status 503
+      responses _and_ send a body too). Since only server versions before
+      0.2.0.16-alpha/0.1.2.19 were affected, there is no longer reason
+      to keep the workaround in place.
+    - Remove the old 'fuzzy time' logic. It was supposed to be used
+      for handling calculations where we have a known amount of clock
+      skew and an allowed amount of unknown skew. But we only used it
+      in three places, and we never adjusted the known/unknown skew
+      values. This is still something we might want to do someday,
+      but if we do, we'll want to do it differently.
+
+
 Changes in version 0.2.2.24-alpha - 2011-04-08
   Tor 0.2.2.24-alpha fixes a variety of bugs, including a big bug that
   prevented Tor clients from effectively using "multihomed" bridges,

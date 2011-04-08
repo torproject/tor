@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Be more careful about reporting the correct error from a failed
-      connect() operation.  Under some circumstances, it was possible to
-      look at an incorrect value for errno when sending the end reason.
-      Bugfix on Tor-0.1.0.1-rc.
-
