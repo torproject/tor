@@ -2330,14 +2330,19 @@ rep_hist_buffer_stats_init(time_t now)
   start_of_buffer_stats_interval = now;
 }
 
+/** Statistics from a single circuit.  Collected when the circuit closes, or
+ * when we flush statistics to disk. */
 typedef struct circ_buffer_stats_t {
-  uint32_t processed_cells;
+  /** Average number of cells in the circuit's queue */
   double mean_num_cells_in_queue;
+  /** Average time a cell waits in the queue. */
   double mean_time_cells_in_queue;
-  uint32_t local_circ_id;
+  /** Total number of cells sent over this circuit */
+  uint32_t processed_cells;
 } circ_buffer_stats_t;
 
-smartlist_t *circuits_for_buffer_stats = NULL;
+/** List of circ_buffer_stats_t. */
+static smartlist_t *circuits_for_buffer_stats = NULL;
 
 /** Remember cell statistics for circuit <b>circ</b> at time
  * <b>end_of_interval</b> and reset cell counters in case the circuit
@@ -2361,6 +2366,8 @@ rep_hist_buffer_stats_add_circ(circuit_t *circ, time_t end_of_interval)
         circ->timestamp_created.tv_sec :
         start_of_buffer_stats_interval;
   interval_length = (int) (end_of_interval - start_of_interval);
+  if (interval_length <= 0)
+    return;
   stat = tor_malloc_zero(sizeof(circ_buffer_stats_t));
   stat->processed_cells = orcirc->processed_cells;
   /* 1000.0 for s -> ms; 2.0 because of app-ward and exit-ward queues */
@@ -2538,5 +2545,11 @@ rep_hist_free_all(void)
   tor_free(exit_streams);
   built_last_stability_doc_at = 0;
   predicted_ports_free();
+  if (circuits_for_buffer_stats) {
+    SMARTLIST_FOREACH(circuits_for_buffer_stats, circ_buffer_stats_t *, s,
+                      tor_free(s));
+    smartlist_free(circuits_for_buffer_stats);
+    circuits_for_buffer_stats = NULL;
+  }
 }
 

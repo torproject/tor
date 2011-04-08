@@ -84,10 +84,16 @@ setup_directory(void)
   if (is_setup) return;
 
 #ifdef MS_WINDOWS
-  // XXXX
-  tor_snprintf(temp_dir, sizeof(temp_dir),
-               "c:\\windows\\temp\\tor_test_%d", (int)getpid());
-  r = mkdir(temp_dir);
+  {
+    char buf[MAX_PATH];
+    const char *tmp = buf;
+    /* If this fails, we're probably screwed anyway */
+    if (!GetTempPath(sizeof(buf),buf))
+      tmp = "c:\\windows\\temp";
+    tor_snprintf(temp_dir, sizeof(temp_dir),
+                 "%s\\tor_test_%d", tmp, (int)getpid());
+    r = mkdir(temp_dir);
+  }
 #else
   tor_snprintf(temp_dir, sizeof(temp_dir), "/tmp/tor_test_%d", (int) getpid());
   r = mkdir(temp_dir, 0700);

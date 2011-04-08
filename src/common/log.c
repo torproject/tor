@@ -363,7 +363,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
       continue;
     } else if (lf->callback) {
       if (domain & LD_NOCB) {
-        if (!callbacks_deferred) {
+        if (!callbacks_deferred && pending_cb_messages) {
           pending_cb_message_t *msg = tor_malloc(sizeof(pending_cb_message_t));
           msg->severity = severity;
           msg->domain = domain;
@@ -512,9 +512,12 @@ void
 logs_free_all(void)
 {
   logfile_t *victim, *next;
+  smartlist_t *messages;
   LOCK_LOGS();
   next = logfiles;
   logfiles = NULL;
+  messages = pending_cb_messages;
+  pending_cb_messages = NULL;
   UNLOCK_LOGS();
   while (next) {
     victim = next;
@@ -523,6 +526,12 @@ logs_free_all(void)
     log_free(victim);
   }
   tor_free(appname);
+
+  SMARTLIST_FOREACH(messages, pending_cb_message_t *, msg, {
+      tor_free(msg->msg);
+      tor_free(msg);
+    });
+  smartlist_free(messages);
 
   /* We _could_ destroy the log mutex here, but that would screw up any logs
    * that happened between here and the end of execution. */
