@@ -330,17 +330,12 @@ tor_check_libevent_version(const char *m, int server,
 
   version = tor_get_libevent_version(&v);
 
-  /* XXX Would it be worthwhile disabling the methods that we know
-   * are buggy, rather than just warning about them and then proceeding
-   * to use them? If so, we should probably not wrap this whole thing
-   * in HAVE_EVENT_GET_VERSION and HAVE_EVENT_GET_METHOD. -RD */
-  /* XXXX The problem is that it's not trivial to get libevent to change it's
-   * method once it's initialized, and it's not trivial to tell what method it
-   * will use without initializing it.  I guess we could preemptively disable
-   * buggy libevent modes based on the version _before_ initializing it,
-   * though, but then there's no good way (afaict) to warn "I would have used
-   * kqueue, but instead I'm using select." -NM */
-  /* XXXX022 revist the above; it is fixable now. */
+  /* It would be better to disable known-buggy methods rather than warning
+   * about them.  But the problem is that with older versions of Libevent,
+   * it's not trivial to get them to change their methods once they're
+   * initialized... and with newer versions of Libevent, they aren't actually
+   * broken.  But we should revisit this if we ever find a post-1.4 version
+   * of Libevent where we need to disable a given method. */
   if (!strcmp(m, "kqueue")) {
     if (version < V_OLD(1,1,'b'))
       buggy = 1;

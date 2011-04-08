@@ -328,7 +328,7 @@ trusted_dirs_remove_old_certs(void)
         time_t cert_published;
         if (newest == cert)
           continue;
-        expired = ftime_definitely_after(now, cert->expires);
+        expired = now > cert->expires;
         cert_published = cert->cache_info.published_on;
         /* Store expired certs for 48 hours after a newer arrives;
          */
@@ -520,7 +520,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
       continue;
     cl = get_cert_list(ds->v3_identity_digest);
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert, {
-      if (!ftime_definitely_after(now, cert->expires)) {
+      if (now < cert->expires) {
         /* It's not expired, and we weren't looking for something to
          * verify a consensus with.  Call it done. */
         download_status_reset(&cl->dl_status);
@@ -1770,7 +1770,7 @@ smartlist_choose_by_bandwidth_weights(smartlist_t *sl,
       sl_last_weighted_bw_of_me = weight*this_bw;
   }
 
-  /* XXXX022 this is a kludge to expose these values. */
+  /* XXXX023 this is a kludge to expose these values. */
   sl_last_total_weighted_bw = weighted_bw;
 
   log_debug(LD_CIRC, "Choosing node for rule %s based on weights "
@@ -1893,7 +1893,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
       if (status->has_bandwidth) {
         this_bw = kb_to_bytes(status->bandwidth);
       } else { /* guess */
-        /* XXX022 once consensuses always list bandwidths, we can take
+        /* XXX023 once consensuses always list bandwidths, we can take
          * this guessing business out. -RD */
         is_known = 0;
         flags = status->is_fast ? 1 : 0;
@@ -1912,7 +1912,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
       if (rs && rs->has_bandwidth) {
         this_bw = kb_to_bytes(rs->bandwidth);
       } else if (rs) { /* guess; don't trust the descriptor */
-        /* XXX022 once consensuses always list bandwidths, we can take
+        /* XXX023 once consensuses always list bandwidths, we can take
          * this guessing business out. -RD */
         is_known = 0;
         flags = router->is_fast ? 1 : 0;
@@ -2028,7 +2028,7 @@ smartlist_choose_by_bandwidth(smartlist_t *sl, bandwidth_weight_rule_t rule,
     }
   }
 
-  /* XXXX022 this is a kludge to expose these values. */
+  /* XXXX023 this is a kludge to expose these values. */
   sl_last_total_weighted_bw = total_bw;
 
   log_debug(LD_CIRC, "Total weighted bw = "U64_FORMAT
@@ -3395,7 +3395,7 @@ router_add_extrainfo_to_routerlist(extrainfo_t *ei, const char **msg,
   int inserted;
   (void)from_fetch;
   if (msg) *msg = NULL;
-  /*XXXX022 Do something with msg */
+  /*XXXX023 Do something with msg */
 
   inserted = extrainfo_insert(router_get_routerlist(), ei);
 
@@ -4591,7 +4591,7 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
 
 /** How often should we launch a server/authority request to be sure of getting
  * a guess for our IP? */
-/*XXXX021 this info should come from netinfo cells or something, or we should
+/*XXXX023 this info should come from netinfo cells or something, or we should
  * do this only when we aren't seeing incoming data. see bug 652. */
 #define DUMMY_DOWNLOAD_INTERVAL (20*60)
 
@@ -4609,7 +4609,7 @@ update_router_descriptor_downloads(time_t now)
   update_consensus_router_descriptor_downloads(now, 0,
     networkstatus_get_reasonably_live_consensus(now));
 
-  /* XXXX021 we could be smarter here; see notes on bug 652. */
+  /* XXXX023 we could be smarter here; see notes on bug 652. */
   /* If we're a server that doesn't have a configured address, we rely on
    * directory fetches to learn when our address changes.  So if we haven't
    * tried to get any routerdescs in a long time, try a dummy fetch now. */

@@ -587,7 +587,7 @@ rep_hist_get_weighted_time_known(const char *id, time_t when)
 int
 rep_hist_have_measured_enough_stability(void)
 {
-  /* XXXX021 This doesn't do so well when we change our opinion
+  /* XXXX022 This doesn't do so well when we change our opinion
    * as to whether we're tracking router stability. */
   return started_tracking_stability < time(NULL) - 4*60*60;
 }

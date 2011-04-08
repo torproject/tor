@@ -291,7 +291,7 @@ circuit_expire_building(void)
     long ms = tor_lround(msec);                             \
     struct timeval diff;                                    \
     diff.tv_sec = ms / 1000;                                \
-    diff.tv_usec = (ms % 1000) * 1000;                      \
+    diff.tv_usec = (int)((ms % 1000) * 1000);               \
     timersub(&now, &diff, &target);                         \
   } while (0)
 
@@ -1284,7 +1284,8 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         return -1;
       }
     } else {
-      /* XXXX022 Duplicates checks in connection_ap_handshake_attach_circuit */
+      /* XXXX023 Duplicates checks in connection_ap_handshake_attach_circuit:
+       * refactor into a single function? */
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
       if (router && !connection_ap_can_use_exit(conn, router, 0)) {
@@ -1623,7 +1624,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
     /* find the circuit that we should use, if there is one. */
     retval = circuit_get_open_circ_or_launch(
         conn, CIRCUIT_PURPOSE_C_GENERAL, &circ);
-    if (retval < 1) // XXX021 if we totally fail, this still returns 0 -RD
+    if (retval < 1) // XXX022 if we totally fail, this still returns 0 -RD
       return retval;
 
     log_debug(LD_APP|LD_CIRC,

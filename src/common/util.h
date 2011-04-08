@@ -247,16 +247,6 @@ time_t approx_time(void);
 void update_approx_time(time_t now);
 #endif
 
-/* Fuzzy time. */
-void ftime_set_maximum_sloppiness(int seconds);
-void ftime_set_estimated_skew(int seconds);
-/* typedef struct ftime_t { time_t earliest; time_t latest; } ftime_t; */
-/* void ftime_get_window(time_t now, ftime_t *ft_out); */
-int ftime_maybe_after(time_t now, time_t when);
-int ftime_maybe_before(time_t now, time_t when);
-int ftime_definitely_after(time_t now, time_t when);
-int ftime_definitely_before(time_t now, time_t when);
-
 /* Rate-limiter */
 
 /** A ratelim_t remembers how often an event is occurring, and how often
