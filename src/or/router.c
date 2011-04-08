@@ -865,7 +865,7 @@ consider_testing_reachability(int test_or, int test_dir)
       if ((msg = rate_limit_log(&warning_limit, approx_time()))) {
         log_warn(LD_CIRC, "Can't peform self-tests for this relay: we have "
                  "listed ourself in ExcludeNodes, and StrictNodes is set. "
-                 "We will cannot learn whether we are usable, and will not "
+                 "We cannot learn whether we are usable, and will not "
                  "be able to advertise ourself.%s", msg);
         tor_free(msg);
       }
