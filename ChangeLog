@@ -72,6 +72,7 @@ Changes in version 0.2.2.24-alpha - 2011-04-08
     - Use computed circuit-build timeouts to decide when to launch
       parallel introduction circuits for hidden services. (Previously,
       we would retry after 15 seconds.)
+    - Update to the April 1 2011 Maxmind GeoLite Country database.
 
   o Packaging fixes:
     - Create the /var/run/tor directory on startup on OpenSUSE if it is
