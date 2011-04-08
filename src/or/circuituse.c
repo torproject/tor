@@ -392,10 +392,11 @@ circuit_expire_building(void)
             TO_ORIGIN_CIRCUIT(victim)->cpath->state == CPATH_STATE_OPEN;
 
       if (TO_ORIGIN_CIRCUIT(victim)->p_streams != NULL) {
-        log_warn(LD_BUG, "Circuit %d (purpose %d) has timed out, "
+        log_warn(LD_BUG, "Circuit %d (purpose %d, %s) has timed out, "
                  "yet has attached streams!",
                  TO_ORIGIN_CIRCUIT(victim)->global_identifier,
-                 victim->purpose);
+                 victim->purpose,
+                 circuit_purpose_to_string(victim->purpose));
         tor_fragile_assert();
         continue;
       }
@@ -426,9 +427,10 @@ circuit_expire_building(void)
         if (timercmp(&victim->timestamp_created, &extremely_old_cutoff, <)) {
           log_notice(LD_CIRC,
                      "Extremely large value for circuit build timeout: %lds. "
-                     "Assuming clock jump. Purpose %d",
+                     "Assuming clock jump. Purpose %d (%s)",
                      (long)(now.tv_sec - victim->timestamp_created.tv_sec),
-                      victim->purpose);
+                     victim->purpose, 
+                     circuit_purpose_to_string(victim->purpose));
         } else if (circuit_build_times_count_close(&circ_times,
                                             first_hop_succeeded,
                                             victim->timestamp_created.tv_sec)) {
@@ -794,12 +796,11 @@ circuit_expire_old_circuits_clientside(void)
               circ->purpose != CIRCUIT_PURPOSE_S_INTRO) {
             log_notice(LD_CIRC,
                        "Ancient non-dirty circuit %d is still around after "
-                       "%ld milliseconds. Purpose: %d",
+                       "%ld milliseconds. Purpose: %d (%s)",
                        TO_ORIGIN_CIRCUIT(circ)->global_identifier,
                        tv_mdiff(&circ->timestamp_created, &now),
-                       circ->purpose);
-            /* FFFF implement a new circuit_purpose_to_string() so we don't
-             * just print out a number for circ->purpose */
+                       circ->purpose,
+                       circuit_purpose_to_string(circ->purpose));
             TO_ORIGIN_CIRCUIT(circ)->is_ancient = 1;
           }
         }
@@ -1136,8 +1137,9 @@ circuit_launch_by_extend_info(uint8_t purpose,
      * internal circs rather than exit circs? -RD */
     circ = circuit_find_to_cannibalize(purpose, extend_info, flags);
     if (circ) {
-      log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d",
-               build_state_get_exit_nickname(circ->build_state), purpose);
+      log_info(LD_CIRC,"Cannibalizing circ '%s' for purpose %d (%s)",
+               build_state_get_exit_nickname(circ->build_state), purpose,
+               circuit_purpose_to_string(purpose));
       circ->_base.purpose = purpose;
       /* reset the birth date of this circ, else expire_building
        * will see it and think it's been trying to build since it

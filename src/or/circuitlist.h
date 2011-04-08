@@ -15,6 +15,7 @@
 circuit_t * _circuit_get_global_list(void);
 const char *circuit_state_to_string(int state);
 const char *circuit_purpose_to_controller_string(uint8_t purpose);
+const char *circuit_purpose_to_string(uint8_t purpose);
 void circuit_dump_by_conn(connection_t *conn, int severity);
 void circuit_set_p_circid_orconn(or_circuit_t *circ, circid_t id,
                                  or_connection_t *conn);

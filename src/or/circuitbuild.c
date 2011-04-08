@@ -2051,8 +2051,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
          */
         if (timediff < 0 || timediff > 2*circ_times.close_ms+1000) {
           log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
-                              "Assuming clock jump. Purpose %d", timediff,
-                              circ->_base.purpose);
+                              "Assuming clock jump. Purpose %d (%s)", timediff,
+                     circ->_base.purpose,
+                     circuit_purpose_to_string(circ->_base.purpose));
         } else if (!circuit_build_times_disabled()) {
           /* Only count circuit times if the network is live */
           if (circuit_build_times_network_check_live(&circ_times)) {
@@ -2890,8 +2891,9 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
     case CIRCUIT_PURPOSE_INTRO_POINT:
     case CIRCUIT_PURPOSE_REND_POINT_WAITING:
     case CIRCUIT_PURPOSE_REND_ESTABLISHED:
-      log_warn(LD_BUG, "Called on non-origin circuit (purpose %d)",
-               (int)purpose);
+      log_warn(LD_BUG, "Called on non-origin circuit (purpose %d, %s)",
+               (int)purpose,
+               circuit_purpose_to_string(purpose));
       return;
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (circ->build_state->is_internal)

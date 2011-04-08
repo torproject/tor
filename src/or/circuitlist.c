@@ -378,6 +378,62 @@ circuit_purpose_to_controller_string(uint8_t purpose)
   }
 }
 
+/** Return a human-readable string for the circuit purpose <b>purpose</b>. */
+const char *
+circuit_purpose_to_string(uint8_t purpose)
+{
+  static char buf[32];
+
+  switch (purpose)
+    {
+    case CIRCUIT_PURPOSE_OR:
+      return "Circuit at relay";
+    case CIRCUIT_PURPOSE_INTRO_POINT:
+      return "Acting as intro point";
+    case CIRCUIT_PURPOSE_REND_POINT_WAITING:
+      return "Acting as rendevous (pending)";
+    case CIRCUIT_PURPOSE_REND_ESTABLISHED:
+      return "Acting as rendevous (established)";
+    case CIRCUIT_PURPOSE_C_GENERAL:
+      return "General-purpose client";
+    case CIRCUIT_PURPOSE_C_INTRODUCING:
+      return "Hidden service client: Connecting to intro point";
+    case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
+      return "Hidden service client: Waiting for ack from intro point";
+    case CIRCUIT_PURPOSE_C_INTRODUCE_ACKED:
+      return "Hidden service client: Received ack from intro point";
+    case CIRCUIT_PURPOSE_C_ESTABLISH_REND:
+      return "Hidden service client: Establishing rendezvous point";
+    case CIRCUIT_PURPOSE_C_REND_READY:
+      return "Hidden service client: Pending rendezvous point";
+    case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
+      return "Hidden service client: Pending rendezvous point (ack received)";
+    case CIRCUIT_PURPOSE_C_REND_JOINED:
+      return "Hidden service client: Active rendezvous point";
+    case CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT:
+      return "Measuring circuit timeout";
+
+    case CIRCUIT_PURPOSE_S_ESTABLISH_INTRO:
+      return "Hidden service: Establishing introduction point";
+    case CIRCUIT_PURPOSE_S_INTRO:
+      return "Hidden service: Introduction point";
+    case CIRCUIT_PURPOSE_S_CONNECT_REND:
+      return "Hidden service: Connecting to rendezvous point";
+    case CIRCUIT_PURPOSE_S_REND_JOINED:
+      return "Hidden service: Active rendezvous point";
+
+    case CIRCUIT_PURPOSE_TESTING:
+      return "Testing circuit";
+
+    case CIRCUIT_PURPOSE_CONTROLLER:
+      return "Circuit made by controller";
+
+    default:
+      tor_snprintf(buf, sizeof(buf), "UNKNOWN_%d", (int)purpose);
+      return buf;
+  }
+}
+
 /** Pick a reasonable package_window to start out for our circuits.
  * Originally this was hard-coded at 1000, but now the consensus votes
  * on the answer. See proposal 168. */
