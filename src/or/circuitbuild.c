@@ -2896,7 +2896,7 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (circ->build_state->is_internal)
         return;
-      description = "Requested exit node";
+      description = "requested exit node";
       rs = options->_ExcludeExitNodesUnion;
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
@@ -2911,22 +2911,28 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
     case CIRCUIT_PURPOSE_C_REND_READY:
     case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
     case CIRCUIT_PURPOSE_C_REND_JOINED:
-      description = "Chosen rendezvous point";
+      description = "chosen rendezvous point";
       domain = LD_BUG;
       break;
     case CIRCUIT_PURPOSE_CONTROLLER:
       rs = options->_ExcludeExitNodesUnion;
-      description = "Controller-selected circuit target";
+      description = "controller-selected circuit target";
       break;
     }
 
   if (routerset_contains_extendinfo(rs, exit)) {
-    log_fn(LOG_WARN, domain, "%s '%s' is in ExcludeNodes%s. Using anyway "
-           "(circuit purpose %d).",
+    /* We should never get here if StrictNodes is set to 1. */
+    if (options->StrictNodes)
+      log_warn(LD_BUG, "Using an excluded node with StrictNodes set. "
+                       "Please report the following log message to the "
+                       "developers.");
+    log_fn(LOG_WARN, domain, "Using %s '%s' which is listed in "
+           "ExcludeNodes%s, because no other options were available. To "
+           "prevent this, set the StrictNodes configuration option."
+           "(Circuit purpose is %d)",
            description,exit->nickname,
            rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
            (int)purpose);
-    /* XXX022-1090 "using anyway" is freaking people out -RD */
     circuit_log_path(LOG_WARN, domain, circ);
   }
 
