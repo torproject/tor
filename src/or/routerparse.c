@@ -3629,7 +3629,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   /* Check length. */
   if (strlen(desc) > REND_DESC_MAX_SIZE) {
     log_warn(LD_REND, "Descriptor length is %i which exceeds "
-             "maximum rendezvous descriptor size of %i kilobytes.",
+             "maximum rendezvous descriptor size of %i bytes.",
              (int)strlen(desc), REND_DESC_MAX_SIZE);
     goto err;
   }
