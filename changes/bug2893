@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Allow manual 'authenticate' commands to the controller interface
+      from nc as well as telnet. We were rejecting them because they
+      didn't come with the expected whitespace at the end of the command.
+      Bugfix on 0.1.1.1-alpha; fixes bug 2893.
