@@ -1,3 +1,90 @@
+Changes in version 0.2.2.24-alpha - 2011-04-08
+  Tor 0.2.2.24-alpha fixes a variety of bugs, including a big bug that
+  prevented Tor clients from effectively using "multihomed" bridges,
+  that is, bridges that listen on multiple ports or IP addresses so users
+  can continue to use some of their addresses even if others get blocked.
+
+  o Major bugfixes:
+    - Fix a bug where bridge users who configure the non-canonical
+      address of a bridge automatically switch to its canonical
+      address. If a bridge listens at more than one address, it should be
+      able to advertise those addresses independently and any non-blocked
+      addresses should continue to work. Bugfix on Tor 0.2.0.x. Fixes
+      bug 2510.
+    - If you configured Tor to use bridge A, and then quit and
+      configured Tor to use bridge B instead, it would happily continue
+      to use bridge A if it's still reachable. While this behavior is
+      a feature if your goal is connectivity, in some scenarios it's a
+      dangerous bug. Bugfix on Tor 0.2.0.1-alpha; fixes bug 2511.
+    - Directory authorities now use data collected from their own
+      uptime observations when choosing whether to assign the HSDir flag
+      to relays, instead of trusting the uptime value the relay reports in
+      its descriptor. This change helps prevent an attack where a small
+      set of nodes with frequently-changing identity keys can blackhole
+      a hidden service. (Only authorities need upgrade; others will be
+      fine once they do.) Bugfix on 0.2.0.10-alpha; fixes bug 2709.
+
+  o Minor bugfixes:
+    - When we restart our relay, we might get a successful connection
+      from the outside before we've started our reachability tests,
+      triggering a warning: "ORPort found reachable, but I have no
+      routerinfo yet. Failing to inform controller of success." This
+      bug was harmless unless Tor is running under a controller
+      like Vidalia, in which case the controller would never get a
+      REACHABILITY_SUCCEEDED status event. Bugfix on 0.1.2.6-alpha;
+      fixes bug 1172.
+    - Make directory authorities more accurate at recording when
+      relays that have failed several reachability tests became
+      unreachable, so we can provide more accuracy at assigning Stable,
+      Guard, HSDir, etc flags. Bugfix on 0.2.0.6-alpha. Resolves bug 2716.
+    - Fix an issue that prevented static linking of libevent on
+      some platforms (notably Linux). Fixes bug 2698; bugfix on
+      versions 0.2.1.23/0.2.2.8-alpha (the versions introducing
+      the --with-static-libevent configure option).
+    - We now ask the other side of a stream (the client or the exit)
+      for more data on that stream when the amount of queued data on
+      that stream dips low enough. Previously, we wouldn't ask the
+      other side for more data until either it sent us more data (which
+      it wasn't supposed to do if it had exhausted its window!) or we
+      had completely flushed all our queued data. This flow control fix
+      should improve throughput. Fixes bug 2756; bugfix on the earliest
+      released versions of Tor (svn commit r152).
+    - Avoid a double-mark-for-free warning when failing to attach a
+      transparent proxy connection. (We thought we had fixed this in
+      0.2.2.23-alpha, but it turns out our fix was checking the wrong
+      connection.) Fixes bug 2757; bugfix on 0.1.2.1-alpha (the original
+      bug) and 0.2.2.23-alpha (the incorrect fix).
+    - When warning about missing zlib development packages during compile,
+      give the correct package names. Bugfix on 0.2.0.1-alpha.
+
+  o Minor features:
+    - Directory authorities now log the source of a rejected POSTed v3
+      networkstatus vote.
+    - Make compilation with clang possible when using
+      --enable-gcc-warnings by removing two warning optionss that clang
+      hasn't implemented yet and by fixing a few warnings. Implements
+      ticket 2696.
+    - When expiring circuits, use microsecond timers rather than
+      one-second timers. This can avoid an unpleasant situation where a
+      circuit is launched near the end of one second and expired right
+      near the beginning of the next, and prevent fluctuations in circuit
+      timeout values.
+    - Use computed circuit-build timeouts to decide when to launch
+      parallel introduction circuits for hidden services. (Previously,
+      we would retry after 15 seconds.)
+    - Update to the April 1 2011 Maxmind GeoLite Country database.
+
+  o Packaging fixes:
+    - Create the /var/run/tor directory on startup on OpenSUSE if it is
+      not already created. Patch from Andreas Stieger. Fixes bug 2573.
+
+  o Documentation changes:
+    - Modernize the doxygen configuration file slightly. Fixes bug 2707.
+    - Resolve all doxygen warnings except those for missing documentation.
+      Fixes bug 2705.
+    - Add doxygen documentation for more functions, fields, and types.
+
+
 Changes in version 0.2.2.23-alpha - 2011-03-08
   Tor 0.2.2.23-alpha lets relays record their bandwidth history so when
   they restart they don't lose their bandwidth capacity estimate. This
