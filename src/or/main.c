@@ -1923,15 +1923,6 @@ get_uptime(void)
   return stats_n_seconds_working;
 }
 
-/** Fills <b>n_read_in</b> with total bytes read and <b>n_written_out</b>
-    with total bytes written */
-void
-get_traffic_stats(uint64_t *n_read_in, uint64_t *n_written_out)
-{
-  *n_read_in = stats_n_bytes_read;
-  *n_written_out = stats_n_bytes_written;
-}
-
 extern uint64_t rephist_total_alloc;
 extern uint32_t rephist_total_num;
 

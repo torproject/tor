@@ -52,7 +52,6 @@ void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
 
 long get_uptime(void);
-void get_traffic_stats(uint64_t *in, uint64_t *out);
 
 void control_signal_act(int the_signal);
 void handle_signals(int is_parent);
