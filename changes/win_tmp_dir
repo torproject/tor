@@ -1,4 +1,0 @@
-  o Unit tests:
-    - Use GetTempDir to find the proper temporary directory location on
-      Windows when generating temporary files for the unit tests.  Patch
-      by Gisle Vanem.

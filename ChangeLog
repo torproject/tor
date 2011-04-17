@@ -14,6 +14,8 @@ Changes in version 0.2.2.25-alpha - 2011-04-??
     - When a client finds that an origin circuit has run out of 16-bit
       stream IDs, we now mark it as unusable for new streams. Previously,
       we would try to close the entire circuit. Bugfix on Tor 0.0.6.
+    - Added a forgotten cast that caused a compile warning on OS X
+      10.6. Bugfix on 0.2.2.24-alpha.
 
   o Minor features:
     - Send END_STREAM_REASON_NOROUTE in response to EHOSTUNREACH errors.
@@ -32,6 +34,9 @@ Changes in version 0.2.2.25-alpha - 2011-04-??
       in three places, and we never adjusted the known/unknown skew
       values. This is still something we might want to do someday,
       but if we do, we'll want to do it differently.
+    - Use GetTempDir to find the proper temporary directory location on
+      Windows when generating temporary files for the unit tests. Patch
+      by Gisle Vanem.
 
 
 Changes in version 0.2.2.24-alpha - 2011-04-08
