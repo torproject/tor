@@ -55,19 +55,19 @@ noinst_HEADERS = or.h eventdns.h eventdns_tor.h micro-revision.i
 tor_main.o: micro-revision.i
 
 micro-revision.i: FORCE
-       @rm -f micro-revision.tmp;                                      \
-       if test -d ../../.git && test -x "`which git 2>&1;true`"; then  \
-         HASH="`git rev-parse --short=16 HEAD`";                       \
-         echo \"$$HASH\" > micro-revision.tmp;                         \
-        fi;                                                            \
-       if test ! -f micro-revision.tmp ; then                          \
-         if test ! -f micro-revision.i ; then                          \
-           echo '""' > micro-revision.i;                               \
-         fi;                                                           \
-       elif test ! -f micro-revision.i ||                              \
-          test x"`cat micro-revision.tmp`" != x"`cat micro-revision.i`"; then \
-         mv micro-revision.tmp micro-revision.i;                       \
-        fi; true
+	@rm -f micro-revision.tmp;					\
+	if test -d ../../.git && test -x "`which git 2>&1;true`"; then	\
+	  HASH="`git rev-parse --short=16 HEAD`";			\
+	  echo \"$$HASH\" > micro-revision.tmp;				\
+	fi;							       \
+	if test ! -f micro-revision.tmp ; then				\
+	  if test ! -f micro-revision.i ; then				\
+	    echo '""' > micro-revision.i;				\
+	  fi;								\
+	elif test ! -f micro-revision.i ||				\
+	   test x"`cat micro-revision.tmp`" != x"`cat micro-revision.i`"; then \
+	  mv micro-revision.tmp micro-revision.i;			\
+	fi; true
 
 #Dummy target to ensure that micro-revision.i _always_ gets built.
 FORCE:
