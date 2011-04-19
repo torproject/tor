@@ -1673,7 +1673,7 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
           mv *= NUM_SECS_ROLLING_MEASURE;
         } else {
           /* No maxima known; guess average rate to be conservative. */
-          mv = v / s_interval;
+          mv = (v / s_interval) * NUM_SECS_ROLLING_MEASURE;
         }
         if (!ok) {
           retval = -1;
