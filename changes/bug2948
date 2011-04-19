@@ -1,0 +1,7 @@
+  o Minor bugfixes
+    - Only limit the lengths of single HS descriptors, even when
+      multiple HS descriptors are published to an HSDir relay in a
+      single POST operation.  Fixes bug 2948; bugfix on 0.2.1.5-alpha.
+      Found by hsdir.
+
+
