@@ -78,7 +78,6 @@ bytes_to_usage(uint64_t bytes)
 int
 log_heartbeat(time_t now)
 {
-  uint64_t in,out;
   char *bw_sent = NULL;
   char *bw_rcvd = NULL;
   char *uptime = NULL;
@@ -99,10 +98,9 @@ log_heartbeat(time_t now)
                "in the cached consensus.");
   }
 
-  get_traffic_stats(&in, &out);
   uptime = secs_to_uptime(get_uptime());
-  bw_sent = bytes_to_usage(out);
-  bw_rcvd = bytes_to_usage(in);
+  bw_rcvd = bytes_to_usage(get_bytes_read());
+  bw_sent = bytes_to_usage(get_bytes_written());
 
   log_fn(LOG_NOTICE, LD_HEARTBEAT, "Heartbeat: Tor's uptime is %s, with %d "
          "circuits open. I've pushed %s and received %s.",
