@@ -1678,7 +1678,7 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
           mv *= NUM_SECS_ROLLING_MEASURE;
         } else {
           /* No maxima known; guess average rate to be conservative. */
-          mv = v / s_interval;
+          mv = (v / s_interval) * NUM_SECS_ROLLING_MEASURE;
         }
         if (!ok) {
           retval = -1;
@@ -1691,11 +1691,24 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
         }
 
         if (start < now) {
-          add_obs(b, start, v);
+          time_t cur_start = start;
+          time_t actual_interval_len = s_interval;
+          uint64_t cur_val = 0;
+          /* Calculate the average per second. This is the best we can do
+           * because our state file doesn't have per-second resolution. */
+          if (start + s_interval > now)
+            actual_interval_len = now - start;
+          cur_val = v / actual_interval_len;
+          /* This is potentially inefficient, but since we don't do it very
+           * often it should be ok. */
+          while (cur_start < start + actual_interval_len) {
+            add_obs(b, cur_start, cur_val);
+            ++cur_start;
+          }
           b->max_total = mv;
           /* This will result in some fairly choppy history if s_interval
-           * is notthe same as NUM_SECS_BW_SUM_INTERVAL. XXXX */
-          start += s_interval;
+           * is not the same as NUM_SECS_BW_SUM_INTERVAL. XXXX */
+          start += actual_interval_len;
         }
     } SMARTLIST_FOREACH_END(cp);
   }
