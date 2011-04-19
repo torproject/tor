@@ -4641,8 +4641,8 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   if (eos-desc > REND_DESC_MAX_SIZE) {
     /* XXX023 If we are parsing this descriptor as a server, this
      * should be a protocol warning. */
-    log_warn(LD_REND, "Descriptor length is %i which exceeds "
-             "maximum rendezvous descriptor size of %i bytes.",
+    log_warn(LD_REND, "Descriptor length is %d which exceeds "
+             "maximum rendezvous descriptor size of %d bytes.",
              (int)(eos-desc), REND_DESC_MAX_SIZE);
     goto err;
   }

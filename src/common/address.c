@@ -604,7 +604,7 @@ tor_addr_parse_mask_ports(const char *s, tor_addr_t *addr_out,
       if (family == AF_INET6 && v4map) {
         if (bits > 32 && bits < 96) { /* Crazy */
           log_warn(LD_GENERAL,
-                   "Bad mask bits %i for V4-mapped V6 address; rejecting.",
+                   "Bad mask bits %d for V4-mapped V6 address; rejecting.",
                    bits);
           goto err;
         }

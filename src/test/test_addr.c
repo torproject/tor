@@ -477,9 +477,9 @@ test_addr_ip6_helpers(void)
   i = get_interface_address6(LOG_DEBUG, AF_INET6, &t2);
 #if 0
   tor_inet_ntop(AF_INET, &t1.sa.sin_addr, buf, sizeof(buf));
-  printf("\nv4 address: %s  (family=%i)", buf, IN_FAMILY(&t1));
+  printf("\nv4 address: %s  (family=%d)", buf, IN_FAMILY(&t1));
   tor_inet_ntop(AF_INET6, &t2.sa6.sin6_addr, buf, sizeof(buf));
-  printf("\nv6 address: %s  (family=%i)", buf, IN_FAMILY(&t2));
+  printf("\nv6 address: %s  (family=%d)", buf, IN_FAMILY(&t2));
 #endif
 
  done:
