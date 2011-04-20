@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix an issue causing calculation of Tor's average bandwidth as saved
+      in the state file to be 10 times smaller than it should be. Fixes the
+      first part of bug 2704, bugfix on tor-0.2.2.23-alpha.
+
