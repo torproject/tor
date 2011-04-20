@@ -23,7 +23,8 @@
 #include "routerlist.h"
 
 static extend_info_t *rend_client_get_random_intro_impl(
-                         const rend_data_t *rend_query, const int strict);
+                          const rend_cache_entry_t *rend_query,
+                          const int strict, const int warnings);
 
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */
@@ -562,7 +563,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
     }
   }
 
-  if (smartlist_len(ent->parsed->intro_nodes) == 0) {
+  if (! rend_client_any_intro_points_usable(ent)) {
     log_info(LD_REND,
              "No more intro points remain for %s. Re-fetching descriptor.",
              escaped_safe_str_client(rend_query->onion_address));
@@ -708,7 +709,7 @@ rend_client_desc_trynow(const char *query)
     assert_connection_ok(TO_CONN(conn), now);
     if (rend_cache_lookup_entry(conn->rend_data->onion_address, -1,
                                 &entry) == 1 &&
-        smartlist_len(entry->parsed->intro_nodes) > 0) {
+        rend_client_any_intro_points_usable(entry)) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
       log_info(LD_REND,"Rend desc is usable. Launching circuits.");
@@ -743,13 +744,22 @@ extend_info_t *
 rend_client_get_random_intro(const rend_data_t *rend_query)
 {
   extend_info_t *result;
+  rend_cache_entry_t *entry;
+
+  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &entry) < 1) {
+      log_warn(LD_REND,
+               "Query '%s' didn't have valid rend desc in cache. Failing.",
+               safe_str_client(rend_query->onion_address));
+    return NULL;
+  }
+
   /* See if we can get a node that complies with ExcludeNodes */
-  if ((result = rend_client_get_random_intro_impl(rend_query, 1)))
+  if ((result = rend_client_get_random_intro_impl(entry, 1, 1)))
     return result;
   /* If not, and StrictNodes is not set, see if we can return any old node
    */
   if (!get_options()->StrictNodes)
-    return rend_client_get_random_intro_impl(rend_query, 0);
+    return rend_client_get_random_intro_impl(entry, 0, 1);
   return NULL;
 }
 
@@ -757,23 +767,18 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
  * iff <b>strict</b> is true.
  */
 static extend_info_t *
-rend_client_get_random_intro_impl(const rend_data_t *rend_query,
-                                  const int strict)
+rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
+                                  const int strict,
+                                  const int warnings)
 {
   int i;
-  rend_cache_entry_t *entry;
+
   rend_intro_point_t *intro;
   routerinfo_t *router;
   or_options_t *options = get_options();
   smartlist_t *usable_nodes;
   int n_excluded = 0;
 
-  if (rend_cache_lookup_entry(rend_query->onion_address, -1, &entry) < 1) {
-    log_warn(LD_REND,
-             "Query '%s' didn't have valid rend desc in cache. Failing.",
-             safe_str_client(rend_query->onion_address));
-    return NULL;
-  }
   /* We'll keep a separate list of the usable nodes.  If this becomes empty,
    * no nodes are usable.  */
   usable_nodes = smartlist_create();
@@ -781,7 +786,7 @@ rend_client_get_random_intro_impl(const rend_data_t *rend_query,
 
  again:
   if (smartlist_len(usable_nodes) == 0) {
-    if (n_excluded && get_options()->StrictNodes) {
+    if (n_excluded && get_options()->StrictNodes && warnings) {
       /* We only want to warn if StrictNodes is really set. Otherwise
        * we're just about to retry anyways.
        */
@@ -820,6 +825,15 @@ rend_client_get_random_intro_impl(const rend_data_t *rend_query,
 
   smartlist_free(usable_nodes);
   return extend_info_dup(intro->extend_info);
+}
+
+/** Return true iff any introduction points still listed in <b>entry</b> are
+ * usable. */
+int
+rend_client_any_intro_points_usable(const rend_cache_entry_t *entry)
+{
+  return rend_client_get_random_intro_impl(
+          entry, get_options()->StrictNodes, 0) != NULL;
 }
 
 /** Client-side authorizations for hidden services; map of onion address to
