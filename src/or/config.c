@@ -3078,6 +3078,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("FetchDirInfoExtraEarly requires that you also set "
            "FetchDirInfoEarly");
 
+  if (options->HSAuthoritativeDir && proxy_mode(options))
+    REJECT("Running as authoritative v0 HS directory, but also configured "
+           "as a client.");
+
   if (options->ConnLimit <= 0) {
     tor_asprintf(msg,
         "ConnLimit must be greater than 0, but was set to %d",
