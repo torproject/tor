@@ -557,8 +557,45 @@ rend_client_refetch_v2_renddesc(const rend_data_t *rend_query)
   return;
 }
 
+/** Cancel all rendezvous descriptor fetches currently in progress.
+ */
+void
+rend_client_cancel_descriptor_fetches(void)
+{
+  smartlist_t *connection_array = get_connection_array();
+
+  SMARTLIST_FOREACH_BEGIN(connection_array, connection_t *, conn) {
+    if (conn->type == CONN_TYPE_DIR &&
+        (conn->purpose == DIR_PURPOSE_FETCH_RENDDESC ||
+         conn->purpose == DIR_PURPOSE_FETCH_RENDDESC_V2)) {
+      /* It's a rendezvous descriptor fetch in progress -- cancel it
+       * by marking the connection for close.
+       *
+       * Even if this connection has already reached EOF, this is
+       * enough to make sure that if the descriptor hasn't been
+       * processed yet, it won't be.  See the end of
+       * connection_handle_read; connection_reached_eof (indirectly)
+       * processes whatever response the connection received. */
+
+      const rend_data_t *rd = (TO_DIR_CONN(conn))->rend_data;
+      if (!rd) {
+        log_warn(LD_BUG | LD_REND,
+                 "Marking for close dir conn fetching rendezvous "
+                 "descriptor for unknown service!");
+      } else {
+        log_debug(LD_REND, "Marking for close dir conn fetching v%d "
+                  "rendezvous descriptor for service %s",
+                  (int)(rd->rend_desc_version),
+                  safe_str(rd->onion_address));
+      }
+      connection_mark_for_close(conn);
+    }
+  } SMARTLIST_FOREACH_END(conn);
+}
+
 /** Remove failed_intro from ent. If ent now has no intro points, or
  * service is unrecognized, then launch a new renddesc fetch.
+
  *
  * Return -1 if error, 0 if no intro points remain or service
  * unrecognized, 1 if recognized and some intro points remain.

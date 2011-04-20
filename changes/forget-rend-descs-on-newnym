@@ -1,0 +1,5 @@
+  o Security fixes:
+    - Forget all hidden service descriptors cached as a client when
+      processing a SIGNAL NEWNYM command.  Fixes bug 3000.  Bugfix on
+      0.0.6.
+

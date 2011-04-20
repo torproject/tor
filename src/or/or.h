@@ -4039,6 +4039,7 @@ int rend_client_introduction_acked(origin_circuit_t *circ,
                                    size_t request_len);
 void rend_client_refetch_renddesc(const char *query);
 void rend_client_refetch_v2_renddesc(const rend_data_t *rend_query);
+void rend_client_cancel_descriptor_fetches(void);
 int rend_client_remove_intro_point(extend_info_t *failed_intro,
                                    const rend_data_t *rend_query);
 int rend_client_rendezvous_acked(origin_circuit_t *circ,
@@ -4137,6 +4138,7 @@ typedef struct rend_cache_entry_t {
 void rend_cache_init(void);
 void rend_cache_clean(void);
 void rend_cache_clean_v2_descs_as_dir(void);
+void rend_cache_purge(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
 int rend_cache_lookup_desc(const char *query, int version, const char **desc,
