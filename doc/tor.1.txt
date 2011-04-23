@@ -167,6 +167,11 @@ Other options can be specified either on the command-line (--option
     Like ControlPort, but listens on a Unix domain socket, rather than a TCP
     socket. (Unix and Unix-like systems only.)
 
+**UnixSocketsGroupWritable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read and
+    write unix sockets (e.g. ControlSocket). If the option is set to 1, make
+    the control socket readable and writable by the default GID. (Default: 0)
+
 **HashedControlPassword** __hashed_password__::
     Don't allow any connections on the control port except when the other
     process knows the password whose one-way hash is __hashed_password__. You

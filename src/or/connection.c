@@ -966,6 +966,13 @@ connection_create_listener(const struct sockaddr *listensockaddr,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
     }
+    if (get_options()->UnixSocketsGroupWritable) {
+      if (chmod(address, 0660) < 0) {
+        log_warn(LD_FS,"Unable to make %s group-readable.", address);
+        tor_close_socket(s);
+        goto err;
+      }
+    }
 
     if (listen(s,SOMAXCONN) < 0) {
       log_warn(LD_NET, "Could not listen on %s: %s", address,

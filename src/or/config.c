@@ -209,6 +209,7 @@ static config_var_t _option_vars[] = {
   V(ControlPortFileGroupReadable,BOOL,     "0"),
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
+  V(UnixSocketsGroupWritable,    BOOL,     "0"),
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
@@ -952,7 +953,7 @@ options_act_reversible(or_options_t *old_options, char **msg)
   }
 
 #ifndef HAVE_SYS_UN_H
-  if (options->ControlSocket) {
+  if (options->ControlSocket || options->UnixSocketsGroupWritable) {
     *msg = tor_strdup("Unix domain sockets (ControlSocket) not supported"
                       " on this OS/with this build.");
     goto rollback;
