@@ -2,4 +2,8 @@
     - Forget all hidden service descriptors cached as a client when
       processing a SIGNAL NEWNYM command.  Fixes bug 3000.  Bugfix on
       0.0.6.
+  o Code simplifications and refactoring:
+    - Allow rend_client_send_introduction to fail without closing the
+      AP connection permanently.
+
 

@@ -77,7 +77,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     log_warn(LD_REND,
              "query %s didn't have valid rend desc in cache. Failing.",
              escaped_safe_str(introcirc->rend_data->onion_address));
-    goto err;
+    goto perm_err;
   }
 
   /* first 20 bytes of payload are the hash of Bob's pk */
@@ -115,13 +115,13 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
         log_info(LD_REND, "Internal error: could not find intro key; we "
                  "only have a v2 rend desc with %d intro points.",
                  num_intro_points);
-        goto err;
+        goto perm_err;
       }
     }
   }
   if (crypto_pk_get_digest(intro_key, payload)<0) {
     log_warn(LD_BUG, "Internal error: couldn't hash public key.");
-    goto err;
+    goto perm_err;
   }
 
   /* Initialize the pending_final_cpath and start the DH handshake. */
@@ -132,11 +132,11 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     cpath->magic = CRYPT_PATH_MAGIC;
     if (!(cpath->dh_handshake_state = crypto_dh_new(DH_TYPE_REND))) {
       log_warn(LD_BUG, "Internal error: couldn't allocate DH.");
-      goto err;
+      goto perm_err;
     }
     if (crypto_dh_generate_public(cpath->dh_handshake_state)<0) {
       log_warn(LD_BUG, "Internal error: couldn't generate g^x.");
-      goto err;
+      goto perm_err;
     }
   }
 
@@ -186,7 +186,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   if (crypto_dh_get_public(cpath->dh_handshake_state, tmp+dh_offset,
                            DH_KEY_LEN)<0) {
     log_warn(LD_BUG, "Internal error: couldn't extract g^x.");
-    goto err;
+    goto perm_err;
   }
 
   note_crypto_pk_op(REND_CLIENT);
@@ -199,7 +199,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                       PK_PKCS1_OAEP_PADDING, 0);
   if (r<0) {
     log_warn(LD_BUG,"Internal error: hybrid pk encrypt failed.");
-    goto err;
+    goto perm_err;
   }
 
   payload_len = DIGEST_LEN + r;
@@ -212,17 +212,17 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
                                    introcirc->cpath->prev)<0) {
     /* introcirc is already marked for close. leave rendcirc alone. */
     log_warn(LD_BUG, "Couldn't send INTRODUCE1 cell");
-    return -1;
+    return -2;
   }
 
   /* Now, we wait for an ACK or NAK on this circuit. */
   introcirc->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
 
   return 0;
-err:
+perm_err:
   circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_REASON_INTERNAL);
   circuit_mark_for_close(TO_CIRCUIT(rendcirc), END_CIRC_REASON_INTERNAL);
-  return -1;
+  return -2;
 }
 
 /** Called when a rendezvous circuit is open; sends a establish
