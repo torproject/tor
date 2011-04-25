@@ -74,10 +74,27 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
 
   if (rend_cache_lookup_entry(introcirc->rend_data->onion_address, -1,
                               &entry) < 1) {
-    log_warn(LD_REND,
-             "query %s didn't have valid rend desc in cache. Failing.",
-             escaped_safe_str(introcirc->rend_data->onion_address));
-    goto perm_err;
+    log_info(LD_REND,
+             "query %s didn't have valid rend desc in cache. "
+             "Refetching descriptor.",
+             safe_str(introcirc->rend_data->onion_address));
+    /* Fetch both v0 and v2 rend descriptors in parallel. Use whichever
+     * arrives first. Exception: When using client authorization, only
+     * fetch v2 descriptors.*/
+    rend_client_refetch_v2_renddesc(introcirc->rend_data);
+    if (introcirc->rend_data->auth_type == REND_NO_AUTH)
+      rend_client_refetch_renddesc(introcirc->rend_data->onion_address);
+    {
+      connection_t *conn;
+
+      while ((conn = connection_get_by_type_state_rendquery(CONN_TYPE_AP,
+                       AP_CONN_STATE_CIRCUIT_WAIT,
+                       introcirc->rend_data->onion_address, -1))) {
+        conn->state = AP_CONN_STATE_RENDDESC_WAIT;
+      }
+    }
+
+    return -1;
   }
 
   /* first 20 bytes of payload are the hash of Bob's pk */
