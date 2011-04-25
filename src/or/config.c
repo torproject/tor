@@ -4489,11 +4489,13 @@ options_init_logs(or_options_t *options, int validate_only)
     if (smartlist_len(elts) == 2 &&
         !strcasecmp(smartlist_get(elts,0), "file")) {
       if (!validate_only) {
-        if (add_file_log(severity, smartlist_get(elts, 1)) < 0) {
+        char *fname = expand_filename(smartlist_get(elts, 1));
+        if (add_file_log(severity, fname) < 0) {
           log_warn(LD_CONFIG, "Couldn't open file for 'Log %s': %s",
                    opt->value, strerror(errno));
           ok = 0;
         }
+        tor_free(fname);
       }
       goto cleanup;
     }
