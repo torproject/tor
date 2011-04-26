@@ -3931,6 +3931,9 @@ control_event_bootstrap_problem(const char *warn, int reason)
   char buf[BOOTSTRAP_MSG_LEN];
   const char *recommendation = "ignore";
 
+  /* bootstrap_percent must not be in "undefined" state here. */
+  tor_assert(status >= 0);
+
   if (bootstrap_percent == 100)
     return; /* already bootstrapped; nothing to be done here. */
 
