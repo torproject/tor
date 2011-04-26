@@ -91,7 +91,7 @@
 #include "compat_libevent.h"
 #include "ht.h"
 
-/* These signals are defined to help control_signal_act work.
+/* These signals are defined to help handle_control_signal work.
  */
 #ifndef SIGHUP
 #define SIGHUP 1

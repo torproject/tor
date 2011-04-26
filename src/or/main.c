@@ -64,7 +64,6 @@ static void dumpmemusage(int severity);
 static void dumpstats(int severity); /* log stats */
 static void conn_read_callback(int fd, short event, void *_conn);
 static void conn_write_callback(int fd, short event, void *_conn);
-static void signal_callback(int fd, short events, void *arg);
 static void second_elapsed_callback(periodic_timer_t *timer, void *args);
 static int conn_close_if_marked(int i);
 static void connection_start_reading_from_linked_conn(connection_t *conn);
@@ -1577,49 +1576,9 @@ do_main_loop(void)
   }
 }
 
-/** Used to implement the SIGNAL control command: if we accept
- * <b>the_signal</b> as a remote pseudo-signal, act on it. */
-/* We don't re-use catch() here because:
- *   1. We handle a different set of signals than those allowed in catch.
- *   2. Platforms without signal() are unlikely to define SIGfoo.
- *   3. The control spec is defined to use fixed numeric signal values
- *      which just happen to match the Unix values.
- */
-void
-control_signal_act(int the_signal)
-{
-  switch (the_signal)
-    {
-    case 1:
-      signal_callback(0,0,(void*)(uintptr_t)SIGHUP);
-      break;
-    case 2:
-      signal_callback(0,0,(void*)(uintptr_t)SIGINT);
-      break;
-    case 10:
-      signal_callback(0,0,(void*)(uintptr_t)SIGUSR1);
-      break;
-    case 12:
-      signal_callback(0,0,(void*)(uintptr_t)SIGUSR2);
-      break;
-    case 15:
-      signal_callback(0,0,(void*)(uintptr_t)SIGTERM);
-      break;
-    case SIGNEWNYM:
-      signal_callback(0,0,(void*)(uintptr_t)SIGNEWNYM);
-      break;
-    case SIGCLEARDNSCACHE:
-      signal_callback(0,0,(void*)(uintptr_t)SIGCLEARDNSCACHE);
-      break;
-    default:
-      log_warn(LD_BUG, "Unrecognized signal number %d.", the_signal);
-      break;
-    }
-}
-
 /** Libevent callback: invoked when we get a signal.
  */
-static void
+void
 signal_callback(int fd, short events, void *arg)
 {
   uintptr_t sig = (uintptr_t)arg;

@@ -1222,7 +1222,8 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   /* Flush the "done" first if the signal might make us shut down. */
   if (sig == SIGTERM || sig == SIGINT)
     connection_handle_write(TO_CONN(conn), 1);
-  control_signal_act(sig);
+  signal_callback(0,0,(void*)(uintptr_t)sig);
+
   return 0;
 }
 
