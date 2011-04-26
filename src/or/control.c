@@ -3875,7 +3875,7 @@ static int bootstrap_problems = 0;
  * information and initial circuits.
  *
  * <b>status</b> is the new status, that is, what task we will be doing
- * next. <b>percent</b> is zero if we just started this task, else it
+ * next. <b>progress</b> is zero if we just started this task, else it
  * represents progress on the task. */
 void
 control_event_bootstrap(bootstrap_status_t status, int progress)
