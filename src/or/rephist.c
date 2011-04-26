@@ -997,10 +997,10 @@ find_next_with(smartlist_t *sl, int i, const char *prefix)
   return -1;
 }
 
-/** How many bad times has parse_possibly_bad_iso_time parsed? */
+/** How many bad times has parse_possibly_bad_iso_time() parsed? */
 static int n_bogus_times = 0;
 /** Parse the ISO-formatted time in <b>s</b> into *<b>time_out</b>, but
- * rounds any pre-1970 date to Jan 1, 1970. */
+ * round any pre-1970 date to Jan 1, 1970. */
 static int
 parse_possibly_bad_iso_time(const char *s, time_t *time_out)
 {
@@ -1293,7 +1293,7 @@ commit_max(bw_array_t *b)
   b->total_in_period = 0;
 }
 
-/** Shift the current observation time of 'b' forward by one second. */
+/** Shift the current observation time of <b>b</b> forward by one second. */
 static INLINE void
 advance_obs(bw_array_t *b)
 {
@@ -1323,16 +1323,16 @@ advance_obs(bw_array_t *b)
 static INLINE void
 add_obs(bw_array_t *b, time_t when, uint64_t n)
 {
-  /* Don't record data in the past. */
-  if (when<b->cur_obs_time)
-    return;
+  if (when < b->cur_obs_time)
+    return; /* Don't record data in the past. */
+
   /* If we're currently adding observations for an earlier second than
    * 'when', advance b->cur_obs_time and b->cur_obs_idx by an
-   * appropriate number of seconds, and do all the other housekeeping */
-  while (when>b->cur_obs_time) {
+   * appropriate number of seconds, and do all the other housekeeping. */
+  while (when > b->cur_obs_time) {
     /* Doing this one second at a time is potentially inefficient, if we start
        with a state file that is very old.  Fortunately, it doesn't seem to
-       show up in profiles, so we can just ignore it for now.  */
+       show up in profiles, so we can just ignore it for now. */
     advance_obs(b);
   }
 
@@ -1380,7 +1380,7 @@ bw_arrays_init(void)
   dir_write_array = bw_array_new();
 }
 
-/** We read <b>num_bytes</b> more bytes in second <b>when</b>.
+/** Remember that we read <b>num_bytes</b> bytes in second <b>when</b>.
  *
  * Add num_bytes to the current running total for <b>when</b>.
  *
@@ -1401,7 +1401,7 @@ rep_hist_note_bytes_written(size_t num_bytes, time_t when)
   add_obs(write_array, when, num_bytes);
 }
 
-/** We wrote <b>num_bytes</b> more bytes in second <b>when</b>.
+/** Remember that we wrote <b>num_bytes</b> bytes in second <b>when</b>.
  * (like rep_hist_note_bytes_written() above)
  */
 void
@@ -1411,8 +1411,8 @@ rep_hist_note_bytes_read(size_t num_bytes, time_t when)
   add_obs(read_array, when, num_bytes);
 }
 
-/** We wrote <b>num_bytes</b> more directory bytes in second <b>when</b>.
- * (like rep_hist_note_bytes_written() above)
+/** Remember that we wrote <b>num_bytes</b> directory bytes in second
+ * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
 rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
@@ -1420,8 +1420,8 @@ rep_hist_note_dir_bytes_written(size_t num_bytes, time_t when)
   add_obs(dir_write_array, when, num_bytes);
 }
 
-/** We read <b>num_bytes</b> more directory bytes in second <b>when</b>.
- * (like rep_hist_note_bytes_written() above)
+/** Remember that we read <b>num_bytes</b> directory bytes in second
+ * <b>when</b>. (like rep_hist_note_bytes_written() above)
  */
 void
 rep_hist_note_dir_bytes_read(size_t num_bytes, time_t when)
@@ -1516,7 +1516,8 @@ rep_hist_fill_bandwidth_history(char *buf, size_t len, const bw_array_t *b)
 }
 
 /** Allocate and return lines for representing this server's bandwidth
- * history in its descriptor.
+ * history in its descriptor. We publish these lines in our extra-info
+ * descriptor.
  */
 char *
 rep_hist_get_bandwidth_lines(void)
@@ -1564,7 +1565,7 @@ rep_hist_get_bandwidth_lines(void)
 }
 
 /** Write a single bw_array_t into the Values, Ends, Interval, and Maximum
- * entries of an or_state_t. */
+ * entries of an or_state_t. Done before writing out a new state file. */
 static void
 rep_hist_update_bwhist_state_section(or_state_t *state,
                                      const bw_array_t *b,
@@ -1624,7 +1625,8 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
   smartlist_add(*s_maxima, cp);
 }
 
-/** Update <b>state</b> with the newest bandwidth history. */
+/** Update <b>state</b> with the newest bandwidth history. Done before
+ * writing out a new state file. */
 void
 rep_hist_update_state(or_state_t *state)
 {
@@ -1648,7 +1650,7 @@ rep_hist_update_state(or_state_t *state)
 }
 
 /** Load a single bw_array_t from its Values, Ends, Maxima, and Interval
- * entries in an or_state_t.  */
+ * entries in an or_state_t. Done while reading the state file. */
 static int
 rep_hist_load_bwhist_state_section(bw_array_t *b,
                                    const smartlist_t *s_values,
@@ -1723,7 +1725,7 @@ rep_hist_load_bwhist_state_section(bw_array_t *b,
   return retval;
 }
 
-/** Set bandwidth history from our saved state. */
+/** Set bandwidth history from the state file we just loaded. */
 int
 rep_hist_load_state(or_state_t *state, char **err)
 {
