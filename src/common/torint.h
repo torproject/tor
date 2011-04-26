@@ -330,8 +330,10 @@ typedef uint32_t uintptr_t;
 #endif
 #endif
 
+/* Any ssize_t larger than this amount is likely to be an underflow. */
+#define SSIZE_T_CEILING ((ssize_t)(SSIZE_T_MAX-16))
 /* Any size_t larger than this amount is likely to be an underflow. */
-#define SIZE_T_CEILING (SSIZE_T_MAX-16)
+#define SIZE_T_CEILING  ((size_t)(SSIZE_T_MAX-16))
 
 #endif /* __TORINT_H */
 
