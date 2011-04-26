@@ -1570,6 +1570,7 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
 {
   char *cp;
   int i,j;
+  uint64_t maxval;
 
   if (*s_values) {
     SMARTLIST_FOREACH(*s_values, char *, val, tor_free(val));
@@ -1603,7 +1604,6 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
   /* Set i to first position in circular array */
   i = (b->num_maxes_set <= b->next_max_idx) ? 0 : b->next_max_idx;
   for (j=0; j < b->num_maxes_set; ++j,++i) {
-    uint64_t maxval;
     if (i >= NUM_TOTALS)
       i = 0;
     tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->totals[i] & ~0x3ff));
