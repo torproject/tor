@@ -47,7 +47,7 @@ void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
 
 void handle_signals(int is_parent);
-void signal_callback(int fd, short events, void *arg);
+void process_signal(uintptr_t sig);
 
 int try_locking(or_options_t *options, int err_if_locked);
 int have_lockfile(void);

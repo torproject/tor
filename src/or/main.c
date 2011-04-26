@@ -1578,12 +1578,20 @@ do_main_loop(void)
 
 /** Libevent callback: invoked when we get a signal.
  */
-void
+static void
 signal_callback(int fd, short events, void *arg)
 {
   uintptr_t sig = (uintptr_t)arg;
   (void)fd;
   (void)events;
+
+  process_signal(sig);
+}
+
+/** Do the work of acting on a signal received in <b>sig</b> */
+void
+process_signal(uintptr_t sig)
+{
   switch (sig)
     {
     case SIGTERM:
