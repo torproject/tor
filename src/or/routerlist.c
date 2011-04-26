@@ -531,8 +531,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
     if (!found &&
         download_status_is_ready(&cl->dl_status, now,MAX_CERT_DL_FAILURES) &&
         !digestmap_get(pending, ds->v3_identity_digest)) {
-      log_notice(LD_DIR, "No current certificate known for authority %s; "
-                 "launching request.", ds->nickname);
+      log_info(LD_DIR, "No current certificate known for authority %s; "
+               "launching request.", ds->nickname);
         smartlist_add(missing_digests, ds->v3_identity_digest);
     }
   } SMARTLIST_FOREACH_END(ds);
