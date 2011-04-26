@@ -2728,7 +2728,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     {
       if (!ap_stream_wants_exit_attention(conn))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), router, 1)) {
+      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), router)) {
         ++n_supported[i];
 //        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
 //               router->nickname, i, n_supported[i]);

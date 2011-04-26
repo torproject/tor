@@ -3044,15 +3044,9 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
  * to exit from it, or 0 if it probably will not allow it.
  * (We might be uncertain if conn's destination address has not yet been
  * resolved.)
- *
- * If <b>excluded_means_no</b> is 1 and Exclude*Nodes is set and excludes
- * this relay, return 0.
- * XXX022-1090 This StrictNodes business needs more work, a la bug 1090. See
- * also git commit ef81649d.
  */
 int
-connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
-                           int excluded_means_no)
+connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit)
 {
   or_options_t *options = get_options();
 
@@ -3102,17 +3096,8 @@ connection_ap_can_use_exit(edge_connection_t *conn, routerinfo_t *exit,
       return 0;
   }
   if (options->_ExcludeExitNodesUnion &&
-      (options->StrictNodes || excluded_means_no) &&
       routerset_contains_router(options->_ExcludeExitNodesUnion, exit)) {
-    /* If we are trying to avoid this node as exit, and we have StrictNodes
-     * set, then this is not a suitable exit. Refuse it.
-     *
-     * If we don't have StrictNodes set, then this function gets called in
-     * two contexts. First, we've got a circuit open and we want to know
-     * whether we can use it. In that case, we somehow built this circuit
-     * despite having the last hop in ExcludeExitNodes, so we should be
-     * willing to use it. Second, we are evaluating whether this is an
-     * acceptable exit for a new circuit. In that case, skip it. */
+    /* Not a suitable exit. Refuse it. */
     return 0;
   }
 

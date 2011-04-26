@@ -127,7 +127,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
         return 0;
       }
     }
-    if (exitrouter && !connection_ap_can_use_exit(conn, exitrouter, 0)) {
+    if (exitrouter && !connection_ap_can_use_exit(conn, exitrouter)) {
       /* can't exit from this router */
       return 0;
     }
@@ -166,6 +166,10 @@ circuit_is_better(circuit_t *a, circuit_t *b, uint8_t purpose)
           return 1;
         if (CIRCUIT_IS_ORIGIN(b) &&
             TO_ORIGIN_CIRCUIT(b)->build_state->is_internal)
+          /* XXX023 what the heck is this internal thing doing here. I
+           * think we can get rid of it. circuit_is_acceptable() already
+           * makes sure that is_internal is exactly what we need it to
+           * be. -RD */
           return 1;
       }
       break;
@@ -511,7 +515,7 @@ circuit_stream_is_being_handled(edge_connection_t *conn,
       if (exitrouter && (!need_uptime || build_state->need_uptime)) {
         int ok;
         if (conn) {
-          ok = connection_ap_can_use_exit(conn, exitrouter, 0);
+          ok = connection_ap_can_use_exit(conn, exitrouter);
         } else {
           addr_policy_result_t r = compare_addr_to_addr_policy(
               0, port, exitrouter->exit_policy);
@@ -1291,9 +1295,10 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
        * refactor into a single function? */
       routerinfo_t *router = router_get_by_nickname(conn->chosen_exit_name, 1);
       int opt = conn->chosen_exit_optional;
-      if (router && !connection_ap_can_use_exit(conn, router, 0)) {
+      if (router && !connection_ap_can_use_exit(conn, router)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
-               "Requested exit point '%s' would refuse request. %s.",
+               "Requested exit point '%s' is excluded or "
+               "would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
           conn->chosen_exit_optional = 0;
@@ -1611,9 +1616,10 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
         }
         return -1;
       }
-      if (router && !connection_ap_can_use_exit(conn, router, 0)) {
+      if (router && !connection_ap_can_use_exit(conn, router)) {
         log_fn(opt ? LOG_INFO : LOG_WARN, LD_APP,
-               "Requested exit point '%s' would refuse request. %s.",
+               "Requested exit point '%s' is excluded or "
+               "would refuse request. %s.",
                conn->chosen_exit_name, opt ? "Trying others" : "Closing");
         if (opt) {
           conn->chosen_exit_optional = 0;
