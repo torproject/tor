@@ -1614,7 +1614,8 @@ rep_hist_update_bwhist_state_section(or_state_t *state,
   }
   tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->total_in_period & ~0x3ff));
   smartlist_add(*s_values, cp);
-  tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(b->max_total & ~0x3ff));
+  maxval = b->max_total / NUM_SECS_ROLLING_MEASURE;
+  tor_asprintf(&cp, U64_FORMAT, U64_PRINTF_ARG(maxval & ~0x3ff));
   smartlist_add(*s_maxima, cp);
 }
 
