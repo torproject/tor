@@ -1,0 +1,7 @@
+  o Security fixes:
+    - Don't double-free a parsable, but invalid, microdescriptor, even
+      if it is followed in the blob we're parsing by an unparsable
+      microdescriptor.  Fixes an issue reported in a comment on bug 2954.
+      Bugfix on 0.2.2.6-alpha; fix by "cypherpunks".
+
+

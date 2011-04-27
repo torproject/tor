@@ -4357,6 +4357,7 @@ microdescs_parse_from_string(const char *s, const char *eos,
     md = NULL;
   next:
     microdesc_free(md);
+    md = NULL;
 
     memarea_clear(area);
     smartlist_clear(tokens);
