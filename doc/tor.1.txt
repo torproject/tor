@@ -511,7 +511,7 @@ The following options are useful only for clients (that is, if
     patterns of nodes to never use when picking an exit node---that is, a
     node that delivers traffic for you outside the Tor network.   Note that any
     node listed in ExcludeNodes is automatically considered to be part of this
-    list too.  See also the caveats on the "ExitNodes" option below
+    list too.  See also the caveats on the "ExitNodes" option below.
 
 
 **ExitNodes** __node__,__node__,__...__::
@@ -527,18 +527,20 @@ The following options are useful only for clients (that is, if
     Note also that not every circuit is used to deliver traffic outside of
     the Tor network.  It is normal to see non-exit circuits (such as those
     used to connect to hidden services, those that do directory fetches,
-    those used for self-tests, and so on) that end at a non-exit node.  To
+    those used for relay reachability self-tests, and so on) that end
+    at a non-exit node.  To
     keep a node from being used entirely, see ExcludeNodes and StrictNodes. +
 +
     The ExcludeNodes option overrides this option: any node listed in both
     ExitNodes and ExcludeNodes is treated as excluded. +
 +
-    The .exit address notation, if enabled, overrides this option.
+    The .exit address notation, if enabled via AllowDotExit, overrides
+    this option.
 
 **EntryNodes** __node__,__node__,__...__::
     A list of identity fingerprints and nicknames of nodes
     to use for the first hop in your normal circuits.  (Country codes and
-    address patterns are not yet supported.)  This includes all
+    address patterns are not yet supported.)  Normal circuits include all
     circuits except for direct connections to directory servers.  The Bridge
     option overrides this option; if you have configured bridges and
     UseBridges is 1, the Bridges are used as your entry nodes. +
@@ -553,7 +555,7 @@ The following options are useful only for clients (that is, if
     still try to avoid nodes in the ExcludeNodes list, but it will err on the
     side of avoiding unexpected errors.  Specifically, StrictNodes 0 tells
     Tor that it is okay to use an excluded node when it is *necessary* to
-    perform self-tests, connect to
+    perform relay reachability self-tests, connect to
     a hidden service, provide a hidden service to a client, fulfill a .exit
     request, upload directory information, or download directory information.
     (Default: 0)
