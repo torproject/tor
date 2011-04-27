@@ -1175,6 +1175,13 @@ typedef struct edge_connection_t {
    * already retried several times. */
   uint8_t num_socks_retries;
 
+#define NUM_CIRCUITS_LAUNCHED_THRESHOLD 10
+  /** Number of times we've launched a circuit to handle this stream. If
+    * it gets too high, that could indicate an inconsistency between our
+    * "launch a circuit to handle this stream" logic and our "attach our
+    * stream to one of the available circuits" logic. */
+  unsigned int num_circuits_launched:4;
+
   /** True iff this connection is for a DNS request only. */
   unsigned int is_dns_request:1;
 
@@ -2544,7 +2551,7 @@ typedef struct {
                                  * ORs not to consider as exits. */
 
   /** Union of ExcludeNodes and ExcludeExitNodes */
-  struct routerset_t *_ExcludeExitNodesUnion;
+  routerset_t *_ExcludeExitNodesUnion;
 
   int DisableAllSwap; /**< Boolean: Attempt to call mlockall() on our
                        * process for all current and future memory. */
@@ -3661,7 +3668,7 @@ typedef struct trusted_dir_server_t {
 
 #define ROUTER_MAX_DECLARED_BANDWIDTH INT32_MAX
 
-/* Flags for pick_directory_server and pick_trusteddirserver. */
+/* Flags for pick_directory_server() and pick_trusteddirserver(). */
 /** Flag to indicate that we should not automatically be willing to use
  * ourself to answer a directory request.
  * Passed to router_pick_directory_server (et al).*/

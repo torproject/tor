@@ -262,9 +262,12 @@ directories_have_accepted_server_descriptor(void)
 }
 
 /** Start a connection to every suitable directory authority, using
- * connection purpose 'purpose' and uploading the payload 'payload'
- * (length 'payload_len').  dir_purpose should be one of
+ * connection purpose <b>dir_purpose</b> and uploading <b>payload</b>
+ * (of length <b>payload_len</b>). The dir_purpose should be one of
  * 'DIR_PURPOSE_UPLOAD_DIR' or 'DIR_PURPOSE_UPLOAD_RENDDESC'.
+ *
+ * <b>router_purpose</b> describes the type of descriptor we're
+ * publishing, if we're publishing a descriptor -- e.g. general or bridge.
  *
  * <b>type</b> specifies what sort of dir authorities (V1, V2,
  * HIDSERV, BRIDGE) we should upload to.
@@ -281,6 +284,7 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
                              const char *payload,
                              size_t payload_len, size_t extrainfo_len)
 {
+  or_options_t *options = get_options();
   int post_via_tor;
   smartlist_t *dirservers = router_get_trusted_dir_servers();
   int found = 0;
@@ -295,6 +299,16 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
 
       if ((type & ds->type) == 0)
         continue;
+
+      if (options->ExcludeNodes && options->StrictNodes &&
+          routerset_contains_routerstatus(options->ExcludeNodes, rs, -1)) {
+        log_warn(LD_DIR, "Wanted to contact authority '%s' for %s, but "
+                 "it's in our ExcludedNodes list and StrictNodes is set. "
+                 "Skipping.",
+                 ds->nickname,
+                 dir_conn_purpose_to_string(dir_purpose));
+        continue;
+      }
 
       found = 1; /* at least one authority of this type was listed */
       if (dir_purpose == DIR_PURPOSE_UPLOAD_DIR)
@@ -527,12 +541,14 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
                                              time_t if_modified_since,
                                              const rend_data_t *rend_query)
 {
+  or_options_t *options = get_options();
   const node_t *node;
   char address_buf[INET_NTOA_BUF_LEN+1];
   struct in_addr in;
   const char *address;
   tor_addr_t addr;
   node = node_get_by_id(status->identity_digest);
+
   if (!node && anonymized_connection) {
     log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
                      "don't have its router descriptor.", status->nickname);
@@ -546,6 +562,17 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
     address = address_buf;
   }
   tor_addr_from_ipv4h(&addr, status->addr);
+
+  if (options->ExcludeNodes && options->StrictNodes &&
+      routerset_contains_routerstatus(options->ExcludeNodes, status, -1)) {
+    log_warn(LD_DIR, "Wanted to contact directory mirror '%s' for %s, but "
+             "it's in our ExcludedNodes list and StrictNodes is set. "
+             "Skipping. This choice might make your Tor not work.",
+             status->nickname,
+             dir_conn_purpose_to_string(dir_purpose));
+    return;
+  }
+
   directory_initiate_command_rend(address, &addr,
                              status->or_port, status->dir_port,
                              status->version_supports_conditional_consensus,

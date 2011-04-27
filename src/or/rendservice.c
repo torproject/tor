@@ -849,6 +849,7 @@ clean_accepted_intros(rend_service_t *service, time_t now)
 /** Respond to an INTRODUCE2 cell by launching a circuit to the chosen
  * rendezvous point.
  */
+ /* XXX022 this function sure could use some organizing. -RD */
 int
 rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
                        size_t request_len)
@@ -876,6 +877,8 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   time_t now = time(NULL);
   char diffie_hellman_hash[DIGEST_LEN];
   time_t *access_time;
+  or_options_t *options = get_options();
+
   tor_assert(circuit->rend_data);
 
   base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
@@ -1045,6 +1048,15 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (len != REND_COOKIE_LEN+DH_KEY_LEN) {
     log_warn(LD_PROTOCOL, "Bad length %u for INTRODUCE2 cell.", (int)len);
     reason = END_CIRC_REASON_TORPROTOCOL;
+    goto err;
+  }
+
+  /* Check if we'd refuse to talk to this router */
+  if (options->ExcludeNodes && options->StrictNodes &&
+      routerset_contains_extendinfo(options->ExcludeNodes, extend_info)) {
+    log_warn(LD_REND, "Client asked to rendezvous at a relay that we "
+             "exclude, and StrictNodes is set. Refusing service.");
+    reason = END_CIRC_REASON_INTERNAL; /* XXX might leak why we refused */
     goto err;
   }
 
@@ -1336,14 +1348,26 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
   }
 
   /* If we already have enough introduction circuits for this service,
-   * redefine this one as a general circuit. */
+   * redefine this one as a general circuit or close it, depending. */
   if (count_established_intro_points(serviceid) > NUM_INTRO_POINTS) {
-    log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
-             "circuit, but we already have enough. Redefining purpose to "
-             "general.");
-    TO_CIRCUIT(circuit)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
-    circuit_has_opened(circuit);
-    return;
+    or_options_t *options = get_options();
+    if (options->ExcludeNodes) {
+      /* XXXX in some future version, we can test whether the transition is
+         allowed or not given the actual nodes in the circuit.  But for now,
+         this case, we might as well close the thing. */
+      log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
+               "circuit, but we already have enough.  Closing it.");
+      circuit_mark_for_close(TO_CIRCUIT(circuit), END_CIRC_REASON_NONE);
+      return;
+    } else {
+      tor_assert(circuit->build_state->is_internal);
+      log_info(LD_CIRC|LD_REND, "We have just finished an introduction "
+               "circuit, but we already have enough. Redefining purpose to "
+               "general; leaving as internal.");
+      TO_CIRCUIT(circuit)->purpose = CIRCUIT_PURPOSE_C_GENERAL;
+      circuit_has_opened(circuit);
+      return;
+    }
   }
 
   log_info(LD_REND,
@@ -1395,7 +1419,7 @@ rend_service_intro_has_opened(origin_circuit_t *circuit)
 
 /** Called when we get an INTRO_ESTABLISHED cell; mark the circuit as a
  * live introduction point, and note that the service descriptor is
- * now out-of-date.*/
+ * now out-of-date. */
 int
 rend_service_intro_established(origin_circuit_t *circuit,
                                const uint8_t *request,

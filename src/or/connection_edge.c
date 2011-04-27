@@ -799,6 +799,7 @@ clear_trackexithost_mappings(const char *exitname)
   tor_strlower(suffix);
 
   STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
+    /* XXXX022 HEY!  Shouldn't this look at ent->new_address? */
     if (ent->source == ADDRMAPSRC_TRACKEXIT && !strcmpend(address, suffix)) {
       addressmap_ent_remove(address, ent);
       MAP_DEL_CURRENT(address);
@@ -806,6 +807,56 @@ clear_trackexithost_mappings(const char *exitname)
   } STRMAP_FOREACH_END;
 
   tor_free(suffix);
+}
+
+/** Remove all TRACKEXIT mappings from the addressmap for which the target
+ * host is unknown or no longer allowed. */
+void
+addressmap_clear_excluded_trackexithosts(or_options_t *options)
+{
+  const routerset_t *allow_nodes = options->ExitNodes;
+  const routerset_t *exclude_nodes = options->_ExcludeExitNodesUnion;
+
+  if (!addressmap)
+    return;
+  if (routerset_is_empty(allow_nodes))
+    allow_nodes = NULL;
+  if (allow_nodes == NULL && routerset_is_empty(exclude_nodes))
+    return;
+
+  STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
+    size_t len;
+    const char *target = ent->new_address, *dot;
+    char *nodename;
+    const node_t *node;
+
+    if (strcmpend(target, ".exit")) {
+      /* Not a .exit mapping */
+      continue;
+    } else if (ent->source != ADDRMAPSRC_TRACKEXIT) {
+      /* Not a trackexit mapping. */
+      continue;
+    }
+    len = strlen(target);
+    if (len < 6)
+      continue; /* malformed. */
+    dot = target + len - 6; /* dot now points to just before .exit */
+    dot = strrchr(dot, '.'); /* dot now points to the . before .exit or NULL */
+    if (!dot) {
+      nodename = tor_strndup(target, len-5);
+    } else {
+      nodename = tor_strndup(dot+1, strlen(dot+1)-5);
+    }
+    node = node_get_by_nickname(nodename, 0);
+    tor_free(nodename);
+    if (!node ||
+        (allow_nodes && !routerset_contains_node(allow_nodes, node)) ||
+        routerset_contains_node(exclude_nodes, node)) {
+      /* We don't know this one, or we want to be rid of it. */
+      addressmap_ent_remove(address, ent);
+      MAP_DEL_CURRENT(address);
+    }
+  } STRMAP_FOREACH_END;
 }
 
 /** Remove all entries from the addressmap that were set via the
@@ -1494,9 +1545,13 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
   hostname_type_t addresstype;
   or_options_t *options = get_options();
   struct in_addr addr_tmp;
+  /* We set this to true if this is an address we should automatically
+   * remap to a local address in VirtualAddrNetwork */
   int automap = 0;
   char orig_address[MAX_SOCKS_ADDR_LEN];
   time_t map_expires = TIME_MAX;
+  /* This will be set to true iff the address starts out as a non-.exit
+     address, and we remap it to one because of an entry in the addressmap. */
   int remapped_to_exit = 0;
   time_t now = time(NULL);
 
@@ -1607,14 +1662,23 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
     /* foo.exit -- modify conn->chosen_exit_node to specify the exit
      * node, and conn->address to hold only the address portion. */
     char *s = strrchr(socks->address,'.');
+
+    /* If StrictNodes is not set, then .exit overrides ExcludeNodes. */
+    routerset_t *excludeset = options->StrictNodes ?
+      options->_ExcludeExitNodesUnion : options->ExcludeExitNodes;
+    const node_t *node;
+
     tor_assert(!automap);
     if (s) {
+      /* The address was of the form "(stuff).(name).exit */
       if (s[1] != '\0') {
         conn->chosen_exit_name = tor_strdup(s+1);
+        node = node_get_by_nickname(conn->chosen_exit_name, 1);
         if (remapped_to_exit) /* 5 tries before it expires the addressmap */
           conn->chosen_exit_retries = TRACKHOSTEXITS_RETRIES;
         *s = 0;
       } else {
+        /* Oops, the address was (stuff)..exit.  That's not okay. */
         log_warn(LD_APP,"Malformed exit address '%s.exit'. Refusing.",
                  safe_str_client(socks->address));
         control_event_client_status(LOG_WARN, "SOCKS_BAD_HOSTNAME HOSTNAME=%s",
@@ -1623,20 +1687,34 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         return -1;
       }
     } else {
-      const node_t *r;
+      /* It looks like they just asked for "foo.exit". */
+
       conn->chosen_exit_name = tor_strdup(socks->address);
-      r = node_get_by_nickname(conn->chosen_exit_name, 1);
-      *socks->address = 0;
-      if (r) {
-        node_get_address_string(r, socks->address, sizeof(socks->address));
-      } else {
-        log_warn(LD_APP,
-                 "Unrecognized server in exit address '%s.exit'. Refusing.",
-                 safe_str_client(socks->address));
-        connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
-        return -1;
+      node = node_get_by_nickname(conn->chosen_exit_name, 1);
+      if (node) {
+        *socks->address = 0;
+        node_get_address_string(node, socks->address, sizeof(socks->address));
       }
     }
+    /* Now make sure that the chosen exit exists... */
+    if (!node) {
+      log_warn(LD_APP,
+               "Unrecognized relay in exit address '%s.exit'. Refusing.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      return -1;
+    }
+    /* ...and make sure that it isn't excluded. */
+    if (routerset_contains_node(excludeset, node)) {
+      log_warn(LD_APP,
+               "Excluded relay in exit address '%s.exit'. Refusing.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_TORPROTOCOL);
+      return -1;
+    }
+    /* XXXX022-1090 Should we also allow foo.bar.exit if ExitNodes is set and
+       Bar is not listed in it?  I say yes, but our revised manpage branch
+       implies no. */
   }
 
   if (addresstype != ONION_HOSTNAME) {
@@ -2977,13 +3055,9 @@ connection_edge_is_rendezvous_stream(edge_connection_t *conn)
  * to exit from it, or 0 if it probably will not allow it.
  * (We might be uncertain if conn's destination address has not yet been
  * resolved.)
- *
- * If <b>excluded_means_no</b> is 1 and Exclude*Nodes is set and excludes
- * this relay, return 0.
  */
 int
-connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit,
-                           int excluded_means_no)
+connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
 {
   or_options_t *options = get_options();
 
@@ -3027,17 +3101,8 @@ connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit,
       return 0;
   }
   if (options->_ExcludeExitNodesUnion &&
-      (options->StrictNodes || excluded_means_no) &&
       routerset_contains_node(options->_ExcludeExitNodesUnion, exit)) {
-    /* If we are trying to avoid this node as exit, and we have StrictNodes
-     * set, then this is not a suitable exit. Refuse it.
-     *
-     * If we don't have StrictNodes set, then this function gets called in
-     * two contexts. First, we've got a circuit open and we want to know
-     * whether we can use it. In that case, we somehow built this circuit
-     * despite having the last hop in ExcludeExitNodes, so we should be
-     * willing to use it. Second, we are evaluating whether this is an
-     * acceptable exit for a new circuit. In that case, skip it. */
+    /* Not a suitable exit. Refuse it. */
     return 0;
   }
 

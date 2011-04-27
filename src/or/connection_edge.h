@@ -49,8 +49,7 @@ int connection_exit_begin_resolve(cell_t *cell, or_circuit_t *circ);
 void connection_exit_connect(edge_connection_t *conn);
 int connection_edge_is_rendezvous_stream(edge_connection_t *conn);
 int connection_ap_can_use_exit(edge_connection_t *conn,
-                               const node_t *exit,
-                               int excluded_means_no);
+                               const node_t *exit);
 void connection_ap_expire_beginning(void);
 void connection_ap_attach_pending(void);
 void connection_ap_fail_onehop(const char *failed_digest,
@@ -64,6 +63,7 @@ int connection_ap_process_transparent(edge_connection_t *conn);
 int address_is_invalid_destination(const char *address, int client);
 
 void addressmap_init(void);
+void addressmap_clear_excluded_trackexithosts(or_options_t *options);
 void addressmap_clean(time_t now);
 void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);

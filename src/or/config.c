@@ -1289,21 +1289,18 @@ options_act(or_options_t *old_options)
   /* Check for transitions that need action. */
   if (old_options) {
     if ((options->UseEntryGuards && !old_options->UseEntryGuards) ||
-        (options->ExcludeNodes &&
-         !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)) ||
-        (options->ExcludeExitNodes &&
-         !routerset_equal(old_options->ExcludeExitNodes,
-                          options->ExcludeExitNodes)) ||
-        (options->EntryNodes &&
-         !routerset_equal(old_options->EntryNodes, options->EntryNodes)) ||
-        (options->ExitNodes &&
-         !routerset_equal(old_options->ExitNodes, options->ExitNodes)) ||
+        !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes) ||
+        !routerset_equal(old_options->ExcludeExitNodes,
+                         options->ExcludeExitNodes) ||
+        !routerset_equal(old_options->EntryNodes, options->EntryNodes) ||
+        !routerset_equal(old_options->ExitNodes, options->ExitNodes) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
                "Changed to using entry guards, or changed preferred or "
                "excluded node lists. Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
+      addressmap_clear_excluded_trackexithosts(options);
     }
 
 /* How long should we delay counting bridge stats after becoming a bridge?
@@ -1454,7 +1451,8 @@ options_act(or_options_t *old_options)
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||
-      (!routerset_equal(old_options->EntryNodes,options->EntryNodes))))
+       !routerset_equal(old_options->EntryNodes,options->EntryNodes) ||
+       !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)))
     entry_nodes_should_be_added();
 
   /* Since our options changed, we might need to regenerate and upload our
@@ -3252,6 +3250,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
            "of the Internet, so they must not set UseBridges.");
+
+  /* If both of these are set, we'll end up with funny behavior where we
+   * demand enough entrynodes be up and running else we won't build
+   * circuits, yet we never actually use them. */
+  if (options->UseBridges && options->EntryNodes)
+    REJECT("You cannot set both UseBridges and EntryNodes.");
 
   options->_AllowInvalid = 0;
   if (options->AllowInvalidNodes) {

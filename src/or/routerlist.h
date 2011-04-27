@@ -169,6 +169,7 @@ int routerset_parse(routerset_t *target, const char *s,
 void routerset_union(routerset_t *target, const routerset_t *source);
 int routerset_is_list(const routerset_t *set);
 int routerset_needs_geoip(const routerset_t *set);
+int routerset_is_empty(const routerset_t *set);
 int routerset_contains_router(const routerset_t *set, const routerinfo_t *ri,
                               country_t country);
 int routerset_contains_routerstatus(const routerset_t *set,
@@ -176,15 +177,20 @@ int routerset_contains_routerstatus(const routerset_t *set,
                                     country_t country);
 int routerset_contains_extendinfo(const routerset_t *set,
                                   const extend_info_t *ei);
+
 int routerset_contains_node(const routerset_t *set, const node_t *node);
 void routerset_get_all_nodes(smartlist_t *out, const routerset_t *routerset,
+                             const routerset_t *excludeset,
                              int running_only);
+#if 0
 void routersets_get_node_disjunction(smartlist_t *target,
                                 const smartlist_t *source,
                                 const routerset_t *include,
                                 const routerset_t *exclude, int running_only);
+#endif
 void routerset_subtract_nodes(smartlist_t *out,
-                              const routerset_t *routerset);
+                                const routerset_t *routerset);
+
 char *routerset_to_string(const routerset_t *routerset);
 int routerset_equal(const routerset_t *old, const routerset_t *new);
 void routerset_free(routerset_t *routerset);
