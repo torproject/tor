@@ -1573,6 +1573,7 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
           return -1;
         default: /* oops */
           tor_fragile_assert();
+          return -1;
         }
       }
     }
