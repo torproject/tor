@@ -1151,6 +1151,13 @@ typedef struct edge_connection_t {
    * already retried several times. */
   uint8_t num_socks_retries;
 
+#define NUM_CIRCUITS_LAUNCHED_THRESHOLD 10
+  /** Number of times we've launched a circuit to handle this stream. If
+    * it gets too high, that could indicate an inconsistency between our
+    * "launch a circuit to handle this stream" logic and our "attach our
+    * stream to one of the available circuits" logic. */
+  unsigned int num_circuits_launched:4;
+
   /** True iff this connection is for a DNS request only. */
   unsigned int is_dns_request:1;
 

@@ -1409,7 +1409,18 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
 
     extend_info_free(extend_info);
 
-    if (desired_circuit_purpose != CIRCUIT_PURPOSE_C_GENERAL) {
+    if (desired_circuit_purpose == CIRCUIT_PURPOSE_C_GENERAL) {
+      /* We just caused a circuit to get built because of this stream.
+       * If this stream has caused a _lot_ of circuits to be built, that's
+       * a bad sign: we should tell the user. */
+      if (conn->num_circuits_launched < NUM_CIRCUITS_LAUNCHED_THRESHOLD &&
+          ++conn->num_circuits_launched == NUM_CIRCUITS_LAUNCHED_THRESHOLD)
+        log_warn(LD_BUG, "The application request to %s:%d has launched "
+                 "%d circuits without finding one it likes.",
+                 escaped_safe_str_client(conn->socks_request->address),
+                 conn->socks_request->port,
+                 conn->num_circuits_launched);
+    } else {
       /* help predict this next time */
       rep_hist_note_used_internal(time(NULL), need_uptime, 1);
       if (circ) {
