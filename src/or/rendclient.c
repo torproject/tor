@@ -764,7 +764,8 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
 }
 
 /** As rend_client_get_random_intro, except assume that StrictNodes is set
- * iff <b>strict</b> is true.
+ * iff <b>strict</b> is true. If <b>warnings</b> is false, don't complain
+ * to the user when we're out of nodes, even if StrictNodes is true.
  */
 static extend_info_t *
 rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
