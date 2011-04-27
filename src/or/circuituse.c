@@ -433,11 +433,11 @@ circuit_expire_building(void)
                      "Extremely large value for circuit build timeout: %lds. "
                      "Assuming clock jump. Purpose %d (%s)",
                      (long)(now.tv_sec - victim->timestamp_created.tv_sec),
-                     victim->purpose, 
+                     victim->purpose,
                      circuit_purpose_to_string(victim->purpose));
         } else if (circuit_build_times_count_close(&circ_times,
-                                            first_hop_succeeded,
-                                            victim->timestamp_created.tv_sec)) {
+                                         first_hop_succeeded,
+                                         victim->timestamp_created.tv_sec)) {
           circuit_build_times_set_timeout(&circ_times);
         }
       }
@@ -770,7 +770,8 @@ circuit_expire_old_circuits_clientside(void)
      * on it, mark it for close.
      */
     if (circ->timestamp_dirty &&
-        circ->timestamp_dirty + get_options()->MaxCircuitDirtiness < now.tv_sec &&
+        circ->timestamp_dirty + get_options()->MaxCircuitDirtiness <
+          now.tv_sec &&
         !TO_ORIGIN_CIRCUIT(circ)->p_streams /* nothing attached */ ) {
       log_debug(LD_CIRC, "Closing n_circ_id %d (dirty %ld sec ago, "
                 "purpose %d)",
