@@ -1,0 +1,73 @@
+  o Major features and bugfixes (node selection)
+
+    - Revise and unify the meaning of the ExitNodes, EntryNodes,
+      ExcludeEntryNodes, ExcludeExitNodes, ExcludeNodes, and
+      StrictNodes options.  Previously, we had been ambiguous in
+      describing what counted as an "exit" node, and what operations
+      exactly "StrictNodes 0" would permit.  This created confusion
+      when people saw nodes built through unexpected circuits, and
+      made it hard to tell real bugs from surprises.  We now stipulate
+      that the intended behavior is:
+
+	. "Exit", in the context of ExitNodes and ExcludeExitNodes,
+	   means a node that delivers user traffic outside the Tor
+	   network.
+	. "Entry", in the context of EntryNodes and ExcludeEntryNodes,
+	  means a node used as the first hop of a multihop circuit:
+	  it doesn't include direct connections to directory servers.
+	. "ExcludeNodes" applies to all nodes.
+	. "StrictNodes" changes the behavior of ExcludeNodes only.
+	  When StrictNodes is set, Tor should avoid all nodes listed
+	  in ExcludeNodes, even when it will make user requests
+	  fail.  When StrictNodes is *not* set, then Tor should
+	  follow ExcludeNodes whenever it can, except when it must
+	  use an excluded node to perform self-tests, connect to a
+	  hidden service, provide a hidden service, fulfill a .exit
+	  request, upload directory information, or fetch directory
+	  information.
+
+      Collectively, the changes to implement the behavior are a fix for
+      bug 1090.
+
+    - ExcludeNodes now takes precedence over EntryNodes and ExitNodes:
+      if a node is listed in both, it's treated as excluded.
+
+    - ExcludeNodes now applies to directory nodes: as a preference if
+      StrictNodes is 0, or an absolute requirement if StrictNodes is 1.
+      (Don't exclude all the directory authorities and set StrictNodes
+      to 1 unless you really want your Tor to break.)
+
+    - ExcludeNodes and ExcludeExitNodes now override exit enclaving.
+
+    - ExcludeExitNodes now overrides .exit requests.
+
+    - We don't use bridges from ExcludeNodes.
+
+    - When StrictNodes is 1:
+       . We now apply ExcludeNodes to hidden service introduction points
+         and to rendezvous points selected by hidden service users.
+         This can make your hidden service less reliable: use it with
+         caution!
+       . If we have used ExcludeNodes on ourself, do not try self-tests.
+       . If we have excluded all the directory authorities, we will
+         not even try to upload our descriptor if we're a server.
+       . Do not honor .exit requests to an excluded node.
+
+    - Remove a misfeature that caused us to ignore the Fast/Stable flags
+      if ExitNodes was set.  Bugfix on 0.2.2.7-alpha.
+
+    - When the set of permitted nodes changes, we now remove any
+      mappings introduced via TrackExitHosts to now-excluded nodes.
+      Bugfix on 0.1.0.1-rc.
+
+    - We never cannibalize a circuit that had excluded nodes on it,
+      even if StrictNodes is 0.  Bugfix on 0.1.0.1-rc.
+
+    - Improve log messages related to excluded nodes.
+
+    - Revert a change where we would be laxer about attaching streams to
+      circuits than when building the circuits.  This was meant to
+      prevent a set of bugs where streams were never attachable, but our
+      improved code here should make this unnecessary.  Bugfix on
+      0.2.2.7-alpha.
+
