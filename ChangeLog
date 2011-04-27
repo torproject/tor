@@ -5,6 +5,21 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       Also, resume reading bandwidth history from the state file correctly.
       Fixes bug 2704; bugfix on tor-0.2.2.23-alpha.
 
+  o Security and stability fixes:
+    - Don't double-free a parsable, but invalid, microdescriptor, even
+      if it is followed in the blob we're parsing by an unparsable
+      microdescriptor.  Fixes an issue reported in a comment on bug 2954.
+      Bugfix on 0.2.2.6-alpha; fix by "cypherpunks".
+    - If the Nickname configuration option isn't given, Tor would pick
+      a nickname based on the local hostname as the nickname for a relay.
+      Because nicknames are not very important in today's Tor and the
+      "Unnamed" nickname has been implemented, this is now problematic
+      behavior: It leaks information about the hostname without being
+      useful at all. Bugfix on 0.1.2.2-alpha, which introduced the
+      Unnamed nickname. Fixes bug 2979, reported by tagnaq.
+    - Fix an uncommon assertion failure when running with DNSPort under
+      heavy load. Fixes bug 2933; bugfix on 2.0.1-alpha.
+
   o Major features:
     - Export GeoIP information on bridge usage to controller even if
       we have not yet been running for 24 hours. Now Vidalia bridge
@@ -74,20 +89,13 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
   o Minor bugfixes:
     - Added a forgotten cast that caused a compile warning on OS X 10.6.
       Bugfix on 0.2.2.24-alpha.
-    - If the Nickname configuration option isn't given, Tor would pick
-      a nickname based on the local hostname as the nickname for a relay.
-      Because nicknames are not very important in today's Tor and the
-      "Unnamed" nickname has been implemented, this is now problematic
-      behavior: It leaks information about the hostname without being
-      useful at all. Bugfix on 0.1.2.2-alpha, which introduced the
-      Unnamed nickname. Fixes bug 2979, reported by tagnaq.
     - Be more careful about reporting the correct error from a failed
       connect() system call. Under some circumstances, it was possible to
       look at an incorrect value for errno when sending the end reason.
       Bugfix on 0.1.0.1-rc.
     - Correctly handle an "impossible" overflow cases in connection
       byte counting, where we write or read more than 4GB on an edge
-      connection in single second. Bugfix on 0.1.2.8-beta.
+      connection in a single second. Bugfix on 0.1.2.8-beta.
     - When a client finds that an origin circuit has run out of 16-bit
       stream IDs, we now mark it as unusable for new streams. Previously,
       we would try to close the entire circuit. Bugfix on 0.0.6.
@@ -98,8 +106,6 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       Notice to Info. Fixes bug 2899; bugfix on 0.2.0.10-alpha.
     - Make the SIGNAL DUMP control-port command work on FreeBSD. Fixes
       bug 2917. Bugfix on 0.1.1.1-alpha.
-    - Fix an uncommon assertion failure when running with DNSPort under
-      heavy load. Fixes bug 2933; bugfix on 2.0.1-alpha.
     - Only limit the lengths of single HS descriptors, even when
       multiple HS descriptors are published to an HSDir relay in a
       single POST operation. Fixes bug 2948; bugfix on 0.2.1.5-alpha.
