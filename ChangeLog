@@ -1,9 +1,86 @@
-Changes in version 0.2.2.25-alpha - 2011-04-??
+Changes in version 0.2.2.25-alpha - 2011-04-28
+  o Major bugfixes:
+    - When writing our maximum bw for the current interval to the state
+      file, don't wrongly inflate that value by a factor of 10 anymore.
+      Also, resume reading bandwidth history from the state file correctly.
+      Fixes bug 2704; bugfix on tor-0.2.2.23-alpha.
+
   o Major features:
-    - Export GeoIP information on usage to bridge controller even if
-      we have not yet been running for 24 hours.
+    - Export GeoIP information on bridge usage to controller even if
+      we have not yet been running for 24 hours. Now Vidalia bridge
+      operators can get more accurate and immediate feedback about their
+      contributions to the network.
+
+  o Major features and bugfixes (node selection):
+    - Revise and unify the meaning of the ExitNodes, EntryNodes,
+      ExcludeEntryNodes, ExcludeExitNodes, ExcludeNodes, and StrictNodes
+      options. Previously, we had been ambiguous in describing what
+      counted as an "exit" node, and what operations exactly "StrictNodes
+      0" would permit. This created confusion when people saw nodes
+      built through unexpected circuits, and made it hard to tell real
+      bugs from surprises. Now the intended behavior is:
+        . "Exit", in the context of ExitNodes and ExcludeExitNodes,
+          means a node that delivers user traffic outside the Tor network.
+        . "Entry", in the context of EntryNodes, means a node used as
+          the first hop of a multihop circuit. It doesn't include direct
+          connections to directory servers.
+        . "ExcludeNodes" applies to all nodes.
+        . "StrictNodes" changes the behavior of ExcludeNodes only. When
+          StrictNodes is set, Tor should avoid all nodes listed in
+          ExcludeNodes, even when it will make user requests fail. When
+          StrictNodes is *not* set, then Tor should follow ExcludeNodes
+          whenever it can, except when it must use an excluded node
+          to perform self-tests, connect to a hidden service, provide
+          a hidden service, fulfill a .exit request, upload directory
+          information, or fetch directory information.
+      Collectively, the changes to implement the behavior fix bug 1090.
+    - ExcludeNodes now takes precedence over EntryNodes and ExitNodes:
+      if a node is listed in both, it's treated as excluded.
+    - ExcludeNodes now applies to directory nodes -- as a preference if
+      StrictNodes is 0, or an absolute requirement if StrictNodes is 1.
+      Don't exclude all the directory authorities and set StrictNodes
+      to 1 unless you really want your Tor to break.
+    - ExcludeNodes and ExcludeExitNodes now override exit enclaving.
+    - ExcludeExitNodes now overrides .exit requests.
+    - We don't use bridges listed in ExcludeNodes.
+    - When StrictNodes is 1:
+       . We now apply ExcludeNodes to hidden service introduction points
+         and to rendezvous points selected by hidden service users.
+         This can make your hidden service less reliable: use it with
+         caution!
+       . If we have used ExcludeNodes on ourself, do not try relay
+         reachability self-tests.
+       . If we have excluded all the directory authorities, we will
+         not even try to upload our descriptor if we're a relay.
+       . Do not honor .exit requests to an excluded node.
+    - Remove a misfeature that caused us to ignore the Fast/Stable flags
+      when ExitNodes is set. Bugfix on 0.2.2.7-alpha.
+    - When the set of permitted nodes changes, we now remove any
+      mappings introduced via TrackExitHosts to now-excluded nodes.
+      Bugfix on 0.1.0.1-rc.
+    - We never cannibalize a circuit that had excluded nodes on it,
+      even if StrictNodes is 0. Bugfix on 0.1.0.1-rc.
+    - Revert a change where we would be laxer about attaching streams to
+      circuits than when building the circuits. This was meant to
+      prevent a set of bugs where streams were never attachable, but our
+      improved code here should make this unnecessary. Bugfix on
+      0.2.2.7-alpha.
+    - Keep track of how many times we launch a new circuit to handle
+      a given stream. Too many launches could indicate an inconsistency
+      between our "launch a circuit to handle this stream" logic and our
+      "attach this stream to one of the available circuits" logic.
+    - Improve log messages related to excluded nodes.
 
   o Minor bugfixes:
+    - Added a forgotten cast that caused a compile warning on OS X 10.6.
+      Bugfix on 0.2.2.24-alpha.
+    - If the Nickname configuration option isn't given, Tor would pick
+      a nickname based on the local hostname as the nickname for a relay.
+      Because nicknames are not very important in today's Tor and the
+      "Unnamed" nickname has been implemented, this is now problematic
+      behavior: It leaks information about the hostname without being
+      useful at all. Bugfix on 0.1.2.2-alpha, which introduced the
+      Unnamed nickname. Fixes bug 2979, reported by tagnaq.
     - Be more careful about reporting the correct error from a failed
       connect() system call. Under some circumstances, it was possible to
       look at an incorrect value for errno when sending the end reason.
@@ -13,9 +90,24 @@ Changes in version 0.2.2.25-alpha - 2011-04-??
       connection in single second. Bugfix on 0.1.2.8-beta.
     - When a client finds that an origin circuit has run out of 16-bit
       stream IDs, we now mark it as unusable for new streams. Previously,
-      we would try to close the entire circuit. Bugfix on Tor 0.0.6.
-    - Added a forgotten cast that caused a compile warning on OS X
-      10.6. Bugfix on 0.2.2.24-alpha.
+      we would try to close the entire circuit. Bugfix on 0.0.6.
+    - Correct the warning displayed when a rendezvous descriptor exceeds
+      the maximum size. Fixes bug 2750; bugfix on 0.2.1.5-alpha. Found
+      by John Brooks.
+    - Downgrade "no current certificates known for authority" message from
+      Notice to Info. Fixes bug 2899; bugfix on 0.2.0.10-alpha.
+    - Make the SIGNAL DUMP control-port command work on FreeBSD. Fixes
+      bug 2917. Bugfix on 0.1.1.1-alpha.
+    - Fix an uncommon assertion failure when running with DNSPort under
+      heavy load. Fixes bug 2933; bugfix on 2.0.1-alpha.
+    - Only limit the lengths of single HS descriptors, even when
+      multiple HS descriptors are published to an HSDir relay in a
+      single POST operation. Fixes bug 2948; bugfix on 0.2.1.5-alpha.
+      Found by hsdir.
+    - Be more consistent in our treatment of file system paths. "~" should
+      get expanded to the user's home directory in the Log config option.
+      Fixes bug 2971; bugfix on 0.2.0.1-alpha, which introduced the
+      feature for the -f and --DataDirectory options.
 
   o Minor features:
     - Send END_STREAM_REASON_NOROUTE in response to EHOSTUNREACH errors.

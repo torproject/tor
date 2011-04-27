@@ -1,5 +1,0 @@
-  o Major bugfixes:
-    - Prevent relays that read their bandwidth history from their state file
-      from arbitrarily inflating that value. Fixes the second half of bug
-      2704, bugfix on tor-0.2.2.23-alpha.
-

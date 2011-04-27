@@ -1,9 +1,0 @@
-  o Minor bugfixes:
-    - If the Nickname configuration option wasn't given, Tor used to pick
-      a nickname based on the local hostname as the nickname for a relay.
-      Because nicknames are not very important in today's Tor and the
-      "Unnamed" nickname has been implemented, this is now problematic
-      behaviour: It leaks information about the hostname without being
-      useful at all. Bugfix on tor-0.1.2.2-alpha, which introduced the
-      Unnamed nickname. Fixes bug 2979, reported by tagnaq.
-
