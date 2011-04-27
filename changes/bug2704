@@ -1,0 +1,5 @@
+  o Major bugfixes:
+    - When writing our maximum bw for the current interval to the state
+      file, don't wrongly inflate that value by a factor of 10 anymore.
+      Fixes more of bug 2704.
+

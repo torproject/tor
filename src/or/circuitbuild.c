@@ -2051,8 +2051,9 @@ circuit_send_next_onion_skin(origin_circuit_t *circ)
          */
         if (timediff < 0 || timediff > 2*circ_times.close_ms+1000) {
           log_notice(LD_CIRC, "Strange value for circuit build time: %ldmsec. "
-                              "Assuming clock jump. Purpose %d", timediff,
-                              circ->_base.purpose);
+                              "Assuming clock jump. Purpose %d (%s)", timediff,
+                     circ->_base.purpose,
+                     circuit_purpose_to_string(circ->_base.purpose));
         } else if (!circuit_build_times_disabled()) {
           /* Only count circuit times if the network is live */
           if (circuit_build_times_network_check_live(&circ_times)) {
@@ -2685,16 +2686,24 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
       n_supported[i] = -1;
       continue; /* skip routers that are known to be down or bad exits */
     }
-    if (router_is_unreliable(router, need_uptime, need_capacity, 0) &&
-        (!options->ExitNodes ||
-         !routerset_contains_router(options->ExitNodes, router))) {
-      /* FFFF Someday, differentiate between a routerset that names
-       * routers, and a routerset that names countries, and only do this
-       * check if they've asked for specific exit relays. Or if the country
-       * they ask for is rare. Or something. */
+
+    if (options->_ExcludeExitNodesUnion &&
+        routerset_contains_router(options->_ExcludeExitNodesUnion, router)) {
       n_supported[i] = -1;
-      continue; /* skip routers that are not suitable, unless we have
-                 * ExitNodes set, in which case we asked for it */
+      continue; /* user asked us not to use it, no matter what */
+    }
+    if (options->ExitNodes &&
+        !routerset_contains_router(options->ExitNodes, router)) {
+      n_supported[i] = -1;
+      continue; /* not one of our chosen exit nodes */
+    }
+
+    if (router_is_unreliable(router, need_uptime, need_capacity, 0)) {
+      n_supported[i] = -1;
+      continue; /* skip routers that are not suitable.  Don't worry if
+                 * this makes us reject all the possible routers: if so,
+                 * we'll retry later in this function with need_update and
+                 * need_capacity set to 0. */
     }
     if (!(router->is_valid || options->_AllowInvalid & ALLOW_INVALID_EXIT)) {
       /* if it's invalid and we don't want it */
@@ -2719,7 +2728,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     {
       if (!ap_stream_wants_exit_attention(conn))
         continue; /* Skip everything but APs in CIRCUIT_WAIT */
-      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), router, 1)) {
+      if (connection_ap_can_use_exit(TO_EDGE_CONN(conn), router)) {
         ++n_supported[i];
 //        log_fn(LOG_DEBUG,"%s is supported. n_supported[%d] now %d.",
 //               router->nickname, i, n_supported[i]);
@@ -2753,21 +2762,13 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
   /* If any routers definitely support any pending connections, choose one
    * at random. */
   if (best_support > 0) {
-    smartlist_t *supporting = smartlist_create(), *use = smartlist_create();
+    smartlist_t *supporting = smartlist_create();
 
     for (i = 0; i < smartlist_len(dir->routers); i++)
       if (n_supported[i] == best_support)
         smartlist_add(supporting, smartlist_get(dir->routers, i));
 
-    routersets_get_disjunction(use, supporting, options->ExitNodes,
-                               options->_ExcludeExitNodesUnion, 1);
-    if (smartlist_len(use) == 0 && options->ExitNodes &&
-        !options->StrictNodes) { /* give up on exitnodes and try again */
-      routersets_get_disjunction(use, supporting, NULL,
-                                 options->_ExcludeExitNodesUnion, 1);
-    }
-    router = routerlist_sl_choose_by_bandwidth(use, WEIGHT_FOR_EXIT);
-    smartlist_free(use);
+    router = routerlist_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
     smartlist_free(supporting);
   } else {
     /* Either there are no pending connections, or no routers even seem to
@@ -2775,7 +2776,7 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
      * at least one predicted exit port. */
 
     int attempt;
-    smartlist_t *needed_ports, *supporting, *use;
+    smartlist_t *needed_ports, *supporting;
 
     if (best_support == -1) {
       if (need_uptime || need_capacity) {
@@ -2792,7 +2793,6 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
                  options->_ExcludeExitNodesUnion ? " or are Excluded" : "");
     }
     supporting = smartlist_create();
-    use = smartlist_create();
     needed_ports = circuit_get_unhandled_ports(time(NULL));
     for (attempt = 0; attempt < 2; attempt++) {
       /* try once to pick only from routers that satisfy a needed port,
@@ -2807,25 +2807,13 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
         }
       }
 
-      routersets_get_disjunction(use, supporting, options->ExitNodes,
-                                 options->_ExcludeExitNodesUnion, 1);
-      if (smartlist_len(use) == 0 && options->ExitNodes &&
-          !options->StrictNodes) { /* give up on exitnodes and try again */
-        routersets_get_disjunction(use, supporting, NULL,
-                                   options->_ExcludeExitNodesUnion, 1);
-      }
-      /* FFF sometimes the above results in null, when the requested
-       * exit node is considered down by the consensus. we should pick
-       * it anyway, since the user asked for it. */
-      router = routerlist_sl_choose_by_bandwidth(use, WEIGHT_FOR_EXIT);
+      router = routerlist_sl_choose_by_bandwidth(supporting, WEIGHT_FOR_EXIT);
       if (router)
         break;
       smartlist_clear(supporting);
-      smartlist_clear(use);
     }
     SMARTLIST_FOREACH(needed_ports, uint16_t *, cp, tor_free(cp));
     smartlist_free(needed_ports);
-    smartlist_free(use);
     smartlist_free(supporting);
   }
 
@@ -2834,10 +2822,11 @@ choose_good_exit_server_general(routerlist_t *dir, int need_uptime,
     log_info(LD_CIRC, "Chose exit server '%s'", router->nickname);
     return router;
   }
-  if (options->ExitNodes && options->StrictNodes) {
+  if (options->ExitNodes) {
     log_warn(LD_CIRC,
-             "No specified exit routers seem to be running, and "
-             "StrictNodes is set: can't choose an exit.");
+             "No specified %sexit routers seem to be running: "
+             "can't choose an exit.",
+             options->_ExcludeExitNodesUnion ? "non-excluded " : "");
   }
   return NULL;
 }
@@ -2889,7 +2878,6 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
   or_options_t *options = get_options();
   routerset_t *rs = options->ExcludeNodes;
   const char *description;
-  int domain = LD_CIRC;
   uint8_t purpose = circ->_base.purpose;
 
   if (circ->build_state->onehop_tunnel)
@@ -2902,13 +2890,14 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
     case CIRCUIT_PURPOSE_INTRO_POINT:
     case CIRCUIT_PURPOSE_REND_POINT_WAITING:
     case CIRCUIT_PURPOSE_REND_ESTABLISHED:
-      log_warn(LD_BUG, "Called on non-origin circuit (purpose %d)",
-               (int)purpose);
+      log_warn(LD_BUG, "Called on non-origin circuit (purpose %d, %s)",
+               (int)purpose,
+               circuit_purpose_to_string(purpose));
       return;
     case CIRCUIT_PURPOSE_C_GENERAL:
       if (circ->build_state->is_internal)
         return;
-      description = "Requested exit node";
+      description = "requested exit node";
       rs = options->_ExcludeExitNodesUnion;
       break;
     case CIRCUIT_PURPOSE_C_INTRODUCING:
@@ -2923,22 +2912,34 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
     case CIRCUIT_PURPOSE_C_REND_READY:
     case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
     case CIRCUIT_PURPOSE_C_REND_JOINED:
-      description = "Chosen rendezvous point";
-      domain = LD_BUG;
+      description = "chosen rendezvous point";
       break;
     case CIRCUIT_PURPOSE_CONTROLLER:
       rs = options->_ExcludeExitNodesUnion;
-      description = "Controller-selected circuit target";
+      description = "controller-selected circuit target";
       break;
     }
 
   if (routerset_contains_extendinfo(rs, exit)) {
-    log_fn(LOG_WARN, domain, "%s '%s' is in ExcludeNodes%s. Using anyway "
-           "(circuit purpose %d).",
-           description,exit->nickname,
-           rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
-           (int)purpose);
-    circuit_log_path(LOG_WARN, domain, circ);
+    /* We should never get here if StrictNodes is set to 1. */
+    if (options->StrictNodes) {
+      log_warn(LD_BUG, "Using %s '%s' which is listed in ExcludeNodes%s, "
+               "even though StrictNodes is set. Please report. "
+               "(Circuit purpose: %s)",
+               description, exit->nickname,
+               rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
+               circuit_purpose_to_string(purpose));
+    } else {
+      log_warn(LD_CIRC, "Using %s '%s' which is listed in "
+               "ExcludeNodes%s, because no better options were available. To "
+               "prevent this (and possibly break your Tor functionality), "
+               "set the StrictNodes configuration option. "
+               "(Circuit purpose: %s)",
+               description, exit->nickname,
+               rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
+               circuit_purpose_to_string(purpose));
+    }
+    circuit_log_path(LOG_WARN, LD_CIRC, circ);
   }
 
   return;
@@ -3979,7 +3980,8 @@ entry_guards_prepend_from_config(or_options_t *options)
    *  Perhaps we should do this calculation once whenever the list of routers
    *  changes or the entrynodes setting changes.
    */
-  routerset_get_all_routers(entry_routers, options->EntryNodes, 0);
+  routerset_get_all_routers(entry_routers, options->EntryNodes,
+                            options->ExcludeNodes, 0);
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri,
                     smartlist_add(entry_fps,ri->cache_info.identity_digest));
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e, {
@@ -4004,14 +4006,10 @@ entry_guards_prepend_from_config(or_options_t *options)
   SMARTLIST_FOREACH(entry_routers, routerinfo_t *, ri, {
     add_an_entry_guard(ri, 0);
   });
-  /* Finally, the remaining previously configured guards that are not in
-   * EntryNodes, unless we're strict in which case we drop them */
-  if (options->StrictNodes) {
-    SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
-                      entry_guard_free(e));
-  } else {
-    smartlist_add_all(entry_guards, old_entry_guards_not_on_list);
-  }
+  /* Finally, free the remaining previously configured guards that are not in
+   * EntryNodes. */
+  SMARTLIST_FOREACH(old_entry_guards_not_on_list, entry_guard_t *, e,
+                    entry_guard_free(e));
 
   smartlist_free(entry_routers);
   smartlist_free(entry_fps);
@@ -4022,24 +4020,12 @@ entry_guards_prepend_from_config(or_options_t *options)
 
 /** Return 0 if we're fine adding arbitrary routers out of the
  * directory to our entry guard list, or return 1 if we have a
- * list already and we'd prefer to stick to it.
+ * list already and we must stick to it.
  */
 int
 entry_list_is_constrained(or_options_t *options)
 {
   if (options->EntryNodes)
-    return 1;
-  if (options->UseBridges)
-    return 1;
-  return 0;
-}
-
-/* Are we dead set against changing our entry guard list, or would we
- * change it if it means keeping Tor usable? */
-static int
-entry_list_is_totally_static(or_options_t *options)
-{
-  if (options->EntryNodes && options->StrictNodes)
     return 1;
   if (options->UseBridges)
     return 1;
@@ -4090,6 +4076,7 @@ choose_random_entry(cpath_build_state_t *state)
         continue; /* don't pick the same node for entry and exit */
       if (consider_exit_family && smartlist_isin(exit_family, r))
         continue; /* avoid relays that are family members of our exit */
+#if 0 /* since EntryNodes is always strict now, this clause is moot */
       if (options->EntryNodes &&
           !routerset_contains_router(options->EntryNodes, r)) {
         /* We've come to the end of our preferred entry nodes. */
@@ -4104,6 +4091,7 @@ choose_random_entry(cpath_build_state_t *state)
                    "No relays from EntryNodes available. Using others.");
         }
       }
+#endif
       smartlist_add(live_entry_guards, r);
       if (!entry->made_contact) {
         /* Always start with the first not-yet-contacted entry
@@ -4129,7 +4117,7 @@ choose_random_entry(cpath_build_state_t *state)
   }
 
   if (smartlist_len(live_entry_guards) < preferred_min) {
-    if (!entry_list_is_totally_static(options)) {
+    if (!entry_list_is_constrained(options)) {
       /* still no? try adding a new entry then */
       /* XXX if guard doesn't imply fast and stable, then we need
        * to tell add_an_entry_guard below what we want, or it might
@@ -4154,13 +4142,18 @@ choose_random_entry(cpath_build_state_t *state)
       need_capacity = 0;
       goto retry;
     }
+#if 0
+    /* Removing this retry logic: if we only allow one exit, and it is in the
+       same family as all our entries, then we are just plain not going to win
+       here. */
     if (!r && entry_list_is_constrained(options) && consider_exit_family) {
-      /* still no? if we're using bridges or have strictentrynodes
-       * set, and our chosen exit is in the same family as all our
-       * bridges/entry guards, then be flexible about families. */
+      /* still no? if we're using bridges,
+       * and our chosen exit is in the same family as all our
+       * bridges, then be flexible about families. */
       consider_exit_family = 0;
       goto retry;
     }
+#endif
     /* live_entry_guards may be empty below. Oh well, we tried. */
   }
 
@@ -4561,6 +4554,24 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port, char *digest)
   smartlist_add(bridge_list, b);
 }
 
+/** Return true iff <b>routerset</b> contains the bridge <b>bridge</b>. */
+static int
+routerset_contains_bridge(const routerset_t *routerset,
+                          const bridge_info_t *bridge)
+{
+  int result;
+  extend_info_t *extinfo;
+  tor_assert(bridge);
+  if (!routerset)
+    return 0;
+
+  extinfo = extend_info_alloc(
+         NULL, bridge->identity, NULL, &bridge->addr, bridge->port);
+  result = routerset_contains_extendinfo(routerset, extinfo);
+  extend_info_free(extinfo);
+  return result;
+}
+
 /** If <b>digest</b> is one of our known bridges, return it. */
 static bridge_info_t *
 find_bridge_by_digest(const char *digest)
@@ -4579,6 +4590,7 @@ static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
   char *address;
+  or_options_t *options = get_options();
 
   if (connection_get_by_type_addr_port_purpose(
       CONN_TYPE_DIR, &bridge->addr, bridge->port,
@@ -4586,6 +4598,13 @@ launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
     return; /* it's already on the way */
 
   address = tor_dup_addr(&bridge->addr);
+  if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
+    download_status_mark_impossible(&bridge->fetch_status);
+    log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
+             safe_str_client(fmt_addr(&bridge->addr)));
+    return;
+  }
+
   directory_initiate_command(address, &bridge->addr,
                              bridge->port, 0,
                              0, /* does not matter */
@@ -4626,6 +4645,12 @@ fetch_bridge_descriptors(or_options_t *options, time_t now)
       if (!download_status_is_ready(&bridge->fetch_status, now,
                                     IMPOSSIBLE_TO_DOWNLOAD))
         continue; /* don't bother, no need to retry yet */
+      if (routerset_contains_bridge(options->ExcludeNodes, bridge)) {
+        download_status_mark_impossible(&bridge->fetch_status);
+        log_warn(LD_APP, "Not using bridge at %s: it is in ExcludeNodes.",
+                 safe_str_client(fmt_addr(&bridge->addr)));
+        continue;
+      }
 
       /* schedule another fetch as if this one will fail, in case it does */
       download_status_failed(&bridge->fetch_status, 0);

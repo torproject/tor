@@ -46,8 +46,8 @@ void directory_info_has_arrived(time_t now, int from_cache);
 void ip_address_changed(int at_interface);
 void dns_servers_relaunch_checks(void);
 
-void control_signal_act(int the_signal);
 void handle_signals(int is_parent);
+void process_signal(uintptr_t sig);
 
 int try_locking(or_options_t *options, int err_if_locked);
 int have_lockfile(void);

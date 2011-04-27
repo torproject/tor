@@ -850,8 +850,28 @@ consider_testing_reachability(int test_or, int test_dir)
   routerinfo_t *me = router_get_my_routerinfo();
   int orport_reachable = check_whether_orport_reachable();
   tor_addr_t addr;
+  or_options_t *options = get_options();
   if (!me)
     return;
+
+  if (routerset_contains_router(options->ExcludeNodes, me) &&
+      options->StrictNodes) {
+    /* If we've excluded ourself, and StrictNodes is set, we can't test
+     * ourself. */
+    if (test_or || test_dir) {
+#define SELF_EXCLUDED_WARN_INTERVAL 3600
+      static ratelim_t warning_limit=RATELIM_INIT(SELF_EXCLUDED_WARN_INTERVAL);
+      char *msg;
+      if ((msg = rate_limit_log(&warning_limit, approx_time()))) {
+        log_warn(LD_CIRC, "Can't peform self-tests for this relay: we have "
+                 "listed ourself in ExcludeNodes, and StrictNodes is set. "
+                 "We cannot learn whether we are usable, and will not "
+                 "be able to advertise ourself.%s", msg);
+        tor_free(msg);
+      }
+    }
+    return;
+  }
 
   if (test_or && (!orport_reachable || !circuit_enough_testing_circs())) {
     log_info(LD_CIRC, "Testing %s of my ORPort: %s:%d.",

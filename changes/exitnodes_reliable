@@ -1,0 +1,7 @@
+  o Minor features:
+    - If ExitNodes is set, still pay attention to the Fast/Stable
+      status of exits when picking exit nodes.  (We used to ignore
+      these flags when ExitNodes was set, on the grounds that people
+      who set exitnodes wanted all of those nodes to get used, but
+      with the ability to pick exits by country and IP range, this
+      doesn't necessarily make sense any more.)

@@ -934,7 +934,7 @@ rend_cache_lookup_entry(const char *query, int version, rend_cache_entry_t **e)
   tor_assert((*e)->parsed && (*e)->parsed->intro_nodes);
   /* XXX023 hack for now, to return "not found" if there are no intro
    * points remaining. See bug 997. */
-  if (smartlist_len((*e)->parsed->intro_nodes) == 0)
+  if (! rend_client_any_intro_points_usable(*e))
     return 0;
   return 1;
 }

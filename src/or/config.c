@@ -1260,21 +1260,18 @@ options_act(or_options_t *old_options)
   /* Check for transitions that need action. */
   if (old_options) {
     if ((options->UseEntryGuards && !old_options->UseEntryGuards) ||
-        (options->ExcludeNodes &&
-         !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)) ||
-        (options->ExcludeExitNodes &&
-         !routerset_equal(old_options->ExcludeExitNodes,
-                          options->ExcludeExitNodes)) ||
-        (options->EntryNodes &&
-         !routerset_equal(old_options->EntryNodes, options->EntryNodes)) ||
-        (options->ExitNodes &&
-         !routerset_equal(old_options->ExitNodes, options->ExitNodes)) ||
+        !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes) ||
+        !routerset_equal(old_options->ExcludeExitNodes,
+                         options->ExcludeExitNodes) ||
+        !routerset_equal(old_options->EntryNodes, options->EntryNodes) ||
+        !routerset_equal(old_options->ExitNodes, options->ExitNodes) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
                "Changed to using entry guards, or changed preferred or "
                "excluded node lists. Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
+      addressmap_clear_excluded_trackexithosts(options);
     }
 
 /* How long should we delay counting bridge stats after becoming a bridge?
@@ -1412,7 +1409,8 @@ options_act(or_options_t *old_options)
   /* Check if we need to parse and add the EntryNodes config option. */
   if (options->EntryNodes &&
       (!old_options ||
-      (!routerset_equal(old_options->EntryNodes,options->EntryNodes))))
+       !routerset_equal(old_options->EntryNodes,options->EntryNodes) ||
+       !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes)))
     entry_nodes_should_be_added();
 
   /* Since our options changed, we might need to regenerate and upload our
@@ -2500,54 +2498,6 @@ is_local_addr(const tor_addr_t *addr)
   return 0;
 }
 
-/** Called when we don't have a nickname set.  Try to guess a good nickname
- * based on the hostname, and return it in a newly allocated string. If we
- * can't, return NULL and let the caller warn if it wants to. */
-static char *
-get_default_nickname(void)
-{
-  static const char * const bad_default_nicknames[] = {
-    "localhost",
-    NULL,
-  };
-  char localhostname[256];
-  char *cp, *out, *outp;
-  int i;
-
-  if (gethostname(localhostname, sizeof(localhostname)) < 0)
-    return NULL;
-
-  /* Put it in lowercase; stop at the first dot. */
-  if ((cp = strchr(localhostname, '.')))
-    *cp = '\0';
-  tor_strlower(localhostname);
-
-  /* Strip invalid characters. */
-  cp = localhostname;
-  out = outp = tor_malloc(strlen(localhostname) + 1);
-  while (*cp) {
-    if (strchr(LEGAL_NICKNAME_CHARACTERS, *cp))
-      *outp++ = *cp++;
-    else
-      cp++;
-  }
-  *outp = '\0';
-
-  /* Enforce length. */
-  if (strlen(out) > MAX_NICKNAME_LEN)
-    out[MAX_NICKNAME_LEN]='\0';
-
-  /* Check for dumb names. */
-  for (i = 0; bad_default_nicknames[i]; ++i) {
-    if (!strcmp(out, bad_default_nicknames[i])) {
-      tor_free(out);
-      return NULL;
-    }
-  }
-
-  return out;
-}
-
 /** Release storage held by <b>options</b>. */
 static void
 config_free(config_format_t *fmt, void *options)
@@ -2976,14 +2926,7 @@ options_validate(or_options_t *old_options, or_options_t *options,
 
   if (options->Nickname == NULL) {
     if (server_mode(options)) {
-      if (!(options->Nickname = get_default_nickname())) {
-        log_notice(LD_CONFIG, "Couldn't pick a nickname based on "
-                   "our hostname; using %s instead.", UNNAMED_ROUTER_NICKNAME);
         options->Nickname = tor_strdup(UNNAMED_ROUTER_NICKNAME);
-      } else {
-        log_notice(LD_CONFIG, "Choosing default nickname '%s'",
-                   options->Nickname);
-      }
     }
   } else {
     if (!is_legal_nickname(options->Nickname)) {
@@ -3242,6 +3185,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
            "of the Internet, so they must not set UseBridges.");
+
+  /* If both of these are set, we'll end up with funny behavior where we
+   * demand enough entrynodes be up and running else we won't build
+   * circuits, yet we never actually use them. */
+  if (options->UseBridges && options->EntryNodes)
+    REJECT("You cannot set both UseBridges and EntryNodes.");
 
   options->_AllowInvalid = 0;
   if (options->AllowInvalidNodes) {
@@ -4382,11 +4331,13 @@ options_init_logs(or_options_t *options, int validate_only)
     if (smartlist_len(elts) == 2 &&
         !strcasecmp(smartlist_get(elts,0), "file")) {
       if (!validate_only) {
-        if (add_file_log(severity, smartlist_get(elts, 1)) < 0) {
+        char *fname = expand_filename(smartlist_get(elts, 1));
+        if (add_file_log(severity, fname) < 0) {
           log_warn(LD_CONFIG, "Couldn't open file for 'Log %s': %s",
                    opt->value, strerror(errno));
           ok = 0;
         }
+        tor_free(fname);
       }
       goto cleanup;
     }

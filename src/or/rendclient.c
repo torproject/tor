@@ -22,6 +22,10 @@
 #include "rephist.h"
 #include "routerlist.h"
 
+static extend_info_t *rend_client_get_random_intro_impl(
+                          const rend_cache_entry_t *rend_query,
+                          const int strict, const int warnings);
+
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */
 void
@@ -559,7 +563,7 @@ rend_client_remove_intro_point(extend_info_t *failed_intro,
     }
   }
 
-  if (smartlist_len(ent->parsed->intro_nodes) == 0) {
+  if (! rend_client_any_intro_points_usable(ent)) {
     log_info(LD_REND,
              "No more intro points remain for %s. Re-fetching descriptor.",
              escaped_safe_str_client(rend_query->onion_address));
@@ -705,7 +709,7 @@ rend_client_desc_trynow(const char *query)
     assert_connection_ok(TO_CONN(conn), now);
     if (rend_cache_lookup_entry(conn->rend_data->onion_address, -1,
                                 &entry) == 1 &&
-        smartlist_len(entry->parsed->intro_nodes) > 0) {
+        rend_client_any_intro_points_usable(entry)) {
       /* either this fetch worked, or it failed but there was a
        * valid entry from before which we should reuse */
       log_info(LD_REND,"Rend desc is usable. Launching circuits.");
@@ -739,24 +743,63 @@ rend_client_desc_trynow(const char *query)
 extend_info_t *
 rend_client_get_random_intro(const rend_data_t *rend_query)
 {
-  int i;
+  extend_info_t *result;
   rend_cache_entry_t *entry;
-  rend_intro_point_t *intro;
-  routerinfo_t *router;
 
   if (rend_cache_lookup_entry(rend_query->onion_address, -1, &entry) < 1) {
-    log_warn(LD_REND,
-             "Query '%s' didn't have valid rend desc in cache. Failing.",
-             safe_str_client(rend_query->onion_address));
+      log_warn(LD_REND,
+               "Query '%s' didn't have valid rend desc in cache. Failing.",
+               safe_str_client(rend_query->onion_address));
     return NULL;
   }
 
- again:
-  if (smartlist_len(entry->parsed->intro_nodes) == 0)
-    return NULL;
+  /* See if we can get a node that complies with ExcludeNodes */
+  if ((result = rend_client_get_random_intro_impl(entry, 1, 1)))
+    return result;
+  /* If not, and StrictNodes is not set, see if we can return any old node
+   */
+  if (!get_options()->StrictNodes)
+    return rend_client_get_random_intro_impl(entry, 0, 1);
+  return NULL;
+}
 
-  i = crypto_rand_int(smartlist_len(entry->parsed->intro_nodes));
-  intro = smartlist_get(entry->parsed->intro_nodes, i);
+/** As rend_client_get_random_intro, except assume that StrictNodes is set
+ * iff <b>strict</b> is true. If <b>warnings</b> is false, don't complain
+ * to the user when we're out of nodes, even if StrictNodes is true.
+ */
+static extend_info_t *
+rend_client_get_random_intro_impl(const rend_cache_entry_t *entry,
+                                  const int strict,
+                                  const int warnings)
+{
+  int i;
+
+  rend_intro_point_t *intro;
+  routerinfo_t *router;
+  or_options_t *options = get_options();
+  smartlist_t *usable_nodes;
+  int n_excluded = 0;
+
+  /* We'll keep a separate list of the usable nodes.  If this becomes empty,
+   * no nodes are usable.  */
+  usable_nodes = smartlist_create();
+  smartlist_add_all(usable_nodes, entry->parsed->intro_nodes);
+
+ again:
+  if (smartlist_len(usable_nodes) == 0) {
+    if (n_excluded && get_options()->StrictNodes && warnings) {
+      /* We only want to warn if StrictNodes is really set. Otherwise
+       * we're just about to retry anyways.
+       */
+      log_warn(LD_REND, "All introduction points for hidden service are "
+               "at excluded relays, and StrictNodes is set. Skipping.");
+    }
+    smartlist_free(usable_nodes);
+    return NULL;
+  }
+
+  i = crypto_rand_int(smartlist_len(usable_nodes));
+  intro = smartlist_get(usable_nodes, i);
   /* Do we need to look up the router or is the extend info complete? */
   if (!intro->extend_info->onion_key) {
     if (tor_digest_is_zero(intro->extend_info->identity_digest))
@@ -766,14 +809,32 @@ rend_client_get_random_intro(const rend_data_t *rend_query)
     if (!router) {
       log_info(LD_REND, "Unknown router with nickname '%s'; trying another.",
                intro->extend_info->nickname);
-      rend_intro_point_free(intro);
-      smartlist_del(entry->parsed->intro_nodes, i);
+      smartlist_del(usable_nodes, i);
       goto again;
     }
     extend_info_free(intro->extend_info);
     intro->extend_info = extend_info_from_router(router);
   }
+  /* Check if we should refuse to talk to this router. */
+  if (options->ExcludeNodes && strict &&
+      routerset_contains_extendinfo(options->ExcludeNodes,
+                                    intro->extend_info)) {
+    n_excluded++;
+    smartlist_del(usable_nodes, i);
+    goto again;
+  }
+
+  smartlist_free(usable_nodes);
   return extend_info_dup(intro->extend_info);
+}
+
+/** Return true iff any introduction points still listed in <b>entry</b> are
+ * usable. */
+int
+rend_client_any_intro_points_usable(const rend_cache_entry_t *entry)
+{
+  return rend_client_get_random_intro_impl(
+          entry, get_options()->StrictNodes, 0) != NULL;
 }
 
 /** Client-side authorizations for hidden services; map of onion address to

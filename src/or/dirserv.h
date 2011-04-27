@@ -52,7 +52,7 @@
    MAX_V_LINE_LEN                                                       \
    )
 
-#define UNNAMED_ROUTER_NICKNAME "Unnamed"
+#define UNNAMED_ROUTER_NICKNAME "Unnamed" 
 
 int connection_dirserv_flushed_some(dir_connection_t *conn);
 

@@ -531,8 +531,8 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
     if (!found &&
         download_status_is_ready(&cl->dl_status, now,MAX_CERT_DL_FAILURES) &&
         !digestmap_get(pending, ds->v3_identity_digest)) {
-      log_notice(LD_DIR, "No current certificate known for authority %s; "
-                 "launching request.", ds->nickname);
+      log_info(LD_DIR, "No current certificate known for authority %s; "
+               "launching request.", ds->nickname);
         smartlist_add(missing_digests, ds->v3_identity_digest);
     }
   } SMARTLIST_FOREACH_END(ds);
@@ -1070,6 +1070,7 @@ router_pick_trusteddirserver(authority_type_t type, int flags)
 static routerstatus_t *
 router_pick_directory_server_impl(authority_type_t type, int flags)
 {
+  or_options_t *options = get_options();
   routerstatus_t *result;
   smartlist_t *direct, *tunnel;
   smartlist_t *trusted_direct, *trusted_tunnel;
@@ -1079,9 +1080,12 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   int requireother = ! (flags & PDS_ALLOW_SELF);
   int fascistfirewall = ! (flags & PDS_IGNORE_FASCISTFIREWALL);
   int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
+  int try_excluding = 1, n_excluded = 0;
 
   if (!consensus)
     return NULL;
+
+ retry_without_exclude:
 
   direct = smartlist_create();
   tunnel = smartlist_create();
@@ -1114,6 +1118,11 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
     if ((type & EXTRAINFO_CACHE) &&
         !router_supports_extrainfo(status->identity_digest, 0))
       continue;
+    if (try_excluding && options->ExcludeNodes &&
+        routerset_contains_routerstatus(options->ExcludeNodes, status)) {
+      ++n_excluded;
+      continue;
+    }
 
     /* XXXX IP6 proposal 118 */
     tor_addr_from_ipv4h(&addr, status->addr);
@@ -1155,6 +1164,15 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
   smartlist_free(trusted_tunnel);
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
+
+  if (result == NULL && try_excluding && !options->StrictNodes && n_excluded) {
+    /* If we got no result, and we are excluding nodes, and StrictNodes is
+     * not set, try again without excluding nodes. */
+    try_excluding = 0;
+    n_excluded = 0;
+    goto retry_without_exclude;
+  }
+
   return result;
 }
 
@@ -1165,6 +1183,7 @@ static routerstatus_t *
 router_pick_trusteddirserver_impl(authority_type_t type, int flags,
                                   int *n_busy_out)
 {
+  or_options_t *options = get_options();
   smartlist_t *direct, *tunnel;
   smartlist_t *overloaded_direct, *overloaded_tunnel;
   routerinfo_t *me = router_get_my_routerinfo();
@@ -1175,9 +1194,12 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
   const int prefer_tunnel = (flags & _PDS_PREFER_TUNNELED_DIR_CONNS);
   const int no_serverdesc_fetching =(flags & PDS_NO_EXISTING_SERVERDESC_FETCH);
   int n_busy = 0;
+  int try_excluding = 1, n_excluded = 0;
 
   if (!trusted_dir_servers)
     return NULL;
+
+ retry_without_exclude:
 
   direct = smartlist_create();
   tunnel = smartlist_create();
@@ -1197,6 +1219,12 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
           continue;
+      if (try_excluding && options->ExcludeNodes &&
+          routerset_contains_routerstatus(options->ExcludeNodes,
+                                          &d->fake_status)) {
+        ++n_excluded;
+        continue;
+      }
 
       /* XXXX IP6 proposal 118 */
       tor_addr_from_ipv4h(&addr, d->addr);
@@ -1243,6 +1271,15 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
   smartlist_free(tunnel);
   smartlist_free(overloaded_direct);
   smartlist_free(overloaded_tunnel);
+
+  if (result == NULL && try_excluding && !options->StrictNodes && n_excluded) {
+    /* If we got no result, and we are excluding nodes, and StrictNodes is
+     * not set, try again without excluding nodes. */
+    try_excluding = 0;
+    n_excluded = 0;
+    goto retry_without_exclude;
+  }
+
   return result;
 }
 
@@ -1501,6 +1538,8 @@ routerlist_find_my_routerinfo(void)
 /** Find a router that's up, that has this IP address, and
  * that allows exit to this address:port, or return NULL if there
  * isn't a good one.
+ * Don't exit enclave to excluded relays -- it wouldn't actually
+ * hurt anything, but this way there are fewer confused users.
  */
 routerinfo_t *
 router_find_exact_exit_enclave(const char *address, uint16_t port)
@@ -1508,6 +1547,7 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
   uint32_t addr;
   struct in_addr in;
   tor_addr_t a;
+  or_options_t *options = get_options();
 
   if (!tor_inet_aton(address, &in))
     return NULL; /* it's not an IP already */
@@ -1520,7 +1560,8 @@ router_find_exact_exit_enclave(const char *address, uint16_t port)
     if (router->addr == addr &&
         router->is_running &&
         compare_tor_addr_to_addr_policy(&a, port, router->exit_policy) ==
-          ADDR_POLICY_ACCEPTED)
+          ADDR_POLICY_ACCEPTED &&
+        !routerset_contains_router(options->_ExcludeExitNodesUnion, router))
       return router;
   });
   return NULL;
@@ -5433,7 +5474,7 @@ routerset_needs_geoip(const routerset_t *set)
 }
 
 /** Return true iff there are no entries in <b>set</b>. */
-static int
+int
 routerset_is_empty(const routerset_t *set)
 {
   return !set || smartlist_len(set->list) == 0;
@@ -5516,10 +5557,11 @@ routerset_contains_routerstatus(const routerset_t *set, routerstatus_t *rs)
 }
 
 /** Add every known routerinfo_t that is a member of <b>routerset</b> to
- * <b>out</b>.  If <b>running_only</b>, only add the running ones. */
+ * <b>out</b>, but never add any that are part of <b>excludeset</b>.
+ * If <b>running_only</b>, only add the running ones. */
 void
 routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
-                          int running_only)
+                          const routerset_t *excludeset, int running_only)
 {
   tor_assert(out);
   if (!routerset || !routerset->list)
@@ -5529,12 +5571,13 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
   if (routerset_is_list(routerset)) {
 
     /* No routers are specified by type; all are given by name or digest.
-     * we can do a lookup in O(len(list)). */
+     * we can do a lookup in O(len(routerset)). */
     SMARTLIST_FOREACH(routerset->list, const char *, name, {
         routerinfo_t *router = router_get_by_nickname(name, 1);
         if (router) {
           if (!running_only || router->is_running)
-            smartlist_add(out, router);
+            if (!routerset_contains_router(excludeset, router))
+              smartlist_add(out, router);
         }
     });
   } else {
@@ -5544,12 +5587,14 @@ routerset_get_all_routers(smartlist_t *out, const routerset_t *routerset,
     SMARTLIST_FOREACH(rl->routers, routerinfo_t *, router, {
         if (running_only && !router->is_running)
           continue;
-        if (routerset_contains_router(routerset, router))
+        if (routerset_contains_router(routerset, router) &&
+            !routerset_contains_router(excludeset, router))
           smartlist_add(out, router);
     });
   }
 }
 
+#if 0
 /** Add to <b>target</b> every routerinfo_t from <b>source</b> except:
  *
  * 1) Don't add it if <b>include</b> is non-empty and the relay isn't in
@@ -5580,6 +5625,7 @@ routersets_get_disjunction(smartlist_t *target,
     }
   });
 }
+#endif
 
 /** Remove every routerinfo_t from <b>lst</b> that is in <b>routerset</b>. */
 void
@@ -5611,10 +5657,15 @@ routerset_to_string(const routerset_t *set)
 int
 routerset_equal(const routerset_t *old, const routerset_t *new)
 {
-  if (old == NULL && new == NULL)
+  if (routerset_is_empty(old) && routerset_is_empty(new)) {
+    /* Two empty sets are equal */
     return 1;
-  else if (old == NULL || new == NULL)
+  } else if (routerset_is_empty(old) || routerset_is_empty(new)) {
+    /* An empty set is equal to nothing else. */
     return 0;
+  }
+  tor_assert(old != NULL);
+  tor_assert(new != NULL);
 
   if (smartlist_len(old->list) != smartlist_len(new->list))
     return 0;
