@@ -799,8 +799,8 @@ clear_trackexithost_mappings(const char *exitname)
   tor_strlower(suffix);
 
   STRMAP_FOREACH_MODIFY(addressmap, address, addressmap_entry_t *, ent) {
-    /* XXXX022 HEY!  Shouldn't this look at ent->new_address? */
-    if (ent->source == ADDRMAPSRC_TRACKEXIT && !strcmpend(address, suffix)) {
+    if (ent->source == ADDRMAPSRC_TRACKEXIT &&
+        !strcmpend(ent->new_address, suffix)) {
       addressmap_ent_remove(address, ent);
       MAP_DEL_CURRENT(address);
     }
