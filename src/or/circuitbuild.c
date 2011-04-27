@@ -2878,7 +2878,6 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
   or_options_t *options = get_options();
   routerset_t *rs = options->ExcludeNodes;
   const char *description;
-  int domain = LD_CIRC;
   uint8_t purpose = circ->_base.purpose;
 
   if (circ->build_state->onehop_tunnel)
@@ -2914,7 +2913,6 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
     case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
     case CIRCUIT_PURPOSE_C_REND_JOINED:
       description = "chosen rendezvous point";
-      domain = LD_BUG;
       break;
     case CIRCUIT_PURPOSE_CONTROLLER:
       rs = options->_ExcludeExitNodesUnion;
@@ -2924,18 +2922,24 @@ warn_if_last_router_excluded(origin_circuit_t *circ, const extend_info_t *exit)
 
   if (routerset_contains_extendinfo(rs, exit)) {
     /* We should never get here if StrictNodes is set to 1. */
-    if (options->StrictNodes)
-      log_warn(LD_BUG, "Using an excluded node with StrictNodes set. "
-                       "Please report the following log message to the "
-                       "developers.");
-    log_fn(LOG_WARN, domain, "Using %s '%s' which is listed in "
-           "ExcludeNodes%s, because no other options were available. To "
-           "prevent this, set the StrictNodes configuration option."
-           "(Circuit purpose is %d)",
-           description,exit->nickname,
-           rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
-           (int)purpose);
-    circuit_log_path(LOG_WARN, domain, circ);
+    if (options->StrictNodes) {
+      log_warn(LD_BUG, "Using %s '%s' which is listed in ExcludeNodes%s, "
+               "even though StrictNodes is set. Please report. "
+               "(Circuit purpose: %s)",
+               description, exit->nickname,
+               rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
+               circuit_purpose_to_string(purpose));
+    } else {
+      log_warn(LD_CIRC, "Using %s '%s' which is listed in "
+               "ExcludeNodes%s, because no better options were available. To "
+               "prevent this (and possibly break your Tor functionality), "
+               "set the StrictNodes configuration option. "
+               "(Circuit purpose: %s)",
+               description, exit->nickname,
+               rs==options->ExcludeNodes?"":" or ExcludeExitNodes",
+               circuit_purpose_to_string(purpose));
+    }
+    circuit_log_path(LOG_WARN, LD_CIRC, circ);
   }
 
   return;
