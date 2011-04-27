@@ -12,7 +12,7 @@
 	. "Exit", in the context of ExitNodes and ExcludeExitNodes,
 	   means a node that delivers user traffic outside the Tor
 	   network.
-	. "Entry", in the context of EntryNodes and ExcludeEntryNodes,
+	. "Entry", in the context of EntryNodes,
 	  means a node used as the first hop of a multihop circuit:
 	  it doesn't include direct connections to directory servers.
 	. "ExcludeNodes" applies to all nodes.
@@ -48,9 +48,10 @@
          and to rendezvous points selected by hidden service users.
          This can make your hidden service less reliable: use it with
          caution!
-       . If we have used ExcludeNodes on ourself, do not try self-tests.
+       . If we have used ExcludeNodes on ourself, do not try relay
+         reachability self-tests.
        . If we have excluded all the directory authorities, we will
-         not even try to upload our descriptor if we're a server.
+         not even try to upload our descriptor if we're a relay.
        . Do not honor .exit requests to an excluded node.
 
     - Remove a misfeature that caused us to ignore the Fast/Stable flags
