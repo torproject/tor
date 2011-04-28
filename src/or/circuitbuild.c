@@ -4584,8 +4584,7 @@ find_bridge_by_digest(const char *digest)
   return NULL;
 }
 
-/** We need to ask <b>bridge</b> for its server descriptor. <b>address</b>
- * is a helpful string describing this bridge. */
+/** We need to ask <b>bridge</b> for its server descriptor. */
 static void
 launch_direct_bridge_descriptor_fetch(bridge_info_t *bridge)
 {
