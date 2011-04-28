@@ -94,7 +94,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     log_info(LD_REND,
              "query %s didn't have valid rend desc in cache. "
              "Refetching descriptor.",
-             safe_str(introcirc->rend_data->onion_address));
+             safe_str_client(introcirc->rend_data->onion_address));
     rend_client_refetch_v2_renddesc(introcirc->rend_data);
     {
       connection_t *conn;
@@ -120,8 +120,9 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     }
   });
   if (!intro_key) {
-    log_info(LD_REND, "Internal error: could not find intro key; we "
-             "only have a v2 rend desc with %d intro points.",
+    log_info(LD_REND, "Our introduction point knowledge changed in "
+             "mid-connect! Could not find intro key; we only have a "
+             "v2 rend desc with %d intro points. Giving up.",
              smartlist_len(entry->parsed->intro_nodes));
     goto perm_err;
   }
