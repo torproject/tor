@@ -92,6 +92,7 @@ size_t crypto_pk_keysize(crypto_pk_env_t *env);
 crypto_pk_env_t *crypto_pk_dup_key(crypto_pk_env_t *orig);
 crypto_pk_env_t *crypto_pk_copy_full(crypto_pk_env_t *orig);
 int crypto_pk_key_is_private(const crypto_pk_env_t *key);
+int crypto_pk_check_key_public_exponent(crypto_pk_env_t *env);
 
 int crypto_pk_public_encrypt(crypto_pk_env_t *env, char *to, size_t tolen,
                              const char *from, size_t fromlen, int padding);
