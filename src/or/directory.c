@@ -353,6 +353,7 @@ directory_get_from_dirserver(uint8_t dir_purpose, uint8_t router_purpose,
       break;
     case DIR_PURPOSE_FETCH_V2_NETWORKSTATUS:
       type = V2_AUTHORITY;
+      prefer_authority = 1; /* Only v2 authorities have these anyway. */
       break;
     case DIR_PURPOSE_FETCH_SERVERDESC:
       type = (router_purpose == ROUTER_PURPOSE_BRIDGE ? BRIDGE_AUTHORITY :
