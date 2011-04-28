@@ -66,6 +66,50 @@ rend_client_send_establish_rendezvous(origin_circuit_t *circ)
   return 0;
 }
 
+/** Extend the introduction circuit <b>circ</b> to another valid
+ * introduction point for the hidden service it is trying to connect
+ * to, or mark it and launch a new circuit if we can't extend it.
+ * Return 0 on success.  Return -1 and mark the introduction
+ * circuit on failure.
+ *
+ * On failure, the caller is responsible for marking the associated
+ * rendezvous circuit for close. */
+static int
+rend_client_reextend_intro_circuit(origin_circuit_t *circ)
+{
+  extend_info_t *extend_info;
+  int result;
+  extend_info = rend_client_get_random_intro(circ->rend_data);
+  if (!extend_info) {
+    log_warn(LD_REND,
+             "No usable introduction points left for %s. Closing.",
+             safe_str_client(circ->rend_data->onion_address));
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
+    return -1;
+  }
+  if (circ->remaining_relay_early_cells) {
+    log_info(LD_REND,
+             "Re-extending circ %d, this time to %s.",
+             circ->_base.n_circ_id, extend_info->nickname);
+    result = circuit_extend_to_new_exit(circ, extend_info);
+  } else {
+    log_info(LD_REND,
+             "Building a new introduction circuit, this time to %s.",
+             extend_info->nickname);
+    circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
+    if (!circuit_launch_by_extend_info(CIRCUIT_PURPOSE_C_INTRODUCING,
+                                       extend_info,
+                                       CIRCLAUNCH_IS_INTERNAL)) {
+      log_warn(LD_REND, "Building introduction circuit failed.");
+      result = -1;
+    } else {
+      result = 0;
+    }
+  }
+  extend_info_free(extend_info);
+  return result;
+}
+
 /** Called when we're trying to connect an ap conn; sends an INTRODUCE1 cell
  * down introcirc if possible.
  */
@@ -120,11 +164,18 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
     }
   });
   if (!intro_key) {
-    log_info(LD_REND, "Our introduction point knowledge changed in "
-             "mid-connect! Could not find intro key; we only have a "
-             "v2 rend desc with %d intro points. Giving up.",
+    log_info(LD_REND, "Could not find intro key for %s at %s; we "
+             "have a v2 rend desc with %d intro points. "
+             "Trying a different intro point...",
+             safe_str_client(introcirc->rend_data->onion_address),
+             introcirc->build_state->chosen_exit->nickname,
              smartlist_len(entry->parsed->intro_nodes));
-    goto perm_err;
+
+    if (rend_client_reextend_intro_circuit(introcirc)) {
+      goto perm_err;
+    } else {
+      return -1;
+    }
   }
   if (crypto_pk_get_digest(intro_key, payload)<0) {
     log_warn(LD_BUG, "Internal error: couldn't hash public key.");
@@ -227,7 +278,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
 
   return 0;
 perm_err:
-  circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_REASON_INTERNAL);
+  if (!introcirc->_base.marked_for_close)
+    circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_REASON_INTERNAL);
   circuit_mark_for_close(TO_CIRCUIT(rendcirc), END_CIRC_REASON_INTERNAL);
   return -2;
 }
@@ -290,45 +342,16 @@ rend_client_introduction_acked(origin_circuit_t *circ,
      * points. If any remain, extend to a new one and try again.
      * If none remain, refetch the service descriptor.
      */
+    log_info(LD_REND, "Got nack for %s from %s...",
+             safe_str_client(circ->rend_data->onion_address),
+             circ->build_state->chosen_exit->nickname);
     if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
                                        circ->rend_data) > 0) {
       /* There are introduction points left. Re-extend the circuit to
        * another intro point and try again. */
-      extend_info_t *extend_info;
-      int result;
-      extend_info = rend_client_get_random_intro(circ->rend_data);
-      if (!extend_info) {
-        log_warn(LD_REND, "No introduction points left for %s. Closing.",
-                 escaped_safe_str_client(circ->rend_data->onion_address));
-        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_INTERNAL);
-        return -1;
-      }
-      if (circ->remaining_relay_early_cells) {
-        log_info(LD_REND,
-                 "Got nack for %s from %s. Re-extending circ %d, "
-                 "this time to %s.",
-                 escaped_safe_str_client(circ->rend_data->onion_address),
-                 circ->build_state->chosen_exit->nickname,
-                 circ->_base.n_circ_id, extend_info->nickname);
-        result = circuit_extend_to_new_exit(circ, extend_info);
-      } else {
-        log_info(LD_REND,
-                 "Got nack for %s from %s. Building a new introduction "
-                 "circuit, this time to %s.",
-                 escaped_safe_str_client(circ->rend_data->onion_address),
-                 circ->build_state->chosen_exit->nickname,
-                 extend_info->nickname);
-        circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
-        if (!circuit_launch_by_extend_info(CIRCUIT_PURPOSE_C_INTRODUCING,
-                                           extend_info,
-                                           CIRCLAUNCH_IS_INTERNAL)) {
-          log_warn(LD_REND, "Building introduction circuit failed.");
-          result = -1;
-        } else {
-          result = 0;
-        }
-      }
-      extend_info_free(extend_info);
+      int result = rend_client_reextend_intro_circuit(circ);
+      /* XXXX If that call failed, should we close the rend circuit,
+       * too? */
       return result;
     }
   }
