@@ -1530,10 +1530,15 @@ rep_hist_get_bandwidth_lines(void)
   size_t len;
 
   /* opt [dirreq-](read|write)-history yyyy-mm-dd HH:MM:SS (n s) n,n,n... */
-  len = (67+21*NUM_TOTALS)*4;
+/* The n,n,n part above. Largest representation of a uint64_t is 20 chars
+ * long, plus the comma. */
+#define MAX_HIST_VALUE_LEN 21*NUM_TOTALS
+  len = (67+MAX_HIST_VALUE_LEN)*4;
   buf = tor_malloc_zero(len);
   cp = buf;
   for (r=0;r<4;++r) {
+    char tmp[MAX_HIST_VALUE_LEN];
+    size_t slen;
     switch (r) {
       case 0:
         b = write_array;
@@ -1553,11 +1558,16 @@ rep_hist_get_bandwidth_lines(void)
         break;
     }
     tor_assert(b);
+    slen = rep_hist_fill_bandwidth_history(tmp, MAX_HIST_VALUE_LEN, b);
+    /* If we don't have anything to write, skip to the next entry. */
+    if (slen == 0)
+      continue;
     format_iso_time(t, b->next_period-NUM_SECS_BW_SUM_INTERVAL);
     tor_snprintf(cp, len-(cp-buf), "%s %s (%d s) ",
                  desc, t, NUM_SECS_BW_SUM_INTERVAL);
     cp += strlen(cp);
-    cp += rep_hist_fill_bandwidth_history(cp, len-(cp-buf), b);
+    strlcat(cp, tmp, len-(cp-buf));
+    cp += slen;
     strlcat(cp, "\n", len-(cp-buf));
     ++cp;
   }
