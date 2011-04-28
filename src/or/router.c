@@ -1112,10 +1112,10 @@ set_server_advertised(int s)
 int
 proxy_mode(or_options_t *options)
 {
-  return (options->SocksPort != 0 || options->SocksListenAddress ||
-          options->TransPort != 0 || options->TransListenAddress ||
-          options->NATDPort != 0 || options->NATDListenAddress ||
-          options->DNSPort != 0 || options->DNSListenAddress);
+  return (options->SocksPort != 0 ||
+          options->TransPort != 0 ||
+          options->NATDPort != 0 ||
+          options->DNSPort != 0);
 }
 
 /** Decide if we're a publishable server. We are a publishable server if:

@@ -1018,6 +1018,13 @@ run_connection_housekeeping(int i, time_t now)
 static void
 signewnym_impl(time_t now)
 {
+  or_options_t *options = get_options();
+  if (!proxy_mode(options)) {
+    log_info(LD_CONTROL, "Ignoring SIGNAL NEWNYM because client functionality "
+             "is disabled.");
+    return;
+  }
+
   circuit_expire_all_dirty_circs();
   addressmap_clear_transient();
   rend_cache_purge();
