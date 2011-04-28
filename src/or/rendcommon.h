@@ -36,6 +36,7 @@ void rend_intro_point_free(rend_intro_point_t *intro);
 void rend_cache_init(void);
 void rend_cache_clean(time_t now);
 void rend_cache_clean_v2_descs_as_dir(time_t now);
+void rend_cache_purge(void);
 void rend_cache_free_all(void);
 int rend_valid_service_id(const char *query);
 int rend_cache_lookup_desc(const char *query, int version, const char **desc,

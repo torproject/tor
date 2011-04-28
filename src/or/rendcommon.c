@@ -833,6 +833,16 @@ rend_cache_clean(time_t now)
   }
 }
 
+/** Remove ALL entries from the rendezvous service descriptor cache.
+ */
+void
+rend_cache_purge(void)
+{
+  if (rend_cache)
+    strmap_free(rend_cache, _rend_cache_entry_free);
+  rend_cache = strmap_new();
+}
+
 /** Remove all old v2 descriptors and those for which this hidden service
  * directory is not responsible for any more. */
 void
