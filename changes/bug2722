@@ -1,0 +1,11 @@
+  o Minor bugfixes
+    - Ignore the TunnelDirConns option when determining which HSDir
+      relays are responsible for a hidden service descriptor ID.
+      Currently, clients and hidden services with TunnelDirConns off
+      will skip over HSDir relays which do not advertise a DirPort
+      when making a list of HSDirs responsible for a descriptor ID,
+      even though they would never try to use a HSDir's DirPort to
+      upload or fetch a hidden service descriptor.  Fixes bug 2722;
+      bugfix on 0.2.1.6-alpha.
+
+
