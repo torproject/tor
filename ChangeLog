@@ -1,9 +1,19 @@
 Changes in version 0.2.2.25-alpha - 2011-04-28
+  Tor 0.2.2.25-alpha fixes many bugs: hidden service clients are more
+  robust, routers no longer overreport their bandwidth, Win7 should crash
+  a little less, and NEWNYM (as used by Vidalia's "new identity" button)
+  now prevents hidden service-related activity from being linkable. It
+  provides more information to Vidalia so you can see if your bridge is
+  working. Also, 0.2.2.25-alpha revamps the Entry/Exit/ExcludeNodes and
+  StrictNodes configuration options to make them more reliable, more
+  understandable, and more regularly applied. If you use those options,
+  please see the revised documentation for them in the manual page.
+
   o Major bugfixes:
     - Relays were publishing grossly inflated bandwidth values because
       they were writing their state files wrong--now they write the
-      correct value.  Also, resume reading bandwidth history from the
-      state file correctly.  Fixes bug 2704; bugfix on 0.2.2.23-alpha.
+      correct value. Also, resume reading bandwidth history from the
+      state file correctly. Fixes bug 2704; bugfix on 0.2.2.23-alpha.
     - Improve hidden service robustness: When we find that we have
       extended a hidden service's introduction circuit to a relay not
       listed as an introduction point in the HS descriptor we currently
@@ -14,8 +24,8 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       destination by TrackHostExits if they fail to reach that exit node.
       Fixes bug 2999. Bugfix on 0.2.0.20-rc.
     - Fix crash bug on platforms where gmtime and localtime can return
-      NULL. Fixes part of bug 2077. Bugfix on all versions of Tor. Found
-      by boboper.
+      NULL. Windows 7 users were running into this one. Fixes part of bug
+      2077. Bugfix on all versions of Tor. Found by boboper.
 
   o Security and stability fixes:
     - Don't double-free a parsable, but invalid, microdescriptor, even if
@@ -75,7 +85,7 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
     - We don't use bridges listed in ExcludeNodes.
     - When StrictNodes is 1:
        . We now apply ExcludeNodes to hidden service introduction points
-         and to rendezvous points selected by hidden service users.  This
+         and to rendezvous points selected by hidden service users. This
          can make your hidden service less reliable: use it with caution!
        . If we have used ExcludeNodes on ourself, do not try relay
          reachability self-tests.
@@ -85,7 +95,7 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
     - Remove a misfeature that caused us to ignore the Fast/Stable flags
       when ExitNodes is set. Bugfix on 0.2.2.7-alpha.
     - When the set of permitted nodes changes, we now remove any mappings
-      introduced via TrackExitHosts to now-excluded nodes.  Bugfix on
+      introduced via TrackExitHosts to now-excluded nodes. Bugfix on
       0.1.0.1-rc.
     - We never cannibalize a circuit that had excluded nodes on it, even
       if StrictNodes is 0. Bugfix on 0.1.0.1-rc.
@@ -129,7 +139,7 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       2917. Bugfix on 0.1.1.1-alpha.
     - Only limit the lengths of single HS descriptors, even when multiple
       HS descriptors are published to an HSDir relay in a single POST
-      operation. Fixes bug 2948; bugfix on 0.2.1.5-alpha.  Found by hsdir.
+      operation. Fixes bug 2948; bugfix on 0.2.1.5-alpha. Found by hsdir.
     - Write the current time into the LastWritten line in our state file,
       rather than the time from the previous write attempt. Also, stop
       trying to use a time of -1 in our log statements. Fixes bug 3039;
@@ -149,7 +159,7 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       clients are already deprecated because of security bugs.
     - Don't allow v0 hidden service authorities to act as clients.
       Required by fix for bug 3000.
-    - Ignore SIGNAL NEWNYM commands on relay-only Tor instances.  Required
+    - Ignore SIGNAL NEWNYM commands on relay-only Tor instances. Required
       by fix for bug 3000.
     - Ensure that no empty [dirreq-](read|write)-history lines are added
       to an extrainfo document. Implements ticket 2497.
