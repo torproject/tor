@@ -444,6 +444,10 @@ interesting and understandable.
 
    Present and imperative tense: not past.
 
+   If a given changes stanza showed up in a different release (e.g.
+   maint-0.2.1), be sure to make the stanzas identical (so people can
+   distinguish if these are the same change).
+
    2.5) Merge them in.
 
    2.6) Clean everything one last time.
