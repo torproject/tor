@@ -4,6 +4,17 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       file, don't wrongly inflate that value by a factor of 10 anymore.
       Also, resume reading bandwidth history from the state file correctly.
       Fixes bug 2704; bugfix on tor-0.2.2.23-alpha.
+    - When we find that we have extended a hidden service's introduction
+      circuit to a relay not listed as an introduction point in the HS
+      descriptor we currently have, retry an introduction point from the
+      current descriptor. Previously we would just give up. Fixes bugs
+      1024 and 1930; bugfix on 0.2.0.10-alpha.
+    - Clients now stop trying to use an exit node associated with a given
+      destination by TrackHostExits if they fail to reach that exit node.
+      Fixes bug 2999. Bugfix on 0.2.0.20-rc.
+    - Fix crash bug on platforms where gmtime and localtime can return
+      NULL. Fixes part of bug 2077. Bugfix on all versions of Tor. Found
+      by boboper.
 
   o Security and stability fixes:
     - Don't double-free a parsable, but invalid, microdescriptor, even
@@ -19,6 +30,9 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       Unnamed nickname. Fixes bug 2979, reported by tagnaq.
     - Fix an uncommon assertion failure when running with DNSPort under
       heavy load. Fixes bug 2933; bugfix on 2.0.1-alpha.
+    - Avoid linkability based on cached hidden service descriptors: forget
+      all hidden service descriptors cached as a client when processing a
+      SIGNAL NEWNYM command. Fixes bug 3000; bugfix on 0.0.6.
 
   o Major features:
     - Export GeoIP information on bridge usage to controller even if
@@ -87,6 +101,12 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
     - Improve log messages related to excluded nodes.
 
   o Minor bugfixes:
+    - Fix a spurious warning when moving from a short month to a long month
+      on relays with month-based BandwidthAccounting.  Bugfix on
+      0.2.2.17-alpha; fixes bug 3020.
+    - When a client finds that an origin circuit has run out of 16-bit
+      stream IDs, we now mark it as unusable for new streams. Previously,
+      we would try to close the entire circuit. Bugfix on 0.0.6.
     - Added a forgotten cast that caused a compile warning on OS X 10.6.
       Bugfix on 0.2.2.24-alpha.
     - Be more careful about reporting the correct error from a failed
@@ -96,12 +116,14 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
     - Correctly handle an "impossible" overflow cases in connection
       byte counting, where we write or read more than 4GB on an edge
       connection in a single second. Bugfix on 0.1.2.8-beta.
-    - When a client finds that an origin circuit has run out of 16-bit
-      stream IDs, we now mark it as unusable for new streams. Previously,
-      we would try to close the entire circuit. Bugfix on 0.0.6.
     - Correct the warning displayed when a rendezvous descriptor exceeds
       the maximum size. Fixes bug 2750; bugfix on 0.2.1.5-alpha. Found
       by John Brooks.
+    - Clients and hidden services now use HSDir-flagged relays for hidden
+      service descriptor downloads and uploads even if the relays have no
+      DirPort set and the client has disabled TunnelDirConns. This will
+      eventually allow us to give the HSDir flag to relays with no
+      DirPort. Fixes bug 2722; bugfix on 0.2.1.6-alpha.
     - Downgrade "no current certificates known for authority" message from
       Notice to Info. Fixes bug 2899; bugfix on 0.2.0.10-alpha.
     - Make the SIGNAL DUMP control-port command work on FreeBSD. Fixes
@@ -110,15 +132,29 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       multiple HS descriptors are published to an HSDir relay in a
       single POST operation. Fixes bug 2948; bugfix on 0.2.1.5-alpha.
       Found by hsdir.
+    - Write the current time into the LastWritten line in our state file,
+      rather than the time from the previous write attempt. Also, stop
+      trying to use a time of -1 in our log statements. Fixes bug 3039;
+      bugfix on 0.2.2.14-alpha.
     - Be more consistent in our treatment of file system paths. "~" should
       get expanded to the user's home directory in the Log config option.
       Fixes bug 2971; bugfix on 0.2.0.1-alpha, which introduced the
       feature for the -f and --DataDirectory options.
 
   o Minor features:
+    - Make sure every relay writes a state file at least every 12 hours.
+      Previously, a relay could go for weeks without writing its state
+      file, and on a crash could lose its bandwidth history, capacity
+      estimates, client country statistics, and so on. Addresses bug 3012.
     - Send END_STREAM_REASON_NOROUTE in response to EHOSTUNREACH errors.
       Clients before 0.2.1.27 didn't handle NOROUTE correctly, but such
       clients are already deprecated because of security bugs.
+    - Don't allow v0 hidden service authorities to act as clients.
+      Required by fix for bug 3000.
+    - Ignore SIGNAL NEWNYM commands on relay-only Tor instances.
+      Required by fix for bug 3000.
+    - Ensure that no empty [dirreq-](read|write)-history lines are added
+      to an extrainfo document. Implements ticket 2497.
 
   o Code simplification and refactoring:
     - Removed workaround code to handle directory responses from
@@ -132,6 +168,10 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       in three places, and we never adjusted the known/unknown skew
       values. This is still something we might want to do someday,
       but if we do, we'll want to do it differently.
+    - Avoid signed/unsigned comparisons by making SIZE_T_CEILING unsigned.
+      (None of the cases where we did this before were wrong, but by making
+      this change we avoid warnings.) Fixes bug 2475; bugfix on
+      0.2.1.28.
     - Use GetTempDir to find the proper temporary directory location on
       Windows when generating temporary files for the unit tests. Patch
       by Gisle Vanem.
