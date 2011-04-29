@@ -1,4 +1,4 @@
-Changes in version 0.2.2.25-alpha - 2011-04-28
+Changes in version 0.2.2.25-alpha - 2011-04-29
   Tor 0.2.2.25-alpha fixes many bugs: hidden service clients are more
   robust, routers no longer overreport their bandwidth, Win7 should crash
   a little less, and NEWNYM (as used by Vidalia's "new identity" button)
