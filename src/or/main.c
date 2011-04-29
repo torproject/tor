@@ -1886,9 +1886,19 @@ tor_init(int argc, char *argv[])
       add_temp_log(LOG_NOTICE);
   }
 
-  log(LOG_NOTICE, LD_GENERAL, "Tor v%s. This is experimental software. "
-      "Do not rely on it for strong anonymity. (Running on %s)",get_version(),
-      get_uname());
+  {
+    const char *version = get_version();
+    log_notice(LD_GENERAL, "Tor v%s running on %s.", version, get_uname());
+
+    log_notice(LD_GENERAL, "WARNING: Tor can't help you if you use it wrong. "
+               "Learn how to be safe at "
+               "https://www.torproject.org/download/download#warning");
+
+    if (strstr(version, "alpha"))
+      log_notice(LD_GENERAL, "This is an alpha release; do not rely on it for "
+                 "strong anonymity.");
+  }
+
 
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");

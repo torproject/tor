@@ -1,0 +1,5 @@
+  o Minor features
+    - Try to make the introductory warning message that Tor prints on
+      startup more useful for actually finding help and information.
+      Resolves bug2474.
+
