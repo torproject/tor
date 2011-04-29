@@ -1647,11 +1647,17 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'", (int)body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
-      log_warn(LD_DIR,
-           "Received http status code %d (%s) from server "
-           "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
-           status_code, escaped(reason), conn->_base.address,
-           conn->_base.port, conn->requested_resource);
+      static ratelim_t warning_limit = RATELIM_INIT(3600);
+      char *m;
+      if ((m = rate_limit_log(&warning_limit, now))) {
+        log_warn(LD_DIR,
+                 "Received http status code %d (%s) from server "
+                 "'%s:%d' while fetching \"/tor/status/%s\". "
+                 "I'll try again soon.%s",
+                 status_code, escaped(reason), conn->_base.address,
+                 conn->_base.port, conn->requested_resource, m);
+        tor_free(m);
+      }
       tor_free(body); tor_free(headers); tor_free(reason);
       connection_dir_download_v2_networkstatus_failed(conn, status_code);
       return -1;
