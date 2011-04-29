@@ -5796,7 +5796,6 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
 {
   int start, found, n_added = 0, i;
   networkstatus_t *c = networkstatus_get_latest_consensus();
-  int use_begindir = get_options()->TunnelDirConns;
   if (!c || !smartlist_len(c->routerstatus_list)) {
     log_warn(LD_REND, "We don't have a consensus, so we can't perform v2 "
              "rendezvous operations.");
@@ -5809,14 +5808,9 @@ hid_serv_get_responsible_directories(smartlist_t *responsible_dirs,
   do {
     routerstatus_t *r = smartlist_get(c->routerstatus_list, i);
     if (r->is_hs_dir) {
-      if (r->dir_port || use_begindir)
-        smartlist_add(responsible_dirs, r);
-      else
-        log_info(LD_REND, "Not adding router '%s' to list of responsible "
-                 "hidden service directories, because we have no way of "
-                 "reaching it.", r->nickname);
+      smartlist_add(responsible_dirs, r);
       if (++n_added == REND_NUMBER_OF_CONSECUTIVE_REPLICAS)
-        break;
+        return 0;
     }
     if (++i == smartlist_len(c->routerstatus_list))
       i = 0;
