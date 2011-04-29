@@ -5300,6 +5300,11 @@ did_last_state_file_write_fail(void)
 /** If writing the state to disk fails, try again after this many seconds. */
 #define STATE_WRITE_RETRY_INTERVAL 3600
 
+/** If we're a relay, how often should we checkpoint our state file even
+ * if nothing else dirties it? This will checkpoint ongoing stats like
+ * bandwidth used, per-country user stats, etc. */
+#define STATE_RELAY_CHECKPOINT_INTERVAL (12*60*60)
+
 /** Write the persistent state to disk. Return 0 for success, <0 on failure. */
 int
 or_state_save(time_t now)
@@ -5352,7 +5357,11 @@ or_state_save(time_t now)
   tor_free(fname);
   tor_free(contents);
 
-  global_state->next_write = TIME_MAX;
+  if (server_mode(get_options()))
+    global_state->next_write = now + STATE_RELAY_CHECKPOINT_INTERVAL;
+  else
+    global_state->next_write = TIME_MAX;
+
   return 0;
 }
 
