@@ -1,14 +1,14 @@
 Changes in version 0.2.2.25-alpha - 2011-04-28
   o Major bugfixes:
-    - When writing our maximum bw for the current interval to the state
-      file, don't wrongly inflate that value by a factor of 10 anymore.
+    - Relays were publishing grossly inflated bandwidth values because they
+      were writing their state files wrong--now they write the correct value.
       Also, resume reading bandwidth history from the state file correctly.
-      Fixes bug 2704; bugfix on tor-0.2.2.23-alpha.
-    - When we find that we have extended a hidden service's introduction
-      circuit to a relay not listed as an introduction point in the HS
-      descriptor we currently have, retry an introduction point from the
-      current descriptor. Previously we would just give up. Fixes bugs
-      1024 and 1930; bugfix on 0.2.0.10-alpha.
+      Fixes bug 2704; bugfix on 0.2.2.23-alpha.
+    - Improve hidden service robustness: When we find that we have extended
+      a hidden service's introduction circuit to a relay not listed as an
+      introduction point in the HS descriptor we currently have, retry an
+      introduction point from the current descriptor. Previously we would
+      just give up. Fixes bugs 1024 and 1930; bugfix on 0.2.0.10-alpha.
     - Clients now stop trying to use an exit node associated with a given
       destination by TrackHostExits if they fail to reach that exit node.
       Fixes bug 2999. Bugfix on 0.2.0.20-rc.
@@ -19,7 +19,7 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
   o Security and stability fixes:
     - Don't double-free a parsable, but invalid, microdescriptor, even
       if it is followed in the blob we're parsing by an unparsable
-      microdescriptor.  Fixes an issue reported in a comment on bug 2954.
+      microdescriptor. Fixes an issue reported in a comment on bug 2954.
       Bugfix on 0.2.2.6-alpha; fix by "cypherpunks".
     - If the Nickname configuration option isn't given, Tor would pick a
       nickname based on the local hostname as the nickname for a relay.
@@ -35,7 +35,7 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       SIGNAL NEWNYM command. Fixes bug 3000; bugfix on 0.0.6.
 
   o Major features:
-    - Export GeoIP information on bridge usage to controller even if
+    - Export GeoIP information on bridge usage to controllers even if
       we have not yet been running for 24 hours. Now Vidalia bridge
       operators can get more accurate and immediate feedback about their
       contributions to the network.
@@ -102,12 +102,12 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
 
   o Minor bugfixes:
     - Fix a spurious warning when moving from a short month to a long month
-      on relays with month-based BandwidthAccounting.  Bugfix on
+      on relays with month-based BandwidthAccounting. Bugfix on
       0.2.2.17-alpha; fixes bug 3020.
     - When a client finds that an origin circuit has run out of 16-bit
       stream IDs, we now mark it as unusable for new streams. Previously,
       we would try to close the entire circuit. Bugfix on 0.0.6.
-    - Added a forgotten cast that caused a compile warning on OS X 10.6.
+    - Add a forgotten cast that caused a compile warning on OS X 10.6.
       Bugfix on 0.2.2.24-alpha.
     - Be more careful about reporting the correct error from a failed
       connect() system call. Under some circumstances, it was possible to
@@ -157,7 +157,7 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       to an extrainfo document. Implements ticket 2497.
 
   o Code simplification and refactoring:
-    - Removed workaround code to handle directory responses from
+    - Remove workaround code to handle directory responses from
       servers that had bug 539 (they would send HTTP status 503
       responses _and_ send a body too). Since only server versions before
       0.2.0.16-alpha/0.1.2.19 were affected, there is no longer reason
@@ -169,8 +169,8 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       values. This is still something we might want to do someday,
       but if we do, we'll want to do it differently.
     - Avoid signed/unsigned comparisons by making SIZE_T_CEILING unsigned.
-      (None of the cases where we did this before were wrong, but by making
-      this change we avoid warnings.) Fixes bug 2475; bugfix on
+      None of the cases where we did this before were wrong, but by making
+      this change we avoid warnings. Fixes bug 2475; bugfix on
       0.2.1.28.
     - Use GetTempDir to find the proper temporary directory location on
       Windows when generating temporary files for the unit tests. Patch
