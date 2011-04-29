@@ -120,7 +120,7 @@ circuit_build_times_disabled(void)
                                                      0, 0, 1);
     int config_disabled = !get_options()->LearnCircuitBuildTimeout;
     int dirauth_disabled = get_options()->AuthoritativeDir;
-    int state_disabled = (get_or_state()->LastWritten == -1);
+    int state_disabled = did_last_state_file_write_fail() ? 1 : 0;
 
     if (consensus_disabled || config_disabled || dirauth_disabled ||
            state_disabled) {

@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Write the current time into the LastWritten line in our state file,
+      rather than the time from the previous write attempt. Also, stop
+      trying to use a time of -1 in our log statements. Fixes bug 3039;
+      bugfix on 0.2.2.14-alpha.

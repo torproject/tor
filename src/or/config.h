@@ -60,6 +60,7 @@ char *options_get_datadir_fname2_suffix(or_options_t *options,
 int get_num_cpus(const or_options_t *options);
 
 or_state_t *get_or_state(void);
+int did_last_state_file_write_fail(void);
 int or_state_save(time_t now);
 
 int options_need_geoip_info(or_options_t *options, const char **reason_out);
