@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Make the SIGNAL DUMP control-port command work on FreeBSD.  Fixes
-      bug 2917.  Bugfix on 0.1.1.1-alpha.
-

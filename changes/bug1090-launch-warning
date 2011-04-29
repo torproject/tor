@@ -1,5 +1,0 @@
-  o Minor features:
-    - Keep track of how many times we launch a new circuit to handle
-      a given stream. Too many launches could indicate an inconsistency
-      between our "launch a circuit to handle this stream" logic and our
-      "attach our stream to one of the available circuits" logic.

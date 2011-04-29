@@ -1,4 +1,0 @@
-  - Minor bugfixes:
-    o Downgrade "no current certificates known for authority" message from
-      Notice to Info.  Bugfix on 0.2.0.10-alpha; fixes bug 2899.
-

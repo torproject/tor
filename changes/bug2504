@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Fix a bug with our locking implementation on windows that couldn't
-      correctly detect when a file was already locked. Fixes bug 2504,
-      bugfix on 0.2.1.6-alpha.
-

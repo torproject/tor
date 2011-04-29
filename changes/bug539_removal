@@ -1,6 +1,0 @@
-  o Removed code
-    - Removed workaround code to handle directory responses from
-      servers that had bug 539 (they would send HTTP status 503
-      responses _and_ send a body too).  Since only server versions
-      before 0.2.0.16-alpha/0.1.2.19 were affected, there is no longer
-      reason to keep the workaround in place.

@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - If you configured Tor to use bridge A, and then quit and
-      configured Tor to use bridge B instead, it would happily continue
-      to use bridge A if it's still reachable. While this behavior is
-      a feature if your goal is connectivity, in some scenarios it's a
-      dangerous bug. Bugfix on Tor 0.2.0.1-alpha; fixes bug 2511.

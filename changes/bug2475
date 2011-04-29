@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Avoid signed/unsigned comparisons by making SIZE_T_CEILING unsigned.
-      (None of the cases where we did this before were wrong, but by making
-      this change we can avoid warnings.)  Fixes bug2475; bugfix on
-      Tor 0.2.1.28.

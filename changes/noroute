@@ -1,5 +1,0 @@
-  - Minor features
-    - Send END_STREAM_REASON_NOROUTE in response to EHOSTUNREACH errors.
-      Clients before 0.2.1.27 didn't handle NOROUTE correctly, but
-      such clients are already deprecated because of security bugs.
-

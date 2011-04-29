@@ -1,6 +1,0 @@
-  o Minor bugfixes
-    - On some platforms, gmtime and localtime can return NULL under
-      certain circumstances even for well-defined values of time_t.
-      Try to detect and make up for this deficiency.  Possible fix for
-      bug 2077.  Bugfix on all versions of Tor.  Found by boboper.
-

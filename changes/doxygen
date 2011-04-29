@@ -1,6 +1,0 @@
-  o Documentation changes
-    - Modernize the doxygen configuration file slightly.  Fixes bug 2707.
-    - Resolve all doxygen warnings except those for missing documentation.
-      Fixes bug 2705.
-    - Add doxygen documentation for more functions, fields, and types.
-

@@ -1,4 +1,0 @@
-  o Minor features:
-    - Ensure that no empty [dirreq-](read|write)-history lines are added
-      to an extrainfo document. Implements ticket 2497.
-
