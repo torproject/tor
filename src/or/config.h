@@ -58,6 +58,7 @@ char *options_get_datadir_fname2_suffix(or_options_t *options,
   get_datadir_fname2_suffix((sub1), NULL, (suffix))
 
 or_state_t *get_or_state(void);
+int did_last_state_file_write_fail(void);
 int or_state_save(time_t now);
 
 int options_need_geoip_info(or_options_t *options, const char **reason_out);

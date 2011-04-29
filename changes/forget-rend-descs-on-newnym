@@ -1,0 +1,21 @@
+  o Security fixes:
+    - Forget all hidden service descriptors cached as a client when
+      processing a SIGNAL NEWNYM command.  Fixes bug 3000.  Bugfix on
+      0.0.6.
+  o Major bugfixes:
+    - When we find that we have extended a hidden service's introduction
+      circuit to a relay which isn't listed as an introduction point in
+      the HS descriptor we currently have for the service, we now retry
+      one of the introduction points in the current HS descriptor.
+      Previously we would just give up.  Bugfix on 0.2.0.10-alpha; fixes
+      bugs 1024 and 1930.
+  o Minor bugfixes:
+    - Don't allow v0 hidden service authorities to act as clients.
+      Required by fix for bug 3000.
+    - Ignore SIGNAL NEWNYM commands on relay-only Tor instances.
+      Required by fix for bug 3000.
+  o Code simplifications and refactoring:
+    - Allow rend_client_send_introduction to fail without closing the
+      AP connection permanently.
+
+

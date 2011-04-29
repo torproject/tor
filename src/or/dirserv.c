@@ -1811,6 +1811,9 @@ dirserv_thinks_router_is_hs_dir(routerinfo_t *router, time_t now)
    * bug 1693. In the future, once relays set wants_to_be_hs_dir
    * correctly, we can revert to only checking dir_port if router's
    * version is too old. */
+  /* XXX Unfortunately, we need to keep checking dir_port until all
+   * *clients* suffering from bug 2722 are obsolete.  The first version
+   * to fix the bug was 0.2.2.25-alpha. */
   return (router->wants_to_be_hs_dir && router->dir_port &&
           uptime > get_options()->MinUptimeHidServDirectoryV2 &&
           router->is_running);

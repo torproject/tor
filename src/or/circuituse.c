@@ -1744,14 +1744,21 @@ connection_ap_handshake_attach_circuit(edge_connection_t *conn)
                  "introduction. (stream %d sec old)",
                  introcirc->_base.n_circ_id, rendcirc->_base.n_circ_id,
                  conn_age);
-        if (rend_client_send_introduction(introcirc, rendcirc) < 0) {
+        switch (rend_client_send_introduction(introcirc, rendcirc)) {
+        case 0: /* success */
+          rendcirc->_base.timestamp_dirty = time(NULL);
+          introcirc->_base.timestamp_dirty = time(NULL);
+          assert_circuit_ok(TO_CIRCUIT(rendcirc));
+          assert_circuit_ok(TO_CIRCUIT(introcirc));
+          return 0;
+        case -1: /* transient error */
+          return 0;
+        case -2: /* permanent error */
+          return -1;
+        default: /* oops */
+          tor_fragile_assert();
           return -1;
         }
-        rendcirc->_base.timestamp_dirty = time(NULL);
-        introcirc->_base.timestamp_dirty = time(NULL);
-        assert_circuit_ok(TO_CIRCUIT(rendcirc));
-        assert_circuit_ok(TO_CIRCUIT(introcirc));
-        return 0;
       }
     }
 

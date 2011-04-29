@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Fix a bug in the code where we could keep trying to use a
+      TrackHostExits-based mapping after we failed to reach the intended
+      destination node. Fixes bug 2999. Bugfix on 0.2.0.20-rc.
+

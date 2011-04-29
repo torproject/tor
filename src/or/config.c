@@ -3078,6 +3078,10 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("FetchDirInfoExtraEarly requires that you also set "
            "FetchDirInfoEarly");
 
+  if (options->HSAuthoritativeDir && proxy_mode(options))
+    REJECT("Running as authoritative v0 HS directory, but also configured "
+           "as a client.");
+
   if (options->ConnLimit <= 0) {
     tor_asprintf(msg,
         "ConnLimit must be greater than 0, but was set to %d",
@@ -5115,8 +5119,25 @@ or_state_load(void)
   return r;
 }
 
+/** Did the last time we tried to write the state file fail? If so, we
+ * should consider disabling such features as preemptive circuit generation
+ * to compute circuit-build-time. */
+static int last_state_file_write_failed = 0;
+
+/** Return whether the state file failed to write last time we tried. */
+int
+did_last_state_file_write_fail(void)
+{
+  return last_state_file_write_failed;
+}
+
 /** If writing the state to disk fails, try again after this many seconds. */
 #define STATE_WRITE_RETRY_INTERVAL 3600
+
+/** If we're a relay, how often should we checkpoint our state file even
+ * if nothing else dirties it? This will checkpoint ongoing stats like
+ * bandwidth used, per-country user stats, etc. */
+#define STATE_RELAY_CHECKPOINT_INTERVAL (12*60*60)
 
 /** Write the persistent state to disk. Return 0 for success, <0 on failure. */
 int
@@ -5139,11 +5160,13 @@ or_state_save(time_t now)
   if (accounting_is_enabled(get_options()))
     accounting_run_housekeeping(now);
 
+  global_state->LastWritten = now;
+
   tor_free(global_state->TorVersion);
   tor_asprintf(&global_state->TorVersion, "Tor %s", get_version());
 
   state = config_dump(&state_format, global_state, 1, 0);
-  format_local_iso_time(tbuf, time(NULL));
+  format_local_iso_time(tbuf, now);
   tor_asprintf(&contents,
                "# Tor state file last generated on %s local time\n"
                "# Other times below are in GMT\n"
@@ -5154,7 +5177,7 @@ or_state_save(time_t now)
   if (write_str_to_file(fname, contents, 0)<0) {
     log_warn(LD_FS, "Unable to write state to file \"%s\"; "
              "will try again later", fname);
-    global_state->LastWritten = -1;
+    last_state_file_write_failed = 1;
     tor_free(fname);
     tor_free(contents);
     /* Try again after STATE_WRITE_RETRY_INTERVAL (or sooner, if the state
@@ -5163,12 +5186,16 @@ or_state_save(time_t now)
     return -1;
   }
 
-  global_state->LastWritten = time(NULL);
+  last_state_file_write_failed = 0;
   log_info(LD_GENERAL, "Saved state to \"%s\"", fname);
   tor_free(fname);
   tor_free(contents);
 
-  global_state->next_write = TIME_MAX;
+  if (server_mode(get_options()))
+    global_state->next_write = now + STATE_RELAY_CHECKPOINT_INTERVAL;
+  else
+    global_state->next_write = TIME_MAX;
+
   return 0;
 }
 

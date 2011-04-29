@@ -321,17 +321,8 @@ struct timeval {
 
 void tor_gettimeofday(struct timeval *timeval);
 
-#ifdef HAVE_LOCALTIME_R
-#define tor_localtime_r localtime_r
-#else
 struct tm *tor_localtime_r(const time_t *timep, struct tm *result);
-#endif
-
-#ifdef HAVE_GMTIME_R
-#define tor_gmtime_r gmtime_r
-#else
 struct tm *tor_gmtime_r(const time_t *timep, struct tm *result);
-#endif
 
 #ifndef timeradd
 /** Replacement for timeradd on platforms that do not have it: sets tvout to

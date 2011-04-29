@@ -523,7 +523,7 @@ crypto_pk_read_private_key_from_string(crypto_pk_env_t *env,
 
   tor_assert(env);
   tor_assert(s);
-  tor_assert(len < INT_MAX && len < SIZE_T_CEILING);
+  tor_assert(len < INT_MAX && len < SSIZE_T_CEILING);
 
   /* Create a read-only memory BIO, backed by the string 's' */
   b = BIO_new_mem_buf((char*)s, (int)len);
