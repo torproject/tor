@@ -1,14 +1,15 @@
 Changes in version 0.2.2.25-alpha - 2011-04-28
   o Major bugfixes:
-    - Relays were publishing grossly inflated bandwidth values because they
-      were writing their state files wrong--now they write the correct value.
-      Also, resume reading bandwidth history from the state file correctly.
-      Fixes bug 2704; bugfix on 0.2.2.23-alpha.
-    - Improve hidden service robustness: When we find that we have extended
-      a hidden service's introduction circuit to a relay not listed as an
-      introduction point in the HS descriptor we currently have, retry an
-      introduction point from the current descriptor. Previously we would
-      just give up. Fixes bugs 1024 and 1930; bugfix on 0.2.0.10-alpha.
+    - Relays were publishing grossly inflated bandwidth values because
+      they were writing their state files wrong--now they write the
+      correct value.  Also, resume reading bandwidth history from the
+      state file correctly.  Fixes bug 2704; bugfix on 0.2.2.23-alpha.
+    - Improve hidden service robustness: When we find that we have
+      extended a hidden service's introduction circuit to a relay not
+      listed as an introduction point in the HS descriptor we currently
+      have, retry with an introduction point from the current
+      descriptor. Previously we would just give up. Fixes bugs 1024 and
+      1930; bugfix on 0.2.0.10-alpha.
     - Clients now stop trying to use an exit node associated with a given
       destination by TrackHostExits if they fail to reach that exit node.
       Fixes bug 2999. Bugfix on 0.2.0.20-rc.
@@ -17,17 +18,17 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       by boboper.
 
   o Security and stability fixes:
-    - Don't double-free a parsable, but invalid, microdescriptor, even
-      if it is followed in the blob we're parsing by an unparsable
+    - Don't double-free a parsable, but invalid, microdescriptor, even if
+      it is followed in the blob we're parsing by an unparsable
       microdescriptor. Fixes an issue reported in a comment on bug 2954.
       Bugfix on 0.2.2.6-alpha; fix by "cypherpunks".
     - If the Nickname configuration option isn't given, Tor would pick a
       nickname based on the local hostname as the nickname for a relay.
       Because nicknames are not very important in today's Tor and the
       "Unnamed" nickname has been implemented, this is now problematic
-      behavior: It leaks information about the hostname without being useful
-      at all. Fixes bug 2979; bugfix on 0.1.2.2-alpha, which introduced the
-      Unnamed nickname. Reported by tagnaq.
+      behavior: It leaks information about the hostname without being
+      useful at all. Fixes bug 2979; bugfix on 0.1.2.2-alpha, which
+      introduced the Unnamed nickname. Reported by tagnaq.
     - Fix an uncommon assertion failure when running with DNSPort under
       heavy load. Fixes bug 2933; bugfix on 0.2.0.1-alpha.
     - Avoid linkability based on cached hidden service descriptors: forget
@@ -35,9 +36,9 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       SIGNAL NEWNYM command. Fixes bug 3000; bugfix on 0.0.6.
 
   o Major features:
-    - Export GeoIP information on bridge usage to controllers even if
-      we have not yet been running for 24 hours. Now Vidalia bridge
-      operators can get more accurate and immediate feedback about their
+    - Export GeoIP information on bridge usage to controllers even if we
+      have not yet been running for 24 hours. Now Vidalia bridge operators
+      can get more accurate and immediate feedback about their
       contributions to the network.
 
   o Major features and bugfixes (node selection):
@@ -45,64 +46,62 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       ExcludeEntryNodes, ExcludeExitNodes, ExcludeNodes, and StrictNodes
       options. Previously, we had been ambiguous in describing what
       counted as an "exit" node, and what operations exactly "StrictNodes
-      0" would permit. This created confusion when people saw nodes
-      built through unexpected circuits, and made it hard to tell real
-      bugs from surprises. Now the intended behavior is:
-        . "Exit", in the context of ExitNodes and ExcludeExitNodes,
-          means a node that delivers user traffic outside the Tor network.
-        . "Entry", in the context of EntryNodes, means a node used as
-          the first hop of a multihop circuit. It doesn't include direct
+      0" would permit. This created confusion when people saw nodes built
+      through unexpected circuits, and made it hard to tell real bugs from
+      surprises. Now the intended behavior is:
+        . "Exit", in the context of ExitNodes and ExcludeExitNodes, means
+          a node that delivers user traffic outside the Tor network.
+        . "Entry", in the context of EntryNodes, means a node used as the
+          first hop of a multihop circuit. It doesn't include direct
           connections to directory servers.
         . "ExcludeNodes" applies to all nodes.
         . "StrictNodes" changes the behavior of ExcludeNodes only. When
           StrictNodes is set, Tor should avoid all nodes listed in
           ExcludeNodes, even when it will make user requests fail. When
           StrictNodes is *not* set, then Tor should follow ExcludeNodes
-          whenever it can, except when it must use an excluded node
-          to perform self-tests, connect to a hidden service, provide
-          a hidden service, fulfill a .exit request, upload directory
+          whenever it can, except when it must use an excluded node to
+          perform self-tests, connect to a hidden service, provide a
+          hidden service, fulfill a .exit request, upload directory
           information, or fetch directory information.
       Collectively, the changes to implement the behavior fix bug 1090.
-    - ExcludeNodes now takes precedence over EntryNodes and ExitNodes:
-      if a node is listed in both, it's treated as excluded.
+    - ExcludeNodes now takes precedence over EntryNodes and ExitNodes: if
+      a node is listed in both, it's treated as excluded.
     - ExcludeNodes now applies to directory nodes -- as a preference if
       StrictNodes is 0, or an absolute requirement if StrictNodes is 1.
-      Don't exclude all the directory authorities and set StrictNodes
-      to 1 unless you really want your Tor to break.
+      Don't exclude all the directory authorities and set StrictNodes to 1
+      unless you really want your Tor to break.
     - ExcludeNodes and ExcludeExitNodes now override exit enclaving.
     - ExcludeExitNodes now overrides .exit requests.
     - We don't use bridges listed in ExcludeNodes.
     - When StrictNodes is 1:
        . We now apply ExcludeNodes to hidden service introduction points
-         and to rendezvous points selected by hidden service users.
-         This can make your hidden service less reliable: use it with
-         caution!
+         and to rendezvous points selected by hidden service users.  This
+         can make your hidden service less reliable: use it with caution!
        . If we have used ExcludeNodes on ourself, do not try relay
          reachability self-tests.
-       . If we have excluded all the directory authorities, we will
-         not even try to upload our descriptor if we're a relay.
+       . If we have excluded all the directory authorities, we will not
+         even try to upload our descriptor if we're a relay.
        . Do not honor .exit requests to an excluded node.
     - Remove a misfeature that caused us to ignore the Fast/Stable flags
       when ExitNodes is set. Bugfix on 0.2.2.7-alpha.
-    - When the set of permitted nodes changes, we now remove any
-      mappings introduced via TrackExitHosts to now-excluded nodes.
-      Bugfix on 0.1.0.1-rc.
-    - We never cannibalize a circuit that had excluded nodes on it,
-      even if StrictNodes is 0. Bugfix on 0.1.0.1-rc.
+    - When the set of permitted nodes changes, we now remove any mappings
+      introduced via TrackExitHosts to now-excluded nodes.  Bugfix on
+      0.1.0.1-rc.
+    - We never cannibalize a circuit that had excluded nodes on it, even
+      if StrictNodes is 0. Bugfix on 0.1.0.1-rc.
     - Revert a change where we would be laxer about attaching streams to
-      circuits than when building the circuits. This was meant to
-      prevent a set of bugs where streams were never attachable, but our
-      improved code here should make this unnecessary. Bugfix on
-      0.2.2.7-alpha.
-    - Keep track of how many times we launch a new circuit to handle
-      a given stream. Too many launches could indicate an inconsistency
+      circuits than when building the circuits. This was meant to prevent
+      a set of bugs where streams were never attachable, but our improved
+      code here should make this unnecessary. Bugfix on 0.2.2.7-alpha.
+    - Keep track of how many times we launch a new circuit to handle a
+      given stream. Too many launches could indicate an inconsistency
       between our "launch a circuit to handle this stream" logic and our
       "attach this stream to one of the available circuits" logic.
     - Improve log messages related to excluded nodes.
 
   o Minor bugfixes:
-    - Fix a spurious warning when moving from a short month to a long month
-      on relays with month-based BandwidthAccounting. Bugfix on
+    - Fix a spurious warning when moving from a short month to a long
+      month on relays with month-based BandwidthAccounting. Bugfix on
       0.2.2.17-alpha; fixes bug 3020.
     - When a client finds that an origin circuit has run out of 16-bit
       stream IDs, we now mark it as unusable for new streams. Previously,
@@ -113,12 +112,12 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       connect() system call. Under some circumstances, it was possible to
       look at an incorrect value for errno when sending the end reason.
       Bugfix on 0.1.0.1-rc.
-    - Correctly handle an "impossible" overflow cases in connection
-      byte counting, where we write or read more than 4GB on an edge
-      connection in a single second. Bugfix on 0.1.2.8-beta.
+    - Correctly handle an "impossible" overflow cases in connection byte
+      counting, where we write or read more than 4GB on an edge connection
+      in a single second. Bugfix on 0.1.2.8-beta.
     - Correct the warning displayed when a rendezvous descriptor exceeds
-      the maximum size. Fixes bug 2750; bugfix on 0.2.1.5-alpha. Found
-      by John Brooks.
+      the maximum size. Fixes bug 2750; bugfix on 0.2.1.5-alpha. Found by
+      John Brooks.
     - Clients and hidden services now use HSDir-flagged relays for hidden
       service descriptor downloads and uploads even if the relays have no
       DirPort set and the client has disabled TunnelDirConns. This will
@@ -126,12 +125,11 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       DirPort. Fixes bug 2722; bugfix on 0.2.1.6-alpha.
     - Downgrade "no current certificates known for authority" message from
       Notice to Info. Fixes bug 2899; bugfix on 0.2.0.10-alpha.
-    - Make the SIGNAL DUMP control-port command work on FreeBSD. Fixes
-      bug 2917. Bugfix on 0.1.1.1-alpha.
-    - Only limit the lengths of single HS descriptors, even when
-      multiple HS descriptors are published to an HSDir relay in a
-      single POST operation. Fixes bug 2948; bugfix on 0.2.1.5-alpha.
-      Found by hsdir.
+    - Make the SIGNAL DUMP control-port command work on FreeBSD. Fixes bug
+      2917. Bugfix on 0.1.1.1-alpha.
+    - Only limit the lengths of single HS descriptors, even when multiple
+      HS descriptors are published to an HSDir relay in a single POST
+      operation. Fixes bug 2948; bugfix on 0.2.1.5-alpha.  Found by hsdir.
     - Write the current time into the LastWritten line in our state file,
       rather than the time from the previous write attempt. Also, stop
       trying to use a time of -1 in our log statements. Fixes bug 3039;
@@ -151,30 +149,29 @@ Changes in version 0.2.2.25-alpha - 2011-04-28
       clients are already deprecated because of security bugs.
     - Don't allow v0 hidden service authorities to act as clients.
       Required by fix for bug 3000.
-    - Ignore SIGNAL NEWNYM commands on relay-only Tor instances.
-      Required by fix for bug 3000.
+    - Ignore SIGNAL NEWNYM commands on relay-only Tor instances.  Required
+      by fix for bug 3000.
     - Ensure that no empty [dirreq-](read|write)-history lines are added
       to an extrainfo document. Implements ticket 2497.
 
   o Code simplification and refactoring:
-    - Remove workaround code to handle directory responses from
-      servers that had bug 539 (they would send HTTP status 503
-      responses _and_ send a body too). Since only server versions before
-      0.2.0.16-alpha/0.1.2.19 were affected, there is no longer reason
-      to keep the workaround in place.
-    - Remove the old 'fuzzy time' logic. It was supposed to be used
-      for handling calculations where we have a known amount of clock
-      skew and an allowed amount of unknown skew. But we only used it
-      in three places, and we never adjusted the known/unknown skew
-      values. This is still something we might want to do someday,
-      but if we do, we'll want to do it differently.
+    - Remove workaround code to handle directory responses from servers
+      that had bug 539 (they would send HTTP status 503 responses _and_
+      send a body too). Since only server versions before
+      0.2.0.16-alpha/0.1.2.19 were affected, there is no longer reason to
+      keep the workaround in place.
+    - Remove the old 'fuzzy time' logic. It was supposed to be used for
+      handling calculations where we have a known amount of clock skew and
+      an allowed amount of unknown skew. But we only used it in three
+      places, and we never adjusted the known/unknown skew values. This is
+      still something we might want to do someday, but if we do, we'll
+      want to do it differently.
     - Avoid signed/unsigned comparisons by making SIZE_T_CEILING unsigned.
       None of the cases where we did this before were wrong, but by making
-      this change we avoid warnings. Fixes bug 2475; bugfix on
-      0.2.1.28.
+      this change we avoid warnings. Fixes bug 2475; bugfix on 0.2.1.28.
     - Use GetTempDir to find the proper temporary directory location on
-      Windows when generating temporary files for the unit tests. Patch
-      by Gisle Vanem.
+      Windows when generating temporary files for the unit tests. Patch by
+      Gisle Vanem.
 
 
 Changes in version 0.2.2.24-alpha - 2011-04-08
