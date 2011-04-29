@@ -3560,10 +3560,9 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->CookieAuthFileGroupReadable && !options->CookieAuthFile) {
-    log_warn(LD_CONFIG, "You set the CookieAuthFileGroupReadable but did "
-             "not configure a the path for the cookie file via "
-             "CookieAuthFile. This means your cookie will not be group "
-             "readable.");
+    log_warn(LD_CONFIG, "CookieAuthFileGroupReadable is set, but will have "
+             "no effect: you must specify an explicit CookieAuthFile to "
+             "have it group-readable.");
   }
 
   if (options->UseEntryGuards && ! options->NumEntryGuards)
