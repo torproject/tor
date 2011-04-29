@@ -378,7 +378,8 @@ configure_accounting(time_t now)
     /* We are in the interval we thought we were in. Do nothing.*/
     interval_end_time = start_of_accounting_period_after(interval_start_time);
   } else {
-    long duration = length_of_accounting_period_containing(now);
+    long duration =
+      length_of_accounting_period_containing(interval_start_time);
     double delta = ((double)(s_now - interval_start_time)) / duration;
     if (-0.50 <= delta && delta <= 0.50) {
       /* The start of the period is now a little later or earlier than we
