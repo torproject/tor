@@ -16,6 +16,26 @@ sub nChanges {
 
 my $look_for_type = "merged";
 
+if (! @ARGV) {
+    print <<EOF
+Usage:
+   findMergedChanges.pl [--merged/--unmerged/--weird/--list] changes/*
+
+A change is "merged" if it has ever been merged to release-0.2.2 and it has had
+no subsequent changes in master.
+
+A change is "unmerged" if it has never been merged to release-0.2.2 and it
+has had changes in master.
+
+A change is "weird" if it has been merged to release-0.2.2 and it *has* had
+subsequent changes in master.
+
+Suggested application:
+   findMergedChanges.pl --merged changes/* | xargs -n 1 git rm
+
+EOF
+}
+
 while (@ARGV and $ARGV[0] =~ /^--/) {
     my $flag = shift @ARGV;
     if ($flag =~ /^--(weird|merged|unmerged|list)/) {
