@@ -64,7 +64,7 @@ static int purpose_needs_anonymity(uint8_t dir_purpose,
                                    uint8_t router_purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
-static void connection_dir_download_networkstatus_failed(
+static void connection_dir_download_v2_networkstatus_failed(
                                dir_connection_t *conn, int status_code);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_bridge_routerdesc_failed(dir_connection_t *conn);
@@ -616,7 +616,7 @@ connection_dir_request_failed(dir_connection_t *conn)
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_V2_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
-    connection_dir_download_networkstatus_failed(conn, -1);
+    connection_dir_download_v2_networkstatus_failed(conn, -1);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
              conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
@@ -644,7 +644,7 @@ connection_dir_request_failed(dir_connection_t *conn)
  * retry the fetch now, later, or never.
  */
 static void
-connection_dir_download_networkstatus_failed(dir_connection_t *conn,
+connection_dir_download_v2_networkstatus_failed(dir_connection_t *conn,
                                              int status_code)
 {
   if (!conn->requested_resource) {
@@ -1653,7 +1653,7 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
            status_code, escaped(reason), conn->_base.address,
            conn->_base.port, conn->requested_resource);
       tor_free(body); tor_free(headers); tor_free(reason);
-      connection_dir_download_networkstatus_failed(conn, status_code);
+      connection_dir_download_v2_networkstatus_failed(conn, status_code);
       return -1;
     }
     if (conn->requested_resource &&
