@@ -2353,6 +2353,10 @@ typedef struct config_line_t {
 
 typedef struct routerset_t routerset_t;
 
+/** A magic value for the (Socks|OR|...)Port options below, telling Tor
+ * to pick its own port. */
+#define CFG_AUTO_PORT 0xc4005e
+
 /** Configuration options for a Tor process. */
 typedef struct {
   uint32_t _magic;

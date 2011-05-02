@@ -1,0 +1,5 @@
+  o Minor features
+    - The options SocksPort, ControlPort, and so on now all accept an
+      optional value "auto" that opens a socket on an OS-selected port.
+
+
