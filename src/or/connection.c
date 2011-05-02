@@ -1772,10 +1772,23 @@ retry_listeners(int type, config_line_t *cfg,
             if (!parse_addr_port(LOG_WARN,
                                  wanted->value, &address, NULL, &port)) {
               int addr_matches = !strcasecmp(address, conn->address);
+              int port_matches;
               tor_free(address);
-              if (! port)
-                port = port_option;
-              if (port == conn->port && addr_matches) {
+              if (port) {
+                /* The Listener line has a port */
+                port_matches = (port == conn->port);
+              } else if (port_option == CFG_AUTO_PORT) {
+                /* The Listener line has no port, and the Port line is "auto".
+                 * "auto" matches anything; transitions from any port to
+                 * "auto" succeed. */
+                port_matches = 1;
+              } else {
+                /*  The Listener line has no port, and the Port line is "auto".
+                 * "auto" matches anything; transitions from any port to
+                 * "auto" succeed. */
+                port_matches = (port_option == conn->port);
+              }
+              if (port_matches  && addr_matches) {
                 line = wanted;
                 break;
               }
