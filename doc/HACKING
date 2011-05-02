@@ -472,6 +472,9 @@ in their approved versions list.
 
 7) Sign and push the tarball to the website in the dist/ directory. Sign
 and push the git tag.
+   (That's either "git tag -u <keyid> tor-0.2.x.y-status", then
+    "git push origin tag tor-0.2.x.y-status".  To sign the
+    tarball, "gpg -ba <the_tarball>")
 
 8) Edit include/versions.wmi to note the new version. Rebuild and push
 the website.
@@ -490,3 +493,5 @@ the date in the ChangeLog.
 packages are up (for a stable release), and mail the release blurb and
 changelog to tor-talk or tor-announce.
 
+  (We might be moving to faster announcements, but don't announce until
+  the website is at least updated.)
