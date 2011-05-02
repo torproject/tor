@@ -1407,6 +1407,63 @@ munge_extrainfo_into_routerinfo(const char *ri_body, signed_descriptor_t *ri,
   return tor_strndup(ri_body, ri->signed_descriptor_len);
 }
 
+/** Implementation helper for GETINFO: answers requests for information about
+ * which ports are bound. */
+static int
+getinfo_helper_listeners(control_connection_t *control_conn,
+                         const char *question,
+                         char **answer, const char **errmsg)
+{
+  int type;
+  smartlist_t *res;
+
+  (void)control_conn;
+  (void)errmsg;
+
+  if (!strcmp(question, "net/listeners/or"))
+    type = CONN_TYPE_OR_LISTENER;
+  else if (!strcmp(question, "net/listeners/dir"))
+    type = CONN_TYPE_DIR_LISTENER;
+  else if (!strcmp(question, "net/listeners/socks"))
+    type = CONN_TYPE_AP_LISTENER;
+  else if (!strcmp(question, "net/listeners/trans"))
+    type = CONN_TYPE_AP_TRANS_LISTENER;
+  else if (!strcmp(question, "net/listeners/natd"))
+    type = CONN_TYPE_AP_NATD_LISTENER;
+  else if (!strcmp(question, "net/listeners/dns"))
+    type = CONN_TYPE_AP_DNS_LISTENER;
+  else if (!strcmp(question, "net/listeners/control"))
+    type = CONN_TYPE_CONTROL_LISTENER;
+  else
+    return 0; /* unknown key */
+
+  res = smartlist_create();
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+    char *addr;
+    struct sockaddr_storage ss;
+    socklen_t ss_len = sizeof(ss);
+
+    if (conn->type != type || conn->marked_for_close || conn->s < 0)
+      continue;
+
+    if (getsockname(conn->s, (struct sockaddr *)&ss, &ss_len) < 0) {
+      tor_asprintf(&addr, "%s:%d", conn->address, (int)conn->port);
+    } else {
+      char *tmp = tor_sockaddr_to_str((struct sockaddr *)&ss);
+      addr = esc_for_log(tmp);
+      tor_free(tmp);
+    }
+    if (addr)
+      smartlist_add(res, addr);
+  } SMARTLIST_FOREACH_END(conn);
+
+  *answer = smartlist_join_strings(res, " ", 0, NULL);
+
+  SMARTLIST_FOREACH(res, char *, cp, tor_free(cp));
+  smartlist_free(res);
+  return 0;
+}
+
 /** Implementation helper for GETINFO: knows the answers for questions about
  * directory information. */
 static int
@@ -1861,6 +1918,7 @@ static const getinfo_item_t getinfo_items[] = {
        "All non-expired, non-superseded router descriptors."),
   ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
   PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
+  PREFIX("net/listeners/", listeners, "Bound addresses by type"),
   ITEM("ns/all", networkstatus,
        "Brief summary of router status (v2 directory format)"),
   PREFIX("ns/id/", networkstatus,
