@@ -563,7 +563,7 @@ static int or_state_validate(or_state_t *old_options, or_state_t *options,
 static int or_state_load(void);
 static int options_init_logs(or_options_t *options, int validate_only);
 
-static int is_listening_on_low_port(uint16_t port_option,
+static int is_listening_on_low_port(int port_option,
                                     const config_line_t *listen_options);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);

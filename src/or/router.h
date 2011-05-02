@@ -50,6 +50,9 @@ int authdir_mode_publishes_statuses(or_options_t *options);
 int authdir_mode_tests_reachability(or_options_t *options);
 int authdir_mode_bridge(or_options_t *options);
 
+uint16_t router_get_advertised_or_port(or_options_t *options);
+uint16_t router_get_advertised_dir_port(or_options_t *options);
+
 int server_mode(or_options_t *options);
 int public_server_mode(or_options_t *options);
 int advertised_server_mode(void);

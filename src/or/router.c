@@ -704,8 +704,8 @@ init_keys(void)
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
     ds = add_trusted_dir_server(options->Nickname, NULL,
-                                (uint16_t)options->DirPort,
-                                (uint16_t)options->ORPort,
+                                router_get_advertised_dir_port(options),
+                                router_get_advertised_or_port(options),
                                 digest,
                                 v3_digest,
                                 type);
@@ -1165,6 +1165,36 @@ consider_publishable_server(int force)
   }
 }
 
+/** Return the port that we should advertise as our ORPort; this is either
+ * the one configured in the ORPort option, or the one we actually bound to
+ * if ORPort is "auto". */
+uint16_t
+router_get_advertised_or_port(or_options_t *options)
+{
+  if (options->ORPort == CFG_AUTO_PORT) {
+    connection_t *c = connection_get_by_type(CONN_TYPE_OR_LISTENER);
+    if (c)
+      return c->port;
+    return 0;
+  }
+  return options->ORPort;
+}
+
+/** Return the port that we should advertise as our DirPort; this is either
+ * the one configured in the DirPort option, or the one we actually bound to
+ * if DirPort is "auto". */
+uint16_t
+router_get_advertised_dir_port(or_options_t *options)
+{
+  if (options->DirPort == CFG_AUTO_PORT) {
+    connection_t *c = connection_get_by_type(CONN_TYPE_DIR_LISTENER);
+    if (c)
+      return c->port;
+    return 0;
+  }
+  return options->DirPort;
+}
+
 /*
  * OR descriptor generation.
  */
@@ -1398,8 +1428,8 @@ router_rebuild_descriptor(int force)
   ri->address = tor_dup_ip(addr);
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
-  ri->or_port = options->ORPort;
-  ri->dir_port = options->DirPort;
+  ri->or_port = router_get_advertised_or_port(options);
+  ri->dir_port = router_get_advertised_dir_port(options);
   ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
                                                         * main thread */
