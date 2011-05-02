@@ -2623,7 +2623,7 @@ options_init(or_options_t *options)
  * it is, or 0 if it isn't or the concept of a low port isn't applicable for
  * the platform we're on. */
 static int
-is_listening_on_low_port(uint16_t port_option,
+is_listening_on_low_port(int port_option,
                          const config_line_t *listen_options)
 {
 #ifdef MS_WINDOWS
