@@ -1269,6 +1269,7 @@ run_scheduled_events(time_t now)
     rep_history_clean(now - options->RephistTrackTime);
     rend_cache_clean(now);
     rend_cache_clean_v2_descs_as_dir(now);
+    microdesc_cache_rebuild(NULL, 0);
 #define CLEAN_CACHES_INTERVAL (30*60)
     time_to_clean_caches = now + CLEAN_CACHES_INTERVAL;
   }
