@@ -177,6 +177,8 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
       if (md2->last_listed < md->last_listed)
         md2->last_listed = md->last_listed;
       microdesc_free(md);
+      if (where != SAVED_NOWHERE)
+        cache->bytes_dropped += size;
       continue;
     }
 
@@ -206,14 +208,7 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
   if (f)
     finish_writing_to_file(open_file); /*XXX Check me.*/
 
-  {
-    size_t old_content_len =
-      cache->cache_content ? cache->cache_content->size : 0;
-    if (cache->journal_len > 16384 + old_content_len &&
-        cache->journal_len > old_content_len / 2) {
-      microdesc_cache_rebuild(cache);
-    }
-  }
+  microdesc_cache_rebuild(cache, 0/* only as needed */);
 
   return added;
 }
@@ -275,6 +270,9 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   }
   log_notice(LD_DIR, "Reloaded microdescriptor cache.  Found %d descriptors.",
              total);
+
+  microdesc_cache_clean(cache, 0, 0);
+
   return 0;
 }
 
@@ -323,11 +321,30 @@ microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
   }
 }
 
+static int
+should_rebuild_md_cache(microdesc_cache_t *cache)
+{
+    const size_t old_len =
+      cache->cache_content ? cache->cache_content->size : 0;
+    const size_t journal_len = cache->journal_len;
+    const size_t dropped = cache->bytes_dropped;
+
+    if (journal_len < 16384)
+      return 0; /* Don't bother, not enough has happened yet. */
+    if (dropped > (journal_len + old_len) / 3)
+      return 1; /* We could save 1/3 or more of the currently used space. */
+    if (journal_len > old_len / 2)
+      return 1; /* We should append to the regular file */
+
+    return 0;
+}
+
 /** Regenerate the main cache file for <b>cache</b>, clear the journal file,
  * and update every microdesc_t in the cache with pointers to its new
- * location. */
+ * location.  If <b>force</b> is true, do this unconditionally.  If
+ * <b>force</b> is false, do it only if we expect to save space on disk. */
 int
-microdesc_cache_rebuild(microdesc_cache_t *cache)
+microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 {
   open_file_t *open_file;
   FILE *f;
@@ -337,10 +354,13 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
   off_t off = 0;
   int orig_size, new_size;
 
-  log_info(LD_DIR, "Rebuilding the microdescriptor cache...");
-
   /* Remove dead descriptors */
   microdesc_cache_clean(cache, 0/*cutoff*/, 0/*force*/);
+
+  if (!force && !should_rebuild_md_cache(cache))
+    return 0;
+
+  log_info(LD_DIR, "Rebuilding the microdescriptor cache...");
 
   orig_size = (int)(cache->cache_content ? cache->cache_content->size : 0);
   orig_size += (int)cache->journal_len;
@@ -396,6 +416,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
 
   write_str_to_file(cache->journal_fname, "", 1);
   cache->journal_len = 0;
+  cache->bytes_dropped = 0;
 
   new_size = (int)cache->cache_content->size;
   log_info(LD_DIR, "Done rebuilding microdesc cache. "
