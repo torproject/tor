@@ -261,6 +261,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   journal_content = read_file_to_str(cache->journal_fname,
                                      RFTS_IGNORE_MISSING, &st);
   if (journal_content) {
+    cache->journal_len = (size_t) st.st_size;
     added = microdescs_add_to_cache(cache, journal_content,
                                     journal_content+st.st_size,
                                     SAVED_IN_JOURNAL, 0);
