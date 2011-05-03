@@ -208,7 +208,7 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
     size_t old_content_len =
       cache->cache_content ? cache->cache_content->size : 0;
     if (cache->journal_len > 16384 + old_content_len &&
-        cache->journal_len > old_content_len * 2) {
+        cache->journal_len > old_content_len / 2) {
       microdesc_cache_rebuild(cache);
     }
   }
