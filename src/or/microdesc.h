@@ -21,6 +21,7 @@ smartlist_t *microdescs_add_list_to_cache(microdesc_cache_t *cache,
                         smartlist_t *descriptors, saved_location_t where,
                         int no_save);
 
+void microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force);
 int microdesc_cache_rebuild(microdesc_cache_t *cache);
 int microdesc_cache_reload(microdesc_cache_t *cache);
 void microdesc_cache_clear(microdesc_cache_t *cache);
