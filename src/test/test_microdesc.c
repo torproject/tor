@@ -160,7 +160,7 @@ test_md_cache(void *data)
   tt_str_op(smartlist_get(md3->family, 0), ==, "nodeX");
 
   /* Now rebuild the cache! */
-  tt_int_op(microdesc_cache_rebuild(mc), ==, 0);
+  tt_int_op(microdesc_cache_rebuild(mc, 1), ==, 0);
 
   tt_int_op(md1->saved_location, ==, SAVED_IN_CACHE);
   tt_int_op(md2->saved_location, ==, SAVED_IN_CACHE);
@@ -208,7 +208,7 @@ test_md_cache(void *data)
   md3 = NULL; /* it's history now! */
 
   /* rebuild again, make sure it stays gone. */
-  microdesc_cache_rebuild(mc);
+  microdesc_cache_rebuild(mc, 1);
   tt_ptr_op(md1, ==, microdesc_cache_lookup_by_digest256(mc, d1));
   tt_ptr_op(md2, ==, microdesc_cache_lookup_by_digest256(mc, d2));
   tt_ptr_op(NULL, ==, microdesc_cache_lookup_by_digest256(mc, d3));
