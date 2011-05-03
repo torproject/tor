@@ -1,0 +1,7 @@
+  o Minor bugfixes
+    - When loading the microdesc journal, remember its current size.
+      In 0.2.2, this helps prevent the microdesc journal from growing
+      without limit on authorities (who are the only ones to use it in
+      0.2.2).  Fixes a part of bug 2230; bugfix on 0.2.2.6-alpha.
+      Fix posted by "cypherpunks."
+      
