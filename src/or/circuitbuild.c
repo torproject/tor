@@ -2668,8 +2668,10 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
        */
       continue;
     }
-    if (!node_has_descriptor(node))
+    if (!node_has_descriptor(node)) {
+      n_supported[i] = -1;
       continue;
+    }
     if (!node->is_running || node->is_bad_exit) {
       n_supported[i] = -1;
       continue; /* skip routers that are known to be down or bad exits */
@@ -2786,8 +2788,6 @@ choose_good_exit_server_general(int need_uptime, int need_capacity)
       /* try once to pick only from routers that satisfy a needed port,
        * then if there are none, pick from any that support exiting. */
       SMARTLIST_FOREACH_BEGIN(the_nodes, const node_t *, node) {
-        if (!node_has_descriptor(node))
-          continue;
         if (n_supported[node_sl_idx] != -1 &&
             (attempt || node_handles_some_port(node, needed_ports))) {
 //          log_fn(LOG_DEBUG,"Try %d: '%s' is a possibility.",
