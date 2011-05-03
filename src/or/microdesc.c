@@ -208,8 +208,6 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
   if (f)
     finish_writing_to_file(open_file); /*XXX Check me.*/
 
-  microdesc_cache_rebuild(cache, 0/* only as needed */);
-
   return added;
 }
 
@@ -230,6 +228,7 @@ microdesc_cache_clear(microdesc_cache_t *cache)
   }
   cache->total_len_seen = 0;
   cache->n_seen = 0;
+  cache->bytes_dropped = 0;
 }
 
 /** Reload the contents of <b>cache</b> from disk.  If it is empty, load it
@@ -271,7 +270,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   log_notice(LD_DIR, "Reloaded microdescriptor cache.  Found %d descriptors.",
              total);
 
-  microdesc_cache_clean(cache, 0, 0);
+  microdesc_cache_rebuild(cache, 0 /* don't force */);
 
   return 0;
 }
@@ -353,6 +352,12 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   ssize_t size;
   off_t off = 0;
   int orig_size, new_size;
+
+  if (cache == NULL) {
+    cache = the_microdesc_cache;
+    if (cache == NULL)
+      return 0;
+  }
 
   /* Remove dead descriptors */
   microdesc_cache_clean(cache, 0/*cutoff*/, 0/*force*/);
