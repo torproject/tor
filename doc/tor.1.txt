@@ -1294,6 +1294,11 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     Authoritative directories only. Like AuthDirMaxServersPerAddr, but applies
     to addresses shared with directory authorities. (Default: 5)
 
+**BridgePassword** __Password__::
+    If set, contains an HTTP authenticator that tells a bridge authority to
+    serve all requested bridge information.  Used for debugging.  (Default:
+    not set.)
+
 **V3AuthVotingInterval** __N__ **minutes**|**hours**::
     V3 authoritative directories only. Configures the server's preferred voting
     interval. Note that voting will __actually__ happen at an interval chosen
@@ -1325,6 +1330,17 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     V3 authoritative directories only. Configures the location of the
     bandiwdth-authority generated file storing information on relays' measured
     bandwidth capacities. (Default: unset.)
+
+**V3AuthUseLegacyKey** **0**|**1**::
+    If set, the directory authority will sign consensuses not only with its
+    own signing key, but also with a "legacy" key and certificate with a
+    different identity.  This feature is used to migrate directory authority
+    keys in the event of a compromise.  (Default: 0.)
+
+**RephistTrackTime** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
+    Tells an authority, or other node tracking node reliability and history,
+    that fine-grained information about nodes can be discarded when it hasn't
+    changed for a given amount of time.  (Default: 24 hours)
 
 HIDDEN SERVICE OPTIONS
 ----------------------

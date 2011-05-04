@@ -1,0 +1,5 @@
+  o Documentation:
+    - Add missing documentation for the authority-related torrc options
+      RephistTrackTime, BridgePassword, and V3AuthUseLegacyKey.  Resolves
+      issue 2379.
+      
