@@ -1507,7 +1507,7 @@ circuit_list_path_impl(origin_circuit_t *circ, int verbose, int verbose_names)
                  circ->build_state->is_internal ? "internal" : "exit",
                  circ->build_state->need_uptime ? " (high-uptime)" : "",
                  circ->build_state->desired_path_len,
-                 circ->_base.state == CIRCUIT_STATE_OPEN ? "" : ", exit ",
+                 circ->_base.state == CIRCUIT_STATE_OPEN ? "" : ", last hop ",
                  circ->_base.state == CIRCUIT_STATE_OPEN ? "" :
                  (nickname?nickname:"*unnamed*"));
     smartlist_add(elements, cp);
