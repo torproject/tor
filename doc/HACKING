@@ -474,7 +474,10 @@ in their approved versions list.
 and push the git tag.
    (That's either "git tag -u <keyid> tor-0.2.x.y-status", then
     "git push origin tag tor-0.2.x.y-status".  To sign the
-    tarball, "gpg -ba <the_tarball>")
+    tarball, "gpg -ba <the_tarball>".  Put the files in
+    /src/www-master.torproject.org/htdocs/dist on vescum, then
+    sudo -u mirroradm -H /home/mirroradm/bin/trigger-mirrors sudoed
+    )
 
 8) Edit include/versions.wmi to note the new version. Rebuild and push
 the website.
