@@ -23,6 +23,8 @@ struct microdesc_cache_t {
   tor_mmap_t *cache_content;
   /** Number of bytes used in the journal file. */
   size_t journal_len;
+  /** Number of bytes in descriptors removed as too old. */
+  size_t bytes_dropped;
 
   /** Total bytes of microdescriptor bodies we have added to this cache */
   uint64_t total_len_seen;
@@ -175,6 +177,8 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
       if (md2->last_listed < md->last_listed)
         md2->last_listed = md->last_listed;
       microdesc_free(md);
+      if (where != SAVED_NOWHERE)
+        cache->bytes_dropped += size;
       continue;
     }
 
@@ -204,15 +208,6 @@ microdescs_add_list_to_cache(microdesc_cache_t *cache,
   if (f)
     finish_writing_to_file(open_file); /*XXX Check me.*/
 
-  {
-    size_t old_content_len =
-      cache->cache_content ? cache->cache_content->size : 0;
-    if (cache->journal_len > 16384 + old_content_len &&
-        cache->journal_len > old_content_len * 2) {
-      microdesc_cache_rebuild(cache);
-    }
-  }
-
   return added;
 }
 
@@ -233,6 +228,7 @@ microdesc_cache_clear(microdesc_cache_t *cache)
   }
   cache->total_len_seen = 0;
   cache->n_seen = 0;
+  cache->bytes_dropped = 0;
 }
 
 /** Reload the contents of <b>cache</b> from disk.  If it is empty, load it
@@ -261,6 +257,7 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   journal_content = read_file_to_str(cache->journal_fname,
                                      RFTS_IGNORE_MISSING, &st);
   if (journal_content) {
+    cache->journal_len = (size_t) st.st_size;
     added = microdescs_add_to_cache(cache, journal_content,
                                     journal_content+st.st_size,
                                     SAVED_IN_JOURNAL, 0);
@@ -272,14 +269,81 @@ microdesc_cache_reload(microdesc_cache_t *cache)
   }
   log_notice(LD_DIR, "Reloaded microdescriptor cache.  Found %d descriptors.",
              total);
+
+  microdesc_cache_rebuild(cache, 0 /* don't force */);
+
   return 0;
+}
+
+/** By default, we remove any microdescriptors that have gone at least this
+ * long without appearing in a current consensus. */
+#define TOLERATE_MICRODESC_AGE (7*24*60*60)
+
+/** Remove all microdescriptors from <b>cache</b> that haven't been listed for
+ * a long time.  Does not rebuild the cache on disk.  If <b>cutoff</b> is
+ * positive, specifically remove microdescriptors that have been unlisted
+ * since <b>cutoff</b>.  If <b>force</b> is true, remove microdescriptors even
+ * if we have no current live microdescriptor consensus.
+ */
+void
+microdesc_cache_clean(microdesc_cache_t *cache, time_t cutoff, int force)
+{
+  microdesc_t **mdp, *victim;
+  int dropped=0, kept=0;
+  size_t bytes_dropped = 0;
+  time_t now = time(NULL);
+
+  (void) force;
+  /* In 0.2.2, we let this proceed unconditionally: only authorities have
+   * microdesc caches. */
+
+  if (cutoff <= 0)
+    cutoff = now - TOLERATE_MICRODESC_AGE;
+
+  for (mdp = HT_START(microdesc_map, &cache->map); mdp != NULL; ) {
+    if ((*mdp)->last_listed < cutoff) {
+      ++dropped;
+      victim = *mdp;
+      mdp = HT_NEXT_RMV(microdesc_map, &cache->map, mdp);
+      bytes_dropped += victim->bodylen;
+      microdesc_free(victim);
+    } else {
+      ++kept;
+      mdp = HT_NEXT(microdesc_map, &cache->map, mdp);
+    }
+  }
+
+  if (dropped) {
+    log_notice(LD_DIR, "Removed %d/%d microdescriptors as old.",
+               dropped,dropped+kept);
+    cache->bytes_dropped += bytes_dropped;
+  }
+}
+
+static int
+should_rebuild_md_cache(microdesc_cache_t *cache)
+{
+    const size_t old_len =
+      cache->cache_content ? cache->cache_content->size : 0;
+    const size_t journal_len = cache->journal_len;
+    const size_t dropped = cache->bytes_dropped;
+
+    if (journal_len < 16384)
+      return 0; /* Don't bother, not enough has happened yet. */
+    if (dropped > (journal_len + old_len) / 3)
+      return 1; /* We could save 1/3 or more of the currently used space. */
+    if (journal_len > old_len / 2)
+      return 1; /* We should append to the regular file */
+
+    return 0;
 }
 
 /** Regenerate the main cache file for <b>cache</b>, clear the journal file,
  * and update every microdesc_t in the cache with pointers to its new
- * location. */
+ * location.  If <b>force</b> is true, do this unconditionally.  If
+ * <b>force</b> is false, do it only if we expect to save space on disk. */
 int
-microdesc_cache_rebuild(microdesc_cache_t *cache)
+microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
 {
   open_file_t *open_file;
   FILE *f;
@@ -289,7 +353,20 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
   off_t off = 0;
   int orig_size, new_size;
 
+  if (cache == NULL) {
+    cache = the_microdesc_cache;
+    if (cache == NULL)
+      return 0;
+  }
+
+  /* Remove dead descriptors */
+  microdesc_cache_clean(cache, 0/*cutoff*/, 0/*force*/);
+
+  if (!force && !should_rebuild_md_cache(cache))
+    return 0;
+
   log_info(LD_DIR, "Rebuilding the microdescriptor cache...");
+
   orig_size = (int)(cache->cache_content ? cache->cache_content->size : 0);
   orig_size += (int)cache->journal_len;
 
@@ -344,6 +421,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache)
 
   write_str_to_file(cache->journal_fname, "", 1);
   cache->journal_len = 0;
+  cache->bytes_dropped = 0;
 
   new_size = (int)cache->cache_content->size;
   log_info(LD_DIR, "Done rebuilding microdesc cache. "

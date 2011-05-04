@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - Authorities now clean their microdesc cache periodically and when
+      reading from disk initially, not only when adding new descriptors.
+      This prevents a bug where we could lose microdescriptors.  Bugfix
+      on 0.2.2.6-alpha.
+

@@ -414,9 +414,46 @@ Here are the steps Roger takes when putting out a new Tor release:
 and as a directory authority. See if it has any obvious bugs, and
 resolve those.
 
+1.5) As applicable, merge the maint-X branch into the release-X branch.
+
 2) Gather the changes/* files into a changelog entry, rewriting many
 of them and reordering to focus on what users and funders would find
 interesting and understandable.
+
+   2.1) Make sure that everything that wants a bug number has one.
+   2.2) Concatenate them.
+   2.3) Sort them by section.  Within each section, try to make the
+      first entry or two and the last entry most interesting: they're
+      the ones that skimmers tend to read.
+
+   2.4) Clean them up
+
+   Standard idioms:
+     "Fixes bug 9999; Bugfix on 0.3.3.3-alpha."
+
+   One period after a space.
+
+   Make stuff very terse
+
+   Describe the user-visible problem right away
+
+   Mention relevant config options by name.  If they're rare or unusual,
+   remind people what they're for
+
+   Avoid starting lines with open-paren
+
+   Present and imperative tense: not past.
+
+   If a given changes stanza showed up in a different release (e.g.
+   maint-0.2.1), be sure to make the stanzas identical (so people can
+   distinguish if these are the same change).
+
+   2.5) Merge them in.
+
+   2.6) Clean everything one last time.
+
+   2.7) Run it through fmt to make it pretty.
+
 
 3) Compose a short release blurb to highlight the user-facing
 changes. Insert said release blurb into the ChangeLog stanza. If it's
@@ -435,6 +472,9 @@ in their approved versions list.
 
 7) Sign and push the tarball to the website in the dist/ directory. Sign
 and push the git tag.
+   (That's either "git tag -u <keyid> tor-0.2.x.y-status", then
+    "git push origin tag tor-0.2.x.y-status".  To sign the
+    tarball, "gpg -ba <the_tarball>")
 
 8) Edit include/versions.wmi to note the new version. Rebuild and push
 the website.
@@ -453,3 +493,5 @@ the date in the ChangeLog.
 packages are up (for a stable release), and mail the release blurb and
 changelog to tor-talk or tor-announce.
 
+  (We might be moving to faster announcements, but don't announce until
+  the website is at least updated.)

@@ -1,0 +1,4 @@
+  o Minor features
+    - Backport code from 0.2.3.x to allow directory authorities to clean
+      their microdescriptor caches.
+
