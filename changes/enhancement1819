@@ -1,4 +1,0 @@
-  o Minor features:
-    - Relays that set "ConnDirectionStatistics 1" write statistics on the
-      birectional use of connections to disk every 24 hours.
-

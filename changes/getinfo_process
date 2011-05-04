@@ -1,3 +1,0 @@
-  o Minor features
-    - Implement some GETINFO controller fields to provide information about
-      the Tor process's pid, euid, username, and resource limits.

@@ -1,6 +1,0 @@
-  o Minor features:
-    - Ordinarily, Tor does not count traffic from private addresses
-      (like 127.0.0.1 or 10.0.0.1) when calculating rate limits or
-      accounting.  There is now a new option, CountPrivateBandwidth, to
-      disable this behavior.  Patch from Daniel Cagara.
-

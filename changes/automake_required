@@ -1,6 +1,0 @@
-  o Build changes
-    - Our build system requires automake 1.6 or later to create the
-      Makefile.in files.  Previously, you could have used 1.4.
-      This only affects developers and people building Tor from git;
-      people who build Tor from the source distribution without changing
-      the Makefile.am files should be fine.

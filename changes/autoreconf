@@ -1,5 +1,0 @@
-  o Minor build changes:
-    - Use autoreconf to launch autoconf, automake, etc from autogen.sh.
-      This is more robust against some of the failure modes associated
-      with running the autotools chain on its own.
-

@@ -1,6 +1,0 @@
-  o Features:
-    - Servers now accept and queue data on not-yet-connected
-      streams.  Previously, such data wasn't allowed.  This forced
-      clients to wait for a CONNECTED cell before sending their
-      data, thus adding a round trip to stream setup.  (Patch from
-      Ian Goldberg; implements the server side of Proposal 174.)

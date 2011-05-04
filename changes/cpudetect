@@ -1,3 +1,0 @@
-  o Minor features
-    - If you set the NumCPUs option to 0, Tor will try to detect how many
-      CPUs you have.  This is the new default behavior.

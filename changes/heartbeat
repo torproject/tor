@@ -1,7 +1,0 @@
-  o Minor features
-    - Add a new 'Heartbeat' log message type to periodically log a
-      message describing Tor's status at level Notice.  This feature
-      is meant for operators who log at notice, adn want to make sure
-      that their Tor server is still working.  Implementation by
-      George Kadianakis.    
-

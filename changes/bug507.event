@@ -1,4 +1,0 @@
-  o Code simplifications
-    - We no longer need link tor-gencert, tor-resolve, or tor-checkkey
-      against libevent; they don't use them, and our code was already
-      refactored not to force them to use them.
