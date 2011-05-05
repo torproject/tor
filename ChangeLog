@@ -3,21 +3,21 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
   Tor 0.2.3.1-alpha adds some new experimental features, including support
   for an improved network IO backend, IOCP networking on Windows,
   microdescriptor caching, "fast-start" support for streams, and automatic
-  home router configuration.  There are also numerous internal improvements
+  home router configuration. There are also numerous internal improvements
   to try to make the code easier for developers to work with.
 
   This is the first alpha release in a new series, so expect there to be
-  bugs.  Users who would rather test out a more stable branch should
+  bugs. Users who would rather test out a more stable branch should
   stay with 0.2.2.x for now.
 
   o Major features
     - Tor can now optionally build with the "bufferevents" buffered IO
       backend provided by Libevent 2. To use this feature, make sure you
       have the latest possible version of Libevent, and pass the
-      --enable-bufferevents flag to configure when building Tor from source.
-      Using this feature will make our networking code more flexible, let us
-      stack layers on each other, and let us use more efficient zero-copy
-      transports where available.
+      --enable-bufferevents flag to configure when building Tor from
+      source. This feature will make our networking code more flexible,
+      let us stack layers on each other, and let us use more efficient
+      zero-copy transports where available.
     - As an experimental feature, Tor can use IOCP for networking on Windows.
       Once this code is tuned and optimized, it promises much better
       performance than the select-based backend we've used in the past. To
@@ -33,16 +33,16 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       Previously, the client wasn't allowed to send data until the stream was
       connected, which slowed down all connections. This change will enable
       clients to perform a "fast-start" on streams and send data without
-      having to wait for a confirmation that the stream has opened.  (Patch
+      having to wait for a confirmation that the stream has opened. (Patch
       from Ian Goldberg; implements the server side of Proposal 174.)
-    - Tor now has initial support for automatic port mapping on on the many
+    - Tor now has initial support for automatic port mapping on the many
       home routers that support NAT-PMP or UPnP. (Not yet supported on
       Windows). To build the support code, you'll need to have libnatpnp
       library and/or the libminiupnpc library, and you'll need to enable the
       feature specifically by passing "--enable-upnp" and/or
       "--enable-natpnp" to configure. To turn it on, use the new
       PortForwarding option.
-    - Caches now download, cache, and sever multiple "flavors" of the
+    - Caches now download, cache, and serve multiple "flavors" of the
       consensus, including a flavor that describes microdescriptors.
     - Caches now download, cache, and serve microdescriptors -- small
       summaries of router descriptors that are authenticated by all of the
@@ -61,8 +61,8 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       There is now a new option, CountPrivateBandwidth, to disable this
       behavior. Patch from Daniel Cagara.
     - New --enable-static-tor configure option for building Tor as
-      statically as possible.  Idea, general hackery and thoughts from
-      Alexei Czeskis, John Gilmore, Jacob Appelbaum.  Implements ticket
+      statically as possible. Idea, general hackery and thoughts from
+      Alexei Czeskis, John Gilmore, Jacob Appelbaum. Implements ticket
       2702.
     - If you set the NumCPUs option to 0, Tor will now try to detect how
       many CPUs you have. This is the new default behavior.
@@ -74,7 +74,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       enhancement 1883.
     - Add a new 'Heartbeat' log message type to periodically log a message
       describing Tor's status at level Notice. This feature is meant for
-      operators who log at notice, adn want to make sure that their Tor
+      operators who log at notice, and want to make sure that their Tor
       server is still working. Implementation by George Kadianakis.
 
   o Minor bugfixes (on 0.2.2.25-alpha):
@@ -85,7 +85,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       Fix posted by "cypherpunks."
     - The microdesc journal is supposed to get rebuilt only if it is
       at least _half_ the length of the store, not _twice_ the length
-      of the store.  Bugfix on 0.2.2.6-alpha; fixes part of bug 2230.
+      of the store. Bugfix on 0.2.2.6-alpha; fixes part of bug 2230.
     - If as an authority we fail to compute the identity digest of a v3
       legacy keypair, warn, and don't use a buffer-full of junk instead.
       Bugfix on 0.2.1.1-alpha; fixes bug 3106.
@@ -110,7 +110,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       people who build Tor from the source distribution without changing
       the Makefile.am files should be fine.
     - Our autogen.sh script uses autoreconf to launch autoconf, automake, and
-      so on.  This is more robust against some of the failure modes
+      so on. This is more robust against some of the failure modes
       associated with running the autotools pieces on their own.
 
   o Minor packaging issues:
@@ -139,7 +139,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
   o Documentation fixes:
     - Correct a broken faq link in the INSTALL file. Fixes bug 2307.
     - Add missing documentation for the authority-related torrc options
-      RephistTrackTime, BridgePassword, and V3AuthUseLegacyKey.  Resolves
+      RephistTrackTime, BridgePassword, and V3AuthUseLegacyKey. Resolves
       issue 2379.
 
 
@@ -6267,7 +6267,7 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
   o Minor bugfixes (logging):
     - When we hit an EOF on a log (probably because we're shutting down),
       don't try to remove the log from the list: just mark it as
-      unusable.  (Bulletproofs against bug 222.)
+      unusable. (Bulletproofs against bug 222.)
 
   o Minor bugfixes (other):
     - In the exitlist script, only consider the most recently published
@@ -6277,7 +6277,7 @@ Changes in version 0.2.0.1-alpha - 2007-06-01
       connections to that address. (Resolves bug 405.)
     - Stop allowing hibernating servers to be "stable" or "fast".
     - On Windows, we were preventing other processes from reading
-      cached-routers while Tor was running.  (Reported by janbar)
+      cached-routers while Tor was running. (Reported by janbar)
     - Make the NodeFamilies config option work. (Reported by
       lodger -- it has never actually worked, even though we added it
       in Oct 2004.)
