@@ -1,10 +1,14 @@
-Changes in version 0.2.3.1-alpha - 2011-05-0?
+Changes in version 0.2.3.1-alpha - 2011-05-05
 
   Tor 0.2.3.1-alpha adds some new experimental features, including support
   for an improved network IO backend, IOCP networking on Windows,
   microdescriptor caching, "fast-start" support for streams, and automatic
   home router configuration.  There are also numerous internal improvements
   to try to make the code easier for developers to work with.
+
+  This is the first alpha release in a new series, so expect there to be
+  bugs.  Users who would rather test out a more stable branch should
+  stay with 0.2.2.x for now.
 
   o Major features
     - Tor can now optionally build with the "bufferevents" buffered IO
@@ -24,7 +28,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-0?
     - The EntryNodes option can now include country codes like {de} or IP
       addresses or network masks. Previously we had disallowed these options
       because we didn't have an efficient way to keep the list up to
-      date. Fixes bug 1982.
+      date. Fixes bug 1982, but see bug 2798 for an unresolved issue here.
     - Exit nodes now accept and queue data on not-yet-connected streams.
       Previously, the client wasn't allowed to send data until the stream was
       connected, which slowed down all connections. This change will enable
@@ -47,18 +51,21 @@ Changes in version 0.2.3.1-alpha - 2011-05-0?
       by downloading microdescriptors instead of router descriptors.
 
   o Minor features:
-    - Make logging resolution configurable and change default from 1
-      millisecond to 1 second. Implements enhancement 1668.
-    - We log which torrc file we're using on startup. Implements ticket 2444.
+    - Make logging resolution configurable with a new LogGranularity
+      option, and change the default from 1 millisecond to 1
+      second. Implements enhancement 1668.
+    - We log which torrc file we're using on startup. Implements ticket
+      2444.
     - Ordinarily, Tor does not count traffic from private addresses (like
       127.0.0.1 or 10.0.0.1) when calculating rate limits or accounting.
       There is now a new option, CountPrivateBandwidth, to disable this
       behavior. Patch from Daniel Cagara.
-    - New --enable-static-tor configure option for building Tor as statically
-      as possible.  Idea, general hackery and thoughts from Alexei Czeskis,
-      John Gilmore, Jacob Appelbaum.  Implements ticket 2702.
-    - If you set the NumCPUs option to 0, Tor will now try to detect how many
-      CPUs you have. This is the new default behavior.
+    - New --enable-static-tor configure option for building Tor as
+      statically as possible.  Idea, general hackery and thoughts from
+      Alexei Czeskis, John Gilmore, Jacob Appelbaum.  Implements ticket
+      2702.
+    - If you set the NumCPUs option to 0, Tor will now try to detect how
+      many CPUs you have. This is the new default behavior.
     - Turn on directory request statistics by default and include them in
       extra-info descriptors. Don't break if we have no GeoIP database.
     - Relays that set "ConnDirectionStatistics 1" write statistics on the
@@ -79,6 +86,9 @@ Changes in version 0.2.3.1-alpha - 2011-05-0?
     - The microdesc journal is supposed to get rebuilt only if it is
       at least _half_ the length of the store, not _twice_ the length
       of the store.  Bugfix on 0.2.2.6-alpha; fixes part of bug 2230.
+    - If as an authority we fail to compute the identity digest of a v3
+      legacy keypair, warn, and don't use a buffer-full of junk instead.
+      Bugfix on 0.2.1.1-alpha; fixes bug 3106.
     - Authorities now clean their microdesc cache periodically and when
       reading from disk initially, not only when adding new descriptors.
       This prevents a bug where we could lose microdescriptors. Bugfix
@@ -122,12 +132,15 @@ Changes in version 0.2.3.1-alpha - 2011-05-0?
       our library structure used to force them to link it.
 
   o Removed features:
-    - Removed some old code to work around even older versions of Tor that
+    - Remove some old code to work around even older versions of Tor that
       used forked processes to handle DNS requests. Such versions of Tor
       are no longer in use as servers.
 
   o Documentation fixes:
     - Correct a broken faq link in the INSTALL file. Fixes bug 2307.
+    - Add missing documentation for the authority-related torrc options
+      RephistTrackTime, BridgePassword, and V3AuthUseLegacyKey.  Resolves
+      issue 2379.
 
 
 Changes in version 0.2.2.25-alpha - 2011-04-29
