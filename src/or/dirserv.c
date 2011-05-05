@@ -2732,7 +2732,10 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   if (options->V3AuthUseLegacyKey) {
     authority_cert_t *c = get_my_v3_legacy_cert();
     if (c) {
-      crypto_pk_get_digest(c->identity_key, voter->legacy_id_digest);
+      if (crypto_pk_get_digest(c->identity_key, voter->legacy_id_digest)) {
+        log_warn(LD_BUG, "Unable to compute digest of legacy v3 identity key");
+        memset(voter->legacy_id_digest, 0, DIGEST_LEN);
+      }
     }
   }
 

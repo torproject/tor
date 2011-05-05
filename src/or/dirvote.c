@@ -3122,8 +3122,12 @@ dirvote_compute_consensuses(void)
       authority_cert_t *cert = get_my_v3_legacy_cert();
       legacy_sign = get_my_v3_legacy_signing_key();
       if (cert) {
-        crypto_pk_get_digest(cert->identity_key, legacy_dbuf);
-        legacy_id_digest = legacy_dbuf;
+        if (crypto_pk_get_digest(cert->identity_key, legacy_dbuf)) {
+          log_warn(LD_BUG,
+                   "Unable to compute digest of legacy v3 identity key");
+        } else {
+          legacy_id_digest = legacy_dbuf;
+        }
       }
     }
 

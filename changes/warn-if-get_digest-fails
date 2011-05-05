@@ -1,0 +1,6 @@
+  o Minor bugfixes:
+    - If we fail to compute the identity digest of a v3 legacy
+      keypair, warn, and don't use a buffer-full of junk instead.
+      Bugfix on 0.2.1.1-alpha; fixes bug 3106.
+
+
