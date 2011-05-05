@@ -658,8 +658,14 @@ we_use_microdescriptors_for_circuits(or_options_t *options)
   int ret = options->UseMicrodescriptors;
   if (ret == -1) {
     /* UseMicrodescriptors is "auto"; we need to decide: */
+#if 0
     /* So we decide that we'll use microdescriptors iff we are not a server */
     ret = ! server_mode(options);
+#else
+    /* We don't use microdescs for now: not enough caches are running
+     * 0.2.3.1-alpha */
+    ret = 0;
+#endif
   }
   return ret;
 }
