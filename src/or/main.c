@@ -1587,6 +1587,7 @@ do_main_loop(void)
   }
 }
 
+#ifndef MS_WINDOWS /* Only called when we're willing to use signals */
 /** Libevent callback: invoked when we get a signal.
  */
 static void
@@ -1598,6 +1599,7 @@ signal_callback(int fd, short events, void *arg)
 
   process_signal(sig);
 }
+#endif
 
 /** Do the work of acting on a signal received in <b>sig</b> */
 void
