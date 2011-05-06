@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Correctly link libevent_openssl when --enable-static-libevent
+      is passed to configure. Fixes bug 3118; bugfix on 0.2.3.1-alpha.
+

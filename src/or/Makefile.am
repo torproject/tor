@@ -69,17 +69,12 @@ AM_CPPFLAGS = -DSHARE_DATADIR="\"$(datadir)\"" \
 # This seems to matter nowhere but on windows, but I assure you that it
 # matters a lot there, and is quite hard to debug if you forget to do it.
 
-if USE_BUFFEREVENTS
-levent_openssl_lib = -levent_openssl
-else
-levent_openssl_lib =
-endif
 
 tor_LDFLAGS = @TOR_LDFLAGS_zlib@ @TOR_LDFLAGS_openssl@ @TOR_LDFLAGS_libevent@
 tor_LDADD = ./libtor.a ../common/libor.a ../common/libor-crypto.a \
 	../common/libor-event.a \
 	@TOR_ZLIB_LIBS@ -lm @TOR_LIBEVENT_LIBS@ @TOR_OPENSSL_LIBS@ \
-	@TOR_LIB_WS32@ @TOR_LIB_GDI@ $(levent_openssl_lib)
+	@TOR_LIB_WS32@ @TOR_LIB_GDI@
 
 noinst_HEADERS = \
 	buffers.h				\
