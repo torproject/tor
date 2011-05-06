@@ -40,9 +40,9 @@
 
 /* static function prototypes */
 static const routerstatus_t *router_pick_directory_server_impl(
-                                           authority_type_t auth, int flags);
+                                           dirinfo_type_t auth, int flags);
 static const routerstatus_t *router_pick_trusteddirserver_impl(
-                          authority_type_t auth, int flags, int *n_busy_out);
+                          dirinfo_type_t auth, int flags, int *n_busy_out);
 static void mark_all_trusteddirservers_up(void);
 static int router_nickname_matches(const routerinfo_t *router,
                                    const char *nickname);
@@ -56,6 +56,8 @@ static const char *signed_descriptor_get_body_impl(
                                               int with_annotations);
 static void list_pending_downloads(digestmap_t *result,
                                    int purpose, const char *prefix);
+static void launch_dummy_descriptor_download_as_needed(time_t now,
+                                                       or_options_t *options);
 
 DECLARE_TYPED_DIGESTMAP_FNS(sdmap_, digest_sd_map_t, signed_descriptor_t)
 DECLARE_TYPED_DIGESTMAP_FNS(rimap_, digest_ri_map_t, routerinfo_t)
@@ -97,7 +99,7 @@ static smartlist_t *warned_nicknames = NULL;
 /** The last time we tried to download any routerdesc, or 0 for "never".  We
  * use this to rate-limit download attempts when the number of routerdescs to
  * download is low. */
-static time_t last_routerdesc_download_attempted = 0;
+static time_t last_descriptor_download_attempted = 0;
 
 /** When we last computed the weights to use for bandwidths on directory
  * requests, what were the total weighted bandwidth, and our share of that
@@ -109,7 +111,7 @@ static uint64_t sl_last_total_weighted_bw = 0,
 /** Return the number of directory authorities whose type matches some bit set
  * in <b>type</b>  */
 int
-get_n_authorities(authority_type_t type)
+get_n_authorities(dirinfo_type_t type)
 {
   int n = 0;
   if (!trusted_dir_servers)
@@ -120,7 +122,7 @@ get_n_authorities(authority_type_t type)
   return n;
 }
 
-#define get_n_v2_authorities() get_n_authorities(V2_AUTHORITY)
+#define get_n_v2_authorities() get_n_authorities(V2_DIRINFO)
 
 /** Helper: Return the cert_list_t for an authority whose authority ID is
  * <b>id_digest</b>, allocating a new list if necessary. */
@@ -518,7 +520,7 @@ authority_certs_fetch_missing(networkstatus_t *status, time_t now)
   }
   SMARTLIST_FOREACH_BEGIN(trusted_dir_servers, trusted_dir_server_t *, ds) {
     int found = 0;
-    if (!(ds->type & V3_AUTHORITY))
+    if (!(ds->type & V3_DIRINFO))
       continue;
     if (smartlist_digest_isin(missing_digests, ds->v3_identity_digest))
       continue;
@@ -931,7 +933,7 @@ router_get_trusted_dir_servers(void)
  * servers that have returned 503 recently.
  */
 const routerstatus_t *
-router_pick_directory_server(authority_type_t type, int flags)
+router_pick_directory_server(dirinfo_type_t type, int flags)
 {
   const routerstatus_t *choice;
   if (get_options()->PreferTunneledDirConns)
@@ -976,7 +978,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
   /* XXXX This is a bit of a kludge */
   if (rs->is_v2_dir) {
     sl_last_total_weighted_bw = 0;
-    router_pick_directory_server(V2_AUTHORITY, pds_flags);
+    router_pick_directory_server(V2_DIRINFO, pds_flags);
     if (sl_last_total_weighted_bw != 0) {
       *v2_share_out = U64_TO_DBL(sl_last_weighted_bw_of_me) /
         U64_TO_DBL(sl_last_total_weighted_bw);
@@ -985,7 +987,7 @@ router_get_my_share_of_directory_requests(double *v2_share_out,
 
   if (rs->version_supports_v3_dir) {
     sl_last_total_weighted_bw = 0;
-    router_pick_directory_server(V3_AUTHORITY, pds_flags);
+    router_pick_directory_server(V3_DIRINFO, pds_flags);
     if (sl_last_total_weighted_bw != 0) {
       *v3_share_out = U64_TO_DBL(sl_last_weighted_bw_of_me) /
         U64_TO_DBL(sl_last_total_weighted_bw);
@@ -1026,7 +1028,7 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
        if (!memcmp(ds->v3_identity_digest, digest, DIGEST_LEN) &&
-           (ds->type & V3_AUTHORITY))
+           (ds->type & V3_DIRINFO))
          return ds;
      });
 
@@ -1037,7 +1039,7 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
  * router_pick_directory_server.
  */
 const routerstatus_t *
-router_pick_trusteddirserver(authority_type_t type, int flags)
+router_pick_trusteddirserver(dirinfo_type_t type, int flags)
 {
   const routerstatus_t *choice;
   int busy = 0;
@@ -1073,7 +1075,7 @@ router_pick_trusteddirserver(authority_type_t type, int flags)
  * that we can use with BEGINDIR.
  */
 static const routerstatus_t *
-router_pick_directory_server_impl(authority_type_t type, int flags)
+router_pick_directory_server_impl(dirinfo_type_t type, int flags)
 {
   or_options_t *options = get_options();
   const node_t *result;
@@ -1115,17 +1117,20 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
       continue;
     if (requireother && router_digest_is_me(node->identity))
       continue;
-    if (type & V3_AUTHORITY) {
+    if (type & V3_DIRINFO) {
       if (!(status->version_supports_v3_dir ||
             router_digest_is_trusted_dir_type(node->identity,
-                                              V3_AUTHORITY)))
+                                              V3_DIRINFO)))
         continue;
     }
     is_trusted = router_digest_is_trusted_dir(node->identity);
-    if ((type & V2_AUTHORITY) && !(node->rs->is_v2_dir || is_trusted))
+    if ((type & V2_DIRINFO) && !(node->rs->is_v2_dir || is_trusted))
       continue;
-    if ((type & EXTRAINFO_CACHE) &&
+    if ((type & EXTRAINFO_DIRINFO) &&
         !router_supports_extrainfo(node->identity, 0))
+      continue;
+    if ((type & MICRODESC_DIRINFO) && !is_trusted &&
+        !node->rs->version_supports_microdesc_cache)
       continue;
     if (try_excluding && options->ExcludeNodes &&
         routerset_contains_routerstatus(options->ExcludeNodes, status,
@@ -1192,7 +1197,7 @@ router_pick_directory_server_impl(authority_type_t type, int flags)
  * are as for router_pick_directory_server_impl().
  */
 static const routerstatus_t *
-router_pick_trusteddirserver_impl(authority_type_t type, int flags,
+router_pick_trusteddirserver_impl(dirinfo_type_t type, int flags,
                                   int *n_busy_out)
 {
   or_options_t *options = get_options();
@@ -1227,7 +1232,7 @@ router_pick_trusteddirserver_impl(authority_type_t type, int flags,
       if (!d->is_running) continue;
       if ((type & d->type) == 0)
         continue;
-      if ((type & EXTRAINFO_CACHE) &&
+      if ((type & EXTRAINFO_DIRINFO) &&
           !router_supports_extrainfo(d->digest, 1))
         continue;
       if (requireother && me && router_digest_is_me(d->digest))
@@ -2443,23 +2448,11 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
 #endif
 }
 
-/** Try to find a routerinfo for <b>digest</b>. If we don't have one,
- * return 1. If we do, ask tor_version_as_new_as() for the answer.
- */
-int
-router_digest_version_as_new_as(const char *digest, const char *cutoff)
-{
-  const routerinfo_t *router = router_get_by_id_digest(digest);
-  if (!router)
-    return 1;
-  return tor_version_as_new_as(router->platform, cutoff);
-}
-
 /** Return true iff <b>digest</b> is the digest of the identity key of a
  * trusted directory matching at least one bit of <b>type</b>.  If <b>type</b>
  * is zero, any authority is okay. */
 int
-router_digest_is_trusted_dir_type(const char *digest, authority_type_t type)
+router_digest_is_trusted_dir_type(const char *digest, dirinfo_type_t type)
 {
   if (!trusted_dir_servers)
     return 0;
@@ -4000,6 +3993,16 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
   return 0;
 }
 
+/** Update downloads for router descriptors and/or microdescriptors as
+ * appropriate. */
+void
+update_all_descriptor_downloads(time_t now)
+{
+  update_router_descriptor_downloads(now);
+  update_microdesc_downloads(now);
+  launch_dummy_descriptor_download_as_needed(now, get_options());
+}
+
 /** Clear all our timeouts for fetching v2 and v3 directory stuff, and then
  * give it all a try again. */
 void
@@ -4008,8 +4011,7 @@ routerlist_retry_directory_downloads(time_t now)
   router_reset_status_download_failures();
   router_reset_descriptor_download_failures();
   update_networkstatus_downloads(now);
-  update_router_descriptor_downloads(now);
-  update_microdesc_downloads(now);
+  update_all_descriptor_downloads(now);
 }
 
 /** Return 1 if all running sufficiently-stable routers we can use will reject
@@ -4049,7 +4051,7 @@ trusted_dir_server_t *
 add_trusted_dir_server(const char *nickname, const char *address,
                        uint16_t dir_port, uint16_t or_port,
                        const char *digest, const char *v3_auth_digest,
-                       authority_type_t type)
+                       dirinfo_type_t type)
 {
   trusted_dir_server_t *ent;
   uint32_t a;
@@ -4084,7 +4086,7 @@ add_trusted_dir_server(const char *nickname, const char *address,
   ent->is_running = 1;
   ent->type = type;
   memcpy(ent->digest, digest, DIGEST_LEN);
-  if (v3_auth_digest && (type & V3_AUTHORITY))
+  if (v3_auth_digest && (type & V3_DIRINFO))
     memcpy(ent->v3_identity_digest, v3_auth_digest, DIGEST_LEN);
 
   dlen = 64 + strlen(hostname) + (nickname?strlen(nickname):0);
@@ -4163,7 +4165,7 @@ int
 any_trusted_dir_is_v1_authority(void)
 {
   if (trusted_dir_servers)
-    return get_n_authorities(V1_AUTHORITY) > 0;
+    return get_n_authorities(V1_DIRINFO) > 0;
 
   return 0;
 }
@@ -4363,15 +4365,15 @@ launch_descriptor_downloads(int purpose,
                 descname);
       should_delay = 0;
     } else {
-      should_delay = (last_routerdesc_download_attempted +
+      should_delay = (last_descriptor_download_attempted +
                       MAX_CLIENT_INTERVAL_WITHOUT_REQUEST) > now;
       if (!should_delay && n_downloadable) {
-        if (last_routerdesc_download_attempted) {
+        if (last_descriptor_download_attempted) {
           log_info(LD_DIR,
                    "There are not many downloadable %ss, but we've "
                    "been waiting long enough (%d seconds). Downloading.",
                    descname,
-                   (int)(now-last_routerdesc_download_attempted));
+                   (int)(now-last_descriptor_download_attempted));
         } else {
           log_info(LD_DIR,
                    "There are not many downloadable %ss, but we haven't "
@@ -4434,7 +4436,7 @@ launch_descriptor_downloads(int purpose,
                                     downloadable, i, i+n_per_request,
                                     pds_flags);
     }
-    last_routerdesc_download_attempted = now;
+    last_descriptor_download_attempted = now;
   }
 }
 
@@ -4718,13 +4720,35 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
  * do this only when we aren't seeing incoming data. see bug 652. */
 #define DUMMY_DOWNLOAD_INTERVAL (20*60)
 
+/** As needed, launch a dummy router descriptor fetch to see if our
+ * address has changed. */
+static void
+launch_dummy_descriptor_download_as_needed(time_t now, or_options_t *options)
+{
+  static time_t last_dummy_download = 0;
+  /* XXXX023 we could be smarter here; see notes on bug 652. */
+  /* If we're a server that doesn't have a configured address, we rely on
+   * directory fetches to learn when our address changes.  So if we haven't
+   * tried to get any routerdescs in a long time, try a dummy fetch now. */
+  if (!options->Address &&
+      server_mode(options) &&
+      last_descriptor_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
+      last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
+    last_dummy_download = now;
+    directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
+                                 ROUTER_PURPOSE_GENERAL, "authority.z",
+                                 PDS_RETRY_IF_NO_SERVERS);
+  }
+}
+
 /** Launch downloads for router status as needed. */
 void
 update_router_descriptor_downloads(time_t now)
 {
   or_options_t *options = get_options();
-  static time_t last_dummy_download = 0;
   if (should_delay_dir_fetches(options))
+    return;
+  if (!we_fetch_router_descriptors(options))
     return;
   if (directory_fetches_dir_info_early(options)) {
     update_router_descriptor_cache_downloads_v2(now);
@@ -4732,22 +4756,6 @@ update_router_descriptor_downloads(time_t now)
 
   update_consensus_router_descriptor_downloads(now, 0,
                   networkstatus_get_reasonably_live_consensus(now, FLAV_NS));
-
-  /* XXXX023 we could be smarter here; see notes on bug 652. */
-  /* XXXX NM Microdescs: if we're not fetching microdescriptors, we need
-   * to make something else invoke this. */
-  /* If we're a server that doesn't have a configured address, we rely on
-   * directory fetches to learn when our address changes.  So if we haven't
-   * tried to get any routerdescs in a long time, try a dummy fetch now. */
-  if (!options->Address &&
-      server_mode(options) &&
-      last_routerdesc_download_attempted + DUMMY_DOWNLOAD_INTERVAL < now &&
-      last_dummy_download + DUMMY_DOWNLOAD_INTERVAL < now) {
-    last_dummy_download = now;
-    directory_get_from_dirserver(DIR_PURPOSE_FETCH_SERVERDESC,
-                                 ROUTER_PURPOSE_GENERAL, "authority.z",
-                                 PDS_RETRY_IF_NO_SERVERS);
-  }
 }
 
 /** Launch extrainfo downloads as needed. */
@@ -4879,20 +4887,28 @@ count_usable_descriptors(int *num_present, int *num_usable,
                          or_options_t *options, time_t now,
                          routerset_t *in_set)
 {
+  const int md = (consensus->flavor == FLAV_MICRODESC);
   *num_present = 0, *num_usable=0;
 
-  SMARTLIST_FOREACH(consensus->routerstatus_list, routerstatus_t *, rs,
-     {
+  SMARTLIST_FOREACH_BEGIN(consensus->routerstatus_list, routerstatus_t *, rs)
+    {
        if (in_set && ! routerset_contains_routerstatus(in_set, rs, -1))
          continue;
        if (client_would_use_router(rs, now, options)) {
+         const char * const digest = rs->descriptor_digest;
+         int present;
          ++*num_usable; /* the consensus says we want it. */
-         if (router_get_by_descriptor_digest(rs->descriptor_digest)) {
+         if (md)
+           present = NULL != (microdesc_cache_lookup_by_digest256(NULL, digest));
+         else
+           present = NULL != router_get_by_descriptor_digest(digest);
+         if (present) {
            /* we have the descriptor listed in the consensus. */
            ++*num_present;
          }
        }
-     });
+     }
+  SMARTLIST_FOREACH_END(rs);
 
   log_debug(LD_DIR, "%d usable, %d present.", *num_usable, *num_present);
 }
@@ -4906,7 +4922,7 @@ count_loading_descriptors_progress(void)
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
+    networkstatus_get_reasonably_live_consensus(now, usable_consensus_flavor());
   double fraction;
 
   if (!consensus)
@@ -4936,14 +4952,14 @@ update_router_have_minimum_dir_info(void)
   int res;
   or_options_t *options = get_options();
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now, FLAV_NS);
+    networkstatus_get_reasonably_live_consensus(now, usable_consensus_flavor());
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())
-      strlcpy(dir_info_status, "We have no network-status consensus.",
+      strlcpy(dir_info_status, "We have no usable consensus.",
               sizeof(dir_info_status));
     else
-      strlcpy(dir_info_status, "We have no recent network-status consensus.",
+      strlcpy(dir_info_status, "We have no recent usable consensus.",
               sizeof(dir_info_status));
     res = 0;
     goto done;
@@ -5022,7 +5038,7 @@ void
 router_reset_descriptor_download_failures(void)
 {
   networkstatus_reset_download_failures();
-  last_routerdesc_download_attempted = 0;
+  last_descriptor_download_attempted = 0;
   if (!routerlist)
     return;
   SMARTLIST_FOREACH(routerlist->routers, routerinfo_t *, ri,

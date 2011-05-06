@@ -497,7 +497,7 @@ init_keys(void)
   char v3_digest[20];
   char *cp;
   or_options_t *options = get_options();
-  authority_type_t type;
+  dirinfo_type_t type;
   time_t now = time(NULL);
   trusted_dir_server_t *ds;
   int v3_digest_set = 0;
@@ -697,11 +697,12 @@ init_keys(void)
   }
   /* 6b. [authdirserver only] add own key to approved directories. */
   crypto_pk_get_digest(get_server_identity_key(), digest);
-  type = ((options->V1AuthoritativeDir ? V1_AUTHORITY : NO_AUTHORITY) |
-          (options->V2AuthoritativeDir ? V2_AUTHORITY : NO_AUTHORITY) |
-          (options->V3AuthoritativeDir ? V3_AUTHORITY : NO_AUTHORITY) |
-          (options->BridgeAuthoritativeDir ? BRIDGE_AUTHORITY : NO_AUTHORITY) |
-          (options->HSAuthoritativeDir ? HIDSERV_AUTHORITY : NO_AUTHORITY));
+  type = ((options->V1AuthoritativeDir ? V1_DIRINFO : NO_DIRINFO) |
+          (options->V2AuthoritativeDir ? V2_DIRINFO : NO_DIRINFO) |
+          (options->V3AuthoritativeDir ?
+               (V3_DIRINFO|MICRODESC_DIRINFO|EXTRAINFO_DIRINFO) : NO_DIRINFO) |
+          (options->BridgeAuthoritativeDir ? BRIDGE_DIRINFO : NO_DIRINFO) |
+          (options->HSAuthoritativeDir ? HIDSERV_DIRINFO : NO_DIRINFO));
 
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
@@ -723,7 +724,7 @@ init_keys(void)
              type, ds->type);
     ds->type = type;
   }
-  if (v3_digest_set && (ds->type & V3_AUTHORITY) &&
+  if (v3_digest_set && (ds->type & V3_DIRINFO) &&
       memcmp(v3_digest, ds->v3_identity_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "V3 identity key does not match identity declared in "
              "DirServer line.  Adjusting.");
@@ -910,7 +911,7 @@ router_orport_found_reachable(void)
   if (!can_reach_or_port && me) {
     log_notice(LD_OR,"Self-testing indicates your ORPort is reachable from "
                "the outside. Excellent.%s",
-               get_options()->_PublishServerDescriptor != NO_AUTHORITY ?
+               get_options()->_PublishServerDescriptor != NO_DIRINFO ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
     mark_my_descriptor_dirty();
@@ -1080,8 +1081,8 @@ public_server_mode(or_options_t *options)
 int
 should_refuse_unknown_exits(or_options_t *options)
 {
-  if (options->RefuseUnknownExits_ != -1) {
-    return options->RefuseUnknownExits_;
+  if (options->RefuseUnknownExits != -1) {
+    return options->RefuseUnknownExits;
   } else {
     return networkstatus_get_param(NULL, "refuseunknownexits", 1, 0, 1);
   }
@@ -1135,7 +1136,7 @@ decide_if_publishable_server(void)
 
   if (options->ClientOnly)
     return 0;
-  if (options->_PublishServerDescriptor == NO_AUTHORITY)
+  if (options->_PublishServerDescriptor == NO_DIRINFO)
     return 0;
   if (!server_mode(options))
     return 0;
@@ -1195,7 +1196,7 @@ router_upload_dir_desc_to_dirservers(int force)
   extrainfo_t *ei;
   char *msg;
   size_t desc_len, extra_len = 0, total_len;
-  authority_type_t auth = get_options()->_PublishServerDescriptor;
+  dirinfo_type_t auth = get_options()->_PublishServerDescriptor;
 
   ri = router_get_my_routerinfo();
   if (!ri) {
@@ -1203,7 +1204,7 @@ router_upload_dir_desc_to_dirservers(int force)
     return;
   }
   ei = router_get_my_extrainfo();
-  if (auth == NO_AUTHORITY)
+  if (auth == NO_DIRINFO)
     return;
   if (!force && !desc_needs_upload)
     return;
@@ -1220,7 +1221,7 @@ router_upload_dir_desc_to_dirservers(int force)
   msg[desc_len+extra_len] = 0;
 
   directory_post_to_dirservers(DIR_PURPOSE_UPLOAD_DIR,
-                               (auth & BRIDGE_AUTHORITY) ?
+                               (auth & BRIDGE_DIRINFO) ?
                                  ROUTER_PURPOSE_BRIDGE :
                                  ROUTER_PURPOSE_GENERAL,
                                auth, msg, desc_len, extra_len);

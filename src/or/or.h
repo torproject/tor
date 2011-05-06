@@ -1641,6 +1641,9 @@ typedef struct routerstatus_t {
   /** True iff this router is a version that, if it caches directory info,
    * we can get v3 downloads from. */
   unsigned int version_supports_v3_dir:1;
+  /** True iff this router is a version that, if it caches directory info,
+   * we can get microdescriptors from. */
+  unsigned int version_supports_microdesc_cache:1;
 
   unsigned int has_bandwidth:1; /**< The vote/consensus had bw info */
   unsigned int has_exitsummary:1; /**< The vote/consensus had exit summaries */
@@ -1918,9 +1921,6 @@ typedef enum {
   FLAV_MICRODESC = 1,
 } consensus_flavor_t;
 
-/** Which consensus flavor do we actually want to use to build circuits? */
-#define USABLE_CONSENSUS_FLAVOR FLAV_NS
-
 /** How many different consensus flavors are there? */
 #define N_CONSENSUS_FLAVORS ((int)(FLAV_MICRODESC)+1)
 
@@ -2090,24 +2090,33 @@ typedef struct authority_cert_t {
   uint8_t is_cross_certified;
 } authority_cert_t;
 
-/** Bitfield enum type listing types of directory authority/directory
- * server.  */
+/** Bitfield enum type listing types of information that directory authorities
+ * can be authoritative about, and that directory caches may or may not cache.
+ *
+ * Note that the granularity here is based on authority granularity and on
+ * cache capabilities.  Thus, one particular bit may correspond in practice to
+ * a few types of directory info, so long as every authority that pronounces
+ * officially about one of the types prounounces officially about all of them,
+ * and so long as every cache that caches one of them caches all of them.
+ */
 typedef enum {
-  NO_AUTHORITY      = 0,
+  NO_DIRINFO      = 0,
   /** Serves/signs v1 directory information: Big lists of routers, and short
    * routerstatus documents. */
-  V1_AUTHORITY      = 1 << 0,
+  V1_DIRINFO      = 1 << 0,
   /** Serves/signs v2 directory information: i.e. v2 networkstatus documents */
-  V2_AUTHORITY      = 1 << 1,
+  V2_DIRINFO      = 1 << 1,
   /** Serves/signs v3 directory information: votes, consensuses, certs */
-  V3_AUTHORITY      = 1 << 2,
+  V3_DIRINFO      = 1 << 2,
   /** Serves hidden service descriptors. */
-  HIDSERV_AUTHORITY = 1 << 3,
+  HIDSERV_DIRINFO = 1 << 3,
   /** Serves bridge descriptors. */
-  BRIDGE_AUTHORITY  = 1 << 4,
-  /** Serves extrainfo documents. (XXX Not precisely an authority type)*/
-  EXTRAINFO_CACHE   = 1 << 5,
-} authority_type_t;
+  BRIDGE_DIRINFO  = 1 << 4,
+  /** Serves extrainfo documents. */
+  EXTRAINFO_DIRINFO=1 << 5,
+  /** Serves microdescriptors. */
+  MICRODESC_DIRINFO=1 << 6,
+} dirinfo_type_t;
 
 #define CRYPT_PATH_MAGIC 0x70127012u
 
@@ -2641,8 +2650,8 @@ typedef struct {
   /** To what authority types do we publish our descriptor? Choices are
    * "v1", "v2", "v3", "bridge", or "". */
   smartlist_t *PublishServerDescriptor;
-  /** An authority type, derived from PublishServerDescriptor. */
-  authority_type_t _PublishServerDescriptor;
+  /** A bitfield of authority types, derived from PublishServerDescriptor. */
+  dirinfo_type_t _PublishServerDescriptor;
   /** Boolean: do we publish hidden service descriptors to the HS auths? */
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
@@ -2669,12 +2678,10 @@ typedef struct {
   uint64_t ConstrainedSockSize; /**< Size of constrained buffers. */
 
   /** Whether we should drop exit streams from Tors that we don't know are
-   * relays.  One of "0" (never refuse), "1" (always refuse), or "auto" (do
+   * relays.  One of "0" (never refuse), "1" (always refuse), or "-1" (do
    * what the consensus says, defaulting to 'refuse' if the consensus says
    * nothing). */
-  char *RefuseUnknownExits;
-  /** Parsed version of RefuseUnknownExits. -1 for auto. */
-  int RefuseUnknownExits_;
+  int RefuseUnknownExits;
 
   /** Application ports that require all nodes in circ to have sufficient
    * uptime. */
@@ -3043,6 +3050,10 @@ typedef struct {
    * This is used so that options_validate() has a chance to realize that
    * the defaults have changed. */
   int _UsingTestNetworkDefaults;
+
+  /** If 1, we try to use microdescriptors to build circuits.  If 0, we don't.
+   * If -1, Tor decides. */
+  int UseMicrodescriptors;
 
 } or_options_t;
 
@@ -3650,7 +3661,7 @@ typedef struct trusted_dir_server_t {
   unsigned int has_accepted_serverdesc:1;
 
   /** What kind of authority is this? (Bitfield.) */
-  authority_type_t type;
+  dirinfo_type_t type;
 
   download_status_t v2_ns_dl_status; /**< Status of downloading this server's
                                * v2 network status. */
