@@ -698,3 +698,4 @@ usable_consensus_flavor(void)
     return FLAV_NS;
   }
 }
+

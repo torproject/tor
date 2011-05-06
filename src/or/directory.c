@@ -1632,13 +1632,14 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
   if (status_code == 503) {
     routerstatus_t *rs;
     trusted_dir_server_t *ds;
+    const char *id_digest = conn->identity_digest;
     log_info(LD_DIR,"Received http status code %d (%s) from server "
              "'%s:%d'. I'll try again soon.",
              status_code, escaped(reason), conn->_base.address,
              conn->_base.port);
-    if ((rs = router_get_mutable_consensus_status_by_id(conn->identity_digest)))
+    if ((rs = router_get_mutable_consensus_status_by_id(id_digest)))
       rs->last_dir_503_at = now;
-    if ((ds = router_get_trusteddirserver_by_digest(conn->identity_digest)))
+    if ((ds = router_get_trusteddirserver_by_digest(id_digest)))
       ds->fake_status.last_dir_503_at = now;
 
     tor_free(body); tor_free(headers); tor_free(reason);

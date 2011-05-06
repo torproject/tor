@@ -4899,7 +4899,7 @@ count_usable_descriptors(int *num_present, int *num_usable,
          int present;
          ++*num_usable; /* the consensus says we want it. */
          if (md)
-           present = NULL != (microdesc_cache_lookup_by_digest256(NULL, digest));
+           present = NULL != microdesc_cache_lookup_by_digest256(NULL, digest);
          else
            present = NULL != router_get_by_descriptor_digest(digest);
          if (present) {
@@ -4922,7 +4922,7 @@ count_loading_descriptors_progress(void)
   int num_present = 0, num_usable=0;
   time_t now = time(NULL);
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now, usable_consensus_flavor());
+    networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
   double fraction;
 
   if (!consensus)
@@ -4952,7 +4952,7 @@ update_router_have_minimum_dir_info(void)
   int res;
   or_options_t *options = get_options();
   const networkstatus_t *consensus =
-    networkstatus_get_reasonably_live_consensus(now, usable_consensus_flavor());
+    networkstatus_get_reasonably_live_consensus(now,usable_consensus_flavor());
 
   if (!consensus) {
     if (!networkstatus_get_latest_consensus())
