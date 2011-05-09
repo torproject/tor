@@ -2655,7 +2655,9 @@ typedef struct {
   /** Boolean: do we publish hidden service descriptors to the HS auths? */
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
-  int FetchHidServDescriptors; /** and hidden service descriptors? */
+  int FetchHidServDescriptors; /**< and hidden service descriptors? */
+  int FetchV2Networkstatus; /**< Do we fetch v2 networkstatus documents when
+                             * we don't need to? */
   int HidServDirectoryV2; /**< Do we participate in the HS DHT? */
 
   int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden

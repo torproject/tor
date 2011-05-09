@@ -1212,6 +1212,12 @@ if DirPort is non-zero):
     Set an entrance policy for this server, to limit who can connect to the
     directory ports. The policies have the same form as exit policies above.
 
+**FetchV2Networkstatus** **0**|**1**::
+    If set, we try to fetch the (obsolete, unused) version 2 network status
+    consensus documents from the directory authorities. No currently
+    supported Tor version uses them.  (Default: 0.)
+
+
 DIRECTORY AUTHORITY SERVER OPTIONS
 ----------------------------------
 
