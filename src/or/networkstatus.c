@@ -1356,7 +1356,7 @@ update_networkstatus_downloads(time_t now)
   or_options_t *options = get_options();
   if (should_delay_dir_fetches(options))
     return;
-  if (directory_fetches_dir_info_early(options))
+  if (authdir_mode_any_main(options) || options->FetchV2Networkstatus)
     update_v2_networkstatus_cache_downloads(now);
   update_consensus_networkstatus_downloads(now);
   update_certificate_downloads(now);
