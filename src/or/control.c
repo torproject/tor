@@ -3997,7 +3997,7 @@ static int bootstrap_problems = 0;
  * information and initial circuits.
  *
  * <b>status</b> is the new status, that is, what task we will be doing
- * next. <b>percent</b> is zero if we just started this task, else it
+ * next. <b>progress</b> is zero if we just started this task, else it
  * represents progress on the task. */
 void
 control_event_bootstrap(bootstrap_status_t status, int progress)
@@ -4052,6 +4052,9 @@ control_event_bootstrap_problem(const char *warn, int reason)
   const char *tag, *summary;
   char buf[BOOTSTRAP_MSG_LEN];
   const char *recommendation = "ignore";
+
+  /* bootstrap_percent must not be in "undefined" state here. */
+  tor_assert(status >= 0);
 
   if (bootstrap_percent == 100)
     return; /* already bootstrapped; nothing to be done here. */

@@ -1283,7 +1283,7 @@ connection_connect(connection_t *conn, const char *address,
 {
   int s, inprogress = 0;
   char addrbuf[256];
-  struct sockaddr *dest_addr = (struct sockaddr*) addrbuf;
+  struct sockaddr *dest_addr;
   int dest_addr_len;
   or_options_t *options = get_options();
   int protocol_family;

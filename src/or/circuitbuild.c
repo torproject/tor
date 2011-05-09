@@ -560,7 +560,9 @@ circuit_build_times_create_histogram(circuit_build_times_t *cbt,
  * Return the Pareto start-of-curve parameter Xm.
  *
  * Because we are not a true Pareto curve, we compute this as the
- * weighted average of the N=3 most frequent build time bins.
+ * weighted average of the N most frequent build time bins. N is either
+ * 1 if we don't have enough circuit build time data collected, or
+ * determined by the consensus parameter cbtnummodes (default 3).
  */
 static build_time_t
 circuit_build_times_get_xm(circuit_build_times_t *cbt)
@@ -573,6 +575,9 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
   int n=0;
   int num_modes = circuit_build_times_default_num_xm_modes();
 
+  tor_assert(nbins > 0);
+  tor_assert(num_modes > 0);
+
   // Only use one mode if < 1000 buildtimes. Not enough data
   // for multiple.
   if (cbt->total_build_times < CBT_NCIRCUITS_TO_OBSERVE)
@@ -580,6 +585,7 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
 
   nth_max_bin = (build_time_t*)tor_malloc_zero(num_modes*sizeof(build_time_t));
 
+  /* Determine the N most common build times */
   for (i = 0; i < nbins; i++) {
     if (histogram[i] >= histogram[nth_max_bin[0]]) {
       nth_max_bin[0] = i;
@@ -600,6 +606,10 @@ circuit_build_times_get_xm(circuit_build_times_t *cbt)
     log_info(LD_CIRC, "Xm mode #%d: %u %u", n, CBT_BIN_TO_MS(nth_max_bin[n]),
              histogram[nth_max_bin[n]]);
   }
+
+  /* The following assert is safe, because we don't get called when we
+   * haven't observed at least CBT_MIN_MIN_CIRCUITS_TO_OBSERVE circuits. */
+  tor_assert(bin_counts > 0);
 
   ret /= bin_counts;
   tor_free(histogram);

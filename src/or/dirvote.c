@@ -441,9 +441,9 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
     if (cur && !compare_vote_rs(cur, rs)) {
       ++cur_n;
     } else {
-      if (cur_n > most_n ||
-          (cur && cur_n == most_n &&
-           cur->status.published_on > most_published)) {
+      if (cur && (cur_n > most_n ||
+                  (cur_n == most_n &&
+                   cur->status.published_on > most_published))) {
         most = cur;
         most_n = cur_n;
         most_published = cur->status.published_on;

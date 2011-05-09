@@ -487,7 +487,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   cache->journal_len = 0;
   cache->bytes_dropped = 0;
 
-  new_size = (int)cache->cache_content->size;
+  new_size = cache->cache_content ? (int)cache->cache_content->size : 0;
   log_info(LD_DIR, "Done rebuilding microdesc cache. "
            "Saved %d bytes; %d still used.",
            orig_size-new_size, new_size);

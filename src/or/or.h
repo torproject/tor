@@ -3388,7 +3388,9 @@ typedef enum buildtimeout_set_event_t {
  */
 #define CONN_LOG_PROTECT(conn, stmt)                                    \
   STMT_BEGIN                                                            \
-    int _log_conn_is_control = (conn && conn->type == CONN_TYPE_CONTROL); \
+    int _log_conn_is_control;                                           \
+    tor_assert(conn);                                                   \
+    _log_conn_is_control = (conn->type == CONN_TYPE_CONTROL);           \
     if (_log_conn_is_control)                                           \
       disable_control_logging();                                        \
   STMT_BEGIN stmt; STMT_END;                                            \
