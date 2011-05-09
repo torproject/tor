@@ -998,6 +998,9 @@ connection_create_listener(const struct sockaddr *listensockaddr,
          "%s listening on port %u.",
          conn_type_to_string(type), gotPort);
 
+  if (type == CONN_TYPE_CONTROL_LISTENER)
+    control_ports_write_to_file();
+
   conn->state = LISTENER_STATE_READY;
   if (start_reading) {
     connection_start_reading(conn);

@@ -191,6 +191,11 @@ Other options can be specified either on the command-line (--option
     the default GID. [Making the file readable by other groups is not yet
     implemented; let us know if you need this for some reason.] (Default: 0).
 
+**ControlPortWriteToFile** __Path__::
+    If set, Tor writes the address and port of any control port it opens to
+    this address.  Usable by controllers to learn the actual control port
+    when ControlPort is set to "auto".
+
 **DataDirectory** __DIR__::
     Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 

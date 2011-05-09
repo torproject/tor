@@ -508,6 +508,45 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
   connection_write_to_buf(buf, len, TO_CONN(conn));
 }
 
+/** Write all of the open control ports to ControlPortWriteToFile */
+void
+control_ports_write_to_file(void)
+{
+  smartlist_t *lines;
+  char *joined = NULL;
+  or_options_t *options = get_options();
+
+  if (!options->ControlPortWriteToFile)
+    return;
+
+  lines = smartlist_create();
+
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), const connection_t *, conn) {
+    char *port_str = NULL;
+    if (conn->type != CONN_TYPE_CONTROL_LISTENER || conn->marked_for_close)
+      continue;
+#ifdef AF_UNIX
+    if (conn->socket_family == AF_UNIX) {
+      tor_asprintf(&port_str, "UNIX_PORT=%s\n", conn->address);
+      smartlist_add(lines, port_str);
+      continue;
+    }
+#endif
+    tor_asprintf(&port_str, "PORT=%s:%d\n", conn->address, conn->port);
+    smartlist_add(lines, port_str);
+  } SMARTLIST_FOREACH_END(conn);
+
+  joined = smartlist_join_strings(lines, "", 0, NULL);
+
+  if (write_str_to_file(options->ControlPortWriteToFile, joined, 0) < 0) {
+    log_warn(LD_CONTROL, "Writing %s failed: %s",
+             options->ControlPortWriteToFile, strerror(errno));
+  }
+  tor_free(joined);
+  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+  smartlist_free(lines);
+}
+
 /** Send a "DONE" message down the control connection <b>conn</b>. */
 static void
 send_control_done(control_connection_t *conn)

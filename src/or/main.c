@@ -2046,12 +2046,14 @@ void
 tor_cleanup(void)
 {
   or_options_t *options = get_options();
-  /* Remove our pid file. We don't care if there was an error when we
-   * unlink, nothing we could do about it anyways. */
   if (options->command == CMD_RUN_TOR) {
     time_t now = time(NULL);
+    /* Remove our pid file. We don't care if there was an error when we
+     * unlink, nothing we could do about it anyways. */
     if (options->PidFile)
       unlink(options->PidFile);
+    if (options->ControlPortWriteToFile)
+      unlink(options->ControlPortWriteToFile);
     if (accounting_is_enabled(options))
       accounting_record_bandwidth_usage(now, get_or_state());
     or_state_mark_dirty(get_or_state(), 0); /* force an immediate save. */

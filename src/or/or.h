@@ -2874,6 +2874,9 @@ typedef struct {
    * the defaults have changed. */
   int _UsingTestNetworkDefaults;
 
+  /** File where we should write the ControlPort. */
+  char *ControlPortWriteToFile;
+
 } or_options_t;
 
 /** Persistent state for an onion router, as saved to disk. */
