@@ -1183,7 +1183,7 @@ if DirPort is non-zero):
 
 **MinUptimeHidServDirectoryV2** __N__ **seconds**|**minutes**|**hours**|**days**|**weeks**::
     Minimum uptime of a v2 hidden service directory to be accepted as such by
-    authoritative directories. (Default: 24 hours)
+    authoritative directories. (Default: 25 hours)
 
 **DirPort** __PORT__|**auto**::
     If this option is nonzero, advertise the directory service on this port.
