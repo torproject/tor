@@ -2517,8 +2517,11 @@ typedef struct {
                              * we don't need to? */
   int HidServDirectoryV2; /**< Do we participate in the HS DHT? */
 
+  int VoteOnHidServDirectoriesV2; /**< As a directory authority, vote on
+                                   * assignment of the HSDir flag? */
   int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
                                     * service directories after what time? */
+
   int FetchUselessDescriptors; /**< Do we fetch non-running descriptors too? */
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */

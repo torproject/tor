@@ -1335,6 +1335,11 @@ DIRECTORY AUTHORITY SERVER OPTIONS
     that fine-grained information about nodes can be discarded when it hasn't
     changed for a given amount of time.  (Default: 24 hours)
 
+**VoteOnHidServDirectoriesV2** **0**|**1**::
+    When this option is set in addition to **AuthoritativeDirectory**, Tor
+    votes on whether to accept relays as hidden service directories.
+    (Default: 1)
+
 HIDDEN SERVICE OPTIONS
 ----------------------
 
