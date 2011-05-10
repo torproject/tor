@@ -430,7 +430,7 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
           continue;
       } else {
         /* We expected a key. See if it's the right one. */
-        if (memcmp(or_conn->identity_digest,
+        if (tor_memcmp(or_conn->identity_digest,
                    circ->n_hop->identity_digest, DIGEST_LEN))
           continue;
       }
@@ -793,7 +793,7 @@ circuit_extend(cell_t *cell, circuit_t *circ)
   /* Next, check if we're being asked to connect to the hop that the
    * extend cell came from. There isn't any reason for that, and it can
    * assist circular-path attacks. */
-  if (!memcmp(id_digest, TO_OR_CIRCUIT(circ)->p_conn->identity_digest,
+  if (tor_memeq(id_digest, TO_OR_CIRCUIT(circ)->p_conn->identity_digest,
               DIGEST_LEN)) {
     log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
            "Client asked me to extend back to the previous hop.");
@@ -2046,7 +2046,7 @@ static INLINE entry_guard_t *
 is_an_entry_guard(const char *digest)
 {
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, entry,
-                    if (!memcmp(digest, entry->identity, DIGEST_LEN))
+                    if (tor_memeq(digest, entry->identity, DIGEST_LEN))
                       return entry;
                    );
   return NULL;
@@ -2373,7 +2373,7 @@ entry_guard_register_connect_status(const char *digest, int succeeded,
 
   SMARTLIST_FOREACH(entry_guards, entry_guard_t *, e,
     {
-      if (!memcmp(e->identity, digest, DIGEST_LEN)) {
+      if (tor_memeq(e->identity, digest, DIGEST_LEN)) {
         entry = e;
         idx = e_sl_idx;
         break;
@@ -3000,7 +3000,7 @@ routerinfo_get_configured_bridge(routerinfo_t *ri)
           tor_addr_eq_ipv4h(&bridge->addr, ri->addr) &&
           bridge->port == ri->or_port)
         return bridge;
-      if (!memcmp(bridge->identity, ri->cache_info.identity_digest,
+      if (tor_memeq(bridge->identity, ri->cache_info.identity_digest,
                   DIGEST_LEN))
         return bridge;
     }
@@ -3037,7 +3037,7 @@ find_bridge_by_digest(const char *digest)
 {
   SMARTLIST_FOREACH(bridge_list, bridge_info_t *, bridge,
     {
-      if (!memcmp(bridge->identity, digest, DIGEST_LEN))
+      if (tor_memeq(bridge->identity, digest, DIGEST_LEN))
         return bridge;
     });
   return NULL;

@@ -459,7 +459,7 @@ strcmp_len(const char *s1, const char *s2, size_t s1_len)
     return -1;
   if (s1_len > s2_len)
     return 1;
-  return memcmp(s1, s2, s2_len);
+  return tor_memcmp(s1, s2, s2_len);
 }
 
 /** Compares the first strlen(s2) characters of s1 with s2.  Returns as for
@@ -501,7 +501,7 @@ strcasecmpend(const char *s1, const char *s2)
 /** Compare the value of the string <b>prefix</b> with the start of the
  * <b>memlen</b>-byte memory chunk at <b>mem</b>.  Return as for strcmp.
  *
- * [As memcmp(mem, prefix, strlen(prefix)) but returns -1 if memlen is less
+ * [As tor_memcmp(mem, prefix, strlen(prefix)) but returns -1 if memlen is less
  * than strlen(prefix).]
  */
 int
@@ -511,7 +511,7 @@ memcmpstart(const void *mem, size_t memlen,
   size_t plen = strlen(prefix);
   if (memlen < plen)
     return -1;
-  return memcmp(mem, prefix, plen);
+  return tor_memcmp(mem, prefix, plen);
 }
 
 /** Return a pointer to the first char of s that is not whitespace and
@@ -644,14 +644,14 @@ tor_mem_is_zero(const char *mem, size_t len)
     0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
   };
   while (len >= sizeof(ZERO)) {
-    if (memcmp(mem, ZERO, sizeof(ZERO)))
+    if (tor_memcmp(mem, ZERO, sizeof(ZERO)))
       return 0;
     len -= sizeof(ZERO);
     mem += sizeof(ZERO);
   }
   /* Deal with leftover bytes. */
   if (len)
-    return ! memcmp(mem, ZERO, len);
+    return tor_memeq(mem, ZERO, len);
 
   return 1;
 }

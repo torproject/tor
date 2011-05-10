@@ -336,7 +336,7 @@ tor_memmem(const void *_haystack, size_t hlen,
   while ((p = memchr(p, first, end-p))) {
     if (p+nlen > end)
       return NULL;
-    if (!memcmp(p, needle, nlen))
+    if (tor_memeq(p, needle, nlen))
       return p;
     ++p;
   }

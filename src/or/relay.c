@@ -89,7 +89,7 @@ relay_digest_matches(crypto_digest_env_t *digest, cell_t *cell)
   crypto_digest_add_bytes(digest, (char*) cell->payload, CELL_PAYLOAD_SIZE);
   crypto_digest_get_digest(digest, calculated_integrity, 4);
 
-  if (memcmp(received_integrity, calculated_integrity, 4)) {
+  if (tor_memcmp(received_integrity, calculated_integrity, 4)) {
 //    log_fn(LOG_INFO,"Recognized=0 but bad digest. Not recognizing.");
 // (%d vs %d).", received_integrity, calculated_integrity);
     /* restore digest to its old form */
