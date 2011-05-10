@@ -14,6 +14,7 @@
 #include "orconfig.h"
 #include "torint.h"
 #include "compat.h"
+#include "di_ops.h"
 #include <stdio.h>
 #include <stdlib.h>
 
