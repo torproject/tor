@@ -634,7 +634,7 @@ init_keys(void)
     ds->type = type;
   }
   if (v3_digest_set && (ds->type & V3_AUTHORITY) &&
-      tor_memcmp(v3_digest, ds->v3_identity_digest, DIGEST_LEN)) {
+      tor_memneq(v3_digest, ds->v3_identity_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "V3 identity key does not match identity declared in "
              "DirServer line.  Adjusting.");
     memcpy(ds->v3_identity_digest, v3_digest, DIGEST_LEN);

@@ -962,7 +962,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   /* first DIGEST_LEN bytes of request is intro or service pk digest */
   crypto_pk_get_digest(intro_key, intro_key_digest);
-  if (tor_memcmp(intro_key_digest, request, DIGEST_LEN)) {
+  if (tor_memneq(intro_key_digest, request, DIGEST_LEN)) {
     base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                   (char*)request, REND_SERVICE_ID_LEN);
     log_warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
@@ -1306,7 +1306,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
     return -1;
   }
 
-  if (tor_memcmp(intro->extend_info->identity_digest,
+  if (tor_memneq(intro->extend_info->identity_digest,
       launched->build_state->chosen_exit->identity_digest, DIGEST_LEN)) {
     char cann[HEX_DIGEST_LEN+1], orig[HEX_DIGEST_LEN+1];
     base16_encode(cann, sizeof(cann),

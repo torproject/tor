@@ -2358,7 +2358,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
     SMARTLIST_FOREACH(v->voters, networkstatus_voter_info_t *, vi, {
       if (vi->signature &&
-          tor_memeq(vi->identity_digest, want_digest, want_len)) {
+          fast_memeq(vi->identity_digest, want_digest, want_len)) {
         have++;
         break;
       };
@@ -3451,17 +3451,17 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
-/** Helper.  Compare two fp_pair_t objects, and return -1, 0, or 1 as
- * appropriate. */
+/** Helper.  Compare two fp_pair_t objects, and return negative, 0, or
+ * positive as appropriate. */
 static int
 _compare_pairs(const void **a, const void **b)
 {
   const fp_pair_t *fp1 = *a, *fp2 = *b;
   int r;
-  if ((r = tor_memcmp(fp1->first, fp2->first, DIGEST_LEN)))
+  if ((r = fast_memcmp(fp1->first, fp2->first, DIGEST_LEN)))
     return r;
   else
-    return tor_memcmp(fp1->second, fp2->second, DIGEST_LEN);
+    return fast_memcmp(fp1->second, fp2->second, DIGEST_LEN);
 }
 
 /** Divide a string <b>res</b> of the form FP1-FP2+FP3-FP4...[.z], where each
@@ -3577,7 +3577,7 @@ dir_split_resource_into_fingerprints(const char *resource,
       char *cp = smartlist_get(fp_tmp, i);
       char *last = smartlist_get(fp_tmp2, smartlist_len(fp_tmp2)-1);
 
-      if ((decode_hex && tor_memcmp(cp, last, DIGEST_LEN))
+      if ((decode_hex && fast_memcmp(cp, last, DIGEST_LEN))
           || (!decode_hex && strcasecmp(cp, last)))
         smartlist_add(fp_tmp2, cp);
       else

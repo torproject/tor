@@ -57,7 +57,7 @@ rend_mid_establish_intro(or_circuit_t *circ, const uint8_t *request,
     log_warn(LD_BUG, "Internal error computing digest.");
     goto err;
   }
-  if (tor_memcmp(expected_digest, request+2+asn1len, DIGEST_LEN)) {
+  if (tor_memneq(expected_digest, request+2+asn1len, DIGEST_LEN)) {
     log_warn(LD_PROTOCOL, "Hash of session info was not as expected.");
     reason = END_CIRC_REASON_TORPROTOCOL;
     goto err;

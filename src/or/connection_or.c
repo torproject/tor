@@ -1024,7 +1024,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     int as_advertised = 1;
     tor_assert(has_cert);
     tor_assert(has_identity);
-    if (tor_memcmp(digest_rcvd_out, conn->identity_digest, DIGEST_LEN)) {
+    if (tor_memneq(digest_rcvd_out, conn->identity_digest, DIGEST_LEN)) {
       /* I was aiming for a particular digest. I didn't get it! */
       char seen[HEX_DIGEST_LEN+1];
       char expected[HEX_DIGEST_LEN+1];

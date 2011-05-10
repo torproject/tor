@@ -336,7 +336,7 @@ networkstatus_get_voter_by_id(networkstatus_t *vote,
   if (!vote || !vote->voters)
     return NULL;
   SMARTLIST_FOREACH(vote->voters, networkstatus_voter_info_t *, voter,
-    if (tor_memeq(voter->identity_digest, identity, DIGEST_LEN))
+    if (fast_memeq(voter->identity_digest, identity, DIGEST_LEN))
       return voter);
   return NULL;
 }
@@ -356,7 +356,7 @@ networkstatus_check_voter_signature(networkstatus_t *consensus,
   size_t signed_digest_len;
   if (crypto_pk_get_digest(cert->signing_key, d)<0)
     return -1;
-  if (tor_memcmp(voter->signing_key_digest, d, DIGEST_LEN))
+  if (tor_memneq(voter->signing_key_digest, d, DIGEST_LEN))
     return -1;
   signed_digest_len = crypto_pk_keysize(cert->signing_key);
   signed_digest = tor_malloc(signed_digest_len);
@@ -365,7 +365,7 @@ networkstatus_check_voter_signature(networkstatus_t *consensus,
                                 signed_digest_len,
                                 voter->signature,
                                 voter->signature_len) != DIGEST_LEN ||
-      tor_memcmp(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
+      tor_memneq(signed_digest, consensus->networkstatus_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "Got a bad signature on a networkstatus vote");
     voter->bad_signature = 1;
   } else {
@@ -1296,7 +1296,7 @@ routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
   tor_assert(tor_memeq(a->identity_digest, b->identity_digest, DIGEST_LEN));
 
   return strcmp(a->nickname, b->nickname) ||
-         tor_memcmp(a->descriptor_digest, b->descriptor_digest, DIGEST_LEN) ||
+         fast_memneq(a->descriptor_digest, b->descriptor_digest, DIGEST_LEN) ||
          a->addr != b->addr ||
          a->or_port != b->or_port ||
          a->dir_port != b->dir_port ||

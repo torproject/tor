@@ -312,6 +312,8 @@ tor_vsnprintf(char *str, size_t size, const char *format, va_list args)
  * <b>needle</b>, return a pointer to the first occurrence of the needle
  * within the haystack, or NULL if there is no such occurrence.
  *
+ * This function is <em>not</em> timing-safe.
+ *
  * Requires that nlen be greater than zero.
  */
 const void *
@@ -336,7 +338,7 @@ tor_memmem(const void *_haystack, size_t hlen,
   while ((p = memchr(p, first, end-p))) {
     if (p+nlen > end)
       return NULL;
-    if (tor_memeq(p, needle, nlen))
+    if (fast_memeq(p, needle, nlen))
       return p;
     ++p;
   }

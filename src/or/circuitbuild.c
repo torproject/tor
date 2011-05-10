@@ -430,7 +430,7 @@ circuit_n_conn_done(or_connection_t *or_conn, int status)
           continue;
       } else {
         /* We expected a key. See if it's the right one. */
-        if (tor_memcmp(or_conn->identity_digest,
+        if (tor_memneq(or_conn->identity_digest,
                    circ->n_hop->identity_digest, DIGEST_LEN))
           continue;
       }

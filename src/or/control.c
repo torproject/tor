@@ -346,7 +346,7 @@ write_escaped_data(const char *data, size_t len, char **out)
     }
     *outp++ = *data++;
   }
-  if (outp < *out+2 || tor_memcmp(outp-2, "\r\n", 2)) {
+  if (outp < *out+2 || fast_memcmp(outp-2, "\r\n", 2)) {
     *outp++ = '\r';
     *outp++ = '\n';
   }
@@ -512,7 +512,7 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
     return;
   }
   len = strlen(buf);
-  if (tor_memcmp("\r\n\0", buf+len-2, 3)) {
+  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-1] = '\0';
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-2] = '\n';
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-3] = '\r';
@@ -611,7 +611,7 @@ send_control_event_impl(uint16_t event, event_format_t which, int extended,
   }
 
   len = strlen(buf);
-  if (tor_memcmp("\r\n\0", buf+len-2, 3)) {
+  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
     /* if it is not properly terminated, do it now */
     buf[SEND_CONTROL1_EVENT_BUFFERSIZE-1] = '\0';
     buf[SEND_CONTROL1_EVENT_BUFFERSIZE-2] = '\n';
@@ -1128,7 +1128,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
         goto err;
       }
       bad_cookie = 1;
-    } else if (tor_memcmp(authentication_cookie, password, password_len)) {
+    } else if (tor_memneq(authentication_cookie, password, password_len)) {
       if (!also_password) {
         log_warn(LD_CONTROL, "Got mismatched authentication cookie");
         errstr = "Authentication cookie did not match expected value.";

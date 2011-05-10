@@ -24,5 +24,7 @@ int tor_memeq(const void *a, const void *b, size_t sz);
  * implementation.
  */
 #define fast_memcmp(a,b,c) (memcmp((a),(b),(c)))
+#define fast_memeq(a,b,c)  (0==memcmp((a),(b),(c)))
+#define fast_memneq(a,b,c) (0!=memcmp((a),(b),(c)))
 
 #endif

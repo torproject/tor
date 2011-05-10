@@ -748,7 +748,7 @@ rend_client_receive_rendezvous(origin_circuit_t *circ, const uint8_t *request,
     goto err;
 
   /* Check whether the digest is right... */
-  if (tor_memcmp(keys, request+DH_KEY_LEN, DIGEST_LEN)) {
+  if (tor_memneq(keys, request+DH_KEY_LEN, DIGEST_LEN)) {
     log_warn(LD_PROTOCOL, "Incorrect digest of key material.");
     goto err;
   }

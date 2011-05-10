@@ -311,7 +311,7 @@ onion_skin_client_handshake(crypto_dh_env_t *handshake_state,
   if (len < 0)
     goto err;
 
-  if (tor_memcmp(key_material, handshake_reply+DH_KEY_LEN, DIGEST_LEN)) {
+  if (tor_memneq(key_material, handshake_reply+DH_KEY_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
     log_warn(LD_PROTOCOL,"Digest DOES NOT MATCH on onion handshake. "
              "Bug or attack.");
@@ -398,7 +398,7 @@ fast_client_handshake(const uint8_t *handshake_state,/*DIGEST_LEN bytes*/
   if (crypto_expand_key_material(tmp, sizeof(tmp), out, out_len)) {
     goto done;
   }
-  if (tor_memcmp(out, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
+  if (tor_memneq(out, handshake_reply_out+DIGEST_LEN, DIGEST_LEN)) {
     /* H(K) does *not* match. Something fishy. */
     log_warn(LD_PROTOCOL,"Digest DOES NOT MATCH on fast handshake. "
              "Bug or attack.");
