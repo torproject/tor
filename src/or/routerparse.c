@@ -1369,6 +1369,12 @@ router_parse_entry_from_string(const char *s, const char *end,
       router->has_old_dnsworkers = 1;
   }
 
+  if (find_opt_by_keyword(tokens, K_REJECT6) ||
+      find_opt_by_keyword(tokens, K_ACCEPT6)) {
+    log_warn(LD_DIR, "Rejecting router with reject6/accept6 line: they crash "
+             "older Tors.");
+    goto err;
+  }
   exit_policy_tokens = find_all_exitpolicy(tokens);
   if (!smartlist_len(exit_policy_tokens)) {
     log_warn(LD_DIR, "No exit policy tokens in descriptor.");
@@ -3622,8 +3628,10 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
     eos = eos + 1;
   /* Check length. */
   if (strlen(desc) > REND_DESC_MAX_SIZE) {
+    /* XXX023 If we are parsing this descriptor as a server, this
+     * should be a protocol warning. */
     log_warn(LD_REND, "Descriptor length is %i which exceeds "
-             "maximum rendezvous descriptor size of %i kilobytes.",
+             "maximum rendezvous descriptor size of %i bytes.",
              (int)strlen(desc), REND_DESC_MAX_SIZE);
     goto err;
   }

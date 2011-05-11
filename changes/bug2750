@@ -1,0 +1,6 @@
+  o Minor bugfixes
+    - Correct the warning displayed when a rendezvous descriptor exceeds
+      the maximum size.  Fixes bug 2750; bugfix on 0.2.1.5-alpha.  Found
+      by John Brooks.
+
+
