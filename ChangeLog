@@ -41,7 +41,7 @@ Changes in version 0.2.1.31 - 2011-05-??
       micro-version numbers. Bugfix on 0.2.1.15-rc; fixes bug 2402.
 
   o Minor features:
-    - Update to the April 1 2011 Maxmind GeoLite Country database.
+    - Update to the May 1 2011 Maxmind GeoLite Country database.
 
 
 Changes in version 0.2.1.30 - 2011-02-23
