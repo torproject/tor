@@ -3105,7 +3105,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
       sdmap_remove(rl->desc_digest_map,
                    ri_old->cache_info.signed_descriptor_digest);
 
-      if (tor_memcmp(ri_old->cache_info.extra_info_digest,
+      if (tor_memneq(ri_old->cache_info.extra_info_digest,
                  ri_new->cache_info.extra_info_digest, DIGEST_LEN)) {
         ei_tmp = eimap_remove(rl->extra_info_map,
                               ri_old->cache_info.extra_info_digest);

@@ -414,7 +414,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   SMARTLIST_FOREACH_BEGIN(wrote, microdesc_t *, md) {
     tor_assert(md->saved_location == SAVED_IN_CACHE);
     md->body = (char*)cache->cache_content->data + md->off;
-    tor_assert(tor_memeq(md->body, "onion-key", 9));
+    tor_assert(fast_memeq(md->body, "onion-key", 9));
   } SMARTLIST_FOREACH_END(md);
 
   smartlist_free(wrote);

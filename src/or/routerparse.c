@@ -4538,7 +4538,7 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
   else if ((i = a->git_tag_len - b->git_tag_len))
     return i;
   else if (a->git_tag_len)
-    return tor_memcmp(a->git_tag, b->git_tag, a->git_tag_len);
+    return fast_memcmp(a->git_tag, b->git_tag, a->git_tag_len);
   else
     return 0;
 }
