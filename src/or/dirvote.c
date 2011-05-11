@@ -444,9 +444,9 @@ compute_routerstatus_consensus(smartlist_t *votes, int consensus_method,
     if (cur && !compare_vote_rs(cur, rs)) {
       ++cur_n;
     } else {
-      if (cur_n > most_n ||
-          (cur && cur_n == most_n &&
-           cur->status.published_on > most_published)) {
+      if (cur && (cur_n > most_n ||
+                  (cur_n == most_n &&
+                   cur->status.published_on > most_published))) {
         most = cur;
         most_n = cur_n;
         most_published = cur->status.published_on;
@@ -3129,8 +3129,12 @@ dirvote_compute_consensuses(void)
       authority_cert_t *cert = get_my_v3_legacy_cert();
       legacy_sign = get_my_v3_legacy_signing_key();
       if (cert) {
-        crypto_pk_get_digest(cert->identity_key, legacy_dbuf);
-        legacy_id_digest = legacy_dbuf;
+        if (crypto_pk_get_digest(cert->identity_key, legacy_dbuf)) {
+          log_warn(LD_BUG,
+                   "Unable to compute digest of legacy v3 identity key");
+        } else {
+          legacy_id_digest = legacy_dbuf;
+        }
       }
     }
 

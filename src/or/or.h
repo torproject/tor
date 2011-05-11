@@ -2489,7 +2489,9 @@ typedef struct {
   /** Boolean: do we publish hidden service descriptors to the HS auths? */
   int PublishHidServDescriptors;
   int FetchServerDescriptors; /**< Do we fetch server descriptors as normal? */
-  int FetchHidServDescriptors; /** and hidden service descriptors? */
+  int FetchHidServDescriptors; /**< and hidden service descriptors? */
+  int FetchV2Networkstatus; /**< Do we fetch v2 networkstatus documents when
+                             * we don't need to? */
   int HidServDirectoryV2; /**< Do we participate in the HS DHT? */
 
   int MinUptimeHidServDirectoryV2; /**< As directory authority, accept hidden
@@ -3203,7 +3205,9 @@ typedef enum buildtimeout_set_event_t {
  */
 #define CONN_LOG_PROTECT(conn, stmt)                                    \
   STMT_BEGIN                                                            \
-    int _log_conn_is_control = (conn && conn->type == CONN_TYPE_CONTROL); \
+    int _log_conn_is_control;                                           \
+    tor_assert(conn);                                                   \
+    _log_conn_is_control = (conn->type == CONN_TYPE_CONTROL);           \
     if (_log_conn_is_control)                                           \
       disable_control_logging();                                        \
   STMT_BEGIN stmt; STMT_END;                                            \

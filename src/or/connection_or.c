@@ -1414,9 +1414,8 @@ connection_or_send_netinfo(or_connection_t *conn)
     len = append_address_to_payload(out, &my_addr);
     if (len < 0)
       return -1;
-    out += len;
   } else {
-    *out++ = 0;
+    *out = 0;
   }
 
   connection_or_write_cell_to_buf(&cell, conn);

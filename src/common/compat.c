@@ -2062,7 +2062,6 @@ correct_tm(int islocal, const time_t *timep, struct tm *resultbuf,
   return r;
 }
 
-
 /** @{ */
 /** As localtime_r, but defined for platforms that don't have it:
  *

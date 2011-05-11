@@ -277,7 +277,7 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
   introcirc->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
 
   return 0;
-perm_err:
+ perm_err:
   if (!introcirc->_base.marked_for_close)
     circuit_mark_for_close(TO_CIRCUIT(introcirc), END_CIRC_REASON_INTERNAL);
   circuit_mark_for_close(TO_CIRCUIT(rendcirc), END_CIRC_REASON_INTERNAL);

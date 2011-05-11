@@ -435,6 +435,8 @@ interesting and understandable.
 
    Make stuff very terse
 
+   Make sure each section name ends with a colon
+
    Describe the user-visible problem right away
 
    Mention relevant config options by name.  If they're rare or unusual,
@@ -474,10 +476,11 @@ in their approved versions list.
 and push the git tag.
    (That's either "git tag -u <keyid> tor-0.2.x.y-status", then
     "git push origin tag tor-0.2.x.y-status".  To sign the
-    tarball, "gpg -ba <the_tarball>")
+    tarball, "gpg -ba <the_tarball>".  Put the files in
+    /srv/www-master.torproject.org/htdocs/dist/ on vescum.)
 
-8) Edit include/versions.wmi to note the new version. Rebuild and push
-the website.
+8) Edit include/versions.wmi to note the new version. From your website
+checkout, run ./publish to build and publish the website.
 
 9) Email Erinn and weasel (cc'ing tor-assistants) that a new tarball
 is up. This step should probably change to mailing more packagers.

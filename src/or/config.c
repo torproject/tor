@@ -255,6 +255,7 @@ static config_var_t _option_vars[] = {
   V(FetchServerDescriptors,      BOOL,     "1"),
   V(FetchHidServDescriptors,     BOOL,     "1"),
   V(FetchUselessDescriptors,     BOOL,     "0"),
+  V(FetchV2Networkstatus,        BOOL,     "0"),
 #ifdef WIN32
   V(GeoIPFile,                   FILENAME, "<default>"),
 #else
