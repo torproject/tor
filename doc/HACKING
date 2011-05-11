@@ -435,6 +435,8 @@ interesting and understandable.
 
    Make stuff very terse
 
+   Make sure each section name ends with a colon
+
    Describe the user-visible problem right away
 
    Mention relevant config options by name.  If they're rare or unusual,
