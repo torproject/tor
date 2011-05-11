@@ -47,7 +47,7 @@ node_id_hash(const node_t *node)
 static INLINE unsigned int
 node_id_eq(const node_t *node1, const node_t *node2)
 {
-  return 0 == memcmp(node1->identity, node2->identity, DIGEST_LEN);
+  return tor_memeq(node1->identity, node2->identity, DIGEST_LEN);
 }
 
 HT_PROTOTYPE(nodelist_map, node_t, ht_ent, node_id_hash, node_id_eq);
@@ -183,7 +183,7 @@ nodelist_set_consensus(networkstatus_t *ns)
     node->rs = rs;
     if (ns->flavor == FLAV_MICRODESC) {
       if (node->md == NULL ||
-          0!=memcmp(node->md->digest,rs->descriptor_digest,DIGEST256_LEN)) {
+          tor_memneq(node->md->digest,rs->descriptor_digest,DIGEST256_LEN)) {
         node->md = microdesc_cache_lookup_by_digest256(NULL,
                                                        rs->descriptor_digest);
       }
@@ -352,7 +352,7 @@ nodelist_assert_ok(void)
     SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
       const node_t *node = node_get_by_id(ri->cache_info.identity_digest);
       tor_assert(node && node->ri == ri);
-      tor_assert(0 == memcmp(ri->cache_info.identity_digest,
+      tor_assert(tor_memeq(ri->cache_info.identity_digest,
                              node->identity, DIGEST_LEN));
       tor_assert(! digestmap_get(dm, node->identity));
       digestmap_set(dm, node->identity, (void*)node);
@@ -364,7 +364,7 @@ nodelist_assert_ok(void)
     SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
       const node_t *node = node_get_by_id(rs->identity_digest);
       tor_assert(node && node->rs == rs);
-      tor_assert(0 == memcmp(rs->identity_digest, node->identity, DIGEST_LEN));
+      tor_assert(tor_memeq(rs->identity_digest, node->identity, DIGEST_LEN));
       digestmap_set(dm, node->identity, (void*)node);
       if (ns->flavor == FLAV_MICRODESC) {
         /* If it's a microdesc consensus, every entry that has a
@@ -422,7 +422,7 @@ node_get_by_hex_id(const char *hex_id)
       if (nn_char == '=') {
         const char *named_id =
           networkstatus_get_router_digest_by_nickname(nn_buf);
-        if (!named_id || memcmp(named_id, digest_buf, DIGEST_LEN))
+        if (!named_id || tor_memcmp(named_id, digest_buf, DIGEST_LEN))
           return NULL;
       }
     }
@@ -540,7 +540,7 @@ node_is_named(const node_t *node)
   named_id = networkstatus_get_router_digest_by_nickname(nickname);
   if (!named_id)
     return 0;
-  return !memcmp(named_id, node->identity, DIGEST_LEN);
+  return tor_memeq(named_id, node->identity, DIGEST_LEN);
 }
 
 /** Return true iff <b>node</b> appears to be a directory authority or

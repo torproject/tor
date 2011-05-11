@@ -2210,7 +2210,7 @@ router_get_verbose_nickname(char *buf, const routerinfo_t *router)
 {
   const char *good_digest = networkstatus_get_router_digest_by_nickname(
                                                          router->nickname);
-  int is_named = good_digest && !memcmp(good_digest,
+  int is_named = good_digest && tor_memeq(good_digest,
                                         router->cache_info.identity_digest,
                                         DIGEST_LEN);
   buf[0] = '$';
