@@ -48,7 +48,7 @@ _microdesc_hash(microdesc_t *md)
 static INLINE int
 _microdesc_eq(microdesc_t *a, microdesc_t *b)
 {
-  return !memcmp(a->digest, b->digest, DIGEST256_LEN);
+  return tor_memeq(a->digest, b->digest, DIGEST256_LEN);
 }
 
 HT_PROTOTYPE(microdesc_map, microdesc_t, node,
@@ -414,7 +414,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
   SMARTLIST_FOREACH_BEGIN(wrote, microdesc_t *, md) {
     tor_assert(md->saved_location == SAVED_IN_CACHE);
     md->body = (char*)cache->cache_content->data + md->off;
-    tor_assert(!memcmp(md->body, "onion-key", 9));
+    tor_assert(tor_memeq(md->body, "onion-key", 9));
   } SMARTLIST_FOREACH_END(md);
 
   smartlist_free(wrote);

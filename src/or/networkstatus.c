@@ -494,7 +494,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
         authority_cert_t *cert =
           authority_cert_get_by_digests(sig->identity_digest,
                                         sig->signing_key_digest);
-        tor_assert(!memcmp(sig->identity_digest, voter->identity_digest,
+        tor_assert(tor_memeq(sig->identity_digest, voter->identity_digest,
                            DIGEST_LEN));
 
         if (!is_v3_auth) {

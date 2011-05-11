@@ -2211,7 +2211,7 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
     }
     for (alg = DIGEST_SHA1; alg < N_DIGEST_ALGORITHMS; ++alg) {
       if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
-        if (!memcmp(target->digests.d[alg], digests->d[alg], DIGEST256_LEN)) {
+        if (tor_memeq(target->digests.d[alg], digests->d[alg], DIGEST256_LEN)) {
           ++n_matches;
         } else {
           *msg_out = "Mismatched digest.";
@@ -3615,7 +3615,7 @@ vote_routerstatus_find_microdesc_hash(char *digest256_out,
      * the first part. */
     while (1) {
       num_len = strspn(cp, "1234567890");
-      if (num_len == mlen && !memcmp(mstr, cp, mlen)) {
+      if (num_len == mlen && tor_memeq(mstr, cp, mlen)) {
         /* This is the line. */
         char buf[BASE64_DIGEST256_LEN+1];
         /* XXXX ignores extraneous stuff if the digest is too long.  This

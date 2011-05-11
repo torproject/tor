@@ -2087,7 +2087,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       /* This assert can fire for the control port, because
        * it can request NS documents before all descriptors
        * have been fetched. */
-      if (memcmp(desc->cache_info.signed_descriptor_digest,
+      if (tor_memcmp(desc->cache_info.signed_descriptor_digest,
             rs->descriptor_digest,
             DIGEST_LEN)) {
         char rl_d[HEX_DIGEST_LEN+1];
@@ -2103,7 +2103,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
             "(router %s)\n",
             rl_d, rs_d, id);
 
-        tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,
+        tor_assert(tor_memeq(desc->cache_info.signed_descriptor_digest,
               rs->descriptor_digest,
               DIGEST_LEN));
       };

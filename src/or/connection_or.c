@@ -748,7 +748,7 @@ connection_or_set_bad_connections(const char *digest, int force)
     return;
 
   DIGESTMAP_FOREACH(orconn_identity_map, identity, or_connection_t *, conn) {
-    if (!digest || !memcmp(digest, conn->identity_digest, DIGEST_LEN))
+    if (!digest || tor_memeq(digest, conn->identity_digest, DIGEST_LEN))
       connection_or_group_set_badness(conn, force);
   } DIGESTMAP_FOREACH_END;
 }

@@ -824,7 +824,7 @@ smartlist_uniq_digests(smartlist_t *sl)
 static int
 _compare_digests256(const void **_a, const void **_b)
 {
-  return memcmp((const char*)*_a, (const char*)*_b, DIGEST256_LEN);
+  return tor_memcmp((const char*)*_a, (const char*)*_b, DIGEST256_LEN);
 }
 
 /** Sort the list of DIGEST256_LEN-byte digests into ascending order. */

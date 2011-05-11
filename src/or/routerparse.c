@@ -3499,8 +3499,8 @@ networkstatus_parse_detached_signatures(const char *s, const char *eos)
     is_duplicate = 0;
     SMARTLIST_FOREACH(siglist, document_signature_t *, s, {
       if (s->alg == alg &&
-          !memcmp(id_digest, s->identity_digest, DIGEST_LEN) &&
-          !memcmp(sk_digest, s->signing_key_digest, DIGEST_LEN)) {
+          tor_memeq(id_digest, s->identity_digest, DIGEST_LEN) &&
+          tor_memeq(sk_digest, s->signing_key_digest, DIGEST_LEN)) {
         is_duplicate = 1;
       }
     });
@@ -4538,7 +4538,7 @@ tor_version_compare(tor_version_t *a, tor_version_t *b)
   else if ((i = a->git_tag_len - b->git_tag_len))
     return i;
   else if (a->git_tag_len)
-    return memcmp(a->git_tag, b->git_tag, a->git_tag_len);
+    return tor_memcmp(a->git_tag, b->git_tag, a->git_tag_len);
   else
     return 0;
 }
