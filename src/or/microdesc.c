@@ -465,7 +465,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     tor_assert(md->saved_location == SAVED_IN_CACHE);
     md->body = (char*)cache->cache_content->data + md->off;
     if (PREDICT_UNLIKELY(
-                 md->bodylen < 9 || tor_memcmp(md->body, "onion-key", 9) != 0)) {
+             md->bodylen < 9 || fast_memneq(md->body, "onion-key", 9) != 0)) {
       /* XXXX023 once bug 2022 is solved, we can kill this block and turn it
        * into just the tor_assert(!memcmp) */
       off_t avail = cache->cache_content->size - md->off;

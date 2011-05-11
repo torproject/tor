@@ -352,7 +352,7 @@ nodelist_assert_ok(void)
     SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
       const node_t *node = node_get_by_id(ri->cache_info.identity_digest);
       tor_assert(node && node->ri == ri);
-      tor_assert(tor_memeq(ri->cache_info.identity_digest,
+      tor_assert(fast_memeq(ri->cache_info.identity_digest,
                              node->identity, DIGEST_LEN));
       tor_assert(! digestmap_get(dm, node->identity));
       digestmap_set(dm, node->identity, (void*)node);
@@ -364,7 +364,7 @@ nodelist_assert_ok(void)
     SMARTLIST_FOREACH_BEGIN(ns->routerstatus_list, routerstatus_t *, rs) {
       const node_t *node = node_get_by_id(rs->identity_digest);
       tor_assert(node && node->rs == rs);
-      tor_assert(tor_memeq(rs->identity_digest, node->identity, DIGEST_LEN));
+      tor_assert(fast_memeq(rs->identity_digest, node->identity, DIGEST_LEN));
       digestmap_set(dm, node->identity, (void*)node);
       if (ns->flavor == FLAV_MICRODESC) {
         /* If it's a microdesc consensus, every entry that has a
@@ -422,7 +422,7 @@ node_get_by_hex_id(const char *hex_id)
       if (nn_char == '=') {
         const char *named_id =
           networkstatus_get_router_digest_by_nickname(nn_buf);
-        if (!named_id || tor_memcmp(named_id, digest_buf, DIGEST_LEN))
+        if (!named_id || tor_memneq(named_id, digest_buf, DIGEST_LEN))
           return NULL;
       }
     }
