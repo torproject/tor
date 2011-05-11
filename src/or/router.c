@@ -722,7 +722,7 @@ init_keys(void)
     ds->type = type;
   }
   if (v3_digest_set && (ds->type & V3_AUTHORITY) &&
-      memcmp(v3_digest, ds->v3_identity_digest, DIGEST_LEN)) {
+      tor_memneq(v3_digest, ds->v3_identity_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "V3 identity key does not match identity declared in "
              "DirServer line.  Adjusting.");
     memcpy(ds->v3_identity_digest, v3_digest, DIGEST_LEN);
@@ -1261,7 +1261,7 @@ int
 router_digest_is_me(const char *digest)
 {
   return (server_identitykey &&
-          !memcmp(server_identitykey_digest, digest, DIGEST_LEN));
+          tor_memeq(server_identitykey_digest, digest, DIGEST_LEN));
 }
 
 /** Return true iff I'm a server and <b>digest</b> is equal to
@@ -1273,7 +1273,7 @@ router_extrainfo_digest_is_me(const char *digest)
   if (!ei)
     return 0;
 
-  return !memcmp(digest,
+  return tor_memeq(digest,
                  ei->cache_info.signed_descriptor_digest,
                  DIGEST_LEN);
 }

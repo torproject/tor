@@ -2436,7 +2436,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
     SMARTLIST_FOREACH_BEGIN(v->voters, networkstatus_voter_info_t *, vi) {
       if (smartlist_len(vi->sigs) &&
-          !memcmp(vi->identity_digest, want_digest, want_len)) {
+          tor_memeq(vi->identity_digest, want_digest, want_len)) {
         have++;
         break;
       };
@@ -3609,17 +3609,17 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
-/** Helper.  Compare two fp_pair_t objects, and return -1, 0, or 1 as
- * appropriate. */
+/** Helper.  Compare two fp_pair_t objects, and return negative, 0, or
+ * positive as appropriate. */
 static int
 _compare_pairs(const void **a, const void **b)
 {
   const fp_pair_t *fp1 = *a, *fp2 = *b;
   int r;
-  if ((r = memcmp(fp1->first, fp2->first, DIGEST_LEN)))
+  if ((r = fast_memcmp(fp1->first, fp2->first, DIGEST_LEN)))
     return r;
   else
-    return memcmp(fp1->second, fp2->second, DIGEST_LEN);
+    return fast_memcmp(fp1->second, fp2->second, DIGEST_LEN);
 }
 
 /** Divide a string <b>res</b> of the form FP1-FP2+FP3-FP4...[.z], where each

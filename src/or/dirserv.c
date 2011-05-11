@@ -2198,9 +2198,9 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
 
   /* They're equal! Compare by identity digest, so there's a
    * deterministic order and we avoid flapping. */
-  return memcmp(first->cache_info.identity_digest,
-                second->cache_info.identity_digest,
-                DIGEST_LEN);
+  return fast_memcmp(first->cache_info.identity_digest,
+                     second->cache_info.identity_digest,
+                     DIGEST_LEN);
 }
 
 /** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
@@ -3158,7 +3158,7 @@ dirserv_orconn_tls_done(const char *address,
   SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
     if (!strcasecmp(address, ri->address) && or_port == ri->or_port &&
         as_advertised &&
-        !memcmp(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN)) {
+        fast_memeq(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN)) {
       /* correct digest. mark this router reachable! */
       if (!bridge_auth || ri->purpose == ROUTER_PURPOSE_BRIDGE) {
         tor_addr_t addr, *addrp=NULL;

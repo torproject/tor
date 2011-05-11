@@ -461,7 +461,7 @@ sockaddr_eq(const struct sockaddr *sa1, const struct sockaddr *sa2,
 		const struct sockaddr_in6 *sin1, *sin2;
 		sin1 = (const struct sockaddr_in6 *)sa1;
 		sin2 = (const struct sockaddr_in6 *)sa2;
-		if (memcmp(sin1->sin6_addr.s6_addr, sin2->sin6_addr.s6_addr, 16))
+		if (tor_memneq(sin1->sin6_addr.s6_addr, sin2->sin6_addr.s6_addr, 16))
 			return 0;
 		else if (include_port && sin1->sin6_port != sin2->sin6_port)
 			return 0;
