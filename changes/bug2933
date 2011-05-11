@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Fix an uncommon assertion failure when running with DNSPort under
-      heavy load.  Fixes bug 2933; bugfix on 2.0.1-alpha.
-

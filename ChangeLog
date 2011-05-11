@@ -1,3 +1,49 @@
+Changes in version 0.2.1.31 - 2011-05-??
+  o Major bugfixes (also included in 0.2.2.x):
+    - Avoid linkability based on cached hidden service descriptors: forget
+      all hidden service descriptors cached as a client when processing a
+      SIGNAL NEWNYM command. Fixes bug 3000; bugfix on 0.0.6.
+    - Make the bridge directory authority refuse to answer directory
+      requests for "all" descriptors. It used to include bridge
+      descriptors in its answer, which was a major information leak.
+      Found by "piebeer". Bugfix on 0.2.0.3-alpha.
+    - Fix an assert in parsing router descriptors containing IPv6
+      addresses. This one took down the directory authorities when
+      somebody tried some experimental code. Bugfix on 0.2.1.3-alpha.
+
+  o Minor bugfixes (also included in 0.2.2.x):
+    - When we restart our relay, we might get a successful connection
+      from the outside before we've started our reachability tests,
+      triggering a warning: "ORPort found reachable, but I have no
+      routerinfo yet. Failing to inform controller of success." This
+      bug was harmless unless Tor is running under a controller
+      like Vidalia, in which case the controller would never get a
+      REACHABILITY_SUCCEEDED status event. Bugfix on 0.1.2.6-alpha;
+      fixes bug 1172.
+    - Avoid signed/unsigned comparisons by making SIZE_T_CEILING unsigned.
+      None of the cases where we did this before were wrong, but by making
+      this change we avoid warnings. Fixes bug 2475; bugfix on 0.2.1.28.
+    - Fix a rare crash bug that could occur when a client was configured
+      with a large number of bridges. Fixes bug 2629; bugfix on
+      0.2.1.2-alpha. Bugfix by trac user "shitlei".
+    - Correct the warning displayed when a rendezvous descriptor exceeds
+      the maximum size. Fixes bug 2750; bugfix on 0.2.1.5-alpha. Found by
+      John Brooks.
+    - Fix an uncommon assertion failure when running with DNSPort under
+      heavy load. Fixes bug 2933; bugfix on 0.2.0.1-alpha.
+    - When warning about missing zlib development packages during compile,
+      give the correct package names. Bugfix on 0.2.0.1-alpha.
+
+  o Minor bugfixes (only in 0.2.1.x):
+    - Resume using micro-version numbers in 0.2.1.x: our Debian packages
+      rely on them. Bugfix on 0.2.1.30.
+    - Use git revisions instead of svn revisions when generating our
+      micro-version numbers. Bugfix on 0.2.1.15-rc; fixes bug 2402.
+
+  o Minor features:
+    - Update to the April 1 2011 Maxmind GeoLite Country database.
+
+
 Changes in version 0.2.1.30 - 2011-02-23
   Tor 0.2.1.30 fixes a variety of less critical bugs. The main other
   change is a slight tweak to Tor's TLS handshake that makes relays

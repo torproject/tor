@@ -1,6 +1,0 @@
-  o Minor bugfixes
-    - Use micro-revision numbers in 0.2.1.x instead: apparently, they
-      were more used than we had known.  (Bugfix on 0.2.1.30).
-    - Instead of generating our micro-version numbers using SVN revisions,
-      use git revisions instead.  Bugfix on 0.2.1.15-rc; fixes bug 2402.
-
