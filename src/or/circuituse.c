@@ -109,7 +109,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
         char digest[DIGEST_LEN];
         if (hexdigest_to_digest(conn->chosen_exit_name, digest) < 0)
           return 0; /* broken digest, we don't want it */
-        if (memcmp(digest, build_state->chosen_exit->identity_digest,
+        if (tor_memneq(digest, build_state->chosen_exit->identity_digest,
                           DIGEST_LEN))
           return 0; /* this is a circuit to somewhere else */
         if (tor_digest_is_zero(digest)) {

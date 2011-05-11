@@ -15,6 +15,7 @@ libor_a_SOURCES = \
   address.c					\
   compat.c					\
   container.c					\
+  di_ops.c					\
   log.c						\
   memarea.c					\
   mempool.c					\
@@ -38,6 +39,7 @@ noinst_HEADERS = 				\
   compat_libevent.h				\
   container.h					\
   crypto.h					\
+  di_ops.h					\
   ht.h						\
   memarea.h					\
   mempool.h					\

@@ -14,6 +14,7 @@
 #include "orconfig.h"
 #include "torint.h"
 #include "compat.h"
+#include "di_ops.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -181,8 +182,8 @@ int strcasecmpstart(const char *s1, const char *s2)
 int strcmpend(const char *s1, const char *s2) ATTR_PURE ATTR_NONNULL((1,2));
 int strcasecmpend(const char *s1, const char *s2)
   ATTR_PURE ATTR_NONNULL((1,2));
-int memcmpstart(const void *mem, size_t memlen,
-                const char *prefix) ATTR_PURE;
+int fast_memcmpstart(const void *mem, size_t memlen,
+                     const char *prefix) ATTR_PURE;
 
 void tor_strstrip(char *s, const char *strip) ATTR_NONNULL((1,2));
 long tor_parse_long(const char *s, int base, long min,

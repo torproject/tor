@@ -424,7 +424,7 @@ networkstatus_get_voter_by_id(networkstatus_t *vote,
   if (!vote || !vote->voters)
     return NULL;
   SMARTLIST_FOREACH(vote->voters, networkstatus_voter_info_t *, voter,
-    if (!memcmp(voter->identity_digest, identity, DIGEST_LEN))
+    if (fast_memeq(voter->identity_digest, identity, DIGEST_LEN))
       return voter);
   return NULL;
 }
@@ -445,9 +445,9 @@ networkstatus_check_document_signature(const networkstatus_t *consensus,
 
   if (crypto_pk_get_digest(cert->signing_key, key_digest)<0)
     return -1;
-  if (memcmp(sig->signing_key_digest, key_digest, DIGEST_LEN) ||
-      memcmp(sig->identity_digest, cert->cache_info.identity_digest,
-             DIGEST_LEN))
+  if (tor_memneq(sig->signing_key_digest, key_digest, DIGEST_LEN) ||
+      tor_memneq(sig->identity_digest, cert->cache_info.identity_digest,
+                 DIGEST_LEN))
     return -1;
 
   signed_digest_len = crypto_pk_keysize(cert->signing_key);
@@ -457,7 +457,7 @@ networkstatus_check_document_signature(const networkstatus_t *consensus,
                                 signed_digest_len,
                                 sig->signature,
                                 sig->signature_len) < dlen ||
-      memcmp(signed_digest, consensus->digests.d[sig->alg], dlen)) {
+      tor_memneq(signed_digest, consensus->digests.d[sig->alg], dlen)) {
     log_warn(LD_DIR, "Got a bad signature on a networkstatus vote");
     sig->bad_signature = 1;
   } else {
@@ -509,7 +509,7 @@ networkstatus_check_consensus_signature(networkstatus_t *consensus,
         authority_cert_t *cert =
           authority_cert_get_by_digests(sig->identity_digest,
                                         sig->signing_key_digest);
-        tor_assert(!memcmp(sig->identity_digest, voter->identity_digest,
+        tor_assert(tor_memeq(sig->identity_digest, voter->identity_digest,
                            DIGEST_LEN));
 
         if (!is_v3_auth) {
@@ -812,8 +812,8 @@ router_set_networkstatus_v2(const char *s, time_t arrived_at,
   for (i=0; i < smartlist_len(networkstatus_v2_list); ++i) {
     networkstatus_v2_t *old_ns = smartlist_get(networkstatus_v2_list, i);
 
-    if (!memcmp(old_ns->identity_digest, ns->identity_digest, DIGEST_LEN)) {
-      if (!memcmp(old_ns->networkstatus_digest,
+    if (tor_memeq(old_ns->identity_digest, ns->identity_digest, DIGEST_LEN)) {
+      if (tor_memeq(old_ns->networkstatus_digest,
                   ns->networkstatus_digest, DIGEST_LEN)) {
         /* Same one we had before. */
         networkstatus_v2_free(ns);
@@ -939,7 +939,7 @@ compare_digest_to_routerstatus_entry(const void *_key, const void **_member)
 {
   const char *key = _key;
   const routerstatus_t *rs = *_member;
-  return memcmp(key, rs->identity_digest, DIGEST_LEN);
+  return tor_memcmp(key, rs->identity_digest, DIGEST_LEN);
 }
 
 /** As networkstatus_v2_find_entry, but do not return a const pointer */
@@ -1404,7 +1404,7 @@ networkstatus_v2_get_by_digest(const char *digest)
 {
   SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
     {
-      if (!memcmp(ns->identity_digest, digest, DIGEST_LEN))
+      if (tor_memeq(ns->identity_digest, digest, DIGEST_LEN))
         return ns;
     });
   return NULL;
@@ -1467,10 +1467,10 @@ networkstatus_get_reasonably_live_consensus(time_t now, int flavor)
 static int
 routerstatus_has_changed(const routerstatus_t *a, const routerstatus_t *b)
 {
-  tor_assert(!memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN));
+  tor_assert(tor_memeq(a->identity_digest, b->identity_digest, DIGEST_LEN));
 
   return strcmp(a->nickname, b->nickname) ||
-         memcmp(a->descriptor_digest, b->descriptor_digest, DIGEST_LEN) ||
+         fast_memneq(a->descriptor_digest, b->descriptor_digest, DIGEST_LEN) ||
          a->addr != b->addr ||
          a->or_port != b->or_port ||
          a->dir_port != b->dir_port ||
@@ -1522,7 +1522,7 @@ notify_control_networkstatus_changed(const networkstatus_t *old_c,
   SMARTLIST_FOREACH_JOIN(
                      old_c->routerstatus_list, const routerstatus_t *, rs_old,
                      new_c->routerstatus_list, const routerstatus_t *, rs_new,
-                     memcmp(rs_old->identity_digest,
+                     tor_memcmp(rs_old->identity_digest,
                             rs_new->identity_digest, DIGEST_LEN),
                      smartlist_add(changed, (void*) rs_new)) {
     if (routerstatus_has_changed(rs_old, rs_new))
@@ -1546,13 +1546,13 @@ networkstatus_copy_old_consensus_info(networkstatus_t *new_c,
 
   SMARTLIST_FOREACH_JOIN(old_c->routerstatus_list, routerstatus_t *, rs_old,
                          new_c->routerstatus_list, routerstatus_t *, rs_new,
-                         memcmp(rs_old->identity_digest,
+                         tor_memcmp(rs_old->identity_digest,
                                 rs_new->identity_digest, DIGEST_LEN),
                          STMT_NIL) {
     /* Okay, so we're looking at the same identity. */
     rs_new->last_dir_503_at = rs_old->last_dir_503_at;
 
-    if (!memcmp(rs_old->descriptor_digest, rs_new->descriptor_digest,
+    if (tor_memeq(rs_old->descriptor_digest, rs_new->descriptor_digest,
                 DIGEST_LEN)) {
       /* And the same descriptor too! */
       memcpy(&rs_new->dl_status, &rs_old->dl_status,sizeof(download_status_t));
@@ -1668,7 +1668,7 @@ networkstatus_set_current_consensus(const char *consensus,
   }
 
   if (current_digests &&
-      !memcmp(&c->digests, current_digests, sizeof(c->digests))) {
+      tor_memeq(&c->digests, current_digests, sizeof(c->digests))) {
     /* We already have this one. That's a failure. */
     log_info(LD_DIR, "Got a %s consensus we already have", flavor);
     goto done;
@@ -2003,7 +2003,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
 
   SMARTLIST_FOREACH_JOIN(ns->routerstatus_list, routerstatus_t *, rs,
                          routers, routerinfo_t *, router,
-                         memcmp(rs->identity_digest,
+                         tor_memcmp(rs->identity_digest,
                                router->cache_info.identity_digest, DIGEST_LEN),
   {
 #if 0
@@ -2020,7 +2020,7 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
     ds = router_get_trusteddirserver_by_digest(digest);
 
     /* Is it the same descriptor, or only the same identity? */
-    if (!memcmp(router->cache_info.signed_descriptor_digest,
+    if (tor_memeq(router->cache_info.signed_descriptor_digest,
                 rs->descriptor_digest, DIGEST_LEN)) {
       if (ns->valid_until > router->cache_info.last_listed_as_valid_until)
         router->cache_info.last_listed_as_valid_until = ns->valid_until;
@@ -2049,10 +2049,10 @@ routers_update_status_from_consensus_networkstatus(smartlist_t *routers,
     time_t live_until = ns->published_on + V2_NETWORKSTATUS_ROUTER_LIFETIME;
     SMARTLIST_FOREACH_JOIN(ns->entries, const routerstatus_t *, rs,
                          routers, routerinfo_t *, ri,
-                         memcmp(rs->identity_digest,
+                         tor_memcmp(rs->identity_digest,
                                 ri->cache_info.identity_digest, DIGEST_LEN),
                          STMT_NIL) {
-      if (!memcmp(ri->cache_info.signed_descriptor_digest,
+      if (tor_memeq(ri->cache_info.signed_descriptor_digest,
                   rs->descriptor_digest, DIGEST_LEN)) {
         if (live_until > ri->cache_info.last_listed_as_valid_until)
           ri->cache_info.last_listed_as_valid_until = live_until;

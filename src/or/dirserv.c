@@ -2116,7 +2116,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
       /* This assert can fire for the control port, because
        * it can request NS documents before all descriptors
        * have been fetched. */
-      if (memcmp(desc->cache_info.signed_descriptor_digest,
+      if (tor_memneq(desc->cache_info.signed_descriptor_digest,
             rs->descriptor_digest,
             DIGEST_LEN)) {
         char rl_d[HEX_DIGEST_LEN+1];
@@ -2132,7 +2132,7 @@ routerstatus_format_entry(char *buf, size_t buf_len,
             "(router %s)\n",
             rl_d, rs_d, id);
 
-        tor_assert(!memcmp(desc->cache_info.signed_descriptor_digest,
+        tor_assert(tor_memeq(desc->cache_info.signed_descriptor_digest,
               rs->descriptor_digest,
               DIGEST_LEN));
       };
@@ -2234,9 +2234,9 @@ _compare_routerinfo_by_ip_and_bw(const void **a, const void **b)
 
   /* They're equal! Compare by identity digest, so there's a
    * deterministic order and we avoid flapping. */
-  return memcmp(first->cache_info.identity_digest,
-                second->cache_info.identity_digest,
-                DIGEST_LEN);
+  return fast_memcmp(first->cache_info.identity_digest,
+                     second->cache_info.identity_digest,
+                     DIGEST_LEN);
 }
 
 /** Given a list of routerinfo_t in <b>routers</b>, return a new digestmap_t
@@ -3185,7 +3185,7 @@ dirserv_orconn_tls_done(const char *address,
   SMARTLIST_FOREACH_BEGIN(rl->routers, routerinfo_t *, ri) {
     if (!strcasecmp(address, ri->address) && or_port == ri->or_port &&
         as_advertised &&
-        !memcmp(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN)) {
+        fast_memeq(ri->cache_info.identity_digest, digest_rcvd, DIGEST_LEN)) {
       /* correct digest. mark this router reachable! */
       if (!bridge_auth || ri->purpose == ROUTER_PURPOSE_BRIDGE) {
         tor_addr_t addr, *addrp=NULL;
