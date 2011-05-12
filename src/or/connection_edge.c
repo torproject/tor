@@ -577,7 +577,7 @@ connection_ap_fail_onehop(const char *failed_digest,
     if (!edge_conn->want_onehop)
       continue;
     if (hexdigest_to_digest(edge_conn->chosen_exit_name, digest) < 0 ||
-        memcmp(digest, failed_digest, DIGEST_LEN))
+        tor_memneq(digest, failed_digest, DIGEST_LEN))
       continue;
     if (tor_digest_is_zero(digest)) {
       /* we don't know the digest; have to compare addr:port */
@@ -3072,7 +3072,7 @@ connection_ap_can_use_exit(edge_connection_t *conn, const node_t *exit)
   if (conn->chosen_exit_name) {
     const node_t *chosen_exit =
       node_get_by_nickname(conn->chosen_exit_name, 1);
-    if (!chosen_exit || memcmp(chosen_exit->identity,
+    if (!chosen_exit || tor_memneq(chosen_exit->identity,
                                exit->identity, DIGEST_LEN)) {
       /* doesn't match */
 //      log_debug(LD_APP,"Requested node '%s', considering node '%s'. No.",

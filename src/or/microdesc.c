@@ -55,7 +55,7 @@ _microdesc_hash(microdesc_t *md)
 static INLINE int
 _microdesc_eq(microdesc_t *a, microdesc_t *b)
 {
-  return !memcmp(a->digest, b->digest, DIGEST256_LEN);
+  return tor_memeq(a->digest, b->digest, DIGEST256_LEN);
 }
 
 HT_PROTOTYPE(microdesc_map, microdesc_t, node,
@@ -466,7 +466,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
     tor_assert(md->saved_location == SAVED_IN_CACHE);
     md->body = (char*)cache->cache_content->data + md->off;
     if (PREDICT_UNLIKELY(
-                 md->bodylen < 9 || memcmp(md->body, "onion-key", 9) != 0)) {
+             md->bodylen < 9 || fast_memneq(md->body, "onion-key", 9) != 0)) {
       /* XXXX023 once bug 2022 is solved, we can kill this block and turn it
        * into just the tor_assert(!memcmp) */
       off_t avail = cache->cache_content->size - md->off;
@@ -478,7 +478,7 @@ microdesc_cache_rebuild(microdesc_cache_t *cache, int force)
               " with \"onion-key\".  Instead I got %s.",
               (int)md->off, escaped(bad_str));
       tor_free(bad_str);
-      tor_assert(!memcmp(md->body, "onion-key", 9));
+      tor_assert(fast_memeq(md->body, "onion-key", 9));
     }
   } SMARTLIST_FOREACH_END(md);
 

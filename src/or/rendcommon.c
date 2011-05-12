@@ -884,15 +884,15 @@ rend_id_is_in_interval(const char *a, const char *b, const char *c)
   tor_assert(c);
 
   /* There are five cases in which a is outside the interval ]b,c]: */
-  a_b = memcmp(a,b,DIGEST_LEN);
+  a_b = tor_memcmp(a,b,DIGEST_LEN);
   if (a_b == 0)
     return 0; /* 1. a == b (b is excluded) */
-  b_c = memcmp(b,c,DIGEST_LEN);
+  b_c = tor_memcmp(b,c,DIGEST_LEN);
   if (b_c == 0)
     return 0; /* 2. b == c (interval is empty) */
   else if (a_b <= 0 && b_c < 0)
     return 0; /* 3. a b c */
-  c_a = memcmp(c,a,DIGEST_LEN);
+  c_a = tor_memcmp(c,a,DIGEST_LEN);
   if (c_a < 0 && a_b <= 0)
     return 0; /* 4. c a b */
   else if (b_c < 0 && c_a < 0)
@@ -1066,7 +1066,7 @@ rend_cache_store(const char *desc, size_t desc_len, int published)
     rend_service_descriptor_free(parsed);
     return 0;
   }
-  if (e && e->len == desc_len && !memcmp(desc,e->desc,desc_len)) {
+  if (e && e->len == desc_len && tor_memeq(desc,e->desc,desc_len)) {
     log_info(LD_REND,"We already have this service descriptor %s.",
              safe_str_client(query));
     e->received = time(NULL);

@@ -124,7 +124,7 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 
   if (!orconn_identity_map)
     orconn_identity_map = digestmap_new();
-  if (!memcmp(conn->identity_digest, digest, DIGEST_LEN))
+  if (tor_memeq(conn->identity_digest, digest, DIGEST_LEN))
     return;
 
   /* If the identity was set previously, remove the old mapping. */
@@ -143,7 +143,7 @@ connection_or_set_identity_digest(or_connection_t *conn, const char *digest)
 #if 1
   /* Testing code to check for bugs in representation. */
   for (; tmp; tmp = tmp->next_with_same_id) {
-    tor_assert(!memcmp(tmp->identity_digest, digest, DIGEST_LEN));
+    tor_assert(tor_memeq(tmp->identity_digest, digest, DIGEST_LEN));
     tor_assert(tmp != conn);
   }
 #endif
@@ -585,7 +585,7 @@ connection_or_get_for_extend(const char *digest,
   for (; conn; conn = conn->next_with_same_id) {
     tor_assert(conn->_base.magic == OR_CONNECTION_MAGIC);
     tor_assert(conn->_base.type == CONN_TYPE_OR);
-    tor_assert(!memcmp(conn->identity_digest, digest, DIGEST_LEN));
+    tor_assert(tor_memeq(conn->identity_digest, digest, DIGEST_LEN));
     if (conn->_base.marked_for_close)
       continue;
     /* Never return a non-open connection. */
@@ -788,7 +788,7 @@ connection_or_set_bad_connections(const char *digest, int force)
     return;
 
   DIGESTMAP_FOREACH(orconn_identity_map, identity, or_connection_t *, conn) {
-    if (!digest || !memcmp(digest, conn->identity_digest, DIGEST_LEN))
+    if (!digest || tor_memeq(digest, conn->identity_digest, DIGEST_LEN))
       connection_or_group_set_badness(conn, force);
   } DIGESTMAP_FOREACH_END;
 }
@@ -1221,7 +1221,7 @@ connection_or_check_valid_tls_handshake(or_connection_t *conn,
     int as_advertised = 1;
     tor_assert(has_cert);
     tor_assert(has_identity);
-    if (memcmp(digest_rcvd_out, conn->identity_digest, DIGEST_LEN)) {
+    if (tor_memneq(digest_rcvd_out, conn->identity_digest, DIGEST_LEN)) {
       /* I was aiming for a particular digest. I didn't get it! */
       char seen[HEX_DIGEST_LEN+1];
       char expected[HEX_DIGEST_LEN+1];

@@ -461,7 +461,7 @@ sockaddr_eq(const struct sockaddr *sa1, const struct sockaddr *sa2,
 		const struct sockaddr_in6 *sin1, *sin2;
 		sin1 = (const struct sockaddr_in6 *)sa1;
 		sin2 = (const struct sockaddr_in6 *)sa2;
-		if (memcmp(sin1->sin6_addr.s6_addr, sin2->sin6_addr.s6_addr, 16))
+		if (tor_memneq(sin1->sin6_addr.s6_addr, sin2->sin6_addr.s6_addr, 16))
 			return 0;
 		else if (include_port && sin1->sin6_port != sin2->sin6_port)
 			return 0;
@@ -2253,7 +2253,7 @@ sockaddr_is_loopback(const struct sockaddr *addr)
 		return (ntohl(sin->sin_addr.s_addr) & 0xff000000) == 0x7f000000;
 	} else if (addr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
-		return !memcmp(sin6->sin6_addr.s6_addr, LOOPBACK_S6, 16);
+		return fast_memeq(sin6->sin6_addr.s6_addr, LOOPBACK_S6, 16);
 	}
 	return 0;
 }

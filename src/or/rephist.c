@@ -118,7 +118,7 @@ get_or_history(const char* id)
 {
   or_history_t *hist;
 
-  if (tor_mem_is_zero(id, DIGEST_LEN))
+  if (tor_digest_is_zero(id))
     return NULL;
 
   hist = digestmap_get(history_map, id);
@@ -146,7 +146,7 @@ get_link_history(const char *from_id, const char *to_id)
   orhist = get_or_history(from_id);
   if (!orhist)
     return NULL;
-  if (tor_mem_is_zero(to_id, DIGEST_LEN))
+  if (tor_digest_is_zero(to_id))
     return NULL;
   lhist = (link_history_t*) digestmap_get(orhist->link_history_map, to_id);
   if (!lhist) {
