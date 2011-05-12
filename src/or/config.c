@@ -4764,7 +4764,7 @@ write_configuration_file(const char *fname, or_options_t *options)
   switch (file_status(fname)) {
     case FN_FILE:
       old_val = read_file_to_str(fname, 0, NULL);
-      if (strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
+      if (!old_val || strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
         rename_old = 1;
       }
       tor_free(old_val);
