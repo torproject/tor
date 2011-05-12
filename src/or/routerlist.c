@@ -5778,11 +5778,6 @@ hid_serv_acting_as_directory(void)
              "being a hidden service directory.");
     return 0;
   }
-  if (!rs->is_hs_dir) {
-    log_info(LD_REND, "We're not listed as a hidden service directory in "
-             "the consensus, so we won't be one.");
-    return 0;
-  }
   return 1;
 }
 
