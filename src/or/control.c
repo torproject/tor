@@ -542,6 +542,14 @@ control_ports_write_to_file(void)
     log_warn(LD_CONTROL, "Writing %s failed: %s",
              options->ControlPortWriteToFile, strerror(errno));
   }
+#ifndef MS_WINDOWS
+  if (options->ControlPortFileGroupReadable) {
+    if (chmod(options->ControlPortWriteToFile, 0640)) {
+      log_warn(LD_FS,"Unable to make %s group-readable.",
+               options->ControlPortWriteToFile);
+    }
+  }
+#endif
   tor_free(joined);
   SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
   smartlist_free(lines);

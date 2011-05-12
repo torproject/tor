@@ -7,5 +7,8 @@
       type.  This is useful for if the user has selected SocksPort
       "auto", and you need to know which port got chosen.
     - There is a ControlPortWriteToFile option that tells Tor to write
-      its actual control port or ports to a chosen file.
+      its actual control port or ports to a chosen file.  If the option
+      ControlPortFileGroupReadable is set, the file is created as
+      group-readable.
+
 

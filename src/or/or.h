@@ -2876,6 +2876,8 @@ typedef struct {
 
   /** File where we should write the ControlPort. */
   char *ControlPortWriteToFile;
+  /** Should that file be group-readable? */
+  int ControlPortFileGroupReadable;
 
 } or_options_t;
 

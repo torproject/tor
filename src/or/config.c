@@ -206,6 +206,7 @@ static config_var_t _option_vars[] = {
   V(ContactInfo,                 STRING,   NULL),
   V(ControlListenAddress,        LINELIST, NULL),
   V(ControlPort,                 PORT,     "0"),
+  V(ControlPortFileGroupReadable,BOOL,     "0"),
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
   V(CookieAuthentication,        BOOL,     "0"),

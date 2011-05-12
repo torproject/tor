@@ -196,6 +196,11 @@ Other options can be specified either on the command-line (--option
     this address.  Usable by controllers to learn the actual control port
     when ControlPort is set to "auto".
 
+**ControlPortFileGroupReadable** **0**|**1**::
+    If this option is set to 0, don't allow the filesystem group to read the
+    control port file. If the option is set to 1, make the control port
+    file readable by the default GID. (Default: 0).
+
 **DataDirectory** __DIR__::
     Store working data in DIR (Default: @LOCALSTATEDIR@/lib/tor)
 
