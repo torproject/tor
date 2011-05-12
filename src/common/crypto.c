@@ -845,7 +845,7 @@ crypto_pk_public_checksig_digest(crypto_pk_env_t *env, const char *data,
     tor_free(buf);
     return -1;
   }
-  if (memcmp(buf, digest, DIGEST_LEN)) {
+  if (tor_memneq(buf, digest, DIGEST_LEN)) {
     log_warn(LD_CRYPTO, "Signature mismatched with digest.");
     tor_free(buf);
     return -1;

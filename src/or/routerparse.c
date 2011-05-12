@@ -959,7 +959,7 @@ check_signature_token(const char *digest,
   }
 //  log_debug(LD_DIR,"Signed %s hash starts %s", doctype,
 //            hex_str(signed_digest,4));
-  if (memcmp(digest, signed_digest, DIGEST_LEN)) {
+  if (tor_memneq(digest, signed_digest, DIGEST_LEN)) {
     log_warn(LD_DIR, "Error reading %s: signature does not match.", doctype);
     tor_free(signed_digest);
     return -1;
@@ -1347,7 +1347,7 @@ router_parse_entry_from_string(const char *s, const char *end,
                escaped(tok->args[0]));
       goto err;
     }
-    if (memcmp(d,router->cache_info.identity_digest, DIGEST_LEN)!=0) {
+    if (tor_memneq(d,router->cache_info.identity_digest, DIGEST_LEN)) {
       log_warn(LD_DIR, "Fingerprint '%s' does not match identity digest.",
                tok->args[0]);
       goto err;
@@ -1669,7 +1669,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
                            cert->cache_info.identity_digest))
     goto err;
 
-  if (memcmp(cert->cache_info.identity_digest, fp_declared, DIGEST_LEN)) {
+  if (tor_memneq(cert->cache_info.identity_digest, fp_declared, DIGEST_LEN)) {
     log_warn(LD_DIR, "Digest of certificate key didn't match declared "
              "fingerprint");
     goto err;
@@ -1717,7 +1717,7 @@ authority_cert_parse_from_string(const char *s, const char **end_of_string)
      * buy us much. */
     if (old_cert->cache_info.signed_descriptor_len == len &&
         old_cert->cache_info.signed_descriptor_body &&
-        !memcmp(s, old_cert->cache_info.signed_descriptor_body, len)) {
+        tor_memeq(s, old_cert->cache_info.signed_descriptor_body, len)) {
       log_debug(LD_DIR, "We already checked the signature on this "
                 "certificate; no need to do so again.");
       found = 1;
@@ -2005,7 +2005,7 @@ static int
 _compare_routerstatus_entries(const void **_a, const void **_b)
 {
   const routerstatus_t *a = *_a, *b = *_b;
-  return memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
+  return fast_memcmp(a->identity_digest, b->identity_digest, DIGEST_LEN);
 }
 
 /** Helper: used in call to _smartlist_uniq to clear out duplicate entries. */
@@ -2098,7 +2098,7 @@ networkstatus_v2_parse_from_string(const char *s)
     log_warn(LD_DIR, "Couldn't compute signing key digest");
     goto err;
   }
-  if (memcmp(tmp_digest, ns->identity_digest, DIGEST_LEN)) {
+  if (tor_memneq(tmp_digest, ns->identity_digest, DIGEST_LEN)) {
     log_warn(LD_DIR,
              "network-status fingerprint did not match dir-signing-key");
     goto err;
@@ -2394,7 +2394,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
         goto err;
       }
       if (ns->type != NS_TYPE_CONSENSUS &&
-          memcmp(ns->cert->cache_info.identity_digest,
+          tor_memneq(ns->cert->cache_info.identity_digest,
                  voter->identity_digest, DIGEST_LEN)) {
         log_warn(LD_DIR,"Mismatch between identities in certificate and vote");
         goto err;
@@ -2499,7 +2499,8 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
       rs1 = smartlist_get(ns->routerstatus_list, i-1);
       rs2 = smartlist_get(ns->routerstatus_list, i);
     }
-    if (memcmp(rs1->identity_digest, rs2->identity_digest, DIGEST_LEN) >= 0) {
+    if (fast_memcmp(rs1->identity_digest, rs2->identity_digest, DIGEST_LEN)
+        >= 0) {
       log_warn(LD_DIR, "Vote networkstatus entries not sorted by identity "
                "digest");
       goto err;
@@ -2555,7 +2556,7 @@ networkstatus_parse_vote_from_string(const char *s, const char **eos_out,
     }
 
     if (ns->type != NS_TYPE_CONSENSUS) {
-      if (memcmp(declared_identity, ns->cert->cache_info.identity_digest,
+      if (tor_memneq(declared_identity, ns->cert->cache_info.identity_digest,
                  DIGEST_LEN)) {
         log_warn(LD_DIR, "Digest mismatch between declared and actual on "
                  "network-status vote.");
@@ -3744,7 +3745,7 @@ rend_parse_v2_service_descriptor(rend_service_descriptor_t **parsed_out,
   crypto_pk_get_digest(result->pk, public_key_hash);
   rend_get_descriptor_id_bytes(test_desc_id, public_key_hash,
                                secret_id_part);
-  if (memcmp(desc_id_out, test_desc_id, DIGEST_LEN)) {
+  if (tor_memneq(desc_id_out, test_desc_id, DIGEST_LEN)) {
     log_warn(LD_REND, "Parsed descriptor ID does not match "
              "computed descriptor ID.");
     goto err;
@@ -3810,7 +3811,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
     crypto_free_digest_env(digest);
     for (pos = 2; pos < 2 + client_entries_len;
          pos += REND_BASIC_AUTH_CLIENT_ENTRY_LEN) {
-      if (!memcmp(ipos_encrypted + pos, client_id,
+      if (tor_memeq(ipos_encrypted + pos, client_id,
                   REND_BASIC_AUTH_CLIENT_ID_LEN)) {
         /* Attempt to decrypt introduction points. */
         cipher = crypto_create_init_cipher(descriptor_cookie, 0);
@@ -3834,7 +3835,7 @@ rend_decrypt_introduction_points(char **ipos_decrypted,
           tor_free(dec);
           return -1;
         }
-        if (memcmpstart(dec, declen, "introduction-point ")) {
+        if (fast_memcmpstart(dec, declen, "introduction-point ")) {
           log_warn(LD_REND, "Decrypted introduction points don't "
                             "look like we could parse them.");
           tor_free(dec);
@@ -3903,7 +3904,7 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
   parsed->intro_nodes = smartlist_create();
   area = memarea_new();
 
-  while (!memcmpstart(current_ipo, end_of_intro_points-current_ipo,
+  while (!fast_memcmpstart(current_ipo, end_of_intro_points-current_ipo,
                       "introduction-point ")) {
     /* Determine end of string. */
     const char *eos = tor_memstr(current_ipo, end_of_intro_points-current_ipo,
