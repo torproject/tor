@@ -325,7 +325,7 @@ Other options can be specified either on the command-line (--option
 
 **Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **file** __FILENAME__ +
 
-**Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **stderr**|**stdout**|**syslog** ::
+**Log** **[**__domain__,...**]**__minSeverity__[-__maxSeverity__] ... **stderr**|**stdout**|**syslog**::
     As above, but select messages by range of log severity __and__ by a
     set of "logging domains".  Each logging domain corresponds to an area of
     functionality inside Tor.  You can specify any number of severity ranges
