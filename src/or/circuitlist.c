@@ -256,7 +256,7 @@ circuit_get_all_pending_on_or_conn(smartlist_t *out, or_connection_t *or_conn)
         continue;
     } else {
       /* We expected a key. See if it's the right one. */
-      if (memcmp(or_conn->identity_digest,
+      if (tor_memneq(or_conn->identity_digest,
                  circ->n_hop->identity_digest, DIGEST_LEN))
         continue;
     }
@@ -719,7 +719,7 @@ circuit_dump_by_conn(connection_t *conn, int severity)
         tor_addr_eq(&circ->n_hop->addr, &conn->addr) &&
         circ->n_hop->port == conn->port &&
         conn->type == CONN_TYPE_OR &&
-        !memcmp(TO_OR_CONN(conn)->identity_digest,
+        tor_memeq(TO_OR_CONN(conn)->identity_digest,
                 circ->n_hop->identity_digest, DIGEST_LEN)) {
       circuit_dump_details(severity, circ, conn->conn_array_index,
                            (circ->state == CIRCUIT_STATE_OPEN &&
@@ -913,7 +913,7 @@ circuit_get_next_by_pk_and_purpose(origin_circuit_t *start,
     if (!digest)
       return TO_ORIGIN_CIRCUIT(circ);
     else if (TO_ORIGIN_CIRCUIT(circ)->rend_data &&
-             !memcmp(TO_ORIGIN_CIRCUIT(circ)->rend_data->rend_pk_digest,
+             tor_memeq(TO_ORIGIN_CIRCUIT(circ)->rend_data->rend_pk_digest,
                      digest, DIGEST_LEN))
       return TO_ORIGIN_CIRCUIT(circ);
   }
@@ -931,7 +931,7 @@ circuit_get_by_rend_token_and_purpose(uint8_t purpose, const char *token,
   for (circ = global_circuitlist; circ; circ = circ->next) {
     if (! circ->marked_for_close &&
         circ->purpose == purpose &&
-        ! memcmp(TO_OR_CIRCUIT(circ)->rend_token, token, len))
+        tor_memeq(TO_OR_CIRCUIT(circ)->rend_token, token, len))
       return TO_OR_CIRCUIT(circ);
   }
   return NULL;
@@ -1008,7 +1008,7 @@ circuit_find_to_cannibalize(uint8_t purpose, extend_info_t *info,
           routerinfo_t *ri1 = router_get_by_digest(info->identity_digest);
           do {
             routerinfo_t *ri2;
-            if (!memcmp(hop->extend_info->identity_digest,
+            if (tor_memeq(hop->extend_info->identity_digest,
                         info->identity_digest, DIGEST_LEN))
               goto next;
             if (ri1 &&

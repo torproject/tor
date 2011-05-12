@@ -837,7 +837,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         const uint8_t *a2 = tor_addr_to_in6_addr8(addr2);
         const int bytes = mbits >> 3;
         const int leftover_bits = mbits & 7;
-        if (bytes && (r = memcmp(a1, a2, bytes))) {
+        if (bytes && (r = tor_memcmp(a1, a2, bytes))) {
           return r;
         } else if (leftover_bits) {
           uint8_t b1 = a1[bytes] >> (8-leftover_bits);

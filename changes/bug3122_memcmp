@@ -1,0 +1,7 @@
+  o Security fixes
+    - Replace all potentially sensitive memory comparison operations
+      with versions whose runtime does not depend on the data being
+      compared. This will help resist a class of attacks where an
+      adversary can use variations in timing information to learn
+      sensitive data.  Fix for one case of bug 3122.  (Safe memcmp
+      implementation by Robert Ransom based partially on code by DJB.)
