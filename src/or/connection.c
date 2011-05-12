@@ -1547,10 +1547,20 @@ connection_read_https_proxy_response(connection_t *conn)
     return 1;
   }
   /* else, bad news on the status code */
-  log_warn(LD_NET,
-           "The https proxy sent back an unexpected status code %d (%s). "
-           "Closing.",
-           status_code, escaped(reason));
+  switch (status_code) {
+    case 403:
+      log_warn(LD_NET,
+             "The https proxy refused to allow connection to %s "
+             "(status code %d, %s). Closing.",
+             conn->address, status_code, escaped(reason));
+      break;
+    default:
+      log_warn(LD_NET,
+             "The https proxy sent back an unexpected status code %d (%s). "
+             "Closing.",
+             status_code, escaped(reason));
+      break;
+  }
   tor_free(reason);
   return -1;
 }
