@@ -158,8 +158,12 @@ nodelist_add_microdesc(microdesc_t *md)
   if (rs == NULL)
     return NULL;
   node = node_get_mutable_by_id(rs->identity_digest);
-  if (node)
+  if (node) {
+    if (node->md)
+      node->md->held_by_node = 0;
     node->md = md;
+    md->held_by_node = 1;
+  }
   return node;
 }
 
@@ -184,8 +188,12 @@ nodelist_set_consensus(networkstatus_t *ns)
     if (ns->flavor == FLAV_MICRODESC) {
       if (node->md == NULL ||
           0!=memcmp(node->md->digest,rs->descriptor_digest,DIGEST256_LEN)) {
+        if (node->md)
+          node->md->held_by_node = 0;
         node->md = microdesc_cache_lookup_by_digest256(NULL,
                                                        rs->descriptor_digest);
+        if (node->md)
+          node->md->held_by_node = 1;
       }
     }
 
@@ -240,8 +248,10 @@ void
 nodelist_remove_microdesc(const char *identity_digest, microdesc_t *md)
 {
   node_t *node = node_get_mutable_by_id(identity_digest);
-  if (node && node->md == md)
+  if (node && node->md == md) {
     node->md = NULL;
+    md->held_by_node = 0;
+  }
 }
 
 /** Tell the nodelist that <b>ri</b> is no longer in the routerlist. */
@@ -288,6 +298,8 @@ node_free(node_t *node)
 {
   if (!node)
     return;
+  if (node->md)
+    node->md->held_by_node = 0;
   tor_assert(node->nodelist_idx == -1);
   tor_free(node);
 }
@@ -373,6 +385,8 @@ nodelist_assert_ok(void)
         microdesc_t *md =
           microdesc_cache_lookup_by_digest256(NULL, rs->descriptor_digest);
         tor_assert(md == node->md);
+        if (md)
+          tor_assert(md->held_by_node == 1);
       }
     } SMARTLIST_FOREACH_END(rs);
   }
