@@ -1409,7 +1409,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
        * a bad sign: we should tell the user. */
       if (conn->num_circuits_launched < NUM_CIRCUITS_LAUNCHED_THRESHOLD &&
           ++conn->num_circuits_launched == NUM_CIRCUITS_LAUNCHED_THRESHOLD)
-        log_warn(LD_BUG, "The application request to %s:%d has launched "
+        log_info(LD_CIRC, "The application request to %s:%d has launched "
                  "%d circuits without finding one it likes.",
                  escaped_safe_str_client(conn->socks_request->address),
                  conn->socks_request->port,
