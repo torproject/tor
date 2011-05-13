@@ -1665,16 +1665,22 @@ file_status(const char *fname)
 }
 
 /** Check whether dirname exists and is private.  If yes return 0.  If
- * it does not exist, and check==CPD_CREATE is set, try to create it
+ * it does not exist, and check&CPD_CREATE is set, try to create it
  * and return 0 on success. If it does not exist, and
- * check==CPD_CHECK, and we think we can create it, return 0.  Else
- * return -1. */
+ * check&CPD_CHECK, and we think we can create it, return 0.  Else
+ * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
+ * is group-readable, but in all cases we create the directory mode 0700.
+ */
 int
 check_private_dir(const char *dirname, cpd_check_t check)
 {
   int r;
   struct stat st;
   char *f;
+#ifndef MS_WINDOWS
+  int mask;
+#endif
+
   tor_assert(dirname);
   f = tor_strdup(dirname);
   clean_name_for_stat(f);
@@ -1686,10 +1692,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
                strerror(errno));
       return -1;
     }
-    if (check == CPD_NONE) {
-      log_warn(LD_FS, "Directory %s does not exist.", dirname);
-      return -1;
-    } else if (check == CPD_CREATE) {
+    if (check & CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
 #if defined (MS_WINDOWS) && !defined (WINCE)
       r = mkdir(dirname);
@@ -1701,6 +1704,9 @@ check_private_dir(const char *dirname, cpd_check_t check)
             strerror(errno));
         return -1;
       }
+    } else if (!(check & CPD_CHECK)) {
+      log_warn(LD_FS, "Directory %s does not exist.", dirname);
+      return -1;
     }
     /* XXXX In the case where check==CPD_CHECK, we should look at the
      * parent directory a little harder. */
@@ -1728,9 +1734,18 @@ check_private_dir(const char *dirname, cpd_check_t check)
     tor_free(process_ownername);
     return -1;
   }
-  if (st.st_mode & 0077) {
+  if (check & CPD_GROUP_OK) {
+    mask = 0027;
+  } else {
+    mask = 0077;
+  }
+  if (st.st_mode & mask) {
+    unsigned new_mode;
     log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
-    if (chmod(dirname, 0700)) {
+    new_mode = st.st_mode;
+    new_mode |= 0700; /* Owner should have rwx */
+    new_mode &= ~mask; /* Clear the other bits that we didn't want set...*/
+    if (chmod(dirname, new_mode)) {
       log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
           strerror(errno));
       return -1;
