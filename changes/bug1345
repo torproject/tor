@@ -1,4 +1,7 @@
   o Minor bugfixes:
-    - On SIGHUP, do not clear out all TrackExitHost mappings, client DNS
+    - On SIGHUP, do not clear out all TrackHostExits mappings, client DNS
       cache entries, and virtual address mappings: that's what NEWNYM is
       for.  Bugfix on Tor 0.1.0.1-rc; fixes bug 1345.
+    - When TrackHostExits is changed from a controller, remove any
+      mappings for hosts that should no longer have their exits tracked.
+      Bugfix on Tor 0.1.0.1-rc.

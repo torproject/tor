@@ -810,7 +810,8 @@ clear_trackexithost_mappings(const char *exitname)
 }
 
 /** Remove all TRACKEXIT mappings from the addressmap for which the target
- * host is unknown or no longer allowed. */
+ * host is unknown or no longer allowed, or for which the source address
+ * is no longer in trackexithosts. */
 void
 addressmap_clear_excluded_trackexithosts(or_options_t *options)
 {
@@ -851,7 +852,8 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
     tor_free(nodename);
     if (!ri ||
         (allow_nodes && !routerset_contains_router(allow_nodes, ri)) ||
-        routerset_contains_router(exclude_nodes, ri)) {
+        routerset_contains_router(exclude_nodes, ri) ||
+        !hostname_in_track_host_exits(options, address)) {
       /* We don't know this one, or we want to be rid of it. */
       addressmap_ent_remove(address, ent);
       MAP_DEL_CURRENT(address);
