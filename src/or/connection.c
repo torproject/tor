@@ -967,6 +967,8 @@ connection_create_listener(const struct sockaddr *listensockaddr,
       goto err;
     }
     if (get_options()->ControlSocketsGroupWritable) {
+      /* We need to use chmod; fchmod doesn't work on sockets on all
+       * platforms. */
       if (chmod(address, 0660) < 0) {
         log_warn(LD_FS,"Unable to make %s group-writable.", address);
         tor_close_socket(s);
