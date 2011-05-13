@@ -43,6 +43,8 @@ typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
   CONFIG_TYPE_FILENAME,     /**< A filename: some prefixes get expanded. */
   CONFIG_TYPE_UINT,         /**< A non-negative integer less than MAX_INT */
+  CONFIG_TYPE_PORT,         /**< A port from 1...65535, 0 for "not set", or
+                             * "auto".  */
   CONFIG_TYPE_INTERVAL,     /**< A number of seconds, with optional units*/
   CONFIG_TYPE_MEMUNIT,      /**< A number of bytes, with optional units*/
   CONFIG_TYPE_DOUBLE,       /**< A floating-point value */
@@ -203,7 +205,9 @@ static config_var_t _option_vars[] = {
   V(ConstrainedSockSize,         MEMUNIT,  "8192"),
   V(ContactInfo,                 STRING,   NULL),
   V(ControlListenAddress,        LINELIST, NULL),
-  V(ControlPort,                 UINT,     "0"),
+  V(ControlPort,                 PORT,     "0"),
+  V(ControlPortFileGroupReadable,BOOL,     "0"),
+  V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
@@ -215,7 +219,7 @@ static config_var_t _option_vars[] = {
   V(DirListenAddress,            LINELIST, NULL),
   OBSOLETE("DirFetchPeriod"),
   V(DirPolicy,                   LINELIST, NULL),
-  V(DirPort,                     UINT,     "0"),
+  V(DirPort,                     PORT,     "0"),
   V(DirPortFrontPage,            FILENAME, NULL),
   OBSOLETE("DirPostPeriod"),
   OBSOLETE("DirRecordUsageByCountry"),
@@ -225,7 +229,7 @@ static config_var_t _option_vars[] = {
   V(DirReqStatistics,            BOOL,     "0"),
   VAR("DirServer",               LINELIST, DirServers, NULL),
   V(DisableAllSwap,              BOOL,     "0"),
-  V(DNSPort,                     UINT,     "0"),
+  V(DNSPort,                     PORT,     "0"),
   V(DNSListenAddress,            LINELIST, NULL),
   V(DownloadExtraInfo,           BOOL,     "0"),
   V(EnforceDistinctSubnets,      BOOL,     "1"),
@@ -304,7 +308,7 @@ static config_var_t _option_vars[] = {
   V(NewCircuitPeriod,            INTERVAL, "30 seconds"),
   VAR("NamingAuthoritativeDirectory",BOOL, NamingAuthoritativeDir, "0"),
   V(NATDListenAddress,           LINELIST, NULL),
-  V(NATDPort,                    UINT,     "0"),
+  V(NATDPort,                    PORT,     "0"),
   V(Nickname,                    STRING,   NULL),
   V(WarnUnsafeSocks,              BOOL,     "1"),
   OBSOLETE("NoPublish"),
@@ -312,7 +316,7 @@ static config_var_t _option_vars[] = {
   V(NumCPUs,                     UINT,     "1"),
   V(NumEntryGuards,              UINT,     "3"),
   V(ORListenAddress,             LINELIST, NULL),
-  V(ORPort,                      UINT,     "0"),
+  V(ORPort,                      PORT,     "0"),
   V(OutboundBindAddress,         STRING,   NULL),
   OBSOLETE("PathlenCoinWeight"),
   V(PerConnBWBurst,              MEMUNIT,  "0"),
@@ -355,7 +359,7 @@ static config_var_t _option_vars[] = {
   V(ShutdownWaitLength,          INTERVAL, "30 seconds"),
   V(SocksListenAddress,          LINELIST, NULL),
   V(SocksPolicy,                 LINELIST, NULL),
-  V(SocksPort,                   UINT,     "9050"),
+  V(SocksPort,                   PORT,     "9050"),
   V(SocksTimeout,                INTERVAL, "2 minutes"),
   OBSOLETE("StatusFetchPeriod"),
   V(StrictNodes,                 BOOL,     "0"),
@@ -366,7 +370,7 @@ static config_var_t _option_vars[] = {
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),
   V(TransListenAddress,          LINELIST, NULL),
-  V(TransPort,                   UINT,     "0"),
+  V(TransPort,                   PORT,     "0"),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
   V(UseBridges,                  BOOL,     "0"),
@@ -561,7 +565,7 @@ static int or_state_validate(or_state_t *old_options, or_state_t *options,
 static int or_state_load(void);
 static int options_init_logs(or_options_t *options, int validate_only);
 
-static int is_listening_on_low_port(uint16_t port_option,
+static int is_listening_on_low_port(int port_option,
                                     const config_line_t *listen_options);
 
 static uint64_t config_parse_memunit(const char *s, int *ok);
@@ -1689,8 +1693,16 @@ config_assign_value(config_format_t *fmt, or_options_t *options,
 
   switch (var->type) {
 
+  case CONFIG_TYPE_PORT:
+    if (!strcasecmp(c->value, "auto")) {
+      *(int *)lvalue = CFG_AUTO_PORT;
+      break;
+    }
+    /* fall through */
   case CONFIG_TYPE_UINT:
-    i = (int)tor_parse_long(c->value, 10, 0, INT_MAX, &ok, NULL);
+    i = (int)tor_parse_long(c->value, 10, 0,
+                            var->type==CONFIG_TYPE_PORT ? 65535 : INT_MAX,
+                            &ok, NULL);
     if (!ok) {
       tor_asprintf(msg,
           "Int keyword '%s %s' is malformed or out of bounds.",
@@ -1998,6 +2010,12 @@ get_assigned_option(config_format_t *fmt, void *options,
       }
       escape_val = 0; /* Can't need escape. */
       break;
+    case CONFIG_TYPE_PORT:
+      if (*(int*)value == CFG_AUTO_PORT) {
+        result->value = tor_strdup("auto");
+        escape_val = 0;
+        break;
+      }
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
       /* This means every or_options_t uint or bool element
@@ -2227,6 +2245,7 @@ option_clear(config_format_t *fmt, or_options_t *options, config_var_t *var)
       break;
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_PORT:
     case CONFIG_TYPE_BOOL:
       *(int*)lvalue = 0;
       break;
@@ -2606,7 +2625,7 @@ options_init(or_options_t *options)
  * it is, or 0 if it isn't or the concept of a low port isn't applicable for
  * the platform we're on. */
 static int
-is_listening_on_low_port(uint16_t port_option,
+is_listening_on_low_port(int port_option,
                          const config_line_t *listen_options)
 {
 #ifdef MS_WINDOWS
@@ -2851,9 +2870,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
   tor_assert(msg);
   *msg = NULL;
 
-  if (options->ORPort < 0 || options->ORPort > 65535)
-    REJECT("ORPort option out of bounds.");
-
   if (server_mode(options) &&
       (!strcmpstart(uname, "Windows 95") ||
        !strcmpstart(uname, "Windows 98") ||
@@ -2968,18 +2984,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
     REJECT("Can't use a relative path to torrc when RunAsDaemon is set.");
 #endif
 
-  if (options->SocksPort < 0 || options->SocksPort > 65535)
-    REJECT("SocksPort option out of bounds.");
-
-  if (options->DNSPort < 0 || options->DNSPort > 65535)
-    REJECT("DNSPort option out of bounds.");
-
-  if (options->TransPort < 0 || options->TransPort > 65535)
-    REJECT("TransPort option out of bounds.");
-
-  if (options->NATDPort < 0 || options->NATDPort > 65535)
-    REJECT("NATDPort option out of bounds.");
-
   if (options->SocksPort == 0 && options->TransPort == 0 &&
       options->NATDPort == 0 && options->ORPort == 0 &&
       options->DNSPort == 0 && !options->RendConfigLines)
@@ -2987,12 +2991,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
         "SocksPort, TransPort, NATDPort, DNSPort, and ORPort are all "
         "undefined, and there aren't any hidden services configured.  "
         "Tor will still run, but probably won't do anything.");
-
-  if (options->ControlPort < 0 || options->ControlPort > 65535)
-    REJECT("ControlPort option out of bounds.");
-
-  if (options->DirPort < 0 || options->DirPort > 65535)
-    REJECT("DirPort option out of bounds.");
 
 #ifndef USE_TRANSPARENT
   if (options->TransPort || options->TransListenAddress)
@@ -5238,6 +5236,7 @@ getinfo_helper_config(control_connection_t *conn,
         case CONFIG_TYPE_STRING: type = "String"; break;
         case CONFIG_TYPE_FILENAME: type = "Filename"; break;
         case CONFIG_TYPE_UINT: type = "Integer"; break;
+        case CONFIG_TYPE_PORT: type = "Port"; break;
         case CONFIG_TYPE_INTERVAL: type = "TimeInterval"; break;
         case CONFIG_TYPE_MEMUNIT: type = "DataSize"; break;
         case CONFIG_TYPE_DOUBLE: type = "Float"; break;
