@@ -1670,6 +1670,8 @@ file_status(const char *fname)
  * check&CPD_CHECK, and we think we can create it, return 0.  Else
  * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
  * is group-readable, but in all cases we create the directory mode 0700.
+ * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
+ * if they are too permissive: we just return -1.
  */
 int
 check_private_dir(const char *dirname, cpd_check_t check)
@@ -1741,6 +1743,11 @@ check_private_dir(const char *dirname, cpd_check_t check)
   }
   if (st.st_mode & mask) {
     unsigned new_mode;
+    if (check & CPD_CHECK_MODE_ONLY) {
+      log_warn(LD_FS, "Permissions on directory %s are too permissive.",
+               dirname);
+      return -1;
+    }
     log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
     new_mode = st.st_mode;
     new_mode |= 0700; /* Owner should have rwx */

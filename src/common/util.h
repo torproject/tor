@@ -291,6 +291,7 @@ typedef unsigned int cpd_check_t;
 #define CPD_CREATE 1
 #define CPD_CHECK 2
 #define CPD_GROUP_OK 4
+#define CPD_CHECK_MODE_ONLY 8
 int check_private_dir(const char *dirname, cpd_check_t check);
 #define OPEN_FLAGS_REPLACE (O_WRONLY|O_CREAT|O_TRUNC)
 #define OPEN_FLAGS_APPEND (O_WRONLY|O_CREAT|O_APPEND)
