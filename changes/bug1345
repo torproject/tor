@@ -5,3 +5,9 @@
     - When TrackHostExits is changed from a controller, remove any
       mappings for hosts that should no longer have their exits tracked.
       Bugfix on Tor 0.1.0.1-rc.
+    - When VirtualAddrNetwork option is changed from a controller,
+      remove any mappings for hosts that were automapped to
+      that network.  Bugfix on 0.1.1.19-rc.
+    - When one of the AutomapHosts* options is changed from a
+      controller, remove any mappings for hosts that should no longer be
+      automapped.  Bugfix on 0.2.0.1-alpha.

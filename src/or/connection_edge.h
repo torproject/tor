@@ -62,6 +62,7 @@ int address_is_invalid_destination(const char *address, int client);
 
 void addressmap_init(void);
 void addressmap_clear_excluded_trackexithosts(or_options_t *options);
+void addressmap_clear_invalid_automaps(or_options_t *options);
 void addressmap_clean(time_t now);
 void addressmap_clear_configured(void);
 void addressmap_clear_transient(void);
