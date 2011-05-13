@@ -2518,6 +2518,10 @@ typedef struct config_line_t {
 
 typedef struct routerset_t routerset_t;
 
+/** A magic value for the (Socks|OR|...)Port options below, telling Tor
+ * to pick its own port. */
+#define CFG_AUTO_PORT 0xc4005e
+
 /** Configuration options for a Tor process. */
 typedef struct {
   uint32_t _magic;
@@ -3056,6 +3060,11 @@ typedef struct {
   /** If 1, we try to use microdescriptors to build circuits.  If 0, we don't.
    * If -1, Tor decides. */
   int UseMicrodescriptors;
+
+  /** File where we should write the ControlPort. */
+  char *ControlPortWriteToFile;
+  /** Should that file be group-readable? */
+  int ControlPortFileGroupReadable;
 
 } or_options_t;
 

@@ -15,6 +15,8 @@
 void control_update_global_event_mask(void);
 void control_adjust_event_log_severity(void);
 
+void control_ports_write_to_file(void);
+
 /** Log information about the connection <b>conn</b>, protecting it as with
  * CONN_LOG_PROTECT. Example:
  *

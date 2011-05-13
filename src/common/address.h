@@ -44,6 +44,7 @@ socklen_t tor_addr_to_sockaddr(const tor_addr_t *a, uint16_t port,
 int tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
                            uint16_t *port_out);
 void tor_addr_make_unspec(tor_addr_t *a);
+char *tor_sockaddr_to_str(const struct sockaddr *sa);
 
 /** Return an in6_addr* equivalent to <b>a</b>, or NULL if <b>a</b> is not
  * an IPv6 address. */
