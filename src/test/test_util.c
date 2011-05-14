@@ -1209,6 +1209,59 @@ test_util_load_win_lib(void *ptr)
 }
 #endif
 
+static void
+test_util_di_ops(void)
+{
+#define LT -1
+#define GT 1
+#define EQ 0
+  const struct {
+    const char *a; int want_sign; const char *b;
+  } examples[] = {
+    { "Foo", EQ, "Foo" },
+    { "foo", GT, "bar", },
+    { "foobar", EQ ,"foobar" },
+    { "foobar", LT, "foobaw" },
+    { "foobar", GT, "f00bar" },
+    { "foobar", GT, "boobar" },
+    { "", EQ, "" },
+    { NULL, 0, NULL },
+  };
+
+  int i;
+
+  for (i = 0; examples[i].a; ++i) {
+    size_t len = strlen(examples[i].a);
+    int eq1, eq2, neq1, neq2, cmp1, cmp2;
+    test_eq(len, strlen(examples[i].b));
+    /* We do all of the operations, with operands in both orders. */
+    eq1 = tor_memeq(examples[i].a, examples[i].b, len);
+    eq2 = tor_memeq(examples[i].b, examples[i].a, len);
+    neq1 = tor_memneq(examples[i].a, examples[i].b, len);
+    neq2 = tor_memneq(examples[i].b, examples[i].a, len);
+    cmp1 = tor_memcmp(examples[i].a, examples[i].b, len);
+    cmp2 = tor_memcmp(examples[i].b, examples[i].a, len);
+
+    /* Check for correctness of cmp1 */
+    if (cmp1 < 0 && examples[i].want_sign != LT)
+      test_fail();
+    else if (cmp1 > 0 && examples[i].want_sign != GT)
+      test_fail();
+    else if (cmp1 == 0 && examples[i].want_sign != EQ)
+      test_fail();
+
+    /* Check for consistency of everything else with cmp1 */
+    test_eq(eq1, eq2);
+    test_eq(neq1, neq2);
+    test_eq(cmp1, -cmp2);
+    test_eq(eq1, cmp1 == 0);
+    test_eq(neq1, !eq1);
+  }
+
+ done:
+  ;
+}
+
 #define UTIL_LEGACY(name)                                               \
   { #name, legacy_test_helper, 0, &legacy_setup, test_util_ ## name }
 
@@ -1229,6 +1282,7 @@ struct testcase_t util_tests[] = {
   UTIL_LEGACY(threads),
   UTIL_LEGACY(sscanf),
   UTIL_LEGACY(strtok),
+  UTIL_LEGACY(di_ops),
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(asprintf, 0),
   UTIL_TEST(listdir, 0),

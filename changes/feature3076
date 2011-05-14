@@ -1,0 +1,14 @@
+  o Minor features
+    - The options SocksPort, ControlPort, and so on now all accept an
+      optional value "auto" that opens a socket on an OS-selected port.
+  o Minor features (controller)
+    - GETINFO net/listeners/(type) now returns a list of the addresses
+      and ports that are bound for listeners for a given connection
+      type.  This is useful for if the user has selected SocksPort
+      "auto", and you need to know which port got chosen.
+    - There is a ControlPortWriteToFile option that tells Tor to write
+      its actual control port or ports to a chosen file.  If the option
+      ControlPortFileGroupReadable is set, the file is created as
+      group-readable.
+
+

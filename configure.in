@@ -695,6 +695,24 @@ if test "$tor_cv_twos_complement" != no ; then
             [Define to 1 iff we represent negative integers with two's complement])
 fi
 
+# What does shifting a negative value do?
+AC_CACHE_CHECK([whether right-shift on negative values does sign-extension], tor_cv_sign_extend,
+[AC_RUN_IFELSE([AC_LANG_SOURCE(
+[[int main () { int okay = (-60 >> 8) == -1; return okay ? 0 : 1; }]])],
+       [tor_cv_sign_extend=yes],
+       [tor_cv_sign_extend=no],
+       [tor_cv_sign_extend=cross])])
+
+if test "$tor_cv_sign_extend" = cross ; then
+  # Cross-compiling; let's hope that the target isn't raving mad.
+  AC_MSG_NOTICE([Cross-compiling: we'll assume that right-shifting negative integers causes sign-extension])
+fi
+
+if test "$tor_cv_sign_extend" != no ; then
+  AC_DEFINE([RSHIFT_DOES_SIGN_EXTEND], 1,
+            [Define to 1 iff right-shifting a negative value performs sign-extension])
+fi
+
 # Whether we should use the dmalloc memory allocation debugging library.
 AC_MSG_CHECKING(whether to use dmalloc (debug memory allocation library))
 AC_ARG_WITH(dmalloc,

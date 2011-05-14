@@ -108,7 +108,7 @@ circuit_is_acceptable(circuit_t *circ, edge_connection_t *conn,
         char digest[DIGEST_LEN];
         if (hexdigest_to_digest(conn->chosen_exit_name, digest) < 0)
           return 0; /* broken digest, we don't want it */
-        if (memcmp(digest, build_state->chosen_exit->identity_digest,
+        if (tor_memneq(digest, build_state->chosen_exit->identity_digest,
                           DIGEST_LEN))
           return 0; /* this is a circuit to somewhere else */
         if (tor_digest_is_zero(digest)) {
@@ -1416,7 +1416,7 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
        * a bad sign: we should tell the user. */
       if (conn->num_circuits_launched < NUM_CIRCUITS_LAUNCHED_THRESHOLD &&
           ++conn->num_circuits_launched == NUM_CIRCUITS_LAUNCHED_THRESHOLD)
-        log_warn(LD_BUG, "The application request to %s:%d has launched "
+        log_info(LD_CIRC, "The application request to %s:%d has launched "
                  "%d circuits without finding one it likes.",
                  escaped_safe_str_client(conn->socks_request->address),
                  conn->socks_request->port,

@@ -334,7 +334,7 @@ write_escaped_data(const char *data, size_t len, char **out)
     }
     *outp++ = *data++;
   }
-  if (outp < *out+2 || memcmp(outp-2, "\r\n", 2)) {
+  if (outp < *out+2 || fast_memcmp(outp-2, "\r\n", 2)) {
     *outp++ = '\r';
     *outp++ = '\n';
   }
@@ -500,12 +500,59 @@ connection_printf_to_buf(control_connection_t *conn, const char *format, ...)
     return;
   }
   len = strlen(buf);
-  if (memcmp("\r\n\0", buf+len-2, 3)) {
+  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-1] = '\0';
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-2] = '\n';
     buf[CONNECTION_PRINTF_TO_BUF_BUFFERSIZE-3] = '\r';
   }
   connection_write_to_buf(buf, len, TO_CONN(conn));
+}
+
+/** Write all of the open control ports to ControlPortWriteToFile */
+void
+control_ports_write_to_file(void)
+{
+  smartlist_t *lines;
+  char *joined = NULL;
+  or_options_t *options = get_options();
+
+  if (!options->ControlPortWriteToFile)
+    return;
+
+  lines = smartlist_create();
+
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), const connection_t *, conn) {
+    char *port_str = NULL;
+    if (conn->type != CONN_TYPE_CONTROL_LISTENER || conn->marked_for_close)
+      continue;
+#ifdef AF_UNIX
+    if (conn->socket_family == AF_UNIX) {
+      tor_asprintf(&port_str, "UNIX_PORT=%s\n", conn->address);
+      smartlist_add(lines, port_str);
+      continue;
+    }
+#endif
+    tor_asprintf(&port_str, "PORT=%s:%d\n", conn->address, conn->port);
+    smartlist_add(lines, port_str);
+  } SMARTLIST_FOREACH_END(conn);
+
+  joined = smartlist_join_strings(lines, "", 0, NULL);
+
+  if (write_str_to_file(options->ControlPortWriteToFile, joined, 0) < 0) {
+    log_warn(LD_CONTROL, "Writing %s failed: %s",
+             options->ControlPortWriteToFile, strerror(errno));
+  }
+#ifndef MS_WINDOWS
+  if (options->ControlPortFileGroupReadable) {
+    if (chmod(options->ControlPortWriteToFile, 0640)) {
+      log_warn(LD_FS,"Unable to make %s group-readable.",
+               options->ControlPortWriteToFile);
+    }
+  }
+#endif
+  tor_free(joined);
+  SMARTLIST_FOREACH(lines, char *, cp, tor_free(cp));
+  smartlist_free(lines);
 }
 
 /** Send a "DONE" message down the control connection <b>conn</b>. */
@@ -581,7 +628,7 @@ send_control_event_impl(uint16_t event, event_format_t which,
   }
 
   len = strlen(buf);
-  if (memcmp("\r\n\0", buf+len-2, 3)) {
+  if (fast_memcmp("\r\n\0", buf+len-2, 3)) {
     /* if it is not properly terminated, do it now */
     buf[SEND_CONTROL1_EVENT_BUFFERSIZE-1] = '\0';
     buf[SEND_CONTROL1_EVENT_BUFFERSIZE-2] = '\n';
@@ -1069,7 +1116,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
         goto err;
       }
       bad_cookie = 1;
-    } else if (memcmp(authentication_cookie, password, password_len)) {
+    } else if (tor_memneq(authentication_cookie, password, password_len)) {
       if (!also_password) {
         log_warn(LD_CONTROL, "Got mismatched authentication cookie");
         errstr = "Authentication cookie did not match expected value.";
@@ -1119,7 +1166,7 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
       SMARTLIST_FOREACH(sl, char *, expected,
       {
         secret_to_key(received,DIGEST_LEN,password,password_len,expected);
-        if (!memcmp(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
+        if (tor_memeq(expected+S2K_SPECIFIER_LEN, received, DIGEST_LEN))
           goto ok;
       });
       SMARTLIST_FOREACH(sl, char *, cp, tor_free(cp));
@@ -1405,6 +1452,63 @@ munge_extrainfo_into_routerinfo(const char *ri_body, signed_descriptor_t *ri,
  bail:
   tor_free(out);
   return tor_strndup(ri_body, ri->signed_descriptor_len);
+}
+
+/** Implementation helper for GETINFO: answers requests for information about
+ * which ports are bound. */
+static int
+getinfo_helper_listeners(control_connection_t *control_conn,
+                         const char *question,
+                         char **answer, const char **errmsg)
+{
+  int type;
+  smartlist_t *res;
+
+  (void)control_conn;
+  (void)errmsg;
+
+  if (!strcmp(question, "net/listeners/or"))
+    type = CONN_TYPE_OR_LISTENER;
+  else if (!strcmp(question, "net/listeners/dir"))
+    type = CONN_TYPE_DIR_LISTENER;
+  else if (!strcmp(question, "net/listeners/socks"))
+    type = CONN_TYPE_AP_LISTENER;
+  else if (!strcmp(question, "net/listeners/trans"))
+    type = CONN_TYPE_AP_TRANS_LISTENER;
+  else if (!strcmp(question, "net/listeners/natd"))
+    type = CONN_TYPE_AP_NATD_LISTENER;
+  else if (!strcmp(question, "net/listeners/dns"))
+    type = CONN_TYPE_AP_DNS_LISTENER;
+  else if (!strcmp(question, "net/listeners/control"))
+    type = CONN_TYPE_CONTROL_LISTENER;
+  else
+    return 0; /* unknown key */
+
+  res = smartlist_create();
+  SMARTLIST_FOREACH_BEGIN(get_connection_array(), connection_t *, conn) {
+    char *addr;
+    struct sockaddr_storage ss;
+    socklen_t ss_len = sizeof(ss);
+
+    if (conn->type != type || conn->marked_for_close || conn->s < 0)
+      continue;
+
+    if (getsockname(conn->s, (struct sockaddr *)&ss, &ss_len) < 0) {
+      tor_asprintf(&addr, "%s:%d", conn->address, (int)conn->port);
+    } else {
+      char *tmp = tor_sockaddr_to_str((struct sockaddr *)&ss);
+      addr = esc_for_log(tmp);
+      tor_free(tmp);
+    }
+    if (addr)
+      smartlist_add(res, addr);
+  } SMARTLIST_FOREACH_END(conn);
+
+  *answer = smartlist_join_strings(res, " ", 0, NULL);
+
+  SMARTLIST_FOREACH(res, char *, cp, tor_free(cp));
+  smartlist_free(res);
+  return 0;
 }
 
 /** Implementation helper for GETINFO: knows the answers for questions about
@@ -1861,6 +1965,7 @@ static const getinfo_item_t getinfo_items[] = {
        "All non-expired, non-superseded router descriptors."),
   ITEM("desc/all-recent-extrainfo-hack", dir, NULL), /* Hack. */
   PREFIX("extra-info/digest/", dir, "Extra-info documents by digest."),
+  PREFIX("net/listeners/", listeners, "Bound addresses by type"),
   ITEM("ns/all", networkstatus,
        "Brief summary of router status (v2 directory format)"),
   PREFIX("ns/id/", networkstatus,
@@ -2834,13 +2939,13 @@ connection_control_process_inbuf(control_connection_t *conn)
       break;
     /* XXXX this code duplication is kind of dumb. */
     if (last_idx+3 == conn->incoming_cmd_cur_len &&
-        !memcmp(conn->incoming_cmd + last_idx, ".\r\n", 3)) {
+        tor_memeq(conn->incoming_cmd + last_idx, ".\r\n", 3)) {
       /* Just appended ".\r\n"; we're done. Remove it. */
       conn->incoming_cmd[last_idx] = '\0';
       conn->incoming_cmd_cur_len -= 3;
       break;
     } else if (last_idx+2 == conn->incoming_cmd_cur_len &&
-               !memcmp(conn->incoming_cmd + last_idx, ".\n", 2)) {
+               tor_memeq(conn->incoming_cmd + last_idx, ".\n", 2)) {
       /* Just appended ".\n"; we're done. Remove it. */
       conn->incoming_cmd[last_idx] = '\0';
       conn->incoming_cmd_cur_len -= 2;

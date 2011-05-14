@@ -43,6 +43,9 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h> /* FreeBSD needs this to know what version it is */
 #endif
+#ifdef HAVE_SYS_UN_H
+#include <sys/un.h>
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -118,6 +121,33 @@ tor_addr_from_sockaddr(tor_addr_t *a, const struct sockaddr *sa,
     return -1;
   }
   return 0;
+}
+
+/** Return a newly allocated string holding the address described in
+ * <b>sa</b>.  AF_UNIX, AF_UNSPEC, AF_INET, and AF_INET6 are supported. */
+char *
+tor_sockaddr_to_str(const struct sockaddr *sa)
+{
+  char address[TOR_ADDR_BUF_LEN];
+  char *result;
+  tor_addr_t addr;
+  uint16_t port;
+#ifdef HAVE_SYS_UN_H
+  if (sa->sa_family == AF_UNIX) {
+    struct sockaddr_un *s_un = (struct sockaddr_un *)sa;
+    tor_asprintf(&result, "unix:%s", s_un->sun_path);
+    return result;
+  }
+#endif
+  if (sa->sa_family == AF_UNSPEC)
+    return tor_strdup("unspec");
+
+  if (tor_addr_from_sockaddr(&addr, sa, &port) < 0)
+    return NULL;
+  if (! tor_addr_to_str(address, &addr, sizeof(address), 1))
+    return NULL;
+  tor_asprintf(&result, "%s:%d", address, (int)port);
+  return result;
 }
 
 /** Set address <b>a</b> to the unspecified address.  This address belongs to
@@ -837,7 +867,7 @@ tor_addr_compare_masked(const tor_addr_t *addr1, const tor_addr_t *addr2,
         const uint8_t *a2 = tor_addr_to_in6_addr8(addr2);
         const int bytes = mbits >> 3;
         const int leftover_bits = mbits & 7;
-        if (bytes && (r = memcmp(a1, a2, bytes))) {
+        if (bytes && (r = tor_memcmp(a1, a2, bytes))) {
           return r;
         } else if (leftover_bits) {
           uint8_t b1 = a1[bytes] >> (8-leftover_bits);

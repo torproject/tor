@@ -64,7 +64,7 @@ static int purpose_needs_anonymity(uint8_t dir_purpose,
                                    uint8_t router_purpose);
 static char *http_get_header(const char *headers, const char *which);
 static void http_set_address_origin(const char *headers, connection_t *conn);
-static void connection_dir_download_networkstatus_failed(
+static void connection_dir_download_v2_networkstatus_failed(
                                dir_connection_t *conn, int status_code);
 static void connection_dir_download_routerdesc_failed(dir_connection_t *conn);
 static void connection_dir_bridge_routerdesc_failed(dir_connection_t *conn);
@@ -617,7 +617,7 @@ connection_dir_request_failed(dir_connection_t *conn)
   if (conn->_base.purpose == DIR_PURPOSE_FETCH_V2_NETWORKSTATUS) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
              conn->_base.address);
-    connection_dir_download_networkstatus_failed(conn, -1);
+    connection_dir_download_v2_networkstatus_failed(conn, -1);
   } else if (conn->_base.purpose == DIR_PURPOSE_FETCH_SERVERDESC ||
              conn->_base.purpose == DIR_PURPOSE_FETCH_EXTRAINFO) {
     log_info(LD_DIR, "Giving up on directory server at '%s'; retrying",
@@ -645,7 +645,7 @@ connection_dir_request_failed(dir_connection_t *conn)
  * retry the fetch now, later, or never.
  */
 static void
-connection_dir_download_networkstatus_failed(dir_connection_t *conn,
+connection_dir_download_v2_networkstatus_failed(dir_connection_t *conn,
                                              int status_code)
 {
   if (!conn->requested_resource) {
@@ -1648,13 +1648,19 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
     log_info(LD_DIR,"Received networkstatus objects (size %d) from server "
              "'%s:%d'", (int)body_len, conn->_base.address, conn->_base.port);
     if (status_code != 200) {
-      log_warn(LD_DIR,
-           "Received http status code %d (%s) from server "
-           "'%s:%d' while fetching \"/tor/status/%s\". I'll try again soon.",
-           status_code, escaped(reason), conn->_base.address,
-           conn->_base.port, conn->requested_resource);
+      static ratelim_t warning_limit = RATELIM_INIT(3600);
+      char *m;
+      if ((m = rate_limit_log(&warning_limit, now))) {
+        log_warn(LD_DIR,
+                 "Received http status code %d (%s) from server "
+                 "'%s:%d' while fetching \"/tor/status/%s\". "
+                 "I'll try again soon.%s",
+                 status_code, escaped(reason), conn->_base.address,
+                 conn->_base.port, conn->requested_resource, m);
+        tor_free(m);
+      }
       tor_free(body); tor_free(headers); tor_free(reason);
-      connection_dir_download_networkstatus_failed(conn, status_code);
+      connection_dir_download_v2_networkstatus_failed(conn, status_code);
       return -1;
     }
     if (conn->requested_resource &&
@@ -2436,7 +2442,7 @@ client_likes_consensus(networkstatus_t *v, const char *want_url)
 
     SMARTLIST_FOREACH_BEGIN(v->voters, networkstatus_voter_info_t *, vi) {
       if (smartlist_len(vi->sigs) &&
-          !memcmp(vi->identity_digest, want_digest, want_len)) {
+          tor_memeq(vi->identity_digest, want_digest, want_len)) {
         have++;
         break;
       };
@@ -3609,17 +3615,17 @@ dir_routerdesc_download_failed(smartlist_t *failed, int status_code,
    * every 10 or 60 seconds (FOO_DESCRIPTOR_RETRY_INTERVAL) in main.c. */
 }
 
-/** Helper.  Compare two fp_pair_t objects, and return -1, 0, or 1 as
- * appropriate. */
+/** Helper.  Compare two fp_pair_t objects, and return negative, 0, or
+ * positive as appropriate. */
 static int
 _compare_pairs(const void **a, const void **b)
 {
   const fp_pair_t *fp1 = *a, *fp2 = *b;
   int r;
-  if ((r = memcmp(fp1->first, fp2->first, DIGEST_LEN)))
+  if ((r = fast_memcmp(fp1->first, fp2->first, DIGEST_LEN)))
     return r;
   else
-    return memcmp(fp1->second, fp2->second, DIGEST_LEN);
+    return fast_memcmp(fp1->second, fp2->second, DIGEST_LEN);
 }
 
 /** Divide a string <b>res</b> of the form FP1-FP2+FP3-FP4...[.z], where each
