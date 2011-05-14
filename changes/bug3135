@@ -1,0 +1,6 @@
+  o Minor bugfixes
+    - Do not crash when our configuration file becomes unreadable
+      (usually due to a permissions change) between when we start
+      up and when a controller calls SAVECONF.  Fixes bug 3135;
+      bugfix on 0.0.9pre6.
+

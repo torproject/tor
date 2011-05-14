@@ -146,7 +146,7 @@ already_have_cert(authority_cert_t *cert)
 
   SMARTLIST_FOREACH(cl->certs, authority_cert_t *, c,
   {
-    if (!memcmp(c->cache_info.signed_descriptor_digest,
+    if (tor_memeq(c->cache_info.signed_descriptor_digest,
                 cert->cache_info.signed_descriptor_digest,
                 DIGEST_LEN))
       return 1;
@@ -353,16 +353,16 @@ authority_cert_get_by_sk_digest(const char *sk_digest)
     return NULL;
 
   if ((c = get_my_v3_authority_cert()) &&
-      !memcmp(c->signing_key_digest, sk_digest, DIGEST_LEN))
+      tor_memeq(c->signing_key_digest, sk_digest, DIGEST_LEN))
     return c;
   if ((c = get_my_v3_legacy_cert()) &&
-      !memcmp(c->signing_key_digest, sk_digest, DIGEST_LEN))
+      tor_memeq(c->signing_key_digest, sk_digest, DIGEST_LEN))
     return c;
 
   DIGESTMAP_FOREACH(trusted_dir_certs, key, cert_list_t *, cl) {
     SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
     {
-      if (!memcmp(cert->signing_key_digest, sk_digest, DIGEST_LEN))
+      if (tor_memeq(cert->signing_key_digest, sk_digest, DIGEST_LEN))
         return cert;
     });
   } DIGESTMAP_FOREACH_END;
@@ -381,7 +381,7 @@ authority_cert_get_by_digests(const char *id_digest,
       !(cl = digestmap_get(trusted_dir_certs, id_digest)))
     return NULL;
   SMARTLIST_FOREACH(cl->certs, authority_cert_t *, cert,
-    if (!memcmp(cert->signing_key_digest, sk_digest, DIGEST_LEN))
+    if (tor_memeq(cert->signing_key_digest, sk_digest, DIGEST_LEN))
       return cert; );
 
   return NULL;
@@ -961,7 +961,7 @@ router_get_trusteddirserver_by_digest(const char *digest)
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
-       if (!memcmp(ds->digest, digest, DIGEST_LEN))
+       if (tor_memeq(ds->digest, digest, DIGEST_LEN))
          return ds;
      });
 
@@ -979,7 +979,7 @@ trusteddirserver_get_by_v3_auth_digest(const char *digest)
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ds,
      {
-       if (!memcmp(ds->v3_identity_digest, digest, DIGEST_LEN) &&
+       if (tor_memeq(ds->v3_identity_digest, digest, DIGEST_LEN) &&
            (ds->type & V3_AUTHORITY))
          return ds;
      });
@@ -1943,7 +1943,7 @@ hex_digest_matches(const char *hexdigest, const char *identity_digest,
 
   if (base16_decode(digest, DIGEST_LEN, hexdigest, HEX_DIGEST_LEN)<0)
     return 0;
-  return (!memcmp(digest, identity_digest, DIGEST_LEN));
+  return (tor_memeq(digest, identity_digest, DIGEST_LEN));
 }
 
 /** Return true iff the digest of <b>router</b>'s identity key,
@@ -2008,7 +2008,7 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       if (n_matches <= 1 || router->is_running)
         best_match = router;
     } else if (maybedigest &&
-               !memcmp(digest, router->cache_info.identity_digest, DIGEST_LEN)
+               tor_memeq(digest, router->cache_info.identity_digest, DIGEST_LEN)
                ) {
       if (router_hex_digest_matches(router, nickname))
         return router;
@@ -2098,7 +2098,7 @@ router_digest_is_trusted_dir_type(const char *digest, authority_type_t type)
   if (authdir_mode(get_options()) && router_digest_is_me(digest))
     return 1;
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, ent,
-    if (!memcmp(digest, ent->digest, DIGEST_LEN)) {
+    if (tor_memeq(digest, ent->digest, DIGEST_LEN)) {
       return (!type) || ((type & ent->type) != 0);
     });
   return 0;
@@ -2263,7 +2263,7 @@ signed_descriptor_get_body_impl(signed_descriptor_t *desc,
 
   tor_assert(r);
   if (!with_annotations) {
-    if (memcmp("router ", r, 7) && memcmp("extra-info ", r, 11)) {
+    if (fast_memcmp("router ", r, 7) && fast_memcmp("extra-info ", r, 11)) {
       char *cp = tor_strndup(r, 64);
       log_err(LD_DIR, "descriptor at %p begins with unexpected string %s.  "
               "Is another process running in our data directory?  Exiting.",
@@ -2458,14 +2458,14 @@ dump_routerlist_mem_usage(int severity)
         SMARTLIST_FOREACH(networkstatus_v2_list, networkstatus_v2_t *, ns,
           {
             rs = networkstatus_v2_find_entry(ns, sd->identity_digest);
-            if (rs && !memcmp(rs->descriptor_digest,
+            if (rs && tor_memeq(rs->descriptor_digest,
                               sd->signed_descriptor_digest, DIGEST_LEN)) {
               in_v2 = 1; break;
             }
           });
         if (consensus) {
           rs = networkstatus_vote_find_entry(consensus, sd->identity_digest);
-          if (rs && !memcmp(rs->descriptor_digest,
+          if (rs && tor_memeq(rs->descriptor_digest,
                             sd->signed_descriptor_digest, DIGEST_LEN))
             in_v3 = 1;
         }
@@ -2765,7 +2765,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     routerlist_insert(rl, ri_new);
     return;
   }
-  if (memcmp(ri_old->cache_info.identity_digest,
+  if (tor_memneq(ri_old->cache_info.identity_digest,
              ri_new->cache_info.identity_digest, DIGEST_LEN)) {
     /* digests don't match; digestmap_set won't replace */
     rimap_remove(rl->identity_map, ri_old->cache_info.identity_digest);
@@ -2791,7 +2791,7 @@ routerlist_replace(routerlist_t *rl, routerinfo_t *ri_old,
     if (!tor_digest_is_zero(sd->extra_info_digest))
       sdmap_set(rl->desc_by_eid_map, sd->extra_info_digest, sd);
   } else {
-    if (memcmp(ri_old->cache_info.signed_descriptor_digest,
+    if (tor_memneq(ri_old->cache_info.signed_descriptor_digest,
                ri_new->cache_info.signed_descriptor_digest,
                DIGEST_LEN)) {
       /* digests don't match; digestmap_set didn't replace */
@@ -2895,7 +2895,7 @@ router_set_status(const char *digest, int up)
   tor_assert(digest);
 
   SMARTLIST_FOREACH(trusted_dir_servers, trusted_dir_server_t *, d,
-                    if (!memcmp(d->digest, digest, DIGEST_LEN))
+                    if (tor_memeq(d->digest, digest, DIGEST_LEN))
                       d->is_running = up);
 
   router = router_get_by_digest(digest);
@@ -3000,7 +3000,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   {
     routerstatus_t *rs =
       networkstatus_v2_find_entry(ns, router->cache_info.identity_digest);
-    if (rs && !memcmp(rs->descriptor_digest,
+    if (rs && tor_memeq(rs->descriptor_digest,
                       router->cache_info.signed_descriptor_digest,
                       DIGEST_LEN))
       rs->need_to_mirror = 0;
@@ -3008,7 +3008,7 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   if (consensus) {
     routerstatus_t *rs = networkstatus_vote_find_entry(consensus,
                                         router->cache_info.identity_digest);
-    if (rs && !memcmp(rs->descriptor_digest,
+    if (rs && tor_memeq(rs->descriptor_digest,
                       router->cache_info.signed_descriptor_digest,
                       DIGEST_LEN)) {
       in_consensus = 1;
@@ -3118,7 +3118,7 @@ _compare_old_routers_by_identity(const void **_a, const void **_b)
 {
   int i;
   const signed_descriptor_t *r1 = *_a, *r2 = *_b;
-  if ((i = memcmp(r1->identity_digest, r2->identity_digest, DIGEST_LEN)))
+  if ((i = fast_memcmp(r1->identity_digest, r2->identity_digest, DIGEST_LEN)))
     return i;
   return (int)(r1->published_on - r2->published_on);
 }
@@ -3166,7 +3166,7 @@ routerlist_remove_old_cached_routers_with_id(time_t now,
   ident = ((signed_descriptor_t*)smartlist_get(lst, lo))->identity_digest;
   for (i = lo+1; i <= hi; ++i) {
     signed_descriptor_t *r = smartlist_get(lst, i);
-    tor_assert(!memcmp(ident, r->identity_digest, DIGEST_LEN));
+    tor_assert(tor_memeq(ident, r->identity_digest, DIGEST_LEN));
   }
 #endif
   /* Check whether we need to do anything at all. */
@@ -3378,7 +3378,7 @@ routerlist_remove_old_routers(void)
       cur_id = r->identity_digest;
       hi = i;
     }
-    if (memcmp(cur_id, r->identity_digest, DIGEST_LEN)) {
+    if (tor_memneq(cur_id, r->identity_digest, DIGEST_LEN)) {
       routerlist_remove_old_cached_routers_with_id(now,
                                                    cutoff, i+1, hi, retain);
       cur_id = r->identity_digest;
@@ -3612,7 +3612,7 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
 
   if (consensus) {
     rs = networkstatus_vote_find_entry(consensus, desc->identity_digest);
-    if (rs && !memcmp(rs->descriptor_digest,
+    if (rs && tor_memeq(rs->descriptor_digest,
                       desc->signed_descriptor_digest, DIGEST_LEN))
       return 1;
   }
@@ -3621,7 +3621,7 @@ signed_desc_digest_is_recognized(signed_descriptor_t *desc)
     {
       if (!(rs = networkstatus_v2_find_entry(ns, desc->identity_digest)))
         continue;
-      if (!memcmp(rs->descriptor_digest,
+      if (tor_memeq(rs->descriptor_digest,
                   desc->signed_descriptor_digest, DIGEST_LEN))
         return 1;
     });
@@ -4192,7 +4192,7 @@ update_consensus_router_descriptor_downloads(time_t now)
         routerinfo_t *ri;
         ++n_have;
         if (!(ri = router_get_by_digest(rs->identity_digest)) ||
-            memcmp(ri->cache_info.signed_descriptor_digest,
+            tor_memneq(ri->cache_info.signed_descriptor_digest,
                    sd->signed_descriptor_digest, DIGEST_LEN)) {
           /* We have a descriptor with this digest, but either there is no
            * entry in routerlist with the same ID (!ri), or there is one,
@@ -4660,12 +4660,12 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
     return 1;
   }
 
-  digest_matches = !memcmp(ei->cache_info.signed_descriptor_digest,
+  digest_matches = tor_memeq(ei->cache_info.signed_descriptor_digest,
                            sd->extra_info_digest, DIGEST_LEN);
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
-  if (memcmp(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
+  if (tor_memneq(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
              DIGEST_LEN)) {
     if (msg) *msg = "Extrainfo nickname or identity did not match routerinfo";
     goto err; /* different servers */
@@ -4676,7 +4676,7 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
     if (crypto_pk_public_checksig(ri->identity_pkey,
                        signed_digest, sizeof(signed_digest),
                        ei->pending_sig, ei->pending_sig_len) != DIGEST_LEN ||
-        memcmp(signed_digest, ei->cache_info.signed_descriptor_digest,
+        tor_memneq(signed_digest, ei->cache_info.signed_descriptor_digest,
                DIGEST_LEN)) {
       ei->bad_sig = 1;
       tor_free(ei->pending_sig);
@@ -4772,25 +4772,25 @@ routerlist_assert_ok(routerlist_t *rl)
   });
 
   RIMAP_FOREACH(rl->identity_map, d, r) {
-    tor_assert(!memcmp(r->cache_info.identity_digest, d, DIGEST_LEN));
+    tor_assert(tor_memeq(r->cache_info.identity_digest, d, DIGEST_LEN));
   } DIGESTMAP_FOREACH_END;
   SDMAP_FOREACH(rl->desc_digest_map, d, sd) {
-    tor_assert(!memcmp(sd->signed_descriptor_digest, d, DIGEST_LEN));
+    tor_assert(tor_memeq(sd->signed_descriptor_digest, d, DIGEST_LEN));
   } DIGESTMAP_FOREACH_END;
   SDMAP_FOREACH(rl->desc_by_eid_map, d, sd) {
     tor_assert(!tor_digest_is_zero(d));
     tor_assert(sd);
-    tor_assert(!memcmp(sd->extra_info_digest, d, DIGEST_LEN));
+    tor_assert(tor_memeq(sd->extra_info_digest, d, DIGEST_LEN));
   } DIGESTMAP_FOREACH_END;
   EIMAP_FOREACH(rl->extra_info_map, d, ei) {
     signed_descriptor_t *sd;
-    tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
+    tor_assert(tor_memeq(ei->cache_info.signed_descriptor_digest,
                        d, DIGEST_LEN));
     sd = sdmap_get(rl->desc_by_eid_map,
                    ei->cache_info.signed_descriptor_digest);
     // tor_assert(sd); // XXXX see above
     if (sd) {
-      tor_assert(!memcmp(ei->cache_info.signed_descriptor_digest,
+      tor_assert(tor_memeq(ei->cache_info.signed_descriptor_digest,
                          sd->extra_info_digest, DIGEST_LEN));
     }
   } DIGESTMAP_FOREACH_END;
@@ -4836,7 +4836,7 @@ static int
 _compare_routerinfo_by_id_digest(const void **a, const void **b)
 {
   routerinfo_t *first = *(routerinfo_t **)a, *second = *(routerinfo_t **)b;
-  return memcmp(first->cache_info.identity_digest,
+  return fast_memcmp(first->cache_info.identity_digest,
                 second->cache_info.identity_digest,
                 DIGEST_LEN);
 }
@@ -5275,15 +5275,15 @@ routerset_equal(const routerset_t *old, const routerset_t *new)
   if (sizeof(old->names) != sizeof(new->names))
     return 0;
 
-  if (memcmp(old->names,new->names,sizeof(new->names)))
+  if (tor_memcmp(old->names,new->names,sizeof(new->names)))
     return 0;
   if (sizeof(old->digests) != sizeof(new->digests))
     return 0;
-  if (memcmp(old->digests,new->digests,sizeof(new->digests)))
+  if (tor_memcmp(old->digests,new->digests,sizeof(new->digests)))
     return 0;
   if (sizeof(old->countries) != sizeof(new->countries))
     return 0;
-  if (memcmp(old->countries,new->countries,sizeof(new->countries)))
+  if (tor_memcmp(old->countries,new->countries,sizeof(new->countries)))
     return 0;
   return 1;
 #endif

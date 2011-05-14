@@ -506,7 +506,7 @@ rend_config_services(or_options_t *options, int validate_only)
         int keep_it = 0;
         tor_assert(oc->rend_data);
         SMARTLIST_FOREACH(surviving_services, rend_service_t *, ptr, {
-          if (!memcmp(ptr->pk_digest, oc->rend_data->rend_pk_digest,
+          if (tor_memeq(ptr->pk_digest, oc->rend_data->rend_pk_digest,
                       DIGEST_LEN) &&
               ptr->descriptor_version == oc->rend_data->rend_desc_version) {
             keep_it = 1;
@@ -806,7 +806,7 @@ rend_service_get_by_pk_digest_and_version(const char* digest,
                                           uint8_t version)
 {
   SMARTLIST_FOREACH(rend_service_list, rend_service_t*, s,
-                    if (!memcmp(s->pk_digest,digest,DIGEST_LEN) &&
+                    if (tor_memeq(s->pk_digest,digest,DIGEST_LEN) &&
                         s->descriptor_version == version) return s);
   return NULL;
 }
@@ -846,7 +846,7 @@ rend_check_authorization(rend_service_t *service,
 
   /* Look up client authorization by descriptor cookie. */
   SMARTLIST_FOREACH(service->clients, rend_authorized_client_t *, client, {
-    if (!memcmp(client->descriptor_cookie, descriptor_cookie,
+    if (tor_memeq(client->descriptor_cookie, descriptor_cookie,
                 REND_DESC_COOKIE_LEN)) {
       auth_client = client;
       break;
@@ -962,7 +962,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
 
   /* first DIGEST_LEN bytes of request is intro or service pk digest */
   crypto_pk_get_digest(intro_key, intro_key_digest);
-  if (memcmp(intro_key_digest, request, DIGEST_LEN)) {
+  if (tor_memneq(intro_key_digest, request, DIGEST_LEN)) {
     base32_encode(serviceid, REND_SERVICE_ID_LEN_BASE32+1,
                   (char*)request, REND_SERVICE_ID_LEN);
     log_warn(LD_REND, "Got an INTRODUCE2 cell for the wrong service (%s).",
@@ -1306,7 +1306,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
     return -1;
   }
 
-  if (memcmp(intro->extend_info->identity_digest,
+  if (tor_memneq(intro->extend_info->identity_digest,
       launched->build_state->chosen_exit->identity_digest, DIGEST_LEN)) {
     char cann[HEX_DIGEST_LEN+1], orig[HEX_DIGEST_LEN+1];
     base16_encode(cann, sizeof(cann),
@@ -1593,7 +1593,7 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
   tor_assert(intro);
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                                   CIRCUIT_PURPOSE_S_INTRO))) {
-    if (!memcmp(circ->build_state->chosen_exit->identity_digest,
+    if (tor_memeq(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
         circ->rend_data &&
         circ->rend_data->rend_desc_version == desc_version) {
@@ -1604,7 +1604,7 @@ find_intro_circuit(rend_intro_point_t *intro, const char *pk_digest,
   circ = NULL;
   while ((circ = circuit_get_next_by_pk_and_purpose(circ,pk_digest,
                                         CIRCUIT_PURPOSE_S_ESTABLISH_INTRO))) {
-    if (!memcmp(circ->build_state->chosen_exit->identity_digest,
+    if (tor_memeq(circ->build_state->chosen_exit->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN) &&
         circ->rend_data &&
         circ->rend_data->rend_desc_version == desc_version) {
@@ -1887,7 +1887,7 @@ rend_services_introduce(void)
         if (service->desc) {
           SMARTLIST_FOREACH(service->desc->intro_nodes, rend_intro_point_t *,
                             dintro, {
-            if (!memcmp(dintro->extend_info->identity_digest,
+            if (tor_memeq(dintro->extend_info->identity_digest,
                 intro->extend_info->identity_digest, DIGEST_LEN)) {
               log_info(LD_REND, "The intro point we are giving up on was "
                                 "included in the last published descriptor. "
