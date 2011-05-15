@@ -5758,24 +5758,11 @@ int
 hid_serv_acting_as_directory(void)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  networkstatus_t *c;
-  routerstatus_t *rs;
   if (!me)
     return 0;
   if (!get_options()->HidServDirectoryV2) {
     log_info(LD_REND, "We are not acting as hidden service directory, "
                       "because we have not been configured as such.");
-    return 0;
-  }
-  if (!(c = networkstatus_get_latest_consensus())) {
-    log_info(LD_REND, "There's no consensus, so I can't tell if I'm a hidden "
-             "service directory");
-    return 0;
-  }
-  rs = networkstatus_vote_find_entry(c, me->cache_info.identity_digest);
-  if (!rs) {
-    log_info(LD_REND, "We're not listed in the consensus, so we're not "
-             "being a hidden service directory.");
     return 0;
   }
   return 1;
