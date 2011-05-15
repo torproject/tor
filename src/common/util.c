@@ -30,6 +30,7 @@
 #else
 #include <dirent.h>
 #include <pwd.h>
+#include <grp.h>
 #endif
 
 /* math.h needs this on Linux */
@@ -1734,6 +1735,21 @@ check_private_dir(const char *dirname, cpd_check_t check)
                          pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
 
     tor_free(process_ownername);
+    return -1;
+  }
+  if ((check & CPD_GROUP_OK) && st.st_gid != getgid()) {
+    struct group *gr;
+    char *process_groupname = NULL;
+    gr = getgrgid(getgid());
+    process_groupname = gr ? tor_strdup(gr->gr_name) : tor_strdup("<unknown>");
+    gr = getgrgid(st.st_gid);
+
+    log_warn(LD_FS, "%s is not owned by this group (%s, %d) but by group "
+             "%s (%d).  Are you running Tor as the wrong user?",
+             dirname, process_groupname, (int)getgid(),
+             gr ?  gr->gr_name : "<unknown>", (int)st.st_gid);
+
+    tor_free(process_groupname);
     return -1;
   }
   if (check & CPD_GROUP_OK) {
