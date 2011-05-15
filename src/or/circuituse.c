@@ -1513,8 +1513,7 @@ static void
 consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 {
   or_options_t *options = get_options();
-  size_t len;
-  char *new_address;
+  char *new_address = NULL;
   char fp[HEX_DIGEST_LEN+1];
 
   /* Search the addressmap for this conn's destination. */
@@ -1534,12 +1533,7 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
                 circ->build_state->chosen_exit->identity_digest, DIGEST_LEN);
 
   /* Add this exit/hostname pair to the addressmap. */
-  len = strlen(conn->socks_request->address) + 1 /* '.' */ +
-        strlen(fp) + 1 /* '.' */ +
-        strlen("exit") + 1 /* '\0' */;
-  new_address = tor_malloc(len);
-
-  tor_snprintf(new_address, len, "%s.%s.exit",
+  tor_asprintf(&new_address, "%s.%s.exit",
                conn->socks_request->address, fp);
 
   addressmap_register(conn->socks_request->address, new_address,
