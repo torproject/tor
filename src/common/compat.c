@@ -1481,7 +1481,12 @@ get_parent_directory(char *fname)
     fname += 2;
   }
 #endif
-  /* Now we want to remove the final character that */
+  /* Now we want to remove all path-separators at the end of the string,
+   * and to remove the end of the string starting with the path separator
+   * before the last non-path-separator.  In perl, this would be
+   *   s#[/]*$##; s#/[^/]*$##;
+   * on a unixy platform.
+   */
   cp = fname + strlen(fname);
   at_end = 1;
   while (--cp > fname) {

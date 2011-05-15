@@ -1664,10 +1664,10 @@ file_status(const char *fname)
     return FN_ERROR;
 }
 
-/** Check whether dirname exists and is private.  If yes return 0.  If
- * it does not exist, and check&CPD_CREATE is set, try to create it
+/** Check whether <b>dirname</b> exists and is private.  If yes return 0.  If
+ * it does not exist, and <b>check</b>&CPD_CREATE is set, try to create it
  * and return 0 on success. If it does not exist, and
- * check&CPD_CHECK, and we think we can create it, return 0.  Else
+ * <b>check</b>&CPD_CHECK, and we think we can create it, return 0.  Else
  * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
  * is group-readable, but in all cases we create the directory mode 0700.
  * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
