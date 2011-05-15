@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Bridges should not complain that they are unlisted in the consensus:
+      that's more or less the point of being a bridge.  Bugfix on
+      0.2.3.1-alpha; fixes bug 3183.
+
