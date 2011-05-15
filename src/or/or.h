@@ -2669,6 +2669,11 @@ typedef struct {
   int DisablePredictedCircuits; /**< Boolean: does Tor preemptively
                                  * make circuits in the background (0),
                                  * or not (1)? */
+
+  /** Process specifier for a controller that ‘owns’ this Tor
+   * instance.  Tor will terminate if its owning controller does. */
+  char *OwningControllerProcess;
+
   int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
                            * long do we wait before exiting? */
   char *SafeLogging; /**< Contains "relay", "1", "0" (meaning no scrubbing). */

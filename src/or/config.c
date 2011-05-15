@@ -38,6 +38,8 @@
 #include <shlobj.h>
 #endif
 
+#include "procmon.h"
+
 /** Enumeration of types which option values can take */
 typedef enum config_type_t {
   CONFIG_TYPE_STRING = 0,   /**< An arbitrary string. */
@@ -393,6 +395,7 @@ static config_var_t _option_vars[] = {
   VAR("__LeaveStreamsUnattached",BOOL,  LeaveStreamsUnattached,   "0"),
   VAR("__HashedControlSessionPassword", LINELIST, HashedControlSessionPassword,
       NULL),
+  VAR("__OwningControllerProcess",STRING,OwningControllerProcess, NULL),
   V(MinUptimeHidServDirectoryV2, INTERVAL, "24 hours"),
   V(_UsingTestNetworkDefaults,   BOOL,     "0"),
 
@@ -1226,6 +1229,11 @@ options_act(or_options_t *old_options)
 
   if (init_cookie_authentication(options->CookieAuthentication) < 0) {
     log_warn(LD_CONFIG,"Error creating cookie authentication file.");
+    return -1;
+  }
+
+  if (monitor_owning_controller_process(options->OwningControllerProcess)) {
+    log_warn(LD_CONFIG, "Error monitoring owning controller process");
     return -1;
   }
 
@@ -3443,6 +3451,16 @@ options_validate(or_options_t *old_options, or_options_t *options,
     } else {
       SMARTLIST_FOREACH(sl, char*, cp, tor_free(cp));
       smartlist_free(sl);
+    }
+  }
+
+  if (options->OwningControllerProcess) {
+    const char *validate_pspec_msg = NULL;
+    if (tor_validate_process_specifier(options->OwningControllerProcess,
+                                       &validate_pspec_msg)) {
+      tor_asprintf(msg, "Bad OwningControllerProcess: %s",
+                   validate_pspec_msg);
+      return -1;
     }
   }
 

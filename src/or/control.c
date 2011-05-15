@@ -32,6 +32,8 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
+#include "procmon.h"
+
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN)
@@ -3776,6 +3778,90 @@ init_cookie_authentication(int enabled)
 #endif
 
   tor_free(fname);
+  return 0;
+}
+
+/** A copy of the process specifier of Tor's owning controller, or
+ * NULL if this Tor instance is not currently owned by a process. */
+static char *owning_controller_process_spec = NULL;
+
+/** A process-termination monitor for Tor's owning controller, or NULL
+ * if this Tor instance is not currently owned by a process. */
+static tor_process_monitor_t *owning_controller_process_monitor = NULL;
+
+/** Process-termination monitor callback for Tor's owning controller
+ * process. */
+static void
+owning_controller_procmon_cb(void *unused)
+{
+  int shutdown_slowly = server_mode(get_options());
+
+  (void)unused;
+
+  log_notice(LD_CONTROL, "Owning controller process has vanished -- "
+             "%s.",
+             shutdown_slowly ? "shutting down" : "exiting now");
+
+  /* XXXX This chunk of code should be a separate function, called
+   * here and by process_signal(SIGINT). */
+
+  if (!shutdown_slowly) {
+    tor_cleanup();
+    exit(0);
+  }
+  /* XXXX This will close all listening sockets except control-port
+   * listeners.  Perhaps we should close those too. */
+  hibernate_begin_shutdown();
+}
+
+/** Set <b>process_spec</b> as Tor's owning controller process.
+ * Return 0 on success, -1 on failure. */
+int
+monitor_owning_controller_process(const char *process_spec)
+{
+  const char *msg;
+
+  tor_assert((owning_controller_process_spec == NULL) ==
+             (owning_controller_process_monitor == NULL));
+
+  if (owning_controller_process_spec != NULL) {
+    if ((process_spec != NULL) && !strcmp(process_spec,
+                                          owning_controller_process_spec)) {
+      /* Same process -- return now, instead of disposing of and
+       * recreating the process-termination monitor. */
+      return 0;
+    }
+
+    /* We are currently owned by a process, and we should no longer be
+     * owned by it.  Free the process-termination monitor. */
+    tor_process_monitor_free(owning_controller_process_monitor);
+    owning_controller_process_monitor = NULL;
+
+    tor_free(owning_controller_process_spec);
+    owning_controller_process_spec = NULL;
+  }
+
+  tor_assert((owning_controller_process_spec == NULL) &&
+             (owning_controller_process_monitor == NULL));
+
+  if (process_spec == NULL)
+    return 0;
+
+  owning_controller_process_spec = tor_strdup(process_spec);
+  owning_controller_process_monitor =
+    tor_process_monitor_new(tor_libevent_get_base(),
+                            owning_controller_process_spec,
+                            LD_CONTROL,
+                            owning_controller_procmon_cb, NULL,
+                            &msg);
+
+  if (owning_controller_process_monitor == NULL) {
+    log_warn(LD_CONTROL, "Couldn't create process-termination monitor for "
+             "owning controller: %s",
+             msg);
+    return -1;
+  }
+
   return 0;
 }
 
