@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Do not reset the bridge descriptor download status every time we
+      re-parse our configuration or get a configuration change.  Fixes
+      bug 3019; bugfix on Tor 0.2.0.3-alpha.

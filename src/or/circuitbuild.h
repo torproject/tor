@@ -62,12 +62,13 @@ int getinfo_helper_entry_guards(control_connection_t *conn,
                                 const char *question, char **answer,
                                 const char **errmsg);
 
-void clear_bridge_list(void);
+void mark_bridge_list(void);
+void sweep_bridge_list(void);
 int routerinfo_is_a_configured_bridge(routerinfo_t *ri);
-void
-learned_router_identity(tor_addr_t *addr, uint16_t port, const char *digest);
+void learned_router_identity(const tor_addr_t *addr, uint16_t port,
+                             const char *digest);
 void bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
-                            char *digest);
+                            const char *digest);
 void retry_bridge_descriptor_fetch_directly(const char *digest);
 void fetch_bridge_descriptors(or_options_t *options, time_t now);
 void learned_bridge_descriptor(routerinfo_t *ri, int from_cache);
