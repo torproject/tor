@@ -810,7 +810,8 @@ clear_trackexithost_mappings(const char *exitname)
 }
 
 /** Remove all TRACKEXIT mappings from the addressmap for which the target
- * host is unknown or no longer allowed. */
+ * host is unknown or no longer allowed, or for which the source address
+ * is no longer in trackexithosts. */
 void
 addressmap_clear_excluded_trackexithosts(or_options_t *options)
 {
@@ -851,10 +852,54 @@ addressmap_clear_excluded_trackexithosts(or_options_t *options)
     tor_free(nodename);
     if (!ri ||
         (allow_nodes && !routerset_contains_router(allow_nodes, ri)) ||
-        routerset_contains_router(exclude_nodes, ri)) {
+        routerset_contains_router(exclude_nodes, ri) ||
+        !hostname_in_track_host_exits(options, address)) {
       /* We don't know this one, or we want to be rid of it. */
       addressmap_ent_remove(address, ent);
       MAP_DEL_CURRENT(address);
+    }
+  } STRMAP_FOREACH_END;
+}
+
+/** Remove all AUTOMAP mappings from the addressmap for which the
+ * source address no longer matches AutomapHostsSuffixes, which is
+ * no longer allowed by AutomapHostsOnResolve, or for which the
+ * target address is no longer in the virtual network. */
+void
+addressmap_clear_invalid_automaps(or_options_t *options)
+{
+  int clear_all = !options->AutomapHostsOnResolve;
+  const smartlist_t *suffixes = options->AutomapHostsSuffixes;
+
+  if (!addressmap)
+    return;
+
+  if (!suffixes)
+    clear_all = 1; /* This should be impossible, but let's be sure. */
+
+  STRMAP_FOREACH_MODIFY(addressmap, src_address, addressmap_entry_t *, ent) {
+    int remove = clear_all;
+    if (ent->source != ADDRMAPSRC_AUTOMAP)
+      continue; /* not an automap mapping. */
+
+    if (!remove) {
+      int suffix_found = 0;
+      SMARTLIST_FOREACH(suffixes, const char *, suffix, {
+          if (!strcasecmpend(src_address, suffix)) {
+            suffix_found = 1;
+            break;
+          }
+      });
+      if (!suffix_found)
+        remove = 1;
+    }
+
+    if (!remove && ! address_is_in_virtual_range(ent->new_address))
+      remove = 1;
+
+    if (remove) {
+      addressmap_ent_remove(src_address, ent);
+      MAP_DEL_CURRENT(src_address);
     }
   } STRMAP_FOREACH_END;
 }
@@ -1370,7 +1415,7 @@ addressmap_register_virtual_address(int type, char *new_address)
   log_info(LD_APP, "Registering map from %s to %s", *addrp, new_address);
   if (vent_needs_to_be_added)
     strmap_set(virtaddress_reversemap, new_address, vent);
-  addressmap_register(*addrp, new_address, 2, ADDRMAPSRC_CONTROLLER);
+  addressmap_register(*addrp, new_address, 2, ADDRMAPSRC_AUTOMAP);
 
 #if 0
   {

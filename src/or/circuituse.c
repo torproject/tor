@@ -1485,12 +1485,33 @@ link_apconn_to_circ(edge_connection_t *apconn, origin_circuit_t *circ,
   }
 }
 
-/** If an exit wasn't specifically chosen, save the history for future
- * use. */
+/** Return true iff <b>address</b> is matched by one of the entries in
+ * TrackHostExits. */
+int
+hostname_in_track_host_exits(or_options_t *options, const char *address)
+{
+  if (!options->TrackHostExits)
+    return 0;
+  SMARTLIST_FOREACH_BEGIN(options->TrackHostExits, const char *, cp) {
+    if (cp[0] == '.') { /* match end */
+      if (cp[1] == '\0' ||
+          !strcasecmpend(address, cp) ||
+          !strcasecmp(address, &cp[1]))
+        return 1;
+    } else if (strcasecmp(cp, address) == 0) {
+      return 1;
+    }
+  } SMARTLIST_FOREACH_END(cp);
+  return 0;
+}
+
+/** If an exit wasn't explicitly specified for <b>conn</b>, consider saving
+ * the exit that we *did* choose for use by future connections to
+ * <b>conn</b>'s destination.
+ */
 static void
 consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 {
-  int found_needle = 0;
   or_options_t *options = get_options();
   size_t len;
   char *new_address;
@@ -1503,18 +1524,8 @@ consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
                               options->TrackHostExitsExpire))
     return; /* nothing to track, or already mapped */
 
-  SMARTLIST_FOREACH(options->TrackHostExits, const char *, cp, {
-    if (cp[0] == '.') { /* match end */
-      if (cp[1] == '\0' ||
-          !strcasecmpend(conn->socks_request->address, cp) ||
-          !strcasecmp(conn->socks_request->address, &cp[1]))
-          found_needle = 1;
-    } else if (strcasecmp(cp, conn->socks_request->address) == 0) {
-      found_needle = 1;
-    }
-  });
-
-  if (!found_needle || !circ->build_state->chosen_exit)
+  if (!hostname_in_track_host_exits(options, conn->socks_request->address) ||
+      !circ->build_state->chosen_exit)
     return;
 
   /* write down the fingerprint of the chosen exit, not the nickname,
