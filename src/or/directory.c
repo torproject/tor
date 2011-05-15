@@ -289,6 +289,8 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
   int post_via_tor;
   smartlist_t *dirservers = router_get_trusted_dir_servers();
   int found = 0;
+  const int exclude_self = (dir_purpose == DIR_PURPOSE_UPLOAD_VOTE ||
+                            dir_purpose == DIR_PURPOSE_UPLOAD_SIGNATURES);
   tor_assert(dirservers);
   /* This tries dirservers which we believe to be down, but ultimately, that's
    * harmless, and we may as well err on the side of getting things uploaded.
@@ -299,6 +301,9 @@ directory_post_to_dirservers(uint8_t dir_purpose, uint8_t router_purpose,
       tor_addr_t ds_addr;
 
       if ((type & ds->type) == 0)
+        continue;
+
+      if (exclude_self && router_digest_is_me(ds->digest))
         continue;
 
       if (options->ExcludeNodes && options->StrictNodes &&
