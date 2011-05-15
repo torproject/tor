@@ -1505,8 +1505,10 @@ hostname_in_track_host_exits(or_options_t *options, const char *address)
   return 0;
 }
 
-/** If an exit wasn't specifically chosen, save the history for future
- * use. */
+/** If an exit wasn't explicitly specified for <b>conn</b>, consider saving
+ * the exit that we *did* choose for use by future connections to
+ * <b>conn</b>'s destination.
+ */
 static void
 consider_recording_trackhost(edge_connection_t *conn, origin_circuit_t *circ)
 {
