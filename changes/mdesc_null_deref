@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Avoid a possible null-pointer dereference when rebuilding the mdesc
-      cache without actually having any descriptors to cache. Bugfix on
-      0.2.2.6-alpha. Issue discovered using clang's static analyzer.
-

@@ -1,5 +1,0 @@
-  o Minor bugfixes
-    - The microdesc journal is supposed to get rebuilt only if it is
-      at least _half_ the length of the store, not _twice_ the length
-      of the store.   Bugfix on 0.2.2.6-alpha; fixes part of bug 2230.
-

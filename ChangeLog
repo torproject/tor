@@ -1,3 +1,78 @@
+Changes in version 0.2.2.26-alpha - 2011-05-??
+  o Security fixes:
+    - Replace all potentially sensitive memory comparison operations
+      with versions whose runtime does not depend on the data being
+      compared. This will help resist a class of attacks where an
+      adversary can use variations in timing information to learn
+      sensitive data. Fix for one case of bug 3122. (Safe memcmp
+      implementation by Robert Ransom based partially on code by DJB.)
+
+  o Major features:
+    - The options SocksPort, ControlPort, and so on now all accept a
+      value "auto" that opens a socket on an OS-selected port. A
+      new ControlPortWriteToFile option tells Tor to write its
+      actual control port or ports to a chosen file. If the option
+      ControlPortFileGroupReadable is set, the file is created as
+      group-readable. Now users can run two Tor clients on the same
+      system without needing to manually mess with parameters. Resolves
+      part of ticket 3076.
+
+  o Minor features:
+    - New "GETINFO net/listeners/(type)" controller command to return
+      a list of addresses and ports that are bound for listeners for a
+      given connection type. This is useful when the user has configured
+      "SocksPort auto" and the controller needs to know which port got
+      chosen. Resolves another part of ticket 3076.
+    - Rate-limit a warning about failures to download v2 networkstatus
+      documents.  Resolves part of bug 1352.
+    - Backport code from 0.2.3.x to allow directory authorities to clean
+      their microdescriptor caches. Needed to resolve bug 2230.
+    - When an HTTPS proxy reports "403 Forbidden", we now explain
+      what it means rather than calling it an unexpected status code.
+      Closes bug 2503. Patch from "mikey". 
+    - Update to the May 1 2011 Maxmind GeoLite Country database.
+
+  o Minor bugfixes:
+    - When loading the microdesc journal, remember its current size.
+      In 0.2.2, this helps prevent the microdesc journal from growing
+      without limit on authorities (who are the only ones to use it in
+      0.2.2). Fixes a part of bug 2230; bugfix on 0.2.2.6-alpha.
+      Fix posted by "cypherpunks."
+    - The microdesc journal is supposed to get rebuilt only if it is
+      at least _half_ the length of the store, not _twice_ the length
+      of the store.  Bugfix on 0.2.2.6-alpha; fixes part of bug 2230.
+    - Authorities now clean their microdesc cache periodically and when
+      reading from disk initially, not only when adding new descriptors.
+      This prevents a bug where we could lose microdescriptors. Bugfix
+      on 0.2.2.6-alpha. 2230
+    - Fix a potential null-pointer dereference while computing a
+      consensus. Bugfix on tor-0.2.0.3-alpha, found with the help of
+      clang's analyzer.
+    - Do not crash when our configuration file becomes unreadable, for
+      example due to a permissions change, between when we start up
+      and when a controller calls SAVECONF. Fixes bug 3135; bugfix
+      on 0.0.9pre6.
+    - Avoid a bug that would keep us from replacing a microdescriptor
+      cache on Windows. (We would try to replace the file while still
+      holding it open. That's fine on Unix, but Windows doesn't let us
+      do that.) Bugfix on 0.2.2.6-alpha; bug found by wanoskarnet.
+    - Avoid a possible null-pointer dereference when rebuilding the mdesc
+      cache without actually having any descriptors to cache. Bugfix on
+      0.2.2.6-alpha. Issue discovered using clang's static analyzer.
+    - If we fail to compute the identity digest of a v3 legacy keypair,
+      warn, and don't use a buffer-full of junk instead. Bugfix on
+      0.2.1.1-alpha; fixes bug 3106.
+    - Add missing explanations for the authority-related torrc options
+      RephistTrackTime, BridgePassword, and V3AuthUseLegacyKey in the
+      man page. Resolves issue 2379.
+
+  o Removed features:
+    - Caches no longer download and serve v2 networkstatus documents
+      unless FetchV2Networkstatus flag is set: these documents haven't
+      haven't been used by clients or relays since 0.2.0.x. Resolves
+      bug 3022.
+
+
 Changes in version 0.2.2.25-alpha - 2011-04-29
   Tor 0.2.2.25-alpha fixes many bugs: hidden service clients are more
   robust, routers no longer overreport their bandwidth, Win7 should crash

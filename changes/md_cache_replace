@@ -1,6 +1,0 @@
-  o Minor bugfixes
-    - Avoid a bug that would keep us from replacing a microdescriptor
-      cache on Windows.  (We would try to replace the file while still
-      holding it open.  That's fine on Unix, but Windows doesn't let us
-      do that.)  Bugfix on 0.2.2.6-alpha; bug found by wanoskarnet.
-

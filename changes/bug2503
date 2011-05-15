@@ -1,4 +1,0 @@
-  o Minor features:
-    - When an HTTPS proxy reports "403 Forbidden", we now explain
-      what it means rather than calling it an unexpected status code.
-      Closes bug 2503.  Patch from "mikey". 

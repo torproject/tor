@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Fix a potential null-pointer dereference while computing a consensus.
-      Bugfix on tor-0.2.0.3-alpha, found with the help of clang's analyzer.
-
