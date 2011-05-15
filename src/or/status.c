@@ -85,10 +85,9 @@ log_heartbeat(time_t now)
   const node_t *myself;
 
   or_options_t *options = get_options();
-  int is_server = server_mode(options);
   (void)now;
 
-  if (is_server) {
+  if (public_server_mode(options)) {
     /* Let's check if we are in the current cached consensus. */
     if (!(me = router_get_my_routerinfo()))
       return -1; /* Something stinks, we won't even attempt this. */
