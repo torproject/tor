@@ -1639,7 +1639,6 @@ do_hup(void)
 
   router_reset_warnings();
   routerlist_reset_warnings();
-  addressmap_clear_transient();
   /* first, reload config variables, in case they've changed */
   if (options->ReloadTorrcOnSIGHUP) {
     /* no need to provide argc/v, they've been cached in init_from_config */

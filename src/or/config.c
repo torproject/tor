@@ -1285,6 +1285,8 @@ options_act(or_options_t *old_options)
 
   /* Check for transitions that need action. */
   if (old_options) {
+    int revise_trackexithosts = 0;
+    int revise_automap_entries = 0;
     if ((options->UseEntryGuards && !old_options->UseEntryGuards) ||
         !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes) ||
         !routerset_equal(old_options->ExcludeExitNodes,
@@ -1297,8 +1299,29 @@ options_act(or_options_t *old_options)
                "excluded node lists. Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
-      addressmap_clear_excluded_trackexithosts(options);
+      revise_trackexithosts = 1;
     }
+
+    if (!smartlist_strings_eq(old_options->TrackHostExits,
+                              options->TrackHostExits))
+      revise_trackexithosts = 1;
+
+    if (revise_trackexithosts)
+      addressmap_clear_excluded_trackexithosts(options);
+
+    if (old_options->AutomapHostsOnResolve && !options->AutomapHostsOnResolve) {
+      revise_automap_entries = 1;
+    } else if (options->AutomapHostsOnResolve) {
+      if (!smartlist_strings_eq(old_options->AutomapHostsSuffixes,
+                                options->AutomapHostsSuffixes))
+        revise_automap_entries = 1;
+      else if (!opt_streq(old_options->VirtualAddrNetwork,
+                          options->VirtualAddrNetwork))
+        revise_automap_entries = 1;
+    }
+
+    if (revise_automap_entries)
+      addressmap_clear_invalid_automaps(options);
 
 /* How long should we delay counting bridge stats after becoming a bridge?
  * We use this so we don't count people who used our bridge thinking it is
