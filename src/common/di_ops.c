@@ -3,7 +3,7 @@
 
 /**
  * \file di_ops.c
- * \brief Functions for data-independent operations
+ * \brief Functions for data-independent operations.
  **/
 
 #include "orconfig.h"
@@ -11,7 +11,7 @@
 
 /**
  * Timing-safe version of memcmp.  As memcmp, compare the <b>sz</b> bytes
- * at <b>a</b> with the <b>sz</b> bytes at <b>, and returns less than 0 if the
+ * at <b>a</b> with the <b>sz</b> bytes at <b>, and return less than 0 if the
  * bytes at <b>a</b> lexically precede those at <b>b</b>, 0 if the byte ranges
  * are equal, and greater than zero if the bytes at <b>a</b> lexically follow
  * those at <b>.
