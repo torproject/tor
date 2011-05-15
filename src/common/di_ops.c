@@ -10,11 +10,11 @@
 #include "di_ops.h"
 
 /**
- * Timing-safe version of memcmp.  As memcmp, compare the <b>sz</b> bytes
- * at <b>a</b> with the <b>sz</b> bytes at <b>, and return less than 0 if the
- * bytes at <b>a</b> lexically precede those at <b>b</b>, 0 if the byte ranges
- * are equal, and greater than zero if the bytes at <b>a</b> lexically follow
- * those at <b>.
+ * Timing-safe version of memcmp.  As memcmp, compare the <b>sz</b> bytes at
+ * <b>a</b> with the <b>sz</b> bytes at <b>b</b>, and return less than 0 if
+ * the bytes at <b>a</b> lexically precede those at <b>b</b>, 0 if the byte
+ * ranges are equal, and greater than zero if the bytes at <b>a</b> lexically
+ * follow those at <b>b</b>.
  *
  * This implementation differs from memcmp in that its timing behavior is not
  * data-dependent: it should return in the same amount of time regardless of
@@ -85,7 +85,7 @@ tor_memcmp(const void *a, const void *b, size_t len)
 
 /**
  * Timing-safe memory comparison.  Return true if the <b>sz</b> bytes at
- * <b>a</b> are the same as the <b>sz</b> bytes at <b>, and 0 otherwise.
+ * <b>a</b> are the same as the <b>sz</b> bytes at <b>b</b>, and 0 otherwise.
  *
  * This implementation differs from !memcmp(a,b,sz) in that its timing
  * behavior is not data-dependent: it should return in the same amount of time
