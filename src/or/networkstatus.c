@@ -1433,8 +1433,9 @@ networkstatus_set_current_consensus(const char *consensus, unsigned flags)
   }
 
   if (current_consensus &&
-      tor_memeq(c->networkstatus_digest, current_consensus->networkstatus_digest,
-              DIGEST_LEN)) {
+      tor_memeq(c->networkstatus_digest,
+                current_consensus->networkstatus_digest,
+                DIGEST_LEN)) {
     /* We already have this one. That's a failure. */
     log_info(LD_DIR, "Got a consensus we already have");
     goto done;

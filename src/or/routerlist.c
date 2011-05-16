@@ -2008,8 +2008,8 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       if (n_matches <= 1 || router->is_running)
         best_match = router;
     } else if (maybedigest &&
-               tor_memeq(digest, router->cache_info.identity_digest, DIGEST_LEN)
-               ) {
+               tor_memeq(digest, router->cache_info.identity_digest,
+                         DIGEST_LEN)) {
       if (router_hex_digest_matches(router, nickname))
         return router;
       /* If we reach this point, we have a ID=name syntax that matches the
@@ -4665,8 +4665,9 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
-  if (tor_memneq(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
-             DIGEST_LEN)) {
+  if (tor_memneq(ri->cache_info.identity_digest,
+                 ei->cache_info.identity_digest,
+                 DIGEST_LEN)) {
     if (msg) *msg = "Extrainfo nickname or identity did not match routerinfo";
     goto err; /* different servers */
   }
