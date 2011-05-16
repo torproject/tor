@@ -1,4 +1,0 @@
-  o Minor features
-    - Export GeoIP information on usage to bridge controller even if we have
-      not yet been running for 24 hours.
-

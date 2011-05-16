@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - Be more consistent in our treatment of file system paths. ~ should
-      get expanded to the user's home directory in the Log config option.
-      Bugfix on 0.2.0.1-alpha, which introduced the feature for the -f and
-      --DataDirectory options.
-

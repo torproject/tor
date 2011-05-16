@@ -1,5 +1,0 @@
-  o Minor features:
-    - Provide a log message stating which geoip file we're parsing
-      instead of just stating that we're parsing the geoip file.
-      Implements ticket 2432.
-

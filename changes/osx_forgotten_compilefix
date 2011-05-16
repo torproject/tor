@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Added a forgotten cast that caused a compile warning on OS X 10.6. Bugfix
-      on 0.2.2.24-alpha.
-

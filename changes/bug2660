@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - Fix connect() failures on some platforms (BSD, OS X). Bugfix on
-      0.2.0.3-alpha; fixes first part of bug 2660. Patch by piebeer.
-    - Set target port in get_interface_address6() correctly. Bugfix
-      on 0.1.1.4-alpha and 0.2.0.3-alpha; fixes second part of bug
-      2660.
-

@@ -1,5 +1,0 @@
-  o Minor features:
-    - Relays can go for weeks without writing out their state file. A
-      relay that crashes would lose its bandwidth history (including
-      capacity estimate), client country statistics, and so on. Now relays
-      checkpoint the file at least every 12 hours. Addresses bug 3012.

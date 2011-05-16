@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - When checking whether a hibernation period has fully elapsed, use
-      the amount of seconds we expect for that period instead of using
-      the new period that just started. This would cause an issue because
-      February is a really short month. Bugfix on 0.2.2.17-alpha;
-      fixes bug 3020.
-
