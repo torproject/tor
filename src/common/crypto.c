@@ -660,7 +660,7 @@ crypto_pk_key_is_private(const crypto_pk_env_t *key)
  * equals 65537.
  */
 int
-crypto_pk_check_key_public_exponent(crypto_pk_env_t *env)
+crypto_pk_public_exponent_ok(crypto_pk_env_t *env)
 {
   tor_assert(env);
   tor_assert(env->key);
