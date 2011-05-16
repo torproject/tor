@@ -39,13 +39,15 @@ secs_to_uptime(long secs)
 
   switch (days) {
   case 0:
-    tor_asprintf(&uptime_string, "%d:%02d", hours, minutes);
+    tor_asprintf(&uptime_string, "%d:%02d hours", hours, minutes);
     break;
   case 1:
-    tor_asprintf(&uptime_string, "%ld day %d:%02d", days, hours, minutes);
+    tor_asprintf(&uptime_string, "%ld day %d:%02d hours",
+                 days, hours, minutes);
     break;
   default:
-    tor_asprintf(&uptime_string, "%ld days %d:%02d", days, hours, minutes);
+    tor_asprintf(&uptime_string, "%ld days %d:%02d hours",
+                 days, hours, minutes);
     break;
   }
 
