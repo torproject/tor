@@ -1210,7 +1210,8 @@ router_parse_list_from_string(const char **s, const char *eos,
                                               prepend_annotations);
       if (router) {
         log_debug(LD_DIR, "Read router '%s', purpose '%s'",
-                  router->nickname, router_purpose_to_string(router->purpose));
+                  router_describe(router),
+                  router_purpose_to_string(router->purpose));
         signed_desc = &router->cache_info;
         elt = router;
       }
@@ -2488,7 +2489,7 @@ networkstatus_verify_bw_weights(networkstatus_t *ns)
       }
     } else {
       log_warn(LD_BUG, "Missing consensus bandwidth for router %s",
-          rs->nickname);
+               routerstatus_describe(rs));
     }
   } SMARTLIST_FOREACH_END(rs);
 

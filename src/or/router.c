@@ -2217,6 +2217,133 @@ is_legal_hexdigest(const char *s)
           strspn(s,HEX_CHARACTERS)==HEX_DIGEST_LEN);
 }
 
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of a node with identity digest
+ * <b>id_digest</b>, named-status <b>is_named</b>, nickname <b>nickname</b>,
+ * and address <b>addr</b> or <b>addr32h</b>.
+ *
+ * The <b>nickname</b> and <b>addr</b> fields are optional and may be set to
+ * NULL.  The <b>addr32h</b> field is optional and may be set to
+ * <b>addr32h</b>.
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+format_node_description(char *buf,
+                        const char *id_digest,
+                        int is_named,
+                        const char *nickname,
+                        const tor_addr_t *addr,
+                        uint32_t addr32h)
+{
+  char *cp;
+  buf[0] = '$';
+  base16_encode(buf+1, HEX_DIGEST_LEN+1, id_digest, DIGEST_LEN);
+  cp = buf+1+HEX_DIGEST_LEN;
+  if (nickname) {
+    buf[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
+    strlcpy(buf+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
+    cp += strlen(cp);
+  }
+  if (addr32h || addr) {
+    memcpy(cp, " at ", 4);
+    cp += 4;
+    if (addr) {
+      tor_addr_to_str(cp, addr, TOR_ADDR_BUF_LEN, 0);
+    } else {
+      struct in_addr in;
+      in.s_addr = htonl(addr32h);
+      tor_inet_ntoa(&in, cp, INET_NTOA_BUF_LEN);
+    }
+  }
+  return buf;
+}
+
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of <b>ri</b>.
+ *
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+router_get_description(char *buf, const routerinfo_t *ri)
+{
+  return format_node_description(buf,
+                                 ri->cache_info.identity_digest,
+                                 ri->is_named,
+                                 ri->nickname,
+                                 NULL,
+                                 ri->addr);
+}
+
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of <b>rs</b>.
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+routerstatus_get_description(char *buf, const routerstatus_t *rs)
+{
+  return format_node_description(buf,
+                                 rs->identity_digest,
+                                 rs->is_named,
+                                 rs->nickname,
+                                 NULL,
+                                 rs->addr);
+}
+
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of <b>ei</b>.
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+extend_info_get_description(char *buf, const extend_info_t *ei)
+{
+  return format_node_description(buf,
+                                 ei->identity_digest,
+                                 0,
+                                 ei->nickname,
+                                 &ei->addr,
+                                 0);
+}
+
+/** Return a human-readable description of the routerinfo_t <b>ri</b>.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+const char *
+router_describe(const routerinfo_t *ri)
+{
+  static char buf[NODE_DESC_BUF_LEN];
+  return router_get_description(buf, ri);
+}
+
+/** Return a human-readable description of the routerstatus_t <b>rs</b>.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+const char *
+routerstatus_describe(const routerstatus_t *rs)
+{
+  static char buf[NODE_DESC_BUF_LEN];
+  return routerstatus_get_description(buf, rs);
+}
+
+/** Return a human-readable description of the extend_info_t <b>ri</b>.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+const char *
+extend_info_describe(const extend_info_t *ei)
+{
+  static char buf[NODE_DESC_BUF_LEN];
+  return extend_info_get_description(buf, ei);
+}
+
 /** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the
  * verbose representation of the identity of <b>router</b>.  The format is:
  *  A dollar sign.

@@ -274,8 +274,8 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
            cell->circ_id, (int)(time(NULL) - conn->_base.timestamp_created));
     if (router)
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Details: nickname \"%s\", platform %s.",
-             router->nickname, escaped(router->platform));
+             "Details: router %s, platform %s.",
+             router_describe(router), escaped(router->platform));
     return;
   }
 
