@@ -1,3 +1,0 @@
-  o Minor bugfixes
-    - When warning about missing zlib development packages, give the
-      correct package names.  Bugfix on 0.2.0.1-alpha.

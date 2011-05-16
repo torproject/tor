@@ -1,6 +1,0 @@
-  o Major bugfixes:
-    - Stop sending a CLOCK_SKEW controller status event whenever
-      we fetch directory information from a relay that has a wrong clock.
-      Instead, only inform the controller when it's a trusted authority
-      that claims our clock is wrong. Bugfix on tor-0.1.2.6-alpha;
-      fixes the other half of bug 1074.
