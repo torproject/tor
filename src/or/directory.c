@@ -1909,7 +1909,8 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
              (int)body_len, status_code, escaped(reason));
     switch (status_code) {
       case 200:
-        if (rend_cache_store(body, body_len, 0) < -1) {
+        if (rend_cache_store(body, body_len, 0,
+                             conn->rend_data->onion_address) < -1) {
           log_warn(LD_REND,"Failed to parse rendezvous descriptor.");
           /* Any pending rendezvous attempts will notice when
            * connection_about_to_close_connection()
@@ -3114,7 +3115,7 @@ directory_handle_command_post(dir_connection_t *conn, const char *headers,
       !strcmpstart(url,"/tor/rendezvous/publish")) {
     /* rendezvous descriptor post */
     log_info(LD_REND, "Handling rendezvous descriptor post.");
-    if (rend_cache_store(body, body_len, 1) < 0) {
+    if (rend_cache_store(body, body_len, 1, NULL) < 0) {
       log_fn(LOG_PROTOCOL_WARN, LD_DIRSERV,
              "Rejected rend descriptor (length %d) from %s.",
              (int)body_len, conn->_base.address);

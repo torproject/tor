@@ -1326,6 +1326,11 @@ router_parse_entry_from_string(const char *s, const char *end,
     goto err;
 
   tok = find_by_keyword(tokens, K_ONION_KEY);
+  if (!crypto_pk_public_exponent_ok(tok->key)) {
+    log_warn(LD_DIR,
+             "Relay's onion key had invalid exponent.");
+    goto err;
+  }
   router->onion_pkey = tok->key;
   tok->key = NULL; /* Prevent free */
 
@@ -3971,10 +3976,22 @@ rend_parse_introduction_points(rend_service_descriptor_t *parsed,
     }
     /* Parse onion key. */
     tok = find_by_keyword(tokens, R_IPO_ONION_KEY);
+    if (!crypto_pk_public_exponent_ok(tok->key)) {
+      log_warn(LD_REND,
+               "Introduction point's onion key had invalid exponent.");
+      rend_intro_point_free(intro);
+      goto err;
+    }
     info->onion_key = tok->key;
     tok->key = NULL; /* Prevent free */
     /* Parse service key. */
     tok = find_by_keyword(tokens, R_IPO_SERVICE_KEY);
+    if (!crypto_pk_public_exponent_ok(tok->key)) {
+      log_warn(LD_REND,
+               "Introduction point key had invalid exponent.");
+      rend_intro_point_free(intro);
+      goto err;
+    }
     intro->intro_key = tok->key;
     tok->key = NULL; /* Prevent free */
     /* Add extend info to list of introduction points. */

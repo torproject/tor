@@ -314,8 +314,9 @@ compare_vote_rs(const vote_routerstatus_t *a, const vote_routerstatus_t *b)
   if ((r = fast_memcmp(a->status.identity_digest, b->status.identity_digest,
                   DIGEST_LEN)))
     return r;
-  if ((r = fast_memcmp(a->status.descriptor_digest, b->status.descriptor_digest,
-                  DIGEST_LEN)))
+  if ((r = fast_memcmp(a->status.descriptor_digest,
+                       b->status.descriptor_digest,
+                       DIGEST_LEN)))
     return r;
   if ((r = (int)(b->status.published_on - a->status.published_on)))
     return r;
@@ -823,7 +824,8 @@ networkstatus_compute_consensus(smartlist_t *votes,
         if (index[v_sl_idx] < size[v_sl_idx]) {
           rs = smartlist_get(v->routerstatus_list, index[v_sl_idx]);
           if (!lowest_id ||
-              fast_memcmp(rs->status.identity_digest, lowest_id, DIGEST_LEN) < 0)
+              fast_memcmp(rs->status.identity_digest,
+                          lowest_id, DIGEST_LEN) < 0)
             lowest_id = rs->status.identity_digest;
         }
       });
@@ -881,7 +883,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
        * routerinfo and its contents are. */
       rs = compute_routerstatus_consensus(matching_descs);
       /* Copy bits of that into rs_out. */
-      tor_assert(fast_memeq(lowest_id, rs->status.identity_digest, DIGEST_LEN));
+      tor_assert(fast_memeq(lowest_id, rs->status.identity_digest,DIGEST_LEN));
       memcpy(rs_out.identity_digest, lowest_id, DIGEST_LEN);
       memcpy(rs_out.descriptor_digest, rs->status.descriptor_digest,
              DIGEST_LEN);
