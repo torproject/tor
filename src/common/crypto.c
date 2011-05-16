@@ -733,6 +733,18 @@ crypto_pk_key_is_private(const crypto_pk_env_t *key)
   return PRIVATE_KEY_OK(key);
 }
 
+/** Return true iff <b>env</b> contains a public key whose public exponent
+ * equals 65537.
+ */
+int
+crypto_pk_public_exponent_ok(crypto_pk_env_t *env)
+{
+  tor_assert(env);
+  tor_assert(env->key);
+
+  return BN_is_word(env->key->e, 65537);
+}
+
 /** Compare the public-key components of a and b.  Return -1 if a\<b, 0
  * if a==b, and 1 if a\>b.
  */

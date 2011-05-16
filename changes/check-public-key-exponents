@@ -1,0 +1,5 @@
+  o Minor bugfixes:
+    - Require that introduction point keys and onion keys have public
+      exponent 65537.  Bugfix on 0.2.0.10-alpha.
+
+
