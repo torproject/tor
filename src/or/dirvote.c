@@ -2213,7 +2213,8 @@ networkstatus_add_detached_signatures(networkstatus_t *target,
     }
     for (alg = DIGEST_SHA1; alg < N_DIGEST_ALGORITHMS; ++alg) {
       if (!tor_mem_is_zero(digests->d[alg], DIGEST256_LEN)) {
-        if (fast_memeq(target->digests.d[alg], digests->d[alg], DIGEST256_LEN)) {
+        if (fast_memeq(target->digests.d[alg], digests->d[alg],
+                       DIGEST256_LEN)) {
           ++n_matches;
         } else {
           *msg_out = "Mismatched digest.";

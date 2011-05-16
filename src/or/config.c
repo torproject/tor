@@ -1288,9 +1288,10 @@ options_act(or_options_t *old_options)
     if (revise_trackexithosts)
       addressmap_clear_excluded_trackexithosts(options);
 
-    if (old_options->AutomapHostsOnResolve && !options->AutomapHostsOnResolve) {
-      revise_automap_entries = 1;
-    } else if (options->AutomapHostsOnResolve) {
+    if (!options->AutomapHostsOnResolve) {
+      if (old_options->AutomapHostsOnResolve)
+        revise_automap_entries = 1;
+    } else {
       if (!smartlist_strings_eq(old_options->AutomapHostsSuffixes,
                                 options->AutomapHostsSuffixes))
         revise_automap_entries = 1;
