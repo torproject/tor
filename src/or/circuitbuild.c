@@ -4488,6 +4488,9 @@ typedef struct {
   tor_addr_t addr;
   /** TLS port for the bridge. */
   uint16_t port;
+  /** Boolean: We are re-parsing our bridge list, and we are going to remove
+   * this one if we don't find it in the list of configured bridges. */
+  unsigned marked_for_removal : 1;
   /** Expected identity digest, or all zero bytes if we don't know what the
    * digest should be. */
   char identity[DIGEST_LEN];
@@ -4496,11 +4499,39 @@ typedef struct {
 } bridge_info_t;
 
 /** A list of configured bridges. Whenever we actually get a descriptor
- * for one, we add it as an entry guard. */
+ * for one, we add it as an entry guard.  Note that the order of bridges
+ * in this list does not necessarily correspond to the order of bridges
+ * in the torrc. */
 static smartlist_t *bridge_list = NULL;
 
-/** Initialize the bridge list to empty, creating it if needed. */
+/** Mark every entry of the bridge list to be removed on our next call to
+ * sweep_bridge_list unless it has first been un-marked. */
 void
+mark_bridge_list(void)
+{
+  if (!bridge_list)
+    bridge_list = smartlist_create();
+  SMARTLIST_FOREACH(bridge_list, bridge_info_t *, b,
+                    b->marked_for_removal = 1);
+}
+
+/** Remove every entry of the bridge list that was marked with
+ * mark_bridge_list if it has not subsequently been un-marked. */
+void
+sweep_bridge_list(void)
+{
+  if (!bridge_list)
+    bridge_list = smartlist_create();
+  SMARTLIST_FOREACH_BEGIN(bridge_list, bridge_info_t *, b) {
+    if (b->marked_for_removal) {
+      SMARTLIST_DEL_CURRENT(bridge_list, b);
+      tor_free(b);
+    }
+  } SMARTLIST_FOREACH_END(b);
+}
+
+/** Initialize the bridge list to empty, creating it if needed. */
+static void
 clear_bridge_list(void)
 {
   if (!bridge_list)
@@ -4513,7 +4544,8 @@ clear_bridge_list(void)
  * (either by comparing keys if possible, else by comparing addr/port).
  * Else return NULL. */
 static bridge_info_t *
-get_configured_bridge_by_addr_port_digest(tor_addr_t *addr, uint16_t port,
+get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
+                                          uint16_t port,
                                           const char *digest)
 {
   if (!bridge_list)
@@ -4554,7 +4586,8 @@ routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
  * If it was a bridge, and we still don't know its digest, record it.
  */
 void
-learned_router_identity(tor_addr_t *addr, uint16_t port, const char *digest)
+learned_router_identity(const tor_addr_t *addr, uint16_t port,
+                        const char *digest)
 {
   bridge_info_t *bridge =
     get_configured_bridge_by_addr_port_digest(addr, port, digest);
@@ -4566,11 +4599,20 @@ learned_router_identity(tor_addr_t *addr, uint16_t port, const char *digest)
 }
 
 /** Remember a new bridge at <b>addr</b>:<b>port</b>. If <b>digest</b>
- * is set, it tells us the identity key too. */
+ * is set, it tells us the identity key too.  If we already had the
+ * bridge in our list, unmark it, and don't actually add anything new. */
 void
-bridge_add_from_config(const tor_addr_t *addr, uint16_t port, char *digest)
+bridge_add_from_config(const tor_addr_t *addr, uint16_t port,
+                       const char *digest)
 {
-  bridge_info_t *b = tor_malloc_zero(sizeof(bridge_info_t));
+  bridge_info_t *b;
+
+  if ((b = get_configured_bridge_by_addr_port_digest(addr, port, digest))) {
+    b->marked_for_removal = 0;
+    return;
+  }
+
+  b = tor_malloc_zero(sizeof(bridge_info_t));
   tor_addr_copy(&b->addr, addr);
   b->port = port;
   if (digest)
@@ -4578,6 +4620,7 @@ bridge_add_from_config(const tor_addr_t *addr, uint16_t port, char *digest)
   b->fetch_status.schedule = DL_SCHED_BRIDGE;
   if (!bridge_list)
     bridge_list = smartlist_create();
+
   smartlist_add(bridge_list, b);
 }
 

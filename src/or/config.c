@@ -1194,7 +1194,7 @@ options_act(or_options_t *old_options)
     return -1;
 
   if (options->Bridges) {
-    clear_bridge_list();
+    mark_bridge_list();
     for (cl = options->Bridges; cl; cl = cl->next) {
       if (parse_bridge_line(cl->value, 0)<0) {
         log_warn(LD_BUG,
@@ -1202,6 +1202,7 @@ options_act(or_options_t *old_options)
         return -1;
       }
     }
+    sweep_bridge_list();
   }
 
   if (running_tor && rend_config_services(options, 0)<0) {
