@@ -29,7 +29,7 @@ Changes in version 0.2.2.26-alpha - 2011-05-??
       their microdescriptor caches. Needed to resolve bug 2230.
     - When an HTTPS proxy reports "403 Forbidden", we now explain
       what it means rather than calling it an unexpected status code.
-      Closes bug 2503. Patch from "mikey". 
+      Closes bug 2503. Patch from Michael Yakubovich.
     - Update to the May 1 2011 Maxmind GeoLite Country database.
 
   o Minor bugfixes:
