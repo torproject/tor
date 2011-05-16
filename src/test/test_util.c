@@ -1208,6 +1208,35 @@ test_util_listdir(void *ptr)
   }
 }
 
+static void
+test_util_parent_dir(void *ptr)
+{
+  char *cp;
+  (void)ptr;
+
+#define T(input,expect_ok,output)               \
+  do {                                          \
+    int ok;                                     \
+    cp = tor_strdup(input);                     \
+    ok = get_parent_directory(cp);              \
+    tt_int_op(ok, ==, expect_ok);               \
+    if (ok==0)                                  \
+      tt_str_op(cp, ==, output);                \
+    tor_free(cp);                               \
+  } while (0);
+
+  T("/home/wombat/knish", 0, "/home/wombat");
+  T("/home/wombat/knish/", 0, "/home/wombat");
+  T("./home/wombat/knish/", 0, "./home/wombat");
+  T("./wombat", 0, ".");
+  T("", -1, "");
+  T("/", -1, "");
+  T("////", -1, "");
+
+ done:
+  tor_free(cp);
+}
+
 #ifdef MS_WINDOWS
 static void
 test_util_load_win_lib(void *ptr)
@@ -1495,6 +1524,7 @@ struct testcase_t util_tests[] = {
   UTIL_TEST(find_str_at_start_of_line, 0),
   UTIL_TEST(asprintf, 0),
   UTIL_TEST(listdir, 0),
+  UTIL_TEST(parent_dir, 0),
 #ifdef MS_WINDOWS
   UTIL_TEST(load_win_lib, 0),
 #endif

@@ -1,0 +1,5 @@
+  o Minor features:
+    - Allow ControlSockets to be group-writable when the
+      ControlSocksGroupWritable configuration option is turned on. Patch
+      by Jérémy Bobbio; implements ticket 2972.
+
