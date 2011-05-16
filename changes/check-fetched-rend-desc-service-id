@@ -1,0 +1,7 @@
+  o Security fixes:
+    - When fetching a hidden service descriptor, check that it is for
+      the hidden service we were trying to connect to, in order to
+      stop a directory from pre-seeding a client with a descriptor for
+      a hidden service that they didn't want.  Bugfix on 0.0.6.
+
+
