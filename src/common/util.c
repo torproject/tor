@@ -30,6 +30,7 @@
 #else
 #include <dirent.h>
 #include <pwd.h>
+#include <grp.h>
 #endif
 
 /* math.h needs this on Linux */
@@ -1664,17 +1665,25 @@ file_status(const char *fname)
     return FN_ERROR;
 }
 
-/** Check whether dirname exists and is private.  If yes return 0.  If
- * it does not exist, and check==CPD_CREATE is set, try to create it
+/** Check whether <b>dirname</b> exists and is private.  If yes return 0.  If
+ * it does not exist, and <b>check</b>&CPD_CREATE is set, try to create it
  * and return 0 on success. If it does not exist, and
- * check==CPD_CHECK, and we think we can create it, return 0.  Else
- * return -1. */
+ * <b>check</b>&CPD_CHECK, and we think we can create it, return 0.  Else
+ * return -1.  If CPD_GROUP_OK is set, then it's okay if the directory
+ * is group-readable, but in all cases we create the directory mode 0700.
+ * If CPD_CHECK_MODE_ONLY is set, then we don't alter the directory permissions
+ * if they are too permissive: we just return -1.
+ */
 int
 check_private_dir(const char *dirname, cpd_check_t check)
 {
   int r;
   struct stat st;
   char *f;
+#ifndef MS_WINDOWS
+  int mask;
+#endif
+
   tor_assert(dirname);
   f = tor_strdup(dirname);
   clean_name_for_stat(f);
@@ -1686,10 +1695,7 @@ check_private_dir(const char *dirname, cpd_check_t check)
                strerror(errno));
       return -1;
     }
-    if (check == CPD_NONE) {
-      log_warn(LD_FS, "Directory %s does not exist.", dirname);
-      return -1;
-    } else if (check == CPD_CREATE) {
+    if (check & CPD_CREATE) {
       log_info(LD_GENERAL, "Creating directory %s", dirname);
 #if defined (MS_WINDOWS) && !defined (WINCE)
       r = mkdir(dirname);
@@ -1701,6 +1707,9 @@ check_private_dir(const char *dirname, cpd_check_t check)
             strerror(errno));
         return -1;
       }
+    } else if (!(check & CPD_CHECK)) {
+      log_warn(LD_FS, "Directory %s does not exist.", dirname);
+      return -1;
     }
     /* XXXX In the case where check==CPD_CHECK, we should look at the
      * parent directory a little harder. */
@@ -1728,9 +1737,38 @@ check_private_dir(const char *dirname, cpd_check_t check)
     tor_free(process_ownername);
     return -1;
   }
-  if (st.st_mode & 0077) {
+  if ((check & CPD_GROUP_OK) && st.st_gid != getgid()) {
+    struct group *gr;
+    char *process_groupname = NULL;
+    gr = getgrgid(getgid());
+    process_groupname = gr ? tor_strdup(gr->gr_name) : tor_strdup("<unknown>");
+    gr = getgrgid(st.st_gid);
+
+    log_warn(LD_FS, "%s is not owned by this group (%s, %d) but by group "
+             "%s (%d).  Are you running Tor as the wrong user?",
+             dirname, process_groupname, (int)getgid(),
+             gr ?  gr->gr_name : "<unknown>", (int)st.st_gid);
+
+    tor_free(process_groupname);
+    return -1;
+  }
+  if (check & CPD_GROUP_OK) {
+    mask = 0027;
+  } else {
+    mask = 0077;
+  }
+  if (st.st_mode & mask) {
+    unsigned new_mode;
+    if (check & CPD_CHECK_MODE_ONLY) {
+      log_warn(LD_FS, "Permissions on directory %s are too permissive.",
+               dirname);
+      return -1;
+    }
     log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
-    if (chmod(dirname, 0700)) {
+    new_mode = st.st_mode;
+    new_mode |= 0700; /* Owner should have rwx */
+    new_mode &= ~mask; /* Clear the other bits that we didn't want set...*/
+    if (chmod(dirname, new_mode)) {
       log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
           strerror(errno));
       return -1;

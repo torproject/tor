@@ -2332,8 +2332,8 @@ router_get_by_nickname(const char *nickname, int warn_if_unnamed)
       if (n_matches <= 1 || router->is_running)
         best_match = router;
     } else if (maybedigest &&
-               tor_memeq(digest, router->cache_info.identity_digest, DIGEST_LEN)
-               ) {
+               tor_memeq(digest, router->cache_info.identity_digest,
+                         DIGEST_LEN)) {
       if (router_hex_digest_matches(router, nickname))
         return router;
       /* If we reach this point, we have a ID=name syntax that matches the
@@ -5063,8 +5063,9 @@ routerinfo_incompatible_with_extrainfo(routerinfo_t *ri, extrainfo_t *ei,
 
   /* The identity must match exactly to have been generated at the same time
    * by the same router. */
-  if (tor_memneq(ri->cache_info.identity_digest, ei->cache_info.identity_digest,
-             DIGEST_LEN)) {
+  if (tor_memneq(ri->cache_info.identity_digest,
+                 ei->cache_info.identity_digest,
+                 DIGEST_LEN)) {
     if (msg) *msg = "Extrainfo nickname or identity did not match routerinfo";
     goto err; /* different servers */
   }
@@ -5758,29 +5759,11 @@ int
 hid_serv_acting_as_directory(void)
 {
   routerinfo_t *me = router_get_my_routerinfo();
-  networkstatus_t *c;
-  routerstatus_t *rs;
   if (!me)
     return 0;
   if (!get_options()->HidServDirectoryV2) {
     log_info(LD_REND, "We are not acting as hidden service directory, "
                       "because we have not been configured as such.");
-    return 0;
-  }
-  if (!(c = networkstatus_get_latest_consensus())) {
-    log_info(LD_REND, "There's no consensus, so I can't tell if I'm a hidden "
-             "service directory");
-    return 0;
-  }
-  rs = networkstatus_vote_find_entry(c, me->cache_info.identity_digest);
-  if (!rs) {
-    log_info(LD_REND, "We're not listed in the consensus, so we're not "
-             "being a hidden service directory.");
-    return 0;
-  }
-  if (!rs->is_hs_dir) {
-    log_info(LD_REND, "We're not listed as a hidden service directory in "
-             "the consensus, so we won't be one.");
     return 0;
   }
   return 1;

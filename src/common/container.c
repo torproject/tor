@@ -210,9 +210,28 @@ smartlist_string_isin_case(const smartlist_t *sl, const char *element)
 int
 smartlist_string_num_isin(const smartlist_t *sl, int num)
 {
-  char buf[16];
+  char buf[32]; /* long enough for 64-bit int, and then some. */
   tor_snprintf(buf,sizeof(buf),"%d", num);
   return smartlist_string_isin(sl, buf);
+}
+
+/** Return true iff the two lists contain the same strings in the same
+ * order, or if they are both NULL. */
+int
+smartlist_strings_eq(const smartlist_t *sl1, const smartlist_t *sl2)
+{
+  if (sl1 == NULL)
+    return sl2 == NULL;
+  if (sl2 == NULL)
+    return 0;
+  if (smartlist_len(sl1) != smartlist_len(sl2))
+    return 0;
+  SMARTLIST_FOREACH(sl1, const char *, cp1, {
+      const char *cp2 = smartlist_get(sl2, cp1_sl_idx);
+      if (strcmp(cp1, cp2))
+        return 0;
+    });
+  return 1;
 }
 
 /** Return true iff <b>sl</b> has some element E such that
