@@ -2445,6 +2445,7 @@ typedef struct {
   int ControlPort; /**< Port to listen on for control connections. */
   config_line_t *ControlSocket; /**< List of Unix Domain Sockets to listen on
                                  * for control connections. */
+  int ControlSocketsGroupWritable; /**< Boolean: Are control sockets g+rw? */
   int DirPort; /**< Port to listen on for directory connections. */
   int DNSPort; /**< Port to listen on for DNS requests. */
   int AssumeReachable; /**< Whether to publish our descriptor regardless. */

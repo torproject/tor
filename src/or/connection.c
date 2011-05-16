@@ -853,6 +853,43 @@ warn_too_many_conns(void)
   }
 }
 
+#ifdef HAVE_SYS_UN_H
+/** Check whether we should be willing to open an AF_UNIX socket in
+ * <b>path</b>.  Return 0 if we should go ahead and -1 if we shouldn't. */
+static int
+check_location_for_unix_socket(or_options_t *options, const char *path)
+{
+  int r = -1;
+  char *p = tor_strdup(path);
+  cpd_check_t flags = CPD_CHECK_MODE_ONLY;
+  if (get_parent_directory(p)<0)
+    goto done;
+
+  if (options->ControlSocketsGroupWritable)
+    flags |= CPD_GROUP_OK;
+
+  if (check_private_dir(p, flags) < 0) {
+    char *escpath, *escdir;
+    escpath = esc_for_log(path);
+    escdir = esc_for_log(p);
+    log_warn(LD_GENERAL, "Before Tor can create a control socket in %s, the "
+             "directory %s needs to exist, and to be accessible only by the "
+             "user%s account that is running Tor.  (On some Unix systems, "
+             "anybody who can list a socket can conect to it, so Tor is "
+             "being careful.)", escpath, escdir,
+             options->ControlSocketsGroupWritable ? " and group" : "");
+    tor_free(escpath);
+    tor_free(escdir);
+    goto done;
+  }
+
+  r = 0;
+ done:
+  tor_free(p);
+  return r;
+}
+#endif
+
 /** Bind a new non-blocking socket listening to the socket described
  * by <b>listensockaddr</b>.
  *
@@ -947,6 +984,9 @@ connection_create_listener(const struct sockaddr *listensockaddr,
      * and listeners at the same time */
     tor_assert(type == CONN_TYPE_CONTROL_LISTENER);
 
+    if (check_location_for_unix_socket(get_options(), address) < 0)
+      goto err;
+
     log_notice(LD_NET, "Opening %s on %s",
                conn_type_to_string(type), address);
 
@@ -965,6 +1005,15 @@ connection_create_listener(const struct sockaddr *listensockaddr,
       log_warn(LD_NET,"Bind to %s failed: %s.", address,
                tor_socket_strerror(tor_socket_errno(s)));
       goto err;
+    }
+    if (get_options()->ControlSocketsGroupWritable) {
+      /* We need to use chmod; fchmod doesn't work on sockets on all
+       * platforms. */
+      if (chmod(address, 0660) < 0) {
+        log_warn(LD_FS,"Unable to make %s group-writable.", address);
+        tor_close_socket(s);
+        goto err;
+      }
     }
 
     if (listen(s,SOMAXCONN) < 0) {
