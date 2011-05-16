@@ -1,5 +1,0 @@
-  o Major features:
-    - Move to the Maxmind GeoIP db (rather than the June 2009
-      ip-to-country GeoIP db) for our statistics that count how many
-      users relays are seeing from each country. Now we have more accurate
-      data for many African countries.

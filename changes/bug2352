@@ -1,6 +1,0 @@
-  o Minor bugfixes
-    - Fix some potential asserts and partsing issues with grossly
-      malformed router caches.  Fixes bug 2352.  Found by doorss.
-      Bugfix on Tor 0.2.1.27.
-
-

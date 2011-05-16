@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Fix a crash in parsing router descriptors containing IPv6
-      addresses.  This one crashed the directory authorities when somebody
-      fired up some experimental code. Bugfix on 0.2.1.3-alpha.

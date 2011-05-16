@@ -1,4 +1,0 @@
-  o Minor bugfixes
-    - Fix a bug with handling misformed replies to reverse DNS lookup
-      requests in DNSPort.  Bugfix on Tor 0.2.0.1-alpha.  Related to a bug
-      reported by doorss.
