@@ -261,7 +261,7 @@ char *smartlist_join_strings2(smartlist_t *sl, const char *join,
  * Example use:
  *  SMARTLIST_FOREACH_JOIN(routerstatus_list, routerstatus_t *, rs,
  *                     routerinfo_list, routerinfo_t *, ri,
- *                     tor_memcmp(rs->identity_digest, ri->identity_digest, 20),
+ *                    tor_memcmp(rs->identity_digest, ri->identity_digest, 20),
  *                     log_info(LD_GENERAL,"No match for %s", ri->nickname)) {
  *    log_info(LD_GENERAL, "%s matches routerstatus %p", ri->nickname, rs);
  * } SMARTLIST_FOREACH_JOIN_END(rs, ri);

@@ -28,3 +28,4 @@ int tor_memeq(const void *a, const void *b, size_t sz);
 #define fast_memneq(a,b,c) (0!=memcmp((a),(b),(c)))
 
 #endif
+
