@@ -1232,10 +1232,7 @@ options_act(or_options_t *old_options)
     return -1;
   }
 
-  if (monitor_owning_controller_process(options->OwningControllerProcess)) {
-    log_warn(LD_CONFIG, "Error monitoring owning controller process");
-    return -1;
-  }
+  monitor_owning_controller_process(options->OwningControllerProcess);
 
   /* reload keys as needed for rendezvous services. */
   if (rend_service_load_keys()<0) {

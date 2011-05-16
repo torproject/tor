@@ -70,7 +70,7 @@ smartlist_t *decode_hashed_passwords(config_line_t *passwords);
 void disable_control_logging(void);
 void enable_control_logging(void);
 
-int monitor_owning_controller_process(const char *process_spec);
+void monitor_owning_controller_process(const char *process_spec);
 
 void control_event_bootstrap(bootstrap_status_t status, int progress);
 void control_event_bootstrap_problem(const char *warn, int reason);

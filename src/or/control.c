@@ -3815,8 +3815,8 @@ owning_controller_procmon_cb(void *unused)
 }
 
 /** Set <b>process_spec</b> as Tor's owning controller process.
- * Return 0 on success, -1 on failure. */
-int
+ * Exit on failure. */
+void
 monitor_owning_controller_process(const char *process_spec)
 {
   const char *msg;
@@ -3829,7 +3829,7 @@ monitor_owning_controller_process(const char *process_spec)
                                           owning_controller_process_spec)) {
       /* Same process -- return now, instead of disposing of and
        * recreating the process-termination monitor. */
-      return 0;
+      return;
     }
 
     /* We are currently owned by a process, and we should no longer be
@@ -3845,7 +3845,7 @@ monitor_owning_controller_process(const char *process_spec)
              (owning_controller_process_monitor == NULL));
 
   if (process_spec == NULL)
-    return 0;
+    return;
 
   owning_controller_process_spec = tor_strdup(process_spec);
   owning_controller_process_monitor =
@@ -3856,13 +3856,13 @@ monitor_owning_controller_process(const char *process_spec)
                             &msg);
 
   if (owning_controller_process_monitor == NULL) {
-    log_warn(LD_CONTROL, "Couldn't create process-termination monitor for "
-             "owning controller: %s",
-             msg);
-    return -1;
+    log_err(LD_BUG, "Couldn't create process-termination monitor for "
+            "owning controller: %s.  Exiting.",
+            msg);
+    owning_controller_process_spec = NULL;
+    tor_cleanup();
+    exit(0);
   }
-
-  return 0;
 }
 
 /** Convert the name of a bootstrapping phase <b>s</b> into strings
