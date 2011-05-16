@@ -1,5 +1,0 @@
-  - Minor features
-    o Set SO_REUSEADDR on all sockets, not just listeners.  This should
-      help busy exit nodes avoid running out of useable ports just because
-      all the ports have been used in the near past.  Resolves issue 2850.
-

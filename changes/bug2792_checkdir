@@ -1,8 +1,0 @@
-  o Minor features:
-    - Tor now refuses to create a ControlSocket in a directory that is
-      world-readable (or group-readable if ControlSocketsGroupWritable
-      is 0).  This is necessary because some operating systems do not
-      check the permissions on an AF_UNIX socket when programs try to
-      connect to it.  Checking permissions on the directory holding
-      the socket, however, seems to work everywhere.
-

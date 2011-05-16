@@ -1,4 +1,0 @@
-  o Minor bugfixes (directory authority)
-    - Do not upload our own vote or signature set to ourself.  It would
-      tell us nothing new.  Also, as of Tor 0.2.2.24-alpha, we started
-      to warn about receiving duplicate votes.  Resolves bug 3026.
