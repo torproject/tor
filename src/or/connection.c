@@ -933,6 +933,25 @@ check_location_for_unix_socket(or_options_t *options, const char *path)
 }
 #endif
 
+/** Tell the TCP stack that it shouldn't wait for a long time after
+ * <b>sock</b> has closed before reusing its port. */
+static void
+make_socket_reuseable(int sock)
+{
+#ifdef MS_WINDOWS
+  (void) sock;
+#else
+  int one=1;
+
+  /* REUSEADDR on normal places means you can rebind to the port
+   * right after somebody else has let it go. But REUSEADDR on win32
+   * means you can bind to the port _even when somebody else
+   * already has it bound_. So, don't do that on Win32. */
+  setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*) &one,
+             (socklen_t)sizeof(one));
+#endif
+}
+
 /** Bind a new non-blocking socket listening to the socket described
  * by <b>listensockaddr</b>.
  *
@@ -957,9 +976,6 @@ connection_create_listener(const struct sockaddr *listensockaddr,
   if (listensockaddr->sa_family == AF_INET) {
     tor_addr_t addr;
     int is_tcp = (type != CONN_TYPE_AP_DNS_LISTENER);
-#ifndef MS_WINDOWS
-    int one=1;
-#endif
     if (is_tcp)
       start_reading = 1;
 
@@ -976,14 +992,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
       goto err;
     }
 
-#ifndef MS_WINDOWS
-    /* REUSEADDR on normal places means you can rebind to the port
-     * right after somebody else has let it go. But REUSEADDR on win32
-     * means you can bind to the port _even when somebody else
-     * already has it bound_. So, don't do that on Win32. */
-    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void*) &one,
-               (socklen_t)sizeof(one));
-#endif
+    make_socket_reuseable(s);
 
     if (bind(s,listensockaddr,socklen) < 0) {
       const char *helpfulhint = "";
@@ -1202,6 +1211,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
             "Connection accepted on socket %d (child of fd %d).",
             news,conn->s);
 
+  make_socket_reuseable(news);
   set_socket_nonblocking(news);
 
   if (options->ConstrainedSockets)
@@ -1410,6 +1420,8 @@ connection_connect(connection_t *conn, const char *address,
 
   log_debug(LD_NET, "Connecting to %s:%u.",
             escaped_safe_str_client(address), port);
+
+  make_socket_reuseable(s);
 
   if (connect(s, dest_addr, (socklen_t)dest_addr_len) < 0) {
     int e = tor_socket_errno(s);
