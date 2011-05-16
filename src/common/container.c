@@ -210,7 +210,7 @@ smartlist_string_isin_case(const smartlist_t *sl, const char *element)
 int
 smartlist_string_num_isin(const smartlist_t *sl, int num)
 {
-  char buf[16];
+  char buf[32]; /* long enough for 64-bit int, and then some. */
   tor_snprintf(buf,sizeof(buf),"%d", num);
   return smartlist_string_isin(sl, buf);
 }
