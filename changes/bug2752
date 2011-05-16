@@ -1,0 +1,5 @@
+  o Minor bugfixes
+    - Tor used to limit HttpProxyAuthenticator values to 48 characters.
+    Changed the limit to 512 characters by removing base64 newlines.
+    Fixes bug 2917.
+

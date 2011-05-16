@@ -3398,8 +3398,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HTTPProxyAuthenticator) {
-    if (strlen(options->HTTPProxyAuthenticator) >= 48)
-      REJECT("HTTPProxyAuthenticator is too long (>= 48 chars).");
+    if (strlen(options->HTTPProxyAuthenticator) >= 512)
+      REJECT("HTTPProxyAuthenticator is too long (>= 512 chars).");
   }
 
   if (options->HTTPSProxy) { /* parse it now */
@@ -3412,8 +3412,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   }
 
   if (options->HTTPSProxyAuthenticator) {
-    if (strlen(options->HTTPSProxyAuthenticator) >= 48)
-      REJECT("HTTPSProxyAuthenticator is too long (>= 48 chars).");
+    if (strlen(options->HTTPSProxyAuthenticator) >= 512)
+      REJECT("HTTPSProxyAuthenticator is too long (>= 512 chars).");
   }
 
   if (options->Socks4Proxy) { /* parse it now */
