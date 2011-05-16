@@ -1418,7 +1418,6 @@ test_util_spawn_background_fail(void *ptr)
 }
 #endif
 
-
 static void
 test_util_di_ops(void)
 {
