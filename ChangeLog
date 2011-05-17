@@ -1,4 +1,9 @@
 Changes in version 0.2.2.26-beta - 2011-05-17
+  Tor 0.2.2.26-beta fixes a variety of potential privacy problems. It
+  also introduces a new "socksport auto" approach that should make it
+  easier to run multiple Tors on the same system, and does a lot of
+  cleanup to get us closer to a release candidate.
+
   o Security/privacy fixes:
     - Replace all potentially sensitive memory comparison operations
       with versions whose runtime does not depend on the data being
@@ -46,7 +51,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
       enforce permissions on an AF_UNIX sockets. Permissions on the
       directory holding the socket, however, seems to work everywhere.
     - Rate-limit a warning about failures to download v2 networkstatus
-      documents.  Resolves part of bug 1352.
+      documents. Resolves part of bug 1352.
     - Backport code from 0.2.3.x that allows directory authorities to
       clean their microdescriptor caches. Needed to resolve bug 2230.
     - When an HTTPS proxy reports "403 Forbidden", we now explain
@@ -101,7 +106,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
       Fix posted by "cypherpunks."
     - The microdesc journal is supposed to get rebuilt only if it is
       at least _half_ the length of the store, not _twice_ the length
-      of the store.  Bugfix on 0.2.2.6-alpha; fixes part of bug 2230.
+      of the store. Bugfix on 0.2.2.6-alpha; fixes part of bug 2230.
     - Fix a potential null-pointer dereference while computing a
       consensus. Bugfix on tor-0.2.0.3-alpha, found with the help of
       clang's analyzer.
@@ -115,7 +120,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
       where if the function had ever in the future been used to check
       for the presence of a too-large number, it would have given an
       incorrect result. (Fortunately, we only used it for 16-bit
-      values.)  Fixes bug 3175; bugfix on 0.1.0.1-rc.
+      values.) Fixes bug 3175; bugfix on 0.1.0.1-rc.
     - Require that introduction point keys and onion handshake keys
       have a public exponent of 65537. Starts to fix bug 3207; bugfix
       on 0.2.0.10-alpha.
