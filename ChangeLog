@@ -73,7 +73,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
     - As an authority, do not upload our own vote or signature set to
       ourself. It would tell us nothing new, and as of 0.2.2.24-alpha,
       it would get flagged as a duplicate. Resolves bug 3026.
-    - Accept hidden service descriptors if we think we are a hidden
+    - Accept hidden service descriptors if we think we might be a hidden
       service directory, regardless of what our consensus says. This
       helps robustness, since clients and hidden services can sometimes
       have a more up-to-date view of the network consensus than we do,
@@ -117,7 +117,8 @@ Changes in version 0.2.2.26-beta - 2011-05-17
       incorrect result. (Fortunately, we only used it for 16-bit
       values.)  Fixes bug 3175; bugfix on 0.1.0.1-rc.
     - Require that introduction point keys and onion handshake keys
-      have public exponent 65537. Bugfix on 0.2.0.10-alpha.
+      have a public exponent of 65537. Starts to fix bug 3207; bugfix
+      on 0.2.0.10-alpha.
 
   o Removed features:
     - Caches no longer download and serve v2 networkstatus documents
