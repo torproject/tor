@@ -4345,6 +4345,11 @@ microdescs_parse_from_string(const char *s, const char *eos,
     }
 
     tok = find_by_keyword(tokens, K_ONION_KEY);
+    if (!crypto_pk_public_exponent_ok(tok->key)) {
+      log_warn(LD_DIR,
+               "Relay's onion key had invalid exponent.");
+      goto next;
+    }
     md->onion_pkey = tok->key;
     tok->key = NULL;
 
