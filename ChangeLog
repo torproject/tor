@@ -1,4 +1,4 @@
-Changes in version 0.2.2.26-alpha - 2011-05-17
+Changes in version 0.2.2.26-beta - 2011-05-17
   o Security/privacy fixes:
     - Replace all potentially sensitive memory comparison operations
       with versions whose runtime does not depend on the data being
