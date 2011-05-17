@@ -4539,7 +4539,7 @@ get_configured_bridge_by_addr_port_digest(const tor_addr_t *addr,
           !tor_addr_compare(&bridge->addr, addr, CMP_EXACT) &&
           bridge->port == port)
         return bridge;
-      if (tor_memeq(bridge->identity, digest, DIGEST_LEN))
+      if (digest && tor_memeq(bridge->identity, digest, DIGEST_LEN))
         return bridge;
     }
   SMARTLIST_FOREACH_END(bridge);
