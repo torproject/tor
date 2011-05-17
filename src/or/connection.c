@@ -3232,8 +3232,17 @@ alloc_http_authenticator(const char *authenticator)
                     authenticator, authenticator_length) < 0) {
     tor_free(base64_authenticator); /* free and set to null */
   } else {
-    /* remove extra \n at end of encoding */
-    base64_authenticator[strlen(base64_authenticator) - 1] = 0;
+    int i = 0, j = 0;
+    int len = strlen(base64_authenticator);
+
+    /* remove all newline occurrences within the string */
+    for (i=0; i < len; ++i) {
+      if ('\n' != base64_authenticator[i]) {
+        base64_authenticator[j] = base64_authenticator[i];
+        ++j;
+      }
+    }
+    base64_authenticator[j]='\0';
   }
   return base64_authenticator;
 }
