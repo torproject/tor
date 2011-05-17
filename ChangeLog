@@ -1,5 +1,5 @@
 Changes in version 0.2.2.26-beta - 2011-05-1?
-  o Security fixes:
+  o Security/privacy fixes:
     - Replace all potentially sensitive memory comparison operations
       with versions whose runtime does not depend on the data being
       compared. This will help resist a class of attacks where an
@@ -11,7 +11,7 @@ Changes in version 0.2.2.26-beta - 2011-05-1?
       hidden service descriptors that a directory gave it, whether it
       wanted them or not. This wouldn't have let an attacker impersonate
       a hidden service, but it did let directories pre-seed a client
-      with a descriptors that it didn't want. Bugfix on 0.0.6.
+      with descriptors that it didn't want. Bugfix on 0.0.6.
 
   o Major features:
     - The options SocksPort, ControlPort, and so on now all accept a
@@ -96,13 +96,6 @@ Changes in version 0.2.2.26-beta - 2011-05-1?
     - When a controller changes one of the AutomapHosts* options, remove
       any mappings for hosts that should no longer be automapped. Bugfix
       on 0.2.0.1-alpha.
-    - Accept hidden service descriptors if we think we are a hidden
-      service directory, regardless of what our consensus says. This
-      helps robustness, since clients and hidden services can sometimes
-      have a more up-to-date view of the network consensus than we do,
-      and if they think that the directory authorities list us a HSDir,
-      we might actually be one. Related to bug 2732; bugfix on
-      0.2.0.10-alpha.
     - Do not reset the bridge descriptor download status every time we
       re-parse our configuration or get a configuration change. Fixes
       bug 3019; bugfix on 0.2.0.3-alpha.
