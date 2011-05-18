@@ -1,0 +1,4 @@
+  o Major bugfixes:
+    - When we configure a new bridge via the controller, don't wait up
+      to ten seconds before trying to fetch its descriptor. Bugfix on
+      0.2.0.3-alpha; fixes bug 3198 (suggested by 2355).
