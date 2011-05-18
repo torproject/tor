@@ -1110,8 +1110,6 @@ run_scheduled_events(time_t now)
   if (time_to_try_getting_descriptors < now) {
     update_all_descriptor_downloads(now);
     update_extrainfo_downloads(now);
-    if (options->UseBridges)
-      fetch_bridge_descriptors(options, now);
     if (router_have_minimum_dir_info())
       time_to_try_getting_descriptors = now + LAZY_DESCRIPTOR_RETRY_INTERVAL;
     else
@@ -1123,6 +1121,9 @@ run_scheduled_events(time_t now)
     time_to_reset_descriptor_failures =
       now + DESCRIPTOR_FAILURE_RESET_INTERVAL;
   }
+
+  if (options->UseBridges)
+    fetch_bridge_descriptors(options, now);
 
   /** 1b. Every MAX_SSL_KEY_LIFETIME seconds, we change our TLS context. */
   if (!last_rotated_x509_certificate)
