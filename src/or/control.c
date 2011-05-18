@@ -1907,8 +1907,8 @@ static const getinfo_item_t getinfo_items[] = {
          "v2 networkstatus docs as retrieved from a DirPort."),
   ITEM("dir/status-vote/current/consensus", dir,
        "v3 Networkstatus consensus as retrieved from a DirPort."),
-  PREFIX("exit-policy/default", policies,
-         "The default value appended to the configured exit policy."),
+  ITEM("exit-policy/default", policies,
+       "The default value appended to the configured exit policy."),
   PREFIX("ip-to-country/", geoip, "Perform a GEOIP lookup"),
   { NULL, NULL, NULL, 0 }
 };
