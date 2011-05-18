@@ -1,4 +1,0 @@
-  o Minor bugfixes:
-    - Require that onion keys have exponent 65537 in microdescriptors too.
-      Fixes part of bug 3207; bugfix on 0.2.2.25-alpha
-

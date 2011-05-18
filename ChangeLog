@@ -1,3 +1,19 @@
+Changes in version 0.2.2.27-beta - 2011-05-18
+  o Major bugfixes:
+    - Fix a crash bug when changing bridges in a running Tor process.
+      Fixes bug 3213; bugfix on 0.2.2.26-beta.
+    - When the controller configures a new bridge, don't wait 10 to 60
+      seconds before trying to fetch its descriptor. Bugfix on
+      0.2.0.3-alpha; fixes bug 3198 (suggested by 2355).
+
+  o Minor bugfixes:
+    - Require that onion keys have exponent 65537 in microdescriptors too.
+      Fixes more of bug 3207; bugfix on 0.2.2.25-alpha.
+    - Tor used to limit HttpProxyAuthenticator values to 48 characters.
+      Changed the limit to 512 characters by removing base64 newlines.
+      Fixes bug 2752. Fix by Michael Yakubovich.
+
+
 Changes in version 0.2.2.26-beta - 2011-05-17
   Tor 0.2.2.26-beta fixes a variety of potential privacy problems. It
   also introduces a new "socksport auto" approach that should make it
