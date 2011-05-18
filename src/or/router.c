@@ -802,6 +802,8 @@ decide_to_advertise_dirport(or_options_t *options, uint16_t dir_port)
     return 0;
   if (!check_whether_dirport_reachable())
     return 0;
+  if (!router_get_advertised_dir_port(options))
+    return 0;
 
   /* Section two: reasons to publish or not publish that the user
    * might find surprising. These are generally config options that
@@ -1136,6 +1138,8 @@ decide_if_publishable_server(void)
     return 0;
   if (authdir_mode(options))
     return 1;
+  if (!router_get_advertised_or_port(options))
+    return 0;
 
   return check_whether_orport_reachable();
 }
