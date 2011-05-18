@@ -2894,6 +2894,9 @@ connection_control_process_inbuf(control_connection_t *conn)
     return 0;
   }
 
+  /* XXXX Why is this not implemented as a table like the GETINFO
+   * items are?  Even handling the plus signs at the beginnings of
+   * commands wouldn't be very hard with proper macros. */
   cmd_data_len = (uint32_t)data_len;
   if (!strcasecmp(conn->incoming_cmd, "SETCONF")) {
     if (handle_control_setconf(conn, cmd_data_len, args))
