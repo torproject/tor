@@ -1296,6 +1296,9 @@ options_act(or_options_t *old_options)
     int revise_trackexithosts = 0;
     int revise_automap_entries = 0;
     if ((options->UseEntryGuards && !old_options->UseEntryGuards) ||
+        options->UseBridges != old_options->UseBridges ||
+        (options->UseBridges &&
+         !config_lines_eq(options->Bridges, old_options->Bridges)) ||
         !routerset_equal(old_options->ExcludeNodes,options->ExcludeNodes) ||
         !routerset_equal(old_options->ExcludeExitNodes,
                          options->ExcludeExitNodes) ||
@@ -1303,8 +1306,9 @@ options_act(or_options_t *old_options)
         !routerset_equal(old_options->ExitNodes, options->ExitNodes) ||
         options->StrictNodes != old_options->StrictNodes) {
       log_info(LD_CIRC,
-               "Changed to using entry guards, or changed preferred or "
-               "excluded node lists. Abandoning previous circuits.");
+               "Changed to using entry guards or bridges, or changed "
+               "preferred or excluded node lists. "
+               "Abandoning previous circuits.");
       circuit_mark_all_unused_circs();
       circuit_expire_all_dirty_circs();
       revise_trackexithosts = 1;
