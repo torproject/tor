@@ -1,4 +1,7 @@
 Changes in version 0.2.2.27-beta - 2011-05-18
+  Tor 0.2.2.27-beta fixes a bridge-related stability bug in the previous
+  release, and also adds a few more general bugfixes.
+
   o Major bugfixes:
     - Fix a crash bug when changing bridges in a running Tor process.
       Fixes bug 3213; bugfix on 0.2.2.26-beta.
@@ -8,7 +11,7 @@ Changes in version 0.2.2.27-beta - 2011-05-18
 
   o Minor bugfixes:
     - Require that onion keys have exponent 65537 in microdescriptors too.
-      Fixes more of bug 3207; bugfix on 0.2.2.25-alpha.
+      Fixes more of bug 3207; bugfix on 0.2.2.26-beta.
     - Tor used to limit HttpProxyAuthenticator values to 48 characters.
       Changed the limit to 512 characters by removing base64 newlines.
       Fixes bug 2752. Fix by Michael Yakubovich.
