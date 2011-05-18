@@ -1,6 +1,0 @@
-  o Minor bugfixes:
-    - When a client starts or stops using bridges, never use a circuit
-      that was built before the configuration change. This behavior could
-      put at risk a user who uses bridges to ensure that her traffic
-      only goes to the chosen addresses. Bugfix on 0.2.0.3-alpha; fixes
-      bug 3200.

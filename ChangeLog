@@ -12,6 +12,11 @@ Changes in version 0.2.2.27-beta - 2011-05-18
     - Tor used to limit HttpProxyAuthenticator values to 48 characters.
       Changed the limit to 512 characters by removing base64 newlines.
       Fixes bug 2752. Fix by Michael Yakubovich.
+    - When a client starts or stops using bridges, never use a circuit
+      that was built before the configuration change. This behavior could
+      put at risk a user who uses bridges to ensure that her traffic
+      only goes to the chosen addresses. Bugfix on 0.2.0.3-alpha; fixes
+      bug 3200.
 
 
 Changes in version 0.2.2.26-beta - 2011-05-17
