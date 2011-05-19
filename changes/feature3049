@@ -1,0 +1,6 @@
+  o Major features:
+    - Add an __OwningControllerProcess configuration option and a
+      TAKEOWNERSHIP control-port command, so that a Tor controller can
+      ensure that when it exits, Tor will shut down.  Implements
+      feature 3049.
+
