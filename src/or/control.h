@@ -25,6 +25,8 @@ void control_adjust_event_log_severity(void);
 
 int connection_control_finished_flushing(control_connection_t *conn);
 int connection_control_reached_eof(control_connection_t *conn);
+void connection_control_closed(control_connection_t *conn);
+
 int connection_control_process_inbuf(control_connection_t *conn);
 
 #define EVENT_AUTHDIR_NEWDESCS 0x000D

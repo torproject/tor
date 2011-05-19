@@ -2739,6 +2739,16 @@ connection_control_reached_eof(control_connection_t *conn)
   return 0;
 }
 
+/** Called when <b>conn</b> is being freed. */
+void
+connection_control_closed(control_connection_t *conn)
+{
+  tor_assert(conn);
+
+  conn->event_mask = 0;
+  control_update_global_event_mask();
+}
+
 /** Return true iff <b>cmd</b> is allowable (or at least forgivable) at this
  * stage of the protocol. */
 static int
