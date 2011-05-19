@@ -1242,6 +1242,9 @@ typedef struct control_connection_t {
 
   /** True if we have sent a protocolinfo reply on this connection. */
   unsigned int have_sent_protocolinfo:1;
+  /** True if we have received a takeownership command on this
+   * connection. */
+  unsigned int is_owning_control_connection:1;
 
   /** Amount of space allocated in incoming_cmd. */
   uint32_t incoming_cmd_len;

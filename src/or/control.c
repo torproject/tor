@@ -1230,6 +1230,26 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** Called when we get a TAKEOWNERSHIP command.  Mark this connection
+ * as an owning connection, so that we will exit if the connection
+ * closes. */
+static int
+handle_control_takeownership(control_connection_t *conn, uint32_t len,
+                             const char *body)
+{
+  (void)len;
+  (void)body;
+
+  conn->is_owning_control_connection = 1;
+
+  log_info(LD_CONTROL, "Control connection %d has taken ownership of this "
+           "Tor instance.",
+           (int)(conn->_base.s));
+
+  send_control_done(conn);
+  return 0;
+}
+
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
  * and report success or failure. */
 static int
@@ -2747,6 +2767,25 @@ connection_control_closed(control_connection_t *conn)
 
   conn->event_mask = 0;
   control_update_global_event_mask();
+
+  if (conn->is_owning_control_connection) {
+    int shutdown_slowly = server_mode(get_options());
+
+    log_notice(LD_CONTROL, "Owning controller connection has closed -- %s.",
+               shutdown_slowly ? "shutting down" : "exiting now");
+
+    /* XXXX This chunk of code should be a separate function, called
+     * here, in owning_controller_procmon_cb, and by
+     * process_signal(SIGINT). */
+
+    if (!shutdown_slowly) {
+      tor_cleanup();
+      exit(0);
+    }
+    /* XXXX This will close all listening sockets except control-port
+     * listeners.  Perhaps we should close those too. */
+    hibernate_begin_shutdown();
+  }
 }
 
 /** Return true iff <b>cmd</b> is allowable (or at least forgivable) at this
@@ -2931,6 +2970,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SIGNAL")) {
     if (handle_control_signal(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "TAKEOWNERSHIP")) {
+    if (handle_control_takeownership(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "MAPADDRESS")) {
     if (handle_control_mapaddress(conn, cmd_data_len, args))
@@ -3816,7 +3858,7 @@ owning_controller_procmon_cb(void *unused)
              shutdown_slowly ? "shutting down" : "exiting now");
 
   /* XXXX This chunk of code should be a separate function, called
-   * here and by process_signal(SIGINT). */
+   * here, in connection_control_closed, and by process_signal(SIGINT). */
 
   if (!shutdown_slowly) {
     tor_cleanup();
