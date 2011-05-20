@@ -3646,7 +3646,7 @@ alloc_http_authenticator(const char *authenticator)
     tor_free(base64_authenticator); /* free and set to null */
   } else {
     int i = 0, j = 0;
-    int len = strlen(base64_authenticator);
+    ssize_t len = strlen(base64_authenticator);
 
     /* remove all newline occurrences within the string */
     for (i=0; i < len; ++i) {

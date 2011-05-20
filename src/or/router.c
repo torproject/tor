@@ -89,7 +89,7 @@ set_onion_key(crypto_pk_env_t *k)
   onionkey = k;
   onionkey_set_at = time(NULL);
   tor_mutex_release(key_lock);
-  mark_my_descriptor_dirty();
+  mark_my_descriptor_dirty("set onion key");
 }
 
 /** Return the current onion key.  Requires that the onion key has been
@@ -276,7 +276,7 @@ rotate_onion_key(void)
   now = time(NULL);
   state->LastRotatedOnionKey = onionkey_set_at = now;
   tor_mutex_release(key_lock);
-  mark_my_descriptor_dirty();
+  mark_my_descriptor_dirty("rotated onion key");
   or_state_mark_dirty(state, get_options()->AvoidDiskWrites ? now+3600 : 0);
   goto done;
  error:
@@ -914,7 +914,7 @@ router_orport_found_reachable(void)
                get_options()->_PublishServerDescriptor != NO_DIRINFO ?
                  " Publishing server descriptor." : "");
     can_reach_or_port = 1;
-    mark_my_descriptor_dirty();
+    mark_my_descriptor_dirty("ORPort found reachable");
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED ORADDRESS=%s:%d",
                                 me->address, me->or_port);
@@ -931,7 +931,7 @@ router_dirport_found_reachable(void)
                "from the outside. Excellent.");
     can_reach_dir_port = 1;
     if (decide_to_advertise_dirport(get_options(), me->dir_port))
-      mark_my_descriptor_dirty();
+      mark_my_descriptor_dirty("DirPort found reachable");
     control_event_server_status(LOG_NOTICE,
                                 "REACHABILITY_SUCCEEDED DIRADDRESS=%s:%d",
                                 me->address, me->dir_port);
@@ -1238,6 +1238,10 @@ router_upload_dir_desc_to_dirservers(int force)
     return;
   if (!force && !desc_needs_upload)
     return;
+
+  log_info(LD_OR, "Uploading relay descriptor to directory authorities%s",
+           force ? " (forced)" : "");
+
   desc_needs_upload = 0;
 
   desc_len = ri->cache_info.signed_descriptor_len;
@@ -1425,6 +1429,8 @@ router_rebuild_descriptor(int force)
     return -1;
   }
 
+  log_info(LD_OR, "Rebuilding relay descriptor%s", force ? " (forced)" : "");
+
   ri = tor_malloc_zero(sizeof(routerinfo_t));
   ri->cache_info.routerlist_index = -1;
   ri->address = tor_dup_ip(addr);
@@ -1597,14 +1603,15 @@ void
 mark_my_descriptor_dirty_if_older_than(time_t when)
 {
   if (desc_clean_since < when)
-    mark_my_descriptor_dirty();
+    mark_my_descriptor_dirty("time for new descriptor");
 }
 
 /** Call when the current descriptor is out of date. */
 void
-mark_my_descriptor_dirty(void)
+mark_my_descriptor_dirty(const char *reason)
 {
   desc_clean_since = 0;
+  log_info(LD_OR, "Decided to publish new relay descriptor: %s", reason);
 }
 
 /** How frequently will we republish our descriptor because of large (factor
@@ -1629,7 +1636,7 @@ check_descriptor_bandwidth_changed(time_t now)
     if (last_changed+MAX_BANDWIDTH_CHANGE_FREQ < now) {
       log_info(LD_GENERAL,
                "Measured bandwidth has changed; rebuilding descriptor.");
-      mark_my_descriptor_dirty();
+      mark_my_descriptor_dirty("bandwidth has changed");
       last_changed = now;
     }
   }
