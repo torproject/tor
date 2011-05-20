@@ -2759,6 +2759,29 @@ connection_control_reached_eof(control_connection_t *conn)
   return 0;
 }
 
+/** Shut down this Tor instance in the same way that SIGINT would, but
+ * with a log message appropriate for the loss of an owning controller. */
+static void
+lost_owning_controller(const char *owner_type, const char *loss_manner)
+{
+  int shutdown_slowly = server_mode(get_options());
+
+  log_notice(LD_CONTROL, "Owning controller %s has %s -- %s.",
+             owner_type, loss_manner,
+             shutdown_slowly ? "shutting down" : "exiting now");
+
+  /* XXXX Perhaps this chunk of code should be a separate function,
+   * called here and by process_signal(SIGINT). */
+
+  if (!shutdown_slowly) {
+    tor_cleanup();
+    exit(0);
+  }
+  /* XXXX This will close all listening sockets except control-port
+   * listeners.  Perhaps we should close those too. */
+  hibernate_begin_shutdown();
+}
+
 /** Called when <b>conn</b> is being freed. */
 void
 connection_control_closed(control_connection_t *conn)
@@ -2769,22 +2792,7 @@ connection_control_closed(control_connection_t *conn)
   control_update_global_event_mask();
 
   if (conn->is_owning_control_connection) {
-    int shutdown_slowly = server_mode(get_options());
-
-    log_notice(LD_CONTROL, "Owning controller connection has closed -- %s.",
-               shutdown_slowly ? "shutting down" : "exiting now");
-
-    /* XXXX This chunk of code should be a separate function, called
-     * here, in owning_controller_procmon_cb, and by
-     * process_signal(SIGINT). */
-
-    if (!shutdown_slowly) {
-      tor_cleanup();
-      exit(0);
-    }
-    /* XXXX This will close all listening sockets except control-port
-     * listeners.  Perhaps we should close those too. */
-    hibernate_begin_shutdown();
+    lost_owning_controller("connection", "closed");
   }
 }
 
@@ -3849,24 +3857,9 @@ static tor_process_monitor_t *owning_controller_process_monitor = NULL;
 static void
 owning_controller_procmon_cb(void *unused)
 {
-  int shutdown_slowly = server_mode(get_options());
-
   (void)unused;
 
-  log_notice(LD_CONTROL, "Owning controller process has vanished -- "
-             "%s.",
-             shutdown_slowly ? "shutting down" : "exiting now");
-
-  /* XXXX This chunk of code should be a separate function, called
-   * here, in connection_control_closed, and by process_signal(SIGINT). */
-
-  if (!shutdown_slowly) {
-    tor_cleanup();
-    exit(0);
-  }
-  /* XXXX This will close all listening sockets except control-port
-   * listeners.  Perhaps we should close those too. */
-  hibernate_begin_shutdown();
+  lost_owning_controller("process", "vanished");
 }
 
 /** Set <b>process_spec</b> as Tor's owning controller process.
