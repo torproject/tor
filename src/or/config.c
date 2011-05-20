@@ -1459,7 +1459,7 @@ options_act(or_options_t *old_options)
    */
   if (!old_options ||
       options_transition_affects_descriptor(old_options, options))
-    mark_my_descriptor_dirty();
+    mark_my_descriptor_dirty("config change");
 
   /* We may need to reschedule some directory stuff if our status changed. */
   if (old_options) {
