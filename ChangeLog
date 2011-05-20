@@ -1,5 +1,4 @@
 Changes in version 0.2.3.1-alpha - 2011-05-05
-
   Tor 0.2.3.1-alpha adds some new experimental features, including support
   for an improved network IO backend, IOCP networking on Windows,
   microdescriptor caching, "fast-start" support for streams, and automatic
@@ -10,7 +9,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
   bugs. Users who would rather test out a more stable branch should
   stay with 0.2.2.x for now.
 
-  o Major features
+  o Major features:
     - Tor can now optionally build with the "bufferevents" buffered IO
       backend provided by Libevent 2. To use this feature, make sure you
       have the latest possible version of Libevent, and pass the
@@ -94,7 +93,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
       This prevents a bug where we could lose microdescriptors. Bugfix
       on 0.2.2.6-alpha.
 
-  o Minor features (controller)
+  o Minor features (controller):
     - Add a new SIGNAL event to the controller interface so that
       controllers can be notified when Tor handles a signal. Resolves
       issue 1955. Patch by John Brooks.
@@ -103,7 +102,7 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
     - Implement some GETINFO controller fields to provide information about
       the Tor process's pid, euid, username, and resource limits.
 
-  o Build changes
+  o Build changes:
     - Our build system requires automake 1.6 or later to create the
       Makefile.in files. Previously, you could have used 1.4.
       This only affects developers and people building Tor from git;
@@ -141,6 +140,30 @@ Changes in version 0.2.3.1-alpha - 2011-05-05
     - Add missing documentation for the authority-related torrc options
       RephistTrackTime, BridgePassword, and V3AuthUseLegacyKey. Resolves
       issue 2379.
+
+
+Changes in version 0.2.2.27-beta - 2011-05-18
+  Tor 0.2.2.27-beta fixes a bridge-related stability bug in the previous
+  release, and also adds a few more general bugfixes.
+
+  o Major bugfixes:
+    - Fix a crash bug when changing bridges in a running Tor process.
+      Fixes bug 3213; bugfix on 0.2.2.26-beta.
+    - When the controller configures a new bridge, don't wait 10 to 60
+      seconds before trying to fetch its descriptor. Bugfix on
+      0.2.0.3-alpha; fixes bug 3198 (suggested by 2355).
+
+  o Minor bugfixes:
+    - Require that onion keys have exponent 65537 in microdescriptors too.
+      Fixes more of bug 3207; bugfix on 0.2.2.26-beta.
+    - Tor used to limit HttpProxyAuthenticator values to 48 characters.
+      Changed the limit to 512 characters by removing base64 newlines.
+      Fixes bug 2752. Fix by Michael Yakubovich.
+    - When a client starts or stops using bridges, never use a circuit
+      that was built before the configuration change. This behavior could
+      put at risk a user who uses bridges to ensure that her traffic
+      only goes to the chosen addresses. Bugfix on 0.2.0.3-alpha; fixes
+      bug 3200.
 
 
 Changes in version 0.2.2.26-beta - 2011-05-17
@@ -5237,7 +5260,7 @@ Changes in version 0.2.0.10-alpha - 2007-11-10
     - New --quiet command-line option to suppress the default console log.
       Good in combination with --hash-password.
     - Authorities send back an X-Descriptor-Not-New header in response to
-      an accepted-but-discarded descriptor upload.  Partially implements
+      an accepted-but-discarded descriptor upload. Partially implements
       fix for bug 535.
     - Make the log message for "tls error. breaking." more useful.
     - Better log messages about certificate downloads, to attempt to
