@@ -1381,7 +1381,7 @@ ip_address_changed(int at_interface)
         reset_bandwidth_test();
       stats_n_seconds_working = 0;
       router_reset_reachability();
-      mark_my_descriptor_dirty();
+      mark_my_descriptor_dirty("IP address changed");
     }
   }
 
