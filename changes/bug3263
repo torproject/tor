@@ -1,0 +1,4 @@
+  o Minor bugfixes:
+    - Don't publish a new relay descriptor when we reload our onion key,
+      unless the onion key has actually changed. Fixes bug 3263 and
+      resolves another cause of bug 1810. Bugfix on 0.1.1.11-alpha.
