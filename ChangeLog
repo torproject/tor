@@ -1,3 +1,16 @@
+Changes in version 0.2.2.28-beta - 2011-05-2?
+  o Major bugfixes:
+    - Don't decide to make a new descriptor when receiving a HUP signal.
+      This bug has caused a lot of 0.2.2.x relays to disappear from the
+      consensus periodically. Fixes the most common case of triggering
+      bug 1810; bugfix on 0.2.2.7-alpha.
+
+  o Minor features:
+    - Relays now log the reason for publishing a new relay descriptor,
+      so we have a better chance of hunting down the root cause of bug
+      1810. Resolves ticket 3252.
+
+
 Changes in version 0.2.2.27-beta - 2011-05-18
   Tor 0.2.2.27-beta fixes a bridge-related stability bug in the previous
   release, and also adds a few more general bugfixes.
