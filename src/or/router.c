@@ -503,7 +503,8 @@ init_keys(void)
   if (!key_lock)
     key_lock = tor_mutex_new();
 
-  /* There are a couple of paths that put us here before */
+  /* There are a couple of paths that put us here before we've asked
+   * openssl to initialize itself. */
   if (crypto_global_init(get_options()->HardwareAccel,
                          get_options()->AccelName,
                          get_options()->AccelDir)) {
