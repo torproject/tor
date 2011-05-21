@@ -2093,7 +2093,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
     int save_errno = errno;
     if (errno == ENOENT && (flags & RFTS_IGNORE_MISSING))
       severity = LOG_INFO;
-    log_fn(severity, LD_FS,"Could not open \"%s\": %s ",filename,
+    log_fn(severity, LD_FS,"Could not open \"%s\": %s",filename,
            strerror(errno));
     errno = save_errno;
     return NULL;
