@@ -490,8 +490,8 @@ init_keys(void)
   char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
   const char *mydesc;
   crypto_pk_env_t *prkey;
-  char digest[20];
-  char v3_digest[20];
+  char digest[DIGEST_LEN];
+  char v3_digest[DIGEST_LEN];
   char *cp;
   or_options_t *options = get_options();
   authority_type_t type;
