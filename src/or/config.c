@@ -3809,7 +3809,7 @@ options_transition_affects_workers(or_options_t *old_options,
       old_options->ORPort != new_options->ORPort ||
       old_options->ServerDNSSearchDomains !=
                                        new_options->ServerDNSSearchDomains ||
-      old_options->SafeLogging != new_options->SafeLogging ||
+      old_options->_SafeLogging != new_options->_SafeLogging ||
       old_options->ClientOnly != new_options->ClientOnly ||
       public_server_mode(old_options) != public_server_mode(new_options) ||
       !config_lines_eq(old_options->Logs, new_options->Logs) ||
