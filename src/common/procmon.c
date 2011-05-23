@@ -34,7 +34,7 @@ typedef int pid_t;
 /* Currently we need to poll in some way on all systems. */
 
 #ifdef PROCMON_POLLS
-static void tor_process_monitor_poll_cb(int unused1, short unused2,
+static void tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
                                         void *procmon_);
 #endif
 
@@ -232,7 +232,8 @@ tor_process_monitor_new(struct event_base *base,
 /** Libevent callback to poll for the existence of the process
  * monitored by <b>procmon_</b>. */
 static void
-tor_process_monitor_poll_cb(int unused1, short unused2, void *procmon_)
+tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
+                            void *procmon_)
 {
   tor_process_monitor_t *procmon = (tor_process_monitor_t *)(procmon_);
   int its_dead_jim;
