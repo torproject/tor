@@ -306,7 +306,7 @@ void
 dnsserv_configure_listener(connection_t *conn)
 {
   tor_assert(conn);
-  tor_assert(conn->s >= 0);
+  tor_assert(SOCKET_OK(conn->s));
   tor_assert(conn->type == CONN_TYPE_AP_DNS_LISTENER);
 
   conn->dns_server_port =

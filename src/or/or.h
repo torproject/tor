@@ -970,7 +970,7 @@ typedef struct connection_t {
   unsigned int proxy_state:4;
 
   /** Our socket; -1 if this connection is closed, or has no socket. */
-  evutil_socket_t s;
+  tor_socket_t s;
   int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */

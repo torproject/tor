@@ -587,7 +587,7 @@ buf_add_chunk_with_capacity(buf_t *buf, size_t capacity, int capped)
  * *<b>reached_eof</b> to 1.  Return -1 on error, 0 on eof or blocking,
  * and the number of bytes read otherwise. */
 static INLINE int
-read_to_chunk(buf_t *buf, chunk_t *chunk, int fd, size_t at_most,
+read_to_chunk(buf_t *buf, chunk_t *chunk, tor_socket_t fd, size_t at_most,
               int *reached_eof, int *socket_error)
 {
   ssize_t read_result;
@@ -668,7 +668,7 @@ read_to_chunk_tls(buf_t *buf, chunk_t *chunk, tor_tls_t *tls,
  */
 /* XXXX023 indicate "read blocked" somehow? */
 int
-read_to_buf(int s, size_t at_most, buf_t *buf, int *reached_eof,
+read_to_buf(tor_socket_t s, size_t at_most, buf_t *buf, int *reached_eof,
             int *socket_error)
 {
   /* XXXX023 It's stupid to overload the return values for these functions:
@@ -767,7 +767,7 @@ read_to_buf_tls(tor_tls_t *tls, size_t at_most, buf_t *buf)
  * written on success, 0 on blocking, -1 on failure.
  */
 static INLINE int
-flush_chunk(int s, buf_t *buf, chunk_t *chunk, size_t sz,
+flush_chunk(tor_socket_t s, buf_t *buf, chunk_t *chunk, size_t sz,
             size_t *buf_flushlen)
 {
   ssize_t write_result;
@@ -854,7 +854,7 @@ flush_chunk_tls(tor_tls_t *tls, buf_t *buf, chunk_t *chunk,
  * -1 on failure.  Return 0 if write() would block.
  */
 int
-flush_buf(int s, buf_t *buf, size_t sz, size_t *buf_flushlen)
+flush_buf(tor_socket_t s, buf_t *buf, size_t sz, size_t *buf_flushlen)
 {
   /* XXXX023 It's stupid to overload the return values for these functions:
    * "error status" and "number of bytes flushed" are not mutually exclusive.

@@ -1490,7 +1490,7 @@ getinfo_helper_listeners(control_connection_t *control_conn,
     struct sockaddr_storage ss;
     socklen_t ss_len = sizeof(ss);
 
-    if (conn->type != type || conn->marked_for_close || conn->s < 0)
+    if (conn->type != type || conn->marked_for_close || !SOCKET_OK(conn->s))
       continue;
 
     if (getsockname(conn->s, (struct sockaddr *)&ss, &ss_len) < 0) {
