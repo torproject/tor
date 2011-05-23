@@ -27,3 +27,4 @@ tor_process_monitor_t *tor_process_monitor_new(struct event_base *base,
 void tor_process_monitor_free(tor_process_monitor_t *procmon);
 
 #endif
+
