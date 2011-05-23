@@ -492,8 +492,8 @@ init_keys(void)
   char fingerprint_line[MAX_NICKNAME_LEN+FINGERPRINT_LEN+3];
   const char *mydesc;
   crypto_pk_env_t *prkey;
-  char digest[20];
-  char v3_digest[20];
+  char digest[DIGEST_LEN];
+  char v3_digest[DIGEST_LEN];
   char *cp;
   or_options_t *options = get_options();
   dirinfo_type_t type;
@@ -505,7 +505,8 @@ init_keys(void)
   if (!key_lock)
     key_lock = tor_mutex_new();
 
-  /* There are a couple of paths that put us here before */
+  /* There are a couple of paths that put us here before we've asked
+   * openssl to initialize itself. */
   if (crypto_global_init(get_options()->HardwareAccel,
                          get_options()->AccelName,
                          get_options()->AccelDir)) {

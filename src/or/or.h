@@ -1027,7 +1027,7 @@ typedef struct connection_t {
   /* XXXX023 move this field, and all the listener-only fields (just
      socket_family, I think), into a new listener_connection_t subtype. */
   /** If the connection is a CONN_TYPE_AP_DNS_LISTENER, this field points
-   * to the evdns_server_port is uses to listen to and answer connections. */
+   * to the evdns_server_port it uses to listen to and answer connections. */
   struct evdns_server_port *dns_server_port;
 
   /** Unique ID for measuring tunneled network status requests. */
@@ -1271,6 +1271,9 @@ typedef struct control_connection_t {
 
   /** True if we have sent a protocolinfo reply on this connection. */
   unsigned int have_sent_protocolinfo:1;
+  /** True if we have received a takeownership command on this
+   * connection. */
+  unsigned int is_owning_control_connection:1;
 
   /** Amount of space allocated in incoming_cmd. */
   uint32_t incoming_cmd_len;
@@ -2842,6 +2845,11 @@ typedef struct {
   int DisablePredictedCircuits; /**< Boolean: does Tor preemptively
                                  * make circuits in the background (0),
                                  * or not (1)? */
+
+  /** Process specifier for a controller that ‘owns’ this Tor
+   * instance.  Tor will terminate if its owning controller does. */
+  char *OwningControllerProcess;
+
   int ShutdownWaitLength; /**< When we get a SIGINT and we're a server, how
                            * long do we wait before exiting? */
   char *SafeLogging; /**< Contains "relay", "1", "0" (meaning no scrubbing). */

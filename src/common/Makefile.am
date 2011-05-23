@@ -19,6 +19,7 @@ libor_a_SOURCES = \
   log.c						\
   memarea.c					\
   mempool.c					\
+  procmon.c					\
   util.c					\
   util_codedigest.c				\
   $(libor_extra_source)
@@ -43,6 +44,7 @@ noinst_HEADERS = 				\
   ht.h						\
   memarea.h					\
   mempool.h					\
+  procmon.h					\
   strlcat.c					\
   strlcpy.c					\
   torgzip.h					\

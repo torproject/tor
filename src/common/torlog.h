@@ -149,7 +149,6 @@ void flush_pending_log_callbacks(void);
 void log_set_application_name(const char *name);
 void set_log_time_granularity(int granularity_msec);
 
-/* Outputs a message to stdout */
 void tor_log(int severity, log_domain_mask_t domain, const char *format, ...)
   CHECK_PRINTF(3,4);
 #define log tor_log /* hack it so we don't conflict with log() as much */

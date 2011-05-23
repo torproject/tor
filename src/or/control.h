@@ -27,6 +27,8 @@ void control_ports_write_to_file(void);
 
 int connection_control_finished_flushing(control_connection_t *conn);
 int connection_control_reached_eof(control_connection_t *conn);
+void connection_control_closed(control_connection_t *conn);
+
 int connection_control_process_inbuf(control_connection_t *conn);
 
 #define EVENT_AUTHDIR_NEWDESCS 0x000D
@@ -72,6 +74,8 @@ int init_cookie_authentication(int enabled);
 smartlist_t *decode_hashed_passwords(config_line_t *passwords);
 void disable_control_logging(void);
 void enable_control_logging(void);
+
+void monitor_owning_controller_process(const char *process_spec);
 
 void control_event_bootstrap(bootstrap_status_t status, int progress);
 void control_event_bootstrap_problem(const char *warn, int reason);
