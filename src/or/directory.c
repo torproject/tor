@@ -1900,7 +1900,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
             router_get_trusteddirserver_by_digest(conn->identity_digest);
           char *rejected_hdr = http_get_header(headers,
                                                "X-Descriptor-Not-New: ");
-          int rejected = 0;
           if (rejected_hdr) {
             if (!strcmp(rejected_hdr, "Yes")) {
               log_info(LD_GENERAL,
@@ -1913,7 +1912,6 @@ connection_dir_client_reached_eof(dir_connection_t *conn)
                * last descriptor, not on the published time of the last
                * descriptor.  If those are different, that's a bad thing to
                * do. -NM */
-              rejected = 1;
             }
             tor_free(rejected_hdr);
           }

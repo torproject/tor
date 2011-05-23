@@ -2,3 +2,5 @@
     - Remove undocumented option "-F" from tor-resolve: it hasn't done
       anything since 0.2.1.16-rc.
 
+  o Minor bugfixes:
+    - Fix warnings from GCC 4.6's "-Wunused-but-set-variable" option.

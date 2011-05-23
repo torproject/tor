@@ -3142,7 +3142,6 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
 {
   const char *status;
   char extended_buf[96];
-  int providing_reason=0;
   if (!EVENT_IS_INTERESTING(EVENT_CIRCUIT_STATUS))
     return 0;
   tor_assert(circ);
@@ -3166,7 +3165,6 @@ control_event_circuit_status(origin_circuit_t *circ, circuit_status_event_t tp,
     const char *reason_str = circuit_end_reason_to_control_string(reason_code);
     char *reason = NULL;
     size_t n=strlen(extended_buf);
-    providing_reason=1;
     if (!reason_str) {
       reason = tor_malloc(16);
       tor_snprintf(reason, 16, "UNKNOWN_%d", reason_code);

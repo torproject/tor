@@ -69,7 +69,7 @@ test_crypto_rng(void)
     uint64_t big;
     char *host;
     j = crypto_rand_int(100);
-    if (i < 0 || i >= 100)
+    if (j < 0 || j >= 100)
       allok = 0;
     big = crypto_rand_uint64(U64_LITERAL(1)<<40);
     if (big >= (U64_LITERAL(1)<<40))
@@ -240,11 +240,13 @@ test_crypto_sha(void)
   /* Test SHA-1 with a test vector from the specification. */
   i = crypto_digest(data, "abc", 3);
   test_memeq_hex(data, "A9993E364706816ABA3E25717850C26C9CD0D89D");
+  tt_int_op(i, ==, 0);
 
   /* Test SHA-256 with a test vector from the specification. */
   i = crypto_digest256(data, "abc", 3, DIGEST_SHA256);
   test_memeq_hex(data, "BA7816BF8F01CFEA414140DE5DAE2223B00361A3"
                        "96177A9CB410FF61F20015AD");
+  tt_int_op(i, ==, 0);
 
   /* Test HMAC-SHA-1 with test cases from RFC2202. */
 
