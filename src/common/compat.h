@@ -398,7 +398,7 @@ int get_n_open_sockets(void);
 #define tor_socket_send(s, buf, len, flags) send(s, buf, len, flags)
 #define tor_socket_recv(s, buf, len, flags) recv(s, buf, len, flags)
 
-/** Implementatino of struct in6_addr for platforms that do not have it.
+/** Implementation of struct in6_addr for platforms that do not have it.
  * Generally, these platforms are ones without IPv6 support, but we want to
  * have a working in6_addr there anyway, so we can use it to parse IPv6
  * addresses. */

@@ -32,6 +32,8 @@
 #include "routerlist.h"
 #include "routerparse.h"
 
+#include "procmon.h"
+
 /** Yield true iff <b>s</b> is the state of a control_connection_t that has
  * finished authentication and is accepting commands. */
 #define STATE_IS_OPEN(s) ((s) == CONTROL_CONN_STATE_OPEN)
@@ -1275,6 +1277,26 @@ handle_control_signal(control_connection_t *conn, uint32_t len,
   return 0;
 }
 
+/** Called when we get a TAKEOWNERSHIP command.  Mark this connection
+ * as an owning connection, so that we will exit if the connection
+ * closes. */
+static int
+handle_control_takeownership(control_connection_t *conn, uint32_t len,
+                             const char *body)
+{
+  (void)len;
+  (void)body;
+
+  conn->is_owning_control_connection = 1;
+
+  log_info(LD_CONTROL, "Control connection %d has taken ownership of this "
+           "Tor instance.",
+           (int)(conn->_base.s));
+
+  send_control_done(conn);
+  return 0;
+}
+
 /** Called when we get a MAPADDRESS command; try to bind all listed addresses,
  * and report success or failure. */
 static int
@@ -2010,8 +2032,8 @@ static const getinfo_item_t getinfo_items[] = {
          "v2 networkstatus docs as retrieved from a DirPort."),
   ITEM("dir/status-vote/current/consensus", dir,
        "v3 Networkstatus consensus as retrieved from a DirPort."),
-  PREFIX("exit-policy/default", policies,
-         "The default value appended to the configured exit policy."),
+  ITEM("exit-policy/default", policies,
+       "The default value appended to the configured exit policy."),
   PREFIX("ip-to-country/", geoip, "Perform a GEOIP lookup"),
   { NULL, NULL, NULL, 0 }
 };
@@ -2842,6 +2864,43 @@ connection_control_reached_eof(control_connection_t *conn)
   return 0;
 }
 
+/** Shut down this Tor instance in the same way that SIGINT would, but
+ * with a log message appropriate for the loss of an owning controller. */
+static void
+lost_owning_controller(const char *owner_type, const char *loss_manner)
+{
+  int shutdown_slowly = server_mode(get_options());
+
+  log_notice(LD_CONTROL, "Owning controller %s has %s -- %s.",
+             owner_type, loss_manner,
+             shutdown_slowly ? "shutting down" : "exiting now");
+
+  /* XXXX Perhaps this chunk of code should be a separate function,
+   * called here and by process_signal(SIGINT). */
+
+  if (!shutdown_slowly) {
+    tor_cleanup();
+    exit(0);
+  }
+  /* XXXX This will close all listening sockets except control-port
+   * listeners.  Perhaps we should close those too. */
+  hibernate_begin_shutdown();
+}
+
+/** Called when <b>conn</b> is being freed. */
+void
+connection_control_closed(control_connection_t *conn)
+{
+  tor_assert(conn);
+
+  conn->event_mask = 0;
+  control_update_global_event_mask();
+
+  if (conn->is_owning_control_connection) {
+    lost_owning_controller("connection", "closed");
+  }
+}
+
 /** Return true iff <b>cmd</b> is allowable (or at least forgivable) at this
  * stage of the protocol. */
 static int
@@ -2997,6 +3056,9 @@ connection_control_process_inbuf(control_connection_t *conn)
     return 0;
   }
 
+  /* XXXX Why is this not implemented as a table like the GETINFO
+   * items are?  Even handling the plus signs at the beginnings of
+   * commands wouldn't be very hard with proper macros. */
   cmd_data_len = (uint32_t)data_len;
   if (!strcasecmp(conn->incoming_cmd, "SETCONF")) {
     if (handle_control_setconf(conn, cmd_data_len, args))
@@ -3021,6 +3083,9 @@ connection_control_process_inbuf(control_connection_t *conn)
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "SIGNAL")) {
     if (handle_control_signal(conn, cmd_data_len, args))
+      return -1;
+  } else if (!strcasecmp(conn->incoming_cmd, "TAKEOWNERSHIP")) {
+    if (handle_control_takeownership(conn, cmd_data_len, args))
       return -1;
   } else if (!strcasecmp(conn->incoming_cmd, "MAPADDRESS")) {
     if (handle_control_mapaddress(conn, cmd_data_len, args))
@@ -3882,6 +3947,75 @@ init_cookie_authentication(int enabled)
 
   tor_free(fname);
   return 0;
+}
+
+/** A copy of the process specifier of Tor's owning controller, or
+ * NULL if this Tor instance is not currently owned by a process. */
+static char *owning_controller_process_spec = NULL;
+
+/** A process-termination monitor for Tor's owning controller, or NULL
+ * if this Tor instance is not currently owned by a process. */
+static tor_process_monitor_t *owning_controller_process_monitor = NULL;
+
+/** Process-termination monitor callback for Tor's owning controller
+ * process. */
+static void
+owning_controller_procmon_cb(void *unused)
+{
+  (void)unused;
+
+  lost_owning_controller("process", "vanished");
+}
+
+/** Set <b>process_spec</b> as Tor's owning controller process.
+ * Exit on failure. */
+void
+monitor_owning_controller_process(const char *process_spec)
+{
+  const char *msg;
+
+  tor_assert((owning_controller_process_spec == NULL) ==
+             (owning_controller_process_monitor == NULL));
+
+  if (owning_controller_process_spec != NULL) {
+    if ((process_spec != NULL) && !strcmp(process_spec,
+                                          owning_controller_process_spec)) {
+      /* Same process -- return now, instead of disposing of and
+       * recreating the process-termination monitor. */
+      return;
+    }
+
+    /* We are currently owned by a process, and we should no longer be
+     * owned by it.  Free the process-termination monitor. */
+    tor_process_monitor_free(owning_controller_process_monitor);
+    owning_controller_process_monitor = NULL;
+
+    tor_free(owning_controller_process_spec);
+    owning_controller_process_spec = NULL;
+  }
+
+  tor_assert((owning_controller_process_spec == NULL) &&
+             (owning_controller_process_monitor == NULL));
+
+  if (process_spec == NULL)
+    return;
+
+  owning_controller_process_spec = tor_strdup(process_spec);
+  owning_controller_process_monitor =
+    tor_process_monitor_new(tor_libevent_get_base(),
+                            owning_controller_process_spec,
+                            LD_CONTROL,
+                            owning_controller_procmon_cb, NULL,
+                            &msg);
+
+  if (owning_controller_process_monitor == NULL) {
+    log_err(LD_BUG, "Couldn't create process-termination monitor for "
+            "owning controller: %s.  Exiting.",
+            msg);
+    owning_controller_process_spec = NULL;
+    tor_cleanup();
+    exit(0);
+  }
 }
 
 /** Convert the name of a bootstrapping phase <b>s</b> into strings

@@ -48,7 +48,7 @@ typedef uint32_t le_version_t;
  * it is. */
 #define LE_OLD V(0,0,0)
 /** Represents a version of libevent so weird we can't figure out what version
- * it it. */
+ * it is. */
 #define LE_OTHER V(0,0,99)
 
 static le_version_t tor_get_libevent_version(const char **v_out);
