@@ -1423,7 +1423,8 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (router_pick_published_address(options, &addr) < 0) {
+  if (router_pick_published_address(options, &addr) < 0 ||
+      router_get_advertised_or_port(options) == 0) {
     /* Stop trying to rebuild our descriptor every second. We'll
      * learn that it's time to try again when ip_address_changed()
      * marks it dirty. */
