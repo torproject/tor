@@ -606,12 +606,12 @@ send_control_event_string(uint16_t event, event_format_t which,
   } SMARTLIST_FOREACH_END(conn);
 }
 
-/** Helper for send_control1_event and send_control1_event_extended:
+/** Helper for send_control_event and control_event_status:
  * Send an event to all v1 controllers that are listening for code
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided.
  *
- * Currently the length of the message is limited to 1024 (including the
+ * Currently the length of the message is limited to 10064 (including the
  * ending \\r\\n\\0). */
 static void
 send_control_event_impl(uint16_t event, event_format_t which,
@@ -644,7 +644,7 @@ send_control_event_impl(uint16_t event, event_format_t which,
  * <b>event</b>.  The event's body is created by the printf-style format in
  * <b>format</b>, and other arguments as provided.
  *
- * Currently the length of the message is limited to 1024 (including the
+ * Currently the length of the message is limited to 10064 (including the
  * ending \\n\\r\\0. */
 static void
 send_control_event(uint16_t event, event_format_t which,
