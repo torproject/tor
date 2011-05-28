@@ -1,0 +1,2 @@
+  o Minor features:
+    - Allow nameserves with IPv6 address. Fixes bug 2574.
