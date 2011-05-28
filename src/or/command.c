@@ -649,6 +649,7 @@ command_process_netinfo_cell(cell_t *cell, or_connection_t *conn)
 
   /* XXX maybe act on my_apparent_addr, if the source is sufficiently
    * trustworthy. */
+  (void)my_apparent_addr;
 
   if (connection_or_set_state_open(conn)<0)
     connection_mark_for_close(TO_CONN(conn));

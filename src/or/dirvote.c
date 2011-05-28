@@ -1585,7 +1585,7 @@ networkstatus_compute_consensus(smartlist_t *votes,
                      * is the same flag as votes[j]->known_flags[b]. */
     int *named_flag; /* Index of the flag "Named" for votes[j] */
     int *unnamed_flag; /* Index of the flag "Unnamed" for votes[j] */
-    int chosen_named_idx, chosen_unnamed_idx;
+    int chosen_named_idx;
 
     strmap_t *name_to_id_map = strmap_new();
     char conflict[DIGEST_LEN];
@@ -1603,7 +1603,6 @@ networkstatus_compute_consensus(smartlist_t *votes,
     for (i = 0; i < smartlist_len(votes); ++i)
       unnamed_flag[i] = named_flag[i] = -1;
     chosen_named_idx = smartlist_string_pos(flags, "Named");
-    chosen_unnamed_idx = smartlist_string_pos(flags, "Unnamed");
 
     /* Build the flag index. */
     SMARTLIST_FOREACH(votes, networkstatus_t *, v,
