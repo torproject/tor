@@ -3084,6 +3084,8 @@ tor_spawn_background(const char *const filename, int *stdout_read,
     nbytes = write(STDOUT_FILENO, error_message, error_message_length);
     nbytes = write(STDOUT_FILENO, hex_errno, sizeof(hex_errno));
 
+    (void) nbytes;
+
     _exit(255);
     return -1; /* Never reached, but avoids compiler warning */
   }
