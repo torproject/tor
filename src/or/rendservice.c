@@ -181,6 +181,31 @@ rend_add_service(rend_service_t *service)
     log_warn(LD_CONFIG, "Hidden service with no ports configured; ignoring.");
     rend_service_free(service);
   } else {
+    int dupe = 0;
+    /* XXX This duplicate check has two problems:
+     *
+     * a) It's O(n^2), but the same comment from the bottom of
+     *    rend_config_services() should apply.
+     *
+     * b) We only compare directory paths as strings, so we can't
+     *    detect two distinct paths that specify the same directory
+     *    (which can arise from symlinks, case-insensitivity, bind
+     *    mounts, etc.).
+     *
+     * It also can't detect that two separate Tor instances are trying
+     * to use the same HiddenServiceDir; for that, we would need a
+     * lock file.  But this is enough to detect a simple mistake that
+     * at least one person has actually made.
+     */
+    SMARTLIST_FOREACH(rend_service_list, rend_service_t*, ptr,
+                      dupe = dupe ||
+                             !strcmp(ptr->directory, service->directory));
+    if (dupe) {
+      log_warn(LD_REND, "Another hidden service is already configured for "
+               "directory %s, ignoring.", service->directory);
+      rend_service_free(service);
+      return;
+    }
     smartlist_add(rend_service_list, service);
     log_debug(LD_REND,"Configuring service with directory \"%s\"",
               service->directory);
