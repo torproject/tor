@@ -2291,7 +2291,7 @@ _evdns_nameserver_add_impl(const struct sockaddr *address,
 
 	evtimer_set(&ns->timeout_event, nameserver_prod_callback, ns);
 
-	ns->socket = tor_open_socket(PF_INET, SOCK_DGRAM, 0);
+	ns->socket = tor_open_socket(address->sa_family, SOCK_DGRAM, 0);
 	if (ns->socket < 0) { err = 1; goto out1; }
 #ifdef WIN32
 	{
