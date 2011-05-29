@@ -263,7 +263,7 @@ circuit_build_times_test_frequency(void)
 }
 
 /**
- * Retrieve and bounds-check the cbtmintimeout consensus paramter.
+ * Retrieve and bounds-check the cbtmintimeout consensus parameter.
  *
  * Effect: This is the minimum allowed timeout value in milliseconds.
  * The minimum is to prevent rounding to 0 (we only check once
