@@ -319,7 +319,7 @@ main(int argc, char **argv)
 {
   uint32_t sockshost;
   uint16_t socksport = 0, port_option = 0;
-  int isSocks4 = 0, isVerbose = 0, isReverse = 0, force = 0;
+  int isSocks4 = 0, isVerbose = 0, isReverse = 0;
   char **arg;
   int n_args;
   struct in_addr a;
@@ -349,8 +349,6 @@ main(int argc, char **argv)
       isSocks4 = 0;
     else if (!strcmp("-x", arg[0]))
       isReverse = 1;
-    else if (!strcmp("-F", arg[0]))
-      force = 1;
     else if (!strcmp("-p", arg[0])) {
       int p;
       if (n_args < 2) {

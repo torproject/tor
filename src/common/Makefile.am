@@ -12,11 +12,11 @@ libor_extra_source=
 endif
 
 libor_a_SOURCES = address.c log.c util.c compat.c container.c mempool.c \
-	memarea.c di_ops.c util_codedigest.c $(libor_extra_source)
+	memarea.c di_ops.c procmon.c util_codedigest.c $(libor_extra_source)
 libor_crypto_a_SOURCES = crypto.c aes.c tortls.c torgzip.c
 libor_event_a_SOURCES = compat_libevent.c
 
-noinst_HEADERS = address.h torlog.h crypto.h util.h compat.h aes.h torint.h tortls.h strlcpy.c strlcat.c torgzip.h container.h ht.h mempool.h memarea.h ciphers.inc compat_libevent.h tortls_states.h di_ops.h
+noinst_HEADERS = address.h torlog.h crypto.h util.h compat.h aes.h torint.h tortls.h strlcpy.c strlcat.c torgzip.h container.h ht.h mempool.h memarea.h ciphers.inc compat_libevent.h tortls_states.h di_ops.h procmon.h
 
 common_sha1.i: $(libor_SOURCES) $(libor_crypto_a_SOURCES) $(noinst_HEADERS)
 	if test "@SHA1SUM@" != none; then \

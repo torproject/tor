@@ -479,8 +479,7 @@ connection_free(connection_t *conn)
     }
   }
   if (conn->type == CONN_TYPE_CONTROL) {
-    TO_CONTROL_CONN(conn)->event_mask = 0;
-    control_update_global_event_mask();
+    connection_control_closed(TO_CONTROL_CONN(conn));
   }
   connection_unregister_events(conn);
   _connection_free(conn);

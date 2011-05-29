@@ -390,7 +390,7 @@ logv(int severity, log_domain_mask_t domain, const char *funcname,
 
 /** Output a message to the log.  It gets logged to all logfiles that
  * care about messages with <b>severity</b> in <b>domain</b>. The content
- * is formatted printf style basedc on <b>format</b> and extra arguments.
+ * is formatted printf-style based on <b>format</b> and extra arguments.
  * */
 void
 tor_log(int severity, log_domain_mask_t domain, const char *format, ...)

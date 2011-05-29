@@ -775,13 +775,17 @@ tor_digest256_is_zero(const char *digest)
   if (next) *next = endptr;                             \
   return 0
 
-/** Extract a long from the start of s, in the given numeric base.  If
- * there is unconverted data and next is provided, set *next to the
- * first unconverted character.  An error has occurred if no characters
- * are converted; or if there are unconverted characters and next is NULL; or
- * if the parsed value is not between min and max.  When no error occurs,
- * return the parsed value and set *ok (if provided) to 1.  When an error
- * occurs, return 0 and set *ok (if provided) to 0.
+/** Extract a long from the start of <b>s</b>, in the given numeric
+ * <b>base</b>.  If <b>base</b> is 0, <b>s</b> is parsed as a decimal,
+ * octal, or hex number in the syntax of a C integer literal.  If
+ * there is unconverted data and <b>next</b> is provided, set
+ * *<b>next</b> to the first unconverted character.  An error has
+ * occurred if no characters are converted; or if there are
+ * unconverted characters and <b>next</b> is NULL; or if the parsed
+ * value is not between <b>min</b> and <b>max</b>.  When no error
+ * occurs, return the parsed value and set *<b>ok</b> (if provided) to
+ * 1.  When an error occurs, return 0 and set *<b>ok</b> (if provided)
+ * to 0.
  */
 long
 tor_parse_long(const char *s, int base, long min, long max,
