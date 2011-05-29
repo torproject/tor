@@ -1,14 +1,30 @@
-Changes in version 0.2.2.28-beta - 2011-05-2?
+Changes in version 0.2.2.28-beta - 2011-05-3?
   o Major bugfixes:
     - Don't decide to make a new descriptor when receiving a HUP signal.
       This bug has caused a lot of 0.2.2.x relays to disappear from the
       consensus periodically. Fixes the most common case of triggering
       bug 1810; bugfix on 0.2.2.7-alpha.
+    - Actually allow nameservers with IPv6 addresses. Fixes bug 2574.
+
+  o Major features:
+    - Add an __OwningControllerProcess configuration option and a
+      TAKEOWNERSHIP control-port command. Now a Tor controller can ensure
+      that when it exits, Tor will shut down. Implements feature 3049.
+
+  o Minor bugfixes:
+    - Fix warnings from GCC 4.6's "-Wunused-but-set-variable" option.
+    - Remove a trailing asterisk from "exit-policy/default" in the
+      output of the control port command "GETINFO info/names". Bugfix
+      on 0.1.2.5-alpha.
 
   o Minor features:
     - Relays now log the reason for publishing a new relay descriptor,
-      so we have a better chance of hunting down the root cause of bug
-      1810. Resolves ticket 3252.
+      so we have a better chance of hunting down instances of bug 1810.
+      Resolves ticket 3252.
+
+  o Removed options:
+    - Remove undocumented option "-F" from tor-resolve: it hasn't done
+      anything since 0.2.1.16-rc.
 
 
 Changes in version 0.2.2.27-beta - 2011-05-18
