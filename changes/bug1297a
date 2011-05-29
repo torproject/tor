@@ -5,4 +5,12 @@
       creation; it was supposed to be applied based on time since the
       circuit entered its current state.  Bugfix on 0.0.6; fixes part
       of bug 1297.
+    - Use the same circuit timeout for client-side introduction
+      circuits as for other four-hop circuits.  Previously,
+      client-side introduction circuits were closed after the same
+      timeout as single-hop directory-fetch circuits; this was
+      appropriate with the static circuit build timeout in 0.2.1.x and
+      earlier, but caused many hidden service access attempts to fail
+      with the adaptive CBT introduced in 0.2.2.2-alpha.  Bugfix on
+      0.2.2.2-alpha; fixes another part of bug 1297.
 
