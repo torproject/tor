@@ -1,0 +1,8 @@
+  o Major bugfixes:
+    - Apply circuit timeouts to opened hidden-service-related circuits
+      based on the correct start time.  Previously, we would apply the
+      circuit build timeout based on time since the circuit's
+      creation; it was supposed to be applied based on time since the
+      circuit entered its current state.  Bugfix on 0.0.6; fixes part
+      of bug 1297.
+

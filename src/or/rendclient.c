@@ -275,6 +275,10 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
 
   /* Now, we wait for an ACK or NAK on this circuit. */
   introcirc->_base.purpose = CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT;
+  /* Set timestamp_dirty, because circuit_expire_building expects it
+   * to specify when a circuit entered the _C_INTRODUCE_ACK_WAIT
+   * state. */
+  introcirc->_base.timestamp_dirty = time(NULL);
 
   return 0;
  perm_err:
@@ -329,6 +333,10 @@ rend_client_introduction_acked(origin_circuit_t *circ,
                circ->rend_data->onion_address, CIRCUIT_PURPOSE_C_REND_READY);
     if (rendcirc) { /* remember the ack */
       rendcirc->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED;
+      /* Set timestamp_dirty, because circuit_expire_building expects
+       * it to specify when a circuit entered the
+       * _C_REND_READY_INTRO_ACKED state. */
+      rendcirc->_base.timestamp_dirty = time(NULL);
     } else {
       log_info(LD_REND,"...Found no rend circ. Dropping on the floor.");
     }
@@ -674,6 +682,9 @@ rend_client_rendezvous_acked(origin_circuit_t *circ, const uint8_t *request,
   log_info(LD_REND,"Got rendezvous ack. This circuit is now ready for "
            "rendezvous.");
   circ->_base.purpose = CIRCUIT_PURPOSE_C_REND_READY;
+  /* Set timestamp_dirty, because circuit_expire_building expects it
+   * to specify when a circuit entered the _C_REND_READY state. */
+  circ->_base.timestamp_dirty = time(NULL);
   /* XXXX023 This is a pretty brute-force approach. It'd be better to
    * attach only the connections that are waiting on this circuit, rather
    * than trying to attach them all. See comments bug 743. */
