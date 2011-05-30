@@ -9,10 +9,14 @@
 struct event;
 struct event_base;
 
+
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/util.h>
 #else
+#ifndef EVUTIL_SOCKET_DEFINED
+#define EVUTIL_SOCKET_DEFINED
 #define evutil_socket_t int
+#endif
 #endif
 
 void configure_libevent_logging(void);

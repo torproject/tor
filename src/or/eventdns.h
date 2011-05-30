@@ -319,7 +319,7 @@ typedef void (*evdns_request_callback_fn_type)(struct evdns_server_request *, vo
 
 #define EVDNS_CLASS_INET   1
 
-struct evdns_server_port *evdns_add_server_port(int socket, int is_tcp, evdns_request_callback_fn_type callback, void *user_data);
+struct evdns_server_port *evdns_add_server_port(tor_socket_t socket, int is_tcp, evdns_request_callback_fn_type callback, void *user_data);
 void evdns_close_server_port(struct evdns_server_port *port);
 
 int evdns_server_request_add_reply(struct evdns_server_request *req, int section, const char *name, int type, int class, int ttl, int datalen, int is_name, const char *data);
