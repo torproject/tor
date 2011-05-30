@@ -1950,37 +1950,40 @@ retry_all_listeners(smartlist_t *replaced_conns,
                     smartlist_t *new_conns)
 {
   or_options_t *options = get_options();
+  int retval = 0;
+  const uint16_t old_or_port = router_get_advertised_or_port(options);
+  const uint16_t old_dir_port = router_get_advertised_dir_port(options);
 
   if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
                       options->ORPort, "0.0.0.0",
                       replaced_conns, new_conns, options->ClientOnly,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
                       options->DirPort, "0.0.0.0",
                       replaced_conns, new_conns, options->ClientOnly,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,
                       options->SocksPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_TRANS_LISTENER, options->TransListenAddress,
                       options->TransPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NATDListenAddress,
                       options->NATDPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_DNS_LISTENER, options->DNSListenAddress,
                       options->DNSPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1",
@@ -1994,7 +1997,16 @@ retry_all_listeners(smartlist_t *replaced_conns,
                       AF_UNIX)<0)
     return -1;
 
-  return 0;
+  if (old_or_port != router_get_advertised_or_port(options) ||
+      old_dir_port != router_get_advertised_dir_port(options)) {
+    /* Our chosen ORPort or DirPort is not what it used to be: the
+     * descriptor we had (if any) should be regenerated.  (We won't
+     * automatically notice this because of changes in the option,
+     * since the value could be "auto".) */
+    mark_my_descriptor_dirty("Chosen Or/DirPort changed");
+  }
+
+  return retval;
 }
 
 /** Return 1 if we should apply rate limiting to <b>conn</b>,
