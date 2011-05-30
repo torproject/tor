@@ -1194,10 +1194,24 @@ options_act(or_options_t *old_options)
   or_options_t *options = get_options();
   int running_tor = options->command == CMD_RUN_TOR;
   char *msg;
+  const int transition_affects_workers =
+    old_options && options_transition_affects_workers(old_options, options);
 
   if (running_tor && !have_lockfile()) {
     if (try_locking(options, 1) < 0)
       return -1;
+  }
+
+  /* We want to reinit keys as needed before we do much of anything else:
+     keys are important, and other things can depend on them. */
+  if (running_tor &&
+      (transition_affects_workers ||
+       (options->V3AuthoritativeDir && (!old_options ||
+                                        !old_options->V3AuthoritativeDir)))) {
+    if (init_keys() < 0) {
+      log_warn(LD_BUG,"Error initializing keys; exiting");
+      return -1;
+    }
   }
 
   if (consider_adding_dir_authorities(options, old_options) < 0)
@@ -1367,14 +1381,10 @@ options_act(or_options_t *old_options)
       }
     }
 
-    if (options_transition_affects_workers(old_options, options)) {
+    if (transition_affects_workers) {
       log_info(LD_GENERAL,
                "Worker-related options changed. Rotating workers.");
 
-      if (init_keys() < 0) {
-        log_warn(LD_BUG,"Error initializing keys; exiting");
-        return -1;
-      }
       if (server_mode(options) && !server_mode(old_options)) {
         ip_address_changed(0);
         if (can_complete_circuit || !any_predicted_circuits(time(NULL)))
@@ -1387,9 +1397,6 @@ options_act(or_options_t *old_options)
       if (dns_reset())
         return -1;
     }
-
-    if (options->V3AuthoritativeDir && !old_options->V3AuthoritativeDir)
-      init_keys();
 
     if (options->PerConnBWRate != old_options->PerConnBWRate ||
         options->PerConnBWBurst != old_options->PerConnBWBurst)
