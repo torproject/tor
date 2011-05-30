@@ -870,7 +870,7 @@ socket_accounting_unlock(void)
  * Windows, where close()ing a socket doesn't work.  Returns 0 on success, -1
  * on failure. */
 int
-tor_close_socket(int s)
+tor_close_socket(tor_socket_t s)
 {
   int r = 0;
 
@@ -923,8 +923,10 @@ tor_close_socket(int s)
 /** Helper: if DEBUG_SOCKET_COUNTING is enabled, remember that <b>s</b> is
  * now an open socket. */
 static INLINE void
-mark_socket_open(int s)
+mark_socket_open(tor_socket_t s)
 {
+  /* XXXX This bitarray business will NOT work on windows: sockets aren't
+     small ints there. */
   if (s > max_socket) {
     if (max_socket == -1) {
       open_sockets = bitarray_init_zero(s+128);
@@ -946,16 +948,16 @@ mark_socket_open(int s)
 /** @} */
 
 /** As socket(), but counts the number of open sockets. */
-int
+tor_socket_t
 tor_open_socket(int domain, int type, int protocol)
 {
-  int s;
+  tor_socket_t s;
 #ifdef SOCK_CLOEXEC
 #define LINUX_CLOEXEC_OPEN_SOCKET
   type |= SOCK_CLOEXEC;
 #endif
   s = socket(domain, type, protocol);
-  if (s >= 0) {
+  if (SOCKET_OK(s)) {
 #if !defined(LINUX_CLOEXEC_OPEN_SOCKET) && defined(FD_CLOEXEC)
     fcntl(s, F_SETFD, FD_CLOEXEC);
 #endif
@@ -968,17 +970,17 @@ tor_open_socket(int domain, int type, int protocol)
 }
 
 /** As socket(), but counts the number of open sockets. */
-int
+tor_socket_t
 tor_accept_socket(int sockfd, struct sockaddr *addr, socklen_t *len)
 {
-  int s;
+  tor_socket_t s;
 #if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC)
 #define LINUX_CLOEXEC_ACCEPT
   s = accept4(sockfd, addr, len, SOCK_CLOEXEC);
 #else
   s = accept(sockfd, addr, len);
 #endif
-  if (s >= 0) {
+  if (SOCKET_OK(s)) {
 #if !defined(LINUX_CLOEXEC_ACCEPT) && defined(FD_CLOEXEC)
     fcntl(s, F_SETFD, FD_CLOEXEC);
 #endif
@@ -1004,7 +1006,7 @@ get_n_open_sockets(void)
 /** Turn <b>socket</b> into a nonblocking socket.
  */
 void
-set_socket_nonblocking(int socket)
+set_socket_nonblocking(tor_socket_t socket)
 {
 #if defined(MS_WINDOWS)
   unsigned long nonblocking = 1;
@@ -1032,7 +1034,7 @@ set_socket_nonblocking(int socket)
  **/
 /* It would be nicer just to set errno, but that won't work for windows. */
 int
-tor_socketpair(int family, int type, int protocol, int fd[2])
+tor_socketpair(int family, int type, int protocol, tor_socket_t fd[2])
 {
 //don't use win32 socketpairs (they are always bad)
 #if defined(HAVE_SOCKETPAIR) && !defined(MS_WINDOWS)
@@ -1066,9 +1068,9 @@ tor_socketpair(int family, int type, int protocol, int fd[2])
      * for now, and really, when localhost is down sometimes, we
      * have other problems too.
      */
-    int listener = -1;
-    int connector = -1;
-    int acceptor = -1;
+    tor_socket_t listener = -1;
+    tor_socket_t connector = -1;
+    tor_socket_t acceptor = -1;
     struct sockaddr_in listen_addr;
     struct sockaddr_in connect_addr;
     int size;
@@ -2678,11 +2680,11 @@ in_main_thread(void)
  */
 #if defined(MS_WINDOWS)
 int
-tor_socket_errno(int sock)
+tor_socket_errno(tor_socket_t sock)
 {
   int optval, optvallen=sizeof(optval);
   int err = WSAGetLastError();
-  if (err == WSAEWOULDBLOCK && sock >= 0) {
+  if (err == WSAEWOULDBLOCK && SOCKET_OK(sock)) {
     if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (void*)&optval, &optvallen))
       return err;
     if (optval)

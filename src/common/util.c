@@ -1573,7 +1573,7 @@ rate_limit_log(ratelim_t *lim, time_t now)
  * was returned by open().  Return the number of bytes written, or -1
  * on error.  Only use if fd is a blocking fd.  */
 ssize_t
-write_all(int fd, const char *buf, size_t count, int isSocket)
+write_all(tor_socket_t fd, const char *buf, size_t count, int isSocket)
 {
   size_t written = 0;
   ssize_t result;
@@ -1583,7 +1583,7 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
     if (isSocket)
       result = tor_socket_send(fd, buf+written, count-written, 0);
     else
-      result = write(fd, buf+written, count-written);
+      result = write((int)fd, buf+written, count-written);
     if (result<0)
       return -1;
     written += result;
@@ -1597,7 +1597,7 @@ write_all(int fd, const char *buf, size_t count, int isSocket)
  * open().  Return the number of bytes read, or -1 on error. Only use
  * if fd is a blocking fd. */
 ssize_t
-read_all(int fd, char *buf, size_t count, int isSocket)
+read_all(tor_socket_t fd, char *buf, size_t count, int isSocket)
 {
   size_t numread = 0;
   ssize_t result;
@@ -1609,7 +1609,7 @@ read_all(int fd, char *buf, size_t count, int isSocket)
     if (isSocket)
       result = tor_socket_recv(fd, buf+numread, count-numread, 0);
     else
-      result = read(fd, buf+numread, count-numread);
+      result = read((int)fd, buf+numread, count-numread);
     if (result<0)
       return -1;
     else if (result == 0)
