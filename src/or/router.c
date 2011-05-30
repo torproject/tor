@@ -2223,8 +2223,7 @@ is_legal_hexdigest(const char *s)
  * and address <b>addr</b> or <b>addr32h</b>.
  *
  * The <b>nickname</b> and <b>addr</b> fields are optional and may be set to
- * NULL.  The <b>addr32h</b> field is optional and may be set to
- * <b>addr32h</b>.
+ * NULL.  The <b>addr32h</b> field is optional and may be set to 0.
  *
  * Return a pointer to the front of <b>buf</b>.
  */
@@ -2237,6 +2236,10 @@ format_node_description(char *buf,
                         uint32_t addr32h)
 {
   char *cp;
+
+  if (!buf)
+    return "<NULL BUFFER>";
+
   buf[0] = '$';
   base16_encode(buf+1, HEX_DIGEST_LEN+1, id_digest, DIGEST_LEN);
   cp = buf+1+HEX_DIGEST_LEN;
@@ -2268,6 +2271,8 @@ format_node_description(char *buf,
 const char *
 router_get_description(char *buf, const routerinfo_t *ri)
 {
+  if (!ri)
+    return "<null>";
   return format_node_description(buf,
                                  ri->cache_info.identity_digest,
                                  ri->is_named,
@@ -2284,6 +2289,8 @@ router_get_description(char *buf, const routerinfo_t *ri)
 const char *
 routerstatus_get_description(char *buf, const routerstatus_t *rs)
 {
+  if (!rs)
+    return "<null>";
   return format_node_description(buf,
                                  rs->identity_digest,
                                  rs->is_named,
@@ -2300,6 +2307,8 @@ routerstatus_get_description(char *buf, const routerstatus_t *rs)
 const char *
 extend_info_get_description(char *buf, const extend_info_t *ei)
 {
+  if (!ei)
+    return "<null>";
   return format_node_description(buf,
                                  ei->identity_digest,
                                  0,
