@@ -2143,6 +2143,11 @@ typedef struct circuit_t {
    * in time in order to indicate that a circuit shouldn't be used for new
    * streams, but that it can stay alive as long as it has streams on it.
    * That's a kludge we should fix.
+   *
+   * XXX023 The CBT code uses this field to record when HS-related
+   * circuits entered certain states.  This usage probably won't
+   * interfere with this field's primary purpose, but we should
+   * document it more thoroughly to make sure of that.
    */
   time_t timestamp_dirty;
 
