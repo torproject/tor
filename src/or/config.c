@@ -216,7 +216,7 @@ static config_var_t _option_vars[] = {
   V(ControlPortFileGroupReadable,BOOL,     "0"),
   V(ControlPortWriteToFile,      FILENAME, NULL),
   V(ControlSocket,               LINELIST, NULL),
-  V(ControlSocketsGroupWritable,    BOOL,     "0"),
+  V(ControlSocketsGroupWritable, BOOL,     "0"),
   V(CookieAuthentication,        BOOL,     "0"),
   V(CookieAuthFileGroupReadable, BOOL,     "0"),
   V(CookieAuthFile,              STRING,   NULL),
@@ -2124,6 +2124,7 @@ get_assigned_option(config_format_t *fmt, void *options,
         escape_val = 0;
         break;
       }
+      /* fall through */
     case CONFIG_TYPE_INTERVAL:
     case CONFIG_TYPE_MSEC_INTERVAL:
     case CONFIG_TYPE_UINT:
