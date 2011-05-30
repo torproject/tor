@@ -1,0 +1,4 @@
+  o Minor bugfixes
+    - Use a wide type to hold sockets when built for 64-bit Windows builds.
+      Fixes bug 3270.
+

@@ -802,6 +802,8 @@ decide_to_advertise_dirport(or_options_t *options, uint16_t dir_port)
     return 0;
   if (!check_whether_dirport_reachable())
     return 0;
+  if (!router_get_advertised_dir_port(options))
+    return 0;
 
   /* Section two: reasons to publish or not publish that the user
    * might find surprising. These are generally config options that
@@ -1136,6 +1138,8 @@ decide_if_publishable_server(void)
     return 0;
   if (authdir_mode(options))
     return 1;
+  if (!router_get_advertised_or_port(options))
+    return 0;
 
   return check_whether_orport_reachable();
 }
@@ -1419,7 +1423,8 @@ router_rebuild_descriptor(int force)
   if (desc_clean_since && !force)
     return 0;
 
-  if (router_pick_published_address(options, &addr) < 0) {
+  if (router_pick_published_address(options, &addr) < 0 ||
+      router_get_advertised_or_port(options) == 0) {
     /* Stop trying to rebuild our descriptor every second. We'll
      * learn that it's time to try again when ip_address_changed()
      * marks it dirty. */
@@ -2222,6 +2227,142 @@ is_legal_hexdigest(const char *s)
   }
   return (len >= HEX_DIGEST_LEN &&
           strspn(s,HEX_CHARACTERS)==HEX_DIGEST_LEN);
+}
+
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of a node with identity digest
+ * <b>id_digest</b>, named-status <b>is_named</b>, nickname <b>nickname</b>,
+ * and address <b>addr</b> or <b>addr32h</b>.
+ *
+ * The <b>nickname</b> and <b>addr</b> fields are optional and may be set to
+ * NULL.  The <b>addr32h</b> field is optional and may be set to 0.
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+format_node_description(char *buf,
+                        const char *id_digest,
+                        int is_named,
+                        const char *nickname,
+                        const tor_addr_t *addr,
+                        uint32_t addr32h)
+{
+  char *cp;
+
+  if (!buf)
+    return "<NULL BUFFER>";
+
+  buf[0] = '$';
+  base16_encode(buf+1, HEX_DIGEST_LEN+1, id_digest, DIGEST_LEN);
+  cp = buf+1+HEX_DIGEST_LEN;
+  if (nickname) {
+    buf[1+HEX_DIGEST_LEN] = is_named ? '=' : '~';
+    strlcpy(buf+1+HEX_DIGEST_LEN+1, nickname, MAX_NICKNAME_LEN+1);
+    cp += strlen(cp);
+  }
+  if (addr32h || addr) {
+    memcpy(cp, " at ", 4);
+    cp += 4;
+    if (addr) {
+      tor_addr_to_str(cp, addr, TOR_ADDR_BUF_LEN, 0);
+    } else {
+      struct in_addr in;
+      in.s_addr = htonl(addr32h);
+      tor_inet_ntoa(&in, cp, INET_NTOA_BUF_LEN);
+    }
+  }
+  return buf;
+}
+
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of <b>ri</b>.
+ *
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+router_get_description(char *buf, const routerinfo_t *ri)
+{
+  if (!ri)
+    return "<null>";
+  return format_node_description(buf,
+                                 ri->cache_info.identity_digest,
+                                 ri->is_named,
+                                 ri->nickname,
+                                 NULL,
+                                 ri->addr);
+}
+
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of <b>rs</b>.
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+routerstatus_get_description(char *buf, const routerstatus_t *rs)
+{
+  if (!rs)
+    return "<null>";
+  return format_node_description(buf,
+                                 rs->identity_digest,
+                                 rs->is_named,
+                                 rs->nickname,
+                                 NULL,
+                                 rs->addr);
+}
+
+/** Use <b>buf</b> (which must be at least NODE_DESC_BUF_LEN bytes long) to
+ * hold a human-readable description of <b>ei</b>.
+ *
+ * Return a pointer to the front of <b>buf</b>.
+ */
+const char *
+extend_info_get_description(char *buf, const extend_info_t *ei)
+{
+  if (!ei)
+    return "<null>";
+  return format_node_description(buf,
+                                 ei->identity_digest,
+                                 0,
+                                 ei->nickname,
+                                 &ei->addr,
+                                 0);
+}
+
+/** Return a human-readable description of the routerinfo_t <b>ri</b>.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+const char *
+router_describe(const routerinfo_t *ri)
+{
+  static char buf[NODE_DESC_BUF_LEN];
+  return router_get_description(buf, ri);
+}
+
+/** Return a human-readable description of the routerstatus_t <b>rs</b>.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+const char *
+routerstatus_describe(const routerstatus_t *rs)
+{
+  static char buf[NODE_DESC_BUF_LEN];
+  return routerstatus_get_description(buf, rs);
+}
+
+/** Return a human-readable description of the extend_info_t <b>ri</b>.
+ *
+ * This function is not thread-safe.  Each call to this function invalidates
+ * previous values returned by this function.
+ */
+const char *
+extend_info_describe(const extend_info_t *ei)
+{
+  static char buf[NODE_DESC_BUF_LEN];
+  return extend_info_get_description(buf, ei);
 }
 
 /** Set <b>buf</b> (which must have MAX_VERBOSE_NICKNAME_LEN+1 bytes) to the

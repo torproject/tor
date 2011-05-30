@@ -54,8 +54,8 @@ static int connection_reached_eof(connection_t *conn);
 static int connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
                                   int *socket_error);
 static int connection_process_inbuf(connection_t *conn, int package_partial);
-static void client_check_address_changed(int sock);
-static void set_constrained_socket_buffers(int sock, int size);
+static void client_check_address_changed(tor_socket_t sock);
+static void set_constrained_socket_buffers(tor_socket_t sock, int size);
 
 static const char *connection_proxy_state_to_string(int state);
 static int connection_read_https_proxy_response(connection_t *conn);
@@ -439,8 +439,8 @@ _connection_free(connection_t *conn)
     rend_data_free(dir_conn->rend_data);
   }
 
-  if (conn->s >= 0) {
-    log_debug(LD_NET,"closing fd %d.",conn->s);
+  if (SOCKET_OK(conn->s)) {
+    log_debug(LD_NET,"closing fd %d.",(int)conn->s);
     tor_close_socket(conn->s);
     conn->s = -1;
   }
@@ -662,14 +662,14 @@ connection_close_immediate(connection_t *conn)
   }
   if (conn->outbuf_flushlen) {
     log_info(LD_NET,"fd %d, type %s, state %s, %d bytes on outbuf.",
-             conn->s, conn_type_to_string(conn->type),
+             (int)conn->s, conn_type_to_string(conn->type),
              conn_state_to_string(conn->type, conn->state),
              (int)conn->outbuf_flushlen);
   }
 
   connection_unregister_events(conn);
 
-  if (conn->s >= 0)
+  if (SOCKET_OK(conn->s))
     tor_close_socket(conn->s);
   conn->s = -1;
   if (conn->linked)
@@ -739,7 +739,7 @@ connection_expire_held_open(void)
         log_fn(severity, LD_NET,
                "Giving up on marked_for_close conn that's been flushing "
                "for 15s (fd %d, type %s, state %s).",
-               conn->s, conn_type_to_string(conn->type),
+               (int)conn->s, conn_type_to_string(conn->type),
                conn_state_to_string(conn->type, conn->state));
         conn->hold_open_until_flushed = 0;
       }
@@ -892,7 +892,7 @@ check_location_for_unix_socket(or_options_t *options, const char *path)
 /** Tell the TCP stack that it shouldn't wait for a long time after
  * <b>sock</b> has closed before reusing its port. */
 static void
-make_socket_reuseable(int sock)
+make_socket_reuseable(tor_socket_t sock)
 {
 #ifdef MS_WINDOWS
   (void) sock;
@@ -920,7 +920,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
                            int type, char* address)
 {
   connection_t *conn;
-  int s; /* the socket we're going to make */
+  tor_socket_t s; /* the socket we're going to make */
   uint16_t usePort = 0, gotPort = 0;
   int start_reading = 0;
 
@@ -943,7 +943,7 @@ connection_create_listener(const struct sockaddr *listensockaddr,
     s = tor_open_socket(PF_INET,
                         is_tcp ? SOCK_STREAM : SOCK_DGRAM,
                         is_tcp ? IPPROTO_TCP: IPPROTO_UDP);
-    if (s < 0) {
+    if (!SOCKET_OK(s)) {
       log_warn(LD_NET,"Socket creation failed.");
       goto err;
     }
@@ -1136,7 +1136,7 @@ check_sockaddr_family_match(sa_family_t got, connection_t *listener)
 static int
 connection_handle_listener_read(connection_t *conn, int new_type)
 {
-  int news; /* the new socket */
+  tor_socket_t news; /* the new socket */
   connection_t *newconn;
   /* information about the remote peer when connecting to other routers */
   char addrbuf[256];
@@ -1149,7 +1149,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   memset(addrbuf, 0, sizeof(addrbuf));
 
   news = tor_accept_socket(conn->s,remote,&remotelen);
-  if (news < 0) { /* accept() error */
+  if (!SOCKET_OK(news)) { /* accept() error */
     int e = tor_socket_errno(conn->s);
     if (ERRNO_IS_ACCEPT_EAGAIN(e)) {
       return 0; /* he hung up before we could accept(). that's fine. */
@@ -1165,7 +1165,7 @@ connection_handle_listener_read(connection_t *conn, int new_type)
   }
   log_debug(LD_NET,
             "Connection accepted on socket %d (child of fd %d).",
-            news,conn->s);
+            (int)news,(int)conn->s);
 
   make_socket_reuseable(news);
   set_socket_nonblocking(news);
@@ -1318,7 +1318,8 @@ int
 connection_connect(connection_t *conn, const char *address,
                    const tor_addr_t *addr, uint16_t port, int *socket_error)
 {
-  int s, inprogress = 0;
+  tor_socket_t s;
+  int inprogress = 0;
   char addrbuf[256];
   struct sockaddr *dest_addr;
   socklen_t dest_addr_len;
@@ -1949,37 +1950,40 @@ retry_all_listeners(smartlist_t *replaced_conns,
                     smartlist_t *new_conns)
 {
   or_options_t *options = get_options();
+  int retval = 0;
+  const uint16_t old_or_port = router_get_advertised_or_port(options);
+  const uint16_t old_dir_port = router_get_advertised_dir_port(options);
 
   if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
                       options->ORPort, "0.0.0.0",
                       replaced_conns, new_conns, options->ClientOnly,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_DIR_LISTENER, options->DirListenAddress,
                       options->DirPort, "0.0.0.0",
                       replaced_conns, new_conns, options->ClientOnly,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_LISTENER, options->SocksListenAddress,
                       options->SocksPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_TRANS_LISTENER, options->TransListenAddress,
                       options->TransPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_NATD_LISTENER, options->NATDListenAddress,
                       options->NATDPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_AP_DNS_LISTENER, options->DNSListenAddress,
                       options->DNSPort, "127.0.0.1",
                       replaced_conns, new_conns, 0,
                       AF_INET)<0)
-    return -1;
+    retval = -1;
   if (retry_listeners(CONN_TYPE_CONTROL_LISTENER,
                       options->ControlListenAddress,
                       options->ControlPort, "127.0.0.1",
@@ -1993,7 +1997,16 @@ retry_all_listeners(smartlist_t *replaced_conns,
                       AF_UNIX)<0)
     return -1;
 
-  return 0;
+  if (old_or_port != router_get_advertised_or_port(options) ||
+      old_dir_port != router_get_advertised_dir_port(options)) {
+    /* Our chosen ORPort or DirPort is not what it used to be: the
+     * descriptor we had (if any) should be regenerated.  (We won't
+     * automatically notice this because of changes in the option,
+     * since the value could be "auto".) */
+    mark_my_descriptor_dirty("Chosen Or/DirPort changed");
+  }
+
+  return retval;
 }
 
 /** Return 1 if we should apply rate limiting to <b>conn</b>,
@@ -2392,7 +2405,7 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
             TO_OR_CONN(conn)->read_bucket > 0)) {
         /* and either a non-cell conn or a cell conn with non-empty bucket */
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
-                         "waking up conn (fd %d) for read", conn->s));
+                         "waking up conn (fd %d) for read", (int)conn->s));
       conn->read_blocked_on_bw = 0;
       connection_start_reading(conn);
     }
@@ -2405,7 +2418,7 @@ connection_bucket_refill(int seconds_elapsed, time_t now)
             conn->state != OR_CONN_STATE_OPEN ||
             TO_OR_CONN(conn)->write_bucket > 0)) {
       LOG_FN_CONN(conn, (LOG_DEBUG,LD_NET,
-                         "waking up conn (fd %d) for write", conn->s));
+                         "waking up conn (fd %d) for write", (int)conn->s));
       conn->write_blocked_on_bw = 0;
       connection_start_writing(conn);
     }
@@ -2597,7 +2610,7 @@ connection_read_to_buf(connection_t *conn, ssize_t *max_to_read,
     log_debug(LD_NET,
               "%d: starting, inbuf_datalen %ld (%d pending in tls object)."
               " at_most %ld.",
-              conn->s,(long)buf_datalen(conn->inbuf),
+              (int)conn->s,(long)buf_datalen(conn->inbuf),
               tor_tls_get_pending_bytes(or_conn->tls), (long)at_most);
 
     initial_size = buf_datalen(conn->inbuf);
@@ -2768,7 +2781,7 @@ connection_handle_write_impl(connection_t *conn, int force)
 
   tor_assert(!connection_is_listener(conn));
 
-  if (conn->marked_for_close || conn->s < 0)
+  if (conn->marked_for_close || !SOCKET_OK(conn->s))
     return 0; /* do nothing */
 
   if (conn->in_flushed_some) {
@@ -2984,12 +2997,13 @@ _connection_write_to_buf_impl(const char *string, size_t len,
       /* if it failed, it means we have our package/delivery windows set
          wrong compared to our max outbuf size. close the whole circuit. */
       log_warn(LD_NET,
-               "write_to_buf failed. Closing circuit (fd %d).", conn->s);
+               "write_to_buf failed. Closing circuit (fd %d).", (int)conn->s);
       circuit_mark_for_close(circuit_get_by_edge_conn(TO_EDGE_CONN(conn)),
                              END_CIRC_REASON_INTERNAL);
     } else {
       log_warn(LD_NET,
-               "write_to_buf failed. Closing connection (fd %d).", conn->s);
+               "write_to_buf failed. Closing connection (fd %d).",
+               (int)conn->s);
       connection_mark_for_close(conn);
     }
     return;
@@ -3029,7 +3043,7 @@ _connection_write_to_buf_impl(const char *string, size_t len,
         /* this connection is broken. remove it. */
         log_warn(LD_BUG, "unhandled error on write for "
                  "conn (type %d, fd %d); removing",
-                 conn->type, conn->s);
+                 conn->type, (int)conn->s);
         tor_fragile_assert();
         /* do a close-immediate here, so we don't try to flush */
         connection_close_immediate(conn);
@@ -3252,7 +3266,7 @@ alloc_http_authenticator(const char *authenticator)
  * call init_keys().
  */
 static void
-client_check_address_changed(int sock)
+client_check_address_changed(tor_socket_t sock)
 {
   uint32_t iface_ip, ip_out; /* host order */
   struct sockaddr_in out_addr;
@@ -3308,7 +3322,7 @@ client_check_address_changed(int sock)
  * to the desired size to stay below system TCP buffer limits.
  */
 static void
-set_constrained_socket_buffers(int sock, int size)
+set_constrained_socket_buffers(tor_socket_t sock, int size)
 {
   void *sz = (void*)&size;
   socklen_t sz_sz = (socklen_t) sizeof(size);
@@ -3540,7 +3554,7 @@ assert_connection_ok(connection_t *conn, time_t now)
     tor_assert(conn->linked);
   }
   if (conn->linked)
-    tor_assert(conn->s < 0);
+    tor_assert(!SOCKET_OK(conn->s));
 
   if (conn->outbuf_flushlen > 0) {
     tor_assert(connection_is_writing(conn) || conn->write_blocked_on_bw ||

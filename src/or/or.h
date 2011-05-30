@@ -970,7 +970,7 @@ typedef struct connection_t {
   unsigned int proxy_state:4;
 
   /** Our socket; -1 if this connection is closed, or has no socket. */
-  evutil_socket_t s;
+  tor_socket_t s;
   int conn_array_index; /**< Index into the global connection array. */
   struct event *read_event; /**< Libevent event structure. */
   struct event *write_event; /**< Libevent event structure. */
@@ -2143,6 +2143,11 @@ typedef struct circuit_t {
    * in time in order to indicate that a circuit shouldn't be used for new
    * streams, but that it can stay alive as long as it has streams on it.
    * That's a kludge we should fix.
+   *
+   * XXX023 The CBT code uses this field to record when HS-related
+   * circuits entered certain states.  This usage probably won't
+   * interfere with this field's primary purpose, but we should
+   * document it more thoroughly to make sure of that.
    */
   time_t timestamp_dirty;
 

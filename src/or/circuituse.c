@@ -288,7 +288,6 @@ circuit_expire_building(void)
   struct timeval general_cutoff, begindir_cutoff, fourhop_cutoff,
     cannibalize_cutoff, close_cutoff, extremely_old_cutoff;
   struct timeval now;
-  struct timeval introcirc_cutoff;
   cpath_build_state_t *build_state;
 
   tor_gettimeofday(&now);
@@ -307,8 +306,6 @@ circuit_expire_building(void)
   SET_CUTOFF(close_cutoff, circ_times.close_ms);
   SET_CUTOFF(extremely_old_cutoff, circ_times.close_ms*2 + 1000);
 
-  introcirc_cutoff = begindir_cutoff;
-
   while (next_circ) {
     struct timeval cutoff;
     victim = next_circ;
@@ -325,8 +322,6 @@ circuit_expire_building(void)
       cutoff = fourhop_cutoff;
     else if (TO_ORIGIN_CIRCUIT(victim)->has_opened)
       cutoff = cannibalize_cutoff;
-    else if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING)
-      cutoff = introcirc_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_MEASURE_TIMEOUT)
       cutoff = close_cutoff;
     else
@@ -337,12 +332,6 @@ circuit_expire_building(void)
 
 #if 0
     /* some debug logs, to help track bugs */
-    if (victim->purpose == CIRCUIT_PURPOSE_C_INTRODUCING &&
-        victim->timestamp_created <= introcirc_cutoff &&
-        victim->timestamp_created > general_cutoff)
-      log_info(LD_REND|LD_CIRC, "Timing out introduction circuit which we "
-               "would not have done if it had been a general circuit.");
-
     if (victim->purpose >= CIRCUIT_PURPOSE_C_INTRODUCING &&
         victim->purpose <= CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED) {
       if (!victim->timestamp_dirty)
@@ -1335,8 +1324,8 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
-      log_info(LD_REND,"Chose '%s' as intro point for '%s'.",
-               extend_info->nickname,
+      log_info(LD_REND,"Chose %s as intro point for '%s'.",
+               extend_info_describe(extend_info),
                safe_str_client(conn->rend_data->onion_address));
     }
 

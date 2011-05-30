@@ -3210,8 +3210,8 @@ router_set_status(const char *digest, int up)
 
   router = router_get_by_digest(digest);
   if (router) {
-    log_debug(LD_DIR,"Marking router '%s/%s' as %s.",
-              router->nickname, router->address, up ? "up" : "down");
+    log_debug(LD_DIR,"Marking router %s as %s.",
+              router_describe(router), up ? "up" : "down");
     if (!up && router_is_me(router) && !we_are_hibernating())
       log_warn(LD_NET, "We just marked ourself as down. Are your external "
                "addresses reachable?");
@@ -3283,11 +3283,12 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
         router->purpose == ROUTER_PURPOSE_BRIDGE &&
         !was_bridge) {
       log_info(LD_DIR, "Replacing non-bridge descriptor with bridge "
-               "descriptor for router '%s'", router->nickname);
+               "descriptor for router %s",
+               router_describe(router));
     } else {
       log_info(LD_DIR,
-               "Dropping descriptor that we already have for router '%s'",
-               router->nickname);
+               "Dropping descriptor that we already have for router %s",
+               router_describe(router));
       *msg = "Router descriptor was not new.";
       routerinfo_free(router);
       return ROUTER_WAS_NOT_NEW;
@@ -3311,8 +3312,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       /* We asked for it, so some networkstatus must have listed it when we
        * did.  Save it if we're a cache in case somebody else asks for it. */
       log_info(LD_DIR,
-               "Received a no-longer-recognized descriptor for router '%s'",
-               router->nickname);
+               "Received a no-longer-recognized descriptor for router %s",
+               router_describe(router));
       *msg = "Router descriptor is not referenced by any network-status.";
 
       /* Only journal this desc if we'll be serving it. */
@@ -3363,8 +3364,9 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
   if (router->purpose == ROUTER_PURPOSE_BRIDGE && from_cache &&
       !authdir_mode_bridge(options) &&
       !routerinfo_is_a_configured_bridge(router)) {
-    log_info(LD_DIR, "Dropping bridge descriptor for '%s' because we have "
-             "no bridge configured at that address.", router->nickname);
+    log_info(LD_DIR, "Dropping bridge descriptor for %s because we have "
+             "no bridge configured at that address.",
+             safe_str_client(router_describe(router)));
     *msg = "Router descriptor was not a configured bridge.";
     routerinfo_free(router);
     return ROUTER_WAS_NOT_WANTED;
@@ -3375,8 +3377,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
     if (!in_consensus && (router->cache_info.published_on <=
                           old_router->cache_info.published_on)) {
       /* Same key, but old.  This one is not listed in the consensus. */
-      log_debug(LD_DIR, "Not-new descriptor for router '%s'",
-                router->nickname);
+      log_debug(LD_DIR, "Not-new descriptor for router %s",
+                router_describe(router));
       /* Only journal this desc if we'll be serving it. */
       if (!from_cache && should_cache_old_descriptors())
         signed_desc_append_to_journal(&router->cache_info,
@@ -3386,9 +3388,8 @@ router_add_to_routerlist(routerinfo_t *router, const char **msg,
       return ROUTER_WAS_NOT_NEW;
     } else {
       /* Same key, and either new, or listed in the consensus. */
-      log_debug(LD_DIR, "Replacing entry for router '%s/%s' [%s]",
-                router->nickname, old_router->nickname,
-                hex_str(id_digest,DIGEST_LEN));
+      log_debug(LD_DIR, "Replacing entry for router %s",
+                router_describe(router));
       if (routers_have_same_or_addr(router, old_router)) {
         /* these carry over when the address and orport are unchanged. */
         router->last_reachable = old_router->last_reachable;
@@ -3664,8 +3665,8 @@ routerlist_remove_old_routers(void)
         /* Too old: remove it.  (If we're a cache, just move it into
          * old_routers.) */
         log_info(LD_DIR,
-                 "Forgetting obsolete (too old) routerinfo for router '%s'",
-                 router->nickname);
+                 "Forgetting obsolete (too old) routerinfo for router %s",
+                 router_describe(router));
         routerlist_remove(routerlist, router, 1, now);
         i--;
       }
@@ -4585,7 +4586,8 @@ update_consensus_router_descriptor_downloads(time_t now, int is_vote,
         if (oldrouter)
           format_iso_time(time_bufold, oldrouter->cache_info.published_on);
         log_info(LD_DIR, "Learned about %s (%s vs %s) from %s's vote (%s)",
-                 rs->nickname, time_bufnew,
+                 routerstatus_describe(rs),
+                 time_bufnew,
                  oldrouter ? time_bufold : "none",
                  source->nickname, oldrouter ? "known" : "unknown");
       }

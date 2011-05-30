@@ -11,7 +11,8 @@ struct event_base;
 
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/util.h>
-#else
+#elif !defined(EVUTIL_SOCKET_DEFINED)
+#define EVUTIL_SOCKET_DEFINED
 #define evutil_socket_t int
 #endif
 
