@@ -276,7 +276,7 @@ typedef struct ratelim_t {
 char *rate_limit_log(ratelim_t *lim, time_t now);
 
 /* File helpers */
-ssize_t write_all(tor_socket_t fd, const char *buf, size_t count, int isSocket);
+ssize_t write_all(tor_socket_t fd, const char *buf, size_t count,int isSocket);
 ssize_t read_all(tor_socket_t fd, char *buf, size_t count, int isSocket);
 
 /** Return values from file_status(); see that function's documentation
