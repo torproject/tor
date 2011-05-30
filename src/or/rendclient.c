@@ -21,6 +21,7 @@
 #include "rendclient.h"
 #include "rendcommon.h"
 #include "rephist.h"
+#include "router.h"
 #include "routerlist.h"
 
 static extend_info_t *rend_client_get_random_intro_impl(
@@ -91,12 +92,13 @@ rend_client_reextend_intro_circuit(origin_circuit_t *circ)
   if (circ->remaining_relay_early_cells) {
     log_info(LD_REND,
              "Re-extending circ %d, this time to %s.",
-             circ->_base.n_circ_id, extend_info->nickname);
+             circ->_base.n_circ_id,
+             safe_str_client(extend_info_describe(extend_info)));
     result = circuit_extend_to_new_exit(circ, extend_info);
   } else {
     log_info(LD_REND,
              "Building a new introduction circuit, this time to %s.",
-             extend_info->nickname);
+             safe_str_client(extend_info_describe(extend_info)));
     circuit_mark_for_close(TO_CIRCUIT(circ), END_CIRC_REASON_FINISHED);
     if (!circuit_launch_by_extend_info(CIRCUIT_PURPOSE_C_INTRODUCING,
                                        extend_info,
@@ -169,7 +171,8 @@ rend_client_send_introduction(origin_circuit_t *introcirc,
              "have a v2 rend desc with %d intro points. "
              "Trying a different intro point...",
              safe_str_client(introcirc->rend_data->onion_address),
-             introcirc->build_state->chosen_exit->nickname,
+             safe_str_client(extend_info_describe(
+                                   introcirc->build_state->chosen_exit)),
              smartlist_len(entry->parsed->intro_nodes));
 
     if (rend_client_reextend_intro_circuit(introcirc)) {
@@ -352,8 +355,8 @@ rend_client_introduction_acked(origin_circuit_t *circ,
      * If none remain, refetch the service descriptor.
      */
     log_info(LD_REND, "Got nack for %s from %s...",
-             safe_str_client(circ->rend_data->onion_address),
-             circ->build_state->chosen_exit->nickname);
+        safe_str_client(circ->rend_data->onion_address),
+        safe_str_client(extend_info_describe(circ->build_state->chosen_exit)));
     if (rend_client_remove_intro_point(circ->build_state->chosen_exit,
                                        circ->rend_data) > 0) {
       /* There are introduction points left. Re-extend the circuit to
@@ -508,12 +511,12 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
                     "service '%s' with descriptor ID '%s', auth type %d, "
                     "and descriptor cookie '%s' to hidden service "
-                    "directory '%s' on port %d.",
+                    "directory %s",
            rend_query->onion_address, desc_id_base32,
            rend_query->auth_type,
            (rend_query->auth_type == REND_NO_AUTH ? "[none]" :
-           escaped_safe_str_client(descriptor_cookie_base64)),
-           hs_dir->nickname, hs_dir->dir_port);
+            escaped_safe_str_client(descriptor_cookie_base64)),
+           routerstatus_describe(hs_dir));
   return 1;
 }
 

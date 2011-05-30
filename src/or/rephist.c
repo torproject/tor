@@ -635,6 +635,7 @@ rep_hist_dump_stats(time_t now, int severity)
   digestmap_iter_t *orhist_it;
   const char *name1, *name2, *digest1, *digest2;
   char hexdigest1[HEX_DIGEST_LEN+1];
+  char hexdigest2[HEX_DIGEST_LEN+1];
   or_history_t *or_history;
   link_history_t *link_history;
   void *or_history_p, *link_history_p;
@@ -695,7 +696,10 @@ rep_hist_dump_stats(time_t now, int severity)
 
         link_history = (link_history_t*) link_history_p;
 
-        ret = tor_snprintf(buffer+len, 2048-len, "%s(%ld/%ld); ", name2,
+        base16_encode(hexdigest2, sizeof(hexdigest2), digest2, DIGEST_LEN);
+        ret = tor_snprintf(buffer+len, 2048-len, "%s [%s](%ld/%ld); ",
+                        name2,
+                        hexdigest2,
                         link_history->n_extend_ok,
                         link_history->n_extend_ok+link_history->n_extend_fail);
         if (ret<0)

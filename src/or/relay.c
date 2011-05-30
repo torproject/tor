@@ -29,6 +29,7 @@
 #include "reasons.h"
 #include "relay.h"
 #include "rendcommon.h"
+#include "router.h"
 #include "routerlist.h"
 #include "routerparse.h"
 
@@ -751,9 +752,9 @@ connection_ap_process_end_not_open(
              (tor_inet_aton(conn->socks_request->address, &in) &&
               !conn->chosen_exit_name))) {
           log_info(LD_APP,
-                 "Exitrouter '%s' seems to be more restrictive than its exit "
+                 "Exitrouter %s seems to be more restrictive than its exit "
                  "policy. Not using this router as exit for now.",
-                 node_get_nickname(exitrouter));
+                 node_describe(exitrouter));
           policies_set_node_exitpolicy_to_reject_all(exitrouter);
         }
         /* rewrite it to an IP if we learned one. */

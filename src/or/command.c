@@ -276,8 +276,8 @@ command_process_create_cell(cell_t *cell, or_connection_t *conn)
     if (node) {
       char *p = esc_for_log(node_get_platform(node));
       log_fn(LOG_PROTOCOL_WARN, LD_PROTOCOL,
-             "Details: nickname \"%s\", platform %s.",
-             node_get_nickname(node), p);
+             "Details: router %s, platform %s.",
+             node_describe(node), p);
       tor_free(p);
     }
     return;

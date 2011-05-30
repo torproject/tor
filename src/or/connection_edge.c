@@ -503,12 +503,12 @@ connection_ap_expire_beginning(void)
     }
     tor_assert(circ->purpose == CIRCUIT_PURPOSE_C_GENERAL);
     log_fn(cutoff < 15 ? LOG_INFO : severity, LD_APP,
-           "We tried for %d seconds to connect to '%s' using exit '%s'."
+           "We tried for %d seconds to connect to '%s' using exit %s."
            " Retrying on a new circuit.",
            seconds_idle,
            safe_str_client(conn->socks_request->address),
            conn->cpath_layer ?
-             conn->cpath_layer->extend_info->nickname : "*unnamed*");
+           extend_info_describe(conn->cpath_layer->extend_info): "*unnamed*");
     /* send an end down the circuit */
     connection_edge_end(conn, END_STREAM_REASON_TIMEOUT);
     /* un-mark it as ending, since we're going to reuse it */
@@ -1830,7 +1830,7 @@ connection_ap_handshake_rewrite_and_attach(edge_connection_t *conn,
         if (r) {
           log_info(LD_APP,
                    "Redirecting address %s to exit at enclave router %s",
-                   safe_str_client(socks->address), node_get_nickname(r));
+                   safe_str_client(socks->address), node_describe(r));
           /* use the hex digest, not nickname, in case there are two
              routers with this nickname */
           conn->chosen_exit_name =

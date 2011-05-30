@@ -475,7 +475,8 @@ rend_config_services(or_options_t *options, int validate_only)
         if (keep_it)
           continue;
         log_info(LD_REND, "Closing intro point %s for service %s.",
-                 safe_str_client(oc->build_state->chosen_exit->nickname),
+                 safe_str_client(extend_info_describe(
+                                            oc->build_state->chosen_exit)),
                  oc->rend_data->onion_address);
         circuit_mark_for_close(circ, END_CIRC_REASON_FINISHED);
         /* XXXX Is there another reason we should use here? */
@@ -1147,7 +1148,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   if (!launched) { /* give up */
     log_warn(LD_REND, "Giving up launching first hop of circuit to rendezvous "
              "point %s for service %s.",
-             escaped_safe_str_client(extend_info->nickname),
+             safe_str_client(extend_info_describe(extend_info)),
              serviceid);
     reason = END_CIRC_REASON_CONNECTFAILED;
     goto err;
@@ -1155,7 +1156,7 @@ rend_service_introduce(origin_circuit_t *circuit, const uint8_t *request,
   log_info(LD_REND,
            "Accepted intro; launching circuit to %s "
            "(cookie %s) for service %s.",
-           escaped_safe_str_client(extend_info->nickname),
+           safe_str_client(extend_info_describe(extend_info)),
            hexcookie, serviceid);
   tor_assert(launched->build_state);
   /* Fill in the circuit's state. */
@@ -1207,7 +1208,8 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
              "Attempt to build circuit to %s for rendezvous has failed "
              "too many times or expired; giving up.",
              oldcirc->build_state ?
-               oldcirc->build_state->chosen_exit->nickname : "*unknown*");
+             safe_str(extend_info_describe(oldcirc->build_state->chosen_exit))
+             : "*unknown*");
     return;
   }
 
@@ -1221,7 +1223,7 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
   }
 
   log_info(LD_REND,"Reattempting rendezvous circuit to '%s'",
-           oldstate->chosen_exit->nickname);
+           safe_str(extend_info_describe(oldstate->chosen_exit)));
 
   newcirc = circuit_launch_by_extend_info(CIRCUIT_PURPOSE_S_CONNECT_REND,
                             oldstate->chosen_exit,
@@ -1229,7 +1231,7 @@ rend_service_relaunch_rendezvous(origin_circuit_t *oldcirc)
 
   if (!newcirc) {
     log_warn(LD_REND,"Couldn't relaunch rendezvous circuit to '%s'.",
-             oldstate->chosen_exit->nickname);
+             safe_str(extend_info_describe(oldstate->chosen_exit)));
     return;
   }
   newstate = newcirc->build_state;
@@ -1253,7 +1255,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
 
   log_info(LD_REND,
            "Launching circuit to introduction point %s for service %s",
-           escaped_safe_str_client(intro->extend_info->nickname),
+           safe_str_client(extend_info_describe(intro->extend_info)),
            service->service_id);
 
   rep_hist_note_used_internal(time(NULL), 1, 0);
@@ -1266,7 +1268,7 @@ rend_service_launch_establish_intro(rend_service_t *service,
   if (!launched) {
     log_info(LD_REND,
              "Can't launch circuit to establish introduction at %s.",
-             escaped_safe_str_client(intro->extend_info->nickname));
+             safe_str_client(extend_info_describe(intro->extend_info)));
     return -1;
   }
 
@@ -1609,9 +1611,9 @@ directory_post_to_hs_dir(rend_service_descriptor_t *renddesc,
         continue;
       if (!router_get_by_id_digest(hs_dir->identity_digest)) {
         log_info(LD_REND, "Not sending publish request for v2 descriptor to "
-                          "hidden service directory '%s'; we don't have its "
+                          "hidden service directory %s; we don't have its "
                           "router descriptor. Queuing for later upload.",
-                 hs_dir->nickname);
+                 safe_str_client(routerstatus_describe(hs_dir)));
         failed_upload = -1;
         continue;
       }
@@ -1819,7 +1821,8 @@ rend_services_introduce(void)
       node = node_get_by_id(intro->extend_info->identity_digest);
       if (!node || !find_intro_circuit(intro, service->pk_digest)) {
         log_info(LD_REND,"Giving up on %s as intro point for %s.",
-                 intro->extend_info->nickname, service->service_id);
+                 safe_str_client(extend_info_describe(intro->extend_info)),
+                 safe_str_client(service->service_id));
         if (service->desc) {
           SMARTLIST_FOREACH(service->desc->intro_nodes, rend_intro_point_t *,
                             dintro, {
@@ -1885,7 +1888,8 @@ rend_services_introduce(void)
       tor_assert(!crypto_pk_generate_key(intro->intro_key));
       smartlist_add(service->intro_nodes, intro);
       log_info(LD_REND, "Picked router %s as an intro point for %s.",
-               node_get_nickname(node), service->service_id);
+               safe_str_client(node_describe(node)),
+               safe_str_client(service->service_id));
     }
 
     /* If there's no need to launch new circuits, stop here. */
@@ -1898,7 +1902,8 @@ rend_services_introduce(void)
       r = rend_service_launch_establish_intro(service, intro);
       if (r<0) {
         log_warn(LD_REND, "Error launching circuit to node %s for service %s.",
-                 intro->extend_info->nickname, service->service_id);
+                 safe_str_client(extend_info_describe(intro->extend_info)),
+                 safe_str_client(service->service_id));
       }
     }
   }

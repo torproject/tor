@@ -272,8 +272,10 @@ circuit_count_pending_on_or_conn(or_connection_t *or_conn)
   circuit_get_all_pending_on_or_conn(sl, or_conn);
   cnt = smartlist_len(sl);
   smartlist_free(sl);
-  log_debug(LD_CIRC,"or_conn to %s, %d pending circs",
-            or_conn->nickname ? or_conn->nickname : "NULL", cnt);
+  log_debug(LD_CIRC,"or_conn to %s at %s, %d pending circs",
+            or_conn->nickname ? or_conn->nickname : "NULL",
+            or_conn->_base.address,
+            cnt);
   return cnt;
 }
 

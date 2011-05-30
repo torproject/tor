@@ -558,7 +558,8 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
 
   if (!node && anonymized_connection) {
     log_info(LD_DIR, "Not sending anonymized request to directory '%s'; we "
-                     "don't have its router descriptor.", status->nickname);
+             "don't have its router descriptor.",
+             routerstatus_describe(status));
     return;
   } else if (node) {
     node_get_address_string(node, address_buf, sizeof(address_buf));
@@ -572,10 +573,10 @@ directory_initiate_command_routerstatus_rend(const routerstatus_t *status,
 
   if (options->ExcludeNodes && options->StrictNodes &&
       routerset_contains_routerstatus(options->ExcludeNodes, status, -1)) {
-    log_warn(LD_DIR, "Wanted to contact directory mirror '%s' for %s, but "
+    log_warn(LD_DIR, "Wanted to contact directory mirror %s for %s, but "
              "it's in our ExcludedNodes list and StrictNodes is set. "
              "Skipping. This choice might make your Tor not work.",
-             status->nickname,
+             routerstatus_describe(status),
              dir_conn_purpose_to_string(dir_purpose));
     return;
   }

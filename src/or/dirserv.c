@@ -518,14 +518,15 @@ dirserv_router_has_valid_address(routerinfo_t *ri)
   if (get_options()->DirAllowPrivateAddresses)
     return 0; /* whatever it is, we're fine with it */
   if (!tor_inet_aton(ri->address, &iaddr)) {
-    log_info(LD_DIRSERV,"Router '%s' published non-IP address '%s'. Refusing.",
-             ri->nickname, ri->address);
+    log_info(LD_DIRSERV,"Router %s published non-IP address '%s'. Refusing.",
+             router_describe(ri),
+             ri->address);
     return -1;
   }
   if (is_internal_IP(ntohl(iaddr.s_addr), 0)) {
     log_info(LD_DIRSERV,
-             "Router '%s' published internal IP address '%s'. Refusing.",
-             ri->nickname, ri->address);
+             "Router %s published internal IP address '%s'. Refusing.",
+             router_describe(ri), ri->address);
     return -1; /* it's a private IP, we should reject it */
   }
   return 0;
@@ -554,10 +555,11 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   /* Is there too much clock skew? */
   now = time(NULL);
   if (ri->cache_info.published_on > now+ROUTER_ALLOW_SKEW) {
-    log_fn(severity, LD_DIRSERV, "Publication time for nickname '%s' is too "
+    log_fn(severity, LD_DIRSERV, "Publication time for %s is too "
            "far (%d minutes) in the future; possible clock skew. Not adding "
            "(%s)",
-           ri->nickname, (int)((ri->cache_info.published_on-now)/60),
+           router_describe(ri),
+           (int)((ri->cache_info.published_on-now)/60),
            esc_router_info(ri));
     *msg = "Rejected: Your clock is set too far in the future, or your "
       "timezone is not correct.";
@@ -565,9 +567,10 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   }
   if (ri->cache_info.published_on < now-ROUTER_MAX_AGE_TO_PUBLISH) {
     log_fn(severity, LD_DIRSERV,
-           "Publication time for router with nickname '%s' is too far "
+           "Publication time for %s is too far "
            "(%d minutes) in the past. Not adding (%s)",
-           ri->nickname, (int)((now-ri->cache_info.published_on)/60),
+           router_describe(ri),
+           (int)((now-ri->cache_info.published_on)/60),
            esc_router_info(ri));
     *msg = "Rejected: Server is expired, or your clock is too far in the past,"
       " or your timezone is not correct.";
@@ -575,9 +578,10 @@ authdir_wants_to_reject_router(routerinfo_t *ri, const char **msg,
   }
   if (dirserv_router_has_valid_address(ri) < 0) {
     log_fn(severity, LD_DIRSERV,
-           "Router with nickname '%s' has invalid address '%s'. "
+           "Router %s has invalid address '%s'. "
            "Not adding (%s).",
-           ri->nickname, ri->address,
+           router_describe(ri),
+           ri->address,
            esc_router_info(ri));
     *msg = "Rejected: Address is not an IP, or IP is a private address.";
     return -1;
@@ -729,9 +733,9 @@ dirserv_add_descriptor(routerinfo_t *ri, const char **msg, const char *source)
       && router_differences_are_cosmetic(ri_old, ri)
       && !router_is_me(ri)) {
     log_info(LD_DIRSERV,
-             "Not replacing descriptor from '%s' (source: %s); "
+             "Not replacing descriptor from %s (source: %s); "
              "differences are cosmetic.",
-             ri->nickname, source);
+             router_describe(ri), source);
     *msg = "Not replacing router descriptor; no information has changed since "
       "the last one with this identity.";
     control_event_or_authdir_new_descriptor("DROPPED",
@@ -831,13 +835,15 @@ directory_remove_invalid(void)
   SMARTLIST_FOREACH_BEGIN(nodes, node_t *, node) {
     const char *msg;
     routerinfo_t *ent = node->ri;
+    char description[NODE_DESC_BUF_LEN];
     uint32_t r;
     if (!ent)
       continue;
     r = dirserv_router_get_status(ent, &msg);
+    router_get_description(description, ent);
     if (r & FP_REJECT) {
-      log_info(LD_DIRSERV, "Router '%s' is now rejected: %s",
-               ent->nickname, msg?msg:"");
+      log_info(LD_DIRSERV, "Router %s is now rejected: %s",
+               description, msg?msg:"");
       routerlist_remove(rl, ent, 0, time(NULL));
       changed = 1;
       continue;
@@ -845,33 +851,33 @@ directory_remove_invalid(void)
 #if 0
     if (bool_neq((r & FP_NAMED), ent->auth_says_is_named)) {
       log_info(LD_DIRSERV,
-               "Router '%s' is now %snamed.", ent->nickname,
+               "Router %s is now %snamed.", description,
                (r&FP_NAMED)?"":"un");
       ent->is_named = (r&FP_NAMED)?1:0;
       changed = 1;
     }
     if (bool_neq((r & FP_UNNAMED), ent->auth_says_is_unnamed)) {
       log_info(LD_DIRSERV,
-               "Router '%s' is now %snamed. (FP_UNNAMED)", ent->nickname,
+               "Router '%s' is now %snamed. (FP_UNNAMED)", description,
                (r&FP_NAMED)?"":"un");
       ent->is_named = (r&FP_NUNAMED)?0:1;
       changed = 1;
     }
 #endif
     if (bool_neq((r & FP_INVALID), !node->is_valid)) {
-      log_info(LD_DIRSERV, "Router '%s' is now %svalid.", ent->nickname,
+      log_info(LD_DIRSERV, "Router '%s' is now %svalid.", description,
                (r&FP_INVALID) ? "in" : "");
       node->is_valid = (r&FP_INVALID)?0:1;
       changed = 1;
     }
     if (bool_neq((r & FP_BADDIR), node->is_bad_directory)) {
-      log_info(LD_DIRSERV, "Router '%s' is now a %s directory", ent->nickname,
+      log_info(LD_DIRSERV, "Router '%s' is now a %s directory", description,
                (r & FP_BADDIR) ? "bad" : "good");
       node->is_bad_directory = (r&FP_BADDIR) ? 1: 0;
       changed = 1;
     }
     if (bool_neq((r & FP_BADEXIT), node->is_bad_exit)) {
-      log_info(LD_DIRSERV, "Router '%s' is now a %s exit", ent->nickname,
+      log_info(LD_DIRSERV, "Router '%s' is now a %s exit", description,
                (r & FP_BADEXIT) ? "bad" : "good");
       node->is_bad_exit = (r&FP_BADEXIT) ? 1: 0;
       changed = 1;
@@ -3191,7 +3197,8 @@ dirserv_orconn_tls_done(const char *address,
       if (!bridge_auth || ri->purpose == ROUTER_PURPOSE_BRIDGE) {
         tor_addr_t addr, *addrp=NULL;
         log_info(LD_DIRSERV, "Found router %s to be reachable at %s:%d. Yay.",
-                 ri->nickname, address, ri->or_port );
+                 router_describe(ri),
+                 address, ri->or_port);
         if (tor_addr_from_str(&addr, ri->address) != -1)
           addrp = &addr;
         else
