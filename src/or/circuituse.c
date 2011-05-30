@@ -1324,8 +1324,8 @@ circuit_get_open_circ_or_launch(edge_connection_t *conn,
         conn->_base.state = AP_CONN_STATE_RENDDESC_WAIT;
         return 0;
       }
-      log_info(LD_REND,"Chose '%s' as intro point for '%s'.",
-               extend_info->nickname,
+      log_info(LD_REND,"Chose %s as intro point for '%s'.",
+               extend_info_describe(extend_info),
                safe_str_client(conn->rend_data->onion_address));
     }
 
