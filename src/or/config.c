@@ -376,7 +376,7 @@ static config_var_t _option_vars[] = {
   V(TransPort,                   PORT,     "0"),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
-  V(UseBridges,                  BOOL,     "0"),
+  VAR("UseBridges",              STRING,   UseBridges_, "auto"),
   V(UseEntryGuards,              BOOL,     "1"),
   V(User,                        STRING,   NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
@@ -3232,6 +3232,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall.");
 
+  /* XXX023 use autobool instead. */
+  if (!strcmp(options->UseBridges_, "auto")) {
+    options->UseBridges = (options->Bridges &&
+                           !server_mode(options) &&
+                           !options->EntryNodes);
+  } else if (!strcmp(options->UseBridges_, "0")) {
+    options->UseBridges = 0;
+  } else if (!strcmp(options->UseBridges_, "1")) {
+    options->UseBridges = 1;
+  } else {
+    REJECT("UseBridges must be 0, 1, or auto");
+  }
+
   if (options->UseBridges &&
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
@@ -3566,10 +3579,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (validate_dir_authorities(options, old_options) < 0)
     REJECT("Directory authority line did not parse. See logs for details.");
 
-  if (options->UseBridges && !options->Bridges)
-    REJECT("If you set UseBridges, you must specify at least one bridge.");
   if (options->UseBridges && !options->TunnelDirConns)
-    REJECT("If you set UseBridges, you must set TunnelDirConns.");
+    REJECT("TunnelDirConns set to 0 only works with UseBridges set to 0");
   if (options->Bridges) {
     for (cl = options->Bridges; cl; cl = cl->next) {
       if (parse_bridge_line(cl->value, 1)<0)
