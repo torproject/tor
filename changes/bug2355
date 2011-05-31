@@ -1,0 +1,8 @@
+  o Major features:
+    - If "UseBridges 1" is set and no bridges are configured, Tor will
+      now refuse to build any circuits until some bridges are set.
+      If "UseBridges auto" is set, Tor will use bridges if they are
+      configured and we are not running as a server, but otherwise
+      will make circuits as usual. The new default is "auto". Patch
+      by anonym.
+
