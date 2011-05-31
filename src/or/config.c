@@ -1277,18 +1277,6 @@ options_act(or_options_t *old_options)
       return -1;
   }
 
-  /* We want to reinit keys as needed before we do much of anything else:
-     keys are important, and other things can depend on them. */
-  if (running_tor &&
-      (transition_affects_workers ||
-       (options->V3AuthoritativeDir && (!old_options ||
-                                        !old_options->V3AuthoritativeDir)))) {
-    if (init_keys() < 0) {
-      log_warn(LD_BUG,"Error initializing keys; exiting");
-      return -1;
-    }
-  }
-
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
@@ -1331,6 +1319,17 @@ options_act(or_options_t *old_options)
   if (running_tor && options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon(options->DataDirectory);
+  }
+
+  /* We want to reinit keys as needed before we do much of anything else:
+     keys are important, and other things can depend on them. */
+  if (transition_affects_workers ||
+      (options->V3AuthoritativeDir && (!old_options ||
+                                       !old_options->V3AuthoritativeDir))) {
+    if (init_keys() < 0) {
+      log_warn(LD_BUG,"Error initializing keys; exiting");
+      return -1;
+    }
   }
 
   /* Write our PID to the PID file. If we do not have write permissions we
