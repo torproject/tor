@@ -1892,6 +1892,14 @@ connection_ap_handshake_rewrite_and_attach(entry_connection_t *conn,
       return -1;
     }
 
+    if (options->Tor2webMode) {
+      log_warn(LD_APP, "Refusing to connect to non-hidden-service hostname %s "
+               "because tor2web mode is enabled.",
+               safe_str_client(socks->address));
+      connection_mark_unattached_ap(conn, END_STREAM_REASON_ENTRYPOLICY);
+      return -1;
+    }
+
     if (socks->command == SOCKS_COMMAND_RESOLVE) {
       uint32_t answer;
       struct in_addr in;
