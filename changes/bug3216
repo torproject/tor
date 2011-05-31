@@ -1,4 +1,0 @@
-  o Major bugfixes:
-    - Don't try to build descriptors if "ORPort auto" is set and we
-      don't know our actual ORPort yet.  Fix for bug 3216; bugfix on
-      0.2.2.26-beta.

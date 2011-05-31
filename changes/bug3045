@@ -1,6 +1,0 @@
-  o Minor features:
-    - Revise most log messages that refer to nodes by nickname to
-      instead use the "$key=nickname at address" format.  This should be
-      more useful, especially since nicknames are less and less likely
-      to be unique.  Fixes bug 3045.
-

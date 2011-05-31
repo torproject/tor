@@ -1,5 +1,0 @@
-  o Minor bugfixes:
-    - Warn when the user configures two HiddenServiceDir lines that point
-      to the same directory. Bugfix on 0.0.6 (the version introducing
-      HiddenServiceDir); fixes bug 3289.
-
