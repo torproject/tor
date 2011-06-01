@@ -3,3 +3,7 @@
       correctly. Previously, it accepted values up to UINT_MAX, but
       could return a negative number if given a value above INT_MAX+1.
       Found by George Kadianakis. Fixes bug 3306; bugfix on 0.2.2pre14.
+
+    - Avoid a segfault when reading a malformed circuit build state
+      with more than INT_MAX entries. Found by wanoskarnet. Bugfix on
+      0.2.2.4-alpha.
