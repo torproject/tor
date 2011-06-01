@@ -225,7 +225,7 @@ connection_add_impl(connection_t *conn, int is_connecting)
       connection_configure_bufferevent_callbacks(conn);
     } else if (conn->linked && conn->linked_conn &&
                connection_type_uses_bufferevent(conn->linked_conn)) {
-      tor_assert(!(SOCKET_OK(conn->s));
+      tor_assert(!(SOCKET_OK(conn->s)));
       if (!conn->bufev) {
         struct bufferevent *pair[2] = { NULL, NULL };
         if (bufferevent_pair_new(tor_libevent_get_base(),
