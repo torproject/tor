@@ -3008,6 +3008,11 @@ typedef struct {
   int AllDirActionsPrivate; /**< Should every directory action be sent
                              * through a Tor circuit? */
 
+  /** Run in 'tor2web mode'? (I.e. only make client connections to hidden
+   * services, and use a single hop for all hidden-service-related
+   * circuits.) */
+  int Tor2webMode;
+
   int ConnLimit; /**< Demanded minimum number of simultaneous connections. */
   int _ConnLimit; /**< Maximum allowed number of simultaneous connections. */
   int RunAsDaemon; /**< If true, run in the background. (Unix only) */

@@ -394,6 +394,7 @@ static config_var_t _option_vars[] = {
   V(TestSocks,                   BOOL,     "0"),
   OBSOLETE("TestVia"),
   V(TokenBucketRefillInterval,   MSEC_INTERVAL, "100 msec"),
+  V(Tor2webMode,                 BOOL,     "0"),
   V(TrackHostExits,              CSV,      NULL),
   V(TrackHostExitsExpire,        INTERVAL, "30 minutes"),
   OBSOLETE("TrafficShaping"),

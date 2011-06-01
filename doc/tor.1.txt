@@ -957,6 +957,10 @@ The following options are useful only for clients (that is, if
     Tor will look at the UseOptimisticData parameter in the networkstatus.
     (Default: auto)
 
+**Tor2webMode** **0**|**1**::
+    When this option is set, Tor connects to hidden services
+    **non-anonymously**.  This option also disables client connections to
+    non-hidden-service hostnames through Tor.  (Default: 0)
 
 SERVER OPTIONS
 --------------
