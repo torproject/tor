@@ -529,6 +529,7 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   char desc_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t now = time(NULL);
   char descriptor_cookie_base64[3*REND_DESC_COOKIE_LEN_BASE64];
+  int tor2web_mode = get_options()->Tor2webMode;
   tor_assert(desc_id);
   tor_assert(rend_query);
   /* Determine responsible dirs. Even if we can't get all we want,
@@ -587,7 +588,8 @@ directory_get_from_hs_dir(const char *desc_id, const rend_data_t *rend_query)
   directory_initiate_command_routerstatus_rend(hs_dir,
                                           DIR_PURPOSE_FETCH_RENDDESC_V2,
                                           ROUTER_PURPOSE_GENERAL,
-                                          1, desc_id_base32, NULL, 0, 0,
+                                          !tor2web_mode, desc_id_base32,
+                                          NULL, 0, 0,
                                           rend_query);
   log_info(LD_REND, "Sending fetch request for v2 descriptor for "
                     "service '%s' with descriptor ID '%s', auth type %d, "
