@@ -1,0 +1,3 @@
+  o Minor bugfixes:
+    - Fix a log message that said "bits" while displaying a value in
+      bytes. Fixes bug 3318; bugfix on 0.2.0.1-alpha.
