@@ -444,6 +444,25 @@ directory_clean_last_hid_serv_requests(void)
   }
 }
 
+/** Purge the history of request times to hidden service directories,
+ * so that future lookups of an HS descriptor will not fail because we
+ * accessed all of the HSDir relays responsible for the descriptor
+ * recently. */
+void
+rend_client_purge_last_hid_serv_requests(void)
+{
+  /* Don't create the table if it doesn't exist yet (and it may very
+   * well not exist if the user hasn't accessed any HSes)... */
+  strmap_t *old_last_hid_serv_requests = last_hid_serv_requests_;
+  /* ... and let get_last_hid_serv_requests re-create it for us if
+   * necessary. */
+  last_hid_serv_requests_ = NULL;
+
+  if (old_last_hid_serv_requests != NULL) {
+    strmap_free(old_last_hid_serv_requests, _tor_free);
+  }
+}
+
 /** Determine the responsible hidden service directories for <b>desc_id</b>
  * and fetch the descriptor belonging to that ID from one of them. Only
  * send a request to hidden service directories that we did not try within
