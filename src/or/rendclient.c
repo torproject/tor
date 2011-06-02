@@ -377,7 +377,17 @@ rend_client_introduction_acked(origin_circuit_t *circ,
  * certain queries; keys are strings consisting of base32-encoded
  * hidden service directory identities and base32-encoded descriptor IDs;
  * values are pointers to timestamps of the last requests. */
-static strmap_t *last_hid_serv_requests = NULL;
+static strmap_t *last_hid_serv_requests_ = NULL;
+
+/** Returns last_hid_serv_requests_, initializing it to a new strmap if
+ * necessary. */
+static strmap_t *
+get_last_hid_serv_requests(void)
+{
+  if (!last_hid_serv_requests_)
+    last_hid_serv_requests_ = strmap_new();
+  return last_hid_serv_requests_;
+}
 
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
  * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
@@ -391,6 +401,7 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char hsdir_desc_comb_id[2 * REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t *last_request_ptr;
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
   tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
@@ -416,8 +427,7 @@ directory_clean_last_hid_serv_requests(void)
 {
   strmap_iter_t *iter;
   time_t cutoff = time(NULL) - REND_HID_SERV_DIR_REQUERY_PERIOD;
-  if (!last_hid_serv_requests)
-    last_hid_serv_requests = strmap_new();
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   for (iter = strmap_iter_init(last_hid_serv_requests);
        !strmap_iter_done(iter); ) {
     const char *key;
