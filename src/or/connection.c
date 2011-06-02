@@ -2008,7 +2008,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
   or_options_t *options = get_options();
   int retval = 0;
   const uint16_t old_or_port = router_get_advertised_or_port(options);
-  const uint16_t old_dir_port = router_get_advertised_dir_port(options);
+  const uint16_t old_dir_port = router_get_advertised_dir_port(options, 0);
 
   if (retry_listeners(CONN_TYPE_OR_LISTENER, options->ORListenAddress,
                       options->ORPort, "0.0.0.0",
@@ -2054,7 +2054,7 @@ retry_all_listeners(smartlist_t *replaced_conns,
     return -1;
 
   if (old_or_port != router_get_advertised_or_port(options) ||
-      old_dir_port != router_get_advertised_dir_port(options)) {
+      old_dir_port != router_get_advertised_dir_port(options, 0)) {
     /* Our chosen ORPort or DirPort is not what it used to be: the
      * descriptor we had (if any) should be regenerated.  (We won't
      * automatically notice this because of changes in the option,

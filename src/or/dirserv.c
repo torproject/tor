@@ -2732,7 +2732,7 @@ dirserv_generate_networkstatus_vote_obj(crypto_pk_env_t *private_key,
   voter->sigs = smartlist_create();
   voter->address = hostname;
   voter->addr = addr;
-  voter->dir_port = router_get_advertised_dir_port(options);
+  voter->dir_port = router_get_advertised_dir_port(options, 0);
   voter->or_port = router_get_advertised_or_port(options);
   voter->contact = tor_strdup(contact);
   if (options->V3AuthUseLegacyKey) {
@@ -2836,7 +2836,7 @@ generate_v2_networkstatus_opinion(void)
                "%s" /* client version line, server version line. */
                "dir-signing-key\n%s",
                hostname, fmt_addr32(addr),
-               (int)router_get_advertised_dir_port(options),
+               (int)router_get_advertised_dir_port(options, 0),
                fingerprint,
                contact,
                published,
