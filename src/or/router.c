@@ -704,7 +704,7 @@ init_keys(void)
   ds = router_get_trusteddirserver_by_digest(digest);
   if (!ds) {
     ds = add_trusted_dir_server(options->Nickname, NULL,
-                                router_get_advertised_dir_port(options),
+                                router_get_advertised_dir_port(options, 0),
                                 router_get_advertised_or_port(options),
                                 digest,
                                 v3_digest,
@@ -802,7 +802,7 @@ decide_to_advertise_dirport(or_options_t *options, uint16_t dir_port)
     return 0;
   if (!check_whether_dirport_reachable())
     return 0;
-  if (!router_get_advertised_dir_port(options))
+  if (!router_get_advertised_dir_port(options, dir_port))
     return 0;
 
   /* Section two: reasons to publish or not publish that the user
@@ -1184,12 +1184,16 @@ router_get_advertised_or_port(or_options_t *options)
   return options->ORPort;
 }
 
-/** Return the port that we should advertise as our DirPort; this is either
- * the one configured in the DirPort option, or the one we actually bound to
- * if DirPort is "auto". */
+/** Return the port that we should advertise as our DirPort;
+ * this is one of three possibilities:
+ * The one that is passed as <b>dirport</b> if the DirPort option is 0, or
+ * the one configured in the DirPort option,
+ * or the one we actually bound to if DirPort is "auto". */
 uint16_t
-router_get_advertised_dir_port(or_options_t *options)
+router_get_advertised_dir_port(or_options_t *options, uint16_t dirport)
 {
+  if (!options->DirPort)
+    return dirport;
   if (options->DirPort == CFG_AUTO_PORT) {
     connection_t *c = connection_get_by_type(CONN_TYPE_DIR_LISTENER);
     if (c)
@@ -1440,7 +1444,7 @@ router_rebuild_descriptor(int force)
   ri->nickname = tor_strdup(options->Nickname);
   ri->addr = addr;
   ri->or_port = router_get_advertised_or_port(options);
-  ri->dir_port = router_get_advertised_dir_port(options);
+  ri->dir_port = router_get_advertised_dir_port(options, 0);
   ri->cache_info.published_on = time(NULL);
   ri->onion_pkey = crypto_pk_dup_key(get_onion_key()); /* must invoke from
                                                         * main thread */
