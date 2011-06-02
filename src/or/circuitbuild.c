@@ -3395,6 +3395,8 @@ entry_guard_set_status(entry_guard_t *e, const node_t *node,
   else if (options->UseBridges && (!node->ri ||
                                    node->ri->purpose != ROUTER_PURPOSE_BRIDGE))
     *reason = "not a bridge";
+  else if (options->UseBridges && !node_is_a_configured_bridge(node))
+    *reason = "not a configured bridge";
   else if (!options->UseBridges && !node->is_possible_guard &&
            !routerset_contains_node(options->EntryNodes,node))
     *reason = "not recommended as a guard";
@@ -3482,6 +3484,10 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
   if (get_options()->UseBridges) {
     if (node_get_purpose(node) != ROUTER_PURPOSE_BRIDGE) {
       *msg = "not a bridge";
+      return NULL;
+    }
+    if (!node_is_a_configured_bridge(node)) {
+      *msg = "not a configured bridge";
       return NULL;
     }
   } else { /* !get_options()->UseBridges */
@@ -4582,6 +4588,24 @@ int
 routerinfo_is_a_configured_bridge(const routerinfo_t *ri)
 {
   return get_configured_bridge_by_routerinfo(ri) ? 1 : 0;
+}
+
+/** Return 1 if <b>node</b> is one of our configured bridges, else 0. */
+int
+node_is_a_configured_bridge(const node_t *node)
+{
+  tor_addr_t addr;
+  uint16_t orport;
+  if (!node)
+    return 0;
+  if (node_get_addr(node, &addr) < 0)
+    return 0;
+  orport = node_get_orport(node);
+  if (orport == 0)
+    return 0;
+
+  return get_configured_bridge_by_addr_port_digest(
+                       &addr, orport, node->identity) != NULL;
 }
 
 /** We made a connection to a router at <b>addr</b>:<b>port</b>
