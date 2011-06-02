@@ -12,6 +12,8 @@
 #ifndef _TOR_RENDCLIENT_H
 #define _TOR_RENDCLIENT_H
 
+void rend_client_purge_state(void);
+
 void rend_client_introcirc_has_opened(origin_circuit_t *circ);
 void rend_client_rendcirc_has_opened(origin_circuit_t *circ);
 int rend_client_introduction_acked(origin_circuit_t *circ,

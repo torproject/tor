@@ -27,6 +27,16 @@ static extend_info_t *rend_client_get_random_intro_impl(
                           const rend_cache_entry_t *rend_query,
                           const int strict, const int warnings);
 
+/** Purge all potentially remotely-detectable state held in the hidden
+ * service client code.  Called on SIGNAL NEWNYM. */
+void
+rend_client_purge_state(void)
+{
+  rend_cache_purge();
+  rend_client_cancel_descriptor_fetches();
+  rend_client_purge_last_hid_serv_requests();
+}
+
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */
 void

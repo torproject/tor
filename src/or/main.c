@@ -853,9 +853,7 @@ signewnym_impl(time_t now)
 
   circuit_expire_all_dirty_circs();
   addressmap_clear_transient();
-  rend_cache_purge();
-  rend_client_cancel_descriptor_fetches();
-  rend_client_purge_last_hid_serv_requests();
+  rend_client_purge_state();
   time_of_last_signewnym = now;
   signewnym_is_pending = 0;
 }
