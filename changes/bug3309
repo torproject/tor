@@ -7,3 +7,7 @@
       refuse to fetch it again for up to 15 minutes.  Bugfix on
       0.2.2.25-alpha; fixes bug 3309.
 
+  o Minor features:
+    - Log (at info level) when purging pieces of hidden-service-client
+      state on SIGNAL NEWNYM.
+

@@ -469,6 +469,7 @@ rend_client_purge_last_hid_serv_requests(void)
   last_hid_serv_requests_ = NULL;
 
   if (old_last_hid_serv_requests != NULL) {
+    log_info(LD_REND, "Purging client last-HS-desc-request-time table");
     strmap_free(old_last_hid_serv_requests, _tor_free);
   }
 }
