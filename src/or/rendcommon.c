@@ -838,8 +838,10 @@ rend_cache_clean(time_t now)
 void
 rend_cache_purge(void)
 {
-  if (rend_cache)
+  if (rend_cache) {
+    log_info(LD_REND, "Purging client/v0-HS-authority HS descriptor cache");
     strmap_free(rend_cache, _rend_cache_entry_free);
+  }
   rend_cache = strmap_new();
 }
 
