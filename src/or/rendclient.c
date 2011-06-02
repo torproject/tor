@@ -27,6 +27,16 @@ static extend_info_t *rend_client_get_random_intro_impl(
                           const rend_cache_entry_t *rend_query,
                           const int strict, const int warnings);
 
+/** Purge all potentially remotely-detectable state held in the hidden
+ * service client code.  Called on SIGNAL NEWNYM. */
+void
+rend_client_purge_state(void)
+{
+  rend_cache_purge();
+  rend_client_cancel_descriptor_fetches();
+  rend_client_purge_last_hid_serv_requests();
+}
+
 /** Called when we've established a circuit to an introduction point:
  * send the introduction request. */
 void
@@ -377,7 +387,17 @@ rend_client_introduction_acked(origin_circuit_t *circ,
  * certain queries; keys are strings consisting of base32-encoded
  * hidden service directory identities and base32-encoded descriptor IDs;
  * values are pointers to timestamps of the last requests. */
-static strmap_t *last_hid_serv_requests = NULL;
+static strmap_t *last_hid_serv_requests_ = NULL;
+
+/** Returns last_hid_serv_requests_, initializing it to a new strmap if
+ * necessary. */
+static strmap_t *
+get_last_hid_serv_requests(void)
+{
+  if (!last_hid_serv_requests_)
+    last_hid_serv_requests_ = strmap_new();
+  return last_hid_serv_requests_;
+}
 
 /** Look up the last request time to hidden service directory <b>hs_dir</b>
  * for descriptor ID <b>desc_id_base32</b>. If <b>set</b> is non-zero,
@@ -391,6 +411,7 @@ lookup_last_hid_serv_request(routerstatus_t *hs_dir,
   char hsdir_id_base32[REND_DESC_ID_V2_LEN_BASE32 + 1];
   char hsdir_desc_comb_id[2 * REND_DESC_ID_V2_LEN_BASE32 + 1];
   time_t *last_request_ptr;
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   base32_encode(hsdir_id_base32, sizeof(hsdir_id_base32),
                 hs_dir->identity_digest, DIGEST_LEN);
   tor_snprintf(hsdir_desc_comb_id, sizeof(hsdir_desc_comb_id), "%s%s",
@@ -416,8 +437,7 @@ directory_clean_last_hid_serv_requests(void)
 {
   strmap_iter_t *iter;
   time_t cutoff = time(NULL) - REND_HID_SERV_DIR_REQUERY_PERIOD;
-  if (!last_hid_serv_requests)
-    last_hid_serv_requests = strmap_new();
+  strmap_t *last_hid_serv_requests = get_last_hid_serv_requests();
   for (iter = strmap_iter_init(last_hid_serv_requests);
        !strmap_iter_done(iter); ) {
     const char *key;
@@ -431,6 +451,26 @@ directory_clean_last_hid_serv_requests(void)
     } else {
       iter = strmap_iter_next(last_hid_serv_requests, iter);
     }
+  }
+}
+
+/** Purge the history of request times to hidden service directories,
+ * so that future lookups of an HS descriptor will not fail because we
+ * accessed all of the HSDir relays responsible for the descriptor
+ * recently. */
+void
+rend_client_purge_last_hid_serv_requests(void)
+{
+  /* Don't create the table if it doesn't exist yet (and it may very
+   * well not exist if the user hasn't accessed any HSes)... */
+  strmap_t *old_last_hid_serv_requests = last_hid_serv_requests_;
+  /* ... and let get_last_hid_serv_requests re-create it for us if
+   * necessary. */
+  last_hid_serv_requests_ = NULL;
+
+  if (old_last_hid_serv_requests != NULL) {
+    log_info(LD_REND, "Purging client last-HS-desc-request-time table");
+    strmap_free(old_last_hid_serv_requests, _tor_free);
   }
 }
 
