@@ -1,0 +1,13 @@
+  o Minor bugfixes:
+    - Clear the table recording the time of the last request for each
+      hidden service descriptor from each HS directory on SIGNAL
+      NEWNYM.  Previously, we would clear our HS descriptor cache on
+      SIGNAL NEWNYM, but if we had previously retrieved a descriptor
+      (or tried to) from every directory responsible for it, we would
+      refuse to fetch it again for up to 15 minutes.  Bugfix on
+      0.2.2.25-alpha; fixes bug 3309.
+
+  o Minor features:
+    - Log (at info level) when purging pieces of hidden-service-client
+      state on SIGNAL NEWNYM.
+

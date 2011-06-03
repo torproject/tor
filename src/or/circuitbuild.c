@@ -3383,6 +3383,8 @@ entry_guard_set_status(entry_guard_t *e, routerinfo_t *ri,
     *reason = "down";
   else if (options->UseBridges && ri->purpose != ROUTER_PURPOSE_BRIDGE)
     *reason = "not a bridge";
+  else if (options->UseBridges && !routerinfo_is_a_configured_bridge(ri))
+    *reason = "not a configured bridge";
   else if (!options->UseBridges && !ri->is_possible_guard &&
            !routerset_contains_router(options->EntryNodes,ri))
     *reason = "not recommended as a guard";
@@ -3467,11 +3469,16 @@ entry_is_live(entry_guard_t *e, int need_uptime, int need_capacity,
     *msg = "no descriptor";
     return NULL;
   }
-  if (get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_BRIDGE) {
-    *msg = "not a bridge";
-    return NULL;
-  }
-  if (!get_options()->UseBridges && r->purpose != ROUTER_PURPOSE_GENERAL) {
+  if (options->UseBridges) {
+    if (r->purpose != ROUTER_PURPOSE_BRIDGE) {
+      *msg = "not a bridge";
+      return NULL;
+    }
+    if (!routerinfo_is_a_configured_bridge(r)) {
+      *msg = "not a configured bridge";
+      return NULL;
+    }
+  } else if (r->purpose != ROUTER_PURPOSE_GENERAL) {
     *msg = "not general-purpose";
     return NULL;
   }

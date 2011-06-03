@@ -376,7 +376,7 @@ static config_var_t _option_vars[] = {
   V(TransPort,                   PORT,     "0"),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
-  V(UseBridges,                  BOOL,     "0"),
+  VAR("UseBridges",              STRING,   UseBridges_, "auto"),
   V(UseEntryGuards,              BOOL,     "1"),
   V(User,                        STRING,   NULL),
   VAR("V1AuthoritativeDirectory",BOOL, V1AuthoritativeDir,   "0"),
@@ -1180,18 +1180,6 @@ options_act(or_options_t *old_options)
       return -1;
   }
 
-  /* We want to reinit keys as needed before we do much of anything else:
-     keys are important, and other things can depend on them. */
-  if (running_tor &&
-      (transition_affects_workers ||
-       (options->V3AuthoritativeDir && (!old_options ||
-                                        !old_options->V3AuthoritativeDir)))) {
-    if (init_keys() < 0) {
-      log_warn(LD_BUG,"Error initializing keys; exiting");
-      return -1;
-    }
-  }
-
   if (consider_adding_dir_authorities(options, old_options) < 0)
     return -1;
 
@@ -1235,6 +1223,17 @@ options_act(or_options_t *old_options)
   if (options->RunAsDaemon) {
     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
     finish_daemon(options->DataDirectory);
+  }
+
+  /* We want to reinit keys as needed before we do much of anything else:
+     keys are important, and other things can depend on them. */
+  if (transition_affects_workers ||
+      (options->V3AuthoritativeDir && (!old_options ||
+                                       !old_options->V3AuthoritativeDir))) {
+    if (init_keys() < 0) {
+      log_warn(LD_BUG,"Error initializing keys; exiting");
+      return -1;
+    }
   }
 
   /* Write our PID to the PID file. If we do not have write permissions we
@@ -3233,6 +3232,19 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall.");
 
+  /* XXX023 use autobool instead. */
+  if (!strcmp(options->UseBridges_, "auto")) {
+    options->UseBridges = (options->Bridges &&
+                           !server_mode(options) &&
+                           !options->EntryNodes);
+  } else if (!strcmp(options->UseBridges_, "0")) {
+    options->UseBridges = 0;
+  } else if (!strcmp(options->UseBridges_, "1")) {
+    options->UseBridges = 1;
+  } else {
+    REJECT("UseBridges must be 0, 1, or auto");
+  }
+
   if (options->UseBridges &&
       server_mode(options))
     REJECT("Servers must be able to freely connect to the rest "
@@ -3567,10 +3579,8 @@ options_validate(or_options_t *old_options, or_options_t *options,
   if (validate_dir_authorities(options, old_options) < 0)
     REJECT("Directory authority line did not parse. See logs for details.");
 
-  if (options->UseBridges && !options->Bridges)
-    REJECT("If you set UseBridges, you must specify at least one bridge.");
   if (options->UseBridges && !options->TunnelDirConns)
-    REJECT("If you set UseBridges, you must set TunnelDirConns.");
+    REJECT("TunnelDirConns set to 0 only works with UseBridges set to 0");
   if (options->Bridges) {
     for (cl = options->Bridges; cl; cl = cl->next) {
       if (parse_bridge_line(cl->value, 1)<0)

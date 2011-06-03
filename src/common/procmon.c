@@ -252,7 +252,7 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
     if (!GetExitCodeProcess(procmon->hproc, &exit_code)) {
       char *errmsg = format_win32_error(GetLastError());
       log_warn(procmon->log_domain, "Error \"%s\" occurred while polling "
-               "handle for monitored process %d; assuming it's dead."
+               "handle for monitored process %d; assuming it's dead.",
                errmsg, procmon->pid);
       tor_free(errmsg);
       its_dead_jim = 1;
@@ -287,12 +287,12 @@ tor_process_monitor_poll_cb(evutil_socket_t unused1, short unused2,
 
       if (!its_dead_jim)
         log_info(procmon->log_domain, "Failed to open handle to monitored "
-                 "process %d, and error code %d (%s) is not 'invalid "
+                 "process %d, and error code %lu (%s) is not 'invalid "
                  "parameter' -- assuming the process is still alive.",
                  procmon->pid,
-                 err_code, err_msg);
+                 err_code, errmsg);
 
-      tor_free(err_msg);
+      tor_free(errmsg);
     }
   }
 #else

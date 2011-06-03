@@ -2480,7 +2480,17 @@ typedef struct {
    * when doing so. */
   char *BridgePassword;
 
-  int UseBridges; /**< Boolean: should we start all circuits with a bridge? */
+  /** Whether we should start all circuits with a bridge. "1" means strictly
+   * yes, "0" means strictly no, and "auto" means that we do iff any bridges
+   * are configured, we are not running a server and have not specified a list
+   * of entry nodes. */
+  char *UseBridges_;
+  /** Effective value of UseBridges. Will be set equally for UseBridges set to
+   * 1 or 0, but for 'auto' it will be set to 1 iff any bridges are
+   * configured, we are not running a server and have not specified a list of
+   * entry nodes. */
+  int UseBridges;
+
   config_line_t *Bridges; /**< List of bootstrap bridge addresses. */
 
   int BridgeRelay; /**< Boolean: are we acting as a bridge relay? We make
