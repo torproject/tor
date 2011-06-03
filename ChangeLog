@@ -1,4 +1,4 @@
-Changes in version 0.2.2.28-beta - 2011-05-3?
+Changes in version 0.2.2.28-beta - 2011-06-04
   o Major bugfixes:
     - Don't decide to make a new descriptor when receiving a HUP signal.
       This bug has caused a lot of 0.2.2.x relays to disappear from the
@@ -8,7 +8,7 @@ Changes in version 0.2.2.28-beta - 2011-05-3?
     - Don't try to build descriptors if "ORPort auto" is set and we
       don't know our actual ORPort yet. Fix for bug 3216; bugfix on
       0.2.2.26-beta.
-    - Resolve a crash that occured when setting BridgeRelay to 1 with
+    - Resolve a crash that occurred when setting BridgeRelay to 1 with
       accounting enabled. Fixes bug 3228; bugfix on 0.2.2.18-alpha.
     - Apply circuit timeouts to opened hidden-service-related circuits
       based on the correct start time. Previously, we would apply the
@@ -22,11 +22,24 @@ Changes in version 0.2.2.28-beta - 2011-05-3?
       0.2.1.x and earlier, but caused many hidden service access attempts
       to fail with the adaptive CBT introduced in 0.2.2.2-alpha. Bugfix
       on 0.2.2.2-alpha; fixes another part of bug 1297.
+    - In ticket 2511 we fixed a case where you could use an unconfigured
+      bridge if you had configured it as a bridge the last time you ran
+      Tor. Now fix another edge case: if you had configured it as a bridge
+      but then switched to a different bridge via the controller, you
+      would still be willing to use the old one. Bugfix on 0.2.0.1-alpha;
+      fixes bug 3321.
 
   o Major features:
     - Add an __OwningControllerProcess configuration option and a
       TAKEOWNERSHIP control-port command. Now a Tor controller can ensure
       that when it exits, Tor will shut down. Implements feature 3049.
+    - If "UseBridges 1" is set and no bridges are configured, Tor will
+      now refuse to build any circuits until some bridges are set.
+      If "UseBridges auto" is set, Tor will use bridges if they are
+      configured and we are not running as a server, but otherwise will
+      make circuits as usual. The new default is "auto". Patch by anonym,
+      so the Tails LiveCD can stop automatically revealing you as a Tor
+      user on startup.
 
   o Minor bugfixes:
     - Fix warnings from GCC 4.6's "-Wunused-but-set-variable" option.
@@ -38,6 +51,26 @@ Changes in version 0.2.2.28-beta - 2011-05-3?
     - Warn when the user configures two HiddenServiceDir lines that point
       to the same directory. Bugfix on 0.0.6 (the version introducing
       HiddenServiceDir); fixes bug 3289.
+    - Remove dead code from rend_cache_lookup_v2_desc_as_dir. Fixes
+      part of bug 2748; bugfix on 0.2.0.10-alpha.
+    - Log malformed requests for rendezvous descriptors as protocol
+      warnings, not warnings. Also, use a more informative log message
+      in case someone sees it at log level warning without prior
+      info-level messages. Fixes the other part of bug 2748; bugfix
+      on 0.2.0.10-alpha.
+    - Clear the table recording the time of the last request for each
+      hidden service descriptor from each HS directory on SIGNAL NEWNYM.
+      Previously, we would clear our HS descriptor cache on SIGNAL
+      NEWNYM, but if we had previously retrieved a descriptor (or tried
+      to) from every directory responsible for it, we would refuse to
+      fetch it again for up to 15 minutes. Bugfix on 0.2.2.25-alpha;
+      fixes bug 3309.
+    - Fix a log message that said "bits" while displaying a value in
+      bytes. Found by wanoskarnet. Fixes bug 3318; bugfix on
+      0.2.0.1-alpha.
+    - When checking for 1024-bit keys, check for 1024 bits, not 128
+      bytes. This allows Tor to correctly discard keys of length 1017
+      through 1023. Bugfix on 0.0.9pre5.
 
   o Minor features:
     - Relays now log the reason for publishing a new relay descriptor,
@@ -47,6 +80,8 @@ Changes in version 0.2.2.28-beta - 2011-05-3?
       instead use the "$key=nickname at address" format. This should be
       more useful, especially since nicknames are less and less likely
       to be unique. Resolves ticket 3045.
+    - Log (at info level) when purging pieces of hidden-service-client
+      state because of SIGNAL NEWNYM.
 
   o Removed options:
     - Remove undocumented option "-F" from tor-resolve: it hasn't done
@@ -205,7 +240,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
       on 0.2.0.10-alpha.
 
   o Removed features:
-    - Caches no longer download and serve v2 networkstatus documents
+    - Caches no longer download and serve e2 networkstatus documents
       unless FetchV2Networkstatus flag is set: these documents haven't
       haven't been used by clients or relays since 0.2.0.x. Resolves
       bug 3022.

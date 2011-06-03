@@ -1,7 +1,0 @@
-  o Minor bugfixes:
-    - In bug 2511 we fixed a case where you could use an unconfigured
-      bridge if you had configured it as a bridge the last time you ran
-      Tor. Now fix another edge case: if you had configured it as a bridge
-      but then switched to a different bridge via the controller, you
-      would still be willing to use the old one. Bugfix on 0.2.0.1-alpha;
-      fixes bug 3321.
