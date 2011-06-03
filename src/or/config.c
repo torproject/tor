@@ -387,7 +387,7 @@ static config_var_t _option_vars[] = {
   V(TransPort,                   PORT,     "0"),
   V(TunnelDirConns,              BOOL,     "1"),
   V(UpdateBridgesFromAuthority,  BOOL,     "0"),
-  VAR("UseBridges",              STRING,   UseBridges_, "auto"),
+  VAR("UseBridges",              AUTOBOOL, UseBridges_, "auto"),
   V(UseEntryGuards,              BOOL,     "1"),
   V(UseMicrodescriptors,         AUTOBOOL, "0"),
   V(User,                        STRING,   NULL),
@@ -3308,17 +3308,12 @@ options_validate(or_options_t *old_options, or_options_t *options,
            "of the Internet, so they must not set Reachable*Addresses "
            "or FascistFirewall.");
 
-  /* XXX023 use autobool instead. */
-  if (!strcmp(options->UseBridges_, "auto")) {
+  if (options->UseBridges_ == -1) {
     options->UseBridges = (options->Bridges &&
                            !server_mode(options) &&
                            !options->EntryNodes);
-  } else if (!strcmp(options->UseBridges_, "0")) {
-    options->UseBridges = 0;
-  } else if (!strcmp(options->UseBridges_, "1")) {
-    options->UseBridges = 1;
   } else {
-    REJECT("UseBridges must be 0, 1, or auto");
+    options->UseBridges = options->UseBridges_;
   }
 
   if (options->UseBridges &&
