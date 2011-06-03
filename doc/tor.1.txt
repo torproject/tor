@@ -726,10 +726,14 @@ The following options are useful only for clients (that is, if
     from the configured bridge authorities when feasible. It will fall back to
     a direct request if the authority responds with a 404. (Default: 0)
 
-**UseBridges** **0**|**1**::
-    When set, Tor will fetch descriptors for each bridge listed in the "Bridge"
+**UseBridges** **0**|**1**|**auto**::
+    Make Tor fetch descriptors for each bridge listed in the "Bridge"
     config lines, and use these relays as both entry guards and directory
-    guards. (Default: 0)
+    guards. If the option is 1, bridges must be used and if no bridges are
+    configured Tor will not make any connections until a bridge is configured;
+    if it's "auto", Tor will use bridges if any are configured, otherwise it
+    will connect directly to the Tor network; if it's 0, bridges are not used
+    at all. (Defaults to auto)
 
 **UseEntryGuards** **0**|**1**::
     If this option is set to 1, we pick a few long-term entry servers, and try
