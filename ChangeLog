@@ -240,7 +240,7 @@ Changes in version 0.2.2.26-beta - 2011-05-17
       on 0.2.0.10-alpha.
 
   o Removed features:
-    - Caches no longer download and serve e2 networkstatus documents
+    - Caches no longer download and serve v2 networkstatus documents
       unless FetchV2Networkstatus flag is set: these documents haven't
       haven't been used by clients or relays since 0.2.0.x. Resolves
       bug 3022.
