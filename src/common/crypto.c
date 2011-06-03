@@ -777,6 +777,17 @@ crypto_pk_keysize(crypto_pk_env_t *env)
   return (size_t) RSA_size(env->key);
 }
 
+/** Return the size of the public key modulus of <b>env</b>, in bits. */
+int
+crypto_pk_num_bits(crypto_pk_env_t *env)
+{
+  tor_assert(env);
+  tor_assert(env->key);
+  tor_assert(env->key->n);
+
+  return BN_num_bits(env->key->n);
+}
+
 /** Increase the reference count of <b>env</b>, and return it.
  */
 crypto_pk_env_t *

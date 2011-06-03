@@ -343,7 +343,9 @@ test_crypto_pk(void)
   test_eq(0, crypto_pk_cmp_keys(pk1, pk2));
 
   test_eq(128, crypto_pk_keysize(pk1));
+  test_eq(1024, crypto_pk_num_bits(pk1));
   test_eq(128, crypto_pk_keysize(pk2));
+  test_eq(1024, crypto_pk_num_bits(pk2));
 
   test_eq(128, crypto_pk_public_encrypt(pk2, data1, sizeof(data1),
                                         "Hello whirled.", 15,

@@ -3774,9 +3774,9 @@ token_check_object(memarea_t *area, const char *kwd,
       break;
     case NEED_KEY_1024: /* There must be a 1024-bit public key. */
     case NEED_SKEY_1024: /* There must be a 1024-bit private key. */
-      if (tok->key && crypto_pk_keysize(tok->key) != PK_BYTES) {
+      if (tok->key && crypto_pk_num_bits(tok->key) != PK_BYTES*8) {
         tor_snprintf(ebuf, sizeof(ebuf), "Wrong size on key for %s: %d bits",
-                     kwd, (int)crypto_pk_keysize(tok->key)*8);
+                     kwd, crypto_pk_num_bits(tok->key));
         RET_ERR(ebuf);
       }
       /* fall through */
