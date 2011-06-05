@@ -899,7 +899,7 @@ log_level_to_string(int level)
 static const char *domain_list[] = {
   "GENERAL", "CRYPTO", "NET", "CONFIG", "FS", "PROTOCOL", "MM",
   "HTTP", "APP", "CONTROL", "CIRC", "REND", "BUG", "DIR", "DIRSERV",
-  "OR", "EDGE", "ACCT", "HIST", "HANDSHAKE", NULL
+  "OR", "EDGE", "ACCT", "HIST", "HANDSHAKE", "HEARTBEAT", NULL
 };
 
 /** Return a bitmask for the log domain for which <b>domain</b> is the name,
