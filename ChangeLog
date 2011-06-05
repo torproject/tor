@@ -1,4 +1,11 @@
 Changes in version 0.2.2.28-beta - 2011-06-04
+  Tor 0.2.2.28-beta makes great progress towards a new stable release: we
+  fixed a big bug in whether relays stay in the consensus consistently,
+  we moved closer to handling bridges and hidden services correctly,
+  and we started the process of better handling the dreaded "my Vidalia
+  died, and now my Tor demands a password when I try to reconnect to it"
+  usability issue.
+
   o Major bugfixes:
     - Don't decide to make a new descriptor when receiving a HUP signal.
       This bug has caused a lot of 0.2.2.x relays to disappear from the
